@@ -21,6 +21,12 @@ Transformar callbacks reais da Meta Cloud API em rastreabilidade operacional den
 
 - `pnpm exec jest --runInBand src/modulos/comunicacoes/apresentacao/controlador-webhook-whatsapp.spec.ts src/modulos/comunicacoes/aplicacao/servico-webhook-whatsapp.spec.ts`: passou.
 - `pnpm typecheck`: passou.
+- Staging Render em `55d4422`: passou.
+- Disparo real WhatsApp apos deploy:
+  - mensagem persistida como `enviado`
+  - `resultadoEnvio.idExterno` presente
+  - webhook real da Meta atualizou `payload.ultimoStatusMeta.status` para `delivered`
+  - `payload.ultimoStatusMeta.timestamp` presente
 
 ## Proximo passo
 
