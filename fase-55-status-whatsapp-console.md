@@ -25,8 +25,9 @@ Exibir no console de Comunicacoes o status de entrega retornado pela Meta, sem d
 
 - `pnpm typecheck`: passou.
 - `pnpm build`: passou.
-- Staging web em `89adb94`: passou.
+- Staging web em `a2d74bd`: passou.
 - Tela `/comunicacoes` carregou historico real e exibiu `Meta: Entregue` para mensagem WhatsApp entregue.
+- Mensagens de e-mail foram validadas sem chip `Meta: Aguardando Meta`.
 
 ## Proximo passo
 
