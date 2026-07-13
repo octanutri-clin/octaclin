@@ -74,6 +74,16 @@ Depois do deploy:
    - o status Meta atualiza para `Entregue` ou equivalente;
    - uma resposta do usuario aparece como `recebido`.
 
+### Tentativa em staging - 2026-07-13
+
+- `META_WHATSAPP_TOKEN` foi substituido no Render por um novo token gerado manualmente.
+- Render disparou deploy do backend e `GET /health` respondeu `status: ok`.
+- Um disparo WhatsApp pelo endpoint `POST /comunicacoes/mensagens` criou a mensagem `d3a3e796-c4ec-4fc6-861e-92589aa64ef7`.
+- O processamento falhou na Meta Cloud API com `OAuthException`, codigo `190`, indicando erro de autenticacao do token.
+- Nenhum token foi registrado neste documento ou no Git.
+
+Conclusao: a troca operacional no Render esta validada, mas o token gerado ainda nao esta valido para o app/ativo WhatsApp usado pelo OctaClin.
+
 ## Rollback
 
 Se o novo token falhar:
@@ -82,6 +92,18 @@ Se o novo token falhar:
 2. Confirmar se o System User tem acesso ao app e ao WhatsApp Business Account.
 3. Gerar novo token com as permissoes listadas.
 4. Repetir a validacao.
+
+## Correcao do token invalido
+
+Para a proxima tentativa, gerar o token novamente conferindo estes pontos antes de salvar no Render:
+
+1. O System User deve pertencer ao mesmo Business Manager do app `OctaClin`.
+2. O System User precisa ter acesso ao app Meta do OctaClin.
+3. O System User precisa ter acesso ao WhatsApp Business Account que contem o Phone Number ID `1166704896532308`.
+4. O token deve ser gerado selecionando o app OctaClin.
+5. O token deve incluir `whatsapp_business_messaging` e `whatsapp_business_management`.
+6. Se a Meta mostrar prazo de expiracao, selecionar a opcao permanente/sem expiracao quando disponivel.
+7. Testar o envio `hello_world` para `5511992362080` logo apos salvar no Render.
 
 ## Cuidados
 
@@ -92,4 +114,4 @@ Se o novo token falhar:
 
 ## Status
 
-Pendente de acao manual no Meta Business Manager: criar System User, gerar token permanente e substituir `META_WHATSAPP_TOKEN` no Render.
+Bloqueada por token Meta invalido: Render aceitou a troca e o backend subiu, mas a Meta retornou erro de autenticacao no envio real. Proximo passo e gerar novo token permanente com o System User associado ao app e ao WhatsApp Business Account corretos.
