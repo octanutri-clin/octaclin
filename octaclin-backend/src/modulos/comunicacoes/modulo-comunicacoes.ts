@@ -17,13 +17,37 @@ import { CanalNotificacaoOrm } from './infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from './infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from './infraestrutura/template-mensagem.orm';
 
+function valorOuIndefinido(valor?: string): string | undefined {
+  return valor && valor.length > 0 ? valor : undefined;
+}
+
+function criarConexaoRedis() {
+  if (process.env.REDIS_URL) {
+    const url = new URL(process.env.REDIS_URL);
+    const porta = Number(url.port || 6379);
+
+    return {
+      host: url.hostname,
+      port: porta,
+      username: valorOuIndefinido(decodeURIComponent(url.username)),
+      password: valorOuIndefinido(decodeURIComponent(url.password)),
+      tls: url.protocol === 'rediss:' || process.env.REDIS_TLS === 'true' ? {} : undefined
+    };
+  }
+
+  return {
+    host: process.env.REDIS_HOST ?? 'localhost',
+    port: Number(process.env.REDIS_PORTA ?? 6379),
+    username: valorOuIndefinido(process.env.REDIS_USUARIO),
+    password: valorOuIndefinido(process.env.REDIS_SENHA),
+    tls: process.env.REDIS_TLS === 'true' ? {} : undefined
+  };
+}
+
 @Module({
   imports: [
     BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST ?? 'localhost',
-        port: Number(process.env.REDIS_PORTA ?? 6379)
-      }
+      connection: criarConexaoRedis()
     }),
     BullModule.registerQueue({ name: FILA_NOTIFICACOES }),
     TypeOrmModule.forFeature([CanalNotificacaoOrm, TemplateMensagemOrm, MensagemNotificacaoOrm, OutboxEventoOrm, UserActionLogOrm]),
