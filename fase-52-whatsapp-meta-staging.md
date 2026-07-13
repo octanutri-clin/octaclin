@@ -15,10 +15,15 @@ Configurar a integracao WhatsApp Meta Cloud API no backend de staging do OctaCli
   - `META_WHATSAPP_TOKEN`
   - `META_WHATSAPP_PHONE_NUMBER_ID`
   - `META_WHATSAPP_API_VERSION=v25.0`
-- Phone Number ID usado em staging: numero de teste da Meta.
+- Phone Number ID usado em staging: `1166704896532308`.
 - Canal OctaClin criado:
   - tipo: `whatsapp`
   - nome: `WhatsApp Meta Cloud staging`
+- Canal OctaClin validado no envio real:
+  - tipo: `whatsapp`
+  - nome: `WhatsApp Meta Cloud staging - teste Meta`
+  - configuracao: `phoneNumberId` e `apiVersion`
+  - observacao: token permanece em variavel de ambiente, nao no banco.
 - Template OctaClin criado:
   - canal: `whatsapp`
   - codigo externo: `hello_world`
@@ -27,7 +32,7 @@ Configurar a integracao WhatsApp Meta Cloud API no backend de staging do OctaCli
 
 ## Validacao
 
-Foi executado um disparo controlado pelo BFF de staging usando destino invalido, para evitar envio real. O backend carregou as variaveis do Render, chamou a Meta Cloud API e recebeu erro esperado da Meta:
+Foi executado inicialmente um disparo controlado pelo BFF de staging usando destino invalido, para evitar envio real. O backend chamou a Meta Cloud API e recebeu erro esperado da Meta:
 
 ```text
 (#131030) Recipient phone number not in allowed list
@@ -35,6 +40,14 @@ Foi executado um disparo controlado pelo BFF de staging usando destino invalido,
 
 Esse resultado confirma que token, versao da API e Phone Number ID chegaram corretamente ao adaptador WhatsApp. A validacao real de entrega depende de adicionar um telefone de destino permitido na tela de teste da Meta.
 
+Depois que o destinatario de teste foi adicionado e verificado na Meta, foi executado um disparo real pelo OctaClin com:
+
+- canal: `WhatsApp Meta Cloud staging - teste Meta`
+- template: `hello_world`
+- idioma: `en_US`
+- status final: `enviado`
+- retorno Meta: `idExterno` presente
+
 ## Proximo passo
 
-Adicionar um telefone de destino na lista permitida do numero de teste da Meta e repetir o envio com esse numero em formato E.164, por exemplo `5511999999999`.
+Substituir o token temporario por um token permanente de System User/WhatsApp Business antes de uso continuo fora de staging.
