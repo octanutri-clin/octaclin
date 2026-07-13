@@ -16,6 +16,10 @@ interface JobEnvioNotificacao {
   mensagemId: string;
 }
 
+interface OpcoesProcessamentoNotificacao {
+  propagarErro?: boolean;
+}
+
 @Injectable()
 @Processor(FILA_NOTIFICACOES)
 export class ProcessadorNotificacoes extends WorkerHost {
@@ -32,7 +36,13 @@ export class ProcessadorNotificacoes extends WorkerHost {
     await this.processarMensagem(job.data.tenantId, job.data.mensagemId);
   }
 
-  async processarMensagem(tenantId: string, mensagemId: string): Promise<void> {
+  async processarMensagem(
+    tenantId: string,
+    mensagemId: string,
+    opcoes: OpcoesProcessamentoNotificacao = {}
+  ): Promise<void> {
+    let erroProcessamento: unknown;
+
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorioMensagens = gerenciador.getRepository(MensagemNotificacaoOrm);
       const mensagem = await repositorioMensagens.findOne({
@@ -67,9 +77,11 @@ export class ProcessadorNotificacoes extends WorkerHost {
         mensagem.status = 'falhou';
         mensagem.erro = erro instanceof Error ? erro.message : 'Falha desconhecida no envio.';
         await repositorioMensagens.save(mensagem);
-        throw erro;
+        erroProcessamento = erro;
       }
     });
+
+    if (erroProcessamento && opcoes.propagarErro !== false) throw erroProcessamento;
   }
 
   private obterAdaptador(tipo: CanalNotificacaoOrm['tipo']): AdaptadorNotificacao {

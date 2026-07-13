@@ -69,7 +69,7 @@ export class ControladorComunicacoes {
     @Body() dados: DispararMensagemDto
   ) {
     const mensagem = await this.servicoComunicacoes.dispararMensagem(usuario.tenantId, dados);
-    await this.processadorNotificacoes.processarMensagem(usuario.tenantId, mensagem.id);
+    await this.processadorNotificacoes.processarMensagem(usuario.tenantId, mensagem.id, { propagarErro: false });
     await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.mensagem.disparar', 'mensagem_notificacao', mensagem.id, {
       pacienteId: dados.pacienteId,
       canalId: dados.canalId,

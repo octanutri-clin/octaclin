@@ -1,0 +1,82 @@
+import { ProcessadorNotificacoes } from './processador-notificacoes';
+import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
+import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
+import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
+
+function criarProcessador(adaptadorEmail: { enviar: jest.Mock }) {
+  const mensagem = {
+    id: 'mensagem-1',
+    tenantId: 'tenant-1',
+    canalId: 'canal-1',
+    templateId: 'template-1',
+    status: 'pendente',
+    erro: undefined as string | undefined,
+    payload: { destino: 'paciente@example.com' }
+  };
+  const canal = { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email' };
+  const template = { id: 'template-1', tenantId: 'tenant-1', canal: 'email' };
+  const repositorioMensagens = {
+    findOne: jest.fn(async () => mensagem),
+    save: jest.fn(async (entrada: Record<string, unknown>) => entrada)
+  };
+  const repositorioCanais = {
+    findOneByOrFail: jest.fn(async () => canal)
+  };
+  const repositorioTemplates = {
+    findOneByOrFail: jest.fn(async () => template)
+  };
+  const gerenciador = {
+    getRepository: jest.fn((entidade: { name: string }) => {
+      if (entidade === MensagemNotificacaoOrm) return repositorioMensagens;
+      if (entidade === CanalNotificacaoOrm) return repositorioCanais;
+      if (entidade === TemplateMensagemOrm) return repositorioTemplates;
+      throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
+    })
+  };
+  const executorTenant = {
+    executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+      operacao(gerenciador)
+    )
+  };
+  const adaptadorPlaceholder = { enviar: jest.fn() };
+  const processador = new ProcessadorNotificacoes(
+    executorTenant as never,
+    adaptadorPlaceholder as never,
+    adaptadorEmail as never,
+    adaptadorPlaceholder as never
+  );
+
+  return { processador, mensagem, repositorioMensagens };
+}
+
+describe('ProcessadorNotificacoes', () => {
+  it('deve persistir falha e nao propagar erro quando solicitado', async () => {
+    const erro = new Error('SMTP indisponivel');
+    const { processador, mensagem, repositorioMensagens } = criarProcessador({
+      enviar: jest.fn(async () => {
+        throw erro;
+      })
+    });
+
+    await expect(
+      processador.processarMensagem('tenant-1', 'mensagem-1', { propagarErro: false })
+    ).resolves.toBeUndefined();
+
+    expect(mensagem.status).toBe('falhou');
+    expect(mensagem.erro).toBe('SMTP indisponivel');
+    expect(repositorioMensagens.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'falhou' }));
+  });
+
+  it('deve persistir falha e propagar erro por padrao', async () => {
+    const erro = new Error('SMTP indisponivel');
+    const { processador, mensagem } = criarProcessador({
+      enviar: jest.fn(async () => {
+        throw erro;
+      })
+    });
+
+    await expect(processador.processarMensagem('tenant-1', 'mensagem-1')).rejects.toThrow('SMTP indisponivel');
+
+    expect(mensagem.status).toBe('falhou');
+  });
+});
