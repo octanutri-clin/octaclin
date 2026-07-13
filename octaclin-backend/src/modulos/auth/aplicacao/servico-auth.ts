@@ -1,0 +1,158 @@
+import { createHash, randomUUID } from 'crypto';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { DataSource } from 'typeorm';
+import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
+import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { LoginDto, RenovarTokenDto } from './dtos';
+import { RefreshTokenOrm } from '../infraestrutura/refresh-token.orm';
+
+interface PayloadToken {
+  sub: string;
+  tenantId: string;
+  papel: string;
+  emailHash: string;
+  familiaToken?: string;
+}
+
+@Injectable()
+export class ServicoAuth {
+  constructor(
+    private readonly fonteDados: DataSource,
+    private readonly executorTenant: ExecutorTenant,
+    private readonly jwt: JwtService,
+    private readonly senhas: ServicoSenhas,
+    private readonly criptografia: CriptografiaDadosSensiveis
+  ) {}
+
+  async login(dados: LoginDto) {
+    const tenant = await this.fonteDados.getRepository(TenantOrm).findOne({
+      where: { slug: dados.tenantSlug, status: 'ativo' }
+    });
+
+    if (!tenant) {
+      throw new UnauthorizedException('Credenciais invalidas.');
+    }
+
+    const emailHash = this.criptografia.gerarHashBusca(dados.email);
+    const usuario = await this.executorTenant.executar(tenant.id, (gerenciador) =>
+      gerenciador.getRepository(UsuarioOrm).findOne({
+        where: { tenantId: tenant.id, emailHash, ativo: true }
+      })
+    );
+
+    if (!usuario || !this.senhas.verificar(dados.senha, usuario.senhaHash)) {
+      throw new UnauthorizedException('Credenciais invalidas.');
+    }
+
+    return this.emitirParTokens(usuario, randomUUID());
+  }
+
+  async renovar(dados: RenovarTokenDto) {
+    const payload = await this.verificarRefreshToken(dados.refreshToken);
+    const tokenHash = this.hashToken(dados.refreshToken);
+
+    const usuario = await this.executorTenant.executar(payload.tenantId, async (gerenciador) => {
+      const repositorioTokens = gerenciador.getRepository(RefreshTokenOrm);
+      const tokenAtual = await repositorioTokens.findOne({
+        where: {
+          tenantId: payload.tenantId,
+          usuarioId: payload.sub,
+          tokenHash,
+          familiaToken: payload.familiaToken
+        }
+      });
+
+      if (!tokenAtual || tokenAtual.revogadoEm || tokenAtual.expiraEm <= new Date()) {
+        throw new UnauthorizedException('Refresh token invalido ou expirado.');
+      }
+
+      tokenAtual.revogadoEm = new Date();
+      await repositorioTokens.save(tokenAtual);
+
+      const usuarioAtual = await gerenciador.getRepository(UsuarioOrm).findOne({
+        where: { id: payload.sub, tenantId: payload.tenantId, ativo: true }
+      });
+
+      if (!usuarioAtual) {
+        throw new UnauthorizedException('Usuario inativo ou inexistente.');
+      }
+
+      return usuarioAtual;
+    });
+
+    return this.emitirParTokens(usuario, payload.familiaToken ?? randomUUID());
+  }
+
+  async revogar(refreshToken: string): Promise<void> {
+    const payload = await this.verificarRefreshToken(refreshToken);
+    const tokenHash = this.hashToken(refreshToken);
+
+    await this.executorTenant.executar(payload.tenantId, async (gerenciador) => {
+      await gerenciador.getRepository(RefreshTokenOrm).update(
+        {
+          tenantId: payload.tenantId,
+          usuarioId: payload.sub,
+          tokenHash
+        },
+        { revogadoEm: new Date() }
+      );
+    });
+  }
+
+  private async emitirParTokens(usuario: UsuarioOrm, familiaToken: string) {
+    const payload: PayloadToken = {
+      sub: usuario.id,
+      tenantId: usuario.tenantId,
+      papel: usuario.role,
+      emailHash: usuario.emailHash,
+      familiaToken
+    };
+
+    const accessToken = await this.jwt.signAsync(payload, {
+      secret: process.env.JWT_SEGREDO ?? 'dev-access-secret',
+      expiresIn: process.env.JWT_EXPIRA_EM ?? '15m'
+    });
+
+    const refreshToken = await this.jwt.signAsync(payload, {
+      secret: process.env.JWT_REFRESH_SEGREDO ?? process.env.JWT_SEGREDO ?? 'dev-refresh-secret',
+      expiresIn: process.env.JWT_REFRESH_EXPIRA_EM ?? '30d'
+    });
+
+    await this.executorTenant.executar(usuario.tenantId, async (gerenciador) => {
+      await gerenciador.getRepository(RefreshTokenOrm).save(
+        gerenciador.getRepository(RefreshTokenOrm).create({
+          tenantId: usuario.tenantId,
+          usuarioId: usuario.id,
+          tokenHash: this.hashToken(refreshToken),
+          familiaToken,
+          expiraEm: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        })
+      );
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      tipoToken: 'Bearer',
+      expiraEmSegundos: 15 * 60
+    };
+  }
+
+  private async verificarRefreshToken(token: string): Promise<PayloadToken> {
+    try {
+      return await this.jwt.verifyAsync<PayloadToken>(token, {
+        secret: process.env.JWT_REFRESH_SEGREDO ?? process.env.JWT_SEGREDO ?? 'dev-refresh-secret'
+      });
+    } catch {
+      throw new UnauthorizedException('Refresh token invalido ou expirado.');
+    }
+  }
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+}

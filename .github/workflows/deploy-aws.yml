@@ -1,0 +1,55 @@
+name: Deploy AWS
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag de imagem"
+        required: true
+        default: "latest"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: backend
+            context: octaclin-backend
+            repository_secret: AWS_ECR_BACKEND_REPOSITORY
+          - name: web
+            context: octaclin-web
+            repository_secret: AWS_ECR_WEB_REPOSITORY
+          - name: ia-service
+            context: octaclin-ai-service
+            repository_secret: AWS_ECR_AI_REPOSITORY
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push
+        run: |
+          REPOSITORY="${{ secrets[matrix.service.repository_secret] }}"
+          docker build -t "$REPOSITORY:${{ inputs.image_tag }}" "${{ matrix.service.context }}"
+          docker push "$REPOSITORY:${{ inputs.image_tag }}"
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Force ECS deployment
+        run: |
+          aws ecs update-service --cluster "${{ secrets.AWS_ECS_CLUSTER }}" --service "${{ secrets.AWS_ECS_BACKEND_SERVICE }}" --force-new-deployment
+          aws ecs update-service --cluster "${{ secrets.AWS_ECS_CLUSTER }}" --service "${{ secrets.AWS_ECS_WEB_SERVICE }}" --force-new-deployment
+          aws ecs update-service --cluster "${{ secrets.AWS_ECS_CLUSTER }}" --service "${{ secrets.AWS_ECS_AI_SERVICE }}" --force-new-deployment

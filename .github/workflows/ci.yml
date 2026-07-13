@@ -1,0 +1,212 @@
+name: OctaClin CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: octaclin-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "9"
+
+jobs:
+  backend:
+    name: Backend NestJS
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: octaclin-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: octaclin-backend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm typecheck
+      - run: pnpm build
+      - name: Specs focadas
+        run: >
+          pnpm exec jest
+          src/modulos/comunicacoes/aplicacao/servico-comunicacoes.spec.ts
+          src/modulos/automacoes/aplicacao/servico-automacoes.spec.ts
+          src/modulos/ia/aplicacao/servico-ia.spec.ts
+          src/modulos/mobile/aplicacao/servico-mobile.spec.ts
+          src/modulos/gamificacao/aplicacao/servico-gamificacao.spec.ts
+          --runInBand
+
+  web:
+    name: Web Next.js
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: octaclin-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: octaclin-web/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm typecheck
+      - run: pnpm build
+
+  mobile:
+    name: Mobile Expo
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: octaclin-mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: octaclin-mobile/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm typecheck
+
+  ai-service:
+    name: AI FastAPI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: octaclin-ai-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - run: python -m py_compile app/main.py
+
+  demo-smoke:
+    name: Demo local smoke
+    runs-on: ubuntu-latest
+    needs: [backend, web]
+    defaults:
+      run:
+        shell: bash
+    env:
+      E2E_WEB_URL: http://127.0.0.1:3000
+      E2E_API_URL: http://127.0.0.1:3001
+      E2E_TENANT_SLUG: clinica-carla
+      E2E_EMAIL: admin@octaclin.local
+      E2E_SENHA: OctaClin@123
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: |
+            octaclin-backend/pnpm-lock.yaml
+            octaclin-web/pnpm-lock.yaml
+
+      - name: Install backend dependencies
+        working-directory: octaclin-backend
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Install web dependencies
+        working-directory: octaclin-web
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Install Playwright Chromium
+        working-directory: octaclin-web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build web
+        working-directory: octaclin-web
+        run: pnpm build
+
+      - name: Start API demo
+        run: |
+          node octaclin-backend/scripts/api-demo-local.mjs --port 3001 > api-demo.log 2>&1 &
+          echo $! > api-demo.pid
+
+      - name: Start web
+        working-directory: octaclin-web
+        run: |
+          pnpm start -- -p 3000 > ../web-next.log 2>&1 &
+          echo $! > ../web-next.pid
+
+      - name: Wait for services
+        run: |
+          for i in {1..30}; do
+            if curl -fsS "$E2E_API_URL/health" >/dev/null && curl -fsS "$E2E_WEB_URL/login" >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API log"
+          cat api-demo.log || true
+          echo "Web log"
+          cat web-next.log || true
+          exit 1
+
+      - name: Smoke UI
+        working-directory: octaclin-web
+        run: node scripts/smoke-ui-regression.mjs
+
+      - name: Smoke E2E BFF
+        working-directory: octaclin-web
+        run: node scripts/smoke-e2e-bff.mjs
+
+      - name: Smoke visual Playwright
+        working-directory: octaclin-web
+        run: pnpm smoke:visual
+
+      - name: Upload service logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-smoke-logs
+          path: |
+            api-demo.log
+            web-next.log
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            octaclin-web/playwright-report
+            octaclin-web/test-results

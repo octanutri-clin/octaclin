@@ -1,0 +1,8 @@
+node_modules
+dist
+.next
+coverage
+.expo
+__pycache__
+*.pyc
+.env
