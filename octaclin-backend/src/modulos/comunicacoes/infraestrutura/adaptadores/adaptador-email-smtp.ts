@@ -4,7 +4,10 @@ import SMTPTransport = require('nodemailer/lib/smtp-transport');
 import { ResultadoEnvioNotificacao } from '../../dominio/canal-notificacao';
 import { AdaptadorNotificacao, ContextoEnvioNotificacao } from './adaptador-notificacao';
 
-type OpcoesSmtpOctaClin = SMTPTransport.Options & { family?: 4 | 6 };
+type OpcoesSmtpOctaClin = SMTPTransport.Options & {
+  allowInternalNetworkInterfaces?: boolean;
+  family?: 4 | 6;
+};
 
 function textoConfiguracao(valor: unknown): string | undefined {
   return typeof valor === 'string' && valor.trim().length > 0 ? valor.trim() : undefined;
@@ -46,6 +49,10 @@ export class AdaptadorEmailSmtp implements AdaptadorNotificacao {
     const greetingTimeout = numeroConfiguracao(process.env.EMAIL_SMTP_GREETING_TIMEOUT_MS, 10000);
     const socketTimeout = numeroConfiguracao(process.env.EMAIL_SMTP_SOCKET_TIMEOUT_MS, 20000);
     const family = familiaIpConfiguracao(process.env.EMAIL_SMTP_FAMILY);
+    const allowInternalNetworkInterfaces = booleanoConfiguracao(
+      process.env.EMAIL_SMTP_ALLOW_INTERNAL_NETWORK_INTERFACES,
+      true
+    );
     const user =
       textoConfiguracao(contexto.canal.configuracao.smtpUsuario) ?? textoConfiguracao(process.env.EMAIL_SMTP_USUARIO);
     const pass = textoConfiguracao(contexto.canal.configuracao.smtpSenha) ?? textoConfiguracao(process.env.EMAIL_SMTP_SENHA);
@@ -76,6 +83,7 @@ export class AdaptadorEmailSmtp implements AdaptadorNotificacao {
       connectionTimeout,
       greetingTimeout,
       socketTimeout,
+      allowInternalNetworkInterfaces,
       family,
       auth: { user, pass }
     };
@@ -97,6 +105,7 @@ export class AdaptadorEmailSmtp implements AdaptadorNotificacao {
         port,
         secure,
         family,
+        allowInternalNetworkInterfaces,
         acceptedCount: resultado.accepted.length,
         rejectedCount: resultado.rejected.length
       }
