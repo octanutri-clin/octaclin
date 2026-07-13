@@ -52,7 +52,11 @@ Verify token:
   - `META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN`
 - `GET /comunicacoes/webhooks/whatsapp` com `hub.challenge`: passou e retornou o challenge.
 - `POST /comunicacoes/webhooks/whatsapp?token=...` com payload simulado: passou e retornou `recebido=true`.
+- Callback URL registrada no app Meta e campo `messages` assinado.
+- Render recebeu callbacks reais da Meta apos disparo WhatsApp:
+  - `statuses=1; messages=0; phoneNumberIds=1166704896532308`
+  - eventos repetidos de status foram aceitos pelo endpoint.
 
 ## Proximo passo
 
-Registrar a Callback URL no app Meta. Depois, assinar o campo `messages` para receber eventos de status e mensagens recebidas.
+Persistir os status recebidos da Meta na mensagem correspondente do OctaClin.

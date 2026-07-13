@@ -1,4 +1,5 @@
 import { Body, Controller, ForbiddenException, Get, Logger, Post, Query, ServiceUnavailableException } from '@nestjs/common';
+import { ServicoWebhookWhatsapp, StatusWebhookWhatsapp } from '../aplicacao/servico-webhook-whatsapp';
 
 interface MetaWebhookValor {
   messaging_product?: string;
@@ -38,6 +39,8 @@ interface MetaWebhookPayload {
 export class ControladorWebhookWhatsApp {
   private readonly logger = new Logger(ControladorWebhookWhatsApp.name);
 
+  constructor(private readonly servicoWebhookWhatsapp: ServicoWebhookWhatsapp) {}
+
   @Get()
   verificar(
     @Query('hub.mode') modo?: string,
@@ -57,24 +60,40 @@ export class ControladorWebhookWhatsApp {
   }
 
   @Post()
-  receber(@Body() payload: MetaWebhookPayload, @Query('token') tokenRecebimento?: string) {
+  async receber(@Body() payload: MetaWebhookPayload, @Query('token') tokenRecebimento?: string) {
     const tokenEsperado = process.env.META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN;
     if (tokenEsperado && tokenRecebimento !== tokenEsperado) {
       throw new ForbiddenException('Token de recebimento invalido.');
     }
 
     const eventos = this.extrairEventos(payload);
+    let persistencia = { statusesAtualizados: 0, statusesIgnorados: eventos.statuses };
     if (eventos.statuses > 0 || eventos.messages > 0) {
       this.logger.log(
         `Webhook WhatsApp recebido: statuses=${eventos.statuses}; messages=${eventos.messages}; phoneNumberIds=${eventos.phoneNumberIds.join(',')}`
       );
     }
 
-    return { recebido: true, eventos };
+    if (eventos.statusesDetalhados.length) {
+      try {
+        const resultado = await this.servicoWebhookWhatsapp.registrarStatus(eventos.statusesDetalhados);
+        persistencia = {
+          statusesAtualizados: resultado.atualizados,
+          statusesIgnorados: resultado.ignorados
+        };
+      } catch (erro) {
+        this.logger.warn(
+          `Falha ao persistir status de webhook WhatsApp: ${erro instanceof Error ? erro.message : 'erro desconhecido'}`
+        );
+      }
+    }
+
+    return { recebido: true, eventos: this.omitirDetalhes(eventos), persistencia };
   }
 
   private extrairEventos(payload: MetaWebhookPayload) {
     const phoneNumberIds = new Set<string>();
+    const statusesDetalhados: StatusWebhookWhatsapp[] = [];
     let statuses = 0;
     let messages = 0;
 
@@ -84,6 +103,7 @@ export class ControladorWebhookWhatsApp {
         if (!valor) continue;
         if (valor.metadata?.phone_number_id) phoneNumberIds.add(valor.metadata.phone_number_id);
         statuses += valor.statuses?.length ?? 0;
+        statusesDetalhados.push(...(valor.statuses ?? []));
         messages += valor.messages?.length ?? 0;
       }
     }
@@ -91,7 +111,16 @@ export class ControladorWebhookWhatsApp {
     return {
       statuses,
       messages,
-      phoneNumberIds: [...phoneNumberIds]
+      phoneNumberIds: [...phoneNumberIds],
+      statusesDetalhados
+    };
+  }
+
+  private omitirDetalhes(eventos: ReturnType<ControladorWebhookWhatsApp['extrairEventos']>) {
+    return {
+      statuses: eventos.statuses,
+      messages: eventos.messages,
+      phoneNumberIds: eventos.phoneNumberIds
     };
   }
 }

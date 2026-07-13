@@ -3,6 +3,9 @@ import { ControladorWebhookWhatsApp } from './controlador-webhook-whatsapp';
 
 describe('ControladorWebhookWhatsApp', () => {
   const ambienteOriginal = process.env;
+  const criarServico = () => ({
+    registrarStatus: jest.fn(async () => ({ atualizados: 1, ignorados: 0 }))
+  });
 
   beforeEach(() => {
     process.env = { ...ambienteOriginal };
@@ -14,32 +17,33 @@ describe('ControladorWebhookWhatsApp', () => {
 
   it('deve retornar o desafio quando o token de verificacao for valido', () => {
     process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN = 'verifica-staging';
-    const controlador = new ControladorWebhookWhatsApp();
+    const controlador = new ControladorWebhookWhatsApp(criarServico() as never);
 
     expect(controlador.verificar('subscribe', 'verifica-staging', 'desafio-123')).toBe('desafio-123');
   });
 
   it('deve bloquear verificacao quando o webhook nao estiver configurado', () => {
     delete process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN;
-    const controlador = new ControladorWebhookWhatsApp();
+    const controlador = new ControladorWebhookWhatsApp(criarServico() as never);
 
     expect(() => controlador.verificar('subscribe', 'qualquer', 'desafio-123')).toThrow(ServiceUnavailableException);
   });
 
-  it('deve bloquear recebimento quando o token de recebimento for invalido', () => {
+  it('deve bloquear recebimento quando o token de recebimento for invalido', async () => {
     process.env.META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN = 'recebe-staging';
-    const controlador = new ControladorWebhookWhatsApp();
+    const controlador = new ControladorWebhookWhatsApp(criarServico() as never);
 
-    expect(() => controlador.receber({ object: 'whatsapp_business_account', entry: [] }, 'errado')).toThrow(
+    await expect(controlador.receber({ object: 'whatsapp_business_account', entry: [] }, 'errado')).rejects.toThrow(
       ForbiddenException
     );
   });
 
-  it('deve resumir eventos de status e mensagens recebidas', () => {
+  it('deve resumir eventos de status e mensagens recebidas', async () => {
     process.env.META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN = 'recebe-staging';
-    const controlador = new ControladorWebhookWhatsApp();
+    const servico = criarServico();
+    const controlador = new ControladorWebhookWhatsApp(servico as never);
 
-    const resposta = controlador.receber(
+    const resposta = await controlador.receber(
       {
         object: 'whatsapp_business_account',
         entry: [
@@ -67,7 +71,12 @@ describe('ControladorWebhookWhatsApp', () => {
         statuses: 1,
         messages: 1,
         phoneNumberIds: ['phone-1']
+      },
+      persistencia: {
+        statusesAtualizados: 1,
+        statusesIgnorados: 0
       }
     });
+    expect(servico.registrarStatus).toHaveBeenCalledWith([{ id: 'wamid-1', status: 'sent' }]);
   });
 });

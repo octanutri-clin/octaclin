@@ -10,6 +10,7 @@ import { ProcessadorNotificacoes } from './aplicacao/processador-notificacoes';
 import { ProcessadorOutboxComunicacoes } from './aplicacao/processador-outbox-comunicacoes';
 import { criarConexaoRedis } from './aplicacao/configuracao-redis';
 import { FILA_NOTIFICACOES, ServicoComunicacoes } from './aplicacao/servico-comunicacoes';
+import { ServicoWebhookWhatsapp } from './aplicacao/servico-webhook-whatsapp';
 import { ControladorComunicacoes } from './apresentacao/controlador-comunicacoes';
 import { ControladorWebhookWhatsApp } from './apresentacao/controlador-webhook-whatsapp';
 import { AdaptadorEmailSmtp } from './infraestrutura/adaptadores/adaptador-email-smtp';
@@ -32,6 +33,7 @@ import { TemplateMensagemOrm } from './infraestrutura/template-mensagem.orm';
   controllers: [ControladorComunicacoes, ControladorWebhookWhatsApp],
   providers: [
     ServicoComunicacoes,
+    ServicoWebhookWhatsapp,
     ServicoAuditoria,
     ProcessadorNotificacoes,
     ProcessadorOutboxComunicacoes,
