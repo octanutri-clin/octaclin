@@ -39,6 +39,7 @@ export class ProcessadorNotificacoes extends WorkerHost {
         where: { id: mensagemId, tenantId }
       });
       if (!mensagem) throw new NotFoundException('Mensagem de notificacao nao encontrada.');
+      if (mensagem.status === 'enviado') return;
 
       mensagem.status = 'processando';
       await repositorioMensagens.save(mensagem);
