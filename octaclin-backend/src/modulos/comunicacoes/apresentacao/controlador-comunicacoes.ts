@@ -69,7 +69,7 @@ export class ControladorComunicacoes {
     @Body() dados: DispararMensagemDto
   ) {
     const mensagem = await this.servicoComunicacoes.dispararMensagem(usuario.tenantId, dados);
-    await this.processadorOutbox.processarPendentes();
+    await this.processadorOutbox.processarMensagemPendente(usuario.tenantId, mensagem.id);
     await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.mensagem.disparar', 'mensagem_notificacao', mensagem.id, {
       pacienteId: dados.pacienteId,
       canalId: dados.canalId,
