@@ -29,7 +29,9 @@ Persistir mensagens recebidas pelo WhatsApp e exibir um historico operacional de
 - Backend `pnpm typecheck`: passou.
 - Web `pnpm typecheck`: passou.
 - Web `pnpm build`: passou.
+- Staging web carregou `/comunicacoes` com a nova secao `Conversas WhatsApp`.
+- A secao agrupou o historico WhatsApp existente do `Paciente Demo`, ainda sem mensagens recebidas reais apos a publicacao.
 
 ## Proximo passo
 
-Publicar em staging, pedir uma resposta real no WhatsApp para o numero de teste e validar se a nova secao `Conversas WhatsApp` aparece no console.
+Responder uma mensagem real no WhatsApp para o numero de teste e validar se ela aparece como `recebido` na secao `Conversas WhatsApp` e em `Mensagens recentes`.
