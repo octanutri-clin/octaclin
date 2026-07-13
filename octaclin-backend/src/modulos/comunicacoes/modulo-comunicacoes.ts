@@ -3,8 +3,10 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditoria';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
+import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ModuloAuth } from '../auth/modulo-auth';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
+import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
 import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
 import { ProcessadorNotificacoes } from './aplicacao/processador-notificacoes';
 import { ProcessadorOutboxComunicacoes } from './aplicacao/processador-outbox-comunicacoes';
@@ -26,7 +28,14 @@ import { TemplateMensagemOrm } from './infraestrutura/template-mensagem.orm';
       connection: criarConexaoRedis()
     }),
     BullModule.registerQueue({ name: FILA_NOTIFICACOES }),
-    TypeOrmModule.forFeature([CanalNotificacaoOrm, TemplateMensagemOrm, MensagemNotificacaoOrm, OutboxEventoOrm, UserActionLogOrm]),
+    TypeOrmModule.forFeature([
+      CanalNotificacaoOrm,
+      TemplateMensagemOrm,
+      MensagemNotificacaoOrm,
+      OutboxEventoOrm,
+      UserActionLogOrm,
+      PacienteOrm
+    ]),
     ModuloAuth,
     ModuloTenancy
   ],
@@ -35,6 +44,7 @@ import { TemplateMensagemOrm } from './infraestrutura/template-mensagem.orm';
     ServicoComunicacoes,
     ServicoWebhookWhatsapp,
     ServicoAuditoria,
+    CriptografiaDadosSensiveis,
     ProcessadorNotificacoes,
     ProcessadorOutboxComunicacoes,
     AdaptadorWhatsAppMeta,

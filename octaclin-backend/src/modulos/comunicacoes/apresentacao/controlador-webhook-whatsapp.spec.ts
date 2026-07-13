@@ -4,7 +4,8 @@ import { ControladorWebhookWhatsApp } from './controlador-webhook-whatsapp';
 describe('ControladorWebhookWhatsApp', () => {
   const ambienteOriginal = process.env;
   const criarServico = () => ({
-    registrarStatus: jest.fn(async () => ({ atualizados: 1, ignorados: 0 }))
+    registrarStatus: jest.fn(async () => ({ atualizados: 1, ignorados: 0 })),
+    registrarMensagensRecebidas: jest.fn(async () => ({ criadas: 1, ignoradas: 0 }))
   });
 
   beforeEach(() => {
@@ -55,7 +56,7 @@ describe('ControladorWebhookWhatsApp', () => {
                 value: {
                   metadata: { phone_number_id: 'phone-1' },
                   statuses: [{ id: 'wamid-1', status: 'sent' }],
-                  messages: [{ id: 'wamid-in-1', from: '5511999999999', type: 'text' }]
+                  messages: [{ id: 'wamid-in-1', from: '5511999999999', type: 'text', text: { body: 'Oi' } }]
                 }
               }
             ]
@@ -74,9 +75,17 @@ describe('ControladorWebhookWhatsApp', () => {
       },
       persistencia: {
         statusesAtualizados: 1,
-        statusesIgnorados: 0
+        statusesIgnorados: 0,
+        mensagensCriadas: 1,
+        mensagensIgnoradas: 0
       }
     });
     expect(servico.registrarStatus).toHaveBeenCalledWith([{ id: 'wamid-1', status: 'sent' }]);
+    expect(servico.registrarMensagensRecebidas).toHaveBeenCalledWith([
+      {
+        phoneNumberId: 'phone-1',
+        mensagem: { id: 'wamid-in-1', from: '5511999999999', type: 'text', text: { body: 'Oi' } }
+      }
+    ]);
   });
 });

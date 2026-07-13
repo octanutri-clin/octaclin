@@ -48,6 +48,17 @@ interface FormularioMensagem {
   observacao: string;
 }
 
+interface ConversaWhatsapp {
+  id: string;
+  titulo: string;
+  contato: string;
+  ultimaMensagem: string;
+  ultimaData?: string;
+  total: number;
+  recebidas: number;
+  enviadas: number;
+}
+
 const canalInicial: FormularioCanal = {
   tipo: 'email',
   nome: 'Email transacional',
@@ -104,6 +115,10 @@ function obterUltimoStatusMeta(payload: Record<string, unknown>): UltimoStatusMe
   return status as UltimoStatusMeta;
 }
 
+function obterDirecaoMensagem(mensagem: MensagemNotificacaoApi) {
+  return obterTextoPayload(mensagem.payload, 'direcao') ?? (mensagem.status === 'recebido' ? 'recebida' : 'enviada');
+}
+
 function formatarStatusMeta(status?: string) {
   if (!status) return 'Aguardando Meta';
 
@@ -140,10 +155,12 @@ function obterCanal(canais: CanalNotificacaoApi[], mensagem: MensagemNotificacao
 }
 
 function nomeTemplate(templates: TemplateMensagemApi[], mensagem: MensagemNotificacaoApi) {
+  if (obterDirecaoMensagem(mensagem) === 'recebida') return 'Mensagem recebida';
   return templates.find((template) => template.id === mensagem.templateId)?.nome ?? 'Template removido';
 }
 
 function corStatusMensagem(status: MensagemNotificacaoApi['status']) {
+  if (status === 'recebido') return 'border-[#c6d8bf] bg-[#f2f8ef] text-[#3d6730]';
   if (status === 'enviado') return 'border-[#b8dfc1] bg-[#eef7f0] text-[#245b33]';
   if (status === 'falhou') return 'border-[#f1b3b3] bg-[#fff0f0] text-[#8c2f2f]';
   if (status === 'processando') return 'border-[#bcd4f6] bg-[#eef5ff] text-[#2d5282]';
@@ -155,6 +172,76 @@ function corStatusMeta(status?: string) {
   if (status === 'failed') return 'border-[#f1b3b3] bg-[#fff0f0] text-[#8c2f2f]';
   if (status === 'sent' || status === 'accepted') return 'border-[#bcd4f6] bg-[#eef5ff] text-[#2d5282]';
   return 'border-linha bg-white text-[#596273]';
+}
+
+function obterContatoMensagem(mensagem: MensagemNotificacaoApi, ultimoStatusMeta?: UltimoStatusMeta) {
+  if (obterDirecaoMensagem(mensagem) === 'recebida') {
+    return obterTextoPayload(mensagem.payload, 'remetente') ?? 'Remetente nao informado';
+  }
+
+  return obterTextoPayload(mensagem.payload, 'destino') ?? ultimoStatusMeta?.recipientId ?? 'Destino nao informado';
+}
+
+function resumirMensagem(mensagem: MensagemNotificacaoApi, templates: TemplateMensagemApi[]) {
+  if (obterDirecaoMensagem(mensagem) === 'recebida') {
+    return obterTextoPayload(mensagem.payload, 'texto') ?? obterTextoPayload(mensagem.payload, 'tipo') ?? 'Mensagem recebida';
+  }
+
+  return obterTextoPayload(mensagem.payload, 'observacao') ?? nomeTemplate(templates, mensagem);
+}
+
+function nomePaciente(pacientes: PacienteResumo[], pacienteId?: string) {
+  return pacientes.find((paciente) => paciente.id === pacienteId)?.nome;
+}
+
+function montarConversasWhatsapp(
+  mensagens: MensagemNotificacaoApi[],
+  canais: CanalNotificacaoApi[],
+  templates: TemplateMensagemApi[],
+  pacientes: PacienteResumo[]
+): ConversaWhatsapp[] {
+  const grupos = new Map<string, ConversaWhatsapp & { ultimaOrdenacao: number }>();
+
+  for (const mensagem of mensagens) {
+    const canal = obterCanal(canais, mensagem);
+    if (canal?.tipo !== 'whatsapp' && mensagem.payload.origem !== 'whatsapp') continue;
+
+    const ultimoStatusMeta = obterUltimoStatusMeta(mensagem.payload);
+    const contato = obterContatoMensagem(mensagem, ultimoStatusMeta);
+    const chave = mensagem.pacienteId ?? contato;
+    const dataOrdenacao = new Date(mensagem.criadoEm).getTime();
+    const conversa = grupos.get(chave);
+    const recebida = obterDirecaoMensagem(mensagem) === 'recebida';
+    const titulo = nomePaciente(pacientes, mensagem.pacienteId) ?? (recebida ? 'Contato WhatsApp' : 'Paciente sem vinculo');
+
+    if (!conversa) {
+      grupos.set(chave, {
+        id: chave,
+        titulo,
+        contato,
+        ultimaMensagem: resumirMensagem(mensagem, templates),
+        ultimaData: formatarDataIso(mensagem.criadoEm),
+        total: 1,
+        recebidas: recebida ? 1 : 0,
+        enviadas: recebida ? 0 : 1,
+        ultimaOrdenacao: dataOrdenacao
+      });
+      continue;
+    }
+
+    conversa.total += 1;
+    conversa.recebidas += recebida ? 1 : 0;
+    conversa.enviadas += recebida ? 0 : 1;
+    if (dataOrdenacao > conversa.ultimaOrdenacao) {
+      conversa.ultimaMensagem = resumirMensagem(mensagem, templates);
+      conversa.ultimaData = formatarDataIso(mensagem.criadoEm);
+      conversa.ultimaOrdenacao = dataOrdenacao;
+    }
+  }
+
+  return [...grupos.values()]
+    .sort((a, b) => b.ultimaOrdenacao - a.ultimaOrdenacao)
+    .map(({ ultimaOrdenacao: _ultimaOrdenacao, ...conversa }) => conversa);
 }
 
 export function PainelComunicacoes() {
@@ -181,6 +268,10 @@ export function PainelComunicacoes() {
   const templateMensagemSelecionado = useMemo(
     () => templates.find((template) => template.id === formularioMensagem.templateId),
     [formularioMensagem.templateId, templates]
+  );
+  const conversasWhatsapp = useMemo(
+    () => montarConversasWhatsapp(mensagens, canais, templates, pacientes?.itens ?? []),
+    [canais, mensagens, pacientes?.itens, templates]
   );
 
   async function carregar() {
@@ -575,6 +666,33 @@ export function PainelComunicacoes() {
 
       <section className="rounded-lg border border-linha bg-white">
         <div className="border-b border-linha px-4 py-3">
+          <h3 className="text-sm font-semibold">Conversas WhatsApp</h3>
+        </div>
+        <div className="grid gap-0 divide-y divide-linha">
+          {conversasWhatsapp.length ? (
+            conversasWhatsapp.map((conversa) => (
+              <div key={conversa.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[1fr_160px_160px] md:items-center">
+                <div className="min-w-0">
+                  <strong className="block truncate">{conversa.titulo}</strong>
+                  <p className="mt-1 truncate text-xs text-[#596273]">{conversa.contato}</p>
+                  <p className="mt-1 truncate text-xs text-[#596273]">{conversa.ultimaMensagem}</p>
+                </div>
+                <span className="w-fit rounded-sm border border-[#c6d8bf] bg-[#f2f8ef] px-2 py-1 text-xs font-semibold text-[#3d6730]">
+                  {conversa.recebidas} recebidas
+                </span>
+                <span className="text-xs font-medium text-[#596273]">
+                  {conversa.enviadas} enviadas{conversa.ultimaData ? `, ultima ${conversa.ultimaData}` : ''}
+                </span>
+              </div>
+            ))
+          ) : (
+            <EstadoVazio titulo="Nenhuma conversa WhatsApp carregada." />
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-linha bg-white">
+        <div className="border-b border-linha px-4 py-3">
           <h3 className="text-sm font-semibold">Mensagens recentes</h3>
         </div>
         <div className="max-h-[420px] divide-y divide-linha overflow-auto">
@@ -582,7 +700,8 @@ export function PainelComunicacoes() {
             mensagens.map((mensagem) => {
               const canalMensagem = obterCanal(canais, mensagem);
               const ultimoStatusMeta = obterUltimoStatusMeta(mensagem.payload);
-              const destino = obterTextoPayload(mensagem.payload, 'destino') ?? ultimoStatusMeta?.recipientId ?? 'Destino nao informado';
+              const direcao = obterDirecaoMensagem(mensagem);
+              const destino = obterContatoMensagem(mensagem, ultimoStatusMeta);
               const criadoEm = formatarDataIso(mensagem.criadoEm);
               const enviadoEm = formatarDataIso(mensagem.enviadoEm);
 
@@ -597,8 +716,11 @@ export function PainelComunicacoes() {
                     </div>
                     <p className="mt-1 truncate text-xs text-[#596273]">{destino}</p>
                     <p className="mt-1 truncate text-xs text-[#596273]">
-                      Criada {criadoEm ?? 'sem data'}{enviadoEm ? `, enviada ${enviadoEm}` : ''}
+                      {direcao === 'recebida' ? 'Recebida' : 'Criada'} {criadoEm ?? 'sem data'}{enviadoEm ? `, enviada ${enviadoEm}` : ''}
                     </p>
+                    {direcao === 'recebida' ? (
+                      <p className="mt-1 break-words text-xs text-[#596273]">{resumirMensagem(mensagem, templates)}</p>
+                    ) : null}
                     {mensagem.erro ? <p className="mt-1 break-words text-xs font-medium text-[#8c2f2f]">{mensagem.erro}</p> : null}
                   </div>
                   <span
@@ -606,11 +728,15 @@ export function PainelComunicacoes() {
                   >
                     {mensagem.status}
                   </span>
-                  {canalMensagem?.tipo === 'whatsapp' ? (
+                  {canalMensagem?.tipo === 'whatsapp' && direcao !== 'recebida' ? (
                     <span
                       className={`w-fit rounded-sm border px-2 py-1 text-xs font-semibold ${corStatusMeta(ultimoStatusMeta?.status)}`}
                     >
                       Meta: {formatarStatusMeta(ultimoStatusMeta?.status)}
+                    </span>
+                  ) : direcao === 'recebida' ? (
+                    <span className="w-fit rounded-sm border border-[#c6d8bf] bg-[#f2f8ef] px-2 py-1 text-xs font-semibold text-[#3d6730]">
+                      Entrada
                     </span>
                   ) : (
                     <span className="w-fit rounded-sm border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">

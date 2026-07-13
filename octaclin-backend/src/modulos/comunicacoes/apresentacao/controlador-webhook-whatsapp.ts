@@ -1,5 +1,9 @@
 import { Body, Controller, ForbiddenException, Get, Logger, Post, Query, ServiceUnavailableException } from '@nestjs/common';
-import { ServicoWebhookWhatsapp, StatusWebhookWhatsapp } from '../aplicacao/servico-webhook-whatsapp';
+import {
+  MensagemRecebidaWebhookWhatsapp,
+  ServicoWebhookWhatsapp,
+  StatusWebhookWhatsapp
+} from '../aplicacao/servico-webhook-whatsapp';
 
 interface MetaWebhookValor {
   messaging_product?: string;
@@ -19,6 +23,9 @@ interface MetaWebhookValor {
     from?: string;
     timestamp?: string;
     type?: string;
+    text?: {
+      body?: string;
+    };
   }>;
 }
 
@@ -67,7 +74,12 @@ export class ControladorWebhookWhatsApp {
     }
 
     const eventos = this.extrairEventos(payload);
-    let persistencia = { statusesAtualizados: 0, statusesIgnorados: eventos.statuses };
+    let persistencia = {
+      statusesAtualizados: 0,
+      statusesIgnorados: eventos.statuses,
+      mensagensCriadas: 0,
+      mensagensIgnoradas: eventos.messages
+    };
     if (eventos.statuses > 0 || eventos.messages > 0) {
       this.logger.log(
         `Webhook WhatsApp recebido: statuses=${eventos.statuses}; messages=${eventos.messages}; phoneNumberIds=${eventos.phoneNumberIds.join(',')}`
@@ -79,11 +91,28 @@ export class ControladorWebhookWhatsApp {
         const resultado = await this.servicoWebhookWhatsapp.registrarStatus(eventos.statusesDetalhados);
         persistencia = {
           statusesAtualizados: resultado.atualizados,
-          statusesIgnorados: resultado.ignorados
+          statusesIgnorados: resultado.ignorados,
+          mensagensCriadas: persistencia.mensagensCriadas,
+          mensagensIgnoradas: persistencia.mensagensIgnoradas
         };
       } catch (erro) {
         this.logger.warn(
           `Falha ao persistir status de webhook WhatsApp: ${erro instanceof Error ? erro.message : 'erro desconhecido'}`
+        );
+      }
+    }
+
+    if (eventos.mensagensDetalhadas.length) {
+      try {
+        const resultado = await this.servicoWebhookWhatsapp.registrarMensagensRecebidas(eventos.mensagensDetalhadas);
+        persistencia = {
+          ...persistencia,
+          mensagensCriadas: resultado.criadas,
+          mensagensIgnoradas: resultado.ignoradas
+        };
+      } catch (erro) {
+        this.logger.warn(
+          `Falha ao persistir mensagens recebidas do WhatsApp: ${erro instanceof Error ? erro.message : 'erro desconhecido'}`
         );
       }
     }
@@ -94,6 +123,7 @@ export class ControladorWebhookWhatsApp {
   private extrairEventos(payload: MetaWebhookPayload) {
     const phoneNumberIds = new Set<string>();
     const statusesDetalhados: StatusWebhookWhatsapp[] = [];
+    const mensagensDetalhadas: MensagemRecebidaWebhookWhatsapp[] = [];
     let statuses = 0;
     let messages = 0;
 
@@ -105,6 +135,12 @@ export class ControladorWebhookWhatsApp {
         statuses += valor.statuses?.length ?? 0;
         statusesDetalhados.push(...(valor.statuses ?? []));
         messages += valor.messages?.length ?? 0;
+        mensagensDetalhadas.push(
+          ...(valor.messages ?? []).map((mensagem) => ({
+            phoneNumberId: valor.metadata?.phone_number_id,
+            mensagem
+          }))
+        );
       }
     }
 
@@ -112,7 +148,8 @@ export class ControladorWebhookWhatsApp {
       statuses,
       messages,
       phoneNumberIds: [...phoneNumberIds],
-      statusesDetalhados
+      statusesDetalhados,
+      mensagensDetalhadas
     };
   }
 

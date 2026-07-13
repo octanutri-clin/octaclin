@@ -1,7 +1,10 @@
 import { ServicoWebhookWhatsapp } from './servico-webhook-whatsapp';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
+import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 
 describe('ServicoWebhookWhatsapp', () => {
-  function criarServico(mensagem?: Record<string, unknown>) {
+  function criarServico(mensagem?: Record<string, unknown>, opcoes?: { mensagemExistente?: boolean }) {
     const entidadeMensagem: { status: string; payload: Record<string, unknown>; erro?: string } | null = mensagem
       ? {
           status: 'enviado',
@@ -12,10 +15,32 @@ describe('ServicoWebhookWhatsapp', () => {
     const repositorioMensagens = {
       createQueryBuilder: jest.fn(() => ({
         where: jest.fn(() => ({
-          getOne: jest.fn(async () => entidadeMensagem)
+          getOne: jest.fn(async () => (opcoes?.mensagemExistente ? { id: 'mensagem-existente' } : entidadeMensagem))
         }))
       })),
+      create: jest.fn((registro) => registro),
       save: jest.fn(async (registro) => registro)
+    };
+    const repositorioCanais = {
+      find: jest.fn(async () => [
+        {
+          id: 'canal-whatsapp',
+          tenantId: 'tenant-1',
+          tipo: 'whatsapp',
+          nome: 'WhatsApp',
+          ativo: true,
+          configuracao: { phoneNumberId: 'phone-1' }
+        }
+      ])
+    };
+    const repositorioPacientes = {
+      find: jest.fn(async () => [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          contatoCriptografado: Buffer.from('5511999999999')
+        }
+      ])
     };
 
     const fonteDados = {
@@ -24,18 +49,30 @@ describe('ServicoWebhookWhatsapp', () => {
       }))
     };
 
+    const criptografia = {
+      descriptografar: jest.fn((valor: Buffer) => valor.toString())
+    };
+
     const executorTenant = {
       executar: jest.fn(async (_tenantId, operacao) =>
         operacao({
-          getRepository: jest.fn(() => repositorioMensagens)
+          getRepository: jest.fn((entidade) => {
+            if (entidade === MensagemNotificacaoOrm) return repositorioMensagens;
+            if (entidade === CanalNotificacaoOrm) return repositorioCanais;
+            if (entidade === PacienteOrm) return repositorioPacientes;
+            return repositorioMensagens;
+          })
         })
       )
     };
 
     return {
-      servico: new ServicoWebhookWhatsapp(fonteDados as never, executorTenant as never),
+      servico: new ServicoWebhookWhatsapp(fonteDados as never, executorTenant as never, criptografia as never),
       entidadeMensagem,
       repositorioMensagens,
+      repositorioCanais,
+      repositorioPacientes,
+      criptografia,
       executorTenant
     };
   }
@@ -84,6 +121,60 @@ describe('ServicoWebhookWhatsapp', () => {
       atualizados: 0,
       ignorados: 1
     });
+    expect(repositorioMensagens.save).not.toHaveBeenCalled();
+  });
+
+  it('deve persistir mensagem recebida do WhatsApp e associar paciente por contato', async () => {
+    const { servico, repositorioMensagens } = criarServico();
+
+    await expect(
+      servico.registrarMensagensRecebidas([
+        {
+          phoneNumberId: 'phone-1',
+          mensagem: {
+            id: 'wamid-in-1',
+            from: '5511999999999',
+            timestamp: '1780000000',
+            type: 'text',
+            text: { body: 'Oi, preciso remarcar.' }
+          }
+        }
+      ])
+    ).resolves.toEqual({ criadas: 1, ignoradas: 0 });
+
+    expect(repositorioMensagens.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        canalId: 'canal-whatsapp',
+        status: 'recebido',
+        payload: expect.objectContaining({
+          direcao: 'recebida',
+          origem: 'whatsapp',
+          idExterno: 'wamid-in-1',
+          remetente: '5511999999999',
+          phoneNumberId: 'phone-1',
+          tipo: 'text',
+          texto: 'Oi, preciso remarcar.',
+          timestamp: '1780000000'
+        })
+      })
+    );
+    expect(repositorioMensagens.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('deve ignorar mensagem recebida duplicada pelo id externo', async () => {
+    const { servico, repositorioMensagens } = criarServico(undefined, { mensagemExistente: true });
+
+    await expect(
+      servico.registrarMensagensRecebidas([
+        {
+          phoneNumberId: 'phone-1',
+          mensagem: { id: 'wamid-in-1', from: '5511999999999', type: 'text' }
+        }
+      ])
+    ).resolves.toEqual({ criadas: 0, ignoradas: 1 });
+
     expect(repositorioMensagens.save).not.toHaveBeenCalled();
   });
 });
