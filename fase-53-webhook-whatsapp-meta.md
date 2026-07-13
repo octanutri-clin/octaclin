@@ -45,6 +45,14 @@ Verify token:
 - `pnpm test -- --runInBand controlador-webhook-whatsapp.spec.ts`: passou.
 - `pnpm typecheck`: passou.
 
+## Validacao em staging
+
+- Variaveis configuradas no Render:
+  - `META_WHATSAPP_WEBHOOK_VERIFY_TOKEN`
+  - `META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN`
+- `GET /comunicacoes/webhooks/whatsapp` com `hub.challenge`: passou e retornou o challenge.
+- `POST /comunicacoes/webhooks/whatsapp?token=...` com payload simulado: passou e retornou `recebido=true`.
+
 ## Proximo passo
 
-Configurar as variaveis no Render, publicar o backend e registrar a Callback URL no app Meta. Depois, assinar o campo `messages` para receber eventos de status e mensagens recebidas.
+Registrar a Callback URL no app Meta. Depois, assinar o campo `messages` para receber eventos de status e mensagens recebidas.
