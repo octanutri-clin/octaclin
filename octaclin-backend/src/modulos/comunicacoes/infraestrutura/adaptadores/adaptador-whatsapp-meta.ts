@@ -5,7 +5,7 @@ import { AdaptadorNotificacao, ContextoEnvioNotificacao } from './adaptador-noti
 @Injectable()
 export class AdaptadorWhatsAppMeta implements AdaptadorNotificacao {
   async enviar(contexto: ContextoEnvioNotificacao): Promise<ResultadoEnvioNotificacao> {
-    const token = String(contexto.canal.configuracao.token ?? process.env.META_WHATSAPP_TOKEN ?? '');
+    const token = String(process.env.META_WHATSAPP_TOKEN ?? contexto.canal.configuracao.token ?? '');
     const phoneNumberId = String(
       contexto.canal.configuracao.phoneNumberId ?? process.env.META_WHATSAPP_PHONE_NUMBER_ID ?? ''
     );

@@ -84,6 +84,17 @@ Depois do deploy:
 
 Conclusao: a troca operacional no Render esta validada, mas o token gerado ainda nao esta valido para o app/ativo WhatsApp usado pelo OctaClin.
 
+### Segunda tentativa em staging - 2026-07-13
+
+- Novo token gerado manualmente foi salvo em `META_WHATSAPP_TOKEN` no Render.
+- Chamada direta para a Graph API com o novo token foi aceita pela Meta, confirmando que o token e valido.
+- O envio pelo OctaClin continuou falhando com `OAuthException`, codigo `190`.
+- Causa encontrada no backend: o adaptador WhatsApp priorizava `canal.configuracao.token` antes de `META_WHATSAPP_TOKEN`; como o canal de staging tinha token antigo salvo no banco, a variavel nova do Render era ignorada.
+- Correcao aplicada: `META_WHATSAPP_TOKEN` passa a ter precedencia; `canal.configuracao.token` fica apenas como fallback.
+- Validacao local:
+  - `pnpm exec jest --runInBand src/modulos/comunicacoes/infraestrutura/adaptadores/adaptador-whatsapp-meta.spec.ts`: passou.
+  - Backend `pnpm typecheck`: passou.
+
 ## Rollback
 
 Se o novo token falhar:
@@ -114,4 +125,4 @@ Para a proxima tentativa, gerar o token novamente conferindo estes pontos antes 
 
 ## Status
 
-Bloqueada por token Meta invalido: Render aceitou a troca e o backend subiu, mas a Meta retornou erro de autenticacao no envio real. Proximo passo e gerar novo token permanente com o System User associado ao app e ao WhatsApp Business Account corretos.
+Em correcao: token novo foi validado diretamente na Graph API, e o backend foi ajustado para priorizar `META_WHATSAPP_TOKEN` em vez do token antigo salvo no canal. Proximo passo e publicar em staging e repetir o envio pelo OctaClin.
