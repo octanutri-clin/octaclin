@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Bell, CheckCircle2, Mail, MessageCircle, Plus, RefreshCcw, Save, Send } from 'lucide-react';
+import { Bell, CheckCircle2, Inbox, Mail, MessageCircle, Plus, RefreshCcw, Reply, Save, Send } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
@@ -52,11 +52,14 @@ interface ConversaWhatsapp {
   id: string;
   titulo: string;
   contato: string;
+  pacienteId?: string;
   ultimaMensagem: string;
   ultimaData?: string;
   total: number;
   recebidas: number;
   enviadas: number;
+  pendentes: number;
+  mensagens: MensagemNotificacaoApi[];
 }
 
 const canalInicial: FormularioCanal = {
@@ -146,6 +149,12 @@ function formatarDataIso(data?: string) {
   }).format(dataFormatada);
 }
 
+function obterTimestamp(data?: string) {
+  if (!data) return 0;
+  const timestamp = new Date(data).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
 function nomeCanal(canais: CanalNotificacaoApi[], mensagem: MensagemNotificacaoApi) {
   return canais.find((canal) => canal.id === mensagem.canalId)?.nome ?? 'Canal removido';
 }
@@ -219,11 +228,14 @@ function montarConversasWhatsapp(
         id: chave,
         titulo,
         contato,
+        pacienteId: mensagem.pacienteId,
         ultimaMensagem: resumirMensagem(mensagem, templates),
         ultimaData: formatarDataIso(mensagem.criadoEm),
         total: 1,
         recebidas: recebida ? 1 : 0,
         enviadas: recebida ? 0 : 1,
+        pendentes: mensagem.status === 'falhou' ? 1 : 0,
+        mensagens: [mensagem],
         ultimaOrdenacao: dataOrdenacao
       });
       continue;
@@ -232,6 +244,9 @@ function montarConversasWhatsapp(
     conversa.total += 1;
     conversa.recebidas += recebida ? 1 : 0;
     conversa.enviadas += recebida ? 0 : 1;
+    conversa.pendentes += mensagem.status === 'falhou' ? 1 : 0;
+    conversa.mensagens.push(mensagem);
+    if (!conversa.pacienteId && mensagem.pacienteId) conversa.pacienteId = mensagem.pacienteId;
     if (dataOrdenacao > conversa.ultimaOrdenacao) {
       conversa.ultimaMensagem = resumirMensagem(mensagem, templates);
       conversa.ultimaData = formatarDataIso(mensagem.criadoEm);
@@ -241,7 +256,10 @@ function montarConversasWhatsapp(
 
   return [...grupos.values()]
     .sort((a, b) => b.ultimaOrdenacao - a.ultimaOrdenacao)
-    .map(({ ultimaOrdenacao: _ultimaOrdenacao, ...conversa }) => conversa);
+    .map(({ ultimaOrdenacao: _ultimaOrdenacao, ...conversa }) => ({
+      ...conversa,
+      mensagens: conversa.mensagens.sort((a, b) => obterTimestamp(a.criadoEm) - obterTimestamp(b.criadoEm))
+    }));
 }
 
 export function PainelComunicacoes() {
@@ -256,6 +274,8 @@ export function PainelComunicacoes() {
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [conversaSelecionadaId, setConversaSelecionadaId] = useState<string | null>(null);
+  const [filtroConversas, setFiltroConversas] = useState<'todas' | 'recebidas' | 'falhas'>('todas');
 
   const templatesCompativeis = useMemo(
     () => templates.filter((template) => template.canal === canais.find((canal) => canal.id === formularioMensagem.canalId)?.tipo),
@@ -272,6 +292,15 @@ export function PainelComunicacoes() {
   const conversasWhatsapp = useMemo(
     () => montarConversasWhatsapp(mensagens, canais, templates, pacientes?.itens ?? []),
     [canais, mensagens, pacientes?.itens, templates]
+  );
+  const conversasFiltradas = useMemo(() => {
+    if (filtroConversas === 'recebidas') return conversasWhatsapp.filter((conversa) => conversa.recebidas > 0);
+    if (filtroConversas === 'falhas') return conversasWhatsapp.filter((conversa) => conversa.pendentes > 0);
+    return conversasWhatsapp;
+  }, [conversasWhatsapp, filtroConversas]);
+  const conversaSelecionada = useMemo(
+    () => conversasWhatsapp.find((conversa) => conversa.id === conversaSelecionadaId) ?? conversasFiltradas[0],
+    [conversaSelecionadaId, conversasFiltradas, conversasWhatsapp]
   );
 
   async function carregar() {
@@ -362,7 +391,7 @@ export function PainelComunicacoes() {
           observacao: formularioMensagem.observacao
         }
       });
-      setMensagens((atuais) => [mensagem, ...atuais].slice(0, 50));
+      setMensagens((atuais) => [mensagem, ...atuais].slice(0, 200));
       setSucesso(`Mensagem criada com status ${mensagem.status}.`);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao disparar mensagem.');
@@ -371,9 +400,33 @@ export function PainelComunicacoes() {
     }
   }
 
+  function prepararRespostaWhatsapp(conversa: ConversaWhatsapp) {
+    const canalWhatsapp = canais.find((canal) => canal.tipo === 'whatsapp' && canal.ativo);
+    const templateWhatsapp =
+      templates.find((template) => template.canal === 'whatsapp' && template.aprovado && template.codigoExterno === 'hello_world') ??
+      templates.find((template) => template.canal === 'whatsapp' && template.aprovado);
+    const pacienteId = conversa.pacienteId ?? formularioMensagem.pacienteId;
+
+    setFormularioMensagem((atual) => ({
+      ...atual,
+      pacienteId,
+      canalId: canalWhatsapp?.id ?? atual.canalId,
+      templateId: templateWhatsapp?.id ?? atual.templateId,
+      destino: conversa.contato,
+      observacao: `Resposta manual para ${conversa.titulo}.`
+    }));
+    setSucesso('Conversa preparada no disparo manual.');
+  }
+
   useEffect(() => {
     void carregar();
   }, []);
+
+  useEffect(() => {
+    if (!conversaSelecionadaId && conversasWhatsapp[0]) {
+      setConversaSelecionadaId(conversasWhatsapp[0].id);
+    }
+  }, [conversaSelecionadaId, conversasWhatsapp]);
 
   useEffect(() => {
     if (!templatesCompativeis.some((template) => template.id === formularioMensagem.templateId)) {
@@ -665,30 +718,116 @@ export function PainelComunicacoes() {
       </section>
 
       <section className="rounded-lg border border-linha bg-white">
-        <div className="border-b border-linha px-4 py-3">
-          <h3 className="text-sm font-semibold">Conversas WhatsApp</h3>
+        <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2">
+            <Inbox size={18} className="text-primaria" />
+            <div>
+              <h3 className="text-sm font-semibold">Inbox WhatsApp</h3>
+              <p className="text-xs text-[#596273]">
+                {conversasWhatsapp.length} conversas, {mensagens.filter((mensagem) => obterDirecaoMensagem(mensagem) === 'recebida').length} entradas
+              </p>
+            </div>
+          </div>
+          <div className="flex rounded-md border border-linha bg-[#f7f8fa] p-1 text-xs font-semibold text-[#596273]">
+            {(['todas', 'recebidas', 'falhas'] as const).map((filtro) => (
+              <button
+                key={filtro}
+                type="button"
+                onClick={() => setFiltroConversas(filtro)}
+                className={`rounded px-3 py-1.5 ${filtroConversas === filtro ? 'bg-white text-tinta shadow-sm' : ''}`}
+              >
+                {filtro === 'todas' ? 'Todas' : filtro === 'recebidas' ? 'Com entrada' : 'Com falha'}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="grid gap-0 divide-y divide-linha">
-          {conversasWhatsapp.length ? (
-            conversasWhatsapp.map((conversa) => (
-              <div key={conversa.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[1fr_160px_160px] md:items-center">
-                <div className="min-w-0">
-                  <strong className="block truncate">{conversa.titulo}</strong>
-                  <p className="mt-1 truncate text-xs text-[#596273]">{conversa.contato}</p>
-                  <p className="mt-1 truncate text-xs text-[#596273]">{conversa.ultimaMensagem}</p>
-                </div>
-                <span className="w-fit rounded-sm border border-[#c6d8bf] bg-[#f2f8ef] px-2 py-1 text-xs font-semibold text-[#3d6730]">
-                  {conversa.recebidas} recebidas
-                </span>
-                <span className="text-xs font-medium text-[#596273]">
-                  {conversa.enviadas} enviadas{conversa.ultimaData ? `, ultima ${conversa.ultimaData}` : ''}
-                </span>
-              </div>
-            ))
-          ) : (
-            <EstadoVazio titulo="Nenhuma conversa WhatsApp carregada." />
-          )}
-        </div>
+        {conversasFiltradas.length ? (
+          <div className="grid min-h-[420px] lg:grid-cols-[360px_1fr]">
+            <div className="divide-y divide-linha border-b border-linha lg:border-b-0 lg:border-r">
+              {conversasFiltradas.map((conversa) => {
+                const selecionada = conversaSelecionada?.id === conversa.id;
+                return (
+                  <button
+                    key={conversa.id}
+                    type="button"
+                    onClick={() => setConversaSelecionadaId(conversa.id)}
+                    className={`grid w-full gap-2 px-4 py-3 text-left text-sm ${selecionada ? 'bg-[#eef7f0]' : 'bg-white hover:bg-[#f7f8fa]'}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <strong className="block truncate">{conversa.titulo}</strong>
+                        <p className="mt-1 truncate text-xs text-[#596273]">{conversa.contato}</p>
+                      </div>
+                      <span className="shrink-0 text-xs font-medium text-[#596273]">{conversa.ultimaData ?? 'sem data'}</span>
+                    </div>
+                    <p className="truncate text-xs text-[#596273]">{conversa.ultimaMensagem}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="rounded-sm border border-[#c6d8bf] bg-[#f2f8ef] px-2 py-1 text-xs font-semibold text-[#3d6730]">
+                        {conversa.recebidas} recebidas
+                      </span>
+                      <span className="rounded-sm border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                        {conversa.enviadas} enviadas
+                      </span>
+                      {conversa.pendentes ? (
+                        <span className="rounded-sm border border-[#f1b3b3] bg-[#fff0f0] px-2 py-1 text-xs font-semibold text-[#8c2f2f]">
+                          {conversa.pendentes} falhas
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid min-h-[420px] grid-rows-[auto_1fr]">
+              {conversaSelecionada ? (
+                <>
+                  <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
+                    <div className="min-w-0">
+                      <strong className="block truncate text-sm">{conversaSelecionada.titulo}</strong>
+                      <p className="mt-1 truncate text-xs text-[#596273]">{conversaSelecionada.contato}</p>
+                    </div>
+                    <Botao type="button" onClick={() => prepararRespostaWhatsapp(conversaSelecionada)}>
+                      <Reply size={16} />
+                      Responder
+                    </Botao>
+                  </div>
+                  <div className="max-h-[520px] space-y-3 overflow-auto bg-[#f7f8fa] p-4">
+                    {conversaSelecionada.mensagens.map((mensagem) => {
+                      const recebida = obterDirecaoMensagem(mensagem) === 'recebida';
+                      const ultimoStatusMeta = obterUltimoStatusMeta(mensagem.payload);
+                      return (
+                        <div key={mensagem.id} className={`flex ${recebida ? 'justify-start' : 'justify-end'}`}>
+                          <div
+                            className={`max-w-[78%] rounded-lg border px-3 py-2 text-sm shadow-sm ${
+                              recebida ? 'border-linha bg-white' : 'border-[#c6d8bf] bg-[#eef7f0]'
+                            }`}
+                          >
+                            <p className="break-words">{resumirMensagem(mensagem, templates)}</p>
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium text-[#596273]">
+                              <span>{recebida ? 'Recebida' : 'Enviada'} {formatarDataIso(mensagem.criadoEm) ?? 'sem data'}</span>
+                              <span className={`rounded-sm border px-1.5 py-0.5 ${corStatusMensagem(mensagem.status)}`}>{mensagem.status}</span>
+                              {!recebida && ultimoStatusMeta?.status ? (
+                                <span className={`rounded-sm border px-1.5 py-0.5 ${corStatusMeta(ultimoStatusMeta.status)}`}>
+                                  Meta: {formatarStatusMeta(ultimoStatusMeta.status)}
+                                </span>
+                              ) : null}
+                            </div>
+                            {mensagem.erro ? <p className="mt-2 break-words text-xs font-medium text-[#8c2f2f]">{mensagem.erro}</p> : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <EstadoVazio titulo="Selecione uma conversa WhatsApp." />
+              )}
+            </div>
+          </div>
+        ) : (
+          <EstadoVazio titulo="Nenhuma conversa WhatsApp carregada." />
+        )}
       </section>
 
       <section className="rounded-lg border border-linha bg-white">

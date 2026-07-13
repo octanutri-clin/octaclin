@@ -64,7 +64,7 @@ export class ServicoComunicacoes {
       gerenciador.getRepository(MensagemNotificacaoOrm).find({
         where: { tenantId },
         order: { criadoEm: 'DESC' },
-        take: 50
+        take: 200
       })
     );
   }
