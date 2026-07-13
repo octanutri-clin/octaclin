@@ -120,8 +120,8 @@ jobs:
       run:
         shell: bash
     env:
-      E2E_WEB_URL: http://127.0.0.1:3000
-      E2E_API_URL: http://127.0.0.1:3001
+      E2E_WEB_URL: http://localhost:3000
+      E2E_API_URL: http://localhost:3001
       E2E_TENANT_SLUG: clinica-carla
       E2E_EMAIL: admin@octaclin.local
       E2E_SENHA: OctaClin@123
