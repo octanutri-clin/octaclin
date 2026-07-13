@@ -164,7 +164,7 @@ jobs:
       - name: Start web
         working-directory: octaclin-web
         run: |
-          pnpm start -- -p 3000 > ../web-next.log 2>&1 &
+          pnpm exec next start -p 3000 > ../web-next.log 2>&1 &
           echo $! > ../web-next.pid
 
       - name: Wait for services
