@@ -31,7 +31,14 @@ Persistir mensagens recebidas pelo WhatsApp e exibir um historico operacional de
 - Web `pnpm build`: passou.
 - Staging web carregou `/comunicacoes` com a nova secao `Conversas WhatsApp`.
 - A secao agrupou o historico WhatsApp existente do `Paciente Demo`, ainda sem mensagens recebidas reais apos a publicacao.
+- Mensagem real enviada pelo usuario para o numero de teste da Meta foi recebida no webhook e persistida:
+  - `status: recebido`
+  - `payload.direcao: recebida`
+  - `payload.origem: whatsapp`
+  - remetente `5511992362080`
+  - texto `Ola`
+- A mensagem recebida ficou sem `pacienteId` porque o contato cadastrado do paciente demo nao corresponde ao numero usado no teste.
 
 ## Proximo passo
 
-Responder uma mensagem real no WhatsApp para o numero de teste e validar se ela aparece como `recebido` na secao `Conversas WhatsApp` e em `Mensagens recentes`.
+Vincular o telefone real ao paciente demo ou adicionar associacao por conversas de saida, para que respostas do mesmo numero aparecam automaticamente no paciente correto.
