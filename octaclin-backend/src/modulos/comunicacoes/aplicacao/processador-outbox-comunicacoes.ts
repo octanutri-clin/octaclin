@@ -37,14 +37,18 @@ export class ProcessadorOutboxComunicacoes {
             evento.tentativas += 1;
             await repositorio.save(evento);
             const mensagemId = String(evento.payload.mensagemId);
-            try {
-              await this.servicoComunicacoes.publicarEventoNotificacao(tenant.id, mensagemId);
-            } catch (erroPublicacao) {
-              this.logger.warn(
-                `Fila de notificacoes indisponivel para outbox ${evento.id}; processando envio diretamente. ` +
-                  `Causa: ${erroPublicacao instanceof Error ? erroPublicacao.message : 'falha desconhecida'}`
-              );
+            if (this.deveProcessarDiretamente()) {
               await this.processadorNotificacoes.processarMensagem(tenant.id, mensagemId);
+            } else {
+              try {
+                await this.servicoComunicacoes.publicarEventoNotificacao(tenant.id, mensagemId);
+              } catch (erroPublicacao) {
+                this.logger.warn(
+                  `Fila de notificacoes indisponivel para outbox ${evento.id}; processando envio diretamente. ` +
+                    `Causa: ${erroPublicacao instanceof Error ? erroPublicacao.message : 'falha desconhecida'}`
+                );
+                await this.processadorNotificacoes.processarMensagem(tenant.id, mensagemId);
+              }
             }
             evento.status = 'processado';
             evento.processadoEm = new Date();
@@ -58,5 +62,9 @@ export class ProcessadorOutboxComunicacoes {
         }
       });
     }
+  }
+
+  private deveProcessarDiretamente(): boolean {
+    return !process.env.REDIS_URL && !process.env.REDIS_HOST && !process.env.REDIS_PORTA;
   }
 }
