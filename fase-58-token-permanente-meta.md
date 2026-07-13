@@ -95,6 +95,20 @@ Conclusao: a troca operacional no Render esta validada, mas o token gerado ainda
   - `pnpm exec jest --runInBand src/modulos/comunicacoes/infraestrutura/adaptadores/adaptador-whatsapp-meta.spec.ts`: passou.
   - Backend `pnpm typecheck`: passou.
 
+### Validacao final em staging - 2026-07-13
+
+- Commit `eb485da` publicado no backend staging.
+- `META_WHATSAPP_TOKEN` foi salvo novamente no Render usando edicao interativa do campo para garantir que a UI aplicasse a mudanca.
+- `GET /health` respondeu `status: ok`.
+- Disparo real pelo OctaClin criou a mensagem `a5adb39e-1eef-4f8a-864a-24dbafa32ff5`.
+- Resultado do processamento:
+  - `status: enviado`
+  - `erro: null`
+  - ID externo Meta presente
+  - `payload.ultimoStatusMeta.status: delivered`
+
+Conclusao: token permanente funcional em staging e backend usando a variavel de ambiente corretamente.
+
 ## Rollback
 
 Se o novo token falhar:
@@ -125,4 +139,4 @@ Para a proxima tentativa, gerar o token novamente conferindo estes pontos antes 
 
 ## Status
 
-Em correcao: token novo foi validado diretamente na Graph API, e o backend foi ajustado para priorizar `META_WHATSAPP_TOKEN` em vez do token antigo salvo no canal. Proximo passo e publicar em staging e repetir o envio pelo OctaClin.
+Concluida em staging: envio WhatsApp pelo OctaClin validado com token permanente salvo em `META_WHATSAPP_TOKEN`, status Meta entregue e sem erro de autenticacao.
