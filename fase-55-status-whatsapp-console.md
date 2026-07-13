@@ -12,7 +12,8 @@ Exibir no console de Comunicacoes o status de entrega retornado pela Meta, sem d
   - destino
   - data de criacao e envio
   - status interno da mensagem
-  - status Meta, como `Aceito`, `Enviado`, `Entregue`, `Lido` ou `Falhou`
+  - status Meta para mensagens WhatsApp, como `Aceito`, `Enviado`, `Entregue`, `Lido` ou `Falhou`
+- Mensagens de e-mail e push mostram apenas o tipo de canal no lugar do status Meta.
 - O payload bruto deixou de ser a informacao principal da lista.
 - O contrato web de mensagem foi alinhado aos status reais do backend: `pendente`, `processando`, `enviado` e `falhou`.
 - Campo de destino do disparo manual passa a respeitar o canal selecionado:
@@ -24,6 +25,8 @@ Exibir no console de Comunicacoes o status de entrega retornado pela Meta, sem d
 
 - `pnpm typecheck`: passou.
 - `pnpm build`: passou.
+- Staging web em `89adb94`: passou.
+- Tela `/comunicacoes` carregou historico real e exibiu `Meta: Entregue` para mensagem WhatsApp entregue.
 
 ## Proximo passo
 

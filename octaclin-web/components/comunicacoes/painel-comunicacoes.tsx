@@ -135,6 +135,10 @@ function nomeCanal(canais: CanalNotificacaoApi[], mensagem: MensagemNotificacaoA
   return canais.find((canal) => canal.id === mensagem.canalId)?.nome ?? 'Canal removido';
 }
 
+function obterCanal(canais: CanalNotificacaoApi[], mensagem: MensagemNotificacaoApi) {
+  return canais.find((canal) => canal.id === mensagem.canalId);
+}
+
 function nomeTemplate(templates: TemplateMensagemApi[], mensagem: MensagemNotificacaoApi) {
   return templates.find((template) => template.id === mensagem.templateId)?.nome ?? 'Template removido';
 }
@@ -576,6 +580,7 @@ export function PainelComunicacoes() {
         <div className="max-h-[420px] divide-y divide-linha overflow-auto">
           {mensagens.length ? (
             mensagens.map((mensagem) => {
+              const canalMensagem = obterCanal(canais, mensagem);
               const ultimoStatusMeta = obterUltimoStatusMeta(mensagem.payload);
               const destino = obterTextoPayload(mensagem.payload, 'destino') ?? ultimoStatusMeta?.recipientId ?? 'Destino nao informado';
               const criadoEm = formatarDataIso(mensagem.criadoEm);
@@ -585,7 +590,7 @@ export function PainelComunicacoes() {
                 <div key={mensagem.id} className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[1fr_160px_170px] lg:items-center">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <strong className="truncate">{nomeCanal(canais, mensagem)}</strong>
+                      <strong className="truncate">{canalMensagem?.nome ?? nomeCanal(canais, mensagem)}</strong>
                       <span className="rounded-sm bg-[#eef3f6] px-2 py-1 text-xs font-semibold text-[#596273]">
                         {nomeTemplate(templates, mensagem)}
                       </span>
@@ -601,11 +606,17 @@ export function PainelComunicacoes() {
                   >
                     {mensagem.status}
                   </span>
-                  <span
-                    className={`w-fit rounded-sm border px-2 py-1 text-xs font-semibold ${corStatusMeta(ultimoStatusMeta?.status)}`}
-                  >
-                    Meta: {formatarStatusMeta(ultimoStatusMeta?.status)}
-                  </span>
+                  {canalMensagem?.tipo === 'whatsapp' ? (
+                    <span
+                      className={`w-fit rounded-sm border px-2 py-1 text-xs font-semibold ${corStatusMeta(ultimoStatusMeta?.status)}`}
+                    >
+                      Meta: {formatarStatusMeta(ultimoStatusMeta?.status)}
+                    </span>
+                  ) : (
+                    <span className="w-fit rounded-sm border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                      {canalMensagem?.tipo ?? 'canal'}
+                    </span>
+                  )}
                 </div>
               );
             })
