@@ -50,4 +50,4 @@ Depois que o destinatario de teste foi adicionado e verificado na Meta, foi exec
 
 ## Proximo passo
 
-Substituir o token temporario por um token permanente de System User/WhatsApp Business antes de uso continuo fora de staging.
+Fase 58: substituir o token temporario por um token permanente de System User/WhatsApp Business antes de uso continuo fora de staging.
