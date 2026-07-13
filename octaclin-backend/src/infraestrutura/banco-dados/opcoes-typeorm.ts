@@ -34,15 +34,37 @@ import { QuestionarioOrm } from '../../modulos/questionarios/infraestrutura/ques
 import { TenantOrm } from '../../modulos/tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../modulos/usuarios/infraestrutura/usuario.orm';
 
-export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
+function criarConexaoBanco() {
+  if (process.env.DATABASE_URL) {
+    const url = new URL(process.env.DATABASE_URL);
+    const sslMode = url.searchParams.get('sslmode');
+
+    return {
+      host: url.hostname,
+      port: Number(url.port || 5432),
+      username: decodeURIComponent(url.username),
+      password: decodeURIComponent(url.password),
+      database: decodeURIComponent(url.pathname.replace(/^\//, '')),
+      ssl: process.env.BANCO_SSL === 'true' || sslMode === 'require' ? { rejectUnauthorized: false } : false
+    };
+  }
+
   return {
-    type: 'postgres',
     host: process.env.BANCO_HOST ?? 'localhost',
     port: Number(process.env.BANCO_PORTA ?? 5432),
     username: process.env.BANCO_USUARIO ?? 'octaclin',
     password: process.env.BANCO_SENHA ?? 'octaclin_local',
     database: process.env.BANCO_NOME ?? 'octaclin',
-    ssl: process.env.BANCO_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    ssl: process.env.BANCO_SSL === 'true' ? { rejectUnauthorized: false } : false
+  };
+}
+
+export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
+  const conexao = criarConexaoBanco();
+
+  return {
+    type: 'postgres',
+    ...conexao,
     entities: [
       TenantOrm,
       UsuarioOrm,
