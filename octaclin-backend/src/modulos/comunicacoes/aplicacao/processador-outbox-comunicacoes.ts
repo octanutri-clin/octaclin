@@ -4,6 +4,7 @@ import { DataSource, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
+import { ProcessadorNotificacoes } from './processador-notificacoes';
 import { ServicoComunicacoes } from './servico-comunicacoes';
 
 @Injectable()
@@ -13,7 +14,8 @@ export class ProcessadorOutboxComunicacoes {
   constructor(
     private readonly fonteDados: DataSource,
     private readonly executorTenant: ExecutorTenant,
-    private readonly servicoComunicacoes: ServicoComunicacoes
+    private readonly servicoComunicacoes: ServicoComunicacoes,
+    private readonly processadorNotificacoes: ProcessadorNotificacoes
   ) {}
 
   @Cron('*/30 * * * * *')
@@ -34,7 +36,16 @@ export class ProcessadorOutboxComunicacoes {
             evento.status = 'processando';
             evento.tentativas += 1;
             await repositorio.save(evento);
-            await this.servicoComunicacoes.publicarEventoNotificacao(tenant.id, String(evento.payload.mensagemId));
+            const mensagemId = String(evento.payload.mensagemId);
+            try {
+              await this.servicoComunicacoes.publicarEventoNotificacao(tenant.id, mensagemId);
+            } catch (erroPublicacao) {
+              this.logger.warn(
+                `Fila de notificacoes indisponivel para outbox ${evento.id}; processando envio diretamente. ` +
+                  `Causa: ${erroPublicacao instanceof Error ? erroPublicacao.message : 'falha desconhecida'}`
+              );
+              await this.processadorNotificacoes.processarMensagem(tenant.id, mensagemId);
+            }
             evento.status = 'processado';
             evento.processadoEm = new Date();
             await repositorio.save(evento);

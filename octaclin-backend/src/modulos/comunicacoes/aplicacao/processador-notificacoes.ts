@@ -29,10 +29,14 @@ export class ProcessadorNotificacoes extends WorkerHost {
   }
 
   async process(job: Job<JobEnvioNotificacao>): Promise<void> {
-    await this.executorTenant.executar(job.data.tenantId, async (gerenciador) => {
+    await this.processarMensagem(job.data.tenantId, job.data.mensagemId);
+  }
+
+  async processarMensagem(tenantId: string, mensagemId: string): Promise<void> {
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorioMensagens = gerenciador.getRepository(MensagemNotificacaoOrm);
       const mensagem = await repositorioMensagens.findOne({
-        where: { id: job.data.mensagemId, tenantId: job.data.tenantId }
+        where: { id: mensagemId, tenantId }
       });
       if (!mensagem) throw new NotFoundException('Mensagem de notificacao nao encontrada.');
 
@@ -42,11 +46,11 @@ export class ProcessadorNotificacoes extends WorkerHost {
       try {
         const canal = await gerenciador.getRepository(CanalNotificacaoOrm).findOneByOrFail({
           id: mensagem.canalId,
-          tenantId: job.data.tenantId
+          tenantId
         });
         const template = await gerenciador.getRepository(TemplateMensagemOrm).findOneByOrFail({
           id: mensagem.templateId,
-          tenantId: job.data.tenantId
+          tenantId
         });
         const adaptador = this.obterAdaptador(canal.tipo);
         const resultado = await adaptador.enviar({ canal, template, payload: mensagem.payload });
