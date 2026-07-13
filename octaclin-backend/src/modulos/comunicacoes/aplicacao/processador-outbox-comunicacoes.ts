@@ -4,6 +4,7 @@ import { DataSource, IsNull, Repository } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
+import { redisConfigurado } from './configuracao-redis';
 import { ProcessadorNotificacoes } from './processador-notificacoes';
 import { ServicoComunicacoes } from './servico-comunicacoes';
 
@@ -52,7 +53,7 @@ export class ProcessadorOutboxComunicacoes {
   }
 
   private deveProcessarDiretamente(): boolean {
-    return !process.env.REDIS_URL && !process.env.REDIS_HOST && !process.env.REDIS_PORTA;
+    return !redisConfigurado();
   }
 
   private async processarEvento(

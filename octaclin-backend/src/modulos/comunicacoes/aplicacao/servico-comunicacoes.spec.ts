@@ -51,6 +51,19 @@ function criarServico(dados: Record<string, unknown>) {
 }
 
 describe('ServicoComunicacoes', () => {
+  const ambienteOriginal = process.env;
+
+  beforeEach(() => {
+    process.env = { ...ambienteOriginal };
+    delete process.env.REDIS_URL;
+    delete process.env.REDIS_HOST;
+    delete process.env.REDIS_PORTA;
+  });
+
+  afterAll(() => {
+    process.env = ambienteOriginal;
+  });
+
   it('deve criar mensagem pendente e evento outbox na mesma transacao', async () => {
     const { servico, fila, repositorios } = criarServico({
       canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
@@ -84,6 +97,7 @@ describe('ServicoComunicacoes', () => {
 
   it('deve publicar evento de notificacao na fila com job idempotente', async () => {
     const { servico, fila } = criarServico({});
+    process.env.REDIS_URL = 'rediss://default:senha@redis.example.com:6379';
 
     await servico.publicarEventoNotificacao('tenant-1', 'mensagem-1');
 
@@ -92,6 +106,14 @@ describe('ServicoComunicacoes', () => {
       { tenantId: 'tenant-1', mensagemId: 'mensagem-1' },
       expect.objectContaining({ jobId: 'mensagem:mensagem-1', attempts: 3 })
     );
+  });
+
+  it('deve ignorar publicacao na fila quando Redis nao estiver configurado', async () => {
+    const { servico, fila } = criarServico({});
+
+    await servico.publicarEventoNotificacao('tenant-1', 'mensagem-1');
+
+    expect(fila.add).not.toHaveBeenCalled();
   });
 
   it('deve listar mensagens somente no contexto do tenant', async () => {

@@ -4,6 +4,7 @@ import { Queue } from 'bullmq';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { CriarCanalNotificacaoDto, CriarTemplateMensagemDto, DispararMensagemDto } from './dtos';
+import { redisConfigurado } from './configuracao-redis';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
@@ -111,6 +112,8 @@ export class ServicoComunicacoes {
   }
 
   async publicarEventoNotificacao(tenantId: string, mensagemId: string): Promise<void> {
+    if (!redisConfigurado()) return;
+
     await this.filaNotificacoes.add(
       'enviar',
       { tenantId, mensagemId },

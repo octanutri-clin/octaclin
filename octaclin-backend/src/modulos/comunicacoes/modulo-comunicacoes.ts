@@ -8,6 +8,7 @@ import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
 import { ProcessadorNotificacoes } from './aplicacao/processador-notificacoes';
 import { ProcessadorOutboxComunicacoes } from './aplicacao/processador-outbox-comunicacoes';
+import { criarConexaoRedis } from './aplicacao/configuracao-redis';
 import { FILA_NOTIFICACOES, ServicoComunicacoes } from './aplicacao/servico-comunicacoes';
 import { ControladorComunicacoes } from './apresentacao/controlador-comunicacoes';
 import { AdaptadorEmailSmtp } from './infraestrutura/adaptadores/adaptador-email-smtp';
@@ -16,33 +17,6 @@ import { AdaptadorWhatsAppMeta } from './infraestrutura/adaptadores/adaptador-wh
 import { CanalNotificacaoOrm } from './infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from './infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from './infraestrutura/template-mensagem.orm';
-
-function valorOuIndefinido(valor?: string): string | undefined {
-  return valor && valor.length > 0 ? valor : undefined;
-}
-
-function criarConexaoRedis() {
-  if (process.env.REDIS_URL) {
-    const url = new URL(process.env.REDIS_URL);
-    const porta = Number(url.port || 6379);
-
-    return {
-      host: url.hostname,
-      port: porta,
-      username: valorOuIndefinido(decodeURIComponent(url.username)),
-      password: valorOuIndefinido(decodeURIComponent(url.password)),
-      tls: url.protocol === 'rediss:' || process.env.REDIS_TLS === 'true' ? {} : undefined
-    };
-  }
-
-  return {
-    host: process.env.REDIS_HOST ?? 'localhost',
-    port: Number(process.env.REDIS_PORTA ?? 6379),
-    username: valorOuIndefinido(process.env.REDIS_USUARIO),
-    password: valorOuIndefinido(process.env.REDIS_SENHA),
-    tls: process.env.REDIS_TLS === 'true' ? {} : undefined
-  };
-}
 
 @Module({
   imports: [
