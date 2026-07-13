@@ -17,6 +17,13 @@ import {
 } from '@/lib/comunicacoes-api';
 import { PacienteResumo, RespostaPaginada } from '@/lib/cadastros-api';
 
+interface UltimoStatusMeta {
+  status?: string;
+  timestamp?: string;
+  recipientId?: string;
+  errors?: unknown[];
+}
+
 interface FormularioCanal {
   tipo: TipoCanalNotificacao;
   nome: string;
@@ -86,6 +93,66 @@ function pacientePorId(pacientes: PacienteResumo[], id: string) {
   return pacientes.find((paciente) => paciente.id === id);
 }
 
+function obterTextoPayload(payload: Record<string, unknown>, chave: string) {
+  const valor = payload[chave];
+  return typeof valor === 'string' && valor.trim() ? valor : undefined;
+}
+
+function obterUltimoStatusMeta(payload: Record<string, unknown>): UltimoStatusMeta | undefined {
+  const status = payload.ultimoStatusMeta;
+  if (!status || typeof status !== 'object' || Array.isArray(status)) return undefined;
+  return status as UltimoStatusMeta;
+}
+
+function formatarStatusMeta(status?: string) {
+  if (!status) return 'Aguardando Meta';
+
+  const mapa: Record<string, string> = {
+    accepted: 'Aceito',
+    sent: 'Enviado',
+    delivered: 'Entregue',
+    read: 'Lido',
+    failed: 'Falhou'
+  };
+
+  return mapa[status] ?? status;
+}
+
+function formatarDataIso(data?: string) {
+  if (!data) return undefined;
+  const dataFormatada = new Date(data);
+  if (Number.isNaN(dataFormatada.getTime())) return undefined;
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(dataFormatada);
+}
+
+function nomeCanal(canais: CanalNotificacaoApi[], mensagem: MensagemNotificacaoApi) {
+  return canais.find((canal) => canal.id === mensagem.canalId)?.nome ?? 'Canal removido';
+}
+
+function nomeTemplate(templates: TemplateMensagemApi[], mensagem: MensagemNotificacaoApi) {
+  return templates.find((template) => template.id === mensagem.templateId)?.nome ?? 'Template removido';
+}
+
+function corStatusMensagem(status: MensagemNotificacaoApi['status']) {
+  if (status === 'enviado') return 'border-[#b8dfc1] bg-[#eef7f0] text-[#245b33]';
+  if (status === 'falhou') return 'border-[#f1b3b3] bg-[#fff0f0] text-[#8c2f2f]';
+  if (status === 'processando') return 'border-[#bcd4f6] bg-[#eef5ff] text-[#2d5282]';
+  return 'border-linha bg-[#eef3f6] text-[#596273]';
+}
+
+function corStatusMeta(status?: string) {
+  if (status === 'delivered' || status === 'read') return 'border-[#b8dfc1] bg-[#eef7f0] text-[#245b33]';
+  if (status === 'failed') return 'border-[#f1b3b3] bg-[#fff0f0] text-[#8c2f2f]';
+  if (status === 'sent' || status === 'accepted') return 'border-[#bcd4f6] bg-[#eef5ff] text-[#2d5282]';
+  return 'border-linha bg-white text-[#596273]';
+}
+
 export function PainelComunicacoes() {
   const [canais, setCanais] = useState<CanalNotificacaoApi[]>([]);
   const [templates, setTemplates] = useState<TemplateMensagemApi[]>([]);
@@ -102,6 +169,14 @@ export function PainelComunicacoes() {
   const templatesCompativeis = useMemo(
     () => templates.filter((template) => template.canal === canais.find((canal) => canal.id === formularioMensagem.canalId)?.tipo),
     [canais, formularioMensagem.canalId, templates]
+  );
+  const canalMensagemSelecionado = useMemo(
+    () => canais.find((canal) => canal.id === formularioMensagem.canalId),
+    [canais, formularioMensagem.canalId]
+  );
+  const templateMensagemSelecionado = useMemo(
+    () => templates.find((template) => template.id === formularioMensagem.templateId),
+    [formularioMensagem.templateId, templates]
   );
 
   async function carregar() {
@@ -185,6 +260,9 @@ export function PainelComunicacoes() {
         templateId: formularioMensagem.templateId,
         payload: {
           destino: formularioMensagem.destino.trim(),
+          ...(canalMensagemSelecionado?.tipo === 'whatsapp' && typeof templateMensagemSelecionado?.conteudo.idioma === 'string'
+            ? { idioma: templateMensagemSelecionado.conteudo.idioma }
+            : {}),
           nome: paciente?.nome ?? 'Paciente',
           observacao: formularioMensagem.observacao
         }
@@ -426,12 +504,13 @@ export function PainelComunicacoes() {
               </Selecao>
             </div>
             <div className="space-y-1.5 md:col-span-3">
-              <Rotulo htmlFor="mensagem-destino">Email de destino</Rotulo>
+              <Rotulo htmlFor="mensagem-destino">{canalMensagemSelecionado?.tipo === 'whatsapp' ? 'WhatsApp de destino' : 'Email de destino'}</Rotulo>
               <Campo
                 id="mensagem-destino"
-                type="email"
+                type={canalMensagemSelecionado?.tipo === 'email' ? 'email' : 'text'}
                 value={formularioMensagem.destino}
                 onChange={(evento) => setFormularioMensagem((atual) => ({ ...atual, destino: evento.target.value }))}
+                placeholder={canalMensagemSelecionado?.tipo === 'whatsapp' ? '5511999999999' : undefined}
                 required
               />
             </div>
@@ -496,16 +575,40 @@ export function PainelComunicacoes() {
         </div>
         <div className="max-h-[420px] divide-y divide-linha overflow-auto">
           {mensagens.length ? (
-            mensagens.map((mensagem) => (
-              <div key={mensagem.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[1fr_140px_140px] md:items-center">
-                <div className="min-w-0">
-                  <strong className="block truncate">{mensagem.id}</strong>
-                  <p className="mt-1 break-all text-xs text-[#596273]">Payload: {JSON.stringify(mensagem.payload)}</p>
+            mensagens.map((mensagem) => {
+              const ultimoStatusMeta = obterUltimoStatusMeta(mensagem.payload);
+              const destino = obterTextoPayload(mensagem.payload, 'destino') ?? ultimoStatusMeta?.recipientId ?? 'Destino nao informado';
+              const criadoEm = formatarDataIso(mensagem.criadoEm);
+              const enviadoEm = formatarDataIso(mensagem.enviadoEm);
+
+              return (
+                <div key={mensagem.id} className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[1fr_160px_170px] lg:items-center">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <strong className="truncate">{nomeCanal(canais, mensagem)}</strong>
+                      <span className="rounded-sm bg-[#eef3f6] px-2 py-1 text-xs font-semibold text-[#596273]">
+                        {nomeTemplate(templates, mensagem)}
+                      </span>
+                    </div>
+                    <p className="mt-1 truncate text-xs text-[#596273]">{destino}</p>
+                    <p className="mt-1 truncate text-xs text-[#596273]">
+                      Criada {criadoEm ?? 'sem data'}{enviadoEm ? `, enviada ${enviadoEm}` : ''}
+                    </p>
+                    {mensagem.erro ? <p className="mt-1 break-words text-xs font-medium text-[#8c2f2f]">{mensagem.erro}</p> : null}
+                  </div>
+                  <span
+                    className={`w-fit rounded-sm border px-2 py-1 text-xs font-semibold ${corStatusMensagem(mensagem.status)}`}
+                  >
+                    {mensagem.status}
+                  </span>
+                  <span
+                    className={`w-fit rounded-sm border px-2 py-1 text-xs font-semibold ${corStatusMeta(ultimoStatusMeta?.status)}`}
+                  >
+                    Meta: {formatarStatusMeta(ultimoStatusMeta?.status)}
+                  </span>
                 </div>
-                <span className="rounded-sm bg-[#eef3f6] px-2 py-1 text-xs font-semibold text-[#596273]">{mensagem.status}</span>
-                <span className="break-all text-xs text-[#596273]">{mensagem.pacienteId ?? 'Sem paciente'}</span>
-              </div>
-            ))
+              );
+            })
           ) : (
             <EstadoVazio titulo="Nenhuma mensagem persistida." />
           )}

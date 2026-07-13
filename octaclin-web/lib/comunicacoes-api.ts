@@ -27,7 +27,7 @@ export interface MensagemNotificacaoApi {
   pacienteId?: string;
   canalId?: string;
   templateId?: string;
-  status: 'pendente' | 'enviado' | 'erro';
+  status: 'pendente' | 'processando' | 'enviado' | 'falhou';
   payload: Record<string, unknown>;
   erro?: string;
   enviadoEm?: string;
