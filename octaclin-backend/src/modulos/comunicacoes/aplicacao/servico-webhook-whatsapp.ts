@@ -194,7 +194,9 @@ export class ServicoWebhookWhatsapp {
       .getOne();
     if (existente) return false;
 
-    const pacienteId = await this.encontrarPacientePorContato(repositorioPacientes, tenantId, entrada.mensagem.from);
+    const pacienteId =
+      (await this.encontrarPacientePorContato(repositorioPacientes, tenantId, entrada.mensagem.from)) ??
+      (await this.encontrarPacientePorEnvioAnterior(repositorioMensagens, tenantId, entrada.mensagem.from));
     const criadaEm = this.converterTimestampMeta(entrada.mensagem.timestamp) ?? new Date();
 
     await repositorioMensagens.save(
@@ -240,6 +242,30 @@ export class ServicoWebhookWhatsapp {
     });
 
     return paciente?.id;
+  }
+
+  private async encontrarPacientePorEnvioAnterior(
+    repositorioMensagens: Repository<MensagemNotificacaoOrm>,
+    tenantId: string,
+    remetente: string
+  ): Promise<string | undefined> {
+    const remetenteNormalizado = this.normalizarTelefone(remetente);
+    if (!remetenteNormalizado) return undefined;
+
+    const mensagensRecentes = await repositorioMensagens.find({
+      where: { tenantId },
+      order: { criadoEm: 'DESC' },
+      take: 200
+    });
+
+    const mensagemAnterior = mensagensRecentes.find((mensagem) => {
+      if (!mensagem.pacienteId) return false;
+      if (mensagem.payload.direcao === 'recebida') return false;
+
+      return this.normalizarTelefone(String(mensagem.payload.destino ?? '')) === remetenteNormalizado;
+    });
+
+    return mensagemAnterior?.pacienteId;
   }
 
   private limparObjeto(objeto: Record<string, unknown>): Record<string, unknown> {

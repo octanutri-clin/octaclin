@@ -17,6 +17,7 @@ Persistir mensagens recebidas pelo WhatsApp e exibir um historico operacional de
 - Deduplicacao por `payload.idExterno` evita gravar novamente o mesmo evento da Meta.
 - Tenant/canal sao identificados pelo `phone_number_id` enviado pela Meta.
 - Paciente e associado quando o telefone recebido bate com o contato criptografado descriptografado do paciente.
+- Quando o contato cadastrado nao bate, o backend tenta associar a resposta ao paciente de uma mensagem WhatsApp enviada anteriormente para o mesmo numero.
 - Console de Comunicacoes ganhou a secao `Conversas WhatsApp`, agrupando mensagens por paciente ou contato.
 - Historico de mensagens diferencia:
   - mensagens enviadas
@@ -37,8 +38,9 @@ Persistir mensagens recebidas pelo WhatsApp e exibir um historico operacional de
   - `payload.origem: whatsapp`
   - remetente `5511992362080`
   - texto `Ola`
-- A mensagem recebida ficou sem `pacienteId` porque o contato cadastrado do paciente demo nao corresponde ao numero usado no teste.
+- A mensagem recebida inicial ficou sem `pacienteId` porque o contato cadastrado do paciente demo nao corresponde ao numero usado no teste.
+- Fallback por envio anterior foi implementado para novas respostas WhatsApp.
 
 ## Proximo passo
 
-Vincular o telefone real ao paciente demo ou adicionar associacao por conversas de saida, para que respostas do mesmo numero aparecam automaticamente no paciente correto.
+Publicar o fallback em staging e pedir uma nova resposta no WhatsApp para validar a associacao automatica ao paciente.

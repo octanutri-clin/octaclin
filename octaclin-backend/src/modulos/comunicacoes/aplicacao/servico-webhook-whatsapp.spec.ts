@@ -4,7 +4,14 @@ import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 
 describe('ServicoWebhookWhatsapp', () => {
-  function criarServico(mensagem?: Record<string, unknown>, opcoes?: { mensagemExistente?: boolean }) {
+  function criarServico(
+    mensagem?: Record<string, unknown>,
+    opcoes?: {
+      mensagemExistente?: boolean;
+      contatoPaciente?: string;
+      mensagensRecentes?: Array<{ pacienteId?: string; payload: Record<string, unknown> }>;
+    }
+  ) {
     const entidadeMensagem: { status: string; payload: Record<string, unknown>; erro?: string } | null = mensagem
       ? {
           status: 'enviado',
@@ -18,6 +25,7 @@ describe('ServicoWebhookWhatsapp', () => {
           getOne: jest.fn(async () => (opcoes?.mensagemExistente ? { id: 'mensagem-existente' } : entidadeMensagem))
         }))
       })),
+      find: jest.fn(async () => opcoes?.mensagensRecentes ?? []),
       create: jest.fn((registro) => registro),
       save: jest.fn(async (registro) => registro)
     };
@@ -38,7 +46,7 @@ describe('ServicoWebhookWhatsapp', () => {
         {
           id: 'paciente-1',
           tenantId: 'tenant-1',
-          contatoCriptografado: Buffer.from('5511999999999')
+          contatoCriptografado: Buffer.from(opcoes?.contatoPaciente ?? '5511999999999')
         }
       ])
     };
@@ -176,5 +184,44 @@ describe('ServicoWebhookWhatsapp', () => {
     ).resolves.toEqual({ criadas: 0, ignoradas: 1 });
 
     expect(repositorioMensagens.save).not.toHaveBeenCalled();
+  });
+
+  it('deve associar mensagem recebida ao paciente por envio WhatsApp anterior', async () => {
+    const { servico, repositorioMensagens } = criarServico(undefined, {
+      contatoPaciente: '5511888888888',
+      mensagensRecentes: [
+        {
+          pacienteId: 'paciente-1',
+          payload: { destino: '55 (11) 99999-9999' }
+        }
+      ]
+    });
+
+    await expect(
+      servico.registrarMensagensRecebidas([
+        {
+          phoneNumberId: 'phone-1',
+          mensagem: {
+            id: 'wamid-in-2',
+            from: '5511999999999',
+            timestamp: '1780000001',
+            type: 'text',
+            text: { body: 'Obrigado.' }
+          }
+        }
+      ])
+    ).resolves.toEqual({ criadas: 1, ignoradas: 0 });
+
+    expect(repositorioMensagens.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pacienteId: 'paciente-1',
+        status: 'recebido',
+        payload: expect.objectContaining({
+          idExterno: 'wamid-in-2',
+          remetente: '5511999999999',
+          texto: 'Obrigado.'
+        })
+      })
+    );
   });
 });
