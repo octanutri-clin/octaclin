@@ -1,7 +1,10 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { createTransport } from 'nodemailer';
+import SMTPTransport = require('nodemailer/lib/smtp-transport');
 import { ResultadoEnvioNotificacao } from '../../dominio/canal-notificacao';
 import { AdaptadorNotificacao, ContextoEnvioNotificacao } from './adaptador-notificacao';
+
+type OpcoesSmtpOctaClin = SMTPTransport.Options & { family?: 4 | 6 };
 
 function textoConfiguracao(valor: unknown): string | undefined {
   return typeof valor === 'string' && valor.trim().length > 0 ? valor.trim() : undefined;
@@ -16,6 +19,10 @@ function booleanoConfiguracao(valor: unknown, padrao: boolean): boolean {
   if (typeof valor === 'boolean') return valor;
   if (typeof valor === 'string') return valor.toLowerCase() === 'true';
   return padrao;
+}
+
+function familiaIpConfiguracao(valor: unknown): 4 | 6 {
+  return Number(valor) === 6 ? 6 : 4;
 }
 
 function substituirVariaveis(texto: string, payload: Record<string, unknown>): string {
@@ -38,6 +45,7 @@ export class AdaptadorEmailSmtp implements AdaptadorNotificacao {
     const connectionTimeout = numeroConfiguracao(process.env.EMAIL_SMTP_CONNECTION_TIMEOUT_MS, 15000);
     const greetingTimeout = numeroConfiguracao(process.env.EMAIL_SMTP_GREETING_TIMEOUT_MS, 10000);
     const socketTimeout = numeroConfiguracao(process.env.EMAIL_SMTP_SOCKET_TIMEOUT_MS, 20000);
+    const family = familiaIpConfiguracao(process.env.EMAIL_SMTP_FAMILY);
     const user =
       textoConfiguracao(contexto.canal.configuracao.smtpUsuario) ?? textoConfiguracao(process.env.EMAIL_SMTP_USUARIO);
     const pass = textoConfiguracao(contexto.canal.configuracao.smtpSenha) ?? textoConfiguracao(process.env.EMAIL_SMTP_SENHA);
@@ -61,15 +69,18 @@ export class AdaptadorEmailSmtp implements AdaptadorNotificacao {
     if (!user || !pass || !remetente) throw new InternalServerErrorException('Configuracao SMTP incompleta.');
     if (!htmlBase && !textoBase) throw new InternalServerErrorException('Template de email sem conteudo.');
 
-    const transportador = createTransport({
+    const opcoesTransporte: OpcoesSmtpOctaClin = {
       host,
       port,
       secure,
       connectionTimeout,
       greetingTimeout,
       socketTimeout,
+      family,
       auth: { user, pass }
-    });
+    };
+
+    const transportador = createTransport(opcoesTransporte);
 
     const resultado = await transportador.sendMail({
       from: remetente,
@@ -85,6 +96,7 @@ export class AdaptadorEmailSmtp implements AdaptadorNotificacao {
         host,
         port,
         secure,
+        family,
         acceptedCount: resultado.accepted.length,
         rejectedCount: resultado.rejected.length
       }
