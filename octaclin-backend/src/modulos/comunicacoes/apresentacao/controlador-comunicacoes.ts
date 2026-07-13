@@ -6,6 +6,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { CriarCanalNotificacaoDto, CriarTemplateMensagemDto, DispararMensagemDto } from '../aplicacao/dtos';
+import { ProcessadorOutboxComunicacoes } from '../aplicacao/processador-outbox-comunicacoes';
 import { ServicoComunicacoes } from '../aplicacao/servico-comunicacoes';
 
 @Controller('comunicacoes')
@@ -14,6 +15,7 @@ import { ServicoComunicacoes } from '../aplicacao/servico-comunicacoes';
 export class ControladorComunicacoes {
   constructor(
     private readonly servicoComunicacoes: ServicoComunicacoes,
+    private readonly processadorOutbox: ProcessadorOutboxComunicacoes,
     private readonly servicoAuditoria: ServicoAuditoria
   ) {}
 
@@ -67,6 +69,7 @@ export class ControladorComunicacoes {
     @Body() dados: DispararMensagemDto
   ) {
     const mensagem = await this.servicoComunicacoes.dispararMensagem(usuario.tenantId, dados);
+    await this.processadorOutbox.processarPendentes();
     await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.mensagem.disparar', 'mensagem_notificacao', mensagem.id, {
       pacienteId: dados.pacienteId,
       canalId: dados.canalId,
