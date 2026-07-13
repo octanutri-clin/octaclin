@@ -1,0 +1,62 @@
+services:
+  backend:
+    build:
+      context: ./octaclin-backend
+    environment:
+      NODE_ENV: production
+      PORTA_HTTP: 3000
+      BANCO_HOST: postgres
+      BANCO_PORTA: 5432
+      BANCO_USUARIO: octaclin
+      BANCO_SENHA: octaclin_local
+      BANCO_NOME: octaclin
+      REDIS_HOST: redis
+      REDIS_PORTA: 6379
+      IA_SERVICE_URL: http://ia-service:8001
+      JWT_SEGREDO: trocar-em-producao
+      JWT_REFRESH_SEGREDO: trocar-em-producao-refresh
+      CRIPTOGRAFIA_CHAVE_AES_256: trocar-em-producao
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+      - ia-service
+
+  web:
+    build:
+      context: ./octaclin-web
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+
+  ia-service:
+    build:
+      context: ./octaclin-ai-service
+    environment:
+      OPENAI_API_KEY: ""
+    ports:
+      - "8001:8001"
+
+  postgres:
+    image: timescale/timescaledb-ha:pg15
+    environment:
+      POSTGRES_USER: octaclin
+      POSTGRES_PASSWORD: octaclin_local
+      POSTGRES_DB: octaclin
+    volumes:
+      - postgres_dados_prod:/home/postgres/pgdata/data
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_dados_prod:/data
+
+volumes:
+  postgres_dados_prod:
+  redis_dados_prod:

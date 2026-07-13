@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "OctaClin",
+    "slug": "octaclin",
+    "scheme": "octaclin",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Permitir captura de refeicoes, exercicios e duvidas em video.",
+        "NSMicrophoneUsageDescription": "Permitir respostas por audio de ate 2 minutos."
+      }
+    },
+    "android": {
+      "permissions": ["CAMERA", "RECORD_AUDIO"]
+    },
+    "plugins": ["expo-router", "expo-sqlite"]
+  }
+}

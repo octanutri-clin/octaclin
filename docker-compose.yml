@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: timescale/timescaledb-ha:pg15
+    container_name: octaclin-postgres
+    environment:
+      POSTGRES_USER: octaclin
+      POSTGRES_PASSWORD: octaclin_local
+      POSTGRES_DB: octaclin
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dados:/home/postgres/pgdata/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U octaclin -d octaclin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: octaclin-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dados:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: octaclin-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: octaclin
+      MINIO_ROOT_PASSWORD: octaclin_local_123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_dados:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_dados:
+  redis_dados:
+  minio_dados:
