@@ -26,6 +26,7 @@ Usar um ambiente `staging` antes de producao. O staging deve ficar privado, com 
 - `BANCO_SENHA`
 - `BANCO_NOME`
 - `BANCO_SSL`
+- `DATABASE_URL` como alternativa aos campos `BANCO_*`
 - `REDIS_URL`
 - `JWT_SEGREDO`
 - `JWT_REFRESH_SEGREDO`
