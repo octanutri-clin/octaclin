@@ -140,3 +140,16 @@ Para a proxima tentativa, gerar o token novamente conferindo estes pontos antes 
 ## Status
 
 Concluida em staging: envio WhatsApp pelo OctaClin validado com token permanente salvo em `META_WHATSAPP_TOKEN`, status Meta entregue e sem erro de autenticacao.
+
+### Rotacao final antes da proxima fase - 2026-07-13
+
+- Token Meta rotacionado manualmente pelo usuario e inserido em META_WHATSAPP_TOKEN no Render.
+- Nenhum valor de token foi registrado no Git.
+- Backend GET /health respondeu status: ok apos a troca.
+- Disparo real pelo OctaClin criou a mensagem 15bcd0c3-e397-45ba-955f-a167e2ae1eb2.
+- Resultado do processamento:
+  - status: enviado
+  - erro: null
+  - ID externo Meta presente
+  - payload.ultimoStatusMeta.status: delivered
+
