@@ -6,7 +6,7 @@
 - Filas BullMQ com Redis para envio assincrono.
 - Entidades TypeORM para `canais_notificacao`, `templates_mensagem` e `mensagens_notificacao`.
 - Adaptador WhatsApp para Meta Cloud API com templates aprovados.
-- Adaptador e-mail para SendGrid.
+- Adaptador e-mail para SMTP.
 - Placeholder push para manter contrato omnichannel ate a fase mobile.
 - Endpoints para canais, templates e disparo de mensagens.
 - Retry exponencial e `jobId` idempotente por mensagem.
@@ -16,14 +16,14 @@
 
 ### Justificativa Tecnica
 
-BullMQ foi escolhido porque ja estava previsto na arquitetura e oferece retries, backoff, idempotencia por `jobId` e isolamento entre API sincrona e provedores externos. WhatsApp e SendGrid foram integrados por HTTP direto para manter baixo acoplamento com SDKs, facilitar testes e reduzir peso operacional.
+BullMQ foi escolhido porque ja estava previsto na arquitetura e oferece retries, backoff, idempotencia por `jobId` e isolamento entre API sincrona e provedores externos. WhatsApp foi integrado por HTTP direto e e-mail por SMTP para manter baixo acoplamento, facilitar testes e reduzir peso operacional.
 
 ### Trade-offs
 
 | Decisao | Custo | Performance | Manutenibilidade |
 |---|---:|---:|---:|
 | BullMQ + Redis | Medio | Alto | Alta, padrao robusto para jobs |
-| HTTP direto para Meta/SendGrid | Baixo | Alto | Menos dependencia, exige manter payloads oficiais |
+| HTTP direto para Meta e SMTP para email | Baixo | Alto | Menos dependencia, exige manter payloads oficiais |
 | Mensagem persistida antes da fila | Baixo | Alto | Auditoria forte e reprocessamento simples |
 | Push placeholder | Baixo | Alto | Mantem contrato; implementacao real vem na Fase 5 |
 
@@ -126,4 +126,4 @@ Observacao operacional: `pnpm install` concluiu a instalacao, mas retorna `ERR_P
 - Implementar outbox transacional para garantir consistencia banco/fila.
 - Adicionar rate limit por canal/tenant.
 - Conectar envios de `envios_questionario` da Fase 2 ao modulo de comunicacoes.
-- Validar com credenciais reais Meta Cloud API e SendGrid em ambiente sandbox.
+- Validar com credenciais reais Meta Cloud API e SMTP em ambiente sandbox.

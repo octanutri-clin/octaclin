@@ -128,4 +128,4 @@ Antes da Fase 3:
 pnpm approve-builds
 ```
 
-Antes de integrar WhatsApp/SendGrid na Fase 3, conectar o editor web aos endpoints reais e trocar geracao direta de envio por job BullMQ idempotente.
+Antes de integrar WhatsApp/SMTP na Fase 3, conectar o editor web aos endpoints reais e trocar geracao direta de envio por job BullMQ idempotente.

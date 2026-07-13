@@ -10,7 +10,7 @@ import { ProcessadorNotificacoes } from './aplicacao/processador-notificacoes';
 import { ProcessadorOutboxComunicacoes } from './aplicacao/processador-outbox-comunicacoes';
 import { FILA_NOTIFICACOES, ServicoComunicacoes } from './aplicacao/servico-comunicacoes';
 import { ControladorComunicacoes } from './apresentacao/controlador-comunicacoes';
-import { AdaptadorEmailSendGrid } from './infraestrutura/adaptadores/adaptador-email-sendgrid';
+import { AdaptadorEmailSmtp } from './infraestrutura/adaptadores/adaptador-email-smtp';
 import { AdaptadorPushPlaceholder } from './infraestrutura/adaptadores/adaptador-push-placeholder';
 import { AdaptadorWhatsAppMeta } from './infraestrutura/adaptadores/adaptador-whatsapp-meta';
 import { CanalNotificacaoOrm } from './infraestrutura/canal-notificacao.orm';
@@ -61,7 +61,7 @@ function criarConexaoRedis() {
     ProcessadorNotificacoes,
     ProcessadorOutboxComunicacoes,
     AdaptadorWhatsAppMeta,
-    AdaptadorEmailSendGrid,
+    AdaptadorEmailSmtp,
     AdaptadorPushPlaceholder
   ],
   exports: [ServicoComunicacoes]

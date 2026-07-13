@@ -34,7 +34,7 @@ C4Context
     System(octaclin, "OctaClin", "Cerebro operacional para acompanhamento nutricional, adesao, IA e comunidades.")
 
     System_Ext(meta, "Meta Cloud API", "WhatsApp templates, botoes e mensagens transacionais.")
-    System_Ext(sendgrid, "SendGrid / SES", "E-mails transacionais e fallback.")
+    System_Ext(smtp, "SMTP Gmail / SES", "E-mails transacionais e fallback.")
     System_Ext(openai, "OpenAI API", "Sentimento contextual, transcricao e coach virtual.")
     System_Ext(vision, "Google Vision / Clarifai", "Reconhecimento alimentar.")
     System_Ext(push, "Expo Push / FCM / APNs", "Push notification mobile.")
@@ -45,7 +45,7 @@ C4Context
     Rel(paciente, octaclin, "Usa app mobile")
     Rel(acompanhante, octaclin, "Acessa modo acompanhante")
     Rel(octaclin, meta, "Envia WhatsApp")
-    Rel(octaclin, sendgrid, "Envia e-mail")
+    Rel(octaclin, smtp, "Envia e-mail")
     Rel(octaclin, openai, "Analisa texto/audio e responde duvidas")
     Rel(octaclin, vision, "Classifica imagens")
     Rel(octaclin, push, "Envia push")

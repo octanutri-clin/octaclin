@@ -7,7 +7,7 @@
 - **ElastiCache Redis**: BullMQ, filas de comunicacao e automacoes.
 - **S3**: midias de pacientes e uploads pre-assinados.
 - **ALB**: roteamento `/api` para backend, `/` para web e rede privada para IA.
-- **Secrets Manager**: JWT, chaves AES, Meta, SendGrid, OpenAI/Gemini/Google Vision.
+- **Secrets Manager**: JWT, chaves AES, Meta, SMTP, OpenAI/Gemini/Google Vision.
 - **CloudWatch**: logs, metricas de fila e alarmes.
 
 ## Secrets GitHub Actions
@@ -45,8 +45,7 @@ JWT_REFRESH_SEGREDO=<secret>
 CRIPTOGRAFIA_CHAVE_AES_256=<secret>
 META_WHATSAPP_TOKEN=<secret>
 META_WHATSAPP_PHONE_NUMBER_ID=<id>
-SENDGRID_API_KEY=<secret>
-SENDGRID_REMETENTE=<email>
+EMAIL_REMETENTE=<email>
 ARMAZENAMENTO_BUCKET_MIDIA=<bucket>
 ```
 

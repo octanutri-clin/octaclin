@@ -122,7 +122,7 @@ async function executarSeed() {
         tenantId: ids.tenant,
         tipo: 'email',
         nome: 'Email transacional demo',
-        configuracao: { provedor: 'sendgrid', modo: 'sandbox' },
+        configuracao: { provedor: 'smtp', remetente: 'OctaClin <octaclinsys@gmail.com>' },
         ativo: true
       })
     );

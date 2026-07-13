@@ -44,7 +44,7 @@ JWT_SEGREDO=<key-vault-secret>
 JWT_REFRESH_SEGREDO=<key-vault-secret>
 CRIPTOGRAFIA_CHAVE_AES_256=<key-vault-secret>
 META_WHATSAPP_TOKEN=<key-vault-secret>
-SENDGRID_API_KEY=<key-vault-secret>
+EMAIL_SMTP_SENHA=<key-vault-secret>
 ARMAZENAMENTO_BUCKET_MIDIA=<blob-container>
 ```
 

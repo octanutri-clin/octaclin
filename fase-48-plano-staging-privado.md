@@ -39,8 +39,12 @@ Usar um ambiente `staging` antes de producao. O staging deve ficar privado, com 
 
 ## Secrets opcionais por integracao
 
-- `SENDGRID_API_KEY`
-- `SENDGRID_REMETENTE`
+- `EMAIL_SMTP_HOST`
+- `EMAIL_SMTP_PORT`
+- `EMAIL_SMTP_SECURE`
+- `EMAIL_SMTP_USUARIO`
+- `EMAIL_SMTP_SENHA`
+- `EMAIL_REMETENTE`
 - `META_WHATSAPP_TOKEN`
 - `META_WHATSAPP_PHONE_NUMBER_ID`
 - `META_WHATSAPP_API_VERSION`

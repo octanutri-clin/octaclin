@@ -37,13 +37,14 @@ interface FormularioMensagem {
   pacienteId: string;
   canalId: string;
   templateId: string;
+  destino: string;
   observacao: string;
 }
 
 const canalInicial: FormularioCanal = {
   tipo: 'email',
   nome: 'Email transacional',
-  identificador: 'atendimento@octaclin.local',
+  identificador: 'OctaClin <octaclinsys@gmail.com>',
   ativo: true
 };
 
@@ -60,6 +61,7 @@ const mensagemInicial: FormularioMensagem = {
   pacienteId: '',
   canalId: '',
   templateId: '',
+  destino: 'octaclinsys@gmail.com',
   observacao: 'Disparo manual pelo console OctaClin.'
 };
 
@@ -182,6 +184,7 @@ export function PainelComunicacoes() {
         canalId: formularioMensagem.canalId,
         templateId: formularioMensagem.templateId,
         payload: {
+          destino: formularioMensagem.destino.trim(),
           nome: paciente?.nome ?? 'Paciente',
           observacao: formularioMensagem.observacao
         }
@@ -423,6 +426,16 @@ export function PainelComunicacoes() {
               </Selecao>
             </div>
             <div className="space-y-1.5 md:col-span-3">
+              <Rotulo htmlFor="mensagem-destino">Email de destino</Rotulo>
+              <Campo
+                id="mensagem-destino"
+                type="email"
+                value={formularioMensagem.destino}
+                onChange={(evento) => setFormularioMensagem((atual) => ({ ...atual, destino: evento.target.value }))}
+                required
+              />
+            </div>
+            <div className="space-y-1.5 md:col-span-3">
               <Rotulo htmlFor="mensagem-observacao">Observacao</Rotulo>
               <AreaTexto
                 id="mensagem-observacao"
@@ -432,7 +445,7 @@ export function PainelComunicacoes() {
             </div>
           </div>
           <div className="mt-3 flex justify-end">
-            <Botao type="submit" variante="primario" disabled={salvando || !formularioMensagem.templateId}>
+            <Botao type="submit" variante="primario" disabled={salvando || !formularioMensagem.templateId || !formularioMensagem.destino.trim()}>
               <Send size={16} />
               Disparar
             </Botao>

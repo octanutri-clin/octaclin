@@ -3,7 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { FILA_NOTIFICACOES } from './servico-comunicacoes';
-import { AdaptadorEmailSendGrid } from '../infraestrutura/adaptadores/adaptador-email-sendgrid';
+import { AdaptadorEmailSmtp } from '../infraestrutura/adaptadores/adaptador-email-smtp';
 import { AdaptadorNotificacao } from '../infraestrutura/adaptadores/adaptador-notificacao';
 import { AdaptadorPushPlaceholder } from '../infraestrutura/adaptadores/adaptador-push-placeholder';
 import { AdaptadorWhatsAppMeta } from '../infraestrutura/adaptadores/adaptador-whatsapp-meta';
@@ -22,7 +22,7 @@ export class ProcessadorNotificacoes extends WorkerHost {
   constructor(
     private readonly executorTenant: ExecutorTenant,
     private readonly whatsapp: AdaptadorWhatsAppMeta,
-    private readonly email: AdaptadorEmailSendGrid,
+    private readonly email: AdaptadorEmailSmtp,
     private readonly push: AdaptadorPushPlaceholder
   ) {
     super();
