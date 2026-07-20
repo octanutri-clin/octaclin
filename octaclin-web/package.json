@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test:authz": "node scripts/test-autorizacao-rotas.mjs",
     "smoke:visual": "playwright test",
     "smoke:ui": "node scripts/smoke-ui-regression.mjs",
     "smoke:e2e:bff": "node scripts/smoke-e2e-bff.mjs",

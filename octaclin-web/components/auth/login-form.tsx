@@ -53,7 +53,8 @@ export function LoginForm() {
       <div className="mx-auto grid w-full max-w-md gap-6">
         <header>
           <p className="text-xs font-semibold uppercase text-[#596273]">OctaClin</p>
-          <h1 className="mt-1 text-3xl font-bold">Acesso operacional</h1>
+          <h1 className="mt-1 text-3xl font-bold">Acesso OctaClin</h1>
+          <p className="mt-2 text-sm text-[#596273]">Entre como profissional, equipe ou paciente.</p>
         </header>
 
         <form onSubmit={enviar} className="grid gap-4 rounded-lg border border-linha bg-white p-5">
