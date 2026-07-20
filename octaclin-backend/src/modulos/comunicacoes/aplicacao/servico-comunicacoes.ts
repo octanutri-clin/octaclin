@@ -3,7 +3,9 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Queue } from 'bullmq';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
-import { CriarCanalNotificacaoDto, CriarTemplateMensagemDto, DispararMensagemDto } from './dtos';
+import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { AssociarContatoWhatsappDto, CriarCanalNotificacaoDto, CriarTemplateMensagemDto, DispararMensagemDto } from './dtos';
 import { redisConfigurado } from './configuracao-redis';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
@@ -15,7 +17,8 @@ export const FILA_NOTIFICACOES = 'notificacoes';
 export class ServicoComunicacoes {
   constructor(
     private readonly executorTenant: ExecutorTenant,
-    @InjectQueue(FILA_NOTIFICACOES) private readonly filaNotificacoes: Queue
+    @InjectQueue(FILA_NOTIFICACOES) private readonly filaNotificacoes: Queue,
+    private readonly criptografia: CriptografiaDadosSensiveis
   ) {}
 
   async criarCanal(tenantId: string, dados: CriarCanalNotificacaoDto): Promise<CanalNotificacaoOrm> {
@@ -67,6 +70,49 @@ export class ServicoComunicacoes {
         take: 200
       })
     );
+  }
+
+  async associarContatoWhatsapp(tenantId: string, dados: AssociarContatoWhatsappDto) {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorioPacientes = gerenciador.getRepository(PacienteOrm);
+      const paciente = await repositorioPacientes.findOne({ where: { id: dados.pacienteId, tenantId } });
+      if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+
+      const contatoNormalizado = this.normalizarTelefone(dados.contato);
+      if (!contatoNormalizado) throw new BadRequestException('Contato WhatsApp invalido.');
+
+      const repositorioMensagens = gerenciador.getRepository(MensagemNotificacaoOrm);
+      const mensagens = await repositorioMensagens.find({
+        where: { tenantId },
+        order: { criadoEm: 'DESC' },
+        take: 200
+      });
+      const mensagensAssociadas = mensagens.filter((mensagem) => this.mensagemPertenceAoContatoWhatsapp(mensagem, contatoNormalizado));
+
+      for (const mensagem of mensagensAssociadas) {
+        mensagem.pacienteId = paciente.id;
+        mensagem.payload = {
+          ...mensagem.payload,
+          contatoAssociadoManualmente: true,
+          contatoAssociadoEm: new Date().toISOString()
+        };
+      }
+
+      const contatoPacienteAtualizado = Boolean(dados.atualizarContatoPaciente && !paciente.contatoCriptografado);
+      if (contatoPacienteAtualizado) {
+        paciente.contatoCriptografado = this.criptografia.criptografar(dados.contato);
+        await repositorioPacientes.save(paciente);
+      }
+
+      if (mensagensAssociadas.length) await repositorioMensagens.save(mensagensAssociadas);
+
+      return {
+        pacienteId: paciente.id,
+        contato: dados.contato,
+        mensagensAtualizadas: mensagensAssociadas.length,
+        contatoPacienteAtualizado
+      };
+    });
   }
 
   async dispararMensagem(tenantId: string, dados: DispararMensagemDto): Promise<MensagemNotificacaoOrm> {
@@ -125,5 +171,30 @@ export class ServicoComunicacoes {
         removeOnFail: 5000
       }
     );
+  }
+
+  private mensagemPertenceAoContatoWhatsapp(mensagem: MensagemNotificacaoOrm, contatoNormalizado: string) {
+    if (mensagem.payload.origem !== 'whatsapp' && !mensagem.canalId) return false;
+
+    const candidatos = [
+      mensagem.payload.remetente,
+      mensagem.payload.destino,
+      this.obterValorAninhado(mensagem.payload, ['ultimoStatusMeta', 'recipientId'])
+    ];
+
+    return candidatos.some((valor) => typeof valor === 'string' && this.normalizarTelefone(valor) === contatoNormalizado);
+  }
+
+  private obterValorAninhado(payload: Record<string, unknown>, caminho: string[]) {
+    let atual: unknown = payload;
+    for (const chave of caminho) {
+      if (!atual || typeof atual !== 'object' || Array.isArray(atual)) return undefined;
+      atual = (atual as Record<string, unknown>)[chave];
+    }
+    return atual;
+  }
+
+  private normalizarTelefone(valor: string) {
+    return valor.replace(/\D/g, '');
   }
 }

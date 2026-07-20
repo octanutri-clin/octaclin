@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { ServicoComunicacoes } from './servico-comunicacoes';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
@@ -9,10 +10,11 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
   return {
     create: jest.fn((entrada: Record<string, unknown>) => entrada),
     save: jest.fn(async (entrada: Record<string, unknown>) => ({ id: `${nome}-1`, ...entrada })),
-    find: jest.fn(async () => []),
+    find: jest.fn(async () => (nome === 'mensagem' ? dados.mensagens ?? [] : [])),
     findOne: jest.fn(async (consulta: { where: Record<string, unknown> }) => {
       if (nome === 'canal') return dados.canal ?? null;
       if (nome === 'template') return dados.template ?? null;
+      if (nome === 'paciente') return dados.paciente ?? null;
       return consulta.where.id ? dados.mensagem ?? null : null;
     })
   };
@@ -23,7 +25,8 @@ function criarServico(dados: Record<string, unknown>) {
     canal: criarRepositorioFake('canal', dados),
     template: criarRepositorioFake('template', dados),
     mensagem: criarRepositorioFake('mensagem', dados),
-    outbox: criarRepositorioFake('outbox', dados)
+    outbox: criarRepositorioFake('outbox', dados),
+    paciente: criarRepositorioFake('paciente', dados)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -31,6 +34,7 @@ function criarServico(dados: Record<string, unknown>) {
       if (entidade === TemplateMensagemOrm) return repositorios.template;
       if (entidade === MensagemNotificacaoOrm) return repositorios.mensagem;
       if (entidade === OutboxEventoOrm) return repositorios.outbox;
+      if (entidade === PacienteOrm) return repositorios.paciente;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -44,7 +48,9 @@ function criarServico(dados: Record<string, unknown>) {
   };
 
   return {
-    servico: new ServicoComunicacoes(executorTenant as never, fila as never),
+    servico: new ServicoComunicacoes(executorTenant as never, fila as never, {
+      criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`))
+    } as never),
     fila,
     repositorios
   };
@@ -124,8 +130,46 @@ describe('ServicoComunicacoes', () => {
     expect(repositorios.mensagem.find).toHaveBeenCalledWith({
       where: { tenantId: 'tenant-1' },
       order: { criadoEm: 'DESC' },
-      take: 50
+      take: 200
     });
+  });
+
+  it('deve associar mensagens WhatsApp de um contato a um paciente', async () => {
+    const mensagemRecebida = {
+      id: 'mensagem-1',
+      tenantId: 'tenant-1',
+      payload: { origem: 'whatsapp', remetente: '+55 11 99236-2080', texto: 'Ola' }
+    };
+    const mensagemEnviada = {
+      id: 'mensagem-2',
+      tenantId: 'tenant-1',
+      canalId: 'canal-whatsapp',
+      payload: { destino: '5511992362080', observacao: 'Resposta' }
+    };
+    const { servico, repositorios } = criarServico({
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1' },
+      mensagens: [mensagemRecebida, mensagemEnviada, { id: 'mensagem-3', tenantId: 'tenant-1', payload: { remetente: '5511888888888' } }]
+    });
+
+    const resultado = await servico.associarContatoWhatsapp('tenant-1', {
+      contato: '5511992362080',
+      pacienteId: 'paciente-1',
+      atualizarContatoPaciente: true
+    });
+
+    expect(resultado).toEqual({
+      pacienteId: 'paciente-1',
+      contato: '5511992362080',
+      mensagensAtualizadas: 2,
+      contatoPacienteAtualizado: true
+    });
+    expect(repositorios.mensagem.save).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 'mensagem-1', pacienteId: 'paciente-1' }),
+      expect.objectContaining({ id: 'mensagem-2', pacienteId: 'paciente-1' })
+    ]);
+    expect(repositorios.paciente.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'paciente-1', contatoCriptografado: Buffer.from('cripto:5511992362080') })
+    );
   });
 
   it('deve rejeitar template WhatsApp nao aprovado', async () => {

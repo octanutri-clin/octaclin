@@ -10,6 +10,7 @@ import {
   MensagemNotificacaoApi,
   TemplateMensagemApi,
   TipoCanalNotificacao,
+  associarContatoWhatsapp,
   carregarBootstrapComunicacoes,
   criarCanal,
   criarTemplate,
@@ -276,6 +277,8 @@ export function PainelComunicacoes() {
   const [salvando, setSalvando] = useState(false);
   const [conversaSelecionadaId, setConversaSelecionadaId] = useState<string | null>(null);
   const [filtroConversas, setFiltroConversas] = useState<'todas' | 'recebidas' | 'falhas'>('todas');
+  const [pacienteAssociacaoId, setPacienteAssociacaoId] = useState('');
+  const [atualizarContatoPaciente, setAtualizarContatoPaciente] = useState(true);
 
   const templatesCompativeis = useMemo(
     () => templates.filter((template) => template.canal === canais.find((canal) => canal.id === formularioMensagem.canalId)?.tipo),
@@ -418,6 +421,31 @@ export function PainelComunicacoes() {
     setSucesso('Conversa preparada no disparo manual.');
   }
 
+  async function associarConversaWhatsapp(conversa: ConversaWhatsapp) {
+    if (!pacienteAssociacaoId) {
+      setErro('Selecione um paciente para associar.');
+      return;
+    }
+
+    setSalvando(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const resultado = await associarContatoWhatsapp({
+        contato: conversa.contato,
+        pacienteId: pacienteAssociacaoId,
+        atualizarContatoPaciente
+      });
+      setSucesso(`${resultado.mensagensAtualizadas} mensagens vinculadas ao paciente.`);
+      setConversaSelecionadaId(pacienteAssociacaoId);
+      await carregar();
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao associar contato.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   useEffect(() => {
     void carregar();
   }, []);
@@ -427,6 +455,12 @@ export function PainelComunicacoes() {
       setConversaSelecionadaId(conversasWhatsapp[0].id);
     }
   }, [conversaSelecionadaId, conversasWhatsapp]);
+
+  useEffect(() => {
+    if (!pacienteAssociacaoId && pacientes?.itens[0]) {
+      setPacienteAssociacaoId(pacientes.itens[0].id);
+    }
+  }, [pacienteAssociacaoId, pacientes?.itens]);
 
   useEffect(() => {
     if (!templatesCompativeis.some((template) => template.id === formularioMensagem.templateId)) {
@@ -792,6 +826,47 @@ export function PainelComunicacoes() {
                       Responder
                     </Botao>
                   </div>
+                  {!conversaSelecionada.pacienteId ? (
+                    <div className="grid gap-3 border-b border-linha bg-[#fffaf0] px-4 py-3 text-sm lg:grid-cols-[1fr_auto] lg:items-end">
+                      <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                        <div className="space-y-1.5">
+                          <Rotulo htmlFor="whatsapp-associar-paciente">Associar contato a paciente</Rotulo>
+                          <Selecao
+                            id="whatsapp-associar-paciente"
+                            value={pacienteAssociacaoId}
+                            onChange={(evento) => setPacienteAssociacaoId(evento.target.value)}
+                          >
+                            <option value="" disabled>
+                              Selecione
+                            </option>
+                            {pacientes?.itens.map((paciente) => (
+                              <option key={paciente.id} value={paciente.id}>
+                                {paciente.nome}
+                              </option>
+                            ))}
+                          </Selecao>
+                        </div>
+                        <label className="flex items-center gap-2 rounded-md border border-linha bg-white px-3 py-2 text-xs font-medium text-[#596273]">
+                          <input
+                            type="checkbox"
+                            checked={atualizarContatoPaciente}
+                            onChange={(evento) => setAtualizarContatoPaciente(evento.target.checked)}
+                            className="h-4 w-4 accent-primaria"
+                          />
+                          salvar telefone no paciente
+                        </label>
+                      </div>
+                      <Botao
+                        type="button"
+                        variante="primario"
+                        disabled={salvando || !pacienteAssociacaoId}
+                        onClick={() => associarConversaWhatsapp(conversaSelecionada)}
+                      >
+                        <Save size={16} />
+                        Associar
+                      </Botao>
+                    </div>
+                  ) : null}
                   <div className="max-h-[520px] space-y-3 overflow-auto bg-[#f7f8fa] p-4">
                     {conversaSelecionada.mensagens.map((mensagem) => {
                       const recebida = obterDirecaoMensagem(mensagem) === 'recebida';

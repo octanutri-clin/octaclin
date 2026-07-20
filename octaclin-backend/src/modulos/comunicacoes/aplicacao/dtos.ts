@@ -51,3 +51,16 @@ export class DispararMensagemDto {
   @IsObject()
   payload: Record<string, unknown>;
 }
+
+export class AssociarContatoWhatsappDto {
+  @IsString()
+  @MaxLength(40)
+  contato: string;
+
+  @IsUUID()
+  pacienteId: string;
+
+  @IsOptional()
+  @IsBoolean()
+  atualizarContatoPaciente?: boolean;
+}

@@ -56,6 +56,19 @@ export interface DispararMensagemEntrada {
   payload: Record<string, unknown>;
 }
 
+export interface AssociarContatoWhatsappEntrada {
+  contato: string;
+  pacienteId: string;
+  atualizarContatoPaciente?: boolean;
+}
+
+export interface AssociarContatoWhatsappResposta {
+  pacienteId: string;
+  contato: string;
+  mensagensAtualizadas: number;
+  contatoPacienteAtualizado: boolean;
+}
+
 export interface BootstrapComunicacoes {
   canais: CanalNotificacaoApi[];
   templates: TemplateMensagemApi[];
@@ -121,6 +134,15 @@ export async function dispararMensagem(entrada: DispararMensagemEntrada): Promis
 
 export async function listarMensagens(): Promise<MensagemNotificacaoApi[]> {
   return requisitar<MensagemNotificacaoApi[]>('/api/comunicacoes/mensagens');
+}
+
+export async function associarContatoWhatsapp(
+  entrada: AssociarContatoWhatsappEntrada
+): Promise<AssociarContatoWhatsappResposta> {
+  return requisitar<AssociarContatoWhatsappResposta>('/api/comunicacoes/whatsapp/associar-contato', {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
 }
 
 export async function carregarBootstrapComunicacoes(): Promise<BootstrapComunicacoes> {

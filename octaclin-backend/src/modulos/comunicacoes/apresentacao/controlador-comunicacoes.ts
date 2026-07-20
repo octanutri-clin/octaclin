@@ -5,7 +5,7 @@ import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { CriarCanalNotificacaoDto, CriarTemplateMensagemDto, DispararMensagemDto } from '../aplicacao/dtos';
+import { AssociarContatoWhatsappDto, CriarCanalNotificacaoDto, CriarTemplateMensagemDto, DispararMensagemDto } from '../aplicacao/dtos';
 import { ProcessadorNotificacoes } from '../aplicacao/processador-notificacoes';
 import { ServicoComunicacoes } from '../aplicacao/servico-comunicacoes';
 
@@ -77,6 +77,20 @@ export class ControladorComunicacoes {
       status: mensagem.status
     });
     return mensagem;
+  }
+
+  @Post('whatsapp/associar-contato')
+  async associarContatoWhatsapp(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: AssociarContatoWhatsappDto
+  ) {
+    const resultado = await this.servicoComunicacoes.associarContatoWhatsapp(usuario.tenantId, dados);
+    await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.whatsapp.associar_contato', 'paciente', dados.pacienteId, {
+      contato: dados.contato,
+      mensagensAtualizadas: resultado.mensagensAtualizadas
+    });
+    return resultado;
   }
 
   private registrarAuditoria(
