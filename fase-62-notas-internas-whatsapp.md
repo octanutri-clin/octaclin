@@ -30,6 +30,12 @@ Permitir operacao interna da inbox WhatsApp sem depender de novos templates Meta
 - Backend `pnpm typecheck`: passou.
 - Web `pnpm typecheck`: passou.
 - Web `pnpm build`: passou.
+- Staging backend `GET /health`: passou.
+- Staging web `/comunicacoes`: HTTP 200.
+- Staging `POST /comunicacoes/whatsapp/notas` criou a nota `9c7094f0-06cd-4c86-b616-046debaf831d` com:
+  - `status: nota`;
+  - `payload.direcao: nota`;
+  - `payload.statusAtendimento: acompanhamento`.
 
 ## Proximo passo
 
