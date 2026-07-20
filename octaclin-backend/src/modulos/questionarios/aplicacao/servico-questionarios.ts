@@ -13,6 +13,7 @@ import {
   CriarCategoriaPerguntaDto,
   CriarPerguntaDto,
   CriarQuestionarioDto,
+  DuplicarQuestionarioDto,
   ReordenarPerguntasDto
 } from './dtos';
 import { AgendamentoQuestionarioOrm } from '../infraestrutura/agendamento-questionario.orm';
@@ -98,6 +99,77 @@ export class ServicoQuestionarios {
       questionario.versao += 1;
 
       return repositorio.save(questionario);
+    });
+  }
+
+  async duplicarQuestionario(
+    tenantId: string,
+    questionarioId: string,
+    dados: DuplicarQuestionarioDto
+  ): Promise<QuestionarioOrm> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorioQuestionarios = gerenciador.getRepository(QuestionarioOrm);
+      const original = await repositorioQuestionarios.findOne({ where: { id: questionarioId, tenantId } });
+      if (!original) throw new NotFoundException('Questionario nao encontrado.');
+
+      const duplicado = await repositorioQuestionarios.save(
+        repositorioQuestionarios.create({
+          tenantId,
+          profissionalId: original.profissionalId,
+          titulo: dados.titulo?.trim() || `${original.titulo} (copia)`,
+          descricao: original.descricao,
+          status: 'rascunho',
+          versao: 1
+        })
+      );
+
+      const perguntasOriginais = await gerenciador.getRepository(PerguntaOrm).find({
+        where: { tenantId, questionarioId },
+        order: { ordem: 'ASC' }
+      });
+      const idsPerguntasOriginais = new Set(perguntasOriginais.map((pergunta) => pergunta.id));
+      const opcoesOriginais = (
+        await gerenciador.getRepository(OpcaoPerguntaOrm).find({
+          where: { tenantId },
+          order: { ordem: 'ASC' }
+        })
+      ).filter((opcao) => idsPerguntasOriginais.has(opcao.perguntaId));
+
+      const mapaPerguntas = new Map<string, string>();
+      for (const perguntaOriginal of perguntasOriginais) {
+        const perguntaDuplicada = await gerenciador.getRepository(PerguntaOrm).save(
+          gerenciador.getRepository(PerguntaOrm).create({
+            tenantId,
+            questionarioId: duplicado.id,
+            categoriaId: perguntaOriginal.categoriaId,
+            tipo: perguntaOriginal.tipo,
+            enunciado: perguntaOriginal.enunciado,
+            peso: perguntaOriginal.peso,
+            obrigatoria: perguntaOriginal.obrigatoria,
+            configuracao: JSON.parse(JSON.stringify(perguntaOriginal.configuracao ?? {})),
+            ordem: perguntaOriginal.ordem
+          })
+        );
+        mapaPerguntas.set(perguntaOriginal.id, perguntaDuplicada.id);
+      }
+
+      const opcoesDuplicadas = opcoesOriginais.flatMap((opcaoOriginal) => {
+        const perguntaId = mapaPerguntas.get(opcaoOriginal.perguntaId);
+        if (!perguntaId) return [];
+        return gerenciador.getRepository(OpcaoPerguntaOrm).create({
+          tenantId,
+          perguntaId,
+          rotulo: opcaoOriginal.rotulo,
+          valor: opcaoOriginal.valor,
+          imagemUrl: opcaoOriginal.imagemUrl,
+          ordem: opcaoOriginal.ordem
+        });
+      });
+      if (opcoesDuplicadas.length) {
+        await gerenciador.getRepository(OpcaoPerguntaOrm).save(opcoesDuplicadas);
+      }
+
+      return duplicado;
     });
   }
 

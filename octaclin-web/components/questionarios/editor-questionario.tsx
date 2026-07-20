@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { AlertTriangle, Archive, CalendarClock, Check, CheckCircle2, Eye, Plus, RefreshCcw, Save, Settings2, Trash2 } from 'lucide-react';
+import { AlertTriangle, Archive, CalendarClock, Check, CheckCircle2, Copy, Eye, Plus, RefreshCcw, Save, Settings2, Trash2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import {
@@ -17,6 +17,7 @@ import {
   criarAgendamentoQuestionario,
   criarPergunta,
   criarQuestionario,
+  duplicarQuestionario,
   listarPerguntas,
   reordenarPerguntas
 } from '@/lib/questionarios-api';
@@ -208,6 +209,24 @@ export function EditorQuestionario() {
     }
   }
 
+  async function duplicarAtual() {
+    if (!questionarioAtual) return;
+
+    setSalvando(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const duplicado = await duplicarQuestionario(questionarioAtual.id);
+      setQuestionarios((atuais) => [duplicado, ...atuais]);
+      await selecionarQuestionario(duplicado);
+      setSucesso('Questionario duplicado.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao duplicar questionario.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   async function adicionarPergunta() {
     if (!questionarioAtual) {
       setErro('Crie um questionario antes de adicionar perguntas.');
@@ -356,7 +375,7 @@ export function EditorQuestionario() {
           ? {
               ...pergunta,
               tipo,
-              configuracao: configuracaoPadrao(tipo),
+              configuracao: { ...configuracaoPadrao(tipo), secao: textoConfig(pergunta.configuracao, 'secao', 'Sem secao') },
               opcoes: tipo === 'multipla_escolha' ? pergunta.opcoes.length >= 2 ? pergunta.opcoes : opcoesPadraoMultipla() : []
             }
           : pergunta
@@ -450,6 +469,10 @@ export function EditorQuestionario() {
         <Botao type="button" onClick={() => setPreviewAberto((valor) => !valor)}>
           <Eye className="h-4 w-4" />
           {previewAberto ? 'Ocultar preview' : 'Preview paciente'}
+        </Botao>
+        <Botao type="button" onClick={() => void duplicarAtual()} disabled={salvando || !questionarioAtual}>
+          <Copy className="h-4 w-4" />
+          Duplicar
         </Botao>
         <Botao
           type="button"
@@ -622,6 +645,14 @@ export function EditorQuestionario() {
                     </option>
                   ))}
                 </Selecao>
+              </div>
+              <div className="space-y-1.5">
+                <Rotulo htmlFor="secao">Secao</Rotulo>
+                <Campo
+                  id="secao"
+                  value={textoConfig(perguntaSelecionada.configuracao, 'secao', 'Sem secao')}
+                  onChange={(event) => atualizarConfiguracao('secao', event.target.value)}
+                />
               </div>
               <label className="flex items-center justify-between rounded-md border border-linha bg-[#f7f8fa] px-3 py-2">
                 <span className="text-sm font-medium text-tinta">Obrigatoria</span>

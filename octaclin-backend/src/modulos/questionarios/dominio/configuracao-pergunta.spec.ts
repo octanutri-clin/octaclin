@@ -31,4 +31,12 @@ describe('Configuracao por tipo de pergunta', () => {
     expect(() => normalizarConfiguracaoPergunta('linear', { minimo: 10, maximo: 5 })).toThrow(BadRequestException);
     expect(() => normalizarConfiguracaoPergunta('metrica', { minimo: 200, maximo: 30 })).toThrow(BadRequestException);
   });
+
+  it('deve preservar a secao comum ao normalizar a configuracao do tipo', () => {
+    expect(normalizarConfiguracaoPergunta('sim_nao', { secao: 'Atividade fisica', rotuloSim: 'Sim', rotuloNao: 'Nao' })).toEqual({
+      secao: 'Atividade fisica',
+      rotuloSim: 'Sim',
+      rotuloNao: 'Nao'
+    });
+  });
 });

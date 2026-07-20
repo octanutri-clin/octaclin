@@ -165,6 +165,13 @@ export async function atualizarQuestionario(
   });
 }
 
+export async function duplicarQuestionario(id: string, entrada: { titulo?: string } = {}): Promise<QuestionarioApi> {
+  return requisitar<QuestionarioApi>(`/api/questionarios/${id}/duplicar`, {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
 export async function listarPerguntas(questionarioId: string): Promise<PerguntaApi[]> {
   return requisitar<PerguntaApi[]>(`/api/questionarios/${questionarioId}/perguntas`);
 }

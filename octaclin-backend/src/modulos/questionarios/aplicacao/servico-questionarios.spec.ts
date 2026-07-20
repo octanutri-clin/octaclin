@@ -108,4 +108,65 @@ describe('ServicoQuestionarios', () => {
     expect(dados.opcaos).toHaveLength(2);
     expect(dados.opcaos.some((opcao: Record<string, unknown>) => opcao.id === 'opcao-antiga')).toBe(false);
   });
+
+  it('deve duplicar questionario com perguntas, configuracoes e opcoes', async () => {
+    const { servico, dados } = criarServico({
+      questionarios: [
+        {
+          id: 'q1',
+          tenantId: 'tenant-1',
+          profissionalId: 'prof-1',
+          titulo: 'Check-in original',
+          descricao: 'Descricao original',
+          status: 'publicado',
+          versao: 4
+        }
+      ],
+      perguntas: [
+        {
+          id: 'p1',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'texto_longo',
+          enunciado: 'Como foi sua semana?',
+          peso: '1',
+          obrigatoria: true,
+          configuracao: { secao: 'Rotina', limiteCaracteres: 500, placeholder: 'Conte aqui' },
+          ordem: 1
+        },
+        {
+          id: 'p2',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'multipla_escolha',
+          enunciado: 'Quais refeicoes?',
+          peso: '2',
+          obrigatoria: true,
+          configuracao: { secao: 'Alimentacao', multipla: true },
+          ordem: 2
+        }
+      ],
+      opcaos: [
+        { id: 'o1', tenantId: 'tenant-1', perguntaId: 'p2', rotulo: 'Cafe', valor: 'cafe', ordem: 1 },
+        { id: 'o2', tenantId: 'tenant-1', perguntaId: 'p2', rotulo: 'Almoco', valor: 'almoco', ordem: 2 }
+      ]
+    });
+
+    const duplicado = await servico.duplicarQuestionario('tenant-1', 'q1', {});
+
+    expect(duplicado).toEqual(
+      expect.objectContaining({
+        id: 'questionario-2',
+        titulo: 'Check-in original (copia)',
+        status: 'rascunho',
+        versao: 1
+      })
+    );
+    const perguntasDuplicadas = dados.perguntas.filter((pergunta: Record<string, unknown>) => pergunta.questionarioId === 'questionario-2');
+    expect(perguntasDuplicadas).toHaveLength(2);
+    expect(perguntasDuplicadas[0]).toEqual(expect.objectContaining({ configuracao: { secao: 'Rotina', limiteCaracteres: 500, placeholder: 'Conte aqui' } }));
+    expect(dados.opcaos.filter((opcao: Record<string, unknown>) => opcao.perguntaId === perguntasDuplicadas[1].id)).toHaveLength(2);
+  });
 });

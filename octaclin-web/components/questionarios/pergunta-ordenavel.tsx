@@ -28,6 +28,7 @@ interface Props {
 export function PerguntaOrdenavel({ pergunta, selecionada, categoriaNome, categoriaCor, aoSelecionar }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: pergunta.id });
   const Icone = icones[pergunta.tipo];
+  const secao = typeof pergunta.configuracao?.secao === 'string' ? pergunta.configuracao.secao : 'Sem secao';
   const style = {
     transform: CSS.Transform.toString(transform),
     transition
@@ -59,6 +60,7 @@ export function PerguntaOrdenavel({ pergunta, selecionada, categoriaNome, catego
           <span className="truncate text-sm font-semibold text-tinta">{pergunta.enunciado}</span>
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#596273]">
+          <span>{secao}</span>
           <span>{categoriaNome}</span>
           <span>Peso {pergunta.peso}</span>
           <span>{pergunta.obrigatoria ? 'Obrigatoria' : 'Opcional'}</span>

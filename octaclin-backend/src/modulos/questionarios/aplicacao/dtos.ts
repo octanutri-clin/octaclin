@@ -65,6 +65,13 @@ export class AtualizarQuestionarioDto {
   status?: 'rascunho' | 'publicado' | 'arquivado';
 }
 
+export class DuplicarQuestionarioDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  titulo?: string;
+}
+
 export class OpcaoPerguntaDto {
   @IsString()
   @MaxLength(180)

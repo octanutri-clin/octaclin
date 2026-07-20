@@ -4,6 +4,7 @@ export type TipoEntradaPreview = 'checkbox' | 'radio' | 'file' | 'number' | 'ran
 
 export interface CampoPreview {
   id: string;
+  secao: string;
   enunciado: string;
   obrigatoria: boolean;
   tipoEntrada: TipoEntradaPreview;
@@ -102,6 +103,7 @@ export function criarCampoPreview(pergunta: PerguntaEditor): CampoPreview {
   const entrada = tipoEntrada(pergunta.tipo, pergunta.configuracao);
   return {
     id: pergunta.id,
+    secao: texto(pergunta.configuracao, 'secao', 'Sem secao'),
     enunciado: pergunta.enunciado,
     obrigatoria: pergunta.obrigatoria,
     tipoEntrada: entrada,

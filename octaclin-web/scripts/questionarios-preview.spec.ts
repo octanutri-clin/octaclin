@@ -20,10 +20,27 @@ test('deve traduzir multipla escolha em campo de preview com opcoes e cardinalid
 
   assert.equal(campo.tipoEntrada, 'checkbox');
   assert.equal(campo.ajuda, 'Selecione uma ou mais opcoes.');
+  assert.equal(campo.secao, 'Sem secao');
   assert.deepEqual(
     campo.opcoes.map((opcao) => opcao.rotulo),
     ['Cafe da manha', 'Almoco']
   );
+});
+
+test('deve expor secao da pergunta para agrupar o preview', () => {
+  const campo = criarCampoPreview({
+    id: 'pergunta-secao',
+    tipo: 'sim_nao',
+    categoriaId: 'cat-1',
+    enunciado: 'Treinou hoje?',
+    peso: 1,
+    obrigatoria: false,
+    configuracao: { secao: 'Atividade fisica', rotuloSim: 'Treinei', rotuloNao: 'Nao treinei' },
+    opcoes: [],
+    ordem: 1
+  });
+
+  assert.equal(campo.secao, 'Atividade fisica');
 });
 
 test('deve respeitar configuracao especifica de metrica, texto e upload', () => {
@@ -41,6 +58,7 @@ test('deve respeitar configuracao especifica de metrica, texto e upload', () => 
     }),
     {
       id: 'peso',
+      secao: 'Sem secao',
       enunciado: 'Peso atual',
       obrigatoria: true,
       tipoEntrada: 'number',

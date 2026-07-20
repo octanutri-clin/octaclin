@@ -26,12 +26,18 @@ function validarFaixa(minimo: number, maximo: number, contexto: string) {
   }
 }
 
+function configuracaoComum(configuracao: Configuracao): Configuracao {
+  const secao = texto(configuracao.secao).trim();
+  return secao ? { secao } : {};
+}
+
 export function normalizarConfiguracaoPergunta(tipo: TipoPergunta, configuracao: Configuracao = {}): Configuracao {
   if (tipo === 'likert') {
     const escalaMin = numero(configuracao.escalaMin, 1);
     const escalaMax = numero(configuracao.escalaMax, 5);
     validarFaixa(escalaMin, escalaMax, 'Likert');
     return {
+      ...configuracaoComum(configuracao),
       escalaMin,
       escalaMax,
       rotuloMin: texto(configuracao.rotuloMin, 'Discordo totalmente'),
@@ -40,7 +46,7 @@ export function normalizarConfiguracaoPergunta(tipo: TipoPergunta, configuracao:
   }
 
   if (tipo === 'multipla_escolha') {
-    return { multipla: booleano(configuracao.multipla, false) };
+    return { ...configuracaoComum(configuracao), multipla: booleano(configuracao.multipla, false) };
   }
 
   if (tipo === 'linear') {
@@ -48,6 +54,7 @@ export function normalizarConfiguracaoPergunta(tipo: TipoPergunta, configuracao:
     const maximo = numero(configuracao.maximo, 10);
     validarFaixa(minimo, maximo, 'Slider linear');
     return {
+      ...configuracaoComum(configuracao),
       minimo,
       maximo,
       passo: Math.max(numero(configuracao.passo, 1), 0.01),
@@ -61,6 +68,7 @@ export function normalizarConfiguracaoPergunta(tipo: TipoPergunta, configuracao:
     const maximo = numero(configuracao.maximo, 100);
     validarFaixa(minimo, maximo, 'Metrica');
     return {
+      ...configuracaoComum(configuracao),
       unidade: texto(configuracao.unidade),
       minimo,
       maximo,
@@ -70,6 +78,7 @@ export function normalizarConfiguracaoPergunta(tipo: TipoPergunta, configuracao:
 
   if (tipo === 'upload_midia') {
     return {
+      ...configuracaoComum(configuracao),
       tiposAceitos: listaTexto(configuracao.tiposAceitos, ['image/*']),
       maxArquivos: Math.min(10, Math.max(1, Math.round(numero(configuracao.maxArquivos, 1))))
     };
@@ -77,6 +86,7 @@ export function normalizarConfiguracaoPergunta(tipo: TipoPergunta, configuracao:
 
   if (tipo === 'texto_longo') {
     return {
+      ...configuracaoComum(configuracao),
       limiteCaracteres: Math.min(5000, Math.max(1, Math.round(numero(configuracao.limiteCaracteres, 1000)))),
       placeholder: texto(configuracao.placeholder)
     };
@@ -84,6 +94,7 @@ export function normalizarConfiguracaoPergunta(tipo: TipoPergunta, configuracao:
 
   if (tipo === 'sim_nao') {
     return {
+      ...configuracaoComum(configuracao),
       rotuloSim: texto(configuracao.rotuloSim, 'Sim'),
       rotuloNao: texto(configuracao.rotuloNao, 'Nao')
     };

@@ -24,6 +24,7 @@ import {
   CriarCategoriaPerguntaDto,
   CriarPerguntaDto,
   CriarQuestionarioDto,
+  DuplicarQuestionarioDto,
   ReordenarPerguntasDto
 } from '../aplicacao/dtos';
 import { ServicoQuestionarios } from '../aplicacao/servico-questionarios';
@@ -89,6 +90,20 @@ export class ControladorQuestionarios {
       status: dados.status
     });
     return questionario;
+  }
+
+  @Post('questionarios/:id/duplicar')
+  async duplicarQuestionario(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dados: DuplicarQuestionarioDto
+  ) {
+    const duplicado = await this.servicoQuestionarios.duplicarQuestionario(usuario.tenantId, id, dados);
+    await this.registrarAuditoria(usuario, requisicao, 'questionarios.duplicar', 'questionario', duplicado.id, {
+      origemId: id
+    });
+    return duplicado;
   }
 
   @Post('questionarios/:id/perguntas')
