@@ -51,6 +51,6 @@ import { TemplateMensagemOrm } from './infraestrutura/template-mensagem.orm';
     AdaptadorEmailSmtp,
     AdaptadorPushPlaceholder
   ],
-  exports: [ServicoComunicacoes]
+  exports: [ServicoComunicacoes, ProcessadorNotificacoes]
 })
 export class ModuloComunicacoes {}

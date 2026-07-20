@@ -3,12 +3,25 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { Brain, ClipboardList, HeartPulse, Send, Settings, Smartphone, Stethoscope, Trophy, UsersRound, Zap } from 'lucide-react';
+import {
+  Brain,
+  CalendarDays,
+  ClipboardList,
+  HeartPulse,
+  Send,
+  Settings,
+  Smartphone,
+  Stethoscope,
+  Trophy,
+  UsersRound,
+  Zap
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const itens = [
   { href: '/questionarios', rotulo: 'Questionarios', icone: ClipboardList },
   { href: '/comunicacoes', rotulo: 'Comunicacoes', icone: Send },
+  { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays },
   { href: '/automacoes', rotulo: 'Automacoes', icone: Zap },
   { href: '/ia', rotulo: 'IA', icone: Brain },
   { href: '/mobile', rotulo: 'Mobile', icone: Smartphone },
@@ -50,7 +63,7 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={item.href as any}
                   aria-current={ativo ? 'page' : undefined}
                   className={cn(
                     'inline-flex h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium text-[#596273] transition-colors',

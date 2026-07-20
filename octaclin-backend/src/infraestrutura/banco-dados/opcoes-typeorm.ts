@@ -1,8 +1,10 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { DataSourceOptions } from 'typeorm';
 import { CriarFundacaoOctaClin1720000000000 } from './migracoes/1720000000000-CriarFundacaoOctaClin';
+import { CriarAgendaConsultas1720000000100 } from './migracoes/1720000000100-CriarAgendaConsultas';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
+import { AgendaConsultaOrm } from '../../modulos/agenda/infraestrutura/agenda-consulta.orm';
 import { RefreshTokenOrm } from '../../modulos/auth/infraestrutura/refresh-token.orm';
 import { CanalNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/mensagem-notificacao.orm';
@@ -80,6 +82,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CanalNotificacaoOrm,
       TemplateMensagemOrm,
       MensagemNotificacaoOrm,
+      AgendaConsultaOrm,
       RegraAutomacaoOrm,
       ExecucaoRegraOrm,
       AnaliseSentimentoOrm,
@@ -99,7 +102,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       UserActionLogOrm,
       OutboxEventoOrm
     ],
-    migrations: [CriarFundacaoOctaClin1720000000000],
+    migrations: [CriarFundacaoOctaClin1720000000000, CriarAgendaConsultas1720000000100],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,
     logging: process.env.NODE_ENV !== 'production'

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { criarOpcoesTypeOrm } from './infraestrutura/banco-dados/opcoes-typeorm';
+import { ModuloAgenda } from './modulos/agenda/modulo-agenda';
 import { ModuloAutomacoes } from './modulos/automacoes/modulo-automacoes';
 import { ModuloAuth } from './modulos/auth/modulo-auth';
 import { ModuloComunicacoes } from './modulos/comunicacoes/modulo-comunicacoes';
@@ -30,6 +31,7 @@ import { ModuloUsuarios } from './modulos/usuarios/modulo-usuarios';
     ModuloPacientes,
     ModuloQuestionarios,
     ModuloComunicacoes,
+    ModuloAgenda,
     ModuloIa,
     ModuloAutomacoes,
     ModuloGamificacao,
