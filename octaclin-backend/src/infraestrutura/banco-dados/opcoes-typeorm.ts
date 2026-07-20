@@ -3,11 +3,13 @@ import { DataSourceOptions } from 'typeorm';
 import { CriarFundacaoOctaClin1720000000000 } from './migracoes/1720000000000-CriarFundacaoOctaClin';
 import { CriarAgendaConsultas1720000000100 } from './migracoes/1720000000100-CriarAgendaConsultas';
 import { CriarConvitesPacienteAcesso1720000000200 } from './migracoes/1720000000200-CriarConvitesPacienteAcesso';
+import { CriarTokensRedefinicaoSenha1720000000300 } from './migracoes/1720000000300-CriarTokensRedefinicaoSenha';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
 import { AgendaConsultaOrm } from '../../modulos/agenda/infraestrutura/agenda-consulta.orm';
 import { RefreshTokenOrm } from '../../modulos/auth/infraestrutura/refresh-token.orm';
+import { TokenRedefinicaoSenhaOrm } from '../../modulos/auth/infraestrutura/token-redefinicao-senha.orm';
 import { CanalNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from '../../modulos/comunicacoes/infraestrutura/template-mensagem.orm';
@@ -74,6 +76,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       TenantOrm,
       UsuarioOrm,
       RefreshTokenOrm,
+      TokenRedefinicaoSenhaOrm,
       ConsentimentoLgpdOrm,
       ProfissionalOrm,
       PacienteOrm,
@@ -110,7 +113,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
     migrations: [
       CriarFundacaoOctaClin1720000000000,
       CriarAgendaConsultas1720000000100,
-      CriarConvitesPacienteAcesso1720000000200
+      CriarConvitesPacienteAcesso1720000000200,
+      CriarTokensRedefinicaoSenha1720000000300
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

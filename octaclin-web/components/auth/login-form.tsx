@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogIn } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
@@ -90,6 +91,9 @@ export function LoginForm() {
             <LogIn size={16} />
             {enviando ? 'Entrando' : 'Entrar'}
           </Botao>
+          <Link href={'/esqueci-senha' as any} className="text-center text-sm font-medium text-primaria hover:underline">
+            Esqueci minha senha
+          </Link>
         </form>
       </div>
     </main>

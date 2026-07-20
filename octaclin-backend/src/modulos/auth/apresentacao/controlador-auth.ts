@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
-import { LoginDto, RenovarTokenDto } from '../aplicacao/dtos';
+import { LoginDto, RedefinirSenhaDto, RenovarTokenDto, SolicitarRecuperacaoSenhaDto, ValidarTokenRedefinicaoSenhaDto } from '../aplicacao/dtos';
+import { ServicoRecuperacaoSenha } from '../aplicacao/servico-recuperacao-senha';
 import { ServicoAuth } from '../aplicacao/servico-auth';
 import { UsuarioAutenticado } from '../dominio/usuario-autenticado';
 import { UsuarioAtual } from './decorators';
@@ -8,7 +9,10 @@ import { GuardaLimiteLogin } from './guarda-limite-login';
 
 @Controller('auth')
 export class ControladorAuth {
-  constructor(private readonly servicoAuth: ServicoAuth) {}
+  constructor(
+    private readonly servicoAuth: ServicoAuth,
+    private readonly servicoRecuperacaoSenha: ServicoRecuperacaoSenha
+  ) {}
 
   @Post('login')
   @HttpCode(200)
@@ -21,6 +25,24 @@ export class ControladorAuth {
   @HttpCode(200)
   renovar(@Body() dados: RenovarTokenDto) {
     return this.servicoAuth.renovar(dados);
+  }
+
+  @Post('recuperar-senha')
+  @HttpCode(200)
+  recuperarSenha(@Body() dados: SolicitarRecuperacaoSenhaDto) {
+    return this.servicoRecuperacaoSenha.solicitarRecuperacao(dados);
+  }
+
+  @Post('recuperar-senha/validar')
+  @HttpCode(200)
+  validarTokenRecuperacao(@Body() dados: ValidarTokenRedefinicaoSenhaDto) {
+    return this.servicoRecuperacaoSenha.validarToken(dados.token);
+  }
+
+  @Post('redefinir-senha')
+  @HttpCode(200)
+  redefinirSenha(@Body() dados: RedefinirSenhaDto) {
+    return this.servicoRecuperacaoSenha.redefinirSenha(dados);
   }
 
   @Get('permissoes')
