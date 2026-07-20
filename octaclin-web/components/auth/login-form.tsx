@@ -33,10 +33,13 @@ export function LoginForm() {
     setEnviando(true);
 
     try {
-      await autenticar({ apiUrl, tenantSlug, email, senha });
+      const sessao = await autenticar({ apiUrl, tenantSlug, email, senha });
       const redirect = new URLSearchParams(window.location.search).get('redirect');
-      const destino = redirect === '/operacoes' ? '/operacoes' : '/operacoes';
-      router.replace(destino);
+      const destino =
+        redirect?.startsWith('/') && !redirect.startsWith('//') && !redirect.startsWith('/api')
+          ? redirect
+          : sessao.destinoInicial ?? '/operacoes';
+      router.replace(destino as any);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao autenticar.');
     } finally {

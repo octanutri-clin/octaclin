@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const COOKIE_ACCESS_TOKEN = 'octaclin_access_token';
 const COOKIE_REFRESH_TOKEN = 'octaclin_refresh_token';
+const COOKIE_DESTINO_INICIAL = 'octaclin_destino_inicial';
 const ROTAS_PROTEGIDAS = [
+  '/agenda',
   '/operacoes',
   '/questionarios',
   '/comunicacoes',
@@ -11,11 +13,24 @@ const ROTAS_PROTEGIDAS = [
   '/mobile',
   '/gamificacao',
   '/pacientes',
-  '/profissionais'
+  '/profissionais',
+  '/portal'
 ];
 
 function possuiSessao(request: NextRequest) {
   return Boolean(request.cookies.get(COOKIE_ACCESS_TOKEN)?.value && request.cookies.get(COOKIE_REFRESH_TOKEN)?.value);
+}
+
+function destinoInicial(request: NextRequest) {
+  const valor = request.cookies.get(COOKIE_DESTINO_INICIAL)?.value;
+  if (!valor) return '/operacoes';
+
+  try {
+    const destino = decodeURIComponent(valor);
+    return destino.startsWith('/') && !destino.startsWith('//') ? destino : '/operacoes';
+  } catch {
+    return '/operacoes';
+  }
 }
 
 export function middleware(request: NextRequest) {
@@ -33,7 +48,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname === '/login' && autenticado) {
-    return NextResponse.redirect(new URL('/operacoes', request.url));
+    return NextResponse.redirect(new URL(destinoInicial(request), request.url));
   }
 
   return NextResponse.next({ request: { headers: requestHeaders } });
@@ -42,6 +57,7 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/login',
+    '/agenda/:path*',
     '/operacoes/:path*',
     '/questionarios/:path*',
     '/comunicacoes/:path*',
@@ -50,6 +66,7 @@ export const config = {
     '/mobile/:path*',
     '/gamificacao/:path*',
     '/pacientes/:path*',
-    '/profissionais/:path*'
+    '/profissionais/:path*',
+    '/portal/:path*'
   ]
 };

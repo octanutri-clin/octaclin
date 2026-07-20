@@ -1,3 +1,5 @@
+import type { PermissaoOctaClin } from './permissoes';
+
 export type PapelUsuario = 'SuperAdmin' | 'Professional' | 'Collaborator' | 'Patient';
 
 export interface UsuarioAutenticado {
@@ -5,4 +7,5 @@ export interface UsuarioAutenticado {
   tenantId: string;
   papel: PapelUsuario;
   emailHash: string;
+  permissoes: PermissaoOctaClin[];
 }

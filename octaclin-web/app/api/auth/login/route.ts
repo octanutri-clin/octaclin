@@ -82,6 +82,10 @@ export async function POST(request: NextRequest) {
     email: body.email,
     tenantSlug: body.tenantSlug,
     apiUrl,
-    expiraEmSegundos: tokens.expiraEmSegundos
+    expiraEmSegundos: tokens.expiraEmSegundos,
+    papel: tokens.papel,
+    permissoes: tokens.permissoes ?? [],
+    escopoDados: tokens.escopoDados,
+    destinoInicial: tokens.destinoInicial
   });
 }

@@ -8,13 +8,17 @@ import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas'
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { LoginDto, RenovarTokenDto } from './dtos';
+import { contextoAcessoPorPapel } from '../dominio/permissoes';
+import type { PermissaoOctaClin } from '../dominio/permissoes';
+import type { PapelUsuario, UsuarioAutenticado } from '../dominio/usuario-autenticado';
 import { RefreshTokenOrm } from '../infraestrutura/refresh-token.orm';
 
 interface PayloadToken {
   sub: string;
   tenantId: string;
-  papel: string;
+  papel: PapelUsuario;
   emailHash: string;
+  permissoes?: PermissaoOctaClin[];
   familiaToken?: string;
 }
 
@@ -103,12 +107,18 @@ export class ServicoAuth {
     });
   }
 
+  obterContextoAcesso(usuario: UsuarioAutenticado) {
+    return contextoAcessoPorPapel(usuario.papel);
+  }
+
   private async emitirParTokens(usuario: UsuarioOrm, familiaToken: string) {
+    const contextoAcesso = contextoAcessoPorPapel(usuario.role);
     const payload: PayloadToken = {
       sub: usuario.id,
       tenantId: usuario.tenantId,
       papel: usuario.role,
       emailHash: usuario.emailHash,
+      permissoes: contextoAcesso.permissoes,
       familiaToken
     };
 
@@ -138,7 +148,11 @@ export class ServicoAuth {
       accessToken,
       refreshToken,
       tipoToken: 'Bearer',
-      expiraEmSegundos: 15 * 60
+      expiraEmSegundos: 15 * 60,
+      papel: usuario.role,
+      permissoes: contextoAcesso.permissoes,
+      escopoDados: contextoAcesso.escopoDados,
+      destinoInicial: contextoAcesso.destinoInicial
     };
   }
 

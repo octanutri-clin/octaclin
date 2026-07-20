@@ -11,6 +11,10 @@ export interface SessaoPublica {
   tenantSlug: string;
   email: string;
   expiraEm: string;
+  papel?: string;
+  permissoes: string[];
+  escopoDados?: string;
+  destinoInicial?: string;
 }
 
 export interface RespostaLoginPublica {
@@ -18,6 +22,17 @@ export interface RespostaLoginPublica {
   tenantSlug: string;
   email: string;
   expiraEmSegundos: number;
+  papel?: string;
+  permissoes: string[];
+  escopoDados?: string;
+  destinoInicial?: string;
+}
+
+export interface ContextoAcessoPublico {
+  papel: string;
+  permissoes: string[];
+  escopoDados: string;
+  destinoInicial: string;
 }
 
 async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
@@ -65,6 +80,10 @@ export async function obterSessao(): Promise<SessaoPublica | null> {
   if (resposta.status === 401) return null;
   if (!resposta.ok) throw new Error(`Falha HTTP ${resposta.status}`);
   return resposta.json() as Promise<SessaoPublica>;
+}
+
+export async function obterPermissoes(): Promise<ContextoAcessoPublico> {
+  return requisitar<ContextoAcessoPublico>('/api/auth/permissoes');
 }
 
 export async function sair(): Promise<void> {

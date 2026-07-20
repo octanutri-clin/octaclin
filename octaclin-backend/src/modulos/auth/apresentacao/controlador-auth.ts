@@ -1,6 +1,9 @@
-import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { LoginDto, RenovarTokenDto } from '../aplicacao/dtos';
 import { ServicoAuth } from '../aplicacao/servico-auth';
+import { UsuarioAutenticado } from '../dominio/usuario-autenticado';
+import { UsuarioAtual } from './decorators';
+import { GuardaJwt } from './guarda-jwt';
 import { GuardaLimiteLogin } from './guarda-limite-login';
 
 @Controller('auth')
@@ -18,6 +21,12 @@ export class ControladorAuth {
   @HttpCode(200)
   renovar(@Body() dados: RenovarTokenDto) {
     return this.servicoAuth.renovar(dados);
+  }
+
+  @Get('permissoes')
+  @UseGuards(GuardaJwt)
+  permissoes(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoAuth.obterContextoAcesso(usuario);
   }
 
   @Post('sair')

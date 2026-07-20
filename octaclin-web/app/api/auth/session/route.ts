@@ -10,6 +10,10 @@ export function GET() {
     apiUrl: sessao.apiUrl,
     tenantSlug: sessao.tenantSlug,
     email: sessao.email,
-    expiraEm: sessao.expiraEm
+    expiraEm: sessao.expiraEm,
+    papel: sessao.papel,
+    permissoes: sessao.permissoes ?? [],
+    escopoDados: sessao.escopoDados,
+    destinoInicial: sessao.destinoInicial
   }, { headers: { 'Cache-Control': 'no-store' } });
 }

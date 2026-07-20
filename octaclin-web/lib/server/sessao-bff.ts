@@ -6,7 +6,11 @@ const nomes = {
   apiUrl: 'octaclin_api_url',
   tenantSlug: 'octaclin_tenant_slug',
   email: 'octaclin_email',
-  expiraEm: 'octaclin_access_expira_em'
+  expiraEm: 'octaclin_access_expira_em',
+  papel: 'octaclin_papel',
+  permissoes: 'octaclin_permissoes',
+  escopoDados: 'octaclin_escopo_dados',
+  destinoInicial: 'octaclin_destino_inicial'
 };
 
 const cookieBase = {
@@ -21,6 +25,10 @@ export interface RespostaToken {
   refreshToken: string;
   tipoToken: 'Bearer';
   expiraEmSegundos: number;
+  papel?: string;
+  permissoes?: string[];
+  escopoDados?: string;
+  destinoInicial?: string;
 }
 
 export interface SessaoBff {
@@ -30,6 +38,10 @@ export interface SessaoBff {
   accessToken: string;
   refreshToken: string;
   expiraEm: string;
+  papel?: string;
+  permissoes?: string[];
+  escopoDados?: string;
+  destinoInicial?: string;
 }
 
 export class ErroSessaoAusente extends Error {
@@ -56,6 +68,19 @@ function decodificar(valor: string) {
 
 function expiraEm(resposta: RespostaToken) {
   return new Date(Date.now() + resposta.expiraEmSegundos * 1000).toISOString();
+}
+
+function codificarJson(valor: unknown) {
+  return codificar(JSON.stringify(valor));
+}
+
+function decodificarJson<T>(valor: string | undefined): T | undefined {
+  if (!valor) return undefined;
+  try {
+    return JSON.parse(decodificar(valor)) as T;
+  } catch {
+    return undefined;
+  }
 }
 
 export function normalizarApiUrlBff(apiUrl: string): string {
@@ -105,6 +130,10 @@ export function salvarSessaoBff(
   jar.set(nomes.tenantSlug, codificar(entrada.tenantSlug), { ...cookieBase, maxAge });
   jar.set(nomes.email, codificar(entrada.email), { ...cookieBase, maxAge });
   jar.set(nomes.expiraEm, expiraEm(resposta), { ...cookieBase, maxAge });
+  if (resposta.papel) jar.set(nomes.papel, codificar(resposta.papel), { ...cookieBase, maxAge });
+  if (resposta.permissoes) jar.set(nomes.permissoes, codificarJson(resposta.permissoes), { ...cookieBase, maxAge });
+  if (resposta.escopoDados) jar.set(nomes.escopoDados, codificar(resposta.escopoDados), { ...cookieBase, maxAge });
+  if (resposta.destinoInicial) jar.set(nomes.destinoInicial, codificar(resposta.destinoInicial), { ...cookieBase, maxAge });
 }
 
 export function obterSessaoBff(): SessaoBff | null {
@@ -115,6 +144,10 @@ export function obterSessaoBff(): SessaoBff | null {
   const tenantSlug = jar.get(nomes.tenantSlug)?.value;
   const email = jar.get(nomes.email)?.value;
   const expiraEmValor = jar.get(nomes.expiraEm)?.value;
+  const papel = jar.get(nomes.papel)?.value;
+  const permissoes = decodificarJson<string[]>(jar.get(nomes.permissoes)?.value);
+  const escopoDados = jar.get(nomes.escopoDados)?.value;
+  const destinoInicial = jar.get(nomes.destinoInicial)?.value;
 
   if (!accessToken || !refreshToken || !apiUrl || !tenantSlug || !email || !expiraEmValor) return null;
 
@@ -124,7 +157,11 @@ export function obterSessaoBff(): SessaoBff | null {
     apiUrl: decodificar(apiUrl),
     tenantSlug: decodificar(tenantSlug),
     email: decodificar(email),
-    expiraEm: expiraEmValor
+    expiraEm: expiraEmValor,
+    papel: papel ? decodificar(papel) : undefined,
+    permissoes,
+    escopoDados: escopoDados ? decodificar(escopoDados) : undefined,
+    destinoInicial: destinoInicial ? decodificar(destinoInicial) : undefined
   };
 }
 
@@ -188,7 +225,11 @@ async function renovarSessao(sessao: SessaoBff): Promise<SessaoBff | null> {
     ...sessao,
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
-    expiraEm: expiraEm(tokens)
+    expiraEm: expiraEm(tokens),
+    papel: tokens.papel,
+    permissoes: tokens.permissoes,
+    escopoDados: tokens.escopoDados,
+    destinoInicial: tokens.destinoInicial
   };
 }
 

@@ -1,5 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { contextoAcessoPorPapel } from '../dominio/permissoes';
+import type { PermissaoOctaClin } from '../dominio/permissoes';
 import { UsuarioAutenticado } from '../dominio/usuario-autenticado';
 
 @Injectable()
@@ -23,12 +25,16 @@ export class GuardaJwt implements CanActivate {
       const payload = await this.jwt.verifyAsync(token, {
         secret: process.env.JWT_SEGREDO ?? 'dev-access-secret'
       });
+      const contextoAcesso = contextoAcessoPorPapel(payload.papel);
 
       requisicao.usuarioAutenticado = {
         usuarioId: payload.sub,
         tenantId: payload.tenantId,
         papel: payload.papel,
-        emailHash: payload.emailHash
+        emailHash: payload.emailHash,
+        permissoes: Array.isArray(payload.permissoes)
+          ? (payload.permissoes as PermissaoOctaClin[])
+          : contextoAcesso.permissoes
       };
 
       return true;

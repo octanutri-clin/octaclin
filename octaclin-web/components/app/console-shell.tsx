@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Brain,
@@ -17,18 +18,19 @@ import {
   Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { obterSessao } from '@/lib/auth-api';
 
 const itens = [
-  { href: '/questionarios', rotulo: 'Questionarios', icone: ClipboardList },
-  { href: '/comunicacoes', rotulo: 'Comunicacoes', icone: Send },
-  { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays },
-  { href: '/automacoes', rotulo: 'Automacoes', icone: Zap },
-  { href: '/ia', rotulo: 'IA', icone: Brain },
-  { href: '/mobile', rotulo: 'Mobile', icone: Smartphone },
-  { href: '/gamificacao', rotulo: 'Gamificacao', icone: Trophy },
-  { href: '/operacoes', rotulo: 'Operacoes', icone: Settings },
-  { href: '/pacientes', rotulo: 'Pacientes', icone: HeartPulse },
-  { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope }
+  { href: '/questionarios', rotulo: 'Questionarios', icone: ClipboardList, permissao: 'questionarios.ler' },
+  { href: '/comunicacoes', rotulo: 'Comunicacoes', icone: Send, permissao: 'comunicacoes.mensagens.ler' },
+  { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays, permissao: 'agenda.consultas.ler' },
+  { href: '/automacoes', rotulo: 'Automacoes', icone: Zap, permissao: 'automacoes.gerenciar' },
+  { href: '/ia', rotulo: 'IA', icone: Brain, permissao: 'ia.executar' },
+  { href: '/mobile', rotulo: 'Mobile', icone: Smartphone, permissao: 'mobile.operar' },
+  { href: '/gamificacao', rotulo: 'Gamificacao', icone: Trophy, permissao: 'gamificacao.gerenciar' },
+  { href: '/operacoes', rotulo: 'Operacoes', icone: Settings, permissao: 'operacoes.auditoria.ler' },
+  { href: '/pacientes', rotulo: 'Pacientes', icone: HeartPulse, permissao: 'pacientes.listar' },
+  { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope, permissao: 'profissionais.ler' }
 ] as const;
 
 interface ConsoleShellProps {
@@ -40,6 +42,18 @@ interface ConsoleShellProps {
 
 export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShellProps) {
   const pathname = usePathname();
+  const [permissoes, setPermissoes] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    void obterSessao()
+      .then((sessao) => setPermissoes(sessao?.permissoes?.length ? sessao.permissoes : null))
+      .catch(() => setPermissoes(null));
+  }, []);
+
+  const itensVisiveis = useMemo(() => {
+    if (!permissoes) return itens;
+    return itens.filter((item) => permissoes.includes(item.permissao));
+  }, [permissoes]);
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
@@ -58,7 +72,7 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
             aria-label="Modulos do console"
             className="flex min-w-0 max-w-full gap-1 overflow-x-auto border-t border-linha px-3 py-2 [scrollbar-width:none] lg:grid lg:overflow-visible lg:px-3 lg:py-3 [&::-webkit-scrollbar]:hidden"
           >
-            {itens.map((item) => {
+            {itensVisiveis.map((item) => {
               const ativo = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
