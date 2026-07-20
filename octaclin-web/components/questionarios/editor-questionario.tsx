@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { AlertTriangle, Archive, CalendarClock, Check, CheckCircle2, Plus, RefreshCcw, Save, Settings2 } from 'lucide-react';
+import { AlertTriangle, Archive, CalendarClock, Check, CheckCircle2, Plus, RefreshCcw, Save, Settings2, Trash2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import {
@@ -42,12 +42,58 @@ function mapearPergunta(pergunta: PerguntaApi): PerguntaEditor {
     enunciado: pergunta.enunciado,
     peso: Number(pergunta.peso),
     obrigatoria: pergunta.obrigatoria,
+    configuracao: pergunta.configuracao ?? configuracaoPadrao(pergunta.tipo),
+    opcoes: (pergunta.opcoes ?? []).map((opcao) => ({
+      id: opcao.id,
+      rotulo: opcao.rotulo,
+      valor: opcao.valor,
+      imagemUrl: opcao.imagemUrl,
+      ordem: opcao.ordem
+    })),
     ordem: pergunta.ordem
   };
 }
 
 function categoriaFallback(categorias: CategoriaPerguntaApi[]): CategoriaPerguntaApi {
   return categorias[0] ?? { id: '', tenantId: '', nome: 'Categoria', iconeSvg: '', corHex: '#247BA0', ordem: 0 };
+}
+
+function configuracaoPadrao(tipo: TipoPergunta): Record<string, unknown> {
+  if (tipo === 'likert') {
+    return { escalaMin: 1, escalaMax: 5, rotuloMin: 'Discordo totalmente', rotuloMax: 'Concordo totalmente' };
+  }
+  if (tipo === 'multipla_escolha') return { multipla: false };
+  if (tipo === 'linear') return { minimo: 0, maximo: 10, passo: 1, rotuloMin: '', rotuloMax: '' };
+  if (tipo === 'metrica') return { unidade: '', minimo: 0, maximo: 100, passo: 1 };
+  if (tipo === 'upload_midia') return { tiposAceitos: ['image/*'], maxArquivos: 1 };
+  if (tipo === 'texto_longo') return { limiteCaracteres: 1000, placeholder: '' };
+  return { rotuloSim: 'Sim', rotuloNao: 'Nao' };
+}
+
+function opcoesPadraoMultipla() {
+  return [
+    { rotulo: 'Opcao 1', valor: 'opcao_1', ordem: 1 },
+    { rotulo: 'Opcao 2', valor: 'opcao_2', ordem: 2 }
+  ];
+}
+
+function textoConfig(configuracao: Record<string, unknown>, chave: string, padrao = '') {
+  const valor = configuracao[chave];
+  return typeof valor === 'string' ? valor : padrao;
+}
+
+function numeroConfig(configuracao: Record<string, unknown>, chave: string, padrao: number) {
+  const valor = Number(configuracao[chave]);
+  return Number.isFinite(valor) ? valor : padrao;
+}
+
+function booleanoConfig(configuracao: Record<string, unknown>, chave: string, padrao = false) {
+  return typeof configuracao[chave] === 'boolean' ? Boolean(configuracao[chave]) : padrao;
+}
+
+function listaTextoConfig(configuracao: Record<string, unknown>, chave: string, padrao: string[]) {
+  const valor = configuracao[chave];
+  return Array.isArray(valor) ? valor.filter((item): item is string => typeof item === 'string') : padrao;
 }
 
 export function EditorQuestionario() {
@@ -178,7 +224,7 @@ export function EditorQuestionario() {
         enunciado: 'Nova pergunta',
         peso: 1,
         obrigatoria: true,
-        configuracao: {}
+        configuracao: configuracaoPadrao('likert')
       });
       const mapeada = mapearPergunta(criada);
       setPerguntas((atuais) => [...atuais, mapeada]);
@@ -204,7 +250,15 @@ export function EditorQuestionario() {
         enunciado: perguntaSelecionada.enunciado,
         peso: perguntaSelecionada.peso,
         obrigatoria: perguntaSelecionada.obrigatoria,
-        configuracao: {}
+        configuracao: perguntaSelecionada.configuracao,
+        opcoes:
+          perguntaSelecionada.tipo === 'multipla_escolha'
+            ? perguntaSelecionada.opcoes.map((opcao) => ({
+                rotulo: opcao.rotulo,
+                valor: opcao.valor,
+                imagemUrl: opcao.imagemUrl
+              }))
+            : []
       });
       setPerguntas((atuais) => atuais.map((pergunta) => (pergunta.id === atualizada.id ? mapearPergunta(atualizada) : pergunta)));
       setSucesso('Pergunta salva.');
@@ -290,6 +344,79 @@ export function EditorQuestionario() {
   function atualizarPerguntaLocal(campo: keyof PerguntaEditor, valor: string | number | boolean) {
     setPerguntas((atuais) =>
       atuais.map((pergunta) => (pergunta.id === selecionadaId ? { ...pergunta, [campo]: valor } : pergunta))
+    );
+  }
+
+  function trocarTipoPergunta(tipo: TipoPergunta) {
+    setPerguntas((atuais) =>
+      atuais.map((pergunta) =>
+        pergunta.id === selecionadaId
+          ? {
+              ...pergunta,
+              tipo,
+              configuracao: configuracaoPadrao(tipo),
+              opcoes: tipo === 'multipla_escolha' ? pergunta.opcoes.length >= 2 ? pergunta.opcoes : opcoesPadraoMultipla() : []
+            }
+          : pergunta
+      )
+    );
+  }
+
+  function atualizarConfiguracao(chave: string, valor: unknown) {
+    setPerguntas((atuais) =>
+      atuais.map((pergunta) =>
+        pergunta.id === selecionadaId ? { ...pergunta, configuracao: { ...pergunta.configuracao, [chave]: valor } } : pergunta
+      )
+    );
+  }
+
+  function atualizarOpcao(indice: number, campo: 'rotulo' | 'valor' | 'imagemUrl', valor: string) {
+    setPerguntas((atuais) =>
+      atuais.map((pergunta) =>
+        pergunta.id === selecionadaId
+          ? {
+              ...pergunta,
+              opcoes: pergunta.opcoes.map((opcao, indiceAtual) =>
+                indiceAtual === indice ? { ...opcao, [campo]: valor } : opcao
+              )
+            }
+          : pergunta
+      )
+    );
+  }
+
+  function adicionarOpcao() {
+    setPerguntas((atuais) =>
+      atuais.map((pergunta) =>
+        pergunta.id === selecionadaId
+          ? {
+              ...pergunta,
+              opcoes: [
+                ...pergunta.opcoes,
+                {
+                  rotulo: `Opcao ${pergunta.opcoes.length + 1}`,
+                  valor: `opcao_${pergunta.opcoes.length + 1}`,
+                  ordem: pergunta.opcoes.length + 1
+                }
+              ]
+            }
+          : pergunta
+      )
+    );
+  }
+
+  function removerOpcao(indice: number) {
+    setPerguntas((atuais) =>
+      atuais.map((pergunta) =>
+        pergunta.id === selecionadaId
+          ? {
+              ...pergunta,
+              opcoes: pergunta.opcoes
+                .filter((_opcao, indiceAtual) => indiceAtual !== indice)
+                .map((opcao, indiceAtual) => ({ ...opcao, ordem: indiceAtual + 1 }))
+            }
+          : pergunta
+      )
     );
   }
 
@@ -453,7 +580,7 @@ export function EditorQuestionario() {
                   <Selecao
                     id="tipo"
                     value={perguntaSelecionada.tipo}
-                    onChange={(event) => atualizarPerguntaLocal('tipo', event.target.value as TipoPergunta)}
+                    onChange={(event) => trocarTipoPergunta(event.target.value as TipoPergunta)}
                   >
                     {tipos.map((tipo) => (
                       <option key={tipo.valor} value={tipo.valor}>
@@ -497,6 +624,224 @@ export function EditorQuestionario() {
                   className="h-5 w-5 accent-primaria"
                 />
               </label>
+
+              <div className="space-y-3 rounded-md border border-linha bg-[#f8fafb] p-3">
+                <div>
+                  <p className="text-sm font-semibold text-tinta">Configuracao do tipo</p>
+                  <p className="text-xs text-[#596273]">Ajuste como esta pergunta sera respondida pelo paciente.</p>
+                </div>
+
+                {perguntaSelecionada.tipo === 'likert' ? (
+                  <div className="grid gap-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="space-y-1.5">
+                        <Rotulo>Escala minima</Rotulo>
+                        <Campo
+                          type="number"
+                          value={numeroConfig(perguntaSelecionada.configuracao, 'escalaMin', 1)}
+                          onChange={(event) => atualizarConfiguracao('escalaMin', Number(event.target.value))}
+                        />
+                      </label>
+                      <label className="space-y-1.5">
+                        <Rotulo>Escala maxima</Rotulo>
+                        <Campo
+                          type="number"
+                          value={numeroConfig(perguntaSelecionada.configuracao, 'escalaMax', 5)}
+                          onChange={(event) => atualizarConfiguracao('escalaMax', Number(event.target.value))}
+                        />
+                      </label>
+                    </div>
+                    <label className="space-y-1.5">
+                      <Rotulo>Rotulo minimo</Rotulo>
+                      <Campo
+                        value={textoConfig(perguntaSelecionada.configuracao, 'rotuloMin', 'Discordo totalmente')}
+                        onChange={(event) => atualizarConfiguracao('rotuloMin', event.target.value)}
+                      />
+                    </label>
+                    <label className="space-y-1.5">
+                      <Rotulo>Rotulo maximo</Rotulo>
+                      <Campo
+                        value={textoConfig(perguntaSelecionada.configuracao, 'rotuloMax', 'Concordo totalmente')}
+                        onChange={(event) => atualizarConfiguracao('rotuloMax', event.target.value)}
+                      />
+                    </label>
+                  </div>
+                ) : null}
+
+                {perguntaSelecionada.tipo === 'multipla_escolha' ? (
+                  <div className="grid gap-3">
+                    <label className="flex items-center justify-between rounded-md border border-linha bg-white px-3 py-2">
+                      <span className="text-sm font-medium text-tinta">Permitir varias respostas</span>
+                      <input
+                        type="checkbox"
+                        checked={booleanoConfig(perguntaSelecionada.configuracao, 'multipla')}
+                        onChange={(event) => atualizarConfiguracao('multipla', event.target.checked)}
+                        className="h-5 w-5 accent-primaria"
+                      />
+                    </label>
+                    <div className="grid gap-2">
+                      {perguntaSelecionada.opcoes.map((opcao, indice) => (
+                        <div key={`${opcao.id ?? 'nova'}-${indice}`} className="grid grid-cols-[1fr_1fr_36px] gap-2">
+                          <Campo
+                            value={opcao.rotulo}
+                            aria-label={`Rotulo da opcao ${indice + 1}`}
+                            onChange={(event) => atualizarOpcao(indice, 'rotulo', event.target.value)}
+                          />
+                          <Campo
+                            value={opcao.valor}
+                            aria-label={`Valor da opcao ${indice + 1}`}
+                            onChange={(event) => atualizarOpcao(indice, 'valor', event.target.value)}
+                          />
+                          <Botao
+                            type="button"
+                            variante="fantasma"
+                            aria-label="Remover opcao"
+                            onClick={() => removerOpcao(indice)}
+                            disabled={perguntaSelecionada.opcoes.length <= 2}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Botao>
+                        </div>
+                      ))}
+                    </div>
+                    <Botao type="button" onClick={adicionarOpcao}>
+                      <Plus className="h-4 w-4" />
+                      Adicionar opcao
+                    </Botao>
+                  </div>
+                ) : null}
+
+                {perguntaSelecionada.tipo === 'linear' || perguntaSelecionada.tipo === 'metrica' ? (
+                  <div className="grid gap-3">
+                    {perguntaSelecionada.tipo === 'metrica' ? (
+                      <label className="space-y-1.5">
+                        <Rotulo>Unidade</Rotulo>
+                        <Campo
+                          value={textoConfig(perguntaSelecionada.configuracao, 'unidade')}
+                          onChange={(event) => atualizarConfiguracao('unidade', event.target.value)}
+                        />
+                      </label>
+                    ) : null}
+                    <div className="grid grid-cols-3 gap-2">
+                      <label className="space-y-1.5">
+                        <Rotulo>Minimo</Rotulo>
+                        <Campo
+                          type="number"
+                          value={numeroConfig(perguntaSelecionada.configuracao, 'minimo', 0)}
+                          onChange={(event) => atualizarConfiguracao('minimo', Number(event.target.value))}
+                        />
+                      </label>
+                      <label className="space-y-1.5">
+                        <Rotulo>Maximo</Rotulo>
+                        <Campo
+                          type="number"
+                          value={numeroConfig(perguntaSelecionada.configuracao, 'maximo', perguntaSelecionada.tipo === 'linear' ? 10 : 100)}
+                          onChange={(event) => atualizarConfiguracao('maximo', Number(event.target.value))}
+                        />
+                      </label>
+                      <label className="space-y-1.5">
+                        <Rotulo>Passo</Rotulo>
+                        <Campo
+                          type="number"
+                          step="0.01"
+                          value={numeroConfig(perguntaSelecionada.configuracao, 'passo', 1)}
+                          onChange={(event) => atualizarConfiguracao('passo', Number(event.target.value))}
+                        />
+                      </label>
+                    </div>
+                    {perguntaSelecionada.tipo === 'linear' ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="space-y-1.5">
+                          <Rotulo>Rotulo minimo</Rotulo>
+                          <Campo
+                            value={textoConfig(perguntaSelecionada.configuracao, 'rotuloMin')}
+                            onChange={(event) => atualizarConfiguracao('rotuloMin', event.target.value)}
+                          />
+                        </label>
+                        <label className="space-y-1.5">
+                          <Rotulo>Rotulo maximo</Rotulo>
+                          <Campo
+                            value={textoConfig(perguntaSelecionada.configuracao, 'rotuloMax')}
+                            onChange={(event) => atualizarConfiguracao('rotuloMax', event.target.value)}
+                          />
+                        </label>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {perguntaSelecionada.tipo === 'upload_midia' ? (
+                  <div className="grid gap-3">
+                    <label className="space-y-1.5">
+                      <Rotulo>Tipos aceitos</Rotulo>
+                      <Campo
+                        value={listaTextoConfig(perguntaSelecionada.configuracao, 'tiposAceitos', ['image/*']).join(', ')}
+                        onChange={(event) =>
+                          atualizarConfiguracao(
+                            'tiposAceitos',
+                            event.target.value
+                              .split(',')
+                              .map((item) => item.trim())
+                              .filter(Boolean)
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1.5">
+                      <Rotulo>Maximo de arquivos</Rotulo>
+                      <Campo
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={numeroConfig(perguntaSelecionada.configuracao, 'maxArquivos', 1)}
+                        onChange={(event) => atualizarConfiguracao('maxArquivos', Number(event.target.value))}
+                      />
+                    </label>
+                  </div>
+                ) : null}
+
+                {perguntaSelecionada.tipo === 'texto_longo' ? (
+                  <div className="grid gap-3">
+                    <label className="space-y-1.5">
+                      <Rotulo>Limite de caracteres</Rotulo>
+                      <Campo
+                        type="number"
+                        min={1}
+                        max={5000}
+                        value={numeroConfig(perguntaSelecionada.configuracao, 'limiteCaracteres', 1000)}
+                        onChange={(event) => atualizarConfiguracao('limiteCaracteres', Number(event.target.value))}
+                      />
+                    </label>
+                    <label className="space-y-1.5">
+                      <Rotulo>Placeholder</Rotulo>
+                      <Campo
+                        value={textoConfig(perguntaSelecionada.configuracao, 'placeholder')}
+                        onChange={(event) => atualizarConfiguracao('placeholder', event.target.value)}
+                      />
+                    </label>
+                  </div>
+                ) : null}
+
+                {perguntaSelecionada.tipo === 'sim_nao' ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="space-y-1.5">
+                      <Rotulo>Rotulo sim</Rotulo>
+                      <Campo
+                        value={textoConfig(perguntaSelecionada.configuracao, 'rotuloSim', 'Sim')}
+                        onChange={(event) => atualizarConfiguracao('rotuloSim', event.target.value)}
+                      />
+                    </label>
+                    <label className="space-y-1.5">
+                      <Rotulo>Rotulo nao</Rotulo>
+                      <Campo
+                        value={textoConfig(perguntaSelecionada.configuracao, 'rotuloNao', 'Nao')}
+                        onChange={(event) => atualizarConfiguracao('rotuloNao', event.target.value)}
+                      />
+                    </label>
+                  </div>
+                ) : null}
+              </div>
+
               <Botao type="button" variante="primario" className="w-full" onClick={salvarPergunta} disabled={salvando}>
                 <Save className="h-4 w-4" />
                 Salvar pergunta

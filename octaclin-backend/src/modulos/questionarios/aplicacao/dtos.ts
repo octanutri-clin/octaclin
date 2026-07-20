@@ -136,6 +136,13 @@ export class AtualizarPerguntaDto {
   @IsOptional()
   @IsObject()
   configuracao?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => OpcaoPerguntaDto)
+  opcoes?: OpcaoPerguntaDto[];
 }
 
 export class OrdemPerguntaDto {

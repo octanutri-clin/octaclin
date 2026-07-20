@@ -20,5 +20,15 @@ export interface PerguntaEditor {
   enunciado: string;
   peso: number;
   obrigatoria: boolean;
+  configuracao: Record<string, unknown>;
+  opcoes: OpcaoPerguntaEditor[];
+  ordem: number;
+}
+
+export interface OpcaoPerguntaEditor {
+  id?: string;
+  rotulo: string;
+  valor: string;
+  imagemUrl?: string;
   ordem: number;
 }

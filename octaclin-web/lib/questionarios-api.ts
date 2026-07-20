@@ -45,6 +45,17 @@ export interface PerguntaApi {
   peso: string;
   obrigatoria: boolean;
   configuracao: Record<string, unknown>;
+  opcoes?: OpcaoPerguntaApi[];
+  ordem: number;
+}
+
+export interface OpcaoPerguntaApi {
+  id: string;
+  tenantId: string;
+  perguntaId: string;
+  rotulo: string;
+  valor: string;
+  imagemUrl?: string;
   ordem: number;
 }
 
@@ -67,6 +78,11 @@ export interface SalvarPerguntaEntrada {
   peso: number;
   obrigatoria: boolean;
   configuracao?: Record<string, unknown>;
+  opcoes?: {
+    rotulo: string;
+    valor: string;
+    imagemUrl?: string;
+  }[];
 }
 
 export interface BootstrapQuestionarios {

@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { IsNull, LessThanOrEqual } from 'typeorm';
+import { EntityManager, In, IsNull, LessThanOrEqual } from 'typeorm';
 import * as cronParser from 'cron-parser';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { normalizarConfiguracaoPergunta } from '../dominio/configuracao-pergunta';
 import { normalizarOrdemPerguntas } from '../dominio/reordenacao-perguntas';
-import { validarTipoPergunta } from '../dominio/tipos-pergunta';
+import { TipoPergunta, validarTipoPergunta } from '../dominio/tipos-pergunta';
 import {
   AtualizarQuestionarioDto,
   AtualizarPerguntaDto,
@@ -20,6 +21,8 @@ import { EnvioQuestionarioOrm } from '../infraestrutura/envio-questionario.orm';
 import { OpcaoPerguntaOrm } from '../infraestrutura/opcao-pergunta.orm';
 import { PerguntaOrm } from '../infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../infraestrutura/questionario.orm';
+
+type PerguntaComOpcoes = PerguntaOrm & { opcoes: OpcaoPerguntaOrm[] };
 
 @Injectable()
 export class ServicoQuestionarios {
@@ -103,9 +106,7 @@ export class ServicoQuestionarios {
       throw new BadRequestException('Tipo de pergunta nao suportado.');
     }
 
-    if (['multipla_escolha'].includes(dados.tipo) && (!dados.opcoes || dados.opcoes.length < 2)) {
-      throw new BadRequestException('Perguntas de multipla escolha exigem pelo menos duas opcoes.');
-    }
+    this.validarOpcoes(dados.tipo, dados.opcoes);
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
@@ -126,7 +127,7 @@ export class ServicoQuestionarios {
           enunciado: dados.enunciado,
           peso: String(dados.peso),
           obrigatoria: dados.obrigatoria ?? true,
-          configuracao: dados.configuracao ?? {},
+          configuracao: normalizarConfiguracaoPergunta(dados.tipo, dados.configuracao),
           ordem: totalPerguntas + 1
         })
       );
@@ -148,17 +149,18 @@ export class ServicoQuestionarios {
 
       questionario.versao += 1;
       await gerenciador.getRepository(QuestionarioOrm).save(questionario);
-      return pergunta;
+      return this.anexarOpcoes(gerenciador, pergunta);
     });
   }
 
-  async listarPerguntas(tenantId: string, questionarioId: string): Promise<PerguntaOrm[]> {
-    return this.executorTenant.executar(tenantId, (gerenciador) =>
-      gerenciador.getRepository(PerguntaOrm).find({
+  async listarPerguntas(tenantId: string, questionarioId: string): Promise<PerguntaComOpcoes[]> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const perguntas = await gerenciador.getRepository(PerguntaOrm).find({
         where: { tenantId, questionarioId },
         order: { ordem: 'ASC' }
-      })
-    );
+      });
+      return this.anexarOpcoesLote(gerenciador, perguntas);
+    });
   }
 
   async atualizarPergunta(
@@ -166,7 +168,7 @@ export class ServicoQuestionarios {
     questionarioId: string,
     perguntaId: string,
     dados: AtualizarPerguntaDto
-  ): Promise<PerguntaOrm> {
+  ): Promise<PerguntaComOpcoes> {
     if (dados.tipo && !validarTipoPergunta(dados.tipo)) {
       throw new BadRequestException('Tipo de pergunta nao suportado.');
     }
@@ -178,12 +180,36 @@ export class ServicoQuestionarios {
       });
       if (!pergunta) throw new NotFoundException('Pergunta nao encontrada.');
 
+      const tipoFinal = dados.tipo ?? pergunta.tipo;
+      this.validarOpcoes(tipoFinal, dados.opcoes, dados.tipo !== undefined);
+
       if (dados.categoriaId !== undefined) pergunta.categoriaId = dados.categoriaId;
       if (dados.tipo !== undefined) pergunta.tipo = dados.tipo;
       if (dados.enunciado !== undefined) pergunta.enunciado = dados.enunciado;
       if (dados.peso !== undefined) pergunta.peso = String(dados.peso);
       if (dados.obrigatoria !== undefined) pergunta.obrigatoria = dados.obrigatoria;
-      if (dados.configuracao !== undefined) pergunta.configuracao = dados.configuracao;
+      if (dados.configuracao !== undefined || dados.tipo !== undefined) {
+        pergunta.configuracao = normalizarConfiguracaoPergunta(tipoFinal, dados.configuracao ?? pergunta.configuracao);
+      }
+
+      if (dados.opcoes !== undefined) {
+        const repositorioOpcoes = gerenciador.getRepository(OpcaoPerguntaOrm);
+        await repositorioOpcoes.delete({ tenantId, perguntaId });
+        if (tipoFinal === 'multipla_escolha') {
+          await repositorioOpcoes.save(
+            dados.opcoes.map((opcao, indice) =>
+              repositorioOpcoes.create({
+                tenantId,
+                perguntaId,
+                rotulo: opcao.rotulo,
+                valor: opcao.valor,
+                imagemUrl: opcao.imagemUrl,
+                ordem: indice + 1
+              })
+            )
+          );
+        }
+      }
 
       const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
         where: { id: questionarioId, tenantId }
@@ -193,7 +219,8 @@ export class ServicoQuestionarios {
         await gerenciador.getRepository(QuestionarioOrm).save(questionario);
       }
 
-      return repositorioPerguntas.save(pergunta);
+      const salva = await repositorioPerguntas.save(pergunta);
+      return this.anexarOpcoes(gerenciador, salva);
     });
   }
 
@@ -302,5 +329,36 @@ export class ServicoQuestionarios {
     } catch {
       throw new BadRequestException('Regra cron invalida.');
     }
+  }
+
+  private validarOpcoes(tipo: TipoPergunta, opcoes?: { rotulo: string; valor: string }[], exigirQuandoMultipla = true) {
+    if (tipo === 'multipla_escolha' && exigirQuandoMultipla && (!opcoes || opcoes.length < 2)) {
+      throw new BadRequestException('Perguntas de multipla escolha exigem pelo menos duas opcoes.');
+    }
+  }
+
+  private async anexarOpcoes(gerenciador: EntityManager, pergunta: PerguntaOrm): Promise<PerguntaComOpcoes> {
+    const opcoes = await gerenciador.getRepository(OpcaoPerguntaOrm).find({
+      where: { tenantId: pergunta.tenantId, perguntaId: pergunta.id },
+      order: { ordem: 'ASC' }
+    });
+    return Object.assign(pergunta, { opcoes });
+  }
+
+  private async anexarOpcoesLote(gerenciador: EntityManager, perguntas: PerguntaOrm[]): Promise<PerguntaComOpcoes[]> {
+    if (!perguntas.length) return [];
+
+    const opcoes = await gerenciador.getRepository(OpcaoPerguntaOrm).find({
+      where: { tenantId: perguntas[0].tenantId, perguntaId: In(perguntas.map((pergunta) => pergunta.id)) },
+      order: { ordem: 'ASC' }
+    });
+    const opcoesPorPergunta = new Map<string, OpcaoPerguntaOrm[]>();
+    opcoes.forEach((opcao) => {
+      const atuais = opcoesPorPergunta.get(opcao.perguntaId) ?? [];
+      atuais.push(opcao);
+      opcoesPorPergunta.set(opcao.perguntaId, atuais);
+    });
+
+    return perguntas.map((pergunta) => Object.assign(pergunta, { opcoes: opcoesPorPergunta.get(pergunta.id) ?? [] }));
   }
 }
