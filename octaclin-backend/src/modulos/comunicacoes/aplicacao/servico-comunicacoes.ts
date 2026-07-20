@@ -5,7 +5,13 @@ import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-ten
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
-import { AssociarContatoWhatsappDto, CriarCanalNotificacaoDto, CriarTemplateMensagemDto, DispararMensagemDto } from './dtos';
+import {
+  AssociarContatoWhatsappDto,
+  CriarCanalNotificacaoDto,
+  CriarTemplateMensagemDto,
+  DispararMensagemDto,
+  RegistrarNotaWhatsappDto
+} from './dtos';
 import { redisConfigurado } from './configuracao-redis';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
@@ -115,6 +121,38 @@ export class ServicoComunicacoes {
     });
   }
 
+  async registrarNotaWhatsapp(tenantId: string, dados: RegistrarNotaWhatsappDto): Promise<MensagemNotificacaoOrm> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const texto = dados.texto.trim();
+      if (!texto) throw new BadRequestException('Nota interna nao pode ficar vazia.');
+
+      if (dados.pacienteId) {
+        const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+          where: { id: dados.pacienteId, tenantId }
+        });
+        if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+      }
+
+      const repositorioMensagens = gerenciador.getRepository(MensagemNotificacaoOrm);
+      return repositorioMensagens.save(
+        repositorioMensagens.create({
+          tenantId,
+          pacienteId: dados.pacienteId,
+          status: 'nota',
+          payload: {
+            origem: 'whatsapp',
+            direcao: 'nota',
+            tipo: 'nota_interna',
+            contato: dados.contato,
+            texto,
+            statusAtendimento: dados.statusAtendimento,
+            registradoEm: new Date().toISOString()
+          }
+        })
+      );
+    });
+  }
+
   async dispararMensagem(tenantId: string, dados: DispararMensagemDto): Promise<MensagemNotificacaoOrm> {
     const mensagem = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const canal = await gerenciador.getRepository(CanalNotificacaoOrm).findOne({
@@ -178,6 +216,7 @@ export class ServicoComunicacoes {
 
     const candidatos = [
       mensagem.payload.remetente,
+      mensagem.payload.contato,
       mensagem.payload.destino,
       this.obterValorAninhado(mensagem.payload, ['ultimoStatusMeta', 'recipientId'])
     ];

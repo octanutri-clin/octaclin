@@ -14,7 +14,8 @@ import {
   carregarBootstrapComunicacoes,
   criarCanal,
   criarTemplate,
-  dispararMensagem
+  dispararMensagem,
+  registrarNotaWhatsapp
 } from '@/lib/comunicacoes-api';
 import { PacienteResumo, RespostaPaginada } from '@/lib/cadastros-api';
 
@@ -60,6 +61,7 @@ interface ConversaWhatsapp {
   recebidas: number;
   enviadas: number;
   pendentes: number;
+  statusAtendimento?: 'acompanhamento' | 'resolvido';
   mensagens: MensagemNotificacaoApi[];
 }
 
@@ -165,11 +167,13 @@ function obterCanal(canais: CanalNotificacaoApi[], mensagem: MensagemNotificacao
 }
 
 function nomeTemplate(templates: TemplateMensagemApi[], mensagem: MensagemNotificacaoApi) {
+  if (obterDirecaoMensagem(mensagem) === 'nota') return 'Nota interna';
   if (obterDirecaoMensagem(mensagem) === 'recebida') return 'Mensagem recebida';
   return templates.find((template) => template.id === mensagem.templateId)?.nome ?? 'Template removido';
 }
 
 function corStatusMensagem(status: MensagemNotificacaoApi['status']) {
+  if (status === 'nota') return 'border-[#e6d6a8] bg-[#fffaf0] text-[#775c18]';
   if (status === 'recebido') return 'border-[#c6d8bf] bg-[#f2f8ef] text-[#3d6730]';
   if (status === 'enviado') return 'border-[#b8dfc1] bg-[#eef7f0] text-[#245b33]';
   if (status === 'falhou') return 'border-[#f1b3b3] bg-[#fff0f0] text-[#8c2f2f]';
@@ -185,6 +189,10 @@ function corStatusMeta(status?: string) {
 }
 
 function obterContatoMensagem(mensagem: MensagemNotificacaoApi, ultimoStatusMeta?: UltimoStatusMeta) {
+  if (obterDirecaoMensagem(mensagem) === 'nota') {
+    return obterTextoPayload(mensagem.payload, 'contato') ?? 'Contato nao informado';
+  }
+
   if (obterDirecaoMensagem(mensagem) === 'recebida') {
     return obterTextoPayload(mensagem.payload, 'remetente') ?? 'Remetente nao informado';
   }
@@ -193,6 +201,10 @@ function obterContatoMensagem(mensagem: MensagemNotificacaoApi, ultimoStatusMeta
 }
 
 function resumirMensagem(mensagem: MensagemNotificacaoApi, templates: TemplateMensagemApi[]) {
+  if (obterDirecaoMensagem(mensagem) === 'nota') {
+    return obterTextoPayload(mensagem.payload, 'texto') ?? 'Nota interna';
+  }
+
   if (obterDirecaoMensagem(mensagem) === 'recebida') {
     return obterTextoPayload(mensagem.payload, 'texto') ?? obterTextoPayload(mensagem.payload, 'tipo') ?? 'Mensagem recebida';
   }
@@ -222,7 +234,9 @@ function montarConversasWhatsapp(
     const dataOrdenacao = new Date(mensagem.criadoEm).getTime();
     const conversa = grupos.get(chave);
     const recebida = obterDirecaoMensagem(mensagem) === 'recebida';
+    const nota = obterDirecaoMensagem(mensagem) === 'nota';
     const titulo = nomePaciente(pacientes, mensagem.pacienteId) ?? (recebida ? 'Contato WhatsApp' : 'Paciente sem vinculo');
+    const statusAtendimento = nota ? obterTextoPayload(mensagem.payload, 'statusAtendimento') : undefined;
 
     if (!conversa) {
       grupos.set(chave, {
@@ -234,8 +248,10 @@ function montarConversasWhatsapp(
         ultimaData: formatarDataIso(mensagem.criadoEm),
         total: 1,
         recebidas: recebida ? 1 : 0,
-        enviadas: recebida ? 0 : 1,
+        enviadas: recebida || nota ? 0 : 1,
         pendentes: mensagem.status === 'falhou' ? 1 : 0,
+        statusAtendimento:
+          statusAtendimento === 'acompanhamento' || statusAtendimento === 'resolvido' ? statusAtendimento : undefined,
         mensagens: [mensagem],
         ultimaOrdenacao: dataOrdenacao
       });
@@ -244,10 +260,13 @@ function montarConversasWhatsapp(
 
     conversa.total += 1;
     conversa.recebidas += recebida ? 1 : 0;
-    conversa.enviadas += recebida ? 0 : 1;
+    conversa.enviadas += recebida || nota ? 0 : 1;
     conversa.pendentes += mensagem.status === 'falhou' ? 1 : 0;
     conversa.mensagens.push(mensagem);
     if (!conversa.pacienteId && mensagem.pacienteId) conversa.pacienteId = mensagem.pacienteId;
+    if (statusAtendimento === 'acompanhamento' || statusAtendimento === 'resolvido') {
+      conversa.statusAtendimento = statusAtendimento;
+    }
     if (dataOrdenacao > conversa.ultimaOrdenacao) {
       conversa.ultimaMensagem = resumirMensagem(mensagem, templates);
       conversa.ultimaData = formatarDataIso(mensagem.criadoEm);
@@ -279,6 +298,8 @@ export function PainelComunicacoes() {
   const [filtroConversas, setFiltroConversas] = useState<'todas' | 'recebidas' | 'falhas'>('todas');
   const [pacienteAssociacaoId, setPacienteAssociacaoId] = useState('');
   const [atualizarContatoPaciente, setAtualizarContatoPaciente] = useState(true);
+  const [textoNotaWhatsapp, setTextoNotaWhatsapp] = useState('');
+  const [statusAtendimentoNota, setStatusAtendimentoNota] = useState<'acompanhamento' | 'resolvido'>('acompanhamento');
 
   const templatesCompativeis = useMemo(
     () => templates.filter((template) => template.canal === canais.find((canal) => canal.id === formularioMensagem.canalId)?.tipo),
@@ -441,6 +462,32 @@ export function PainelComunicacoes() {
       await carregar();
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao associar contato.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function registrarNotaConversaWhatsapp(conversa: ConversaWhatsapp) {
+    if (!textoNotaWhatsapp.trim()) {
+      setErro('Informe a nota interna.');
+      return;
+    }
+
+    setSalvando(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const nota = await registrarNotaWhatsapp({
+        contato: conversa.contato,
+        pacienteId: conversa.pacienteId,
+        texto: textoNotaWhatsapp.trim(),
+        statusAtendimento: statusAtendimentoNota
+      });
+      setMensagens((atuais) => [nota, ...atuais].slice(0, 200));
+      setTextoNotaWhatsapp('');
+      setSucesso(statusAtendimentoNota === 'resolvido' ? 'Conversa marcada como resolvida.' : 'Nota interna registrada.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar nota interna.');
     } finally {
       setSalvando(false);
     }
@@ -807,6 +854,11 @@ export function PainelComunicacoes() {
                           {conversa.pendentes} falhas
                         </span>
                       ) : null}
+                      {conversa.statusAtendimento ? (
+                        <span className="rounded-sm border border-[#e6d6a8] bg-[#fffaf0] px-2 py-1 text-xs font-semibold text-[#775c18]">
+                          {conversa.statusAtendimento === 'resolvido' ? 'resolvida' : 'em acompanhamento'}
+                        </span>
+                      ) : null}
                     </div>
                   </button>
                 );
@@ -819,7 +871,12 @@ export function PainelComunicacoes() {
                   <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
                     <div className="min-w-0">
                       <strong className="block truncate text-sm">{conversaSelecionada.titulo}</strong>
-                      <p className="mt-1 truncate text-xs text-[#596273]">{conversaSelecionada.contato}</p>
+                      <p className="mt-1 truncate text-xs text-[#596273]">
+                        {conversaSelecionada.contato}
+                        {conversaSelecionada.statusAtendimento
+                          ? `, ${conversaSelecionada.statusAtendimento === 'resolvido' ? 'resolvida' : 'em acompanhamento'}`
+                          : ''}
+                      </p>
                     </div>
                     <Botao type="button" onClick={() => prepararRespostaWhatsapp(conversaSelecionada)}>
                       <Reply size={16} />
@@ -867,21 +924,60 @@ export function PainelComunicacoes() {
                       </Botao>
                     </div>
                   ) : null}
+                  <div className="grid gap-3 border-b border-linha bg-white px-4 py-3 text-sm lg:grid-cols-[1fr_190px_auto] lg:items-end">
+                    <div className="space-y-1.5">
+                      <Rotulo htmlFor="whatsapp-nota-interna">Nota interna</Rotulo>
+                      <AreaTexto
+                        id="whatsapp-nota-interna"
+                        value={textoNotaWhatsapp}
+                        onChange={(evento) => setTextoNotaWhatsapp(evento.target.value)}
+                        placeholder="Registre contexto, combinados ou proximo passo da conversa."
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Rotulo htmlFor="whatsapp-status-atendimento">Status</Rotulo>
+                      <Selecao
+                        id="whatsapp-status-atendimento"
+                        value={statusAtendimentoNota}
+                        onChange={(evento) =>
+                          setStatusAtendimentoNota(evento.target.value as 'acompanhamento' | 'resolvido')
+                        }
+                      >
+                        <option value="acompanhamento">Em acompanhamento</option>
+                        <option value="resolvido">Resolvido</option>
+                      </Selecao>
+                    </div>
+                    <Botao
+                      type="button"
+                      variante="primario"
+                      disabled={salvando || !textoNotaWhatsapp.trim()}
+                      onClick={() => registrarNotaConversaWhatsapp(conversaSelecionada)}
+                    >
+                      <Save size={16} />
+                      Registrar
+                    </Botao>
+                  </div>
                   <div className="max-h-[520px] space-y-3 overflow-auto bg-[#f7f8fa] p-4">
                     {conversaSelecionada.mensagens.map((mensagem) => {
                       const recebida = obterDirecaoMensagem(mensagem) === 'recebida';
+                      const nota = obterDirecaoMensagem(mensagem) === 'nota';
                       const ultimoStatusMeta = obterUltimoStatusMeta(mensagem.payload);
                       return (
-                        <div key={mensagem.id} className={`flex ${recebida ? 'justify-start' : 'justify-end'}`}>
+                        <div key={mensagem.id} className={`flex ${nota ? 'justify-center' : recebida ? 'justify-start' : 'justify-end'}`}>
                           <div
                             className={`max-w-[78%] rounded-lg border px-3 py-2 text-sm shadow-sm ${
-                              recebida ? 'border-linha bg-white' : 'border-[#c6d8bf] bg-[#eef7f0]'
+                              nota ? 'border-[#e6d6a8] bg-[#fffaf0]' : recebida ? 'border-linha bg-white' : 'border-[#c6d8bf] bg-[#eef7f0]'
                             }`}
                           >
                             <p className="break-words">{resumirMensagem(mensagem, templates)}</p>
                             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium text-[#596273]">
-                              <span>{recebida ? 'Recebida' : 'Enviada'} {formatarDataIso(mensagem.criadoEm) ?? 'sem data'}</span>
+                              <span>{nota ? 'Nota interna' : recebida ? 'Recebida' : 'Enviada'} {formatarDataIso(mensagem.criadoEm) ?? 'sem data'}</span>
                               <span className={`rounded-sm border px-1.5 py-0.5 ${corStatusMensagem(mensagem.status)}`}>{mensagem.status}</span>
+                              {nota ? (
+                                <span className="rounded-sm border border-[#e6d6a8] bg-white px-1.5 py-0.5 text-[#775c18]">
+                                  {obterTextoPayload(mensagem.payload, 'statusAtendimento') === 'resolvido' ? 'resolvido' : 'acompanhamento'}
+                                </span>
+                              ) : null}
                               {!recebida && ultimoStatusMeta?.status ? (
                                 <span className={`rounded-sm border px-1.5 py-0.5 ${corStatusMeta(ultimoStatusMeta.status)}`}>
                                   Meta: {formatarStatusMeta(ultimoStatusMeta.status)}
@@ -930,9 +1026,9 @@ export function PainelComunicacoes() {
                     </div>
                     <p className="mt-1 truncate text-xs text-[#596273]">{destino}</p>
                     <p className="mt-1 truncate text-xs text-[#596273]">
-                      {direcao === 'recebida' ? 'Recebida' : 'Criada'} {criadoEm ?? 'sem data'}{enviadoEm ? `, enviada ${enviadoEm}` : ''}
+                      {direcao === 'nota' ? 'Nota interna' : direcao === 'recebida' ? 'Recebida' : 'Criada'} {criadoEm ?? 'sem data'}{enviadoEm ? `, enviada ${enviadoEm}` : ''}
                     </p>
-                    {direcao === 'recebida' ? (
+                    {direcao === 'recebida' || direcao === 'nota' ? (
                       <p className="mt-1 break-words text-xs text-[#596273]">{resumirMensagem(mensagem, templates)}</p>
                     ) : null}
                     {mensagem.erro ? <p className="mt-1 break-words text-xs font-medium text-[#8c2f2f]">{mensagem.erro}</p> : null}
@@ -951,6 +1047,10 @@ export function PainelComunicacoes() {
                   ) : direcao === 'recebida' ? (
                     <span className="w-fit rounded-sm border border-[#c6d8bf] bg-[#f2f8ef] px-2 py-1 text-xs font-semibold text-[#3d6730]">
                       Entrada
+                    </span>
+                  ) : direcao === 'nota' ? (
+                    <span className="w-fit rounded-sm border border-[#e6d6a8] bg-[#fffaf0] px-2 py-1 text-xs font-semibold text-[#775c18]">
+                      Nota interna
                     </span>
                   ) : (
                     <span className="w-fit rounded-sm border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">

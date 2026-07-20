@@ -27,7 +27,7 @@ export interface MensagemNotificacaoApi {
   pacienteId?: string;
   canalId?: string;
   templateId?: string;
-  status: 'pendente' | 'processando' | 'enviado' | 'falhou' | 'recebido';
+  status: 'pendente' | 'processando' | 'enviado' | 'falhou' | 'recebido' | 'nota';
   payload: Record<string, unknown>;
   erro?: string;
   enviadoEm?: string;
@@ -67,6 +67,13 @@ export interface AssociarContatoWhatsappResposta {
   contato: string;
   mensagensAtualizadas: number;
   contatoPacienteAtualizado: boolean;
+}
+
+export interface RegistrarNotaWhatsappEntrada {
+  contato: string;
+  pacienteId?: string;
+  texto: string;
+  statusAtendimento: 'acompanhamento' | 'resolvido';
 }
 
 export interface BootstrapComunicacoes {
@@ -140,6 +147,13 @@ export async function associarContatoWhatsapp(
   entrada: AssociarContatoWhatsappEntrada
 ): Promise<AssociarContatoWhatsappResposta> {
   return requisitar<AssociarContatoWhatsappResposta>('/api/comunicacoes/whatsapp/associar-contato', {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
+export async function registrarNotaWhatsapp(entrada: RegistrarNotaWhatsappEntrada): Promise<MensagemNotificacaoApi> {
+  return requisitar<MensagemNotificacaoApi>('/api/comunicacoes/whatsapp/notas', {
     method: 'POST',
     body: JSON.stringify(entrada)
   });

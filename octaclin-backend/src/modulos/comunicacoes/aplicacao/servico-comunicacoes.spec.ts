@@ -172,6 +172,37 @@ describe('ServicoComunicacoes', () => {
     );
   });
 
+  it('deve registrar nota interna WhatsApp sem criar evento de envio', async () => {
+    const { servico, repositorios } = criarServico({
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
+    });
+
+    const nota = await servico.registrarNotaWhatsapp('tenant-1', {
+      contato: '5511992362080',
+      pacienteId: 'paciente-1',
+      texto: 'Paciente pediu retorno amanha.',
+      statusAtendimento: 'acompanhamento'
+    });
+
+    expect(nota).toEqual(
+      expect.objectContaining({
+        id: 'mensagem-1',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        status: 'nota',
+        payload: expect.objectContaining({
+          origem: 'whatsapp',
+          direcao: 'nota',
+          tipo: 'nota_interna',
+          contato: '5511992362080',
+          texto: 'Paciente pediu retorno amanha.',
+          statusAtendimento: 'acompanhamento'
+        })
+      })
+    );
+    expect(repositorios.outbox.save).not.toHaveBeenCalled();
+  });
+
   it('deve rejeitar template WhatsApp nao aprovado', async () => {
     const { servico } = criarServico({
       canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true },

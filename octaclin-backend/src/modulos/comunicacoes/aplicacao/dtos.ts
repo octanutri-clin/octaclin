@@ -64,3 +64,20 @@ export class AssociarContatoWhatsappDto {
   @IsBoolean()
   atualizarContatoPaciente?: boolean;
 }
+
+export class RegistrarNotaWhatsappDto {
+  @IsString()
+  @MaxLength(40)
+  contato: string;
+
+  @IsOptional()
+  @IsUUID()
+  pacienteId?: string;
+
+  @IsString()
+  @MaxLength(1000)
+  texto: string;
+
+  @IsIn(['acompanhamento', 'resolvido'])
+  statusAtendimento: 'acompanhamento' | 'resolvido';
+}
