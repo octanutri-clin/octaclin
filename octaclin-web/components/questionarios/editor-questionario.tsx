@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { AlertTriangle, Archive, CalendarClock, Check, CheckCircle2, Plus, RefreshCcw, Save, Settings2, Trash2 } from 'lucide-react';
+import { AlertTriangle, Archive, CalendarClock, Check, CheckCircle2, Eye, Plus, RefreshCcw, Save, Settings2, Trash2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import {
@@ -22,6 +22,7 @@ import {
 } from '@/lib/questionarios-api';
 import { ProfissionalResumo } from '@/lib/cadastros-api';
 import { PerguntaOrdenavel } from './pergunta-ordenavel';
+import { PreviewQuestionarioPaciente } from './preview-questionario-paciente';
 import { PerguntaEditor } from './tipos';
 
 const tipos: { valor: TipoPergunta; rotulo: string }[] = [
@@ -111,6 +112,7 @@ export function EditorQuestionario() {
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [previewAberto, setPreviewAberto] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -445,6 +447,10 @@ export function EditorQuestionario() {
           <RefreshCcw className="h-4 w-4" />
           {carregando ? 'Atualizando' : 'Atualizar'}
         </Botao>
+        <Botao type="button" onClick={() => setPreviewAberto((valor) => !valor)}>
+          <Eye className="h-4 w-4" />
+          {previewAberto ? 'Ocultar preview' : 'Preview paciente'}
+        </Botao>
         <Botao
           type="button"
           variante="fantasma"
@@ -459,6 +465,8 @@ export function EditorQuestionario() {
           {questionarioAtual ? 'Salvar questionario' : 'Criar questionario'}
         </Botao>
       </div>
+
+      {previewAberto ? <PreviewQuestionarioPaciente titulo={titulo} descricao={descricao} perguntas={perguntas} /> : null}
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(420px,1fr)_360px]">
         <aside className="rounded-lg border border-linha bg-white">
