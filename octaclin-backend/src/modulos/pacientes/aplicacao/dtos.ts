@@ -1,4 +1,4 @@
-import { IsDateString, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsEmail, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class CriarPacienteDto {
   @IsUUID()
@@ -67,4 +67,28 @@ export interface PacienteRespostaDto {
   ultimoCheckinEm?: Date;
   criadoEm: Date;
   atualizadoEm: Date;
+}
+
+export class CriarConvitePacienteDto {
+  @IsEmail()
+  @MaxLength(180)
+  email: string;
+}
+
+export class AtivarConvitePacienteDto {
+  @IsString()
+  token: string;
+
+  @IsString()
+  @MinLength(8)
+  @MaxLength(120)
+  senha: string;
+
+  @IsBoolean()
+  aceiteLgpd: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  versaoLgpd?: string;
 }

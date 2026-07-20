@@ -2,7 +2,9 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { DataSourceOptions } from 'typeorm';
 import { CriarFundacaoOctaClin1720000000000 } from './migracoes/1720000000000-CriarFundacaoOctaClin';
 import { CriarAgendaConsultas1720000000100 } from './migracoes/1720000000100-CriarAgendaConsultas';
+import { CriarConvitesPacienteAcesso1720000000200 } from './migracoes/1720000000200-CriarConvitesPacienteAcesso';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
+import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
 import { AgendaConsultaOrm } from '../../modulos/agenda/infraestrutura/agenda-consulta.orm';
 import { RefreshTokenOrm } from '../../modulos/auth/infraestrutura/refresh-token.orm';
@@ -25,6 +27,7 @@ import { AcompanhanteOrm } from '../../modulos/mobile/infraestrutura/acompanhant
 import { ArquivoMidiaOrm } from '../../modulos/mobile/infraestrutura/arquivo-midia.orm';
 import { LogDiarioRapidoOrm } from '../../modulos/mobile/infraestrutura/log-diario-rapido.orm';
 import { SincronizacaoMobileOrm } from '../../modulos/mobile/infraestrutura/sincronizacao-mobile.orm';
+import { ConvitePacienteOrm } from '../../modulos/pacientes/infraestrutura/convite-paciente.orm';
 import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { AgendamentoQuestionarioOrm } from '../../modulos/questionarios/infraestrutura/agendamento-questionario.orm';
@@ -71,8 +74,10 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       TenantOrm,
       UsuarioOrm,
       RefreshTokenOrm,
+      ConsentimentoLgpdOrm,
       ProfissionalOrm,
       PacienteOrm,
+      ConvitePacienteOrm,
       CategoriaPerguntaOrm,
       QuestionarioOrm,
       PerguntaOrm,
@@ -102,7 +107,11 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       UserActionLogOrm,
       OutboxEventoOrm
     ],
-    migrations: [CriarFundacaoOctaClin1720000000000, CriarAgendaConsultas1720000000100],
+    migrations: [
+      CriarFundacaoOctaClin1720000000000,
+      CriarAgendaConsultas1720000000100,
+      CriarConvitesPacienteAcesso1720000000200
+    ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,
     logging: process.env.NODE_ENV !== 'production'
