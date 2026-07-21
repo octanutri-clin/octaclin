@@ -72,6 +72,20 @@ export class DuplicarQuestionarioDto {
   titulo?: string;
 }
 
+export class CriarQuestionarioAPartirModeloDto {
+  @IsUUID()
+  profissionalId: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  titulo?: string;
+
+  @IsOptional()
+  @IsString()
+  descricao?: string;
+}
+
 export class OpcaoPerguntaDto {
   @IsString()
   @MaxLength(180)

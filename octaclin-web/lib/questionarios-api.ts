@@ -35,6 +35,16 @@ export interface QuestionarioApi {
   atualizadoEm: string;
 }
 
+export interface ModeloQuestionarioApi {
+  id: string;
+  titulo: string;
+  descricao: string;
+  objetivo: string;
+  estimativaMinutos: number;
+  totalPerguntas: number;
+  secoes: string[];
+}
+
 export interface PerguntaApi {
   id: string;
   tenantId: string;
@@ -65,6 +75,12 @@ export interface CriarQuestionarioEntrada {
   descricao?: string;
 }
 
+export interface CriarQuestionarioModeloEntrada {
+  profissionalId: string;
+  titulo?: string;
+  descricao?: string;
+}
+
 export interface AtualizarQuestionarioEntrada {
   titulo?: string;
   descricao?: string;
@@ -89,6 +105,7 @@ export interface BootstrapQuestionarios {
   categorias: CategoriaPerguntaApi[];
   profissionais: ProfissionalResumo[];
   questionarios: RespostaPaginada<QuestionarioApi>;
+  modelos: ModeloQuestionarioApi[];
 }
 
 const categoriasPadrao = [
@@ -148,8 +165,22 @@ export async function listarQuestionarios(): Promise<RespostaPaginada<Questionar
   return requisitar<RespostaPaginada<QuestionarioApi>>('/api/questionarios?pagina=1&limite=25');
 }
 
+export async function listarModelosQuestionario(): Promise<ModeloQuestionarioApi[]> {
+  return requisitar<ModeloQuestionarioApi[]>('/api/questionarios/modelos');
+}
+
 export async function criarQuestionario(entrada: CriarQuestionarioEntrada): Promise<QuestionarioApi> {
   return requisitar<QuestionarioApi>('/api/questionarios', {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
+export async function criarQuestionarioAPartirModelo(
+  modeloId: string,
+  entrada: CriarQuestionarioModeloEntrada
+): Promise<QuestionarioApi> {
+  return requisitar<QuestionarioApi>(`/api/questionarios/modelos/${modeloId}/criar`, {
     method: 'POST',
     body: JSON.stringify(entrada)
   });
@@ -214,11 +245,12 @@ export async function criarAgendamentoQuestionario(entrada: {
 }
 
 export async function carregarBootstrapQuestionarios(): Promise<BootstrapQuestionarios> {
-  const [categorias, profissionais, questionarios] = await Promise.all([
+  const [categorias, profissionais, questionarios, modelos] = await Promise.all([
     garantirCategoriasPadrao(),
     listarProfissionais().then((resposta) => resposta.itens),
-    listarQuestionarios()
+    listarQuestionarios(),
+    listarModelosQuestionario()
   ]);
 
-  return { categorias, profissionais, questionarios };
+  return { categorias, profissionais, questionarios, modelos };
 }

@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { AlertTriangle, Archive, CalendarClock, Check, CheckCircle2, Copy, Eye, Plus, RefreshCcw, Save, Settings2, Trash2 } from 'lucide-react';
+import { AlertTriangle, Archive, BookOpen, CalendarClock, Check, CheckCircle2, Copy, Eye, Plus, RefreshCcw, Save, Settings2, Trash2, Wand2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import {
   CategoriaPerguntaApi,
+  ModeloQuestionarioApi,
   PerguntaApi,
   QuestionarioApi,
   TipoPergunta,
@@ -16,6 +17,7 @@ import {
   carregarBootstrapQuestionarios,
   criarAgendamentoQuestionario,
   criarPergunta,
+  criarQuestionarioAPartirModelo,
   criarQuestionario,
   duplicarQuestionario,
   listarPerguntas,
@@ -102,6 +104,7 @@ export function EditorQuestionario() {
   const [categorias, setCategorias] = useState<CategoriaPerguntaApi[]>([]);
   const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
   const [questionarios, setQuestionarios] = useState<QuestionarioApi[]>([]);
+  const [modelos, setModelos] = useState<ModeloQuestionarioApi[]>([]);
   const [questionarioAtual, setQuestionarioAtual] = useState<QuestionarioApi | null>(null);
   const [perguntas, setPerguntas] = useState<PerguntaEditor[]>([]);
   const [selecionadaId, setSelecionadaId] = useState<string | null>(null);
@@ -148,6 +151,7 @@ export function EditorQuestionario() {
       setCategorias(bootstrap.categorias);
       setProfissionais(bootstrap.profissionais);
       setQuestionarios(bootstrap.questionarios.itens);
+      setModelos(bootstrap.modelos);
 
       const primeiro = bootstrap.questionarios.itens[0];
       if (primeiro) {
@@ -222,6 +226,29 @@ export function EditorQuestionario() {
       setSucesso('Questionario duplicado.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao duplicar questionario.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function criarAPartirModelo(modelo: ModeloQuestionarioApi) {
+    const profissionalId = profissionais[0]?.id;
+    if (!profissionalId) {
+      setErro('Cadastre um profissional antes de usar modelos.');
+      setSucesso(null);
+      return;
+    }
+
+    setSalvando(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const criado = await criarQuestionarioAPartirModelo(modelo.id, { profissionalId });
+      setQuestionarios((atuais) => [criado, ...atuais]);
+      await selecionarQuestionario(criado);
+      setSucesso(`Modelo aplicado: ${modelo.titulo}.`);
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar questionario a partir do modelo.');
     } finally {
       setSalvando(false);
     }
@@ -514,6 +541,30 @@ export function EditorQuestionario() {
                   </option>
                 ))}
               </Selecao>
+            </div>
+            <div className="space-y-2 rounded-md border border-linha bg-[#f8fafb] p-3">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-[#596273]" />
+                <p className="text-sm font-semibold text-tinta">Modelos</p>
+              </div>
+              <div className="grid gap-2">
+                {modelos.map((modelo) => (
+                  <button
+                    key={modelo.id}
+                    type="button"
+                    onClick={() => void criarAPartirModelo(modelo)}
+                    disabled={salvando}
+                    className="grid gap-1 rounded-md border border-linha bg-white p-3 text-left transition-colors hover:bg-[#eef3f6] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-tinta">{modelo.titulo}</span>
+                      <Wand2 className="h-4 w-4 shrink-0 text-primaria" />
+                    </span>
+                    <span className="text-xs text-[#596273]">{modelo.totalPerguntas} perguntas - {modelo.estimativaMinutos} min</span>
+                    <span className="line-clamp-2 text-xs text-[#596273]">{modelo.objetivo}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="space-y-1.5">
               <Rotulo htmlFor="titulo">Titulo</Rotulo>

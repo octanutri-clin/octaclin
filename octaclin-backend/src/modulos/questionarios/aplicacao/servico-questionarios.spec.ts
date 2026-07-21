@@ -1,9 +1,10 @@
 import { ServicoQuestionarios } from './servico-questionarios';
+import { CategoriaPerguntaOrm } from '../infraestrutura/categoria-pergunta.orm';
 import { OpcaoPerguntaOrm } from '../infraestrutura/opcao-pergunta.orm';
 import { PerguntaOrm } from '../infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../infraestrutura/questionario.orm';
 
-function criarRepositorioFake(nome: 'questionario' | 'pergunta' | 'opcao', dados: Record<string, any>) {
+function criarRepositorioFake(nome: 'questionario' | 'pergunta' | 'opcao' | 'categoria', dados: Record<string, any>) {
   const itens = dados[`${nome}s`] as Record<string, any>[];
 
   return {
@@ -42,12 +43,14 @@ function criarRepositorioFake(nome: 'questionario' | 'pergunta' | 'opcao', dados
 
 function criarServico(dados: Record<string, any>) {
   const repositorios = {
+    categoria: criarRepositorioFake('categoria', dados),
     questionario: criarRepositorioFake('questionario', dados),
     pergunta: criarRepositorioFake('pergunta', dados),
     opcao: criarRepositorioFake('opcao', dados)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
+      if (entidade === CategoriaPerguntaOrm) return repositorios.categoria;
       if (entidade === QuestionarioOrm) return repositorios.questionario;
       if (entidade === PerguntaOrm) return repositorios.pergunta;
       if (entidade === OpcaoPerguntaOrm) return repositorios.opcao;
@@ -62,9 +65,31 @@ function criarServico(dados: Record<string, any>) {
 }
 
 describe('ServicoQuestionarios', () => {
+  it('deve listar modelos prontos de questionario', () => {
+    const { servico } = criarServico({
+      categorias: [],
+      questionarios: [],
+      perguntas: [],
+      opcaos: []
+    });
+
+    const modelos = servico.listarModelosQuestionario();
+
+    expect(modelos).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'checkin-adesao-semanal',
+          titulo: 'Check-in semanal de adesao',
+          totalPerguntas: expect.any(Number)
+        })
+      ])
+    );
+  });
+
   it('deve substituir opcoes ao atualizar pergunta de multipla escolha', async () => {
     const { servico, dados } = criarServico({
       questionarios: [{ id: 'q1', tenantId: 'tenant-1', versao: 1 }],
+      categorias: [],
       perguntas: [
         {
           id: 'p1',
@@ -122,6 +147,7 @@ describe('ServicoQuestionarios', () => {
           versao: 4
         }
       ],
+      categorias: [],
       perguntas: [
         {
           id: 'p1',
@@ -168,5 +194,39 @@ describe('ServicoQuestionarios', () => {
     expect(perguntasDuplicadas).toHaveLength(2);
     expect(perguntasDuplicadas[0]).toEqual(expect.objectContaining({ configuracao: { secao: 'Rotina', limiteCaracteres: 500, placeholder: 'Conte aqui' } }));
     expect(dados.opcaos.filter((opcao: Record<string, unknown>) => opcao.perguntaId === perguntasDuplicadas[1].id)).toHaveLength(2);
+  });
+
+  it('deve criar questionario a partir de modelo com categorias, secoes e opcoes', async () => {
+    const { servico, dados } = criarServico({
+      categorias: [],
+      questionarios: [],
+      perguntas: [],
+      opcaos: []
+    });
+
+    const criado = await servico.criarQuestionarioAPartirModelo('tenant-1', 'checkin-adesao-semanal', {
+      profissionalId: 'prof-1'
+    } as any);
+
+    expect(criado).toEqual(
+      expect.objectContaining({
+        id: 'questionario-1',
+        tenantId: 'tenant-1',
+        profissionalId: 'prof-1',
+        titulo: 'Check-in semanal de adesao',
+        status: 'rascunho',
+        versao: 1
+      })
+    );
+    expect(dados.categorias.length).toBeGreaterThan(0);
+    expect(dados.perguntas.length).toBeGreaterThan(3);
+    expect(dados.perguntas[0]).toEqual(
+      expect.objectContaining({
+        questionarioId: 'questionario-1',
+        configuracao: expect.objectContaining({ secao: expect.any(String) }),
+        ordem: 1
+      })
+    );
+    expect(dados.opcaos.length).toBeGreaterThan(1);
   });
 });

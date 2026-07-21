@@ -23,6 +23,7 @@ import {
   CriarAgendamentoQuestionarioDto,
   CriarCategoriaPerguntaDto,
   CriarPerguntaDto,
+  CriarQuestionarioAPartirModeloDto,
   CriarQuestionarioDto,
   DuplicarQuestionarioDto,
   ReordenarPerguntasDto
@@ -76,6 +77,26 @@ export class ControladorQuestionarios {
     @Query('limite', new ParseIntPipe({ optional: true })) limite = 25
   ) {
     return this.servicoQuestionarios.listarQuestionarios(usuario.tenantId, pagina, limite);
+  }
+
+  @Get('questionarios/modelos')
+  listarModelosQuestionario() {
+    return this.servicoQuestionarios.listarModelosQuestionario();
+  }
+
+  @Post('questionarios/modelos/:modeloId/criar')
+  async criarQuestionarioAPartirModelo(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('modeloId') modeloId: string,
+    @Body() dados: CriarQuestionarioAPartirModeloDto
+  ) {
+    const questionario = await this.servicoQuestionarios.criarQuestionarioAPartirModelo(usuario.tenantId, modeloId, dados);
+    await this.registrarAuditoria(usuario, requisicao, 'questionarios.modelo.criar', 'questionario', questionario.id, {
+      modeloId,
+      profissionalId: dados.profissionalId
+    });
+    return questionario;
   }
 
   @Patch('questionarios/:id')

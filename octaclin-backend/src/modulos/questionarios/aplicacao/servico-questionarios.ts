@@ -4,6 +4,7 @@ import * as cronParser from 'cron-parser';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { normalizarConfiguracaoPergunta } from '../dominio/configuracao-pergunta';
+import { MODELOS_QUESTIONARIO, ModeloQuestionarioResumo, resumirModeloQuestionario } from '../dominio/modelos-questionario';
 import { normalizarOrdemPerguntas } from '../dominio/reordenacao-perguntas';
 import { TipoPergunta, validarTipoPergunta } from '../dominio/tipos-pergunta';
 import {
@@ -12,6 +13,7 @@ import {
   CriarAgendamentoQuestionarioDto,
   CriarCategoriaPerguntaDto,
   CriarPerguntaDto,
+  CriarQuestionarioAPartirModeloDto,
   CriarQuestionarioDto,
   DuplicarQuestionarioDto,
   ReordenarPerguntasDto
@@ -80,6 +82,88 @@ export class ServicoQuestionarios {
       });
 
       return { itens, total };
+    });
+  }
+
+  listarModelosQuestionario(): ModeloQuestionarioResumo[] {
+    return MODELOS_QUESTIONARIO.map(resumirModeloQuestionario);
+  }
+
+  async criarQuestionarioAPartirModelo(
+    tenantId: string,
+    modeloId: string,
+    dados: CriarQuestionarioAPartirModeloDto
+  ): Promise<QuestionarioOrm> {
+    const modelo = MODELOS_QUESTIONARIO.find((item) => item.id === modeloId);
+    if (!modelo) throw new NotFoundException('Modelo de questionario nao encontrado.');
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const categoriasPorNome = new Map<string, CategoriaPerguntaOrm>();
+      for (const perguntaModelo of modelo.perguntas) {
+        const categoriaModelo = perguntaModelo.categoria;
+        const existente = await gerenciador.getRepository(CategoriaPerguntaOrm).findOne({
+          where: { tenantId, nome: categoriaModelo.nome }
+        });
+        const categoria =
+          existente ??
+          (await gerenciador.getRepository(CategoriaPerguntaOrm).save(
+            gerenciador.getRepository(CategoriaPerguntaOrm).create({
+              tenantId,
+              nome: categoriaModelo.nome,
+              iconeSvg: categoriaModelo.iconeSvg,
+              corHex: categoriaModelo.corHex,
+              ordem: categoriaModelo.ordem
+            })
+          ));
+        categoriasPorNome.set(categoriaModelo.nome, categoria);
+      }
+
+      const questionario = await gerenciador.getRepository(QuestionarioOrm).save(
+        gerenciador.getRepository(QuestionarioOrm).create({
+          tenantId,
+          profissionalId: dados.profissionalId,
+          titulo: dados.titulo?.trim() || modelo.titulo,
+          descricao: dados.descricao ?? modelo.descricao,
+          status: 'rascunho',
+          versao: 1
+        })
+      );
+
+      for (const [indice, perguntaModelo] of modelo.perguntas.entries()) {
+        const categoria = categoriasPorNome.get(perguntaModelo.categoria.nome);
+        if (!categoria) throw new NotFoundException('Categoria do modelo nao encontrada.');
+
+        const pergunta = await gerenciador.getRepository(PerguntaOrm).save(
+          gerenciador.getRepository(PerguntaOrm).create({
+            tenantId,
+            questionarioId: questionario.id,
+            categoriaId: categoria.id,
+            tipo: perguntaModelo.tipo,
+            enunciado: perguntaModelo.enunciado,
+            peso: String(perguntaModelo.peso),
+            obrigatoria: perguntaModelo.obrigatoria,
+            configuracao: normalizarConfiguracaoPergunta(perguntaModelo.tipo, perguntaModelo.configuracao),
+            ordem: indice + 1
+          })
+        );
+
+        if (perguntaModelo.opcoes?.length) {
+          await gerenciador.getRepository(OpcaoPerguntaOrm).save(
+            perguntaModelo.opcoes.map((opcao, indiceOpcao) =>
+              gerenciador.getRepository(OpcaoPerguntaOrm).create({
+                tenantId,
+                perguntaId: pergunta.id,
+                rotulo: opcao.rotulo,
+                valor: opcao.valor,
+                imagemUrl: opcao.imagemUrl,
+                ordem: indiceOpcao + 1
+              })
+            )
+          );
+        }
+      }
+
+      return questionario;
     });
   }
 
