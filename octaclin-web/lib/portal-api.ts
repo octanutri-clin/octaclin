@@ -6,9 +6,16 @@ export interface PortalPacienteApi {
     scoreRisco: string;
     ultimoCheckinEm?: string;
   };
+  perfil: {
+    contato?: string;
+    dataNascimento?: string;
+    profissionalResponsavelId: string;
+    ultimoCheckinEm?: string;
+  };
   resumo: {
     consultasProximas: number;
     formulariosPendentes: number;
+    formulariosRespondidos: number;
     mensagensRecentes: number;
   };
   consultasProximas: {
@@ -27,6 +34,16 @@ export interface PortalPacienteApi {
     status: string;
     expiraEm?: string;
     linkFormulario: string;
+  }[];
+  formulariosRespondidos: {
+    respostaId: string;
+    envioId: string;
+    questionarioId: string;
+    titulo: string;
+    status: string;
+    respondidoEm?: string;
+    finalizadoEm?: string;
+    scoreFinal?: string;
   }[];
   mensagensRecentes: {
     id: string;

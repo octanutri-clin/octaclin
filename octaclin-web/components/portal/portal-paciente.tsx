@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CalendarDays, ClipboardList, HeartPulse, MessageCircle, RefreshCcw } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CheckCircle2, ClipboardList, HeartPulse, MessageCircle, RefreshCcw, UserRound } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { obterPortalPaciente, PortalPacienteApi } from '@/lib/portal-api';
 
@@ -10,6 +10,13 @@ function formatarDataHora(valor?: string) {
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return 'Sem data';
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(data);
+}
+
+function formatarData(valor?: string) {
+  if (!valor) return 'Nao informado';
+  const data = new Date(`${valor}T00:00:00`);
+  if (Number.isNaN(data.getTime())) return 'Nao informado';
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(data);
 }
 
 function rotuloStatus(status: string) {
@@ -74,7 +81,7 @@ export function PortalPaciente() {
 
         {portal ? (
           <>
-            <section className="grid gap-4 md:grid-cols-[minmax(0,1fr)_repeat(3,150px)]">
+            <section className="grid gap-4 md:grid-cols-[minmax(0,1fr)_repeat(4,140px)]">
               <div>
                 <p className="text-sm text-[#596273]">Ola,</p>
                 <h2 className="text-2xl font-semibold text-tinta">{portal.paciente.nome}</h2>
@@ -91,6 +98,10 @@ export function PortalPaciente() {
                 <p className="text-2xl font-semibold">{portal.resumo.formulariosPendentes}</p>
               </div>
               <div className="rounded-lg border border-linha bg-white p-3">
+                <p className="text-xs text-[#596273]">Respondidos</p>
+                <p className="text-2xl font-semibold">{portal.resumo.formulariosRespondidos}</p>
+              </div>
+              <div className="rounded-lg border border-linha bg-white p-3">
                 <p className="text-xs text-[#596273]">Mensagens</p>
                 <p className="text-2xl font-semibold">{portal.resumo.mensagensRecentes}</p>
               </div>
@@ -98,6 +109,31 @@ export function PortalPaciente() {
 
             <section className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
               <div className="grid gap-4">
+                <section className="rounded-lg border border-linha bg-white">
+                  <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+                    <UserRound className="h-4 w-4 text-[#596273]" />
+                    <h2 className="text-sm font-semibold">Meu perfil</h2>
+                  </div>
+                  <dl className="grid gap-3 p-4 sm:grid-cols-2">
+                    <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                      <dt className="text-xs text-[#596273]">Contato</dt>
+                      <dd className="mt-1 break-words text-sm font-semibold">{portal.perfil.contato ?? 'Nao informado'}</dd>
+                    </div>
+                    <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                      <dt className="text-xs text-[#596273]">Nascimento</dt>
+                      <dd className="mt-1 text-sm font-semibold">{formatarData(portal.perfil.dataNascimento)}</dd>
+                    </div>
+                    <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                      <dt className="text-xs text-[#596273]">Ultimo check-in</dt>
+                      <dd className="mt-1 text-sm font-semibold">{formatarDataHora(portal.perfil.ultimoCheckinEm)}</dd>
+                    </div>
+                    <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                      <dt className="text-xs text-[#596273]">Status</dt>
+                      <dd className="mt-1 text-sm font-semibold">{rotuloStatus(portal.paciente.statusAdesao)}</dd>
+                    </div>
+                  </dl>
+                </section>
+
                 <section className="rounded-lg border border-linha bg-white">
                   <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
                     <ClipboardList className="h-4 w-4 text-[#596273]" />
@@ -123,6 +159,34 @@ export function PortalPaciente() {
                       ))
                     ) : (
                       <p className="text-sm text-[#596273]">Nenhum formulario pendente.</p>
+                    )}
+                  </div>
+                </section>
+
+                <section className="rounded-lg border border-linha bg-white">
+                  <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+                    <CheckCircle2 className="h-4 w-4 text-[#596273]" />
+                    <h2 className="text-sm font-semibold">Historico de formularios</h2>
+                  </div>
+                  <div className="grid gap-3 p-4">
+                    {portal.formulariosRespondidos.length ? (
+                      portal.formulariosRespondidos.map((formulario) => (
+                        <article key={formulario.respostaId} className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-semibold">{formulario.titulo}</p>
+                              <p className="text-xs text-[#596273]">
+                                Respondido em {formatarDataHora(formulario.finalizadoEm ?? formulario.respondidoEm)}
+                              </p>
+                            </div>
+                            <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                              {formulario.scoreFinal ? `Score ${formulario.scoreFinal}` : rotuloStatus(formulario.status)}
+                            </span>
+                          </div>
+                        </article>
+                      ))
+                    ) : (
+                      <p className="text-sm text-[#596273]">Nenhum formulario respondido ainda.</p>
                     )}
                   </div>
                 </section>

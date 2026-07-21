@@ -3,6 +3,7 @@ import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.o
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
+import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { ServicoPortalPaciente } from './servico-portal-paciente';
 
@@ -57,6 +58,7 @@ function criarServico(dados: Record<string, any>) {
     consulta: criarRepositorioFake('consulta', dados),
     envio: criarRepositorioFake('envio', dados),
     questionario: criarRepositorioFake('questionario', dados),
+    respostaCheckin: criarRepositorioFake('respostaCheckin', dados),
     mensagem: criarRepositorioFake('mensagem', dados)
   };
   const gerenciador = {
@@ -65,6 +67,7 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === AgendaConsultaOrm) return repositorios.consulta;
       if (entidade === EnvioQuestionarioOrm) return repositorios.envio;
       if (entidade === QuestionarioOrm) return repositorios.questionario;
+      if (entidade === RespostaCheckinOrm) return repositorios.respostaCheckin;
       if (entidade === MensagemNotificacaoOrm) return repositorios.mensagem;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
@@ -94,6 +97,9 @@ describe('ServicoPortalPaciente', () => {
           tenantId: 'tenant-1',
           usuarioId: 'usuario-paciente-1',
           nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          contatoCriptografado: Buffer.from('cripto:ana@example.com'),
+          dataNascimento: '1990-04-15',
+          profissionalResponsavelId: 'profissional-1',
           statusAdesao: 'aderente',
           scoreRisco: '12.50',
           ultimoCheckinEm: new Date('2026-07-20T12:00:00.000Z')
@@ -141,7 +147,8 @@ describe('ServicoPortalPaciente', () => {
           tenantId: 'tenant-1',
           pacienteId: 'paciente-1',
           questionarioId: 'questionario-2',
-          status: 'respondido'
+          status: 'respondido',
+          respondidoEm: new Date('2026-07-19T12:05:00.000Z')
         },
         {
           id: 'envio-3',
@@ -154,6 +161,16 @@ describe('ServicoPortalPaciente', () => {
       questionarios: [
         { id: 'questionario-1', tenantId: 'tenant-1', titulo: 'Check-in semanal' },
         { id: 'questionario-2', tenantId: 'tenant-1', titulo: 'Respondido' }
+      ],
+      respostaCheckins: [
+        {
+          id: 'resposta-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          envioQuestionarioId: 'envio-2',
+          scoreFinal: '87.40',
+          finalizadoEm: new Date('2026-07-19T12:05:00.000Z')
+        }
       ],
       mensagens: [
         {
@@ -186,7 +203,13 @@ describe('ServicoPortalPaciente', () => {
         scoreRisco: '12.50'
       })
     );
-    expect(portal.resumo).toEqual({ consultasProximas: 1, formulariosPendentes: 1, mensagensRecentes: 1 });
+    expect(portal.resumo).toEqual({ consultasProximas: 1, formulariosPendentes: 1, formulariosRespondidos: 1, mensagensRecentes: 1 });
+    expect(portal.perfil).toEqual({
+      contato: 'ana@example.com',
+      dataNascimento: '1990-04-15',
+      profissionalResponsavelId: 'profissional-1',
+      ultimoCheckinEm: new Date('2026-07-20T12:00:00.000Z')
+    });
     expect(portal.consultasProximas).toEqual([
       expect.objectContaining({ id: 'consulta-1', titulo: 'Consulta nutricional', local: 'Online' })
     ]);
@@ -197,6 +220,16 @@ describe('ServicoPortalPaciente', () => {
         titulo: 'Check-in semanal',
         status: 'enviado',
         linkFormulario: expect.stringContaining('/formularios/')
+      })
+    ]);
+    expect(portal.formulariosRespondidos).toEqual([
+      expect.objectContaining({
+        respostaId: 'resposta-1',
+        envioId: 'envio-2',
+        questionarioId: 'questionario-2',
+        titulo: 'Respondido',
+        scoreFinal: '87.40',
+        finalizadoEm: new Date('2026-07-19T12:05:00.000Z')
       })
     ]);
     expect(portal.mensagensRecentes).toEqual([

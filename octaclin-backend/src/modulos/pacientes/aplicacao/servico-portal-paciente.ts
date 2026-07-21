@@ -7,6 +7,7 @@ import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.o
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
+import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
 export interface ResumoPortalPaciente {
@@ -17,9 +18,16 @@ export interface ResumoPortalPaciente {
     scoreRisco: string;
     ultimoCheckinEm?: Date;
   };
+  perfil: {
+    contato?: string;
+    dataNascimento?: string;
+    profissionalResponsavelId: string;
+    ultimoCheckinEm?: Date;
+  };
   resumo: {
     consultasProximas: number;
     formulariosPendentes: number;
+    formulariosRespondidos: number;
     mensagensRecentes: number;
   };
   consultasProximas: {
@@ -38,6 +46,16 @@ export interface ResumoPortalPaciente {
     status: string;
     expiraEm?: Date;
     linkFormulario: string;
+  }[];
+  formulariosRespondidos: {
+    respostaId: string;
+    envioId: string;
+    questionarioId: string;
+    titulo: string;
+    status: string;
+    respondidoEm?: Date;
+    finalizadoEm?: Date;
+    scoreFinal?: string;
   }[];
   mensagensRecentes: {
     id: string;
@@ -78,12 +96,26 @@ export class ServicoPortalPaciente {
         order: { expiraEm: 'ASC' },
         take: 20
       });
-      const questionarios = envios.length
+      const enviosRespondidos = await gerenciador.getRepository(EnvioQuestionarioOrm).find({
+        where: { tenantId, pacienteId: paciente.id, status: 'respondido' },
+        order: { respondidoEm: 'DESC' },
+        take: 20
+      });
+      const todosEnvios = [...envios, ...enviosRespondidos];
+      const questionarios = todosEnvios.length
         ? await gerenciador.getRepository(QuestionarioOrm).find({
-            where: { tenantId, id: In(envios.map((envio) => envio.questionarioId)) }
+            where: { tenantId, id: In(todosEnvios.map((envio) => envio.questionarioId)) }
           })
         : [];
       const questionariosPorId = new Map(questionarios.map((questionario) => [questionario.id, questionario]));
+      const respostasCheckin = enviosRespondidos.length
+        ? await gerenciador.getRepository(RespostaCheckinOrm).find({
+            where: { tenantId, pacienteId: paciente.id, envioQuestionarioId: In(enviosRespondidos.map((envio) => envio.id)) },
+            order: { finalizadoEm: 'DESC' },
+            take: 20
+          })
+        : [];
+      const respostasPorEnvioId = new Map(respostasCheckin.map((resposta) => [resposta.envioQuestionarioId, resposta]));
 
       const mensagens = await gerenciador.getRepository(MensagemNotificacaoOrm).find({
         where: { tenantId, pacienteId: paciente.id },
@@ -108,6 +140,19 @@ export class ServicoPortalPaciente {
         expiraEm: envio.expiraEm,
         linkFormulario: this.montarLinkFormulario(tenantId, envio.id)
       }));
+      const formulariosRespondidos = enviosRespondidos.map((envio) => {
+        const resposta = respostasPorEnvioId.get(envio.id);
+        return {
+          respostaId: resposta?.id ?? envio.id,
+          envioId: envio.id,
+          questionarioId: envio.questionarioId,
+          titulo: questionariosPorId.get(envio.questionarioId)?.titulo ?? 'Formulario',
+          status: envio.status,
+          respondidoEm: envio.respondidoEm,
+          finalizadoEm: resposta?.finalizadoEm ?? envio.respondidoEm,
+          scoreFinal: resposta?.scoreFinal
+        };
+      });
       const mensagensRecentes = mensagens.map((mensagem) => ({
         id: mensagem.id,
         titulo: this.textoPayload(mensagem.payload, 'assunto') ?? 'Mensagem OctaClin',
@@ -125,13 +170,21 @@ export class ServicoPortalPaciente {
           scoreRisco: paciente.scoreRisco,
           ultimoCheckinEm: paciente.ultimoCheckinEm
         },
+        perfil: {
+          contato: paciente.contatoCriptografado ? this.criptografia.descriptografar(paciente.contatoCriptografado) : undefined,
+          dataNascimento: paciente.dataNascimento,
+          profissionalResponsavelId: paciente.profissionalResponsavelId,
+          ultimoCheckinEm: paciente.ultimoCheckinEm
+        },
         resumo: {
           consultasProximas: consultasProximas.length,
           formulariosPendentes: formulariosPendentes.length,
+          formulariosRespondidos: formulariosRespondidos.length,
           mensagensRecentes: mensagensRecentes.length
         },
         consultasProximas,
         formulariosPendentes,
+        formulariosRespondidos,
         mensagensRecentes
       };
     });

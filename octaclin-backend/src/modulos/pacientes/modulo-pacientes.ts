@@ -11,6 +11,7 @@ import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm'
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { EnvioQuestionarioOrm } from '../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../questionarios/infraestrutura/questionario.orm';
+import { RespostaCheckinOrm } from '../questionarios/infraestrutura/resposta-checkin.orm';
 import { UsuarioOrm } from '../usuarios/infraestrutura/usuario.orm';
 import { ServicoConvitesPaciente } from './aplicacao/servico-convites-paciente';
 import { ServicoPacientes } from './aplicacao/servico-pacientes';
@@ -32,6 +33,7 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
       AgendaConsultaOrm,
       EnvioQuestionarioOrm,
       QuestionarioOrm,
+      RespostaCheckinOrm,
       MensagemNotificacaoOrm
     ]),
     ModuloTenancy,
