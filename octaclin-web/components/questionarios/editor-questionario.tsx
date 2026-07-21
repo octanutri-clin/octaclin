@@ -8,6 +8,7 @@ import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import {
   CategoriaPerguntaApi,
+  LeituraClinicaQuestionarioApi,
   ModeloQuestionarioApi,
   PerguntaApi,
   QuestionarioApi,
@@ -23,7 +24,7 @@ import {
   criarQuestionario,
   duplicarQuestionario,
   listarPerguntas,
-  listarRespostasQuestionario,
+  obterLeituraClinicaQuestionario,
   reordenarPerguntas
 } from '@/lib/questionarios-api';
 import { PacienteResumo, ProfissionalResumo } from '@/lib/cadastros-api';
@@ -140,7 +141,10 @@ export function EditorQuestionario() {
   const [salvando, setSalvando] = useState(false);
   const [previewAberto, setPreviewAberto] = useState(false);
   const [respostasRecebidas, setRespostasRecebidas] = useState<RespostaQuestionarioRecebidaApi[]>([]);
+  const [leituraClinica, setLeituraClinica] = useState<LeituraClinicaQuestionarioApi | null>(null);
   const [carregandoRespostas, setCarregandoRespostas] = useState(false);
+  const [pacienteFiltroRespostas, setPacienteFiltroRespostas] = useState('');
+  const [buscaRespostas, setBuscaRespostas] = useState('');
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -151,6 +155,32 @@ export function EditorQuestionario() {
   const categoriasPorId = useMemo(() => new Map(categorias.map((categoria) => [categoria.id, categoria])), [categorias]);
   const pacientesPorId = useMemo(() => new Map(pacientes.map((paciente) => [paciente.id, paciente])), [pacientes]);
   const scoreTotal = perguntas.reduce((total, pergunta) => total + pergunta.peso, 0);
+  const perguntasLeituraFiltradas = useMemo(() => {
+    const termo = buscaRespostas.trim().toLocaleLowerCase('pt-BR');
+    const itens = leituraClinica?.perguntas ?? [];
+    if (!termo) return itens;
+    return itens.filter((pergunta) => {
+      const textos = [
+        pergunta.enunciado,
+        pergunta.tipo,
+        ...pergunta.textosRecentes,
+        ...pergunta.distribuicao.map((item) => item.valor)
+      ];
+      return textos.some((texto) => texto.toLocaleLowerCase('pt-BR').includes(termo));
+    });
+  }, [buscaRespostas, leituraClinica]);
+  const respostasVisiveis = useMemo(() => {
+    const termo = buscaRespostas.trim().toLocaleLowerCase('pt-BR');
+    if (!termo) return respostasRecebidas;
+    return respostasRecebidas.filter((resposta) => {
+      const paciente = pacientesPorId.get(resposta.pacienteId);
+      const textos = [
+        paciente?.nome ?? '',
+        ...resposta.respostas.flatMap((item) => [item.enunciado, formatarValorResposta(item.valor)])
+      ];
+      return textos.some((texto) => texto.toLocaleLowerCase('pt-BR').includes(termo));
+    });
+  }, [buscaRespostas, pacientesPorId, respostasRecebidas]);
 
   async function carregarPerguntas(questionarioId: string) {
     const resposta = await listarPerguntas(questionarioId);
@@ -159,15 +189,18 @@ export function EditorQuestionario() {
     setSelecionadaId(mapeadas[0]?.id ?? null);
   }
 
-  async function carregarRespostas(questionarioId = questionarioAtual?.id) {
+  async function carregarRespostas(questionarioId = questionarioAtual?.id, pacienteId = pacienteFiltroRespostas) {
     if (!questionarioId) {
       setRespostasRecebidas([]);
+      setLeituraClinica(null);
       return;
     }
 
     setCarregandoRespostas(true);
     try {
-      setRespostasRecebidas(await listarRespostasQuestionario(questionarioId));
+      const leitura = await obterLeituraClinicaQuestionario(questionarioId, { pacienteId: pacienteId || undefined });
+      setLeituraClinica(leitura);
+      setRespostasRecebidas(leitura.respostas);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar respostas do formulario.');
     } finally {
@@ -205,6 +238,7 @@ export function EditorQuestionario() {
         setPerguntas([]);
         setSelecionadaId(null);
         setRespostasRecebidas([]);
+        setLeituraClinica(null);
       }
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar questionarios.');
@@ -1049,46 +1083,147 @@ export function EditorQuestionario() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-linha px-4 py-3">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-[#596273]" />
-            <h2 className="text-sm font-semibold text-tinta">Respostas recebidas</h2>
+            <h2 className="text-sm font-semibold text-tinta">Leitura clinica das respostas</h2>
           </div>
-          <Botao type="button" onClick={() => void carregarRespostas()} disabled={carregandoRespostas || !questionarioAtual}>
+          <Botao
+            type="button"
+            onClick={() => void carregarRespostas(questionarioAtual?.id, pacienteFiltroRespostas)}
+            disabled={carregandoRespostas || !questionarioAtual}
+          >
             <RefreshCcw className="h-4 w-4" />
             {carregandoRespostas ? 'Atualizando respostas' : 'Atualizar respostas'}
           </Botao>
         </div>
 
-        {respostasRecebidas.length ? (
-          <div className="grid gap-3 p-4">
-            {respostasRecebidas.map((resposta) => {
-              const paciente = pacientesPorId.get(resposta.pacienteId);
-              return (
-                <article key={resposta.respostaId} className="rounded-md border border-linha bg-[#f8fafb] p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="grid gap-4 p-4">
+          <div className="grid gap-3 md:grid-cols-[minmax(220px,300px)_minmax(220px,1fr)]">
+            <label className="space-y-1.5">
+              <Rotulo htmlFor="filtro-paciente-respostas">Paciente</Rotulo>
+              <Selecao
+                id="filtro-paciente-respostas"
+                value={pacienteFiltroRespostas}
+                onChange={(event) => {
+                  const pacienteId = event.target.value;
+                  setPacienteFiltroRespostas(pacienteId);
+                  void carregarRespostas(questionarioAtual?.id, pacienteId);
+                }}
+                disabled={!questionarioAtual}
+              >
+                <option value="">Todos os pacientes</option>
+                {pacientes.map((paciente) => (
+                  <option key={paciente.id} value={paciente.id}>
+                    {paciente.nome}
+                  </option>
+                ))}
+              </Selecao>
+            </label>
+            <label className="space-y-1.5">
+              <Rotulo htmlFor="busca-respostas">Busca</Rotulo>
+              <Campo
+                id="busca-respostas"
+                value={buscaRespostas}
+                onChange={(event) => setBuscaRespostas(event.target.value)}
+                placeholder="Paciente, pergunta ou resposta"
+              />
+            </label>
+          </div>
+
+          {leituraClinica ? (
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                <p className="text-xs text-[#596273]">Envios respondidos</p>
+                <p className="text-2xl font-semibold text-tinta">{leituraClinica.resumo.totalRespostas}</p>
+              </div>
+              <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                <p className="text-xs text-[#596273]">Pacientes</p>
+                <p className="text-2xl font-semibold text-tinta">{leituraClinica.resumo.totalPacientes}</p>
+              </div>
+              <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                <p className="text-xs text-[#596273]">Media por envio</p>
+                <p className="text-2xl font-semibold text-tinta">{leituraClinica.resumo.mediaRespostasPorEnvio}</p>
+              </div>
+              <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                <p className="text-xs text-[#596273]">Ultima resposta</p>
+                <p className="text-base font-semibold text-tinta">{formatarDataResposta(leituraClinica.resumo.ultimaRespostaEm)}</p>
+              </div>
+            </div>
+          ) : null}
+
+          {perguntasLeituraFiltradas.length ? (
+            <div className="grid gap-3 lg:grid-cols-3">
+              {perguntasLeituraFiltradas.map((pergunta) => (
+                <article key={pergunta.perguntaId} className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-tinta">{paciente?.nome ?? 'Paciente nao identificado'}</p>
-                      <p className="text-xs text-[#596273]">Finalizado em {formatarDataResposta(resposta.finalizadoEm)}</p>
+                      <p className="text-sm font-semibold text-tinta">{pergunta.enunciado}</p>
+                      <p className="text-xs text-[#596273]">{pergunta.totalRespostas} respostas</p>
                     </div>
-                    <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-[#596273]">
-                      {resposta.totalRespostas} respostas
-                    </span>
+                    {typeof pergunta.mediaNumerica === 'number' ? (
+                      <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                        Media {pergunta.mediaNumerica}
+                      </span>
+                    ) : null}
                   </div>
-                  <dl className="mt-4 grid gap-2 md:grid-cols-2">
-                    {resposta.respostas.map((item) => (
-                      <div key={`${resposta.respostaId}-${item.perguntaId}`} className="rounded-md border border-linha bg-white p-3">
-                        <dt className="text-xs font-medium text-[#596273]">{item.enunciado}</dt>
-                        <dd className="mt-1 break-words text-sm font-semibold text-tinta">{formatarValorResposta(item.valor)}</dd>
-                      </div>
-                    ))}
-                  </dl>
+                  {typeof pergunta.totalSim === 'number' || typeof pergunta.totalNao === 'number' ? (
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                      <span className="rounded-md border border-linha bg-white px-3 py-2 font-semibold text-[#245b33]">
+                        Sim {pergunta.totalSim ?? 0}
+                      </span>
+                      <span className="rounded-md border border-linha bg-white px-3 py-2 font-semibold text-perigo">
+                        Nao {pergunta.totalNao ?? 0}
+                      </span>
+                    </div>
+                  ) : null}
+                  {pergunta.distribuicao.length ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {pergunta.distribuicao.slice(0, 4).map((item) => (
+                        <span key={`${pergunta.perguntaId}-${item.valor}`} className="rounded-full border border-linha bg-white px-2 py-1 text-xs text-[#596273]">
+                          {item.valor}: {item.total}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  {pergunta.textosRecentes.length ? (
+                    <p className="mt-3 line-clamp-2 text-xs text-[#596273]">{pergunta.textosRecentes[0]}</p>
+                  ) : null}
                 </article>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="p-6 text-sm text-[#596273]">
-            {carregandoRespostas ? 'Carregando respostas.' : 'Nenhuma resposta recebida para este questionario.'}
-          </div>
-        )}
+              ))}
+            </div>
+          ) : null}
+
+          {respostasVisiveis.length ? (
+            <div className="grid gap-3">
+              {respostasVisiveis.map((resposta) => {
+                const paciente = pacientesPorId.get(resposta.pacienteId);
+                return (
+                  <article key={resposta.respostaId} className="rounded-md border border-linha bg-[#f8fafb] p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-tinta">{paciente?.nome ?? 'Paciente nao identificado'}</p>
+                        <p className="text-xs text-[#596273]">Finalizado em {formatarDataResposta(resposta.finalizadoEm)}</p>
+                      </div>
+                      <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-[#596273]">
+                        {resposta.totalRespostas} respostas
+                      </span>
+                    </div>
+                    <dl className="mt-4 grid gap-2 md:grid-cols-2">
+                      {resposta.respostas.map((item) => (
+                        <div key={`${resposta.respostaId}-${item.perguntaId}`} className="rounded-md border border-linha bg-white p-3">
+                          <dt className="text-xs font-medium text-[#596273]">{item.enunciado}</dt>
+                          <dd className="mt-1 break-words text-sm font-semibold text-tinta">{formatarValorResposta(item.valor)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-2 text-sm text-[#596273]">
+              {carregandoRespostas ? 'Carregando respostas.' : 'Nenhuma resposta encontrada para os filtros atuais.'}
+            </div>
+          )}
+        </div>
       </section>
     </section>
   );

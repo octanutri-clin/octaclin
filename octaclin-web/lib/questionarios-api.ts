@@ -63,6 +63,37 @@ export interface RespostaQuestionarioRecebidaApi {
   }[];
 }
 
+export interface LeituraClinicaQuestionarioApi {
+  questionarioId: string;
+  filtroPacienteId?: string;
+  resumo: {
+    totalRespostas: number;
+    totalPacientes: number;
+    totalPerguntas: number;
+    mediaRespostasPorEnvio: number;
+    ultimaRespostaEm?: string;
+  };
+  pacientes: {
+    pacienteId: string;
+    totalRespostas: number;
+    totalValoresRespondidos: number;
+    mediaRespostasPorEnvio: number;
+    ultimaRespostaEm?: string;
+  }[];
+  perguntas: {
+    perguntaId: string;
+    enunciado: string;
+    tipo: TipoPergunta;
+    totalRespostas: number;
+    totalSim?: number;
+    totalNao?: number;
+    mediaNumerica?: number;
+    textosRecentes: string[];
+    distribuicao: { valor: string; total: number }[];
+  }[];
+  respostas: RespostaQuestionarioRecebidaApi[];
+}
+
 export interface ModeloQuestionarioApi {
   id: string;
   titulo: string;
@@ -285,6 +316,18 @@ export async function criarEnvioQuestionario(
 
 export async function listarRespostasQuestionario(questionarioId: string): Promise<RespostaQuestionarioRecebidaApi[]> {
   return requisitar<RespostaQuestionarioRecebidaApi[]>(`/api/questionarios/${questionarioId}/respostas`);
+}
+
+export async function obterLeituraClinicaQuestionario(
+  questionarioId: string,
+  filtros: { pacienteId?: string } = {}
+): Promise<LeituraClinicaQuestionarioApi> {
+  const parametros = new URLSearchParams();
+  if (filtros.pacienteId) parametros.set('pacienteId', filtros.pacienteId);
+  const consulta = parametros.toString();
+  return requisitar<LeituraClinicaQuestionarioApi>(
+    `/api/questionarios/${questionarioId}/respostas/leitura-clinica${consulta ? `?${consulta}` : ''}`
+  );
 }
 
 export async function carregarBootstrapQuestionarios(): Promise<BootstrapQuestionarios> {

@@ -482,4 +482,90 @@ describe('ServicoQuestionarios', () => {
       })
     ]);
   });
+
+  it('deve agregar leitura clinica filtrada por paciente', async () => {
+    const respostaPaciente1 = new Date('2026-07-20T12:00:00.000Z');
+    const respostaPaciente2 = new Date('2026-07-19T12:00:00.000Z');
+    const { servico } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in semanal' }],
+      perguntas: [
+        {
+          id: 'p1',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'sim_nao',
+          enunciado: 'Treinou?',
+          peso: '1',
+          obrigatoria: true,
+          configuracao: { secao: 'Rotina' },
+          ordem: 1
+        },
+        {
+          id: 'p2',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'metrica',
+          enunciado: 'Peso corporal',
+          peso: '1',
+          obrigatoria: false,
+          configuracao: { secao: 'Medidas' },
+          ordem: 2
+        },
+        {
+          id: 'p3',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'texto_longo',
+          enunciado: 'Observacoes',
+          peso: '1',
+          obrigatoria: false,
+          configuracao: { secao: 'Rotina' },
+          ordem: 3
+        }
+      ],
+      opcaos: [],
+      envios: [
+        { id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'respondido' },
+        { id: 'envio-2', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-2', status: 'respondido' }
+      ],
+      respostaCheckins: [
+        { id: 'resposta-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', envioQuestionarioId: 'envio-1', finalizadoEm: respostaPaciente1 },
+        { id: 'resposta-2', tenantId: 'tenant-1', pacienteId: 'paciente-2', envioQuestionarioId: 'envio-2', finalizadoEm: respostaPaciente2 }
+      ],
+      respostaValors: [
+        { id: 'valor-1', tenantId: 'tenant-1', respostaCheckinId: 'resposta-1', perguntaId: 'p1', valor: true },
+        { id: 'valor-2', tenantId: 'tenant-1', respostaCheckinId: 'resposta-1', perguntaId: 'p2', valor: 82.4 },
+        { id: 'valor-3', tenantId: 'tenant-1', respostaCheckinId: 'resposta-1', perguntaId: 'p3', valor: 'Dormiu melhor' },
+        { id: 'valor-4', tenantId: 'tenant-1', respostaCheckinId: 'resposta-2', perguntaId: 'p1', valor: false },
+        { id: 'valor-5', tenantId: 'tenant-1', respostaCheckinId: 'resposta-2', perguntaId: 'p2', valor: 91.2 }
+      ],
+      pacientes: [
+        { id: 'paciente-1', tenantId: 'tenant-1', ultimoCheckinEm: respostaPaciente1 },
+        { id: 'paciente-2', tenantId: 'tenant-1', ultimoCheckinEm: respostaPaciente2 }
+      ]
+    });
+
+    const leitura = await servico.obterLeituraClinicaQuestionario('tenant-1', 'q1', { pacienteId: 'paciente-1' });
+
+    expect(leitura.resumo).toEqual({
+      totalRespostas: 1,
+      totalPacientes: 1,
+      totalPerguntas: 3,
+      mediaRespostasPorEnvio: 3,
+      ultimaRespostaEm: respostaPaciente1
+    });
+    expect(leitura.respostas).toHaveLength(1);
+    expect(leitura.pacientes).toEqual([
+      expect.objectContaining({ pacienteId: 'paciente-1', totalRespostas: 1, ultimaRespostaEm: respostaPaciente1 })
+    ]);
+    expect(leitura.perguntas).toEqual([
+      expect.objectContaining({ perguntaId: 'p1', totalRespostas: 1, totalSim: 1, totalNao: 0 }),
+      expect.objectContaining({ perguntaId: 'p2', totalRespostas: 1, mediaNumerica: 82.4 }),
+      expect.objectContaining({ perguntaId: 'p3', totalRespostas: 1, textosRecentes: ['Dormiu melhor'] })
+    ]);
+  });
 });

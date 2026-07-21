@@ -149,6 +149,15 @@ export class ControladorQuestionarios {
     return this.servicoQuestionarios.listarRespostasQuestionario(usuario.tenantId, id);
   }
 
+  @Get('questionarios/:id/respostas/leitura-clinica')
+  obterLeituraClinicaQuestionario(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('pacienteId') pacienteId?: string
+  ) {
+    return this.servicoQuestionarios.obterLeituraClinicaQuestionario(usuario.tenantId, id, { pacienteId });
+  }
+
   @Post('questionarios/:id/perguntas')
   async adicionarPergunta(
     @UsuarioAtual() usuario: UsuarioAutenticado,

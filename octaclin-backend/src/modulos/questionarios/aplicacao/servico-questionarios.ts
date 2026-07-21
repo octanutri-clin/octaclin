@@ -61,6 +61,41 @@ export interface RespostaQuestionarioRecebida {
   }[];
 }
 
+export interface FiltrosLeituraClinicaQuestionario {
+  pacienteId?: string;
+}
+
+export interface LeituraClinicaQuestionario {
+  questionarioId: string;
+  filtroPacienteId?: string;
+  resumo: {
+    totalRespostas: number;
+    totalPacientes: number;
+    totalPerguntas: number;
+    mediaRespostasPorEnvio: number;
+    ultimaRespostaEm?: Date;
+  };
+  pacientes: {
+    pacienteId: string;
+    totalRespostas: number;
+    totalValoresRespondidos: number;
+    mediaRespostasPorEnvio: number;
+    ultimaRespostaEm?: Date;
+  }[];
+  perguntas: {
+    perguntaId: string;
+    enunciado: string;
+    tipo: TipoPergunta;
+    totalRespostas: number;
+    totalSim?: number;
+    totalNao?: number;
+    mediaNumerica?: number;
+    textosRecentes: string[];
+    distribuicao: { valor: string; total: number }[];
+  }[];
+  respostas: RespostaQuestionarioRecebida[];
+}
+
 @Injectable()
 export class ServicoQuestionarios {
   constructor(private readonly executorTenant: ExecutorTenant) {}
@@ -555,6 +590,124 @@ export class ServicoQuestionarios {
           };
         });
     });
+  }
+
+  async obterLeituraClinicaQuestionario(
+    tenantId: string,
+    questionarioId: string,
+    filtros: FiltrosLeituraClinicaQuestionario = {}
+  ): Promise<LeituraClinicaQuestionario> {
+    const respostas = await this.listarRespostasQuestionario(tenantId, questionarioId);
+    const respostasFiltradas = filtros.pacienteId ? respostas.filter((resposta) => resposta.pacienteId === filtros.pacienteId) : respostas;
+    const perguntas = await this.executorTenant.executar(tenantId, async (gerenciador) =>
+      gerenciador.getRepository(PerguntaOrm).find({ where: { tenantId, questionarioId }, order: { ordem: 'ASC' } })
+    );
+    const pacientesPorId = new Map<
+      string,
+      {
+        pacienteId: string;
+        totalRespostas: number;
+        totalValoresRespondidos: number;
+        ultimaRespostaEm?: Date;
+      }
+    >();
+    const valoresPorPergunta = new Map<string, { valor: unknown; finalizadoEm?: Date }[]>();
+    let totalValoresRespondidos = 0;
+
+    respostasFiltradas.forEach((resposta) => {
+      totalValoresRespondidos += resposta.totalRespostas;
+      const paciente = pacientesPorId.get(resposta.pacienteId) ?? {
+        pacienteId: resposta.pacienteId,
+        totalRespostas: 0,
+        totalValoresRespondidos: 0,
+        ultimaRespostaEm: resposta.finalizadoEm
+      };
+      paciente.totalRespostas += 1;
+      paciente.totalValoresRespondidos += resposta.totalRespostas;
+      if ((resposta.finalizadoEm?.getTime() ?? 0) > (paciente.ultimaRespostaEm?.getTime() ?? 0)) {
+        paciente.ultimaRespostaEm = resposta.finalizadoEm;
+      }
+      pacientesPorId.set(resposta.pacienteId, paciente);
+
+      resposta.respostas.forEach((item) => {
+        const valores = valoresPorPergunta.get(item.perguntaId) ?? [];
+        valores.push({ valor: item.valor, finalizadoEm: resposta.finalizadoEm });
+        valoresPorPergunta.set(item.perguntaId, valores);
+      });
+    });
+
+    const pacientes = Array.from(pacientesPorId.values())
+      .sort((a, b) => (b.ultimaRespostaEm?.getTime() ?? 0) - (a.ultimaRespostaEm?.getTime() ?? 0))
+      .map((paciente) => ({
+        ...paciente,
+        mediaRespostasPorEnvio: this.arredondarMedia(paciente.totalValoresRespondidos, paciente.totalRespostas)
+      }));
+
+    const perguntasAgregadas = perguntas.map((pergunta) => {
+      const valores = valoresPorPergunta.get(pergunta.id) ?? [];
+      const permiteMediaNumerica = pergunta.tipo === 'metrica' || pergunta.tipo === 'linear' || pergunta.tipo === 'likert';
+      const numericos = permiteMediaNumerica ? valores.map((item) => Number(item.valor)).filter((valor) => Number.isFinite(valor)) : [];
+      const totalSim = valores.filter((item) => item.valor === true).length;
+      const totalNao = valores.filter((item) => item.valor === false).length;
+
+      return {
+        perguntaId: pergunta.id,
+        enunciado: pergunta.enunciado,
+        tipo: pergunta.tipo,
+        totalRespostas: valores.length,
+        totalSim: pergunta.tipo === 'sim_nao' ? totalSim : undefined,
+        totalNao: pergunta.tipo === 'sim_nao' ? totalNao : undefined,
+        mediaNumerica: numericos.length ? this.arredondarMedia(numericos.reduce((total, valor) => total + valor, 0), numericos.length) : undefined,
+        textosRecentes: valores
+          .filter((item) => typeof item.valor === 'string' && item.valor.trim())
+          .sort((a, b) => (b.finalizadoEm?.getTime() ?? 0) - (a.finalizadoEm?.getTime() ?? 0))
+          .slice(0, 3)
+          .map((item) => String(item.valor)),
+        distribuicao: this.montarDistribuicao(valores.map((item) => item.valor))
+      };
+    });
+
+    return {
+      questionarioId,
+      filtroPacienteId: filtros.pacienteId,
+      resumo: {
+        totalRespostas: respostasFiltradas.length,
+        totalPacientes: pacientes.length,
+        totalPerguntas: perguntas.length,
+        mediaRespostasPorEnvio: this.arredondarMedia(totalValoresRespondidos, respostasFiltradas.length),
+        ultimaRespostaEm: respostasFiltradas[0]?.finalizadoEm
+      },
+      pacientes,
+      perguntas: perguntasAgregadas,
+      respostas: respostasFiltradas
+    };
+  }
+
+  private arredondarMedia(total: number, divisor: number): number {
+    if (!divisor) return 0;
+    return Math.round((total / divisor) * 100) / 100;
+  }
+
+  private montarDistribuicao(valores: unknown[]): { valor: string; total: number }[] {
+    const contagem = new Map<string, number>();
+    valores.forEach((valor) => {
+      const itens = Array.isArray(valor) ? valor : [valor];
+      itens.forEach((item) => {
+        const chave = this.valorDistribuicao(item);
+        contagem.set(chave, (contagem.get(chave) ?? 0) + 1);
+      });
+    });
+    return Array.from(contagem.entries())
+      .map(([valor, total]) => ({ valor, total }))
+      .sort((a, b) => b.total - a.total || a.valor.localeCompare(b.valor));
+  }
+
+  private valorDistribuicao(valor: unknown): string {
+    if (valor === true) return 'Sim';
+    if (valor === false) return 'Nao';
+    if (valor === null || valor === undefined || valor === '') return 'Sem resposta';
+    if (typeof valor === 'object') return JSON.stringify(valor);
+    return String(valor);
   }
 
   gerarTokenFormularioPaciente(tenantId: string, envioId: string): string {
