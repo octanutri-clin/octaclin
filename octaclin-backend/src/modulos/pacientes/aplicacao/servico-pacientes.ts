@@ -101,9 +101,7 @@ export class ServicoPacientes {
       usuarioId: paciente.usuarioId,
       profissionalResponsavelId: paciente.profissionalResponsavelId,
       nome: this.criptografia.descriptografar(paciente.nomeCriptografado),
-      contato: paciente.contatoCriptografado
-        ? this.criptografia.descriptografar(paciente.contatoCriptografado)
-        : undefined,
+      contato: this.mapearContato(paciente),
       dataNascimento: paciente.dataNascimento,
       statusAdesao: paciente.statusAdesao,
       scoreRisco: paciente.scoreRisco,
@@ -111,5 +109,18 @@ export class ServicoPacientes {
       criadoEm: paciente.criadoEm,
       atualizadoEm: paciente.atualizadoEm
     };
+  }
+
+  private mapearContato(paciente: PacienteOrm): string | undefined {
+    if (!paciente.contatoCriptografado) return undefined;
+    const contato = this.criptografia.descriptografar(paciente.contatoCriptografado);
+    try {
+      const estruturado = JSON.parse(contato) as { email?: unknown; whatsapp?: unknown };
+      if (typeof estruturado.email === 'string' && estruturado.email.trim()) return estruturado.email.trim().toLowerCase();
+      if (typeof estruturado.whatsapp === 'string' && estruturado.whatsapp.trim()) return estruturado.whatsapp.replace(/\D/g, '');
+      return undefined;
+    } catch {
+      return contato;
+    }
   }
 }

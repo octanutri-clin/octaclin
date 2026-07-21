@@ -8,6 +8,12 @@ export interface PortalPacienteApi {
   };
   perfil: {
     contato?: string;
+    email?: string;
+    whatsapp?: string;
+    preferenciasContato: {
+      email: boolean;
+      whatsapp: boolean;
+    };
     dataNascimento?: string;
     profissionalResponsavelId: string;
     ultimoCheckinEm?: string;
@@ -74,6 +80,20 @@ export interface DetalheFormularioRespondidoApi {
   }[];
 }
 
+export interface AtualizarPerfilPacienteEntrada {
+  nome?: string;
+  email?: string;
+  whatsapp?: string;
+  dataNascimento?: string;
+  prefereEmail?: boolean;
+  prefereWhatsapp?: boolean;
+}
+
+export interface PerfilPacienteAtualizadoApi {
+  paciente: PortalPacienteApi['paciente'];
+  perfil: PortalPacienteApi['perfil'];
+}
+
 class ErroApiPortal extends Error {
   constructor(
     public readonly status: number,
@@ -100,4 +120,17 @@ export async function obterFormularioRespondidoPaciente(respostaId: string): Pro
     throw new ErroApiPortal(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
   }
   return resposta.json() as Promise<DetalheFormularioRespondidoApi>;
+}
+
+export async function atualizarPerfilPaciente(dados: AtualizarPerfilPacienteEntrada): Promise<PerfilPacienteAtualizadoApi> {
+  const resposta = await fetch('/api/portal/paciente/perfil', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dados)
+  });
+  if (!resposta.ok) {
+    const detalhe = await resposta.text();
+    throw new ErroApiPortal(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+  }
+  return resposta.json() as Promise<PerfilPacienteAtualizadoApi>;
 }

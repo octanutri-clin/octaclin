@@ -1,27 +1,42 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { AlertTriangle, CalendarDays, CheckCircle2, ClipboardList, HeartPulse, MessageCircle, RefreshCcw, UserRound } from 'lucide-react';
+import { FormEvent, useEffect, useState } from 'react';
+import { AlertTriangle, CalendarDays, CheckCircle2, ClipboardList, HeartPulse, MessageCircle, RefreshCcw, Save, UserRound } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import {
+  atualizarPerfilPaciente,
   DetalheFormularioRespondidoApi,
   obterFormularioRespondidoPaciente,
   obterPortalPaciente,
   PortalPacienteApi
 } from '@/lib/portal-api';
 
+interface FormularioPerfilPaciente {
+  nome: string;
+  email: string;
+  whatsapp: string;
+  dataNascimento: string;
+  prefereEmail: boolean;
+  prefereWhatsapp: boolean;
+}
+
+const formularioPerfilVazio: FormularioPerfilPaciente = {
+  nome: '',
+  email: '',
+  whatsapp: '',
+  dataNascimento: '',
+  prefereEmail: true,
+  prefereWhatsapp: true
+};
+
+const classeCampo =
+  'h-10 rounded-md border border-linha bg-white px-3 text-sm outline-none focus:border-primaria focus:ring-2 focus:ring-[#c7e4ef]';
+
 function formatarDataHora(valor?: string) {
   if (!valor) return 'Sem data';
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return 'Sem data';
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(data);
-}
-
-function formatarData(valor?: string) {
-  if (!valor) return 'Nao informado';
-  const data = new Date(`${valor}T00:00:00`);
-  if (Number.isNaN(data.getTime())) return 'Nao informado';
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(data);
 }
 
 function rotuloStatus(status: string) {
@@ -44,18 +59,35 @@ function formatarValor(valor: unknown): string {
   return JSON.stringify(valor);
 }
 
+function montarFormularioPerfil(portal: PortalPacienteApi): FormularioPerfilPaciente {
+  return {
+    nome: portal.paciente.nome ?? '',
+    email: portal.perfil.email ?? (portal.perfil.contato?.includes('@') ? portal.perfil.contato : ''),
+    whatsapp: portal.perfil.whatsapp ?? (portal.perfil.contato?.includes('@') ? '' : portal.perfil.contato ?? ''),
+    dataNascimento: portal.perfil.dataNascimento ?? '',
+    prefereEmail: portal.perfil.preferenciasContato?.email ?? true,
+    prefereWhatsapp: portal.perfil.preferenciasContato?.whatsapp ?? true
+  };
+}
+
 export function PortalPaciente() {
   const [portal, setPortal] = useState<PortalPacienteApi | null>(null);
   const [detalheFormulario, setDetalheFormulario] = useState<DetalheFormularioRespondidoApi | null>(null);
+  const [formularioPerfil, setFormularioPerfil] = useState<FormularioPerfilPaciente>(formularioPerfilVazio);
   const [erro, setErro] = useState<string | null>(null);
+  const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [carregandoDetalheId, setCarregandoDetalheId] = useState<string | null>(null);
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
 
   async function carregar() {
     setCarregando(true);
     setErro(null);
+    setSucesso(null);
     try {
-      setPortal(await obterPortalPaciente());
+      const portalAtualizado = await obterPortalPaciente();
+      setPortal(portalAtualizado);
+      setFormularioPerfil(montarFormularioPerfil(portalAtualizado));
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar portal.');
     } finally {
@@ -66,6 +98,45 @@ export function PortalPaciente() {
   useEffect(() => {
     void carregar();
   }, []);
+
+  async function salvarPerfil(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setSalvandoPerfil(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const atualizado = await atualizarPerfilPaciente({
+        nome: formularioPerfil.nome.trim() || undefined,
+        email: formularioPerfil.email.trim() || undefined,
+        whatsapp: formularioPerfil.whatsapp.trim() || undefined,
+        dataNascimento: formularioPerfil.dataNascimento || undefined,
+        prefereEmail: formularioPerfil.prefereEmail,
+        prefereWhatsapp: formularioPerfil.prefereWhatsapp
+      });
+      setPortal((atual) =>
+        atual
+          ? {
+              ...atual,
+              paciente: atualizado.paciente,
+              perfil: atualizado.perfil
+            }
+          : atual
+      );
+      setFormularioPerfil({
+        nome: atualizado.paciente.nome ?? '',
+        email: atualizado.perfil.email ?? '',
+        whatsapp: atualizado.perfil.whatsapp ?? '',
+        dataNascimento: atualizado.perfil.dataNascimento ?? '',
+        prefereEmail: atualizado.perfil.preferenciasContato.email,
+        prefereWhatsapp: atualizado.perfil.preferenciasContato.whatsapp
+      });
+      setSucesso('Perfil atualizado.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar perfil.');
+    } finally {
+      setSalvandoPerfil(false);
+    }
+  }
 
   async function abrirFormularioRespondido(respostaId: string) {
     setCarregandoDetalheId(respostaId);
@@ -107,6 +178,13 @@ export function PortalPaciente() {
           </div>
         ) : null}
 
+        {sucesso ? (
+          <div className="flex items-center gap-2 rounded-lg border border-[#b9ddc7] bg-[#f0fbf4] px-4 py-3 text-sm text-[#23633b]">
+            <CheckCircle2 size={16} />
+            {sucesso}
+          </div>
+        ) : null}
+
         {portal ? (
           <>
             <section className="grid gap-4 md:grid-cols-[minmax(0,1fr)_repeat(4,140px)]">
@@ -142,24 +220,76 @@ export function PortalPaciente() {
                     <UserRound className="h-4 w-4 text-[#596273]" />
                     <h2 className="text-sm font-semibold">Meu perfil</h2>
                   </div>
-                  <dl className="grid gap-3 p-4 sm:grid-cols-2">
-                    <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                      <dt className="text-xs text-[#596273]">Contato</dt>
-                      <dd className="mt-1 break-words text-sm font-semibold">{portal.perfil.contato ?? 'Nao informado'}</dd>
+                  <form onSubmit={salvarPerfil} className="grid gap-3 p-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                        Nome
+                        <input
+                          className={classeCampo}
+                          value={formularioPerfil.nome}
+                          onChange={(evento) => setFormularioPerfil((atual) => ({ ...atual, nome: evento.target.value }))}
+                          maxLength={180}
+                        />
+                      </label>
+                      <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                        Nascimento
+                        <input
+                          type="date"
+                          className={classeCampo}
+                          value={formularioPerfil.dataNascimento}
+                          onChange={(evento) => setFormularioPerfil((atual) => ({ ...atual, dataNascimento: evento.target.value }))}
+                        />
+                      </label>
+                      <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                        E-mail
+                        <input
+                          type="email"
+                          className={classeCampo}
+                          value={formularioPerfil.email}
+                          onChange={(evento) => setFormularioPerfil((atual) => ({ ...atual, email: evento.target.value }))}
+                          maxLength={180}
+                        />
+                      </label>
+                      <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                        WhatsApp
+                        <input
+                          className={classeCampo}
+                          value={formularioPerfil.whatsapp}
+                          onChange={(evento) => setFormularioPerfil((atual) => ({ ...atual, whatsapp: evento.target.value }))}
+                          maxLength={30}
+                        />
+                      </label>
                     </div>
-                    <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                      <dt className="text-xs text-[#596273]">Nascimento</dt>
-                      <dd className="mt-1 text-sm font-semibold">{formatarData(portal.perfil.dataNascimento)}</dd>
+                    <div className="flex flex-wrap gap-3">
+                      <label className="inline-flex items-center gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 py-2 text-sm font-medium">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-primaria"
+                          checked={formularioPerfil.prefereEmail}
+                          onChange={(evento) => setFormularioPerfil((atual) => ({ ...atual, prefereEmail: evento.target.checked }))}
+                        />
+                        Receber e-mail
+                      </label>
+                      <label className="inline-flex items-center gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 py-2 text-sm font-medium">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-primaria"
+                          checked={formularioPerfil.prefereWhatsapp}
+                          onChange={(evento) => setFormularioPerfil((atual) => ({ ...atual, prefereWhatsapp: evento.target.checked }))}
+                        />
+                        Receber WhatsApp
+                      </label>
                     </div>
-                    <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                      <dt className="text-xs text-[#596273]">Ultimo check-in</dt>
-                      <dd className="mt-1 text-sm font-semibold">{formatarDataHora(portal.perfil.ultimoCheckinEm)}</dd>
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-linha pt-3">
+                      <div className="text-xs text-[#596273]">
+                        Ultimo check-in {formatarDataHora(portal.perfil.ultimoCheckinEm)} - status {rotuloStatus(portal.paciente.statusAdesao)}
+                      </div>
+                      <Botao type="submit" variante="primario" disabled={salvandoPerfil}>
+                        <Save className="h-4 w-4" />
+                        {salvandoPerfil ? 'Salvando' : 'Salvar perfil'}
+                      </Botao>
                     </div>
-                    <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                      <dt className="text-xs text-[#596273]">Status</dt>
-                      <dd className="mt-1 text-sm font-semibold">{rotuloStatus(portal.paciente.statusAdesao)}</dd>
-                    </div>
-                  </dl>
+                  </form>
                 </section>
 
                 <section className="rounded-lg border border-linha bg-white">

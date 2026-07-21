@@ -90,6 +90,44 @@ describe('ServicoPacientes', () => {
     expect(resposta.itens[0]).toEqual(expect.objectContaining({ nome: 'Maria', contato: 'maria@example.com' }));
   });
 
+  it('deve exibir contato principal quando paciente possui contato estruturado pelo portal', async () => {
+    const repositorio = {
+      findAndCount: jest.fn(async () => [
+        [
+          {
+            id: 'paciente-1',
+            tenantId: 'tenant-1',
+            profissionalResponsavelId: 'profissional-1',
+            nomeCriptografado: Buffer.from('cripto:Maria'),
+            contatoCriptografado: Buffer.from(
+              'cripto:{"email":"maria@example.com","whatsapp":"5511999999999","preferencias":{"email":true,"whatsapp":false}}'
+            ),
+            statusAdesao: 'novo',
+            scoreRisco: '0',
+            criadoEm: new Date('2026-01-01T00:00:00Z'),
+            atualizadoEm: new Date('2026-01-01T00:00:00Z')
+          }
+        ],
+        1
+      ])
+    };
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao(criarGerenciadorFake(repositorio))
+        )
+      } as never,
+      {
+        criptografar: jest.fn(),
+        descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', ''))
+      } as never
+    );
+
+    const resposta = await servico.listar('tenant-1');
+
+    expect(resposta.itens[0]).toEqual(expect.objectContaining({ nome: 'Maria', contato: 'maria@example.com' }));
+  });
+
   it('deve falhar ao arquivar paciente inexistente', async () => {
     const repositorio = {
       update: jest.fn(async () => ({ affected: 0 }))

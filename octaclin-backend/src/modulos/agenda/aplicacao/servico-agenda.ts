@@ -26,6 +26,15 @@ interface ContextoConsultaCriada {
   textoMensagem: string;
 }
 
+interface ContatoPacienteAgenda {
+  email?: string;
+  whatsapp?: string;
+  preferencias: {
+    email: boolean;
+    whatsapp: boolean;
+  };
+}
+
 function dataValida(valor: string): Date {
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) throw new BadRequestException('Data de agendamento invalida.');
@@ -232,14 +241,49 @@ export class ServicoAgenda {
 
   private obterEmailPaciente(paciente: PacienteOrm): string | undefined {
     if (!paciente.contatoCriptografado) return undefined;
-    const contato = this.criptografia.descriptografar(paciente.contatoCriptografado);
-    return contato.includes('@') ? contato : undefined;
+    const contato = this.obterContatoPaciente(paciente);
+    return contato.preferencias.email ? contato.email : undefined;
   }
 
   private obterWhatsappPaciente(paciente: PacienteOrm): string | undefined {
     if (!paciente.contatoCriptografado) return undefined;
+    const contato = this.obterContatoPaciente(paciente);
+    return contato.preferencias.whatsapp ? contato.whatsapp : undefined;
+  }
+
+  private obterContatoPaciente(paciente: PacienteOrm): ContatoPacienteAgenda {
+    const preferencias = { email: true, whatsapp: true };
+    if (!paciente.contatoCriptografado) return { preferencias };
     const contato = this.criptografia.descriptografar(paciente.contatoCriptografado);
-    return contato.includes('@') ? undefined : contato.replace(/\D/g, '');
+    try {
+      const parseado = JSON.parse(contato) as {
+        email?: unknown;
+        whatsapp?: unknown;
+        preferencias?: { email?: unknown; whatsapp?: unknown };
+      };
+      return {
+        email: typeof parseado.email === 'string' ? this.normalizarEmail(parseado.email) : undefined,
+        whatsapp: typeof parseado.whatsapp === 'string' ? this.normalizarWhatsapp(parseado.whatsapp) : undefined,
+        preferencias: {
+          email: typeof parseado.preferencias?.email === 'boolean' ? parseado.preferencias.email : true,
+          whatsapp: typeof parseado.preferencias?.whatsapp === 'boolean' ? parseado.preferencias.whatsapp : true
+        }
+      };
+    } catch {
+      return contato.includes('@')
+        ? { email: this.normalizarEmail(contato), preferencias }
+        : { whatsapp: this.normalizarWhatsapp(contato), preferencias };
+    }
+  }
+
+  private normalizarEmail(email?: string): string | undefined {
+    const normalizado = email?.trim().toLowerCase();
+    return normalizado || undefined;
+  }
+
+  private normalizarWhatsapp(whatsapp?: string): string | undefined {
+    const normalizado = whatsapp?.replace(/\D/g, '');
+    return normalizado || undefined;
   }
 
   private mapearResposta(

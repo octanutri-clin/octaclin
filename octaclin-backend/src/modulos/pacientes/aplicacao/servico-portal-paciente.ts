@@ -1,5 +1,5 @@
 import { createHmac } from 'crypto';
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -10,7 +10,17 @@ import { PerguntaOrm } from '../../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-valor.orm';
+import { AtualizarPerfilPacientePortalDto } from './dtos';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
+
+interface ContatoPacientePortal {
+  email?: string;
+  whatsapp?: string;
+  preferencias: {
+    email: boolean;
+    whatsapp: boolean;
+  };
+}
 
 export interface ResumoPortalPaciente {
   paciente: {
@@ -22,6 +32,12 @@ export interface ResumoPortalPaciente {
   };
   perfil: {
     contato?: string;
+    email?: string;
+    whatsapp?: string;
+    preferenciasContato: {
+      email: boolean;
+      whatsapp: boolean;
+    };
     dataNascimento?: string;
     profissionalResponsavelId: string;
     ultimoCheckinEm?: Date;
@@ -67,6 +83,11 @@ export interface ResumoPortalPaciente {
     criadoEm: Date;
     enviadoEm?: Date;
   }[];
+}
+
+export interface PerfilPortalPaciente {
+  paciente: ResumoPortalPaciente['paciente'];
+  perfil: ResumoPortalPaciente['perfil'];
 }
 
 export interface DetalheFormularioRespondidoPaciente {
@@ -182,6 +203,7 @@ export class ServicoPortalPaciente {
         criadoEm: mensagem.criadoEm,
         enviadoEm: mensagem.enviadoEm
       }));
+      const contato = this.obterContatoPaciente(paciente);
 
       return {
         paciente: {
@@ -192,7 +214,10 @@ export class ServicoPortalPaciente {
           ultimoCheckinEm: paciente.ultimoCheckinEm
         },
         perfil: {
-          contato: paciente.contatoCriptografado ? this.criptografia.descriptografar(paciente.contatoCriptografado) : undefined,
+          contato: contato.email ?? contato.whatsapp,
+          email: contato.email,
+          whatsapp: contato.whatsapp,
+          preferenciasContato: contato.preferencias,
           dataNascimento: paciente.dataNascimento,
           profissionalResponsavelId: paciente.profissionalResponsavelId,
           ultimoCheckinEm: paciente.ultimoCheckinEm
@@ -208,6 +233,46 @@ export class ServicoPortalPaciente {
         formulariosRespondidos,
         mensagensRecentes
       };
+    });
+  }
+
+  async atualizarPerfil(
+    tenantId: string,
+    usuarioId: string,
+    dados: AtualizarPerfilPacientePortalDto
+  ): Promise<PerfilPortalPaciente> {
+    const camposRecebidos = Object.values(dados).some((valor) => valor !== undefined && valor !== null && String(valor).trim() !== '');
+    if (!camposRecebidos) throw new BadRequestException('Informe ao menos um dado para atualizar.');
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(PacienteOrm);
+      const paciente = await repositorio.findOne({
+        where: { tenantId, usuarioId, arquivadoEm: IsNull() }
+      });
+      if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
+
+      if (dados.nome?.trim()) paciente.nomeCriptografado = this.criptografia.criptografar(dados.nome.trim());
+      if (dados.dataNascimento) paciente.dataNascimento = dados.dataNascimento;
+
+      const contatoAtual = this.obterContatoPaciente(paciente);
+      const contatoAtualizado: ContatoPacientePortal = {
+        email: dados.email !== undefined ? this.normalizarEmail(dados.email) : contatoAtual.email,
+        whatsapp: dados.whatsapp !== undefined ? this.normalizarWhatsapp(dados.whatsapp) : contatoAtual.whatsapp,
+        preferencias: {
+          email: dados.prefereEmail ?? contatoAtual.preferencias.email,
+          whatsapp: dados.prefereWhatsapp ?? contatoAtual.preferencias.whatsapp
+        }
+      };
+      if (
+        dados.email !== undefined ||
+        dados.whatsapp !== undefined ||
+        dados.prefereEmail !== undefined ||
+        dados.prefereWhatsapp !== undefined
+      ) {
+        paciente.contatoCriptografado = this.criptografia.criptografar(this.serializarContato(contatoAtualizado));
+      }
+
+      return this.mapearPerfilPaciente(await repositorio.save(paciente));
     });
   }
 
@@ -271,6 +336,72 @@ export class ServicoPortalPaciente {
   private textoPayload(payload: Record<string, unknown>, chave: string): string | undefined {
     const valor = payload[chave];
     return typeof valor === 'string' && valor.trim() ? valor : undefined;
+  }
+
+  private mapearPerfilPaciente(paciente: PacienteOrm): PerfilPortalPaciente {
+    const contato = this.obterContatoPaciente(paciente);
+    return {
+      paciente: {
+        id: paciente.id,
+        nome: this.criptografia.descriptografar(paciente.nomeCriptografado),
+        statusAdesao: paciente.statusAdesao,
+        scoreRisco: paciente.scoreRisco,
+        ultimoCheckinEm: paciente.ultimoCheckinEm
+      },
+      perfil: {
+        contato: contato.email ?? contato.whatsapp,
+        email: contato.email,
+        whatsapp: contato.whatsapp,
+        preferenciasContato: contato.preferencias,
+        dataNascimento: paciente.dataNascimento,
+        profissionalResponsavelId: paciente.profissionalResponsavelId,
+        ultimoCheckinEm: paciente.ultimoCheckinEm
+      }
+    };
+  }
+
+  private obterContatoPaciente(paciente: PacienteOrm): ContatoPacientePortal {
+    const preferencias = { email: true, whatsapp: true };
+    if (!paciente.contatoCriptografado) return { preferencias };
+
+    const contato = this.criptografia.descriptografar(paciente.contatoCriptografado);
+    try {
+      const parseado = JSON.parse(contato) as {
+        email?: unknown;
+        whatsapp?: unknown;
+        preferencias?: { email?: unknown; whatsapp?: unknown };
+      };
+      return {
+        email: typeof parseado.email === 'string' ? this.normalizarEmail(parseado.email) : undefined,
+        whatsapp: typeof parseado.whatsapp === 'string' ? this.normalizarWhatsapp(parseado.whatsapp) : undefined,
+        preferencias: {
+          email: typeof parseado.preferencias?.email === 'boolean' ? parseado.preferencias.email : true,
+          whatsapp: typeof parseado.preferencias?.whatsapp === 'boolean' ? parseado.preferencias.whatsapp : true
+        }
+      };
+    } catch {
+      return contato.includes('@')
+        ? { email: this.normalizarEmail(contato), preferencias }
+        : { whatsapp: this.normalizarWhatsapp(contato), preferencias };
+    }
+  }
+
+  private serializarContato(contato: ContatoPacientePortal): string {
+    return JSON.stringify({
+      email: contato.email,
+      whatsapp: contato.whatsapp,
+      preferencias: contato.preferencias
+    });
+  }
+
+  private normalizarEmail(email?: string): string | undefined {
+    const normalizado = email?.trim().toLowerCase();
+    return normalizado || undefined;
+  }
+
+  private normalizarWhatsapp(whatsapp?: string): string | undefined {
+    const normalizado = whatsapp?.replace(/\D/g, '');
+    return normalizado || undefined;
   }
 
   private montarLinkFormulario(tenantId: string, envioId: string): string {

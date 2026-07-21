@@ -165,4 +165,39 @@ describe('ServicoAgenda', () => {
       })
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('deve respeitar contato estruturado e preferencias do portal do paciente', async () => {
+    const { servico, comunicacoes } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+        contatoCriptografado: Buffer.from(
+          'cripto:{"email":"ana@example.com","whatsapp":"5511992362080","preferencias":{"email":true,"whatsapp":false}}'
+        )
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      }
+    });
+
+    const consulta = await servico.criarConsulta('tenant-1', {
+      pacienteId: 'paciente-1',
+      inicioEm: '2026-07-22T12:00:00.000Z',
+      enviarNotificacoes: true
+    });
+
+    expect(comunicacoes.dispararMensagem).toHaveBeenCalledTimes(1);
+    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+      'tenant-1',
+      expect.objectContaining({
+        canalId: 'canal-email',
+        payload: expect.objectContaining({ destino: 'ana@example.com' })
+      })
+    );
+    expect(consulta.notificacoes.whatsapp).toEqual({ status: 'ignorado', motivo: 'contato_ausente' });
+  });
 });

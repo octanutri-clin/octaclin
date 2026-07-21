@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
@@ -50,6 +50,11 @@ function criarRepositorioFake(nome: string, dados: Record<string, any>) {
         });
       }
       return consulta?.take ? resultado.slice(0, consulta.take) : resultado;
+    }),
+    save: jest.fn(async (entidade: Record<string, any>) => {
+      const existente = itens.find((item) => item.id === entidade.id);
+      if (existente) Object.assign(existente, entidade);
+      return entidade;
     })
   };
 }
@@ -82,7 +87,8 @@ function criarServico(dados: Record<string, any>) {
     executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => operacao(gerenciador))
   };
   const criptografia = {
-    descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8').replace('cripto:', ''))
+    descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8').replace('cripto:', '')),
+    criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`))
   };
 
   return { servico: new ServicoPortalPaciente(executorTenant as never, criptografia as never), repositorios };
@@ -212,6 +218,9 @@ describe('ServicoPortalPaciente', () => {
     expect(portal.resumo).toEqual({ consultasProximas: 1, formulariosPendentes: 1, formulariosRespondidos: 1, mensagensRecentes: 1 });
     expect(portal.perfil).toEqual({
       contato: 'ana@example.com',
+      email: 'ana@example.com',
+      whatsapp: undefined,
+      preferenciasContato: { email: true, whatsapp: true },
       dataNascimento: '1990-04-15',
       profissionalResponsavelId: 'profissional-1',
       ultimoCheckinEm: new Date('2026-07-20T12:00:00.000Z')
@@ -352,5 +361,73 @@ describe('ServicoPortalPaciente', () => {
       expect.objectContaining({ perguntaId: 'pergunta-2', enunciado: 'Observacoes', tipo: 'texto_longo', valor: 'Dormiu melhor', ordem: 2 })
     ]);
     await expect(servico.obterFormularioRespondido('tenant-1', 'usuario-paciente-1', 'resposta-outro')).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('deve atualizar perfil do paciente logado com preferencias de contato', async () => {
+    const { servico, repositorios } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          contatoCriptografado: Buffer.from('cripto:ana-antigo@example.com'),
+          dataNascimento: '1990-04-15',
+          profissionalResponsavelId: 'profissional-1',
+          statusAdesao: 'aderente',
+          scoreRisco: '12.50'
+        },
+        {
+          id: 'paciente-2',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-2',
+          nomeCriptografado: Buffer.from('cripto:Outro Paciente')
+        }
+      ],
+      consultas: [],
+      envios: [],
+      questionarios: [],
+      mensagens: []
+    });
+
+    const perfil = await servico.atualizarPerfil('tenant-1', 'usuario-paciente-1', {
+      nome: ' Ana Paciente ',
+      email: ' ANA@EXAMPLE.COM ',
+      whatsapp: ' (11) 99999-8888 ',
+      dataNascimento: '1991-05-20',
+      prefereEmail: true,
+      prefereWhatsapp: false
+    });
+
+    expect(perfil.paciente).toEqual(
+      expect.objectContaining({
+        id: 'paciente-1',
+        nome: 'Ana Paciente'
+      })
+    );
+    expect(perfil.perfil).toEqual(
+      expect.objectContaining({
+        contato: 'ana@example.com',
+        email: 'ana@example.com',
+        whatsapp: '11999998888',
+        dataNascimento: '1991-05-20',
+        preferenciasContato: { email: true, whatsapp: false }
+      })
+    );
+    expect(repositorios.paciente.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'paciente-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paciente'),
+        contatoCriptografado: Buffer.from(
+          'cripto:{"email":"ana@example.com","whatsapp":"11999998888","preferencias":{"email":true,"whatsapp":false}}'
+        ),
+        dataNascimento: '1991-05-20'
+      })
+    );
+
+    await expect(servico.atualizarPerfil('tenant-1', 'usuario-paciente-1', {})).rejects.toBeInstanceOf(BadRequestException);
+    await expect(servico.atualizarPerfil('tenant-1', 'usuario-paciente-2', { email: 'outro@example.com' })).resolves.toEqual(
+      expect.objectContaining({ paciente: expect.objectContaining({ id: 'paciente-2' }) })
+    );
   });
 });

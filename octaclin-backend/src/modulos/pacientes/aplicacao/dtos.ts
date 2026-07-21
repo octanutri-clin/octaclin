@@ -92,3 +92,32 @@ export class AtivarConvitePacienteDto {
   @MaxLength(40)
   versaoLgpd?: string;
 }
+
+export class AtualizarPerfilPacientePortalDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  nome?: string;
+
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(180)
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  whatsapp?: string;
+
+  @IsOptional()
+  @IsDateString()
+  dataNascimento?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  prefereEmail?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  prefereWhatsapp?: boolean;
+}
