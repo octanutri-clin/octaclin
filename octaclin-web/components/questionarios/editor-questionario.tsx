@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { AlertTriangle, Archive, BookOpen, CalendarClock, Check, CheckCircle2, Copy, Eye, Link2, Plus, RefreshCcw, Save, Settings2, Trash2, Wand2 } from 'lucide-react';
+import { AlertTriangle, Archive, BookOpen, CalendarClock, Check, CheckCircle2, ClipboardList, Copy, Eye, Link2, Plus, RefreshCcw, Save, Settings2, Trash2, Wand2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import {
@@ -11,6 +11,7 @@ import {
   ModeloQuestionarioApi,
   PerguntaApi,
   QuestionarioApi,
+  RespostaQuestionarioRecebidaApi,
   TipoPergunta,
   atualizarPergunta,
   atualizarQuestionario,
@@ -22,6 +23,7 @@ import {
   criarQuestionario,
   duplicarQuestionario,
   listarPerguntas,
+  listarRespostasQuestionario,
   reordenarPerguntas
 } from '@/lib/questionarios-api';
 import { PacienteResumo, ProfissionalResumo } from '@/lib/cadastros-api';
@@ -101,6 +103,22 @@ function listaTextoConfig(configuracao: Record<string, unknown>, chave: string, 
   return Array.isArray(valor) ? valor.filter((item): item is string => typeof item === 'string') : padrao;
 }
 
+function formatarValorResposta(valor: unknown): string {
+  if (valor === null || valor === undefined || valor === '') return 'Sem resposta';
+  if (Array.isArray(valor)) return valor.length ? valor.map(formatarValorResposta).join(', ') : 'Sem resposta';
+  if (typeof valor === 'boolean') return valor ? 'Sim' : 'Nao';
+  if (typeof valor === 'number') return new Intl.NumberFormat('pt-BR').format(valor);
+  if (typeof valor === 'string') return valor;
+  return JSON.stringify(valor);
+}
+
+function formatarDataResposta(valor?: string): string {
+  if (!valor) return 'Sem data';
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return 'Sem data';
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(data);
+}
+
 export function EditorQuestionario() {
   const [categorias, setCategorias] = useState<CategoriaPerguntaApi[]>([]);
   const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
@@ -121,6 +139,8 @@ export function EditorQuestionario() {
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [previewAberto, setPreviewAberto] = useState(false);
+  const [respostasRecebidas, setRespostasRecebidas] = useState<RespostaQuestionarioRecebidaApi[]>([]);
+  const [carregandoRespostas, setCarregandoRespostas] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -129,6 +149,7 @@ export function EditorQuestionario() {
 
   const perguntaSelecionada = perguntas.find((pergunta) => pergunta.id === selecionadaId) ?? perguntas[0];
   const categoriasPorId = useMemo(() => new Map(categorias.map((categoria) => [categoria.id, categoria])), [categorias]);
+  const pacientesPorId = useMemo(() => new Map(pacientes.map((paciente) => [paciente.id, paciente])), [pacientes]);
   const scoreTotal = perguntas.reduce((total, pergunta) => total + pergunta.peso, 0);
 
   async function carregarPerguntas(questionarioId: string) {
@@ -138,13 +159,29 @@ export function EditorQuestionario() {
     setSelecionadaId(mapeadas[0]?.id ?? null);
   }
 
+  async function carregarRespostas(questionarioId = questionarioAtual?.id) {
+    if (!questionarioId) {
+      setRespostasRecebidas([]);
+      return;
+    }
+
+    setCarregandoRespostas(true);
+    try {
+      setRespostasRecebidas(await listarRespostasQuestionario(questionarioId));
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar respostas do formulario.');
+    } finally {
+      setCarregandoRespostas(false);
+    }
+  }
+
   async function selecionarQuestionario(questionario: QuestionarioApi) {
     setQuestionarioAtual(questionario);
     setTitulo(questionario.titulo);
     setDescricao(questionario.descricao ?? '');
     setStatus(questionario.status);
     setLinkFormulario('');
-    await carregarPerguntas(questionario.id);
+    await Promise.all([carregarPerguntas(questionario.id), carregarRespostas(questionario.id)]);
   }
 
   async function carregar() {
@@ -167,6 +204,7 @@ export function EditorQuestionario() {
         setQuestionarioAtual(null);
         setPerguntas([]);
         setSelecionadaId(null);
+        setRespostasRecebidas([]);
       }
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar questionarios.');
@@ -1005,6 +1043,52 @@ export function EditorQuestionario() {
             <div className="p-4 text-sm text-[#596273]">Selecione ou crie uma pergunta.</div>
           )}
         </aside>
+      </section>
+
+      <section className="overflow-hidden rounded-lg border border-linha bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-linha px-4 py-3">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-[#596273]" />
+            <h2 className="text-sm font-semibold text-tinta">Respostas recebidas</h2>
+          </div>
+          <Botao type="button" onClick={() => void carregarRespostas()} disabled={carregandoRespostas || !questionarioAtual}>
+            <RefreshCcw className="h-4 w-4" />
+            {carregandoRespostas ? 'Atualizando respostas' : 'Atualizar respostas'}
+          </Botao>
+        </div>
+
+        {respostasRecebidas.length ? (
+          <div className="grid gap-3 p-4">
+            {respostasRecebidas.map((resposta) => {
+              const paciente = pacientesPorId.get(resposta.pacienteId);
+              return (
+                <article key={resposta.respostaId} className="rounded-md border border-linha bg-[#f8fafb] p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-tinta">{paciente?.nome ?? 'Paciente nao identificado'}</p>
+                      <p className="text-xs text-[#596273]">Finalizado em {formatarDataResposta(resposta.finalizadoEm)}</p>
+                    </div>
+                    <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-[#596273]">
+                      {resposta.totalRespostas} respostas
+                    </span>
+                  </div>
+                  <dl className="mt-4 grid gap-2 md:grid-cols-2">
+                    {resposta.respostas.map((item) => (
+                      <div key={`${resposta.respostaId}-${item.perguntaId}`} className="rounded-md border border-linha bg-white p-3">
+                        <dt className="text-xs font-medium text-[#596273]">{item.enunciado}</dt>
+                        <dd className="mt-1 break-words text-sm font-semibold text-tinta">{formatarValorResposta(item.valor)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="p-6 text-sm text-[#596273]">
+            {carregandoRespostas ? 'Carregando respostas.' : 'Nenhuma resposta recebida para este questionario.'}
+          </div>
+        )}
       </section>
     </section>
   );

@@ -144,6 +144,11 @@ export class ControladorQuestionarios {
     return envio;
   }
 
+  @Get('questionarios/:id/respostas')
+  listarRespostasQuestionario(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
+    return this.servicoQuestionarios.listarRespostasQuestionario(usuario.tenantId, id);
+  }
+
   @Post('questionarios/:id/perguntas')
   async adicionarPergunta(
     @UsuarioAtual() usuario: UsuarioAutenticado,

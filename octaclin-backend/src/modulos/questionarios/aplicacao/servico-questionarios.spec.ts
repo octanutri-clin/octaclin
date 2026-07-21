@@ -55,6 +55,15 @@ function criarRepositorioFake(
     ) {
       return valorItem === null || valorItem === undefined;
     }
+    if (
+      valorConsulta &&
+      typeof valorConsulta === 'object' &&
+      '_type' in valorConsulta &&
+      (valorConsulta as { _type?: string })._type === 'in'
+    ) {
+      const valores = (valorConsulta as { _value?: unknown[] })._value ?? [];
+      return valores.includes(valorItem);
+    }
     return valorItem === valorConsulta;
   }
 }
@@ -403,5 +412,74 @@ describe('ServicoQuestionarios', () => {
     expect(dados.envios[0].status).toBe('respondido');
     expect(dados.envios[0].respondidoEm).toBeInstanceOf(Date);
     expect(dados.pacientes[0].ultimoCheckinEm).toBeInstanceOf(Date);
+  });
+
+  it('deve listar respostas recebidas por questionario com valores por pergunta', async () => {
+    const finalizadoEm = new Date('2026-07-20T12:00:00.000Z');
+    const { servico } = criarServico({
+      categorias: [],
+      questionarios: [
+        { id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in semanal' },
+        { id: 'q2', tenantId: 'tenant-1', titulo: 'Outro questionario' }
+      ],
+      perguntas: [
+        {
+          id: 'p1',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'sim_nao',
+          enunciado: 'Treinou?',
+          peso: '1',
+          obrigatoria: true,
+          configuracao: { secao: 'Rotina' },
+          ordem: 1
+        },
+        {
+          id: 'p2',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'texto_longo',
+          enunciado: 'Observacoes',
+          peso: '1',
+          obrigatoria: false,
+          configuracao: { secao: 'Rotina' },
+          ordem: 2
+        }
+      ],
+      opcaos: [],
+      envios: [
+        { id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'respondido' },
+        { id: 'envio-2', tenantId: 'tenant-1', questionarioId: 'q2', pacienteId: 'paciente-1', status: 'respondido' }
+      ],
+      respostaCheckins: [
+        { id: 'resposta-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', envioQuestionarioId: 'envio-1', finalizadoEm },
+        { id: 'resposta-2', tenantId: 'tenant-1', pacienteId: 'paciente-1', envioQuestionarioId: 'envio-2', finalizadoEm }
+      ],
+      respostaValors: [
+        { id: 'valor-1', tenantId: 'tenant-1', respostaCheckinId: 'resposta-1', perguntaId: 'p1', valor: true },
+        { id: 'valor-2', tenantId: 'tenant-1', respostaCheckinId: 'resposta-1', perguntaId: 'p2', valor: 'Boa semana' },
+        { id: 'valor-3', tenantId: 'tenant-1', respostaCheckinId: 'resposta-2', perguntaId: 'p-x', valor: 'Ignorar' }
+      ],
+      pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1', ultimoCheckinEm: finalizadoEm }]
+    });
+
+    const respostas = await servico.listarRespostasQuestionario('tenant-1', 'q1');
+
+    expect(respostas).toEqual([
+      expect.objectContaining({
+        respostaId: 'resposta-1',
+        envioId: 'envio-1',
+        pacienteId: 'paciente-1',
+        questionarioId: 'q1',
+        finalizadoEm,
+        totalRespostas: 2,
+        respostas: [
+          expect.objectContaining({ perguntaId: 'p1', enunciado: 'Treinou?', valor: true }),
+          expect.objectContaining({ perguntaId: 'p2', enunciado: 'Observacoes', valor: 'Boa semana' })
+        ]
+      })
+    ]);
   });
 });

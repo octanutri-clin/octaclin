@@ -46,6 +46,21 @@ export interface EnvioQuestionarioManualResposta extends EnvioQuestionarioOrm {
   linkFormulario: string;
 }
 
+export interface RespostaQuestionarioRecebida {
+  respostaId: string;
+  envioId: string;
+  pacienteId: string;
+  questionarioId: string;
+  finalizadoEm?: Date;
+  totalRespostas: number;
+  respostas: {
+    perguntaId: string;
+    enunciado: string;
+    tipo: TipoPergunta;
+    valor: unknown;
+  }[];
+}
+
 @Injectable()
 export class ServicoQuestionarios {
   constructor(private readonly executorTenant: ExecutorTenant) {}
@@ -480,6 +495,65 @@ export class ServicoQuestionarios {
     return Object.assign(envio, {
       tokenFormulario,
       linkFormulario: this.montarLinkFormulario(tokenFormulario)
+    });
+  }
+
+  async listarRespostasQuestionario(tenantId: string, questionarioId: string): Promise<RespostaQuestionarioRecebida[]> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({ where: { id: questionarioId, tenantId } });
+      if (!questionario) throw new NotFoundException('Questionario nao encontrado.');
+
+      const envios = await gerenciador.getRepository(EnvioQuestionarioOrm).find({ where: { tenantId, questionarioId } });
+      const enviosPorId = new Map(envios.map((envio) => [envio.id, envio]));
+      const respostasCheckin = envios.length
+        ? await gerenciador.getRepository(RespostaCheckinOrm).find({
+            where: { tenantId, envioQuestionarioId: In(envios.map((envio) => envio.id)) }
+          })
+        : [];
+
+      const perguntas = await gerenciador.getRepository(PerguntaOrm).find({
+        where: { tenantId, questionarioId },
+        order: { ordem: 'ASC' }
+      });
+      const perguntasPorId = new Map(perguntas.map((pergunta) => [pergunta.id, pergunta]));
+      const valores = respostasCheckin.length
+        ? await gerenciador.getRepository(RespostaValorOrm).find({
+            where: { tenantId, respostaCheckinId: In(respostasCheckin.map((resposta) => resposta.id)) }
+          })
+        : [];
+
+      const valoresPorResposta = new Map<string, RespostaValorOrm[]>();
+      valores.forEach((valor) => {
+        const atuais = valoresPorResposta.get(valor.respostaCheckinId) ?? [];
+        atuais.push(valor);
+        valoresPorResposta.set(valor.respostaCheckinId, atuais);
+      });
+
+      return respostasCheckin
+        .sort((a, b) => (b.finalizadoEm?.getTime() ?? 0) - (a.finalizadoEm?.getTime() ?? 0))
+        .map((resposta) => {
+          const envio = enviosPorId.get(resposta.envioQuestionarioId);
+          const respostas = (valoresPorResposta.get(resposta.id) ?? []).flatMap((valor) => {
+            const pergunta = perguntasPorId.get(valor.perguntaId);
+            if (!pergunta) return [];
+            return {
+              perguntaId: pergunta.id,
+              enunciado: pergunta.enunciado,
+              tipo: pergunta.tipo,
+              valor: valor.valor
+            };
+          });
+
+          return {
+            respostaId: resposta.id,
+            envioId: resposta.envioQuestionarioId,
+            pacienteId: resposta.pacienteId,
+            questionarioId: envio?.questionarioId ?? questionarioId,
+            finalizadoEm: resposta.finalizadoEm,
+            totalRespostas: respostas.length,
+            respostas
+          };
+        });
     });
   }
 

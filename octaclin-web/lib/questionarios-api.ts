@@ -48,6 +48,21 @@ export interface EnvioQuestionarioApi {
   linkFormulario: string;
 }
 
+export interface RespostaQuestionarioRecebidaApi {
+  respostaId: string;
+  envioId: string;
+  pacienteId: string;
+  questionarioId: string;
+  finalizadoEm?: string;
+  totalRespostas: number;
+  respostas: {
+    perguntaId: string;
+    enunciado: string;
+    tipo: TipoPergunta;
+    valor: unknown;
+  }[];
+}
+
 export interface ModeloQuestionarioApi {
   id: string;
   titulo: string;
@@ -266,6 +281,10 @@ export async function criarEnvioQuestionario(
     method: 'POST',
     body: JSON.stringify(entrada)
   });
+}
+
+export async function listarRespostasQuestionario(questionarioId: string): Promise<RespostaQuestionarioRecebidaApi[]> {
+  return requisitar<RespostaQuestionarioRecebidaApi[]>(`/api/questionarios/${questionarioId}/respostas`);
 }
 
 export async function carregarBootstrapQuestionarios(): Promise<BootstrapQuestionarios> {
