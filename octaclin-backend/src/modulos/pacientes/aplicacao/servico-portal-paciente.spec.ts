@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
@@ -34,6 +35,7 @@ function criarRepositorioFake(nome: string, dados: Record<string, any>) {
   }
 
   return {
+    create: jest.fn((entrada: Record<string, any>) => entrada),
     findOne: jest.fn(async (consulta: { where: Record<string, unknown> }) =>
       itens.find((item) => Object.entries(consulta.where).every(([chave, valor]) => corresponde(item[chave], valor))) ?? null
     ),
@@ -52,8 +54,10 @@ function criarRepositorioFake(nome: string, dados: Record<string, any>) {
       return consulta?.take ? resultado.slice(0, consulta.take) : resultado;
     }),
     save: jest.fn(async (entidade: Record<string, any>) => {
+      if (!entidade.id) entidade.id = `${nome}-${itens.length + 1}`;
       const existente = itens.find((item) => item.id === entidade.id);
       if (existente) Object.assign(existente, entidade);
+      else itens.push(entidade);
       return entidade;
     })
   };
@@ -68,7 +72,8 @@ function criarServico(dados: Record<string, any>) {
     questionario: criarRepositorioFake('questionario', dados),
     respostaCheckin: criarRepositorioFake('respostaCheckin', dados),
     respostaValor: criarRepositorioFake('respostaValor', dados),
-    mensagem: criarRepositorioFake('mensagem', dados)
+    mensagem: criarRepositorioFake('mensagem', dados),
+    consentimento: criarRepositorioFake('consentimento', dados)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -80,6 +85,7 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === RespostaCheckinOrm) return repositorios.respostaCheckin;
       if (entidade === RespostaValorOrm) return repositorios.respostaValor;
       if (entidade === MensagemNotificacaoOrm) return repositorios.mensagem;
+      if (entidade === ConsentimentoLgpdOrm) return repositorios.consentimento;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -202,6 +208,26 @@ describe('ServicoPortalPaciente', () => {
           payload: { texto: 'Nao deve aparecer' },
           criadoEm: new Date('2026-07-20T15:00:00.000Z')
         }
+      ],
+      consentimentos: [
+        {
+          id: 'consentimento-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          tipo: 'primeiro_acesso_paciente',
+          versao: '2026-07',
+          aceitoEm: new Date('2026-07-10T10:00:00.000Z'),
+          metadados: { origem: 'primeiro_acesso' }
+        },
+        {
+          id: 'consentimento-outro',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-2',
+          tipo: 'primeiro_acesso_paciente',
+          versao: '2026-07',
+          aceitoEm: new Date('2026-07-11T10:00:00.000Z'),
+          metadados: { origem: 'outro' }
+        }
       ]
     });
 
@@ -250,6 +276,19 @@ describe('ServicoPortalPaciente', () => {
     expect(portal.mensagensRecentes).toEqual([
       expect.objectContaining({ id: 'mensagem-1', titulo: 'Consulta agendada', texto: 'Sua consulta foi agendada.' })
     ]);
+    expect(portal.lgpd).toEqual({
+      versaoAtual: '2026-07',
+      ultimoAceiteEm: new Date('2026-07-10T10:00:00.000Z'),
+      consentimentos: [
+        {
+          id: 'consentimento-1',
+          tipo: 'primeiro_acesso_paciente',
+          versao: '2026-07',
+          aceitoEm: new Date('2026-07-10T10:00:00.000Z'),
+          metadados: { origem: 'primeiro_acesso' }
+        }
+      ]
+    });
   });
 
   it('deve rejeitar usuario sem paciente vinculado', async () => {
@@ -429,5 +468,66 @@ describe('ServicoPortalPaciente', () => {
     await expect(servico.atualizarPerfil('tenant-1', 'usuario-paciente-2', { email: 'outro@example.com' })).resolves.toEqual(
       expect.objectContaining({ paciente: expect.objectContaining({ id: 'paciente-2' }) })
     );
+  });
+
+  it('deve registrar aceite LGPD do paciente logado e atualizar preferencias de comunicacao', async () => {
+    const { servico, repositorios } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          contatoCriptografado: Buffer.from(
+            'cripto:{"email":"ana@example.com","whatsapp":"5511992362080","preferencias":{"email":true,"whatsapp":true}}'
+          ),
+          profissionalResponsavelId: 'profissional-1',
+          statusAdesao: 'aderente',
+          scoreRisco: '12.50'
+        }
+      ],
+      consultas: [],
+      envios: [],
+      questionarios: [],
+      mensagens: [],
+      consentimentos: []
+    });
+
+    const resultado = await servico.registrarConsentimentoLgpd('tenant-1', 'usuario-paciente-1', {
+      aceiteLgpd: true,
+      versaoLgpd: '2026-09',
+      prefereEmail: false,
+      prefereWhatsapp: true
+    });
+
+    expect(repositorios.consentimento.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-paciente-1',
+        tipo: 'portal_paciente_lgpd',
+        versao: '2026-09',
+        aceitoEm: expect.any(Date),
+        metadados: {
+          pacienteId: 'paciente-1',
+          origem: 'portal_paciente',
+          preferenciasContato: { email: false, whatsapp: true }
+        }
+      })
+    );
+    expect(repositorios.paciente.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contatoCriptografado: Buffer.from(
+          'cripto:{"email":"ana@example.com","whatsapp":"5511992362080","preferencias":{"email":false,"whatsapp":true}}'
+        )
+      })
+    );
+    expect(resultado.perfil.preferenciasContato).toEqual({ email: false, whatsapp: true });
+    expect(resultado.lgpd.consentimentos).toEqual([
+      expect.objectContaining({ tipo: 'portal_paciente_lgpd', versao: '2026-09' })
+    ]);
+
+    await expect(
+      servico.registrarConsentimentoLgpd('tenant-1', 'usuario-paciente-1', { aceiteLgpd: false })
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

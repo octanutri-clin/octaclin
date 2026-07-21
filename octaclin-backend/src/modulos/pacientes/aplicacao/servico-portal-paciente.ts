@@ -1,7 +1,8 @@
 import { createHmac } from 'crypto';
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
-import { In, IsNull } from 'typeorm';
+import { EntityManager, In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
@@ -10,7 +11,7 @@ import { PerguntaOrm } from '../../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-valor.orm';
-import { AtualizarPerfilPacientePortalDto } from './dtos';
+import { AtualizarPerfilPacientePortalDto, RegistrarConsentimentoLgpdPortalDto } from './dtos';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
 interface ContatoPacientePortal {
@@ -83,11 +84,28 @@ export interface ResumoPortalPaciente {
     criadoEm: Date;
     enviadoEm?: Date;
   }[];
+  lgpd: LgpdPortalPaciente;
 }
 
 export interface PerfilPortalPaciente {
   paciente: ResumoPortalPaciente['paciente'];
   perfil: ResumoPortalPaciente['perfil'];
+}
+
+export interface LgpdPortalPaciente {
+  versaoAtual: string;
+  ultimoAceiteEm?: Date;
+  consentimentos: {
+    id: string;
+    tipo: string;
+    versao: string;
+    aceitoEm: Date;
+    metadados: Record<string, unknown>;
+  }[];
+}
+
+export interface ConsentimentoLgpdPortalPaciente extends PerfilPortalPaciente {
+  lgpd: LgpdPortalPaciente;
 }
 
 export interface DetalheFormularioRespondidoPaciente {
@@ -164,6 +182,7 @@ export class ServicoPortalPaciente {
         order: { criadoEm: 'DESC' },
         take: 5
       });
+      const consentimentos = await this.listarConsentimentosPaciente(gerenciador, tenantId, usuarioId);
 
       const consultasProximas = consultas.map((consulta) => ({
         id: consulta.id,
@@ -231,7 +250,8 @@ export class ServicoPortalPaciente {
         consultasProximas,
         formulariosPendentes,
         formulariosRespondidos,
-        mensagensRecentes
+        mensagensRecentes,
+        lgpd: this.mapearLgpd(consentimentos)
       };
     });
   }
@@ -273,6 +293,59 @@ export class ServicoPortalPaciente {
       }
 
       return this.mapearPerfilPaciente(await repositorio.save(paciente));
+    });
+  }
+
+  async registrarConsentimentoLgpd(
+    tenantId: string,
+    usuarioId: string,
+    dados: RegistrarConsentimentoLgpdPortalDto
+  ): Promise<ConsentimentoLgpdPortalPaciente> {
+    if (!dados.aceiteLgpd) throw new BadRequestException('Aceite LGPD obrigatorio para registrar consentimento.');
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorioPacientes = gerenciador.getRepository(PacienteOrm);
+      const paciente = await repositorioPacientes.findOne({
+        where: { tenantId, usuarioId, arquivadoEm: IsNull() }
+      });
+      if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
+
+      if (dados.prefereEmail !== undefined || dados.prefereWhatsapp !== undefined) {
+        const contatoAtual = this.obterContatoPaciente(paciente);
+        paciente.contatoCriptografado = this.criptografia.criptografar(
+          this.serializarContato({
+            email: contatoAtual.email,
+            whatsapp: contatoAtual.whatsapp,
+            preferencias: {
+              email: dados.prefereEmail ?? contatoAtual.preferencias.email,
+              whatsapp: dados.prefereWhatsapp ?? contatoAtual.preferencias.whatsapp
+            }
+          })
+        );
+        await repositorioPacientes.save(paciente);
+      }
+
+      const preferenciasContato = this.obterContatoPaciente(paciente).preferencias;
+      const repositorioConsentimentos = gerenciador.getRepository(ConsentimentoLgpdOrm);
+      await repositorioConsentimentos.save(
+        repositorioConsentimentos.create({
+          tenantId,
+          usuarioId,
+          tipo: 'portal_paciente_lgpd',
+          versao: dados.versaoLgpd ?? this.versaoLgpdAtual(),
+          aceitoEm: new Date(),
+          metadados: {
+            pacienteId: paciente.id,
+            origem: 'portal_paciente',
+            preferenciasContato
+          }
+        })
+      );
+
+      return {
+        ...this.mapearPerfilPaciente(paciente),
+        lgpd: this.mapearLgpd(await this.listarConsentimentosPaciente(gerenciador, tenantId, usuarioId))
+      };
     });
   }
 
@@ -360,6 +433,32 @@ export class ServicoPortalPaciente {
     };
   }
 
+  private async listarConsentimentosPaciente(
+    gerenciador: EntityManager,
+    tenantId: string,
+    usuarioId: string
+  ): Promise<ConsentimentoLgpdOrm[]> {
+    return gerenciador.getRepository(ConsentimentoLgpdOrm).find({
+      where: { tenantId, usuarioId },
+      order: { aceitoEm: 'DESC' },
+      take: 10
+    });
+  }
+
+  private mapearLgpd(consentimentos: ConsentimentoLgpdOrm[]): LgpdPortalPaciente {
+    return {
+      versaoAtual: this.versaoLgpdAtual(),
+      ultimoAceiteEm: consentimentos[0]?.aceitoEm,
+      consentimentos: consentimentos.map((consentimento) => ({
+        id: consentimento.id,
+        tipo: consentimento.tipo,
+        versao: consentimento.versao,
+        aceitoEm: consentimento.aceitoEm,
+        metadados: consentimento.metadados ?? {}
+      }))
+    };
+  }
+
   private obterContatoPaciente(paciente: PacienteOrm): ContatoPacientePortal {
     const preferencias = { email: true, whatsapp: true };
     if (!paciente.contatoCriptografado) return { preferencias };
@@ -402,6 +501,10 @@ export class ServicoPortalPaciente {
   private normalizarWhatsapp(whatsapp?: string): string | undefined {
     const normalizado = whatsapp?.replace(/\D/g, '');
     return normalizado || undefined;
+  }
+
+  private versaoLgpdAtual(): string {
+    return process.env.OCTACLIN_LGPD_VERSAO ?? '2026-07';
   }
 
   private montarLinkFormulario(tenantId: string, envioId: string): string {

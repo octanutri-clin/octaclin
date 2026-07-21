@@ -1,14 +1,26 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { AlertTriangle, CalendarDays, CheckCircle2, ClipboardList, HeartPulse, MessageCircle, RefreshCcw, Save, UserRound } from 'lucide-react';
+import {
+  AlertTriangle,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  HeartPulse,
+  MessageCircle,
+  RefreshCcw,
+  Save,
+  ShieldCheck,
+  UserRound
+} from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import {
   atualizarPerfilPaciente,
   DetalheFormularioRespondidoApi,
   obterFormularioRespondidoPaciente,
   obterPortalPaciente,
-  PortalPacienteApi
+  PortalPacienteApi,
+  registrarConsentimentoLgpdPaciente
 } from '@/lib/portal-api';
 
 interface FormularioPerfilPaciente {
@@ -50,6 +62,14 @@ function rotuloStatus(status: string) {
   return mapa[status] ?? status;
 }
 
+function rotuloConsentimento(tipo: string) {
+  const mapa: Record<string, string> = {
+    primeiro_acesso_paciente: 'Primeiro acesso',
+    portal_paciente_lgpd: 'Portal do paciente'
+  };
+  return mapa[tipo] ?? tipo;
+}
+
 function formatarValor(valor: unknown): string {
   if (valor === null || valor === undefined || valor === '') return 'Sem resposta';
   if (Array.isArray(valor)) return valor.length ? valor.map(formatarValor).join(', ') : 'Sem resposta';
@@ -79,6 +99,7 @@ export function PortalPaciente() {
   const [carregando, setCarregando] = useState(true);
   const [carregandoDetalheId, setCarregandoDetalheId] = useState<string | null>(null);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  const [salvandoConsentimento, setSalvandoConsentimento] = useState(false);
 
   async function carregar() {
     setCarregando(true);
@@ -147,6 +168,41 @@ export function PortalPaciente() {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar formulario respondido.');
     } finally {
       setCarregandoDetalheId(null);
+    }
+  }
+
+  async function registrarAceiteLgpd() {
+    if (!portal) return;
+    setSalvandoConsentimento(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const resultado = await registrarConsentimentoLgpdPaciente({
+        aceiteLgpd: true,
+        versaoLgpd: portal.lgpd.versaoAtual,
+        prefereEmail: formularioPerfil.prefereEmail,
+        prefereWhatsapp: formularioPerfil.prefereWhatsapp
+      });
+      setPortal((atual) =>
+        atual
+          ? {
+              ...atual,
+              paciente: resultado.paciente,
+              perfil: resultado.perfil,
+              lgpd: resultado.lgpd
+            }
+          : atual
+      );
+      setFormularioPerfil((atual) => ({
+        ...atual,
+        prefereEmail: resultado.perfil.preferenciasContato.email,
+        prefereWhatsapp: resultado.perfil.preferenciasContato.whatsapp
+      }));
+      setSucesso('Consentimento LGPD registrado.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar consentimento LGPD.');
+    } finally {
+      setSalvandoConsentimento(false);
     }
   }
 
@@ -448,6 +504,41 @@ export function PortalPaciente() {
                   ) : (
                     <p className="text-sm text-[#596273]">Nenhuma mensagem recente.</p>
                   )}
+                </div>
+              </section>
+
+              <section className="rounded-lg border border-linha bg-white">
+                <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+                  <ShieldCheck className="h-4 w-4 text-[#596273]" />
+                  <h2 className="text-sm font-semibold">Privacidade</h2>
+                </div>
+                <div className="grid gap-3 p-4">
+                  <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                    <p className="text-xs text-[#596273]">Versao atual</p>
+                    <p className="mt-1 text-sm font-semibold">{portal.lgpd.versaoAtual}</p>
+                    <p className="mt-1 text-xs text-[#596273]">Ultimo aceite {formatarDataHora(portal.lgpd.ultimoAceiteEm)}</p>
+                  </div>
+                  <Botao type="button" variante="primario" onClick={() => void registrarAceiteLgpd()} disabled={salvandoConsentimento}>
+                    <ShieldCheck className="h-4 w-4" />
+                    {salvandoConsentimento ? 'Registrando' : 'Registrar aceite'}
+                  </Botao>
+                  <div className="grid gap-2">
+                    {portal.lgpd.consentimentos.length ? (
+                      portal.lgpd.consentimentos.map((consentimento) => (
+                        <article key={consentimento.id} className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <p className="text-sm font-semibold">{rotuloConsentimento(consentimento.tipo)}</p>
+                            <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                              {consentimento.versao}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs text-[#596273]">{formatarDataHora(consentimento.aceitoEm)}</p>
+                        </article>
+                      ))
+                    ) : (
+                      <p className="text-sm text-[#596273]">Nenhum consentimento registrado.</p>
+                    )}
+                  </div>
                 </div>
               </section>
             </section>

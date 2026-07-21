@@ -121,3 +121,21 @@ export class AtualizarPerfilPacientePortalDto {
   @IsBoolean()
   prefereWhatsapp?: boolean;
 }
+
+export class RegistrarConsentimentoLgpdPortalDto {
+  @IsBoolean()
+  aceiteLgpd: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  versaoLgpd?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  prefereEmail?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  prefereWhatsapp?: boolean;
+}

@@ -59,6 +59,19 @@ export interface PortalPacienteApi {
     criadoEm: string;
     enviadoEm?: string;
   }[];
+  lgpd: LgpdPortalPacienteApi;
+}
+
+export interface LgpdPortalPacienteApi {
+  versaoAtual: string;
+  ultimoAceiteEm?: string;
+  consentimentos: {
+    id: string;
+    tipo: string;
+    versao: string;
+    aceitoEm: string;
+    metadados: Record<string, unknown>;
+  }[];
 }
 
 export interface DetalheFormularioRespondidoApi {
@@ -92,6 +105,17 @@ export interface AtualizarPerfilPacienteEntrada {
 export interface PerfilPacienteAtualizadoApi {
   paciente: PortalPacienteApi['paciente'];
   perfil: PortalPacienteApi['perfil'];
+}
+
+export interface RegistrarConsentimentoLgpdEntrada {
+  aceiteLgpd: boolean;
+  versaoLgpd?: string;
+  prefereEmail?: boolean;
+  prefereWhatsapp?: boolean;
+}
+
+export interface ConsentimentoLgpdRegistradoApi extends PerfilPacienteAtualizadoApi {
+  lgpd: LgpdPortalPacienteApi;
 }
 
 class ErroApiPortal extends Error {
@@ -133,4 +157,19 @@ export async function atualizarPerfilPaciente(dados: AtualizarPerfilPacienteEntr
     throw new ErroApiPortal(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
   }
   return resposta.json() as Promise<PerfilPacienteAtualizadoApi>;
+}
+
+export async function registrarConsentimentoLgpdPaciente(
+  dados: RegistrarConsentimentoLgpdEntrada
+): Promise<ConsentimentoLgpdRegistradoApi> {
+  const resposta = await fetch('/api/portal/paciente/lgpd/consentimentos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dados)
+  });
+  if (!resposta.ok) {
+    const detalhe = await resposta.text();
+    throw new ErroApiPortal(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+  }
+  return resposta.json() as Promise<ConsentimentoLgpdRegistradoApi>;
 }

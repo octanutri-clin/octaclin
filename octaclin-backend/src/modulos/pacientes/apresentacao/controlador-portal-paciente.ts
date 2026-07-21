@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPerfilPacientePortalDto } from '../aplicacao/dtos';
+import { AtualizarPerfilPacientePortalDto, RegistrarConsentimentoLgpdPortalDto } from '../aplicacao/dtos';
 import { ServicoPortalPaciente } from '../aplicacao/servico-portal-paciente';
 
 @Controller('portal')
@@ -42,6 +42,32 @@ export class ControladorPortalPaciente {
       }
     });
     return perfil;
+  }
+
+  @Post('paciente/lgpd/consentimentos')
+  async registrarConsentimentoLgpd(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: RegistrarConsentimentoLgpdPortalDto
+  ) {
+    const resultado = await this.servicoPortal.registrarConsentimentoLgpd(usuario.tenantId, usuario.usuarioId, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'portal.paciente.lgpd.consentimento_registrar',
+      recursoTipo: 'paciente',
+      recursoId: resultado.paciente.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        versaoLgpd: dados.versaoLgpd,
+        preferenciasContato: {
+          email: dados.prefereEmail,
+          whatsapp: dados.prefereWhatsapp
+        }
+      }
+    });
+    return resultado;
   }
 
   @Get('paciente/formularios-respondidos/:respostaId')
