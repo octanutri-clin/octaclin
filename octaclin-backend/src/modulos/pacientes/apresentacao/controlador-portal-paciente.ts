@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, UseGuards } from '@nestjs/common';
 import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
@@ -14,5 +14,13 @@ export class ControladorPortalPaciente {
   @Get('paciente')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoPortal.obterResumoPortal(usuario.tenantId, usuario.usuarioId);
+  }
+
+  @Get('paciente/formularios-respondidos/:respostaId')
+  obterFormularioRespondido(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('respostaId', ParseUUIDPipe) respostaId: string
+  ) {
+    return this.servicoPortal.obterFormularioRespondido(usuario.tenantId, usuario.usuarioId, respostaId);
   }
 }

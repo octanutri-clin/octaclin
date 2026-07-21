@@ -3,7 +3,12 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, CalendarDays, CheckCircle2, ClipboardList, HeartPulse, MessageCircle, RefreshCcw, UserRound } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
-import { obterPortalPaciente, PortalPacienteApi } from '@/lib/portal-api';
+import {
+  DetalheFormularioRespondidoApi,
+  obterFormularioRespondidoPaciente,
+  obterPortalPaciente,
+  PortalPacienteApi
+} from '@/lib/portal-api';
 
 function formatarDataHora(valor?: string) {
   if (!valor) return 'Sem data';
@@ -30,10 +35,21 @@ function rotuloStatus(status: string) {
   return mapa[status] ?? status;
 }
 
+function formatarValor(valor: unknown): string {
+  if (valor === null || valor === undefined || valor === '') return 'Sem resposta';
+  if (Array.isArray(valor)) return valor.length ? valor.map(formatarValor).join(', ') : 'Sem resposta';
+  if (typeof valor === 'boolean') return valor ? 'Sim' : 'Nao';
+  if (typeof valor === 'number') return new Intl.NumberFormat('pt-BR').format(valor);
+  if (typeof valor === 'string') return valor;
+  return JSON.stringify(valor);
+}
+
 export function PortalPaciente() {
   const [portal, setPortal] = useState<PortalPacienteApi | null>(null);
+  const [detalheFormulario, setDetalheFormulario] = useState<DetalheFormularioRespondidoApi | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [carregandoDetalheId, setCarregandoDetalheId] = useState<string | null>(null);
 
   async function carregar() {
     setCarregando(true);
@@ -50,6 +66,18 @@ export function PortalPaciente() {
   useEffect(() => {
     void carregar();
   }, []);
+
+  async function abrirFormularioRespondido(respostaId: string) {
+    setCarregandoDetalheId(respostaId);
+    setErro(null);
+    try {
+      setDetalheFormulario(await obterFormularioRespondidoPaciente(respostaId));
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar formulario respondido.');
+    } finally {
+      setCarregandoDetalheId(null);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-fundo text-tinta">
@@ -183,6 +211,14 @@ export function PortalPaciente() {
                               {formulario.scoreFinal ? `Score ${formulario.scoreFinal}` : rotuloStatus(formulario.status)}
                             </span>
                           </div>
+                          <Botao
+                            type="button"
+                            className="mt-3"
+                            onClick={() => void abrirFormularioRespondido(formulario.respostaId)}
+                            disabled={carregandoDetalheId === formulario.respostaId}
+                          >
+                            {carregandoDetalheId === formulario.respostaId ? 'Abrindo' : 'Ver respostas'}
+                          </Botao>
                         </article>
                       ))
                     ) : (
@@ -190,6 +226,42 @@ export function PortalPaciente() {
                     )}
                   </div>
                 </section>
+
+                {detalheFormulario ? (
+                  <section className="rounded-lg border border-linha bg-white">
+                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-linha px-4 py-3">
+                      <div>
+                        <h2 className="text-sm font-semibold">{detalheFormulario.titulo}</h2>
+                        <p className="mt-1 text-xs text-[#596273]">
+                          Finalizado em {formatarDataHora(detalheFormulario.finalizadoEm)}
+                          {detalheFormulario.scoreFinal ? ` - score ${detalheFormulario.scoreFinal}` : ''}
+                        </p>
+                      </div>
+                      <Botao type="button" variante="fantasma" onClick={() => setDetalheFormulario(null)}>
+                        Fechar
+                      </Botao>
+                    </div>
+                    <div className="grid gap-3 p-4">
+                      {detalheFormulario.descricao ? <p className="text-sm text-[#596273]">{detalheFormulario.descricao}</p> : null}
+                      <dl className="grid gap-3">
+                        {detalheFormulario.respostas.map((resposta) => (
+                          <div key={resposta.perguntaId} className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                            <dt className="flex flex-wrap items-start justify-between gap-2 text-sm font-semibold">
+                              <span>{resposta.enunciado}</span>
+                              <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-medium text-[#596273]">
+                                {resposta.obrigatoria ? 'Obrigatoria' : 'Opcional'}
+                              </span>
+                            </dt>
+                            <dd className="mt-2 break-words text-sm text-[#596273]">{formatarValor(resposta.valor)}</dd>
+                            {resposta.scorePonderado ? (
+                              <p className="mt-2 text-xs font-semibold text-[#596273]">Score {resposta.scorePonderado}</p>
+                            ) : null}
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  </section>
+                ) : null}
 
                 <section className="rounded-lg border border-linha bg-white">
                   <div className="flex items-center gap-2 border-b border-linha px-4 py-3">

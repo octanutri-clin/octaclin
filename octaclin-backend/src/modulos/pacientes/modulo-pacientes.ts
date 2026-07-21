@@ -10,8 +10,10 @@ import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { EnvioQuestionarioOrm } from '../questionarios/infraestrutura/envio-questionario.orm';
+import { PerguntaOrm } from '../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../questionarios/infraestrutura/resposta-checkin.orm';
+import { RespostaValorOrm } from '../questionarios/infraestrutura/resposta-valor.orm';
 import { UsuarioOrm } from '../usuarios/infraestrutura/usuario.orm';
 import { ServicoConvitesPaciente } from './aplicacao/servico-convites-paciente';
 import { ServicoPacientes } from './aplicacao/servico-pacientes';
@@ -32,8 +34,10 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
       UserActionLogOrm,
       AgendaConsultaOrm,
       EnvioQuestionarioOrm,
+      PerguntaOrm,
       QuestionarioOrm,
       RespostaCheckinOrm,
+      RespostaValorOrm,
       MensagemNotificacaoOrm
     ]),
     ModuloTenancy,

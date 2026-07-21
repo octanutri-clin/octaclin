@@ -2,8 +2,10 @@ import { ForbiddenException } from '@nestjs/common';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
+import { PerguntaOrm } from '../../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
+import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-valor.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { ServicoPortalPaciente } from './servico-portal-paciente';
 
@@ -57,8 +59,10 @@ function criarServico(dados: Record<string, any>) {
     paciente: criarRepositorioFake('paciente', dados),
     consulta: criarRepositorioFake('consulta', dados),
     envio: criarRepositorioFake('envio', dados),
+    pergunta: criarRepositorioFake('pergunta', dados),
     questionario: criarRepositorioFake('questionario', dados),
     respostaCheckin: criarRepositorioFake('respostaCheckin', dados),
+    respostaValor: criarRepositorioFake('respostaValor', dados),
     mensagem: criarRepositorioFake('mensagem', dados)
   };
   const gerenciador = {
@@ -66,8 +70,10 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === PacienteOrm) return repositorios.paciente;
       if (entidade === AgendaConsultaOrm) return repositorios.consulta;
       if (entidade === EnvioQuestionarioOrm) return repositorios.envio;
+      if (entidade === PerguntaOrm) return repositorios.pergunta;
       if (entidade === QuestionarioOrm) return repositorios.questionario;
       if (entidade === RespostaCheckinOrm) return repositorios.respostaCheckin;
+      if (entidade === RespostaValorOrm) return repositorios.respostaValor;
       if (entidade === MensagemNotificacaoOrm) return repositorios.mensagem;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
@@ -241,5 +247,110 @@ describe('ServicoPortalPaciente', () => {
     const { servico } = criarServico({ pacientes: [], consultas: [], envios: [], questionarios: [], mensagens: [] });
 
     await expect(servico.obterResumoPortal('tenant-1', 'usuario-sem-paciente')).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('deve detalhar formulario respondido do paciente logado com perguntas e respostas', async () => {
+    const finalizadoEm = new Date('2026-07-19T12:05:00.000Z');
+    const { servico } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          profissionalResponsavelId: 'profissional-1',
+          statusAdesao: 'aderente',
+          scoreRisco: '12.50'
+        },
+        {
+          id: 'paciente-2',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-2',
+          nomeCriptografado: Buffer.from('cripto:Outro Paciente')
+        }
+      ],
+      envios: [
+        {
+          id: 'envio-respondido-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          questionarioId: 'questionario-1',
+          status: 'respondido',
+          respondidoEm: finalizadoEm
+        },
+        {
+          id: 'envio-outro',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          questionarioId: 'questionario-1',
+          status: 'respondido',
+          respondidoEm: finalizadoEm
+        }
+      ],
+      questionarios: [{ id: 'questionario-1', tenantId: 'tenant-1', titulo: 'Check-in semanal', descricao: 'Acompanhamento' }],
+      perguntas: [
+        {
+          id: 'pergunta-1',
+          tenantId: 'tenant-1',
+          questionarioId: 'questionario-1',
+          tipo: 'sim_nao',
+          enunciado: 'Treinou?',
+          obrigatoria: true,
+          ordem: 1
+        },
+        {
+          id: 'pergunta-2',
+          tenantId: 'tenant-1',
+          questionarioId: 'questionario-1',
+          tipo: 'texto_longo',
+          enunciado: 'Observacoes',
+          obrigatoria: false,
+          ordem: 2
+        }
+      ],
+      respostaCheckins: [
+        {
+          id: 'resposta-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          envioQuestionarioId: 'envio-respondido-1',
+          scoreFinal: '87.40',
+          finalizadoEm
+        },
+        {
+          id: 'resposta-outro',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          envioQuestionarioId: 'envio-outro',
+          finalizadoEm
+        }
+      ],
+      respostaValors: [
+        { id: 'valor-1', tenantId: 'tenant-1', respostaCheckinId: 'resposta-1', perguntaId: 'pergunta-1', valor: true },
+        { id: 'valor-2', tenantId: 'tenant-1', respostaCheckinId: 'resposta-1', perguntaId: 'pergunta-2', valor: 'Dormiu melhor' },
+        { id: 'valor-outro', tenantId: 'tenant-1', respostaCheckinId: 'resposta-outro', perguntaId: 'pergunta-1', valor: false }
+      ],
+      consultas: [],
+      mensagens: []
+    });
+
+    const detalhe = await servico.obterFormularioRespondido('tenant-1', 'usuario-paciente-1', 'resposta-1');
+
+    expect(detalhe).toEqual(
+      expect.objectContaining({
+        respostaId: 'resposta-1',
+        envioId: 'envio-respondido-1',
+        questionarioId: 'questionario-1',
+        titulo: 'Check-in semanal',
+        descricao: 'Acompanhamento',
+        scoreFinal: '87.40',
+        finalizadoEm
+      })
+    );
+    expect(detalhe.respostas).toEqual([
+      expect.objectContaining({ perguntaId: 'pergunta-1', enunciado: 'Treinou?', tipo: 'sim_nao', valor: true, ordem: 1 }),
+      expect.objectContaining({ perguntaId: 'pergunta-2', enunciado: 'Observacoes', tipo: 'texto_longo', valor: 'Dormiu melhor', ordem: 2 })
+    ]);
+    await expect(servico.obterFormularioRespondido('tenant-1', 'usuario-paciente-1', 'resposta-outro')).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

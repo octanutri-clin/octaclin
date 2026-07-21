@@ -55,6 +55,25 @@ export interface PortalPacienteApi {
   }[];
 }
 
+export interface DetalheFormularioRespondidoApi {
+  respostaId: string;
+  envioId: string;
+  questionarioId: string;
+  titulo: string;
+  descricao?: string;
+  scoreFinal?: string;
+  finalizadoEm?: string;
+  respostas: {
+    perguntaId: string;
+    enunciado: string;
+    tipo: string;
+    obrigatoria: boolean;
+    ordem: number;
+    valor: unknown;
+    scorePonderado?: string;
+  }[];
+}
+
 class ErroApiPortal extends Error {
   constructor(
     public readonly status: number,
@@ -72,4 +91,13 @@ export async function obterPortalPaciente(): Promise<PortalPacienteApi> {
     throw new ErroApiPortal(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
   }
   return resposta.json() as Promise<PortalPacienteApi>;
+}
+
+export async function obterFormularioRespondidoPaciente(respostaId: string): Promise<DetalheFormularioRespondidoApi> {
+  const resposta = await fetch(`/api/portal/paciente/formularios-respondidos/${respostaId}`, { cache: 'no-store' });
+  if (!resposta.ok) {
+    const detalhe = await resposta.text();
+    throw new ErroApiPortal(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+  }
+  return resposta.json() as Promise<DetalheFormularioRespondidoApi>;
 }
