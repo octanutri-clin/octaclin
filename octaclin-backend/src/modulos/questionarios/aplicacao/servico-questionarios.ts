@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { EntityManager, In, IsNull, LessThanOrEqual } from 'typeorm';
 import * as cronParser from 'cron-parser';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -12,10 +13,12 @@ import {
   AtualizarPerguntaDto,
   CriarAgendamentoQuestionarioDto,
   CriarCategoriaPerguntaDto,
+  CriarEnvioQuestionarioManualDto,
   CriarPerguntaDto,
   CriarQuestionarioAPartirModeloDto,
   CriarQuestionarioDto,
   DuplicarQuestionarioDto,
+  FinalizarFormularioPacienteDto,
   ReordenarPerguntasDto
 } from './dtos';
 import { AgendamentoQuestionarioOrm } from '../infraestrutura/agendamento-questionario.orm';
@@ -24,8 +27,24 @@ import { EnvioQuestionarioOrm } from '../infraestrutura/envio-questionario.orm';
 import { OpcaoPerguntaOrm } from '../infraestrutura/opcao-pergunta.orm';
 import { PerguntaOrm } from '../infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../infraestrutura/questionario.orm';
+import { RespostaCheckinOrm } from '../infraestrutura/resposta-checkin.orm';
+import { RespostaValorOrm } from '../infraestrutura/resposta-valor.orm';
 
 type PerguntaComOpcoes = PerguntaOrm & { opcoes: OpcaoPerguntaOrm[] };
+
+export interface FormularioPacientePublico {
+  envioId: string;
+  titulo: string;
+  descricao?: string;
+  status: string;
+  expiraEm?: Date;
+  perguntas: PerguntaComOpcoes[];
+}
+
+export interface EnvioQuestionarioManualResposta extends EnvioQuestionarioOrm {
+  tokenFormulario: string;
+  linkFormulario: string;
+}
 
 @Injectable()
 export class ServicoQuestionarios {
@@ -430,6 +449,122 @@ export class ServicoQuestionarios {
     });
   }
 
+  async criarEnvioQuestionarioManual(
+    tenantId: string,
+    questionarioId: string,
+    dados: CriarEnvioQuestionarioManualDto
+  ): Promise<EnvioQuestionarioManualResposta> {
+    const envio = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({ where: { id: questionarioId, tenantId } });
+      if (!questionario) throw new NotFoundException('Questionario nao encontrado.');
+
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: { id: dados.pacienteId, tenantId, arquivadoEm: IsNull() }
+      });
+      if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+
+      const agora = new Date();
+      return gerenciador.getRepository(EnvioQuestionarioOrm).save(
+        gerenciador.getRepository(EnvioQuestionarioOrm).create({
+          tenantId,
+          questionarioId,
+          pacienteId: dados.pacienteId,
+          status: 'enviado',
+          enviadoEm: agora,
+          expiraEm: dados.expiraEm ? new Date(dados.expiraEm) : new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000)
+        })
+      );
+    });
+
+    const tokenFormulario = this.gerarTokenFormularioPaciente(tenantId, envio.id);
+    return Object.assign(envio, {
+      tokenFormulario,
+      linkFormulario: this.montarLinkFormulario(tokenFormulario)
+    });
+  }
+
+  gerarTokenFormularioPaciente(tenantId: string, envioId: string): string {
+    const assinatura = this.assinarTokenFormulario(tenantId, envioId);
+    return `${tenantId}.${envioId}.${assinatura}`;
+  }
+
+  async obterFormularioPaciente(token: string): Promise<FormularioPacientePublico> {
+    const { tenantId, envioId } = this.validarTokenFormulario(token);
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const envio = await gerenciador.getRepository(EnvioQuestionarioOrm).findOne({ where: { id: envioId, tenantId } });
+      this.validarEnvioFormulario(envio);
+
+      const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
+        where: { id: envio.questionarioId, tenantId }
+      });
+      if (!questionario) throw new NotFoundException('Questionario nao encontrado.');
+
+      const perguntas = await this.listarPerguntasComOpcoesPorQuestionario(gerenciador, tenantId, questionario.id);
+
+      return {
+        envioId: envio.id,
+        titulo: questionario.titulo,
+        descricao: questionario.descricao,
+        status: envio.status,
+        expiraEm: envio.expiraEm,
+        perguntas
+      };
+    });
+  }
+
+  async finalizarFormularioPaciente(token: string, dados: FinalizarFormularioPacienteDto) {
+    const { tenantId, envioId } = this.validarTokenFormulario(token);
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorioEnvios = gerenciador.getRepository(EnvioQuestionarioOrm);
+      const envio = await repositorioEnvios.findOne({ where: { id: envioId, tenantId } });
+      this.validarEnvioFormulario(envio);
+
+      const perguntas = await this.listarPerguntasComOpcoesPorQuestionario(gerenciador, tenantId, envio.questionarioId);
+      this.validarRespostasObrigatorias(perguntas, dados.respostas);
+
+      const agora = new Date();
+      const respostaCheckin = await gerenciador.getRepository(RespostaCheckinOrm).save(
+        gerenciador.getRepository(RespostaCheckinOrm).create({
+          tenantId,
+          pacienteId: envio.pacienteId,
+          envioQuestionarioId: envio.id,
+          finalizadoEm: agora,
+          criadoEm: agora
+        })
+      );
+
+      await gerenciador.getRepository(RespostaValorOrm).save(
+        dados.respostas.map((resposta) =>
+          gerenciador.getRepository(RespostaValorOrm).create({
+            tenantId,
+            respostaCheckinId: respostaCheckin.id,
+            perguntaId: resposta.perguntaId,
+            valor: resposta.valor
+          })
+        )
+      );
+
+      envio.status = 'respondido';
+      envio.respondidoEm = agora;
+      await repositorioEnvios.save(envio);
+
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({ where: { id: envio.pacienteId, tenantId } });
+      if (paciente) {
+        paciente.ultimoCheckinEm = agora;
+        await gerenciador.getRepository(PacienteOrm).save(paciente);
+      }
+
+      return {
+        envioId: envio.id,
+        respostaCheckinId: respostaCheckin.id,
+        status: envio.status,
+        respondidoEm: envio.respondidoEm
+      };
+    });
+  }
+
   async processarAgendamentosVencidos(tenantId: string, agora = new Date()): Promise<number> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const agendamentos = await gerenciador.getRepository(AgendamentoQuestionarioOrm).find({
@@ -491,6 +626,88 @@ export class ServicoQuestionarios {
     if (tipo === 'multipla_escolha' && exigirQuandoMultipla && (!opcoes || opcoes.length < 2)) {
       throw new BadRequestException('Perguntas de multipla escolha exigem pelo menos duas opcoes.');
     }
+  }
+
+  private segredoFormulario() {
+    return process.env.FORMULARIO_PUBLICO_SEGREDO ?? process.env.JWT_SEGREDO ?? 'dev-formulario-publico-secret';
+  }
+
+  private assinarTokenFormulario(tenantId: string, envioId: string) {
+    return createHmac('sha256', this.segredoFormulario()).update(`${tenantId}.${envioId}`).digest('base64url');
+  }
+
+  private validarTokenFormulario(token: string): { tenantId: string; envioId: string } {
+    const [tenantId, envioId, assinatura] = token.split('.');
+    if (!tenantId || !envioId || !assinatura) throw new BadRequestException('Token do formulario invalido.');
+
+    const esperada = this.assinarTokenFormulario(tenantId, envioId);
+    const assinaturaBuffer = Buffer.from(assinatura);
+    const esperadaBuffer = Buffer.from(esperada);
+    if (assinaturaBuffer.length !== esperadaBuffer.length || !timingSafeEqual(assinaturaBuffer, esperadaBuffer)) {
+      throw new BadRequestException('Token do formulario invalido.');
+    }
+
+    return { tenantId, envioId };
+  }
+
+  private validarEnvioFormulario(envio?: EnvioQuestionarioOrm | null): asserts envio is EnvioQuestionarioOrm {
+    if (!envio) throw new NotFoundException('Envio de questionario nao encontrado.');
+    if (envio.status === 'respondido') throw new GoneException('Formulario ja respondido.');
+    if (envio.status === 'expirado' || (envio.expiraEm && envio.expiraEm <= new Date())) throw new GoneException('Formulario expirado.');
+  }
+
+  private validarRespostasObrigatorias(perguntas: PerguntaOrm[], respostas: { perguntaId: string; valor: unknown }[]) {
+    const respostasPorPergunta = new Map(respostas.map((resposta) => [resposta.perguntaId, resposta.valor]));
+    const idsPerguntas = new Set(perguntas.map((pergunta) => pergunta.id));
+
+    if (respostas.some((resposta) => !idsPerguntas.has(resposta.perguntaId))) {
+      throw new BadRequestException('Resposta contem pergunta inexistente no formulario.');
+    }
+
+    const obrigatoriaSemResposta = perguntas.find((pergunta) => pergunta.obrigatoria && !this.valorPreenchido(respostasPorPergunta.get(pergunta.id)));
+    if (obrigatoriaSemResposta) {
+      throw new BadRequestException(`Pergunta obrigatoria sem resposta: ${obrigatoriaSemResposta.enunciado}`);
+    }
+  }
+
+  private montarLinkFormulario(token: string) {
+    const baseUrl = (process.env.OCTACLIN_WEB_URL ?? process.env.WEB_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+    const url = new URL(`/formularios/${encodeURIComponent(token)}`, baseUrl);
+    return url.toString();
+  }
+
+  private valorPreenchido(valor: unknown) {
+    if (valor === null || valor === undefined) return false;
+    if (typeof valor === 'string') return valor.trim().length > 0;
+    if (Array.isArray(valor)) return valor.length > 0;
+    return true;
+  }
+
+  private async listarPerguntasComOpcoesPorQuestionario(
+    gerenciador: EntityManager,
+    tenantId: string,
+    questionarioId: string
+  ): Promise<PerguntaComOpcoes[]> {
+    const perguntas = await gerenciador.getRepository(PerguntaOrm).find({
+      where: { tenantId, questionarioId },
+      order: { ordem: 'ASC' }
+    });
+    const idsPerguntas = new Set(perguntas.map((pergunta) => pergunta.id));
+    const opcoes = (
+      await gerenciador.getRepository(OpcaoPerguntaOrm).find({
+        where: { tenantId },
+        order: { ordem: 'ASC' }
+      })
+    ).filter((opcao) => idsPerguntas.has(opcao.perguntaId));
+
+    const opcoesPorPergunta = new Map<string, OpcaoPerguntaOrm[]>();
+    opcoes.forEach((opcao) => {
+      const atuais = opcoesPorPergunta.get(opcao.perguntaId) ?? [];
+      atuais.push(opcao);
+      opcoesPorPergunta.set(opcao.perguntaId, atuais);
+    });
+
+    return perguntas.map((pergunta) => Object.assign(pergunta, { opcoes: opcoesPorPergunta.get(pergunta.id) ?? [] }));
   }
 
   private async anexarOpcoes(gerenciador: EntityManager, pergunta: PerguntaOrm): Promise<PerguntaComOpcoes> {

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { AlertTriangle, Archive, BookOpen, CalendarClock, Check, CheckCircle2, Copy, Eye, Plus, RefreshCcw, Save, Settings2, Trash2, Wand2 } from 'lucide-react';
+import { AlertTriangle, Archive, BookOpen, CalendarClock, Check, CheckCircle2, Copy, Eye, Link2, Plus, RefreshCcw, Save, Settings2, Trash2, Wand2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import {
@@ -16,6 +16,7 @@ import {
   atualizarQuestionario,
   carregarBootstrapQuestionarios,
   criarAgendamentoQuestionario,
+  criarEnvioQuestionario,
   criarPergunta,
   criarQuestionarioAPartirModelo,
   criarQuestionario,
@@ -23,7 +24,7 @@ import {
   listarPerguntas,
   reordenarPerguntas
 } from '@/lib/questionarios-api';
-import { ProfissionalResumo } from '@/lib/cadastros-api';
+import { PacienteResumo, ProfissionalResumo } from '@/lib/cadastros-api';
 import { PerguntaOrdenavel } from './pergunta-ordenavel';
 import { PreviewQuestionarioPaciente } from './preview-questionario-paciente';
 import { PerguntaEditor } from './tipos';
@@ -103,6 +104,7 @@ function listaTextoConfig(configuracao: Record<string, unknown>, chave: string, 
 export function EditorQuestionario() {
   const [categorias, setCategorias] = useState<CategoriaPerguntaApi[]>([]);
   const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
+  const [pacientes, setPacientes] = useState<PacienteResumo[]>([]);
   const [questionarios, setQuestionarios] = useState<QuestionarioApi[]>([]);
   const [modelos, setModelos] = useState<ModeloQuestionarioApi[]>([]);
   const [questionarioAtual, setQuestionarioAtual] = useState<QuestionarioApi | null>(null);
@@ -112,6 +114,8 @@ export function EditorQuestionario() {
   const [descricao, setDescricao] = useState('Protocolo operacional de acompanhamento clinico.');
   const [status, setStatus] = useState<'rascunho' | 'publicado' | 'arquivado'>('rascunho');
   const [regraCron, setRegraCron] = useState('0 8 * * 1');
+  const [pacienteEnvioId, setPacienteEnvioId] = useState('');
+  const [linkFormulario, setLinkFormulario] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -139,6 +143,7 @@ export function EditorQuestionario() {
     setTitulo(questionario.titulo);
     setDescricao(questionario.descricao ?? '');
     setStatus(questionario.status);
+    setLinkFormulario('');
     await carregarPerguntas(questionario.id);
   }
 
@@ -150,8 +155,10 @@ export function EditorQuestionario() {
       const bootstrap = await carregarBootstrapQuestionarios();
       setCategorias(bootstrap.categorias);
       setProfissionais(bootstrap.profissionais);
+      setPacientes(bootstrap.pacientes);
       setQuestionarios(bootstrap.questionarios.itens);
       setModelos(bootstrap.modelos);
+      setPacienteEnvioId(bootstrap.pacientes[0]?.id ?? '');
 
       const primeiro = bootstrap.questionarios.itens[0];
       if (primeiro) {
@@ -395,6 +402,32 @@ export function EditorQuestionario() {
     );
   }
 
+  async function gerarLinkFormulario() {
+    if (!questionarioAtual) {
+      setErro('Crie um questionario antes de gerar link.');
+      setSucesso(null);
+      return;
+    }
+    if (!pacienteEnvioId) {
+      setErro('Selecione um paciente para gerar o link.');
+      setSucesso(null);
+      return;
+    }
+
+    setSalvando(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const envio = await criarEnvioQuestionario(questionarioAtual.id, { pacienteId: pacienteEnvioId });
+      setLinkFormulario(envio.linkFormulario);
+      setSucesso('Link do formulario gerado.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao gerar link do formulario.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   function trocarTipoPergunta(tipo: TipoPergunta) {
     setPerguntas((atuais) =>
       atuais.map((pergunta) =>
@@ -604,6 +637,30 @@ export function EditorQuestionario() {
                   <CalendarClock className="h-4 w-4" />
                 </Botao>
               </div>
+            </div>
+            <div className="space-y-2 rounded-md border border-linha bg-[#f8fafb] p-3">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-[#596273]" />
+                <p className="text-sm font-semibold text-tinta">Envio ao paciente</p>
+              </div>
+              <div className="space-y-1.5">
+                <Rotulo htmlFor="paciente-envio">Paciente</Rotulo>
+                <Selecao id="paciente-envio" value={pacienteEnvioId} onChange={(event) => setPacienteEnvioId(event.target.value)}>
+                  <option value="">Selecione</option>
+                  {pacientes.map((paciente) => (
+                    <option key={paciente.id} value={paciente.id}>
+                      {paciente.nome}
+                    </option>
+                  ))}
+                </Selecao>
+              </div>
+              <Botao type="button" className="w-full" onClick={() => void gerarLinkFormulario()} disabled={salvando || !questionarioAtual}>
+                <Link2 className="h-4 w-4" />
+                Gerar link
+              </Botao>
+              {linkFormulario ? (
+                <Campo readOnly value={linkFormulario} onFocus={(event) => event.currentTarget.select()} aria-label="Link publico do formulario" />
+              ) : null}
             </div>
           </div>
         </aside>

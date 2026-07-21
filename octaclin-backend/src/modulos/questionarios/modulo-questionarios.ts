@@ -9,6 +9,7 @@ import { TenantOrm } from '../tenancy/infraestrutura/tenant.orm';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoQuestionarios } from './aplicacao/servico-questionarios';
 import { ProcessadorAgendamentosQuestionario } from './aplicacao/processador-agendamentos';
+import { ControladorFormulariosPublicos } from './apresentacao/controlador-formularios-publicos';
 import { ControladorQuestionarios } from './apresentacao/controlador-questionarios';
 import { AgendamentoQuestionarioOrm } from './infraestrutura/agendamento-questionario.orm';
 import { CategoriaPerguntaOrm } from './infraestrutura/categoria-pergunta.orm';
@@ -16,6 +17,8 @@ import { EnvioQuestionarioOrm } from './infraestrutura/envio-questionario.orm';
 import { OpcaoPerguntaOrm } from './infraestrutura/opcao-pergunta.orm';
 import { PerguntaOrm } from './infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from './infraestrutura/questionario.orm';
+import { RespostaCheckinOrm } from './infraestrutura/resposta-checkin.orm';
+import { RespostaValorOrm } from './infraestrutura/resposta-valor.orm';
 
 @Module({
   imports: [
@@ -29,12 +32,14 @@ import { QuestionarioOrm } from './infraestrutura/questionario.orm';
       OpcaoPerguntaOrm,
       AgendamentoQuestionarioOrm,
       EnvioQuestionarioOrm,
+      RespostaCheckinOrm,
+      RespostaValorOrm,
       UserActionLogOrm
     ]),
     ModuloAuth,
     ModuloTenancy
   ],
-  controllers: [ControladorQuestionarios],
+  controllers: [ControladorQuestionarios, ControladorFormulariosPublicos],
   providers: [ServicoQuestionarios, ProcessadorAgendamentosQuestionario, ServicoAuditoria],
   exports: [ServicoQuestionarios]
 })

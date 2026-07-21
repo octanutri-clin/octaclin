@@ -1,4 +1,4 @@
-import { ProfissionalResumo, listarProfissionais } from './cadastros-api';
+import { PacienteResumo, ProfissionalResumo, listarPacientes, listarProfissionais } from './cadastros-api';
 
 export type TipoPergunta =
   | 'likert'
@@ -33,6 +33,19 @@ export interface QuestionarioApi {
   versao: number;
   criadoEm: string;
   atualizadoEm: string;
+}
+
+export interface EnvioQuestionarioApi {
+  id: string;
+  tenantId: string;
+  questionarioId: string;
+  pacienteId: string;
+  status: 'pendente' | 'enviado' | 'respondido' | 'expirado';
+  enviadoEm?: string;
+  respondidoEm?: string;
+  expiraEm?: string;
+  tokenFormulario: string;
+  linkFormulario: string;
 }
 
 export interface ModeloQuestionarioApi {
@@ -104,6 +117,7 @@ export interface SalvarPerguntaEntrada {
 export interface BootstrapQuestionarios {
   categorias: CategoriaPerguntaApi[];
   profissionais: ProfissionalResumo[];
+  pacientes: PacienteResumo[];
   questionarios: RespostaPaginada<QuestionarioApi>;
   modelos: ModeloQuestionarioApi[];
 }
@@ -244,13 +258,24 @@ export async function criarAgendamentoQuestionario(entrada: {
   });
 }
 
+export async function criarEnvioQuestionario(
+  questionarioId: string,
+  entrada: { pacienteId: string; expiraEm?: string }
+): Promise<EnvioQuestionarioApi> {
+  return requisitar<EnvioQuestionarioApi>(`/api/questionarios/${questionarioId}/envios`, {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
 export async function carregarBootstrapQuestionarios(): Promise<BootstrapQuestionarios> {
-  const [categorias, profissionais, questionarios, modelos] = await Promise.all([
+  const [categorias, profissionais, pacientes, questionarios, modelos] = await Promise.all([
     garantirCategoriasPadrao(),
     listarProfissionais().then((resposta) => resposta.itens),
+    listarPacientes().then((resposta) => resposta.itens),
     listarQuestionarios(),
     listarModelosQuestionario()
   ]);
 
-  return { categorias, profissionais, questionarios, modelos };
+  return { categorias, profissionais, pacientes, questionarios, modelos };
 }

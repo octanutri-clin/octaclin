@@ -38,6 +38,8 @@ import { EnvioQuestionarioOrm } from '../../modulos/questionarios/infraestrutura
 import { OpcaoPerguntaOrm } from '../../modulos/questionarios/infraestrutura/opcao-pergunta.orm';
 import { PerguntaOrm } from '../../modulos/questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../../modulos/questionarios/infraestrutura/questionario.orm';
+import { RespostaCheckinOrm } from '../../modulos/questionarios/infraestrutura/resposta-checkin.orm';
+import { RespostaValorOrm } from '../../modulos/questionarios/infraestrutura/resposta-valor.orm';
 import { TenantOrm } from '../../modulos/tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../modulos/usuarios/infraestrutura/usuario.orm';
 
@@ -87,6 +89,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       OpcaoPerguntaOrm,
       AgendamentoQuestionarioOrm,
       EnvioQuestionarioOrm,
+      RespostaCheckinOrm,
+      RespostaValorOrm,
       CanalNotificacaoOrm,
       TemplateMensagemOrm,
       MensagemNotificacaoOrm,

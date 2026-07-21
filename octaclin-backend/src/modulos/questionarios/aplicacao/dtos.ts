@@ -1,5 +1,6 @@
 import {
   ArrayMaxSize,
+  Allow,
   IsArray,
   IsBoolean,
   IsHexColor,
@@ -197,4 +198,28 @@ export class CriarAgendamentoQuestionarioDto {
   @IsOptional()
   @IsString()
   timezone?: string;
+}
+
+export class CriarEnvioQuestionarioManualDto {
+  @IsUUID()
+  pacienteId: string;
+
+  @IsOptional()
+  @IsISO8601()
+  expiraEm?: string;
+}
+
+export class RespostaFormularioPacienteDto {
+  @IsUUID()
+  perguntaId: string;
+
+  @Allow()
+  valor: unknown;
+}
+
+export class FinalizarFormularioPacienteDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RespostaFormularioPacienteDto)
+  respostas: RespostaFormularioPacienteDto[];
 }

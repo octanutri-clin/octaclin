@@ -22,6 +22,7 @@ import {
   AtualizarPerguntaDto,
   CriarAgendamentoQuestionarioDto,
   CriarCategoriaPerguntaDto,
+  CriarEnvioQuestionarioManualDto,
   CriarPerguntaDto,
   CriarQuestionarioAPartirModeloDto,
   CriarQuestionarioDto,
@@ -125,6 +126,22 @@ export class ControladorQuestionarios {
       origemId: id
     });
     return duplicado;
+  }
+
+  @Post('questionarios/:id/envios')
+  async criarEnvioManual(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dados: CriarEnvioQuestionarioManualDto
+  ) {
+    const envio = await this.servicoQuestionarios.criarEnvioQuestionarioManual(usuario.tenantId, id, dados);
+    await this.registrarAuditoria(usuario, requisicao, 'questionarios.envio.criar', 'envio_questionario', envio.id, {
+      questionarioId: id,
+      pacienteId: dados.pacienteId,
+      expiraEm: envio.expiraEm
+    });
+    return envio;
   }
 
   @Post('questionarios/:id/perguntas')

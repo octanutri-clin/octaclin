@@ -1,10 +1,16 @@
 import { ServicoQuestionarios } from './servico-questionarios';
 import { CategoriaPerguntaOrm } from '../infraestrutura/categoria-pergunta.orm';
+import { EnvioQuestionarioOrm } from '../infraestrutura/envio-questionario.orm';
 import { OpcaoPerguntaOrm } from '../infraestrutura/opcao-pergunta.orm';
 import { PerguntaOrm } from '../infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../infraestrutura/questionario.orm';
+import { RespostaCheckinOrm } from '../infraestrutura/resposta-checkin.orm';
+import { RespostaValorOrm } from '../infraestrutura/resposta-valor.orm';
 
-function criarRepositorioFake(nome: 'questionario' | 'pergunta' | 'opcao' | 'categoria', dados: Record<string, any>) {
+function criarRepositorioFake(
+  nome: 'questionario' | 'pergunta' | 'opcao' | 'categoria' | 'envio' | 'respostaCheckin' | 'respostaValor' | 'paciente',
+  dados: Record<string, any>
+) {
   const itens = dados[`${nome}s`] as Record<string, any>[];
 
   return {
@@ -12,13 +18,13 @@ function criarRepositorioFake(nome: 'questionario' | 'pergunta' | 'opcao' | 'cat
     count: jest.fn(async () => itens.length),
     find: jest.fn(async (consulta?: { where?: Record<string, unknown>; order?: Record<string, 'ASC' | 'DESC'> }) => {
       const filtrados = consulta?.where
-        ? itens.filter((item) => Object.entries(consulta.where ?? {}).every(([chave, valor]) => item[chave] === valor))
+        ? itens.filter((item) => Object.entries(consulta.where ?? {}).every(([chave, valor]) => corresponde(item[chave], valor)))
         : [...itens];
       if (consulta?.order?.ordem) return [...filtrados].sort((a, b) => Number(a.ordem) - Number(b.ordem));
       return filtrados;
     }),
     findOne: jest.fn(async (consulta: { where: Record<string, unknown> }) =>
-      itens.find((item) => Object.entries(consulta.where).every(([chave, valor]) => item[chave] === valor)) ?? null
+      itens.find((item) => Object.entries(consulta.where).every(([chave, valor]) => corresponde(item[chave], valor))) ?? null
     ),
     save: jest.fn(async (entrada: Record<string, any> | Record<string, any>[]) => {
       if (Array.isArray(entrada)) return Promise.all(entrada.map((item) => salvar(item)));
@@ -39,6 +45,18 @@ function criarRepositorioFake(nome: 'questionario' | 'pergunta' | 'opcao' | 'cat
     else itens.push(salvo);
     return salvo;
   }
+
+  function corresponde(valorItem: unknown, valorConsulta: unknown) {
+    if (
+      valorConsulta &&
+      typeof valorConsulta === 'object' &&
+      '_type' in valorConsulta &&
+      (valorConsulta as { _type?: string })._type === 'isNull'
+    ) {
+      return valorItem === null || valorItem === undefined;
+    }
+    return valorItem === valorConsulta;
+  }
 }
 
 function criarServico(dados: Record<string, any>) {
@@ -46,7 +64,11 @@ function criarServico(dados: Record<string, any>) {
     categoria: criarRepositorioFake('categoria', dados),
     questionario: criarRepositorioFake('questionario', dados),
     pergunta: criarRepositorioFake('pergunta', dados),
-    opcao: criarRepositorioFake('opcao', dados)
+    opcao: criarRepositorioFake('opcao', dados),
+    envio: criarRepositorioFake('envio', dados),
+    respostaCheckin: criarRepositorioFake('respostaCheckin', dados),
+    respostaValor: criarRepositorioFake('respostaValor', dados),
+    paciente: criarRepositorioFake('paciente', dados)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -54,6 +76,10 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === QuestionarioOrm) return repositorios.questionario;
       if (entidade === PerguntaOrm) return repositorios.pergunta;
       if (entidade === OpcaoPerguntaOrm) return repositorios.opcao;
+      if (entidade === EnvioQuestionarioOrm) return repositorios.envio;
+      if (entidade === RespostaCheckinOrm) return repositorios.respostaCheckin;
+      if (entidade === RespostaValorOrm) return repositorios.respostaValor;
+      if (entidade.name === 'PacienteOrm') return repositorios.paciente;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -65,12 +91,20 @@ function criarServico(dados: Record<string, any>) {
 }
 
 describe('ServicoQuestionarios', () => {
+  beforeEach(() => {
+    process.env.FORMULARIO_PUBLICO_SEGREDO = 'segredo-teste-formulario';
+  });
+
   it('deve listar modelos prontos de questionario', () => {
     const { servico } = criarServico({
       categorias: [],
       questionarios: [],
       perguntas: [],
-      opcaos: []
+      opcaos: [],
+      envios: [],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: []
     });
 
     const modelos = servico.listarModelosQuestionario();
@@ -104,7 +138,11 @@ describe('ServicoQuestionarios', () => {
           ordem: 1
         }
       ],
-      opcaos: [{ id: 'opcao-antiga', tenantId: 'tenant-1', perguntaId: 'p1', rotulo: 'Antiga', valor: 'antiga', ordem: 1 }]
+      opcaos: [{ id: 'opcao-antiga', tenantId: 'tenant-1', perguntaId: 'p1', rotulo: 'Antiga', valor: 'antiga', ordem: 1 }],
+      envios: [],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: []
     });
 
     const resposta = await servico.atualizarPergunta('tenant-1', 'q1', 'p1', {
@@ -177,7 +215,11 @@ describe('ServicoQuestionarios', () => {
       opcaos: [
         { id: 'o1', tenantId: 'tenant-1', perguntaId: 'p2', rotulo: 'Cafe', valor: 'cafe', ordem: 1 },
         { id: 'o2', tenantId: 'tenant-1', perguntaId: 'p2', rotulo: 'Almoco', valor: 'almoco', ordem: 2 }
-      ]
+      ],
+      envios: [],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: []
     });
 
     const duplicado = await servico.duplicarQuestionario('tenant-1', 'q1', {});
@@ -201,7 +243,11 @@ describe('ServicoQuestionarios', () => {
       categorias: [],
       questionarios: [],
       perguntas: [],
-      opcaos: []
+      opcaos: [],
+      envios: [],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: []
     });
 
     const criado = await servico.criarQuestionarioAPartirModelo('tenant-1', 'checkin-adesao-semanal', {
@@ -228,5 +274,134 @@ describe('ServicoQuestionarios', () => {
       })
     );
     expect(dados.opcaos.length).toBeGreaterThan(1);
+  });
+
+  it('deve abrir formulario do paciente a partir do token de envio', async () => {
+    const { servico } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in', descricao: 'Descricao' }],
+      perguntas: [
+        {
+          id: 'p1',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'sim_nao',
+          enunciado: 'Treinou?',
+          peso: '1',
+          obrigatoria: true,
+          configuracao: { secao: 'Rotina', rotuloSim: 'Sim', rotuloNao: 'Nao' },
+          ordem: 1
+        }
+      ],
+      opcaos: [],
+      envios: [{ id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'enviado' }],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1', ultimoCheckinEm: null }]
+    });
+    const token = servico.gerarTokenFormularioPaciente('tenant-1', 'envio-1');
+
+    const formulario = await servico.obterFormularioPaciente(token);
+
+    expect(formulario).toEqual(
+      expect.objectContaining({
+        envioId: 'envio-1',
+        titulo: 'Check-in',
+        status: 'enviado',
+        perguntas: [
+          expect.objectContaining({
+            id: 'p1',
+            enunciado: 'Treinou?',
+            configuracao: expect.objectContaining({ secao: 'Rotina' })
+          })
+        ]
+      })
+    );
+  });
+
+  it('deve criar envio manual com link publico de formulario', async () => {
+    process.env.OCTACLIN_WEB_URL = 'https://app.octaclin.test';
+    const { servico, dados } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in', descricao: 'Descricao' }],
+      perguntas: [],
+      opcaos: [],
+      envios: [],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1', ultimoCheckinEm: null }]
+    });
+
+    const envio = await servico.criarEnvioQuestionarioManual('tenant-1', 'q1', {
+      pacienteId: 'paciente-1'
+    } as any);
+
+    expect(envio).toEqual(
+      expect.objectContaining({
+        id: 'envio-1',
+        status: 'enviado',
+        linkFormulario: expect.stringMatching(/^https:\/\/app\.octaclin\.test\/formularios\//)
+      })
+    );
+    expect(dados.envios[0]).toEqual(expect.objectContaining({ questionarioId: 'q1', pacienteId: 'paciente-1', enviadoEm: expect.any(Date) }));
+  });
+
+  it('deve finalizar formulario salvando respostas e marcando envio como respondido', async () => {
+    const { servico, dados } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in', descricao: 'Descricao' }],
+      perguntas: [
+        {
+          id: 'p1',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'sim_nao',
+          enunciado: 'Treinou?',
+          peso: '1',
+          obrigatoria: true,
+          configuracao: { secao: 'Rotina', rotuloSim: 'Sim', rotuloNao: 'Nao' },
+          ordem: 1
+        },
+        {
+          id: 'p2',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'texto_longo',
+          enunciado: 'Observacoes',
+          peso: '1',
+          obrigatoria: false,
+          configuracao: { secao: 'Rotina' },
+          ordem: 2
+        }
+      ],
+      opcaos: [],
+      envios: [{ id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'enviado' }],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1', ultimoCheckinEm: null }]
+    });
+    const token = servico.gerarTokenFormularioPaciente('tenant-1', 'envio-1');
+
+    const resultado = await servico.finalizarFormularioPaciente(token, {
+      respostas: [
+        { perguntaId: 'p1', valor: true },
+        { perguntaId: 'p2', valor: 'Foi uma boa semana.' }
+      ]
+    });
+
+    expect(resultado).toEqual(expect.objectContaining({ envioId: 'envio-1', status: 'respondido' }));
+    expect(dados.respostaCheckins).toHaveLength(1);
+    expect(dados.respostaValors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ respostaCheckinId: 'respostaCheckin-1', perguntaId: 'p1', valor: true }),
+        expect.objectContaining({ respostaCheckinId: 'respostaCheckin-1', perguntaId: 'p2', valor: 'Foi uma boa semana.' })
+      ])
+    );
+    expect(dados.envios[0].status).toBe('respondido');
+    expect(dados.envios[0].respondidoEm).toBeInstanceOf(Date);
+    expect(dados.pacientes[0].ultimoCheckinEm).toBeInstanceOf(Date);
   });
 });
