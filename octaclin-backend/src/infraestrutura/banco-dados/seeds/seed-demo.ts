@@ -14,6 +14,7 @@ import { UsuarioOrm } from '../../../modulos/usuarios/infraestrutura/usuario.orm
 
 const ids = {
   tenant: '11111111-1111-4111-8111-111111111111',
+  usuarioCliente: '12121212-1212-4121-8121-121212121212',
   usuarioAdmin: '22222222-2222-4222-8222-222222222222',
   usuarioProfissional: '33333333-3333-4333-8333-333333333333',
   profissional: '44444444-4444-4444-8444-444444444444',
@@ -31,6 +32,7 @@ const ids = {
 
 const credenciais = {
   tenantSlug: 'clinica-carla',
+  clienteEmail: 'gestor@octaclin.local',
   adminEmail: 'admin@octaclin.local',
   profissionalEmail: 'dra.carla@example.com',
   pacienteEmail: 'paciente.demo@example.com',
@@ -56,11 +58,21 @@ async function executarSeed() {
     await gerenciador.query("select set_config('app.tenant_id', $1, true)", [ids.tenant]);
 
     const repositorioUsuarios = gerenciador.getRepository(UsuarioOrm);
+    const clienteEmailHash = criptografia.gerarHashBusca(credenciais.clienteEmail);
     const adminEmailHash = criptografia.gerarHashBusca(credenciais.adminEmail);
     const profissionalEmailHash = criptografia.gerarHashBusca(credenciais.profissionalEmail);
     const pacienteEmailHash = criptografia.gerarHashBusca(credenciais.pacienteEmail);
 
     await repositorioUsuarios.save([
+      repositorioUsuarios.create({
+        id: ids.usuarioCliente,
+        tenantId: ids.tenant,
+        emailHash: clienteEmailHash,
+        emailCriptografado: criptografia.criptografar(credenciais.clienteEmail),
+        senhaHash: senhas.gerarHash(credenciais.senha),
+        role: 'Client',
+        ativo: true
+      }),
       repositorioUsuarios.create({
         id: ids.usuarioAdmin,
         tenantId: ids.tenant,
@@ -207,6 +219,7 @@ async function executarSeed() {
 
   console.log('Seed demo OctaClin aplicado.');
   console.log(`Tenant: ${credenciais.tenantSlug}`);
+  console.log(`Cliente: ${credenciais.clienteEmail}`);
   console.log(`SuperAdmin: ${credenciais.adminEmail}`);
   console.log(`Senha: ${credenciais.senha}`);
 }

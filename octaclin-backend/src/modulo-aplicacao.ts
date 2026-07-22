@@ -5,6 +5,7 @@ import { criarOpcoesTypeOrm } from './infraestrutura/banco-dados/opcoes-typeorm'
 import { ModuloAgenda } from './modulos/agenda/modulo-agenda';
 import { ModuloAutomacoes } from './modulos/automacoes/modulo-automacoes';
 import { ModuloAuth } from './modulos/auth/modulo-auth';
+import { ModuloClientes } from './modulos/clientes/modulo-clientes';
 import { ModuloComunicacoes } from './modulos/comunicacoes/modulo-comunicacoes';
 import { ModuloGamificacao } from './modulos/gamificacao/modulo-gamificacao';
 import { ModuloIa } from './modulos/ia/modulo-ia';
@@ -25,6 +26,7 @@ import { ModuloUsuarios } from './modulos/usuarios/modulo-usuarios';
     }),
     ModuloSaude,
     ModuloAuth,
+    ModuloClientes,
     ModuloTenancy,
     ModuloUsuarios,
     ModuloProfissionais,
