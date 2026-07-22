@@ -15,6 +15,9 @@ Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo
 - `RUNBOOK_PRODUCAO.md`
 - `VARIAVEIS_AMBIENTE.md`
 - `CHECKLIST_GO_LIVE.md`
+- `ONBOARDING_DESENVOLVEDOR.md`
+- `COORDENACAO_DESENVOLVIMENTO_IA.md`
+- `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md`
 
 ## Resumo executivo
 
@@ -51,6 +54,9 @@ O sistema esta em staging funcional avancado, mas ainda nao deve ser considerado
 - `fase-*.md`: historico incremental por fase.
 - `RESUMO_FASES_CONCLUIDAS.md`: resumo das fases ja entregues.
 - `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`: roadmap vivo ate producao.
+- `ONBOARDING_DESENVOLVEDOR.md`: guia de entrada para novo desenvolvedor.
+- `COORDENACAO_DESENVOLVIMENTO_IA.md`: fluxo para evitar conflito entre desenvolvedores/agentes.
+- `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md`: acessos e ferramentas recomendadas.
 
 ## Credenciais demo locais
 

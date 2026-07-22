@@ -82,6 +82,9 @@ Atualizado em 2026-07-22.
 - `RUNBOOK_PRODUCAO.md`: operacao.
 - `VARIAVEIS_AMBIENTE.md`: env vars sem secrets.
 - `CHECKLIST_GO_LIVE.md`: liberacao para clientes reais.
+- `ONBOARDING_DESENVOLVEDOR.md`: entrada de novos desenvolvedores/agentes.
+- `COORDENACAO_DESENVOLVIMENTO_IA.md`: regras para trabalho alternado entre pessoas e IAs.
+- `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md`: ferramentas, plugins e acessos recomendados.
 
 ## Risco principal atual
 
