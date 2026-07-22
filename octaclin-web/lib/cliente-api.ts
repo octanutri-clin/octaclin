@@ -128,6 +128,20 @@ export interface RespostaConvitesUsuarioClienteApi {
   total: number;
 }
 
+export interface HistoricoConviteUsuarioClienteApi extends ConviteUsuarioClienteApi {
+  usadoEm?: string;
+  revogadoEm?: string;
+  convidadoEm?: string;
+  reenviadoPorUsuarioId?: string;
+  revogadoPorUsuarioId?: string;
+  motivoRevogacao?: string;
+}
+
+export interface RespostaHistoricoConvitesUsuarioClienteApi {
+  itens: HistoricoConviteUsuarioClienteApi[];
+  total: number;
+}
+
 export interface CriarUsuarioClienteEntrada {
   email: string;
   role: PapelUsuarioClienteCriavelApi;
@@ -191,6 +205,12 @@ export async function listarConvitesUsuariosCliente(): Promise<RespostaConvitesU
   const resposta = await fetch('/api/cliente/usuarios/convites', { cache: 'no-store' });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
   return resposta.json() as Promise<RespostaConvitesUsuarioClienteApi>;
+}
+
+export async function listarHistoricoConvitesUsuariosCliente(): Promise<RespostaHistoricoConvitesUsuarioClienteApi> {
+  const resposta = await fetch('/api/cliente/usuarios/convites/historico', { cache: 'no-store' });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<RespostaHistoricoConvitesUsuarioClienteApi>;
 }
 
 export async function criarUsuarioCliente(entrada: CriarUsuarioClienteEntrada): Promise<UsuarioClienteApi> {

@@ -19,7 +19,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Recuperacao de senha | Pronto | Fluxo seguro e testes focados. | Aplicar rate limit e lockout. |
 | Permissoes finas | Pronto | Matriz refinada, guard backend, BFF e middleware web por permissao. | Revalidar em producao isolada e ampliar testes cross-tenant. |
 | Multi-tenant | Parcial | Tenant aplicado nos fluxos principais. | Criar testes negativos cross-tenant para rotas criticas. |
-| Portal do cliente | Parcial | Base, resumo real, configuracoes, perfil fiscal, usuarios e convites administrativos. | Historico de convites, assinatura e limites. |
+| Portal do cliente | Parcial | Base, resumo real, configuracoes, perfil fiscal, usuarios, convites administrativos e historico/exportacao de convites. | Assinatura e limites. |
 | Portal do profissional | Parcial | Console operacional, pacientes, agenda, formularios e comunicacoes. | Dashboard diario, prontuario, evolucoes e materiais. |
 | Portal do paciente | Parcial | Primeiro acesso, historico, perfil, formularios e LGPD. | UX final, tarefas, materiais, check-ins e notificacoes. |
 | Formularios | Pronto | Editor, modelos, preview, coleta, respostas e leitura clinica. | QA E2E com jornada real e dados realistas. |
@@ -27,7 +27,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Email | Parcial | Envio validado com Gmail. | Identidade de envio, SPF/DKIM/DMARC quando houver dominio proprio. |
 | WhatsApp | Parcial | Envio, webhook, status, inbox, associacao e notas. | Templates aprovados, mapeamento por evento e automacoes. |
 | LGPD | Parcial | Portal paciente e painel operacional LGPD. | Termos, politica, consentimentos versionados, retencao e exportacao completa. |
-| Auditoria | Parcial | Auditoria operacional e convites administrativos. | Cobrir mutacoes sensiveis restantes e exportacoes. |
+| Auditoria | Parcial | Auditoria operacional, convites administrativos e perfil fiscal. | Cobrir mutacoes sensiveis restantes e exportacoes. |
 | Billing/assinatura | Pendente | Planejado no roadmap. | Modelo de planos, limites, assinatura e bloqueios suaves. |
 | Observabilidade | Pendente | Healthcheck basico e runbook. | Logs estruturados, alertas, filas, dashboards e incidentes. |
 | Backups/restore | Pendente | Planejado para Neon/Postgres. | Configurar backup e testar restore real. |
@@ -79,4 +79,4 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Seguir para a proxima fase funcional: convite, reenvio e revogacao com auditoria operacional completa, Fase 98.
+Seguir para a proxima fase funcional: modelo de planos e limites SaaS, Fase 99.

@@ -1,6 +1,6 @@
 # OctaClin - Handoff tecnico
 
-Atualizado em 2026-07-22, apos a Fase 97 e a documentacao operacional para agentes.
+Atualizado em 2026-07-22, apos a Fase 98 e a documentacao operacional para agentes.
 
 Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo, leia tambem:
 
@@ -80,7 +80,7 @@ Principais modulos:
 - `auth`: login, refresh token, recuperacao de senha, papeis e permissoes.
 - `tenancy`: tenant e executor tenant-aware.
 - `usuarios`: entidade base de usuarios.
-- `clientes`: portal do cliente, resumo, configuracoes, perfil fiscal, usuarios administrativos e convites.
+- `clientes`: portal do cliente, resumo, configuracoes, perfil fiscal, usuarios administrativos, convites e historico de convites.
 - `pacientes`: cadastros, portal do paciente, convites e LGPD.
 - `profissionais`: cadastro de profissionais.
 - `questionarios`: modelos, perguntas, envios e respostas.
@@ -152,8 +152,8 @@ Leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md` antes de alterar qualquer i
 
 ## Estado de roadmap
 
-- Ultima fase concluida: Fase 97 - Perfil da empresa/consultoria e dados fiscais.
-- Proxima fase planejada: Fase 98 - Convite, reenvio e revogacao com auditoria operacional completa.
+- Ultima fase concluida: Fase 98 - Convite, reenvio e revogacao com auditoria operacional completa.
+- Proxima fase planejada: Fase 99 - Modelo de planos e limites SaaS.
 - Roadmap completo: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regra de continuidade

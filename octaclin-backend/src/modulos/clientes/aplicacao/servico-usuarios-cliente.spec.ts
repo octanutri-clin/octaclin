@@ -281,6 +281,173 @@ describe('ServicoUsuariosCliente', () => {
     });
   });
 
+  it('deve listar historico completo de convites administrativos por usuario', async () => {
+    const { servico, repositorioTokens } = criarServico(
+      [
+        {
+          id: 'colaborador-1',
+          tenantId: 'tenant-1',
+          emailCriptografado: Buffer.from('email:agenda@octaclin.local'),
+          emailHash: 'hash:agenda@octaclin.local',
+          senhaHash: 'senha-aleatoria',
+          role: 'Collaborator',
+          ativo: false,
+          criadoEm: new Date('2026-07-20T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        },
+        {
+          id: 'profissional-1',
+          tenantId: 'tenant-1',
+          emailCriptografado: Buffer.from('email:prof@octaclin.local'),
+          emailHash: 'hash:prof@octaclin.local',
+          senhaHash: 'senha-aleatoria',
+          role: 'Professional',
+          ativo: true,
+          criadoEm: new Date('2026-07-20T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      [
+        {
+          id: 'token-2',
+          tenantId: 'tenant-1',
+          usuarioId: 'colaborador-1',
+          emailHash: 'hash:agenda@octaclin.local',
+          tokenHash: 'hash-token-2',
+          status: 'pendente',
+          expiraEm: new Date('2026-07-30T10:00:00.000Z'),
+          payload: {
+            origem: 'convite_usuario_cliente',
+            role: 'Collaborator',
+            reenviadoPorUsuarioId: 'cliente-2',
+            convidadoEm: '2026-07-23T10:00:00.000Z'
+          },
+          criadoEm: new Date('2026-07-23T10:00:00.000Z')
+        },
+        {
+          id: 'token-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'colaborador-1',
+          emailHash: 'hash:agenda@octaclin.local',
+          tokenHash: 'hash-token-1',
+          status: 'revogado',
+          expiraEm: new Date('2026-07-29T10:00:00.000Z'),
+          revogadoEm: new Date('2026-07-23T09:00:00.000Z'),
+          payload: {
+            origem: 'convite_usuario_cliente',
+            role: 'Collaborator',
+            criadoPorUsuarioId: 'cliente-1',
+            revogadoPorUsuarioId: 'cliente-2',
+            motivoRevogacao: 'reenviado',
+            convidadoEm: '2026-07-22T10:00:00.000Z'
+          },
+          criadoEm: new Date('2026-07-22T10:00:00.000Z')
+        },
+        {
+          id: 'token-3',
+          tenantId: 'tenant-1',
+          usuarioId: 'profissional-1',
+          emailHash: 'hash:prof@octaclin.local',
+          tokenHash: 'hash-token-3',
+          status: 'usado',
+          usadoEm: new Date('2026-07-24T10:00:00.000Z'),
+          expiraEm: new Date('2026-07-31T10:00:00.000Z'),
+          payload: {
+            origem: 'convite_usuario_cliente',
+            role: 'Professional',
+            criadoPorUsuarioId: 'cliente-1',
+            convidadoEm: '2026-07-24T09:00:00.000Z'
+          },
+          criadoEm: new Date('2026-07-24T09:00:00.000Z')
+        }
+      ]
+    );
+
+    const resposta = await servico.listarHistoricoConvites('tenant-1');
+
+    expect(repositorioTokens.find).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant-1' },
+      order: { criadoEm: 'DESC' }
+    });
+    expect(resposta.total).toBe(3);
+    expect(resposta.itens).toEqual([
+      expect.objectContaining({
+        id: 'token-3',
+        usuarioId: 'profissional-1',
+        email: 'prof@octaclin.local',
+        role: 'Professional',
+        status: 'usado',
+        criadoPorUsuarioId: 'cliente-1',
+        usadoEm: new Date('2026-07-24T10:00:00.000Z')
+      }),
+      expect.objectContaining({
+        id: 'token-2',
+        usuarioId: 'colaborador-1',
+        email: 'agenda@octaclin.local',
+        role: 'Collaborator',
+        status: 'pendente',
+        reenviadoPorUsuarioId: 'cliente-2'
+      }),
+      expect.objectContaining({
+        id: 'token-1',
+        usuarioId: 'colaborador-1',
+        email: 'agenda@octaclin.local',
+        role: 'Collaborator',
+        status: 'revogado',
+        criadoPorUsuarioId: 'cliente-1',
+        revogadoPorUsuarioId: 'cliente-2',
+        motivoRevogacao: 'reenviado',
+        revogadoEm: new Date('2026-07-23T09:00:00.000Z')
+      })
+    ]);
+    expect(JSON.stringify(resposta)).not.toContain('hash-token');
+  });
+
+  it('deve exportar historico de convites administrativos em csv simples', async () => {
+    const { servico } = criarServico(
+      [
+        {
+          id: 'colaborador-1',
+          tenantId: 'tenant-1',
+          emailCriptografado: Buffer.from('email:agenda@octaclin.local'),
+          emailHash: 'hash:agenda@octaclin.local',
+          senhaHash: 'senha-aleatoria',
+          role: 'Collaborator',
+          ativo: false,
+          criadoEm: new Date('2026-07-20T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      [
+        {
+          id: 'token-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'colaborador-1',
+          emailHash: 'hash:agenda@octaclin.local',
+          tokenHash: 'hash-token-1',
+          status: 'revogado',
+          expiraEm: new Date('2026-07-29T10:00:00.000Z'),
+          revogadoEm: new Date('2026-07-23T09:00:00.000Z'),
+          payload: {
+            origem: 'convite_usuario_cliente',
+            role: 'Collaborator',
+            criadoPorUsuarioId: 'cliente-1',
+            revogadoPorUsuarioId: 'cliente-2',
+            motivoRevogacao: 'manual',
+            convidadoEm: '2026-07-22T10:00:00.000Z'
+          },
+          criadoEm: new Date('2026-07-22T10:00:00.000Z')
+        }
+      ]
+    );
+
+    const csv = await servico.exportarHistoricoConvitesCsv('tenant-1');
+
+    expect(csv).toContain('email,role,status,criado_em,expira_em,usado_em,revogado_em,criado_por,reenviado_por,revogado_por,motivo_revogacao,email_erro');
+    expect(csv).toContain('agenda@octaclin.local,Collaborator,revogado,2026-07-22T10:00:00.000Z,2026-07-29T10:00:00.000Z,,2026-07-23T09:00:00.000Z,cliente-1,,cliente-2,manual,');
+    expect(csv).not.toContain('hash-token');
+  });
+
   it('deve reenviar convite revogando tokens pendentes anteriores', async () => {
     process.env.EXPOR_LINK_RECUPERACAO_SENHA = 'true';
     const tokenAntigo: Record<string, any> = {

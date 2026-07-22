@@ -1,6 +1,6 @@
 # OctaClin - Mapa de rotas e permissoes
 
-Atualizado apos a Fase 95. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
+Atualizado apos a Fase 98. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
 
 ## Papeis
 
@@ -120,6 +120,8 @@ Inclui permissoes de `Professional` e adiciona:
 | `/api/cliente/usuarios` | `/cliente/usuarios` | GET exige `cliente.usuarios.ler`; POST exige `cliente.usuarios.convidar` |
 | `/api/cliente/usuarios/[id]` | `/cliente/usuarios/:id` | DELETE exige `cliente.usuarios.desativar` |
 | `/api/cliente/usuarios/convites` | `/cliente/usuarios/convites` | GET exige `cliente.convites.gerenciar` |
+| `/api/cliente/usuarios/convites/historico` | `/cliente/usuarios/convites/historico` | GET exige `cliente.convites.gerenciar` |
+| `/api/cliente/usuarios/convites/historico/exportar.csv` | `/cliente/usuarios/convites/historico/exportar.csv` | GET exige `cliente.convites.gerenciar` |
 | `/api/cliente/usuarios/[id]/convite/reenvio` | `/cliente/usuarios/:id/convite/reenvio` | POST exige `cliente.convites.gerenciar` |
 | `/api/cliente/usuarios/[id]/convite` | `/cliente/usuarios/:id/convite` | DELETE exige `cliente.convites.gerenciar` |
 

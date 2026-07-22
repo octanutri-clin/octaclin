@@ -7,8 +7,8 @@ Atualizado em 2026-07-22.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 97 - Perfil da empresa/consultoria e dados fiscais.
-- Proxima fase planejada: Fase 98 - Convite, reenvio e revogacao com auditoria operacional completa.
+- Ultima fase concluida: Fase 98 - Convite, reenvio e revogacao com auditoria operacional completa.
+- Proxima fase planejada: Fase 99 - Modelo de planos e limites SaaS.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -29,6 +29,7 @@ Atualizado em 2026-07-22.
 - Gestao de usuarios administrativos do cliente.
 - Convites administrativos por email.
 - Reenvio e revogacao de convites administrativos.
+- Historico e exportacao CSV de convites administrativos.
 - Agenda interna com integracao Google Calendar.
 - Comunicacoes por email.
 - WhatsApp Meta com envio, webhook, status, inbox, associacao e notas.
@@ -37,7 +38,6 @@ Atualizado em 2026-07-22.
 
 ## O que ainda falta antes de producao real
 
-- Historico operacional completo de convites administrativos.
 - Planos, limites e assinatura.
 - Dashboard do profissional.
 - Prontuario/linha do tempo clinica do paciente para profissional.

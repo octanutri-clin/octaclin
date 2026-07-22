@@ -115,6 +115,55 @@ async function prepararSessaoCliente(page) {
     });
   });
 
+  await page.route('**/api/cliente/usuarios/convites/historico', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            id: 'token-3',
+            usuarioId: 'profissional-1',
+            tenantId: 'tenant-1',
+            email: 'prof@octaclin.local',
+            role: 'Professional',
+            status: 'usado',
+            expiraEm: '2026-07-31T10:00:00.000Z',
+            criadoEm: '2026-07-24T09:00:00.000Z',
+            usadoEm: '2026-07-24T10:00:00.000Z',
+            criadoPorUsuarioId: 'cliente-1'
+          },
+          {
+            id: 'token-2',
+            usuarioId: 'colaborador-1',
+            tenantId: 'tenant-1',
+            email: 'agenda@octaclin.local',
+            role: 'Collaborator',
+            status: 'pendente',
+            expiraEm: '2026-07-30T10:00:00.000Z',
+            criadoEm: '2026-07-23T10:00:00.000Z',
+            reenviadoPorUsuarioId: 'cliente-2'
+          },
+          {
+            id: 'token-1',
+            usuarioId: 'colaborador-1',
+            tenantId: 'tenant-1',
+            email: 'agenda@octaclin.local',
+            role: 'Collaborator',
+            status: 'revogado',
+            expiraEm: '2026-07-29T10:00:00.000Z',
+            criadoEm: '2026-07-22T10:00:00.000Z',
+            revogadoEm: '2026-07-23T09:00:00.000Z',
+            criadoPorUsuarioId: 'cliente-1',
+            revogadoPorUsuarioId: 'cliente-2',
+            motivoRevogacao: 'reenviado'
+          }
+        ],
+        total: 3
+      })
+    });
+  });
+
   await page.route('**/api/cliente/usuarios/convites', async (route) => {
     await route.fulfill({
       status: 200,
@@ -280,6 +329,17 @@ test.describe('portal do cliente', () => {
     await expect(convitesUsuarios.getByText('Expira em 29/07/26')).toBeVisible();
     await expect(convitesUsuarios.getByRole('button', { name: 'Reenviar convite para agenda@octaclin.local' })).toBeVisible();
     await expect(convitesUsuarios.getByRole('button', { name: 'Revogar convite de agenda@octaclin.local' })).toBeVisible();
+    const historicoConvites = page.locator('#historico-convites');
+    await expect(historicoConvites.getByRole('heading', { name: 'Historico de convites' })).toBeVisible();
+    await expect(historicoConvites.getByRole('link', { name: 'Exportar CSV' })).toHaveAttribute(
+      'href',
+      '/api/cliente/usuarios/convites/historico/exportar.csv'
+    );
+    await expect(historicoConvites.getByText('3 eventos de convite')).toBeVisible();
+    await expect(historicoConvites.getByText('prof@octaclin.local')).toBeVisible();
+    await expect(historicoConvites.getByText('Usado em 24/07/26')).toBeVisible();
+    await expect(historicoConvites.getByText('Reenviado por cliente-2')).toBeVisible();
+    await expect(historicoConvites.getByText('Revogado por cliente-2')).toBeVisible();
     await expect(page.getByText('Acesso profissional separado')).toBeVisible();
     const configuracoes = page.locator('#configuracoes');
     await expect(configuracoes.getByRole('heading', { name: 'Configuracoes da conta' })).toBeVisible();

@@ -9,6 +9,7 @@ import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import {
   ConviteUsuarioClienteRespostaDto,
   CriarUsuarioClienteDto,
+  HistoricoConviteUsuarioClienteRespostaDto,
   PapelUsuarioClienteAdministrativo,
   UsuarioClienteRespostaDto
 } from './dtos';
@@ -120,6 +121,67 @@ export class ServicoUsuariosCliente {
     });
   }
 
+  async listarHistoricoConvites(tenantId: string): Promise<{ itens: HistoricoConviteUsuarioClienteRespostaDto[]; total: number }> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const tokens = await gerenciador.getRepository(TokenRedefinicaoSenhaOrm).find({
+        where: { tenantId },
+        order: { criadoEm: 'DESC' }
+      });
+      const itens: HistoricoConviteUsuarioClienteRespostaDto[] = [];
+
+      for (const token of tokens
+        .filter((item) => this.ehTokenConviteAdministrativo(item))
+        .sort((a, b) => b.criadoEm.getTime() - a.criadoEm.getTime())) {
+        const usuario = await gerenciador.getRepository(UsuarioOrm).findOne({
+          where: { id: token.usuarioId, tenantId }
+        });
+        if (!usuario || !this.ehPapelAdministrativo(usuario.role)) continue;
+
+        itens.push(this.mapearHistoricoConvite(token, usuario));
+      }
+
+      return { itens, total: itens.length };
+    });
+  }
+
+  async exportarHistoricoConvitesCsv(tenantId: string): Promise<string> {
+    const historico = await this.listarHistoricoConvites(tenantId);
+    const cabecalho = [
+      'email',
+      'role',
+      'status',
+      'criado_em',
+      'expira_em',
+      'usado_em',
+      'revogado_em',
+      'criado_por',
+      'reenviado_por',
+      'revogado_por',
+      'motivo_revogacao',
+      'email_erro'
+    ];
+    const linhas = historico.itens.map((item) =>
+      [
+        item.email,
+        item.role,
+        item.status,
+        this.dataIso(item.criadoEm),
+        this.dataIso(item.expiraEm),
+        this.dataIso(item.usadoEm),
+        this.dataIso(item.revogadoEm),
+        item.criadoPorUsuarioId ?? '',
+        item.reenviadoPorUsuarioId ?? '',
+        item.revogadoPorUsuarioId ?? '',
+        item.motivoRevogacao ?? '',
+        item.emailErro ?? ''
+      ]
+        .map((valor) => this.campoCsv(valor))
+        .join(',')
+    );
+
+    return [cabecalho.join(','), ...linhas].join('\n');
+  }
+
   async reenviarConvite(tenantId: string, usuarioExecutorId: string, usuarioId: string): Promise<UsuarioClienteRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const usuario = await this.obterUsuarioConvidavel(gerenciador, tenantId, usuarioId);
@@ -198,6 +260,30 @@ export class ServicoUsuariosCliente {
       ultimoLoginEm: usuario.ultimoLoginEm,
       criadoEm: usuario.criadoEm,
       atualizadoEm: usuario.atualizadoEm
+    };
+  }
+
+  private mapearHistoricoConvite(
+    token: TokenRedefinicaoSenhaOrm,
+    usuario: UsuarioOrm
+  ): HistoricoConviteUsuarioClienteRespostaDto {
+    return {
+      id: token.id,
+      usuarioId: token.usuarioId,
+      tenantId: token.tenantId,
+      email: this.criptografia.descriptografar(usuario.emailCriptografado),
+      role: (textoPayload(token.payload, 'role') ?? usuario.role) as PapelUsuarioClienteAdministrativo,
+      status: token.status,
+      expiraEm: token.expiraEm,
+      criadoEm: token.criadoEm,
+      usadoEm: token.usadoEm,
+      revogadoEm: token.revogadoEm,
+      convidadoEm: textoPayload(token.payload, 'convidadoEm'),
+      criadoPorUsuarioId: textoPayload(token.payload, 'criadoPorUsuarioId'),
+      reenviadoPorUsuarioId: textoPayload(token.payload, 'reenviadoPorUsuarioId'),
+      revogadoPorUsuarioId: textoPayload(token.payload, 'revogadoPorUsuarioId'),
+      motivoRevogacao: textoPayload(token.payload, 'motivoRevogacao'),
+      emailErro: textoPayload(token.payload, 'emailErro')
     };
   }
 
@@ -333,5 +419,13 @@ export class ServicoUsuariosCliente {
 
   private deveExporLinkPrimeiroAcesso() {
     return process.env.NODE_ENV !== 'production' || process.env.EXPOR_LINK_RECUPERACAO_SENHA === 'true';
+  }
+
+  private dataIso(valor?: Date) {
+    return valor instanceof Date ? valor.toISOString() : '';
+  }
+
+  private campoCsv(valor: string) {
+    return /[",\n\r]/.test(valor) ? `"${valor.replace(/"/g, '""')}"` : valor;
   }
 }

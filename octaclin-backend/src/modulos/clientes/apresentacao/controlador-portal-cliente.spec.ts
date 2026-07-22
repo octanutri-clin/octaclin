@@ -55,4 +55,57 @@ describe('ControladorPortalCliente', () => {
     });
     expect(JSON.stringify(servicoAuditoria.registrar.mock.calls)).not.toContain('12.345.678/0001-90');
   });
+
+  it('deve auditar criacao, reenvio e revogacao de convites administrativos', async () => {
+    const servicoPortalCliente = {};
+    const servicoUsuariosCliente = {
+      criar: jest.fn(async () => ({ id: 'usuario-1', email: 'novo@octaclin.local', role: 'Collaborator' })),
+      reenviarConvite: jest.fn(async () => ({ id: 'usuario-1', email: 'novo@octaclin.local', role: 'Collaborator' })),
+      revogarConvite: jest.fn(async () => undefined)
+    };
+    const servicoAuditoria = {
+      registrar: jest.fn(async () => undefined)
+    };
+    const controlador = new ControladorPortalCliente(servicoPortalCliente as never, servicoUsuariosCliente as never, servicoAuditoria as never);
+    const usuario = { tenantId: 'tenant-1', usuarioId: 'cliente-1' } as never;
+    const requisicao = { ip: '127.0.0.1', headers: { 'user-agent': 'jest' } } as never;
+
+    await controlador.criarUsuario(usuario, requisicao, { email: 'novo@octaclin.local', role: 'Collaborator' } as never);
+    await controlador.reenviarConvite(usuario, requisicao, 'usuario-1');
+    await controlador.revogarConvite(usuario, requisicao, 'usuario-1');
+
+    expect(servicoAuditoria.registrar).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'cliente-1',
+        acao: 'cliente.convite.criar',
+        recursoTipo: 'usuario',
+        recursoId: 'usuario-1',
+        metadados: { role: 'Collaborator', email: 'novo@octaclin.local' }
+      })
+    );
+    expect(servicoAuditoria.registrar).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'cliente-1',
+        acao: 'cliente.convite.reenviar',
+        recursoTipo: 'usuario',
+        recursoId: 'usuario-1',
+        metadados: { role: 'Collaborator', email: 'novo@octaclin.local' }
+      })
+    );
+    expect(servicoAuditoria.registrar).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'cliente-1',
+        acao: 'cliente.convite.revogar',
+        recursoTipo: 'usuario',
+        recursoId: 'usuario-1',
+        metadados: { usuarioAlvoId: 'usuario-1' }
+      })
+    );
+  });
 });

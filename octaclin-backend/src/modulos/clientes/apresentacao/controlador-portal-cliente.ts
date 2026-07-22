@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
@@ -80,10 +80,38 @@ export class ControladorPortalCliente {
     return this.servicoUsuariosCliente.listarConvites(usuario.tenantId);
   }
 
+  @Get('usuarios/convites/historico')
+  @Permissoes('cliente.convites.gerenciar')
+  listarHistoricoConvites(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoUsuariosCliente.listarHistoricoConvites(usuario.tenantId);
+  }
+
+  @Get('usuarios/convites/historico/exportar.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="historico-convites-octaclin.csv"')
+  @Permissoes('cliente.convites.gerenciar')
+  exportarHistoricoConvites(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoUsuariosCliente.exportarHistoricoConvitesCsv(usuario.tenantId);
+  }
+
   @Post('usuarios')
   @Permissoes('cliente.usuarios.convidar')
-  criarUsuario(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: CriarUsuarioClienteDto) {
-    return this.servicoUsuariosCliente.criar(usuario.tenantId, usuario.usuarioId, dados);
+  async criarUsuario(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Body() dados: CriarUsuarioClienteDto) {
+    const criado = await this.servicoUsuariosCliente.criar(usuario.tenantId, usuario.usuarioId, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'cliente.convite.criar',
+      recursoTipo: 'usuario',
+      recursoId: criado.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        role: criado.role,
+        email: criado.email
+      }
+    });
+    return criado;
   }
 
   @Delete('usuarios/:id')
@@ -94,14 +122,40 @@ export class ControladorPortalCliente {
 
   @Post('usuarios/:id/convite/reenvio')
   @Permissoes('cliente.convites.gerenciar')
-  reenviarConvite(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
-    return this.servicoUsuariosCliente.reenviarConvite(usuario.tenantId, usuario.usuarioId, id);
+  async reenviarConvite(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Param('id', ParseUUIDPipe) id: string) {
+    const reenviado = await this.servicoUsuariosCliente.reenviarConvite(usuario.tenantId, usuario.usuarioId, id);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'cliente.convite.reenviar',
+      recursoTipo: 'usuario',
+      recursoId: reenviado.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        role: reenviado.role,
+        email: reenviado.email
+      }
+    });
+    return reenviado;
   }
 
   @Delete('usuarios/:id/convite')
   @Permissoes('cliente.convites.gerenciar')
-  revogarConvite(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
-    return this.servicoUsuariosCliente.revogarConvite(usuario.tenantId, usuario.usuarioId, id);
+  async revogarConvite(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Param('id', ParseUUIDPipe) id: string) {
+    await this.servicoUsuariosCliente.revogarConvite(usuario.tenantId, usuario.usuarioId, id);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'cliente.convite.revogar',
+      recursoTipo: 'usuario',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        usuarioAlvoId: id
+      }
+    });
   }
 
   private obterUserAgent(requisicao: Request): string | undefined {

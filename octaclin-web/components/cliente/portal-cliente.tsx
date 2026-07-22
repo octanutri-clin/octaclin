@@ -8,7 +8,9 @@ import {
   Building2,
   CheckCircle2,
   CreditCard,
+  Download,
   FileText,
+  History,
   MailCheck,
   RefreshCcw,
   Save,
@@ -26,6 +28,7 @@ import {
   ConfiguracoesPortalClienteApi,
   PerfilEmpresaClienteApi,
   RespostaConvitesUsuarioClienteApi,
+  RespostaHistoricoConvitesUsuarioClienteApi,
   PapelUsuarioClienteCriavelApi,
   RespostaUsuariosClienteApi,
   ResumoPortalClienteApi,
@@ -36,6 +39,7 @@ import {
   obterConfiguracoesCliente,
   obterPerfilEmpresaCliente,
   listarConvitesUsuariosCliente,
+  listarHistoricoConvitesUsuariosCliente,
   listarUsuariosCliente,
   obterResumoPortalCliente,
   reenviarConviteUsuarioCliente,
@@ -59,6 +63,21 @@ function formatarData(valor?: string) {
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return valor;
   return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(data);
+}
+
+function descreverHistoricoConvite(item: {
+  status: string;
+  criadoPorUsuarioId?: string;
+  reenviadoPorUsuarioId?: string;
+  revogadoPorUsuarioId?: string;
+  usadoEm?: string;
+  revogadoEm?: string;
+}) {
+  if (item.status === 'usado' && item.usadoEm) return `Usado em ${formatarData(item.usadoEm)}`;
+  if (item.status === 'revogado' && item.revogadoPorUsuarioId) return `Revogado por ${item.revogadoPorUsuarioId}`;
+  if (item.reenviadoPorUsuarioId) return `Reenviado por ${item.reenviadoPorUsuarioId}`;
+  if (item.criadoPorUsuarioId) return `Criado por ${item.criadoPorUsuarioId}`;
+  return 'Evento registrado';
 }
 
 const formularioUsuarioInicial = {
@@ -121,6 +140,7 @@ export function PortalCliente() {
   const [resumo, setResumo] = useState<ResumoPortalClienteApi | null>(null);
   const [usuarios, setUsuarios] = useState<RespostaUsuariosClienteApi | null>(null);
   const [convites, setConvites] = useState<RespostaConvitesUsuarioClienteApi | null>(null);
+  const [historicoConvites, setHistoricoConvites] = useState<RespostaHistoricoConvitesUsuarioClienteApi | null>(null);
   const [configuracoes, setConfiguracoes] = useState<ConfiguracoesPortalClienteApi | null>(null);
   const [perfilEmpresa, setPerfilEmpresa] = useState<PerfilEmpresaClienteApi | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -133,6 +153,7 @@ export function PortalCliente() {
   const [carregando, setCarregando] = useState(true);
   const [carregandoUsuarios, setCarregandoUsuarios] = useState(true);
   const [carregandoConvites, setCarregandoConvites] = useState(true);
+  const [carregandoHistoricoConvites, setCarregandoHistoricoConvites] = useState(true);
   const [carregandoConfiguracoes, setCarregandoConfiguracoes] = useState(true);
   const [carregandoPerfilEmpresa, setCarregandoPerfilEmpresa] = useState(true);
   const [salvandoUsuario, setSalvandoUsuario] = useState(false);
@@ -222,6 +243,19 @@ export function PortalCliente() {
     }
   }, []);
 
+  const carregarHistoricoConvites = useCallback(async () => {
+    setCarregandoHistoricoConvites(true);
+    setErroUsuarios(null);
+
+    try {
+      setHistoricoConvites(await listarHistoricoConvitesUsuariosCliente());
+    } catch (erroAtual) {
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar historico de convites.');
+    } finally {
+      setCarregandoHistoricoConvites(false);
+    }
+  }, []);
+
   const carregarConfiguracoes = useCallback(async () => {
     setCarregandoConfiguracoes(true);
     setErroConfiguracoes(null);
@@ -283,6 +317,7 @@ export function PortalCliente() {
       setFormularioUsuario(formularioUsuarioInicial);
       await carregarUsuarios();
       await carregarConvites();
+      await carregarHistoricoConvites();
       setSucessoUsuarios('Convite enviado por email.');
     } catch (erroAtual) {
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao convidar usuario.');
@@ -303,6 +338,7 @@ export function PortalCliente() {
       await desativarUsuarioCliente(id);
       await carregarUsuarios();
       await carregarConvites();
+      await carregarHistoricoConvites();
       setSucessoUsuarios('Usuario desativado.');
     } catch (erroAtual) {
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desativar usuario.');
@@ -319,6 +355,7 @@ export function PortalCliente() {
     try {
       await reenviarConviteUsuarioCliente(usuarioId);
       await carregarConvites();
+      await carregarHistoricoConvites();
       setSucessoUsuarios(`Convite reenviado para ${email}.`);
     } catch (erroAtual) {
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao reenviar convite.');
@@ -339,6 +376,7 @@ export function PortalCliente() {
       await revogarConviteUsuarioCliente(usuarioId);
       await carregarUsuarios();
       await carregarConvites();
+      await carregarHistoricoConvites();
       setSucessoUsuarios(`Convite revogado para ${email}.`);
     } catch (erroAtual) {
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao revogar convite.');
@@ -454,8 +492,10 @@ export function PortalCliente() {
 
     if (podeGerenciarConvites) {
       void carregarConvites();
+      void carregarHistoricoConvites();
     } else {
       setCarregandoConvites(false);
+      setCarregandoHistoricoConvites(false);
     }
 
     if (podeGerenciarConfiguracoes) {
@@ -472,6 +512,7 @@ export function PortalCliente() {
     podeGerenciarConfiguracoes,
     carregarUsuarios,
     carregarConvites,
+    carregarHistoricoConvites,
     carregarConfiguracoes,
     carregarPerfilEmpresa
   ]);
@@ -728,6 +769,53 @@ export function PortalCliente() {
                   ))
                 ) : (
                   <div className="px-4 py-6 text-sm text-[#596273]">Nenhum convite administrativo pendente.</div>
+                )}
+              </div>
+            </section>
+            ) : null}
+
+            {podeGerenciarConvites ? (
+            <section id="historico-convites" className="rounded-md border border-linha bg-white" aria-busy={carregandoHistoricoConvites}>
+              <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-2">
+                  <History size={16} className="text-[#596273]" />
+                  <div>
+                    <h3 className="text-sm font-semibold">Historico de convites</h3>
+                    <p className="mt-1 text-xs text-[#596273]">
+                      {historicoConvites
+                        ? `${formatarQuantidade(historicoConvites.total, 'evento de convite', 'eventos de convite')}`
+                        : 'Carregando historico operacional'}
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href="/api/cliente/usuarios/convites/historico/exportar.csv"
+                  className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 text-sm font-medium text-[#343c4b] hover:bg-white"
+                >
+                  <Download size={16} />
+                  Exportar CSV
+                </a>
+              </div>
+              <div className="divide-y divide-linha">
+                {historicoConvites?.itens.length ? (
+                  historicoConvites.itens.map((convite) => (
+                    <div key={convite.id} className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[1fr_140px_180px_1fr] lg:items-center">
+                      <div className="min-w-0">
+                        <p className="break-all font-medium">{convite.email}</p>
+                        <p className="mt-1 text-xs text-[#596273]">{convite.role}</p>
+                      </div>
+                      <span className="w-fit rounded-md border border-linha bg-[#f8fafb] px-2 py-1 text-xs font-semibold uppercase text-[#596273]">
+                        {convite.status}
+                      </span>
+                      <span>{descreverHistoricoConvite(convite)}</span>
+                      <span className="text-xs text-[#596273]">
+                        Criado em {formatarData(convite.criadoEm)}
+                        {convite.motivoRevogacao ? ` · Motivo: ${convite.motivoRevogacao}` : ''}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-6 text-sm text-[#596273]">Nenhum historico de convite registrado.</div>
                 )}
               </div>
             </section>

@@ -41,6 +41,15 @@ export interface ConviteUsuarioClienteRespostaDto {
   emailErro?: string;
 }
 
+export interface HistoricoConviteUsuarioClienteRespostaDto extends ConviteUsuarioClienteRespostaDto {
+  usadoEm?: Date;
+  revogadoEm?: Date;
+  convidadoEm?: string;
+  reenviadoPorUsuarioId?: string;
+  revogadoPorUsuarioId?: string;
+  motivoRevogacao?: string;
+}
+
 export class CanaisPadraoClienteDto {
   @IsBoolean()
   email: boolean;
