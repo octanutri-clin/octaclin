@@ -530,4 +530,98 @@ describe('ServicoPortalPaciente', () => {
       servico.registrarConsentimentoLgpd('tenant-1', 'usuario-paciente-1', { aceiteLgpd: false })
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('deve exportar dados LGPD do paciente logado sem dados de outro paciente', async () => {
+    const { servico } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          contatoCriptografado: Buffer.from('cripto:ana@example.com'),
+          profissionalResponsavelId: 'profissional-1',
+          statusAdesao: 'aderente',
+          scoreRisco: '12.50'
+        },
+        {
+          id: 'paciente-2',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-2',
+          nomeCriptografado: Buffer.from('cripto:Outro Paciente')
+        }
+      ],
+      consultas: [],
+      envios: [],
+      questionarios: [],
+      mensagens: [],
+      consentimentos: []
+    });
+
+    const exportacao = await servico.exportarDadosLgpd('tenant-1', 'usuario-paciente-1');
+
+    expect(exportacao).toEqual(
+      expect.objectContaining({
+        geradoEm: expect.any(Date),
+        titular: {
+          pacienteId: 'paciente-1',
+          nome: 'Ana Paula',
+          email: 'ana@example.com'
+        },
+        dados: expect.objectContaining({
+          paciente: expect.objectContaining({ id: 'paciente-1', nome: 'Ana Paula' })
+        })
+      })
+    );
+    expect(JSON.stringify(exportacao)).not.toContain('Outro Paciente');
+  });
+
+  it('deve registrar solicitacao LGPD com protocolo no historico do paciente', async () => {
+    const { servico, repositorios } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          profissionalResponsavelId: 'profissional-1',
+          statusAdesao: 'aderente',
+          scoreRisco: '12.50'
+        }
+      ],
+      consultas: [],
+      envios: [],
+      questionarios: [],
+      mensagens: [],
+      consentimentos: []
+    });
+
+    const solicitacao = await servico.registrarSolicitacaoLgpd('tenant-1', 'usuario-paciente-1', {
+      tipo: 'retificacao',
+      detalhes: 'Atualizar telefone cadastrado.'
+    });
+
+    expect(solicitacao).toEqual(
+      expect.objectContaining({
+        pacienteId: 'paciente-1',
+        tipo: 'retificacao',
+        status: 'recebida',
+        protocolo: expect.stringMatching(/^LGPD-/),
+        criadoEm: expect.any(Date)
+      })
+    );
+    expect(repositorios.consentimento.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-paciente-1',
+        tipo: 'solicitacao_lgpd_retificacao',
+        metadados: expect.objectContaining({
+          pacienteId: 'paciente-1',
+          protocolo: solicitacao.protocolo,
+          status: 'recebida',
+          detalhes: 'Atualizar telefone cadastrado.'
+        })
+      })
+    );
+  });
 });

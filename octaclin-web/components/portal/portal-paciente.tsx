@@ -18,10 +18,12 @@ import { Botao } from '@/components/ui/botao';
 import {
   atualizarPerfilPaciente,
   DetalheFormularioRespondidoApi,
+  exportarDadosLgpdPaciente,
   obterFormularioRespondidoPaciente,
   obterPortalPaciente,
   PortalPacienteApi,
-  registrarConsentimentoLgpdPaciente
+  registrarConsentimentoLgpdPaciente,
+  registrarSolicitacaoLgpdPaciente
 } from '@/lib/portal-api';
 
 interface FormularioPerfilPaciente {
@@ -184,6 +186,10 @@ export function PortalPaciente() {
   const [carregandoDetalheId, setCarregandoDetalheId] = useState<string | null>(null);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [salvandoConsentimento, setSalvandoConsentimento] = useState(false);
+  const [exportandoLgpd, setExportandoLgpd] = useState(false);
+  const [solicitandoLgpd, setSolicitandoLgpd] = useState(false);
+  const [tipoSolicitacaoLgpd, setTipoSolicitacaoLgpd] = useState<'retificacao' | 'exclusao'>('retificacao');
+  const [detalhesSolicitacaoLgpd, setDetalhesSolicitacaoLgpd] = useState('');
 
   async function carregar() {
     setCarregando(true);
@@ -287,6 +293,47 @@ export function PortalPaciente() {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar consentimento LGPD.');
     } finally {
       setSalvandoConsentimento(false);
+    }
+  }
+
+  async function exportarDadosLgpd() {
+    setExportandoLgpd(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const exportacao = await exportarDadosLgpdPaciente();
+      const blob = new Blob([JSON.stringify(exportacao, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `octaclin-dados-${exportacao.titular.pacienteId}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setSucesso(`Exportacao gerada para ${exportacao.titular.nome}.`);
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao exportar dados LGPD.');
+    } finally {
+      setExportandoLgpd(false);
+    }
+  }
+
+  async function enviarSolicitacaoLgpd(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setSolicitandoLgpd(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const solicitacao = await registrarSolicitacaoLgpdPaciente({
+        tipo: tipoSolicitacaoLgpd,
+        detalhes: detalhesSolicitacaoLgpd.trim() || undefined
+      });
+      setDetalhesSolicitacaoLgpd('');
+      await carregar();
+      setSucesso(`Solicitacao LGPD registrada: ${solicitacao.protocolo}.`);
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar solicitacao LGPD.');
+    } finally {
+      setSolicitandoLgpd(false);
     }
   }
 
@@ -692,6 +739,45 @@ export function PortalPaciente() {
                     <ShieldCheck className="h-4 w-4" />
                     {salvandoConsentimento ? 'Registrando' : 'Registrar aceite'}
                   </Botao>
+                  <div className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3">
+                    <div>
+                      <p className="text-sm font-semibold">Meus dados</p>
+                      <p className="mt-1 text-xs text-[#596273]">Baixe uma copia do seu perfil, consultas, formularios, mensagens e historico LGPD.</p>
+                    </div>
+                    <Botao type="button" onClick={() => void exportarDadosLgpd()} disabled={exportandoLgpd}>
+                      <ShieldCheck className="h-4 w-4" />
+                      {exportandoLgpd ? 'Gerando' : 'Baixar meus dados'}
+                    </Botao>
+                  </div>
+                  <form onSubmit={enviarSolicitacaoLgpd} className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3">
+                    <div>
+                      <p className="text-sm font-semibold">Solicitacoes LGPD</p>
+                      <p className="mt-1 text-xs text-[#596273]">Abra um protocolo para corrigir seus dados ou solicitar exclusao conforme avaliacao legal.</p>
+                    </div>
+                    <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                      Tipo de solicitacao LGPD
+                      <select
+                        value={tipoSolicitacaoLgpd}
+                        onChange={(evento) => setTipoSolicitacaoLgpd(evento.target.value as 'retificacao' | 'exclusao')}
+                        className="h-10 rounded-md border border-linha bg-white px-3 text-sm text-tinta"
+                      >
+                        <option value="retificacao">Retificacao de dados</option>
+                        <option value="exclusao">Exclusao de dados</option>
+                      </select>
+                    </label>
+                    <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                      Detalhes da solicitacao
+                      <textarea
+                        value={detalhesSolicitacaoLgpd}
+                        onChange={(evento) => setDetalhesSolicitacaoLgpd(evento.target.value)}
+                        maxLength={1000}
+                        className="min-h-24 rounded-md border border-linha bg-white px-3 py-2 text-sm text-tinta"
+                      />
+                    </label>
+                    <Botao type="submit" variante="primario" disabled={solicitandoLgpd}>
+                      {solicitandoLgpd ? 'Enviando' : 'Enviar solicitacao LGPD'}
+                    </Botao>
+                  </form>
                   <div className="grid gap-2">
                     {portal.lgpd.consentimentos.length ? (
                       portal.lgpd.consentimentos.map((consentimento) => (

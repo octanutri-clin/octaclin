@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsEmail, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsBoolean, IsDateString, IsEmail, IsIn, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class CriarPacienteDto {
   @IsUUID()
@@ -138,4 +138,14 @@ export class RegistrarConsentimentoLgpdPortalDto {
   @IsOptional()
   @IsBoolean()
   prefereWhatsapp?: boolean;
+}
+
+export class RegistrarSolicitacaoLgpdPortalDto {
+  @IsIn(['retificacao', 'exclusao'])
+  tipo: 'retificacao' | 'exclusao';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  detalhes?: string;
 }

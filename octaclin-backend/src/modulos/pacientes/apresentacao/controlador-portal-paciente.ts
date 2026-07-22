@@ -5,7 +5,7 @@ import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPerfilPacientePortalDto, RegistrarConsentimentoLgpdPortalDto } from '../aplicacao/dtos';
+import { AtualizarPerfilPacientePortalDto, RegistrarConsentimentoLgpdPortalDto, RegistrarSolicitacaoLgpdPortalDto } from '../aplicacao/dtos';
 import { ServicoPortalPaciente } from '../aplicacao/servico-portal-paciente';
 
 @Controller('portal')
@@ -68,6 +68,50 @@ export class ControladorPortalPaciente {
       }
     });
     return resultado;
+  }
+
+  @Get('paciente/lgpd/exportacao')
+  async exportarDadosLgpd(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request) {
+    const exportacao = await this.servicoPortal.exportarDadosLgpd(usuario.tenantId, usuario.usuarioId);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'portal.paciente.lgpd.exportar_dados',
+      recursoTipo: 'paciente',
+      recursoId: exportacao.titular.pacienteId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        categorias: ['perfil', 'consultas', 'formularios', 'mensagens', 'lgpd'],
+        geradoEm: exportacao.geradoEm
+      }
+    });
+    return exportacao;
+  }
+
+  @Post('paciente/lgpd/solicitacoes')
+  async registrarSolicitacaoLgpd(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: RegistrarSolicitacaoLgpdPortalDto
+  ) {
+    const solicitacao = await this.servicoPortal.registrarSolicitacaoLgpd(usuario.tenantId, usuario.usuarioId, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'portal.paciente.lgpd.solicitacao_registrar',
+      recursoTipo: 'paciente',
+      recursoId: solicitacao.pacienteId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        protocolo: solicitacao.protocolo,
+        tipo: solicitacao.tipo,
+        status: solicitacao.status,
+        possuiDetalhes: Boolean(dados.detalhes?.trim())
+      }
+    });
+    return solicitacao;
   }
 
   @Get('paciente/formularios-respondidos/:respostaId')

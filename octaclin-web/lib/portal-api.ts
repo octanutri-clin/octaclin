@@ -118,6 +118,25 @@ export interface ConsentimentoLgpdRegistradoApi extends PerfilPacienteAtualizado
   lgpd: LgpdPortalPacienteApi;
 }
 
+export interface ExportacaoDadosLgpdApi {
+  geradoEm: string;
+  titular: {
+    pacienteId: string;
+    nome: string;
+    email?: string;
+    whatsapp?: string;
+  };
+  dados: PortalPacienteApi;
+}
+
+export interface SolicitacaoLgpdApi {
+  protocolo: string;
+  pacienteId: string;
+  tipo: 'retificacao' | 'exclusao';
+  status: 'recebida';
+  criadoEm: string;
+}
+
 class ErroApiPortal extends Error {
   constructor(
     public readonly status: number,
@@ -180,4 +199,27 @@ export async function registrarConsentimentoLgpdPaciente(
     throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
   }
   return resposta.json() as Promise<ConsentimentoLgpdRegistradoApi>;
+}
+
+export async function exportarDadosLgpdPaciente(): Promise<ExportacaoDadosLgpdApi> {
+  const resposta = await fetch('/api/portal/paciente/lgpd/exportacao', { cache: 'no-store' });
+  if (!resposta.ok) {
+    throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
+  }
+  return resposta.json() as Promise<ExportacaoDadosLgpdApi>;
+}
+
+export async function registrarSolicitacaoLgpdPaciente(dados: {
+  tipo: 'retificacao' | 'exclusao';
+  detalhes?: string;
+}): Promise<SolicitacaoLgpdApi> {
+  const resposta = await fetch('/api/portal/paciente/lgpd/solicitacoes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dados)
+  });
+  if (!resposta.ok) {
+    throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
+  }
+  return resposta.json() as Promise<SolicitacaoLgpdApi>;
 }

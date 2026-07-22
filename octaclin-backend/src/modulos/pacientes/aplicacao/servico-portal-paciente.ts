@@ -1,4 +1,4 @@
-import { createHmac } from 'crypto';
+import { createHmac, randomUUID } from 'crypto';
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -11,7 +11,7 @@ import { PerguntaOrm } from '../../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-valor.orm';
-import { AtualizarPerfilPacientePortalDto, RegistrarConsentimentoLgpdPortalDto } from './dtos';
+import { AtualizarPerfilPacientePortalDto, RegistrarConsentimentoLgpdPortalDto, RegistrarSolicitacaoLgpdPortalDto } from './dtos';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
 interface ContatoPacientePortal {
@@ -125,6 +125,25 @@ export interface DetalheFormularioRespondidoPaciente {
     valor: unknown;
     scorePonderado?: string;
   }[];
+}
+
+export interface ExportacaoDadosLgpdPaciente {
+  geradoEm: Date;
+  titular: {
+    pacienteId: string;
+    nome: string;
+    email?: string;
+    whatsapp?: string;
+  };
+  dados: ResumoPortalPaciente;
+}
+
+export interface SolicitacaoLgpdPaciente {
+  protocolo: string;
+  pacienteId: string;
+  tipo: 'retificacao' | 'exclusao';
+  status: 'recebida';
+  criadoEm: Date;
 }
 
 @Injectable()
@@ -345,6 +364,61 @@ export class ServicoPortalPaciente {
       return {
         ...this.mapearPerfilPaciente(paciente),
         lgpd: this.mapearLgpd(await this.listarConsentimentosPaciente(gerenciador, tenantId, usuarioId))
+      };
+    });
+  }
+
+  async exportarDadosLgpd(tenantId: string, usuarioId: string): Promise<ExportacaoDadosLgpdPaciente> {
+    const dados = await this.obterResumoPortal(tenantId, usuarioId);
+    return {
+      geradoEm: new Date(),
+      titular: {
+        pacienteId: dados.paciente.id,
+        nome: dados.paciente.nome,
+        email: dados.perfil.email,
+        whatsapp: dados.perfil.whatsapp
+      },
+      dados
+    };
+  }
+
+  async registrarSolicitacaoLgpd(
+    tenantId: string,
+    usuarioId: string,
+    dados: RegistrarSolicitacaoLgpdPortalDto
+  ): Promise<SolicitacaoLgpdPaciente> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: { tenantId, usuarioId, arquivadoEm: IsNull() }
+      });
+      if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
+
+      const criadoEm = new Date();
+      const protocolo = `LGPD-${randomUUID()}`;
+      const repositorioConsentimentos = gerenciador.getRepository(ConsentimentoLgpdOrm);
+      await repositorioConsentimentos.save(
+        repositorioConsentimentos.create({
+          tenantId,
+          usuarioId,
+          tipo: `solicitacao_lgpd_${dados.tipo}`,
+          versao: this.versaoLgpdAtual(),
+          aceitoEm: criadoEm,
+          metadados: {
+            pacienteId: paciente.id,
+            protocolo,
+            status: 'recebida',
+            canal: 'portal_paciente',
+            detalhes: dados.detalhes?.trim() || undefined
+          }
+        })
+      );
+
+      return {
+        protocolo,
+        pacienteId: paciente.id,
+        tipo: dados.tipo,
+        status: 'recebida',
+        criadoEm
       };
     });
   }

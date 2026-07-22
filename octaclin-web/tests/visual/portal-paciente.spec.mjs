@@ -117,6 +117,30 @@ async function prepararPortal(page) {
       })
     });
   });
+  await page.route('**/api/portal/paciente/lgpd/exportacao', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geradoEm: '2026-07-22T12:00:00.000Z',
+        titular: { pacienteId: 'paciente-1', nome: 'Ana Paula', email: 'ana@example.com' },
+        dados: portalPaciente
+      })
+    });
+  });
+  await page.route('**/api/portal/paciente/lgpd/solicitacoes', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        protocolo: 'LGPD-123',
+        pacienteId: 'paciente-1',
+        tipo: 'retificacao',
+        status: 'recebida',
+        criadoEm: '2026-07-22T12:10:00.000Z'
+      })
+    });
+  });
 }
 
 async function prepararSessaoPaciente(page) {
@@ -159,9 +183,19 @@ test.describe('portal do paciente', () => {
     await expect(page.getByText('Consulta nutricional').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Meu perfil' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Privacidade' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Baixar meus dados' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Enviar solicitacao LGPD' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Ver respostas' }).click();
     await expect(page.getByText('Mantive boa adesao durante a semana.')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Baixar meus dados' }).click();
+    await expect(page.getByText('Exportacao gerada para Ana Paula.')).toBeVisible();
+
+    await page.getByLabel('Tipo de solicitacao LGPD').selectOption('retificacao');
+    await page.getByLabel('Detalhes da solicitacao').fill('Atualizar telefone cadastrado.');
+    await page.getByRole('button', { name: 'Enviar solicitacao LGPD' }).click();
+    await expect(page.getByText('Solicitacao LGPD registrada: LGPD-123.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
 
     const screenshot = await page.screenshot({ fullPage: true });
