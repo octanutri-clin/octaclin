@@ -234,4 +234,49 @@ describe('ServicoOperacoes', () => {
       })
     );
   });
+
+  it('deve detalhar protocolo LGPD com linha do tempo operacional', async () => {
+    const { servico } = criarServico();
+
+    await expect(servico.obterDetalheSolicitacaoLgpd('tenant-1', 'LGPD-123')).resolves.toEqual({
+      protocolo: 'LGPD-123',
+      pacienteId: 'paciente-1',
+      usuarioPacienteId: 'usuario-paciente-1',
+      tipo: 'retificacao',
+      status: 'em_tratamento',
+      detalhes: 'Atualizar telefone cadastrado.',
+      abertoEm: new Date('2026-07-22T10:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-22T11:00:00.000Z'),
+      responsavelId: 'usuario-admin-1',
+      ultimaTratativa: 'Validando cadastro.',
+      historico: [
+        {
+          id: 'consentimento-1',
+          tipo: 'solicitacao_lgpd_retificacao',
+          status: 'recebida',
+          detalhes: 'Atualizar telefone cadastrado.',
+          responsavelId: undefined,
+          criadoEm: new Date('2026-07-22T10:00:00.000Z')
+        },
+        {
+          id: 'tratativa-1',
+          tipo: 'tratativa_lgpd',
+          status: 'em_tratamento',
+          detalhes: 'Validando cadastro.',
+          responsavelId: 'usuario-admin-1',
+          criadoEm: new Date('2026-07-22T11:00:00.000Z')
+        }
+      ]
+    });
+  });
+
+  it('deve exportar protocolo LGPD em CSV sem metadados brutos', async () => {
+    const { servico } = criarServico();
+
+    await expect(servico.exportarSolicitacaoLgpdCsv('tenant-1', 'LGPD-123')).resolves.toContain(
+      '"protocolo","pacienteId","tipo","status","criadoEm","responsavelId","detalhes"'
+    );
+    await expect(servico.exportarSolicitacaoLgpdCsv('tenant-1', 'LGPD-123')).resolves.toContain('"LGPD-123","paciente-1","retificacao","recebida"');
+    await expect(servico.exportarSolicitacaoLgpdCsv('tenant-1', 'LGPD-123')).resolves.not.toContain('usuarioPacienteId');
+  });
 });

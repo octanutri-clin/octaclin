@@ -103,6 +103,17 @@ export class ControladorOperacoes {
     return this.servicoOperacoes.atualizarSolicitacaoLgpd(usuario.tenantId, usuario.usuarioId, protocolo, dados);
   }
 
+  @Get('lgpd/solicitacoes/:protocolo')
+  obterDetalheSolicitacaoLgpd(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('protocolo') protocolo: string) {
+    return this.servicoOperacoes.obterDetalheSolicitacaoLgpd(usuario.tenantId, protocolo);
+  }
+
+  @Get('lgpd/solicitacoes/:protocolo/exportar.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  exportarSolicitacaoLgpdCsv(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('protocolo') protocolo: string) {
+    return this.servicoOperacoes.exportarSolicitacaoLgpdCsv(usuario.tenantId, protocolo);
+  }
+
   @Get('auditoria')
   listarAuditoria(
     @UsuarioAtual() usuario: UsuarioAutenticado,

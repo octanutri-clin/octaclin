@@ -9,6 +9,7 @@ import { SessaoPublica, obterSessao, sair } from '@/lib/auth-api';
 import {
   AuditoriaOperacional,
   DadosOperacionais,
+  DetalheSolicitacaoLgpdOperacional,
   ErroApiOperacoes,
   FiltrosAuditoriaOperacional,
   FiltrosOutboxOperacional,
@@ -21,9 +22,11 @@ import {
   carregarFalhasOutboxPaginadas,
   carregarDadosOperacionais,
   carregarSolicitacoesLgpd,
+  obterDetalheSolicitacaoLgpd,
   reprocessarOutbox,
   urlExportacaoAuditoria,
-  urlExportacaoFalhasOutbox
+  urlExportacaoFalhasOutbox,
+  urlExportacaoSolicitacaoLgpd
 } from '@/lib/operacoes-api';
 
 function formatarData(valor?: string) {
@@ -80,8 +83,10 @@ export function PainelOperacoes() {
   const [carregando, setCarregando] = useState(false);
   const [carregandoAuditoria, setCarregandoAuditoria] = useState(false);
   const [carregandoLgpd, setCarregandoLgpd] = useState(false);
+  const [carregandoDetalheLgpd, setCarregandoDetalheLgpd] = useState(false);
   const [reprocessandoId, setReprocessandoId] = useState<string | null>(null);
   const [atualizandoLgpdProtocolo, setAtualizandoLgpdProtocolo] = useState<string | null>(null);
+  const [detalheLgpd, setDetalheLgpd] = useState<DetalheSolicitacaoLgpdOperacional | null>(null);
   const [filtrosAuditoria, setFiltrosAuditoria] = useState<FiltrosAuditoriaOperacional>({
     acao: '',
     recursoTipo: '',
@@ -138,6 +143,7 @@ export function PainelOperacoes() {
     try {
       const resposta = await executarAutenticado(carregarDadosOperacionais);
       if (resposta) setDados(resposta);
+      setDetalheLgpd(null);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar operacoes.');
     } finally {
@@ -315,12 +321,35 @@ export function PainelOperacoes() {
             : dadosAtuais
         );
         setSucesso(`Solicitacao LGPD atualizada: ${solicitacao.protocolo}.`);
+        if (detalheLgpd?.protocolo === solicitacao.protocolo) {
+          await carregarDetalheLgpd(solicitacao.protocolo, { preservarMensagem: true });
+        }
       }
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar solicitacao LGPD.');
     } finally {
       setAtualizandoLgpdProtocolo(null);
     }
+  }
+
+  async function carregarDetalheLgpd(protocolo: string, opcoes: { preservarMensagem?: boolean } = {}) {
+    if (!sessao) return;
+
+    setCarregandoDetalheLgpd(true);
+    setErro(null);
+    if (!opcoes.preservarMensagem) setSucesso(null);
+    try {
+      const detalhe = await executarAutenticado(() => obterDetalheSolicitacaoLgpd(protocolo));
+      if (detalhe) setDetalheLgpd(detalhe);
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar detalhe LGPD.');
+    } finally {
+      setCarregandoDetalheLgpd(false);
+    }
+  }
+
+  function exportarSolicitacaoLgpd(protocolo: string) {
+    window.location.href = urlExportacaoSolicitacaoLgpd(protocolo);
   }
 
   function exportarAuditoria() {
@@ -392,7 +421,7 @@ export function PainelOperacoes() {
             {sucesso}
           </div>
         ) : null}
-        <BarraCarregamento visivel={carregando || carregandoAuditoria || carregandoLgpd} />
+        <BarraCarregamento visivel={carregando || carregandoAuditoria || carregandoLgpd || carregandoDetalheLgpd} />
 
         <section className="grid gap-3 md:grid-cols-4">
           {metricas.map((item) => (
@@ -468,6 +497,14 @@ export function PainelOperacoes() {
                     <p className="mt-1 break-all">Responsavel: {solicitacao.responsavelId ?? '-'}</p>
                   </div>
                   <div className="flex flex-wrap gap-2 lg:justify-end">
+                    <Botao
+                      type="button"
+                      onClick={() => void carregarDetalheLgpd(solicitacao.protocolo)}
+                      disabled={carregandoDetalheLgpd && detalheLgpd?.protocolo === solicitacao.protocolo}
+                      aria-label={`Ver detalhes ${solicitacao.protocolo}`}
+                    >
+                      {carregandoDetalheLgpd && detalheLgpd?.protocolo === solicitacao.protocolo ? 'Carregando' : 'Ver detalhes'}
+                    </Botao>
                     {solicitacao.status === 'recebida' ? (
                       <Botao
                         type="button"
@@ -504,6 +541,43 @@ export function PainelOperacoes() {
               <EstadoVazio titulo="Nenhuma solicitacao LGPD carregada." />
             )}
           </div>
+          {detalheLgpd ? (
+            <div className="border-t border-linha bg-[#f8fafb] px-4 py-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h3 className="text-base font-semibold">Detalhe do protocolo {detalheLgpd.protocolo}</h3>
+                  <p className="mt-1 text-sm text-[#596273]">
+                    {rotuloTipoLgpd(detalheLgpd.tipo)} | {rotuloStatusLgpd(detalheLgpd.status)} | Paciente {detalheLgpd.pacienteId}
+                  </p>
+                </div>
+                <Botao
+                  type="button"
+                  onClick={() => exportarSolicitacaoLgpd(detalheLgpd.protocolo)}
+                  aria-label={`Exportar protocolo ${detalheLgpd.protocolo}`}
+                >
+                  <Download size={16} />
+                  CSV
+                </Botao>
+              </div>
+              <div className="mt-4 grid gap-3">
+                {detalheLgpd.historico.map((evento) => (
+                  <article key={evento.id} className="rounded-md border border-linha bg-white p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <strong className="text-sm">{evento.tipo}</strong>
+                        <span className={`rounded-sm px-2 py-1 text-xs font-semibold ${classeStatusLgpd(evento.status)}`}>
+                          {rotuloStatusLgpd(evento.status)}
+                        </span>
+                      </div>
+                      <span className="text-xs text-[#596273]">{formatarData(evento.criadoEm)}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-tinta">{evento.detalhes ?? 'Sem detalhes.'}</p>
+                    <p className="mt-1 break-all text-xs text-[#596273]">Responsavel: {evento.responsavelId ?? '-'}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="flex flex-col gap-2 border-t border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
             <span className="text-sm text-[#596273]">
               Pagina {solicitacoesLgpd?.pagina ?? 1} de {totalPaginasLgpd} | {solicitacoesLgpd?.total ?? 0} protocolos

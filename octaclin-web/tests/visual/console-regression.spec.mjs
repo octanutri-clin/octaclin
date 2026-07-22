@@ -56,6 +56,8 @@ async function assertSemOverflowHorizontal(page) {
 }
 
 async function prepararOperacoesMockadas(page) {
+  let requisitouCsvLgpd = false;
+
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -109,6 +111,54 @@ async function prepararOperacoesMockadas(page) {
     });
   });
   await page.route('**/api/operacoes/lgpd/solicitacoes**', async (route) => {
+    const url = route.request().url();
+    if (url.includes('/LGPD-123/exportar.csv')) {
+      requisitouCsvLgpd = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/csv; charset=utf-8',
+        body: '"protocolo","pacienteId","tipo","status","criadoEm","responsavelId","detalhes"\n"LGPD-123","paciente-1","retificacao","recebida","2026-07-22T10:00:00.000Z","","Atualizar telefone cadastrado."\n'
+      });
+      return;
+    }
+
+    if (url.endsWith('/LGPD-123')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          protocolo: 'LGPD-123',
+          pacienteId: 'paciente-1',
+          usuarioPacienteId: 'usuario-paciente-1',
+          tipo: 'retificacao',
+          status: 'em_tratamento',
+          detalhes: 'Atualizar telefone cadastrado.',
+          abertoEm: '2026-07-22T10:00:00.000Z',
+          atualizadoEm: '2026-07-22T11:00:00.000Z',
+          responsavelId: 'usuario-admin-1',
+          ultimaTratativa: 'Validando cadastro.',
+          historico: [
+            {
+              id: 'consentimento-1',
+              tipo: 'solicitacao_lgpd_retificacao',
+              status: 'recebida',
+              detalhes: 'Atualizar telefone cadastrado.',
+              criadoEm: '2026-07-22T10:00:00.000Z'
+            },
+            {
+              id: 'tratativa-1',
+              tipo: 'tratativa_lgpd',
+              status: 'em_tratamento',
+              detalhes: 'Validando cadastro.',
+              responsavelId: 'usuario-admin-1',
+              criadoEm: '2026-07-22T11:00:00.000Z'
+            }
+          ]
+        })
+      });
+      return;
+    }
+
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -149,6 +199,9 @@ async function prepararOperacoesMockadas(page) {
       })
     });
   });
+  return {
+    requisitouCsvLgpd: () => requisitouCsvLgpd
+  };
 }
 
 test.describe('console operacional', () => {
@@ -180,7 +233,7 @@ test.describe('console operacional', () => {
 
 test.describe('operacoes LGPD', () => {
   test('exibe fila LGPD e permite iniciar tratativa', async ({ page }) => {
-    await prepararOperacoesMockadas(page);
+    const operacoes = await prepararOperacoesMockadas(page);
     await page.goto('/operacoes');
 
     await expect(page.getByRole('heading', { name: 'Solicitacoes LGPD' })).toBeVisible();
@@ -189,6 +242,12 @@ test.describe('operacoes LGPD', () => {
 
     await page.getByRole('button', { name: 'Iniciar tratativa' }).click();
     await expect(page.getByText('Solicitacao LGPD atualizada: LGPD-123.')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Ver detalhes LGPD-123' }).click();
+    await expect(page.getByRole('heading', { name: 'Detalhe do protocolo LGPD-123' })).toBeVisible();
+    await expect(page.getByText('Validando cadastro.')).toBeVisible();
+    await page.getByRole('button', { name: 'Exportar protocolo LGPD-123' }).click();
+    await expect.poll(() => operacoes.requisitouCsvLgpd()).toBe(true);
     await assertSemOverflowHorizontal(page);
   });
 });

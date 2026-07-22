@@ -64,6 +64,19 @@ export interface SolicitacaoLgpdOperacional {
   ultimaTratativa?: string;
 }
 
+export interface EventoSolicitacaoLgpdOperacional {
+  id: string;
+  tipo: string;
+  status: StatusSolicitacaoLgpd;
+  detalhes?: string;
+  responsavelId?: string;
+  criadoEm: string;
+}
+
+export interface DetalheSolicitacaoLgpdOperacional extends SolicitacaoLgpdOperacional {
+  historico: EventoSolicitacaoLgpdOperacional[];
+}
+
 export interface DadosOperacionais {
   resumo: ResumoOperacional;
   falhas: OutboxFalha[];
@@ -206,6 +219,16 @@ export async function atualizarSolicitacaoLgpd(
       body: JSON.stringify(dados)
     }
   );
+}
+
+export async function obterDetalheSolicitacaoLgpd(protocolo: string): Promise<DetalheSolicitacaoLgpdOperacional> {
+  return requisitar<DetalheSolicitacaoLgpdOperacional>(
+    `/api/operacoes/lgpd/solicitacoes/${encodeURIComponent(protocolo)}`
+  );
+}
+
+export function urlExportacaoSolicitacaoLgpd(protocolo: string): string {
+  return `/api/operacoes/lgpd/solicitacoes/${encodeURIComponent(protocolo)}/exportar.csv`;
 }
 
 export function urlExportacaoAuditoria(filtros: FiltrosAuditoriaOperacional): string {

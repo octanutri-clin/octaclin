@@ -61,6 +61,19 @@ export interface SolicitacaoLgpdOperacional {
   ultimaTratativa?: string;
 }
 
+export interface EventoSolicitacaoLgpdOperacional {
+  id: string;
+  tipo: string;
+  status: StatusSolicitacaoLgpd;
+  detalhes?: string;
+  responsavelId?: string;
+  criadoEm: Date;
+}
+
+export interface DetalheSolicitacaoLgpdOperacional extends SolicitacaoLgpdOperacional {
+  historico: EventoSolicitacaoLgpdOperacional[];
+}
+
 export interface AtualizarSolicitacaoLgpdOperacional {
   status: Exclude<StatusSolicitacaoLgpd, 'recebida'>;
   detalhes?: string;
@@ -212,6 +225,29 @@ export class ServicoOperacoes {
     });
   }
 
+  async obterDetalheSolicitacaoLgpd(tenantId: string, protocolo: string): Promise<DetalheSolicitacaoLgpdOperacional> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const eventos = await this.carregarEventosSolicitacoesLgpd(gerenciador, tenantId);
+      return this.montarDetalheSolicitacaoLgpd(eventos, protocolo);
+    });
+  }
+
+  async exportarSolicitacaoLgpdCsv(tenantId: string, protocolo: string): Promise<string> {
+    const detalhe = await this.obterDetalheSolicitacaoLgpd(tenantId, protocolo);
+    return this.montarCsv(
+      ['protocolo', 'pacienteId', 'tipo', 'status', 'criadoEm', 'responsavelId', 'detalhes'],
+      detalhe.historico.map((evento) => [
+        detalhe.protocolo,
+        detalhe.pacienteId,
+        detalhe.tipo,
+        evento.status,
+        this.serializarData(evento.criadoEm),
+        evento.responsavelId ?? '',
+        evento.detalhes ?? ''
+      ])
+    );
+  }
+
   async listarAuditoria(tenantId: string, filtros: FiltrosAuditoriaOperacional = {}): Promise<UserActionLogOrm[]> {
     return this.executorTenant.executar(tenantId, (gerenciador) => {
       return gerenciador.getRepository(UserActionLogOrm).find({
@@ -342,6 +378,25 @@ export class ServicoOperacoes {
       });
 
     return Array.from(solicitacoes.values());
+  }
+
+  private montarDetalheSolicitacaoLgpd(eventos: ConsentimentoLgpdOrm[], protocolo: string): DetalheSolicitacaoLgpdOperacional {
+    const solicitacao = this.consolidarSolicitacoesLgpd(eventos).find((item) => item.protocolo === protocolo);
+    if (!solicitacao) throw new NotFoundException('Solicitacao LGPD nao encontrada.');
+
+    const historico = [...eventos]
+      .filter((evento) => this.metadadoTexto(evento.metadados, 'protocolo') === protocolo)
+      .sort((a, b) => this.timestampData(a.aceitoEm) - this.timestampData(b.aceitoEm))
+      .map((evento) => ({
+        id: evento.id,
+        tipo: evento.tipo,
+        status: this.normalizarStatusLgpd(this.metadadoTexto(evento.metadados, 'status')),
+        detalhes: this.metadadoTexto(evento.metadados, 'detalhes'),
+        responsavelId: this.metadadoTexto(evento.metadados, 'responsavelId'),
+        criadoEm: evento.aceitoEm
+      }));
+
+    return { ...solicitacao, historico };
   }
 
   private metadadoTexto(metadados: Record<string, unknown> | undefined, chave: string): string | undefined {
