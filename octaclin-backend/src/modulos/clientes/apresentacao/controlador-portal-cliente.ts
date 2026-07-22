@@ -1,10 +1,12 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
+import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarConfiguracoesClienteDto, CriarUsuarioClienteDto } from '../aplicacao/dtos';
+import { AtualizarConfiguracoesClienteDto, AtualizarPerfilEmpresaClienteDto, CriarUsuarioClienteDto } from '../aplicacao/dtos';
 import { ServicoPortalCliente } from '../aplicacao/servico-portal-cliente';
 import { ServicoUsuariosCliente } from '../aplicacao/servico-usuarios-cliente';
 
@@ -15,7 +17,8 @@ import { ServicoUsuariosCliente } from '../aplicacao/servico-usuarios-cliente';
 export class ControladorPortalCliente {
   constructor(
     private readonly servicoPortalCliente: ServicoPortalCliente,
-    private readonly servicoUsuariosCliente: ServicoUsuariosCliente
+    private readonly servicoUsuariosCliente: ServicoUsuariosCliente,
+    private readonly servicoAuditoria: ServicoAuditoria
   ) {}
 
   @Get('resumo')
@@ -33,6 +36,36 @@ export class ControladorPortalCliente {
   @Permissoes('cliente.configuracoes.gerenciar')
   atualizarConfiguracoes(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: AtualizarConfiguracoesClienteDto) {
     return this.servicoPortalCliente.atualizarConfiguracoes(usuario.tenantId, dados);
+  }
+
+  @Get('perfil-empresa')
+  @Permissoes('cliente.configuracoes.gerenciar')
+  obterPerfilEmpresa(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoPortalCliente.obterPerfilEmpresa(usuario.tenantId);
+  }
+
+  @Patch('perfil-empresa')
+  @Permissoes('cliente.configuracoes.gerenciar')
+  async atualizarPerfilEmpresa(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: AtualizarPerfilEmpresaClienteDto
+  ) {
+    const perfil = await this.servicoPortalCliente.atualizarPerfilEmpresa(usuario.tenantId, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'cliente.perfil_empresa.atualizar',
+      recursoTipo: 'tenant',
+      recursoId: usuario.tenantId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        tipoPessoa: dados.tipoPessoa,
+        campos: Object.keys(dados).filter((campo) => dados[campo as keyof AtualizarPerfilEmpresaClienteDto] !== undefined)
+      }
+    });
+    return perfil;
   }
 
   @Get('usuarios')
@@ -69,5 +102,10 @@ export class ControladorPortalCliente {
   @Permissoes('cliente.convites.gerenciar')
   revogarConvite(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
     return this.servicoUsuariosCliente.revogarConvite(usuario.tenantId, usuario.usuarioId, id);
+  }
+
+  private obterUserAgent(requisicao: Request): string | undefined {
+    const userAgent = requisicao.headers['user-agent'];
+    return Array.isArray(userAgent) ? userAgent.join(', ') : userAgent;
   }
 }

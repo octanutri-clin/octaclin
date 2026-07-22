@@ -19,7 +19,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Recuperacao de senha | Pronto | Fluxo seguro e testes focados. | Aplicar rate limit e lockout. |
 | Permissoes finas | Pronto | Matriz refinada, guard backend, BFF e middleware web por permissao. | Revalidar em producao isolada e ampliar testes cross-tenant. |
 | Multi-tenant | Parcial | Tenant aplicado nos fluxos principais. | Criar testes negativos cross-tenant para rotas criticas. |
-| Portal do cliente | Parcial | Base, resumo real, configuracoes, usuarios e convites administrativos. | Perfil fiscal/comercial, assinatura e limites. |
+| Portal do cliente | Parcial | Base, resumo real, configuracoes, perfil fiscal, usuarios e convites administrativos. | Historico de convites, assinatura e limites. |
 | Portal do profissional | Parcial | Console operacional, pacientes, agenda, formularios e comunicacoes. | Dashboard diario, prontuario, evolucoes e materiais. |
 | Portal do paciente | Parcial | Primeiro acesso, historico, perfil, formularios e LGPD. | UX final, tarefas, materiais, check-ins e notificacoes. |
 | Formularios | Pronto | Editor, modelos, preview, coleta, respostas e leitura clinica. | QA E2E com jornada real e dados realistas. |
@@ -79,4 +79,4 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Seguir para a proxima fase funcional: perfil da empresa/consultoria e dados fiscais, Fase 97.
+Seguir para a proxima fase funcional: convite, reenvio e revogacao com auditoria operacional completa, Fase 98.

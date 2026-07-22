@@ -5,9 +5,10 @@ import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-confi
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { contextoAcessoPorPapel } from '../../auth/dominio/permissoes';
-import { AtualizarConfiguracoesClienteDto } from './dtos';
+import { AtualizarConfiguracoesClienteDto, AtualizarPerfilEmpresaClienteDto } from './dtos';
 
 const CHAVE_CONFIGURACOES_CONTA = 'conta_cliente';
+const CHAVE_PERFIL_EMPRESA = 'perfil_empresa';
 
 export interface ResumoPortalCliente {
   conta: {
@@ -53,6 +54,43 @@ export interface ConfiguracoesPortalCliente {
     nomeExibido: string;
     emailRemetente: string;
     corPrimaria: string;
+  };
+  atualizadoEm: Date;
+}
+
+export interface PerfilEmpresaCliente {
+  tenantId: string;
+  tipoPessoa: 'pf' | 'pj';
+  documento: string;
+  nomeLegal: string;
+  nomeFantasia: string;
+  inscricaoEstadual: string;
+  inscricaoMunicipal: string;
+  responsavel: {
+    nome: string;
+    email: string;
+    telefone: string;
+    cargo: string;
+  };
+  endereco: {
+    cep: string;
+    logradouro: string;
+    numero: string;
+    complemento: string;
+    bairro: string;
+    cidade: string;
+    uf: string;
+    pais: string;
+  };
+  contatos: {
+    emailFinanceiro: string;
+    telefoneFinanceiro: string;
+    whatsappAtendimento: string;
+    emailAtendimento: string;
+  };
+  fiscal: {
+    prepararRecibos: boolean;
+    observacoes: string;
   };
   atualizadoEm: Date;
 }
@@ -146,6 +184,40 @@ export class ServicoPortalCliente {
     return this.obterConfiguracoes(tenantId);
   }
 
+  async obterPerfilEmpresa(tenantId: string): Promise<PerfilEmpresaCliente> {
+    const tenant = await this.obterTenantAtivo(tenantId);
+    const configuracao = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      gerenciador.getRepository(TenantConfiguracaoOrm).findOne({
+        where: { tenantId, chave: CHAVE_PERFIL_EMPRESA }
+      })
+    );
+
+    return this.mapearPerfilEmpresa(tenant, configuracao?.valor);
+  }
+
+  async atualizarPerfilEmpresa(tenantId: string, dados: AtualizarPerfilEmpresaClienteDto): Promise<PerfilEmpresaCliente> {
+    const tenant = await this.obterTenantAtivo(tenantId);
+    const dadosNormalizados = this.normalizarPerfilEmpresa(dados);
+
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(TenantConfiguracaoOrm);
+      const atual = await repositorio.findOne({
+        where: { tenantId, chave: CHAVE_PERFIL_EMPRESA }
+      });
+      await repositorio.save(
+        repositorio.create({
+          id: atual?.id,
+          tenantId,
+          chave: CHAVE_PERFIL_EMPRESA,
+          valor: dadosNormalizados,
+          criadoEm: atual?.criadoEm
+        })
+      );
+    });
+
+    return this.obterPerfilEmpresa(tenantId);
+  }
+
   private async obterTenantAtivo(tenantId: string): Promise<TenantOrm> {
     const tenant = await this.fonteDados.getRepository(TenantOrm).findOne({
       where: { id: tenantId, status: 'ativo' }
@@ -168,6 +240,43 @@ export class ServicoPortalCliente {
         nomeExibido: dados.marca.nomeExibido.trim(),
         emailRemetente: dados.marca.emailRemetente?.trim() ?? '',
         corPrimaria: dados.marca.corPrimaria?.trim() || '#197d8f'
+      }
+    };
+  }
+
+  private normalizarPerfilEmpresa(dados: AtualizarPerfilEmpresaClienteDto): Omit<PerfilEmpresaCliente, 'tenantId' | 'atualizadoEm'> {
+    return {
+      tipoPessoa: dados.tipoPessoa,
+      documento: this.aparar(dados.documento),
+      nomeLegal: this.aparar(dados.nomeLegal),
+      nomeFantasia: this.aparar(dados.nomeFantasia),
+      inscricaoEstadual: this.aparar(dados.inscricaoEstadual),
+      inscricaoMunicipal: this.aparar(dados.inscricaoMunicipal),
+      responsavel: {
+        nome: this.aparar(dados.responsavel.nome),
+        email: this.aparar(dados.responsavel.email),
+        telefone: this.aparar(dados.responsavel.telefone),
+        cargo: this.aparar(dados.responsavel.cargo)
+      },
+      endereco: {
+        cep: this.aparar(dados.endereco.cep),
+        logradouro: this.aparar(dados.endereco.logradouro),
+        numero: this.aparar(dados.endereco.numero),
+        complemento: this.aparar(dados.endereco.complemento),
+        bairro: this.aparar(dados.endereco.bairro),
+        cidade: this.aparar(dados.endereco.cidade),
+        uf: this.aparar(dados.endereco.uf).toUpperCase(),
+        pais: this.aparar(dados.endereco.pais).toUpperCase() || 'BR'
+      },
+      contatos: {
+        emailFinanceiro: this.aparar(dados.contatos.emailFinanceiro),
+        telefoneFinanceiro: this.aparar(dados.contatos.telefoneFinanceiro),
+        whatsappAtendimento: this.aparar(dados.contatos.whatsappAtendimento),
+        emailAtendimento: this.aparar(dados.contatos.emailAtendimento)
+      },
+      fiscal: {
+        prepararRecibos: Boolean(dados.fiscal.prepararRecibos),
+        observacoes: this.aparar(dados.fiscal.observacoes)
       }
     };
   }
@@ -198,12 +307,61 @@ export class ServicoPortalCliente {
     };
   }
 
+  private mapearPerfilEmpresa(tenant: TenantOrm, valor?: Record<string, unknown>): PerfilEmpresaCliente {
+    const perfil = valor ?? {};
+    const responsavel = this.objeto(perfil.responsavel);
+    const endereco = this.objeto(perfil.endereco);
+    const contatos = this.objeto(perfil.contatos);
+    const fiscal = this.objeto(perfil.fiscal);
+
+    return {
+      tenantId: tenant.id,
+      tipoPessoa: perfil.tipoPessoa === 'pf' ? 'pf' : 'pj',
+      documento: this.texto(perfil.documento, ''),
+      nomeLegal: this.texto(perfil.nomeLegal, tenant.nome),
+      nomeFantasia: this.texto(perfil.nomeFantasia, tenant.nome),
+      inscricaoEstadual: this.texto(perfil.inscricaoEstadual, ''),
+      inscricaoMunicipal: this.texto(perfil.inscricaoMunicipal, ''),
+      responsavel: {
+        nome: this.texto(responsavel.nome, ''),
+        email: this.texto(responsavel.email, ''),
+        telefone: this.texto(responsavel.telefone, ''),
+        cargo: this.texto(responsavel.cargo, '')
+      },
+      endereco: {
+        cep: this.texto(endereco.cep, ''),
+        logradouro: this.texto(endereco.logradouro, ''),
+        numero: this.texto(endereco.numero, ''),
+        complemento: this.texto(endereco.complemento, ''),
+        bairro: this.texto(endereco.bairro, ''),
+        cidade: this.texto(endereco.cidade, ''),
+        uf: this.texto(endereco.uf, ''),
+        pais: this.texto(endereco.pais, 'BR')
+      },
+      contatos: {
+        emailFinanceiro: this.texto(contatos.emailFinanceiro, ''),
+        telefoneFinanceiro: this.texto(contatos.telefoneFinanceiro, ''),
+        whatsappAtendimento: this.texto(contatos.whatsappAtendimento, ''),
+        emailAtendimento: this.texto(contatos.emailAtendimento, '')
+      },
+      fiscal: {
+        prepararRecibos: this.booleano(fiscal.prepararRecibos, true),
+        observacoes: this.texto(fiscal.observacoes, '')
+      },
+      atualizadoEm: tenant.atualizadoEm
+    };
+  }
+
   private objeto(valor: unknown): Record<string, unknown> {
     return valor && typeof valor === 'object' && !Array.isArray(valor) ? (valor as Record<string, unknown>) : {};
   }
 
   private texto(valor: unknown, fallback: string): string {
     return typeof valor === 'string' && valor.trim() ? valor : fallback;
+  }
+
+  private aparar(valor: unknown): string {
+    return typeof valor === 'string' ? valor.trim() : '';
   }
 
   private booleano(valor: unknown, fallback: boolean): boolean {

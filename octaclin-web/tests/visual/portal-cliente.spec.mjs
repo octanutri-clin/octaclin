@@ -179,6 +179,63 @@ async function prepararSessaoCliente(page) {
       })
     });
   });
+
+  await page.route('**/api/cliente/perfil-empresa', async (route) => {
+    if (route.request().method() === 'PATCH') {
+      const corpo = JSON.parse(route.request().postData() ?? '{}');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          tenantId: 'tenant-1',
+          atualizadoEm: '2026-07-22T10:00:00.000Z',
+          ...corpo
+        })
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        tenantId: 'tenant-1',
+        tipoPessoa: 'pj',
+        documento: '12.345.678/0001-90',
+        nomeLegal: 'OctaClin Consultoria LTDA',
+        nomeFantasia: 'OctaClin Prime',
+        inscricaoEstadual: 'isento',
+        inscricaoMunicipal: '123456',
+        responsavel: {
+          nome: 'Carla Octa',
+          email: 'carla@octaclin.com.br',
+          telefone: '5511999990000',
+          cargo: 'Diretora'
+        },
+        endereco: {
+          cep: '01310-100',
+          logradouro: 'Avenida Paulista',
+          numero: '1000',
+          complemento: 'cj 101',
+          bairro: 'Bela Vista',
+          cidade: 'Sao Paulo',
+          uf: 'SP',
+          pais: 'BR'
+        },
+        contatos: {
+          emailFinanceiro: 'financeiro@octaclin.com.br',
+          telefoneFinanceiro: '5511888880000',
+          whatsappAtendimento: '5511992362080',
+          emailAtendimento: 'atendimento@octaclin.com.br'
+        },
+        fiscal: {
+          prepararRecibos: true,
+          observacoes: 'Emitir recibos em nome do responsavel financeiro.'
+        },
+        atualizadoEm: '2026-07-20T10:00:00.000Z'
+      })
+    });
+  });
 }
 
 async function assertSemOverflowHorizontal(page) {
@@ -236,6 +293,21 @@ test.describe('portal do cliente', () => {
     await configuracoes.getByRole('checkbox', { name: 'WhatsApp' }).uncheck();
     await configuracoes.getByRole('button', { name: 'Salvar configuracoes' }).click();
     await expect(configuracoes.getByText('Configuracoes salvas.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Perfil fiscal' })).toBeVisible();
+    const perfilFiscal = page.locator('#perfil-fiscal');
+    await expect(perfilFiscal.getByRole('heading', { name: 'Perfil fiscal' })).toBeVisible();
+    await expect(perfilFiscal.getByLabel('Tipo de pessoa')).toHaveValue('pj');
+    await expect(perfilFiscal.getByLabel('Documento fiscal')).toHaveValue('12.345.678/0001-90');
+    await expect(perfilFiscal.getByLabel('Nome legal')).toHaveValue('OctaClin Consultoria LTDA');
+    await expect(perfilFiscal.getByRole('textbox', { name: 'Responsavel', exact: true })).toHaveValue('Carla Octa');
+    await expect(perfilFiscal.getByLabel('Email do responsavel')).toHaveValue('carla@octaclin.com.br');
+    await expect(perfilFiscal.getByLabel('Cidade')).toHaveValue('Sao Paulo');
+    await expect(perfilFiscal.getByLabel('UF')).toHaveValue('SP');
+    await expect(perfilFiscal.getByLabel('Email financeiro')).toHaveValue('financeiro@octaclin.com.br');
+    await perfilFiscal.getByLabel('Nome fantasia').fill('OctaClin Fiscal');
+    await perfilFiscal.getByLabel('Observacoes fiscais').fill('Recibos por consulta paga.');
+    await perfilFiscal.getByRole('button', { name: 'Salvar perfil fiscal' }).click();
+    await expect(perfilFiscal.getByText('Perfil fiscal salvo.')).toBeVisible();
     await expect(page.getByText('Portal do paciente')).toHaveCount(0);
     await expect(page.getByText('Console clinico')).toHaveCount(0);
     await assertSemOverflowHorizontal(page);

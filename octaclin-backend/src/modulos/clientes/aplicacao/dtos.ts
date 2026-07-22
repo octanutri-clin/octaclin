@@ -92,3 +92,149 @@ export class AtualizarConfiguracoesClienteDto {
   @Type(() => MarcaClienteDto)
   marca: MarcaClienteDto;
 }
+
+export class ResponsavelEmpresaClienteDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  nome?: string;
+
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(180)
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  telefone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  cargo?: string;
+}
+
+export class EnderecoEmpresaClienteDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  cep?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  logradouro?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  numero?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  complemento?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  bairro?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  cidade?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2)
+  uf?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2)
+  pais?: string;
+}
+
+export class ContatosEmpresaClienteDto {
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(180)
+  emailFinanceiro?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  telefoneFinanceiro?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  whatsappAtendimento?: string;
+
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(180)
+  emailAtendimento?: string;
+}
+
+export class FiscalEmpresaClienteDto {
+  @IsBoolean()
+  prepararRecibos: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  observacoes?: string;
+}
+
+export class AtualizarPerfilEmpresaClienteDto {
+  @IsIn(['pf', 'pj'])
+  tipoPessoa: 'pf' | 'pj';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  documento?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(180)
+  nomeLegal: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  nomeFantasia?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  inscricaoEstadual?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  inscricaoMunicipal?: string;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ResponsavelEmpresaClienteDto)
+  responsavel: ResponsavelEmpresaClienteDto;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => EnderecoEmpresaClienteDto)
+  endereco: EnderecoEmpresaClienteDto;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ContatosEmpresaClienteDto)
+  contatos: ContatosEmpresaClienteDto;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => FiscalEmpresaClienteDto)
+  fiscal: FiscalEmpresaClienteDto;
+}

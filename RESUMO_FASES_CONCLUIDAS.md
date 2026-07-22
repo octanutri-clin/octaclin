@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 96.
+Atualizado apos a Fase 97.
 
 Este arquivo e um handoff executivo do que ja foi construido no OctaClin. Ele deve ajudar outro agente de IA ou desenvolvedor a entender rapidamente a evolucao do projeto sem precisar reprocessar todo o historico de commits.
 
@@ -138,6 +138,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 94 - Preflight de producao: prontidao por area, gates de fase e validacao local padronizada.
 - Fase 95 - Permissoes finas para usuarios administrativos: matriz refinada para Client, Professional e Collaborator, guard backend por permissao, BFF protegido e UI escondendo acoes indevidas.
 - Fase 96 - Configuracoes da conta do cliente: tela e endpoints para nome, marca, timezone, idioma e canais padrao, persistidos em `tenant_configuracoes`.
+- Fase 97 - Perfil da empresa/consultoria e dados fiscais: tela e endpoints para pessoa fisica/juridica, responsavel, endereco, contatos e base de recibos/notas, persistidos por tenant e auditados.
 
 ## Estado atual de uso
 

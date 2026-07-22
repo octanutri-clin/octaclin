@@ -8,6 +8,7 @@ import {
   Building2,
   CheckCircle2,
   CreditCard,
+  FileText,
   MailCheck,
   RefreshCcw,
   Save,
@@ -21,15 +22,19 @@ import { Botao } from '@/components/ui/botao';
 import { obterSessao } from '@/lib/auth-api';
 import {
   AtualizarConfiguracoesClienteEntrada,
+  AtualizarPerfilEmpresaClienteEntrada,
   ConfiguracoesPortalClienteApi,
+  PerfilEmpresaClienteApi,
   RespostaConvitesUsuarioClienteApi,
   PapelUsuarioClienteCriavelApi,
   RespostaUsuariosClienteApi,
   ResumoPortalClienteApi,
   atualizarConfiguracoesCliente,
+  atualizarPerfilEmpresaCliente,
   criarUsuarioCliente,
   desativarUsuarioCliente,
   obterConfiguracoesCliente,
+  obterPerfilEmpresaCliente,
   listarConvitesUsuariosCliente,
   listarUsuariosCliente,
   obterResumoPortalCliente,
@@ -41,7 +46,8 @@ const navegacao = [
   { href: '#conta', rotulo: 'Conta', permissao: 'cliente.acessar' },
   { href: '#assinatura', rotulo: 'Assinatura', permissao: 'cliente.assinatura.ler' },
   { href: '#usuarios', rotulo: 'Usuarios', permissao: 'cliente.usuarios.ler' },
-  { href: '#configuracoes', rotulo: 'Configuracoes', permissao: 'cliente.configuracoes.gerenciar' }
+  { href: '#configuracoes', rotulo: 'Configuracoes', permissao: 'cliente.configuracoes.gerenciar' },
+  { href: '#perfil-fiscal', rotulo: 'Perfil fiscal', permissao: 'cliente.configuracoes.gerenciar' }
 ] as const;
 
 function formatarQuantidade(valor: number, singular: string, plural: string) {
@@ -76,26 +82,67 @@ const formularioConfiguracoesInicial: AtualizarConfiguracoesClienteEntrada = {
   }
 };
 
+const formularioPerfilEmpresaInicial: AtualizarPerfilEmpresaClienteEntrada = {
+  tipoPessoa: 'pj',
+  documento: '',
+  nomeLegal: '',
+  nomeFantasia: '',
+  inscricaoEstadual: '',
+  inscricaoMunicipal: '',
+  responsavel: {
+    nome: '',
+    email: '',
+    telefone: '',
+    cargo: ''
+  },
+  endereco: {
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    uf: '',
+    pais: 'BR'
+  },
+  contatos: {
+    emailFinanceiro: '',
+    telefoneFinanceiro: '',
+    whatsappAtendimento: '',
+    emailAtendimento: ''
+  },
+  fiscal: {
+    prepararRecibos: true,
+    observacoes: ''
+  }
+};
+
 export function PortalCliente() {
   const [resumo, setResumo] = useState<ResumoPortalClienteApi | null>(null);
   const [usuarios, setUsuarios] = useState<RespostaUsuariosClienteApi | null>(null);
   const [convites, setConvites] = useState<RespostaConvitesUsuarioClienteApi | null>(null);
   const [configuracoes, setConfiguracoes] = useState<ConfiguracoesPortalClienteApi | null>(null);
+  const [perfilEmpresa, setPerfilEmpresa] = useState<PerfilEmpresaClienteApi | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [erroUsuarios, setErroUsuarios] = useState<string | null>(null);
   const [erroConfiguracoes, setErroConfiguracoes] = useState<string | null>(null);
+  const [erroPerfilEmpresa, setErroPerfilEmpresa] = useState<string | null>(null);
   const [sucessoUsuarios, setSucessoUsuarios] = useState<string | null>(null);
   const [sucessoConfiguracoes, setSucessoConfiguracoes] = useState<string | null>(null);
+  const [sucessoPerfilEmpresa, setSucessoPerfilEmpresa] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [carregandoUsuarios, setCarregandoUsuarios] = useState(true);
   const [carregandoConvites, setCarregandoConvites] = useState(true);
   const [carregandoConfiguracoes, setCarregandoConfiguracoes] = useState(true);
+  const [carregandoPerfilEmpresa, setCarregandoPerfilEmpresa] = useState(true);
   const [salvandoUsuario, setSalvandoUsuario] = useState(false);
   const [salvandoConfiguracoes, setSalvandoConfiguracoes] = useState(false);
+  const [salvandoPerfilEmpresa, setSalvandoPerfilEmpresa] = useState(false);
   const [desativandoUsuarioId, setDesativandoUsuarioId] = useState<string | null>(null);
   const [acaoConviteUsuarioId, setAcaoConviteUsuarioId] = useState<string | null>(null);
   const [formularioUsuario, setFormularioUsuario] = useState(formularioUsuarioInicial);
   const [formularioConfiguracoes, setFormularioConfiguracoes] = useState(formularioConfiguracoesInicial);
+  const [formularioPerfilEmpresa, setFormularioPerfilEmpresa] = useState(formularioPerfilEmpresaInicial);
   const [permissoes, setPermissoes] = useState<string[]>([]);
   const [permissoesCarregadas, setPermissoesCarregadas] = useState(false);
 
@@ -193,6 +240,32 @@ export function PortalCliente() {
       setErroConfiguracoes(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar configuracoes da conta.');
     } finally {
       setCarregandoConfiguracoes(false);
+    }
+  }, []);
+
+  const carregarPerfilEmpresa = useCallback(async () => {
+    setCarregandoPerfilEmpresa(true);
+    setErroPerfilEmpresa(null);
+
+    try {
+      const dados = await obterPerfilEmpresaCliente();
+      setPerfilEmpresa(dados);
+      setFormularioPerfilEmpresa({
+        tipoPessoa: dados.tipoPessoa,
+        documento: dados.documento,
+        nomeLegal: dados.nomeLegal,
+        nomeFantasia: dados.nomeFantasia,
+        inscricaoEstadual: dados.inscricaoEstadual,
+        inscricaoMunicipal: dados.inscricaoMunicipal,
+        responsavel: dados.responsavel,
+        endereco: dados.endereco,
+        contatos: dados.contatos,
+        fiscal: dados.fiscal
+      });
+    } catch (erroAtual) {
+      setErroPerfilEmpresa(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar perfil fiscal.');
+    } finally {
+      setCarregandoPerfilEmpresa(false);
     }
   }, []);
 
@@ -308,6 +381,68 @@ export function PortalCliente() {
     }
   }
 
+  async function salvarPerfilEmpresa(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setSalvandoPerfilEmpresa(true);
+    setErroPerfilEmpresa(null);
+    setSucessoPerfilEmpresa(null);
+
+    try {
+      const atualizado = await atualizarPerfilEmpresaCliente({
+        ...formularioPerfilEmpresa,
+        documento: formularioPerfilEmpresa.documento.trim(),
+        nomeLegal: formularioPerfilEmpresa.nomeLegal.trim(),
+        nomeFantasia: formularioPerfilEmpresa.nomeFantasia.trim(),
+        inscricaoEstadual: formularioPerfilEmpresa.inscricaoEstadual.trim(),
+        inscricaoMunicipal: formularioPerfilEmpresa.inscricaoMunicipal.trim(),
+        responsavel: {
+          nome: formularioPerfilEmpresa.responsavel.nome.trim(),
+          email: formularioPerfilEmpresa.responsavel.email.trim(),
+          telefone: formularioPerfilEmpresa.responsavel.telefone.trim(),
+          cargo: formularioPerfilEmpresa.responsavel.cargo.trim()
+        },
+        endereco: {
+          cep: formularioPerfilEmpresa.endereco.cep.trim(),
+          logradouro: formularioPerfilEmpresa.endereco.logradouro.trim(),
+          numero: formularioPerfilEmpresa.endereco.numero.trim(),
+          complemento: formularioPerfilEmpresa.endereco.complemento.trim(),
+          bairro: formularioPerfilEmpresa.endereco.bairro.trim(),
+          cidade: formularioPerfilEmpresa.endereco.cidade.trim(),
+          uf: formularioPerfilEmpresa.endereco.uf.trim().toUpperCase(),
+          pais: formularioPerfilEmpresa.endereco.pais.trim().toUpperCase() || 'BR'
+        },
+        contatos: {
+          emailFinanceiro: formularioPerfilEmpresa.contatos.emailFinanceiro.trim(),
+          telefoneFinanceiro: formularioPerfilEmpresa.contatos.telefoneFinanceiro.trim(),
+          whatsappAtendimento: formularioPerfilEmpresa.contatos.whatsappAtendimento.trim(),
+          emailAtendimento: formularioPerfilEmpresa.contatos.emailAtendimento.trim()
+        },
+        fiscal: {
+          prepararRecibos: formularioPerfilEmpresa.fiscal.prepararRecibos,
+          observacoes: formularioPerfilEmpresa.fiscal.observacoes.trim()
+        }
+      });
+      setPerfilEmpresa(atualizado);
+      setFormularioPerfilEmpresa({
+        tipoPessoa: atualizado.tipoPessoa,
+        documento: atualizado.documento,
+        nomeLegal: atualizado.nomeLegal,
+        nomeFantasia: atualizado.nomeFantasia,
+        inscricaoEstadual: atualizado.inscricaoEstadual,
+        inscricaoMunicipal: atualizado.inscricaoMunicipal,
+        responsavel: atualizado.responsavel,
+        endereco: atualizado.endereco,
+        contatos: atualizado.contatos,
+        fiscal: atualizado.fiscal
+      });
+      setSucessoPerfilEmpresa('Perfil fiscal salvo.');
+    } catch (erroAtual) {
+      setErroPerfilEmpresa(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar perfil fiscal.');
+    } finally {
+      setSalvandoPerfilEmpresa(false);
+    }
+  }
+
   useEffect(() => {
     if (!permissoesCarregadas) return;
 
@@ -325,8 +460,10 @@ export function PortalCliente() {
 
     if (podeGerenciarConfiguracoes) {
       void carregarConfiguracoes();
+      void carregarPerfilEmpresa();
     } else {
       setCarregandoConfiguracoes(false);
+      setCarregandoPerfilEmpresa(false);
     }
   }, [
     permissoesCarregadas,
@@ -335,7 +472,8 @@ export function PortalCliente() {
     podeGerenciarConfiguracoes,
     carregarUsuarios,
     carregarConvites,
-    carregarConfiguracoes
+    carregarConfiguracoes,
+    carregarPerfilEmpresa
   ]);
 
   const indicadores = useMemo(
@@ -781,6 +919,372 @@ export function PortalCliente() {
                 <Botao type="submit" variante="primario" disabled={salvandoConfiguracoes || carregandoConfiguracoes}>
                   <Save size={16} />
                   {salvandoConfiguracoes ? 'Salvando' : 'Salvar configuracoes'}
+                </Botao>
+              </div>
+            </form>
+          </section>
+        ) : null}
+
+        {podeGerenciarConfiguracoes ? (
+          <section id="perfil-fiscal" className="scroll-mt-4 rounded-lg border border-linha bg-white" aria-busy={carregandoPerfilEmpresa}>
+            <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+              <FileText className="h-4 w-4 text-[#596273]" />
+              <div>
+                <h2 className="text-sm font-semibold">Perfil fiscal</h2>
+                <p className="mt-1 text-sm text-[#596273]">
+                  {perfilEmpresa ? `Atualizado em ${formatarData(perfilEmpresa.atualizadoEm)}` : 'Carregando dados fiscais da conta'}
+                </p>
+              </div>
+            </div>
+            <form onSubmit={salvarPerfilEmpresa} className="grid gap-4 p-4">
+              {erroPerfilEmpresa ? (
+                <div className="flex items-center gap-2 rounded-lg border border-[#efb8ad] bg-[#fff4f1] px-4 py-3 text-sm text-perigo">
+                  <AlertTriangle size={16} />
+                  {erroPerfilEmpresa}
+                </div>
+              ) : null}
+              {sucessoPerfilEmpresa ? (
+                <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+                  <CheckCircle2 size={16} />
+                  {sucessoPerfilEmpresa}
+                </div>
+              ) : null}
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Tipo de pessoa
+                  <select
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.tipoPessoa}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        tipoPessoa: evento.target.value as AtualizarPerfilEmpresaClienteEntrada['tipoPessoa']
+                      }))
+                    }
+                  >
+                    <option value="pj">Pessoa juridica</option>
+                    <option value="pf">Pessoa fisica</option>
+                  </select>
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Documento fiscal
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.documento}
+                    onChange={(evento) => setFormularioPerfilEmpresa((atual) => ({ ...atual, documento: evento.target.value }))}
+                    maxLength={32}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Nome legal
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.nomeLegal}
+                    onChange={(evento) => setFormularioPerfilEmpresa((atual) => ({ ...atual, nomeLegal: evento.target.value }))}
+                    required
+                    maxLength={180}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Nome fantasia
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.nomeFantasia}
+                    onChange={(evento) => setFormularioPerfilEmpresa((atual) => ({ ...atual, nomeFantasia: evento.target.value }))}
+                    maxLength={180}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Inscricao estadual
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.inscricaoEstadual}
+                    onChange={(evento) => setFormularioPerfilEmpresa((atual) => ({ ...atual, inscricaoEstadual: evento.target.value }))}
+                    maxLength={40}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Inscricao municipal
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.inscricaoMunicipal}
+                    onChange={(evento) => setFormularioPerfilEmpresa((atual) => ({ ...atual, inscricaoMunicipal: evento.target.value }))}
+                    maxLength={40}
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3 md:grid-cols-2">
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Responsavel
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.responsavel.nome}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        responsavel: { ...atual.responsavel, nome: evento.target.value }
+                      }))
+                    }
+                    maxLength={120}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Email do responsavel
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    type="email"
+                    value={formularioPerfilEmpresa.responsavel.email}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        responsavel: { ...atual.responsavel, email: evento.target.value }
+                      }))
+                    }
+                    maxLength={180}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Telefone do responsavel
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.responsavel.telefone}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        responsavel: { ...atual.responsavel, telefone: evento.target.value }
+                      }))
+                    }
+                    maxLength={40}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Cargo
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.responsavel.cargo}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        responsavel: { ...atual.responsavel, cargo: evento.target.value }
+                      }))
+                    }
+                    maxLength={80}
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3 md:grid-cols-4">
+                <label className="grid gap-1 text-xs font-semibold text-[#596273] md:col-span-1">
+                  CEP
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.endereco.cep}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        endereco: { ...atual.endereco, cep: evento.target.value }
+                      }))
+                    }
+                    maxLength={20}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273] md:col-span-2">
+                  Logradouro
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.endereco.logradouro}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        endereco: { ...atual.endereco, logradouro: evento.target.value }
+                      }))
+                    }
+                    maxLength={160}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Numero
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.endereco.numero}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        endereco: { ...atual.endereco, numero: evento.target.value }
+                      }))
+                    }
+                    maxLength={30}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273] md:col-span-2">
+                  Complemento
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.endereco.complemento}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        endereco: { ...atual.endereco, complemento: evento.target.value }
+                      }))
+                    }
+                    maxLength={120}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Bairro
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.endereco.bairro}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        endereco: { ...atual.endereco, bairro: evento.target.value }
+                      }))
+                    }
+                    maxLength={120}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Cidade
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.endereco.cidade}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        endereco: { ...atual.endereco, cidade: evento.target.value }
+                      }))
+                    }
+                    maxLength={120}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  UF
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal uppercase text-tinta"
+                    value={formularioPerfilEmpresa.endereco.uf}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        endereco: { ...atual.endereco, uf: evento.target.value.toUpperCase() }
+                      }))
+                    }
+                    maxLength={2}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Pais
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal uppercase text-tinta"
+                    value={formularioPerfilEmpresa.endereco.pais}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        endereco: { ...atual.endereco, pais: evento.target.value.toUpperCase() }
+                      }))
+                    }
+                    maxLength={2}
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Email financeiro
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    type="email"
+                    value={formularioPerfilEmpresa.contatos.emailFinanceiro}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        contatos: { ...atual.contatos, emailFinanceiro: evento.target.value }
+                      }))
+                    }
+                    maxLength={180}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Telefone financeiro
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.contatos.telefoneFinanceiro}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        contatos: { ...atual.contatos, telefoneFinanceiro: evento.target.value }
+                      }))
+                    }
+                    maxLength={40}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  WhatsApp atendimento
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.contatos.whatsappAtendimento}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        contatos: { ...atual.contatos, whatsappAtendimento: evento.target.value }
+                      }))
+                    }
+                    maxLength={40}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Email atendimento
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    type="email"
+                    value={formularioPerfilEmpresa.contatos.emailAtendimento}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        contatos: { ...atual.contatos, emailAtendimento: evento.target.value }
+                      }))
+                    }
+                    maxLength={180}
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3">
+                <label className="inline-flex min-h-10 items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={formularioPerfilEmpresa.fiscal.prepararRecibos}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        fiscal: { ...atual.fiscal, prepararRecibos: evento.target.checked }
+                      }))
+                    }
+                  />
+                  Preparar base para recibos
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Observacoes fiscais
+                  <textarea
+                    className="min-h-24 rounded-md border border-linha bg-white px-3 py-2 text-sm font-normal text-tinta"
+                    value={formularioPerfilEmpresa.fiscal.observacoes}
+                    onChange={(evento) =>
+                      setFormularioPerfilEmpresa((atual) => ({
+                        ...atual,
+                        fiscal: { ...atual.fiscal, observacoes: evento.target.value }
+                      }))
+                    }
+                    maxLength={500}
+                  />
+                </label>
+              </div>
+
+              <div className="flex justify-end">
+                <Botao type="submit" variante="primario" disabled={salvandoPerfilEmpresa || carregandoPerfilEmpresa}>
+                  <Save size={16} />
+                  {salvandoPerfilEmpresa ? 'Salvando' : 'Salvar perfil fiscal'}
                 </Botao>
               </div>
             </form>

@@ -7,8 +7,8 @@ Atualizado em 2026-07-22.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 96 - Configuracoes da conta do cliente.
-- Proxima fase planejada: Fase 97 - Perfil da empresa/consultoria e dados fiscais.
+- Ultima fase concluida: Fase 97 - Perfil da empresa/consultoria e dados fiscais.
+- Proxima fase planejada: Fase 98 - Convite, reenvio e revogacao com auditoria operacional completa.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -25,6 +25,7 @@ Atualizado em 2026-07-22.
 - Portal do cliente.
 - Resumo real da conta do cliente.
 - Configuracoes da conta do cliente.
+- Perfil fiscal da empresa/consultoria do cliente.
 - Gestao de usuarios administrativos do cliente.
 - Convites administrativos por email.
 - Reenvio e revogacao de convites administrativos.
@@ -36,7 +37,7 @@ Atualizado em 2026-07-22.
 
 ## O que ainda falta antes de producao real
 
-- Configuracoes da conta do cliente.
+- Historico operacional completo de convites administrativos.
 - Planos, limites e assinatura.
 - Dashboard do profissional.
 - Prontuario/linha do tempo clinica do paciente para profissional.

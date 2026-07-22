@@ -48,6 +48,45 @@ export interface ConfiguracoesPortalClienteApi {
 
 export type AtualizarConfiguracoesClienteEntrada = Omit<ConfiguracoesPortalClienteApi, 'tenantId' | 'slug' | 'status' | 'atualizadoEm'>;
 
+export interface PerfilEmpresaClienteApi {
+  tenantId: string;
+  tipoPessoa: 'pf' | 'pj';
+  documento: string;
+  nomeLegal: string;
+  nomeFantasia: string;
+  inscricaoEstadual: string;
+  inscricaoMunicipal: string;
+  responsavel: {
+    nome: string;
+    email: string;
+    telefone: string;
+    cargo: string;
+  };
+  endereco: {
+    cep: string;
+    logradouro: string;
+    numero: string;
+    complemento: string;
+    bairro: string;
+    cidade: string;
+    uf: string;
+    pais: string;
+  };
+  contatos: {
+    emailFinanceiro: string;
+    telefoneFinanceiro: string;
+    whatsappAtendimento: string;
+    emailAtendimento: string;
+  };
+  fiscal: {
+    prepararRecibos: boolean;
+    observacoes: string;
+  };
+  atualizadoEm: string;
+}
+
+export type AtualizarPerfilEmpresaClienteEntrada = Omit<PerfilEmpresaClienteApi, 'tenantId' | 'atualizadoEm'>;
+
 export type PapelUsuarioClienteApi = 'Client' | 'Professional' | 'Collaborator';
 export type PapelUsuarioClienteCriavelApi = 'Professional' | 'Collaborator';
 
@@ -124,6 +163,22 @@ export async function atualizarConfiguracoesCliente(entrada: AtualizarConfigurac
   });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
   return resposta.json() as Promise<ConfiguracoesPortalClienteApi>;
+}
+
+export async function obterPerfilEmpresaCliente(): Promise<PerfilEmpresaClienteApi> {
+  const resposta = await fetch('/api/cliente/perfil-empresa', { cache: 'no-store' });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<PerfilEmpresaClienteApi>;
+}
+
+export async function atualizarPerfilEmpresaCliente(entrada: AtualizarPerfilEmpresaClienteEntrada): Promise<PerfilEmpresaClienteApi> {
+  const resposta = await fetch('/api/cliente/perfil-empresa', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entrada)
+  });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<PerfilEmpresaClienteApi>;
 }
 
 export async function listarUsuariosCliente(): Promise<RespostaUsuariosClienteApi> {

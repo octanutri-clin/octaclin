@@ -245,4 +245,170 @@ describe('ServicoPortalCliente', () => {
     expect(configuracoes.marca.nomeExibido).toBe('Octa Prime');
     expect(configuracoes.canaisPadrao.whatsapp).toBe(false);
   });
+
+  it('deve retornar perfil da empresa com defaults para preparacao fiscal', async () => {
+    const { servico, repositorioConfiguracoes } = criarServico({
+      tenants: [
+        {
+          id: 'tenant-1',
+          nome: 'Clinica Octa Real',
+          slug: 'clinica-octa-real',
+          status: 'ativo',
+          criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      usuarios: []
+    });
+
+    const perfil = await servico.obterPerfilEmpresa('tenant-1');
+
+    expect(repositorioConfiguracoes.findOne).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant-1', chave: 'perfil_empresa' }
+    });
+    expect(perfil).toEqual({
+      tenantId: 'tenant-1',
+      tipoPessoa: 'pj',
+      documento: '',
+      nomeLegal: 'Clinica Octa Real',
+      nomeFantasia: 'Clinica Octa Real',
+      inscricaoEstadual: '',
+      inscricaoMunicipal: '',
+      responsavel: {
+        nome: '',
+        email: '',
+        telefone: '',
+        cargo: ''
+      },
+      endereco: {
+        cep: '',
+        logradouro: '',
+        numero: '',
+        complemento: '',
+        bairro: '',
+        cidade: '',
+        uf: '',
+        pais: 'BR'
+      },
+      contatos: {
+        emailFinanceiro: '',
+        telefoneFinanceiro: '',
+        whatsappAtendimento: '',
+        emailAtendimento: ''
+      },
+      fiscal: {
+        prepararRecibos: true,
+        observacoes: ''
+      },
+      atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+    });
+  });
+
+  it('deve atualizar perfil da empresa e persistir dados fiscais no tenant autenticado', async () => {
+    const { servico, repositorioConfiguracoes } = criarServico({
+      tenants: [
+        {
+          id: 'tenant-1',
+          nome: 'Clinica Octa Real',
+          slug: 'clinica-octa-real',
+          status: 'ativo',
+          criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      usuarios: [],
+      configuracoes: [
+        {
+          id: 'perfil-1',
+          tenantId: 'tenant-1',
+          chave: 'perfil_empresa',
+          valor: {
+            tipoPessoa: 'pj',
+            documento: '00.000.000/0001-00'
+          },
+          criadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ]
+    });
+
+    const perfil = await servico.atualizarPerfilEmpresa('tenant-1', {
+      tipoPessoa: 'pj',
+      documento: ' 12.345.678/0001-90 ',
+      nomeLegal: ' OctaClin Consultoria LTDA ',
+      nomeFantasia: ' OctaClin Prime ',
+      inscricaoEstadual: ' isento ',
+      inscricaoMunicipal: ' 123456 ',
+      responsavel: {
+        nome: ' Dra. Carla Octa ',
+        email: ' carla@octaclin.com.br ',
+        telefone: ' 5511999990000 ',
+        cargo: ' Diretora '
+      },
+      endereco: {
+        cep: ' 01310-100 ',
+        logradouro: ' Avenida Paulista ',
+        numero: ' 1000 ',
+        complemento: ' cj 101 ',
+        bairro: ' Bela Vista ',
+        cidade: ' Sao Paulo ',
+        uf: ' SP ',
+        pais: ' BR '
+      },
+      contatos: {
+        emailFinanceiro: ' financeiro@octaclin.com.br ',
+        telefoneFinanceiro: ' 5511888880000 ',
+        whatsappAtendimento: ' 5511992362080 ',
+        emailAtendimento: ' atendimento@octaclin.com.br '
+      },
+      fiscal: {
+        prepararRecibos: true,
+        observacoes: ' Emitir recibos em nome do responsavel financeiro. '
+      }
+    });
+
+    expect(repositorioConfiguracoes.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'perfil-1',
+        tenantId: 'tenant-1',
+        chave: 'perfil_empresa',
+        valor: {
+          tipoPessoa: 'pj',
+          documento: '12.345.678/0001-90',
+          nomeLegal: 'OctaClin Consultoria LTDA',
+          nomeFantasia: 'OctaClin Prime',
+          inscricaoEstadual: 'isento',
+          inscricaoMunicipal: '123456',
+          responsavel: {
+            nome: 'Dra. Carla Octa',
+            email: 'carla@octaclin.com.br',
+            telefone: '5511999990000',
+            cargo: 'Diretora'
+          },
+          endereco: {
+            cep: '01310-100',
+            logradouro: 'Avenida Paulista',
+            numero: '1000',
+            complemento: 'cj 101',
+            bairro: 'Bela Vista',
+            cidade: 'Sao Paulo',
+            uf: 'SP',
+            pais: 'BR'
+          },
+          contatos: {
+            emailFinanceiro: 'financeiro@octaclin.com.br',
+            telefoneFinanceiro: '5511888880000',
+            whatsappAtendimento: '5511992362080',
+            emailAtendimento: 'atendimento@octaclin.com.br'
+          },
+          fiscal: {
+            prepararRecibos: true,
+            observacoes: 'Emitir recibos em nome do responsavel financeiro.'
+          }
+        }
+      })
+    );
+    expect(perfil.nomeLegal).toBe('OctaClin Consultoria LTDA');
+    expect(perfil.responsavel.email).toBe('carla@octaclin.com.br');
+    expect(perfil.endereco.uf).toBe('SP');
+  });
 });
