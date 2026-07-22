@@ -10,7 +10,7 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 4. `VARIAVEIS_AMBIENTE.md` se a tarefa tocar deploy, integracoes, secrets ou ambiente.
 5. `RUNBOOK_PRODUCAO.md` se a tarefa tocar Render, Neon, Upstash, Gmail, Meta, Google Calendar ou operacao.
 6. `DECISOES_ARQUITETURA.md` se a tarefa alterar arquitetura, seguranca, tenancy, auth, dados ou integracoes.
-7. `ONBOARDING_DESENVOLVEDOR.md`, `COORDENACAO_DESENVOLVIMENTO_IA.md`, `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md` e `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` quando um novo desenvolvedor/agente entrar no projeto.
+7. `ONBOARDING_DESENVOLVEDOR.md`, `COORDENACAO_DESENVOLVIMENTO_IA.md`, `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`, `DEVELOPMENT_LOG.md`, `RETORNO_APOS_DESENVOLVEDOR.md` e `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` quando um novo desenvolvedor/agente entrar no projeto.
 
 ## Estado atual
 

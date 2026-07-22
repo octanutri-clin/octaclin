@@ -87,6 +87,8 @@ Atualizado em 2026-07-22.
 - `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`: pacote multifase para o desenvolvedor seguir enquanto outros agentes ficam pausados.
 - `MENSAGEM_HANDOFF_DESENVOLVEDOR.md`: texto pronto para repassar o contexto do projeto.
 - `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md`: ferramentas, plugins e acessos recomendados.
+- `DEVELOPMENT_LOG.md`: diario curto de fases concluidas por desenvolvedores/agentes.
+- `RETORNO_APOS_DESENVOLVEDOR.md`: checklist para retomada apos trabalho externo.
 
 ## Risco principal atual
 

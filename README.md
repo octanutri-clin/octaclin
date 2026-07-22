@@ -18,6 +18,8 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 - `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md` - escopo recomendado para avancar por varias fases.
 - `MENSAGEM_HANDOFF_DESENVOLVEDOR.md` - mensagem pronta para repassar o contexto.
 - `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` - ferramentas, plugins e acessos recomendados.
+- `DEVELOPMENT_LOG.md` - diario curto de fases concluidas por devs/agentes.
+- `RETORNO_APOS_DESENVOLVEDOR.md` - checklist para retomar apos trabalho externo.
 - `MAPA_ROTAS_PERMISSOES.md` - mapa de papeis, permissoes e rotas.
 - `TESTES_E_VALIDACOES.md` - matriz de comandos de validacao.
 - `VARIAVEIS_AMBIENTE.md` - variaveis necessarias sem valores secretos.
