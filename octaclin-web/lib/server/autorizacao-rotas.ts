@@ -29,6 +29,8 @@ export function sanitizarDestinoInicial(valor?: string) {
 }
 
 function permissaoExigidaParaRota(pathname: string): string | undefined {
+  if (pathname.startsWith('/pacientes/')) return 'pacientes.ler';
+
   const entrada = Object.entries(permissoesRotasOperacionais).find(
     ([rota]) => pathname === rota || pathname.startsWith(`${rota}/`)
   );

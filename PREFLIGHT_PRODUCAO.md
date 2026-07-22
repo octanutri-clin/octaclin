@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-07-22, Fase 103.
+Atualizado em 2026-07-22, Fase 104.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -20,7 +20,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Permissoes finas | Pronto | Matriz refinada, guard backend, BFF e middleware web por permissao. | Revalidar em producao isolada e ampliar testes cross-tenant. |
 | Multi-tenant | Parcial | Tenant aplicado nos fluxos principais. | Criar testes negativos cross-tenant para rotas criticas. |
 | Portal do cliente | Parcial | Base, resumo real, configuracoes, perfil fiscal, usuarios, convites administrativos, historico/exportacao de convites, resumo de limites SaaS, solicitacao comercial manual e aviso de assinatura bloqueada. | Onboarding final e QA E2E. |
-| Portal do profissional | Parcial | Dashboard diario, console operacional, pacientes, agenda, formularios e comunicacoes. | Prontuario, evolucoes, tarefas e materiais. |
+| Portal do profissional | Parcial | Dashboard diario, console operacional, pacientes, prontuario/linha do tempo, agenda, formularios e comunicacoes. | Evolucoes clinicas, tarefas e materiais. |
 | Portal do paciente | Parcial | Primeiro acesso, historico, perfil, formularios e LGPD. | UX final, tarefas, materiais, check-ins e notificacoes. |
 | Formularios | Pronto | Editor, modelos, preview, coleta, respostas e leitura clinica. | QA E2E com jornada real e dados realistas. |
 | Agenda | Parcial | Agenda interna com Google Calendar e comunicacoes no agendamento. | Remarcacao, cancelamento, conflitos e sincronizacao bidirecional minima. |
@@ -79,4 +79,4 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Seguir para a proxima fase funcional: prontuario/linha do tempo do paciente para profissional, Fase 104.
+Seguir para a proxima fase funcional: evolucoes/anotacoes clinicas, Fase 105.

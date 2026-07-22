@@ -93,6 +93,26 @@ export class ControladorPacientes {
     return paciente;
   }
 
+  @Get(':id/prontuario')
+  async obterProntuario(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    const prontuario = await this.servicoPacientes.obterProntuario(usuario.tenantId, id);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.prontuario.ler',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { eventos: prontuario.linhaDoTempo.length }
+    });
+    return prontuario;
+  }
+
   @Patch(':id')
   @Permissoes('pacientes.gerenciar')
   async atualizar(

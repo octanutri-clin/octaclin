@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Edit3, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Trash2, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { criarConvitePaciente } from '@/lib/convites-paciente-api';
 import {
@@ -328,7 +329,7 @@ export function ListaPacientes() {
 
       <div className="overflow-x-auto rounded-lg border border-linha bg-white">
         <div className="min-w-[840px]">
-          <div className="grid grid-cols-[1.2fr_1fr_0.8fr_0.7fr_136px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-[#596273]">
+          <div className="grid grid-cols-[1.2fr_1fr_0.8fr_0.7fr_172px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-[#596273]">
             <span>Paciente</span>
             <span>Responsavel</span>
             <span>Status</span>
@@ -338,7 +339,7 @@ export function ListaPacientes() {
           <div className="divide-y divide-linha">
             {dados?.itens.length ? (
               dados.itens.map((paciente) => (
-                <div key={paciente.id} className="grid grid-cols-[1.2fr_1fr_0.8fr_0.7fr_136px] gap-3 px-4 py-3 text-sm">
+                <div key={paciente.id} className="grid grid-cols-[1.2fr_1fr_0.8fr_0.7fr_172px] gap-3 px-4 py-3 text-sm">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <HeartPulse size={16} className="shrink-0 text-primaria" />
@@ -355,6 +356,14 @@ export function ListaPacientes() {
                   </span>
                   <span className="font-semibold">{Number(paciente.scoreRisco).toFixed(1)}</span>
                   <div className="flex justify-end gap-1">
+                    <Link
+                      href={`/pacientes/${paciente.id}` as any}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md text-tinta transition-colors hover:bg-[#eef3f6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                      aria-label="Abrir prontuario"
+                      title="Abrir prontuario"
+                    >
+                      <FileText size={16} />
+                    </Link>
                     <Botao
                       type="button"
                       variante="fantasma"

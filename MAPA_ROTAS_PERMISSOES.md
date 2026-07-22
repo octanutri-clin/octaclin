@@ -1,6 +1,6 @@
 # OctaClin - Mapa de rotas e permissoes
 
-Atualizado apos a Fase 103. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
+Atualizado apos a Fase 104. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
 
 ## Papeis
 
@@ -79,6 +79,7 @@ Inclui permissoes de `Professional` e adiciona:
 | `/dashboard` | SuperAdmin, Professional, Collaborator | `dashboard.ler` |
 | `/agenda` | SuperAdmin, Professional, Collaborator | `agenda.consultas.ler` |
 | `/pacientes` | SuperAdmin, Professional, Collaborator | `pacientes.listar` |
+| `/pacientes/[id]` | SuperAdmin, Professional, Collaborator | `pacientes.ler` |
 | `/profissionais` | SuperAdmin, Professional | `profissionais.ler` |
 | `/questionarios` | SuperAdmin, Professional, Collaborator | `questionarios.ler` |
 | `/comunicacoes` | SuperAdmin, Professional, Collaborator | `comunicacoes.mensagens.ler` |
@@ -129,6 +130,7 @@ Inclui permissoes de `Professional` e adiciona:
 | `/api/cliente/usuarios/[id]/convite` | `/cliente/usuarios/:id/convite` | DELETE exige `cliente.convites.gerenciar` |
 | `/api/operacoes/assinaturas/solicitacoes` | `/operacoes/assinaturas/solicitacoes` | GET exige `SuperAdmin`; lista solicitacoes comerciais pendentes/concluidas |
 | `/api/operacoes/assinaturas/plano` | `/operacoes/assinaturas/plano` | POST exige `SuperAdmin`; aplica plano manualmente no tenant atual |
+| `/api/pacientes/[id]/prontuario` | `/pacientes/:id/prontuario` | GET exige sessao operacional com `pacientes.ler`; backend audita leitura sensivel do prontuario |
 
 ## Resultado da Fase 95
 

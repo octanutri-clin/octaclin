@@ -69,6 +69,31 @@ export interface PacienteRespostaDto {
   atualizadoEm: Date;
 }
 
+export type TipoEventoProntuarioPaciente = 'consulta' | 'formulario' | 'resposta_formulario' | 'mensagem';
+
+export interface EventoProntuarioPacienteDto {
+  id: string;
+  tipo: TipoEventoProntuarioPaciente;
+  titulo: string;
+  descricao?: string;
+  data: Date;
+  status?: string;
+  origemId?: string;
+  metadados?: Record<string, unknown>;
+}
+
+export interface ProntuarioPacienteRespostaDto {
+  paciente: PacienteRespostaDto;
+  resumo: {
+    consultas: number;
+    formulariosPendentes: number;
+    respostas: number;
+    mensagens: number;
+    ultimoEventoEm?: Date;
+  };
+  linhaDoTempo: EventoProntuarioPacienteDto[];
+}
+
 export class CriarConvitePacienteDto {
   @IsEmail()
   @MaxLength(180)

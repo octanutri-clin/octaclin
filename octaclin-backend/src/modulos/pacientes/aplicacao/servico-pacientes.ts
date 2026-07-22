@@ -1,9 +1,14 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { IsNull } from 'typeorm';
+import { In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cliente';
-import { AtualizarPacienteDto, CriarPacienteDto, PacienteRespostaDto } from './dtos';
+import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
+import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
+import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
+import { AtualizarPacienteDto, CriarPacienteDto, EventoProntuarioPacienteDto, PacienteRespostaDto, ProntuarioPacienteRespostaDto } from './dtos';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
 @Injectable()
@@ -115,6 +120,74 @@ export class ServicoPacientes {
     };
   }
 
+  async obterProntuario(tenantId: string, pacienteId: string): Promise<ProntuarioPacienteRespostaDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const pacienteOrm = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: { id: pacienteId, tenantId, arquivadoEm: IsNull() }
+      });
+
+      if (!pacienteOrm) {
+        throw new NotFoundException('Paciente nao encontrado.');
+      }
+
+      const [consultas, envios, respostas, mensagens] = await Promise.all([
+        gerenciador.getRepository(AgendaConsultaOrm).find({
+          where: { tenantId, pacienteId },
+          order: { inicioEm: 'DESC' },
+          take: 30
+        }),
+        gerenciador.getRepository(EnvioQuestionarioOrm).find({
+          where: { tenantId, pacienteId },
+          order: { enviadoEm: 'DESC' },
+          take: 30
+        }),
+        gerenciador.getRepository(RespostaCheckinOrm).find({
+          where: { tenantId, pacienteId },
+          order: { finalizadoEm: 'DESC' },
+          take: 30
+        }),
+        gerenciador.getRepository(MensagemNotificacaoOrm).find({
+          where: { tenantId, pacienteId },
+          order: { criadoEm: 'DESC' },
+          take: 30
+        })
+      ]);
+
+      const idsQuestionarios = Array.from(new Set(envios.map((envio) => envio.questionarioId).filter(Boolean)));
+      const questionarios = idsQuestionarios.length
+        ? await gerenciador.getRepository(QuestionarioOrm).find({ where: { tenantId, id: In(idsQuestionarios) } })
+        : [];
+      const questionariosPorId = new Map(questionarios.map((questionario) => [questionario.id, questionario]));
+      const enviosPorId = new Map(envios.map((envio) => [envio.id, envio]));
+
+      const linhaDoTempo = [
+        ...consultas.map((consulta) => this.mapearEventoConsulta(consulta)),
+        ...envios.map((envio) => this.mapearEventoEnvioQuestionario(envio, questionariosPorId.get(envio.questionarioId)?.titulo)),
+        ...respostas.map((resposta) =>
+          this.mapearEventoRespostaQuestionario(
+            resposta,
+            questionariosPorId.get(enviosPorId.get(resposta.envioQuestionarioId)?.questionarioId ?? '')?.titulo
+          )
+        ),
+        ...mensagens.map((mensagem) => this.mapearEventoMensagem(mensagem))
+      ]
+        .sort((a, b) => b.data.getTime() - a.data.getTime())
+        .slice(0, 80);
+
+      return {
+        paciente: this.mapearResposta(pacienteOrm),
+        resumo: {
+          consultas: consultas.length,
+          formulariosPendentes: envios.filter((envio) => envio.status === 'pendente' || envio.status === 'enviado').length,
+          respostas: respostas.length,
+          mensagens: mensagens.length,
+          ultimoEventoEm: linhaDoTempo[0]?.data
+        },
+        linhaDoTempo
+      };
+    });
+  }
+
   private async garantirLimitePermitido(tenantId: string, recurso: 'pacientes') {
     const limite = await this.portalCliente.checarLimite(tenantId, recurso);
     if (!limite.permitido) {
@@ -133,5 +206,77 @@ export class ServicoPacientes {
     } catch {
       return contato;
     }
+  }
+
+  private mapearEventoConsulta(consulta: AgendaConsultaOrm): EventoProntuarioPacienteDto {
+    return {
+      id: consulta.id,
+      tipo: 'consulta',
+      titulo: consulta.titulo,
+      descricao: consulta.local,
+      data: consulta.inicioEm,
+      status: consulta.status,
+      origemId: consulta.id,
+      metadados: {
+        fimEm: consulta.fimEm,
+        googleEventId: consulta.googleEventId,
+        googleEventHtmlLink: consulta.googleEventHtmlLink
+      }
+    };
+  }
+
+  private mapearEventoEnvioQuestionario(envio: EnvioQuestionarioOrm, tituloQuestionario?: string): EventoProntuarioPacienteDto {
+    return {
+      id: envio.id,
+      tipo: 'formulario',
+      titulo: tituloQuestionario ?? 'Formulario',
+      descricao: envio.expiraEm ? `Expira em ${envio.expiraEm.toISOString()}` : undefined,
+      data: envio.enviadoEm ?? envio.expiraEm ?? new Date(0),
+      status: envio.status,
+      origemId: envio.questionarioId,
+      metadados: {
+        envioQuestionarioId: envio.id,
+        expiraEm: envio.expiraEm
+      }
+    };
+  }
+
+  private mapearEventoRespostaQuestionario(resposta: RespostaCheckinOrm, tituloQuestionario?: string): EventoProntuarioPacienteDto {
+    return {
+      id: resposta.id,
+      tipo: 'resposta_formulario',
+      titulo: `Resposta de ${tituloQuestionario ?? 'formulario'}`,
+      descricao: resposta.scoreFinal ? `Score final ${resposta.scoreFinal}` : undefined,
+      data: resposta.finalizadoEm ?? resposta.criadoEm,
+      status: resposta.finalizadoEm ? 'finalizado' : 'em_andamento',
+      origemId: resposta.envioQuestionarioId,
+      metadados: {
+        scoreFinal: resposta.scoreFinal
+      }
+    };
+  }
+
+  private mapearEventoMensagem(mensagem: MensagemNotificacaoOrm): EventoProntuarioPacienteDto {
+    return {
+      id: mensagem.id,
+      tipo: 'mensagem',
+      titulo: mensagem.status === 'recebido' ? 'Mensagem recebida' : 'Mensagem',
+      descricao: this.extrairTextoMensagem(mensagem),
+      data: mensagem.enviadoEm ?? mensagem.criadoEm,
+      status: mensagem.status,
+      origemId: mensagem.id,
+      metadados: {
+        canalId: mensagem.canalId,
+        templateId: mensagem.templateId,
+        erro: mensagem.erro
+      }
+    };
+  }
+
+  private extrairTextoMensagem(mensagem: MensagemNotificacaoOrm): string | undefined {
+    const payload = mensagem.payload ?? {};
+    const candidatos = [payload.texto, payload.mensagem, payload.body, payload.conteudo];
+    const texto = candidatos.find((valor) => typeof valor === 'string' && valor.trim().length > 0);
+    return typeof texto === 'string' ? texto : mensagem.erro;
   }
 }

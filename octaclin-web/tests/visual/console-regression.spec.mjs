@@ -468,6 +468,95 @@ async function prepararDashboardMockado(page) {
   });
 }
 
+async function prepararProntuarioMockado(page) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: 'Professional', domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/dashboard'), domain: 'localhost', path: '/' }
+  ]);
+
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        autenticado: true,
+        apiUrl: 'http://localhost:3001',
+        tenantSlug: 'clinica-carla',
+        email: 'dra.carla@octaclin.local',
+        expiraEm: '2026-07-22T15:00:00.000Z',
+        papel: 'Professional',
+        permissoes: ['dashboard.ler', 'pacientes.listar', 'pacientes.ler', 'agenda.consultas.ler', 'questionarios.ler', 'comunicacoes.mensagens.ler'],
+        destinoInicial: '/dashboard'
+      })
+    });
+  });
+
+  await page.route('**/api/pacientes/paciente-1/prontuario', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        paciente: {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          profissionalResponsavelId: 'profissional-1',
+          nome: 'Ana Souza',
+          contato: 'ana@example.com',
+          dataNascimento: '1990-04-12',
+          statusAdesao: 'risco',
+          scoreRisco: '82',
+          ultimoCheckinEm: '2026-07-21T10:00:00.000Z',
+          criadoEm: '2026-07-01T10:00:00.000Z',
+          atualizadoEm: '2026-07-21T10:00:00.000Z'
+        },
+        resumo: {
+          consultas: 1,
+          formulariosPendentes: 1,
+          respostas: 1,
+          mensagens: 1,
+          ultimoEventoEm: '2026-07-22T16:00:00.000Z'
+        },
+        linhaDoTempo: [
+          {
+            id: 'mensagem-1',
+            tipo: 'mensagem',
+            titulo: 'Mensagem recebida',
+            descricao: 'Estou com duvida no plano.',
+            data: '2026-07-22T16:00:00.000Z',
+            status: 'recebido'
+          },
+          {
+            id: 'consulta-1',
+            tipo: 'consulta',
+            titulo: 'Consulta de retorno',
+            descricao: 'Online',
+            data: '2026-07-22T13:00:00.000Z',
+            status: 'agendada'
+          },
+          {
+            id: 'resposta-1',
+            tipo: 'resposta_formulario',
+            titulo: 'Resposta de Check-in semanal',
+            descricao: 'Score final 74.5',
+            data: '2026-07-21T15:00:00.000Z',
+            status: 'finalizado'
+          },
+          {
+            id: 'envio-1',
+            tipo: 'formulario',
+            titulo: 'Check-in semanal',
+            descricao: 'Expira em 2026-07-25T13:00:00.000Z',
+            data: '2026-07-20T13:00:00.000Z',
+            status: 'enviado'
+          }
+        ]
+      })
+    });
+  });
+}
+
 test.describe('dashboard profissional', () => {
   test('agrega rotina diaria do profissional', async ({ page }) => {
     await prepararDashboardMockado(page);
@@ -485,6 +574,26 @@ test.describe('dashboard profissional', () => {
     await assertSemOverflowHorizontal(page);
   });
 });
+
+test.describe('prontuario do paciente', () => {
+  test('exibe linha do tempo clinica consolidada', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await expect(page.getByRole('heading', { name: 'Prontuario do paciente' })).toBeVisible();
+    await expect(page.getByText('Ana Souza')).toBeVisible();
+    await expect(page.getByText('Risco 82 pontos')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Linha do tempo clinica' })).toBeVisible();
+    await expect(page.getByText('Mensagem recebida')).toBeVisible();
+    await expect(page.getByText('Estou com duvida no plano.')).toBeVisible();
+    await expect(page.getByText('Consulta de retorno')).toBeVisible();
+    await expect(page.getByText('Resposta de Check-in semanal')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Check-in semanal', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Voltar para pacientes' })).toHaveAttribute('href', '/pacientes');
+    await assertSemOverflowHorizontal(page);
+  });
+});
+
 
 test.describe('operacoes LGPD', () => {
   test('exibe fila LGPD e permite iniciar tratativa', async ({ page }) => {
