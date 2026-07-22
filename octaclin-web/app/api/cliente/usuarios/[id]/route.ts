@@ -1,0 +1,18 @@
+import { NextResponse } from 'next/server';
+import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
+
+interface Params {
+  params: { id: string };
+}
+
+export async function DELETE(_request: Request, { params }: Params) {
+  try {
+    const resposta = await requisitarBackendAutenticado(`/cliente/usuarios/${params.id}`, { method: 'DELETE' });
+    return new NextResponse(null, { status: resposta.status });
+  } catch (erro) {
+    if (erro instanceof ErroSessaoAusente) {
+      return NextResponse.json({ mensagem: erro.message }, { status: 401 });
+    }
+    throw erro;
+  }
+}

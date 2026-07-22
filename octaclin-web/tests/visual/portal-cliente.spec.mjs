@@ -58,6 +58,54 @@ async function prepararSessaoCliente(page) {
       })
     });
   });
+
+  await page.route('**/api/cliente/usuarios', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          itens: [
+            {
+              id: 'cliente-1',
+              tenantId: 'tenant-1',
+              email: 'gestor@octaclin.local',
+              role: 'Client',
+              ativo: true,
+              ultimoLoginEm: '2026-07-21T10:00:00.000Z',
+              criadoEm: '2026-07-01T10:00:00.000Z',
+              atualizadoEm: '2026-07-21T10:00:00.000Z'
+            },
+            {
+              id: 'colaborador-1',
+              tenantId: 'tenant-1',
+              email: 'agenda@octaclin.local',
+              role: 'Collaborator',
+              ativo: true,
+              criadoEm: '2026-07-12T10:00:00.000Z',
+              atualizadoEm: '2026-07-20T10:00:00.000Z'
+            }
+          ],
+          total: 2
+        })
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'novo-1',
+        tenantId: 'tenant-1',
+        email: 'novo@octaclin.local',
+        role: 'Collaborator',
+        ativo: true,
+        criadoEm: '2026-07-22T10:00:00.000Z',
+        atualizadoEm: '2026-07-22T10:00:00.000Z'
+      })
+    });
+  });
 }
 
 async function assertSemOverflowHorizontal(page) {
@@ -87,6 +135,12 @@ test.describe('portal do cliente', () => {
     await expect(page.getByText('4 usuarios ativos')).toBeVisible();
     await expect(page.getByText('2 profissionais')).toBeVisible();
     await expect(page.getByText('1 paciente')).toBeVisible();
+    const gestaoUsuarios = page.locator('#gestao-usuarios');
+    await expect(gestaoUsuarios.getByRole('heading', { name: 'Gerenciar usuarios' })).toBeVisible();
+    await expect(gestaoUsuarios.getByRole('button', { name: 'Convidar usuario' })).toBeVisible();
+    await expect(gestaoUsuarios.getByText('gestor@octaclin.local')).toBeVisible();
+    await expect(gestaoUsuarios.getByText('agenda@octaclin.local')).toBeVisible();
+    await expect(gestaoUsuarios.locator('span').filter({ hasText: 'Collaborator' })).toBeVisible();
     await expect(page.getByText('Acesso profissional separado')).toBeVisible();
     await expect(page.getByText('Portal do paciente')).toHaveCount(0);
     await expect(page.getByText('Console clinico')).toHaveCount(0);

@@ -26,6 +26,31 @@ export interface ResumoPortalClienteApi {
   };
 }
 
+export type PapelUsuarioClienteApi = 'Client' | 'Professional' | 'Collaborator';
+export type PapelUsuarioClienteCriavelApi = 'Professional' | 'Collaborator';
+
+export interface UsuarioClienteApi {
+  id: string;
+  tenantId: string;
+  email: string;
+  role: PapelUsuarioClienteApi;
+  ativo: boolean;
+  ultimoLoginEm?: string;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+export interface RespostaUsuariosClienteApi {
+  itens: UsuarioClienteApi[];
+  total: number;
+}
+
+export interface CriarUsuarioClienteEntrada {
+  email: string;
+  senhaInicial: string;
+  role: PapelUsuarioClienteCriavelApi;
+}
+
 async function extrairMensagemErro(resposta: Response): Promise<string> {
   const texto = await resposta.text();
   try {
@@ -40,4 +65,25 @@ export async function obterResumoPortalCliente(): Promise<ResumoPortalClienteApi
   const resposta = await fetch('/api/cliente/resumo', { cache: 'no-store' });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
   return resposta.json() as Promise<ResumoPortalClienteApi>;
+}
+
+export async function listarUsuariosCliente(): Promise<RespostaUsuariosClienteApi> {
+  const resposta = await fetch('/api/cliente/usuarios', { cache: 'no-store' });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<RespostaUsuariosClienteApi>;
+}
+
+export async function criarUsuarioCliente(entrada: CriarUsuarioClienteEntrada): Promise<UsuarioClienteApi> {
+  const resposta = await fetch('/api/cliente/usuarios', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entrada)
+  });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<UsuarioClienteApi>;
+}
+
+export async function desativarUsuarioCliente(id: string): Promise<void> {
+  const resposta = await fetch(`/api/cliente/usuarios/${id}`, { method: 'DELETE' });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
 }

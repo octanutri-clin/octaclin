@@ -1,9 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Building2, CreditCard, ShieldCheck, UsersRound } from 'lucide-react';
-import { obterResumoPortalCliente, ResumoPortalClienteApi } from '@/lib/cliente-api';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Building2, CheckCircle2, CreditCard, RefreshCcw, ShieldCheck, Trash2, UserPlus, UsersRound } from 'lucide-react';
+import { Botao } from '@/components/ui/botao';
+import {
+  PapelUsuarioClienteCriavelApi,
+  RespostaUsuariosClienteApi,
+  ResumoPortalClienteApi,
+  criarUsuarioCliente,
+  desativarUsuarioCliente,
+  listarUsuariosCliente,
+  obterResumoPortalCliente
+} from '@/lib/cliente-api';
 
 const navegacao = [
   { href: '#conta', rotulo: 'Conta' },
@@ -15,10 +24,30 @@ function formatarQuantidade(valor: number, singular: string, plural: string) {
   return `${valor} ${valor === 1 ? singular : plural}`;
 }
 
+function formatarData(valor?: string) {
+  if (!valor) return '-';
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return valor;
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(data);
+}
+
+const formularioUsuarioInicial = {
+  email: '',
+  senhaInicial: '',
+  role: 'Collaborator' as PapelUsuarioClienteCriavelApi
+};
+
 export function PortalCliente() {
   const [resumo, setResumo] = useState<ResumoPortalClienteApi | null>(null);
+  const [usuarios, setUsuarios] = useState<RespostaUsuariosClienteApi | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [erroUsuarios, setErroUsuarios] = useState<string | null>(null);
+  const [sucessoUsuarios, setSucessoUsuarios] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [carregandoUsuarios, setCarregandoUsuarios] = useState(true);
+  const [salvandoUsuario, setSalvandoUsuario] = useState(false);
+  const [desativandoUsuarioId, setDesativandoUsuarioId] = useState<string | null>(null);
+  const [formularioUsuario, setFormularioUsuario] = useState(formularioUsuarioInicial);
 
   useEffect(() => {
     let ativo = true;
@@ -41,6 +70,64 @@ export function PortalCliente() {
     return () => {
       ativo = false;
     };
+  }, []);
+
+  async function carregarUsuarios() {
+    setCarregandoUsuarios(true);
+    setErroUsuarios(null);
+
+    try {
+      setUsuarios(await listarUsuariosCliente());
+    } catch (erroAtual) {
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar usuarios da conta.');
+    } finally {
+      setCarregandoUsuarios(false);
+    }
+  }
+
+  async function convidarUsuario(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setSalvandoUsuario(true);
+    setErroUsuarios(null);
+    setSucessoUsuarios(null);
+
+    try {
+      await criarUsuarioCliente({
+        email: formularioUsuario.email.trim(),
+        senhaInicial: formularioUsuario.senhaInicial,
+        role: formularioUsuario.role
+      });
+      setFormularioUsuario(formularioUsuarioInicial);
+      await carregarUsuarios();
+      setSucessoUsuarios('Usuario convidado.');
+    } catch (erroAtual) {
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao convidar usuario.');
+    } finally {
+      setSalvandoUsuario(false);
+    }
+  }
+
+  async function desativarUsuario(id: string, email: string) {
+    const confirmado = window.confirm(`Desativar o acesso de ${email}?`);
+    if (!confirmado) return;
+
+    setDesativandoUsuarioId(id);
+    setErroUsuarios(null);
+    setSucessoUsuarios(null);
+
+    try {
+      await desativarUsuarioCliente(id);
+      await carregarUsuarios();
+      setSucessoUsuarios('Usuario desativado.');
+    } catch (erroAtual) {
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desativar usuario.');
+    } finally {
+      setDesativandoUsuarioId(null);
+    }
+  }
+
+  useEffect(() => {
+    void carregarUsuarios();
   }, []);
 
   const indicadores = useMemo(
@@ -176,6 +263,116 @@ export function PortalCliente() {
             </div>
           </section>
         </div>
+
+        <section id="gestao-usuarios" className="scroll-mt-4 rounded-lg border border-linha bg-white" aria-busy={carregandoUsuarios}>
+          <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold">Gerenciar usuarios</h2>
+              <p className="mt-1 text-sm text-[#596273]">
+                {usuarios ? `${usuarios.total} acessos administrativos` : 'Carregando acessos administrativos'}
+              </p>
+            </div>
+            <Botao type="button" onClick={() => void carregarUsuarios()} disabled={carregandoUsuarios}>
+              <RefreshCcw size={16} />
+              {carregandoUsuarios ? 'Atualizando' : 'Atualizar'}
+            </Botao>
+          </div>
+
+          <div className="grid gap-4 p-4">
+            {erroUsuarios ? (
+              <div className="flex items-center gap-2 rounded-lg border border-[#efb8ad] bg-[#fff4f1] px-4 py-3 text-sm text-perigo">
+                <AlertTriangle size={16} />
+                {erroUsuarios}
+              </div>
+            ) : null}
+            {sucessoUsuarios ? (
+              <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+                <CheckCircle2 size={16} />
+                {sucessoUsuarios}
+              </div>
+            ) : null}
+
+            <form onSubmit={convidarUsuario} className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3 lg:grid-cols-[1fr_180px_180px_auto]">
+              <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                Email
+                <input
+                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                  type="email"
+                  value={formularioUsuario.email}
+                  onChange={(evento) => setFormularioUsuario((atual) => ({ ...atual, email: evento.target.value }))}
+                  required
+                />
+              </label>
+              <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                Papel
+                <select
+                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                  value={formularioUsuario.role}
+                  onChange={(evento) =>
+                    setFormularioUsuario((atual) => ({ ...atual, role: evento.target.value as PapelUsuarioClienteCriavelApi }))
+                  }
+                >
+                  <option value="Collaborator">Collaborator</option>
+                  <option value="Professional">Professional</option>
+                </select>
+              </label>
+              <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                Senha inicial
+                <input
+                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                  type="password"
+                  minLength={8}
+                  value={formularioUsuario.senhaInicial}
+                  onChange={(evento) => setFormularioUsuario((atual) => ({ ...atual, senhaInicial: evento.target.value }))}
+                  required
+                />
+              </label>
+              <div className="flex items-end">
+                <Botao type="submit" variante="primario" disabled={salvandoUsuario} className="w-full">
+                  <UserPlus size={16} />
+                  {salvandoUsuario ? 'Convidando' : 'Convidar usuario'}
+                </Botao>
+              </div>
+            </form>
+
+            <div className="overflow-x-auto rounded-md border border-linha bg-white">
+              <div className="min-w-[760px]">
+                <div className="grid grid-cols-[1.4fr_160px_120px_140px_96px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-[#596273]">
+                  <span>Email</span>
+                  <span>Papel</span>
+                  <span>Status</span>
+                  <span>Ultimo login</span>
+                  <span>Acoes</span>
+                </div>
+                <div className="divide-y divide-linha">
+                  {usuarios?.itens.length ? (
+                    usuarios.itens.map((usuario) => (
+                      <div key={usuario.id} className="grid grid-cols-[1.4fr_160px_120px_140px_96px] gap-3 px-4 py-3 text-sm">
+                        <span className="break-all font-medium">{usuario.email}</span>
+                        <span>{usuario.role}</span>
+                        <span>{usuario.ativo ? 'Ativo' : 'Inativo'}</span>
+                        <span>{formatarData(usuario.ultimoLoginEm)}</span>
+                        <div className="flex justify-end">
+                          <Botao
+                            type="button"
+                            variante="fantasma"
+                            onClick={() => void desativarUsuario(usuario.id, usuario.email)}
+                            disabled={!usuario.ativo || usuario.role === 'Client' || desativandoUsuarioId === usuario.id}
+                            aria-label={`Desativar ${usuario.email}`}
+                          >
+                            <Trash2 size={16} />
+                          </Botao>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-8 text-sm text-[#596273]">Nenhum usuario administrativo carregado.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </section>
     </main>
   );
