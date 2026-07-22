@@ -40,7 +40,8 @@ const portalPaciente = {
         aceitoEm: '2026-07-22T12:00:00.000Z',
         metadados: { origem: 'primeiro_acesso' }
       }
-    ]
+    ],
+    solicitacoes: []
   }
 };
 

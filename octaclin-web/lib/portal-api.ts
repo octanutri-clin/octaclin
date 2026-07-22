@@ -72,6 +72,17 @@ export interface LgpdPortalPacienteApi {
     aceitoEm: string;
     metadados: Record<string, unknown>;
   }[];
+  solicitacoes: {
+    protocolo: string;
+    pacienteId: string;
+    tipo: 'retificacao' | 'exclusao';
+    status: 'recebida' | 'em_tratamento' | 'concluida' | 'indeferida';
+    detalhes?: string;
+    abertoEm: string;
+    atualizadoEm: string;
+    ultimaTratativa?: string;
+    ultimaResposta?: string;
+  }[];
 }
 
 export interface DetalheFormularioRespondidoApi {

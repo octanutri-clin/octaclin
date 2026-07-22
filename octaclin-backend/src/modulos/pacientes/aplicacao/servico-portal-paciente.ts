@@ -102,6 +102,7 @@ export interface LgpdPortalPaciente {
     aceitoEm: Date;
     metadados: Record<string, unknown>;
   }[];
+  solicitacoes: SolicitacaoLgpdPortalPaciente[];
 }
 
 export interface ConsentimentoLgpdPortalPaciente extends PerfilPortalPaciente {
@@ -144,6 +145,20 @@ export interface SolicitacaoLgpdPaciente {
   tipo: 'retificacao' | 'exclusao';
   status: 'recebida';
   criadoEm: Date;
+}
+
+type StatusSolicitacaoLgpdPortal = 'recebida' | 'em_tratamento' | 'concluida' | 'indeferida';
+
+export interface SolicitacaoLgpdPortalPaciente {
+  protocolo: string;
+  pacienteId: string;
+  tipo: 'retificacao' | 'exclusao';
+  status: StatusSolicitacaoLgpdPortal;
+  detalhes?: string;
+  abertoEm: Date;
+  atualizadoEm: Date;
+  ultimaTratativa?: string;
+  ultimaResposta?: string;
 }
 
 @Injectable()
@@ -201,7 +216,7 @@ export class ServicoPortalPaciente {
         order: { criadoEm: 'DESC' },
         take: 5
       });
-      const consentimentos = await this.listarConsentimentosPaciente(gerenciador, tenantId, usuarioId);
+      const consentimentos = await this.listarConsentimentosPaciente(gerenciador, tenantId);
 
       const consultasProximas = consultas.map((consulta) => ({
         id: consulta.id,
@@ -270,7 +285,7 @@ export class ServicoPortalPaciente {
         formulariosPendentes,
         formulariosRespondidos,
         mensagensRecentes,
-        lgpd: this.mapearLgpd(consentimentos)
+        lgpd: this.mapearLgpd(consentimentos, paciente.id, usuarioId)
       };
     });
   }
@@ -363,7 +378,7 @@ export class ServicoPortalPaciente {
 
       return {
         ...this.mapearPerfilPaciente(paciente),
-        lgpd: this.mapearLgpd(await this.listarConsentimentosPaciente(gerenciador, tenantId, usuarioId))
+        lgpd: this.mapearLgpd(await this.listarConsentimentosPaciente(gerenciador, tenantId), paciente.id, usuarioId)
       };
     });
   }
@@ -509,28 +524,104 @@ export class ServicoPortalPaciente {
 
   private async listarConsentimentosPaciente(
     gerenciador: EntityManager,
-    tenantId: string,
-    usuarioId: string
+    tenantId: string
   ): Promise<ConsentimentoLgpdOrm[]> {
     return gerenciador.getRepository(ConsentimentoLgpdOrm).find({
-      where: { tenantId, usuarioId },
+      where: { tenantId },
       order: { aceitoEm: 'DESC' },
-      take: 10
+      take: 200
     });
   }
 
-  private mapearLgpd(consentimentos: ConsentimentoLgpdOrm[]): LgpdPortalPaciente {
+  private mapearLgpd(consentimentos: ConsentimentoLgpdOrm[], pacienteId: string, usuarioId: string): LgpdPortalPaciente {
+    const consentimentosPaciente = consentimentos.filter(
+      (consentimento) => consentimento.usuarioId === usuarioId && !this.ehEventoSolicitacaoLgpd(consentimento.tipo)
+    );
+
     return {
       versaoAtual: this.versaoLgpdAtual(),
-      ultimoAceiteEm: consentimentos[0]?.aceitoEm,
-      consentimentos: consentimentos.map((consentimento) => ({
+      ultimoAceiteEm: consentimentosPaciente[0]?.aceitoEm,
+      consentimentos: consentimentosPaciente.map((consentimento) => ({
         id: consentimento.id,
         tipo: consentimento.tipo,
         versao: consentimento.versao,
         aceitoEm: consentimento.aceitoEm,
         metadados: consentimento.metadados ?? {}
-      }))
+      })),
+      solicitacoes: this.consolidarSolicitacoesLgpdPortal(consentimentos, pacienteId, usuarioId)
     };
+  }
+
+  private consolidarSolicitacoesLgpdPortal(
+    eventos: ConsentimentoLgpdOrm[],
+    pacienteId: string,
+    usuarioId: string
+  ): SolicitacaoLgpdPortalPaciente[] {
+    const solicitacoes = new Map<string, SolicitacaoLgpdPortalPaciente>();
+
+    eventos
+      .filter((evento) => this.ehEventoSolicitacaoLgpd(evento.tipo))
+      .filter((evento) => evento.usuarioId === usuarioId || this.metadadoTexto(evento.metadados, 'pacienteId') === pacienteId)
+      .sort((a, b) => this.timestampData(a.aceitoEm) - this.timestampData(b.aceitoEm))
+      .forEach((evento) => {
+        const protocolo = this.metadadoTexto(evento.metadados, 'protocolo');
+        if (!protocolo) return;
+
+        if (evento.tipo.startsWith('solicitacao_lgpd_')) {
+          const tipo = evento.tipo.replace('solicitacao_lgpd_', '');
+          if (tipo !== 'retificacao' && tipo !== 'exclusao') return;
+
+          solicitacoes.set(protocolo, {
+            protocolo,
+            pacienteId: this.metadadoTexto(evento.metadados, 'pacienteId') ?? pacienteId,
+            tipo,
+            status: this.normalizarStatusLgpd(this.metadadoTexto(evento.metadados, 'status')),
+            detalhes: this.metadadoTexto(evento.metadados, 'detalhes'),
+            abertoEm: evento.aceitoEm,
+            atualizadoEm: evento.aceitoEm
+          });
+          return;
+        }
+
+        const solicitacao = solicitacoes.get(protocolo);
+        if (!solicitacao) return;
+
+        solicitacao.status = this.normalizarStatusLgpd(this.metadadoTexto(evento.metadados, 'status'));
+        solicitacao.atualizadoEm = evento.aceitoEm;
+
+        if (evento.tipo === 'tratativa_lgpd') {
+          solicitacao.ultimaTratativa = this.metadadoTexto(evento.metadados, 'detalhes') ?? solicitacao.ultimaTratativa;
+          return;
+        }
+
+        if (evento.tipo === 'resposta_lgpd_preparada') {
+          solicitacao.ultimaResposta =
+            this.metadadoTexto(evento.metadados, 'assuntoEmail') ??
+            this.metadadoTexto(evento.metadados, 'detalhes') ??
+            solicitacao.ultimaResposta;
+        }
+      });
+
+    return Array.from(solicitacoes.values()).sort((a, b) => this.timestampData(b.atualizadoEm) - this.timestampData(a.atualizadoEm));
+  }
+
+  private ehEventoSolicitacaoLgpd(tipo: string): boolean {
+    return tipo.startsWith('solicitacao_lgpd_') || tipo === 'tratativa_lgpd' || tipo === 'resposta_lgpd_preparada';
+  }
+
+  private metadadoTexto(metadados: Record<string, unknown> | undefined, chave: string): string | undefined {
+    const valor = metadados?.[chave];
+    return typeof valor === 'string' && valor.trim() ? valor.trim() : undefined;
+  }
+
+  private normalizarStatusLgpd(status?: string): StatusSolicitacaoLgpdPortal {
+    if (status === 'em_tratamento' || status === 'concluida' || status === 'indeferida') return status;
+    return 'recebida';
+  }
+
+  private timestampData(valor?: Date): number {
+    if (!valor) return 0;
+    return valor instanceof Date ? valor.getTime() : new Date(valor).getTime();
   }
 
   private obterContatoPaciente(paciente: PacienteOrm): ContatoPacientePortal {

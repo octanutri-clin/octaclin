@@ -77,6 +77,19 @@ const portalPaciente = {
         aceitoEm: '2026-07-10T10:00:00.000Z',
         metadados: { origem: 'primeiro_acesso' }
       }
+    ],
+    solicitacoes: [
+      {
+        protocolo: 'LGPD-123',
+        pacienteId: 'paciente-1',
+        tipo: 'retificacao',
+        status: 'em_tratamento',
+        detalhes: 'Atualizar telefone cadastrado.',
+        abertoEm: '2026-07-22T10:00:00.000Z',
+        atualizadoEm: '2026-07-22T12:00:00.000Z',
+        ultimaTratativa: 'Validando cadastro.',
+        ultimaResposta: 'Atualizacao da solicitacao LGPD LGPD-123'
+      }
     ]
   }
 };
@@ -185,6 +198,11 @@ test.describe('portal do paciente', () => {
     await expect(page.getByRole('heading', { name: 'Privacidade' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Baixar meus dados' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Enviar solicitacao LGPD' })).toBeVisible();
+    await expect(page.getByText('Meus protocolos LGPD')).toBeVisible();
+    await expect(page.getByText('LGPD-123', { exact: true })).toBeVisible();
+    await expect(page.getByText('Em tratamento')).toBeVisible();
+    await expect(page.getByText('Validando cadastro.')).toBeVisible();
+    await expect(page.getByText('Atualizacao da solicitacao LGPD LGPD-123')).toBeVisible();
 
     await page.getByRole('button', { name: 'Ver respostas' }).click();
     await expect(page.getByText('Mantive boa adesao durante a semana.')).toBeVisible();

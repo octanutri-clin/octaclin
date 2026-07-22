@@ -81,6 +81,24 @@ function rotuloConsentimento(tipo: string) {
   return mapa[tipo] ?? tipo;
 }
 
+function rotuloTipoSolicitacaoLgpd(tipo: string) {
+  const mapa: Record<string, string> = {
+    retificacao: 'Retificacao de dados',
+    exclusao: 'Exclusao de dados'
+  };
+  return mapa[tipo] ?? tipo;
+}
+
+function rotuloStatusSolicitacaoLgpd(status: string) {
+  const mapa: Record<string, string> = {
+    recebida: 'Recebida',
+    em_tratamento: 'Em tratamento',
+    concluida: 'Concluida',
+    indeferida: 'Indeferida'
+  };
+  return mapa[status] ?? status;
+}
+
 function formatarValor(valor: unknown): string {
   if (valor === null || valor === undefined || valor === '') return 'Sem resposta';
   if (Array.isArray(valor)) return valor.length ? valor.map(formatarValor).join(', ') : 'Sem resposta';
@@ -778,6 +796,50 @@ export function PortalPaciente() {
                       {solicitandoLgpd ? 'Enviando' : 'Enviar solicitacao LGPD'}
                     </Botao>
                   </form>
+                  <div className="grid gap-2">
+                    <div>
+                      <p className="text-sm font-semibold">Meus protocolos LGPD</p>
+                      <p className="mt-1 text-xs text-[#596273]">Acompanhe as solicitacoes abertas pelo portal e o andamento registrado pela equipe.</p>
+                    </div>
+                    {portal.lgpd.solicitacoes.length ? (
+                      portal.lgpd.solicitacoes.map((solicitacao) => (
+                        <article key={solicitacao.protocolo} className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="break-words text-sm font-semibold">{solicitacao.protocolo}</p>
+                              <p className="mt-1 text-xs text-[#596273]">{rotuloTipoSolicitacaoLgpd(solicitacao.tipo)}</p>
+                            </div>
+                            <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                              {rotuloStatusSolicitacaoLgpd(solicitacao.status)}
+                            </span>
+                          </div>
+                          {solicitacao.detalhes ? <p className="mt-2 break-words text-sm text-[#343c4b]">{solicitacao.detalhes}</p> : null}
+                          <dl className="mt-3 grid gap-2 text-xs text-[#596273] sm:grid-cols-2">
+                            <div>
+                              <dt className="font-medium text-[#343c4b]">Aberto em</dt>
+                              <dd>{formatarDataHora(solicitacao.abertoEm)}</dd>
+                            </div>
+                            <div>
+                              <dt className="font-medium text-[#343c4b]">Atualizado em</dt>
+                              <dd>{formatarDataHora(solicitacao.atualizadoEm)}</dd>
+                            </div>
+                          </dl>
+                          {solicitacao.ultimaTratativa ? (
+                            <p className="mt-3 break-words text-xs text-[#596273]">
+                              Ultima tratativa: <span className="font-medium text-[#343c4b]">{solicitacao.ultimaTratativa}</span>
+                            </p>
+                          ) : null}
+                          {solicitacao.ultimaResposta ? (
+                            <p className="mt-2 break-words text-xs text-[#596273]">
+                              Ultima resposta: <span className="font-medium text-[#343c4b]">{solicitacao.ultimaResposta}</span>
+                            </p>
+                          ) : null}
+                        </article>
+                      ))
+                    ) : (
+                      <p className="text-sm text-[#596273]">Nenhum protocolo LGPD aberto.</p>
+                    )}
+                  </div>
                   <div className="grid gap-2">
                     {portal.lgpd.consentimentos.length ? (
                       portal.lgpd.consentimentos.map((consentimento) => (

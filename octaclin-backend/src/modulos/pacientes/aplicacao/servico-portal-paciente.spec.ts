@@ -287,7 +287,8 @@ describe('ServicoPortalPaciente', () => {
           aceitoEm: new Date('2026-07-10T10:00:00.000Z'),
           metadados: { origem: 'primeiro_acesso' }
         }
-      ]
+      ],
+      solicitacoes: []
     });
   });
 
@@ -295,6 +296,101 @@ describe('ServicoPortalPaciente', () => {
     const { servico } = criarServico({ pacientes: [], consultas: [], envios: [], questionarios: [], mensagens: [] });
 
     await expect(servico.obterResumoPortal('tenant-1', 'usuario-sem-paciente')).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('deve mostrar protocolos LGPD do paciente com status operacional consolidado', async () => {
+    const { servico } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          profissionalResponsavelId: 'profissional-1',
+          statusAdesao: 'aderente'
+        }
+      ],
+      consultas: [],
+      envios: [],
+      questionarios: [],
+      mensagens: [],
+      consentimentos: [
+        {
+          id: 'solicitacao-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          tipo: 'solicitacao_lgpd_retificacao',
+          versao: '2026-07',
+          aceitoEm: new Date('2026-07-22T10:00:00.000Z'),
+          metadados: {
+            pacienteId: 'paciente-1',
+            protocolo: 'LGPD-123',
+            status: 'recebida',
+            detalhes: 'Atualizar telefone cadastrado.'
+          }
+        },
+        {
+          id: 'tratativa-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-admin-1',
+          tipo: 'tratativa_lgpd',
+          versao: '2026-07',
+          aceitoEm: new Date('2026-07-22T11:00:00.000Z'),
+          metadados: {
+            pacienteId: 'paciente-1',
+            protocolo: 'LGPD-123',
+            status: 'em_tratamento',
+            responsavelId: 'usuario-admin-1',
+            detalhes: 'Validando cadastro.'
+          }
+        },
+        {
+          id: 'resposta-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-admin-1',
+          tipo: 'resposta_lgpd_preparada',
+          versao: '2026-07',
+          aceitoEm: new Date('2026-07-22T12:00:00.000Z'),
+          metadados: {
+            pacienteId: 'paciente-1',
+            protocolo: 'LGPD-123',
+            status: 'em_tratamento',
+            assuntoEmail: 'Atualizacao da solicitacao LGPD LGPD-123'
+          }
+        },
+        {
+          id: 'solicitacao-outro',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-2',
+          tipo: 'solicitacao_lgpd_exclusao',
+          versao: '2026-07',
+          aceitoEm: new Date('2026-07-22T13:00:00.000Z'),
+          metadados: {
+            pacienteId: 'paciente-2',
+            protocolo: 'LGPD-OUTRO',
+            status: 'recebida',
+            detalhes: 'Nao deve aparecer.'
+          }
+        }
+      ]
+    });
+
+    const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+
+    expect(portal.lgpd.solicitacoes).toEqual([
+      {
+        protocolo: 'LGPD-123',
+        pacienteId: 'paciente-1',
+        tipo: 'retificacao',
+        status: 'em_tratamento',
+        detalhes: 'Atualizar telefone cadastrado.',
+        abertoEm: new Date('2026-07-22T10:00:00.000Z'),
+        atualizadoEm: new Date('2026-07-22T12:00:00.000Z'),
+        ultimaTratativa: 'Validando cadastro.',
+        ultimaResposta: 'Atualizacao da solicitacao LGPD LGPD-123'
+      }
+    ]);
+    expect(JSON.stringify(portal.lgpd.solicitacoes)).not.toContain('LGPD-OUTRO');
   });
 
   it('deve detalhar formulario respondido do paciente logado com perguntas e respostas', async () => {
