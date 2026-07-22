@@ -25,6 +25,7 @@ test('perfil operacional deve sair do portal para seu destino operacional', () =
   });
   assert.deepEqual(decidirAcessoRota('/agenda', 'Professional', '/agenda'), { permitir: true });
   assert.deepEqual(decidirAcessoRota('/operacoes', 'SuperAdmin', '/operacoes'), { permitir: true });
+  assert.deepEqual(decidirAcessoRota('/dashboard', 'Professional', '/dashboard', ['dashboard.ler']), { permitir: true });
   assert.deepEqual(decidirAcessoRota('/cliente', 'Professional', '/agenda'), {
     permitir: false,
     redirecionarPara: '/agenda'
@@ -44,6 +45,10 @@ test('colaborador deve acessar apenas rotas operacionais autorizadas por permiss
   ];
 
   assert.deepEqual(decidirAcessoRota('/agenda', 'Collaborator', '/agenda', permissoesColaborador), { permitir: true });
+  assert.deepEqual(decidirAcessoRota('/dashboard', 'Collaborator', '/agenda', permissoesColaborador), {
+    permitir: false,
+    redirecionarPara: '/agenda'
+  });
   assert.deepEqual(decidirAcessoRota('/comunicacoes', 'Collaborator', '/agenda', permissoesColaborador), { permitir: true });
   assert.deepEqual(decidirAcessoRota('/automacoes', 'Collaborator', '/agenda', permissoesColaborador), {
     permitir: false,

@@ -6,6 +6,7 @@ export interface DecisaoAcessoRota {
 const ROTAS_PORTAL = ['/portal'];
 const ROTAS_CLIENTE = ['/cliente'];
 const permissoesRotasOperacionais: Record<string, string> = {
+  '/dashboard': 'dashboard.ler',
   '/agenda': 'agenda.consultas.ler',
   '/operacoes': 'operacoes.auditoria.ler',
   '/questionarios': 'questionarios.ler',
@@ -23,8 +24,8 @@ function pertenceARota(pathname: string, rotas: readonly string[]) {
 }
 
 export function sanitizarDestinoInicial(valor?: string) {
-  if (!valor) return '/operacoes';
-  return valor.startsWith('/') && !valor.startsWith('//') ? valor : '/operacoes';
+  if (!valor) return '/dashboard';
+  return valor.startsWith('/') && !valor.startsWith('//') ? valor : '/dashboard';
 }
 
 function permissaoExigidaParaRota(pathname: string): string | undefined {

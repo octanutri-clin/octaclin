@@ -144,10 +144,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 100 - Tela de assinatura e uso no portal do cliente: plano recomendado, CTAs de upgrade/revisao de limite, endpoint backend/BFF para solicitacao comercial manual, persistencia em `tenant_configuracoes` e auditoria da solicitacao.
 - Fase 101 - Controle manual de assinatura: painel operacional para listar solicitacoes comerciais, aplicar plano SaaS manualmente por tenant, atualizar `plano_saas` e concluir a solicitacao sem gateway pago inicial.
 - Fase 102 - Bloqueios suaves por inadimplencia/limite: criacao de usuarios administrativos e pacientes passa por checagem de limite/status da assinatura, assinatura suspensa/cancelada bloqueia novas acoes e o portal do cliente exibe aviso sem impedir acesso a dados existentes.
+- Fase 103 - Dashboard inicial do profissional: nova rota `/dashboard`, destino inicial operacional, permissao `dashboard.ler`, indicadores de agenda/pacientes/formularios/mensagens e links para a rotina diaria.
 
 ## Estado atual de uso
 
-O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam maturidade da rotina profissional, onboarding final do cliente/paciente, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e checklist juridico/privacidade.
+O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam prontuario/linha do tempo, evolucoes clinicas, onboarding final do cliente/paciente, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e checklist juridico/privacidade.
 
 ## Como atualizar este arquivo
 

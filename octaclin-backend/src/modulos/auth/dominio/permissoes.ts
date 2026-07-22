@@ -4,6 +4,7 @@ export type EscopoDados = 'tenant_total' | 'pacientes_responsaveis' | 'operacion
 
 export type PermissaoOctaClin =
   | 'console.acessar'
+  | 'dashboard.ler'
   | 'operacoes.auditoria.ler'
   | 'operacoes.outbox.reprocessar'
   | 'profissionais.ler'
@@ -58,6 +59,7 @@ const permissoesCliente = [
 
 const permissoesColaborador = [
   'console.acessar',
+  'dashboard.ler',
   'pacientes.listar',
   'pacientes.ler',
   'questionarios.ler',
@@ -96,9 +98,9 @@ const matrizPermissoes: Record<PapelUsuario, readonly PermissaoOctaClin[]> = {
 };
 
 const destinosIniciais: Record<PapelUsuario, string> = {
-  SuperAdmin: '/operacoes',
-  Professional: '/agenda',
-  Collaborator: '/agenda',
+  SuperAdmin: '/dashboard',
+  Professional: '/dashboard',
+  Collaborator: '/dashboard',
   Patient: '/portal',
   Client: '/cliente'
 };

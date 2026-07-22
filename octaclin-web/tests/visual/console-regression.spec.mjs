@@ -8,6 +8,7 @@ const credenciais = {
 };
 
 const rotas = [
+  { caminho: '/dashboard', titulo: 'Dashboard' },
   { caminho: '/operacoes', titulo: 'Confiabilidade OctaClin' },
   { caminho: '/pacientes', titulo: 'Pacientes' },
   { caminho: '/profissionais', titulo: 'Profissionais' },
@@ -20,8 +21,10 @@ const rotas = [
 ];
 
 const rotulosMenu = [
+  'Dashboard',
   'Questionarios',
   'Comunicacoes',
+  'Agenda',
   'Automacoes',
   'IA',
   'Mobile',
@@ -43,7 +46,7 @@ async function login(page) {
   await campos.nth(3).fill(credenciais.senha);
 
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page).toHaveURL(/\/operacoes$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
 }
 
 async function assertSemOverflowHorizontal(page) {
@@ -296,6 +299,191 @@ test.describe('console operacional', () => {
       await testInfo.attach(nomeArquivo, { body: screenshot, contentType: 'image/png' });
     });
   }
+});
+
+async function prepararDashboardMockado(page) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: 'Professional', domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/dashboard'), domain: 'localhost', path: '/' }
+  ]);
+
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        autenticado: true,
+        apiUrl: 'http://localhost:3001',
+        tenantSlug: 'clinica-carla',
+        email: 'dra.carla@octaclin.local',
+        expiraEm: '2026-07-22T15:00:00.000Z',
+        papel: 'Professional',
+        permissoes: [
+          'dashboard.ler',
+          'agenda.consultas.ler',
+          'pacientes.listar',
+          'questionarios.ler',
+          'comunicacoes.mensagens.ler'
+        ],
+        destinoInicial: '/dashboard'
+      })
+    });
+  });
+
+  await page.route('**/api/agenda/consultas', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 'consulta-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          pacienteNome: 'Ana Souza',
+          profissionalId: 'profissional-1',
+          profissionalNome: 'Dra. Carla',
+          titulo: 'Consulta inicial',
+          inicioEm: '2026-07-22T13:00:00.000Z',
+          fimEm: '2026-07-22T14:00:00.000Z',
+          timezone: 'America/Sao_Paulo',
+          status: 'agendada',
+          local: 'Online',
+          notificacoes: {},
+          payload: {},
+          criadoEm: '2026-07-20T10:00:00.000Z',
+          atualizadoEm: '2026-07-20T10:00:00.000Z'
+        },
+        {
+          id: 'consulta-2',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          pacienteNome: 'Bruno Lima',
+          profissionalId: 'profissional-1',
+          profissionalNome: 'Dra. Carla',
+          titulo: 'Retorno',
+          inicioEm: '2026-07-23T13:00:00.000Z',
+          fimEm: '2026-07-23T13:30:00.000Z',
+          timezone: 'America/Sao_Paulo',
+          status: 'agendada',
+          notificacoes: {},
+          payload: {},
+          criadoEm: '2026-07-20T10:00:00.000Z',
+          atualizadoEm: '2026-07-20T10:00:00.000Z'
+        }
+      ])
+    });
+  });
+
+  await page.route('**/api/pacientes**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            id: 'paciente-1',
+            tenantId: 'tenant-1',
+            profissionalResponsavelId: 'profissional-1',
+            nome: 'Ana Souza',
+            contato: '11999990000',
+            statusAdesao: 'risco',
+            scoreRisco: '82',
+            ultimoCheckinEm: '2026-07-21T12:00:00.000Z',
+            criadoEm: '2026-07-21T10:00:00.000Z'
+          },
+          {
+            id: 'paciente-2',
+            tenantId: 'tenant-1',
+            profissionalResponsavelId: 'profissional-1',
+            nome: 'Bruno Lima',
+            contato: '11988880000',
+            statusAdesao: 'em_acompanhamento',
+            scoreRisco: '34',
+            criadoEm: '2026-07-18T10:00:00.000Z'
+          }
+        ],
+        total: 2
+      })
+    });
+  });
+
+  await page.route('**/api/questionarios**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            id: 'questionario-1',
+            tenantId: 'tenant-1',
+            profissionalId: 'profissional-1',
+            titulo: 'Check-in semanal',
+            status: 'publicado',
+            versao: 2,
+            criadoEm: '2026-07-10T10:00:00.000Z',
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          },
+          {
+            id: 'questionario-2',
+            tenantId: 'tenant-1',
+            profissionalId: 'profissional-1',
+            titulo: 'Pre-consulta',
+            status: 'rascunho',
+            versao: 1,
+            criadoEm: '2026-07-10T10:00:00.000Z',
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          }
+        ],
+        total: 2
+      })
+    });
+  });
+
+  await page.route('**/api/comunicacoes/mensagens', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 'mensagem-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          status: 'recebido',
+          payload: { texto: 'Dra., posso trocar o horario?' },
+          criadoEm: '2026-07-22T11:30:00.000Z'
+        },
+        {
+          id: 'mensagem-2',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          status: 'falhou',
+          erro: 'Template pendente',
+          payload: {},
+          criadoEm: '2026-07-22T10:30:00.000Z'
+        }
+      ])
+    });
+  });
+}
+
+test.describe('dashboard profissional', () => {
+  test('agrega rotina diaria do profissional', async ({ page }) => {
+    await prepararDashboardMockado(page);
+    await page.goto('/dashboard');
+
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Consultas de hoje' })).toBeVisible();
+    await expect(page.getByText('Ana Souza').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Pacientes recentes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Formularios pendentes' })).toBeVisible();
+    await expect(page.getByText('1 rascunho para publicar')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Mensagens para revisar' })).toBeVisible();
+    await expect(page.getByText('Dra., posso trocar o horario?')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Abrir agenda' })).toHaveAttribute('href', '/agenda');
+    await assertSemOverflowHorizontal(page);
+  });
 });
 
 test.describe('operacoes LGPD', () => {

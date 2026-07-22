@@ -39,6 +39,7 @@ describe('Matriz de permissoes OctaClin', () => {
   it('deve separar acesso operacional por perfil profissional', () => {
     expect(possuiPermissao('SuperAdmin', 'operacoes.auditoria.ler')).toBe(true);
     expect(possuiPermissao('Professional', 'operacoes.auditoria.ler')).toBe(false);
+    expect(possuiPermissao('Professional', 'dashboard.ler')).toBe(true);
     expect(possuiPermissao('Professional', 'agenda.consultas.criar')).toBe(true);
     expect(possuiPermissao('Professional', 'pacientes.gerenciar')).toBe(true);
     expect(possuiPermissao('Professional', 'questionarios.gerenciar')).toBe(true);
@@ -53,9 +54,9 @@ describe('Matriz de permissoes OctaClin', () => {
   });
 
   it('deve definir destino inicial por papel para suportar login unificado', () => {
-    expect(destinoInicialPorPapel('SuperAdmin')).toBe('/operacoes');
-    expect(destinoInicialPorPapel('Professional')).toBe('/agenda');
-    expect(destinoInicialPorPapel('Collaborator')).toBe('/agenda');
+    expect(destinoInicialPorPapel('SuperAdmin')).toBe('/dashboard');
+    expect(destinoInicialPorPapel('Professional')).toBe('/dashboard');
+    expect(destinoInicialPorPapel('Collaborator')).toBe('/dashboard');
     expect(destinoInicialPorPapel('Patient')).toBe('/portal');
     expect(destinoInicialPorPapel('Client')).toBe('/cliente');
   });

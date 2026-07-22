@@ -8,6 +8,7 @@ import {
   Brain,
   CalendarDays,
   ClipboardList,
+  LayoutDashboard,
   HeartPulse,
   Send,
   Settings,
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { obterSessao } from '@/lib/auth-api';
 
 const itens = [
+  { href: '/dashboard', rotulo: 'Dashboard', icone: LayoutDashboard, permissao: 'dashboard.ler' },
   { href: '/questionarios', rotulo: 'Questionarios', icone: ClipboardList, permissao: 'questionarios.ler' },
   { href: '/comunicacoes', rotulo: 'Comunicacoes', icone: Send, permissao: 'comunicacoes.mensagens.ler' },
   { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays, permissao: 'agenda.consultas.ler' },

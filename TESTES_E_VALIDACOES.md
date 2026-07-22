@@ -63,6 +63,7 @@ Use quando alterar UI/UX, portal do cliente, portal do paciente ou rotas visuais
 
 ```powershell
 pnpm --dir octaclin-web exec playwright test tests/visual/portal-cliente.spec.mjs --reporter=list
+pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs -g "dashboard profissional" --project=desktop-chromium --project=mobile-chromium --reporter=list
 ```
 
 Antes de rodar Playwright, garanta servidor limpo:

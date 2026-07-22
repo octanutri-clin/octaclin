@@ -1,6 +1,6 @@
 # OctaClin - Handoff tecnico
 
-Atualizado em 2026-07-22, apos a Fase 102 e a documentacao operacional para agentes.
+Atualizado em 2026-07-22, apos a Fase 103 e a documentacao operacional para agentes.
 
 Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo, leia tambem:
 
@@ -38,6 +38,7 @@ O projeto ja possui:
 - solicitacao comercial manual de upgrade/revisao de assinatura;
 - controle manual administrativo de assinatura pelo painel operacional;
 - bloqueios suaves de assinatura/limite para novas criacoes sem impedir acesso a dados existentes.
+- dashboard inicial do profissional com agenda, pacientes, formularios e mensagens.
 
 O sistema esta em staging funcional avancado, mas ainda nao deve ser considerado pronto para clientes reais ate concluir o checklist de producao.
 
@@ -108,6 +109,7 @@ Pasta: `octaclin-web`
 Rotas principais:
 
 - `/login`
+- `/dashboard`
 - `/agenda`
 - `/pacientes`
 - `/profissionais`
@@ -156,8 +158,8 @@ Leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md` antes de alterar qualquer i
 
 ## Estado de roadmap
 
-- Ultima fase concluida: Fase 102 - Bloqueios suaves por inadimplencia/limite.
-- Proxima fase planejada: Fase 103 - Dashboard inicial do profissional.
+- Ultima fase concluida: Fase 103 - Dashboard inicial do profissional.
+- Proxima fase planejada: Fase 104 - Prontuario/linha do tempo do paciente para profissional.
 - Roadmap completo: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regra de continuidade

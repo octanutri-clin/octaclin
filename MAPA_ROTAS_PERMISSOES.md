@@ -1,14 +1,14 @@
 # OctaClin - Mapa de rotas e permissoes
 
-Atualizado apos a Fase 101. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
+Atualizado apos a Fase 103. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
 
 ## Papeis
 
 | Papel | Destino inicial | Escopo | Uso atual |
 | --- | --- | --- | --- |
-| `SuperAdmin` | `/operacoes` | `tenant_total` | Operacao/admin interno e acesso total operacional |
-| `Professional` | `/agenda` | `pacientes_responsaveis` | Profissional clinico |
-| `Collaborator` | `/agenda` | `operacional_delegado` | Colaborador operacional |
+| `SuperAdmin` | `/dashboard` | `tenant_total` | Operacao/admin interno e acesso total operacional |
+| `Professional` | `/dashboard` | `pacientes_responsaveis` | Profissional clinico |
+| `Collaborator` | `/dashboard` | `operacional_delegado` | Colaborador operacional |
 | `Patient` | `/portal` | `proprio_paciente` | Paciente no portal |
 | `Client` | `/cliente` | `conta_cliente` | Gestor da conta SaaS |
 
@@ -36,6 +36,7 @@ Atualizado apos a Fase 101. Este arquivo documenta o estado atual de papeis, per
 ### Collaborator
 
 - `console.acessar`
+- `dashboard.ler`
 - `pacientes.listar`
 - `pacientes.ler`
 - `questionarios.ler`
@@ -75,6 +76,7 @@ Inclui permissoes de `Professional` e adiciona:
 | `/recuperar-senha` | Publica com token | N/A |
 | `/primeiro-acesso` | Publica com token de paciente | N/A |
 | `/formularios/[token]` | Publica com token | N/A |
+| `/dashboard` | SuperAdmin, Professional, Collaborator | `dashboard.ler` |
 | `/agenda` | SuperAdmin, Professional, Collaborator | `agenda.consultas.ler` |
 | `/pacientes` | SuperAdmin, Professional, Collaborator | `pacientes.listar` |
 | `/profissionais` | SuperAdmin, Professional | `profissionais.ler` |
