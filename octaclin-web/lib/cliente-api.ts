@@ -49,6 +49,24 @@ export interface RespostaUsuariosClienteApi {
   total: number;
 }
 
+export interface ConviteUsuarioClienteApi {
+  id: string;
+  usuarioId: string;
+  tenantId: string;
+  email: string;
+  role: PapelUsuarioClienteApi;
+  status: string;
+  expiraEm: string;
+  criadoEm: string;
+  criadoPorUsuarioId?: string;
+  emailErro?: string;
+}
+
+export interface RespostaConvitesUsuarioClienteApi {
+  itens: ConviteUsuarioClienteApi[];
+  total: number;
+}
+
 export interface CriarUsuarioClienteEntrada {
   email: string;
   role: PapelUsuarioClienteCriavelApi;
@@ -76,6 +94,12 @@ export async function listarUsuariosCliente(): Promise<RespostaUsuariosClienteAp
   return resposta.json() as Promise<RespostaUsuariosClienteApi>;
 }
 
+export async function listarConvitesUsuariosCliente(): Promise<RespostaConvitesUsuarioClienteApi> {
+  const resposta = await fetch('/api/cliente/usuarios/convites', { cache: 'no-store' });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<RespostaConvitesUsuarioClienteApi>;
+}
+
 export async function criarUsuarioCliente(entrada: CriarUsuarioClienteEntrada): Promise<UsuarioClienteApi> {
   const resposta = await fetch('/api/cliente/usuarios', {
     method: 'POST',
@@ -88,5 +112,16 @@ export async function criarUsuarioCliente(entrada: CriarUsuarioClienteEntrada): 
 
 export async function desativarUsuarioCliente(id: string): Promise<void> {
   const resposta = await fetch(`/api/cliente/usuarios/${id}`, { method: 'DELETE' });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+}
+
+export async function reenviarConviteUsuarioCliente(usuarioId: string): Promise<UsuarioClienteApi> {
+  const resposta = await fetch(`/api/cliente/usuarios/${usuarioId}/convite/reenvio`, { method: 'POST' });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<UsuarioClienteApi>;
+}
+
+export async function revogarConviteUsuarioCliente(usuarioId: string): Promise<void> {
+  const resposta = await fetch(`/api/cliente/usuarios/${usuarioId}/convite`, { method: 'DELETE' });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
 }

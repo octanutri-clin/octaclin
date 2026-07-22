@@ -6,12 +6,22 @@ import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas'
 import { TokenRedefinicaoSenhaOrm } from '../../auth/infraestrutura/token-redefinicao-senha.orm';
 import { AdaptadorEmailSmtp } from '../../comunicacoes/infraestrutura/adaptadores/adaptador-email-smtp';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
-import { CriarUsuarioClienteDto, PapelUsuarioClienteAdministrativo, UsuarioClienteRespostaDto } from './dtos';
+import {
+  ConviteUsuarioClienteRespostaDto,
+  CriarUsuarioClienteDto,
+  PapelUsuarioClienteAdministrativo,
+  UsuarioClienteRespostaDto
+} from './dtos';
 
 const papeisAdministrativos = ['Client', 'Professional', 'Collaborator'] satisfies PapelUsuarioClienteAdministrativo[];
 
 function hashToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
+}
+
+function textoPayload(payload: Record<string, unknown>, chave: string): string | undefined {
+  const valor = payload[chave];
+  return typeof valor === 'string' ? valor : undefined;
 }
 
 @Injectable()
@@ -40,7 +50,6 @@ export class ServicoUsuariosCliente {
   async criar(tenantId: string, usuarioCriadorId: string, dados: CriarUsuarioClienteDto): Promise<UsuarioClienteRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(UsuarioOrm);
-      const repositorioTokens = gerenciador.getRepository(TokenRedefinicaoSenhaOrm);
       const emailNormalizado = dados.email.trim().toLowerCase();
       const emailHash = this.criptografia.gerarHashBusca(dados.email);
       const existente = await repositorio.findOne({ where: { tenantId, emailHash } });
@@ -60,49 +69,90 @@ export class ServicoUsuariosCliente {
         })
       );
 
-      const token = `${tenantId}.${randomBytes(32).toString('base64url')}`;
-      const linkPrimeiroAcesso = this.montarLinkPrimeiroAcesso(token);
-      const expiraEm = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      const payload = {
-        origem: 'convite_usuario_cliente',
-        criadoPorUsuarioId: usuarioCriadorId,
+      const convite = await this.criarTokenConvite(gerenciador, {
+        tenantId,
+        usuarioId: usuario.id,
+        emailHash,
+        email: emailNormalizado,
         role: dados.role,
-        convidadoEm: new Date().toISOString()
-      };
-
-      await repositorioTokens.save(
-        repositorioTokens.create({
-          tenantId,
-          usuarioId: usuario.id,
-          emailHash,
-          tokenHash: hashToken(token),
-          status: 'pendente',
-          expiraEm,
-          payload
-        })
-      );
-
-      try {
-        await this.enviarEmailConvite(emailNormalizado, linkPrimeiroAcesso, dados.role);
-      } catch (erro) {
-        await repositorioTokens.update(
-          { tenantId, tokenHash: hashToken(token) },
-          {
-            payload: {
-              ...payload,
-              emailErro: erro instanceof Error ? erro.message : 'Falha desconhecida no envio.'
-            }
-          }
-        );
-      }
+        criadoPorUsuarioId: usuarioCriadorId
+      });
 
       return {
         ...this.mapearResposta(usuario),
         convite: {
-          expiraEm,
-          linkPrimeiroAcesso: this.deveExporLinkPrimeiroAcesso() ? linkPrimeiroAcesso : undefined
+          expiraEm: convite.expiraEm,
+          linkPrimeiroAcesso: convite.linkPrimeiroAcesso
         }
       };
+    });
+  }
+
+  async listarConvites(tenantId: string): Promise<{ itens: ConviteUsuarioClienteRespostaDto[]; total: number }> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const tokens = await gerenciador.getRepository(TokenRedefinicaoSenhaOrm).find({
+        where: { tenantId, status: 'pendente' },
+        order: { criadoEm: 'DESC' }
+      });
+      const itens: ConviteUsuarioClienteRespostaDto[] = [];
+
+      for (const token of tokens.filter((item) => this.ehTokenConviteAdministrativo(item))) {
+        const usuario = await gerenciador.getRepository(UsuarioOrm).findOne({
+          where: { id: token.usuarioId, tenantId }
+        });
+        if (!usuario || !this.ehPapelAdministrativo(usuario.role)) continue;
+
+        itens.push({
+          id: token.id,
+          usuarioId: token.usuarioId,
+          tenantId: token.tenantId,
+          email: this.criptografia.descriptografar(usuario.emailCriptografado),
+          role: (textoPayload(token.payload, 'role') ?? usuario.role) as PapelUsuarioClienteAdministrativo,
+          status: token.status,
+          expiraEm: token.expiraEm,
+          criadoEm: token.criadoEm,
+          criadoPorUsuarioId: textoPayload(token.payload, 'criadoPorUsuarioId'),
+          emailErro: textoPayload(token.payload, 'emailErro')
+        });
+      }
+
+      return { itens, total: itens.length };
+    });
+  }
+
+  async reenviarConvite(tenantId: string, usuarioExecutorId: string, usuarioId: string): Promise<UsuarioClienteRespostaDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const usuario = await this.obterUsuarioConvidavel(gerenciador, tenantId, usuarioId);
+      await this.revogarTokensPendentes(gerenciador, tenantId, usuarioId, usuarioExecutorId, 'reenviado');
+      const email = this.criptografia.descriptografar(usuario.emailCriptografado);
+      const convite = await this.criarTokenConvite(gerenciador, {
+        tenantId,
+        usuarioId,
+        emailHash: usuario.emailHash,
+        email,
+        role: usuario.role as PapelUsuarioClienteAdministrativo,
+        reenviadoPorUsuarioId: usuarioExecutorId
+      });
+
+      return {
+        ...this.mapearResposta(usuario),
+        convite: {
+          expiraEm: convite.expiraEm,
+          linkPrimeiroAcesso: convite.linkPrimeiroAcesso
+        }
+      };
+    });
+  }
+
+  async revogarConvite(tenantId: string, usuarioExecutorId: string, usuarioId: string): Promise<void> {
+    if (usuarioExecutorId === usuarioId) {
+      throw new ForbiddenException('O gestor logado nao pode revogar o proprio convite.');
+    }
+
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.obterUsuarioConvidavel(gerenciador, tenantId, usuarioId);
+      await this.revogarTokensPendentes(gerenciador, tenantId, usuarioId, usuarioExecutorId, 'revogado');
+      await gerenciador.getRepository(UsuarioOrm).update({ id: usuarioId, tenantId }, { ativo: false });
     });
   }
 
@@ -124,6 +174,18 @@ export class ServicoUsuariosCliente {
 
   private ehPapelAdministrativo(role: string): role is PapelUsuarioClienteAdministrativo {
     return papeisAdministrativos.includes(role as PapelUsuarioClienteAdministrativo);
+  }
+
+  private ehTokenConviteAdministrativo(token: TokenRedefinicaoSenhaOrm) {
+    return token.payload?.origem === 'convite_usuario_cliente';
+  }
+
+  private async obterUsuarioConvidavel(gerenciador: any, tenantId: string, usuarioId: string): Promise<UsuarioOrm> {
+    const usuario = await gerenciador.getRepository(UsuarioOrm).findOne({ where: { id: usuarioId, tenantId } });
+    if (!usuario || !this.ehPapelAdministrativo(usuario.role) || usuario.role === 'Client') {
+      throw new NotFoundException('Usuario administrativo convidado nao encontrado.');
+    }
+    return usuario;
   }
 
   private mapearResposta(usuario: UsuarioOrm): UsuarioClienteRespostaDto {
@@ -178,6 +240,88 @@ export class ServicoUsuariosCliente {
         role
       }
     });
+  }
+
+  private async criarTokenConvite(
+    gerenciador: any,
+    dados: {
+      tenantId: string;
+      usuarioId: string;
+      emailHash: string;
+      email: string;
+      role: string;
+      criadoPorUsuarioId?: string;
+      reenviadoPorUsuarioId?: string;
+    }
+  ) {
+    const repositorioTokens = gerenciador.getRepository(TokenRedefinicaoSenhaOrm);
+    const token = `${dados.tenantId}.${randomBytes(32).toString('base64url')}`;
+    const linkPrimeiroAcesso = this.montarLinkPrimeiroAcesso(token);
+    const expiraEm = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const payload = {
+      origem: 'convite_usuario_cliente',
+      criadoPorUsuarioId: dados.criadoPorUsuarioId,
+      reenviadoPorUsuarioId: dados.reenviadoPorUsuarioId,
+      role: dados.role,
+      convidadoEm: new Date().toISOString()
+    };
+
+    await repositorioTokens.save(
+      repositorioTokens.create({
+        tenantId: dados.tenantId,
+        usuarioId: dados.usuarioId,
+        emailHash: dados.emailHash,
+        tokenHash: hashToken(token),
+        status: 'pendente',
+        expiraEm,
+        payload
+      })
+    );
+
+    try {
+      await this.enviarEmailConvite(dados.email, linkPrimeiroAcesso, dados.role);
+    } catch (erro) {
+      await repositorioTokens.update(
+        { tenantId: dados.tenantId, tokenHash: hashToken(token) },
+        {
+          payload: {
+            ...payload,
+            emailErro: erro instanceof Error ? erro.message : 'Falha desconhecida no envio.'
+          }
+        }
+      );
+    }
+
+    return {
+      expiraEm,
+      linkPrimeiroAcesso: this.deveExporLinkPrimeiroAcesso() ? linkPrimeiroAcesso : undefined
+    };
+  }
+
+  private async revogarTokensPendentes(
+    gerenciador: any,
+    tenantId: string,
+    usuarioId: string,
+    usuarioExecutorId: string,
+    motivo: string
+  ) {
+    const repositorioTokens = gerenciador.getRepository(TokenRedefinicaoSenhaOrm);
+    const tokens = await repositorioTokens.find({
+      where: { tenantId, status: 'pendente' },
+      order: { criadoEm: 'DESC' }
+    });
+    const agora = new Date();
+
+    for (const token of tokens.filter((item: TokenRedefinicaoSenhaOrm) => item.usuarioId === usuarioId && this.ehTokenConviteAdministrativo(item))) {
+      token.status = 'revogado';
+      token.revogadoEm = agora;
+      token.payload = {
+        ...token.payload,
+        revogadoPorUsuarioId: usuarioExecutorId,
+        motivoRevogacao: motivo
+      };
+      await repositorioTokens.save(token);
+    }
   }
 
   private montarLinkPrimeiroAcesso(token: string) {

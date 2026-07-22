@@ -26,3 +26,16 @@ export interface UsuarioClienteRespostaDto {
     linkPrimeiroAcesso?: string;
   };
 }
+
+export interface ConviteUsuarioClienteRespostaDto {
+  id: string;
+  usuarioId: string;
+  tenantId: string;
+  email: string;
+  role: PapelUsuarioClienteAdministrativo;
+  status: string;
+  expiraEm: Date;
+  criadoEm: Date;
+  criadoPorUsuarioId?: string;
+  emailErro?: string;
+}

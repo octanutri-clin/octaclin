@@ -2,16 +2,33 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Building2, CheckCircle2, CreditCard, RefreshCcw, ShieldCheck, Trash2, UserPlus, UsersRound } from 'lucide-react';
+import {
+  AlertTriangle,
+  Ban,
+  Building2,
+  CheckCircle2,
+  CreditCard,
+  MailCheck,
+  RefreshCcw,
+  Send,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
+  UsersRound
+} from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import {
+  RespostaConvitesUsuarioClienteApi,
   PapelUsuarioClienteCriavelApi,
   RespostaUsuariosClienteApi,
   ResumoPortalClienteApi,
   criarUsuarioCliente,
   desativarUsuarioCliente,
+  listarConvitesUsuariosCliente,
   listarUsuariosCliente,
-  obterResumoPortalCliente
+  obterResumoPortalCliente,
+  reenviarConviteUsuarioCliente,
+  revogarConviteUsuarioCliente
 } from '@/lib/cliente-api';
 
 const navegacao = [
@@ -28,7 +45,7 @@ function formatarData(valor?: string) {
   if (!valor) return '-';
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return valor;
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(data);
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(data);
 }
 
 const formularioUsuarioInicial = {
@@ -39,13 +56,16 @@ const formularioUsuarioInicial = {
 export function PortalCliente() {
   const [resumo, setResumo] = useState<ResumoPortalClienteApi | null>(null);
   const [usuarios, setUsuarios] = useState<RespostaUsuariosClienteApi | null>(null);
+  const [convites, setConvites] = useState<RespostaConvitesUsuarioClienteApi | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [erroUsuarios, setErroUsuarios] = useState<string | null>(null);
   const [sucessoUsuarios, setSucessoUsuarios] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [carregandoUsuarios, setCarregandoUsuarios] = useState(true);
+  const [carregandoConvites, setCarregandoConvites] = useState(true);
   const [salvandoUsuario, setSalvandoUsuario] = useState(false);
   const [desativandoUsuarioId, setDesativandoUsuarioId] = useState<string | null>(null);
+  const [acaoConviteUsuarioId, setAcaoConviteUsuarioId] = useState<string | null>(null);
   const [formularioUsuario, setFormularioUsuario] = useState(formularioUsuarioInicial);
 
   useEffect(() => {
@@ -84,6 +104,19 @@ export function PortalCliente() {
     }
   }
 
+  async function carregarConvites() {
+    setCarregandoConvites(true);
+    setErroUsuarios(null);
+
+    try {
+      setConvites(await listarConvitesUsuariosCliente());
+    } catch (erroAtual) {
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar convites administrativos.');
+    } finally {
+      setCarregandoConvites(false);
+    }
+  }
+
   async function convidarUsuario(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setSalvandoUsuario(true);
@@ -97,6 +130,7 @@ export function PortalCliente() {
       });
       setFormularioUsuario(formularioUsuarioInicial);
       await carregarUsuarios();
+      await carregarConvites();
       setSucessoUsuarios('Convite enviado por email.');
     } catch (erroAtual) {
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao convidar usuario.');
@@ -116,6 +150,7 @@ export function PortalCliente() {
     try {
       await desativarUsuarioCliente(id);
       await carregarUsuarios();
+      await carregarConvites();
       setSucessoUsuarios('Usuario desativado.');
     } catch (erroAtual) {
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desativar usuario.');
@@ -124,8 +159,45 @@ export function PortalCliente() {
     }
   }
 
+  async function reenviarConvite(usuarioId: string, email: string) {
+    setAcaoConviteUsuarioId(usuarioId);
+    setErroUsuarios(null);
+    setSucessoUsuarios(null);
+
+    try {
+      await reenviarConviteUsuarioCliente(usuarioId);
+      await carregarConvites();
+      setSucessoUsuarios(`Convite reenviado para ${email}.`);
+    } catch (erroAtual) {
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao reenviar convite.');
+    } finally {
+      setAcaoConviteUsuarioId(null);
+    }
+  }
+
+  async function revogarConvite(usuarioId: string, email: string) {
+    const confirmado = window.confirm(`Revogar o convite de ${email}?`);
+    if (!confirmado) return;
+
+    setAcaoConviteUsuarioId(usuarioId);
+    setErroUsuarios(null);
+    setSucessoUsuarios(null);
+
+    try {
+      await revogarConviteUsuarioCliente(usuarioId);
+      await carregarUsuarios();
+      await carregarConvites();
+      setSucessoUsuarios(`Convite revogado para ${email}.`);
+    } catch (erroAtual) {
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao revogar convite.');
+    } finally {
+      setAcaoConviteUsuarioId(null);
+    }
+  }
+
   useEffect(() => {
     void carregarUsuarios();
+    void carregarConvites();
   }, []);
 
   const indicadores = useMemo(
@@ -322,6 +394,56 @@ export function PortalCliente() {
               </div>
               <p className="text-sm text-[#596273] lg:col-span-3">Link de primeiro acesso enviado por email.</p>
             </form>
+
+            <section id="convites-usuarios" className="rounded-md border border-linha bg-[#f8fafb]" aria-busy={carregandoConvites}>
+              <div className="flex flex-col gap-2 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-2">
+                  <MailCheck size={16} className="text-primaria" />
+                  <div>
+                    <h3 className="text-sm font-semibold">Convites pendentes</h3>
+                    <p className="mt-1 text-xs text-[#596273]">
+                      {convites ? `${convites.total} convites aguardando primeiro acesso` : 'Carregando convites'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="divide-y divide-linha">
+                {convites?.itens.length ? (
+                  convites.itens.map((convite) => (
+                    <div key={convite.id} className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[1fr_150px_160px_180px] lg:items-center">
+                      <div className="min-w-0">
+                        <p className="break-all font-medium">{convite.email}</p>
+                        <p className="mt-1 text-xs text-[#596273]">{convite.role}</p>
+                      </div>
+                      <span>{convite.status}</span>
+                      <span>Expira em {formatarData(convite.expiraEm)}</span>
+                      <div className="flex justify-end gap-1">
+                        <Botao
+                          type="button"
+                          variante="fantasma"
+                          onClick={() => void reenviarConvite(convite.usuarioId, convite.email)}
+                          disabled={acaoConviteUsuarioId === convite.usuarioId}
+                          aria-label={`Reenviar convite para ${convite.email}`}
+                        >
+                          <Send size={16} />
+                        </Botao>
+                        <Botao
+                          type="button"
+                          variante="fantasma"
+                          onClick={() => void revogarConvite(convite.usuarioId, convite.email)}
+                          disabled={acaoConviteUsuarioId === convite.usuarioId}
+                          aria-label={`Revogar convite de ${convite.email}`}
+                        >
+                          <Ban size={16} />
+                        </Botao>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-6 text-sm text-[#596273]">Nenhum convite administrativo pendente.</div>
+                )}
+              </div>
+            </section>
 
             <div className="overflow-x-auto rounded-md border border-linha bg-white">
               <div className="min-w-[760px]">

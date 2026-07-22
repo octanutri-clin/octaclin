@@ -7,6 +7,7 @@ function criarRepositorioFake(usuarios: Record<string, any>[]) {
     find: jest.fn(async (opcoes?: any) => {
       let itens = [...usuarios];
       if (opcoes?.where?.tenantId) itens = itens.filter((usuario) => usuario.tenantId === opcoes.where.tenantId);
+      if (opcoes?.where?.status) itens = itens.filter((usuario) => usuario.status === opcoes.where.status);
       return itens;
     }),
     findOne: jest.fn(async (opcoes?: any) => {
@@ -29,7 +30,9 @@ function criarRepositorioFake(usuarios: Record<string, any>[]) {
       return salvo;
     }),
     update: jest.fn(async (where, dados) => {
-      const usuario = usuarios.find((item) => item.id === where.id && item.tenantId === where.tenantId);
+      const usuario = usuarios.find((item) =>
+        Object.entries(where).every(([chave, valor]) => item[chave] === valor)
+      );
       if (!usuario) return { affected: 0 };
       Object.assign(usuario, dados);
       return { affected: 1 };
@@ -37,9 +40,8 @@ function criarRepositorioFake(usuarios: Record<string, any>[]) {
   };
 }
 
-function criarServico(usuarios: Record<string, any>[]) {
+function criarServico(usuarios: Record<string, any>[], tokens: Record<string, any>[] = []) {
   const repositorioUsuarios = criarRepositorioFake(usuarios);
-  const tokens: Record<string, any>[] = [];
   const repositorioTokens = criarRepositorioFake(tokens);
   const executorTenant = {
     executar: jest.fn((_tenantId: string, callback: any) =>
@@ -206,5 +208,183 @@ describe('ServicoUsuariosCliente', () => {
       'O gestor logado nao pode desativar o proprio acesso.'
     );
     expect(repositorioUsuarios.update).not.toHaveBeenCalled();
+  });
+
+  it('deve listar convites administrativos pendentes com trilha de auditoria', async () => {
+    const { servico, repositorioTokens } = criarServico(
+      [
+        {
+          id: 'colaborador-1',
+          tenantId: 'tenant-1',
+          emailCriptografado: Buffer.from('email:agenda@octaclin.local'),
+          emailHash: 'hash:agenda@octaclin.local',
+          senhaHash: 'senha-aleatoria',
+          role: 'Collaborator',
+          ativo: true,
+          criadoEm: new Date('2026-07-20T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      [
+        {
+          id: 'token-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'colaborador-1',
+          emailHash: 'hash:agenda@octaclin.local',
+          tokenHash: 'hash-token',
+          status: 'pendente',
+          expiraEm: new Date('2026-07-29T10:00:00.000Z'),
+          payload: {
+            origem: 'convite_usuario_cliente',
+            criadoPorUsuarioId: 'cliente-1',
+            role: 'Collaborator',
+            convidadoEm: '2026-07-22T10:00:00.000Z'
+          },
+          criadoEm: new Date('2026-07-22T10:00:00.000Z')
+        },
+        {
+          id: 'token-recuperacao',
+          tenantId: 'tenant-1',
+          usuarioId: 'colaborador-1',
+          emailHash: 'hash:agenda@octaclin.local',
+          tokenHash: 'hash-recuperacao',
+          status: 'pendente',
+          expiraEm: new Date('2026-07-22T11:00:00.000Z'),
+          payload: { origem: 'recuperacao_senha' },
+          criadoEm: new Date('2026-07-22T09:00:00.000Z')
+        }
+      ]
+    );
+
+    const resposta = await servico.listarConvites('tenant-1');
+
+    expect(repositorioTokens.find).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant-1', status: 'pendente' },
+      order: { criadoEm: 'DESC' }
+    });
+    expect(resposta).toEqual({
+      itens: [
+        {
+          id: 'token-1',
+          usuarioId: 'colaborador-1',
+          tenantId: 'tenant-1',
+          email: 'agenda@octaclin.local',
+          role: 'Collaborator',
+          status: 'pendente',
+          expiraEm: new Date('2026-07-29T10:00:00.000Z'),
+          criadoEm: new Date('2026-07-22T10:00:00.000Z'),
+          criadoPorUsuarioId: 'cliente-1',
+          emailErro: undefined
+        }
+      ],
+      total: 1
+    });
+  });
+
+  it('deve reenviar convite revogando tokens pendentes anteriores', async () => {
+    process.env.EXPOR_LINK_RECUPERACAO_SENHA = 'true';
+    const tokenAntigo: Record<string, any> = {
+      id: 'token-antigo',
+      tenantId: 'tenant-1',
+      usuarioId: 'colaborador-1',
+      emailHash: 'hash:agenda@octaclin.local',
+      tokenHash: 'hash-antigo',
+      status: 'pendente',
+      expiraEm: new Date('2026-07-29T10:00:00.000Z'),
+      payload: { origem: 'convite_usuario_cliente', role: 'Collaborator' },
+      criadoEm: new Date('2026-07-22T10:00:00.000Z')
+    };
+    const { servico, repositorioTokens, email } = criarServico(
+      [
+        {
+          id: 'colaborador-1',
+          tenantId: 'tenant-1',
+          emailCriptografado: Buffer.from('email:agenda@octaclin.local'),
+          emailHash: 'hash:agenda@octaclin.local',
+          senhaHash: 'senha-aleatoria',
+          role: 'Collaborator',
+          ativo: true,
+          criadoEm: new Date('2026-07-20T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      [tokenAntigo]
+    );
+
+    const resposta = await servico.reenviarConvite('tenant-1', 'cliente-1', 'colaborador-1');
+
+    expect(tokenAntigo.status).toBe('revogado');
+    expect(tokenAntigo.revogadoEm).toEqual(expect.any(Date));
+    expect(repositorioTokens.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'token-antigo',
+        status: 'revogado',
+        revogadoEm: expect.any(Date)
+      })
+    );
+    expect(repositorioTokens.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'colaborador-1',
+        status: 'pendente',
+        payload: expect.objectContaining({
+          origem: 'convite_usuario_cliente',
+          reenviadoPorUsuarioId: 'cliente-1',
+          role: 'Collaborator'
+        })
+      })
+    );
+    expect(email.enviar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          destino: 'agenda@octaclin.local',
+          linkPrimeiroAcesso: expect.stringMatching(/^http:\/\/localhost:3000\/recuperar-senha\?token=tenant-1\./)
+        })
+      })
+    );
+    expect(resposta.convite?.linkPrimeiroAcesso).toMatch(/^http:\/\/localhost:3000\/recuperar-senha\?token=tenant-1\./);
+    delete process.env.EXPOR_LINK_RECUPERACAO_SENHA;
+  });
+
+  it('deve revogar convite administrativo e desativar usuario convidado', async () => {
+    const tokenPendente: Record<string, any> = {
+      id: 'token-1',
+      tenantId: 'tenant-1',
+      usuarioId: 'colaborador-1',
+      emailHash: 'hash:agenda@octaclin.local',
+      tokenHash: 'hash-token',
+      status: 'pendente',
+      expiraEm: new Date('2026-07-29T10:00:00.000Z'),
+      payload: { origem: 'convite_usuario_cliente', role: 'Collaborator' },
+      criadoEm: new Date('2026-07-22T10:00:00.000Z')
+    };
+    const { servico, repositorioUsuarios, repositorioTokens } = criarServico(
+      [
+        {
+          id: 'colaborador-1',
+          tenantId: 'tenant-1',
+          emailCriptografado: Buffer.from('email:agenda@octaclin.local'),
+          emailHash: 'hash:agenda@octaclin.local',
+          senhaHash: 'senha-aleatoria',
+          role: 'Collaborator',
+          ativo: true,
+          criadoEm: new Date('2026-07-20T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      [tokenPendente]
+    );
+
+    await servico.revogarConvite('tenant-1', 'cliente-1', 'colaborador-1');
+
+    expect(tokenPendente.status).toBe('revogado');
+    expect(tokenPendente.revogadoEm).toEqual(expect.any(Date));
+    expect(tokenPendente.payload).toEqual(
+      expect.objectContaining({
+        revogadoPorUsuarioId: 'cliente-1'
+      })
+    );
+    expect(repositorioTokens.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'token-1', status: 'revogado' }));
+    expect(repositorioUsuarios.update).toHaveBeenCalledWith({ id: 'colaborador-1', tenantId: 'tenant-1' }, { ativo: false });
   });
 });

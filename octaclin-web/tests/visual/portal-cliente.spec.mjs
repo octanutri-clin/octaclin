@@ -106,6 +106,29 @@ async function prepararSessaoCliente(page) {
       })
     });
   });
+
+  await page.route('**/api/cliente/usuarios/convites', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            id: 'token-1',
+            usuarioId: 'colaborador-1',
+            tenantId: 'tenant-1',
+            email: 'agenda@octaclin.local',
+            role: 'Collaborator',
+            status: 'pendente',
+            expiraEm: '2026-07-29T10:00:00.000Z',
+            criadoEm: '2026-07-22T10:00:00.000Z',
+            criadoPorUsuarioId: 'cliente-1'
+          }
+        ],
+        total: 1
+      })
+    });
+  });
 }
 
 async function assertSemOverflowHorizontal(page) {
@@ -141,8 +164,14 @@ test.describe('portal do cliente', () => {
     await expect(gestaoUsuarios.getByText('Link de primeiro acesso enviado por email')).toBeVisible();
     await expect(gestaoUsuarios.getByText('Senha inicial')).toHaveCount(0);
     await expect(gestaoUsuarios.getByText('gestor@octaclin.local')).toBeVisible();
-    await expect(gestaoUsuarios.getByText('agenda@octaclin.local')).toBeVisible();
+    await expect(gestaoUsuarios.locator('span').filter({ hasText: 'agenda@octaclin.local' })).toBeVisible();
     await expect(gestaoUsuarios.locator('span').filter({ hasText: 'Collaborator' })).toBeVisible();
+    const convitesUsuarios = page.locator('#convites-usuarios');
+    await expect(convitesUsuarios.getByRole('heading', { name: 'Convites pendentes' })).toBeVisible();
+    await expect(convitesUsuarios.getByText('agenda@octaclin.local')).toBeVisible();
+    await expect(convitesUsuarios.getByText('Expira em 29/07/26')).toBeVisible();
+    await expect(convitesUsuarios.getByRole('button', { name: 'Reenviar convite para agenda@octaclin.local' })).toBeVisible();
+    await expect(convitesUsuarios.getByRole('button', { name: 'Revogar convite de agenda@octaclin.local' })).toBeVisible();
     await expect(page.getByText('Acesso profissional separado')).toBeVisible();
     await expect(page.getByText('Portal do paciente')).toHaveCount(0);
     await expect(page.getByText('Console clinico')).toHaveCount(0);

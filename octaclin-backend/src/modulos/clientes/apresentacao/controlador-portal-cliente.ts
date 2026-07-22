@@ -26,6 +26,11 @@ export class ControladorPortalCliente {
     return this.servicoUsuariosCliente.listar(usuario.tenantId);
   }
 
+  @Get('usuarios/convites')
+  listarConvites(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoUsuariosCliente.listarConvites(usuario.tenantId);
+  }
+
   @Post('usuarios')
   criarUsuario(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: CriarUsuarioClienteDto) {
     return this.servicoUsuariosCliente.criar(usuario.tenantId, usuario.usuarioId, dados);
@@ -34,5 +39,15 @@ export class ControladorPortalCliente {
   @Delete('usuarios/:id')
   desativarUsuario(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
     return this.servicoUsuariosCliente.desativar(usuario.tenantId, usuario.usuarioId, id);
+  }
+
+  @Post('usuarios/:id/convite/reenvio')
+  reenviarConvite(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
+    return this.servicoUsuariosCliente.reenviarConvite(usuario.tenantId, usuario.usuarioId, id);
+  }
+
+  @Delete('usuarios/:id/convite')
+  revogarConvite(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
+    return this.servicoUsuariosCliente.revogarConvite(usuario.tenantId, usuario.usuarioId, id);
   }
 }
