@@ -21,6 +21,13 @@ export interface AtivacaoPacienteApi {
   usuarioId: string;
   tenantId: string;
   email: string;
+  accessToken?: string;
+  refreshToken?: string;
+  tipoToken?: 'Bearer';
+  expiraEmSegundos?: number;
+  papel?: string;
+  permissoes?: string[];
+  escopoDados?: string;
   destinoInicial: string;
 }
 

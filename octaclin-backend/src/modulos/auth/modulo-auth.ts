@@ -30,6 +30,6 @@ import { TokenRedefinicaoSenhaOrm } from './infraestrutura/token-redefinicao-sen
     GuardaPapeis,
     GuardaLimiteLogin
   ],
-  exports: [JwtModule, GuardaJwt, GuardaPapeis, ServicoSenhas, CriptografiaDadosSensiveis]
+  exports: [JwtModule, GuardaJwt, GuardaPapeis, ServicoAuth, ServicoSenhas, CriptografiaDadosSensiveis]
 })
 export class ModuloAuth {}

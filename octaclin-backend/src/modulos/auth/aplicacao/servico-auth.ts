@@ -91,6 +91,10 @@ export class ServicoAuth {
     return this.emitirParTokens(usuario, payload.familiaToken ?? randomUUID());
   }
 
+  async emitirSessaoUsuario(usuario: UsuarioOrm) {
+    return this.emitirParTokens(usuario, randomUUID());
+  }
+
   async revogar(refreshToken: string): Promise<void> {
     const payload = await this.verificarRefreshToken(refreshToken);
     const tokenHash = this.hashToken(refreshToken);

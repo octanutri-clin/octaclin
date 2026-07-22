@@ -6,6 +6,7 @@ import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
 import { contextoAcessoPorPapel } from '../../auth/dominio/permissoes';
+import { ServicoAuth } from '../../auth/aplicacao/servico-auth';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { AtivarConvitePacienteDto, CriarConvitePacienteDto } from './dtos';
 import { ConvitePacienteOrm } from '../infraestrutura/convite-paciente.orm';
@@ -48,7 +49,8 @@ export class ServicoConvitesPaciente {
   constructor(
     private readonly executorTenant: ExecutorTenant,
     private readonly criptografia: CriptografiaDadosSensiveis,
-    private readonly senhas: ServicoSenhas
+    private readonly senhas: ServicoSenhas,
+    private readonly servicoAuth: ServicoAuth
   ) {}
 
   async criarConvite(
@@ -175,12 +177,14 @@ export class ServicoConvitesPaciente {
       convite!.aceitoEm = new Date();
       convite!.usuarioId = usuario.id;
       await repositorioConvites.save(convite!);
+      const sessao = await this.servicoAuth.emitirSessaoUsuario(usuario);
 
       return {
         pacienteId: paciente.id,
         usuarioId: usuario.id,
         tenantId,
         email,
+        ...sessao,
         destinoInicial: contextoPaciente.destinoInicial
       };
     });

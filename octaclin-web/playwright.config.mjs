@@ -6,6 +6,7 @@ export default defineConfig({
   testDir: './tests/visual',
   outputDir: './test-results/visual',
   timeout: 30_000,
+  workers: 1,
   expect: {
     timeout: 10_000
   },

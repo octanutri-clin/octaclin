@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { CheckCircle2, KeyRound, Loader2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo } from '@/components/ui/campo';
@@ -19,6 +20,7 @@ function formatarData(valor?: string) {
 }
 
 export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
+  const router = useRouter();
   const [token] = useState(tokenInicial ?? '');
   const [convite, setConvite] = useState<ConvitePacientePublicoApi | null>(null);
   const [senha, setSenha] = useState('');
@@ -59,8 +61,9 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
 
     setSalvando(true);
     try {
-      await ativarConvitePaciente({ token, senha, aceiteLgpd, versaoLgpd: '2026-07' });
+      const ativacao = await ativarConvitePaciente({ token, senha, aceiteLgpd, versaoLgpd: '2026-07' });
       setAtivado(true);
+      router.replace((ativacao.destinoInicial || '/portal') as any);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao ativar acesso.');
     } finally {

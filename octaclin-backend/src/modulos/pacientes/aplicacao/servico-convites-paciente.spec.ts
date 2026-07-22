@@ -53,10 +53,23 @@ function criarServico(dados: Record<string, any> = {}) {
   const senhas = {
     gerarHash: jest.fn((senha: string) => `senha:${senha}`)
   } as unknown as ServicoSenhas;
+  const servicoAuth = {
+    emitirSessaoUsuario: jest.fn(async () => ({
+      accessToken: 'access-token-paciente',
+      refreshToken: 'refresh-token-paciente',
+      tipoToken: 'Bearer',
+      expiraEmSegundos: 15 * 60,
+      papel: 'Patient',
+      permissoes: ['portal.paciente.acessar'],
+      escopoDados: 'paciente',
+      destinoInicial: '/portal'
+    }))
+  };
 
   return {
-    servico: new ServicoConvitesPaciente(executorTenant as never, criptografia as never, senhas),
+    servico: new ServicoConvitesPaciente(executorTenant as never, criptografia as never, senhas, servicoAuth as never),
     repositorios,
+    servicoAuth,
     dados
   };
 }
@@ -107,7 +120,7 @@ describe('ServicoConvitesPaciente', () => {
       },
       convites: []
     };
-    const { servico, repositorios } = criarServico(dados);
+    const { servico, repositorios, servicoAuth } = criarServico(dados);
     const convite = await servico.criarConvite('tenant-1', 'usuario-profissional-1', 'paciente-1', {
       email: 'ana@example.com'
     });
@@ -137,11 +150,19 @@ describe('ServicoConvitesPaciente', () => {
         versao: '2026-07'
       })
     );
+    expect(servicoAuth.emitirSessaoUsuario).toHaveBeenCalledWith(expect.objectContaining({ id: 'usuario-1', role: 'Patient' }));
     expect(ativacao).toEqual({
       pacienteId: 'paciente-1',
       usuarioId: 'usuario-1',
       tenantId: 'tenant-1',
       email: 'ana@example.com',
+      accessToken: 'access-token-paciente',
+      refreshToken: 'refresh-token-paciente',
+      tipoToken: 'Bearer',
+      expiraEmSegundos: 15 * 60,
+      papel: 'Patient',
+      permissoes: ['portal.paciente.acessar'],
+      escopoDados: 'paciente',
       destinoInicial: '/portal'
     });
     expect(dados.convites[0].status).toBe('aceito');
