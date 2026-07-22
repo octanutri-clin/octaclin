@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 95.
+Atualizado apos a Fase 96.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -52,10 +52,13 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Validacoes: `pnpm --dir octaclin-backend exec jest permissoes.spec.ts guarda-permissoes.spec.ts servico-usuarios-cliente.spec.ts --runInBand`, `pnpm --dir octaclin-backend typecheck`, `pnpm --dir octaclin-web test:authz`, `pnpm --dir octaclin-web typecheck`.
   - Saida entregue: testes de permissao, guard backend, BFF protegido, middleware por permissao e UI escondendo acoes indevidas.
 
-- [ ] Fase 96 - Configuracoes da conta do cliente.
+- [x] Fase 96 - Configuracoes da conta do cliente.
   - Permitir editar nome da clinica, dados basicos, timezone, idioma e canais padrao.
   - Preparar configuracoes de marca simples: nome exibido, email remetente e identidade visual basica.
-  - Saida esperada: tela `Configuracoes` no portal do cliente e endpoint seguro.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-22.
+  - Validacoes: `pnpm --dir octaclin-backend exec jest servico-portal-cliente.spec.ts --runInBand`, `pnpm --dir octaclin-backend typecheck`, `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web test:authz`, `pnpm --dir octaclin-web exec playwright test tests/visual/portal-cliente.spec.mjs --reporter=list`.
+  - Saida entregue: tela `Configuracoes`, endpoints backend/BFF seguros e persistencia em `tenant_configuracoes`.
 
 - [ ] Fase 97 - Perfil da empresa/consultoria e dados fiscais.
   - Adicionar dados de pessoa juridica/fisica, responsavel, endereco e contatos.

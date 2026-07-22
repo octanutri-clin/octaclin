@@ -25,7 +25,8 @@ async function prepararSessaoCliente(page) {
           'cliente.usuarios.ler',
           'cliente.usuarios.convidar',
           'cliente.usuarios.desativar',
-          'cliente.convites.gerenciar'
+          'cliente.convites.gerenciar',
+          'cliente.configuracoes.gerenciar'
         ],
         destinoInicial: '/cliente'
       })
@@ -136,6 +137,48 @@ async function prepararSessaoCliente(page) {
       })
     });
   });
+
+  await page.route('**/api/cliente/configuracoes', async (route) => {
+    if (route.request().method() === 'PATCH') {
+      const corpo = JSON.parse(route.request().postData() ?? '{}');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          tenantId: 'tenant-1',
+          slug: 'clinica-octa-real',
+          status: 'ativo',
+          atualizadoEm: '2026-07-22T10:00:00.000Z',
+          ...corpo
+        })
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        tenantId: 'tenant-1',
+        nome: 'Clinica Octa Real',
+        slug: 'clinica-octa-real',
+        status: 'ativo',
+        timezone: 'America/Sao_Paulo',
+        idioma: 'pt-BR',
+        canaisPadrao: {
+          email: true,
+          whatsapp: true,
+          googleCalendar: true
+        },
+        marca: {
+          nomeExibido: 'Clinica Octa Real',
+          emailRemetente: 'contato@octaclin.com.br',
+          corPrimaria: '#197d8f'
+        },
+        atualizadoEm: '2026-07-20T10:00:00.000Z'
+      })
+    });
+  });
 }
 
 async function assertSemOverflowHorizontal(page) {
@@ -157,6 +200,7 @@ test.describe('portal do cliente', () => {
     await expect(page.getByRole('link', { name: 'Conta' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Assinatura' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Usuarios' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Configuracoes' })).toBeVisible();
     const resumoConta = page.locator('#conta');
     await expect(resumoConta.getByText('Resumo da conta')).toBeVisible();
     await expect(resumoConta.getByText('Clinica Octa Real')).toBeVisible();
@@ -180,6 +224,18 @@ test.describe('portal do cliente', () => {
     await expect(convitesUsuarios.getByRole('button', { name: 'Reenviar convite para agenda@octaclin.local' })).toBeVisible();
     await expect(convitesUsuarios.getByRole('button', { name: 'Revogar convite de agenda@octaclin.local' })).toBeVisible();
     await expect(page.getByText('Acesso profissional separado')).toBeVisible();
+    const configuracoes = page.locator('#configuracoes');
+    await expect(configuracoes.getByRole('heading', { name: 'Configuracoes da conta' })).toBeVisible();
+    await expect(configuracoes.getByLabel('Nome da clinica')).toHaveValue('Clinica Octa Real');
+    await expect(configuracoes.getByLabel('Timezone')).toHaveValue('America/Sao_Paulo');
+    await expect(configuracoes.getByLabel('Idioma')).toHaveValue('pt-BR');
+    await expect(configuracoes.getByLabel('Email remetente')).toHaveValue('contato@octaclin.com.br');
+    await expect(configuracoes.getByRole('checkbox', { name: 'Email' })).toBeChecked();
+    await expect(configuracoes.getByRole('checkbox', { name: 'WhatsApp' })).toBeChecked();
+    await configuracoes.getByLabel('Nome exibido').fill('Octa Prime');
+    await configuracoes.getByRole('checkbox', { name: 'WhatsApp' }).uncheck();
+    await configuracoes.getByRole('button', { name: 'Salvar configuracoes' }).click();
+    await expect(configuracoes.getByText('Configuracoes salvas.')).toBeVisible();
     await expect(page.getByText('Portal do paciente')).toHaveCount(0);
     await expect(page.getByText('Console clinico')).toHaveCount(0);
     await assertSemOverflowHorizontal(page);

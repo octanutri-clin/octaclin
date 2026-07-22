@@ -10,6 +10,7 @@ import {
   CreditCard,
   MailCheck,
   RefreshCcw,
+  Save,
   Send,
   ShieldCheck,
   Trash2,
@@ -19,12 +20,16 @@ import {
 import { Botao } from '@/components/ui/botao';
 import { obterSessao } from '@/lib/auth-api';
 import {
+  AtualizarConfiguracoesClienteEntrada,
+  ConfiguracoesPortalClienteApi,
   RespostaConvitesUsuarioClienteApi,
   PapelUsuarioClienteCriavelApi,
   RespostaUsuariosClienteApi,
   ResumoPortalClienteApi,
+  atualizarConfiguracoesCliente,
   criarUsuarioCliente,
   desativarUsuarioCliente,
+  obterConfiguracoesCliente,
   listarConvitesUsuariosCliente,
   listarUsuariosCliente,
   obterResumoPortalCliente,
@@ -35,7 +40,8 @@ import {
 const navegacao = [
   { href: '#conta', rotulo: 'Conta', permissao: 'cliente.acessar' },
   { href: '#assinatura', rotulo: 'Assinatura', permissao: 'cliente.assinatura.ler' },
-  { href: '#usuarios', rotulo: 'Usuarios', permissao: 'cliente.usuarios.ler' }
+  { href: '#usuarios', rotulo: 'Usuarios', permissao: 'cliente.usuarios.ler' },
+  { href: '#configuracoes', rotulo: 'Configuracoes', permissao: 'cliente.configuracoes.gerenciar' }
 ] as const;
 
 function formatarQuantidade(valor: number, singular: string, plural: string) {
@@ -54,20 +60,42 @@ const formularioUsuarioInicial = {
   role: 'Collaborator' as PapelUsuarioClienteCriavelApi
 };
 
+const formularioConfiguracoesInicial: AtualizarConfiguracoesClienteEntrada = {
+  nome: '',
+  timezone: 'America/Sao_Paulo',
+  idioma: 'pt-BR',
+  canaisPadrao: {
+    email: true,
+    whatsapp: true,
+    googleCalendar: true
+  },
+  marca: {
+    nomeExibido: '',
+    emailRemetente: '',
+    corPrimaria: '#197d8f'
+  }
+};
+
 export function PortalCliente() {
   const [resumo, setResumo] = useState<ResumoPortalClienteApi | null>(null);
   const [usuarios, setUsuarios] = useState<RespostaUsuariosClienteApi | null>(null);
   const [convites, setConvites] = useState<RespostaConvitesUsuarioClienteApi | null>(null);
+  const [configuracoes, setConfiguracoes] = useState<ConfiguracoesPortalClienteApi | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [erroUsuarios, setErroUsuarios] = useState<string | null>(null);
+  const [erroConfiguracoes, setErroConfiguracoes] = useState<string | null>(null);
   const [sucessoUsuarios, setSucessoUsuarios] = useState<string | null>(null);
+  const [sucessoConfiguracoes, setSucessoConfiguracoes] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [carregandoUsuarios, setCarregandoUsuarios] = useState(true);
   const [carregandoConvites, setCarregandoConvites] = useState(true);
+  const [carregandoConfiguracoes, setCarregandoConfiguracoes] = useState(true);
   const [salvandoUsuario, setSalvandoUsuario] = useState(false);
+  const [salvandoConfiguracoes, setSalvandoConfiguracoes] = useState(false);
   const [desativandoUsuarioId, setDesativandoUsuarioId] = useState<string | null>(null);
   const [acaoConviteUsuarioId, setAcaoConviteUsuarioId] = useState<string | null>(null);
   const [formularioUsuario, setFormularioUsuario] = useState(formularioUsuarioInicial);
+  const [formularioConfiguracoes, setFormularioConfiguracoes] = useState(formularioConfiguracoesInicial);
   const [permissoes, setPermissoes] = useState<string[]>([]);
   const [permissoesCarregadas, setPermissoesCarregadas] = useState(false);
 
@@ -96,6 +124,7 @@ export function PortalCliente() {
   const podeConvidarUsuarios = possuiPermissao('cliente.usuarios.convidar');
   const podeDesativarUsuarios = possuiPermissao('cliente.usuarios.desativar');
   const podeGerenciarConvites = possuiPermissao('cliente.convites.gerenciar');
+  const podeGerenciarConfiguracoes = possuiPermissao('cliente.configuracoes.gerenciar');
 
   useEffect(() => {
     let ativo = true;
@@ -143,6 +172,27 @@ export function PortalCliente() {
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar convites administrativos.');
     } finally {
       setCarregandoConvites(false);
+    }
+  }, []);
+
+  const carregarConfiguracoes = useCallback(async () => {
+    setCarregandoConfiguracoes(true);
+    setErroConfiguracoes(null);
+
+    try {
+      const dados = await obterConfiguracoesCliente();
+      setConfiguracoes(dados);
+      setFormularioConfiguracoes({
+        nome: dados.nome,
+        timezone: dados.timezone,
+        idioma: dados.idioma,
+        canaisPadrao: dados.canaisPadrao,
+        marca: dados.marca
+      });
+    } catch (erroAtual) {
+      setErroConfiguracoes(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar configuracoes da conta.');
+    } finally {
+      setCarregandoConfiguracoes(false);
     }
   }, []);
 
@@ -224,6 +274,40 @@ export function PortalCliente() {
     }
   }
 
+  async function salvarConfiguracoes(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setSalvandoConfiguracoes(true);
+    setErroConfiguracoes(null);
+    setSucessoConfiguracoes(null);
+
+    try {
+      const atualizadas = await atualizarConfiguracoesCliente({
+        ...formularioConfiguracoes,
+        nome: formularioConfiguracoes.nome.trim(),
+        timezone: formularioConfiguracoes.timezone.trim(),
+        marca: {
+          ...formularioConfiguracoes.marca,
+          nomeExibido: formularioConfiguracoes.marca.nomeExibido.trim(),
+          emailRemetente: formularioConfiguracoes.marca.emailRemetente.trim(),
+          corPrimaria: formularioConfiguracoes.marca.corPrimaria.trim()
+        }
+      });
+      setConfiguracoes(atualizadas);
+      setFormularioConfiguracoes({
+        nome: atualizadas.nome,
+        timezone: atualizadas.timezone,
+        idioma: atualizadas.idioma,
+        canaisPadrao: atualizadas.canaisPadrao,
+        marca: atualizadas.marca
+      });
+      setSucessoConfiguracoes('Configuracoes salvas.');
+    } catch (erroAtual) {
+      setErroConfiguracoes(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar configuracoes.');
+    } finally {
+      setSalvandoConfiguracoes(false);
+    }
+  }
+
   useEffect(() => {
     if (!permissoesCarregadas) return;
 
@@ -238,7 +322,21 @@ export function PortalCliente() {
     } else {
       setCarregandoConvites(false);
     }
-  }, [permissoesCarregadas, podeLerUsuarios, podeGerenciarConvites, carregarUsuarios, carregarConvites]);
+
+    if (podeGerenciarConfiguracoes) {
+      void carregarConfiguracoes();
+    } else {
+      setCarregandoConfiguracoes(false);
+    }
+  }, [
+    permissoesCarregadas,
+    podeLerUsuarios,
+    podeGerenciarConvites,
+    podeGerenciarConfiguracoes,
+    carregarUsuarios,
+    carregarConvites,
+    carregarConfiguracoes
+  ]);
 
   const indicadores = useMemo(
     () => [
@@ -537,6 +635,156 @@ export function PortalCliente() {
             ) : null}
           </div>
         </section>
+        ) : null}
+
+        {podeGerenciarConfiguracoes ? (
+          <section id="configuracoes" className="scroll-mt-4 rounded-lg border border-linha bg-white" aria-busy={carregandoConfiguracoes}>
+            <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+              <ShieldCheck className="h-4 w-4 text-[#596273]" />
+              <div>
+                <h2 className="text-sm font-semibold">Configuracoes da conta</h2>
+                <p className="mt-1 text-sm text-[#596273]">
+                  {configuracoes ? `Atualizado em ${formatarData(configuracoes.atualizadoEm)}` : 'Carregando preferencias da conta'}
+                </p>
+              </div>
+            </div>
+            <form onSubmit={salvarConfiguracoes} className="grid gap-4 p-4">
+              {erroConfiguracoes ? (
+                <div className="flex items-center gap-2 rounded-lg border border-[#efb8ad] bg-[#fff4f1] px-4 py-3 text-sm text-perigo">
+                  <AlertTriangle size={16} />
+                  {erroConfiguracoes}
+                </div>
+              ) : null}
+              {sucessoConfiguracoes ? (
+                <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+                  <CheckCircle2 size={16} />
+                  {sucessoConfiguracoes}
+                </div>
+              ) : null}
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Nome da clinica
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioConfiguracoes.nome}
+                    onChange={(evento) => setFormularioConfiguracoes((atual) => ({ ...atual, nome: evento.target.value }))}
+                    required
+                    maxLength={160}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Nome exibido
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioConfiguracoes.marca.nomeExibido}
+                    onChange={(evento) =>
+                      setFormularioConfiguracoes((atual) => ({
+                        ...atual,
+                        marca: { ...atual.marca, nomeExibido: evento.target.value }
+                      }))
+                    }
+                    required
+                    maxLength={120}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Timezone
+                  <select
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioConfiguracoes.timezone}
+                    onChange={(evento) => setFormularioConfiguracoes((atual) => ({ ...atual, timezone: evento.target.value }))}
+                  >
+                    <option value="America/Sao_Paulo">America/Sao_Paulo</option>
+                    <option value="America/Fortaleza">America/Fortaleza</option>
+                    <option value="America/Manaus">America/Manaus</option>
+                    <option value="America/Recife">America/Recife</option>
+                  </select>
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Idioma
+                  <select
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formularioConfiguracoes.idioma}
+                    onChange={(evento) =>
+                      setFormularioConfiguracoes((atual) => ({
+                        ...atual,
+                        idioma: evento.target.value as AtualizarConfiguracoesClienteEntrada['idioma']
+                      }))
+                    }
+                  >
+                    <option value="pt-BR">pt-BR</option>
+                    <option value="en-US">en-US</option>
+                    <option value="es">es</option>
+                  </select>
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Email remetente
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    type="email"
+                    value={formularioConfiguracoes.marca.emailRemetente}
+                    onChange={(evento) =>
+                      setFormularioConfiguracoes((atual) => ({
+                        ...atual,
+                        marca: { ...atual.marca, emailRemetente: evento.target.value }
+                      }))
+                    }
+                    maxLength={180}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                  Cor primaria
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    type="color"
+                    value={formularioConfiguracoes.marca.corPrimaria}
+                    onChange={(evento) =>
+                      setFormularioConfiguracoes((atual) => ({
+                        ...atual,
+                        marca: { ...atual.marca, corPrimaria: evento.target.value }
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+
+              <fieldset className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                <legend className="px-1 text-xs font-semibold text-[#596273]">Canais padrao</legend>
+                <div className="mt-2 grid gap-2 md:grid-cols-3">
+                  {[
+                    ['email', 'Email'],
+                    ['whatsapp', 'WhatsApp'],
+                    ['googleCalendar', 'Google Calendar']
+                  ].map(([chave, rotulo]) => (
+                    <label key={chave} className="inline-flex h-10 items-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium">
+                      <input
+                        type="checkbox"
+                        checked={formularioConfiguracoes.canaisPadrao[chave as keyof AtualizarConfiguracoesClienteEntrada['canaisPadrao']]}
+                        onChange={(evento) =>
+                          setFormularioConfiguracoes((atual) => ({
+                            ...atual,
+                            canaisPadrao: {
+                              ...atual.canaisPadrao,
+                              [chave]: evento.target.checked
+                            }
+                          }))
+                        }
+                      />
+                      {rotulo}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <div className="flex justify-end">
+                <Botao type="submit" variante="primario" disabled={salvandoConfiguracoes || carregandoConfiguracoes}>
+                  <Save size={16} />
+                  {salvandoConfiguracoes ? 'Salvando' : 'Salvar configuracoes'}
+                </Botao>
+              </div>
+            </form>
+          </section>
         ) : null}
       </section>
     </main>

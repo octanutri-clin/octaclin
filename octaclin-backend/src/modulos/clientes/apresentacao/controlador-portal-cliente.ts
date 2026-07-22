@@ -1,10 +1,10 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { CriarUsuarioClienteDto } from '../aplicacao/dtos';
+import { AtualizarConfiguracoesClienteDto, CriarUsuarioClienteDto } from '../aplicacao/dtos';
 import { ServicoPortalCliente } from '../aplicacao/servico-portal-cliente';
 import { ServicoUsuariosCliente } from '../aplicacao/servico-usuarios-cliente';
 
@@ -21,6 +21,18 @@ export class ControladorPortalCliente {
   @Get('resumo')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoPortalCliente.obterResumo(usuario.tenantId, usuario.usuarioId);
+  }
+
+  @Get('configuracoes')
+  @Permissoes('cliente.configuracoes.gerenciar')
+  obterConfiguracoes(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoPortalCliente.obterConfiguracoes(usuario.tenantId);
+  }
+
+  @Patch('configuracoes')
+  @Permissoes('cliente.configuracoes.gerenciar')
+  atualizarConfiguracoes(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: AtualizarConfiguracoesClienteDto) {
+    return this.servicoPortalCliente.atualizarConfiguracoes(usuario.tenantId, dados);
   }
 
   @Get('usuarios')

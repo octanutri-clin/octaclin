@@ -1,4 +1,5 @@
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
+import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { ServicoPortalCliente } from './servico-portal-cliente';
 
@@ -13,13 +14,30 @@ function criarRepositorioFake(itens: Record<string, any>[]) {
     ),
     find: jest.fn(async (consulta: { where: Record<string, unknown> }) =>
       itens.filter((item) => Object.entries(consulta.where).every(([chave, valor]) => corresponde(item[chave], valor)))
-    )
+    ),
+    create: jest.fn((dados) => ({ ...dados })),
+    save: jest.fn(async (dados) => {
+      const existente = itens.find((item) => dados.id ? item.id === dados.id : item.tenantId === dados.tenantId && item.chave === dados.chave);
+      if (existente) {
+        Object.assign(existente, dados);
+        return existente;
+      }
+      const salvo = {
+        id: dados.id ?? `item-${itens.length + 1}`,
+        criadoEm: dados.criadoEm ?? new Date('2026-07-22T10:00:00.000Z'),
+        atualizadoEm: dados.atualizadoEm ?? new Date('2026-07-22T10:00:00.000Z'),
+        ...dados
+      };
+      itens.push(salvo);
+      return salvo;
+    })
   };
 }
 
-function criarServico(dados: { tenants: Record<string, any>[]; usuarios: Record<string, any>[] }) {
+function criarServico(dados: { tenants: Record<string, any>[]; usuarios: Record<string, any>[]; configuracoes?: Record<string, any>[] }) {
   const repositorioTenants = criarRepositorioFake(dados.tenants);
   const repositorioUsuarios = criarRepositorioFake(dados.usuarios);
+  const repositorioConfiguracoes = criarRepositorioFake(dados.configuracoes ?? []);
   const fonteDados = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === TenantOrm) return repositorioTenants;
@@ -29,6 +47,7 @@ function criarServico(dados: { tenants: Record<string, any>[]; usuarios: Record<
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === UsuarioOrm) return repositorioUsuarios;
+      if (entidade === TenantConfiguracaoOrm) return repositorioConfiguracoes;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -40,6 +59,7 @@ function criarServico(dados: { tenants: Record<string, any>[]; usuarios: Record<
     servico: new ServicoPortalCliente(fonteDados as never, executorTenant as never),
     repositorioTenants,
     repositorioUsuarios,
+    repositorioConfiguracoes,
     executorTenant
   };
 }
@@ -108,5 +128,121 @@ describe('ServicoPortalCliente', () => {
       }
     });
     expect(JSON.stringify(resumo)).not.toContain('Outra conta');
+  });
+
+  it('deve retornar configuracoes da conta com defaults quando ainda nao existem', async () => {
+    const { servico, repositorioConfiguracoes, executorTenant } = criarServico({
+      tenants: [
+        {
+          id: 'tenant-1',
+          nome: 'Clinica Octa Real',
+          slug: 'clinica-octa-real',
+          status: 'ativo',
+          criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      usuarios: []
+    });
+
+    const configuracoes = await servico.obterConfiguracoes('tenant-1');
+
+    expect(executorTenant.executar).toHaveBeenCalledWith('tenant-1', expect.any(Function));
+    expect(repositorioConfiguracoes.findOne).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant-1', chave: 'conta_cliente' }
+    });
+    expect(configuracoes).toEqual({
+      tenantId: 'tenant-1',
+      nome: 'Clinica Octa Real',
+      slug: 'clinica-octa-real',
+      status: 'ativo',
+      timezone: 'America/Sao_Paulo',
+      idioma: 'pt-BR',
+      canaisPadrao: {
+        email: true,
+        whatsapp: true,
+        googleCalendar: true
+      },
+      marca: {
+        nomeExibido: 'Clinica Octa Real',
+        emailRemetente: '',
+        corPrimaria: '#197d8f'
+      },
+      atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+    });
+  });
+
+  it('deve atualizar nome da conta e salvar configuracoes flexiveis no tenant autenticado', async () => {
+    const tenant = {
+      id: 'tenant-1',
+      nome: 'Clinica Antiga',
+      slug: 'clinica-octa-real',
+      status: 'ativo',
+      criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+    };
+    const { servico, repositorioTenants, repositorioConfiguracoes } = criarServico({
+      tenants: [tenant],
+      usuarios: [],
+      configuracoes: [
+        {
+          id: 'config-1',
+          tenantId: 'tenant-1',
+          chave: 'conta_cliente',
+          valor: {
+            timezone: 'America/Sao_Paulo',
+            idioma: 'pt-BR'
+          },
+          criadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ]
+    });
+
+    const configuracoes = await servico.atualizarConfiguracoes('tenant-1', {
+      nome: ' Clinica Octa Atualizada ',
+      timezone: 'America/Fortaleza',
+      idioma: 'pt-BR',
+      canaisPadrao: {
+        email: true,
+        whatsapp: false,
+        googleCalendar: true
+      },
+      marca: {
+        nomeExibido: ' Octa Prime ',
+        emailRemetente: ' contato@octaclin.com.br ',
+        corPrimaria: '#0f766e'
+      }
+    });
+
+    expect(repositorioTenants.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'tenant-1',
+        nome: 'Clinica Octa Atualizada'
+      })
+    );
+    expect(repositorioConfiguracoes.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'config-1',
+        tenantId: 'tenant-1',
+        chave: 'conta_cliente',
+        valor: {
+          timezone: 'America/Fortaleza',
+          idioma: 'pt-BR',
+          canaisPadrao: {
+            email: true,
+            whatsapp: false,
+            googleCalendar: true
+          },
+          marca: {
+            nomeExibido: 'Octa Prime',
+            emailRemetente: 'contato@octaclin.com.br',
+            corPrimaria: '#0f766e'
+          }
+        }
+      })
+    );
+    expect(configuracoes.nome).toBe('Clinica Octa Atualizada');
+    expect(configuracoes.marca.nomeExibido).toBe('Octa Prime');
+    expect(configuracoes.canaisPadrao.whatsapp).toBe(false);
   });
 });

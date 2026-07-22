@@ -15,8 +15,8 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase concluida mais recente no momento deste arquivo: Fase 95.
-- Proxima fase planejada: Fase 96 - Configuracoes da conta do cliente.
+- Fase concluida mais recente no momento deste arquivo: Fase 96.
+- Proxima fase planejada: Fase 97 - Perfil da empresa/consultoria e dados fiscais.
 - O checklist vivo das proximas fases fica em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regras de trabalho

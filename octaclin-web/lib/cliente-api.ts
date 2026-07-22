@@ -26,6 +26,28 @@ export interface ResumoPortalClienteApi {
   };
 }
 
+export interface ConfiguracoesPortalClienteApi {
+  tenantId: string;
+  nome: string;
+  slug: string;
+  status: string;
+  timezone: string;
+  idioma: 'pt-BR' | 'en-US' | 'es';
+  canaisPadrao: {
+    email: boolean;
+    whatsapp: boolean;
+    googleCalendar: boolean;
+  };
+  marca: {
+    nomeExibido: string;
+    emailRemetente: string;
+    corPrimaria: string;
+  };
+  atualizadoEm: string;
+}
+
+export type AtualizarConfiguracoesClienteEntrada = Omit<ConfiguracoesPortalClienteApi, 'tenantId' | 'slug' | 'status' | 'atualizadoEm'>;
+
 export type PapelUsuarioClienteApi = 'Client' | 'Professional' | 'Collaborator';
 export type PapelUsuarioClienteCriavelApi = 'Professional' | 'Collaborator';
 
@@ -86,6 +108,22 @@ export async function obterResumoPortalCliente(): Promise<ResumoPortalClienteApi
   const resposta = await fetch('/api/cliente/resumo', { cache: 'no-store' });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
   return resposta.json() as Promise<ResumoPortalClienteApi>;
+}
+
+export async function obterConfiguracoesCliente(): Promise<ConfiguracoesPortalClienteApi> {
+  const resposta = await fetch('/api/cliente/configuracoes', { cache: 'no-store' });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<ConfiguracoesPortalClienteApi>;
+}
+
+export async function atualizarConfiguracoesCliente(entrada: AtualizarConfiguracoesClienteEntrada): Promise<ConfiguracoesPortalClienteApi> {
+  const resposta = await fetch('/api/cliente/configuracoes', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entrada)
+  });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<ConfiguracoesPortalClienteApi>;
 }
 
 export async function listarUsuariosCliente(): Promise<RespostaUsuariosClienteApi> {
