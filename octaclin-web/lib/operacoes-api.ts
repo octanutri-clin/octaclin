@@ -77,6 +77,17 @@ export interface DetalheSolicitacaoLgpdOperacional extends SolicitacaoLgpdOperac
   historico: EventoSolicitacaoLgpdOperacional[];
 }
 
+export interface RespostaSolicitacaoLgpdOperacional {
+  protocolo: string;
+  pacienteId: string;
+  status: StatusSolicitacaoLgpd;
+  assuntoEmail: string;
+  corpoEmail: string;
+  textoWhatsapp: string;
+  canaisSugeridos: ('email' | 'whatsapp')[];
+  geradoEm: string;
+}
+
 export interface DadosOperacionais {
   resumo: ResumoOperacional;
   falhas: OutboxFalha[];
@@ -229,6 +240,13 @@ export async function obterDetalheSolicitacaoLgpd(protocolo: string): Promise<De
 
 export function urlExportacaoSolicitacaoLgpd(protocolo: string): string {
   return `/api/operacoes/lgpd/solicitacoes/${encodeURIComponent(protocolo)}/exportar.csv`;
+}
+
+export async function prepararRespostaSolicitacaoLgpd(protocolo: string): Promise<RespostaSolicitacaoLgpdOperacional> {
+  return requisitar<RespostaSolicitacaoLgpdOperacional>(
+    `/api/operacoes/lgpd/solicitacoes/${encodeURIComponent(protocolo)}/resposta`,
+    { method: 'POST' }
+  );
 }
 
 export function urlExportacaoAuditoria(filtros: FiltrosAuditoriaOperacional): string {

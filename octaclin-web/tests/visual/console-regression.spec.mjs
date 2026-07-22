@@ -122,6 +122,24 @@ async function prepararOperacoesMockadas(page) {
       return;
     }
 
+    if (url.endsWith('/LGPD-123/resposta')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          protocolo: 'LGPD-123',
+          pacienteId: 'paciente-1',
+          status: 'em_tratamento',
+          assuntoEmail: 'Atualizacao da solicitacao LGPD LGPD-123',
+          corpoEmail: 'Ola,\\n\\nSeu pedido LGPD LGPD-123 esta em tratamento.\\n\\nProtocolo: LGPD-123.\\n\\nEquipe OctaClin',
+          textoWhatsapp: 'Seu pedido LGPD LGPD-123 esta em tratamento. Protocolo: LGPD-123.',
+          canaisSugeridos: ['email', 'whatsapp'],
+          geradoEm: '2026-07-22T12:00:00.000Z'
+        })
+      });
+      return;
+    }
+
     if (url.endsWith('/LGPD-123')) {
       await route.fulfill({
         status: 200,
@@ -248,6 +266,13 @@ test.describe('operacoes LGPD', () => {
     await expect(page.getByText('Validando cadastro.')).toBeVisible();
     await page.getByRole('button', { name: 'Exportar protocolo LGPD-123' }).click();
     await expect.poll(() => operacoes.requisitouCsvLgpd()).toBe(true);
+
+    await page.getByRole('button', { name: 'Preparar resposta LGPD-123' }).click();
+    await expect(page.getByRole('heading', { name: 'Resposta ao paciente' })).toBeVisible();
+    await expect(page.getByText('Atualizacao da solicitacao LGPD LGPD-123')).toBeVisible();
+    await expect(page.getByText('Seu pedido LGPD LGPD-123 esta em tratamento. Protocolo: LGPD-123.')).toBeVisible();
+    await page.getByRole('button', { name: 'Copiar resposta LGPD-123' }).click();
+    await expect(page.getByText('Resposta LGPD copiada para LGPD-123.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });

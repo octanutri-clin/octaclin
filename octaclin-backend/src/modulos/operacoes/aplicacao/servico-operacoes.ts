@@ -74,6 +74,17 @@ export interface DetalheSolicitacaoLgpdOperacional extends SolicitacaoLgpdOperac
   historico: EventoSolicitacaoLgpdOperacional[];
 }
 
+export interface RespostaSolicitacaoLgpdOperacional {
+  protocolo: string;
+  pacienteId: string;
+  status: StatusSolicitacaoLgpd;
+  assuntoEmail: string;
+  corpoEmail: string;
+  textoWhatsapp: string;
+  canaisSugeridos: ('email' | 'whatsapp')[];
+  geradoEm: Date;
+}
+
 export interface AtualizarSolicitacaoLgpdOperacional {
   status: Exclude<StatusSolicitacaoLgpd, 'recebida'>;
   detalhes?: string;
@@ -248,6 +259,39 @@ export class ServicoOperacoes {
     );
   }
 
+  async prepararRespostaSolicitacaoLgpd(
+    tenantId: string,
+    usuarioId: string,
+    protocolo: string
+  ): Promise<RespostaSolicitacaoLgpdOperacional> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const eventos = await this.carregarEventosSolicitacoesLgpd(gerenciador, tenantId);
+      const detalhe = this.montarDetalheSolicitacaoLgpd(eventos, protocolo);
+      const resposta = this.montarRespostaSolicitacaoLgpd(detalhe);
+      const repositorio = gerenciador.getRepository(ConsentimentoLgpdOrm);
+
+      await repositorio.save(
+        repositorio.create({
+          tenantId,
+          usuarioId,
+          tipo: 'resposta_lgpd_preparada',
+          versao: '2026-09',
+          aceitoEm: resposta.geradoEm,
+          metadados: {
+            pacienteId: detalhe.pacienteId,
+            protocolo,
+            status: detalhe.status,
+            responsavelId: usuarioId,
+            assuntoEmail: resposta.assuntoEmail,
+            canaisSugeridos: resposta.canaisSugeridos
+          }
+        })
+      );
+
+      return resposta;
+    });
+  }
+
   async listarAuditoria(tenantId: string, filtros: FiltrosAuditoriaOperacional = {}): Promise<UserActionLogOrm[]> {
     return this.executorTenant.executar(tenantId, (gerenciador) => {
       return gerenciador.getRepository(UserActionLogOrm).find({
@@ -397,6 +441,44 @@ export class ServicoOperacoes {
       }));
 
     return { ...solicitacao, historico };
+  }
+
+  private montarRespostaSolicitacaoLgpd(detalhe: DetalheSolicitacaoLgpdOperacional): RespostaSolicitacaoLgpdOperacional {
+    const mensagemStatus = this.mensagemRespostaPorStatus(detalhe.status);
+    const assuntoEmail = `Atualizacao da solicitacao LGPD ${detalhe.protocolo}`;
+    const corpoEmail = [
+      `Ola,`,
+      '',
+      `${mensagemStatus(detalhe.protocolo)}`,
+      '',
+      `Tipo da solicitacao: ${detalhe.tipo === 'retificacao' ? 'retificacao de dados' : 'exclusao de dados'}.`,
+      `Protocolo: ${detalhe.protocolo}.`,
+      '',
+      'Qualquer duvida, responda esta mensagem para falarmos sobre o atendimento.',
+      '',
+      'Equipe OctaClin'
+    ].join('\n');
+
+    return {
+      protocolo: detalhe.protocolo,
+      pacienteId: detalhe.pacienteId,
+      status: detalhe.status,
+      assuntoEmail,
+      corpoEmail,
+      textoWhatsapp: `${mensagemStatus(detalhe.protocolo)} Protocolo: ${detalhe.protocolo}.`,
+      canaisSugeridos: ['email', 'whatsapp'],
+      geradoEm: new Date()
+    };
+  }
+
+  private mensagemRespostaPorStatus(status: StatusSolicitacaoLgpd): (protocolo: string) => string {
+    const mensagens: Record<StatusSolicitacaoLgpd, (protocolo: string) => string> = {
+      recebida: (protocolo) => `Recebemos seu pedido LGPD ${protocolo} e ele ja esta registrado para atendimento.`,
+      em_tratamento: (protocolo) => `Seu pedido LGPD ${protocolo} esta em tratamento.`,
+      concluida: (protocolo) => `Seu pedido LGPD ${protocolo} foi concluido.`,
+      indeferida: (protocolo) => `Seu pedido LGPD ${protocolo} foi analisado e nao pode ser atendido integralmente neste momento.`
+    };
+    return mensagens[status];
   }
 
   private metadadoTexto(metadados: Record<string, unknown> | undefined, chave: string): string | undefined {

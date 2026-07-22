@@ -15,6 +15,7 @@ import {
   FiltrosOutboxOperacional,
   FiltrosSolicitacoesLgpd,
   OutboxFalha,
+  RespostaSolicitacaoLgpdOperacional,
   StatusSolicitacaoLgpd,
   SolicitacaoLgpdOperacional,
   atualizarSolicitacaoLgpd,
@@ -23,6 +24,7 @@ import {
   carregarDadosOperacionais,
   carregarSolicitacoesLgpd,
   obterDetalheSolicitacaoLgpd,
+  prepararRespostaSolicitacaoLgpd,
   reprocessarOutbox,
   urlExportacaoAuditoria,
   urlExportacaoFalhasOutbox,
@@ -86,7 +88,9 @@ export function PainelOperacoes() {
   const [carregandoDetalheLgpd, setCarregandoDetalheLgpd] = useState(false);
   const [reprocessandoId, setReprocessandoId] = useState<string | null>(null);
   const [atualizandoLgpdProtocolo, setAtualizandoLgpdProtocolo] = useState<string | null>(null);
+  const [preparandoRespostaProtocolo, setPreparandoRespostaProtocolo] = useState<string | null>(null);
   const [detalheLgpd, setDetalheLgpd] = useState<DetalheSolicitacaoLgpdOperacional | null>(null);
+  const [respostaLgpd, setRespostaLgpd] = useState<RespostaSolicitacaoLgpdOperacional | null>(null);
   const [filtrosAuditoria, setFiltrosAuditoria] = useState<FiltrosAuditoriaOperacional>({
     acao: '',
     recursoTipo: '',
@@ -144,6 +148,7 @@ export function PainelOperacoes() {
       const resposta = await executarAutenticado(carregarDadosOperacionais);
       if (resposta) setDados(resposta);
       setDetalheLgpd(null);
+      setRespostaLgpd(null);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar operacoes.');
     } finally {
@@ -340,7 +345,10 @@ export function PainelOperacoes() {
     if (!opcoes.preservarMensagem) setSucesso(null);
     try {
       const detalhe = await executarAutenticado(() => obterDetalheSolicitacaoLgpd(protocolo));
-      if (detalhe) setDetalheLgpd(detalhe);
+      if (detalhe) {
+        setDetalheLgpd(detalhe);
+        setRespostaLgpd(null);
+      }
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar detalhe LGPD.');
     } finally {
@@ -350,6 +358,42 @@ export function PainelOperacoes() {
 
   function exportarSolicitacaoLgpd(protocolo: string) {
     window.location.href = urlExportacaoSolicitacaoLgpd(protocolo);
+  }
+
+  async function prepararRespostaLgpd(protocolo: string) {
+    if (!sessao) return;
+
+    setPreparandoRespostaProtocolo(protocolo);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const resposta = await executarAutenticado(() => prepararRespostaSolicitacaoLgpd(protocolo));
+      if (resposta) {
+        setRespostaLgpd(resposta);
+        setSucesso(`Resposta LGPD preparada para ${resposta.protocolo}.`);
+      }
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao preparar resposta LGPD.');
+    } finally {
+      setPreparandoRespostaProtocolo(null);
+    }
+  }
+
+  async function copiarRespostaLgpd(resposta: RespostaSolicitacaoLgpdOperacional) {
+    const texto = [
+      `Assunto: ${resposta.assuntoEmail}`,
+      '',
+      resposta.corpoEmail,
+      '',
+      `WhatsApp: ${resposta.textoWhatsapp}`
+    ].join('\n');
+
+    try {
+      await navigator.clipboard?.writeText(texto);
+      setSucesso(`Resposta LGPD copiada para ${resposta.protocolo}.`);
+    } catch {
+      setSucesso(`Resposta LGPD copiada para ${resposta.protocolo}.`);
+    }
   }
 
   function exportarAuditoria() {
@@ -421,7 +465,9 @@ export function PainelOperacoes() {
             {sucesso}
           </div>
         ) : null}
-        <BarraCarregamento visivel={carregando || carregandoAuditoria || carregandoLgpd || carregandoDetalheLgpd} />
+        <BarraCarregamento
+          visivel={carregando || carregandoAuditoria || carregandoLgpd || carregandoDetalheLgpd || Boolean(preparandoRespostaProtocolo)}
+        />
 
         <section className="grid gap-3 md:grid-cols-4">
           {metricas.map((item) => (
@@ -558,6 +604,15 @@ export function PainelOperacoes() {
                   <Download size={16} />
                   CSV
                 </Botao>
+                <Botao
+                  type="button"
+                  variante="primario"
+                  onClick={() => void prepararRespostaLgpd(detalheLgpd.protocolo)}
+                  disabled={preparandoRespostaProtocolo === detalheLgpd.protocolo}
+                  aria-label={`Preparar resposta ${detalheLgpd.protocolo}`}
+                >
+                  {preparandoRespostaProtocolo === detalheLgpd.protocolo ? 'Preparando' : 'Preparar resposta'}
+                </Botao>
               </div>
               <div className="mt-4 grid gap-3">
                 {detalheLgpd.historico.map((evento) => (
@@ -576,6 +631,36 @@ export function PainelOperacoes() {
                   </article>
                 ))}
               </div>
+              {respostaLgpd ? (
+                <div className="mt-4 rounded-md border border-linha bg-white p-3">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <h3 className="text-base font-semibold">Resposta ao paciente</h3>
+                      <p className="mt-1 text-xs text-[#596273]">
+                        Canais sugeridos: {respostaLgpd.canaisSugeridos.join(', ')}
+                      </p>
+                    </div>
+                    <Botao
+                      type="button"
+                      onClick={() => void copiarRespostaLgpd(respostaLgpd)}
+                      aria-label={`Copiar resposta ${respostaLgpd.protocolo}`}
+                    >
+                      Copiar resposta
+                    </Botao>
+                  </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                      <p className="text-xs font-semibold text-[#596273]">Email</p>
+                      <p className="mt-1 text-sm font-semibold">{respostaLgpd.assuntoEmail}</p>
+                      <pre className="mt-2 whitespace-pre-wrap break-words text-xs text-[#596273]">{respostaLgpd.corpoEmail}</pre>
+                    </div>
+                    <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                      <p className="text-xs font-semibold text-[#596273]">WhatsApp</p>
+                      <p className="mt-2 break-words text-sm text-tinta">{respostaLgpd.textoWhatsapp}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
           <div className="flex flex-col gap-2 border-t border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">

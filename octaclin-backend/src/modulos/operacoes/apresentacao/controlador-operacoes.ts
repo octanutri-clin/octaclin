@@ -114,6 +114,11 @@ export class ControladorOperacoes {
     return this.servicoOperacoes.exportarSolicitacaoLgpdCsv(usuario.tenantId, protocolo);
   }
 
+  @Post('lgpd/solicitacoes/:protocolo/resposta')
+  prepararRespostaSolicitacaoLgpd(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('protocolo') protocolo: string) {
+    return this.servicoOperacoes.prepararRespostaSolicitacaoLgpd(usuario.tenantId, usuario.usuarioId, protocolo);
+  }
+
   @Get('auditoria')
   listarAuditoria(
     @UsuarioAtual() usuario: UsuarioAutenticado,

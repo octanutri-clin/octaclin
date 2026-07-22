@@ -279,4 +279,33 @@ describe('ServicoOperacoes', () => {
     await expect(servico.exportarSolicitacaoLgpdCsv('tenant-1', 'LGPD-123')).resolves.toContain('"LGPD-123","paciente-1","retificacao","recebida"');
     await expect(servico.exportarSolicitacaoLgpdCsv('tenant-1', 'LGPD-123')).resolves.not.toContain('usuarioPacienteId');
   });
+
+  it('deve preparar resposta LGPD ao paciente e registrar evento operacional', async () => {
+    const { servico, repositorios } = criarServico();
+
+    await expect(servico.prepararRespostaSolicitacaoLgpd('tenant-1', 'usuario-admin-1', 'LGPD-123')).resolves.toEqual(
+      expect.objectContaining({
+        protocolo: 'LGPD-123',
+        pacienteId: 'paciente-1',
+        status: 'em_tratamento',
+        assuntoEmail: 'Atualizacao da solicitacao LGPD LGPD-123',
+        corpoEmail: expect.stringContaining('Seu pedido LGPD LGPD-123 esta em tratamento.'),
+        textoWhatsapp: expect.stringContaining('Seu pedido LGPD LGPD-123 esta em tratamento.'),
+        canaisSugeridos: ['email', 'whatsapp']
+      })
+    );
+    expect(repositorios.consentimentos.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-admin-1',
+        tipo: 'resposta_lgpd_preparada',
+        metadados: expect.objectContaining({
+          protocolo: 'LGPD-123',
+          status: 'em_tratamento',
+          responsavelId: 'usuario-admin-1',
+          assuntoEmail: 'Atualizacao da solicitacao LGPD LGPD-123'
+        })
+      })
+    );
+  });
 });
