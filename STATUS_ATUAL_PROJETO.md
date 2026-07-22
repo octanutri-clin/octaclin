@@ -7,8 +7,8 @@ Atualizado em 2026-07-22.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 101 - Controle manual de assinatura.
-- Proxima fase planejada: Fase 102 - Bloqueios suaves por inadimplencia/limite.
+- Ultima fase concluida: Fase 102 - Bloqueios suaves por inadimplencia/limite.
+- Proxima fase planejada: Fase 103 - Dashboard inicial do profissional.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -34,6 +34,7 @@ Atualizado em 2026-07-22.
 - Calculo de uso, limites e alertas de assinatura no portal do cliente.
 - Solicitacao comercial manual de upgrade/revisao de limite no portal do cliente.
 - Controle manual administrativo de assinatura no painel operacional.
+- Bloqueios suaves de assinatura/limite para novas criacoes de usuarios administrativos e pacientes.
 - Agenda interna com integracao Google Calendar.
 - Comunicacoes por email.
 - WhatsApp Meta com envio, webhook, status, inbox, associacao e notas.
@@ -42,7 +43,6 @@ Atualizado em 2026-07-22.
 
 ## O que ainda falta antes de producao real
 
-- Bloqueios suaves por inadimplencia/limite.
 - Gateway de pagamento definitivo, se a operacao manual deixar de ser suficiente.
 - Dashboard do profissional.
 - Prontuario/linha do tempo clinica do paciente para profissional.
@@ -84,4 +84,4 @@ Atualizado em 2026-07-22.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, mas ainda precisa de revisao multi-tenant ampla, observabilidade, bloqueios de limites/inadimplencia, QA E2E e producao isolada antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, mas ainda precisa de revisao multi-tenant ampla, observabilidade, rotina profissional madura, QA E2E e producao isolada antes de uso comercial com clientes reais.

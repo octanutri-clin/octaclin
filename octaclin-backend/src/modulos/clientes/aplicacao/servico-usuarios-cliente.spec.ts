@@ -40,7 +40,13 @@ function criarRepositorioFake(usuarios: Record<string, any>[]) {
   };
 }
 
-function criarServico(usuarios: Record<string, any>[], tokens: Record<string, any>[] = []) {
+function criarServico(
+  usuarios: Record<string, any>[],
+  tokens: Record<string, any>[] = [],
+  limites: { checarLimite: jest.Mock } = {
+    checarLimite: jest.fn(async () => ({ permitido: true }))
+  }
+) {
   const repositorioUsuarios = criarRepositorioFake(usuarios);
   const repositorioTokens = criarRepositorioFake(tokens);
   const executorTenant = {
@@ -63,7 +69,7 @@ function criarServico(usuarios: Record<string, any>[], tokens: Record<string, an
   const email = { enviar: jest.fn(async () => ({ idExterno: 'email-1' })) };
 
   return {
-    servico: new ServicoUsuariosCliente(executorTenant as never, criptografia as never, senhas as never, email as never),
+    servico: new ServicoUsuariosCliente(executorTenant as never, criptografia as never, senhas as never, email as never, limites as never),
     repositorioUsuarios,
     repositorioTokens,
     executorTenant,
@@ -199,6 +205,32 @@ describe('ServicoUsuariosCliente', () => {
     );
     expect(JSON.stringify(resposta)).not.toContain('convite.');
     delete process.env.EXPOR_LINK_RECUPERACAO_SENHA;
+  });
+
+  it('deve bloquear convite administrativo quando limite de usuarios for atingido', async () => {
+    const limites = {
+      checarLimite: jest.fn(async () => ({
+        permitido: false,
+        recurso: 'usuariosAdministrativos',
+        plano: 'Profissional',
+        uso: 3,
+        limite: 3,
+        restante: 0,
+        mensagem: 'Limite de usuarios administrativos atingido para o Profissional.'
+      }))
+    };
+    const { servico, repositorioUsuarios, repositorioTokens } = criarServico([], [], limites);
+
+    await expect(
+      servico.criar('tenant-1', 'cliente-1', {
+        email: 'novo@octaclin.local',
+        role: 'Collaborator'
+      })
+    ).rejects.toThrow('Limite de usuarios administrativos atingido para o Profissional.');
+
+    expect(limites.checarLimite).toHaveBeenCalledWith('tenant-1', 'usuariosAdministrativos');
+    expect(repositorioUsuarios.save).not.toHaveBeenCalled();
+    expect(repositorioTokens.save).not.toHaveBeenCalled();
   });
 
   it('deve impedir o gestor de desativar o proprio usuario', async () => {

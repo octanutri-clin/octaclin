@@ -299,8 +299,48 @@ describe('ServicoPortalCliente', () => {
       uso: 25,
       limite: 25,
       restante: 0,
+      motivo: 'limite_excedido',
       mensagem: 'Limite de pacientes atingido para o Plano gratuito.'
     });
+  });
+
+  it('deve bloquear novas acoes quando assinatura estiver suspensa', async () => {
+    const { servico } = criarServico({
+      tenants: [
+        {
+          id: 'tenant-1',
+          nome: 'Clinica Octa Real',
+          slug: 'clinica-octa-real',
+          status: 'ativo',
+          criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      usuarios: [],
+      configuracoes: [
+        {
+          id: 'plano-1',
+          tenantId: 'tenant-1',
+          chave: 'plano_saas',
+          valor: { planoId: 'profissional', status: 'suspensa', origem: 'operacao_manual' }
+        }
+      ]
+    });
+
+    await expect(servico.checarLimite('tenant-1', 'pacientes')).resolves.toEqual(
+      expect.objectContaining({
+        permitido: false,
+        recurso: 'pacientes',
+        planoId: 'profissional',
+        plano: 'Profissional',
+        uso: 0,
+        limite: 100,
+        restante: 100,
+        statusAssinatura: 'suspensa',
+        motivo: 'assinatura_bloqueada',
+        mensagem: 'Assinatura suspensa. Novas acoes estao bloqueadas, mas os dados existentes continuam disponiveis.'
+      })
+    );
   });
 
   it('deve registrar solicitacao comercial de ajuste de assinatura do cliente', async () => {

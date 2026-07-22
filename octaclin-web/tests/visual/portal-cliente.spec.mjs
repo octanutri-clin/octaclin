@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-async function prepararSessaoCliente(page) {
+async function prepararSessaoCliente(page, opcoes = {}) {
+  const statusAssinatura = opcoes.statusAssinatura ?? 'trial';
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -49,7 +50,7 @@ async function prepararSessaoCliente(page) {
         assinatura: {
           plano: 'Profissional',
           planoId: 'profissional',
-          status: 'trial',
+          status: statusAssinatura,
           origem: 'manual_admin',
           renovacaoEm: '2026-08-22T00:00:00.000Z',
           limites: {
@@ -436,5 +437,16 @@ test.describe('portal do cliente', () => {
 
     const screenshot = await page.screenshot({ fullPage: true });
     await testInfo.attach(`${testInfo.project.name}-portal-cliente.png`, { body: screenshot, contentType: 'image/png' });
+  });
+
+  test('exibe bloqueio suave quando assinatura esta suspensa', async ({ page }) => {
+    await prepararSessaoCliente(page, { statusAssinatura: 'suspensa' });
+    await page.goto('/cliente');
+
+    const assinatura = page.locator('#assinatura');
+    await expect(assinatura.getByText('Assinatura suspensa com origem manual_admin.')).toBeVisible();
+    await expect(assinatura.getByText('Novas acoes estao bloqueadas, mas os dados existentes continuam disponiveis.')).toBeVisible();
+    await expect(page.locator('#gestao-usuarios').getByRole('button', { name: 'Assinatura bloqueada' })).toBeDisabled();
+    await assertSemOverflowHorizontal(page);
   });
 });

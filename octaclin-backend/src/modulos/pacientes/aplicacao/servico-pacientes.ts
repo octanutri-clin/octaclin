@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cliente';
 import { AtualizarPacienteDto, CriarPacienteDto, PacienteRespostaDto } from './dtos';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
@@ -9,10 +10,13 @@ import { PacienteOrm } from '../infraestrutura/paciente.orm';
 export class ServicoPacientes {
   constructor(
     private readonly executorTenant: ExecutorTenant,
-    private readonly criptografia: CriptografiaDadosSensiveis
+    private readonly criptografia: CriptografiaDadosSensiveis,
+    private readonly portalCliente: ServicoPortalCliente
   ) {}
 
   async criar(tenantId: string, dados: CriarPacienteDto): Promise<PacienteRespostaDto> {
+    await this.garantirLimitePermitido(tenantId, 'pacientes');
+
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(PacienteOrm);
       const paciente = repositorio.create({
@@ -109,6 +113,13 @@ export class ServicoPacientes {
       criadoEm: paciente.criadoEm,
       atualizadoEm: paciente.atualizadoEm
     };
+  }
+
+  private async garantirLimitePermitido(tenantId: string, recurso: 'pacientes') {
+    const limite = await this.portalCliente.checarLimite(tenantId, recurso);
+    if (!limite.permitido) {
+      throw new ForbiddenException(limite.mensagem ?? 'Limite do plano atingido para esta acao.');
+    }
   }
 
   private mapearContato(paciente: PacienteOrm): string | undefined {

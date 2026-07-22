@@ -6,6 +6,7 @@ import { ConsentimentoLgpdOrm } from '../../infraestrutura/lgpd/consentimento-lg
 import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../../infraestrutura/seguranca/servico-senhas';
 import { ModuloAuth } from '../auth/modulo-auth';
+import { ModuloClientes } from '../clientes/modulo-clientes';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
@@ -41,7 +42,8 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
       MensagemNotificacaoOrm
     ]),
     ModuloTenancy,
-    ModuloAuth
+    ModuloAuth,
+    ModuloClientes
   ],
   controllers: [ControladorPacientes, ControladorConvitesPaciente, ControladorPortalPaciente],
   providers: [ServicoPacientes, ServicoConvitesPaciente, ServicoPortalPaciente, CriptografiaDadosSensiveis, ServicoSenhas, ServicoAuditoria],

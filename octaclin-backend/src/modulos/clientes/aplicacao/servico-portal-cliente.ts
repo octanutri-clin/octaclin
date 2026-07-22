@@ -27,6 +27,19 @@ interface AlertaPlanoSaas {
   status: 'atencao' | 'excedido';
 }
 
+export interface ChecagemLimiteSaas {
+  permitido: boolean;
+  recurso: RecursoLimitavelSaas;
+  planoId: PlanoSaasId;
+  plano: string;
+  uso: number;
+  limite: number | null;
+  restante: number | null;
+  statusAssinatura?: string;
+  motivo?: 'limite_excedido' | 'assinatura_bloqueada';
+  mensagem?: string;
+}
+
 export interface SolicitacaoAjusteAssinaturaCliente {
   tenantId: string;
   acao: 'upgrade' | 'downgrade' | 'revisao_limite';
@@ -184,25 +197,47 @@ export class ServicoPortalCliente {
     };
   }
 
-  async checarLimite(tenantId: string, recurso: RecursoLimitavelSaas) {
+  async checarLimite(tenantId: string, recurso: RecursoLimitavelSaas): Promise<ChecagemLimiteSaas> {
     const assinatura = await this.obterAssinatura(tenantId);
     const limite = assinatura.plano.limites[recurso];
     const uso = assinatura.uso[recurso];
+    const bloqueadaPorAssinatura = assinatura.status === 'suspensa' || assinatura.status === 'cancelada';
 
     if (limite === null) {
       return {
-        permitido: true,
+        permitido: !bloqueadaPorAssinatura,
         recurso,
         planoId: assinatura.plano.id,
         plano: assinatura.plano.nome,
         uso,
         limite,
-        restante: null
+        restante: null,
+        ...(bloqueadaPorAssinatura
+          ? {
+              statusAssinatura: assinatura.status,
+              motivo: 'assinatura_bloqueada' as const,
+              mensagem: this.mensagemAssinaturaBloqueada(assinatura.status)
+            }
+          : {})
       };
     }
 
     const restante = Math.max(limite - uso, 0);
     const permitido = uso < limite;
+    if (bloqueadaPorAssinatura) {
+      return {
+        permitido: false,
+        recurso,
+        planoId: assinatura.plano.id,
+        plano: assinatura.plano.nome,
+        uso,
+        limite,
+        restante,
+        statusAssinatura: assinatura.status,
+        motivo: 'assinatura_bloqueada',
+        mensagem: this.mensagemAssinaturaBloqueada(assinatura.status)
+      };
+    }
 
     return {
       permitido,
@@ -212,7 +247,8 @@ export class ServicoPortalCliente {
       uso,
       limite,
       restante,
-      mensagem: permitido ? undefined : `Limite de ${this.rotuloRecurso(recurso)} atingido para o ${assinatura.plano.nome}.`
+      mensagem: permitido ? undefined : `Limite de ${this.rotuloRecurso(recurso)} atingido para o ${assinatura.plano.nome}.`,
+      ...(!permitido ? { motivo: 'limite_excedido' as const } : {})
     };
   }
 
@@ -562,5 +598,9 @@ export class ServicoPortalCliente {
       armazenamentoMb: 'armazenamento'
     };
     return rotulos[recurso];
+  }
+
+  private mensagemAssinaturaBloqueada(status: string): string {
+    return `Assinatura ${status}. Novas acoes estao bloqueadas, mas os dados existentes continuam disponiveis.`;
   }
 }

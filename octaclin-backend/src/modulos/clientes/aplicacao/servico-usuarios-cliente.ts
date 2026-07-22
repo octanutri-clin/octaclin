@@ -13,6 +13,7 @@ import {
   PapelUsuarioClienteAdministrativo,
   UsuarioClienteRespostaDto
 } from './dtos';
+import { ServicoPortalCliente } from './servico-portal-cliente';
 
 const papeisAdministrativos = ['Client', 'Professional', 'Collaborator'] satisfies PapelUsuarioClienteAdministrativo[];
 
@@ -31,7 +32,8 @@ export class ServicoUsuariosCliente {
     private readonly executorTenant: ExecutorTenant,
     private readonly criptografia: CriptografiaDadosSensiveis,
     private readonly senhas: ServicoSenhas,
-    private readonly email: AdaptadorEmailSmtp
+    private readonly email: AdaptadorEmailSmtp,
+    private readonly portalCliente: ServicoPortalCliente
   ) {}
 
   async listar(tenantId: string): Promise<{ itens: UsuarioClienteRespostaDto[]; total: number }> {
@@ -49,6 +51,8 @@ export class ServicoUsuariosCliente {
   }
 
   async criar(tenantId: string, usuarioCriadorId: string, dados: CriarUsuarioClienteDto): Promise<UsuarioClienteRespostaDto> {
+    await this.garantirLimitePermitido(tenantId, 'usuariosAdministrativos');
+
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(UsuarioOrm);
       const emailNormalizado = dados.email.trim().toLowerCase();
@@ -236,6 +240,13 @@ export class ServicoUsuariosCliente {
 
   private ehPapelAdministrativo(role: string): role is PapelUsuarioClienteAdministrativo {
     return papeisAdministrativos.includes(role as PapelUsuarioClienteAdministrativo);
+  }
+
+  private async garantirLimitePermitido(tenantId: string, recurso: 'usuariosAdministrativos') {
+    const limite = await this.portalCliente.checarLimite(tenantId, recurso);
+    if (!limite.permitido) {
+      throw new ForbiddenException(limite.mensagem ?? 'Limite do plano atingido para esta acao.');
+    }
   }
 
   private ehTokenConviteAdministrativo(token: TokenRedefinicaoSenhaOrm) {

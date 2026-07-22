@@ -91,6 +91,10 @@ function descreverAlertaSaas(status: 'atencao' | 'excedido') {
   return status === 'excedido' ? 'Limite atingido' : 'Perto do limite';
 }
 
+function assinaturaBloqueada(status?: string) {
+  return status === 'suspensa' || status === 'cancelada';
+}
+
 const proximosPlanos: Record<PlanoSaasIdApi, { id?: PlanoSaasIdApi; nome: string; detalhe: string }> = {
   gratuito: { id: 'profissional', nome: 'Profissional', detalhe: 'Mais pacientes, formularios e mensagens para operacao individual.' },
   profissional: { id: 'clinica', nome: 'Clinica', detalhe: 'Mais usuarios administrativos e margem para crescer a operacao.' },
@@ -605,6 +609,7 @@ export function PortalCliente() {
   const podeVerGestaoUsuarios = podeLerUsuarios || podeConvidarUsuarios || podeGerenciarConvites;
   const alertasAssinatura = resumo?.assinatura.alertas ?? [];
   const planoRecomendado = resumo ? obterProximoPlano(resumo.assinatura.planoId) : null;
+  const bloqueioAssinatura = assinaturaBloqueada(resumo?.assinatura.status);
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
@@ -682,6 +687,12 @@ export function PortalCliente() {
                 </p>
                 {resumo?.assinatura.renovacaoEm ? (
                   <p className="mt-1 text-xs font-medium text-[#343c4b]">Renova em {formatarData(resumo.assinatura.renovacaoEm)}</p>
+                ) : null}
+                {bloqueioAssinatura ? (
+                  <div className="mt-3 flex items-start gap-2 rounded-md border border-[#efb8ad] bg-white px-3 py-2 text-sm text-perigo">
+                    <Ban size={16} className="mt-0.5 shrink-0" />
+                    <span>Novas acoes estao bloqueadas, mas os dados existentes continuam disponiveis.</span>
+                  </div>
                 ) : null}
               </article>
               <div className="grid gap-2">
@@ -847,9 +858,9 @@ export function PortalCliente() {
                 </select>
               </label>
               <div className="flex items-end">
-                <Botao type="submit" variante="primario" disabled={salvandoUsuario} className="w-full">
+                <Botao type="submit" variante="primario" disabled={salvandoUsuario || bloqueioAssinatura} className="w-full">
                   <UserPlus size={16} />
-                  {salvandoUsuario ? 'Convidando' : 'Convidar usuario'}
+                  {salvandoUsuario ? 'Convidando' : bloqueioAssinatura ? 'Assinatura bloqueada' : 'Convidar usuario'}
                 </Botao>
               </div>
               <p className="text-sm text-[#596273] lg:col-span-3">Link de primeiro acesso enviado por email.</p>
