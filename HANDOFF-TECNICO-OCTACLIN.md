@@ -1,6 +1,6 @@
 # OctaClin - Handoff tecnico
 
-Atualizado em 2026-07-22, apos a Fase 98 e a documentacao operacional para agentes.
+Atualizado em 2026-07-22, apos a Fase 99 e a documentacao operacional para agentes.
 
 Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo, leia tambem:
 
@@ -33,7 +33,8 @@ O projeto ja possui:
 - email via Gmail/SMTP/Gmail API;
 - WhatsApp Meta Cloud API com webhook, inbox e status;
 - LGPD operacional e portal;
-- convites administrativos para usuarios de cliente.
+- convites administrativos para usuarios de cliente;
+- modelo de planos SaaS com limites, uso e alertas por tenant.
 
 O sistema esta em staging funcional avancado, mas ainda nao deve ser considerado pronto para clientes reais ate concluir o checklist de producao.
 
@@ -80,7 +81,7 @@ Principais modulos:
 - `auth`: login, refresh token, recuperacao de senha, papeis e permissoes.
 - `tenancy`: tenant e executor tenant-aware.
 - `usuarios`: entidade base de usuarios.
-- `clientes`: portal do cliente, resumo, configuracoes, perfil fiscal, usuarios administrativos, convites e historico de convites.
+- `clientes`: portal do cliente, resumo, configuracoes, perfil fiscal, usuarios administrativos, convites, historico de convites, planos SaaS e limites por tenant.
 - `pacientes`: cadastros, portal do paciente, convites e LGPD.
 - `profissionais`: cadastro de profissionais.
 - `questionarios`: modelos, perguntas, envios e respostas.
@@ -152,8 +153,8 @@ Leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md` antes de alterar qualquer i
 
 ## Estado de roadmap
 
-- Ultima fase concluida: Fase 98 - Convite, reenvio e revogacao com auditoria operacional completa.
-- Proxima fase planejada: Fase 99 - Modelo de planos e limites SaaS.
+- Ultima fase concluida: Fase 99 - Modelo de planos e limites SaaS.
+- Proxima fase planejada: Fase 100 - Tela de assinatura e uso no portal do cliente.
 - Roadmap completo: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regra de continuidade

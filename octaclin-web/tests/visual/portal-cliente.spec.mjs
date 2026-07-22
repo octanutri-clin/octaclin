@@ -47,9 +47,34 @@ async function prepararSessaoCliente(page) {
           atualizadoEm: '2026-07-20T10:00:00.000Z'
         },
         assinatura: {
-          plano: 'Plano gratuito',
-          status: 'ativa',
-          origem: 'base_inicial'
+          plano: 'Profissional',
+          planoId: 'profissional',
+          status: 'trial',
+          origem: 'manual_admin',
+          renovacaoEm: '2026-08-22T00:00:00.000Z',
+          limites: {
+            usuariosAdministrativos: 3,
+            pacientes: 100,
+            mensagensMes: 1000,
+            formulariosAtivos: 20,
+            armazenamentoMb: 2048
+          },
+          uso: {
+            usuariosAdministrativos: 3,
+            pacientes: 82,
+            mensagensMes: 790,
+            formulariosAtivos: 12,
+            armazenamentoMb: 640
+          },
+          alertas: [
+            {
+              recurso: 'usuariosAdministrativos',
+              uso: 3,
+              limite: 3,
+              percentual: 100,
+              status: 'excedido'
+            }
+          ]
         },
         usuarios: {
           totalAtivos: 4,
@@ -311,7 +336,7 @@ test.describe('portal do cliente', () => {
     await expect(resumoConta.getByText('Resumo da conta')).toBeVisible();
     await expect(resumoConta.getByText('Clinica Octa Real')).toBeVisible();
     await expect(resumoConta.getByText('clinica-octa-real')).toBeVisible();
-    await expect(resumoConta.getByText('Plano gratuito')).toBeVisible();
+    await expect(resumoConta.getByText('Profissional')).toBeVisible();
     await expect(page.getByText('4 usuarios ativos')).toBeVisible();
     await expect(page.getByText('2 profissionais')).toBeVisible();
     await expect(page.getByText('1 paciente')).toBeVisible();
@@ -341,6 +366,14 @@ test.describe('portal do cliente', () => {
     await expect(historicoConvites.getByText('Reenviado por cliente-2')).toBeVisible();
     await expect(historicoConvites.getByText('Revogado por cliente-2')).toBeVisible();
     await expect(page.getByText('Acesso profissional separado')).toBeVisible();
+    const assinatura = page.locator('#assinatura');
+    await expect(assinatura.getByText('Profissional')).toBeVisible();
+    await expect(assinatura.getByText('Renova em 22/08/26')).toBeVisible();
+    await expect(assinatura.getByText('Usuarios administrativos')).toBeVisible();
+    await expect(assinatura.getByText('3 / 3')).toBeVisible();
+    await expect(assinatura.getByText('Limite atingido')).toBeVisible();
+    await expect(assinatura.getByText('Mensagens no mes')).toBeVisible();
+    await expect(assinatura.getByText('790 / 1000')).toBeVisible();
     const configuracoes = page.locator('#configuracoes');
     await expect(configuracoes.getByRole('heading', { name: 'Configuracoes da conta' })).toBeVisible();
     await expect(configuracoes.getByLabel('Nome da clinica')).toHaveValue('Clinica Octa Real');

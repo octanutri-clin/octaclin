@@ -5,10 +5,26 @@ import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-confi
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { contextoAcessoPorPapel } from '../../auth/dominio/permissoes';
+import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
+import { LimitesPlanoSaas, PlanoSaasId, RecursoLimitavelSaas, resolverPlanoSaas } from '../dominio/planos-saas';
 import { AtualizarConfiguracoesClienteDto, AtualizarPerfilEmpresaClienteDto } from './dtos';
 
 const CHAVE_CONFIGURACOES_CONTA = 'conta_cliente';
 const CHAVE_PERFIL_EMPRESA = 'perfil_empresa';
+const CHAVE_PLANO_SAAS = 'plano_saas';
+
+type UsoPlanoSaas = Record<RecursoLimitavelSaas, number>;
+
+interface AlertaPlanoSaas {
+  recurso: RecursoLimitavelSaas;
+  uso: number;
+  limite: number;
+  percentual: number;
+  status: 'atencao' | 'excedido';
+}
 
 export interface ResumoPortalCliente {
   conta: {
@@ -21,8 +37,13 @@ export interface ResumoPortalCliente {
   };
   assinatura: {
     plano: string;
+    planoId: PlanoSaasId;
     status: string;
     origem: string;
+    renovacaoEm?: string;
+    limites: LimitesPlanoSaas;
+    uso: UsoPlanoSaas;
+    alertas: AlertaPlanoSaas[];
   };
   usuarios: {
     totalAtivos: number;
@@ -108,9 +129,12 @@ export class ServicoPortalCliente {
     });
     if (!tenant) throw new NotFoundException('Conta cliente nao encontrada.');
 
-    const usuarios = await this.executorTenant.executar(tenantId, (gerenciador) =>
-      gerenciador.getRepository(UsuarioOrm).find({ where: { tenantId, ativo: true } })
-    );
+    const [usuarios, assinatura] = await Promise.all([
+      this.executorTenant.executar(tenantId, (gerenciador) =>
+        gerenciador.getRepository(UsuarioOrm).find({ where: { tenantId, ativo: true } })
+      ),
+      this.obterAssinatura(tenantId)
+    ]);
     const contexto = contextoAcessoPorPapel('Client');
 
     return {
@@ -123,9 +147,14 @@ export class ServicoPortalCliente {
         atualizadoEm: tenant.atualizadoEm
       },
       assinatura: {
-        plano: 'Plano gratuito',
-        status: 'ativa',
-        origem: 'base_inicial'
+        plano: assinatura.plano.nome,
+        planoId: assinatura.plano.id,
+        status: assinatura.status,
+        origem: assinatura.origem,
+        ...(assinatura.renovacaoEm ? { renovacaoEm: assinatura.renovacaoEm } : {}),
+        limites: assinatura.plano.limites,
+        uso: assinatura.uso,
+        alertas: assinatura.alertas
       },
       usuarios: {
         totalAtivos: usuarios.length,
@@ -139,6 +168,38 @@ export class ServicoPortalCliente {
         escopoDados: contexto.escopoDados,
         destinoInicial: contexto.destinoInicial
       }
+    };
+  }
+
+  async checarLimite(tenantId: string, recurso: RecursoLimitavelSaas) {
+    const assinatura = await this.obterAssinatura(tenantId);
+    const limite = assinatura.plano.limites[recurso];
+    const uso = assinatura.uso[recurso];
+
+    if (limite === null) {
+      return {
+        permitido: true,
+        recurso,
+        planoId: assinatura.plano.id,
+        plano: assinatura.plano.nome,
+        uso,
+        limite,
+        restante: null
+      };
+    }
+
+    const restante = Math.max(limite - uso, 0);
+    const permitido = uso < limite;
+
+    return {
+      permitido,
+      recurso,
+      planoId: assinatura.plano.id,
+      plano: assinatura.plano.nome,
+      uso,
+      limite,
+      restante,
+      mensagem: permitido ? undefined : `Limite de ${this.rotuloRecurso(recurso)} atingido para o ${assinatura.plano.nome}.`
     };
   }
 
@@ -224,6 +285,70 @@ export class ServicoPortalCliente {
     });
     if (!tenant) throw new NotFoundException('Conta cliente nao encontrada.');
     return tenant;
+  }
+
+  private async obterAssinatura(tenantId: string) {
+    const configuracao = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      gerenciador.getRepository(TenantConfiguracaoOrm).findOne({
+        where: { tenantId, chave: CHAVE_PLANO_SAAS }
+      })
+    );
+    const valor = configuracao?.valor ?? {};
+    const plano = resolverPlanoSaas(valor.planoId);
+    const uso = await this.calcularUsoPlano(tenantId);
+
+    return {
+      plano,
+      status: this.texto(valor.status, 'ativa'),
+      origem: this.texto(valor.origem, 'base_inicial'),
+      renovacaoEm: this.textoOpcional(valor.renovacaoEm),
+      uso,
+      alertas: this.montarAlertasPlano(plano.limites, uso)
+    };
+  }
+
+  private async calcularUsoPlano(tenantId: string): Promise<UsoPlanoSaas> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const usuarios = await gerenciador.getRepository(UsuarioOrm).find({ where: { tenantId, ativo: true } });
+      const pacientes = await gerenciador.getRepository(PacienteOrm).find({ where: { tenantId } });
+      const mensagens = await gerenciador.getRepository(MensagemNotificacaoOrm).find({ where: { tenantId } });
+      const questionarios = await gerenciador.getRepository(QuestionarioOrm).find({ where: { tenantId } });
+      const arquivos = await gerenciador.getRepository(ArquivoMidiaOrm).find({ where: { tenantId } });
+      const inicioMes = new Date();
+      inicioMes.setUTCDate(1);
+      inicioMes.setUTCHours(0, 0, 0, 0);
+
+      return {
+        usuariosAdministrativos: usuarios.filter((usuario) =>
+          ['Client', 'Professional', 'Collaborator'].includes(usuario.role)
+        ).length,
+        pacientes: pacientes.filter((paciente) => !paciente.arquivadoEm).length,
+        mensagensMes: mensagens.filter((mensagem) => mensagem.criadoEm >= inicioMes).length,
+        formulariosAtivos: questionarios.filter((questionario) => questionario.status !== 'arquivado').length,
+        armazenamentoMb: Math.ceil(
+          arquivos.reduce((total, arquivo) => total + Number(arquivo.tamanhoBytes || 0), 0) / (1024 * 1024)
+        )
+      };
+    });
+  }
+
+  private montarAlertasPlano(limites: LimitesPlanoSaas, uso: UsoPlanoSaas): AlertaPlanoSaas[] {
+    return (Object.keys(limites) as RecursoLimitavelSaas[]).flatMap((recurso) => {
+      const limite = limites[recurso];
+      if (limite === null || limite <= 0) return [];
+      const percentual = Math.round((uso[recurso] / limite) * 100);
+      if (percentual < 80) return [];
+
+      return [
+        {
+          recurso,
+          uso: uso[recurso],
+          limite,
+          percentual,
+          status: uso[recurso] >= limite ? 'excedido' : 'atencao'
+        }
+      ];
+    });
   }
 
   private normalizarConfiguracoes(dados: AtualizarConfiguracoesClienteDto): AtualizarConfiguracoesClienteDto {
@@ -360,6 +485,10 @@ export class ServicoPortalCliente {
     return typeof valor === 'string' && valor.trim() ? valor : fallback;
   }
 
+  private textoOpcional(valor: unknown): string | undefined {
+    return typeof valor === 'string' && valor.trim() ? valor : undefined;
+  }
+
   private aparar(valor: unknown): string {
     return typeof valor === 'string' ? valor.trim() : '';
   }
@@ -370,5 +499,16 @@ export class ServicoPortalCliente {
 
   private idioma(valor: unknown): 'pt-BR' | 'en-US' | 'es' {
     return valor === 'en-US' || valor === 'es' || valor === 'pt-BR' ? valor : 'pt-BR';
+  }
+
+  private rotuloRecurso(recurso: RecursoLimitavelSaas): string {
+    const rotulos: Record<RecursoLimitavelSaas, string> = {
+      usuariosAdministrativos: 'usuarios administrativos',
+      pacientes: 'pacientes',
+      mensagensMes: 'mensagens mensais',
+      formulariosAtivos: 'formularios ativos',
+      armazenamentoMb: 'armazenamento'
+    };
+    return rotulos[recurso];
   }
 }

@@ -1,3 +1,11 @@
+export type PlanoSaasIdApi = 'gratuito' | 'profissional' | 'clinica' | 'enterprise';
+export type RecursoLimitavelSaasApi =
+  | 'usuariosAdministrativos'
+  | 'pacientes'
+  | 'mensagensMes'
+  | 'formulariosAtivos'
+  | 'armazenamentoMb';
+
 export interface ResumoPortalClienteApi {
   conta: {
     tenantId: string;
@@ -9,8 +17,19 @@ export interface ResumoPortalClienteApi {
   };
   assinatura: {
     plano: string;
+    planoId: PlanoSaasIdApi;
     status: string;
     origem: string;
+    renovacaoEm?: string;
+    limites: Record<RecursoLimitavelSaasApi, number | null>;
+    uso: Record<RecursoLimitavelSaasApi, number>;
+    alertas: {
+      recurso: RecursoLimitavelSaasApi;
+      uso: number;
+      limite: number;
+      percentual: number;
+      status: 'atencao' | 'excedido';
+    }[];
   };
   usuarios: {
     totalAtivos: number;

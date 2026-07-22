@@ -4,6 +4,10 @@ import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditor
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
 import { ModuloAuth } from '../auth/modulo-auth';
 import { TokenRedefinicaoSenhaOrm } from '../auth/infraestrutura/token-redefinicao-senha.orm';
+import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { ArquivoMidiaOrm } from '../mobile/infraestrutura/arquivo-midia.orm';
+import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
+import { QuestionarioOrm } from '../questionarios/infraestrutura/questionario.orm';
 import { AdaptadorEmailSmtp } from '../comunicacoes/infraestrutura/adaptadores/adaptador-email-smtp';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { TenantOrm } from '../tenancy/infraestrutura/tenant.orm';
@@ -15,7 +19,17 @@ import { ControladorPortalCliente } from './apresentacao/controlador-portal-clie
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TenantOrm, TenantConfiguracaoOrm, UsuarioOrm, TokenRedefinicaoSenhaOrm, UserActionLogOrm]),
+    TypeOrmModule.forFeature([
+      TenantOrm,
+      TenantConfiguracaoOrm,
+      UsuarioOrm,
+      TokenRedefinicaoSenhaOrm,
+      UserActionLogOrm,
+      PacienteOrm,
+      MensagemNotificacaoOrm,
+      QuestionarioOrm,
+      ArquivoMidiaOrm
+    ]),
     ModuloAuth,
     ModuloTenancy
   ],

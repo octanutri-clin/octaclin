@@ -1,6 +1,10 @@
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { ServicoPortalCliente } from './servico-portal-cliente';
 
 function criarRepositorioFake(itens: Record<string, any>[]) {
@@ -34,10 +38,22 @@ function criarRepositorioFake(itens: Record<string, any>[]) {
   };
 }
 
-function criarServico(dados: { tenants: Record<string, any>[]; usuarios: Record<string, any>[]; configuracoes?: Record<string, any>[] }) {
+function criarServico(dados: {
+  tenants: Record<string, any>[];
+  usuarios: Record<string, any>[];
+  configuracoes?: Record<string, any>[];
+  pacientes?: Record<string, any>[];
+  mensagens?: Record<string, any>[];
+  questionarios?: Record<string, any>[];
+  arquivos?: Record<string, any>[];
+}) {
   const repositorioTenants = criarRepositorioFake(dados.tenants);
   const repositorioUsuarios = criarRepositorioFake(dados.usuarios);
   const repositorioConfiguracoes = criarRepositorioFake(dados.configuracoes ?? []);
+  const repositorioPacientes = criarRepositorioFake(dados.pacientes ?? []);
+  const repositorioMensagens = criarRepositorioFake(dados.mensagens ?? []);
+  const repositorioQuestionarios = criarRepositorioFake(dados.questionarios ?? []);
+  const repositorioArquivos = criarRepositorioFake(dados.arquivos ?? []);
   const fonteDados = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === TenantOrm) return repositorioTenants;
@@ -48,6 +64,10 @@ function criarServico(dados: { tenants: Record<string, any>[]; usuarios: Record<
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === UsuarioOrm) return repositorioUsuarios;
       if (entidade === TenantConfiguracaoOrm) return repositorioConfiguracoes;
+      if (entidade === PacienteOrm) return repositorioPacientes;
+      if (entidade === MensagemNotificacaoOrm) return repositorioMensagens;
+      if (entidade === QuestionarioOrm) return repositorioQuestionarios;
+      if (entidade === ArquivoMidiaOrm) return repositorioArquivos;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -60,6 +80,10 @@ function criarServico(dados: { tenants: Record<string, any>[]; usuarios: Record<
     repositorioTenants,
     repositorioUsuarios,
     repositorioConfiguracoes,
+    repositorioPacientes,
+    repositorioMensagens,
+    repositorioQuestionarios,
+    repositorioArquivos,
     executorTenant
   };
 }
@@ -111,8 +135,32 @@ describe('ServicoPortalCliente', () => {
       },
       assinatura: {
         plano: 'Plano gratuito',
+        planoId: 'gratuito',
         status: 'ativa',
-        origem: 'base_inicial'
+        origem: 'base_inicial',
+        limites: {
+          usuariosAdministrativos: 2,
+          pacientes: 25,
+          mensagensMes: 200,
+          formulariosAtivos: 5,
+          armazenamentoMb: 500
+        },
+        uso: {
+          usuariosAdministrativos: 3,
+          pacientes: 0,
+          mensagensMes: 0,
+          formulariosAtivos: 0,
+          armazenamentoMb: 0
+        },
+        alertas: [
+          {
+            recurso: 'usuariosAdministrativos',
+            uso: 3,
+            limite: 2,
+            percentual: 150,
+            status: 'excedido'
+          }
+        ]
       },
       usuarios: {
         totalAtivos: 4,
@@ -128,6 +176,131 @@ describe('ServicoPortalCliente', () => {
       }
     });
     expect(JSON.stringify(resumo)).not.toContain('Outra conta');
+  });
+
+  it('deve montar assinatura SaaS com plano configurado, uso real e alertas de limite', async () => {
+    const { servico } = criarServico({
+      tenants: [
+        {
+          id: 'tenant-1',
+          nome: 'Clinica Octa Real',
+          slug: 'clinica-octa-real',
+          status: 'ativo',
+          criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      usuarios: [
+        { id: 'cliente-1', tenantId: 'tenant-1', role: 'Client', ativo: true },
+        { id: 'profissional-1', tenantId: 'tenant-1', role: 'Professional', ativo: true },
+        { id: 'colaborador-1', tenantId: 'tenant-1', role: 'Collaborator', ativo: true },
+        { id: 'paciente-user-1', tenantId: 'tenant-1', role: 'Patient', ativo: true }
+      ],
+      configuracoes: [
+        {
+          id: 'plano-1',
+          tenantId: 'tenant-1',
+          chave: 'plano_saas',
+          valor: {
+            planoId: 'profissional',
+            status: 'trial',
+            origem: 'manual_admin',
+            renovacaoEm: '2026-08-22T00:00:00.000Z'
+          }
+        }
+      ],
+      pacientes: [
+        { id: 'paciente-1', tenantId: 'tenant-1', arquivadoEm: null },
+        { id: 'paciente-2', tenantId: 'tenant-1', arquivadoEm: null },
+        { id: 'paciente-arquivado', tenantId: 'tenant-1', arquivadoEm: new Date('2026-07-01T10:00:00.000Z') }
+      ],
+      mensagens: [
+        { id: 'mensagem-1', tenantId: 'tenant-1', criadoEm: new Date('2026-07-21T10:00:00.000Z') },
+        { id: 'mensagem-antiga', tenantId: 'tenant-1', criadoEm: new Date('2026-06-21T10:00:00.000Z') }
+      ],
+      questionarios: [
+        { id: 'questionario-1', tenantId: 'tenant-1', status: 'publicado' },
+        { id: 'questionario-2', tenantId: 'tenant-1', status: 'rascunho' },
+        { id: 'questionario-arquivado', tenantId: 'tenant-1', status: 'arquivado' }
+      ],
+      arquivos: [
+        { id: 'arquivo-1', tenantId: 'tenant-1', tamanhoBytes: String(5 * 1024 * 1024) },
+        { id: 'arquivo-2', tenantId: 'tenant-1', tamanhoBytes: String(6 * 1024 * 1024) }
+      ]
+    });
+
+    const resumo = await servico.obterResumo('tenant-1', 'cliente-1');
+
+    expect(resumo.assinatura).toEqual({
+      plano: 'Profissional',
+      planoId: 'profissional',
+      status: 'trial',
+      origem: 'manual_admin',
+      renovacaoEm: '2026-08-22T00:00:00.000Z',
+      limites: {
+        usuariosAdministrativos: 3,
+        pacientes: 100,
+        mensagensMes: 1000,
+        formulariosAtivos: 20,
+        armazenamentoMb: 2048
+      },
+      uso: {
+        usuariosAdministrativos: 3,
+        pacientes: 2,
+        mensagensMes: 1,
+        formulariosAtivos: 2,
+        armazenamentoMb: 11
+      },
+      alertas: [
+        {
+          recurso: 'usuariosAdministrativos',
+          uso: 3,
+          limite: 3,
+          percentual: 100,
+          status: 'excedido'
+        }
+      ]
+    });
+  });
+
+  it('deve checar limite do tenant antes de novas acoes SaaS', async () => {
+    const { servico } = criarServico({
+      tenants: [
+        {
+          id: 'tenant-1',
+          nome: 'Clinica Octa Real',
+          slug: 'clinica-octa-real',
+          status: 'ativo',
+          criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      usuarios: [],
+      configuracoes: [
+        {
+          id: 'plano-1',
+          tenantId: 'tenant-1',
+          chave: 'plano_saas',
+          valor: { planoId: 'gratuito', status: 'ativa', origem: 'base_inicial' }
+        }
+      ],
+      pacientes: Array.from({ length: 25 }, (_, indice) => ({
+        id: `paciente-${indice + 1}`,
+        tenantId: 'tenant-1',
+        arquivadoEm: null
+      }))
+    });
+
+    await expect(servico.checarLimite('tenant-1', 'pacientes')).resolves.toEqual({
+      permitido: false,
+      recurso: 'pacientes',
+      planoId: 'gratuito',
+      plano: 'Plano gratuito',
+      uso: 25,
+      limite: 25,
+      restante: 0,
+      mensagem: 'Limite de pacientes atingido para o Plano gratuito.'
+    });
   });
 
   it('deve retornar configuracoes da conta com defaults quando ainda nao existem', async () => {

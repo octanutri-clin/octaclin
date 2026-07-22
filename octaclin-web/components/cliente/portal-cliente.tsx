@@ -30,6 +30,7 @@ import {
   RespostaConvitesUsuarioClienteApi,
   RespostaHistoricoConvitesUsuarioClienteApi,
   PapelUsuarioClienteCriavelApi,
+  RecursoLimitavelSaasApi,
   RespostaUsuariosClienteApi,
   ResumoPortalClienteApi,
   atualizarConfiguracoesCliente,
@@ -62,7 +63,30 @@ function formatarData(valor?: string) {
   if (!valor) return '-';
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return valor;
-  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(data);
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'UTC' }).format(data);
+}
+
+const recursosSaas: { chave: RecursoLimitavelSaasApi; rotulo: string }[] = [
+  { chave: 'usuariosAdministrativos', rotulo: 'Usuarios administrativos' },
+  { chave: 'pacientes', rotulo: 'Pacientes' },
+  { chave: 'mensagensMes', rotulo: 'Mensagens no mes' },
+  { chave: 'formulariosAtivos', rotulo: 'Formularios ativos' },
+  { chave: 'armazenamentoMb', rotulo: 'Armazenamento' }
+];
+
+function formatarLimiteSaas(uso: number, limite: number | null, recurso: RecursoLimitavelSaasApi) {
+  const sufixo = recurso === 'armazenamentoMb' ? ' MB' : '';
+  if (limite === null) return `${uso}${sufixo} / ilimitado`;
+  return `${uso}${sufixo} / ${limite}${sufixo}`;
+}
+
+function calcularPercentualSaas(uso: number, limite: number | null) {
+  if (limite === null || limite <= 0) return 0;
+  return Math.min(Math.round((uso / limite) * 100), 100);
+}
+
+function descreverAlertaSaas(status: 'atencao' | 'excedido') {
+  return status === 'excedido' ? 'Limite atingido' : 'Perto do limite';
 }
 
 function descreverHistoricoConvite(item: {
@@ -544,6 +568,7 @@ export function PortalCliente() {
     [permissoes]
   );
   const podeVerGestaoUsuarios = podeLerUsuarios || podeConvidarUsuarios || podeGerenciarConvites;
+  const alertasAssinatura = resumo?.assinatura.alertas ?? [];
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
@@ -619,11 +644,42 @@ export function PortalCliente() {
                 <p className="mt-1 text-sm text-[#596273]">
                   {resumo ? `Assinatura ${resumo.assinatura.status} com origem ${resumo.assinatura.origem}.` : 'Atualizando assinatura da conta.'}
                 </p>
+                {resumo?.assinatura.renovacaoEm ? (
+                  <p className="mt-1 text-xs font-medium text-[#343c4b]">Renova em {formatarData(resumo.assinatura.renovacaoEm)}</p>
+                ) : null}
               </article>
-              <article className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                <p className="text-xs text-[#596273]">Proxima integracao</p>
-                <p className="mt-1 text-sm font-semibold">Gateway de pagamento</p>
-              </article>
+              <div className="grid gap-2">
+                {recursosSaas.map((recurso) => {
+                  const uso = resumo?.assinatura.uso[recurso.chave] ?? 0;
+                  const limite = resumo?.assinatura.limites[recurso.chave] ?? null;
+                  const percentual = calcularPercentualSaas(uso, limite);
+                  const alerta = alertasAssinatura.find((item) => item.recurso === recurso.chave);
+
+                  return (
+                    <article key={recurso.chave} className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-semibold">{recurso.rotulo}</p>
+                          {alerta ? (
+                            <p className={`mt-1 text-xs font-medium ${alerta.status === 'excedido' ? 'text-perigo' : 'text-[#8a5a00]'}`}>
+                              {descreverAlertaSaas(alerta.status)}
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-xs text-[#596273]">Dentro do limite</p>
+                          )}
+                        </div>
+                        <p className="shrink-0 text-sm font-semibold">{formatarLimiteSaas(uso, limite, recurso.chave)}</p>
+                      </div>
+                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+                        <div
+                          className={`h-full rounded-full ${alerta?.status === 'excedido' ? 'bg-perigo' : 'bg-primaria'}`}
+                          style={{ width: `${percentual}%` }}
+                        />
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             </div>
           </section>
 

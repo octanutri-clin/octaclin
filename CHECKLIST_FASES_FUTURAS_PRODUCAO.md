@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 98.
+Atualizado apos a Fase 99.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -78,15 +78,18 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 
 ### Bloco B - Assinaturas, planos e limites
 
-- [ ] Fase 99 - Modelo de planos e limites SaaS.
+- [x] Fase 99 - Modelo de planos e limites SaaS.
   - Definir planos: gratuito/teste, profissional, clinica, enterprise.
   - Limites: usuarios, pacientes, envios WhatsApp/email, formularios, armazenamento.
-  - Saida esperada: entidade/configuracao de plano por tenant e checagens no backend.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-22.
+  - Validacoes: `pnpm --dir octaclin-backend exec jest servico-portal-cliente.spec.ts --runInBand`, `pnpm --dir octaclin-backend typecheck`, `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web test:authz`, `pnpm --dir octaclin-web exec playwright test tests/visual/portal-cliente.spec.mjs --reporter=list`, `pnpm --dir octaclin-web build`.
+  - Saida entregue: configuracao de plano por tenant, catalogo de planos, calculo de uso real, alertas, checagem backend de limite e resumo visual no portal do cliente.
 
 - [ ] Fase 100 - Tela de assinatura e uso no portal do cliente.
-  - Mostrar plano atual, consumo, limites e alertas.
-  - Preparar CTAs de upgrade sem necessariamente cobrar ainda.
-  - Saida esperada: cliente entende seu plano e limites.
+  - Melhorar a tela de assinatura com CTA de upgrade/downgrade e estados comerciais.
+  - Preparar administracao manual de assinatura sem gateway definitivo.
+  - Saida esperada: cliente entende proximos passos comerciais e operacao consegue ajustar plano.
 
 - [ ] Fase 101 - Integracao de pagamento sem custo inicial ou gateway definitivo.
   - Escolher estrategia: Stripe, Mercado Pago, Asaas ou controle manual inicial.
