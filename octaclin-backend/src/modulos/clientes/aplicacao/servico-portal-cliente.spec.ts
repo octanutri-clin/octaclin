@@ -303,6 +303,68 @@ describe('ServicoPortalCliente', () => {
     });
   });
 
+  it('deve registrar solicitacao comercial de ajuste de assinatura do cliente', async () => {
+    const { servico, repositorioConfiguracoes } = criarServico({
+      tenants: [
+        {
+          id: 'tenant-1',
+          nome: 'Clinica Octa Real',
+          slug: 'clinica-octa-real',
+          status: 'ativo',
+          criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      usuarios: [
+        { id: 'cliente-1', tenantId: 'tenant-1', role: 'Client', ativo: true },
+        { id: 'profissional-1', tenantId: 'tenant-1', role: 'Professional', ativo: true }
+      ],
+      configuracoes: [
+        {
+          id: 'plano-1',
+          tenantId: 'tenant-1',
+          chave: 'plano_saas',
+          valor: { planoId: 'profissional', status: 'trial', origem: 'manual_admin' }
+        }
+      ]
+    });
+
+    const solicitacao = await servico.solicitarAjusteAssinatura('tenant-1', 'cliente-1', {
+      acao: 'upgrade',
+      planoDesejado: 'clinica',
+      observacao: ' Preciso liberar mais usuarios administrativos. '
+    });
+
+    expect(repositorioConfiguracoes.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        chave: 'assinatura_interesse',
+        valor: expect.objectContaining({
+          acao: 'upgrade',
+          status: 'pendente',
+          planoAtualId: 'profissional',
+          planoAtual: 'Profissional',
+          planoDesejado: 'clinica',
+          solicitadoPorUsuarioId: 'cliente-1',
+          observacao: 'Preciso liberar mais usuarios administrativos.',
+          solicitadoEm: expect.any(String)
+        })
+      })
+    );
+    expect(solicitacao).toEqual(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        acao: 'upgrade',
+        status: 'pendente',
+        planoAtualId: 'profissional',
+        planoAtual: 'Profissional',
+        planoDesejado: 'clinica',
+        observacao: 'Preciso liberar mais usuarios administrativos.',
+        solicitadoEm: expect.any(String)
+      })
+    );
+  });
+
   it('deve retornar configuracoes da conta com defaults quando ainda nao existem', async () => {
     const { servico, repositorioConfiguracoes, executorTenant } = criarServico({
       tenants: [

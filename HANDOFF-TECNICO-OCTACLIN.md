@@ -1,6 +1,6 @@
 # OctaClin - Handoff tecnico
 
-Atualizado em 2026-07-22, apos a Fase 99 e a documentacao operacional para agentes.
+Atualizado em 2026-07-22, apos a Fase 100 e a documentacao operacional para agentes.
 
 Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo, leia tambem:
 
@@ -34,7 +34,8 @@ O projeto ja possui:
 - WhatsApp Meta Cloud API com webhook, inbox e status;
 - LGPD operacional e portal;
 - convites administrativos para usuarios de cliente;
-- modelo de planos SaaS com limites, uso e alertas por tenant.
+- modelo de planos SaaS com limites, uso e alertas por tenant;
+- solicitacao comercial manual de upgrade/revisao de assinatura.
 
 O sistema esta em staging funcional avancado, mas ainda nao deve ser considerado pronto para clientes reais ate concluir o checklist de producao.
 
@@ -81,7 +82,7 @@ Principais modulos:
 - `auth`: login, refresh token, recuperacao de senha, papeis e permissoes.
 - `tenancy`: tenant e executor tenant-aware.
 - `usuarios`: entidade base de usuarios.
-- `clientes`: portal do cliente, resumo, configuracoes, perfil fiscal, usuarios administrativos, convites, historico de convites, planos SaaS e limites por tenant.
+- `clientes`: portal do cliente, resumo, configuracoes, perfil fiscal, usuarios administrativos, convites, historico de convites, planos SaaS, limites por tenant e solicitacoes comerciais de assinatura.
 - `pacientes`: cadastros, portal do paciente, convites e LGPD.
 - `profissionais`: cadastro de profissionais.
 - `questionarios`: modelos, perguntas, envios e respostas.
@@ -153,8 +154,8 @@ Leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md` antes de alterar qualquer i
 
 ## Estado de roadmap
 
-- Ultima fase concluida: Fase 99 - Modelo de planos e limites SaaS.
-- Proxima fase planejada: Fase 100 - Tela de assinatura e uso no portal do cliente.
+- Ultima fase concluida: Fase 100 - Tela de assinatura e uso no portal do cliente.
+- Proxima fase planejada: Fase 101 - Integracao de pagamento sem custo inicial ou gateway definitivo.
 - Roadmap completo: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regra de continuidade

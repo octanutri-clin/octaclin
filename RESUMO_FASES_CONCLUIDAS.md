@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 99.
+Atualizado apos a Fase 100.
 
 Este arquivo e um handoff executivo do que ja foi construido no OctaClin. Ele deve ajudar outro agente de IA ou desenvolvedor a entender rapidamente a evolucao do projeto sem precisar reprocessar todo o historico de commits.
 
@@ -141,6 +141,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 97 - Perfil da empresa/consultoria e dados fiscais: tela e endpoints para pessoa fisica/juridica, responsavel, endereco, contatos e base de recibos/notas, persistidos por tenant e auditados.
 - Fase 98 - Historico de convites administrativos: historico completo por usuario, auditoria de criar/reenvio/revogacao e exportacao CSV simples sem expor tokens.
 - Fase 99 - Modelo de planos e limites SaaS: planos gratuito/profissional/clinica/enterprise por tenant, limites de usuarios, pacientes, mensagens, formularios e armazenamento, calculo de uso real, alertas e checagem backend de limite com resumo visivel no portal do cliente.
+- Fase 100 - Tela de assinatura e uso no portal do cliente: plano recomendado, CTAs de upgrade/revisao de limite, endpoint backend/BFF para solicitacao comercial manual, persistencia em `tenant_configuracoes` e auditoria da solicitacao.
 
 ## Estado atual de uso
 

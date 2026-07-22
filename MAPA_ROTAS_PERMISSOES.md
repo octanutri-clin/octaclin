@@ -1,6 +1,6 @@
 # OctaClin - Mapa de rotas e permissoes
 
-Atualizado apos a Fase 98. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
+Atualizado apos a Fase 100. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
 
 ## Papeis
 
@@ -115,6 +115,7 @@ Inclui permissoes de `Professional` e adiciona:
 | BFF | Backend | Observacao |
 | --- | --- | --- |
 | `/api/cliente/resumo` | `/cliente/resumo` | Resumo real da conta do cliente |
+| `/api/cliente/assinatura/interesse` | `/cliente/assinatura/interesse` | POST exige `cliente.assinatura.ler`; registra solicitacao comercial manual de upgrade/revisao |
 | `/api/cliente/configuracoes` | `/cliente/configuracoes` | GET/PATCH exigem `cliente.configuracoes.gerenciar` |
 | `/api/cliente/perfil-empresa` | `/cliente/perfil-empresa` | GET/PATCH exigem `cliente.configuracoes.gerenciar`; PATCH audita `cliente.perfil_empresa.atualizar` |
 | `/api/cliente/usuarios` | `/cliente/usuarios` | GET exige `cliente.usuarios.ler`; POST exige `cliente.usuarios.convidar` |

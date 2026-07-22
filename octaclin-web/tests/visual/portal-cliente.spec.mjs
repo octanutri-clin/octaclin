@@ -92,6 +92,29 @@ async function prepararSessaoCliente(page) {
     });
   });
 
+  await page.route('**/api/cliente/assinatura/interesse', async (route) => {
+    const corpo = JSON.parse(route.request().postData() ?? '{}');
+    expect(corpo).toEqual({
+      acao: 'upgrade',
+      planoDesejado: 'clinica',
+      observacao: 'Solicitacao feita pelo portal do cliente.'
+    });
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        tenantId: 'tenant-1',
+        acao: 'upgrade',
+        status: 'pendente',
+        planoAtualId: 'profissional',
+        planoAtual: 'Profissional',
+        planoDesejado: 'clinica',
+        observacao: 'Solicitacao feita pelo portal do cliente.',
+        solicitadoEm: '2026-07-22T10:00:00.000Z'
+      })
+    });
+  });
+
   await page.route('**/api/cliente/usuarios', async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({
@@ -324,7 +347,7 @@ async function assertSemOverflowHorizontal(page) {
 test.describe('portal do cliente', () => {
   test('renderiza base de conta sem expor console ou portal do paciente', async ({ page }, testInfo) => {
     await prepararSessaoCliente(page);
-    await page.goto('/cliente');
+    await page.goto('/cliente', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     await expect(page.getByRole('heading', { name: 'Portal do cliente' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Navegacao do cliente' })).toBeVisible();
@@ -369,11 +392,17 @@ test.describe('portal do cliente', () => {
     const assinatura = page.locator('#assinatura');
     await expect(assinatura.getByText('Profissional')).toBeVisible();
     await expect(assinatura.getByText('Renova em 22/08/26')).toBeVisible();
-    await expect(assinatura.getByText('Usuarios administrativos')).toBeVisible();
+    await expect(assinatura.getByText('Usuarios administrativos', { exact: true })).toBeVisible();
     await expect(assinatura.getByText('3 / 3')).toBeVisible();
     await expect(assinatura.getByText('Limite atingido')).toBeVisible();
     await expect(assinatura.getByText('Mensagens no mes')).toBeVisible();
     await expect(assinatura.getByText('790 / 1000')).toBeVisible();
+    await expect(assinatura.getByText('Plano recomendado')).toBeVisible();
+    await expect(assinatura.locator('p').filter({ hasText: /^Clinica$/ })).toBeVisible();
+    await expect(assinatura.getByRole('button', { name: 'Solicitar upgrade para Clinica' })).toBeVisible();
+    await expect(assinatura.getByRole('button', { name: 'Pedir revisao de limite' })).toBeVisible();
+    await assinatura.getByRole('button', { name: 'Solicitar upgrade para Clinica' }).click();
+    await expect(assinatura.getByText('Solicitacao de upgrade enviada.')).toBeVisible();
     const configuracoes = page.locator('#configuracoes');
     await expect(configuracoes.getByRole('heading', { name: 'Configuracoes da conta' })).toBeVisible();
     await expect(configuracoes.getByLabel('Nome da clinica')).toHaveValue('Clinica Octa Real');

@@ -10,11 +10,12 @@ import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { LimitesPlanoSaas, PlanoSaasId, RecursoLimitavelSaas, resolverPlanoSaas } from '../dominio/planos-saas';
-import { AtualizarConfiguracoesClienteDto, AtualizarPerfilEmpresaClienteDto } from './dtos';
+import { AtualizarConfiguracoesClienteDto, AtualizarPerfilEmpresaClienteDto, SolicitarAjusteAssinaturaClienteDto } from './dtos';
 
 const CHAVE_CONFIGURACOES_CONTA = 'conta_cliente';
 const CHAVE_PERFIL_EMPRESA = 'perfil_empresa';
 const CHAVE_PLANO_SAAS = 'plano_saas';
+const CHAVE_INTERESSE_ASSINATURA = 'assinatura_interesse';
 
 type UsoPlanoSaas = Record<RecursoLimitavelSaas, number>;
 
@@ -24,6 +25,18 @@ interface AlertaPlanoSaas {
   limite: number;
   percentual: number;
   status: 'atencao' | 'excedido';
+}
+
+export interface SolicitacaoAjusteAssinaturaCliente {
+  tenantId: string;
+  acao: 'upgrade' | 'downgrade' | 'revisao_limite';
+  status: 'pendente';
+  planoAtualId: PlanoSaasId;
+  planoAtual: string;
+  planoDesejado?: PlanoSaasId;
+  observacao?: string;
+  solicitadoPorUsuarioId: string;
+  solicitadoEm: string;
 }
 
 export interface ResumoPortalCliente {
@@ -201,6 +214,45 @@ export class ServicoPortalCliente {
       restante,
       mensagem: permitido ? undefined : `Limite de ${this.rotuloRecurso(recurso)} atingido para o ${assinatura.plano.nome}.`
     };
+  }
+
+  async solicitarAjusteAssinatura(
+    tenantId: string,
+    usuarioId: string,
+    dados: SolicitarAjusteAssinaturaClienteDto
+  ): Promise<SolicitacaoAjusteAssinaturaCliente> {
+    const assinatura = await this.obterAssinatura(tenantId);
+    const observacao = this.aparar(dados.observacao);
+    const solicitacao: SolicitacaoAjusteAssinaturaCliente = {
+      tenantId,
+      acao: dados.acao,
+      status: 'pendente',
+      planoAtualId: assinatura.plano.id,
+      planoAtual: assinatura.plano.nome,
+      ...(dados.planoDesejado ? { planoDesejado: dados.planoDesejado } : {}),
+      ...(observacao ? { observacao } : {}),
+      solicitadoPorUsuarioId: usuarioId,
+      solicitadoEm: new Date().toISOString()
+    };
+    const valorPersistido: Record<string, unknown> = { ...solicitacao };
+
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(TenantConfiguracaoOrm);
+      const atual = await repositorio.findOne({
+        where: { tenantId, chave: CHAVE_INTERESSE_ASSINATURA }
+      });
+      await repositorio.save(
+        repositorio.create({
+          id: atual?.id,
+          tenantId,
+          chave: CHAVE_INTERESSE_ASSINATURA,
+          valor: valorPersistido,
+          criadoEm: atual?.criadoEm
+        })
+      );
+    });
+
+    return solicitacao;
   }
 
   async obterConfiguracoes(tenantId: string): Promise<ConfiguracoesPortalCliente> {

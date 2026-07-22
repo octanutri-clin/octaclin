@@ -30,6 +30,7 @@ import {
   RespostaConvitesUsuarioClienteApi,
   RespostaHistoricoConvitesUsuarioClienteApi,
   PapelUsuarioClienteCriavelApi,
+  PlanoSaasIdApi,
   RecursoLimitavelSaasApi,
   RespostaUsuariosClienteApi,
   ResumoPortalClienteApi,
@@ -44,7 +45,8 @@ import {
   listarUsuariosCliente,
   obterResumoPortalCliente,
   reenviarConviteUsuarioCliente,
-  revogarConviteUsuarioCliente
+  revogarConviteUsuarioCliente,
+  solicitarAjusteAssinaturaCliente
 } from '@/lib/cliente-api';
 
 const navegacao = [
@@ -87,6 +89,17 @@ function calcularPercentualSaas(uso: number, limite: number | null) {
 
 function descreverAlertaSaas(status: 'atencao' | 'excedido') {
   return status === 'excedido' ? 'Limite atingido' : 'Perto do limite';
+}
+
+const proximosPlanos: Record<PlanoSaasIdApi, { id?: PlanoSaasIdApi; nome: string; detalhe: string }> = {
+  gratuito: { id: 'profissional', nome: 'Profissional', detalhe: 'Mais pacientes, formularios e mensagens para operacao individual.' },
+  profissional: { id: 'clinica', nome: 'Clinica', detalhe: 'Mais usuarios administrativos e margem para crescer a operacao.' },
+  clinica: { id: 'enterprise', nome: 'Enterprise', detalhe: 'Limites sob medida para operacoes maiores ou multiunidade.' },
+  enterprise: { nome: 'Plano atual sob medida', detalhe: 'Solicite revisao comercial quando precisar ajustar contrato ou capacidade.' }
+};
+
+function obterProximoPlano(planoId: PlanoSaasIdApi) {
+  return proximosPlanos[planoId];
 }
 
 function descreverHistoricoConvite(item: {
@@ -172,6 +185,8 @@ export function PortalCliente() {
   const [erroConfiguracoes, setErroConfiguracoes] = useState<string | null>(null);
   const [erroPerfilEmpresa, setErroPerfilEmpresa] = useState<string | null>(null);
   const [sucessoUsuarios, setSucessoUsuarios] = useState<string | null>(null);
+  const [sucessoAssinatura, setSucessoAssinatura] = useState<string | null>(null);
+  const [erroAssinatura, setErroAssinatura] = useState<string | null>(null);
   const [sucessoConfiguracoes, setSucessoConfiguracoes] = useState<string | null>(null);
   const [sucessoPerfilEmpresa, setSucessoPerfilEmpresa] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -181,6 +196,7 @@ export function PortalCliente() {
   const [carregandoConfiguracoes, setCarregandoConfiguracoes] = useState(true);
   const [carregandoPerfilEmpresa, setCarregandoPerfilEmpresa] = useState(true);
   const [salvandoUsuario, setSalvandoUsuario] = useState(false);
+  const [enviandoAssinatura, setEnviandoAssinatura] = useState<'upgrade' | 'revisao_limite' | null>(null);
   const [salvandoConfiguracoes, setSalvandoConfiguracoes] = useState(false);
   const [salvandoPerfilEmpresa, setSalvandoPerfilEmpresa] = useState(false);
   const [desativandoUsuarioId, setDesativandoUsuarioId] = useState<string | null>(null);
@@ -409,6 +425,25 @@ export function PortalCliente() {
     }
   }
 
+  async function solicitarAjusteAssinatura(acao: 'upgrade' | 'revisao_limite', planoDesejado?: PlanoSaasIdApi) {
+    setEnviandoAssinatura(acao);
+    setErroAssinatura(null);
+    setSucessoAssinatura(null);
+
+    try {
+      await solicitarAjusteAssinaturaCliente({
+        acao,
+        ...(planoDesejado ? { planoDesejado } : {}),
+        observacao: 'Solicitacao feita pelo portal do cliente.'
+      });
+      setSucessoAssinatura(acao === 'upgrade' ? 'Solicitacao de upgrade enviada.' : 'Solicitacao de revisao enviada.');
+    } catch (erroAtual) {
+      setErroAssinatura(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar solicitacao de assinatura.');
+    } finally {
+      setEnviandoAssinatura(null);
+    }
+  }
+
   async function salvarConfiguracoes(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setSalvandoConfiguracoes(true);
@@ -569,6 +604,7 @@ export function PortalCliente() {
   );
   const podeVerGestaoUsuarios = podeLerUsuarios || podeConvidarUsuarios || podeGerenciarConvites;
   const alertasAssinatura = resumo?.assinatura.alertas ?? [];
+  const planoRecomendado = resumo ? obterProximoPlano(resumo.assinatura.planoId) : null;
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
@@ -680,6 +716,48 @@ export function PortalCliente() {
                   );
                 })}
               </div>
+              <article className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                <p className="text-xs text-[#596273]">Plano recomendado</p>
+                <p className="mt-1 text-base font-semibold">{planoRecomendado?.nome ?? 'Carregando recomendacao'}</p>
+                <p className="mt-1 text-sm text-[#596273]">
+                  {planoRecomendado?.detalhe ?? 'Avaliando uso atual da conta.'}
+                </p>
+                {erroAssinatura ? (
+                  <div className="mt-3 flex items-center gap-2 rounded-md border border-[#efb8ad] bg-white px-3 py-2 text-sm text-perigo">
+                    <AlertTriangle size={16} />
+                    {erroAssinatura}
+                  </div>
+                ) : null}
+                {sucessoAssinatura ? (
+                  <div className="mt-3 flex items-center gap-2 rounded-md border border-[#b8dfc1] bg-white px-3 py-2 text-sm text-[#245b33]">
+                    <CheckCircle2 size={16} />
+                    {sucessoAssinatura}
+                  </div>
+                ) : null}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {planoRecomendado?.id ? (
+                    <Botao
+                      type="button"
+                      variante="primario"
+                      disabled={Boolean(enviandoAssinatura)}
+                      onClick={() => solicitarAjusteAssinatura('upgrade', planoRecomendado.id)}
+                      aria-label={`Solicitar upgrade para ${planoRecomendado.nome}`}
+                    >
+                      <Send size={16} />
+                      {enviandoAssinatura === 'upgrade' ? 'Enviando' : `Solicitar upgrade para ${planoRecomendado.nome}`}
+                    </Botao>
+                  ) : null}
+                  <Botao
+                    type="button"
+                    variante="secundario"
+                    disabled={Boolean(enviandoAssinatura)}
+                    onClick={() => solicitarAjusteAssinatura('revisao_limite')}
+                  >
+                    <RefreshCcw size={16} />
+                    {enviandoAssinatura === 'revisao_limite' ? 'Enviando' : 'Pedir revisao de limite'}
+                  </Botao>
+                </div>
+              </article>
             </div>
           </section>
 

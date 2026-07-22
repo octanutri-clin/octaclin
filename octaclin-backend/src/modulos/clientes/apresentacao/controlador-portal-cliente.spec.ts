@@ -108,4 +108,52 @@ describe('ControladorPortalCliente', () => {
       })
     );
   });
+
+  it('deve auditar solicitacao comercial de ajuste de assinatura', async () => {
+    const solicitacao = {
+      tenantId: 'tenant-1',
+      acao: 'upgrade',
+      status: 'pendente',
+      planoAtualId: 'profissional',
+      planoAtual: 'Profissional',
+      planoDesejado: 'clinica',
+      observacao: 'Mais capacidade administrativa',
+      solicitadoEm: '2026-07-22T10:00:00.000Z'
+    };
+    const servicoPortalCliente = {
+      solicitarAjusteAssinatura: jest.fn(async () => solicitacao)
+    };
+    const servicoAuditoria = {
+      registrar: jest.fn(async () => undefined)
+    };
+    const controlador = new ControladorPortalCliente(servicoPortalCliente as never, {} as never, servicoAuditoria as never);
+
+    const resultado = await controlador.solicitarAjusteAssinatura(
+      { tenantId: 'tenant-1', usuarioId: 'cliente-1' } as never,
+      { ip: '127.0.0.1', headers: { 'user-agent': 'jest' } } as never,
+      { acao: 'upgrade', planoDesejado: 'clinica', observacao: 'Mais capacidade administrativa' } as never
+    );
+
+    expect(resultado).toBe(solicitacao);
+    expect(servicoPortalCliente.solicitarAjusteAssinatura).toHaveBeenCalledWith('tenant-1', 'cliente-1', {
+      acao: 'upgrade',
+      planoDesejado: 'clinica',
+      observacao: 'Mais capacidade administrativa'
+    });
+    expect(servicoAuditoria.registrar).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      usuarioId: 'cliente-1',
+      acao: 'cliente.assinatura.solicitar_ajuste',
+      recursoTipo: 'tenant',
+      recursoId: 'tenant-1',
+      ip: '127.0.0.1',
+      userAgent: 'jest',
+      metadados: {
+        acao: 'upgrade',
+        planoAtualId: 'profissional',
+        planoDesejado: 'clinica',
+        status: 'pendente'
+      }
+    });
+  });
 });

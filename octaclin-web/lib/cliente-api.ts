@@ -5,6 +5,7 @@ export type RecursoLimitavelSaasApi =
   | 'mensagensMes'
   | 'formulariosAtivos'
   | 'armazenamentoMb';
+export type AcaoAjusteAssinaturaClienteApi = 'upgrade' | 'downgrade' | 'revisao_limite';
 
 export interface ResumoPortalClienteApi {
   conta: {
@@ -43,6 +44,20 @@ export interface ResumoPortalClienteApi {
     escopoDados: string;
     destinoInicial: string;
   };
+}
+
+export interface SolicitarAjusteAssinaturaClienteEntrada {
+  acao: AcaoAjusteAssinaturaClienteApi;
+  planoDesejado?: PlanoSaasIdApi;
+  observacao?: string;
+}
+
+export interface SolicitacaoAjusteAssinaturaClienteApi extends SolicitarAjusteAssinaturaClienteEntrada {
+  tenantId: string;
+  status: 'pendente';
+  planoAtualId: PlanoSaasIdApi;
+  planoAtual: string;
+  solicitadoEm: string;
 }
 
 export interface ConfiguracoesPortalClienteApi {
@@ -180,6 +195,18 @@ export async function obterResumoPortalCliente(): Promise<ResumoPortalClienteApi
   const resposta = await fetch('/api/cliente/resumo', { cache: 'no-store' });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
   return resposta.json() as Promise<ResumoPortalClienteApi>;
+}
+
+export async function solicitarAjusteAssinaturaCliente(
+  entrada: SolicitarAjusteAssinaturaClienteEntrada
+): Promise<SolicitacaoAjusteAssinaturaClienteApi> {
+  const resposta = await fetch('/api/cliente/assinatura/interesse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entrada)
+  });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<SolicitacaoAjusteAssinaturaClienteApi>;
 }
 
 export async function obterConfiguracoesCliente(): Promise<ConfiguracoesPortalClienteApi> {

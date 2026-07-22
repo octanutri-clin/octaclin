@@ -1,6 +1,7 @@
 import { IsBoolean, IsEmail, IsHexColor, IsIn, IsNotEmpty, IsObject, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { PapelUsuario } from '../../auth/dominio/usuario-autenticado';
+import type { PlanoSaasId } from '../dominio/planos-saas';
 
 export type PapelUsuarioClienteAdministrativo = Extract<PapelUsuario, 'Client' | 'Professional' | 'Collaborator'>;
 export type PapelUsuarioClienteCriavel = Extract<PapelUsuario, 'Professional' | 'Collaborator'>;
@@ -11,6 +12,20 @@ export class CriarUsuarioClienteDto {
 
   @IsIn(['Professional', 'Collaborator'])
   role: PapelUsuarioClienteCriavel;
+}
+
+export class SolicitarAjusteAssinaturaClienteDto {
+  @IsIn(['upgrade', 'downgrade', 'revisao_limite'])
+  acao: 'upgrade' | 'downgrade' | 'revisao_limite';
+
+  @IsOptional()
+  @IsIn(['gratuito', 'profissional', 'clinica', 'enterprise'])
+  planoDesejado?: PlanoSaasId;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  observacao?: string;
 }
 
 export interface UsuarioClienteRespostaDto {

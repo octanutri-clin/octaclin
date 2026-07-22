@@ -6,7 +6,12 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarConfiguracoesClienteDto, AtualizarPerfilEmpresaClienteDto, CriarUsuarioClienteDto } from '../aplicacao/dtos';
+import {
+  AtualizarConfiguracoesClienteDto,
+  AtualizarPerfilEmpresaClienteDto,
+  CriarUsuarioClienteDto,
+  SolicitarAjusteAssinaturaClienteDto
+} from '../aplicacao/dtos';
 import { ServicoPortalCliente } from '../aplicacao/servico-portal-cliente';
 import { ServicoUsuariosCliente } from '../aplicacao/servico-usuarios-cliente';
 
@@ -24,6 +29,32 @@ export class ControladorPortalCliente {
   @Get('resumo')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoPortalCliente.obterResumo(usuario.tenantId, usuario.usuarioId);
+  }
+
+  @Post('assinatura/interesse')
+  @Permissoes('cliente.assinatura.ler')
+  async solicitarAjusteAssinatura(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: SolicitarAjusteAssinaturaClienteDto
+  ) {
+    const solicitacao = await this.servicoPortalCliente.solicitarAjusteAssinatura(usuario.tenantId, usuario.usuarioId, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'cliente.assinatura.solicitar_ajuste',
+      recursoTipo: 'tenant',
+      recursoId: usuario.tenantId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        acao: solicitacao.acao,
+        planoAtualId: solicitacao.planoAtualId,
+        planoDesejado: solicitacao.planoDesejado,
+        status: solicitacao.status
+      }
+    });
+    return solicitacao;
   }
 
   @Get('configuracoes')
