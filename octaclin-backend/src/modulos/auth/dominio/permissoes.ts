@@ -1,6 +1,6 @@
 import type { PapelUsuario } from './usuario-autenticado';
 
-export type EscopoDados = 'tenant_total' | 'pacientes_responsaveis' | 'operacional_delegado' | 'proprio_paciente';
+export type EscopoDados = 'tenant_total' | 'pacientes_responsaveis' | 'operacional_delegado' | 'proprio_paciente' | 'conta_cliente';
 
 export type PermissaoOctaClin =
   | 'console.acessar'
@@ -28,7 +28,11 @@ export type PermissaoOctaClin =
   | 'portal.questionarios.responder'
   | 'portal.comunicacoes.ler_proprias'
   | 'portal.materiais.ler'
-  | 'portal.perfil.gerenciar';
+  | 'portal.perfil.gerenciar'
+  | 'cliente.acessar'
+  | 'cliente.assinatura.ler'
+  | 'cliente.usuarios.gerenciar'
+  | 'cliente.configuracoes.gerenciar';
 
 const permissoesPaciente = [
   'portal.acessar',
@@ -37,6 +41,13 @@ const permissoesPaciente = [
   'portal.comunicacoes.ler_proprias',
   'portal.materiais.ler',
   'portal.perfil.gerenciar'
+] as const satisfies readonly PermissaoOctaClin[];
+
+const permissoesCliente = [
+  'cliente.acessar',
+  'cliente.assinatura.ler',
+  'cliente.usuarios.gerenciar',
+  'cliente.configuracoes.gerenciar'
 ] as const satisfies readonly PermissaoOctaClin[];
 
 const permissoesColaborador = [
@@ -74,21 +85,24 @@ const matrizPermissoes: Record<PapelUsuario, readonly PermissaoOctaClin[]> = {
   SuperAdmin: permissoesSuperAdmin,
   Professional: permissoesProfissional,
   Collaborator: permissoesColaborador,
-  Patient: permissoesPaciente
+  Patient: permissoesPaciente,
+  Client: permissoesCliente
 };
 
 const destinosIniciais: Record<PapelUsuario, string> = {
   SuperAdmin: '/operacoes',
   Professional: '/agenda',
   Collaborator: '/agenda',
-  Patient: '/portal'
+  Patient: '/portal',
+  Client: '/cliente'
 };
 
 const escoposDados: Record<PapelUsuario, EscopoDados> = {
   SuperAdmin: 'tenant_total',
   Professional: 'pacientes_responsaveis',
   Collaborator: 'operacional_delegado',
-  Patient: 'proprio_paciente'
+  Patient: 'proprio_paciente',
+  Client: 'conta_cliente'
 };
 
 export function obterPermissoesPorPapel(papel: PapelUsuario): PermissaoOctaClin[] {

@@ -11,6 +11,13 @@ test('paciente deve acessar apenas o portal e voltar ao portal ao tentar console
   });
 });
 
+test('cliente deve acessar apenas o portal do cliente e voltar ao cliente ao tentar outras areas', () => {
+  assert.deepEqual(decidirAcessoRota('/cliente', 'Client', '/cliente'), { permitir: true });
+  assert.deepEqual(decidirAcessoRota('/cliente/assinatura', 'Client', '/cliente'), { permitir: true });
+  assert.deepEqual(decidirAcessoRota('/portal', 'Client', '/cliente'), { permitir: false, redirecionarPara: '/cliente' });
+  assert.deepEqual(decidirAcessoRota('/agenda', 'Client', '/cliente'), { permitir: false, redirecionarPara: '/cliente' });
+});
+
 test('perfil operacional deve sair do portal para seu destino operacional', () => {
   assert.deepEqual(decidirAcessoRota('/portal', 'Professional', '/agenda'), {
     permitir: false,
@@ -18,4 +25,8 @@ test('perfil operacional deve sair do portal para seu destino operacional', () =
   });
   assert.deepEqual(decidirAcessoRota('/agenda', 'Professional', '/agenda'), { permitir: true });
   assert.deepEqual(decidirAcessoRota('/operacoes', 'SuperAdmin', '/operacoes'), { permitir: true });
+  assert.deepEqual(decidirAcessoRota('/cliente', 'Professional', '/agenda'), {
+    permitir: false,
+    redirecionarPara: '/agenda'
+  });
 });

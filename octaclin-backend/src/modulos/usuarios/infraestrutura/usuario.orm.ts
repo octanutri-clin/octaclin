@@ -18,7 +18,7 @@ export class UsuarioOrm {
   senhaHash: string;
 
   @Column({ type: 'varchar', length: 32 })
-  role: 'SuperAdmin' | 'Professional' | 'Collaborator' | 'Patient';
+  role: 'SuperAdmin' | 'Professional' | 'Collaborator' | 'Patient' | 'Client';
 
   @Column({ type: 'boolean', default: true })
   ativo: boolean;

@@ -19,6 +19,19 @@ describe('Matriz de permissoes OctaClin', () => {
     expect(escopoDadosPorPapel('Patient')).toBe('proprio_paciente');
   });
 
+  it('deve manter cliente restrito ao portal do cliente e aos dados da conta', () => {
+    const permissoes = obterPermissoesPorPapel('Client');
+
+    expect(permissoes).toContain('cliente.acessar');
+    expect(permissoes).toContain('cliente.assinatura.ler');
+    expect(permissoes).not.toContain('console.acessar');
+    expect(permissoes).not.toContain('portal.acessar');
+    expect(permissoes).not.toContain('pacientes.listar');
+    expect(possuiPermissao('Client', 'cliente.usuarios.gerenciar')).toBe(true);
+    expect(possuiPermissao('Client', 'agenda.consultas.criar')).toBe(false);
+    expect(escopoDadosPorPapel('Client')).toBe('conta_cliente');
+  });
+
   it('deve separar acesso operacional por perfil profissional', () => {
     expect(possuiPermissao('SuperAdmin', 'operacoes.auditoria.ler')).toBe(true);
     expect(possuiPermissao('Professional', 'operacoes.auditoria.ler')).toBe(false);
@@ -32,5 +45,6 @@ describe('Matriz de permissoes OctaClin', () => {
     expect(destinoInicialPorPapel('Professional')).toBe('/agenda');
     expect(destinoInicialPorPapel('Collaborator')).toBe('/agenda');
     expect(destinoInicialPorPapel('Patient')).toBe('/portal');
+    expect(destinoInicialPorPapel('Client')).toBe('/cliente');
   });
 });

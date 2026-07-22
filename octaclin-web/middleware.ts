@@ -16,7 +16,8 @@ const ROTAS_PROTEGIDAS = [
   '/gamificacao',
   '/pacientes',
   '/profissionais',
-  '/portal'
+  '/portal',
+  '/cliente'
 ];
 
 function possuiSessao(request: NextRequest) {
@@ -85,6 +86,7 @@ export const config = {
     '/gamificacao/:path*',
     '/pacientes/:path*',
     '/profissionais/:path*',
-    '/portal/:path*'
+    '/portal/:path*',
+    '/cliente/:path*'
   ]
 };

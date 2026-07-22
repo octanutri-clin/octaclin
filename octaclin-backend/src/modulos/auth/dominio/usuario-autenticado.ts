@@ -1,6 +1,6 @@
 import type { PermissaoOctaClin } from './permissoes';
 
-export type PapelUsuario = 'SuperAdmin' | 'Professional' | 'Collaborator' | 'Patient';
+export type PapelUsuario = 'SuperAdmin' | 'Professional' | 'Collaborator' | 'Patient' | 'Client';
 
 export interface UsuarioAutenticado {
   usuarioId: string;

@@ -4,6 +4,7 @@ export interface DecisaoAcessoRota {
 }
 
 const ROTAS_PORTAL = ['/portal'];
+const ROTAS_CLIENTE = ['/cliente'];
 
 function pertenceARota(pathname: string, rotas: readonly string[]) {
   return rotas.some((rota) => pathname === rota || pathname.startsWith(`${rota}/`));
@@ -23,7 +24,11 @@ export function decidirAcessoRota(pathname: string, papel?: string, destinoInici
     return pertenceARota(pathname, ROTAS_PORTAL) ? { permitir: true } : { permitir: false, redirecionarPara: '/portal' };
   }
 
-  if (pertenceARota(pathname, ROTAS_PORTAL)) {
+  if (papel === 'Client') {
+    return pertenceARota(pathname, ROTAS_CLIENTE) ? { permitir: true } : { permitir: false, redirecionarPara: '/cliente' };
+  }
+
+  if (pertenceARota(pathname, ROTAS_PORTAL) || pertenceARota(pathname, ROTAS_CLIENTE)) {
     return { permitir: false, redirecionarPara: destino };
   }
 
