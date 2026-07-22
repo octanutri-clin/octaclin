@@ -10,6 +10,10 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 - `RESUMO_FASES_CONCLUIDAS.md` - resumo das fases concluidas ate aqui.
 - `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` - checklist vivo das proximas fases ate producao.
 - `DECISOES_ARQUITETURA.md` - decisoes de arquitetura ja tomadas.
+- `STATUS_ATUAL_PROJETO.md` - snapshot do estado atual e riscos.
+- `HANDOFF-TECNICO-OCTACLIN.md` - handoff tecnico atualizado.
+- `MAPA_ROTAS_PERMISSOES.md` - mapa de papeis, permissoes e rotas.
+- `TESTES_E_VALIDACOES.md` - matriz de comandos de validacao.
 - `VARIAVEIS_AMBIENTE.md` - variaveis necessarias sem valores secretos.
 - `RUNBOOK_PRODUCAO.md` - operacao, deploy, validacao e incidentes.
 - `CHECKLIST_GO_LIVE.md` - criterios antes de incluir clientes reais.

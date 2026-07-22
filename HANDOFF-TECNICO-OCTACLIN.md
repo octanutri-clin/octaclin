@@ -1,116 +1,109 @@
 # OctaClin - Handoff tecnico
 
+Atualizado em 2026-07-22, apos a Fase 93 e a documentacao operacional para agentes.
+
+Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo, leia tambem:
+
+- `AGENTS.md`
+- `RESUMO_FASES_CONCLUIDAS.md`
+- `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`
+- `STATUS_ATUAL_PROJETO.md`
+- `DECISOES_ARQUITETURA.md`
+- `MAPA_ROTAS_PERMISSOES.md`
+- `TESTES_E_VALIDACOES.md`
+- `RUNBOOK_PRODUCAO.md`
+- `VARIAVEIS_AMBIENTE.md`
+- `CHECKLIST_GO_LIVE.md`
+
 ## Resumo executivo
 
-OctaClin e um sistema clinico modular com backend NestJS, console web Next.js, app mobile Expo e microservico FastAPI para IA. A demo local atual cobre login, questionarios, comunicacoes, automacoes, IA, mobile, gamificacao, operacoes, pacientes e profissionais.
+OctaClin e um sistema SaaS clinico multi-tenant para consultoria, acompanhamento de pacientes, agenda, formularios, comunicacoes e portais por perfil.
 
-O caminho mais rapido para validar o produto e usar a API demo local com os scripts da raiz `outputs`.
+O projeto ja possui:
 
-## Demo local
+- backend NestJS com TypeORM e PostgreSQL;
+- frontend Next.js com BFF em rotas `/api`;
+- login unificado por papel;
+- portal do paciente;
+- portal do cliente;
+- console operacional;
+- questionarios e formularios;
+- agenda interna integrada ao Google Calendar;
+- email via Gmail/SMTP/Gmail API;
+- WhatsApp Meta Cloud API com webhook, inbox e status;
+- LGPD operacional e portal;
+- convites administrativos para usuarios de cliente.
 
-### Subir
+O sistema esta em staging funcional avancado, mas ainda nao deve ser considerado pronto para clientes reais ate concluir o checklist de producao.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File outputs/iniciar-demo-local.ps1 -SkipBuild
-```
+## Estrutura atual do repositorio
 
-### Acessar
+- `octaclin-backend`: backend NestJS.
+- `octaclin-web`: frontend Next.js e BFF.
+- `fase-*.md`: historico incremental por fase.
+- `RESUMO_FASES_CONCLUIDAS.md`: resumo das fases ja entregues.
+- `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`: roadmap vivo ate producao.
 
-- Web: `http://localhost:3000/login`
-- API: `http://localhost:3001`
+## Credenciais demo locais
 
-### Credenciais
+Quando o seed demo estiver aplicado:
 
-- API: `http://localhost:3001`
+- API local: `http://localhost:3001`
+- Web local: `http://localhost:3000`
 - Tenant: `clinica-carla`
-- Email: `admin@octaclin.local`
-- Senha: `OctaClin@123`
-
-### Verificar
-
-```powershell
-powershell -ExecutionPolicy Bypass -File outputs/verificar-demo-local.ps1
-```
-
-### Parar
-
-```powershell
-powershell -ExecutionPolicy Bypass -File outputs/parar-demo-local.ps1
-```
+- SuperAdmin: `admin@octaclin.local`
+- Profissional: `dra.carla@example.com`
+- Paciente: `paciente.demo@example.com`
+- Cliente: `gestor@octaclin.local`
+- Senha demo: `OctaClin@123`
 
 ## Arquitetura
 
 ```mermaid
 flowchart LR
-  Browser["Console web Next.js"] --> BFF["Rotas BFF /api/*"]
+  Browser["Web Next.js"] --> BFF["BFF /api/*"]
   BFF --> API["Backend NestJS"]
-  Mobile["App mobile Expo"] --> API
-  API --> Postgres["PostgreSQL / Timescale"]
-  API --> Redis["Redis / BullMQ"]
-  API --> Minio["MinIO / midias"]
-  API --> IA["Microservico FastAPI IA"]
+  API --> Postgres["Neon/PostgreSQL"]
+  API --> Redis["Upstash Redis"]
+  API --> Gmail["Gmail SMTP/API"]
+  API --> Meta["Meta WhatsApp Cloud API"]
+  API --> GoogleCalendar["Google Calendar"]
 ```
 
-## Componentes
+## Backend
 
-### Backend
+Pasta: `octaclin-backend`
 
-Pasta: `outputs/octaclin-backend`
+Principais modulos:
 
-Stack:
+- `auth`: login, refresh token, recuperacao de senha, papeis e permissoes.
+- `tenancy`: tenant e executor tenant-aware.
+- `usuarios`: entidade base de usuarios.
+- `clientes`: portal do cliente, resumo, usuarios administrativos e convites.
+- `pacientes`: cadastros, portal do paciente, convites e LGPD.
+- `profissionais`: cadastro de profissionais.
+- `questionarios`: modelos, perguntas, envios e respostas.
+- `agenda`: consultas e Google Calendar.
+- `comunicacoes`: canais, mensagens, WhatsApp, inbox, notas e outbox.
+- `operacoes`: auditoria, LGPD operacional, outbox e suporte.
+- `automacoes`, `ia`, `mobile`, `gamificacao`: dominios operacionais ja iniciados.
 
-- NestJS 10.
-- TypeORM.
-- PostgreSQL com multitenancy por `tenant_id`.
-- Redis/BullMQ para filas.
-- Auditoria operacional em `user_action_logs`.
-- Outbox transacional em `outbox_eventos`.
-
-Modulos principais:
-
-- Auth e tenancy.
-- Pacientes e profissionais.
-- Questionarios e agendamentos.
-- Comunicacoes.
-- Automacoes.
-- IA.
-- Mobile.
-- Gamificacao.
-- Operacoes.
-
-Comandos:
+Comandos comuns:
 
 ```powershell
-cd outputs/octaclin-backend
-npm run typecheck
-npm run build
-npm run test
-npm run mock:api
+pnpm --dir octaclin-backend typecheck
+pnpm --dir octaclin-backend test -- <specs> --runInBand
+pnpm --dir octaclin-backend build
 ```
 
-Suite focada mais relevante:
+## Web
 
-```powershell
-cd outputs/octaclin-backend
-node node_modules/jest/bin/jest.js src/modulos/comunicacoes/aplicacao/servico-comunicacoes.spec.ts src/modulos/automacoes/aplicacao/servico-automacoes.spec.ts src/modulos/ia/aplicacao/servico-ia.spec.ts src/modulos/mobile/aplicacao/servico-mobile.spec.ts src/modulos/gamificacao/aplicacao/servico-gamificacao.spec.ts --runInBand
-```
-
-### Web
-
-Pasta: `outputs/octaclin-web`
-
-Stack:
-
-- Next.js 14 App Router.
-- React 18.
-- TailwindCSS.
-- BFF interno em rotas `/api/*`.
-- Cookies `HttpOnly` para access/refresh tokens.
+Pasta: `octaclin-web`
 
 Rotas principais:
 
 - `/login`
-- `/operacoes`
+- `/agenda`
 - `/pacientes`
 - `/profissionais`
 - `/questionarios`
@@ -119,150 +112,55 @@ Rotas principais:
 - `/ia`
 - `/mobile`
 - `/gamificacao`
+- `/operacoes`
+- `/portal`
+- `/cliente`
+- `/esqueci-senha`
+- `/recuperar-senha`
+- `/primeiro-acesso`
 
-Comandos:
-
-```powershell
-cd outputs/octaclin-web
-npm run typecheck
-npm run build
-npm run smoke:ui
-npm run smoke:e2e:bff
-```
-
-Fallback sem npm no PATH:
+Comandos comuns:
 
 ```powershell
-cd outputs/octaclin-web
-node scripts/smoke-ui-regression.mjs
-node scripts/smoke-e2e-bff.mjs
+pnpm --dir octaclin-web typecheck
+pnpm --dir octaclin-web test:authz
+pnpm --dir octaclin-web build
+pnpm --dir octaclin-web exec playwright test tests/visual/portal-cliente.spec.mjs --reporter=list
 ```
 
-### Mobile
+## Seguranca consolidada
 
-Pasta: `outputs/octaclin-mobile`
+- Tenant vem do JWT, nao de input livre.
+- Sessao web usa cookies HttpOnly.
+- BFF normaliza e restringe API URL.
+- PII deve ser criptografada ou retornada por DTO autorizado.
+- Pacientes/profissionais usam arquivamento logico.
+- Leituras sensiveis e mutacoes relevantes exigem auditoria.
+- Tokens e secrets nao devem aparecer em commits ou docs.
 
-Stack:
+## Integracoes externas
 
-- Expo.
-- React Native.
-- Expo Router.
-- SQLite local.
+- Render: hospedagem atual.
+- Neon: PostgreSQL.
+- Upstash: Redis.
+- Gmail: SMTP e/ou Gmail API.
+- Meta: WhatsApp Cloud API.
+- Google Calendar: agenda.
 
-Funcionalidades entregues:
+Leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md` antes de alterar qualquer integracao.
 
-- Abas para jornada do paciente.
-- Diario rapido offline-first.
-- Captura de foto, video curto e audio.
-- Modo acompanhante com PIN.
-- Fila local de sincronizacao.
+## Estado de roadmap
 
-Comandos:
+- Ultima fase de produto concluida: Fase 93.
+- Proxima fase planejada: Fase 94 - Perfis e permissoes finas para usuarios administrativos.
+- Roadmap completo: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
-```powershell
-cd outputs/octaclin-mobile
-npm run typecheck
-npm run start
-```
+## Regra de continuidade
 
-### IA
+Ao concluir qualquer fase:
 
-Pasta: `outputs/octaclin-ai-service`
-
-Stack:
-
-- FastAPI.
-- Uvicorn.
-- Pydantic.
-
-Endpoints:
-
-- `GET /health`
-- `POST /analisar-sentimento`
-- `POST /reconhecer-alimento`
-
-Comandos:
-
-```powershell
-cd outputs/octaclin-ai-service
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8001
-```
-
-## Infra local completa
-
-Arquivo: `outputs/docker-compose.yml`
-
-Servicos:
-
-- PostgreSQL/Timescale em `5432`.
-- Redis em `6379`.
-- MinIO em `9000` e console `9001`.
-
-Subir:
-
-```powershell
-cd outputs
-docker compose up -d
-```
-
-## Seguranca e privacidade
-
-- O tenant e derivado do JWT validado no backend.
-- O fluxo removeu dependencia de header de tenant informado pelo cliente.
-- Sessao web usa cookies `HttpOnly`.
-- O BFF restringe URLs de API e rejeita protocolo invalido, credenciais embutidas, query string e hash.
-- Leituras sensiveis e mutacoes administrativas geram auditoria.
-- Auditoria nao grava textos, PINs, contatos ou payloads brutos.
-- Pacientes e profissionais retornam DTOs autorizados, nao entidades ORM com campos sensiveis.
-- Acompanhantes nao expoem `pinHash`.
-
-## Matriz de validacao
-
-Workflow GitHub Actions:
-
-- `outputs/.github/workflows/ci.yml`
-- Jobs: backend, web, mobile, ai-service e demo-smoke.
-- Nao exige secrets para CI e smoke demo.
-- O job demo-smoke tambem roda regressao visual Playwright em desktop e mobile.
-- Workflows de deploy AWS/Azure continuam manuais e exigem secrets especificos.
-
-Execucao completa recomendada:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File outputs/validar-ci-local.ps1
-```
-
-| Camada | Comando | O que cobre |
-| --- | --- | --- |
-| CI local | `outputs/validar-ci-local.ps1` | Typechecks, builds, specs focadas, demo e smokes |
-| Demo local | `outputs/verificar-demo-local.ps1` | Web, API, login BFF, sessao e pacientes |
-| Web typecheck | `npm run typecheck` | Tipagem TypeScript do frontend |
-| Web build | `npm run build` | Build Next.js e rotas App Router |
-| UI smoke | `npm run smoke:ui` | Login, shell, menu e 9 rotas protegidas |
-| Visual smoke | `npm run smoke:visual` | Playwright desktop/mobile, screenshots e overflow |
-| BFF smoke | `npm run smoke:e2e:bff` | Fluxo BFF, cookies, CRUDs, auditoria e exports |
-| Backend typecheck | `npm run typecheck` | Tipagem TypeScript do backend |
-| Backend tests | `npm run test` ou specs focadas | Contratos de dominio e servicos |
-| Mobile typecheck | `npm run typecheck` | Tipagem do app Expo |
-
-## Criterios de aceite atuais
-
-- Login demo funciona com API, tenant, email e senha seed.
-- Todas as rotas protegidas redirecionam sem sessao e renderizam com sessao.
-- CRUDs principais de pacientes, profissionais e questionarios passam pelo BFF.
-- Comunicacoes, automacoes, IA, mobile e gamificacao persistem/listam registros via BFF.
-- Operacoes exibe auditoria, outbox, sincronizacoes, filtros, paginacao e exportacao CSV.
-- Auditoria cobre leituras sensiveis e mutacoes administrativas.
-- Estados de erro, loading e vazio seguem componentes compartilhados.
-- Navegacao responsiva nao gera overflow horizontal nas rotas operacionais validadas.
-
-## Proximos passos recomendados
-
-1. Adicionar Playwright como dependencia de desenvolvimento para screenshots e regressao visual real em CI.
-2. Criar pipeline CI que rode typecheck, build, smoke UI e smoke BFF.
-3. Evoluir a API demo para cenarios de erro controlado por rota, facilitando QA de estados vazios/erro.
-4. Integrar provedores reais de IA mantendo os contratos HTTP atuais.
-5. Formalizar ambiente staging com dominios permitidos no BFF e cookies `Secure`.
+1. Criar ou atualizar `fase-XXX-*.md`.
+2. Atualizar `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
+3. Atualizar `RESUMO_FASES_CONCLUIDAS.md` se a fase consolidar capacidade.
+4. Rodar validacoes.
+5. Commitar e fazer push.
