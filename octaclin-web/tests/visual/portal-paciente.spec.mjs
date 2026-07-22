@@ -135,6 +135,12 @@ test.describe('portal do paciente', () => {
 
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Proximas acoes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Linha do tempo' })).toBeVisible();
+    await expect(page.getByText('Agenda', { exact: true })).toBeVisible();
+    await expect(page.getByText('Formulario pendente', { exact: true })).toBeVisible();
+    await expect(page.getByText('Formulario respondido', { exact: true })).toBeVisible();
+    await expect(page.getByText('Mensagem', { exact: true })).toBeVisible();
+    await expect(page.getByText('Privacidade').first()).toBeVisible();
     await expect(page.getByText('Responder Check-in semanal')).toBeVisible();
     await expect(page.getByText('Consulta nutricional').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Meu perfil' })).toBeVisible();

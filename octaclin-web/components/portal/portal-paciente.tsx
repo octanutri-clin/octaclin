@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   CalendarDays,
   CheckCircle2,
+  Clock3,
   ClipboardList,
   HeartPulse,
   MessageCircle,
@@ -30,6 +31,14 @@ interface FormularioPerfilPaciente {
   dataNascimento: string;
   prefereEmail: boolean;
   prefereWhatsapp: boolean;
+}
+
+interface ItemLinhaTempoPortal {
+  id: string;
+  tipo: string;
+  titulo: string;
+  descricao: string;
+  data?: string;
 }
 
 const formularioPerfilVazio: FormularioPerfilPaciente = {
@@ -88,6 +97,56 @@ function montarFormularioPerfil(portal: PortalPacienteApi): FormularioPerfilPaci
     prefereEmail: portal.perfil.preferenciasContato?.email ?? true,
     prefereWhatsapp: portal.perfil.preferenciasContato?.whatsapp ?? true
   };
+}
+
+function timestampLinhaTempo(valor?: string) {
+  if (!valor) return 0;
+  const data = new Date(valor);
+  return Number.isNaN(data.getTime()) ? 0 : data.getTime();
+}
+
+function montarLinhaTempoPortal(portal: PortalPacienteApi): ItemLinhaTempoPortal[] {
+  const itens: ItemLinhaTempoPortal[] = [
+    ...portal.consultasProximas.map((consulta) => ({
+      id: `consulta-${consulta.id}`,
+      tipo: 'Agenda',
+      titulo: consulta.titulo,
+      descricao: `${rotuloStatus(consulta.status)}${consulta.local ? ` - ${consulta.local}` : ''}`,
+      data: consulta.inicioEm
+    })),
+    ...portal.formulariosPendentes.map((formulario) => ({
+      id: `formulario-pendente-${formulario.envioId}`,
+      tipo: 'Formulario pendente',
+      titulo: formulario.titulo,
+      descricao: `${rotuloStatus(formulario.status)} - responder ate ${formatarDataHora(formulario.expiraEm)}`,
+      data: formulario.expiraEm
+    })),
+    ...portal.formulariosRespondidos.map((formulario) => ({
+      id: `formulario-respondido-${formulario.respostaId}`,
+      tipo: 'Formulario respondido',
+      titulo: formulario.titulo,
+      descricao: formulario.scoreFinal ? `Score ${formulario.scoreFinal}` : rotuloStatus(formulario.status),
+      data: formulario.finalizadoEm ?? formulario.respondidoEm
+    })),
+    ...portal.mensagensRecentes.map((mensagem) => ({
+      id: `mensagem-${mensagem.id}`,
+      tipo: 'Mensagem',
+      titulo: mensagem.titulo,
+      descricao: mensagem.texto || 'Mensagem registrada no acompanhamento.',
+      data: mensagem.enviadoEm ?? mensagem.criadoEm
+    })),
+    ...portal.lgpd.consentimentos.map((consentimento) => ({
+      id: `lgpd-${consentimento.id}`,
+      tipo: 'Privacidade',
+      titulo: rotuloConsentimento(consentimento.tipo),
+      descricao: `Versao ${consentimento.versao}`,
+      data: consentimento.aceitoEm
+    }))
+  ];
+
+  return itens
+    .sort((a, b) => timestampLinhaTempo(b.data) - timestampLinhaTempo(a.data))
+    .slice(0, 8);
 }
 
 export function PortalPaciente() {
@@ -206,6 +265,8 @@ export function PortalPaciente() {
     }
   }
 
+  const linhaTempo = portal ? montarLinhaTempoPortal(portal) : [];
+
   return (
     <main className="min-h-screen bg-fundo text-tinta">
       <header className="border-b border-linha bg-white">
@@ -311,6 +372,31 @@ export function PortalPaciente() {
                 {!portal.formulariosPendentes.length && !portal.consultasProximas.length ? (
                   <p className="text-sm text-[#596273]">Nenhuma acao pendente para hoje.</p>
                 ) : null}
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-linha bg-white">
+              <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+                <Clock3 className="h-4 w-4 text-[#596273]" />
+                <h2 className="text-sm font-semibold">Linha do tempo</h2>
+              </div>
+              <div className="grid gap-3 p-4">
+                {linhaTempo.length ? (
+                  linhaTempo.map((item) => (
+                    <article key={item.id} className="grid gap-2 rounded-md border border-linha bg-[#f8fafb] p-3 sm:grid-cols-[150px_minmax(0,1fr)_140px] sm:items-start">
+                      <span className="w-fit rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                        {item.tipo}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{item.titulo}</p>
+                        <p className="mt-1 line-clamp-2 break-words text-xs text-[#596273]">{item.descricao}</p>
+                      </div>
+                      <time className="text-xs text-[#596273] sm:text-right">{formatarDataHora(item.data)}</time>
+                    </article>
+                  ))
+                ) : (
+                  <p className="text-sm text-[#596273]">Nenhuma movimentacao recente registrada.</p>
+                )}
               </div>
             </section>
 
