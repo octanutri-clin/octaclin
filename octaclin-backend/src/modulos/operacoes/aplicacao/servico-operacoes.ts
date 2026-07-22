@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Between, FindOptionsWhere, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Between, EntityManager, FindOptionsWhere, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
+import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
@@ -35,6 +36,34 @@ export interface FiltrosOutboxOperacional {
   fim?: string;
   limite?: number;
   pagina?: number;
+}
+
+export type StatusSolicitacaoLgpd = 'recebida' | 'em_tratamento' | 'concluida' | 'indeferida';
+export type TipoSolicitacaoLgpd = 'retificacao' | 'exclusao';
+
+export interface FiltrosSolicitacoesLgpd {
+  status?: StatusSolicitacaoLgpd | '';
+  tipo?: TipoSolicitacaoLgpd | '';
+  limite?: number;
+  pagina?: number;
+}
+
+export interface SolicitacaoLgpdOperacional {
+  protocolo: string;
+  pacienteId: string;
+  usuarioPacienteId: string;
+  tipo: TipoSolicitacaoLgpd;
+  status: StatusSolicitacaoLgpd;
+  detalhes?: string;
+  abertoEm: Date;
+  atualizadoEm: Date;
+  responsavelId?: string;
+  ultimaTratativa?: string;
+}
+
+export interface AtualizarSolicitacaoLgpdOperacional {
+  status: Exclude<StatusSolicitacaoLgpd, 'recebida'>;
+  detalhes?: string;
 }
 
 export interface ResultadoPaginado<T> {
@@ -121,6 +150,68 @@ export class ServicoOperacoes {
     );
   }
 
+  async listarSolicitacoesLgpd(
+    tenantId: string,
+    filtros: FiltrosSolicitacoesLgpd = {}
+  ): Promise<ResultadoPaginado<SolicitacaoLgpdOperacional>> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const eventos = await this.carregarEventosSolicitacoesLgpd(gerenciador, tenantId);
+      const pagina = this.normalizarPagina(filtros.pagina ?? 1);
+      const limite = this.normalizarLimite(filtros.limite ?? 25);
+      const solicitacoes = this.consolidarSolicitacoesLgpd(eventos)
+        .filter((solicitacao) => !filtros.status || solicitacao.status === filtros.status)
+        .filter((solicitacao) => !filtros.tipo || solicitacao.tipo === filtros.tipo)
+        .sort((a, b) => b.atualizadoEm.getTime() - a.atualizadoEm.getTime());
+
+      return {
+        itens: solicitacoes.slice((pagina - 1) * limite, pagina * limite),
+        total: solicitacoes.length,
+        pagina,
+        limite
+      };
+    });
+  }
+
+  async atualizarSolicitacaoLgpd(
+    tenantId: string,
+    usuarioId: string,
+    protocolo: string,
+    dados: AtualizarSolicitacaoLgpdOperacional
+  ): Promise<SolicitacaoLgpdOperacional> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const eventos = await this.carregarEventosSolicitacoesLgpd(gerenciador, tenantId);
+      const solicitacao = this.consolidarSolicitacoesLgpd(eventos).find((item) => item.protocolo === protocolo);
+      if (!solicitacao) throw new NotFoundException('Solicitacao LGPD nao encontrada.');
+
+      const agora = new Date();
+      const repositorio = gerenciador.getRepository(ConsentimentoLgpdOrm);
+      await repositorio.save(
+        repositorio.create({
+          tenantId,
+          usuarioId,
+          tipo: 'tratativa_lgpd',
+          versao: '2026-09',
+          aceitoEm: agora,
+          metadados: {
+            pacienteId: solicitacao.pacienteId,
+            protocolo,
+            status: dados.status,
+            responsavelId: usuarioId,
+            detalhes: dados.detalhes?.trim() || undefined
+          }
+        })
+      );
+
+      return {
+        ...solicitacao,
+        status: dados.status,
+        atualizadoEm: agora,
+        responsavelId: usuarioId,
+        ultimaTratativa: dados.detalhes?.trim() || solicitacao.ultimaTratativa
+      };
+    });
+  }
+
   async listarAuditoria(tenantId: string, filtros: FiltrosAuditoriaOperacional = {}): Promise<UserActionLogOrm[]> {
     return this.executorTenant.executar(tenantId, (gerenciador) => {
       return gerenciador.getRepository(UserActionLogOrm).find({
@@ -203,6 +294,69 @@ export class ServicoOperacoes {
     if (filtros.tipo) where.tipo = filtros.tipo;
     if (intervalo) where.criadoEm = intervalo;
     return where;
+  }
+
+  private carregarEventosSolicitacoesLgpd(gerenciador: EntityManager, tenantId: string) {
+    return gerenciador.getRepository(ConsentimentoLgpdOrm).find({
+      where: {
+        tenantId,
+        tipo: In(['solicitacao_lgpd_retificacao', 'solicitacao_lgpd_exclusao', 'tratativa_lgpd'])
+      },
+      order: { aceitoEm: 'DESC' }
+    });
+  }
+
+  private consolidarSolicitacoesLgpd(eventos: ConsentimentoLgpdOrm[]): SolicitacaoLgpdOperacional[] {
+    const solicitacoes = new Map<string, SolicitacaoLgpdOperacional>();
+    [...eventos]
+      .sort((a, b) => this.timestampData(a.aceitoEm) - this.timestampData(b.aceitoEm))
+      .forEach((evento) => {
+        const protocolo = this.metadadoTexto(evento.metadados, 'protocolo');
+        if (!protocolo) return;
+
+        if (evento.tipo.startsWith('solicitacao_lgpd_')) {
+          const tipo = evento.tipo.replace('solicitacao_lgpd_', '') as TipoSolicitacaoLgpd;
+          if (tipo !== 'retificacao' && tipo !== 'exclusao') return;
+
+          solicitacoes.set(protocolo, {
+            protocolo,
+            pacienteId: this.metadadoTexto(evento.metadados, 'pacienteId') ?? '',
+            usuarioPacienteId: evento.usuarioId,
+            tipo,
+            status: this.normalizarStatusLgpd(this.metadadoTexto(evento.metadados, 'status')),
+            detalhes: this.metadadoTexto(evento.metadados, 'detalhes'),
+            abertoEm: evento.aceitoEm,
+            atualizadoEm: evento.aceitoEm
+          });
+          return;
+        }
+
+        if (evento.tipo !== 'tratativa_lgpd') return;
+        const solicitacao = solicitacoes.get(protocolo);
+        if (!solicitacao) return;
+
+        solicitacao.status = this.normalizarStatusLgpd(this.metadadoTexto(evento.metadados, 'status'));
+        solicitacao.atualizadoEm = evento.aceitoEm;
+        solicitacao.responsavelId = this.metadadoTexto(evento.metadados, 'responsavelId') ?? evento.usuarioId;
+        solicitacao.ultimaTratativa = this.metadadoTexto(evento.metadados, 'detalhes') ?? solicitacao.ultimaTratativa;
+      });
+
+    return Array.from(solicitacoes.values());
+  }
+
+  private metadadoTexto(metadados: Record<string, unknown> | undefined, chave: string): string | undefined {
+    const valor = metadados?.[chave];
+    return typeof valor === 'string' && valor.trim() ? valor.trim() : undefined;
+  }
+
+  private normalizarStatusLgpd(status?: string): StatusSolicitacaoLgpd {
+    if (status === 'em_tratamento' || status === 'concluida' || status === 'indeferida') return status;
+    return 'recebida';
+  }
+
+  private timestampData(valor?: Date): number {
+    if (!valor) return 0;
+    return valor instanceof Date ? valor.getTime() : new Date(valor).getTime();
   }
 
   private normalizarLimite(limite: number): number {

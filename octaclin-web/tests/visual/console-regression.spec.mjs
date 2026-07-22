@@ -55,6 +55,102 @@ async function assertSemOverflowHorizontal(page) {
   expect(medidas.larguraDocumento).toBeLessThanOrEqual(medidas.larguraViewport + 1);
 }
 
+async function prepararOperacoesMockadas(page) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: 'SuperAdmin', domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/operacoes'), domain: 'localhost', path: '/' }
+  ]);
+
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        autenticado: true,
+        apiUrl: 'http://localhost:3001',
+        tenantSlug: 'clinica-carla',
+        email: 'admin@octaclin.local',
+        expiraEm: '2026-07-22T15:00:00.000Z',
+        papel: 'SuperAdmin',
+        permissoes: ['operacoes.auditoria.ler'],
+        destinoInicial: '/operacoes'
+      })
+    });
+  });
+  await page.route('**/api/operacoes/resumo', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        outbox: { pendente: 1, processando: 0, processado: 12, falhou: 0 },
+        mobile: { sincronizado: 3, erro: 0 }
+      })
+    });
+  });
+  await page.route('**/api/operacoes/outbox/falhas**', async (route) => {
+    const paginada = route.request().url().includes('/paginada');
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(paginada ? { itens: [], total: 0, pagina: 1, limite: 25 } : [])
+    });
+  });
+  await page.route('**/api/operacoes/mobile/sincronizacoes**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+  });
+  await page.route('**/api/operacoes/auditoria**', async (route) => {
+    const paginada = route.request().url().includes('/paginada');
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(paginada ? { itens: [], total: 0, pagina: 1, limite: 25 } : [])
+    });
+  });
+  await page.route('**/api/operacoes/lgpd/solicitacoes**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            protocolo: 'LGPD-123',
+            pacienteId: 'paciente-1',
+            usuarioPacienteId: 'usuario-paciente-1',
+            tipo: 'retificacao',
+            status: 'recebida',
+            detalhes: 'Atualizar telefone cadastrado.',
+            abertoEm: '2026-07-22T10:00:00.000Z',
+            atualizadoEm: '2026-07-22T10:00:00.000Z'
+          }
+        ],
+        total: 1,
+        pagina: 1,
+        limite: 25
+      })
+    });
+  });
+  await page.route('**/api/operacoes/lgpd/solicitacoes/LGPD-123/status**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        protocolo: 'LGPD-123',
+        pacienteId: 'paciente-1',
+        usuarioPacienteId: 'usuario-paciente-1',
+        tipo: 'retificacao',
+        status: 'em_tratamento',
+        detalhes: 'Atualizar telefone cadastrado.',
+        abertoEm: '2026-07-22T10:00:00.000Z',
+        atualizadoEm: '2026-07-22T11:00:00.000Z',
+        responsavelId: 'usuario-admin-1',
+        ultimaTratativa: 'Em atendimento.'
+      })
+    });
+  });
+}
+
 test.describe('console operacional', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
@@ -80,4 +176,19 @@ test.describe('console operacional', () => {
       await testInfo.attach(nomeArquivo, { body: screenshot, contentType: 'image/png' });
     });
   }
+});
+
+test.describe('operacoes LGPD', () => {
+  test('exibe fila LGPD e permite iniciar tratativa', async ({ page }) => {
+    await prepararOperacoesMockadas(page);
+    await page.goto('/operacoes');
+
+    await expect(page.getByRole('heading', { name: 'Solicitacoes LGPD' })).toBeVisible();
+    await expect(page.getByText('LGPD-123')).toBeVisible();
+    await expect(page.getByText('Atualizar telefone cadastrado.')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Iniciar tratativa' }).click();
+    await expect(page.getByText('Solicitacao LGPD atualizada: LGPD-123.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
 });

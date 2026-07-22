@@ -1,9 +1,20 @@
-import { Controller, Get, Header, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoOperacoes } from '../aplicacao/servico-operacoes';
+
+class AtualizarSolicitacaoLgpdOperacionalDto {
+  @IsIn(['em_tratamento', 'concluida', 'indeferida'])
+  status: 'em_tratamento' | 'concluida' | 'indeferida';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  detalhes?: string;
+}
 
 @Controller('operacoes')
 @UseGuards(GuardaJwt, GuardaPapeis)
@@ -65,6 +76,31 @@ export class ControladorOperacoes {
   @Get('mobile/sincronizacoes')
   listarSincronizacoesMobile(@UsuarioAtual() usuario: UsuarioAutenticado, @Query('limite') limite?: string) {
     return this.servicoOperacoes.listarSincronizacoesMobile(usuario.tenantId, Number(limite ?? 50));
+  }
+
+  @Get('lgpd/solicitacoes')
+  listarSolicitacoesLgpd(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Query('status') status?: 'recebida' | 'em_tratamento' | 'concluida' | 'indeferida',
+    @Query('tipo') tipo?: 'retificacao' | 'exclusao',
+    @Query('pagina') pagina?: string,
+    @Query('limite') limite?: string
+  ) {
+    return this.servicoOperacoes.listarSolicitacoesLgpd(usuario.tenantId, {
+      status,
+      tipo,
+      pagina: Number(pagina ?? 1),
+      limite: Number(limite ?? 25)
+    });
+  }
+
+  @Post('lgpd/solicitacoes/:protocolo/status')
+  atualizarSolicitacaoLgpd(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('protocolo') protocolo: string,
+    @Body() dados: AtualizarSolicitacaoLgpdOperacionalDto
+  ) {
+    return this.servicoOperacoes.atualizarSolicitacaoLgpd(usuario.tenantId, usuario.usuarioId, protocolo, dados);
   }
 
   @Get('auditoria')

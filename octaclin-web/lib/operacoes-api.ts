@@ -48,6 +48,22 @@ export interface AuditoriaOperacional {
   criadoEm: string;
 }
 
+export type StatusSolicitacaoLgpd = 'recebida' | 'em_tratamento' | 'concluida' | 'indeferida';
+export type TipoSolicitacaoLgpd = 'retificacao' | 'exclusao';
+
+export interface SolicitacaoLgpdOperacional {
+  protocolo: string;
+  pacienteId: string;
+  usuarioPacienteId: string;
+  tipo: TipoSolicitacaoLgpd;
+  status: StatusSolicitacaoLgpd;
+  detalhes?: string;
+  abertoEm: string;
+  atualizadoEm: string;
+  responsavelId?: string;
+  ultimaTratativa?: string;
+}
+
 export interface DadosOperacionais {
   resumo: ResumoOperacional;
   falhas: OutboxFalha[];
@@ -55,6 +71,7 @@ export interface DadosOperacionais {
   auditoria: AuditoriaOperacional[];
   auditoriaPaginada: ResultadoPaginado<AuditoriaOperacional>;
   falhasPaginadas: ResultadoPaginado<OutboxFalha>;
+  solicitacoesLgpd: ResultadoPaginado<SolicitacaoLgpdOperacional>;
 }
 
 export interface FiltrosAuditoriaOperacional {
@@ -72,6 +89,13 @@ export interface FiltrosOutboxOperacional {
   tipo?: string;
   inicio?: string;
   fim?: string;
+  limite?: number;
+  pagina?: number;
+}
+
+export interface FiltrosSolicitacoesLgpd {
+  status?: StatusSolicitacaoLgpd | '';
+  tipo?: TipoSolicitacaoLgpd | '';
   limite?: number;
   pagina?: number;
 }
@@ -111,16 +135,17 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
 }
 
 export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
-  const [resumo, falhas, sincronizacoes, auditoria, auditoriaPaginada, falhasPaginadas] = await Promise.all([
+  const [resumo, falhas, sincronizacoes, auditoria, auditoriaPaginada, falhasPaginadas, solicitacoesLgpd] = await Promise.all([
     requisitar<ResumoOperacional>('/api/operacoes/resumo'),
     requisitar<OutboxFalha[]>('/api/operacoes/outbox/falhas?limite=50'),
     requisitar<SincronizacaoMobile[]>('/api/operacoes/mobile/sincronizacoes?limite=50'),
     requisitar<AuditoriaOperacional[]>('/api/operacoes/auditoria?limite=50'),
     carregarAuditoriaOperacionalPaginada({ pagina: 1, limite: 25 }),
-    carregarFalhasOutboxPaginadas({ pagina: 1, limite: 25 })
+    carregarFalhasOutboxPaginadas({ pagina: 1, limite: 25 }),
+    carregarSolicitacoesLgpd({ pagina: 1, limite: 25 })
   ]);
 
-  return { resumo, falhas, sincronizacoes, auditoria, auditoriaPaginada, falhasPaginadas };
+  return { resumo, falhas, sincronizacoes, auditoria, auditoriaPaginada, falhasPaginadas, solicitacoesLgpd };
 }
 
 export async function carregarAuditoriaOperacional(
@@ -155,6 +180,32 @@ export async function carregarFalhasOutboxPaginadas(
   if (!parametros.has('limite')) parametros.set('limite', '25');
 
   return requisitar<ResultadoPaginado<OutboxFalha>>(`/api/operacoes/outbox/falhas/paginada?${parametros.toString()}`);
+}
+
+export async function carregarSolicitacoesLgpd(
+  filtros: FiltrosSolicitacoesLgpd
+): Promise<ResultadoPaginado<SolicitacaoLgpdOperacional>> {
+  const parametros = montarParametros(filtros);
+  if (!parametros.has('pagina')) parametros.set('pagina', '1');
+  if (!parametros.has('limite')) parametros.set('limite', '25');
+
+  return requisitar<ResultadoPaginado<SolicitacaoLgpdOperacional>>(`/api/operacoes/lgpd/solicitacoes?${parametros.toString()}`);
+}
+
+export async function atualizarSolicitacaoLgpd(
+  protocolo: string,
+  dados: {
+    status: Exclude<StatusSolicitacaoLgpd, 'recebida'>;
+    detalhes?: string;
+  }
+): Promise<SolicitacaoLgpdOperacional> {
+  return requisitar<SolicitacaoLgpdOperacional>(
+    `/api/operacoes/lgpd/solicitacoes/${encodeURIComponent(protocolo)}/status`,
+    {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    }
+  );
 }
 
 export function urlExportacaoAuditoria(filtros: FiltrosAuditoriaOperacional): string {
