@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, AlertTriangle, CheckCircle2, Download, History, RefreshCcw, Scale, Search, Smartphone, Undo2 } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, CreditCard, Download, History, RefreshCcw, Scale, Search, Smartphone, Undo2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { SessaoPublica, obterSessao, sair } from '@/lib/auth-api';
@@ -17,11 +17,14 @@ import {
   OutboxFalha,
   RespostaSolicitacaoLgpdOperacional,
   StatusSolicitacaoLgpd,
+  SolicitacaoAssinaturaOperacional,
   SolicitacaoLgpdOperacional,
+  aplicarPlanoAssinatura,
   atualizarSolicitacaoLgpd,
   carregarAuditoriaOperacionalPaginada,
   carregarFalhasOutboxPaginadas,
   carregarDadosOperacionais,
+  carregarSolicitacoesAssinatura,
   carregarSolicitacoesLgpd,
   obterDetalheSolicitacaoLgpd,
   prepararRespostaSolicitacaoLgpd,
@@ -76,6 +79,38 @@ function classeStatusLgpd(status: StatusSolicitacaoLgpd) {
   return mapa[status];
 }
 
+function rotuloPlano(plano: SolicitacaoAssinaturaOperacional['planoAtualId']) {
+  const mapa: Record<SolicitacaoAssinaturaOperacional['planoAtualId'], string> = {
+    gratuito: 'Gratuito',
+    profissional: 'Profissional',
+    clinica: 'Clinica',
+    enterprise: 'Enterprise'
+  };
+  return mapa[plano];
+}
+
+function rotuloStatusAssinatura(status: SolicitacaoAssinaturaOperacional['status']) {
+  const mapa: Record<SolicitacaoAssinaturaOperacional['status'], string> = {
+    pendente: 'Pendente',
+    concluida: 'Concluida',
+    cancelada: 'Cancelada'
+  };
+  return mapa[status];
+}
+
+function classeStatusAssinatura(status: SolicitacaoAssinaturaOperacional['status']) {
+  const mapa: Record<SolicitacaoAssinaturaOperacional['status'], string> = {
+    pendente: 'bg-[#fff6db] text-[#7a5a00]',
+    concluida: 'bg-[#e6f4ea] text-sucesso',
+    cancelada: 'bg-[#f8e8e4] text-perigo'
+  };
+  return mapa[status];
+}
+
+function chaveSolicitacaoAssinatura(solicitacao: SolicitacaoAssinaturaOperacional) {
+  return `${solicitacao.tenantId}:${solicitacao.solicitadoEm}:${solicitacao.planoDesejado ?? solicitacao.planoAtualId}`;
+}
+
 export function PainelOperacoes() {
   const router = useRouter();
   const [sessao, setSessao] = useState<SessaoPublica | null>(null);
@@ -84,9 +119,11 @@ export function PainelOperacoes() {
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [carregandoAuditoria, setCarregandoAuditoria] = useState(false);
+  const [carregandoAssinatura, setCarregandoAssinatura] = useState(false);
   const [carregandoLgpd, setCarregandoLgpd] = useState(false);
   const [carregandoDetalheLgpd, setCarregandoDetalheLgpd] = useState(false);
   const [reprocessandoId, setReprocessandoId] = useState<string | null>(null);
+  const [aplicandoAssinaturaId, setAplicandoAssinaturaId] = useState<string | null>(null);
   const [atualizandoLgpdProtocolo, setAtualizandoLgpdProtocolo] = useState<string | null>(null);
   const [preparandoRespostaProtocolo, setPreparandoRespostaProtocolo] = useState<string | null>(null);
   const [detalheLgpd, setDetalheLgpd] = useState<DetalheSolicitacaoLgpdOperacional | null>(null);
@@ -256,6 +293,56 @@ export function PainelOperacoes() {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao paginar outbox.');
     } finally {
       setCarregando(false);
+    }
+  }
+
+  async function recarregarSolicitacoesAssinatura(opcoes: { preservarMensagem?: boolean } = {}) {
+    if (!sessao) return;
+
+    setCarregandoAssinatura(true);
+    setErro(null);
+    if (!opcoes.preservarMensagem) setSucesso(null);
+    try {
+      const solicitacoesAssinatura = await executarAutenticado(() =>
+        carregarSolicitacoesAssinatura({
+          pagina: dados?.solicitacoesAssinatura.pagina ?? 1,
+          limite: dados?.solicitacoesAssinatura.limite ?? 25
+        })
+      );
+      if (solicitacoesAssinatura) {
+        setDados((dadosAtuais) => (dadosAtuais ? { ...dadosAtuais, solicitacoesAssinatura } : dadosAtuais));
+      }
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar solicitacoes de assinatura.');
+    } finally {
+      setCarregandoAssinatura(false);
+    }
+  }
+
+  async function aplicarPlanoSolicitacao(solicitacao: SolicitacaoAssinaturaOperacional) {
+    if (!sessao || solicitacao.status !== 'pendente') return;
+
+    const chave = chaveSolicitacaoAssinatura(solicitacao);
+    const planoId = solicitacao.planoDesejado ?? solicitacao.planoAtualId;
+    setAplicandoAssinaturaId(chave);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const assinatura = await executarAutenticado(() =>
+        aplicarPlanoAssinatura({
+          planoId,
+          status: 'ativa',
+          observacao: `Solicitacao ${solicitacao.acao} aplicada pelo painel operacional.`
+        })
+      );
+      if (assinatura) {
+        await recarregarSolicitacoesAssinatura({ preservarMensagem: true });
+        setSucesso(`Plano ${assinatura.plano} aplicado para ${assinatura.tenantId}.`);
+      }
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao aplicar plano de assinatura.');
+    } finally {
+      setAplicandoAssinaturaId(null);
     }
   }
 
@@ -438,6 +525,7 @@ export function PainelOperacoes() {
   const falhasPaginadas = dados?.falhasPaginadas;
   const totalPaginasAuditoria = auditoriaPaginada ? Math.max(Math.ceil(auditoriaPaginada.total / auditoriaPaginada.limite), 1) : 1;
   const totalPaginasOutbox = falhasPaginadas ? Math.max(Math.ceil(falhasPaginadas.total / falhasPaginadas.limite), 1) : 1;
+  const solicitacoesAssinatura = dados?.solicitacoesAssinatura;
   const solicitacoesLgpd = dados?.solicitacoesLgpd;
   const totalPaginasLgpd = solicitacoesLgpd ? Math.max(Math.ceil(solicitacoesLgpd.total / solicitacoesLgpd.limite), 1) : 1;
 
@@ -466,7 +554,14 @@ export function PainelOperacoes() {
           </div>
         ) : null}
         <BarraCarregamento
-          visivel={carregando || carregandoAuditoria || carregandoLgpd || carregandoDetalheLgpd || Boolean(preparandoRespostaProtocolo)}
+          visivel={
+            carregando ||
+            carregandoAuditoria ||
+            carregandoAssinatura ||
+            carregandoLgpd ||
+            carregandoDetalheLgpd ||
+            Boolean(preparandoRespostaProtocolo)
+          }
         />
 
         <section className="grid gap-3 md:grid-cols-4">
@@ -479,6 +574,78 @@ export function PainelOperacoes() {
               <p className="mt-3 text-3xl font-bold">{item.valor}</p>
             </div>
           ))}
+        </section>
+
+        <section className="rounded-lg border border-linha bg-white">
+          <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2">
+              <CreditCard size={19} className="text-primaria" />
+              <h2 className="text-base font-semibold">Assinaturas</h2>
+              <span className="text-sm text-[#596273]">{solicitacoesAssinatura?.total ?? 0} solicitacoes</span>
+            </div>
+            <Botao type="button" onClick={() => void recarregarSolicitacoesAssinatura()} disabled={carregandoAssinatura}>
+              <RefreshCcw size={16} />
+              {carregandoAssinatura ? 'Atualizando' : 'Atualizar fila'}
+            </Botao>
+          </div>
+          <div className="divide-y divide-linha">
+            {solicitacoesAssinatura?.itens.length ? (
+              solicitacoesAssinatura.itens.map((solicitacao) => {
+                const chave = chaveSolicitacaoAssinatura(solicitacao);
+                const planoDestino = solicitacao.planoDesejado ?? solicitacao.planoAtualId;
+
+                return (
+                  <div key={chave} className="grid gap-3 px-4 py-4 lg:grid-cols-[0.8fr_0.8fr_1fr_auto] lg:items-center">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <strong className="text-sm">{solicitacao.acao}</strong>
+                        <span className={`rounded-sm px-2 py-1 text-xs font-semibold ${classeStatusAssinatura(solicitacao.status)}`}>
+                          {rotuloStatusAssinatura(solicitacao.status)}
+                        </span>
+                      </div>
+                      <p className="mt-1 break-all text-xs text-[#596273]">Tenant: {solicitacao.tenantId}</p>
+                      <p className="mt-1 text-xs text-[#596273]">{formatarData(solicitacao.solicitadoEm)}</p>
+                    </div>
+                    <div className="text-sm">
+                      <p>
+                        <span className="text-[#596273]">Atual: </span>
+                        <strong>{solicitacao.planoAtual || rotuloPlano(solicitacao.planoAtualId)}</strong>
+                      </p>
+                      <p className="mt-1">
+                        <span className="text-[#596273]">Desejado: </span>
+                        <strong>{rotuloPlano(planoDestino)}</strong>
+                      </p>
+                    </div>
+                    <div className="text-sm text-tinta">
+                      <p>{solicitacao.observacao ?? 'Sem observacao comercial.'}</p>
+                      {solicitacao.resolvidoEm ? (
+                        <p className="mt-1 text-xs text-[#596273]">Resolvido em {formatarData(solicitacao.resolvidoEm)}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex justify-start lg:justify-end">
+                      {solicitacao.status === 'pendente' ? (
+                        <Botao
+                          type="button"
+                          variante="primario"
+                          onClick={() => void aplicarPlanoSolicitacao(solicitacao)}
+                          disabled={aplicandoAssinaturaId === chave}
+                        >
+                          <CreditCard size={16} />
+                          {aplicandoAssinaturaId === chave ? 'Aplicando' : `Aplicar ${rotuloPlano(planoDestino)}`}
+                        </Botao>
+                      ) : (
+                        <span className="rounded-sm bg-[#e8eef8] px-2 py-1 text-xs font-semibold text-primaria">
+                          {solicitacao.planoAplicadoId ? `Plano ${rotuloPlano(solicitacao.planoAplicadoId)}` : 'Sem acao pendente'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <EstadoVazio titulo="Nenhuma solicitacao de assinatura carregada." />
+            )}
+          </div>
         </section>
 
         <section className="rounded-lg border border-linha bg-white">

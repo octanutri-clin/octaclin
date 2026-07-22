@@ -3,6 +3,7 @@ import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
+import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { ServicoOperacoes } from './servico-operacoes';
 
 function criarServico() {
@@ -17,7 +18,37 @@ function criarServico() {
     criadoEm: new Date('2026-01-01T00:00:00.000Z'),
     processadoEm: new Date()
   };
-  const repositorios = {
+  const configuracoes = [
+    {
+      id: 'plano-1',
+      tenantId: 'tenant-1',
+      chave: 'plano_saas',
+      valor: {
+        planoId: 'profissional',
+        status: 'trial',
+        origem: 'manual_admin',
+        renovacaoEm: '2026-08-22T00:00:00.000Z'
+      },
+      criadoEm: new Date('2026-07-20T10:00:00.000Z')
+    },
+    {
+      id: 'interesse-1',
+      tenantId: 'tenant-1',
+      chave: 'assinatura_interesse',
+      valor: {
+        acao: 'upgrade',
+        status: 'pendente',
+        planoAtualId: 'profissional',
+        planoAtual: 'Profissional',
+        planoDesejado: 'clinica',
+        observacao: 'Mais usuarios administrativos.',
+        solicitadoPorUsuarioId: 'cliente-1',
+        solicitadoEm: '2026-07-22T10:00:00.000Z'
+      },
+      criadoEm: new Date('2026-07-22T10:00:00.000Z')
+    }
+  ];
+  const repositorios: Record<string, any> = {
     outbox: {
       count: jest.fn(async ({ where }: { where: { status: string } }) => {
         const mapa: Record<string, number> = { pendente: 2, processando: 1, processado: 10, falhou: 3 };
@@ -72,6 +103,30 @@ function criarServico() {
       ]),
       create: jest.fn((dados: Record<string, unknown>) => dados),
       save: jest.fn(async (dados: Record<string, unknown>) => ({ id: 'tratativa-2', ...dados }))
+    },
+    configuracoes: {
+      itens: configuracoes,
+      find: jest.fn(async ({ where }: { where: { tenantId: string; chave?: string } }) =>
+        configuracoes.filter((item) => item.tenantId === where.tenantId && (!where.chave || item.chave === where.chave))
+      ),
+      findOne: jest.fn(async ({ where }: { where: { tenantId: string; chave: string } }) =>
+        configuracoes.find((item) => item.tenantId === where.tenantId && item.chave === where.chave) ?? null
+      ),
+      create: jest.fn((dados: Record<string, unknown>) => dados),
+      save: jest.fn(async (dados: Record<string, unknown>): Promise<Record<string, unknown>> => {
+        const existente = configuracoes.find((item) => item.id === dados.id);
+        if (existente) {
+          Object.assign(existente, dados);
+          return existente;
+        }
+        const salvo: Record<string, unknown> = {
+          id: `config-${repositorios.configuracoes.itens.length + 1}`,
+          criadoEm: new Date('2026-07-22T10:00:00.000Z'),
+          ...dados
+        };
+        configuracoes.push(salvo as never);
+        return salvo;
+      })
     }
   };
   const gerenciador = {
@@ -80,6 +135,7 @@ function criarServico() {
       if (entidade === SincronizacaoMobileOrm) return repositorios.mobile;
       if (entidade === UserActionLogOrm) return repositorios.auditoria;
       if (entidade === ConsentimentoLgpdOrm) return repositorios.consentimentos;
+      if (entidade === TenantConfiguracaoOrm) return repositorios.configuracoes;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -304,6 +360,86 @@ describe('ServicoOperacoes', () => {
           status: 'em_tratamento',
           responsavelId: 'usuario-admin-1',
           assuntoEmail: 'Atualizacao da solicitacao LGPD LGPD-123'
+        })
+      })
+    );
+  });
+
+  it('deve listar solicitacoes comerciais de assinatura pendentes', async () => {
+    const { servico, repositorios } = criarServico();
+
+    await expect(servico.listarSolicitacoesAssinatura('tenant-1')).resolves.toEqual({
+      itens: [
+        {
+          tenantId: 'tenant-1',
+          acao: 'upgrade',
+          status: 'pendente',
+          planoAtualId: 'profissional',
+          planoAtual: 'Profissional',
+          planoDesejado: 'clinica',
+          observacao: 'Mais usuarios administrativos.',
+          solicitadoPorUsuarioId: 'cliente-1',
+          solicitadoEm: '2026-07-22T10:00:00.000Z'
+        }
+      ],
+      total: 1,
+      pagina: 1,
+      limite: 25
+    });
+    expect(repositorios.configuracoes.find).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant-1', chave: 'assinatura_interesse' },
+      order: { criadoEm: 'DESC' },
+      take: 25,
+      skip: 0
+    });
+  });
+
+  it('deve aplicar plano manualmente e concluir solicitacao comercial', async () => {
+    const { servico, repositorios } = criarServico();
+
+    await expect(
+      servico.aplicarPlanoAssinatura('tenant-1', 'admin-1', {
+        planoId: 'clinica',
+        status: 'ativa',
+        renovacaoEm: '2026-09-22T00:00:00.000Z',
+        observacao: 'Aprovado manualmente.'
+      })
+    ).resolves.toEqual(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        planoId: 'clinica',
+        plano: 'Clinica',
+        status: 'ativa',
+        origem: 'operacao_manual',
+        renovacaoEm: '2026-09-22T00:00:00.000Z',
+        atualizadoPorUsuarioId: 'admin-1'
+      })
+    );
+
+    expect(repositorios.configuracoes.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'plano-1',
+        tenantId: 'tenant-1',
+        chave: 'plano_saas',
+        valor: expect.objectContaining({
+          planoId: 'clinica',
+          status: 'ativa',
+          origem: 'operacao_manual',
+          renovacaoEm: '2026-09-22T00:00:00.000Z',
+          atualizadoPorUsuarioId: 'admin-1'
+        })
+      })
+    );
+    expect(repositorios.configuracoes.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'interesse-1',
+        tenantId: 'tenant-1',
+        chave: 'assinatura_interesse',
+        valor: expect.objectContaining({
+          status: 'concluida',
+          planoAplicadoId: 'clinica',
+          resolvidoPorUsuarioId: 'admin-1',
+          observacaoResolucao: 'Aprovado manualmente.'
         })
       })
     );

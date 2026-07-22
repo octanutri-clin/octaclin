@@ -4,7 +4,12 @@ import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { PlanoSaasId, resolverPlanoSaas } from '../../clientes/dominio/planos-saas';
 import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
+import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
+
+const CHAVE_PLANO_SAAS = 'plano_saas';
+const CHAVE_INTERESSE_ASSINATURA = 'assinatura_interesse';
 
 export interface ResumoOperacional {
   outbox: {
@@ -88,6 +93,40 @@ export interface RespostaSolicitacaoLgpdOperacional {
 export interface AtualizarSolicitacaoLgpdOperacional {
   status: Exclude<StatusSolicitacaoLgpd, 'recebida'>;
   detalhes?: string;
+}
+
+export interface SolicitacaoAssinaturaOperacional {
+  tenantId: string;
+  acao: 'upgrade' | 'downgrade' | 'revisao_limite';
+  status: 'pendente' | 'concluida' | 'cancelada';
+  planoAtualId: PlanoSaasId;
+  planoAtual: string;
+  planoDesejado?: PlanoSaasId;
+  observacao?: string;
+  solicitadoPorUsuarioId: string;
+  solicitadoEm: string;
+  planoAplicadoId?: PlanoSaasId;
+  resolvidoPorUsuarioId?: string;
+  resolvidoEm?: string;
+  observacaoResolucao?: string;
+}
+
+export interface AplicarPlanoAssinaturaOperacional {
+  planoId: PlanoSaasId;
+  status?: 'ativa' | 'trial' | 'suspensa' | 'cancelada';
+  renovacaoEm?: string;
+  observacao?: string;
+}
+
+export interface AssinaturaManualOperacional {
+  tenantId: string;
+  planoId: PlanoSaasId;
+  plano: string;
+  status: string;
+  origem: 'operacao_manual';
+  renovacaoEm?: string;
+  atualizadoPorUsuarioId: string;
+  atualizadoEm: string;
 }
 
 export interface ResultadoPaginado<T> {
@@ -193,6 +232,89 @@ export class ServicoOperacoes {
         pagina,
         limite
       };
+    });
+  }
+
+  async listarSolicitacoesAssinatura(
+    tenantId: string,
+    filtros: { pagina?: number; limite?: number } = {}
+  ): Promise<ResultadoPaginado<SolicitacaoAssinaturaOperacional>> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const limite = this.normalizarLimite(filtros.limite ?? 25);
+      const pagina = this.normalizarPagina(filtros.pagina ?? 1);
+      const registros = await gerenciador.getRepository(TenantConfiguracaoOrm).find({
+        where: { tenantId, chave: CHAVE_INTERESSE_ASSINATURA },
+        order: { criadoEm: 'DESC' },
+        take: limite,
+        skip: (pagina - 1) * limite
+      });
+
+      return {
+        itens: registros.map((registro) => this.mapearSolicitacaoAssinatura(tenantId, registro.valor)),
+        total: registros.length,
+        pagina,
+        limite
+      };
+    });
+  }
+
+  async aplicarPlanoAssinatura(
+    tenantId: string,
+    usuarioId: string,
+    dados: AplicarPlanoAssinaturaOperacional
+  ): Promise<AssinaturaManualOperacional> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(TenantConfiguracaoOrm);
+      const [configuracaoAtual, interesseAtual] = await Promise.all([
+        repositorio.findOne({ where: { tenantId, chave: CHAVE_PLANO_SAAS } }),
+        repositorio.findOne({ where: { tenantId, chave: CHAVE_INTERESSE_ASSINATURA } })
+      ]);
+      const plano = resolverPlanoSaas(dados.planoId);
+      const atualizadoEm = new Date().toISOString();
+      const renovacaoEm = this.textoOpcional(dados.renovacaoEm);
+      const observacaoResolucao = this.textoOpcional(dados.observacao);
+      const assinatura: AssinaturaManualOperacional = {
+        tenantId,
+        planoId: plano.id,
+        plano: plano.nome,
+        status: dados.status ?? 'ativa',
+        origem: 'operacao_manual',
+        ...(renovacaoEm ? { renovacaoEm } : {}),
+        atualizadoPorUsuarioId: usuarioId,
+        atualizadoEm
+      };
+
+      await repositorio.save(
+        repositorio.create({
+          id: configuracaoAtual?.id,
+          tenantId,
+          chave: CHAVE_PLANO_SAAS,
+          valor: { ...assinatura },
+          criadoEm: configuracaoAtual?.criadoEm
+        })
+      );
+
+      if (interesseAtual) {
+        const solicitacao = this.mapearSolicitacaoAssinatura(tenantId, interesseAtual.valor);
+        await repositorio.save(
+          repositorio.create({
+            id: interesseAtual.id,
+            tenantId,
+            chave: CHAVE_INTERESSE_ASSINATURA,
+            valor: {
+              ...solicitacao,
+              status: 'concluida',
+              planoAplicadoId: plano.id,
+              resolvidoPorUsuarioId: usuarioId,
+              resolvidoEm: atualizadoEm,
+              ...(observacaoResolucao ? { observacaoResolucao } : {})
+            },
+            criadoEm: interesseAtual.criadoEm
+          })
+        );
+      }
+
+      return assinatura;
     });
   }
 
@@ -484,6 +606,50 @@ export class ServicoOperacoes {
   private metadadoTexto(metadados: Record<string, unknown> | undefined, chave: string): string | undefined {
     const valor = metadados?.[chave];
     return typeof valor === 'string' && valor.trim() ? valor.trim() : undefined;
+  }
+
+  private textoOpcional(valor: unknown): string | undefined {
+    return typeof valor === 'string' && valor.trim() ? valor.trim() : undefined;
+  }
+
+  private mapearSolicitacaoAssinatura(
+    tenantId: string,
+    valor?: Record<string, unknown>
+  ): SolicitacaoAssinaturaOperacional {
+    const planoAtual = resolverPlanoSaas(this.planoOpcional(valor?.planoAtualId) ?? 'gratuito');
+    const planoDesejado = this.planoOpcional(valor?.planoDesejado);
+    const planoAplicadoId = this.planoOpcional(valor?.planoAplicadoId);
+    const status = valor?.status === 'concluida' || valor?.status === 'cancelada' ? valor.status : 'pendente';
+    const observacao = this.metadadoTexto(valor, 'observacao');
+    const resolvidoPorUsuarioId = this.metadadoTexto(valor, 'resolvidoPorUsuarioId');
+    const resolvidoEm = this.metadadoTexto(valor, 'resolvidoEm');
+    const observacaoResolucao = this.metadadoTexto(valor, 'observacaoResolucao');
+
+    return {
+      tenantId,
+      acao: this.acaoAssinatura(valor?.acao),
+      status,
+      planoAtualId: planoAtual.id,
+      planoAtual: this.metadadoTexto(valor, 'planoAtual') ?? planoAtual.nome,
+      ...(planoDesejado ? { planoDesejado } : {}),
+      ...(observacao ? { observacao } : {}),
+      solicitadoPorUsuarioId: this.metadadoTexto(valor, 'solicitadoPorUsuarioId') ?? '',
+      solicitadoEm: this.metadadoTexto(valor, 'solicitadoEm') ?? '',
+      ...(planoAplicadoId ? { planoAplicadoId } : {}),
+      ...(resolvidoPorUsuarioId ? { resolvidoPorUsuarioId } : {}),
+      ...(resolvidoEm ? { resolvidoEm } : {}),
+      ...(observacaoResolucao ? { observacaoResolucao } : {})
+    };
+  }
+
+  private acaoAssinatura(valor: unknown): SolicitacaoAssinaturaOperacional['acao'] {
+    if (valor === 'downgrade' || valor === 'revisao_limite') return valor;
+    return 'upgrade';
+  }
+
+  private planoOpcional(valor: unknown): PlanoSaasId | undefined {
+    if (valor === 'gratuito' || valor === 'profissional' || valor === 'clinica' || valor === 'enterprise') return valor;
+    return undefined;
   }
 
   private normalizarStatusLgpd(status?: string): StatusSolicitacaoLgpd {

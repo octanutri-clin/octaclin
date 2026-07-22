@@ -5,12 +5,23 @@ import { ConsentimentoLgpdOrm } from '../../infraestrutura/lgpd/consentimento-lg
 import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
 import { ModuloAuth } from '../auth/modulo-auth';
 import { SincronizacaoMobileOrm } from '../mobile/infraestrutura/sincronizacao-mobile.orm';
+import { TenantConfiguracaoOrm } from '../tenancy/infraestrutura/tenant-configuracao.orm';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoOperacoes } from './aplicacao/servico-operacoes';
 import { ControladorOperacoes } from './apresentacao/controlador-operacoes';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([OutboxEventoOrm, SincronizacaoMobileOrm, UserActionLogOrm, ConsentimentoLgpdOrm]), ModuloAuth, ModuloTenancy],
+  imports: [
+    TypeOrmModule.forFeature([
+      OutboxEventoOrm,
+      SincronizacaoMobileOrm,
+      UserActionLogOrm,
+      ConsentimentoLgpdOrm,
+      TenantConfiguracaoOrm
+    ]),
+    ModuloAuth,
+    ModuloTenancy
+  ],
   controllers: [ControladorOperacoes],
   providers: [ServicoOperacoes],
   exports: [ServicoOperacoes]

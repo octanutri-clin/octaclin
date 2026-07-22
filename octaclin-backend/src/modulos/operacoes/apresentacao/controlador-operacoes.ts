@@ -16,6 +16,25 @@ class AtualizarSolicitacaoLgpdOperacionalDto {
   detalhes?: string;
 }
 
+class AplicarPlanoAssinaturaOperacionalDto {
+  @IsIn(['gratuito', 'profissional', 'clinica', 'enterprise'])
+  planoId: 'gratuito' | 'profissional' | 'clinica' | 'enterprise';
+
+  @IsOptional()
+  @IsIn(['ativa', 'trial', 'suspensa', 'cancelada'])
+  status?: 'ativa' | 'trial' | 'suspensa' | 'cancelada';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  renovacaoEm?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  observacao?: string;
+}
+
 @Controller('operacoes')
 @UseGuards(GuardaJwt, GuardaPapeis)
 @Papeis('SuperAdmin')
@@ -76,6 +95,26 @@ export class ControladorOperacoes {
   @Get('mobile/sincronizacoes')
   listarSincronizacoesMobile(@UsuarioAtual() usuario: UsuarioAutenticado, @Query('limite') limite?: string) {
     return this.servicoOperacoes.listarSincronizacoesMobile(usuario.tenantId, Number(limite ?? 50));
+  }
+
+  @Get('assinaturas/solicitacoes')
+  listarSolicitacoesAssinatura(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Query('pagina') pagina?: string,
+    @Query('limite') limite?: string
+  ) {
+    return this.servicoOperacoes.listarSolicitacoesAssinatura(usuario.tenantId, {
+      pagina: Number(pagina ?? 1),
+      limite: Number(limite ?? 25)
+    });
+  }
+
+  @Post('assinaturas/plano')
+  aplicarPlanoAssinatura(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Body() dados: AplicarPlanoAssinaturaOperacionalDto
+  ) {
+    return this.servicoOperacoes.aplicarPlanoAssinatura(usuario.tenantId, usuario.usuarioId, dados);
   }
 
   @Get('lgpd/solicitacoes')

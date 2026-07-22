@@ -1,6 +1,6 @@
 # OctaClin - Mapa de rotas e permissoes
 
-Atualizado apos a Fase 100. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
+Atualizado apos a Fase 101. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
 
 ## Papeis
 
@@ -125,6 +125,8 @@ Inclui permissoes de `Professional` e adiciona:
 | `/api/cliente/usuarios/convites/historico/exportar.csv` | `/cliente/usuarios/convites/historico/exportar.csv` | GET exige `cliente.convites.gerenciar` |
 | `/api/cliente/usuarios/[id]/convite/reenvio` | `/cliente/usuarios/:id/convite/reenvio` | POST exige `cliente.convites.gerenciar` |
 | `/api/cliente/usuarios/[id]/convite` | `/cliente/usuarios/:id/convite` | DELETE exige `cliente.convites.gerenciar` |
+| `/api/operacoes/assinaturas/solicitacoes` | `/operacoes/assinaturas/solicitacoes` | GET exige `SuperAdmin`; lista solicitacoes comerciais pendentes/concluidas |
+| `/api/operacoes/assinaturas/plano` | `/operacoes/assinaturas/plano` | POST exige `SuperAdmin`; aplica plano manualmente no tenant atual |
 
 ## Resultado da Fase 95
 

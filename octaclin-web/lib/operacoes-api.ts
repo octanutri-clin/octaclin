@@ -88,6 +88,36 @@ export interface RespostaSolicitacaoLgpdOperacional {
   geradoEm: string;
 }
 
+export type PlanoSaasIdOperacional = 'gratuito' | 'profissional' | 'clinica' | 'enterprise';
+export type StatusAssinaturaOperacional = 'ativa' | 'trial' | 'suspensa' | 'cancelada';
+
+export interface SolicitacaoAssinaturaOperacional {
+  tenantId: string;
+  acao: 'upgrade' | 'downgrade' | 'revisao_limite';
+  status: 'pendente' | 'concluida' | 'cancelada';
+  planoAtualId: PlanoSaasIdOperacional;
+  planoAtual: string;
+  planoDesejado?: PlanoSaasIdOperacional;
+  observacao?: string;
+  solicitadoPorUsuarioId: string;
+  solicitadoEm: string;
+  planoAplicadoId?: PlanoSaasIdOperacional;
+  resolvidoPorUsuarioId?: string;
+  resolvidoEm?: string;
+  observacaoResolucao?: string;
+}
+
+export interface AssinaturaManualOperacional {
+  tenantId: string;
+  planoId: PlanoSaasIdOperacional;
+  plano: string;
+  status: StatusAssinaturaOperacional;
+  origem: 'operacao_manual';
+  renovacaoEm?: string;
+  atualizadoPorUsuarioId: string;
+  atualizadoEm: string;
+}
+
 export interface DadosOperacionais {
   resumo: ResumoOperacional;
   falhas: OutboxFalha[];
@@ -96,6 +126,7 @@ export interface DadosOperacionais {
   auditoriaPaginada: ResultadoPaginado<AuditoriaOperacional>;
   falhasPaginadas: ResultadoPaginado<OutboxFalha>;
   solicitacoesLgpd: ResultadoPaginado<SolicitacaoLgpdOperacional>;
+  solicitacoesAssinatura: ResultadoPaginado<SolicitacaoAssinaturaOperacional>;
 }
 
 export interface FiltrosAuditoriaOperacional {
@@ -120,6 +151,11 @@ export interface FiltrosOutboxOperacional {
 export interface FiltrosSolicitacoesLgpd {
   status?: StatusSolicitacaoLgpd | '';
   tipo?: TipoSolicitacaoLgpd | '';
+  limite?: number;
+  pagina?: number;
+}
+
+export interface FiltrosSolicitacoesAssinatura {
   limite?: number;
   pagina?: number;
 }
@@ -159,17 +195,36 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
 }
 
 export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
-  const [resumo, falhas, sincronizacoes, auditoria, auditoriaPaginada, falhasPaginadas, solicitacoesLgpd] = await Promise.all([
+  const [
+    resumo,
+    falhas,
+    sincronizacoes,
+    auditoria,
+    auditoriaPaginada,
+    falhasPaginadas,
+    solicitacoesLgpd,
+    solicitacoesAssinatura
+  ] = await Promise.all([
     requisitar<ResumoOperacional>('/api/operacoes/resumo'),
     requisitar<OutboxFalha[]>('/api/operacoes/outbox/falhas?limite=50'),
     requisitar<SincronizacaoMobile[]>('/api/operacoes/mobile/sincronizacoes?limite=50'),
     requisitar<AuditoriaOperacional[]>('/api/operacoes/auditoria?limite=50'),
     carregarAuditoriaOperacionalPaginada({ pagina: 1, limite: 25 }),
     carregarFalhasOutboxPaginadas({ pagina: 1, limite: 25 }),
-    carregarSolicitacoesLgpd({ pagina: 1, limite: 25 })
+    carregarSolicitacoesLgpd({ pagina: 1, limite: 25 }),
+    carregarSolicitacoesAssinatura({ pagina: 1, limite: 25 })
   ]);
 
-  return { resumo, falhas, sincronizacoes, auditoria, auditoriaPaginada, falhasPaginadas, solicitacoesLgpd };
+  return {
+    resumo,
+    falhas,
+    sincronizacoes,
+    auditoria,
+    auditoriaPaginada,
+    falhasPaginadas,
+    solicitacoesLgpd,
+    solicitacoesAssinatura
+  };
 }
 
 export async function carregarAuditoriaOperacional(
@@ -214,6 +269,30 @@ export async function carregarSolicitacoesLgpd(
   if (!parametros.has('limite')) parametros.set('limite', '25');
 
   return requisitar<ResultadoPaginado<SolicitacaoLgpdOperacional>>(`/api/operacoes/lgpd/solicitacoes?${parametros.toString()}`);
+}
+
+export async function carregarSolicitacoesAssinatura(
+  filtros: FiltrosSolicitacoesAssinatura
+): Promise<ResultadoPaginado<SolicitacaoAssinaturaOperacional>> {
+  const parametros = montarParametros(filtros);
+  if (!parametros.has('pagina')) parametros.set('pagina', '1');
+  if (!parametros.has('limite')) parametros.set('limite', '25');
+
+  return requisitar<ResultadoPaginado<SolicitacaoAssinaturaOperacional>>(
+    `/api/operacoes/assinaturas/solicitacoes?${parametros.toString()}`
+  );
+}
+
+export async function aplicarPlanoAssinatura(dados: {
+  planoId: PlanoSaasIdOperacional;
+  status?: StatusAssinaturaOperacional;
+  renovacaoEm?: string;
+  observacao?: string;
+}): Promise<AssinaturaManualOperacional> {
+  return requisitar<AssinaturaManualOperacional>('/api/operacoes/assinaturas/plano', {
+    method: 'POST',
+    body: JSON.stringify(dados)
+  });
 }
 
 export async function atualizarSolicitacaoLgpd(

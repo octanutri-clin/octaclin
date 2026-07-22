@@ -57,6 +57,7 @@ async function assertSemOverflowHorizontal(page) {
 
 async function prepararOperacoesMockadas(page) {
   let requisitouCsvLgpd = false;
+  let aplicouPlanoAssinatura = false;
 
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -108,6 +109,53 @@ async function prepararOperacoesMockadas(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(paginada ? { itens: [], total: 0, pagina: 1, limite: 25 } : [])
+    });
+  });
+  await page.route('**/api/operacoes/assinaturas/solicitacoes**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            tenantId: 'clinica-carla',
+            acao: 'upgrade',
+            status: aplicouPlanoAssinatura ? 'concluida' : 'pendente',
+            planoAtualId: 'profissional',
+            planoAtual: 'Profissional',
+            planoDesejado: 'clinica',
+            observacao: 'Mais usuarios administrativos.',
+            solicitadoPorUsuarioId: 'cliente-1',
+            solicitadoEm: '2026-07-22T10:00:00.000Z',
+            ...(aplicouPlanoAssinatura
+              ? {
+                  planoAplicadoId: 'clinica',
+                  resolvidoPorUsuarioId: 'admin-1',
+                  resolvidoEm: '2026-07-22T12:00:00.000Z'
+                }
+              : {})
+          }
+        ],
+        total: 1,
+        pagina: 1,
+        limite: 25
+      })
+    });
+  });
+  await page.route('**/api/operacoes/assinaturas/plano', async (route) => {
+    aplicouPlanoAssinatura = true;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        tenantId: 'clinica-carla',
+        planoId: 'clinica',
+        plano: 'Clinica',
+        status: 'ativa',
+        origem: 'operacao_manual',
+        atualizadoPorUsuarioId: 'admin-1',
+        atualizadoEm: '2026-07-22T12:00:00.000Z'
+      })
     });
   });
   await page.route('**/api/operacoes/lgpd/solicitacoes**', async (route) => {
@@ -218,7 +266,8 @@ async function prepararOperacoesMockadas(page) {
     });
   });
   return {
-    requisitouCsvLgpd: () => requisitouCsvLgpd
+    requisitouCsvLgpd: () => requisitouCsvLgpd,
+    aplicouPlanoAssinatura: () => aplicouPlanoAssinatura
   };
 }
 
@@ -273,6 +322,20 @@ test.describe('operacoes LGPD', () => {
     await expect(page.getByText('Seu pedido LGPD LGPD-123 esta em tratamento. Protocolo: LGPD-123.')).toBeVisible();
     await page.getByRole('button', { name: 'Copiar resposta LGPD-123' }).click();
     await expect(page.getByText('Resposta LGPD copiada para LGPD-123.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+});
+
+test.describe('operacoes assinatura', () => {
+  test('exibe solicitacao comercial e permite aplicar plano manualmente', async ({ page }) => {
+    const operacoes = await prepararOperacoesMockadas(page);
+    await page.goto('/operacoes');
+
+    await expect(page.getByRole('heading', { name: 'Assinaturas' })).toBeVisible();
+    await expect(page.getByText('Mais usuarios administrativos.')).toBeVisible();
+    await page.getByRole('button', { name: 'Aplicar Clinica' }).click();
+    await expect(page.getByText('Plano Clinica aplicado para clinica-carla.')).toBeVisible();
+    await expect.poll(() => operacoes.aplicouPlanoAssinatura()).toBe(true);
     await assertSemOverflowHorizontal(page);
   });
 });

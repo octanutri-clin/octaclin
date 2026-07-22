@@ -1,6 +1,6 @@
 # OctaClin - Handoff tecnico
 
-Atualizado em 2026-07-22, apos a Fase 100 e a documentacao operacional para agentes.
+Atualizado em 2026-07-22, apos a Fase 101 e a documentacao operacional para agentes.
 
 Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo, leia tambem:
 
@@ -35,7 +35,8 @@ O projeto ja possui:
 - LGPD operacional e portal;
 - convites administrativos para usuarios de cliente;
 - modelo de planos SaaS com limites, uso e alertas por tenant;
-- solicitacao comercial manual de upgrade/revisao de assinatura.
+- solicitacao comercial manual de upgrade/revisao de assinatura;
+- controle manual administrativo de assinatura pelo painel operacional.
 
 O sistema esta em staging funcional avancado, mas ainda nao deve ser considerado pronto para clientes reais ate concluir o checklist de producao.
 
@@ -88,7 +89,7 @@ Principais modulos:
 - `questionarios`: modelos, perguntas, envios e respostas.
 - `agenda`: consultas e Google Calendar.
 - `comunicacoes`: canais, mensagens, WhatsApp, inbox, notas e outbox.
-- `operacoes`: auditoria, LGPD operacional, outbox e suporte.
+- `operacoes`: auditoria, LGPD operacional, outbox, suporte e controle manual de assinatura.
 - `automacoes`, `ia`, `mobile`, `gamificacao`: dominios operacionais ja iniciados.
 
 Comandos comuns:
@@ -154,8 +155,8 @@ Leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md` antes de alterar qualquer i
 
 ## Estado de roadmap
 
-- Ultima fase concluida: Fase 100 - Tela de assinatura e uso no portal do cliente.
-- Proxima fase planejada: Fase 101 - Integracao de pagamento sem custo inicial ou gateway definitivo.
+- Ultima fase concluida: Fase 101 - Controle manual de assinatura.
+- Proxima fase planejada: Fase 102 - Bloqueios suaves por inadimplencia/limite.
 - Roadmap completo: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regra de continuidade
