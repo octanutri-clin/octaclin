@@ -30,14 +30,14 @@ Select-String -Path *.md -Pattern '^# '
 Use quando alterar servicos, controllers, DTOs ou dominio no backend:
 
 ```powershell
-pnpm --dir octaclin-backend test -- <spec1> <spec2> --runInBand
+pnpm --dir octaclin-backend exec jest <spec1> <spec2> --runInBand
 pnpm --dir octaclin-backend typecheck
 ```
 
 Specs recentes importantes:
 
 ```powershell
-pnpm --dir octaclin-backend test -- servico-usuarios-cliente.spec.ts servico-recuperacao-senha.spec.ts servico-portal-cliente.spec.ts permissoes.spec.ts --runInBand
+pnpm --dir octaclin-backend exec jest servico-usuarios-cliente.spec.ts servico-recuperacao-senha.spec.ts servico-portal-cliente.spec.ts permissoes.spec.ts --runInBand
 ```
 
 ## Validacao web focada
@@ -85,16 +85,38 @@ Remove-Item $out,$err -ErrorAction SilentlyContinue
 
 ## Validacao para fases de permissao
 
-Fase 94 e semelhantes devem rodar:
+Fase 95 e semelhantes devem rodar:
 
 ```powershell
-pnpm --dir octaclin-backend test -- permissoes.spec.ts --runInBand
+pnpm --dir octaclin-backend exec jest permissoes.spec.ts --runInBand
 pnpm --dir octaclin-web test:authz
 pnpm --dir octaclin-backend typecheck
 pnpm --dir octaclin-web typecheck
 ```
 
 Tambem atualizar e revisar `MAPA_ROTAS_PERMISSOES.md`.
+
+## Preflight de producao
+
+Use antes de iniciar uma fase relevante ou antes de passar o projeto para outro agente:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
+```
+
+Use antes de concluir fases de maior risco:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -Full
+```
+
+Atalhos equivalentes:
+
+```powershell
+pnpm validate:docs
+pnpm validate
+pnpm validate:full
+```
 
 ## Validacao para integracoes
 

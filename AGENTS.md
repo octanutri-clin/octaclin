@@ -16,7 +16,7 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
 - Fase concluida mais recente no momento deste arquivo: Fase 93.
-- Proxima fase planejada: Fase 94 - Perfis e permissoes finas para usuarios administrativos.
+- Proxima fase planejada: Fase 95 - Perfis e permissoes finas para usuarios administrativos.
 - O checklist vivo das proximas fases fica em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regras de trabalho

@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 93.
+Atualizado apos a Fase 94.
 
 Este arquivo e um handoff executivo do que ja foi construido no OctaClin. Ele deve ajudar outro agente de IA ou desenvolvedor a entender rapidamente a evolucao do projeto sem precisar reprocessar todo o historico de commits.
 
@@ -135,6 +135,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 91 - Gestao inicial de usuarios do cliente: listar, criar e desativar usuarios administrativos.
 - Fase 92 - Convites para usuarios administrativos: convite por email e primeiro acesso sem senha manual.
 - Fase 93 - Auditoria e controle de convites administrativos: listar, reenviar e revogar convites pendentes.
+- Fase 94 - Preflight de producao: prontidao por area, gates de fase e validacao local padronizada.
 
 ## Estado atual de uso
 

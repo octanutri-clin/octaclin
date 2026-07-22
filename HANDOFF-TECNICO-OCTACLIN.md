@@ -1,6 +1,6 @@
 # OctaClin - Handoff tecnico
 
-Atualizado em 2026-07-22, apos a Fase 93 e a documentacao operacional para agentes.
+Atualizado em 2026-07-22, apos a Fase 94 e a documentacao operacional para agentes.
 
 Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo, leia tambem:
 
@@ -8,6 +8,7 @@ Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo
 - `RESUMO_FASES_CONCLUIDAS.md`
 - `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`
 - `STATUS_ATUAL_PROJETO.md`
+- `PREFLIGHT_PRODUCAO.md`
 - `DECISOES_ARQUITETURA.md`
 - `MAPA_ROTAS_PERMISSOES.md`
 - `TESTES_E_VALIDACOES.md`
@@ -151,8 +152,8 @@ Leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md` antes de alterar qualquer i
 
 ## Estado de roadmap
 
-- Ultima fase de produto concluida: Fase 93.
-- Proxima fase planejada: Fase 94 - Perfis e permissoes finas para usuarios administrativos.
+- Ultima fase concluida: Fase 94 - Preflight de producao.
+- Proxima fase planejada: Fase 95 - Perfis e permissoes finas para usuarios administrativos.
 - Roadmap completo: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regra de continuidade

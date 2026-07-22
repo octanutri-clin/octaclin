@@ -1,6 +1,6 @@
 # OctaClin - Mapa de rotas e permissoes
 
-Este arquivo prepara a Fase 94. Ele documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
+Este arquivo prepara a Fase 95. Ele documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
 
 ## Papeis
 
@@ -118,7 +118,7 @@ Inclui permissoes de `Professional` e adiciona:
 | `/api/cliente/usuarios/[id]/convite/reenvio` | `/cliente/usuarios/:id/convite/reenvio` | Reenvia convite |
 | `/api/cliente/usuarios/[id]/convite` | `/cliente/usuarios/:id/convite` | Revoga convite |
 
-## Pontos para Fase 94
+## Pontos para Fase 95
 
 - Migrar checagens de algumas rotas de papel para permissao explicita onde fizer sentido.
 - Garantir que `Client` nao acesse rotinas clinicas.

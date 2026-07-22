@@ -11,6 +11,7 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 - `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` - checklist vivo das proximas fases ate producao.
 - `DECISOES_ARQUITETURA.md` - decisoes de arquitetura ja tomadas.
 - `STATUS_ATUAL_PROJETO.md` - snapshot do estado atual e riscos.
+- `PREFLIGHT_PRODUCAO.md` - prontidao por area e gates antes/depois de cada fase.
 - `HANDOFF-TECNICO-OCTACLIN.md` - handoff tecnico atualizado.
 - `MAPA_ROTAS_PERMISSOES.md` - mapa de papeis, permissoes e rotas.
 - `TESTES_E_VALIDACOES.md` - matriz de comandos de validacao.
@@ -27,3 +28,15 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 ## Regra de continuidade
 
 O projeto evolui por fases numeradas. Ao concluir uma fase, atualize o checklist vivo, crie/atualize o arquivo da fase, valide, commite e faca push.
+
+## Validacao rapida
+
+```powershell
+pnpm validate:docs
+```
+
+Validacao ampliada:
+
+```powershell
+pnpm validate
+```
