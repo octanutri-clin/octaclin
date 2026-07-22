@@ -33,7 +33,6 @@ function formatarData(valor?: string) {
 
 const formularioUsuarioInicial = {
   email: '',
-  senhaInicial: '',
   role: 'Collaborator' as PapelUsuarioClienteCriavelApi
 };
 
@@ -94,12 +93,11 @@ export function PortalCliente() {
     try {
       await criarUsuarioCliente({
         email: formularioUsuario.email.trim(),
-        senhaInicial: formularioUsuario.senhaInicial,
         role: formularioUsuario.role
       });
       setFormularioUsuario(formularioUsuarioInicial);
       await carregarUsuarios();
-      setSucessoUsuarios('Usuario convidado.');
+      setSucessoUsuarios('Convite enviado por email.');
     } catch (erroAtual) {
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao convidar usuario.');
     } finally {
@@ -292,7 +290,7 @@ export function PortalCliente() {
               </div>
             ) : null}
 
-            <form onSubmit={convidarUsuario} className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3 lg:grid-cols-[1fr_180px_180px_auto]">
+            <form onSubmit={convidarUsuario} className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3 lg:grid-cols-[1fr_180px_auto]">
               <label className="grid gap-1 text-xs font-semibold text-[#596273]">
                 Email
                 <input
@@ -316,23 +314,13 @@ export function PortalCliente() {
                   <option value="Professional">Professional</option>
                 </select>
               </label>
-              <label className="grid gap-1 text-xs font-semibold text-[#596273]">
-                Senha inicial
-                <input
-                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
-                  type="password"
-                  minLength={8}
-                  value={formularioUsuario.senhaInicial}
-                  onChange={(evento) => setFormularioUsuario((atual) => ({ ...atual, senhaInicial: evento.target.value }))}
-                  required
-                />
-              </label>
               <div className="flex items-end">
                 <Botao type="submit" variante="primario" disabled={salvandoUsuario} className="w-full">
                   <UserPlus size={16} />
                   {salvandoUsuario ? 'Convidando' : 'Convidar usuario'}
                 </Botao>
               </div>
+              <p className="text-sm text-[#596273] lg:col-span-3">Link de primeiro acesso enviado por email.</p>
             </form>
 
             <div className="overflow-x-auto rounded-md border border-linha bg-white">

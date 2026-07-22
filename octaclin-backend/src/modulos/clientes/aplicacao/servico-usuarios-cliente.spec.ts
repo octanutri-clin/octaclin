@@ -1,4 +1,5 @@
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { TokenRedefinicaoSenhaOrm } from '../../auth/infraestrutura/token-redefinicao-senha.orm';
 import { ServicoUsuariosCliente } from './servico-usuarios-cliente';
 
 function criarRepositorioFake(usuarios: Record<string, any>[]) {
@@ -38,11 +39,14 @@ function criarRepositorioFake(usuarios: Record<string, any>[]) {
 
 function criarServico(usuarios: Record<string, any>[]) {
   const repositorioUsuarios = criarRepositorioFake(usuarios);
+  const tokens: Record<string, any>[] = [];
+  const repositorioTokens = criarRepositorioFake(tokens);
   const executorTenant = {
     executar: jest.fn((_tenantId: string, callback: any) =>
       callback({
         getRepository: (entidade: any) => {
           if (entidade === UsuarioOrm) return repositorioUsuarios;
+          if (entidade === TokenRedefinicaoSenhaOrm) return repositorioTokens;
           throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
         }
       })
@@ -54,13 +58,16 @@ function criarServico(usuarios: Record<string, any>[]) {
     descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8').replace('email:', ''))
   };
   const senhas = { gerarHash: jest.fn((valor: string) => `senha:${valor}`) };
+  const email = { enviar: jest.fn(async () => ({ idExterno: 'email-1' })) };
 
   return {
-    servico: new ServicoUsuariosCliente(executorTenant as never, criptografia as never, senhas as never),
+    servico: new ServicoUsuariosCliente(executorTenant as never, criptografia as never, senhas as never, email as never),
     repositorioUsuarios,
+    repositorioTokens,
     executorTenant,
     criptografia,
-    senhas
+    senhas,
+    email
   };
 }
 
@@ -129,26 +136,50 @@ describe('ServicoUsuariosCliente', () => {
     expect(JSON.stringify(resposta)).not.toContain('hash:gestor');
   });
 
-  it('deve criar usuario colaborador com email normalizado e senha protegida', async () => {
-    const { servico, repositorioUsuarios, criptografia, senhas } = criarServico([]);
+  it('deve convidar usuario colaborador com token de primeiro acesso e email', async () => {
+    process.env.EXPOR_LINK_RECUPERACAO_SENHA = 'true';
+    const { servico, repositorioUsuarios, repositorioTokens, criptografia, senhas, email } = criarServico([]);
 
-    const resposta = await servico.criar('tenant-1', {
+    const resposta = await servico.criar('tenant-1', 'cliente-1', {
       email: ' Novo@OctaClin.Local ',
-      senhaInicial: 'SenhaNova@123',
       role: 'Collaborator'
     });
 
     expect(criptografia.gerarHashBusca).toHaveBeenCalledWith(' Novo@OctaClin.Local ');
     expect(criptografia.criptografar).toHaveBeenCalledWith('novo@octaclin.local');
-    expect(senhas.gerarHash).toHaveBeenCalledWith('SenhaNova@123');
+    expect(senhas.gerarHash).toHaveBeenCalledWith(expect.stringMatching(/^convite\./));
     expect(repositorioUsuarios.save).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant-1',
         emailHash: 'hash:novo@octaclin.local',
         emailCriptografado: Buffer.from('email:novo@octaclin.local'),
-        senhaHash: 'senha:SenhaNova@123',
+        senhaHash: expect.stringMatching(/^senha:convite\./),
         role: 'Collaborator',
         ativo: true
+      })
+    );
+    expect(repositorioTokens.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-1',
+        emailHash: 'hash:novo@octaclin.local',
+        tokenHash: expect.any(String),
+        status: 'pendente',
+        expiraEm: expect.any(Date),
+        payload: expect.objectContaining({
+          origem: 'convite_usuario_cliente',
+          criadoPorUsuarioId: 'cliente-1',
+          role: 'Collaborator'
+        })
+      })
+    );
+    expect(email.enviar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          destino: 'novo@octaclin.local',
+          assunto: 'Convite para acessar o OctaClin',
+          linkPrimeiroAcesso: expect.stringMatching(/^http:\/\/localhost:3000\/recuperar-senha\?token=tenant-1\./)
+        })
       })
     );
     expect(resposta).toEqual(
@@ -157,10 +188,15 @@ describe('ServicoUsuariosCliente', () => {
         tenantId: 'tenant-1',
         email: 'novo@octaclin.local',
         role: 'Collaborator',
-        ativo: true
+        ativo: true,
+        convite: {
+          expiraEm: expect.any(Date),
+          linkPrimeiroAcesso: expect.stringMatching(/^http:\/\/localhost:3000\/recuperar-senha\?token=tenant-1\./)
+        }
       })
     );
-    expect(JSON.stringify(resposta)).not.toContain('SenhaNova@123');
+    expect(JSON.stringify(resposta)).not.toContain('convite.');
+    delete process.env.EXPOR_LINK_RECUPERACAO_SENHA;
   });
 
   it('deve impedir o gestor de desativar o proprio usuario', async () => {

@@ -138,6 +138,8 @@ test.describe('portal do cliente', () => {
     const gestaoUsuarios = page.locator('#gestao-usuarios');
     await expect(gestaoUsuarios.getByRole('heading', { name: 'Gerenciar usuarios' })).toBeVisible();
     await expect(gestaoUsuarios.getByRole('button', { name: 'Convidar usuario' })).toBeVisible();
+    await expect(gestaoUsuarios.getByText('Link de primeiro acesso enviado por email')).toBeVisible();
+    await expect(gestaoUsuarios.getByText('Senha inicial')).toHaveCount(0);
     await expect(gestaoUsuarios.getByText('gestor@octaclin.local')).toBeVisible();
     await expect(gestaoUsuarios.getByText('agenda@octaclin.local')).toBeVisible();
     await expect(gestaoUsuarios.locator('span').filter({ hasText: 'Collaborator' })).toBeVisible();

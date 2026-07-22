@@ -38,6 +38,10 @@ export interface UsuarioClienteApi {
   ultimoLoginEm?: string;
   criadoEm: string;
   atualizadoEm: string;
+  convite?: {
+    expiraEm: string;
+    linkPrimeiroAcesso?: string;
+  };
 }
 
 export interface RespostaUsuariosClienteApi {
@@ -47,7 +51,6 @@ export interface RespostaUsuariosClienteApi {
 
 export interface CriarUsuarioClienteEntrada {
   email: string;
-  senhaInicial: string;
   role: PapelUsuarioClienteCriavelApi;
 }
 

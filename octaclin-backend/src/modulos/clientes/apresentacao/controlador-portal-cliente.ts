@@ -28,7 +28,7 @@ export class ControladorPortalCliente {
 
   @Post('usuarios')
   criarUsuario(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: CriarUsuarioClienteDto) {
-    return this.servicoUsuariosCliente.criar(usuario.tenantId, dados);
+    return this.servicoUsuariosCliente.criar(usuario.tenantId, usuario.usuarioId, dados);
   }
 
   @Delete('usuarios/:id')
