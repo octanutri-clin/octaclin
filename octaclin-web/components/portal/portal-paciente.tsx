@@ -269,6 +269,51 @@ export function PortalPaciente() {
               </div>
             </section>
 
+            <section className="rounded-lg border border-linha bg-white">
+              <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+                <ClipboardList className="h-4 w-4 text-[#596273]" />
+                <h2 className="text-sm font-semibold">Proximas acoes</h2>
+              </div>
+              <div className="grid gap-3 p-4 md:grid-cols-2">
+                {portal.formulariosPendentes.slice(0, 2).map((formulario) => (
+                  <article key={formulario.envioId} className="flex min-w-0 flex-col gap-3 rounded-md border border-linha bg-[#f8fafb] p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{formulario.titulo}</p>
+                      <p className="mt-1 text-xs text-[#596273]">Expira em {formatarDataHora(formulario.expiraEm)}</p>
+                    </div>
+                    <a
+                      href={formulario.linkFormulario}
+                      className="inline-flex h-9 w-full min-w-0 max-w-full items-center justify-center rounded-md bg-primaria px-3 text-sm font-medium text-white hover:bg-[#1d6684] sm:w-auto sm:max-w-[260px]"
+                    >
+                      <span className="truncate">Responder {formulario.titulo}</span>
+                    </a>
+                  </article>
+                ))}
+
+                {portal.consultasProximas.slice(0, 1).map((consulta) => (
+                  <article key={consulta.id} className="flex min-w-0 flex-col gap-3 rounded-md border border-linha bg-[#f8fafb] p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{consulta.titulo}</p>
+                      <p className="mt-1 text-xs text-[#596273]">{formatarDataHora(consulta.inicioEm)}</p>
+                    </div>
+                    {consulta.googleEventHtmlLink ? (
+                      <a className="inline-flex h-9 w-full shrink-0 items-center justify-center rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-[#eef5f8] sm:w-auto" href={consulta.googleEventHtmlLink}>
+                        Abrir agenda
+                      </a>
+                    ) : (
+                      <span className="inline-flex h-9 shrink-0 items-center justify-center rounded-md border border-linha bg-white px-3 text-sm font-medium text-[#596273]">
+                        {rotuloStatus(consulta.status)}
+                      </span>
+                    )}
+                  </article>
+                ))}
+
+                {!portal.formulariosPendentes.length && !portal.consultasProximas.length ? (
+                  <p className="text-sm text-[#596273]">Nenhuma acao pendente para hoje.</p>
+                ) : null}
+              </div>
+            </section>
+
             <section className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
               <div className="grid gap-4">
                 <section className="rounded-lg border border-linha bg-white">
