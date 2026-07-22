@@ -4,6 +4,7 @@ import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensag
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
+import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { ServicoPacientes } from './servico-pacientes';
 
@@ -281,6 +282,12 @@ describe('ServicoPacientes', () => {
         }
       ],
       [
+        EvolucaoClinicaOrm,
+        {
+          find: jest.fn(async () => [])
+        }
+      ],
+      [
         MensagemNotificacaoOrm,
         {
           find: jest.fn(async () => [
@@ -317,6 +324,7 @@ describe('ServicoPacientes', () => {
       formulariosPendentes: 1,
       respostas: 1,
       mensagens: 1,
+      evolucoes: 0,
       ultimoEventoEm: new Date('2026-07-22T16:00:00.000Z')
     });
     expect(prontuario.linhaDoTempo.map((evento: { tipo: string }) => evento.tipo)).toEqual([
@@ -335,6 +343,90 @@ describe('ServicoPacientes', () => {
       expect.objectContaining({
         titulo: 'Resposta de Check-in semanal',
         descricao: 'Score final 74.5'
+      })
+    );
+  });
+
+  it('deve criar evolucao clinica privada criptografada e listar no prontuario', async () => {
+    const paciente = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('cripto:Maria'),
+      statusAdesao: 'em_acompanhamento',
+      scoreRisco: '40',
+      criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-01T10:00:00.000Z')
+    };
+    const evolucoesSalvas: Record<string, unknown>[] = [];
+    const repositorios = new Map<unknown, Record<string, unknown>>([
+      [PacienteOrm, { findOne: jest.fn(async () => paciente) }],
+      [AgendaConsultaOrm, { find: jest.fn(async () => []) }],
+      [EnvioQuestionarioOrm, { find: jest.fn(async () => []) }],
+      [RespostaCheckinOrm, { find: jest.fn(async () => []) }],
+      [QuestionarioOrm, { find: jest.fn(async () => []) }],
+      [MensagemNotificacaoOrm, { find: jest.fn(async () => []) }],
+      [
+        EvolucaoClinicaOrm,
+        {
+          create: jest.fn((dados: Record<string, unknown>) => dados),
+          save: jest.fn(async (dados: Record<string, unknown>) => {
+            const salvo = {
+              id: 'evolucao-1',
+              criadoEm: new Date('2026-07-22T17:00:00.000Z'),
+              atualizadoEm: new Date('2026-07-22T17:00:00.000Z'),
+              ...dados
+            };
+            evolucoesSalvas.push(salvo);
+            return salvo;
+          }),
+          find: jest.fn(async () => evolucoesSalvas)
+        }
+      ]
+    ]);
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao({ getRepository: jest.fn((entidade) => repositorios.get(entidade)) })
+        )
+      } as never,
+      {
+        criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`)),
+        descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', ''))
+      } as never,
+      limitesPermitidos as never
+    );
+
+    const evolucao = await servico.criarEvolucaoClinica('tenant-1', 'paciente-1', 'usuario-profissional-1', {
+      titulo: 'Consulta inicial',
+      conteudo: 'Paciente relatou melhora de adesao.',
+      tipo: 'consulta',
+      visibilidade: 'privada'
+    });
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1');
+
+    expect(evolucao).toEqual(
+      expect.objectContaining({
+        pacienteId: 'paciente-1',
+        autorUsuarioId: 'usuario-profissional-1',
+        titulo: 'Consulta inicial',
+        conteudo: 'Paciente relatou melhora de adesao.',
+        tipo: 'consulta',
+        visibilidade: 'privada'
+      })
+    );
+    expect(evolucoesSalvas[0]).toEqual(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        conteudoCriptografado: Buffer.from('cripto:Paciente relatou melhora de adesao.')
+      })
+    );
+    expect(prontuario.resumo.evolucoes).toBe(1);
+    expect(prontuario.linhaDoTempo[0]).toEqual(
+      expect.objectContaining({
+        tipo: 'evolucao_clinica',
+        titulo: 'Consulta inicial',
+        descricao: 'Paciente relatou melhora de adesao.'
       })
     );
   });

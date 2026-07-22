@@ -469,6 +469,7 @@ async function prepararDashboardMockado(page) {
 }
 
 async function prepararProntuarioMockado(page) {
+  let criouEvolucao = false;
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -494,6 +495,53 @@ async function prepararProntuarioMockado(page) {
   });
 
   await page.route('**/api/pacientes/paciente-1/prontuario', async (route) => {
+    const eventos = [
+      ...(criouEvolucao
+        ? [
+            {
+              id: 'evolucao-1',
+              tipo: 'evolucao_clinica',
+              titulo: 'Conduta ajustada',
+              descricao: 'Aumentar ingestao de agua no periodo da tarde.',
+              data: '2026-07-22T18:00:00.000Z',
+              status: 'ajuste_plano'
+            }
+          ]
+        : []),
+      {
+        id: 'mensagem-1',
+        tipo: 'mensagem',
+        titulo: 'Mensagem recebida',
+        descricao: 'Estou com duvida no plano.',
+        data: '2026-07-22T16:00:00.000Z',
+        status: 'recebido'
+      },
+      {
+        id: 'consulta-1',
+        tipo: 'consulta',
+        titulo: 'Consulta de retorno',
+        descricao: 'Online',
+        data: '2026-07-22T13:00:00.000Z',
+        status: 'agendada'
+      },
+      {
+        id: 'resposta-1',
+        tipo: 'resposta_formulario',
+        titulo: 'Resposta de Check-in semanal',
+        descricao: 'Score final 74.5',
+        data: '2026-07-21T15:00:00.000Z',
+        status: 'finalizado'
+      },
+      {
+        id: 'envio-1',
+        tipo: 'formulario',
+        titulo: 'Check-in semanal',
+        descricao: 'Expira em 2026-07-25T13:00:00.000Z',
+        data: '2026-07-20T13:00:00.000Z',
+        status: 'enviado'
+      }
+    ];
+
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -516,45 +564,42 @@ async function prepararProntuarioMockado(page) {
           formulariosPendentes: 1,
           respostas: 1,
           mensagens: 1,
-          ultimoEventoEm: '2026-07-22T16:00:00.000Z'
+          evolucoes: criouEvolucao ? 1 : 0,
+          ultimoEventoEm: criouEvolucao ? '2026-07-22T18:00:00.000Z' : '2026-07-22T16:00:00.000Z'
         },
-        linhaDoTempo: [
-          {
-            id: 'mensagem-1',
-            tipo: 'mensagem',
-            titulo: 'Mensagem recebida',
-            descricao: 'Estou com duvida no plano.',
-            data: '2026-07-22T16:00:00.000Z',
-            status: 'recebido'
-          },
-          {
-            id: 'consulta-1',
-            tipo: 'consulta',
-            titulo: 'Consulta de retorno',
-            descricao: 'Online',
-            data: '2026-07-22T13:00:00.000Z',
-            status: 'agendada'
-          },
-          {
-            id: 'resposta-1',
-            tipo: 'resposta_formulario',
-            titulo: 'Resposta de Check-in semanal',
-            descricao: 'Score final 74.5',
-            data: '2026-07-21T15:00:00.000Z',
-            status: 'finalizado'
-          },
-          {
-            id: 'envio-1',
-            tipo: 'formulario',
-            titulo: 'Check-in semanal',
-            descricao: 'Expira em 2026-07-25T13:00:00.000Z',
-            data: '2026-07-20T13:00:00.000Z',
-            status: 'enviado'
-          }
-        ]
+        linhaDoTempo: eventos
       })
     });
   });
+
+  await page.route('**/api/pacientes/paciente-1/evolucoes', async (route) => {
+    if (route.request().method() === 'POST') {
+      criouEvolucao = true;
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'evolucao-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          autorUsuarioId: 'usuario-profissional-1',
+          titulo: 'Conduta ajustada',
+          conteudo: 'Aumentar ingestao de agua no periodo da tarde.',
+          tipo: 'ajuste_plano',
+          visibilidade: 'privada',
+          criadoEm: '2026-07-22T18:00:00.000Z',
+          atualizadoEm: '2026-07-22T18:00:00.000Z'
+        })
+      });
+      return;
+    }
+
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+  });
+
+  return {
+    criouEvolucao: () => criouEvolucao
+  };
 }
 
 test.describe('dashboard profissional', () => {
@@ -590,6 +635,22 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Resposta de Check-in semanal')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Check-in semanal', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Voltar para pacientes' })).toHaveAttribute('href', '/pacientes');
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('permite registrar evolucao clinica privada', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByLabel('Titulo da evolucao').fill('Conduta ajustada');
+    await page.getByLabel('Tipo da evolucao').selectOption('ajuste_plano');
+    await page.getByLabel('Conteudo da evolucao').fill('Aumentar ingestao de agua no periodo da tarde.');
+    await page.getByRole('button', { name: 'Registrar evolucao' }).click();
+
+    await expect.poll(() => prontuario.criouEvolucao()).toBe(true);
+    await expect(page.getByText('Evolucao clinica registrada.')).toBeVisible();
+    await expect(page.getByText('Conduta ajustada')).toBeVisible();
+    await expect(page.getByText('Aumentar ingestao de agua no periodo da tarde.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });

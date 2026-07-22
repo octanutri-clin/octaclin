@@ -1,11 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarDays, ClipboardList, MessageSquareText, RefreshCcw, Stethoscope, UserRound } from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, CalendarDays, ClipboardList, MessageSquareText, RefreshCcw, Save, Stethoscope, UserRound } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
-import { obterProntuarioPaciente, type EventoProntuarioPacienteApi, type ProntuarioPacienteApi } from '@/lib/prontuario-api';
+import {
+  criarEvolucaoClinica,
+  obterProntuarioPaciente,
+  type EventoProntuarioPacienteApi,
+  type ProntuarioPacienteApi,
+  type TipoEvolucaoClinicaApi
+} from '@/lib/prontuario-api';
+
+interface FormularioEvolucao {
+  titulo: string;
+  tipo: TipoEvolucaoClinicaApi;
+  conteudo: string;
+}
+
+const formularioEvolucaoInicial: FormularioEvolucao = {
+  titulo: '',
+  tipo: 'observacao',
+  conteudo: ''
+};
 
 function formatarDataHora(valor?: string) {
   if (!valor) return '-';
@@ -26,7 +44,8 @@ function rotuloTipo(tipo: EventoProntuarioPacienteApi['tipo']) {
     consulta: 'Consulta',
     formulario: 'Formulario',
     resposta_formulario: 'Resposta',
-    mensagem: 'Mensagem'
+    mensagem: 'Mensagem',
+    evolucao_clinica: 'Evolucao'
   };
   return rotulos[tipo];
 }
@@ -40,6 +59,7 @@ function classeStatus(status?: string) {
 function iconeEvento(tipo: EventoProntuarioPacienteApi['tipo']) {
   if (tipo === 'consulta') return CalendarDays;
   if (tipo === 'mensagem') return MessageSquareText;
+  if (tipo === 'evolucao_clinica') return Stethoscope;
   return ClipboardList;
 }
 
@@ -94,7 +114,10 @@ function LinhaDoTempo({ eventos }: { eventos: EventoProntuarioPacienteApi[] }) {
 export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [dados, setDados] = useState<ProntuarioPacienteApi | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [salvandoEvolucao, setSalvandoEvolucao] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [sucesso, setSucesso] = useState<string | null>(null);
+  const [formularioEvolucao, setFormularioEvolucao] = useState<FormularioEvolucao>(formularioEvolucaoInicial);
 
   async function carregar() {
     setCarregando(true);
@@ -105,6 +128,28 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar prontuario.');
     } finally {
       setCarregando(false);
+    }
+  }
+
+  async function registrarEvolucao(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setSalvandoEvolucao(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      await criarEvolucaoClinica(pacienteId, {
+        titulo: formularioEvolucao.titulo.trim(),
+        conteudo: formularioEvolucao.conteudo.trim(),
+        tipo: formularioEvolucao.tipo,
+        visibilidade: 'privada'
+      });
+      setFormularioEvolucao(formularioEvolucaoInicial);
+      setSucesso('Evolucao clinica registrada.');
+      await carregar();
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar evolucao clinica.');
+    } finally {
+      setSalvandoEvolucao(false);
     }
   }
 
@@ -166,8 +211,61 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         <CartaoResumo titulo="Consultas" valor={String(dados.resumo.consultas)} detalhe="Eventos de agenda vinculados" />
         <CartaoResumo titulo="Formularios pendentes" valor={String(dados.resumo.formulariosPendentes)} detalhe="Envios aguardando resposta" />
         <CartaoResumo titulo="Respostas" valor={String(dados.resumo.respostas)} detalhe="Check-ins finalizados ou em andamento" />
-        <CartaoResumo titulo="Mensagens" valor={String(dados.resumo.mensagens)} detalhe="Interacoes registradas" />
+        <CartaoResumo titulo="Evolucoes" valor={String(dados.resumo.evolucoes ?? 0)} detalhe={`${dados.resumo.mensagens} mensagens registradas`} />
       </section>
+
+      {sucesso ? (
+        <div className="rounded-md border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">{sucesso}</div>
+      ) : null}
+
+      <form onSubmit={registrarEvolucao} className="grid gap-3 rounded-md border border-linha bg-white p-4">
+        <div>
+          <h2 className="text-base font-semibold text-tinta">Nova evolucao clinica</h2>
+          <p className="mt-1 text-sm text-[#596273]">Registro privado do profissional, salvo no historico do paciente.</p>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            Titulo da evolucao
+            <input
+              className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+              value={formularioEvolucao.titulo}
+              onChange={(evento) => setFormularioEvolucao((atual) => ({ ...atual, titulo: evento.target.value }))}
+              required
+              maxLength={180}
+            />
+          </label>
+          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            Tipo da evolucao
+            <select
+              className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+              value={formularioEvolucao.tipo}
+              onChange={(evento) => setFormularioEvolucao((atual) => ({ ...atual, tipo: evento.target.value as TipoEvolucaoClinicaApi }))}
+            >
+              <option value="observacao">Observacao</option>
+              <option value="consulta">Consulta</option>
+              <option value="retorno">Retorno</option>
+              <option value="ajuste_plano">Ajuste de plano</option>
+            </select>
+          </label>
+        </div>
+        <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          Conteudo da evolucao
+          <textarea
+            className="min-h-[112px] rounded-md border border-linha px-3 py-2 text-sm font-normal text-tinta"
+            value={formularioEvolucao.conteudo}
+            onChange={(evento) => setFormularioEvolucao((atual) => ({ ...atual, conteudo: evento.target.value }))}
+            required
+            minLength={3}
+            maxLength={6000}
+          />
+        </label>
+        <div className="flex justify-end">
+          <Botao type="submit" variante="primario" disabled={salvandoEvolucao}>
+            <Save size={16} />
+            {salvandoEvolucao ? 'Registrando' : 'Registrar evolucao'}
+          </Botao>
+        </div>
+      </form>
 
       <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
         <article className="grid gap-3">

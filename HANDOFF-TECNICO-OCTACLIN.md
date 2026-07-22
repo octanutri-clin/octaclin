@@ -1,6 +1,6 @@
 # OctaClin - Handoff tecnico
 
-Atualizado em 2026-07-22, apos a Fase 104 e a documentacao operacional para agentes.
+Atualizado em 2026-07-22, apos a Fase 105 e a documentacao operacional para agentes.
 
 Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo, leia tambem:
 
@@ -40,6 +40,7 @@ O projeto ja possui:
 - bloqueios suaves de assinatura/limite para novas criacoes sem impedir acesso a dados existentes.
 - dashboard inicial do profissional com agenda, pacientes, formularios e mensagens.
 - prontuario/linha do tempo do paciente para profissional, auditado e consolidando agenda, formularios, respostas e mensagens.
+- evolucoes/anotacoes clinicas privadas no prontuario, com conteudo criptografado e auditoria.
 
 O sistema esta em staging funcional avancado, mas ainda nao deve ser considerado pronto para clientes reais ate concluir o checklist de producao.
 
@@ -160,8 +161,8 @@ Leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md` antes de alterar qualquer i
 
 ## Estado de roadmap
 
-- Ultima fase concluida: Fase 104 - Prontuario/linha do tempo do paciente para profissional.
-- Proxima fase planejada: Fase 105 - Evolucoes/anotacoes clinicas.
+- Ultima fase concluida: Fase 105 - Evolucoes/anotacoes clinicas.
+- Proxima fase planejada: Fase 106 - Planos de acompanhamento e tarefas do paciente.
 - Roadmap completo: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regra de continuidade

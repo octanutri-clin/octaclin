@@ -19,7 +19,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPacienteDto, CriarPacienteDto } from '../aplicacao/dtos';
+import { AtualizarPacienteDto, CriarEvolucaoClinicaDto, CriarPacienteDto } from '../aplicacao/dtos';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
 
 @Controller('pacientes')
@@ -111,6 +111,48 @@ export class ControladorPacientes {
       metadados: { eventos: prontuario.linhaDoTempo.length }
     });
     return prontuario;
+  }
+
+  @Get(':id/evolucoes')
+  async listarEvolucoes(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    const evolucoes = await this.servicoPacientes.listarEvolucoesClinicas(usuario.tenantId, id);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.evolucoes.listar',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { total: evolucoes.length }
+    });
+    return evolucoes;
+  }
+
+  @Post(':id/evolucoes')
+  @Permissoes('pacientes.gerenciar')
+  async criarEvolucao(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dados: CriarEvolucaoClinicaDto
+  ) {
+    const evolucao = await this.servicoPacientes.criarEvolucaoClinica(usuario.tenantId, id, usuario.usuarioId, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.evolucoes.criar',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { evolucaoId: evolucao.id, tipo: evolucao.tipo, visibilidade: evolucao.visibilidade }
+    });
+    return evolucao;
   }
 
   @Patch(':id')

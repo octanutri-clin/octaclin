@@ -1,4 +1,5 @@
 import { IsBoolean, IsDateString, IsEmail, IsIn, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
+import type { TipoEvolucaoClinica, VisibilidadeEvolucaoClinica } from '../infraestrutura/evolucao-clinica.orm';
 
 export class CriarPacienteDto {
   @IsUUID()
@@ -69,7 +70,7 @@ export interface PacienteRespostaDto {
   atualizadoEm: Date;
 }
 
-export type TipoEventoProntuarioPaciente = 'consulta' | 'formulario' | 'resposta_formulario' | 'mensagem';
+export type TipoEventoProntuarioPaciente = 'consulta' | 'formulario' | 'resposta_formulario' | 'mensagem' | 'evolucao_clinica';
 
 export interface EventoProntuarioPacienteDto {
   id: string;
@@ -89,9 +90,42 @@ export interface ProntuarioPacienteRespostaDto {
     formulariosPendentes: number;
     respostas: number;
     mensagens: number;
+    evolucoes: number;
     ultimoEventoEm?: Date;
   };
   linhaDoTempo: EventoProntuarioPacienteDto[];
+}
+
+export class CriarEvolucaoClinicaDto {
+  @IsString()
+  @MaxLength(180)
+  titulo: string;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(6000)
+  conteudo: string;
+
+  @IsOptional()
+  @IsIn(['consulta', 'retorno', 'observacao', 'ajuste_plano'])
+  tipo?: TipoEvolucaoClinica;
+
+  @IsOptional()
+  @IsIn(['privada'])
+  visibilidade?: VisibilidadeEvolucaoClinica;
+}
+
+export interface EvolucaoClinicaRespostaDto {
+  id: string;
+  tenantId: string;
+  pacienteId: string;
+  autorUsuarioId: string;
+  titulo: string;
+  conteudo: string;
+  tipo: TipoEvolucaoClinica;
+  visibilidade: VisibilidadeEvolucaoClinica;
+  criadoEm: Date;
+  atualizadoEm: Date;
 }
 
 export class CriarConvitePacienteDto {

@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { In, IsNull } from 'typeorm';
+import { EntityManager, In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
@@ -8,7 +8,16 @@ import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensag
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
-import { AtualizarPacienteDto, CriarPacienteDto, EventoProntuarioPacienteDto, PacienteRespostaDto, ProntuarioPacienteRespostaDto } from './dtos';
+import {
+  AtualizarPacienteDto,
+  CriarEvolucaoClinicaDto,
+  CriarPacienteDto,
+  EventoProntuarioPacienteDto,
+  EvolucaoClinicaRespostaDto,
+  PacienteRespostaDto,
+  ProntuarioPacienteRespostaDto
+} from './dtos';
+import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
 @Injectable()
@@ -120,6 +129,43 @@ export class ServicoPacientes {
     };
   }
 
+  async criarEvolucaoClinica(
+    tenantId: string,
+    pacienteId: string,
+    autorUsuarioId: string,
+    dados: CriarEvolucaoClinicaDto
+  ): Promise<EvolucaoClinicaRespostaDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId);
+
+      const repositorio = gerenciador.getRepository(EvolucaoClinicaOrm);
+      const evolucao = repositorio.create({
+        tenantId,
+        pacienteId,
+        autorUsuarioId,
+        titulo: dados.titulo.trim(),
+        conteudoCriptografado: this.criptografia.criptografar(dados.conteudo.trim()),
+        tipo: dados.tipo ?? 'observacao',
+        visibilidade: dados.visibilidade ?? 'privada'
+      });
+
+      return this.mapearEvolucao(await repositorio.save(evolucao));
+    });
+  }
+
+  async listarEvolucoesClinicas(tenantId: string, pacienteId: string): Promise<EvolucaoClinicaRespostaDto[]> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId);
+      const evolucoes = await gerenciador.getRepository(EvolucaoClinicaOrm).find({
+        where: { tenantId, pacienteId },
+        order: { criadoEm: 'DESC' },
+        take: 50
+      });
+
+      return evolucoes.map((evolucao) => this.mapearEvolucao(evolucao));
+    });
+  }
+
   async obterProntuario(tenantId: string, pacienteId: string): Promise<ProntuarioPacienteRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const pacienteOrm = await gerenciador.getRepository(PacienteOrm).findOne({
@@ -130,7 +176,7 @@ export class ServicoPacientes {
         throw new NotFoundException('Paciente nao encontrado.');
       }
 
-      const [consultas, envios, respostas, mensagens] = await Promise.all([
+      const [consultas, envios, respostas, mensagens, evolucoes] = await Promise.all([
         gerenciador.getRepository(AgendaConsultaOrm).find({
           where: { tenantId, pacienteId },
           order: { inicioEm: 'DESC' },
@@ -150,6 +196,11 @@ export class ServicoPacientes {
           where: { tenantId, pacienteId },
           order: { criadoEm: 'DESC' },
           take: 30
+        }),
+        gerenciador.getRepository(EvolucaoClinicaOrm).find({
+          where: { tenantId, pacienteId },
+          order: { criadoEm: 'DESC' },
+          take: 50
         })
       ]);
 
@@ -169,7 +220,8 @@ export class ServicoPacientes {
             questionariosPorId.get(enviosPorId.get(resposta.envioQuestionarioId)?.questionarioId ?? '')?.titulo
           )
         ),
-        ...mensagens.map((mensagem) => this.mapearEventoMensagem(mensagem))
+        ...mensagens.map((mensagem) => this.mapearEventoMensagem(mensagem)),
+        ...evolucoes.map((evolucao) => this.mapearEventoEvolucao(evolucao))
       ]
         .sort((a, b) => b.data.getTime() - a.data.getTime())
         .slice(0, 80);
@@ -181,6 +233,7 @@ export class ServicoPacientes {
           formulariosPendentes: envios.filter((envio) => envio.status === 'pendente' || envio.status === 'enviado').length,
           respostas: respostas.length,
           mensagens: mensagens.length,
+          evolucoes: evolucoes.length,
           ultimoEventoEm: linhaDoTempo[0]?.data
         },
         linhaDoTempo
@@ -193,6 +246,33 @@ export class ServicoPacientes {
     if (!limite.permitido) {
       throw new ForbiddenException(limite.mensagem ?? 'Limite do plano atingido para esta acao.');
     }
+  }
+
+  private async garantirPacienteExiste(gerenciador: EntityManager, tenantId: string, pacienteId: string) {
+    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+      where: { id: pacienteId, tenantId, arquivadoEm: IsNull() }
+    });
+
+    if (!paciente) {
+      throw new NotFoundException('Paciente nao encontrado.');
+    }
+
+    return paciente;
+  }
+
+  private mapearEvolucao(evolucao: EvolucaoClinicaOrm): EvolucaoClinicaRespostaDto {
+    return {
+      id: evolucao.id,
+      tenantId: evolucao.tenantId,
+      pacienteId: evolucao.pacienteId,
+      autorUsuarioId: evolucao.autorUsuarioId,
+      titulo: evolucao.titulo,
+      conteudo: this.criptografia.descriptografar(evolucao.conteudoCriptografado),
+      tipo: evolucao.tipo,
+      visibilidade: evolucao.visibilidade,
+      criadoEm: evolucao.criadoEm,
+      atualizadoEm: evolucao.atualizadoEm
+    };
   }
 
   private mapearContato(paciente: PacienteOrm): string | undefined {
@@ -269,6 +349,22 @@ export class ServicoPacientes {
         canalId: mensagem.canalId,
         templateId: mensagem.templateId,
         erro: mensagem.erro
+      }
+    };
+  }
+
+  private mapearEventoEvolucao(evolucao: EvolucaoClinicaOrm): EventoProntuarioPacienteDto {
+    return {
+      id: evolucao.id,
+      tipo: 'evolucao_clinica',
+      titulo: evolucao.titulo,
+      descricao: this.criptografia.descriptografar(evolucao.conteudoCriptografado),
+      data: evolucao.criadoEm,
+      status: evolucao.tipo,
+      origemId: evolucao.id,
+      metadados: {
+        autorUsuarioId: evolucao.autorUsuarioId,
+        visibilidade: evolucao.visibilidade
       }
     };
   }

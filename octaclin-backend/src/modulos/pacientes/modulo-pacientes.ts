@@ -23,6 +23,7 @@ import { ControladorConvitesPaciente } from './apresentacao/controlador-convites
 import { ControladorPacientes } from './apresentacao/controlador-pacientes';
 import { ControladorPortalPaciente } from './apresentacao/controlador-portal-paciente';
 import { ConvitePacienteOrm } from './infraestrutura/convite-paciente.orm';
+import { EvolucaoClinicaOrm } from './infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from './infraestrutura/paciente.orm';
 
 @Module({
@@ -30,6 +31,7 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
     TypeOrmModule.forFeature([
       PacienteOrm,
       ConvitePacienteOrm,
+      EvolucaoClinicaOrm,
       UsuarioOrm,
       ConsentimentoLgpdOrm,
       UserActionLogOrm,

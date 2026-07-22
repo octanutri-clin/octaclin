@@ -1,6 +1,6 @@
 # OctaClin - Mapa de rotas e permissoes
 
-Atualizado apos a Fase 104. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
+Atualizado apos a Fase 105. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
 
 ## Papeis
 
@@ -131,6 +131,7 @@ Inclui permissoes de `Professional` e adiciona:
 | `/api/operacoes/assinaturas/solicitacoes` | `/operacoes/assinaturas/solicitacoes` | GET exige `SuperAdmin`; lista solicitacoes comerciais pendentes/concluidas |
 | `/api/operacoes/assinaturas/plano` | `/operacoes/assinaturas/plano` | POST exige `SuperAdmin`; aplica plano manualmente no tenant atual |
 | `/api/pacientes/[id]/prontuario` | `/pacientes/:id/prontuario` | GET exige sessao operacional com `pacientes.ler`; backend audita leitura sensivel do prontuario |
+| `/api/pacientes/[id]/evolucoes` | `/pacientes/:id/evolucoes` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e criacao de anotacoes privadas |
 
 ## Resultado da Fase 95
 

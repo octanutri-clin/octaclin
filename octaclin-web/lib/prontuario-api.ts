@@ -1,6 +1,7 @@
 import type { PacienteResumo } from './cadastros-api';
 
-export type TipoEventoProntuarioPaciente = 'consulta' | 'formulario' | 'resposta_formulario' | 'mensagem';
+export type TipoEventoProntuarioPaciente = 'consulta' | 'formulario' | 'resposta_formulario' | 'mensagem' | 'evolucao_clinica';
+export type TipoEvolucaoClinicaApi = 'consulta' | 'retorno' | 'observacao' | 'ajuste_plano';
 
 export interface EventoProntuarioPacienteApi {
   id: string;
@@ -20,9 +21,28 @@ export interface ProntuarioPacienteApi {
     formulariosPendentes: number;
     respostas: number;
     mensagens: number;
+    evolucoes: number;
     ultimoEventoEm?: string;
   };
   linhaDoTempo: EventoProntuarioPacienteApi[];
+}
+
+export interface CriarEvolucaoClinicaEntrada {
+  titulo: string;
+  conteudo: string;
+  tipo?: TipoEvolucaoClinicaApi;
+  visibilidade?: 'privada';
+}
+
+export interface EvolucaoClinicaApi extends CriarEvolucaoClinicaEntrada {
+  id: string;
+  tenantId: string;
+  pacienteId: string;
+  autorUsuarioId: string;
+  tipo: TipoEvolucaoClinicaApi;
+  visibilidade: 'privada';
+  criadoEm: string;
+  atualizadoEm: string;
 }
 
 class ErroApiProntuario extends Error {
@@ -43,4 +63,21 @@ export async function obterProntuarioPaciente(pacienteId: string): Promise<Pront
   }
 
   return resposta.json() as Promise<ProntuarioPacienteApi>;
+}
+
+export async function criarEvolucaoClinica(
+  pacienteId: string,
+  entrada: CriarEvolucaoClinicaEntrada
+): Promise<EvolucaoClinicaApi> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/evolucoes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entrada)
+  });
+  if (!resposta.ok) {
+    const detalhe = await resposta.text();
+    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+  }
+
+  return resposta.json() as Promise<EvolucaoClinicaApi>;
 }
