@@ -149,6 +149,31 @@ function montarLinhaTempoPortal(portal: PortalPacienteApi): ItemLinhaTempoPortal
     .slice(0, 8);
 }
 
+const linksPortal = [
+  { href: '#resumo', rotulo: 'Resumo' },
+  { href: '#acoes', rotulo: 'Acoes' },
+  { href: '#historico', rotulo: 'Historico' },
+  { href: '#perfil', rotulo: 'Perfil' },
+  { href: '#privacidade', rotulo: 'Privacidade' }
+];
+
+function PortalCarregando() {
+  return (
+    <section className="grid gap-4 rounded-lg border border-linha bg-white p-5" aria-live="polite" aria-busy="true">
+      <div>
+        <h2 className="text-sm font-semibold">Carregando portal</h2>
+        <p className="mt-1 text-sm text-[#596273]">Atualizando suas informacoes.</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-4">
+        {[0, 1, 2, 3].map((item) => (
+          <div key={item} className="h-20 animate-pulse rounded-md border border-linha bg-[#f8fafb]" />
+        ))}
+      </div>
+      <div className="h-28 animate-pulse rounded-md border border-linha bg-[#f8fafb]" />
+    </section>
+  );
+}
+
 export function PortalPaciente() {
   const [portal, setPortal] = useState<PortalPacienteApi | null>(null);
   const [detalheFormulario, setDetalheFormulario] = useState<DetalheFormularioRespondidoApi | null>(null);
@@ -288,7 +313,7 @@ export function PortalPaciente() {
       </header>
 
       <div className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-5">
-        {erro ? (
+        {erro && portal ? (
           <div className="flex items-center gap-2 rounded-lg border border-[#efb8ad] bg-[#fff4f1] px-4 py-3 text-sm text-perigo">
             <AlertTriangle size={16} />
             {erro}
@@ -304,7 +329,21 @@ export function PortalPaciente() {
 
         {portal ? (
           <>
-            <section className="grid gap-4 md:grid-cols-[minmax(0,1fr)_repeat(4,140px)]">
+            <nav aria-label="Navegacao do portal" className="overflow-x-auto rounded-lg border border-linha bg-white p-2">
+              <div className="flex min-w-max gap-2">
+                {linksPortal.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="inline-flex h-10 min-w-24 items-center justify-center rounded-md px-3 text-sm font-medium text-[#596273] outline-none hover:bg-[#eef5f8] focus-visible:ring-2 focus-visible:ring-[#c7e4ef]"
+                  >
+                    {link.rotulo}
+                  </a>
+                ))}
+              </div>
+            </nav>
+
+            <section id="resumo" className="scroll-mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_repeat(4,140px)]">
               <div>
                 <p className="text-sm text-[#596273]">Ola,</p>
                 <h2 className="text-2xl font-semibold text-tinta">{portal.paciente.nome}</h2>
@@ -330,7 +369,7 @@ export function PortalPaciente() {
               </div>
             </section>
 
-            <section className="rounded-lg border border-linha bg-white">
+            <section id="acoes" className="scroll-mt-4 rounded-lg border border-linha bg-white">
               <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
                 <ClipboardList className="h-4 w-4 text-[#596273]" />
                 <h2 className="text-sm font-semibold">Proximas acoes</h2>
@@ -375,7 +414,7 @@ export function PortalPaciente() {
               </div>
             </section>
 
-            <section className="rounded-lg border border-linha bg-white">
+            <section id="historico" className="scroll-mt-4 rounded-lg border border-linha bg-white">
               <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
                 <Clock3 className="h-4 w-4 text-[#596273]" />
                 <h2 className="text-sm font-semibold">Linha do tempo</h2>
@@ -402,7 +441,7 @@ export function PortalPaciente() {
 
             <section className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
               <div className="grid gap-4">
-                <section className="rounded-lg border border-linha bg-white">
+                <section id="perfil" className="scroll-mt-4 rounded-lg border border-linha bg-white">
                   <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
                     <UserRound className="h-4 w-4 text-[#596273]" />
                     <h2 className="text-sm font-semibold">Meu perfil</h2>
@@ -638,7 +677,7 @@ export function PortalPaciente() {
                 </div>
               </section>
 
-              <section className="rounded-lg border border-linha bg-white">
+              <section id="privacidade" className="scroll-mt-4 rounded-lg border border-linha bg-white">
                 <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
                   <ShieldCheck className="h-4 w-4 text-[#596273]" />
                   <h2 className="text-sm font-semibold">Privacidade</h2>
@@ -675,9 +714,27 @@ export function PortalPaciente() {
             </section>
           </>
         ) : (
-          <section className="rounded-lg border border-linha bg-white p-6 text-sm text-[#596273]">
-            {carregando ? 'Carregando portal.' : 'Portal indisponivel.'}
-          </section>
+          carregando ? (
+            <PortalCarregando />
+          ) : (
+            <section className="grid gap-4 rounded-lg border border-[#efb8ad] bg-white p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#fff4f1] text-perigo">
+                  <AlertTriangle size={18} />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base font-semibold">Portal indisponivel</h2>
+                  <p className="mt-1 break-words text-sm text-[#596273]">{erro ?? 'Nao foi possivel carregar suas informacoes.'}</p>
+                </div>
+              </div>
+              <div>
+                <Botao type="button" variante="primario" onClick={() => void carregar()}>
+                  <RefreshCcw className="h-4 w-4" />
+                  Tentar novamente
+                </Botao>
+              </div>
+            </section>
+          )
         )}
       </div>
     </main>

@@ -119,6 +119,15 @@ async function prepararPortal(page) {
   });
 }
 
+async function prepararSessaoPaciente(page) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: 'Patient', domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/portal'), domain: 'localhost', path: '/' }
+  ]);
+}
+
 async function assertSemOverflowHorizontal(page) {
   const medidas = await page.evaluate(() => ({
     larguraDocumento: document.documentElement.scrollWidth,
@@ -134,6 +143,11 @@ test.describe('portal do paciente', () => {
     await page.goto('/portal');
 
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Navegacao do portal' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Resumo' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Acoes' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Historico' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Perfil' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Proximas acoes' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Linha do tempo' })).toBeVisible();
     await expect(page.getByText('Agenda', { exact: true })).toBeVisible();
@@ -152,5 +166,23 @@ test.describe('portal do paciente', () => {
 
     const screenshot = await page.screenshot({ fullPage: true });
     await testInfo.attach(`${testInfo.project.name}-portal-paciente.png`, { body: screenshot, contentType: 'image/png' });
+  });
+
+  test('exibe estado de erro acionavel quando o portal nao carrega', async ({ page }) => {
+    await prepararSessaoPaciente(page);
+    await page.route('**/api/portal/paciente', async (route) => {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ mensagem: 'Servico temporariamente indisponivel.' })
+      });
+    });
+
+    await page.goto('/portal');
+
+    await expect(page.getByRole('heading', { name: 'Portal indisponivel' })).toBeVisible();
+    await expect(page.getByText('Servico temporariamente indisponivel.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Tentar novamente' })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
   });
 });

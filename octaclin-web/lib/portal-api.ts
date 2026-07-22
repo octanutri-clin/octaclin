@@ -128,11 +128,22 @@ class ErroApiPortal extends Error {
   }
 }
 
+async function extrairMensagemErro(resposta: Response): Promise<string> {
+  const detalhe = await resposta.text();
+  if (!detalhe) return `Falha HTTP ${resposta.status}`;
+
+  try {
+    const corpo = JSON.parse(detalhe) as { mensagem?: string; message?: string };
+    return corpo.mensagem ?? corpo.message ?? detalhe;
+  } catch {
+    return detalhe;
+  }
+}
+
 export async function obterPortalPaciente(): Promise<PortalPacienteApi> {
   const resposta = await fetch('/api/portal/paciente', { cache: 'no-store' });
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiPortal(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
   }
   return resposta.json() as Promise<PortalPacienteApi>;
 }
@@ -140,8 +151,7 @@ export async function obterPortalPaciente(): Promise<PortalPacienteApi> {
 export async function obterFormularioRespondidoPaciente(respostaId: string): Promise<DetalheFormularioRespondidoApi> {
   const resposta = await fetch(`/api/portal/paciente/formularios-respondidos/${respostaId}`, { cache: 'no-store' });
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiPortal(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
   }
   return resposta.json() as Promise<DetalheFormularioRespondidoApi>;
 }
@@ -153,8 +163,7 @@ export async function atualizarPerfilPaciente(dados: AtualizarPerfilPacienteEntr
     body: JSON.stringify(dados)
   });
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiPortal(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
   }
   return resposta.json() as Promise<PerfilPacienteAtualizadoApi>;
 }
@@ -168,8 +177,7 @@ export async function registrarConsentimentoLgpdPaciente(
     body: JSON.stringify(dados)
   });
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiPortal(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
   }
   return resposta.json() as Promise<ConsentimentoLgpdRegistradoApi>;
 }
