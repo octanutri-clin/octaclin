@@ -90,6 +90,7 @@ try {
           'exec',
           'jest',
           'permissoes.spec.ts',
+          'guarda-permissoes.spec.ts',
           'servico-usuarios-cliente.spec.ts',
           'servico-portal-cliente.spec.ts',
           'servico-recuperacao-senha.spec.ts',

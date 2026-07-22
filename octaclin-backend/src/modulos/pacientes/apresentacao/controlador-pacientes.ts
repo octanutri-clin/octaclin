@@ -14,16 +14,18 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
-import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
+import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
+import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AtualizarPacienteDto, CriarPacienteDto } from '../aplicacao/dtos';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
 
 @Controller('pacientes')
-@UseGuards(GuardaJwt, GuardaPapeis)
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
 @Papeis('SuperAdmin', 'Professional', 'Collaborator')
+@Permissoes('pacientes.ler')
 export class ControladorPacientes {
   constructor(
     private readonly servicoPacientes: ServicoPacientes,
@@ -31,6 +33,7 @@ export class ControladorPacientes {
   ) {}
 
   @Post()
+  @Permissoes('pacientes.gerenciar')
   async criar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -51,6 +54,7 @@ export class ControladorPacientes {
   }
 
   @Get()
+  @Permissoes('pacientes.listar')
   async listar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -90,6 +94,7 @@ export class ControladorPacientes {
   }
 
   @Patch(':id')
+  @Permissoes('pacientes.gerenciar')
   async atualizar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -111,6 +116,7 @@ export class ControladorPacientes {
   }
 
   @Delete(':id')
+  @Permissoes('pacientes.gerenciar')
   async arquivar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,

@@ -51,7 +51,7 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
   }, []);
 
   const itensVisiveis = useMemo(() => {
-    if (!permissoes) return itens;
+    if (!permissoes) return [];
     return itens.filter((item) => permissoes.includes(item.permissao));
   }, [permissoes]);
 

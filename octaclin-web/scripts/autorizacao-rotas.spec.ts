@@ -30,3 +30,31 @@ test('perfil operacional deve sair do portal para seu destino operacional', () =
     redirecionarPara: '/agenda'
   });
 });
+
+test('colaborador deve acessar apenas rotas operacionais autorizadas por permissao', () => {
+  const permissoesColaborador = [
+    'console.acessar',
+    'pacientes.listar',
+    'pacientes.ler',
+    'questionarios.ler',
+    'agenda.consultas.ler',
+    'agenda.consultas.criar',
+    'comunicacoes.mensagens.ler',
+    'comunicacoes.mensagens.enviar'
+  ];
+
+  assert.deepEqual(decidirAcessoRota('/agenda', 'Collaborator', '/agenda', permissoesColaborador), { permitir: true });
+  assert.deepEqual(decidirAcessoRota('/comunicacoes', 'Collaborator', '/agenda', permissoesColaborador), { permitir: true });
+  assert.deepEqual(decidirAcessoRota('/automacoes', 'Collaborator', '/agenda', permissoesColaborador), {
+    permitir: false,
+    redirecionarPara: '/agenda'
+  });
+  assert.deepEqual(decidirAcessoRota('/ia', 'Collaborator', '/agenda', permissoesColaborador), {
+    permitir: false,
+    redirecionarPara: '/agenda'
+  });
+  assert.deepEqual(decidirAcessoRota('/profissionais', 'Collaborator', '/agenda', permissoesColaborador), {
+    permitir: false,
+    redirecionarPara: '/agenda'
+  });
+});

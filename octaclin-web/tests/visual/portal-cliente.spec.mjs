@@ -19,7 +19,14 @@ async function prepararSessaoCliente(page) {
         email: 'gestor@octaclin.local',
         expiraEm: '2026-07-22T15:00:00.000Z',
         papel: 'Client',
-        permissoes: ['cliente.acessar', 'cliente.assinatura.ler', 'cliente.usuarios.gerenciar'],
+        permissoes: [
+          'cliente.acessar',
+          'cliente.assinatura.ler',
+          'cliente.usuarios.ler',
+          'cliente.usuarios.convidar',
+          'cliente.usuarios.desativar',
+          'cliente.convites.gerenciar'
+        ],
         destinoInicial: '/cliente'
       })
     });

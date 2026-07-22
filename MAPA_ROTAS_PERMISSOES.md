@@ -1,6 +1,6 @@
 # OctaClin - Mapa de rotas e permissoes
 
-Este arquivo prepara a Fase 95. Ele documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
+Atualizado apos a Fase 95. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
 
 ## Papeis
 
@@ -18,7 +18,10 @@ Este arquivo prepara a Fase 95. Ele documenta o estado atual de papeis, permisso
 
 - `cliente.acessar`
 - `cliente.assinatura.ler`
-- `cliente.usuarios.gerenciar`
+- `cliente.usuarios.ler`
+- `cliente.usuarios.convidar`
+- `cliente.usuarios.desativar`
+- `cliente.convites.gerenciar`
 - `cliente.configuracoes.gerenciar`
 
 ### Patient
@@ -35,25 +38,25 @@ Este arquivo prepara a Fase 95. Ele documenta o estado atual de papeis, permisso
 - `console.acessar`
 - `pacientes.listar`
 - `pacientes.ler`
-- `pacientes.gerenciar`
 - `questionarios.ler`
-- `questionarios.gerenciar`
 - `agenda.consultas.ler`
 - `agenda.consultas.criar`
 - `comunicacoes.mensagens.ler`
 - `comunicacoes.mensagens.enviar`
-- `automacoes.gerenciar`
-- `ia.executar`
-- `mobile.operar`
-- `gamificacao.gerenciar`
 
 ### Professional
 
 Inclui permissoes de `Collaborator` e adiciona:
 
+- `pacientes.gerenciar`
+- `questionarios.gerenciar`
 - `profissionais.ler`
 - `comunicacoes.canais.gerenciar`
 - `comunicacoes.templates.gerenciar`
+- `automacoes.gerenciar`
+- `ia.executar`
+- `mobile.operar`
+- `gamificacao.gerenciar`
 
 ### SuperAdmin
 
@@ -77,10 +80,10 @@ Inclui permissoes de `Professional` e adiciona:
 | `/profissionais` | SuperAdmin, Professional | `profissionais.ler` |
 | `/questionarios` | SuperAdmin, Professional, Collaborator | `questionarios.ler` |
 | `/comunicacoes` | SuperAdmin, Professional, Collaborator | `comunicacoes.mensagens.ler` |
-| `/automacoes` | SuperAdmin, Professional, Collaborator | `automacoes.gerenciar` |
-| `/ia` | SuperAdmin, Professional, Collaborator | `ia.executar` |
-| `/mobile` | SuperAdmin, Professional, Collaborator | `mobile.operar` |
-| `/gamificacao` | SuperAdmin, Professional, Collaborator | `gamificacao.gerenciar` |
+| `/automacoes` | SuperAdmin, Professional | `automacoes.gerenciar` |
+| `/ia` | SuperAdmin, Professional | `ia.executar` |
+| `/mobile` | SuperAdmin, Professional | `mobile.operar` |
+| `/gamificacao` | SuperAdmin, Professional | `gamificacao.gerenciar` |
 | `/operacoes` | SuperAdmin | `operacoes.auditoria.ler` |
 | `/portal` | Patient | `portal.acessar` |
 | `/cliente` | Client | `cliente.acessar` |
@@ -91,20 +94,20 @@ Inclui permissoes de `Professional` e adiciona:
 | --- | --- | --- |
 | Auth | `/auth` | Publico/autenticado conforme rota |
 | Health | `/health` | Publico |
-| Cliente | `/cliente` | `Client` |
+| Cliente | `/cliente` | `Client` + permissoes `cliente.*` por acao |
 | Portal paciente | `/portal` | `Patient` |
-| Pacientes | `/pacientes` | `SuperAdmin`, `Professional`, `Collaborator` |
+| Pacientes | `/pacientes` | `SuperAdmin`, `Professional`, `Collaborator` + `pacientes.listar`/`pacientes.ler`/`pacientes.gerenciar` |
 | Convites paciente | `/pacientes/.../convites-acesso` | `SuperAdmin`, `Professional`, `Collaborator` para criacao; publico para ativacao |
-| Profissionais | `/profissionais` | `SuperAdmin`, `Professional`; criacao/delete mais restritos a `SuperAdmin` |
-| Questionarios | `/questionarios`, `/categorias-pergunta`, `/agendamentos-questionario` | `SuperAdmin`, `Professional`, `Collaborator` |
+| Profissionais | `/profissionais` | `SuperAdmin`, `Professional` + `profissionais.ler`; mutacoes com `profissionais.gerenciar` |
+| Questionarios | `/questionarios`, `/categorias-pergunta`, `/agendamentos-questionario` | `SuperAdmin`, `Professional`, `Collaborator` + `questionarios.ler`/`questionarios.gerenciar` |
 | Formularios publicos | `/formularios` | Publico com token |
-| Agenda | `/agenda` | `SuperAdmin`, `Professional`, `Collaborator` |
-| Comunicacoes | `/comunicacoes` | `SuperAdmin`, `Professional`, `Collaborator` |
+| Agenda | `/agenda` | `SuperAdmin`, `Professional`, `Collaborator` + `agenda.consultas.ler`/`agenda.consultas.criar` |
+| Comunicacoes | `/comunicacoes` | `SuperAdmin`, `Professional`, `Collaborator` + permissoes de mensagens/canais/templates |
 | Webhook WhatsApp | `/comunicacoes/webhooks/whatsapp` | Publico validado por token/assinatura |
-| Automacoes | `/automacoes` | `SuperAdmin`, `Professional`, `Collaborator` |
-| IA | `/ia` | `SuperAdmin`, `Professional`, `Collaborator` |
+| Automacoes | `/automacoes` | `SuperAdmin`, `Professional` + `automacoes.gerenciar` |
+| IA | `/ia` | `SuperAdmin`, `Professional` + `ia.executar` |
 | Mobile | `/mobile` | `SuperAdmin`, `Professional`, `Collaborator`, `Patient` |
-| Gamificacao | `/gamificacao` | `SuperAdmin`, `Professional`, `Collaborator` |
+| Gamificacao | `/gamificacao` | `SuperAdmin`, `Professional` + `gamificacao.gerenciar` |
 | Operacoes | `/operacoes` | `SuperAdmin` |
 
 ## Rotas BFF sensiveis recentes
@@ -112,23 +115,23 @@ Inclui permissoes de `Professional` e adiciona:
 | BFF | Backend | Observacao |
 | --- | --- | --- |
 | `/api/cliente/resumo` | `/cliente/resumo` | Resumo real da conta do cliente |
-| `/api/cliente/usuarios` | `/cliente/usuarios` | Lista/cria usuarios administrativos |
-| `/api/cliente/usuarios/[id]` | `/cliente/usuarios/:id` | Desativa usuario |
-| `/api/cliente/usuarios/convites` | `/cliente/usuarios/convites` | Lista convites pendentes |
-| `/api/cliente/usuarios/[id]/convite/reenvio` | `/cliente/usuarios/:id/convite/reenvio` | Reenvia convite |
-| `/api/cliente/usuarios/[id]/convite` | `/cliente/usuarios/:id/convite` | Revoga convite |
+| `/api/cliente/usuarios` | `/cliente/usuarios` | GET exige `cliente.usuarios.ler`; POST exige `cliente.usuarios.convidar` |
+| `/api/cliente/usuarios/[id]` | `/cliente/usuarios/:id` | DELETE exige `cliente.usuarios.desativar` |
+| `/api/cliente/usuarios/convites` | `/cliente/usuarios/convites` | GET exige `cliente.convites.gerenciar` |
+| `/api/cliente/usuarios/[id]/convite/reenvio` | `/cliente/usuarios/:id/convite/reenvio` | POST exige `cliente.convites.gerenciar` |
+| `/api/cliente/usuarios/[id]/convite` | `/cliente/usuarios/:id/convite` | DELETE exige `cliente.convites.gerenciar` |
 
-## Pontos para Fase 95
+## Resultado da Fase 95
 
-- Migrar checagens de algumas rotas de papel para permissao explicita onde fizer sentido.
-- Garantir que `Client` nao acesse rotinas clinicas.
-- Garantir que `Patient` nao acesse BFF operacional nem cliente.
-- Separar melhor `Professional` e `Collaborator`.
-- Decidir se `Collaborator` pode gerenciar pacientes ou apenas operar agenda/comunicacoes.
-- Decidir se `Professional` pode gerenciar canais/templates ou se isso deve ficar com `SuperAdmin`/`Client`.
-- Criar testes negativos cross-role e cross-tenant.
-- Atualizar `octaclin-web/lib/server/autorizacao-rotas.ts` se o roteamento mudar.
-- Atualizar `octaclin-backend/src/modulos/auth/dominio/permissoes.ts` e `permissoes.spec.ts`.
+- `Client` nao acessa rotinas clinicas.
+- `Patient` continua isolado no portal.
+- `Collaborator` atua como operador delegado: agenda, mensagens e leitura/listagem, sem gestao clinica avancada.
+- `Professional` mantem gestao clinica completa.
+- Backend tem `@Permissoes(...)` e `GuardaPermissoes`.
+- BFF do cliente valida permissao antes de proxyar.
+- Middleware web usa permissoes da sessao para bloquear rotas operacionais.
+- UI esconde menus e acoes sem permissao.
+- Pendente para fases futuras: testes negativos cross-tenant mais amplos e refinamento de permissoes no app/mobile.
 
 ## Regra de atualizacao
 

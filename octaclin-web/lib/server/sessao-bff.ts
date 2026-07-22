@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { sessaoPossuiPermissao } from './permissoes-bff';
 
 const nomes = {
   accessToken: 'octaclin_access_token',
@@ -68,6 +69,13 @@ function decodificar(valor: string) {
 
 function expiraEm(resposta: RespostaToken) {
   return new Date(Date.now() + resposta.expiraEmSegundos * 1000).toISOString();
+}
+
+export class ErroPermissaoAusente extends Error {
+  constructor() {
+    super('Usuario sem permissao para esta acao.');
+    this.name = 'ErroPermissaoAusente';
+  }
 }
 
 function codificarJson(valor: unknown) {
@@ -241,6 +249,14 @@ export async function obterSessaoValidaBff(): Promise<SessaoBff> {
   const renovada = await renovarSessao(sessao);
   if (!renovada) throw new ErroSessaoAusente();
   return renovada;
+}
+
+export async function exigirPermissaoBff(permissao: string): Promise<SessaoBff> {
+  const sessao = await obterSessaoValidaBff();
+  if (!sessaoPossuiPermissao(sessao, permissao)) {
+    throw new ErroPermissaoAusente();
+  }
+  return sessao;
 }
 
 export async function requisitarBackendAutenticado(caminho: string, init?: RequestInit): Promise<Response> {

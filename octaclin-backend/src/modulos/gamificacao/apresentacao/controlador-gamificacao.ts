@@ -1,9 +1,10 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
-import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
+import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
+import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import {
   AtualizarProgressoDesafioDto,
@@ -17,8 +18,9 @@ import {
 import { ServicoGamificacao } from '../aplicacao/servico-gamificacao';
 
 @Controller('gamificacao')
-@UseGuards(GuardaJwt, GuardaPapeis)
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
 @Papeis('SuperAdmin', 'Professional', 'Collaborator')
+@Permissoes('gamificacao.gerenciar')
 export class ControladorGamificacao {
   constructor(
     private readonly servicoGamificacao: ServicoGamificacao,

@@ -5,6 +5,7 @@ const COOKIE_ACCESS_TOKEN = 'octaclin_access_token';
 const COOKIE_REFRESH_TOKEN = 'octaclin_refresh_token';
 const COOKIE_DESTINO_INICIAL = 'octaclin_destino_inicial';
 const COOKIE_PAPEL = 'octaclin_papel';
+const COOKIE_PERMISSOES = 'octaclin_permissoes';
 const ROTAS_PROTEGIDAS = [
   '/agenda',
   '/operacoes',
@@ -45,6 +46,18 @@ function papelSessao(request: NextRequest) {
   }
 }
 
+function permissoesSessao(request: NextRequest) {
+  const valor = request.cookies.get(COOKIE_PERMISSOES)?.value;
+  if (!valor) return undefined;
+
+  try {
+    const permissoes = JSON.parse(decodeURIComponent(valor));
+    return Array.isArray(permissoes) ? permissoes.filter((permissao) => typeof permissao === 'string') : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const autenticado = possuiSessao(request);
@@ -60,7 +73,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (rotaProtegida && autenticado) {
-    const decisao = decidirAcessoRota(pathname, papelSessao(request), destinoInicial(request));
+    const decisao = decidirAcessoRota(pathname, papelSessao(request), destinoInicial(request), permissoesSessao(request));
     if (!decisao.permitir && decisao.redirecionarPara) {
       return NextResponse.redirect(new URL(decisao.redirecionarPara, request.url));
     }

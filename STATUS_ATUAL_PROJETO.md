@@ -7,13 +7,14 @@ Atualizado em 2026-07-22.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 94 - Preflight de producao.
-- Proxima fase planejada: Fase 95 - Perfis e permissoes finas para usuarios administrativos.
+- Ultima fase concluida: Fase 95 - Perfis e permissoes finas para usuarios administrativos.
+- Proxima fase planejada: Fase 96 - Configuracoes da conta do cliente.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
 
 - Login unificado por perfil.
+- Permissoes finas para Client, Professional e Collaborator.
 - BFF com cookies HttpOnly.
 - Roteamento por papel.
 - Console operacional.
@@ -34,7 +35,6 @@ Atualizado em 2026-07-22.
 
 ## O que ainda falta antes de producao real
 
-- Fase 95: permissoes finas por perfil administrativo.
 - Configuracoes da conta do cliente.
 - Planos, limites e assinatura.
 - Dashboard do profissional.
@@ -77,4 +77,4 @@ Atualizado em 2026-07-22.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, mas ainda precisa de endurecimento de permissoes, observabilidade, billing/limites, QA E2E e producao isolada antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, mas ainda precisa de revisao multi-tenant ampla, observabilidade, billing/limites, QA E2E e producao isolada antes de uso comercial com clientes reais.

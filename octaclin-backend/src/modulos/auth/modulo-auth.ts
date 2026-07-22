@@ -13,6 +13,7 @@ import { ControladorAuth } from './apresentacao/controlador-auth';
 import { GuardaJwt } from './apresentacao/guarda-jwt';
 import { GuardaLimiteLogin } from './apresentacao/guarda-limite-login';
 import { GuardaPapeis } from './apresentacao/guarda-papeis';
+import { GuardaPermissoes } from './apresentacao/guarda-permissoes';
 import { RefreshTokenOrm } from './infraestrutura/refresh-token.orm';
 import { TokenRedefinicaoSenhaOrm } from './infraestrutura/token-redefinicao-senha.orm';
 
@@ -28,8 +29,9 @@ import { TokenRedefinicaoSenhaOrm } from './infraestrutura/token-redefinicao-sen
     AdaptadorEmailSmtp,
     GuardaJwt,
     GuardaPapeis,
+    GuardaPermissoes,
     GuardaLimiteLogin
   ],
-  exports: [JwtModule, GuardaJwt, GuardaPapeis, ServicoAuth, ServicoSenhas, CriptografiaDadosSensiveis]
+  exports: [JwtModule, GuardaJwt, GuardaPapeis, GuardaPermissoes, ServicoAuth, ServicoSenhas, CriptografiaDadosSensiveis]
 })
 export class ModuloAuth {}

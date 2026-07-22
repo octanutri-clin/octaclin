@@ -13,9 +13,10 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
-import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
+import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
+import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import {
   AtualizarQuestionarioDto,
@@ -32,8 +33,9 @@ import {
 import { ServicoQuestionarios } from '../aplicacao/servico-questionarios';
 
 @Controller()
-@UseGuards(GuardaJwt, GuardaPapeis)
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
 @Papeis('SuperAdmin', 'Professional', 'Collaborator')
+@Permissoes('questionarios.ler')
 export class ControladorQuestionarios {
   constructor(
     private readonly servicoQuestionarios: ServicoQuestionarios,
@@ -41,6 +43,7 @@ export class ControladorQuestionarios {
   ) {}
 
   @Post('categorias-pergunta')
+  @Permissoes('questionarios.gerenciar')
   async criarCategoria(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -59,6 +62,7 @@ export class ControladorQuestionarios {
   }
 
   @Post('questionarios')
+  @Permissoes('questionarios.gerenciar')
   async criarQuestionario(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -86,6 +90,7 @@ export class ControladorQuestionarios {
   }
 
   @Post('questionarios/modelos/:modeloId/criar')
+  @Permissoes('questionarios.gerenciar')
   async criarQuestionarioAPartirModelo(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -101,6 +106,7 @@ export class ControladorQuestionarios {
   }
 
   @Patch('questionarios/:id')
+  @Permissoes('questionarios.gerenciar')
   async atualizarQuestionario(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -115,6 +121,7 @@ export class ControladorQuestionarios {
   }
 
   @Post('questionarios/:id/duplicar')
+  @Permissoes('questionarios.gerenciar')
   async duplicarQuestionario(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -129,6 +136,7 @@ export class ControladorQuestionarios {
   }
 
   @Post('questionarios/:id/envios')
+  @Permissoes('questionarios.gerenciar')
   async criarEnvioManual(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -159,6 +167,7 @@ export class ControladorQuestionarios {
   }
 
   @Post('questionarios/:id/perguntas')
+  @Permissoes('questionarios.gerenciar')
   async adicionarPergunta(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -181,6 +190,7 @@ export class ControladorQuestionarios {
   }
 
   @Patch('questionarios/:id/perguntas/ordem')
+  @Permissoes('questionarios.gerenciar')
   async reordenarPerguntas(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -195,6 +205,7 @@ export class ControladorQuestionarios {
   }
 
   @Patch('questionarios/:id/perguntas/:perguntaId')
+  @Permissoes('questionarios.gerenciar')
   async atualizarPergunta(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -213,6 +224,7 @@ export class ControladorQuestionarios {
   }
 
   @Post('agendamentos-questionario')
+  @Permissoes('questionarios.gerenciar')
   async criarAgendamento(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,

@@ -14,16 +14,18 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
-import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
+import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
+import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AtualizarProfissionalDto, CriarProfissionalDto } from '../aplicacao/dtos';
 import { ServicoProfissionais } from '../aplicacao/servico-profissionais';
 
 @Controller('profissionais')
-@UseGuards(GuardaJwt, GuardaPapeis)
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
 @Papeis('SuperAdmin', 'Professional')
+@Permissoes('profissionais.ler')
 export class ControladorProfissionais {
   constructor(
     private readonly servicoProfissionais: ServicoProfissionais,
@@ -32,6 +34,7 @@ export class ControladorProfissionais {
 
   @Post()
   @Papeis('SuperAdmin')
+  @Permissoes('profissionais.gerenciar')
   async criar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -91,6 +94,7 @@ export class ControladorProfissionais {
   }
 
   @Patch(':id')
+  @Permissoes('profissionais.gerenciar')
   async atualizar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -113,6 +117,7 @@ export class ControladorProfissionais {
 
   @Delete(':id')
   @Papeis('SuperAdmin')
+  @Permissoes('profissionais.gerenciar')
   async arquivar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,

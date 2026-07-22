@@ -1,9 +1,10 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
-import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
+import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
+import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import {
   AssociarContatoWhatsappDto,
@@ -16,8 +17,9 @@ import { ProcessadorNotificacoes } from '../aplicacao/processador-notificacoes';
 import { ServicoComunicacoes } from '../aplicacao/servico-comunicacoes';
 
 @Controller('comunicacoes')
-@UseGuards(GuardaJwt, GuardaPapeis)
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
 @Papeis('SuperAdmin', 'Professional', 'Collaborator')
+@Permissoes('comunicacoes.mensagens.ler')
 export class ControladorComunicacoes {
   constructor(
     private readonly servicoComunicacoes: ServicoComunicacoes,
@@ -26,6 +28,7 @@ export class ControladorComunicacoes {
   ) {}
 
   @Post('canais')
+  @Permissoes('comunicacoes.canais.gerenciar')
   async criarCanal(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -40,11 +43,13 @@ export class ControladorComunicacoes {
   }
 
   @Get('canais')
+  @Permissoes('comunicacoes.canais.gerenciar')
   listarCanais(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoComunicacoes.listarCanais(usuario.tenantId);
   }
 
   @Post('templates')
+  @Permissoes('comunicacoes.templates.gerenciar')
   async criarTemplate(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -59,6 +64,7 @@ export class ControladorComunicacoes {
   }
 
   @Get('templates')
+  @Permissoes('comunicacoes.templates.gerenciar')
   listarTemplates(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoComunicacoes.listarTemplates(usuario.tenantId);
   }
@@ -69,6 +75,7 @@ export class ControladorComunicacoes {
   }
 
   @Post('mensagens')
+  @Permissoes('comunicacoes.mensagens.enviar')
   async dispararMensagem(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -86,6 +93,7 @@ export class ControladorComunicacoes {
   }
 
   @Post('whatsapp/associar-contato')
+  @Permissoes('comunicacoes.mensagens.enviar')
   async associarContatoWhatsapp(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
@@ -100,6 +108,7 @@ export class ControladorComunicacoes {
   }
 
   @Post('whatsapp/notas')
+  @Permissoes('comunicacoes.mensagens.enviar')
   async registrarNotaWhatsapp(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,

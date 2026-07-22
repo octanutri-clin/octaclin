@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
+import { ErroPermissaoAusente, ErroSessaoAusente, exigirPermissaoBff, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
 export async function GET() {
   try {
+    await exigirPermissaoBff('cliente.usuarios.ler');
     const resposta = await requisitarBackendAutenticado('/cliente/usuarios');
     return new NextResponse(await resposta.text(), {
       status: resposta.status,
@@ -12,12 +13,16 @@ export async function GET() {
     if (erro instanceof ErroSessaoAusente) {
       return NextResponse.json({ mensagem: erro.message }, { status: 401 });
     }
+    if (erro instanceof ErroPermissaoAusente) {
+      return NextResponse.json({ mensagem: erro.message }, { status: 403 });
+    }
     throw erro;
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    await exigirPermissaoBff('cliente.usuarios.convidar');
     const corpo = await request.text();
     const resposta = await requisitarBackendAutenticado('/cliente/usuarios', { method: 'POST', body: corpo });
     return new NextResponse(await resposta.text(), {
@@ -27,6 +32,9 @@ export async function POST(request: NextRequest) {
   } catch (erro) {
     if (erro instanceof ErroSessaoAusente) {
       return NextResponse.json({ mensagem: erro.message }, { status: 401 });
+    }
+    if (erro instanceof ErroPermissaoAusente) {
+      return NextResponse.json({ mensagem: erro.message }, { status: 403 });
     }
     throw erro;
   }

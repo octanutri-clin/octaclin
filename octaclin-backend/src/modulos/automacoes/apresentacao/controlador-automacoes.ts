@@ -1,16 +1,18 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
-import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
+import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
+import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AvaliarRegraDto, CriarRegraAutomacaoDto } from '../aplicacao/dtos';
 import { ServicoAutomacoes } from '../aplicacao/servico-automacoes';
 
 @Controller('automacoes')
-@UseGuards(GuardaJwt, GuardaPapeis)
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
 @Papeis('SuperAdmin', 'Professional', 'Collaborator')
+@Permissoes('automacoes.gerenciar')
 export class ControladorAutomacoes {
   constructor(
     private readonly servicoAutomacoes: ServicoAutomacoes,

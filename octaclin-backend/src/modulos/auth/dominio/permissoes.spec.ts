@@ -24,10 +24,14 @@ describe('Matriz de permissoes OctaClin', () => {
 
     expect(permissoes).toContain('cliente.acessar');
     expect(permissoes).toContain('cliente.assinatura.ler');
+    expect(permissoes).toContain('cliente.usuarios.ler');
+    expect(permissoes).toContain('cliente.usuarios.convidar');
+    expect(permissoes).toContain('cliente.usuarios.desativar');
+    expect(permissoes).toContain('cliente.convites.gerenciar');
     expect(permissoes).not.toContain('console.acessar');
     expect(permissoes).not.toContain('portal.acessar');
     expect(permissoes).not.toContain('pacientes.listar');
-    expect(possuiPermissao('Client', 'cliente.usuarios.gerenciar')).toBe(true);
+    expect(possuiPermissao('Client', 'cliente.usuarios.convidar')).toBe(true);
     expect(possuiPermissao('Client', 'agenda.consultas.criar')).toBe(false);
     expect(escopoDadosPorPapel('Client')).toBe('conta_cliente');
   });
@@ -36,7 +40,15 @@ describe('Matriz de permissoes OctaClin', () => {
     expect(possuiPermissao('SuperAdmin', 'operacoes.auditoria.ler')).toBe(true);
     expect(possuiPermissao('Professional', 'operacoes.auditoria.ler')).toBe(false);
     expect(possuiPermissao('Professional', 'agenda.consultas.criar')).toBe(true);
+    expect(possuiPermissao('Professional', 'pacientes.gerenciar')).toBe(true);
+    expect(possuiPermissao('Professional', 'questionarios.gerenciar')).toBe(true);
     expect(possuiPermissao('Collaborator', 'profissionais.gerenciar')).toBe(false);
+    expect(possuiPermissao('Collaborator', 'pacientes.gerenciar')).toBe(false);
+    expect(possuiPermissao('Collaborator', 'questionarios.gerenciar')).toBe(false);
+    expect(possuiPermissao('Collaborator', 'automacoes.gerenciar')).toBe(false);
+    expect(possuiPermissao('Collaborator', 'ia.executar')).toBe(false);
+    expect(possuiPermissao('Collaborator', 'mobile.operar')).toBe(false);
+    expect(possuiPermissao('Collaborator', 'gamificacao.gerenciar')).toBe(false);
     expect(possuiPermissao('Collaborator', 'comunicacoes.mensagens.enviar')).toBe(true);
   });
 

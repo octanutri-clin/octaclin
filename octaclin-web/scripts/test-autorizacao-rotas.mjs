@@ -36,8 +36,14 @@ executar(process.execPath, [
   '--outDir',
   pastaTemporaria,
   'scripts/autorizacao-rotas.spec.ts',
-  'lib/server/autorizacao-rotas.ts'
+  'scripts/permissoes-bff.spec.ts',
+  'lib/server/autorizacao-rotas.ts',
+  'lib/server/permissoes-bff.ts'
 ]);
 
-executar(process.execPath, ['--test', join(pastaTemporaria, 'scripts', 'autorizacao-rotas.spec.js')]);
+executar(process.execPath, [
+  '--test',
+  join(pastaTemporaria, 'scripts', 'autorizacao-rotas.spec.js'),
+  join(pastaTemporaria, 'scripts', 'permissoes-bff.spec.js')
+]);
 rmSync(pastaTemporaria, { recursive: true, force: true });

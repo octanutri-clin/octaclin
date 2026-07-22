@@ -17,7 +17,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | --- | --- | --- | --- |
 | Login unificado | Pronto | Login por perfil, cookies HttpOnly e roteamento por papel. | Revalidar em producao isolada. |
 | Recuperacao de senha | Pronto | Fluxo seguro e testes focados. | Aplicar rate limit e lockout. |
-| Permissoes finas | Parcial | Matriz inicial de papeis e rotas. | Implementar permissoes por capacidade para usuarios administrativos. |
+| Permissoes finas | Pronto | Matriz refinada, guard backend, BFF e middleware web por permissao. | Revalidar em producao isolada e ampliar testes cross-tenant. |
 | Multi-tenant | Parcial | Tenant aplicado nos fluxos principais. | Criar testes negativos cross-tenant para rotas criticas. |
 | Portal do cliente | Parcial | Base, resumo real, usuarios e convites administrativos. | Configuracoes de conta, perfis finos, assinatura e limites. |
 | Portal do profissional | Parcial | Console operacional, pacientes, agenda, formularios e comunicacoes. | Dashboard diario, prontuario, evolucoes e materiais. |
@@ -79,4 +79,4 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Seguir para a proxima fase funcional: permissoes finas para usuarios administrativos, agora renumerada no roadmap como Fase 95.
+Seguir para a proxima fase funcional: configuracoes da conta do cliente, Fase 96.

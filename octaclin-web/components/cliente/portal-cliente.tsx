@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Ban,
@@ -17,6 +17,7 @@ import {
   UsersRound
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { obterSessao } from '@/lib/auth-api';
 import {
   RespostaConvitesUsuarioClienteApi,
   PapelUsuarioClienteCriavelApi,
@@ -32,9 +33,9 @@ import {
 } from '@/lib/cliente-api';
 
 const navegacao = [
-  { href: '#conta', rotulo: 'Conta' },
-  { href: '#assinatura', rotulo: 'Assinatura' },
-  { href: '#usuarios', rotulo: 'Usuarios' }
+  { href: '#conta', rotulo: 'Conta', permissao: 'cliente.acessar' },
+  { href: '#assinatura', rotulo: 'Assinatura', permissao: 'cliente.assinatura.ler' },
+  { href: '#usuarios', rotulo: 'Usuarios', permissao: 'cliente.usuarios.ler' }
 ] as const;
 
 function formatarQuantidade(valor: number, singular: string, plural: string) {
@@ -67,6 +68,34 @@ export function PortalCliente() {
   const [desativandoUsuarioId, setDesativandoUsuarioId] = useState<string | null>(null);
   const [acaoConviteUsuarioId, setAcaoConviteUsuarioId] = useState<string | null>(null);
   const [formularioUsuario, setFormularioUsuario] = useState(formularioUsuarioInicial);
+  const [permissoes, setPermissoes] = useState<string[]>([]);
+  const [permissoesCarregadas, setPermissoesCarregadas] = useState(false);
+
+  useEffect(() => {
+    let ativo = true;
+
+    void obterSessao()
+      .then((sessao) => {
+        if (!ativo) return;
+        setPermissoes(sessao?.permissoes ?? []);
+      })
+      .catch(() => {
+        if (ativo) setPermissoes([]);
+      })
+      .finally(() => {
+        if (ativo) setPermissoesCarregadas(true);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const possuiPermissao = (permissao: string) => permissoes.includes(permissao);
+  const podeLerUsuarios = possuiPermissao('cliente.usuarios.ler');
+  const podeConvidarUsuarios = possuiPermissao('cliente.usuarios.convidar');
+  const podeDesativarUsuarios = possuiPermissao('cliente.usuarios.desativar');
+  const podeGerenciarConvites = possuiPermissao('cliente.convites.gerenciar');
 
   useEffect(() => {
     let ativo = true;
@@ -91,7 +120,7 @@ export function PortalCliente() {
     };
   }, []);
 
-  async function carregarUsuarios() {
+  const carregarUsuarios = useCallback(async () => {
     setCarregandoUsuarios(true);
     setErroUsuarios(null);
 
@@ -102,9 +131,9 @@ export function PortalCliente() {
     } finally {
       setCarregandoUsuarios(false);
     }
-  }
+  }, []);
 
-  async function carregarConvites() {
+  const carregarConvites = useCallback(async () => {
     setCarregandoConvites(true);
     setErroUsuarios(null);
 
@@ -115,7 +144,7 @@ export function PortalCliente() {
     } finally {
       setCarregandoConvites(false);
     }
-  }
+  }, []);
 
   async function convidarUsuario(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -196,9 +225,20 @@ export function PortalCliente() {
   }
 
   useEffect(() => {
-    void carregarUsuarios();
-    void carregarConvites();
-  }, []);
+    if (!permissoesCarregadas) return;
+
+    if (podeLerUsuarios) {
+      void carregarUsuarios();
+    } else {
+      setCarregandoUsuarios(false);
+    }
+
+    if (podeGerenciarConvites) {
+      void carregarConvites();
+    } else {
+      setCarregandoConvites(false);
+    }
+  }, [permissoesCarregadas, podeLerUsuarios, podeGerenciarConvites, carregarUsuarios, carregarConvites]);
 
   const indicadores = useMemo(
     () => [
@@ -222,6 +262,11 @@ export function PortalCliente() {
     ],
     [resumo]
   );
+  const navegacaoVisivel = useMemo(
+    () => navegacao.filter((item) => permissoes.includes(item.permissao)),
+    [permissoes]
+  );
+  const podeVerGestaoUsuarios = podeLerUsuarios || podeConvidarUsuarios || podeGerenciarConvites;
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
@@ -242,7 +287,7 @@ export function PortalCliente() {
         </div>
         <div className="mx-auto w-full max-w-[1180px] px-4 pb-4 lg:px-6">
           <nav aria-label="Navegacao do cliente" className="flex gap-1 overflow-x-auto rounded-lg border border-linha bg-[#f8fafb] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {navegacao.map((item) => (
+            {navegacaoVisivel.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -334,6 +379,7 @@ export function PortalCliente() {
           </section>
         </div>
 
+        {podeVerGestaoUsuarios ? (
         <section id="gestao-usuarios" className="scroll-mt-4 rounded-lg border border-linha bg-white" aria-busy={carregandoUsuarios}>
           <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
             <div>
@@ -342,10 +388,12 @@ export function PortalCliente() {
                 {usuarios ? `${usuarios.total} acessos administrativos` : 'Carregando acessos administrativos'}
               </p>
             </div>
-            <Botao type="button" onClick={() => void carregarUsuarios()} disabled={carregandoUsuarios}>
-              <RefreshCcw size={16} />
-              {carregandoUsuarios ? 'Atualizando' : 'Atualizar'}
-            </Botao>
+            {podeLerUsuarios ? (
+              <Botao type="button" onClick={() => void carregarUsuarios()} disabled={carregandoUsuarios}>
+                <RefreshCcw size={16} />
+                {carregandoUsuarios ? 'Atualizando' : 'Atualizar'}
+              </Botao>
+            ) : null}
           </div>
 
           <div className="grid gap-4 p-4">
@@ -362,6 +410,7 @@ export function PortalCliente() {
               </div>
             ) : null}
 
+            {podeConvidarUsuarios ? (
             <form onSubmit={convidarUsuario} className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3 lg:grid-cols-[1fr_180px_auto]">
               <label className="grid gap-1 text-xs font-semibold text-[#596273]">
                 Email
@@ -394,7 +443,9 @@ export function PortalCliente() {
               </div>
               <p className="text-sm text-[#596273] lg:col-span-3">Link de primeiro acesso enviado por email.</p>
             </form>
+            ) : null}
 
+            {podeGerenciarConvites ? (
             <section id="convites-usuarios" className="rounded-md border border-linha bg-[#f8fafb]" aria-busy={carregandoConvites}>
               <div className="flex flex-col gap-2 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-2">
@@ -444,7 +495,9 @@ export function PortalCliente() {
                 )}
               </div>
             </section>
+            ) : null}
 
+            {podeLerUsuarios ? (
             <div className="overflow-x-auto rounded-md border border-linha bg-white">
               <div className="min-w-[760px]">
                 <div className="grid grid-cols-[1.4fr_160px_120px_140px_96px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-[#596273]">
@@ -467,7 +520,7 @@ export function PortalCliente() {
                             type="button"
                             variante="fantasma"
                             onClick={() => void desativarUsuario(usuario.id, usuario.email)}
-                            disabled={!usuario.ativo || usuario.role === 'Client' || desativandoUsuarioId === usuario.id}
+                            disabled={!podeDesativarUsuarios || !usuario.ativo || usuario.role === 'Client' || desativandoUsuarioId === usuario.id}
                             aria-label={`Desativar ${usuario.email}`}
                           >
                             <Trash2 size={16} />
@@ -481,8 +534,10 @@ export function PortalCliente() {
                 </div>
               </div>
             </div>
+            ) : null}
           </div>
         </section>
+        ) : null}
       </section>
     </main>
   );

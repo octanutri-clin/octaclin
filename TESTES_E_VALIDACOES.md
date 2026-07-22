@@ -37,7 +37,7 @@ pnpm --dir octaclin-backend typecheck
 Specs recentes importantes:
 
 ```powershell
-pnpm --dir octaclin-backend exec jest servico-usuarios-cliente.spec.ts servico-recuperacao-senha.spec.ts servico-portal-cliente.spec.ts permissoes.spec.ts --runInBand
+pnpm --dir octaclin-backend exec jest servico-usuarios-cliente.spec.ts servico-recuperacao-senha.spec.ts servico-portal-cliente.spec.ts permissoes.spec.ts guarda-permissoes.spec.ts --runInBand
 ```
 
 ## Validacao web focada
@@ -88,7 +88,7 @@ Remove-Item $out,$err -ErrorAction SilentlyContinue
 Fase 95 e semelhantes devem rodar:
 
 ```powershell
-pnpm --dir octaclin-backend exec jest permissoes.spec.ts --runInBand
+pnpm --dir octaclin-backend exec jest permissoes.spec.ts guarda-permissoes.spec.ts --runInBand
 pnpm --dir octaclin-web test:authz
 pnpm --dir octaclin-backend typecheck
 pnpm --dir octaclin-web typecheck

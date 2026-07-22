@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 94.
+Atualizado apos a Fase 95.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -43,11 +43,14 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 
 ### Bloco A - Portal do cliente e administracao SaaS
 
-- [ ] Fase 95 - Perfis e permissoes finas para usuarios administrativos.
+- [x] Fase 95 - Perfis e permissoes finas para usuarios administrativos.
   - Separar capacidades de `Client`, `Professional` e `Collaborator`.
   - Criar matriz operacional clara para cliente, profissional, recepcao/assistente e admin interno.
   - Validar rotas backend/BFF/frontend por permissao, nao apenas por papel.
-  - Saida esperada: testes de permissao e UI escondendo acoes indevidas.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-22.
+  - Validacoes: `pnpm --dir octaclin-backend exec jest permissoes.spec.ts guarda-permissoes.spec.ts servico-usuarios-cliente.spec.ts --runInBand`, `pnpm --dir octaclin-backend typecheck`, `pnpm --dir octaclin-web test:authz`, `pnpm --dir octaclin-web typecheck`.
+  - Saida entregue: testes de permissao, guard backend, BFF protegido, middleware por permissao e UI escondendo acoes indevidas.
 
 - [ ] Fase 96 - Configuracoes da conta do cliente.
   - Permitir editar nome da clinica, dados basicos, timezone, idioma e canais padrao.

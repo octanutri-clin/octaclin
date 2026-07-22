@@ -31,7 +31,10 @@ export type PermissaoOctaClin =
   | 'portal.perfil.gerenciar'
   | 'cliente.acessar'
   | 'cliente.assinatura.ler'
-  | 'cliente.usuarios.gerenciar'
+  | 'cliente.usuarios.ler'
+  | 'cliente.usuarios.convidar'
+  | 'cliente.usuarios.desativar'
+  | 'cliente.convites.gerenciar'
   | 'cliente.configuracoes.gerenciar';
 
 const permissoesPaciente = [
@@ -46,7 +49,10 @@ const permissoesPaciente = [
 const permissoesCliente = [
   'cliente.acessar',
   'cliente.assinatura.ler',
-  'cliente.usuarios.gerenciar',
+  'cliente.usuarios.ler',
+  'cliente.usuarios.convidar',
+  'cliente.usuarios.desativar',
+  'cliente.convites.gerenciar',
   'cliente.configuracoes.gerenciar'
 ] as const satisfies readonly PermissaoOctaClin[];
 
@@ -54,24 +60,24 @@ const permissoesColaborador = [
   'console.acessar',
   'pacientes.listar',
   'pacientes.ler',
-  'pacientes.gerenciar',
   'questionarios.ler',
-  'questionarios.gerenciar',
   'agenda.consultas.ler',
   'agenda.consultas.criar',
   'comunicacoes.mensagens.ler',
-  'comunicacoes.mensagens.enviar',
-  'automacoes.gerenciar',
-  'ia.executar',
-  'mobile.operar',
-  'gamificacao.gerenciar'
+  'comunicacoes.mensagens.enviar'
 ] as const satisfies readonly PermissaoOctaClin[];
 
 const permissoesProfissional = [
   ...permissoesColaborador,
+  'pacientes.gerenciar',
+  'questionarios.gerenciar',
   'profissionais.ler',
   'comunicacoes.canais.gerenciar',
-  'comunicacoes.templates.gerenciar'
+  'comunicacoes.templates.gerenciar',
+  'automacoes.gerenciar',
+  'ia.executar',
+  'mobile.operar',
+  'gamificacao.gerenciar'
 ] as const satisfies readonly PermissaoOctaClin[];
 
 const permissoesSuperAdmin = [
