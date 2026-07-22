@@ -4,12 +4,13 @@ Este documento define como Codex, Claude Code, Cursor, desenvolvedores humanos e
 
 ## Regra principal
 
-Trabalhar uma fase por vez. Se um desenvolvedor estiver implementando uma fase, os demais devem aguardar, revisar ou preparar contexto, mas nao commitar alteracoes concorrentes na mesma area.
+Trabalhar uma fase por vez, mesmo quando o mesmo desenvolvedor for avancar varias fases em sequencia. Se um desenvolvedor estiver implementando uma fase, os demais devem aguardar, revisar ou preparar contexto, mas nao commitar alteracoes concorrentes na mesma area.
 
 ## Estado atual
 
 - Ultima fase concluida: Fase 105.
 - Proxima fase planejada: Fase 106 - Planos de acompanhamento e tarefas do paciente.
+- Pacote multifase: `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`.
 - Fonte de verdade: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Antes de iniciar trabalho
@@ -40,6 +41,16 @@ Trabalhar uma fase por vez. Se um desenvolvedor estiver implementando uma fase, 
 6. Fazer push.
 7. Informar commit, validacoes e proxima fase.
 
+## Se for continuar para outra fase
+
+Antes de iniciar a fase seguinte:
+
+1. Confirmar que o push anterior foi concluido.
+2. Confirmar `git status --short` limpo.
+3. Reabrir `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
+4. Conferir se a fase seguinte depende de acesso externo.
+5. Registrar no chat/time: `Iniciando Fase XXX - nome`.
+
 ## Quando pausar para economizar tokens
 
 Se o limite semanal de tokens estiver alto ou proximo do fim:
@@ -61,6 +72,7 @@ HANDOFF-TECNICO-OCTACLIN.md e os arquivos fase-*.md recentes.
 
 Ultima fase concluida: Fase 105.
 Proxima fase: Fase 106 - Planos de acompanhamento e tarefas do paciente.
+Pode avancar por varias fases, mas feche uma fase por commit antes de seguir.
 Trabalhe por TDD, atualize a documentacao viva ao final, rode validacoes,
 commite e faca push.
 ```

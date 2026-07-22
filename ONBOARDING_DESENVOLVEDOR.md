@@ -8,6 +8,7 @@ Este guia e para desenvolvedores e agentes de IA que vao trabalhar no OctaClin j
 - O desenvolvimento deve continuar por fases numeradas.
 - A fase atual concluida e a Fase 105.
 - A proxima fase planejada e a Fase 106 - Planos de acompanhamento e tarefas do paciente.
+- O desenvolvedor pode avancar por varias fases em sequencia, desde que feche uma fase por vez com validacao, documentacao, commit e push.
 - Nao vamos duplicar direcao de produto em paralelo. Quando um desenvolvedor estiver codando uma fase, os demais ficam em pausa ou atuam apenas em revisao/documentacao combinada.
 
 ## Primeira leitura obrigatoria
@@ -17,11 +18,13 @@ Este guia e para desenvolvedores e agentes de IA que vao trabalhar no OctaClin j
 3. `RESUMO_FASES_CONCLUIDAS.md`
 4. `STATUS_ATUAL_PROJETO.md`
 5. `HANDOFF-TECNICO-OCTACLIN.md`
-6. `MAPA_ROTAS_PERMISSOES.md`
-7. `TESTES_E_VALIDACOES.md`
-8. `VARIAVEIS_AMBIENTE.md`
-9. `RUNBOOK_PRODUCAO.md`
-10. Os ultimos arquivos `fase-*.md`
+6. `COORDENACAO_DESENVOLVIMENTO_IA.md`
+7. `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`
+8. `MAPA_ROTAS_PERMISSOES.md`
+9. `TESTES_E_VALIDACOES.md`
+10. `VARIAVEIS_AMBIENTE.md`
+11. `RUNBOOK_PRODUCAO.md`
+12. Os ultimos arquivos `fase-*.md`
 
 ## Como entrar no projeto
 
@@ -32,6 +35,7 @@ Se o desenvolvedor ja vai conectar o Codex/IA dele ao GitHub, ele deve:
 3. Ler os documentos obrigatorios acima antes de pedir qualquer alteracao a IA.
 4. Conferir o ultimo commit com `git log --oneline --max-count=5`.
 5. Confirmar que o trabalho seguinte e a Fase 106, salvo nova decisao do usuario.
+6. Se for avancar mais de uma fase, usar `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md` como guia de sequencia.
 
 Se ele for trabalhar em maquina local propria, pode clonar o repo normalmente. Se ele estiver apenas plugando uma IA ao GitHub, nao precisa clonar antes de entender o roadmap.
 
@@ -43,6 +47,7 @@ Se ele for trabalhar em maquina local propria, pode clonar o repo normalmente. S
 - Se alguem precisar mexer em paralelo, usar branch separada e avisar o escopo.
 - Ao terminar, a fase deve gerar um commit pequeno, validado e com documentacao atualizada.
 - Depois do push, os demais devem dar pull/sincronizar antes de continuar.
+- Se a mesma pessoa/agente continuar para a proxima fase, repetir o ciclo de leitura rapida, implementacao, validacao, docs, commit e push.
 
 ## Regras para agentes de IA
 
@@ -114,12 +119,14 @@ O projeto ja usa:
 
 O desenvolvedor nao precisa de todos os acessos no primeiro dia. Conceda apenas o necessario para a fase em andamento.
 
-## Primeiro trabalho recomendado
+## Sequencia inicial recomendada
 
-Comecar pela Fase 106:
+Comecar pela Fase 106 e seguir o pacote multifase:
 
 - Planejar modelo de dados de planos de acompanhamento.
 - Criar tarefas/metas prescritas pelo profissional.
 - Exibir no prontuario do profissional.
 - Preparar visibilidade futura no portal do paciente.
 - Atualizar roadmap e resumo ao final.
+
+Depois, seguir para as fases seguintes do `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, especialmente Fases 107 a 112, se nao houver bloqueio externo.

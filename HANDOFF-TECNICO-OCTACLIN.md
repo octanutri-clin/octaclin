@@ -17,6 +17,8 @@ Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo
 - `CHECKLIST_GO_LIVE.md`
 - `ONBOARDING_DESENVOLVEDOR.md`
 - `COORDENACAO_DESENVOLVIMENTO_IA.md`
+- `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`
+- `MENSAGEM_HANDOFF_DESENVOLVEDOR.md`
 - `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md`
 
 ## Resumo executivo
@@ -56,6 +58,8 @@ O sistema esta em staging funcional avancado, mas ainda nao deve ser considerado
 - `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`: roadmap vivo ate producao.
 - `ONBOARDING_DESENVOLVEDOR.md`: guia de entrada para novo desenvolvedor.
 - `COORDENACAO_DESENVOLVIMENTO_IA.md`: fluxo para evitar conflito entre desenvolvedores/agentes.
+- `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`: roteiro para avancar varias fases em sequencia.
+- `MENSAGEM_HANDOFF_DESENVOLVEDOR.md`: mensagem pronta de repasse.
 - `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md`: acessos e ferramentas recomendadas.
 
 ## Credenciais demo locais

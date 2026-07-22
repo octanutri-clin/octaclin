@@ -10,7 +10,7 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 4. `VARIAVEIS_AMBIENTE.md` se a tarefa tocar deploy, integracoes, secrets ou ambiente.
 5. `RUNBOOK_PRODUCAO.md` se a tarefa tocar Render, Neon, Upstash, Gmail, Meta, Google Calendar ou operacao.
 6. `DECISOES_ARQUITETURA.md` se a tarefa alterar arquitetura, seguranca, tenancy, auth, dados ou integracoes.
-7. `ONBOARDING_DESENVOLVEDOR.md`, `COORDENACAO_DESENVOLVIMENTO_IA.md` e `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` quando um novo desenvolvedor/agente entrar no projeto.
+7. `ONBOARDING_DESENVOLVEDOR.md`, `COORDENACAO_DESENVOLVIMENTO_IA.md`, `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md` e `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` quando um novo desenvolvedor/agente entrar no projeto.
 
 ## Estado atual
 
@@ -30,6 +30,7 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 - Use commits pequenos e objetivos.
 - Por padrao, faca push para `main` apos validar e commitar, pois o usuario pediu continuidade com GitHub como fonte de verdade.
 - Se outro desenvolvedor ou agente estiver trabalhando na fase atual, aguarde ou combine escopo antes de alterar a mesma area.
+- Um desenvolvedor/agente pode avancar por varias fases, desde que conclua cada fase com documentacao, validacao, commit e push antes de iniciar a proxima.
 - Nunca reverta mudancas que voce nao fez sem pedido explicito.
 - Nunca commite secrets, tokens, senhas, arquivos `.env` reais, dumps de banco ou logs com credenciais.
 

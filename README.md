@@ -13,6 +13,11 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 - `STATUS_ATUAL_PROJETO.md` - snapshot do estado atual e riscos.
 - `PREFLIGHT_PRODUCAO.md` - prontidao por area e gates antes/depois de cada fase.
 - `HANDOFF-TECNICO-OCTACLIN.md` - handoff tecnico atualizado.
+- `ONBOARDING_DESENVOLVEDOR.md` - entrada de novo desenvolvedor/agente.
+- `COORDENACAO_DESENVOLVIMENTO_IA.md` - regras para trabalhar com multiplas IAs/desenvolvedores.
+- `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md` - escopo recomendado para avancar por varias fases.
+- `MENSAGEM_HANDOFF_DESENVOLVEDOR.md` - mensagem pronta para repassar o contexto.
+- `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` - ferramentas, plugins e acessos recomendados.
 - `MAPA_ROTAS_PERMISSOES.md` - mapa de papeis, permissoes e rotas.
 - `TESTES_E_VALIDACOES.md` - matriz de comandos de validacao.
 - `VARIAVEIS_AMBIENTE.md` - variaveis necessarias sem valores secretos.
@@ -28,6 +33,8 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 ## Regra de continuidade
 
 O projeto evolui por fases numeradas. Ao concluir uma fase, atualize o checklist vivo, crie/atualize o arquivo da fase, valide, commite e faca push.
+
+Quando outro desenvolvedor ou agente assumir, ele pode avancar por varias fases, mas deve fechar cada fase separadamente com documentacao, validacao, commit e push antes de iniciar a proxima.
 
 ## Validacao rapida
 

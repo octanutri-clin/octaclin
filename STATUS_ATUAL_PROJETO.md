@@ -84,6 +84,8 @@ Atualizado em 2026-07-22.
 - `CHECKLIST_GO_LIVE.md`: liberacao para clientes reais.
 - `ONBOARDING_DESENVOLVEDOR.md`: entrada de novos desenvolvedores/agentes.
 - `COORDENACAO_DESENVOLVIMENTO_IA.md`: regras para trabalho alternado entre pessoas e IAs.
+- `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`: pacote multifase para o desenvolvedor seguir enquanto outros agentes ficam pausados.
+- `MENSAGEM_HANDOFF_DESENVOLVEDOR.md`: texto pronto para repassar o contexto do projeto.
 - `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md`: ferramentas, plugins e acessos recomendados.
 
 ## Risco principal atual
