@@ -39,7 +39,7 @@ export class ControladorPacientes {
     @Req() requisicao: Request,
     @Body() dados: CriarPacienteDto
   ) {
-    const paciente = await this.servicoPacientes.criar(usuario.tenantId, dados);
+    const paciente = await this.servicoPacientes.criar(usuario.tenantId, dados, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -61,7 +61,7 @@ export class ControladorPacientes {
     @Query('pagina', new ParseIntPipe({ optional: true })) pagina = 1,
     @Query('limite', new ParseIntPipe({ optional: true })) limite = 25
   ) {
-    const resultado = await this.servicoPacientes.listar(usuario.tenantId, pagina, limite);
+    const resultado = await this.servicoPacientes.listar(usuario.tenantId, usuario, pagina, limite);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -80,7 +80,7 @@ export class ControladorPacientes {
     @Req() requisicao: Request,
     @Param('id', ParseUUIDPipe) id: string
   ) {
-    const paciente = await this.servicoPacientes.obterPorId(usuario.tenantId, id);
+    const paciente = await this.servicoPacientes.obterPorId(usuario.tenantId, id, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -99,7 +99,7 @@ export class ControladorPacientes {
     @Req() requisicao: Request,
     @Param('id', ParseUUIDPipe) id: string
   ) {
-    const prontuario = await this.servicoPacientes.obterProntuario(usuario.tenantId, id);
+    const prontuario = await this.servicoPacientes.obterProntuario(usuario.tenantId, id, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -119,7 +119,7 @@ export class ControladorPacientes {
     @Req() requisicao: Request,
     @Param('id', ParseUUIDPipe) id: string
   ) {
-    const evolucoes = await this.servicoPacientes.listarEvolucoesClinicas(usuario.tenantId, id);
+    const evolucoes = await this.servicoPacientes.listarEvolucoesClinicas(usuario.tenantId, id, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -141,7 +141,7 @@ export class ControladorPacientes {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dados: CriarEvolucaoClinicaDto
   ) {
-    const evolucao = await this.servicoPacientes.criarEvolucaoClinica(usuario.tenantId, id, usuario.usuarioId, dados);
+    const evolucao = await this.servicoPacientes.criarEvolucaoClinica(usuario.tenantId, id, usuario.usuarioId, dados, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -161,7 +161,7 @@ export class ControladorPacientes {
     @Req() requisicao: Request,
     @Param('id', ParseUUIDPipe) id: string
   ) {
-    const tarefas = await this.servicoPacientes.listarTarefasAcompanhamento(usuario.tenantId, id);
+    const tarefas = await this.servicoPacientes.listarTarefasAcompanhamento(usuario.tenantId, id, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -183,7 +183,7 @@ export class ControladorPacientes {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dados: CriarTarefaAcompanhamentoDto
   ) {
-    const tarefa = await this.servicoPacientes.criarTarefaAcompanhamento(usuario.tenantId, id, usuario.usuarioId, dados);
+    const tarefa = await this.servicoPacientes.criarTarefaAcompanhamento(usuario.tenantId, id, usuario.usuarioId, dados, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -206,7 +206,7 @@ export class ControladorPacientes {
     @Param('tarefaId', ParseUUIDPipe) tarefaId: string,
     @Body() dados: AtualizarTarefaAcompanhamentoDto
   ) {
-    const tarefa = await this.servicoPacientes.atualizarTarefaAcompanhamento(usuario.tenantId, id, tarefaId, dados);
+    const tarefa = await this.servicoPacientes.atualizarTarefaAcompanhamento(usuario.tenantId, id, tarefaId, dados, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -228,7 +228,7 @@ export class ControladorPacientes {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dados: AtualizarPacienteDto
   ) {
-    const paciente = await this.servicoPacientes.atualizar(usuario.tenantId, id, dados);
+    const paciente = await this.servicoPacientes.atualizar(usuario.tenantId, id, dados, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -249,7 +249,7 @@ export class ControladorPacientes {
     @Req() requisicao: Request,
     @Param('id', ParseUUIDPipe) id: string
   ) {
-    await this.servicoPacientes.arquivar(usuario.tenantId, id);
+    await this.servicoPacientes.arquivar(usuario.tenantId, id, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,

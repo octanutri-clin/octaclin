@@ -21,7 +21,7 @@ export class ControladorAgenda {
 
   @Get('consultas')
   listarConsultas(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoAgenda.listarConsultas(usuario.tenantId);
+    return this.servicoAgenda.listarConsultas(usuario.tenantId, usuario);
   }
 
   @Post('consultas')
@@ -31,7 +31,7 @@ export class ControladorAgenda {
     @Req() requisicao: Request,
     @Body() dados: CriarConsultaAgendaDto
   ) {
-    const consulta = await this.servicoAgenda.criarConsulta(usuario.tenantId, dados);
+    const consulta = await this.servicoAgenda.criarConsulta(usuario.tenantId, dados, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -58,7 +58,7 @@ export class ControladorAgenda {
     @Param('consultaId', ParseUUIDPipe) consultaId: string,
     @Body() dados: RemarcarConsultaAgendaDto
   ) {
-    const consulta = await this.servicoAgenda.remarcarConsulta(usuario.tenantId, consultaId, dados);
+    const consulta = await this.servicoAgenda.remarcarConsulta(usuario.tenantId, consultaId, dados, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -84,7 +84,7 @@ export class ControladorAgenda {
     @Param('consultaId', ParseUUIDPipe) consultaId: string,
     @Body() dados: CancelarConsultaAgendaDto
   ) {
-    const consulta = await this.servicoAgenda.cancelarConsulta(usuario.tenantId, consultaId, dados ?? {});
+    const consulta = await this.servicoAgenda.cancelarConsulta(usuario.tenantId, consultaId, dados ?? {}, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,

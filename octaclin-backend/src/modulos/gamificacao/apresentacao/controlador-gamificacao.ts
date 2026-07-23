@@ -29,7 +29,7 @@ export class ControladorGamificacao {
 
   @Get('circulos')
   listarCirculos(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoGamificacao.listarCirculos(usuario.tenantId);
+    return this.servicoGamificacao.listarCirculos(usuario.tenantId, usuario);
   }
 
   @Post('circulos')
@@ -38,7 +38,7 @@ export class ControladorGamificacao {
     @Req() requisicao: Request,
     @Body() dados: CriarCirculoDto
   ) {
-    const circulo = await this.servicoGamificacao.criarCirculo(usuario.tenantId, dados);
+    const circulo = await this.servicoGamificacao.criarCirculo(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'gamificacao.circulo.criar', 'circulo_pacientes', circulo.id, {
       profissionalId: dados.profissionalId,
       privado: dados.privado ?? true
@@ -78,7 +78,7 @@ export class ControladorGamificacao {
 
   @Get('desafios')
   listarDesafios(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoGamificacao.listarDesafios(usuario.tenantId);
+    return this.servicoGamificacao.listarDesafios(usuario.tenantId, usuario);
   }
 
   @Post('desafios')
@@ -87,7 +87,7 @@ export class ControladorGamificacao {
     @Req() requisicao: Request,
     @Body() dados: CriarDesafioDto
   ) {
-    const desafio = await this.servicoGamificacao.criarDesafio(usuario.tenantId, dados);
+    const desafio = await this.servicoGamificacao.criarDesafio(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'gamificacao.desafio.criar', 'desafio', desafio.id, {
       profissionalId: dados.profissionalId,
       iniciaEm: dados.iniciaEm,

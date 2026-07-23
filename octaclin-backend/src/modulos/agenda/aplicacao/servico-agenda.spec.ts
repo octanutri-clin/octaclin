@@ -1,9 +1,26 @@
 import { BadRequestException } from '@nestjs/common';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
 import { ServicoAgenda } from './servico-agenda';
+
+const usuarioColaborador: UsuarioAutenticado = {
+  usuarioId: 'usuario-colaborador-1',
+  tenantId: 'tenant-1',
+  papel: 'Collaborator',
+  emailHash: 'hash-colaborador',
+  permissoes: []
+};
+
+const usuarioProfissional: UsuarioAutenticado = {
+  usuarioId: 'usuario-profissional-1',
+  tenantId: 'tenant-1',
+  papel: 'Professional',
+  emailHash: 'hash-profissional',
+  permissoes: []
+};
 
 function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
   let ultimoSalvo: Record<string, unknown> | null = null;
@@ -101,15 +118,19 @@ describe('ServicoAgenda', () => {
       }
     });
 
-    const consulta = await servico.criarConsulta('tenant-1', {
-      pacienteId: 'paciente-1',
-      profissionalId: 'profissional-1',
-      inicioEm: '2026-07-22T12:00:00.000Z',
-      duracaoMinutos: 60,
-      emailContato: 'ana@example.com',
-      whatsappContato: '5511992362080',
-      enviarNotificacoes: true
-    });
+    const consulta = await servico.criarConsulta(
+      'tenant-1',
+      {
+        pacienteId: 'paciente-1',
+        profissionalId: 'profissional-1',
+        inicioEm: '2026-07-22T12:00:00.000Z',
+        duracaoMinutos: 60,
+        emailContato: 'ana@example.com',
+        whatsappContato: '5511992362080',
+        enviarNotificacoes: true
+      },
+      usuarioColaborador
+    );
 
     expect(repositorios.consulta.save).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -198,15 +219,19 @@ describe('ServicoAgenda', () => {
       ]
     });
 
-    await servico.criarConsulta('tenant-1', {
-      pacienteId: 'paciente-1',
-      profissionalId: 'profissional-1',
-      inicioEm: '2026-07-22T12:00:00.000Z',
-      duracaoMinutos: 60,
-      emailContato: 'ana@example.com',
-      whatsappContato: '5511992362080',
-      enviarNotificacoes: true
-    });
+    await servico.criarConsulta(
+      'tenant-1',
+      {
+        pacienteId: 'paciente-1',
+        profissionalId: 'profissional-1',
+        inicioEm: '2026-07-22T12:00:00.000Z',
+        duracaoMinutos: 60,
+        emailContato: 'ana@example.com',
+        whatsappContato: '5511992362080',
+        enviarNotificacoes: true
+      },
+      usuarioColaborador
+    );
 
     expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
       'tenant-1',
@@ -235,11 +260,15 @@ describe('ServicoAgenda', () => {
     const { servico } = criarServico();
 
     await expect(
-      servico.criarConsulta('tenant-1', {
-        pacienteId: 'paciente-1',
-        inicioEm: '2026-07-22T12:00:00.000Z',
-        fimEm: '2026-07-22T11:00:00.000Z'
-      })
+      servico.criarConsulta(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          inicioEm: '2026-07-22T12:00:00.000Z',
+          fimEm: '2026-07-22T11:00:00.000Z'
+        },
+        usuarioColaborador
+      )
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -270,12 +299,16 @@ describe('ServicoAgenda', () => {
     });
 
     await expect(
-      servico.criarConsulta('tenant-1', {
-        pacienteId: 'paciente-1',
-        profissionalId: 'profissional-1',
-        inicioEm: '2026-07-22T12:00:00.000Z',
-        duracaoMinutos: 60
-      })
+      servico.criarConsulta(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          inicioEm: '2026-07-22T12:00:00.000Z',
+          duracaoMinutos: 60
+        },
+        usuarioColaborador
+      )
     ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
   });
 
@@ -302,12 +335,17 @@ describe('ServicoAgenda', () => {
     };
     const { servico, googleCalendar } = criarServico({ consulta: consultaExistente, consultas: [consultaExistente] });
 
-    const consulta = await servico.remarcarConsulta('tenant-1', 'consulta-1', {
-      inicioEm: '2026-07-23T14:00:00.000Z',
-      duracaoMinutos: 45,
-      local: 'Sala 2',
-      observacoes: 'Remarcada por solicitacao do paciente'
-    });
+    const consulta = await servico.remarcarConsulta(
+      'tenant-1',
+      'consulta-1',
+      {
+        inicioEm: '2026-07-23T14:00:00.000Z',
+        duracaoMinutos: 45,
+        local: 'Sala 2',
+        observacoes: 'Remarcada por solicitacao do paciente'
+      },
+      usuarioColaborador
+    );
 
     expect(googleCalendar.atualizarEvento).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -352,7 +390,12 @@ describe('ServicoAgenda', () => {
     };
     const { servico, googleCalendar } = criarServico({ consulta: consultaExistente, consultas: [consultaExistente] });
 
-    const consulta = await servico.cancelarConsulta('tenant-1', 'consulta-1', { motivo: 'Paciente solicitou remarcacao futura.' });
+    const consulta = await servico.cancelarConsulta(
+      'tenant-1',
+      'consulta-1',
+      { motivo: 'Paciente solicitou remarcacao futura.' },
+      usuarioColaborador
+    );
 
     expect(googleCalendar.cancelarEvento).toHaveBeenCalledWith({ calendarId: 'primary', eventId: 'event-1' });
     expect(consulta.status).toBe('cancelada');
@@ -384,11 +427,15 @@ describe('ServicoAgenda', () => {
       }
     });
 
-    const consulta = await servico.criarConsulta('tenant-1', {
-      pacienteId: 'paciente-1',
-      inicioEm: '2026-07-22T12:00:00.000Z',
-      enviarNotificacoes: true
-    });
+    const consulta = await servico.criarConsulta(
+      'tenant-1',
+      {
+        pacienteId: 'paciente-1',
+        inicioEm: '2026-07-22T12:00:00.000Z',
+        enviarNotificacoes: true
+      },
+      usuarioColaborador
+    );
 
     expect(comunicacoes.dispararMensagem).toHaveBeenCalledTimes(1);
     expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
@@ -399,5 +446,99 @@ describe('ServicoAgenda', () => {
       })
     );
     expect(consulta.notificacoes.whatsapp).toEqual({ status: 'ignorado', motivo: 'contato_ausente' });
+  });
+
+  describe('escopo pacientes_responsaveis para Professional', () => {
+    it('deve forcar profissionalId para o proprio profissional ao criar consulta como Professional', async () => {
+      const { servico, repositorios } = criarServico({
+        paciente: {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          profissionalResponsavelId: 'profissional-outro-2',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula')
+        },
+        profissional: {
+          id: 'profissional-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-profissional-1',
+          nomeCriptografado: Buffer.from('cripto:Dra Carla')
+        }
+      });
+
+      await servico.criarConsulta(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-outro-2',
+          inicioEm: '2026-07-22T12:00:00.000Z',
+          duracaoMinutos: 60,
+          enviarNotificacoes: false
+        },
+        usuarioProfissional
+      );
+
+      expect(repositorios.consulta.save).toHaveBeenCalledWith(
+        expect.objectContaining({ profissionalId: 'profissional-1' })
+      );
+    });
+
+    it('deve listar consultas filtrando apenas pelo profissional autenticado', async () => {
+      const { servico, repositorios } = criarServico({
+        profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }
+      });
+
+      await servico.listarConsultas('tenant-1', usuarioProfissional);
+
+      expect(repositorios.consulta.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ profissionalId: 'profissional-1' }) })
+      );
+    });
+
+    it('deve tratar consulta de outro profissional como nao encontrada ao remarcar', async () => {
+      const repositorios = {
+        consulta: {
+          create: jest.fn((entrada: Record<string, unknown>) => entrada),
+          save: jest.fn(async (entrada: Record<string, unknown>) => entrada),
+          find: jest.fn(async () => []),
+          findOne: jest.fn(async () => null)
+        },
+        paciente: { findOne: jest.fn(async () => null) },
+        profissional: {
+          findOne: jest.fn(async () => ({ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }))
+        }
+      };
+      const gerenciador = {
+        getRepository: jest.fn((entidade: { name: string }) => {
+          if (entidade === AgendaConsultaOrm) return repositorios.consulta;
+          if (entidade === PacienteOrm) return repositorios.paciente;
+          if (entidade === ProfissionalOrm) return repositorios.profissional;
+          throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
+        })
+      };
+      const servico = new ServicoAgenda(
+        {
+          executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+            operacao(gerenciador)
+          )
+        } as never,
+        { descriptografar: jest.fn() } as never,
+        {} as never,
+        {} as never,
+        {} as never
+      );
+
+      await expect(
+        servico.remarcarConsulta(
+          'tenant-1',
+          'consulta-1',
+          { inicioEm: '2026-07-23T14:00:00.000Z', duracaoMinutos: 45 },
+          usuarioProfissional
+        )
+      ).rejects.toThrow('Consulta nao encontrada.');
+
+      expect(repositorios.consulta.findOne).toHaveBeenCalledWith({
+        where: { id: 'consulta-1', tenantId: 'tenant-1', profissionalId: 'profissional-1' }
+      });
+    });
   });
 });

@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { moderarConteudo } from '../dominio/moderacao';
 import { BadgeOrm } from '../infraestrutura/badge.orm';
 import { CirculoPacientesOrm } from '../infraestrutura/circulo-pacientes.orm';
@@ -23,28 +25,30 @@ import {
 export class ServicoGamificacao {
   constructor(private readonly executorTenant: ExecutorTenant) {}
 
-  async listarCirculos(tenantId: string): Promise<CirculoPacientesOrm[]> {
-    return this.executorTenant.executar(tenantId, (gerenciador) =>
-      gerenciador.getRepository(CirculoPacientesOrm).find({
-        where: { tenantId },
+  async listarCirculos(tenantId: string, usuario: UsuarioAutenticado): Promise<CirculoPacientesOrm[]> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      return gerenciador.getRepository(CirculoPacientesOrm).find({
+        where: { tenantId, ...(profissionalId ? { profissionalId } : {}) },
         order: { criadoEm: 'DESC' },
         take: 100
-      })
-    );
+      });
+    });
   }
 
-  async criarCirculo(tenantId: string, dados: CriarCirculoDto): Promise<CirculoPacientesOrm> {
-    return this.executorTenant.executar(tenantId, async (gerenciador) =>
-      gerenciador.getRepository(CirculoPacientesOrm).save(
+  async criarCirculo(tenantId: string, dados: CriarCirculoDto, usuario: UsuarioAutenticado): Promise<CirculoPacientesOrm> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      return gerenciador.getRepository(CirculoPacientesOrm).save(
         gerenciador.getRepository(CirculoPacientesOrm).create({
           tenantId,
-          profissionalId: dados.profissionalId,
+          profissionalId: profissionalIdDoUsuario ?? dados.profissionalId,
           nome: dados.nome,
           objetivo: dados.objetivo,
           privado: dados.privado ?? true
         })
-      )
-    );
+      );
+    });
   }
 
   async entrarCirculo(tenantId: string, circuloId: string, dados: EntrarCirculoDto): Promise<MembroCirculoOrm> {
@@ -83,30 +87,32 @@ export class ServicoGamificacao {
     });
   }
 
-  async listarDesafios(tenantId: string): Promise<DesafioOrm[]> {
-    return this.executorTenant.executar(tenantId, (gerenciador) =>
-      gerenciador.getRepository(DesafioOrm).find({
-        where: { tenantId },
+  async listarDesafios(tenantId: string, usuario: UsuarioAutenticado): Promise<DesafioOrm[]> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      return gerenciador.getRepository(DesafioOrm).find({
+        where: { tenantId, ...(profissionalId ? { profissionalId } : {}) },
         order: { criadoEm: 'DESC' },
         take: 100
-      })
-    );
+      });
+    });
   }
 
-  async criarDesafio(tenantId: string, dados: CriarDesafioDto): Promise<DesafioOrm> {
-    return this.executorTenant.executar(tenantId, async (gerenciador) =>
-      gerenciador.getRepository(DesafioOrm).save(
+  async criarDesafio(tenantId: string, dados: CriarDesafioDto, usuario: UsuarioAutenticado): Promise<DesafioOrm> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      return gerenciador.getRepository(DesafioOrm).save(
         gerenciador.getRepository(DesafioOrm).create({
           tenantId,
-          profissionalId: dados.profissionalId,
+          profissionalId: profissionalIdDoUsuario ?? dados.profissionalId,
           titulo: dados.titulo,
           descricao: dados.descricao,
           regraPontuacao: dados.regraPontuacao,
           iniciaEm: new Date(dados.iniciaEm),
           terminaEm: new Date(dados.terminaEm)
         })
-      )
-    );
+      );
+    });
   }
 
   async atualizarProgresso(tenantId: string, dados: AtualizarProgressoDesafioDto): Promise<ParticipacaoDesafioOrm> {

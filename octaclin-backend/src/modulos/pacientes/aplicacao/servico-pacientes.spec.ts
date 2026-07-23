@@ -1,4 +1,5 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
@@ -30,6 +31,22 @@ const limitesPermitidos = {
   checarLimite: jest.fn(async () => ({ permitido: true }))
 };
 
+const usuarioColaborador: UsuarioAutenticado = {
+  usuarioId: 'usuario-colaborador-1',
+  tenantId: 'tenant-1',
+  papel: 'Collaborator',
+  emailHash: 'hash-colaborador',
+  permissoes: []
+};
+
+const usuarioProfissional: UsuarioAutenticado = {
+  usuarioId: 'usuario-profissional-1',
+  tenantId: 'tenant-1',
+  papel: 'Professional',
+  emailHash: 'hash-profissional',
+  permissoes: []
+};
+
 describe('ServicoPacientes', () => {
   it('deve criar paciente dentro do contexto do tenant e criptografar dados sensiveis', async () => {
     const repositorioPacientes = {
@@ -54,11 +71,15 @@ describe('ServicoPacientes', () => {
     };
     const servico = new ServicoPacientes(executorTenant as never, criptografia as never, limitesPermitidos as never);
 
-    const paciente = await servico.criar('tenant-1', {
-      profissionalResponsavelId: 'profissional-1',
-      nome: 'Maria',
-      contato: 'maria@example.com'
-    });
+    const paciente = await servico.criar(
+      'tenant-1',
+      {
+        profissionalResponsavelId: 'profissional-1',
+        nome: 'Maria',
+        contato: 'maria@example.com'
+      },
+      usuarioColaborador
+    );
 
     expect(executorTenant.executar).toHaveBeenCalledWith('tenant-1', expect.any(Function));
     expect(criptografia.criptografar).toHaveBeenCalledWith('Maria');
@@ -79,7 +100,7 @@ describe('ServicoPacientes', () => {
       limitesPermitidos as never
     );
 
-    await servico.listar('tenant-1', 1, 500);
+    await servico.listar('tenant-1', usuarioColaborador, 1, 500);
 
     expect(repositorio.findAndCount).toHaveBeenCalledWith(expect.objectContaining({ take: 100 }));
   });
@@ -112,11 +133,15 @@ describe('ServicoPacientes', () => {
     );
 
     await expect(
-      servico.criar('tenant-1', {
-        profissionalResponsavelId: 'profissional-1',
-        nome: 'Maria',
-        contato: 'maria@example.com'
-      })
+      servico.criar(
+        'tenant-1',
+        {
+          profissionalResponsavelId: 'profissional-1',
+          nome: 'Maria',
+          contato: 'maria@example.com'
+        },
+        usuarioColaborador
+      )
     ).rejects.toThrow('Limite de pacientes atingido para o Plano gratuito.');
 
     expect(limites.checarLimite).toHaveBeenCalledWith('tenant-1', 'pacientes');
@@ -146,11 +171,15 @@ describe('ServicoPacientes', () => {
     );
 
     await expect(
-      servico.criar('tenant-1', {
-        profissionalResponsavelId: 'profissional-tenant-2',
-        nome: 'Maria',
-        contato: 'maria@example.com'
-      })
+      servico.criar(
+        'tenant-1',
+        {
+          profissionalResponsavelId: 'profissional-tenant-2',
+          nome: 'Maria',
+          contato: 'maria@example.com'
+        },
+        usuarioColaborador
+      )
     ).rejects.toBeInstanceOf(NotFoundException);
 
     expect(repositorioProfissionais.findOne).toHaveBeenCalledWith({
@@ -195,9 +224,14 @@ describe('ServicoPacientes', () => {
     );
 
     await expect(
-      servico.atualizar('tenant-1', 'paciente-1', {
-        profissionalResponsavelId: 'profissional-tenant-2'
-      })
+      servico.atualizar(
+        'tenant-1',
+        'paciente-1',
+        {
+          profissionalResponsavelId: 'profissional-tenant-2'
+        },
+        usuarioColaborador
+      )
     ).rejects.toBeInstanceOf(NotFoundException);
 
     expect(repositorioProfissionais.findOne).toHaveBeenCalledWith({
@@ -238,7 +272,7 @@ describe('ServicoPacientes', () => {
       limitesPermitidos as never
     );
 
-    const resposta = await servico.listar('tenant-1');
+    const resposta = await servico.listar('tenant-1', usuarioColaborador);
 
     expect(resposta.itens[0]).toEqual(expect.objectContaining({ nome: 'Maria', contato: 'maria@example.com' }));
   });
@@ -277,7 +311,7 @@ describe('ServicoPacientes', () => {
       limitesPermitidos as never
     );
 
-    const resposta = await servico.listar('tenant-1');
+    const resposta = await servico.listar('tenant-1', usuarioColaborador);
 
     expect(resposta.itens[0]).toEqual(expect.objectContaining({ nome: 'Maria', contato: 'maria@example.com' }));
   });
@@ -296,7 +330,9 @@ describe('ServicoPacientes', () => {
       limitesPermitidos as never
     );
 
-    await expect(servico.arquivar('tenant-1', 'paciente-inexistente')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(servico.arquivar('tenant-1', 'paciente-inexistente', usuarioColaborador)).rejects.toBeInstanceOf(
+      NotFoundException
+    );
   });
 
   it('deve montar prontuario longitudinal do paciente com agenda, formularios, respostas e mensagens', async () => {
@@ -423,7 +459,7 @@ describe('ServicoPacientes', () => {
       limitesPermitidos as never
     );
 
-    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1');
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(prontuario.paciente).toEqual(expect.objectContaining({ id: 'paciente-1', nome: 'Maria', contato: 'maria@example.com' }));
     expect(prontuario.resumo).toEqual({
@@ -506,13 +542,19 @@ describe('ServicoPacientes', () => {
       limitesPermitidos as never
     );
 
-    const evolucao = await servico.criarEvolucaoClinica('tenant-1', 'paciente-1', 'usuario-profissional-1', {
-      titulo: 'Consulta inicial',
-      conteudo: 'Paciente relatou melhora de adesao.',
-      tipo: 'consulta',
-      visibilidade: 'privada'
-    });
-    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1');
+    const evolucao = await servico.criarEvolucaoClinica(
+      'tenant-1',
+      'paciente-1',
+      'usuario-profissional-1',
+      {
+        titulo: 'Consulta inicial',
+        conteudo: 'Paciente relatou melhora de adesao.',
+        tipo: 'consulta',
+        visibilidade: 'privada'
+      },
+      usuarioColaborador
+    );
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(evolucao).toEqual(
       expect.objectContaining({
@@ -591,14 +633,20 @@ describe('ServicoPacientes', () => {
       limitesPermitidos as never
     );
 
-    const tarefa = await servico.criarTarefaAcompanhamento('tenant-1', 'paciente-1', 'usuario-profissional-1', {
-      titulo: 'Beber agua no periodo da tarde',
-      descricao: 'Meta diaria de 1 litro entre 13h e 18h.',
-      categoria: 'meta',
-      prioridade: 'media',
-      vencimentoEm: '2026-07-29T18:00:00.000Z'
-    });
-    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1');
+    const tarefa = await servico.criarTarefaAcompanhamento(
+      'tenant-1',
+      'paciente-1',
+      'usuario-profissional-1',
+      {
+        titulo: 'Beber agua no periodo da tarde',
+        descricao: 'Meta diaria de 1 litro entre 13h e 18h.',
+        categoria: 'meta',
+        prioridade: 'media',
+        vencimentoEm: '2026-07-29T18:00:00.000Z'
+      },
+      usuarioColaborador
+    );
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(tarefa).toEqual(
       expect.objectContaining({
@@ -626,5 +674,151 @@ describe('ServicoPacientes', () => {
         status: 'pendente'
       })
     );
+  });
+
+  describe('escopo pacientes_responsaveis para Professional', () => {
+    it('deve listar apenas pacientes do proprio profissional quando o usuario for Professional', async () => {
+      const repositorioProfissionais = {
+        findOne: jest.fn(async () => ({ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }))
+      };
+      const repositorioPacientes = {
+        findAndCount: jest.fn(async () => [[], 0])
+      };
+      const servico = new ServicoPacientes(
+        {
+          executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+            operacao(criarGerenciadorFake({ paciente: repositorioPacientes, profissional: repositorioProfissionais }))
+          )
+        } as never,
+        { criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+        limitesPermitidos as never
+      );
+
+      await servico.listar('tenant-1', usuarioProfissional);
+
+      expect(repositorioProfissionais.findOne).toHaveBeenCalledWith({
+        where: { usuarioId: 'usuario-profissional-1', tenantId: 'tenant-1', arquivadoEm: expect.any(Object) }
+      });
+      expect(repositorioPacientes.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ profissionalResponsavelId: 'profissional-1' }) })
+      );
+    });
+
+    it('nao deve filtrar pacientes por profissional quando o usuario for Collaborator ou SuperAdmin', async () => {
+      const repositorioPacientes = {
+        findAndCount: jest.fn(async (_opcoes: { where: Record<string, unknown> }) => [[], 0])
+      };
+      const servico = new ServicoPacientes(
+        {
+          executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+            operacao(criarGerenciadorFake(repositorioPacientes))
+          )
+        } as never,
+        { criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+        limitesPermitidos as never
+      );
+
+      await servico.listar('tenant-1', usuarioColaborador);
+
+      const chamada = repositorioPacientes.findAndCount.mock.calls[0][0];
+      expect(chamada.where).not.toHaveProperty('profissionalResponsavelId');
+    });
+
+    it('deve forcar profissionalResponsavelId para o proprio profissional ao criar paciente como Professional', async () => {
+      const repositorioPacientes = {
+        create: jest.fn((dados: Record<string, unknown>) => dados),
+        save: jest.fn(async (dados: Record<string, unknown>) => ({ id: 'paciente-1', ...dados }))
+      };
+      const repositorioProfissionais = {
+        findOne: jest.fn(async () => ({ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }))
+      };
+      const servico = new ServicoPacientes(
+        {
+          executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+            operacao(criarGerenciadorFake({ paciente: repositorioPacientes, profissional: repositorioProfissionais }))
+          )
+        } as never,
+        { criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+        limitesPermitidos as never
+      );
+
+      const paciente = await servico.criar(
+        'tenant-1',
+        {
+          profissionalResponsavelId: 'profissional-outro-2',
+          nome: 'Maria',
+          contato: 'maria@example.com'
+        },
+        usuarioProfissional
+      );
+
+      expect(paciente.profissionalResponsavelId).toBe('profissional-1');
+    });
+
+    it('deve tratar paciente de outro profissional como nao encontrado para um Professional', async () => {
+      const paciente = {
+        id: 'paciente-2',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-outro-2',
+        nomeCriptografado: Buffer.from('cripto:Joao'),
+        statusAdesao: 'novo',
+        scoreRisco: '0'
+      };
+      const repositorioProfissionais = {
+        findOne: jest.fn(async () => ({ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }))
+      };
+      const repositorioPacientes = {
+        findOne: jest.fn(async (opcoes: { where: Record<string, unknown> }) =>
+          opcoes.where.profissionalResponsavelId && opcoes.where.profissionalResponsavelId !== paciente.profissionalResponsavelId
+            ? null
+            : paciente
+        )
+      };
+      const servico = new ServicoPacientes(
+        {
+          executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+            operacao(criarGerenciadorFake({ paciente: repositorioPacientes, profissional: repositorioProfissionais }))
+          )
+        } as never,
+        { criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+        limitesPermitidos as never
+      );
+
+      await expect(servico.obterPorId('tenant-1', 'paciente-2', usuarioProfissional)).rejects.toBeInstanceOf(
+        NotFoundException
+      );
+    });
+
+    it('deve impedir Professional de reatribuir paciente para outro profissional', async () => {
+      const paciente = {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Maria'),
+        statusAdesao: 'novo',
+        scoreRisco: '0'
+      };
+      const repositorioProfissionais = {
+        findOne: jest.fn(async () => ({ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }))
+      };
+      const repositorioPacientes = {
+        findOne: jest.fn(async () => paciente),
+        save: jest.fn(async (dados: Record<string, unknown>) => dados)
+      };
+      const servico = new ServicoPacientes(
+        {
+          executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+            operacao(criarGerenciadorFake({ paciente: repositorioPacientes, profissional: repositorioProfissionais }))
+          )
+        } as never,
+        { criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+        limitesPermitidos as never
+      );
+
+      await expect(
+        servico.atualizar('tenant-1', 'paciente-1', { profissionalResponsavelId: 'profissional-outro-2' }, usuarioProfissional)
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(repositorioPacientes.save).not.toHaveBeenCalled();
+    });
   });
 });

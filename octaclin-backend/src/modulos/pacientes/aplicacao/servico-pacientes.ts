@@ -5,6 +5,8 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cliente';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
@@ -33,15 +35,20 @@ export class ServicoPacientes {
     private readonly portalCliente: ServicoPortalCliente
   ) {}
 
-  async criar(tenantId: string, dados: CriarPacienteDto): Promise<PacienteRespostaDto> {
+  async criar(tenantId: string, dados: CriarPacienteDto, usuario: UsuarioAutenticado): Promise<PacienteRespostaDto> {
     await this.garantirLimitePermitido(tenantId, 'pacientes');
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(PacienteOrm);
-      await this.garantirProfissionalResponsavelExiste(gerenciador, tenantId, dados.profissionalResponsavelId);
+      const profissionalResponsavelId =
+        usuario.papel === 'Professional'
+          ? await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)
+          : dados.profissionalResponsavelId;
+
+      await this.garantirProfissionalResponsavelExiste(gerenciador, tenantId, profissionalResponsavelId);
       const paciente = repositorio.create({
         tenantId,
-        profissionalResponsavelId: dados.profissionalResponsavelId,
+        profissionalResponsavelId,
         nomeCriptografado: this.criptografia.criptografar(dados.nome),
         contatoCriptografado: dados.contato ? this.criptografia.criptografar(dados.contato) : undefined,
         dataNascimento: dados.dataNascimento,
@@ -53,13 +60,23 @@ export class ServicoPacientes {
     });
   }
 
-  async listar(tenantId: string, pagina = 1, limite = 25): Promise<{ itens: PacienteRespostaDto[]; total: number }> {
+  async listar(
+    tenantId: string,
+    usuario: UsuarioAutenticado,
+    pagina = 1,
+    limite = 25
+  ): Promise<{ itens: PacienteRespostaDto[]; total: number }> {
     const paginaNormalizada = Math.max(1, pagina);
     const limiteNormalizado = Math.min(100, Math.max(1, limite));
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const [itens, total] = await gerenciador.getRepository(PacienteOrm).findAndCount({
-        where: { tenantId, arquivadoEm: IsNull() },
+        where: {
+          tenantId,
+          arquivadoEm: IsNull(),
+          ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
+        },
         order: { criadoEm: 'DESC' },
         skip: (paginaNormalizada - 1) * limiteNormalizado,
         take: limiteNormalizado
@@ -69,32 +86,27 @@ export class ServicoPacientes {
     });
   }
 
-  async obterPorId(tenantId: string, pacienteId: string): Promise<PacienteRespostaDto> {
+  async obterPorId(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<PacienteRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-        where: { id: pacienteId, tenantId, arquivadoEm: IsNull() }
-      });
-
-      if (!paciente) {
-        throw new NotFoundException('Paciente nao encontrado.');
-      }
-
+      const paciente = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
       return this.mapearResposta(paciente);
     });
   }
 
-  async atualizar(tenantId: string, pacienteId: string, dados: AtualizarPacienteDto): Promise<PacienteRespostaDto> {
+  async atualizar(
+    tenantId: string,
+    pacienteId: string,
+    dados: AtualizarPacienteDto,
+    usuario: UsuarioAutenticado
+  ): Promise<PacienteRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const paciente = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
       const repositorio = gerenciador.getRepository(PacienteOrm);
-      const paciente = await repositorio.findOne({
-        where: { id: pacienteId, tenantId, arquivadoEm: IsNull() }
-      });
-
-      if (!paciente) {
-        throw new NotFoundException('Paciente nao encontrado.');
-      }
 
       if (dados.profissionalResponsavelId) {
+        if (usuario.papel === 'Professional') {
+          throw new ForbiddenException('Profissional nao pode reatribuir o paciente para outro profissional.');
+        }
         await this.garantirProfissionalResponsavelExiste(gerenciador, tenantId, dados.profissionalResponsavelId);
         paciente.profissionalResponsavelId = dados.profissionalResponsavelId;
       }
@@ -108,10 +120,16 @@ export class ServicoPacientes {
     });
   }
 
-  async arquivar(tenantId: string, pacienteId: string): Promise<void> {
+  async arquivar(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<void> {
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const resultado = await gerenciador.getRepository(PacienteOrm).update(
-        { id: pacienteId, tenantId, arquivadoEm: IsNull() },
+        {
+          id: pacienteId,
+          tenantId,
+          arquivadoEm: IsNull(),
+          ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
+        },
         { arquivadoEm: new Date(), statusAdesao: 'inativo' }
       );
 
@@ -142,10 +160,11 @@ export class ServicoPacientes {
     tenantId: string,
     pacienteId: string,
     autorUsuarioId: string,
-    dados: CriarEvolucaoClinicaDto
+    dados: CriarEvolucaoClinicaDto,
+    usuario: UsuarioAutenticado
   ): Promise<EvolucaoClinicaRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId);
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
 
       const repositorio = gerenciador.getRepository(EvolucaoClinicaOrm);
       const evolucao = repositorio.create({
@@ -162,9 +181,13 @@ export class ServicoPacientes {
     });
   }
 
-  async listarEvolucoesClinicas(tenantId: string, pacienteId: string): Promise<EvolucaoClinicaRespostaDto[]> {
+  async listarEvolucoesClinicas(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<EvolucaoClinicaRespostaDto[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId);
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
       const evolucoes = await gerenciador.getRepository(EvolucaoClinicaOrm).find({
         where: { tenantId, pacienteId },
         order: { criadoEm: 'DESC' },
@@ -179,10 +202,11 @@ export class ServicoPacientes {
     tenantId: string,
     pacienteId: string,
     profissionalId: string,
-    dados: CriarTarefaAcompanhamentoDto
+    dados: CriarTarefaAcompanhamentoDto,
+    usuario: UsuarioAutenticado
   ): Promise<TarefaAcompanhamentoRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId);
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
 
       const repositorio = gerenciador.getRepository(AcompanhamentoTarefaOrm);
       const tarefa = repositorio.create({
@@ -201,9 +225,13 @@ export class ServicoPacientes {
     });
   }
 
-  async listarTarefasAcompanhamento(tenantId: string, pacienteId: string): Promise<TarefaAcompanhamentoRespostaDto[]> {
+  async listarTarefasAcompanhamento(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<TarefaAcompanhamentoRespostaDto[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId);
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
       const tarefas = await gerenciador.getRepository(AcompanhamentoTarefaOrm).find({
         where: { tenantId, pacienteId },
         order: { vencimentoEm: 'ASC', criadoEm: 'DESC' },
@@ -218,10 +246,11 @@ export class ServicoPacientes {
     tenantId: string,
     pacienteId: string,
     tarefaId: string,
-    dados: AtualizarTarefaAcompanhamentoDto
+    dados: AtualizarTarefaAcompanhamentoDto,
+    usuario: UsuarioAutenticado
   ): Promise<TarefaAcompanhamentoRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId);
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
       const repositorio = gerenciador.getRepository(AcompanhamentoTarefaOrm);
       const tarefa = await repositorio.findOne({ where: { id: tarefaId, tenantId, pacienteId } });
 
@@ -238,15 +267,13 @@ export class ServicoPacientes {
     });
   }
 
-  async obterProntuario(tenantId: string, pacienteId: string): Promise<ProntuarioPacienteRespostaDto> {
+  async obterProntuario(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<ProntuarioPacienteRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const pacienteOrm = await gerenciador.getRepository(PacienteOrm).findOne({
-        where: { id: pacienteId, tenantId, arquivadoEm: IsNull() }
-      });
-
-      if (!pacienteOrm) {
-        throw new NotFoundException('Paciente nao encontrado.');
-      }
+      const pacienteOrm = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
 
       const [consultas, envios, respostas, mensagens, evolucoes, tarefas] = await Promise.all([
         gerenciador.getRepository(AgendaConsultaOrm).find({
@@ -327,9 +354,20 @@ export class ServicoPacientes {
     }
   }
 
-  private async garantirPacienteExiste(gerenciador: EntityManager, tenantId: string, pacienteId: string) {
+  private async garantirPacienteExiste(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ) {
+    const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
     const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-      where: { id: pacienteId, tenantId, arquivadoEm: IsNull() }
+      where: {
+        id: pacienteId,
+        tenantId,
+        arquivadoEm: IsNull(),
+        ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
+      }
     });
 
     if (!paciente) {

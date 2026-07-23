@@ -2,6 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { EntityManager, IsNull, MoreThanOrEqual } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ProcessadorNotificacoes } from '../../comunicacoes/aplicacao/processador-notificacoes';
 import { ServicoComunicacoes } from '../../comunicacoes/aplicacao/servico-comunicacoes';
 import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
@@ -62,10 +64,15 @@ export class ServicoAgenda {
     private readonly processadorNotificacoes: ProcessadorNotificacoes
   ) {}
 
-  async listarConsultas(tenantId: string): Promise<ConsultaAgendaRespostaDto[]> {
+  async listarConsultas(tenantId: string, usuario: UsuarioAutenticado): Promise<ConsultaAgendaRespostaDto[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const consultas = await gerenciador.getRepository(AgendaConsultaOrm).find({
-        where: { tenantId, inicioEm: MoreThanOrEqual(new Date(Date.now() - 1000 * 60 * 60 * 24 * 30)) },
+        where: {
+          tenantId,
+          inicioEm: MoreThanOrEqual(new Date(Date.now() - 1000 * 60 * 60 * 24 * 30)),
+          ...(profissionalId ? { profissionalId } : {})
+        },
         order: { inicioEm: 'ASC' },
         take: 200
       });
@@ -73,8 +80,8 @@ export class ServicoAgenda {
     });
   }
 
-  async criarConsulta(tenantId: string, dados: CriarConsultaAgendaDto): Promise<ConsultaAgendaRespostaDto> {
-    const contexto = await this.criarRegistroInterno(tenantId, dados);
+  async criarConsulta(tenantId: string, dados: CriarConsultaAgendaDto, usuario: UsuarioAutenticado): Promise<ConsultaAgendaRespostaDto> {
+    const contexto = await this.criarRegistroInterno(tenantId, dados, usuario);
     const google = await this.googleCalendar.criarEvento({
       resumo: `Consulta OctaClin - ${contexto.pacienteNome}`,
       descricao: this.montarDescricaoEvento(contexto),
@@ -91,14 +98,22 @@ export class ServicoAgenda {
     return this.mapearResposta(consultaAtualizada, contexto.pacienteNome, contexto.profissionalNome);
   }
 
-  async remarcarConsulta(tenantId: string, consultaId: string, dados: RemarcarConsultaAgendaDto): Promise<ConsultaAgendaRespostaDto> {
+  async remarcarConsulta(
+    tenantId: string,
+    consultaId: string,
+    dados: RemarcarConsultaAgendaDto,
+    usuario: UsuarioAutenticado
+  ): Promise<ConsultaAgendaRespostaDto> {
     const inicioEm = dataValida(dados.inicioEm);
     const fimEm = this.calcularFim(inicioEm, dados);
     if (fimEm <= inicioEm) throw new BadRequestException('Horario final deve ser posterior ao inicio da consulta.');
 
     const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
-      const atual = await repositorio.findOne({ where: { id: consultaId, tenantId } });
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const atual = await repositorio.findOne({
+        where: { id: consultaId, tenantId, ...(profissionalIdDoUsuario ? { profissionalId: profissionalIdDoUsuario } : {}) }
+      });
       if (!atual) throw new NotFoundException('Consulta nao encontrada.');
       if (atual.status === 'cancelada') throw new BadRequestException('Consulta cancelada nao pode ser remarcada.');
 
@@ -140,10 +155,18 @@ export class ServicoAgenda {
     return this.mapearResposta(await this.aplicarResultadoGoogle(tenantId, consulta.id, google));
   }
 
-  async cancelarConsulta(tenantId: string, consultaId: string, dados: CancelarConsultaAgendaDto): Promise<ConsultaAgendaRespostaDto> {
+  async cancelarConsulta(
+    tenantId: string,
+    consultaId: string,
+    dados: CancelarConsultaAgendaDto,
+    usuario: UsuarioAutenticado
+  ): Promise<ConsultaAgendaRespostaDto> {
     const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
-      const atual = await repositorio.findOne({ where: { id: consultaId, tenantId } });
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const atual = await repositorio.findOne({
+        where: { id: consultaId, tenantId, ...(profissionalIdDoUsuario ? { profissionalId: profissionalIdDoUsuario } : {}) }
+      });
       if (!atual) throw new NotFoundException('Consulta nao encontrada.');
       if (atual.status === 'cancelada') return atual;
 
@@ -163,7 +186,11 @@ export class ServicoAgenda {
     return this.mapearResposta(await this.aplicarResultadoGoogle(tenantId, consulta.id, google));
   }
 
-  private async criarRegistroInterno(tenantId: string, dados: CriarConsultaAgendaDto): Promise<ContextoConsultaCriada> {
+  private async criarRegistroInterno(
+    tenantId: string,
+    dados: CriarConsultaAgendaDto,
+    usuario: UsuarioAutenticado
+  ): Promise<ContextoConsultaCriada> {
     const inicioEm = dataValida(dados.inicioEm);
     const fimEm = this.calcularFim(inicioEm, dados);
     if (fimEm <= inicioEm) throw new BadRequestException('Horario final deve ser posterior ao inicio da consulta.');
@@ -174,7 +201,8 @@ export class ServicoAgenda {
       });
       if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
 
-      const profissionalId = dados.profissionalId ?? paciente.profissionalResponsavelId;
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const profissionalId = profissionalIdDoUsuario ?? dados.profissionalId ?? paciente.profissionalResponsavelId;
       const profissional = profissionalId
         ? await gerenciador.getRepository(ProfissionalOrm).findOne({
             where: { id: profissionalId, tenantId, arquivadoEm: IsNull() }

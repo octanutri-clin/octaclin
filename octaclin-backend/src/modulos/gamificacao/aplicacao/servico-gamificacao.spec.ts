@@ -1,3 +1,5 @@
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { BadgeOrm } from '../infraestrutura/badge.orm';
 import { CirculoPacientesOrm } from '../infraestrutura/circulo-pacientes.orm';
 import { DesafioOrm } from '../infraestrutura/desafio.orm';
@@ -7,6 +9,22 @@ import { PacienteBadgeOrm } from '../infraestrutura/paciente-badge.orm';
 import { ParticipacaoDesafioOrm } from '../infraestrutura/participacao-desafio.orm';
 import { PostComunidadeOrm } from '../infraestrutura/post-comunidade.orm';
 import { ServicoGamificacao } from './servico-gamificacao';
+
+const usuarioColaborador: UsuarioAutenticado = {
+  usuarioId: 'usuario-colaborador-1',
+  tenantId: 'tenant-1',
+  papel: 'Collaborator',
+  emailHash: 'hash-colaborador',
+  permissoes: []
+};
+
+const usuarioProfissional: UsuarioAutenticado = {
+  usuarioId: 'usuario-profissional-1',
+  tenantId: 'tenant-1',
+  papel: 'Professional',
+  emailHash: 'hash-profissional',
+  permissoes: []
+};
 
 function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
   return {
@@ -26,7 +44,10 @@ function criarServico(dados: Record<string, unknown> = {}) {
     desafio: criarRepositorioFake('desafio', dados),
     participacao: criarRepositorioFake('participacao', dados),
     badge: criarRepositorioFake('badge', dados),
-    pacienteBadge: criarRepositorioFake('paciente-badge', dados)
+    pacienteBadge: criarRepositorioFake('paciente-badge', dados),
+    profissional: {
+      findOne: jest.fn(async () => dados.profissional ?? null)
+    }
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -38,6 +59,7 @@ function criarServico(dados: Record<string, unknown> = {}) {
       if (entidade === ParticipacaoDesafioOrm) return repositorios.participacao;
       if (entidade === BadgeOrm) return repositorios.badge;
       if (entidade === PacienteBadgeOrm) return repositorios.pacienteBadge;
+      if (entidade === ProfissionalOrm) return repositorios.profissional;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -84,5 +106,80 @@ describe('ServicoGamificacao', () => {
     expect(repositorios.participacao.save).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'participacao-1', tenantId: 'tenant-1', pontos: '25' })
     );
+  });
+
+  describe('escopo pacientes_responsaveis para Professional', () => {
+    it('deve forcar profissionalId para o proprio profissional ao criar circulo como Professional', async () => {
+      const { servico, repositorios } = criarServico({
+        profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }
+      });
+
+      await servico.criarCirculo(
+        'tenant-1',
+        { profissionalId: 'profissional-outro-2', nome: 'Circulo teste', objetivo: 'Objetivo' },
+        usuarioProfissional
+      );
+
+      expect(repositorios.circulo.save).toHaveBeenCalledWith(expect.objectContaining({ profissionalId: 'profissional-1' }));
+    });
+
+    it('deve manter profissionalId enviado ao criar circulo como Collaborator', async () => {
+      const { servico, repositorios } = criarServico();
+
+      await servico.criarCirculo(
+        'tenant-1',
+        { profissionalId: 'profissional-escolhido-1', nome: 'Circulo teste', objetivo: 'Objetivo' },
+        usuarioColaborador
+      );
+
+      expect(repositorios.circulo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ profissionalId: 'profissional-escolhido-1' })
+      );
+    });
+
+    it('deve listar circulos filtrando apenas pelo profissional autenticado', async () => {
+      const { servico, repositorios } = criarServico({
+        profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }
+      });
+
+      await servico.listarCirculos('tenant-1', usuarioProfissional);
+
+      expect(repositorios.circulo.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ profissionalId: 'profissional-1' }) })
+      );
+    });
+
+    it('deve forcar profissionalId para o proprio profissional ao criar desafio como Professional', async () => {
+      const { servico, repositorios } = criarServico({
+        profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }
+      });
+
+      await servico.criarDesafio(
+        'tenant-1',
+        {
+          profissionalId: 'profissional-outro-2',
+          titulo: 'Desafio teste',
+          descricao: 'Descricao',
+          regraPontuacao: {},
+          iniciaEm: '2026-08-01T00:00:00.000Z',
+          terminaEm: '2026-08-15T00:00:00.000Z'
+        },
+        usuarioProfissional
+      );
+
+      expect(repositorios.desafio.save).toHaveBeenCalledWith(expect.objectContaining({ profissionalId: 'profissional-1' }));
+    });
+
+    it('deve listar desafios filtrando apenas pelo profissional autenticado', async () => {
+      const { servico, repositorios } = criarServico({
+        profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }
+      });
+
+      await servico.listarDesafios('tenant-1', usuarioProfissional);
+
+      expect(repositorios.desafio.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ profissionalId: 'profissional-1' }) })
+      );
+    });
   });
 });

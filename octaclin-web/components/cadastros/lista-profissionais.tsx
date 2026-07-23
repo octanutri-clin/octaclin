@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Edit3, Plus, RefreshCcw, Save, Stethoscope, Trash2, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { obterSessao } from '@/lib/auth-api';
 import {
   ProfissionalResumo,
   RespostaPaginada,
@@ -55,6 +56,11 @@ export function ListaProfissionais() {
   const [arquivandoId, setArquivandoId] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<FormularioProfissional>(formularioInicial);
   const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [podeGerenciar, setPodeGerenciar] = useState(false);
+
+  useEffect(() => {
+    void obterSessao().then((sessao) => setPodeGerenciar(Boolean(sessao?.permissoes?.includes('profissionais.gerenciar'))));
+  }, []);
 
   async function carregar() {
     setCarregando(true);
@@ -170,6 +176,7 @@ export function ListaProfissionais() {
         </div>
       ) : null}
 
+      {podeGerenciar ? (
       <form onSubmit={salvar} className="rounded-lg border border-linha bg-white p-4">
         <div className="mb-3 flex items-center gap-2">
           {editandoId ? <Edit3 size={18} className="text-primaria" /> : <Plus size={18} className="text-primaria" />}
@@ -234,6 +241,7 @@ export function ListaProfissionais() {
           </Botao>
         </div>
       </form>
+      ) : null}
 
       <div className="overflow-x-auto rounded-lg border border-linha bg-white">
         <div className="min-w-[820px]">
@@ -262,18 +270,24 @@ export function ListaProfissionais() {
                   <span>{profissional.especialidade ?? '-'}</span>
                   <span>{formatarData(profissional.criadoEm)}</span>
                   <div className="flex justify-end gap-1">
-                    <Botao type="button" variante="fantasma" onClick={() => editar(profissional)} aria-label="Editar profissional">
-                      <Edit3 size={16} />
-                    </Botao>
-                    <Botao
-                      type="button"
-                      variante="fantasma"
-                      onClick={() => void arquivar(profissional)}
-                      disabled={arquivandoId === profissional.id}
-                      aria-label="Arquivar profissional"
-                    >
-                      <Trash2 size={16} />
-                    </Botao>
+                    {podeGerenciar ? (
+                      <>
+                        <Botao type="button" variante="fantasma" onClick={() => editar(profissional)} aria-label="Editar profissional">
+                          <Edit3 size={16} />
+                        </Botao>
+                        <Botao
+                          type="button"
+                          variante="fantasma"
+                          onClick={() => void arquivar(profissional)}
+                          disabled={arquivandoId === profissional.id}
+                          aria-label="Arquivar profissional"
+                        >
+                          <Trash2 size={16} />
+                        </Botao>
+                      </>
+                    ) : (
+                      <span className="text-xs text-[#94a0af]">-</span>
+                    )}
                   </div>
                 </div>
               ))
