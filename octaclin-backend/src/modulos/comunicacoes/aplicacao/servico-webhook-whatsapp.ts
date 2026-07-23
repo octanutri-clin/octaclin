@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
@@ -149,6 +150,7 @@ export class ServicoWebhookWhatsapp {
         return this.registrarMensagemNoTenant(
           gerenciador.getRepository(MensagemNotificacaoOrm),
           gerenciador.getRepository(PacienteOrm),
+          gerenciador.getRepository(AgendaConsultaOrm),
           tenant.id,
           canal,
           entrada
@@ -181,6 +183,7 @@ export class ServicoWebhookWhatsapp {
   private async registrarMensagemNoTenant(
     repositorioMensagens: Repository<MensagemNotificacaoOrm>,
     repositorioPacientes: Repository<PacienteOrm>,
+    repositorioConsultas: Repository<AgendaConsultaOrm>,
     tenantId: string,
     canal: CanalNotificacaoOrm,
     entrada: MensagemRecebidaWebhookWhatsapp
@@ -194,9 +197,10 @@ export class ServicoWebhookWhatsapp {
       .getOne();
     if (existente) return false;
 
+    const envioAnterior = await this.encontrarEnvioAnteriorWhatsapp(repositorioMensagens, tenantId, entrada.mensagem.from);
     const pacienteId =
       (await this.encontrarPacientePorContato(repositorioPacientes, tenantId, entrada.mensagem.from)) ??
-      (await this.encontrarPacientePorEnvioAnterior(repositorioMensagens, tenantId, entrada.mensagem.from));
+      envioAnterior?.pacienteId;
     const criadaEm = this.converterTimestampMeta(entrada.mensagem.timestamp) ?? new Date();
 
     await repositorioMensagens.save(
@@ -218,6 +222,7 @@ export class ServicoWebhookWhatsapp {
         criadoEm: criadaEm
       })
     );
+    await this.registrarConfirmacaoConsulta(repositorioConsultas, tenantId, entrada, envioAnterior, criadaEm);
 
     return true;
   }
@@ -249,6 +254,14 @@ export class ServicoWebhookWhatsapp {
     tenantId: string,
     remetente: string
   ): Promise<string | undefined> {
+    return (await this.encontrarEnvioAnteriorWhatsapp(repositorioMensagens, tenantId, remetente))?.pacienteId;
+  }
+
+  private async encontrarEnvioAnteriorWhatsapp(
+    repositorioMensagens: Repository<MensagemNotificacaoOrm>,
+    tenantId: string,
+    remetente: string
+  ): Promise<MensagemNotificacaoOrm | undefined> {
     const remetenteNormalizado = this.normalizarTelefone(remetente);
     if (!remetenteNormalizado) return undefined;
 
@@ -265,7 +278,48 @@ export class ServicoWebhookWhatsapp {
       return this.normalizarTelefone(String(mensagem.payload.destino ?? '')) === remetenteNormalizado;
     });
 
-    return mensagemAnterior?.pacienteId;
+    return mensagemAnterior;
+  }
+
+  private async registrarConfirmacaoConsulta(
+    repositorioConsultas: Repository<AgendaConsultaOrm>,
+    tenantId: string,
+    entrada: MensagemRecebidaWebhookWhatsapp,
+    envioAnterior: MensagemNotificacaoOrm | undefined,
+    confirmadaEm: Date
+  ) {
+    const texto = entrada.mensagem.text?.body?.trim();
+    if (!texto || !this.textoConfirmaConsulta(texto)) return;
+
+    const consultaId = envioAnterior?.payload.consultaId;
+    if (typeof consultaId !== 'string' || !consultaId) return;
+
+    const consulta = await repositorioConsultas.findOne({ where: { id: consultaId, tenantId } });
+    if (!consulta) return;
+
+    consulta.notificacoes = {
+      ...(consulta.notificacoes ?? {}),
+      confirmacaoPaciente: {
+        status: 'confirmada',
+        origem: 'whatsapp',
+        texto,
+        remetente: entrada.mensagem.from,
+        confirmadaEm: confirmadaEm.toISOString()
+      }
+    };
+    consulta.payload = {
+      ...(consulta.payload ?? {}),
+      automacoes: [
+        ...(Array.isArray(consulta.payload?.automacoes) ? consulta.payload.automacoes : []),
+        {
+          tipo: 'agenda.consulta.confirmacao',
+          status: 'confirmada',
+          origem: 'whatsapp',
+          processadoEm: confirmadaEm.toISOString()
+        }
+      ]
+    };
+    await repositorioConsultas.save(consulta);
   }
 
   private limparObjeto(objeto: Record<string, unknown>): Record<string, unknown> {
@@ -288,5 +342,14 @@ export class ServicoWebhookWhatsapp {
 
   private normalizarTelefone(valor?: string): string {
     return String(valor ?? '').replace(/\D/g, '');
+  }
+
+  private textoConfirmaConsulta(texto: string): boolean {
+    const normalizado = texto
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+    return /^(confirmo|confirmado|confirmada|sim|ok|pode confirmar)(\b|$)/.test(normalizado);
   }
 }

@@ -90,6 +90,8 @@ const templateInicial: FormularioTemplate = {
 const eventosTemplate = [
   { valor: '', rotulo: 'Uso manual' },
   { valor: 'agenda.consulta.agendada', rotulo: 'Consulta agendada' },
+  { valor: 'agenda.consulta.lembrete', rotulo: 'Lembrete de consulta' },
+  { valor: 'agenda.consulta.confirmacao', rotulo: 'Confirmacao de consulta' },
   { valor: 'agenda.consulta.remarcada', rotulo: 'Consulta remarcada' },
   { valor: 'agenda.consulta.cancelada', rotulo: 'Consulta cancelada' }
 ];

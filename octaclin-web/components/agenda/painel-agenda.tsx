@@ -98,6 +98,20 @@ function statusGoogle(consulta: ConsultaAgendaApi) {
   return 'Pendente';
 }
 
+function statusLembrete(notificacoes: Record<string, any>) {
+  const lembrete = notificacoes?.lembrete24h;
+  if (lembrete?.status === 'processado') return 'Lembrete 24h enviado';
+  if (lembrete?.status === 'ignorado') return 'Lembrete ignorado';
+  if (lembrete?.status === 'falhou') return 'Lembrete falhou';
+  return 'Lembrete pendente';
+}
+
+function statusConfirmacao(notificacoes: Record<string, any>) {
+  const confirmacao = notificacoes?.confirmacaoPaciente;
+  if (confirmacao?.status === 'confirmada') return 'Paciente confirmou';
+  return 'Aguardando confirmacao';
+}
+
 export function PainelAgenda() {
   const [consultas, setConsultas] = useState<ConsultaAgendaApi[]>([]);
   const [pacientes, setPacientes] = useState<RespostaPaginada<PacienteResumo> | null>(null);
@@ -431,6 +445,14 @@ export function PainelAgenda() {
                       <span className="inline-flex items-center gap-2 rounded-md border border-linha bg-white px-2 py-2">
                         <MessageCircle size={14} />
                         {statusNotificacao(consulta.notificacoes, 'whatsapp')}
+                      </span>
+                      <span className="inline-flex items-center gap-2 rounded-md border border-linha bg-white px-2 py-2">
+                        <Clock size={14} />
+                        {statusLembrete(consulta.notificacoes)}
+                      </span>
+                      <span className="inline-flex items-center gap-2 rounded-md border border-linha bg-white px-2 py-2">
+                        <CheckCircle2 size={14} />
+                        {statusConfirmacao(consulta.notificacoes)}
                       </span>
                     </div>
                   </div>

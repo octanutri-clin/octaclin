@@ -1,4 +1,5 @@
 import { ServicoWebhookWhatsapp } from './servico-webhook-whatsapp';
+import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
@@ -10,6 +11,7 @@ describe('ServicoWebhookWhatsapp', () => {
       mensagemExistente?: boolean;
       contatoPaciente?: string;
       mensagensRecentes?: Array<{ pacienteId?: string; payload: Record<string, unknown> }>;
+      consulta?: Record<string, unknown>;
     }
   ) {
     const entidadeMensagem: { status: string; payload: Record<string, unknown>; erro?: string } | null = mensagem
@@ -50,6 +52,10 @@ describe('ServicoWebhookWhatsapp', () => {
         }
       ])
     };
+    const repositorioConsultas = {
+      findOne: jest.fn(async () => opcoes?.consulta ?? null),
+      save: jest.fn(async (registro) => registro)
+    };
 
     const fonteDados = {
       getRepository: jest.fn(() => ({
@@ -68,6 +74,7 @@ describe('ServicoWebhookWhatsapp', () => {
             if (entidade === MensagemNotificacaoOrm) return repositorioMensagens;
             if (entidade === CanalNotificacaoOrm) return repositorioCanais;
             if (entidade === PacienteOrm) return repositorioPacientes;
+            if (entidade === AgendaConsultaOrm) return repositorioConsultas;
             return repositorioMensagens;
           })
         })
@@ -80,6 +87,7 @@ describe('ServicoWebhookWhatsapp', () => {
       repositorioMensagens,
       repositorioCanais,
       repositorioPacientes,
+      repositorioConsultas,
       criptografia,
       executorTenant
     };
@@ -220,6 +228,58 @@ describe('ServicoWebhookWhatsapp', () => {
           idExterno: 'wamid-in-2',
           remetente: '5511999999999',
           texto: 'Obrigado.'
+        })
+      })
+    );
+  });
+
+  it('deve marcar consulta como confirmada quando paciente responde confirmo ao lembrete', async () => {
+    const consulta = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      notificacoes: { lembrete24h: { status: 'processado' } },
+      payload: {}
+    };
+    const { servico, repositorioConsultas } = criarServico(undefined, {
+      contatoPaciente: '5511888888888',
+      consulta,
+      mensagensRecentes: [
+        {
+          pacienteId: 'paciente-1',
+          payload: {
+            destino: '5511999999999',
+            consultaId: 'consulta-1',
+            evento: 'agenda.consulta.lembrete'
+          }
+        }
+      ]
+    });
+
+    await expect(
+      servico.registrarMensagensRecebidas([
+        {
+          phoneNumberId: 'phone-1',
+          mensagem: {
+            id: 'wamid-in-confirmacao',
+            from: '5511999999999',
+            timestamp: '1780000002',
+            type: 'text',
+            text: { body: 'Confirmo' }
+          }
+        }
+      ])
+    ).resolves.toEqual({ criadas: 1, ignoradas: 0 });
+
+    expect(repositorioConsultas.findOne).toHaveBeenCalledWith({ where: { id: 'consulta-1', tenantId: 'tenant-1' } });
+    expect(repositorioConsultas.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'consulta-1',
+        notificacoes: expect.objectContaining({
+          confirmacaoPaciente: expect.objectContaining({
+            status: 'confirmada',
+            origem: 'whatsapp',
+            texto: 'Confirmo'
+          })
         })
       })
     );
