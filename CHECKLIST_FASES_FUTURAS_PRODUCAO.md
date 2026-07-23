@@ -191,9 +191,9 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 
 ### Bloco E - Portal do paciente pronto para clientes reais
 
-- [ ] Fase 113 - UX final do primeiro acesso do paciente.
-  - Melhorar copy, telas de erro, expiracao de convite e recuperacao.
-  - Saida esperada: paciente consegue entrar sem suporte manual.
+- [x] Fase 113 - UX final do primeiro acesso do paciente.
+  - Status: concluida em 2026-07-22.
+  - Saida entregue: primeiro acesso com estados claros para link sem token, convite expirado e convite invalido, com acoes para solicitar novo acesso ou ir ao login.
 
 - [ ] Fase 114 - Area de tarefas e materiais no portal do paciente.
   - Tarefas, metas, materiais enviados e status.

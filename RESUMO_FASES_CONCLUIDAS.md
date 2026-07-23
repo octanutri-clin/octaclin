@@ -154,10 +154,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 110 - Automacoes de lembrete e confirmacao de consulta: cron de lembrete 24h por tenant ativo, envio email/WhatsApp com template `agenda.consulta.lembrete`, idempotencia/logs em `notificacoes` e `payload.automacoes`, confirmacao simples por resposta WhatsApp e status visivel na agenda.
 - Fase 111 - Preferencias de comunicacao por paciente: portal do paciente permite editar opt-in de email/WhatsApp, canal preferido e horario permitido; backend persiste isso no contato criptografado e automacoes de lembrete respeitam consentimento, canal preferido e janela de horario.
 - Fase 112 - Central de falhas de comunicacao: painel operacional consolida falhas de mensagens, WhatsApp, email, Google Calendar e outbox, com filtros, resumo por canal e reprocessamento unificado por item.
+- Fase 113 - UX final do primeiro acesso do paciente: primeiro acesso diferencia link sem token, convite expirado e convite invalido, exibindo copy acionavel e caminhos para novo acesso ou login; smoke visual cobre caminho feliz e falhas esperadas.
 
 ## Estado atual de uso
 
-O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam recorrencia avancada/importacao Google Calendar, onboarding final do cliente/paciente, materiais no portal do paciente, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e checklist juridico/privacidade.
+O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam recorrencia avancada/importacao Google Calendar, materiais no portal do paciente, check-ins do paciente, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e checklist juridico/privacidade.
 
 ## Como atualizar este arquivo
 

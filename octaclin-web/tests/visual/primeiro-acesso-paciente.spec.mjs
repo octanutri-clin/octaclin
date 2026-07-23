@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 const tokenPrimeiroAcesso = 'tenant-1.token-primeiro-acesso';
+const tokenExpirado = 'tenant-1.token-expirado';
+const tokenInvalido = 'tenant-1.token-invalido';
 
 const portalPaciente = {
   paciente: {
@@ -101,5 +103,46 @@ test.describe('primeiro acesso do paciente', () => {
     await expect(page).toHaveURL(/\/portal$/);
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
     await expect(page.getByText('Nenhuma acao pendente para hoje.')).toBeVisible();
+  });
+
+  test('orienta paciente quando o link esta sem token', async ({ page }) => {
+    await page.goto('/primeiro-acesso');
+
+    await expect(page.getByRole('heading', { name: 'Link de primeiro acesso indisponivel' })).toBeVisible();
+    await expect(page.getByText('Abra o link completo enviado pelo profissional ou solicite um novo acesso.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Solicitar novo acesso' })).toHaveAttribute('href', '/recuperar-senha');
+    await expect(page.getByRole('link', { name: 'Ir para login' })).toHaveAttribute('href', '/login');
+  });
+
+  test('orienta paciente quando o convite expirou', async ({ page }) => {
+    await page.route(`**/api/pacientes/convites-acesso/${encodeURIComponent(tokenExpirado)}`, async (route) => {
+      await route.fulfill({
+        status: 410,
+        contentType: 'application/json',
+        body: JSON.stringify({ mensagem: 'Convite expirado.' })
+      });
+    });
+
+    await page.goto(`/primeiro-acesso?token=${encodeURIComponent(tokenExpirado)}`);
+
+    await expect(page.getByRole('heading', { name: 'Convite expirado' })).toBeVisible();
+    await expect(page.getByText('Solicite um novo acesso para proteger seus dados e concluir a ativacao.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Solicitar novo acesso' })).toHaveAttribute('href', '/recuperar-senha');
+  });
+
+  test('orienta paciente quando o convite e invalido', async ({ page }) => {
+    await page.route(`**/api/pacientes/convites-acesso/${encodeURIComponent(tokenInvalido)}`, async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ mensagem: 'Convite nao encontrado.' })
+      });
+    });
+
+    await page.goto(`/primeiro-acesso?token=${encodeURIComponent(tokenInvalido)}`);
+
+    await expect(page.getByRole('heading', { name: 'Convite nao encontrado' })).toBeVisible();
+    await expect(page.getByText('Confira se o link foi copiado inteiro ou peca um novo convite ao profissional.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Ir para login' })).toHaveAttribute('href', '/login');
   });
 });

@@ -31,7 +31,7 @@ export interface AtivacaoPacienteApi {
   destinoInicial: string;
 }
 
-class ErroApiConvitePaciente extends Error {
+export class ErroApiConvitePaciente extends Error {
   constructor(
     public readonly status: number,
     mensagem: string

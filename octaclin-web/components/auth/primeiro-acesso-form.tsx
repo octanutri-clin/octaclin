@@ -3,20 +3,95 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, KeyRound, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, KeyRound, Loader2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo } from '@/components/ui/campo';
-import { ativarConvitePaciente, ConvitePacientePublicoApi, obterConvitePaciente } from '@/lib/convites-paciente-api';
+import {
+  ativarConvitePaciente,
+  ConvitePacientePublicoApi,
+  ErroApiConvitePaciente,
+  obterConvitePaciente
+} from '@/lib/convites-paciente-api';
 
 interface PrimeiroAcessoFormProps {
   tokenInicial?: string;
 }
+
+type EstadoFalha = 'sem_token' | 'expirado' | 'nao_encontrado' | 'indisponivel';
+
+const conteudoFalha: Record<EstadoFalha, { titulo: string; mensagem: string; detalhe: string }> = {
+  sem_token: {
+    titulo: 'Link de primeiro acesso indisponivel',
+    mensagem: 'Abra o link completo enviado pelo profissional ou solicite um novo acesso.',
+    detalhe: 'O link precisa conter o codigo seguro do convite para ativar o portal.'
+  },
+  expirado: {
+    titulo: 'Convite expirado',
+    mensagem: 'Solicite um novo acesso para proteger seus dados e concluir a ativacao.',
+    detalhe: 'Por seguranca, links antigos deixam de funcionar automaticamente.'
+  },
+  nao_encontrado: {
+    titulo: 'Convite nao encontrado',
+    mensagem: 'Confira se o link foi copiado inteiro ou peca um novo convite ao profissional.',
+    detalhe: 'Nao encontramos um convite ativo com o codigo informado.'
+  },
+  indisponivel: {
+    titulo: 'Nao foi possivel validar o convite',
+    mensagem: 'Tente novamente em instantes ou fale com o profissional para receber um novo link.',
+    detalhe: 'A validacao do convite nao retornou uma resposta esperada.'
+  }
+};
 
 function formatarData(valor?: string) {
   if (!valor) return '';
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return '';
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(data);
+}
+
+function classificarFalha(erroAtual: unknown): { tipo: EstadoFalha; mensagem?: string } {
+  if (erroAtual instanceof ErroApiConvitePaciente) {
+    if (erroAtual.status === 410) return { tipo: 'expirado', mensagem: erroAtual.message };
+    if (erroAtual.status === 404) return { tipo: 'nao_encontrado', mensagem: erroAtual.message };
+    return { tipo: 'indisponivel', mensagem: erroAtual.message };
+  }
+
+  return {
+    tipo: 'indisponivel',
+    mensagem: erroAtual instanceof Error ? erroAtual.message : 'Convite invalido ou expirado.'
+  };
+}
+
+function EstadoFalhaConvite({ tipo, erro }: { tipo: EstadoFalha; erro?: string | null }) {
+  const conteudo = conteudoFalha[tipo];
+
+  return (
+    <div className="grid gap-4">
+      <div className="flex items-start gap-3 rounded-md border border-[#efb8ad] bg-[#fff4f1] px-3 py-3 text-sm text-[#7a2f23]">
+        <AlertTriangle size={18} className="mt-0.5 shrink-0 text-perigo" />
+        <div className="grid gap-1">
+          <h2 className="text-base font-semibold text-[#7a2f23]">{conteudo.titulo}</h2>
+          <p>{conteudo.mensagem}</p>
+          <p className="text-xs text-[#8f554d]">{erro || conteudo.detalhe}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Link
+          href="/recuperar-senha"
+          className="inline-flex h-9 items-center justify-center rounded-md bg-primaria px-3 text-sm font-medium text-white hover:bg-[#1d6684]"
+        >
+          Solicitar novo acesso
+        </Link>
+        <Link
+          href="/login"
+          className="inline-flex h-9 items-center justify-center rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-[#f8fafb]"
+        >
+          Ir para login
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
@@ -29,20 +104,28 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [falhaConvite, setFalhaConvite] = useState<EstadoFalha | null>(null);
   const [ativado, setAtivado] = useState(false);
 
   const senhaValida = useMemo(() => senha.length >= 8 && senha === confirmacao, [senha, confirmacao]);
 
   useEffect(() => {
     if (!token) {
-      setErro('Link de primeiro acesso invalido.');
+      setFalhaConvite('sem_token');
       setCarregando(false);
       return;
     }
 
     void obterConvitePaciente(token)
-      .then((resposta) => setConvite(resposta))
-      .catch((erroAtual) => setErro(erroAtual instanceof Error ? erroAtual.message : 'Convite invalido ou expirado.'))
+      .then((resposta) => {
+        setFalhaConvite(null);
+        setConvite(resposta);
+      })
+      .catch((erroAtual) => {
+        const falha = classificarFalha(erroAtual);
+        setFalhaConvite(falha.tipo);
+        setErro(falha.mensagem ?? null);
+      })
       .finally(() => setCarregando(false));
   }, [token]);
 
@@ -152,9 +235,7 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
           ) : null}
 
           {!carregando && !ativado && !convite ? (
-            <div className="rounded-md border border-[#efb8ad] bg-[#fff4f1] px-3 py-2 text-sm text-perigo">
-              {erro ?? 'Convite nao encontrado.'}
-            </div>
+            <EstadoFalhaConvite tipo={falhaConvite ?? 'nao_encontrado'} erro={erro} />
           ) : null}
         </section>
       </div>
