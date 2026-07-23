@@ -157,10 +157,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 113 - UX final do primeiro acesso do paciente: primeiro acesso diferencia link sem token, convite expirado e convite invalido, exibindo copy acionavel e caminhos para novo acesso ou login; smoke visual cobre caminho feliz e falhas esperadas.
 - Fase 114 - Area de tarefas e materiais no portal do paciente: resumo do portal passa a incluir tarefas/metas ativas e materiais enviados ao paciente; UI adiciona navegacao `Plano`, contadores, secao de plano de acompanhamento, materiais com status/observacao/link e eventos na linha do tempo.
 - Fase 115 - Check-ins e diario rapido de acompanhamento: portal do paciente permite registrar check-in rapido com humor, adesao ao plano, sintomas e observacoes; backend vincula pelo usuario logado, atualiza `ultimoCheckinEm`, lista diarios recentes e inclui eventos de check-in na linha do tempo.
+- Fase 116 - Notificacoes do paciente: portal do paciente passa a exibir notificacoes pendentes e historico de comunicacoes por canal, status, evento, datas e erros, com contadores `notificacoesPendentes` e `notificacoesHistorico` derivados de `mensagens_notificacao`.
 
 ## Estado atual de uso
 
-O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam recorrencia avancada/importacao Google Calendar, notificacoes do paciente, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e checklist juridico/privacidade.
+O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam recorrencia avancada/importacao Google Calendar, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e checklist juridico/privacidade.
 
 ## Como atualizar este arquivo
 

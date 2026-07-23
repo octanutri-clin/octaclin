@@ -203,9 +203,9 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Status: concluida em 2026-07-23.
   - Saida entregue: paciente registra check-in rapido com humor, adesao, sintomas e observacoes; portal exibe diario recente e backend vincula automaticamente ao paciente logado.
 
-- [ ] Fase 116 - Notificacoes do paciente.
-  - Historico de notificacoes recebidas e pendentes.
-  - Saida esperada: transparencia e reducao de mensagens perdidas.
+- [x] Fase 116 - Notificacoes do paciente.
+  - Status: concluida em 2026-07-23.
+  - Saida entregue: portal do paciente exibe notificacoes pendentes e historico de comunicacoes por canal, status, evento, datas e erros quando existirem.
 
 ### Bloco F - LGPD, seguranca e compliance
 

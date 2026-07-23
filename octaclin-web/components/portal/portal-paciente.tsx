@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import {
   AlertTriangle,
+  BellRing,
   BookOpen,
   CalendarDays,
   CheckCircle2,
@@ -102,9 +103,27 @@ function rotuloStatus(status: string) {
     enviado: 'Disponivel',
     visualizado: 'Visualizado',
     respondido: 'Respondido',
-    enviado_meta: 'Enviado'
+    enviado_meta: 'Enviado',
+    processando: 'Processando',
+    em_fila: 'Em fila',
+    falha: 'Falha'
   };
   return mapa[status] ?? status;
+}
+
+function rotuloCanalNotificacao(canal: string) {
+  const mapa: Record<string, string> = {
+    email: 'E-mail',
+    whatsapp: 'WhatsApp',
+    sms: 'SMS',
+    canal_configurado: 'Canal configurado',
+    indefinido: 'Canal indefinido'
+  };
+  return mapa[canal] ?? canal;
+}
+
+function ehNotificacaoPendente(status: string) {
+  return ['pendente', 'agendada', 'processando', 'em_fila'].includes(status);
 }
 
 function rotuloPrioridade(prioridade: string) {
@@ -293,6 +312,7 @@ const linksPortal = [
   { href: '#resumo', rotulo: 'Resumo' },
   { href: '#acoes', rotulo: 'Acoes' },
   { href: '#plano', rotulo: 'Plano' },
+  { href: '#notificacoes', rotulo: 'Notificacoes' },
   { href: '#historico', rotulo: 'Historico' },
   { href: '#perfil', rotulo: 'Perfil' },
   { href: '#privacidade', rotulo: 'Privacidade' }
@@ -513,6 +533,8 @@ export function PortalPaciente() {
   const tarefasAcompanhamento = portal?.tarefasAcompanhamento ?? [];
   const materiaisDisponiveis = portal?.materiaisDisponiveis ?? [];
   const diariosRecentes = portal?.diariosRecentes ?? [];
+  const notificacoesPaciente = portal?.notificacoesPaciente ?? [];
+  const notificacoesPendentes = notificacoesPaciente.filter((notificacao) => ehNotificacaoPendente(notificacao.status));
 
   return (
     <main className="min-h-screen bg-fundo text-tinta">
@@ -565,7 +587,7 @@ export function PortalPaciente() {
               </div>
             </nav>
 
-            <section id="resumo" className="scroll-mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_repeat(3,140px)] xl:grid-cols-[minmax(0,1fr)_repeat(7,112px)]">
+            <section id="resumo" className="scroll-mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_repeat(3,140px)] xl:grid-cols-[minmax(0,1fr)_repeat(8,104px)]">
               <div>
                 <p className="text-sm text-[#596273]">Ola,</p>
                 <h2 className="text-2xl font-semibold text-tinta">{portal.paciente.nome}</h2>
@@ -600,6 +622,10 @@ export function PortalPaciente() {
               <div className="rounded-lg border border-linha bg-white p-3">
                 <p className="text-xs text-[#596273]">Check-ins</p>
                 <p className="text-2xl font-semibold">{portal.resumo.checkinsRecentes ?? diariosRecentes.length}</p>
+              </div>
+              <div className="rounded-lg border border-linha bg-white p-3">
+                <p className="text-xs text-[#596273]">Notificacoes</p>
+                <p className="text-2xl font-semibold">{portal.resumo.notificacoesPendentes ?? notificacoesPendentes.length}</p>
               </div>
             </section>
 
@@ -821,6 +847,90 @@ export function PortalPaciente() {
                   )}
                 </div>
               </section>
+            </section>
+
+            <section id="notificacoes" className="scroll-mt-4 rounded-lg border border-linha bg-white">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-linha px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <BellRing className="h-4 w-4 text-[#596273]" />
+                  <h2 className="text-sm font-semibold">Notificacoes do paciente</h2>
+                </div>
+                <span className="rounded-full border border-linha bg-[#f8fafb] px-2 py-1 text-xs font-semibold text-[#596273]">
+                  {portal.resumo.notificacoesHistorico ?? notificacoesPaciente.length} no historico
+                </span>
+              </div>
+              <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+                <div className="grid gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">Pendentes</p>
+                    <p className="mt-1 text-xs text-[#596273]">Mensagens ainda aguardando envio ou processamento.</p>
+                  </div>
+                  {notificacoesPendentes.length ? (
+                    notificacoesPendentes.map((notificacao) => (
+                      <article key={notificacao.id} className="rounded-md border border-linha bg-[#fffaf0] p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-semibold">{notificacao.titulo}</p>
+                            <p className="mt-1 text-xs text-[#596273]">
+                              {rotuloCanalNotificacao(notificacao.canal)}
+                              {notificacao.evento ? ` - ${notificacao.evento}` : ''}
+                            </p>
+                          </div>
+                          <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                            {rotuloStatus(notificacao.status)}
+                          </span>
+                        </div>
+                        <p className="mt-3 line-clamp-3 break-words text-sm text-[#596273]">
+                          {notificacao.texto || 'Notificacao registrada no acompanhamento.'}
+                        </p>
+                        <p className="mt-3 text-xs text-[#596273]">
+                          {notificacao.agendadoPara ? `Agendada para ${formatarDataHora(notificacao.agendadoPara)}` : `Criada em ${formatarDataHora(notificacao.criadoEm)}`}
+                        </p>
+                      </article>
+                    ))
+                  ) : (
+                    <p className="rounded-md border border-linha bg-[#f8fafb] p-3 text-sm text-[#596273]">Nenhuma notificacao pendente.</p>
+                  )}
+                </div>
+
+                <div className="grid gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">Historico</p>
+                    <p className="mt-1 text-xs text-[#596273]">Ultimas notificacoes registradas para este paciente.</p>
+                  </div>
+                  {notificacoesPaciente.length ? (
+                    notificacoesPaciente.slice(0, 6).map((notificacao) => (
+                      <article key={notificacao.id} className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-semibold">{notificacao.titulo}</p>
+                            <p className="mt-1 text-xs text-[#596273]">{rotuloCanalNotificacao(notificacao.canal)}</p>
+                          </div>
+                          <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                            {rotuloStatus(notificacao.status)}
+                          </span>
+                        </div>
+                        <p className="mt-2 line-clamp-2 break-words text-sm text-[#596273]">
+                          {notificacao.texto || 'Notificacao registrada no acompanhamento.'}
+                        </p>
+                        <dl className="mt-3 grid gap-2 text-xs text-[#596273] sm:grid-cols-2">
+                          <div>
+                            <dt className="font-medium text-[#343c4b]">Criada em</dt>
+                            <dd>{formatarDataHora(notificacao.criadoEm)}</dd>
+                          </div>
+                          <div>
+                            <dt className="font-medium text-[#343c4b]">Enviada em</dt>
+                            <dd>{formatarDataHora(notificacao.enviadoEm ?? notificacao.agendadoPara)}</dd>
+                          </div>
+                        </dl>
+                        {notificacao.erro ? <p className="mt-3 break-words text-xs text-perigo">{notificacao.erro}</p> : null}
+                      </article>
+                    ))
+                  ) : (
+                    <p className="rounded-md border border-linha bg-[#f8fafb] p-3 text-sm text-[#596273]">Nenhuma notificacao registrada.</p>
+                  )}
+                </div>
+              </div>
             </section>
 
             <section id="historico" className="scroll-mt-4 rounded-lg border border-linha bg-white">

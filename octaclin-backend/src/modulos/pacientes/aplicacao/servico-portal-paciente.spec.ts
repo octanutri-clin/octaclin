@@ -207,10 +207,26 @@ describe('ServicoPortalPaciente', () => {
           id: 'mensagem-1',
           tenantId: 'tenant-1',
           pacienteId: 'paciente-1',
+          canalId: 'canal-email-1',
           status: 'enviado',
-          payload: { assunto: 'Consulta agendada', texto: 'Sua consulta foi agendada.' },
+          payload: { assunto: 'Consulta agendada', texto: 'Sua consulta foi agendada.', canal: 'email', evento: 'agenda.consulta.agendada' },
           criadoEm: new Date('2026-07-20T14:00:00.000Z'),
           enviadoEm: new Date('2026-07-20T14:01:00.000Z')
+        },
+        {
+          id: 'mensagem-pendente-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          canalId: 'canal-whatsapp-1',
+          status: 'pendente',
+          payload: {
+            assunto: 'Lembrete de consulta',
+            texto: 'Sua consulta sera amanha.',
+            canal: 'whatsapp',
+            evento: 'agenda.consulta.lembrete',
+            agendadoPara: '2026-08-09T13:00:00.000Z'
+          },
+          criadoEm: new Date('2026-07-21T14:00:00.000Z')
         },
         {
           id: 'mensagem-2',
@@ -339,6 +355,7 @@ describe('ServicoPortalPaciente', () => {
       tarefasAcompanhamento: unknown[];
       materiaisDisponiveis: unknown[];
       diariosRecentes: unknown[];
+      notificacoesPaciente: unknown[];
     };
 
     expect(portal.paciente).toEqual(
@@ -353,10 +370,12 @@ describe('ServicoPortalPaciente', () => {
       consultasProximas: 1,
       formulariosPendentes: 1,
       formulariosRespondidos: 1,
-      mensagensRecentes: 1,
+      mensagensRecentes: 2,
       tarefasPendentes: 1,
       materiaisDisponiveis: 1,
-      checkinsRecentes: 1
+      checkinsRecentes: 1,
+      notificacoesPendentes: 1,
+      notificacoesHistorico: 2
     });
     expect(portal.perfil).toEqual({
       contato: 'ana@example.com',
@@ -395,7 +414,30 @@ describe('ServicoPortalPaciente', () => {
       })
     ]);
     expect(portal.mensagensRecentes).toEqual([
+      expect.objectContaining({ id: 'mensagem-pendente-1', titulo: 'Lembrete de consulta', texto: 'Sua consulta sera amanha.' }),
       expect.objectContaining({ id: 'mensagem-1', titulo: 'Consulta agendada', texto: 'Sua consulta foi agendada.' })
+    ]);
+    expect(portalComPlano.notificacoesPaciente).toEqual([
+      expect.objectContaining({
+        id: 'mensagem-pendente-1',
+        canal: 'whatsapp',
+        titulo: 'Lembrete de consulta',
+        texto: 'Sua consulta sera amanha.',
+        status: 'pendente',
+        evento: 'agenda.consulta.lembrete',
+        criadoEm: new Date('2026-07-21T14:00:00.000Z'),
+        agendadoPara: new Date('2026-08-09T13:00:00.000Z')
+      }),
+      expect.objectContaining({
+        id: 'mensagem-1',
+        canal: 'email',
+        titulo: 'Consulta agendada',
+        texto: 'Sua consulta foi agendada.',
+        status: 'enviado',
+        evento: 'agenda.consulta.agendada',
+        criadoEm: new Date('2026-07-20T14:00:00.000Z'),
+        enviadoEm: new Date('2026-07-20T14:01:00.000Z')
+      })
     ]);
     expect(portalComPlano.tarefasAcompanhamento).toEqual([
       expect.objectContaining({

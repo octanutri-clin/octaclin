@@ -79,6 +79,8 @@ export interface ResumoPortalPaciente {
     tarefasPendentes: number;
     materiaisDisponiveis: number;
     checkinsRecentes: number;
+    notificacoesPendentes: number;
+    notificacoesHistorico: number;
   };
   consultasProximas: {
     id: string;
@@ -115,6 +117,7 @@ export interface ResumoPortalPaciente {
     criadoEm: Date;
     enviadoEm?: Date;
   }[];
+  notificacoesPaciente: NotificacaoPortalPaciente[];
   tarefasAcompanhamento: {
     id: string;
     titulo: string;
@@ -156,6 +159,19 @@ export interface CheckinRapidoPortalPaciente {
   sintomas?: string;
   observacoes?: string;
   registradoEm: Date;
+}
+
+export interface NotificacaoPortalPaciente {
+  id: string;
+  canal: string;
+  titulo: string;
+  texto: string;
+  status: string;
+  evento?: string;
+  erro?: string;
+  criadoEm: Date;
+  enviadoEm?: Date;
+  agendadoPara?: Date;
 }
 
 export interface PerfilPortalPaciente {
@@ -285,7 +301,7 @@ export class ServicoPortalPaciente {
       const mensagens = await gerenciador.getRepository(MensagemNotificacaoOrm).find({
         where: { tenantId, pacienteId: paciente.id },
         order: { criadoEm: 'DESC' },
-        take: 5
+        take: 20
       });
       const tarefas = await gerenciador.getRepository(AcompanhamentoTarefaOrm).find({
         where: { tenantId, pacienteId: paciente.id, status: In(['pendente', 'em_andamento']) },
@@ -347,7 +363,8 @@ export class ServicoPortalPaciente {
         status: mensagem.status,
         criadoEm: mensagem.criadoEm,
         enviadoEm: mensagem.enviadoEm
-      }));
+      })).slice(0, 5);
+      const notificacoesPaciente = mensagens.map((mensagem) => this.mapearNotificacaoPaciente(mensagem));
       const tarefasAcompanhamento = tarefas.map((tarefa) => ({
         id: tarefa.id,
         titulo: tarefa.titulo,
@@ -410,12 +427,15 @@ export class ServicoPortalPaciente {
           mensagensRecentes: mensagensRecentes.length,
           tarefasPendentes: tarefasAcompanhamento.length,
           materiaisDisponiveis: materiaisDisponiveis.length,
-          checkinsRecentes: diariosRecentes.length
+          checkinsRecentes: diariosRecentes.length,
+          notificacoesPendentes: notificacoesPaciente.filter((notificacao) => this.ehNotificacaoPendente(notificacao.status)).length,
+          notificacoesHistorico: notificacoesPaciente.length
         },
         consultasProximas,
         formulariosPendentes,
         formulariosRespondidos,
         mensagensRecentes,
+        notificacoesPaciente,
         tarefasAcompanhamento,
         materiaisDisponiveis,
         diariosRecentes,
@@ -683,6 +703,33 @@ export class ServicoPortalPaciente {
   private textoPayload(payload: Record<string, unknown>, chave: string): string | undefined {
     const valor = payload[chave];
     return typeof valor === 'string' && valor.trim() ? valor : undefined;
+  }
+
+  private dataPayload(payload: Record<string, unknown>, chave: string): Date | undefined {
+    const valor = payload[chave];
+    if (valor instanceof Date && !Number.isNaN(valor.getTime())) return valor;
+    if (typeof valor !== 'string' || !valor.trim()) return undefined;
+    const data = new Date(valor);
+    return Number.isNaN(data.getTime()) ? undefined : data;
+  }
+
+  private ehNotificacaoPendente(status: string): boolean {
+    return ['pendente', 'agendada', 'processando', 'em_fila'].includes(status);
+  }
+
+  private mapearNotificacaoPaciente(mensagem: MensagemNotificacaoOrm): NotificacaoPortalPaciente {
+    return {
+      id: mensagem.id,
+      canal: this.textoPayload(mensagem.payload, 'canal') ?? (mensagem.canalId ? 'canal_configurado' : 'indefinido'),
+      titulo: this.textoPayload(mensagem.payload, 'assunto') ?? 'Mensagem OctaClin',
+      texto: this.textoPayload(mensagem.payload, 'texto') ?? this.textoPayload(mensagem.payload, 'observacao') ?? '',
+      status: mensagem.status,
+      evento: this.textoPayload(mensagem.payload, 'evento') ?? this.textoPayload(mensagem.payload, 'templateEvento'),
+      erro: mensagem.erro,
+      criadoEm: mensagem.criadoEm,
+      enviadoEm: mensagem.enviadoEm,
+      agendadoPara: this.dataPayload(mensagem.payload, 'agendadoPara')
+    };
   }
 
   private textoOpcional(valor?: string): string | undefined {

@@ -37,6 +37,8 @@ export interface PortalPacienteApi {
     tarefasPendentes?: number;
     materiaisDisponiveis?: number;
     checkinsRecentes?: number;
+    notificacoesPendentes?: number;
+    notificacoesHistorico?: number;
   };
   consultasProximas: {
     id: string;
@@ -72,6 +74,18 @@ export interface PortalPacienteApi {
     status: string;
     criadoEm: string;
     enviadoEm?: string;
+  }[];
+  notificacoesPaciente?: {
+    id: string;
+    canal: string;
+    titulo: string;
+    texto: string;
+    status: string;
+    evento?: string;
+    erro?: string;
+    criadoEm: string;
+    enviadoEm?: string;
+    agendadoPara?: string;
   }[];
   tarefasAcompanhamento?: {
     id: string;
