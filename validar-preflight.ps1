@@ -69,6 +69,7 @@ try {
       'VARIAVEIS_AMBIENTE.md',
       'RUNBOOK_ROTACAO_SECRETS.md',
       'RUNBOOK_BACKUP_RESTORE.md',
+      'RUNBOOK_SUPORTE.md',
       'CHECKLIST_GO_LIVE.md'
     )
 

@@ -1,6 +1,6 @@
 # OctaClin - Handoff tecnico
 
-Atualizado em 2026-07-22, apos a Fase 108 e a documentacao operacional para agentes.
+Atualizado em 2026-07-23, apos a Fase 127.
 
 Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo, leia tambem:
 
@@ -14,6 +14,7 @@ Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo
 - `TESTES_E_VALIDACOES.md`
 - `RUNBOOK_PRODUCAO.md`
 - `RUNBOOK_BACKUP_RESTORE.md`
+- `RUNBOOK_SUPORTE.md`
 - `VARIAVEIS_AMBIENTE.md`
 - `CHECKLIST_GO_LIVE.md`
 - `ONBOARDING_DESENVOLVEDOR.md`
@@ -39,6 +40,7 @@ O projeto ja possui:
 - email via Gmail/SMTP/Gmail API;
 - WhatsApp Meta Cloud API com webhook, inbox e status;
 - LGPD operacional e portal;
+- runbooks de producao, backup/restore, rotacao de secrets e suporte;
 - convites administrativos para usuarios de cliente;
 - modelo de planos SaaS com limites, uso e alertas por tenant;
 - solicitacao comercial manual de upgrade/revisao de assinatura;
@@ -175,8 +177,8 @@ Leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md` antes de alterar qualquer i
 
 ## Estado de roadmap
 
-- Ultima fase concluida: Fase 126 - Backups e restore testado.
-- Proxima fase planejada: Fase 127 - Runbooks de suporte.
+- Ultima fase concluida: Fase 127 - Runbooks de suporte.
+- Proxima fase planejada: Fase 128 - Suite E2E de jornadas criticas.
 - Roadmap completo: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regra de continuidade

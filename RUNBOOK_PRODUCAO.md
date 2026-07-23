@@ -274,6 +274,8 @@ Fluxo de resposta:
 
 ## Incidentes
 
+Para atendimento operacional detalhado de login, convites, recuperacao de senha, WhatsApp, email e agenda, use `RUNBOOK_SUPORTE.md`. As secoes abaixo sao apenas o resumo de resposta rapida.
+
 ### Login indisponivel
 
 1. Verificar Render backend.

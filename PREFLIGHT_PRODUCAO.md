@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-07-22, Fase 108.
+Atualizado em 2026-07-23, Fase 127.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -16,21 +16,22 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Area | Status | Evidencia atual | Antes de clientes reais |
 | --- | --- | --- | --- |
 | Login unificado | Pronto | Login por perfil, cookies HttpOnly e roteamento por papel. | Revalidar em producao isolada. |
-| Recuperacao de senha | Pronto | Fluxo seguro e testes focados. | Aplicar rate limit e lockout. |
-| Permissoes finas | Pronto | Matriz refinada, guard backend, BFF e middleware web por permissao. | Revalidar em producao isolada e ampliar testes cross-tenant. |
-| Multi-tenant | Parcial | Tenant aplicado nos fluxos principais. | Criar testes negativos cross-tenant para rotas criticas. |
+| Recuperacao de senha | Pronto | Fluxo seguro, testes focados, rate limit e lockout. | Revalidar em producao isolada. |
+| Permissoes finas | Pronto | Matriz refinada, guard backend, BFF e middleware web por permissao. | Revalidar em producao isolada. |
+| Multi-tenant | Pronto | Tenant aplicado nos fluxos principais e testes negativos para rotas criticas revisadas. | Revalidar em producao isolada e ampliar conforme novos dominios. |
 | Portal do cliente | Parcial | Base, resumo real, configuracoes, perfil fiscal, usuarios, convites administrativos, historico/exportacao de convites, resumo de limites SaaS, solicitacao comercial manual e aviso de assinatura bloqueada. | Onboarding final e QA E2E. |
 | Portal do profissional | Parcial | Dashboard diario, console operacional, pacientes, prontuario/linha do tempo, evolucoes clinicas privadas, tarefas/metas/check-ins de acompanhamento, biblioteca/envio de materiais, agenda, formularios e comunicacoes. | Agenda de producao e UX final de rotina. |
-| Portal do paciente | Parcial | Primeiro acesso, historico, perfil, formularios e LGPD. | UX final, tarefas, materiais enviados, check-ins e notificacoes. |
+| Portal do paciente | Parcial | Primeiro acesso, historico, perfil, formularios, LGPD, tarefas, materiais, check-ins e notificacoes. | QA E2E com jornada real e dados realistas. |
 | Formularios | Pronto | Editor, modelos, preview, coleta, respostas e leitura clinica. | QA E2E com jornada real e dados realistas. |
 | Agenda | Parcial | Agenda interna com Google Calendar, comunicacoes no agendamento, conflito local por profissional, remarcacao e cancelamento sincronizados com Google. | Recorrencia avancada, importacao inbound por `syncToken` e painel de disponibilidade. |
 | Email | Parcial | Envio validado com Gmail. | Identidade de envio, SPF/DKIM/DMARC quando houver dominio proprio. |
-| WhatsApp | Parcial | Envio, webhook, status, inbox, associacao e notas. | Templates aprovados, mapeamento por evento e automacoes. |
-| LGPD | Parcial | Portal paciente e painel operacional LGPD. | Termos, politica, consentimentos versionados, retencao e exportacao completa. |
-| Auditoria | Parcial | Auditoria operacional, convites administrativos e perfil fiscal. | Cobrir mutacoes sensiveis restantes e exportacoes. |
+| WhatsApp | Parcial | Envio, webhook, status, inbox, associacao, notas, templates por evento e automacoes. | Validar templates reais aprovados em producao. |
+| LGPD | Pronto | Portal paciente, painel operacional LGPD, consentimentos versionados, retencao programada e exportacao completa. | Revisao juridica/comercial antes do go-live. |
+| Auditoria | Parcial | Auditoria operacional, convites administrativos, perfil fiscal, LGPD, agenda e leituras sensiveis. | Cobrir mutacoes sensiveis restantes conforme surgirem. |
 | Billing/assinatura | Parcial | Modelo de planos, limites, uso, alertas, solicitacao manual de upgrade/revisao, controle manual administrativo e bloqueios suaves para novas criacoes. | Expandir bloqueios para mensagens/formularios/armazenamento; gateway definitivo se necessario. |
-| Observabilidade | Parcial | Healthchecks, logs estruturados, request ID, alertas operacionais e runbook. | Persistir historico de alertas e integrar notificacao externa se necessario. |
+| Observabilidade | Parcial | Healthchecks, logs estruturados, request ID, alertas operacionais e runbooks. | Persistir historico de alertas e integrar notificacao externa se necessario. |
 | Backups/restore | Parcial | Runbook, planejador seguro, script de backup e validacao estrutural com `pg_restore --list`. | Executar restore real em banco dedicado antes do go-live. |
+| Suporte | Pronto | `RUNBOOK_SUPORTE.md` cobre login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento. | Treinar responsavel e revisar apos piloto. |
 | Producao isolada | Pendente | Staging funcional. | Criar env de producao separado de staging. |
 | Juridico/comercial | Pendente | Checklist previsto. | Termos, politica, contrato e processo de suporte. |
 | QA E2E | Parcial | Typechecks, specs focadas e Playwright visual por areas. | Suite de jornadas criticas ponta a ponta. |
@@ -79,4 +80,4 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Seguir para a proxima fase operacional: runbooks de suporte, Fase 127.
+Seguir para a proxima fase de qualidade: suite E2E de jornadas criticas, Fase 128.

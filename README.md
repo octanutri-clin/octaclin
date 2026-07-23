@@ -25,6 +25,7 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 - `VARIAVEIS_AMBIENTE.md` - variaveis necessarias sem valores secretos.
 - `RUNBOOK_PRODUCAO.md` - operacao, deploy, validacao e incidentes.
 - `RUNBOOK_BACKUP_RESTORE.md` - backup PostgreSQL/Neon e restore de teste.
+- `RUNBOOK_SUPORTE.md` - atendimento de suporte para login, convites, senha, WhatsApp, email e agenda.
 - `CHECKLIST_GO_LIVE.md` - criterios antes de incluir clientes reais.
 
 ## Estrutura
@@ -55,5 +56,6 @@ Backup/restore:
 
 ```powershell
 pnpm test:backup
+pnpm test:suporte
 pnpm backup:plan
 ```

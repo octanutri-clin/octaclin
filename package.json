@@ -7,6 +7,7 @@
     "test:security": "node scripts/test-scan-secrets.mjs",
     "backup:plan": "node scripts/backup-restore-plan.mjs",
     "test:backup": "node scripts/test-backup-restore-plan.mjs",
+    "test:suporte": "node scripts/test-runbook-suporte.mjs",
     "validate": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1",
     "validate:docs": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -DocsOnly",
     "validate:full": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -Full"

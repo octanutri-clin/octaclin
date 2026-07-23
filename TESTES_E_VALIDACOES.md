@@ -201,6 +201,18 @@ powershell -ExecutionPolicy Bypass -File .\validar-backup-restore.ps1 -RestoreTe
 
 Regra esperada: o plano de backup nao pode imprimir senha real, `RESTORE_DATABASE_URL` nao pode ser igual a `DATABASE_URL`, e dumps em `backups/` nao devem entrar no Git.
 
+## Validacao do runbook de suporte
+
+Use quando alterar fluxos de atendimento, incidentes comuns, comunicacoes, agenda, login ou convites:
+
+```powershell
+pnpm test:suporte
+pnpm security:secrets
+powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
+```
+
+Regra esperada: `RUNBOOK_SUPORTE.md` deve cobrir triagem inicial, login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento, sem padroes obvios de secrets.
+
 ## Validacao para integracoes
 
 Quando mexer em Gmail, Meta, Calendar, Redis ou Render:

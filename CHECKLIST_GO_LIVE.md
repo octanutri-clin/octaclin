@@ -44,6 +44,7 @@ Este checklist deve ser concluido antes de incluir clientes reais de consultoria
 - [ ] Restore testado em banco dedicado com `validar-backup-restore.ps1 -RestoreTeste`.
 - [ ] Logs e alertas configurados.
 - [ ] Runbooks revisados.
+- [ ] Suporte treinado com `RUNBOOK_SUPORTE.md`.
 
 ## Integracoes
 

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 126.
+Atualizado apos a Fase 127.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -271,9 +271,13 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Saida entregue: `RUNBOOK_BACKUP_RESTORE.md`, planejador seguro `scripts/backup-restore-plan.mjs`, teste `scripts/test-backup-restore-plan.mjs`, executor `validar-backup-restore.ps1`, `backups/` ignorado no Git e procedimento de restore em banco dedicado.
   - Observacao: restore operacional real exige `RESTORE_DATABASE_URL` dedicado e `CONFIRMAR_RESTORE_TESTE=SIM`; nao foi executado contra Neon nesta fase sem um banco de restore fornecido.
 
-- [ ] Fase 127 - Runbooks de suporte.
+- [x] Fase 127 - Runbooks de suporte.
   - Login, convite, falha WhatsApp, falha email, falha agenda, recuperacao de senha.
   - Saida esperada: manual operacional para atendimento.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-23.
+  - Validacoes: `pnpm test:suporte`, `pnpm security:secrets`, `powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly`.
+  - Saida entregue: `RUNBOOK_SUPORTE.md`, teste documental `scripts/test-runbook-suporte.mjs`, script `pnpm test:suporte`, referencias nos runbooks/checklists e orientacao segura para triagem/escalonamento.
 
 ### Bloco H - QA, dados reais e go-live
 

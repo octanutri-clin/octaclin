@@ -1,14 +1,14 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-07-22.
+Atualizado em 2026-07-23.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 126 - Backups e restore testado.
-- Proxima fase planejada: Fase 127 - Runbooks de suporte.
+- Ultima fase concluida: Fase 127 - Runbooks de suporte.
+- Proxima fase planejada: Fase 128 - Suite E2E de jornadas criticas.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -46,18 +46,18 @@ Atualizado em 2026-07-22.
 - WhatsApp Meta com envio, webhook, status, inbox, associacao e notas.
 - Painel operacional LGPD.
 - Auditoria e outbox operacional.
+- Runbooks de producao, backup/restore, rotacao de secrets e suporte.
 
 ## O que ainda falta antes de producao real
 
 - Gateway de pagamento definitivo, se a operacao manual deixar de ser suficiente.
 - Recorrencia avancada e importacao inbound do Google Calendar por `syncToken`.
-- Templates WhatsApp aprovados mapeados no OctaClin.
-- Automacoes de lembrete/confirmacao.
-- Politicas, termos e consentimentos versionados.
-- Hardening de secrets, rate limiting e revisao multi-tenant.
 - Restore real em banco dedicado antes do go-live.
-- Producao isolada de staging.
 - QA E2E das jornadas criticas.
+- Staging com dados realistas.
+- Piloto interno controlado.
+- Producao isolada de staging.
+- Dominio, SSL e identidade de envio.
 - Checklist juridico/comercial.
 - Go-live assistido.
 
@@ -83,6 +83,7 @@ Atualizado em 2026-07-22.
 - `TESTES_E_VALIDACOES.md`: comandos de validacao.
 - `RUNBOOK_PRODUCAO.md`: operacao.
 - `RUNBOOK_BACKUP_RESTORE.md`: backup PostgreSQL/Neon e restore de teste.
+- `RUNBOOK_SUPORTE.md`: suporte para login, convites, senha, WhatsApp, email e agenda.
 - `VARIAVEIS_AMBIENTE.md`: env vars sem secrets.
 - `CHECKLIST_GO_LIVE.md`: liberacao para clientes reais.
 - `ONBOARDING_DESENVOLVEDOR.md`: entrada de novos desenvolvedores/agentes.
@@ -95,4 +96,4 @@ Atualizado em 2026-07-22.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, mas ainda precisa de restore real em banco dedicado, runbooks de suporte, QA E2E de jornadas criticas e producao isolada antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, mas ainda precisa de restore real em banco dedicado, QA E2E de jornadas criticas, staging com dados realistas e producao isolada antes de uso comercial com clientes reais.
