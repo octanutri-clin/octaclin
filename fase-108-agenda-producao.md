@@ -35,7 +35,7 @@ Amadurecer a agenda interna para uso real, reduzindo risco de conflito de horari
 ## Validacoes
 
 ```powershell
-pnpm --dir octaclin-backend exec jest servico-agenda.spec.ts servico-google-calendar.spec.ts --runInBand
+pnpm --dir octaclin-backend test --runInBand servico-agenda.spec.ts servico-google-calendar.spec.ts
 pnpm --dir octaclin-backend typecheck
 pnpm --dir octaclin-web typecheck
 pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs -g "permite remarcar e cancelar consulta agendada|agrega rotina diaria do profissional" --project=desktop-chromium --project=mobile-chromium --reporter=list

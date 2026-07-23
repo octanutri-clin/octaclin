@@ -30,15 +30,17 @@ Select-String -Path *.md -Pattern '^# '
 Use quando alterar servicos, controllers, DTOs ou dominio no backend:
 
 ```powershell
-pnpm --dir octaclin-backend exec jest <spec1> <spec2> --runInBand
+pnpm --dir octaclin-backend test --runInBand <spec1> <spec2>
 pnpm --dir octaclin-backend typecheck
 ```
 
 Specs recentes importantes:
 
 ```powershell
-pnpm --dir octaclin-backend exec jest servico-usuarios-cliente.spec.ts servico-recuperacao-senha.spec.ts servico-portal-cliente.spec.ts permissoes.spec.ts guarda-permissoes.spec.ts --runInBand
+pnpm --dir octaclin-backend test --runInBand servico-usuarios-cliente.spec.ts servico-recuperacao-senha.spec.ts servico-portal-cliente.spec.ts permissoes.spec.ts guarda-permissoes.spec.ts
 ```
+
+No Windows/Codex, prefira o script `test` do pacote backend. O formato `pnpm --dir octaclin-backend exec jest ...` pode nao resolver o binario local do Jest corretamente em alguns shells.
 
 ## Validacao web focada
 
@@ -94,7 +96,7 @@ Remove-Item $out,$err -ErrorAction SilentlyContinue
 Fase 95 e semelhantes devem rodar:
 
 ```powershell
-pnpm --dir octaclin-backend exec jest permissoes.spec.ts guarda-permissoes.spec.ts --runInBand
+pnpm --dir octaclin-backend test --runInBand permissoes.spec.ts guarda-permissoes.spec.ts
 pnpm --dir octaclin-web test:authz
 pnpm --dir octaclin-backend typecheck
 pnpm --dir octaclin-web typecheck
