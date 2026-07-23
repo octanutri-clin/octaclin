@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 127.
+Atualizado apos a Fase 128.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -281,9 +281,13 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 
 ### Bloco H - QA, dados reais e go-live
 
-- [ ] Fase 128 - Suite E2E de jornadas criticas.
+- [x] Fase 128 - Suite E2E de jornadas criticas.
   - Cliente cria usuario, profissional cria paciente, paciente acessa portal, consulta agenda e comunicacao dispara.
   - Saida esperada: Playwright/API cobrindo jornada real.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-23.
+  - Validacoes: `pnpm test:e2e:criticas`, `pnpm security:secrets`, `powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly`.
+  - Saida entregue: suite Playwright `jornadas-criticas.spec.mjs` e validador `validar-jornadas-criticas.ps1` cobrindo convite administrativo, criacao de paciente, agendamento com email/WhatsApp/Google Calendar e portal do paciente com notificacoes/plano.
 
 - [ ] Fase 129 - Staging com dados realistas.
   - Criar massa de dados sem PII real.

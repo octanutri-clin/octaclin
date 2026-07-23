@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test:authz": "node scripts/test-autorizacao-rotas.mjs",
+    "test:e2e:criticas": "playwright test tests/visual/jornadas-criticas.spec.mjs --reporter=list",
     "test:questionarios-preview": "node scripts/test-questionarios-preview.mjs",
     "smoke:visual": "playwright test",
     "smoke:ui": "node scripts/smoke-ui-regression.mjs",

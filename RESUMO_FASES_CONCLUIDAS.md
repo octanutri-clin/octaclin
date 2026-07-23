@@ -169,10 +169,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 125 - Alertas operacionais: console de operacoes passa a exibir alertas consolidados de health critico/degradado, outbox atrasado, falhas de comunicacao e metadados de deploy ausentes em producao, com severidade, metricas e acao sugerida.
 - Fase 126 - Backups e restore testado: politica PostgreSQL/Neon documentada, `backups/` ignorado no Git, planejador seguro sem vazamento de senha, script `validar-backup-restore.ps1` para `pg_dump`/`pg_restore --list` e restore opcional em banco dedicado com confirmacao explicita.
 - Fase 127 - Runbooks de suporte: criado `RUNBOOK_SUPORTE.md` com triagem segura, atendimento de login, convites, recuperacao de senha, WhatsApp, email, agenda e criterio de escalonamento; adicionado teste documental `pnpm test:suporte`.
+- Fase 128 - Suite E2E de jornadas criticas: adicionada suite Playwright para cliente convidar usuario, profissional criar paciente, agenda disparar email/WhatsApp/Google Calendar e paciente visualizar consulta, notificacoes e plano no portal.
 
 ## Estado atual de uso
 
-O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam executar restore real em banco dedicado, QA de ponta a ponta com dados realistas, piloto interno controlado e separacao formal de staging/producao.
+O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam executar restore real em banco dedicado, staging com dados realistas, piloto interno controlado e separacao formal de staging/producao.
 
 ## Como atualizar este arquivo
 

@@ -59,3 +59,9 @@ pnpm test:backup
 pnpm test:suporte
 pnpm backup:plan
 ```
+
+Jornadas criticas:
+
+```powershell
+pnpm test:e2e:criticas
+```

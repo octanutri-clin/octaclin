@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-07-23, Fase 127.
+Atualizado em 2026-07-23, Fase 128.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -34,7 +34,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Suporte | Pronto | `RUNBOOK_SUPORTE.md` cobre login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento. | Treinar responsavel e revisar apos piloto. |
 | Producao isolada | Pendente | Staging funcional. | Criar env de producao separado de staging. |
 | Juridico/comercial | Pendente | Checklist previsto. | Termos, politica, contrato e processo de suporte. |
-| QA E2E | Parcial | Typechecks, specs focadas e Playwright visual por areas. | Suite de jornadas criticas ponta a ponta. |
+| QA E2E | Parcial | Typechecks, specs focadas, Playwright visual por areas e suite de jornadas criticas com BFF mockado. | Validar em staging com dados realistas. |
 
 ## Gate antes de cada fase
 
@@ -80,4 +80,4 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Seguir para a proxima fase de qualidade: suite E2E de jornadas criticas, Fase 128.
+Seguir para a proxima fase de qualidade: staging com dados realistas, Fase 129.

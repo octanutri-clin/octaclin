@@ -8,6 +8,7 @@
     "backup:plan": "node scripts/backup-restore-plan.mjs",
     "test:backup": "node scripts/test-backup-restore-plan.mjs",
     "test:suporte": "node scripts/test-runbook-suporte.mjs",
+    "test:e2e:criticas": "powershell -ExecutionPolicy Bypass -File ./validar-jornadas-criticas.ps1",
     "validate": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1",
     "validate:docs": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -DocsOnly",
     "validate:full": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -Full"

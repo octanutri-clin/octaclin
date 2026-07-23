@@ -41,6 +41,7 @@ O projeto ja possui:
 - WhatsApp Meta Cloud API com webhook, inbox e status;
 - LGPD operacional e portal;
 - runbooks de producao, backup/restore, rotacao de secrets e suporte;
+- suite Playwright de jornadas criticas para cliente, profissional, agenda/comunicacoes e paciente;
 - convites administrativos para usuarios de cliente;
 - modelo de planos SaaS com limites, uso e alertas por tenant;
 - solicitacao comercial manual de upgrade/revisao de assinatura;
@@ -177,8 +178,8 @@ Leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md` antes de alterar qualquer i
 
 ## Estado de roadmap
 
-- Ultima fase concluida: Fase 127 - Runbooks de suporte.
-- Proxima fase planejada: Fase 128 - Suite E2E de jornadas criticas.
+- Ultima fase concluida: Fase 128 - Suite E2E de jornadas criticas.
+- Proxima fase planejada: Fase 129 - Staging com dados realistas.
 - Roadmap completo: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regra de continuidade

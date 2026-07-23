@@ -224,6 +224,16 @@ Quando mexer em Gmail, Meta, Calendar, Redis ou Render:
 5. Conferir logs.
 6. Atualizar `RUNBOOK_PRODUCAO.md` ou `VARIAVEIS_AMBIENTE.md` se necessario.
 
+## Suite E2E de jornadas criticas
+
+Use antes de go-live, ao alterar portal do cliente, pacientes, agenda, comunicacoes ou portal do paciente:
+
+```powershell
+pnpm test:e2e:criticas
+```
+
+A suite `octaclin-web/tests/visual/jornadas-criticas.spec.mjs` valida convite administrativo, criacao de paciente, agendamento com email/WhatsApp/Google Calendar e portal do paciente com notificacoes/plano. O comando raiz usa `validar-jornadas-criticas.ps1` para subir o Next temporariamente e encerrar a porta ao final.
+
 ## Validacao antes de commit
 
 Sempre:

@@ -7,8 +7,8 @@ Atualizado em 2026-07-23.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 127 - Runbooks de suporte.
-- Proxima fase planejada: Fase 128 - Suite E2E de jornadas criticas.
+- Ultima fase concluida: Fase 128 - Suite E2E de jornadas criticas.
+- Proxima fase planejada: Fase 129 - Staging com dados realistas.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -47,13 +47,13 @@ Atualizado em 2026-07-23.
 - Painel operacional LGPD.
 - Auditoria e outbox operacional.
 - Runbooks de producao, backup/restore, rotacao de secrets e suporte.
+- Suite Playwright de jornadas criticas com contratos BFF mockados.
 
 ## O que ainda falta antes de producao real
 
 - Gateway de pagamento definitivo, se a operacao manual deixar de ser suficiente.
 - Recorrencia avancada e importacao inbound do Google Calendar por `syncToken`.
 - Restore real em banco dedicado antes do go-live.
-- QA E2E das jornadas criticas.
 - Staging com dados realistas.
 - Piloto interno controlado.
 - Producao isolada de staging.
@@ -96,4 +96,4 @@ Atualizado em 2026-07-23.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, mas ainda precisa de restore real em banco dedicado, QA E2E de jornadas criticas, staging com dados realistas e producao isolada antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, mas ainda precisa de restore real em banco dedicado, staging com dados realistas, piloto interno controlado e producao isolada antes de uso comercial com clientes reais.
