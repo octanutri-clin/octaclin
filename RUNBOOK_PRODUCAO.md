@@ -72,6 +72,8 @@ Depois validar manualmente:
 
 Fornecedor atual: Neon PostgreSQL.
 
+Runbook dedicado: `RUNBOOK_BACKUP_RESTORE.md`.
+
 Antes de migration sensivel:
 
 - revisar SQL/migration;
@@ -84,8 +86,21 @@ Validacoes:
 
 - conexao backend;
 - `/health`;
+- `/health/detalhado`;
 - login;
 - uma leitura e uma escrita por dominio alterado.
+
+### Backup e restore
+
+Antes de go-live e antes de migrations sensiveis:
+
+1. Gerar backup com `powershell -ExecutionPolicy Bypass -File .\validar-backup-restore.ps1`.
+2. Validar estrutura do dump com `pg_restore --list`.
+3. Executar restore em banco dedicado com `-RestoreTeste`, `RESTORE_DATABASE_URL` e `CONFIRMAR_RESTORE_TESTE=SIM`.
+4. Validar `/health/detalhado`, login e leitura de tabelas criticas no banco restaurado.
+5. Registrar data, responsavel e arquivo usado fora do Git.
+
+Nunca restaurar diretamente sobre producao sem decisao explicita de incidente e plano de reversao.
 
 ## Redis e filas
 

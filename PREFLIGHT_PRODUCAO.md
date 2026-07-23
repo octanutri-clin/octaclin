@@ -29,8 +29,8 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | LGPD | Parcial | Portal paciente e painel operacional LGPD. | Termos, politica, consentimentos versionados, retencao e exportacao completa. |
 | Auditoria | Parcial | Auditoria operacional, convites administrativos e perfil fiscal. | Cobrir mutacoes sensiveis restantes e exportacoes. |
 | Billing/assinatura | Parcial | Modelo de planos, limites, uso, alertas, solicitacao manual de upgrade/revisao, controle manual administrativo e bloqueios suaves para novas criacoes. | Expandir bloqueios para mensagens/formularios/armazenamento; gateway definitivo se necessario. |
-| Observabilidade | Pendente | Healthcheck basico e runbook. | Logs estruturados, alertas, filas, dashboards e incidentes. |
-| Backups/restore | Pendente | Planejado para Neon/Postgres. | Configurar backup e testar restore real. |
+| Observabilidade | Parcial | Healthchecks, logs estruturados, request ID, alertas operacionais e runbook. | Persistir historico de alertas e integrar notificacao externa se necessario. |
+| Backups/restore | Parcial | Runbook, planejador seguro, script de backup e validacao estrutural com `pg_restore --list`. | Executar restore real em banco dedicado antes do go-live. |
 | Producao isolada | Pendente | Staging funcional. | Criar env de producao separado de staging. |
 | Juridico/comercial | Pendente | Checklist previsto. | Termos, politica, contrato e processo de suporte. |
 | QA E2E | Parcial | Typechecks, specs focadas e Playwright visual por areas. | Suite de jornadas criticas ponta a ponta. |
@@ -79,4 +79,4 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Seguir para a proxima fase funcional: templates aprovados e mapeamento Meta WhatsApp, Fase 109.
+Seguir para a proxima fase operacional: runbooks de suporte, Fase 127.

@@ -40,8 +40,8 @@ Este checklist deve ser concluido antes de incluir clientes reais de consultoria
 - [ ] Render services de producao configurados.
 - [ ] Dominio oficial configurado.
 - [ ] SSL ativo.
-- [ ] Backups configurados.
-- [ ] Restore testado.
+- [ ] Backups configurados conforme `RUNBOOK_BACKUP_RESTORE.md`.
+- [ ] Restore testado em banco dedicado com `validar-backup-restore.ps1 -RestoreTeste`.
 - [ ] Logs e alertas configurados.
 - [ ] Runbooks revisados.
 

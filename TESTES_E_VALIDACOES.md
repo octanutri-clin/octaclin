@@ -173,6 +173,34 @@ npm run test:security
 
 O preflight executa `security:secrets` automaticamente. O runbook de resposta e rotacao fica em `RUNBOOK_ROTACAO_SECRETS.md`.
 
+## Validacao de backup e restore
+
+Use quando alterar scripts, runbooks ou politica de backup/restore:
+
+```powershell
+pnpm test:backup
+pnpm security:secrets
+powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
+```
+
+Para validacao operacional real com banco:
+
+```powershell
+$env:DATABASE_URL='<url do banco origem>'
+powershell -ExecutionPolicy Bypass -File .\validar-backup-restore.ps1
+```
+
+Para restore de teste, use somente banco dedicado:
+
+```powershell
+$env:DATABASE_URL='<url do banco origem>'
+$env:RESTORE_DATABASE_URL='<url do banco dedicado para restore>'
+$env:CONFIRMAR_RESTORE_TESTE='SIM'
+powershell -ExecutionPolicy Bypass -File .\validar-backup-restore.ps1 -RestoreTeste
+```
+
+Regra esperada: o plano de backup nao pode imprimir senha real, `RESTORE_DATABASE_URL` nao pode ser igual a `DATABASE_URL`, e dumps em `backups/` nao devem entrar no Git.
+
 ## Validacao para integracoes
 
 Quando mexer em Gmail, Meta, Calendar, Redis ou Render:

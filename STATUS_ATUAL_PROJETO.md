@@ -7,8 +7,8 @@ Atualizado em 2026-07-22.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 108 - Agenda de producao.
-- Proxima fase planejada: Fase 109 - Templates aprovados e mapeamento Meta WhatsApp.
+- Ultima fase concluida: Fase 126 - Backups e restore testado.
+- Proxima fase planejada: Fase 127 - Runbooks de suporte.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -55,7 +55,7 @@ Atualizado em 2026-07-22.
 - Automacoes de lembrete/confirmacao.
 - Politicas, termos e consentimentos versionados.
 - Hardening de secrets, rate limiting e revisao multi-tenant.
-- Monitoramento, backups, restore e alertas.
+- Restore real em banco dedicado antes do go-live.
 - Producao isolada de staging.
 - QA E2E das jornadas criticas.
 - Checklist juridico/comercial.
@@ -82,6 +82,7 @@ Atualizado em 2026-07-22.
 - `MAPA_ROTAS_PERMISSOES.md`: rotas e permissoes.
 - `TESTES_E_VALIDACOES.md`: comandos de validacao.
 - `RUNBOOK_PRODUCAO.md`: operacao.
+- `RUNBOOK_BACKUP_RESTORE.md`: backup PostgreSQL/Neon e restore de teste.
 - `VARIAVEIS_AMBIENTE.md`: env vars sem secrets.
 - `CHECKLIST_GO_LIVE.md`: liberacao para clientes reais.
 - `ONBOARDING_DESENVOLVEDOR.md`: entrada de novos desenvolvedores/agentes.
@@ -94,4 +95,4 @@ Atualizado em 2026-07-22.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, mas ainda precisa de revisao multi-tenant ampla, observabilidade, recorrencia/importacao Google Calendar, materiais no portal do paciente, QA E2E e producao isolada antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, mas ainda precisa de restore real em banco dedicado, runbooks de suporte, QA E2E de jornadas criticas e producao isolada antes de uso comercial com clientes reais.

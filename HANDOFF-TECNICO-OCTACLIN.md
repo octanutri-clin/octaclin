@@ -13,6 +13,7 @@ Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo
 - `MAPA_ROTAS_PERMISSOES.md`
 - `TESTES_E_VALIDACOES.md`
 - `RUNBOOK_PRODUCAO.md`
+- `RUNBOOK_BACKUP_RESTORE.md`
 - `VARIAVEIS_AMBIENTE.md`
 - `CHECKLIST_GO_LIVE.md`
 - `ONBOARDING_DESENVOLVEDOR.md`
@@ -174,8 +175,8 @@ Leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md` antes de alterar qualquer i
 
 ## Estado de roadmap
 
-- Ultima fase concluida: Fase 108 - Agenda de producao.
-- Proxima fase planejada: Fase 109 - Templates aprovados e mapeamento Meta WhatsApp.
+- Ultima fase concluida: Fase 126 - Backups e restore testado.
+- Proxima fase planejada: Fase 127 - Runbooks de suporte.
 - Roadmap completo: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regra de continuidade

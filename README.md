@@ -24,6 +24,7 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 - `TESTES_E_VALIDACOES.md` - matriz de comandos de validacao.
 - `VARIAVEIS_AMBIENTE.md` - variaveis necessarias sem valores secretos.
 - `RUNBOOK_PRODUCAO.md` - operacao, deploy, validacao e incidentes.
+- `RUNBOOK_BACKUP_RESTORE.md` - backup PostgreSQL/Neon e restore de teste.
 - `CHECKLIST_GO_LIVE.md` - criterios antes de incluir clientes reais.
 
 ## Estrutura
@@ -48,4 +49,11 @@ Validacao ampliada:
 
 ```powershell
 pnpm validate
+```
+
+Backup/restore:
+
+```powershell
+pnpm test:backup
+pnpm backup:plan
 ```
