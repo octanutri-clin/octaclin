@@ -236,8 +236,30 @@ async function prepararPortal(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
+        formato: 'octaclin.lgpd.exportacao_paciente.v1',
         geradoEm: '2026-07-22T12:00:00.000Z',
         titular: { pacienteId: 'paciente-1', nome: 'Ana Paula', email: 'ana@example.com' },
+        escopo: {
+          origem: 'portal_paciente',
+          categorias: ['perfil', 'consultas', 'formularios', 'comunicacoes', 'acompanhamento', 'lgpd'],
+          observacoes: ['Exportacao gerada a partir dos dados vinculados ao usuario autenticado.']
+        },
+        pacote: {
+          perfil: { paciente: portalPaciente.paciente, perfil: portalPaciente.perfil },
+          consultas: portalPaciente.consultasProximas,
+          formularios: { pendentes: portalPaciente.formulariosPendentes, respondidos: [] },
+          comunicacoes: { mensagens: portalPaciente.mensagensRecentes, notificacoes: portalPaciente.notificacoesPaciente },
+          acompanhamento: {
+            tarefas: portalPaciente.tarefasAcompanhamento,
+            materiais: portalPaciente.materiaisDisponiveis,
+            diarios: portalPaciente.diariosRecentes
+          },
+          lgpd: portalPaciente.lgpd
+        },
+        integridade: {
+          algoritmo: 'sha256',
+          hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+        },
         dados: portalPaciente
       })
     });
@@ -375,7 +397,7 @@ test.describe('portal do paciente', () => {
     await expect(page.getByText('Mantive boa adesao durante a semana.')).toBeVisible();
 
     await page.getByRole('button', { name: 'Baixar meus dados' }).click();
-    await expect(page.getByText('Exportacao gerada para Ana Paula.')).toBeVisible();
+    await expect(page.getByText('Exportacao LGPD completa gerada para Ana Paula. Hash 0123456789ab.')).toBeVisible();
 
     await page.getByLabel('Tipo de solicitacao LGPD').selectOption('retificacao');
     await page.getByLabel('Detalhes da solicitacao').fill('Atualizar telefone cadastrado.');

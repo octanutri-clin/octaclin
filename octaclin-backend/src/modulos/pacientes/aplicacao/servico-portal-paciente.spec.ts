@@ -1004,11 +1004,177 @@ describe('ServicoPortalPaciente', () => {
           nomeCriptografado: Buffer.from('cripto:Outro Paciente')
         }
       ],
-      consultas: [],
-      envios: [],
-      questionarios: [],
-      mensagens: [],
-      consentimentos: []
+      consultas: [
+        {
+          id: 'consulta-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          titulo: 'Consulta nutricional',
+          inicioEm: new Date('2026-08-10T13:00:00.000Z'),
+          fimEm: new Date('2026-08-10T13:50:00.000Z'),
+          status: 'agendada',
+          local: 'Online'
+        },
+        {
+          id: 'consulta-outro',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          titulo: 'Consulta de outro paciente',
+          inicioEm: new Date('2026-08-10T13:00:00.000Z'),
+          fimEm: new Date('2026-08-10T13:50:00.000Z'),
+          status: 'agendada'
+        }
+      ],
+      envios: [
+        {
+          id: 'envio-respondido-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          questionarioId: 'questionario-1',
+          status: 'respondido',
+          respondidoEm: new Date('2026-07-19T12:00:00.000Z')
+        },
+        {
+          id: 'envio-outro',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          questionarioId: 'questionario-outro',
+          status: 'respondido',
+          respondidoEm: new Date('2026-07-19T12:00:00.000Z')
+        }
+      ],
+      questionarios: [
+        {
+          id: 'questionario-1',
+          tenantId: 'tenant-1',
+          titulo: 'Recordatorio alimentar',
+          descricao: 'Resumo alimentar'
+        },
+        {
+          id: 'questionario-outro',
+          tenantId: 'tenant-1',
+          titulo: 'Formulario de outro paciente'
+        }
+      ],
+      respostaCheckins: [
+        {
+          id: 'resposta-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          envioQuestionarioId: 'envio-respondido-1',
+          scoreFinal: '87.40',
+          finalizadoEm: new Date('2026-07-19T12:05:00.000Z')
+        },
+        {
+          id: 'resposta-outro',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          envioQuestionarioId: 'envio-outro',
+          scoreFinal: '10.00',
+          finalizadoEm: new Date('2026-07-19T12:05:00.000Z')
+        }
+      ],
+      perguntas: [
+        {
+          id: 'pergunta-1',
+          tenantId: 'tenant-1',
+          questionarioId: 'questionario-1',
+          enunciado: 'Como foi sua adesao?',
+          tipo: 'texto_longo',
+          obrigatoria: true,
+          ordem: 1
+        },
+        {
+          id: 'pergunta-outro',
+          tenantId: 'tenant-1',
+          questionarioId: 'questionario-outro',
+          enunciado: 'Pergunta de outro paciente',
+          tipo: 'texto_longo',
+          obrigatoria: true,
+          ordem: 1
+        }
+      ],
+      respostaValors: [
+        {
+          id: 'valor-1',
+          tenantId: 'tenant-1',
+          respostaCheckinId: 'resposta-1',
+          perguntaId: 'pergunta-1',
+          valor: 'Mantive boa adesao durante a semana.',
+          scorePonderado: '87.40'
+        },
+        {
+          id: 'valor-outro',
+          tenantId: 'tenant-1',
+          respostaCheckinId: 'resposta-outro',
+          perguntaId: 'pergunta-outro',
+          valor: 'Dado de outro paciente'
+        }
+      ],
+      mensagens: [
+        {
+          id: 'mensagem-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          status: 'enviado',
+          payload: { canal: 'email', assunto: 'Consulta agendada', texto: 'Sua consulta foi agendada.' },
+          criadoEm: new Date('2026-07-22T12:00:00.000Z')
+        }
+      ],
+      consentimentos: [
+        {
+          id: 'consentimento-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          tipo: 'consentimento_lgpd',
+          versao: '2026-09',
+          aceitoEm: new Date('2026-07-10T10:00:00.000Z'),
+          metadados: { pacienteId: 'paciente-1', origem: 'primeiro_acesso' }
+        }
+      ],
+      tarefas: [
+        {
+          id: 'tarefa-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          titulo: 'Enviar medidas',
+          categoria: 'checkin',
+          prioridade: 'media',
+          status: 'pendente',
+          criadoEm: new Date('2026-07-20T10:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+        }
+      ],
+      materiais: [
+        {
+          id: 'material-1',
+          tenantId: 'tenant-1',
+          titulo: 'Guia de hidratacao',
+          tipo: 'pdf',
+          ativo: true
+        }
+      ],
+      envioMaterials: [
+        {
+          id: 'envio-material-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          materialId: 'material-1',
+          status: 'enviado',
+          enviadoEm: new Date('2026-07-22T13:00:00.000Z'),
+          criadoEm: new Date('2026-07-22T13:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-22T13:00:00.000Z')
+        }
+      ],
+      diarios: [
+        {
+          id: 'diario-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          valor: { humor: 'bem', adesaoPlano: 80, sintomas: 'Sono leve' },
+          registradoEm: new Date('2026-07-23T10:00:00.000Z')
+        }
+      ]
     });
 
     const exportacao = await servico.exportarDadosLgpd('tenant-1', 'usuario-paciente-1');
@@ -1016,13 +1182,49 @@ describe('ServicoPortalPaciente', () => {
     expect(exportacao).toEqual(
       expect.objectContaining({
         geradoEm: expect.any(Date),
+        formato: 'octaclin.lgpd.exportacao_paciente.v1',
         titular: {
           pacienteId: 'paciente-1',
           nome: 'Ana Paula',
           email: 'ana@example.com'
         },
-        dados: expect.objectContaining({
-          paciente: expect.objectContaining({ id: 'paciente-1', nome: 'Ana Paula' })
+        escopo: expect.objectContaining({
+          categorias: ['perfil', 'consultas', 'formularios', 'comunicacoes', 'acompanhamento', 'lgpd']
+        }),
+        pacote: expect.objectContaining({
+          perfil: expect.objectContaining({
+            paciente: expect.objectContaining({ id: 'paciente-1', nome: 'Ana Paula' })
+          }),
+          consultas: expect.arrayContaining([expect.objectContaining({ id: 'consulta-1', titulo: 'Consulta nutricional' })]),
+          formularios: expect.objectContaining({
+            respondidos: [
+              expect.objectContaining({
+                respostaId: 'resposta-1',
+                titulo: 'Recordatorio alimentar',
+                respostas: [
+                  expect.objectContaining({
+                    perguntaId: 'pergunta-1',
+                    valor: 'Mantive boa adesao durante a semana.'
+                  })
+                ]
+              })
+            ]
+          }),
+          comunicacoes: expect.objectContaining({
+            notificacoes: expect.arrayContaining([expect.objectContaining({ id: 'mensagem-1', titulo: 'Consulta agendada' })])
+          }),
+          acompanhamento: expect.objectContaining({
+            tarefas: expect.arrayContaining([expect.objectContaining({ id: 'tarefa-1', titulo: 'Enviar medidas' })]),
+            materiais: expect.arrayContaining([expect.objectContaining({ id: 'envio-material-1', titulo: 'Guia de hidratacao' })]),
+            diarios: expect.arrayContaining([expect.objectContaining({ id: 'diario-1', humor: 'bem' })])
+          }),
+          lgpd: expect.objectContaining({
+            consentimentos: expect.arrayContaining([expect.objectContaining({ id: 'consentimento-1', tipo: 'consentimento_lgpd' })])
+          })
+        }),
+        integridade: expect.objectContaining({
+          algoritmo: 'sha256',
+          hash: expect.stringMatching(/^[a-f0-9]{64}$/)
         })
       })
     );

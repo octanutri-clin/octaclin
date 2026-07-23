@@ -113,8 +113,10 @@ export class ControladorPortalPaciente {
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
       metadados: {
-        categorias: ['perfil', 'consultas', 'formularios', 'mensagens', 'lgpd'],
-        geradoEm: exportacao.geradoEm
+        formato: exportacao.formato,
+        categorias: exportacao.escopo.categorias,
+        geradoEm: exportacao.geradoEm,
+        hashIntegridade: exportacao.integridade.hash
       }
     });
     return exportacao;

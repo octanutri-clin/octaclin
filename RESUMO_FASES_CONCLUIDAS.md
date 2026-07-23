@@ -160,10 +160,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 116 - Notificacoes do paciente: portal do paciente passa a exibir notificacoes pendentes e historico de comunicacoes por canal, status, evento, datas e erros, com contadores `notificacoesPendentes` e `notificacoesHistorico` derivados de `mensagens_notificacao`.
 - Fase 117 - Politicas, termos e consentimentos versionados: primeiro acesso e portal do paciente passam a registrar `termos_uso`, `politica_privacidade` e `consentimento_lgpd` como aceites separados por versao, perfil e origem, usando `consentimentos_lgpd` como trilha rastreavel.
 - Fase 118 - Retencao e exclusao programada de dados: painel operacional LGPD passa a exibir politicas versionadas de retencao por tipo de dado, itens vencidos por corte temporal e programacao auditavel com protocolo `RET-*`, registrada em `consentimentos_lgpd` sem apagar dados automaticamente nesta fase.
+- Fase 119 - Exportacao LGPD completa por titular: exportacao do portal do paciente passa a gerar pacote `octaclin.lgpd.exportacao_paciente.v1` por categorias, incluindo perfil, consultas, formularios respondidos com respostas, comunicacoes, acompanhamento, LGPD e hash SHA-256 de integridade.
 
 ## Estado atual de uso
 
-O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam exportacao LGPD completa, hardening de secrets, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e separacao formal de staging/producao.
+O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam hardening de secrets, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e separacao formal de staging/producao.
 
 ## Como atualizar este arquivo
 

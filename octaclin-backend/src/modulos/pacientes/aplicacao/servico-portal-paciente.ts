@@ -1,4 +1,4 @@
-import { createHmac, randomUUID } from 'crypto';
+import { createHash, createHmac, randomUUID } from 'crypto';
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -229,12 +229,40 @@ export interface DetalheFormularioRespondidoPaciente {
 }
 
 export interface ExportacaoDadosLgpdPaciente {
+  formato: 'octaclin.lgpd.exportacao_paciente.v1';
   geradoEm: Date;
   titular: {
     pacienteId: string;
     nome: string;
     email?: string;
     whatsapp?: string;
+  };
+  escopo: {
+    origem: 'portal_paciente';
+    categorias: ('perfil' | 'consultas' | 'formularios' | 'comunicacoes' | 'acompanhamento' | 'lgpd')[];
+    observacoes: string[];
+  };
+  pacote: {
+    perfil: PerfilPortalPaciente;
+    consultas: ResumoPortalPaciente['consultasProximas'];
+    formularios: {
+      pendentes: ResumoPortalPaciente['formulariosPendentes'];
+      respondidos: DetalheFormularioRespondidoPaciente[];
+    };
+    comunicacoes: {
+      mensagens: ResumoPortalPaciente['mensagensRecentes'];
+      notificacoes: ResumoPortalPaciente['notificacoesPaciente'];
+    };
+    acompanhamento: {
+      tarefas: ResumoPortalPaciente['tarefasAcompanhamento'];
+      materiais: ResumoPortalPaciente['materiaisDisponiveis'];
+      diarios: ResumoPortalPaciente['diariosRecentes'];
+    };
+    lgpd: LgpdPortalPaciente;
+  };
+  integridade: {
+    algoritmo: 'sha256';
+    hash: string;
   };
   dados: ResumoPortalPaciente;
 }
@@ -610,13 +638,62 @@ export class ServicoPortalPaciente {
 
   async exportarDadosLgpd(tenantId: string, usuarioId: string): Promise<ExportacaoDadosLgpdPaciente> {
     const dados = await this.obterResumoPortal(tenantId, usuarioId);
+    const geradoEm = new Date();
+    const titular = {
+      pacienteId: dados.paciente.id,
+      nome: dados.paciente.nome,
+      email: dados.perfil.email,
+      whatsapp: dados.perfil.whatsapp
+    };
+    const escopo: ExportacaoDadosLgpdPaciente['escopo'] = {
+      origem: 'portal_paciente',
+      categorias: ['perfil', 'consultas', 'formularios', 'comunicacoes', 'acompanhamento', 'lgpd'],
+      observacoes: [
+        'Exportacao gerada a partir dos dados vinculados ao usuario autenticado.',
+        'Dados de outros pacientes e outros tenants sao excluidos do pacote.'
+      ]
+    };
+    const formulariosRespondidos = await Promise.all(
+      dados.formulariosRespondidos.map((formulario) => this.obterFormularioRespondido(tenantId, usuarioId, formulario.respostaId))
+    );
+    const pacote: ExportacaoDadosLgpdPaciente['pacote'] = {
+      perfil: {
+        paciente: dados.paciente,
+        perfil: dados.perfil
+      },
+      consultas: dados.consultasProximas,
+      formularios: {
+        pendentes: dados.formulariosPendentes,
+        respondidos: formulariosRespondidos
+      },
+      comunicacoes: {
+        mensagens: dados.mensagensRecentes,
+        notificacoes: dados.notificacoesPaciente
+      },
+      acompanhamento: {
+        tarefas: dados.tarefasAcompanhamento,
+        materiais: dados.materiaisDisponiveis,
+        diarios: dados.diariosRecentes
+      },
+      lgpd: dados.lgpd
+    };
+    const baseIntegridade = {
+      formato: 'octaclin.lgpd.exportacao_paciente.v1',
+      geradoEm,
+      titular,
+      escopo,
+      pacote
+    };
+
     return {
-      geradoEm: new Date(),
-      titular: {
-        pacienteId: dados.paciente.id,
-        nome: dados.paciente.nome,
-        email: dados.perfil.email,
-        whatsapp: dados.perfil.whatsapp
+      formato: 'octaclin.lgpd.exportacao_paciente.v1',
+      geradoEm,
+      titular,
+      escopo,
+      pacote,
+      integridade: {
+        algoritmo: 'sha256',
+        hash: this.gerarHashIntegridade(baseIntegridade)
       },
       dados
     };
@@ -913,6 +990,10 @@ export class ServicoPortalPaciente {
   private timestampData(valor?: Date): number {
     if (!valor) return 0;
     return valor instanceof Date ? valor.getTime() : new Date(valor).getTime();
+  }
+
+  private gerarHashIntegridade(valor: unknown): string {
+    return createHash('sha256').update(JSON.stringify(valor)).digest('hex');
   }
 
   private obterContatoPaciente(paciente: PacienteOrm): ContatoPacientePortal {

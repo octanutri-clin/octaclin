@@ -512,7 +512,8 @@ export function PortalPaciente() {
       link.download = `octaclin-dados-${exportacao.titular.pacienteId}.json`;
       link.click();
       URL.revokeObjectURL(url);
-      setSucesso(`Exportacao gerada para ${exportacao.titular.nome}.`);
+      const hashCurto = exportacao.integridade?.hash ? ` Hash ${exportacao.integridade.hash.slice(0, 12)}.` : '';
+      setSucesso(`Exportacao LGPD completa gerada para ${exportacao.titular.nome}.${hashCurto}`);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao exportar dados LGPD.');
     } finally {

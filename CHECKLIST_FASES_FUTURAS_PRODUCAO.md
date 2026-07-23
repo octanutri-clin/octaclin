@@ -217,9 +217,9 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Status: concluida em 2026-07-23.
   - Saida entregue: console operacional exibe politicas de retencao por tipo de dado, itens vencidos por corte temporal e permite programar retencao LGPD com protocolo auditavel sem exclusao fisica automatica.
 
-- [ ] Fase 119 - Exportacao LGPD completa por titular.
-  - Consolidar dados de paciente/usuario em pacote exportavel.
-  - Saida esperada: exportacao robusta e auditavel.
+- [x] Fase 119 - Exportacao LGPD completa por titular.
+  - Status: concluida em 2026-07-23.
+  - Saida entregue: portal do paciente gera pacote LGPD estruturado por titular, com perfil, consultas, formularios detalhados, comunicacoes, acompanhamento, trilha LGPD e hash SHA-256 de integridade.
 
 - [ ] Fase 120 - Hardening de secrets e variaveis.
   - Conferir que nenhuma chave foi commitada.

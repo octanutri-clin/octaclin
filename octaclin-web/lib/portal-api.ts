@@ -223,12 +223,43 @@ export interface ConsentimentoLgpdRegistradoApi extends PerfilPacienteAtualizado
 }
 
 export interface ExportacaoDadosLgpdApi {
+  formato: 'octaclin.lgpd.exportacao_paciente.v1';
   geradoEm: string;
   titular: {
     pacienteId: string;
     nome: string;
     email?: string;
     whatsapp?: string;
+  };
+  escopo: {
+    origem: 'portal_paciente';
+    categorias: ('perfil' | 'consultas' | 'formularios' | 'comunicacoes' | 'acompanhamento' | 'lgpd')[];
+    observacoes: string[];
+  };
+  pacote: {
+    perfil: {
+      paciente: PortalPacienteApi['paciente'];
+      perfil: PortalPacienteApi['perfil'];
+    };
+    consultas: PortalPacienteApi['consultasProximas'];
+    formularios: {
+      pendentes: PortalPacienteApi['formulariosPendentes'];
+      respondidos: DetalheFormularioRespondidoApi[];
+    };
+    comunicacoes: {
+      mensagens: PortalPacienteApi['mensagensRecentes'];
+      notificacoes: PortalPacienteApi['notificacoesPaciente'];
+    };
+    acompanhamento: {
+      tarefas: NonNullable<PortalPacienteApi['tarefasAcompanhamento']>;
+      materiais: NonNullable<PortalPacienteApi['materiaisDisponiveis']>;
+      diarios: NonNullable<PortalPacienteApi['diariosRecentes']>;
+    };
+    lgpd: LgpdPortalPacienteApi;
+  };
+  integridade: {
+    algoritmo: 'sha256';
+    hash: string;
   };
   dados: PortalPacienteApi;
 }
