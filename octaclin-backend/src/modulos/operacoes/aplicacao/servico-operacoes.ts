@@ -4,7 +4,12 @@ import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from '../../agenda/aplicacao/servico-google-calendar';
+import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { PlanoSaasId, resolverPlanoSaas } from '../../clientes/dominio/planos-saas';
+import { ProcessadorNotificacoes } from '../../comunicacoes/aplicacao/processador-notificacoes';
+import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
+import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 
@@ -41,6 +46,43 @@ export interface FiltrosOutboxOperacional {
   fim?: string;
   limite?: number;
   pagina?: number;
+}
+
+export type OrigemFalhaComunicacao = 'mensagem' | 'outbox' | 'google_calendar';
+export type CanalFalhaComunicacao = 'email' | 'whatsapp' | 'push' | 'google_calendar' | 'outbox' | 'outro';
+
+export interface FiltrosFalhasComunicacao {
+  origem?: OrigemFalhaComunicacao | '';
+  canal?: CanalFalhaComunicacao | '';
+  tipo?: string;
+  inicio?: string;
+  fim?: string;
+  limite?: number;
+  pagina?: number;
+}
+
+export interface FalhaComunicacaoOperacional {
+  id: string;
+  origem: OrigemFalhaComunicacao;
+  canal: CanalFalhaComunicacao;
+  tipo: string;
+  referenciaId: string;
+  pacienteId?: string;
+  erro?: string;
+  tentativas?: number;
+  criadoEm: Date;
+  reprocessavel: boolean;
+  resumo?: string;
+}
+
+export interface ResumoFalhasComunicacao {
+  total: number;
+  email: number;
+  whatsapp: number;
+  googleCalendar: number;
+  outbox: number;
+  outras: number;
+  reprocessaveis: number;
 }
 
 export type StatusSolicitacaoLgpd = 'recebida' | 'em_tratamento' | 'concluida' | 'indeferida';
@@ -136,9 +178,17 @@ export interface ResultadoPaginado<T> {
   limite: number;
 }
 
+export interface ResultadoFalhasComunicacao extends ResultadoPaginado<FalhaComunicacaoOperacional> {
+  resumo: ResumoFalhasComunicacao;
+}
+
 @Injectable()
 export class ServicoOperacoes {
-  constructor(private readonly executorTenant: ExecutorTenant) {}
+  constructor(
+    private readonly executorTenant: ExecutorTenant,
+    private readonly processadorNotificacoes: ProcessadorNotificacoes,
+    private readonly googleCalendar: ServicoGoogleCalendar
+  ) {}
 
   async obterResumo(tenantId: string): Promise<ResumoOperacional> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
@@ -477,6 +527,35 @@ export class ServicoOperacoes {
     );
   }
 
+  async listarFalhasComunicacao(
+    tenantId: string,
+    filtros: FiltrosFalhasComunicacao = {}
+  ): Promise<ResultadoFalhasComunicacao> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const limite = this.normalizarLimite(filtros.limite ?? 25);
+      const pagina = this.normalizarPagina(filtros.pagina ?? 1);
+      const falhas = (await this.carregarFalhasComunicacao(gerenciador, tenantId, filtros)).sort(
+        (a, b) => this.timestampData(b.criadoEm) - this.timestampData(a.criadoEm)
+      );
+
+      return {
+        itens: falhas.slice((pagina - 1) * limite, pagina * limite),
+        total: falhas.length,
+        pagina,
+        limite,
+        resumo: this.resumirFalhasComunicacao(falhas)
+      };
+    });
+  }
+
+  async reprocessarFalhaComunicacao(tenantId: string, id: string): Promise<FalhaComunicacaoOperacional> {
+    const [origem, referenciaId] = id.split(':');
+    if (origem === 'mensagem') return this.reprocessarMensagemFalha(tenantId, referenciaId);
+    if (origem === 'outbox') return this.mapearFalhaOutbox(await this.reprocessarOutbox(tenantId, referenciaId));
+    if (origem === 'google_calendar') return this.reprocessarGoogleCalendar(tenantId, referenciaId);
+    throw new NotFoundException('Falha de comunicacao nao encontrada.');
+  }
+
   private criarWhereAuditoria(tenantId: string, filtros: FiltrosAuditoriaOperacional): FindOptionsWhere<UserActionLogOrm> {
     const where: FindOptionsWhere<UserActionLogOrm> = { tenantId };
     const intervalo = this.normalizarIntervalo(filtros.inicio, filtros.fim);
@@ -496,6 +575,222 @@ export class ServicoOperacoes {
     if (filtros.tipo) where.tipo = filtros.tipo;
     if (intervalo) where.criadoEm = intervalo;
     return where;
+  }
+
+  private async carregarFalhasComunicacao(
+    gerenciador: EntityManager,
+    tenantId: string,
+    filtros: FiltrosFalhasComunicacao
+  ): Promise<FalhaComunicacaoOperacional[]> {
+    const intervalo = this.normalizarIntervalo(filtros.inicio, filtros.fim);
+    const [mensagens, outbox, consultas] = await Promise.all([
+      gerenciador.getRepository(MensagemNotificacaoOrm).find({
+        where: { tenantId, status: 'falhou', ...(intervalo ? { criadoEm: intervalo } : {}) },
+        order: { criadoEm: 'DESC' },
+        take: 500
+      }),
+      gerenciador.getRepository(OutboxEventoOrm).find({
+        where: { tenantId, status: 'falhou', ...(intervalo ? { criadoEm: intervalo } : {}) },
+        order: { criadoEm: 'DESC' },
+        take: 500
+      }),
+      gerenciador.getRepository(AgendaConsultaOrm).find({
+        where: { tenantId, ...(intervalo ? { atualizadoEm: intervalo } : {}) },
+        order: { atualizadoEm: 'DESC' },
+        take: 500
+      })
+    ]);
+    const canalIds = mensagens.map((mensagem) => mensagem.canalId).filter((id): id is string => Boolean(id));
+    const canais = canalIds.length
+      ? await gerenciador.getRepository(CanalNotificacaoOrm).find({ where: { tenantId, id: In(canalIds) } })
+      : [];
+    const canaisPorId = new Map(canais.map((canal) => [canal.id, canal]));
+
+    return [
+      ...mensagens.map((mensagem) => this.mapearFalhaMensagem(mensagem, canaisPorId.get(mensagem.canalId ?? ''))),
+      ...outbox.map((evento) => this.mapearFalhaOutbox(evento)),
+      ...consultas.flatMap((consulta) => this.mapearFalhasGoogleCalendar(consulta))
+    ]
+      .filter((falha) => !filtros.origem || falha.origem === filtros.origem)
+      .filter((falha) => !filtros.canal || falha.canal === filtros.canal)
+      .filter((falha) => !filtros.tipo || falha.tipo === filtros.tipo);
+  }
+
+  private mapearFalhaMensagem(mensagem: MensagemNotificacaoOrm, canal?: CanalNotificacaoOrm): FalhaComunicacaoOperacional {
+    return {
+      id: `mensagem:${mensagem.id}`,
+      origem: 'mensagem',
+      canal: this.normalizarCanalFalha(canal?.tipo),
+      tipo: this.textoPayload(mensagem.payload, 'evento') ?? 'mensagem_notificacao',
+      referenciaId: mensagem.id,
+      pacienteId: mensagem.pacienteId,
+      erro: mensagem.erro,
+      criadoEm: mensagem.criadoEm,
+      reprocessavel: Boolean(mensagem.canalId && mensagem.templateId),
+      resumo: this.resumirPayloadComunicacao(mensagem.payload)
+    };
+  }
+
+  private mapearFalhaOutbox(evento: OutboxEventoOrm): FalhaComunicacaoOperacional {
+    return {
+      id: `outbox:${evento.id}`,
+      origem: 'outbox',
+      canal: 'outbox',
+      tipo: evento.tipo,
+      referenciaId: evento.id,
+      erro: evento.erro,
+      tentativas: evento.tentativas,
+      criadoEm: evento.criadoEm,
+      reprocessavel: true,
+      resumo: this.resumirPayloadComunicacao(evento.payload)
+    };
+  }
+
+  private mapearFalhasGoogleCalendar(consulta: AgendaConsultaOrm): FalhaComunicacaoOperacional[] {
+    const google = this.objeto(consulta.notificacoes?.googleCalendar ?? consulta.payload?.googleCalendar);
+    if (google.sincronizado !== false) return [];
+
+    const motivo = typeof google.motivo === 'string' ? google.motivo : 'google_calendar';
+    if (motivo === 'evento_google_ausente') return [];
+
+    return [
+      {
+        id: `google_calendar:${consulta.id}`,
+        origem: 'google_calendar',
+        canal: 'google_calendar',
+        tipo: motivo,
+        referenciaId: consulta.id,
+        pacienteId: consulta.pacienteId,
+        erro: typeof google.erro === 'string' ? google.erro : motivo,
+        criadoEm: consulta.atualizadoEm ?? consulta.criadoEm,
+        reprocessavel: true,
+        resumo: consulta.titulo
+      }
+    ];
+  }
+
+  private resumirFalhasComunicacao(falhas: FalhaComunicacaoOperacional[]): ResumoFalhasComunicacao {
+    return falhas.reduce<ResumoFalhasComunicacao>(
+      (resumo, falha) => {
+        resumo.total += 1;
+        resumo.reprocessaveis += falha.reprocessavel ? 1 : 0;
+        if (falha.canal === 'email') resumo.email += 1;
+        else if (falha.canal === 'whatsapp') resumo.whatsapp += 1;
+        else if (falha.canal === 'google_calendar') resumo.googleCalendar += 1;
+        else if (falha.canal === 'outbox') resumo.outbox += 1;
+        else resumo.outras += 1;
+        return resumo;
+      },
+      { total: 0, email: 0, whatsapp: 0, googleCalendar: 0, outbox: 0, outras: 0, reprocessaveis: 0 }
+    );
+  }
+
+  private async reprocessarMensagemFalha(tenantId: string, mensagemId: string): Promise<FalhaComunicacaoOperacional> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(MensagemNotificacaoOrm);
+      const mensagem = await repositorio.findOne({ where: { id: mensagemId, tenantId, status: 'falhou' } });
+      if (!mensagem) throw new NotFoundException('Mensagem falha nao encontrada.');
+
+      mensagem.status = 'pendente';
+      mensagem.erro = undefined;
+      mensagem.enviadoEm = undefined;
+      await repositorio.save(mensagem);
+      await this.processadorNotificacoes.processarMensagem(tenantId, mensagem.id, { propagarErro: false });
+
+      const canal = mensagem.canalId
+        ? await gerenciador.getRepository(CanalNotificacaoOrm).findOne({ where: { id: mensagem.canalId, tenantId } })
+        : undefined;
+      return this.mapearFalhaMensagem(mensagem, canal ?? undefined);
+    });
+  }
+
+  private async reprocessarGoogleCalendar(tenantId: string, consultaId: string): Promise<FalhaComunicacaoOperacional> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
+      const consulta = await repositorio.findOne({ where: { id: consultaId, tenantId } });
+      if (!consulta) throw new NotFoundException('Falha de Google Calendar nao encontrada.');
+
+      const google = await this.executarSincronizacaoGoogle(consulta);
+      if (google.sincronizado) {
+        consulta.googleCalendarId = google.calendarId;
+        consulta.googleEventId = google.eventId;
+        consulta.googleEventHtmlLink = google.htmlLink ?? consulta.googleEventHtmlLink;
+      }
+      consulta.notificacoes = { ...(consulta.notificacoes ?? {}), googleCalendar: google };
+      consulta.payload = { ...(consulta.payload ?? {}), googleCalendar: google };
+      const salvo = await repositorio.save(consulta);
+      return (
+        this.mapearFalhasGoogleCalendar(salvo)[0] ?? {
+          id: `google_calendar:${salvo.id}`,
+          origem: 'google_calendar',
+          canal: 'google_calendar',
+          tipo: 'google_calendar_reprocessado',
+          referenciaId: salvo.id,
+          pacienteId: salvo.pacienteId,
+          criadoEm: salvo.atualizadoEm ?? new Date(),
+          reprocessavel: false,
+          resumo: salvo.titulo
+        }
+      );
+    });
+  }
+
+  private executarSincronizacaoGoogle(consulta: AgendaConsultaOrm): Promise<ResultadoGoogleCalendar> {
+    const entrada = {
+      resumo: consulta.titulo,
+      descricao: this.montarDescricaoGoogleOperacional(consulta),
+      inicioEm: consulta.inicioEm,
+      fimEm: consulta.fimEm,
+      timezone: consulta.timezone,
+      local: consulta.local
+    };
+    if (consulta.status === 'cancelada' && consulta.googleCalendarId && consulta.googleEventId) {
+      return this.googleCalendar.cancelarEvento({ calendarId: consulta.googleCalendarId, eventId: consulta.googleEventId });
+    }
+    if (consulta.googleCalendarId && consulta.googleEventId) {
+      return this.googleCalendar.atualizarEvento({
+        ...entrada,
+        calendarId: consulta.googleCalendarId,
+        eventId: consulta.googleEventId
+      });
+    }
+    return this.googleCalendar.criarEvento(entrada);
+  }
+
+  private montarDescricaoGoogleOperacional(consulta: AgendaConsultaOrm): string {
+    const pacienteNome = this.textoPayload(consulta.payload, 'pacienteNome');
+    const profissionalNome = this.textoPayload(consulta.payload, 'profissionalNome');
+    return [
+      'Consulta registrada no OctaClin.',
+      pacienteNome ? `Paciente: ${pacienteNome}` : undefined,
+      profissionalNome ? `Profissional: ${profissionalNome}` : undefined,
+      consulta.observacoes ? `Observacoes: ${consulta.observacoes}` : undefined
+    ]
+      .filter((linha): linha is string => Boolean(linha))
+      .join('\n');
+  }
+
+  private normalizarCanalFalha(valor?: string): CanalFalhaComunicacao {
+    if (valor === 'email' || valor === 'whatsapp' || valor === 'push') return valor;
+    return 'outro';
+  }
+
+  private resumirPayloadComunicacao(payload: Record<string, unknown>): string | undefined {
+    return (
+      this.textoPayload(payload, 'evento') ??
+      this.textoPayload(payload, 'mensagemId') ??
+      this.textoPayload(payload, 'consultaId') ??
+      this.textoPayload(payload, 'destino')
+    );
+  }
+
+  private textoPayload(payload: Record<string, unknown> | undefined, chave: string): string | undefined {
+    const valor = payload?.[chave];
+    return typeof valor === 'string' && valor.trim() ? valor.trim() : undefined;
+  }
+
+  private objeto(valor: unknown): Record<string, unknown> {
+    return valor && typeof valor === 'object' && !Array.isArray(valor) ? (valor as Record<string, unknown>) : {};
   }
 
   private carregarEventosSolicitacoesLgpd(gerenciador: EntityManager, tenantId: string) {

@@ -23,6 +23,33 @@ export interface OutboxFalha {
   processadoEm?: string;
 }
 
+export type OrigemFalhaComunicacao = 'mensagem' | 'outbox' | 'google_calendar';
+export type CanalFalhaComunicacao = 'email' | 'whatsapp' | 'push' | 'google_calendar' | 'outbox' | 'outro';
+
+export interface FalhaComunicacaoOperacional {
+  id: string;
+  origem: OrigemFalhaComunicacao;
+  canal: CanalFalhaComunicacao;
+  tipo: string;
+  referenciaId: string;
+  pacienteId?: string;
+  erro?: string;
+  tentativas?: number;
+  criadoEm: string;
+  reprocessavel: boolean;
+  resumo?: string;
+}
+
+export interface ResumoFalhasComunicacao {
+  total: number;
+  email: number;
+  whatsapp: number;
+  googleCalendar: number;
+  outbox: number;
+  outras: number;
+  reprocessaveis: number;
+}
+
 export interface SincronizacaoMobile {
   id: string;
   tenantId: string;
@@ -125,6 +152,7 @@ export interface DadosOperacionais {
   auditoria: AuditoriaOperacional[];
   auditoriaPaginada: ResultadoPaginado<AuditoriaOperacional>;
   falhasPaginadas: ResultadoPaginado<OutboxFalha>;
+  falhasComunicacao: ResultadoPaginado<FalhaComunicacaoOperacional> & { resumo: ResumoFalhasComunicacao };
   solicitacoesLgpd: ResultadoPaginado<SolicitacaoLgpdOperacional>;
   solicitacoesAssinatura: ResultadoPaginado<SolicitacaoAssinaturaOperacional>;
 }
@@ -141,6 +169,16 @@ export interface FiltrosAuditoriaOperacional {
 }
 
 export interface FiltrosOutboxOperacional {
+  tipo?: string;
+  inicio?: string;
+  fim?: string;
+  limite?: number;
+  pagina?: number;
+}
+
+export interface FiltrosFalhasComunicacao {
+  origem?: OrigemFalhaComunicacao | '';
+  canal?: CanalFalhaComunicacao | '';
   tipo?: string;
   inicio?: string;
   fim?: string;
@@ -202,6 +240,7 @@ export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
     auditoria,
     auditoriaPaginada,
     falhasPaginadas,
+    falhasComunicacao,
     solicitacoesLgpd,
     solicitacoesAssinatura
   ] = await Promise.all([
@@ -211,6 +250,7 @@ export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
     requisitar<AuditoriaOperacional[]>('/api/operacoes/auditoria?limite=50'),
     carregarAuditoriaOperacionalPaginada({ pagina: 1, limite: 25 }),
     carregarFalhasOutboxPaginadas({ pagina: 1, limite: 25 }),
+    carregarFalhasComunicacao({ pagina: 1, limite: 25 }),
     carregarSolicitacoesLgpd({ pagina: 1, limite: 25 }),
     carregarSolicitacoesAssinatura({ pagina: 1, limite: 25 })
   ]);
@@ -222,6 +262,7 @@ export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
     auditoria,
     auditoriaPaginada,
     falhasPaginadas,
+    falhasComunicacao,
     solicitacoesLgpd,
     solicitacoesAssinatura
   };
@@ -259,6 +300,18 @@ export async function carregarFalhasOutboxPaginadas(
   if (!parametros.has('limite')) parametros.set('limite', '25');
 
   return requisitar<ResultadoPaginado<OutboxFalha>>(`/api/operacoes/outbox/falhas/paginada?${parametros.toString()}`);
+}
+
+export async function carregarFalhasComunicacao(
+  filtros: FiltrosFalhasComunicacao
+): Promise<ResultadoPaginado<FalhaComunicacaoOperacional> & { resumo: ResumoFalhasComunicacao }> {
+  const parametros = montarParametros(filtros);
+  if (!parametros.has('pagina')) parametros.set('pagina', '1');
+  if (!parametros.has('limite')) parametros.set('limite', '25');
+
+  return requisitar<ResultadoPaginado<FalhaComunicacaoOperacional> & { resumo: ResumoFalhasComunicacao }>(
+    `/api/operacoes/comunicacoes/falhas?${parametros.toString()}`
+  );
 }
 
 export async function carregarSolicitacoesLgpd(
@@ -350,4 +403,11 @@ function montarParametros<T extends object>(filtros: T): URLSearchParams {
 
 export async function reprocessarOutbox(eventoId: string): Promise<OutboxFalha> {
   return requisitar<OutboxFalha>(`/api/operacoes/outbox/${eventoId}/reprocessar`, { method: 'POST' });
+}
+
+export async function reprocessarFalhaComunicacao(id: string): Promise<FalhaComunicacaoOperacional> {
+  return requisitar<FalhaComunicacaoOperacional>(
+    `/api/operacoes/comunicacoes/falhas/${encodeURIComponent(id)}/reprocessar`,
+    { method: 'POST' }
+  );
 }

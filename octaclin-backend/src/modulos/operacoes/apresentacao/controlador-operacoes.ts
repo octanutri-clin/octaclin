@@ -92,6 +92,33 @@ export class ControladorOperacoes {
     return this.servicoOperacoes.reprocessarOutbox(usuario.tenantId, id);
   }
 
+  @Get('comunicacoes/falhas')
+  listarFalhasComunicacao(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Query('origem') origem?: 'mensagem' | 'outbox' | 'google_calendar',
+    @Query('canal') canal?: 'email' | 'whatsapp' | 'push' | 'google_calendar' | 'outbox' | 'outro',
+    @Query('tipo') tipo?: string,
+    @Query('inicio') inicio?: string,
+    @Query('fim') fim?: string,
+    @Query('pagina') pagina?: string,
+    @Query('limite') limite?: string
+  ) {
+    return this.servicoOperacoes.listarFalhasComunicacao(usuario.tenantId, {
+      origem,
+      canal,
+      tipo,
+      inicio,
+      fim,
+      pagina: Number(pagina ?? 1),
+      limite: Number(limite ?? 25)
+    });
+  }
+
+  @Post('comunicacoes/falhas/:id/reprocessar')
+  reprocessarFalhaComunicacao(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id') id: string) {
+    return this.servicoOperacoes.reprocessarFalhaComunicacao(usuario.tenantId, id);
+  }
+
   @Get('mobile/sincronizacoes')
   listarSincronizacoesMobile(@UsuarioAtual() usuario: UsuarioAutenticado, @Query('limite') limite?: string) {
     return this.servicoOperacoes.listarSincronizacoesMobile(usuario.tenantId, Number(limite ?? 50));

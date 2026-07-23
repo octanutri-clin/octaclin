@@ -2,6 +2,9 @@ import { NotFoundException } from '@nestjs/common';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
+import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
+import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { ServicoOperacoes } from './servico-operacoes';
@@ -18,6 +21,56 @@ function criarServico() {
     criadoEm: new Date('2026-01-01T00:00:00.000Z'),
     processadoEm: new Date()
   };
+  const mensagens = [
+    {
+      id: 'mensagem-email-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      canalId: 'canal-email',
+      templateId: 'template-email',
+      status: 'falhou',
+      payload: { destino: 'ana@example.com', evento: 'agenda.consulta.lembrete' },
+      erro: 'SMTP indisponivel',
+      criadoEm: new Date('2026-07-22T12:00:00.000Z')
+    },
+    {
+      id: 'mensagem-whatsapp-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      canalId: 'canal-whatsapp',
+      templateId: 'template-whatsapp',
+      status: 'falhou',
+      payload: { destino: '5511992362080', evento: 'agenda.consulta.lembrete' },
+      erro: 'Token Meta expirado',
+      criadoEm: new Date('2026-07-22T13:00:00.000Z')
+    }
+  ];
+  const canais = [
+    { id: 'canal-email', tenantId: 'tenant-1', tipo: 'email', nome: 'Email' },
+    { id: 'canal-whatsapp', tenantId: 'tenant-1', tipo: 'whatsapp', nome: 'WhatsApp' }
+  ];
+  const consultas = [
+    {
+      id: 'consulta-google-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-23T12:00:00.000Z'),
+      fimEm: new Date('2026-07-23T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {
+        googleCalendar: {
+          sincronizado: false,
+          motivo: 'falha_google_calendar',
+          erro: 'Refresh token revogado'
+        }
+      },
+      payload: { pacienteNome: 'Ana Paula' },
+      criadoEm: new Date('2026-07-22T14:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-22T14:05:00.000Z')
+    }
+  ];
   const configuracoes = [
     {
       id: 'plano-1',
@@ -60,6 +113,31 @@ function criarServico() {
         where.id === 'evento-1' && where.status === 'falhou' ? eventoFalho : null
       ),
       save: jest.fn(async (evento: Record<string, unknown>) => evento)
+    },
+    mensagens: {
+      find: jest.fn(async () => mensagens),
+      findOne: jest.fn(async ({ where }: { where: { id: string; tenantId: string; status?: string } }) =>
+        mensagens.find((mensagem) => mensagem.id === where.id && mensagem.tenantId === where.tenantId && (!where.status || mensagem.status === where.status)) ??
+        null
+      ),
+      save: jest.fn(async (mensagem: Record<string, unknown>) => {
+        const existente = mensagens.find((item) => item.id === mensagem.id);
+        if (existente) Object.assign(existente, mensagem);
+        return mensagem;
+      })
+    },
+    canais: {
+      find: jest.fn(async () => canais),
+      findOne: jest.fn(async ({ where }: { where: { id: string; tenantId: string } }) =>
+        canais.find((canal) => canal.id === where.id && canal.tenantId === where.tenantId) ?? null
+      )
+    },
+    consultas: {
+      find: jest.fn(async () => consultas),
+      findOne: jest.fn(async ({ where }: { where: { id: string; tenantId: string } }) =>
+        consultas.find((consulta) => consulta.id === where.id && consulta.tenantId === where.tenantId) ?? null
+      ),
+      save: jest.fn(async (consulta: Record<string, unknown>) => consulta)
     },
     mobile: {
       count: jest.fn(async ({ where }: { where: { status: string } }) => (where.status === 'sincronizado' ? 8 : 1)),
@@ -132,6 +210,9 @@ function criarServico() {
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === OutboxEventoOrm) return repositorios.outbox;
+      if (entidade === MensagemNotificacaoOrm) return repositorios.mensagens;
+      if (entidade === CanalNotificacaoOrm) return repositorios.canais;
+      if (entidade === AgendaConsultaOrm) return repositorios.consultas;
       if (entidade === SincronizacaoMobileOrm) return repositorios.mobile;
       if (entidade === UserActionLogOrm) return repositorios.auditoria;
       if (entidade === ConsentimentoLgpdOrm) return repositorios.consentimentos;
@@ -145,7 +226,31 @@ function criarServico() {
     )
   };
 
-  return { servico: new ServicoOperacoes(executorTenant as never), repositorios };
+  const processadorNotificacoes = {
+    processarMensagem: jest.fn(async () => undefined)
+  };
+  const googleCalendar = {
+    criarEvento: jest.fn(async () => ({
+      sincronizado: true,
+      calendarId: 'primary',
+      eventId: 'google-event-1',
+      htmlLink: 'https://calendar.google/event'
+    })),
+    atualizarEvento: jest.fn(async () => ({
+      sincronizado: true,
+      calendarId: 'primary',
+      eventId: 'google-event-1',
+      htmlLink: 'https://calendar.google/event'
+    })),
+    cancelarEvento: jest.fn(async () => ({ sincronizado: true, calendarId: 'primary', eventId: 'google-event-1' }))
+  };
+
+  return {
+    servico: new ServicoOperacoes(executorTenant as never, processadorNotificacoes as never, googleCalendar as never),
+    repositorios,
+    processadorNotificacoes,
+    googleCalendar
+  };
 }
 
 describe('ServicoOperacoes', () => {
@@ -229,6 +334,90 @@ describe('ServicoOperacoes', () => {
     const { servico } = criarServico();
 
     await expect(servico.exportarFalhasOutboxCsv('tenant-1')).resolves.toContain('"criadoEm","tipo","status","tentativas","erro","mensagemId"');
+  });
+
+  it('deve consolidar central de falhas de comunicacao por origem e canal', async () => {
+    const { servico } = criarServico();
+
+    await expect(servico.listarFalhasComunicacao('tenant-1', { pagina: 1, limite: 10 })).resolves.toEqual({
+      itens: [
+        expect.objectContaining({
+          id: 'google_calendar:consulta-google-1',
+          origem: 'google_calendar',
+          canal: 'google_calendar',
+          referenciaId: 'consulta-google-1',
+          erro: 'Refresh token revogado'
+        }),
+        expect.objectContaining({
+          id: 'mensagem:mensagem-whatsapp-1',
+          origem: 'mensagem',
+          canal: 'whatsapp',
+          referenciaId: 'mensagem-whatsapp-1',
+          erro: 'Token Meta expirado'
+        }),
+        expect.objectContaining({
+          id: 'mensagem:mensagem-email-1',
+          origem: 'mensagem',
+          canal: 'email',
+          referenciaId: 'mensagem-email-1',
+          erro: 'SMTP indisponivel'
+        }),
+        expect.objectContaining({
+          id: 'outbox:evento-1',
+          origem: 'outbox',
+          canal: 'outbox',
+          referenciaId: 'evento-1',
+          erro: 'Redis indisponivel'
+        })
+      ],
+      total: 4,
+      pagina: 1,
+      limite: 10,
+      resumo: {
+        total: 4,
+        email: 1,
+        whatsapp: 1,
+        googleCalendar: 1,
+        outbox: 1,
+        outras: 0,
+        reprocessaveis: 4
+      }
+    });
+  });
+
+  it('deve reprocessar mensagem falha pela central de comunicacao', async () => {
+    const { servico, repositorios, processadorNotificacoes } = criarServico();
+
+    await servico.reprocessarFalhaComunicacao('tenant-1', 'mensagem:mensagem-email-1');
+
+    expect(repositorios.mensagens.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'mensagem-email-1', status: 'pendente', erro: undefined, enviadoEm: undefined })
+    );
+    expect(processadorNotificacoes.processarMensagem).toHaveBeenCalledWith('tenant-1', 'mensagem-email-1', { propagarErro: false });
+  });
+
+  it('deve reprocessar falha de Google Calendar pela central de comunicacao', async () => {
+    const { servico, repositorios, googleCalendar } = criarServico();
+
+    await servico.reprocessarFalhaComunicacao('tenant-1', 'google_calendar:consulta-google-1');
+
+    expect(googleCalendar.criarEvento).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resumo: 'Consulta - Ana Paula',
+        inicioEm: new Date('2026-07-23T12:00:00.000Z'),
+        fimEm: new Date('2026-07-23T13:00:00.000Z'),
+        timezone: 'America/Sao_Paulo'
+      })
+    );
+    expect(repositorios.consultas.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'consulta-google-1',
+        googleCalendarId: 'primary',
+        googleEventId: 'google-event-1',
+        googleEventHtmlLink: 'https://calendar.google/event',
+        notificacoes: expect.objectContaining({ googleCalendar: expect.objectContaining({ sincronizado: true }) })
+      })
+    );
   });
 
   it('deve listar fila LGPD consolidada por protocolo e status atual', async () => {

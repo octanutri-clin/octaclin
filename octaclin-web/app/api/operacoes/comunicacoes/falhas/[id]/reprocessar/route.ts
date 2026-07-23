@@ -1,0 +1,21 @@
+import { NextResponse } from 'next/server';
+import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
+
+export async function POST(_: Request, { params }: { params: { id: string } }) {
+  try {
+    const id = decodeURIComponent(params.id);
+    const resposta = await requisitarBackendAutenticado(
+      `/operacoes/comunicacoes/falhas/${encodeURIComponent(id)}/reprocessar`,
+      { method: 'POST' }
+    );
+    return new NextResponse(await resposta.text(), {
+      status: resposta.status,
+      headers: { 'Content-Type': resposta.headers.get('Content-Type') ?? 'application/json' }
+    });
+  } catch (erro) {
+    if (erro instanceof ErroSessaoAusente) {
+      return NextResponse.json({ mensagem: erro.message }, { status: 401 });
+    }
+    throw erro;
+  }
+}

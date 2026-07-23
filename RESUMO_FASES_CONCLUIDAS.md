@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 111.
+Atualizado apos a Fase 112.
 
 Este arquivo e um handoff executivo do que ja foi construido no OctaClin. Ele deve ajudar outro agente de IA ou desenvolvedor a entender rapidamente a evolucao do projeto sem precisar reprocessar todo o historico de commits.
 
@@ -153,10 +153,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 109 - Templates Meta WhatsApp por evento: cadastro de templates aprovados com evento, idioma e parametros na tela de comunicacoes, selecao automatica do template `agenda.consulta.agendada` pela agenda e montagem de `components` para envio Meta.
 - Fase 110 - Automacoes de lembrete e confirmacao de consulta: cron de lembrete 24h por tenant ativo, envio email/WhatsApp com template `agenda.consulta.lembrete`, idempotencia/logs em `notificacoes` e `payload.automacoes`, confirmacao simples por resposta WhatsApp e status visivel na agenda.
 - Fase 111 - Preferencias de comunicacao por paciente: portal do paciente permite editar opt-in de email/WhatsApp, canal preferido e horario permitido; backend persiste isso no contato criptografado e automacoes de lembrete respeitam consentimento, canal preferido e janela de horario.
+- Fase 112 - Central de falhas de comunicacao: painel operacional consolida falhas de mensagens, WhatsApp, email, Google Calendar e outbox, com filtros, resumo por canal e reprocessamento unificado por item.
 
 ## Estado atual de uso
 
-O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam central de falhas, recorrencia avancada/importacao Google Calendar, onboarding final do cliente/paciente, materiais no portal do paciente, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e checklist juridico/privacidade.
+O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam recorrencia avancada/importacao Google Calendar, onboarding final do cliente/paciente, materiais no portal do paciente, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e checklist juridico/privacidade.
 
 ## Como atualizar este arquivo
 

@@ -103,6 +103,31 @@ async function prepararOperacoesMockadas(page) {
       body: JSON.stringify(paginada ? { itens: [], total: 0, pagina: 1, limite: 25 } : [])
     });
   });
+  await page.route('**/api/operacoes/comunicacoes/falhas**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            id: 'mensagem:mensagem-email-1',
+            origem: 'mensagem',
+            canal: 'email',
+            tipo: 'agenda.consulta.lembrete',
+            referenciaId: 'mensagem-email-1',
+            erro: 'SMTP indisponivel',
+            criadoEm: '2026-07-22T12:00:00.000Z',
+            reprocessavel: true,
+            resumo: 'ana@example.com'
+          }
+        ],
+        total: 1,
+        pagina: 1,
+        limite: 25,
+        resumo: { total: 1, email: 1, whatsapp: 0, googleCalendar: 0, outbox: 0, outras: 0, reprocessaveis: 1 }
+      })
+    });
+  });
   await page.route('**/api/operacoes/mobile/sincronizacoes**', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });
@@ -975,6 +1000,8 @@ test.describe('operacoes LGPD', () => {
     const operacoes = await prepararOperacoesMockadas(page);
     await page.goto('/operacoes');
 
+    await expect(page.getByRole('heading', { name: 'Central de comunicacao' })).toBeVisible();
+    await expect(page.getByText('SMTP indisponivel')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Solicitacoes LGPD' })).toBeVisible();
     await expect(page.getByText('LGPD-123')).toBeVisible();
     await expect(page.getByText('Atualizar telefone cadastrado.')).toBeVisible();
