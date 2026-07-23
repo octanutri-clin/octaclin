@@ -126,6 +126,17 @@ pnpm validate
 pnpm validate:full
 ```
 
+## Validacao de secrets
+
+Use antes de commit, handoff ou deploy quando houver qualquer mudanca em ambiente, docs ou integracoes:
+
+```powershell
+npm run security:secrets
+npm run test:security
+```
+
+O preflight executa `security:secrets` automaticamente. O runbook de resposta e rotacao fica em `RUNBOOK_ROTACAO_SECRETS.md`.
+
 ## Validacao para integracoes
 
 Quando mexer em Gmail, Meta, Calendar, Redis ou Render:

@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "security:secrets": "node scripts/scan-secrets.mjs",
+    "test:security": "node scripts/test-scan-secrets.mjs",
     "validate": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1",
     "validate:docs": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -DocsOnly",
     "validate:full": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -Full"

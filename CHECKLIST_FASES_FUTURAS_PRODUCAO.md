@@ -221,10 +221,9 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Status: concluida em 2026-07-23.
   - Saida entregue: portal do paciente gera pacote LGPD estruturado por titular, com perfil, consultas, formularios detalhados, comunicacoes, acompanhamento, trilha LGPD e hash SHA-256 de integridade.
 
-- [ ] Fase 120 - Hardening de secrets e variaveis.
-  - Conferir que nenhuma chave foi commitada.
-  - Documentar rotacao de tokens Meta, Gmail, OpenAI e banco.
-  - Saida esperada: checklist de seguranca operacional.
+- [x] Fase 120 - Hardening de secrets e variaveis.
+  - Status: concluida em 2026-07-23.
+  - Saida entregue: scanner local de secrets com teste, execucao no preflight, runbook de rotacao para Meta, Gmail, Google Calendar, OpenAI, Neon/Postgres, Upstash/Redis, JWT e criptografia.
 
 - [ ] Fase 121 - Rate limiting, lockout e protecoes anti-abuso.
   - Login, recuperacao de senha, convites e APIs sensiveis.

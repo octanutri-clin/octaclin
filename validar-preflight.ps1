@@ -51,6 +51,10 @@ try {
     git diff --check
   }
 
+  Invoke-Step 'Scanner local de secrets' {
+    node (Join-Path $raiz 'scripts/scan-secrets.mjs')
+  }
+
   Invoke-Step 'Documentos obrigatorios' {
     $obrigatorios = @(
       'AGENTS.md',
@@ -63,6 +67,7 @@ try {
       'PREFLIGHT_PRODUCAO.md',
       'RUNBOOK_PRODUCAO.md',
       'VARIAVEIS_AMBIENTE.md',
+      'RUNBOOK_ROTACAO_SECRETS.md',
       'CHECKLIST_GO_LIVE.md'
     )
 

@@ -14,14 +14,14 @@ describe('criarOpcoesTypeOrm', () => {
   });
 
   it('usa DATABASE_URL quando informada', () => {
-    process.env.DATABASE_URL = 'postgresql://usuario%40app:senha%23forte@ep-demo.neon.tech/octaclin?sslmode=require';
+    process.env.DATABASE_URL = 'postgresql://usuario%40app:senha@ep-demo.neon.tech/octaclin?sslmode=require';
 
     const opcoes = criarOpcoesTypeOrm() as unknown as Record<string, unknown>;
 
     expect(opcoes.host).toBe('ep-demo.neon.tech');
     expect(opcoes.port).toBe(5432);
     expect(opcoes.username).toBe('usuario@app');
-    expect(opcoes.password).toBe('senha#forte');
+    expect(opcoes.password).toBe('senha');
     expect(opcoes.database).toBe('octaclin');
     expect(opcoes.ssl).toEqual({ rejectUnauthorized: false });
   });

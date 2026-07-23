@@ -84,6 +84,14 @@ Secrets ficam no painel Upstash e em `REDIS_URL` no Render. Nao registrar URL re
 
 ## Checklist de rotacao
 
+Runbook detalhado: `RUNBOOK_ROTACAO_SECRETS.md`.
+
+Antes de commit ou deploy:
+
+```powershell
+npm run security:secrets
+```
+
 Rotacionar imediatamente se exposto:
 
 - `META_WHATSAPP_TOKEN`
