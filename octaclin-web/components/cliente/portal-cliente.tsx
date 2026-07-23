@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
@@ -11,6 +12,7 @@ import {
   Download,
   FileText,
   History,
+  LogOut,
   MailCheck,
   RefreshCcw,
   Save,
@@ -21,7 +23,7 @@ import {
   UsersRound
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
-import { obterSessao } from '@/lib/auth-api';
+import { obterSessao, sair } from '@/lib/auth-api';
 import {
   AtualizarConfiguracoesClienteEntrada,
   AtualizarPerfilEmpresaClienteEntrada,
@@ -178,6 +180,7 @@ const formularioPerfilEmpresaInicial: AtualizarPerfilEmpresaClienteEntrada = {
 };
 
 export function PortalCliente() {
+  const router = useRouter();
   const [resumo, setResumo] = useState<ResumoPortalClienteApi | null>(null);
   const [usuarios, setUsuarios] = useState<RespostaUsuariosClienteApi | null>(null);
   const [convites, setConvites] = useState<RespostaConvitesUsuarioClienteApi | null>(null);
@@ -611,6 +614,11 @@ export function PortalCliente() {
   const planoRecomendado = resumo ? obterProximoPlano(resumo.assinatura.planoId) : null;
   const bloqueioAssinatura = assinaturaBloqueada(resumo?.assinatura.status);
 
+  async function encerrarSessao() {
+    await sair();
+    router.replace('/login');
+  }
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
       <header className="border-b border-linha bg-white">
@@ -623,9 +631,15 @@ export function PortalCliente() {
             </p>
             {resumo ? <p className="mt-2 break-words text-sm font-medium text-[#343c4b]">{resumo.conta.nome}</p> : null}
           </div>
-          <div className="inline-flex w-fit items-center gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 py-2 text-sm font-medium text-[#343c4b]">
-            <ShieldCheck className="h-4 w-4 text-primaria" />
-            Acesso profissional separado
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <div className="inline-flex w-fit items-center gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 py-2 text-sm font-medium text-[#343c4b]">
+              <ShieldCheck className="h-4 w-4 text-primaria" />
+              Acesso profissional separado
+            </div>
+            <Botao type="button" variante="fantasma" onClick={encerrarSessao}>
+              <LogOut className="h-4 w-4" />
+              Sair
+            </Botao>
           </div>
         </div>
         <div className="mx-auto w-full max-w-[1180px] px-4 pb-4 lg:px-6">

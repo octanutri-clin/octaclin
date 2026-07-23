@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Brain,
   CalendarDays,
   ClipboardList,
   LayoutDashboard,
   HeartPulse,
+  LogOut,
   Send,
   Settings,
   Smartphone,
@@ -19,7 +20,8 @@ import {
   Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { obterSessao } from '@/lib/auth-api';
+import { Botao } from '@/components/ui/botao';
+import { obterSessao, sair } from '@/lib/auth-api';
 
 const itens = [
   { href: '/dashboard', rotulo: 'Dashboard', icone: LayoutDashboard, permissao: 'dashboard.ler' },
@@ -44,6 +46,7 @@ interface ConsoleShellProps {
 
 export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [permissoes, setPermissoes] = useState<string[] | null>(null);
 
   useEffect(() => {
@@ -56,6 +59,11 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
     if (!permissoes) return [];
     return itens.filter((item) => permissoes.includes(item.permissao));
   }, [permissoes]);
+
+  async function encerrarSessao() {
+    await sair();
+    router.replace('/login');
+  }
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
@@ -102,7 +110,13 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
                 <p className="text-xs font-semibold uppercase text-[#596273]">{subtitulo}</p>
                 <h1 className="text-xl font-semibold text-tinta">{titulo}</h1>
               </div>
-              {acoes ? <div className="flex shrink-0 flex-wrap items-center gap-2">{acoes}</div> : null}
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                {acoes}
+                <Botao type="button" variante="fantasma" onClick={encerrarSessao}>
+                  <LogOut size={16} />
+                  Sair
+                </Botao>
+              </div>
             </div>
           </header>
           <div className="mx-auto w-full max-w-[1500px] px-4 py-4 lg:px-6 lg:py-5">{children}</div>

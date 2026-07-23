@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   BellRing,
@@ -11,6 +12,7 @@ import {
   ClipboardList,
   ExternalLink,
   HeartPulse,
+  LogOut,
   MessageCircle,
   RefreshCcw,
   Save,
@@ -20,6 +22,7 @@ import {
   UserRound
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { sair } from '@/lib/auth-api';
 import {
   atualizarPerfilPaciente,
   CheckinRapidoPacienteApi,
@@ -343,6 +346,7 @@ function PortalCarregando() {
 }
 
 export function PortalPaciente() {
+  const router = useRouter();
   const [portal, setPortal] = useState<PortalPacienteApi | null>(null);
   const [detalheFormulario, setDetalheFormulario] = useState<DetalheFormularioRespondidoApi | null>(null);
   const [formularioPerfil, setFormularioPerfil] = useState<FormularioPerfilPaciente>(formularioPerfilVazio);
@@ -548,6 +552,11 @@ export function PortalPaciente() {
   const notificacoesPaciente = portal?.notificacoesPaciente ?? [];
   const notificacoesPendentes = notificacoesPaciente.filter((notificacao) => ehNotificacaoPendente(notificacao.status));
 
+  async function encerrarSessao() {
+    await sair();
+    router.replace('/login');
+  }
+
   return (
     <main className="min-h-screen bg-fundo text-tinta">
       <header className="border-b border-linha bg-white">
@@ -561,10 +570,16 @@ export function PortalPaciente() {
               <h1 className="text-xl font-semibold">Portal do paciente</h1>
             </div>
           </div>
-          <Botao type="button" onClick={() => void carregar()} disabled={carregando}>
-            <RefreshCcw className="h-4 w-4" />
-            {carregando ? 'Atualizando' : 'Atualizar'}
-          </Botao>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Botao type="button" onClick={() => void carregar()} disabled={carregando}>
+              <RefreshCcw className="h-4 w-4" />
+              {carregando ? 'Atualizando' : 'Atualizar'}
+            </Botao>
+            <Botao type="button" variante="fantasma" onClick={encerrarSessao}>
+              <LogOut className="h-4 w-4" />
+              Sair
+            </Botao>
+          </div>
         </div>
       </header>
 
