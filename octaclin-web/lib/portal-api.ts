@@ -33,6 +33,8 @@ export interface PortalPacienteApi {
     formulariosPendentes: number;
     formulariosRespondidos: number;
     mensagensRecentes: number;
+    tarefasPendentes?: number;
+    materiaisDisponiveis?: number;
   };
   consultasProximas: {
     id: string;
@@ -68,6 +70,34 @@ export interface PortalPacienteApi {
     status: string;
     criadoEm: string;
     enviadoEm?: string;
+  }[];
+  tarefasAcompanhamento?: {
+    id: string;
+    titulo: string;
+    descricao?: string;
+    categoria: string;
+    prioridade: string;
+    status: string;
+    vencimentoEm?: string;
+    concluidoEm?: string;
+    criadoEm: string;
+    atualizadoEm: string;
+  }[];
+  materiaisDisponiveis?: {
+    id: string;
+    materialId: string;
+    titulo: string;
+    tipo: string;
+    categoria?: string;
+    resumo?: string;
+    url?: string;
+    conteudo?: string;
+    observacao?: string;
+    status: string;
+    enviadoEm?: string;
+    visualizadoEm?: string;
+    criadoEm: string;
+    atualizadoEm: string;
   }[];
   lgpd: LgpdPortalPacienteApi;
 }

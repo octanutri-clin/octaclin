@@ -2,16 +2,19 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
+import { MaterialEducativoOrm } from '../../materiais/infraestrutura/material-educativo.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { PerguntaOrm } from '../../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-valor.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
+import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { ServicoPortalPaciente } from './servico-portal-paciente';
 
 function criarRepositorioFake(nome: string, dados: Record<string, any>) {
-  const chaveColecao = nome === 'mensagem' ? 'mensagens' : `${nome}s`;
+  const chaveColecao = nome === 'mensagem' ? 'mensagens' : nome === 'material' ? 'materiais' : `${nome}s`;
   const itens: Record<string, any>[] = dados[chaveColecao] ?? [];
 
   function corresponde(valorItem: unknown, valorConsulta: unknown) {
@@ -73,7 +76,10 @@ function criarServico(dados: Record<string, any>) {
     respostaCheckin: criarRepositorioFake('respostaCheckin', dados),
     respostaValor: criarRepositorioFake('respostaValor', dados),
     mensagem: criarRepositorioFake('mensagem', dados),
-    consentimento: criarRepositorioFake('consentimento', dados)
+    consentimento: criarRepositorioFake('consentimento', dados),
+    tarefa: criarRepositorioFake('tarefa', dados),
+    material: criarRepositorioFake('material', dados),
+    envioMaterial: criarRepositorioFake('envioMaterial', dados)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -86,6 +92,9 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === RespostaValorOrm) return repositorios.respostaValor;
       if (entidade === MensagemNotificacaoOrm) return repositorios.mensagem;
       if (entidade === ConsentimentoLgpdOrm) return repositorios.consentimento;
+      if (entidade === AcompanhamentoTarefaOrm) return repositorios.tarefa;
+      if (entidade === MaterialEducativoOrm) return repositorios.material;
+      if (entidade === EnvioMaterialPacienteOrm) return repositorios.envioMaterial;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -209,6 +218,73 @@ describe('ServicoPortalPaciente', () => {
           criadoEm: new Date('2026-07-20T15:00:00.000Z')
         }
       ],
+      tarefas: [
+        {
+          id: 'tarefa-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          titulo: 'Registrar agua diariamente',
+          descricaoCriptografada: Buffer.from('cripto:Meta de 2 litros por dia.'),
+          categoria: 'meta',
+          prioridade: 'alta',
+          status: 'pendente',
+          vencimentoEm: new Date('2026-08-05T12:00:00.000Z'),
+          criadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-22T12:00:00.000Z')
+        },
+        {
+          id: 'tarefa-outro',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          profissionalId: 'profissional-1',
+          titulo: 'Nao deve aparecer',
+          categoria: 'tarefa',
+          prioridade: 'media',
+          status: 'pendente',
+          criadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-22T12:00:00.000Z')
+        }
+      ],
+      materiais: [
+        {
+          id: 'material-1',
+          tenantId: 'tenant-1',
+          criadoPorUsuarioId: 'usuario-profissional-1',
+          titulo: 'Guia de hidratacao',
+          tipo: 'link',
+          categoria: 'Habitos',
+          resumo: 'Orientacoes para hidratar melhor.',
+          url: 'https://materiais.octaclin.test/hidratacao',
+          ativo: true,
+          criadoEm: new Date('2026-07-21T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-21T12:00:00.000Z')
+        }
+      ],
+      envioMaterials: [
+        {
+          id: 'envio-material-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          materialId: 'material-1',
+          enviadoPorUsuarioId: 'usuario-profissional-1',
+          observacaoCriptografada: Buffer.from('cripto:Ler antes da proxima consulta.'),
+          status: 'enviado',
+          enviadoEm: new Date('2026-07-22T13:00:00.000Z'),
+          criadoEm: new Date('2026-07-22T13:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-22T13:00:00.000Z')
+        },
+        {
+          id: 'envio-material-outro',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          materialId: 'material-1',
+          enviadoPorUsuarioId: 'usuario-profissional-1',
+          status: 'enviado',
+          criadoEm: new Date('2026-07-22T13:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-22T13:00:00.000Z')
+        }
+      ],
       consentimentos: [
         {
           id: 'consentimento-1',
@@ -232,6 +308,10 @@ describe('ServicoPortalPaciente', () => {
     });
 
     const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+    const portalComPlano = portal as typeof portal & {
+      tarefasAcompanhamento: unknown[];
+      materiaisDisponiveis: unknown[];
+    };
 
     expect(portal.paciente).toEqual(
       expect.objectContaining({
@@ -241,7 +321,14 @@ describe('ServicoPortalPaciente', () => {
         scoreRisco: '12.50'
       })
     );
-    expect(portal.resumo).toEqual({ consultasProximas: 1, formulariosPendentes: 1, formulariosRespondidos: 1, mensagensRecentes: 1 });
+    expect(portal.resumo).toEqual({
+      consultasProximas: 1,
+      formulariosPendentes: 1,
+      formulariosRespondidos: 1,
+      mensagensRecentes: 1,
+      tarefasPendentes: 1,
+      materiaisDisponiveis: 1
+    });
     expect(portal.perfil).toEqual({
       contato: 'ana@example.com',
       email: 'ana@example.com',
@@ -280,6 +367,30 @@ describe('ServicoPortalPaciente', () => {
     ]);
     expect(portal.mensagensRecentes).toEqual([
       expect.objectContaining({ id: 'mensagem-1', titulo: 'Consulta agendada', texto: 'Sua consulta foi agendada.' })
+    ]);
+    expect(portalComPlano.tarefasAcompanhamento).toEqual([
+      expect.objectContaining({
+        id: 'tarefa-1',
+        titulo: 'Registrar agua diariamente',
+        descricao: 'Meta de 2 litros por dia.',
+        categoria: 'meta',
+        prioridade: 'alta',
+        status: 'pendente',
+        vencimentoEm: new Date('2026-08-05T12:00:00.000Z')
+      })
+    ]);
+    expect(portalComPlano.materiaisDisponiveis).toEqual([
+      expect.objectContaining({
+        id: 'envio-material-1',
+        materialId: 'material-1',
+        titulo: 'Guia de hidratacao',
+        tipo: 'link',
+        categoria: 'Habitos',
+        resumo: 'Orientacoes para hidratar melhor.',
+        url: 'https://materiais.octaclin.test/hidratacao',
+        observacao: 'Ler antes da proxima consulta.',
+        status: 'enviado'
+      })
     ]);
     expect(portal.lgpd).toEqual({
       versaoAtual: '2026-07',

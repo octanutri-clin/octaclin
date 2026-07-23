@@ -21,7 +21,9 @@ const portalPaciente = {
     consultasProximas: 1,
     formulariosPendentes: 1,
     formulariosRespondidos: 1,
-    mensagensRecentes: 1
+    mensagensRecentes: 1,
+    tarefasPendentes: 1,
+    materiaisDisponiveis: 1
   },
   consultasProximas: [
     {
@@ -66,6 +68,35 @@ const portalPaciente = {
       enviadoEm: '2026-07-20T14:01:00.000Z'
     }
   ],
+  tarefasAcompanhamento: [
+    {
+      id: 'tarefa-1',
+      titulo: 'Registrar agua diariamente',
+      descricao: 'Meta de 2 litros por dia.',
+      categoria: 'meta',
+      prioridade: 'alta',
+      status: 'pendente',
+      vencimentoEm: '2026-08-05T12:00:00.000Z',
+      criadoEm: '2026-07-22T12:00:00.000Z',
+      atualizadoEm: '2026-07-22T12:00:00.000Z'
+    }
+  ],
+  materiaisDisponiveis: [
+    {
+      id: 'envio-material-1',
+      materialId: 'material-1',
+      titulo: 'Guia de hidratacao',
+      tipo: 'link',
+      categoria: 'Habitos',
+      resumo: 'Orientacoes para hidratar melhor.',
+      url: 'https://materiais.octaclin.test/hidratacao',
+      observacao: 'Ler antes da proxima consulta.',
+      status: 'enviado',
+      enviadoEm: '2026-07-22T13:00:00.000Z',
+      criadoEm: '2026-07-22T13:00:00.000Z',
+      atualizadoEm: '2026-07-22T13:00:00.000Z'
+    }
+  ],
   lgpd: {
     versaoAtual: '2026-07',
     ultimoAceiteEm: '2026-07-10T10:00:00.000Z',
@@ -102,7 +133,7 @@ async function prepararPortal(page) {
     { name: 'octaclin_destino_inicial', value: encodeURIComponent('/portal'), domain: 'localhost', path: '/' }
   ]);
 
-  await page.route('**/api/portal/paciente', async (route) => {
+  await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(portalPaciente) });
   });
   await page.route('**/api/portal/paciente/formularios-respondidos/**', async (route) => {
@@ -130,7 +161,7 @@ async function prepararPortal(page) {
       })
     });
   });
-  await page.route('**/api/portal/paciente/lgpd/exportacao', async (route) => {
+  await page.route((url) => url.pathname === '/api/portal/paciente/lgpd/exportacao', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -141,7 +172,7 @@ async function prepararPortal(page) {
       })
     });
   });
-  await page.route('**/api/portal/paciente/lgpd/solicitacoes', async (route) => {
+  await page.route((url) => url.pathname === '/api/portal/paciente/lgpd/solicitacoes', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -183,6 +214,7 @@ test.describe('portal do paciente', () => {
     await expect(page.getByRole('navigation', { name: 'Navegacao do portal' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Resumo' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Acoes' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Plano' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Historico' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Perfil' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Proximas acoes' })).toBeVisible();
@@ -194,6 +226,20 @@ test.describe('portal do paciente', () => {
     await expect(page.getByText('Privacidade').first()).toBeVisible();
     await expect(page.getByText('Responder Check-in semanal')).toBeVisible();
     await expect(page.getByText('Consulta nutricional').first()).toBeVisible();
+    await expect(page.getByText('Tarefas', { exact: true })).toBeVisible();
+    await expect(page.getByText('Materiais', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Plano de acompanhamento' })).toBeVisible();
+    await expect(page.locator('#plano').getByText('Registrar agua diariamente')).toBeVisible();
+    await expect(page.locator('#plano').getByText('Meta de 2 litros por dia.')).toBeVisible();
+    await expect(page.locator('#plano').getByText('Alta')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Materiais do plano' })).toBeVisible();
+    await expect(page.locator('#plano').getByText('Guia de hidratacao')).toBeVisible();
+    await expect(page.locator('#plano').getByText('Orientacoes para hidratar melhor.')).toBeVisible();
+    await expect(page.locator('#plano').getByText('Ler antes da proxima consulta.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Abrir Guia de hidratacao' })).toHaveAttribute(
+      'href',
+      'https://materiais.octaclin.test/hidratacao'
+    );
     await expect(page.getByRole('heading', { name: 'Meu perfil' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Privacidade' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Baixar meus dados' })).toBeVisible();
@@ -222,7 +268,7 @@ test.describe('portal do paciente', () => {
 
   test('exibe estado de erro acionavel quando o portal nao carrega', async ({ page }) => {
     await prepararSessaoPaciente(page);
-    await page.route('**/api/portal/paciente', async (route) => {
+    await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
       await route.fulfill({
         status: 503,
         contentType: 'application/json',

@@ -195,9 +195,9 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Status: concluida em 2026-07-22.
   - Saida entregue: primeiro acesso com estados claros para link sem token, convite expirado e convite invalido, com acoes para solicitar novo acesso ou ir ao login.
 
-- [ ] Fase 114 - Area de tarefas e materiais no portal do paciente.
-  - Tarefas, metas, materiais enviados e status.
-  - Saida esperada: paciente acompanha o plano entre consultas.
+- [x] Fase 114 - Area de tarefas e materiais no portal do paciente.
+  - Status: concluida em 2026-07-22.
+  - Saida entregue: portal do paciente exibe tarefas/metas ativas, materiais enviados, status, vencimentos, observacoes e links externos quando disponiveis.
 
 - [ ] Fase 115 - Check-ins e diario rapido de acompanhamento.
   - Check-ins simples, humor, adesao, sintomas e observacoes.

@@ -3,15 +3,18 @@
 import { FormEvent, useEffect, useState } from 'react';
 import {
   AlertTriangle,
+  BookOpen,
   CalendarDays,
   CheckCircle2,
   Clock3,
   ClipboardList,
+  ExternalLink,
   HeartPulse,
   MessageCircle,
   RefreshCcw,
   Save,
   ShieldCheck,
+  Target,
   UserRound
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
@@ -75,11 +78,43 @@ function rotuloStatus(status: string) {
   const mapa: Record<string, string> = {
     agendada: 'Agendada',
     pendente: 'Pendente',
+    em_andamento: 'Em andamento',
+    concluida: 'Concluida',
+    cancelada: 'Cancelada',
     enviado: 'Disponivel',
+    visualizado: 'Visualizado',
     respondido: 'Respondido',
     enviado_meta: 'Enviado'
   };
   return mapa[status] ?? status;
+}
+
+function rotuloPrioridade(prioridade: string) {
+  const mapa: Record<string, string> = {
+    baixa: 'Baixa',
+    media: 'Media',
+    alta: 'Alta'
+  };
+  return mapa[prioridade] ?? prioridade;
+}
+
+function rotuloCategoriaTarefa(categoria: string) {
+  const mapa: Record<string, string> = {
+    meta: 'Meta',
+    tarefa: 'Tarefa',
+    checkin: 'Check-in',
+    orientacao: 'Orientacao'
+  };
+  return mapa[categoria] ?? categoria;
+}
+
+function rotuloTipoMaterial(tipo: string) {
+  const mapa: Record<string, string> = {
+    link: 'Link',
+    pdf_url: 'PDF',
+    orientacao: 'Orientacao'
+  };
+  return mapa[tipo] ?? tipo;
 }
 
 function rotuloConsentimento(tipo: string) {
@@ -139,6 +174,8 @@ function timestampLinhaTempo(valor?: string) {
 }
 
 function montarLinhaTempoPortal(portal: PortalPacienteApi): ItemLinhaTempoPortal[] {
+  const tarefas = portal.tarefasAcompanhamento ?? [];
+  const materiais = portal.materiaisDisponiveis ?? [];
   const itens: ItemLinhaTempoPortal[] = [
     ...portal.consultasProximas.map((consulta) => ({
       id: `consulta-${consulta.id}`,
@@ -168,6 +205,20 @@ function montarLinhaTempoPortal(portal: PortalPacienteApi): ItemLinhaTempoPortal
       descricao: mensagem.texto || 'Mensagem registrada no acompanhamento.',
       data: mensagem.enviadoEm ?? mensagem.criadoEm
     })),
+    ...tarefas.map((tarefa) => ({
+      id: `tarefa-${tarefa.id}`,
+      tipo: 'Tarefa',
+      titulo: tarefa.titulo,
+      descricao: `${rotuloStatus(tarefa.status)} - ${rotuloCategoriaTarefa(tarefa.categoria)}`,
+      data: tarefa.vencimentoEm ?? tarefa.atualizadoEm
+    })),
+    ...materiais.map((material) => ({
+      id: `material-${material.id}`,
+      tipo: 'Material',
+      titulo: material.titulo,
+      descricao: material.resumo || material.observacao || rotuloTipoMaterial(material.tipo),
+      data: material.enviadoEm ?? material.criadoEm
+    })),
     ...portal.lgpd.consentimentos.map((consentimento) => ({
       id: `lgpd-${consentimento.id}`,
       tipo: 'Privacidade',
@@ -185,6 +236,7 @@ function montarLinhaTempoPortal(portal: PortalPacienteApi): ItemLinhaTempoPortal
 const linksPortal = [
   { href: '#resumo', rotulo: 'Resumo' },
   { href: '#acoes', rotulo: 'Acoes' },
+  { href: '#plano', rotulo: 'Plano' },
   { href: '#historico', rotulo: 'Historico' },
   { href: '#perfil', rotulo: 'Perfil' },
   { href: '#privacidade', rotulo: 'Privacidade' }
@@ -377,6 +429,8 @@ export function PortalPaciente() {
   }
 
   const linhaTempo = portal ? montarLinhaTempoPortal(portal) : [];
+  const tarefasAcompanhamento = portal?.tarefasAcompanhamento ?? [];
+  const materiaisDisponiveis = portal?.materiaisDisponiveis ?? [];
 
   return (
     <main className="min-h-screen bg-fundo text-tinta">
@@ -429,7 +483,7 @@ export function PortalPaciente() {
               </div>
             </nav>
 
-            <section id="resumo" className="scroll-mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_repeat(4,140px)]">
+            <section id="resumo" className="scroll-mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_repeat(3,140px)] xl:grid-cols-[minmax(0,1fr)_repeat(6,120px)]">
               <div>
                 <p className="text-sm text-[#596273]">Ola,</p>
                 <h2 className="text-2xl font-semibold text-tinta">{portal.paciente.nome}</h2>
@@ -452,6 +506,14 @@ export function PortalPaciente() {
               <div className="rounded-lg border border-linha bg-white p-3">
                 <p className="text-xs text-[#596273]">Mensagens</p>
                 <p className="text-2xl font-semibold">{portal.resumo.mensagensRecentes}</p>
+              </div>
+              <div className="rounded-lg border border-linha bg-white p-3">
+                <p className="text-xs text-[#596273]">Tarefas</p>
+                <p className="text-2xl font-semibold">{portal.resumo.tarefasPendentes ?? tarefasAcompanhamento.length}</p>
+              </div>
+              <div className="rounded-lg border border-linha bg-white p-3">
+                <p className="text-xs text-[#596273]">Materiais</p>
+                <p className="text-2xl font-semibold">{portal.resumo.materiaisDisponiveis ?? materiaisDisponiveis.length}</p>
               </div>
             </section>
 
@@ -498,6 +560,86 @@ export function PortalPaciente() {
                   <p className="text-sm text-[#596273]">Nenhuma acao pendente para hoje.</p>
                 ) : null}
               </div>
+            </section>
+
+            <section id="plano" className="scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <section className="rounded-lg border border-linha bg-white">
+                <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+                  <Target className="h-4 w-4 text-[#596273]" />
+                  <h2 className="text-sm font-semibold">Plano de acompanhamento</h2>
+                </div>
+                <div className="grid gap-3 p-4">
+                  {tarefasAcompanhamento.length ? (
+                    tarefasAcompanhamento.map((tarefa) => (
+                      <article key={tarefa.id} className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-semibold">{tarefa.titulo}</p>
+                            <p className="mt-1 text-xs text-[#596273]">
+                              {rotuloCategoriaTarefa(tarefa.categoria)} - vencimento {formatarDataHora(tarefa.vencimentoEm)}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap gap-2">
+                            <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                              {rotuloStatus(tarefa.status)}
+                            </span>
+                            <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                              {rotuloPrioridade(tarefa.prioridade)}
+                            </span>
+                          </div>
+                        </div>
+                        {tarefa.descricao ? <p className="mt-3 break-words text-sm text-[#596273]">{tarefa.descricao}</p> : null}
+                      </article>
+                    ))
+                  ) : (
+                    <p className="text-sm text-[#596273]">Nenhuma tarefa ativa no plano.</p>
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-lg border border-linha bg-white">
+                <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+                  <BookOpen className="h-4 w-4 text-[#596273]" />
+                  <h2 className="text-sm font-semibold">Materiais do plano</h2>
+                </div>
+                <div className="grid gap-3 p-4">
+                  {materiaisDisponiveis.length ? (
+                    materiaisDisponiveis.map((material) => (
+                      <article key={material.id} className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-semibold">{material.titulo}</p>
+                            <p className="mt-1 text-xs text-[#596273]">
+                              {rotuloTipoMaterial(material.tipo)}
+                              {material.categoria ? ` - ${material.categoria}` : ''}
+                            </p>
+                          </div>
+                          <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                            {rotuloStatus(material.status)}
+                          </span>
+                        </div>
+                        {material.resumo ? <p className="mt-3 break-words text-sm text-[#596273]">{material.resumo}</p> : null}
+                        {material.observacao ? <p className="mt-2 break-words text-xs text-[#596273]">{material.observacao}</p> : null}
+                        {material.conteudo ? <p className="mt-3 line-clamp-4 break-words text-sm text-[#343c4b]">{material.conteudo}</p> : null}
+                        {material.url ? (
+                          <a
+                            href={material.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={`Abrir ${material.titulo}`}
+                            className="mt-3 inline-flex h-9 max-w-full items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-[#eef5f8]"
+                          >
+                            <ExternalLink className="h-4 w-4 shrink-0" />
+                            <span className="truncate">Abrir material</span>
+                          </a>
+                        ) : null}
+                      </article>
+                    ))
+                  ) : (
+                    <p className="text-sm text-[#596273]">Nenhum material disponivel no plano.</p>
+                  )}
+                </div>
+              </section>
             </section>
 
             <section id="historico" className="scroll-mt-4 rounded-lg border border-linha bg-white">

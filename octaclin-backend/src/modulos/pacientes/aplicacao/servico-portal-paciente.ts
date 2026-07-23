@@ -6,12 +6,15 @@ import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
+import { MaterialEducativoOrm } from '../../materiais/infraestrutura/material-educativo.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { PerguntaOrm } from '../../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-valor.orm';
 import { AtualizarPerfilPacientePortalDto, RegistrarConsentimentoLgpdPortalDto, RegistrarSolicitacaoLgpdPortalDto } from './dtos';
+import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
 type CanalPreferidoComunicacao = 'email' | 'whatsapp' | 'qualquer';
@@ -67,6 +70,8 @@ export interface ResumoPortalPaciente {
     formulariosPendentes: number;
     formulariosRespondidos: number;
     mensagensRecentes: number;
+    tarefasPendentes: number;
+    materiaisDisponiveis: number;
   };
   consultasProximas: {
     id: string;
@@ -102,6 +107,34 @@ export interface ResumoPortalPaciente {
     status: string;
     criadoEm: Date;
     enviadoEm?: Date;
+  }[];
+  tarefasAcompanhamento: {
+    id: string;
+    titulo: string;
+    descricao?: string;
+    categoria: string;
+    prioridade: string;
+    status: string;
+    vencimentoEm?: Date;
+    concluidoEm?: Date;
+    criadoEm: Date;
+    atualizadoEm: Date;
+  }[];
+  materiaisDisponiveis: {
+    id: string;
+    materialId: string;
+    titulo: string;
+    tipo: string;
+    categoria?: string;
+    resumo?: string;
+    url?: string;
+    conteudo?: string;
+    observacao?: string;
+    status: string;
+    enviadoEm?: Date;
+    visualizadoEm?: Date;
+    criadoEm: Date;
+    atualizadoEm: Date;
   }[];
   lgpd: LgpdPortalPaciente;
 }
@@ -235,6 +268,22 @@ export class ServicoPortalPaciente {
         order: { criadoEm: 'DESC' },
         take: 5
       });
+      const tarefas = await gerenciador.getRepository(AcompanhamentoTarefaOrm).find({
+        where: { tenantId, pacienteId: paciente.id, status: In(['pendente', 'em_andamento']) },
+        order: { vencimentoEm: 'ASC', criadoEm: 'DESC' },
+        take: 20
+      });
+      const enviosMateriais = await gerenciador.getRepository(EnvioMaterialPacienteOrm).find({
+        where: { tenantId, pacienteId: paciente.id, status: In(['enviado', 'visualizado']) },
+        order: { enviadoEm: 'DESC', criadoEm: 'DESC' },
+        take: 20
+      });
+      const materiais = enviosMateriais.length
+        ? await gerenciador.getRepository(MaterialEducativoOrm).find({
+            where: { tenantId, id: In(enviosMateriais.map((envio) => envio.materialId)), ativo: true }
+          })
+        : [];
+      const materiaisPorId = new Map(materiais.map((material) => [material.id, material]));
       const consentimentos = await this.listarConsentimentosPaciente(gerenciador, tenantId);
 
       const consultasProximas = consultas.map((consulta) => ({
@@ -275,6 +324,41 @@ export class ServicoPortalPaciente {
         criadoEm: mensagem.criadoEm,
         enviadoEm: mensagem.enviadoEm
       }));
+      const tarefasAcompanhamento = tarefas.map((tarefa) => ({
+        id: tarefa.id,
+        titulo: tarefa.titulo,
+        descricao: tarefa.descricaoCriptografada ? this.criptografia.descriptografar(tarefa.descricaoCriptografada) : undefined,
+        categoria: tarefa.categoria,
+        prioridade: tarefa.prioridade,
+        status: tarefa.status,
+        vencimentoEm: tarefa.vencimentoEm,
+        concluidoEm: tarefa.concluidoEm,
+        criadoEm: tarefa.criadoEm,
+        atualizadoEm: tarefa.atualizadoEm
+      }));
+      const materiaisDisponiveis = enviosMateriais
+        .map((envio) => {
+          const material = materiaisPorId.get(envio.materialId);
+          if (!material) return null;
+
+          return {
+            id: envio.id,
+            materialId: envio.materialId,
+            titulo: material.titulo,
+            tipo: material.tipo,
+            categoria: material.categoria,
+            resumo: material.resumo,
+            url: material.url,
+            conteudo: material.conteudo,
+            observacao: envio.observacaoCriptografada ? this.criptografia.descriptografar(envio.observacaoCriptografada) : undefined,
+            status: envio.status,
+            enviadoEm: envio.enviadoEm,
+            visualizadoEm: envio.visualizadoEm,
+            criadoEm: envio.criadoEm,
+            atualizadoEm: envio.atualizadoEm
+          };
+        })
+        .filter((envio): envio is NonNullable<typeof envio> => Boolean(envio));
       const contato = this.obterContatoPaciente(paciente);
 
       return {
@@ -298,12 +382,16 @@ export class ServicoPortalPaciente {
           consultasProximas: consultasProximas.length,
           formulariosPendentes: formulariosPendentes.length,
           formulariosRespondidos: formulariosRespondidos.length,
-          mensagensRecentes: mensagensRecentes.length
+          mensagensRecentes: mensagensRecentes.length,
+          tarefasPendentes: tarefasAcompanhamento.length,
+          materiaisDisponiveis: materiaisDisponiveis.length
         },
         consultasProximas,
         formulariosPendentes,
         formulariosRespondidos,
         mensagensRecentes,
+        tarefasAcompanhamento,
+        materiaisDisponiveis,
         lgpd: this.mapearLgpd(consentimentos, paciente.id, usuarioId)
       };
     });
