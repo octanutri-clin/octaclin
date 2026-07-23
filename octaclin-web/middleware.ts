@@ -7,6 +7,7 @@ const COOKIE_DESTINO_INICIAL = 'octaclin_destino_inicial';
 const COOKIE_PAPEL = 'octaclin_papel';
 const COOKIE_PERMISSOES = 'octaclin_permissoes';
 const ROTAS_PROTEGIDAS = [
+  '/dashboard',
   '/agenda',
   '/operacoes',
   '/questionarios',
@@ -89,6 +90,7 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/login',
+    '/dashboard/:path*',
     '/agenda/:path*',
     '/operacoes/:path*',
     '/questionarios/:path*',
