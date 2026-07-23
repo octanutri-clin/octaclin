@@ -7,6 +7,7 @@ import { CriarTokensRedefinicaoSenha1720000000300 } from './migracoes/1720000000
 import { CriarEvolucoesClinicas1720000000400 } from './migracoes/1720000000400-CriarEvolucoesClinicas';
 import { CriarAcompanhamentoTarefas1720000000500 } from './migracoes/1720000000500-CriarAcompanhamentoTarefas';
 import { CriarMateriaisEducativos1720000000600 } from './migracoes/1720000000600-CriarMateriaisEducativos';
+import { CorrigeConstraintRoleUsuarios1720000000700 } from './migracoes/1720000000700-CorrigeConstraintRoleUsuarios';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -134,7 +135,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CriarTokensRedefinicaoSenha1720000000300,
       CriarEvolucoesClinicas1720000000400,
       CriarAcompanhamentoTarefas1720000000500,
-      CriarMateriaisEducativos1720000000600
+      CriarMateriaisEducativos1720000000600,
+      CorrigeConstraintRoleUsuarios1720000000700
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,
