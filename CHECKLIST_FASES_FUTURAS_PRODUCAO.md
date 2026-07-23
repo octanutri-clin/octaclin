@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 128.
+Atualizado apos a Fase 129.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -289,9 +289,14 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Validacoes: `pnpm test:e2e:criticas`, `pnpm security:secrets`, `powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly`.
   - Saida entregue: suite Playwright `jornadas-criticas.spec.mjs` e validador `validar-jornadas-criticas.ps1` cobrindo convite administrativo, criacao de paciente, agendamento com email/WhatsApp/Google Calendar e portal do paciente com notificacoes/plano.
 
-- [ ] Fase 129 - Staging com dados realistas.
+- [x] Fase 129 - Staging com dados realistas.
   - Criar massa de dados sem PII real.
   - Saida esperada: ambiente para demonstracao e QA.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-23.
+  - Validacoes: `pnpm test:staging-fixtures`, `pnpm --dir octaclin-backend typecheck`, `pnpm security:secrets`, `powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly`.
+  - Saida entregue: fixture `staging-fixtures.json`, seed `seed-staging.ts`, runbook `RUNBOOK_STAGING_DADOS.md` e comandos `pnpm test:staging-fixtures`/`pnpm seed:staging`.
+  - Observacao: aplicacao no Neon staging exige `DATABASE_URL` de staging e nao foi executada nesta sessao.
 
 - [ ] Fase 130 - Piloto interno controlado.
   - Usar com poucos clientes ficticios/reais autorizados.

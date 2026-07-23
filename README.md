@@ -26,6 +26,7 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 - `RUNBOOK_PRODUCAO.md` - operacao, deploy, validacao e incidentes.
 - `RUNBOOK_BACKUP_RESTORE.md` - backup PostgreSQL/Neon e restore de teste.
 - `RUNBOOK_SUPORTE.md` - atendimento de suporte para login, convites, senha, WhatsApp, email e agenda.
+- `RUNBOOK_STAGING_DADOS.md` - massa ficticia de staging para demonstracao e QA.
 - `CHECKLIST_GO_LIVE.md` - criterios antes de incluir clientes reais.
 
 ## Estrutura
@@ -64,4 +65,11 @@ Jornadas criticas:
 
 ```powershell
 pnpm test:e2e:criticas
+```
+
+Dados realistas de staging:
+
+```powershell
+pnpm test:staging-fixtures
+pnpm seed:staging
 ```

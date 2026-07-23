@@ -70,6 +70,7 @@ try {
       'RUNBOOK_ROTACAO_SECRETS.md',
       'RUNBOOK_BACKUP_RESTORE.md',
       'RUNBOOK_SUPORTE.md',
+      'RUNBOOK_STAGING_DADOS.md',
       'CHECKLIST_GO_LIVE.md'
     )
 

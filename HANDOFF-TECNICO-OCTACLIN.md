@@ -15,6 +15,7 @@ Este arquivo e um resumo tecnico curto para continuidade. Para contexto completo
 - `RUNBOOK_PRODUCAO.md`
 - `RUNBOOK_BACKUP_RESTORE.md`
 - `RUNBOOK_SUPORTE.md`
+- `RUNBOOK_STAGING_DADOS.md`
 - `VARIAVEIS_AMBIENTE.md`
 - `CHECKLIST_GO_LIVE.md`
 - `ONBOARDING_DESENVOLVEDOR.md`
@@ -42,6 +43,7 @@ O projeto ja possui:
 - LGPD operacional e portal;
 - runbooks de producao, backup/restore, rotacao de secrets e suporte;
 - suite Playwright de jornadas criticas para cliente, profissional, agenda/comunicacoes e paciente;
+- massa ficticia de staging pronta para aplicar no Neon staging;
 - convites administrativos para usuarios de cliente;
 - modelo de planos SaaS com limites, uso e alertas por tenant;
 - solicitacao comercial manual de upgrade/revisao de assinatura;
@@ -178,8 +180,8 @@ Leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md` antes de alterar qualquer i
 
 ## Estado de roadmap
 
-- Ultima fase concluida: Fase 128 - Suite E2E de jornadas criticas.
-- Proxima fase planejada: Fase 129 - Staging com dados realistas.
+- Ultima fase concluida: Fase 129 - Staging com dados realistas.
+- Proxima fase planejada: Fase 130 - Piloto interno controlado.
 - Roadmap completo: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regra de continuidade

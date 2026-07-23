@@ -13,6 +13,7 @@
     "migration:generate": "npm run typeorm -- migration:generate src/infraestrutura/banco-dados/migracoes/MigracaoAutomatica",
     "migration:revert": "npm run typeorm -- migration:revert",
     "seed:demo": "ts-node src/infraestrutura/banco-dados/seeds/seed-demo.ts",
+    "seed:staging": "ts-node src/infraestrutura/banco-dados/seeds/seed-staging.ts",
     "smoke:operacoes": "ts-node src/infraestrutura/smoke/smoke-operacoes.ts",
     "gmail:oauth-token": "node scripts/gmail-oauth-token.mjs",
     "mock:api": "node scripts/api-demo-local.mjs"

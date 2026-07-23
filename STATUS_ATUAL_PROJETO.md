@@ -7,8 +7,8 @@ Atualizado em 2026-07-23.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 128 - Suite E2E de jornadas criticas.
-- Proxima fase planejada: Fase 129 - Staging com dados realistas.
+- Ultima fase concluida: Fase 129 - Staging com dados realistas.
+- Proxima fase planejada: Fase 130 - Piloto interno controlado.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -48,13 +48,14 @@ Atualizado em 2026-07-23.
 - Auditoria e outbox operacional.
 - Runbooks de producao, backup/restore, rotacao de secrets e suporte.
 - Suite Playwright de jornadas criticas com contratos BFF mockados.
+- Massa ficticia de staging pronta para aplicar no Neon staging.
 
 ## O que ainda falta antes de producao real
 
 - Gateway de pagamento definitivo, se a operacao manual deixar de ser suficiente.
 - Recorrencia avancada e importacao inbound do Google Calendar por `syncToken`.
 - Restore real em banco dedicado antes do go-live.
-- Staging com dados realistas.
+- Aplicar e validar a massa ficticia no Neon staging com `pnpm seed:staging`.
 - Piloto interno controlado.
 - Producao isolada de staging.
 - Dominio, SSL e identidade de envio.
@@ -84,6 +85,7 @@ Atualizado em 2026-07-23.
 - `RUNBOOK_PRODUCAO.md`: operacao.
 - `RUNBOOK_BACKUP_RESTORE.md`: backup PostgreSQL/Neon e restore de teste.
 - `RUNBOOK_SUPORTE.md`: suporte para login, convites, senha, WhatsApp, email e agenda.
+- `RUNBOOK_STAGING_DADOS.md`: massa ficticia de staging para demonstracao e QA.
 - `VARIAVEIS_AMBIENTE.md`: env vars sem secrets.
 - `CHECKLIST_GO_LIVE.md`: liberacao para clientes reais.
 - `ONBOARDING_DESENVOLVEDOR.md`: entrada de novos desenvolvedores/agentes.
@@ -96,4 +98,4 @@ Atualizado em 2026-07-23.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, mas ainda precisa de restore real em banco dedicado, staging com dados realistas, piloto interno controlado e producao isolada antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, mas ainda precisa de restore real em banco dedicado, aplicacao/validacao da massa ficticia no Neon staging, piloto interno controlado e producao isolada antes de uso comercial com clientes reais.

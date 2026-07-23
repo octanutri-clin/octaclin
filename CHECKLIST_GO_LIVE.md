@@ -77,6 +77,7 @@ Este checklist deve ser concluido antes de incluir clientes reais de consultoria
 - [ ] Teste manual com usuario cliente realista.
 - [ ] Teste manual com profissional realista.
 - [ ] Teste manual com paciente realista.
+- [ ] Massa ficticia de staging aplicada conforme `RUNBOOK_STAGING_DADOS.md`.
 
 ## Operacao
 

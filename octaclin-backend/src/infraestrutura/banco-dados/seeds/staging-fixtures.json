@@ -1,0 +1,234 @@
+{
+  "tenant": {
+    "id": "10101010-1010-4101-8101-101010101010",
+    "nome": "OctaClin Staging",
+    "slug": "octaclin-staging"
+  },
+  "senhaPadrao": "OctaClin@123",
+  "usuarios": [
+    {
+      "id": "10101010-1010-4101-8101-101010101011",
+      "email": "gestor.staging@octaclin.test",
+      "role": "Client"
+    },
+    {
+      "id": "10101010-1010-4101-8101-101010101012",
+      "email": "ops.staging@octaclin.test",
+      "role": "Collaborator"
+    },
+    {
+      "id": "10101010-1010-4101-8101-101010101013",
+      "email": "marina.profissional@octaclin.test",
+      "role": "Professional"
+    },
+    {
+      "id": "10101010-1010-4101-8101-101010101014",
+      "email": "rafael.profissional@octaclin.test",
+      "role": "Professional"
+    },
+    {
+      "id": "10101010-1010-4101-8101-101010101015",
+      "email": "paciente.alfa@octaclin.test",
+      "role": "Patient"
+    }
+  ],
+  "profissionais": [
+    {
+      "id": "20202020-2020-4202-8202-202020202021",
+      "usuarioId": "10101010-1010-4101-8101-101010101013",
+      "nome": "Dra. Marina Campos",
+      "registroProfissional": "CRN-STG-001",
+      "especialidade": "Nutricao clinica"
+    },
+    {
+      "id": "20202020-2020-4202-8202-202020202022",
+      "usuarioId": "10101010-1010-4101-8101-101010101014",
+      "nome": "Dr. Rafael Nogueira",
+      "registroProfissional": "CRN-STG-002",
+      "especialidade": "Nutrologia"
+    }
+  ],
+  "pacientes": [
+    {
+      "id": "30303030-3030-4303-8303-303030303031",
+      "usuarioId": "10101010-1010-4101-8101-101010101015",
+      "profissionalResponsavelId": "20202020-2020-4202-8202-202020202021",
+      "nome": "Paciente Alfa",
+      "contato": "paciente.alfa@octaclin.test",
+      "dataNascimento": "1991-05-14",
+      "statusAdesao": "aderente",
+      "scoreRisco": "18.00",
+      "ultimoCheckinEm": "2026-07-22T12:00:00.000Z"
+    },
+    {
+      "id": "30303030-3030-4303-8303-303030303032",
+      "profissionalResponsavelId": "20202020-2020-4202-8202-202020202021",
+      "nome": "Paciente Beta",
+      "contato": "5511990000102",
+      "dataNascimento": "1988-11-02",
+      "statusAdesao": "risco",
+      "scoreRisco": "74.00",
+      "ultimoCheckinEm": "2026-07-20T09:00:00.000Z"
+    },
+    {
+      "id": "30303030-3030-4303-8303-303030303033",
+      "profissionalResponsavelId": "20202020-2020-4202-8202-202020202022",
+      "nome": "Paciente Gama",
+      "contato": "5511990000103",
+      "dataNascimento": "1979-02-20",
+      "statusAdesao": "em_acompanhamento",
+      "scoreRisco": "41.00"
+    }
+  ],
+  "canais": [
+    {
+      "id": "40404040-4040-4404-8404-404040404041",
+      "tipo": "email",
+      "nome": "Email staging",
+      "configuracao": { "provedor": "smtp", "remetente": "OctaClin Staging <no-reply@octaclin.test>" }
+    },
+    {
+      "id": "40404040-4040-4404-8404-404040404042",
+      "tipo": "whatsapp",
+      "nome": "WhatsApp staging",
+      "configuracao": { "provedor": "meta", "modo": "staging" }
+    }
+  ],
+  "templates": [
+    {
+      "id": "50505050-5050-4505-8505-505050505051",
+      "canal": "email",
+      "codigoExterno": "staging_agenda_consulta_agendada",
+      "nome": "Consulta agendada staging",
+      "conteudo": { "assunto": "Consulta agendada", "corpo": "Sua consulta foi agendada no OctaClin." },
+      "aprovado": true
+    },
+    {
+      "id": "50505050-5050-4505-8505-505050505052",
+      "canal": "whatsapp",
+      "codigoExterno": "consulta_agendada_staging",
+      "nome": "WhatsApp consulta agendada staging",
+      "conteudo": { "evento": "agenda.consulta.agendada", "idioma": "pt_BR" },
+      "aprovado": true
+    }
+  ],
+  "agenda": [
+    {
+      "id": "60606060-6060-4606-8606-606060606061",
+      "pacienteId": "30303030-3030-4303-8303-303030303031",
+      "profissionalId": "20202020-2020-4202-8202-202020202021",
+      "titulo": "Consulta inicial - Paciente Alfa",
+      "inicioEm": "2026-08-03T13:00:00.000Z",
+      "fimEm": "2026-08-03T13:50:00.000Z",
+      "local": "Online",
+      "notificacoes": {
+        "googleCalendar": { "status": "sincronizado" },
+        "email": { "status": "enviado" },
+        "whatsapp": { "status": "enviado" },
+        "lembrete24h": { "status": "pendente" }
+      }
+    },
+    {
+      "id": "60606060-6060-4606-8606-606060606062",
+      "pacienteId": "30303030-3030-4303-8303-303030303032",
+      "profissionalId": "20202020-2020-4202-8202-202020202021",
+      "titulo": "Retorno - Paciente Beta",
+      "inicioEm": "2026-08-04T16:00:00.000Z",
+      "fimEm": "2026-08-04T16:40:00.000Z",
+      "local": "Consultorio",
+      "notificacoes": { "email": { "status": "falhou", "motivo": "caixa_destino_indisponivel" } }
+    }
+  ],
+  "materiais": [
+    {
+      "id": "70707070-7070-4707-8707-707070707071",
+      "titulo": "Guia de preparacao para consulta",
+      "tipo": "link",
+      "categoria": "Onboarding",
+      "resumo": "Material ficticio para demonstracao do portal.",
+      "url": "https://materiais.octaclin.test/preparacao"
+    },
+    {
+      "id": "70707070-7070-4707-8707-707070707072",
+      "titulo": "Orientacoes de hidratacao",
+      "tipo": "orientacao",
+      "categoria": "Habitos",
+      "resumo": "Orientacao sintetica para QA.",
+      "conteudo": "Beber agua ao longo do dia conforme plano combinado."
+    }
+  ],
+  "enviosMaterial": [
+    {
+      "id": "80808080-8080-4808-8808-808080808081",
+      "pacienteId": "30303030-3030-4303-8303-303030303031",
+      "materialId": "70707070-7070-4707-8707-707070707071",
+      "observacao": "Ler antes da primeira consulta.",
+      "status": "visualizado",
+      "enviadoEm": "2026-07-23T12:00:00.000Z",
+      "visualizadoEm": "2026-07-23T13:00:00.000Z"
+    }
+  ],
+  "tarefas": [
+    {
+      "id": "90909090-9090-4909-8909-909090909091",
+      "pacienteId": "30303030-3030-4303-8303-303030303031",
+      "profissionalId": "20202020-2020-4202-8202-202020202021",
+      "titulo": "Registrar check-in inicial",
+      "descricao": "Preencher diario rapido antes da consulta.",
+      "categoria": "checkin",
+      "prioridade": "alta",
+      "status": "pendente",
+      "vencimentoEm": "2026-08-02T12:00:00.000Z"
+    },
+    {
+      "id": "90909090-9090-4909-8909-909090909092",
+      "pacienteId": "30303030-3030-4303-8303-303030303032",
+      "profissionalId": "20202020-2020-4202-8202-202020202021",
+      "titulo": "Enviar foto do prato",
+      "descricao": "Tarefa ficticia para validar acompanhamento.",
+      "categoria": "tarefa",
+      "prioridade": "media",
+      "status": "em_andamento"
+    }
+  ],
+  "mensagens": [
+    {
+      "id": "a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a1",
+      "pacienteId": "30303030-3030-4303-8303-303030303031",
+      "canalId": "40404040-4040-4404-8404-404040404041",
+      "templateId": "50505050-5050-4505-8505-505050505051",
+      "status": "enviado",
+      "payload": { "evento": "agenda.consulta.agendada", "destino": "paciente.alfa@octaclin.test" },
+      "enviadoEm": "2026-07-23T12:01:00.000Z"
+    },
+    {
+      "id": "a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a2",
+      "pacienteId": "30303030-3030-4303-8303-303030303032",
+      "canalId": "40404040-4040-4404-8404-404040404042",
+      "templateId": "50505050-5050-4505-8505-505050505052",
+      "status": "pendente",
+      "payload": { "evento": "agenda.consulta.lembrete", "destino": "5511990000102" }
+    }
+  ],
+  "configuracoesTenant": [
+    {
+      "id": "b0b0b0b0-b0b0-4b0b-8b0b-b0b0b0b0b0b1",
+      "chave": "portal_cliente",
+      "valor": {
+        "nome": "OctaClin Staging",
+        "timezone": "America/Sao_Paulo",
+        "idioma": "pt-BR",
+        "canaisPadrao": { "email": true, "whatsapp": true }
+      }
+    },
+    {
+      "id": "b0b0b0b0-b0b0-4b0b-8b0b-b0b0b0b0b0b2",
+      "chave": "plano_saas",
+      "valor": {
+        "plano": "clinica",
+        "status": "ativa",
+        "origem": "seed_staging"
+      }
+    }
+  ]
+}

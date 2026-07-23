@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-07-23, Fase 128.
+Atualizado em 2026-07-23, Fase 129.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -32,6 +32,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Observabilidade | Parcial | Healthchecks, logs estruturados, request ID, alertas operacionais e runbooks. | Persistir historico de alertas e integrar notificacao externa se necessario. |
 | Backups/restore | Parcial | Runbook, planejador seguro, script de backup e validacao estrutural com `pg_restore --list`. | Executar restore real em banco dedicado antes do go-live. |
 | Suporte | Pronto | `RUNBOOK_SUPORTE.md` cobre login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento. | Treinar responsavel e revisar apos piloto. |
+| Dados de staging | Parcial | Fixture sem PII real, seed `seed-staging.ts` e runbook `RUNBOOK_STAGING_DADOS.md`. | Aplicar no Neon staging com `DATABASE_URL` de staging e validar jornadas. |
 | Producao isolada | Pendente | Staging funcional. | Criar env de producao separado de staging. |
 | Juridico/comercial | Pendente | Checklist previsto. | Termos, politica, contrato e processo de suporte. |
 | QA E2E | Parcial | Typechecks, specs focadas, Playwright visual por areas e suite de jornadas criticas com BFF mockado. | Validar em staging com dados realistas. |
@@ -80,4 +81,4 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Seguir para a proxima fase de qualidade: staging com dados realistas, Fase 129.
+Seguir para a proxima fase de qualidade: piloto interno controlado, Fase 130.

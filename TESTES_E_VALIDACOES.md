@@ -234,6 +234,24 @@ pnpm test:e2e:criticas
 
 A suite `octaclin-web/tests/visual/jornadas-criticas.spec.mjs` valida convite administrativo, criacao de paciente, agendamento com email/WhatsApp/Google Calendar e portal do paciente com notificacoes/plano. O comando raiz usa `validar-jornadas-criticas.ps1` para subir o Next temporariamente e encerrar a porta ao final.
 
+## Dados realistas de staging
+
+Use quando alterar massa de staging, seeds ou dados de QA:
+
+```powershell
+pnpm test:staging-fixtures
+pnpm --dir octaclin-backend typecheck
+```
+
+Para aplicar no banco de staging:
+
+```powershell
+$env:DATABASE_URL='<url do Neon staging>'
+pnpm seed:staging
+```
+
+Regra esperada: `staging-fixtures.json` deve usar apenas dados ficticios, dominio `@octaclin.test`, telefones sinteticos e origem `seed_staging`.
+
 ## Validacao antes de commit
 
 Sempre:
