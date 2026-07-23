@@ -6,6 +6,7 @@ import { CriarConvitesPacienteAcesso1720000000200 } from './migracoes/1720000000
 import { CriarTokensRedefinicaoSenha1720000000300 } from './migracoes/1720000000300-CriarTokensRedefinicaoSenha';
 import { CriarEvolucoesClinicas1720000000400 } from './migracoes/1720000000400-CriarEvolucoesClinicas';
 import { CriarAcompanhamentoTarefas1720000000500 } from './migracoes/1720000000500-CriarAcompanhamentoTarefas';
+import { CriarMateriaisEducativos1720000000600 } from './migracoes/1720000000600-CriarMateriaisEducativos';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -19,6 +20,8 @@ import { ExecucaoRegraOrm } from '../../modulos/automacoes/infraestrutura/execuc
 import { RegraAutomacaoOrm } from '../../modulos/automacoes/infraestrutura/regra-automacao.orm';
 import { AnaliseSentimentoOrm } from '../../modulos/ia/infraestrutura/analise-sentimento.orm';
 import { ReconhecimentoAlimentarOrm } from '../../modulos/ia/infraestrutura/reconhecimento-alimentar.orm';
+import { EnvioMaterialPacienteOrm } from '../../modulos/materiais/infraestrutura/envio-material-paciente.orm';
+import { MaterialEducativoOrm } from '../../modulos/materiais/infraestrutura/material-educativo.orm';
 import { BadgeOrm } from '../../modulos/gamificacao/infraestrutura/badge.orm';
 import { CirculoPacientesOrm } from '../../modulos/gamificacao/infraestrutura/circulo-pacientes.orm';
 import { DesafioOrm } from '../../modulos/gamificacao/infraestrutura/desafio.orm';
@@ -107,6 +110,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       ExecucaoRegraOrm,
       AnaliseSentimentoOrm,
       ReconhecimentoAlimentarOrm,
+      MaterialEducativoOrm,
+      EnvioMaterialPacienteOrm,
       CirculoPacientesOrm,
       MembroCirculoOrm,
       PostComunidadeOrm,
@@ -128,7 +133,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CriarConvitesPacienteAcesso1720000000200,
       CriarTokensRedefinicaoSenha1720000000300,
       CriarEvolucoesClinicas1720000000400,
-      CriarAcompanhamentoTarefas1720000000500
+      CriarAcompanhamentoTarefas1720000000500,
+      CriarMateriaisEducativos1720000000600
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

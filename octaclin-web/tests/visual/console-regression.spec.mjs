@@ -471,6 +471,8 @@ async function prepararDashboardMockado(page) {
 async function prepararProntuarioMockado(page) {
   let criouEvolucao = false;
   let criouTarefa = false;
+  let criouMaterial = false;
+  let enviouMaterial = false;
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -494,6 +496,8 @@ async function prepararProntuarioMockado(page) {
           'pacientes.listar',
           'pacientes.ler',
           'pacientes.gerenciar',
+          'materiais.ler',
+          'materiais.gerenciar',
           'agenda.consultas.ler',
           'questionarios.ler',
           'comunicacoes.mensagens.ler'
@@ -650,9 +654,115 @@ async function prepararProntuarioMockado(page) {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });
 
+  await page.route('**/api/materiais', async (route) => {
+    if (route.request().method() === 'POST') {
+      criouMaterial = true;
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'material-1',
+          tenantId: 'tenant-1',
+          criadoPorUsuarioId: 'usuario-profissional-1',
+          titulo: 'Guia de hidratacao',
+          tipo: 'link',
+          categoria: 'Habitos',
+          resumo: 'Orientacao simples para rotina diaria.',
+          url: 'https://example.com/hidratacao',
+          ativo: true,
+          criadoEm: '2026-07-22T18:00:00.000Z',
+          atualizadoEm: '2026-07-22T18:00:00.000Z'
+        })
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        criouMaterial
+          ? [
+              {
+                id: 'material-1',
+                tenantId: 'tenant-1',
+                criadoPorUsuarioId: 'usuario-profissional-1',
+                titulo: 'Guia de hidratacao',
+                tipo: 'link',
+                categoria: 'Habitos',
+                resumo: 'Orientacao simples para rotina diaria.',
+                url: 'https://example.com/hidratacao',
+                ativo: true,
+                criadoEm: '2026-07-22T18:00:00.000Z',
+                atualizadoEm: '2026-07-22T18:00:00.000Z'
+              }
+            ]
+          : []
+      )
+    });
+  });
+
+  await page.route('**/api/materiais/pacientes/paciente-1', async (route) => {
+    if (route.request().method() === 'POST') {
+      enviouMaterial = true;
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'envio-material-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          materialId: 'material-1',
+          enviadoPorUsuarioId: 'usuario-profissional-1',
+          titulo: 'Guia de hidratacao',
+          tipo: 'link',
+          categoria: 'Habitos',
+          resumo: 'Orientacao simples para rotina diaria.',
+          url: 'https://example.com/hidratacao',
+          observacao: 'Ler antes do retorno.',
+          status: 'enviado',
+          enviadoEm: '2026-07-22T19:00:00.000Z',
+          criadoEm: '2026-07-22T19:00:00.000Z',
+          atualizadoEm: '2026-07-22T19:00:00.000Z'
+        })
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        enviouMaterial
+          ? [
+              {
+                id: 'envio-material-1',
+                tenantId: 'tenant-1',
+                pacienteId: 'paciente-1',
+                materialId: 'material-1',
+                enviadoPorUsuarioId: 'usuario-profissional-1',
+                titulo: 'Guia de hidratacao',
+                tipo: 'link',
+                categoria: 'Habitos',
+                resumo: 'Orientacao simples para rotina diaria.',
+                url: 'https://example.com/hidratacao',
+                observacao: 'Ler antes do retorno.',
+                status: 'enviado',
+                enviadoEm: '2026-07-22T19:00:00.000Z',
+                criadoEm: '2026-07-22T19:00:00.000Z',
+                atualizadoEm: '2026-07-22T19:00:00.000Z'
+              }
+            ]
+          : []
+      )
+    });
+  });
+
   return {
     criouEvolucao: () => criouEvolucao,
-    criouTarefa: () => criouTarefa
+    criouTarefa: () => criouTarefa,
+    criouMaterial: () => criouMaterial,
+    enviouMaterial: () => enviouMaterial
   };
 }
 
@@ -724,6 +834,31 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Beber agua no periodo da tarde')).toBeVisible();
     await expect(page.getByText('Meta diaria de 1 litro entre 13h e 18h.')).toBeVisible();
     await expect(page.getByText('1 tarefas pendentes')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('permite criar material e enviar ao paciente', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByLabel('Titulo do material').fill('Guia de hidratacao');
+    await page.getByLabel('Tipo do material').selectOption('link');
+    await page.getByLabel('Categoria do material').fill('Habitos');
+    await page.getByLabel('URL do material').fill('https://example.com/hidratacao');
+    await page.getByLabel('Resumo do material').fill('Orientacao simples para rotina diaria.');
+    await page.getByRole('button', { name: 'Salvar material' }).click();
+
+    await expect.poll(() => prontuario.criouMaterial()).toBe(true);
+    await expect(page.getByText('Material salvo na biblioteca.')).toBeVisible();
+    await page.getByLabel('Material para enviar').selectOption('material-1');
+    await page.getByLabel('Observacao do envio').fill('Ler antes do retorno.');
+    await page.getByRole('button', { name: 'Enviar material' }).click();
+
+    await expect.poll(() => prontuario.enviouMaterial()).toBe(true);
+    await expect(page.getByText('Material enviado ao paciente.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Materiais enviados' })).toBeVisible();
+    await expect(page.locator('article').filter({ hasText: 'Guia de hidratacao' })).toBeVisible();
+    await expect(page.getByText('Ler antes do retorno.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });

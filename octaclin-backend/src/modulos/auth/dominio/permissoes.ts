@@ -20,6 +20,8 @@ export type PermissaoOctaClin =
   | 'comunicacoes.templates.gerenciar'
   | 'comunicacoes.mensagens.ler'
   | 'comunicacoes.mensagens.enviar'
+  | 'materiais.ler'
+  | 'materiais.gerenciar'
   | 'automacoes.gerenciar'
   | 'ia.executar'
   | 'mobile.operar'
@@ -66,13 +68,15 @@ const permissoesColaborador = [
   'agenda.consultas.ler',
   'agenda.consultas.criar',
   'comunicacoes.mensagens.ler',
-  'comunicacoes.mensagens.enviar'
+  'comunicacoes.mensagens.enviar',
+  'materiais.ler'
 ] as const satisfies readonly PermissaoOctaClin[];
 
 const permissoesProfissional = [
   ...permissoesColaborador,
   'pacientes.gerenciar',
   'questionarios.gerenciar',
+  'materiais.gerenciar',
   'profissionais.ler',
   'comunicacoes.canais.gerenciar',
   'comunicacoes.templates.gerenciar',

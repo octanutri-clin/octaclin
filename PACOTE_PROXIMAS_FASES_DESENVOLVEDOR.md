@@ -4,7 +4,7 @@ Este pacote orienta um desenvolvedor ou agente de IA que vai assumir varias fase
 
 ## Regra de execucao
 
-- Avancar em ordem a partir da Fase 106.
+- Avancar em ordem a partir da Fase 108.
 - Fazer uma fase por vez.
 - Cada fase deve ter seu proprio commit.
 - Atualizar a documentacao viva ao final de cada fase.
@@ -13,13 +13,15 @@ Este pacote orienta um desenvolvedor ou agente de IA que vai assumir varias fase
 
 ## Estado de partida
 
-- Ultima fase concluida: Fase 105 - Evolucoes/anotacoes clinicas.
-- Primeiro proximo passo: Fase 106 - Planos de acompanhamento e tarefas do paciente.
+- Ultima fase concluida: Fase 107 - Biblioteca de materiais e envio ao paciente.
+- Primeiro proximo passo: Fase 108 - Agenda de producao.
 - Fonte de verdade do roadmap: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Sequencia recomendada
 
 ### Fase 106 - Planos de acompanhamento e tarefas do paciente
+
+Status: concluida em 2026-07-22.
 
 Objetivo:
 
@@ -41,6 +43,8 @@ Cuidados:
 - Evitar expor dados de outros pacientes ou tenants.
 
 ### Fase 107 - Biblioteca de materiais e envio ao paciente
+
+Status: concluida em 2026-07-22.
 
 Objetivo:
 

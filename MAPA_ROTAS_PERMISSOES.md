@@ -1,6 +1,6 @@
 # OctaClin - Mapa de rotas e permissoes
 
-Atualizado apos a Fase 106. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
+Atualizado apos a Fase 107. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
 
 ## Papeis
 
@@ -44,6 +44,7 @@ Atualizado apos a Fase 106. Este arquivo documenta o estado atual de papeis, per
 - `agenda.consultas.criar`
 - `comunicacoes.mensagens.ler`
 - `comunicacoes.mensagens.enviar`
+- `materiais.ler`
 
 ### Professional
 
@@ -58,6 +59,7 @@ Inclui permissoes de `Collaborator` e adiciona:
 - `ia.executar`
 - `mobile.operar`
 - `gamificacao.gerenciar`
+- `materiais.gerenciar`
 
 ### SuperAdmin
 
@@ -106,6 +108,7 @@ Inclui permissoes de `Professional` e adiciona:
 | Formularios publicos | `/formularios` | Publico com token |
 | Agenda | `/agenda` | `SuperAdmin`, `Professional`, `Collaborator` + `agenda.consultas.ler`/`agenda.consultas.criar` |
 | Comunicacoes | `/comunicacoes` | `SuperAdmin`, `Professional`, `Collaborator` + permissoes de mensagens/canais/templates |
+| Materiais | `/materiais` | `SuperAdmin`, `Professional`, `Collaborator` + `materiais.ler`/`materiais.gerenciar` |
 | Webhook WhatsApp | `/comunicacoes/webhooks/whatsapp` | Publico validado por token/assinatura |
 | Automacoes | `/automacoes` | `SuperAdmin`, `Professional` + `automacoes.gerenciar` |
 | IA | `/ia` | `SuperAdmin`, `Professional` + `ia.executar` |
@@ -134,6 +137,8 @@ Inclui permissoes de `Professional` e adiciona:
 | `/api/pacientes/[id]/evolucoes` | `/pacientes/:id/evolucoes` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e criacao de anotacoes privadas |
 | `/api/pacientes/[id]/tarefas-acompanhamento` | `/pacientes/:id/tarefas-acompanhamento` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e prescricao de tarefas |
 | `/api/pacientes/[id]/tarefas-acompanhamento/[tarefaId]` | `/pacientes/:id/tarefas-acompanhamento/:tarefaId` | PATCH exige `pacientes.gerenciar`; backend audita alteracao de status da tarefa |
+| `/api/materiais` | `/materiais` | GET exige `materiais.ler`; POST exige `materiais.gerenciar`; backend audita criacao |
+| `/api/materiais/pacientes/[pacienteId]` | `/materiais/pacientes/:pacienteId` | GET exige `materiais.ler` e `pacientes.ler`; POST exige `materiais.gerenciar` e `pacientes.gerenciar`; backend audita envio ao paciente |
 
 ## Resultado da Fase 95
 

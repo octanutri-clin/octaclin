@@ -9,6 +9,7 @@ import { ModuloClientes } from './modulos/clientes/modulo-clientes';
 import { ModuloComunicacoes } from './modulos/comunicacoes/modulo-comunicacoes';
 import { ModuloGamificacao } from './modulos/gamificacao/modulo-gamificacao';
 import { ModuloIa } from './modulos/ia/modulo-ia';
+import { ModuloMateriais } from './modulos/materiais/modulo-materiais';
 import { ModuloMobile } from './modulos/mobile/modulo-mobile';
 import { ModuloOperacoes } from './modulos/operacoes/modulo-operacoes';
 import { ModuloPacientes } from './modulos/pacientes/modulo-pacientes';
@@ -34,6 +35,7 @@ import { ModuloUsuarios } from './modulos/usuarios/modulo-usuarios';
     ModuloQuestionarios,
     ModuloComunicacoes,
     ModuloAgenda,
+    ModuloMateriais,
     ModuloIa,
     ModuloAutomacoes,
     ModuloGamificacao,

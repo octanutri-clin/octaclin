@@ -2,9 +2,31 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarDays, CheckSquare, ClipboardList, MessageSquareText, RefreshCcw, Save, Stethoscope, UserRound } from 'lucide-react';
+import {
+  ArrowLeft,
+  CalendarDays,
+  CheckSquare,
+  ClipboardList,
+  FileText,
+  LinkIcon,
+  MessageSquareText,
+  RefreshCcw,
+  Save,
+  Send,
+  Stethoscope,
+  UserRound
+} from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import {
+  criarMaterial,
+  enviarMaterialPaciente,
+  listarMateriais,
+  listarMateriaisPaciente,
+  type EnvioMaterialPacienteApi,
+  type MaterialEducativoApi,
+  type TipoMaterialEducativoApi
+} from '@/lib/materiais-api';
 import {
   criarEvolucaoClinica,
   criarTarefaAcompanhamento,
@@ -30,6 +52,20 @@ interface FormularioTarefa {
   descricao: string;
 }
 
+interface FormularioMaterial {
+  titulo: string;
+  tipo: TipoMaterialEducativoApi;
+  categoria: string;
+  url: string;
+  resumo: string;
+  conteudo: string;
+}
+
+interface FormularioEnvioMaterial {
+  materialId: string;
+  observacao: string;
+}
+
 const formularioEvolucaoInicial: FormularioEvolucao = {
   titulo: '',
   tipo: 'observacao',
@@ -42,6 +78,20 @@ const formularioTarefaInicial: FormularioTarefa = {
   prioridade: 'media',
   vencimentoEm: '',
   descricao: ''
+};
+
+const formularioMaterialInicial: FormularioMaterial = {
+  titulo: '',
+  tipo: 'link',
+  categoria: '',
+  url: '',
+  resumo: '',
+  conteudo: ''
+};
+
+const formularioEnvioMaterialInicial: FormularioEnvioMaterial = {
+  materialId: '',
+  observacao: ''
 };
 
 function formatarDataHora(valor?: string) {
@@ -134,19 +184,36 @@ function LinhaDoTempo({ eventos }: { eventos: EventoProntuarioPacienteApi[] }) {
 
 export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [dados, setDados] = useState<ProntuarioPacienteApi | null>(null);
+  const [materiais, setMateriais] = useState<MaterialEducativoApi[]>([]);
+  const [materiaisPaciente, setMateriaisPaciente] = useState<EnvioMaterialPacienteApi[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [salvandoEvolucao, setSalvandoEvolucao] = useState(false);
   const [salvandoTarefa, setSalvandoTarefa] = useState(false);
+  const [salvandoMaterial, setSalvandoMaterial] = useState(false);
+  const [enviandoMaterial, setEnviandoMaterial] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [formularioEvolucao, setFormularioEvolucao] = useState<FormularioEvolucao>(formularioEvolucaoInicial);
   const [formularioTarefa, setFormularioTarefa] = useState<FormularioTarefa>(formularioTarefaInicial);
+  const [formularioMaterial, setFormularioMaterial] = useState<FormularioMaterial>(formularioMaterialInicial);
+  const [formularioEnvioMaterial, setFormularioEnvioMaterial] = useState<FormularioEnvioMaterial>(formularioEnvioMaterialInicial);
 
   async function carregar() {
     setCarregando(true);
     setErro(null);
     try {
-      setDados(await obterProntuarioPaciente(pacienteId));
+      const [prontuario, biblioteca, enviados] = await Promise.all([
+        obterProntuarioPaciente(pacienteId),
+        listarMateriais(),
+        listarMateriaisPaciente(pacienteId)
+      ]);
+      setDados(prontuario);
+      setMateriais(biblioteca);
+      setMateriaisPaciente(enviados);
+      setFormularioEnvioMaterial((atual) => ({
+        ...atual,
+        materialId: atual.materialId || biblioteca[0]?.id || ''
+      }));
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar prontuario.');
     } finally {
@@ -196,6 +263,52 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao prescrever tarefa de acompanhamento.');
     } finally {
       setSalvandoTarefa(false);
+    }
+  }
+
+  async function registrarMaterial(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setSalvandoMaterial(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const material = await criarMaterial({
+        titulo: formularioMaterial.titulo.trim(),
+        tipo: formularioMaterial.tipo,
+        categoria: formularioMaterial.categoria.trim() || undefined,
+        url: formularioMaterial.url.trim() || undefined,
+        resumo: formularioMaterial.resumo.trim() || undefined,
+        conteudo: formularioMaterial.conteudo.trim() || undefined
+      });
+      setFormularioMaterial(formularioMaterialInicial);
+      setFormularioEnvioMaterial((atual) => ({ ...atual, materialId: material.id }));
+      setSucesso('Material salvo na biblioteca.');
+      setMateriais(await listarMateriais());
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar material.');
+    } finally {
+      setSalvandoMaterial(false);
+    }
+  }
+
+  async function enviarMaterial(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!formularioEnvioMaterial.materialId) return;
+    setEnviandoMaterial(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      await enviarMaterialPaciente(pacienteId, {
+        materialId: formularioEnvioMaterial.materialId,
+        observacao: formularioEnvioMaterial.observacao.trim() || undefined
+      });
+      setFormularioEnvioMaterial((atual) => ({ ...formularioEnvioMaterialInicial, materialId: atual.materialId }));
+      setSucesso('Material enviado ao paciente.');
+      setMateriaisPaciente(await listarMateriaisPaciente(pacienteId));
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao enviar material ao paciente.');
+    } finally {
+      setEnviandoMaterial(false);
     }
   }
 
@@ -385,6 +498,140 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           </Botao>
         </div>
       </form>
+
+      <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-tinta">Biblioteca de materiais</h2>
+            <p className="mt-1 text-sm text-[#596273]">Salve links, PDFs por URL e orientacoes reutilizaveis para enviar ao paciente.</p>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-[#596273]">
+            <FileText size={16} className="text-primaria" />
+            {materiais.length} materiais
+          </div>
+        </div>
+
+        <form onSubmit={registrarMaterial} className="grid gap-3">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_180px]">
+            <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+              Titulo do material
+              <input
+                className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+                value={formularioMaterial.titulo}
+                onChange={(evento) => setFormularioMaterial((atual) => ({ ...atual, titulo: evento.target.value }))}
+                required
+                maxLength={180}
+              />
+            </label>
+            <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+              Tipo do material
+              <select
+                className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                value={formularioMaterial.tipo}
+                onChange={(evento) => setFormularioMaterial((atual) => ({ ...atual, tipo: evento.target.value as TipoMaterialEducativoApi }))}
+              >
+                <option value="link">Link</option>
+                <option value="pdf_url">PDF por URL</option>
+                <option value="orientacao">Orientacao</option>
+              </select>
+            </label>
+            <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+              Categoria do material
+              <input
+                className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+                value={formularioMaterial.categoria}
+                onChange={(evento) => setFormularioMaterial((atual) => ({ ...atual, categoria: evento.target.value }))}
+                maxLength={80}
+              />
+            </label>
+          </div>
+          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            URL do material
+            <input
+              className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+              value={formularioMaterial.url}
+              onChange={(evento) => setFormularioMaterial((atual) => ({ ...atual, url: evento.target.value }))}
+              maxLength={1000}
+            />
+          </label>
+          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            Resumo do material
+            <textarea
+              className="min-h-[78px] rounded-md border border-linha px-3 py-2 text-sm font-normal text-tinta"
+              value={formularioMaterial.resumo}
+              onChange={(evento) => setFormularioMaterial((atual) => ({ ...atual, resumo: evento.target.value }))}
+              maxLength={500}
+            />
+          </label>
+          <div className="flex justify-end">
+            <Botao type="submit" variante="primario" disabled={salvandoMaterial}>
+              <Save size={16} />
+              {salvandoMaterial ? 'Salvando' : 'Salvar material'}
+            </Botao>
+          </div>
+        </form>
+
+        <form onSubmit={enviarMaterial} className="grid gap-3 border-t border-linha pt-3">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+              Material para enviar
+              <select
+                className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                value={formularioEnvioMaterial.materialId}
+                onChange={(evento) => setFormularioEnvioMaterial((atual) => ({ ...atual, materialId: evento.target.value }))}
+                disabled={!materiais.length}
+                required
+              >
+                {materiais.length ? null : <option value="">Nenhum material salvo</option>}
+                {materiais.map((material) => (
+                  <option key={material.id} value={material.id}>
+                    {material.titulo}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+              Observacao do envio
+              <input
+                className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+                value={formularioEnvioMaterial.observacao}
+                onChange={(evento) => setFormularioEnvioMaterial((atual) => ({ ...atual, observacao: evento.target.value }))}
+                maxLength={1000}
+              />
+            </label>
+          </div>
+          <div className="flex justify-end">
+            <Botao type="submit" variante="primario" disabled={enviandoMaterial || !materiais.length}>
+              <Send size={16} />
+              {enviandoMaterial ? 'Enviando' : 'Enviar material'}
+            </Botao>
+          </div>
+        </form>
+
+        <div className="grid gap-2 border-t border-linha pt-3">
+          <h3 className="text-sm font-semibold text-tinta">Materiais enviados</h3>
+          {materiaisPaciente.length ? (
+            materiaisPaciente.map((material) => (
+              <article key={material.id} className="grid gap-1 rounded-md border border-linha p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="break-words text-sm font-semibold text-tinta">{material.titulo}</p>
+                  <span className={`rounded-md px-2 py-1 text-xs font-semibold ${classeStatus(material.status)}`}>{material.status}</span>
+                </div>
+                {material.resumo ? <p className="break-words text-sm text-[#596273]">{material.resumo}</p> : null}
+                {material.observacao ? <p className="break-words text-sm text-[#596273]">{material.observacao}</p> : null}
+                {material.url ? (
+                  <a className="inline-flex items-center gap-1 break-all text-sm font-medium text-primaria hover:underline" href={material.url}>
+                    <LinkIcon size={14} />
+                    {material.url}
+                  </a>
+                ) : null}
+              </article>
+            ))
+          ) : (
+            <p className="text-sm text-[#596273]">Nenhum material enviado ao paciente.</p>
+          )}
+        </div>
+      </section>
 
       <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
         <article className="grid gap-3">
