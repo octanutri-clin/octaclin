@@ -37,6 +37,9 @@ interface FormularioTemplate {
   canal: TipoCanalNotificacao;
   codigoExterno: string;
   nome: string;
+  eventoAutomacao: string;
+  idioma: string;
+  parametros: string;
   assunto: string;
   corpo: string;
   aprovado: boolean;
@@ -76,10 +79,20 @@ const templateInicial: FormularioTemplate = {
   canal: 'email',
   codigoExterno: '',
   nome: 'Lembrete de check-in',
+  eventoAutomacao: '',
+  idioma: 'pt_BR',
+  parametros: '',
   assunto: 'Seu check-in OctaClin',
   corpo: 'Ola {{nome}}, seu check-in esta disponivel.',
   aprovado: true
 };
+
+const eventosTemplate = [
+  { valor: '', rotulo: 'Uso manual' },
+  { valor: 'agenda.consulta.agendada', rotulo: 'Consulta agendada' },
+  { valor: 'agenda.consulta.remarcada', rotulo: 'Consulta remarcada' },
+  { valor: 'agenda.consulta.cancelada', rotulo: 'Consulta cancelada' }
+];
 
 const mensagemInicial: FormularioMensagem = {
   pacienteId: '',
@@ -102,8 +115,26 @@ function montarConfiguracao(formulario: FormularioCanal): Record<string, unknown
 }
 
 function montarConteudo(formulario: FormularioTemplate): Record<string, unknown> {
-  if (formulario.canal === 'email') return { assunto: formulario.assunto, corpo: formulario.corpo };
-  return { corpo: formulario.corpo };
+  const evento = formulario.eventoAutomacao.trim();
+  if (formulario.canal === 'email') {
+    return {
+      assunto: formulario.assunto,
+      corpo: formulario.corpo,
+      ...(evento ? { evento } : {})
+    };
+  }
+
+  const parametros = formulario.parametros
+    .split(',')
+    .map((parametro) => parametro.trim())
+    .filter(Boolean);
+
+  return {
+    corpo: formulario.corpo,
+    ...(evento ? { evento } : {}),
+    ...(formulario.canal === 'whatsapp' ? { idioma: formulario.idioma.trim() || 'pt_BR' } : {}),
+    ...(parametros.length ? { parametros } : {})
+  };
 }
 
 function pacientePorId(pacientes: PacienteResumo[], id: string) {
@@ -113,6 +144,16 @@ function pacientePorId(pacientes: PacienteResumo[], id: string) {
 function obterTextoPayload(payload: Record<string, unknown>, chave: string) {
   const valor = payload[chave];
   return typeof valor === 'string' && valor.trim() ? valor : undefined;
+}
+
+function obterTextoTemplate(template: TemplateMensagemApi, chave: string) {
+  const valor = template.conteudo[chave];
+  return typeof valor === 'string' && valor.trim() ? valor : undefined;
+}
+
+function resumirTemplateInventario(template: TemplateMensagemApi) {
+  const evento = obterTextoTemplate(template, 'evento');
+  return `${template.aprovado ? 'Aprovado' : 'Rascunho'}: ${template.nome}${evento ? ` (${evento})` : ''}`;
 }
 
 function obterUltimoStatusMeta(payload: Record<string, unknown>): UltimoStatusMeta | undefined {
@@ -617,13 +658,39 @@ export function PainelComunicacoes() {
               </Selecao>
             </div>
             <div className="space-y-1.5">
-              <Rotulo htmlFor="template-codigo">Codigo externo</Rotulo>
+              <Rotulo htmlFor="template-codigo">{formularioTemplate.canal === 'whatsapp' ? 'Nome Meta' : 'Codigo externo'}</Rotulo>
               <Campo
                 id="template-codigo"
                 value={formularioTemplate.codigoExterno}
                 onChange={(evento) => setFormularioTemplate((atual) => ({ ...atual, codigoExterno: evento.target.value }))}
+                placeholder={formularioTemplate.canal === 'whatsapp' ? 'consulta_agendada' : undefined}
               />
             </div>
+            <div className="space-y-1.5">
+              <Rotulo htmlFor="template-evento">Evento</Rotulo>
+              <Selecao
+                id="template-evento"
+                value={formularioTemplate.eventoAutomacao}
+                onChange={(evento) => setFormularioTemplate((atual) => ({ ...atual, eventoAutomacao: evento.target.value }))}
+              >
+                {eventosTemplate.map((eventoTemplate) => (
+                  <option key={eventoTemplate.valor || 'manual'} value={eventoTemplate.valor}>
+                    {eventoTemplate.rotulo}
+                  </option>
+                ))}
+              </Selecao>
+            </div>
+            {formularioTemplate.canal === 'whatsapp' ? (
+              <div className="space-y-1.5">
+                <Rotulo htmlFor="template-idioma">Idioma Meta</Rotulo>
+                <Campo
+                  id="template-idioma"
+                  value={formularioTemplate.idioma}
+                  onChange={(evento) => setFormularioTemplate((atual) => ({ ...atual, idioma: evento.target.value }))}
+                  placeholder="pt_BR"
+                />
+              </div>
+            ) : null}
             <div className="space-y-1.5 md:col-span-2">
               <Rotulo htmlFor="template-nome">Nome</Rotulo>
               <Campo
@@ -641,6 +708,17 @@ export function PainelComunicacoes() {
                 onChange={(evento) => setFormularioTemplate((atual) => ({ ...atual, assunto: evento.target.value }))}
               />
             </div>
+            {formularioTemplate.canal === 'whatsapp' ? (
+              <div className="space-y-1.5 md:col-span-2">
+                <Rotulo htmlFor="template-parametros">Parametros do corpo</Rotulo>
+                <Campo
+                  id="template-parametros"
+                  value={formularioTemplate.parametros}
+                  onChange={(evento) => setFormularioTemplate((atual) => ({ ...atual, parametros: evento.target.value }))}
+                  placeholder="nomePaciente, dataConsulta, horaConsulta"
+                />
+              </div>
+            ) : null}
             <div className="space-y-1.5 md:col-span-2">
               <Rotulo htmlFor="template-corpo">Corpo</Rotulo>
               <AreaTexto
@@ -784,7 +862,7 @@ export function PainelComunicacoes() {
                         .slice(0, 3)
                         .map((template) => (
                           <p key={template.id} className="truncate text-xs text-[#596273]">
-                            {template.aprovado ? 'Aprovado' : 'Rascunho'}: {template.nome}
+                            {resumirTemplateInventario(template)}
                           </p>
                         ))}
                     </div>

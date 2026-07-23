@@ -12,6 +12,8 @@ import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
 import { CancelarConsultaAgendaDto, ConsultaAgendaRespostaDto, CriarConsultaAgendaDto, RemarcarConsultaAgendaDto } from './dtos';
 import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from './servico-google-calendar';
 
+const EVENTO_CONSULTA_AGENDADA = 'agenda.consulta.agendada';
+
 type ResultadoNotificacaoAgenda =
   | { status: 'enviado'; mensagemId: string }
   | { status: 'ignorado'; motivo: string }
@@ -316,25 +318,16 @@ export class ServicoAgenda {
     const canal = canais.find((item) => item.tipo === tipo && item.ativo);
     if (!canal) return { status: 'ignorado', motivo: 'canal_ausente' };
 
-    const template = templates.find((item) => item.canal === tipo && (tipo === 'email' || item.aprovado));
+    const template = this.selecionarTemplateNotificacao(templates, tipo, EVENTO_CONSULTA_AGENDADA);
     if (!template) return { status: 'ignorado', motivo: 'template_ausente' };
+    const payload = this.montarPayloadNotificacao(tipo, template, contexto, destino, EVENTO_CONSULTA_AGENDADA);
 
     try {
       const mensagem = await this.comunicacoes.dispararMensagem(tenantId, {
         pacienteId: contexto.consulta.pacienteId,
         canalId: canal.id,
         templateId: template.id,
-        payload: {
-          destino,
-          nomePaciente: contexto.pacienteNome,
-          profissionalNome: contexto.profissionalNome,
-          consultaId: contexto.consulta.id,
-          consultaInicioEm: contexto.consulta.inicioEm.toISOString(),
-          consultaFimEm: contexto.consulta.fimEm.toISOString(),
-          assunto: 'Consulta agendada - OctaClin',
-          texto: contexto.textoMensagem,
-          observacao: contexto.textoMensagem
-        }
+        payload
       });
       await this.processadorNotificacoes.processarMensagem(tenantId, mensagem.id, { propagarErro: false });
       return { status: 'enviado', mensagemId: mensagem.id };
@@ -343,20 +336,107 @@ export class ServicoAgenda {
     }
   }
 
+  private selecionarTemplateNotificacao(
+    templates: TemplateMensagemOrm[],
+    tipo: 'email' | 'whatsapp',
+    evento: string
+  ): TemplateMensagemOrm | undefined {
+    const candidatos = templates.filter((item) => item.canal === tipo && (tipo === 'email' || item.aprovado));
+    return (
+      candidatos.find((item) => this.obterTextoConteudo(item, 'evento') === evento) ??
+      candidatos.find((item) => !this.obterTextoConteudo(item, 'evento'))
+    );
+  }
+
+  private montarPayloadNotificacao(
+    tipo: 'email' | 'whatsapp',
+    template: TemplateMensagemOrm,
+    contexto: ContextoConsultaCriada,
+    destino: string,
+    evento: string
+  ) {
+    const payload: Record<string, unknown> = {
+      destino,
+      nomePaciente: contexto.pacienteNome,
+      profissionalNome: contexto.profissionalNome,
+      consultaId: contexto.consulta.id,
+      consultaInicioEm: contexto.consulta.inicioEm.toISOString(),
+      consultaFimEm: contexto.consulta.fimEm.toISOString(),
+      assunto: 'Consulta agendada - OctaClin',
+      texto: contexto.textoMensagem,
+      observacao: contexto.textoMensagem
+    };
+
+    if (tipo !== 'whatsapp') return payload;
+
+    const idioma = this.obterTextoConteudo(template, 'idioma');
+    const components = this.montarComponentesTemplateWhatsapp(template, contexto);
+    return {
+      ...payload,
+      evento,
+      ...(idioma ? { idioma } : {}),
+      ...(components ? { components } : {})
+    };
+  }
+
+  private montarComponentesTemplateWhatsapp(template: TemplateMensagemOrm, contexto: ContextoConsultaCriada) {
+    const parametros = Array.isArray(template.conteudo?.parametros)
+      ? template.conteudo.parametros.filter((parametro): parametro is string => typeof parametro === 'string')
+      : [];
+    if (!parametros.length) return undefined;
+
+    return [
+      {
+        type: 'body',
+        parameters: parametros.map((parametro) => ({
+          type: 'text',
+          text: this.valorParametroTemplate(parametro, contexto)
+        }))
+      }
+    ];
+  }
+
+  private valorParametroTemplate(parametro: string, contexto: ContextoConsultaCriada) {
+    const dataConsulta = this.formatarDataConsulta(contexto.consulta.inicioEm, contexto.consulta.timezone);
+    const horaConsulta = this.formatarHoraConsulta(contexto.consulta.inicioEm, contexto.consulta.timezone);
+    const mapa: Record<string, string | undefined> = {
+      nomePaciente: contexto.pacienteNome,
+      profissionalNome: contexto.profissionalNome,
+      dataConsulta,
+      horaConsulta,
+      localConsulta: contexto.consulta.local,
+      textoMensagem: contexto.textoMensagem
+    };
+    return mapa[parametro] ?? '';
+  }
+
+  private obterTextoConteudo(template: TemplateMensagemOrm, chave: string) {
+    const valor = template.conteudo?.[chave];
+    return typeof valor === 'string' && valor.trim() ? valor.trim() : undefined;
+  }
+
   private montarTextoMensagem(nomePaciente: string, inicioEm: Date) {
-    const data = new Intl.DateTimeFormat('pt-BR', {
-      timeZone: 'America/Sao_Paulo',
+    const data = this.formatarDataConsulta(inicioEm);
+    const hora = this.formatarHoraConsulta(inicioEm);
+
+    return `Ola ${nomePaciente}, tudo bem?\n\nPassando para avisar que sua consulta foi agendada para ${data} as ${hora}.\n\nQualquer coisa estou a disposicao!`;
+  }
+
+  private formatarDataConsulta(inicioEm: Date, timezone = 'America/Sao_Paulo') {
+    return new Intl.DateTimeFormat('pt-BR', {
+      timeZone: timezone,
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     }).format(inicioEm);
-    const hora = new Intl.DateTimeFormat('pt-BR', {
-      timeZone: 'America/Sao_Paulo',
+  }
+
+  private formatarHoraConsulta(inicioEm: Date, timezone = 'America/Sao_Paulo') {
+    return new Intl.DateTimeFormat('pt-BR', {
+      timeZone: timezone,
       hour: '2-digit',
       minute: '2-digit'
     }).format(inicioEm);
-
-    return `Ola ${nomePaciente}, tudo bem?\n\nPassando para avisar que sua consulta foi agendada para ${data} as ${hora}.\n\nQualquer coisa estou a disposicao!`;
   }
 
   private montarDescricaoEvento(contexto: ContextoConsultaCriada) {

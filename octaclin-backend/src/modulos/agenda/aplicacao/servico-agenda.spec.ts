@@ -51,12 +51,16 @@ function criarServico(dados: Record<string, unknown> = {}) {
   };
   const comunicacoes = {
     listarCanais: jest.fn(async () => [
-      { id: 'canal-email', tipo: 'email', ativo: true, nome: 'Email' },
-      { id: 'canal-whatsapp', tipo: 'whatsapp', ativo: true, nome: 'WhatsApp' }
+      ...((dados.canais as Array<Record<string, unknown>> | undefined) ?? [
+        { id: 'canal-email', tipo: 'email', ativo: true, nome: 'Email' },
+        { id: 'canal-whatsapp', tipo: 'whatsapp', ativo: true, nome: 'WhatsApp' }
+      ])
     ]),
     listarTemplates: jest.fn(async () => [
-      { id: 'template-email', canal: 'email', aprovado: true, nome: 'Agendamento email' },
-      { id: 'template-whatsapp', canal: 'whatsapp', aprovado: true, nome: 'Agendamento WhatsApp' }
+      ...((dados.templates as Array<Record<string, unknown>> | undefined) ?? [
+        { id: 'template-email', canal: 'email', aprovado: true, nome: 'Agendamento email', conteudo: {} },
+        { id: 'template-whatsapp', canal: 'whatsapp', aprovado: true, nome: 'Agendamento WhatsApp', conteudo: {} }
+      ])
     ]),
     dispararMensagem: jest.fn(async (_tenantId: string, entrada: { canalId: string }) => ({
       id: entrada.canalId === 'canal-email' ? 'mensagem-email' : 'mensagem-whatsapp'
@@ -154,6 +158,77 @@ describe('ServicoAgenda', () => {
     expect(consulta.googleEventId).toBe('event-1');
     expect(consulta.notificacoes.email.status).toBe('enviado');
     expect(consulta.notificacoes.whatsapp.status).toBe('enviado');
+  });
+
+  it('deve usar template Meta mapeado para consulta agendada e montar parametros do corpo', async () => {
+    const { servico, comunicacoes } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      },
+      templates: [
+        { id: 'template-email', canal: 'email', aprovado: true, nome: 'Agendamento email', conteudo: {} },
+        {
+          id: 'template-whatsapp-generico',
+          canal: 'whatsapp',
+          aprovado: true,
+          nome: 'Resposta manual',
+          codigoExterno: 'resposta_manual',
+          conteudo: { evento: 'whatsapp.manual', idioma: 'pt_BR' }
+        },
+        {
+          id: 'template-whatsapp-agenda',
+          canal: 'whatsapp',
+          aprovado: true,
+          nome: 'Consulta agendada',
+          codigoExterno: 'consulta_agendada',
+          conteudo: {
+            evento: 'agenda.consulta.agendada',
+            idioma: 'pt_BR',
+            parametros: ['nomePaciente', 'dataConsulta', 'horaConsulta']
+          }
+        }
+      ]
+    });
+
+    await servico.criarConsulta('tenant-1', {
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      inicioEm: '2026-07-22T12:00:00.000Z',
+      duracaoMinutos: 60,
+      emailContato: 'ana@example.com',
+      whatsappContato: '5511992362080',
+      enviarNotificacoes: true
+    });
+
+    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+      'tenant-1',
+      expect.objectContaining({
+        canalId: 'canal-whatsapp',
+        templateId: 'template-whatsapp-agenda',
+        payload: expect.objectContaining({
+          idioma: 'pt_BR',
+          evento: 'agenda.consulta.agendada',
+          components: [
+            {
+              type: 'body',
+              parameters: [
+                { type: 'text', text: 'Ana Paula' },
+                { type: 'text', text: '22/07/2026' },
+                { type: 'text', text: '09:00' }
+              ]
+            }
+          ]
+        })
+      })
+    );
   });
 
   it('deve rejeitar consultas com data final anterior ao inicio', async () => {

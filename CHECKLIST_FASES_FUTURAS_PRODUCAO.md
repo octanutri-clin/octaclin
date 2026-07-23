@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 108.
+Atualizado apos a Fase 109.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -158,10 +158,13 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Saida entregue: conflitos locais por profissional, remarcacao, cancelamento, auditoria, historico no payload e sincronizacao OctaClin -> Google Calendar para criar/atualizar/cancelar eventos.
   - Observacao: recorrencia avancada e importacao inbound por `syncToken` seguem como aprofundamento futuro antes do go-live amplo.
 
-- [ ] Fase 109 - Templates aprovados e mapeamento Meta WhatsApp.
+- [x] Fase 109 - Templates aprovados e mapeamento Meta WhatsApp.
   - Mapear templates aprovados manualmente na Meta.
   - Criar configuracao no OctaClin para usar templates corretos por evento.
-  - Saida esperada: lembrete de consulta e comunicacoes transacionais por WhatsApp.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-22.
+  - Validacoes: `pnpm --dir octaclin-backend test --runInBand servico-agenda.spec.ts servico-google-calendar.spec.ts`, `pnpm --dir octaclin-backend typecheck`, `pnpm --dir octaclin-web typecheck`, `powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly`.
+  - Saida entregue: cadastro de templates WhatsApp com evento, idioma e parametros, selecao automatica do template `agenda.consulta.agendada` e montagem de `components` para Meta.
 
 - [ ] Fase 110 - Automacoes de lembrete e confirmacao de consulta.
   - Lembretes por email/WhatsApp.
