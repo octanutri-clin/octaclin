@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 121.
+Atualizado apos a Fase 122.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -233,9 +233,12 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Saida entregue: servico anti-abuso em memoria, lockout de login por falha, throttle de recuperacao de senha antes de consulta sensivel e limite para criacao/reenvio de convites administrativos.
   - Observacao: migrar contadores para Redis/Upstash antes de producao multi-replica.
 
-- [ ] Fase 122 - Revisao de autorizacao multi-tenant.
+- [x] Fase 122 - Revisao de autorizacao multi-tenant.
   - Testes negativos para vazamento cross-tenant.
-  - Saida esperada: suite de seguranca tenant-aware.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-23.
+  - Validacoes: `pnpm --dir octaclin-backend test --runInBand src/modulos/pacientes/aplicacao/servico-pacientes.spec.ts src/modulos/comunicacoes/aplicacao/servico-comunicacoes.spec.ts`, `pnpm --dir octaclin-backend typecheck`, `pnpm --dir octaclin-backend build`, `powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly`.
+  - Saida entregue: testes negativos e bloqueios para impedir vinculo paciente-profissional cross-tenant e disparo de comunicacao para paciente de outro tenant.
 
 ### Bloco G - Observabilidade, operacao e suporte
 

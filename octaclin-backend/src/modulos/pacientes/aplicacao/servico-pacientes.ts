@@ -5,6 +5,7 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cliente';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
@@ -37,6 +38,7 @@ export class ServicoPacientes {
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(PacienteOrm);
+      await this.garantirProfissionalResponsavelExiste(gerenciador, tenantId, dados.profissionalResponsavelId);
       const paciente = repositorio.create({
         tenantId,
         profissionalResponsavelId: dados.profissionalResponsavelId,
@@ -92,7 +94,10 @@ export class ServicoPacientes {
         throw new NotFoundException('Paciente nao encontrado.');
       }
 
-      if (dados.profissionalResponsavelId) paciente.profissionalResponsavelId = dados.profissionalResponsavelId;
+      if (dados.profissionalResponsavelId) {
+        await this.garantirProfissionalResponsavelExiste(gerenciador, tenantId, dados.profissionalResponsavelId);
+        paciente.profissionalResponsavelId = dados.profissionalResponsavelId;
+      }
       if (dados.nome) paciente.nomeCriptografado = this.criptografia.criptografar(dados.nome);
       if (dados.contato) paciente.contatoCriptografado = this.criptografia.criptografar(dados.contato);
       if (dados.dataNascimento) paciente.dataNascimento = dados.dataNascimento;
@@ -332,6 +337,22 @@ export class ServicoPacientes {
     }
 
     return paciente;
+  }
+
+  private async garantirProfissionalResponsavelExiste(
+    gerenciador: EntityManager,
+    tenantId: string,
+    profissionalResponsavelId?: string
+  ) {
+    if (!profissionalResponsavelId) return;
+
+    const profissional = await gerenciador.getRepository(ProfissionalOrm).findOne({
+      where: { id: profissionalResponsavelId, tenantId, arquivadoEm: IsNull() }
+    });
+
+    if (!profissional) {
+      throw new NotFoundException('Profissional responsavel nao encontrado.');
+    }
   }
 
   private mapearEvolucao(evolucao: EvolucaoClinicaOrm): EvolucaoClinicaRespostaDto {

@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ServicoComunicacoes } from './servico-comunicacoes';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
@@ -73,7 +73,8 @@ describe('ServicoComunicacoes', () => {
   it('deve criar mensagem pendente e evento outbox na mesma transacao', async () => {
     const { servico, fila, repositorios } = criarServico({
       canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
-      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true }
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
     });
 
     const mensagem = await servico.dispararMensagem('tenant-1', {
@@ -203,10 +204,34 @@ describe('ServicoComunicacoes', () => {
     expect(repositorios.outbox.save).not.toHaveBeenCalled();
   });
 
+  it('deve impedir disparo de mensagem para paciente de outro tenant', async () => {
+    const { servico, repositorios } = criarServico({
+      canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+      paciente: null
+    });
+
+    await expect(
+      servico.dispararMensagem('tenant-1', {
+        pacienteId: 'paciente-tenant-2',
+        canalId: 'canal-1',
+        templateId: 'template-1',
+        payload: { destino: 'paciente@example.com' }
+      })
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(repositorios.paciente.findOne).toHaveBeenCalledWith({
+      where: { id: 'paciente-tenant-2', tenantId: 'tenant-1' }
+    });
+    expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+    expect(repositorios.outbox.save).not.toHaveBeenCalled();
+  });
+
   it('deve rejeitar template WhatsApp nao aprovado', async () => {
     const { servico } = criarServico({
       canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true },
-      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: false }
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: false },
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
     });
 
     await expect(
@@ -222,7 +247,8 @@ describe('ServicoComunicacoes', () => {
   it('deve rejeitar template incompativel com canal', async () => {
     const { servico } = criarServico({
       canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
-      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: true }
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: true },
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
     });
 
     await expect(

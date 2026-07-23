@@ -104,6 +104,17 @@ pnpm --dir octaclin-web typecheck
 
 Tambem atualizar e revisar `MAPA_ROTAS_PERMISSOES.md`.
 
+## Validacao multi-tenant
+
+Use quando alterar servicos que recebem IDs de entidades relacionadas, como `pacienteId`, `profissionalId`, `questionarioId`, `canalId`, `templateId`, `usuarioId` ou `tenantId` derivado de JWT:
+
+```powershell
+pnpm --dir octaclin-backend test --runInBand src/modulos/pacientes/aplicacao/servico-pacientes.spec.ts src/modulos/comunicacoes/aplicacao/servico-comunicacoes.spec.ts
+pnpm --dir octaclin-backend typecheck
+```
+
+Regra esperada: toda busca por entidade relacionada deve validar `tenantId` junto do `id`. Quando a entidade existir em outro tenant, responder como nao encontrada.
+
 ## Preflight de producao
 
 Use antes de iniciar uma fase relevante ou antes de passar o projeto para outro agente:

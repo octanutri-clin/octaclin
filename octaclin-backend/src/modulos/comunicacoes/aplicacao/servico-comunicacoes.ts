@@ -169,6 +169,11 @@ export class ServicoComunicacoes {
         throw new BadRequestException('Templates WhatsApp devem estar aprovados antes do disparo.');
       }
 
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: { id: dados.pacienteId, tenantId }
+      });
+      if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+
       const mensagemCriada = await gerenciador.getRepository(MensagemNotificacaoOrm).save(
         gerenciador.getRepository(MensagemNotificacaoOrm).create({
           tenantId,

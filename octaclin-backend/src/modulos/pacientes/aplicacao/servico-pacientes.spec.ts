@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
@@ -10,6 +11,16 @@ import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { ServicoPacientes } from './servico-pacientes';
 
 function criarGerenciadorFake(repositorio: Record<string, unknown>) {
+  if ('paciente' in repositorio || 'profissional' in repositorio) {
+    return {
+      getRepository: jest.fn((entidade: unknown) => {
+        if (entidade === PacienteOrm) return repositorio.paciente;
+        if (entidade === ProfissionalOrm) return repositorio.profissional;
+        return repositorio.paciente;
+      })
+    };
+  }
+
   return {
     getRepository: jest.fn().mockReturnValue(repositorio)
   };
@@ -21,11 +32,17 @@ const limitesPermitidos = {
 
 describe('ServicoPacientes', () => {
   it('deve criar paciente dentro do contexto do tenant e criptografar dados sensiveis', async () => {
-    const repositorio = {
+    const repositorioPacientes = {
       create: jest.fn((dados: Record<string, unknown>) => dados),
       save: jest.fn(async (dados: Record<string, unknown>) => ({ id: 'paciente-1', ...dados }))
     };
-    const gerenciador = criarGerenciadorFake(repositorio);
+    const repositorioProfissionais = {
+      findOne: jest.fn(async () => ({ id: 'profissional-1', tenantId: 'tenant-1' }))
+    };
+    const gerenciador = criarGerenciadorFake({
+      paciente: repositorioPacientes,
+      profissional: repositorioProfissionais
+    });
     const executorTenant = {
       executar: jest.fn((tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
         operacao(gerenciador)
@@ -104,6 +121,89 @@ describe('ServicoPacientes', () => {
 
     expect(limites.checarLimite).toHaveBeenCalledWith('tenant-1', 'pacientes');
     expect(repositorio.save).not.toHaveBeenCalled();
+  });
+
+  it('deve impedir criar paciente com profissional responsavel de outro tenant', async () => {
+    const repositorioPacientes = {
+      create: jest.fn((dados: Record<string, unknown>) => dados),
+      save: jest.fn(async (dados: Record<string, unknown>) => ({ id: 'paciente-1', ...dados }))
+    };
+    const repositorioProfissionais = {
+      findOne: jest.fn(async () => null)
+    };
+    const gerenciador = criarGerenciadorFake({
+      paciente: repositorioPacientes,
+      profissional: repositorioProfissionais
+    });
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao(gerenciador)
+        )
+      } as never,
+      { criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+      limitesPermitidos as never
+    );
+
+    await expect(
+      servico.criar('tenant-1', {
+        profissionalResponsavelId: 'profissional-tenant-2',
+        nome: 'Maria',
+        contato: 'maria@example.com'
+      })
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(repositorioProfissionais.findOne).toHaveBeenCalledWith({
+      where: { id: 'profissional-tenant-2', tenantId: 'tenant-1', arquivadoEm: expect.any(Object) }
+    });
+    expect(repositorioPacientes.save).not.toHaveBeenCalled();
+  });
+
+  it('deve impedir atualizar paciente para profissional responsavel de outro tenant', async () => {
+    const paciente = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('cripto:Maria'),
+      contatoCriptografado: Buffer.from('cripto:maria@example.com'),
+      statusAdesao: 'novo',
+      scoreRisco: '0'
+    };
+    const repositorioPacientes = {
+      findOne: jest.fn(async () => paciente),
+      save: jest.fn(async (dados: Record<string, unknown>) => dados)
+    };
+    const repositorioProfissionais = {
+      findOne: jest.fn(async () => null)
+    };
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao(
+            criarGerenciadorFake({
+              paciente: repositorioPacientes,
+              profissional: repositorioProfissionais
+            })
+          )
+        )
+      } as never,
+      {
+        criptografar: jest.fn(),
+        descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', ''))
+      } as never,
+      limitesPermitidos as never
+    );
+
+    await expect(
+      servico.atualizar('tenant-1', 'paciente-1', {
+        profissionalResponsavelId: 'profissional-tenant-2'
+      })
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(repositorioProfissionais.findOne).toHaveBeenCalledWith({
+      where: { id: 'profissional-tenant-2', tenantId: 'tenant-1', arquivadoEm: expect.any(Object) }
+    });
+    expect(repositorioPacientes.save).not.toHaveBeenCalled();
   });
 
   it('deve retornar pacientes com campos sensiveis descriptografados na listagem', async () => {
