@@ -71,6 +71,8 @@ try {
       'RUNBOOK_BACKUP_RESTORE.md',
       'RUNBOOK_SUPORTE.md',
       'RUNBOOK_STAGING_DADOS.md',
+      'RUNBOOK_PILOTO_INTERNO.md',
+      'PILOTO_INTERNO_CONTROLE.md',
       'CHECKLIST_GO_LIVE.md'
     )
 

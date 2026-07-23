@@ -252,6 +252,18 @@ pnpm seed:staging
 
 Regra esperada: `staging-fixtures.json` deve usar apenas dados ficticios, dominio `@octaclin.test`, telefones sinteticos e origem `seed_staging`.
 
+## Validacao do piloto interno
+
+Use quando alterar `RUNBOOK_PILOTO_INTERNO.md` ou `PILOTO_INTERNO_CONTROLE.md`:
+
+```powershell
+pnpm test:piloto
+pnpm security:secrets
+powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
+```
+
+Regra esperada: o runbook deve cobrir participantes, perfis, jornadas, criterios de sucesso/bloqueio, registro de bugs e aceite; o controle deve manter status, checklist de jornadas, registro de bugs e decisao de aceite, sem secrets nem dados reais de clientes/pacientes.
+
 ## Validacao antes de commit
 
 Sempre:

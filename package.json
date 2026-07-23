@@ -11,6 +11,7 @@
     "test:e2e:criticas": "powershell -ExecutionPolicy Bypass -File ./validar-jornadas-criticas.ps1",
     "test:staging-fixtures": "node scripts/test-staging-fixtures.mjs",
     "seed:staging": "pnpm --dir octaclin-backend seed:staging",
+    "test:piloto": "node scripts/test-piloto-interno.mjs",
     "validate": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1",
     "validate:docs": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -DocsOnly",
     "validate:full": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -Full"

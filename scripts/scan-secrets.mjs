@@ -3,6 +3,7 @@ import { relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const DEFAULT_EXCLUDED_DIRS = new Set([
+  '.agents',
   '.git',
   '.next',
   '.turbo',
@@ -10,6 +11,7 @@ const DEFAULT_EXCLUDED_DIRS = new Set([
   'dist',
   'node_modules',
   'playwright-report',
+  'skills',
   'test-results'
 ]);
 

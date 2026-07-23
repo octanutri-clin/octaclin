@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 129.
+Atualizado apos a Fase 130.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -298,10 +298,13 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Saida entregue: fixture `staging-fixtures.json`, seed `seed-staging.ts`, runbook `RUNBOOK_STAGING_DADOS.md` e comandos `pnpm test:staging-fixtures`/`pnpm seed:staging`.
   - Observacao: aplicacao no Neon staging exige `DATABASE_URL` de staging e nao foi executada nesta sessao.
 
-- [ ] Fase 130 - Piloto interno controlado.
-  - Usar com poucos clientes ficticios/reais autorizados.
-  - Registrar problemas e ajustar.
-  - Saida esperada: lista de bugs de piloto zerada ou aceita.
+- [x] Fase 130 - Piloto interno controlado.
+  - Criar a estrutura operacional para o piloto: runbook, controle de acompanhamento, criterios de sucesso/bloqueio e processo de aceite.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-23.
+  - Validacoes: `pnpm test:piloto`, `pnpm security:secrets`, `powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly`.
+  - Saida entregue: `RUNBOOK_PILOTO_INTERNO.md`, `PILOTO_INTERNO_CONTROLE.md`, validador `scripts/test-piloto-interno.mjs`, comando `pnpm test:piloto` e conexao com `CHECKLIST_GO_LIVE.md`/`PREFLIGHT_PRODUCAO.md`/`TESTES_E_VALIDACOES.md`.
+  - Observacao: nenhuma rodada real do piloto foi executada nesta fase; `PILOTO_INTERNO_CONTROLE.md` fica pronto como template para a primeira execucao com participantes internos.
 
 - [ ] Fase 131 - Producao isolada de staging.
   - Banco, Redis, Render service/env, dominio e secrets separados.

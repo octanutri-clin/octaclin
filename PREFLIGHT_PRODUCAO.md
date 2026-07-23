@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-07-23, Fase 129.
+Atualizado em 2026-07-23, Fase 130.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -33,6 +33,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Backups/restore | Parcial | Runbook, planejador seguro, script de backup e validacao estrutural com `pg_restore --list`. | Executar restore real em banco dedicado antes do go-live. |
 | Suporte | Pronto | `RUNBOOK_SUPORTE.md` cobre login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento. | Treinar responsavel e revisar apos piloto. |
 | Dados de staging | Parcial | Fixture sem PII real, seed `seed-staging.ts` e runbook `RUNBOOK_STAGING_DADOS.md`. | Aplicar no Neon staging com `DATABASE_URL` de staging e validar jornadas. |
+| Piloto interno | Parcial | Runbook `RUNBOOK_PILOTO_INTERNO.md` e controle `PILOTO_INTERNO_CONTROLE.md` criados; nenhuma rodada executada ainda. | Executar a primeira rodada com participantes internos e registrar aceite. |
 | Producao isolada | Pendente | Staging funcional. | Criar env de producao separado de staging. |
 | Juridico/comercial | Pendente | Checklist previsto. | Termos, politica, contrato e processo de suporte. |
 | QA E2E | Parcial | Typechecks, specs focadas, Playwright visual por areas e suite de jornadas criticas com BFF mockado. | Validar em staging com dados realistas. |
@@ -81,4 +82,4 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Seguir para a proxima fase de qualidade: piloto interno controlado, Fase 130.
+Executar a primeira rodada do piloto interno controlado seguindo `RUNBOOK_PILOTO_INTERNO.md` e, apos aceite registrado em `PILOTO_INTERNO_CONTROLE.md`, seguir para a Fase 131 - Producao isolada de staging.

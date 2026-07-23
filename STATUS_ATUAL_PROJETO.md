@@ -7,8 +7,8 @@ Atualizado em 2026-07-23.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 129 - Staging com dados realistas.
-- Proxima fase planejada: Fase 130 - Piloto interno controlado.
+- Ultima fase concluida: Fase 130 - Piloto interno controlado (estrutura operacional).
+- Proxima fase planejada: executar a primeira rodada real do piloto interno e, apos aceite, Fase 131 - Producao isolada de staging.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -49,6 +49,7 @@ Atualizado em 2026-07-23.
 - Runbooks de producao, backup/restore, rotacao de secrets e suporte.
 - Suite Playwright de jornadas criticas com contratos BFF mockados.
 - Massa ficticia de staging pronta para aplicar no Neon staging.
+- Estrutura de piloto interno controlado: runbook, controle de acompanhamento e validador documental.
 
 ## O que ainda falta antes de producao real
 
@@ -56,7 +57,7 @@ Atualizado em 2026-07-23.
 - Recorrencia avancada e importacao inbound do Google Calendar por `syncToken`.
 - Restore real em banco dedicado antes do go-live.
 - Aplicar e validar a massa ficticia no Neon staging com `pnpm seed:staging`.
-- Piloto interno controlado.
+- Executar a primeira rodada real do piloto interno controlado e registrar aceite em `PILOTO_INTERNO_CONTROLE.md`.
 - Producao isolada de staging.
 - Dominio, SSL e identidade de envio.
 - Checklist juridico/comercial.
@@ -86,6 +87,8 @@ Atualizado em 2026-07-23.
 - `RUNBOOK_BACKUP_RESTORE.md`: backup PostgreSQL/Neon e restore de teste.
 - `RUNBOOK_SUPORTE.md`: suporte para login, convites, senha, WhatsApp, email e agenda.
 - `RUNBOOK_STAGING_DADOS.md`: massa ficticia de staging para demonstracao e QA.
+- `RUNBOOK_PILOTO_INTERNO.md`: processo do piloto interno controlado antes da producao real.
+- `PILOTO_INTERNO_CONTROLE.md`: acompanhamento vivo da rodada atual do piloto interno.
 - `VARIAVEIS_AMBIENTE.md`: env vars sem secrets.
 - `CHECKLIST_GO_LIVE.md`: liberacao para clientes reais.
 - `ONBOARDING_DESENVOLVEDOR.md`: entrada de novos desenvolvedores/agentes.
@@ -98,4 +101,4 @@ Atualizado em 2026-07-23.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, mas ainda precisa de restore real em banco dedicado, aplicacao/validacao da massa ficticia no Neon staging, piloto interno controlado e producao isolada antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, mas ainda precisa de restore real em banco dedicado, aplicacao/validacao da massa ficticia no Neon staging, execucao real do piloto interno controlado (a estrutura ja existe em `RUNBOOK_PILOTO_INTERNO.md`/`PILOTO_INTERNO_CONTROLE.md`) e producao isolada antes de uso comercial com clientes reais.

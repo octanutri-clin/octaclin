@@ -89,6 +89,13 @@ Este checklist deve ser concluido antes de incluir clientes reais de consultoria
 - [ ] Pessoa responsavel por monitoramento definida.
 - [ ] Janela de go-live definida.
 
+## Piloto interno
+
+- [ ] Piloto interno controlado executado conforme `RUNBOOK_PILOTO_INTERNO.md`.
+- [ ] Todas as jornadas obrigatorias do piloto marcadas em `PILOTO_INTERNO_CONTROLE.md`.
+- [ ] Nenhum bug P0/P1 aberto ao final do piloto.
+- [ ] Aceite do piloto registrado em `PILOTO_INTERNO_CONTROLE.md`.
+
 ## Go-live assistido
 
 - [ ] Primeiro cliente piloto selecionado.

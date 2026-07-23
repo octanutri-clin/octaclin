@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 126.
+Atualizado apos a Fase 130.
 
 Este arquivo e um handoff executivo do que ja foi construido no OctaClin. Ele deve ajudar outro agente de IA ou desenvolvedor a entender rapidamente a evolucao do projeto sem precisar reprocessar todo o historico de commits.
 
@@ -171,10 +171,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 127 - Runbooks de suporte: criado `RUNBOOK_SUPORTE.md` com triagem segura, atendimento de login, convites, recuperacao de senha, WhatsApp, email, agenda e criterio de escalonamento; adicionado teste documental `pnpm test:suporte`.
 - Fase 128 - Suite E2E de jornadas criticas: adicionada suite Playwright para cliente convidar usuario, profissional criar paciente, agenda disparar email/WhatsApp/Google Calendar e paciente visualizar consulta, notificacoes e plano no portal.
 - Fase 129 - Staging com dados realistas: criada massa ficticia `octaclin-staging` sem PII real, seed `seed-staging.ts`, validador `test-staging-fixtures.mjs` e runbook para aplicar no Neon staging.
+- Fase 130 - Piloto interno controlado: criado `RUNBOOK_PILOTO_INTERNO.md` com participantes, perfis, jornadas, criterios de sucesso/bloqueio e processo de aceite, alem de `PILOTO_INTERNO_CONTROLE.md` como acompanhamento vivo da rodada do piloto e validador documental `test-piloto-interno.mjs`. Nenhuma rodada real foi executada ainda.
 
 ## Estado atual de uso
 
-O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam executar restore real em banco dedicado, aplicar/validar a massa ficticia no Neon staging, rodar piloto interno controlado e separar formalmente staging/producao.
+O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam executar restore real em banco dedicado, aplicar/validar a massa ficticia no Neon staging, executar a primeira rodada real do piloto interno controlado e registrar aceite, e separar formalmente staging/producao.
 
 ## Como atualizar este arquivo
 
