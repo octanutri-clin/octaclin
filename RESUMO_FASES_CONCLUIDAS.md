@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 122.
+Atualizado apos a Fase 123.
 
 Este arquivo e um handoff executivo do que ja foi construido no OctaClin. Ele deve ajudar outro agente de IA ou desenvolvedor a entender rapidamente a evolucao do projeto sem precisar reprocessar todo o historico de commits.
 
@@ -164,10 +164,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 120 - Hardening de secrets e variaveis: adicionado scanner local `scripts/scan-secrets.mjs`, teste `scripts/test-scan-secrets.mjs`, scripts `security:secrets`/`test:security`, execucao no preflight e runbook de rotacao de secrets para provedores criticos.
 - Fase 121 - Rate limiting, lockout e protecoes anti-abuso: servico anti-abuso em memoria com politicas para login, recuperacao de senha e convites administrativos; login bloqueia apos falhas, recuperacao limita antes de consultar dados sensiveis e convites limitam criacao/reenvio repetidos.
 - Fase 122 - Revisao de autorizacao multi-tenant: adicionados testes negativos e correcoes para impedir vinculo de paciente a profissional de outro tenant e disparo de comunicacao para paciente fora do tenant atual.
+- Fase 123 - Monitoramento e healthchecks de producao: `/health` mantido como liveness simples e `/health/detalhado` criado para readiness/diagnostico de backend, banco, Redis, email, WhatsApp Meta e Google Calendar sem expor secrets.
 
 ## Estado atual de uso
 
-O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e separacao formal de staging/producao.
+O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam alertas, backups, politica operacional, QA de ponta a ponta com dados reais e separacao formal de staging/producao.
 
 ## Como atualizar este arquivo
 

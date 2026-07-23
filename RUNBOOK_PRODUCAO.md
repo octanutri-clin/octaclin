@@ -42,13 +42,15 @@ Producao deve ser separada de staging:
 3. Render inicia auto-deploy, se configurado.
 4. Aguardar deploy terminar.
 5. Validar `/health`.
-6. Validar login.
-7. Validar uma jornada critica afetada pela mudanca.
+6. Validar `/health/detalhado` quando a mudanca tocar banco, Redis, email, WhatsApp, Google Calendar ou variaveis.
+7. Validar login.
+8. Validar uma jornada critica afetada pela mudanca.
 
 ### Validacao pos-deploy minima
 
 ```powershell
 curl https://<backend-render-url>/health
+curl https://<backend-render-url>/health/detalhado
 ```
 
 Depois validar manualmente:
@@ -178,14 +180,40 @@ Falhas comuns:
 
 ## Healthchecks recomendados
 
-- Backend `/health`.
-- Login web.
-- Banco via backend.
-- Redis/fila.
-- Envio email.
-- Envio WhatsApp.
-- Webhook WhatsApp.
-- Criacao de evento Google Calendar.
+### Liveness
+
+Use `/health` para load balancer, Render e verificacao rapida de processo:
+
+```powershell
+curl https://<backend-render-url>/health
+```
+
+Resposta esperada:
+
+- `status: ok`
+- `servico: octaclin-backend`
+- `horario` em ISO.
+
+### Readiness detalhado
+
+Use `/health/detalhado` para suporte, monitoramento e validacao pos-deploy:
+
+```powershell
+curl https://<backend-render-url>/health/detalhado
+```
+
+Campos principais:
+
+- `status: ok`: backend, banco e configuracoes criticas estao prontos.
+- `status: degradado`: backend e banco respondem, mas alguma integracao opcional esta ausente/incompleta.
+- `status: falha`: dependencia critica falhou, hoje principalmente banco.
+- `checks.banco`: executa `SELECT 1`.
+- `checks.redis`: valida se Redis/Upstash esta configurado.
+- `checks.email`: valida SMTP ou Gmail API.
+- `checks.whatsapp`: valida token e phone number id Meta.
+- `checks.googleCalendar`: valida credenciais OAuth do Calendar.
+
+O health detalhado nao deve retornar secrets, tokens, refresh tokens ou URLs com senha. Se aparecer qualquer credencial na resposta, trate como incidente e siga `RUNBOOK_ROTACAO_SECRETS.md`.
 
 ## Incidentes
 

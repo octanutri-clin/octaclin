@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 122.
+Atualizado apos a Fase 123.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -242,9 +242,12 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 
 ### Bloco G - Observabilidade, operacao e suporte
 
-- [ ] Fase 123 - Monitoramento e healthchecks de producao.
+- [x] Fase 123 - Monitoramento e healthchecks de producao.
   - Health detalhado para backend, banco, Redis, email, WhatsApp e Calendar.
-  - Saida esperada: painel/check automatizavel.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-23.
+  - Validacoes: `pnpm --dir octaclin-backend test --runInBand src/modulos/saude/servico-saude.spec.ts`, `pnpm --dir octaclin-backend typecheck`, `pnpm --dir octaclin-backend build`, `powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly`.
+  - Saida entregue: `/health` para liveness e `/health/detalhado` para readiness/diagnostico com checks de backend, banco, Redis, email, WhatsApp Meta e Google Calendar sem expor secrets.
 
 - [ ] Fase 124 - Logs estruturados e correlacao.
   - Request ID, tenant ID seguro, usuario e acao.
