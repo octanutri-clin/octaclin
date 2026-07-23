@@ -8,6 +8,7 @@ import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas'
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { LoginDto, RenovarTokenDto } from './dtos';
+import { montarChaveProtecaoAbuso, POLITICA_LOGIN, ServicoProtecaoAbuso } from './servico-protecao-abuso';
 import { contextoAcessoPorPapel } from '../dominio/permissoes';
 import type { PermissaoOctaClin } from '../dominio/permissoes';
 import type { PapelUsuario, UsuarioAutenticado } from '../dominio/usuario-autenticado';
@@ -29,15 +30,20 @@ export class ServicoAuth {
     private readonly executorTenant: ExecutorTenant,
     private readonly jwt: JwtService,
     private readonly senhas: ServicoSenhas,
-    private readonly criptografia: CriptografiaDadosSensiveis
+    private readonly criptografia: CriptografiaDadosSensiveis,
+    private readonly protecaoAbuso: ServicoProtecaoAbuso
   ) {}
 
   async login(dados: LoginDto) {
+    const chaveProtecao = montarChaveProtecaoAbuso('login', dados.tenantSlug, dados.email);
+    this.protecaoAbuso.verificarDisponibilidade(chaveProtecao, POLITICA_LOGIN);
+
     const tenant = await this.fonteDados.getRepository(TenantOrm).findOne({
       where: { slug: dados.tenantSlug, status: 'ativo' }
     });
 
     if (!tenant) {
+      this.protecaoAbuso.registrarFalha(chaveProtecao, POLITICA_LOGIN);
       throw new UnauthorizedException('Credenciais invalidas.');
     }
 
@@ -49,9 +55,11 @@ export class ServicoAuth {
     );
 
     if (!usuario || !this.senhas.verificar(dados.senha, usuario.senhaHash)) {
+      this.protecaoAbuso.registrarFalha(chaveProtecao, POLITICA_LOGIN);
       throw new UnauthorizedException('Credenciais invalidas.');
     }
 
+    this.protecaoAbuso.registrarSucesso(chaveProtecao);
     return this.emitirParTokens(usuario, randomUUID());
   }
 

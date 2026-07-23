@@ -8,6 +8,11 @@ import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { AdaptadorEmailSmtp } from '../../comunicacoes/infraestrutura/adaptadores/adaptador-email-smtp';
 import { RedefinirSenhaDto, SolicitarRecuperacaoSenhaDto } from './dtos';
+import {
+  montarChaveProtecaoAbuso,
+  POLITICA_RECUPERACAO_SENHA,
+  ServicoProtecaoAbuso
+} from './servico-protecao-abuso';
 import { TokenRedefinicaoSenhaOrm } from '../infraestrutura/token-redefinicao-senha.orm';
 
 interface ContextoEnvioEmailRecuperacao {
@@ -43,7 +48,8 @@ export class ServicoRecuperacaoSenha {
     private readonly executorTenant: ExecutorTenant,
     private readonly criptografia: CriptografiaDadosSensiveis,
     private readonly senhas: ServicoSenhas,
-    private readonly email: AdaptadorEmailSmtp
+    private readonly email: AdaptadorEmailSmtp,
+    private readonly protecaoAbuso: ServicoProtecaoAbuso
   ) {}
 
   static hashToken(token: string) {
@@ -54,12 +60,17 @@ export class ServicoRecuperacaoSenha {
     dados: SolicitarRecuperacaoSenhaDto,
     metadados: { ip?: string; userAgent?: string } = {}
   ): Promise<{ mensagem: string; linkRecuperacao?: string }> {
+    const emailNormalizado = normalizarEmail(dados.email);
+    this.protecaoAbuso.consumirTentativa(
+      montarChaveProtecaoAbuso('recuperacao-senha', dados.tenantSlug, emailNormalizado),
+      POLITICA_RECUPERACAO_SENHA
+    );
+
     const tenant = await this.fonteDados.getRepository(TenantOrm).findOne({
       where: { slug: dados.tenantSlug, status: 'ativo' }
     });
     if (!tenant) return { mensagem: MENSAGEM_GENERICA };
 
-    const emailNormalizado = normalizarEmail(dados.email);
     const emailHash = this.criptografia.gerarHashBusca(emailNormalizado);
 
     const resultado = await this.executorTenant.executar(tenant.id, async (gerenciador) => {

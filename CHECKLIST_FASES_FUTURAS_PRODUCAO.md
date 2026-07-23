@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 112.
+Atualizado apos a Fase 121.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -225,9 +225,13 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Status: concluida em 2026-07-23.
   - Saida entregue: scanner local de secrets com teste, execucao no preflight, runbook de rotacao para Meta, Gmail, Google Calendar, OpenAI, Neon/Postgres, Upstash/Redis, JWT e criptografia.
 
-- [ ] Fase 121 - Rate limiting, lockout e protecoes anti-abuso.
+- [x] Fase 121 - Rate limiting, lockout e protecoes anti-abuso.
   - Login, recuperacao de senha, convites e APIs sensiveis.
-  - Saida esperada: protecao basica contra abuso.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-23.
+  - Validacoes: `pnpm --dir octaclin-backend exec jest src/modulos/auth/aplicacao/servico-protecao-abuso.spec.ts src/modulos/auth/aplicacao/servico-auth.spec.ts src/modulos/auth/aplicacao/servico-recuperacao-senha.spec.ts src/modulos/clientes/aplicacao/servico-usuarios-cliente.spec.ts --runInBand`, `pnpm --dir octaclin-backend typecheck`, `powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly`.
+  - Saida entregue: servico anti-abuso em memoria, lockout de login por falha, throttle de recuperacao de senha antes de consulta sensivel e limite para criacao/reenvio de convites administrativos.
+  - Observacao: migrar contadores para Redis/Upstash antes de producao multi-replica.
 
 - [ ] Fase 122 - Revisao de autorizacao multi-tenant.
   - Testes negativos para vazamento cross-tenant.

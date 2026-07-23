@@ -1,3 +1,4 @@
+import { HttpException, HttpStatus } from '@nestjs/common';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { TokenRedefinicaoSenhaOrm } from '../../auth/infraestrutura/token-redefinicao-senha.orm';
 import { ServicoUsuariosCliente } from './servico-usuarios-cliente';
@@ -45,6 +46,9 @@ function criarServico(
   tokens: Record<string, any>[] = [],
   limites: { checarLimite: jest.Mock } = {
     checarLimite: jest.fn(async () => ({ permitido: true }))
+  },
+  protecaoAbuso = {
+    consumirTentativa: jest.fn()
   }
 ) {
   const repositorioUsuarios = criarRepositorioFake(usuarios);
@@ -69,17 +73,49 @@ function criarServico(
   const email = { enviar: jest.fn(async () => ({ idExterno: 'email-1' })) };
 
   return {
-    servico: new ServicoUsuariosCliente(executorTenant as never, criptografia as never, senhas as never, email as never, limites as never),
+    servico: new ServicoUsuariosCliente(
+      executorTenant as never,
+      criptografia as never,
+      senhas as never,
+      email as never,
+      limites as never,
+      protecaoAbuso as never
+    ),
     repositorioUsuarios,
     repositorioTokens,
     executorTenant,
     criptografia,
     senhas,
-    email
+    email,
+    protecaoAbuso
   };
 }
 
 describe('ServicoUsuariosCliente', () => {
+  it('deve limitar abuso na criacao de convites administrativos antes de consultar limite do plano', async () => {
+    const limites = { checarLimite: jest.fn(async () => ({ permitido: true })) };
+    const protecaoAbuso = {
+      consumirTentativa: jest.fn(() => {
+        throw new HttpException('Muitas acoes de convite. Tente novamente em alguns minutos.', HttpStatus.TOO_MANY_REQUESTS);
+      })
+    };
+    const { servico, repositorioUsuarios } = criarServico([], [], limites, protecaoAbuso);
+
+    await expect(
+      servico.criar('tenant-1', 'cliente-1', {
+        email: 'novo@octaclin.local',
+        role: 'Collaborator'
+      })
+    ).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
+
+    expect(protecaoAbuso.consumirTentativa).toHaveBeenCalledWith(
+      'convite-admin:tenant-1:novo@octaclin.local',
+      expect.objectContaining({ maxTentativas: 10 })
+    );
+    expect(limites.checarLimite).not.toHaveBeenCalled();
+    expect(repositorioUsuarios.save).not.toHaveBeenCalled();
+  });
+
   it('deve listar apenas usuarios administrativos do tenant sem expor credenciais', async () => {
     const { servico, repositorioUsuarios, executorTenant } = criarServico([
       {

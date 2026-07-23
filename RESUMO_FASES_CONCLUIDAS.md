@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 112.
+Atualizado apos a Fase 121.
 
 Este arquivo e um handoff executivo do que ja foi construido no OctaClin. Ele deve ajudar outro agente de IA ou desenvolvedor a entender rapidamente a evolucao do projeto sem precisar reprocessar todo o historico de commits.
 
@@ -162,6 +162,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 118 - Retencao e exclusao programada de dados: painel operacional LGPD passa a exibir politicas versionadas de retencao por tipo de dado, itens vencidos por corte temporal e programacao auditavel com protocolo `RET-*`, registrada em `consentimentos_lgpd` sem apagar dados automaticamente nesta fase.
 - Fase 119 - Exportacao LGPD completa por titular: exportacao do portal do paciente passa a gerar pacote `octaclin.lgpd.exportacao_paciente.v1` por categorias, incluindo perfil, consultas, formularios respondidos com respostas, comunicacoes, acompanhamento, LGPD e hash SHA-256 de integridade.
 - Fase 120 - Hardening de secrets e variaveis: adicionado scanner local `scripts/scan-secrets.mjs`, teste `scripts/test-scan-secrets.mjs`, scripts `security:secrets`/`test:security`, execucao no preflight e runbook de rotacao de secrets para provedores criticos.
+- Fase 121 - Rate limiting, lockout e protecoes anti-abuso: servico anti-abuso em memoria com politicas para login, recuperacao de senha e convites administrativos; login bloqueia apos falhas, recuperacao limita antes de consultar dados sensiveis e convites limitam criacao/reenvio repetidos.
 
 ## Estado atual de uso
 

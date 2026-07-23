@@ -3,6 +3,11 @@ import { ConflictException, ForbiddenException, Injectable, NotFoundException } 
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
+import {
+  montarChaveProtecaoAbuso,
+  POLITICA_CONVITES_ADMIN,
+  ServicoProtecaoAbuso
+} from '../../auth/aplicacao/servico-protecao-abuso';
 import { TokenRedefinicaoSenhaOrm } from '../../auth/infraestrutura/token-redefinicao-senha.orm';
 import { AdaptadorEmailSmtp } from '../../comunicacoes/infraestrutura/adaptadores/adaptador-email-smtp';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
@@ -33,7 +38,8 @@ export class ServicoUsuariosCliente {
     private readonly criptografia: CriptografiaDadosSensiveis,
     private readonly senhas: ServicoSenhas,
     private readonly email: AdaptadorEmailSmtp,
-    private readonly portalCliente: ServicoPortalCliente
+    private readonly portalCliente: ServicoPortalCliente,
+    private readonly protecaoAbuso: ServicoProtecaoAbuso
   ) {}
 
   async listar(tenantId: string): Promise<{ itens: UsuarioClienteRespostaDto[]; total: number }> {
@@ -51,11 +57,15 @@ export class ServicoUsuariosCliente {
   }
 
   async criar(tenantId: string, usuarioCriadorId: string, dados: CriarUsuarioClienteDto): Promise<UsuarioClienteRespostaDto> {
+    const emailNormalizado = dados.email.trim().toLowerCase();
+    this.protecaoAbuso.consumirTentativa(
+      montarChaveProtecaoAbuso('convite-admin', tenantId, emailNormalizado),
+      POLITICA_CONVITES_ADMIN
+    );
     await this.garantirLimitePermitido(tenantId, 'usuariosAdministrativos');
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(UsuarioOrm);
-      const emailNormalizado = dados.email.trim().toLowerCase();
       const emailHash = this.criptografia.gerarHashBusca(dados.email);
       const existente = await repositorio.findOne({ where: { tenantId, emailHash } });
 
@@ -187,6 +197,11 @@ export class ServicoUsuariosCliente {
   }
 
   async reenviarConvite(tenantId: string, usuarioExecutorId: string, usuarioId: string): Promise<UsuarioClienteRespostaDto> {
+    this.protecaoAbuso.consumirTentativa(
+      montarChaveProtecaoAbuso('convite-admin-reenvio', tenantId, usuarioId),
+      POLITICA_CONVITES_ADMIN
+    );
+
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const usuario = await this.obterUsuarioConvidavel(gerenciador, tenantId, usuarioId);
       await this.revogarTokensPendentes(gerenciador, tenantId, usuarioId, usuarioExecutorId, 'reenviado');

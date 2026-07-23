@@ -9,6 +9,7 @@ import { TenantOrm } from '../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../usuarios/infraestrutura/usuario.orm';
 import { ServicoRecuperacaoSenha } from './aplicacao/servico-recuperacao-senha';
 import { ServicoAuth } from './aplicacao/servico-auth';
+import { ServicoProtecaoAbuso } from './aplicacao/servico-protecao-abuso';
 import { ControladorAuth } from './apresentacao/controlador-auth';
 import { GuardaJwt } from './apresentacao/guarda-jwt';
 import { GuardaLimiteLogin } from './apresentacao/guarda-limite-login';
@@ -23,6 +24,7 @@ import { TokenRedefinicaoSenhaOrm } from './infraestrutura/token-redefinicao-sen
   providers: [
     ServicoAuth,
     ServicoRecuperacaoSenha,
+    ServicoProtecaoAbuso,
     ExecutorTenant,
     ServicoSenhas,
     CriptografiaDadosSensiveis,
@@ -32,6 +34,15 @@ import { TokenRedefinicaoSenhaOrm } from './infraestrutura/token-redefinicao-sen
     GuardaPermissoes,
     GuardaLimiteLogin
   ],
-  exports: [JwtModule, GuardaJwt, GuardaPapeis, GuardaPermissoes, ServicoAuth, ServicoSenhas, CriptografiaDadosSensiveis]
+  exports: [
+    JwtModule,
+    GuardaJwt,
+    GuardaPapeis,
+    GuardaPermissoes,
+    ServicoAuth,
+    ServicoProtecaoAbuso,
+    ServicoSenhas,
+    CriptografiaDadosSensiveis
+  ]
 })
 export class ModuloAuth {}

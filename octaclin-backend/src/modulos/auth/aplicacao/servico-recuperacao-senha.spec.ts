@@ -1,4 +1,4 @@
-import { GoneException, NotFoundException } from '@nestjs/common';
+import { GoneException, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
@@ -62,12 +62,23 @@ function criarServico(dados: Record<string, any> = {}) {
     gerarHash: jest.fn((senha: string) => `senha:${senha}`)
   } as unknown as ServicoSenhas;
   const email = { enviar: jest.fn(async () => ({ idExterno: 'email-1' })) };
+  const protecaoAbuso = dados.protecaoAbuso ?? {
+    consumirTentativa: jest.fn()
+  };
 
   return {
-    servico: new ServicoRecuperacaoSenha(fonteDados as never, executorTenant as never, criptografia as never, senhas, email as never),
+    servico: new ServicoRecuperacaoSenha(
+      fonteDados as never,
+      executorTenant as never,
+      criptografia as never,
+      senhas,
+      email as never,
+      protecaoAbuso as never
+    ),
     repositorios,
     dados,
-    email
+    email,
+    protecaoAbuso
   };
 }
 
@@ -88,6 +99,29 @@ describe('ServicoRecuperacaoSenha', () => {
     expect(resposta.mensagem).toBe('Se os dados estiverem corretos, enviaremos um link de redefinicao de senha.');
     expect(resposta.linkRecuperacao).toBeUndefined();
     expect(repositorios.token.save).not.toHaveBeenCalled();
+    expect(email.enviar).not.toHaveBeenCalled();
+  });
+
+  it('deve limitar abuso de recuperacao antes de consultar dados do tenant', async () => {
+    const protecaoAbuso = {
+      consumirTentativa: jest.fn(() => {
+        throw new HttpException('Muitas solicitacoes. Tente novamente em alguns minutos.', HttpStatus.TOO_MANY_REQUESTS);
+      })
+    };
+    const { servico, repositorios, email } = criarServico({ protecaoAbuso });
+
+    await expect(
+      servico.solicitarRecuperacao({
+        tenantSlug: 'clinica-carla',
+        email: 'ana@example.com'
+      })
+    ).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
+
+    expect(protecaoAbuso.consumirTentativa).toHaveBeenCalledWith(
+      'recuperacao-senha:clinica-carla:ana@example.com',
+      expect.objectContaining({ maxTentativas: 3 })
+    );
+    expect(repositorios.tenant.findOne).not.toHaveBeenCalled();
     expect(email.enviar).not.toHaveBeenCalled();
   });
 
