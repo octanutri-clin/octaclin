@@ -127,6 +127,19 @@ pnpm --dir octaclin-backend build
 
 Regra esperada: logs podem conter `requestId`, `tenantId`, `usuarioId`, metodo, rota sem query string, status e duracao; nao devem conter corpo da requisicao, query string, email, token, senha, refresh token ou mensagem de erro com dado de negocio sensivel.
 
+## Validacao de alertas operacionais
+
+Use quando alterar `/operacoes/alertas`, `/api/operacoes/alertas`, healthchecks, outbox, central de falhas ou painel operacional:
+
+```powershell
+pnpm --dir octaclin-backend test --runInBand src/modulos/operacoes/aplicacao/servico-operacoes.spec.ts src/modulos/operacoes/apresentacao/controlador-operacoes.spec.ts
+pnpm --dir octaclin-backend typecheck
+pnpm --dir octaclin-web typecheck
+pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs -g "operacoes LGPD" --project=desktop-chromium --reporter=list
+```
+
+Regra esperada: alertas indicam severidade, origem, metrica e acao sugerida sem expor payload bruto, secrets, tokens, senhas ou mensagens de erro com dados sensiveis.
+
 ## Preflight de producao
 
 Use antes de iniciar uma fase relevante ou antes de passar o projeto para outro agente:

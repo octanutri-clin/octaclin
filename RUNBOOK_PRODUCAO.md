@@ -232,6 +232,31 @@ Uso em suporte:
 3. Cruzar com `tenantId` e `usuarioId` quando a requisicao estiver autenticada.
 4. Nunca colar corpo de requisicao, token, senha, email completo ou URL com query string em chamados, commits ou docs.
 
+## Alertas operacionais
+
+O console `/operacoes` exibe a secao `Alertas operacionais`, alimentada por `/operacoes/alertas` no backend e `/api/operacoes/alertas` no BFF web.
+
+Severidades:
+
+- `critico`: exige acao antes de continuar operacao normal.
+- `atencao`: exige acompanhamento ou correcao operacional.
+- `informativo`: melhora diagnostico, mas nao bloqueia uso.
+
+Fontes atuais:
+
+- health detalhado: banco/backend como servico critico; Redis, email, WhatsApp e Google Calendar como integracoes;
+- outbox atrasado: eventos pendentes ou processando acima da janela operacional;
+- falhas de comunicacao: itens reprocessaveis ou pendentes na central de comunicacoes;
+- deploy: metadados de release ausentes em producao.
+
+Fluxo de resposta:
+
+1. Abrir `/operacoes` e revisar alertas criticos primeiro.
+2. Se houver alerta de health, validar `/health/detalhado`.
+3. Se houver alerta de outbox, conferir Redis, worker/processador e central de falhas.
+4. Se houver alerta de integracao, seguir o runbook especifico do provedor.
+5. Usar `requestId` dos logs da Fase 124 quando houver erro em uma requisicao especifica.
+
 ## Incidentes
 
 ### Login indisponivel

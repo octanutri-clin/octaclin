@@ -11,6 +11,34 @@ export interface ResumoOperacional {
   };
 }
 
+export type SeveridadeAlertaOperacional = 'critico' | 'atencao' | 'informativo';
+export type StatusAlertasOperacionais = SeveridadeAlertaOperacional | 'ok';
+export type OrigemAlertaOperacional = 'deploy' | 'servico' | 'fila' | 'integracao';
+
+export interface AlertaOperacionalApi {
+  id: string;
+  severidade: SeveridadeAlertaOperacional;
+  origem: OrigemAlertaOperacional;
+  titulo: string;
+  mensagem: string;
+  acaoSugerida: string;
+  metrica?: string;
+  valor?: number;
+  referencia?: string;
+}
+
+export interface ResultadoAlertasOperacionais {
+  status: StatusAlertasOperacionais;
+  geradoEm: string;
+  resumo: {
+    total: number;
+    criticos: number;
+    atencao: number;
+    informativos: number;
+  };
+  itens: AlertaOperacionalApi[];
+}
+
 export interface OutboxFalha {
   id: string;
   tenantId: string;
@@ -188,6 +216,7 @@ export interface AssinaturaManualOperacional {
 }
 
 export interface DadosOperacionais {
+  alertasOperacionais: ResultadoAlertasOperacionais;
   resumo: ResumoOperacional;
   falhas: OutboxFalha[];
   sincronizacoes: SincronizacaoMobile[];
@@ -277,6 +306,7 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
 
 export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
   const [
+    alertasOperacionais,
     resumo,
     falhas,
     sincronizacoes,
@@ -288,6 +318,7 @@ export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
     retencaoDados,
     solicitacoesAssinatura
   ] = await Promise.all([
+    carregarAlertasOperacionais(),
     requisitar<ResumoOperacional>('/api/operacoes/resumo'),
     requisitar<OutboxFalha[]>('/api/operacoes/outbox/falhas?limite=50'),
     requisitar<SincronizacaoMobile[]>('/api/operacoes/mobile/sincronizacoes?limite=50'),
@@ -301,6 +332,7 @@ export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
   ]);
 
   return {
+    alertasOperacionais,
     resumo,
     falhas,
     sincronizacoes,
@@ -312,6 +344,10 @@ export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
     retencaoDados,
     solicitacoesAssinatura
   };
+}
+
+export async function carregarAlertasOperacionais(): Promise<ResultadoAlertasOperacionais> {
+  return requisitar<ResultadoAlertasOperacionais>('/api/operacoes/alertas');
 }
 
 export async function carregarAuditoriaOperacional(

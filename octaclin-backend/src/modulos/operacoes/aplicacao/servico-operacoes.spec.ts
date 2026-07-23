@@ -9,7 +9,11 @@ import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizaca
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { ServicoOperacoes } from './servico-operacoes';
 
-function criarServico() {
+function criarServico(
+  opcoes: {
+    health?: Record<string, unknown>;
+  } = {}
+) {
   const eventoFalho = {
     id: 'evento-1',
     tenantId: 'tenant-1',
@@ -104,7 +108,11 @@ function criarServico() {
   const repositorios: Record<string, any> = {
     outbox: {
       count: jest.fn(async ({ where }: { where: { status: string } }) => {
-        if ('criadoEm' in where) return 4;
+        if ('criadoEm' in where) {
+          if (where.status === 'pendente') return 4;
+          if (where.status === 'processando') return 0;
+          return 4;
+        }
         const mapa: Record<string, number> = { pendente: 2, processando: 1, processado: 10, falhou: 3 };
         return mapa[where.status] ?? 0;
       }),
@@ -251,16 +259,121 @@ function criarServico() {
     })),
     cancelarEvento: jest.fn(async () => ({ sincronizado: true, calendarId: 'primary', eventId: 'google-event-1' }))
   };
+  const servicoSaude = {
+    verificarDetalhado: jest.fn(async () =>
+      opcoes.health ?? {
+        status: 'degradado',
+        checks: {
+          backend: { status: 'ok' },
+          banco: { status: 'ok' },
+          redis: { status: 'degradado', mensagem: 'Redis nao configurado.' },
+          email: { status: 'ok' },
+          whatsapp: { status: 'ok' },
+          googleCalendar: { status: 'degradado', mensagem: 'Google Calendar incompleto.' }
+        }
+      }
+    )
+  };
 
   return {
-    servico: new ServicoOperacoes(executorTenant as never, processadorNotificacoes as never, googleCalendar as never),
+    servico: new ServicoOperacoes(executorTenant as never, processadorNotificacoes as never, googleCalendar as never, servicoSaude as never),
     repositorios,
     processadorNotificacoes,
-    googleCalendar
+    googleCalendar,
+    servicoSaude
   };
 }
 
 describe('ServicoOperacoes', () => {
+  it('deve consolidar alertas operacionais por severidade sem expor payload sensivel', async () => {
+    const { servico, servicoSaude } = criarServico({
+      health: {
+        status: 'falha',
+        checks: {
+          backend: { status: 'ok' },
+          banco: { status: 'falha', mensagem: 'database unavailable password=secret' },
+          redis: { status: 'degradado', mensagem: 'Redis indisponivel.' },
+          email: { status: 'ok' },
+          whatsapp: { status: 'degradado', mensagem: 'Token Meta expirado.' },
+          googleCalendar: { status: 'ok' }
+        }
+      }
+    });
+
+    await expect(servico.listarAlertasOperacionais('tenant-1')).resolves.toEqual(
+      expect.objectContaining({
+        status: 'critico',
+        resumo: { total: 5, criticos: 2, atencao: 3, informativos: 0 },
+        itens: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'servico.banco.falha',
+            origem: 'servico',
+            severidade: 'critico',
+            titulo: 'Banco indisponivel',
+            acaoSugerida: expect.stringContaining('/health/detalhado')
+          }),
+          expect.objectContaining({
+            id: 'fila.outbox.pendente.atrasado',
+            origem: 'fila',
+            severidade: 'critico',
+            metrica: 'outbox_pendente_atrasado',
+            valor: 4
+          }),
+          expect.objectContaining({
+            id: 'integracao.whatsapp.degradada',
+            origem: 'integracao',
+            severidade: 'atencao'
+          }),
+          expect.objectContaining({
+            id: 'integracao.redis.degradada',
+            origem: 'integracao',
+            severidade: 'atencao'
+          }),
+          expect.objectContaining({
+            id: 'integracao.comunicacoes.falhas',
+            origem: 'integracao',
+            severidade: 'atencao',
+            valor: 4
+          })
+        ])
+      })
+    );
+    expect(servicoSaude.verificarDetalhado).toHaveBeenCalledTimes(1);
+    await expect(servico.listarAlertasOperacionais('tenant-1')).resolves.not.toEqual(
+      expect.objectContaining({
+        itens: expect.arrayContaining([expect.objectContaining({ mensagem: expect.stringContaining('password=secret') })])
+      })
+    );
+  });
+
+  it('deve retornar status ok quando health e filas estiverem saudaveis', async () => {
+    const { servico, repositorios } = criarServico({
+      health: {
+        status: 'ok',
+        checks: {
+          backend: { status: 'ok' },
+          banco: { status: 'ok' },
+          redis: { status: 'ok' },
+          email: { status: 'ok' },
+          whatsapp: { status: 'ok' },
+          googleCalendar: { status: 'ok' }
+        }
+      }
+    });
+    repositorios.outbox.count.mockResolvedValue(0);
+    repositorios.mensagens.find.mockResolvedValue([]);
+    repositorios.outbox.find.mockResolvedValue([]);
+    repositorios.consultas.find.mockResolvedValue([]);
+
+    await expect(servico.listarAlertasOperacionais('tenant-1')).resolves.toEqual(
+      expect.objectContaining({
+        status: 'ok',
+        resumo: { total: 0, criticos: 0, atencao: 0, informativos: 0 },
+        itens: []
+      })
+    );
+  });
+
   it('deve consolidar resumo operacional por tenant', async () => {
     const { servico } = criarServico();
 

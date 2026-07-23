@@ -46,6 +46,11 @@ export class ControladorOperacoes {
     return this.servicoOperacoes.obterResumo(usuario.tenantId);
   }
 
+  @Get('alertas')
+  listarAlertasOperacionais(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoOperacoes.listarAlertasOperacionais(usuario.tenantId);
+  }
+
   @Get('outbox/falhas')
   listarFalhasOutbox(@UsuarioAtual() usuario: UsuarioAutenticado, @Query('limite') limite?: string) {
     return this.servicoOperacoes.listarFalhasOutbox(usuario.tenantId, Number(limite ?? 50));

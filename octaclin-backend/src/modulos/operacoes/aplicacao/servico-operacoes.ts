@@ -12,11 +12,13 @@ import { ProcessadorNotificacoes } from '../../comunicacoes/aplicacao/processado
 import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
+import { CheckHealth, HealthDetalhado, ServicoSaude } from '../../saude/servico-saude';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 
 const CHAVE_PLANO_SAAS = 'plano_saas';
 const CHAVE_INTERESSE_ASSINATURA = 'assinatura_interesse';
 const VERSAO_RETENCAO_DADOS = '2026-10';
+const MINUTOS_OUTBOX_ATRASADO = 15;
 
 export interface ResumoOperacional {
   outbox: {
@@ -226,12 +228,41 @@ export interface ResultadoFalhasComunicacao extends ResultadoPaginado<FalhaComun
   resumo: ResumoFalhasComunicacao;
 }
 
+export type SeveridadeAlertaOperacional = 'critico' | 'atencao' | 'informativo';
+export type StatusAlertasOperacionais = SeveridadeAlertaOperacional | 'ok';
+export type OrigemAlertaOperacional = 'deploy' | 'servico' | 'fila' | 'integracao';
+
+export interface AlertaOperacional {
+  id: string;
+  severidade: SeveridadeAlertaOperacional;
+  origem: OrigemAlertaOperacional;
+  titulo: string;
+  mensagem: string;
+  acaoSugerida: string;
+  metrica?: string;
+  valor?: number;
+  referencia?: string;
+}
+
+export interface ResultadoAlertasOperacionais {
+  status: StatusAlertasOperacionais;
+  geradoEm: Date;
+  resumo: {
+    total: number;
+    criticos: number;
+    atencao: number;
+    informativos: number;
+  };
+  itens: AlertaOperacional[];
+}
+
 @Injectable()
 export class ServicoOperacoes {
   constructor(
     private readonly executorTenant: ExecutorTenant,
     private readonly processadorNotificacoes: ProcessadorNotificacoes,
-    private readonly googleCalendar: ServicoGoogleCalendar
+    private readonly googleCalendar: ServicoGoogleCalendar,
+    private readonly servicoSaude: ServicoSaude
   ) {}
 
   async obterResumo(tenantId: string): Promise<ResumoOperacional> {
@@ -327,6 +358,30 @@ export class ServicoOperacoes {
         limite
       };
     });
+  }
+
+  async listarAlertasOperacionais(tenantId: string): Promise<ResultadoAlertasOperacionais> {
+    const geradoEm = new Date();
+    const health = await this.servicoSaude.verificarDetalhado();
+    const alertas: AlertaOperacional[] = [...this.montarAlertasHealth(health), ...this.montarAlertasDeploy()];
+
+    const alertasTenant = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const corteOutbox = new Date(geradoEm.getTime() - MINUTOS_OUTBOX_ATRASADO * 60 * 1000);
+      const outbox = gerenciador.getRepository(OutboxEventoOrm);
+      const [pendentesAtrasados, processandoAtrasados, falhasComunicacao] = await Promise.all([
+        outbox.count({ where: { tenantId, status: 'pendente', criadoEm: LessThanOrEqual(corteOutbox) } }),
+        outbox.count({ where: { tenantId, status: 'processando', criadoEm: LessThanOrEqual(corteOutbox) } }),
+        this.carregarFalhasComunicacao(gerenciador, tenantId, {})
+      ]);
+
+      return [
+        ...this.montarAlertasOutbox(pendentesAtrasados, processandoAtrasados),
+        ...this.montarAlertasFalhasComunicacao(falhasComunicacao)
+      ];
+    });
+
+    alertas.push(...alertasTenant);
+    return this.montarResultadoAlertas(geradoEm, alertas);
   }
 
   async listarSolicitacoesAssinatura(
@@ -766,6 +821,141 @@ export class ServicoOperacoes {
       },
       { total: 0, email: 0, whatsapp: 0, googleCalendar: 0, outbox: 0, outras: 0, reprocessaveis: 0 }
     );
+  }
+
+  private montarAlertasHealth(health: HealthDetalhado): AlertaOperacional[] {
+    return Object.entries(health.checks).flatMap(([nome, check]) => this.mapearAlertaHealth(nome, check));
+  }
+
+  private mapearAlertaHealth(nome: string, check: CheckHealth): AlertaOperacional[] {
+    if (check.status === 'ok') return [];
+
+    const origem: OrigemAlertaOperacional = nome === 'backend' || nome === 'banco' ? 'servico' : 'integracao';
+    const severidade: SeveridadeAlertaOperacional = check.status === 'falha' ? 'critico' : 'atencao';
+    const nomeVisivel = this.nomeCheckHealth(nome);
+    const sufixoId = check.status === 'degradado' ? 'degradada' : check.status;
+
+    return [
+      {
+        id: `${origem}.${nome}.${sufixoId}`,
+        severidade,
+        origem,
+        titulo: `${nomeVisivel} ${check.status === 'falha' ? 'indisponivel' : 'degradado'}`,
+        mensagem:
+          check.status === 'falha'
+            ? 'Dependencia critica falhou no healthcheck detalhado.'
+            : 'Dependencia operacional esta degradada ou incompleta.',
+        acaoSugerida: `Validar /health/detalhado e seguir o runbook de ${nomeVisivel}.`,
+        referencia: nome
+      }
+    ];
+  }
+
+  private montarAlertasDeploy(): AlertaOperacional[] {
+    if (process.env.NODE_ENV !== 'production') return [];
+    if (process.env.RENDER_GIT_COMMIT || process.env.RENDER_SERVICE_ID) return [];
+
+    return [
+      {
+        id: 'deploy.metadados_ausentes',
+        severidade: 'informativo',
+        origem: 'deploy',
+        titulo: 'Deploy sem metadados de release',
+        mensagem: 'Ambiente de producao nao expoe metadados de release para diagnostico.',
+        acaoSugerida: 'Configurar metadados do provedor de deploy ou registrar commit ativo no ambiente.',
+        metrica: 'deploy_metadados',
+        valor: 0
+      }
+    ];
+  }
+
+  private montarAlertasOutbox(pendentesAtrasados: number, processandoAtrasados: number): AlertaOperacional[] {
+    const alertas: AlertaOperacional[] = [];
+
+    if (pendentesAtrasados > 0) {
+      alertas.push({
+        id: 'fila.outbox.pendente.atrasado',
+        severidade: 'critico',
+        origem: 'fila',
+        titulo: 'Outbox com eventos pendentes atrasados',
+        mensagem: 'Existem eventos pendentes acima da janela operacional esperada.',
+        acaoSugerida: 'Verificar Redis, processador de outbox e central de falhas antes de liberar novos envios.',
+        metrica: 'outbox_pendente_atrasado',
+        valor: pendentesAtrasados
+      });
+    }
+
+    if (processandoAtrasados > 0) {
+      alertas.push({
+        id: 'fila.outbox.processando.atrasado',
+        severidade: 'atencao',
+        origem: 'fila',
+        titulo: 'Outbox com eventos processando por tempo excessivo',
+        mensagem: 'Existem eventos em processamento acima da janela operacional esperada.',
+        acaoSugerida: 'Conferir logs do worker e reprocessar eventos travados quando aplicavel.',
+        metrica: 'outbox_processando_atrasado',
+        valor: processandoAtrasados
+      });
+    }
+
+    return alertas;
+  }
+
+  private montarAlertasFalhasComunicacao(falhas: FalhaComunicacaoOperacional[]): AlertaOperacional[] {
+    if (!falhas.length) return [];
+
+    const resumo = this.resumirFalhasComunicacao(falhas);
+    return [
+      {
+        id: 'integracao.comunicacoes.falhas',
+        severidade: 'atencao',
+        origem: 'integracao',
+        titulo: 'Falhas de comunicacao aguardam tratamento',
+        mensagem: 'Existem falhas reprocessaveis ou pendentes na central de comunicacoes.',
+        acaoSugerida: 'Abrir /operacoes/comunicacoes/falhas, filtrar por canal e reprocessar os itens corrigiveis.',
+        metrica: 'falhas_comunicacao_total',
+        valor: resumo.total,
+        referencia: `email:${resumo.email};whatsapp:${resumo.whatsapp};calendar:${resumo.googleCalendar};outbox:${resumo.outbox}`
+      }
+    ];
+  }
+
+  private montarResultadoAlertas(geradoEm: Date, itens: AlertaOperacional[]): ResultadoAlertasOperacionais {
+    const resumo = itens.reduce(
+      (acc, alerta) => {
+        acc.total += 1;
+        if (alerta.severidade === 'critico') acc.criticos += 1;
+        else if (alerta.severidade === 'atencao') acc.atencao += 1;
+        else acc.informativos += 1;
+        return acc;
+      },
+      { total: 0, criticos: 0, atencao: 0, informativos: 0 }
+    );
+
+    return {
+      status: resumo.criticos > 0 ? 'critico' : resumo.atencao > 0 ? 'atencao' : resumo.informativos > 0 ? 'informativo' : 'ok',
+      geradoEm,
+      resumo,
+      itens: itens.sort((a, b) => this.pesoSeveridade(b.severidade) - this.pesoSeveridade(a.severidade))
+    };
+  }
+
+  private pesoSeveridade(severidade: SeveridadeAlertaOperacional): number {
+    if (severidade === 'critico') return 3;
+    if (severidade === 'atencao') return 2;
+    return 1;
+  }
+
+  private nomeCheckHealth(nome: string): string {
+    const nomes: Record<string, string> = {
+      backend: 'Backend',
+      banco: 'Banco',
+      redis: 'Redis',
+      email: 'Email',
+      whatsapp: 'WhatsApp',
+      googleCalendar: 'Google Calendar'
+    };
+    return nomes[nome] ?? nome;
   }
 
   private async reprocessarMensagemFalha(tenantId: string, mensagemId: string): Promise<FalhaComunicacaoOperacional> {

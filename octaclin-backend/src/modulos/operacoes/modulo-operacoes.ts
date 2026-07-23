@@ -10,6 +10,7 @@ import { ModuloComunicacoes } from '../comunicacoes/modulo-comunicacoes';
 import { CanalNotificacaoOrm } from '../comunicacoes/infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { SincronizacaoMobileOrm } from '../mobile/infraestrutura/sincronizacao-mobile.orm';
+import { ModuloSaude } from '../saude/modulo-saude';
 import { TenantConfiguracaoOrm } from '../tenancy/infraestrutura/tenant-configuracao.orm';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoOperacoes } from './aplicacao/servico-operacoes';
@@ -29,7 +30,8 @@ import { ControladorOperacoes } from './apresentacao/controlador-operacoes';
     ]),
     ModuloAuth,
     ModuloTenancy,
-    ModuloComunicacoes
+    ModuloComunicacoes,
+    ModuloSaude
   ],
   controllers: [ControladorOperacoes],
   providers: [ServicoOperacoes, ServicoGoogleCalendar],

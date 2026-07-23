@@ -74,6 +74,7 @@ Rotas internas:
 - `GET /api/auth/session`
 - `POST /api/auth/sair`
 - `GET /api/operacoes/resumo`
+- `GET /api/operacoes/alertas`
 - `GET /api/operacoes/outbox/falhas`
 - `GET /api/operacoes/outbox/falhas/paginada`
 - `GET /api/operacoes/outbox/falhas/exportar.csv`

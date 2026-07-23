@@ -96,6 +96,38 @@ async function prepararOperacoesMockadas(page) {
       })
     });
   });
+  await page.route('**/api/operacoes/alertas', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'critico',
+        geradoEm: '2026-07-23T13:00:00.000Z',
+        resumo: { total: 2, criticos: 1, atencao: 1, informativos: 0 },
+        itens: [
+          {
+            id: 'fila.outbox.pendente.atrasado',
+            severidade: 'critico',
+            origem: 'fila',
+            titulo: 'Outbox com eventos pendentes atrasados',
+            mensagem: 'Existem eventos pendentes acima da janela operacional esperada.',
+            acaoSugerida: 'Verificar Redis, processador de outbox e central de falhas.',
+            metrica: 'outbox_pendente_atrasado',
+            valor: 4
+          },
+          {
+            id: 'integracao.comunicacoes.falhas',
+            severidade: 'atencao',
+            origem: 'integracao',
+            titulo: 'Falhas de comunicacao aguardam tratamento',
+            mensagem: 'Existem falhas reprocessaveis ou pendentes na central de comunicacoes.',
+            acaoSugerida: 'Abrir /operacoes/comunicacoes/falhas.',
+            valor: 1
+          }
+        ]
+      })
+    });
+  });
   await page.route('**/api/operacoes/outbox/falhas**', async (route) => {
     const paginada = route.request().url().includes('/paginada');
     await route.fulfill({
@@ -1072,6 +1104,8 @@ test.describe('operacoes LGPD', () => {
     const operacoes = await prepararOperacoesMockadas(page);
     await page.goto('/operacoes');
 
+    await expect(page.getByRole('heading', { name: 'Alertas operacionais' })).toBeVisible();
+    await expect(page.getByText('Outbox com eventos pendentes atrasados')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Central de comunicacao' })).toBeVisible();
     await expect(page.getByText('SMTP indisponivel')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Solicitacoes LGPD' })).toBeVisible();
