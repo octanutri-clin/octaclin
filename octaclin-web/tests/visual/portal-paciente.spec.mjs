@@ -137,6 +137,37 @@ const portalPaciente = {
   lgpd: {
     versaoAtual: '2026-07',
     ultimoAceiteEm: '2026-07-10T10:00:00.000Z',
+    documentosLegais: [
+      {
+        tipo: 'termos_uso',
+        titulo: 'Termos de uso',
+        versao: '2026-07',
+        perfil: 'paciente',
+        resumo: 'Regras de acesso e uso adequado do OctaClin.',
+        obrigatorio: true,
+        aceito: true,
+        aceitoEm: '2026-07-10T10:00:00.000Z'
+      },
+      {
+        tipo: 'politica_privacidade',
+        titulo: 'Politica de privacidade',
+        versao: '2026-07',
+        perfil: 'paciente',
+        resumo: 'Como seus dados pessoais e de saude sao tratados.',
+        obrigatorio: true,
+        aceito: false
+      },
+      {
+        tipo: 'consentimento_lgpd',
+        titulo: 'Consentimento LGPD',
+        versao: '2026-07',
+        perfil: 'paciente',
+        resumo: 'Autorizacao para tratamento de dados no acompanhamento clinico.',
+        obrigatorio: true,
+        aceito: true,
+        aceitoEm: '2026-07-10T10:00:00.000Z'
+      }
+    ],
     consentimentos: [
       {
         id: 'consentimento-1',
@@ -326,6 +357,12 @@ test.describe('portal do paciente', () => {
     await expect(page.locator('#notificacoes').getByText('E-mail')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Meu perfil' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Privacidade' })).toBeVisible();
+    await expect(page.getByText('Documentos legais')).toBeVisible();
+    await expect(page.locator('#privacidade').getByText('Termos de uso')).toBeVisible();
+    await expect(page.locator('#privacidade').getByText('Politica de privacidade')).toBeVisible();
+    await expect(page.locator('#privacidade').getByText('Consentimento LGPD')).toBeVisible();
+    await expect(page.locator('#privacidade').getByText('Pendente')).toBeVisible();
+    await expect(page.locator('#privacidade').getByText('Aceito').first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Baixar meus dados' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Enviar solicitacao LGPD' })).toBeVisible();
     await expect(page.getByText('Meus protocolos LGPD')).toBeVisible();

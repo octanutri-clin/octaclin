@@ -20,6 +20,7 @@ import {
   RegistrarConsentimentoLgpdPortalDto,
   RegistrarSolicitacaoLgpdPortalDto
 } from './dtos';
+import { listarDocumentosLegaisPaciente } from './documentos-legais-paciente';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
@@ -182,6 +183,7 @@ export interface PerfilPortalPaciente {
 export interface LgpdPortalPaciente {
   versaoAtual: string;
   ultimoAceiteEm?: Date;
+  documentosLegais: DocumentoLegalPortalPaciente[];
   consentimentos: {
     id: string;
     tipo: string;
@@ -190,6 +192,17 @@ export interface LgpdPortalPaciente {
     metadados: Record<string, unknown>;
   }[];
   solicitacoes: SolicitacaoLgpdPortalPaciente[];
+}
+
+export interface DocumentoLegalPortalPaciente {
+  tipo: string;
+  titulo: string;
+  versao: string;
+  perfil: 'paciente';
+  resumo: string;
+  obrigatorio: boolean;
+  aceito: boolean;
+  aceitoEm?: Date;
 }
 
 export interface ConsentimentoLgpdPortalPaciente extends PerfilPortalPaciente {
@@ -538,7 +551,9 @@ export class ServicoPortalPaciente {
     usuarioId: string,
     dados: RegistrarConsentimentoLgpdPortalDto
   ): Promise<ConsentimentoLgpdPortalPaciente> {
-    if (!dados.aceiteLgpd) throw new BadRequestException('Aceite LGPD obrigatorio para registrar consentimento.');
+    if (!dados.aceiteTermosUso || !dados.aceitePoliticaPrivacidade || !dados.aceiteLgpd) {
+      throw new BadRequestException('Aceite dos termos, politica de privacidade e LGPD e obrigatorio para registrar consentimento.');
+    }
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorioPacientes = gerenciador.getRepository(PacienteOrm);
@@ -566,20 +581,25 @@ export class ServicoPortalPaciente {
 
       const preferenciasContato = this.obterContatoPaciente(paciente).preferencias;
       const repositorioConsentimentos = gerenciador.getRepository(ConsentimentoLgpdOrm);
-      await repositorioConsentimentos.save(
-        repositorioConsentimentos.create({
-          tenantId,
-          usuarioId,
-          tipo: 'portal_paciente_lgpd',
-          versao: dados.versaoLgpd ?? this.versaoLgpdAtual(),
-          aceitoEm: new Date(),
-          metadados: {
-            pacienteId: paciente.id,
-            origem: 'portal_paciente',
-            preferenciasContato
-          }
-        })
-      );
+      const aceitoEm = new Date();
+      for (const documento of listarDocumentosLegaisPaciente(dados)) {
+        await repositorioConsentimentos.save(
+          repositorioConsentimentos.create({
+            tenantId,
+            usuarioId,
+            tipo: documento.tipo,
+            versao: documento.versao,
+            aceitoEm,
+            metadados: {
+              pacienteId: paciente.id,
+              origem: 'portal_paciente',
+              perfil: documento.perfil,
+              documentoLegal: documento.tipo,
+              ...(documento.tipo === 'consentimento_lgpd' ? { preferenciasContato } : {})
+            }
+          })
+        );
+      }
 
       return {
         ...this.mapearPerfilPaciente(paciente),
@@ -797,10 +817,21 @@ export class ServicoPortalPaciente {
     const consentimentosPaciente = consentimentos.filter(
       (consentimento) => consentimento.usuarioId === usuarioId && !this.ehEventoSolicitacaoLgpd(consentimento.tipo)
     );
+    const documentosLegais = listarDocumentosLegaisPaciente().map((documento) => {
+      const aceite = consentimentosPaciente.find(
+        (consentimento) => consentimento.tipo === documento.tipo && consentimento.versao === documento.versao
+      );
+      return {
+        ...documento,
+        aceito: Boolean(aceite),
+        aceitoEm: aceite?.aceitoEm
+      };
+    });
 
     return {
       versaoAtual: this.versaoLgpdAtual(),
       ultimoAceiteEm: consentimentosPaciente[0]?.aceitoEm,
+      documentosLegais,
       consentimentos: consentimentosPaciente.map((consentimento) => ({
         id: consentimento.id,
         tipo: consentimento.tipo,

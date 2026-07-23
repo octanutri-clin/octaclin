@@ -34,6 +34,38 @@ const portalPaciente = {
   lgpd: {
     versaoAtual: '2026-07',
     ultimoAceiteEm: '2026-07-22T12:00:00.000Z',
+    documentosLegais: [
+      {
+        tipo: 'termos_uso',
+        titulo: 'Termos de uso',
+        versao: '2026-07',
+        perfil: 'paciente',
+        resumo: 'Regras de acesso e uso adequado do OctaClin.',
+        obrigatorio: true,
+        aceito: true,
+        aceitoEm: '2026-07-22T12:00:00.000Z'
+      },
+      {
+        tipo: 'politica_privacidade',
+        titulo: 'Politica de privacidade',
+        versao: '2026-07',
+        perfil: 'paciente',
+        resumo: 'Como seus dados pessoais e de saude sao tratados.',
+        obrigatorio: true,
+        aceito: true,
+        aceitoEm: '2026-07-22T12:00:00.000Z'
+      },
+      {
+        tipo: 'consentimento_lgpd',
+        titulo: 'Consentimento LGPD',
+        versao: '2026-07',
+        perfil: 'paciente',
+        resumo: 'Autorizacao para tratamento de dados no acompanhamento clinico.',
+        obrigatorio: true,
+        aceito: true,
+        aceitoEm: '2026-07-22T12:00:00.000Z'
+      }
+    ],
     consentimentos: [
       {
         id: 'consentimento-1',
@@ -48,6 +80,8 @@ const portalPaciente = {
 };
 
 async function prepararOnboarding(page) {
+  let payloadAtivacao = null;
+
   await page.route(`**/api/pacientes/convites-acesso/${encodeURIComponent(tokenPrimeiroAcesso)}`, async (route) => {
     await route.fulfill({
       status: 200,
@@ -63,6 +97,7 @@ async function prepararOnboarding(page) {
   });
 
   await page.route('**/api/pacientes/convites-acesso/ativar', async (route) => {
+    payloadAtivacao = route.request().postDataJSON();
     await page.context().addCookies([
       { name: 'octaclin_access_token', value: 'fake-access-token', domain: 'localhost', path: '/' },
       { name: 'octaclin_refresh_token', value: 'fake-refresh-token', domain: 'localhost', path: '/' },
@@ -85,20 +120,38 @@ async function prepararOnboarding(page) {
   await page.route('**/api/portal/paciente', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(portalPaciente) });
   });
+
+  return { payloadAtivacao: () => payloadAtivacao };
 }
 
 test.describe('primeiro acesso do paciente', () => {
   test('ativa convite e abre o portal do paciente sem login manual', async ({ page }) => {
-    await prepararOnboarding(page);
+    const onboarding = await prepararOnboarding(page);
     await page.goto(`/primeiro-acesso?token=${encodeURIComponent(tokenPrimeiroAcesso)}`);
 
     await expect(page.getByRole('heading', { name: 'Primeiro acesso' })).toBeVisible();
     await expect(page.getByText('Ana Paula')).toBeVisible();
+    await expect(page.getByLabel('Aceito os Termos de uso do OctaClin')).toBeVisible();
+    await expect(page.getByLabel('Aceito a Politica de privacidade')).toBeVisible();
+    await expect(page.getByLabel('Autorizo o tratamento dos meus dados de saude')).toBeVisible();
 
     await page.locator('input[type="password"]').nth(0).fill('SenhaPaciente@123');
     await page.locator('input[type="password"]').nth(1).fill('SenhaPaciente@123');
-    await page.locator('input[type="checkbox"]').check();
+    await page.getByLabel('Aceito os Termos de uso do OctaClin').check();
+    await page.getByLabel('Aceito a Politica de privacidade').check();
+    await page.getByLabel('Autorizo o tratamento dos meus dados de saude').check();
     await page.getByRole('button', { name: 'Ativar acesso' }).click();
+
+    await expect.poll(() => onboarding.payloadAtivacao()).toEqual(
+      expect.objectContaining({
+        aceiteLgpd: true,
+        aceiteTermosUso: true,
+        aceitePoliticaPrivacidade: true,
+        versaoLgpd: '2026-07',
+        versaoTermosUso: '2026-07',
+        versaoPoliticaPrivacidade: '2026-07'
+      })
+    );
 
     await expect(page).toHaveURL(/\/portal$/);
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();

@@ -42,6 +42,8 @@ const conteudoFalha: Record<EstadoFalha, { titulo: string; mensagem: string; det
   }
 };
 
+const versaoLegalPaciente = '2026-07';
+
 function formatarData(valor?: string) {
   if (!valor) return '';
   const data = new Date(valor);
@@ -100,6 +102,8 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
   const [convite, setConvite] = useState<ConvitePacientePublicoApi | null>(null);
   const [senha, setSenha] = useState('');
   const [confirmacao, setConfirmacao] = useState('');
+  const [aceiteTermosUso, setAceiteTermosUso] = useState(false);
+  const [aceitePoliticaPrivacidade, setAceitePoliticaPrivacidade] = useState(false);
   const [aceiteLgpd, setAceiteLgpd] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -137,14 +141,23 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
       setErro('A senha precisa ter ao menos 8 caracteres e bater com a confirmacao.');
       return;
     }
-    if (!aceiteLgpd) {
-      setErro('O aceite LGPD e obrigatorio para ativar o acesso.');
+    if (!aceiteTermosUso || !aceitePoliticaPrivacidade || !aceiteLgpd) {
+      setErro('Os aceites legais obrigatorios precisam ser marcados para ativar o acesso.');
       return;
     }
 
     setSalvando(true);
     try {
-      const ativacao = await ativarConvitePaciente({ token, senha, aceiteLgpd, versaoLgpd: '2026-07' });
+      const ativacao = await ativarConvitePaciente({
+        token,
+        senha,
+        aceiteTermosUso,
+        aceitePoliticaPrivacidade,
+        aceiteLgpd,
+        versaoTermosUso: versaoLegalPaciente,
+        versaoPoliticaPrivacidade: versaoLegalPaciente,
+        versaoLgpd: versaoLegalPaciente
+      });
       setAtivado(true);
       router.replace((ativacao.destinoInicial || '/portal') as any);
     } catch (erroAtual) {
@@ -218,11 +231,31 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
               <label className="flex items-start gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 py-2 text-sm text-[#596273]">
                 <input
                   type="checkbox"
+                  checked={aceiteTermosUso}
+                  onChange={(evento) => setAceiteTermosUso(evento.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                Aceito os Termos de uso do OctaClin, versao {versaoLegalPaciente}.
+              </label>
+
+              <label className="flex items-start gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 py-2 text-sm text-[#596273]">
+                <input
+                  type="checkbox"
+                  checked={aceitePoliticaPrivacidade}
+                  onChange={(evento) => setAceitePoliticaPrivacidade(evento.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                Aceito a Politica de privacidade, versao {versaoLegalPaciente}.
+              </label>
+
+              <label className="flex items-start gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 py-2 text-sm text-[#596273]">
+                <input
+                  type="checkbox"
                   checked={aceiteLgpd}
                   onChange={(evento) => setAceiteLgpd(evento.target.checked)}
                   className="mt-0.5 h-4 w-4"
                 />
-                Declaro que aceito o tratamento dos meus dados para uso do portal OctaClin e acompanhamento clinico.
+                Autorizo o tratamento dos meus dados de saude para uso do portal OctaClin e acompanhamento clinico.
               </label>
 
               {erro ? <div className="rounded-md border border-[#efb8ad] bg-[#fff4f1] px-3 py-2 text-sm text-perigo">{erro}</div> : null}

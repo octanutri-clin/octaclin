@@ -133,6 +133,16 @@ export interface CheckinRapidoPacienteApi {
 export interface LgpdPortalPacienteApi {
   versaoAtual: string;
   ultimoAceiteEm?: string;
+  documentosLegais?: {
+    tipo: 'termos_uso' | 'politica_privacidade' | 'consentimento_lgpd' | string;
+    titulo: string;
+    versao: string;
+    perfil: 'paciente' | string;
+    resumo: string;
+    obrigatorio: boolean;
+    aceito: boolean;
+    aceitoEm?: string;
+  }[];
   consentimentos: {
     id: string;
     tipo: string;
@@ -192,7 +202,11 @@ export interface PerfilPacienteAtualizadoApi {
 
 export interface RegistrarConsentimentoLgpdEntrada {
   aceiteLgpd: boolean;
+  aceiteTermosUso: boolean;
+  aceitePoliticaPrivacidade: boolean;
   versaoLgpd?: string;
+  versaoTermosUso?: string;
+  versaoPoliticaPrivacidade?: string;
   prefereEmail?: boolean;
   prefereWhatsapp?: boolean;
 }

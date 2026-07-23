@@ -110,7 +110,7 @@ describe('ServicoConvitesPaciente', () => {
     expect(repositorios.convite.save.mock.calls[0][0].tokenHash).not.toBe(convite.token);
   });
 
-  it('deve ativar convite criando usuario paciente, vinculando paciente e registrando aceite LGPD', async () => {
+  it('deve ativar convite criando usuario paciente, vinculando paciente e registrando aceites legais versionados', async () => {
     const dados: Record<string, any> = {
       paciente: {
         id: 'paciente-1',
@@ -129,7 +129,11 @@ describe('ServicoConvitesPaciente', () => {
       token: convite.token,
       senha: 'SenhaPaciente@123',
       aceiteLgpd: true,
-      versaoLgpd: '2026-07'
+      aceiteTermosUso: true,
+      aceitePoliticaPrivacidade: true,
+      versaoLgpd: '2026-07',
+      versaoTermosUso: '2026-07',
+      versaoPoliticaPrivacidade: '2026-07'
     });
 
     expect(repositorios.usuario.save).toHaveBeenCalledWith(
@@ -142,12 +146,50 @@ describe('ServicoConvitesPaciente', () => {
       })
     );
     expect(repositorios.paciente.save).toHaveBeenCalledWith(expect.objectContaining({ usuarioId: 'usuario-1' }));
+    expect(repositorios.consentimento.save).toHaveBeenCalledTimes(3);
     expect(repositorios.consentimento.save).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant-1',
         usuarioId: 'usuario-1',
-        tipo: 'primeiro_acesso_paciente',
-        versao: '2026-07'
+        tipo: 'termos_uso',
+        versao: '2026-07',
+        metadados: expect.objectContaining({
+          pacienteId: 'paciente-1',
+          conviteId: convite.id,
+          origem: 'primeiro_acesso',
+          perfil: 'paciente',
+          documentoLegal: 'termos_uso'
+        })
+      })
+    );
+    expect(repositorios.consentimento.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-1',
+        tipo: 'politica_privacidade',
+        versao: '2026-07',
+        metadados: expect.objectContaining({
+          pacienteId: 'paciente-1',
+          conviteId: convite.id,
+          origem: 'primeiro_acesso',
+          perfil: 'paciente',
+          documentoLegal: 'politica_privacidade'
+        })
+      })
+    );
+    expect(repositorios.consentimento.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-1',
+        tipo: 'consentimento_lgpd',
+        versao: '2026-07',
+        metadados: expect.objectContaining({
+          pacienteId: 'paciente-1',
+          conviteId: convite.id,
+          origem: 'primeiro_acesso',
+          perfil: 'paciente',
+          documentoLegal: 'consentimento_lgpd'
+        })
       })
     );
     expect(servicoAuth.emitirSessaoUsuario).toHaveBeenCalledWith(expect.objectContaining({ id: 'usuario-1', role: 'Patient' }));
@@ -169,11 +211,17 @@ describe('ServicoConvitesPaciente', () => {
     expect(dados.convites[0].aceitoEm).toBeInstanceOf(Date);
   });
 
-  it('deve rejeitar ativacao sem aceite LGPD', async () => {
+  it('deve rejeitar ativacao sem todos os aceites legais obrigatorios', async () => {
     const { servico } = criarServico();
 
     await expect(
-      servico.ativarConvite({ token: 'qualquer-token', senha: 'SenhaPaciente@123', aceiteLgpd: false })
+      servico.ativarConvite({
+        token: 'qualquer-token',
+        senha: 'SenhaPaciente@123',
+        aceiteLgpd: true,
+        aceiteTermosUso: false,
+        aceitePoliticaPrivacidade: true
+      })
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 

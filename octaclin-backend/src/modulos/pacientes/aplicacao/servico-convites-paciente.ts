@@ -8,6 +8,7 @@ import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas'
 import { contextoAcessoPorPapel } from '../../auth/dominio/permissoes';
 import { ServicoAuth } from '../../auth/aplicacao/servico-auth';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { listarDocumentosLegaisPaciente } from './documentos-legais-paciente';
 import { AtivarConvitePacienteDto, CriarConvitePacienteDto } from './dtos';
 import { ConvitePacienteOrm } from '../infraestrutura/convite-paciente.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
@@ -125,7 +126,9 @@ export class ServicoConvitesPaciente {
   }
 
   async ativarConvite(dados: AtivarConvitePacienteDto) {
-    if (!dados.aceiteLgpd) throw new BadRequestException('Aceite LGPD obrigatorio para ativar o acesso.');
+    if (!dados.aceiteTermosUso || !dados.aceitePoliticaPrivacidade || !dados.aceiteLgpd) {
+      throw new BadRequestException('Aceite dos termos, politica de privacidade e LGPD e obrigatorio para ativar o acesso.');
+    }
 
     const tenantId = extrairTenantToken(dados.token);
     const contextoPaciente = contextoAcessoPorPapel('Patient');
@@ -158,20 +161,26 @@ export class ServicoConvitesPaciente {
       paciente.usuarioId = usuario.id;
       await gerenciador.getRepository(PacienteOrm).save(paciente);
 
-      await gerenciador.getRepository(ConsentimentoLgpdOrm).save(
-        gerenciador.getRepository(ConsentimentoLgpdOrm).create({
-          tenantId,
-          usuarioId: usuario.id,
-          tipo: 'primeiro_acesso_paciente',
-          versao: dados.versaoLgpd ?? '2026-07',
-          aceitoEm: new Date(),
-          metadados: {
-            pacienteId: paciente.id,
-            conviteId: convite!.id,
-            origem: 'primeiro_acesso'
-          }
-        })
-      );
+      const repositorioConsentimentos = gerenciador.getRepository(ConsentimentoLgpdOrm);
+      const aceitoEm = new Date();
+      for (const documento of listarDocumentosLegaisPaciente(dados)) {
+        await repositorioConsentimentos.save(
+          repositorioConsentimentos.create({
+            tenantId,
+            usuarioId: usuario.id,
+            tipo: documento.tipo,
+            versao: documento.versao,
+            aceitoEm,
+            metadados: {
+              pacienteId: paciente.id,
+              conviteId: convite!.id,
+              origem: 'primeiro_acesso',
+              perfil: documento.perfil,
+              documentoLegal: documento.tipo
+            }
+          })
+        );
+      }
 
       convite!.status = 'aceito';
       convite!.aceitoEm = new Date();

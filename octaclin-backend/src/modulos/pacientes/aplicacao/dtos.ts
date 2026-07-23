@@ -217,10 +217,26 @@ export class AtivarConvitePacienteDto {
   @IsBoolean()
   aceiteLgpd: boolean;
 
+  @IsBoolean()
+  aceiteTermosUso: boolean;
+
+  @IsBoolean()
+  aceitePoliticaPrivacidade: boolean;
+
   @IsOptional()
   @IsString()
   @MaxLength(40)
   versaoLgpd?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  versaoTermosUso?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  versaoPoliticaPrivacidade?: string;
 }
 
 export class AtualizarPerfilPacientePortalDto {
@@ -293,10 +309,26 @@ export class RegistrarConsentimentoLgpdPortalDto {
   @IsBoolean()
   aceiteLgpd: boolean;
 
+  @IsBoolean()
+  aceiteTermosUso: boolean;
+
+  @IsBoolean()
+  aceitePoliticaPrivacidade: boolean;
+
   @IsOptional()
   @IsString()
   @MaxLength(40)
   versaoLgpd?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  versaoTermosUso?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  versaoPoliticaPrivacidade?: string;
 
   @IsOptional()
   @IsBoolean()

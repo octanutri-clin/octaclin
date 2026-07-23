@@ -477,6 +477,32 @@ describe('ServicoPortalPaciente', () => {
     expect(portal.lgpd).toEqual({
       versaoAtual: '2026-07',
       ultimoAceiteEm: new Date('2026-07-10T10:00:00.000Z'),
+      documentosLegais: [
+        expect.objectContaining({
+          tipo: 'termos_uso',
+          titulo: 'Termos de uso',
+          versao: '2026-07',
+          perfil: 'paciente',
+          obrigatorio: true,
+          aceito: false
+        }),
+        expect.objectContaining({
+          tipo: 'politica_privacidade',
+          titulo: 'Politica de privacidade',
+          versao: '2026-07',
+          perfil: 'paciente',
+          obrigatorio: true,
+          aceito: false
+        }),
+        expect.objectContaining({
+          tipo: 'consentimento_lgpd',
+          titulo: 'Consentimento LGPD',
+          versao: '2026-07',
+          perfil: 'paciente',
+          obrigatorio: true,
+          aceito: false
+        })
+      ],
       consentimentos: [
         {
           id: 'consentimento-1',
@@ -869,28 +895,65 @@ describe('ServicoPortalPaciente', () => {
 
     const resultado = await servico.registrarConsentimentoLgpd('tenant-1', 'usuario-paciente-1', {
       aceiteLgpd: true,
+      aceiteTermosUso: true,
+      aceitePoliticaPrivacidade: true,
       versaoLgpd: '2026-09',
+      versaoTermosUso: '2026-09',
+      versaoPoliticaPrivacidade: '2026-09',
       prefereEmail: false,
       prefereWhatsapp: true
     });
 
+    expect(repositorios.consentimento.save).toHaveBeenCalledTimes(3);
     expect(repositorios.consentimento.save).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant-1',
         usuarioId: 'usuario-paciente-1',
-        tipo: 'portal_paciente_lgpd',
+        tipo: 'termos_uso',
         versao: '2026-09',
         aceitoEm: expect.any(Date),
-        metadados: {
+        metadados: expect.objectContaining({
           pacienteId: 'paciente-1',
           origem: 'portal_paciente',
+          perfil: 'paciente',
+          documentoLegal: 'termos_uso'
+        })
+      })
+    );
+    expect(repositorios.consentimento.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-paciente-1',
+        tipo: 'politica_privacidade',
+        versao: '2026-09',
+        aceitoEm: expect.any(Date),
+        metadados: expect.objectContaining({
+          pacienteId: 'paciente-1',
+          origem: 'portal_paciente',
+          perfil: 'paciente',
+          documentoLegal: 'politica_privacidade'
+        })
+      })
+    );
+    expect(repositorios.consentimento.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-paciente-1',
+        tipo: 'consentimento_lgpd',
+        versao: '2026-09',
+        aceitoEm: expect.any(Date),
+        metadados: expect.objectContaining({
+          pacienteId: 'paciente-1',
+          origem: 'portal_paciente',
+          perfil: 'paciente',
+          documentoLegal: 'consentimento_lgpd',
           preferenciasContato: {
             email: false,
             whatsapp: true,
             canalPreferido: 'whatsapp',
             horarioPermitido: { inicio: '09:00', fim: '18:00', timezone: 'America/Sao_Paulo' }
           }
-        }
+        })
       })
     );
     expect(repositorios.paciente.save).toHaveBeenCalledWith(
@@ -907,11 +970,17 @@ describe('ServicoPortalPaciente', () => {
       horarioPermitido: { inicio: '09:00', fim: '18:00', timezone: 'America/Sao_Paulo' }
     });
     expect(resultado.lgpd.consentimentos).toEqual([
-      expect.objectContaining({ tipo: 'portal_paciente_lgpd', versao: '2026-09' })
+      expect.objectContaining({ tipo: 'termos_uso', versao: '2026-09' }),
+      expect.objectContaining({ tipo: 'politica_privacidade', versao: '2026-09' }),
+      expect.objectContaining({ tipo: 'consentimento_lgpd', versao: '2026-09' })
     ]);
 
     await expect(
-      servico.registrarConsentimentoLgpd('tenant-1', 'usuario-paciente-1', { aceiteLgpd: false })
+      servico.registrarConsentimentoLgpd('tenant-1', 'usuario-paciente-1', {
+        aceiteLgpd: true,
+        aceiteTermosUso: false,
+        aceitePoliticaPrivacidade: true
+      })
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 

@@ -80,7 +80,11 @@ export async function ativarConvitePaciente(entrada: {
   token: string;
   senha: string;
   aceiteLgpd: boolean;
+  aceiteTermosUso: boolean;
+  aceitePoliticaPrivacidade: boolean;
   versaoLgpd?: string;
+  versaoTermosUso?: string;
+  versaoPoliticaPrivacidade?: string;
 }): Promise<AtivacaoPacienteApi> {
   return requisitar<AtivacaoPacienteApi>('/api/pacientes/convites-acesso/ativar', {
     method: 'POST',

@@ -168,7 +168,10 @@ function rotuloHumor(humor: string) {
 function rotuloConsentimento(tipo: string) {
   const mapa: Record<string, string> = {
     primeiro_acesso_paciente: 'Primeiro acesso',
-    portal_paciente_lgpd: 'Portal do paciente'
+    portal_paciente_lgpd: 'Portal do paciente',
+    termos_uso: 'Termos de uso',
+    politica_privacidade: 'Politica de privacidade',
+    consentimento_lgpd: 'Consentimento LGPD'
   };
   return mapa[tipo] ?? tipo;
 }
@@ -213,6 +216,10 @@ function montarFormularioPerfil(portal: PortalPacienteApi): FormularioPerfilPaci
     horarioFim: portal.perfil.preferenciasContato?.horarioPermitido?.fim ?? '20:00',
     timezoneComunicacao: portal.perfil.preferenciasContato?.horarioPermitido?.timezone ?? 'America/Sao_Paulo'
   };
+}
+
+function versaoDocumentoLegal(portal: PortalPacienteApi, tipo: string): string {
+  return portal.lgpd.documentosLegais?.find((documento) => documento.tipo === tipo)?.versao ?? portal.lgpd.versaoAtual;
 }
 
 function timestampLinhaTempo(valor?: string) {
@@ -461,7 +468,11 @@ export function PortalPaciente() {
     try {
       const resultado = await registrarConsentimentoLgpdPaciente({
         aceiteLgpd: true,
-        versaoLgpd: portal.lgpd.versaoAtual,
+        aceiteTermosUso: true,
+        aceitePoliticaPrivacidade: true,
+        versaoLgpd: versaoDocumentoLegal(portal, 'consentimento_lgpd'),
+        versaoTermosUso: versaoDocumentoLegal(portal, 'termos_uso'),
+        versaoPoliticaPrivacidade: versaoDocumentoLegal(portal, 'politica_privacidade'),
         prefereEmail: formularioPerfil.prefereEmail,
         prefereWhatsapp: formularioPerfil.prefereWhatsapp
       });
@@ -1252,6 +1263,32 @@ export function PortalPaciente() {
                     <p className="text-xs text-[#596273]">Versao atual</p>
                     <p className="mt-1 text-sm font-semibold">{portal.lgpd.versaoAtual}</p>
                     <p className="mt-1 text-xs text-[#596273]">Ultimo aceite {formatarDataHora(portal.lgpd.ultimoAceiteEm)}</p>
+                  </div>
+                  <div className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3">
+                    <div>
+                      <p className="text-sm font-semibold">Documentos legais</p>
+                      <p className="mt-1 text-xs text-[#596273]">Versoes obrigatorias aplicaveis ao portal do paciente.</p>
+                    </div>
+                    <div className="grid gap-2">
+                      {(portal.lgpd.documentosLegais ?? []).map((documento) => (
+                        <article key={`${documento.tipo}-${documento.versao}`} className="rounded-md border border-linha bg-white p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="break-words text-sm font-semibold">{documento.titulo}</p>
+                              <p className="mt-1 text-xs text-[#596273]">Versao {documento.versao}</p>
+                            </div>
+                            <span className="rounded-full border border-linha bg-[#f8fafb] px-2 py-1 text-xs font-semibold text-[#596273]">
+                              {documento.aceito ? 'Aceito' : 'Pendente'}
+                            </span>
+                          </div>
+                          <p className="mt-2 break-words text-xs text-[#596273]">{documento.resumo}</p>
+                          {documento.aceitoEm ? <p className="mt-2 text-xs text-[#596273]">Aceito em {formatarDataHora(documento.aceitoEm)}</p> : null}
+                        </article>
+                      ))}
+                      {!(portal.lgpd.documentosLegais ?? []).length ? (
+                        <p className="text-sm text-[#596273]">Nenhum documento legal versionado retornado.</p>
+                      ) : null}
+                    </div>
                   </div>
                   <Botao type="button" variante="primario" onClick={() => void registrarAceiteLgpd()} disabled={salvandoConsentimento}>
                     <ShieldCheck className="h-4 w-4" />
