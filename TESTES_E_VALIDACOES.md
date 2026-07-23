@@ -115,6 +115,18 @@ pnpm --dir octaclin-backend typecheck
 
 Regra esperada: toda busca por entidade relacionada deve validar `tenantId` junto do `id`. Quando a entidade existir em outro tenant, responder como nao encontrada.
 
+## Validacao de observabilidade
+
+Use quando alterar logs, interceptors, auditoria, healthchecks, middleware global ou bootstrap do backend:
+
+```powershell
+pnpm --dir octaclin-backend test --runInBand src/infraestrutura/observabilidade/contexto-requisicao.spec.ts src/infraestrutura/observabilidade/middleware-correlacao.spec.ts src/infraestrutura/observabilidade/interceptor-log-requisicao.spec.ts src/infraestrutura/auditoria/servico-auditoria.spec.ts
+pnpm --dir octaclin-backend typecheck
+pnpm --dir octaclin-backend build
+```
+
+Regra esperada: logs podem conter `requestId`, `tenantId`, `usuarioId`, metodo, rota sem query string, status e duracao; nao devem conter corpo da requisicao, query string, email, token, senha, refresh token ou mensagem de erro com dado de negocio sensivel.
+
 ## Preflight de producao
 
 Use antes de iniciar uma fase relevante ou antes de passar o projeto para outro agente:

@@ -26,6 +26,7 @@ describe('ServicoAuditoria', () => {
       recursoId: 'paciente-1',
       ip: '127.0.0.1',
       userAgent: 'jest',
+      requestId: 'req-123',
       metadados: { origem: 'teste' }
     });
 
@@ -40,7 +41,7 @@ describe('ServicoAuditoria', () => {
         recursoId: 'paciente-1',
         ip: '127.0.0.1',
         userAgent: 'jest',
-        metadados: { origem: 'teste' }
+        metadados: { origem: 'teste', requestId: 'req-123' }
       })
     );
     expect(repositorio.save).toHaveBeenCalledWith(expect.objectContaining({ persistido: true }));
@@ -62,7 +63,15 @@ describe('ServicoAuditoria', () => {
       })
     ).resolves.toBeUndefined();
 
-    expect(loggerWarn).toHaveBeenCalledWith('Falha ao registrar auditoria: banco indisponivel');
+    expect(loggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evento: 'auditoria.falha',
+        tenantId: 'tenant-1',
+        acao: 'profissionais.listar_dados_sensiveis',
+        erroNome: 'Error'
+      })
+    );
+    expect(JSON.stringify(loggerWarn.mock.calls[0][0])).not.toContain('banco indisponivel');
     loggerWarn.mockRestore();
   });
 });

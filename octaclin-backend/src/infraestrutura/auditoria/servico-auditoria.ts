@@ -10,6 +10,7 @@ export interface RegistrarAuditoriaEntrada {
   recursoId?: string;
   ip?: string;
   userAgent?: string;
+  requestId?: string;
   metadados?: Record<string, unknown>;
 }
 
@@ -32,13 +33,22 @@ export class ServicoAuditoria {
             recursoId: entrada.recursoId,
             ip: entrada.ip,
             userAgent: entrada.userAgent,
-            metadados: entrada.metadados ?? {}
+            metadados: {
+              ...(entrada.metadados ?? {}),
+              ...(entrada.requestId ? { requestId: entrada.requestId } : {})
+            }
           })
         );
       });
     } catch (erro) {
-      const mensagem = erro instanceof Error ? erro.message : 'falha desconhecida';
-      this.logger.warn(`Falha ao registrar auditoria: ${mensagem}`);
+      this.logger.warn({
+        evento: 'auditoria.falha',
+        tenantId: entrada.tenantId,
+        usuarioId: entrada.usuarioId,
+        acao: entrada.acao,
+        requestId: entrada.requestId,
+        erroNome: erro instanceof Error ? erro.name : 'ErroDesconhecido'
+      });
     }
   }
 }

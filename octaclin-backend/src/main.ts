@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { InterceptorLogRequisicao } from './infraestrutura/observabilidade/interceptor-log-requisicao';
+import { middlewareCorrelacao } from './infraestrutura/observabilidade/middleware-correlacao';
 import { ModuloAplicacao } from './modulo-aplicacao';
 
 function obterOrigensCors(): boolean | string[] {
@@ -22,6 +24,8 @@ function obterPortaHttp(): number {
 
 async function iniciarAplicacao() {
   const aplicacao = await NestFactory.create(ModuloAplicacao);
+  aplicacao.use(middlewareCorrelacao);
+  aplicacao.useGlobalInterceptors(new InterceptorLogRequisicao());
   aplicacao.enableCors({
     origin: obterOrigensCors(),
     credentials: true

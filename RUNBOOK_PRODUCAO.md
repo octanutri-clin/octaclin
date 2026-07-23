@@ -215,6 +215,23 @@ Campos principais:
 
 O health detalhado nao deve retornar secrets, tokens, refresh tokens ou URLs com senha. Se aparecer qualquer credencial na resposta, trate como incidente e siga `RUNBOOK_ROTACAO_SECRETS.md`.
 
+## Logs estruturados e correlacao
+
+Cada requisicao HTTP recebe um `requestId`. Quando o cliente enviar `x-request-id` ou `x-correlation-id`, o backend preserva o valor sanitizado; caso contrario, gera um UUID. O mesmo valor volta no header `x-request-id`.
+
+Eventos esperados nos logs do backend:
+
+- `http.request`: requisicao concluida com `requestId`, `tenantId`, `usuarioId`, metodo, rota sem query string, status e duracao.
+- `http.request.erro`: requisicao com erro, contendo nome tecnico do erro sem mensagem de negocio.
+- `auditoria.falha`: falha ao persistir auditoria sem bloquear o fluxo principal e sem mensagem bruta de erro.
+
+Uso em suporte:
+
+1. Pedir ao usuario o horario aproximado e, se disponivel, o `x-request-id` retornado pela API.
+2. Buscar o `requestId` nos logs Render.
+3. Cruzar com `tenantId` e `usuarioId` quando a requisicao estiver autenticada.
+4. Nunca colar corpo de requisicao, token, senha, email completo ou URL com query string em chamados, commits ou docs.
+
 ## Incidentes
 
 ### Login indisponivel

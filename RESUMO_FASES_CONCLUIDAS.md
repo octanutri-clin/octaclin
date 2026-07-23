@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 123.
+Atualizado apos a Fase 124.
 
 Este arquivo e um handoff executivo do que ja foi construido no OctaClin. Ele deve ajudar outro agente de IA ou desenvolvedor a entender rapidamente a evolucao do projeto sem precisar reprocessar todo o historico de commits.
 
@@ -165,10 +165,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 121 - Rate limiting, lockout e protecoes anti-abuso: servico anti-abuso em memoria com politicas para login, recuperacao de senha e convites administrativos; login bloqueia apos falhas, recuperacao limita antes de consultar dados sensiveis e convites limitam criacao/reenvio repetidos.
 - Fase 122 - Revisao de autorizacao multi-tenant: adicionados testes negativos e correcoes para impedir vinculo de paciente a profissional de outro tenant e disparo de comunicacao para paciente fora do tenant atual.
 - Fase 123 - Monitoramento e healthchecks de producao: `/health` mantido como liveness simples e `/health/detalhado` criado para readiness/diagnostico de backend, banco, Redis, email, WhatsApp Meta e Google Calendar sem expor secrets.
+- Fase 124 - Logs estruturados e correlacao: backend passa a atribuir `requestId` por requisicao, devolver `x-request-id`, emitir logs HTTP estruturados com tenant/usuario quando autenticados e gravar `requestId` em auditoria para diagnostico sem expor PII.
 
 ## Estado atual de uso
 
-O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam alertas, backups, politica operacional, QA de ponta a ponta com dados reais e separacao formal de staging/producao.
+O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam alertas operacionais, backups, politica operacional, QA de ponta a ponta com dados reais e separacao formal de staging/producao.
 
 ## Como atualizar este arquivo
 
