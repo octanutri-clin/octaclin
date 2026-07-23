@@ -11,6 +11,17 @@
             "statusMessage": "Verificando protecao de .env..."
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/guard-google-actions.ps1",
+            "timeout": 15,
+            "statusMessage": "Verificando acao no Google Workspace/Gmail..."
+          }
+        ]
       }
     ],
     "PostToolUse": [
