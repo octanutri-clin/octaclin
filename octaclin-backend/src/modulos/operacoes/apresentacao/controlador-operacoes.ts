@@ -160,6 +160,16 @@ export class ControladorOperacoes {
     });
   }
 
+  @Get('lgpd/retencao')
+  obterRetencaoDados(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoOperacoes.obterRetencaoDados(usuario.tenantId);
+  }
+
+  @Post('lgpd/retencao/programar')
+  programarRetencaoDados(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoOperacoes.programarRetencaoDados(usuario.tenantId, usuario.usuarioId);
+  }
+
   @Post('lgpd/solicitacoes/:protocolo/status')
   atualizarSolicitacaoLgpd(
     @UsuarioAtual() usuario: UsuarioAutenticado,

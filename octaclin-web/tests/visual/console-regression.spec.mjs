@@ -61,6 +61,7 @@ async function assertSemOverflowHorizontal(page) {
 async function prepararOperacoesMockadas(page) {
   let requisitouCsvLgpd = false;
   let aplicouPlanoAssinatura = false;
+  let programouRetencao = false;
 
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -293,9 +294,80 @@ async function prepararOperacoesMockadas(page) {
       })
     });
   });
+  await page.route('**/api/operacoes/lgpd/retencao', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        versao: '2026-10',
+        geradoEm: '2026-07-23T12:00:00.000Z',
+        politicas: [
+          {
+            id: 'auditoria_operacional',
+            rotulo: 'Auditoria operacional',
+            entidade: 'user_action_logs',
+            campoData: 'criadoEm',
+            diasRetencao: 3650,
+            acao: 'arquivar_exportar',
+            baseLegal: 'Obrigacao legal e exercicio regular de direitos',
+            descricao: 'Logs sensiveis sao preservados por 10 anos antes de arquivo controlado.'
+          },
+          {
+            id: 'outbox_processado',
+            rotulo: 'Outbox processado',
+            entidade: 'outbox_eventos',
+            campoData: 'criadoEm',
+            diasRetencao: 180,
+            acao: 'excluir',
+            baseLegal: 'Minimizacao operacional',
+            descricao: 'Eventos processados sao elegiveis para limpeza apos 180 dias.'
+          }
+        ],
+        resumo: {
+          totalVencidos: 11,
+          itens: [
+            {
+              politicaId: 'auditoria_operacional',
+              rotulo: 'Auditoria operacional',
+              acao: 'arquivar_exportar',
+              diasRetencao: 3650,
+              corteEm: '2016-07-25T12:00:00.000Z',
+              vencidos: 7
+            },
+            {
+              politicaId: 'outbox_processado',
+              rotulo: 'Outbox processado',
+              acao: 'excluir',
+              diasRetencao: 180,
+              corteEm: '2026-01-24T12:00:00.000Z',
+              vencidos: 4
+            }
+          ]
+        }
+      })
+    });
+  });
+  await page.route('**/api/operacoes/lgpd/retencao/programar', async (route) => {
+    programouRetencao = true;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        protocolo: 'RET-20260723120000',
+        status: 'programada',
+        programadoEm: '2026-07-23T12:00:00.000Z',
+        totalItensVencidos: 11,
+        resumo: {
+          totalVencidos: 11,
+          itens: []
+        }
+      })
+    });
+  });
   return {
     requisitouCsvLgpd: () => requisitouCsvLgpd,
-    aplicouPlanoAssinatura: () => aplicouPlanoAssinatura
+    aplicouPlanoAssinatura: () => aplicouPlanoAssinatura,
+    programouRetencao: () => programouRetencao
   };
 }
 
@@ -1003,6 +1075,12 @@ test.describe('operacoes LGPD', () => {
     await expect(page.getByRole('heading', { name: 'Central de comunicacao' })).toBeVisible();
     await expect(page.getByText('SMTP indisponivel')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Solicitacoes LGPD' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Retencao e exclusao programada' })).toBeVisible();
+    await expect(page.getByText('11 itens vencidos')).toBeVisible();
+    await expect(page.getByText('Auditoria operacional')).toBeVisible();
+    await page.getByRole('button', { name: 'Programar retencao LGPD' }).click();
+    await expect.poll(() => operacoes.programouRetencao()).toBe(true);
+    await expect(page.getByText('Retencao LGPD programada: RET-20260723120000.')).toBeVisible();
     await expect(page.getByText('LGPD-123')).toBeVisible();
     await expect(page.getByText('Atualizar telefone cadastrado.')).toBeVisible();
 

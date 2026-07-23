@@ -115,6 +115,48 @@ export interface RespostaSolicitacaoLgpdOperacional {
   geradoEm: string;
 }
 
+export type AcaoRetencaoDadosOperacional = 'preservar' | 'anonimizar' | 'excluir' | 'arquivar_exportar';
+
+export interface PoliticaRetencaoDadosOperacional {
+  id: string;
+  rotulo: string;
+  entidade: string;
+  campoData: string;
+  diasRetencao: number;
+  acao: AcaoRetencaoDadosOperacional;
+  baseLegal: string;
+  descricao: string;
+}
+
+export interface ItemResumoRetencaoDadosOperacional {
+  politicaId: string;
+  rotulo: string;
+  acao: AcaoRetencaoDadosOperacional;
+  diasRetencao: number;
+  corteEm: string;
+  vencidos: number;
+}
+
+export interface ResumoRetencaoDadosOperacional {
+  totalVencidos: number;
+  itens: ItemResumoRetencaoDadosOperacional[];
+}
+
+export interface RetencaoDadosOperacional {
+  versao: string;
+  geradoEm: string;
+  politicas: PoliticaRetencaoDadosOperacional[];
+  resumo: ResumoRetencaoDadosOperacional;
+}
+
+export interface ProgramacaoRetencaoDadosOperacional {
+  protocolo: string;
+  status: 'programada';
+  programadoEm: string;
+  totalItensVencidos: number;
+  resumo: ResumoRetencaoDadosOperacional;
+}
+
 export type PlanoSaasIdOperacional = 'gratuito' | 'profissional' | 'clinica' | 'enterprise';
 export type StatusAssinaturaOperacional = 'ativa' | 'trial' | 'suspensa' | 'cancelada';
 
@@ -154,6 +196,7 @@ export interface DadosOperacionais {
   falhasPaginadas: ResultadoPaginado<OutboxFalha>;
   falhasComunicacao: ResultadoPaginado<FalhaComunicacaoOperacional> & { resumo: ResumoFalhasComunicacao };
   solicitacoesLgpd: ResultadoPaginado<SolicitacaoLgpdOperacional>;
+  retencaoDados: RetencaoDadosOperacional;
   solicitacoesAssinatura: ResultadoPaginado<SolicitacaoAssinaturaOperacional>;
 }
 
@@ -242,6 +285,7 @@ export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
     falhasPaginadas,
     falhasComunicacao,
     solicitacoesLgpd,
+    retencaoDados,
     solicitacoesAssinatura
   ] = await Promise.all([
     requisitar<ResumoOperacional>('/api/operacoes/resumo'),
@@ -252,6 +296,7 @@ export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
     carregarFalhasOutboxPaginadas({ pagina: 1, limite: 25 }),
     carregarFalhasComunicacao({ pagina: 1, limite: 25 }),
     carregarSolicitacoesLgpd({ pagina: 1, limite: 25 }),
+    carregarRetencaoDadosOperacional(),
     carregarSolicitacoesAssinatura({ pagina: 1, limite: 25 })
   ]);
 
@@ -264,6 +309,7 @@ export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
     falhasPaginadas,
     falhasComunicacao,
     solicitacoesLgpd,
+    retencaoDados,
     solicitacoesAssinatura
   };
 }
@@ -379,6 +425,14 @@ export async function prepararRespostaSolicitacaoLgpd(protocolo: string): Promis
     `/api/operacoes/lgpd/solicitacoes/${encodeURIComponent(protocolo)}/resposta`,
     { method: 'POST' }
   );
+}
+
+export async function carregarRetencaoDadosOperacional(): Promise<RetencaoDadosOperacional> {
+  return requisitar<RetencaoDadosOperacional>('/api/operacoes/lgpd/retencao');
+}
+
+export async function programarRetencaoDadosOperacional(): Promise<ProgramacaoRetencaoDadosOperacional> {
+  return requisitar<ProgramacaoRetencaoDadosOperacional>('/api/operacoes/lgpd/retencao/programar', { method: 'POST' });
 }
 
 export function urlExportacaoAuditoria(filtros: FiltrosAuditoriaOperacional): string {

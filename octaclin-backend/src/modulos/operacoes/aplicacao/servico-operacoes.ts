@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { Between, EntityManager, FindOptionsWhere, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
@@ -15,6 +16,7 @@ import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-confi
 
 const CHAVE_PLANO_SAAS = 'plano_saas';
 const CHAVE_INTERESSE_ASSINATURA = 'assinatura_interesse';
+const VERSAO_RETENCAO_DADOS = '2026-10';
 
 export interface ResumoOperacional {
   outbox: {
@@ -130,6 +132,48 @@ export interface RespostaSolicitacaoLgpdOperacional {
   textoWhatsapp: string;
   canaisSugeridos: ('email' | 'whatsapp')[];
   geradoEm: Date;
+}
+
+export type AcaoRetencaoDados = 'preservar' | 'anonimizar' | 'excluir' | 'arquivar_exportar';
+
+export interface PoliticaRetencaoDadosOperacional {
+  id: string;
+  rotulo: string;
+  entidade: string;
+  campoData: string;
+  diasRetencao: number;
+  acao: AcaoRetencaoDados;
+  baseLegal: string;
+  descricao: string;
+}
+
+export interface ItemResumoRetencaoDadosOperacional {
+  politicaId: string;
+  rotulo: string;
+  acao: AcaoRetencaoDados;
+  diasRetencao: number;
+  corteEm: Date;
+  vencidos: number;
+}
+
+export interface ResumoRetencaoDadosOperacional {
+  totalVencidos: number;
+  itens: ItemResumoRetencaoDadosOperacional[];
+}
+
+export interface RetencaoDadosOperacional {
+  versao: string;
+  geradoEm: Date;
+  politicas: PoliticaRetencaoDadosOperacional[];
+  resumo: ResumoRetencaoDadosOperacional;
+}
+
+export interface ProgramacaoRetencaoDadosOperacional {
+  protocolo: string;
+  status: 'programada';
+  programadoEm: Date;
+  totalItensVencidos: number;
+  resumo: ResumoRetencaoDadosOperacional;
 }
 
 export interface AtualizarSolicitacaoLgpdOperacional {
@@ -464,6 +508,45 @@ export class ServicoOperacoes {
     });
   }
 
+  async obterRetencaoDados(tenantId: string): Promise<RetencaoDadosOperacional> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => this.montarRetencaoDados(gerenciador, tenantId));
+  }
+
+  async programarRetencaoDados(tenantId: string, usuarioId: string): Promise<ProgramacaoRetencaoDadosOperacional> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const retencao = await this.montarRetencaoDados(gerenciador, tenantId);
+      const programadoEm = new Date();
+      const protocolo = this.gerarProtocoloRetencao(programadoEm);
+      const repositorio = gerenciador.getRepository(ConsentimentoLgpdOrm);
+
+      await repositorio.save(
+        repositorio.create({
+          tenantId,
+          usuarioId,
+          tipo: 'retencao_dados_programada',
+          versao: VERSAO_RETENCAO_DADOS,
+          aceitoEm: programadoEm,
+          metadados: {
+            origem: 'operacoes',
+            acao: 'planejamento_retencao',
+            protocolo,
+            totalItensVencidos: retencao.resumo.totalVencidos,
+            politicas: retencao.politicas.map((politica) => politica.id),
+            resumo: retencao.resumo
+          }
+        })
+      );
+
+      return {
+        protocolo,
+        status: 'programada',
+        programadoEm,
+        totalItensVencidos: retencao.resumo.totalVencidos,
+        resumo: retencao.resumo
+      };
+    });
+  }
+
   async listarAuditoria(tenantId: string, filtros: FiltrosAuditoriaOperacional = {}): Promise<UserActionLogOrm[]> {
     return this.executorTenant.executar(tenantId, (gerenciador) => {
       return gerenciador.getRepository(UserActionLogOrm).find({
@@ -791,6 +874,138 @@ export class ServicoOperacoes {
 
   private objeto(valor: unknown): Record<string, unknown> {
     return valor && typeof valor === 'object' && !Array.isArray(valor) ? (valor as Record<string, unknown>) : {};
+  }
+
+  private politicasRetencaoDados(): PoliticaRetencaoDadosOperacional[] {
+    return [
+      {
+        id: 'auditoria_operacional',
+        rotulo: 'Auditoria operacional',
+        entidade: 'user_action_logs',
+        campoData: 'criadoEm',
+        diasRetencao: 3650,
+        acao: 'arquivar_exportar',
+        baseLegal: 'Obrigacao legal e exercicio regular de direitos',
+        descricao: 'Logs sensiveis ficam preservados por 10 anos antes de arquivo controlado.'
+      },
+      {
+        id: 'outbox_processado',
+        rotulo: 'Outbox processado',
+        entidade: 'outbox_eventos',
+        campoData: 'criadoEm',
+        diasRetencao: 180,
+        acao: 'excluir',
+        baseLegal: 'Minimizacao operacional',
+        descricao: 'Eventos de entrega ja processados podem sair da base operacional apos 180 dias.'
+      },
+      {
+        id: 'sincronizacao_mobile',
+        rotulo: 'Sincronizacao mobile',
+        entidade: 'sincronizacoes_mobile',
+        campoData: 'criadoEm',
+        diasRetencao: 365,
+        acao: 'anonimizar',
+        baseLegal: 'Seguranca e minimizacao',
+        descricao: 'Registros tecnicos de sincronizacao podem manter metricas sem dados identificaveis.'
+      },
+      {
+        id: 'mensagens_notificacao',
+        rotulo: 'Mensagens de notificacao',
+        entidade: 'mensagens_notificacao',
+        campoData: 'criadoEm',
+        diasRetencao: 730,
+        acao: 'anonimizar',
+        baseLegal: 'Execucao do servico e minimizacao',
+        descricao: 'Historico de comunicacao antigo deve ser mantido apenas com dados minimos de auditoria.'
+      },
+      {
+        id: 'consentimentos_lgpd',
+        rotulo: 'Consentimentos LGPD',
+        entidade: 'consentimentos_lgpd',
+        campoData: 'aceitoEm',
+        diasRetencao: 3650,
+        acao: 'preservar',
+        baseLegal: 'Comprovacao de consentimento e obrigacao legal',
+        descricao: 'Registros de consentimento sao preservados para prova historica de conformidade.'
+      }
+    ];
+  }
+
+  private async montarRetencaoDados(gerenciador: EntityManager, tenantId: string): Promise<RetencaoDadosOperacional> {
+    const geradoEm = new Date();
+    const politicas = this.politicasRetencaoDados();
+    const itens = await Promise.all(
+      politicas.map(async (politica) => {
+        const corteEm = this.subtrairDias(geradoEm, politica.diasRetencao);
+        const vencidos = await this.contarItensVencidosRetencao(gerenciador, tenantId, politica.id, corteEm);
+        return {
+          politicaId: politica.id,
+          rotulo: politica.rotulo,
+          acao: politica.acao,
+          diasRetencao: politica.diasRetencao,
+          corteEm,
+          vencidos
+        };
+      })
+    );
+
+    return {
+      versao: VERSAO_RETENCAO_DADOS,
+      geradoEm,
+      politicas,
+      resumo: {
+        totalVencidos: itens.reduce((total, item) => total + item.vencidos, 0),
+        itens
+      }
+    };
+  }
+
+  private contarItensVencidosRetencao(
+    gerenciador: EntityManager,
+    tenantId: string,
+    politicaId: string,
+    corteEm: Date
+  ): Promise<number> {
+    if (politicaId === 'auditoria_operacional') {
+      return gerenciador.getRepository(UserActionLogOrm).count({ where: { tenantId, criadoEm: LessThanOrEqual(corteEm) } });
+    }
+
+    if (politicaId === 'outbox_processado') {
+      return gerenciador
+        .getRepository(OutboxEventoOrm)
+        .count({ where: { tenantId, status: 'processado', criadoEm: LessThanOrEqual(corteEm) } });
+    }
+
+    if (politicaId === 'sincronizacao_mobile') {
+      return gerenciador
+        .getRepository(SincronizacaoMobileOrm)
+        .count({ where: { tenantId, status: 'sincronizado', criadoEm: LessThanOrEqual(corteEm) } });
+    }
+
+    if (politicaId === 'mensagens_notificacao') {
+      return gerenciador.getRepository(MensagemNotificacaoOrm).count({
+        where: {
+          tenantId,
+          status: In(['enviado', 'falhou', 'recebido', 'nota']),
+          criadoEm: LessThanOrEqual(corteEm)
+        }
+      });
+    }
+
+    return gerenciador.getRepository(ConsentimentoLgpdOrm).count({
+      where: { tenantId, aceitoEm: LessThanOrEqual(corteEm) }
+    });
+  }
+
+  private subtrairDias(data: Date, dias: number): Date {
+    const resultado = new Date(data);
+    resultado.setUTCDate(resultado.getUTCDate() - dias);
+    return resultado;
+  }
+
+  private gerarProtocoloRetencao(data: Date): string {
+    const instante = data.toISOString().replace(/\D/g, '').slice(0, 14);
+    return `RET-${instante}-${randomUUID().slice(0, 8).toUpperCase()}`;
   }
 
   private carregarEventosSolicitacoesLgpd(gerenciador: EntityManager, tenantId: string) {

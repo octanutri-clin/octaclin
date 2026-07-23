@@ -104,6 +104,7 @@ function criarServico() {
   const repositorios: Record<string, any> = {
     outbox: {
       count: jest.fn(async ({ where }: { where: { status: string } }) => {
+        if ('criadoEm' in where) return 4;
         const mapa: Record<string, number> = { pendente: 2, processando: 1, processado: 10, falhou: 3 };
         return mapa[where.status] ?? 0;
       }),
@@ -115,6 +116,7 @@ function criarServico() {
       save: jest.fn(async (evento: Record<string, unknown>) => evento)
     },
     mensagens: {
+      count: jest.fn(async ({ where }: { where: { criadoEm?: unknown } }) => (where.criadoEm ? 2 : 0)),
       find: jest.fn(async () => mensagens),
       findOne: jest.fn(async ({ where }: { where: { id: string; tenantId: string; status?: string } }) =>
         mensagens.find((mensagem) => mensagem.id === where.id && mensagem.tenantId === where.tenantId && (!where.status || mensagem.status === where.status)) ??
@@ -140,14 +142,19 @@ function criarServico() {
       save: jest.fn(async (consulta: Record<string, unknown>) => consulta)
     },
     mobile: {
-      count: jest.fn(async ({ where }: { where: { status: string } }) => (where.status === 'sincronizado' ? 8 : 1)),
+      count: jest.fn(async ({ where }: { where: { status: string; criadoEm?: unknown } }) => {
+        if (where.criadoEm) return 3;
+        return where.status === 'sincronizado' ? 8 : 1;
+      }),
       find: jest.fn(async () => [{ idLocal: 'local-1', status: 'sincronizado' }])
     },
     auditoria: {
+      count: jest.fn(async () => 7),
       find: jest.fn(async () => [{ id: 'log-1', acao: 'pacientes.listar_dados_sensiveis', metadados: {} }]),
       findAndCount: jest.fn(async () => [[{ id: 'log-1', acao: 'pacientes.listar_dados_sensiveis', metadados: {} }], 1])
     },
     consentimentos: {
+      count: jest.fn(async () => 1),
       find: jest.fn(async () => [
         {
           id: 'consentimento-1',
@@ -549,6 +556,72 @@ describe('ServicoOperacoes', () => {
           status: 'em_tratamento',
           responsavelId: 'usuario-admin-1',
           assuntoEmail: 'Atualizacao da solicitacao LGPD LGPD-123'
+        })
+      })
+    );
+  });
+
+  it('deve consolidar politicas de retencao com itens vencidos por tipo de dado', async () => {
+    const { servico } = criarServico();
+
+    await expect(servico.obterRetencaoDados('tenant-1')).resolves.toEqual(
+      expect.objectContaining({
+        versao: '2026-10',
+        politicas: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'auditoria_operacional',
+            rotulo: 'Auditoria operacional',
+            diasRetencao: 3650,
+            acao: 'arquivar_exportar'
+          }),
+          expect.objectContaining({
+            id: 'outbox_processado',
+            diasRetencao: 180,
+            acao: 'excluir'
+          }),
+          expect.objectContaining({
+            id: 'consentimentos_lgpd',
+            diasRetencao: 3650,
+            acao: 'preservar'
+          })
+        ]),
+        resumo: expect.objectContaining({
+          totalVencidos: 17,
+          itens: expect.arrayContaining([
+            expect.objectContaining({ politicaId: 'auditoria_operacional', vencidos: 7 }),
+            expect.objectContaining({ politicaId: 'outbox_processado', vencidos: 4 }),
+            expect.objectContaining({ politicaId: 'sincronizacao_mobile', vencidos: 3 }),
+            expect.objectContaining({ politicaId: 'mensagens_notificacao', vencidos: 2 }),
+            expect.objectContaining({ politicaId: 'consentimentos_lgpd', vencidos: 1 })
+          ])
+        })
+      })
+    );
+  });
+
+  it('deve programar retencao LGPD com protocolo sem apagar dados no ato', async () => {
+    const { servico, repositorios } = criarServico();
+
+    const resultado = await servico.programarRetencaoDados('tenant-1', 'usuario-admin-1');
+
+    expect(resultado).toEqual(
+      expect.objectContaining({
+        protocolo: expect.stringMatching(/^RET-/),
+        status: 'programada',
+        totalItensVencidos: 17
+      })
+    );
+    expect(repositorios.consentimentos.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-admin-1',
+        tipo: 'retencao_dados_programada',
+        versao: '2026-10',
+        metadados: expect.objectContaining({
+          origem: 'operacoes',
+          acao: 'planejamento_retencao',
+          totalItensVencidos: 17,
+          politicas: expect.arrayContaining(['auditoria_operacional', 'outbox_processado'])
         })
       })
     );

@@ -7,6 +7,7 @@ import { Botao } from '@/components/ui/botao';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { SessaoPublica, obterSessao, sair } from '@/lib/auth-api';
 import {
+  AcaoRetencaoDadosOperacional,
   AuditoriaOperacional,
   DadosOperacionais,
   DetalheSolicitacaoLgpdOperacional,
@@ -29,8 +30,10 @@ import {
   carregarDadosOperacionais,
   carregarSolicitacoesAssinatura,
   carregarSolicitacoesLgpd,
+  carregarRetencaoDadosOperacional,
   obterDetalheSolicitacaoLgpd,
   prepararRespostaSolicitacaoLgpd,
+  programarRetencaoDadosOperacional,
   reprocessarFalhaComunicacao,
   reprocessarOutbox,
   urlExportacaoAuditoria,
@@ -104,6 +107,20 @@ function classeStatusLgpd(status: StatusSolicitacaoLgpd) {
   return mapa[status];
 }
 
+function rotuloAcaoRetencao(acao: AcaoRetencaoDadosOperacional) {
+  const mapa: Record<AcaoRetencaoDadosOperacional, string> = {
+    preservar: 'Preservar',
+    anonimizar: 'Anonimizar',
+    excluir: 'Excluir',
+    arquivar_exportar: 'Arquivar/exportar'
+  };
+  return mapa[acao];
+}
+
+function pluralizarItensRetencao(total: number) {
+  return `${total} ${total === 1 ? 'item vencido' : 'itens vencidos'}`;
+}
+
 function rotuloPlano(plano: SolicitacaoAssinaturaOperacional['planoAtualId']) {
   const mapa: Record<SolicitacaoAssinaturaOperacional['planoAtualId'], string> = {
     gratuito: 'Gratuito',
@@ -152,6 +169,7 @@ export function PainelOperacoes() {
   const [aplicandoAssinaturaId, setAplicandoAssinaturaId] = useState<string | null>(null);
   const [atualizandoLgpdProtocolo, setAtualizandoLgpdProtocolo] = useState<string | null>(null);
   const [preparandoRespostaProtocolo, setPreparandoRespostaProtocolo] = useState<string | null>(null);
+  const [programandoRetencao, setProgramandoRetencao] = useState(false);
   const [detalheLgpd, setDetalheLgpd] = useState<DetalheSolicitacaoLgpdOperacional | null>(null);
   const [respostaLgpd, setRespostaLgpd] = useState<RespostaSolicitacaoLgpdOperacional | null>(null);
   const [filtrosAuditoria, setFiltrosAuditoria] = useState<FiltrosAuditoriaOperacional>({
@@ -579,6 +597,26 @@ export function PainelOperacoes() {
     }
   }
 
+  async function programarRetencaoLgpd() {
+    if (!sessao) return;
+
+    setProgramandoRetencao(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const programacao = await executarAutenticado(programarRetencaoDadosOperacional);
+      if (programacao) {
+        const retencaoDados = await executarAutenticado(carregarRetencaoDadosOperacional);
+        setDados((dadosAtuais) => (dadosAtuais && retencaoDados ? { ...dadosAtuais, retencaoDados } : dadosAtuais));
+        setSucesso(`Retencao LGPD programada: ${programacao.protocolo}.`);
+      }
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao programar retencao LGPD.');
+    } finally {
+      setProgramandoRetencao(false);
+    }
+  }
+
   function exportarAuditoria() {
     window.location.href = urlExportacaoAuditoria(filtrosAuditoria);
   }
@@ -627,6 +665,7 @@ export function PainelOperacoes() {
     : 1;
   const solicitacoesAssinatura = dados?.solicitacoesAssinatura;
   const solicitacoesLgpd = dados?.solicitacoesLgpd;
+  const retencaoDados = dados?.retencaoDados;
   const totalPaginasLgpd = solicitacoesLgpd ? Math.max(Math.ceil(solicitacoesLgpd.total / solicitacoesLgpd.limite), 1) : 1;
 
   return (
@@ -661,7 +700,8 @@ export function PainelOperacoes() {
             carregandoLgpd ||
             carregandoDetalheLgpd ||
             Boolean(reprocessandoComunicacaoId) ||
-            Boolean(preparandoRespostaProtocolo)
+            Boolean(preparandoRespostaProtocolo) ||
+            programandoRetencao
           }
         />
 
@@ -913,6 +953,44 @@ export function PainelOperacoes() {
                 {carregandoLgpd ? 'Filtrando' : 'Filtrar'}
               </Botao>
             </form>
+          </div>
+          <div className="border-b border-linha bg-[#f8fafb] px-4 py-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h3 className="text-base font-semibold">Retencao e exclusao programada</h3>
+                <p className="mt-1 text-sm text-[#596273]">
+                  {pluralizarItensRetencao(retencaoDados?.resumo.totalVencidos ?? 0)} | Politica {retencaoDados?.versao ?? '-'}
+                </p>
+              </div>
+              <Botao type="button" variante="primario" onClick={() => void programarRetencaoLgpd()} disabled={programandoRetencao}>
+                <History size={16} />
+                {programandoRetencao ? 'Programando' : 'Programar retencao LGPD'}
+              </Botao>
+            </div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              {retencaoDados?.resumo.itens.length ? (
+                retencaoDados.resumo.itens.map((item) => {
+                  const politica = retencaoDados.politicas.find((politicaAtual) => politicaAtual.id === item.politicaId);
+
+                  return (
+                    <article key={item.politicaId} className="rounded-md border border-linha bg-white p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <strong className="text-sm">{item.rotulo}</strong>
+                        <span className="rounded-sm bg-[#e8eef8] px-2 py-1 text-xs font-semibold text-primaria">
+                          {rotuloAcaoRetencao(item.acao)}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-tinta">{politica?.descricao ?? 'Politica operacional cadastrada.'}</p>
+                      <p className="mt-2 text-xs text-[#596273]">
+                        {item.vencidos} vencidos desde {formatarData(item.corteEm)} | {item.diasRetencao} dias
+                      </p>
+                    </article>
+                  );
+                })
+              ) : (
+                <EstadoVazio titulo="Nenhuma politica de retencao carregada." />
+              )}
+            </div>
           </div>
           <div className="divide-y divide-linha">
             {solicitacoesLgpd?.itens.length ? (
