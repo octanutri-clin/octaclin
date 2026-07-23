@@ -19,7 +19,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPacienteDto, CriarEvolucaoClinicaDto, CriarPacienteDto } from '../aplicacao/dtos';
+import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto } from '../aplicacao/dtos';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
 
 @Controller('pacientes')
@@ -153,6 +153,71 @@ export class ControladorPacientes {
       metadados: { evolucaoId: evolucao.id, tipo: evolucao.tipo, visibilidade: evolucao.visibilidade }
     });
     return evolucao;
+  }
+
+  @Get(':id/tarefas-acompanhamento')
+  async listarTarefasAcompanhamento(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    const tarefas = await this.servicoPacientes.listarTarefasAcompanhamento(usuario.tenantId, id);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.tarefas_acompanhamento.listar',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { total: tarefas.length }
+    });
+    return tarefas;
+  }
+
+  @Post(':id/tarefas-acompanhamento')
+  @Permissoes('pacientes.gerenciar')
+  async criarTarefaAcompanhamento(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dados: CriarTarefaAcompanhamentoDto
+  ) {
+    const tarefa = await this.servicoPacientes.criarTarefaAcompanhamento(usuario.tenantId, id, usuario.usuarioId, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.tarefas_acompanhamento.criar',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { tarefaId: tarefa.id, categoria: tarefa.categoria, prioridade: tarefa.prioridade }
+    });
+    return tarefa;
+  }
+
+  @Patch(':id/tarefas-acompanhamento/:tarefaId')
+  @Permissoes('pacientes.gerenciar')
+  async atualizarTarefaAcompanhamento(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('tarefaId', ParseUUIDPipe) tarefaId: string,
+    @Body() dados: AtualizarTarefaAcompanhamentoDto
+  ) {
+    const tarefa = await this.servicoPacientes.atualizarTarefaAcompanhamento(usuario.tenantId, id, tarefaId, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.tarefas_acompanhamento.atualizar',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { tarefaId: tarefa.id, status: tarefa.status }
+    });
+    return tarefa;
   }
 
   @Patch(':id')

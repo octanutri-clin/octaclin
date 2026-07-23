@@ -4,6 +4,7 @@ import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensag
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
+import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { ServicoPacientes } from './servico-pacientes';
@@ -282,6 +283,12 @@ describe('ServicoPacientes', () => {
         }
       ],
       [
+        AcompanhamentoTarefaOrm,
+        {
+          find: jest.fn(async () => [])
+        }
+      ],
+      [
         EvolucaoClinicaOrm,
         {
           find: jest.fn(async () => [])
@@ -325,6 +332,7 @@ describe('ServicoPacientes', () => {
       respostas: 1,
       mensagens: 1,
       evolucoes: 0,
+      tarefasPendentes: 0,
       ultimoEventoEm: new Date('2026-07-22T16:00:00.000Z')
     });
     expect(prontuario.linhaDoTempo.map((evento: { tipo: string }) => evento.tipo)).toEqual([
@@ -366,6 +374,7 @@ describe('ServicoPacientes', () => {
       [RespostaCheckinOrm, { find: jest.fn(async () => []) }],
       [QuestionarioOrm, { find: jest.fn(async () => []) }],
       [MensagemNotificacaoOrm, { find: jest.fn(async () => []) }],
+      [AcompanhamentoTarefaOrm, { find: jest.fn(async () => []) }],
       [
         EvolucaoClinicaOrm,
         {
@@ -427,6 +436,94 @@ describe('ServicoPacientes', () => {
         tipo: 'evolucao_clinica',
         titulo: 'Consulta inicial',
         descricao: 'Paciente relatou melhora de adesao.'
+      })
+    );
+  });
+
+  it('deve criar tarefa de acompanhamento e exibir pendencia no prontuario', async () => {
+    const paciente = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('cripto:Maria'),
+      statusAdesao: 'em_acompanhamento',
+      scoreRisco: '40',
+      criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-01T10:00:00.000Z')
+    };
+    const tarefasSalvas: Record<string, unknown>[] = [];
+    const repositorios = new Map<unknown, Record<string, unknown>>([
+      [PacienteOrm, { findOne: jest.fn(async () => paciente) }],
+      [AgendaConsultaOrm, { find: jest.fn(async () => []) }],
+      [EnvioQuestionarioOrm, { find: jest.fn(async () => []) }],
+      [RespostaCheckinOrm, { find: jest.fn(async () => []) }],
+      [QuestionarioOrm, { find: jest.fn(async () => []) }],
+      [MensagemNotificacaoOrm, { find: jest.fn(async () => []) }],
+      [EvolucaoClinicaOrm, { find: jest.fn(async () => []) }],
+      [
+        AcompanhamentoTarefaOrm,
+        {
+          create: jest.fn((dados: Record<string, unknown>) => dados),
+          save: jest.fn(async (dados: Record<string, unknown>) => {
+            const salvo = {
+              id: 'tarefa-1',
+              criadoEm: new Date('2026-07-22T18:00:00.000Z'),
+              atualizadoEm: new Date('2026-07-22T18:00:00.000Z'),
+              ...dados
+            };
+            tarefasSalvas.push(salvo);
+            return salvo;
+          }),
+          find: jest.fn(async () => tarefasSalvas)
+        }
+      ]
+    ]);
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao({ getRepository: jest.fn((entidade) => repositorios.get(entidade)) })
+        )
+      } as never,
+      {
+        criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`)),
+        descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', ''))
+      } as never,
+      limitesPermitidos as never
+    );
+
+    const tarefa = await servico.criarTarefaAcompanhamento('tenant-1', 'paciente-1', 'usuario-profissional-1', {
+      titulo: 'Beber agua no periodo da tarde',
+      descricao: 'Meta diaria de 1 litro entre 13h e 18h.',
+      categoria: 'meta',
+      prioridade: 'media',
+      vencimentoEm: '2026-07-29T18:00:00.000Z'
+    });
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1');
+
+    expect(tarefa).toEqual(
+      expect.objectContaining({
+        pacienteId: 'paciente-1',
+        profissionalId: 'usuario-profissional-1',
+        titulo: 'Beber agua no periodo da tarde',
+        descricao: 'Meta diaria de 1 litro entre 13h e 18h.',
+        categoria: 'meta',
+        prioridade: 'media',
+        status: 'pendente'
+      })
+    );
+    expect(tarefasSalvas[0]).toEqual(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        descricaoCriptografada: Buffer.from('cripto:Meta diaria de 1 litro entre 13h e 18h.')
+      })
+    );
+    expect(prontuario.resumo.tarefasPendentes).toBe(1);
+    expect(prontuario.linhaDoTempo[0]).toEqual(
+      expect.objectContaining({
+        tipo: 'tarefa_acompanhamento',
+        titulo: 'Beber agua no periodo da tarde',
+        descricao: 'Meta diaria de 1 litro entre 13h e 18h.',
+        status: 'pendente'
       })
     );
   });

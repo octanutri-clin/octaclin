@@ -5,6 +5,7 @@ import { CriarAgendaConsultas1720000000100 } from './migracoes/1720000000100-Cri
 import { CriarConvitesPacienteAcesso1720000000200 } from './migracoes/1720000000200-CriarConvitesPacienteAcesso';
 import { CriarTokensRedefinicaoSenha1720000000300 } from './migracoes/1720000000300-CriarTokensRedefinicaoSenha';
 import { CriarEvolucoesClinicas1720000000400 } from './migracoes/1720000000400-CriarEvolucoesClinicas';
+import { CriarAcompanhamentoTarefas1720000000500 } from './migracoes/1720000000500-CriarAcompanhamentoTarefas';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -31,6 +32,7 @@ import { ArquivoMidiaOrm } from '../../modulos/mobile/infraestrutura/arquivo-mid
 import { LogDiarioRapidoOrm } from '../../modulos/mobile/infraestrutura/log-diario-rapido.orm';
 import { SincronizacaoMobileOrm } from '../../modulos/mobile/infraestrutura/sincronizacao-mobile.orm';
 import { ConvitePacienteOrm } from '../../modulos/pacientes/infraestrutura/convite-paciente.orm';
+import { AcompanhamentoTarefaOrm } from '../../modulos/pacientes/infraestrutura/acompanhamento-tarefa.orm';
 import { EvolucaoClinicaOrm } from '../../modulos/pacientes/infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
@@ -87,6 +89,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       ProfissionalOrm,
       PacienteOrm,
       ConvitePacienteOrm,
+      AcompanhamentoTarefaOrm,
       EvolucaoClinicaOrm,
       CategoriaPerguntaOrm,
       QuestionarioOrm,
@@ -124,7 +127,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CriarAgendaConsultas1720000000100,
       CriarConvitesPacienteAcesso1720000000200,
       CriarTokensRedefinicaoSenha1720000000300,
-      CriarEvolucoesClinicas1720000000400
+      CriarEvolucoesClinicas1720000000400,
+      CriarAcompanhamentoTarefas1720000000500
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

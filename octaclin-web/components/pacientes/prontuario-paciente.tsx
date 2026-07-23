@@ -2,13 +2,16 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarDays, ClipboardList, MessageSquareText, RefreshCcw, Save, Stethoscope, UserRound } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CheckSquare, ClipboardList, MessageSquareText, RefreshCcw, Save, Stethoscope, UserRound } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import {
   criarEvolucaoClinica,
+  criarTarefaAcompanhamento,
   obterProntuarioPaciente,
+  type CategoriaTarefaAcompanhamentoApi,
   type EventoProntuarioPacienteApi,
+  type PrioridadeTarefaAcompanhamentoApi,
   type ProntuarioPacienteApi,
   type TipoEvolucaoClinicaApi
 } from '@/lib/prontuario-api';
@@ -19,10 +22,26 @@ interface FormularioEvolucao {
   conteudo: string;
 }
 
+interface FormularioTarefa {
+  titulo: string;
+  categoria: CategoriaTarefaAcompanhamentoApi;
+  prioridade: PrioridadeTarefaAcompanhamentoApi;
+  vencimentoEm: string;
+  descricao: string;
+}
+
 const formularioEvolucaoInicial: FormularioEvolucao = {
   titulo: '',
   tipo: 'observacao',
   conteudo: ''
+};
+
+const formularioTarefaInicial: FormularioTarefa = {
+  titulo: '',
+  categoria: 'tarefa',
+  prioridade: 'media',
+  vencimentoEm: '',
+  descricao: ''
 };
 
 function formatarDataHora(valor?: string) {
@@ -45,7 +64,8 @@ function rotuloTipo(tipo: EventoProntuarioPacienteApi['tipo']) {
     formulario: 'Formulario',
     resposta_formulario: 'Resposta',
     mensagem: 'Mensagem',
-    evolucao_clinica: 'Evolucao'
+    evolucao_clinica: 'Evolucao',
+    tarefa_acompanhamento: 'Tarefa'
   };
   return rotulos[tipo];
 }
@@ -60,6 +80,7 @@ function iconeEvento(tipo: EventoProntuarioPacienteApi['tipo']) {
   if (tipo === 'consulta') return CalendarDays;
   if (tipo === 'mensagem') return MessageSquareText;
   if (tipo === 'evolucao_clinica') return Stethoscope;
+  if (tipo === 'tarefa_acompanhamento') return CheckSquare;
   return ClipboardList;
 }
 
@@ -115,9 +136,11 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [dados, setDados] = useState<ProntuarioPacienteApi | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [salvandoEvolucao, setSalvandoEvolucao] = useState(false);
+  const [salvandoTarefa, setSalvandoTarefa] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [formularioEvolucao, setFormularioEvolucao] = useState<FormularioEvolucao>(formularioEvolucaoInicial);
+  const [formularioTarefa, setFormularioTarefa] = useState<FormularioTarefa>(formularioTarefaInicial);
 
   async function carregar() {
     setCarregando(true);
@@ -150,6 +173,29 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar evolucao clinica.');
     } finally {
       setSalvandoEvolucao(false);
+    }
+  }
+
+  async function registrarTarefa(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setSalvandoTarefa(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      await criarTarefaAcompanhamento(pacienteId, {
+        titulo: formularioTarefa.titulo.trim(),
+        descricao: formularioTarefa.descricao.trim() || undefined,
+        categoria: formularioTarefa.categoria,
+        prioridade: formularioTarefa.prioridade,
+        vencimentoEm: formularioTarefa.vencimentoEm ? new Date(formularioTarefa.vencimentoEm).toISOString() : undefined
+      });
+      setFormularioTarefa(formularioTarefaInicial);
+      setSucesso('Tarefa de acompanhamento prescrita.');
+      await carregar();
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao prescrever tarefa de acompanhamento.');
+    } finally {
+      setSalvandoTarefa(false);
     }
   }
 
@@ -207,11 +253,12 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
       </div>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <CartaoResumo titulo="Consultas" valor={String(dados.resumo.consultas)} detalhe="Eventos de agenda vinculados" />
         <CartaoResumo titulo="Formularios pendentes" valor={String(dados.resumo.formulariosPendentes)} detalhe="Envios aguardando resposta" />
         <CartaoResumo titulo="Respostas" valor={String(dados.resumo.respostas)} detalhe="Check-ins finalizados ou em andamento" />
         <CartaoResumo titulo="Evolucoes" valor={String(dados.resumo.evolucoes ?? 0)} detalhe={`${dados.resumo.mensagens} mensagens registradas`} />
+        <CartaoResumo titulo="Tarefas" valor={String(dados.resumo.tarefasPendentes ?? 0)} detalhe={`${dados.resumo.tarefasPendentes ?? 0} tarefas pendentes`} />
       </section>
 
       {sucesso ? (
@@ -263,6 +310,78 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <Botao type="submit" variante="primario" disabled={salvandoEvolucao}>
             <Save size={16} />
             {salvandoEvolucao ? 'Registrando' : 'Registrar evolucao'}
+          </Botao>
+        </div>
+      </form>
+
+      <form onSubmit={registrarTarefa} className="grid gap-3 rounded-md border border-linha bg-white p-4">
+        <div>
+          <h2 className="text-base font-semibold text-tinta">Plano de acompanhamento</h2>
+          <p className="mt-1 text-sm text-[#596273]">Prescreva metas, tarefas e check-ins para o paciente cumprir entre consultas.</p>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_210px]">
+          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            Titulo da tarefa
+            <input
+              className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+              value={formularioTarefa.titulo}
+              onChange={(evento) => setFormularioTarefa((atual) => ({ ...atual, titulo: evento.target.value }))}
+              required
+              maxLength={180}
+            />
+          </label>
+          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            Categoria da tarefa
+            <select
+              className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+              value={formularioTarefa.categoria}
+              onChange={(evento) =>
+                setFormularioTarefa((atual) => ({ ...atual, categoria: evento.target.value as CategoriaTarefaAcompanhamentoApi }))
+              }
+            >
+              <option value="tarefa">Tarefa</option>
+              <option value="meta">Meta</option>
+              <option value="checkin">Check-in</option>
+              <option value="orientacao">Orientacao</option>
+            </select>
+          </label>
+          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            Prioridade da tarefa
+            <select
+              className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+              value={formularioTarefa.prioridade}
+              onChange={(evento) =>
+                setFormularioTarefa((atual) => ({ ...atual, prioridade: evento.target.value as PrioridadeTarefaAcompanhamentoApi }))
+              }
+            >
+              <option value="baixa">Baixa</option>
+              <option value="media">Media</option>
+              <option value="alta">Alta</option>
+            </select>
+          </label>
+          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            Vencimento da tarefa
+            <input
+              className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+              type="datetime-local"
+              value={formularioTarefa.vencimentoEm}
+              onChange={(evento) => setFormularioTarefa((atual) => ({ ...atual, vencimentoEm: evento.target.value }))}
+            />
+          </label>
+        </div>
+        <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          Descricao da tarefa
+          <textarea
+            className="min-h-[96px] rounded-md border border-linha px-3 py-2 text-sm font-normal text-tinta"
+            value={formularioTarefa.descricao}
+            onChange={(evento) => setFormularioTarefa((atual) => ({ ...atual, descricao: evento.target.value }))}
+            maxLength={2000}
+          />
+        </label>
+        <div className="flex justify-end">
+          <Botao type="submit" variante="primario" disabled={salvandoTarefa}>
+            <CheckSquare size={16} />
+            {salvandoTarefa ? 'Prescrevendo' : 'Prescrever tarefa'}
           </Botao>
         </div>
       </form>

@@ -22,6 +22,7 @@ import { ServicoPortalPaciente } from './aplicacao/servico-portal-paciente';
 import { ControladorConvitesPaciente } from './apresentacao/controlador-convites-paciente';
 import { ControladorPacientes } from './apresentacao/controlador-pacientes';
 import { ControladorPortalPaciente } from './apresentacao/controlador-portal-paciente';
+import { AcompanhamentoTarefaOrm } from './infraestrutura/acompanhamento-tarefa.orm';
 import { ConvitePacienteOrm } from './infraestrutura/convite-paciente.orm';
 import { EvolucaoClinicaOrm } from './infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from './infraestrutura/paciente.orm';
@@ -31,6 +32,7 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
     TypeOrmModule.forFeature([
       PacienteOrm,
       ConvitePacienteOrm,
+      AcompanhamentoTarefaOrm,
       EvolucaoClinicaOrm,
       UsuarioOrm,
       ConsentimentoLgpdOrm,

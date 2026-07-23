@@ -7,8 +7,8 @@ Atualizado em 2026-07-22.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 105 - Evolucoes/anotacoes clinicas.
-- Proxima fase planejada: Fase 106 - Planos de acompanhamento e tarefas do paciente.
+- Ultima fase concluida: Fase 106 - Planos de acompanhamento e tarefas do paciente.
+- Proxima fase planejada: Fase 107 - Biblioteca de materiais e envio ao paciente.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -22,6 +22,7 @@ Atualizado em 2026-07-22.
 - Cadastros de pacientes e profissionais.
 - Prontuario/linha do tempo do paciente para profissional.
 - Evolucoes/anotacoes clinicas privadas no prontuario.
+- Planos de acompanhamento com tarefas/metas/check-ins prescritos no prontuario.
 - Questionarios, modelos, preview, respostas e leitura clinica.
 - Portal autenticado do paciente.
 - Historico, perfil, LGPD e protocolos no portal do paciente.
@@ -47,7 +48,7 @@ Atualizado em 2026-07-22.
 ## O que ainda falta antes de producao real
 
 - Gateway de pagamento definitivo, se a operacao manual deixar de ser suficiente.
-- Tarefas/materiais.
+- Biblioteca de materiais e envio ao paciente.
 - Agenda de producao com remarcacao, cancelamento e conflitos maduros.
 - Templates WhatsApp aprovados mapeados no OctaClin.
 - Automacoes de lembrete/confirmacao.
@@ -92,4 +93,4 @@ Atualizado em 2026-07-22.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, mas ainda precisa de revisao multi-tenant ampla, observabilidade, tarefas/materiais, QA E2E e producao isolada antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, mas ainda precisa de revisao multi-tenant ampla, observabilidade, biblioteca de materiais, QA E2E e producao isolada antes de uso comercial com clientes reais.

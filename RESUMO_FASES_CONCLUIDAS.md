@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 105.
+Atualizado apos a Fase 106.
 
 Este arquivo e um handoff executivo do que ja foi construido no OctaClin. Ele deve ajudar outro agente de IA ou desenvolvedor a entender rapidamente a evolucao do projeto sem precisar reprocessar todo o historico de commits.
 
@@ -147,10 +147,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 103 - Dashboard inicial do profissional: nova rota `/dashboard`, destino inicial operacional, permissao `dashboard.ler`, indicadores de agenda/pacientes/formularios/mensagens e links para a rotina diaria.
 - Fase 104 - Prontuario/linha do tempo do paciente: endpoint consolidado e tela `/pacientes/[id]` com dados cadastrais, resumo e eventos cronologicos de consultas, formularios, respostas e mensagens, com auditoria de leitura sensivel.
 - Fase 105 - Evolucoes/anotacoes clinicas: registro privado do profissional no prontuario, conteudo criptografado, listagem auditada e eventos de evolucao clinica na linha do tempo.
+- Fase 106 - Planos de acompanhamento e tarefas do paciente: tarefas/metas/check-ins prescritos no prontuario, descricao criptografada, resumo de pendencias, auditoria e base para exibir o plano no portal do paciente.
 
 ## Estado atual de uso
 
-O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam tarefas/materiais, onboarding final do cliente/paciente, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e checklist juridico/privacidade.
+O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam biblioteca de materiais, onboarding final do cliente/paciente, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e checklist juridico/privacidade.
 
 ## Como atualizar este arquivo
 

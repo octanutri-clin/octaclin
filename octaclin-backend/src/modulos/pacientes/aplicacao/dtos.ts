@@ -1,4 +1,9 @@
 import { IsBoolean, IsDateString, IsEmail, IsIn, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
+import type {
+  CategoriaTarefaAcompanhamento,
+  PrioridadeTarefaAcompanhamento,
+  StatusTarefaAcompanhamento
+} from '../infraestrutura/acompanhamento-tarefa.orm';
 import type { TipoEvolucaoClinica, VisibilidadeEvolucaoClinica } from '../infraestrutura/evolucao-clinica.orm';
 
 export class CriarPacienteDto {
@@ -70,7 +75,13 @@ export interface PacienteRespostaDto {
   atualizadoEm: Date;
 }
 
-export type TipoEventoProntuarioPaciente = 'consulta' | 'formulario' | 'resposta_formulario' | 'mensagem' | 'evolucao_clinica';
+export type TipoEventoProntuarioPaciente =
+  | 'consulta'
+  | 'formulario'
+  | 'resposta_formulario'
+  | 'mensagem'
+  | 'evolucao_clinica'
+  | 'tarefa_acompanhamento';
 
 export interface EventoProntuarioPacienteDto {
   id: string;
@@ -91,6 +102,7 @@ export interface ProntuarioPacienteRespostaDto {
     respostas: number;
     mensagens: number;
     evolucoes: number;
+    tarefasPendentes: number;
     ultimoEventoEm?: Date;
   };
   linhaDoTempo: EventoProntuarioPacienteDto[];
@@ -124,6 +136,51 @@ export interface EvolucaoClinicaRespostaDto {
   conteudo: string;
   tipo: TipoEvolucaoClinica;
   visibilidade: VisibilidadeEvolucaoClinica;
+  criadoEm: Date;
+  atualizadoEm: Date;
+}
+
+export class CriarTarefaAcompanhamentoDto {
+  @IsString()
+  @MaxLength(180)
+  titulo: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  descricao?: string;
+
+  @IsOptional()
+  @IsIn(['meta', 'tarefa', 'checkin', 'orientacao'])
+  categoria?: CategoriaTarefaAcompanhamento;
+
+  @IsOptional()
+  @IsIn(['baixa', 'media', 'alta'])
+  prioridade?: PrioridadeTarefaAcompanhamento;
+
+  @IsOptional()
+  @IsDateString()
+  vencimentoEm?: string;
+}
+
+export class AtualizarTarefaAcompanhamentoDto {
+  @IsOptional()
+  @IsIn(['pendente', 'em_andamento', 'concluida', 'cancelada'])
+  status?: StatusTarefaAcompanhamento;
+}
+
+export interface TarefaAcompanhamentoRespostaDto {
+  id: string;
+  tenantId: string;
+  pacienteId: string;
+  profissionalId: string;
+  titulo: string;
+  descricao?: string;
+  categoria: CategoriaTarefaAcompanhamento;
+  prioridade: PrioridadeTarefaAcompanhamento;
+  status: StatusTarefaAcompanhamento;
+  vencimentoEm?: Date;
+  concluidoEm?: Date;
   criadoEm: Date;
   atualizadoEm: Date;
 }

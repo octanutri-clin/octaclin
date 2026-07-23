@@ -470,6 +470,7 @@ async function prepararDashboardMockado(page) {
 
 async function prepararProntuarioMockado(page) {
   let criouEvolucao = false;
+  let criouTarefa = false;
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -488,7 +489,15 @@ async function prepararProntuarioMockado(page) {
         email: 'dra.carla@octaclin.local',
         expiraEm: '2026-07-22T15:00:00.000Z',
         papel: 'Professional',
-        permissoes: ['dashboard.ler', 'pacientes.listar', 'pacientes.ler', 'agenda.consultas.ler', 'questionarios.ler', 'comunicacoes.mensagens.ler'],
+        permissoes: [
+          'dashboard.ler',
+          'pacientes.listar',
+          'pacientes.ler',
+          'pacientes.gerenciar',
+          'agenda.consultas.ler',
+          'questionarios.ler',
+          'comunicacoes.mensagens.ler'
+        ],
         destinoInicial: '/dashboard'
       })
     });
@@ -496,6 +505,18 @@ async function prepararProntuarioMockado(page) {
 
   await page.route('**/api/pacientes/paciente-1/prontuario', async (route) => {
     const eventos = [
+      ...(criouTarefa
+        ? [
+            {
+              id: 'tarefa-1',
+              tipo: 'tarefa_acompanhamento',
+              titulo: 'Beber agua no periodo da tarde',
+              descricao: 'Meta diaria de 1 litro entre 13h e 18h.',
+              data: '2026-07-29T18:00:00.000Z',
+              status: 'pendente'
+            }
+          ]
+        : []),
       ...(criouEvolucao
         ? [
             {
@@ -565,7 +586,12 @@ async function prepararProntuarioMockado(page) {
           respostas: 1,
           mensagens: 1,
           evolucoes: criouEvolucao ? 1 : 0,
-          ultimoEventoEm: criouEvolucao ? '2026-07-22T18:00:00.000Z' : '2026-07-22T16:00:00.000Z'
+          tarefasPendentes: criouTarefa ? 1 : 0,
+          ultimoEventoEm: criouTarefa
+            ? '2026-07-29T18:00:00.000Z'
+            : criouEvolucao
+              ? '2026-07-22T18:00:00.000Z'
+              : '2026-07-22T16:00:00.000Z'
         },
         linhaDoTempo: eventos
       })
@@ -597,8 +623,36 @@ async function prepararProntuarioMockado(page) {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });
 
+  await page.route('**/api/pacientes/paciente-1/tarefas-acompanhamento', async (route) => {
+    if (route.request().method() === 'POST') {
+      criouTarefa = true;
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'tarefa-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'usuario-profissional-1',
+          titulo: 'Beber agua no periodo da tarde',
+          descricao: 'Meta diaria de 1 litro entre 13h e 18h.',
+          categoria: 'meta',
+          prioridade: 'media',
+          status: 'pendente',
+          vencimentoEm: '2026-07-29T18:00:00.000Z',
+          criadoEm: '2026-07-22T18:00:00.000Z',
+          atualizadoEm: '2026-07-22T18:00:00.000Z'
+        })
+      });
+      return;
+    }
+
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+  });
+
   return {
-    criouEvolucao: () => criouEvolucao
+    criouEvolucao: () => criouEvolucao,
+    criouTarefa: () => criouTarefa
   };
 }
 
@@ -651,6 +705,25 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Evolucao clinica registrada.')).toBeVisible();
     await expect(page.getByText('Conduta ajustada')).toBeVisible();
     await expect(page.getByText('Aumentar ingestao de agua no periodo da tarde.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('permite prescrever tarefa de acompanhamento', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByLabel('Titulo da tarefa').fill('Beber agua no periodo da tarde');
+    await page.getByLabel('Categoria da tarefa').selectOption('meta');
+    await page.getByLabel('Prioridade da tarefa').selectOption('media');
+    await page.getByLabel('Vencimento da tarefa').fill('2026-07-29T15:00');
+    await page.getByLabel('Descricao da tarefa').fill('Meta diaria de 1 litro entre 13h e 18h.');
+    await page.getByRole('button', { name: 'Prescrever tarefa' }).click();
+
+    await expect.poll(() => prontuario.criouTarefa()).toBe(true);
+    await expect(page.getByText('Tarefa de acompanhamento prescrita.')).toBeVisible();
+    await expect(page.getByText('Beber agua no periodo da tarde')).toBeVisible();
+    await expect(page.getByText('Meta diaria de 1 litro entre 13h e 18h.')).toBeVisible();
+    await expect(page.getByText('1 tarefas pendentes')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });

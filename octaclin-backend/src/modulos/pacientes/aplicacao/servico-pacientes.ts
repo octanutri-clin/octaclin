@@ -10,13 +10,17 @@ import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import {
   AtualizarPacienteDto,
+  AtualizarTarefaAcompanhamentoDto,
   CriarEvolucaoClinicaDto,
   CriarPacienteDto,
+  CriarTarefaAcompanhamentoDto,
   EventoProntuarioPacienteDto,
   EvolucaoClinicaRespostaDto,
   PacienteRespostaDto,
-  ProntuarioPacienteRespostaDto
+  ProntuarioPacienteRespostaDto,
+  TarefaAcompanhamentoRespostaDto
 } from './dtos';
+import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
@@ -166,6 +170,69 @@ export class ServicoPacientes {
     });
   }
 
+  async criarTarefaAcompanhamento(
+    tenantId: string,
+    pacienteId: string,
+    profissionalId: string,
+    dados: CriarTarefaAcompanhamentoDto
+  ): Promise<TarefaAcompanhamentoRespostaDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId);
+
+      const repositorio = gerenciador.getRepository(AcompanhamentoTarefaOrm);
+      const tarefa = repositorio.create({
+        tenantId,
+        pacienteId,
+        profissionalId,
+        titulo: dados.titulo.trim(),
+        descricaoCriptografada: dados.descricao?.trim() ? this.criptografia.criptografar(dados.descricao.trim()) : undefined,
+        categoria: dados.categoria ?? 'tarefa',
+        prioridade: dados.prioridade ?? 'media',
+        status: 'pendente',
+        vencimentoEm: dados.vencimentoEm ? new Date(dados.vencimentoEm) : undefined
+      });
+
+      return this.mapearTarefa(await repositorio.save(tarefa));
+    });
+  }
+
+  async listarTarefasAcompanhamento(tenantId: string, pacienteId: string): Promise<TarefaAcompanhamentoRespostaDto[]> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId);
+      const tarefas = await gerenciador.getRepository(AcompanhamentoTarefaOrm).find({
+        where: { tenantId, pacienteId },
+        order: { vencimentoEm: 'ASC', criadoEm: 'DESC' },
+        take: 100
+      });
+
+      return tarefas.map((tarefa) => this.mapearTarefa(tarefa));
+    });
+  }
+
+  async atualizarTarefaAcompanhamento(
+    tenantId: string,
+    pacienteId: string,
+    tarefaId: string,
+    dados: AtualizarTarefaAcompanhamentoDto
+  ): Promise<TarefaAcompanhamentoRespostaDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId);
+      const repositorio = gerenciador.getRepository(AcompanhamentoTarefaOrm);
+      const tarefa = await repositorio.findOne({ where: { id: tarefaId, tenantId, pacienteId } });
+
+      if (!tarefa) {
+        throw new NotFoundException('Tarefa de acompanhamento nao encontrada.');
+      }
+
+      if (dados.status) {
+        tarefa.status = dados.status;
+        tarefa.concluidoEm = dados.status === 'concluida' ? new Date() : undefined;
+      }
+
+      return this.mapearTarefa(await repositorio.save(tarefa));
+    });
+  }
+
   async obterProntuario(tenantId: string, pacienteId: string): Promise<ProntuarioPacienteRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const pacienteOrm = await gerenciador.getRepository(PacienteOrm).findOne({
@@ -176,7 +243,7 @@ export class ServicoPacientes {
         throw new NotFoundException('Paciente nao encontrado.');
       }
 
-      const [consultas, envios, respostas, mensagens, evolucoes] = await Promise.all([
+      const [consultas, envios, respostas, mensagens, evolucoes, tarefas] = await Promise.all([
         gerenciador.getRepository(AgendaConsultaOrm).find({
           where: { tenantId, pacienteId },
           order: { inicioEm: 'DESC' },
@@ -201,6 +268,11 @@ export class ServicoPacientes {
           where: { tenantId, pacienteId },
           order: { criadoEm: 'DESC' },
           take: 50
+        }),
+        gerenciador.getRepository(AcompanhamentoTarefaOrm).find({
+          where: { tenantId, pacienteId },
+          order: { vencimentoEm: 'ASC', criadoEm: 'DESC' },
+          take: 100
         })
       ]);
 
@@ -221,7 +293,8 @@ export class ServicoPacientes {
           )
         ),
         ...mensagens.map((mensagem) => this.mapearEventoMensagem(mensagem)),
-        ...evolucoes.map((evolucao) => this.mapearEventoEvolucao(evolucao))
+        ...evolucoes.map((evolucao) => this.mapearEventoEvolucao(evolucao)),
+        ...tarefas.map((tarefa) => this.mapearEventoTarefa(tarefa))
       ]
         .sort((a, b) => b.data.getTime() - a.data.getTime())
         .slice(0, 80);
@@ -234,6 +307,7 @@ export class ServicoPacientes {
           respostas: respostas.length,
           mensagens: mensagens.length,
           evolucoes: evolucoes.length,
+          tarefasPendentes: tarefas.filter((tarefa) => tarefa.status === 'pendente' || tarefa.status === 'em_andamento').length,
           ultimoEventoEm: linhaDoTempo[0]?.data
         },
         linhaDoTempo
@@ -272,6 +346,24 @@ export class ServicoPacientes {
       visibilidade: evolucao.visibilidade,
       criadoEm: evolucao.criadoEm,
       atualizadoEm: evolucao.atualizadoEm
+    };
+  }
+
+  private mapearTarefa(tarefa: AcompanhamentoTarefaOrm): TarefaAcompanhamentoRespostaDto {
+    return {
+      id: tarefa.id,
+      tenantId: tarefa.tenantId,
+      pacienteId: tarefa.pacienteId,
+      profissionalId: tarefa.profissionalId,
+      titulo: tarefa.titulo,
+      descricao: tarefa.descricaoCriptografada ? this.criptografia.descriptografar(tarefa.descricaoCriptografada) : undefined,
+      categoria: tarefa.categoria,
+      prioridade: tarefa.prioridade,
+      status: tarefa.status,
+      vencimentoEm: tarefa.vencimentoEm,
+      concluidoEm: tarefa.concluidoEm,
+      criadoEm: tarefa.criadoEm,
+      atualizadoEm: tarefa.atualizadoEm
     };
   }
 
@@ -365,6 +457,24 @@ export class ServicoPacientes {
       metadados: {
         autorUsuarioId: evolucao.autorUsuarioId,
         visibilidade: evolucao.visibilidade
+      }
+    };
+  }
+
+  private mapearEventoTarefa(tarefa: AcompanhamentoTarefaOrm): EventoProntuarioPacienteDto {
+    return {
+      id: tarefa.id,
+      tipo: 'tarefa_acompanhamento',
+      titulo: tarefa.titulo,
+      descricao: tarefa.descricaoCriptografada ? this.criptografia.descriptografar(tarefa.descricaoCriptografada) : undefined,
+      data: tarefa.vencimentoEm ?? tarefa.criadoEm,
+      status: tarefa.status,
+      origemId: tarefa.id,
+      metadados: {
+        categoria: tarefa.categoria,
+        prioridade: tarefa.prioridade,
+        profissionalId: tarefa.profissionalId,
+        concluidoEm: tarefa.concluidoEm
       }
     };
   }

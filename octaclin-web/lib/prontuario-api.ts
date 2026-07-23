@@ -1,7 +1,16 @@
 import type { PacienteResumo } from './cadastros-api';
 
-export type TipoEventoProntuarioPaciente = 'consulta' | 'formulario' | 'resposta_formulario' | 'mensagem' | 'evolucao_clinica';
+export type TipoEventoProntuarioPaciente =
+  | 'consulta'
+  | 'formulario'
+  | 'resposta_formulario'
+  | 'mensagem'
+  | 'evolucao_clinica'
+  | 'tarefa_acompanhamento';
 export type TipoEvolucaoClinicaApi = 'consulta' | 'retorno' | 'observacao' | 'ajuste_plano';
+export type CategoriaTarefaAcompanhamentoApi = 'meta' | 'tarefa' | 'checkin' | 'orientacao';
+export type PrioridadeTarefaAcompanhamentoApi = 'baixa' | 'media' | 'alta';
+export type StatusTarefaAcompanhamentoApi = 'pendente' | 'em_andamento' | 'concluida' | 'cancelada';
 
 export interface EventoProntuarioPacienteApi {
   id: string;
@@ -22,6 +31,7 @@ export interface ProntuarioPacienteApi {
     respostas: number;
     mensagens: number;
     evolucoes: number;
+    tarefasPendentes: number;
     ultimoEventoEm?: string;
   };
   linhaDoTempo: EventoProntuarioPacienteApi[];
@@ -41,6 +51,28 @@ export interface EvolucaoClinicaApi extends CriarEvolucaoClinicaEntrada {
   autorUsuarioId: string;
   tipo: TipoEvolucaoClinicaApi;
   visibilidade: 'privada';
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+export interface CriarTarefaAcompanhamentoEntrada {
+  titulo: string;
+  descricao?: string;
+  categoria?: CategoriaTarefaAcompanhamentoApi;
+  prioridade?: PrioridadeTarefaAcompanhamentoApi;
+  vencimentoEm?: string;
+}
+
+export interface TarefaAcompanhamentoApi extends CriarTarefaAcompanhamentoEntrada {
+  id: string;
+  tenantId: string;
+  pacienteId: string;
+  profissionalId: string;
+  categoria: CategoriaTarefaAcompanhamentoApi;
+  prioridade: PrioridadeTarefaAcompanhamentoApi;
+  status: StatusTarefaAcompanhamentoApi;
+  vencimentoEm?: string;
+  concluidoEm?: string;
   criadoEm: string;
   atualizadoEm: string;
 }
@@ -80,4 +112,21 @@ export async function criarEvolucaoClinica(
   }
 
   return resposta.json() as Promise<EvolucaoClinicaApi>;
+}
+
+export async function criarTarefaAcompanhamento(
+  pacienteId: string,
+  entrada: CriarTarefaAcompanhamentoEntrada
+): Promise<TarefaAcompanhamentoApi> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/tarefas-acompanhamento`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entrada)
+  });
+  if (!resposta.ok) {
+    const detalhe = await resposta.text();
+    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+  }
+
+  return resposta.json() as Promise<TarefaAcompanhamentoApi>;
 }
