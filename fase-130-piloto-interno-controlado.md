@@ -31,7 +31,9 @@ Apos a estrutura entregue, a primeira rodada real do piloto comecou nesta mesma 
 - Dois bugs reais foram encontrados e corrigidos durante a aplicacao do seed (detalhes e severidade em `PILOTO_INTERNO_CONTROLE.md`, tabela de bugs):
   - **BUG-001 (P1):** a constraint `usuarios_role_check`, criada em `1720000000000-CriarFundacaoOctaClin.ts`, nunca incluiu o papel `Client`, apesar de o tipo TypeScript de `UsuarioOrm.role` incluir `'Client'` desde a Fase 89. Qualquer banco Postgres criado do zero pelas migrations falhava ao inserir um usuario Client. Corrigido pela nova migration `1720000000700-CorrigeConstraintRoleUsuarios.ts`, que amplia a constraint para incluir `'Client'`.
   - **BUG-002 (P2):** o fixture `staging-fixtures.json` usava `profissionais.id` no campo `tarefas[].profissionalId`, mas a coluna `acompanhamento_tarefas.profissional_id` referencia `usuarios.id` (o controlador `controlador-pacientes.ts` grava ali o `usuario.usuarioId` de quem criou a tarefa, nao o perfil profissional). Corrigido ajustando o fixture para usar o `usuarioId` correto do profissional responsavel.
-- Jornadas manuais (cliente, profissional, paciente, suporte/operador navegando de fato na aplicacao) e a definicao de participantes internos continuam pendentes — dependem de pessoas reais e ficam para a proxima etapa, acompanhadas em `PILOTO_INTERNO_CONTROLE.md`.
+- Subimos backend (`http://localhost:3001`) e web (`http://localhost:3000`) locais apontando para o banco de staging ja seedado, para o usuario comecar as jornadas manuais.
+- **BUG-003 (P1):** ao testar o acesso inicial (`/` -> `/dashboard`), o usuario recebeu a tela quebrada `{"mensagem":"Sessao ausente ou expirada."}` em vez de ser levado ao login. Causa raiz: `octaclin-web/middleware.ts` nao incluia `/dashboard` em `ROTAS_PROTEGIDAS` nem no `matcher`, entao a rota nunca passava pela checagem de autenticacao (a logica de permissao em `lib/server/autorizacao-rotas.ts` ja suportava `/dashboard` corretamente, so faltava registrar a rota no middleware). Corrigido adicionando `/dashboard` a `ROTAS_PROTEGIDAS` e ao `matcher`; validado via curl que visitante nao autenticado agora recebe redirect 307 para `/login?redirect=%2Fdashboard` e que uma sessao autenticada continua acessando `/dashboard` normalmente.
+- Jornadas manuais (cliente, profissional, paciente, suporte/operador navegando de fato na aplicacao) e a definicao de participantes internos continuam em andamento, acompanhadas em `PILOTO_INTERNO_CONTROLE.md`.
 
 ## Validacoes
 
@@ -42,10 +44,13 @@ pnpm test:piloto
 pnpm test:staging-fixtures
 pnpm --dir octaclin-backend typecheck
 pnpm --dir octaclin-backend test -- servico-portal-cliente.spec.ts servico-usuarios-cliente.spec.ts permissoes.spec.ts --runInBand
+pnpm --dir octaclin-web typecheck
+pnpm --dir octaclin-web test:authz
 powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
 ```
 
 ## Observacoes
 
 - Nenhum teste de integracao automatizado cobre a constraint `usuarios_role_check` contra Postgres real (os specs Jest existentes usam repositorios mockados); o Docker Compose local (`docker-compose.yml`) nao estava disponivel neste ambiente de execucao para validar a migration antes de aplica-la no banco compartilhado. Fica como lacuna conhecida para uma fase futura de hardening de testes de integracao.
+- `pnpm --dir octaclin-web test:authz` cobre `decidirAcessoRota` (a logica de permissao), mas nao cobre a lista `ROTAS_PROTEGIDAS`/`matcher` do proprio `middleware.ts` — foi exatamente essa lacuna que deixou o BUG-003 passar despropercebido. Vale considerar, em fase futura, um teste que garanta que toda rota mapeada em `permissoesRotasOperacionais` (`lib/server/autorizacao-rotas.ts`) tambem esteja em `ROTAS_PROTEGIDAS` no middleware.
 - A Fase 131 - Producao isolada de staging so deve iniciar apos as jornadas manuais serem executadas e o aceite do piloto ser registrado em `PILOTO_INTERNO_CONTROLE.md`.

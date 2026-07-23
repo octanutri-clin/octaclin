@@ -41,6 +41,7 @@ Este arquivo acompanha a execucao do piloto interno descrito em `RUNBOOK_PILOTO_
 | --- | --- | --- | --- | --- | --- |
 | BUG-001 | 2026-07-23 | Aplicacao de `pnpm seed:staging` | P1 | Constraint `usuarios_role_check` (migration `1720000000000-CriarFundacaoOctaClin`) nunca incluia o papel `Client`, impedindo criar qualquer usuario Client em um banco novo criado do zero pelas migrations. | Corrigido (migration `1720000000700-CorrigeConstraintRoleUsuarios`). |
 | BUG-002 | 2026-07-23 | Aplicacao de `pnpm seed:staging` | P2 | Fixture `staging-fixtures.json` usava o `profissionais.id` no campo `tarefas[].profissionalId`, mas a coluna real referencia `usuarios.id` (quem criou a tarefa), causando violacao de FK ao aplicar o seed. | Corrigido (fixture ajustado para usar o `usuarioId` do profissional responsavel). |
+| BUG-003 | 2026-07-23 | Acesso inicial nao autenticado (`/` -> `/dashboard`) | P1 | `/dashboard` nao estava na lista `ROTAS_PROTEGIDAS` nem no `matcher` do `middleware.ts`, entao qualquer visitante nao autenticado que abrisse a raiz do site (`app/page.tsx` redireciona sempre para `/dashboard`) caia numa tela quebrada com o erro cru `{"mensagem":"Sessao ausente ou expirada."}` em vez de ser levado ao `/login`. A logica de autorizacao (`decidirAcessoRota`) ja tratava `/dashboard` corretamente; faltava so registrar a rota no middleware. | Corrigido (`/dashboard` adicionado a `ROTAS_PROTEGIDAS` e ao `matcher` de `octaclin-web/middleware.ts`). |
 
 ## Decisao de aceite
 
@@ -53,4 +54,4 @@ Este arquivo acompanha a execucao do piloto interno descrito em `RUNBOOK_PILOTO_
 
 ## Proximo passo
 
-Massa de staging aplicada e ambiente pronto. Falta definir participantes internos por perfil e executar de fato as jornadas manuais listadas acima navegando na aplicacao (cliente, profissional, paciente, suporte/operador), depois preencher a tabela de participantes e a decisao de aceite.
+Ambiente local (backend `http://localhost:3001` + web `http://localhost:3000`) no ar apontando para o banco de staging. Testes manuais em andamento: BUG-003 (acesso nao autenticado a `/dashboard`) foi encontrado e corrigido nesta mesma sessao. Falta continuar as jornadas manuais listadas acima, definir participantes internos por perfil, e preencher a tabela de participantes e a decisao de aceite.
