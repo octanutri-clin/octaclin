@@ -4,11 +4,11 @@ Este arquivo acompanha a execucao do piloto interno descrito em `RUNBOOK_PILOTO_
 
 ## Status atual
 
-- Status: em preparacao (suite automatizada validada; jornadas manuais e seed remoto pendentes).
-- Rodada: 1 (em preparacao).
-- Data de inicio: pendente (aguardando participantes e `DATABASE_URL` de staging).
+- Status: em andamento (massa de staging aplicada; jornadas manuais pendentes de execucao humana).
+- Rodada: 1.
+- Data de inicio: 2026-07-23.
 - Data de encerramento: pendente.
-- Ambiente: staging, tenant `octaclin-staging`.
+- Ambiente: staging (banco unico atual, usado como staging de fato ate a Fase 131 separar producao), tenant `octaclin-staging`.
 
 ## Participantes
 
@@ -33,12 +33,14 @@ Este arquivo acompanha a execucao do piloto interno descrito em `RUNBOOK_PILOTO_
 - [ ] Suporte/operador revisa console operacional e central de falhas.
 - [ ] Suporte/operador simula atendimento de login/convite.
 - [x] `pnpm test:e2e:criticas` executado nesta rodada (2026-07-23, 6/6 testes passaram em desktop e mobile).
+- [x] `pnpm seed:staging` aplicado com sucesso em 2026-07-23 (tenant `octaclin-staging`, 5 usuarios, 3 pacientes e demais dados ficticios).
 
 ## Registro de bugs
 
 | ID | Data | Perfil/jornada | Severidade | Descricao | Status |
 | --- | --- | --- | --- | --- | --- |
-| - | - | - | - | Nenhum bug registrado ainda. | - |
+| BUG-001 | 2026-07-23 | Aplicacao de `pnpm seed:staging` | P1 | Constraint `usuarios_role_check` (migration `1720000000000-CriarFundacaoOctaClin`) nunca incluia o papel `Client`, impedindo criar qualquer usuario Client em um banco novo criado do zero pelas migrations. | Corrigido (migration `1720000000700-CorrigeConstraintRoleUsuarios`). |
+| BUG-002 | 2026-07-23 | Aplicacao de `pnpm seed:staging` | P2 | Fixture `staging-fixtures.json` usava o `profissionais.id` no campo `tarefas[].profissionalId`, mas a coluna real referencia `usuarios.id` (quem criou a tarefa), causando violacao de FK ao aplicar o seed. | Corrigido (fixture ajustado para usar o `usuarioId` do profissional responsavel). |
 
 ## Decisao de aceite
 
@@ -51,4 +53,4 @@ Este arquivo acompanha a execucao do piloto interno descrito em `RUNBOOK_PILOTO_
 
 ## Proximo passo
 
-Preparar a primeira rodada real do piloto: definir participantes, aplicar a massa de staging (`RUNBOOK_STAGING_DADOS.md`) e agendar a execucao das jornadas listadas acima.
+Massa de staging aplicada e ambiente pronto. Falta definir participantes internos por perfil e executar de fato as jornadas manuais listadas acima navegando na aplicacao (cliente, profissional, paciente, suporte/operador), depois preencher a tabela de participantes e a decisao de aceite.

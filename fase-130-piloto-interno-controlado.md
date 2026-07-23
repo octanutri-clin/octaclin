@@ -21,7 +21,17 @@ Criar a estrutura operacional para um piloto interno controlado antes do go-live
 ## Escopo nao incluido
 
 - Nenhum cliente real de consultoria foi convidado nesta fase.
-- Nenhuma rodada real do piloto foi executada; `PILOTO_INTERNO_CONTROLE.md` permanece como template preenchivel para a proxima execucao.
+
+## Rodada 1 - execucao real (2026-07-23)
+
+Apos a estrutura entregue, a primeira rodada real do piloto comecou nesta mesma fase:
+
+- `pnpm test:e2e:criticas` executado: 6/6 testes passaram (desktop e mobile).
+- Massa de staging aplicada com `pnpm seed:staging` contra o banco Neon unico do projeto (hoje rotulado "producao" no console, mas usado como staging de fato ate a Fase 131 separar os ambientes; o usuario confirmou explicitamente o uso e a ausencia de clientes reais nele).
+- Dois bugs reais foram encontrados e corrigidos durante a aplicacao do seed (detalhes e severidade em `PILOTO_INTERNO_CONTROLE.md`, tabela de bugs):
+  - **BUG-001 (P1):** a constraint `usuarios_role_check`, criada em `1720000000000-CriarFundacaoOctaClin.ts`, nunca incluiu o papel `Client`, apesar de o tipo TypeScript de `UsuarioOrm.role` incluir `'Client'` desde a Fase 89. Qualquer banco Postgres criado do zero pelas migrations falhava ao inserir um usuario Client. Corrigido pela nova migration `1720000000700-CorrigeConstraintRoleUsuarios.ts`, que amplia a constraint para incluir `'Client'`.
+  - **BUG-002 (P2):** o fixture `staging-fixtures.json` usava `profissionais.id` no campo `tarefas[].profissionalId`, mas a coluna `acompanhamento_tarefas.profissional_id` referencia `usuarios.id` (o controlador `controlador-pacientes.ts` grava ali o `usuario.usuarioId` de quem criou a tarefa, nao o perfil profissional). Corrigido ajustando o fixture para usar o `usuarioId` correto do profissional responsavel.
+- Jornadas manuais (cliente, profissional, paciente, suporte/operador navegando de fato na aplicacao) e a definicao de participantes internos continuam pendentes — dependem de pessoas reais e ficam para a proxima etapa, acompanhadas em `PILOTO_INTERNO_CONTROLE.md`.
 
 ## Validacoes
 
@@ -29,10 +39,13 @@ Criar a estrutura operacional para um piloto interno controlado antes do go-live
 git diff --check
 pnpm security:secrets
 pnpm test:piloto
+pnpm test:staging-fixtures
+pnpm --dir octaclin-backend typecheck
+pnpm --dir octaclin-backend test -- servico-portal-cliente.spec.ts servico-usuarios-cliente.spec.ts permissoes.spec.ts --runInBand
 powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
 ```
 
 ## Observacoes
 
-- A execucao real do piloto (convocar participantes internos, aplicar `pnpm seed:staging` e rodar as jornadas) fica para a proxima etapa de trabalho, ainda dentro da Fase 130.
-- A Fase 131 - Producao isolada de staging so deve iniciar apos o aceite do piloto ser registrado em `PILOTO_INTERNO_CONTROLE.md`.
+- Nenhum teste de integracao automatizado cobre a constraint `usuarios_role_check` contra Postgres real (os specs Jest existentes usam repositorios mockados); o Docker Compose local (`docker-compose.yml`) nao estava disponivel neste ambiente de execucao para validar a migration antes de aplica-la no banco compartilhado. Fica como lacuna conhecida para uma fase futura de hardening de testes de integracao.
+- A Fase 131 - Producao isolada de staging so deve iniciar apos as jornadas manuais serem executadas e o aceite do piloto ser registrado em `PILOTO_INTERNO_CONTROLE.md`.
