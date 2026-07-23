@@ -1,3 +1,16 @@
+export type CanalPreferidoComunicacaoPaciente = 'email' | 'whatsapp' | 'qualquer';
+
+export interface PreferenciasContatoPacienteApi {
+  email: boolean;
+  whatsapp: boolean;
+  canalPreferido: CanalPreferidoComunicacaoPaciente;
+  horarioPermitido: {
+    inicio: string;
+    fim: string;
+    timezone: string;
+  };
+}
+
 export interface PortalPacienteApi {
   paciente: {
     id: string;
@@ -10,10 +23,7 @@ export interface PortalPacienteApi {
     contato?: string;
     email?: string;
     whatsapp?: string;
-    preferenciasContato: {
-      email: boolean;
-      whatsapp: boolean;
-    };
+    preferenciasContato: PreferenciasContatoPacienteApi;
     dataNascimento?: string;
     profissionalResponsavelId: string;
     ultimoCheckinEm?: string;
@@ -111,6 +121,10 @@ export interface AtualizarPerfilPacienteEntrada {
   dataNascimento?: string;
   prefereEmail?: boolean;
   prefereWhatsapp?: boolean;
+  canalPreferido?: CanalPreferidoComunicacaoPaciente;
+  horarioInicio?: string;
+  horarioFim?: string;
+  timezoneComunicacao?: string;
 }
 
 export interface PerfilPacienteAtualizadoApi {

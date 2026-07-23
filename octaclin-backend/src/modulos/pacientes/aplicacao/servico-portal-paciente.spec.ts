@@ -246,7 +246,12 @@ describe('ServicoPortalPaciente', () => {
       contato: 'ana@example.com',
       email: 'ana@example.com',
       whatsapp: undefined,
-      preferenciasContato: { email: true, whatsapp: true },
+      preferenciasContato: {
+        email: true,
+        whatsapp: true,
+        canalPreferido: 'qualquer',
+        horarioPermitido: { inicio: '08:00', fim: '20:00', timezone: 'America/Sao_Paulo' }
+      },
       dataNascimento: '1990-04-15',
       profissionalResponsavelId: 'profissional-1',
       ultimoCheckinEm: new Date('2026-07-20T12:00:00.000Z')
@@ -531,7 +536,11 @@ describe('ServicoPortalPaciente', () => {
       whatsapp: ' (11) 99999-8888 ',
       dataNascimento: '1991-05-20',
       prefereEmail: true,
-      prefereWhatsapp: false
+      prefereWhatsapp: false,
+      canalPreferido: 'whatsapp',
+      horarioInicio: '09:00',
+      horarioFim: '18:30',
+      timezoneComunicacao: 'America/Sao_Paulo'
     });
 
     expect(perfil.paciente).toEqual(
@@ -546,19 +555,34 @@ describe('ServicoPortalPaciente', () => {
         email: 'ana@example.com',
         whatsapp: '11999998888',
         dataNascimento: '1991-05-20',
-        preferenciasContato: { email: true, whatsapp: false }
+        preferenciasContato: {
+          email: true,
+          whatsapp: false,
+          canalPreferido: 'whatsapp',
+          horarioPermitido: { inicio: '09:00', fim: '18:30', timezone: 'America/Sao_Paulo' }
+        }
       })
     );
     expect(repositorios.paciente.save).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'paciente-1',
         nomeCriptografado: Buffer.from('cripto:Ana Paciente'),
-        contatoCriptografado: Buffer.from(
-          'cripto:{"email":"ana@example.com","whatsapp":"11999998888","preferencias":{"email":true,"whatsapp":false}}'
-        ),
         dataNascimento: '1991-05-20'
       })
     );
+    const contatoSalvo = JSON.parse(
+      repositorios.paciente.save.mock.calls[0][0].contatoCriptografado.toString('utf8').replace('cripto:', '')
+    );
+    expect(contatoSalvo).toEqual({
+      email: 'ana@example.com',
+      whatsapp: '11999998888',
+      preferencias: {
+        email: true,
+        whatsapp: false,
+        canalPreferido: 'whatsapp',
+        horarioPermitido: { inicio: '09:00', fim: '18:30', timezone: 'America/Sao_Paulo' }
+      }
+    });
 
     await expect(servico.atualizarPerfil('tenant-1', 'usuario-paciente-1', {})).rejects.toBeInstanceOf(BadRequestException);
     await expect(servico.atualizarPerfil('tenant-1', 'usuario-paciente-2', { email: 'outro@example.com' })).resolves.toEqual(
@@ -575,7 +599,7 @@ describe('ServicoPortalPaciente', () => {
           usuarioId: 'usuario-paciente-1',
           nomeCriptografado: Buffer.from('cripto:Ana Paula'),
           contatoCriptografado: Buffer.from(
-            'cripto:{"email":"ana@example.com","whatsapp":"5511992362080","preferencias":{"email":true,"whatsapp":true}}'
+            'cripto:{"email":"ana@example.com","whatsapp":"5511992362080","preferencias":{"email":true,"whatsapp":true,"canalPreferido":"whatsapp","horarioPermitido":{"inicio":"09:00","fim":"18:00","timezone":"America/Sao_Paulo"}}}'
           ),
           profissionalResponsavelId: 'profissional-1',
           statusAdesao: 'aderente',
@@ -606,18 +630,28 @@ describe('ServicoPortalPaciente', () => {
         metadados: {
           pacienteId: 'paciente-1',
           origem: 'portal_paciente',
-          preferenciasContato: { email: false, whatsapp: true }
+          preferenciasContato: {
+            email: false,
+            whatsapp: true,
+            canalPreferido: 'whatsapp',
+            horarioPermitido: { inicio: '09:00', fim: '18:00', timezone: 'America/Sao_Paulo' }
+          }
         }
       })
     );
     expect(repositorios.paciente.save).toHaveBeenCalledWith(
       expect.objectContaining({
         contatoCriptografado: Buffer.from(
-          'cripto:{"email":"ana@example.com","whatsapp":"5511992362080","preferencias":{"email":false,"whatsapp":true}}'
+          'cripto:{"email":"ana@example.com","whatsapp":"5511992362080","preferencias":{"email":false,"whatsapp":true,"canalPreferido":"whatsapp","horarioPermitido":{"inicio":"09:00","fim":"18:00","timezone":"America/Sao_Paulo"}}}'
         )
       })
     );
-    expect(resultado.perfil.preferenciasContato).toEqual({ email: false, whatsapp: true });
+    expect(resultado.perfil.preferenciasContato).toEqual({
+      email: false,
+      whatsapp: true,
+      canalPreferido: 'whatsapp',
+      horarioPermitido: { inicio: '09:00', fim: '18:00', timezone: 'America/Sao_Paulo' }
+    });
     expect(resultado.lgpd.consentimentos).toEqual([
       expect.objectContaining({ tipo: 'portal_paciente_lgpd', versao: '2026-09' })
     ]);

@@ -21,6 +21,7 @@ import {
   exportarDadosLgpdPaciente,
   obterFormularioRespondidoPaciente,
   obterPortalPaciente,
+  CanalPreferidoComunicacaoPaciente,
   PortalPacienteApi,
   registrarConsentimentoLgpdPaciente,
   registrarSolicitacaoLgpdPaciente
@@ -33,6 +34,10 @@ interface FormularioPerfilPaciente {
   dataNascimento: string;
   prefereEmail: boolean;
   prefereWhatsapp: boolean;
+  canalPreferido: CanalPreferidoComunicacaoPaciente;
+  horarioInicio: string;
+  horarioFim: string;
+  timezoneComunicacao: string;
 }
 
 interface ItemLinhaTempoPortal {
@@ -49,7 +54,11 @@ const formularioPerfilVazio: FormularioPerfilPaciente = {
   whatsapp: '',
   dataNascimento: '',
   prefereEmail: true,
-  prefereWhatsapp: true
+  prefereWhatsapp: true,
+  canalPreferido: 'qualquer',
+  horarioInicio: '08:00',
+  horarioFim: '20:00',
+  timezoneComunicacao: 'America/Sao_Paulo'
 };
 
 const classeCampo =
@@ -115,7 +124,11 @@ function montarFormularioPerfil(portal: PortalPacienteApi): FormularioPerfilPaci
     whatsapp: portal.perfil.whatsapp ?? (portal.perfil.contato?.includes('@') ? '' : portal.perfil.contato ?? ''),
     dataNascimento: portal.perfil.dataNascimento ?? '',
     prefereEmail: portal.perfil.preferenciasContato?.email ?? true,
-    prefereWhatsapp: portal.perfil.preferenciasContato?.whatsapp ?? true
+    prefereWhatsapp: portal.perfil.preferenciasContato?.whatsapp ?? true,
+    canalPreferido: portal.perfil.preferenciasContato?.canalPreferido ?? 'qualquer',
+    horarioInicio: portal.perfil.preferenciasContato?.horarioPermitido?.inicio ?? '08:00',
+    horarioFim: portal.perfil.preferenciasContato?.horarioPermitido?.fim ?? '20:00',
+    timezoneComunicacao: portal.perfil.preferenciasContato?.horarioPermitido?.timezone ?? 'America/Sao_Paulo'
   };
 }
 
@@ -240,7 +253,11 @@ export function PortalPaciente() {
         whatsapp: formularioPerfil.whatsapp.trim() || undefined,
         dataNascimento: formularioPerfil.dataNascimento || undefined,
         prefereEmail: formularioPerfil.prefereEmail,
-        prefereWhatsapp: formularioPerfil.prefereWhatsapp
+        prefereWhatsapp: formularioPerfil.prefereWhatsapp,
+        canalPreferido: formularioPerfil.canalPreferido,
+        horarioInicio: formularioPerfil.horarioInicio,
+        horarioFim: formularioPerfil.horarioFim,
+        timezoneComunicacao: formularioPerfil.timezoneComunicacao.trim() || undefined
       });
       setPortal((atual) =>
         atual
@@ -257,7 +274,11 @@ export function PortalPaciente() {
         whatsapp: atualizado.perfil.whatsapp ?? '',
         dataNascimento: atualizado.perfil.dataNascimento ?? '',
         prefereEmail: atualizado.perfil.preferenciasContato.email,
-        prefereWhatsapp: atualizado.perfil.preferenciasContato.whatsapp
+        prefereWhatsapp: atualizado.perfil.preferenciasContato.whatsapp,
+        canalPreferido: atualizado.perfil.preferenciasContato.canalPreferido,
+        horarioInicio: atualizado.perfil.preferenciasContato.horarioPermitido.inicio,
+        horarioFim: atualizado.perfil.preferenciasContato.horarioPermitido.fim,
+        timezoneComunicacao: atualizado.perfil.preferenciasContato.horarioPermitido.timezone
       });
       setSucesso('Perfil atualizado.');
     } catch (erroAtual) {
@@ -571,6 +592,52 @@ export function PortalPaciente() {
                         Receber WhatsApp
                       </label>
                     </div>
+                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px_120px]">
+                      <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                        Canal preferido
+                        <select
+                          className={classeCampo}
+                          value={formularioPerfil.canalPreferido}
+                          onChange={(evento) =>
+                            setFormularioPerfil((atual) => ({
+                              ...atual,
+                              canalPreferido: evento.target.value as CanalPreferidoComunicacaoPaciente
+                            }))
+                          }
+                        >
+                          <option value="qualquer">Qualquer canal</option>
+                          <option value="email">E-mail</option>
+                          <option value="whatsapp">WhatsApp</option>
+                        </select>
+                      </label>
+                      <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                        Inicio
+                        <input
+                          type="time"
+                          className={classeCampo}
+                          value={formularioPerfil.horarioInicio}
+                          onChange={(evento) => setFormularioPerfil((atual) => ({ ...atual, horarioInicio: evento.target.value }))}
+                        />
+                      </label>
+                      <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                        Fim
+                        <input
+                          type="time"
+                          className={classeCampo}
+                          value={formularioPerfil.horarioFim}
+                          onChange={(evento) => setFormularioPerfil((atual) => ({ ...atual, horarioFim: evento.target.value }))}
+                        />
+                      </label>
+                    </div>
+                    <label className="grid gap-1 text-xs font-medium text-[#596273] sm:max-w-xs">
+                      Fuso horario
+                      <input
+                        className={classeCampo}
+                        value={formularioPerfil.timezoneComunicacao}
+                        onChange={(evento) => setFormularioPerfil((atual) => ({ ...atual, timezoneComunicacao: evento.target.value }))}
+                        maxLength={80}
+                      />
+                    </label>
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-linha pt-3">
                       <div className="text-xs text-[#596273]">
                         Ultimo check-in {formatarDataHora(portal.perfil.ultimoCheckinEm)} - status {rotuloStatus(portal.paciente.statusAdesao)}

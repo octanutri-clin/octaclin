@@ -12,13 +12,14 @@ import { FILA_AUTOMACOES, ServicoAutomacoes } from './aplicacao/servico-automaco
 import { ServicoLembretesAgenda } from './aplicacao/servico-lembretes-agenda';
 import { ControladorAutomacoes } from './apresentacao/controlador-automacoes';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
+import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
 import { ExecucaoRegraOrm } from './infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from './infraestrutura/regra-automacao.orm';
 
 @Module({
   imports: [
     BullModule.registerQueue({ name: FILA_AUTOMACOES }),
-    TypeOrmModule.forFeature([RegraAutomacaoOrm, ExecucaoRegraOrm, UserActionLogOrm, AgendaConsultaOrm]),
+    TypeOrmModule.forFeature([RegraAutomacaoOrm, ExecucaoRegraOrm, UserActionLogOrm, AgendaConsultaOrm, PacienteOrm]),
     ModuloAuth,
     ModuloTenancy,
     ModuloComunicacoes

@@ -1,6 +1,7 @@
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
 import { TemplateMensagemOrm } from '../../comunicacoes/infraestrutura/template-mensagem.orm';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ServicoLembretesAgenda } from './servico-lembretes-agenda';
 
 function criarRepositorioConsultas(dados: Record<string, unknown>) {
@@ -12,9 +13,17 @@ function criarRepositorioConsultas(dados: Record<string, unknown>) {
 
 function criarServico(dados: Record<string, unknown> = {}) {
   const repositorioConsultas = criarRepositorioConsultas(dados);
+  const repositorioPacientes = {
+    findOne: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+      ((dados.pacientes as Record<string, unknown>[] | undefined) ?? []).find((paciente) =>
+        Object.entries(where).every(([chave, valor]) => paciente[chave] === valor)
+      ) ?? null
+    )
+  };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === AgendaConsultaOrm) return repositorioConsultas;
+      if (entidade === PacienteOrm) return repositorioPacientes;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -60,10 +69,14 @@ function criarServico(dados: Record<string, unknown> = {}) {
   const processador = {
     processarMensagem: jest.fn(async () => undefined)
   };
+  const criptografia = {
+    descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8').replace('cripto:', ''))
+  };
 
   return {
-    servico: new ServicoLembretesAgenda(executorTenant as never, comunicacoes as never, processador as never),
+    servico: new ServicoLembretesAgenda(executorTenant as never, comunicacoes as never, processador as never, criptografia as never),
     repositorioConsultas,
+    repositorioPacientes,
     comunicacoes,
     processador
   };
@@ -165,5 +178,105 @@ describe('ServicoLembretesAgenda', () => {
     expect(resultado).toEqual({ consultasAvaliadas: 1, lembretesProcessados: 0, lembretesIgnorados: 1 });
     expect(comunicacoes.dispararMensagem).not.toHaveBeenCalled();
     expect(repositorioConsultas.save).not.toHaveBeenCalled();
+  });
+
+  it('deve respeitar canal preferido do paciente quando houver contato disponivel', async () => {
+    const consulta = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-23T12:00:00.000Z'),
+      fimEm: new Date('2026-07-23T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {},
+      payload: {
+        pacienteNome: 'Ana Paula',
+        emailContato: 'ana@example.com',
+        whatsappContato: '5511992362080'
+      }
+    };
+    const { servico, repositorioConsultas, comunicacoes } = criarServico({
+      consultas: [consulta],
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          contatoCriptografado: Buffer.from(
+            'cripto:{"email":"ana@example.com","whatsapp":"5511992362080","preferencias":{"email":true,"whatsapp":true,"canalPreferido":"whatsapp","horarioPermitido":{"inicio":"08:00","fim":"20:00","timezone":"America/Sao_Paulo"}}}'
+          )
+        }
+      ]
+    });
+
+    await servico.processarLembretesConsulta('tenant-1', new Date('2026-07-22T12:00:00.000Z'));
+
+    expect(comunicacoes.dispararMensagem).toHaveBeenCalledTimes(1);
+    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+      'tenant-1',
+      expect.objectContaining({
+        canalId: 'canal-whatsapp',
+        payload: expect.objectContaining({ destino: '5511992362080' })
+      })
+    );
+    expect(repositorioConsultas.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        notificacoes: expect.objectContaining({
+          lembrete24h: expect.objectContaining({
+            email: { status: 'ignorado', motivo: 'canal_nao_preferido' },
+            whatsapp: { status: 'enviado', mensagemId: 'mensagem-whatsapp' }
+          })
+        })
+      })
+    );
+  });
+
+  it('deve ignorar lembrete fora do horario permitido pelo paciente', async () => {
+    const consulta = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-23T12:00:00.000Z'),
+      fimEm: new Date('2026-07-23T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {},
+      payload: {
+        pacienteNome: 'Ana Paula',
+        emailContato: 'ana@example.com',
+        whatsappContato: '5511992362080'
+      }
+    };
+    const { servico, repositorioConsultas, comunicacoes } = criarServico({
+      consultas: [consulta],
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          contatoCriptografado: Buffer.from(
+            'cripto:{"preferencias":{"email":true,"whatsapp":true,"canalPreferido":"qualquer","horarioPermitido":{"inicio":"13:00","fim":"18:00","timezone":"America/Sao_Paulo"}}}'
+          )
+        }
+      ]
+    });
+
+    const resultado = await servico.processarLembretesConsulta('tenant-1', new Date('2026-07-22T12:00:00.000Z'));
+
+    expect(resultado).toEqual({ consultasAvaliadas: 1, lembretesProcessados: 1, lembretesIgnorados: 0 });
+    expect(comunicacoes.dispararMensagem).not.toHaveBeenCalled();
+    expect(repositorioConsultas.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        notificacoes: expect.objectContaining({
+          lembrete24h: expect.objectContaining({
+            status: 'ignorado',
+            motivo: 'fora_horario_preferido',
+            email: { status: 'ignorado', motivo: 'fora_horario_preferido' },
+            whatsapp: { status: 'ignorado', motivo: 'fora_horario_preferido' }
+          })
+        })
+      })
+    );
   });
 });

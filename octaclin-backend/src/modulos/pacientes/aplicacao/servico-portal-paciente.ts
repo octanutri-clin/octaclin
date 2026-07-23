@@ -14,14 +14,31 @@ import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-va
 import { AtualizarPerfilPacientePortalDto, RegistrarConsentimentoLgpdPortalDto, RegistrarSolicitacaoLgpdPortalDto } from './dtos';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
+type CanalPreferidoComunicacao = 'email' | 'whatsapp' | 'qualquer';
+
+interface HorarioPermitidoComunicacao {
+  inicio: string;
+  fim: string;
+  timezone: string;
+}
+
 interface ContatoPacientePortal {
   email?: string;
   whatsapp?: string;
   preferencias: {
     email: boolean;
     whatsapp: boolean;
+    canalPreferido: CanalPreferidoComunicacao;
+    horarioPermitido: HorarioPermitidoComunicacao;
   };
 }
+
+const CANAL_PREFERIDO_PADRAO: CanalPreferidoComunicacao = 'qualquer';
+const HORARIO_PERMITIDO_PADRAO: HorarioPermitidoComunicacao = {
+  inicio: '08:00',
+  fim: '20:00',
+  timezone: 'America/Sao_Paulo'
+};
 
 export interface ResumoPortalPaciente {
   paciente: {
@@ -38,6 +55,8 @@ export interface ResumoPortalPaciente {
     preferenciasContato: {
       email: boolean;
       whatsapp: boolean;
+      canalPreferido: CanalPreferidoComunicacao;
+      horarioPermitido: HorarioPermitidoComunicacao;
     };
     dataNascimento?: string;
     profissionalResponsavelId: string;
@@ -314,14 +333,24 @@ export class ServicoPortalPaciente {
         whatsapp: dados.whatsapp !== undefined ? this.normalizarWhatsapp(dados.whatsapp) : contatoAtual.whatsapp,
         preferencias: {
           email: dados.prefereEmail ?? contatoAtual.preferencias.email,
-          whatsapp: dados.prefereWhatsapp ?? contatoAtual.preferencias.whatsapp
+          whatsapp: dados.prefereWhatsapp ?? contatoAtual.preferencias.whatsapp,
+          canalPreferido: dados.canalPreferido ?? contatoAtual.preferencias.canalPreferido,
+          horarioPermitido: {
+            inicio: dados.horarioInicio ?? contatoAtual.preferencias.horarioPermitido.inicio,
+            fim: dados.horarioFim ?? contatoAtual.preferencias.horarioPermitido.fim,
+            timezone: this.normalizarTimezone(dados.timezoneComunicacao) ?? contatoAtual.preferencias.horarioPermitido.timezone
+          }
         }
       };
       if (
         dados.email !== undefined ||
         dados.whatsapp !== undefined ||
         dados.prefereEmail !== undefined ||
-        dados.prefereWhatsapp !== undefined
+        dados.prefereWhatsapp !== undefined ||
+        dados.canalPreferido !== undefined ||
+        dados.horarioInicio !== undefined ||
+        dados.horarioFim !== undefined ||
+        dados.timezoneComunicacao !== undefined
       ) {
         paciente.contatoCriptografado = this.criptografia.criptografar(this.serializarContato(contatoAtualizado));
       }
@@ -352,7 +381,9 @@ export class ServicoPortalPaciente {
             whatsapp: contatoAtual.whatsapp,
             preferencias: {
               email: dados.prefereEmail ?? contatoAtual.preferencias.email,
-              whatsapp: dados.prefereWhatsapp ?? contatoAtual.preferencias.whatsapp
+              whatsapp: dados.prefereWhatsapp ?? contatoAtual.preferencias.whatsapp,
+              canalPreferido: contatoAtual.preferencias.canalPreferido,
+              horarioPermitido: contatoAtual.preferencias.horarioPermitido
             }
           })
         );
@@ -625,7 +656,7 @@ export class ServicoPortalPaciente {
   }
 
   private obterContatoPaciente(paciente: PacienteOrm): ContatoPacientePortal {
-    const preferencias = { email: true, whatsapp: true };
+    const preferencias = this.preferenciasContatoPadrao();
     if (!paciente.contatoCriptografado) return { preferencias };
 
     const contato = this.criptografia.descriptografar(paciente.contatoCriptografado);
@@ -633,14 +664,21 @@ export class ServicoPortalPaciente {
       const parseado = JSON.parse(contato) as {
         email?: unknown;
         whatsapp?: unknown;
-        preferencias?: { email?: unknown; whatsapp?: unknown };
+        preferencias?: {
+          email?: unknown;
+          whatsapp?: unknown;
+          canalPreferido?: unknown;
+          horarioPermitido?: unknown;
+        };
       };
       return {
         email: typeof parseado.email === 'string' ? this.normalizarEmail(parseado.email) : undefined,
         whatsapp: typeof parseado.whatsapp === 'string' ? this.normalizarWhatsapp(parseado.whatsapp) : undefined,
         preferencias: {
           email: typeof parseado.preferencias?.email === 'boolean' ? parseado.preferencias.email : true,
-          whatsapp: typeof parseado.preferencias?.whatsapp === 'boolean' ? parseado.preferencias.whatsapp : true
+          whatsapp: typeof parseado.preferencias?.whatsapp === 'boolean' ? parseado.preferencias.whatsapp : true,
+          canalPreferido: this.normalizarCanalPreferido(parseado.preferencias?.canalPreferido),
+          horarioPermitido: this.normalizarHorarioPermitido(parseado.preferencias?.horarioPermitido)
         }
       };
     } catch {
@@ -666,6 +704,37 @@ export class ServicoPortalPaciente {
   private normalizarWhatsapp(whatsapp?: string): string | undefined {
     const normalizado = whatsapp?.replace(/\D/g, '');
     return normalizado || undefined;
+  }
+
+  private preferenciasContatoPadrao(): ContatoPacientePortal['preferencias'] {
+    return {
+      email: true,
+      whatsapp: true,
+      canalPreferido: CANAL_PREFERIDO_PADRAO,
+      horarioPermitido: { ...HORARIO_PERMITIDO_PADRAO }
+    };
+  }
+
+  private normalizarCanalPreferido(valor: unknown): CanalPreferidoComunicacao {
+    return valor === 'email' || valor === 'whatsapp' || valor === 'qualquer' ? valor : CANAL_PREFERIDO_PADRAO;
+  }
+
+  private normalizarHorarioPermitido(valor: unknown): HorarioPermitidoComunicacao {
+    if (!valor || typeof valor !== 'object' || Array.isArray(valor)) return { ...HORARIO_PERMITIDO_PADRAO };
+    const horario = valor as Record<string, unknown>;
+    return {
+      inicio: typeof horario.inicio === 'string' && this.horarioValido(horario.inicio) ? horario.inicio : HORARIO_PERMITIDO_PADRAO.inicio,
+      fim: typeof horario.fim === 'string' && this.horarioValido(horario.fim) ? horario.fim : HORARIO_PERMITIDO_PADRAO.fim,
+      timezone: this.normalizarTimezone(horario.timezone) ?? HORARIO_PERMITIDO_PADRAO.timezone
+    };
+  }
+
+  private normalizarTimezone(valor: unknown): string | undefined {
+    return typeof valor === 'string' && valor.trim() ? valor.trim().slice(0, 80) : undefined;
+  }
+
+  private horarioValido(valor: string): boolean {
+    return /^([01]\d|2[0-3]):[0-5]\d$/.test(valor);
   }
 
   private versaoLgpdAtual(): string {

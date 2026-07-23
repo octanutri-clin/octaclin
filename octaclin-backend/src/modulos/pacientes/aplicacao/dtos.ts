@@ -1,4 +1,18 @@
-import { IsBoolean, IsDateString, IsEmail, IsIn, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsEmail,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength
+} from 'class-validator';
 import type {
   CategoriaTarefaAcompanhamento,
   PrioridadeTarefaAcompanhamento,
@@ -236,6 +250,23 @@ export class AtualizarPerfilPacientePortalDto {
   @IsOptional()
   @IsBoolean()
   prefereWhatsapp?: boolean;
+
+  @IsOptional()
+  @IsIn(['email', 'whatsapp', 'qualquer'])
+  canalPreferido?: 'email' | 'whatsapp' | 'qualquer';
+
+  @IsOptional()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  horarioInicio?: string;
+
+  @IsOptional()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  horarioFim?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  timezoneComunicacao?: string;
 }
 
 export class RegistrarConsentimentoLgpdPortalDto {

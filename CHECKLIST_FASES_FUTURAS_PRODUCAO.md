@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 110.
+Atualizado apos a Fase 111.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -175,9 +175,12 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Saida entregue: lembrete automatico 24h por email/WhatsApp, cron por tenant ativo, logs em `notificacoes`/`payload.automacoes`, reprocessamento pelo outbox existente, confirmacao simples via resposta WhatsApp e status visivel na agenda.
   - Observacao: cancelamento e reagendamento por resposta livre ficam para fluxo assistido futuro, sem alterar agenda automaticamente nesta fase.
 
-- [ ] Fase 111 - Preferencias de comunicacao por paciente.
+- [x] Fase 111 - Preferencias de comunicacao por paciente.
   - Opt-in/opt-out, canal preferido e horarios.
-  - Saida esperada: comunicacoes respeitam consentimento e preferencia.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-22.
+  - Validacoes: `pnpm --dir octaclin-backend test --runInBand servico-portal-paciente.spec.ts servico-lembretes-agenda.spec.ts processador-lembretes-agenda.spec.ts servico-agenda.spec.ts`, `pnpm --dir octaclin-backend typecheck`, `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web build`, `powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly`.
+  - Saida entregue: portal do paciente edita preferencias de comunicacao, contato criptografado preserva canal preferido/horario, lembrete 24h respeita opt-in, canal preferido e janela permitida.
 
 - [ ] Fase 112 - Central de falhas de comunicacao.
   - Reprocessar falhas de email, WhatsApp, calendario e outbox.
