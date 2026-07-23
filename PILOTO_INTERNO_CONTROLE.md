@@ -4,9 +4,9 @@ Este arquivo acompanha a execucao do piloto interno descrito em `RUNBOOK_PILOTO_
 
 ## Status atual
 
-- Status: nao iniciado.
-- Rodada: nenhuma ate o momento.
-- Data de inicio: pendente.
+- Status: em preparacao (suite automatizada validada; jornadas manuais e seed remoto pendentes).
+- Rodada: 1 (em preparacao).
+- Data de inicio: pendente (aguardando participantes e `DATABASE_URL` de staging).
 - Data de encerramento: pendente.
 - Ambiente: staging, tenant `octaclin-staging`.
 
@@ -32,7 +32,7 @@ Este arquivo acompanha a execucao do piloto interno descrito em `RUNBOOK_PILOTO_
 - [ ] Paciente consulta notificacoes/tarefas e exporta dados LGPD.
 - [ ] Suporte/operador revisa console operacional e central de falhas.
 - [ ] Suporte/operador simula atendimento de login/convite.
-- [ ] `pnpm test:e2e:criticas` executado nesta rodada.
+- [x] `pnpm test:e2e:criticas` executado nesta rodada (2026-07-23, 6/6 testes passaram em desktop e mobile).
 
 ## Registro de bugs
 
