@@ -88,4 +88,92 @@ describe('ServicoGoogleCalendar', () => {
       htmlLink: 'https://calendar.google/event'
     });
   });
+
+  it('deve atualizar evento existente no Google Calendar', async () => {
+    process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+    process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
+    process.env.GOOGLE_CALENDAR_REFRESH_TOKEN = 'refresh-token';
+    process.env.GOOGLE_CALENDAR_TOKEN_URI = 'https://oauth2.test/token';
+
+    (fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn(async () => ({ access_token: 'access-token' }))
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn(async () => ({ id: 'google-event-1', htmlLink: 'https://calendar.google/event-editado' }))
+      });
+
+    const servico = new ServicoGoogleCalendar();
+    const resultado = await servico.atualizarEvento({
+      calendarId: 'octaclinsys@gmail.com',
+      eventId: 'google-event-1',
+      resumo: 'Consulta OctaClin - Ana',
+      descricao: 'Consulta remarcada pelo OctaClin.',
+      inicioEm: new Date('2026-07-23T14:00:00.000Z'),
+      fimEm: new Date('2026-07-23T14:45:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      local: 'Sala 2'
+    });
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      'https://www.googleapis.com/calendar/v3/calendars/octaclinsys%40gmail.com/events/google-event-1',
+      expect.objectContaining({
+        method: 'PATCH',
+        headers: expect.objectContaining({ Authorization: 'Bearer access-token' }),
+        body: JSON.stringify({
+          summary: 'Consulta OctaClin - Ana',
+          description: 'Consulta remarcada pelo OctaClin.',
+          location: 'Sala 2',
+          start: { dateTime: '2026-07-23T14:00:00.000Z', timeZone: 'America/Sao_Paulo' },
+          end: { dateTime: '2026-07-23T14:45:00.000Z', timeZone: 'America/Sao_Paulo' }
+        })
+      })
+    );
+    expect(resultado).toEqual({
+      sincronizado: true,
+      calendarId: 'octaclinsys@gmail.com',
+      eventId: 'google-event-1',
+      htmlLink: 'https://calendar.google/event-editado'
+    });
+  });
+
+  it('deve cancelar evento existente no Google Calendar', async () => {
+    process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+    process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
+    process.env.GOOGLE_CALENDAR_REFRESH_TOKEN = 'refresh-token';
+    process.env.GOOGLE_CALENDAR_TOKEN_URI = 'https://oauth2.test/token';
+
+    (fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn(async () => ({ access_token: 'access-token' }))
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 204
+      });
+
+    const servico = new ServicoGoogleCalendar();
+    const resultado = await servico.cancelarEvento({
+      calendarId: 'octaclinsys@gmail.com',
+      eventId: 'google-event-1'
+    });
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      'https://www.googleapis.com/calendar/v3/calendars/octaclinsys%40gmail.com/events/google-event-1',
+      expect.objectContaining({
+        method: 'DELETE',
+        headers: expect.objectContaining({ Authorization: 'Bearer access-token' })
+      })
+    );
+    expect(resultado).toEqual({
+      sincronizado: true,
+      calendarId: 'octaclinsys@gmail.com',
+      eventId: 'google-event-1'
+    });
+  });
 });

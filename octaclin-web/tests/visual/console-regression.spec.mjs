@@ -302,6 +302,45 @@ test.describe('console operacional', () => {
 });
 
 async function prepararDashboardMockado(page) {
+  let remarcouConsulta = false;
+  let cancelouConsulta = false;
+  const consultasAgenda = [
+    {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      pacienteNome: 'Ana Souza',
+      profissionalId: 'profissional-1',
+      profissionalNome: 'Dra. Carla',
+      titulo: 'Consulta inicial',
+      inicioEm: '2026-07-22T13:00:00.000Z',
+      fimEm: '2026-07-22T14:00:00.000Z',
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      local: 'Online',
+      notificacoes: {},
+      payload: {},
+      criadoEm: '2026-07-20T10:00:00.000Z',
+      atualizadoEm: '2026-07-20T10:00:00.000Z'
+    },
+    {
+      id: 'consulta-2',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-2',
+      pacienteNome: 'Bruno Lima',
+      profissionalId: 'profissional-1',
+      profissionalNome: 'Dra. Carla',
+      titulo: 'Retorno',
+      inicioEm: '2026-07-23T13:00:00.000Z',
+      fimEm: '2026-07-23T13:30:00.000Z',
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {},
+      payload: {},
+      criadoEm: '2026-07-20T10:00:00.000Z',
+      atualizadoEm: '2026-07-20T10:00:00.000Z'
+    }
+  ];
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -323,6 +362,7 @@ async function prepararDashboardMockado(page) {
         permissoes: [
           'dashboard.ler',
           'agenda.consultas.ler',
+          'agenda.consultas.criar',
           'pacientes.listar',
           'questionarios.ler',
           'comunicacoes.mensagens.ler'
@@ -333,47 +373,60 @@ async function prepararDashboardMockado(page) {
   });
 
   await page.route('**/api/agenda/consultas', async (route) => {
+    if (route.request().method() === 'POST') {
+      const consulta = {
+        id: 'consulta-3',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        pacienteNome: 'Ana Souza',
+        profissionalId: 'profissional-1',
+        profissionalNome: 'Dra. Carla',
+        titulo: 'Consulta - Ana Souza',
+        inicioEm: '2026-07-24T13:00:00.000Z',
+        fimEm: '2026-07-24T14:00:00.000Z',
+        timezone: 'America/Sao_Paulo',
+        status: 'agendada',
+        notificacoes: {},
+        payload: {},
+        criadoEm: '2026-07-22T10:00:00.000Z',
+        atualizadoEm: '2026-07-22T10:00:00.000Z'
+      };
+      consultasAgenda.unshift(consulta);
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(consulta) });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify([
-        {
-          id: 'consulta-1',
-          tenantId: 'tenant-1',
-          pacienteId: 'paciente-1',
-          pacienteNome: 'Ana Souza',
-          profissionalId: 'profissional-1',
-          profissionalNome: 'Dra. Carla',
-          titulo: 'Consulta inicial',
-          inicioEm: '2026-07-22T13:00:00.000Z',
-          fimEm: '2026-07-22T14:00:00.000Z',
-          timezone: 'America/Sao_Paulo',
-          status: 'agendada',
-          local: 'Online',
-          notificacoes: {},
-          payload: {},
-          criadoEm: '2026-07-20T10:00:00.000Z',
-          atualizadoEm: '2026-07-20T10:00:00.000Z'
-        },
-        {
-          id: 'consulta-2',
-          tenantId: 'tenant-1',
-          pacienteId: 'paciente-2',
-          pacienteNome: 'Bruno Lima',
-          profissionalId: 'profissional-1',
-          profissionalNome: 'Dra. Carla',
-          titulo: 'Retorno',
-          inicioEm: '2026-07-23T13:00:00.000Z',
-          fimEm: '2026-07-23T13:30:00.000Z',
-          timezone: 'America/Sao_Paulo',
-          status: 'agendada',
-          notificacoes: {},
-          payload: {},
-          criadoEm: '2026-07-20T10:00:00.000Z',
-          atualizadoEm: '2026-07-20T10:00:00.000Z'
-        }
-      ])
+      body: JSON.stringify(consultasAgenda)
     });
+  });
+
+  await page.route('**/api/agenda/consultas/consulta-1', async (route) => {
+    const consulta = consultasAgenda.find((item) => item.id === 'consulta-1');
+    if (route.request().method() === 'PATCH') {
+      remarcouConsulta = true;
+      Object.assign(consulta, {
+        inicioEm: '2026-07-24T13:30:00.000Z',
+        fimEm: '2026-07-24T14:15:00.000Z',
+        local: 'Sala 2',
+        atualizadoEm: '2026-07-22T12:00:00.000Z',
+        notificacoes: { googleCalendar: { sincronizado: true } }
+      });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(consulta) });
+      return;
+    }
+    if (route.request().method() === 'DELETE') {
+      cancelouConsulta = true;
+      Object.assign(consulta, {
+        status: 'cancelada',
+        notificacoes: { googleCalendar: { sincronizado: true } },
+        payload: { historico: [{ acao: 'cancelada', motivo: 'Paciente pediu reagendamento.' }] }
+      });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(consulta) });
+      return;
+    }
+    await route.fallback();
   });
 
   await page.route('**/api/pacientes**', async (route) => {
@@ -405,6 +458,26 @@ async function prepararDashboardMockado(page) {
           }
         ],
         total: 2
+      })
+    });
+  });
+
+  await page.route('**/api/profissionais**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            id: 'profissional-1',
+            tenantId: 'tenant-1',
+            nome: 'Dra. Carla',
+            email: 'dra.carla@octaclin.local',
+            especialidade: 'Nutrologia',
+            criadoEm: '2026-07-20T10:00:00.000Z'
+          }
+        ],
+        total: 1
       })
     });
   });
@@ -466,6 +539,11 @@ async function prepararDashboardMockado(page) {
       ])
     });
   });
+
+  return {
+    remarcouConsulta: () => remarcouConsulta,
+    cancelouConsulta: () => cancelouConsulta
+  };
 }
 
 async function prepararProntuarioMockado(page) {
@@ -780,6 +858,34 @@ test.describe('dashboard profissional', () => {
     await expect(page.getByRole('heading', { name: 'Mensagens para revisar' })).toBeVisible();
     await expect(page.getByText('Dra., posso trocar o horario?')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Abrir agenda' })).toHaveAttribute('href', '/agenda');
+    await assertSemOverflowHorizontal(page);
+  });
+});
+
+test.describe('agenda de producao', () => {
+  test('permite remarcar e cancelar consulta agendada', async ({ page }) => {
+    const agenda = await prepararDashboardMockado(page);
+    await page.goto('/agenda');
+
+    await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
+    const consultaAna = page.locator('article').filter({ hasText: 'Ana Souza' });
+    await expect(consultaAna).toBeVisible();
+
+    await consultaAna.getByLabel('Nova data e hora').fill('2026-07-24T10:30');
+    await consultaAna.getByLabel('Nova duracao').fill('45');
+    await consultaAna.getByLabel('Novo local').fill('Sala 2');
+    await consultaAna.getByRole('button', { name: 'Remarcar' }).click();
+
+    await expect.poll(() => agenda.remarcouConsulta()).toBe(true);
+    await expect(page.getByText('Consulta remarcada. Google Calendar foi atualizado conforme configuracao.')).toBeVisible();
+    await expect(consultaAna.getByText('24/07/2026')).toBeVisible();
+
+    await consultaAna.getByLabel('Motivo do cancelamento').fill('Paciente pediu reagendamento.');
+    await consultaAna.getByRole('button', { name: 'Cancelar consulta' }).click();
+
+    await expect.poll(() => agenda.cancelouConsulta()).toBe(true);
+    await expect(page.getByText('Consulta cancelada. Google Calendar foi atualizado conforme configuracao.')).toBeVisible();
+    await expect(consultaAna.getByText('cancelada')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });

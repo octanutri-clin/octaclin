@@ -7,8 +7,8 @@ Atualizado em 2026-07-22.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 107 - Biblioteca de materiais e envio ao paciente.
-- Proxima fase planejada: Fase 108 - Agenda de producao.
+- Ultima fase concluida: Fase 108 - Agenda de producao.
+- Proxima fase planejada: Fase 109 - Templates aprovados e mapeamento Meta WhatsApp.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -41,6 +41,7 @@ Atualizado em 2026-07-22.
 - Controle manual administrativo de assinatura no painel operacional.
 - Bloqueios suaves de assinatura/limite para novas criacoes de usuarios administrativos e pacientes.
 - Agenda interna com integracao Google Calendar.
+- Agenda com conflito local por profissional, remarcacao e cancelamento sincronizados com Google Calendar quando configurado.
 - Comunicacoes por email.
 - WhatsApp Meta com envio, webhook, status, inbox, associacao e notas.
 - Painel operacional LGPD.
@@ -49,7 +50,7 @@ Atualizado em 2026-07-22.
 ## O que ainda falta antes de producao real
 
 - Gateway de pagamento definitivo, se a operacao manual deixar de ser suficiente.
-- Agenda de producao com remarcacao, cancelamento e conflitos maduros.
+- Recorrencia avancada e importacao inbound do Google Calendar por `syncToken`.
 - Templates WhatsApp aprovados mapeados no OctaClin.
 - Automacoes de lembrete/confirmacao.
 - Politicas, termos e consentimentos versionados.
@@ -93,4 +94,4 @@ Atualizado em 2026-07-22.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, mas ainda precisa de revisao multi-tenant ampla, observabilidade, agenda de producao madura, materiais no portal do paciente, QA E2E e producao isolada antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, mas ainda precisa de revisao multi-tenant ampla, observabilidade, recorrencia/importacao Google Calendar, materiais no portal do paciente, QA E2E e producao isolada antes de uso comercial com clientes reais.

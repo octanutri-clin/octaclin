@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 107.
+Atualizado apos a Fase 108.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -149,10 +149,14 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 
 ### Bloco D - Agenda, comunicacoes e automacoes
 
-- [ ] Fase 108 - Agenda de producao.
+- [x] Fase 108 - Agenda de producao.
   - Conflitos, remarcacao, cancelamento, recorrencia e disponibilidade.
   - Sincronizacao bidirecional minima com Google Calendar.
-  - Saida esperada: agenda confiavel para uso real.
+  - Commit: registrado no historico Git desta fase.
+  - Data: 2026-07-22.
+  - Validacoes: `pnpm --dir octaclin-backend exec jest servico-agenda.spec.ts servico-google-calendar.spec.ts --runInBand`, `pnpm --dir octaclin-backend typecheck`, `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs -g "permite remarcar e cancelar consulta agendada|agrega rotina diaria do profissional" --project=desktop-chromium --project=mobile-chromium --reporter=list`.
+  - Saida entregue: conflitos locais por profissional, remarcacao, cancelamento, auditoria, historico no payload e sincronizacao OctaClin -> Google Calendar para criar/atualizar/cancelar eventos.
+  - Observacao: recorrencia avancada e importacao inbound por `syncToken` seguem como aprofundamento futuro antes do go-live amplo.
 
 - [ ] Fase 109 - Templates aprovados e mapeamento Meta WhatsApp.
   - Mapear templates aprovados manualmente na Meta.

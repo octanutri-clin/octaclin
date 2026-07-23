@@ -4,7 +4,7 @@ Este pacote orienta um desenvolvedor ou agente de IA que vai assumir varias fase
 
 ## Regra de execucao
 
-- Avancar em ordem a partir da Fase 108.
+- Avancar em ordem a partir da Fase 109.
 - Fazer uma fase por vez.
 - Cada fase deve ter seu proprio commit.
 - Atualizar a documentacao viva ao final de cada fase.
@@ -13,8 +13,8 @@ Este pacote orienta um desenvolvedor ou agente de IA que vai assumir varias fase
 
 ## Estado de partida
 
-- Ultima fase concluida: Fase 107 - Biblioteca de materiais e envio ao paciente.
-- Primeiro proximo passo: Fase 108 - Agenda de producao.
+- Ultima fase concluida: Fase 108 - Agenda de producao.
+- Primeiro proximo passo: Fase 109 - Templates aprovados e mapeamento Meta WhatsApp.
 - Fonte de verdade do roadmap: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Sequencia recomendada
@@ -64,6 +64,8 @@ Cuidados:
 - Comecar com links e metadados, deixando arquivo/binario para evolucao posterior se necessario.
 
 ### Fase 108 - Agenda de producao
+
+Status: concluida em 2026-07-22, com conflito local, remarcacao, cancelamento e sincronizacao OctaClin -> Google. Recorrencia avancada e importacao inbound por `syncToken` seguem como aprofundamento futuro.
 
 Objetivo:
 

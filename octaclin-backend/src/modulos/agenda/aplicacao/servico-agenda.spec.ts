@@ -45,7 +45,9 @@ function criarServico(dados: Record<string, unknown> = {}) {
     descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8').replace('cripto:', ''))
   } as unknown as CriptografiaDadosSensiveis;
   const googleCalendar = {
-    criarEvento: jest.fn(async () => ({ sincronizado: true, calendarId: 'primary', eventId: 'event-1', htmlLink: 'https://calendar.google/event' }))
+    criarEvento: jest.fn(async () => ({ sincronizado: true, calendarId: 'primary', eventId: 'event-1', htmlLink: 'https://calendar.google/event' })),
+    atualizarEvento: jest.fn(async () => ({ sincronizado: true, calendarId: 'primary', eventId: 'event-1', htmlLink: 'https://calendar.google/event-editado' })),
+    cancelarEvento: jest.fn(async () => ({ sincronizado: true, calendarId: 'primary', eventId: 'event-1', htmlLink: 'https://calendar.google/event-editado' }))
   };
   const comunicacoes = {
     listarCanais: jest.fn(async () => [
@@ -164,6 +166,129 @@ describe('ServicoAgenda', () => {
         fimEm: '2026-07-22T11:00:00.000Z'
       })
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('deve rejeitar consulta que conflita com horario agendado do mesmo profissional', async () => {
+    const { servico } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      },
+      consultas: [
+        {
+          id: 'consulta-existente',
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          pacienteId: 'paciente-2',
+          status: 'agendada',
+          inicioEm: new Date('2026-07-22T12:30:00.000Z'),
+          fimEm: new Date('2026-07-22T13:30:00.000Z')
+        }
+      ]
+    });
+
+    await expect(
+      servico.criarConsulta('tenant-1', {
+        pacienteId: 'paciente-1',
+        profissionalId: 'profissional-1',
+        inicioEm: '2026-07-22T12:00:00.000Z',
+        duracaoMinutos: 60
+      })
+    ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
+  });
+
+  it('deve remarcar consulta e atualizar evento no Google Calendar', async () => {
+    const consultaExistente = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      local: 'Sala 1',
+      observacoes: 'Primeira consulta',
+      googleCalendarId: 'primary',
+      googleEventId: 'event-1',
+      googleEventHtmlLink: 'https://calendar.google/event',
+      notificacoes: {},
+      payload: { pacienteNome: 'Ana Paula', profissionalNome: 'Dra Carla' },
+      criadoEm: new Date('2026-07-20T12:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-20T12:00:00.000Z')
+    };
+    const { servico, googleCalendar } = criarServico({ consulta: consultaExistente, consultas: [consultaExistente] });
+
+    const consulta = await servico.remarcarConsulta('tenant-1', 'consulta-1', {
+      inicioEm: '2026-07-23T14:00:00.000Z',
+      duracaoMinutos: 45,
+      local: 'Sala 2',
+      observacoes: 'Remarcada por solicitacao do paciente'
+    });
+
+    expect(googleCalendar.atualizarEvento).toHaveBeenCalledWith(
+      expect.objectContaining({
+        calendarId: 'primary',
+        eventId: 'event-1',
+        inicioEm: new Date('2026-07-23T14:00:00.000Z'),
+        fimEm: new Date('2026-07-23T14:45:00.000Z'),
+        local: 'Sala 2'
+      })
+    );
+    expect(consulta.inicioEm).toEqual(new Date('2026-07-23T14:00:00.000Z'));
+    expect(consulta.fimEm).toEqual(new Date('2026-07-23T14:45:00.000Z'));
+    expect(consulta.notificacoes.googleCalendar).toEqual(expect.objectContaining({ sincronizado: true }));
+    expect(consulta.payload.historico).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          acao: 'remarcada',
+          inicioAnteriorEm: '2026-07-22T12:00:00.000Z',
+          inicioNovoEm: '2026-07-23T14:00:00.000Z'
+        })
+      ])
+    );
+  });
+
+  it('deve cancelar consulta e cancelar evento no Google Calendar', async () => {
+    const consultaExistente = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      googleCalendarId: 'primary',
+      googleEventId: 'event-1',
+      notificacoes: {},
+      payload: { pacienteNome: 'Ana Paula' },
+      criadoEm: new Date('2026-07-20T12:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-20T12:00:00.000Z')
+    };
+    const { servico, googleCalendar } = criarServico({ consulta: consultaExistente, consultas: [consultaExistente] });
+
+    const consulta = await servico.cancelarConsulta('tenant-1', 'consulta-1', { motivo: 'Paciente solicitou remarcacao futura.' });
+
+    expect(googleCalendar.cancelarEvento).toHaveBeenCalledWith({ calendarId: 'primary', eventId: 'event-1' });
+    expect(consulta.status).toBe('cancelada');
+    expect(consulta.payload.historico).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          acao: 'cancelada',
+          motivo: 'Paciente solicitou remarcacao futura.'
+        })
+      ])
+    );
   });
 
   it('deve respeitar contato estruturado e preferencias do portal do paciente', async () => {

@@ -46,6 +46,38 @@ export class CriarConsultaAgendaDto {
   enviarNotificacoes?: boolean;
 }
 
+export class RemarcarConsultaAgendaDto {
+  @IsDateString()
+  inicioEm: string;
+
+  @IsOptional()
+  @IsDateString()
+  fimEm?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(15)
+  @Max(480)
+  duracaoMinutos?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  local?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  observacoes?: string;
+}
+
+export class CancelarConsultaAgendaDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  motivo?: string;
+}
+
 export interface ConsultaAgendaRespostaDto {
   id: string;
   tenantId: string;

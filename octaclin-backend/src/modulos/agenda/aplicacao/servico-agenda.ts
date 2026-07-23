@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { IsNull, MoreThanOrEqual } from 'typeorm';
+import { EntityManager, IsNull, MoreThanOrEqual } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ProcessadorNotificacoes } from '../../comunicacoes/aplicacao/processador-notificacoes';
@@ -9,7 +9,7 @@ import { TemplateMensagemOrm } from '../../comunicacoes/infraestrutura/template-
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
-import { ConsultaAgendaRespostaDto, CriarConsultaAgendaDto } from './dtos';
+import { CancelarConsultaAgendaDto, ConsultaAgendaRespostaDto, CriarConsultaAgendaDto, RemarcarConsultaAgendaDto } from './dtos';
 import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from './servico-google-calendar';
 
 type ResultadoNotificacaoAgenda =
@@ -24,6 +24,11 @@ interface ContextoConsultaCriada {
   emailContato?: string;
   whatsappContato?: string;
   textoMensagem: string;
+}
+
+interface JanelaConsulta {
+  inicioEm: Date;
+  fimEm: Date;
 }
 
 interface ContatoPacienteAgenda {
@@ -84,11 +89,81 @@ export class ServicoAgenda {
     return this.mapearResposta(consultaAtualizada, contexto.pacienteNome, contexto.profissionalNome);
   }
 
+  async remarcarConsulta(tenantId: string, consultaId: string, dados: RemarcarConsultaAgendaDto): Promise<ConsultaAgendaRespostaDto> {
+    const inicioEm = dataValida(dados.inicioEm);
+    const fimEm = this.calcularFim(inicioEm, dados);
+    if (fimEm <= inicioEm) throw new BadRequestException('Horario final deve ser posterior ao inicio da consulta.');
+
+    const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
+      const atual = await repositorio.findOne({ where: { id: consultaId, tenantId } });
+      if (!atual) throw new NotFoundException('Consulta nao encontrada.');
+      if (atual.status === 'cancelada') throw new BadRequestException('Consulta cancelada nao pode ser remarcada.');
+
+      await this.validarConflitoHorario(gerenciador, tenantId, atual.profissionalId, { inicioEm, fimEm }, atual.id);
+      const inicioAnterior = atual.inicioEm;
+      const fimAnterior = atual.fimEm;
+      atual.inicioEm = inicioEm;
+      atual.fimEm = fimEm;
+      atual.local = dados.local !== undefined ? textoOpcional(dados.local) : atual.local;
+      atual.observacoes = dados.observacoes !== undefined ? textoOpcional(dados.observacoes) : atual.observacoes;
+      atual.payload = this.adicionarHistorico(atual.payload, {
+        acao: 'remarcada',
+        inicioAnteriorEm: inicioAnterior.toISOString(),
+        fimAnteriorEm: fimAnterior.toISOString(),
+        inicioNovoEm: inicioEm.toISOString(),
+        fimNovoEm: fimEm.toISOString()
+      });
+      return repositorio.save(atual);
+    });
+
+    const google = consulta.googleCalendarId && consulta.googleEventId
+      ? await this.googleCalendar.atualizarEvento({
+          calendarId: consulta.googleCalendarId,
+          eventId: consulta.googleEventId,
+          resumo: consulta.titulo,
+          descricao: this.montarDescricaoEvento({
+            consulta,
+            pacienteNome: this.nomePacientePayload(consulta),
+            profissionalNome: this.nomeProfissionalPayload(consulta),
+            textoMensagem: ''
+          }),
+          inicioEm: consulta.inicioEm,
+          fimEm: consulta.fimEm,
+          timezone: consulta.timezone,
+          local: consulta.local
+        })
+      : { sincronizado: false as const, motivo: 'evento_google_ausente' };
+
+    return this.mapearResposta(await this.aplicarResultadoGoogle(tenantId, consulta.id, google));
+  }
+
+  async cancelarConsulta(tenantId: string, consultaId: string, dados: CancelarConsultaAgendaDto): Promise<ConsultaAgendaRespostaDto> {
+    const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
+      const atual = await repositorio.findOne({ where: { id: consultaId, tenantId } });
+      if (!atual) throw new NotFoundException('Consulta nao encontrada.');
+      if (atual.status === 'cancelada') return atual;
+
+      atual.status = 'cancelada';
+      atual.payload = this.adicionarHistorico(atual.payload, {
+        acao: 'cancelada',
+        motivo: textoOpcional(dados.motivo),
+        canceladaEm: new Date().toISOString()
+      });
+      return repositorio.save(atual);
+    });
+
+    const google = consulta.googleCalendarId && consulta.googleEventId
+      ? await this.googleCalendar.cancelarEvento({ calendarId: consulta.googleCalendarId, eventId: consulta.googleEventId })
+      : { sincronizado: false as const, motivo: 'evento_google_ausente' };
+
+    return this.mapearResposta(await this.aplicarResultadoGoogle(tenantId, consulta.id, google));
+  }
+
   private async criarRegistroInterno(tenantId: string, dados: CriarConsultaAgendaDto): Promise<ContextoConsultaCriada> {
     const inicioEm = dataValida(dados.inicioEm);
-    const fimEm = dados.fimEm
-      ? dataValida(dados.fimEm)
-      : new Date(inicioEm.getTime() + (dados.duracaoMinutos ?? 50) * 60 * 1000);
+    const fimEm = this.calcularFim(inicioEm, dados);
     if (fimEm <= inicioEm) throw new BadRequestException('Horario final deve ser posterior ao inicio da consulta.');
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
@@ -104,6 +179,7 @@ export class ServicoAgenda {
           })
         : null;
       if (profissionalId && !profissional) throw new NotFoundException('Profissional nao encontrado.');
+      await this.validarConflitoHorario(gerenciador, tenantId, profissionalId, { inicioEm, fimEm });
 
       const pacienteNome = this.criptografia.descriptografar(paciente.nomeCriptografado);
       const profissionalNome = profissional ? this.criptografia.descriptografar(profissional.nomeCriptografado) : undefined;
@@ -158,6 +234,62 @@ export class ServicoAgenda {
       consulta.payload = { ...consulta.payload, googleCalendar: google };
       return repositorio.save(consulta);
     });
+  }
+
+  private async aplicarResultadoGoogle(
+    tenantId: string,
+    consultaId: string,
+    google: ResultadoGoogleCalendar
+  ): Promise<AgendaConsultaOrm> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
+      const consulta = await repositorio.findOne({ where: { id: consultaId, tenantId } });
+      if (!consulta) throw new NotFoundException('Consulta nao encontrada.');
+
+      if (google.sincronizado) {
+        consulta.googleCalendarId = google.calendarId;
+        consulta.googleEventId = google.eventId;
+        consulta.googleEventHtmlLink = google.htmlLink ?? consulta.googleEventHtmlLink;
+      }
+      consulta.notificacoes = { ...(consulta.notificacoes ?? {}), googleCalendar: google };
+      consulta.payload = { ...consulta.payload, googleCalendar: google };
+      return repositorio.save(consulta);
+    });
+  }
+
+  private async validarConflitoHorario(
+    gerenciador: EntityManager,
+    tenantId: string,
+    profissionalId: string | undefined,
+    janela: JanelaConsulta,
+    ignorarConsultaId?: string
+  ) {
+    if (!profissionalId) return;
+    const consultas = await gerenciador.getRepository(AgendaConsultaOrm).find({
+      where: { tenantId, profissionalId, status: 'agendada' },
+      take: 500
+    });
+    const conflito = consultas.some(
+      (consulta) =>
+        consulta.id !== ignorarConsultaId &&
+        consulta.inicioEm < janela.fimEm &&
+        consulta.fimEm > janela.inicioEm
+    );
+    if (conflito) throw new BadRequestException('Ja existe consulta agendada neste horario para o profissional.');
+  }
+
+  private calcularFim(inicioEm: Date, dados: { fimEm?: string; duracaoMinutos?: number }) {
+    return dados.fimEm
+      ? dataValida(dados.fimEm)
+      : new Date(inicioEm.getTime() + (dados.duracaoMinutos ?? 50) * 60 * 1000);
+  }
+
+  private adicionarHistorico(payload: Record<string, unknown> | undefined, evento: Record<string, unknown>) {
+    const historico = Array.isArray(payload?.historico) ? payload.historico : [];
+    return {
+      ...(payload ?? {}),
+      historico: [...historico, evento]
+    };
   }
 
   private async enviarNotificacoes(tenantId: string, contexto: ContextoConsultaCriada) {
@@ -237,6 +369,14 @@ export class ServicoAgenda {
       'Evento criado automaticamente pelo OctaClin.'
     ];
     return partes.filter((parte) => parte !== undefined).join('\n');
+  }
+
+  private nomePacientePayload(consulta: AgendaConsultaOrm) {
+    return typeof consulta.payload?.pacienteNome === 'string' ? consulta.payload.pacienteNome : consulta.titulo;
+  }
+
+  private nomeProfissionalPayload(consulta: AgendaConsultaOrm) {
+    return typeof consulta.payload?.profissionalNome === 'string' ? consulta.payload.profissionalNome : undefined;
   }
 
   private obterEmailPaciente(paciente: PacienteOrm): string | undefined {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
@@ -6,7 +6,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { CriarConsultaAgendaDto } from '../aplicacao/dtos';
+import { CancelarConsultaAgendaDto, CriarConsultaAgendaDto, RemarcarConsultaAgendaDto } from '../aplicacao/dtos';
 import { ServicoAgenda } from '../aplicacao/servico-agenda';
 
 @Controller('agenda')
@@ -45,6 +45,57 @@ export class ControladorAgenda {
         profissionalId: dados.profissionalId,
         googleEventId: consulta.googleEventId,
         notificacoes: consulta.notificacoes
+      }
+    });
+    return consulta;
+  }
+
+  @Patch('consultas/:consultaId')
+  @Permissoes('agenda.consultas.criar')
+  async remarcarConsulta(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('consultaId', ParseUUIDPipe) consultaId: string,
+    @Body() dados: RemarcarConsultaAgendaDto
+  ) {
+    const consulta = await this.servicoAgenda.remarcarConsulta(usuario.tenantId, consultaId, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'agenda.consulta.remarcar',
+      recursoTipo: 'agenda_consulta',
+      recursoId: consulta.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        inicioEm: consulta.inicioEm,
+        fimEm: consulta.fimEm,
+        googleEventId: consulta.googleEventId
+      }
+    });
+    return consulta;
+  }
+
+  @Delete('consultas/:consultaId')
+  @Permissoes('agenda.consultas.criar')
+  async cancelarConsulta(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('consultaId', ParseUUIDPipe) consultaId: string,
+    @Body() dados: CancelarConsultaAgendaDto
+  ) {
+    const consulta = await this.servicoAgenda.cancelarConsulta(usuario.tenantId, consultaId, dados ?? {});
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'agenda.consulta.cancelar',
+      recursoTipo: 'agenda_consulta',
+      recursoId: consulta.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        motivo: dados?.motivo,
+        googleEventId: consulta.googleEventId
       }
     });
     return consulta;

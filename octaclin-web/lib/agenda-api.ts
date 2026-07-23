@@ -36,6 +36,18 @@ export interface CriarConsultaAgendaEntrada {
   enviarNotificacoes?: boolean;
 }
 
+export interface RemarcarConsultaAgendaEntrada {
+  inicioEm: string;
+  fimEm?: string;
+  duracaoMinutos?: number;
+  local?: string;
+  observacoes?: string;
+}
+
+export interface CancelarConsultaAgendaEntrada {
+  motivo?: string;
+}
+
 export interface BootstrapAgenda {
   consultas: ConsultaAgendaApi[];
   pacientes: RespostaPaginada<PacienteResumo>;
@@ -76,6 +88,20 @@ export async function listarConsultasAgenda(): Promise<ConsultaAgendaApi[]> {
 export async function criarConsultaAgenda(entrada: CriarConsultaAgendaEntrada): Promise<ConsultaAgendaApi> {
   return requisitar<ConsultaAgendaApi>('/api/agenda/consultas', {
     method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
+export async function remarcarConsultaAgenda(consultaId: string, entrada: RemarcarConsultaAgendaEntrada): Promise<ConsultaAgendaApi> {
+  return requisitar<ConsultaAgendaApi>(`/api/agenda/consultas/${encodeURIComponent(consultaId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(entrada)
+  });
+}
+
+export async function cancelarConsultaAgenda(consultaId: string, entrada: CancelarConsultaAgendaEntrada): Promise<ConsultaAgendaApi> {
+  return requisitar<ConsultaAgendaApi>(`/api/agenda/consultas/${encodeURIComponent(consultaId)}`, {
+    method: 'DELETE',
     body: JSON.stringify(entrada)
   });
 }

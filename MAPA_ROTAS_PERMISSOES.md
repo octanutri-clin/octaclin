@@ -1,6 +1,6 @@
 # OctaClin - Mapa de rotas e permissoes
 
-Atualizado apos a Fase 107. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
+Atualizado apos a Fase 108. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
 
 ## Papeis
 
@@ -133,6 +133,8 @@ Inclui permissoes de `Professional` e adiciona:
 | `/api/cliente/usuarios/[id]/convite` | `/cliente/usuarios/:id/convite` | DELETE exige `cliente.convites.gerenciar` |
 | `/api/operacoes/assinaturas/solicitacoes` | `/operacoes/assinaturas/solicitacoes` | GET exige `SuperAdmin`; lista solicitacoes comerciais pendentes/concluidas |
 | `/api/operacoes/assinaturas/plano` | `/operacoes/assinaturas/plano` | POST exige `SuperAdmin`; aplica plano manualmente no tenant atual |
+| `/api/agenda/consultas` | `/agenda/consultas` | GET exige `agenda.consultas.ler`; POST exige `agenda.consultas.criar`; cria consulta, valida conflito e sincroniza Google quando configurado |
+| `/api/agenda/consultas/[consultaId]` | `/agenda/consultas/:consultaId` | PATCH/DELETE exigem `agenda.consultas.criar`; remarcam/cancelam consulta e sincronizam Google quando configurado |
 | `/api/pacientes/[id]/prontuario` | `/pacientes/:id/prontuario` | GET exige sessao operacional com `pacientes.ler`; backend audita leitura sensivel do prontuario |
 | `/api/pacientes/[id]/evolucoes` | `/pacientes/:id/evolucoes` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e criacao de anotacoes privadas |
 | `/api/pacientes/[id]/tarefas-acompanhamento` | `/pacientes/:id/tarefas-acompanhamento` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e prescricao de tarefas |

@@ -53,3 +53,12 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Push: sim.
 - Validacoes: backend spec de materiais/pacientes/permissoes, backend/web typecheck, authz, Playwright prontuario desktop/mobile, backend/web build, preflight docs e varredura de secrets.
 - Proxima fase: Fase 108 - Agenda de producao.
+
+### Fase 108 - Agenda de producao
+
+- Responsavel: Codex.
+- Conclusao: 2026-07-22.
+- Commit: registrado no historico Git desta fase.
+- Push: sim.
+- Validacoes: backend specs de agenda/Google Calendar, backend/web typecheck, authz, Playwright agenda/dashboard desktop/mobile, backend/web build, preflight docs e varredura de secrets.
+- Proxima fase: Fase 109 - Templates aprovados e mapeamento Meta WhatsApp.

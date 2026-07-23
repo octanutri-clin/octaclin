@@ -1,12 +1,12 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, CheckCircle2, Clock, Mail, MessageCircle, RefreshCcw, Save, Video } from 'lucide-react';
+import { CalendarCheck, CheckCircle2, Clock, Mail, MessageCircle, RefreshCcw, Save, Video, XCircle } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
-import { ConsultaAgendaApi, carregarBootstrapAgenda, criarConsultaAgenda } from '@/lib/agenda-api';
+import { ConsultaAgendaApi, cancelarConsultaAgenda, carregarBootstrapAgenda, criarConsultaAgenda, remarcarConsultaAgenda } from '@/lib/agenda-api';
 
 interface FormularioAgenda {
   pacienteId: string;
@@ -57,6 +57,13 @@ function formatarDataHora(valor: string) {
   }).format(data);
 }
 
+function duracaoConsultaMinutos(consulta: ConsultaAgendaApi) {
+  const inicio = new Date(consulta.inicioEm).getTime();
+  const fim = new Date(consulta.fimEm).getTime();
+  if (Number.isNaN(inicio) || Number.isNaN(fim) || fim <= inicio) return 50;
+  return Math.round((fim - inicio) / 60000);
+}
+
 function pacientePorId(pacientes: PacienteResumo[], id: string) {
   return pacientes.find((paciente) => paciente.id === id);
 }
@@ -98,6 +105,7 @@ export function PainelAgenda() {
   const [formulario, setFormulario] = useState<FormularioAgenda>({ ...formularioInicial, inicioEm: proximoHorarioPadrao() });
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [processandoConsultaId, setProcessandoConsultaId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
 
@@ -188,6 +196,60 @@ export function PainelAgenda() {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao agendar consulta.');
     } finally {
       setSalvando(false);
+    }
+  }
+
+  function atualizarConsulta(consulta: ConsultaAgendaApi) {
+    setConsultas((atuais) => atuais.map((item) => (item.id === consulta.id ? consulta : item)));
+  }
+
+  async function remarcar(evento: FormEvent<HTMLFormElement>, consulta: ConsultaAgendaApi) {
+    evento.preventDefault();
+    const dados = new FormData(evento.currentTarget);
+    const inicioLocal = String(dados.get('inicioEm') ?? '');
+    const duracaoMinutos = Number(dados.get('duracaoMinutos') ?? duracaoConsultaMinutos(consulta));
+    const local = String(dados.get('local') ?? '').trim();
+
+    if (!inicioLocal) {
+      setErro('Informe a nova data e hora da consulta.');
+      return;
+    }
+
+    setErro(null);
+    setSucesso(null);
+    setProcessandoConsultaId(consulta.id);
+    try {
+      const atualizada = await remarcarConsultaAgenda(consulta.id, {
+        inicioEm: new Date(inicioLocal).toISOString(),
+        duracaoMinutos,
+        local: local || undefined,
+        observacoes: consulta.observacoes || undefined
+      });
+      atualizarConsulta(atualizada);
+      setSucesso('Consulta remarcada. Google Calendar foi atualizado conforme configuracao.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao remarcar consulta.');
+    } finally {
+      setProcessandoConsultaId(null);
+    }
+  }
+
+  async function cancelar(evento: FormEvent<HTMLFormElement>, consulta: ConsultaAgendaApi) {
+    evento.preventDefault();
+    const dados = new FormData(evento.currentTarget);
+    const motivo = String(dados.get('motivo') ?? '').trim();
+
+    setErro(null);
+    setSucesso(null);
+    setProcessandoConsultaId(consulta.id);
+    try {
+      const cancelada = await cancelarConsultaAgenda(consulta.id, { motivo: motivo || undefined });
+      atualizarConsulta(cancelada);
+      setSucesso('Consulta cancelada. Google Calendar foi atualizado conforme configuracao.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao cancelar consulta.');
+    } finally {
+      setProcessandoConsultaId(null);
     }
   }
 
@@ -383,6 +445,67 @@ export function PainelAgenda() {
                     >
                       Abrir no Google Calendar
                     </a>
+                  ) : null}
+
+                  {consulta.status === 'agendada' ? (
+                    <div className="mt-3 grid gap-3 border-t border-linha pt-3 xl:grid-cols-[minmax(0,1fr)_minmax(220px,320px)]">
+                      <form onSubmit={(evento) => remarcar(evento, consulta)} className="grid gap-2">
+                        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_120px_minmax(140px,1fr)]">
+                          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                            Nova data e hora
+                            <input
+                              name="inicioEm"
+                              type="datetime-local"
+                              defaultValue={valorDatetimeLocal(new Date(consulta.inicioEm))}
+                              className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                            />
+                          </label>
+                          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                            Nova duracao
+                            <input
+                              name="duracaoMinutos"
+                              type="number"
+                              min={15}
+                              max={480}
+                              step={5}
+                              defaultValue={duracaoConsultaMinutos(consulta)}
+                              className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                            />
+                          </label>
+                          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                            Novo local
+                            <input
+                              name="local"
+                              defaultValue={consulta.local ?? ''}
+                              className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                            />
+                          </label>
+                        </div>
+                        <div className="flex justify-end">
+                          <Botao type="submit" disabled={processandoConsultaId === consulta.id}>
+                            <RefreshCcw size={15} />
+                            Remarcar
+                          </Botao>
+                        </div>
+                      </form>
+
+                      <form onSubmit={(evento) => cancelar(evento, consulta)} className="grid gap-2">
+                        <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                          Motivo do cancelamento
+                          <input
+                            name="motivo"
+                            className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                            placeholder="Opcional"
+                          />
+                        </label>
+                        <div className="flex justify-end">
+                          <Botao type="submit" disabled={processandoConsultaId === consulta.id}>
+                            <XCircle size={15} />
+                            Cancelar consulta
+                          </Botao>
+                        </div>
+                      </form>
+                    </div>
                   ) : null}
                 </article>
               );

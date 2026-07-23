@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 107.
+Atualizado apos a Fase 108.
 
 Este arquivo e um handoff executivo do que ja foi construido no OctaClin. Ele deve ajudar outro agente de IA ou desenvolvedor a entender rapidamente a evolucao do projeto sem precisar reprocessar todo o historico de commits.
 
@@ -149,10 +149,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 105 - Evolucoes/anotacoes clinicas: registro privado do profissional no prontuario, conteudo criptografado, listagem auditada e eventos de evolucao clinica na linha do tempo.
 - Fase 106 - Planos de acompanhamento e tarefas do paciente: tarefas/metas/check-ins prescritos no prontuario, descricao criptografada, resumo de pendencias, auditoria e base para exibir o plano no portal do paciente.
 - Fase 107 - Biblioteca de materiais e envio ao paciente: cadastro de materiais educativos reutilizaveis por tenant, envio ao paciente pelo prontuario, observacao criptografada e base para exibir materiais no portal do paciente.
+- Fase 108 - Agenda de producao: conflitos locais por profissional, remarcacao, cancelamento, historico/auditoria e sincronizacao Google Calendar para criar, atualizar e cancelar eventos.
 
 ## Estado atual de uso
 
-O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam agenda de producao madura, onboarding final do cliente/paciente, materiais no portal do paciente, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e checklist juridico/privacidade.
+O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam recorrencia avancada/importacao Google Calendar, onboarding final do cliente/paciente, materiais no portal do paciente, monitoramento, backups, politica operacional, QA de ponta a ponta com dados reais e checklist juridico/privacidade.
 
 ## Como atualizar este arquivo
 

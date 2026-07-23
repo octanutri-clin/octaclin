@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-07-22, Fase 107.
+Atualizado em 2026-07-22, Fase 108.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -23,7 +23,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Portal do profissional | Parcial | Dashboard diario, console operacional, pacientes, prontuario/linha do tempo, evolucoes clinicas privadas, tarefas/metas/check-ins de acompanhamento, biblioteca/envio de materiais, agenda, formularios e comunicacoes. | Agenda de producao e UX final de rotina. |
 | Portal do paciente | Parcial | Primeiro acesso, historico, perfil, formularios e LGPD. | UX final, tarefas, materiais enviados, check-ins e notificacoes. |
 | Formularios | Pronto | Editor, modelos, preview, coleta, respostas e leitura clinica. | QA E2E com jornada real e dados realistas. |
-| Agenda | Parcial | Agenda interna com Google Calendar e comunicacoes no agendamento. | Remarcacao, cancelamento, conflitos e sincronizacao bidirecional minima. |
+| Agenda | Parcial | Agenda interna com Google Calendar, comunicacoes no agendamento, conflito local por profissional, remarcacao e cancelamento sincronizados com Google. | Recorrencia avancada, importacao inbound por `syncToken` e painel de disponibilidade. |
 | Email | Parcial | Envio validado com Gmail. | Identidade de envio, SPF/DKIM/DMARC quando houver dominio proprio. |
 | WhatsApp | Parcial | Envio, webhook, status, inbox, associacao e notas. | Templates aprovados, mapeamento por evento e automacoes. |
 | LGPD | Parcial | Portal paciente e painel operacional LGPD. | Termos, politica, consentimentos versionados, retencao e exportacao completa. |
@@ -79,4 +79,4 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Seguir para a proxima fase funcional: agenda de producao, Fase 108.
+Seguir para a proxima fase funcional: templates aprovados e mapeamento Meta WhatsApp, Fase 109.
