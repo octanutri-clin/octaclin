@@ -4,6 +4,7 @@ import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.o
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../../materiais/infraestrutura/material-educativo.orm';
+import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { PerguntaOrm } from '../../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
@@ -79,7 +80,8 @@ function criarServico(dados: Record<string, any>) {
     consentimento: criarRepositorioFake('consentimento', dados),
     tarefa: criarRepositorioFake('tarefa', dados),
     material: criarRepositorioFake('material', dados),
-    envioMaterial: criarRepositorioFake('envioMaterial', dados)
+    envioMaterial: criarRepositorioFake('envioMaterial', dados),
+    diario: criarRepositorioFake('diario', dados)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -95,6 +97,7 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === AcompanhamentoTarefaOrm) return repositorios.tarefa;
       if (entidade === MaterialEducativoOrm) return repositorios.material;
       if (entidade === EnvioMaterialPacienteOrm) return repositorios.envioMaterial;
+      if (entidade === LogDiarioRapidoOrm) return repositorios.diario;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -285,6 +288,30 @@ describe('ServicoPortalPaciente', () => {
           atualizadoEm: new Date('2026-07-22T13:00:00.000Z')
         }
       ],
+      diarios: [
+        {
+          id: 'diario-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          tipo: 'humor',
+          valor: {
+            humor: 'bem',
+            adesaoPlano: 80,
+            sintomas: 'Sono leve',
+            observacoes: 'Consegui seguir o plano no almoco.',
+            origem: 'portal_paciente'
+          },
+          registradoEm: new Date('2026-07-23T10:00:00.000Z')
+        },
+        {
+          id: 'diario-outro',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          tipo: 'humor',
+          valor: { humor: 'mal', origem: 'portal_paciente' },
+          registradoEm: new Date('2026-07-23T11:00:00.000Z')
+        }
+      ],
       consentimentos: [
         {
           id: 'consentimento-1',
@@ -311,6 +338,7 @@ describe('ServicoPortalPaciente', () => {
     const portalComPlano = portal as typeof portal & {
       tarefasAcompanhamento: unknown[];
       materiaisDisponiveis: unknown[];
+      diariosRecentes: unknown[];
     };
 
     expect(portal.paciente).toEqual(
@@ -327,7 +355,8 @@ describe('ServicoPortalPaciente', () => {
       formulariosRespondidos: 1,
       mensagensRecentes: 1,
       tarefasPendentes: 1,
-      materiaisDisponiveis: 1
+      materiaisDisponiveis: 1,
+      checkinsRecentes: 1
     });
     expect(portal.perfil).toEqual({
       contato: 'ana@example.com',
@@ -392,6 +421,17 @@ describe('ServicoPortalPaciente', () => {
         status: 'enviado'
       })
     ]);
+    expect(portalComPlano.diariosRecentes).toEqual([
+      expect.objectContaining({
+        id: 'diario-1',
+        tipo: 'humor',
+        humor: 'bem',
+        adesaoPlano: 80,
+        sintomas: 'Sono leve',
+        observacoes: 'Consegui seguir o plano no almoco.',
+        registradoEm: new Date('2026-07-23T10:00:00.000Z')
+      })
+    ]);
     expect(portal.lgpd).toEqual({
       versaoAtual: '2026-07',
       ultimoAceiteEm: new Date('2026-07-10T10:00:00.000Z'),
@@ -412,6 +452,67 @@ describe('ServicoPortalPaciente', () => {
     const { servico } = criarServico({ pacientes: [], consultas: [], envios: [], questionarios: [], mensagens: [] });
 
     await expect(servico.obterResumoPortal('tenant-1', 'usuario-sem-paciente')).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('deve registrar check-in rapido no paciente vinculado ao usuario logado', async () => {
+    const { servico, repositorios } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          profissionalResponsavelId: 'profissional-1',
+          statusAdesao: 'aderente',
+          scoreRisco: '12.50'
+        }
+      ],
+      consultas: [],
+      envios: [],
+      questionarios: [],
+      mensagens: [],
+      diarios: []
+    });
+
+    const checkin = await (servico as any).registrarCheckinRapido('tenant-1', 'usuario-paciente-1', {
+      humor: 'bem',
+      adesaoPlano: 80,
+      sintomas: 'Sono leve',
+      observacoes: 'Consegui seguir o plano no almoco.'
+    });
+
+    expect(checkin).toEqual(
+      expect.objectContaining({
+        pacienteId: 'paciente-1',
+        tipo: 'humor',
+        humor: 'bem',
+        adesaoPlano: 80,
+        sintomas: 'Sono leve',
+        observacoes: 'Consegui seguir o plano no almoco.',
+        registradoEm: expect.any(Date)
+      })
+    );
+    expect(repositorios.diario.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        tipo: 'humor',
+        valor: {
+          humor: 'bem',
+          adesaoPlano: 80,
+          sintomas: 'Sono leve',
+          observacoes: 'Consegui seguir o plano no almoco.',
+          origem: 'portal_paciente'
+        },
+        registradoEm: expect.any(Date)
+      })
+    );
+    expect(repositorios.paciente.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'paciente-1',
+        ultimoCheckinEm: expect.any(Date)
+      })
+    );
   });
 
   it('deve mostrar protocolos LGPD do paciente com status operacional consolidado', async () => {

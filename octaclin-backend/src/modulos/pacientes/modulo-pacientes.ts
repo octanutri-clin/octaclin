@@ -10,6 +10,7 @@ import { ModuloClientes } from '../clientes/modulo-clientes';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { LogDiarioRapidoOrm } from '../mobile/infraestrutura/log-diario-rapido.orm';
 import { EnvioQuestionarioOrm } from '../questionarios/infraestrutura/envio-questionario.orm';
 import { PerguntaOrm } from '../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../questionarios/infraestrutura/questionario.orm';
@@ -43,7 +44,8 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
       QuestionarioOrm,
       RespostaCheckinOrm,
       RespostaValorOrm,
-      MensagemNotificacaoOrm
+      MensagemNotificacaoOrm,
+      LogDiarioRapidoOrm
     ]),
     ModuloTenancy,
     ModuloAuth,

@@ -14,18 +14,22 @@ import {
   RefreshCcw,
   Save,
   ShieldCheck,
+  SmilePlus,
   Target,
   UserRound
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import {
   atualizarPerfilPaciente,
+  CheckinRapidoPacienteApi,
   DetalheFormularioRespondidoApi,
   exportarDadosLgpdPaciente,
+  HumorCheckinRapidoPaciente,
   obterFormularioRespondidoPaciente,
   obterPortalPaciente,
   CanalPreferidoComunicacaoPaciente,
   PortalPacienteApi,
+  registrarCheckinRapidoPaciente,
   registrarConsentimentoLgpdPaciente,
   registrarSolicitacaoLgpdPaciente
 } from '@/lib/portal-api';
@@ -51,6 +55,13 @@ interface ItemLinhaTempoPortal {
   data?: string;
 }
 
+interface FormularioCheckinRapido {
+  humor: HumorCheckinRapidoPaciente;
+  adesaoPlano: string;
+  sintomas: string;
+  observacoes: string;
+}
+
 const formularioPerfilVazio: FormularioPerfilPaciente = {
   nome: '',
   email: '',
@@ -62,6 +73,13 @@ const formularioPerfilVazio: FormularioPerfilPaciente = {
   horarioInicio: '08:00',
   horarioFim: '20:00',
   timezoneComunicacao: 'America/Sao_Paulo'
+};
+
+const formularioCheckinInicial: FormularioCheckinRapido = {
+  humor: 'bem',
+  adesaoPlano: '80',
+  sintomas: '',
+  observacoes: ''
 };
 
 const classeCampo =
@@ -115,6 +133,17 @@ function rotuloTipoMaterial(tipo: string) {
     orientacao: 'Orientacao'
   };
   return mapa[tipo] ?? tipo;
+}
+
+function rotuloHumor(humor: string) {
+  const mapa: Record<string, string> = {
+    muito_bem: 'Muito bem',
+    bem: 'Bem',
+    neutro: 'Neutro',
+    mal: 'Mal',
+    muito_mal: 'Muito mal'
+  };
+  return mapa[humor] ?? humor;
 }
 
 function rotuloConsentimento(tipo: string) {
@@ -176,6 +205,7 @@ function timestampLinhaTempo(valor?: string) {
 function montarLinhaTempoPortal(portal: PortalPacienteApi): ItemLinhaTempoPortal[] {
   const tarefas = portal.tarefasAcompanhamento ?? [];
   const materiais = portal.materiaisDisponiveis ?? [];
+  const diarios = portal.diariosRecentes ?? [];
   const itens: ItemLinhaTempoPortal[] = [
     ...portal.consultasProximas.map((consulta) => ({
       id: `consulta-${consulta.id}`,
@@ -219,6 +249,13 @@ function montarLinhaTempoPortal(portal: PortalPacienteApi): ItemLinhaTempoPortal
       descricao: material.resumo || material.observacao || rotuloTipoMaterial(material.tipo),
       data: material.enviadoEm ?? material.criadoEm
     })),
+    ...diarios.map((diario) => ({
+      id: `diario-${diario.id}`,
+      tipo: 'Check-in',
+      titulo: `Humor ${rotuloHumor(diario.humor)}`,
+      descricao: `Adesao ${diario.adesaoPlano}%${diario.sintomas ? ` - ${diario.sintomas}` : ''}`,
+      data: diario.registradoEm
+    })),
     ...portal.lgpd.consentimentos.map((consentimento) => ({
       id: `lgpd-${consentimento.id}`,
       tipo: 'Privacidade',
@@ -231,6 +268,25 @@ function montarLinhaTempoPortal(portal: PortalPacienteApi): ItemLinhaTempoPortal
   return itens
     .sort((a, b) => timestampLinhaTempo(b.data) - timestampLinhaTempo(a.data))
     .slice(0, 8);
+}
+
+function atualizarPortalComCheckin(
+  portal: PortalPacienteApi | null,
+  checkin: CheckinRapidoPacienteApi
+): PortalPacienteApi | null {
+  if (!portal) return portal;
+  const diariosRecentes = [checkin, ...(portal.diariosRecentes ?? []).filter((item) => item.id !== checkin.id)].slice(0, 5);
+
+  return {
+    ...portal,
+    paciente: { ...portal.paciente, ultimoCheckinEm: checkin.registradoEm },
+    perfil: { ...portal.perfil, ultimoCheckinEm: checkin.registradoEm },
+    resumo: {
+      ...portal.resumo,
+      checkinsRecentes: diariosRecentes.length
+    },
+    diariosRecentes
+  };
 }
 
 const linksPortal = [
@@ -263,11 +319,13 @@ export function PortalPaciente() {
   const [portal, setPortal] = useState<PortalPacienteApi | null>(null);
   const [detalheFormulario, setDetalheFormulario] = useState<DetalheFormularioRespondidoApi | null>(null);
   const [formularioPerfil, setFormularioPerfil] = useState<FormularioPerfilPaciente>(formularioPerfilVazio);
+  const [formularioCheckin, setFormularioCheckin] = useState<FormularioCheckinRapido>(formularioCheckinInicial);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [carregandoDetalheId, setCarregandoDetalheId] = useState<string | null>(null);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  const [salvandoCheckin, setSalvandoCheckin] = useState(false);
   const [salvandoConsentimento, setSalvandoConsentimento] = useState(false);
   const [exportandoLgpd, setExportandoLgpd] = useState(false);
   const [solicitandoLgpd, setSolicitandoLgpd] = useState(false);
@@ -352,6 +410,29 @@ export function PortalPaciente() {
     }
   }
 
+  async function enviarCheckinRapido(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setSalvandoCheckin(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const adesaoPlano = Math.max(0, Math.min(100, Number(formularioCheckin.adesaoPlano || 0)));
+      const checkin = await registrarCheckinRapidoPaciente({
+        humor: formularioCheckin.humor,
+        adesaoPlano,
+        sintomas: formularioCheckin.sintomas.trim() || undefined,
+        observacoes: formularioCheckin.observacoes.trim() || undefined
+      });
+      setPortal((atual) => atualizarPortalComCheckin(atual, checkin));
+      setFormularioCheckin(formularioCheckinInicial);
+      setSucesso('Check-in registrado.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar check-in.');
+    } finally {
+      setSalvandoCheckin(false);
+    }
+  }
+
   async function registrarAceiteLgpd() {
     if (!portal) return;
     setSalvandoConsentimento(true);
@@ -431,6 +512,7 @@ export function PortalPaciente() {
   const linhaTempo = portal ? montarLinhaTempoPortal(portal) : [];
   const tarefasAcompanhamento = portal?.tarefasAcompanhamento ?? [];
   const materiaisDisponiveis = portal?.materiaisDisponiveis ?? [];
+  const diariosRecentes = portal?.diariosRecentes ?? [];
 
   return (
     <main className="min-h-screen bg-fundo text-tinta">
@@ -483,7 +565,7 @@ export function PortalPaciente() {
               </div>
             </nav>
 
-            <section id="resumo" className="scroll-mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_repeat(3,140px)] xl:grid-cols-[minmax(0,1fr)_repeat(6,120px)]">
+            <section id="resumo" className="scroll-mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_repeat(3,140px)] xl:grid-cols-[minmax(0,1fr)_repeat(7,112px)]">
               <div>
                 <p className="text-sm text-[#596273]">Ola,</p>
                 <h2 className="text-2xl font-semibold text-tinta">{portal.paciente.nome}</h2>
@@ -514,6 +596,10 @@ export function PortalPaciente() {
               <div className="rounded-lg border border-linha bg-white p-3">
                 <p className="text-xs text-[#596273]">Materiais</p>
                 <p className="text-2xl font-semibold">{portal.resumo.materiaisDisponiveis ?? materiaisDisponiveis.length}</p>
+              </div>
+              <div className="rounded-lg border border-linha bg-white p-3">
+                <p className="text-xs text-[#596273]">Check-ins</p>
+                <p className="text-2xl font-semibold">{portal.resumo.checkinsRecentes ?? diariosRecentes.length}</p>
               </div>
             </section>
 
@@ -560,6 +646,101 @@ export function PortalPaciente() {
                   <p className="text-sm text-[#596273]">Nenhuma acao pendente para hoje.</p>
                 ) : null}
               </div>
+            </section>
+
+            <section id="checkin-rapido" className="scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <section className="rounded-lg border border-linha bg-white">
+                <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+                  <SmilePlus className="h-4 w-4 text-[#596273]" />
+                  <h2 className="text-sm font-semibold">Check-in rapido</h2>
+                </div>
+                <form onSubmit={enviarCheckinRapido} className="grid gap-3 p-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                      Humor de hoje
+                      <select
+                        className={classeCampo}
+                        value={formularioCheckin.humor}
+                        onChange={(evento) =>
+                          setFormularioCheckin((atual) => ({
+                            ...atual,
+                            humor: evento.target.value as HumorCheckinRapidoPaciente
+                          }))
+                        }
+                      >
+                        <option value="muito_bem">Muito bem</option>
+                        <option value="bem">Bem</option>
+                        <option value="neutro">Neutro</option>
+                        <option value="mal">Mal</option>
+                        <option value="muito_mal">Muito mal</option>
+                      </select>
+                    </label>
+                    <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                      Adesao ao plano
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className={classeCampo}
+                        value={formularioCheckin.adesaoPlano}
+                        onChange={(evento) => setFormularioCheckin((atual) => ({ ...atual, adesaoPlano: evento.target.value }))}
+                      />
+                    </label>
+                  </div>
+                  <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                    Sintomas ou sinais
+                    <input
+                      className={classeCampo}
+                      value={formularioCheckin.sintomas}
+                      onChange={(evento) => setFormularioCheckin((atual) => ({ ...atual, sintomas: evento.target.value }))}
+                      maxLength={500}
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs font-medium text-[#596273]">
+                    Observacoes do dia
+                    <textarea
+                      className="min-h-24 rounded-md border border-linha bg-white px-3 py-2 text-sm outline-none focus:border-primaria focus:ring-2 focus:ring-[#c7e4ef]"
+                      value={formularioCheckin.observacoes}
+                      onChange={(evento) => setFormularioCheckin((atual) => ({ ...atual, observacoes: evento.target.value }))}
+                      maxLength={1000}
+                    />
+                  </label>
+                  <div className="flex justify-end border-t border-linha pt-3">
+                    <Botao type="submit" variante="primario" disabled={salvandoCheckin}>
+                      <Save className="h-4 w-4" />
+                      {salvandoCheckin ? 'Registrando' : 'Registrar check-in'}
+                    </Botao>
+                  </div>
+                </form>
+              </section>
+
+              <section className="rounded-lg border border-linha bg-white">
+                <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+                  <Clock3 className="h-4 w-4 text-[#596273]" />
+                  <h2 className="text-sm font-semibold">Diario recente</h2>
+                </div>
+                <div className="grid gap-3 p-4">
+                  {diariosRecentes.length ? (
+                    diariosRecentes.map((diario) => (
+                      <article key={diario.id} className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold">Humor {rotuloHumor(diario.humor)}</p>
+                            <p className="mt-1 text-xs text-[#596273]">{formatarDataHora(diario.registradoEm)}</p>
+                          </div>
+                          <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                            Adesao {diario.adesaoPlano}%
+                          </span>
+                        </div>
+                        {diario.sintomas ? <p className="mt-3 break-words text-sm text-[#596273]">{diario.sintomas}</p> : null}
+                        {diario.observacoes ? <p className="mt-2 break-words text-sm text-[#343c4b]">{diario.observacoes}</p> : null}
+                      </article>
+                    ))
+                  ) : (
+                    <p className="text-sm text-[#596273]">Nenhum check-in registrado ainda.</p>
+                  )}
+                </div>
+              </section>
             </section>
 
             <section id="plano" className="scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">

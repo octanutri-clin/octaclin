@@ -5,7 +5,12 @@ import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPerfilPacientePortalDto, RegistrarConsentimentoLgpdPortalDto, RegistrarSolicitacaoLgpdPortalDto } from '../aplicacao/dtos';
+import {
+  AtualizarPerfilPacientePortalDto,
+  RegistrarCheckinRapidoPortalDto,
+  RegistrarConsentimentoLgpdPortalDto,
+  RegistrarSolicitacaoLgpdPortalDto
+} from '../aplicacao/dtos';
 import { ServicoPortalPaciente } from '../aplicacao/servico-portal-paciente';
 
 @Controller('portal')
@@ -20,6 +25,32 @@ export class ControladorPortalPaciente {
   @Get('paciente')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoPortal.obterResumoPortal(usuario.tenantId, usuario.usuarioId);
+  }
+
+  @Post('paciente/checkins')
+  async registrarCheckinRapido(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: RegistrarCheckinRapidoPortalDto
+  ) {
+    const checkin = await this.servicoPortal.registrarCheckinRapido(usuario.tenantId, usuario.usuarioId, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'portal.paciente.checkin_rapido.registrar',
+      recursoTipo: 'log_diario_rapido',
+      recursoId: checkin.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        pacienteId: checkin.pacienteId,
+        humor: checkin.humor,
+        adesaoPlano: checkin.adesaoPlano,
+        possuiSintomas: Boolean(dados.sintomas?.trim()),
+        possuiObservacoes: Boolean(dados.observacoes?.trim())
+      }
+    });
+    return checkin;
   }
 
   @Patch('paciente/perfil')

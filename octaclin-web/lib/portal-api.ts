@@ -1,4 +1,5 @@
 export type CanalPreferidoComunicacaoPaciente = 'email' | 'whatsapp' | 'qualquer';
+export type HumorCheckinRapidoPaciente = 'muito_bem' | 'bem' | 'neutro' | 'mal' | 'muito_mal';
 
 export interface PreferenciasContatoPacienteApi {
   email: boolean;
@@ -35,6 +36,7 @@ export interface PortalPacienteApi {
     mensagensRecentes: number;
     tarefasPendentes?: number;
     materiaisDisponiveis?: number;
+    checkinsRecentes?: number;
   };
   consultasProximas: {
     id: string;
@@ -99,7 +101,19 @@ export interface PortalPacienteApi {
     criadoEm: string;
     atualizadoEm: string;
   }[];
+  diariosRecentes?: CheckinRapidoPacienteApi[];
   lgpd: LgpdPortalPacienteApi;
+}
+
+export interface CheckinRapidoPacienteApi {
+  id: string;
+  pacienteId: string;
+  tipo: 'humor';
+  humor: HumorCheckinRapidoPaciente;
+  adesaoPlano: number;
+  sintomas?: string;
+  observacoes?: string;
+  registradoEm: string;
 }
 
 export interface LgpdPortalPacienteApi {
@@ -167,6 +181,13 @@ export interface RegistrarConsentimentoLgpdEntrada {
   versaoLgpd?: string;
   prefereEmail?: boolean;
   prefereWhatsapp?: boolean;
+}
+
+export interface RegistrarCheckinRapidoEntrada {
+  humor: HumorCheckinRapidoPaciente;
+  adesaoPlano: number;
+  sintomas?: string;
+  observacoes?: string;
 }
 
 export interface ConsentimentoLgpdRegistradoApi extends PerfilPacienteAtualizadoApi {
@@ -240,6 +261,18 @@ export async function atualizarPerfilPaciente(dados: AtualizarPerfilPacienteEntr
     throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
   }
   return resposta.json() as Promise<PerfilPacienteAtualizadoApi>;
+}
+
+export async function registrarCheckinRapidoPaciente(dados: RegistrarCheckinRapidoEntrada): Promise<CheckinRapidoPacienteApi> {
+  const resposta = await fetch('/api/portal/paciente/checkins', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dados)
+  });
+  if (!resposta.ok) {
+    throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
+  }
+  return resposta.json() as Promise<CheckinRapidoPacienteApi>;
 }
 
 export async function registrarConsentimentoLgpdPaciente(

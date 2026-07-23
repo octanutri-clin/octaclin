@@ -23,7 +23,8 @@ const portalPaciente = {
     formulariosRespondidos: 1,
     mensagensRecentes: 1,
     tarefasPendentes: 1,
-    materiaisDisponiveis: 1
+    materiaisDisponiveis: 1,
+    checkinsRecentes: 1
   },
   consultasProximas: [
     {
@@ -97,6 +98,18 @@ const portalPaciente = {
       atualizadoEm: '2026-07-22T13:00:00.000Z'
     }
   ],
+  diariosRecentes: [
+    {
+      id: 'diario-1',
+      pacienteId: 'paciente-1',
+      tipo: 'humor',
+      humor: 'bem',
+      adesaoPlano: 80,
+      sintomas: 'Sono leve',
+      observacoes: 'Consegui seguir o plano no almoco.',
+      registradoEm: '2026-07-23T10:00:00.000Z'
+    }
+  ],
   lgpd: {
     versaoAtual: '2026-07',
     ultimoAceiteEm: '2026-07-10T10:00:00.000Z',
@@ -126,6 +139,8 @@ const portalPaciente = {
 };
 
 async function prepararPortal(page) {
+  let registrouCheckin = false;
+
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -185,6 +200,31 @@ async function prepararPortal(page) {
       })
     });
   });
+
+  await page.route((url) => url.pathname === '/api/portal/paciente/checkins', async (route) => {
+    const payload = route.request().postDataJSON();
+    registrouCheckin =
+      payload.humor === 'muito_bem' &&
+      payload.adesaoPlano === 90 &&
+      payload.sintomas === 'Sem sintomas relevantes.' &&
+      payload.observacoes === 'Mantive o plano no cafe da manha.';
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'diario-2',
+        pacienteId: 'paciente-1',
+        tipo: 'humor',
+        humor: 'muito_bem',
+        adesaoPlano: 90,
+        sintomas: 'Sem sintomas relevantes.',
+        observacoes: 'Mantive o plano no cafe da manha.',
+        registradoEm: '2026-07-23T12:00:00.000Z'
+      })
+    });
+  });
+
+  return { registrouCheckin: () => registrouCheckin };
 }
 
 async function prepararSessaoPaciente(page) {
@@ -207,7 +247,7 @@ async function assertSemOverflowHorizontal(page) {
 
 test.describe('portal do paciente', () => {
   test('renderiza prioridades, perfil e privacidade sem regressao visual', async ({ page }, testInfo) => {
-    await prepararPortal(page);
+    const portal = await prepararPortal(page);
     await page.goto('/portal');
 
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
@@ -228,6 +268,17 @@ test.describe('portal do paciente', () => {
     await expect(page.getByText('Consulta nutricional').first()).toBeVisible();
     await expect(page.getByText('Tarefas', { exact: true })).toBeVisible();
     await expect(page.getByText('Materiais', { exact: true })).toBeVisible();
+    await expect(page.getByText('Check-ins', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Check-in rapido' })).toBeVisible();
+    await expect(page.getByLabel('Humor de hoje')).toBeVisible();
+    await expect(page.getByLabel('Adesao ao plano')).toBeVisible();
+    await expect(page.getByLabel('Sintomas ou sinais')).toBeVisible();
+    await expect(page.getByLabel('Observacoes do dia')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Diario recente' })).toBeVisible();
+    await expect(page.locator('#checkin-rapido').getByText('Humor Bem')).toBeVisible();
+    await expect(page.locator('#checkin-rapido').getByText('Adesao 80%')).toBeVisible();
+    await expect(page.locator('#checkin-rapido').getByText('Sono leve')).toBeVisible();
+    await expect(page.locator('#checkin-rapido').getByText('Consegui seguir o plano no almoco.')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Plano de acompanhamento' })).toBeVisible();
     await expect(page.locator('#plano').getByText('Registrar agua diariamente')).toBeVisible();
     await expect(page.locator('#plano').getByText('Meta de 2 litros por dia.')).toBeVisible();
@@ -260,6 +311,14 @@ test.describe('portal do paciente', () => {
     await page.getByLabel('Detalhes da solicitacao').fill('Atualizar telefone cadastrado.');
     await page.getByRole('button', { name: 'Enviar solicitacao LGPD' }).click();
     await expect(page.getByText('Solicitacao LGPD registrada: LGPD-123.')).toBeVisible();
+
+    await page.getByLabel('Humor de hoje').selectOption('muito_bem');
+    await page.getByLabel('Adesao ao plano').fill('90');
+    await page.getByLabel('Sintomas ou sinais').fill('Sem sintomas relevantes.');
+    await page.getByLabel('Observacoes do dia').fill('Mantive o plano no cafe da manha.');
+    await page.getByRole('button', { name: 'Registrar check-in' }).click();
+    await expect.poll(() => portal.registrouCheckin()).toBe(true);
+    await expect(page.getByText('Check-in registrado.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
 
     const screenshot = await page.screenshot({ fullPage: true });

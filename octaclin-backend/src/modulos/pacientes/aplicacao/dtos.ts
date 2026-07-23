@@ -269,6 +269,26 @@ export class AtualizarPerfilPacientePortalDto {
   timezoneComunicacao?: string;
 }
 
+export class RegistrarCheckinRapidoPortalDto {
+  @IsIn(['muito_bem', 'bem', 'neutro', 'mal', 'muito_mal'])
+  humor: 'muito_bem' | 'bem' | 'neutro' | 'mal' | 'muito_mal';
+
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  adesaoPlano: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  sintomas?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  observacoes?: string;
+}
+
 export class RegistrarConsentimentoLgpdPortalDto {
   @IsBoolean()
   aceiteLgpd: boolean;

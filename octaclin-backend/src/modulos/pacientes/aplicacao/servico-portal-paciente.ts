@@ -8,12 +8,18 @@ import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.o
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../../materiais/infraestrutura/material-educativo.orm';
+import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { PerguntaOrm } from '../../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-valor.orm';
-import { AtualizarPerfilPacientePortalDto, RegistrarConsentimentoLgpdPortalDto, RegistrarSolicitacaoLgpdPortalDto } from './dtos';
+import {
+  AtualizarPerfilPacientePortalDto,
+  RegistrarCheckinRapidoPortalDto,
+  RegistrarConsentimentoLgpdPortalDto,
+  RegistrarSolicitacaoLgpdPortalDto
+} from './dtos';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
@@ -72,6 +78,7 @@ export interface ResumoPortalPaciente {
     mensagensRecentes: number;
     tarefasPendentes: number;
     materiaisDisponiveis: number;
+    checkinsRecentes: number;
   };
   consultasProximas: {
     id: string;
@@ -136,7 +143,19 @@ export interface ResumoPortalPaciente {
     criadoEm: Date;
     atualizadoEm: Date;
   }[];
+  diariosRecentes: CheckinRapidoPortalPaciente[];
   lgpd: LgpdPortalPaciente;
+}
+
+export interface CheckinRapidoPortalPaciente {
+  id: string;
+  pacienteId: string;
+  tipo: 'humor';
+  humor: 'muito_bem' | 'bem' | 'neutro' | 'mal' | 'muito_mal';
+  adesaoPlano: number;
+  sintomas?: string;
+  observacoes?: string;
+  registradoEm: Date;
 }
 
 export interface PerfilPortalPaciente {
@@ -284,6 +303,11 @@ export class ServicoPortalPaciente {
           })
         : [];
       const materiaisPorId = new Map(materiais.map((material) => [material.id, material]));
+      const diarios = await gerenciador.getRepository(LogDiarioRapidoOrm).find({
+        where: { tenantId, pacienteId: paciente.id },
+        order: { registradoEm: 'DESC' },
+        take: 5
+      });
       const consentimentos = await this.listarConsentimentosPaciente(gerenciador, tenantId);
 
       const consultasProximas = consultas.map((consulta) => ({
@@ -359,6 +383,7 @@ export class ServicoPortalPaciente {
           };
         })
         .filter((envio): envio is NonNullable<typeof envio> => Boolean(envio));
+      const diariosRecentes = diarios.map((diario) => this.mapearCheckinRapido(diario));
       const contato = this.obterContatoPaciente(paciente);
 
       return {
@@ -384,7 +409,8 @@ export class ServicoPortalPaciente {
           formulariosRespondidos: formulariosRespondidos.length,
           mensagensRecentes: mensagensRecentes.length,
           tarefasPendentes: tarefasAcompanhamento.length,
-          materiaisDisponiveis: materiaisDisponiveis.length
+          materiaisDisponiveis: materiaisDisponiveis.length,
+          checkinsRecentes: diariosRecentes.length
         },
         consultasProximas,
         formulariosPendentes,
@@ -392,8 +418,48 @@ export class ServicoPortalPaciente {
         mensagensRecentes,
         tarefasAcompanhamento,
         materiaisDisponiveis,
+        diariosRecentes,
         lgpd: this.mapearLgpd(consentimentos, paciente.id, usuarioId)
       };
+    });
+  }
+
+  async registrarCheckinRapido(
+    tenantId: string,
+    usuarioId: string,
+    dados: RegistrarCheckinRapidoPortalDto
+  ): Promise<CheckinRapidoPortalPaciente> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorioPacientes = gerenciador.getRepository(PacienteOrm);
+      const paciente = await repositorioPacientes.findOne({
+        where: { tenantId, usuarioId, arquivadoEm: IsNull() }
+      });
+      if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
+
+      const registradoEm = new Date();
+      const valor = {
+        humor: dados.humor,
+        adesaoPlano: dados.adesaoPlano,
+        sintomas: this.textoOpcional(dados.sintomas),
+        observacoes: this.textoOpcional(dados.observacoes),
+        origem: 'portal_paciente'
+      };
+
+      const repositorioDiario = gerenciador.getRepository(LogDiarioRapidoOrm);
+      const diario = await repositorioDiario.save(
+        repositorioDiario.create({
+          tenantId,
+          pacienteId: paciente.id,
+          tipo: 'humor',
+          valor,
+          registradoEm
+        })
+      );
+
+      paciente.ultimoCheckinEm = registradoEm;
+      await repositorioPacientes.save(paciente);
+
+      return this.mapearCheckinRapido(diario);
     });
   }
 
@@ -617,6 +683,34 @@ export class ServicoPortalPaciente {
   private textoPayload(payload: Record<string, unknown>, chave: string): string | undefined {
     const valor = payload[chave];
     return typeof valor === 'string' && valor.trim() ? valor : undefined;
+  }
+
+  private textoOpcional(valor?: string): string | undefined {
+    const texto = valor?.trim();
+    return texto || undefined;
+  }
+
+  private mapearCheckinRapido(diario: LogDiarioRapidoOrm): CheckinRapidoPortalPaciente {
+    return {
+      id: diario.id,
+      pacienteId: diario.pacienteId,
+      tipo: 'humor',
+      humor: this.valorTextoDiario(diario.valor, 'humor', 'neutro') as CheckinRapidoPortalPaciente['humor'],
+      adesaoPlano: this.valorNumeroDiario(diario.valor, 'adesaoPlano', 0),
+      sintomas: this.valorTextoDiario(diario.valor, 'sintomas'),
+      observacoes: this.valorTextoDiario(diario.valor, 'observacoes'),
+      registradoEm: diario.registradoEm
+    };
+  }
+
+  private valorTextoDiario(valor: Record<string, unknown>, chave: string, padrao?: string): string | undefined {
+    const texto = valor[chave];
+    return typeof texto === 'string' && texto.trim() ? texto : padrao;
+  }
+
+  private valorNumeroDiario(valor: Record<string, unknown>, chave: string, padrao: number): number {
+    const numero = valor[chave];
+    return typeof numero === 'number' && Number.isFinite(numero) ? numero : padrao;
   }
 
   private mapearPerfilPaciente(paciente: PacienteOrm): PerfilPortalPaciente {
