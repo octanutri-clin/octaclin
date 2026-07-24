@@ -91,7 +91,22 @@ novos e separados dos de staging: backend em Docker, web em Node.
 O `Dockerfile` do backend espera que o contexto de build seja a propria pasta
 `octaclin-backend`, porque copia `package.json`/`pnpm-lock.yaml*`/
 `pnpm-workspace.yaml` direto na raiz do contexto antes de `COPY . .`. Por
-isso o campo de contexto **nao** pode ser a raiz do repositorio.
+isso o contexto Docker efetivo **nao** pode ser a raiz do repositorio.
+
+Atencao ao monorepo no Render: se o campo `Root Directory` estiver preenchido,
+os caminhos de Docker tambem passam a ser relativos a esse root. Use apenas
+uma das duas configuracoes abaixo, nunca uma mistura das duas.
+
+- Opcao A, recomendada por ser explicita: `Root Directory` vazio,
+  `Dockerfile Path=octaclin-backend/Dockerfile` e
+  `Docker Build Context Directory=octaclin-backend`.
+- Opcao B, equivalente: `Root Directory=octaclin-backend`,
+  `Dockerfile Path=Dockerfile` e `Docker Build Context Directory=.`.
+
+Se `Root Directory=octaclin-backend` for combinado com
+`Dockerfile Path=octaclin-backend/Dockerfile`, o Render tende a procurar o
+arquivo dentro de `octaclin-backend/octaclin-backend/Dockerfile` e o deploy
+falha antes mesmo de construir a aplicacao.
 
 ### Backend (`octaclin-backend`)
 
@@ -99,22 +114,23 @@ isso o campo de contexto **nao** pode ser a raiz do repositorio.
    `octanutri-clin/octaclin` > escolher `Runtime: Docker` quando perguntado.
 2. `Name`: algo que deixe claro que e producao (ex.: `octaclin-backend-producao`),
    nunca reaproveitar o nome/servico do staging.
-3. `Docker Build Context Directory`: `octaclin-backend`.
-4. `Dockerfile Path`: `octaclin-backend/Dockerfile`.
-5. `Docker Command`: deixar em branco. O `CMD ["node", "dist/main.js"]` ja
+3. `Root Directory`: deixar vazio se usar a configuracao recomendada abaixo.
+4. `Docker Build Context Directory`: `octaclin-backend`.
+5. `Dockerfile Path`: `octaclin-backend/Dockerfile`.
+6. `Docker Command`: deixar em branco. O `CMD ["node", "dist/main.js"]` ja
    definido no Dockerfile e suficiente; so preencher este campo se precisar
    sobrescrever o comando padrao.
-6. `Pre-Deploy Command`: deixar em branco. O backend ja executa as
+7. `Pre-Deploy Command`: deixar em branco. O backend ja executa as
    migrations pendentes no proprio boot via TypeORM
    (`migrationsRun`, controlado por `BANCO_EXECUTAR_MIGRACOES`), entao nao
    ha comando separado de release/pre-deploy neste projeto.
-7. `Auto-Deploy`: `On Commit` (mesmo fluxo ja usado hoje: commit e push para
+8. `Auto-Deploy`: `On Commit` (mesmo fluxo ja usado hoje: commit e push para
    `main` dispara deploy).
-8. `Build Filters`: `Included Paths` = `octaclin-backend/**`. Isso evita que
+9. `Build Filters`: `Included Paths` = `octaclin-backend/**`. Isso evita que
    commits que so tocam documentacao ou `octaclin-web` disparem rebuild do
    backend.
-9. `Health Check Path`: `/health`.
-10. Variaveis de ambiente (todas as obrigatorias de `VARIAVEIS_AMBIENTE.md`
+10. `Health Check Path`: `/health`.
+11. Variaveis de ambiente (todas as obrigatorias de `VARIAVEIS_AMBIENTE.md`
     para as integracoes usadas), incluindo:
     - `NODE_ENV=production`
     - `PORT=3000` (o Dockerfile expoe a porta 3000; defina explicitamente
@@ -127,7 +143,7 @@ isso o campo de contexto **nao** pode ser a raiz do repositorio.
       (preencher depois de criar o servico web, passo seguinte)
     - `JWT_SEGREDO`, `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256`
       exclusivos de producao.
-11. Plano: escolher um plano pago do Render (planos gratuitos hibernam e nao
+12. Plano: escolher um plano pago do Render (planos gratuitos hibernam e nao
     servem para producao com clientes reais).
 
 ### Web/BFF (`octaclin-web`)

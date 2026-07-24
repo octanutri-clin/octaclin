@@ -82,18 +82,27 @@ Contexto para quem retomar com acesso ao dashboard Render:
 3. Pelo menos um deploy falhou. Abrir a aba de logs de build/deploy de cada
    servico no dashboard, identificar a causa exata (dependencia, variavel de
    ambiente ausente, health check, memoria do plano, etc.) e corrigir.
-4. Suspeitas mais provaveis a descartar primeiro: variavel obrigatoria
+4. Validacao local feita pelo Codex em 2026-07-24: `pnpm --dir
+   octaclin-backend build`, `pnpm --dir octaclin-web build` e `pnpm --dir
+   octaclin-web typecheck` passaram. A primeira falha local de Next
+   (`PageNotFoundError` em `/api/cliente/configuracoes`) desapareceu apos um
+   rebuild completo, indicando cache/artefato parcial de `.next`, nao erro de
+   codigo versionado. Se o web falhar no Render com esse mesmo erro, usar
+   `Manual Deploy` com limpeza de build cache.
+5. Suspeitas mais provaveis a descartar primeiro: caminho Docker ambiguo no
+   backend (`Root Directory=octaclin-backend` combinado com `Dockerfile
+   Path=octaclin-backend/Dockerfile`), variavel obrigatoria
    ausente (`JWT_SEGREDO`, `JWT_REFRESH_SEGREDO`,
    `CRIPTOGRAFIA_CHAVE_AES_256` no backend; `NEXT_PUBLIC_API_URL`/
    `OCTACLIN_BACKEND_URL` no web), `REDIS_URL` sem `rediss://` (TLS
    obrigatorio, ver `configuracao-redis.ts`), `BANCO_EXECUTAR_MIGRACOES` sem
    estar `false` tentando rodar migration de novo, ou plano Free do Render
    sem recurso suficiente para o build.
-5. Depois de corrigir e o deploy ficar verde, seguir a secao "Validacao do
+6. Depois de corrigir e o deploy ficar verde, seguir a secao "Validacao do
    ambiente novo" de `RUNBOOK_PRODUCAO_ISOLADA.md` (`/health`,
    `/health/detalhado`, login) antes de marcar qualquer linha da tabela acima
    como `Feito`.
-6. Atualizar esta tabela, o registro de execucao e, se tudo passar, a secao
+7. Atualizar esta tabela, o registro de execucao e, se tudo passar, a secao
    "Decisao de aceite" abaixo.
 
 ## Validacoes pendentes antes do aceite
