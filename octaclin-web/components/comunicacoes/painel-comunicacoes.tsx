@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Bell, CheckCircle2, Inbox, Mail, MessageCircle, Plus, RefreshCcw, Reply, Save, Send } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import {
@@ -560,7 +561,8 @@ export function PainelComunicacoes() {
 
   return (
     <section className="grid gap-4">
-      <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
+      <Cartao>
+      <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-base font-semibold">Comunicacoes</h2>
           <p className="mt-1 text-sm text-texto-suave">
@@ -571,7 +573,8 @@ export function PainelComunicacoes() {
           <RefreshCcw size={16} />
           {carregando ? 'Atualizando' : 'Atualizar'}
         </Botao>
-      </div>
+      </CartaoConteudo>
+      </Cartao>
 
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       <BarraCarregamento visivel={carregando} />
@@ -583,11 +586,12 @@ export function PainelComunicacoes() {
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <form onSubmit={salvarCanal} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Plus size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Novo canal</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={salvarCanal}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<Plus size={18} className="text-primaria" />}>Novo canal</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
               <Rotulo htmlFor="canal-tipo">Tipo</Rotulo>
@@ -637,13 +641,16 @@ export function PainelComunicacoes() {
               Salvar canal
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
 
-        <form onSubmit={salvarTemplate} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Plus size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Novo template</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={salvarTemplate}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<Plus size={18} className="text-primaria" />}>Novo template</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
               <Rotulo htmlFor="template-canal">Canal</Rotulo>
@@ -746,15 +753,18 @@ export function PainelComunicacoes() {
               Salvar template
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1fr_420px]">
-        <form onSubmit={enviarMensagem} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Send size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Disparo manual</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={enviarMensagem}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<Send size={18} className="text-primaria" />}>Disparo manual</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-1.5">
               <Rotulo htmlFor="mensagem-paciente">Paciente</Rotulo>
@@ -838,12 +848,14 @@ export function PainelComunicacoes() {
               Disparar
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
 
-        <aside className="rounded-lg border border-linha bg-white">
-          <div className="border-b border-linha px-4 py-3">
-            <h3 className="text-sm font-semibold">Inventario ativo</h3>
-          </div>
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo>Inventario ativo</CartaoTitulo>
+          </CartaoCabecalho>
           <div className="max-h-[420px] divide-y divide-linha overflow-auto">
             {canais.length ? (
               canais.map((canal) => {
@@ -875,11 +887,11 @@ export function PainelComunicacoes() {
               <EstadoVazio titulo="Nenhum canal carregado." />
             )}
           </div>
-        </aside>
+        </Cartao>
       </section>
 
-      <section className="rounded-lg border border-linha bg-white">
-        <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
+      <Cartao>
+        <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
           <div className="flex items-center gap-2">
             <Inbox size={18} className="text-primaria" />
             <div>
@@ -901,7 +913,7 @@ export function PainelComunicacoes() {
               </button>
             ))}
           </div>
-        </div>
+        </CartaoCabecalho>
         {conversasFiltradas.length ? (
           <div className="grid min-h-[420px] lg:grid-cols-[360px_1fr]">
             <div className="divide-y divide-linha border-b border-linha lg:border-b-0 lg:border-r">
@@ -1079,12 +1091,12 @@ export function PainelComunicacoes() {
         ) : (
           <EstadoVazio titulo="Nenhuma conversa WhatsApp carregada." />
         )}
-      </section>
+      </Cartao>
 
-      <section className="rounded-lg border border-linha bg-white">
-        <div className="border-b border-linha px-4 py-3">
-          <h3 className="text-sm font-semibold">Mensagens recentes</h3>
-        </div>
+      <Cartao>
+        <CartaoCabecalho>
+          <CartaoTitulo>Mensagens recentes</CartaoTitulo>
+        </CartaoCabecalho>
         <div className="max-h-[420px] divide-y divide-linha overflow-auto">
           {mensagens.length ? (
             mensagens.map((mensagem) => {
@@ -1144,7 +1156,7 @@ export function PainelComunicacoes() {
             <EstadoVazio titulo="Nenhuma mensagem persistida." />
           )}
         </div>
-      </section>
+      </Cartao>
     </section>
   );
 }

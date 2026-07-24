@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { CheckCircle2, Play, Plus, RefreshCcw, Save, SlidersHorizontal, Zap } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import {
@@ -168,18 +169,20 @@ export function PainelAutomacoes() {
 
   return (
     <section className="grid gap-4">
-      <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-base font-semibold">Regras de automacao</h2>
-          <p className="mt-1 text-sm text-texto-suave">
-            {regras.length} regras, {execucoes.length} avaliacoes persistidas
-          </p>
-        </div>
-        <Botao onClick={carregar} disabled={carregando}>
-          <RefreshCcw size={16} />
-          {carregando ? 'Atualizando' : 'Atualizar'}
-        </Botao>
-      </div>
+      <Cartao>
+        <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Regras de automacao</h2>
+            <p className="mt-1 text-sm text-texto-suave">
+              {regras.length} regras, {execucoes.length} avaliacoes persistidas
+            </p>
+          </div>
+          <Botao onClick={carregar} disabled={carregando}>
+            <RefreshCcw size={16} />
+            {carregando ? 'Atualizando' : 'Atualizar'}
+          </Botao>
+        </CartaoConteudo>
+      </Cartao>
 
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       <BarraCarregamento visivel={carregando} />
@@ -191,11 +194,12 @@ export function PainelAutomacoes() {
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[1fr_420px]">
-        <form onSubmit={salvarRegra} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Plus size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Nova regra</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={salvarRegra}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<Plus size={18} className="text-primaria" />}>Nova regra</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5 md:col-span-2">
               <Rotulo htmlFor="regra-nome">Nome</Rotulo>
@@ -301,13 +305,14 @@ export function PainelAutomacoes() {
               Salvar regra
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
 
-        <aside className="rounded-lg border border-linha bg-white">
-          <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-            <SlidersHorizontal size={16} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Regras cadastradas</h3>
-          </div>
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<SlidersHorizontal size={16} />}>Regras cadastradas</CartaoTitulo>
+          </CartaoCabecalho>
           <div className="max-h-[520px] divide-y divide-linha overflow-auto">
             {regras.length ? (
               regras.map((regra) => (
@@ -327,15 +332,16 @@ export function PainelAutomacoes() {
               <EstadoVazio titulo="Nenhuma regra carregada." />
             )}
           </div>
-        </aside>
+        </Cartao>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1fr_420px]">
-        <form onSubmit={avaliar} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Play size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Avaliar regra</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={avaliar}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<Play size={18} className="text-primaria" />}>Avaliar regra</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
               <Rotulo htmlFor="avaliacao-regra">Regra</Rotulo>
@@ -420,12 +426,14 @@ export function PainelAutomacoes() {
               Solicitar avaliacao
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
 
-        <aside className="rounded-lg border border-linha bg-white">
-          <div className="border-b border-linha px-4 py-3">
-            <h3 className="text-sm font-semibold">Avaliacoes recentes</h3>
-          </div>
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo>Avaliacoes recentes</CartaoTitulo>
+          </CartaoCabecalho>
           <div className="max-h-[420px] divide-y divide-linha overflow-auto">
             {execucoes.length ? (
               execucoes.map((execucao) => (
@@ -444,7 +452,7 @@ export function PainelAutomacoes() {
               <EstadoVazio titulo="Nenhuma avaliacao persistida." />
             )}
           </div>
-        </aside>
+        </Cartao>
       </section>
     </section>
   );
