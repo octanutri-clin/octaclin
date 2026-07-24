@@ -63,6 +63,21 @@ o que foi feito, quem confirmou). Nao inclua valores de secrets.
   de build/deploy real, a causa nao foi diagnosticada. Trabalho pausado aqui
   e passado para o Codex (que tem acesso via browser ao Render) continuar o
   diagnostico e a correcao.
+- 2026-07-24: usuario confirmou que os dois servicos Render de producao estao
+  rodando (web e backend). Criado script minimo
+  `octaclin-backend/src/infraestrutura/banco-dados/seeds/criar-admin-producao.ts`
+  (`pnpm --dir octaclin-backend run criar-admin:producao`) para gerar apenas
+  um tenant + um usuario `SuperAdmin` diretamente em producao, sem dados fake
+  de paciente/profissional/mensagens (diferente de `seed-demo.ts`, que nao foi
+  usado). Rodado uma vez contra o banco `Octaclin-db-producao` com
+  `DATABASE_URL` como variavel de sessao (nao gravada em arquivo); tenant
+  `octaclin-admin` e usuario `octavioomarostica@gmail.com` (`SuperAdmin`)
+  criados com sucesso. Observacao de seguranca: a `DATABASE_URL` apareceu em
+  texto no chat novamente durante esta etapa; ainda pendente a rotacao da
+  senha do role `neondb_owner` recomendada anteriormente
+  (`RUNBOOK_ROTACAO_SECRETS.md`, secao Neon/Postgres). Login ainda nao
+  validado via curl/browser nesta sessao - falta confirmar com a URL publica
+  do servico web de producao.
 
 ## Handoff para o Codex
 
