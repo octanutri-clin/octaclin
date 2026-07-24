@@ -2,7 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { AtualizarProfissionalDto, CriarProfissionalDto, ProfissionalRespostaDto } from './dtos';
 import { ProfissionalOrm } from '../infraestrutura/profissional.orm';
@@ -43,13 +45,19 @@ export class ServicoProfissionais {
     });
   }
 
-  async listar(tenantId: string, pagina = 1, limite = 25): Promise<{ itens: ProfissionalRespostaDto[]; total: number }> {
+  async listar(
+    tenantId: string,
+    usuario: UsuarioAutenticado,
+    pagina = 1,
+    limite = 25
+  ): Promise<{ itens: ProfissionalRespostaDto[]; total: number }> {
     const paginaNormalizada = Math.max(1, pagina);
     const limiteNormalizado = Math.min(100, Math.max(1, limite));
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const [itens, total] = await gerenciador.getRepository(ProfissionalOrm).findAndCount({
-        where: { tenantId, arquivadoEm: IsNull() },
+        where: { tenantId, arquivadoEm: IsNull(), ...(profissionalId ? { id: profissionalId } : {}) },
         order: { criadoEm: 'DESC' },
         skip: (paginaNormalizada - 1) * limiteNormalizado,
         take: limiteNormalizado
@@ -59,8 +67,13 @@ export class ServicoProfissionais {
     });
   }
 
-  async obterPorId(tenantId: string, profissionalId: string): Promise<ProfissionalRespostaDto> {
+  async obterPorId(tenantId: string, profissionalId: string, usuario: UsuarioAutenticado): Promise<ProfissionalRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      if (profissionalIdDoUsuario && profissionalIdDoUsuario !== profissionalId) {
+        throw new NotFoundException('Profissional nao encontrado.');
+      }
+
       const profissional = await gerenciador.getRepository(ProfissionalOrm).findOne({
         where: { id: profissionalId, tenantId, arquivadoEm: IsNull() }
       });

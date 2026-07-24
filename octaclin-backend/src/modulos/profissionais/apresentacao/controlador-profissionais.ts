@@ -61,7 +61,7 @@ export class ControladorProfissionais {
     @Query('pagina', new ParseIntPipe({ optional: true })) pagina = 1,
     @Query('limite', new ParseIntPipe({ optional: true })) limite = 25
   ) {
-    const resultado = await this.servicoProfissionais.listar(usuario.tenantId, pagina, limite);
+    const resultado = await this.servicoProfissionais.listar(usuario.tenantId, usuario, pagina, limite);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -80,7 +80,7 @@ export class ControladorProfissionais {
     @Req() requisicao: Request,
     @Param('id', ParseUUIDPipe) id: string
   ) {
-    const profissional = await this.servicoProfissionais.obterPorId(usuario.tenantId, id);
+    const profissional = await this.servicoProfissionais.obterPorId(usuario.tenantId, id, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,

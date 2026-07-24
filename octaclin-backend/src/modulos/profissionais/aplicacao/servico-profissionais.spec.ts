@@ -1,4 +1,22 @@
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { ProfissionalOrm } from '../infraestrutura/profissional.orm';
 import { ServicoProfissionais } from './servico-profissionais';
+
+const usuarioColaborador: UsuarioAutenticado = {
+  usuarioId: 'usuario-colaborador-1',
+  tenantId: 'tenant-1',
+  papel: 'Collaborator',
+  emailHash: 'hash-colaborador',
+  permissoes: []
+};
+
+const usuarioProfissional: UsuarioAutenticado = {
+  usuarioId: 'usuario-profissional-1',
+  tenantId: 'tenant-1',
+  papel: 'Professional',
+  emailHash: 'hash-profissional',
+  permissoes: []
+};
 
 function criarRepositorioFake() {
   return {
@@ -76,8 +94,58 @@ describe('ServicoProfissionais', () => {
       { gerarHash: jest.fn() } as never
     );
 
-    const resposta = await servico.listar('tenant-1');
+    const resposta = await servico.listar('tenant-1', usuarioColaborador);
 
     expect(resposta.itens[0]).toEqual(expect.objectContaining({ nome: 'Dra. Carla' }));
+  });
+
+  describe('escopo pacientes_responsaveis para Professional', () => {
+    function criarServicoComProfissional(dadosProfissional: Record<string, unknown> | null) {
+      const repositorioProfissionais = {
+        findAndCount: jest.fn(async () => [[], 0]),
+        findOne: jest.fn(async () => dadosProfissional)
+      };
+      const servico = new ServicoProfissionais(
+        {
+          executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+            operacao({
+              getRepository: jest.fn((entidade: { name: string }) => {
+                if (entidade === ProfissionalOrm) return repositorioProfissionais;
+                throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
+              })
+            })
+          )
+        } as never,
+        { gerarHashBusca: jest.fn(), criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+        { gerarHash: jest.fn() } as never
+      );
+      return { servico, repositorioProfissionais };
+    }
+
+    it('deve listar apenas o proprio registro quando o usuario for Professional', async () => {
+      const { servico, repositorioProfissionais } = criarServicoComProfissional({
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-profissional-1'
+      });
+
+      await servico.listar('tenant-1', usuarioProfissional);
+
+      expect(repositorioProfissionais.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ id: 'profissional-1' }) })
+      );
+    });
+
+    it('deve tratar outro profissional como nao encontrado ao consultar por id como Professional', async () => {
+      const { servico } = criarServicoComProfissional({
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-profissional-1'
+      });
+
+      await expect(servico.obterPorId('tenant-1', 'profissional-outro-2', usuarioProfissional)).rejects.toThrow(
+        'Profissional nao encontrado.'
+      );
+    });
   });
 });
