@@ -3,6 +3,8 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { EntityManager, In, IsNull, LessThanOrEqual } from 'typeorm';
 import * as cronParser from 'cron-parser';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { normalizarConfiguracaoPergunta } from '../dominio/configuracao-pergunta';
 import { MODELOS_QUESTIONARIO, ModeloQuestionarioResumo, resumirModeloQuestionario } from '../dominio/modelos-questionario';
@@ -123,28 +125,35 @@ export class ServicoQuestionarios {
     );
   }
 
-  async criarQuestionario(tenantId: string, dados: CriarQuestionarioDto): Promise<QuestionarioOrm> {
-    return this.executorTenant.executar(tenantId, async (gerenciador) =>
-      gerenciador.getRepository(QuestionarioOrm).save(
+  async criarQuestionario(tenantId: string, dados: CriarQuestionarioDto, usuario: UsuarioAutenticado): Promise<QuestionarioOrm> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      return gerenciador.getRepository(QuestionarioOrm).save(
         gerenciador.getRepository(QuestionarioOrm).create({
           tenantId,
-          profissionalId: dados.profissionalId,
+          profissionalId: profissionalIdDoUsuario ?? dados.profissionalId,
           titulo: dados.titulo,
           descricao: dados.descricao,
           status: 'rascunho',
           versao: 1
         })
-      )
-    );
+      );
+    });
   }
 
-  async listarQuestionarios(tenantId: string, pagina = 1, limite = 25): Promise<{ itens: QuestionarioOrm[]; total: number }> {
+  async listarQuestionarios(
+    tenantId: string,
+    usuario: UsuarioAutenticado,
+    pagina = 1,
+    limite = 25
+  ): Promise<{ itens: QuestionarioOrm[]; total: number }> {
     const paginaNormalizada = Math.max(1, pagina);
     const limiteNormalizado = Math.min(100, Math.max(1, limite));
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const [itens, total] = await gerenciador.getRepository(QuestionarioOrm).findAndCount({
-        where: { tenantId },
+        where: { tenantId, ...(profissionalId ? { profissionalId } : {}) },
         order: { atualizadoEm: 'DESC' },
         skip: (paginaNormalizada - 1) * limiteNormalizado,
         take: limiteNormalizado
@@ -161,12 +170,14 @@ export class ServicoQuestionarios {
   async criarQuestionarioAPartirModelo(
     tenantId: string,
     modeloId: string,
-    dados: CriarQuestionarioAPartirModeloDto
+    dados: CriarQuestionarioAPartirModeloDto,
+    usuario: UsuarioAutenticado
   ): Promise<QuestionarioOrm> {
     const modelo = MODELOS_QUESTIONARIO.find((item) => item.id === modeloId);
     if (!modelo) throw new NotFoundException('Modelo de questionario nao encontrado.');
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const categoriasPorNome = new Map<string, CategoriaPerguntaOrm>();
       for (const perguntaModelo of modelo.perguntas) {
         const categoriaModelo = perguntaModelo.categoria;
@@ -190,7 +201,7 @@ export class ServicoQuestionarios {
       const questionario = await gerenciador.getRepository(QuestionarioOrm).save(
         gerenciador.getRepository(QuestionarioOrm).create({
           tenantId,
-          profissionalId: dados.profissionalId,
+          profissionalId: profissionalIdDoUsuario ?? dados.profissionalId,
           titulo: dados.titulo?.trim() || modelo.titulo,
           descricao: dados.descricao ?? modelo.descricao,
           status: 'rascunho',
@@ -239,12 +250,12 @@ export class ServicoQuestionarios {
   async atualizarQuestionario(
     tenantId: string,
     questionarioId: string,
-    dados: AtualizarQuestionarioDto
+    dados: AtualizarQuestionarioDto,
+    usuario: UsuarioAutenticado
   ): Promise<QuestionarioOrm> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(QuestionarioOrm);
-      const questionario = await repositorio.findOne({ where: { id: questionarioId, tenantId } });
-      if (!questionario) throw new NotFoundException('Questionario nao encontrado.');
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
 
       if (dados.titulo !== undefined) questionario.titulo = dados.titulo;
       if (dados.descricao !== undefined) questionario.descricao = dados.descricao;
@@ -258,17 +269,18 @@ export class ServicoQuestionarios {
   async duplicarQuestionario(
     tenantId: string,
     questionarioId: string,
-    dados: DuplicarQuestionarioDto
+    dados: DuplicarQuestionarioDto,
+    usuario: UsuarioAutenticado
   ): Promise<QuestionarioOrm> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorioQuestionarios = gerenciador.getRepository(QuestionarioOrm);
-      const original = await repositorioQuestionarios.findOne({ where: { id: questionarioId, tenantId } });
-      if (!original) throw new NotFoundException('Questionario nao encontrado.');
+      const original = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
 
       const duplicado = await repositorioQuestionarios.save(
         repositorioQuestionarios.create({
           tenantId,
-          profissionalId: original.profissionalId,
+          profissionalId: profissionalIdDoUsuario ?? original.profissionalId,
           titulo: dados.titulo?.trim() || `${original.titulo} (copia)`,
           descricao: original.descricao,
           status: 'rascunho',
@@ -326,7 +338,12 @@ export class ServicoQuestionarios {
     });
   }
 
-  async adicionarPergunta(tenantId: string, questionarioId: string, dados: CriarPerguntaDto): Promise<PerguntaOrm> {
+  async adicionarPergunta(
+    tenantId: string,
+    questionarioId: string,
+    dados: CriarPerguntaDto,
+    usuario: UsuarioAutenticado
+  ): Promise<PerguntaOrm> {
     if (!validarTipoPergunta(dados.tipo)) {
       throw new BadRequestException('Tipo de pergunta nao suportado.');
     }
@@ -334,10 +351,7 @@ export class ServicoQuestionarios {
     this.validarOpcoes(dados.tipo, dados.opcoes);
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
-        where: { id: questionarioId, tenantId }
-      });
-      if (!questionario) throw new NotFoundException('Questionario nao encontrado.');
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
 
       const totalPerguntas = await gerenciador.getRepository(PerguntaOrm).count({
         where: { tenantId, questionarioId }
@@ -378,8 +392,9 @@ export class ServicoQuestionarios {
     });
   }
 
-  async listarPerguntas(tenantId: string, questionarioId: string): Promise<PerguntaComOpcoes[]> {
+  async listarPerguntas(tenantId: string, questionarioId: string, usuario: UsuarioAutenticado): Promise<PerguntaComOpcoes[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
       const perguntas = await gerenciador.getRepository(PerguntaOrm).find({
         where: { tenantId, questionarioId },
         order: { ordem: 'ASC' }
@@ -392,13 +407,15 @@ export class ServicoQuestionarios {
     tenantId: string,
     questionarioId: string,
     perguntaId: string,
-    dados: AtualizarPerguntaDto
+    dados: AtualizarPerguntaDto,
+    usuario: UsuarioAutenticado
   ): Promise<PerguntaComOpcoes> {
     if (dados.tipo && !validarTipoPergunta(dados.tipo)) {
       throw new BadRequestException('Tipo de pergunta nao suportado.');
     }
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
       const repositorioPerguntas = gerenciador.getRepository(PerguntaOrm);
       const pergunta = await repositorioPerguntas.findOne({
         where: { id: perguntaId, tenantId, questionarioId }
@@ -449,10 +466,16 @@ export class ServicoQuestionarios {
     });
   }
 
-  async reordenarPerguntas(tenantId: string, questionarioId: string, dados: ReordenarPerguntasDto): Promise<PerguntaOrm[]> {
+  async reordenarPerguntas(
+    tenantId: string,
+    questionarioId: string,
+    dados: ReordenarPerguntasDto,
+    usuario: UsuarioAutenticado
+  ): Promise<PerguntaOrm[]> {
     const ordemNormalizada = normalizarOrdemPerguntas(dados.perguntas);
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
       const repositorio = gerenciador.getRepository(PerguntaOrm);
       const perguntasPersistidas = await repositorio.find({ where: { tenantId, questionarioId } });
       const idsPersistidos = new Set(perguntasPersistidas.map((pergunta) => pergunta.id));
@@ -472,7 +495,11 @@ export class ServicoQuestionarios {
     });
   }
 
-  async criarAgendamento(tenantId: string, dados: CriarAgendamentoQuestionarioDto): Promise<AgendamentoQuestionarioOrm> {
+  async criarAgendamento(
+    tenantId: string,
+    dados: CriarAgendamentoQuestionarioDto,
+    usuario: UsuarioAutenticado
+  ): Promise<AgendamentoQuestionarioOrm> {
     if (!dados.regraCron && !dados.dataFixa) {
       throw new BadRequestException('Informe regraCron ou dataFixa.');
     }
@@ -480,10 +507,7 @@ export class ServicoQuestionarios {
     const proximaExecucaoEm = this.calcularProximaExecucao(dados.regraCron, dados.dataFixa, dados.timezone);
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
-        where: { id: dados.questionarioId, tenantId }
-      });
-      if (!questionario) throw new NotFoundException('Questionario nao encontrado.');
+      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, dados.questionarioId, usuario);
 
       return gerenciador.getRepository(AgendamentoQuestionarioOrm).save(
         gerenciador.getRepository(AgendamentoQuestionarioOrm).create({
@@ -502,11 +526,11 @@ export class ServicoQuestionarios {
   async criarEnvioQuestionarioManual(
     tenantId: string,
     questionarioId: string,
-    dados: CriarEnvioQuestionarioManualDto
+    dados: CriarEnvioQuestionarioManualDto,
+    usuario: UsuarioAutenticado
   ): Promise<EnvioQuestionarioManualResposta> {
     const envio = await this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({ where: { id: questionarioId, tenantId } });
-      if (!questionario) throw new NotFoundException('Questionario nao encontrado.');
+      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
 
       const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
         where: { id: dados.pacienteId, tenantId, arquivadoEm: IsNull() }
@@ -533,10 +557,13 @@ export class ServicoQuestionarios {
     });
   }
 
-  async listarRespostasQuestionario(tenantId: string, questionarioId: string): Promise<RespostaQuestionarioRecebida[]> {
+  async listarRespostasQuestionario(
+    tenantId: string,
+    questionarioId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<RespostaQuestionarioRecebida[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({ where: { id: questionarioId, tenantId } });
-      if (!questionario) throw new NotFoundException('Questionario nao encontrado.');
+      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
 
       const envios = await gerenciador.getRepository(EnvioQuestionarioOrm).find({ where: { tenantId, questionarioId } });
       const enviosPorId = new Map(envios.map((envio) => [envio.id, envio]));
@@ -595,9 +622,10 @@ export class ServicoQuestionarios {
   async obterLeituraClinicaQuestionario(
     tenantId: string,
     questionarioId: string,
-    filtros: FiltrosLeituraClinicaQuestionario = {}
+    filtros: FiltrosLeituraClinicaQuestionario = {},
+    usuario: UsuarioAutenticado
   ): Promise<LeituraClinicaQuestionario> {
-    const respostas = await this.listarRespostasQuestionario(tenantId, questionarioId);
+    const respostas = await this.listarRespostasQuestionario(tenantId, questionarioId, usuario);
     const respostasFiltradas = filtros.pacienteId ? respostas.filter((resposta) => resposta.pacienteId === filtros.pacienteId) : respostas;
     const perguntas = await this.executorTenant.executar(tenantId, async (gerenciador) =>
       gerenciador.getRepository(PerguntaOrm).find({ where: { tenantId, questionarioId }, order: { ordem: 'ASC' } })
@@ -681,6 +709,24 @@ export class ServicoQuestionarios {
       perguntas: perguntasAgregadas,
       respostas: respostasFiltradas
     };
+  }
+
+  private async garantirQuestionarioDoProfissional(
+    gerenciador: EntityManager,
+    tenantId: string,
+    questionarioId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<QuestionarioOrm> {
+    const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+    const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
+      where: { id: questionarioId, tenantId, ...(profissionalId ? { profissionalId } : {}) }
+    });
+
+    if (!questionario) {
+      throw new NotFoundException('Questionario nao encontrado.');
+    }
+
+    return questionario;
   }
 
   private arredondarMedia(total: number, divisor: number): number {

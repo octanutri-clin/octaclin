@@ -68,7 +68,7 @@ export class ControladorQuestionarios {
     @Req() requisicao: Request,
     @Body() dados: CriarQuestionarioDto
   ) {
-    const questionario = await this.servicoQuestionarios.criarQuestionario(usuario.tenantId, dados);
+    const questionario = await this.servicoQuestionarios.criarQuestionario(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'questionarios.criar', 'questionario', questionario.id, {
       profissionalId: dados.profissionalId
     });
@@ -81,7 +81,7 @@ export class ControladorQuestionarios {
     @Query('pagina', new ParseIntPipe({ optional: true })) pagina = 1,
     @Query('limite', new ParseIntPipe({ optional: true })) limite = 25
   ) {
-    return this.servicoQuestionarios.listarQuestionarios(usuario.tenantId, pagina, limite);
+    return this.servicoQuestionarios.listarQuestionarios(usuario.tenantId, usuario, pagina, limite);
   }
 
   @Get('questionarios/modelos')
@@ -97,7 +97,7 @@ export class ControladorQuestionarios {
     @Param('modeloId') modeloId: string,
     @Body() dados: CriarQuestionarioAPartirModeloDto
   ) {
-    const questionario = await this.servicoQuestionarios.criarQuestionarioAPartirModelo(usuario.tenantId, modeloId, dados);
+    const questionario = await this.servicoQuestionarios.criarQuestionarioAPartirModelo(usuario.tenantId, modeloId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'questionarios.modelo.criar', 'questionario', questionario.id, {
       modeloId,
       profissionalId: dados.profissionalId
@@ -113,7 +113,7 @@ export class ControladorQuestionarios {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dados: AtualizarQuestionarioDto
   ) {
-    const questionario = await this.servicoQuestionarios.atualizarQuestionario(usuario.tenantId, id, dados);
+    const questionario = await this.servicoQuestionarios.atualizarQuestionario(usuario.tenantId, id, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'questionarios.atualizar', 'questionario', id, {
       status: dados.status
     });
@@ -128,7 +128,7 @@ export class ControladorQuestionarios {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dados: DuplicarQuestionarioDto
   ) {
-    const duplicado = await this.servicoQuestionarios.duplicarQuestionario(usuario.tenantId, id, dados);
+    const duplicado = await this.servicoQuestionarios.duplicarQuestionario(usuario.tenantId, id, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'questionarios.duplicar', 'questionario', duplicado.id, {
       origemId: id
     });
@@ -143,7 +143,7 @@ export class ControladorQuestionarios {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dados: CriarEnvioQuestionarioManualDto
   ) {
-    const envio = await this.servicoQuestionarios.criarEnvioQuestionarioManual(usuario.tenantId, id, dados);
+    const envio = await this.servicoQuestionarios.criarEnvioQuestionarioManual(usuario.tenantId, id, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'questionarios.envio.criar', 'envio_questionario', envio.id, {
       questionarioId: id,
       pacienteId: dados.pacienteId,
@@ -154,7 +154,7 @@ export class ControladorQuestionarios {
 
   @Get('questionarios/:id/respostas')
   listarRespostasQuestionario(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
-    return this.servicoQuestionarios.listarRespostasQuestionario(usuario.tenantId, id);
+    return this.servicoQuestionarios.listarRespostasQuestionario(usuario.tenantId, id, usuario);
   }
 
   @Get('questionarios/:id/respostas/leitura-clinica')
@@ -163,7 +163,7 @@ export class ControladorQuestionarios {
     @Param('id', ParseUUIDPipe) id: string,
     @Query('pacienteId') pacienteId?: string
   ) {
-    return this.servicoQuestionarios.obterLeituraClinicaQuestionario(usuario.tenantId, id, { pacienteId });
+    return this.servicoQuestionarios.obterLeituraClinicaQuestionario(usuario.tenantId, id, { pacienteId }, usuario);
   }
 
   @Post('questionarios/:id/perguntas')
@@ -174,7 +174,7 @@ export class ControladorQuestionarios {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dados: CriarPerguntaDto
   ) {
-    const pergunta = await this.servicoQuestionarios.adicionarPergunta(usuario.tenantId, id, dados);
+    const pergunta = await this.servicoQuestionarios.adicionarPergunta(usuario.tenantId, id, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'questionarios.pergunta.criar', 'pergunta', pergunta.id, {
       questionarioId: id,
       categoriaId: dados.categoriaId,
@@ -186,7 +186,7 @@ export class ControladorQuestionarios {
 
   @Get('questionarios/:id/perguntas')
   listarPerguntas(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
-    return this.servicoQuestionarios.listarPerguntas(usuario.tenantId, id);
+    return this.servicoQuestionarios.listarPerguntas(usuario.tenantId, id, usuario);
   }
 
   @Patch('questionarios/:id/perguntas/ordem')
@@ -197,7 +197,7 @@ export class ControladorQuestionarios {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dados: ReordenarPerguntasDto
   ) {
-    const perguntas = await this.servicoQuestionarios.reordenarPerguntas(usuario.tenantId, id, dados);
+    const perguntas = await this.servicoQuestionarios.reordenarPerguntas(usuario.tenantId, id, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'questionarios.perguntas.reordenar', 'questionario', id, {
       totalPerguntas: dados.perguntas.length
     });
@@ -213,7 +213,7 @@ export class ControladorQuestionarios {
     @Param('perguntaId', ParseUUIDPipe) perguntaId: string,
     @Body() dados: AtualizarPerguntaDto
   ) {
-    const pergunta = await this.servicoQuestionarios.atualizarPergunta(usuario.tenantId, id, perguntaId, dados);
+    const pergunta = await this.servicoQuestionarios.atualizarPergunta(usuario.tenantId, id, perguntaId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'questionarios.pergunta.atualizar', 'pergunta', perguntaId, {
       questionarioId: id,
       categoriaId: dados.categoriaId,
@@ -230,7 +230,7 @@ export class ControladorQuestionarios {
     @Req() requisicao: Request,
     @Body() dados: CriarAgendamentoQuestionarioDto
   ) {
-    const agendamento = await this.servicoQuestionarios.criarAgendamento(usuario.tenantId, dados);
+    const agendamento = await this.servicoQuestionarios.criarAgendamento(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'questionarios.agendamento.criar', 'agendamento_questionario', agendamento.id, {
       questionarioId: dados.questionarioId,
       timezone: dados.timezone

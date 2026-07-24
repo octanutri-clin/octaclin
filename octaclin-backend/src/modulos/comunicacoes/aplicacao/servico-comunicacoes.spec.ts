@@ -1,20 +1,43 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ServicoComunicacoes } from './servico-comunicacoes';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
+
+const usuarioColaborador: UsuarioAutenticado = {
+  usuarioId: 'usuario-colaborador-1',
+  tenantId: 'tenant-1',
+  papel: 'Collaborator',
+  emailHash: 'hash-colaborador',
+  permissoes: []
+};
+
+const usuarioProfissional: UsuarioAutenticado = {
+  usuarioId: 'usuario-profissional-1',
+  tenantId: 'tenant-1',
+  papel: 'Professional',
+  emailHash: 'hash-profissional',
+  permissoes: []
+};
 
 function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
   return {
     create: jest.fn((entrada: Record<string, unknown>) => entrada),
     save: jest.fn(async (entrada: Record<string, unknown>) => ({ id: `${nome}-1`, ...entrada })),
-    find: jest.fn(async () => (nome === 'mensagem' ? dados.mensagens ?? [] : [])),
+    find: jest.fn(async () => {
+      if (nome === 'mensagem') return dados.mensagens ?? [];
+      if (nome === 'paciente') return dados.pacientes ?? [];
+      return [];
+    }),
     findOne: jest.fn(async (consulta: { where: Record<string, unknown> }) => {
       if (nome === 'canal') return dados.canal ?? null;
       if (nome === 'template') return dados.template ?? null;
       if (nome === 'paciente') return dados.paciente ?? null;
+      if (nome === 'profissional') return dados.profissional ?? null;
       return consulta.where.id ? dados.mensagem ?? null : null;
     })
   };
@@ -26,7 +49,8 @@ function criarServico(dados: Record<string, unknown>) {
     template: criarRepositorioFake('template', dados),
     mensagem: criarRepositorioFake('mensagem', dados),
     outbox: criarRepositorioFake('outbox', dados),
-    paciente: criarRepositorioFake('paciente', dados)
+    paciente: criarRepositorioFake('paciente', dados),
+    profissional: criarRepositorioFake('profissional', dados)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -35,6 +59,7 @@ function criarServico(dados: Record<string, unknown>) {
       if (entidade === MensagemNotificacaoOrm) return repositorios.mensagem;
       if (entidade === OutboxEventoOrm) return repositorios.outbox;
       if (entidade === PacienteOrm) return repositorios.paciente;
+      if (entidade === ProfissionalOrm) return repositorios.profissional;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -126,13 +151,41 @@ describe('ServicoComunicacoes', () => {
   it('deve listar mensagens somente no contexto do tenant', async () => {
     const { servico, repositorios } = criarServico({});
 
-    await servico.listarMensagens('tenant-1');
+    await servico.listarMensagens('tenant-1', usuarioColaborador);
 
     expect(repositorios.mensagem.find).toHaveBeenCalledWith({
       where: { tenantId: 'tenant-1' },
       order: { criadoEm: 'DESC' },
       take: 200
     });
+  });
+
+  it('deve listar mensagens apenas dos proprios pacientes quando o usuario for Professional', async () => {
+    const { servico, repositorios } = criarServico({
+      profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' },
+      pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1' }]
+    });
+
+    await servico.listarMensagens('tenant-1', usuarioProfissional);
+
+    expect(repositorios.paciente.find).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1' }
+    });
+    expect(repositorios.mensagem.find).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-1' }) })
+    );
+  });
+
+  it('deve retornar lista vazia quando Professional nao possui pacientes proprios', async () => {
+    const { servico, repositorios } = criarServico({
+      profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' },
+      pacientes: []
+    });
+
+    const mensagens = await servico.listarMensagens('tenant-1', usuarioProfissional);
+
+    expect(mensagens).toEqual([]);
+    expect(repositorios.mensagem.find).not.toHaveBeenCalled();
   });
 
   it('deve associar mensagens WhatsApp de um contato a um paciente', async () => {

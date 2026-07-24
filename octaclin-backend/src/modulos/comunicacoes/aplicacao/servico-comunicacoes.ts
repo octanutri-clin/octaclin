@@ -1,9 +1,12 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bullmq';
+import { In } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import {
   AssociarContatoWhatsappDto,
@@ -68,14 +71,30 @@ export class ServicoComunicacoes {
     );
   }
 
-  async listarMensagens(tenantId: string): Promise<MensagemNotificacaoOrm[]> {
-    return this.executorTenant.executar(tenantId, (gerenciador) =>
-      gerenciador.getRepository(MensagemNotificacaoOrm).find({
+  async listarMensagens(tenantId: string, usuario: UsuarioAutenticado): Promise<MensagemNotificacaoOrm[]> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+
+      if (profissionalId) {
+        const pacientes = await gerenciador.getRepository(PacienteOrm).find({
+          where: { tenantId, profissionalResponsavelId: profissionalId }
+        });
+        const pacienteIds = pacientes.map((paciente) => paciente.id);
+        if (!pacienteIds.length) return [];
+
+        return gerenciador.getRepository(MensagemNotificacaoOrm).find({
+          where: { tenantId, pacienteId: In(pacienteIds) },
+          order: { criadoEm: 'DESC' },
+          take: 200
+        });
+      }
+
+      return gerenciador.getRepository(MensagemNotificacaoOrm).find({
         where: { tenantId },
         order: { criadoEm: 'DESC' },
         take: 200
-      })
-    );
+      });
+    });
   }
 
   async associarContatoWhatsapp(tenantId: string, dados: AssociarContatoWhatsappDto) {

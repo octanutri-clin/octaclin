@@ -25,7 +25,7 @@ export class ControladorAutomacoes {
     @Req() requisicao: Request,
     @Body() dados: CriarRegraAutomacaoDto
   ) {
-    const regra = await this.servicoAutomacoes.criarRegra(usuario.tenantId, dados);
+    const regra = await this.servicoAutomacoes.criarRegra(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'automacoes.regra.criar', 'regra_automacao', regra.id, {
       profissionalId: dados.profissionalId,
       ativa: dados.ativa ?? true,
@@ -37,7 +37,7 @@ export class ControladorAutomacoes {
 
   @Get('regras')
   listarRegras(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoAutomacoes.listarRegras(usuario.tenantId);
+    return this.servicoAutomacoes.listarRegras(usuario.tenantId, usuario);
   }
 
   @Get('avaliacoes')
@@ -51,7 +51,7 @@ export class ControladorAutomacoes {
     @Req() requisicao: Request,
     @Body() dados: AvaliarRegraDto
   ) {
-    const execucao = await this.servicoAutomacoes.solicitarAvaliacao(usuario.tenantId, dados);
+    const execucao = await this.servicoAutomacoes.solicitarAvaliacao(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'automacoes.avaliacao.solicitar', 'execucao_regra', execucao.id, {
       regraId: dados.regraId,
       pacienteId: dados.pacienteId,

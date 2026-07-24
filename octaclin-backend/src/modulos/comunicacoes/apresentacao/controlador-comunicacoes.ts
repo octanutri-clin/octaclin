@@ -71,7 +71,7 @@ export class ControladorComunicacoes {
 
   @Get('mensagens')
   listarMensagens(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoComunicacoes.listarMensagens(usuario.tenantId);
+    return this.servicoComunicacoes.listarMensagens(usuario.tenantId, usuario);
   }
 
   @Post('mensagens')

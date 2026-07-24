@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { CriarMaterialEducativoDto, EnviarMaterialPacienteDto, EnvioMaterialPacienteRespostaDto, MaterialEducativoRespostaDto } from './dtos';
 import { EnvioMaterialPacienteOrm } from '../infraestrutura/envio-material-paciente.orm';
@@ -49,11 +51,18 @@ export class ServicoMateriais {
     tenantId: string,
     pacienteId: string,
     usuarioId: string,
-    dados: EnviarMaterialPacienteDto
+    dados: EnviarMaterialPacienteDto,
+    usuario: UsuarioAutenticado
   ): Promise<EnvioMaterialPacienteRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-        where: { id: pacienteId, tenantId, arquivadoEm: IsNull() }
+        where: {
+          id: pacienteId,
+          tenantId,
+          arquivadoEm: IsNull(),
+          ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
+        }
       });
       if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
 
@@ -76,10 +85,20 @@ export class ServicoMateriais {
     });
   }
 
-  async listarMateriaisPaciente(tenantId: string, pacienteId: string): Promise<EnvioMaterialPacienteRespostaDto[]> {
+  async listarMateriaisPaciente(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<EnvioMaterialPacienteRespostaDto[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-        where: { id: pacienteId, tenantId, arquivadoEm: IsNull() }
+        where: {
+          id: pacienteId,
+          tenantId,
+          arquivadoEm: IsNull(),
+          ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
+        }
       });
       if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
 

@@ -38,7 +38,7 @@ export class ControladorMateriais {
   @Get('pacientes/:pacienteId')
   @Permissoes('materiais.ler', 'pacientes.ler')
   async listarPaciente(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string) {
-    return this.servicoMateriais.listarMateriaisPaciente(usuario.tenantId, pacienteId);
+    return this.servicoMateriais.listarMateriaisPaciente(usuario.tenantId, pacienteId, usuario);
   }
 
   @Post('pacientes/:pacienteId')
@@ -49,7 +49,7 @@ export class ControladorMateriais {
     @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
     @Body() dados: EnviarMaterialPacienteDto
   ) {
-    const envio = await this.servicoMateriais.enviarMaterialParaPaciente(usuario.tenantId, pacienteId, usuario.usuarioId, dados);
+    const envio = await this.servicoMateriais.enviarMaterialParaPaciente(usuario.tenantId, pacienteId, usuario.usuarioId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'materiais.enviar_paciente', 'paciente', pacienteId, {
       materialId: envio.materialId,
       envioId: envio.id,

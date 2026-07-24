@@ -1,3 +1,5 @@
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { ServicoQuestionarios } from './servico-questionarios';
 import { CategoriaPerguntaOrm } from '../infraestrutura/categoria-pergunta.orm';
 import { EnvioQuestionarioOrm } from '../infraestrutura/envio-questionario.orm';
@@ -7,8 +9,33 @@ import { QuestionarioOrm } from '../infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../infraestrutura/resposta-checkin.orm';
 import { RespostaValorOrm } from '../infraestrutura/resposta-valor.orm';
 
+const usuarioColaborador: UsuarioAutenticado = {
+  usuarioId: 'usuario-colaborador-1',
+  tenantId: 'tenant-1',
+  papel: 'Collaborator',
+  emailHash: 'hash-colaborador',
+  permissoes: []
+};
+
+const usuarioProfissional: UsuarioAutenticado = {
+  usuarioId: 'usuario-profissional-1',
+  tenantId: 'tenant-1',
+  papel: 'Professional',
+  emailHash: 'hash-profissional',
+  permissoes: []
+};
+
 function criarRepositorioFake(
-  nome: 'questionario' | 'pergunta' | 'opcao' | 'categoria' | 'envio' | 'respostaCheckin' | 'respostaValor' | 'paciente',
+  nome:
+    | 'questionario'
+    | 'pergunta'
+    | 'opcao'
+    | 'categoria'
+    | 'envio'
+    | 'respostaCheckin'
+    | 'respostaValor'
+    | 'paciente'
+    | 'profissional',
   dados: Record<string, any>
 ) {
   const itens = dados[`${nome}s`] as Record<string, any>[];
@@ -26,6 +53,12 @@ function criarRepositorioFake(
     findOne: jest.fn(async (consulta: { where: Record<string, unknown> }) =>
       itens.find((item) => Object.entries(consulta.where).every(([chave, valor]) => corresponde(item[chave], valor))) ?? null
     ),
+    findAndCount: jest.fn(async (consulta?: { where?: Record<string, unknown> }) => {
+      const filtrados = consulta?.where
+        ? itens.filter((item) => Object.entries(consulta.where ?? {}).every(([chave, valor]) => corresponde(item[chave], valor)))
+        : [...itens];
+      return [filtrados, filtrados.length];
+    }),
     save: jest.fn(async (entrada: Record<string, any> | Record<string, any>[]) => {
       if (Array.isArray(entrada)) return Promise.all(entrada.map((item) => salvar(item)));
       return salvar(entrada);
@@ -77,7 +110,8 @@ function criarServico(dados: Record<string, any>) {
     envio: criarRepositorioFake('envio', dados),
     respostaCheckin: criarRepositorioFake('respostaCheckin', dados),
     respostaValor: criarRepositorioFake('respostaValor', dados),
-    paciente: criarRepositorioFake('paciente', dados)
+    paciente: criarRepositorioFake('paciente', dados),
+    profissional: criarRepositorioFake('profissional', { profissionals: dados.profissionals ?? [] })
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -88,6 +122,7 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === EnvioQuestionarioOrm) return repositorios.envio;
       if (entidade === RespostaCheckinOrm) return repositorios.respostaCheckin;
       if (entidade === RespostaValorOrm) return repositorios.respostaValor;
+      if (entidade === ProfissionalOrm) return repositorios.profissional;
       if (entidade.name === 'PacienteOrm') return repositorios.paciente;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
@@ -154,18 +189,24 @@ describe('ServicoQuestionarios', () => {
       pacientes: []
     });
 
-    const resposta = await servico.atualizarPergunta('tenant-1', 'q1', 'p1', {
-      categoriaId: 'cat-1',
-      tipo: 'multipla_escolha',
-      enunciado: 'Quais refeicoes voce fez hoje?',
-      peso: 2,
-      obrigatoria: true,
-      configuracao: { multipla: true },
-      opcoes: [
-        { rotulo: 'Cafe da manha', valor: 'cafe' },
-        { rotulo: 'Almoco', valor: 'almoco' }
-      ]
-    } as any);
+    const resposta = await servico.atualizarPergunta(
+      'tenant-1',
+      'q1',
+      'p1',
+      {
+        categoriaId: 'cat-1',
+        tipo: 'multipla_escolha',
+        enunciado: 'Quais refeicoes voce fez hoje?',
+        peso: 2,
+        obrigatoria: true,
+        configuracao: { multipla: true },
+        opcoes: [
+          { rotulo: 'Cafe da manha', valor: 'cafe' },
+          { rotulo: 'Almoco', valor: 'almoco' }
+        ]
+      } as any,
+      usuarioColaborador
+    );
 
     expect(resposta).toEqual(
       expect.objectContaining({
@@ -231,7 +272,7 @@ describe('ServicoQuestionarios', () => {
       pacientes: []
     });
 
-    const duplicado = await servico.duplicarQuestionario('tenant-1', 'q1', {});
+    const duplicado = await servico.duplicarQuestionario('tenant-1', 'q1', {}, usuarioColaborador);
 
     expect(duplicado).toEqual(
       expect.objectContaining({
@@ -259,9 +300,12 @@ describe('ServicoQuestionarios', () => {
       pacientes: []
     });
 
-    const criado = await servico.criarQuestionarioAPartirModelo('tenant-1', 'checkin-adesao-semanal', {
-      profissionalId: 'prof-1'
-    } as any);
+    const criado = await servico.criarQuestionarioAPartirModelo(
+      'tenant-1',
+      'checkin-adesao-semanal',
+      { profissionalId: 'prof-1' } as any,
+      usuarioColaborador
+    );
 
     expect(criado).toEqual(
       expect.objectContaining({
@@ -342,9 +386,12 @@ describe('ServicoQuestionarios', () => {
       pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1', ultimoCheckinEm: null }]
     });
 
-    const envio = await servico.criarEnvioQuestionarioManual('tenant-1', 'q1', {
-      pacienteId: 'paciente-1'
-    } as any);
+    const envio = await servico.criarEnvioQuestionarioManual(
+      'tenant-1',
+      'q1',
+      { pacienteId: 'paciente-1' } as any,
+      usuarioColaborador
+    );
 
     expect(envio).toEqual(
       expect.objectContaining({
@@ -465,7 +512,7 @@ describe('ServicoQuestionarios', () => {
       pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1', ultimoCheckinEm: finalizadoEm }]
     });
 
-    const respostas = await servico.listarRespostasQuestionario('tenant-1', 'q1');
+    const respostas = await servico.listarRespostasQuestionario('tenant-1', 'q1', usuarioColaborador);
 
     expect(respostas).toEqual([
       expect.objectContaining({
@@ -549,7 +596,12 @@ describe('ServicoQuestionarios', () => {
       ]
     });
 
-    const leitura = await servico.obterLeituraClinicaQuestionario('tenant-1', 'q1', { pacienteId: 'paciente-1' });
+    const leitura = await servico.obterLeituraClinicaQuestionario(
+      'tenant-1',
+      'q1',
+      { pacienteId: 'paciente-1' },
+      usuarioColaborador
+    );
 
     expect(leitura.resumo).toEqual({
       totalRespostas: 1,
@@ -567,5 +619,61 @@ describe('ServicoQuestionarios', () => {
       expect.objectContaining({ perguntaId: 'p2', totalRespostas: 1, mediaNumerica: 82.4 }),
       expect.objectContaining({ perguntaId: 'p3', totalRespostas: 1, textosRecentes: ['Dormiu melhor'] })
     ]);
+  });
+
+  describe('escopo pacientes_responsaveis para Professional', () => {
+    function dadosBase(extra: Record<string, any> = {}) {
+      return {
+        categorias: [],
+        questionarios: [],
+        perguntas: [],
+        opcaos: [],
+        envios: [],
+        respostaCheckins: [],
+        respostaValors: [],
+        pacientes: [],
+        profissionals: [{ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }],
+        ...extra
+      };
+    }
+
+    it('deve forcar profissionalId para o proprio profissional ao criar questionario como Professional', async () => {
+      const { servico } = criarServico(dadosBase());
+
+      const questionario = await servico.criarQuestionario(
+        'tenant-1',
+        { profissionalId: 'profissional-outro-2', titulo: 'Novo questionario' } as any,
+        usuarioProfissional
+      );
+
+      expect(questionario.profissionalId).toBe('profissional-1');
+    });
+
+    it('deve listar apenas questionarios do proprio profissional quando o usuario for Professional', async () => {
+      const { servico } = criarServico(
+        dadosBase({
+          questionarios: [
+            { id: 'q-meu', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Meu questionario', versao: 1 },
+            { id: 'q-outro', tenantId: 'tenant-1', profissionalId: 'profissional-outro-2', titulo: 'De outro profissional', versao: 1 }
+          ]
+        })
+      );
+
+      const resultado = await servico.listarQuestionarios('tenant-1', usuarioProfissional);
+
+      expect(resultado.itens.map((item) => item.id)).toEqual(['q-meu']);
+    });
+
+    it('deve tratar questionario de outro profissional como nao encontrado ao atualizar', async () => {
+      const { servico } = criarServico(
+        dadosBase({
+          questionarios: [{ id: 'q-outro', tenantId: 'tenant-1', profissionalId: 'profissional-outro-2', titulo: 'De outro', versao: 1 }]
+        })
+      );
+
+      await expect(
+        servico.atualizarQuestionario('tenant-1', 'q-outro', { titulo: 'Tentativa' } as any, usuarioProfissional)
+      ).rejects.toThrow('Questionario nao encontrado.');
+    });
   });
 });
