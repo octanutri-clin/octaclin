@@ -55,7 +55,8 @@ como staging.
 3. Criar a instancia Upstash de producao e guardar a `REDIS_URL` apenas no
    Render.
 4. Criar o(s) servico(s) Render de producao (backend e web), separados dos
-   servicos de staging, com `NODE_ENV=production`.
+   servicos de staging, com `NODE_ENV=production`. Ver "Como criar os
+   servicos no Render" abaixo para o passo a passo no dashboard.
 5. Gerar valores exclusivos de producao para `JWT_SEGREDO`,
    `JWT_REFRESH_SEGREDO` e `CRIPTOGRAFIA_CHAVE_AES_256` (nunca reaproveitar os
    de staging). Guardar apenas no Render.
@@ -66,6 +67,70 @@ como staging.
 7. Fazer o primeiro deploy do backend e do web de producao.
 8. Validar o ambiente novo (ver secao seguinte) antes de registrar qualquer
    avanco em `PRODUCAO_ISOLADA_CONTROLE.md`.
+
+## Como criar os servicos no Render
+
+Este repositorio nao usa Render Blueprint (`render.yaml`); os servicos de
+staging foram criados manualmente no dashboard, um por pasta do monorepo
+(`octaclin-backend` e `octaclin-web`, cada um com seu proprio `package.json` e
+`pnpm-lock.yaml`, sem workspace compartilhado). Repita o mesmo padrao para
+producao, em dois servicos novos e separados dos de staging.
+
+### Backend (`octaclin-backend`)
+
+1. No Render, `New +` > `Web Service` > conectar o repositorio
+   `octanutri-clin/octaclin`.
+2. `Name`: algo que deixe claro que e producao (ex.: `octaclin-backend-producao`),
+   nunca reaproveitar o nome/servico do staging.
+3. `Root Directory`: `octaclin-backend`.
+4. `Environment`/`Runtime`: Node.
+5. `Build Command`:
+   ```
+   corepack enable && pnpm install --frozen-lockfile && pnpm build
+   ```
+6. `Start Command`:
+   ```
+   pnpm start
+   ```
+7. `Health Check Path`: `/health`.
+8. Variaveis de ambiente: adicionar todas as obrigatorias de
+   `VARIAVEIS_AMBIENTE.md` (secao Backend e integracoes usadas), incluindo
+   `NODE_ENV=production`, a `DATABASE_URL` e a `REDIS_URL` de producao ja
+   criadas, `OCTACLIN_WEB_URL` apontando para a URL do servico web de
+   producao (criado no passo seguinte) e `BANCO_EXECUTAR_MIGRACOES=false`
+   (as migrations de producao ja foram aplicadas manualmente; nao deixar o
+   backend rodar migration automatica sem revisao).
+9. Plano: escolher um plano pago do Render (planos gratuitos hibernam e nao
+   servem para producao com clientes reais).
+
+### Web/BFF (`octaclin-web`)
+
+1. `New +` > `Web Service` > mesmo repositorio.
+2. `Name`: `octaclin-web-producao` (ou equivalente), separado do staging.
+3. `Root Directory`: `octaclin-web`.
+4. `Build Command`:
+   ```
+   corepack enable && pnpm install --frozen-lockfile && pnpm build
+   ```
+5. `Start Command`:
+   ```
+   pnpm start
+   ```
+6. Variaveis de ambiente: `NEXT_PUBLIC_API_URL` e `OCTACLIN_BACKEND_URL`
+   apontando para a URL do backend de producao criado acima,
+   `OCTACLIN_API_ORIGENS_PERMITIDAS` restrito a essa mesma URL,
+   `OCTACLIN_COOKIE_SECURE=true`.
+7. Plano pago, mesmo motivo do backend.
+
+### Depois de criar os dois servicos
+
+1. Copiar a URL publica do servico web e configurar `OCTACLIN_WEB_URL` no
+   servico backend (passo 8 acima), depois redeploy do backend se a URL nao
+   estava disponivel antes.
+2. Aguardar o primeiro deploy de cada servico terminar sem erro de build.
+3. Seguir a secao "Validacao do ambiente novo" abaixo.
+4. Registrar nome dos servicos (sem URL nem token) e status em
+   `PRODUCAO_ISOLADA_CONTROLE.md`.
 
 ## Validacao do ambiente novo
 
