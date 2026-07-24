@@ -4,6 +4,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Botao } from '@/components/ui/botao';
 
 const SELETOR_FOCAVEL = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
@@ -98,5 +99,40 @@ export function Modal({ aberto, aoFechar, titulo, descricao, children, className
       </div>
     </div>,
     document.body
+  );
+}
+
+interface ModalConfirmacaoProps {
+  aberto: boolean;
+  titulo: string;
+  mensagem: string;
+  rotuloConfirmar?: string;
+  rotuloCancelar?: string;
+  confirmando?: boolean;
+  aoConfirmar: () => void;
+  aoCancelar: () => void;
+}
+
+export function ModalConfirmacao({
+  aberto,
+  titulo,
+  mensagem,
+  rotuloConfirmar = 'Confirmar',
+  rotuloCancelar = 'Cancelar',
+  confirmando = false,
+  aoConfirmar,
+  aoCancelar
+}: ModalConfirmacaoProps) {
+  return (
+    <Modal aberto={aberto} aoFechar={aoCancelar} titulo={titulo} descricao={mensagem}>
+      <div className="flex justify-end gap-2">
+        <Botao type="button" variante="secundario" onClick={aoCancelar} disabled={confirmando}>
+          {rotuloCancelar}
+        </Botao>
+        <Botao type="button" variante="perigo" onClick={aoConfirmar} disabled={confirmando}>
+          {confirmando ? 'Processando' : rotuloConfirmar}
+        </Botao>
+      </div>
+    </Modal>
   );
 }

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Edit3, Plus, RefreshCcw, Save, Stethoscope, Trash2, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
+import { ModalConfirmacao } from '@/components/ui/modal';
 import { Tabela, TabelaCabecalho, TabelaConteudo, TabelaLinha, TabelaLinhas, TabelaVazia } from '@/components/ui/tabela';
 import { obterSessao } from '@/lib/auth-api';
 import {
@@ -59,6 +60,7 @@ export function ListaProfissionais() {
   const [formulario, setFormulario] = useState<FormularioProfissional>(formularioInicial);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [podeGerenciar, setPodeGerenciar] = useState(false);
+  const [profissionalParaArquivar, setProfissionalParaArquivar] = useState<ProfissionalResumo | null>(null);
 
   useEffect(() => {
     void obterSessao().then((sessao) => setPodeGerenciar(Boolean(sessao?.permissoes?.includes('profissionais.gerenciar'))));
@@ -113,9 +115,9 @@ export function ListaProfissionais() {
     });
   }
 
-  async function arquivar(profissional: ProfissionalResumo) {
-    const confirmado = window.confirm(`Arquivar o profissional ${profissional.nome}?`);
-    if (!confirmado) return;
+  async function confirmarArquivar() {
+    if (!profissionalParaArquivar) return;
+    const profissional = profissionalParaArquivar;
 
     setArquivandoId(profissional.id);
     setErro(null);
@@ -126,6 +128,7 @@ export function ListaProfissionais() {
       if (editandoId === profissional.id) cancelarEdicao();
       await carregar();
       setSucesso('Profissional arquivado.');
+      setProfissionalParaArquivar(null);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao arquivar profissional.');
     } finally {
@@ -284,7 +287,7 @@ export function ListaProfissionais() {
                         <Botao
                           type="button"
                           variante="fantasma"
-                          onClick={() => void arquivar(profissional)}
+                          onClick={() => setProfissionalParaArquivar(profissional)}
                           disabled={arquivandoId === profissional.id}
                           aria-label="Arquivar profissional"
                         >
@@ -303,6 +306,16 @@ export function ListaProfissionais() {
           </TabelaLinhas>
         </TabelaConteudo>
       </Tabela>
+
+      <ModalConfirmacao
+        aberto={profissionalParaArquivar !== null}
+        titulo="Arquivar profissional"
+        mensagem={profissionalParaArquivar ? `Arquivar o profissional ${profissionalParaArquivar.nome}?` : ''}
+        rotuloConfirmar="Arquivar"
+        confirmando={Boolean(arquivandoId)}
+        aoConfirmar={() => void confirmarArquivar()}
+        aoCancelar={() => setProfissionalParaArquivar(null)}
+      />
     </section>
   );
 }

@@ -6,6 +6,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { AlertTriangle, Archive, BookOpen, CalendarClock, Check, CheckCircle2, ClipboardList, Copy, Eye, Link2, Plus, RefreshCcw, Save, Settings2, Trash2, Wand2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
+import { ModalConfirmacao } from '@/components/ui/modal';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import {
   CategoriaPerguntaApi,
@@ -140,6 +141,7 @@ export function EditorQuestionario() {
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [confirmandoArquivarQuestionario, setConfirmandoArquivarQuestionario] = useState(false);
   const [previewAberto, setPreviewAberto] = useState(false);
   const [respostasRecebidas, setRespostasRecebidas] = useState<RespostaQuestionarioRecebidaApi[]>([]);
   const [leituraClinica, setLeituraClinica] = useState<LeituraClinicaQuestionarioApi | null>(null);
@@ -424,9 +426,6 @@ export function EditorQuestionario() {
   async function arquivarQuestionario() {
     if (!questionarioAtual) return;
 
-    const confirmado = window.confirm(`Arquivar o questionario ${questionarioAtual.titulo}?`);
-    if (!confirmado) return;
-
     setSalvando(true);
     setErro(null);
     setSucesso(null);
@@ -436,6 +435,7 @@ export function EditorQuestionario() {
       setQuestionarioAtual(atualizado);
       setQuestionarios((atuais) => atuais.map((item) => (item.id === atualizado.id ? atualizado : item)));
       setSucesso('Questionario arquivado.');
+      setConfirmandoArquivarQuestionario(false);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao arquivar questionario.');
     } finally {
@@ -610,7 +610,7 @@ export function EditorQuestionario() {
         <Botao
           type="button"
           variante="fantasma"
-          onClick={() => void arquivarQuestionario()}
+          onClick={() => setConfirmandoArquivarQuestionario(true)}
           disabled={salvando || !questionarioAtual || status === 'arquivado'}
         >
           <Archive className="h-4 w-4" />
@@ -1225,6 +1225,16 @@ export function EditorQuestionario() {
           )}
         </div>
       </Cartao>
+
+      <ModalConfirmacao
+        aberto={confirmandoArquivarQuestionario}
+        titulo="Arquivar questionario"
+        mensagem={questionarioAtual ? `Arquivar o questionario ${questionarioAtual.titulo}?` : ''}
+        rotuloConfirmar="Arquivar"
+        confirmando={salvando}
+        aoConfirmar={() => void arquivarQuestionario()}
+        aoCancelar={() => setConfirmandoArquivarQuestionario(false)}
+      />
     </section>
   );
 }

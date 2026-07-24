@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Trash2, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
+import { ModalConfirmacao } from '@/components/ui/modal';
 import { Tabela, TabelaCabecalho, TabelaConteudo, TabelaLinha, TabelaLinhas, TabelaVazia } from '@/components/ui/tabela';
 import { criarConvitePaciente } from '@/lib/convites-paciente-api';
 import {
@@ -84,6 +85,7 @@ export function ListaPacientes() {
   const [linkConvite, setLinkConvite] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<FormularioPaciente>(formularioInicial);
   const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [pacienteParaArquivar, setPacienteParaArquivar] = useState<PacienteResumo | null>(null);
 
   async function carregar() {
     setCarregando(true);
@@ -141,9 +143,9 @@ export function ListaPacientes() {
     });
   }
 
-  async function arquivar(paciente: PacienteResumo) {
-    const confirmado = window.confirm(`Arquivar o paciente ${paciente.nome}?`);
-    if (!confirmado) return;
+  async function confirmarArquivar() {
+    if (!pacienteParaArquivar) return;
+    const paciente = pacienteParaArquivar;
 
     setArquivandoId(paciente.id);
     setErro(null);
@@ -154,6 +156,7 @@ export function ListaPacientes() {
       if (editandoId === paciente.id) cancelarEdicao();
       await carregar();
       setSucesso('Paciente arquivado.');
+      setPacienteParaArquivar(null);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao arquivar paciente.');
     } finally {
@@ -391,7 +394,7 @@ export function ListaPacientes() {
                     <Botao
                       type="button"
                       variante="fantasma"
-                      onClick={() => void arquivar(paciente)}
+                      onClick={() => setPacienteParaArquivar(paciente)}
                       disabled={arquivandoId === paciente.id}
                       aria-label="Arquivar paciente"
                     >
@@ -406,6 +409,16 @@ export function ListaPacientes() {
           </TabelaLinhas>
         </TabelaConteudo>
       </Tabela>
+
+      <ModalConfirmacao
+        aberto={pacienteParaArquivar !== null}
+        titulo="Arquivar paciente"
+        mensagem={pacienteParaArquivar ? `Arquivar o paciente ${pacienteParaArquivar.nome}?` : ''}
+        rotuloConfirmar="Arquivar"
+        confirmando={Boolean(arquivandoId)}
+        aoConfirmar={() => void confirmarArquivar()}
+        aoCancelar={() => setPacienteParaArquivar(null)}
+      />
     </section>
   );
 }

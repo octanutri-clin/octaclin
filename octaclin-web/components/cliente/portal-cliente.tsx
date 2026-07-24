@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
+import { ModalConfirmacao } from '@/components/ui/modal';
 import { obterSessao } from '@/lib/auth-api';
 import { PortalShell } from '@/components/app/portal-shell';
 import {
@@ -190,6 +191,9 @@ export function PortalCliente() {
   const [erroConfiguracoes, setErroConfiguracoes] = useState<string | null>(null);
   const [erroPerfilEmpresa, setErroPerfilEmpresa] = useState<string | null>(null);
   const [sucessoUsuarios, setSucessoUsuarios] = useState<string | null>(null);
+  const [confirmacaoUsuario, setConfirmacaoUsuario] = useState<
+    { tipo: 'desativar' | 'revogar'; id: string; email: string } | null
+  >(null);
   const [sucessoAssinatura, setSucessoAssinatura] = useState<string | null>(null);
   const [erroAssinatura, setErroAssinatura] = useState<string | null>(null);
   const [sucessoConfiguracoes, setSucessoConfiguracoes] = useState<string | null>(null);
@@ -372,9 +376,6 @@ export function PortalCliente() {
   }
 
   async function desativarUsuario(id: string, email: string) {
-    const confirmado = window.confirm(`Desativar o acesso de ${email}?`);
-    if (!confirmado) return;
-
     setDesativandoUsuarioId(id);
     setErroUsuarios(null);
     setSucessoUsuarios(null);
@@ -385,6 +386,7 @@ export function PortalCliente() {
       await carregarConvites();
       await carregarHistoricoConvites();
       setSucessoUsuarios('Usuario desativado.');
+      setConfirmacaoUsuario(null);
     } catch (erroAtual) {
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desativar usuario.');
     } finally {
@@ -410,9 +412,6 @@ export function PortalCliente() {
   }
 
   async function revogarConvite(usuarioId: string, email: string) {
-    const confirmado = window.confirm(`Revogar o convite de ${email}?`);
-    if (!confirmado) return;
-
     setAcaoConviteUsuarioId(usuarioId);
     setErroUsuarios(null);
     setSucessoUsuarios(null);
@@ -423,10 +422,20 @@ export function PortalCliente() {
       await carregarConvites();
       await carregarHistoricoConvites();
       setSucessoUsuarios(`Convite revogado para ${email}.`);
+      setConfirmacaoUsuario(null);
     } catch (erroAtual) {
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao revogar convite.');
     } finally {
       setAcaoConviteUsuarioId(null);
+    }
+  }
+
+  async function confirmarAcaoUsuario() {
+    if (!confirmacaoUsuario) return;
+    if (confirmacaoUsuario.tipo === 'desativar') {
+      await desativarUsuario(confirmacaoUsuario.id, confirmacaoUsuario.email);
+    } else {
+      await revogarConvite(confirmacaoUsuario.id, confirmacaoUsuario.email);
     }
   }
 
@@ -894,7 +903,7 @@ export function PortalCliente() {
                         <Botao
                           type="button"
                           variante="fantasma"
-                          onClick={() => void revogarConvite(convite.usuarioId, convite.email)}
+                          onClick={() => setConfirmacaoUsuario({ tipo: 'revogar', id: convite.usuarioId, email: convite.email })}
                           disabled={acaoConviteUsuarioId === convite.usuarioId}
                           aria-label={`Revogar convite de ${convite.email}`}
                         >
@@ -979,7 +988,7 @@ export function PortalCliente() {
                           <Botao
                             type="button"
                             variante="fantasma"
-                            onClick={() => void desativarUsuario(usuario.id, usuario.email)}
+                            onClick={() => setConfirmacaoUsuario({ tipo: 'desativar', id: usuario.id, email: usuario.email })}
                             disabled={!podeDesativarUsuarios || !usuario.ativo || usuario.role === 'Client' || desativandoUsuarioId === usuario.id}
                             aria-label={`Desativar ${usuario.email}`}
                           >
@@ -1515,6 +1524,22 @@ export function PortalCliente() {
           </Cartao>
         ) : null}
       </section>
+
+      <ModalConfirmacao
+        aberto={confirmacaoUsuario !== null}
+        titulo={confirmacaoUsuario?.tipo === 'revogar' ? 'Revogar convite' : 'Desativar usuario'}
+        mensagem={
+          confirmacaoUsuario
+            ? confirmacaoUsuario.tipo === 'revogar'
+              ? `Revogar o convite de ${confirmacaoUsuario.email}?`
+              : `Desativar o acesso de ${confirmacaoUsuario.email}?`
+            : ''
+        }
+        rotuloConfirmar={confirmacaoUsuario?.tipo === 'revogar' ? 'Revogar' : 'Desativar'}
+        confirmando={Boolean(desativandoUsuarioId) || Boolean(acaoConviteUsuarioId)}
+        aoConfirmar={() => void confirmarAcaoUsuario()}
+        aoCancelar={() => setConfirmacaoUsuario(null)}
+      />
     </PortalShell>
   );
 }
