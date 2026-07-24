@@ -329,6 +329,20 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Coletar feedback, priorizar bugs, acompanhar custos e performance.
   - Saida esperada: backlog de evolucao pos-producao.
 
+### Bloco I - Melhorias adicionais (nao bloqueiam go-live)
+
+- [ ] Fase 136 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional.
+  - Cada profissional conecta a propria conta Google via OAuth; mudancas
+    feitas direto na Google Agenda pessoal (remarcar/cancelar consulta,
+    criar compromisso pessoal) refletem no OctaClin quase em tempo real via
+    notificacao push do Google, complementando o fluxo outbound que ja
+    existe. Fecha o debito tecnico registrado na Fase 108.
+  - Escopo adicional, decidido pelo usuario em 2026-07-24 fora da ordem
+    sequencial de go-live (nao bloqueia nem depende das Fases 132-135).
+  - Design aprovado via skill `brainstorming` em 2026-07-24.
+  - Saida esperada: `fase-136-sincronizacao-google-agenda-profissional.md`
+    (design completo), depois plano de implementacao e codigo.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.
