@@ -70,62 +70,80 @@ como staging.
 
 ## Como criar os servicos no Render
 
-Este repositorio nao usa Render Blueprint (`render.yaml`); os servicos de
-staging foram criados manualmente no dashboard, um por pasta do monorepo
-(`octaclin-backend` e `octaclin-web`, cada um com seu proprio `package.json` e
-`pnpm-lock.yaml`, sem workspace compartilhado). Repita o mesmo padrao para
-producao, em dois servicos novos e separados dos de staging.
+Este repositorio ja tem `Dockerfile` proprio em `octaclin-backend/Dockerfile`
+e `octaclin-web/Dockerfile` (build multi-stage com `node:22-alpine`, cada um
+independente, sem workspace compartilhado). Os servicos de staging foram
+criados no dashboard com runtime Docker apontando para esses arquivos.
+Repita o mesmo padrao para producao, em dois servicos novos e separados dos
+de staging.
+
+Cada Dockerfile espera que o contexto de build seja a propria pasta do
+projeto (`octaclin-backend` ou `octaclin-web`), porque copia
+`package.json`/`pnpm-lock.yaml*`/`pnpm-workspace.yaml` direto na raiz do
+contexto antes de `COPY . .`. Por isso o campo de contexto **nao** pode ser a
+raiz do repositorio.
 
 ### Backend (`octaclin-backend`)
 
 1. No Render, `New +` > `Web Service` > conectar o repositorio
-   `octanutri-clin/octaclin`.
+   `octanutri-clin/octaclin` > escolher `Runtime: Docker` quando perguntado.
 2. `Name`: algo que deixe claro que e producao (ex.: `octaclin-backend-producao`),
    nunca reaproveitar o nome/servico do staging.
-3. `Root Directory`: `octaclin-backend`.
-4. `Environment`/`Runtime`: Node.
-5. `Build Command`:
-   ```
-   corepack enable && pnpm install --frozen-lockfile && pnpm build
-   ```
-6. `Start Command`:
-   ```
-   pnpm start
-   ```
-7. `Health Check Path`: `/health`.
-8. Variaveis de ambiente: adicionar todas as obrigatorias de
-   `VARIAVEIS_AMBIENTE.md` (secao Backend e integracoes usadas), incluindo
-   `NODE_ENV=production`, a `DATABASE_URL` e a `REDIS_URL` de producao ja
-   criadas, `OCTACLIN_WEB_URL` apontando para a URL do servico web de
-   producao (criado no passo seguinte) e `BANCO_EXECUTAR_MIGRACOES=false`
-   (as migrations de producao ja foram aplicadas manualmente; nao deixar o
-   backend rodar migration automatica sem revisao).
-9. Plano: escolher um plano pago do Render (planos gratuitos hibernam e nao
-   servem para producao com clientes reais).
+3. `Docker Build Context Directory`: `octaclin-backend`.
+4. `Dockerfile Path`: `octaclin-backend/Dockerfile`.
+5. `Docker Command`: deixar em branco. O `CMD ["node", "dist/main.js"]` ja
+   definido no Dockerfile e suficiente; so preencher este campo se precisar
+   sobrescrever o comando padrao.
+6. `Pre-Deploy Command`: deixar em branco. O backend ja executa as
+   migrations pendentes no proprio boot via TypeORM
+   (`migrationsRun`, controlado por `BANCO_EXECUTAR_MIGRACOES`), entao nao
+   ha comando separado de release/pre-deploy neste projeto.
+7. `Auto-Deploy`: `On Commit` (mesmo fluxo ja usado hoje: commit e push para
+   `main` dispara deploy).
+8. `Build Filters`: `Included Paths` = `octaclin-backend/**`. Isso evita que
+   commits que so tocam documentacao ou `octaclin-web` disparem rebuild do
+   backend.
+9. `Health Check Path`: `/health`.
+10. Variaveis de ambiente (todas as obrigatorias de `VARIAVEIS_AMBIENTE.md`
+    para as integracoes usadas), incluindo:
+    - `NODE_ENV=production`
+    - `PORT=3000` (o Dockerfile expoe a porta 3000; defina explicitamente
+      para nao depender da porta padrao do Render para outros runtimes)
+    - `DATABASE_URL` e `REDIS_URL` de producao ja criadas
+    - `BANCO_EXECUTAR_MIGRACOES=false` (as migrations de producao ja foram
+      aplicadas manualmente; nao deixar o backend rodar migration
+      automatica de novo sem revisao a cada deploy)
+    - `OCTACLIN_WEB_URL` apontando para a URL do servico web de producao
+      (preencher depois de criar o servico web, passo seguinte)
+    - `JWT_SEGREDO`, `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256`
+      exclusivos de producao.
+11. Plano: escolher um plano pago do Render (planos gratuitos hibernam e nao
+    servem para producao com clientes reais).
 
 ### Web/BFF (`octaclin-web`)
 
-1. `New +` > `Web Service` > mesmo repositorio.
+1. `New +` > `Web Service` > mesmo repositorio > `Runtime: Docker`.
 2. `Name`: `octaclin-web-producao` (ou equivalente), separado do staging.
-3. `Root Directory`: `octaclin-web`.
-4. `Build Command`:
-   ```
-   corepack enable && pnpm install --frozen-lockfile && pnpm build
-   ```
-5. `Start Command`:
-   ```
-   pnpm start
-   ```
-6. Variaveis de ambiente: `NEXT_PUBLIC_API_URL` e `OCTACLIN_BACKEND_URL`
-   apontando para a URL do backend de producao criado acima,
-   `OCTACLIN_API_ORIGENS_PERMITIDAS` restrito a essa mesma URL,
-   `OCTACLIN_COOKIE_SECURE=true`.
-7. Plano pago, mesmo motivo do backend.
+3. `Docker Build Context Directory`: `octaclin-web`.
+4. `Dockerfile Path`: `octaclin-web/Dockerfile`.
+5. `Docker Command`: deixar em branco (usa `CMD ["pnpm", "start"]` do
+   Dockerfile, que roda `next start`).
+6. `Pre-Deploy Command`: deixar em branco (nao aplicavel ao Next/BFF).
+7. `Auto-Deploy`: `On Commit`.
+8. `Build Filters`: `Included Paths` = `octaclin-web/**`.
+9. Variaveis de ambiente:
+   - `NODE_ENV=production`
+   - `PORT=3000` (mesmo motivo do backend)
+   - `NEXT_PUBLIC_API_URL` e `OCTACLIN_BACKEND_URL` apontando para a URL do
+     backend de producao criado acima
+   - `OCTACLIN_API_ORIGENS_PERMITIDAS` restrito a essa mesma URL do backend
+   - `OCTACLIN_COOKIE_SECURE=true`
+10. Plano pago, mesmo motivo do backend.
 
 ### Depois de criar os dois servicos
 
 1. Copiar a URL publica do servico web e configurar `OCTACLIN_WEB_URL` no
-   servico backend (passo 8 acima), depois redeploy do backend se a URL nao
+   servico backend (passo 10 acima), depois redeploy do backend se a URL nao
    estava disponivel antes.
 2. Aguardar o primeiro deploy de cada servico terminar sem erro de build.
 3. Seguir a secao "Validacao do ambiente novo" abaixo.
