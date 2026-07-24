@@ -45,7 +45,16 @@ Apos a estrutura entregue, a primeira rodada real do piloto comecou nesta mesma 
   - **Comunicacoes:** `listarMensagens` retornava mensagens de pacientes de qualquer profissional do tenant (canais e templates continuam tenant-wide de proposito, sao configuracao compartilhada, nao dado clinico).
   - **Automacoes:** `criarRegra`/`listarRegras` aceitavam/retornavam qualquer `profissionalId`; `solicitarAvaliacao` nao verificava se a regra pertencia ao profissional autenticado.
   - Corrigido aplicando o mesmo `resolverProfissionalIdDoUsuario` nos quatro modulos, seguindo exatamente o padrao do BUG-004 (forcar profissional proprio ao criar, filtrar ao listar, tratar recurso de outro profissional como nao encontrado). 26 testes novos; suite completa do backend (43 suites, 204 testes) permanece verde, assim como typecheck e testes de autorizacao do web.
-- Jornadas manuais (cliente, profissional, paciente, suporte/operador navegando de fato na aplicacao) e a definicao de participantes internos continuam em andamento, acompanhadas em `PILOTO_INTERNO_CONTROLE.md`.
+- Apos os BUG-004/004b/005 corrigidos, o usuario executou manualmente as jornadas restantes da checklist (cliente convida usuario/revisa configuracoes, profissional prescreve plano/envia material/agenda/remarca/cancela, paciente acessa portal/formulario/check-in/notificacoes/LGPD, suporte/operador revisa console/simula atendimento) e confirmou aprovacao de todas.
+
+## Encerramento da rodada 1 e decisao de aceite (2026-07-23)
+
+- Todas as jornadas manuais da checklist foram executadas e aprovadas pelo usuario, incluindo a validacao explicita do escopo por profissional (BUG-004/004b/005) em Pacientes, Agenda, Gamificacao, Automacoes e Questionarios.
+- Nenhum bug com severidade P0 ou P1 permanece aberto (BUG-004 P0 e BUG-001/003/004b/005 P1 todos corrigidos e validados); BUG-002 (P2) corrigido.
+- Decisao de aceite registrada em `PILOTO_INTERNO_CONTROLE.md`: **aprovado**, por `octavioomarostica@gmail.com`, em 2026-07-23.
+- `CHECKLIST_GO_LIVE.md` (secao "Piloto interno" e itens de QA correspondentes) e `PREFLIGHT_PRODUCAO.md` (linhas "Dados de staging" e "Piloto interno", e "Proximo passo recomendado") atualizados para refletir o aceite.
+- `STATUS_ATUAL_PROJETO.md` atualizado: ultima fase concluida passa a ser a Fase 130 com rodada aprovada, proxima fase planejada e a Fase 131 - Producao isolada de staging.
+- Liberado o inicio da Fase 131 conforme o processo descrito em `RUNBOOK_PILOTO_INTERNO.md`.
 
 ## Validacoes
 
@@ -66,4 +75,4 @@ powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
 - Nenhum teste de integracao automatizado cobre a constraint `usuarios_role_check` contra Postgres real (os specs Jest existentes usam repositorios mockados); o Docker Compose local (`docker-compose.yml`) nao estava disponivel neste ambiente de execucao para validar a migration antes de aplica-la no banco compartilhado. Fica como lacuna conhecida para uma fase futura de hardening de testes de integracao.
 - `pnpm --dir octaclin-web test:authz` cobre `decidirAcessoRota` (a logica de permissao), mas nao cobre a lista `ROTAS_PROTEGIDAS`/`matcher` do proprio `middleware.ts` — foi exatamente essa lacuna que deixou o BUG-003 passar despropercebido. Vale considerar, em fase futura, um teste que garanta que toda rota mapeada em `permissoesRotasOperacionais` (`lib/server/autorizacao-rotas.ts`) tambem esteja em `ROTAS_PROTEGIDAS` no middleware.
 - O padrao de escopo do BUG-004/BUG-004b (filtrar por profissional responsavel, nao so por tenant) agora cobre todos os modulos que tocam pacientes/profissionalId: pacientes, agenda, gamificacao, profissionais, questionarios, materiais, comunicacoes e automacoes (BUG-005). Nenhum modulo pendente identificado ate o momento; se surgir um novo modulo com `profissionalId` ou vinculo a paciente, aplicar o mesmo helper `resolverProfissionalIdDoUsuario`.
-- A Fase 131 - Producao isolada de staging so deve iniciar apos as jornadas manuais serem executadas e o aceite do piloto ser registrado em `PILOTO_INTERNO_CONTROLE.md`.
+- O piloto interno controlado foi aprovado; a Fase 131 - Producao isolada de staging esta liberada para iniciar.

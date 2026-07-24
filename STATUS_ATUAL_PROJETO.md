@@ -7,8 +7,8 @@ Atualizado em 2026-07-23.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 130 - Piloto interno controlado (estrutura operacional).
-- Proxima fase planejada: executar a primeira rodada real do piloto interno e, apos aceite, Fase 131 - Producao isolada de staging.
+- Ultima fase concluida: Fase 130 - Piloto interno controlado (rodada 1 executada e aprovada em 2026-07-23).
+- Proxima fase planejada: Fase 131 - Producao isolada de staging.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -48,16 +48,15 @@ Atualizado em 2026-07-23.
 - Auditoria e outbox operacional.
 - Runbooks de producao, backup/restore, rotacao de secrets e suporte.
 - Suite Playwright de jornadas criticas com contratos BFF mockados.
-- Massa ficticia de staging pronta para aplicar no Neon staging.
-- Estrutura de piloto interno controlado: runbook, controle de acompanhamento e validador documental.
+- Massa ficticia de staging aplicada e validada no Neon staging (tenant `octaclin-staging`).
+- Piloto interno controlado: runbook, controle de acompanhamento, validador documental e rodada 1 aprovada em 2026-07-23.
+- Escopo de dados por profissional responsavel (`pacientes_responsaveis`) aplicado e testado em pacientes, agenda, gamificacao, profissionais, questionarios, materiais, comunicacoes e automacoes.
 
 ## O que ainda falta antes de producao real
 
 - Gateway de pagamento definitivo, se a operacao manual deixar de ser suficiente.
 - Recorrencia avancada e importacao inbound do Google Calendar por `syncToken`.
 - Restore real em banco dedicado antes do go-live.
-- Aplicar e validar a massa ficticia no Neon staging com `pnpm seed:staging`.
-- Executar a primeira rodada real do piloto interno controlado e registrar aceite em `PILOTO_INTERNO_CONTROLE.md`.
 - Producao isolada de staging.
 - Dominio, SSL e identidade de envio.
 - Checklist juridico/comercial.
@@ -101,4 +100,4 @@ Atualizado em 2026-07-23.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, mas ainda precisa de restore real em banco dedicado, aplicacao/validacao da massa ficticia no Neon staging, execucao real do piloto interno controlado (a estrutura ja existe em `RUNBOOK_PILOTO_INTERNO.md`/`PILOTO_INTERNO_CONTROLE.md`) e producao isolada antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional e o piloto interno controlado foi executado e aprovado, mas ainda precisa de restore real em banco dedicado e producao isolada de staging antes de uso comercial com clientes reais.

@@ -4,34 +4,34 @@ Este arquivo acompanha a execucao do piloto interno descrito em `RUNBOOK_PILOTO_
 
 ## Status atual
 
-- Status: em andamento (massa de staging aplicada; jornadas manuais pendentes de execucao humana).
+- Status: concluido e aprovado.
 - Rodada: 1.
 - Data de inicio: 2026-07-23.
-- Data de encerramento: pendente.
+- Data de encerramento: 2026-07-23.
 - Ambiente: staging (banco unico atual, usado como staging de fato ate a Fase 131 separar producao), tenant `octaclin-staging`.
 
 ## Participantes
 
 | Perfil | Responsavel | Contato interno |
 | --- | --- | --- |
-| Responsavel tecnico | pendente | pendente |
-| Cliente | pendente | pendente |
-| Profissional | pendente | pendente |
-| Paciente | pendente | pendente |
-| Suporte/operador | pendente | pendente |
+| Responsavel tecnico | octavioomarostica@gmail.com | octavioomarostica@gmail.com |
+| Cliente | octavioomarostica@gmail.com | octavioomarostica@gmail.com |
+| Profissional | octavioomarostica@gmail.com | octavioomarostica@gmail.com |
+| Paciente | octavioomarostica@gmail.com | octavioomarostica@gmail.com |
+| Suporte/operador | octavioomarostica@gmail.com | octavioomarostica@gmail.com |
 
 ## Checklist de jornadas executadas
 
-- [ ] Cliente convida usuario administrativo e usuario ativa convite.
-- [ ] Cliente revisa configuracoes, perfil fiscal e assinatura/uso.
-- [ ] Profissional cadastra paciente e registra evolucao clinica.
-- [ ] Profissional prescreve plano de acompanhamento e envia material.
-- [ ] Profissional agenda consulta com email/WhatsApp/Google Calendar.
-- [ ] Profissional remarca e cancela consulta sincronizada.
-- [ ] Paciente acessa portal, responde formulario e registra check-in.
-- [ ] Paciente consulta notificacoes/tarefas e exporta dados LGPD.
-- [ ] Suporte/operador revisa console operacional e central de falhas.
-- [ ] Suporte/operador simula atendimento de login/convite.
+- [x] Cliente convida usuario administrativo e usuario ativa convite.
+- [x] Cliente revisa configuracoes, perfil fiscal e assinatura/uso.
+- [x] Profissional cadastra paciente e registra evolucao clinica.
+- [x] Profissional prescreve plano de acompanhamento e envia material.
+- [x] Profissional agenda consulta com email/WhatsApp/Google Calendar.
+- [x] Profissional remarca e cancela consulta sincronizada.
+- [x] Paciente acessa portal, responde formulario e registra check-in.
+- [x] Paciente consulta notificacoes/tarefas e exporta dados LGPD.
+- [x] Suporte/operador revisa console operacional e central de falhas.
+- [x] Suporte/operador simula atendimento de login/convite.
 - [x] `pnpm test:e2e:criticas` executado nesta rodada (2026-07-23, 6/6 testes passaram em desktop e mobile).
 - [x] `pnpm seed:staging` aplicado com sucesso em 2026-07-23 (tenant `octaclin-staging`, 5 usuarios, 3 pacientes e demais dados ficticios).
 - [x] Validacao manual do escopo por profissional (BUG-004/004b/005): usuario testou como profissional (Marina/Rafael) as abas Pacientes, Agenda, Gamificacao, Automacoes e Questionarios e confirmou que cada profissional so enxerga os proprios dados (2026-07-23).
@@ -49,13 +49,13 @@ Este arquivo acompanha a execucao do piloto interno descrito em `RUNBOOK_PILOTO_
 
 ## Decisao de aceite
 
-- Status: pendente.
-- Criterios de sucesso atendidos: pendente de avaliacao.
-- Criterios de bloqueio observados: nenhum ate o momento.
-- Decisao: pendente (aprovado / aprovado com ressalvas / reprovado).
-- Aprovado por: pendente.
-- Data da decisao: pendente.
+- Status: concluido.
+- Criterios de sucesso atendidos: sim — todas as jornadas manuais executadas, `pnpm test:e2e:criticas` passou (6/6), nenhum bug P0/P1 permanece aberto (BUG-004 P0 e BUG-001/003/004b/005 P1 todos corrigidos e validados), BUG-002 (P2) corrigido, console operacional sem alerta critico nao tratado.
+- Criterios de bloqueio observados: nenhum.
+- Decisao: **aprovado**.
+- Aprovado por: octavioomarostica@gmail.com.
+- Data da decisao: 2026-07-23.
 
 ## Proximo passo
 
-Ambiente local (backend `http://localhost:3001` + web `http://localhost:3000`) no ar apontando para o banco de staging. Testes manuais em andamento: BUG-003, BUG-004, BUG-004b e BUG-005 foram encontrados, corrigidos e validados manualmente pelo usuario nesta mesma sessao (escopo por profissional em Pacientes, Agenda, Gamificacao, Automacoes e Questionarios). Falta continuar as demais jornadas manuais da lista acima (cliente, paciente, suporte/operador), definir participantes internos por perfil, e preencher a tabela de participantes e a decisao de aceite.
+Piloto interno controlado aprovado. Todas as jornadas manuais (cliente, profissional, paciente, suporte/operador) foram testadas e aprovadas, incluindo a validacao do escopo por profissional (BUG-004/004b/005) em Pacientes, Agenda, Gamificacao, Automacoes e Questionarios. Liberado o inicio da Fase 131 - Producao isolada de staging.

@@ -32,8 +32,8 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Observabilidade | Parcial | Healthchecks, logs estruturados, request ID, alertas operacionais e runbooks. | Persistir historico de alertas e integrar notificacao externa se necessario. |
 | Backups/restore | Parcial | Runbook, planejador seguro, script de backup e validacao estrutural com `pg_restore --list`. | Executar restore real em banco dedicado antes do go-live. |
 | Suporte | Pronto | `RUNBOOK_SUPORTE.md` cobre login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento. | Treinar responsavel e revisar apos piloto. |
-| Dados de staging | Parcial | Fixture sem PII real, seed `seed-staging.ts` e runbook `RUNBOOK_STAGING_DADOS.md`. | Aplicar no Neon staging com `DATABASE_URL` de staging e validar jornadas. |
-| Piloto interno | Parcial | Runbook `RUNBOOK_PILOTO_INTERNO.md` e controle `PILOTO_INTERNO_CONTROLE.md` criados; nenhuma rodada executada ainda. | Executar a primeira rodada com participantes internos e registrar aceite. |
+| Dados de staging | Pronto | Fixture sem PII real, seed `seed-staging.ts`, runbook `RUNBOOK_STAGING_DADOS.md`; `pnpm seed:staging` aplicado e validado no Neon staging (tenant `octaclin-staging`). | Reaplicar quando a Fase 131 separar staging de producao. |
+| Piloto interno | Pronto | Runbook `RUNBOOK_PILOTO_INTERNO.md` e controle `PILOTO_INTERNO_CONTROLE.md`; rodada 1 executada em 2026-07-23 com todas as jornadas manuais aprovadas e aceite registrado. | Nenhuma pendencia; repetir rodada apos mudancas relevantes de autorizacao. |
 | Producao isolada | Pendente | Staging funcional. | Criar env de producao separado de staging. |
 | Juridico/comercial | Pendente | Checklist previsto. | Termos, politica, contrato e processo de suporte. |
 | QA E2E | Parcial | Typechecks, specs focadas, Playwright visual por areas e suite de jornadas criticas com BFF mockado. | Validar em staging com dados realistas. |
@@ -82,4 +82,4 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Executar a primeira rodada do piloto interno controlado seguindo `RUNBOOK_PILOTO_INTERNO.md` e, apos aceite registrado em `PILOTO_INTERNO_CONTROLE.md`, seguir para a Fase 131 - Producao isolada de staging.
+Piloto interno controlado aprovado em 2026-07-23 (`PILOTO_INTERNO_CONTROLE.md`). Seguir para a Fase 131 - Producao isolada de staging (banco, Redis, Render service/env, dominio e secrets separados de staging).

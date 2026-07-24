@@ -171,11 +171,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 127 - Runbooks de suporte: criado `RUNBOOK_SUPORTE.md` com triagem segura, atendimento de login, convites, recuperacao de senha, WhatsApp, email, agenda e criterio de escalonamento; adicionado teste documental `pnpm test:suporte`.
 - Fase 128 - Suite E2E de jornadas criticas: adicionada suite Playwright para cliente convidar usuario, profissional criar paciente, agenda disparar email/WhatsApp/Google Calendar e paciente visualizar consulta, notificacoes e plano no portal.
 - Fase 129 - Staging com dados realistas: criada massa ficticia `octaclin-staging` sem PII real, seed `seed-staging.ts`, validador `test-staging-fixtures.mjs` e runbook para aplicar no Neon staging.
-- Fase 130 - Piloto interno controlado: criado `RUNBOOK_PILOTO_INTERNO.md` com participantes, perfis, jornadas, criterios de sucesso/bloqueio e processo de aceite, alem de `PILOTO_INTERNO_CONTROLE.md` como acompanhamento vivo da rodada do piloto e validador documental `test-piloto-interno.mjs`. Nenhuma rodada real foi executada ainda.
+- Fase 130 - Piloto interno controlado: criado `RUNBOOK_PILOTO_INTERNO.md` com participantes, perfis, jornadas, criterios de sucesso/bloqueio e processo de aceite, alem de `PILOTO_INTERNO_CONTROLE.md` como acompanhamento vivo da rodada do piloto e validador documental `test-piloto-interno.mjs`. Rodada 1 executada e aprovada em 2026-07-23: todas as jornadas manuais testadas, 5 bugs reais encontrados e corrigidos (BUG-001 a BUG-005), com destaque para o escopo de dados por profissional responsavel (`pacientes_responsaveis`) aplicado e testado em pacientes, agenda, gamificacao, profissionais, questionarios, materiais, comunicacoes e automacoes via o helper `resolverProfissionalIdDoUsuario`.
 
 ## Estado atual de uso
 
-O sistema esta em estado avancado de staging funcional, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam executar restore real em banco dedicado, aplicar/validar a massa ficticia no Neon staging, executar a primeira rodada real do piloto interno controlado e registrar aceite, e separar formalmente staging/producao.
+O sistema esta em estado avancado de staging funcional, com massa ficticia aplicada e o piloto interno controlado ja executado e aprovado, mas ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria. Antes de producao real, ainda faltam executar restore real em banco dedicado e separar formalmente staging/producao (Fase 131).
 
 ## Como atualizar este arquivo
 

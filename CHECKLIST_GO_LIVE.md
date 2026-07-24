@@ -67,17 +67,17 @@ Este checklist deve ser concluido antes de incluir clientes reais de consultoria
 
 ## QA
 
-- [ ] Suite backend focada passando.
-- [ ] Typecheck backend passando.
-- [ ] Typecheck web passando.
-- [ ] Build web passando.
-- [ ] Testes de autorizacao web passando.
+- [x] Suite backend focada passando (suite completa: 43 suites, 204 testes).
+- [x] Typecheck backend passando.
+- [x] Typecheck web passando.
+- [x] Build web passando.
+- [x] Testes de autorizacao web passando.
 - [ ] Playwright visual passando.
-- [ ] E2E de jornada critica passando.
-- [ ] Teste manual com usuario cliente realista.
-- [ ] Teste manual com profissional realista.
-- [ ] Teste manual com paciente realista.
-- [ ] Massa ficticia de staging aplicada conforme `RUNBOOK_STAGING_DADOS.md`.
+- [x] E2E de jornada critica passando (`pnpm test:e2e:criticas`, 6/6).
+- [x] Teste manual com usuario cliente realista.
+- [x] Teste manual com profissional realista.
+- [x] Teste manual com paciente realista.
+- [x] Massa ficticia de staging aplicada conforme `RUNBOOK_STAGING_DADOS.md`.
 
 ## Operacao
 
@@ -91,10 +91,10 @@ Este checklist deve ser concluido antes de incluir clientes reais de consultoria
 
 ## Piloto interno
 
-- [ ] Piloto interno controlado executado conforme `RUNBOOK_PILOTO_INTERNO.md`.
-- [ ] Todas as jornadas obrigatorias do piloto marcadas em `PILOTO_INTERNO_CONTROLE.md`.
-- [ ] Nenhum bug P0/P1 aberto ao final do piloto.
-- [ ] Aceite do piloto registrado em `PILOTO_INTERNO_CONTROLE.md`.
+- [x] Piloto interno controlado executado conforme `RUNBOOK_PILOTO_INTERNO.md` (rodada 1, 2026-07-23).
+- [x] Todas as jornadas obrigatorias do piloto marcadas em `PILOTO_INTERNO_CONTROLE.md`.
+- [x] Nenhum bug P0/P1 aberto ao final do piloto.
+- [x] Aceite do piloto registrado em `PILOTO_INTERNO_CONTROLE.md` (aprovado em 2026-07-23).
 
 ## Go-live assistido
 
