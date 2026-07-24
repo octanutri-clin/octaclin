@@ -20,6 +20,7 @@ import {
   UserRound
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { PortalShell } from '@/components/app/portal-shell';
 import {
   atualizarPerfilPaciente,
@@ -328,7 +329,7 @@ const linksPortal = [
 
 function PortalCarregando() {
   return (
-    <section className="grid gap-4 rounded-lg border border-linha bg-white p-5" aria-live="polite" aria-busy="true">
+    <Cartao className="grid gap-4 p-5" aria-live="polite" aria-busy="true">
       <div>
         <h2 className="text-sm font-semibold">Carregando portal</h2>
         <p className="mt-1 text-sm text-texto-suave">Atualizando suas informacoes.</p>
@@ -339,7 +340,7 @@ function PortalCarregando() {
         ))}
       </div>
       <div className="h-28 animate-pulse rounded-md border border-linha bg-superficie" />
-    </section>
+    </Cartao>
   );
 }
 
@@ -591,46 +592,45 @@ export function PortalPaciente() {
                   Status {rotuloStatus(portal.paciente.statusAdesao)} - risco {portal.paciente.scoreRisco}
                 </p>
               </div>
-              <div className="rounded-lg border border-linha bg-white p-3">
+              <Cartao className="p-3">
                 <p className="text-xs text-texto-suave">Consultas</p>
                 <p className="text-2xl font-semibold">{portal.resumo.consultasProximas}</p>
-              </div>
-              <div className="rounded-lg border border-linha bg-white p-3">
+              </Cartao>
+              <Cartao className="p-3">
                 <p className="text-xs text-texto-suave">Formularios</p>
                 <p className="text-2xl font-semibold">{portal.resumo.formulariosPendentes}</p>
-              </div>
-              <div className="rounded-lg border border-linha bg-white p-3">
+              </Cartao>
+              <Cartao className="p-3">
                 <p className="text-xs text-texto-suave">Respondidos</p>
                 <p className="text-2xl font-semibold">{portal.resumo.formulariosRespondidos}</p>
-              </div>
-              <div className="rounded-lg border border-linha bg-white p-3">
+              </Cartao>
+              <Cartao className="p-3">
                 <p className="text-xs text-texto-suave">Mensagens</p>
                 <p className="text-2xl font-semibold">{portal.resumo.mensagensRecentes}</p>
-              </div>
-              <div className="rounded-lg border border-linha bg-white p-3">
+              </Cartao>
+              <Cartao className="p-3">
                 <p className="text-xs text-texto-suave">Tarefas</p>
                 <p className="text-2xl font-semibold">{portal.resumo.tarefasPendentes ?? tarefasAcompanhamento.length}</p>
-              </div>
-              <div className="rounded-lg border border-linha bg-white p-3">
+              </Cartao>
+              <Cartao className="p-3">
                 <p className="text-xs text-texto-suave">Materiais</p>
                 <p className="text-2xl font-semibold">{portal.resumo.materiaisDisponiveis ?? materiaisDisponiveis.length}</p>
-              </div>
-              <div className="rounded-lg border border-linha bg-white p-3">
+              </Cartao>
+              <Cartao className="p-3">
                 <p className="text-xs text-texto-suave">Check-ins</p>
                 <p className="text-2xl font-semibold">{portal.resumo.checkinsRecentes ?? diariosRecentes.length}</p>
-              </div>
-              <div className="rounded-lg border border-linha bg-white p-3">
+              </Cartao>
+              <Cartao className="p-3">
                 <p className="text-xs text-texto-suave">Notificacoes</p>
                 <p className="text-2xl font-semibold">{portal.resumo.notificacoesPendentes ?? notificacoesPendentes.length}</p>
-              </div>
+              </Cartao>
             </section>
 
-            <section id="acoes" className="scroll-mt-4 rounded-lg border border-linha bg-white">
-              <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-                <ClipboardList className="h-4 w-4 text-texto-suave" />
-                <h2 className="text-sm font-semibold">Proximas acoes</h2>
-              </div>
-              <div className="grid gap-3 p-4 md:grid-cols-2">
+            <Cartao id="acoes" className="scroll-mt-4">
+              <CartaoCabecalho>
+                <CartaoTitulo icone={<ClipboardList className="h-4 w-4" />}>Proximas acoes</CartaoTitulo>
+              </CartaoCabecalho>
+              <CartaoConteudo className="grid gap-3 md:grid-cols-2">
                 {portal.formulariosPendentes.slice(0, 2).map((formulario) => (
                   <article key={formulario.envioId} className="flex min-w-0 flex-col gap-3 rounded-md border border-linha bg-superficie p-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
@@ -667,15 +667,14 @@ export function PortalPaciente() {
                 {!portal.formulariosPendentes.length && !portal.consultasProximas.length ? (
                   <p className="text-sm text-texto-suave">Nenhuma acao pendente para hoje.</p>
                 ) : null}
-              </div>
-            </section>
+              </CartaoConteudo>
+            </Cartao>
 
             <section id="checkin-rapido" className="scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-              <section className="rounded-lg border border-linha bg-white">
-                <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-                  <SmilePlus className="h-4 w-4 text-texto-suave" />
-                  <h2 className="text-sm font-semibold">Check-in rapido</h2>
-                </div>
+              <Cartao>
+                <CartaoCabecalho>
+                  <CartaoTitulo icone={<SmilePlus className="h-4 w-4" />}>Check-in rapido</CartaoTitulo>
+                </CartaoCabecalho>
                 <form onSubmit={enviarCheckinRapido} className="grid gap-3 p-4">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="grid gap-1 text-xs font-medium text-texto-suave">
@@ -734,14 +733,13 @@ export function PortalPaciente() {
                     </Botao>
                   </div>
                 </form>
-              </section>
+              </Cartao>
 
-              <section className="rounded-lg border border-linha bg-white">
-                <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-                  <Clock3 className="h-4 w-4 text-texto-suave" />
-                  <h2 className="text-sm font-semibold">Diario recente</h2>
-                </div>
-                <div className="grid gap-3 p-4">
+              <Cartao>
+                <CartaoCabecalho>
+                  <CartaoTitulo icone={<Clock3 className="h-4 w-4" />}>Diario recente</CartaoTitulo>
+                </CartaoCabecalho>
+                <CartaoConteudo>
                   {diariosRecentes.length ? (
                     diariosRecentes.map((diario) => (
                       <article key={diario.id} className="rounded-md border border-linha bg-superficie p-3">
@@ -761,17 +759,16 @@ export function PortalPaciente() {
                   ) : (
                     <p className="text-sm text-texto-suave">Nenhum check-in registrado ainda.</p>
                   )}
-                </div>
-              </section>
+                </CartaoConteudo>
+              </Cartao>
             </section>
 
             <section id="plano" className="scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <section className="rounded-lg border border-linha bg-white">
-                <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-                  <Target className="h-4 w-4 text-texto-suave" />
-                  <h2 className="text-sm font-semibold">Plano de acompanhamento</h2>
-                </div>
-                <div className="grid gap-3 p-4">
+              <Cartao>
+                <CartaoCabecalho>
+                  <CartaoTitulo icone={<Target className="h-4 w-4" />}>Plano de acompanhamento</CartaoTitulo>
+                </CartaoCabecalho>
+                <CartaoConteudo>
                   {tarefasAcompanhamento.length ? (
                     tarefasAcompanhamento.map((tarefa) => (
                       <article key={tarefa.id} className="rounded-md border border-linha bg-superficie p-3">
@@ -797,15 +794,14 @@ export function PortalPaciente() {
                   ) : (
                     <p className="text-sm text-texto-suave">Nenhuma tarefa ativa no plano.</p>
                   )}
-                </div>
-              </section>
+                </CartaoConteudo>
+              </Cartao>
 
-              <section className="rounded-lg border border-linha bg-white">
-                <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-                  <BookOpen className="h-4 w-4 text-texto-suave" />
-                  <h2 className="text-sm font-semibold">Materiais do plano</h2>
-                </div>
-                <div className="grid gap-3 p-4">
+              <Cartao>
+                <CartaoCabecalho>
+                  <CartaoTitulo icone={<BookOpen className="h-4 w-4" />}>Materiais do plano</CartaoTitulo>
+                </CartaoCabecalho>
+                <CartaoConteudo>
                   {materiaisDisponiveis.length ? (
                     materiaisDisponiveis.map((material) => (
                       <article key={material.id} className="rounded-md border border-linha bg-superficie p-3">
@@ -841,12 +837,12 @@ export function PortalPaciente() {
                   ) : (
                     <p className="text-sm text-texto-suave">Nenhum material disponivel no plano.</p>
                   )}
-                </div>
-              </section>
+                </CartaoConteudo>
+              </Cartao>
             </section>
 
-            <section id="notificacoes" className="scroll-mt-4 rounded-lg border border-linha bg-white">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-linha px-4 py-3">
+            <Cartao id="notificacoes" className="scroll-mt-4">
+              <CartaoCabecalho>
                 <div className="flex items-center gap-2">
                   <BellRing className="h-4 w-4 text-texto-suave" />
                   <h2 className="text-sm font-semibold">Notificacoes do paciente</h2>
@@ -854,8 +850,8 @@ export function PortalPaciente() {
                 <span className="rounded-full border border-linha bg-superficie px-2 py-1 text-xs font-semibold text-texto-suave">
                   {portal.resumo.notificacoesHistorico ?? notificacoesPaciente.length} no historico
                 </span>
-              </div>
-              <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+              </CartaoCabecalho>
+              <CartaoConteudo className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
                 <div className="grid gap-3">
                   <div>
                     <p className="text-sm font-semibold">Pendentes</p>
@@ -926,15 +922,14 @@ export function PortalPaciente() {
                     <p className="rounded-md border border-linha bg-superficie p-3 text-sm text-texto-suave">Nenhuma notificacao registrada.</p>
                   )}
                 </div>
-              </div>
-            </section>
+              </CartaoConteudo>
+            </Cartao>
 
-            <section id="historico" className="scroll-mt-4 rounded-lg border border-linha bg-white">
-              <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-                <Clock3 className="h-4 w-4 text-texto-suave" />
-                <h2 className="text-sm font-semibold">Linha do tempo</h2>
-              </div>
-              <div className="grid gap-3 p-4">
+            <Cartao id="historico" className="scroll-mt-4">
+              <CartaoCabecalho>
+                <CartaoTitulo icone={<Clock3 className="h-4 w-4" />}>Linha do tempo</CartaoTitulo>
+              </CartaoCabecalho>
+              <CartaoConteudo>
                 {linhaTempo.length ? (
                   linhaTempo.map((item) => (
                     <article key={item.id} className="grid gap-2 rounded-md border border-linha bg-superficie p-3 sm:grid-cols-[150px_minmax(0,1fr)_140px] sm:items-start">
@@ -951,16 +946,15 @@ export function PortalPaciente() {
                 ) : (
                   <p className="text-sm text-texto-suave">Nenhuma movimentacao recente registrada.</p>
                 )}
-              </div>
-            </section>
+              </CartaoConteudo>
+            </Cartao>
 
             <section className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
               <div className="grid gap-4">
-                <section id="perfil" className="scroll-mt-4 rounded-lg border border-linha bg-white">
-                  <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-                    <UserRound className="h-4 w-4 text-texto-suave" />
-                    <h2 className="text-sm font-semibold">Meu perfil</h2>
-                  </div>
+                <Cartao id="perfil" className="scroll-mt-4">
+                  <CartaoCabecalho>
+                    <CartaoTitulo icone={<UserRound className="h-4 w-4" />}>Meu perfil</CartaoTitulo>
+                  </CartaoCabecalho>
                   <form onSubmit={salvarPerfil} className="grid gap-3 p-4">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <label className="grid gap-1 text-xs font-medium text-texto-suave">
@@ -1077,14 +1071,13 @@ export function PortalPaciente() {
                       </Botao>
                     </div>
                   </form>
-                </section>
+                </Cartao>
 
-                <section className="rounded-lg border border-linha bg-white">
-                  <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-                    <ClipboardList className="h-4 w-4 text-texto-suave" />
-                    <h2 className="text-sm font-semibold">Formularios pendentes</h2>
-                  </div>
-                  <div className="grid gap-3 p-4">
+                <Cartao>
+                  <CartaoCabecalho>
+                    <CartaoTitulo icone={<ClipboardList className="h-4 w-4" />}>Formularios pendentes</CartaoTitulo>
+                  </CartaoCabecalho>
+                  <CartaoConteudo>
                     {portal.formulariosPendentes.length ? (
                       portal.formulariosPendentes.map((formulario) => (
                         <article key={formulario.envioId} className="flex flex-col gap-3 rounded-md border border-linha bg-superficie p-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1105,15 +1098,14 @@ export function PortalPaciente() {
                     ) : (
                       <p className="text-sm text-texto-suave">Nenhum formulario pendente.</p>
                     )}
-                  </div>
-                </section>
+                  </CartaoConteudo>
+                </Cartao>
 
-                <section className="rounded-lg border border-linha bg-white">
-                  <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-                    <CheckCircle2 className="h-4 w-4 text-texto-suave" />
-                    <h2 className="text-sm font-semibold">Historico de formularios</h2>
-                  </div>
-                  <div className="grid gap-3 p-4">
+                <Cartao>
+                  <CartaoCabecalho>
+                    <CartaoTitulo icone={<CheckCircle2 className="h-4 w-4" />}>Historico de formularios</CartaoTitulo>
+                  </CartaoCabecalho>
+                  <CartaoConteudo>
                     {portal.formulariosRespondidos.length ? (
                       portal.formulariosRespondidos.map((formulario) => (
                         <article key={formulario.respostaId} className="rounded-md border border-linha bg-superficie p-3">
@@ -1141,12 +1133,12 @@ export function PortalPaciente() {
                     ) : (
                       <p className="text-sm text-texto-suave">Nenhum formulario respondido ainda.</p>
                     )}
-                  </div>
-                </section>
+                  </CartaoConteudo>
+                </Cartao>
 
                 {detalheFormulario ? (
-                  <section className="rounded-lg border border-linha bg-white">
-                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-linha px-4 py-3">
+                  <Cartao>
+                    <CartaoCabecalho>
                       <div>
                         <h2 className="text-sm font-semibold">{detalheFormulario.titulo}</h2>
                         <p className="mt-1 text-xs text-texto-suave">
@@ -1157,8 +1149,8 @@ export function PortalPaciente() {
                       <Botao type="button" variante="fantasma" onClick={() => setDetalheFormulario(null)}>
                         Fechar
                       </Botao>
-                    </div>
-                    <div className="grid gap-3 p-4">
+                    </CartaoCabecalho>
+                    <CartaoConteudo>
                       {detalheFormulario.descricao ? <p className="text-sm text-texto-suave">{detalheFormulario.descricao}</p> : null}
                       <dl className="grid gap-3">
                         {detalheFormulario.respostas.map((resposta) => (
@@ -1176,16 +1168,15 @@ export function PortalPaciente() {
                           </div>
                         ))}
                       </dl>
-                    </div>
-                  </section>
+                    </CartaoConteudo>
+                  </Cartao>
                 ) : null}
 
-                <section className="rounded-lg border border-linha bg-white">
-                  <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-                    <CalendarDays className="h-4 w-4 text-texto-suave" />
-                    <h2 className="text-sm font-semibold">Proximas consultas</h2>
-                  </div>
-                  <div className="grid gap-3 p-4">
+                <Cartao>
+                  <CartaoCabecalho>
+                    <CartaoTitulo icone={<CalendarDays className="h-4 w-4" />}>Proximas consultas</CartaoTitulo>
+                  </CartaoCabecalho>
+                  <CartaoConteudo>
                     {portal.consultasProximas.length ? (
                       portal.consultasProximas.map((consulta) => (
                         <article key={consulta.id} className="rounded-md border border-linha bg-superficie p-3">
@@ -1209,16 +1200,15 @@ export function PortalPaciente() {
                     ) : (
                       <p className="text-sm text-texto-suave">Nenhuma consulta futura agendada.</p>
                     )}
-                  </div>
-                </section>
+                  </CartaoConteudo>
+                </Cartao>
               </div>
 
-              <section className="rounded-lg border border-linha bg-white">
-                <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-                  <MessageCircle className="h-4 w-4 text-texto-suave" />
-                  <h2 className="text-sm font-semibold">Mensagens recentes</h2>
-                </div>
-                <div className="grid gap-3 p-4">
+              <Cartao>
+                <CartaoCabecalho>
+                  <CartaoTitulo icone={<MessageCircle className="h-4 w-4" />}>Mensagens recentes</CartaoTitulo>
+                </CartaoCabecalho>
+                <CartaoConteudo>
                   {portal.mensagensRecentes.length ? (
                     portal.mensagensRecentes.map((mensagem) => (
                       <article key={mensagem.id} className="rounded-md border border-linha bg-superficie p-3">
@@ -1235,15 +1225,14 @@ export function PortalPaciente() {
                   ) : (
                     <p className="text-sm text-texto-suave">Nenhuma mensagem recente.</p>
                   )}
-                </div>
-              </section>
+                </CartaoConteudo>
+              </Cartao>
 
-              <section id="privacidade" className="scroll-mt-4 rounded-lg border border-linha bg-white">
-                <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-                  <ShieldCheck className="h-4 w-4 text-texto-suave" />
-                  <h2 className="text-sm font-semibold">Privacidade</h2>
-                </div>
-                <div className="grid gap-3 p-4">
+              <Cartao id="privacidade" className="scroll-mt-4">
+                <CartaoCabecalho>
+                  <CartaoTitulo icone={<ShieldCheck className="h-4 w-4" />}>Privacidade</CartaoTitulo>
+                </CartaoCabecalho>
+                <CartaoConteudo>
                   <div className="rounded-md border border-linha bg-superficie p-3">
                     <p className="text-xs text-texto-suave">Versao atual</p>
                     <p className="mt-1 text-sm font-semibold">{portal.lgpd.versaoAtual}</p>
@@ -1379,15 +1368,15 @@ export function PortalPaciente() {
                       <p className="text-sm text-texto-suave">Nenhum consentimento registrado.</p>
                     )}
                   </div>
-                </div>
-              </section>
+                </CartaoConteudo>
+              </Cartao>
             </section>
           </>
         ) : (
           carregando ? (
             <PortalCarregando />
           ) : (
-            <section className="grid gap-4 rounded-lg border border-perigo-borda bg-white p-5">
+            <Cartao className="grid gap-4 border-perigo-borda p-5">
               <div className="flex items-start gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-perigo-suave text-perigo">
                   <AlertTriangle size={18} />
@@ -1403,7 +1392,7 @@ export function PortalPaciente() {
                   Tentar novamente
                 </Botao>
               </div>
-            </section>
+            </Cartao>
           )
         )}
     </PortalShell>
