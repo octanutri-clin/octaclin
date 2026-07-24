@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, KeyRound, Loader2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoConteudo } from '@/components/ui/cartao';
 import { Campo, Rotulo } from '@/components/ui/campo';
 import { redefinirSenha, TokenRecuperacaoSenhaApi, validarTokenRecuperacaoSenha } from '@/lib/recuperacao-senha-api';
 
@@ -71,7 +72,8 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
           <h1 className="mt-1 text-3xl font-bold">Nova senha</h1>
         </header>
 
-        <section className="rounded-lg border border-linha bg-white p-5">
+        <Cartao>
+          <CartaoConteudo>
           {carregando ? (
             <div className="flex items-center gap-2 text-sm text-texto-suave">
               <Loader2 size={16} className="animate-spin text-primaria" />
@@ -136,7 +138,8 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
               </Link>
             </div>
           ) : null}
-        </section>
+          </CartaoConteudo>
+        </Cartao>
       </div>
     </main>
   );

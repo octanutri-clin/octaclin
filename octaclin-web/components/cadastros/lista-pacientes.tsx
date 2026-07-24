@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Trash2, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
+import { Tabela, TabelaCabecalho, TabelaConteudo, TabelaLinha, TabelaLinhas, TabelaVazia } from '@/components/ui/tabela';
 import { criarConvitePaciente } from '@/lib/convites-paciente-api';
 import {
   PacienteResumo,
@@ -196,26 +198,28 @@ export function ListaPacientes() {
 
   return (
     <section className="grid gap-4">
-      <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-base font-semibold">Lista de pacientes</h2>
-          <p className="mt-1 text-sm text-texto-suave">
-            {dados ? `${dados.total} registros encontrados` : 'Carregando registros'}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {editandoId ? (
-            <Botao type="button" variante="fantasma" onClick={cancelarEdicao}>
-              <X size={16} />
-              Cancelar
+      <Cartao>
+        <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Lista de pacientes</h2>
+            <p className="mt-1 text-sm text-texto-suave">
+              {dados ? `${dados.total} registros encontrados` : 'Carregando registros'}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {editandoId ? (
+              <Botao type="button" variante="fantasma" onClick={cancelarEdicao}>
+                <X size={16} />
+                Cancelar
+              </Botao>
+            ) : null}
+            <Botao onClick={carregar} disabled={carregando}>
+              <RefreshCcw size={16} />
+              {carregando ? 'Atualizando' : 'Atualizar'}
             </Botao>
-          ) : null}
-          <Botao onClick={carregar} disabled={carregando}>
-            <RefreshCcw size={16} />
-            {carregando ? 'Atualizando' : 'Atualizar'}
-          </Botao>
-        </div>
-      </div>
+          </div>
+        </CartaoConteudo>
+      </Cartao>
 
       {erro ? (
         <div className="flex items-center gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
@@ -230,17 +234,22 @@ export function ListaPacientes() {
         </div>
       ) : null}
       {linkConvite ? (
-        <div className="rounded-lg border border-linha bg-white px-4 py-3 text-sm text-texto-suave">
-          <p className="font-medium text-tinta">Link de primeiro acesso</p>
-          <p className="mt-1 break-all">{linkConvite}</p>
-        </div>
+        <Cartao>
+          <CartaoConteudo className="text-sm text-texto-suave">
+            <p className="font-medium text-tinta">Link de primeiro acesso</p>
+            <p className="mt-1 break-all">{linkConvite}</p>
+          </CartaoConteudo>
+        </Cartao>
       ) : null}
 
-      <form onSubmit={salvar} className="rounded-lg border border-linha bg-white p-4">
-        <div className="mb-3 flex items-center gap-2">
-          {editandoId ? <Edit3 size={18} className="text-primaria" /> : <Plus size={18} className="text-primaria" />}
-          <h3 className="text-sm font-semibold">{editandoId ? 'Editar paciente' : 'Novo paciente'}</h3>
-        </div>
+      <Cartao>
+        <form onSubmit={salvar}>
+        <CartaoCabecalho>
+          <CartaoTitulo icone={editandoId ? <Edit3 size={18} className="text-primaria" /> : <Plus size={18} className="text-primaria" />}>
+            {editandoId ? 'Editar paciente' : 'Novo paciente'}
+          </CartaoTitulo>
+        </CartaoCabecalho>
+        <CartaoConteudo>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-6">
           <label className="grid gap-1 text-xs font-semibold text-texto-suave lg:col-span-2">
             Profissional
@@ -325,21 +334,23 @@ export function ListaPacientes() {
             {salvando ? 'Salvando' : 'Salvar'}
           </Botao>
         </div>
-      </form>
+        </CartaoConteudo>
+        </form>
+      </Cartao>
 
-      <div className="overflow-x-auto rounded-lg border border-linha bg-white">
-        <div className="min-w-[840px]">
-          <div className="grid grid-cols-[1.2fr_1fr_0.8fr_0.7fr_172px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-texto-suave">
+      <Tabela>
+        <TabelaConteudo larguraMinima="840px">
+          <TabelaCabecalho className="grid-cols-[1.2fr_1fr_0.8fr_0.7fr_172px]">
             <span>Paciente</span>
             <span>Responsavel</span>
             <span>Status</span>
             <span>Risco</span>
             <span>Acoes</span>
-          </div>
-          <div className="divide-y divide-linha">
+          </TabelaCabecalho>
+          <TabelaLinhas>
             {dados?.itens.length ? (
               dados.itens.map((paciente) => (
-                <div key={paciente.id} className="grid grid-cols-[1.2fr_1fr_0.8fr_0.7fr_172px] gap-3 px-4 py-3 text-sm">
+                <TabelaLinha key={paciente.id} className="grid-cols-[1.2fr_1fr_0.8fr_0.7fr_172px]">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <HeartPulse size={16} className="shrink-0 text-primaria" />
@@ -387,14 +398,14 @@ export function ListaPacientes() {
                       <Trash2 size={16} />
                     </Botao>
                   </div>
-                </div>
+                </TabelaLinha>
               ))
             ) : (
-              <div className="px-4 py-8 text-sm text-texto-suave">Nenhum paciente carregado.</div>
+              <TabelaVazia mensagem="Nenhum paciente carregado." />
             )}
-          </div>
-        </div>
-      </div>
+          </TabelaLinhas>
+        </TabelaConteudo>
+      </Tabela>
     </section>
   );
 }

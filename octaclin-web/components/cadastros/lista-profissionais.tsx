@@ -3,6 +3,8 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Edit3, Plus, RefreshCcw, Save, Stethoscope, Trash2, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
+import { Tabela, TabelaCabecalho, TabelaConteudo, TabelaLinha, TabelaLinhas, TabelaVazia } from '@/components/ui/tabela';
 import { obterSessao } from '@/lib/auth-api';
 import {
   ProfissionalResumo,
@@ -142,26 +144,28 @@ export function ListaProfissionais() {
 
   return (
     <section className="grid gap-4">
-      <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-base font-semibold">Equipe clinica</h2>
-          <p className="mt-1 text-sm text-texto-suave">
-            {dados ? `${dados.total} registros encontrados` : 'Carregando registros'}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {editandoId ? (
-            <Botao type="button" variante="fantasma" onClick={cancelarEdicao}>
-              <X size={16} />
-              Cancelar
+      <Cartao>
+        <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Equipe clinica</h2>
+            <p className="mt-1 text-sm text-texto-suave">
+              {dados ? `${dados.total} registros encontrados` : 'Carregando registros'}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {editandoId ? (
+              <Botao type="button" variante="fantasma" onClick={cancelarEdicao}>
+                <X size={16} />
+                Cancelar
+              </Botao>
+            ) : null}
+            <Botao onClick={carregar} disabled={carregando}>
+              <RefreshCcw size={16} />
+              {carregando ? 'Atualizando' : 'Atualizar'}
             </Botao>
-          ) : null}
-          <Botao onClick={carregar} disabled={carregando}>
-            <RefreshCcw size={16} />
-            {carregando ? 'Atualizando' : 'Atualizar'}
-          </Botao>
-        </div>
-      </div>
+          </div>
+        </CartaoConteudo>
+      </Cartao>
 
       {erro ? (
         <div className="flex items-center gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
@@ -177,11 +181,14 @@ export function ListaProfissionais() {
       ) : null}
 
       {podeGerenciar ? (
-      <form onSubmit={salvar} className="rounded-lg border border-linha bg-white p-4">
-        <div className="mb-3 flex items-center gap-2">
-          {editandoId ? <Edit3 size={18} className="text-primaria" /> : <Plus size={18} className="text-primaria" />}
-          <h3 className="text-sm font-semibold">{editandoId ? 'Editar profissional' : 'Novo profissional'}</h3>
-        </div>
+      <Cartao>
+        <form onSubmit={salvar}>
+        <CartaoCabecalho>
+          <CartaoTitulo icone={editandoId ? <Edit3 size={18} className="text-primaria" /> : <Plus size={18} className="text-primaria" />}>
+            {editandoId ? 'Editar profissional' : 'Novo profissional'}
+          </CartaoTitulo>
+        </CartaoCabecalho>
+        <CartaoConteudo>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
           {!editandoId ? (
             <>
@@ -240,25 +247,24 @@ export function ListaProfissionais() {
             {salvando ? 'Salvando' : 'Salvar'}
           </Botao>
         </div>
-      </form>
+        </CartaoConteudo>
+        </form>
+      </Cartao>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border border-linha bg-white">
-        <div className="min-w-[820px]">
-          <div className="grid grid-cols-[1.2fr_0.9fr_1fr_0.7fr_96px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-texto-suave">
+      <Tabela>
+        <TabelaConteudo larguraMinima="820px">
+          <TabelaCabecalho className="grid-cols-[1.2fr_0.9fr_1fr_0.7fr_96px]">
             <span>Profissional</span>
             <span>Registro</span>
             <span>Especialidade</span>
             <span>Criado em</span>
             <span>Acoes</span>
-          </div>
-          <div className="divide-y divide-linha">
+          </TabelaCabecalho>
+          <TabelaLinhas>
             {dados?.itens.length ? (
               dados.itens.map((profissional) => (
-                <div
-                  key={profissional.id}
-                  className="grid grid-cols-[1.2fr_0.9fr_1fr_0.7fr_96px] gap-3 px-4 py-3 text-sm"
-                >
+                <TabelaLinha key={profissional.id} className="grid-cols-[1.2fr_0.9fr_1fr_0.7fr_96px]">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <Stethoscope size={16} className="shrink-0 text-primaria" />
@@ -289,14 +295,14 @@ export function ListaProfissionais() {
                       <span className="text-xs text-texto-sutil">-</span>
                     )}
                   </div>
-                </div>
+                </TabelaLinha>
               ))
             ) : (
-              <div className="px-4 py-8 text-sm text-texto-suave">Nenhum profissional carregado.</div>
+              <TabelaVazia mensagem="Nenhum profissional carregado." />
             )}
-          </div>
-        </div>
-      </div>
+          </TabelaLinhas>
+        </TabelaConteudo>
+      </Tabela>
     </section>
   );
 }

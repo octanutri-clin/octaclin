@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Brain, CheckCircle2, Image, RefreshCcw, ScanSearch, Sparkles } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import {
@@ -124,18 +125,20 @@ export function PainelIa() {
 
   return (
     <section className="grid gap-4">
-      <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-base font-semibold">IA operacional</h2>
-          <p className="mt-1 text-sm text-texto-suave">
-            {analises.length} analises, {reconhecimentos.length} reconhecimentos persistidos
-          </p>
-        </div>
-        <Botao onClick={carregar} disabled={carregando}>
-          <RefreshCcw size={16} />
-          {carregando ? 'Atualizando' : 'Atualizar'}
-        </Botao>
-      </div>
+      <Cartao>
+        <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-base font-semibold">IA operacional</h2>
+            <p className="mt-1 text-sm text-texto-suave">
+              {analises.length} analises, {reconhecimentos.length} reconhecimentos persistidos
+            </p>
+          </div>
+          <Botao onClick={carregar} disabled={carregando}>
+            <RefreshCcw size={16} />
+            {carregando ? 'Atualizando' : 'Atualizar'}
+          </Botao>
+        </CartaoConteudo>
+      </Cartao>
 
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       <BarraCarregamento visivel={carregando} />
@@ -147,11 +150,12 @@ export function PainelIa() {
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <form onSubmit={executarSentimento} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Brain size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Analise de sentimento</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={executarSentimento}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<Brain size={18} className="text-primaria" />}>Analise de sentimento</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3">
             <div className="space-y-1.5">
               <Rotulo htmlFor="ia-sentimento-paciente">Paciente</Rotulo>
@@ -199,13 +203,16 @@ export function PainelIa() {
               Analisar
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
 
-        <form onSubmit={executarReconhecimento} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Image size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Reconhecimento alimentar</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={executarReconhecimento}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<Image size={18} className="text-primaria" />}>Reconhecimento alimentar</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3">
             <div className="space-y-1.5">
               <Rotulo htmlFor="ia-alimento-paciente">Paciente</Rotulo>
@@ -257,14 +264,16 @@ export function PainelIa() {
               Reconhecer
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <aside className="rounded-lg border border-linha bg-white">
-          <div className="border-b border-linha px-4 py-3">
-            <h3 className="text-sm font-semibold">Sentimentos recentes</h3>
-          </div>
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo>Sentimentos recentes</CartaoTitulo>
+          </CartaoCabecalho>
           <div className="max-h-[420px] divide-y divide-linha overflow-auto">
             {analises.length ? (
               analises.map((analise) => (
@@ -288,12 +297,12 @@ export function PainelIa() {
               <EstadoVazio titulo="Nenhuma analise persistida." />
             )}
           </div>
-        </aside>
+        </Cartao>
 
-        <aside className="rounded-lg border border-linha bg-white">
-          <div className="border-b border-linha px-4 py-3">
-            <h3 className="text-sm font-semibold">Reconhecimentos recentes</h3>
-          </div>
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo>Reconhecimentos recentes</CartaoTitulo>
+          </CartaoCabecalho>
           <div className="max-h-[420px] divide-y divide-linha overflow-auto">
             {reconhecimentos.length ? (
               reconhecimentos.map((item) => (
@@ -315,7 +324,7 @@ export function PainelIa() {
               <EstadoVazio titulo="Nenhum reconhecimento persistido." />
             )}
           </div>
-        </aside>
+        </Cartao>
       </section>
     </section>
   );

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { CalendarCheck, CheckCircle2, Clock, Mail, MessageCircle, RefreshCcw, Save, Video, XCircle } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
@@ -269,15 +270,17 @@ export function PainelAgenda() {
 
   return (
     <div className="grid min-w-0 gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-      <form onSubmit={salvar} className="min-w-0 rounded-lg border border-linha bg-white p-4">
-        <div className="mb-4 flex items-start justify-between gap-3">
+      <Cartao className="min-w-0">
+        <form onSubmit={salvar}>
+        <CartaoCabecalho className="items-start">
           <div>
             <h2 className="text-base font-semibold">Novo agendamento</h2>
             <p className="mt-1 text-sm text-texto-suave">Cria a consulta interna, sincroniza com Google Calendar e envia os avisos.</p>
           </div>
           <CalendarCheck size={20} className="text-primaria" />
-        </div>
+        </CartaoCabecalho>
 
+        <CartaoConteudo>
         <div className="grid gap-3">
           <label className="grid gap-1">
             <Rotulo>Paciente</Rotulo>
@@ -395,16 +398,19 @@ export function PainelAgenda() {
             </Botao>
           </div>
         </div>
-      </form>
+        </CartaoConteudo>
+        </form>
+      </Cartao>
 
-      <section className="min-w-0 rounded-lg border border-linha bg-white p-4">
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <Cartao className="min-w-0">
+        <CartaoCabecalho className="flex-col items-start sm:flex-row sm:items-center">
           <div>
             <h2 className="text-base font-semibold">Consultas agendadas</h2>
             <p className="mt-1 text-sm text-texto-suave">{proximasConsultas.length} consultas no periodo carregado</p>
           </div>
           <BarraCarregamento visivel={carregando} rotulo="Carregando agenda" />
-        </div>
+        </CartaoCabecalho>
+        <CartaoConteudo>
 
         {proximasConsultas.length ? (
           <div className="grid gap-3">
@@ -536,7 +542,8 @@ export function PainelAgenda() {
         ) : (
           <EstadoVazio titulo="Nenhuma consulta agendada" descricao="Use o formulario ao lado para criar o primeiro agendamento." />
         )}
-      </section>
+        </CartaoConteudo>
+      </Cartao>
     </div>
   );
 }

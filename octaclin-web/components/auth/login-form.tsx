@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogIn } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoConteudo } from '@/components/ui/cartao';
 import { Campo, Rotulo } from '@/components/ui/campo';
 import { autenticar, obterSessao } from '@/lib/auth-api';
 
@@ -57,45 +58,51 @@ export function LoginForm() {
           <p className="mt-2 text-sm text-texto-suave">Entre como profissional, equipe ou paciente.</p>
         </header>
 
-        <form onSubmit={enviar} className="grid gap-4 rounded-lg border border-linha bg-white p-5">
-          <label className="grid gap-1">
-            <Rotulo>API</Rotulo>
-            <Campo value={apiUrl} onChange={(event) => setApiUrl(event.target.value)} required />
-          </label>
+        <Cartao>
+          <CartaoConteudo>
+            <form onSubmit={enviar} className="grid gap-4">
+              <label className="grid gap-1">
+                <Rotulo>API</Rotulo>
+                <Campo value={apiUrl} onChange={(event) => setApiUrl(event.target.value)} required />
+              </label>
 
-          <label className="grid gap-1">
-            <Rotulo>Tenant</Rotulo>
-            <Campo value={tenantSlug} onChange={(event) => setTenantSlug(event.target.value)} required />
-          </label>
+              <label className="grid gap-1">
+                <Rotulo>Tenant</Rotulo>
+                <Campo value={tenantSlug} onChange={(event) => setTenantSlug(event.target.value)} required />
+              </label>
 
-          <label className="grid gap-1">
-            <Rotulo>Email</Rotulo>
-            <Campo value={email} onChange={(event) => setEmail(event.target.value)} type="email" required />
-          </label>
+              <label className="grid gap-1">
+                <Rotulo>Email</Rotulo>
+                <Campo value={email} onChange={(event) => setEmail(event.target.value)} type="email" required />
+              </label>
 
-          <label className="grid gap-1">
-            <Rotulo>Senha</Rotulo>
-            <Campo
-              value={senha}
-              onChange={(event) => setSenha(event.target.value)}
-              type="password"
-              autoComplete="current-password"
-              required
-            />
-          </label>
+              <label className="grid gap-1">
+                <Rotulo>Senha</Rotulo>
+                <Campo
+                  value={senha}
+                  onChange={(event) => setSenha(event.target.value)}
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                />
+              </label>
 
-          {erro ? (
-            <div className="rounded-md border border-perigo-borda bg-perigo-suave px-3 py-2 text-sm text-perigo">{erro}</div>
-          ) : null}
+              {erro ? (
+                <div className="rounded-md border border-perigo-borda bg-perigo-suave px-3 py-2 text-sm text-perigo">
+                  {erro}
+                </div>
+              ) : null}
 
-          <Botao type="submit" variante="primario" disabled={enviando}>
-            <LogIn size={16} />
-            {enviando ? 'Entrando' : 'Entrar'}
-          </Botao>
-          <Link href={'/esqueci-senha' as any} className="text-center text-sm font-medium text-primaria hover:underline">
-            Esqueci minha senha
-          </Link>
-        </form>
+              <Botao type="submit" variante="primario" disabled={enviando}>
+                <LogIn size={16} />
+                {enviando ? 'Entrando' : 'Entrar'}
+              </Botao>
+              <Link href={'/esqueci-senha' as any} className="text-center text-sm font-medium text-primaria hover:underline">
+                Esqueci minha senha
+              </Link>
+            </form>
+          </CartaoConteudo>
+        </Cartao>
       </div>
     </main>
   );
