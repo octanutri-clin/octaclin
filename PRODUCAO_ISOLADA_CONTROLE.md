@@ -18,8 +18,8 @@ validados em 2026-07-23. Servicos Render de producao e secrets exclusivos
 | Banco Neon de producao (projeto/branch proprio) | Feito | 2026-07-23 | Projeto dedicado `Octaclin-db-producao`, host proprio, distinto do staging (`ep-rough-bird-atunz76m`). |
 | Migrations aplicadas no banco novo (`pnpm --dir octaclin-backend migration:run`) | Feito | 2026-07-23 | 8/8 migrations aplicadas (`migration:show` sem pendencias). Confirmado `tenants=0` e `usuarios=0` apos a migracao: banco vazio, sem dado de staging. |
 | Redis Upstash de producao | Feito | 2026-07-23 | Instancia dedicada (`relieved-goose-91945.upstash.io`). `PING` validado via TLS (`rediss://`) com `ioredis`. |
-| Render backend de producao | Pendente | - | Servico/environment separado do staging. |
-| Render web de producao | Pendente | - | Servico/environment separado do staging. |
+| Render backend de producao | Pendente | - | Servico separado do staging, `Language: Docker` (mesmo runtime do backend de staging). |
+| Render web de producao | Pendente | - | Servico separado do staging, `Language: Node` (confirmado com o usuario que o staging usa Node, nao Docker, apesar de existir `octaclin-web/Dockerfile` no repo). |
 | Secrets de producao (`JWT_SEGREDO`, `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256`, `DATABASE_URL`, `REDIS_URL`) | Pendente | - | Valores exclusivos, nunca copiados de staging. |
 | Credenciais de integracao proprias de producao (Gmail/SMTP, Meta WhatsApp, Google Calendar) | Pendente | - | Enquanto pendente, manter integracao correspondente desativada em producao. |
 | Primeiro deploy validado (`/health`, `/health/detalhado`, login) | Pendente | - | Ver criterios em `RUNBOOK_PRODUCAO_ISOLADA.md`. |

@@ -26,7 +26,13 @@ como staging.
 
 1. **Banco Neon de producao**: novo projeto Neon dedicado (branch `main` propria),
    nunca o mesmo projeto/branch usado para staging.
-2. **Redis Upstash de producao**: nova instancia Upstash dedicada.
+2. **Redis Upstash de producao**: nova instancia Upstash dedicada, separada da
+   usada em staging. Observacao: staging usa hoje o servico nativo
+   `Key Value` do Render (Valkey 8, `octaclin-redis-staging`), nao Upstash
+   externo. Producao pode usar um provedor diferente do de staging sem
+   problema - o requisito desta fase e isolamento, nao paridade de provedor.
+   O importante e que `REDIS_URL` de producao use `rediss://` (TLS) quando o
+   provedor exigir, conforme `configuracao-redis.ts`.
 3. **Render backend de producao**: novo servico Render (ou novo environment),
    nunca o mesmo servico Render usado para staging.
 4. **Render web de producao**: novo servico Render (ou novo environment),
@@ -70,18 +76,22 @@ como staging.
 
 ## Como criar os servicos no Render
 
-Este repositorio ja tem `Dockerfile` proprio em `octaclin-backend/Dockerfile`
-e `octaclin-web/Dockerfile` (build multi-stage com `node:22-alpine`, cada um
-independente, sem workspace compartilhado). Os servicos de staging foram
-criados no dashboard com runtime Docker apontando para esses arquivos.
-Repita o mesmo padrao para producao, em dois servicos novos e separados dos
-de staging.
+Staging usa runtimes diferentes por servico, confirmado no dashboard Render:
 
-Cada Dockerfile espera que o contexto de build seja a propria pasta do
-projeto (`octaclin-backend` ou `octaclin-web`), porque copia
-`package.json`/`pnpm-lock.yaml*`/`pnpm-workspace.yaml` direto na raiz do
-contexto antes de `COPY . .`. Por isso o campo de contexto **nao** pode ser a
-raiz do repositorio.
+- `octaclin-backend-staging`: `Language: Docker`.
+- `octaclin-web-staging`: `Language: Node` (nao Docker, mesmo havendo um
+  `octaclin-web/Dockerfile` no repositorio - esse arquivo existe mas nao e o
+  usado pelo servico web hoje).
+- `octaclin-redis-staging`: servico Render nativo `Key Value` (Valkey 8), nao
+  Upstash externo (ver observacao na secao de Redis mais abaixo).
+
+Repita exatamente essa combinacao de runtimes para producao, em servicos
+novos e separados dos de staging: backend em Docker, web em Node.
+
+O `Dockerfile` do backend espera que o contexto de build seja a propria pasta
+`octaclin-backend`, porque copia `package.json`/`pnpm-lock.yaml*`/
+`pnpm-workspace.yaml` direto na raiz do contexto antes de `COPY . .`. Por
+isso o campo de contexto **nao** pode ser a raiz do repositorio.
 
 ### Backend (`octaclin-backend`)
 
@@ -122,23 +132,34 @@ raiz do repositorio.
 
 ### Web/BFF (`octaclin-web`)
 
-1. `New +` > `Web Service` > mesmo repositorio > `Runtime: Docker`.
+O servico de staging (`octaclin-web-staging`) usa `Language: Node` (nao
+Docker), mesmo havendo um `octaclin-web/Dockerfile` no repositorio. Repita o
+runtime Node para manter paridade com staging.
+
+1. `New +` > `Web Service` > mesmo repositorio > `Language: Node`.
 2. `Name`: `octaclin-web-producao` (ou equivalente), separado do staging.
-3. `Docker Build Context Directory`: `octaclin-web`.
-4. `Dockerfile Path`: `octaclin-web/Dockerfile`.
-5. `Docker Command`: deixar em branco (usa `CMD ["pnpm", "start"]` do
-   Dockerfile, que roda `next start`).
-6. `Pre-Deploy Command`: deixar em branco (nao aplicavel ao Next/BFF).
-7. `Auto-Deploy`: `On Commit`.
-8. `Build Filters`: `Included Paths` = `octaclin-web/**`.
-9. Variaveis de ambiente:
+3. `Root Directory`: `octaclin-web`.
+4. `Build Command`:
+   ```
+   corepack enable && pnpm install --frozen-lockfile && pnpm build
+   ```
+5. `Start Command`:
+   ```
+   pnpm start
+   ```
+6. `Auto-Deploy`: `On Commit`. Com `Root Directory` definido, o Render ja
+   restringe autodeploy a mudancas dentro de `octaclin-web/`; nao e
+   necessario configurar Build Filters manualmente.
+7. Variaveis de ambiente:
    - `NODE_ENV=production`
-   - `PORT=3000` (mesmo motivo do backend)
    - `NEXT_PUBLIC_API_URL` e `OCTACLIN_BACKEND_URL` apontando para a URL do
      backend de producao criado acima
    - `OCTACLIN_API_ORIGENS_PERMITIDAS` restrito a essa mesma URL do backend
    - `OCTACLIN_COOKIE_SECURE=true`
-10. Plano pago, mesmo motivo do backend.
+   - Nao defina `PORT` manualmente: o Render injeta a variavel `PORT`
+     automaticamente para runtime nativo e o `next start` ja respeita esse
+     valor.
+8. Plano pago, mesmo motivo do backend.
 
 ### Depois de criar os dois servicos
 
