@@ -1,6 +1,6 @@
 # Fase 131 - Producao isolada de staging
 
-Status: em andamento (estrutura entregue em 2026-07-23; provisionamento real pendente).
+Status: em andamento (estrutura entregue em 2026-07-23; banco Neon de producao criado e migrado em 2026-07-23; Redis, Render e secrets ainda pendentes).
 
 ## Objetivo
 
@@ -31,14 +31,24 @@ de ser o unico ambiente: producao precisa de recursos proprios.
   `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` atualizados para referenciar os novos
   arquivos e o status real da fase.
 
+## Banco Neon de producao (concluido em 2026-07-23)
+
+O usuario criou o projeto Neon dedicado `Octaclin-db-producao` (host proprio,
+distinto do projeto usado como staging). `pnpm --dir octaclin-backend
+migration:run` foi executado contra ele com `DATABASE_URL` apenas como
+variavel de ambiente de sessao (nunca gravada em arquivo). Resultado: 8/8
+migrations aplicadas, `migration:show` sem pendencias, e contagem confirmada
+de `tenants=0`/`usuarios=0` (banco vazio, sem dado de staging). A senha desse
+role apareceu em texto no chat durante a troca de credencial e deve ser
+rotacionada (`RUNBOOK_ROTACAO_SECRETS.md`) antes de considerar o secret
+definitivo.
+
 ## O que ainda falta (pendente de acao do usuario)
 
 Provisionamento real, que exige acesso e decisoes nos consoles dos
 provedores:
 
-1. Criar o projeto Neon de producao e rodar
-   `pnpm --dir octaclin-backend migration:run` contra ele (nunca
-   `pnpm seed:staging`).
+1. Rotacionar a senha do role `neondb_owner` do projeto Neon de producao.
 2. Criar a instancia Upstash de producao.
 3. Criar os servicos Render de producao (backend e web), separados dos
    servicos usados hoje como staging.

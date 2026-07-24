@@ -7,15 +7,16 @@ banco/cache com credencial ou dominio privado aqui - apenas status.
 ## Status atual
 
 Estrutura da fase entregue em 2026-07-23 (runbook, este controle e validador
-documental). Provisionamento real dos recursos ainda nao foi executado nesta
-sessao: depende de acoes do usuario nos consoles Neon, Upstash e Render.
+documental). Banco Neon de producao criado e migrado em 2026-07-23. Redis
+Upstash, servicos Render de producao e secrets exclusivos ainda pendentes de
+acao do usuario.
 
 ## Recursos a criar
 
 | Recurso | Status | Data | Observacao |
 | --- | --- | --- | --- |
-| Banco Neon de producao (projeto/branch proprio) | Pendente | - | Nao reaproveitar o projeto usado como staging. |
-| Migrations aplicadas no banco novo (`pnpm --dir octaclin-backend migration:run`) | Pendente | - | Sem `pnpm seed:staging` em producao. |
+| Banco Neon de producao (projeto/branch proprio) | Feito | 2026-07-23 | Projeto dedicado `Octaclin-db-producao`, host proprio, distinto do staging (`ep-rough-bird-atunz76m`). |
+| Migrations aplicadas no banco novo (`pnpm --dir octaclin-backend migration:run`) | Feito | 2026-07-23 | 8/8 migrations aplicadas (`migration:show` sem pendencias). Confirmado `tenants=0` e `usuarios=0` apos a migracao: banco vazio, sem dado de staging. |
 | Redis Upstash de producao | Pendente | - | Instancia dedicada, nao compartilhada com staging. |
 | Render backend de producao | Pendente | - | Servico/environment separado do staging. |
 | Render web de producao | Pendente | - | Servico/environment separado do staging. |
@@ -30,6 +31,15 @@ o que foi feito, quem confirmou). Nao inclua valores de secrets.
 
 - 2026-07-23: estrutura da fase (runbook, este controle e validador) criada e
   commitada. Nenhum recurso de infraestrutura provisionado ainda.
+- 2026-07-23: usuario criou o projeto Neon de producao dedicado
+  (`Octaclin-db-producao`). `DATABASE_URL` usada apenas como variavel de
+  ambiente de sessao para rodar `pnpm --dir octaclin-backend migration:run`;
+  nao foi gravada em nenhum arquivo do repositorio. 8/8 migrations aplicadas
+  com sucesso; `migration:show` sem pendencias; contagem confirmada de
+  `tenants=0` e `usuarios=0` no banco novo. Observacao de seguranca: a URL
+  apareceu em texto no chat durante a troca de credencial; recomendado
+  rotacionar a senha do role `neondb_owner` no console Neon (`RUNBOOK_ROTACAO_SECRETS.md`,
+  secao Neon/Postgres) antes de considerar o secret definitivo.
 
 ## Validacoes pendentes antes do aceite
 
@@ -51,9 +61,13 @@ o que foi feito, quem confirmou). Nao inclua valores de secrets.
 
 ## Proximo passo
 
-Usuario cria o projeto Neon de producao e informa apenas que foi criado (sem
-colar a URL em texto no chat quando possivel; se precisar compartilhar a
-`DATABASE_URL` para rodar as migrations, trate como secret e rotacione depois
-se ela aparecer em qualquer lugar nao seguro). Depois disso, seguir a ordem de
-`RUNBOOK_PRODUCAO_ISOLADA.md` recurso por recurso, atualizando a tabela acima a
-cada etapa concluida.
+1. Rotacionar a senha do role `neondb_owner` no projeto Neon de producao (ela
+   apareceu em texto no chat durante o provisionamento), seguindo
+   `RUNBOOK_ROTACAO_SECRETS.md`, e atualizar apenas no Render quando o servico
+   existir.
+2. Criar a instancia Upstash de producao.
+3. Criar os servicos Render de producao (backend e web), separados dos de
+   staging, com `NODE_ENV=production` e as variaveis de
+   `VARIAVEIS_AMBIENTE.md`.
+4. Validar `/health` e `/health/detalhado` apos o primeiro deploy e atualizar
+   a tabela acima a cada etapa concluida.
