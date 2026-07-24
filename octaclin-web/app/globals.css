@@ -17,8 +17,15 @@ body {
   min-height: 100vh;
   background: #f7f8fa;
   color: #1f2937;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-noto-sans), system-ui, sans-serif;
   letter-spacing: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-figtree), system-ui, sans-serif;
 }
 
 button,

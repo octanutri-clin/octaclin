@@ -69,25 +69,25 @@ function EstadoFalhaConvite({ tipo, erro }: { tipo: EstadoFalha; erro?: string |
 
   return (
     <div className="grid gap-4">
-      <div className="flex items-start gap-3 rounded-md border border-[#efb8ad] bg-[#fff4f1] px-3 py-3 text-sm text-[#7a2f23]">
+      <div className="flex items-start gap-3 rounded-md border border-perigo-borda bg-perigo-suave px-3 py-3 text-sm text-perigo-forte">
         <AlertTriangle size={18} className="mt-0.5 shrink-0 text-perigo" />
         <div className="grid gap-1">
-          <h2 className="text-base font-semibold text-[#7a2f23]">{conteudo.titulo}</h2>
+          <h2 className="text-base font-semibold text-perigo-forte">{conteudo.titulo}</h2>
           <p>{conteudo.mensagem}</p>
-          <p className="text-xs text-[#8f554d]">{erro || conteudo.detalhe}</p>
+          <p className="text-xs text-perigo-forte">{erro || conteudo.detalhe}</p>
         </div>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2">
         <Link
           href="/recuperar-senha"
-          className="inline-flex h-9 items-center justify-center rounded-md bg-primaria px-3 text-sm font-medium text-white hover:bg-[#1d6684]"
+          className="inline-flex h-9 items-center justify-center rounded-md bg-primaria px-3 text-sm font-medium text-white hover:bg-primaria-forte"
         >
           Solicitar novo acesso
         </Link>
         <Link
           href="/login"
-          className="inline-flex h-9 items-center justify-center rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-[#f8fafb]"
+          className="inline-flex h-9 items-center justify-center rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie"
         >
           Ir para login
         </Link>
@@ -171,13 +171,13 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
     <main className="min-h-screen bg-fundo px-6 py-10 text-tinta">
       <div className="mx-auto grid w-full max-w-md gap-6">
         <header>
-          <p className="text-xs font-semibold uppercase text-[#596273]">OctaClin</p>
+          <p className="text-xs font-semibold uppercase text-texto-suave">OctaClin</p>
           <h1 className="mt-1 text-3xl font-bold">Primeiro acesso</h1>
         </header>
 
         <section className="rounded-lg border border-linha bg-white p-5">
           {carregando ? (
-            <div className="flex items-center gap-2 text-sm text-[#596273]">
+            <div className="flex items-center gap-2 text-sm text-texto-suave">
               <Loader2 size={16} className="animate-spin text-primaria" />
               Validando convite
             </div>
@@ -185,13 +185,13 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
 
           {!carregando && ativado ? (
             <div className="grid gap-4">
-              <div className="flex items-start gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+              <div className="flex items-start gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
                 <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
                 <span>Acesso ativado. Agora voce pode entrar no portal do paciente.</span>
               </div>
               <Link
                 href="/login"
-                className="inline-flex h-9 items-center justify-center rounded-md bg-primaria px-3 text-sm font-medium text-white hover:bg-[#1d6684]"
+                className="inline-flex h-9 items-center justify-center rounded-md bg-primaria px-3 text-sm font-medium text-white hover:bg-primaria-forte"
               >
                 Ir para login
               </Link>
@@ -200,10 +200,10 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
 
           {!carregando && !ativado && convite ? (
             <form onSubmit={enviar} className="grid gap-4">
-              <div className="rounded-md border border-linha bg-[#f8fafb] px-3 py-3 text-sm">
+              <div className="rounded-md border border-linha bg-superficie px-3 py-3 text-sm">
                 <p className="font-medium">{convite.nomePaciente}</p>
-                <p className="mt-1 text-[#596273]">{convite.email}</p>
-                <p className="mt-1 text-xs text-[#596273]">Convite valido ate {formatarData(convite.expiraEm)}</p>
+                <p className="mt-1 text-texto-suave">{convite.email}</p>
+                <p className="mt-1 text-xs text-texto-suave">Convite valido ate {formatarData(convite.expiraEm)}</p>
               </div>
 
               <label className="grid gap-1">
@@ -228,7 +228,7 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
                 />
               </label>
 
-              <label className="flex items-start gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 py-2 text-sm text-[#596273]">
+              <label className="flex items-start gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm text-texto-suave">
                 <input
                   type="checkbox"
                   checked={aceiteTermosUso}
@@ -238,7 +238,7 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
                 Aceito os Termos de uso do OctaClin, versao {versaoLegalPaciente}.
               </label>
 
-              <label className="flex items-start gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 py-2 text-sm text-[#596273]">
+              <label className="flex items-start gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm text-texto-suave">
                 <input
                   type="checkbox"
                   checked={aceitePoliticaPrivacidade}
@@ -248,7 +248,7 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
                 Aceito a Politica de privacidade, versao {versaoLegalPaciente}.
               </label>
 
-              <label className="flex items-start gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 py-2 text-sm text-[#596273]">
+              <label className="flex items-start gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm text-texto-suave">
                 <input
                   type="checkbox"
                   checked={aceiteLgpd}
@@ -258,7 +258,7 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
                 Autorizo o tratamento dos meus dados de saude para uso do portal OctaClin e acompanhamento clinico.
               </label>
 
-              {erro ? <div className="rounded-md border border-[#efb8ad] bg-[#fff4f1] px-3 py-2 text-sm text-perigo">{erro}</div> : null}
+              {erro ? <div className="rounded-md border border-perigo-borda bg-perigo-suave px-3 py-2 text-sm text-perigo">{erro}</div> : null}
 
               <Botao type="submit" variante="primario" disabled={salvando}>
                 <KeyRound size={16} />

@@ -121,9 +121,9 @@ function rotuloTipo(tipo: EventoProntuarioPacienteApi['tipo']) {
 }
 
 function classeStatus(status?: string) {
-  if (status === 'falhou' || status === 'cancelada') return 'bg-[#f8e8e4] text-perigo';
-  if (status === 'respondido' || status === 'finalizado' || status === 'agendada') return 'bg-[#e6f4ea] text-sucesso';
-  return 'bg-[#eef3f6] text-[#596273]';
+  if (status === 'falhou' || status === 'cancelada') return 'bg-perigo-suave text-perigo';
+  if (status === 'respondido' || status === 'finalizado' || status === 'agendada') return 'bg-sucesso-suave text-sucesso';
+  return 'bg-superficie-hover text-texto-suave';
 }
 
 function iconeEvento(tipo: EventoProntuarioPacienteApi['tipo']) {
@@ -137,9 +137,9 @@ function iconeEvento(tipo: EventoProntuarioPacienteApi['tipo']) {
 function CartaoResumo({ titulo, valor, detalhe }: { titulo: string; valor: string; detalhe: string }) {
   return (
     <article className="rounded-md border border-linha bg-white p-4">
-      <p className="text-xs font-semibold uppercase text-[#596273]">{titulo}</p>
+      <p className="text-xs font-semibold uppercase text-texto-suave">{titulo}</p>
       <p className="mt-2 text-2xl font-semibold text-tinta">{valor}</p>
-      <p className="mt-1 text-sm text-[#596273]">{detalhe}</p>
+      <p className="mt-1 text-sm text-texto-suave">{detalhe}</p>
     </article>
   );
 }
@@ -157,17 +157,17 @@ function LinhaDoTempo({ eventos }: { eventos: EventoProntuarioPacienteApi[] }) {
           <article key={`${evento.tipo}-${evento.id}`} className="grid gap-2 rounded-md border border-linha bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#eaf3f7] text-primaria">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primaria-suave text-primaria">
                   <Icone size={18} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase text-[#596273]">{rotuloTipo(evento.tipo)}</p>
+                  <p className="text-xs font-semibold uppercase text-texto-suave">{rotuloTipo(evento.tipo)}</p>
                   <h3 className="mt-1 break-words text-sm font-semibold text-tinta">{evento.titulo}</h3>
-                  {evento.descricao ? <p className="mt-1 break-words text-sm text-[#596273]">{evento.descricao}</p> : null}
+                  {evento.descricao ? <p className="mt-1 break-words text-sm text-texto-suave">{evento.descricao}</p> : null}
                 </div>
               </div>
               <div className="shrink-0 text-left sm:text-right">
-                <p className="text-xs text-[#596273]">{formatarDataHora(evento.data)}</p>
+                <p className="text-xs text-texto-suave">{formatarDataHora(evento.data)}</p>
                 {evento.status ? (
                   <span className={`mt-2 inline-flex rounded-md px-2 py-1 text-xs font-semibold ${classeStatus(evento.status)}`}>
                     {evento.status}
@@ -338,15 +338,15 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-linha bg-white p-4">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#eaf3f7] text-primaria">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primaria-suave text-primaria">
             <UserRound size={22} />
           </div>
           <div className="min-w-0">
             <h2 className="break-words text-lg font-semibold text-tinta">{dados.paciente.nome}</h2>
-            <p className="mt-1 text-sm text-[#596273]">
+            <p className="mt-1 text-sm text-texto-suave">
               Risco {Number(dados.paciente.scoreRisco).toFixed(0)} pontos - {dados.paciente.statusAdesao}
             </p>
-            <p className="mt-1 text-sm text-[#596273]">
+            <p className="mt-1 text-sm text-texto-suave">
               Contato {dados.paciente.contato ?? '-'} - Nascimento {formatarData(dados.paciente.dataNascimento)}
             </p>
           </div>
@@ -354,7 +354,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/pacientes"
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors hover:bg-[#eef3f6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
           >
             <ArrowLeft size={16} />
             Voltar para pacientes
@@ -375,16 +375,16 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       </section>
 
       {sucesso ? (
-        <div className="rounded-md border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">{sucesso}</div>
+        <div className="rounded-md border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">{sucesso}</div>
       ) : null}
 
       <form onSubmit={registrarEvolucao} className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div>
           <h2 className="text-base font-semibold text-tinta">Nova evolucao clinica</h2>
-          <p className="mt-1 text-sm text-[#596273]">Registro privado do profissional, salvo no historico do paciente.</p>
+          <p className="mt-1 text-sm text-texto-suave">Registro privado do profissional, salvo no historico do paciente.</p>
         </div>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Titulo da evolucao
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -394,7 +394,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               maxLength={180}
             />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Tipo da evolucao
             <select
               className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -408,7 +408,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             </select>
           </label>
         </div>
-        <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+        <label className="grid gap-1 text-xs font-semibold text-texto-suave">
           Conteudo da evolucao
           <textarea
             className="min-h-[112px] rounded-md border border-linha px-3 py-2 text-sm font-normal text-tinta"
@@ -430,10 +430,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       <form onSubmit={registrarTarefa} className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div>
           <h2 className="text-base font-semibold text-tinta">Plano de acompanhamento</h2>
-          <p className="mt-1 text-sm text-[#596273]">Prescreva metas, tarefas e check-ins para o paciente cumprir entre consultas.</p>
+          <p className="mt-1 text-sm text-texto-suave">Prescreva metas, tarefas e check-ins para o paciente cumprir entre consultas.</p>
         </div>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_210px]">
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Titulo da tarefa
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -443,7 +443,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               maxLength={180}
             />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Categoria da tarefa
             <select
               className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -458,7 +458,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               <option value="orientacao">Orientacao</option>
             </select>
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Prioridade da tarefa
             <select
               className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -472,7 +472,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               <option value="alta">Alta</option>
             </select>
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Vencimento da tarefa
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -482,7 +482,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             />
           </label>
         </div>
-        <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+        <label className="grid gap-1 text-xs font-semibold text-texto-suave">
           Descricao da tarefa
           <textarea
             className="min-h-[96px] rounded-md border border-linha px-3 py-2 text-sm font-normal text-tinta"
@@ -503,9 +503,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-tinta">Biblioteca de materiais</h2>
-            <p className="mt-1 text-sm text-[#596273]">Salve links, PDFs por URL e orientacoes reutilizaveis para enviar ao paciente.</p>
+            <p className="mt-1 text-sm text-texto-suave">Salve links, PDFs por URL e orientacoes reutilizaveis para enviar ao paciente.</p>
           </div>
-          <div className="flex items-center gap-2 text-sm text-[#596273]">
+          <div className="flex items-center gap-2 text-sm text-texto-suave">
             <FileText size={16} className="text-primaria" />
             {materiais.length} materiais
           </div>
@@ -513,7 +513,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
         <form onSubmit={registrarMaterial} className="grid gap-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_180px]">
-            <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
               Titulo do material
               <input
                 className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -523,7 +523,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 maxLength={180}
               />
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
               Tipo do material
               <select
                 className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -535,7 +535,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 <option value="orientacao">Orientacao</option>
               </select>
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
               Categoria do material
               <input
                 className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -545,7 +545,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               />
             </label>
           </div>
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             URL do material
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -554,7 +554,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               maxLength={1000}
             />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Resumo do material
             <textarea
               className="min-h-[78px] rounded-md border border-linha px-3 py-2 text-sm font-normal text-tinta"
@@ -573,7 +573,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
         <form onSubmit={enviarMaterial} className="grid gap-3 border-t border-linha pt-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
               Material para enviar
               <select
                 className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -590,7 +590,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 ))}
               </select>
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
               Observacao do envio
               <input
                 className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -617,8 +617,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                   <p className="break-words text-sm font-semibold text-tinta">{material.titulo}</p>
                   <span className={`rounded-md px-2 py-1 text-xs font-semibold ${classeStatus(material.status)}`}>{material.status}</span>
                 </div>
-                {material.resumo ? <p className="break-words text-sm text-[#596273]">{material.resumo}</p> : null}
-                {material.observacao ? <p className="break-words text-sm text-[#596273]">{material.observacao}</p> : null}
+                {material.resumo ? <p className="break-words text-sm text-texto-suave">{material.resumo}</p> : null}
+                {material.observacao ? <p className="break-words text-sm text-texto-suave">{material.observacao}</p> : null}
                 {material.url ? (
                   <a className="inline-flex items-center gap-1 break-all text-sm font-medium text-primaria hover:underline" href={material.url}>
                     <LinkIcon size={14} />
@@ -628,7 +628,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               </article>
             ))
           ) : (
-            <p className="text-sm text-[#596273]">Nenhum material enviado ao paciente.</p>
+            <p className="text-sm text-texto-suave">Nenhum material enviado ao paciente.</p>
           )}
         </div>
       </section>
@@ -637,7 +637,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         <article className="grid gap-3">
           <div className="rounded-md border border-linha bg-white p-4">
             <h2 className="text-base font-semibold text-tinta">Linha do tempo clinica</h2>
-            <p className="mt-1 text-sm text-[#596273]">Consultas, formularios, respostas e mensagens em ordem cronologica.</p>
+            <p className="mt-1 text-sm text-texto-suave">Consultas, formularios, respostas e mensagens em ordem cronologica.</p>
           </div>
           <LinhaDoTempo eventos={eventos} />
         </article>
@@ -647,7 +647,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <Stethoscope size={18} className="mt-0.5 shrink-0 text-primaria" />
             <div>
               <h2 className="text-base font-semibold text-tinta">Atalhos do prontuario</h2>
-              <p className="mt-1 text-sm text-[#596273]">Abra os modulos conectados para agir sobre o acompanhamento.</p>
+              <p className="mt-1 text-sm text-texto-suave">Abra os modulos conectados para agir sobre o acompanhamento.</p>
             </div>
           </div>
           <Link className="text-sm font-medium text-primaria hover:underline" href="/agenda">

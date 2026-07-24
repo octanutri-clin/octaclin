@@ -99,10 +99,10 @@ function rotuloStatusLgpd(status: StatusSolicitacaoLgpd) {
 
 function classeStatusLgpd(status: StatusSolicitacaoLgpd) {
   const mapa: Record<StatusSolicitacaoLgpd, string> = {
-    recebida: 'bg-[#e8eef8] text-primaria',
-    em_tratamento: 'bg-[#fff6db] text-[#7a5a00]',
-    concluida: 'bg-[#e6f4ea] text-sucesso',
-    indeferida: 'bg-[#f8e8e4] text-perigo'
+    recebida: 'bg-superficie-hover text-primaria',
+    em_tratamento: 'bg-alerta-suave text-alerta-forte',
+    concluida: 'bg-sucesso-suave text-sucesso',
+    indeferida: 'bg-perigo-suave text-perigo'
   };
   return mapa[status];
 }
@@ -142,9 +142,9 @@ function rotuloStatusAssinatura(status: SolicitacaoAssinaturaOperacional['status
 
 function classeStatusAssinatura(status: SolicitacaoAssinaturaOperacional['status']) {
   const mapa: Record<SolicitacaoAssinaturaOperacional['status'], string> = {
-    pendente: 'bg-[#fff6db] text-[#7a5a00]',
-    concluida: 'bg-[#e6f4ea] text-sucesso',
-    cancelada: 'bg-[#f8e8e4] text-perigo'
+    pendente: 'bg-alerta-suave text-alerta-forte',
+    concluida: 'bg-sucesso-suave text-sucesso',
+    cancelada: 'bg-perigo-suave text-perigo'
   };
   return mapa[status];
 }
@@ -161,9 +161,9 @@ function rotuloStatusAlertas(status: DadosOperacionais['alertasOperacionais']['s
 
 function classeSeveridadeAlerta(severidade: DadosOperacionais['alertasOperacionais']['itens'][number]['severidade']) {
   const mapa: Record<DadosOperacionais['alertasOperacionais']['itens'][number]['severidade'], string> = {
-    critico: 'border-perigo bg-[#fff4f1] text-perigo',
-    atencao: 'border-[#f0d589] bg-[#fff8e5] text-[#7a5a00]',
-    informativo: 'border-[#c6d3e3] bg-[#f4f7fb] text-primaria'
+    critico: 'border-perigo bg-perigo-suave text-perigo',
+    atencao: 'border-alerta-borda bg-alerta-suave text-alerta-forte',
+    informativo: 'border-primaria-suave bg-superficie text-primaria'
   };
   return mapa[severidade];
 }
@@ -693,7 +693,7 @@ export function PainelOperacoes() {
         <section className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm font-semibold">{sessao?.email ?? 'Carregando sessao'}</p>
-            <p className="mt-1 text-xs text-[#596273]">
+            <p className="mt-1 text-xs text-texto-suave">
               {sessao ? `${sessao.tenantSlug} em ${sessao.apiUrl}` : 'Validando acesso operacional'}
             </p>
           </div>
@@ -708,7 +708,7 @@ export function PainelOperacoes() {
 
         {erro ? <AlertaOperacional mensagem={erro} /> : null}
         {sucesso ? (
-          <div role="status" className="rounded-lg border border-[#b9dfc5] bg-[#f1fbf4] px-4 py-3 text-sm text-sucesso">
+          <div role="status" className="rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso">
             {sucesso}
           </div>
         ) : null}
@@ -729,7 +729,7 @@ export function PainelOperacoes() {
           {metricas.map((item) => (
             <div key={item.rotulo} className="rounded-lg border border-linha bg-white p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-[#596273]">{item.rotulo}</span>
+                <span className="text-sm font-medium text-texto-suave">{item.rotulo}</span>
                 <item.icone className={item.cor} size={20} />
               </div>
               <p className="mt-3 text-3xl font-bold">{item.valor}</p>
@@ -743,14 +743,14 @@ export function PainelOperacoes() {
               <div className="flex items-center gap-2">
                 <AlertTriangle size={19} className={alertasOperacionais?.status === 'critico' ? 'text-perigo' : 'text-alerta'} />
                 <h2 className="text-base font-semibold">Alertas operacionais</h2>
-                <span className="text-sm text-[#596273]">{alertasOperacionais?.resumo.total ?? 0} ativos</span>
+                <span className="text-sm text-texto-suave">{alertasOperacionais?.resumo.total ?? 0} ativos</span>
               </div>
-              <p className="mt-1 text-xs text-[#596273]">
+              <p className="mt-1 text-xs text-texto-suave">
                 Criticos {alertasOperacionais?.resumo.criticos ?? 0} | Atencao {alertasOperacionais?.resumo.atencao ?? 0} | Informativos{' '}
                 {alertasOperacionais?.resumo.informativos ?? 0}
               </p>
             </div>
-            <span className="rounded-sm bg-[#e8eef8] px-2 py-1 text-xs font-semibold text-primaria">
+            <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
               {rotuloStatusAlertas(alertasOperacionais?.status ?? 'ok')}
             </span>
           </div>
@@ -783,14 +783,14 @@ export function PainelOperacoes() {
               <div className="flex items-center gap-2">
                 <AlertTriangle size={19} className="text-perigo" />
                 <h2 className="text-base font-semibold">Central de comunicacao</h2>
-                <span className="text-sm text-[#596273]">{falhasComunicacao?.total ?? 0} falhas</span>
+                <span className="text-sm text-texto-suave">{falhasComunicacao?.total ?? 0} falhas</span>
               </div>
-              <p className="mt-1 text-xs text-[#596273]">
+              <p className="mt-1 text-xs text-texto-suave">
                 E-mail {falhasComunicacao?.resumo.email ?? 0} | WhatsApp {falhasComunicacao?.resumo.whatsapp ?? 0} | Google Calendar{' '}
                 {falhasComunicacao?.resumo.googleCalendar ?? 0} | Outbox {falhasComunicacao?.resumo.outbox ?? 0}
               </p>
             </div>
-            <span className="rounded-sm bg-[#e8eef8] px-2 py-1 text-xs font-semibold text-primaria">
+            <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
               {falhasComunicacao?.resumo.reprocessaveis ?? 0} reprocessaveis
             </span>
           </div>
@@ -854,17 +854,17 @@ export function PainelOperacoes() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <strong className="text-sm">{falha.tipo}</strong>
-                      <span className="rounded-sm bg-[#f8e8e4] px-2 py-1 text-xs font-semibold text-perigo">
+                      <span className="rounded-sm bg-perigo-suave px-2 py-1 text-xs font-semibold text-perigo">
                         {rotuloCanalFalha(falha.canal)}
                       </span>
-                      <span className="rounded-sm bg-[#e8eef8] px-2 py-1 text-xs font-semibold text-primaria">
+                      <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
                         {rotuloOrigemFalha(falha.origem)}
                       </span>
                     </div>
-                    <p className="mt-1 break-words text-sm text-[#596273]">{falha.erro ?? 'Erro nao informado'}</p>
-                    <p className="mt-1 break-all text-xs text-[#596273]">{falha.resumo ?? falha.referenciaId}</p>
+                    <p className="mt-1 break-words text-sm text-texto-suave">{falha.erro ?? 'Erro nao informado'}</p>
+                    <p className="mt-1 break-all text-xs text-texto-suave">{falha.resumo ?? falha.referenciaId}</p>
                   </div>
-                  <div className="text-xs text-[#596273]">
+                  <div className="text-xs text-texto-suave">
                     <p className="break-all">Referencia: {falha.referenciaId}</p>
                     <p className="mt-1">Criado em {formatarData(falha.criadoEm)}</p>
                     {falha.tentativas !== undefined ? <p className="mt-1">{falha.tentativas} tentativas</p> : null}
@@ -884,7 +884,7 @@ export function PainelOperacoes() {
             )}
           </div>
           <div className="flex flex-col gap-2 border-t border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <span className="text-sm text-[#596273]">
+            <span className="text-sm text-texto-suave">
               Pagina {falhasComunicacao?.pagina ?? 1} de {totalPaginasFalhasComunicacao} | {falhasComunicacao?.total ?? 0} falhas
             </span>
             <div className="flex gap-2">
@@ -911,7 +911,7 @@ export function PainelOperacoes() {
             <div className="flex items-center gap-2">
               <CreditCard size={19} className="text-primaria" />
               <h2 className="text-base font-semibold">Assinaturas</h2>
-              <span className="text-sm text-[#596273]">{solicitacoesAssinatura?.total ?? 0} solicitacoes</span>
+              <span className="text-sm text-texto-suave">{solicitacoesAssinatura?.total ?? 0} solicitacoes</span>
             </div>
             <Botao type="button" onClick={() => void recarregarSolicitacoesAssinatura()} disabled={carregandoAssinatura}>
               <RefreshCcw size={16} />
@@ -933,23 +933,23 @@ export function PainelOperacoes() {
                           {rotuloStatusAssinatura(solicitacao.status)}
                         </span>
                       </div>
-                      <p className="mt-1 break-all text-xs text-[#596273]">Tenant: {solicitacao.tenantId}</p>
-                      <p className="mt-1 text-xs text-[#596273]">{formatarData(solicitacao.solicitadoEm)}</p>
+                      <p className="mt-1 break-all text-xs text-texto-suave">Tenant: {solicitacao.tenantId}</p>
+                      <p className="mt-1 text-xs text-texto-suave">{formatarData(solicitacao.solicitadoEm)}</p>
                     </div>
                     <div className="text-sm">
                       <p>
-                        <span className="text-[#596273]">Atual: </span>
+                        <span className="text-texto-suave">Atual: </span>
                         <strong>{solicitacao.planoAtual || rotuloPlano(solicitacao.planoAtualId)}</strong>
                       </p>
                       <p className="mt-1">
-                        <span className="text-[#596273]">Desejado: </span>
+                        <span className="text-texto-suave">Desejado: </span>
                         <strong>{rotuloPlano(planoDestino)}</strong>
                       </p>
                     </div>
                     <div className="text-sm text-tinta">
                       <p>{solicitacao.observacao ?? 'Sem observacao comercial.'}</p>
                       {solicitacao.resolvidoEm ? (
-                        <p className="mt-1 text-xs text-[#596273]">Resolvido em {formatarData(solicitacao.resolvidoEm)}</p>
+                        <p className="mt-1 text-xs text-texto-suave">Resolvido em {formatarData(solicitacao.resolvidoEm)}</p>
                       ) : null}
                     </div>
                     <div className="flex justify-start lg:justify-end">
@@ -964,7 +964,7 @@ export function PainelOperacoes() {
                           {aplicandoAssinaturaId === chave ? 'Aplicando' : `Aplicar ${rotuloPlano(planoDestino)}`}
                         </Botao>
                       ) : (
-                        <span className="rounded-sm bg-[#e8eef8] px-2 py-1 text-xs font-semibold text-primaria">
+                        <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
                           {solicitacao.planoAplicadoId ? `Plano ${rotuloPlano(solicitacao.planoAplicadoId)}` : 'Sem acao pendente'}
                         </span>
                       )}
@@ -983,7 +983,7 @@ export function PainelOperacoes() {
             <div className="flex items-center gap-2">
               <Scale size={19} className="text-primaria" />
               <h2 className="text-base font-semibold">Solicitacoes LGPD</h2>
-              <span className="text-sm text-[#596273]">{solicitacoesLgpd?.total ?? 0} protocolos</span>
+              <span className="text-sm text-texto-suave">{solicitacoesLgpd?.total ?? 0} protocolos</span>
             </div>
             <form onSubmit={filtrarLgpd} className="grid gap-2 md:grid-cols-3">
               <select
@@ -1014,11 +1014,11 @@ export function PainelOperacoes() {
               </Botao>
             </form>
           </div>
-          <div className="border-b border-linha bg-[#f8fafb] px-4 py-4">
+          <div className="border-b border-linha bg-superficie px-4 py-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <h3 className="text-base font-semibold">Retencao e exclusao programada</h3>
-                <p className="mt-1 text-sm text-[#596273]">
+                <p className="mt-1 text-sm text-texto-suave">
                   {pluralizarItensRetencao(retencaoDados?.resumo.totalVencidos ?? 0)} | Politica {retencaoDados?.versao ?? '-'}
                 </p>
               </div>
@@ -1036,12 +1036,12 @@ export function PainelOperacoes() {
                     <article key={item.politicaId} className="rounded-md border border-linha bg-white p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <strong className="text-sm">{item.rotulo}</strong>
-                        <span className="rounded-sm bg-[#e8eef8] px-2 py-1 text-xs font-semibold text-primaria">
+                        <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
                           {rotuloAcaoRetencao(item.acao)}
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-tinta">{politica?.descricao ?? 'Politica operacional cadastrada.'}</p>
-                      <p className="mt-2 text-xs text-[#596273]">
+                      <p className="mt-2 text-xs text-texto-suave">
                         {item.vencidos} vencidos desde {formatarData(item.corteEm)} | {item.diasRetencao} dias
                       </p>
                     </article>
@@ -1063,16 +1063,16 @@ export function PainelOperacoes() {
                         {rotuloStatusLgpd(solicitacao.status)}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-[#596273]">{rotuloTipoLgpd(solicitacao.tipo)}</p>
-                    <p className="mt-1 break-all text-xs text-[#596273]">Paciente: {solicitacao.pacienteId}</p>
+                    <p className="mt-1 text-xs text-texto-suave">{rotuloTipoLgpd(solicitacao.tipo)}</p>
+                    <p className="mt-1 break-all text-xs text-texto-suave">Paciente: {solicitacao.pacienteId}</p>
                   </div>
                   <div>
                     <p className="text-sm text-tinta">{solicitacao.detalhes ?? 'Sem detalhes informados.'}</p>
-                    <p className="mt-1 text-xs text-[#596273]">
+                    <p className="mt-1 text-xs text-texto-suave">
                       Ultima tratativa: {solicitacao.ultimaTratativa ?? 'Sem tratativa registrada.'}
                     </p>
                   </div>
-                  <div className="text-xs text-[#596273]">
+                  <div className="text-xs text-texto-suave">
                     <p>Aberta: {formatarData(solicitacao.abertoEm)}</p>
                     <p className="mt-1">Atualizada: {formatarData(solicitacao.atualizadoEm)}</p>
                     <p className="mt-1 break-all">Responsavel: {solicitacao.responsavelId ?? '-'}</p>
@@ -1123,11 +1123,11 @@ export function PainelOperacoes() {
             )}
           </div>
           {detalheLgpd ? (
-            <div className="border-t border-linha bg-[#f8fafb] px-4 py-4">
+            <div className="border-t border-linha bg-superficie px-4 py-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="text-base font-semibold">Detalhe do protocolo {detalheLgpd.protocolo}</h3>
-                  <p className="mt-1 text-sm text-[#596273]">
+                  <p className="mt-1 text-sm text-texto-suave">
                     {rotuloTipoLgpd(detalheLgpd.tipo)} | {rotuloStatusLgpd(detalheLgpd.status)} | Paciente {detalheLgpd.pacienteId}
                   </p>
                 </div>
@@ -1159,10 +1159,10 @@ export function PainelOperacoes() {
                           {rotuloStatusLgpd(evento.status)}
                         </span>
                       </div>
-                      <span className="text-xs text-[#596273]">{formatarData(evento.criadoEm)}</span>
+                      <span className="text-xs text-texto-suave">{formatarData(evento.criadoEm)}</span>
                     </div>
                     <p className="mt-2 text-sm text-tinta">{evento.detalhes ?? 'Sem detalhes.'}</p>
-                    <p className="mt-1 break-all text-xs text-[#596273]">Responsavel: {evento.responsavelId ?? '-'}</p>
+                    <p className="mt-1 break-all text-xs text-texto-suave">Responsavel: {evento.responsavelId ?? '-'}</p>
                   </article>
                 ))}
               </div>
@@ -1171,7 +1171,7 @@ export function PainelOperacoes() {
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <h3 className="text-base font-semibold">Resposta ao paciente</h3>
-                      <p className="mt-1 text-xs text-[#596273]">
+                      <p className="mt-1 text-xs text-texto-suave">
                         Canais sugeridos: {respostaLgpd.canaisSugeridos.join(', ')}
                       </p>
                     </div>
@@ -1184,13 +1184,13 @@ export function PainelOperacoes() {
                     </Botao>
                   </div>
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                      <p className="text-xs font-semibold text-[#596273]">Email</p>
+                    <div className="rounded-md border border-linha bg-superficie p-3">
+                      <p className="text-xs font-semibold text-texto-suave">Email</p>
                       <p className="mt-1 text-sm font-semibold">{respostaLgpd.assuntoEmail}</p>
-                      <pre className="mt-2 whitespace-pre-wrap break-words text-xs text-[#596273]">{respostaLgpd.corpoEmail}</pre>
+                      <pre className="mt-2 whitespace-pre-wrap break-words text-xs text-texto-suave">{respostaLgpd.corpoEmail}</pre>
                     </div>
-                    <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                      <p className="text-xs font-semibold text-[#596273]">WhatsApp</p>
+                    <div className="rounded-md border border-linha bg-superficie p-3">
+                      <p className="text-xs font-semibold text-texto-suave">WhatsApp</p>
                       <p className="mt-2 break-words text-sm text-tinta">{respostaLgpd.textoWhatsapp}</p>
                     </div>
                   </div>
@@ -1199,7 +1199,7 @@ export function PainelOperacoes() {
             </div>
           ) : null}
           <div className="flex flex-col gap-2 border-t border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <span className="text-sm text-[#596273]">
+            <span className="text-sm text-texto-suave">
               Pagina {solicitacoesLgpd?.pagina ?? 1} de {totalPaginasLgpd} | {solicitacoesLgpd?.total ?? 0} protocolos
             </span>
             <div className="flex gap-2">
@@ -1226,7 +1226,7 @@ export function PainelOperacoes() {
             <div className="flex items-center gap-2">
               <History size={19} className="text-primaria" />
               <h2 className="text-base font-semibold">Auditoria sensivel</h2>
-              <span className="text-sm text-[#596273]">{dados?.auditoria.length ?? 0} eventos</span>
+              <span className="text-sm text-texto-suave">{dados?.auditoria.length ?? 0} eventos</span>
             </div>
             <form onSubmit={filtrarAuditoria} className="grid gap-2 md:grid-cols-3 lg:grid-cols-8">
               <select
@@ -1290,19 +1290,19 @@ export function PainelOperacoes() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <strong className="text-sm">{evento.acao}</strong>
-                      <span className="rounded-sm bg-[#e8eef8] px-2 py-1 text-xs font-semibold text-primaria">
+                      <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
                         {evento.recursoTipo ?? 'recurso'}
                       </span>
                     </div>
-                    <p className="mt-1 break-all text-xs text-[#596273]">{evento.recursoId ?? '-'}</p>
-                    <p className="mt-1 text-xs text-[#596273]">{formatarData(evento.criadoEm)}</p>
+                    <p className="mt-1 break-all text-xs text-texto-suave">{evento.recursoId ?? '-'}</p>
+                    <p className="mt-1 text-xs text-texto-suave">{formatarData(evento.criadoEm)}</p>
                   </div>
-                  <div className="text-xs text-[#596273]">
+                  <div className="text-xs text-texto-suave">
                     <p className="break-all">Usuario: {evento.usuarioId ?? '-'}</p>
                     <p className="mt-1 break-all">IP: {evento.ip ?? '-'}</p>
                     <p className="mt-1 break-all">Agent: {evento.userAgent ?? '-'}</p>
                   </div>
-                  <p className="break-all text-xs text-[#596273]">{resumirMetadados(evento.metadados)}</p>
+                  <p className="break-all text-xs text-texto-suave">{resumirMetadados(evento.metadados)}</p>
                 </div>
               ))
             ) : (
@@ -1310,7 +1310,7 @@ export function PainelOperacoes() {
             )}
           </div>
           <div className="flex flex-col gap-2 border-t border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <span className="text-sm text-[#596273]">
+            <span className="text-sm text-texto-suave">
               Pagina {auditoriaPaginada?.pagina ?? 1} de {totalPaginasAuditoria} | {auditoriaPaginada?.total ?? 0} eventos
             </span>
             <div className="flex gap-2">
@@ -1337,7 +1337,7 @@ export function PainelOperacoes() {
             <div className="flex items-center justify-between border-b border-linha px-4 py-3">
               <div>
                 <h2 className="text-base font-semibold">Outbox com falha</h2>
-                <span className="text-sm text-[#596273]">{falhasPaginadas?.total ?? dados?.falhas.length ?? 0} eventos</span>
+                <span className="text-sm text-texto-suave">{falhasPaginadas?.total ?? dados?.falhas.length ?? 0} eventos</span>
               </div>
               <Botao type="button" onClick={exportarOutbox} disabled={!dados?.falhas.length}>
                 <Download size={16} />
@@ -1377,13 +1377,13 @@ export function PainelOperacoes() {
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <strong>{falha.tipo}</strong>
-                        <span className="rounded-sm bg-[#f8e8e4] px-2 py-1 text-xs font-semibold text-perigo">
+                        <span className="rounded-sm bg-perigo-suave px-2 py-1 text-xs font-semibold text-perigo">
                           {falha.tentativas} tentativas
                         </span>
                       </div>
-                      <p className="mt-1 text-sm text-[#596273]">{falha.erro ?? 'Erro nao informado'}</p>
-                      <p className="mt-1 break-all text-xs text-[#596273]">{resumirPayload(falha.payload)}</p>
-                      <p className="mt-1 text-xs text-[#596273]">{formatarData(falha.criadoEm)}</p>
+                      <p className="mt-1 text-sm text-texto-suave">{falha.erro ?? 'Erro nao informado'}</p>
+                      <p className="mt-1 break-all text-xs text-texto-suave">{resumirPayload(falha.payload)}</p>
+                      <p className="mt-1 text-xs text-texto-suave">{formatarData(falha.criadoEm)}</p>
                     </div>
                     <Botao onClick={() => reprocessar(falha.id)} disabled={reprocessandoId === falha.id}>
                       <Undo2 size={16} />
@@ -1396,7 +1396,7 @@ export function PainelOperacoes() {
               )}
             </div>
             <div className="flex flex-col gap-2 border-t border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
-              <span className="text-sm text-[#596273]">
+              <span className="text-sm text-texto-suave">
                 Pagina {falhasPaginadas?.pagina ?? 1} de {totalPaginasOutbox} | {falhasPaginadas?.total ?? 0} eventos
               </span>
               <div className="flex gap-2">
@@ -1432,16 +1432,16 @@ export function PainelOperacoes() {
                       <span
                         className={
                           item.status === 'sincronizado'
-                            ? 'rounded-sm bg-[#e6f4ea] px-2 py-1 text-xs font-semibold text-sucesso'
-                            : 'rounded-sm bg-[#f8e8e4] px-2 py-1 text-xs font-semibold text-perigo'
+                            ? 'rounded-sm bg-sucesso-suave px-2 py-1 text-xs font-semibold text-sucesso'
+                            : 'rounded-sm bg-perigo-suave px-2 py-1 text-xs font-semibold text-perigo'
                         }
                       >
                         {item.status}
                       </span>
                     </div>
-                    <p className="mt-1 break-all text-xs text-[#596273]">{item.idLocal}</p>
-                    <p className="mt-1 text-xs text-[#596273]">{item.recursoId ?? item.erro ?? '-'}</p>
-                    <p className="mt-1 text-xs text-[#596273]">{formatarData(item.criadoEm)}</p>
+                    <p className="mt-1 break-all text-xs text-texto-suave">{item.idLocal}</p>
+                    <p className="mt-1 text-xs text-texto-suave">{item.recursoId ?? item.erro ?? '-'}</p>
+                    <p className="mt-1 text-xs text-texto-suave">{formatarData(item.criadoEm)}</p>
                   </div>
                 ))
               ) : (

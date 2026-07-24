@@ -216,19 +216,19 @@ function nomeTemplate(templates: TemplateMensagemApi[], mensagem: MensagemNotifi
 }
 
 function corStatusMensagem(status: MensagemNotificacaoApi['status']) {
-  if (status === 'nota') return 'border-[#e6d6a8] bg-[#fffaf0] text-[#775c18]';
-  if (status === 'recebido') return 'border-[#c6d8bf] bg-[#f2f8ef] text-[#3d6730]';
-  if (status === 'enviado') return 'border-[#b8dfc1] bg-[#eef7f0] text-[#245b33]';
-  if (status === 'falhou') return 'border-[#f1b3b3] bg-[#fff0f0] text-[#8c2f2f]';
-  if (status === 'processando') return 'border-[#bcd4f6] bg-[#eef5ff] text-[#2d5282]';
-  return 'border-linha bg-[#eef3f6] text-[#596273]';
+  if (status === 'nota') return 'border-alerta-borda bg-alerta-suave text-alerta-forte';
+  if (status === 'recebido') return 'border-sucesso-borda bg-sucesso-suave text-sucesso-forte';
+  if (status === 'enviado') return 'border-sucesso-borda bg-sucesso-suave text-sucesso-forte';
+  if (status === 'falhou') return 'border-perigo-borda bg-perigo-suave text-perigo-forte';
+  if (status === 'processando') return 'border-primaria-suave bg-superficie-hover text-primaria-forte';
+  return 'border-linha bg-superficie-hover text-texto-suave';
 }
 
 function corStatusMeta(status?: string) {
-  if (status === 'delivered' || status === 'read') return 'border-[#b8dfc1] bg-[#eef7f0] text-[#245b33]';
-  if (status === 'failed') return 'border-[#f1b3b3] bg-[#fff0f0] text-[#8c2f2f]';
-  if (status === 'sent' || status === 'accepted') return 'border-[#bcd4f6] bg-[#eef5ff] text-[#2d5282]';
-  return 'border-linha bg-white text-[#596273]';
+  if (status === 'delivered' || status === 'read') return 'border-sucesso-borda bg-sucesso-suave text-sucesso-forte';
+  if (status === 'failed') return 'border-perigo-borda bg-perigo-suave text-perigo-forte';
+  if (status === 'sent' || status === 'accepted') return 'border-primaria-suave bg-superficie-hover text-primaria-forte';
+  return 'border-linha bg-white text-texto-suave';
 }
 
 function obterContatoMensagem(mensagem: MensagemNotificacaoApi, ultimoStatusMeta?: UltimoStatusMeta) {
@@ -563,7 +563,7 @@ export function PainelComunicacoes() {
       <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-base font-semibold">Comunicacoes</h2>
-          <p className="mt-1 text-sm text-[#596273]">
+          <p className="mt-1 text-sm text-texto-suave">
             {canais.length} canais, {templates.length} templates, {mensagens.length} mensagens persistidas
           </p>
         </div>
@@ -576,7 +576,7 @@ export function PainelComunicacoes() {
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       <BarraCarregamento visivel={carregando} />
       {sucesso ? (
-        <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+        <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
           <CheckCircle2 size={16} />
           {sucesso}
         </div>
@@ -622,7 +622,7 @@ export function PainelComunicacoes() {
               />
             </div>
           </div>
-          <label className="mt-3 flex items-center justify-between rounded-md border border-linha bg-[#f7f8fa] px-3 py-2">
+          <label className="mt-3 flex items-center justify-between rounded-md border border-linha bg-fundo px-3 py-2">
             <span className="text-sm font-medium text-tinta">Ativo</span>
             <input
               type="checkbox"
@@ -731,7 +731,7 @@ export function PainelComunicacoes() {
               />
             </div>
           </div>
-          <label className="mt-3 flex items-center justify-between rounded-md border border-linha bg-[#f7f8fa] px-3 py-2">
+          <label className="mt-3 flex items-center justify-between rounded-md border border-linha bg-fundo px-3 py-2">
             <span className="text-sm font-medium text-tinta">Aprovado para envio</span>
             <input
               type="checkbox"
@@ -855,15 +855,15 @@ export function PainelComunicacoes() {
                         <Icone size={16} className="shrink-0 text-primaria" />
                         <span className="truncate">{canal.nome}</span>
                       </span>
-                      <span className="rounded-sm bg-[#eef3f6] px-2 py-1 text-xs font-semibold text-[#596273]">{canal.tipo}</span>
+                      <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-texto-suave">{canal.tipo}</span>
                     </div>
-                    <p className="text-xs text-[#596273]">{canal.ativo ? 'Ativo' : 'Inativo'}</p>
+                    <p className="text-xs text-texto-suave">{canal.ativo ? 'Ativo' : 'Inativo'}</p>
                     <div className="grid gap-1">
                       {templates
                         .filter((template) => template.canal === canal.tipo)
                         .slice(0, 3)
                         .map((template) => (
-                          <p key={template.id} className="truncate text-xs text-[#596273]">
+                          <p key={template.id} className="truncate text-xs text-texto-suave">
                             {resumirTemplateInventario(template)}
                           </p>
                         ))}
@@ -884,12 +884,12 @@ export function PainelComunicacoes() {
             <Inbox size={18} className="text-primaria" />
             <div>
               <h3 className="text-sm font-semibold">Inbox WhatsApp</h3>
-              <p className="text-xs text-[#596273]">
+              <p className="text-xs text-texto-suave">
                 {conversasWhatsapp.length} conversas, {mensagens.filter((mensagem) => obterDirecaoMensagem(mensagem) === 'recebida').length} entradas
               </p>
             </div>
           </div>
-          <div className="flex rounded-md border border-linha bg-[#f7f8fa] p-1 text-xs font-semibold text-[#596273]">
+          <div className="flex rounded-md border border-linha bg-fundo p-1 text-xs font-semibold text-texto-suave">
             {(['todas', 'recebidas', 'falhas'] as const).map((filtro) => (
               <button
                 key={filtro}
@@ -912,30 +912,30 @@ export function PainelComunicacoes() {
                     key={conversa.id}
                     type="button"
                     onClick={() => setConversaSelecionadaId(conversa.id)}
-                    className={`grid w-full gap-2 px-4 py-3 text-left text-sm ${selecionada ? 'bg-[#eef7f0]' : 'bg-white hover:bg-[#f7f8fa]'}`}
+                    className={`grid w-full gap-2 px-4 py-3 text-left text-sm ${selecionada ? 'bg-sucesso-suave' : 'bg-white hover:bg-fundo'}`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <strong className="block truncate">{conversa.titulo}</strong>
-                        <p className="mt-1 truncate text-xs text-[#596273]">{conversa.contato}</p>
+                        <p className="mt-1 truncate text-xs text-texto-suave">{conversa.contato}</p>
                       </div>
-                      <span className="shrink-0 text-xs font-medium text-[#596273]">{conversa.ultimaData ?? 'sem data'}</span>
+                      <span className="shrink-0 text-xs font-medium text-texto-suave">{conversa.ultimaData ?? 'sem data'}</span>
                     </div>
-                    <p className="truncate text-xs text-[#596273]">{conversa.ultimaMensagem}</p>
+                    <p className="truncate text-xs text-texto-suave">{conversa.ultimaMensagem}</p>
                     <div className="flex flex-wrap gap-2">
-                      <span className="rounded-sm border border-[#c6d8bf] bg-[#f2f8ef] px-2 py-1 text-xs font-semibold text-[#3d6730]">
+                      <span className="rounded-sm border border-sucesso-borda bg-sucesso-suave px-2 py-1 text-xs font-semibold text-sucesso-forte">
                         {conversa.recebidas} recebidas
                       </span>
-                      <span className="rounded-sm border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                      <span className="rounded-sm border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
                         {conversa.enviadas} enviadas
                       </span>
                       {conversa.pendentes ? (
-                        <span className="rounded-sm border border-[#f1b3b3] bg-[#fff0f0] px-2 py-1 text-xs font-semibold text-[#8c2f2f]">
+                        <span className="rounded-sm border border-perigo-borda bg-perigo-suave px-2 py-1 text-xs font-semibold text-perigo-forte">
                           {conversa.pendentes} falhas
                         </span>
                       ) : null}
                       {conversa.statusAtendimento ? (
-                        <span className="rounded-sm border border-[#e6d6a8] bg-[#fffaf0] px-2 py-1 text-xs font-semibold text-[#775c18]">
+                        <span className="rounded-sm border border-alerta-borda bg-alerta-suave px-2 py-1 text-xs font-semibold text-alerta-forte">
                           {conversa.statusAtendimento === 'resolvido' ? 'resolvida' : 'em acompanhamento'}
                         </span>
                       ) : null}
@@ -951,7 +951,7 @@ export function PainelComunicacoes() {
                   <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
                     <div className="min-w-0">
                       <strong className="block truncate text-sm">{conversaSelecionada.titulo}</strong>
-                      <p className="mt-1 truncate text-xs text-[#596273]">
+                      <p className="mt-1 truncate text-xs text-texto-suave">
                         {conversaSelecionada.contato}
                         {conversaSelecionada.statusAtendimento
                           ? `, ${conversaSelecionada.statusAtendimento === 'resolvido' ? 'resolvida' : 'em acompanhamento'}`
@@ -964,7 +964,7 @@ export function PainelComunicacoes() {
                     </Botao>
                   </div>
                   {!conversaSelecionada.pacienteId ? (
-                    <div className="grid gap-3 border-b border-linha bg-[#fffaf0] px-4 py-3 text-sm lg:grid-cols-[1fr_auto] lg:items-end">
+                    <div className="grid gap-3 border-b border-linha bg-alerta-suave px-4 py-3 text-sm lg:grid-cols-[1fr_auto] lg:items-end">
                       <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
                         <div className="space-y-1.5">
                           <Rotulo htmlFor="whatsapp-associar-paciente">Associar contato a paciente</Rotulo>
@@ -983,7 +983,7 @@ export function PainelComunicacoes() {
                             ))}
                           </Selecao>
                         </div>
-                        <label className="flex items-center gap-2 rounded-md border border-linha bg-white px-3 py-2 text-xs font-medium text-[#596273]">
+                        <label className="flex items-center gap-2 rounded-md border border-linha bg-white px-3 py-2 text-xs font-medium text-texto-suave">
                           <input
                             type="checkbox"
                             checked={atualizarContatoPaciente}
@@ -1037,7 +1037,7 @@ export function PainelComunicacoes() {
                       Registrar
                     </Botao>
                   </div>
-                  <div className="max-h-[520px] space-y-3 overflow-auto bg-[#f7f8fa] p-4">
+                  <div className="max-h-[520px] space-y-3 overflow-auto bg-fundo p-4">
                     {conversaSelecionada.mensagens.map((mensagem) => {
                       const recebida = obterDirecaoMensagem(mensagem) === 'recebida';
                       const nota = obterDirecaoMensagem(mensagem) === 'nota';
@@ -1046,15 +1046,15 @@ export function PainelComunicacoes() {
                         <div key={mensagem.id} className={`flex ${nota ? 'justify-center' : recebida ? 'justify-start' : 'justify-end'}`}>
                           <div
                             className={`max-w-[78%] rounded-lg border px-3 py-2 text-sm shadow-sm ${
-                              nota ? 'border-[#e6d6a8] bg-[#fffaf0]' : recebida ? 'border-linha bg-white' : 'border-[#c6d8bf] bg-[#eef7f0]'
+                              nota ? 'border-alerta-borda bg-alerta-suave' : recebida ? 'border-linha bg-white' : 'border-sucesso-borda bg-sucesso-suave'
                             }`}
                           >
                             <p className="break-words">{resumirMensagem(mensagem, templates)}</p>
-                            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium text-[#596273]">
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium text-texto-suave">
                               <span>{nota ? 'Nota interna' : recebida ? 'Recebida' : 'Enviada'} {formatarDataIso(mensagem.criadoEm) ?? 'sem data'}</span>
                               <span className={`rounded-sm border px-1.5 py-0.5 ${corStatusMensagem(mensagem.status)}`}>{mensagem.status}</span>
                               {nota ? (
-                                <span className="rounded-sm border border-[#e6d6a8] bg-white px-1.5 py-0.5 text-[#775c18]">
+                                <span className="rounded-sm border border-alerta-borda bg-white px-1.5 py-0.5 text-alerta-forte">
                                   {obterTextoPayload(mensagem.payload, 'statusAtendimento') === 'resolvido' ? 'resolvido' : 'acompanhamento'}
                                 </span>
                               ) : null}
@@ -1064,7 +1064,7 @@ export function PainelComunicacoes() {
                                 </span>
                               ) : null}
                             </div>
-                            {mensagem.erro ? <p className="mt-2 break-words text-xs font-medium text-[#8c2f2f]">{mensagem.erro}</p> : null}
+                            {mensagem.erro ? <p className="mt-2 break-words text-xs font-medium text-perigo-forte">{mensagem.erro}</p> : null}
                           </div>
                         </div>
                       );
@@ -1100,18 +1100,18 @@ export function PainelComunicacoes() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <strong className="truncate">{canalMensagem?.nome ?? nomeCanal(canais, mensagem)}</strong>
-                      <span className="rounded-sm bg-[#eef3f6] px-2 py-1 text-xs font-semibold text-[#596273]">
+                      <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-texto-suave">
                         {nomeTemplate(templates, mensagem)}
                       </span>
                     </div>
-                    <p className="mt-1 truncate text-xs text-[#596273]">{destino}</p>
-                    <p className="mt-1 truncate text-xs text-[#596273]">
+                    <p className="mt-1 truncate text-xs text-texto-suave">{destino}</p>
+                    <p className="mt-1 truncate text-xs text-texto-suave">
                       {direcao === 'nota' ? 'Nota interna' : direcao === 'recebida' ? 'Recebida' : 'Criada'} {criadoEm ?? 'sem data'}{enviadoEm ? `, enviada ${enviadoEm}` : ''}
                     </p>
                     {direcao === 'recebida' || direcao === 'nota' ? (
-                      <p className="mt-1 break-words text-xs text-[#596273]">{resumirMensagem(mensagem, templates)}</p>
+                      <p className="mt-1 break-words text-xs text-texto-suave">{resumirMensagem(mensagem, templates)}</p>
                     ) : null}
-                    {mensagem.erro ? <p className="mt-1 break-words text-xs font-medium text-[#8c2f2f]">{mensagem.erro}</p> : null}
+                    {mensagem.erro ? <p className="mt-1 break-words text-xs font-medium text-perigo-forte">{mensagem.erro}</p> : null}
                   </div>
                   <span
                     className={`w-fit rounded-sm border px-2 py-1 text-xs font-semibold ${corStatusMensagem(mensagem.status)}`}
@@ -1125,15 +1125,15 @@ export function PainelComunicacoes() {
                       Meta: {formatarStatusMeta(ultimoStatusMeta?.status)}
                     </span>
                   ) : direcao === 'recebida' ? (
-                    <span className="w-fit rounded-sm border border-[#c6d8bf] bg-[#f2f8ef] px-2 py-1 text-xs font-semibold text-[#3d6730]">
+                    <span className="w-fit rounded-sm border border-sucesso-borda bg-sucesso-suave px-2 py-1 text-xs font-semibold text-sucesso-forte">
                       Entrada
                     </span>
                   ) : direcao === 'nota' ? (
-                    <span className="w-fit rounded-sm border border-[#e6d6a8] bg-[#fffaf0] px-2 py-1 text-xs font-semibold text-[#775c18]">
+                    <span className="w-fit rounded-sm border border-alerta-borda bg-alerta-suave px-2 py-1 text-xs font-semibold text-alerta-forte">
                       Nota interna
                     </span>
                   ) : (
-                    <span className="w-fit rounded-sm border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                    <span className="w-fit rounded-sm border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
                       {canalMensagem?.tipo ?? 'canal'}
                     </span>
                   )}

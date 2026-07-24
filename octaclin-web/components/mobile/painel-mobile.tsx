@@ -233,7 +233,7 @@ export function PainelMobile() {
       <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-base font-semibold">Operacoes mobile</h2>
-          <p className="mt-1 text-sm text-[#596273]">
+          <p className="mt-1 text-sm text-texto-suave">
             {opcoesPacientes.length} pacientes, {logsDiario.length} diarios, {arquivosMidia.length} midias, {acompanhantes.length} acompanhantes
           </p>
         </div>
@@ -246,7 +246,7 @@ export function PainelMobile() {
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       <BarraCarregamento visivel={carregando} />
       {sucesso ? (
-        <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+        <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
           <CheckCircle2 size={16} />
           {sucesso}
         </div>
@@ -522,7 +522,7 @@ export function PainelMobile() {
               logsDiario.map((log) => (
                 <div key={log.id} className="grid gap-1 px-4 py-3 text-sm">
                   <strong>{log.tipo}</strong>
-                  <p className="break-all text-xs text-[#596273]">{resumirJson(log.valor)}</p>
+                  <p className="break-all text-xs text-texto-suave">{resumirJson(log.valor)}</p>
                 </div>
               ))
             ) : (
@@ -536,24 +536,24 @@ export function PainelMobile() {
             <h3 className="text-sm font-semibold">Resultados</h3>
           </div>
           <div className="grid gap-3 p-4 text-sm">
-            <div className="rounded-md border border-linha bg-[#f7f8fa] p-3">
-              <p className="text-xs font-semibold uppercase text-[#596273]">Upload URL</p>
+            <div className="rounded-md border border-linha bg-fundo p-3">
+              <p className="text-xs font-semibold uppercase text-texto-suave">Upload URL</p>
               <p className="mt-1 break-all text-xs text-tinta">{uploadUrl ?? 'Nenhum upload solicitado.'}</p>
             </div>
-            <div className="rounded-md border border-linha bg-[#f7f8fa] p-3">
-              <p className="text-xs font-semibold uppercase text-[#596273]">Midias</p>
+            <div className="rounded-md border border-linha bg-fundo p-3">
+              <p className="text-xs font-semibold uppercase text-texto-suave">Midias</p>
               <p className="mt-1 break-all text-xs text-tinta">
                 {arquivosMidia.map((arquivo) => `${arquivo.tipo}:${arquivo.id}`).join(', ') || 'Nenhuma midia persistida.'}
               </p>
             </div>
-            <div className="rounded-md border border-linha bg-[#f7f8fa] p-3">
-              <p className="text-xs font-semibold uppercase text-[#596273]">Acompanhantes</p>
+            <div className="rounded-md border border-linha bg-fundo p-3">
+              <p className="text-xs font-semibold uppercase text-texto-suave">Acompanhantes</p>
               <p className="mt-1 break-all text-xs text-tinta">
                 {acompanhantes.map((item) => `${item.pacienteId}:${item.ativo ? 'ativo' : 'inativo'}`).join(', ') || 'Nenhum acompanhante persistido.'}
               </p>
             </div>
-            <div className="rounded-md border border-linha bg-[#f7f8fa] p-3">
-              <p className="text-xs font-semibold uppercase text-[#596273]">Sincronizacao</p>
+            <div className="rounded-md border border-linha bg-fundo p-3">
+              <p className="text-xs font-semibold uppercase text-texto-suave">Sincronizacao</p>
               <p className="mt-1 break-all text-xs text-tinta">
                 {resultadoSincronizacao ? resumirJson(resultadoSincronizacao.resultados) : 'Nenhum lote sincronizado.'}
               </p>

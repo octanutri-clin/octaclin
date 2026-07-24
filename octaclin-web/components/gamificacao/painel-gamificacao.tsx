@@ -251,7 +251,7 @@ export function PainelGamificacao() {
       <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-base font-semibold">Gamificacao</h2>
-          <p className="mt-1 text-sm text-[#596273]">
+          <p className="mt-1 text-sm text-texto-suave">
             {circulos.length} circulos, {desafios.length} desafios, {badges.length} badges persistidos
           </p>
         </div>
@@ -264,7 +264,7 @@ export function PainelGamificacao() {
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       <BarraCarregamento visivel={carregando} />
       {sucesso ? (
-        <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+        <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
           <CheckCircle2 size={16} />
           {sucesso}
         </div>
@@ -332,7 +332,7 @@ export function PainelGamificacao() {
               />
             </div>
           </div>
-          <label className="mt-3 flex items-center justify-between rounded-md border border-linha bg-[#f7f8fa] px-3 py-2">
+          <label className="mt-3 flex items-center justify-between rounded-md border border-linha bg-fundo px-3 py-2">
             <span className="text-sm font-medium text-tinta">Privado</span>
             <input
               type="checkbox"
@@ -562,7 +562,7 @@ export function PainelGamificacao() {
                     <strong className="truncate">{nomePaciente(listaPacientes, item.pacienteId)}</strong>
                     <span className="font-semibold">{Number(item.pontos).toFixed(1)} pts</span>
                   </div>
-                  <p className="break-all text-xs text-[#596273]">{resumirJson(item.progresso)}</p>
+                  <p className="break-all text-xs text-texto-suave">{resumirJson(item.progresso)}</p>
                 </div>
               ))
             ) : (
@@ -584,16 +584,16 @@ export function PainelGamificacao() {
             <h3 className="text-sm font-semibold">Registros persistidos</h3>
           </div>
           <div className="grid gap-3 p-4 text-sm">
-            <div className="rounded-md border border-linha bg-[#f7f8fa] p-3">
-              <p className="text-xs font-semibold uppercase text-[#596273]">Circulos</p>
+            <div className="rounded-md border border-linha bg-fundo p-3">
+              <p className="text-xs font-semibold uppercase text-texto-suave">Circulos</p>
               <p className="mt-1 text-tinta">{circulos.map((item) => item.nome).join(', ') || 'Nenhum circulo criado.'}</p>
             </div>
-            <div className="rounded-md border border-linha bg-[#f7f8fa] p-3">
-              <p className="text-xs font-semibold uppercase text-[#596273]">Desafios</p>
+            <div className="rounded-md border border-linha bg-fundo p-3">
+              <p className="text-xs font-semibold uppercase text-texto-suave">Desafios</p>
               <p className="mt-1 text-tinta">{desafios.map((item) => item.titulo).join(', ') || 'Nenhum desafio criado.'}</p>
             </div>
-            <div className="rounded-md border border-linha bg-[#f7f8fa] p-3">
-              <p className="text-xs font-semibold uppercase text-[#596273]">Badges</p>
+            <div className="rounded-md border border-linha bg-fundo p-3">
+              <p className="text-xs font-semibold uppercase text-texto-suave">Badges</p>
               <p className="mt-1 text-tinta">{badges.map((item) => item.nome).join(', ') || 'Nenhum badge criado.'}</p>
             </div>
           </div>

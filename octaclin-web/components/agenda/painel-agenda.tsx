@@ -273,7 +273,7 @@ export function PainelAgenda() {
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold">Novo agendamento</h2>
-            <p className="mt-1 text-sm text-[#596273]">Cria a consulta interna, sincroniza com Google Calendar e envia os avisos.</p>
+            <p className="mt-1 text-sm text-texto-suave">Cria a consulta interna, sincroniza com Google Calendar e envia os avisos.</p>
           </div>
           <CalendarCheck size={20} className="text-primaria" />
         </div>
@@ -366,7 +366,7 @@ export function PainelAgenda() {
             />
           </label>
 
-          <label className="flex items-center gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 py-2 text-sm text-[#596273]">
+          <label className="flex items-center gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm text-texto-suave">
             <input
               type="checkbox"
               checked={formulario.enviarNotificacoes}
@@ -378,7 +378,7 @@ export function PainelAgenda() {
 
           {erro ? <AlertaOperacional mensagem={erro} /> : null}
           {sucesso ? (
-            <div className="flex items-start gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+            <div className="flex items-start gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
               <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
               <span>{sucesso}</span>
             </div>
@@ -401,7 +401,7 @@ export function PainelAgenda() {
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-semibold">Consultas agendadas</h2>
-            <p className="mt-1 text-sm text-[#596273]">{proximasConsultas.length} consultas no periodo carregado</p>
+            <p className="mt-1 text-sm text-texto-suave">{proximasConsultas.length} consultas no periodo carregado</p>
           </div>
           <BarraCarregamento visivel={carregando} rotulo="Carregando agenda" />
         </div>
@@ -412,18 +412,18 @@ export function PainelAgenda() {
               const paciente = pacientePorId(pacientesLista, consulta.pacienteId);
               const profissional = profissionalPorId(profissionaisLista, consulta.profissionalId);
               return (
-                <article key={consulta.id} className="rounded-lg border border-linha bg-[#f8fafb] p-3">
+                <article key={consulta.id} className="rounded-lg border border-linha bg-superficie p-3">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="truncate text-sm font-semibold text-tinta">
                           {consulta.pacienteNome ?? paciente?.nome ?? consulta.titulo}
                         </h3>
-                        <span className="rounded-md border border-[#bcd4f6] bg-[#eef5ff] px-2 py-1 text-xs font-medium text-[#2d5282]">
+                        <span className="rounded-md border border-primaria-suave bg-superficie-hover px-2 py-1 text-xs font-medium text-primaria-forte">
                           {consulta.status}
                         </span>
                       </div>
-                      <div className="mt-2 grid gap-1 text-sm text-[#596273] sm:grid-cols-2">
+                      <div className="mt-2 grid gap-1 text-sm text-texto-suave sm:grid-cols-2">
                         <p className="flex min-w-0 items-center gap-2">
                           <Clock size={15} className="shrink-0" />
                           <span>{formatarDataHora(consulta.inicioEm)}</span>
@@ -437,7 +437,7 @@ export function PainelAgenda() {
                       </div>
                     </div>
 
-                    <div className="grid shrink-0 gap-2 text-xs text-[#596273] sm:grid-cols-2 lg:w-[360px]">
+                    <div className="grid shrink-0 gap-2 text-xs text-texto-suave sm:grid-cols-2 lg:w-[360px]">
                       <span className="inline-flex items-center gap-2 rounded-md border border-linha bg-white px-2 py-2">
                         <Mail size={14} />
                         {statusNotificacao(consulta.notificacoes, 'email')}
@@ -457,7 +457,7 @@ export function PainelAgenda() {
                     </div>
                   </div>
 
-                  {consulta.observacoes ? <p className="mt-3 text-sm text-[#596273]">{consulta.observacoes}</p> : null}
+                  {consulta.observacoes ? <p className="mt-3 text-sm text-texto-suave">{consulta.observacoes}</p> : null}
                   {consulta.googleEventHtmlLink ? (
                     <a
                       href={consulta.googleEventHtmlLink}
@@ -473,7 +473,7 @@ export function PainelAgenda() {
                     <div className="mt-3 grid gap-3 border-t border-linha pt-3 xl:grid-cols-[minmax(0,1fr)_minmax(220px,320px)]">
                       <form onSubmit={(evento) => remarcar(evento, consulta)} className="grid gap-2">
                         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_120px_minmax(140px,1fr)]">
-                          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                             Nova data e hora
                             <input
                               name="inicioEm"
@@ -482,7 +482,7 @@ export function PainelAgenda() {
                               className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
                             />
                           </label>
-                          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                             Nova duracao
                             <input
                               name="duracaoMinutos"
@@ -494,7 +494,7 @@ export function PainelAgenda() {
                               className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
                             />
                           </label>
-                          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                             Novo local
                             <input
                               name="local"
@@ -512,7 +512,7 @@ export function PainelAgenda() {
                       </form>
 
                       <form onSubmit={(evento) => cancelar(evento, consulta)} className="grid gap-2">
-                        <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                        <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                           Motivo do cancelamento
                           <input
                             name="motivo"

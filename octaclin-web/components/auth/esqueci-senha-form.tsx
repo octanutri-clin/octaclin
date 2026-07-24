@@ -40,7 +40,7 @@ export function EsqueciSenhaForm() {
     <main className="min-h-screen bg-fundo px-6 py-10 text-tinta">
       <div className="mx-auto grid w-full max-w-md gap-6">
         <header>
-          <p className="text-xs font-semibold uppercase text-[#596273]">OctaClin</p>
+          <p className="text-xs font-semibold uppercase text-texto-suave">OctaClin</p>
           <h1 className="mt-1 text-3xl font-bold">Recuperar senha</h1>
         </header>
 
@@ -60,14 +60,14 @@ export function EsqueciSenhaForm() {
             <Campo value={email} onChange={(event) => setEmail(event.target.value)} type="email" required />
           </label>
 
-          {erro ? <div className="rounded-md border border-[#efb8ad] bg-[#fff4f1] px-3 py-2 text-sm text-perigo">{erro}</div> : null}
+          {erro ? <div className="rounded-md border border-perigo-borda bg-perigo-suave px-3 py-2 text-sm text-perigo">{erro}</div> : null}
           {mensagem ? (
-            <div className="grid gap-2 rounded-md border border-[#b8dfc1] bg-[#eef7f0] px-3 py-2 text-sm text-[#245b33]">
+            <div className="grid gap-2 rounded-md border border-sucesso-borda bg-sucesso-suave px-3 py-2 text-sm text-sucesso-forte">
               <span className="inline-flex items-center gap-2">
                 <CheckCircle2 size={16} />
                 {mensagem}
               </span>
-              {link ? <span className="break-all text-xs text-[#596273]">{link}</span> : null}
+              {link ? <span className="break-all text-xs text-texto-suave">{link}</span> : null}
             </div>
           ) : null}
 

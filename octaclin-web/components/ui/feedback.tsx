@@ -12,7 +12,7 @@ export function AlertaOperacional({ mensagem, className }: AlertaOperacionalProp
     <div
       role="alert"
       className={cn(
-        'flex items-start gap-2 rounded-lg border border-[#efb8ad] bg-[#fff4f1] px-4 py-3 text-sm text-perigo',
+        'flex items-start gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo',
         className
       )}
     >
@@ -31,7 +31,7 @@ export function BarraCarregamento({ visivel, rotulo = 'Atualizando dados' }: Bar
   if (!visivel) return null;
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-linha bg-white px-4 py-3 text-sm text-[#596273]">
+    <div className="flex items-center gap-2 rounded-lg border border-linha bg-white px-4 py-3 text-sm text-texto-suave">
       <Loader2 size={16} className="animate-spin text-primaria" />
       <span>{rotulo}</span>
     </div>
@@ -48,9 +48,9 @@ interface EstadoVazioProps {
 export function EstadoVazio({ titulo, descricao, acao, className }: EstadoVazioProps) {
   return (
     <div className={cn('flex flex-col items-center justify-center gap-2 px-4 py-8 text-center', className)}>
-      <Inbox size={24} className="text-[#8a94a3]" />
+      <Inbox size={24} className="text-texto-sutil" />
       <p className="text-sm font-medium text-tinta">{titulo}</p>
-      {descricao ? <p className="max-w-sm text-sm text-[#596273]">{descricao}</p> : null}
+      {descricao ? <p className="max-w-sm text-sm text-texto-suave">{descricao}</p> : null}
       {acao ? <div className="pt-1">{acao}</div> : null}
     </div>
   );

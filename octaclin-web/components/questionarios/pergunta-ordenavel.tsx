@@ -40,12 +40,12 @@ export function PerguntaOrdenavel({ pergunta, selecionada, categoriaNome, catego
       style={style}
       className={cn(
         'grid min-h-20 grid-cols-[36px_1fr_auto] items-center gap-3 border-b border-linha bg-white px-3 py-2',
-        selecionada && 'bg-[#eaf4f8]',
+        selecionada && 'bg-primaria-suave',
         isDragging && 'relative z-10 shadow-lg'
       )}
     >
       <button
-        className="flex h-9 w-9 items-center justify-center rounded-md text-[#596273] hover:bg-[#eef3f6]"
+        className="flex h-9 w-9 items-center justify-center rounded-md text-texto-suave hover:bg-superficie-hover"
         aria-label="Reordenar pergunta"
         {...attributes}
         {...listeners}
@@ -59,14 +59,14 @@ export function PerguntaOrdenavel({ pergunta, selecionada, categoriaNome, catego
           </span>
           <span className="truncate text-sm font-semibold text-tinta">{pergunta.enunciado}</span>
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#596273]">
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-texto-suave">
           <span>{secao}</span>
           <span>{categoriaNome}</span>
           <span>Peso {pergunta.peso}</span>
           <span>{pergunta.obrigatoria ? 'Obrigatoria' : 'Opcional'}</span>
         </div>
       </button>
-      <span className="rounded-md border border-linha bg-[#f7f8fa] px-2 py-1 text-xs text-[#596273]">
+      <span className="rounded-md border border-linha bg-fundo px-2 py-1 text-xs text-texto-suave">
         {String(pergunta.ordem).padStart(2, '0')}
       </span>
     </li>

@@ -127,7 +127,7 @@ export function PainelIa() {
       <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-base font-semibold">IA operacional</h2>
-          <p className="mt-1 text-sm text-[#596273]">
+          <p className="mt-1 text-sm text-texto-suave">
             {analises.length} analises, {reconhecimentos.length} reconhecimentos persistidos
           </p>
         </div>
@@ -140,7 +140,7 @@ export function PainelIa() {
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       <BarraCarregamento visivel={carregando} />
       {sucesso ? (
-        <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+        <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
           <CheckCircle2 size={16} />
           {sucesso}
         </div>
@@ -271,17 +271,17 @@ export function PainelIa() {
                 <div key={analise.id} className="grid gap-2 px-4 py-3 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <strong className="truncate">{analise.modelo}</strong>
-                    <span className="rounded-sm bg-[#eef3f6] px-2 py-1 text-xs font-semibold text-[#596273]">
+                    <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-texto-suave">
                       {analise.alertaDisparado ? 'Alerta' : 'Monitorar'}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-[#596273]">
+                  <div className="grid grid-cols-2 gap-2 text-xs text-texto-suave">
                     <span>Ansiedade: {formatarScore(analise.ansiedadeScore)}</span>
                     <span>Frustracao: {formatarScore(analise.frustracaoScore)}</span>
                     <span>Motivacao: {formatarScore(analise.motivacaoScore)}</span>
                     <span>Confusao: {formatarScore(analise.confusaoScore)}</span>
                   </div>
-                  <p className="break-all text-xs text-[#596273]">Explicacao: {resumirJson(analise.explicacao)}</p>
+                  <p className="break-all text-xs text-texto-suave">Explicacao: {resumirJson(analise.explicacao)}</p>
                 </div>
               ))
             ) : (
@@ -300,15 +300,15 @@ export function PainelIa() {
                 <div key={item.id} className="grid gap-2 px-4 py-3 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <strong className="truncate">{item.provedor}</strong>
-                    <span className="rounded-sm bg-[#eef3f6] px-2 py-1 text-xs font-semibold text-[#596273]">
+                    <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-texto-suave">
                       {item.confiancaMedia ? `${formatarScore(item.confiancaMedia)}%` : 'Sem score'}
                     </span>
                   </div>
-                  <p className="text-xs text-[#596273]">
+                  <p className="text-xs text-texto-suave">
                     {item.caloriasEstimadas ? `${formatarScore(item.caloriasEstimadas)} kcal` : 'Calorias nao estimadas'}
                     {item.pesoEstimadoGramas ? ` | ${formatarScore(item.pesoEstimadoGramas)} g` : ''}
                   </p>
-                  <p className="break-all text-xs text-[#596273]">Alimentos: {resumirJson(item.alimentosDetectados)}</p>
+                  <p className="break-all text-xs text-texto-suave">Alimentos: {resumirJson(item.alimentosDetectados)}</p>
                 </div>
               ))
             ) : (

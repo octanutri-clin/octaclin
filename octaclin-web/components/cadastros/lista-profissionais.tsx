@@ -145,7 +145,7 @@ export function ListaProfissionais() {
       <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-base font-semibold">Equipe clinica</h2>
-          <p className="mt-1 text-sm text-[#596273]">
+          <p className="mt-1 text-sm text-texto-suave">
             {dados ? `${dados.total} registros encontrados` : 'Carregando registros'}
           </p>
         </div>
@@ -164,13 +164,13 @@ export function ListaProfissionais() {
       </div>
 
       {erro ? (
-        <div className="flex items-center gap-2 rounded-lg border border-[#efb8ad] bg-[#fff4f1] px-4 py-3 text-sm text-perigo">
+        <div className="flex items-center gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
           <AlertTriangle size={16} />
           {erro}
         </div>
       ) : null}
       {sucesso ? (
-        <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+        <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
           <CheckCircle2 size={16} />
           {sucesso}
         </div>
@@ -185,7 +185,7 @@ export function ListaProfissionais() {
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
           {!editandoId ? (
             <>
-              <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                 Email
                 <input
                   className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -195,7 +195,7 @@ export function ListaProfissionais() {
                   required
                 />
               </label>
-              <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                 Senha inicial
                 <input
                   className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -208,7 +208,7 @@ export function ListaProfissionais() {
               </label>
             </>
           ) : null}
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Nome
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -217,7 +217,7 @@ export function ListaProfissionais() {
               required
             />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Registro
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -225,7 +225,7 @@ export function ListaProfissionais() {
               onChange={(evento) => setFormulario((atual) => ({ ...atual, registroProfissional: evento.target.value }))}
             />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Especialidade
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -245,7 +245,7 @@ export function ListaProfissionais() {
 
       <div className="overflow-x-auto rounded-lg border border-linha bg-white">
         <div className="min-w-[820px]">
-          <div className="grid grid-cols-[1.2fr_0.9fr_1fr_0.7fr_96px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-[#596273]">
+          <div className="grid grid-cols-[1.2fr_0.9fr_1fr_0.7fr_96px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-texto-suave">
             <span>Profissional</span>
             <span>Registro</span>
             <span>Especialidade</span>
@@ -264,7 +264,7 @@ export function ListaProfissionais() {
                       <Stethoscope size={16} className="shrink-0 text-primaria" />
                       <strong className="truncate">{profissional.nome}</strong>
                     </div>
-                    <p className="mt-1 break-all text-xs text-[#596273]">{profissional.id}</p>
+                    <p className="mt-1 break-all text-xs text-texto-suave">{profissional.id}</p>
                   </div>
                   <span>{profissional.registroProfissional ?? '-'}</span>
                   <span>{profissional.especialidade ?? '-'}</span>
@@ -286,13 +286,13 @@ export function ListaProfissionais() {
                         </Botao>
                       </>
                     ) : (
-                      <span className="text-xs text-[#94a0af]">-</span>
+                      <span className="text-xs text-texto-sutil">-</span>
                     )}
                   </div>
                 </div>
               ))
             ) : (
-              <div className="px-4 py-8 text-sm text-[#596273]">Nenhum profissional carregado.</div>
+              <div className="px-4 py-8 text-sm text-texto-suave">Nenhum profissional carregado.</div>
             )}
           </div>
         </div>

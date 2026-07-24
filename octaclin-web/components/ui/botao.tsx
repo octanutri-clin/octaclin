@@ -4,10 +4,10 @@ import { cn } from '@/lib/utils';
 type VarianteBotao = 'primario' | 'secundario' | 'fantasma' | 'perigo';
 
 const estilos: Record<VarianteBotao, string> = {
-  primario: 'bg-primaria text-white hover:bg-[#1d6684]',
-  secundario: 'border border-linha bg-white text-tinta hover:bg-[#eef3f6]',
-  fantasma: 'text-tinta hover:bg-[#eef3f6]',
-  perigo: 'bg-perigo text-white hover:bg-[#a93226]'
+  primario: 'bg-primaria text-white hover:bg-primaria-forte',
+  secundario: 'border border-linha bg-white text-tinta hover:bg-superficie-hover',
+  fantasma: 'text-tinta hover:bg-superficie-hover',
+  perigo: 'bg-perigo text-white hover:bg-perigo-forte'
 };
 
 export interface BotaoProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

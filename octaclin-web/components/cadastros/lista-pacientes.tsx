@@ -45,9 +45,9 @@ function formatarData(valor?: string) {
 }
 
 function statusClasse(status: string) {
-  if (status === 'risco') return 'bg-[#f8e8e4] text-perigo';
-  if (status === 'em_acompanhamento' || status === 'aderente') return 'bg-[#e6f4ea] text-sucesso';
-  return 'bg-[#eef3f6] text-[#596273]';
+  if (status === 'risco') return 'bg-perigo-suave text-perigo';
+  if (status === 'em_acompanhamento' || status === 'aderente') return 'bg-sucesso-suave text-sucesso';
+  return 'bg-superficie-hover text-texto-suave';
 }
 
 function montarPayload(formulario: FormularioPaciente, editandoId: string | null): SalvarPacienteEntrada {
@@ -199,7 +199,7 @@ export function ListaPacientes() {
       <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-base font-semibold">Lista de pacientes</h2>
-          <p className="mt-1 text-sm text-[#596273]">
+          <p className="mt-1 text-sm text-texto-suave">
             {dados ? `${dados.total} registros encontrados` : 'Carregando registros'}
           </p>
         </div>
@@ -218,19 +218,19 @@ export function ListaPacientes() {
       </div>
 
       {erro ? (
-        <div className="flex items-center gap-2 rounded-lg border border-[#efb8ad] bg-[#fff4f1] px-4 py-3 text-sm text-perigo">
+        <div className="flex items-center gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
           <AlertTriangle size={16} />
           {erro}
         </div>
       ) : null}
       {sucesso ? (
-        <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+        <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
           <CheckCircle2 size={16} />
           {sucesso}
         </div>
       ) : null}
       {linkConvite ? (
-        <div className="rounded-lg border border-linha bg-white px-4 py-3 text-sm text-[#596273]">
+        <div className="rounded-lg border border-linha bg-white px-4 py-3 text-sm text-texto-suave">
           <p className="font-medium text-tinta">Link de primeiro acesso</p>
           <p className="mt-1 break-all">{linkConvite}</p>
         </div>
@@ -242,7 +242,7 @@ export function ListaPacientes() {
           <h3 className="text-sm font-semibold">{editandoId ? 'Editar paciente' : 'Novo paciente'}</h3>
         </div>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-6">
-          <label className="grid gap-1 text-xs font-semibold text-[#596273] lg:col-span-2">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave lg:col-span-2">
             Profissional
             <select
               className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -260,7 +260,7 @@ export function ListaPacientes() {
               ))}
             </select>
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-[#596273] lg:col-span-2">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave lg:col-span-2">
             Nome
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -269,7 +269,7 @@ export function ListaPacientes() {
               required
             />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Contato
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -277,7 +277,7 @@ export function ListaPacientes() {
               onChange={(evento) => setFormulario((atual) => ({ ...atual, contato: evento.target.value }))}
             />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Nascimento
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -288,7 +288,7 @@ export function ListaPacientes() {
           </label>
           {editandoId ? (
             <>
-              <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                 Status
                 <select
                   className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -304,7 +304,7 @@ export function ListaPacientes() {
                   <option value="inativo">inativo</option>
                 </select>
               </label>
-              <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                 Risco
                 <input
                   className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -329,7 +329,7 @@ export function ListaPacientes() {
 
       <div className="overflow-x-auto rounded-lg border border-linha bg-white">
         <div className="min-w-[840px]">
-          <div className="grid grid-cols-[1.2fr_1fr_0.8fr_0.7fr_172px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-[#596273]">
+          <div className="grid grid-cols-[1.2fr_1fr_0.8fr_0.7fr_172px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-texto-suave">
             <span>Paciente</span>
             <span>Responsavel</span>
             <span>Status</span>
@@ -345,10 +345,10 @@ export function ListaPacientes() {
                       <HeartPulse size={16} className="shrink-0 text-primaria" />
                       <strong className="truncate">{paciente.nome}</strong>
                     </div>
-                    <p className="mt-1 text-xs text-[#596273]">{paciente.contato ?? paciente.id}</p>
-                    <p className="mt-1 text-xs text-[#596273]">Nascimento: {formatarData(paciente.dataNascimento)}</p>
+                    <p className="mt-1 text-xs text-texto-suave">{paciente.contato ?? paciente.id}</p>
+                    <p className="mt-1 text-xs text-texto-suave">Nascimento: {formatarData(paciente.dataNascimento)}</p>
                   </div>
-                  <span className="break-all text-xs text-[#596273]">
+                  <span className="break-all text-xs text-texto-suave">
                     {nomeProfissional(profissionais, paciente.profissionalResponsavelId)}
                   </span>
                   <span className={`h-fit rounded-sm px-2 py-1 text-xs font-semibold ${statusClasse(paciente.statusAdesao)}`}>
@@ -358,7 +358,7 @@ export function ListaPacientes() {
                   <div className="flex justify-end gap-1">
                     <Link
                       href={`/pacientes/${paciente.id}` as any}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md text-tinta transition-colors hover:bg-[#eef3f6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md text-tinta transition-colors hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
                       aria-label="Abrir prontuario"
                       title="Abrir prontuario"
                     >
@@ -390,7 +390,7 @@ export function ListaPacientes() {
                 </div>
               ))
             ) : (
-              <div className="px-4 py-8 text-sm text-[#596273]">Nenhum paciente carregado.</div>
+              <div className="px-4 py-8 text-sm text-texto-suave">Nenhum paciente carregado.</div>
             )}
           </div>
         </div>

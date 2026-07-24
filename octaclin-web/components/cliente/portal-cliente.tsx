@@ -1,7 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
@@ -12,7 +10,6 @@ import {
   Download,
   FileText,
   History,
-  LogOut,
   MailCheck,
   RefreshCcw,
   Save,
@@ -23,7 +20,8 @@ import {
   UsersRound
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
-import { obterSessao, sair } from '@/lib/auth-api';
+import { obterSessao } from '@/lib/auth-api';
+import { PortalShell } from '@/components/app/portal-shell';
 import {
   AtualizarConfiguracoesClienteEntrada,
   AtualizarPerfilEmpresaClienteEntrada,
@@ -180,7 +178,6 @@ const formularioPerfilEmpresaInicial: AtualizarPerfilEmpresaClienteEntrada = {
 };
 
 export function PortalCliente() {
-  const router = useRouter();
   const [resumo, setResumo] = useState<ResumoPortalClienteApi | null>(null);
   const [usuarios, setUsuarios] = useState<RespostaUsuariosClienteApi | null>(null);
   const [convites, setConvites] = useState<RespostaConvitesUsuarioClienteApi | null>(null);
@@ -614,73 +611,55 @@ export function PortalCliente() {
   const planoRecomendado = resumo ? obterProximoPlano(resumo.assinatura.planoId) : null;
   const bloqueioAssinatura = assinaturaBloqueada(resumo?.assinatura.status);
 
-  async function encerrarSessao() {
-    await sair();
-    router.replace('/login');
-  }
+  const acoesCabecalho = (
+    <div className="inline-flex w-fit items-center gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm font-medium text-texto-forte">
+      <ShieldCheck className="h-4 w-4 text-primaria" />
+      Acesso profissional separado
+    </div>
+  );
+
+  const descricaoCabecalho = (
+    <>
+      <p>Area administrativa da conta, separada das rotinas assistenciais e dos acessos dos pacientes.</p>
+      {resumo ? <p className="mt-2 break-words font-medium text-texto-forte">{resumo.conta.nome}</p> : null}
+    </>
+  );
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
-      <header className="border-b border-linha bg-white">
-        <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 px-4 py-5 md:flex-row md:items-center md:justify-between lg:px-6">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase text-[#596273]">Conta OctaClin</p>
-            <h1 className="text-xl font-semibold">Portal do cliente</h1>
-            <p className="mt-1 max-w-2xl text-sm text-[#596273]">
-              Area administrativa da conta, separada das rotinas assistenciais e dos acessos dos pacientes.
-            </p>
-            {resumo ? <p className="mt-2 break-words text-sm font-medium text-[#343c4b]">{resumo.conta.nome}</p> : null}
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <div className="inline-flex w-fit items-center gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 py-2 text-sm font-medium text-[#343c4b]">
-              <ShieldCheck className="h-4 w-4 text-primaria" />
-              Acesso profissional separado
-            </div>
-            <Botao type="button" variante="fantasma" onClick={encerrarSessao}>
-              <LogOut className="h-4 w-4" />
-              Sair
-            </Botao>
-          </div>
-        </div>
-        <div className="mx-auto w-full max-w-[1180px] px-4 pb-4 lg:px-6">
-          <nav aria-label="Navegacao do cliente" className="flex gap-1 overflow-x-auto rounded-lg border border-linha bg-[#f8fafb] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {navegacaoVisivel.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="inline-flex h-9 shrink-0 items-center rounded-md px-3 text-sm font-medium text-[#596273] hover:bg-white hover:text-tinta"
-              >
-                {item.rotulo}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </header>
-
-      <section className="mx-auto grid w-full max-w-[1180px] gap-4 px-4 py-5 lg:px-6" aria-busy={carregando}>
+    <PortalShell
+      variante="tabs"
+      titulo="Portal do cliente"
+      subtitulo="Conta OctaClin"
+      descricao={descricaoCabecalho}
+      navegacao={navegacaoVisivel}
+      navLabel="Navegacao do cliente"
+      acoes={acoesCabecalho}
+      maxWidth="1180px"
+    >
+      <section className="grid gap-4" aria-busy={carregando}>
         {erro ? (
-          <section className="flex items-start gap-3 rounded-lg border border-[#efb8ad] bg-white p-4" aria-live="polite">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#fff4f1] text-perigo">
+          <section className="flex items-start gap-3 rounded-lg border border-perigo-borda bg-white p-4" aria-live="polite">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-perigo-suave text-perigo">
               <AlertTriangle className="h-4 w-4" />
             </div>
             <div className="min-w-0">
               <h2 className="text-sm font-semibold">Conta indisponivel</h2>
-              <p className="mt-1 break-words text-sm text-[#596273]">{erro}</p>
+              <p className="mt-1 break-words text-sm text-texto-suave">{erro}</p>
             </div>
           </section>
         ) : null}
 
         <section id="conta" className="scroll-mt-4 rounded-lg border border-linha bg-white">
           <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-            <Building2 className="h-4 w-4 text-[#596273]" />
+            <Building2 className="h-4 w-4 text-texto-suave" />
             <h2 className="text-sm font-semibold">Resumo da conta</h2>
           </div>
           <div className="grid gap-3 p-4 md:grid-cols-3">
             {indicadores.map((indicador) => (
-              <article key={indicador.rotulo} className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                <p className="text-xs text-[#596273]">{indicador.rotulo}</p>
+              <article key={indicador.rotulo} className="rounded-md border border-linha bg-superficie p-3">
+                <p className="text-xs text-texto-suave">{indicador.rotulo}</p>
                 <p className="mt-1 break-words text-base font-semibold">{indicador.valor}</p>
-                <p className="mt-1 text-xs text-[#596273]">{indicador.detalhe}</p>
+                <p className="mt-1 text-xs text-texto-suave">{indicador.detalhe}</p>
               </article>
             ))}
           </div>
@@ -689,21 +668,21 @@ export function PortalCliente() {
         <div className="grid gap-4 lg:grid-cols-2">
           <section id="assinatura" className="scroll-mt-4 rounded-lg border border-linha bg-white">
             <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-              <CreditCard className="h-4 w-4 text-[#596273]" />
+              <CreditCard className="h-4 w-4 text-texto-suave" />
               <h2 className="text-sm font-semibold">Assinatura</h2>
             </div>
             <div className="grid gap-3 p-4">
-              <article className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                <p className="text-xs text-[#596273]">Status</p>
+              <article className="rounded-md border border-linha bg-superficie p-3">
+                <p className="text-xs text-texto-suave">Status</p>
                 <p className="mt-1 text-base font-semibold">{resumo?.assinatura.plano ?? 'Carregando plano'}</p>
-                <p className="mt-1 text-sm text-[#596273]">
+                <p className="mt-1 text-sm text-texto-suave">
                   {resumo ? `Assinatura ${resumo.assinatura.status} com origem ${resumo.assinatura.origem}.` : 'Atualizando assinatura da conta.'}
                 </p>
                 {resumo?.assinatura.renovacaoEm ? (
-                  <p className="mt-1 text-xs font-medium text-[#343c4b]">Renova em {formatarData(resumo.assinatura.renovacaoEm)}</p>
+                  <p className="mt-1 text-xs font-medium text-texto-forte">Renova em {formatarData(resumo.assinatura.renovacaoEm)}</p>
                 ) : null}
                 {bloqueioAssinatura ? (
-                  <div className="mt-3 flex items-start gap-2 rounded-md border border-[#efb8ad] bg-white px-3 py-2 text-sm text-perigo">
+                  <div className="mt-3 flex items-start gap-2 rounded-md border border-perigo-borda bg-white px-3 py-2 text-sm text-perigo">
                     <Ban size={16} className="mt-0.5 shrink-0" />
                     <span>Novas acoes estao bloqueadas, mas os dados existentes continuam disponiveis.</span>
                   </div>
@@ -717,16 +696,16 @@ export function PortalCliente() {
                   const alerta = alertasAssinatura.find((item) => item.recurso === recurso.chave);
 
                   return (
-                    <article key={recurso.chave} className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                    <article key={recurso.chave} className="rounded-md border border-linha bg-superficie p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="break-words text-sm font-semibold">{recurso.rotulo}</p>
                           {alerta ? (
-                            <p className={`mt-1 text-xs font-medium ${alerta.status === 'excedido' ? 'text-perigo' : 'text-[#8a5a00]'}`}>
+                            <p className={`mt-1 text-xs font-medium ${alerta.status === 'excedido' ? 'text-perigo' : 'text-alerta-forte'}`}>
                               {descreverAlertaSaas(alerta.status)}
                             </p>
                           ) : (
-                            <p className="mt-1 text-xs text-[#596273]">Dentro do limite</p>
+                            <p className="mt-1 text-xs text-texto-suave">Dentro do limite</p>
                           )}
                         </div>
                         <p className="shrink-0 text-sm font-semibold">{formatarLimiteSaas(uso, limite, recurso.chave)}</p>
@@ -741,20 +720,20 @@ export function PortalCliente() {
                   );
                 })}
               </div>
-              <article className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                <p className="text-xs text-[#596273]">Plano recomendado</p>
+              <article className="rounded-md border border-linha bg-superficie p-3">
+                <p className="text-xs text-texto-suave">Plano recomendado</p>
                 <p className="mt-1 text-base font-semibold">{planoRecomendado?.nome ?? 'Carregando recomendacao'}</p>
-                <p className="mt-1 text-sm text-[#596273]">
+                <p className="mt-1 text-sm text-texto-suave">
                   {planoRecomendado?.detalhe ?? 'Avaliando uso atual da conta.'}
                 </p>
                 {erroAssinatura ? (
-                  <div className="mt-3 flex items-center gap-2 rounded-md border border-[#efb8ad] bg-white px-3 py-2 text-sm text-perigo">
+                  <div className="mt-3 flex items-center gap-2 rounded-md border border-perigo-borda bg-white px-3 py-2 text-sm text-perigo">
                     <AlertTriangle size={16} />
                     {erroAssinatura}
                   </div>
                 ) : null}
                 {sucessoAssinatura ? (
-                  <div className="mt-3 flex items-center gap-2 rounded-md border border-[#b8dfc1] bg-white px-3 py-2 text-sm text-[#245b33]">
+                  <div className="mt-3 flex items-center gap-2 rounded-md border border-sucesso-borda bg-white px-3 py-2 text-sm text-sucesso-forte">
                     <CheckCircle2 size={16} />
                     {sucessoAssinatura}
                   </div>
@@ -788,19 +767,19 @@ export function PortalCliente() {
 
           <section id="usuarios" className="scroll-mt-4 rounded-lg border border-linha bg-white">
             <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-              <UsersRound className="h-4 w-4 text-[#596273]" />
+              <UsersRound className="h-4 w-4 text-texto-suave" />
               <h2 className="text-sm font-semibold">Usuarios</h2>
             </div>
             <div className="grid gap-3 p-4">
-              <article className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                <p className="text-xs text-[#596273]">Gestor da conta</p>
+              <article className="rounded-md border border-linha bg-superficie p-3">
+                <p className="text-xs text-texto-suave">Gestor da conta</p>
                 <p className="mt-1 break-words text-base font-semibold">{resumo?.acesso.usuarioId ?? 'Carregando usuario'}</p>
-                <p className="mt-1 text-sm text-[#596273]">
+                <p className="mt-1 text-sm text-texto-suave">
                   {resumo ? `${resumo.acesso.papel} com escopo ${resumo.acesso.escopoDados}.` : 'Validando escopo da sessao.'}
                 </p>
               </article>
-              <article className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                <p className="text-xs text-[#596273]">Separacao de acesso</p>
+              <article className="rounded-md border border-linha bg-superficie p-3">
+                <p className="text-xs text-texto-suave">Separacao de acesso</p>
                 <p className="mt-1 text-sm font-semibold">
                   {resumo
                     ? `${formatarQuantidade(resumo.usuarios.profissionais, 'profissional', 'profissionais')} e ${formatarQuantidade(
@@ -820,7 +799,7 @@ export function PortalCliente() {
           <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-sm font-semibold">Gerenciar usuarios</h2>
-              <p className="mt-1 text-sm text-[#596273]">
+              <p className="mt-1 text-sm text-texto-suave">
                 {usuarios ? `${usuarios.total} acessos administrativos` : 'Carregando acessos administrativos'}
               </p>
             </div>
@@ -834,21 +813,21 @@ export function PortalCliente() {
 
           <div className="grid gap-4 p-4">
             {erroUsuarios ? (
-              <div className="flex items-center gap-2 rounded-lg border border-[#efb8ad] bg-[#fff4f1] px-4 py-3 text-sm text-perigo">
+              <div className="flex items-center gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
                 <AlertTriangle size={16} />
                 {erroUsuarios}
               </div>
             ) : null}
             {sucessoUsuarios ? (
-              <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+              <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
                 <CheckCircle2 size={16} />
                 {sucessoUsuarios}
               </div>
             ) : null}
 
             {podeConvidarUsuarios ? (
-            <form onSubmit={convidarUsuario} className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3 lg:grid-cols-[1fr_180px_auto]">
-              <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+            <form onSubmit={convidarUsuario} className="grid gap-3 rounded-md border border-linha bg-superficie p-3 lg:grid-cols-[1fr_180px_auto]">
+              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                 Email
                 <input
                   className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -858,7 +837,7 @@ export function PortalCliente() {
                   required
                 />
               </label>
-              <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                 Papel
                 <select
                   className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -877,18 +856,18 @@ export function PortalCliente() {
                   {salvandoUsuario ? 'Convidando' : bloqueioAssinatura ? 'Assinatura bloqueada' : 'Convidar usuario'}
                 </Botao>
               </div>
-              <p className="text-sm text-[#596273] lg:col-span-3">Link de primeiro acesso enviado por email.</p>
+              <p className="text-sm text-texto-suave lg:col-span-3">Link de primeiro acesso enviado por email.</p>
             </form>
             ) : null}
 
             {podeGerenciarConvites ? (
-            <section id="convites-usuarios" className="rounded-md border border-linha bg-[#f8fafb]" aria-busy={carregandoConvites}>
+            <section id="convites-usuarios" className="rounded-md border border-linha bg-superficie" aria-busy={carregandoConvites}>
               <div className="flex flex-col gap-2 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-2">
                   <MailCheck size={16} className="text-primaria" />
                   <div>
                     <h3 className="text-sm font-semibold">Convites pendentes</h3>
-                    <p className="mt-1 text-xs text-[#596273]">
+                    <p className="mt-1 text-xs text-texto-suave">
                       {convites ? `${convites.total} convites aguardando primeiro acesso` : 'Carregando convites'}
                     </p>
                   </div>
@@ -900,7 +879,7 @@ export function PortalCliente() {
                     <div key={convite.id} className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[1fr_150px_160px_180px] lg:items-center">
                       <div className="min-w-0">
                         <p className="break-all font-medium">{convite.email}</p>
-                        <p className="mt-1 text-xs text-[#596273]">{convite.role}</p>
+                        <p className="mt-1 text-xs text-texto-suave">{convite.role}</p>
                       </div>
                       <span>{convite.status}</span>
                       <span>Expira em {formatarData(convite.expiraEm)}</span>
@@ -927,7 +906,7 @@ export function PortalCliente() {
                     </div>
                   ))
                 ) : (
-                  <div className="px-4 py-6 text-sm text-[#596273]">Nenhum convite administrativo pendente.</div>
+                  <div className="px-4 py-6 text-sm text-texto-suave">Nenhum convite administrativo pendente.</div>
                 )}
               </div>
             </section>
@@ -937,10 +916,10 @@ export function PortalCliente() {
             <section id="historico-convites" className="rounded-md border border-linha bg-white" aria-busy={carregandoHistoricoConvites}>
               <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-2">
-                  <History size={16} className="text-[#596273]" />
+                  <History size={16} className="text-texto-suave" />
                   <div>
                     <h3 className="text-sm font-semibold">Historico de convites</h3>
-                    <p className="mt-1 text-xs text-[#596273]">
+                    <p className="mt-1 text-xs text-texto-suave">
                       {historicoConvites
                         ? `${formatarQuantidade(historicoConvites.total, 'evento de convite', 'eventos de convite')}`
                         : 'Carregando historico operacional'}
@@ -949,7 +928,7 @@ export function PortalCliente() {
                 </div>
                 <a
                   href="/api/cliente/usuarios/convites/historico/exportar.csv"
-                  className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-md border border-linha bg-[#f8fafb] px-3 text-sm font-medium text-[#343c4b] hover:bg-white"
+                  className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-md border border-linha bg-superficie px-3 text-sm font-medium text-texto-forte hover:bg-white"
                 >
                   <Download size={16} />
                   Exportar CSV
@@ -961,20 +940,20 @@ export function PortalCliente() {
                     <div key={convite.id} className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[1fr_140px_180px_1fr] lg:items-center">
                       <div className="min-w-0">
                         <p className="break-all font-medium">{convite.email}</p>
-                        <p className="mt-1 text-xs text-[#596273]">{convite.role}</p>
+                        <p className="mt-1 text-xs text-texto-suave">{convite.role}</p>
                       </div>
-                      <span className="w-fit rounded-md border border-linha bg-[#f8fafb] px-2 py-1 text-xs font-semibold uppercase text-[#596273]">
+                      <span className="w-fit rounded-md border border-linha bg-superficie px-2 py-1 text-xs font-semibold uppercase text-texto-suave">
                         {convite.status}
                       </span>
                       <span>{descreverHistoricoConvite(convite)}</span>
-                      <span className="text-xs text-[#596273]">
+                      <span className="text-xs text-texto-suave">
                         Criado em {formatarData(convite.criadoEm)}
                         {convite.motivoRevogacao ? ` · Motivo: ${convite.motivoRevogacao}` : ''}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <div className="px-4 py-6 text-sm text-[#596273]">Nenhum historico de convite registrado.</div>
+                  <div className="px-4 py-6 text-sm text-texto-suave">Nenhum historico de convite registrado.</div>
                 )}
               </div>
             </section>
@@ -983,7 +962,7 @@ export function PortalCliente() {
             {podeLerUsuarios ? (
             <div className="overflow-x-auto rounded-md border border-linha bg-white">
               <div className="min-w-[760px]">
-                <div className="grid grid-cols-[1.4fr_160px_120px_140px_96px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-[#596273]">
+                <div className="grid grid-cols-[1.4fr_160px_120px_140px_96px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-texto-suave">
                   <span>Email</span>
                   <span>Papel</span>
                   <span>Status</span>
@@ -1012,7 +991,7 @@ export function PortalCliente() {
                       </div>
                     ))
                   ) : (
-                    <div className="px-4 py-8 text-sm text-[#596273]">Nenhum usuario administrativo carregado.</div>
+                    <div className="px-4 py-8 text-sm text-texto-suave">Nenhum usuario administrativo carregado.</div>
                   )}
                 </div>
               </div>
@@ -1025,30 +1004,30 @@ export function PortalCliente() {
         {podeGerenciarConfiguracoes ? (
           <section id="configuracoes" className="scroll-mt-4 rounded-lg border border-linha bg-white" aria-busy={carregandoConfiguracoes}>
             <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-              <ShieldCheck className="h-4 w-4 text-[#596273]" />
+              <ShieldCheck className="h-4 w-4 text-texto-suave" />
               <div>
                 <h2 className="text-sm font-semibold">Configuracoes da conta</h2>
-                <p className="mt-1 text-sm text-[#596273]">
+                <p className="mt-1 text-sm text-texto-suave">
                   {configuracoes ? `Atualizado em ${formatarData(configuracoes.atualizadoEm)}` : 'Carregando preferencias da conta'}
                 </p>
               </div>
             </div>
             <form onSubmit={salvarConfiguracoes} className="grid gap-4 p-4">
               {erroConfiguracoes ? (
-                <div className="flex items-center gap-2 rounded-lg border border-[#efb8ad] bg-[#fff4f1] px-4 py-3 text-sm text-perigo">
+                <div className="flex items-center gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
                   <AlertTriangle size={16} />
                   {erroConfiguracoes}
                 </div>
               ) : null}
               {sucessoConfiguracoes ? (
-                <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+                <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
                   <CheckCircle2 size={16} />
                   {sucessoConfiguracoes}
                 </div>
               ) : null}
 
               <div className="grid gap-3 md:grid-cols-2">
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Nome da clinica
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1058,7 +1037,7 @@ export function PortalCliente() {
                     maxLength={160}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Nome exibido
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1073,7 +1052,7 @@ export function PortalCliente() {
                     maxLength={120}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Timezone
                   <select
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1086,7 +1065,7 @@ export function PortalCliente() {
                     <option value="America/Recife">America/Recife</option>
                   </select>
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Idioma
                   <select
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1103,7 +1082,7 @@ export function PortalCliente() {
                     <option value="es">es</option>
                   </select>
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Email remetente
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1118,7 +1097,7 @@ export function PortalCliente() {
                     maxLength={180}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Cor primaria
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1134,8 +1113,8 @@ export function PortalCliente() {
                 </label>
               </div>
 
-              <fieldset className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                <legend className="px-1 text-xs font-semibold text-[#596273]">Canais padrao</legend>
+              <fieldset className="rounded-md border border-linha bg-superficie p-3">
+                <legend className="px-1 text-xs font-semibold text-texto-suave">Canais padrao</legend>
                 <div className="mt-2 grid gap-2 md:grid-cols-3">
                   {[
                     ['email', 'Email'],
@@ -1175,30 +1154,30 @@ export function PortalCliente() {
         {podeGerenciarConfiguracoes ? (
           <section id="perfil-fiscal" className="scroll-mt-4 rounded-lg border border-linha bg-white" aria-busy={carregandoPerfilEmpresa}>
             <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-              <FileText className="h-4 w-4 text-[#596273]" />
+              <FileText className="h-4 w-4 text-texto-suave" />
               <div>
                 <h2 className="text-sm font-semibold">Perfil fiscal</h2>
-                <p className="mt-1 text-sm text-[#596273]">
+                <p className="mt-1 text-sm text-texto-suave">
                   {perfilEmpresa ? `Atualizado em ${formatarData(perfilEmpresa.atualizadoEm)}` : 'Carregando dados fiscais da conta'}
                 </p>
               </div>
             </div>
             <form onSubmit={salvarPerfilEmpresa} className="grid gap-4 p-4">
               {erroPerfilEmpresa ? (
-                <div className="flex items-center gap-2 rounded-lg border border-[#efb8ad] bg-[#fff4f1] px-4 py-3 text-sm text-perigo">
+                <div className="flex items-center gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
                   <AlertTriangle size={16} />
                   {erroPerfilEmpresa}
                 </div>
               ) : null}
               {sucessoPerfilEmpresa ? (
-                <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+                <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
                   <CheckCircle2 size={16} />
                   {sucessoPerfilEmpresa}
                 </div>
               ) : null}
 
               <div className="grid gap-3 md:grid-cols-2">
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Tipo de pessoa
                   <select
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1214,7 +1193,7 @@ export function PortalCliente() {
                     <option value="pf">Pessoa fisica</option>
                   </select>
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Documento fiscal
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1223,7 +1202,7 @@ export function PortalCliente() {
                     maxLength={32}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Nome legal
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1233,7 +1212,7 @@ export function PortalCliente() {
                     maxLength={180}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Nome fantasia
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1242,7 +1221,7 @@ export function PortalCliente() {
                     maxLength={180}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Inscricao estadual
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1251,7 +1230,7 @@ export function PortalCliente() {
                     maxLength={40}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Inscricao municipal
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1262,8 +1241,8 @@ export function PortalCliente() {
                 </label>
               </div>
 
-              <div className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3 md:grid-cols-2">
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+              <div className="grid gap-3 rounded-md border border-linha bg-superficie p-3 md:grid-cols-2">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Responsavel
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1277,7 +1256,7 @@ export function PortalCliente() {
                     maxLength={120}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Email do responsavel
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1292,7 +1271,7 @@ export function PortalCliente() {
                     maxLength={180}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Telefone do responsavel
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1306,7 +1285,7 @@ export function PortalCliente() {
                     maxLength={40}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Cargo
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1322,8 +1301,8 @@ export function PortalCliente() {
                 </label>
               </div>
 
-              <div className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3 md:grid-cols-4">
-                <label className="grid gap-1 text-xs font-semibold text-[#596273] md:col-span-1">
+              <div className="grid gap-3 rounded-md border border-linha bg-superficie p-3 md:grid-cols-4">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave md:col-span-1">
                   CEP
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1337,7 +1316,7 @@ export function PortalCliente() {
                     maxLength={20}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273] md:col-span-2">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave md:col-span-2">
                   Logradouro
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1351,7 +1330,7 @@ export function PortalCliente() {
                     maxLength={160}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Numero
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1365,7 +1344,7 @@ export function PortalCliente() {
                     maxLength={30}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273] md:col-span-2">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave md:col-span-2">
                   Complemento
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1379,7 +1358,7 @@ export function PortalCliente() {
                     maxLength={120}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Bairro
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1393,7 +1372,7 @@ export function PortalCliente() {
                     maxLength={120}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Cidade
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1407,7 +1386,7 @@ export function PortalCliente() {
                     maxLength={120}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   UF
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal uppercase text-tinta"
@@ -1421,7 +1400,7 @@ export function PortalCliente() {
                     maxLength={2}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Pais
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal uppercase text-tinta"
@@ -1438,7 +1417,7 @@ export function PortalCliente() {
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Email financeiro
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1453,7 +1432,7 @@ export function PortalCliente() {
                     maxLength={180}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Telefone financeiro
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1467,7 +1446,7 @@ export function PortalCliente() {
                     maxLength={40}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   WhatsApp atendimento
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1481,7 +1460,7 @@ export function PortalCliente() {
                     maxLength={40}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Email atendimento
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
@@ -1498,7 +1477,7 @@ export function PortalCliente() {
                 </label>
               </div>
 
-              <div className="grid gap-3 rounded-md border border-linha bg-[#f8fafb] p-3">
+              <div className="grid gap-3 rounded-md border border-linha bg-superficie p-3">
                 <label className="inline-flex min-h-10 items-center gap-2 text-sm font-medium">
                   <input
                     type="checkbox"
@@ -1512,7 +1491,7 @@ export function PortalCliente() {
                   />
                   Preparar base para recibos
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#596273]">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Observacoes fiscais
                   <textarea
                     className="min-h-24 rounded-md border border-linha bg-white px-3 py-2 text-sm font-normal text-tinta"
@@ -1538,6 +1517,6 @@ export function PortalCliente() {
           </section>
         ) : null}
       </section>
-    </main>
+    </PortalShell>
   );
 }

@@ -31,9 +31,9 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
   return (
     <section className="border border-linha bg-white">
       <div className="border-b border-linha px-4 py-3">
-        <p className="text-xs font-semibold uppercase text-[#596273]">Preview do paciente</p>
+        <p className="text-xs font-semibold uppercase text-texto-suave">Preview do paciente</p>
         <h2 className="mt-1 text-lg font-semibold text-tinta">{titulo || 'Formulario sem titulo'}</h2>
-        {descricao ? <p className="mt-1 text-sm text-[#596273]">{descricao}</p> : null}
+        {descricao ? <p className="mt-1 text-sm text-texto-suave">{descricao}</p> : null}
       </div>
 
       <div className="mx-auto grid w-full max-w-3xl gap-4 px-4 py-5">
@@ -44,20 +44,20 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
                 <h3 className="text-sm font-semibold text-tinta">{secao.nome}</h3>
               </div>
               {secao.campos.map((campo, indice) => (
-                <div key={campo.id} className="grid gap-3 rounded-lg border border-linha bg-[#fbfcfd] p-4">
+                <div key={campo.id} className="grid gap-3 rounded-lg border border-linha bg-superficie p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase text-[#596273]">Pergunta {indice + 1}</p>
+                      <p className="text-xs font-semibold uppercase text-texto-suave">Pergunta {indice + 1}</p>
                       <h3 className="mt-1 text-base font-semibold text-tinta">{campo.enunciado}</h3>
                     </div>
                     {campo.obrigatoria ? (
-                      <span className="shrink-0 rounded-md border border-[#b8dfc1] bg-[#eef7f0] px-2 py-1 text-xs font-medium text-[#245b33]">
+                      <span className="shrink-0 rounded-md border border-sucesso-borda bg-sucesso-suave px-2 py-1 text-xs font-medium text-sucesso-forte">
                         Obrigatoria
                       </span>
                     ) : null}
                   </div>
 
-                  <p className="text-xs text-[#596273]">{campo.ajuda}</p>
+                  <p className="text-xs text-texto-suave">{campo.ajuda}</p>
 
                   {campo.tipoEntrada === 'radio' || campo.tipoEntrada === 'checkbox' ? (
                     <div className="grid gap-2">
@@ -75,7 +75,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
 
                   {campo.tipoEntrada === 'likert' ? (
                     <div className="grid gap-2">
-                      <div className="flex items-center justify-between text-xs text-[#596273]">
+                      <div className="flex items-center justify-between text-xs text-texto-suave">
                         <span>{String(campo.atributos.rotuloMin)}</span>
                         <span>{String(campo.atributos.rotuloMax)}</span>
                       </div>
@@ -85,7 +85,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
                             key={valor}
                             type="button"
                             disabled
-                            className="h-10 rounded-md border border-linha bg-white text-sm font-semibold text-[#596273]"
+                            className="h-10 rounded-md border border-linha bg-white text-sm font-semibold text-texto-suave"
                           >
                             {valor}
                           </button>
@@ -104,7 +104,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
                         step={Number(campo.atributos.step)}
                         className="w-full accent-primaria"
                       />
-                      <div className="flex justify-between text-xs text-[#596273]">
+                      <div className="flex justify-between text-xs text-texto-suave">
                         <span>{String(campo.atributos.min)}</span>
                         <span>{String(campo.atributos.max)}</span>
                       </div>
@@ -122,7 +122,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
                         placeholder={`${campo.atributos.min}`}
                       />
                       {campo.atributos.unidade ? (
-                        <span className="text-sm font-medium text-[#596273]">{String(campo.atributos.unidade)}</span>
+                        <span className="text-sm font-medium text-texto-suave">{String(campo.atributos.unidade)}</span>
                       ) : null}
                     </div>
                   ) : null}
@@ -137,7 +137,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
                   ) : null}
 
                   {campo.tipoEntrada === 'file' ? (
-                    <div className="flex min-h-24 items-center justify-center gap-2 rounded-md border border-dashed border-linha bg-white text-sm text-[#596273]">
+                    <div className="flex min-h-24 items-center justify-center gap-2 rounded-md border border-dashed border-linha bg-white text-sm text-texto-suave">
                       <ImagePlus size={18} />
                       <span>
                         {String(campo.atributos.accept)} - ate {String(campo.atributos.maxArquivos)} arquivo(s)
@@ -147,10 +147,10 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
 
                   {campo.tipoEntrada === 'sim_nao' ? (
                     <div className="grid grid-cols-2 gap-2">
-                      <button type="button" disabled className="h-10 rounded-md border border-linha bg-white text-sm font-medium text-[#596273]">
+                      <button type="button" disabled className="h-10 rounded-md border border-linha bg-white text-sm font-medium text-texto-suave">
                         {String(campo.atributos.rotuloSim)}
                       </button>
-                      <button type="button" disabled className="h-10 rounded-md border border-linha bg-white text-sm font-medium text-[#596273]">
+                      <button type="button" disabled className="h-10 rounded-md border border-linha bg-white text-sm font-medium text-texto-suave">
                         {String(campo.atributos.rotuloNao)}
                       </button>
                     </div>
@@ -160,7 +160,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
             </section>
           ))
         ) : (
-          <div className="flex min-h-32 items-center justify-center rounded-lg border border-dashed border-linha text-sm text-[#596273]">
+          <div className="flex min-h-32 items-center justify-center rounded-lg border border-dashed border-linha text-sm text-texto-suave">
             Nenhuma pergunta para visualizar.
           </div>
         )}

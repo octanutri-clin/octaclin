@@ -581,13 +581,13 @@ export function EditorQuestionario() {
   return (
     <section className="grid gap-4">
       {erro ? (
-        <div className="flex items-center gap-2 rounded-lg border border-[#efb8ad] bg-[#fff4f1] px-4 py-3 text-sm text-perigo">
+        <div className="flex items-center gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
           <AlertTriangle size={16} />
           {erro}
         </div>
       ) : null}
       {sucesso ? (
-        <div className="flex items-center gap-2 rounded-lg border border-[#b8dfc1] bg-[#eef7f0] px-4 py-3 text-sm text-[#245b33]">
+        <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
           <CheckCircle2 size={16} />
           {sucesso}
         </div>
@@ -647,9 +647,9 @@ export function EditorQuestionario() {
                 ))}
               </Selecao>
             </div>
-            <div className="space-y-2 rounded-md border border-linha bg-[#f8fafb] p-3">
+            <div className="space-y-2 rounded-md border border-linha bg-superficie p-3">
               <div className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-[#596273]" />
+                <BookOpen className="h-4 w-4 text-texto-suave" />
                 <p className="text-sm font-semibold text-tinta">Modelos</p>
               </div>
               <div className="grid gap-2">
@@ -659,14 +659,14 @@ export function EditorQuestionario() {
                     type="button"
                     onClick={() => void criarAPartirModelo(modelo)}
                     disabled={salvando}
-                    className="grid gap-1 rounded-md border border-linha bg-white p-3 text-left transition-colors hover:bg-[#eef3f6] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="grid gap-1 rounded-md border border-linha bg-white p-3 text-left transition-colors hover:bg-superficie-hover disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <span className="flex items-center justify-between gap-2">
                       <span className="text-sm font-semibold text-tinta">{modelo.titulo}</span>
                       <Wand2 className="h-4 w-4 shrink-0 text-primaria" />
                     </span>
-                    <span className="text-xs text-[#596273]">{modelo.totalPerguntas} perguntas - {modelo.estimativaMinutos} min</span>
-                    <span className="line-clamp-2 text-xs text-[#596273]">{modelo.objetivo}</span>
+                    <span className="text-xs text-texto-suave">{modelo.totalPerguntas} perguntas - {modelo.estimativaMinutos} min</span>
+                    <span className="line-clamp-2 text-xs text-texto-suave">{modelo.objetivo}</span>
                   </button>
                 ))}
               </div>
@@ -692,12 +692,12 @@ export function EditorQuestionario() {
               </Selecao>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-md border border-linha bg-[#f7f8fa] p-3">
-                <p className="text-xs text-[#596273]">Perguntas</p>
+              <div className="rounded-md border border-linha bg-fundo p-3">
+                <p className="text-xs text-texto-suave">Perguntas</p>
                 <p className="text-2xl font-semibold text-tinta">{perguntas.length}</p>
               </div>
-              <div className="rounded-md border border-linha bg-[#f7f8fa] p-3">
-                <p className="text-xs text-[#596273]">Peso total</p>
+              <div className="rounded-md border border-linha bg-fundo p-3">
+                <p className="text-xs text-texto-suave">Peso total</p>
                 <p className="text-2xl font-semibold text-tinta">{scoreTotal}</p>
               </div>
             </div>
@@ -710,9 +710,9 @@ export function EditorQuestionario() {
                 </Botao>
               </div>
             </div>
-            <div className="space-y-2 rounded-md border border-linha bg-[#f8fafb] p-3">
+            <div className="space-y-2 rounded-md border border-linha bg-superficie p-3">
               <div className="flex items-center gap-2">
-                <Link2 className="h-4 w-4 text-[#596273]" />
+                <Link2 className="h-4 w-4 text-texto-suave" />
                 <p className="text-sm font-semibold text-tinta">Envio ao paciente</p>
               </div>
               <div className="space-y-1.5">
@@ -763,7 +763,7 @@ export function EditorQuestionario() {
                     );
                   })
                 ) : (
-                  <li className="px-4 py-8 text-sm text-[#596273]">Nenhuma pergunta carregada.</li>
+                  <li className="px-4 py-8 text-sm text-texto-suave">Nenhuma pergunta carregada.</li>
                 )}
               </ul>
             </SortableContext>
@@ -772,7 +772,7 @@ export function EditorQuestionario() {
 
         <aside className="rounded-lg border border-linha bg-white">
           <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-            <Settings2 className="h-4 w-4 text-[#596273]" />
+            <Settings2 className="h-4 w-4 text-texto-suave" />
             <h2 className="text-sm font-semibold text-tinta">Propriedades</h2>
           </div>
           {perguntaSelecionada ? (
@@ -834,7 +834,7 @@ export function EditorQuestionario() {
                   onChange={(event) => atualizarConfiguracao('secao', event.target.value)}
                 />
               </div>
-              <label className="flex items-center justify-between rounded-md border border-linha bg-[#f7f8fa] px-3 py-2">
+              <label className="flex items-center justify-between rounded-md border border-linha bg-fundo px-3 py-2">
                 <span className="text-sm font-medium text-tinta">Obrigatoria</span>
                 <input
                   type="checkbox"
@@ -844,10 +844,10 @@ export function EditorQuestionario() {
                 />
               </label>
 
-              <div className="space-y-3 rounded-md border border-linha bg-[#f8fafb] p-3">
+              <div className="space-y-3 rounded-md border border-linha bg-superficie p-3">
                 <div>
                   <p className="text-sm font-semibold text-tinta">Configuracao do tipo</p>
-                  <p className="text-xs text-[#596273]">Ajuste como esta pergunta sera respondida pelo paciente.</p>
+                  <p className="text-xs text-texto-suave">Ajuste como esta pergunta sera respondida pelo paciente.</p>
                 </div>
 
                 {perguntaSelecionada.tipo === 'likert' ? (
@@ -1065,7 +1065,7 @@ export function EditorQuestionario() {
                 <Save className="h-4 w-4" />
                 Salvar pergunta
               </Botao>
-              <div className="rounded-md border border-linha bg-[#eef7f0] p-3 text-sm text-[#245b33]">
+              <div className="rounded-md border border-linha bg-sucesso-suave p-3 text-sm text-sucesso-forte">
                 <div className="flex items-center gap-2 font-semibold">
                   <Check className="h-4 w-4" />
                   Contrato valido
@@ -1074,7 +1074,7 @@ export function EditorQuestionario() {
               </div>
             </div>
           ) : (
-            <div className="p-4 text-sm text-[#596273]">Selecione ou crie uma pergunta.</div>
+            <div className="p-4 text-sm text-texto-suave">Selecione ou crie uma pergunta.</div>
           )}
         </aside>
       </section>
@@ -1082,7 +1082,7 @@ export function EditorQuestionario() {
       <section className="overflow-hidden rounded-lg border border-linha bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-linha px-4 py-3">
           <div className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 text-[#596273]" />
+            <ClipboardList className="h-4 w-4 text-texto-suave" />
             <h2 className="text-sm font-semibold text-tinta">Leitura clinica das respostas</h2>
           </div>
           <Botao
@@ -1130,20 +1130,20 @@ export function EditorQuestionario() {
 
           {leituraClinica ? (
             <div className="grid gap-3 md:grid-cols-4">
-              <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                <p className="text-xs text-[#596273]">Envios respondidos</p>
+              <div className="rounded-md border border-linha bg-superficie p-3">
+                <p className="text-xs text-texto-suave">Envios respondidos</p>
                 <p className="text-2xl font-semibold text-tinta">{leituraClinica.resumo.totalRespostas}</p>
               </div>
-              <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                <p className="text-xs text-[#596273]">Pacientes</p>
+              <div className="rounded-md border border-linha bg-superficie p-3">
+                <p className="text-xs text-texto-suave">Pacientes</p>
                 <p className="text-2xl font-semibold text-tinta">{leituraClinica.resumo.totalPacientes}</p>
               </div>
-              <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                <p className="text-xs text-[#596273]">Media por envio</p>
+              <div className="rounded-md border border-linha bg-superficie p-3">
+                <p className="text-xs text-texto-suave">Media por envio</p>
                 <p className="text-2xl font-semibold text-tinta">{leituraClinica.resumo.mediaRespostasPorEnvio}</p>
               </div>
-              <div className="rounded-md border border-linha bg-[#f8fafb] p-3">
-                <p className="text-xs text-[#596273]">Ultima resposta</p>
+              <div className="rounded-md border border-linha bg-superficie p-3">
+                <p className="text-xs text-texto-suave">Ultima resposta</p>
                 <p className="text-base font-semibold text-tinta">{formatarDataResposta(leituraClinica.resumo.ultimaRespostaEm)}</p>
               </div>
             </div>
@@ -1152,21 +1152,21 @@ export function EditorQuestionario() {
           {perguntasLeituraFiltradas.length ? (
             <div className="grid gap-3 lg:grid-cols-3">
               {perguntasLeituraFiltradas.map((pergunta) => (
-                <article key={pergunta.perguntaId} className="rounded-md border border-linha bg-[#f8fafb] p-3">
+                <article key={pergunta.perguntaId} className="rounded-md border border-linha bg-superficie p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-tinta">{pergunta.enunciado}</p>
-                      <p className="text-xs text-[#596273]">{pergunta.totalRespostas} respostas</p>
+                      <p className="text-xs text-texto-suave">{pergunta.totalRespostas} respostas</p>
                     </div>
                     {typeof pergunta.mediaNumerica === 'number' ? (
-                      <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-[#596273]">
+                      <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
                         Media {pergunta.mediaNumerica}
                       </span>
                     ) : null}
                   </div>
                   {typeof pergunta.totalSim === 'number' || typeof pergunta.totalNao === 'number' ? (
                     <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                      <span className="rounded-md border border-linha bg-white px-3 py-2 font-semibold text-[#245b33]">
+                      <span className="rounded-md border border-linha bg-white px-3 py-2 font-semibold text-sucesso-forte">
                         Sim {pergunta.totalSim ?? 0}
                       </span>
                       <span className="rounded-md border border-linha bg-white px-3 py-2 font-semibold text-perigo">
@@ -1177,14 +1177,14 @@ export function EditorQuestionario() {
                   {pergunta.distribuicao.length ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {pergunta.distribuicao.slice(0, 4).map((item) => (
-                        <span key={`${pergunta.perguntaId}-${item.valor}`} className="rounded-full border border-linha bg-white px-2 py-1 text-xs text-[#596273]">
+                        <span key={`${pergunta.perguntaId}-${item.valor}`} className="rounded-full border border-linha bg-white px-2 py-1 text-xs text-texto-suave">
                           {item.valor}: {item.total}
                         </span>
                       ))}
                     </div>
                   ) : null}
                   {pergunta.textosRecentes.length ? (
-                    <p className="mt-3 line-clamp-2 text-xs text-[#596273]">{pergunta.textosRecentes[0]}</p>
+                    <p className="mt-3 line-clamp-2 text-xs text-texto-suave">{pergunta.textosRecentes[0]}</p>
                   ) : null}
                 </article>
               ))}
@@ -1196,20 +1196,20 @@ export function EditorQuestionario() {
               {respostasVisiveis.map((resposta) => {
                 const paciente = pacientesPorId.get(resposta.pacienteId);
                 return (
-                  <article key={resposta.respostaId} className="rounded-md border border-linha bg-[#f8fafb] p-4">
+                  <article key={resposta.respostaId} className="rounded-md border border-linha bg-superficie p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-tinta">{paciente?.nome ?? 'Paciente nao identificado'}</p>
-                        <p className="text-xs text-[#596273]">Finalizado em {formatarDataResposta(resposta.finalizadoEm)}</p>
+                        <p className="text-xs text-texto-suave">Finalizado em {formatarDataResposta(resposta.finalizadoEm)}</p>
                       </div>
-                      <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-[#596273]">
+                      <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-texto-suave">
                         {resposta.totalRespostas} respostas
                       </span>
                     </div>
                     <dl className="mt-4 grid gap-2 md:grid-cols-2">
                       {resposta.respostas.map((item) => (
                         <div key={`${resposta.respostaId}-${item.perguntaId}`} className="rounded-md border border-linha bg-white p-3">
-                          <dt className="text-xs font-medium text-[#596273]">{item.enunciado}</dt>
+                          <dt className="text-xs font-medium text-texto-suave">{item.enunciado}</dt>
                           <dd className="mt-1 break-words text-sm font-semibold text-tinta">{formatarValorResposta(item.valor)}</dd>
                         </div>
                       ))}
@@ -1219,7 +1219,7 @@ export function EditorQuestionario() {
               })}
             </div>
           ) : (
-            <div className="p-2 text-sm text-[#596273]">
+            <div className="p-2 text-sm text-texto-suave">
               {carregandoRespostas ? 'Carregando respostas.' : 'Nenhuma resposta encontrada para os filtros atuais.'}
             </div>
           )}

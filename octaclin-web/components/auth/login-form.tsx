@@ -52,9 +52,9 @@ export function LoginForm() {
     <main className="min-h-screen bg-fundo px-6 py-10 text-tinta">
       <div className="mx-auto grid w-full max-w-md gap-6">
         <header>
-          <p className="text-xs font-semibold uppercase text-[#596273]">OctaClin</p>
+          <p className="text-xs font-semibold uppercase text-texto-suave">OctaClin</p>
           <h1 className="mt-1 text-3xl font-bold">Acesso OctaClin</h1>
-          <p className="mt-2 text-sm text-[#596273]">Entre como profissional, equipe ou paciente.</p>
+          <p className="mt-2 text-sm text-texto-suave">Entre como profissional, equipe ou paciente.</p>
         </header>
 
         <form onSubmit={enviar} className="grid gap-4 rounded-lg border border-linha bg-white p-5">
@@ -85,7 +85,7 @@ export function LoginForm() {
           </label>
 
           {erro ? (
-            <div className="rounded-md border border-[#efb8ad] bg-[#fff4f1] px-3 py-2 text-sm text-perigo">{erro}</div>
+            <div className="rounded-md border border-perigo-borda bg-perigo-suave px-3 py-2 text-sm text-perigo">{erro}</div>
           ) : null}
 
           <Botao type="submit" variante="primario" disabled={enviando}>

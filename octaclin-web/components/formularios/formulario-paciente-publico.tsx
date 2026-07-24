@@ -105,7 +105,7 @@ export function FormularioPacientePublico({ token }: Props) {
 
   if (carregando) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-fundo px-4 text-sm text-[#596273]">
+      <main className="flex min-h-screen items-center justify-center bg-fundo px-4 text-sm text-texto-suave">
         Carregando formulario...
       </main>
     );
@@ -115,9 +115,9 @@ export function FormularioPacientePublico({ token }: Props) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-fundo px-4">
         <section className="grid w-full max-w-xl gap-3 border border-linha bg-white p-6 text-center">
-          <CheckCircle2 className="mx-auto h-8 w-8 text-[#245b33]" />
+          <CheckCircle2 className="mx-auto h-8 w-8 text-sucesso-forte" />
           <h1 className="text-xl font-semibold text-tinta">Respostas enviadas</h1>
-          <p className="text-sm text-[#596273]">Seu formulario foi registrado com sucesso.</p>
+          <p className="text-sm text-texto-suave">Seu formulario foi registrado com sucesso.</p>
         </section>
       </main>
     );
@@ -126,7 +126,7 @@ export function FormularioPacientePublico({ token }: Props) {
   if (!formulario || erro) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-fundo px-4">
-        <section className="flex w-full max-w-xl items-start gap-3 border border-[#efb8ad] bg-[#fff4f1] p-4 text-sm text-perigo">
+        <section className="flex w-full max-w-xl items-start gap-3 border border-perigo-borda bg-perigo-suave p-4 text-sm text-perigo">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{erro ?? 'Formulario indisponivel.'}</span>
         </section>
@@ -138,13 +138,13 @@ export function FormularioPacientePublico({ token }: Props) {
     <main className="min-h-screen bg-fundo px-4 py-6 text-tinta">
       <section className="mx-auto grid w-full max-w-3xl gap-4">
         <header className="border border-linha bg-white p-5">
-          <p className="text-xs font-semibold uppercase text-[#596273]">OctaClin</p>
+          <p className="text-xs font-semibold uppercase text-texto-suave">OctaClin</p>
           <h1 className="mt-1 text-2xl font-semibold">{formulario.titulo}</h1>
-          {formulario.descricao ? <p className="mt-2 text-sm text-[#596273]">{formulario.descricao}</p> : null}
+          {formulario.descricao ? <p className="mt-2 text-sm text-texto-suave">{formulario.descricao}</p> : null}
         </header>
 
         {erro ? (
-          <div className="flex items-center gap-2 border border-[#efb8ad] bg-[#fff4f1] px-4 py-3 text-sm text-perigo">
+          <div className="flex items-center gap-2 border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
             <AlertTriangle className="h-4 w-4" />
             {erro}
           </div>
@@ -192,7 +192,7 @@ function CampoPergunta({
   const multipla = pergunta.configuracao.multipla === true;
 
   return (
-    <fieldset className="grid gap-3 rounded-md border border-linha bg-[#fbfcfd] p-4">
+    <fieldset className="grid gap-3 rounded-md border border-linha bg-superficie p-4">
       <legend className="text-base font-semibold text-tinta">
         {pergunta.enunciado}
         {pergunta.obrigatoria ? <span className="ml-1 text-perigo">*</span> : null}
@@ -229,7 +229,7 @@ function CampoPergunta({
 
       {pergunta.tipo === 'likert' ? (
         <div className="grid gap-2">
-          <div className="flex justify-between text-xs text-[#596273]">
+          <div className="flex justify-between text-xs text-texto-suave">
             <span>{texto(pergunta.configuracao, 'rotuloMin', 'Discordo totalmente')}</span>
             <span>{texto(pergunta.configuracao, 'rotuloMax', 'Concordo totalmente')}</span>
           </div>
@@ -257,7 +257,7 @@ function CampoPergunta({
             onChange={(event) => aoAlterar(Number(event.target.value))}
             className="w-full accent-primaria"
           />
-          <div className="flex justify-between text-xs text-[#596273]">
+          <div className="flex justify-between text-xs text-texto-suave">
             <span>{texto(pergunta.configuracao, 'rotuloMin', String(numero(pergunta.configuracao, 'minimo', 0)))}</span>
             <span>{texto(pergunta.configuracao, 'rotuloMax', String(numero(pergunta.configuracao, 'maximo', 10)))}</span>
           </div>
@@ -274,7 +274,7 @@ function CampoPergunta({
             value={typeof valor === 'number' ? valor : ''}
             onChange={(event) => aoAlterar(Number(event.target.value))}
           />
-          {texto(pergunta.configuracao, 'unidade') ? <span className="text-sm text-[#596273]">{texto(pergunta.configuracao, 'unidade')}</span> : null}
+          {texto(pergunta.configuracao, 'unidade') ? <span className="text-sm text-texto-suave">{texto(pergunta.configuracao, 'unidade')}</span> : null}
         </div>
       ) : null}
 

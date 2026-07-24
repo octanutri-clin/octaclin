@@ -48,7 +48,7 @@ function LinkAcao({ href, children }: { href: string; children: string }) {
   return (
     <Link
       href={href as any}
-      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors hover:bg-[#eef3f6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
     >
       {children}
     </Link>
@@ -70,11 +70,11 @@ function CartaoIndicador({
     <article className="rounded-md border border-linha bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase text-[#596273]">{titulo}</p>
+          <p className="text-xs font-semibold uppercase text-texto-suave">{titulo}</p>
           <p className="mt-2 text-2xl font-semibold text-tinta">{valor}</p>
-          <p className="mt-1 text-sm text-[#596273]">{detalhe}</p>
+          <p className="mt-1 text-sm text-texto-suave">{detalhe}</p>
         </div>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#eaf3f7] text-primaria">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primaria-suave text-primaria">
           <Icone size={20} />
         </div>
       </div>
@@ -91,10 +91,10 @@ function ListaConsultas({ consultas }: { consultas: ConsultaAgendaApi[] }) {
         <div key={consulta.id} className="grid gap-1 py-3 first:pt-0 last:pb-0">
           <div className="flex min-w-0 items-center justify-between gap-3">
             <p className="truncate text-sm font-semibold text-tinta">{consulta.pacienteNome ?? consulta.titulo}</p>
-            <span className="shrink-0 text-xs font-medium text-[#596273]">{formatarDataHora(consulta.inicioEm)}</span>
+            <span className="shrink-0 text-xs font-medium text-texto-suave">{formatarDataHora(consulta.inicioEm)}</span>
           </div>
-          <p className="truncate text-sm text-[#596273]">{consulta.titulo}</p>
-          {consulta.local ? <p className="truncate text-xs text-[#596273]">{consulta.local}</p> : null}
+          <p className="truncate text-sm text-texto-suave">{consulta.titulo}</p>
+          {consulta.local ? <p className="truncate text-xs text-texto-suave">{consulta.local}</p> : null}
         </div>
       ))}
     </div>
@@ -110,10 +110,10 @@ function ListaPacientesRecentes({ pacientes }: { pacientes: PacienteResumo[] }) 
         <div key={paciente.id} className="grid gap-1 py-3 first:pt-0 last:pb-0">
           <div className="flex min-w-0 items-center justify-between gap-3">
             <p className="truncate text-sm font-semibold text-tinta">{paciente.nome}</p>
-            <span className="shrink-0 rounded-md bg-[#eef3f6] px-2 py-1 text-xs text-[#596273]">{paciente.statusAdesao}</span>
+            <span className="shrink-0 rounded-md bg-superficie-hover px-2 py-1 text-xs text-texto-suave">{paciente.statusAdesao}</span>
           </div>
-          <p className="text-sm text-[#596273]">Risco {numeroSeguro(paciente.scoreRisco)} pontos</p>
-          <p className="text-xs text-[#596273]">Criado em {formatarDataHora(paciente.criadoEm)}</p>
+          <p className="text-sm text-texto-suave">Risco {numeroSeguro(paciente.scoreRisco)} pontos</p>
+          <p className="text-xs text-texto-suave">Criado em {formatarDataHora(paciente.criadoEm)}</p>
         </div>
       ))}
     </div>
@@ -129,10 +129,10 @@ function ListaQuestionarios({ questionarios }: { questionarios: QuestionarioApi[
         <div key={questionario.id} className="grid gap-1 py-3 first:pt-0 last:pb-0">
           <div className="flex min-w-0 items-center justify-between gap-3">
             <p className="truncate text-sm font-semibold text-tinta">{questionario.titulo}</p>
-            <span className="shrink-0 rounded-md bg-[#fff7e6] px-2 py-1 text-xs text-[#8a5a00]">{questionario.status}</span>
+            <span className="shrink-0 rounded-md bg-alerta-suave px-2 py-1 text-xs text-alerta-forte">{questionario.status}</span>
           </div>
-          <p className="text-sm text-[#596273]">Versao {questionario.versao}</p>
-          <p className="text-xs text-[#596273]">Atualizado em {formatarDataHora(questionario.atualizadoEm)}</p>
+          <p className="text-sm text-texto-suave">Versao {questionario.versao}</p>
+          <p className="text-xs text-texto-suave">Atualizado em {formatarDataHora(questionario.atualizadoEm)}</p>
         </div>
       ))}
     </div>
@@ -148,9 +148,9 @@ function ListaMensagens({ mensagens }: { mensagens: MensagemNotificacaoApi[] }) 
         <div key={mensagem.id} className="grid gap-1 py-3 first:pt-0 last:pb-0">
           <div className="flex min-w-0 items-center justify-between gap-3">
             <p className="truncate text-sm font-semibold text-tinta">{textoMensagem(mensagem)}</p>
-            <span className="shrink-0 rounded-md bg-[#eef3f6] px-2 py-1 text-xs text-[#596273]">{mensagem.status}</span>
+            <span className="shrink-0 rounded-md bg-superficie-hover px-2 py-1 text-xs text-texto-suave">{mensagem.status}</span>
           </div>
-          <p className="text-xs text-[#596273]">{formatarDataHora(mensagem.criadoEm)}</p>
+          <p className="text-xs text-texto-suave">{formatarDataHora(mensagem.criadoEm)}</p>
         </div>
       ))}
     </div>
@@ -248,7 +248,7 @@ export function PainelDashboard() {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-semibold text-tinta">Consultas de hoje</h2>
-              <p className="text-sm text-[#596273]">Agenda imediata para conduzir o atendimento diario.</p>
+              <p className="text-sm text-texto-suave">Agenda imediata para conduzir o atendimento diario.</p>
             </div>
             <LinkAcao href="/agenda">Abrir agenda</LinkAcao>
           </div>
@@ -259,7 +259,7 @@ export function PainelDashboard() {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-semibold text-tinta">Pacientes recentes</h2>
-              <p className="text-sm text-[#596273]">Novos cadastros e pessoas que exigem acompanhamento inicial.</p>
+              <p className="text-sm text-texto-suave">Novos cadastros e pessoas que exigem acompanhamento inicial.</p>
             </div>
             <LinkAcao href="/pacientes">Abrir pacientes</LinkAcao>
           </div>
@@ -272,7 +272,7 @@ export function PainelDashboard() {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-semibold text-tinta">Formularios pendentes</h2>
-              <p className="text-sm text-[#596273]">Rascunhos que ainda precisam ser publicados ou revisados.</p>
+              <p className="text-sm text-texto-suave">Rascunhos que ainda precisam ser publicados ou revisados.</p>
             </div>
             <LinkAcao href="/questionarios">Abrir formularios</LinkAcao>
           </div>
@@ -283,7 +283,7 @@ export function PainelDashboard() {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-semibold text-tinta">Mensagens para revisar</h2>
-              <p className="text-sm text-[#596273]">Entradas recentes que podem exigir resposta ou reprocessamento.</p>
+              <p className="text-sm text-texto-suave">Entradas recentes que podem exigir resposta ou reprocessamento.</p>
             </div>
             <LinkAcao href="/comunicacoes">Abrir comunicacoes</LinkAcao>
           </div>
@@ -296,21 +296,21 @@ export function PainelDashboard() {
           <UsersRound size={18} className="mt-0.5 shrink-0 text-primaria" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-tinta">Fila clinica</p>
-            <p className="text-sm text-[#596273]">Priorize pacientes com risco alto e mensagens recebidas.</p>
+            <p className="text-sm text-texto-suave">Priorize pacientes com risco alto e mensagens recebidas.</p>
           </div>
         </div>
         <div className="flex min-w-0 items-start gap-3">
           <UserRoundCheck size={18} className="mt-0.5 shrink-0 text-primaria" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-tinta">Rotina diaria</p>
-            <p className="text-sm text-[#596273]">Abra a agenda antes de iniciar atendimentos do dia.</p>
+            <p className="text-sm text-texto-suave">Abra a agenda antes de iniciar atendimentos do dia.</p>
           </div>
         </div>
         <div className="flex min-w-0 items-start gap-3">
           <ClipboardList size={18} className="mt-0.5 shrink-0 text-primaria" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-tinta">Formularios</p>
-            <p className="text-sm text-[#596273]">Publique rascunhos importantes antes das proximas consultas.</p>
+            <p className="text-sm text-texto-suave">Publique rascunhos importantes antes das proximas consultas.</p>
           </div>
         </div>
       </section>
