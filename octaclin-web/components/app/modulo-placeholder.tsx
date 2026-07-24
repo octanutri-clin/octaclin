@@ -1,4 +1,5 @@
 import { LucideIcon } from 'lucide-react';
+import { Cartao, CartaoConteudo } from '@/components/ui/cartao';
 
 interface ModuloPlaceholderProps {
   titulo: string;
@@ -10,7 +11,8 @@ interface ModuloPlaceholderProps {
 export function ModuloPlaceholder({ titulo, descricao, icone: Icone, itens }: ModuloPlaceholderProps) {
   return (
     <section className="grid gap-4 lg:grid-cols-[1fr_360px]">
-      <div className="rounded-lg border border-linha bg-white p-5">
+      <Cartao>
+        <CartaoConteudo>
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primaria-suave text-primaria">
             <Icone size={20} />
@@ -27,14 +29,17 @@ export function ModuloPlaceholder({ titulo, descricao, icone: Icone, itens }: Mo
             </div>
           ))}
         </div>
-      </div>
-      <aside className="rounded-lg border border-linha bg-white p-5">
+        </CartaoConteudo>
+      </Cartao>
+      <Cartao>
+        <CartaoConteudo>
         <h3 className="text-sm font-semibold">Proximo incremento</h3>
         <p className="mt-2 text-sm text-texto-suave">
           Este modulo ja esta posicionado na navegacao. A proxima etapa e conectar a tela aos endpoints do backend e
           substituir estes estados por dados reais.
         </p>
-      </aside>
+        </CartaoConteudo>
+      </Cartao>
     </section>
   );
 }

@@ -20,6 +20,7 @@ import {
   UsersRound
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { obterSessao } from '@/lib/auth-api';
 import { PortalShell } from '@/components/app/portal-shell';
 import {
@@ -649,12 +650,11 @@ export function PortalCliente() {
           </section>
         ) : null}
 
-        <section id="conta" className="scroll-mt-4 rounded-lg border border-linha bg-white">
-          <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-            <Building2 className="h-4 w-4 text-texto-suave" />
-            <h2 className="text-sm font-semibold">Resumo da conta</h2>
-          </div>
-          <div className="grid gap-3 p-4 md:grid-cols-3">
+        <Cartao id="conta" className="scroll-mt-4">
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<Building2 className="h-4 w-4" />}>Resumo da conta</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo className="grid gap-3 md:grid-cols-3">
             {indicadores.map((indicador) => (
               <article key={indicador.rotulo} className="rounded-md border border-linha bg-superficie p-3">
                 <p className="text-xs text-texto-suave">{indicador.rotulo}</p>
@@ -662,16 +662,15 @@ export function PortalCliente() {
                 <p className="mt-1 text-xs text-texto-suave">{indicador.detalhe}</p>
               </article>
             ))}
-          </div>
-        </section>
+          </CartaoConteudo>
+        </Cartao>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <section id="assinatura" className="scroll-mt-4 rounded-lg border border-linha bg-white">
-            <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-              <CreditCard className="h-4 w-4 text-texto-suave" />
-              <h2 className="text-sm font-semibold">Assinatura</h2>
-            </div>
-            <div className="grid gap-3 p-4">
+          <Cartao id="assinatura" className="scroll-mt-4">
+            <CartaoCabecalho>
+              <CartaoTitulo icone={<CreditCard className="h-4 w-4" />}>Assinatura</CartaoTitulo>
+            </CartaoCabecalho>
+            <CartaoConteudo className="grid gap-3">
               <article className="rounded-md border border-linha bg-superficie p-3">
                 <p className="text-xs text-texto-suave">Status</p>
                 <p className="mt-1 text-base font-semibold">{resumo?.assinatura.plano ?? 'Carregando plano'}</p>
@@ -762,15 +761,14 @@ export function PortalCliente() {
                   </Botao>
                 </div>
               </article>
-            </div>
-          </section>
+            </CartaoConteudo>
+          </Cartao>
 
-          <section id="usuarios" className="scroll-mt-4 rounded-lg border border-linha bg-white">
-            <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-              <UsersRound className="h-4 w-4 text-texto-suave" />
-              <h2 className="text-sm font-semibold">Usuarios</h2>
-            </div>
-            <div className="grid gap-3 p-4">
+          <Cartao id="usuarios" className="scroll-mt-4">
+            <CartaoCabecalho>
+              <CartaoTitulo icone={<UsersRound className="h-4 w-4" />}>Usuarios</CartaoTitulo>
+            </CartaoCabecalho>
+            <CartaoConteudo className="grid gap-3">
               <article className="rounded-md border border-linha bg-superficie p-3">
                 <p className="text-xs text-texto-suave">Gestor da conta</p>
                 <p className="mt-1 break-words text-base font-semibold">{resumo?.acesso.usuarioId ?? 'Carregando usuario'}</p>
@@ -790,13 +788,13 @@ export function PortalCliente() {
                     : 'Profissionais e pacientes usam areas isoladas.'}
                 </p>
               </article>
-            </div>
-          </section>
+            </CartaoConteudo>
+          </Cartao>
         </div>
 
         {podeVerGestaoUsuarios ? (
-        <section id="gestao-usuarios" className="scroll-mt-4 rounded-lg border border-linha bg-white" aria-busy={carregandoUsuarios}>
-          <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
+        <Cartao id="gestao-usuarios" className="scroll-mt-4" aria-busy={carregandoUsuarios}>
+          <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
             <div>
               <h2 className="text-sm font-semibold">Gerenciar usuarios</h2>
               <p className="mt-1 text-sm text-texto-suave">
@@ -809,7 +807,7 @@ export function PortalCliente() {
                 {carregandoUsuarios ? 'Atualizando' : 'Atualizar'}
               </Botao>
             ) : null}
-          </div>
+          </CartaoCabecalho>
 
           <div className="grid gap-4 p-4">
             {erroUsuarios ? (
@@ -998,12 +996,12 @@ export function PortalCliente() {
             </div>
             ) : null}
           </div>
-        </section>
+        </Cartao>
         ) : null}
 
         {podeGerenciarConfiguracoes ? (
-          <section id="configuracoes" className="scroll-mt-4 rounded-lg border border-linha bg-white" aria-busy={carregandoConfiguracoes}>
-            <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+          <Cartao id="configuracoes" className="scroll-mt-4" aria-busy={carregandoConfiguracoes}>
+            <CartaoCabecalho>
               <ShieldCheck className="h-4 w-4 text-texto-suave" />
               <div>
                 <h2 className="text-sm font-semibold">Configuracoes da conta</h2>
@@ -1011,7 +1009,7 @@ export function PortalCliente() {
                   {configuracoes ? `Atualizado em ${formatarData(configuracoes.atualizadoEm)}` : 'Carregando preferencias da conta'}
                 </p>
               </div>
-            </div>
+            </CartaoCabecalho>
             <form onSubmit={salvarConfiguracoes} className="grid gap-4 p-4">
               {erroConfiguracoes ? (
                 <div className="flex items-center gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
@@ -1148,12 +1146,12 @@ export function PortalCliente() {
                 </Botao>
               </div>
             </form>
-          </section>
+          </Cartao>
         ) : null}
 
         {podeGerenciarConfiguracoes ? (
-          <section id="perfil-fiscal" className="scroll-mt-4 rounded-lg border border-linha bg-white" aria-busy={carregandoPerfilEmpresa}>
-            <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+          <Cartao id="perfil-fiscal" className="scroll-mt-4" aria-busy={carregandoPerfilEmpresa}>
+            <CartaoCabecalho>
               <FileText className="h-4 w-4 text-texto-suave" />
               <div>
                 <h2 className="text-sm font-semibold">Perfil fiscal</h2>
@@ -1161,7 +1159,7 @@ export function PortalCliente() {
                   {perfilEmpresa ? `Atualizado em ${formatarData(perfilEmpresa.atualizadoEm)}` : 'Carregando dados fiscais da conta'}
                 </p>
               </div>
-            </div>
+            </CartaoCabecalho>
             <form onSubmit={salvarPerfilEmpresa} className="grid gap-4 p-4">
               {erroPerfilEmpresa ? (
                 <div className="flex items-center gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
@@ -1514,7 +1512,7 @@ export function PortalCliente() {
                 </Botao>
               </div>
             </form>
-          </section>
+          </Cartao>
         ) : null}
       </section>
     </PortalShell>
