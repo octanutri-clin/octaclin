@@ -7,9 +7,9 @@ banco/cache com credencial ou dominio privado aqui - apenas status.
 ## Status atual
 
 Estrutura da fase entregue em 2026-07-23 (runbook, este controle e validador
-documental). Banco Neon de producao criado e migrado em 2026-07-23. Redis
-Upstash, servicos Render de producao e secrets exclusivos ainda pendentes de
-acao do usuario.
+documental). Banco Neon de producao e Redis Upstash de producao criados e
+validados em 2026-07-23. Servicos Render de producao e secrets exclusivos
+(JWT/AES) ainda pendentes de acao do usuario.
 
 ## Recursos a criar
 
@@ -17,7 +17,7 @@ acao do usuario.
 | --- | --- | --- | --- |
 | Banco Neon de producao (projeto/branch proprio) | Feito | 2026-07-23 | Projeto dedicado `Octaclin-db-producao`, host proprio, distinto do staging (`ep-rough-bird-atunz76m`). |
 | Migrations aplicadas no banco novo (`pnpm --dir octaclin-backend migration:run`) | Feito | 2026-07-23 | 8/8 migrations aplicadas (`migration:show` sem pendencias). Confirmado `tenants=0` e `usuarios=0` apos a migracao: banco vazio, sem dado de staging. |
-| Redis Upstash de producao | Pendente | - | Instancia dedicada, nao compartilhada com staging. |
+| Redis Upstash de producao | Feito | 2026-07-23 | Instancia dedicada (`relieved-goose-91945.upstash.io`). `PING` validado via TLS (`rediss://`) com `ioredis`. |
 | Render backend de producao | Pendente | - | Servico/environment separado do staging. |
 | Render web de producao | Pendente | - | Servico/environment separado do staging. |
 | Secrets de producao (`JWT_SEGREDO`, `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256`, `DATABASE_URL`, `REDIS_URL`) | Pendente | - | Valores exclusivos, nunca copiados de staging. |
@@ -40,6 +40,13 @@ o que foi feito, quem confirmou). Nao inclua valores de secrets.
   apareceu em texto no chat durante a troca de credencial; recomendado
   rotacionar a senha do role `neondb_owner` no console Neon (`RUNBOOK_ROTACAO_SECRETS.md`,
   secao Neon/Postgres) antes de considerar o secret definitivo.
+- 2026-07-23: usuario criou a instancia Upstash de producao dedicada. `REDIS_URL`
+  usada apenas como variavel de ambiente de sessao (convertida para
+  `rediss://` para forcar TLS, conforme `configuracao-redis.ts`); nao foi
+  gravada em nenhum arquivo do repositorio. `PING` respondeu `PONG` via
+  `ioredis` com TLS. Mesma observacao de seguranca: o token apareceu em texto
+  no chat e deve ser rotacionado no console Upstash antes de considerar o
+  secret definitivo (`RUNBOOK_ROTACAO_SECRETS.md`, secao Upstash/Redis).
 
 ## Validacoes pendentes antes do aceite
 
@@ -61,13 +68,11 @@ o que foi feito, quem confirmou). Nao inclua valores de secrets.
 
 ## Proximo passo
 
-1. Rotacionar a senha do role `neondb_owner` no projeto Neon de producao (ela
-   apareceu em texto no chat durante o provisionamento), seguindo
-   `RUNBOOK_ROTACAO_SECRETS.md`, e atualizar apenas no Render quando o servico
-   existir.
-2. Criar a instancia Upstash de producao.
-3. Criar os servicos Render de producao (backend e web), separados dos de
+1. Rotacionar a senha do role `neondb_owner` (Neon) e o token da instancia
+   Upstash de producao, seguindo `RUNBOOK_ROTACAO_SECRETS.md` (ambos
+   apareceram em texto no chat durante o provisionamento).
+2. Criar os servicos Render de producao (backend e web), separados dos de
    staging, com `NODE_ENV=production` e as variaveis de
    `VARIAVEIS_AMBIENTE.md`.
-4. Validar `/health` e `/health/detalhado` apos o primeiro deploy e atualizar
+3. Validar `/health` e `/health/detalhado` apos o primeiro deploy e atualizar
    a tabela acima a cada etapa concluida.

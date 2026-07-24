@@ -1,6 +1,6 @@
 # Fase 131 - Producao isolada de staging
 
-Status: em andamento (estrutura entregue em 2026-07-23; banco Neon de producao criado e migrado em 2026-07-23; Redis, Render e secrets ainda pendentes).
+Status: em andamento (estrutura entregue em 2026-07-23; banco Neon e Redis Upstash de producao criados e validados em 2026-07-23; Render e secrets exclusivos ainda pendentes).
 
 ## Objetivo
 
@@ -43,20 +43,30 @@ role apareceu em texto no chat durante a troca de credencial e deve ser
 rotacionada (`RUNBOOK_ROTACAO_SECRETS.md`) antes de considerar o secret
 definitivo.
 
+## Redis Upstash de producao (concluido em 2026-07-23)
+
+O usuario criou a instancia Upstash dedicada a producao
+(`relieved-goose-91945.upstash.io`). A conexao foi validada com `ioredis`
+usando `rediss://` (TLS obrigatorio, conforme `configuracao-redis.ts`): `PING`
+respondeu `PONG`. A `REDIS_URL` foi usada apenas como variavel de ambiente de
+sessao, nunca gravada em arquivo. O token apareceu em texto no chat durante a
+troca de credencial e deve ser rotacionado no console Upstash antes de
+considerar o secret definitivo.
+
 ## O que ainda falta (pendente de acao do usuario)
 
 Provisionamento real, que exige acesso e decisoes nos consoles dos
 provedores:
 
-1. Rotacionar a senha do role `neondb_owner` do projeto Neon de producao.
-2. Criar a instancia Upstash de producao.
-3. Criar os servicos Render de producao (backend e web), separados dos
+1. Rotacionar a senha do role `neondb_owner` (Neon) e o token da instancia
+   Upstash de producao.
+2. Criar os servicos Render de producao (backend e web), separados dos
    servicos usados hoje como staging.
-4. Gerar secrets exclusivos de producao (`JWT_SEGREDO`,
+3. Gerar secrets exclusivos de producao (`JWT_SEGREDO`,
    `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256`) e credenciais proprias
    de Gmail/Meta/Google quando disponiveis.
-5. Validar `/health`, `/health/detalhado` e login no ambiente novo.
-6. Atualizar `PRODUCAO_ISOLADA_CONTROLE.md` a cada etapa e registrar a
+4. Validar `/health`, `/health/detalhado` e login no ambiente novo.
+5. Atualizar `PRODUCAO_ISOLADA_CONTROLE.md` a cada etapa e registrar a
    decisao final de aceite.
 
 ## Arquivos principais tocados
