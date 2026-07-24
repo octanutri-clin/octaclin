@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity, AlertTriangle, CheckCircle2, CreditCard, Download, History, RefreshCcw, Scale, Search, Smartphone, Undo2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { SessaoPublica, obterSessao, sair } from '@/lib/auth-api';
 import {
@@ -690,7 +691,8 @@ export function PainelOperacoes() {
 
   return (
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <section className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
+        <Cartao>
+        <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm font-semibold">{sessao?.email ?? 'Carregando sessao'}</p>
             <p className="mt-1 text-xs text-texto-suave">
@@ -704,7 +706,8 @@ export function PainelOperacoes() {
             <RefreshCcw size={16} />
             {carregando ? 'Atualizando' : 'Atualizar'}
           </Botao>
-        </section>
+        </CartaoConteudo>
+        </Cartao>
 
         {erro ? <AlertaOperacional mensagem={erro} /> : null}
         {sucesso ? (
@@ -727,18 +730,20 @@ export function PainelOperacoes() {
 
         <section className="grid gap-3 md:grid-cols-4">
           {metricas.map((item) => (
-            <div key={item.rotulo} className="rounded-lg border border-linha bg-white p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-texto-suave">{item.rotulo}</span>
-                <item.icone className={item.cor} size={20} />
-              </div>
-              <p className="mt-3 text-3xl font-bold">{item.valor}</p>
-            </div>
+            <Cartao key={item.rotulo}>
+              <CartaoConteudo>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-texto-suave">{item.rotulo}</span>
+                  <item.icone className={item.cor} size={20} />
+                </div>
+                <p className="mt-3 text-3xl font-bold">{item.valor}</p>
+              </CartaoConteudo>
+            </Cartao>
           ))}
         </section>
 
-        <section className="rounded-lg border border-linha bg-white">
-          <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
+        <Cartao>
+          <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
             <div>
               <div className="flex items-center gap-2">
                 <AlertTriangle size={19} className={alertasOperacionais?.status === 'critico' ? 'text-perigo' : 'text-alerta'} />
@@ -753,7 +758,7 @@ export function PainelOperacoes() {
             <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
               {rotuloStatusAlertas(alertasOperacionais?.status ?? 'ok')}
             </span>
-          </div>
+          </CartaoCabecalho>
           {alertasOperacionais?.itens.length ? (
             <div className="grid gap-3 p-4 md:grid-cols-2">
               {alertasOperacionais.itens.slice(0, 6).map((alerta) => (
@@ -775,10 +780,10 @@ export function PainelOperacoes() {
           ) : (
             <EstadoVazio titulo="Nenhum alerta ativo" descricao="Health, filas e integracoes sem alerta operacional no momento." />
           )}
-        </section>
+        </Cartao>
 
-        <section className="rounded-lg border border-linha bg-white">
-          <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
+        <Cartao>
+          <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
             <div>
               <div className="flex items-center gap-2">
                 <AlertTriangle size={19} className="text-perigo" />
@@ -793,7 +798,7 @@ export function PainelOperacoes() {
             <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
               {falhasComunicacao?.resumo.reprocessaveis ?? 0} reprocessaveis
             </span>
-          </div>
+          </CartaoCabecalho>
           <form onSubmit={filtrarFalhasComunicacao} className="grid gap-2 border-b border-linha px-4 py-3 lg:grid-cols-[0.8fr_0.8fr_1fr_1fr_1fr_auto]">
             <select
               className="h-9 rounded-md border border-linha px-2 text-sm"
@@ -904,10 +909,10 @@ export function PainelOperacoes() {
               </Botao>
             </div>
           </div>
-        </section>
+        </Cartao>
 
-        <section className="rounded-lg border border-linha bg-white">
-          <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
+        <Cartao>
+          <CartaoCabecalho>
             <div className="flex items-center gap-2">
               <CreditCard size={19} className="text-primaria" />
               <h2 className="text-base font-semibold">Assinaturas</h2>
@@ -917,7 +922,7 @@ export function PainelOperacoes() {
               <RefreshCcw size={16} />
               {carregandoAssinatura ? 'Atualizando' : 'Atualizar fila'}
             </Botao>
-          </div>
+          </CartaoCabecalho>
           <div className="divide-y divide-linha">
             {solicitacoesAssinatura?.itens.length ? (
               solicitacoesAssinatura.itens.map((solicitacao) => {
@@ -976,10 +981,10 @@ export function PainelOperacoes() {
               <EstadoVazio titulo="Nenhuma solicitacao de assinatura carregada." />
             )}
           </div>
-        </section>
+        </Cartao>
 
-        <section className="rounded-lg border border-linha bg-white">
-          <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <Cartao>
+          <CartaoCabecalho className="flex-col items-start lg:flex-row lg:items-center">
             <div className="flex items-center gap-2">
               <Scale size={19} className="text-primaria" />
               <h2 className="text-base font-semibold">Solicitacoes LGPD</h2>
@@ -1013,7 +1018,7 @@ export function PainelOperacoes() {
                 {carregandoLgpd ? 'Filtrando' : 'Filtrar'}
               </Botao>
             </form>
-          </div>
+          </CartaoCabecalho>
           <div className="border-b border-linha bg-superficie px-4 py-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
@@ -1219,10 +1224,10 @@ export function PainelOperacoes() {
               </Botao>
             </div>
           </div>
-        </section>
+        </Cartao>
 
-        <section className="rounded-lg border border-linha bg-white">
-          <div className="flex flex-col gap-3 border-b border-linha px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <Cartao>
+          <CartaoCabecalho className="flex-col items-start lg:flex-row lg:items-center">
             <div className="flex items-center gap-2">
               <History size={19} className="text-primaria" />
               <h2 className="text-base font-semibold">Auditoria sensivel</h2>
@@ -1282,7 +1287,7 @@ export function PainelOperacoes() {
                 CSV
               </Botao>
             </form>
-          </div>
+          </CartaoCabecalho>
           <div className="divide-y divide-linha">
             {dados?.auditoria.length ? (
               dados.auditoria.map((evento) => (
@@ -1330,11 +1335,11 @@ export function PainelOperacoes() {
               </Botao>
             </div>
           </div>
-        </section>
+        </Cartao>
 
         <section className="grid gap-5 lg:grid-cols-[1.35fr_0.9fr]">
-          <div className="rounded-lg border border-linha bg-white">
-            <div className="flex items-center justify-between border-b border-linha px-4 py-3">
+          <Cartao>
+            <CartaoCabecalho>
               <div>
                 <h2 className="text-base font-semibold">Outbox com falha</h2>
                 <span className="text-sm text-texto-suave">{falhasPaginadas?.total ?? dados?.falhas.length ?? 0} eventos</span>
@@ -1343,7 +1348,7 @@ export function PainelOperacoes() {
                 <Download size={16} />
                 CSV
               </Botao>
-            </div>
+            </CartaoCabecalho>
             <form onSubmit={filtrarOutbox} className="grid gap-2 border-b border-linha px-4 py-3 md:grid-cols-4">
               <input
                 className="h-9 rounded-md border border-linha px-2 text-sm"
@@ -1416,13 +1421,13 @@ export function PainelOperacoes() {
                 </Botao>
               </div>
             </div>
-          </div>
+          </Cartao>
 
-          <div className="rounded-lg border border-linha bg-white">
-            <div className="flex items-center justify-between border-b border-linha px-4 py-3">
+          <Cartao>
+            <CartaoCabecalho>
               <h2 className="text-base font-semibold">Sync mobile</h2>
               <Smartphone size={19} className="text-primaria" />
-            </div>
+            </CartaoCabecalho>
             <div className="divide-y divide-linha">
               {dados?.sincronizacoes.length ? (
                 dados.sincronizacoes.map((item) => (
@@ -1448,7 +1453,7 @@ export function PainelOperacoes() {
                 <EstadoVazio titulo="Nenhuma sincronizacao carregada." />
               )}
             </div>
-          </div>
+          </Cartao>
         </section>
       </div>
   );

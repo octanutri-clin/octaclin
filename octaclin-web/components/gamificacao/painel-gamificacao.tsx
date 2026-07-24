@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Award, CheckCircle2, MessageSquare, RefreshCcw, Save, Trophy, UsersRound } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import {
@@ -248,7 +249,8 @@ export function PainelGamificacao() {
 
   return (
     <section className="grid gap-4">
-      <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
+      <Cartao>
+      <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-base font-semibold">Gamificacao</h2>
           <p className="mt-1 text-sm text-texto-suave">
@@ -259,7 +261,8 @@ export function PainelGamificacao() {
           <RefreshCcw size={16} />
           {carregando ? 'Atualizando' : 'Atualizar'}
         </Botao>
-      </div>
+      </CartaoConteudo>
+      </Cartao>
 
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       <BarraCarregamento visivel={carregando} />
@@ -271,11 +274,12 @@ export function PainelGamificacao() {
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <form onSubmit={salvarCirculo} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <UsersRound size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Circulo</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={salvarCirculo}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<UsersRound size={18} className="text-primaria" />}>Circulo</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
               <Rotulo htmlFor="gamificacao-circulo-profissional">Profissional</Rotulo>
@@ -347,13 +351,16 @@ export function PainelGamificacao() {
               Criar circulo
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
 
-        <form onSubmit={publicarPost} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <MessageSquare size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Post de comunidade</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={publicarPost}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<MessageSquare size={18} className="text-primaria" />}>Post de comunidade</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3">
             <div className="space-y-1.5">
               <Rotulo htmlFor="gamificacao-post-circulo">Circulo</Rotulo>
@@ -407,15 +414,18 @@ export function PainelGamificacao() {
               Publicar
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <form onSubmit={salvarDesafio} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Trophy size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Desafio</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={salvarDesafio}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<Trophy size={18} className="text-primaria" />}>Desafio</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
               <Rotulo htmlFor="gamificacao-desafio-profissional">Profissional</Rotulo>
@@ -487,13 +497,16 @@ export function PainelGamificacao() {
               Criar desafio
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
 
-        <form onSubmit={salvarBadge} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Award size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Badge</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={salvarBadge}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<Award size={18} className="text-primaria" />}>Badge</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3">
             <div className="space-y-1.5">
               <Rotulo htmlFor="gamificacao-badge-paciente">Paciente</Rotulo>
@@ -546,14 +559,16 @@ export function PainelGamificacao() {
               Conceder
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <aside className="rounded-lg border border-linha bg-white">
-          <div className="border-b border-linha px-4 py-3">
-            <h3 className="text-sm font-semibold">Ranking</h3>
-          </div>
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo>Ranking</CartaoTitulo>
+          </CartaoCabecalho>
           <div className="max-h-[340px] divide-y divide-linha overflow-auto">
             {ranking.length ? (
               ranking.map((item) => (
@@ -577,12 +592,12 @@ export function PainelGamificacao() {
               </Botao>
             </div>
           ) : null}
-        </aside>
+        </Cartao>
 
-        <aside className="rounded-lg border border-linha bg-white">
-          <div className="border-b border-linha px-4 py-3">
-            <h3 className="text-sm font-semibold">Registros persistidos</h3>
-          </div>
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo>Registros persistidos</CartaoTitulo>
+          </CartaoCabecalho>
           <div className="grid gap-3 p-4 text-sm">
             <div className="rounded-md border border-linha bg-fundo p-3">
               <p className="text-xs font-semibold uppercase text-texto-suave">Circulos</p>
@@ -597,7 +612,7 @@ export function PainelGamificacao() {
               <p className="mt-1 text-tinta">{badges.map((item) => item.nome).join(', ') || 'Nenhum badge criado.'}</p>
             </div>
           </div>
-        </aside>
+        </Cartao>
       </section>
     </section>
   );
