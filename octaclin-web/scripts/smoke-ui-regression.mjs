@@ -110,7 +110,7 @@ async function validarLogin() {
   const resposta = await requisitar('/login');
   assertStatus(resposta, 200, 'login');
   const html = await resposta.text();
-  assertInclui(html, 'Acesso operacional', 'login');
+  assertInclui(html, 'Acesso OctaClin', 'login');
   assertInclui(html, 'API', 'login');
   assertInclui(html, 'Tenant', 'login');
   assertInclui(html, 'Email', 'login');

@@ -36,7 +36,7 @@ const rotulosMenu = [
 
 async function login(page) {
   await page.goto('/login');
-  await expect(page.getByRole('heading', { name: 'Acesso operacional' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Acesso OctaClin' })).toBeVisible();
 
   const campos = page.locator('input');
   await expect(campos).toHaveCount(4);
