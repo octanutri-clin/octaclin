@@ -8,7 +8,7 @@ Atualizado em 2026-07-23.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
 - Ultima fase concluida: Fase 130 - Piloto interno controlado (rodada 1 executada e aprovada em 2026-07-23).
-- Fase em andamento: Fase 131 - Producao isolada de staging (estrutura entregue em 2026-07-23; provisionamento real pendente).
+- Fase em andamento: Fase 131 - Producao isolada de staging (estrutura entregue em 2026-07-23; banco Neon e Redis Upstash de producao validados; servicos Render de producao criados em 2026-07-24 mas com falha de deploy nao diagnosticada, trabalho pausado e passado para o Codex - ver `PRODUCAO_ISOLADA_CONTROLE.md`, secao "Handoff para o Codex").
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional

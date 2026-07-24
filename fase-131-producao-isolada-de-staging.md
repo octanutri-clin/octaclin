@@ -1,6 +1,6 @@
 # Fase 131 - Producao isolada de staging
 
-Status: em andamento (estrutura entregue em 2026-07-23; banco Neon e Redis Upstash de producao criados e validados em 2026-07-23; Render e secrets exclusivos ainda pendentes).
+Status: bloqueado, em handoff para o Codex (estrutura entregue em 2026-07-23; banco Neon e Redis Upstash de producao criados e validados em 2026-07-23; servicos Render de producao criados em 2026-07-24 mas com falha de deploy nao diagnosticada nesta sessao).
 
 ## Objetivo
 
@@ -53,15 +53,25 @@ sessao, nunca gravada em arquivo. O token apareceu em texto no chat durante a
 troca de credencial e deve ser rotacionado no console Upstash antes de
 considerar o secret definitivo.
 
-## O que ainda falta (pendente de acao do usuario)
+## Servicos Render de producao (bloqueado em 2026-07-24)
 
-Provisionamento real, que exige acesso e decisoes nos consoles dos
-provedores:
+O usuario confirmou os runtimes reais de staging no dashboard Render
+(`octaclin-backend-staging` em Docker, `octaclin-web-staging` em Node,
+`octaclin-redis-staging` no servico nativo Key Value/Valkey do Render) e
+criou `octaclin-backend-producao` (Docker) e `octaclin-web-producao` (Node)
+seguindo a configuracao de `RUNBOOK_PRODUCAO_ISOLADA.md`. Pelo menos um dos
+dois falhou no deploy. Sem acesso a browser/dashboard Render nesta sessao
+(Claude Code via CLI), nao foi possivel ler o log de erro real para
+diagnosticar. O usuario decidiu pausar aqui e passar para o Codex, que tem
+acesso via browser ao Render, terminar o diagnostico e a correcao. Detalhes
+completos do handoff em `PRODUCAO_ISOLADA_CONTROLE.md`, secao "Handoff para
+o Codex".
 
-1. Rotacionar a senha do role `neondb_owner` (Neon) e o token da instancia
-   Upstash de producao.
-2. Criar os servicos Render de producao (backend e web), separados dos
-   servicos usados hoje como staging.
+## O que ainda falta
+
+1. Codex diagnostica e corrige a falha de deploy (backend e/ou web).
+2. Rotacionar a senha do role `neondb_owner` (Neon) e o token da instancia
+   Upstash de producao, seguindo `RUNBOOK_ROTACAO_SECRETS.md`.
 3. Gerar secrets exclusivos de producao (`JWT_SEGREDO`,
    `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256`) e credenciais proprias
    de Gmail/Meta/Google quando disponiveis.

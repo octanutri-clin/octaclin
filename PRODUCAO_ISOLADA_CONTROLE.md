@@ -8,8 +8,17 @@ banco/cache com credencial ou dominio privado aqui - apenas status.
 
 Estrutura da fase entregue em 2026-07-23 (runbook, este controle e validador
 documental). Banco Neon de producao e Redis Upstash de producao criados e
-validados em 2026-07-23. Servicos Render de producao e secrets exclusivos
-(JWT/AES) ainda pendentes de acao do usuario.
+validados em 2026-07-23.
+
+**Bloqueado em 2026-07-24**: usuario criou os dois servicos Render de
+producao (`octaclin-backend-producao` com `Language: Docker`,
+`octaclin-web-producao` com `Language: Node`, conforme
+`RUNBOOK_PRODUCAO_ISOLADA.md`), mas o deploy de pelo menos um dos servicos
+falhou. O usuario nao chegou a compartilhar o log de erro nesta sessao (sem
+acesso a browser/dashboard Render neste ambiente para diagnosticar
+diretamente). Decisao do usuario: pular esta etapa aqui e deixar para o
+Codex, que tem acesso via browser ao dashboard Render, diagnosticar e
+resolver a falha de deploy. Ver secao "Handoff para o Codex" abaixo.
 
 ## Recursos a criar
 
@@ -18,8 +27,8 @@ validados em 2026-07-23. Servicos Render de producao e secrets exclusivos
 | Banco Neon de producao (projeto/branch proprio) | Feito | 2026-07-23 | Projeto dedicado `Octaclin-db-producao`, host proprio, distinto do staging (`ep-rough-bird-atunz76m`). |
 | Migrations aplicadas no banco novo (`pnpm --dir octaclin-backend migration:run`) | Feito | 2026-07-23 | 8/8 migrations aplicadas (`migration:show` sem pendencias). Confirmado `tenants=0` e `usuarios=0` apos a migracao: banco vazio, sem dado de staging. |
 | Redis Upstash de producao | Feito | 2026-07-23 | Instancia dedicada (`relieved-goose-91945.upstash.io`). `PING` validado via TLS (`rediss://`) com `ioredis`. |
-| Render backend de producao | Pendente | - | Servico separado do staging, `Language: Docker` (mesmo runtime do backend de staging). |
-| Render web de producao | Pendente | - | Servico separado do staging, `Language: Node` (confirmado com o usuario que o staging usa Node, nao Docker, apesar de existir `octaclin-web/Dockerfile` no repo). |
+| Render backend de producao | Bloqueado | 2026-07-24 | Servico `octaclin-backend-producao` criado (`Language: Docker`), mas deploy falhou. Log de erro nao coletado nesta sessao. |
+| Render web de producao | Bloqueado | 2026-07-24 | Servico `octaclin-web-producao` criado (`Language: Node`), mas deploy falhou (ou pode estar afetado pela falha do backend). Log de erro nao coletado nesta sessao. |
 | Secrets de producao (`JWT_SEGREDO`, `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256`, `DATABASE_URL`, `REDIS_URL`) | Pendente | - | Valores exclusivos, nunca copiados de staging. |
 | Credenciais de integracao proprias de producao (Gmail/SMTP, Meta WhatsApp, Google Calendar) | Pendente | - | Enquanto pendente, manter integracao correspondente desativada em producao. |
 | Primeiro deploy validado (`/health`, `/health/detalhado`, login) | Pendente | - | Ver criterios em `RUNBOOK_PRODUCAO_ISOLADA.md`. |
@@ -47,6 +56,45 @@ o que foi feito, quem confirmou). Nao inclua valores de secrets.
   `ioredis` com TLS. Mesma observacao de seguranca: o token apareceu em texto
   no chat e deve ser rotacionado no console Upstash antes de considerar o
   secret definitivo (`RUNBOOK_ROTACAO_SECRETS.md`, secao Upstash/Redis).
+- 2026-07-24: usuario criou `octaclin-backend-producao` (Docker) e
+  `octaclin-web-producao` (Node) no Render seguindo a configuracao de
+  `RUNBOOK_PRODUCAO_ISOLADA.md`. Pelo menos um deploy falhou. Sem acesso a
+  browser/dashboard Render nesta sessao (Claude Code via CLI) para ler o log
+  de build/deploy real, a causa nao foi diagnosticada. Trabalho pausado aqui
+  e passado para o Codex (que tem acesso via browser ao Render) continuar o
+  diagnostico e a correcao.
+
+## Handoff para o Codex
+
+Contexto para quem retomar com acesso ao dashboard Render:
+
+1. Os dois servicos ja existem: `octaclin-backend-producao` (`Language:
+   Docker`, Build Context `octaclin-backend`, Dockerfile Path
+   `octaclin-backend/Dockerfile`) e `octaclin-web-producao` (`Language:
+   Node`, Root Directory `octaclin-web`, Build Command
+   `corepack enable && pnpm install --frozen-lockfile && pnpm build`, Start
+   Command `pnpm start`). Configuracao completa em
+   `RUNBOOK_PRODUCAO_ISOLADA.md`.
+2. O banco Neon de producao (`Octaclin-db-producao`) e o Redis Upstash de
+   producao ja estao criados e validados (ver tabela acima); as variaveis
+   `DATABASE_URL` e `REDIS_URL` de producao ja devem ter sido configuradas
+   pelo usuario no Render ao criar os servicos.
+3. Pelo menos um deploy falhou. Abrir a aba de logs de build/deploy de cada
+   servico no dashboard, identificar a causa exata (dependencia, variavel de
+   ambiente ausente, health check, memoria do plano, etc.) e corrigir.
+4. Suspeitas mais provaveis a descartar primeiro: variavel obrigatoria
+   ausente (`JWT_SEGREDO`, `JWT_REFRESH_SEGREDO`,
+   `CRIPTOGRAFIA_CHAVE_AES_256` no backend; `NEXT_PUBLIC_API_URL`/
+   `OCTACLIN_BACKEND_URL` no web), `REDIS_URL` sem `rediss://` (TLS
+   obrigatorio, ver `configuracao-redis.ts`), `BANCO_EXECUTAR_MIGRACOES` sem
+   estar `false` tentando rodar migration de novo, ou plano Free do Render
+   sem recurso suficiente para o build.
+5. Depois de corrigir e o deploy ficar verde, seguir a secao "Validacao do
+   ambiente novo" de `RUNBOOK_PRODUCAO_ISOLADA.md` (`/health`,
+   `/health/detalhado`, login) antes de marcar qualquer linha da tabela acima
+   como `Feito`.
+6. Atualizar esta tabela, o registro de execucao e, se tudo passar, a secao
+   "Decisao de aceite" abaixo.
 
 ## Validacoes pendentes antes do aceite
 
@@ -68,11 +116,11 @@ o que foi feito, quem confirmou). Nao inclua valores de secrets.
 
 ## Proximo passo
 
-1. Rotacionar a senha do role `neondb_owner` (Neon) e o token da instancia
+1. Codex diagnostica e corrige a falha de deploy dos servicos Render de
+   producao (ver "Handoff para o Codex" acima).
+2. Rotacionar a senha do role `neondb_owner` (Neon) e o token da instancia
    Upstash de producao, seguindo `RUNBOOK_ROTACAO_SECRETS.md` (ambos
-   apareceram em texto no chat durante o provisionamento).
-2. Criar os servicos Render de producao (backend e web), separados dos de
-   staging, com `NODE_ENV=production` e as variaveis de
-   `VARIAVEIS_AMBIENTE.md`.
-3. Validar `/health` e `/health/detalhado` apos o primeiro deploy e atualizar
-   a tabela acima a cada etapa concluida.
+   apareceram em texto no chat durante o provisionamento), e atualizar os
+   valores novos apenas no Render.
+3. Validar `/health` e `/health/detalhado` apos o deploy ficar saudavel e
+   atualizar a tabela acima a cada etapa concluida.

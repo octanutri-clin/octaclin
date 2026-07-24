@@ -309,8 +309,8 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 - [ ] Fase 131 - Producao isolada de staging.
   - Banco, Redis, Render service/env, dominio e secrets separados.
   - Saida esperada: ambiente de producao independente.
-  - Status: em andamento. Estrutura entregue em 2026-07-23 (`RUNBOOK_PRODUCAO_ISOLADA.md`, `PRODUCAO_ISOLADA_CONTROLE.md`, `scripts/test-producao-isolada.mjs`, `pnpm test:producao-isolada`).
-  - Pendente: provisionar de fato o banco Neon, o Redis Upstash e os servicos Render de producao (separados do ambiente hoje usado como staging), configurar secrets exclusivos e registrar cada etapa em `PRODUCAO_ISOLADA_CONTROLE.md` ate o aceite final.
+  - Status: bloqueado, em handoff para o Codex. Estrutura entregue em 2026-07-23 (`RUNBOOK_PRODUCAO_ISOLADA.md`, `PRODUCAO_ISOLADA_CONTROLE.md`, `scripts/test-producao-isolada.mjs`, `pnpm test:producao-isolada`); banco Neon e Redis Upstash de producao criados e validados em 2026-07-23.
+  - Pendente: servicos Render de producao (`octaclin-backend-producao`, `octaclin-web-producao`) foram criados em 2026-07-24 mas o deploy falhou; sem acesso a browser/dashboard Render nesta sessao para diagnosticar, o trabalho foi pausado e passado para o Codex (detalhes em `PRODUCAO_ISOLADA_CONTROLE.md`, secao "Handoff para o Codex"). Faltam ainda secrets exclusivos de producao e o registro do aceite final.
 
 - [ ] Fase 132 - Dominio, SSL e identidade de envio.
   - Dominio oficial, remetente, SPF/DKIM/DMARC quando aplicavel.
