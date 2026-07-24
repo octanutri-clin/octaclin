@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-07-23, Fase 130.
+Atualizado em 2026-07-23, Fase 131.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -34,7 +34,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Suporte | Pronto | `RUNBOOK_SUPORTE.md` cobre login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento. | Treinar responsavel e revisar apos piloto. |
 | Dados de staging | Pronto | Fixture sem PII real, seed `seed-staging.ts`, runbook `RUNBOOK_STAGING_DADOS.md`; `pnpm seed:staging` aplicado e validado no Neon staging (tenant `octaclin-staging`). | Reaplicar quando a Fase 131 separar staging de producao. |
 | Piloto interno | Pronto | Runbook `RUNBOOK_PILOTO_INTERNO.md` e controle `PILOTO_INTERNO_CONTROLE.md`; rodada 1 executada em 2026-07-23 com todas as jornadas manuais aprovadas e aceite registrado. | Nenhuma pendencia; repetir rodada apos mudancas relevantes de autorizacao. |
-| Producao isolada | Pendente | Staging funcional. | Criar env de producao separado de staging. |
+| Producao isolada | Parcial | Runbook `RUNBOOK_PRODUCAO_ISOLADA.md` e controle `PRODUCAO_ISOLADA_CONTROLE.md` criados; nenhum recurso de producao (Neon/Upstash/Render) provisionado ainda. | Criar banco Neon, Redis Upstash e servicos Render de producao separados de staging conforme o runbook. |
 | Juridico/comercial | Pendente | Checklist previsto. | Termos, politica, contrato e processo de suporte. |
 | QA E2E | Parcial | Typechecks, specs focadas, Playwright visual por areas e suite de jornadas criticas com BFF mockado. | Validar em staging com dados realistas. |
 
@@ -82,4 +82,8 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Piloto interno controlado aprovado em 2026-07-23 (`PILOTO_INTERNO_CONTROLE.md`). Seguir para a Fase 131 - Producao isolada de staging (banco, Redis, Render service/env, dominio e secrets separados de staging).
+Fase 131 - Producao isolada de staging em andamento. Estrutura entregue em
+2026-07-23 (`RUNBOOK_PRODUCAO_ISOLADA.md`, `PRODUCAO_ISOLADA_CONTROLE.md`).
+Falta provisionar de fato o banco Neon, o Redis Upstash e os servicos Render
+de producao, separados do ambiente hoje usado como staging, e registrar cada
+etapa em `PRODUCAO_ISOLADA_CONTROLE.md` ate o aceite final.

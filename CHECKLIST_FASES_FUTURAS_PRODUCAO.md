@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado apos a Fase 130.
+Atualizado durante a Fase 131 (estrutura entregue em 2026-07-23; provisionamento real em andamento).
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -309,6 +309,8 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 - [ ] Fase 131 - Producao isolada de staging.
   - Banco, Redis, Render service/env, dominio e secrets separados.
   - Saida esperada: ambiente de producao independente.
+  - Status: em andamento. Estrutura entregue em 2026-07-23 (`RUNBOOK_PRODUCAO_ISOLADA.md`, `PRODUCAO_ISOLADA_CONTROLE.md`, `scripts/test-producao-isolada.mjs`, `pnpm test:producao-isolada`).
+  - Pendente: provisionar de fato o banco Neon, o Redis Upstash e os servicos Render de producao (separados do ambiente hoje usado como staging), configurar secrets exclusivos e registrar cada etapa em `PRODUCAO_ISOLADA_CONTROLE.md` ate o aceite final.
 
 - [ ] Fase 132 - Dominio, SSL e identidade de envio.
   - Dominio oficial, remetente, SPF/DKIM/DMARC quando aplicavel.

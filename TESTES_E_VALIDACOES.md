@@ -264,6 +264,28 @@ powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
 
 Regra esperada: o runbook deve cobrir participantes, perfis, jornadas, criterios de sucesso/bloqueio, registro de bugs e aceite; o controle deve manter status, checklist de jornadas, registro de bugs e decisao de aceite, sem secrets nem dados reais de clientes/pacientes.
 
+## Validacao da producao isolada
+
+Use quando alterar `RUNBOOK_PRODUCAO_ISOLADA.md` ou `PRODUCAO_ISOLADA_CONTROLE.md`:
+
+```powershell
+pnpm test:producao-isolada
+pnpm security:secrets
+powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
+```
+
+Regra esperada: o runbook deve cobrir os recursos a criar (Neon, Upstash, Render
+backend/web), a ordem de execucao, validacao do ambiente novo e regras de
+separacao de staging; o controle deve manter status, tabela de recursos,
+registro de execucao e decisao de aceite, sem secrets nem URLs reais.
+
+Para aplicar as migrations no banco novo de producao (nunca `pnpm seed:staging`):
+
+```powershell
+$env:DATABASE_URL='<url do Neon producao>'
+pnpm --dir octaclin-backend migration:run
+```
+
 ## Validacao antes de commit
 
 Sempre:

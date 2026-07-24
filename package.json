@@ -12,6 +12,7 @@
     "test:staging-fixtures": "node scripts/test-staging-fixtures.mjs",
     "seed:staging": "pnpm --dir octaclin-backend seed:staging",
     "test:piloto": "node scripts/test-piloto-interno.mjs",
+    "test:producao-isolada": "node scripts/test-producao-isolada.mjs",
     "validate": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1",
     "validate:docs": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -DocsOnly",
     "validate:full": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -Full"

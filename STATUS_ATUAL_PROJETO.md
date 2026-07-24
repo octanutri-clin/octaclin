@@ -8,7 +8,7 @@ Atualizado em 2026-07-23.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
 - Ultima fase concluida: Fase 130 - Piloto interno controlado (rodada 1 executada e aprovada em 2026-07-23).
-- Proxima fase planejada: Fase 131 - Producao isolada de staging.
+- Fase em andamento: Fase 131 - Producao isolada de staging (estrutura entregue em 2026-07-23; provisionamento real pendente).
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -51,6 +51,7 @@ Atualizado em 2026-07-23.
 - Massa ficticia de staging aplicada e validada no Neon staging (tenant `octaclin-staging`).
 - Piloto interno controlado: runbook, controle de acompanhamento, validador documental e rodada 1 aprovada em 2026-07-23.
 - Escopo de dados por profissional responsavel (`pacientes_responsaveis`) aplicado e testado em pacientes, agenda, gamificacao, profissionais, questionarios, materiais, comunicacoes e automacoes.
+- Producao isolada de staging: runbook `RUNBOOK_PRODUCAO_ISOLADA.md`, controle `PRODUCAO_ISOLADA_CONTROLE.md` e validador documental criados em 2026-07-23; provisionamento real de Neon/Upstash/Render de producao ainda pendente.
 
 ## O que ainda falta antes de producao real
 
@@ -88,6 +89,8 @@ Atualizado em 2026-07-23.
 - `RUNBOOK_STAGING_DADOS.md`: massa ficticia de staging para demonstracao e QA.
 - `RUNBOOK_PILOTO_INTERNO.md`: processo do piloto interno controlado antes da producao real.
 - `PILOTO_INTERNO_CONTROLE.md`: acompanhamento vivo da rodada atual do piloto interno.
+- `RUNBOOK_PRODUCAO_ISOLADA.md`: como criar banco, Redis e servicos Render de producao separados de staging.
+- `PRODUCAO_ISOLADA_CONTROLE.md`: acompanhamento vivo do provisionamento de producao isolada.
 - `VARIAVEIS_AMBIENTE.md`: env vars sem secrets.
 - `CHECKLIST_GO_LIVE.md`: liberacao para clientes reais.
 - `ONBOARDING_DESENVOLVEDOR.md`: entrada de novos desenvolvedores/agentes.
@@ -100,4 +103,4 @@ Atualizado em 2026-07-23.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional e o piloto interno controlado foi executado e aprovado, mas ainda precisa de restore real em banco dedicado e producao isolada de staging antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional e o piloto interno controlado foi executado e aprovado, mas ainda precisa de restore real em banco dedicado e do provisionamento real da producao isolada de staging (Neon, Upstash e Render de producao) antes de uso comercial com clientes reais.

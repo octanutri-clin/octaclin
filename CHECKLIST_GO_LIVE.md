@@ -34,6 +34,10 @@ Este checklist deve ser concluido antes de incluir clientes reais de consultoria
 
 ## Infraestrutura
 
+Processo de provisionamento em `RUNBOOK_PRODUCAO_ISOLADA.md`, acompanhamento em
+`PRODUCAO_ISOLADA_CONTROLE.md` (estrutura entregue em 2026-07-23; recursos
+ainda pendentes).
+
 - [ ] Producao separada de staging.
 - [ ] Banco Neon de producao criado.
 - [ ] Redis Upstash de producao criado.
