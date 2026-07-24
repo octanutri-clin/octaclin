@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 export interface PoliticaProtecaoAbuso {
   maxTentativas: number;
@@ -42,12 +42,35 @@ export function montarChaveProtecaoAbuso(escopo: string, tenantSlug?: string, em
   ].join(':');
 }
 
+export const REDIS_PROTECAO_ABUSO = 'REDIS_PROTECAO_ABUSO';
+
+export interface ClienteRedisProtecaoAbuso {
+  get(chave: string): Promise<string | null>;
+  set(chave: string, valor: string, modo: 'PX', duracaoMs: number): Promise<unknown>;
+  del(chave: string): Promise<unknown>;
+}
+
 @Injectable()
 export class ServicoProtecaoAbuso {
-  private readonly registros = new Map<string, RegistroProtecaoAbuso>();
+  constructor(@Inject(REDIS_PROTECAO_ABUSO) private readonly redis: ClienteRedisProtecaoAbuso) {}
 
-  verificarDisponibilidade(chave: string, politica: PoliticaProtecaoAbuso, agora = Date.now()): void {
-    const registro = this.registros.get(chave);
+  private async obterRegistro(chave: string): Promise<RegistroProtecaoAbuso | null> {
+    const bruto = await this.redis.get(chave);
+    if (!bruto) return null;
+
+    try {
+      return JSON.parse(bruto) as RegistroProtecaoAbuso;
+    } catch {
+      return null;
+    }
+  }
+
+  private async salvarRegistro(chave: string, registro: RegistroProtecaoAbuso, ttlMs: number): Promise<void> {
+    await this.redis.set(chave, JSON.stringify(registro), 'PX', Math.max(Math.ceil(ttlMs), 1000));
+  }
+
+  async verificarDisponibilidade(chave: string, politica: PoliticaProtecaoAbuso, agora = Date.now()): Promise<void> {
+    const registro = await this.obterRegistro(chave);
     if (!registro) return;
 
     if (registro.bloqueadoAte && registro.bloqueadoAte > agora) {
@@ -55,33 +78,34 @@ export class ServicoProtecaoAbuso {
     }
 
     if (registro.expiraEm <= agora || (registro.bloqueadoAte && registro.bloqueadoAte <= agora)) {
-      this.registros.delete(chave);
+      await this.redis.del(chave);
     }
   }
 
-  registrarFalha(chave: string, politica: PoliticaProtecaoAbuso, agora = Date.now()): void {
-    this.verificarDisponibilidade(chave, politica, agora);
+  async registrarFalha(chave: string, politica: PoliticaProtecaoAbuso, agora = Date.now()): Promise<void> {
+    await this.verificarDisponibilidade(chave, politica, agora);
 
-    const registro = this.registros.get(chave);
+    const registro = await this.obterRegistro(chave);
     if (!registro || registro.expiraEm <= agora) {
-      this.registros.set(chave, {
-        quantidade: 1,
-        expiraEm: agora + politica.janelaMs
-      });
+      await this.salvarRegistro(chave, { quantidade: 1, expiraEm: agora + politica.janelaMs }, politica.janelaMs);
       return;
     }
 
     registro.quantidade += 1;
     if (registro.quantidade >= politica.maxTentativas) {
       registro.bloqueadoAte = agora + politica.bloqueioMs;
+      await this.salvarRegistro(chave, registro, politica.bloqueioMs);
+      return;
     }
+
+    await this.salvarRegistro(chave, registro, registro.expiraEm - agora);
   }
 
-  consumirTentativa(chave: string, politica: PoliticaProtecaoAbuso, agora = Date.now()): void {
-    this.registrarFalha(chave, politica, agora);
+  async consumirTentativa(chave: string, politica: PoliticaProtecaoAbuso, agora = Date.now()): Promise<void> {
+    await this.registrarFalha(chave, politica, agora);
   }
 
-  registrarSucesso(chave: string): void {
-    this.registros.delete(chave);
+  async registrarSucesso(chave: string): Promise<void> {
+    await this.redis.del(chave);
   }
 }

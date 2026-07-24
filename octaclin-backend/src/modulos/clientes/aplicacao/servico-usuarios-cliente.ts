@@ -58,7 +58,7 @@ export class ServicoUsuariosCliente {
 
   async criar(tenantId: string, usuarioCriadorId: string, dados: CriarUsuarioClienteDto): Promise<UsuarioClienteRespostaDto> {
     const emailNormalizado = dados.email.trim().toLowerCase();
-    this.protecaoAbuso.consumirTentativa(
+    await this.protecaoAbuso.consumirTentativa(
       montarChaveProtecaoAbuso('convite-admin', tenantId, emailNormalizado),
       POLITICA_CONVITES_ADMIN
     );
@@ -197,7 +197,7 @@ export class ServicoUsuariosCliente {
   }
 
   async reenviarConvite(tenantId: string, usuarioExecutorId: string, usuarioId: string): Promise<UsuarioClienteRespostaDto> {
-    this.protecaoAbuso.consumirTentativa(
+    await this.protecaoAbuso.consumirTentativa(
       montarChaveProtecaoAbuso('convite-admin-reenvio', tenantId, usuarioId),
       POLITICA_CONVITES_ADMIN
     );

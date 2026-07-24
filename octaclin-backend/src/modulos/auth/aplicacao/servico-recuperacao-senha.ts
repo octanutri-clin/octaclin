@@ -61,7 +61,7 @@ export class ServicoRecuperacaoSenha {
     metadados: { ip?: string; userAgent?: string } = {}
   ): Promise<{ mensagem: string; linkRecuperacao?: string }> {
     const emailNormalizado = normalizarEmail(dados.email);
-    this.protecaoAbuso.consumirTentativa(
+    await this.protecaoAbuso.consumirTentativa(
       montarChaveProtecaoAbuso('recuperacao-senha', dados.tenantSlug, emailNormalizado),
       POLITICA_RECUPERACAO_SENHA
     );

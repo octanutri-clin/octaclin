@@ -5,12 +5,12 @@ import { montarChaveProtecaoAbuso, POLITICA_LOGIN, ServicoProtecaoAbuso } from '
 export class GuardaLimiteLogin implements CanActivate {
   constructor(private readonly protecaoAbuso: ServicoProtecaoAbuso) {}
 
-  canActivate(contexto: ExecutionContext): boolean {
+  async canActivate(contexto: ExecutionContext): Promise<boolean> {
     const requisicao = contexto.switchToHttp().getRequest<{
       body?: { tenantSlug?: string; email?: string };
     }>();
 
-    this.protecaoAbuso.verificarDisponibilidade(
+    await this.protecaoAbuso.verificarDisponibilidade(
       montarChaveProtecaoAbuso('login', requisicao.body?.tenantSlug, requisicao.body?.email),
       POLITICA_LOGIN
     );

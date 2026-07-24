@@ -36,14 +36,14 @@ export class ServicoAuth {
 
   async login(dados: LoginDto) {
     const chaveProtecao = montarChaveProtecaoAbuso('login', dados.tenantSlug, dados.email);
-    this.protecaoAbuso.verificarDisponibilidade(chaveProtecao, POLITICA_LOGIN);
+    await this.protecaoAbuso.verificarDisponibilidade(chaveProtecao, POLITICA_LOGIN);
 
     const tenant = await this.fonteDados.getRepository(TenantOrm).findOne({
       where: { slug: dados.tenantSlug, status: 'ativo' }
     });
 
     if (!tenant) {
-      this.protecaoAbuso.registrarFalha(chaveProtecao, POLITICA_LOGIN);
+      await this.protecaoAbuso.registrarFalha(chaveProtecao, POLITICA_LOGIN);
       throw new UnauthorizedException('Credenciais invalidas.');
     }
 
@@ -55,11 +55,11 @@ export class ServicoAuth {
     );
 
     if (!usuario || !this.senhas.verificar(dados.senha, usuario.senhaHash)) {
-      this.protecaoAbuso.registrarFalha(chaveProtecao, POLITICA_LOGIN);
+      await this.protecaoAbuso.registrarFalha(chaveProtecao, POLITICA_LOGIN);
       throw new UnauthorizedException('Credenciais invalidas.');
     }
 
-    this.protecaoAbuso.registrarSucesso(chaveProtecao);
+    await this.protecaoAbuso.registrarSucesso(chaveProtecao);
     return this.emitirParTokens(usuario, randomUUID());
   }
 

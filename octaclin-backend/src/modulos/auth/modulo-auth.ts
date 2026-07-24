@@ -1,15 +1,17 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import Redis from 'ioredis';
 import { ExecutorTenant } from '../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../../infraestrutura/seguranca/servico-senhas';
 import { AdaptadorEmailSmtp } from '../comunicacoes/infraestrutura/adaptadores/adaptador-email-smtp';
+import { criarConexaoRedis } from '../comunicacoes/aplicacao/configuracao-redis';
 import { TenantOrm } from '../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../usuarios/infraestrutura/usuario.orm';
 import { ServicoRecuperacaoSenha } from './aplicacao/servico-recuperacao-senha';
 import { ServicoAuth } from './aplicacao/servico-auth';
-import { ServicoProtecaoAbuso } from './aplicacao/servico-protecao-abuso';
+import { REDIS_PROTECAO_ABUSO, ServicoProtecaoAbuso } from './aplicacao/servico-protecao-abuso';
 import { ControladorAuth } from './apresentacao/controlador-auth';
 import { GuardaJwt } from './apresentacao/guarda-jwt';
 import { GuardaLimiteLogin } from './apresentacao/guarda-limite-login';
@@ -24,6 +26,7 @@ import { TokenRedefinicaoSenhaOrm } from './infraestrutura/token-redefinicao-sen
   providers: [
     ServicoAuth,
     ServicoRecuperacaoSenha,
+    { provide: REDIS_PROTECAO_ABUSO, useFactory: () => new Redis(criarConexaoRedis()) },
     ServicoProtecaoAbuso,
     ExecutorTenant,
     ServicoSenhas,
