@@ -5,6 +5,7 @@ import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor,
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { AlertTriangle, Archive, BookOpen, CalendarClock, Check, CheckCircle2, ClipboardList, Copy, Eye, Link2, Plus, RefreshCcw, Save, Settings2, Trash2, Wand2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import {
   CategoriaPerguntaApi,
@@ -624,11 +625,11 @@ export function EditorQuestionario() {
       {previewAberto ? <PreviewQuestionarioPaciente titulo={titulo} descricao={descricao} perguntas={perguntas} /> : null}
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(420px,1fr)_360px]">
-        <aside className="rounded-lg border border-linha bg-white">
-          <div className="border-b border-linha px-4 py-3">
-            <h2 className="text-sm font-semibold text-tinta">Questionario</h2>
-          </div>
-          <div className="space-y-4 p-4">
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo>Questionario</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo className="space-y-4">
             <div className="space-y-1.5">
               <Rotulo htmlFor="questionario">Selecionar</Rotulo>
               <Selecao
@@ -734,10 +735,10 @@ export function EditorQuestionario() {
                 <Campo readOnly value={linkFormulario} onFocus={(event) => event.currentTarget.select()} aria-label="Link publico do formulario" />
               ) : null}
             </div>
-          </div>
-        </aside>
+          </CartaoConteudo>
+        </Cartao>
 
-        <section className="overflow-hidden rounded-lg border border-linha bg-white">
+        <Cartao className="overflow-hidden">
           <div className="flex items-center justify-between border-b border-linha px-4 py-3">
             <h2 className="text-sm font-semibold text-tinta">Perguntas</h2>
             <Botao variante="primario" onClick={adicionarPergunta} disabled={salvando || !questionarioAtual}>
@@ -768,13 +769,12 @@ export function EditorQuestionario() {
               </ul>
             </SortableContext>
           </DndContext>
-        </section>
+        </Cartao>
 
-        <aside className="rounded-lg border border-linha bg-white">
-          <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
-            <Settings2 className="h-4 w-4 text-texto-suave" />
-            <h2 className="text-sm font-semibold text-tinta">Propriedades</h2>
-          </div>
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<Settings2 className="h-4 w-4" />}>Propriedades</CartaoTitulo>
+          </CartaoCabecalho>
           {perguntaSelecionada ? (
             <div className="space-y-4 p-4">
               <div className="space-y-1.5">
@@ -1076,10 +1076,10 @@ export function EditorQuestionario() {
           ) : (
             <div className="p-4 text-sm text-texto-suave">Selecione ou crie uma pergunta.</div>
           )}
-        </aside>
+        </Cartao>
       </section>
 
-      <section className="overflow-hidden rounded-lg border border-linha bg-white">
+      <Cartao className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-linha px-4 py-3">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-texto-suave" />
@@ -1224,7 +1224,7 @@ export function EditorQuestionario() {
             </div>
           )}
         </div>
-      </section>
+      </Cartao>
     </section>
   );
 }

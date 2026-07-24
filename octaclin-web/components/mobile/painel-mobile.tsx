@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { CheckCircle2, CloudUpload, HeartHandshake, RefreshCcw, Save, Smartphone, UploadCloud } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import {
@@ -230,18 +231,20 @@ export function PainelMobile() {
 
   return (
     <section className="grid gap-4">
-      <div className="flex flex-col gap-3 rounded-lg border border-linha bg-white p-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-base font-semibold">Operacoes mobile</h2>
-          <p className="mt-1 text-sm text-texto-suave">
-            {opcoesPacientes.length} pacientes, {logsDiario.length} diarios, {arquivosMidia.length} midias, {acompanhantes.length} acompanhantes
-          </p>
-        </div>
-        <Botao onClick={carregar} disabled={carregando}>
-          <RefreshCcw size={16} />
-          {carregando ? 'Atualizando' : 'Atualizar'}
-        </Botao>
-      </div>
+      <Cartao>
+        <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Operacoes mobile</h2>
+            <p className="mt-1 text-sm text-texto-suave">
+              {opcoesPacientes.length} pacientes, {logsDiario.length} diarios, {arquivosMidia.length} midias, {acompanhantes.length} acompanhantes
+            </p>
+          </div>
+          <Botao onClick={carregar} disabled={carregando}>
+            <RefreshCcw size={16} />
+            {carregando ? 'Atualizando' : 'Atualizar'}
+          </Botao>
+        </CartaoConteudo>
+      </Cartao>
 
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       <BarraCarregamento visivel={carregando} />
@@ -253,11 +256,12 @@ export function PainelMobile() {
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <form onSubmit={salvarDiario} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Smartphone size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Diario rapido</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={salvarDiario}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<Smartphone size={18} className="text-primaria" />}>Diario rapido</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3">
             <div className="space-y-1.5">
               <Rotulo htmlFor="mobile-diario-paciente">Paciente</Rotulo>
@@ -306,13 +310,16 @@ export function PainelMobile() {
               Registrar
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
 
-        <form onSubmit={solicitarUpload} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <UploadCloud size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Upload de midia</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={solicitarUpload}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<UploadCloud size={18} className="text-primaria" />}>Upload de midia</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5 md:col-span-2">
               <Rotulo htmlFor="mobile-upload-paciente">Paciente</Rotulo>
@@ -391,15 +398,18 @@ export function PainelMobile() {
               Solicitar
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <form onSubmit={salvarAcompanhante} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <HeartHandshake size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Acompanhante</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={salvarAcompanhante}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<HeartHandshake size={18} className="text-primaria" />}>Acompanhante</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5 md:col-span-2">
               <Rotulo htmlFor="mobile-acompanhante-paciente">Paciente</Rotulo>
@@ -452,13 +462,16 @@ export function PainelMobile() {
               Criar
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
 
-        <form onSubmit={sincronizar} className="rounded-lg border border-linha bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <RefreshCcw size={18} className="text-primaria" />
-            <h3 className="text-sm font-semibold">Sincronizacao em lote</h3>
-          </div>
+        <Cartao>
+        <form onSubmit={sincronizar}>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<RefreshCcw size={18} className="text-primaria" />}>Sincronizacao em lote</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
           <div className="grid gap-3">
             <div className="space-y-1.5">
               <Rotulo htmlFor="mobile-sync-paciente">Paciente</Rotulo>
@@ -509,14 +522,16 @@ export function PainelMobile() {
               Sincronizar
             </Botao>
           </div>
+          </CartaoConteudo>
         </form>
+        </Cartao>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <aside className="rounded-lg border border-linha bg-white">
-          <div className="border-b border-linha px-4 py-3">
-            <h3 className="text-sm font-semibold">Diarios recentes</h3>
-          </div>
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo>Diarios recentes</CartaoTitulo>
+          </CartaoCabecalho>
           <div className="max-h-[320px] divide-y divide-linha overflow-auto">
             {logsDiario.length ? (
               logsDiario.map((log) => (
@@ -529,12 +544,12 @@ export function PainelMobile() {
               <EstadoVazio titulo="Nenhum diario persistido." />
             )}
           </div>
-        </aside>
+        </Cartao>
 
-        <aside className="rounded-lg border border-linha bg-white">
-          <div className="border-b border-linha px-4 py-3">
-            <h3 className="text-sm font-semibold">Resultados</h3>
-          </div>
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo>Resultados</CartaoTitulo>
+          </CartaoCabecalho>
           <div className="grid gap-3 p-4 text-sm">
             <div className="rounded-md border border-linha bg-fundo p-3">
               <p className="text-xs font-semibold uppercase text-texto-suave">Upload URL</p>
@@ -559,7 +574,7 @@ export function PainelMobile() {
               </p>
             </div>
           </div>
-        </aside>
+        </Cartao>
       </section>
     </section>
   );
