@@ -46,7 +46,13 @@ export class ServicoSincronizacaoGoogleCalendar {
     const { eventos, proximoSyncToken } = await this.googleCalendar.listarEventosAlterados(credenciais, syncToken);
 
     for (const evento of eventos) {
-      await this.aplicarEvento(tenantId, profissionalId, evento);
+      try {
+        await this.aplicarEvento(tenantId, profissionalId, evento);
+      } catch (erro) {
+        this.logger.warn(
+          `Falha ao aplicar evento Google ${evento.id} durante reconciliacao: ${erro instanceof Error ? erro.message : 'erro desconhecido'}`
+        );
+      }
     }
 
     if (proximoSyncToken) {
@@ -78,27 +84,21 @@ export class ServicoSincronizacaoGoogleCalendar {
     evento: { id: string; status: string; octaclinConsultaId?: string; inicioEm?: Date; fimEm?: Date }
   ): Promise<void> {
     const consultaId = evento.octaclinConsultaId as string;
-    try {
-      if (evento.status === 'cancelled') {
-        await this.servicoAgenda.cancelarConsultaComoSistema(
-          tenantId,
-          consultaId,
-          { motivo: 'Cancelado direto na Google Agenda.' },
-          profissionalId
-        );
-        return;
-      }
-      if (evento.inicioEm && evento.fimEm) {
-        await this.servicoAgenda.remarcarConsultaComoSistema(
-          tenantId,
-          consultaId,
-          { inicioEm: evento.inicioEm.toISOString(), fimEm: evento.fimEm.toISOString() },
-          profissionalId
-        );
-      }
-    } catch (erro) {
-      this.logger.warn(
-        `Falha ao aplicar evento Google ${evento.id} na consulta ${consultaId}: ${erro instanceof Error ? erro.message : 'erro desconhecido'}`
+    if (evento.status === 'cancelled') {
+      await this.servicoAgenda.cancelarConsultaComoSistema(
+        tenantId,
+        consultaId,
+        { motivo: 'Cancelado direto na Google Agenda.' },
+        profissionalId
+      );
+      return;
+    }
+    if (evento.inicioEm && evento.fimEm) {
+      await this.servicoAgenda.remarcarConsultaComoSistema(
+        tenantId,
+        consultaId,
+        { inicioEm: evento.inicioEm.toISOString(), fimEm: evento.fimEm.toISOString() },
+        profissionalId
       );
     }
   }
