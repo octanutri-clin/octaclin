@@ -57,6 +57,16 @@ export class ControladorGoogleAgenda {
     return { url: `${urlWeb.replace(/\/$/, '')}/agenda?google=conectado`, statusCode: 302 };
   }
 
+  @Get('status')
+  @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
+  @Papeis('SuperAdmin', 'Professional')
+  @Permissoes('agenda.consultas.ler')
+  async status(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    const profissionalId = await this.resolverProfissionalIdObrigatorio(usuario);
+    const credenciais = await this.servicoConexao.obterConexaoAtiva(usuario.tenantId, profissionalId);
+    return { conectado: Boolean(credenciais) };
+  }
+
   @Post('desconectar')
   @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
   @Papeis('SuperAdmin', 'Professional')

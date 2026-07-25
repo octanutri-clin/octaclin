@@ -114,3 +114,19 @@ export async function carregarBootstrapAgenda(): Promise<BootstrapAgenda> {
   ]);
   return { consultas, pacientes, profissionais };
 }
+
+export interface ConexaoGoogleAgendaStatus {
+  conectado: boolean;
+}
+
+export async function obterStatusGoogleAgenda(): Promise<ConexaoGoogleAgendaStatus> {
+  return requisitar<ConexaoGoogleAgendaStatus>('/api/agenda/google/status');
+}
+
+export function conectarGoogleAgenda(): void {
+  window.location.href = '/api/agenda/google/conectar';
+}
+
+export async function desconectarGoogleAgenda(): Promise<void> {
+  await requisitar<{ desconectado: boolean }>('/api/agenda/google/desconectar', { method: 'POST' });
+}

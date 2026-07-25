@@ -7,7 +7,17 @@ import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao'
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
-import { ConsultaAgendaApi, cancelarConsultaAgenda, carregarBootstrapAgenda, criarConsultaAgenda, remarcarConsultaAgenda } from '@/lib/agenda-api';
+import {
+  ConexaoGoogleAgendaStatus,
+  ConsultaAgendaApi,
+  cancelarConsultaAgenda,
+  carregarBootstrapAgenda,
+  conectarGoogleAgenda,
+  criarConsultaAgenda,
+  desconectarGoogleAgenda,
+  obterStatusGoogleAgenda,
+  remarcarConsultaAgenda
+} from '@/lib/agenda-api';
 
 interface FormularioAgenda {
   pacienteId: string;
@@ -123,6 +133,7 @@ export function PainelAgenda() {
   const [processandoConsultaId, setProcessandoConsultaId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
+  const [statusGoogleAgenda, setStatusGoogleAgenda] = useState<ConexaoGoogleAgendaStatus | null>(null);
 
   const pacientesLista = pacientes?.itens ?? [];
   const profissionaisLista = profissionais?.itens ?? [];
@@ -159,6 +170,12 @@ export function PainelAgenda() {
 
   useEffect(() => {
     void carregar();
+  }, []);
+
+  useEffect(() => {
+    void obterStatusGoogleAgenda()
+      .then(setStatusGoogleAgenda)
+      .catch(() => setStatusGoogleAgenda({ conectado: false }));
   }, []);
 
   function selecionarPaciente(pacienteId: string) {
@@ -388,10 +405,25 @@ export function PainelAgenda() {
           ) : null}
 
           <div className="flex items-center justify-between gap-2 pt-1">
-            <Botao type="button" onClick={carregar} disabled={carregando || salvando}>
-              <RefreshCcw size={16} />
-              Atualizar
-            </Botao>
+            <div className="flex items-center gap-2">
+              <Botao type="button" onClick={carregar} disabled={carregando || salvando}>
+                <RefreshCcw size={16} />
+                Atualizar
+              </Botao>
+              {statusGoogleAgenda?.conectado ? (
+                <Botao
+                  type="button"
+                  variante="fantasma"
+                  onClick={() => void desconectarGoogleAgenda().then(() => setStatusGoogleAgenda({ conectado: false }))}
+                >
+                  Desconectar Google Agenda
+                </Botao>
+              ) : (
+                <Botao type="button" variante="fantasma" onClick={conectarGoogleAgenda}>
+                  Conectar Google Agenda
+                </Botao>
+              )}
+            </div>
             <Botao type="submit" variante="primario" disabled={salvando || !pacientesLista.length}>
               <Save size={16} />
               Agendar
