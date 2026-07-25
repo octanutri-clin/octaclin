@@ -13,6 +13,7 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
 import { CancelarConsultaAgendaDto, ConsultaAgendaRespostaDto, CriarConsultaAgendaDto, RemarcarConsultaAgendaDto } from './dtos';
+import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar';
 import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from './servico-google-calendar';
 
 const EVENTO_CONSULTA_AGENDADA = 'agenda.consulta.agendada';
@@ -62,7 +63,8 @@ export class ServicoAgenda {
     private readonly criptografia: CriptografiaDadosSensiveis,
     private readonly googleCalendar: ServicoGoogleCalendar,
     private readonly comunicacoes: ServicoComunicacoes,
-    private readonly processadorNotificacoes: ProcessadorNotificacoes
+    private readonly processadorNotificacoes: ProcessadorNotificacoes,
+    private readonly servicoConexao: ServicoConexaoGoogleCalendar
   ) {}
 
   async listarConsultas(tenantId: string, usuario: UsuarioAutenticado): Promise<ConsultaAgendaRespostaDto[]> {
@@ -83,13 +85,17 @@ export class ServicoAgenda {
 
   async criarConsulta(tenantId: string, dados: CriarConsultaAgendaDto, usuario: UsuarioAutenticado): Promise<ConsultaAgendaRespostaDto> {
     const contexto = await this.criarRegistroInterno(tenantId, dados, usuario);
+    const credenciais = contexto.consulta.profissionalId
+      ? await this.servicoConexao.obterConexaoAtiva(tenantId, contexto.consulta.profissionalId)
+      : undefined;
     const google = await this.googleCalendar.criarEvento({
       resumo: `Consulta OctaClin - ${contexto.pacienteNome}`,
       descricao: this.montarDescricaoEvento(contexto),
       inicioEm: contexto.consulta.inicioEm,
       fimEm: contexto.consulta.fimEm,
       timezone: contexto.consulta.timezone,
-      consultaId: contexto.consulta.id
+      consultaId: contexto.consulta.id,
+      credenciais
     });
     const notificacoes: Record<string, ResultadoNotificacaoAgenda> =
       dados.enviarNotificacoes === false
@@ -160,6 +166,9 @@ export class ServicoAgenda {
 
     if (!propagarParaGoogle) return this.mapearResposta(consulta);
 
+    const credenciais = consulta.profissionalId
+      ? await this.servicoConexao.obterConexaoAtiva(tenantId, consulta.profissionalId)
+      : undefined;
     const google = consulta.googleCalendarId && consulta.googleEventId
       ? await this.googleCalendar.atualizarEvento({
           calendarId: consulta.googleCalendarId,
@@ -175,7 +184,8 @@ export class ServicoAgenda {
           inicioEm: consulta.inicioEm,
           fimEm: consulta.fimEm,
           timezone: consulta.timezone,
-          local: consulta.local
+          local: consulta.local,
+          credenciais
         })
       : { sincronizado: false as const, motivo: 'evento_google_ausente' };
 
@@ -230,8 +240,15 @@ export class ServicoAgenda {
 
     if (!propagarParaGoogle) return this.mapearResposta(consulta);
 
+    const credenciais = consulta.profissionalId
+      ? await this.servicoConexao.obterConexaoAtiva(tenantId, consulta.profissionalId)
+      : undefined;
     const google = consulta.googleCalendarId && consulta.googleEventId
-      ? await this.googleCalendar.cancelarEvento({ calendarId: consulta.googleCalendarId, eventId: consulta.googleEventId })
+      ? await this.googleCalendar.cancelarEvento({
+          calendarId: consulta.googleCalendarId,
+          eventId: consulta.googleEventId,
+          credenciais
+        })
       : { sincronizado: false as const, motivo: 'evento_google_ausente' };
 
     return this.mapearResposta(await this.aplicarResultadoGoogle(tenantId, consulta.id, google));

@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { DataSource, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { ProfissionalGoogleConexaoOrm } from '../infraestrutura/profissional-google-conexao.orm';
 import { GoogleCanalWatchOrm } from '../infraestrutura/google-canal-watch.orm';
 import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar';
@@ -30,19 +31,33 @@ export class ProcessadorRenovacaoGoogleCalendar {
 
   @Cron('0 3 * * *')
   async renovarCanaisEReconciliar(): Promise<void> {
-    const conexoes = await this.fonteDados
-      .getRepository(ProfissionalGoogleConexaoOrm)
-      .find({ where: { desconectadoEm: IsNull() } });
+    const tenants = await this.fonteDados.getRepository(TenantOrm).find({ where: { status: 'ativo' } });
 
-    for (const conexao of conexoes) {
+    for (const tenant of tenants) {
       try {
-        if (this.precisaRenovar(conexao)) {
-          await this.renovarCanal(conexao);
+        const conexoes = await this.executorTenant.executar(tenant.id, (gerenciador) =>
+          gerenciador
+            .getRepository(ProfissionalGoogleConexaoOrm)
+            .find({ where: { tenantId: tenant.id, desconectadoEm: IsNull() } })
+        );
+
+        for (const conexao of conexoes) {
+          try {
+            if (this.precisaRenovar(conexao)) {
+              await this.renovarCanal(conexao);
+            }
+            await this.servicoSincronizacao.reconciliar(conexao.tenantId, conexao.profissionalId);
+          } catch (erro) {
+            this.logger.warn(
+              `Falha ao renovar/reconciliar canal do profissional ${conexao.profissionalId}: ${
+                erro instanceof Error ? erro.message : 'erro desconhecido'
+              }`
+            );
+          }
         }
-        await this.servicoSincronizacao.reconciliar(conexao.tenantId, conexao.profissionalId);
       } catch (erro) {
         this.logger.warn(
-          `Falha ao renovar/reconciliar canal do profissional ${conexao.profissionalId}: ${
+          `Falha ao processar renovacao de canais Google Calendar do tenant ${tenant.id}: ${
             erro instanceof Error ? erro.message : 'erro desconhecido'
           }`
         );
