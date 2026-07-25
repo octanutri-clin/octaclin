@@ -331,7 +331,7 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 
 ### Bloco I - Melhorias adicionais (nao bloqueiam go-live)
 
-- [ ] Fase 136 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional.
+- [x] Fase 136 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional.
   - Cada profissional conecta a propria conta Google via OAuth; mudancas
     feitas direto na Google Agenda pessoal (remarcar/cancelar consulta,
     criar compromisso pessoal) refletem no OctaClin quase em tempo real via
@@ -339,9 +339,20 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     existe. Fecha o debito tecnico registrado na Fase 108.
   - Escopo adicional, decidido pelo usuario em 2026-07-24 fora da ordem
     sequencial de go-live (nao bloqueia nem depende das Fases 132-135).
-  - Design aprovado via skill `brainstorming` em 2026-07-24.
-  - Saida esperada: `fase-136-sincronizacao-google-agenda-profissional.md`
-    (design completo), depois plano de implementacao e codigo.
+  - Design aprovado via skill `brainstorming` em 2026-07-24; implementado via
+    `superpowers:subagent-driven-development` em 2026-07-25.
+  - Commit final: `7762537` (fix de seguranca) na branch `main`; ver
+    `fase-136-sincronizacao-google-agenda-profissional.md` para o historico
+    completo de commits e o achado CRITICAL/IMPORTANT corrigido na revisao
+    de seguranca multi-tenant antes do fechamento.
+  - Data: 2026-07-25.
+  - Validacoes: `pnpm --dir octaclin-backend typecheck`, `pnpm --dir
+    octaclin-backend test --runInBand` (46 suites/224 testes),
+    `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web build`,
+    `npm run security:secrets`, `validar-preflight.ps1 -DocsOnly`.
+  - Pendente (nao bloqueia): registrar a URL de callback OAuth no Google
+    Cloud Console (fora do repositorio); ver pendencias menores no arquivo
+    da fase.
 
 ## Backlog pos-producao
 

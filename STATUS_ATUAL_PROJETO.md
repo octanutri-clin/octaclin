@@ -52,6 +52,7 @@ Atualizado em 2026-07-23.
 - Piloto interno controlado: runbook, controle de acompanhamento, validador documental e rodada 1 aprovada em 2026-07-23.
 - Escopo de dados por profissional responsavel (`pacientes_responsaveis`) aplicado e testado em pacientes, agenda, gamificacao, profissionais, questionarios, materiais, comunicacoes e automacoes.
 - Producao isolada de staging: runbook `RUNBOOK_PRODUCAO_ISOLADA.md`, controle `PRODUCAO_ISOLADA_CONTROLE.md` e validador documental criados em 2026-07-23; provisionamento real de Neon/Upstash/Render de producao ainda pendente.
+- Sincronizacao em tempo real com a Google Agenda pessoal do profissional (Fase 136, 2026-07-25): conexao OAuth individual por profissional, notificacao push do Google, eventos externos viram bloqueio de horario, mudancas feitas direto no Google aplicam automaticamente na consulta correspondente.
 
 ## O que ainda falta antes de producao real
 

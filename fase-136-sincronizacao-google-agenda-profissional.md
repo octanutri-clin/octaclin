@@ -1,6 +1,97 @@
 # Fase 136 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional
 
-Status: planejado (design aprovado em 2026-07-24, implementacao ainda nao iniciada).
+Status: concluida em 2026-07-25 (implementada via `superpowers:subagent-driven-development`, plano em
+`docs/superpowers/plans/2026-07-25-fase-136-google-calendar-sync.md`).
+
+## Entregue
+
+- Migration `1720000000800-CriarSincronizacaoGoogleAgenda` (3 tabelas:
+  `profissionais_google_conexao` e `agenda_bloqueios_externos` com RLS,
+  `google_canais_watch` sem RLS de proposito - ver "Refinamento de design"
+  abaixo) e as entidades TypeORM correspondentes.
+- `ServicoGoogleCalendar` estendido: credenciais por profissional,
+  `extendedProperties.private.octaclinConsultaId`, leitura de eventos
+  alterados (`listarEventosAlterados`), canal de watch
+  (`criarCanalWatch`/`pararCanalWatch`).
+- `ServicoConexaoGoogleCalendar`: fluxo OAuth completo (URL de autorizacao,
+  `state` assinado com HMAC e validado com `timingSafeEqual`, troca de
+  codigo por refresh token criptografado, desconexao).
+- `ServicoAgenda` refatorado: `remarcarConsulta`/`cancelarConsulta` divididos
+  em entrada HTTP + nucleo privado, com novas entradas
+  `remarcarConsultaComoSistema`/`cancelarConsultaComoSistema` para o
+  processador de sincronizacao; `criarConsulta`/remarcar/cancelar agora
+  resolvem e usam a credencial do profissional conectado (corrigido durante
+  a revisao de seguranca, ver abaixo); checagem de conflito de horario
+  estendida para `agenda_bloqueios_externos`.
+- `ServicoSincronizacaoGoogleCalendar` + fila BullMQ + processador: aplica
+  eventos alterados do Google como atualizacao/cancelamento de consulta
+  (quando marcados com `octaclinConsultaId`) ou como bloqueio de horario
+  (quando nao relacionados a nenhuma consulta).
+- `ControladorGoogleAgenda`: endpoints `conectar`/`callback`/`desconectar`/
+  `status` (autenticados, restritos a `Professional`) e `notificacoes`
+  (webhook publico do Google, sem guard, so enfileira o processamento).
+- `ProcessadorRenovacaoGoogleCalendar`: job `@Cron` diario que renova canais
+  perto de expirar e roda reconciliacao de seguranca por profissional
+  conectado.
+- Frontend: rotas BFF (`status`/`desconectar`/`conectar`), funcoes em
+  `lib/agenda-api.ts` e botao "Conectar/Desconectar Google Agenda" no painel
+  de agenda.
+
+## Refinamento de design (durante o planejamento)
+
+O design aprovado previa 2 tabelas novas. Ao planejar o webhook, ficou claro
+que o backend precisa descobrir qual tenant e dono de um canal *antes* de
+poder rodar qualquer query com RLS (que exige `app.tenant_id` ja definido).
+Solucao: uma terceira tabela `google_canais_watch`, sem RLS, guardando so o
+mapeamento `canal_watch_id -> tenant_id/profissional_id` (nenhum dado
+sensivel) - mesmo principio ja usado por `tenants` (tabela global, sem RLS,
+usada pra descobrir o tenant antes de escopar o resto).
+
+## Achados da revisao de seguranca multi-tenant (`tenant-security-reviewer`)
+
+A revisao final encontrou e corrigiu (commit `7762537`, antes do fechamento
+da fase):
+
+- **CRITICAL**: o caminho de escrita (`criarConsulta`/remarcar/cancelar)
+  nunca resolvia a credencial do profissional conectado, entao toda consulta
+  continuava sendo sincronizada com a agenda compartilhada via variavel de
+  ambiente, nunca com a agenda pessoal do profissional. Corrigido.
+- **IMPORTANT**: o cron de renovacao acessava `profissionais_google_conexao`
+  (tabela com RLS) direto via `DataSource`, fora de `ExecutorTenant.executar`
+  - em Postgres real isso retornaria zero linhas sempre, silenciosamente.
+  Corrigido para seguir o mesmo padrao de `processador-lembretes-agenda.ts`
+  (buscar tenants primeiro, depois escopar por tenant).
+- Teste negativo cross-tenant/cross-profissional adicionado para
+  `remarcarConsultaComoSistema`/`cancelarConsultaComoSistema`.
+- Ambos os fixes foram re-verificados por uma segunda rodada do
+  `tenant-security-reviewer` contra o diff da correcao, com resultado limpo.
+
+Pendencias menores registradas (nao bloqueiam esta fase, ficam pra um
+follow-up): `GET /agenda/google/conectar` pode sempre retornar 401 em
+producao real (navegacao do browser nao carrega o header `Authorization` do
+mesmo jeito que os outros BFFs autenticados - precisa validacao manual
+ponta-a-ponta); o `state` OAuth reaproveita `CRIPTOGRAFIA_CHAVE_AES_256` como
+segredo HMAC em vez de um segredo dedicado; `desconectar()` nao limpa a linha
+correspondente em `google_canais_watch` nem chama `pararCanalWatch` (nao e
+vazamento, so sobra de dado).
+
+## Validacoes rodadas ao fechar
+
+```powershell
+pnpm --dir octaclin-backend typecheck
+pnpm --dir octaclin-backend test --runInBand   # 46 suites / 224 testes
+pnpm --dir octaclin-web typecheck
+pnpm --dir octaclin-web build
+npm run security:secrets
+powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
+```
+
+## Passo manual pendente (fora do repositorio)
+
+Antes desta sincronizacao funcionar de ponta a ponta em producao, e preciso
+adicionar a URL de callback (`<url-do-backend>/agenda/google/callback`) na
+lista de redirect URIs autorizados do OAuth client no Google Cloud Console -
+isso nao pode ser feito via commit.
 
 ## Objetivo
 

@@ -1,6 +1,12 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 130.
+Atualizado apos a Fase 136.
+
+Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
+Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
+push do Google, bloqueio de horario para eventos externos e aplicacao
+automatica de mudancas feitas direto no Google na consulta correspondente.
+Ver `fase-136-sincronizacao-google-agenda-profissional.md`.
 
 Este arquivo e um handoff executivo do que ja foi construido no OctaClin. Ele deve ajudar outro agente de IA ou desenvolvedor a entender rapidamente a evolucao do projeto sem precisar reprocessar todo o historico de commits.
 
