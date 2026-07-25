@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -51,7 +51,11 @@ export class ServicoConexaoGoogleCalendar {
 
     const [payloadBase64, assinatura] = partes;
     const assinaturaEsperada = createHmac('sha256', chaveAssinaturaState()).update(payloadBase64).digest('base64url');
-    if (assinatura !== assinaturaEsperada) throw new BadRequestException('State OAuth invalido.');
+    const bufferAssinatura = Buffer.from(assinatura, 'base64url');
+    const bufferEsperada = Buffer.from(assinaturaEsperada, 'base64url');
+    if (bufferAssinatura.length !== bufferEsperada.length || !timingSafeEqual(bufferAssinatura, bufferEsperada)) {
+      throw new BadRequestException('State OAuth invalido.');
+    }
 
     const payload = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString('utf8')) as {
       tenantId: string;
