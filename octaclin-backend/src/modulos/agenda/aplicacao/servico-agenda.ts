@@ -10,6 +10,7 @@ import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-not
 import { TemplateMensagemOrm } from '../../comunicacoes/infraestrutura/template-mensagem.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
 import { CancelarConsultaAgendaDto, ConsultaAgendaRespostaDto, CriarConsultaAgendaDto, RemarcarConsultaAgendaDto } from './dtos';
 import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from './servico-google-calendar';
@@ -87,7 +88,8 @@ export class ServicoAgenda {
       descricao: this.montarDescricaoEvento(contexto),
       inicioEm: contexto.consulta.inicioEm,
       fimEm: contexto.consulta.fimEm,
-      timezone: contexto.consulta.timezone
+      timezone: contexto.consulta.timezone,
+      consultaId: contexto.consulta.id
     });
     const notificacoes: Record<string, ResultadoNotificacaoAgenda> =
       dados.enviarNotificacoes === false
@@ -104,15 +106,36 @@ export class ServicoAgenda {
     dados: RemarcarConsultaAgendaDto,
     usuario: UsuarioAutenticado
   ): Promise<ConsultaAgendaRespostaDto> {
+    const profissionalIdDoUsuario = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)
+    );
+    return this.executarRemarcacao(tenantId, consultaId, dados, profissionalIdDoUsuario, true);
+  }
+
+  async remarcarConsultaComoSistema(
+    tenantId: string,
+    consultaId: string,
+    dados: RemarcarConsultaAgendaDto,
+    profissionalId: string
+  ): Promise<ConsultaAgendaRespostaDto> {
+    return this.executarRemarcacao(tenantId, consultaId, dados, profissionalId, false);
+  }
+
+  private async executarRemarcacao(
+    tenantId: string,
+    consultaId: string,
+    dados: RemarcarConsultaAgendaDto,
+    profissionalIdEscopo: string | undefined,
+    propagarParaGoogle: boolean
+  ): Promise<ConsultaAgendaRespostaDto> {
     const inicioEm = dataValida(dados.inicioEm);
     const fimEm = this.calcularFim(inicioEm, dados);
     if (fimEm <= inicioEm) throw new BadRequestException('Horario final deve ser posterior ao inicio da consulta.');
 
     const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
-      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const atual = await repositorio.findOne({
-        where: { id: consultaId, tenantId, ...(profissionalIdDoUsuario ? { profissionalId: profissionalIdDoUsuario } : {}) }
+        where: { id: consultaId, tenantId, ...(profissionalIdEscopo ? { profissionalId: profissionalIdEscopo } : {}) }
       });
       if (!atual) throw new NotFoundException('Consulta nao encontrada.');
       if (atual.status === 'cancelada') throw new BadRequestException('Consulta cancelada nao pode ser remarcada.');
@@ -126,6 +149,7 @@ export class ServicoAgenda {
       atual.observacoes = dados.observacoes !== undefined ? textoOpcional(dados.observacoes) : atual.observacoes;
       atual.payload = this.adicionarHistorico(atual.payload, {
         acao: 'remarcada',
+        origem: propagarParaGoogle ? 'octaclin' : 'google_agenda',
         inicioAnteriorEm: inicioAnterior.toISOString(),
         fimAnteriorEm: fimAnterior.toISOString(),
         inicioNovoEm: inicioEm.toISOString(),
@@ -134,10 +158,13 @@ export class ServicoAgenda {
       return repositorio.save(atual);
     });
 
+    if (!propagarParaGoogle) return this.mapearResposta(consulta);
+
     const google = consulta.googleCalendarId && consulta.googleEventId
       ? await this.googleCalendar.atualizarEvento({
           calendarId: consulta.googleCalendarId,
           eventId: consulta.googleEventId,
+          consultaId: consulta.id,
           resumo: consulta.titulo,
           descricao: this.montarDescricaoEvento({
             consulta,
@@ -161,11 +188,32 @@ export class ServicoAgenda {
     dados: CancelarConsultaAgendaDto,
     usuario: UsuarioAutenticado
   ): Promise<ConsultaAgendaRespostaDto> {
+    const profissionalIdDoUsuario = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)
+    );
+    return this.executarCancelamento(tenantId, consultaId, dados, profissionalIdDoUsuario, true);
+  }
+
+  async cancelarConsultaComoSistema(
+    tenantId: string,
+    consultaId: string,
+    dados: CancelarConsultaAgendaDto,
+    profissionalId: string
+  ): Promise<ConsultaAgendaRespostaDto> {
+    return this.executarCancelamento(tenantId, consultaId, dados, profissionalId, false);
+  }
+
+  private async executarCancelamento(
+    tenantId: string,
+    consultaId: string,
+    dados: CancelarConsultaAgendaDto,
+    profissionalIdEscopo: string | undefined,
+    propagarParaGoogle: boolean
+  ): Promise<ConsultaAgendaRespostaDto> {
     const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
-      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const atual = await repositorio.findOne({
-        where: { id: consultaId, tenantId, ...(profissionalIdDoUsuario ? { profissionalId: profissionalIdDoUsuario } : {}) }
+        where: { id: consultaId, tenantId, ...(profissionalIdEscopo ? { profissionalId: profissionalIdEscopo } : {}) }
       });
       if (!atual) throw new NotFoundException('Consulta nao encontrada.');
       if (atual.status === 'cancelada') return atual;
@@ -173,11 +221,14 @@ export class ServicoAgenda {
       atual.status = 'cancelada';
       atual.payload = this.adicionarHistorico(atual.payload, {
         acao: 'cancelada',
+        origem: propagarParaGoogle ? 'octaclin' : 'google_agenda',
         motivo: textoOpcional(dados.motivo),
         canceladaEm: new Date().toISOString()
       });
       return repositorio.save(atual);
     });
+
+    if (!propagarParaGoogle) return this.mapearResposta(consulta);
 
     const google = consulta.googleCalendarId && consulta.googleEventId
       ? await this.googleCalendar.cancelarEvento({ calendarId: consulta.googleCalendarId, eventId: consulta.googleEventId })
@@ -299,13 +350,22 @@ export class ServicoAgenda {
       where: { tenantId, profissionalId, status: 'agendada' },
       take: 500
     });
-    const conflito = consultas.some(
+    const conflitoConsulta = consultas.some(
       (consulta) =>
         consulta.id !== ignorarConsultaId &&
         consulta.inicioEm < janela.fimEm &&
         consulta.fimEm > janela.inicioEm
     );
-    if (conflito) throw new BadRequestException('Ja existe consulta agendada neste horario para o profissional.');
+    if (conflitoConsulta) throw new BadRequestException('Ja existe consulta agendada neste horario para o profissional.');
+
+    const bloqueiosExternos = await gerenciador.getRepository(AgendaBloqueioExternoOrm).find({
+      where: { tenantId, profissionalId },
+      take: 500
+    });
+    const conflitoExterno = bloqueiosExternos.some(
+      (bloqueio) => bloqueio.inicioEm < janela.fimEm && bloqueio.fimEm > janela.inicioEm
+    );
+    if (conflitoExterno) throw new BadRequestException('Ja existe consulta agendada neste horario para o profissional.');
   }
 
   private calcularFim(inicioEm: Date, dados: { fimEm?: string; duracaoMinutos?: number }) {

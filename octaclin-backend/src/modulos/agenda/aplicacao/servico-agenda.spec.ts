@@ -3,6 +3,7 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
 import { ServicoAgenda } from './servico-agenda';
 
@@ -30,7 +31,10 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
       ultimoSalvo = { id: `${nome}-1`, criadoEm: new Date(), atualizadoEm: new Date(), ...entrada };
       return ultimoSalvo;
     }),
-    find: jest.fn(async () => dados.consultas ?? []),
+    find: jest.fn(async () => {
+      if (nome === 'bloqueioExterno') return dados.bloqueiosExternos ?? [];
+      return dados.consultas ?? [];
+    }),
     findOne: jest.fn(async () => {
       if (nome === 'paciente') return dados.paciente ?? null;
       if (nome === 'profissional') return dados.profissional ?? null;
@@ -43,13 +47,15 @@ function criarServico(dados: Record<string, unknown> = {}) {
   const repositorios = {
     consulta: criarRepositorioFake('consulta', dados),
     paciente: criarRepositorioFake('paciente', dados),
-    profissional: criarRepositorioFake('profissional', dados)
+    profissional: criarRepositorioFake('profissional', dados),
+    bloqueioExterno: criarRepositorioFake('bloqueioExterno', dados)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === AgendaConsultaOrm) return repositorios.consulta;
       if (entidade === PacienteOrm) return repositorios.paciente;
       if (entidade === ProfissionalOrm) return repositorios.profissional;
+      if (entidade === AgendaBloqueioExternoOrm) return repositorios.bloqueioExterno;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -310,6 +316,99 @@ describe('ServicoAgenda', () => {
         usuarioColaborador
       )
     ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
+  });
+
+  it('bloqueia agendamento quando ha um bloqueio externo do Google no mesmo horario', async () => {
+    const { servico } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      },
+      bloqueiosExternos: [
+        {
+          id: 'bloqueio-1',
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          googleEventId: 'google-evento-externo-1',
+          inicioEm: new Date('2026-07-22T12:30:00.000Z'),
+          fimEm: new Date('2026-07-22T13:30:00.000Z')
+        }
+      ]
+    });
+
+    await expect(
+      servico.criarConsulta(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          inicioEm: '2026-07-22T12:00:00.000Z',
+          duracaoMinutos: 60
+        },
+        usuarioColaborador
+      )
+    ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
+  });
+
+  it('remarcarConsultaComoSistema atualiza a consulta usando o profissionalId informado, sem exigir UsuarioAutenticado', async () => {
+    const consultaExistente = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'prof-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      local: 'Sala 1',
+      observacoes: 'Primeira consulta',
+      googleCalendarId: 'primary',
+      googleEventId: 'event-1',
+      googleEventHtmlLink: 'https://calendar.google/event',
+      notificacoes: {},
+      payload: { pacienteNome: 'Ana Paula', profissionalNome: 'Dra Carla' },
+      criadoEm: new Date('2026-07-20T12:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-20T12:00:00.000Z')
+    };
+    const { servico, googleCalendar, repositorios } = criarServico({
+      consulta: consultaExistente,
+      consultas: [consultaExistente]
+    });
+
+    const consulta = await servico.remarcarConsultaComoSistema(
+      'tenant-1',
+      'consulta-1',
+      {
+        inicioEm: '2026-07-23T14:00:00.000Z',
+        duracaoMinutos: 45
+      },
+      'prof-1'
+    );
+
+    expect(repositorios.consulta.findOne).toHaveBeenCalledWith({
+      where: { id: 'consulta-1', tenantId: 'tenant-1', profissionalId: 'prof-1' }
+    });
+    expect(consulta.inicioEm).toEqual(new Date('2026-07-23T14:00:00.000Z'));
+    expect(consulta.fimEm).toEqual(new Date('2026-07-23T14:45:00.000Z'));
+    expect(consulta.payload.historico).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          acao: 'remarcada',
+          origem: 'google_agenda',
+          inicioNovoEm: '2026-07-23T14:00:00.000Z'
+        })
+      ])
+    );
+    expect(googleCalendar.criarEvento).not.toHaveBeenCalled();
+    expect(googleCalendar.atualizarEvento).not.toHaveBeenCalled();
   });
 
   it('deve remarcar consulta e atualizar evento no Google Calendar', async () => {

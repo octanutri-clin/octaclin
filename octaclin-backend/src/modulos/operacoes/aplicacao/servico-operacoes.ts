@@ -1015,7 +1015,8 @@ export class ServicoOperacoes {
       inicioEm: consulta.inicioEm,
       fimEm: consulta.fimEm,
       timezone: consulta.timezone,
-      local: consulta.local
+      local: consulta.local,
+      consultaId: consulta.id
     };
     if (consulta.status === 'cancelada' && consulta.googleCalendarId && consulta.googleEventId) {
       return this.googleCalendar.cancelarEvento({ calendarId: consulta.googleCalendarId, eventId: consulta.googleEventId });

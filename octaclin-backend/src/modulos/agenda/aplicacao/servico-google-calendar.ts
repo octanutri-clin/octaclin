@@ -1,5 +1,12 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 
+export interface CredenciaisGoogleCalendar {
+  clientId: string;
+  clientSecret: string;
+  refreshToken: string;
+  calendarId: string;
+}
+
 interface CriarEventoGoogleEntrada {
   resumo: string;
   descricao: string;
@@ -7,6 +14,8 @@ interface CriarEventoGoogleEntrada {
   fimEm: Date;
   timezone: string;
   local?: string;
+  consultaId: string;
+  credenciais?: CredenciaisGoogleCalendar;
 }
 
 interface AtualizarEventoGoogleEntrada extends CriarEventoGoogleEntrada {
@@ -17,6 +26,7 @@ interface AtualizarEventoGoogleEntrada extends CriarEventoGoogleEntrada {
 interface CancelarEventoGoogleEntrada {
   calendarId: string;
   eventId: string;
+  credenciais?: CredenciaisGoogleCalendar;
 }
 
 export type ResultadoGoogleCalendar =
@@ -32,6 +42,14 @@ export type ResultadoGoogleCalendar =
       erro?: string;
     };
 
+export interface EventoGoogleAlterado {
+  id: string;
+  status: string;
+  octaclinConsultaId?: string;
+  inicioEm?: Date;
+  fimEm?: Date;
+}
+
 interface RespostaTokenGoogle {
   access_token?: string;
   error?: string;
@@ -44,6 +62,21 @@ interface RespostaEventoGoogle {
   error?: { message?: string };
 }
 
+interface EventoGoogleBruto {
+  id: string;
+  status: string;
+  start?: { dateTime?: string };
+  end?: { dateTime?: string };
+  extendedProperties?: { private?: { octaclinConsultaId?: string } };
+}
+
+interface RespostaListaEventosGoogle {
+  items?: EventoGoogleBruto[];
+  nextSyncToken?: string;
+  nextPageToken?: string;
+  error?: { message?: string };
+}
+
 function textoEnv(valor: unknown): string | undefined {
   return typeof valor === 'string' && valor.trim() ? valor.trim() : undefined;
 }
@@ -51,7 +84,7 @@ function textoEnv(valor: unknown): string | undefined {
 @Injectable()
 export class ServicoGoogleCalendar {
   async criarEvento(entrada: CriarEventoGoogleEntrada): Promise<ResultadoGoogleCalendar> {
-    const configuracao = this.obterConfiguracao();
+    const configuracao = this.obterConfiguracao(entrada.credenciais);
     if (!configuracao) return { sincronizado: false, motivo: 'configuracao_ausente' };
 
     try {
@@ -78,7 +111,7 @@ export class ServicoGoogleCalendar {
   }
 
   async atualizarEvento(entrada: AtualizarEventoGoogleEntrada): Promise<ResultadoGoogleCalendar> {
-    const configuracao = this.obterConfiguracao(entrada.calendarId);
+    const configuracao = this.obterConfiguracao(entrada.credenciais, entrada.calendarId);
     if (!configuracao) return { sincronizado: false, motivo: 'configuracao_ausente' };
 
     try {
@@ -105,7 +138,7 @@ export class ServicoGoogleCalendar {
   }
 
   async cancelarEvento(entrada: CancelarEventoGoogleEntrada): Promise<ResultadoGoogleCalendar> {
-    const configuracao = this.obterConfiguracao(entrada.calendarId);
+    const configuracao = this.obterConfiguracao(entrada.credenciais, entrada.calendarId);
     if (!configuracao) return { sincronizado: false, motivo: 'configuracao_ausente' };
 
     try {
@@ -132,7 +165,67 @@ export class ServicoGoogleCalendar {
     }
   }
 
-  private obterConfiguracao(calendarIdPreferencial?: string) {
+  async listarEventosAlterados(
+    credenciais: CredenciaisGoogleCalendar,
+    syncToken?: string
+  ): Promise<{ eventos: EventoGoogleAlterado[]; proximoSyncToken?: string }> {
+    const accessToken = await this.obterAccessToken(credenciais.clientId, credenciais.clientSecret, credenciais.refreshToken);
+    const parametros = new URLSearchParams({ showDeleted: 'true', singleEvents: 'true' });
+    if (syncToken) parametros.set('syncToken', syncToken);
+
+    const resposta = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(credenciais.calendarId)}/events?${parametros.toString()}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const corpo = (await resposta.json()) as RespostaListaEventosGoogle;
+    if (!resposta.ok) {
+      throw new InternalServerErrorException(`Falha ao listar eventos alterados: ${corpo.error?.message ?? `HTTP ${resposta.status}`}`);
+    }
+
+    const eventos: EventoGoogleAlterado[] = (corpo.items ?? []).map((evento) => ({
+      id: evento.id,
+      status: evento.status,
+      octaclinConsultaId: evento.extendedProperties?.private?.octaclinConsultaId,
+      inicioEm: evento.start?.dateTime ? new Date(evento.start.dateTime) : undefined,
+      fimEm: evento.end?.dateTime ? new Date(evento.end.dateTime) : undefined
+    }));
+
+    return { eventos, proximoSyncToken: corpo.nextSyncToken };
+  }
+
+  async criarCanalWatch(
+    credenciais: CredenciaisGoogleCalendar,
+    canalId: string,
+    urlWebhook: string
+  ): Promise<{ recursoId: string; expiraEm: Date }> {
+    const accessToken = await this.obterAccessToken(credenciais.clientId, credenciais.clientSecret, credenciais.refreshToken);
+    const resposta = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(credenciais.calendarId)}/events/watch`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: canalId, type: 'web_hook', address: urlWebhook })
+      }
+    );
+    const corpo = (await resposta.json()) as { resourceId?: string; expiration?: string; error?: { message?: string } };
+    if (!resposta.ok || !corpo.resourceId) {
+      throw new InternalServerErrorException(`Falha ao criar canal de watch: ${corpo.error?.message ?? `HTTP ${resposta.status}`}`);
+    }
+    return { recursoId: corpo.resourceId, expiraEm: new Date(Number(corpo.expiration ?? Date.now())) };
+  }
+
+  async pararCanalWatch(credenciais: CredenciaisGoogleCalendar, canalId: string, recursoId: string): Promise<void> {
+    const accessToken = await this.obterAccessToken(credenciais.clientId, credenciais.clientSecret, credenciais.refreshToken);
+    await fetch('https://www.googleapis.com/calendar/v3/channels/stop', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: canalId, resourceId: recursoId })
+    });
+  }
+
+  private obterConfiguracao(credenciais?: CredenciaisGoogleCalendar, calendarIdPreferencial?: string) {
+    if (credenciais) return credenciais;
+
     const clientId = textoEnv(process.env.GOOGLE_CALENDAR_CLIENT_ID);
     const clientSecret = textoEnv(process.env.GOOGLE_CALENDAR_CLIENT_SECRET);
     const refreshToken = textoEnv(process.env.GOOGLE_CALENDAR_REFRESH_TOKEN);
@@ -151,7 +244,8 @@ export class ServicoGoogleCalendar {
       description: entrada.descricao,
       location: entrada.local,
       start: { dateTime: entrada.inicioEm.toISOString(), timeZone: entrada.timezone },
-      end: { dateTime: entrada.fimEm.toISOString(), timeZone: entrada.timezone }
+      end: { dateTime: entrada.fimEm.toISOString(), timeZone: entrada.timezone },
+      extendedProperties: { private: { octaclinConsultaId: entrada.consultaId } }
     };
   }
 
