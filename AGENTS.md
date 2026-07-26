@@ -16,11 +16,12 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase concluida mais recente no momento deste arquivo: Fase 140 - Cobertura de confiabilidade e regressao. A revisao juridica externa da Fase 133 continua obrigatoria antes do go-live.
+- Fase concluida mais recente no momento deste arquivo: Fase 142 - Migracao controlada do Next.js e seguranca web. A revisao juridica externa da Fase 133 continua obrigatoria antes do go-live.
 - Proxima fase critica planejada: Fase 131 - Producao isolada de staging (validacao final e aceite operacional).
-- Melhoria continua: Fases 138 e 141 atualizaram NestJS para 11.1.28 e TypeORM para 1.1.0, com audit de producao backend zerado. Nao atualize Next.js/React sem a fase de migracao dedicada.
+- Melhoria continua: Fases 138, 141 e 142 atualizaram NestJS para 11.1.28, TypeORM para 1.1.0 e Next.js para 15.5.22, com auditorias de producao zeradas. Preserve React 18.3.1 e o shim de cookies BFF ate uma fase dedicada de Next.js 16/React 19.
 - Fase 139 removeu `any` de codigo backend de producao e consolidou contratos de agenda/convites; preserve `requisitarBackendAutenticado` como a fronteira unica de erros BFF autenticados.
 - Fase 140 introduziu `MATRIZ_CONFIABILIDADE_TESTES.md`; atualize a matriz e seu validador sempre que adicionar ou remover um fluxo de risco alto.
+- Fase 142 introduziu `pnpm --dir octaclin-web test:next15`; toda nova rota dinamica deve receber `params`/`searchParams` assincronos e manter esse gate verde.
 - O checklist vivo das proximas fases fica em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regras de trabalho

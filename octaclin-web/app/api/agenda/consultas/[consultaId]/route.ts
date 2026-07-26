@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
 interface Params {
-  params: { consultaId: string };
+  params: Promise<{ consultaId: string }>;
 }
 
-export async function PATCH(request: NextRequest, { params }: Params) {
+export async function PATCH(request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     const resposta = await requisitarBackendAutenticado(`/agenda/consultas/${encodeURIComponent(params.consultaId)}`, {
       method: 'PATCH',
@@ -23,7 +24,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     const resposta = await requisitarBackendAutenticado(`/agenda/consultas/${encodeURIComponent(params.consultaId)}`, {
       method: 'DELETE',

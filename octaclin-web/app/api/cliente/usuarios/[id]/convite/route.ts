@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import { ErroPermissaoAusente, ErroSessaoAusente, exigirPermissaoBff, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
 interface Params {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(_request: Request, props: Params) {
+  const params = await props.params;
   try {
     await exigirPermissaoBff('cliente.convites.gerenciar');
     const resposta = await requisitarBackendAutenticado(`/cliente/usuarios/${params.id}/convite`, { method: 'DELETE' });

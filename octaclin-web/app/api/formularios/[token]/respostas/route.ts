@@ -5,7 +5,8 @@ function obterApiUrlPublica() {
   return normalizarApiUrlBff(process.env.OCTACLIN_BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001');
 }
 
-export async function POST(request: Request, { params }: { params: { token: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const resposta = await fetch(`${obterApiUrlPublica()}/formularios/${encodeURIComponent(params.token)}/respostas`, {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },

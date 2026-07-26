@@ -425,6 +425,17 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Saida entregue: audit de producao do backend sem vulnerabilidades, build,
     typecheck e 47 suites/244 testes aprovados.
 
+- [x] Fase 142 - Migracao controlada do Next.js e remediacao de vulnerabilidades web.
+  - Next.js 15.5.22 com React 18.3.1, codemod oficial de APIs dinamicas,
+    `typedRoutes` estavel e limite de output tracing explicito.
+  - Parametros dinamicos e `searchParams` passaram a usar o contrato assincrono;
+    gate `pnpm --dir octaclin-web test:next15` impede regressoes.
+  - Overrides de `postcss` 8.5.23 e `sharp` 0.35.3 zeraram a auditoria de
+    producao do frontend. `sharp` foi autorizado explicitamente na politica
+    restritiva de scripts do pnpm.
+  - Pendencia futura: remover o shim temporario `UnsafeUnwrappedCookies` na
+    migracao dedicada para Next.js 16/React 19.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.

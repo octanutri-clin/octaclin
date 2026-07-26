@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
 interface Params {
-  params: { modeloId: string };
+  params: Promise<{ modeloId: string }>;
 }
 
-export async function POST(request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     const resposta = await requisitarBackendAutenticado(`/questionarios/modelos/${params.modeloId}/criar`, {
       method: 'POST',

@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
 interface Params {
-  params: { id: string; perguntaId: string };
+  params: Promise<{ id: string; perguntaId: string }>;
 }
 
-export async function PATCH(request: NextRequest, { params }: Params) {
+export async function PATCH(request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     const resposta = await requisitarBackendAutenticado(`/questionarios/${params.id}/perguntas/${params.perguntaId}`, {
       method: 'PATCH',

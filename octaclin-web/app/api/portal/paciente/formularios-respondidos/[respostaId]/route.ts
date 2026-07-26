@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
 interface Params {
-  params: { respostaId: string };
+  params: Promise<{ respostaId: string }>;
 }
 
-export async function GET(_request: Request, { params }: Params) {
+export async function GET(_request: Request, props: Params) {
+  const params = await props.params;
   try {
     const resposta = await requisitarBackendAutenticado(`/portal/paciente/formularios-respondidos/${params.respostaId}`);
     return new NextResponse(await resposta.text(), {

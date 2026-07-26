@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
 interface Params {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 function respostaProxy(resposta: Response) {
@@ -15,7 +15,8 @@ function respostaProxy(resposta: Response) {
   );
 }
 
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(_request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     return respostaProxy(await requisitarBackendAutenticado(`/questionarios/${params.id}/perguntas`));
   } catch (erro) {
@@ -24,7 +25,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
   }
 }
 
-export async function POST(request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     return respostaProxy(
       await requisitarBackendAutenticado(`/questionarios/${params.id}/perguntas`, {

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
-export async function POST(request: NextRequest, { params }: { params: { protocolo: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ protocolo: string }> }) {
+  const params = await props.params;
   try {
     const resposta = await requisitarBackendAutenticado(
       `/operacoes/lgpd/solicitacoes/${encodeURIComponent(params.protocolo)}/status`,

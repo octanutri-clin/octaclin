@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
 interface Params {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     const consulta = request.nextUrl.searchParams.toString();
     const caminho = `/questionarios/${params.id}/respostas/leitura-clinica${consulta ? `?${consulta}` : ''}`;

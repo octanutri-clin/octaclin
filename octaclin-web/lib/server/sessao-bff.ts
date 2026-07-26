@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, type UnsafeUnwrappedCookies } from 'next/headers';
 import { sessaoPossuiPermissao } from './permissoes-bff';
 
 const nomes = {
@@ -129,7 +129,7 @@ export function salvarSessaoBff(
   entrada: { apiUrl: string; tenantSlug: string; email: string },
   resposta: RespostaToken
 ) {
-  const jar = cookies();
+  const jar = (cookies() as unknown as UnsafeUnwrappedCookies);
   const maxAge = 60 * 60 * 24 * 30;
   const apiUrlNormalizada = normalizarApiUrlBff(entrada.apiUrl);
   jar.set(nomes.accessToken, resposta.accessToken, { ...cookieBase, maxAge: resposta.expiraEmSegundos });
@@ -145,7 +145,7 @@ export function salvarSessaoBff(
 }
 
 export function obterSessaoBff(): SessaoBff | null {
-  const jar = cookies();
+  const jar = (cookies() as unknown as UnsafeUnwrappedCookies);
   const accessToken = jar.get(nomes.accessToken)?.value;
   const refreshToken = jar.get(nomes.refreshToken)?.value;
   const apiUrl = jar.get(nomes.apiUrl)?.value;
@@ -174,7 +174,7 @@ export function obterSessaoBff(): SessaoBff | null {
 }
 
 export function limparSessaoBff() {
-  const jar = cookies();
+  const jar = (cookies() as unknown as UnsafeUnwrappedCookies);
   Object.values(nomes).forEach((nome) => jar.delete(nome));
 }
 

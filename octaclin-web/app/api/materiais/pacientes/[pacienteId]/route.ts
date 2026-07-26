@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
 interface Params {
-  params: { pacienteId: string };
+  params: Promise<{ pacienteId: string }>;
 }
 
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(_request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     const resposta = await requisitarBackendAutenticado(`/materiais/pacientes/${encodeURIComponent(params.pacienteId)}`);
     return new NextResponse(await resposta.text(), {
@@ -20,7 +21,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
   }
 }
 
-export async function POST(request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     const corpo = await request.text();
     const resposta = await requisitarBackendAutenticado(`/materiais/pacientes/${encodeURIComponent(params.pacienteId)}`, {

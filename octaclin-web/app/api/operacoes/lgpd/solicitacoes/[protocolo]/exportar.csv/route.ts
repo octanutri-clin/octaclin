@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
-export async function GET(_request: Request, { params }: { params: { protocolo: string } }) {
+export async function GET(_request: Request, props: { params: Promise<{ protocolo: string }> }) {
+  const params = await props.params;
   try {
     const resposta = await requisitarBackendAutenticado(
       `/operacoes/lgpd/solicitacoes/${encodeURIComponent(params.protocolo)}/exportar.csv`
