@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID, timingSafeEqual } from 'crypto';
-import { Controller, Get, Headers, HttpCode, Post, Query, Redirect, UseGuards } from '@nestjs/common';
+import { Controller, Get, Headers, HttpCode, Logger, Post, Query, Redirect, UseGuards } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { DataSource } from 'typeorm';
@@ -27,6 +27,8 @@ function urlWebhook(): string {
 
 @Controller('agenda/google')
 export class ControladorGoogleAgenda {
+  private readonly logger = new Logger(ControladorGoogleAgenda.name);
+
   constructor(
     private readonly servicoConexao: ServicoConexaoGoogleCalendar,
     private readonly googleCalendar: ServicoGoogleCalendar,
@@ -86,7 +88,11 @@ export class ControladorGoogleAgenda {
     if (!canalWatchId) return;
 
     const canal = await this.fonteDados.getRepository(GoogleCanalWatchOrm).findOne({ where: { canalWatchId } });
-    if (!canal || !canal.token || !tokenRecebido) return;
+    if (!canal) return;
+    if (!canal.token || !tokenRecebido) {
+      this.logger.warn(`Notificacao rejeitada para canal ${canalWatchId}: token de canal ausente ou nao verificavel.`);
+      return;
+    }
 
     const bufferRecebido = Buffer.from(tokenRecebido);
     const bufferEsperado = Buffer.from(canal.token);

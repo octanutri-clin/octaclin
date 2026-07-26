@@ -10,6 +10,8 @@ import { CriarMateriaisEducativos1720000000600 } from './migracoes/1720000000600
 import { CorrigeConstraintRoleUsuarios1720000000700 } from './migracoes/1720000000700-CorrigeConstraintRoleUsuarios';
 import { CriarSincronizacaoGoogleAgenda1720000000800 } from './migracoes/1720000000800-CriarSincronizacaoGoogleAgenda';
 import { AdicionaTokenCanalWatchGoogleAgenda1720000000900 } from './migracoes/1720000000900-AdicionaTokenCanalWatchGoogleAgenda';
+import { AdicionaContadorFalhasSincronizacaoGoogleAgenda1720000000901 } from './migracoes/1720000000901-AdicionaContadorFalhasSincronizacaoGoogleAgenda';
+import { ForcaRenovacaoCanaisWatchSemToken1720000000902 } from './migracoes/1720000000902-ForcaRenovacaoCanaisWatchSemToken';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -146,7 +148,9 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CriarMateriaisEducativos1720000000600,
       CorrigeConstraintRoleUsuarios1720000000700,
       CriarSincronizacaoGoogleAgenda1720000000800,
-      AdicionaTokenCanalWatchGoogleAgenda1720000000900
+      AdicionaTokenCanalWatchGoogleAgenda1720000000900,
+      AdicionaContadorFalhasSincronizacaoGoogleAgenda1720000000901,
+      ForcaRenovacaoCanaisWatchSemToken1720000000902
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

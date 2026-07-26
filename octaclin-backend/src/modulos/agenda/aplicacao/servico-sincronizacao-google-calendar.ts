@@ -49,7 +49,7 @@ export class ServicoSincronizacaoGoogleCalendar {
       }
       if (!(erro instanceof SyncTokenExpiradoError)) throw erro;
       this.logger.warn(`Sync token expirado para profissional ${profissionalId}; refazendo sincronizacao completa.`);
-      await this.armazenarSyncToken(tenantId, profissionalId, undefined);
+      await this.armazenarSyncTokenEResetarFalhas(tenantId, profissionalId, undefined);
       resultado = await this.googleCalendar.listarEventosAlterados(credenciais, undefined);
     }
 
@@ -67,8 +67,19 @@ export class ServicoSincronizacaoGoogleCalendar {
       }
     }
 
-    if (proximoSyncToken && !houveFalha) {
-      await this.armazenarSyncToken(tenantId, profissionalId, proximoSyncToken);
+    const LIMITE_FALHAS_CONSECUTIVAS = 5;
+    if (proximoSyncToken) {
+      if (!houveFalha) {
+        await this.armazenarSyncTokenEResetarFalhas(tenantId, profissionalId, proximoSyncToken);
+      } else {
+        const falhas = await this.incrementarFalhasConsecutivas(tenantId, profissionalId);
+        if (falhas >= LIMITE_FALHAS_CONSECUTIVAS) {
+          this.logger.error(
+            `Profissional ${profissionalId}: ${falhas} falhas consecutivas ao aplicar eventos da Google Agenda; avancando o sync token mesmo assim para evitar bloqueio permanente da sincronizacao.`
+          );
+          await this.armazenarSyncTokenEResetarFalhas(tenantId, profissionalId, proximoSyncToken);
+        }
+      }
     }
   }
 
@@ -81,13 +92,25 @@ export class ServicoSincronizacaoGoogleCalendar {
     });
   }
 
-  private async armazenarSyncToken(tenantId: string, profissionalId: string, syncToken: string | undefined): Promise<void> {
+  private async armazenarSyncTokenEResetarFalhas(tenantId: string, profissionalId: string, syncToken: string | undefined): Promise<void> {
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(ProfissionalGoogleConexaoOrm);
       const conexao = await repositorio.findOne({ where: { tenantId, profissionalId } });
       if (!conexao) return;
       conexao.ultimoSyncToken = syncToken;
+      conexao.falhasConsecutivasSincronizacao = 0;
       await repositorio.save(conexao);
+    });
+  }
+
+  private async incrementarFalhasConsecutivas(tenantId: string, profissionalId: string): Promise<number> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(ProfissionalGoogleConexaoOrm);
+      const conexao = await repositorio.findOne({ where: { tenantId, profissionalId } });
+      if (!conexao) return 0;
+      conexao.falhasConsecutivasSincronizacao = (conexao.falhasConsecutivasSincronizacao ?? 0) + 1;
+      await repositorio.save(conexao);
+      return conexao.falhasConsecutivasSincronizacao;
     });
   }
 

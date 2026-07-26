@@ -980,20 +980,27 @@ export class ServicoOperacoes {
   }
 
   private async reprocessarGoogleCalendar(tenantId: string, consultaId: string): Promise<FalhaComunicacaoOperacional> {
+    const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const encontrada = await gerenciador.getRepository(AgendaConsultaOrm).findOne({ where: { id: consultaId, tenantId } });
+      if (!encontrada) throw new NotFoundException('Falha de Google Calendar nao encontrada.');
+      return encontrada;
+    });
+
+    const google = await this.executarSincronizacaoGoogle(tenantId, consulta);
+
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
-      const consulta = await repositorio.findOne({ where: { id: consultaId, tenantId } });
-      if (!consulta) throw new NotFoundException('Falha de Google Calendar nao encontrada.');
+      const atual = await repositorio.findOne({ where: { id: consultaId, tenantId } });
+      if (!atual) throw new NotFoundException('Falha de Google Calendar nao encontrada.');
 
-      const google = await this.executarSincronizacaoGoogle(tenantId, consulta);
       if (google.sincronizado) {
-        consulta.googleCalendarId = google.calendarId;
-        consulta.googleEventId = google.eventId;
-        consulta.googleEventHtmlLink = google.htmlLink ?? consulta.googleEventHtmlLink;
+        atual.googleCalendarId = google.calendarId;
+        atual.googleEventId = google.eventId;
+        atual.googleEventHtmlLink = google.htmlLink ?? atual.googleEventHtmlLink;
       }
-      consulta.notificacoes = { ...(consulta.notificacoes ?? {}), googleCalendar: google };
-      consulta.payload = { ...(consulta.payload ?? {}), googleCalendar: google };
-      const salvo = await repositorio.save(consulta);
+      atual.notificacoes = { ...(atual.notificacoes ?? {}), googleCalendar: google };
+      atual.payload = { ...(atual.payload ?? {}), googleCalendar: google };
+      const salvo = await repositorio.save(atual);
       return (
         this.mapearFalhasGoogleCalendar(salvo)[0] ?? {
           id: `google_calendar:${salvo.id}`,

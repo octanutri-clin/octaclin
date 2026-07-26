@@ -38,6 +38,9 @@ export class ProfissionalGoogleConexaoOrm {
   @Column({ name: 'canal_expira_em', type: 'timestamptz', nullable: true })
   canalExpiraEm?: Date;
 
+  @Column({ name: 'falhas_consecutivas_sincronizacao', type: 'int', default: 0 })
+  falhasConsecutivasSincronizacao: number;
+
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 

@@ -264,4 +264,58 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
 
     loggerWarnSpy.mockRestore();
   });
+
+  it('avanca o syncToken apos 5 falhas consecutivas ao aplicar eventos, e loga em nivel error (retentativa limitada)', async () => {
+    const deps = construirDependencias();
+    deps.servicoAgenda.remarcarConsultaComoSistema = jest.fn(async () => {
+      throw new Error('falha simulada ao aplicar evento');
+    });
+
+    const conexaoFake = {
+      tenantId: 'tenant-1',
+      profissionalId: 'prof-1',
+      ultimoSyncToken: 'sync-antigo',
+      falhasConsecutivasSincronizacao: 0
+    };
+    deps.executorTenant.executar = jest.fn((_tenantId: string, callback: (gerenciador: any) => any) =>
+      callback({
+        getRepository: () => ({
+          findOne: jest.fn(async () => conexaoFake),
+          create: jest.fn((dados: any) => dados),
+          save: jest.fn(async (dados: any) => {
+            Object.assign(conexaoFake, dados);
+            return conexaoFake;
+          }),
+          delete: jest.fn(async () => undefined)
+        })
+      })
+    );
+
+    const loggerWarnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+
+    const servico = new ServicoSincronizacaoGoogleCalendar(
+      deps.fonteDados as any,
+      deps.executorTenant as any,
+      deps.servicoConexao as any,
+      deps.googleCalendar as any,
+      deps.servicoAgenda as any
+    );
+
+    for (let chamada = 1; chamada <= 4; chamada += 1) {
+      await servico.reconciliar('tenant-1', 'prof-1');
+      expect(conexaoFake.ultimoSyncToken).toBe('sync-antigo');
+      expect(conexaoFake.falhasConsecutivasSincronizacao).toBe(chamada);
+    }
+    expect(loggerErrorSpy).not.toHaveBeenCalled();
+
+    await servico.reconciliar('tenant-1', 'prof-1');
+
+    expect(conexaoFake.falhasConsecutivasSincronizacao).toBe(0);
+    expect(conexaoFake.ultimoSyncToken).toBe('novo-sync-token');
+    expect(loggerErrorSpy).toHaveBeenCalledWith(expect.stringContaining('5 falhas consecutivas'));
+
+    loggerWarnSpy.mockRestore();
+    loggerErrorSpy.mockRestore();
+  });
 });
