@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado durante a Fase 131 (estrutura entregue em 2026-07-23; provisionamento real em andamento).
+Atualizado em 2026-07-26 apos a Fase 136 e o hardening de CI/producao.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -341,15 +341,18 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     sequencial de go-live (nao bloqueia nem depende das Fases 132-135).
   - Design aprovado via skill `brainstorming` em 2026-07-24; implementado via
     `superpowers:subagent-driven-development` em 2026-07-25.
-  - Commit final: `7762537` (fix de seguranca) na branch `main`; ver
+  - Commits de fechamento: `5e1c33a` (onda final da revisao) e `701ed6b`
+    (configuracao segura de producao), sobre a base funcional `7762537`; ver
     `fase-136-sincronizacao-google-agenda-profissional.md` para o historico
     completo de commits e o achado CRITICAL/IMPORTANT corrigido na revisao
     de seguranca multi-tenant antes do fechamento.
-  - Data: 2026-07-25.
+  - Data: 2026-07-26.
   - Validacoes: `pnpm --dir octaclin-backend typecheck`, `pnpm --dir
-    octaclin-backend test --runInBand` (46 suites/224 testes),
-    `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web build`,
-    `npm run security:secrets`, `validar-preflight.ps1 -DocsOnly`.
+    octaclin-backend test --runInBand` (47 suites/242 testes), `pnpm --dir
+    octaclin-web typecheck`, `pnpm --dir octaclin-web build`, `pnpm
+    --dir octaclin-web smoke:ui`, `smoke:e2e:bff`, `smoke:visual` (58 testes),
+    `pnpm security:secrets`, `validar-preflight.ps1 -DocsOnly` e GitHub Actions
+    verde para backend, web, mobile, IA e demo local smoke.
   - Pendente (nao bloqueia): registrar a URL de callback OAuth no Google
     Cloud Console (fora do repositorio); ver pendencias menores no arquivo
     da fase.
