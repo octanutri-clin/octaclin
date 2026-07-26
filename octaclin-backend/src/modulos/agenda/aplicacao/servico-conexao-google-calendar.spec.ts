@@ -15,8 +15,20 @@ describe('ServicoConexaoGoogleCalendar', () => {
     const gerenciadorFalso = criarGerenciadorFalso();
     const executorTenant = { executar: jest.fn((_tenantId: string, callback: (gerenciador: any) => any) => callback(gerenciadorFalso)) } as unknown as ExecutorTenant;
     const fonteDados = { transaction: jest.fn() } as unknown as DataSource;
-    const servico = new ServicoConexaoGoogleCalendar(executorTenant, criptografia);
-    return { servico, gerenciadorFalso, executorTenant };
+    const redis = criarRedisFalso();
+    const servico = new ServicoConexaoGoogleCalendar(executorTenant, criptografia, redis as any);
+    return { servico, gerenciadorFalso, executorTenant, redis };
+  }
+
+  function criarRedisFalso() {
+    const chavesConsumidas = new Set<string>();
+    return {
+      set: jest.fn(async (chave: string) => {
+        if (chavesConsumidas.has(chave)) return null;
+        chavesConsumidas.add(chave);
+        return 'OK' as const;
+      })
+    };
   }
 
   function criarGerenciadorFalso() {
@@ -37,7 +49,7 @@ describe('ServicoConexaoGoogleCalendar', () => {
     };
   }
 
-  it('gera uma URL de autorizacao com state assinado contendo tenantId e profissionalId', () => {
+  it('gera uma URL de autorizacao com state assinado contendo tenantId e profissionalId', async () => {
     process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
     const { servico } = construirServico();
 
@@ -46,16 +58,16 @@ describe('ServicoConexaoGoogleCalendar', () => {
     expect(url).toContain('https://accounts.google.com/o/oauth2/v2/auth');
     expect(url).toContain('client_id=client-id');
     const parametros = new URL(url).searchParams;
-    const decodificado = servico.validarEDecodificarState(parametros.get('state') ?? '');
+    const decodificado = await servico.validarEDecodificarState(parametros.get('state') ?? '');
     expect(decodificado).toEqual({ tenantId: 'tenant-1', profissionalId: 'profissional-1' });
   });
 
-  it('rejeita um state adulterado', () => {
+  it('rejeita um state adulterado', async () => {
     const { servico } = construirServico();
-    expect(() => servico.validarEDecodificarState('valor-invalido')).toThrow();
+    await expect(servico.validarEDecodificarState('valor-invalido')).rejects.toThrow();
   });
 
-  it('rejeita um state bem formado mas com assinatura adulterada', () => {
+  it('rejeita um state bem formado mas com assinatura adulterada', async () => {
     process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
     const { servico } = construirServico();
 
@@ -75,7 +87,33 @@ describe('ServicoConexaoGoogleCalendar', () => {
 
     const stateAdulterado = Buffer.from(`${payloadBase64}.${assinaturaAdulterada}`).toString('base64url');
 
-    expect(() => servico.validarEDecodificarState(stateAdulterado)).toThrow('State OAuth invalido.');
+    await expect(servico.validarEDecodificarState(stateAdulterado)).rejects.toThrow('State OAuth invalido.');
+  });
+
+  it('rejeita um state expirado', async () => {
+    process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+    const { servico } = construirServico();
+
+    const payloadBase64 = Buffer.from(
+      JSON.stringify({ tenantId: 'tenant-1', profissionalId: 'profissional-1', nonce: 'nonce-expirado', exp: Date.now() - 1000 })
+    ).toString('base64url');
+    const chaveAssinatura = process.env.CRIPTOGRAFIA_CHAVE_AES_256 ?? 'octaclin-chave-local-desenvolvimento';
+    const { createHmac } = await import('crypto');
+    const assinatura = createHmac('sha256', chaveAssinatura).update(payloadBase64).digest('base64url');
+    const stateExpirado = Buffer.from(`${payloadBase64}.${assinatura}`).toString('base64url');
+
+    await expect(servico.validarEDecodificarState(stateExpirado)).rejects.toThrow('State OAuth expirado.');
+  });
+
+  it('rejeita um state reutilizado (replay) mesmo dentro do prazo de validade', async () => {
+    process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+    const { servico } = construirServico();
+
+    const url = servico.gerarUrlAutorizacao('tenant-1', 'profissional-1', 'https://backend/agenda/google/callback');
+    const state = new URL(url).searchParams.get('state') ?? '';
+
+    await expect(servico.validarEDecodificarState(state)).resolves.toEqual({ tenantId: 'tenant-1', profissionalId: 'profissional-1' });
+    await expect(servico.validarEDecodificarState(state)).rejects.toThrow('State OAuth ja utilizado.');
   });
 
   describe('trocarCodigoPorConexao', () => {

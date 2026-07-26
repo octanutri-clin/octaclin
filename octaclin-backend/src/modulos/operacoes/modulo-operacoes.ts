@@ -1,14 +1,16 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import Redis from 'ioredis';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
 import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
-import { ServicoConexaoGoogleCalendar } from '../agenda/aplicacao/servico-conexao-google-calendar';
+import { REDIS_OAUTH_STATE_GOOGLE, ServicoConexaoGoogleCalendar } from '../agenda/aplicacao/servico-conexao-google-calendar';
 import { ServicoGoogleCalendar } from '../agenda/aplicacao/servico-google-calendar';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { ModuloAuth } from '../auth/modulo-auth';
 import { ModuloComunicacoes } from '../comunicacoes/modulo-comunicacoes';
+import { criarConexaoRedis } from '../comunicacoes/aplicacao/configuracao-redis';
 import { CanalNotificacaoOrm } from '../comunicacoes/infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { SincronizacaoMobileOrm } from '../mobile/infraestrutura/sincronizacao-mobile.orm';
@@ -36,7 +38,13 @@ import { ControladorOperacoes } from './apresentacao/controlador-operacoes';
     ModuloSaude
   ],
   controllers: [ControladorOperacoes],
-  providers: [ServicoOperacoes, ServicoGoogleCalendar, ServicoConexaoGoogleCalendar, CriptografiaDadosSensiveis],
+  providers: [
+    ServicoOperacoes,
+    ServicoGoogleCalendar,
+    ServicoConexaoGoogleCalendar,
+    { provide: REDIS_OAUTH_STATE_GOOGLE, useFactory: () => new Redis(criarConexaoRedis()) },
+    CriptografiaDadosSensiveis
+  ],
   exports: [ServicoOperacoes]
 })
 export class ModuloOperacoes {}

@@ -48,7 +48,7 @@ export class ControladorGoogleAgenda {
   @Get('callback')
   @Redirect()
   async callback(@Query('code') code: string, @Query('state') state: string) {
-    const { tenantId, profissionalId } = this.servicoConexao.validarEDecodificarState(state);
+    const { tenantId, profissionalId } = await this.servicoConexao.validarEDecodificarState(state);
     await this.servicoConexao.trocarCodigoPorConexao(tenantId, profissionalId, code, urlCallback());
     await this.criarCanalParaProfissional(tenantId, profissionalId);
 

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
+import Redis from 'ioredis';
 import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditoria';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
 import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -14,7 +15,7 @@ import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ControladorAgenda } from './apresentacao/controlador-agenda';
 import { ControladorGoogleAgenda } from './apresentacao/controlador-google-agenda';
 import { ServicoAgenda } from './aplicacao/servico-agenda';
-import { ServicoConexaoGoogleCalendar } from './aplicacao/servico-conexao-google-calendar';
+import { REDIS_OAUTH_STATE_GOOGLE, ServicoConexaoGoogleCalendar } from './aplicacao/servico-conexao-google-calendar';
 import { ServicoGoogleCalendar } from './aplicacao/servico-google-calendar';
 import { FILA_SINCRONIZACAO_GOOGLE, ServicoSincronizacaoGoogleCalendar } from './aplicacao/servico-sincronizacao-google-calendar';
 import { ProcessadorSincronizacaoGoogleCalendar } from './aplicacao/processador-sincronizacao-google-calendar';
@@ -47,6 +48,7 @@ import { ProfissionalGoogleConexaoOrm } from './infraestrutura/profissional-goog
     ServicoAgenda,
     ServicoGoogleCalendar,
     ServicoConexaoGoogleCalendar,
+    { provide: REDIS_OAUTH_STATE_GOOGLE, useFactory: () => new Redis(criarConexaoRedis()) },
     ServicoSincronizacaoGoogleCalendar,
     ProcessadorSincronizacaoGoogleCalendar,
     ProcessadorRenovacaoGoogleCalendar,

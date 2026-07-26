@@ -1,5 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ProfissionalGoogleConexaoOrm } from '../infraestrutura/profissional-google-conexao.orm';
@@ -21,11 +21,20 @@ function chaveAssinaturaState(): string {
   return process.env.CRIPTOGRAFIA_CHAVE_AES_256 ?? 'octaclin-chave-local-desenvolvimento';
 }
 
+export const REDIS_OAUTH_STATE_GOOGLE = 'REDIS_OAUTH_STATE_GOOGLE';
+
+export interface ClienteRedisOAuthState {
+  set(chave: string, valor: string, modo: 'PX', duracaoMs: number, condicao: 'NX'): Promise<'OK' | null>;
+}
+
+const DURACAO_MAXIMA_STATE_MS = 10 * 60 * 1000;
+
 @Injectable()
 export class ServicoConexaoGoogleCalendar {
   constructor(
     private readonly executorTenant: ExecutorTenant,
-    private readonly criptografia: CriptografiaDadosSensiveis
+    private readonly criptografia: CriptografiaDadosSensiveis,
+    @Inject(REDIS_OAUTH_STATE_GOOGLE) private readonly redis: ClienteRedisOAuthState
   ) {}
 
   gerarUrlAutorizacao(tenantId: string, profissionalId: string, urlCallback: string): string {
@@ -45,7 +54,7 @@ export class ServicoConexaoGoogleCalendar {
     return `https://accounts.google.com/o/oauth2/v2/auth?${parametros.toString()}`;
   }
 
-  validarEDecodificarState(state: string): { tenantId: string; profissionalId: string } {
+  async validarEDecodificarState(state: string): Promise<{ tenantId: string; profissionalId: string }> {
     const partes = Buffer.from(state, 'base64url').toString('utf8').split('.');
     if (partes.length !== 2) throw new BadRequestException('State OAuth invalido.');
 
@@ -60,7 +69,19 @@ export class ServicoConexaoGoogleCalendar {
     const payload = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString('utf8')) as {
       tenantId: string;
       profissionalId: string;
+      nonce: string;
+      exp: number;
     };
+
+    if (!payload.exp || payload.exp < Date.now()) {
+      throw new BadRequestException('State OAuth expirado.');
+    }
+
+    const consumido = await this.redis.set(`google-oauth-state:${payload.nonce}`, '1', 'PX', DURACAO_MAXIMA_STATE_MS, 'NX');
+    if (consumido !== 'OK') {
+      throw new BadRequestException('State OAuth ja utilizado.');
+    }
+
     return { tenantId: payload.tenantId, profissionalId: payload.profissionalId };
   }
 
@@ -134,8 +155,9 @@ export class ServicoConexaoGoogleCalendar {
   }
 
   private assinarState(tenantId: string, profissionalId: string): string {
-    const nonce = randomBytes(8).toString('hex');
-    const payloadBase64 = Buffer.from(JSON.stringify({ tenantId, profissionalId, nonce })).toString('base64url');
+    const nonce = randomBytes(16).toString('hex');
+    const exp = Date.now() + DURACAO_MAXIMA_STATE_MS;
+    const payloadBase64 = Buffer.from(JSON.stringify({ tenantId, profissionalId, nonce, exp })).toString('base64url');
     const assinatura = createHmac('sha256', chaveAssinaturaState()).update(payloadBase64).digest('base64url');
     return Buffer.from(`${payloadBase64}.${assinatura}`).toString('base64url');
   }
