@@ -8,8 +8,9 @@ Atualizado em 2026-07-26.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
 - Ultima fase concluida: Fase 136 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional (revisao final concluida e publicada em 2026-07-26).
-- Fase em andamento: Fase 131 - Producao isolada de staging. Banco Neon, Redis Upstash e servicos Render de producao foram provisionados; falta registrar a validacao final de runtime, secrets exclusivos e aceite operacional conforme `PRODUCAO_ISOLADA_CONTROLE.md`.
-- Estado: staging funcional avancado, ainda nao liberado para clientes reais.
+- Fase em andamento: Fase 131 - Producao isolada de staging. Banco Neon, Redis Upstash e servicos Render de producao estao em live; health, Redis, banco e login foram validados em 2026-07-26. Faltam rotacao de credenciais expostas, conferencia formal de isolamento e aceite operacional conforme `PRODUCAO_ISOLADA_CONTROLE.md`.
+- Proxima fase preparada: Fase 132 - Dominio, SSL e identidade de envio. A configuracao tecnica de DNS permanece pendente ate a definicao do dominio oficial.
+- Estado: producao tecnica acessivel, mas ainda nao liberada para clientes reais.
 
 ## O que esta funcional
 

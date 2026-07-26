@@ -10,15 +10,13 @@ Estrutura da fase entregue em 2026-07-23 (runbook, este controle e validador
 documental). Banco Neon de producao e Redis Upstash de producao criados e
 validados em 2026-07-23.
 
-**Bloqueado em 2026-07-24**: usuario criou os dois servicos Render de
-producao (`octaclin-backend-producao` com `Language: Docker`,
-`octaclin-web-producao` com `Language: Node`, conforme
-`RUNBOOK_PRODUCAO_ISOLADA.md`), mas o deploy de pelo menos um dos servicos
-falhou. O usuario nao chegou a compartilhar o log de erro nesta sessao (sem
-acesso a browser/dashboard Render neste ambiente para diagnosticar
-diretamente). Decisao do usuario: pular esta etapa aqui e deixar para o
-Codex, que tem acesso via browser ao dashboard Render, diagnosticar e
-resolver a falha de deploy. Ver secao "Handoff para o Codex" abaixo.
+Em 2026-07-26, os servicos Render de producao foram corrigidos, receberam
+deploy e ficaram em live. O health detalhado confirmou banco e Redis
+operacionais, e o login do usuario SuperAdmin foi validado pela interface.
+A fase continua aberta ate rotacionar credenciais que apareceram em conversas,
+conferir formalmente que nao ha configuracao de staging no Render e registrar
+o aceite operacional. Google Calendar permanece degradado ate o callback OAuth
+de producao ser concluido em trabalho separado.
 
 ## Recursos a criar
 
@@ -27,11 +25,11 @@ resolver a falha de deploy. Ver secao "Handoff para o Codex" abaixo.
 | Banco Neon de producao (projeto/branch proprio) | Feito | 2026-07-23 | Projeto dedicado `Octaclin-db-producao`, host proprio, distinto do staging (`ep-rough-bird-atunz76m`). |
 | Migrations aplicadas no banco novo (`pnpm --dir octaclin-backend migration:run`) | Feito | 2026-07-23 | 8/8 migrations aplicadas (`migration:show` sem pendencias). Confirmado `tenants=0` e `usuarios=0` apos a migracao: banco vazio, sem dado de staging. |
 | Redis Upstash de producao | Feito | 2026-07-23 | Instancia dedicada (`relieved-goose-91945.upstash.io`). `PING` validado via TLS (`rediss://`) com `ioredis`. |
-| Render backend de producao | Bloqueado | 2026-07-24 | Servico `octaclin-backend-producao` criado (`Language: Docker`), mas deploy falhou. Log de erro nao coletado nesta sessao. |
-| Render web de producao | Bloqueado | 2026-07-24 | Servico `octaclin-web-producao` criado (`Language: Node`), mas deploy falhou (ou pode estar afetado pela falha do backend). Log de erro nao coletado nesta sessao. |
-| Secrets de producao (`JWT_SEGREDO`, `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256`, `DATABASE_URL`, `REDIS_URL`) | Pendente | - | Valores exclusivos, nunca copiados de staging. |
+| Render backend de producao | Feito | 2026-07-26 | Servico `octaclin-backend-producao` em live; health e health detalhado respondendo. |
+| Render web de producao | Feito | 2026-07-26 | Servico `octaclin-web-producao` em live; login e dashboard validados pela interface. |
+| Secrets de producao (`JWT_SEGREDO`, `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256`, `DATABASE_URL`, `REDIS_URL`) | Parcial | 2026-07-26 | Backend operando com banco e Redis. Ainda falta rotacionar valores expostos em conversas e registrar a conferencia de isolamento de staging, sem gravar valores aqui. |
 | Credenciais de integracao proprias de producao (Gmail/SMTP, Meta WhatsApp, Google Calendar) | Pendente | - | Enquanto pendente, manter integracao correspondente desativada em producao. |
-| Primeiro deploy validado (`/health`, `/health/detalhado`, login) | Pendente | - | Ver criterios em `RUNBOOK_PRODUCAO_ISOLADA.md`. |
+| Primeiro deploy validado (`/health`, `/health/detalhado`, login) | Feito | 2026-07-26 | Backend e web em live; health, health detalhado e login SuperAdmin confirmados. |
 
 ## Registro de execucao
 
@@ -78,6 +76,13 @@ o que foi feito, quem confirmou). Nao inclua valores de secrets.
   (`RUNBOOK_ROTACAO_SECRETS.md`, secao Neon/Postgres). Login ainda nao
   validado via curl/browser nesta sessao - falta confirmar com a URL publica
   do servico web de producao.
+- 2026-07-26: deploy de producao corrigido e confirmado em live. O Redis
+  inicialmente recusava autenticacao por credencial invalida; a `REDIS_URL`
+  foi atualizada no Render usando a URL TLS da instancia dedicada. Em seguida,
+  `/health/detalhado` retornou banco e Redis como `ok`, sem alerta critico, e
+  o login do SuperAdmin foi concluido pela web com redirecionamento para
+  `/dashboard`. Google Calendar ficou `degradado` enquanto o callback OAuth
+  de producao e finalizado em trabalho separado.
 
 ## Handoff para o Codex
 
@@ -123,9 +128,9 @@ Contexto para quem retomar com acesso ao dashboard Render:
 ## Validacoes pendentes antes do aceite
 
 - [ ] Todos os recursos da tabela acima marcados como `Feito`.
-- [ ] `curl https://<backend-producao-url>/health` respondendo `status: ok`.
-- [ ] `curl https://<backend-producao-url>/health/detalhado` sem alerta critico.
-- [ ] Login validado com usuario criado diretamente em producao.
+- [x] `curl https://<backend-producao-url>/health` respondendo `status: ok`.
+- [x] `curl https://<backend-producao-url>/health/detalhado` sem alerta critico.
+- [x] Login validado com usuario criado diretamente em producao.
 - [ ] Nenhuma variavel/secret de staging presente no ambiente Render de producao.
 - [ ] Nenhum dado do tenant `octaclin-staging` presente no banco de producao.
 - [ ] `npm run security:secrets` limpo.
@@ -140,11 +145,10 @@ Contexto para quem retomar com acesso ao dashboard Render:
 
 ## Proximo passo
 
-1. Codex diagnostica e corrige a falha de deploy dos servicos Render de
-   producao (ver "Handoff para o Codex" acima).
-2. Rotacionar a senha do role `neondb_owner` (Neon) e o token da instancia
-   Upstash de producao, seguindo `RUNBOOK_ROTACAO_SECRETS.md` (ambos
-   apareceram em texto no chat durante o provisionamento), e atualizar os
-   valores novos apenas no Render.
-3. Validar `/health` e `/health/detalhado` apos o deploy ficar saudavel e
-   atualizar a tabela acima a cada etapa concluida.
+1. Rotacionar a senha do SuperAdmin e as credenciais expostas do Neon e
+   Upstash, seguindo `RUNBOOK_ROTACAO_SECRETS.md`, e atualizar os valores
+   novos apenas no Render.
+2. Conferir os nomes e a origem de todas as variaveis dos dois servicos Render
+   para registrar que nenhum valor de staging esta presente em producao.
+3. Revalidar login e health apos a rotacao; registrar o aceite operacional
+   somente depois dessas verificacoes.

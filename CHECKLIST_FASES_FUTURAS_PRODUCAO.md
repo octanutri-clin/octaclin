@@ -309,12 +309,15 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 - [ ] Fase 131 - Producao isolada de staging.
   - Banco, Redis, Render service/env, dominio e secrets separados.
   - Saida esperada: ambiente de producao independente.
-  - Status: bloqueado, em handoff para o Codex. Estrutura entregue em 2026-07-23 (`RUNBOOK_PRODUCAO_ISOLADA.md`, `PRODUCAO_ISOLADA_CONTROLE.md`, `scripts/test-producao-isolada.mjs`, `pnpm test:producao-isolada`); banco Neon e Redis Upstash de producao criados e validados em 2026-07-23.
-  - Pendente: servicos Render de producao (`octaclin-backend-producao`, `octaclin-web-producao`) foram criados em 2026-07-24 mas o deploy falhou; sem acesso a browser/dashboard Render nesta sessao para diagnosticar, o trabalho foi pausado e passado para o Codex (detalhes em `PRODUCAO_ISOLADA_CONTROLE.md`, secao "Handoff para o Codex"). Faltam ainda secrets exclusivos de producao e o registro do aceite final.
+  - Status: em validacao final. Banco Neon, Redis Upstash e os servicos Render `octaclin-backend-producao`/`octaclin-web-producao` estao isolados e em live; health, Redis, banco e login foram validados em 2026-07-26.
+  - Pendente: rotacionar credenciais expostas, conferir que nenhum valor de staging esta configurado no Render e registrar o aceite operacional em `PRODUCAO_ISOLADA_CONTROLE.md`. Google Calendar degradado sera resolvido pelo trabalho separado de callback OAuth.
 
 - [ ] Fase 132 - Dominio, SSL e identidade de envio.
   - Dominio oficial, remetente, SPF/DKIM/DMARC quando aplicavel.
   - Saida esperada: comunicacoes confiaveis e marca consistente.
+  - Status: preparacao iniciada sem dominio. Nao configurar DNS, SPF, DKIM ou
+    DMARC ate existir um dominio oficial; manter as URLs Render temporarias e
+    preparar a decisao de dominio, hospedagem DNS e provedor/remetente.
 
 - [ ] Fase 133 - Checklist juridico/comercial para clientes.
   - Termos, politica, contrato de consultoria, suporte e SLA basico.
