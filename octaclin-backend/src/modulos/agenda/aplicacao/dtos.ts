@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsEmail, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsBoolean, IsDateString, IsEmail, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 import type { ResultadoGoogleCalendar } from './servico-google-calendar';
 
 export type ResultadoNotificacaoAgenda =
@@ -93,6 +93,7 @@ export class CancelarConsultaAgendaDto {
 export class CriarSolicitacaoAgendamentoPublicoDto {
   @IsString()
   @MinLength(1)
+  @Matches(/\S/)
   @MaxLength(180)
   nome: string;
 

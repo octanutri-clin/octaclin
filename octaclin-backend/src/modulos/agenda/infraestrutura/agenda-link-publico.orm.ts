@@ -11,7 +11,7 @@ export class AgendaLinkPublicoOrm {
   @Column({ name: 'profissional_id', type: 'uuid' })
   profissionalId: string;
 
-  @Column({ name: 'token_hash', type: 'varchar', length: 128, unique: true })
+  @Column({ name: 'token_hash', type: 'char', length: 64, unique: true })
   tokenHash: string;
 
   @Column({ type: 'boolean', default: true })

@@ -9,7 +9,7 @@ export class CriarAgendamentoPublico1720000001000 implements MigrationInterface 
         id uuid primary key default gen_random_uuid(),
         tenant_id uuid not null references tenants(id),
         profissional_id uuid not null references profissionais(id),
-        token_hash varchar(128) not null,
+        token_hash char(64) not null check (token_hash ~ '^[0-9a-f]{64}$'),
         ativo boolean not null default true,
         duracao_minutos int not null default 30,
         criado_em timestamptz not null default now(),
@@ -38,7 +38,11 @@ export class CriarAgendamentoPublico1720000001000 implements MigrationInterface 
         paciente_id uuid references pacientes(id),
         consulta_id uuid references agenda_consultas(id),
         criado_em timestamptz not null default now(),
-        atualizado_em timestamptz not null default now()
+        atualizado_em timestamptz not null default now(),
+        check (
+          (status = 'pendente' and paciente_id is null and consulta_id is null and decidida_em is null and decidida_por_usuario_id is null)
+          or (status in ('aprovada', 'recusada', 'expirada'))
+        )
       );
 
       create index if not exists idx_agenda_solicitacoes_tenant_profissional_status_inicio

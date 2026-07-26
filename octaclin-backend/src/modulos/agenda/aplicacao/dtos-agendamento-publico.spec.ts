@@ -2,9 +2,9 @@ import { validate } from 'class-validator';
 import { CriarSolicitacaoAgendamentoPublicoDto } from './dtos';
 
 describe('CriarSolicitacaoAgendamentoPublicoDto', () => {
-  it('rejeita dados publicos sem contato valido ou horario ISO', async () => {
+  it('rejeita nome em branco, contato invalido e horario nao ISO', async () => {
     const dados = Object.assign(new CriarSolicitacaoAgendamentoPublicoDto(), {
-      nome: '',
+      nome: '   ',
       email: 'invalido',
       inicioEm: 'amanha'
     });
