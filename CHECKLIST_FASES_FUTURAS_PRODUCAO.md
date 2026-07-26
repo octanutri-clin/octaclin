@@ -391,11 +391,18 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     9 moderadas e 1 baixa para zero vulnerabilidades. A migracao major do
     Next.js permanece fase separada por risco de frontend.
 
-- [ ] Fase 139 - Fortalecimento de contratos de dominio e fronteiras BFF.
+- [x] Fase 139 - Fortalecimento de contratos de dominio e fronteiras BFF.
   - Reduzir `any` residual, normalizar DTOs compartilhados e cobrir limites de
     erro nos BFFs criticos.
   - Saida esperada: menor risco de regressao em agenda, pacientes, portal e
     comunicacoes.
+  - Status: concluida em 2026-07-26. Removidos os `any` de producao do backend:
+    contratos de notificacao da agenda e gerenciador transacional de convites
+    agora sao tipados. A fronteira BFF foi revisada: `requisitarBackendAutenticado`
+    centraliza sessao, renovacao, indisponibilidade de rede e HTML indevido em
+    resposta JSON 502; as rotas continuam delegando a esse contrato unico.
+  - Validacoes: backend 47 suites/244 testes, typecheck/build; web lint,
+    typecheck, `test:authz` e build.
 
 - [ ] Fase 140 - Cobertura de confiabilidade e regressao.
   - Priorizar testes negativos para autorizacao, tenant, operacoes e falhas de

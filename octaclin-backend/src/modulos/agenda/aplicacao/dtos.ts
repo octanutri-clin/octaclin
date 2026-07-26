@@ -1,4 +1,16 @@
 import { IsBoolean, IsDateString, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
+import type { ResultadoGoogleCalendar } from './servico-google-calendar';
+
+export type ResultadoNotificacaoAgenda =
+  | { status: 'enviado'; mensagemId: string }
+  | { status: 'ignorado'; motivo: string }
+  | { status: 'falhou'; erro: string };
+
+export interface NotificacoesConsultaAgenda {
+  email?: ResultadoNotificacaoAgenda;
+  whatsapp?: ResultadoNotificacaoAgenda;
+  googleCalendar?: ResultadoGoogleCalendar;
+}
 
 export class CriarConsultaAgendaDto {
   @IsUUID()
@@ -95,7 +107,7 @@ export interface ConsultaAgendaRespostaDto {
   googleCalendarId?: string;
   googleEventId?: string;
   googleEventHtmlLink?: string;
-  notificacoes: Record<string, any>;
+  notificacoes: NotificacoesConsultaAgenda;
   payload: Record<string, unknown>;
   criadoEm: Date;
   atualizadoEm: Date;

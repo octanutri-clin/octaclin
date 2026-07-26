@@ -12,16 +12,18 @@ import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
-import { CancelarConsultaAgendaDto, ConsultaAgendaRespostaDto, CriarConsultaAgendaDto, RemarcarConsultaAgendaDto } from './dtos';
+import {
+  CancelarConsultaAgendaDto,
+  ConsultaAgendaRespostaDto,
+  CriarConsultaAgendaDto,
+  NotificacoesConsultaAgenda,
+  RemarcarConsultaAgendaDto,
+  ResultadoNotificacaoAgenda
+} from './dtos';
 import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar';
 import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from './servico-google-calendar';
 
 const EVENTO_CONSULTA_AGENDADA = 'agenda.consulta.agendada';
-
-type ResultadoNotificacaoAgenda =
-  | { status: 'enviado'; mensagemId: string }
-  | { status: 'ignorado'; motivo: string }
-  | { status: 'falhou'; erro: string };
 
 interface ContextoConsultaCriada {
   consulta: AgendaConsultaOrm;
@@ -97,7 +99,7 @@ export class ServicoAgenda {
       consultaId: contexto.consulta.id,
       credenciais
     });
-    const notificacoes: Record<string, ResultadoNotificacaoAgenda> =
+    const notificacoes: NotificacoesConsultaAgenda =
       dados.enviarNotificacoes === false
         ? { email: { status: 'ignorado', motivo: 'notificacoes_desativadas' }, whatsapp: { status: 'ignorado', motivo: 'notificacoes_desativadas' } }
         : await this.enviarNotificacoes(tenantId, contexto);
@@ -316,7 +318,7 @@ export class ServicoAgenda {
     tenantId: string,
     consultaId: string,
     google: ResultadoGoogleCalendar,
-    notificacoes: Record<string, ResultadoNotificacaoAgenda>
+    notificacoes: NotificacoesConsultaAgenda
   ): Promise<AgendaConsultaOrm> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
@@ -635,7 +637,7 @@ export class ServicoAgenda {
       googleCalendarId: consulta.googleCalendarId,
       googleEventId: consulta.googleEventId,
       googleEventHtmlLink: consulta.googleEventHtmlLink,
-      notificacoes: consulta.notificacoes ?? {},
+      notificacoes: (consulta.notificacoes ?? {}) as NotificacoesConsultaAgenda,
       payload,
       criadoEm: consulta.criadoEm,
       atualizadoEm: consulta.atualizadoEm

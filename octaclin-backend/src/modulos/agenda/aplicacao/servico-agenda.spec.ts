@@ -206,8 +206,8 @@ describe('ServicoAgenda', () => {
     expect(processador.processarMensagem).toHaveBeenCalledWith('tenant-1', 'mensagem-email', { propagarErro: false });
     expect(processador.processarMensagem).toHaveBeenCalledWith('tenant-1', 'mensagem-whatsapp', { propagarErro: false });
     expect(consulta.googleEventId).toBe('event-1');
-    expect(consulta.notificacoes.email.status).toBe('enviado');
-    expect(consulta.notificacoes.whatsapp.status).toBe('enviado');
+    expect(consulta.notificacoes.email).toEqual(expect.objectContaining({ status: 'enviado' }));
+    expect(consulta.notificacoes.whatsapp).toEqual(expect.objectContaining({ status: 'enviado' }));
   });
 
   it('deve resolver credenciais Google do profissional conectado e repassar ao criar evento no Google Calendar', async () => {

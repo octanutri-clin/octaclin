@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'crypto';
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
@@ -268,7 +269,7 @@ export class ServicoUsuariosCliente {
     return token.payload?.origem === 'convite_usuario_cliente';
   }
 
-  private async obterUsuarioConvidavel(gerenciador: any, tenantId: string, usuarioId: string): Promise<UsuarioOrm> {
+  private async obterUsuarioConvidavel(gerenciador: EntityManager, tenantId: string, usuarioId: string): Promise<UsuarioOrm> {
     const usuario = await gerenciador.getRepository(UsuarioOrm).findOne({ where: { id: usuarioId, tenantId } });
     if (!usuario || !this.ehPapelAdministrativo(usuario.role) || usuario.role === 'Client') {
       throw new NotFoundException('Usuario administrativo convidado nao encontrado.');
@@ -355,7 +356,7 @@ export class ServicoUsuariosCliente {
   }
 
   private async criarTokenConvite(
-    gerenciador: any,
+    gerenciador: EntityManager,
     dados: {
       tenantId: string;
       usuarioId: string;
@@ -411,7 +412,7 @@ export class ServicoUsuariosCliente {
   }
 
   private async revogarTokensPendentes(
-    gerenciador: any,
+    gerenciador: EntityManager,
     tenantId: string,
     usuarioId: string,
     usuarioExecutorId: string,
