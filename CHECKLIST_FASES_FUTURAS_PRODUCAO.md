@@ -306,11 +306,11 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Saida entregue: `RUNBOOK_PILOTO_INTERNO.md`, `PILOTO_INTERNO_CONTROLE.md`, validador `scripts/test-piloto-interno.mjs`, comando `pnpm test:piloto`, conexao com `CHECKLIST_GO_LIVE.md`/`PREFLIGHT_PRODUCAO.md`/`TESTES_E_VALIDACOES.md`, e rodada 1 do piloto executada e aprovada (5 bugs reais encontrados e corrigidos: BUG-001 a BUG-005, incluindo escopo de dados por profissional responsavel aplicado em pacientes, agenda, gamificacao, profissionais, questionarios, materiais, comunicacoes e automacoes).
   - Observacao: aceite do piloto registrado em `PILOTO_INTERNO_CONTROLE.md` (aprovado por `octavioomarostica@gmail.com` em 2026-07-23). Fase 131 liberada para iniciar.
 
-- [ ] Fase 131 - Producao isolada de staging.
+- [x] Fase 131 - Producao isolada de staging.
   - Banco, Redis, Render service/env, dominio e secrets separados.
   - Saida esperada: ambiente de producao independente.
-  - Status: em validacao final. Banco Neon, Redis Upstash e os servicos Render `octaclin-backend-producao`/`octaclin-web-producao` estao isolados e em live; health, Redis, banco e login foram validados em 2026-07-26.
-  - Pendente: rotacionar credenciais expostas, conferir que nenhum valor de staging esta configurado no Render e registrar o aceite operacional em `PRODUCAO_ISOLADA_CONTROLE.md`. Google Calendar degradado sera resolvido pelo trabalho separado de callback OAuth.
+  - Status: aceita em 2026-07-26. Banco Neon, Redis Upstash e os servicos Render de producao estao isolados e em live; credenciais expostas foram rotacionadas, ambiente/banco auditados sem staging e runtime revalidado.
+  - Ressalva: Google Calendar continua degradado pelo callback OAuth da Fase 136, sem bloquear o isolamento de producao aceito nesta fase.
 
 - [ ] Fase 132 - Dominio, SSL e identidade de envio.
   - Dominio oficial, remetente, SPF/DKIM/DMARC quando aplicavel.

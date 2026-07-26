@@ -8,12 +8,12 @@ Atualizado em 2026-07-26.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
 - Ultima fase concluida: Fase 142 - Migracao controlada do Next.js e seguranca web (entregue em 2026-07-26).
-- Fase em andamento: Fase 131 - Producao isolada de staging. Banco Neon, Redis Upstash e servicos Render de producao estao em live; health, Redis, banco e login foram validados em 2026-07-26. Faltam rotacao de credenciais expostas, conferencia formal de isolamento e aceite operacional conforme `PRODUCAO_ISOLADA_CONTROLE.md`.
+- Fase 131 aceita: producao isolada de staging confirmada em 2026-07-26, com Neon, Upstash e Render independentes, credenciais rotacionadas e ambiente/banco auditados sem staging. Google Calendar permanece pendente na Fase 136.
 - Melhoria continua: Fases 138, 141 e 142 concluidas. NestJS 11.1.28, TypeORM 1.1.0 e Next.js 15.5.22 foram validados; as auditorias de producao de backend e web estao zeradas. A proxima migracao de framework sera Next.js 16/React 19, em fase dedicada por exigir refatoracao assincrona do BFF.
 - Fase 139 concluida: contratos de agenda e convite administrativo passaram a ser tipados sem `any` em codigo de producao; o BFF preserva uma fronteira central para sessao, renovacao e falhas de backend.
 - Fase 140 concluida: matriz rastreavel de riscos, testes e gates para tenant, autorizacao, BFF, integracoes, portal e operacoes.
 - Fase 142 concluida: APIs dinamicas do App Router foram migradas para `Promise`/`await`, com gate de regressao, build de producao validado e auditoria web sem vulnerabilidades.
-- Proxima fase preparada: Fase 132 - Dominio, SSL e identidade de envio. A configuracao tecnica de DNS permanece pendente ate a definicao do dominio oficial.
+- Proxima fase critica: Fase 132 - Dominio, SSL e identidade de envio. A configuracao tecnica de DNS permanece pendente ate a definicao do dominio oficial.
 - Estado: producao tecnica acessivel, mas ainda nao liberada para clientes reais.
 
 ## O que esta funcional
@@ -56,7 +56,7 @@ Atualizado em 2026-07-26.
 - Massa ficticia de staging aplicada e validada no Neon staging (tenant `octaclin-staging`).
 - Piloto interno controlado: runbook, controle de acompanhamento, validador documental e rodada 1 aprovada em 2026-07-23.
 - Escopo de dados por profissional responsavel (`pacientes_responsaveis`) aplicado e testado em pacientes, agenda, gamificacao, profissionais, questionarios, materiais, comunicacoes e automacoes.
-- Producao isolada de staging: banco Neon, Redis Upstash e servicos Render de producao provisionados; a validacao final de runtime, secrets exclusivos e aceite operacional seguem pendentes na Fase 131.
+- Producao isolada de staging: banco Neon, Redis Upstash e servicos Render de producao aceitos; runtime, secrets exclusivos e ausencia de staging foram revalidados na Fase 131.
 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional (Fase 136, 2026-07-25): conexao OAuth individual por profissional, notificacao push do Google, eventos externos viram bloqueio de horario, mudancas feitas direto no Google aplicam automaticamente na consulta correspondente.
 - CI do GitHub verde em `701ed6b` (2026-07-26): backend, web, mobile, IA e demo local smoke, incluindo UI, BFF e Playwright.
 - Gate de qualidade web: lint nao interativo com as regras estritas recomendadas pelo Next.js, typecheck, build e teste de autorizacao de rotas; o lint agora tambem e exigido no CI.
@@ -112,4 +112,4 @@ Atualizado em 2026-07-26.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional e o piloto interno controlado foi executado e aprovado, mas ainda precisa de restore real em banco dedicado e do provisionamento real da producao isolada de staging (Neon, Upstash e Render de producao) antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, piloto interno aprovado e producao isolada aceita, mas ainda precisa de restore real em banco dedicado, dominio/identidade de envio, revisao juridica e go-live assistido antes de uso comercial com clientes reais.

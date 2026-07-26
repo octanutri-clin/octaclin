@@ -13,10 +13,10 @@ validados em 2026-07-23.
 Em 2026-07-26, os servicos Render de producao foram corrigidos, receberam
 deploy e ficaram em live. O health detalhado confirmou banco e Redis
 operacionais, e o login do usuario SuperAdmin foi validado pela interface.
-A fase continua aberta ate rotacionar credenciais que apareceram em conversas,
-conferir formalmente que nao ha configuracao de staging no Render e registrar
-o aceite operacional. Google Calendar permanece degradado ate o callback OAuth
-de producao ser concluido em trabalho separado.
+A fase foi aceita em 2026-07-26 apos a confirmacao da rotacao de credenciais,
+auditoria de variaveis sem staging e conferencia do banco sem dados de staging.
+Google Calendar permanece degradado ate o callback OAuth de producao ser
+concluido no trabalho separado da Fase 136.
 
 ## Recursos a criar
 
@@ -27,8 +27,8 @@ de producao ser concluido em trabalho separado.
 | Redis Upstash de producao | Feito | 2026-07-23 | Instancia dedicada (`relieved-goose-91945.upstash.io`). `PING` validado via TLS (`rediss://`) com `ioredis`. |
 | Render backend de producao | Feito | 2026-07-26 | Servico `octaclin-backend-producao` em live; health e health detalhado respondendo. |
 | Render web de producao | Feito | 2026-07-26 | Servico `octaclin-web-producao` em live; login e dashboard validados pela interface. |
-| Secrets de producao (`JWT_SEGREDO`, `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256`, `DATABASE_URL`, `REDIS_URL`) | Parcial | 2026-07-26 | Backend operando com banco e Redis. Ainda falta rotacionar valores expostos em conversas e registrar a conferencia de isolamento de staging, sem gravar valores aqui. |
-| Credenciais de integracao proprias de producao (Gmail/SMTP, Meta WhatsApp, Google Calendar) | Pendente | - | Enquanto pendente, manter integracao correspondente desativada em producao. |
+| Secrets de producao (`JWT_SEGREDO`, `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256`, `DATABASE_URL`, `REDIS_URL`) | Feito | 2026-07-26 | Credenciais expostas rotacionadas e atualizadas apenas no Render; auditoria de isolamento confirmada pelo responsavel. |
+| Credenciais de integracao proprias de producao (Gmail/SMTP, Meta WhatsApp, Google Calendar) | Feito para Fase 131 | 2026-07-26 | Gmail e WhatsApp saudaveis; Google Calendar permanece desabilitado/degradado ate o callback OAuth da Fase 136. |
 | Primeiro deploy validado (`/health`, `/health/detalhado`, login) | Feito | 2026-07-26 | Backend e web em live; health, health detalhado e login SuperAdmin confirmados. |
 
 ## Registro de execucao
@@ -91,6 +91,12 @@ o que foi feito, quem confirmou). Nao inclua valores de secrets.
   pendencia ja tratada em trabalho separado. O aceite final nao foi dado:
   faltam rotacao de credenciais expostas, auditoria de variaveis sem staging e
   confirmacao de ausencia de dados de staging no banco.
+- 2026-07-26: responsavel confirmou a rotacao das credenciais expostas, a
+  auditoria de variaveis do Render sem referencias de staging e a ausencia de
+  dados do tenant de staging no banco Neon de producao. Revalidacao final:
+  `/health=ok`, backend/banco/Redis/email/WhatsApp `ok` em
+  `/health/detalhado` e `/login` HTTP 200. Aceite operacional registrado;
+  Google Calendar continua pendente na Fase 136.
 
 ## Handoff para o Codex
 
@@ -135,28 +141,25 @@ Contexto para quem retomar com acesso ao dashboard Render:
 
 ## Validacoes pendentes antes do aceite
 
-- [ ] Todos os recursos da tabela acima marcados como `Feito`.
+- [x] Todos os recursos bloqueantes da Fase 131 marcados como `Feito`.
 - [x] `curl https://<backend-producao-url>/health` respondendo `status: ok`.
 - [x] `curl https://<backend-producao-url>/health/detalhado` sem alerta critico.
 - [x] Login validado com usuario criado diretamente em producao.
-- [ ] Nenhuma variavel/secret de staging presente no ambiente Render de producao.
-- [ ] Nenhum dado do tenant `octaclin-staging` presente no banco de producao.
-- [ ] `npm run security:secrets` limpo.
+- [x] Nenhuma variavel/secret de staging presente no ambiente Render de producao.
+- [x] Nenhum dado do tenant `octaclin-staging` presente no banco de producao.
+- [x] `pnpm security:secrets` limpo.
 
 ## Decisao de aceite
 
-- Status: pendente.
-- Decisao: nao aplicavel ainda (aguardando provisionamento real).
-- Responsavel pela decisao final: a definir quando os recursos estiverem
-  criados.
-- Data: -
+- Status: aceito.
+- Decisao: producao isolada de staging aprovada para prosseguir com a Fase 132.
+- Responsavel pela decisao final: responsavel do projeto, por confirmacao em
+  2026-07-26.
+- Data: 2026-07-26.
 
 ## Proximo passo
 
-1. Rotacionar a senha do SuperAdmin e as credenciais expostas do Neon e
-   Upstash, seguindo `RUNBOOK_ROTACAO_SECRETS.md`, e atualizar os valores
-   novos apenas no Render.
-2. Conferir os nomes e a origem de todas as variaveis dos dois servicos Render
-   para registrar que nenhum valor de staging esta presente em producao.
-3. Revalidar login e health apos a rotacao; registrar o aceite operacional
-   somente depois dessas verificacoes.
+1. Iniciar a Fase 132 quando existir dominio oficial para configurar DNS, SSL e
+   identidade de envio.
+2. Concluir o callback OAuth e a validacao real da Google Calendar na Fase 136
+   antes de habilitar essa integracao para clientes reais.
