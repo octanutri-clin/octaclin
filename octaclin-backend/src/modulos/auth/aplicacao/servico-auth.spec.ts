@@ -49,7 +49,7 @@ function criarServico(dados: Record<string, any> = {}) {
     verifyAsync: jest.fn()
   };
   const senhas = {
-    verificar: jest.fn(() => false)
+    verificar: jest.fn(() => dados.senhaValida ?? false)
   };
   const criptografia = {
     gerarHashBusca: jest.fn((valor: string) => `hash:${valor.trim().toLowerCase()}`)
@@ -70,6 +70,8 @@ function criarServico(dados: Record<string, any> = {}) {
       protecaoAbuso as never
     ),
     repositorios,
+    jwt,
+    senhas,
     protecaoAbuso
   };
 }
@@ -119,5 +121,78 @@ describe('ServicoAuth', () => {
       expect.objectContaining({ maxTentativas: 5 })
     );
     expect(protecaoAbuso.registrarSucesso).not.toHaveBeenCalled();
+  });
+
+  it('deve assinar os tokens com as expiracoes padrao validas', async () => {
+    const { servico, jwt } = criarServico({
+      tenant: { id: 'tenant-1', slug: 'clinica-carla', status: 'ativo' },
+      usuario: {
+        id: 'usuario-1',
+        tenantId: 'tenant-1',
+        emailHash: 'hash:ana@example.com',
+        senhaHash: 'hash-senha',
+        ativo: true,
+        role: 'Professional'
+      },
+      senhaValida: true
+    });
+    const senhaAnterior = process.env.JWT_EXPIRA_EM;
+    const refreshAnterior = process.env.JWT_REFRESH_EXPIRA_EM;
+    delete process.env.JWT_EXPIRA_EM;
+    delete process.env.JWT_REFRESH_EXPIRA_EM;
+
+    try {
+      await servico.login({
+        tenantSlug: 'clinica-carla',
+        email: 'ana@example.com',
+        senha: 'SenhaValida123'
+      });
+    } finally {
+      if (senhaAnterior === undefined) delete process.env.JWT_EXPIRA_EM;
+      else process.env.JWT_EXPIRA_EM = senhaAnterior;
+      if (refreshAnterior === undefined) delete process.env.JWT_REFRESH_EXPIRA_EM;
+      else process.env.JWT_REFRESH_EXPIRA_EM = refreshAnterior;
+    }
+
+    expect(jwt.signAsync).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ sub: 'usuario-1' }),
+      expect.objectContaining({ expiresIn: '15m' })
+    );
+    expect(jwt.signAsync).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ sub: 'usuario-1' }),
+      expect.objectContaining({ expiresIn: '30d' })
+    );
+  });
+
+  it('deve rejeitar duracao JWT invalida vinda do ambiente', async () => {
+    const { servico } = criarServico({
+      tenant: { id: 'tenant-1', slug: 'clinica-carla', status: 'ativo' },
+      usuario: {
+        id: 'usuario-1',
+        tenantId: 'tenant-1',
+        emailHash: 'hash:ana@example.com',
+        senhaHash: 'hash-senha',
+        ativo: true,
+        role: 'Professional'
+      },
+      senhaValida: true
+    });
+    const expiracaoAnterior = process.env.JWT_EXPIRA_EM;
+    process.env.JWT_EXPIRA_EM = 'duracao-invalida';
+
+    try {
+      await expect(
+        servico.login({
+          tenantSlug: 'clinica-carla',
+          email: 'ana@example.com',
+          senha: 'SenhaValida123'
+        })
+      ).rejects.toThrow('duracao de expiracao JWT');
+    } finally {
+      if (expiracaoAnterior === undefined) delete process.env.JWT_EXPIRA_EM;
+      else process.env.JWT_EXPIRA_EM = expiracaoAnterior;
+    }
   });
 });

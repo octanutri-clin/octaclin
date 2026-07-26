@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'crypto';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import type { JwtSignOptions } from '@nestjs/jwt';
 import { DataSource } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -21,6 +22,25 @@ interface PayloadToken {
   emailHash: string;
   permissoes?: PermissaoOctaClin[];
   familiaToken?: string;
+}
+
+const DURACAO_JWT_VALIDA = /^\d+\s*(milliseconds?|seconds?|minutes?|hours?|days?|weeks?|years?|ms|s|m|h|d|w|y)$/i;
+
+function obterExpiracaoJwt(
+  valorAmbiente: string | undefined,
+  padrao: NonNullable<JwtSignOptions['expiresIn']>
+): NonNullable<JwtSignOptions['expiresIn']> {
+  const valor = valorAmbiente?.trim() || padrao;
+
+  if (typeof valor === 'number') {
+    return valor;
+  }
+
+  if (DURACAO_JWT_VALIDA.test(valor)) {
+    return valor as NonNullable<JwtSignOptions['expiresIn']>;
+  }
+
+  throw new Error('A duracao de expiracao JWT deve usar numero e unidade, por exemplo 15m ou 30d.');
 }
 
 @Injectable()
@@ -136,12 +156,12 @@ export class ServicoAuth {
 
     const accessToken = await this.jwt.signAsync(payload, {
       secret: process.env.JWT_SEGREDO ?? 'dev-access-secret',
-      expiresIn: process.env.JWT_EXPIRA_EM ?? '15m'
+      expiresIn: obterExpiracaoJwt(process.env.JWT_EXPIRA_EM, '15m')
     });
 
     const refreshToken = await this.jwt.signAsync(payload, {
       secret: process.env.JWT_REFRESH_SEGREDO ?? process.env.JWT_SEGREDO ?? 'dev-refresh-secret',
-      expiresIn: process.env.JWT_REFRESH_EXPIRA_EM ?? '30d'
+      expiresIn: obterExpiracaoJwt(process.env.JWT_REFRESH_EXPIRA_EM, '30d')
     });
 
     await this.executorTenant.executar(usuario.tenantId, async (gerenciador) => {

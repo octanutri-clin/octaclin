@@ -386,6 +386,11 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     visuais e de autenticacao completos.
   - Saida esperada: inventario de risco, lockfiles atualizados e validacao
     integral sem upgrade massivo nao revisado.
+  - Status: checkpoint backend entregue em 2026-07-26. NestJS foi atualizado
+    para 11.1.28 e TypeORM para 0.3.31; a auditoria de producao do backend
+    caiu de 6 altas para 1 alta. Restam a migracao major do Next.js e a
+    dependencia transitoria `brace-expansion` do TypeORM 0.3, que nao deve
+    receber override incompativel.
 
 - [ ] Fase 139 - Fortalecimento de contratos de dominio e fronteiras BFF.
   - Reduzir `any` residual, normalizar DTOs compartilhados e cobrir limites de
@@ -398,6 +403,13 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     integracao; definir metas de cobertura por modulo de risco.
   - Saida esperada: matriz rastreavel de risco, testes focados e sinais de CI
     para regressao critica.
+
+- [ ] Fase 141 - Migracao major do TypeORM e eliminacao de dependencia transitiva vulneravel.
+  - Avaliar e executar o codemod oficial do TypeORM 0.3 para 1.x em branch
+    isolado, removendo a cadeia `typeorm -> glob -> brace-expansion` que ainda
+    aparece na auditoria de producao.
+  - Saida esperada: audit de producao do backend sem vulnerabilidades altas,
+    migrations e bootstrap validados em banco dedicado de restore/staging.
 
 ## Backlog pos-producao
 
