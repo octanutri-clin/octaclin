@@ -32,6 +32,10 @@ Este checklist deve ser concluido antes de incluir clientes reais de consultoria
 - [ ] Canal de suporte/privacidade definido.
 - [ ] Contrato comercial ou termo de consultoria pronto.
 
+Referencia: a Fase 133 entregou minutas e checklists em
+`PACOTE_JURIDICO_COMERCIAL.md`; todos os itens desta secao continuam pendentes
+ate revisao juridica, dados empresariais finais e publicacao controlada.
+
 ## Infraestrutura
 
 Processo de provisionamento em `RUNBOOK_PRODUCAO_ISOLADA.md`, acompanhamento em

@@ -16,7 +16,7 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase concluida mais recente no momento deste arquivo: Fase 136 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional.
+- Fase concluida mais recente no momento deste arquivo: Fase 133 - Checklist juridico/comercial para clientes (nao substitui revisao juridica externa antes do go-live).
 - Proxima fase critica planejada: Fase 131 - Producao isolada de staging (validacao final e aceite operacional).
 - O checklist vivo das proximas fases fica em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 

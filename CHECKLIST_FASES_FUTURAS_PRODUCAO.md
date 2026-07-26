@@ -319,9 +319,14 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     DMARC ate existir um dominio oficial; manter as URLs Render temporarias e
     preparar a decisao de dominio, hospedagem DNS e provedor/remetente.
 
-- [ ] Fase 133 - Checklist juridico/comercial para clientes.
+- [x] Fase 133 - Checklist juridico/comercial para clientes.
   - Termos, politica, contrato de consultoria, suporte e SLA basico.
-  - Saida esperada: pronto para convidar clientes de consultoria.
+  - Saida entregue: pacote documental, minuta contratual, rascunho de politica,
+    mapa inicial de papeis LGPD, SLA e checklist de onboarding.
+  - Validacoes: `pnpm test:juridico-comercial` e `pnpm validate:docs`.
+  - Observacao: revisao juridica, identidade empresarial e publicacao final
+    continuam obrigatorias em `CHECKLIST_GO_LIVE.md`; esta fase nao autoriza
+    convidar clientes reais isoladamente.
 
 - [ ] Fase 134 - Go-live assistido.
   - Ativar primeiros clientes reais.
