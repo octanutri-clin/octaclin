@@ -14,6 +14,9 @@ export class GoogleCanalWatchOrm {
   @Column({ name: 'expira_em', type: 'timestamptz' })
   expiraEm: Date;
 
+  @Column({ name: 'token', type: 'varchar', length: 120, nullable: true })
+  token?: string;
+
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 }

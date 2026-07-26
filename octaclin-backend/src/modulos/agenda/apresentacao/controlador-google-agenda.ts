@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'crypto';
 import { Controller, Get, Headers, HttpCode, Post, Query, Redirect, UseGuards } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -78,9 +78,32 @@ export class ControladorGoogleAgenda {
 
   @Post('notificacoes')
   @HttpCode(200)
-  async receberNotificacao(@Headers('x-goog-channel-id') canalWatchId?: string): Promise<void> {
+  async receberNotificacao(
+    @Headers('x-goog-channel-id') canalWatchId?: string,
+    @Headers('x-goog-channel-token') tokenRecebido?: string,
+    @Headers('x-goog-message-number') numeroMensagem?: string
+  ): Promise<void> {
     if (!canalWatchId) return;
-    await this.filaSincronizacao.add('notificacao', { canalWatchId }, { attempts: 3, backoff: { type: 'exponential', delay: 5000 } });
+
+    const canal = await this.fonteDados.getRepository(GoogleCanalWatchOrm).findOne({ where: { canalWatchId } });
+    if (!canal || !canal.token || !tokenRecebido) return;
+
+    const bufferRecebido = Buffer.from(tokenRecebido);
+    const bufferEsperado = Buffer.from(canal.token);
+    const tokenValido = bufferRecebido.length === bufferEsperado.length && timingSafeEqual(bufferRecebido, bufferEsperado);
+    if (!tokenValido) return;
+
+    await this.filaSincronizacao.add(
+      'notificacao',
+      { canalWatchId },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        jobId: numeroMensagem ? `${canalWatchId}:${numeroMensagem}` : undefined,
+        removeOnComplete: 500,
+        removeOnFail: 500
+      }
+    );
   }
 
   private async criarCanalParaProfissional(tenantId: string, profissionalId: string): Promise<void> {
@@ -88,7 +111,8 @@ export class ControladorGoogleAgenda {
     if (!credenciais) return;
 
     const canalId = randomUUID();
-    const { recursoId, expiraEm } = await this.googleCalendar.criarCanalWatch(credenciais, canalId, urlWebhook());
+    const token = randomBytes(24).toString('hex');
+    const { recursoId, expiraEm } = await this.googleCalendar.criarCanalWatch(credenciais, canalId, urlWebhook(), token);
 
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(ProfissionalGoogleConexaoOrm);
@@ -101,7 +125,7 @@ export class ControladorGoogleAgenda {
     });
 
     await this.fonteDados.getRepository(GoogleCanalWatchOrm).save(
-      this.fonteDados.getRepository(GoogleCanalWatchOrm).create({ canalWatchId: canalId, tenantId, profissionalId, expiraEm })
+      this.fonteDados.getRepository(GoogleCanalWatchOrm).create({ canalWatchId: canalId, tenantId, profissionalId, expiraEm, token })
     );
   }
 

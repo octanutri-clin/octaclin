@@ -9,6 +9,7 @@ import { CriarAcompanhamentoTarefas1720000000500 } from './migracoes/17200000005
 import { CriarMateriaisEducativos1720000000600 } from './migracoes/1720000000600-CriarMateriaisEducativos';
 import { CorrigeConstraintRoleUsuarios1720000000700 } from './migracoes/1720000000700-CorrigeConstraintRoleUsuarios';
 import { CriarSincronizacaoGoogleAgenda1720000000800 } from './migracoes/1720000000800-CriarSincronizacaoGoogleAgenda';
+import { AdicionaTokenCanalWatchGoogleAgenda1720000000900 } from './migracoes/1720000000900-AdicionaTokenCanalWatchGoogleAgenda';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -144,7 +145,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CriarAcompanhamentoTarefas1720000000500,
       CriarMateriaisEducativos1720000000600,
       CorrigeConstraintRoleUsuarios1720000000700,
-      CriarSincronizacaoGoogleAgenda1720000000800
+      CriarSincronizacaoGoogleAgenda1720000000800,
+      AdicionaTokenCanalWatchGoogleAgenda1720000000900
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

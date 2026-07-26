@@ -224,7 +224,8 @@ export class ServicoGoogleCalendar {
   async criarCanalWatch(
     credenciais: CredenciaisGoogleCalendar,
     canalId: string,
-    urlWebhook: string
+    urlWebhook: string,
+    token: string
   ): Promise<{ recursoId: string; expiraEm: Date }> {
     const accessToken = await this.obterAccessToken(credenciais.clientId, credenciais.clientSecret, credenciais.refreshToken);
     const resposta = await fetch(
@@ -232,7 +233,7 @@ export class ServicoGoogleCalendar {
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: canalId, type: 'web_hook', address: urlWebhook })
+        body: JSON.stringify({ id: canalId, type: 'web_hook', address: urlWebhook, token })
       }
     );
     const corpo = (await resposta.json()) as { resourceId?: string; expiration?: string; error?: { message?: string } };

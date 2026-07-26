@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { DataSource, IsNull } from 'typeorm';
@@ -80,7 +80,8 @@ export class ProcessadorRenovacaoGoogleCalendar {
     }
 
     const novoCanalId = randomUUID();
-    const { recursoId, expiraEm } = await this.googleCalendar.criarCanalWatch(credenciais, novoCanalId, urlWebhook());
+    const token = randomBytes(24).toString('hex');
+    const { recursoId, expiraEm } = await this.googleCalendar.criarCanalWatch(credenciais, novoCanalId, urlWebhook(), token);
 
     await this.executorTenant.executar(conexao.tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(ProfissionalGoogleConexaoOrm);
@@ -97,7 +98,8 @@ export class ProcessadorRenovacaoGoogleCalendar {
         canalWatchId: novoCanalId,
         tenantId: conexao.tenantId,
         profissionalId: conexao.profissionalId,
-        expiraEm
+        expiraEm,
+        token
       })
     );
   }
