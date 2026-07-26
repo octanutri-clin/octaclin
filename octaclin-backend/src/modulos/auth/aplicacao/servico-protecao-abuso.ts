@@ -44,10 +44,41 @@ export function montarChaveProtecaoAbuso(escopo: string, tenantSlug?: string, em
 
 export const REDIS_PROTECAO_ABUSO = 'REDIS_PROTECAO_ABUSO';
 
+const SCRIPT_REGISTRAR_FALHA = `
+local chave = KEYS[1]
+local agora = tonumber(ARGV[1])
+local janelaMs = tonumber(ARGV[2])
+local maxTentativas = tonumber(ARGV[3])
+local bloqueioMs = tonumber(ARGV[4])
+local bruto = redis.call('GET', chave)
+local registro = nil
+
+if bruto then
+  local ok, valor = pcall(cjson.decode, bruto)
+  if ok then registro = valor end
+end
+
+if not registro or registro.expiraEm <= agora then
+  registro = { quantidade = 0, expiraEm = agora + janelaMs }
+end
+
+registro.quantidade = registro.quantidade + 1
+local ttlMs = registro.expiraEm - agora
+
+if registro.quantidade >= maxTentativas then
+  registro.bloqueadoAte = agora + bloqueioMs
+  ttlMs = bloqueioMs
+end
+
+redis.call('SET', chave, cjson.encode(registro), 'PX', math.max(ttlMs, 1000))
+return { registro.quantidade, registro.bloqueadoAte or 0 }
+`;
+
 export interface ClienteRedisProtecaoAbuso {
   get(chave: string): Promise<string | null>;
   set(chave: string, valor: string, modo: 'PX', duracaoMs: number): Promise<unknown>;
   del(chave: string): Promise<unknown>;
+  eval(script: string, quantidadeChaves: number, ...argumentos: string[]): Promise<unknown>;
 }
 
 @Injectable()
@@ -65,10 +96,6 @@ export class ServicoProtecaoAbuso {
     }
   }
 
-  private async salvarRegistro(chave: string, registro: RegistroProtecaoAbuso, ttlMs: number): Promise<void> {
-    await this.redis.set(chave, JSON.stringify(registro), 'PX', Math.max(Math.ceil(ttlMs), 1000));
-  }
-
   async verificarDisponibilidade(chave: string, politica: PoliticaProtecaoAbuso, agora = Date.now()): Promise<void> {
     const registro = await this.obterRegistro(chave);
     if (!registro) return;
@@ -84,21 +111,15 @@ export class ServicoProtecaoAbuso {
 
   async registrarFalha(chave: string, politica: PoliticaProtecaoAbuso, agora = Date.now()): Promise<void> {
     await this.verificarDisponibilidade(chave, politica, agora);
-
-    const registro = await this.obterRegistro(chave);
-    if (!registro || registro.expiraEm <= agora) {
-      await this.salvarRegistro(chave, { quantidade: 1, expiraEm: agora + politica.janelaMs }, politica.janelaMs);
-      return;
-    }
-
-    registro.quantidade += 1;
-    if (registro.quantidade >= politica.maxTentativas) {
-      registro.bloqueadoAte = agora + politica.bloqueioMs;
-      await this.salvarRegistro(chave, registro, politica.bloqueioMs);
-      return;
-    }
-
-    await this.salvarRegistro(chave, registro, registro.expiraEm - agora);
+    await this.redis.eval(
+      SCRIPT_REGISTRAR_FALHA,
+      1,
+      chave,
+      String(agora),
+      String(politica.janelaMs),
+      String(politica.maxTentativas),
+      String(politica.bloqueioMs)
+    );
   }
 
   async consumirTentativa(chave: string, politica: PoliticaProtecaoAbuso, agora = Date.now()): Promise<void> {

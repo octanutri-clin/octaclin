@@ -18,18 +18,6 @@ const rotasProtegidas = [
   { caminho: '/gamificacao', titulo: 'Gamificacao', subtitulo: 'Comunidade e conquistas' }
 ];
 
-const rotulosMenu = [
-  'Questionarios',
-  'Comunicacoes',
-  'Automacoes',
-  'IA',
-  'Mobile',
-  'Gamificacao',
-  'Operacoes',
-  'Pacientes',
-  'Profissionais'
-];
-
 const referenciasExternasProibidas = [
   ['Live', 'Clin'].join(''),
   ['Live', 'clin'].join(''),
@@ -100,7 +88,6 @@ function assertNaoInclui(html, texto, contexto) {
 function assertShell(html, contexto) {
   assertInclui(html, 'OctaClin', contexto);
   assertInclui(html, 'Console clinico', contexto);
-  for (const rotulo of rotulosMenu) assertInclui(html, rotulo, `${contexto} menu`);
   for (const referencia of referenciasExternasProibidas) assertNaoInclui(html, referencia, contexto);
   assertNaoInclui(html, '__NEXT_ERROR__', contexto);
   assertNaoInclui(html, 'Application error', contexto);

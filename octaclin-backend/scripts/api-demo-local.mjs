@@ -234,7 +234,23 @@ function criarTokens() {
     accessToken: `demo-access-${Date.now()}`,
     refreshToken: `demo-refresh-${Date.now()}`,
     tipoToken: 'Bearer',
-    expiraEmSegundos: 3600
+    expiraEmSegundos: 3600,
+    papel: 'SuperAdmin',
+    permissoes: [
+      'dashboard.ler',
+      'questionarios.ler',
+      'comunicacoes.mensagens.ler',
+      'agenda.consultas.ler',
+      'automacoes.gerenciar',
+      'ia.executar',
+      'mobile.operar',
+      'gamificacao.gerenciar',
+      'operacoes.auditoria.ler',
+      'pacientes.listar',
+      'profissionais.ler'
+    ],
+    escopoDados: 'tenant_completo',
+    destinoInicial: '/operacoes'
   };
 }
 
