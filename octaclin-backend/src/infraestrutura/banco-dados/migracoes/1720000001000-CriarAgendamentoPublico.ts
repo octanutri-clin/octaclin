@@ -13,12 +13,14 @@ export class CriarAgendamentoPublico1720000001000 implements MigrationInterface 
         ativo boolean not null default true,
         duracao_minutos int not null default 30,
         criado_em timestamptz not null default now(),
-        atualizado_em timestamptz not null default now(),
-        unique (tenant_id, profissional_id)
+        atualizado_em timestamptz not null default now()
       );
 
       create index if not exists idx_agenda_links_publicos_tenant_profissional
         on agenda_links_publicos (tenant_id, profissional_id);
+      create unique index if not exists idx_agenda_links_publicos_tenant_profissional_ativo
+        on agenda_links_publicos (tenant_id, profissional_id)
+        where ativo = true;
       create unique index if not exists idx_agenda_links_publicos_token_hash
         on agenda_links_publicos (token_hash);
 
@@ -41,6 +43,7 @@ export class CriarAgendamentoPublico1720000001000 implements MigrationInterface 
         atualizado_em timestamptz not null default now(),
         check (
           (status = 'pendente' and paciente_id is null and consulta_id is null and decidida_em is null and decidida_por_usuario_id is null)
+          or (status = 'processando' and paciente_id is null and consulta_id is null and decidida_em is not null and decidida_por_usuario_id is not null)
           or (status in ('aprovada', 'recusada', 'expirada'))
         )
       );

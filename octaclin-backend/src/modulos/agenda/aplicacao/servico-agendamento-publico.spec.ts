@@ -20,12 +20,20 @@ interface EstadoFalso {
   consultas?: AgendaConsultaOrm[];
   bloqueios?: AgendaBloqueioExternoOrm[];
   solicitacoes?: AgendaSolicitacaoOrm[];
+  criarConsultaImpl?: (tenantId: string, entrada: Record<string, unknown>, usuario: UsuarioAutenticado) => Promise<unknown>;
 }
 
 function coincideWhere<T extends object>(registro: T, where: Partial<T> = {}): boolean {
   return Object.entries(where).every(([chave, valor]) => {
-    if (valor && typeof valor === 'object' && '_type' in (valor as Record<string, unknown>)) return true;
-    return (registro as Record<string, unknown>)[chave] === valor;
+    const atual = (registro as Record<string, unknown>)[chave];
+    if (valor && typeof valor === 'object' && '_type' in (valor as Record<string, unknown>)) {
+      const operador = valor as { _type?: string; _value?: unknown };
+      if (operador._type === 'moreThan') return atual instanceof Date && operador._value instanceof Date && atual > operador._value;
+      if (operador._type === 'lessThan') return atual instanceof Date && operador._value instanceof Date && atual < operador._value;
+      if (operador._type === 'isNull') return atual == null;
+      return true;
+    }
+    return atual === valor;
   });
 }
 
@@ -42,6 +50,15 @@ function criarRepositorioLink(estado: EstadoFalso) {
     find: jest.fn(async (consulta?: { where?: Partial<AgendaLinkPublicoOrm> }) => {
       const where = consulta?.where ?? {};
       return links.filter((item) => coincideWhere(item, where));
+    }),
+    update: jest.fn(async (criterios: Partial<AgendaLinkPublicoOrm>, valores: Partial<AgendaLinkPublicoOrm>) => {
+      let afetados = 0;
+      for (const link of links) {
+        if (!coincideWhere(link, criterios)) continue;
+        Object.assign(link, valores);
+        afetados++;
+      }
+      return { affected: afetados };
     }),
     create: jest.fn((entrada: Partial<AgendaLinkPublicoOrm>) => entrada),
     save: jest.fn(async (entrada: Partial<AgendaLinkPublicoOrm>) => {
@@ -126,6 +143,15 @@ function criarRepositorioSolicitacao(estado: EstadoFalso) {
       const where = consulta?.where ?? {};
       return solicitacoes.find((item) => coincideWhere(item, where)) ?? null;
     }),
+    update: jest.fn(async (criterios: Partial<AgendaSolicitacaoOrm>, valores: Partial<AgendaSolicitacaoOrm>) => {
+      let afetados = 0;
+      for (const solicitacao of solicitacoes) {
+        if (!coincideWhere(solicitacao, criterios)) continue;
+        Object.assign(solicitacao, valores);
+        afetados++;
+      }
+      return { affected: afetados };
+    }),
     ultimoSalvo: () => ultimoSalvo,
     todos: () => solicitacoes
   };
@@ -163,21 +189,27 @@ function criarServico(estado: EstadoFalso = {}) {
   } as unknown as ServicoProtecaoAbuso;
   const criptografia = new CriptografiaDadosSensiveis();
   const servicoAgenda = {
-    criarConsulta: jest.fn(async (_tenantId: string, entrada: Record<string, unknown>) => ({
-      id: 'consulta-1',
-      tenantId: 'tenant-1',
-      pacienteId: entrada.pacienteId,
-      profissionalId: entrada.profissionalId,
-      titulo: 'Consulta - Ana Silva',
-      inicioEm: new Date(entrada.inicioEm as string),
-      fimEm: new Date(entrada.fimEm as string),
-      timezone: 'America/Sao_Paulo',
-      status: 'agendada',
-      notificacoes: {},
-      payload: {},
-      criadoEm: new Date('2026-07-26T12:00:00.000Z'),
-      atualizadoEm: new Date('2026-07-26T12:00:00.000Z')
-    }))
+    criarConsulta: jest.fn(async (tenantId: string, entrada: Record<string, unknown>, usuario: UsuarioAutenticado) => {
+      if (estado.criarConsultaImpl) {
+        return estado.criarConsultaImpl(tenantId, entrada, usuario);
+      }
+
+      return {
+        id: 'consulta-1',
+        tenantId: 'tenant-1',
+        pacienteId: entrada.pacienteId,
+        profissionalId: entrada.profissionalId,
+        titulo: 'Consulta - Ana Silva',
+        inicioEm: new Date(entrada.inicioEm as string),
+        fimEm: new Date(entrada.fimEm as string),
+        timezone: 'America/Sao_Paulo',
+        status: 'agendada',
+        notificacoes: {},
+        payload: {},
+        criadoEm: new Date('2026-07-26T12:00:00.000Z'),
+        atualizadoEm: new Date('2026-07-26T12:00:00.000Z')
+      };
+    })
   } as unknown as ServicoAgenda;
 
   return {
@@ -569,6 +601,97 @@ describe('ServicoAgendamentoPublico', () => {
     expect(links.find((item) => item.id === 'link-1')?.ativo).toBe(false);
     expect(links.filter((item) => item.ativo)).toHaveLength(1);
     expect(links.find((item) => item.ativo)?.tokenHash).toBe(createHash('sha256').update(resultado.token).digest('hex'));
+  });
+
+  it('preserva historico inativo e mantem no maximo um link ativo por tenant e profissional apos rotacao', async () => {
+    const { servico, repositorios } = criarServico({
+      profissionais: [criarProfissional()],
+      links: [
+        criarLinkAtivo(),
+        {
+          ...criarLinkAtivo(),
+          id: 'link-antigo',
+          tokenHash: createHash('sha256').update('token-antigo').digest('hex'),
+          ativo: false,
+          criadoEm: new Date('2026-06-01T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-06-01T12:00:00.000Z')
+        }
+      ]
+    });
+
+    await servico.rotacionarLinkPublico('tenant-1', usuarioProfissionalUm);
+
+    const links = repositorios.link.todos();
+    expect(links.filter((item) => item.profissionalId === 'profissional-1')).toHaveLength(3);
+    expect(links.filter((item) => item.profissionalId === 'profissional-1' && item.ativo)).toHaveLength(1);
+    expect(links.find((item) => item.id === 'link-antigo')?.ativo).toBe(false);
+  });
+
+  it('faz claim atomico da solicitacao antes de criar a consulta e impede segunda aprovacao concorrente de chamar a agenda', async () => {
+    let liberarCriacao: (() => void) | undefined;
+    const bloqueioCriacao = new Promise<void>((resolve) => {
+      liberarCriacao = resolve;
+    });
+    const { servico, repositorios, servicoAgenda } = criarServico({
+      profissionais: [criarProfissional()],
+      solicitacoes: [criarSolicitacaoPendente({ id: 'sol-claim' })],
+      criarConsultaImpl: async (_tenantId, entrada) => {
+        await bloqueioCriacao;
+        return {
+          id: 'consulta-claim',
+          tenantId: 'tenant-1',
+          pacienteId: entrada.pacienteId,
+          profissionalId: entrada.profissionalId,
+          titulo: 'Consulta - Ana Silva',
+          inicioEm: new Date(entrada.inicioEm as string),
+          fimEm: new Date(entrada.fimEm as string),
+          timezone: 'America/Sao_Paulo',
+          status: 'agendada',
+          notificacoes: {},
+          payload: {},
+          criadoEm: new Date('2026-07-26T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-26T12:00:00.000Z')
+        };
+      }
+    });
+
+    const primeira = servico.aprovarSolicitacao('tenant-1', 'sol-claim', { pacienteId: 'paciente-1' }, usuarioProfissionalUm);
+    await Promise.resolve();
+    const segunda = servico.aprovarSolicitacao('tenant-1', 'sol-claim', { pacienteId: 'paciente-1' }, usuarioProfissionalUm);
+
+    liberarCriacao?.();
+
+    const [resultadoPrimeira, resultadoSegunda] = await Promise.allSettled([primeira, segunda]);
+
+    expect(servicoAgenda.criarConsulta).toHaveBeenCalledTimes(1);
+    expect(resultadoPrimeira.status).toBe('fulfilled');
+    expect(resultadoSegunda.status).toBe('rejected');
+    expect((resultadoSegunda as PromiseRejectedResult).reason.message).toBe('Solicitacao em processamento.');
+    expect(repositorios.solicitacao.todos().find((item) => item.id === 'sol-claim')).toEqual(
+      expect.objectContaining({
+        status: 'aprovada',
+        consultaId: 'consulta-claim'
+      })
+    );
+  });
+
+  it('restaura a solicitacao para pendente se a criacao da consulta falhar apos o claim', async () => {
+    const { servico, repositorios } = criarServico({
+      profissionais: [criarProfissional()],
+      solicitacoes: [criarSolicitacaoPendente({ id: 'sol-rollback' })],
+      criarConsultaImpl: async () => {
+        throw new Error('falha-google');
+      }
+    });
+
+    await expect(
+      servico.aprovarSolicitacao('tenant-1', 'sol-rollback', { pacienteId: 'paciente-1' }, usuarioProfissionalUm)
+    ).rejects.toThrow('falha-google');
+
+    const solicitacao = repositorios.solicitacao.todos().find((item) => item.id === 'sol-rollback');
+    expect(solicitacao).toMatchObject({ status: 'pendente' });
+    expect(solicitacao?.pacienteId).toBeUndefined();
+    expect(solicitacao?.consultaId).toBeUndefined();
   });
 
   it('permite que SuperAdmin liste solicitacoes do tenant inteiro', async () => {

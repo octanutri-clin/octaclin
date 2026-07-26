@@ -57,6 +57,7 @@ interface ContatoSolicitacao {
 interface ContextoAprovacaoSolicitacao {
   solicitacao: AgendaSolicitacaoOrm;
   observacao?: string;
+  claimedAt: Date;
 }
 
 export interface ResumoAgendaPublica {
@@ -282,8 +283,8 @@ export class ServicoAgendamentoPublico {
     usuario: UsuarioAutenticado
   ): Promise<SolicitacaoAgendaAutenticada> {
     const contexto = await this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const solicitacao = await this.obterSolicitacaoSobEscopo(gerenciador, tenantId, solicitacaoId, usuario);
-      await this.garantirSolicitacaoPendente(gerenciador, solicitacao);
+      const now = new Date(Date.now());
+      const solicitacao = await this.claimSolicitacaoParaAprovacao(gerenciador, tenantId, solicitacaoId, usuario, now);
       await this.validarDisponibilidade(gerenciador, tenantId, solicitacao.profissionalId, {
         inicioEm: solicitacao.inicioEm,
         fimEm: solicitacao.fimEm
@@ -293,35 +294,71 @@ export class ServicoAgendamentoPublico {
         solicitacao,
         observacao: solicitacao.observacaoCriptografada
           ? this.criptografia.descriptografar(solicitacao.observacaoCriptografada)
-          : undefined
+          : undefined,
+        claimedAt: now
       } satisfies ContextoAprovacaoSolicitacao;
     });
 
-    const consulta = await this.servicoAgenda.criarConsulta(
-      tenantId,
-      {
-        pacienteId: dados.pacienteId,
-        profissionalId: contexto.solicitacao.profissionalId,
-        inicioEm: contexto.solicitacao.inicioEm.toISOString(),
-        fimEm: contexto.solicitacao.fimEm.toISOString(),
-        ...(contexto.observacao ? { observacoes: contexto.observacao } : {})
-      },
-      usuario
-    );
+    try {
+      const consulta = await this.servicoAgenda.criarConsulta(
+        tenantId,
+        {
+          pacienteId: dados.pacienteId,
+          profissionalId: contexto.solicitacao.profissionalId,
+          inicioEm: contexto.solicitacao.inicioEm.toISOString(),
+          fimEm: contexto.solicitacao.fimEm.toISOString(),
+          ...(contexto.observacao ? { observacoes: contexto.observacao } : {})
+        },
+        usuario
+      );
 
-    return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const solicitacao = await this.obterSolicitacaoSobEscopo(gerenciador, tenantId, solicitacaoId, usuario);
-      await this.garantirSolicitacaoPendente(gerenciador, solicitacao);
+      return this.executorTenant.executar(tenantId, async (gerenciador) => {
+        const repositorio = gerenciador.getRepository(AgendaSolicitacaoOrm);
+        const affected = await repositorio.update(
+          {
+            id: solicitacaoId,
+            tenantId,
+            status: 'processando',
+            decididaPorUsuarioId: usuario.usuarioId,
+            decididaEm: contexto.claimedAt
+          },
+          {
+            status: 'aprovada',
+            decididaEm: new Date(Date.now()),
+            decididaPorUsuarioId: usuario.usuarioId,
+            pacienteId: dados.pacienteId,
+            consultaId: consulta.id
+          }
+        );
 
-      solicitacao.status = 'aprovada';
-      solicitacao.decididaEm = new Date(Date.now());
-      solicitacao.decididaPorUsuarioId = usuario.usuarioId;
-      solicitacao.pacienteId = dados.pacienteId;
-      solicitacao.consultaId = consulta.id;
+        if (!affected.affected) {
+          throw new BadRequestException('Solicitacao em processamento.');
+        }
 
-      const salva = await gerenciador.getRepository(AgendaSolicitacaoOrm).save(solicitacao);
-      return this.mapearSolicitacaoAutenticada(salva);
-    });
+        const salva = await repositorio.findOne({ where: { id: solicitacaoId, tenantId } });
+        if (!salva) throw new NotFoundException('Solicitacao nao encontrada.');
+        return this.mapearSolicitacaoAutenticada(salva);
+      });
+    } catch (erro) {
+      await this.executorTenant.executar(tenantId, async (gerenciador) => {
+        const repositorio = gerenciador.getRepository(AgendaSolicitacaoOrm);
+        await repositorio.update(
+          {
+            id: solicitacaoId,
+            tenantId,
+            status: 'processando',
+            decididaPorUsuarioId: usuario.usuarioId,
+            decididaEm: contexto.claimedAt
+          },
+          {
+            status: 'pendente',
+            decididaEm: undefined,
+            decididaPorUsuarioId: undefined
+          }
+        );
+      });
+      throw erro;
+    }
   }
 
   async recusarSolicitacao(
@@ -487,6 +524,48 @@ export class ServicoAgendamentoPublico {
     solicitacao.decididaEm = new Date(Date.now());
     await gerenciador.getRepository(AgendaSolicitacaoOrm).save(solicitacao);
     throw new BadRequestException('Solicitacao expirada.');
+  }
+
+  private async claimSolicitacaoParaAprovacao(
+    gerenciador: EntityManager,
+    tenantId: string,
+    solicitacaoId: string,
+    usuario: UsuarioAutenticado,
+    claimedAt: Date
+  ): Promise<AgendaSolicitacaoOrm> {
+    const solicitacao = await this.obterSolicitacaoSobEscopo(gerenciador, tenantId, solicitacaoId, usuario);
+    if (solicitacaoPendenteExpirou(solicitacao.expiraEm, claimedAt)) {
+      solicitacao.status = 'expirada';
+      solicitacao.decididaEm = claimedAt;
+      await gerenciador.getRepository(AgendaSolicitacaoOrm).save(solicitacao);
+      throw new BadRequestException('Solicitacao expirada.');
+    }
+
+    const repositorio = gerenciador.getRepository(AgendaSolicitacaoOrm);
+    const affected = await repositorio.update(
+      {
+        id: solicitacaoId,
+        tenantId,
+        status: 'pendente',
+        expiraEm: MoreThan(claimedAt)
+      },
+      {
+        status: 'processando',
+        decididaEm: claimedAt,
+        decididaPorUsuarioId: usuario.usuarioId
+      }
+    );
+
+    if (affected.affected) {
+      const claimed = await repositorio.findOne({ where: { id: solicitacaoId, tenantId } });
+      if (!claimed) throw new NotFoundException('Solicitacao nao encontrada.');
+      return claimed;
+    }
+
+    const atual = await this.obterSolicitacaoSobEscopo(gerenciador, tenantId, solicitacaoId, usuario);
+    if (atual.status === 'processando') throw new BadRequestException('Solicitacao em processamento.');
+    await this.garantirSolicitacaoPendente(gerenciador, atual);
+    throw new BadRequestException('Solicitacao ja decidida.');
   }
 
   private serializarContato(dados: CriarSolicitacaoAgendamentoPublicoDto): string {

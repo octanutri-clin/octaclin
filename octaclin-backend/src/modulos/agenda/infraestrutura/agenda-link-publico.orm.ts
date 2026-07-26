@@ -1,6 +1,10 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('agenda_links_publicos')
+@Index('idx_agenda_links_publicos_tenant_profissional_ativo', ['tenantId', 'profissionalId'], {
+  unique: true,
+  where: `"ativo" = true`
+})
 export class AgendaLinkPublicoOrm {
   @PrimaryGeneratedColumn('uuid')
   id: string;
