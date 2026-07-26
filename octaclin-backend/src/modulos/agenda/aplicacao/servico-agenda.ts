@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager, IsNull, MoreThanOrEqual } from 'typeorm';
+import { EntityManager, IsNull, LessThan, MoreThan, MoreThanOrEqual } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -375,13 +375,14 @@ export class ServicoAgenda {
     );
     if (conflitoConsulta) throw new BadRequestException('Ja existe consulta agendada neste horario para o profissional.');
 
-    const bloqueiosExternos = await gerenciador.getRepository(AgendaBloqueioExternoOrm).find({
-      where: { tenantId, profissionalId },
-      take: 500
+    const conflitoExterno = await gerenciador.getRepository(AgendaBloqueioExternoOrm).exists({
+      where: {
+        tenantId,
+        profissionalId,
+        inicioEm: LessThan(janela.fimEm),
+        fimEm: MoreThan(janela.inicioEm)
+      }
     });
-    const conflitoExterno = bloqueiosExternos.some(
-      (bloqueio) => bloqueio.inicioEm < janela.fimEm && bloqueio.fimEm > janela.inicioEm
-    );
     if (conflitoExterno) throw new BadRequestException('Ja existe consulta agendada neste horario para o profissional.');
   }
 

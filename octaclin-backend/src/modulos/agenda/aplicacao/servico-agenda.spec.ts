@@ -39,6 +39,24 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
       if (nome === 'paciente') return dados.paciente ?? null;
       if (nome === 'profissional') return dados.profissional ?? null;
       return dados.consulta ?? ultimoSalvo;
+    }),
+    exists: jest.fn(async (criterios: { where: Record<string, unknown> }) => {
+      if (nome === 'bloqueioExterno') {
+        const bloqueios = (dados.bloqueiosExternos ?? []) as Array<Record<string, unknown>>;
+        const where = criterios.where;
+        return bloqueios.some((bloqueio) => {
+          // Verificar tenantId e profissionalId
+          if (bloqueio.tenantId !== where.tenantId || bloqueio.profissionalId !== where.profissionalId) return false;
+          // Verificar LessThan(inicioEm) e MoreThan(fimEm)
+          const inicioEmOperador = where.inicioEm as { _value?: Date };
+          const fimEmOperador = where.fimEm as { _value?: Date };
+          if (inicioEmOperador?._value && fimEmOperador?._value) {
+            return (bloqueio.inicioEm as Date) < inicioEmOperador._value && (bloqueio.fimEm as Date) > fimEmOperador._value;
+          }
+          return false;
+        });
+      }
+      return false;
     })
   };
 }
@@ -400,6 +418,63 @@ describe('ServicoAgenda', () => {
         usuarioColaborador
       )
     ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
+  });
+
+  it('detecta conflito com bloqueio externo consultando por sobreposicao de horario (nao mais em memoria com take:500)', async () => {
+    const bloqueioInicio = new Date('2026-09-01T10:00:00.000Z');
+    const bloqueioFim = new Date('2026-09-01T10:30:00.000Z');
+    const janelaInicio = new Date('2026-09-01T09:45:00.000Z');
+    const janelaFim = new Date('2026-09-01T10:15:00.000Z');
+    const { servico, repositorios } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      },
+      bloqueiosExternos: [
+        {
+          id: 'bloqueio-agenda-externa-1',
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          googleEventId: 'google-event-external-1',
+          inicioEm: bloqueioInicio,
+          fimEm: bloqueioFim
+        }
+      ]
+    });
+
+    // Tentar agendar consulta que sobrepõe o bloqueio (janela: 09:45-10:15, bloqueio: 10:00-10:30)
+    await expect(
+      servico.criarConsulta(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          inicioEm: janelaInicio.toISOString(),
+          fimEm: janelaFim.toISOString()
+        },
+        usuarioColaborador
+      )
+    ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
+
+    // Verificar que o .exists() foi chamado com tenantId, profissionalId, e os operadores TypeORM
+    // onde inicioEm: LessThan(janelaFim) e fimEm: MoreThan(janelaInicio)
+    expect(repositorios.bloqueioExterno.exists).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          inicioEm: expect.objectContaining({ _value: janelaFim }),
+          fimEm: expect.objectContaining({ _value: janelaInicio })
+        })
+      })
+    );
   });
 
   it('remarcarConsultaComoSistema atualiza a consulta usando o profissionalId informado, sem exigir UsuarioAutenticado', async () => {
