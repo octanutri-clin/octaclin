@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
+import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { ServicoConexaoGoogleCalendar } from '../agenda/aplicacao/servico-conexao-google-calendar';
 import { ServicoGoogleCalendar } from '../agenda/aplicacao/servico-google-calendar';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { ModuloAuth } from '../auth/modulo-auth';
@@ -34,7 +36,7 @@ import { ControladorOperacoes } from './apresentacao/controlador-operacoes';
     ModuloSaude
   ],
   controllers: [ControladorOperacoes],
-  providers: [ServicoOperacoes, ServicoGoogleCalendar],
+  providers: [ServicoOperacoes, ServicoGoogleCalendar, ServicoConexaoGoogleCalendar, CriptografiaDadosSensiveis],
   exports: [ServicoOperacoes]
 })
 export class ModuloOperacoes {}

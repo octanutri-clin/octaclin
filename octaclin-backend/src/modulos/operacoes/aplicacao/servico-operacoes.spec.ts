@@ -58,6 +58,7 @@ function criarServico(
       id: 'consulta-google-1',
       tenantId: 'tenant-1',
       pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
       titulo: 'Consulta - Ana Paula',
       inicioEm: new Date('2026-07-23T12:00:00.000Z'),
       fimEm: new Date('2026-07-23T13:00:00.000Z'),
@@ -259,6 +260,9 @@ function criarServico(
     })),
     cancelarEvento: jest.fn(async () => ({ sincronizado: true, calendarId: 'primary', eventId: 'google-event-1' }))
   };
+  const servicoConexaoGoogle = {
+    obterConexaoAtiva: jest.fn(async () => undefined)
+  };
   const servicoSaude = {
     verificarDetalhado: jest.fn(async () =>
       opcoes.health ?? {
@@ -276,10 +280,17 @@ function criarServico(
   };
 
   return {
-    servico: new ServicoOperacoes(executorTenant as never, processadorNotificacoes as never, googleCalendar as never, servicoSaude as never),
+    servico: new ServicoOperacoes(
+      executorTenant as never,
+      processadorNotificacoes as never,
+      googleCalendar as never,
+      servicoConexaoGoogle as never,
+      servicoSaude as never
+    ),
     repositorios,
     processadorNotificacoes,
     googleCalendar,
+    servicoConexaoGoogle,
     servicoSaude
   };
 }
@@ -517,16 +528,20 @@ describe('ServicoOperacoes', () => {
   });
 
   it('deve reprocessar falha de Google Calendar pela central de comunicacao', async () => {
-    const { servico, repositorios, googleCalendar } = criarServico();
+    const { servico, repositorios, googleCalendar, servicoConexaoGoogle } = criarServico();
+    const credenciais = { clientId: 'c', clientSecret: 's', refreshToken: 'r', calendarId: 'calendario-profissional' };
+    servicoConexaoGoogle.obterConexaoAtiva = jest.fn(async () => credenciais) as never;
 
     await servico.reprocessarFalhaComunicacao('tenant-1', 'google_calendar:consulta-google-1');
 
+    expect(servicoConexaoGoogle.obterConexaoAtiva).toHaveBeenCalledWith('tenant-1', 'profissional-1');
     expect(googleCalendar.criarEvento).toHaveBeenCalledWith(
       expect.objectContaining({
         resumo: 'Consulta - Ana Paula',
         inicioEm: new Date('2026-07-23T12:00:00.000Z'),
         fimEm: new Date('2026-07-23T13:00:00.000Z'),
-        timezone: 'America/Sao_Paulo'
+        timezone: 'America/Sao_Paulo',
+        credenciais
       })
     );
     expect(repositorios.consultas.save).toHaveBeenCalledWith(

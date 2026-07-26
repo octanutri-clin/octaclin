@@ -5,6 +5,7 @@ import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { ServicoConexaoGoogleCalendar } from '../../agenda/aplicacao/servico-conexao-google-calendar';
 import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from '../../agenda/aplicacao/servico-google-calendar';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { PlanoSaasId, resolverPlanoSaas } from '../../clientes/dominio/planos-saas';
@@ -262,6 +263,7 @@ export class ServicoOperacoes {
     private readonly executorTenant: ExecutorTenant,
     private readonly processadorNotificacoes: ProcessadorNotificacoes,
     private readonly googleCalendar: ServicoGoogleCalendar,
+    private readonly servicoConexaoGoogle: ServicoConexaoGoogleCalendar,
     private readonly servicoSaude: ServicoSaude
   ) {}
 
@@ -983,7 +985,7 @@ export class ServicoOperacoes {
       const consulta = await repositorio.findOne({ where: { id: consultaId, tenantId } });
       if (!consulta) throw new NotFoundException('Falha de Google Calendar nao encontrada.');
 
-      const google = await this.executarSincronizacaoGoogle(consulta);
+      const google = await this.executarSincronizacaoGoogle(tenantId, consulta);
       if (google.sincronizado) {
         consulta.googleCalendarId = google.calendarId;
         consulta.googleEventId = google.eventId;
@@ -1008,7 +1010,10 @@ export class ServicoOperacoes {
     });
   }
 
-  private executarSincronizacaoGoogle(consulta: AgendaConsultaOrm): Promise<ResultadoGoogleCalendar> {
+  private async executarSincronizacaoGoogle(tenantId: string, consulta: AgendaConsultaOrm): Promise<ResultadoGoogleCalendar> {
+    const credenciais = consulta.profissionalId
+      ? await this.servicoConexaoGoogle.obterConexaoAtiva(tenantId, consulta.profissionalId)
+      : undefined;
     const entrada = {
       resumo: consulta.titulo,
       descricao: this.montarDescricaoGoogleOperacional(consulta),
@@ -1016,10 +1021,11 @@ export class ServicoOperacoes {
       fimEm: consulta.fimEm,
       timezone: consulta.timezone,
       local: consulta.local,
-      consultaId: consulta.id
+      consultaId: consulta.id,
+      credenciais
     };
     if (consulta.status === 'cancelada' && consulta.googleCalendarId && consulta.googleEventId) {
-      return this.googleCalendar.cancelarEvento({ calendarId: consulta.googleCalendarId, eventId: consulta.googleEventId });
+      return this.googleCalendar.cancelarEvento({ calendarId: consulta.googleCalendarId, eventId: consulta.googleEventId, credenciais });
     }
     if (consulta.googleCalendarId && consulta.googleEventId) {
       return this.googleCalendar.atualizarEvento({
