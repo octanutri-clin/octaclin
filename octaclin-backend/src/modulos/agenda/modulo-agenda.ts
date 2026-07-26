@@ -13,7 +13,9 @@ import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../profissionais/infraestrutura/profissional.orm';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ControladorAgenda } from './apresentacao/controlador-agenda';
+import { ControladorAgendamentoPublico } from './apresentacao/controlador-agendamento-publico';
 import { ControladorGoogleAgenda } from './apresentacao/controlador-google-agenda';
+import { ServicoAgendamentoPublico } from './aplicacao/servico-agendamento-publico';
 import { ServicoAgenda } from './aplicacao/servico-agenda';
 import { REDIS_OAUTH_STATE_GOOGLE, ServicoConexaoGoogleCalendar } from './aplicacao/servico-conexao-google-calendar';
 import { ServicoGoogleCalendar } from './aplicacao/servico-google-calendar';
@@ -47,9 +49,10 @@ import { ProfissionalGoogleConexaoOrm } from './infraestrutura/profissional-goog
     ModuloTenancy,
     ModuloComunicacoes
   ],
-  controllers: [ControladorAgenda, ControladorGoogleAgenda],
+  controllers: [ControladorAgenda, ControladorAgendamentoPublico, ControladorGoogleAgenda],
   providers: [
     ServicoAgenda,
+    ServicoAgendamentoPublico,
     ServicoGoogleCalendar,
     ServicoConexaoGoogleCalendar,
     { provide: REDIS_OAUTH_STATE_GOOGLE, useFactory: () => new Redis(criarConexaoRedis()) },
