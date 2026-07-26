@@ -7,9 +7,9 @@ Atualizado em 2026-07-26.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 137 - Gate de qualidade do frontend (lint estrito, tipos e CI; entregue em 2026-07-26).
+- Ultima fase concluida: Fase 141 - Migracao major do TypeORM e eliminacao de dependencia transitoria vulneravel (entregue em 2026-07-26).
 - Fase em andamento: Fase 131 - Producao isolada de staging. Banco Neon, Redis Upstash e servicos Render de producao estao em live; health, Redis, banco e login foram validados em 2026-07-26. Faltam rotacao de credenciais expostas, conferencia formal de isolamento e aceite operacional conforme `PRODUCAO_ISOLADA_CONTROLE.md`.
-- Melhoria continua em andamento: Fase 138. O checkpoint backend atualizou NestJS para 11.1.28 e TypeORM para 0.3.31, com 47 suites/244 testes aprovados; a atualizacao major do Next.js e a remocao da dependencia transitoria do TypeORM continuam separadas por risco.
+- Melhoria continua: Fases 138 e 141 concluidas. NestJS 11.1.28 e TypeORM 1.1.0 foram validados com 47 suites/244 testes, CLI de migrations e auditoria de producao do backend zerada. A proxima pendencia tecnica e a migracao major do Next.js/React em fase dedicada.
 - Proxima fase preparada: Fase 132 - Dominio, SSL e identidade de envio. A configuracao tecnica de DNS permanece pendente ate a definicao do dominio oficial.
 - Estado: producao tecnica acessivel, mas ainda nao liberada para clientes reais.
 

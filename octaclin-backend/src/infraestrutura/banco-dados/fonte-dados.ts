@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';

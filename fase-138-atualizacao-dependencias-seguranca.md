@@ -1,6 +1,6 @@
 # Fase 138 - Atualizacao controlada de dependencias de seguranca
 
-Status: em andamento. Checkpoint backend concluido em 2026-07-26.
+Status: concluida em 2026-07-26.
 
 ## Objetivo
 
@@ -33,12 +33,17 @@ pnpm --dir octaclin-backend audit --prod
 
 Resultado: 47 suites e 244 testes aprovados.
 
-## Pendencias deliberadamente separadas
+## Fechamento da pendencia transitoria
 
-- O unico achado alto restante no backend e `brace-expansion`, trazido por
-  `typeorm@0.3.31 -> glob@10 -> minimatch@9`. A versao corrigida requer uma
-  linha maior incompativel; nao usar override direto. A Fase 141 deve migrar
-  TypeORM com codemod oficial, testes e banco dedicado.
+- A Fase 141 atualizou TypeORM de 0.3.31 para 1.1.0 e removeu o wrapper CLI
+  obsoleto. O codemod oficial foi executado sobre `src` sem transformacoes
+  necessarias; o datasource passou a carregar `dotenv/config` explicitamente
+  para preservar o CLI de migrations fora do bootstrap Nest.
+- A auditoria de producao do backend passou a retornar zero vulnerabilidades
+  altas, moderadas, baixas e criticas.
+
+## Pendencia separada
+
 - O frontend continua em Next.js 14/React 18. A auditoria web exige migracao
   major para Next.js atual e React 19, com codemods e regressao visual/BFF em
   fase propria antes de qualquer deploy.

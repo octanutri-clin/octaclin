@@ -16,9 +16,9 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase concluida mais recente no momento deste arquivo: Fase 137 - Gate de qualidade do frontend (lint estrito, tipos e CI). A revisao juridica externa da Fase 133 continua obrigatoria antes do go-live.
+- Fase concluida mais recente no momento deste arquivo: Fase 141 - Migracao major do TypeORM e eliminacao de dependencia transitoria vulneravel. A revisao juridica externa da Fase 133 continua obrigatoria antes do go-live.
 - Proxima fase critica planejada: Fase 131 - Producao isolada de staging (validacao final e aceite operacional).
-- Melhoria continua ativa: Fase 138 possui um checkpoint backend publicado com NestJS 11.1.28 e TypeORM 0.3.31; nao force overrides para `brace-expansion` nem atualize Next.js/React sem a fase de migracao dedicada.
+- Melhoria continua: Fases 138 e 141 atualizaram NestJS para 11.1.28 e TypeORM para 1.1.0, com audit de producao backend zerado. Nao atualize Next.js/React sem a fase de migracao dedicada.
 - O checklist vivo das proximas fases fica em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regras de trabalho
