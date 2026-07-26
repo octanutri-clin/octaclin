@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { LogIn } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
@@ -37,11 +38,12 @@ export function LoginForm() {
     try {
       const sessao = await autenticar({ apiUrl, tenantSlug, email, senha });
       const redirect = new URLSearchParams(window.location.search).get('redirect');
-      const destino =
+      const destino = (
         redirect?.startsWith('/') && !redirect.startsWith('//') && !redirect.startsWith('/api')
           ? redirect
-          : sessao.destinoInicial ?? '/operacoes';
-      router.replace(destino as any);
+          : sessao.destinoInicial ?? '/operacoes'
+      ) as Route;
+      router.replace(destino);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao autenticar.');
     } finally {
@@ -97,7 +99,7 @@ export function LoginForm() {
                 <LogIn size={16} />
                 {enviando ? 'Entrando' : 'Entrar'}
               </Botao>
-              <Link href={'/esqueci-senha' as any} className="text-center text-sm font-medium text-primaria hover:underline">
+              <Link href="/esqueci-senha" className="text-center text-sm font-medium text-primaria hover:underline">
                 Esqueci minha senha
               </Link>
             </form>

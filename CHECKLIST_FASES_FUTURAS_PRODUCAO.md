@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-26 apos a Fase 136 e o hardening de CI/producao.
+Atualizado em 2026-07-26 apos a Fase 137 de melhoria continua de qualidade.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -369,6 +369,35 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     conexao OAuth ponta-a-ponta contra o Google real (o fix do 401 nao foi
     exercitado contra um round-trip OAuth real ainda); ver pendencias
     menores no arquivo da fase.
+
+### Bloco J - Melhoria continua e qualidade de engenharia
+
+- [x] Fase 137 - Gate de qualidade do frontend.
+  - ESLint nao interativo com regras estritas do Next.js, correcoes de tipos e
+    inclusao do lint no CI web.
+  - Data: 2026-07-26.
+  - Validacoes: `pnpm --dir octaclin-web lint`, `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web test:authz` e `pnpm --dir octaclin-web build`.
+  - Saida entregue: configuracao ESLint, 18 erros de lint removidos, contratos
+    de rotas/notificacoes mais tipados e CI impedindo novas regressoes estaticas.
+
+- [ ] Fase 138 - Atualizacao controlada de dependencias vulneraveis.
+  - Corrigir vulnerabilidades de producao em `multer`, `lodash`, `typeorm` e
+    `postcss`; planejar a migracao major do Next.js separadamente, com testes
+    visuais e de autenticacao completos.
+  - Saida esperada: inventario de risco, lockfiles atualizados e validacao
+    integral sem upgrade massivo nao revisado.
+
+- [ ] Fase 139 - Fortalecimento de contratos de dominio e fronteiras BFF.
+  - Reduzir `any` residual, normalizar DTOs compartilhados e cobrir limites de
+    erro nos BFFs criticos.
+  - Saida esperada: menor risco de regressao em agenda, pacientes, portal e
+    comunicacoes.
+
+- [ ] Fase 140 - Cobertura de confiabilidade e regressao.
+  - Priorizar testes negativos para autorizacao, tenant, operacoes e falhas de
+    integracao; definir metas de cobertura por modulo de risco.
+  - Saida esperada: matriz rastreavel de risco, testes focados e sinais de CI
+    para regressao critica.
 
 ## Backlog pos-producao
 

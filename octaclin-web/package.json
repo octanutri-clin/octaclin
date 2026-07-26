@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:authz": "node scripts/test-autorizacao-rotas.mjs",
     "test:e2e:criticas": "playwright test tests/visual/jornadas-criticas.spec.mjs --reporter=list",

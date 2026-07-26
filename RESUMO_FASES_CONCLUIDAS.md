@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 136.
+Atualizado apos a Fase 137.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -180,6 +180,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 130 - Piloto interno controlado: criado `RUNBOOK_PILOTO_INTERNO.md` com participantes, perfis, jornadas, criterios de sucesso/bloqueio e processo de aceite, alem de `PILOTO_INTERNO_CONTROLE.md` como acompanhamento vivo da rodada do piloto e validador documental `test-piloto-interno.mjs`. Rodada 1 executada e aprovada em 2026-07-23: todas as jornadas manuais testadas, 5 bugs reais encontrados e corrigidos (BUG-001 a BUG-005), com destaque para o escopo de dados por profissional responsavel (`pacientes_responsaveis`) aplicado e testado em pacientes, agenda, gamificacao, profissionais, questionarios, materiais, comunicacoes e automacoes via o helper `resolverProfissionalIdDoUsuario`.
 - Fase 133 - Checklist juridico/comercial para clientes: pacote operacional com minuta de contrato, rascunho de politica de privacidade, matriz de papeis LGPD, proposta de SLA e checklist de onboarding. As minutas exigem revisao juridica e dados empresariais finais antes do go-live.
 - Fase 136 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional: OAuth individual, canais push, sincronizacao inbound resiliente com paginacao e recuperacao de `syncToken`, bloqueios externos, desconexao segura para token revogado, state OAuth com expiracao/uso unico e protecao de webhook. A revisao final foi publicada em `5e1c33a`; os hardenings de CI/Redis e configuracao segura de producao foram publicados em `a7abee3` e `701ed6b`, com GitHub Actions verde em 2026-07-26.
+- Fase 137 - Gate de qualidade do frontend: configurado ESLint nao interativo com `next/core-web-vitals` e `next/typescript`; corrigidos casts inseguros de rotas, tipagem de notificacoes da agenda, dependencias de hooks e imports mortos. O lint passou a ser etapa obrigatoria no job web do GitHub Actions; lint, typecheck, build e teste de autorizacao passaram em 2026-07-26.
 
 ## Estado atual de uso
 

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { Route } from 'next';
 import type { ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, type LucideIcon } from 'lucide-react';
@@ -85,7 +86,7 @@ export function PortalShell({
                 return (
                   <Link
                     key={item.href}
-                    href={item.href as any}
+                    href={item.href as Route}
                     aria-current={ativo ? 'page' : undefined}
                     className={cn(
                       'inline-flex h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium text-texto-suave transition-colors',
@@ -166,7 +167,7 @@ export function PortalShell({
               {navegacao.map((item) => (
                 <Link
                   key={item.href}
-                  href={item.href as any}
+                  href={item.href as Route}
                   className="inline-flex h-9 shrink-0 items-center rounded-md px-3 text-sm font-medium text-texto-suave hover:bg-white hover:text-tinta"
                 >
                   {item.rotulo}

@@ -7,7 +7,7 @@ Atualizado em 2026-07-26.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 133 - Checklist juridico/comercial para clientes (pacote documental entregue em 2026-07-26; revisao juridica externa ainda obrigatoria antes do go-live).
+- Ultima fase concluida: Fase 137 - Gate de qualidade do frontend (lint estrito, tipos e CI; entregue em 2026-07-26).
 - Fase em andamento: Fase 131 - Producao isolada de staging. Banco Neon, Redis Upstash e servicos Render de producao estao em live; health, Redis, banco e login foram validados em 2026-07-26. Faltam rotacao de credenciais expostas, conferencia formal de isolamento e aceite operacional conforme `PRODUCAO_ISOLADA_CONTROLE.md`.
 - Proxima fase preparada: Fase 132 - Dominio, SSL e identidade de envio. A configuracao tecnica de DNS permanece pendente ate a definicao do dominio oficial.
 - Estado: producao tecnica acessivel, mas ainda nao liberada para clientes reais.
@@ -55,6 +55,7 @@ Atualizado em 2026-07-26.
 - Producao isolada de staging: banco Neon, Redis Upstash e servicos Render de producao provisionados; a validacao final de runtime, secrets exclusivos e aceite operacional seguem pendentes na Fase 131.
 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional (Fase 136, 2026-07-25): conexao OAuth individual por profissional, notificacao push do Google, eventos externos viram bloqueio de horario, mudancas feitas direto no Google aplicam automaticamente na consulta correspondente.
 - CI do GitHub verde em `701ed6b` (2026-07-26): backend, web, mobile, IA e demo local smoke, incluindo UI, BFF e Playwright.
+- Gate de qualidade web: lint nao interativo com as regras estritas recomendadas pelo Next.js, typecheck, build e teste de autorizacao de rotas; o lint agora tambem e exigido no CI.
 
 ## O que ainda falta antes de producao real
 
@@ -65,6 +66,7 @@ Atualizado em 2026-07-26.
 - Dominio, SSL e identidade de envio.
 - Checklist juridico/comercial.
 - Go-live assistido.
+- Atualizacao controlada das dependencias com vulnerabilidades conhecidas, priorizando `multer`, `lodash`, `typeorm`, `postcss` e a atualizacao major planejada do Next.js.
 
 ## Ambientes e provedores
 

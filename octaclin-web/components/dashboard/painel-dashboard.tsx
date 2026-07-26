@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { Route } from 'next';
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CalendarDays, ClipboardList, MessageSquareText, RefreshCcw, UserRoundCheck, UsersRound } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
@@ -44,10 +45,10 @@ function ordenarConsultas(consultas: ConsultaAgendaApi[]) {
     .sort((a, b) => new Date(a.inicioEm).getTime() - new Date(b.inicioEm).getTime());
 }
 
-function LinkAcao({ href, children }: { href: string; children: string }) {
+function LinkAcao({ href, children }: { href: Route; children: string }) {
   return (
     <Link
-      href={href as any}
+      href={href}
       className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
     >
       {children}

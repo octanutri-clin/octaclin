@@ -10,6 +10,7 @@ import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cada
 import {
   ConexaoGoogleAgendaStatus,
   ConsultaAgendaApi,
+  NotificacoesConsultaAgenda,
   cancelarConsultaAgenda,
   carregarBootstrapAgenda,
   conectarGoogleAgenda,
@@ -92,7 +93,7 @@ function contatoWhatsapp(contato?: string) {
   return contato.replace(/\D/g, '');
 }
 
-function statusNotificacao(notificacoes: Record<string, any>, canal: 'email' | 'whatsapp') {
+function statusNotificacao(notificacoes: NotificacoesConsultaAgenda, canal: 'email' | 'whatsapp') {
   const status = notificacoes?.[canal]?.status;
   const motivo = notificacoes?.[canal]?.motivo ?? notificacoes?.[canal]?.erro;
   if (status === 'enviado') return 'Enviado';
@@ -109,7 +110,7 @@ function statusGoogle(consulta: ConsultaAgendaApi) {
   return 'Pendente';
 }
 
-function statusLembrete(notificacoes: Record<string, any>) {
+function statusLembrete(notificacoes: NotificacoesConsultaAgenda) {
   const lembrete = notificacoes?.lembrete24h;
   if (lembrete?.status === 'processado') return 'Lembrete 24h enviado';
   if (lembrete?.status === 'ignorado') return 'Lembrete ignorado';
@@ -117,7 +118,7 @@ function statusLembrete(notificacoes: Record<string, any>) {
   return 'Lembrete pendente';
 }
 
-function statusConfirmacao(notificacoes: Record<string, any>) {
+function statusConfirmacao(notificacoes: NotificacoesConsultaAgenda) {
   const confirmacao = notificacoes?.confirmacaoPaciente;
   if (confirmacao?.status === 'confirmada') return 'Paciente confirmou';
   return 'Aguardando confirmacao';

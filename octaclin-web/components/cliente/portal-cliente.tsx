@@ -375,7 +375,7 @@ export function PortalCliente() {
     }
   }
 
-  async function desativarUsuario(id: string, email: string) {
+  async function desativarUsuario(id: string) {
     setDesativandoUsuarioId(id);
     setErroUsuarios(null);
     setSucessoUsuarios(null);
@@ -433,7 +433,7 @@ export function PortalCliente() {
   async function confirmarAcaoUsuario() {
     if (!confirmacaoUsuario) return;
     if (confirmacaoUsuario.tipo === 'desativar') {
-      await desativarUsuario(confirmacaoUsuario.id, confirmacaoUsuario.email);
+      await desativarUsuario(confirmacaoUsuario.id);
     } else {
       await revogarConvite(confirmacaoUsuario.id, confirmacaoUsuario.email);
     }

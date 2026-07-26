@@ -70,6 +70,7 @@ jobs:
           cache-dependency-path: octaclin-web/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile=false
+      - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm build
 

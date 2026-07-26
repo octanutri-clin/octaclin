@@ -43,6 +43,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { accessToken: _accessToken, refreshToken: _refreshToken, ...ativacaoPublica } = ativacao;
+  const ativacaoPublica = Object.fromEntries(
+    Object.entries(ativacao).filter(([chave]) => chave !== 'accessToken' && chave !== 'refreshToken')
+  );
   return NextResponse.json(ativacaoPublica, { status: resposta.status });
 }

@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity, AlertTriangle, CheckCircle2, CreditCard, Download, History, RefreshCcw, Scale, Search, Smartphone, Undo2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
-import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
+import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { SessaoPublica, obterSessao, sair } from '@/lib/auth-api';
 import {

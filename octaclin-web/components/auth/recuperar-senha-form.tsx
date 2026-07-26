@@ -133,7 +133,7 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
               <div className="rounded-md border border-perigo-borda bg-perigo-suave px-3 py-2 text-sm text-perigo">
                 {erro ?? 'Link invalido ou expirado.'}
               </div>
-              <Link href={'/esqueci-senha' as any} className="text-sm font-medium text-primaria hover:underline">
+              <Link href="/esqueci-senha" className="text-sm font-medium text-primaria hover:underline">
                 Solicitar novo link
               </Link>
             </div>

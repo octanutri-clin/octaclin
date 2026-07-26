@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const resposta = await requisitarBackendAutenticado('/questionarios/modelos');
     return new NextResponse(await resposta.text(), {

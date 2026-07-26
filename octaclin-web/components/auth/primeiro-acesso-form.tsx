@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, CheckCircle2, KeyRound, Loader2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
@@ -160,7 +161,7 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
         versaoLgpd: versaoLegalPaciente
       });
       setAtivado(true);
-      router.replace((ativacao.destinoInicial || '/portal') as any);
+      router.replace((ativacao.destinoInicial || '/portal') as Route);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao ativar acesso.');
     } finally {

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   CalendarDays,
@@ -198,7 +198,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [formularioMaterial, setFormularioMaterial] = useState<FormularioMaterial>(formularioMaterialInicial);
   const [formularioEnvioMaterial, setFormularioEnvioMaterial] = useState<FormularioEnvioMaterial>(formularioEnvioMaterialInicial);
 
-  async function carregar() {
+  const carregar = useCallback(async () => {
     setCarregando(true);
     setErro(null);
     try {
@@ -219,7 +219,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     } finally {
       setCarregando(false);
     }
-  }
+  }, [pacienteId]);
 
   async function registrarEvolucao(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -314,7 +314,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
   useEffect(() => {
     void carregar();
-  }, [pacienteId]);
+  }, [carregar]);
 
   const eventos = useMemo(() => dados?.linhaDoTempo ?? [], [dados?.linhaDoTempo]);
 

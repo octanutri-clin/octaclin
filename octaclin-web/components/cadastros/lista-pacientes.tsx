@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { Route } from 'next';
 import { FormEvent, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Trash2, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
@@ -371,7 +372,7 @@ export function ListaPacientes() {
                   <span className="font-semibold">{Number(paciente.scoreRisco).toFixed(1)}</span>
                   <div className="flex justify-end gap-1">
                     <Link
-                      href={`/pacientes/${paciente.id}` as any}
+                      href={`/pacientes/${paciente.id}` as Route}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-md text-tinta transition-colors hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
                       aria-label="Abrir prontuario"
                       title="Abrir prontuario"

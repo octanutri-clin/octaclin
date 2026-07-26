@@ -320,8 +320,18 @@ function montarConversasWhatsapp(
 
   return [...grupos.values()]
     .sort((a, b) => b.ultimaOrdenacao - a.ultimaOrdenacao)
-    .map(({ ultimaOrdenacao: _ultimaOrdenacao, ...conversa }) => ({
-      ...conversa,
+    .map((conversa) => ({
+      id: conversa.id,
+      titulo: conversa.titulo,
+      contato: conversa.contato,
+      pacienteId: conversa.pacienteId,
+      ultimaMensagem: conversa.ultimaMensagem,
+      ultimaData: conversa.ultimaData,
+      total: conversa.total,
+      recebidas: conversa.recebidas,
+      enviadas: conversa.enviadas,
+      pendentes: conversa.pendentes,
+      statusAtendimento: conversa.statusAtendimento,
       mensagens: conversa.mensagens.sort((a, b) => obterTimestamp(a.criadoEm) - obterTimestamp(b.criadoEm))
     }));
 }

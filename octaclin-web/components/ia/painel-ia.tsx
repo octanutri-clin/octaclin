@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { Brain, CheckCircle2, Image, RefreshCcw, ScanSearch, Sparkles } from 'lucide-react';
+import { Brain, CheckCircle2, Image as ImageIcon, RefreshCcw, ScanSearch, Sparkles } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
@@ -210,7 +210,7 @@ export function PainelIa() {
         <Cartao>
         <form onSubmit={executarReconhecimento}>
           <CartaoCabecalho>
-            <CartaoTitulo icone={<Image size={18} className="text-primaria" />}>Reconhecimento alimentar</CartaoTitulo>
+            <CartaoTitulo icone={<ImageIcon size={18} className="text-primaria" />}>Reconhecimento alimentar</CartaoTitulo>
           </CartaoCabecalho>
           <CartaoConteudo>
           <div className="grid gap-3">

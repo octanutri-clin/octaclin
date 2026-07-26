@@ -47,6 +47,7 @@ No Windows/Codex, prefira o script `test` do pacote backend. O formato `pnpm --d
 Use quando alterar componentes, BFF ou autorizacao de rotas:
 
 ```powershell
+pnpm --dir octaclin-web lint
 pnpm --dir octaclin-web typecheck
 pnpm --dir octaclin-web test:authz
 ```

@@ -1,5 +1,19 @@
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada, listarPacientes, listarProfissionais } from './cadastros-api';
 
+export interface DetalheNotificacaoAgenda {
+  status?: string;
+  motivo?: string;
+  erro?: string;
+}
+
+export interface NotificacoesConsultaAgenda {
+  email?: DetalheNotificacaoAgenda;
+  whatsapp?: DetalheNotificacaoAgenda;
+  googleCalendar?: DetalheNotificacaoAgenda;
+  lembrete24h?: DetalheNotificacaoAgenda;
+  confirmacaoPaciente?: DetalheNotificacaoAgenda;
+}
+
 export interface ConsultaAgendaApi {
   id: string;
   tenantId: string;
@@ -17,7 +31,7 @@ export interface ConsultaAgendaApi {
   googleCalendarId?: string;
   googleEventId?: string;
   googleEventHtmlLink?: string;
-  notificacoes: Record<string, any>;
+  notificacoes: NotificacoesConsultaAgenda;
   payload: Record<string, unknown>;
   criadoEm: string;
   atualizadoEm: string;
