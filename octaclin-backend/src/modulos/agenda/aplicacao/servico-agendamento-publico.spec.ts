@@ -8,7 +8,7 @@ import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
 import { AgendaLinkPublicoOrm } from '../infraestrutura/agenda-link-publico.orm';
 import { AgendaSolicitacaoOrm } from '../infraestrutura/agenda-solicitacao.orm';
 import { CriarSolicitacaoAgendamentoPublicoDto } from './dtos';
-import { ServicoAgendamentoPublico } from './servico-agendamento-publico';
+import { ServicoAgendamentoPublico, solicitacaoPendenteExpirou } from './servico-agendamento-publico';
 
 interface EstadoFalso {
   link?: AgendaLinkPublicoOrm | null;
@@ -191,6 +191,27 @@ describe('ServicoAgendamentoPublico', () => {
     expect(resumo.horariosLivres).not.toContain('2026-07-26T16:00:00.000Z');
     expect(JSON.stringify(resumo)).not.toContain('tenantId');
     expect(JSON.stringify(resumo)).not.toContain('pacienteId');
+    expect(repositorios.consulta.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          status: 'agendada',
+          inicioEm: expect.objectContaining({ _value: new Date('2026-08-25T12:10:00.000Z') }),
+          fimEm: expect.objectContaining({ _value: new Date('2026-07-26T12:10:00.000Z') })
+        })
+      })
+    );
+    expect(repositorios.bloqueio.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          inicioEm: expect.objectContaining({ _value: new Date('2026-08-25T12:10:00.000Z') }),
+          fimEm: expect.objectContaining({ _value: new Date('2026-07-26T12:10:00.000Z') })
+        })
+      })
+    );
   });
 
   it('retorna resposta neutra para token ausente ou inativo', async () => {
@@ -236,11 +257,19 @@ describe('ServicoAgendamentoPublico', () => {
     expect(salvo?.status).toBe('pendente');
     expect(salvo?.pacienteId).toBeUndefined();
     expect(salvo?.consultaId).toBeUndefined();
+    expect(salvo?.expiraEm.toISOString()).toBe('2026-07-28T13:00:00.000Z');
+    expect(salvo?.expiraEm.getTime()).toBe(salvo?.inicioEm.getTime());
     expect(criptografia.descriptografar(salvo?.nomeCriptografado as Buffer)).toBe('Ana Silva');
     expect(criptografia.descriptografar(salvo?.contatoCriptografado as Buffer)).toBe(
       JSON.stringify({ email: 'ana@exemplo.com', whatsapp: '5511999998888' })
     );
     expect(criptografia.descriptografar(salvo?.observacaoCriptografada as Buffer)).toBe('Primeira consulta');
+  });
+
+  it('formaliza que a solicitacao pendente expira no inicio do horario e deve ser rejeitada quando expiraEm for menor ou igual a agora', () => {
+    expect(solicitacaoPendenteExpirou(new Date('2026-07-28T13:00:00.000Z'), new Date('2026-07-28T12:59:59.999Z'))).toBe(false);
+    expect(solicitacaoPendenteExpirou(new Date('2026-07-28T13:00:00.000Z'), new Date('2026-07-28T13:00:00.000Z'))).toBe(true);
+    expect(solicitacaoPendenteExpirou(new Date('2026-07-28T13:00:00.000Z'), new Date('2026-07-28T13:00:00.001Z'))).toBe(true);
   });
 
   it('revalida disponibilidade antes de salvar a solicitacao publica', async () => {

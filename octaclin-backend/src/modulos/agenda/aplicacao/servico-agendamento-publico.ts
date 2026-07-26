@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash } from 'crypto';
-import { DataSource, EntityManager, IsNull } from 'typeorm';
+import { DataSource, EntityManager, IsNull, LessThan, MoreThan } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoProtecaoAbuso } from '../../auth/aplicacao/servico-protecao-abuso';
@@ -65,6 +65,10 @@ function textoOpcional(valor?: string): string | undefined {
 
 function sobrepoe(janela: FaixaHorario, intervalo: FaixaHorario): boolean {
   return intervalo.inicioEm < janela.fimEm && intervalo.fimEm > janela.inicioEm;
+}
+
+export function solicitacaoPendenteExpirou(expiraEm: Date, agora = new Date()): boolean {
+  return expiraEm.getTime() <= agora.getTime();
 }
 
 @Injectable()
@@ -170,16 +174,26 @@ export class ServicoAgendamentoPublico {
   ): Promise<FaixaHorario[]> {
     const [consultas, bloqueios] = await Promise.all([
       gerenciador.getRepository(AgendaConsultaOrm).find({
-        where: { tenantId, profissionalId, status: 'agendada' }
+        where: {
+          tenantId,
+          profissionalId,
+          status: 'agendada',
+          inicioEm: LessThan(fimJanela),
+          fimEm: MoreThan(inicioJanela)
+        }
       }),
       gerenciador.getRepository(AgendaBloqueioExternoOrm).find({
-        where: { tenantId, profissionalId }
+        where: {
+          tenantId,
+          profissionalId,
+          inicioEm: LessThan(fimJanela),
+          fimEm: MoreThan(inicioJanela)
+        }
       })
     ]);
 
     return [...consultas, ...bloqueios]
       .map((item) => ({ inicioEm: item.inicioEm, fimEm: item.fimEm }))
-      .filter((item) => item.inicioEm < fimJanela && item.fimEm > inicioJanela)
       .sort((a, b) => a.inicioEm.getTime() - b.inicioEm.getTime());
   }
 
