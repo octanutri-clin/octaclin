@@ -364,11 +364,14 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     --dir octaclin-web smoke:ui`, `smoke:e2e:bff`, `smoke:visual` (58 testes),
     `pnpm security:secrets`, `validar-preflight.ps1 -DocsOnly` e GitHub Actions
     verde para backend, web, mobile, IA e demo local smoke.
-  - Pendente (nao bloqueia): registrar a URL de callback OAuth no Google
-    Cloud Console (fora do repositorio) e validar manualmente o fluxo de
-    conexao OAuth ponta-a-ponta contra o Google real (o fix do 401 nao foi
-    exercitado contra um round-trip OAuth real ainda); ver pendencias
-    menores no arquivo da fase.
+  - Pendente para habilitacao produtiva: cadastrar `GOOGLE_CALENDAR_CLIENT_ID`,
+    `GOOGLE_CALENDAR_CLIENT_SECRET`, `OCTACLIN_BACKEND_URL` e
+    `OCTACLIN_WEB_URL` no backend Render; registrar
+    `https://octaclin-backend-producao.onrender.com/agenda/google/callback`
+    no Google Cloud Console; validar uma conexao OAuth ponta-a-ponta com um
+    profissional real. O callback tem fallback seguro para
+    `RENDER_EXTERNAL_URL` e o health aceita OAuth individual sem refresh token
+    global; ver `fase-136-sincronizacao-google-agenda-profissional.md`.
 
 ### Bloco J - Melhoria continua e qualidade de engenharia
 

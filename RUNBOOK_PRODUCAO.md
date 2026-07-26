@@ -226,7 +226,9 @@ Campos principais:
 - `checks.redis`: valida se Redis/Upstash esta configurado.
 - `checks.email`: valida SMTP ou Gmail API.
 - `checks.whatsapp`: valida token e phone number id Meta.
-- `checks.googleCalendar`: valida credenciais OAuth do Calendar.
+- `checks.googleCalendar`: valida `GOOGLE_CALENDAR_CLIENT_ID` e
+  `GOOGLE_CALENDAR_CLIENT_SECRET`. Em OAuth individual, a ausencia de refresh
+  token global e esperada; `modo: oauth_por_profissional` confirma esse modelo.
 
 O health detalhado nao deve retornar secrets, tokens, refresh tokens ou URLs com senha. Se aparecer qualquer credencial na resposta, trate como incidente e siga `RUNBOOK_ROTACAO_SECRETS.md`.
 

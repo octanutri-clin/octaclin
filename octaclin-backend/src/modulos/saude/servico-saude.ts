@@ -169,20 +169,20 @@ export class ServicoSaude {
   private verificarGoogleCalendar(): CheckHealth {
     const configurado =
       valorDefinido('GOOGLE_CALENDAR_CLIENT_ID') &&
-      valorDefinido('GOOGLE_CALENDAR_CLIENT_SECRET') &&
-      valorDefinido('GOOGLE_CALENDAR_REFRESH_TOKEN');
+      valorDefinido('GOOGLE_CALENDAR_CLIENT_SECRET');
 
     if (!configurado) {
       return {
         status: 'degradado',
-        mensagem: 'Google Calendar incompleto; verifique client id, client secret e refresh token.'
+        mensagem: 'Google Calendar incompleto; verifique client id e client secret.'
       };
     }
 
     return {
       status: 'ok',
       detalhes: {
-        calendarIdConfigurado: valorDefinido('GOOGLE_CALENDAR_ID')
+        calendarIdConfigurado: valorDefinido('GOOGLE_CALENDAR_ID'),
+        modo: valorDefinido('GOOGLE_CALENDAR_REFRESH_TOKEN') ? 'refresh_global_compativel' : 'oauth_por_profissional'
       }
     };
   }

@@ -75,6 +75,27 @@ describe('ServicoSaude', () => {
     expect(resposta.checks.redis.status).toBe('ok');
   });
 
+  it('deve aceitar OAuth por profissional sem refresh token global do Google Calendar', async () => {
+    delete process.env.GOOGLE_CALENDAR_REFRESH_TOKEN;
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }])
+      } as never,
+      { ping: jest.fn(async () => 'PONG') } as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.checks.googleCalendar).toEqual({
+      status: 'ok',
+      detalhes: {
+        calendarIdConfigurado: false,
+        modo: 'oauth_por_profissional'
+      }
+    });
+  });
+
   it('deve marcar Redis configurado como falha quando PING rejeitar', async () => {
     const redis = { ping: jest.fn(async () => Promise.reject(new Error('redis connection refused'))) };
     const servico = new ServicoSaude(

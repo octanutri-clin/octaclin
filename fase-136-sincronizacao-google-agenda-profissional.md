@@ -154,10 +154,23 @@ powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
 
 ## Passo manual pendente (fora do repositorio)
 
-Antes desta sincronizacao funcionar de ponta a ponta em producao, e preciso
-adicionar a URL de callback (`<url-do-backend>/agenda/google/callback`) na
-lista de redirect URIs autorizados do OAuth client no Google Cloud Console -
-isso nao pode ser feito via commit.
+Antes desta sincronizacao funcionar de ponta a ponta em producao:
+
+1. No Render do backend, cadastrar `GOOGLE_CALENDAR_CLIENT_ID`,
+   `GOOGLE_CALENDAR_CLIENT_SECRET`, `OCTACLIN_BACKEND_URL` e
+   `OCTACLIN_WEB_URL`. Os dois ultimos devem apontar, respectivamente, para
+   `https://octaclin-backend-producao.onrender.com` e
+   `https://octaclin-web-producao.onrender.com`.
+2. No cliente OAuth do Google Cloud Console, adicionar exatamente
+   `https://octaclin-backend-producao.onrender.com/agenda/google/callback` na
+   lista de redirect URIs autorizados.
+3. Garantir que a Google Calendar API esta habilitada no mesmo projeto do
+   cliente OAuth e concluir uma conexao por um usuario `Professional` real.
+
+O callback passou a usar `OCTACLIN_BACKEND_URL` e, no Render, usa
+automaticamente `RENDER_EXTERNAL_URL` como fallback. O health tambem foi
+alinhado ao OAuth individual: refresh token global e opcional e nunca deve ser
+preenchido para simular a conexao de um profissional.
 
 ## Objetivo
 

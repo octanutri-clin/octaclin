@@ -64,11 +64,18 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 
 | Variavel | Obrigatoria | Uso | Onde configurar | Como validar |
 | --- | --- | --- | --- | --- |
-| `GOOGLE_CALENDAR_ID` | Sim | Calendario alvo | Render/backend | Evento aparece no calendario |
-| `GOOGLE_CLIENT_ID` | Sim | OAuth Google | Render/backend | Token renova |
-| `GOOGLE_CLIENT_SECRET` | Sim | OAuth Google | Render/backend | Token renova |
-| `GOOGLE_REFRESH_TOKEN` | Sim | Refresh token Google | Render/backend | Criacao de evento funciona |
-| `GOOGLE_TOKEN_URI` | Opcional | Endpoint OAuth | Render/backend | Token renova |
+| `GOOGLE_CALENDAR_CLIENT_ID` | Sim | Client ID do OAuth Google | Render/backend | Botao redireciona ao consentimento |
+| `GOOGLE_CALENDAR_CLIENT_SECRET` | Sim | Client secret do OAuth Google | Render/backend | Callback conclui sem erro |
+| `OCTACLIN_BACKEND_URL` | Recomendado | Base publica do callback e webhook | Render/backend | URL gerada aponta para producao |
+| `OCTACLIN_WEB_URL` | Sim em producao | Retorno apos o consentimento | Render/backend | Retorna para `/agenda?google=conectado` |
+| `GOOGLE_CALENDAR_REFRESH_TOKEN` | Opcional | Compatibilidade com agenda compartilhada antiga | Render/backend | Health indica modo compativel |
+| `GOOGLE_CALENDAR_ID` | Opcional | Calendario da agenda compartilhada antiga | Render/backend | Evento aparece no calendario |
+| `GOOGLE_CALENDAR_TOKEN_URI` | Opcional | Endpoint OAuth alternativo | Render/backend | Apenas testes/desenvolvimento |
+
+Na conexao individual da Fase 136, os refresh tokens sao obtidos no callback
+OAuth e armazenados criptografados por profissional. No Google Cloud Console,
+registre exatamente `https://octaclin-backend-producao.onrender.com/agenda/google/callback`
+como redirect URI autorizado do cliente OAuth de producao.
 
 ## Frontend/BFF
 

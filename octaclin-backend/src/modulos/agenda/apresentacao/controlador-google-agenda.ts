@@ -14,16 +14,7 @@ import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-ten
 import { ServicoConexaoGoogleCalendar } from '../aplicacao/servico-conexao-google-calendar';
 import { ServicoGoogleCalendar } from '../aplicacao/servico-google-calendar';
 import { FILA_SINCRONIZACAO_GOOGLE } from '../aplicacao/servico-sincronizacao-google-calendar';
-
-function urlCallback(): string {
-  const base = process.env.OCTACLIN_BACKEND_URL?.trim() ?? 'http://localhost:3000';
-  return `${base.replace(/\/$/, '')}/agenda/google/callback`;
-}
-
-function urlWebhook(): string {
-  const base = process.env.OCTACLIN_BACKEND_URL?.trim() ?? 'http://localhost:3000';
-  return `${base.replace(/\/$/, '')}/agenda/google/notificacoes`;
-}
+import { urlCallbackGoogleAgenda, urlWebhookGoogleAgenda } from './urls-google-agenda';
 
 @Controller('agenda/google')
 export class ControladorGoogleAgenda {
@@ -43,7 +34,7 @@ export class ControladorGoogleAgenda {
   @Permissoes('agenda.consultas.ler')
   async conectar(@UsuarioAtual() usuario: UsuarioAutenticado): Promise<{ url: string }> {
     const profissionalId = await this.resolverProfissionalIdObrigatorio(usuario);
-    const url = this.servicoConexao.gerarUrlAutorizacao(usuario.tenantId, profissionalId, urlCallback());
+    const url = this.servicoConexao.gerarUrlAutorizacao(usuario.tenantId, profissionalId, urlCallbackGoogleAgenda());
     return { url };
   }
 
@@ -51,7 +42,7 @@ export class ControladorGoogleAgenda {
   @Redirect()
   async callback(@Query('code') code: string, @Query('state') state: string) {
     const { tenantId, profissionalId } = await this.servicoConexao.validarEDecodificarState(state);
-    await this.servicoConexao.trocarCodigoPorConexao(tenantId, profissionalId, code, urlCallback());
+    await this.servicoConexao.trocarCodigoPorConexao(tenantId, profissionalId, code, urlCallbackGoogleAgenda());
     await this.criarCanalParaProfissional(tenantId, profissionalId);
 
     const urlWeb = process.env.OCTACLIN_WEB_URL?.trim() ?? '/';
@@ -118,7 +109,7 @@ export class ControladorGoogleAgenda {
 
     const canalId = randomUUID();
     const token = randomBytes(24).toString('hex');
-    const { recursoId, expiraEm } = await this.googleCalendar.criarCanalWatch(credenciais, canalId, urlWebhook(), token);
+    const { recursoId, expiraEm } = await this.googleCalendar.criarCanalWatch(credenciais, canalId, urlWebhookGoogleAgenda(), token);
 
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(ProfissionalGoogleConexaoOrm);
