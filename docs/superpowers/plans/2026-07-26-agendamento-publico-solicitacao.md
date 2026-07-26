@@ -44,29 +44,30 @@
 - Modify: `octaclin-backend/src/infraestrutura/banco-dados/opcoes-typeorm.ts`
 - Modify: `octaclin-backend/src/modulos/agenda/modulo-agenda.ts`
 - Modify: `octaclin-backend/src/modulos/agenda/aplicacao/dtos.ts`
-- Test: `octaclin-backend/src/modulos/agenda/aplicacao/servico-agendamento-publico.spec.ts`
+- Test: `octaclin-backend/src/modulos/agenda/aplicacao/dtos-agendamento-publico.spec.ts`
 
 **Interfaces:**
 - Produces `AgendaLinkPublicoOrm` with `tenantId`, `profissionalId`, `tokenHash`, `ativo`, `duracaoMinutos`, `criadoEm`, `atualizadoEm`.
 - Produces `AgendaSolicitacaoOrm` with `tenantId`, `profissionalId`, `inicioEm`, `fimEm`, `nomeCriptografado`, `contatoCriptografado`, `observacaoCriptografada`, `status`, `expiraEm`, `decididaEm`, `decididaPorUsuarioId`, `pacienteId` e `consultaId`.
 - Produces DTOs `CriarSolicitacaoAgendamentoPublicoDto`, `AprovarSolicitacaoAgendamentoDto` e `RecusarSolicitacaoAgendamentoDto`.
 
-- [ ] **Step 1: Write the failing entity/service test**
+- [ ] **Step 1: Write the failing DTO validation test**
 
 ```ts
-it('deve manter solicitacao pendente sem paciente ou consulta', async () => {
-  const solicitacao = await servico.criarSolicitacaoPublica('token-valido', {
-    nome: 'Ana Silva', email: 'ana@exemplo.com', inicioEm: '2026-08-01T13:00:00.000Z'
-  }, '203.0.113.5');
-  expect(solicitacao).toMatchObject({ status: 'pendente', pacienteId: undefined, consultaId: undefined });
+it('rejeita dados publicos sem contato valido ou horario ISO', async () => {
+  const dados = Object.assign(new CriarSolicitacaoAgendamentoPublicoDto(), {
+    nome: '', email: 'invalido', inicioEm: 'amanha'
+  });
+  const erros = await validate(dados);
+  expect(erros.map((erro) => erro.property)).toEqual(expect.arrayContaining(['nome', 'email', 'inicioEm']));
 });
 ```
 
 - [ ] **Step 2: Run the targeted test to verify it fails**
 
-Run: `pnpm --dir octaclin-backend exec jest servico-agendamento-publico.spec.ts --runInBand`
+Run: `pnpm --dir octaclin-backend exec jest dtos-agendamento-publico.spec.ts --runInBand`
 
-Expected: FAIL because the service and entities do not exist.
+Expected: FAIL because the DTO and its validation contract do not exist.
 
 - [ ] **Step 3: Implement entities, DTOs, migration and module registration**
 
@@ -87,7 +88,7 @@ Create a migration with foreign keys to `tenants`, `profissionais`, `pacientes`,
 
 - [ ] **Step 4: Run targeted test and migration compilation**
 
-Run: `pnpm --dir octaclin-backend exec jest servico-agendamento-publico.spec.ts --runInBand; pnpm --dir octaclin-backend typecheck`
+Run: `pnpm --dir octaclin-backend exec jest dtos-agendamento-publico.spec.ts --runInBand; pnpm --dir octaclin-backend typecheck`
 
 Expected: PASS; entities are listed in `opcoes-typeorm.ts`, migration list and `TypeOrmModule.forFeature`.
 
@@ -114,6 +115,13 @@ git commit -m "Adiciona modelo de solicitacoes de agendamento publico"
 - [ ] **Step 1: Write failing public-flow tests**
 
 ```ts
+it('mantem solicitacao pendente sem paciente ou consulta', async () => {
+  const solicitacao = await servico.criarSolicitacaoPublica('token-valido', {
+    nome: 'Ana Silva', email: 'ana@exemplo.com', inicioEm: '2026-08-01T13:00:00.000Z'
+  }, '203.0.113.5');
+  expect(solicitacao).toMatchObject({ status: 'pendente', pacienteId: undefined, consultaId: undefined });
+});
+
 it('nao retorna consultas ou contatos no resumo publico', async () => {
   const resumo = await servico.obterAgendaPublica('token-valido', '203.0.113.5');
   expect(resumo).toEqual(expect.objectContaining({ profissionalNome: 'Dra. Carla', horariosLivres: expect.any(Array) }));
