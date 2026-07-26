@@ -341,18 +341,22 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     sequencial de go-live (nao bloqueia nem depende das Fases 132-135).
   - Design aprovado via skill `brainstorming` em 2026-07-24; implementado via
     `superpowers:subagent-driven-development` em 2026-07-25.
-  - Commit final: `7762537` (fix de seguranca) na branch `main`; ver
-    `fase-136-sincronizacao-google-agenda-profissional.md` para o historico
-    completo de commits e o achado CRITICAL/IMPORTANT corrigido na revisao
-    de seguranca multi-tenant antes do fechamento.
-  - Data: 2026-07-25.
+  - Commit final: `5e1c33a` (fecha a segunda onda de correcao) na branch
+    `main`; ver `fase-136-sincronizacao-google-agenda-profissional.md` para o
+    historico completo de commits e os achados corrigidos.
+  - Data: 2026-07-25 (entrega original), 2026-07-26 (segunda onda de
+    correcao apos revisao final de todo o branch: 2 Critical + 7 Important,
+    mais 3 Important de segunda ordem encontrados pela propria revisao
+    final - todos corrigidos, commits `4ec4825`..`fc2c3b7`).
   - Validacoes: `pnpm --dir octaclin-backend typecheck`, `pnpm --dir
-    octaclin-backend test --runInBand` (46 suites/224 testes),
+    octaclin-backend test --runInBand` (46 suites/234 testes),
     `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web build`,
     `npm run security:secrets`, `validar-preflight.ps1 -DocsOnly`.
   - Pendente (nao bloqueia): registrar a URL de callback OAuth no Google
-    Cloud Console (fora do repositorio); ver pendencias menores no arquivo
-    da fase.
+    Cloud Console (fora do repositorio) e validar manualmente o fluxo de
+    conexao OAuth ponta-a-ponta contra o Google real (o fix do 401 nao foi
+    exercitado contra um round-trip OAuth real ainda); ver pendencias
+    menores no arquivo da fase.
 
 ## Backlog pos-producao
 
