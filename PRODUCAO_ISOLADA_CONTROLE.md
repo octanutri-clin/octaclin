@@ -83,6 +83,14 @@ o que foi feito, quem confirmou). Nao inclua valores de secrets.
   o login do SuperAdmin foi concluido pela web com redirecionamento para
   `/dashboard`. Google Calendar ficou `degradado` enquanto o callback OAuth
   de producao e finalizado em trabalho separado.
+- 2026-07-26: revisao de aceite apos a Fase 142. O Render confirmou o web de
+  producao em `live` no commit `c110efa`; `/login` respondeu HTTP 200. O
+  backend respondeu `ok` em `/health`; em `/health/detalhado`, backend, banco,
+  Redis, email e WhatsApp estavam `ok`. O status agregado permaneceu
+  `degradado` somente pelo Google Calendar sem callback OAuth de producao,
+  pendencia ja tratada em trabalho separado. O aceite final nao foi dado:
+  faltam rotacao de credenciais expostas, auditoria de variaveis sem staging e
+  confirmacao de ausencia de dados de staging no banco.
 
 ## Handoff para o Codex
 
