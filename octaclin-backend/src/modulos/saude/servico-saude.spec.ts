@@ -24,7 +24,7 @@ describe('ServicoSaude', () => {
       isInitialized: true,
       query: jest.fn(async () => [{ ok: 1 }])
     };
-    const servico = new ServicoSaude(fonteDados as never);
+    const servico = new ServicoSaude(fonteDados as never, { ping: jest.fn(async () => 'PONG') } as never);
 
     const resposta = await servico.verificarDetalhado();
 
@@ -57,6 +57,38 @@ describe('ServicoSaude', () => {
         mensagem: 'database unavailable'
       })
     );
+  });
+
+  it('deve validar Redis por PING antes de marcar o check como saudavel', async () => {
+    const redis = { ping: jest.fn(async () => 'PONG') };
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }])
+      } as never,
+      redis as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(redis.ping).toHaveBeenCalledTimes(1);
+    expect(resposta.checks.redis.status).toBe('ok');
+  });
+
+  it('deve marcar Redis configurado como falha quando PING rejeitar', async () => {
+    const redis = { ping: jest.fn(async () => Promise.reject(new Error('redis connection refused'))) };
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }])
+      } as never,
+      redis as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.status).toBe('falha');
+    expect(resposta.checks.redis).toEqual({ status: 'falha', mensagem: 'Redis indisponivel.' });
   });
 
   it('deve sinalizar integracoes opcionais ausentes como degradadas', async () => {

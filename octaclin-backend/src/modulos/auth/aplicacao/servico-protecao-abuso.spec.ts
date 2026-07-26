@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { ClienteRedisProtecaoAbuso, ServicoProtecaoAbuso } from './servico-protecao-abuso';
+import { ClienteRedisProtecaoAbuso, PoliticaProtecaoAbuso, ServicoProtecaoAbuso } from './servico-protecao-abuso';
 
 class ClienteRedisFalso implements ClienteRedisProtecaoAbuso {
   private readonly valores = new Map<string, string>();
@@ -15,6 +15,32 @@ class ClienteRedisFalso implements ClienteRedisProtecaoAbuso {
 
   async del(chave: string): Promise<unknown> {
     return this.valores.delete(chave) ? 1 : 0;
+  }
+
+  async eval(
+    _script: string,
+    quantidadeChaves: number,
+    chave: string,
+    agoraBruto: string,
+    janelaBruta: string,
+    maxTentativasBruto: string,
+    bloqueioBruto: string
+  ): Promise<[number, number]> {
+    expect(quantidadeChaves).toBe(1);
+
+    const agora = Number(agoraBruto);
+    const janelaMs = Number(janelaBruta);
+    const maxTentativas = Number(maxTentativasBruto);
+    const bloqueioMs = Number(bloqueioBruto);
+    const existente = this.valores.get(chave) ?? null;
+    const registro = existente ? (JSON.parse(existente) as { quantidade: number; expiraEm: number; bloqueadoAte?: number }) : null;
+    const atual = !registro || registro.expiraEm <= agora ? { quantidade: 0, expiraEm: agora + janelaMs } : registro;
+
+    atual.quantidade += 1;
+    if (atual.quantidade >= maxTentativas) atual.bloqueadoAte = agora + bloqueioMs;
+
+    this.valores.set(chave, JSON.stringify(atual));
+    return [atual.quantidade, atual.bloqueadoAte ?? 0];
   }
 }
 
@@ -42,6 +68,26 @@ describe('ServicoProtecaoAbuso', () => {
     } catch (erro) {
       expect((erro as HttpException).getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
     }
+  });
+
+  it('deve preservar todas as falhas concorrentes para bloquear no limite', async () => {
+    const servico = new ServicoProtecaoAbuso(new ClienteRedisFalso());
+    const politicaConcorrente: PoliticaProtecaoAbuso = {
+      maxTentativas: 5,
+      janelaMs: 60_000,
+      bloqueioMs: 120_000,
+      mensagemBloqueio: 'Bloqueado.'
+    };
+
+    await Promise.all(
+      Array.from({ length: politicaConcorrente.maxTentativas }, () =>
+        servico.registrarFalha('login:tenant:concorrente@example.com', politicaConcorrente, 1_000)
+      )
+    );
+
+    await expect(
+      servico.verificarDisponibilidade('login:tenant:concorrente@example.com', politicaConcorrente, 1_001)
+    ).rejects.toThrow(HttpException);
   });
 
   it('deve limpar tentativas quando a autenticacao for bem sucedida', async () => {

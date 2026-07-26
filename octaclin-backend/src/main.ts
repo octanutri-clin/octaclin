@@ -22,6 +22,31 @@ function obterPortaHttp(): number {
   return Number(process.env.PORT ?? process.env.PORTA_HTTP ?? 3000);
 }
 
+function validarCorsProducao() {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  const origens = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((origem) => origem.trim())
+    .filter(Boolean);
+
+  if (!origens.length || origens.includes('*')) {
+    throw new Error('CORS_ORIGINS deve definir origens explicitas em producao.');
+  }
+
+  if (!process.env.JWT_SEGREDO?.trim()) {
+    throw new Error('JWT_SEGREDO e obrigatorio em producao.');
+  }
+
+  if (!process.env.JWT_REFRESH_SEGREDO?.trim()) {
+    throw new Error('JWT_REFRESH_SEGREDO e obrigatorio em producao.');
+  }
+
+  if (!process.env.CRIPTOGRAFIA_CHAVE_AES_256?.trim()) {
+    throw new Error('CRIPTOGRAFIA_CHAVE_AES_256 e obrigatoria em producao.');
+  }
+}
+
 async function iniciarAplicacao() {
   const aplicacao = await NestFactory.create(ModuloAplicacao);
   aplicacao.use(middlewareCorrelacao);
@@ -41,4 +66,5 @@ async function iniciarAplicacao() {
   await aplicacao.listen(obterPortaHttp());
 }
 
+validarCorsProducao();
 void iniciarAplicacao();

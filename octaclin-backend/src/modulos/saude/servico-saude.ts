@@ -1,6 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { redisConfigurado } from '../comunicacoes/aplicacao/configuracao-redis';
+
+export const REDIS_SAUDE = 'REDIS_SAUDE';
+
+export interface ClienteRedisSaude {
+  ping(): Promise<string>;
+}
 
 export type StatusHealth = 'ok' | 'degradado' | 'falha';
 
@@ -35,13 +41,16 @@ function mensagemErro(erro: unknown): string {
 
 @Injectable()
 export class ServicoSaude {
-  constructor(private readonly fonteDados: DataSource) {}
+  constructor(
+    private readonly fonteDados: DataSource,
+    @Optional() @Inject(REDIS_SAUDE) private readonly redis?: ClienteRedisSaude
+  ) {}
 
   async verificarDetalhado(): Promise<HealthDetalhado> {
     const checks = {
       backend: this.verificarBackend(),
       banco: await this.verificarBanco(),
-      redis: this.verificarRedis(),
+      redis: await this.verificarRedis(),
       email: this.verificarEmail(),
       whatsapp: this.verificarWhatsapp(),
       googleCalendar: this.verificarGoogleCalendar()
@@ -81,7 +90,7 @@ export class ServicoSaude {
     }
   }
 
-  private verificarRedis(): CheckHealth {
+  private async verificarRedis(): Promise<CheckHealth> {
     if (!redisConfigurado()) {
       return {
         status: 'degradado',
@@ -89,13 +98,36 @@ export class ServicoSaude {
       };
     }
 
-    return {
-      status: 'ok',
-      detalhes: {
-        configurado: true,
-        tls: process.env.REDIS_URL?.startsWith('rediss://') || process.env.REDIS_TLS === 'true'
-      }
-    };
+    if (!this.redis) return { status: 'falha', mensagem: 'Redis indisponivel.' };
+
+    try {
+      const resposta = await this.executarComTimeout(this.redis.ping(), 1_500);
+      if (resposta !== 'PONG') return { status: 'falha', mensagem: 'Redis indisponivel.' };
+
+      return {
+        status: 'ok',
+        detalhes: {
+          configurado: true,
+          tls: process.env.REDIS_URL?.startsWith('rediss://') || process.env.REDIS_TLS === 'true'
+        }
+      };
+    } catch {
+      return { status: 'falha', mensagem: 'Redis indisponivel.' };
+    }
+  }
+
+  private async executarComTimeout<T>(operacao: Promise<T>, timeoutMs: number): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        operacao,
+        new Promise<T>((_, rejeitar) => {
+          timer = setTimeout(() => rejeitar(new Error('Tempo esgotado.')), timeoutMs);
+        })
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   private verificarEmail(): CheckHealth {

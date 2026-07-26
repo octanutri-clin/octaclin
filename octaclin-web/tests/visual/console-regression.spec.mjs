@@ -46,7 +46,7 @@ async function login(page) {
   await campos.nth(3).fill(credenciais.senha);
 
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/operacoes$/);
 }
 
 async function assertSemOverflowHorizontal(page) {

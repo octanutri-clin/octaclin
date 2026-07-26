@@ -1,14 +1,14 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-07-23.
+Atualizado em 2026-07-26.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 130 - Piloto interno controlado (rodada 1 executada e aprovada em 2026-07-23).
-- Fase em andamento: Fase 131 - Producao isolada de staging (estrutura entregue em 2026-07-23; banco Neon e Redis Upstash de producao validados; servicos Render de producao criados em 2026-07-24 mas com falha de deploy nao diagnosticada, trabalho pausado e passado para o Codex - ver `PRODUCAO_ISOLADA_CONTROLE.md`, secao "Handoff para o Codex").
+- Ultima fase concluida: Fase 136 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional (revisao final concluida e publicada em 2026-07-26).
+- Fase em andamento: Fase 131 - Producao isolada de staging. Banco Neon, Redis Upstash e servicos Render de producao foram provisionados; falta registrar a validacao final de runtime, secrets exclusivos e aceite operacional conforme `PRODUCAO_ISOLADA_CONTROLE.md`.
 - Estado: staging funcional avancado, ainda nao liberado para clientes reais.
 
 ## O que esta funcional
@@ -51,8 +51,9 @@ Atualizado em 2026-07-23.
 - Massa ficticia de staging aplicada e validada no Neon staging (tenant `octaclin-staging`).
 - Piloto interno controlado: runbook, controle de acompanhamento, validador documental e rodada 1 aprovada em 2026-07-23.
 - Escopo de dados por profissional responsavel (`pacientes_responsaveis`) aplicado e testado em pacientes, agenda, gamificacao, profissionais, questionarios, materiais, comunicacoes e automacoes.
-- Producao isolada de staging: runbook `RUNBOOK_PRODUCAO_ISOLADA.md`, controle `PRODUCAO_ISOLADA_CONTROLE.md` e validador documental criados em 2026-07-23; provisionamento real de Neon/Upstash/Render de producao ainda pendente.
+- Producao isolada de staging: banco Neon, Redis Upstash e servicos Render de producao provisionados; a validacao final de runtime, secrets exclusivos e aceite operacional seguem pendentes na Fase 131.
 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional (Fase 136, 2026-07-25): conexao OAuth individual por profissional, notificacao push do Google, eventos externos viram bloqueio de horario, mudancas feitas direto no Google aplicam automaticamente na consulta correspondente.
+- CI do GitHub verde em `701ed6b` (2026-07-26): backend, web, mobile, IA e demo local smoke, incluindo UI, BFF e Playwright.
 
 ## O que ainda falta antes de producao real
 
