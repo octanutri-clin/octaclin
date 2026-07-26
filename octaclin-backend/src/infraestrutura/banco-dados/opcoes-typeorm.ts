@@ -12,11 +12,14 @@ import { CriarSincronizacaoGoogleAgenda1720000000800 } from './migracoes/1720000
 import { AdicionaTokenCanalWatchGoogleAgenda1720000000900 } from './migracoes/1720000000900-AdicionaTokenCanalWatchGoogleAgenda';
 import { AdicionaContadorFalhasSincronizacaoGoogleAgenda1720000000901 } from './migracoes/1720000000901-AdicionaContadorFalhasSincronizacaoGoogleAgenda';
 import { ForcaRenovacaoCanaisWatchSemToken1720000000902 } from './migracoes/1720000000902-ForcaRenovacaoCanaisWatchSemToken';
+import { CriarAgendamentoPublico1720000001000 } from './migracoes/1720000001000-CriarAgendamentoPublico';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
 import { AgendaConsultaOrm } from '../../modulos/agenda/infraestrutura/agenda-consulta.orm';
 import { AgendaBloqueioExternoOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-externo.orm';
+import { AgendaLinkPublicoOrm } from '../../modulos/agenda/infraestrutura/agenda-link-publico.orm';
+import { AgendaSolicitacaoOrm } from '../../modulos/agenda/infraestrutura/agenda-solicitacao.orm';
 import { GoogleCanalWatchOrm } from '../../modulos/agenda/infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from '../../modulos/agenda/infraestrutura/profissional-google-conexao.orm';
 import { RefreshTokenOrm } from '../../modulos/auth/infraestrutura/refresh-token.orm';
@@ -117,6 +120,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       ProfissionalGoogleConexaoOrm,
       GoogleCanalWatchOrm,
       AgendaBloqueioExternoOrm,
+      AgendaLinkPublicoOrm,
+      AgendaSolicitacaoOrm,
       RegraAutomacaoOrm,
       ExecucaoRegraOrm,
       AnaliseSentimentoOrm,
@@ -150,7 +155,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CriarSincronizacaoGoogleAgenda1720000000800,
       AdicionaTokenCanalWatchGoogleAgenda1720000000900,
       AdicionaContadorFalhasSincronizacaoGoogleAgenda1720000000901,
-      ForcaRenovacaoCanaisWatchSemToken1720000000902
+      ForcaRenovacaoCanaisWatchSemToken1720000000902,
+      CriarAgendamentoPublico1720000001000
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

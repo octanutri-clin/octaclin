@@ -22,6 +22,8 @@ import { ProcessadorSincronizacaoGoogleCalendar } from './aplicacao/processador-
 import { ProcessadorRenovacaoGoogleCalendar } from './aplicacao/processador-renovacao-google-calendar';
 import { AgendaConsultaOrm } from './infraestrutura/agenda-consulta.orm';
 import { AgendaBloqueioExternoOrm } from './infraestrutura/agenda-bloqueio-externo.orm';
+import { AgendaLinkPublicoOrm } from './infraestrutura/agenda-link-publico.orm';
+import { AgendaSolicitacaoOrm } from './infraestrutura/agenda-solicitacao.orm';
 import { GoogleCanalWatchOrm } from './infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from './infraestrutura/profissional-google-conexao.orm';
 
@@ -34,7 +36,9 @@ import { ProfissionalGoogleConexaoOrm } from './infraestrutura/profissional-goog
       UserActionLogOrm,
       ProfissionalGoogleConexaoOrm,
       GoogleCanalWatchOrm,
-      AgendaBloqueioExternoOrm
+      AgendaBloqueioExternoOrm,
+      AgendaLinkPublicoOrm,
+      AgendaSolicitacaoOrm
     ]),
     BullModule.forRoot({ connection: criarConexaoRedis() }),
     BullModule.registerQueue({ name: FILA_SINCRONIZACAO_GOOGLE }),
