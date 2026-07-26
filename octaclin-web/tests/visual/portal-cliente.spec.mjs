@@ -449,4 +449,21 @@ test.describe('portal do cliente', () => {
     await expect(page.locator('#gestao-usuarios').getByRole('button', { name: 'Assinatura bloqueada' })).toBeDisabled();
     await assertSemOverflowHorizontal(page);
   });
+
+  test('exibe dados clinicos ao convidar um profissional', async ({ page }) => {
+    await prepararSessaoCliente(page);
+    await page.goto('/cliente');
+
+    const gestaoUsuarios = page.locator('#gestao-usuarios');
+    await gestaoUsuarios.getByLabel('Papel').selectOption('Professional');
+
+    await expect(gestaoUsuarios.getByLabel('Nome do profissional')).toBeVisible();
+    await expect(gestaoUsuarios.getByLabel('Nome do profissional')).toHaveAttribute('required', '');
+    await expect(gestaoUsuarios.getByLabel('Registro profissional')).toBeVisible();
+    await expect(gestaoUsuarios.getByLabel('Especialidade')).toBeVisible();
+    await expect(
+      gestaoUsuarios.getByText('O convite tambem cria o perfil clinico e libera a agenda pessoal apos o primeiro acesso.')
+    ).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
 });

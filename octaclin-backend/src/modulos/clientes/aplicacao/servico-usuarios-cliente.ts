@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'crypto';
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -12,6 +12,7 @@ import {
 import { TokenRedefinicaoSenhaOrm } from '../../auth/infraestrutura/token-redefinicao-senha.orm';
 import { AdaptadorEmailSmtp } from '../../comunicacoes/infraestrutura/adaptadores/adaptador-email-smtp';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import {
   ConviteUsuarioClienteRespostaDto,
   CriarUsuarioClienteDto,
@@ -59,6 +60,10 @@ export class ServicoUsuariosCliente {
 
   async criar(tenantId: string, usuarioCriadorId: string, dados: CriarUsuarioClienteDto): Promise<UsuarioClienteRespostaDto> {
     const emailNormalizado = dados.email.trim().toLowerCase();
+    const nomeProfissional = dados.nomeProfissional?.trim();
+    if (dados.role === 'Professional' && !nomeProfissional) {
+      throw new BadRequestException('Informe o nome do profissional para enviar este convite.');
+    }
     await this.protecaoAbuso.consumirTentativa(
       montarChaveProtecaoAbuso('convite-admin', tenantId, emailNormalizado),
       POLITICA_CONVITES_ADMIN
@@ -84,6 +89,18 @@ export class ServicoUsuariosCliente {
           ativo: true
         })
       );
+
+      if (dados.role === 'Professional') {
+        await gerenciador.getRepository(ProfissionalOrm).save(
+          gerenciador.getRepository(ProfissionalOrm).create({
+            tenantId,
+            usuarioId: usuario.id,
+            nomeCriptografado: this.criptografia.criptografar(nomeProfissional as string),
+            registroProfissional: dados.registroProfissional?.trim() || undefined,
+            especialidade: dados.especialidade?.trim() || undefined
+          })
+        );
+      }
 
       const convite = await this.criarTokenConvite(gerenciador, {
         tenantId,

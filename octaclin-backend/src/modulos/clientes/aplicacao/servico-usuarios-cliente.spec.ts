@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { TokenRedefinicaoSenhaOrm } from '../../auth/infraestrutura/token-redefinicao-senha.orm';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { ServicoUsuariosCliente } from './servico-usuarios-cliente';
 
 function criarRepositorioFake(usuarios: Record<string, any>[]) {
@@ -49,16 +50,19 @@ function criarServico(
   },
   protecaoAbuso = {
     consumirTentativa: jest.fn()
-  }
+  },
+  profissionais: Record<string, any>[] = []
 ) {
   const repositorioUsuarios = criarRepositorioFake(usuarios);
   const repositorioTokens = criarRepositorioFake(tokens);
+  const repositorioProfissionais = criarRepositorioFake(profissionais);
   const executorTenant = {
     executar: jest.fn((_tenantId: string, callback: any) =>
       callback({
         getRepository: (entidade: any) => {
           if (entidade === UsuarioOrm) return repositorioUsuarios;
           if (entidade === TokenRedefinicaoSenhaOrm) return repositorioTokens;
+          if (entidade === ProfissionalOrm) return repositorioProfissionais;
           throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
         }
       })
@@ -83,6 +87,7 @@ function criarServico(
     ),
     repositorioUsuarios,
     repositorioTokens,
+    repositorioProfissionais,
     executorTenant,
     criptografia,
     senhas,
@@ -241,6 +246,29 @@ describe('ServicoUsuariosCliente', () => {
     );
     expect(JSON.stringify(resposta)).not.toContain('convite.');
     delete process.env.EXPOR_LINK_RECUPERACAO_SENHA;
+  });
+
+  it('deve provisionar perfil profissional vinculado ao usuario convidado', async () => {
+    const { servico, repositorioProfissionais, criptografia } = criarServico([]);
+
+    await servico.criar('tenant-1', 'cliente-1', {
+      email: 'profissional@octaclin.local',
+      role: 'Professional',
+      nomeProfissional: 'Dra. Carla',
+      registroProfissional: 'CRN-1234',
+      especialidade: 'Nutricao clinica'
+    });
+
+    expect(criptografia.criptografar).toHaveBeenCalledWith('Dra. Carla');
+    expect(repositorioProfissionais.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-1',
+        nomeCriptografado: Buffer.from('email:Dra. Carla'),
+        registroProfissional: 'CRN-1234',
+        especialidade: 'Nutricao clinica'
+      })
+    );
   });
 
   it('deve bloquear convite administrativo quando limite de usuarios for atingido', async () => {

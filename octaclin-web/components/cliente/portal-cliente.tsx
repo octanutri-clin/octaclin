@@ -125,7 +125,10 @@ function descreverHistoricoConvite(item: {
 
 const formularioUsuarioInicial = {
   email: '',
-  role: 'Collaborator' as PapelUsuarioClienteCriavelApi
+  role: 'Collaborator' as PapelUsuarioClienteCriavelApi,
+  nomeProfissional: '',
+  registroProfissional: '',
+  especialidade: ''
 };
 
 const formularioConfiguracoesInicial: AtualizarConfiguracoesClienteEntrada = {
@@ -361,7 +364,14 @@ export function PortalCliente() {
     try {
       await criarUsuarioCliente({
         email: formularioUsuario.email.trim(),
-        role: formularioUsuario.role
+        role: formularioUsuario.role,
+        ...(formularioUsuario.role === 'Professional'
+          ? {
+              nomeProfissional: formularioUsuario.nomeProfissional.trim(),
+              registroProfissional: formularioUsuario.registroProfissional.trim() || undefined,
+              especialidade: formularioUsuario.especialidade.trim() || undefined
+            }
+          : {})
       });
       setFormularioUsuario(formularioUsuarioInicial);
       await carregarUsuarios();
@@ -833,7 +843,7 @@ export function PortalCliente() {
             ) : null}
 
             {podeConvidarUsuarios ? (
-            <form onSubmit={convidarUsuario} className="grid gap-3 rounded-md border border-linha bg-superficie p-3 lg:grid-cols-[1fr_180px_auto]">
+            <form onSubmit={convidarUsuario} className="grid gap-3 rounded-md border border-linha bg-superficie p-3 lg:grid-cols-[minmax(0,1fr)_180px_auto]">
               <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                 Email
                 <input
@@ -857,13 +867,46 @@ export function PortalCliente() {
                   <option value="Professional">Professional</option>
                 </select>
               </label>
+              {formularioUsuario.role === 'Professional' ? (
+                <>
+                  <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                    Nome do profissional
+                    <input
+                      className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                      value={formularioUsuario.nomeProfissional}
+                      onChange={(evento) => setFormularioUsuario((atual) => ({ ...atual, nomeProfissional: evento.target.value }))}
+                      required
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                    Registro profissional
+                    <input
+                      className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                      value={formularioUsuario.registroProfissional}
+                      onChange={(evento) => setFormularioUsuario((atual) => ({ ...atual, registroProfissional: evento.target.value }))}
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                    Especialidade
+                    <input
+                      className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                      value={formularioUsuario.especialidade}
+                      onChange={(evento) => setFormularioUsuario((atual) => ({ ...atual, especialidade: evento.target.value }))}
+                    />
+                  </label>
+                </>
+              ) : null}
               <div className="flex items-end">
                 <Botao type="submit" variante="primario" disabled={salvandoUsuario || bloqueioAssinatura} className="w-full">
                   <UserPlus size={16} />
                   {salvandoUsuario ? 'Convidando' : bloqueioAssinatura ? 'Assinatura bloqueada' : 'Convidar usuario'}
                 </Botao>
               </div>
-              <p className="text-sm text-texto-suave lg:col-span-3">Link de primeiro acesso enviado por email.</p>
+              <p className="text-sm text-texto-suave lg:col-span-3">
+                {formularioUsuario.role === 'Professional'
+                  ? 'O convite tambem cria o perfil clinico e libera a agenda pessoal apos o primeiro acesso.'
+                  : 'Link de primeiro acesso enviado por email.'}
+              </p>
             </form>
             ) : null}
 

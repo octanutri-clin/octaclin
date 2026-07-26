@@ -1,4 +1,4 @@
-import { IsBoolean, IsEmail, IsHexColor, IsIn, IsNotEmpty, IsObject, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { IsBoolean, IsEmail, IsHexColor, IsIn, IsNotEmpty, IsObject, IsOptional, IsString, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { PapelUsuario } from '../../auth/dominio/usuario-autenticado';
 import type { PlanoSaasId } from '../dominio/planos-saas';
@@ -12,6 +12,22 @@ export class CriarUsuarioClienteDto {
 
   @IsIn(['Professional', 'Collaborator'])
   role: PapelUsuarioClienteCriavel;
+
+  @ValidateIf((dados: CriarUsuarioClienteDto) => dados.role === 'Professional')
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(180)
+  nomeProfissional?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  registroProfissional?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  especialidade?: string;
 }
 
 export class SolicitarAjusteAssinaturaClienteDto {

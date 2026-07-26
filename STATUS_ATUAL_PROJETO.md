@@ -7,11 +7,12 @@ Atualizado em 2026-07-26.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 142 - Migracao controlada do Next.js e seguranca web (entregue em 2026-07-26).
+- Ultima fase concluida: Fase 143 - Onboarding de profissionais por convite (entregue em 2026-07-26).
 - Fase 131 aceita: producao isolada de staging confirmada em 2026-07-26, com Neon, Upstash e Render independentes, credenciais rotacionadas e ambiente/banco auditados sem staging. Para habilitar Google Calendar, falta cadastrar as credenciais OAuth e a URI de callback da Fase 136 no ambiente/projeto Google de producao.
 - Melhoria continua: Fases 138, 141 e 142 concluidas. NestJS 11.1.28, TypeORM 1.1.0 e Next.js 15.5.22 foram validados; as auditorias de producao de backend e web estao zeradas. A proxima migracao de framework sera Next.js 16/React 19, em fase dedicada por exigir refatoracao assincrona do BFF.
 - Fase 139 concluida: contratos de agenda e convite administrativo passaram a ser tipados sem `any` em codigo de producao; o BFF preserva uma fronteira central para sessao, renovacao e falhas de backend.
 - Fase 140 concluida: matriz rastreavel de riscos, testes e gates para tenant, autorizacao, BFF, integracoes, portal e operacoes.
+- Fase 143 concluida: convites `Professional` agora criam o perfil clinico vinculado ao login, deixando agenda, escopo de dados e Google Calendar prontos apos o primeiro acesso.
 - Fase 142 concluida: APIs dinamicas do App Router foram migradas para `Promise`/`await`, com gate de regressao, build de producao validado e auditoria web sem vulnerabilidades.
 - Proxima fase critica: Fase 132 - Dominio, SSL e identidade de envio. A configuracao tecnica de DNS permanece pendente ate a definicao do dominio oficial.
 - Estado: producao tecnica acessivel, mas ainda nao liberada para clientes reais.

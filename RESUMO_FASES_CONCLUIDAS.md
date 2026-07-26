@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos as Fases 138, 139, 140 e 141.
+Atualizado apos a Fase 143 de onboarding de profissionais.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -187,6 +187,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 139 - Fortalecimento de contratos de dominio e fronteiras BFF: removidos os `any` de codigo backend de producao com contrato explicito para notificacoes de agenda e `EntityManager` nos convites administrativos. A revisao confirmou que o BFF preserva uma fronteira unica para sessao, renovacao, falha de rede e resposta HTML indevida; backend e web passaram em suas suites e builds completos.
 - Fase 140 - Cobertura de confiabilidade e regressao: criada `MATRIZ_CONFIABILIDADE_TESTES.md` e o validador `pnpm test:confiabilidade`, tornando rastreaveis os riscos de tenant, autorizacao, BFF, integracoes, portal clinico e operacoes, seus testes e gates de execucao.
 - Fase 142 - Migracao controlada do Next.js: frontend atualizado para Next.js 15.5.22 mantendo React 18.3.1; o codemod oficial converteu APIs dinamicas para `Promise`/`await`, `typedRoutes` foi estabilizado e o output tracing foi delimitado ao frontend. Overrides de PostCSS 8.5.23 e Sharp 0.35.3 eliminaram os achados de auditoria de producao web. O gate `pnpm --dir octaclin-web test:next15` protege parametros dinamicos assincronos. A migracao para Next 16/React 19 permanece futura, pois exige remover o shim temporario de cookies no BFF.
+- Fase 143 - Onboarding de profissionais por convite: o portal do cliente solicita nome, registro profissional opcional e especialidade opcional ao convidar um `Professional`; o backend cria em uma unica transacao o usuario, o perfil profissional e o convite. O primeiro login ja recebe escopo de profissional, agenda propria e base para conectar Google Calendar.
 
 ## Estado atual de uso
 

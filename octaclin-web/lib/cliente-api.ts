@@ -179,6 +179,9 @@ export interface RespostaHistoricoConvitesUsuarioClienteApi {
 export interface CriarUsuarioClienteEntrada {
   email: string;
   role: PapelUsuarioClienteCriavelApi;
+  nomeProfissional?: string;
+  registroProfissional?: string;
+  especialidade?: string;
 }
 
 async function extrairMensagemErro(resposta: Response): Promise<string> {

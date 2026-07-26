@@ -375,6 +375,19 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 
 ### Bloco J - Melhoria continua e qualidade de engenharia
 
+- [x] Fase 143 - Onboarding de profissionais por convite.
+  - O convite `Professional` cria, na mesma transacao, o usuario, o perfil
+    clinico e o token de primeiro acesso.
+  - Nome obrigatorio; registro profissional e especialidade opcionais.
+  - Saida entregue: profissional convidado entra com vinculo pronto para
+    agenda, escopo de dados e Google Calendar; colaboradores permanecem no
+    fluxo administrativo existente.
+  - Validacoes: teste unitario do convite, typecheck backend/web, suite
+    completa backend, build web, preflight documental e scanner de secrets.
+  - Ressalva: convites Professional anteriores nao sao retroativamente
+    vinculados por ausencia de nome clinico confiavel; ver
+    `fase-143-onboarding-profissionais.md`.
+
 - [x] Fase 137 - Gate de qualidade do frontend.
   - ESLint nao interativo com regras estritas do Next.js, correcoes de tipos e
     inclusao do lint no CI web.

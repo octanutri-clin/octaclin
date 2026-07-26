@@ -13,6 +13,7 @@ import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { TenantOrm } from '../tenancy/infraestrutura/tenant.orm';
 import { TenantConfiguracaoOrm } from '../tenancy/infraestrutura/tenant-configuracao.orm';
 import { UsuarioOrm } from '../usuarios/infraestrutura/usuario.orm';
+import { ProfissionalOrm } from '../profissionais/infraestrutura/profissional.orm';
 import { ServicoPortalCliente } from './aplicacao/servico-portal-cliente';
 import { ServicoUsuariosCliente } from './aplicacao/servico-usuarios-cliente';
 import { ControladorPortalCliente } from './apresentacao/controlador-portal-cliente';
@@ -23,6 +24,7 @@ import { ControladorPortalCliente } from './apresentacao/controlador-portal-clie
       TenantOrm,
       TenantConfiguracaoOrm,
       UsuarioOrm,
+      ProfissionalOrm,
       TokenRedefinicaoSenhaOrm,
       UserActionLogOrm,
       PacienteOrm,
