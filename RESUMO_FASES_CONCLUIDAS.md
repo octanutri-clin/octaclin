@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos as Fases 138, 139 e 141.
+Atualizado apos as Fases 138, 139, 140 e 141.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -184,6 +184,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 138 - Atualizacao controlada de dependencias vulneraveis: backend atualizado para NestJS 11.1.28 e TypeORM 0.3.31; a compatibilidade mais estrita de JWT passou a validar duracoes de ambiente e recebeu testes. A auditoria de producao caiu de 6 achados altos, 9 moderados e 1 baixo para um unico achado transitorio.
 - Fase 141 - Migracao major do TypeORM: TypeORM 1.1.0 substituiu a linha 0.3, removendo a cadeia transitoria vulneravel; o codemod oficial nao encontrou APIs a transformar e `dotenv/config` foi tornado explicito para o datasource do CLI. Build, typecheck, CLI de migrations e 47 suites/244 testes passaram; o audit de producao backend ficou sem vulnerabilidades.
 - Fase 139 - Fortalecimento de contratos de dominio e fronteiras BFF: removidos os `any` de codigo backend de producao com contrato explicito para notificacoes de agenda e `EntityManager` nos convites administrativos. A revisao confirmou que o BFF preserva uma fronteira unica para sessao, renovacao, falha de rede e resposta HTML indevida; backend e web passaram em suas suites e builds completos.
+- Fase 140 - Cobertura de confiabilidade e regressao: criada `MATRIZ_CONFIABILIDADE_TESTES.md` e o validador `pnpm test:confiabilidade`, tornando rastreaveis os riscos de tenant, autorizacao, BFF, integracoes, portal clinico e operacoes, seus testes e gates de execucao.
 
 ## Estado atual de uso
 

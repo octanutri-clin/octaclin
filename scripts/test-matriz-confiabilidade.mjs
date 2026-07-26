@@ -1,0 +1,31 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const raiz = resolve(import.meta.dirname, '..');
+const matriz = resolve(raiz, 'MATRIZ_CONFIABILIDADE_TESTES.md');
+const conteudo = readFileSync(matriz, 'utf8');
+
+const referenciasObrigatorias = [
+  'octaclin-backend/src/modulos/pacientes/aplicacao/servico-pacientes.spec.ts',
+  'octaclin-backend/src/modulos/comunicacoes/aplicacao/servico-comunicacoes.spec.ts',
+  'octaclin-backend/src/modulos/agenda/aplicacao/servico-agenda.spec.ts',
+  'octaclin-backend/src/modulos/auth/aplicacao/servico-auth.spec.ts',
+  'octaclin-backend/src/modulos/agenda/aplicacao/servico-sincronizacao-google-calendar.spec.ts',
+  'octaclin-web/scripts/test-autorizacao-rotas.mjs',
+  'octaclin-web/scripts/smoke-e2e-bff.mjs'
+];
+
+for (const referencia of referenciasObrigatorias) {
+  if (!conteudo.includes(`\`${referencia}\``)) {
+    throw new Error(`A matriz nao referencia o teste critico: ${referencia}`);
+  }
+  if (!existsSync(resolve(raiz, referencia))) {
+    throw new Error(`O teste referenciado nao existe: ${referencia}`);
+  }
+}
+
+for (const risco of ['Isolamento multi-tenant', 'Autenticacao e autorizacao', 'Integracoes externas', 'BFF e sessao']) {
+  if (!conteudo.includes(risco)) throw new Error(`Risco critico ausente da matriz: ${risco}`);
+}
+
+console.log(`Matriz de confiabilidade valida: ${referenciasObrigatorias.length} referencias criticas.`);

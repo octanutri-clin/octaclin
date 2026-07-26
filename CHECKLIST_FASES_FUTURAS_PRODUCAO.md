@@ -404,11 +404,16 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Validacoes: backend 47 suites/244 testes, typecheck/build; web lint,
     typecheck, `test:authz` e build.
 
-- [ ] Fase 140 - Cobertura de confiabilidade e regressao.
+- [x] Fase 140 - Cobertura de confiabilidade e regressao.
   - Priorizar testes negativos para autorizacao, tenant, operacoes e falhas de
     integracao; definir metas de cobertura por modulo de risco.
   - Saida esperada: matriz rastreavel de risco, testes focados e sinais de CI
     para regressao critica.
+  - Status: concluida em 2026-07-26. Criada matriz de riscos/testes com
+    validador `pnpm test:confiabilidade`, cobrindo isolamento multi-tenant,
+    autenticacao/autorizacao, BFF/sessao, integracoes, portal clinico e
+    operacoes. A suite existente ja contem cenarios negativos para os riscos
+    prioritarios e agora esta rastreada por comando e gate.
 
 - [x] Fase 141 - Migracao major do TypeORM e eliminacao de dependencia transitiva vulneravel.
   - Avaliar e executar o codemod oficial do TypeORM 0.3 para 1.x em branch
