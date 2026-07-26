@@ -1,7 +1,9 @@
 # Fase 136 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional
 
-Status: concluida em 2026-07-25 (implementada via `superpowers:subagent-driven-development`, plano em
-`docs/superpowers/plans/2026-07-25-fase-136-google-calendar-sync.md`).
+Status: concluida em 2026-07-25, com uma segunda onda de correcao fechada em
+2026-07-26 (implementada via `superpowers:subagent-driven-development`, planos
+em `docs/superpowers/plans/2026-07-25-fase-136-google-calendar-sync.md` e
+`docs/superpowers/plans/2026-07-26-fase-136-fix-wave-revisao-final.md`).
 
 ## Entregue
 
@@ -66,20 +68,84 @@ da fase):
 - Ambos os fixes foram re-verificados por uma segunda rodada do
   `tenant-security-reviewer` contra o diff da correcao, com resultado limpo.
 
-Pendencias menores registradas (nao bloqueiam esta fase, ficam pra um
-follow-up): `GET /agenda/google/conectar` pode sempre retornar 401 em
-producao real (navegacao do browser nao carrega o header `Authorization` do
-mesmo jeito que os outros BFFs autenticados - precisa validacao manual
-ponta-a-ponta); o `state` OAuth reaproveita `CRIPTOGRAFIA_CHAVE_AES_256` como
-segredo HMAC em vez de um segredo dedicado; `desconectar()` nao limpa a linha
-correspondente em `google_canais_watch` nem chama `pararCanalWatch` (nao e
-vazamento, so sobra de dado).
+Pendencias menores registradas nesta rodada (a do 401 no `conectar` e a do
+`state` OAuth foram corrigidas na segunda onda, ver secao abaixo):
+`desconectar()` nao limpa a linha correspondente em `google_canais_watch` nem
+chama `pararCanalWatch` (nao e vazamento, so sobra de dado) - segue como
+follow-up nao bloqueante.
+
+## Segunda onda de correcao - revisao final do branch inteiro (2026-07-26)
+
+Depois do fechamento acima, uma revisao final de todo o branch (modelo mais
+capaz, template `requesting-code-review`) encontrou **2 Critical + 7
+Important** que as revisoes por tarefa/seguranca anteriores nao pegaram.
+Corrigidas de uma vez via plano formal
+(`docs/superpowers/plans/2026-07-26-fase-136-fix-wave-revisao-final.md`,
+6 tarefas, `superpowers:subagent-driven-development`):
+
+- **CRITICAL**: `GET /agenda/google/conectar` sempre retornava 401 em
+  producao - o BFF redirecionava o navegador direto pro backend, sem passar
+  pelo `requisitarBackendAutenticado` que os outros BFFs usam pra injetar o
+  header `Authorization` do lado do servidor. Corrigido: o backend agora
+  devolve a URL de autorizacao como JSON, e o BFF busca essa URL de forma
+  autenticada antes de redirecionar o navegador pro Google.
+- **CRITICAL**: resposta `410` do Google (syncToken expirado, ocorrencia
+  rotineira) nao era tratada, quebrando a sincronizacao inbound daquele
+  profissional silenciosa e permanentemente. Corrigido: `410` agora limpa o
+  syncToken salvo e refaz a sincronizacao completa.
+- **IMPORTANT**: paginacao (`nextPageToken`) nunca era seguida, perdendo
+  eventos alem da primeira pagina e nunca capturando o `nextSyncToken` (que o
+  Google so retorna na ultima pagina). Corrigido.
+- **IMPORTANT**: o syncToken avancava mesmo quando algum evento do lote falhava
+  ao ser aplicado, perdendo aquele evento pra sempre. Corrigido: token so
+  avanca quando o lote inteiro tem sucesso; em falha continua, uma
+  retentativa limitada (5 tentativas consecutivas) evita bloqueio permanente.
+- **IMPORTANT**: token revogado pelo profissional no Google (`invalid_grant`)
+  nunca marcava `desconectado_em`. Corrigido no fluxo de reconciliacao.
+- **IMPORTANT**: `ServicoOperacoes.executarSincronizacaoGoogle` (reprocessamento
+  operacional) era um segundo chamador do Google Calendar que nunca resolvia
+  a credencial do profissional - mesma classe de bug do CRITICAL ja corrigido
+  em `ServicoAgenda`. Corrigido.
+- **IMPORTANT**: checagem de conflito contra `agenda_bloqueios_externos`
+  carregava ate 500 linhas em memoria sem filtro de tempo. Corrigido: query
+  agora expressa a sobreposicao de horario direto no SQL (`LessThan`/
+  `MoreThan`), sem limite artificial.
+- **IMPORTANT**: webhook `POST /agenda/google/notificacoes` aceitava qualquer
+  POST com o header de canal, sem verificar se veio do Google, sem dedupe e
+  sem limite de retencao de jobs. Corrigido: token anti-forjadura por canal
+  (verificado com `timingSafeEqual`), `jobId` baseado no numero da mensagem
+  do Google para dedupe, e `removeOnComplete`/`removeOnFail` na fila.
+- **IMPORTANT**: `state` OAuth nao expirava e o nonce nunca era checado,
+  permitindo replay indefinido (CSRF/account-linking). Corrigido: `state`
+  agora expira em 10 minutos e o nonce e consumido uma unica vez via Redis
+  (`SET ... NX`), mesmo padrao ja usado pelo rate limiting de login.
+
+A revisao final do branch (apos essas 6 tarefas) encontrou mais 3 Important
+de segunda ordem, tambem corrigidos na mesma onda antes de fechar:
+
+- Um evento com falha permanente travava o syncToken pra sempre (retentativa
+  sem limite) - corrigido com o contador de 5 falhas consecutivas acima.
+- Canais de watch criados antes do token anti-forjadura ficavam com
+  `token = null` e tinham as notificacoes silenciosamente descartadas ate o
+  cron diario recriar o canal (ate ~1 semana) - corrigido com log de aviso
+  imediato e uma migration que forca a renovacao no proximo ciclo do cron.
+- `ServicoOperacoes.reprocessarGoogleCalendar` mantinha uma transacao aberta
+  durante a chamada HTTP ao Google - corrigido dividindo em leitura, chamada
+  ao Google fora de transacao, e escrita, igual ao padrao ja usado em
+  `ServicoAgenda`.
+
+Pendencias menores registradas nesta segunda onda (nao bloqueiam, ficam pra
+follow-up): token revogado no fluxo outbound ainda so aparece como falha
+generica (autocura via cron diario em ate 24h); resync apos `410` reimporta
+o historico completo como bloqueios externos (idempotente); sem teste de
+controller para a logica anti-forjadura do webhook (este projeto nao testa
+controllers/route handlers, so a camada de servico).
 
 ## Validacoes rodadas ao fechar
 
 ```powershell
 pnpm --dir octaclin-backend typecheck
-pnpm --dir octaclin-backend test --runInBand   # 46 suites / 224 testes
+pnpm --dir octaclin-backend test --runInBand   # 46 suites / 234 testes (apos a segunda onda)
 pnpm --dir octaclin-web typecheck
 pnpm --dir octaclin-web build
 npm run security:secrets
