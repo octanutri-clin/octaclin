@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
+import { SyncTokenExpiradoError, TokenRevogadoError } from './servico-google-calendar';
 import { ServicoSincronizacaoGoogleCalendar } from './servico-sincronizacao-google-calendar';
 
 describe('ServicoSincronizacaoGoogleCalendar', () => {
@@ -29,7 +30,7 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
     };
 
     const googleCalendar = {
-      listarEventosAlterados: jest.fn(async () => ({
+      listarEventosAlterados: jest.fn(async (_credenciais?: unknown, _syncToken?: string) => ({
         eventos: [
           { id: 'evt-consulta', status: 'confirmed', octaclinConsultaId: 'consulta-1', inicioEm: new Date('2026-08-01T10:00:00Z'), fimEm: new Date('2026-08-01T10:50:00Z') },
           { id: 'evt-cancelado', status: 'cancelled', octaclinConsultaId: 'consulta-2' },
@@ -178,6 +179,88 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
       { motivo: 'Cancelado direto na Google Agenda.' },
       'prof-1'
     );
+
+    loggerWarnSpy.mockRestore();
+  });
+
+  it('desconecta a integracao quando o Google retorna token revogado (TokenRevogadoError)', async () => {
+    const deps = construirDependencias();
+    deps.googleCalendar.listarEventosAlterados = jest.fn(async () => {
+      throw new TokenRevogadoError();
+    });
+    const servicoConexaoComDesconectar = { ...deps.servicoConexao, desconectar: jest.fn(async () => undefined) };
+
+    const servico = new ServicoSincronizacaoGoogleCalendar(
+      deps.fonteDados as any,
+      deps.executorTenant as any,
+      servicoConexaoComDesconectar as any,
+      deps.googleCalendar as any,
+      deps.servicoAgenda as any
+    );
+
+    await expect(servico.reconciliar('tenant-1', 'prof-1')).resolves.not.toThrow();
+    expect(servicoConexaoComDesconectar.desconectar).toHaveBeenCalledWith('tenant-1', 'prof-1');
+  });
+
+  it('refaz a sincronizacao do zero quando o sync token expirou (SyncTokenExpiradoError)', async () => {
+    const deps = construirDependencias();
+    let chamada = 0;
+    deps.googleCalendar.listarEventosAlterados = jest.fn(async (_credenciais: unknown, syncToken?: string) => {
+      chamada += 1;
+      if (chamada === 1) {
+        expect(syncToken).toBeUndefined();
+        throw new SyncTokenExpiradoError();
+      }
+      expect(syncToken).toBeUndefined();
+      return { eventos: [], proximoSyncToken: 'sync-recem-gerado' };
+    });
+
+    const servico = new ServicoSincronizacaoGoogleCalendar(
+      deps.fonteDados as any,
+      deps.executorTenant as any,
+      deps.servicoConexao as any,
+      deps.googleCalendar as any,
+      deps.servicoAgenda as any
+    );
+
+    await expect(servico.reconciliar('tenant-1', 'prof-1')).resolves.not.toThrow();
+    expect(deps.googleCalendar.listarEventosAlterados).toHaveBeenCalledTimes(2);
+  });
+
+  it('nao avanca o syncToken armazenado quando algum evento do lote falhou ao ser aplicado', async () => {
+    const deps = construirDependencias();
+    deps.servicoAgenda.remarcarConsultaComoSistema = jest.fn(async () => {
+      throw new Error('falha simulada ao aplicar evento');
+    });
+
+    const chamadasSave: unknown[] = [];
+    deps.executorTenant.executar = jest.fn((_tenantId: string, callback: (gerenciador: any) => any) =>
+      callback({
+        getRepository: () => ({
+          findOne: jest.fn(async () => ({ tenantId: 'tenant-1', profissionalId: 'prof-1', ultimoSyncToken: 'sync-antigo' })),
+          create: jest.fn((dados: any) => dados),
+          save: jest.fn(async (dados: any) => {
+            chamadasSave.push(dados);
+            return dados;
+          }),
+          delete: jest.fn(async () => undefined)
+        })
+      })
+    );
+
+    const loggerWarnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+    const servico = new ServicoSincronizacaoGoogleCalendar(
+      deps.fonteDados as any,
+      deps.executorTenant as any,
+      deps.servicoConexao as any,
+      deps.googleCalendar as any,
+      deps.servicoAgenda as any
+    );
+
+    await servico.reconciliar('tenant-1', 'prof-1');
+
+    expect(chamadasSave.some((dados: any) => dados.ultimoSyncToken === 'novo-sync-token')).toBe(false);
 
     loggerWarnSpy.mockRestore();
   });

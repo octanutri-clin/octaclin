@@ -1,4 +1,4 @@
-import { ServicoGoogleCalendar } from './servico-google-calendar';
+import { ServicoGoogleCalendar, SyncTokenExpiradoError } from './servico-google-calendar';
 
 describe('ServicoGoogleCalendar', () => {
   const ambienteOriginal = process.env;
@@ -287,5 +287,69 @@ describe('ServicoGoogleCalendar', () => {
       },
       { id: 'evento-b', status: 'cancelled', octaclinConsultaId: undefined, inicioEm: undefined, fimEm: undefined }
     ]);
+  });
+
+  it('listarEventosAlterados percorre todas as paginas via nextPageToken e so usa o nextSyncToken da ultima pagina', async () => {
+    let chamada = 0;
+    global.fetch = jest.fn(async (url: string) => {
+      if (String(url).includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'token-4' }), { status: 200 });
+      }
+      chamada += 1;
+      if (chamada === 1) {
+        expect(String(url)).not.toContain('pageToken');
+        return new Response(
+          JSON.stringify({ items: [{ id: 'evento-pagina-1', status: 'confirmed' }], nextPageToken: 'pagina-2' }),
+          { status: 200 }
+        );
+      }
+      expect(String(url)).toContain('pageToken=pagina-2');
+      return new Response(
+        JSON.stringify({ items: [{ id: 'evento-pagina-2', status: 'confirmed' }], nextSyncToken: 'sync-final' }),
+        { status: 200 }
+      );
+    }) as unknown as typeof fetch;
+
+    const servico = new ServicoGoogleCalendar();
+    const resultado = await servico.listarEventosAlterados({ clientId: 'c', clientSecret: 's', refreshToken: 'r', calendarId: 'cal-1' });
+
+    expect(resultado.eventos.map((evento) => evento.id)).toEqual(['evento-pagina-1', 'evento-pagina-2']);
+    expect(resultado.proximoSyncToken).toBe('sync-final');
+  });
+
+  it('listarEventosAlterados lanca SyncTokenExpiradoError quando o Google responde 410', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (String(url).includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'token-5' }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ error: { message: 'Sync token is no longer valid' } }), { status: 410 });
+    }) as unknown as typeof fetch;
+
+    const servico = new ServicoGoogleCalendar();
+    await expect(
+      servico.listarEventosAlterados({ clientId: 'c', clientSecret: 's', refreshToken: 'r', calendarId: 'cal-1' }, 'token-antigo')
+    ).rejects.toThrow(SyncTokenExpiradoError);
+  });
+
+  it('obterAccessToken (via criarEvento) lanca TokenRevogadoError quando o Google responde invalid_grant', async () => {
+    process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+    process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
+    process.env.GOOGLE_CALENDAR_REFRESH_TOKEN = 'refresh-token-revogado';
+
+    global.fetch = jest.fn(async () =>
+      new Response(JSON.stringify({ error: 'invalid_grant', error_description: 'Token has been expired or revoked.' }), { status: 400 })
+    ) as unknown as typeof fetch;
+
+    const servico = new ServicoGoogleCalendar();
+    const resultado = await servico.criarEvento({
+      resumo: 'Consulta',
+      descricao: 'desc',
+      inicioEm: new Date('2026-08-01T10:00:00Z'),
+      fimEm: new Date('2026-08-01T10:50:00Z'),
+      timezone: 'America/Sao_Paulo',
+      consultaId: 'consulta-1'
+    });
+
+    expect(resultado).toEqual({ sincronizado: false, motivo: 'falha_google_calendar', erro: expect.stringContaining('revogado') });
   });
 });

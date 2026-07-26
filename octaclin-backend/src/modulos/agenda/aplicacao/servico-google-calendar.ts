@@ -77,6 +77,20 @@ interface RespostaListaEventosGoogle {
   error?: { message?: string };
 }
 
+export class SyncTokenExpiradoError extends Error {
+  constructor() {
+    super('Sync token do Google Calendar expirou (410); e necessario resincronizar do zero.');
+    this.name = 'SyncTokenExpiradoError';
+  }
+}
+
+export class TokenRevogadoError extends Error {
+  constructor() {
+    super('Refresh token do Google Calendar foi revogado pelo usuario.');
+    this.name = 'TokenRevogadoError';
+  }
+}
+
 function textoEnv(valor: unknown): string | undefined {
   return typeof valor === 'string' && valor.trim() ? valor.trim() : undefined;
 }
@@ -170,27 +184,41 @@ export class ServicoGoogleCalendar {
     syncToken?: string
   ): Promise<{ eventos: EventoGoogleAlterado[]; proximoSyncToken?: string }> {
     const accessToken = await this.obterAccessToken(credenciais.clientId, credenciais.clientSecret, credenciais.refreshToken);
-    const parametros = new URLSearchParams({ showDeleted: 'true', singleEvents: 'true' });
-    if (syncToken) parametros.set('syncToken', syncToken);
+    const eventos: EventoGoogleAlterado[] = [];
+    let proximoSyncToken: string | undefined;
+    let pageToken: string | undefined;
 
-    const resposta = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(credenciais.calendarId)}/events?${parametros.toString()}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    const corpo = (await resposta.json()) as RespostaListaEventosGoogle;
-    if (!resposta.ok) {
-      throw new InternalServerErrorException(`Falha ao listar eventos alterados: ${corpo.error?.message ?? `HTTP ${resposta.status}`}`);
-    }
+    do {
+      const parametros = new URLSearchParams({ showDeleted: 'true', singleEvents: 'true' });
+      if (syncToken) parametros.set('syncToken', syncToken);
+      if (pageToken) parametros.set('pageToken', pageToken);
 
-    const eventos: EventoGoogleAlterado[] = (corpo.items ?? []).map((evento) => ({
-      id: evento.id,
-      status: evento.status,
-      octaclinConsultaId: evento.extendedProperties?.private?.octaclinConsultaId,
-      inicioEm: evento.start?.dateTime ? new Date(evento.start.dateTime) : undefined,
-      fimEm: evento.end?.dateTime ? new Date(evento.end.dateTime) : undefined
-    }));
+      const resposta = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(credenciais.calendarId)}/events?${parametros.toString()}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      const corpo = (await resposta.json()) as RespostaListaEventosGoogle;
 
-    return { eventos, proximoSyncToken: corpo.nextSyncToken };
+      if (!resposta.ok) {
+        if (resposta.status === 410) throw new SyncTokenExpiradoError();
+        throw new InternalServerErrorException(`Falha ao listar eventos alterados: ${corpo.error?.message ?? `HTTP ${resposta.status}`}`);
+      }
+
+      for (const evento of corpo.items ?? []) {
+        eventos.push({
+          id: evento.id,
+          status: evento.status,
+          octaclinConsultaId: evento.extendedProperties?.private?.octaclinConsultaId,
+          inicioEm: evento.start?.dateTime ? new Date(evento.start.dateTime) : undefined,
+          fimEm: evento.end?.dateTime ? new Date(evento.end.dateTime) : undefined
+        });
+      }
+
+      proximoSyncToken = corpo.nextSyncToken ?? proximoSyncToken;
+      pageToken = corpo.nextPageToken;
+    } while (pageToken);
+
+    return { eventos, proximoSyncToken };
   }
 
   async criarCanalWatch(
@@ -280,6 +308,7 @@ export class ServicoGoogleCalendar {
     const corpo = (await resposta.json()) as RespostaTokenGoogle;
 
     if (!resposta.ok || !corpo.access_token) {
+      if (corpo.error === 'invalid_grant') throw new TokenRevogadoError();
       const detalhe = corpo.error_description ?? corpo.error ?? `HTTP ${resposta.status}`;
       throw new InternalServerErrorException(`Falha ao renovar token Google Calendar: ${detalhe}`);
     }

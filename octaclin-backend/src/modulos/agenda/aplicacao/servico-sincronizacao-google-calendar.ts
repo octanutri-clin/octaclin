@@ -6,7 +6,7 @@ import { GoogleCanalWatchOrm } from '../infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from '../infraestrutura/profissional-google-conexao.orm';
 import { ServicoAgenda } from './servico-agenda';
 import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar';
-import { ServicoGoogleCalendar } from './servico-google-calendar';
+import { EventoGoogleAlterado, ServicoGoogleCalendar, SyncTokenExpiradoError, TokenRevogadoError } from './servico-google-calendar';
 
 export const FILA_SINCRONIZACAO_GOOGLE = 'sincronizacao-google-calendar';
 
@@ -36,34 +36,59 @@ export class ServicoSincronizacaoGoogleCalendar {
     const credenciais = await this.servicoConexao.obterConexaoAtiva(tenantId, profissionalId);
     if (!credenciais) return;
 
-    const syncToken = await this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const conexao = await gerenciador
-        .getRepository(ProfissionalGoogleConexaoOrm)
-        .findOne({ where: { tenantId, profissionalId } });
-      return conexao?.ultimoSyncToken;
-    });
+    const syncToken = await this.obterSyncTokenArmazenado(tenantId, profissionalId);
 
-    const { eventos, proximoSyncToken } = await this.googleCalendar.listarEventosAlterados(credenciais, syncToken);
+    let resultado: { eventos: EventoGoogleAlterado[]; proximoSyncToken?: string };
+    try {
+      resultado = await this.googleCalendar.listarEventosAlterados(credenciais, syncToken);
+    } catch (erro) {
+      if (erro instanceof TokenRevogadoError) {
+        this.logger.warn(`Refresh token revogado para profissional ${profissionalId}; desconectando integracao Google Agenda.`);
+        await this.servicoConexao.desconectar(tenantId, profissionalId);
+        return;
+      }
+      if (!(erro instanceof SyncTokenExpiradoError)) throw erro;
+      this.logger.warn(`Sync token expirado para profissional ${profissionalId}; refazendo sincronizacao completa.`);
+      await this.armazenarSyncToken(tenantId, profissionalId, undefined);
+      resultado = await this.googleCalendar.listarEventosAlterados(credenciais, undefined);
+    }
+
+    const { eventos, proximoSyncToken } = resultado;
+    let houveFalha = false;
 
     for (const evento of eventos) {
       try {
         await this.aplicarEvento(tenantId, profissionalId, evento);
       } catch (erro) {
+        houveFalha = true;
         this.logger.warn(
           `Falha ao aplicar evento Google ${evento.id} durante reconciliacao: ${erro instanceof Error ? erro.message : 'erro desconhecido'}`
         );
       }
     }
 
-    if (proximoSyncToken) {
-      await this.executorTenant.executar(tenantId, async (gerenciador) => {
-        const repositorio = gerenciador.getRepository(ProfissionalGoogleConexaoOrm);
-        const conexao = await repositorio.findOne({ where: { tenantId, profissionalId } });
-        if (!conexao) return;
-        conexao.ultimoSyncToken = proximoSyncToken;
-        await repositorio.save(conexao);
-      });
+    if (proximoSyncToken && !houveFalha) {
+      await this.armazenarSyncToken(tenantId, profissionalId, proximoSyncToken);
     }
+  }
+
+  private async obterSyncTokenArmazenado(tenantId: string, profissionalId: string): Promise<string | undefined> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const conexao = await gerenciador
+        .getRepository(ProfissionalGoogleConexaoOrm)
+        .findOne({ where: { tenantId, profissionalId } });
+      return conexao?.ultimoSyncToken;
+    });
+  }
+
+  private async armazenarSyncToken(tenantId: string, profissionalId: string, syncToken: string | undefined): Promise<void> {
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(ProfissionalGoogleConexaoOrm);
+      const conexao = await repositorio.findOne({ where: { tenantId, profissionalId } });
+      if (!conexao) return;
+      conexao.ultimoSyncToken = syncToken;
+      await repositorio.save(conexao);
+    });
   }
 
   private async aplicarEvento(
