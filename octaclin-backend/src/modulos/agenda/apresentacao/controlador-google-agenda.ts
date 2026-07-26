@@ -39,11 +39,10 @@ export class ControladorGoogleAgenda {
   @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
   @Papeis('SuperAdmin', 'Professional')
   @Permissoes('agenda.consultas.ler')
-  @Redirect()
-  async conectar(@UsuarioAtual() usuario: UsuarioAutenticado) {
+  async conectar(@UsuarioAtual() usuario: UsuarioAutenticado): Promise<{ url: string }> {
     const profissionalId = await this.resolverProfissionalIdObrigatorio(usuario);
     const url = this.servicoConexao.gerarUrlAutorizacao(usuario.tenantId, profissionalId, urlCallback());
-    return { url, statusCode: 302 };
+    return { url };
   }
 
   @Get('callback')
