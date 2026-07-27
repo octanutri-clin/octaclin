@@ -152,6 +152,28 @@ export class ControladorQuestionarios {
     return envio;
   }
 
+  @Post('questionarios/envios/:envioId/revisar')
+  @Permissoes('questionarios.gerenciar')
+  async revisarEnvio(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('envioId', ParseUUIDPipe) envioId: string
+  ) {
+    const envio = await this.servicoQuestionarios.marcarEnvioComoRevisado(usuario.tenantId, envioId, usuario);
+    await this.registrarAuditoria(
+      usuario,
+      requisicao,
+      'questionarios.envio.revisar',
+      'envio_questionario',
+      envio.id,
+      {
+        origem: requisicao.header('x-octaclin-origem') ?? 'questionarios',
+        revisadoEm: envio.revisadoEm
+      }
+    );
+    return envio;
+  }
+
   @Get('questionarios/:id/respostas')
   listarRespostasQuestionario(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
     return this.servicoQuestionarios.listarRespostasQuestionario(usuario.tenantId, id, usuario);
