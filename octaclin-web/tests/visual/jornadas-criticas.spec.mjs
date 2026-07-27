@@ -234,6 +234,41 @@ async function prepararProfissional(page) {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(respostaPaginada([profissional])) });
   });
 
+  await page.route('**/api/agenda/google/status', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ conectado: false })
+    });
+  });
+
+  await page.route('**/api/agenda/agendamento-publico', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'link-publico-profissional',
+        profissionalId: 'profissional-1',
+        duracaoMinutos: 50,
+        ativo: false,
+        criadoEm: '2026-07-27T08:00:00.000Z',
+        atualizadoEm: '2026-07-27T08:00:00.000Z',
+        urlPublica: null,
+        urlPublicaDisponivel: false,
+        requerRotacaoConfirmada: true,
+        mensagemUrlPublica: 'Nenhum link ativo. Rotacione para gerar o primeiro endereco publico.'
+      })
+    });
+  });
+
+  await page.route('**/api/agenda/solicitacoes', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(respostaPaginada([]))
+    });
+  });
+
   await page.route('**/api/pacientes**', async (route) => {
     if (route.request().method() === 'POST') {
       const payload = await route.request().postDataJSON();
@@ -420,6 +455,359 @@ async function prepararPaciente(page) {
   });
 }
 
+async function prepararJornadaSolicitacaoPublica(page) {
+  const profissionalSessaoAgenda = {
+    ...usuarioProfissional,
+    destinoInicial: '/agenda'
+  };
+  const pacienteSessaoPortal = {
+    autenticado: true,
+    apiUrl: 'http://localhost:3001',
+    tenantSlug: 'clinica-carla',
+    email: 'ana.silva@example.com',
+    expiraEm: '2026-07-27T15:00:00.000Z',
+    papel: 'Patient',
+    permissoes: ['portal.paciente.ler'],
+    destinoInicial: '/portal'
+  };
+  const pacienteAprovacao = {
+    id: 'paciente-1',
+    tenantId: 'tenant-1',
+    profissionalResponsavelId: 'profissional-1',
+    nome: 'Ana Souza',
+    contato: 'ana.silva@example.com',
+    statusAdesao: 'em_acompanhamento',
+    scoreRisco: '15',
+    criadoEm: '2026-07-20T10:00:00.000Z'
+  };
+  const horarioSolicitado = {
+    inicioEm: '2026-08-03T13:00:00.000Z',
+    fimEm: '2026-08-03T13:50:00.000Z',
+    rotulo: '10:00'
+  };
+  let sessaoAtual = null;
+  let solicitacaoEnviada = null;
+  let urlPublica = null;
+  let solicitacaoAtual = null;
+  let consultaCriada = null;
+  let notificacoesCriadas = [];
+
+  async function ativarSessao(papel, destinoInicial) {
+    sessaoAtual = papel;
+    await criarSessao(page, papel, destinoInicial);
+  }
+
+  await page.route('**/api/auth/session', async (route) => {
+    if (sessaoAtual === 'Professional') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(profissionalSessaoAgenda)
+      });
+      return;
+    }
+
+    if (sessaoAtual === 'Patient') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(pacienteSessaoPortal)
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        autenticado: false,
+        apiUrl: 'http://localhost:3001',
+        tenantSlug: 'clinica-carla',
+        destinoInicial: '/login'
+      })
+    });
+  });
+
+  await page.route('**/api/agendamentos-publicos/token-publico', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        profissional: {
+          nomeExibicao: 'Dra. Carla',
+          especialidade: 'Nutricao clinica'
+        },
+        timezone: 'America/Sao_Paulo',
+        duracaoMinutos: 50,
+        dias: [
+          {
+            data: '2026-08-03',
+            rotulo: '03/08/2026',
+            horarios: [{ inicioEm: horarioSolicitado.inicioEm, rotulo: horarioSolicitado.rotulo }]
+          }
+        ]
+      })
+    });
+  });
+
+  await page.route('**/api/agendamentos-publicos/token-publico/solicitacoes', async (route) => {
+    solicitacaoEnviada = JSON.parse(route.request().postData() ?? '{}');
+    solicitacaoAtual = {
+      id: 'solicitacao-publica-1',
+      status: 'pendente',
+      nome: solicitacaoEnviada.nome,
+      email: solicitacaoEnviada.email,
+      whatsapp: solicitacaoEnviada.whatsapp ?? '',
+      observacao: solicitacaoEnviada.observacao ?? '',
+      inicioEm: horarioSolicitado.inicioEm,
+      expiraEm: '2026-08-04T13:00:00.000Z'
+    };
+
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: solicitacaoAtual.id,
+        status: solicitacaoAtual.status,
+        inicioEm: solicitacaoAtual.inicioEm
+      })
+    });
+  });
+
+  await page.route('**/api/profissionais**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(respostaPaginada([profissional]))
+    });
+  });
+
+  await page.route('**/api/pacientes**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(respostaPaginada([pacienteAprovacao]))
+    });
+  });
+
+  await page.route('**/api/agenda/consultas', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(consultaCriada ? [consultaCriada] : [])
+    });
+  });
+
+  await page.route('**/api/agenda/google/status', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ conectado: false })
+    });
+  });
+
+  await page.route('**/api/agenda/agendamento-publico', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'link-publico-1',
+        profissionalId: 'profissional-1',
+        duracaoMinutos: 50,
+        ativo: true,
+        criadoEm: '2026-07-26T12:00:00.000Z',
+        atualizadoEm: '2026-07-27T09:00:00.000Z',
+        urlPublica,
+        urlPublicaDisponivel: Boolean(urlPublica),
+        requerRotacaoConfirmada: !urlPublica,
+        mensagemUrlPublica: urlPublica
+          ? 'URL publica disponivel ate nova rotacao confirmada.'
+          : 'URL atual indisponivel nesta sessao. Por seguranca, o token bruto nao e persistido. Rotacione com confirmacao para gerar uma nova URL publica.'
+      })
+    });
+  });
+
+  await page.route('**/api/agenda/agendamento-publico/rotacionar', async (route) => {
+    urlPublica = 'https://octaclin.local/agendar/token-rotacionado';
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'link-publico-1',
+        profissionalId: 'profissional-1',
+        duracaoMinutos: 50,
+        ativo: true,
+        criadoEm: '2026-07-26T12:00:00.000Z',
+        atualizadoEm: '2026-07-27T09:15:00.000Z',
+        urlPublica,
+        urlPublicaDisponivel: true,
+        requerRotacaoConfirmada: false,
+        mensagemUrlPublica: 'URL publica disponivel ate nova rotacao confirmada.'
+      })
+    });
+  });
+
+  await page.route('**/api/agenda/solicitacoes', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        respostaPaginada(
+          solicitacaoAtual
+            ? [
+                {
+                  ...solicitacaoAtual,
+                  pacienteId: consultaCriada?.pacienteId ?? null,
+                  consultaId: consultaCriada?.id ?? null
+                }
+              ]
+            : []
+        )
+      )
+    });
+  });
+
+  await page.route('**/api/agenda/solicitacoes/solicitacao-publica-1/aprovar', async (route) => {
+    const corpo = JSON.parse(route.request().postData() ?? '{}');
+    expect(corpo).toEqual({ pacienteId: pacienteAprovacao.id });
+    expect(solicitacaoAtual?.status).toBe('pendente');
+
+    solicitacaoAtual = {
+      ...solicitacaoAtual,
+      status: 'aprovada',
+      pacienteId: pacienteAprovacao.id,
+      consultaId: 'consulta-solicitacao-1'
+    };
+    consultaCriada = {
+      id: 'consulta-solicitacao-1',
+      tenantId: 'tenant-1',
+      pacienteId: pacienteAprovacao.id,
+      pacienteNome: pacienteAprovacao.nome,
+      profissionalId: 'profissional-1',
+      profissionalNome: 'Dra. Carla',
+      titulo: 'Consulta por solicitacao publica',
+      inicioEm: horarioSolicitado.inicioEm,
+      fimEm: horarioSolicitado.fimEm,
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      local: 'Online',
+      googleEventId: 'google-event-publico-1',
+      googleEventHtmlLink: 'https://calendar.google.com/event?eid=solicitacao',
+      notificacoes: {
+        googleCalendar: { status: 'sincronizado' },
+        email: { status: 'enviado' },
+        whatsapp: { status: 'enviado' },
+        lembrete24h: { status: 'pendente' },
+        confirmacaoPaciente: { status: 'aguardando' }
+      },
+      payload: { origem: 'solicitacao_publica_aprovada' },
+      criadoEm: '2026-07-27T10:00:00.000Z',
+      atualizadoEm: '2026-07-27T10:00:00.000Z'
+    };
+    notificacoesCriadas = [
+      {
+        id: 'mensagem-agendamento-publico',
+        canal: 'email',
+        titulo: 'Consulta agendada',
+        texto: 'Sua consulta foi agendada apos aprovacao manual.',
+        status: 'enviado',
+        evento: 'agenda.consulta.agendada',
+        criadoEm: '2026-07-27T10:00:00.000Z',
+        enviadoEm: '2026-07-27T10:01:00.000Z'
+      },
+      {
+        id: 'notificacao-lembrete-publico',
+        canal: 'whatsapp',
+        titulo: 'Lembrete de consulta',
+        texto: 'Sua consulta sera amanha.',
+        status: 'pendente',
+        evento: 'agenda.consulta.lembrete',
+        criadoEm: '2026-07-27T10:00:00.000Z',
+        agendadoPara: '2026-08-02T13:00:00.000Z'
+      }
+    ];
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: solicitacaoAtual.id,
+        status: solicitacaoAtual.status,
+        pacienteId: solicitacaoAtual.pacienteId,
+        consultaId: solicitacaoAtual.consultaId,
+        nome: solicitacaoAtual.nome,
+        email: solicitacaoAtual.email,
+        whatsapp: solicitacaoAtual.whatsapp,
+        inicioEm: solicitacaoAtual.inicioEm
+      })
+    });
+  });
+
+  await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        paciente: { id: pacienteAprovacao.id, nome: pacienteAprovacao.nome, statusAdesao: 'em_acompanhamento', scoreRisco: '15' },
+        perfil: {
+          contato: 'ana.silva@example.com',
+          email: 'ana.silva@example.com',
+          whatsapp: '5511999999999',
+          preferenciasContato: { email: true, whatsapp: true },
+          profissionalResponsavelId: 'profissional-1'
+        },
+        resumo: {
+          consultasProximas: consultaCriada ? 1 : 0,
+          formulariosPendentes: 0,
+          formulariosRespondidos: 0,
+          mensagensRecentes: notificacoesCriadas.length,
+          tarefasPendentes: 0,
+          materiaisDisponiveis: 0,
+          checkinsRecentes: 0,
+          notificacoesPendentes: notificacoesCriadas.filter((item) => item.status === 'pendente').length,
+          notificacoesHistorico: notificacoesCriadas.length
+        },
+        consultasProximas: consultaCriada
+          ? [
+              {
+                id: consultaCriada.id,
+                titulo: consultaCriada.titulo,
+                inicioEm: consultaCriada.inicioEm,
+                fimEm: consultaCriada.fimEm,
+                status: consultaCriada.status,
+                local: consultaCriada.local,
+                googleEventHtmlLink: consultaCriada.googleEventHtmlLink
+              }
+            ]
+          : [],
+        formulariosPendentes: [],
+        formulariosRespondidos: [],
+        mensagensRecentes: notificacoesCriadas.filter((item) => item.status === 'enviado'),
+        notificacoesPaciente: notificacoesCriadas,
+        tarefasAcompanhamento: [],
+        materiaisDisponiveis: [],
+        diariosRecentes: [],
+        lgpd: { versaoAtual: '2026-07', documentosLegais: [], consentimentos: [], solicitacoes: [] }
+      })
+    });
+  });
+
+  return {
+    ativarSessaoProfissional: () => ativarSessao('Professional', '/agenda'),
+    ativarSessaoPaciente: () => ativarSessao('Patient', '/portal'),
+    solicitacaoEnviada: () => solicitacaoEnviada,
+    consultaCriada: () => consultaCriada,
+    notificacoesCriadas: () => notificacoesCriadas,
+    urlPublica: () => urlPublica
+  };
+}
+
 test.describe('jornadas criticas de producao', () => {
   test('cliente convida usuario administrativo com trilha de convite', async ({ page }) => {
     const cliente = await prepararCliente(page);
@@ -477,6 +865,72 @@ test.describe('jornadas criticas de producao', () => {
     await expect(page.getByText('Google Calendar: Sincronizado')).toBeVisible();
     const consulta = page.locator('article').filter({ hasText: 'Ana Jornada' });
     await expect(consulta.getByText('Enviado')).toHaveCount(2);
+  });
+
+  test('solicitacao publica segue para aprovacao manual antes de gerar consulta e notificacoes', async ({ page }) => {
+    const jornada = await prepararJornadaSolicitacaoPublica(page);
+
+    await page.goto('/agendar/token-publico');
+
+    await expect(page.getByRole('heading', { name: 'Agendar com Dra. Carla' })).toBeVisible();
+    await page.getByRole('button', { name: '10:00' }).click();
+    await page.getByLabel('Nome completo').fill('Ana Silva');
+    await page.getByLabel('Email').fill('ana.silva@example.com');
+    await page.getByLabel('WhatsApp').fill('5511999999999');
+    await page.getByLabel('Observacoes').fill('Prefiro atendimento online.');
+    await page.getByRole('button', { name: 'Enviar solicitacao' }).click();
+
+    await expect(page.getByText('Solicitacao enviada para analise.')).toBeVisible();
+    await expect.poll(() => jornada.solicitacaoEnviada()).toMatchObject({
+      nome: 'Ana Silva',
+      email: 'ana.silva@example.com',
+      whatsapp: '5511999999999'
+    });
+    expect(jornada.consultaCriada()).toBeNull();
+    expect(jornada.notificacoesCriadas()).toHaveLength(0);
+
+    await page.goto('/agendar/token-publico');
+    await expect(page.getByRole('button', { name: '10:00' })).toBeVisible();
+
+    await jornada.ativarSessaoProfissional();
+    await page.goto('/agenda');
+
+    await expect(page.getByRole('heading', { name: 'Link publico de agendamento' })).toBeVisible();
+    await expect(page.getByText(/token bruto nao e persistido/i)).toBeVisible();
+    const solicitacao = page.locator('article').filter({ hasText: 'Ana Silva' });
+    await expect(solicitacao).toBeVisible();
+    await expect(solicitacao.getByRole('button', { name: 'Aprovar solicitacao' })).toBeVisible();
+    await expect(solicitacao.getByLabel('Paciente para aprovar')).toHaveValue('');
+    await expect(solicitacao.getByRole('button', { name: 'Aprovar solicitacao' })).toBeDisabled();
+
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('invalida a URL publica anterior');
+      await dialog.accept();
+    });
+    await page.getByRole('button', { name: 'Rotacionar link' }).click();
+
+    await expect.poll(() => jornada.urlPublica()).toBe('https://octaclin.local/agendar/token-rotacionado');
+    await expect(page.getByText('https://octaclin.local/agendar/token-rotacionado')).toBeVisible();
+
+    await solicitacao.getByLabel('Paciente para aprovar').selectOption('paciente-1');
+    await expect(solicitacao.getByRole('button', { name: 'Aprovar solicitacao' })).toBeEnabled();
+    await solicitacao.getByRole('button', { name: 'Aprovar solicitacao' }).click();
+
+    await expect.poll(() => jornada.consultaCriada()).toMatchObject({
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta por solicitacao publica'
+    });
+    await expect(page.getByText('Solicitacao aprovada e convertida em consulta.')).toBeVisible();
+    await expect.poll(() => jornada.notificacoesCriadas().length).toBe(2);
+
+    await jornada.ativarSessaoPaciente();
+    await page.goto('/portal');
+
+    await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
+    await expect(page.locator('#acoes').getByText('Consulta por solicitacao publica')).toBeVisible();
+    await expect(page.locator('#notificacoes').getByText('Consulta agendada')).toBeVisible();
+    await expect(page.locator('#notificacoes').getByText('Lembrete de consulta').first()).toBeVisible();
   });
 
   test('paciente acessa portal com consulta, notificacoes e plano visiveis', async ({ page }) => {

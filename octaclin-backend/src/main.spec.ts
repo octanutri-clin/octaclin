@@ -1,4 +1,11 @@
+const mockServidorHttp = {
+  set: jest.fn()
+};
+
 const mockAplicacao = {
+  getHttpAdapter: jest.fn(() => ({
+    getInstance: jest.fn(() => mockServidorHttp)
+  })),
   use: jest.fn(),
   useGlobalInterceptors: jest.fn(),
   enableCors: jest.fn(),
@@ -18,6 +25,12 @@ jest.mock('./modulo-aplicacao', () => ({
   ModuloAplicacao: class ModuloAplicacao {}
 }));
 
+function carregarMain() {
+  return jest.isolateModulesAsync(async () => {
+    await import('./main');
+  });
+}
+
 describe('inicializacao da aplicacao', () => {
   const ambienteOriginal = process.env;
 
@@ -34,7 +47,7 @@ describe('inicializacao da aplicacao', () => {
   });
 
   it('recusa iniciar em producao sem CORS_ORIGINS', async () => {
-    await expect(import('./main')).rejects.toThrow('CORS_ORIGINS');
+    await expect(carregarMain()).rejects.toThrow('CORS_ORIGINS');
 
     expect(mockCriarAplicacao).not.toHaveBeenCalled();
   });
@@ -42,7 +55,7 @@ describe('inicializacao da aplicacao', () => {
   it('recusa iniciar em producao com CORS_ORIGINS curinga', async () => {
     process.env.CORS_ORIGINS = '*';
 
-    await expect(import('./main')).rejects.toThrow('CORS_ORIGINS');
+    await expect(carregarMain()).rejects.toThrow('CORS_ORIGINS');
 
     expect(mockCriarAplicacao).not.toHaveBeenCalled();
   });
@@ -51,7 +64,7 @@ describe('inicializacao da aplicacao', () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
     delete process.env.JWT_SEGREDO;
 
-    await expect(import('./main')).rejects.toThrow('JWT_SEGREDO');
+    await expect(carregarMain()).rejects.toThrow('JWT_SEGREDO');
 
     expect(mockCriarAplicacao).not.toHaveBeenCalled();
   });
@@ -61,7 +74,7 @@ describe('inicializacao da aplicacao', () => {
     process.env.JWT_SEGREDO = 'segredo-access';
     delete process.env.JWT_REFRESH_SEGREDO;
 
-    await expect(import('./main')).rejects.toThrow('JWT_REFRESH_SEGREDO');
+    await expect(carregarMain()).rejects.toThrow('JWT_REFRESH_SEGREDO');
 
     expect(mockCriarAplicacao).not.toHaveBeenCalled();
   });
@@ -72,8 +85,20 @@ describe('inicializacao da aplicacao', () => {
     process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
     delete process.env.CRIPTOGRAFIA_CHAVE_AES_256;
 
-    await expect(import('./main')).rejects.toThrow('CRIPTOGRAFIA_CHAVE_AES_256');
+    await expect(carregarMain()).rejects.toThrow('CRIPTOGRAFIA_CHAVE_AES_256');
 
     expect(mockCriarAplicacao).not.toHaveBeenCalled();
+  });
+
+  it('confia em exatamente um proxy para resolver req.ip atras do proxy do Render', async () => {
+    process.env.CORS_ORIGINS = 'https://app.octaclin.test';
+    process.env.JWT_SEGREDO = 'segredo-access';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'chave-criptografia-32-bytes';
+
+    await carregarMain();
+
+    expect(mockCriarAplicacao).toHaveBeenCalled();
+    expect(mockServidorHttp.set).toHaveBeenCalledWith('trust proxy', 1);
   });
 });

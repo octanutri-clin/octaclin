@@ -49,6 +49,8 @@ function validarCorsProducao() {
 
 async function iniciarAplicacao() {
   const aplicacao = await NestFactory.create(ModuloAplicacao);
+  const servidorHttp = aplicacao.getHttpAdapter().getInstance();
+  servidorHttp.set('trust proxy', 1);
   aplicacao.use(middlewareCorrelacao);
   aplicacao.useGlobalInterceptors(new InterceptorLogRequisicao());
   aplicacao.enableCors({

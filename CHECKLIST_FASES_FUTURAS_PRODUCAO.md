@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-26 apos a Fase 137 de melhoria continua de qualidade.
+Atualizado em 2026-07-27 apos a Fase 144 de agendamento publico por solicitacao.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -387,6 +387,18 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Ressalva: convites Professional anteriores nao sao retroativamente
     vinculados por ausencia de nome clinico confiavel; ver
     `fase-143-onboarding-profissionais.md`.
+
+- [x] Fase 144 - Agendamento publico por solicitacao.
+  - Link publico permite solicitar horario sem reservar a agenda de imediato;
+    a aprovacao manual segue pelo painel interno da agenda.
+  - O profissional precisa selecionar explicitamente um paciente existente para
+    aprovar; a solicitacao publica so vira consulta, Google Calendar e
+    notificacoes depois da criacao normal da agenda.
+  - O token bruto do link nunca e persistido. Em sessao nova, a URL copiavel so
+    reaparece apos rotacao confirmada.
+  - Data: 2026-07-27.
+  - Validacoes: `pnpm --dir octaclin-backend test --runInBand` (52 suites/273 testes), `pnpm --dir octaclin-backend typecheck`, `pnpm --dir octaclin-web lint`, `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web build`, `pnpm --dir octaclin-web test:e2e:criticas` (8 testes), `pnpm security:secrets`, `powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly`.
+  - Saida entregue: `fase-144-agendamento-publico-solicitacao.md` e regressao Playwright cobrindo solicitacao publica, aprovacao interna obrigando paciente explicito e reflexo da consulta/notificacoes no portal.
 
 - [x] Fase 137 - Gate de qualidade do frontend.
   - ESLint nao interativo com regras estritas do Next.js, correcoes de tipos e

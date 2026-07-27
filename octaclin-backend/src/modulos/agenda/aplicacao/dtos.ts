@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsEmail, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 import type { ResultadoGoogleCalendar } from './servico-google-calendar';
 
 export type ResultadoNotificacaoAgenda =
@@ -84,6 +84,43 @@ export class RemarcarConsultaAgendaDto {
 }
 
 export class CancelarConsultaAgendaDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  motivo?: string;
+}
+
+export class CriarSolicitacaoAgendamentoPublicoDto {
+  @IsString()
+  @MinLength(1)
+  @Matches(/\S/)
+  @MaxLength(180)
+  nome: string;
+
+  @IsEmail()
+  @MaxLength(180)
+  email: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  whatsapp?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  observacao?: string;
+
+  @IsDateString()
+  inicioEm: string;
+}
+
+export class AprovarSolicitacaoAgendamentoDto {
+  @IsUUID()
+  pacienteId: string;
+}
+
+export class RecusarSolicitacaoAgendamentoDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)

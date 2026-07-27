@@ -1,23 +1,39 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, CheckCircle2, Clock, Mail, MessageCircle, RefreshCcw, Save, Video, XCircle } from 'lucide-react';
+import {
+  CalendarCheck,
+  CheckCircle2,
+  Clipboard,
+  Clock,
+  Link2,
+  Mail,
+  MessageCircle,
+  RefreshCcw,
+  Save,
+  Video,
+  XCircle
+} from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi } from '@/lib/agendamento-publico-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
 import {
-  ConexaoGoogleAgendaStatus,
-  ConsultaAgendaApi,
-  NotificacoesConsultaAgenda,
+  aprovarSolicitacaoPublicaAgenda,
   cancelarConsultaAgenda,
   carregarBootstrapAgenda,
+  ConexaoGoogleAgendaStatus,
   conectarGoogleAgenda,
+  ConsultaAgendaApi,
   criarConsultaAgenda,
   desconectarGoogleAgenda,
+  NotificacoesConsultaAgenda,
   obterStatusGoogleAgenda,
-  remarcarConsultaAgenda
+  recusarSolicitacaoPublicaAgenda,
+  remarcarConsultaAgenda,
+  rotacionarLinkPublicoAgenda
 } from '@/lib/agenda-api';
 
 interface FormularioAgenda {
@@ -124,23 +140,37 @@ function statusConfirmacao(notificacoes: NotificacoesConsultaAgenda) {
   return 'Aguardando confirmacao';
 }
 
+function descricaoLinkPublico(linkPublico: LinkAgendamentoPublicoApi | null) {
+  if (!linkPublico) return 'Nenhum link ativo. Rotacione para gerar o primeiro endereco publico.';
+  return linkPublico.urlPublica ?? linkPublico.mensagemUrlPublica;
+}
+
 export function PainelAgenda() {
   const [consultas, setConsultas] = useState<ConsultaAgendaApi[]>([]);
   const [pacientes, setPacientes] = useState<RespostaPaginada<PacienteResumo> | null>(null);
   const [profissionais, setProfissionais] = useState<RespostaPaginada<ProfissionalResumo> | null>(null);
+  const [linkPublico, setLinkPublico] = useState<LinkAgendamentoPublicoApi | null>(null);
+  const [solicitacoes, setSolicitacoes] = useState<SolicitacaoAgendaPublicaApi[]>([]);
   const [formulario, setFormulario] = useState<FormularioAgenda>({ ...formularioInicial, inicioEm: proximoHorarioPadrao() });
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [processandoConsultaId, setProcessandoConsultaId] = useState<string | null>(null);
+  const [processandoSolicitacaoId, setProcessandoSolicitacaoId] = useState<string | null>(null);
+  const [motivosRecusa, setMotivosRecusa] = useState<Record<string, string>>({});
+  const [pacientesPorSolicitacao, setPacientesPorSolicitacao] = useState<Record<string, string>>({});
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [statusGoogleAgenda, setStatusGoogleAgenda] = useState<ConexaoGoogleAgendaStatus | null>(null);
 
-  const pacientesLista = pacientes?.itens ?? [];
+  const pacientesLista = useMemo(() => pacientes?.itens ?? [], [pacientes]);
   const profissionaisLista = profissionais?.itens ?? [];
   const proximasConsultas = useMemo(
     () => [...consultas].sort((a, b) => new Date(a.inicioEm).getTime() - new Date(b.inicioEm).getTime()),
     [consultas]
+  );
+  const solicitacoesPendentes = useMemo(
+    () => solicitacoes.filter((solicitacao) => solicitacao.status === 'pendente' || solicitacao.status === 'processando'),
+    [solicitacoes]
   );
 
   async function carregar() {
@@ -151,6 +181,8 @@ export function PainelAgenda() {
       setConsultas(bootstrap.consultas);
       setPacientes(bootstrap.pacientes);
       setProfissionais(bootstrap.profissionais);
+      setLinkPublico(bootstrap.linkPublico);
+      setSolicitacoes(bootstrap.solicitacoes.itens);
       setFormulario((atual) => {
         const paciente = pacientePorId(bootstrap.pacientes.itens, atual.pacienteId) ?? bootstrap.pacientes.itens[0];
         const profissionalId = atual.profissionalId || paciente?.profissionalResponsavelId || bootstrap.profissionais.itens[0]?.id || '';
@@ -236,6 +268,10 @@ export function PainelAgenda() {
     setConsultas((atuais) => atuais.map((item) => (item.id === consulta.id ? consulta : item)));
   }
 
+  function atualizarSolicitacao(solicitacao: SolicitacaoAgendaPublicaApi) {
+    setSolicitacoes((atuais) => atuais.map((item) => (item.id === solicitacao.id ? solicitacao : item)));
+  }
+
   async function remarcar(evento: FormEvent<HTMLFormElement>, consulta: ConsultaAgendaApi) {
     evento.preventDefault();
     const dados = new FormData(evento.currentTarget);
@@ -286,297 +322,536 @@ export function PainelAgenda() {
     }
   }
 
+  async function copiarLinkPublico() {
+    if (!linkPublico?.urlPublica) return;
+    try {
+      await navigator.clipboard?.writeText(linkPublico.urlPublica);
+      setErro(null);
+      setSucesso('Link publico copiado.');
+    } catch {
+      setErro('Nao foi possivel copiar o link publico.');
+    }
+  }
+
+  async function rotacionarLink() {
+    const confirmado = window.confirm(
+      'Rotacionar o link invalida a URL publica anterior imediatamente. Deseja continuar?'
+    );
+    if (!confirmado) return;
+
+    setErro(null);
+    setSucesso(null);
+    setProcessandoSolicitacaoId('rotacionar-link');
+    try {
+      const link = await rotacionarLinkPublicoAgenda();
+      setLinkPublico(link);
+      setSucesso('Link publico rotacionado. Copie a nova URL antes de encerrar esta sessao.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao rotacionar link publico.');
+    } finally {
+      setProcessandoSolicitacaoId(null);
+    }
+  }
+
+  async function aprovarSolicitacao(solicitacao: SolicitacaoAgendaPublicaApi) {
+    const pacienteId = pacientesPorSolicitacao[solicitacao.id];
+    if (!pacienteId) {
+      setErro('Selecione um paciente antes de aprovar a solicitacao.');
+      return;
+    }
+
+    setErro(null);
+    setSucesso(null);
+    setProcessandoSolicitacaoId(solicitacao.id);
+    try {
+      const atualizada = await aprovarSolicitacaoPublicaAgenda(solicitacao.id, pacienteId);
+      atualizarSolicitacao(atualizada);
+      setSucesso('Solicitacao aprovada e convertida em consulta.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao aprovar solicitacao.');
+    } finally {
+      setProcessandoSolicitacaoId(null);
+    }
+  }
+
+  async function recusarSolicitacao(solicitacao: SolicitacaoAgendaPublicaApi) {
+    setErro(null);
+    setSucesso(null);
+    setProcessandoSolicitacaoId(solicitacao.id);
+    try {
+      const atualizada = await recusarSolicitacaoPublicaAgenda(
+        solicitacao.id,
+        motivosRecusa[solicitacao.id]?.trim() || undefined
+      );
+      atualizarSolicitacao(atualizada);
+      setSucesso('Solicitacao recusada.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao recusar solicitacao.');
+    } finally {
+      setProcessandoSolicitacaoId(null);
+    }
+  }
+
   return (
     <div className="grid min-w-0 gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-      <Cartao className="min-w-0">
-        <form onSubmit={salvar}>
-        <CartaoCabecalho className="items-start">
-          <div>
-            <h2 className="text-base font-semibold">Novo agendamento</h2>
-            <p className="mt-1 text-sm text-texto-suave">Cria a consulta interna, sincroniza com Google Calendar e envia os avisos.</p>
-          </div>
-          <CalendarCheck size={20} className="text-primaria" />
-        </CartaoCabecalho>
-
-        <CartaoConteudo>
-        <div className="grid gap-3">
-          <label className="grid gap-1">
-            <Rotulo>Paciente</Rotulo>
-            <Selecao value={formulario.pacienteId} onChange={(evento) => selecionarPaciente(evento.target.value)}>
-              {pacientesLista.map((paciente) => (
-                <option key={paciente.id} value={paciente.id}>
-                  {paciente.nome}
-                </option>
-              ))}
-            </Selecao>
-          </label>
-
-          <label className="grid gap-1">
-            <Rotulo>Profissional</Rotulo>
-            <Selecao
-              value={formulario.profissionalId}
-              onChange={(evento) => setFormulario((atual) => ({ ...atual, profissionalId: evento.target.value }))}
-            >
-              {profissionaisLista.map((profissional) => (
-                <option key={profissional.id} value={profissional.id}>
-                  {profissional.nome}
-                </option>
-              ))}
-            </Selecao>
-          </label>
-
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
-            <label className="grid gap-1">
-              <Rotulo>Data e hora</Rotulo>
-              <Campo
-                type="datetime-local"
-                value={formulario.inicioEm}
-                onChange={(evento) => setFormulario((atual) => ({ ...atual, inicioEm: evento.target.value }))}
-              />
-            </label>
-            <label className="grid gap-1">
-              <Rotulo>Duracao</Rotulo>
-              <Campo
-                type="number"
-                min={15}
-                max={480}
-                step={5}
-                value={formulario.duracaoMinutos}
-                onChange={(evento) =>
-                  setFormulario((atual) => ({ ...atual, duracaoMinutos: Number(evento.target.value) || 50 }))
-                }
-              />
-            </label>
-          </div>
-
-          <label className="grid gap-1">
-            <Rotulo>Local</Rotulo>
-            <Campo
-              value={formulario.local}
-              onChange={(evento) => setFormulario((atual) => ({ ...atual, local: evento.target.value }))}
-              placeholder="Consultorio, videochamada ou endereco"
-            />
-          </label>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1">
-              <Rotulo>Email</Rotulo>
-              <Campo
-                type="email"
-                value={formulario.emailContato}
-                onChange={(evento) => setFormulario((atual) => ({ ...atual, emailContato: evento.target.value }))}
-                placeholder="paciente@email.com"
-              />
-            </label>
-            <label className="grid gap-1">
-              <Rotulo>WhatsApp</Rotulo>
-              <Campo
-                value={formulario.whatsappContato}
-                onChange={(evento) => setFormulario((atual) => ({ ...atual, whatsappContato: evento.target.value }))}
-                placeholder="5511999999999"
-              />
-            </label>
-          </div>
-
-          <label className="grid gap-1">
-            <Rotulo>Observacoes</Rotulo>
-            <AreaTexto
-              value={formulario.observacoes}
-              onChange={(evento) => setFormulario((atual) => ({ ...atual, observacoes: evento.target.value }))}
-              placeholder="Informacoes internas para o evento."
-            />
-          </label>
-
-          <label className="flex items-center gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm text-texto-suave">
-            <input
-              type="checkbox"
-              checked={formulario.enviarNotificacoes}
-              onChange={(evento) => setFormulario((atual) => ({ ...atual, enviarNotificacoes: evento.target.checked }))}
-              className="h-4 w-4"
-            />
-            Enviar e-mail e mensagem ao salvar
-          </label>
-
-          {erro ? <AlertaOperacional mensagem={erro} /> : null}
-          {sucesso ? (
-            <div className="flex items-start gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
-              <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
-              <span>{sucesso}</span>
+      <div className="grid min-w-0 gap-4">
+        <Cartao className="min-w-0">
+          <CartaoCabecalho className="items-start">
+            <div>
+              <h2 className="text-base font-semibold">Link publico de agendamento</h2>
+              <p className="mt-1 text-sm text-texto-suave">
+                Compartilhe um unico endereco publico para receber solicitacoes antes da aprovacao manual.
+              </p>
             </div>
-          ) : null}
+            <Link2 size={20} className="text-primaria" />
+          </CartaoCabecalho>
+          <CartaoConteudo className="grid gap-4">
+            <div className="grid gap-2 rounded-lg border border-linha bg-superficie px-4 py-3">
+              <span className="text-xs font-semibold uppercase text-texto-suave">Endereco atual</span>
+              <span className="break-all text-sm font-medium text-tinta">{descricaoLinkPublico(linkPublico)}</span>
+            </div>
 
-          <div className="flex items-center justify-between gap-2 pt-1">
-            <div className="flex items-center gap-2">
-              <Botao type="button" onClick={carregar} disabled={carregando || salvando}>
+            {linkPublico ? (
+              <div className="grid gap-1 text-sm text-texto-suave">
+                <p>{linkPublico.duracaoMinutos} minutos por solicitacao publica.</p>
+                <p>Atualizado em {formatarDataHora(linkPublico.atualizadoEm)}.</p>
+                {linkPublico.requerRotacaoConfirmada ? (
+                  <p>A URL atual so volta a ficar copiavel apos nova rotacao confirmada.</p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Botao
+                type="button"
+                variante="primario"
+                onClick={() => void rotacionarLink()}
+                disabled={processandoSolicitacaoId === 'rotacionar-link'}
+              >
                 <RefreshCcw size={16} />
-                Atualizar
+                Rotacionar link
               </Botao>
-              {statusGoogleAgenda?.conectado ? (
-                <Botao
-                  type="button"
-                  variante="fantasma"
-                  onClick={() => void desconectarGoogleAgenda().then(() => setStatusGoogleAgenda({ conectado: false }))}
-                >
-                  Desconectar Google Agenda
-                </Botao>
-              ) : (
-                <Botao type="button" variante="fantasma" onClick={conectarGoogleAgenda}>
-                  Conectar Google Agenda
-                </Botao>
-              )}
+              <Botao type="button" onClick={() => void copiarLinkPublico()} disabled={!linkPublico?.urlPublicaDisponivel}>
+                <Clipboard size={16} />
+                Copiar link
+              </Botao>
             </div>
-            <Botao type="submit" variante="primario" disabled={salvando || !pacientesLista.length}>
-              <Save size={16} />
-              Agendar
-            </Botao>
-          </div>
-        </div>
-        </CartaoConteudo>
-        </form>
-      </Cartao>
+          </CartaoConteudo>
+        </Cartao>
 
-      <Cartao className="min-w-0">
-        <CartaoCabecalho className="flex-col items-start sm:flex-row sm:items-center">
-          <div>
-            <h2 className="text-base font-semibold">Consultas agendadas</h2>
-            <p className="mt-1 text-sm text-texto-suave">{proximasConsultas.length} consultas no periodo carregado</p>
-          </div>
-          <BarraCarregamento visivel={carregando} rotulo="Carregando agenda" />
-        </CartaoCabecalho>
-        <CartaoConteudo>
+        <Cartao className="min-w-0">
+          <form onSubmit={salvar}>
+            <CartaoCabecalho className="items-start">
+              <div>
+                <h2 className="text-base font-semibold">Novo agendamento</h2>
+                <p className="mt-1 text-sm text-texto-suave">
+                  Cria a consulta interna, sincroniza com Google Calendar e envia os avisos.
+                </p>
+              </div>
+              <CalendarCheck size={20} className="text-primaria" />
+            </CartaoCabecalho>
 
-        {proximasConsultas.length ? (
-          <div className="grid gap-3">
-            {proximasConsultas.map((consulta) => {
-              const paciente = pacientePorId(pacientesLista, consulta.pacienteId);
-              const profissional = profissionalPorId(profissionaisLista, consulta.profissionalId);
-              return (
-                <article key={consulta.id} className="rounded-lg border border-linha bg-superficie p-3">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="truncate text-sm font-semibold text-tinta">
-                          {consulta.pacienteNome ?? paciente?.nome ?? consulta.titulo}
-                        </h3>
-                        <span className="rounded-md border border-primaria-suave bg-superficie-hover px-2 py-1 text-xs font-medium text-primaria-forte">
-                          {consulta.status}
-                        </span>
-                      </div>
-                      <div className="mt-2 grid gap-1 text-sm text-texto-suave sm:grid-cols-2">
-                        <p className="flex min-w-0 items-center gap-2">
-                          <Clock size={15} className="shrink-0" />
-                          <span>{formatarDataHora(consulta.inicioEm)}</span>
-                        </p>
-                        <p className="flex min-w-0 items-center gap-2">
-                          <Video size={15} className="shrink-0" />
-                          <span className="truncate">{consulta.local || 'Local nao informado'}</span>
-                        </p>
-                        <p className="truncate">Profissional: {consulta.profissionalNome ?? profissional?.nome ?? 'Nao informado'}</p>
-                        <p className="truncate">Google Calendar: {statusGoogle(consulta)}</p>
-                      </div>
-                    </div>
+            <CartaoConteudo>
+              <div className="grid gap-3">
+                <label className="grid gap-1">
+                  <Rotulo>Paciente</Rotulo>
+                  <Selecao value={formulario.pacienteId} onChange={(evento) => selecionarPaciente(evento.target.value)}>
+                    {pacientesLista.map((paciente) => (
+                      <option key={paciente.id} value={paciente.id}>
+                        {paciente.nome}
+                      </option>
+                    ))}
+                  </Selecao>
+                </label>
 
-                    <div className="grid shrink-0 gap-2 text-xs text-texto-suave sm:grid-cols-2 lg:w-[360px]">
-                      <span className="inline-flex items-center gap-2 rounded-md border border-linha bg-white px-2 py-2">
-                        <Mail size={14} />
-                        {statusNotificacao(consulta.notificacoes, 'email')}
-                      </span>
-                      <span className="inline-flex items-center gap-2 rounded-md border border-linha bg-white px-2 py-2">
-                        <MessageCircle size={14} />
-                        {statusNotificacao(consulta.notificacoes, 'whatsapp')}
-                      </span>
-                      <span className="inline-flex items-center gap-2 rounded-md border border-linha bg-white px-2 py-2">
-                        <Clock size={14} />
-                        {statusLembrete(consulta.notificacoes)}
-                      </span>
-                      <span className="inline-flex items-center gap-2 rounded-md border border-linha bg-white px-2 py-2">
-                        <CheckCircle2 size={14} />
-                        {statusConfirmacao(consulta.notificacoes)}
-                      </span>
-                    </div>
+                <label className="grid gap-1">
+                  <Rotulo>Profissional</Rotulo>
+                  <Selecao
+                    value={formulario.profissionalId}
+                    onChange={(evento) => setFormulario((atual) => ({ ...atual, profissionalId: evento.target.value }))}
+                  >
+                    {profissionaisLista.map((profissional) => (
+                      <option key={profissional.id} value={profissional.id}>
+                        {profissional.nome}
+                      </option>
+                    ))}
+                  </Selecao>
+                </label>
+
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
+                  <label className="grid gap-1">
+                    <Rotulo>Data e hora</Rotulo>
+                    <Campo
+                      type="datetime-local"
+                      value={formulario.inicioEm}
+                      onChange={(evento) => setFormulario((atual) => ({ ...atual, inicioEm: evento.target.value }))}
+                    />
+                  </label>
+                  <label className="grid gap-1">
+                    <Rotulo>Duracao</Rotulo>
+                    <Campo
+                      type="number"
+                      min={15}
+                      max={480}
+                      step={5}
+                      value={formulario.duracaoMinutos}
+                      onChange={(evento) =>
+                        setFormulario((atual) => ({ ...atual, duracaoMinutos: Number(evento.target.value) || 50 }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                <label className="grid gap-1">
+                  <Rotulo>Local</Rotulo>
+                  <Campo
+                    value={formulario.local}
+                    onChange={(evento) => setFormulario((atual) => ({ ...atual, local: evento.target.value }))}
+                    placeholder="Consultorio, videochamada ou endereco"
+                  />
+                </label>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="grid gap-1">
+                    <Rotulo>Email</Rotulo>
+                    <Campo
+                      type="email"
+                      value={formulario.emailContato}
+                      onChange={(evento) => setFormulario((atual) => ({ ...atual, emailContato: evento.target.value }))}
+                      placeholder="paciente@email.com"
+                    />
+                  </label>
+                  <label className="grid gap-1">
+                    <Rotulo>WhatsApp</Rotulo>
+                    <Campo
+                      value={formulario.whatsappContato}
+                      onChange={(evento) => setFormulario((atual) => ({ ...atual, whatsappContato: evento.target.value }))}
+                      placeholder="5511999999999"
+                    />
+                  </label>
+                </div>
+
+                <label className="grid gap-1">
+                  <Rotulo>Observacoes</Rotulo>
+                  <AreaTexto
+                    value={formulario.observacoes}
+                    onChange={(evento) => setFormulario((atual) => ({ ...atual, observacoes: evento.target.value }))}
+                    placeholder="Informacoes internas para o evento."
+                  />
+                </label>
+
+                <label className="flex min-h-10 items-center gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm text-texto-suave">
+                  <input
+                    type="checkbox"
+                    checked={formulario.enviarNotificacoes}
+                    onChange={(evento) => setFormulario((atual) => ({ ...atual, enviarNotificacoes: evento.target.checked }))}
+                    className="h-4 w-4"
+                  />
+                  Enviar e-mail e mensagem ao salvar
+                </label>
+
+                {erro ? <AlertaOperacional mensagem={erro} /> : null}
+                {sucesso ? (
+                  <div className="flex items-start gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
+                    <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
+                    <span>{sucesso}</span>
                   </div>
+                ) : null}
 
-                  {consulta.observacoes ? <p className="mt-3 text-sm text-texto-suave">{consulta.observacoes}</p> : null}
-                  {consulta.googleEventHtmlLink ? (
-                    <a
-                      href={consulta.googleEventHtmlLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-3 inline-flex text-sm font-medium text-primaria hover:underline"
-                    >
-                      Abrir no Google Calendar
-                    </a>
-                  ) : null}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Botao type="button" onClick={() => void carregar()} disabled={carregando || salvando}>
+                      <RefreshCcw size={16} />
+                      Atualizar
+                    </Botao>
+                    {statusGoogleAgenda?.conectado ? (
+                      <Botao
+                        type="button"
+                        variante="fantasma"
+                        onClick={() =>
+                          void desconectarGoogleAgenda().then(() => setStatusGoogleAgenda({ conectado: false }))
+                        }
+                      >
+                        Desconectar Google Agenda
+                      </Botao>
+                    ) : (
+                      <Botao type="button" variante="fantasma" onClick={conectarGoogleAgenda}>
+                        Conectar Google Agenda
+                      </Botao>
+                    )}
+                  </div>
+                  <Botao type="submit" variante="primario" disabled={salvando || !pacientesLista.length}>
+                    <Save size={16} />
+                    Agendar
+                  </Botao>
+                </div>
+              </div>
+            </CartaoConteudo>
+          </form>
+        </Cartao>
+      </div>
 
-                  {consulta.status === 'agendada' ? (
-                    <div className="mt-3 grid gap-3 border-t border-linha pt-3 xl:grid-cols-[minmax(0,1fr)_minmax(220px,320px)]">
-                      <form onSubmit={(evento) => remarcar(evento, consulta)} className="grid gap-2">
-                        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_120px_minmax(140px,1fr)]">
-                          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                            Nova data e hora
-                            <input
-                              name="inicioEm"
-                              type="datetime-local"
-                              defaultValue={valorDatetimeLocal(new Date(consulta.inicioEm))}
-                              className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
-                            />
-                          </label>
-                          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                            Nova duracao
-                            <input
-                              name="duracaoMinutos"
-                              type="number"
-                              min={15}
-                              max={480}
-                              step={5}
-                              defaultValue={duracaoConsultaMinutos(consulta)}
-                              className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
-                            />
-                          </label>
-                          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                            Novo local
-                            <input
-                              name="local"
-                              defaultValue={consulta.local ?? ''}
-                              className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
-                            />
-                          </label>
+      <div className="grid min-w-0 gap-4">
+        <Cartao className="min-w-0">
+          <CartaoCabecalho className="flex-col items-start sm:flex-row sm:items-center">
+            <div>
+              <h2 className="text-base font-semibold">Solicitacoes pendentes</h2>
+              <p className="mt-1 text-sm text-texto-suave">{solicitacoesPendentes.length} aguardando decisao manual</p>
+            </div>
+            <BarraCarregamento visivel={carregando} rotulo="Atualizando solicitacoes" />
+          </CartaoCabecalho>
+          <CartaoConteudo>
+            {solicitacoesPendentes.length ? (
+              <div className="grid gap-3">
+                {solicitacoesPendentes.map((solicitacao) => (
+                  <article key={solicitacao.id} className="rounded-lg border border-linha bg-superficie p-3">
+                    <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="truncate text-sm font-semibold text-tinta">{solicitacao.nome}</h3>
+                          <span className="rounded-md border border-primaria-suave bg-white px-2 py-1 text-xs font-medium text-primaria-forte">
+                            {solicitacao.status}
+                          </span>
                         </div>
-                        <div className="flex justify-end">
-                          <Botao type="submit" disabled={processandoConsultaId === consulta.id}>
-                            <RefreshCcw size={15} />
-                            Remarcar
-                          </Botao>
-                        </div>
-                      </form>
 
-                      <form onSubmit={(evento) => cancelar(evento, consulta)} className="grid gap-2">
-                        <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                          Motivo do cancelamento
-                          <input
-                            name="motivo"
-                            className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                        <div className="mt-2 grid gap-1 text-sm text-texto-suave">
+                          <p className="flex min-w-0 items-center gap-2">
+                            <Clock size={15} className="shrink-0" />
+                            <span>{formatarDataHora(solicitacao.inicioEm)}</span>
+                          </p>
+                          {solicitacao.email ? (
+                            <p className="flex min-w-0 items-center gap-2">
+                              <Mail size={15} className="shrink-0" />
+                              <span className="truncate">{solicitacao.email}</span>
+                            </p>
+                          ) : null}
+                          {solicitacao.whatsapp ? (
+                            <p className="flex min-w-0 items-center gap-2">
+                              <MessageCircle size={15} className="shrink-0" />
+                              <span>{solicitacao.whatsapp}</span>
+                            </p>
+                          ) : null}
+                          <p>Expira em {formatarDataHora(solicitacao.expiraEm)}</p>
+                        </div>
+
+                        {solicitacao.observacao ? <p className="mt-3 text-sm text-texto-suave">{solicitacao.observacao}</p> : null}
+                      </div>
+
+                      <div className="grid gap-3 xl:w-[320px]">
+                        <label className="grid gap-1">
+                          <Rotulo>Paciente para aprovar</Rotulo>
+                          <Selecao
+                            aria-label="Paciente para aprovar"
+                            value={pacientesPorSolicitacao[solicitacao.id] ?? ''}
+                            onChange={(evento) =>
+                              setPacientesPorSolicitacao((atual) => ({
+                                ...atual,
+                                [solicitacao.id]: evento.target.value
+                              }))
+                            }
+                          >
+                            <option value="">Selecione um paciente</option>
+                            {pacientesLista.map((paciente) => (
+                              <option key={paciente.id} value={paciente.id}>
+                                {paciente.nome}
+                              </option>
+                            ))}
+                          </Selecao>
+                        </label>
+
+                        <label className="grid gap-1">
+                          <Rotulo>Motivo da recusa</Rotulo>
+                          <Campo
+                            value={motivosRecusa[solicitacao.id] ?? ''}
+                            onChange={(evento) =>
+                              setMotivosRecusa((atual) => ({
+                                ...atual,
+                                [solicitacao.id]: evento.target.value
+                              }))
+                            }
                             placeholder="Opcional"
                           />
                         </label>
-                        <div className="flex justify-end">
-                          <Botao type="submit" disabled={processandoConsultaId === consulta.id}>
+
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Botao
+                            type="button"
+                            variante="primario"
+                            disabled={!pacientesLista.length || !pacientesPorSolicitacao[solicitacao.id] || processandoSolicitacaoId === solicitacao.id}
+                            onClick={() => void aprovarSolicitacao(solicitacao)}
+                          >
+                            <CheckCircle2 size={15} />
+                            Aprovar solicitacao
+                          </Botao>
+                          <Botao
+                            type="button"
+                            disabled={processandoSolicitacaoId === solicitacao.id}
+                            onClick={() => void recusarSolicitacao(solicitacao)}
+                          >
                             <XCircle size={15} />
-                            Cancelar consulta
+                            Recusar solicitacao
                           </Botao>
                         </div>
-                      </form>
+                      </div>
                     </div>
-                  ) : null}
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <EstadoVazio titulo="Nenhuma consulta agendada" descricao="Use o formulario ao lado para criar o primeiro agendamento." />
-        )}
-        </CartaoConteudo>
-      </Cartao>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EstadoVazio
+                titulo="Nenhuma solicitacao pendente"
+                descricao="Quando alguem usar o link publico, a solicitacao aparecera aqui para aprovacao manual."
+              />
+            )}
+          </CartaoConteudo>
+        </Cartao>
+
+        <Cartao className="min-w-0">
+          <CartaoCabecalho className="flex-col items-start sm:flex-row sm:items-center">
+            <div>
+              <h2 className="text-base font-semibold">Consultas agendadas</h2>
+              <p className="mt-1 text-sm text-texto-suave">{proximasConsultas.length} consultas no periodo carregado</p>
+            </div>
+            <BarraCarregamento visivel={carregando} rotulo="Carregando agenda" />
+          </CartaoCabecalho>
+          <CartaoConteudo>
+            {proximasConsultas.length ? (
+              <div className="grid gap-3">
+                {proximasConsultas.map((consulta) => {
+                  const paciente = pacientePorId(pacientesLista, consulta.pacienteId);
+                  const profissional = profissionalPorId(profissionaisLista, consulta.profissionalId);
+                  return (
+                    <article key={consulta.id} className="rounded-lg border border-linha bg-superficie p-3">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate text-sm font-semibold text-tinta">
+                              {consulta.pacienteNome ?? paciente?.nome ?? consulta.titulo}
+                            </h3>
+                            <span className="rounded-md border border-primaria-suave bg-superficie-hover px-2 py-1 text-xs font-medium text-primaria-forte">
+                              {consulta.status}
+                            </span>
+                          </div>
+                          <div className="mt-2 grid gap-1 text-sm text-texto-suave sm:grid-cols-2">
+                            <p className="flex min-w-0 items-center gap-2">
+                              <Clock size={15} className="shrink-0" />
+                              <span>{formatarDataHora(consulta.inicioEm)}</span>
+                            </p>
+                            <p className="flex min-w-0 items-center gap-2">
+                              <Video size={15} className="shrink-0" />
+                              <span className="truncate">{consulta.local || 'Local nao informado'}</span>
+                            </p>
+                            <p className="truncate">Profissional: {consulta.profissionalNome ?? profissional?.nome ?? 'Nao informado'}</p>
+                            <p className="truncate">Google Calendar: {statusGoogle(consulta)}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid shrink-0 gap-2 text-xs text-texto-suave sm:grid-cols-2 lg:w-[360px]">
+                          <span className="inline-flex min-h-10 items-center gap-2 rounded-md border border-linha bg-white px-2 py-2">
+                            <Mail size={14} />
+                            {statusNotificacao(consulta.notificacoes, 'email')}
+                          </span>
+                          <span className="inline-flex min-h-10 items-center gap-2 rounded-md border border-linha bg-white px-2 py-2">
+                            <MessageCircle size={14} />
+                            {statusNotificacao(consulta.notificacoes, 'whatsapp')}
+                          </span>
+                          <span className="inline-flex min-h-10 items-center gap-2 rounded-md border border-linha bg-white px-2 py-2">
+                            <Clock size={14} />
+                            {statusLembrete(consulta.notificacoes)}
+                          </span>
+                          <span className="inline-flex min-h-10 items-center gap-2 rounded-md border border-linha bg-white px-2 py-2">
+                            <CheckCircle2 size={14} />
+                            {statusConfirmacao(consulta.notificacoes)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {consulta.observacoes ? <p className="mt-3 text-sm text-texto-suave">{consulta.observacoes}</p> : null}
+                      {consulta.googleEventHtmlLink ? (
+                        <a
+                          href={consulta.googleEventHtmlLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 inline-flex text-sm font-medium text-primaria hover:underline"
+                        >
+                          Abrir no Google Calendar
+                        </a>
+                      ) : null}
+
+                      {consulta.status === 'agendada' ? (
+                        <div className="mt-3 grid gap-3 border-t border-linha pt-3 xl:grid-cols-[minmax(0,1fr)_minmax(220px,320px)]">
+                          <form onSubmit={(evento) => remarcar(evento, consulta)} className="grid gap-2">
+                            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_120px_minmax(140px,1fr)]">
+                              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                                Nova data e hora
+                                <input
+                                  aria-label="Nova data e hora"
+                                  name="inicioEm"
+                                  type="datetime-local"
+                                  defaultValue={valorDatetimeLocal(new Date(consulta.inicioEm))}
+                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                                />
+                              </label>
+                              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                                Nova duracao
+                                <input
+                                  aria-label="Nova duracao"
+                                  name="duracaoMinutos"
+                                  type="number"
+                                  min={15}
+                                  max={480}
+                                  step={5}
+                                  defaultValue={duracaoConsultaMinutos(consulta)}
+                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                                />
+                              </label>
+                              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                                Novo local
+                                <input
+                                  aria-label="Novo local"
+                                  name="local"
+                                  defaultValue={consulta.local ?? ''}
+                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                                />
+                              </label>
+                            </div>
+                            <div className="flex justify-end">
+                              <Botao type="submit" disabled={processandoConsultaId === consulta.id}>
+                                <RefreshCcw size={15} />
+                                Remarcar
+                              </Botao>
+                            </div>
+                          </form>
+
+                          <form onSubmit={(evento) => cancelar(evento, consulta)} className="grid gap-2">
+                            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                              Motivo do cancelamento
+                              <input
+                                aria-label="Motivo do cancelamento"
+                                name="motivo"
+                                className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                                placeholder="Opcional"
+                              />
+                            </label>
+                            <div className="flex justify-end">
+                              <Botao type="submit" disabled={processandoConsultaId === consulta.id}>
+                                <XCircle size={15} />
+                                Cancelar consulta
+                              </Botao>
+                            </div>
+                          </form>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <EstadoVazio titulo="Nenhuma consulta agendada" descricao="Use o formulario ao lado para criar o primeiro agendamento." />
+            )}
+          </CartaoConteudo>
+        </Cartao>
+      </div>
     </div>
   );
 }
