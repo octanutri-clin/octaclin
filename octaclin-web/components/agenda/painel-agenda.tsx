@@ -329,7 +329,11 @@ export function PainelAgenda() {
     try {
       const atualizada = await registrarDesfechoConsulta(consulta.id, status);
       atualizarConsulta(atualizada);
-      setSucesso(`Consulta registrada como ${rotulo}.`);
+      setSucesso(
+        status === 'cancelada'
+          ? 'Consulta cancelada. Google Calendar foi atualizado conforme configuracao.'
+          : `Consulta registrada como ${rotulo}.`
+      );
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar desfecho da consulta.');
     } finally {

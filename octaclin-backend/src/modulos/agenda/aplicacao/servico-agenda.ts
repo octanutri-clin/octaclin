@@ -146,7 +146,8 @@ export class ServicoAgenda {
     const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
       const atual = await repositorio.findOne({
-        where: { id: consultaId, tenantId, ...(profissionalIdEscopo ? { profissionalId: profissionalIdEscopo } : {}) }
+        where: { id: consultaId, tenantId, ...(profissionalIdEscopo ? { profissionalId: profissionalIdEscopo } : {}) },
+        lock: { mode: 'pessimistic_write' }
       });
       if (!atual) throw new NotFoundException('Consulta nao encontrada.');
       if (STATUS_CONSULTA_TERMINAIS.includes(atual.status)) {
@@ -210,6 +211,10 @@ export class ServicoAgenda {
       resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)
     );
 
+    if (dados.status === 'cancelada') {
+      return this.executarCancelamento(tenantId, consultaId, {}, profissionalIdDoUsuario, true, false);
+    }
+
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
       const consulta = await repositorio.findOne({
@@ -217,7 +222,8 @@ export class ServicoAgenda {
           id: consultaId,
           tenantId,
           ...(profissionalIdDoUsuario ? { profissionalId: profissionalIdDoUsuario } : {})
-        }
+        },
+        lock: { mode: 'pessimistic_write' }
       });
       if (!consulta) throw new NotFoundException('Consulta nao encontrada.');
       if (STATUS_CONSULTA_TERMINAIS.includes(consulta.status)) {
@@ -260,17 +266,23 @@ export class ServicoAgenda {
     consultaId: string,
     dados: CancelarConsultaAgendaDto,
     profissionalIdEscopo: string | undefined,
-    propagarParaGoogle: boolean
+    propagarParaGoogle: boolean,
+    permitirCancelamentoIdempotente = true
   ): Promise<ConsultaAgendaRespostaDto> {
     const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
       const atual = await repositorio.findOne({
-        where: { id: consultaId, tenantId, ...(profissionalIdEscopo ? { profissionalId: profissionalIdEscopo } : {}) }
+        where: { id: consultaId, tenantId, ...(profissionalIdEscopo ? { profissionalId: profissionalIdEscopo } : {}) },
+        lock: { mode: 'pessimistic_write' }
       });
       if (!atual) throw new NotFoundException('Consulta nao encontrada.');
-      if (atual.status === 'cancelada') return atual;
+      if (atual.status === 'cancelada' && permitirCancelamentoIdempotente) return atual;
       if (STATUS_CONSULTA_TERMINAIS.includes(atual.status)) {
-        throw new BadRequestException('Consulta encerrada nao pode ser cancelada.');
+        throw new BadRequestException(
+          permitirCancelamentoIdempotente
+            ? 'Consulta encerrada nao pode ser cancelada.'
+            : 'Consulta encerrada nao pode receber novo desfecho.'
+        );
       }
 
       atual.status = 'cancelada';
@@ -365,7 +377,10 @@ export class ServicoAgenda {
   ): Promise<AgendaConsultaOrm> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
-      const consulta = await repositorio.findOne({ where: { id: consultaId, tenantId } });
+      const consulta = await repositorio.findOne({
+        where: { id: consultaId, tenantId },
+        lock: { mode: 'pessimistic_write' }
+      });
       if (!consulta) throw new NotFoundException('Consulta nao encontrada.');
 
       if (google.sincronizado) {

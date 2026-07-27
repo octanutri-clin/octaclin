@@ -19,7 +19,7 @@ export default defineConfig({
   webServer: usaServidorLocal
     ? {
         command: `pnpm exec next dev --hostname ${servidorVisual.hostname} --port ${portaServidor}`,
-        url: servidorVisual.origin,
+        url: new URL('/login', servidorVisual.origin).href,
         timeout: 120_000,
         reuseExistingServer: !process.env.CI
       }

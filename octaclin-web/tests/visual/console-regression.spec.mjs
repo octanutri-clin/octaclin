@@ -6,6 +6,7 @@ const credenciais = {
   email: process.env.E2E_EMAIL ?? 'admin@octaclin.local',
   senha: process.env.E2E_SENHA ?? 'OctaClin@123'
 };
+const webUrl = process.env.E2E_WEB_URL ?? 'http://localhost:3000';
 
 const rotas = [
   { caminho: '/dashboard', titulo: 'Dashboard' },
@@ -33,8 +34,68 @@ const rotulosMenu = [
   'Pacientes',
   'Profissionais'
 ];
+const permissoesConsoleCompleto = [
+  'dashboard.ler',
+  'questionarios.ler',
+  'comunicacoes.mensagens.ler',
+  'agenda.consultas.ler',
+  'automacoes.gerenciar',
+  'ia.executar',
+  'mobile.operar',
+  'gamificacao.gerenciar',
+  'operacoes.auditoria.ler',
+  'pacientes.listar',
+  'profissionais.ler'
+];
 
 async function login(page) {
+  let payloadLogin;
+  let autenticado = false;
+
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      status: autenticado ? 200 : 401,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        autenticado
+          ? {
+              autenticado: true,
+              apiUrl: credenciais.apiUrl,
+              tenantSlug: credenciais.tenantSlug,
+              email: credenciais.email,
+              expiraEm: '2026-07-27T15:00:00.000Z',
+              papel: 'SuperAdmin',
+              permissoes: ['operacoes.auditoria.ler'],
+              destinoInicial: '/operacoes'
+            }
+          : { autenticado: false }
+      )
+    });
+  });
+  await page.route('**/api/auth/login', async (route) => {
+    payloadLogin = route.request().postDataJSON();
+    autenticado = true;
+    await page.context().addCookies([
+      { name: 'octaclin_access_token', value: 'fake', url: webUrl },
+      { name: 'octaclin_refresh_token', value: 'fake', url: webUrl },
+      { name: 'octaclin_papel', value: 'SuperAdmin', url: webUrl },
+      { name: 'octaclin_destino_inicial', value: encodeURIComponent('/operacoes'), url: webUrl }
+    ]);
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        apiUrl: credenciais.apiUrl,
+        tenantSlug: credenciais.tenantSlug,
+        email: credenciais.email,
+        expiraEmSegundos: 900,
+        papel: 'SuperAdmin',
+        permissoes: permissoesConsoleCompleto,
+        destinoInicial: '/operacoes'
+      })
+    });
+  });
+
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: 'Acesso OctaClin' })).toBeVisible();
 
@@ -47,6 +108,33 @@ async function login(page) {
 
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(/\/operacoes$/);
+  expect(payloadLogin).toEqual(credenciais);
+}
+
+async function prepararSessaoConsoleMockada(page) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', url: webUrl },
+    { name: 'octaclin_refresh_token', value: 'fake', url: webUrl },
+    { name: 'octaclin_papel', value: 'SuperAdmin', url: webUrl },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/operacoes'), url: webUrl }
+  ]);
+
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        autenticado: true,
+        apiUrl: credenciais.apiUrl,
+        tenantSlug: credenciais.tenantSlug,
+        email: credenciais.email,
+        expiraEm: '2026-07-27T15:00:00.000Z',
+        papel: 'SuperAdmin',
+        permissoes: permissoesConsoleCompleto,
+        destinoInicial: '/operacoes'
+      })
+    });
+  });
 }
 
 async function assertSemOverflowHorizontal(page) {
@@ -403,9 +491,15 @@ async function prepararOperacoesMockadas(page) {
   };
 }
 
+test.describe('login do console', () => {
+  test('envia as credenciais e respeita o destino da sessao', async ({ page }) => {
+    await login(page);
+  });
+});
+
 test.describe('console operacional', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page);
+    await prepararSessaoConsoleMockada(page);
   });
 
   for (const rota of rotas) {
@@ -538,6 +632,7 @@ async function prepararDashboardMockado(page) {
       Object.assign(consulta, {
         inicioEm: '2026-07-24T13:30:00.000Z',
         fimEm: '2026-07-24T14:15:00.000Z',
+        status: 'reagendada',
         local: 'Sala 2',
         atualizadoEm: '2026-07-22T12:00:00.000Z',
         notificacoes: { googleCalendar: { sincronizado: true } }
@@ -545,17 +640,43 @@ async function prepararDashboardMockado(page) {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(consulta) });
       return;
     }
-    if (route.request().method() === 'DELETE') {
+    await route.fallback();
+  });
+
+  await page.route('**/api/agenda/consultas/consulta-1/desfecho', async (route) => {
+    const consulta = consultasAgenda.find((item) => item.id === 'consulta-1');
+    const dados = route.request().postDataJSON();
+    if (route.request().method() === 'POST' && dados.status === 'cancelada') {
       cancelouConsulta = true;
       Object.assign(consulta, {
         status: 'cancelada',
         notificacoes: { googleCalendar: { sincronizado: true } },
-        payload: { historico: [{ acao: 'cancelada', motivo: 'Paciente pediu reagendamento.' }] }
+        payload: { historico: [{ acao: 'cancelada', origem: 'octaclin' }] }
       });
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(consulta) });
       return;
     }
     await route.fallback();
+  });
+
+  await page.route('**/api/agenda/agendamento-publico', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
+  });
+
+  await page.route('**/api/agenda/solicitacoes', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ itens: [], total: 0 })
+    });
+  });
+
+  await page.route('**/api/agenda/google/status', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ conectado: true })
+    });
   });
 
   await page.route('**/api/pacientes**', async (route) => {
@@ -1008,13 +1129,19 @@ test.describe('agenda de producao', () => {
     await expect.poll(() => agenda.remarcouConsulta()).toBe(true);
     await expect(page.getByText('Consulta remarcada. Google Calendar foi atualizado conforme configuracao.')).toBeVisible();
     await expect(consultaAna.getByText('24/07/2026')).toBeVisible();
+    await expect(consultaAna.getByText('Reagendada')).toBeVisible();
 
-    await consultaAna.getByLabel('Motivo do cancelamento').fill('Paciente pediu reagendamento.');
-    await consultaAna.getByRole('button', { name: 'Cancelar consulta' }).click();
+    const botaoCancelar = consultaAna.getByRole('button', { name: 'Cancelar consulta' });
+    await expect(botaoCancelar).toHaveAttribute('title', 'Cancelar');
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('Registrar a consulta como cancelada?');
+      await dialog.accept();
+    });
+    await botaoCancelar.click();
 
     await expect.poll(() => agenda.cancelouConsulta()).toBe(true);
     await expect(page.getByText('Consulta cancelada. Google Calendar foi atualizado conforme configuracao.')).toBeVisible();
-    await expect(consultaAna.getByText('cancelada')).toBeVisible();
+    await expect(consultaAna.getByText('Cancelada')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });
