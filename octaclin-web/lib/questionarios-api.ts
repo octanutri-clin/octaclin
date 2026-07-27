@@ -50,6 +50,13 @@ export interface EnvioQuestionarioApi {
   linkFormulario: string;
 }
 
+export interface RevisaoEnvioQuestionarioApi {
+  id: string;
+  status: 'respondido';
+  revisadoEm?: string;
+  revisadoPorUsuarioId?: string;
+}
+
 export interface RespostaQuestionarioRecebidaApi {
   respostaId: string;
   envioId: string;
@@ -316,8 +323,8 @@ export async function criarEnvioQuestionario(
   });
 }
 
-export async function revisarEnvioQuestionario(envioId: string): Promise<EnvioQuestionarioApi> {
-  return requisitar<EnvioQuestionarioApi>(
+export async function revisarEnvioQuestionario(envioId: string): Promise<RevisaoEnvioQuestionarioApi> {
+  return requisitar<RevisaoEnvioQuestionarioApi>(
     `/api/questionarios/envios/${encodeURIComponent(envioId)}/revisar`,
     { method: 'POST' }
   );
