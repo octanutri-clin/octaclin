@@ -464,6 +464,30 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Pendencia futura: remover o shim temporario `UnsafeUnwrappedCookies` na
     migracao dedicada para Next.js 16/React 19.
 
+- [x] Fase 145 - Painel clinico do profissional e desmarcamento/cancelamento distintos.
+  - Painel clinico diario por profissional (rotina do dia, sem retorno 30/60/90+,
+    risco alto prioritario, tarefas vencidas, formularios pendentes, solicitacoes
+    publicas e comunicacoes em alerta), com acoes rapidas auditadas via
+    `origem: dashboard_clinico`. `SuperAdmin` pode selecionar profissional em
+    contexto (auditado); nenhum outro papel acessa dados de terceiro.
+  - `cancelada` continua o unico desfecho terminal da agenda; o historico da
+    consulta passou a registrar a origem (`profissional`, `paciente` ou
+    `google`), que decide a comunicacao: cancelamento pelo profissional notifica
+    o paciente por e-mail/WhatsApp conforme preferencia; desmarcamento pelo
+    paciente (portal, sessao autenticada, nunca id vindo do navegador) libera o
+    horario, cancela o evento Google uma unica vez e cria um alerta
+    operacional sem PHI para o profissional responsavel, sem notificar o
+    proprio paciente; cancelamento originado no Google nao gera novo envio.
+  - Status: concluida em 2026-07-27. Tasks 1-4 (painel clinico, formularios,
+    resumo agregado, BFF/UI) e Task 5 (desmarcamento/cancelamento, commit
+    `22e161b`) aprovadas por revisao SDD.
+  - Validacoes: `pnpm --dir octaclin-backend typecheck` e `test --runInBand`
+    (59 suites/318 testes), `pnpm --dir octaclin-web typecheck`, `lint`,
+    `build`, `test:authz` e `test:e2e:criticas` (10 jornadas, desktop/mobile).
+  - Pendencia: nenhuma dependencia externa (credencial/dominio/OAuth) para esta
+    fase; `desconectar()` do Google Calendar segue sem limpar o canal de watch
+    (debito ja registrado na Fase 136, nao reintroduzido nem agravado aqui).
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.

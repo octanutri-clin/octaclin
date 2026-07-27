@@ -388,8 +388,8 @@ export function PortalPaciente() {
     setSucesso(null);
     try {
       await desmarcarConsultaPaciente(consultaId);
-      setSucesso('Consulta desmarcada.');
       await carregar();
+      setSucesso('Consulta desmarcada.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desmarcar consulta.');
     } finally {

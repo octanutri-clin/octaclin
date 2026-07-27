@@ -335,6 +335,7 @@ async function prepararProfissional(page) {
 }
 
 async function prepararPaciente(page) {
+  let desmarcou = false;
   await criarSessao(page, 'Patient', '/portal');
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({
@@ -367,7 +368,7 @@ async function prepararPaciente(page) {
           profissionalResponsavelId: 'profissional-1'
         },
         resumo: {
-          consultasProximas: 1,
+          consultasProximas: desmarcou ? 0 : 1,
           formulariosPendentes: 0,
           formulariosRespondidos: 0,
           mensagensRecentes: 1,
@@ -377,17 +378,19 @@ async function prepararPaciente(page) {
           notificacoesPendentes: 1,
           notificacoesHistorico: 1
         },
-        consultasProximas: [
-          {
-            id: 'consulta-jornada',
-            titulo: 'Consulta inicial',
-            inicioEm: '2026-08-10T13:00:00.000Z',
-            fimEm: '2026-08-10T13:50:00.000Z',
-            status: 'agendada',
-            local: 'Online',
-            googleEventHtmlLink: 'https://calendar.google.com/event?eid=teste'
-          }
-        ],
+        consultasProximas: desmarcou
+          ? []
+          : [
+              {
+                id: 'consulta-jornada',
+                titulo: 'Consulta inicial',
+                inicioEm: '2026-08-10T13:00:00.000Z',
+                fimEm: '2026-08-10T13:50:00.000Z',
+                status: 'agendada',
+                local: 'Online',
+                googleEventHtmlLink: 'https://calendar.google.com/event?eid=teste'
+              }
+            ],
         formulariosPendentes: [],
         formulariosRespondidos: [],
         mensagensRecentes: [
@@ -453,6 +456,21 @@ async function prepararPaciente(page) {
       })
     });
   });
+
+  await page.route('**/api/portal/paciente/consultas/consulta-jornada/desmarcar', async (route) => {
+    desmarcou = true;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'consulta-jornada',
+        status: 'cancelada',
+        payload: { historico: [{ acao: 'cancelada', origem: 'paciente', canceladaEm: '2026-08-09T12:00:00.000Z' }] }
+      })
+    });
+  });
+
+  return { desmarcou: () => desmarcou };
 }
 
 async function prepararJornadaSolicitacaoPublica(page) {
@@ -944,5 +962,18 @@ test.describe('jornadas criticas de producao', () => {
     await expect(page.locator('#notificacoes').getByText('Lembrete de consulta').first()).toBeVisible();
     await expect(page.locator('#plano').getByText('Responder check-in inicial')).toBeVisible();
     await expect(page.locator('#plano').getByText('Orientacoes iniciais')).toBeVisible();
+  });
+
+  test('paciente desmarca a propria consulta e ela some da lista de proximas consultas', async ({ page }) => {
+    const paciente = await prepararPaciente(page);
+
+    await page.goto('/portal');
+    await expect(page.locator('#acoes').getByText('Consulta inicial')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Desmarcar' }).click();
+
+    await expect.poll(() => paciente.desmarcou()).toBe(true);
+    await expect(page.getByText('Consulta desmarcada.')).toBeVisible();
+    await expect(page.getByText('Nenhuma consulta futura agendada.')).toBeVisible();
   });
 });
