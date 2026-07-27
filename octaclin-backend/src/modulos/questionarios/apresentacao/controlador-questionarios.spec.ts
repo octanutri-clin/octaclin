@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
+import { CHAVE_PAPEIS, CHAVE_PERMISSOES } from '../../auth/apresentacao/decorators';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoQuestionarios } from '../aplicacao/servico-questionarios';
 import { ControladorQuestionarios } from './controlador-questionarios';
@@ -41,8 +42,8 @@ describe('ControladorQuestionarios', () => {
     return { controlador, marcarEnvioComoRevisado, registrar, requisicao };
   }
 
-  it('preserva a origem propria quando o BFF generico nao informa outra origem', async () => {
-    const { controlador, registrar, requisicao } = criarCenario(undefined);
+  it('ignora origem forjada no endpoint generico', async () => {
+    const { controlador, registrar, requisicao } = criarCenario('dashboard_clinico');
 
     await controlador.revisarEnvio(usuario, requisicao, 'envio-1');
 
@@ -57,19 +58,35 @@ describe('ControladorQuestionarios', () => {
         }
       })
     );
-    expect(requisicao.header).toHaveBeenCalledWith('x-octaclin-origem');
+    expect(requisicao.header).not.toHaveBeenCalled();
   });
 
-  it('registra a origem clinica fixada pelo BFF dedicado', async () => {
-    const { controlador, registrar, requisicao } = criarCenario('dashboard_clinico');
+  it('fixa origem e papeis clinicos no endpoint do dashboard', async () => {
+    const { controlador, registrar, requisicao } = criarCenario('origem_forjada');
+    const revisarDashboard = (
+      controlador as unknown as {
+        revisarEnvioDashboard(
+          usuario: UsuarioAutenticado,
+          requisicao: Request,
+          envioId: string
+        ): Promise<unknown>;
+      }
+    ).revisarEnvioDashboard;
 
-    await controlador.revisarEnvio(usuario, requisicao, 'envio-1');
+    await revisarDashboard.call(controlador, usuario, requisicao, 'envio-1');
 
     expect(registrar).toHaveBeenCalledWith(
       expect.objectContaining({
         metadados: expect.objectContaining({ origem: 'dashboard_clinico' })
       })
     );
+    expect(Reflect.getMetadata(CHAVE_PAPEIS, revisarDashboard)).toEqual([
+      'SuperAdmin',
+      'Professional'
+    ]);
+    expect(Reflect.getMetadata(CHAVE_PERMISSOES, revisarDashboard)).toEqual([
+      'questionarios.gerenciar'
+    ]);
   });
 
   it('retorna apenas os campos clinicos minimos da revisao', async () => {

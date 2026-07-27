@@ -72,7 +72,7 @@ test('BFF de revisao retorna 403 sem permissao e nao consulta o backend', async 
   }
 });
 
-test('BFF generico preserva origem de questionarios e remove token publico da resposta', async () => {
+test('BFF generico nao encaminha origem e remove token publico da resposta', async () => {
   __setCookies(cookiesSessaoValida(['questionarios.gerenciar']));
   const fetchOriginal = global.fetch;
   let headersBackend: Headers | undefined;
@@ -95,13 +95,15 @@ test('BFF generico preserva origem de questionarios e remove token publico da re
   }) as typeof global.fetch;
 
   try {
-    const resposta = await revisarEnvio(new Request('http://localhost/api/revisar'), {
+    const resposta = await revisarEnvio(new Request('http://localhost/api/revisar', {
+      headers: { 'x-octaclin-origem': 'dashboard_clinico' }
+    }), {
       params: Promise.resolve({ envioId: 'envio-1' })
     });
     const corpo = (await resposta.json()) as Record<string, unknown>;
 
     assert.equal(resposta.status, 200);
-    assert.equal(headersBackend?.get('x-octaclin-origem'), 'questionarios');
+    assert.equal(headersBackend?.get('x-octaclin-origem'), null);
     assert.deepEqual(corpo, {
       id: 'envio-1',
       status: 'respondido',

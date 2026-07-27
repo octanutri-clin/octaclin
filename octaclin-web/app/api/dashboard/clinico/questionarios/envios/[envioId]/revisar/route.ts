@@ -15,8 +15,8 @@ export async function POST(_request: Request, props: Params) {
     await exigirAcaoDashboardClinico('questionarios.gerenciar');
     const { envioId } = await props.params;
     const resposta = await requisitarBackendAutenticado(
-      `/questionarios/envios/${encodeURIComponent(envioId)}/revisar`,
-      { method: 'POST', headers: { 'x-octaclin-origem': 'dashboard_clinico' } }
+      `/questionarios/dashboard/envios/${encodeURIComponent(envioId)}/revisar`,
+      { method: 'POST' }
     );
     const texto = await resposta.text();
     if (!resposta.ok) {

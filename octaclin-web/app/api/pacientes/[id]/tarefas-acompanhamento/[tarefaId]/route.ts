@@ -14,8 +14,7 @@ export async function PATCH(request: NextRequest, props: Params) {
       `/pacientes/${encodeURIComponent(params.id)}/tarefas-acompanhamento/${encodeURIComponent(params.tarefaId)}`,
       {
         method: 'PATCH',
-        body: corpo,
-        headers: { 'x-octaclin-origem': 'pacientes' }
+        body: corpo
       }
     );
     return new NextResponse(await resposta.text(), {

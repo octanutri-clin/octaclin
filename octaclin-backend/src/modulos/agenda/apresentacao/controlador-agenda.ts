@@ -198,6 +198,34 @@ export class ControladorAgenda {
     @Param('consultaId', ParseUUIDPipe) consultaId: string,
     @Body() dados: RegistrarDesfechoConsultaAgendaDto
   ) {
+    return this.registrarDesfechoComOrigem(usuario, requisicao, consultaId, dados, 'agenda');
+  }
+
+  @Post('dashboard/consultas/:consultaId/desfecho')
+  @Papeis('SuperAdmin', 'Professional')
+  @Permissoes('agenda.consultas.criar')
+  async registrarDesfechoDashboard(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('consultaId', ParseUUIDPipe) consultaId: string,
+    @Body() dados: RegistrarDesfechoConsultaAgendaDto
+  ) {
+    return this.registrarDesfechoComOrigem(
+      usuario,
+      requisicao,
+      consultaId,
+      dados,
+      'dashboard_clinico'
+    );
+  }
+
+  private async registrarDesfechoComOrigem(
+    usuario: UsuarioAutenticado,
+    requisicao: Request,
+    consultaId: string,
+    dados: RegistrarDesfechoConsultaAgendaDto,
+    origem: 'agenda' | 'dashboard_clinico'
+  ) {
     const consulta = await this.servicoAgenda.registrarDesfecho(usuario.tenantId, consultaId, dados, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
@@ -209,7 +237,7 @@ export class ControladorAgenda {
       userAgent: this.obterUserAgent(requisicao),
       metadados: {
         status: dados.status,
-        origem: requisicao.header('x-octaclin-origem') ?? 'agenda'
+        origem
       }
     });
     return consulta;

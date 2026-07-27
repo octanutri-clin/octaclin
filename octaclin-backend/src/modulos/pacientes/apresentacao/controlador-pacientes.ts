@@ -206,6 +206,44 @@ export class ControladorPacientes {
     @Param('tarefaId', ParseUUIDPipe) tarefaId: string,
     @Body() dados: AtualizarTarefaAcompanhamentoDto
   ) {
+    return this.atualizarTarefaAcompanhamentoComOrigem(
+      usuario,
+      requisicao,
+      id,
+      tarefaId,
+      dados,
+      'pacientes'
+    );
+  }
+
+  @Patch('dashboard/:id/tarefas-acompanhamento/:tarefaId')
+  @Papeis('SuperAdmin', 'Professional')
+  @Permissoes('pacientes.gerenciar')
+  async atualizarTarefaAcompanhamentoDashboard(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('tarefaId', ParseUUIDPipe) tarefaId: string,
+    @Body() dados: AtualizarTarefaAcompanhamentoDto
+  ) {
+    return this.atualizarTarefaAcompanhamentoComOrigem(
+      usuario,
+      requisicao,
+      id,
+      tarefaId,
+      dados,
+      'dashboard_clinico'
+    );
+  }
+
+  private async atualizarTarefaAcompanhamentoComOrigem(
+    usuario: UsuarioAutenticado,
+    requisicao: Request,
+    id: string,
+    tarefaId: string,
+    dados: AtualizarTarefaAcompanhamentoDto,
+    origem: 'pacientes' | 'dashboard_clinico'
+  ) {
     const tarefa = await this.servicoPacientes.atualizarTarefaAcompanhamento(usuario.tenantId, id, tarefaId, dados, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
@@ -218,7 +256,7 @@ export class ControladorPacientes {
       metadados: {
         tarefaId: tarefa.id,
         status: tarefa.status,
-        origem: requisicao.header('x-octaclin-origem') ?? 'pacientes'
+        origem
       }
     });
     return tarefa;

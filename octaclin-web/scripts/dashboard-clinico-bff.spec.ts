@@ -6,6 +6,7 @@ import { GET as obterResumo } from '../app/api/dashboard/clinico/route';
 import { POST as registrarDesfechoDashboard } from '../app/api/dashboard/clinico/consultas/[consultaId]/desfecho/route';
 import { PATCH as concluirTarefaDashboard } from '../app/api/dashboard/clinico/pacientes/[pacienteId]/tarefas/[tarefaId]/concluir/route';
 import { POST as revisarEnvioDashboard } from '../app/api/dashboard/clinico/questionarios/envios/[envioId]/revisar/route';
+import { POST as ocultarAlertaDashboard } from '../app/api/dashboard/clinico/alertas/[alertaId]/ocultar/route';
 import { POST as registrarDesfechoAgenda } from '../app/api/agenda/consultas/[consultaId]/desfecho/route';
 import { PATCH as atualizarTarefaPaciente } from '../app/api/pacientes/[id]/tarefas-acompanhamento/[tarefaId]/route';
 import { POST as revisarEnvioQuestionarios } from '../app/api/questionarios/envios/[envioId]/revisar/route';
@@ -48,7 +49,7 @@ test('BFF clinico fixa escopo do Professional e permite contexto apenas ao Super
   } finally { restaurarFetch(original); }
 });
 
-test('BFFs de acao clinica exigem papel clinico e fixam origem sem encaminhar origem do navegador', async () => {
+test('BFFs de acao clinica exigem papel clinico e usam endpoints backend dedicados sem encaminhar origem', async () => {
   const original = global.fetch;
   const chamadas: { url: string; headers: Headers; body?: BodyInit | null }[] = [];
   global.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
@@ -103,18 +104,18 @@ test('BFFs de acao clinica exigem papel clinico e fixam origem sem encaminhar or
       })),
       [
         {
-          caminho: '/agenda/consultas/consulta-1/desfecho',
-          origem: 'dashboard_clinico',
+          caminho: '/agenda/dashboard/consultas/consulta-1/desfecho',
+          origem: null,
           corpo: JSON.stringify({ status: 'falta' })
         },
         {
-          caminho: '/pacientes/paciente-1/tarefas-acompanhamento/tarefa-1',
-          origem: 'dashboard_clinico',
+          caminho: '/pacientes/dashboard/paciente-1/tarefas-acompanhamento/tarefa-1',
+          origem: null,
           corpo: JSON.stringify({ status: 'concluida' })
         },
         {
-          caminho: '/questionarios/envios/envio-1/revisar',
-          origem: 'dashboard_clinico',
+          caminho: '/questionarios/dashboard/envios/envio-1/revisar',
+          origem: null,
           corpo: undefined
         }
       ]
@@ -124,7 +125,7 @@ test('BFFs de acao clinica exigem papel clinico e fixam origem sem encaminhar or
   }
 });
 
-test('BFFs genericos preservam a origem de agenda, pacientes e questionarios', async () => {
+test('BFFs genericos nao encaminham origem fornecida pelo navegador', async () => {
   const original = global.fetch;
   const origens: Array<string | null> = [];
   global.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
@@ -161,7 +162,41 @@ test('BFFs genericos preservam a origem de agenda, pacientes e questionarios', a
       { params: Promise.resolve({ envioId: 'envio-1' }) }
     );
 
-    assert.deepEqual(origens, ['agenda', 'pacientes', 'questionarios']);
+    assert.deepEqual(origens, [null, null, null]);
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('ocultacao de alerta permanece no fluxo proprio do dashboard e nao encaminha origem', async () => {
+  const original = global.fetch;
+  let chamada: { caminho: string; origem: string | null } | undefined;
+  global.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    chamada = {
+      caminho: new URL(String(url)).pathname,
+      origem: new Headers(init?.headers).get('x-octaclin-origem')
+    };
+    return new Response(JSON.stringify({ alertaId: 'alerta-1' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }) as typeof global.fetch;
+
+  try {
+    __setCookies(cookiesSessao('Professional', ['dashboard.ler']));
+    const resposta = await ocultarAlertaDashboard(
+      new Request('http://localhost/api/dashboard/clinico/alertas/alerta-1/ocultar', {
+        method: 'POST',
+        headers: { 'x-octaclin-origem': 'origem_forjada' }
+      }),
+      { params: Promise.resolve({ alertaId: 'alerta-1' }) }
+    );
+
+    assert.equal(resposta.status, 200);
+    assert.deepEqual(chamada, {
+      caminho: '/dashboard/clinico/alertas/alerta-1/ocultar',
+      origem: null
+    });
   } finally {
     restaurarFetch(original);
   }

@@ -159,6 +159,31 @@ export class ControladorQuestionarios {
     @Req() requisicao: Request,
     @Param('envioId', ParseUUIDPipe) envioId: string
   ) {
+    return this.revisarEnvioComOrigem(usuario, requisicao, envioId, 'questionarios');
+  }
+
+  @Post('questionarios/dashboard/envios/:envioId/revisar')
+  @Papeis('SuperAdmin', 'Professional')
+  @Permissoes('questionarios.gerenciar')
+  async revisarEnvioDashboard(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('envioId', ParseUUIDPipe) envioId: string
+  ) {
+    return this.revisarEnvioComOrigem(
+      usuario,
+      requisicao,
+      envioId,
+      'dashboard_clinico'
+    );
+  }
+
+  private async revisarEnvioComOrigem(
+    usuario: UsuarioAutenticado,
+    requisicao: Request,
+    envioId: string,
+    origem: 'questionarios' | 'dashboard_clinico'
+  ) {
     const envio = await this.servicoQuestionarios.marcarEnvioComoRevisado(usuario.tenantId, envioId, usuario);
     await this.registrarAuditoria(
       usuario,
@@ -167,7 +192,7 @@ export class ControladorQuestionarios {
       'envio_questionario',
       envio.id,
       {
-          origem: requisicao.header('x-octaclin-origem') ?? 'questionarios',
+        origem,
         revisadoEm: envio.revisadoEm
       }
     );

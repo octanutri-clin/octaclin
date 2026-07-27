@@ -17,7 +17,7 @@ export async function POST(_request: Request, props: Params) {
     const { alertaId } = await props.params;
     const resposta = await requisitarBackendAutenticado(
       `/dashboard/clinico/alertas/${encodeURIComponent(alertaId)}/ocultar`,
-      { method: 'POST', headers: { 'x-octaclin-origem': 'dashboard_clinico' } }
+      { method: 'POST' }
     );
     return new NextResponse(resposta.body, {
       status: resposta.status,

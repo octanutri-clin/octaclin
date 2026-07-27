@@ -16,7 +16,7 @@ export async function POST(_request: Request, props: Params) {
     const params = await props.params;
     const resposta = await requisitarBackendAutenticado(
       `/questionarios/envios/${encodeURIComponent(params.envioId)}/revisar`,
-      { method: 'POST', headers: { 'x-octaclin-origem': 'questionarios' } }
+      { method: 'POST' }
     );
     const texto = await resposta.text();
     if (!resposta.ok) {

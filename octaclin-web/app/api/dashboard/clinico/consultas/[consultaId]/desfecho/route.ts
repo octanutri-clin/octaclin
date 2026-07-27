@@ -18,11 +18,10 @@ export async function POST(request: NextRequest, props: Params) {
     await exigirAcaoDashboardClinico('agenda.consultas.criar');
     const { consultaId } = await props.params;
     const resposta = await requisitarBackendAutenticado(
-      `/agenda/consultas/${encodeURIComponent(consultaId)}/desfecho`,
+      `/agenda/dashboard/consultas/${encodeURIComponent(consultaId)}/desfecho`,
       {
         method: 'POST',
-        body: await request.text(),
-        headers: { 'x-octaclin-origem': 'dashboard_clinico' }
+        body: await request.text()
       }
     );
     return encaminharRespostaDashboardClinico(resposta);

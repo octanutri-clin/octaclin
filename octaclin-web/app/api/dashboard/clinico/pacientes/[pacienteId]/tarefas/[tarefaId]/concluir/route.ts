@@ -18,11 +18,10 @@ export async function PATCH(_request: Request, props: Params) {
     await exigirAcaoDashboardClinico('pacientes.gerenciar');
     const { pacienteId, tarefaId } = await props.params;
     const resposta = await requisitarBackendAutenticado(
-      `/pacientes/${encodeURIComponent(pacienteId)}/tarefas-acompanhamento/${encodeURIComponent(tarefaId)}`,
+      `/pacientes/dashboard/${encodeURIComponent(pacienteId)}/tarefas-acompanhamento/${encodeURIComponent(tarefaId)}`,
       {
         method: 'PATCH',
-        body: JSON.stringify({ status: 'concluida' }),
-        headers: { 'x-octaclin-origem': 'dashboard_clinico' }
+        body: JSON.stringify({ status: 'concluida' })
       }
     );
     return encaminharRespostaDashboardClinico(resposta);

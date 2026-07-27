@@ -16,7 +16,7 @@ export async function POST(request: NextRequest, props: Params) {
     const { consultaId } = await props.params;
     const resposta = await requisitarBackendAutenticado(
       `/agenda/consultas/${encodeURIComponent(consultaId)}/desfecho`,
-      { method: 'POST', body: await request.text(), headers: { 'x-octaclin-origem': 'agenda' } }
+      { method: 'POST', body: await request.text() }
     );
     return new NextResponse(resposta.body, {
       status: resposta.status,
