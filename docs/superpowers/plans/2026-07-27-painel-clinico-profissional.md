@@ -14,6 +14,7 @@
 - `Collaborator`, `Client` e `Patient` nao acessam o resumo clinico nem o seletor de profissional.
 - Pacientes arquivados, pausados ou encerrados nao entram nas filas de retorno e tarefa vencida.
 - Somente `concluida` reinicia o calculo de retorno; `reagendada`, `falta` e `cancelada` nao contam como atendimento realizado.
+- `cancelada` continua sendo o unico estado terminal de liberacao de horario; o historico registra a origem `profissional`, `paciente` ou `google`. Somente a origem `profissional` notifica o paciente; somente a origem `paciente` cria alerta ao profissional; a origem `google` nao gera novo envio.
 - O dashboard nao persiste token publico, conteudo de mensagem ou dados clinicos detalhados fora de seus modulos de origem.
 - Toda mutacao disparada pelo painel carrega `origem: dashboard_clinico` na auditoria sem permitir que o frontend escolha usuario, tenant ou profissional.
 - Sem dependencias novas, sem `any` em codigo de producao e sem alteracao na integracao Google Calendar fora das chamadas ja existentes de agenda.
@@ -342,7 +343,67 @@ git add octaclin-web/app/api/dashboard octaclin-web/app/api/agenda/consultas oct
 git commit -m "Aprimora painel clinico do profissional"
 ```
 
-### Task 5: Regressao, documentacao e publicacao da fase
+### Task 5: Desmarcamento pelo paciente e comunicacao de cancelamento
+
+**Files:**
+- Modify: `octaclin-backend/src/modulos/agenda/aplicacao/servico-agenda.ts`
+- Modify: `octaclin-backend/src/modulos/agenda/aplicacao/servico-agenda.spec.ts`
+- Modify: `octaclin-backend/src/modulos/agenda/apresentacao/controlador-agenda.ts`
+- Modify: `octaclin-backend/src/modulos/agenda/aplicacao/servico-agendamento-publico.ts`
+- Modify: `octaclin-backend/src/modulos/agenda/aplicacao/servico-agendamento-publico.spec.ts`
+- Create: authenticated patient BFF route for appointment cancellation
+- Modify: portal client appointment UI and dashboard clinical alert mapping
+
+**Interfaces:**
+- The professional cancellation flow persists `status: 'cancelada'` with
+  `payload.historico.origem: 'profissional'`, cancels the Google event and
+  queues existing enabled email/WhatsApp notifications to the patient.
+- The patient flow is authenticated through the patient portal and can cancel
+  only their own active appointment. It persists the same terminal status with
+  `origem: 'paciente'`, cancels the Google event and creates a non-PHI alert
+  visible only to the appointment professional.
+- A Google Calendar cancellation persists `origem: 'google'` and does not
+  send a further patient or professional notification.
+
+- [ ] **Step 1: Write failing origin and notification tests**
+
+Cover professional cancellation notifying the linked patient according to
+preferences, patient cancellation refusing another patient's appointment,
+Google cancellation producing no notification loop, and all three origins
+releasing the scheduling conflict.
+
+- [ ] **Step 2: Implement cancellation origin and transport policy**
+
+Keep `cancelada` as the sole terminal database status. Store the initiator and
+notification outcomes in the appointment payload/notificacoes, reuse the
+existing communication processor for patient channels, and use the dashboard
+alert mechanism for the professional notification. Do not include free-text
+reason, contact values, bearer tokens or clinical payload in the dashboard
+alert. The professional console labels the result `Cancelada pelo
+profissional`; the patient portal labels it `Desmarcada`.
+
+- [ ] **Step 3: Expose secure patient action and visible alert**
+
+The portal BFF derives the patient identity exclusively from its authenticated
+session; it never accepts a patient or professional identifier from the
+browser. The backend records a dedicated audit event for each origin. The
+dashboard aggregate returns only a short operational alert with appointment
+identifier and timestamp to the assigned professional or selected SuperAdmin
+context.
+
+- [ ] **Step 4: Run focused verification and commit**
+
+Run agenda, public scheduling, dashboard and portal authorization tests plus
+the desktop/mobile visual journey for patient desmarcamento and professional
+cancellation. Confirm the resulting consultation is terminal, absent from
+conflict checks and the Google cancellation is invoked once.
+
+```bash
+git add octaclin-backend/src/modulos/agenda octaclin-web/app/api octaclin-web/components
+git commit -m "Distingue desmarcamento e cancelamento de consulta"
+```
+
+### Task 6: Regressao, documentacao e publicacao da fase
 
 **Files:**
 - Create: `fase-145-painel-clinico-profissional.md`

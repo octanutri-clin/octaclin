@@ -50,6 +50,15 @@ A agenda passa a registrar os estados `Concluida`, `Reagendada`, `Falta` e
 - `Falta` encerra o horario sem atendimento e nao conta como retorno.
 - `Cancelada` encerra o horario sem atendimento e nao conta como retorno.
 
+`Cancelada` e o estado terminal unico para liberar o horario local e remover o
+evento correspondente do Google Calendar. A origem, gravada no historico da
+consulta, define a linguagem e a comunicacao: um cancelamento autenticado pelo
+paciente aparece como `Desmarcada pelo paciente` e gera alerta ao profissional;
+um cancelamento feito pelo profissional aparece como `Cancelada pelo
+profissional` e dispara as notificacoes habilitadas ao paciente. Eventos
+cancelados recebidos do Google Calendar apenas registram a origem `google`,
+sem produzir notificacao em ciclo.
+
 Somente consultas com estado `Concluida` interrompem a contagem de 30 dias sem
 retorno. O profissional pode registrar o desfecho por uma acao rapida na
 agenda ou no painel clinico, sempre dentro de seu escopo. Alteracoes de estado
@@ -81,6 +90,8 @@ operacao de destino:
 - criar retorno com paciente e profissional preselecionados na agenda;
 - concluir uma tarefa de acompanhamento;
 - registrar consulta como concluida, falta, cancelada ou reagendada;
+- desmarcar consulta pelo portal do paciente ou cancelar pelo console, sempre
+  registrando quem iniciou a acao e a notificacao correspondente;
 - revisar formulario pendente;
 - responder ou reprocessar comunicacao;
 - aprovar ou recusar solicitacao publica de agenda.
