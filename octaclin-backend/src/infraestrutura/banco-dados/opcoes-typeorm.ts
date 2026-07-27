@@ -14,6 +14,9 @@ import { AdicionaContadorFalhasSincronizacaoGoogleAgenda1720000000901 } from './
 import { ForcaRenovacaoCanaisWatchSemToken1720000000902 } from './migracoes/1720000000902-ForcaRenovacaoCanaisWatchSemToken';
 import { CriarAgendamentoPublico1720000001000 } from './migracoes/1720000001000-CriarAgendamentoPublico';
 import { CorrigeAgendamentoPublicoPosMigracaoInicial1720000001001 } from './migracoes/1720000001001-CorrigeAgendamentoPublicoPosMigracaoInicial';
+import { AdicionarDesfechosConsultaAgenda1720000001002 } from './migracoes/1720000001002-AdicionarDesfechosConsultaAgenda';
+import { AdicionarRevisaoClinicaEnviosQuestionario1720000001003 } from './migracoes/1720000001003-AdicionarRevisaoClinicaEnviosQuestionario';
+import { CriarAlertasOcultosDashboardClinico1720000001004 } from './migracoes/1720000001004-CriarAlertasOcultosDashboardClinico';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -62,6 +65,7 @@ import { RespostaValorOrm } from '../../modulos/questionarios/infraestrutura/res
 import { TenantConfiguracaoOrm } from '../../modulos/tenancy/infraestrutura/tenant-configuracao.orm';
 import { TenantOrm } from '../../modulos/tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../modulos/usuarios/infraestrutura/usuario.orm';
+import { DashboardAlertaOcultoOrm } from '../../modulos/dashboard/infraestrutura/dashboard-alerta-oculto.orm';
 
 function criarConexaoBanco() {
   if (process.env.DATABASE_URL) {
@@ -141,6 +145,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       ArquivoMidiaOrm,
       AcompanhanteOrm,
       SincronizacaoMobileOrm,
+      DashboardAlertaOcultoOrm,
       UserActionLogOrm,
       OutboxEventoOrm
     ],
@@ -158,7 +163,10 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AdicionaContadorFalhasSincronizacaoGoogleAgenda1720000000901,
       ForcaRenovacaoCanaisWatchSemToken1720000000902,
       CriarAgendamentoPublico1720000001000,
-      CorrigeAgendamentoPublicoPosMigracaoInicial1720000001001
+      CorrigeAgendamentoPublicoPosMigracaoInicial1720000001001,
+      AdicionarDesfechosConsultaAgenda1720000001002,
+      AdicionarRevisaoClinicaEnviosQuestionario1720000001003,
+      CriarAlertasOcultosDashboardClinico1720000001004
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

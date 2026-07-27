@@ -1,4 +1,8 @@
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
+import { AdicionarDesfechosConsultaAgenda1720000001002 } from './migracoes/1720000001002-AdicionarDesfechosConsultaAgenda';
+import { AdicionarRevisaoClinicaEnviosQuestionario1720000001003 } from './migracoes/1720000001003-AdicionarRevisaoClinicaEnviosQuestionario';
+import { CriarAlertasOcultosDashboardClinico1720000001004 } from './migracoes/1720000001004-CriarAlertasOcultosDashboardClinico';
+import { DashboardAlertaOcultoOrm } from '../../modulos/dashboard/infraestrutura/dashboard-alerta-oculto.orm';
 
 const ambienteOriginal = process.env;
 
@@ -42,5 +46,18 @@ describe('criarOpcoesTypeOrm', () => {
     expect(opcoes.password).toBe('local');
     expect(opcoes.database).toBe('octaclin_local');
     expect(opcoes.ssl).toBe(false);
+  });
+
+  it('registra a entidade e a sequencia de migrations da fase 145', () => {
+    const opcoes = criarOpcoesTypeOrm();
+
+    expect(opcoes.entities).toEqual(expect.arrayContaining([DashboardAlertaOcultoOrm]));
+    expect(opcoes.migrations).toEqual(
+      expect.arrayContaining([
+        AdicionarDesfechosConsultaAgenda1720000001002,
+        AdicionarRevisaoClinicaEnviosQuestionario1720000001003,
+        CriarAlertasOcultosDashboardClinico1720000001004
+      ])
+    );
   });
 });
