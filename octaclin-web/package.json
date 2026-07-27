@@ -11,6 +11,7 @@
     "test:next15": "node scripts/test-async-dynamic-apis.mjs",
     "test:authz": "node scripts/test-autorizacao-rotas.mjs",
     "test:e2e:criticas": "playwright test tests/visual/jornadas-criticas.spec.mjs --reporter=list",
+    "test:a11y": "playwright test tests/visual/acessibilidade.spec.mjs --reporter=list",
     "test:questionarios-preview": "node scripts/test-questionarios-preview.mjs",
     "smoke:visual": "playwright test",
     "smoke:ui": "node scripts/smoke-ui-regression.mjs",
