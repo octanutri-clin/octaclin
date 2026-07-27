@@ -294,6 +294,9 @@ export class ServicoAgendamentoPublico {
       } satisfies ContextoAprovacaoSolicitacao;
     });
 
+    let consultaCriadaId: string | undefined;
+    let associacaoPersistida = false;
+
     try {
       await this.executorTenant.executar(tenantId, async (gerenciador) => {
         await this.validarDisponibilidade(gerenciador, tenantId, contexto.solicitacao.profissionalId, {
@@ -313,8 +316,9 @@ export class ServicoAgendamentoPublico {
         },
         usuario
       );
+      consultaCriadaId = consulta.id;
 
-      return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      return await this.executorTenant.executar(tenantId, async (gerenciador) => {
         const repositorio = gerenciador.getRepository(AgendaSolicitacaoOrm);
         const affected = await repositorio.update(
           {
@@ -336,13 +340,24 @@ export class ServicoAgendamentoPublico {
         if (!affected.affected) {
           throw new BadRequestException('Solicitacao em processamento.');
         }
+        associacaoPersistida = true;
 
         const salva = await repositorio.findOne({ where: { id: solicitacaoId, tenantId } });
         if (!salva) throw new NotFoundException('Solicitacao nao encontrada.');
         return this.mapearSolicitacaoAutenticada(salva);
       });
     } catch (erro) {
-      await this.restaurarSolicitacaoPendenteAposClaim(tenantId, solicitacaoId, usuario, contexto.claimedAt);
+      if (consultaCriadaId && !associacaoPersistida) {
+        try {
+          await this.servicoAgenda.cancelarConsulta(tenantId, consultaCriadaId, {}, usuario);
+        } catch {
+          throw erro;
+        }
+      }
+
+      if (!associacaoPersistida) {
+        await this.restaurarSolicitacaoPendenteAposClaim(tenantId, solicitacaoId, usuario, contexto.claimedAt);
+      }
       throw erro;
     }
   }

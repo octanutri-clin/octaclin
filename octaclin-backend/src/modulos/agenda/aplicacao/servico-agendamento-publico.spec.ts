@@ -21,6 +21,8 @@ interface EstadoFalso {
   bloqueios?: AgendaBloqueioExternoOrm[];
   solicitacoes?: AgendaSolicitacaoOrm[];
   criarConsultaImpl?: (tenantId: string, entrada: Record<string, unknown>, usuario: UsuarioAutenticado) => Promise<unknown>;
+  cancelarConsultaImpl?: (tenantId: string, consultaId: string, usuario: UsuarioAutenticado) => Promise<unknown>;
+  falharAtualizacaoFinal?: boolean;
 }
 
 function coincideWhere<T extends object>(registro: T, where: Partial<T> = {}): boolean {
@@ -144,6 +146,10 @@ function criarRepositorioSolicitacao(estado: EstadoFalso) {
       return solicitacoes.find((item) => coincideWhere(item, where)) ?? null;
     }),
     update: jest.fn(async (criterios: Partial<AgendaSolicitacaoOrm>, valores: Partial<AgendaSolicitacaoOrm>) => {
+      if (estado.falharAtualizacaoFinal && valores.status === 'aprovada') {
+        throw new Error('falha-persistencia-final');
+      }
+
       let afetados = 0;
       for (const solicitacao of solicitacoes) {
         if (!coincideWhere(solicitacao, criterios)) continue;
@@ -209,6 +215,13 @@ function criarServico(estado: EstadoFalso = {}) {
         criadoEm: new Date('2026-07-26T12:00:00.000Z'),
         atualizadoEm: new Date('2026-07-26T12:00:00.000Z')
       };
+    }),
+    cancelarConsulta: jest.fn(async (tenantId: string, consultaId: string, _dados: unknown, usuario: UsuarioAutenticado) => {
+      if (estado.cancelarConsultaImpl) {
+        return estado.cancelarConsultaImpl(tenantId, consultaId, usuario);
+      }
+
+      return { id: consultaId, tenantId, status: 'cancelada' };
     })
   } as unknown as ServicoAgenda;
 
@@ -756,6 +769,68 @@ describe('ServicoAgendamentoPublico', () => {
         consultaId: null
       })
     );
+  });
+
+  it('cancela a consulta criada antes de restaurar pendente se a persistencia final falhar', async () => {
+    const { servico, repositorios, servicoAgenda } = criarServico({
+      profissionais: [criarProfissional()],
+      solicitacoes: [criarSolicitacaoPendente({ id: 'sol-compensacao' })],
+      falharAtualizacaoFinal: true
+    });
+
+    await expect(
+      servico.aprovarSolicitacao('tenant-1', 'sol-compensacao', { pacienteId: 'paciente-1' }, usuarioProfissionalUm)
+    ).rejects.toThrow('falha-persistencia-final');
+
+    expect(servicoAgenda.criarConsulta).toHaveBeenCalledTimes(1);
+    expect(servicoAgenda.cancelarConsulta).toHaveBeenCalledWith(
+      'tenant-1',
+      'consulta-1',
+      {},
+      usuarioProfissionalUm
+    );
+    const indiceRollback = (repositorios.solicitacao.update as jest.Mock).mock.calls.findIndex(
+      ([, valores]) => valores.status === 'pendente'
+    );
+    expect((servicoAgenda.cancelarConsulta as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
+      (repositorios.solicitacao.update as jest.Mock).mock.invocationCallOrder[indiceRollback]
+    );
+    expect(repositorios.solicitacao.todos().find((item) => item.id === 'sol-compensacao')).toMatchObject({
+      status: 'pendente',
+      pacienteId: null,
+      consultaId: null,
+      decididaEm: null,
+      decididaPorUsuarioId: null
+    });
+  });
+
+  it('mantem o claim processando se a compensacao da consulta falhar', async () => {
+    const { servico, repositorios, servicoAgenda } = criarServico({
+      profissionais: [criarProfissional()],
+      solicitacoes: [criarSolicitacaoPendente({ id: 'sol-compensacao-falha' })],
+      falharAtualizacaoFinal: true,
+      cancelarConsultaImpl: async () => {
+        throw new Error('falha-cancelamento');
+      }
+    });
+
+    await expect(
+      servico.aprovarSolicitacao('tenant-1', 'sol-compensacao-falha', { pacienteId: 'paciente-1' }, usuarioProfissionalUm)
+    ).rejects.toThrow('falha-persistencia-final');
+
+    expect(servicoAgenda.criarConsulta).toHaveBeenCalledTimes(1);
+    expect(servicoAgenda.cancelarConsulta).toHaveBeenCalledTimes(1);
+    const solicitacao = repositorios.solicitacao.todos().find((item) => item.id === 'sol-compensacao-falha');
+    expect(solicitacao).toMatchObject({
+      status: 'processando',
+      decididaPorUsuarioId: 'usuario-1'
+    });
+    expect(solicitacao?.pacienteId).toBeUndefined();
+    expect(solicitacao?.consultaId).toBeUndefined();
+    await expect(
+      servico.aprovarSolicitacao('tenant-1', 'sol-compensacao-falha', { pacienteId: 'paciente-1' }, usuarioProfissionalUm)
+    ).rejects.toThrow('Solicitacao em processamento.');
+    expect(servicoAgenda.criarConsulta).toHaveBeenCalledTimes(1);
   });
 
   it('permite que SuperAdmin liste solicitacoes do tenant inteiro', async () => {
