@@ -506,6 +506,50 @@ describe('ServicoDashboardClinico', () => {
     );
   });
 
+  it('cria alerta de desmarcacao apenas quando a origem do cancelamento e o paciente, nunca o proprio profissional', async () => {
+    const consultas = registros.get(AgendaConsultaOrm) as AgendaConsultaOrm[];
+    consultas.push(
+      {
+        ...consulta('desmarcada-paciente', 'paciente-risco', 'profissional-1', 'cancelada', new Date('2026-07-27T09:00:00.000Z')),
+        payload: { historico: [{ acao: 'cancelada', origem: 'paciente', canceladaEm: '2026-07-27T09:05:00.000Z' }] }
+      },
+      {
+        ...consulta('cancelada-profissional', 'paciente-risco', 'profissional-1', 'cancelada', new Date('2026-07-27T10:00:00.000Z')),
+        payload: { historico: [{ acao: 'cancelada', origem: 'profissional', canceladaEm: '2026-07-27T10:05:00.000Z' }] }
+      }
+    );
+
+    const resumo = await servico.obterResumo('tenant-1', { periodo: 'hoje' }, profissionalUm);
+
+    expect(resumo.alertas.map((item) => item.id)).toContain(
+      'desmarcacao_paciente:profissional-1:desmarcada-paciente'
+    );
+    expect(resumo.alertas.map((item) => item.id)).not.toContain(
+      'desmarcacao_paciente:profissional-1:cancelada-profissional'
+    );
+    const alertaDesmarcacao = resumo.alertas.find((item) => item.tipo === 'desmarcacao_paciente');
+    expect(alertaDesmarcacao?.pacienteId).toBe('paciente-risco');
+    expect(alertaDesmarcacao?.ocorridoEm).toEqual(new Date('2026-07-27T09:05:00.000Z'));
+  });
+
+  it('permite ocultar o alerta de desmarcacao somente enquanto a origem paciente ainda for a atual', async () => {
+    const profissionalUuid = '55555555-5555-4555-8555-555555555555';
+    const pacienteUuid = '66666666-6666-4666-8666-666666666666';
+    const consultaUuid = '77777777-7777-4777-8777-777777777777';
+    (registros.get(ProfissionalOrm) as ProfissionalOrm[]).push(profissional(profissionalUuid, 'usuario-uuid-2'));
+    (registros.get(PacienteOrm) as PacienteOrm[]).push(paciente(pacienteUuid, profissionalUuid, 10));
+    (registros.get(AgendaConsultaOrm) as AgendaConsultaOrm[]).push({
+      ...consulta(consultaUuid, pacienteUuid, profissionalUuid, 'cancelada', new Date('2026-07-27T09:00:00.000Z')),
+      payload: { historico: [{ acao: 'cancelada', origem: 'paciente', canceladaEm: '2026-07-27T09:05:00.000Z' }] }
+    });
+    const usuarioUuid = usuario('Professional', 'usuario-uuid-2');
+    const alertaId = `desmarcacao_paciente:${profissionalUuid}:${consultaUuid}`;
+
+    const resultado = await servico.ocultarAlerta('tenant-1', alertaId, usuarioUuid);
+    expect(resultado.alertaId).toBe(alertaId);
+    expect(salvarOcultacao).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', alertaId }));
+  });
+
   it('calcula hoje no timezone clinico e usa fallback para configuracao invalida', async () => {
     jest.setSystemTime(new Date('2026-07-27T02:30:00.000Z'));
 

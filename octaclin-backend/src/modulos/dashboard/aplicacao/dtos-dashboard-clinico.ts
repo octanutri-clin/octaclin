@@ -9,10 +9,13 @@ export type NivelRiscoDashboard = 'baixo' | 'medio' | 'alto';
 export type TipoAlertaDashboardClinico =
   | 'sem_retorno_risco_alto'
   | 'tarefa_vencida'
+  | 'desmarcacao_paciente'
   | 'atendimento_proximo'
   | 'formulario_pendente'
   | 'solicitacao_pendente'
   | 'comunicacao_alerta';
+
+export type OrigemCancelamentoAtendimentoDashboard = 'profissional' | 'paciente' | 'google';
 
 export class FiltrosDashboardClinicoDto {
   @IsOptional()
@@ -57,6 +60,8 @@ export interface AtendimentoDashboardClinicoDto {
   inicioEm: Date;
   fimEm: Date;
   status: StatusAgendaConsulta;
+  origemCancelamento?: OrigemCancelamentoAtendimentoDashboard;
+  canceladaEm?: Date;
 }
 
 export interface SemRetornoDashboardClinicoDto {

@@ -302,6 +302,13 @@ export async function obterPortalPaciente(): Promise<PortalPacienteApi> {
   return resposta.json() as Promise<PortalPacienteApi>;
 }
 
+export async function desmarcarConsultaPaciente(consultaId: string): Promise<void> {
+  const resposta = await fetch(`/api/portal/paciente/consultas/${consultaId}/desmarcar`, { method: 'POST' });
+  if (!resposta.ok) {
+    throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
+  }
+}
+
 export async function obterFormularioRespondidoPaciente(respostaId: string): Promise<DetalheFormularioRespondidoApi> {
   const resposta = await fetch(`/api/portal/paciente/formularios-respondidos/${respostaId}`, { cache: 'no-store' });
   if (!resposta.ok) {

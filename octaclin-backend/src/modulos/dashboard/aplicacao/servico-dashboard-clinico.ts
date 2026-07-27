@@ -22,6 +22,7 @@ import {
   IndicadoresDashboardClinicoDto,
   NivelRiscoDashboard,
   OcultacaoAlertaDashboardClinicoDto,
+  OrigemCancelamentoAtendimentoDashboard,
   PeriodoDashboardClinico,
   ResumoDashboardClinicoDto,
   SemRetornoDashboardClinicoDto,
@@ -38,6 +39,7 @@ const STATUS_CONSULTA_ATIVA = new Set(['agendada', 'reagendada']);
 const UUID_VALIDO = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TIPOS_ALERTA_OCULTAVEIS = new Set([
   'tarefa_vencida',
+  'desmarcacao_paciente',
   'atendimento_proximo',
   'formulario_pendente',
   'solicitacao_pendente',
@@ -538,6 +540,19 @@ export class ServicoDashboardClinico {
       });
     }
     for (const item of atendimentos.filter(
+      (consulta) => consulta.status === 'cancelada' && consulta.origemCancelamento === 'paciente'
+    )) {
+      alertas.push({
+        id: `desmarcacao_paciente:${profissionalId}:${item.id}`,
+        tipo: 'desmarcacao_paciente',
+        prioridade: 2,
+        recursoId: item.id,
+        pacienteId: item.pacienteId,
+        ocorridoEm: item.canceladaEm ?? item.inicioEm,
+        ocultavel: true
+      });
+    }
+    for (const item of atendimentos.filter(
       (consulta) =>
         STATUS_CONSULTA_ATIVA.has(consulta.status) && consulta.inicioEm.getTime() >= Date.now()
     )) {
@@ -625,6 +640,7 @@ export class ServicoDashboardClinico {
     paciente: PacienteOrm,
     profissionalId: string
   ): AtendimentoDashboardClinicoDto {
+    const ultimoEvento = consulta.status === 'cancelada' ? this.ultimoEventoHistorico(consulta) : undefined;
     return {
       id: consulta.id,
       pacienteId: consulta.pacienteId,
@@ -632,8 +648,27 @@ export class ServicoDashboardClinico {
       pacienteNome: this.criptografia.descriptografar(paciente.nomeCriptografado),
       inicioEm: consulta.inicioEm,
       fimEm: consulta.fimEm,
-      status: consulta.status
+      status: consulta.status,
+      origemCancelamento: this.origemCancelamentoValida(ultimoEvento?.origem),
+      canceladaEm: this.dataValidaOuIndefinida(ultimoEvento?.canceladaEm)
     };
+  }
+
+  private ultimoEventoHistorico(consulta: AgendaConsultaOrm): { origem?: unknown; canceladaEm?: unknown } | undefined {
+    const payload = consulta.payload as { historico?: unknown } | undefined;
+    const historico = Array.isArray(payload?.historico) ? (payload!.historico as unknown[]) : [];
+    const ultimo = historico[historico.length - 1];
+    return ultimo && typeof ultimo === 'object' ? (ultimo as Record<string, unknown>) : undefined;
+  }
+
+  private origemCancelamentoValida(valor: unknown): OrigemCancelamentoAtendimentoDashboard | undefined {
+    return valor === 'profissional' || valor === 'paciente' || valor === 'google' ? valor : undefined;
+  }
+
+  private dataValidaOuIndefinida(valor: unknown): Date | undefined {
+    if (typeof valor !== 'string') return undefined;
+    const data = new Date(valor);
+    return Number.isNaN(data.getTime()) ? undefined : data;
   }
 
   private async resolverContextoProfissional(
@@ -831,6 +866,19 @@ export class ServicoDashboardClinico {
         (tarefa.status === 'pendente' || tarefa.status === 'em_andamento') &&
         !!tarefa.vencimentoEm &&
         tarefa.vencimentoEm.getTime() < agora;
+    } else if (partes.tipo === 'desmarcacao_paciente') {
+      const consulta = await gerenciador.getRepository(AgendaConsultaOrm).findOne({
+        where: {
+          id: partes.recursoId,
+          tenantId,
+          profissionalId: contexto.id
+        }
+      });
+      pacienteId = consulta?.pacienteId;
+      alertaAtual =
+        !!consulta &&
+        consulta.status === 'cancelada' &&
+        this.origemCancelamentoValida(this.ultimoEventoHistorico(consulta)?.origem) === 'paciente';
     } else if (partes.tipo === 'atendimento_proximo') {
       const consulta = await gerenciador.getRepository(AgendaConsultaOrm).findOne({
         where: {

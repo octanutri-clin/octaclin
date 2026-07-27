@@ -154,6 +154,24 @@ function rotuloStatusConsulta(status: ConsultaAgendaApi['status']) {
   return rotulos[status];
 }
 
+function origemCancelamentoConsulta(consulta: ConsultaAgendaApi): 'profissional' | 'paciente' | 'google' | undefined {
+  const historico = Array.isArray((consulta.payload as { historico?: unknown })?.historico)
+    ? ((consulta.payload as { historico: unknown[] }).historico as Array<Record<string, unknown>>)
+    : [];
+  const ultimo = historico[historico.length - 1];
+  const origem = ultimo?.origem;
+  return origem === 'profissional' || origem === 'paciente' || origem === 'google' ? origem : undefined;
+}
+
+function rotuloStatusConsultaCompleto(consulta: ConsultaAgendaApi) {
+  if (consulta.status !== 'cancelada') return rotuloStatusConsulta(consulta.status);
+  const origem = origemCancelamentoConsulta(consulta);
+  if (origem === 'paciente') return 'Desmarcada pelo paciente';
+  if (origem === 'profissional') return 'Cancelada pelo profissional';
+  if (origem === 'google') return 'Cancelada na Google Agenda';
+  return rotuloStatusConsulta(consulta.status);
+}
+
 function consultaAtiva(consulta: ConsultaAgendaApi) {
   return consulta.status === 'agendada' || consulta.status === 'reagendada';
 }
@@ -771,7 +789,7 @@ export function PainelAgenda() {
                               {consulta.pacienteNome ?? paciente?.nome ?? consulta.titulo}
                             </h3>
                             <span className="rounded-md border border-primaria-suave bg-superficie-hover px-2 py-1 text-xs font-medium text-primaria-forte">
-                              {rotuloStatusConsulta(consulta.status)}
+                              {rotuloStatusConsultaCompleto(consulta)}
                             </span>
                           </div>
                           <div className="mt-2 grid gap-1 text-sm text-texto-suave sm:grid-cols-2">

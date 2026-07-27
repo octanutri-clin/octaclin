@@ -56,7 +56,23 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
       });
     }),
     findOne: jest.fn(async (criterios?: { where?: Record<string, unknown> }) => {
-      if (nome === 'paciente') return dados.paciente ?? null;
+      if (nome === 'paciente') {
+        const pacientes =
+          (dados.pacientes as Array<Record<string, unknown>> | undefined) ??
+          (dados.paciente ? [dados.paciente as Record<string, unknown>] : []);
+        return (
+          pacientes.find((paciente) =>
+            Object.entries(criterios?.where ?? {}).every(([chave, valor]) => {
+              if (valor && typeof valor === 'object' && '_type' in (valor as Record<string, unknown>)) {
+                return (valor as { _type?: string })._type === 'isNull'
+                  ? paciente[chave] === undefined || paciente[chave] === null
+                  : true;
+              }
+              return paciente[chave] === valor;
+            })
+          ) ?? null
+        );
+      }
       if (nome === 'profissional') return dados.profissional ?? null;
       const consultas = dados.consultas as Array<Record<string, unknown>> | undefined;
       if (consultas && criterios?.where) {
@@ -760,6 +776,118 @@ describe('ServicoAgenda', () => {
           motivo: 'Paciente solicitou remarcacao futura.'
         })
       ])
+    );
+  });
+
+  it('registra origem profissional no historico ao cancelar pelo console', async () => {
+    const consultaExistente = {
+      id: 'consulta-profissional',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {},
+      payload: {}
+    };
+    const { servico } = criarServico({ consultas: [consultaExistente] });
+
+    const consulta = await servico.cancelarConsulta(
+      'tenant-1',
+      consultaExistente.id,
+      {},
+      usuarioColaborador
+    );
+
+    expect(consulta.payload.historico).toEqual(
+      expect.arrayContaining([expect.objectContaining({ acao: 'cancelada', origem: 'profissional' })])
+    );
+  });
+
+  it('registra origem paciente somente quando a consulta pertence ao paciente autenticado', async () => {
+    const consultaExistente = {
+      id: 'consulta-paciente',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {},
+      payload: {}
+    };
+    const { servico } = criarServico({
+      consultas: [consultaExistente],
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          profissionalResponsavelId: 'profissional-1'
+        },
+        {
+          id: 'paciente-2',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-2',
+          profissionalResponsavelId: 'profissional-1'
+        }
+      ]
+    });
+    const desmarcar = (
+      servico as unknown as {
+        desmarcarConsultaPeloPaciente(
+          tenantId: string,
+          consultaId: string,
+          usuarioId: string
+        ): Promise<{ payload: Record<string, unknown> }>;
+      }
+    ).desmarcarConsultaPeloPaciente;
+
+    await expect(
+      desmarcar.call(servico, 'tenant-1', consultaExistente.id, 'usuario-paciente-2')
+    ).rejects.toThrow('Consulta nao encontrada.');
+
+    const consulta = await desmarcar.call(
+      servico,
+      'tenant-1',
+      consultaExistente.id,
+      'usuario-paciente-1'
+    );
+    expect(consulta.payload.historico).toEqual(
+      expect.arrayContaining([expect.objectContaining({ acao: 'cancelada', origem: 'paciente' })])
+    );
+  });
+
+  it('registra origem google sem converter para origem interna', async () => {
+    const consultaExistente = {
+      id: 'consulta-google',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {},
+      payload: {}
+    };
+    const { servico } = criarServico({ consultas: [consultaExistente] });
+
+    const consulta = await servico.cancelarConsultaComoSistema(
+      'tenant-1',
+      consultaExistente.id,
+      {},
+      'profissional-1'
+    );
+
+    expect(consulta.payload.historico).toEqual(
+      expect.arrayContaining([expect.objectContaining({ acao: 'cancelada', origem: 'google' })])
     );
   });
 

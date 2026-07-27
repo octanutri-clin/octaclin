@@ -61,6 +61,7 @@ import { ProfissionalGoogleConexaoOrm } from './infraestrutura/profissional-goog
     ProcessadorRenovacaoGoogleCalendar,
     ServicoAuditoria,
     CriptografiaDadosSensiveis
-  ]
+  ],
+  exports: [ServicoAgenda]
 })
 export class ModuloAgenda {}
