@@ -56,7 +56,7 @@ export class ControladorDashboardClinico {
       acao: 'dashboard.clinico.alerta.ocultar',
       recursoTipo: 'dashboard_alerta',
       metadados: {
-        alertaId,
+        alertaId: ocultacao.alertaId,
         ocultoAteEm: ocultacao.ocultoAteEm
       }
     });

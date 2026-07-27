@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { CHAVE_PAPEIS, CHAVE_PERMISSOES } from '../../auth/apresentacao/decorators';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
@@ -130,5 +131,19 @@ describe('ControladorDashboardClinico', () => {
         ocultoAteEm: resposta.ocultoAteEm
       }
     });
+  });
+
+  it('nao audita alerta rejeitado pelo servico', async () => {
+    const { controlador, ocultarAlerta, registrar } = criarCenario();
+    ocultarAlerta.mockRejectedValueOnce(new BadRequestException('Alerta indisponivel.'));
+
+    await expect(
+      controlador.ocultarAlerta(
+        usuario('Professional'),
+        'tarefa_vencida:11111111-1111-4111-8111-111111111111:texto-arbitrario'
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(registrar).not.toHaveBeenCalled();
   });
 });

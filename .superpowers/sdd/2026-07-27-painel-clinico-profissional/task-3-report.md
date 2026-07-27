@@ -53,22 +53,43 @@ Concluida.
 - Comunicacoes retornam apenas identificadores, paciente associado, status e
   data; payload e erro tecnico nao atravessam o agregado.
 - Alertas ocultos sao isolados por tenant e usuario no banco e no servico.
+- A ocultacao so persiste IDs de alertas cujo recurso ainda existe, ainda
+  satisfaz a regra geradora e pertence ao contexto profissional atual.
+- IDs arbitrarios, recursos concluidos/inativos e alertas fora do escopo sao
+  rejeitados antes da persistencia e da auditoria.
 - Auditoria nao persiste PII.
+
+## Correcao de review - round 1
+
+- A validacao de ocultacao passou a consultar o recurso real por tenant e
+  profissional, incluindo o paciente ativo associado quando aplicavel.
+- Alertas de atendimentos sao montados com a lista completa antes do limite de
+  50 itens aplicado somente na resposta de UI.
+- `atendimento_proximo` exige status ativo e inicio atual ou futuro.
+- Os periodos `hoje`, `sete_dias` e `trinta_dias` usam
+  `GOOGLE_CALENDAR_TIMEZONE`, com fallback seguro para
+  `America/Sao_Paulo`, sem depender do timezone local do processo.
+- O calculo de sem-retorno considera a ultima consulta concluida do paciente
+  no tenant, inclusive quando realizada pelo profissional anterior.
+- O controlador audita apenas o ID validado retornado pelo servico e nao
+  registra tentativas rejeitadas.
 
 ## Validacoes
 
-- Jest focado: aprovado, `6` suites e `52` testes.
+- Jest focado do round 1: aprovado, `2` suites e `15` testes.
+- Jest completo do backend: aprovado, `57/57` suites e `307/307` testes.
 - Casos do agregado: aprovado, `6/6`.
 - Controlador e autorizacao: aprovado, `4/4`.
 - Migration `1004`: aprovado, `2/2`.
 - Registro TypeORM: aprovado, incluindo a sequencia `1002/1003/1004`.
 - Regressoes focadas de agenda e questionarios: aprovadas.
 - Backend typecheck: aprovado.
+- Backend build: aprovado.
 - `git diff --check`: aprovado.
 
 ## Preocupacoes residuais
 
 - A migration `1004` foi validada por teste de contrato SQL e compilacao, mas
   nao foi executada contra uma instancia PostgreSQL externa nesta tarefa.
-- A suite completa do backend nao foi exigida para esta etapa; a validacao foi
-  limitada ao conjunto focado definido no brief e ao typecheck.
+- Nenhum PostgreSQL externo foi criado ou simulado para esta correcao; os
+  testes adicionados cobrem as regras viaveis na infraestrutura local.

@@ -31,6 +31,7 @@ import {
 import { DashboardAlertaOcultoOrm } from '../infraestrutura/dashboard-alerta-oculto.orm';
 
 const LIMITE_FILA = 50;
+const TIMEZONE_CLINICO_PADRAO = 'America/Sao_Paulo';
 const STATUS_PACIENTE_INATIVO = new Set(['inativo', 'pausado', 'encerrado', 'fechado']);
 const STATUS_COMUNICACAO_ALERTA = new Set(['pendente', 'falhou', 'recebido']);
 const STATUS_CONSULTA_ATIVA = new Set(['agendada', 'reagendada']);
@@ -140,6 +141,8 @@ export class ServicoDashboardClinico {
         throw new ForbiddenException('Alerta fora do escopo profissional.');
       }
 
+      await this.garantirAlertaAtual(gerenciador, tenantId, contexto, partes);
+
       const repositorio = gerenciador.getRepository(DashboardAlertaOcultoOrm);
       const existente = await repositorio.findOne({
         where: { tenantId, usuarioId: usuario.usuarioId, alertaId }
@@ -217,7 +220,6 @@ export class ServicoDashboardClinico {
         gerenciador.getRepository(AgendaConsultaOrm).find({
           where: {
             tenantId,
-            profissionalId: contexto.id,
             pacienteId: In(pacienteIds),
             status: 'concluida'
           },
@@ -304,7 +306,6 @@ export class ServicoDashboardClinico {
     const consultasConcluidas = dados.consultasConcluidas.filter(
       (consulta) =>
         consulta.tenantId === tenantId &&
-        consulta.profissionalId === contexto.id &&
         consulta.status === 'concluida' &&
         pacientesPorId.has(consulta.pacienteId)
     );
@@ -317,10 +318,11 @@ export class ServicoDashboardClinico {
     }
 
     const semRetorno = this.montarSemRetorno(pacientes, ultimaConcluidaPorPaciente, contexto.id);
-    const atendimentos = consultas
+    const atendimentosCompletos = consultas
       .filter((consulta) => pacientesPorId.has(consulta.pacienteId))
-      .map((consulta) => this.mapearAtendimento(consulta, pacientesPorId.get(consulta.pacienteId)!, contexto.id))
-      .slice(0, LIMITE_FILA);
+      .map((consulta) =>
+        this.mapearAtendimento(consulta, pacientesPorId.get(consulta.pacienteId)!, contexto.id)
+      );
     const tarefasVencidas = this.montarTarefas(dados.tarefas, pacientesPorId, contexto);
     const formulariosPendentes = this.montarFormularios(dados.envios, pacientesPorId, contexto.id);
     const solicitacoesPendentes = this.montarSolicitacoes(
@@ -343,7 +345,7 @@ export class ServicoDashboardClinico {
       contexto.id,
       semRetorno,
       tarefasVencidas,
-      atendimentos,
+      atendimentosCompletos,
       formulariosPendentes,
       solicitacoesPendentes,
       comunicacoes
@@ -365,7 +367,7 @@ export class ServicoDashboardClinico {
         solicitacoesPendentes,
         comunicacoes
       ),
-      atendimentos,
+      atendimentos: atendimentosCompletos.slice(0, LIMITE_FILA),
       semRetorno: semRetorno.slice(0, LIMITE_FILA),
       tarefasVencidas: tarefasVencidas.slice(0, LIMITE_FILA),
       formulariosPendentes: formulariosPendentes.slice(0, LIMITE_FILA),
@@ -534,7 +536,10 @@ export class ServicoDashboardClinico {
         ocultavel: true
       });
     }
-    for (const item of atendimentos.filter((consulta) => STATUS_CONSULTA_ATIVA.has(consulta.status))) {
+    for (const item of atendimentos.filter(
+      (consulta) =>
+        STATUS_CONSULTA_ATIVA.has(consulta.status) && consulta.inicioEm.getTime() >= Date.now()
+    )) {
       alertas.push({
         id: `atendimento_proximo:${profissionalId}:${item.id}`,
         tipo: 'atendimento_proximo',
@@ -711,13 +716,191 @@ export class ServicoDashboardClinico {
   }
 
   private calcularIntervalo(periodo: PeriodoDashboardClinico): { inicioEm: Date; fimEm: Date } {
-    const inicioEm = new Date();
-    inicioEm.setHours(0, 0, 0, 0);
-    const fimEm = new Date(inicioEm);
+    const timezone = this.obterTimezoneClinico();
+    const agora = new Date();
+    const dataLocal = this.extrairPartesData(agora, timezone);
     const dias = periodo === 'hoje' ? 1 : periodo === 'sete_dias' ? 7 : 30;
-    fimEm.setDate(fimEm.getDate() + dias);
-    fimEm.setMilliseconds(fimEm.getMilliseconds() - 1);
+    const inicioEm = this.converterInicioLocalParaUtc(
+      dataLocal.ano,
+      dataLocal.mes,
+      dataLocal.dia,
+      timezone
+    );
+    const dataFinal = new Date(Date.UTC(dataLocal.ano, dataLocal.mes - 1, dataLocal.dia + dias));
+    const fimExclusivo = this.converterInicioLocalParaUtc(
+      dataFinal.getUTCFullYear(),
+      dataFinal.getUTCMonth() + 1,
+      dataFinal.getUTCDate(),
+      timezone
+    );
+    const fimEm = new Date(fimExclusivo.getTime() - 1);
     return { inicioEm, fimEm };
+  }
+
+  private obterTimezoneClinico(): string {
+    const configurado = process.env.GOOGLE_CALENDAR_TIMEZONE?.trim() || TIMEZONE_CLINICO_PADRAO;
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: configurado }).format();
+      return configurado;
+    } catch {
+      return TIMEZONE_CLINICO_PADRAO;
+    }
+  }
+
+  private extrairPartesData(
+    data: Date,
+    timezone: string
+  ): { ano: number; mes: number; dia: number } {
+    const partes = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(data);
+    const valor = (tipo: Intl.DateTimeFormatPartTypes) =>
+      Number(partes.find((parte) => parte.type === tipo)?.value);
+    return { ano: valor('year'), mes: valor('month'), dia: valor('day') };
+  }
+
+  private converterInicioLocalParaUtc(
+    ano: number,
+    mes: number,
+    dia: number,
+    timezone: string
+  ): Date {
+    const alvoUtc = Date.UTC(ano, mes - 1, dia);
+    let instante = alvoUtc;
+
+    for (let tentativa = 0; tentativa < 3; tentativa += 1) {
+      const deslocamento = this.calcularDeslocamentoTimezone(new Date(instante), timezone);
+      const ajustado = alvoUtc - deslocamento;
+      if (ajustado === instante) break;
+      instante = ajustado;
+    }
+
+    return new Date(instante);
+  }
+
+  private calcularDeslocamentoTimezone(data: Date, timezone: string): number {
+    const partes = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(data);
+    const valor = (tipo: Intl.DateTimeFormatPartTypes) =>
+      Number(partes.find((parte) => parte.type === tipo)?.value);
+    const representacaoUtc = Date.UTC(
+      valor('year'),
+      valor('month') - 1,
+      valor('day'),
+      valor('hour'),
+      valor('minute'),
+      valor('second')
+    );
+    const instanteSemMilissegundos = Math.floor(data.getTime() / 1000) * 1000;
+    return representacaoUtc - instanteSemMilissegundos;
+  }
+
+  private async garantirAlertaAtual(
+    gerenciador: EntityManager,
+    tenantId: string,
+    contexto: ContextoProfissionalResolvido,
+    partes: { tipo: string; profissionalId: string; recursoId: string }
+  ): Promise<void> {
+    const agora = Date.now();
+    let pacienteId: string | undefined;
+    let alertaAtual = false;
+
+    if (partes.tipo === 'tarefa_vencida') {
+      const tarefa = await gerenciador.getRepository(AcompanhamentoTarefaOrm).findOne({
+        where: {
+          id: partes.recursoId,
+          tenantId,
+          profissionalId: contexto.usuarioId
+        }
+      });
+      pacienteId = tarefa?.pacienteId;
+      alertaAtual =
+        !!tarefa &&
+        (tarefa.status === 'pendente' || tarefa.status === 'em_andamento') &&
+        !!tarefa.vencimentoEm &&
+        tarefa.vencimentoEm.getTime() < agora;
+    } else if (partes.tipo === 'atendimento_proximo') {
+      const consulta = await gerenciador.getRepository(AgendaConsultaOrm).findOne({
+        where: {
+          id: partes.recursoId,
+          tenantId,
+          profissionalId: contexto.id
+        }
+      });
+      pacienteId = consulta?.pacienteId;
+      alertaAtual =
+        !!consulta &&
+        STATUS_CONSULTA_ATIVA.has(consulta.status) &&
+        consulta.inicioEm.getTime() >= agora &&
+        consulta.inicioEm <= this.calcularIntervalo('trinta_dias').fimEm;
+    } else if (partes.tipo === 'formulario_pendente') {
+      const envio = await gerenciador.getRepository(EnvioQuestionarioOrm).findOne({
+        where: { id: partes.recursoId, tenantId }
+      });
+      pacienteId = envio?.pacienteId;
+      alertaAtual = !!envio && envio.status === 'respondido' && !envio.revisadoEm;
+    } else if (partes.tipo === 'solicitacao_pendente') {
+      const solicitacao = await gerenciador.getRepository(AgendaSolicitacaoOrm).findOne({
+        where: {
+          id: partes.recursoId,
+          tenantId,
+          profissionalId: contexto.id
+        }
+      });
+      alertaAtual =
+        !!solicitacao &&
+        solicitacao.status === 'pendente' &&
+        solicitacao.expiraEm.getTime() > agora;
+    } else if (partes.tipo === 'comunicacao_alerta') {
+      const mensagem = await gerenciador.getRepository(MensagemNotificacaoOrm).findOne({
+        where: { id: partes.recursoId, tenantId }
+      });
+      pacienteId = mensagem?.pacienteId;
+      alertaAtual =
+        !!mensagem && !!mensagem.pacienteId && STATUS_COMUNICACAO_ALERTA.has(mensagem.status);
+    }
+
+    if (pacienteId) {
+      alertaAtual =
+        alertaAtual &&
+        (await this.pacientePertenceAoContexto(
+          gerenciador,
+          tenantId,
+          contexto.id,
+          pacienteId
+        ));
+    }
+
+    if (!alertaAtual) {
+      throw new BadRequestException('Alerta indisponivel para ocultacao.');
+    }
+  }
+
+  private async pacientePertenceAoContexto(
+    gerenciador: EntityManager,
+    tenantId: string,
+    profissionalId: string,
+    pacienteId: string
+  ): Promise<boolean> {
+    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+      where: { id: pacienteId, tenantId, profissionalResponsavelId: profissionalId }
+    });
+    return (
+      !!paciente &&
+      !paciente.arquivadoEm &&
+      !STATUS_PACIENTE_INATIVO.has(paciente.statusAdesao)
+    );
   }
 
   private calcularNivelRisco(statusAdesao: string, scoreRisco: number): NivelRiscoDashboard {

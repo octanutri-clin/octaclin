@@ -25,6 +25,7 @@ type RegistroTeste =
 
 const AGORA = new Date('2026-07-27T15:00:00.000Z');
 const DIA = 24 * 60 * 60 * 1000;
+const TIMEZONE_ANTERIOR = process.env.GOOGLE_CALENDAR_TIMEZONE;
 
 function diasAntes(dias: number): Date {
   return new Date(AGORA.getTime() - dias * DIA);
@@ -105,6 +106,7 @@ describe('ServicoDashboardClinico', () => {
 
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(AGORA);
+    process.env.GOOGLE_CALENDAR_TIMEZONE = 'America/Sao_Paulo';
     salvarOcultacao = jest.fn(async (valor: DashboardAlertaOcultoOrm) => valor);
 
     registros = new Map<Function, RegistroTeste[]>([
@@ -288,6 +290,11 @@ describe('ServicoDashboardClinico', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    if (TIMEZONE_ANTERIOR === undefined) {
+      delete process.env.GOOGLE_CALENDAR_TIMEZONE;
+    } else {
+      process.env.GOOGLE_CALENDAR_TIMEZONE = TIMEZONE_ANTERIOR;
+    }
   });
 
   it('forca Professional ao proprio profissional e elimina dados de outro profissional e tenant', async () => {
@@ -383,5 +390,102 @@ describe('ServicoDashboardClinico', () => {
     await expect(
       servico.ocultarAlerta('tenant-1', 'tarefa_vencida:profissional-2:tarefa-outro', profissionalUm)
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('recusa ID arbitrario e recurso que deixou de gerar alerta antes de persistir', async () => {
+    await expect(
+      servico.ocultarAlerta(
+        'tenant-1',
+        'tarefa_vencida:profissional-1:joao-silva-hiv',
+        profissionalUm
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    const tarefas = registros.get(AcompanhamentoTarefaOrm) as AcompanhamentoTarefaOrm[];
+    tarefas.find((tarefa) => tarefa.id === 'tarefa-1')!.status = 'concluida';
+
+    await expect(
+      servico.ocultarAlerta(
+        'tenant-1',
+        'tarefa_vencida:profissional-1:tarefa-1',
+        profissionalUm
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(salvarOcultacao).not.toHaveBeenCalled();
+  });
+
+  it('gera alertas com a lista completa e ignora atendimento ativo que ja passou', async () => {
+    const consultas = registros.get(AgendaConsultaOrm) as AgendaConsultaOrm[];
+    for (let indice = 0; indice < 50; indice += 1) {
+      consultas.push(
+        consulta(
+          `terminal-${indice}`,
+          'paciente-risco',
+          'profissional-1',
+          'cancelada',
+          new Date(`2026-07-27T${String(3 + Math.floor(indice / 60)).padStart(2, '0')}:${String(
+            indice % 60
+          ).padStart(2, '0')}:00.000Z`)
+        )
+      );
+    }
+    consultas.push(
+      consulta(
+        'ativo-passado',
+        'paciente-risco',
+        'profissional-1',
+        'agendada',
+        new Date('2026-07-27T14:00:00.000Z')
+      ),
+      consulta(
+        'ativo-alem-limite-ui',
+        'paciente-risco',
+        'profissional-1',
+        'agendada',
+        new Date('2026-07-27T22:00:00.000Z')
+      )
+    );
+
+    const resumo = await servico.obterResumo('tenant-1', { periodo: 'hoje' }, profissionalUm);
+
+    expect(resumo.atendimentos).toHaveLength(50);
+    expect(resumo.atendimentos.map((item) => item.id)).not.toContain('ativo-alem-limite-ui');
+    expect(resumo.alertas.map((item) => item.id)).toContain(
+      'atendimento_proximo:profissional-1:ativo-alem-limite-ui'
+    );
+    expect(resumo.alertas.map((item) => item.id)).not.toContain(
+      'atendimento_proximo:profissional-1:ativo-passado'
+    );
+  });
+
+  it('calcula hoje no timezone clinico e usa fallback para configuracao invalida', async () => {
+    jest.setSystemTime(new Date('2026-07-27T02:30:00.000Z'));
+
+    const resumo = await servico.obterResumo('tenant-1', { periodo: 'hoje' }, profissionalUm);
+
+    expect(resumo.contexto.inicioEm).toEqual(new Date('2026-07-26T03:00:00.000Z'));
+    expect(resumo.contexto.fimEm).toEqual(new Date('2026-07-27T02:59:59.999Z'));
+
+    process.env.GOOGLE_CALENDAR_TIMEZONE = 'timezone-invalido';
+    const fallback = await servico.obterResumo('tenant-1', { periodo: 'hoje' }, profissionalUm);
+    expect(fallback.contexto.inicioEm).toEqual(new Date('2026-07-26T03:00:00.000Z'));
+    expect(fallback.contexto.fimEm).toEqual(new Date('2026-07-27T02:59:59.999Z'));
+  });
+
+  it('usa a ultima consulta concluida do paciente no tenant apos reatribuicao', async () => {
+    const consultas = registros.get(AgendaConsultaOrm) as AgendaConsultaOrm[];
+    consultas.push(
+      consulta(
+        'concluida-profissional-anterior',
+        'paciente-60',
+        'profissional-2',
+        'concluida',
+        diasAntes(5)
+      )
+    );
+
+    const resumo = await servico.obterResumo('tenant-1', { periodo: 'hoje' }, profissionalUm);
+
+    expect(resumo.semRetorno.map((item) => item.pacienteId)).not.toContain('paciente-60');
   });
 });
