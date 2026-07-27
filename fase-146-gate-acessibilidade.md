@@ -1,4 +1,4 @@
-# Fase 145 - Gate de acessibilidade e navegacao por teclado do frontend
+# Fase 146 - Gate de acessibilidade e navegacao por teclado do frontend
 
 Status: entregue em 2026-07-27, com 1 risco residual real encontrado e nao corrigido (fora do escopo autorizado desta fase, ver "Resultado" abaixo).
 
@@ -14,7 +14,7 @@ Arquivos criados/alterados nesta fase:
 
 - `octaclin-web/tests/visual/acessibilidade.spec.mjs` (novo).
 - `octaclin-web/package.json` (somente para adicionar o script `test:a11y`).
-- `fase-145-gate-acessibilidade.md` (este arquivo).
+- `fase-146-gate-acessibilidade.md` (este arquivo).
 
 Nenhum arquivo em `octaclin-backend/`, nenhum componente de agenda/agendamento
 publico/Google Calendar/autenticacao/BFF/rotas de API, `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`,
