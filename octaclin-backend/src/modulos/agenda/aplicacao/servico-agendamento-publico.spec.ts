@@ -690,8 +690,72 @@ describe('ServicoAgendamentoPublico', () => {
 
     const solicitacao = repositorios.solicitacao.todos().find((item) => item.id === 'sol-rollback');
     expect(solicitacao).toMatchObject({ status: 'pendente' });
-    expect(solicitacao?.pacienteId).toBeUndefined();
-    expect(solicitacao?.consultaId).toBeUndefined();
+    expect(solicitacao?.pacienteId).toBeNull();
+    expect(solicitacao?.consultaId).toBeNull();
+    expect(solicitacao?.decididaEm).toBeNull();
+    expect(solicitacao?.decididaPorUsuarioId).toBeNull();
+    expect(repositorios.solicitacao.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        id: 'sol-rollback',
+        status: 'processando',
+        decididaPorUsuarioId: 'usuario-1'
+      }),
+      expect.objectContaining({
+        status: 'pendente',
+        decididaEm: null,
+        decididaPorUsuarioId: null,
+        pacienteId: null,
+        consultaId: null
+      })
+    );
+  });
+
+  it('restaura a solicitacao para pendente se validarDisponibilidade falhar apos o claim', async () => {
+    const { servico, repositorios, servicoAgenda } = criarServico({
+      profissionais: [criarProfissional()],
+      solicitacoes: [criarSolicitacaoPendente({ id: 'sol-conflito' })],
+      consultas: [
+        {
+          id: 'consulta-conflitante',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-9',
+          profissionalId: 'profissional-1',
+          titulo: 'Consulta conflitante',
+          inicioEm: new Date('2026-07-28T13:15:00.000Z'),
+          fimEm: new Date('2026-07-28T13:45:00.000Z'),
+          timezone: 'America/Sao_Paulo',
+          status: 'agendada',
+          notificacoes: {},
+          payload: {},
+          criadoEm: new Date('2026-07-26T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-26T12:00:00.000Z')
+        }
+      ]
+    });
+
+    await expect(
+      servico.aprovarSolicitacao('tenant-1', 'sol-conflito', { pacienteId: 'paciente-1' }, usuarioProfissionalUm)
+    ).rejects.toThrow('Horario indisponivel.');
+
+    const solicitacao = repositorios.solicitacao.todos().find((item) => item.id === 'sol-conflito');
+    expect(servicoAgenda.criarConsulta).not.toHaveBeenCalled();
+    expect(solicitacao).toMatchObject({ status: 'pendente' });
+    expect(solicitacao?.decididaEm).toBeNull();
+    expect(solicitacao?.decididaPorUsuarioId).toBeNull();
+    expect(repositorios.solicitacao.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        id: 'sol-conflito',
+        status: 'processando',
+        decididaPorUsuarioId: 'usuario-1'
+      }),
+      expect.objectContaining({
+        status: 'pendente',
+        decididaEm: null,
+        decididaPorUsuarioId: null,
+        pacienteId: null,
+        consultaId: null
+      })
+    );
   });
 
   it('permite que SuperAdmin liste solicitacoes do tenant inteiro', async () => {

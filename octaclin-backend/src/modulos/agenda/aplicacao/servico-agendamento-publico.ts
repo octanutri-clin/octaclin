@@ -94,10 +94,10 @@ export interface SolicitacaoAgendaAutenticada {
   observacao?: string;
   status: StatusAgendaSolicitacao;
   expiraEm: Date;
-  decididaEm?: Date;
-  decididaPorUsuarioId?: string;
-  pacienteId?: string;
-  consultaId?: string;
+  decididaEm?: Date | null;
+  decididaPorUsuarioId?: string | null;
+  pacienteId?: string | null;
+  consultaId?: string | null;
   criadoEm: Date;
   atualizadoEm: Date;
 }
@@ -285,11 +285,6 @@ export class ServicoAgendamentoPublico {
     const contexto = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const now = new Date(Date.now());
       const solicitacao = await this.claimSolicitacaoParaAprovacao(gerenciador, tenantId, solicitacaoId, usuario, now);
-      await this.validarDisponibilidade(gerenciador, tenantId, solicitacao.profissionalId, {
-        inicioEm: solicitacao.inicioEm,
-        fimEm: solicitacao.fimEm
-      });
-
       return {
         solicitacao,
         observacao: solicitacao.observacaoCriptografada
@@ -300,6 +295,13 @@ export class ServicoAgendamentoPublico {
     });
 
     try {
+      await this.executorTenant.executar(tenantId, async (gerenciador) => {
+        await this.validarDisponibilidade(gerenciador, tenantId, contexto.solicitacao.profissionalId, {
+          inicioEm: contexto.solicitacao.inicioEm,
+          fimEm: contexto.solicitacao.fimEm
+        });
+      });
+
       const consulta = await this.servicoAgenda.criarConsulta(
         tenantId,
         {
@@ -340,23 +342,7 @@ export class ServicoAgendamentoPublico {
         return this.mapearSolicitacaoAutenticada(salva);
       });
     } catch (erro) {
-      await this.executorTenant.executar(tenantId, async (gerenciador) => {
-        const repositorio = gerenciador.getRepository(AgendaSolicitacaoOrm);
-        await repositorio.update(
-          {
-            id: solicitacaoId,
-            tenantId,
-            status: 'processando',
-            decididaPorUsuarioId: usuario.usuarioId,
-            decididaEm: contexto.claimedAt
-          },
-          {
-            status: 'pendente',
-            decididaEm: undefined,
-            decididaPorUsuarioId: undefined
-          }
-        );
-      });
+      await this.restaurarSolicitacaoPendenteAposClaim(tenantId, solicitacaoId, usuario, contexto.claimedAt);
       throw erro;
     }
   }
@@ -566,6 +552,33 @@ export class ServicoAgendamentoPublico {
     if (atual.status === 'processando') throw new BadRequestException('Solicitacao em processamento.');
     await this.garantirSolicitacaoPendente(gerenciador, atual);
     throw new BadRequestException('Solicitacao ja decidida.');
+  }
+
+  private async restaurarSolicitacaoPendenteAposClaim(
+    tenantId: string,
+    solicitacaoId: string,
+    usuario: UsuarioAutenticado,
+    claimedAt: Date
+  ): Promise<void> {
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(AgendaSolicitacaoOrm);
+      await repositorio.update(
+        {
+          id: solicitacaoId,
+          tenantId,
+          status: 'processando',
+          decididaPorUsuarioId: usuario.usuarioId,
+          decididaEm: claimedAt
+        },
+        {
+          status: 'pendente',
+          decididaEm: null,
+          decididaPorUsuarioId: null,
+          pacienteId: null,
+          consultaId: null
+        }
+      );
+    });
   }
 
   private serializarContato(dados: CriarSolicitacaoAgendamentoPublicoDto): string {

@@ -26,7 +26,7 @@ export class AgendaSolicitacaoOrm {
   contatoCriptografado: Buffer;
 
   @Column({ name: 'observacao_criptografada', type: 'bytea', nullable: true })
-  observacaoCriptografada?: Buffer;
+  observacaoCriptografada?: Buffer | null;
 
   @Column({ type: 'varchar', length: 32, default: 'pendente' })
   status: StatusAgendaSolicitacao;
@@ -35,16 +35,16 @@ export class AgendaSolicitacaoOrm {
   expiraEm: Date;
 
   @Column({ name: 'decidida_em', type: 'timestamptz', nullable: true })
-  decididaEm?: Date;
+  decididaEm?: Date | null;
 
   @Column({ name: 'decidida_por_usuario_id', type: 'uuid', nullable: true })
-  decididaPorUsuarioId?: string;
+  decididaPorUsuarioId?: string | null;
 
   @Column({ name: 'paciente_id', type: 'uuid', nullable: true })
-  pacienteId?: string;
+  pacienteId?: string | null;
 
   @Column({ name: 'consulta_id', type: 'uuid', nullable: true })
-  consultaId?: string;
+  consultaId?: string | null;
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
