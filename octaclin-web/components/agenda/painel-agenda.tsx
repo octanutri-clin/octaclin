@@ -183,7 +183,7 @@ export function PainelAgenda() {
   const [statusGoogleAgenda, setStatusGoogleAgenda] = useState<ConexaoGoogleAgendaStatus | null>(null);
 
   const pacientesLista = useMemo(() => pacientes?.itens ?? [], [pacientes]);
-  const profissionaisLista = profissionais?.itens ?? [];
+  const profissionaisLista = useMemo(() => profissionais?.itens ?? [], [profissionais]);
   const proximasConsultas = useMemo(
     () => [...consultas].sort((a, b) => new Date(a.inicioEm).getTime() - new Date(b.inicioEm).getTime()),
     [consultas]

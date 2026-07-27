@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   AlertTriangle,
@@ -108,7 +108,7 @@ export function PainelDashboard() {
     if (superAdmin) setProfissionalId(parametros.get('profissionalId') ?? '');
   }, [parametros, superAdmin]);
 
-  async function carregar() {
+  const carregar = useCallback(async () => {
     if (sessao && !superAdmin && !profissional) {
       setCarregando(false);
       setErro('Seu perfil nao possui acesso ao painel clinico.');
@@ -123,9 +123,9 @@ export function PainelDashboard() {
     } finally {
       setCarregando(false);
     }
-  }
+  }, [periodo, profissional, profissionalId, sessao, superAdmin]);
 
-  useEffect(() => { if (sessao !== null) void carregar(); }, [sessao, periodo, profissionalId]);
+  useEffect(() => { if (sessao !== null) void carregar(); }, [carregar, sessao]);
 
   const podeConcluirTarefa = podeAgir(sessao, 'pacientes.gerenciar');
   const podeRevisarFormulario = podeAgir(sessao, 'questionarios.gerenciar');
@@ -182,8 +182,8 @@ export function PainelDashboard() {
         <div className="min-w-0"><CabecalhoFila titulo="Formularios pendentes" detalhe="Respostas que precisam de revisao clinica." />{dados.formulariosPendentes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.formulariosPendentes.map((item) => <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">Formulario de {item.pacienteNome}</p><p className="text-xs text-texto-suave">Respondido em {item.respondidoEm ? formatarDataHora(item.respondidoEm) : 'data indisponivel'}</p></div>{podeRevisarFormulario ? <Botao type="button" disabled={processando === `formulario-${item.id}`} onClick={() => void executar(`formulario-${item.id}`, 'Formulario marcado como revisado.', () => revisarEnvioQuestionario(item.id), 'Marcar este formulario como revisado?')}><ClipboardCheck size={15} />Marcar revisado</Botao> : null}</div>)}</div> : <EstadoVazio titulo="Nenhum formulario pendente" descricao="Nao ha respostas aguardando revisao." />}</div>
       </section>
       <section className="grid gap-5 xl:grid-cols-2">
-        <div className="min-w-0"><CabecalhoFila titulo="Solicitacoes de agendamento" detalhe="Pedidos aguardando aprovacao manual." children={<LinkAcao href="/agenda">Abrir agenda</LinkAcao>} />{dados.solicitacoesPendentes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.solicitacoesPendentes.map((item) => <div key={item.id} className="py-3"><p className="text-sm font-semibold text-tinta">{item.solicitanteNome}</p><p className="text-xs text-texto-suave">{formatarDataHora(item.inicioEm)} · expira em {formatarDataHora(item.expiraEm)}</p></div>)}</div> : <EstadoVazio titulo="Nenhuma solicitacao pendente" descricao="Novos pedidos aparecerao aqui." />}</div>
-        <div className="min-w-0"><CabecalhoFila titulo="Comunicacoes em alerta" detalhe="Somente o status operacional e exibido neste painel." children={<LinkAcao href="/comunicacoes">Abrir comunicacoes</LinkAcao>} />{dados.comunicacoes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.comunicacoes.map((item) => <div key={item.id} className="py-3"><p className="truncate text-sm font-semibold text-tinta">{item.pacienteNome}</p><p className="text-xs text-texto-suave">Status {item.status} · {formatarDataHora(item.criadoEm)}</p></div>)}</div> : <EstadoVazio titulo="Comunicacoes em dia" descricao="Nao ha comunicacoes que demandem atencao." />}</div>
+        <div className="min-w-0"><CabecalhoFila titulo="Solicitacoes de agendamento" detalhe="Pedidos aguardando aprovacao manual."><LinkAcao href="/agenda">Abrir agenda</LinkAcao></CabecalhoFila>{dados.solicitacoesPendentes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.solicitacoesPendentes.map((item) => <div key={item.id} className="py-3"><p className="text-sm font-semibold text-tinta">{item.solicitanteNome}</p><p className="text-xs text-texto-suave">{formatarDataHora(item.inicioEm)} · expira em {formatarDataHora(item.expiraEm)}</p></div>)}</div> : <EstadoVazio titulo="Nenhuma solicitacao pendente" descricao="Novos pedidos aparecerao aqui." />}</div>
+        <div className="min-w-0"><CabecalhoFila titulo="Comunicacoes em alerta" detalhe="Somente o status operacional e exibido neste painel."><LinkAcao href="/comunicacoes">Abrir comunicacoes</LinkAcao></CabecalhoFila>{dados.comunicacoes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.comunicacoes.map((item) => <div key={item.id} className="py-3"><p className="truncate text-sm font-semibold text-tinta">{item.pacienteNome}</p><p className="text-xs text-texto-suave">Status {item.status} · {formatarDataHora(item.criadoEm)}</p></div>)}</div> : <EstadoVazio titulo="Comunicacoes em dia" descricao="Nao ha comunicacoes que demandem atencao." />}</div>
       </section>
     </> : null}
   </div>;
