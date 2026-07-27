@@ -163,14 +163,17 @@ async function prepararAgendaInterna(page) {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          habilitado: true,
-          urlPublica: urlAtual,
-          tokenAtual: urlAtual.split('/').pop(),
-          profissional: {
-            id: 'profissional-1',
-            nomeExibicao: 'Dra. Carla',
-            especialidade: 'Nutricao clinica'
-          }
+          id: 'link-publico-1',
+          profissionalId: 'profissional-1',
+          duracaoMinutos: 50,
+          ativo: true,
+          criadoEm: '2026-07-26T12:00:00.000Z',
+          atualizadoEm: '2026-07-27T09:00:00.000Z',
+          urlPublica: null,
+          urlPublicaDisponivel: false,
+          requerRotacaoConfirmada: true,
+          mensagemUrlPublica:
+            'URL atual indisponivel nesta sessao. Por seguranca, o token bruto nao e persistido. Rotacione com confirmacao para gerar uma nova URL publica.'
         })
       });
       return;
@@ -187,14 +190,16 @@ async function prepararAgendaInterna(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        habilitado: true,
+        id: 'link-publico-1',
+        profissionalId: 'profissional-1',
+        duracaoMinutos: 50,
+        ativo: true,
+        criadoEm: '2026-07-26T12:00:00.000Z',
+        atualizadoEm: '2026-07-27T09:15:00.000Z',
         urlPublica: urlAtual,
-        tokenAtual: 'token-rotacionado',
-        profissional: {
-          id: 'profissional-1',
-          nomeExibicao: 'Dra. Carla',
-          especialidade: 'Nutricao clinica'
-        }
+        urlPublicaDisponivel: true,
+        requerRotacaoConfirmada: false,
+        mensagemUrlPublica: 'URL publica disponivel ate nova rotacao confirmada.'
       })
     });
   });
@@ -302,7 +307,11 @@ test.describe('agendamento publico', () => {
 
     await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Link publico de agendamento' })).toBeVisible();
-    await expect(page.getByText('https://octaclin.local/agendar/token-publico')).toBeVisible();
+    await expect(page.getByText(/token bruto nao e persistido/i)).toBeVisible();
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('invalida a URL publica anterior');
+      await dialog.accept();
+    });
     await page.getByRole('button', { name: 'Rotacionar link' }).click();
 
     await expect.poll(() => agenda.rotacionouLink()).toBe(true);
@@ -310,7 +319,10 @@ test.describe('agendamento publico', () => {
 
     const solicitacaoAna = page.locator('article').filter({ hasText: 'Ana Silva' });
     await expect(solicitacaoAna).toBeVisible();
+    await expect(solicitacaoAna.getByLabel('Paciente para aprovar')).toHaveValue('');
+    await expect(solicitacaoAna.getByRole('button', { name: 'Aprovar solicitacao' })).toBeDisabled();
     await solicitacaoAna.getByLabel('Paciente para aprovar').selectOption('paciente-1');
+    await expect(solicitacaoAna.getByRole('button', { name: 'Aprovar solicitacao' })).toBeEnabled();
     await solicitacaoAna.getByRole('button', { name: 'Aprovar solicitacao' }).click();
 
     await expect.poll(() => agenda.aprovouSolicitacao()).toBe(true);

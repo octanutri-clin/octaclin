@@ -1,9 +1,6 @@
-import { cookies, type UnsafeUnwrappedCookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import { montarLinkAgendaPublicaBff } from '@/lib/server/agendamento-publico-bff';
 import { ErroPermissaoAusente, ErroSessaoAusente, exigirPermissaoBff, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
-
-const COOKIE_LINK_ID = 'octaclin_agendamento_publico_link_id';
-const COOKIE_LINK_TOKEN = 'octaclin_agendamento_publico_token';
 
 function tratarErroSessao(erro: unknown) {
   if (erro instanceof ErroSessaoAusente) {
@@ -13,17 +10,6 @@ function tratarErroSessao(erro: unknown) {
     return NextResponse.json({ mensagem: erro.message }, { status: 403 });
   }
   throw erro;
-}
-
-function obterTokenMemorizado(linkId: string) {
-  const jar = cookies() as unknown as UnsafeUnwrappedCookies;
-  const linkIdAtual = jar.get(COOKIE_LINK_ID)?.value;
-  if (linkIdAtual !== linkId) return undefined;
-  return jar.get(COOKIE_LINK_TOKEN)?.value;
-}
-
-function montarUrlPublica(origin: string, token?: string) {
-  return token ? `${origin}/agendar/${encodeURIComponent(token)}` : null;
 }
 
 export async function GET(request: NextRequest) {
@@ -48,10 +34,7 @@ export async function GET(request: NextRequest) {
     const linkAtual = links.find((link) => link.ativo) ?? links[0] ?? null;
     if (!linkAtual) return NextResponse.json(null, { status: 200 });
 
-    return NextResponse.json({
-      ...linkAtual,
-      urlPublica: montarUrlPublica(request.nextUrl.origin, obterTokenMemorizado(linkAtual.id))
-    });
+    return NextResponse.json(montarLinkAgendaPublicaBff(request.nextUrl.origin, linkAtual));
   } catch (erro) {
     return tratarErroSessao(erro);
   }

@@ -142,8 +142,7 @@ function statusConfirmacao(notificacoes: NotificacoesConsultaAgenda) {
 
 function descricaoLinkPublico(linkPublico: LinkAgendamentoPublicoApi | null) {
   if (!linkPublico) return 'Nenhum link ativo. Rotacione para gerar o primeiro endereco publico.';
-  if (linkPublico.urlPublica) return linkPublico.urlPublica;
-  return 'Link ativo. Rotacione para gerar um novo endereco publico copiavel nesta sessao.';
+  return linkPublico.urlPublica ?? linkPublico.mensagemUrlPublica;
 }
 
 export function PainelAgenda() {
@@ -211,21 +210,6 @@ export function PainelAgenda() {
       .then(setStatusGoogleAgenda)
       .catch(() => setStatusGoogleAgenda({ conectado: false }));
   }, []);
-
-  useEffect(() => {
-    if (!pacientesLista.length) return;
-    setPacientesPorSolicitacao((atual) => {
-      let alterado = false;
-      const proximo = { ...atual };
-      for (const solicitacao of solicitacoesPendentes) {
-        if (!proximo[solicitacao.id]) {
-          proximo[solicitacao.id] = pacientesLista[0].id;
-          alterado = true;
-        }
-      }
-      return alterado ? proximo : atual;
-    });
-  }, [pacientesLista, solicitacoesPendentes]);
 
   function selecionarPaciente(pacienteId: string) {
     const paciente = pacientePorId(pacientesLista, pacienteId);
@@ -350,13 +334,18 @@ export function PainelAgenda() {
   }
 
   async function rotacionarLink() {
+    const confirmado = window.confirm(
+      'Rotacionar o link invalida a URL publica anterior imediatamente. Deseja continuar?'
+    );
+    if (!confirmado) return;
+
     setErro(null);
     setSucesso(null);
     setProcessandoSolicitacaoId('rotacionar-link');
     try {
       const link = await rotacionarLinkPublicoAgenda();
       setLinkPublico(link);
-      setSucesso('Link publico rotacionado.');
+      setSucesso('Link publico rotacionado. Copie a nova URL antes de encerrar esta sessao.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao rotacionar link publico.');
     } finally {
@@ -426,6 +415,9 @@ export function PainelAgenda() {
               <div className="grid gap-1 text-sm text-texto-suave">
                 <p>{linkPublico.duracaoMinutos} minutos por solicitacao publica.</p>
                 <p>Atualizado em {formatarDataHora(linkPublico.atualizadoEm)}.</p>
+                {linkPublico.requerRotacaoConfirmada ? (
+                  <p>A URL atual so volta a ficar copiavel apos nova rotacao confirmada.</p>
+                ) : null}
               </div>
             ) : null}
 
@@ -439,7 +431,7 @@ export function PainelAgenda() {
                 <RefreshCcw size={16} />
                 Rotacionar link
               </Botao>
-              <Botao type="button" onClick={() => void copiarLinkPublico()} disabled={!linkPublico?.urlPublica}>
+              <Botao type="button" onClick={() => void copiarLinkPublico()} disabled={!linkPublico?.urlPublicaDisponivel}>
                 <Clipboard size={16} />
                 Copiar link
               </Botao>
@@ -658,6 +650,7 @@ export function PainelAgenda() {
                               }))
                             }
                           >
+                            <option value="">Selecione um paciente</option>
                             {pacientesLista.map((paciente) => (
                               <option key={paciente.id} value={paciente.id}>
                                 {paciente.nome}
@@ -684,7 +677,7 @@ export function PainelAgenda() {
                           <Botao
                             type="button"
                             variante="primario"
-                            disabled={!pacientesLista.length || processandoSolicitacaoId === solicitacao.id}
+                            disabled={!pacientesLista.length || !pacientesPorSolicitacao[solicitacao.id] || processandoSolicitacaoId === solicitacao.id}
                             onClick={() => void aprovarSolicitacao(solicitacao)}
                           >
                             <CheckCircle2 size={15} />

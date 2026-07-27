@@ -42,7 +42,10 @@ export interface LinkAgendamentoPublicoApi {
   ativo: boolean;
   criadoEm: string;
   atualizadoEm: string;
-  urlPublica?: string | null;
+  urlPublica: string | null;
+  urlPublicaDisponivel: boolean;
+  requerRotacaoConfirmada: boolean;
+  mensagemUrlPublica: string;
 }
 
 export interface SolicitacaoAgendaPublicaApi {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { criarHeadersProxyPublico } from '@/lib/server/agendamento-publico-bff';
 import { normalizarApiUrlBff } from '@/lib/server/sessao-bff';
 
 function obterApiUrlPublica() {
@@ -64,7 +65,7 @@ function agruparHorarios(horariosLivres: string[], timeZone: string) {
 export async function GET(_: Request, props: { params: Promise<{ token: string }> }) {
   const params = await props.params;
   const resposta = await fetch(`${obterApiUrlPublica()}/agendamentos-publicos/${encodeURIComponent(params.token)}`, {
-    headers: { Accept: 'application/json' },
+    headers: criarHeadersProxyPublico(),
     cache: 'no-store'
   });
 

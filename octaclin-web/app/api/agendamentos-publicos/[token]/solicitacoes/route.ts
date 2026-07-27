@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { criarHeadersProxyPublico } from '@/lib/server/agendamento-publico-bff';
 import { normalizarApiUrlBff } from '@/lib/server/sessao-bff';
 
 function obterApiUrlPublica() {
@@ -11,7 +12,7 @@ export async function POST(request: Request, props: { params: Promise<{ token: s
     `${obterApiUrlPublica()}/agendamentos-publicos/${encodeURIComponent(params.token)}/solicitacoes`,
     {
       method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      headers: criarHeadersProxyPublico(request),
       body: await request.text(),
       cache: 'no-store'
     }
