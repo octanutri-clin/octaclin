@@ -1,4 +1,5 @@
-import { IsBoolean, IsDateString, IsEmail, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsBoolean, IsDateString, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import type { StatusAgendaConsulta } from '../infraestrutura/agenda-consulta.orm';
 import type { ResultadoGoogleCalendar } from './servico-google-calendar';
 
 export type ResultadoNotificacaoAgenda =
@@ -90,6 +91,11 @@ export class CancelarConsultaAgendaDto {
   motivo?: string;
 }
 
+export class RegistrarDesfechoConsultaAgendaDto {
+  @IsIn(['concluida', 'falta', 'cancelada'])
+  status: 'concluida' | 'falta' | 'cancelada';
+}
+
 export class CriarSolicitacaoAgendamentoPublicoDto {
   @IsString()
   @MinLength(1)
@@ -138,7 +144,7 @@ export interface ConsultaAgendaRespostaDto {
   inicioEm: Date;
   fimEm: Date;
   timezone: string;
-  status: string;
+  status: StatusAgendaConsulta;
   local?: string;
   observacoes?: string;
   googleCalendarId?: string;

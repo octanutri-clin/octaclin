@@ -34,7 +34,7 @@ export interface ConsultaAgendaApi {
   inicioEm: string;
   fimEm: string;
   timezone: string;
-  status: 'agendada' | 'cancelada';
+  status: 'agendada' | 'reagendada' | 'concluida' | 'falta' | 'cancelada';
   local?: string;
   observacoes?: string;
   googleCalendarId?: string;
@@ -70,6 +70,8 @@ export interface RemarcarConsultaAgendaEntrada {
 export interface CancelarConsultaAgendaEntrada {
   motivo?: string;
 }
+
+export type DesfechoConsultaAgenda = 'concluida' | 'falta' | 'cancelada';
 
 export interface BootstrapAgenda {
   consultas: ConsultaAgendaApi[];
@@ -128,6 +130,16 @@ export async function cancelarConsultaAgenda(consultaId: string, entrada: Cancel
   return requisitar<ConsultaAgendaApi>(`/api/agenda/consultas/${encodeURIComponent(consultaId)}`, {
     method: 'DELETE',
     body: JSON.stringify(entrada)
+  });
+}
+
+export async function registrarDesfechoConsulta(
+  consultaId: string,
+  status: DesfechoConsultaAgenda
+): Promise<ConsultaAgendaApi> {
+  return requisitar<ConsultaAgendaApi>(`/api/agenda/consultas/${encodeURIComponent(consultaId)}/desfecho`, {
+    method: 'POST',
+    body: JSON.stringify({ status })
   });
 }
 

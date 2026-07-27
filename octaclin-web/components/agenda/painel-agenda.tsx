@@ -11,6 +11,7 @@ import {
   MessageCircle,
   RefreshCcw,
   Save,
+  UserX,
   Video,
   XCircle
 } from 'lucide-react';
@@ -22,16 +23,17 @@ import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi } from '@/lib/ag
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
 import {
   aprovarSolicitacaoPublicaAgenda,
-  cancelarConsultaAgenda,
   carregarBootstrapAgenda,
   ConexaoGoogleAgendaStatus,
   conectarGoogleAgenda,
   ConsultaAgendaApi,
   criarConsultaAgenda,
+  DesfechoConsultaAgenda,
   desconectarGoogleAgenda,
   NotificacoesConsultaAgenda,
   obterStatusGoogleAgenda,
   recusarSolicitacaoPublicaAgenda,
+  registrarDesfechoConsulta,
   remarcarConsultaAgenda,
   rotacionarLinkPublicoAgenda
 } from '@/lib/agenda-api';
@@ -138,6 +140,21 @@ function statusConfirmacao(notificacoes: NotificacoesConsultaAgenda) {
   const confirmacao = notificacoes?.confirmacaoPaciente;
   if (confirmacao?.status === 'confirmada') return 'Paciente confirmou';
   return 'Aguardando confirmacao';
+}
+
+function rotuloStatusConsulta(status: ConsultaAgendaApi['status']) {
+  const rotulos: Record<ConsultaAgendaApi['status'], string> = {
+    agendada: 'Agendada',
+    reagendada: 'Reagendada',
+    concluida: 'Concluida',
+    falta: 'Falta',
+    cancelada: 'Cancelada'
+  };
+  return rotulos[status];
+}
+
+function consultaAtiva(consulta: ConsultaAgendaApi) {
+  return consulta.status === 'agendada' || consulta.status === 'reagendada';
 }
 
 function descricaoLinkPublico(linkPublico: LinkAgendamentoPublicoApi | null) {
@@ -303,20 +320,18 @@ export function PainelAgenda() {
     }
   }
 
-  async function cancelar(evento: FormEvent<HTMLFormElement>, consulta: ConsultaAgendaApi) {
-    evento.preventDefault();
-    const dados = new FormData(evento.currentTarget);
-    const motivo = String(dados.get('motivo') ?? '').trim();
-
+  async function registrarDesfecho(consulta: ConsultaAgendaApi, status: DesfechoConsultaAgenda) {
+    const rotulo = rotuloStatusConsulta(status).toLocaleLowerCase('pt-BR');
+    if (!window.confirm(`Registrar a consulta como ${rotulo}? Este desfecho nao podera ser alterado.`)) return;
     setErro(null);
     setSucesso(null);
     setProcessandoConsultaId(consulta.id);
     try {
-      const cancelada = await cancelarConsultaAgenda(consulta.id, { motivo: motivo || undefined });
-      atualizarConsulta(cancelada);
-      setSucesso('Consulta cancelada. Google Calendar foi atualizado conforme configuracao.');
+      const atualizada = await registrarDesfechoConsulta(consulta.id, status);
+      atualizarConsulta(atualizada);
+      setSucesso(`Consulta registrada como ${rotulo}.`);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao cancelar consulta.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar desfecho da consulta.');
     } finally {
       setProcessandoConsultaId(null);
     }
@@ -729,7 +744,7 @@ export function PainelAgenda() {
                               {consulta.pacienteNome ?? paciente?.nome ?? consulta.titulo}
                             </h3>
                             <span className="rounded-md border border-primaria-suave bg-superficie-hover px-2 py-1 text-xs font-medium text-primaria-forte">
-                              {consulta.status}
+                              {rotuloStatusConsulta(consulta.status)}
                             </span>
                           </div>
                           <div className="mt-2 grid gap-1 text-sm text-texto-suave sm:grid-cols-2">
@@ -778,7 +793,7 @@ export function PainelAgenda() {
                         </a>
                       ) : null}
 
-                      {consulta.status === 'agendada' ? (
+                      {consultaAtiva(consulta) ? (
                         <div className="mt-3 grid gap-3 border-t border-linha pt-3 xl:grid-cols-[minmax(0,1fr)_minmax(220px,320px)]">
                           <form onSubmit={(evento) => remarcar(evento, consulta)} className="grid gap-2">
                             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_120px_minmax(140px,1fr)]">
@@ -823,23 +838,45 @@ export function PainelAgenda() {
                             </div>
                           </form>
 
-                          <form onSubmit={(evento) => cancelar(evento, consulta)} className="grid gap-2">
-                            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                              Motivo do cancelamento
-                              <input
-                                aria-label="Motivo do cancelamento"
-                                name="motivo"
-                                className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
-                                placeholder="Opcional"
-                              />
-                            </label>
-                            <div className="flex justify-end">
-                              <Botao type="submit" disabled={processandoConsultaId === consulta.id}>
-                                <XCircle size={15} />
-                                Cancelar consulta
+                          <div className="flex items-end justify-end">
+                            <div
+                              className="flex h-10 items-center gap-2"
+                              role="group"
+                              aria-label="Registrar desfecho da consulta"
+                            >
+                              <Botao
+                                type="button"
+                                className="h-9 w-9 p-0"
+                                aria-label="Concluir consulta"
+                                title="Concluir"
+                                disabled={processandoConsultaId === consulta.id}
+                                onClick={() => void registrarDesfecho(consulta, 'concluida')}
+                              >
+                                <CheckCircle2 size={17} />
+                              </Botao>
+                              <Botao
+                                type="button"
+                                className="h-9 w-9 p-0"
+                                aria-label="Registrar falta"
+                                title="Falta"
+                                disabled={processandoConsultaId === consulta.id}
+                                onClick={() => void registrarDesfecho(consulta, 'falta')}
+                              >
+                                <UserX size={17} />
+                              </Botao>
+                              <Botao
+                                type="button"
+                                variante="perigo"
+                                className="h-9 w-9 p-0"
+                                aria-label="Cancelar consulta"
+                                title="Cancelar"
+                                disabled={processandoConsultaId === consulta.id}
+                                onClick={() => void registrarDesfecho(consulta, 'cancelada')}
+                              >
+                                <XCircle size={17} />
                               </Botao>
                             </div>
-                          </form>
+                          </div>
                         </div>
                       ) : null}
                     </article>
