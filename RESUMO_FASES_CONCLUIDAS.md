@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 143 de onboarding de profissionais.
+Atualizado apos a Fase 144 de agendamento publico por solicitacao.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -188,10 +188,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 140 - Cobertura de confiabilidade e regressao: criada `MATRIZ_CONFIABILIDADE_TESTES.md` e o validador `pnpm test:confiabilidade`, tornando rastreaveis os riscos de tenant, autorizacao, BFF, integracoes, portal clinico e operacoes, seus testes e gates de execucao.
 - Fase 142 - Migracao controlada do Next.js: frontend atualizado para Next.js 15.5.22 mantendo React 18.3.1; o codemod oficial converteu APIs dinamicas para `Promise`/`await`, `typedRoutes` foi estabilizado e o output tracing foi delimitado ao frontend. Overrides de PostCSS 8.5.23 e Sharp 0.35.3 eliminaram os achados de auditoria de producao web. O gate `pnpm --dir octaclin-web test:next15` protege parametros dinamicos assincronos. A migracao para Next 16/React 19 permanece futura, pois exige remover o shim temporario de cookies no BFF.
 - Fase 143 - Onboarding de profissionais por convite: o portal do cliente solicita nome, registro profissional opcional e especialidade opcional ao convidar um `Professional`; o backend cria em uma unica transacao o usuario, o perfil profissional e o convite. O primeiro login ja recebe escopo de profissional, agenda propria e base para conectar Google Calendar.
+- Fase 144 - Agendamento publico por solicitacao: o profissional pode compartilhar um link publico para receber pedidos de horario sem reservar a agenda na hora. A solicitacao fica pendente, a aprovacao interna exige paciente explicito do tenant e a consulta/notificacoes so nascem quando o fluxo normal de agenda cria a consulta aprovada. O token bruto do link nao e persistido; uma nova sessao exige rotacao confirmada para voltar a exibir uma URL copiavel.
 
 ## Estado atual de uso
 
-O sistema esta em producao isolada aceita, com massa ficticia mantida fora do banco de producao e o piloto interno aprovado. Ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria: faltam restore real em banco dedicado, dominio/identidade de envio, revisao juridica e go-live assistido.
+O sistema esta em producao isolada aceita, com massa ficticia mantida fora do banco de producao e o piloto interno aprovado. A agenda agora tambem aceita solicitacoes publicas com aprovacao manual segura, sem reservar horario nem persistir token bruto. Ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria: faltam restore real em banco dedicado, dominio/identidade de envio, revisao juridica e go-live assistido.
 
 ## Como atualizar este arquivo
 
