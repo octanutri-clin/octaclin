@@ -54,6 +54,10 @@ export function decidirAcessoRota(pathname: string, papel?: string, destinoInici
     return { permitir: false, redirecionarPara: destino };
   }
 
+  if (pertenceARota(pathname, ['/dashboard']) && papel !== 'SuperAdmin' && papel !== 'Professional') {
+    return { permitir: false, redirecionarPara: destino };
+  }
+
   const permissaoExigida = permissaoExigidaParaRota(pathname);
   if (permissaoExigida && Array.isArray(permissoes) && !permissoes.includes(permissaoExigida)) {
     return { permitir: false, redirecionarPara: destino };

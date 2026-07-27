@@ -72,7 +72,7 @@ test('BFF de revisao retorna 403 sem permissao e nao consulta o backend', async 
   }
 });
 
-test('BFF nao envia origem forjavel e remove token publico da resposta', async () => {
+test('BFF define origem do painel e remove token publico da resposta', async () => {
   __setCookies(cookiesSessaoValida(['questionarios.gerenciar']));
   const fetchOriginal = global.fetch;
   let headersBackend: Headers | undefined;
@@ -101,7 +101,7 @@ test('BFF nao envia origem forjavel e remove token publico da resposta', async (
     const corpo = (await resposta.json()) as Record<string, unknown>;
 
     assert.equal(resposta.status, 200);
-    assert.equal(headersBackend?.get('x-octaclin-origem'), null);
+    assert.equal(headersBackend?.get('x-octaclin-origem'), 'dashboard_clinico');
     assert.deepEqual(corpo, {
       id: 'envio-1',
       status: 'respondido',

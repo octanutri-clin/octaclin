@@ -1,6 +1,7 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   CalendarCheck,
   CheckCircle2,
@@ -163,6 +164,8 @@ function descricaoLinkPublico(linkPublico: LinkAgendamentoPublicoApi | null) {
 }
 
 export function PainelAgenda() {
+  const parametros = useSearchParams();
+  const parametrosIniciaisAplicados = useRef(false);
   const [consultas, setConsultas] = useState<ConsultaAgendaApi[]>([]);
   const [pacientes, setPacientes] = useState<RespostaPaginada<PacienteResumo> | null>(null);
   const [profissionais, setProfissionais] = useState<RespostaPaginada<ProfissionalResumo> | null>(null);
@@ -227,6 +230,26 @@ export function PainelAgenda() {
       .then(setStatusGoogleAgenda)
       .catch(() => setStatusGoogleAgenda({ conectado: false }));
   }, []);
+
+  useEffect(() => {
+    if (parametrosIniciaisAplicados.current || !pacientesLista.length || !profissionaisLista.length) return;
+    parametrosIniciaisAplicados.current = true;
+
+    const pacienteId = parametros.get('pacienteId');
+    const profissionalId = parametros.get('profissionalId');
+    const paciente = pacienteId ? pacientePorId(pacientesLista, pacienteId) : undefined;
+    const profissionalValido = profissionalId && profissionalPorId(profissionaisLista, profissionalId) ? profissionalId : undefined;
+
+    if (!paciente && !profissionalValido) return;
+    setFormulario((atual) => ({
+      ...atual,
+      pacienteId: paciente?.id ?? atual.pacienteId,
+      profissionalId: profissionalValido ?? paciente?.profissionalResponsavelId ?? atual.profissionalId,
+      emailContato: paciente ? contatoEmail(paciente.contato) : atual.emailContato,
+      whatsappContato: paciente ? contatoWhatsapp(paciente.contato) : atual.whatsappContato
+    }));
+    setSucesso('Dados do retorno preenchidos. Confirme data e hora antes de agendar.');
+  }, [pacientesLista, profissionaisLista, parametros]);
 
   function selecionarPaciente(pacienteId: string) {
     const paciente = pacientePorId(pacientesLista, pacienteId);

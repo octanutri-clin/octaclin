@@ -3,318 +3,188 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CalendarDays, ClipboardList, MessageSquareText, RefreshCcw, UserRoundCheck, UsersRound } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import {
+  AlertTriangle,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardCheck,
+  ClipboardList,
+  EyeOff,
+  MessageSquareWarning,
+  RefreshCcw,
+  UserRoundPlus,
+  XCircle
+} from 'lucide-react';
+import { obterSessao, type SessaoPublica } from '@/lib/auth-api';
+import { registrarDesfechoConsulta } from '@/lib/agenda-api';
+import { listarProfissionais, type ProfissionalResumo } from '@/lib/cadastros-api';
+import {
+  carregarResumoDashboardClinico,
+  concluirTarefaDashboardClinico,
+  ocultarAlertaDashboardClinico,
+  type PeriodoDashboardClinico,
+  type ResumoDashboardClinicoApi,
+  type StatusConsultaClinica
+} from '@/lib/dashboard-api';
+import { revisarEnvioQuestionario } from '@/lib/questionarios-api';
 import { Botao } from '@/components/ui/botao';
+import { Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
-import { type ConsultaAgendaApi } from '@/lib/agenda-api';
-import { type PacienteResumo } from '@/lib/cadastros-api';
-import { type MensagemNotificacaoApi } from '@/lib/comunicacoes-api';
-import { carregarDashboardProfissional, type DashboardProfissionalApi } from '@/lib/dashboard-api';
-import { type QuestionarioApi } from '@/lib/questionarios-api';
 
-function formatarDataHora(valor?: string) {
-  if (!valor) return 'Sem data';
+const periodos: { valor: PeriodoDashboardClinico; rotulo: string }[] = [
+  { valor: 'hoje', rotulo: 'Hoje' },
+  { valor: 'sete_dias', rotulo: '7 dias' },
+  { valor: 'trinta_dias', rotulo: '30 dias' }
+];
+
+function formatarDataHora(valor: string) {
   const data = new Date(valor);
-  if (Number.isNaN(data.getTime())) return 'Data invalida';
+  if (Number.isNaN(data.getTime())) return 'Data indisponivel';
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(data);
 }
 
-function mesmaDataLocal(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+function nomeStatusConsulta(status: StatusConsultaClinica) {
+  return { agendada: 'Agendada', reagendada: 'Reagendada', concluida: 'Concluida', falta: 'Falta', cancelada: 'Cancelada' }[status];
 }
 
-function numeroSeguro(valor: string | number | undefined) {
-  const numero = Number(valor ?? 0);
-  return Number.isFinite(numero) ? numero : 0;
+function nomeAlerta(tipo: string) {
+  return {
+    sem_retorno_risco_alto: 'Paciente de risco sem retorno',
+    tarefa_vencida: 'Tarefa vencida',
+    atendimento_proximo: 'Atendimento proximo',
+    formulario_pendente: 'Formulario pendente',
+    solicitacao_pendente: 'Solicitacao pendente',
+    comunicacao_alerta: 'Comunicacao requer atencao'
+  }[tipo] ?? 'Alerta clinico';
 }
 
-function textoMensagem(mensagem: MensagemNotificacaoApi) {
-  const payload = mensagem.payload ?? {};
-  const candidatos = [payload.texto, payload.mensagem, payload.body, payload.conteudo];
-  const texto = candidatos.find((valor) => typeof valor === 'string' && valor.trim().length > 0);
-  return typeof texto === 'string' ? texto : mensagem.erro ?? 'Mensagem sem texto registrado.';
+function podeAgir(sessao: SessaoPublica | null, permissao: string) {
+  return Boolean(sessao?.permissoes.includes(permissao));
 }
 
-function ordenarPorDataDesc<T>(itens: T[], obterData: (item: T) => string | undefined) {
-  return [...itens].sort((a, b) => new Date(obterData(b) ?? 0).getTime() - new Date(obterData(a) ?? 0).getTime());
+function LinkAcao({ href, children }: { href: Route; children: React.ReactNode }) {
+  return <Link href={href} className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover">{children}</Link>;
 }
 
-function ordenarConsultas(consultas: ConsultaAgendaApi[]) {
-  return [...consultas]
-    .filter((consulta) => consulta.status === 'agendada')
-    .sort((a, b) => new Date(a.inicioEm).getTime() - new Date(b.inicioEm).getTime());
+function Indicador({ titulo, valor, detalhe, icone: Icone }: { titulo: string; valor: number; detalhe: string; icone: typeof CalendarDays }) {
+  return <article className="min-w-0 rounded-md border border-linha bg-white p-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold uppercase text-texto-suave">{titulo}</p><p className="mt-1 text-2xl font-semibold text-tinta">{valor}</p><p className="mt-1 text-xs text-texto-suave">{detalhe}</p></div><Icone size={18} className="shrink-0 text-primaria" /></div></article>;
 }
 
-function LinkAcao({ href, children }: { href: Route; children: string }) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
-    >
-      {children}
-    </Link>
-  );
-}
-
-function CartaoIndicador({
-  titulo,
-  valor,
-  detalhe,
-  icone: Icone
-}: {
-  titulo: string;
-  valor: string;
-  detalhe: string;
-  icone: typeof CalendarDays;
-}) {
-  return (
-    <article className="rounded-md border border-linha bg-white p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase text-texto-suave">{titulo}</p>
-          <p className="mt-2 text-2xl font-semibold text-tinta">{valor}</p>
-          <p className="mt-1 text-sm text-texto-suave">{detalhe}</p>
-        </div>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primaria-suave text-primaria">
-          <Icone size={20} />
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function ListaConsultas({ consultas }: { consultas: ConsultaAgendaApi[] }) {
-  if (!consultas.length) return <EstadoVazio titulo="Nenhuma consulta hoje" descricao="A agenda do dia esta livre." />;
-
-  return (
-    <div className="divide-y divide-linha">
-      {consultas.slice(0, 4).map((consulta) => (
-        <div key={consulta.id} className="grid gap-1 py-3 first:pt-0 last:pb-0">
-          <div className="flex min-w-0 items-center justify-between gap-3">
-            <p className="truncate text-sm font-semibold text-tinta">{consulta.pacienteNome ?? consulta.titulo}</p>
-            <span className="shrink-0 text-xs font-medium text-texto-suave">{formatarDataHora(consulta.inicioEm)}</span>
-          </div>
-          <p className="truncate text-sm text-texto-suave">{consulta.titulo}</p>
-          {consulta.local ? <p className="truncate text-xs text-texto-suave">{consulta.local}</p> : null}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ListaPacientesRecentes({ pacientes }: { pacientes: PacienteResumo[] }) {
-  if (!pacientes.length) return <EstadoVazio titulo="Nenhum paciente recente" descricao="Cadastre ou importe pacientes para iniciar." />;
-
-  return (
-    <div className="divide-y divide-linha">
-      {pacientes.slice(0, 4).map((paciente) => (
-        <div key={paciente.id} className="grid gap-1 py-3 first:pt-0 last:pb-0">
-          <div className="flex min-w-0 items-center justify-between gap-3">
-            <p className="truncate text-sm font-semibold text-tinta">{paciente.nome}</p>
-            <span className="shrink-0 rounded-md bg-superficie-hover px-2 py-1 text-xs text-texto-suave">{paciente.statusAdesao}</span>
-          </div>
-          <p className="text-sm text-texto-suave">Risco {numeroSeguro(paciente.scoreRisco)} pontos</p>
-          <p className="text-xs text-texto-suave">Criado em {formatarDataHora(paciente.criadoEm)}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ListaQuestionarios({ questionarios }: { questionarios: QuestionarioApi[] }) {
-  if (!questionarios.length) return <EstadoVazio titulo="Nenhum formulario pendente" descricao="Os formularios ativos estao em dia." />;
-
-  return (
-    <div className="divide-y divide-linha">
-      {questionarios.slice(0, 4).map((questionario) => (
-        <div key={questionario.id} className="grid gap-1 py-3 first:pt-0 last:pb-0">
-          <div className="flex min-w-0 items-center justify-between gap-3">
-            <p className="truncate text-sm font-semibold text-tinta">{questionario.titulo}</p>
-            <span className="shrink-0 rounded-md bg-alerta-suave px-2 py-1 text-xs text-alerta-forte">{questionario.status}</span>
-          </div>
-          <p className="text-sm text-texto-suave">Versao {questionario.versao}</p>
-          <p className="text-xs text-texto-suave">Atualizado em {formatarDataHora(questionario.atualizadoEm)}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ListaMensagens({ mensagens }: { mensagens: MensagemNotificacaoApi[] }) {
-  if (!mensagens.length) return <EstadoVazio titulo="Nenhuma mensagem para revisar" descricao="A caixa operacional esta sem pendencias." />;
-
-  return (
-    <div className="divide-y divide-linha">
-      {mensagens.slice(0, 4).map((mensagem) => (
-        <div key={mensagem.id} className="grid gap-1 py-3 first:pt-0 last:pb-0">
-          <div className="flex min-w-0 items-center justify-between gap-3">
-            <p className="truncate text-sm font-semibold text-tinta">{textoMensagem(mensagem)}</p>
-            <span className="shrink-0 rounded-md bg-superficie-hover px-2 py-1 text-xs text-texto-suave">{mensagem.status}</span>
-          </div>
-          <p className="text-xs text-texto-suave">{formatarDataHora(mensagem.criadoEm)}</p>
-        </div>
-      ))}
-    </div>
-  );
+function CabecalhoFila({ titulo, detalhe, children }: { titulo: string; detalhe: string; children?: React.ReactNode }) {
+  return <div className="mb-3 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold text-tinta">{titulo}</h2><p className="text-sm text-texto-suave">{detalhe}</p></div>{children}</div>;
 }
 
 export function PainelDashboard() {
-  const [dados, setDados] = useState<DashboardProfissionalApi | null>(null);
+  const parametros = useSearchParams();
+  const [sessao, setSessao] = useState<SessaoPublica | null>(null);
+  const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
+  const [periodo, setPeriodo] = useState<PeriodoDashboardClinico>('hoje');
+  const [profissionalId, setProfissionalId] = useState('');
+  const [dados, setDados] = useState<ResumoDashboardClinicoApi | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [sucesso, setSucesso] = useState<string | null>(null);
+  const [processando, setProcessando] = useState<string | null>(null);
+
+  const superAdmin = sessao?.papel === 'SuperAdmin';
+  const profissional = sessao?.papel === 'Professional';
+  const podeContexto = superAdmin && podeAgir(sessao, 'profissionais.ler');
+
+  useEffect(() => {
+    let ativo = true;
+    void obterSessao().then(async (sessaoAtual) => {
+      if (!ativo) return;
+      setSessao(sessaoAtual);
+      if (sessaoAtual?.papel === 'SuperAdmin' && sessaoAtual.permissoes.includes('profissionais.ler')) {
+        const resposta = await listarProfissionais();
+        if (ativo) setProfissionais(resposta.itens);
+      }
+    }).catch(() => ativo && setSessao(null));
+    return () => { ativo = false; };
+  }, []);
+
+  useEffect(() => {
+    if (superAdmin) setProfissionalId(parametros.get('profissionalId') ?? '');
+  }, [parametros, superAdmin]);
 
   async function carregar() {
+    if (sessao && !superAdmin && !profissional) {
+      setCarregando(false);
+      setErro('Seu perfil nao possui acesso ao painel clinico.');
+      return;
+    }
     setCarregando(true);
     setErro(null);
     try {
-      setDados(await carregarDashboardProfissional());
+      setDados(await carregarResumoDashboardClinico({ periodo, profissionalId: superAdmin ? profissionalId || undefined : undefined }));
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar dashboard.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar o painel clinico.');
     } finally {
       setCarregando(false);
     }
   }
 
-  useEffect(() => {
-    void carregar();
-  }, []);
+  useEffect(() => { if (sessao !== null) void carregar(); }, [sessao, periodo, profissionalId]);
 
-  const hoje = useMemo(() => new Date(), []);
-  const consultasOrdenadas = useMemo(() => ordenarConsultas(dados?.consultas ?? []), [dados?.consultas]);
-  const consultasHoje = useMemo(
-    () => consultasOrdenadas.filter((consulta) => mesmaDataLocal(new Date(consulta.inicioEm), hoje)),
-    [consultasOrdenadas, hoje]
-  );
-  const pacientesRecentes = useMemo(() => ordenarPorDataDesc(dados?.pacientes.itens ?? [], (paciente) => paciente.criadoEm), [dados?.pacientes.itens]);
-  const pacientesRisco = useMemo(
-    () => (dados?.pacientes.itens ?? []).filter((paciente) => paciente.statusAdesao === 'risco' || numeroSeguro(paciente.scoreRisco) >= 70),
-    [dados?.pacientes.itens]
-  );
-  const questionariosPendentes = useMemo(
-    () => (dados?.questionarios.itens ?? []).filter((questionario) => questionario.status === 'rascunho'),
-    [dados?.questionarios.itens]
-  );
-  const mensagensRevisar = useMemo(
-    () =>
-      ordenarPorDataDesc(
-        (dados?.mensagens ?? []).filter((mensagem) => ['recebido', 'falhou', 'pendente'].includes(mensagem.status)),
-        (mensagem) => mensagem.criadoEm
-      ),
-    [dados?.mensagens]
-  );
+  const podeConcluirTarefa = podeAgir(sessao, 'pacientes.gerenciar');
+  const podeRevisarFormulario = podeAgir(sessao, 'questionarios.gerenciar');
+  const podeRegistrarDesfecho = podeAgir(sessao, 'agenda.consultas.criar');
+  const retornoUrl = (pacienteId: string, responsavelId: string) => `/agenda?pacienteId=${encodeURIComponent(pacienteId)}&profissionalId=${encodeURIComponent(responsavelId)}` as Route;
+  const contextoSelecionado = useMemo(() => profissionais.find((item) => item.id === profissionalId), [profissionais, profissionalId]);
 
-  if (carregando) return <BarraCarregamento visivel rotulo="Carregando dashboard profissional" />;
-
-  if (erro) {
-    return (
-      <div className="grid gap-3">
-        <AlertaOperacional mensagem={`Falha ao carregar dashboard: ${erro}`} />
-        <Botao type="button" onClick={() => void carregar()}>
-          <RefreshCcw size={16} />
-          Tentar novamente
-        </Botao>
-      </div>
-    );
+  async function executar(chave: string, mensagem: string, acao: () => Promise<unknown>, confirmar?: string) {
+    if (confirmar && !window.confirm(confirmar)) return;
+    setProcessando(chave);
+    setErro(null);
+    setSucesso(null);
+    try {
+      await acao();
+      setSucesso(mensagem);
+      await carregar();
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao executar a acao.');
+    } finally {
+      setProcessando(null);
+    }
   }
 
-  const resumoQuestionarios =
-    questionariosPendentes.length === 1 ? '1 rascunho para publicar' : `${questionariosPendentes.length} rascunhos para publicar`;
+  if (carregando && !dados) return <BarraCarregamento visivel rotulo="Carregando painel clinico" />;
 
-  return (
-    <div className="grid gap-4">
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <CartaoIndicador
-          titulo="Consultas de hoje"
-          valor={String(consultasHoje.length)}
-          detalhe={`${consultasOrdenadas.length} consultas futuras na agenda`}
-          icone={CalendarDays}
-        />
-        <CartaoIndicador
-          titulo="Pacientes em risco"
-          valor={String(pacientesRisco.length)}
-          detalhe={`${dados?.pacientes.total ?? 0} pacientes ativos no console`}
-          icone={AlertTriangle}
-        />
-        <CartaoIndicador titulo="Formularios pendentes" valor={String(questionariosPendentes.length)} detalhe={resumoQuestionarios} icone={ClipboardList} />
-        <CartaoIndicador
-          titulo="Mensagens para revisar"
-          valor={String(mensagensRevisar.length)}
-          detalhe="Recebidas, pendentes ou com falha"
-          icone={MessageSquareText}
-        />
+  return <div className="grid gap-4">
+    <section className="flex flex-col gap-3 border-b border-linha pb-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="min-w-0"><h2 className="text-lg font-semibold text-tinta">Painel clinico</h2><p className="text-sm text-texto-suave">Prioridades diarias, pendencias e proximos atendimentos.</p></div>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex rounded-md border border-linha p-1" aria-label="Periodo do painel clinico">{periodos.map((item) => <button key={item.valor} type="button" onClick={() => setPeriodo(item.valor)} className={`h-8 rounded px-3 text-sm font-medium ${periodo === item.valor ? 'bg-primaria text-white' : 'text-tinta hover:bg-superficie-hover'}`}>{item.rotulo}</button>)}</div>
+        {podeContexto ? <label className="grid min-w-52 gap-1 text-xs font-semibold text-texto-suave">Profissional em contexto<Selecao aria-label="Profissional em contexto" value={profissionalId} onChange={(evento) => setProfissionalId(evento.target.value)}><option value="">Selecionar profissional</option>{profissionais.map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}</Selecao></label> : null}
+      </div>
+    </section>
+
+    {superAdmin ? <AlertaOperacional mensagem={profissionalId ? `Voce esta acompanhando o painel de ${contextoSelecionado?.nome ?? dados?.contexto.profissionalNome ?? 'outro profissional'}. Acoes serao registradas em auditoria.` : 'Selecione um profissional para acessar o contexto clinico. Apenas SuperAdmin pode trocar este contexto.'} /> : null}
+    {erro ? <div className="grid gap-3"><AlertaOperacional mensagem={erro} /><Botao type="button" onClick={() => void carregar()}><RefreshCcw size={16} />Tentar novamente</Botao></div> : null}
+    {sucesso ? <p role="status" className="rounded-md border border-sucesso bg-sucesso-suave px-3 py-2 text-sm font-medium text-sucesso-forte">{sucesso}</p> : null}
+    {dados?.selecaoObrigatoria ? <EstadoVazio titulo="Selecione um profissional" descricao="O painel clinico requer um contexto profissional explicito." /> : null}
+    {dados && !dados.selecaoObrigatoria ? <>
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <Indicador titulo="Hoje" valor={dados.indicadores.consultasHoje} detalhe={`${dados.indicadores.proximas} proximas`} icone={CalendarDays} />
+        <Indicador titulo="Sem retorno" valor={dados.indicadores.semRetorno30} detalhe={`${dados.indicadores.semRetorno60} em 60d, ${dados.indicadores.semRetorno90Mais} em 90+d`} icone={UserRoundPlus} />
+        <Indicador titulo="Pendencias" valor={dados.indicadores.tarefasVencidas + dados.indicadores.formulariosPendentes} detalhe={`${dados.indicadores.tarefasVencidas} tarefas, ${dados.indicadores.formulariosPendentes} formularios`} icone={ClipboardList} />
+        <Indicador titulo="Comunicacoes" valor={dados.indicadores.comunicacoesEmAlerta} detalhe={`${dados.indicadores.solicitacoesPendentes} solicitacoes pendentes`} icone={MessageSquareWarning} />
+        <Indicador titulo="Risco alto" valor={dados.indicadores.pacientesRiscoAlto} detalhe="Priorizar retorno clinico" icone={AlertTriangle} />
       </section>
-
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-        <article className="rounded-md border border-linha bg-white p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="text-base font-semibold text-tinta">Consultas de hoje</h2>
-              <p className="text-sm text-texto-suave">Agenda imediata para conduzir o atendimento diario.</p>
-            </div>
-            <LinkAcao href="/agenda">Abrir agenda</LinkAcao>
-          </div>
-          <ListaConsultas consultas={consultasHoje} />
-        </article>
-
-        <article className="rounded-md border border-linha bg-white p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="text-base font-semibold text-tinta">Pacientes recentes</h2>
-              <p className="text-sm text-texto-suave">Novos cadastros e pessoas que exigem acompanhamento inicial.</p>
-            </div>
-            <LinkAcao href="/pacientes">Abrir pacientes</LinkAcao>
-          </div>
-          <ListaPacientesRecentes pacientes={pacientesRecentes} />
-        </article>
+      <section className="border-y border-linha py-4"><CabecalhoFila titulo="Fila de prioridade" detalhe="Alertas operacionais ordenados por prioridade." />{dados.alertas.length ? <div className="grid gap-2">{dados.alertas.map((alerta) => <div key={alerta.id} className="flex min-w-0 items-center justify-between gap-3 border-l-4 border-alerta bg-alerta-suave px-3 py-2"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{nomeAlerta(alerta.tipo)}</p><p className="text-xs text-texto-suave">Registrado em {formatarDataHora(alerta.ocorridoEm)}</p></div>{alerta.ocultavel ? <button type="button" aria-label="Ocultar alerta" title="Ocultar alerta" disabled={processando === `alerta-${alerta.id}`} onClick={() => void executar(`alerta-${alerta.id}`, 'Alerta ocultado por 24 horas.', () => ocultarAlertaDashboardClinico(alerta.id), 'Ocultar este alerta por 24 horas?')} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-texto-suave hover:bg-white disabled:opacity-50"><EyeOff size={17} /></button> : null}</div>)}</div> : <EstadoVazio titulo="Nenhum alerta clinico" descricao="Nao ha alertas prioritarios neste contexto." />}</section>
+      <section className="grid gap-5 xl:grid-cols-2">
+        <div className="min-w-0"><CabecalhoFila titulo="Proximos atendimentos" detalhe="Registre o desfecho para liberar agenda e atualizar o acompanhamento." /><div className="divide-y divide-linha border-y border-linha">{dados.atendimentos.length ? dados.atendimentos.map((item) => <div key={item.id} className="grid gap-2 py-3"><div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{item.pacienteNome}</p><p className="text-xs text-texto-suave">{formatarDataHora(item.inicioEm)} · {nomeStatusConsulta(item.status)}</p></div><LinkAcao href={retornoUrl(item.pacienteId, item.profissionalId)}>Abrir agenda</LinkAcao></div>{(item.status === 'agendada' || item.status === 'reagendada') && podeRegistrarDesfecho ? <div className="flex flex-wrap gap-2"><Botao type="button" disabled={processando === item.id} onClick={() => void executar(item.id, 'Consulta marcada como concluida.', () => registrarDesfechoConsulta(item.id, 'concluida'), 'Confirmar consulta concluida?')}><CheckCircle2 size={15} />Concluida</Botao><Botao type="button" disabled={processando === item.id} onClick={() => void executar(item.id, 'Consulta marcada como falta.', () => registrarDesfechoConsulta(item.id, 'falta'), 'Registrar falta do paciente?')}><XCircle size={15} />Falta</Botao><Botao type="button" variante="perigo" disabled={processando === item.id} onClick={() => void executar(item.id, 'Consulta cancelada e horario liberado.', () => registrarDesfechoConsulta(item.id, 'cancelada'), 'Cancelar a consulta e liberar o horario?')}><XCircle size={15} />Cancelar</Botao></div> : null}</div>) : <EstadoVazio titulo="Nenhum atendimento" descricao="Nao ha consultas no periodo selecionado." />}</div></div>
+        <div className="min-w-0"><CabecalhoFila titulo="Pacientes sem retorno" detalhe="30 dias sem consulta concluida, priorizados por risco." /><div className="divide-y divide-linha border-y border-linha">{dados.semRetorno.length ? dados.semRetorno.map((item) => <div key={item.pacienteId} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{item.pacienteNome}</p><p className="text-xs text-texto-suave">{item.faixa} dias · Risco {item.nivelRisco} · Score {item.scoreRisco}</p></div><LinkAcao href={retornoUrl(item.pacienteId, item.profissionalId)}>Criar retorno</LinkAcao></div>) : <EstadoVazio titulo="Retornos em dia" descricao="Nenhum paciente ativo excedeu 30 dias sem consulta concluida." />}</div></div>
       </section>
-
-      <section className="grid gap-4 xl:grid-cols-2">
-        <article className="rounded-md border border-linha bg-white p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="text-base font-semibold text-tinta">Formularios pendentes</h2>
-              <p className="text-sm text-texto-suave">Rascunhos que ainda precisam ser publicados ou revisados.</p>
-            </div>
-            <LinkAcao href="/questionarios">Abrir formularios</LinkAcao>
-          </div>
-          <ListaQuestionarios questionarios={questionariosPendentes} />
-        </article>
-
-        <article className="rounded-md border border-linha bg-white p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="text-base font-semibold text-tinta">Mensagens para revisar</h2>
-              <p className="text-sm text-texto-suave">Entradas recentes que podem exigir resposta ou reprocessamento.</p>
-            </div>
-            <LinkAcao href="/comunicacoes">Abrir comunicacoes</LinkAcao>
-          </div>
-          <ListaMensagens mensagens={mensagensRevisar} />
-        </article>
+      <section className="grid gap-5 xl:grid-cols-2">
+        <div className="min-w-0"><CabecalhoFila titulo="Tarefas vencidas" detalhe="Acoes clinicas que exigem tratamento." />{dados.tarefasVencidas.length ? <div className="divide-y divide-linha border-y border-linha">{dados.tarefasVencidas.map((item) => <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{item.titulo}</p><p className="truncate text-xs text-texto-suave">{item.pacienteNome} · {item.prioridade} · Venceu em {formatarDataHora(item.vencimentoEm)}</p></div>{podeConcluirTarefa ? <Botao type="button" disabled={processando === `tarefa-${item.id}`} onClick={() => void executar(`tarefa-${item.id}`, 'Tarefa concluida.', () => concluirTarefaDashboardClinico(item.pacienteId, item.id), 'Concluir esta tarefa?')}><CheckCircle2 size={15} />Concluir tarefa</Botao> : null}</div>)}</div> : <EstadoVazio titulo="Nenhuma tarefa vencida" descricao="A rotina de acompanhamento esta em dia." />}</div>
+        <div className="min-w-0"><CabecalhoFila titulo="Formularios pendentes" detalhe="Respostas que precisam de revisao clinica." />{dados.formulariosPendentes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.formulariosPendentes.map((item) => <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">Formulario de {item.pacienteNome}</p><p className="text-xs text-texto-suave">Respondido em {item.respondidoEm ? formatarDataHora(item.respondidoEm) : 'data indisponivel'}</p></div>{podeRevisarFormulario ? <Botao type="button" disabled={processando === `formulario-${item.id}`} onClick={() => void executar(`formulario-${item.id}`, 'Formulario marcado como revisado.', () => revisarEnvioQuestionario(item.id), 'Marcar este formulario como revisado?')}><ClipboardCheck size={15} />Marcar revisado</Botao> : null}</div>)}</div> : <EstadoVazio titulo="Nenhum formulario pendente" descricao="Nao ha respostas aguardando revisao." />}</div>
       </section>
-
-      <section className="grid gap-3 rounded-md border border-linha bg-white p-4 md:grid-cols-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <UsersRound size={18} className="mt-0.5 shrink-0 text-primaria" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-tinta">Fila clinica</p>
-            <p className="text-sm text-texto-suave">Priorize pacientes com risco alto e mensagens recebidas.</p>
-          </div>
-        </div>
-        <div className="flex min-w-0 items-start gap-3">
-          <UserRoundCheck size={18} className="mt-0.5 shrink-0 text-primaria" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-tinta">Rotina diaria</p>
-            <p className="text-sm text-texto-suave">Abra a agenda antes de iniciar atendimentos do dia.</p>
-          </div>
-        </div>
-        <div className="flex min-w-0 items-start gap-3">
-          <ClipboardList size={18} className="mt-0.5 shrink-0 text-primaria" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-tinta">Formularios</p>
-            <p className="text-sm text-texto-suave">Publique rascunhos importantes antes das proximas consultas.</p>
-          </div>
-        </div>
+      <section className="grid gap-5 xl:grid-cols-2">
+        <div className="min-w-0"><CabecalhoFila titulo="Solicitacoes de agendamento" detalhe="Pedidos aguardando aprovacao manual." children={<LinkAcao href="/agenda">Abrir agenda</LinkAcao>} />{dados.solicitacoesPendentes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.solicitacoesPendentes.map((item) => <div key={item.id} className="py-3"><p className="text-sm font-semibold text-tinta">{item.solicitanteNome}</p><p className="text-xs text-texto-suave">{formatarDataHora(item.inicioEm)} · expira em {formatarDataHora(item.expiraEm)}</p></div>)}</div> : <EstadoVazio titulo="Nenhuma solicitacao pendente" descricao="Novos pedidos aparecerao aqui." />}</div>
+        <div className="min-w-0"><CabecalhoFila titulo="Comunicacoes em alerta" detalhe="Somente o status operacional e exibido neste painel." children={<LinkAcao href="/comunicacoes">Abrir comunicacoes</LinkAcao>} />{dados.comunicacoes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.comunicacoes.map((item) => <div key={item.id} className="py-3"><p className="truncate text-sm font-semibold text-tinta">{item.pacienteNome}</p><p className="text-xs text-texto-suave">Status {item.status} · {formatarDataHora(item.criadoEm)}</p></div>)}</div> : <EstadoVazio titulo="Comunicacoes em dia" descricao="Nao ha comunicacoes que demandem atencao." />}</div>
       </section>
-    </div>
-  );
+    </> : null}
+  </div>;
 }

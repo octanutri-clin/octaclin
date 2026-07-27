@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import {
   ErroPermissaoAusente,
   ErroSessaoAusente,
@@ -7,17 +7,17 @@ import {
 } from '@/lib/server/sessao-bff';
 
 interface Params {
-  params: Promise<{ consultaId: string }>;
+  params: Promise<{ alertaId: string }>;
 }
 
-export async function POST(request: NextRequest, props: Params) {
+export async function POST(_request: Request, props: Params) {
   try {
-    const sessao = await exigirPermissaoBff('agenda.consultas.criar');
+    const sessao = await exigirPermissaoBff('dashboard.ler');
     if (sessao.papel !== 'SuperAdmin' && sessao.papel !== 'Professional') throw new ErroPermissaoAusente();
-    const { consultaId } = await props.params;
+    const { alertaId } = await props.params;
     const resposta = await requisitarBackendAutenticado(
-      `/agenda/consultas/${encodeURIComponent(consultaId)}/desfecho`,
-      { method: 'POST', body: await request.text(), headers: { 'x-octaclin-origem': 'dashboard_clinico' } }
+      `/dashboard/clinico/alertas/${encodeURIComponent(alertaId)}/ocultar`,
+      { method: 'POST', headers: { 'x-octaclin-origem': 'dashboard_clinico' } }
     );
     return new NextResponse(resposta.body, {
       status: resposta.status,

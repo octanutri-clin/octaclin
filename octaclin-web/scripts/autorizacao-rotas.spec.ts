@@ -53,6 +53,10 @@ test('colaborador deve acessar apenas rotas operacionais autorizadas por permiss
     permitir: false,
     redirecionarPara: '/agenda'
   });
+  assert.deepEqual(decidirAcessoRota('/dashboard', 'Collaborator', '/agenda', [...permissoesColaborador, 'dashboard.ler']), {
+    permitir: false,
+    redirecionarPara: '/agenda'
+  });
   assert.deepEqual(decidirAcessoRota('/comunicacoes', 'Collaborator', '/agenda', permissoesColaborador), { permitir: true });
   assert.deepEqual(decidirAcessoRota('/automacoes', 'Collaborator', '/agenda', permissoesColaborador), {
     permitir: false,

@@ -72,6 +72,25 @@ async function login(page) {
       )
     });
   });
+
+  await page.route('**/api/dashboard/clinico**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: 'profissional-1', profissionalNome: 'Dra. Carla' },
+        indicadores: { consultasHoje: 1, proximas: 1, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
+        atendimentos: [{ id: 'consulta-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', inicioEm: '2026-07-22T13:00:00.000Z', fimEm: '2026-07-22T14:00:00.000Z', status: 'agendada' }],
+        semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', scoreRisco: 82, diasSemRetorno: 31, faixa: '30' }],
+        tarefasVencidas: [{ id: 'tarefa-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', titulo: 'Revisar plano alimentar', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }],
+        formulariosPendentes: [{ id: 'envio-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', questionarioId: 'questionario-1', respondidoEm: '2026-07-21T10:00:00.000Z' }],
+        solicitacoesPendentes: [{ id: 'solicitacao-1', profissionalId: 'profissional-1', solicitanteNome: 'Marina Reis', inicioEm: '2026-07-23T14:00:00.000Z', fimEm: '2026-07-23T14:30:00.000Z', expiraEm: '2026-07-23T12:00:00.000Z' }],
+        comunicacoes: [{ id: 'mensagem-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', status: 'recebido', criadoEm: '2026-07-22T10:00:00.000Z' }],
+        alertas: [{ id: 'tarefa_vencida:profissional-1:tarefa-1', tipo: 'tarefa_vencida', prioridade: 1, recursoId: 'tarefa-1', pacienteId: 'paciente-1', ocorridoEm: '2026-07-21T12:00:00.000Z', ocultavel: true }],
+        selecaoObrigatoria: false
+      })
+    });
+  });
   await page.route('**/api/auth/login', async (route) => {
     payloadLogin = route.request().postDataJSON();
     autenticado = true;
@@ -1094,20 +1113,57 @@ async function prepararProntuarioMockado(page) {
   };
 }
 
-test.describe('dashboard profissional', () => {
-  test('agrega rotina diaria do profissional', async ({ page }) => {
+test.describe('painel clinico profissional', () => {
+  test('Professional conserva o proprio escopo e mostra filas clinicas', async ({ page }) => {
     await prepararDashboardMockado(page);
-    await page.goto('/dashboard');
+    await page.route('**/api/dashboard/clinico**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: 'profissional-1', profissionalNome: 'Dra. Carla' },
+        indicadores: { consultasHoje: 1, proximas: 1, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
+        atendimentos: [{ id: 'consulta-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', inicioEm: '2026-07-22T13:00:00.000Z', fimEm: '2026-07-22T14:00:00.000Z', status: 'agendada' }],
+        semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', scoreRisco: 82, diasSemRetorno: 31, faixa: '30' }],
+        tarefasVencidas: [{ id: 'tarefa-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', titulo: 'Revisar plano alimentar', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }],
+        formulariosPendentes: [{ id: 'envio-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', questionarioId: 'questionario-1', respondidoEm: '2026-07-21T10:00:00.000Z' }],
+        solicitacoesPendentes: [{ id: 'solicitacao-1', profissionalId: 'profissional-1', solicitanteNome: 'Marina Reis', inicioEm: '2026-07-23T14:00:00.000Z', fimEm: '2026-07-23T14:30:00.000Z', expiraEm: '2026-07-23T12:00:00.000Z' }],
+        comunicacoes: [{ id: 'mensagem-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', status: 'recebido', criadoEm: '2026-07-22T10:00:00.000Z' }],
+        alertas: [], selecaoObrigatoria: false
+      }) });
+    });
+    await page.goto('/dashboard?profissionalId=profissional-2');
 
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Consultas de hoje' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Painel clinico' })).toBeVisible();
     await expect(page.getByText('Ana Souza').first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Pacientes recentes' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Formularios pendentes' })).toBeVisible();
-    await expect(page.getByText('1 rascunho para publicar')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Mensagens para revisar' })).toBeVisible();
-    await expect(page.getByText('Dra., posso trocar o horario?')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Abrir agenda' })).toHaveAttribute('href', '/agenda');
+    await expect(page.getByLabel('Profissional em contexto')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Criar retorno' })).toHaveAttribute('href', /pacienteId=paciente-2/);
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('SuperAdmin seleciona profissional e conclui tarefa sem overflow', async ({ page }) => {
+    let tarefaConcluida = false;
+    await prepararSessaoConsoleMockada(page);
+    await page.route('**/api/auth/session', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ autenticado: true, apiUrl: credenciais.apiUrl, tenantSlug: credenciais.tenantSlug, email: credenciais.email, expiraEm: '2026-07-27T15:00:00.000Z', papel: 'SuperAdmin', permissoes: ['dashboard.ler', 'profissionais.ler', 'pacientes.gerenciar'], destinoInicial: '/dashboard' }) });
+    });
+    await page.route('**/api/profissionais**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-1', nome: 'Dra. Carla', criadoEm: '2026-07-20T10:00:00.000Z' }, { id: 'profissional-2', tenantId: 'tenant-1', usuarioId: 'usuario-2', nome: 'Dr. Paulo', criadoEm: '2026-07-20T10:00:00.000Z' }], total: 2 }) });
+    });
+    await page.route('**/api/dashboard/clinico**', async (route) => {
+      const selecionado = new URL(route.request().url()).searchParams.get('profissionalId');
+      const base = { contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: selecionado, profissionalNome: 'Dr. Paulo' }, indicadores: { consultasHoje: 0, proximas: 0, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 0, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 0, tarefasVencidas: tarefaConcluida ? 0 : 1, solicitacoesPendentes: 0, comunicacoesEmAlerta: 0, pacientesRiscoAlto: 0 }, atendimentos: [], semRetorno: [], formulariosPendentes: [], solicitacoesPendentes: [], comunicacoes: [], alertas: [], selecaoObrigatoria: !selecionado };
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...base, tarefasVencidas: selecionado && !tarefaConcluida ? [{ id: 'tarefa-2', pacienteId: 'paciente-2', profissionalId: selecionado, pacienteNome: 'Beatriz', titulo: 'Revisar exames', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }] : [] }) });
+    });
+    await page.route('**/api/pacientes/paciente-2/tarefas-acompanhamento/tarefa-2', async (route) => {
+      expect(route.request().postDataJSON()).toEqual({ status: 'concluida' });
+      tarefaConcluida = true;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'tarefa-2', status: 'concluida' }) });
+    });
+    await page.goto('/dashboard');
+    await page.getByLabel('Profissional em contexto').selectOption('profissional-2');
+    await expect(page.getByText('Revisar exames')).toBeVisible();
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: 'Concluir tarefa' }).click();
+    await expect(page.getByText('Tarefa concluida.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });
