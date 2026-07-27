@@ -1,3 +1,12 @@
+import {
+  aprovarSolicitacaoAgendaPublica,
+  LinkAgendamentoPublicoApi,
+  listarSolicitacoesAgendaPublica,
+  obterLinkAgendamentoPublico,
+  recusarSolicitacaoAgendaPublica,
+  rotacionarLinkAgendamentoPublico,
+  SolicitacaoAgendaPublicaApi
+} from './agendamento-publico-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada, listarPacientes, listarProfissionais } from './cadastros-api';
 
 export interface DetalheNotificacaoAgenda {
@@ -66,6 +75,8 @@ export interface BootstrapAgenda {
   consultas: ConsultaAgendaApi[];
   pacientes: RespostaPaginada<PacienteResumo>;
   profissionais: RespostaPaginada<ProfissionalResumo>;
+  linkPublico: LinkAgendamentoPublicoApi | null;
+  solicitacoes: RespostaPaginada<SolicitacaoAgendaPublicaApi>;
 }
 
 class ErroApiAgenda extends Error {
@@ -121,12 +132,14 @@ export async function cancelarConsultaAgenda(consultaId: string, entrada: Cancel
 }
 
 export async function carregarBootstrapAgenda(): Promise<BootstrapAgenda> {
-  const [consultas, pacientes, profissionais] = await Promise.all([
+  const [consultas, pacientes, profissionais, linkPublico, solicitacoes] = await Promise.all([
     listarConsultasAgenda(),
     listarPacientes(),
-    listarProfissionais()
+    listarProfissionais(),
+    obterLinkAgendamentoPublico(),
+    listarSolicitacoesAgendaPublica()
   ]);
-  return { consultas, pacientes, profissionais };
+  return { consultas, pacientes, profissionais, linkPublico, solicitacoes };
 }
 
 export interface ConexaoGoogleAgendaStatus {
@@ -143,4 +156,30 @@ export function conectarGoogleAgenda(): void {
 
 export async function desconectarGoogleAgenda(): Promise<void> {
   await requisitar<{ desconectado: boolean }>('/api/agenda/google/desconectar', { method: 'POST' });
+}
+
+export async function obterLinkPublicoAgenda(): Promise<LinkAgendamentoPublicoApi | null> {
+  return obterLinkAgendamentoPublico();
+}
+
+export async function rotacionarLinkPublicoAgenda(): Promise<LinkAgendamentoPublicoApi> {
+  return rotacionarLinkAgendamentoPublico();
+}
+
+export async function listarSolicitacoesPublicasAgenda(): Promise<RespostaPaginada<SolicitacaoAgendaPublicaApi>> {
+  return listarSolicitacoesAgendaPublica();
+}
+
+export async function aprovarSolicitacaoPublicaAgenda(
+  solicitacaoId: string,
+  pacienteId: string
+): Promise<SolicitacaoAgendaPublicaApi> {
+  return aprovarSolicitacaoAgendaPublica(solicitacaoId, pacienteId);
+}
+
+export async function recusarSolicitacaoPublicaAgenda(
+  solicitacaoId: string,
+  motivo?: string
+): Promise<SolicitacaoAgendaPublicaApi> {
+  return recusarSolicitacaoAgendaPublica(solicitacaoId, motivo);
 }
