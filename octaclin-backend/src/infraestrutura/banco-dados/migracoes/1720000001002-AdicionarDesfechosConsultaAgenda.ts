@@ -11,11 +11,25 @@ export class AdicionarDesfechosConsultaAgenda1720000001002 implements MigrationI
       alter table agenda_consultas
         add constraint chk_agenda_consultas_status
         check (status in ('agendada', 'reagendada', 'concluida', 'falta', 'cancelada'));
+
+      create extension if not exists btree_gist;
+
+      alter table agenda_consultas
+        add constraint ex_agenda_consultas_profissional_horario_ativo
+        exclude using gist (
+          tenant_id with =,
+          profissional_id with =,
+          tstzrange(inicio_em, fim_em, '[)') with &&
+        )
+        where (profissional_id is not null and status in ('agendada', 'reagendada'));
     `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
+      alter table agenda_consultas
+        drop constraint if exists ex_agenda_consultas_profissional_horario_ativo;
+
       alter table agenda_consultas
         drop constraint if exists chk_agenda_consultas_status;
 

@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { QueryFailedError } from 'typeorm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
@@ -22,6 +23,14 @@ const usuarioProfissional: UsuarioAutenticado = {
   emailHash: 'hash-profissional',
   permissoes: []
 };
+
+function criarErroSobreposicaoAgenda(): QueryFailedError {
+  const erroPostgres = Object.assign(new Error('conflicting key value violates exclusion constraint'), {
+    code: '23P01',
+    constraint: 'ex_agenda_consultas_profissional_horario_ativo'
+  });
+  return new QueryFailedError('insert into agenda_consultas', [], erroPostgres);
+}
 
 function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
   let ultimoSalvo: Record<string, unknown> | null = null;
@@ -148,6 +157,66 @@ function criarServico(dados: Record<string, unknown> = {}) {
 }
 
 describe('ServicoAgenda', () => {
+  it('traduz corrida de sobreposicao ao criar consulta para conflito de horario', async () => {
+    const { servico, repositorios } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      }
+    });
+    repositorios.consulta.save.mockRejectedValueOnce(criarErroSobreposicaoAgenda());
+
+    await expect(
+      servico.criarConsulta(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          inicioEm: '2026-07-22T12:00:00.000Z',
+          duracaoMinutos: 60
+        },
+        usuarioColaborador
+      )
+    ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
+  });
+
+  it('traduz corrida de sobreposicao ao remarcar consulta para conflito de horario', async () => {
+    const consultaExistente = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {},
+      payload: {}
+    };
+    const { servico, repositorios } = criarServico({ consultas: [consultaExistente] });
+    repositorios.consulta.save.mockRejectedValueOnce(criarErroSobreposicaoAgenda());
+
+    await expect(
+      servico.remarcarConsultaComoSistema(
+        'tenant-1',
+        'consulta-1',
+        {
+          inicioEm: '2026-07-23T12:00:00.000Z',
+          duracaoMinutos: 60
+        },
+        'profissional-1'
+      )
+    ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
+  });
+
   it('deve criar consulta, sincronizar Google Calendar e disparar notificacoes', async () => {
     const { servico, repositorios, googleCalendar, comunicacoes, processador } = criarServico({
       paciente: {

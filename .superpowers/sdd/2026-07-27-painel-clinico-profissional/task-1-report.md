@@ -45,8 +45,10 @@ terminal e os 18 testes focados ficaram verdes.
 - `StatusAgendaConsulta` agora aceita `agendada`, `reagendada`, `concluida`,
   `falta` e `cancelada`.
 - A migracao `1720000001002-AdicionarDesfechosConsultaAgenda.ts` adiciona a
-  constraint PostgreSQL dos cinco estados e restaura os dois estados anteriores
-  no `down`.
+  constraint PostgreSQL dos cinco estados e uma exclusion constraint por
+  tenant, profissional e intervalo para consultas ativas. O `down` remove a
+  exclusion constraint e restaura os dois estados anteriores sem remover a
+  extensao compartilhada `btree_gist`.
 - Remarcacoes bem-sucedidas persistem `reagendada`.
 - Conflitos locais consideram `agendada` e `reagendada`; estados terminais nao
   ocupam horario.
@@ -85,14 +87,59 @@ Regressoes adicionais:
 - `git diff --check`: sem erros de whitespace; apenas avisos esperados de
   conversao LF/CRLF no Windows.
 
+## Correcoes apos revisao
+
+- As transicoes que encerram, remarcam ou atualizam integracao agora usam
+  bloqueio pessimista dentro da transacao tenant-aware, impedindo que dois
+  desfechos terminais concorrentes sejam persistidos.
+- O desfecho `cancelada` usa o mesmo fluxo de cancelamento legado para remover
+  o evento Google Calendar e persistir o resultado da sincronizacao.
+- O `down` da migracao converte `reagendada`, `concluida` e `falta` antes de
+  restaurar a constraint anterior.
+- A regressao visual agora simula a sessao completa do SuperAdmin e cobre
+  reagendamento e cancelamento pelo endpoint de desfecho.
+
+## Validacao complementar
+
+- `pnpm --dir octaclin-backend exec jest servico-agenda.spec.ts 1720000001002-AdicionarDesfechosConsultaAgenda.spec.ts --runInBand`:
+  2 suites e 20 testes aprovados.
+- `pnpm --dir octaclin-backend typecheck`: aprovado.
+- `pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs --project=desktop-chromium --project=mobile-chromium --reporter=list`:
+  38 cenarios aprovados em 2,4 minutos.
+
+## Correcao SDD round 2
+
+Finding corrigido: a validacao antecipada de conflito nao serializava duas
+criacoes ou remarcacoes concorrentes de consultas diferentes.
+
+- A migracao agora habilita `btree_gist` e cria
+  `ex_agenda_consultas_profissional_horario_ativo` com `EXCLUDE USING gist`
+  sobre `(tenant_id, profissional_id, tstzrange(inicio_em, fim_em, '[)'))`.
+- O predicado parcial inclui apenas `agendada` e `reagendada`, portanto
+  `concluida`, `falta` e `cancelada` continuam liberando o horario.
+- Criacao e remarcacao traduzem somente a violacao PostgreSQL `23P01` dessa
+  constraint para o mesmo `BadRequestException` de conflito ja usado pela
+  validacao antecipada.
+- A protecao preserva o tenant na propria chave de exclusao e nao altera RLS,
+  desmarcamento ou notificacoes futuras.
+
+TDD:
+
+- RED: os quatro novos testes falharam porque a migracao nao continha a
+  exclusion constraint e `QueryFailedError` escapava nas duas operacoes.
+- GREEN:
+  `pnpm --dir octaclin-backend exec jest src/infraestrutura/banco-dados/migracoes/1720000001002-AdicionarDesfechosConsultaAgenda.spec.ts src/modulos/agenda/aplicacao/servico-agenda.spec.ts --runInBand`;
+  2 suites e 23 testes aprovados.
+- `pnpm --dir octaclin-backend typecheck`: aprovado.
+- `git diff --check`: sem erros de whitespace; apenas avisos esperados de
+  conversao LF/CRLF no Windows.
+
 ## Limites e preocupacoes
 
 - A migracao foi validada estaticamente e pelo typecheck, mas nao foi aplicada
   contra um PostgreSQL real nesta tarefa.
-- O brief nao inclui teste visual/E2E novo para os tres botoes de desfecho; a
-  verificacao web desta tarefa cobre lint, tipos, autorizacao, contrato de rota
-  dinamica e build.
-- Conforme o limite explicito do brief, registrar um desfecho nao adiciona
-  comportamento novo de sincronizacao com Google Calendar.
+- O brief nao inclui o fluxo autenticado de desmarcamento pelo paciente nem a
+  comunicacao dirigida por origem. Ambos foram planejados como Task 5 apos o
+  dashboard clinico disponibilizar alerta seguro ao profissional.
 - Nenhum dashboard, formulario, documento de fase ou integracao Google
   adicional foi implementado.

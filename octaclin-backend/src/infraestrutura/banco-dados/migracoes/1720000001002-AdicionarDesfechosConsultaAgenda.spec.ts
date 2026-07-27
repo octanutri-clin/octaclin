@@ -2,6 +2,26 @@ import type { QueryRunner } from 'typeorm';
 import { AdicionarDesfechosConsultaAgenda1720000001002 } from './1720000001002-AdicionarDesfechosConsultaAgenda';
 
 describe('AdicionarDesfechosConsultaAgenda1720000001002', () => {
+  it('impede sobreposicao de consultas ativas do mesmo profissional no PostgreSQL', async () => {
+    const migration = new AdicionarDesfechosConsultaAgenda1720000001002();
+    const query = jest.fn().mockResolvedValue(undefined);
+
+    await migration.up({ query } as unknown as QueryRunner);
+
+    const sql = query.mock.calls.map((call) => call[0] as string).join('\n');
+
+    expect(sql).toMatch(/create extension if not exists btree_gist/i);
+    expect(sql).toMatch(
+      /add constraint ex_agenda_consultas_profissional_horario_ativo\s+exclude using gist/i
+    );
+    expect(sql).toMatch(/tenant_id with =/i);
+    expect(sql).toMatch(/profissional_id with =/i);
+    expect(sql).toMatch(/tstzrange\(inicio_em,\s*fim_em,\s*'\[\)'\) with &&/i);
+    expect(sql).toMatch(
+      /where \(profissional_id is not null and status in \('agendada',\s*'reagendada'\)\)/i
+    );
+  });
+
   it('normaliza estados novos antes de restaurar a constraint antiga no down', async () => {
     const migration = new AdicionarDesfechosConsultaAgenda1720000001002();
     const query = jest.fn().mockResolvedValue(undefined);
@@ -16,5 +36,9 @@ describe('AdicionarDesfechosConsultaAgenda1720000001002', () => {
     expect(indiceConstraint).toBeGreaterThan(indiceNormalizacao);
     expect(sql).toMatch(/when status = 'reagendada' then 'agendada'/i);
     expect(sql).toMatch(/when status in \('concluida', 'falta'\) then 'cancelada'/i);
+    expect(sql).toMatch(
+      /drop constraint if exists ex_agenda_consultas_profissional_horario_ativo/i
+    );
+    expect(sql).not.toMatch(/drop extension/i);
   });
 });

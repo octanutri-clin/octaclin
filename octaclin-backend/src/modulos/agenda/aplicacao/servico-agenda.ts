@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager, In, IsNull, LessThan, MoreThan, MoreThanOrEqual } from 'typeorm';
+import { EntityManager, In, IsNull, LessThan, MoreThan, MoreThanOrEqual, QueryFailedError } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -25,6 +25,8 @@ import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar'
 import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from './servico-google-calendar';
 
 const EVENTO_CONSULTA_AGENDADA = 'agenda.consulta.agendada';
+const CONSTRAINT_SOBREPOSICAO_AGENDA = 'ex_agenda_consultas_profissional_horario_ativo';
+const MENSAGEM_CONFLITO_HORARIO = 'Ja existe consulta agendada neste horario para o profissional.';
 const STATUS_CONSULTA_ATIVOS: StatusAgendaConsulta[] = ['agendada', 'reagendada'];
 const STATUS_CONSULTA_TERMINAIS: StatusAgendaConsulta[] = ['concluida', 'falta', 'cancelada'];
 
@@ -170,7 +172,7 @@ export class ServicoAgenda {
         inicioNovoEm: inicioEm.toISOString(),
         fimNovoEm: fimEm.toISOString()
       });
-      return repositorio.save(atual);
+      return this.salvarConsultaProtegidaContraSobreposicao(() => repositorio.save(atual));
     });
 
     if (!propagarParaGoogle) return this.mapearResposta(consulta);
@@ -342,27 +344,29 @@ export class ServicoAgenda {
       const whatsappContato = textoOpcional(dados.whatsappContato) ?? this.obterWhatsappPaciente(paciente);
       const textoMensagem = this.montarTextoMensagem(pacienteNome, inicioEm);
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
-      const consulta = await repositorio.save(
-        repositorio.create({
-          tenantId,
-          pacienteId: paciente.id,
-          profissionalId,
-          titulo: `Consulta - ${pacienteNome}`,
-          inicioEm,
-          fimEm,
-          timezone: process.env.GOOGLE_CALENDAR_TIMEZONE ?? 'America/Sao_Paulo',
-          status: 'agendada',
-          local: textoOpcional(dados.local),
-          observacoes: textoOpcional(dados.observacoes),
-          notificacoes: {},
-          payload: {
-            pacienteNome,
-            profissionalNome,
-            emailContato,
-            whatsappContato,
-            textoMensagem
-          }
-        })
+      const consulta = await this.salvarConsultaProtegidaContraSobreposicao(() =>
+        repositorio.save(
+          repositorio.create({
+            tenantId,
+            pacienteId: paciente.id,
+            profissionalId,
+            titulo: `Consulta - ${pacienteNome}`,
+            inicioEm,
+            fimEm,
+            timezone: process.env.GOOGLE_CALENDAR_TIMEZONE ?? 'America/Sao_Paulo',
+            status: 'agendada',
+            local: textoOpcional(dados.local),
+            observacoes: textoOpcional(dados.observacoes),
+            notificacoes: {},
+            payload: {
+              pacienteNome,
+              profissionalNome,
+              emailContato,
+              whatsappContato,
+              textoMensagem
+            }
+          })
+        )
       );
 
       return { consulta, pacienteNome, profissionalNome, emailContato, whatsappContato, textoMensagem };
@@ -433,7 +437,7 @@ export class ServicoAgenda {
         consulta.inicioEm < janela.fimEm &&
         consulta.fimEm > janela.inicioEm
     );
-    if (conflitoConsulta) throw new BadRequestException('Ja existe consulta agendada neste horario para o profissional.');
+    if (conflitoConsulta) throw new BadRequestException(MENSAGEM_CONFLITO_HORARIO);
 
     const conflitoExterno = await gerenciador.getRepository(AgendaBloqueioExternoOrm).exists({
       where: {
@@ -443,7 +447,33 @@ export class ServicoAgenda {
         fimEm: MoreThan(janela.inicioEm)
       }
     });
-    if (conflitoExterno) throw new BadRequestException('Ja existe consulta agendada neste horario para o profissional.');
+    if (conflitoExterno) throw new BadRequestException(MENSAGEM_CONFLITO_HORARIO);
+  }
+
+  private async salvarConsultaProtegidaContraSobreposicao(
+    operacao: () => Promise<AgendaConsultaOrm>
+  ): Promise<AgendaConsultaOrm> {
+    try {
+      return await operacao();
+    } catch (erro) {
+      if (this.ehViolacaoDaConstraintDeSobreposicao(erro)) {
+        throw new BadRequestException(MENSAGEM_CONFLITO_HORARIO);
+      }
+      throw erro;
+    }
+  }
+
+  private ehViolacaoDaConstraintDeSobreposicao(erro: unknown): boolean {
+    if (!(erro instanceof QueryFailedError)) return false;
+
+    const erroPostgres: unknown = erro.driverError;
+    if (typeof erroPostgres !== 'object' || erroPostgres === null) return false;
+    if (!('code' in erroPostgres) || !('constraint' in erroPostgres)) return false;
+
+    return (
+      erroPostgres.code === '23P01' &&
+      erroPostgres.constraint === CONSTRAINT_SOBREPOSICAO_AGENDA
+    );
   }
 
   private calcularFim(inicioEm: Date, dados: { fimEm?: string; duracaoMinutos?: number }) {
