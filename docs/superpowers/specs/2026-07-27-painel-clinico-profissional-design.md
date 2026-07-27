@@ -24,7 +24,7 @@ links para a area completa, evitando carregar prontuarios em massa.
 
 Os indicadores principais sao:
 
-1. consultas de hoje, proximas, concluidas, canceladas e faltas;
+1. consultas de hoje, proximas, concluidas, reagendadas, canceladas e faltas;
 2. pacientes sem retorno, agrupados em `30`, `60` e `90+` dias;
 3. formularios enviados aguardando leitura clinica;
 4. tarefas de acompanhamento vencidas ou atrasadas;
@@ -36,6 +36,25 @@ Um paciente e considerado sem retorno quando esta ativo e nao possui consulta
 concluida nos ultimos 30 dias. Quem nunca concluiu consulta passa a entrar na
 fila apos 30 dias do cadastro. O calculo usa a consulta concluida mais recente,
 nao apenas a ultima consulta agendada.
+
+## Desfecho da consulta
+
+A agenda passa a registrar os estados `Concluida`, `Reagendada`, `Falta` e
+`Cancelada`, alem da consulta inicialmente `Agendada`.
+
+- `Concluida` confirma que o atendimento ocorreu e atualiza a referencia de
+  retorno do paciente.
+- `Reagendada` move a consulta para uma nova data e hora, mantem o atendimento
+  ativo na agenda e registra a mudanca em auditoria; nao conta como consulta
+  concluida.
+- `Falta` encerra o horario sem atendimento e nao conta como retorno.
+- `Cancelada` encerra o horario sem atendimento e nao conta como retorno.
+
+Somente consultas com estado `Concluida` interrompem a contagem de 30 dias sem
+retorno. O profissional pode registrar o desfecho por uma acao rapida na
+agenda ou no painel clinico, sempre dentro de seu escopo. Alteracoes de estado
+e reagendamentos preservam a trilha de auditoria e a sincronizacao normal com
+Google Calendar quando configurada.
 
 ## Priorizacao clinica
 
@@ -61,6 +80,7 @@ operacao de destino:
 - abrir paciente, consulta, formulario ou comunicacao no contexto correto;
 - criar retorno com paciente e profissional preselecionados na agenda;
 - concluir uma tarefa de acompanhamento;
+- registrar consulta como concluida, falta, cancelada ou reagendada;
 - revisar formulario pendente;
 - responder ou reprocessar comunicacao;
 - aprovar ou recusar solicitacao publica de agenda.
