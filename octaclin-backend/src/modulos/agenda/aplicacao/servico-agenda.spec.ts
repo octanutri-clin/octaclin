@@ -24,12 +24,16 @@ const usuarioProfissional: UsuarioAutenticado = {
   permissoes: []
 };
 
-function criarErroSobreposicaoAgenda(): QueryFailedError {
+function criarErroExclusao(constraint = 'ex_agenda_consultas_profissional_horario_ativo'): QueryFailedError {
   const erroPostgres = Object.assign(new Error('conflicting key value violates exclusion constraint'), {
     code: '23P01',
-    constraint: 'ex_agenda_consultas_profissional_horario_ativo'
+    constraint
   });
   return new QueryFailedError('insert into agenda_consultas', [], erroPostgres);
+}
+
+function criarErroSobreposicaoAgenda(): QueryFailedError {
+  return criarErroExclusao();
 }
 
 function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
@@ -215,6 +219,37 @@ describe('ServicoAgenda', () => {
         'profissional-1'
       )
     ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
+  });
+
+  it('preserva como erro tecnico um 23P01 originado por outra constraint', async () => {
+    const erroTecnico = criarErroExclusao('ex_outra_regra_de_exclusao');
+    const { servico, repositorios } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      }
+    });
+    repositorios.consulta.save.mockRejectedValueOnce(erroTecnico);
+
+    await expect(
+      servico.criarConsulta(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          inicioEm: '2026-07-22T12:00:00.000Z',
+          duracaoMinutos: 60
+        },
+        usuarioColaborador
+      )
+    ).rejects.toBe(erroTecnico);
   });
 
   it('deve criar consulta, sincronizar Google Calendar e disparar notificacoes', async () => {

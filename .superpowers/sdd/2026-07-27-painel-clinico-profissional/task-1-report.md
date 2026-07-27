@@ -143,3 +143,31 @@ TDD:
   dashboard clinico disponibilizar alerta seguro ao profissional.
 - Nenhum dashboard, formulario, documento de fase ou integracao Google
   adicional foi implementado.
+
+## Correcao SDD round 3
+
+Achados corrigidos sem reset e sem dependencia externa:
+
+- A migracao executa um preflight antes de qualquer DDL. Ele procura pares
+  sobrepostos do mesmo tenant e profissional, considerando `agendada` e
+  `reagendada` nos dois lados da comparacao.
+- Quando encontra conflito historico, a migracao aborta com mensagem
+  operacional, informa uma amostra dos IDs envolvidos e exige resolucao
+  manual. Nenhuma consulta e alterada automaticamente.
+- A disponibilidade do agendamento publico usa o operador TypeORM `In` para
+  considerar `agendada` e `reagendada` como ocupacoes.
+- Os testes do repositorio falso passaram a interpretar `In`, permitindo
+  comprovar que uma consulta reagendada nao volta a ser oferecida como horario
+  livre.
+- A traducao de erro permanece restrita ao codigo PostgreSQL `23P01` da
+  constraint `ex_agenda_consultas_profissional_horario_ativo`; um `23P01`
+  emitido por outra constraint continua sendo propagado como erro tecnico.
+
+Validacao:
+
+- `pnpm --dir octaclin-backend exec jest src/infraestrutura/banco-dados/migracoes/1720000001002-AdicionarDesfechosConsultaAgenda.spec.ts src/modulos/agenda/aplicacao/servico-agendamento-publico.spec.ts src/modulos/agenda/aplicacao/servico-agenda.spec.ts --runInBand`:
+  3 suites e 44 testes aprovados.
+- `pnpm --dir octaclin-backend typecheck`: aprovado.
+- `git diff --check`: aprovado, sem erros de whitespace.
+- Nenhum teste desta rodada afirma concorrencia PostgreSQL real; o setup atual
+  continua sem dependencia de banco externo.

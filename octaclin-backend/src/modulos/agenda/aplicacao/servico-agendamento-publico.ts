@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
-import { DataSource, EntityManager, IsNull, LessThan, MoreThan } from 'typeorm';
+import { DataSource, EntityManager, In, IsNull, LessThan, MoreThan } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -412,7 +412,7 @@ export class ServicoAgendamentoPublico {
         where: {
           tenantId,
           profissionalId,
-          status: 'agendada',
+          status: In(['agendada', 'reagendada']),
           inicioEm: LessThan(fimJanela),
           fimEm: MoreThan(inicioJanela)
         }
