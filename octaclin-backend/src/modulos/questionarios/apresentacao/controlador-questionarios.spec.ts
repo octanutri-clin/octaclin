@@ -25,7 +25,7 @@ describe('ControladorQuestionarios', () => {
     linkFormulario: 'https://app.octaclin.test/formularios/tenant-1.envio-1.assinatura'
   };
 
-  function criarCenario(origemForjada = 'dashboard_clinico') {
+  function criarCenario(origemForjada?: string) {
     const marcarEnvioComoRevisado = jest.fn().mockResolvedValue(envioRevisado);
     const registrar = jest.fn().mockResolvedValue(undefined);
     const controlador = new ControladorQuestionarios(
@@ -41,8 +41,8 @@ describe('ControladorQuestionarios', () => {
     return { controlador, marcarEnvioComoRevisado, registrar, requisicao };
   }
 
-  it('ignora origem externa forjada e audita a origem segura do backend', async () => {
-    const { controlador, registrar, requisicao } = criarCenario('origem_forjada');
+  it('preserva a origem propria quando o BFF generico nao informa outra origem', async () => {
+    const { controlador, registrar, requisicao } = criarCenario(undefined);
 
     await controlador.revisarEnvio(usuario, requisicao, 'envio-1');
 
@@ -57,7 +57,19 @@ describe('ControladorQuestionarios', () => {
         }
       })
     );
-    expect(requisicao.header).not.toHaveBeenCalledWith('x-octaclin-origem');
+    expect(requisicao.header).toHaveBeenCalledWith('x-octaclin-origem');
+  });
+
+  it('registra a origem clinica fixada pelo BFF dedicado', async () => {
+    const { controlador, registrar, requisicao } = criarCenario('dashboard_clinico');
+
+    await controlador.revisarEnvio(usuario, requisicao, 'envio-1');
+
+    expect(registrar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadados: expect.objectContaining({ origem: 'dashboard_clinico' })
+      })
+    );
   });
 
   it('retorna apenas os campos clinicos minimos da revisao', async () => {

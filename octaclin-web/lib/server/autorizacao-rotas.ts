@@ -37,9 +37,26 @@ function permissaoExigidaParaRota(pathname: string): string | undefined {
   return entrada?.[1];
 }
 
-export function decidirAcessoRota(pathname: string, papel?: string, destinoInicial?: string, permissoes?: string[]): DecisaoAcessoRota {
-  const destino = sanitizarDestinoInicial(destinoInicial);
+function papelPermiteRotaOperacional(pathname: string, papel: string) {
+  return !pertenceARota(pathname, ['/dashboard']) || papel === 'SuperAdmin' || papel === 'Professional';
+}
 
+function rotaOperacionalPermitida(pathname: string, papel: string, permissoes?: string[]) {
+  const permissaoExigida = permissaoExigidaParaRota(pathname);
+  if (!permissaoExigida || !papelPermiteRotaOperacional(pathname, papel)) return false;
+  return !Array.isArray(permissoes) || permissoes.includes(permissaoExigida);
+}
+
+export function resolverDestinoPermitido(papel: string, destinoInicial?: string, permissoes?: string[]) {
+  if (papel === 'Patient') return '/portal';
+  if (papel === 'Client') return '/cliente';
+
+  const destino = sanitizarDestinoInicial(destinoInicial);
+  const candidatos = [destino, ...Object.keys(permissoesRotasOperacionais)];
+  return candidatos.find((candidato) => rotaOperacionalPermitida(candidato, papel, permissoes)) ?? '/login';
+}
+
+export function decidirAcessoRota(pathname: string, papel?: string, destinoInicial?: string, permissoes?: string[]): DecisaoAcessoRota {
   if (!papel) return { permitir: true };
 
   if (papel === 'Patient') {
@@ -50,16 +67,14 @@ export function decidirAcessoRota(pathname: string, papel?: string, destinoInici
     return pertenceARota(pathname, ROTAS_CLIENTE) ? { permitir: true } : { permitir: false, redirecionarPara: '/cliente' };
   }
 
+  const destino = resolverDestinoPermitido(papel, destinoInicial, permissoes);
+
   if (pertenceARota(pathname, ROTAS_PORTAL) || pertenceARota(pathname, ROTAS_CLIENTE)) {
     return { permitir: false, redirecionarPara: destino };
   }
 
-  if (pertenceARota(pathname, ['/dashboard']) && papel !== 'SuperAdmin' && papel !== 'Professional') {
-    return { permitir: false, redirecionarPara: destino };
-  }
-
   const permissaoExigida = permissaoExigidaParaRota(pathname);
-  if (permissaoExigida && Array.isArray(permissoes) && !permissoes.includes(permissaoExigida)) {
+  if (permissaoExigida && !rotaOperacionalPermitida(pathname, papel, permissoes)) {
     return { permitir: false, redirecionarPara: destino };
   }
 

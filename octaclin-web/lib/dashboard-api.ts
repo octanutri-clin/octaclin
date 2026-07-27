@@ -120,10 +120,14 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
 export async function carregarResumoDashboardClinico(entrada: {
   periodo: PeriodoDashboardClinico;
   profissionalId?: string;
+  signal?: AbortSignal;
 }): Promise<ResumoDashboardClinicoApi> {
   const parametros = new URLSearchParams({ periodo: entrada.periodo });
   if (entrada.profissionalId) parametros.set('profissionalId', entrada.profissionalId);
-  return requisitar<ResumoDashboardClinicoApi>(`/api/dashboard/clinico?${parametros.toString()}`);
+  return requisitar<ResumoDashboardClinicoApi>(
+    `/api/dashboard/clinico?${parametros.toString()}`,
+    { signal: entrada.signal }
+  );
 }
 
 export async function ocultarAlertaDashboardClinico(alertaId: string): Promise<{ alertaId: string; ocultoAteEm: string }> {
@@ -134,9 +138,26 @@ export async function ocultarAlertaDashboardClinico(alertaId: string): Promise<{
 }
 
 export async function concluirTarefaDashboardClinico(pacienteId: string, tarefaId: string): Promise<void> {
-  await requisitar(`/api/pacientes/${encodeURIComponent(pacienteId)}/tarefas-acompanhamento/${encodeURIComponent(tarefaId)}`, {
-    method: 'PATCH',
+  await requisitar(
+    `/api/dashboard/clinico/pacientes/${encodeURIComponent(pacienteId)}/tarefas/${encodeURIComponent(tarefaId)}/concluir`,
+    { method: 'PATCH' }
+  );
+}
+
+export async function registrarDesfechoDashboardClinico(
+  consultaId: string,
+  status: 'concluida' | 'falta' | 'cancelada'
+): Promise<void> {
+  await requisitar(`/api/dashboard/clinico/consultas/${encodeURIComponent(consultaId)}/desfecho`, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'concluida' })
+    body: JSON.stringify({ status })
   });
+}
+
+export async function revisarEnvioDashboardClinico(envioId: string): Promise<void> {
+  await requisitar(
+    `/api/dashboard/clinico/questionarios/envios/${encodeURIComponent(envioId)}/revisar`,
+    { method: 'POST' }
+  );
 }

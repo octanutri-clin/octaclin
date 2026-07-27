@@ -22,6 +22,13 @@ writeFileSync(join(pastaTemporaria, 'tsconfig.json'), JSON.stringify({
   files: [
     'scripts/dashboard-clinico-bff.spec.ts',
     'app/api/dashboard/clinico/route.ts',
+    'app/api/dashboard/clinico/consultas/[consultaId]/desfecho/route.ts',
+    'app/api/dashboard/clinico/pacientes/[pacienteId]/tarefas/[tarefaId]/concluir/route.ts',
+    'app/api/dashboard/clinico/questionarios/envios/[envioId]/revisar/route.ts',
+    'app/api/agenda/consultas/[consultaId]/desfecho/route.ts',
+    'app/api/pacientes/[id]/tarefas-acompanhamento/[tarefaId]/route.ts',
+    'app/api/questionarios/envios/[envioId]/revisar/route.ts',
+    'lib/server/dashboard-clinico-acoes-bff.ts',
     'lib/server/permissoes-bff.ts',
     'lib/server/sessao-bff.ts'
   ].map((arquivo) => join(raiz, arquivo))

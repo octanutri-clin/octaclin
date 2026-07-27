@@ -15,7 +15,7 @@ export async function PATCH(request: NextRequest, props: Params) {
       {
         method: 'PATCH',
         body: corpo,
-        headers: { 'x-octaclin-origem': 'dashboard_clinico' }
+        headers: { 'x-octaclin-origem': 'pacientes' }
       }
     );
     return new NextResponse(await resposta.text(), {

@@ -3,6 +3,12 @@ import test from 'node:test';
 import * as nextHeaders from 'next/headers';
 import { NextRequest } from 'next/server';
 import { GET as obterResumo } from '../app/api/dashboard/clinico/route';
+import { POST as registrarDesfechoDashboard } from '../app/api/dashboard/clinico/consultas/[consultaId]/desfecho/route';
+import { PATCH as concluirTarefaDashboard } from '../app/api/dashboard/clinico/pacientes/[pacienteId]/tarefas/[tarefaId]/concluir/route';
+import { POST as revisarEnvioDashboard } from '../app/api/dashboard/clinico/questionarios/envios/[envioId]/revisar/route';
+import { POST as registrarDesfechoAgenda } from '../app/api/agenda/consultas/[consultaId]/desfecho/route';
+import { PATCH as atualizarTarefaPaciente } from '../app/api/pacientes/[id]/tarefas-acompanhamento/[tarefaId]/route';
+import { POST as revisarEnvioQuestionarios } from '../app/api/questionarios/envios/[envioId]/revisar/route';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & { __clearCookies: () => void; __setCookies: (cookies: Record<string, string>) => void };
 
@@ -40,4 +46,123 @@ test('BFF clinico fixa escopo do Professional e permite contexto apenas ao Super
     assert.equal((await obterResumo(new NextRequest('http://localhost/api/dashboard/clinico?periodo=sete_dias&profissionalId=profissional-2'))).status, 200);
     assert.match(urls[1], /profissionalId=profissional-2/);
   } finally { restaurarFetch(original); }
+});
+
+test('BFFs de acao clinica exigem papel clinico e fixam origem sem encaminhar origem do navegador', async () => {
+  const original = global.fetch;
+  const chamadas: { url: string; headers: Headers; body?: BodyInit | null }[] = [];
+  global.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    chamadas.push({ url: String(url), headers: new Headers(init?.headers), body: init?.body });
+    return new Response(JSON.stringify({ id: 'recurso-1', status: 'concluida' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }) as typeof global.fetch;
+
+  try {
+    __setCookies(cookiesSessao('Collaborator', ['agenda.consultas.criar', 'pacientes.gerenciar', 'questionarios.gerenciar']));
+    assert.equal((await registrarDesfechoDashboard(
+      new NextRequest('http://localhost/api/dashboard/clinico/consultas/consulta-1/desfecho', {
+        method: 'POST',
+        headers: { 'x-octaclin-origem': 'origem_forjada' },
+        body: JSON.stringify({ status: 'concluida' })
+      }),
+      { params: Promise.resolve({ consultaId: 'consulta-1' }) }
+    )).status, 403);
+    assert.equal(chamadas.length, 0);
+
+    __setCookies(cookiesSessao('Professional', ['agenda.consultas.criar', 'pacientes.gerenciar', 'questionarios.gerenciar']));
+    await registrarDesfechoDashboard(
+      new NextRequest('http://localhost/api/dashboard/clinico/consultas/consulta-1/desfecho', {
+        method: 'POST',
+        headers: { 'x-octaclin-origem': 'origem_forjada' },
+        body: JSON.stringify({ status: 'falta' })
+      }),
+      { params: Promise.resolve({ consultaId: 'consulta-1' }) }
+    );
+    await concluirTarefaDashboard(
+      new NextRequest('http://localhost/api/dashboard/clinico/pacientes/paciente-1/tarefas/tarefa-1/concluir', {
+        method: 'PATCH',
+        headers: { 'x-octaclin-origem': 'origem_forjada' }
+      }),
+      { params: Promise.resolve({ pacienteId: 'paciente-1', tarefaId: 'tarefa-1' }) }
+    );
+    await revisarEnvioDashboard(
+      new Request('http://localhost/api/dashboard/clinico/questionarios/envios/envio-1/revisar', {
+        method: 'POST',
+        headers: { 'x-octaclin-origem': 'origem_forjada' }
+      }),
+      { params: Promise.resolve({ envioId: 'envio-1' }) }
+    );
+
+    assert.deepEqual(
+      chamadas.map((chamada) => ({
+        caminho: new URL(chamada.url).pathname,
+        origem: chamada.headers.get('x-octaclin-origem'),
+        corpo: chamada.body
+      })),
+      [
+        {
+          caminho: '/agenda/consultas/consulta-1/desfecho',
+          origem: 'dashboard_clinico',
+          corpo: JSON.stringify({ status: 'falta' })
+        },
+        {
+          caminho: '/pacientes/paciente-1/tarefas-acompanhamento/tarefa-1',
+          origem: 'dashboard_clinico',
+          corpo: JSON.stringify({ status: 'concluida' })
+        },
+        {
+          caminho: '/questionarios/envios/envio-1/revisar',
+          origem: 'dashboard_clinico',
+          corpo: undefined
+        }
+      ]
+    );
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFFs genericos preservam a origem de agenda, pacientes e questionarios', async () => {
+  const original = global.fetch;
+  const origens: Array<string | null> = [];
+  global.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+    origens.push(new Headers(init?.headers).get('x-octaclin-origem'));
+    return new Response(JSON.stringify({ id: 'recurso-1', status: 'respondido' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }) as typeof global.fetch;
+
+  try {
+    __setCookies(cookiesSessao('Collaborator', ['agenda.consultas.criar', 'pacientes.gerenciar', 'questionarios.gerenciar']));
+    await registrarDesfechoAgenda(
+      new NextRequest('http://localhost/api/agenda/consultas/consulta-1/desfecho', {
+        method: 'POST',
+        headers: { 'x-octaclin-origem': 'dashboard_clinico' },
+        body: JSON.stringify({ status: 'concluida' })
+      }),
+      { params: Promise.resolve({ consultaId: 'consulta-1' }) }
+    );
+    await atualizarTarefaPaciente(
+      new NextRequest('http://localhost/api/pacientes/paciente-1/tarefas-acompanhamento/tarefa-1', {
+        method: 'PATCH',
+        headers: { 'x-octaclin-origem': 'dashboard_clinico' },
+        body: JSON.stringify({ status: 'concluida' })
+      }),
+      { params: Promise.resolve({ id: 'paciente-1', tarefaId: 'tarefa-1' }) }
+    );
+    await revisarEnvioQuestionarios(
+      new Request('http://localhost/api/questionarios/envios/envio-1/revisar', {
+        method: 'POST',
+        headers: { 'x-octaclin-origem': 'dashboard_clinico' }
+      }),
+      { params: Promise.resolve({ envioId: 'envio-1' }) }
+    );
+
+    assert.deepEqual(origens, ['agenda', 'pacientes', 'questionarios']);
+  } finally {
+    restaurarFetch(original);
+  }
 });

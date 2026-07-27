@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   AlertTriangle,
@@ -17,17 +17,17 @@ import {
   XCircle
 } from 'lucide-react';
 import { obterSessao, type SessaoPublica } from '@/lib/auth-api';
-import { registrarDesfechoConsulta } from '@/lib/agenda-api';
 import { listarProfissionais, type ProfissionalResumo } from '@/lib/cadastros-api';
 import {
   carregarResumoDashboardClinico,
   concluirTarefaDashboardClinico,
   ocultarAlertaDashboardClinico,
+  registrarDesfechoDashboardClinico,
+  revisarEnvioDashboardClinico,
   type PeriodoDashboardClinico,
   type ResumoDashboardClinicoApi,
   type StatusConsultaClinica
 } from '@/lib/dashboard-api';
-import { revisarEnvioQuestionario } from '@/lib/questionarios-api';
 import { Botao } from '@/components/ui/botao';
 import { Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
@@ -86,6 +86,8 @@ export function PainelDashboard() {
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [processando, setProcessando] = useState<string | null>(null);
+  const sequenciaRequisicao = useRef(0);
+  const controladorRequisicao = useRef<AbortController | null>(null);
 
   const superAdmin = sessao?.papel === 'SuperAdmin';
   const profissional = sessao?.papel === 'Professional';
@@ -105,7 +107,10 @@ export function PainelDashboard() {
   }, []);
 
   useEffect(() => {
-    if (superAdmin) setProfissionalId(parametros.get('profissionalId') ?? '');
+    if (superAdmin) {
+      setDados(null);
+      setProfissionalId(parametros.get('profissionalId') ?? '');
+    }
   }, [parametros, superAdmin]);
 
   const carregar = useCallback(async () => {
@@ -114,24 +119,51 @@ export function PainelDashboard() {
       setErro('Seu perfil nao possui acesso ao painel clinico.');
       return;
     }
+    controladorRequisicao.current?.abort();
+    const controlador = new AbortController();
+    controladorRequisicao.current = controlador;
+    const sequencia = ++sequenciaRequisicao.current;
+    setDados(null);
     setCarregando(true);
     setErro(null);
     try {
-      setDados(await carregarResumoDashboardClinico({ periodo, profissionalId: superAdmin ? profissionalId || undefined : undefined }));
+      const novosDados = await carregarResumoDashboardClinico({
+        periodo,
+        profissionalId: superAdmin ? profissionalId || undefined : undefined,
+        signal: controlador.signal
+      });
+      if (sequencia === sequenciaRequisicao.current) setDados(novosDados);
     } catch (erroAtual) {
+      if (controlador.signal.aborted || sequencia !== sequenciaRequisicao.current) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar o painel clinico.');
     } finally {
-      setCarregando(false);
+      if (sequencia === sequenciaRequisicao.current) setCarregando(false);
     }
   }, [periodo, profissional, profissionalId, sessao, superAdmin]);
 
-  useEffect(() => { if (sessao !== null) void carregar(); }, [carregar, sessao]);
+  useEffect(() => {
+    if (sessao !== null) void carregar();
+    return () => controladorRequisicao.current?.abort();
+  }, [carregar, sessao]);
 
   const podeConcluirTarefa = podeAgir(sessao, 'pacientes.gerenciar');
   const podeRevisarFormulario = podeAgir(sessao, 'questionarios.gerenciar');
   const podeRegistrarDesfecho = podeAgir(sessao, 'agenda.consultas.criar');
   const retornoUrl = (pacienteId: string, responsavelId: string) => `/agenda?pacienteId=${encodeURIComponent(pacienteId)}&profissionalId=${encodeURIComponent(responsavelId)}` as Route;
   const contextoSelecionado = useMemo(() => profissionais.find((item) => item.id === profissionalId), [profissionais, profissionalId]);
+
+  function trocarPeriodo(novoPeriodo: PeriodoDashboardClinico) {
+    setDados(null);
+    setSucesso(null);
+    setPeriodo(novoPeriodo);
+  }
+
+  function trocarProfissional(novoProfissionalId: string) {
+    controladorRequisicao.current?.abort();
+    setDados(null);
+    setSucesso(null);
+    setProfissionalId(novoProfissionalId);
+  }
 
   async function executar(chave: string, mensagem: string, acao: () => Promise<unknown>, confirmar?: string) {
     if (confirmar && !window.confirm(confirmar)) return;
@@ -149,20 +181,21 @@ export function PainelDashboard() {
     }
   }
 
-  if (carregando && !dados) return <BarraCarregamento visivel rotulo="Carregando painel clinico" />;
+  if (carregando && !dados && sessao === null) return <BarraCarregamento visivel rotulo="Carregando painel clinico" />;
 
   return <div className="grid gap-4">
     <section className="flex flex-col gap-3 border-b border-linha pb-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0"><h2 className="text-lg font-semibold text-tinta">Painel clinico</h2><p className="text-sm text-texto-suave">Prioridades diarias, pendencias e proximos atendimentos.</p></div>
       <div className="flex flex-wrap items-end gap-3">
-        <div className="flex rounded-md border border-linha p-1" aria-label="Periodo do painel clinico">{periodos.map((item) => <button key={item.valor} type="button" onClick={() => setPeriodo(item.valor)} className={`h-8 rounded px-3 text-sm font-medium ${periodo === item.valor ? 'bg-primaria text-white' : 'text-tinta hover:bg-superficie-hover'}`}>{item.rotulo}</button>)}</div>
-        {podeContexto ? <label className="grid min-w-52 gap-1 text-xs font-semibold text-texto-suave">Profissional em contexto<Selecao aria-label="Profissional em contexto" value={profissionalId} onChange={(evento) => setProfissionalId(evento.target.value)}><option value="">Selecionar profissional</option>{profissionais.map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}</Selecao></label> : null}
+        <div className="flex rounded-md border border-linha p-1" aria-label="Periodo do painel clinico">{periodos.map((item) => <button key={item.valor} type="button" onClick={() => trocarPeriodo(item.valor)} className={`h-8 rounded px-3 text-sm font-medium ${periodo === item.valor ? 'bg-primaria text-white' : 'text-tinta hover:bg-superficie-hover'}`}>{item.rotulo}</button>)}</div>
+        {podeContexto ? <label className="grid min-w-52 gap-1 text-xs font-semibold text-texto-suave">Profissional em contexto<Selecao aria-label="Profissional em contexto" value={profissionalId} onChange={(evento) => trocarProfissional(evento.target.value)}><option value="">Selecionar profissional</option>{profissionais.map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}</Selecao></label> : null}
       </div>
     </section>
 
     {superAdmin ? <AlertaOperacional mensagem={profissionalId ? `Voce esta acompanhando o painel de ${contextoSelecionado?.nome ?? dados?.contexto.profissionalNome ?? 'outro profissional'}. Acoes serao registradas em auditoria.` : 'Selecione um profissional para acessar o contexto clinico. Apenas SuperAdmin pode trocar este contexto.'} /> : null}
     {erro ? <div className="grid gap-3"><AlertaOperacional mensagem={erro} /><Botao type="button" onClick={() => void carregar()}><RefreshCcw size={16} />Tentar novamente</Botao></div> : null}
     {sucesso ? <p role="status" className="rounded-md border border-sucesso bg-sucesso-suave px-3 py-2 text-sm font-medium text-sucesso-forte">{sucesso}</p> : null}
+    {carregando && !dados ? <BarraCarregamento visivel rotulo="Atualizando painel clinico" /> : null}
     {dados?.selecaoObrigatoria ? <EstadoVazio titulo="Selecione um profissional" descricao="O painel clinico requer um contexto profissional explicito." /> : null}
     {dados && !dados.selecaoObrigatoria ? <>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -174,12 +207,12 @@ export function PainelDashboard() {
       </section>
       <section className="border-y border-linha py-4"><CabecalhoFila titulo="Fila de prioridade" detalhe="Alertas operacionais ordenados por prioridade." />{dados.alertas.length ? <div className="grid gap-2">{dados.alertas.map((alerta) => <div key={alerta.id} className="flex min-w-0 items-center justify-between gap-3 border-l-4 border-alerta bg-alerta-suave px-3 py-2"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{nomeAlerta(alerta.tipo)}</p><p className="text-xs text-texto-suave">Registrado em {formatarDataHora(alerta.ocorridoEm)}</p></div>{alerta.ocultavel ? <button type="button" aria-label="Ocultar alerta" title="Ocultar alerta" disabled={processando === `alerta-${alerta.id}`} onClick={() => void executar(`alerta-${alerta.id}`, 'Alerta ocultado por 24 horas.', () => ocultarAlertaDashboardClinico(alerta.id), 'Ocultar este alerta por 24 horas?')} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-texto-suave hover:bg-white disabled:opacity-50"><EyeOff size={17} /></button> : null}</div>)}</div> : <EstadoVazio titulo="Nenhum alerta clinico" descricao="Nao ha alertas prioritarios neste contexto." />}</section>
       <section className="grid gap-5 xl:grid-cols-2">
-        <div className="min-w-0"><CabecalhoFila titulo="Proximos atendimentos" detalhe="Registre o desfecho para liberar agenda e atualizar o acompanhamento." /><div className="divide-y divide-linha border-y border-linha">{dados.atendimentos.length ? dados.atendimentos.map((item) => <div key={item.id} className="grid gap-2 py-3"><div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{item.pacienteNome}</p><p className="text-xs text-texto-suave">{formatarDataHora(item.inicioEm)} · {nomeStatusConsulta(item.status)}</p></div><LinkAcao href={retornoUrl(item.pacienteId, item.profissionalId)}>Abrir agenda</LinkAcao></div>{(item.status === 'agendada' || item.status === 'reagendada') && podeRegistrarDesfecho ? <div className="flex flex-wrap gap-2"><Botao type="button" disabled={processando === item.id} onClick={() => void executar(item.id, 'Consulta marcada como concluida.', () => registrarDesfechoConsulta(item.id, 'concluida'), 'Confirmar consulta concluida?')}><CheckCircle2 size={15} />Concluida</Botao><Botao type="button" disabled={processando === item.id} onClick={() => void executar(item.id, 'Consulta marcada como falta.', () => registrarDesfechoConsulta(item.id, 'falta'), 'Registrar falta do paciente?')}><XCircle size={15} />Falta</Botao><Botao type="button" variante="perigo" disabled={processando === item.id} onClick={() => void executar(item.id, 'Consulta cancelada e horario liberado.', () => registrarDesfechoConsulta(item.id, 'cancelada'), 'Cancelar a consulta e liberar o horario?')}><XCircle size={15} />Cancelar</Botao></div> : null}</div>) : <EstadoVazio titulo="Nenhum atendimento" descricao="Nao ha consultas no periodo selecionado." />}</div></div>
+        <div className="min-w-0"><CabecalhoFila titulo="Proximos atendimentos" detalhe="Registre o desfecho para liberar agenda e atualizar o acompanhamento." /><div className="divide-y divide-linha border-y border-linha">{dados.atendimentos.length ? dados.atendimentos.map((item) => <div key={item.id} className="grid gap-2 py-3"><div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{item.pacienteNome}</p><p className="text-xs text-texto-suave">{formatarDataHora(item.inicioEm)} · {nomeStatusConsulta(item.status)}</p></div><LinkAcao href={retornoUrl(item.pacienteId, item.profissionalId)}>Abrir agenda</LinkAcao></div>{(item.status === 'agendada' || item.status === 'reagendada') && podeRegistrarDesfecho ? <div className="flex flex-wrap gap-2"><Botao type="button" disabled={processando === item.id} onClick={() => void executar(item.id, 'Consulta marcada como concluida.', () => registrarDesfechoDashboardClinico(item.id, 'concluida'), 'Confirmar consulta concluida?')}><CheckCircle2 size={15} />Concluida</Botao><Botao type="button" disabled={processando === item.id} onClick={() => void executar(item.id, 'Consulta marcada como falta.', () => registrarDesfechoDashboardClinico(item.id, 'falta'), 'Registrar falta do paciente?')}><XCircle size={15} />Falta</Botao><Botao type="button" variante="perigo" disabled={processando === item.id} onClick={() => void executar(item.id, 'Consulta cancelada e horario liberado.', () => registrarDesfechoDashboardClinico(item.id, 'cancelada'), 'Cancelar a consulta e liberar o horario?')}><XCircle size={15} />Cancelar</Botao></div> : null}</div>) : <EstadoVazio titulo="Nenhum atendimento" descricao="Nao ha consultas no periodo selecionado." />}</div></div>
         <div className="min-w-0"><CabecalhoFila titulo="Pacientes sem retorno" detalhe="30 dias sem consulta concluida, priorizados por risco." /><div className="divide-y divide-linha border-y border-linha">{dados.semRetorno.length ? dados.semRetorno.map((item) => <div key={item.pacienteId} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{item.pacienteNome}</p><p className="text-xs text-texto-suave">{item.faixa} dias · Risco {item.nivelRisco} · Score {item.scoreRisco}</p></div><LinkAcao href={retornoUrl(item.pacienteId, item.profissionalId)}>Criar retorno</LinkAcao></div>) : <EstadoVazio titulo="Retornos em dia" descricao="Nenhum paciente ativo excedeu 30 dias sem consulta concluida." />}</div></div>
       </section>
       <section className="grid gap-5 xl:grid-cols-2">
         <div className="min-w-0"><CabecalhoFila titulo="Tarefas vencidas" detalhe="Acoes clinicas que exigem tratamento." />{dados.tarefasVencidas.length ? <div className="divide-y divide-linha border-y border-linha">{dados.tarefasVencidas.map((item) => <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{item.titulo}</p><p className="truncate text-xs text-texto-suave">{item.pacienteNome} · {item.prioridade} · Venceu em {formatarDataHora(item.vencimentoEm)}</p></div>{podeConcluirTarefa ? <Botao type="button" disabled={processando === `tarefa-${item.id}`} onClick={() => void executar(`tarefa-${item.id}`, 'Tarefa concluida.', () => concluirTarefaDashboardClinico(item.pacienteId, item.id), 'Concluir esta tarefa?')}><CheckCircle2 size={15} />Concluir tarefa</Botao> : null}</div>)}</div> : <EstadoVazio titulo="Nenhuma tarefa vencida" descricao="A rotina de acompanhamento esta em dia." />}</div>
-        <div className="min-w-0"><CabecalhoFila titulo="Formularios pendentes" detalhe="Respostas que precisam de revisao clinica." />{dados.formulariosPendentes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.formulariosPendentes.map((item) => <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">Formulario de {item.pacienteNome}</p><p className="text-xs text-texto-suave">Respondido em {item.respondidoEm ? formatarDataHora(item.respondidoEm) : 'data indisponivel'}</p></div>{podeRevisarFormulario ? <Botao type="button" disabled={processando === `formulario-${item.id}`} onClick={() => void executar(`formulario-${item.id}`, 'Formulario marcado como revisado.', () => revisarEnvioQuestionario(item.id), 'Marcar este formulario como revisado?')}><ClipboardCheck size={15} />Marcar revisado</Botao> : null}</div>)}</div> : <EstadoVazio titulo="Nenhum formulario pendente" descricao="Nao ha respostas aguardando revisao." />}</div>
+        <div className="min-w-0"><CabecalhoFila titulo="Formularios pendentes" detalhe="Respostas que precisam de revisao clinica." />{dados.formulariosPendentes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.formulariosPendentes.map((item) => <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">Formulario de {item.pacienteNome}</p><p className="text-xs text-texto-suave">Respondido em {item.respondidoEm ? formatarDataHora(item.respondidoEm) : 'data indisponivel'}</p></div>{podeRevisarFormulario ? <Botao type="button" disabled={processando === `formulario-${item.id}`} onClick={() => void executar(`formulario-${item.id}`, 'Formulario marcado como revisado.', () => revisarEnvioDashboardClinico(item.id), 'Marcar este formulario como revisado?')}><ClipboardCheck size={15} />Marcar revisado</Botao> : null}</div>)}</div> : <EstadoVazio titulo="Nenhum formulario pendente" descricao="Nao ha respostas aguardando revisao." />}</div>
       </section>
       <section className="grid gap-5 xl:grid-cols-2">
         <div className="min-w-0"><CabecalhoFila titulo="Solicitacoes de agendamento" detalhe="Pedidos aguardando aprovacao manual."><LinkAcao href="/agenda">Abrir agenda</LinkAcao></CabecalhoFila>{dados.solicitacoesPendentes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.solicitacoesPendentes.map((item) => <div key={item.id} className="py-3"><p className="text-sm font-semibold text-tinta">{item.solicitanteNome}</p><p className="text-xs text-texto-suave">{formatarDataHora(item.inicioEm)} · expira em {formatarDataHora(item.expiraEm)}</p></div>)}</div> : <EstadoVazio titulo="Nenhuma solicitacao pendente" descricao="Novos pedidos aparecerao aqui." />}</div>

@@ -167,7 +167,7 @@ export class ControladorQuestionarios {
       'envio_questionario',
       envio.id,
       {
-        origem: 'questionarios',
+          origem: requisicao.header('x-octaclin-origem') ?? 'questionarios',
         revisadoEm: envio.revisadoEm
       }
     );

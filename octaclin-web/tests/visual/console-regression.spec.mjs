@@ -1116,7 +1116,7 @@ async function prepararProntuarioMockado(page) {
 test.describe('painel clinico profissional', () => {
   test('Professional conserva o proprio escopo e mostra filas clinicas', async ({ page }) => {
     await prepararDashboardMockado(page);
-    await page.route('**/api/dashboard/clinico**', async (route) => {
+    await page.route('**/api/dashboard/clinico?*', async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
         contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: 'profissional-1', profissionalNome: 'Dra. Carla' },
         indicadores: { consultasHoje: 1, proximas: 1, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
@@ -1148,23 +1148,99 @@ test.describe('painel clinico profissional', () => {
     await page.route('**/api/profissionais**', async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-1', nome: 'Dra. Carla', criadoEm: '2026-07-20T10:00:00.000Z' }, { id: 'profissional-2', tenantId: 'tenant-1', usuarioId: 'usuario-2', nome: 'Dr. Paulo', criadoEm: '2026-07-20T10:00:00.000Z' }], total: 2 }) });
     });
-    await page.route('**/api/dashboard/clinico**', async (route) => {
+    await page.route('**/api/dashboard/clinico?*', async (route) => {
       const selecionado = new URL(route.request().url()).searchParams.get('profissionalId');
       const base = { contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: selecionado, profissionalNome: 'Dr. Paulo' }, indicadores: { consultasHoje: 0, proximas: 0, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 0, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 0, tarefasVencidas: tarefaConcluida ? 0 : 1, solicitacoesPendentes: 0, comunicacoesEmAlerta: 0, pacientesRiscoAlto: 0 }, atendimentos: [], semRetorno: [], formulariosPendentes: [], solicitacoesPendentes: [], comunicacoes: [], alertas: [], selecaoObrigatoria: !selecionado };
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...base, tarefasVencidas: selecionado && !tarefaConcluida ? [{ id: 'tarefa-2', pacienteId: 'paciente-2', profissionalId: selecionado, pacienteNome: 'Beatriz', titulo: 'Revisar exames', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }] : [] }) });
     });
-    await page.route('**/api/pacientes/paciente-2/tarefas-acompanhamento/tarefa-2', async (route) => {
-      expect(route.request().postDataJSON()).toEqual({ status: 'concluida' });
+    await page.route('**/api/dashboard/clinico/pacientes/paciente-2/tarefas/tarefa-2/concluir', async (route) => {
+      expect(route.request().postData()).toBeNull();
       tarefaConcluida = true;
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'tarefa-2', status: 'concluida' }) });
     });
     await page.goto('/dashboard');
+    await expect(page.getByLabel('Profissional em contexto')).toBeVisible();
     await page.getByLabel('Profissional em contexto').selectOption('profissional-2');
     await expect(page.getByText('Revisar exames')).toBeVisible();
     page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Concluir tarefa' }).click();
     await expect(page.getByText('Tarefa concluida.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
+  });
+
+  test('SuperAdmin limpa dados antigos e ignora resposta obsoleta ao trocar contexto', async ({ page }) => {
+    let liberarRespostaPaulo;
+    const respostaPauloLiberada = new Promise((resolve) => {
+      liberarRespostaPaulo = resolve;
+    });
+
+    await prepararSessaoConsoleMockada(page);
+    await page.route('**/api/auth/session', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          autenticado: true,
+          apiUrl: credenciais.apiUrl,
+          tenantSlug: credenciais.tenantSlug,
+          email: credenciais.email,
+          expiraEm: '2026-07-27T15:00:00.000Z',
+          papel: 'SuperAdmin',
+          permissoes: ['dashboard.ler', 'profissionais.ler', 'pacientes.gerenciar'],
+          destinoInicial: '/dashboard'
+        })
+      });
+    });
+    await page.route('**/api/profissionais**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          itens: [
+            { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-1', nome: 'Dra. Carla', criadoEm: '2026-07-20T10:00:00.000Z' },
+            { id: 'profissional-2', tenantId: 'tenant-1', usuarioId: 'usuario-2', nome: 'Dr. Paulo', criadoEm: '2026-07-20T10:00:00.000Z' }
+          ],
+          total: 2
+        })
+      });
+    });
+    await page.route('**/api/dashboard/clinico?*', async (route) => {
+      const profissionalId = new URL(route.request().url()).searchParams.get('profissionalId');
+      if (profissionalId === 'profissional-2') await respostaPauloLiberada;
+      const nome = profissionalId === 'profissional-2' ? 'Dr. Paulo' : 'Dra. Carla';
+      const tarefa = profissionalId === 'profissional-2' ? 'Tarefa Paulo' : 'Tarefa Carla';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId, profissionalNome: nome },
+          indicadores: { consultasHoje: 0, proximas: 0, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 0, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 0, tarefasVencidas: profissionalId ? 1 : 0, solicitacoesPendentes: 0, comunicacoesEmAlerta: 0, pacientesRiscoAlto: 0 },
+          atendimentos: [],
+          semRetorno: [],
+          tarefasVencidas: profissionalId ? [{ id: `tarefa-${profissionalId}`, pacienteId: `paciente-${profissionalId}`, profissionalId, pacienteNome: nome, titulo: tarefa, prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }] : [],
+          formulariosPendentes: [],
+          solicitacoesPendentes: [],
+          comunicacoes: [],
+          alertas: [],
+          selecaoObrigatoria: !profissionalId
+        })
+      });
+    });
+
+    await page.goto('/dashboard');
+    await expect(page.getByLabel('Profissional em contexto')).toBeVisible();
+    await page.getByLabel('Profissional em contexto').selectOption('profissional-1');
+    await expect(page.getByText('Tarefa Carla')).toBeVisible();
+
+    await page.getByLabel('Profissional em contexto').selectOption('profissional-2');
+    await expect(page.getByText('Tarefa Carla')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Concluir tarefa' })).toHaveCount(0);
+
+    await page.getByLabel('Profissional em contexto').selectOption('profissional-1');
+    await expect(page.getByText('Tarefa Carla')).toBeVisible();
+    liberarRespostaPaulo();
+    await expect(page.getByText('Tarefa Paulo')).toHaveCount(0);
+    await expect(page.getByText('Tarefa Carla')).toBeVisible();
   });
 });
 

@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import {
   ErroPermissaoAusente,
   ErroSessaoAusente,
-  exigirPermissaoBff,
   requisitarBackendAutenticado
 } from '@/lib/server/sessao-bff';
+import { exigirAcaoDashboardClinico } from '@/lib/server/dashboard-clinico-acoes-bff';
 
 interface Params {
   params: Promise<{ envioId: string }>;
@@ -12,11 +12,11 @@ interface Params {
 
 export async function POST(_request: Request, props: Params) {
   try {
-    await exigirPermissaoBff('questionarios.gerenciar');
-    const params = await props.params;
+    await exigirAcaoDashboardClinico('questionarios.gerenciar');
+    const { envioId } = await props.params;
     const resposta = await requisitarBackendAutenticado(
-      `/questionarios/envios/${encodeURIComponent(params.envioId)}/revisar`,
-      { method: 'POST', headers: { 'x-octaclin-origem': 'questionarios' } }
+      `/questionarios/envios/${encodeURIComponent(envioId)}/revisar`,
+      { method: 'POST', headers: { 'x-octaclin-origem': 'dashboard_clinico' } }
     );
     const texto = await resposta.text();
     if (!resposta.ok) {
@@ -36,12 +36,8 @@ export async function POST(_request: Request, props: Params) {
         : {})
     });
   } catch (erro) {
-    if (erro instanceof ErroSessaoAusente) {
-      return NextResponse.json({ mensagem: erro.message }, { status: 401 });
-    }
-    if (erro instanceof ErroPermissaoAusente) {
-      return NextResponse.json({ mensagem: erro.message }, { status: 403 });
-    }
+    if (erro instanceof ErroSessaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 401 });
+    if (erro instanceof ErroPermissaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 403 });
     throw erro;
   }
 }

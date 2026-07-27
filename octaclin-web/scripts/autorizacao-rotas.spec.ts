@@ -47,7 +47,11 @@ test('colaborador deve acessar apenas rotas operacionais autorizadas por permiss
   assert.deepEqual(decidirAcessoRota('/agenda', 'Collaborator', '/agenda', permissoesColaborador), { permitir: true });
   assert.deepEqual(decidirAcessoRota('/pacientes/paciente-1', 'Collaborator', '/dashboard', ['pacientes.listar']), {
     permitir: false,
-    redirecionarPara: '/dashboard'
+    redirecionarPara: '/pacientes'
+  });
+  assert.deepEqual(decidirAcessoRota('/dashboard', 'Collaborator', '/dashboard', permissoesColaborador), {
+    permitir: false,
+    redirecionarPara: '/agenda'
   });
   assert.deepEqual(decidirAcessoRota('/dashboard', 'Collaborator', '/agenda', permissoesColaborador), {
     permitir: false,
@@ -70,4 +74,19 @@ test('colaborador deve acessar apenas rotas operacionais autorizadas por permiss
     permitir: false,
     redirecionarPara: '/agenda'
   });
+});
+
+test('fallback operacional ignora destino inicial sem permissao e escolhe rota permitida', () => {
+  assert.deepEqual(
+    decidirAcessoRota('/operacoes', 'Professional', '/operacoes', ['questionarios.ler']),
+    { permitir: false, redirecionarPara: '/questionarios' }
+  );
+  assert.deepEqual(
+    decidirAcessoRota('/dashboard', 'Professional', '/dashboard', ['agenda.consultas.ler']),
+    { permitir: false, redirecionarPara: '/agenda' }
+  );
+  assert.deepEqual(
+    decidirAcessoRota('/dashboard', 'Collaborator', '/dashboard', []),
+    { permitir: false, redirecionarPara: '/login' }
+  );
 });

@@ -215,7 +215,11 @@ export class ControladorPacientes {
       recursoId: id,
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
-      metadados: { tarefaId: tarefa.id, status: tarefa.status }
+      metadados: {
+        tarefaId: tarefa.id,
+        status: tarefa.status,
+        origem: requisicao.header('x-octaclin-origem') ?? 'pacientes'
+      }
     });
     return tarefa;
   }
