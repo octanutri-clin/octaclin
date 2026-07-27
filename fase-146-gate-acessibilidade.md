@@ -1,6 +1,11 @@
 # Fase 146 - Gate de acessibilidade e navegacao por teclado do frontend
 
-Status: entregue em 2026-07-27, com 1 risco residual real encontrado e nao corrigido (fora do escopo autorizado desta fase, ver "Resultado" abaixo).
+Status: entregue em 2026-07-27. A suite encontrou 1 achado real de
+acessibilidade na agenda durante o desenvolvimento (fora do escopo permitido
+para correcao nesta fase); apos o merge do trabalho paralelo do Codex na
+Fase 144 (agendamento publico), o achado foi resolvido incidentalmente por
+uma regra global de `:focus-visible` adicionada em `app/globals.css` - ver
+"Resultado" abaixo para o historico completo.
 
 ## Objetivo
 
@@ -73,44 +78,57 @@ corretamente conectados antes de qualquer implementacao real.
 ## Resultado
 
 `pnpm --dir octaclin-web test:a11y` roda 5 rotas x 2 projetos = 10 testes.
-**8 passam, 2 falham** (ambos os projetos, mesma rota: `agenda interna`).
-Essa falha e um achado real de acessibilidade no codigo existente da agenda,
-nao um defeito do teste - e por isso nao foi "consertada" alterando o teste
-para deixa-lo verde, nem o componente para satisfaze-lo, ja que
-`components/agenda/painel-agenda.tsx` esta fora do escopo autorizado desta
+
+**Primeira execucao (antes do merge da Fase 144 do Codex): 8 passam, 2
+falham** (ambos os projetos, mesma rota: `agenda interna`). Essa falha era um
+achado real de acessibilidade no codigo entao existente da agenda, nao um
+defeito do teste - por isso nao foi "consertada" alterando o teste para
+deixa-lo verde, nem o componente para satisfaze-lo, ja que
+`components/agenda/painel-agenda.tsx` estava fora do escopo autorizado desta
 fase.
 
-**Achado (nao corrigido, fora de escopo):** os campos `<input>` nativos em
-`components/agenda/painel-agenda.tsx` (linhas ~391-396: checkbox "Enviar
-e-mail e mensagem ao salvar"; ~517-522: "Nova data e hora"; ~526-534: "Nova
-duracao"; ~538-542: "Novo local"; ~556-560: "Motivo do cancelamento") nao tem
-nenhuma classe Tailwind de foco (`focus-visible:outline...`), ao contrario de
-botoes e links do mesmo app (ex.: os itens de navegacao em
-`components/app/portal-shell.tsx` usam
+**Achado original:** os campos `<input>` nativos em
+`components/agenda/painel-agenda.tsx` (checkbox "Enviar e-mail e mensagem ao
+salvar"; "Nova data e hora"; "Nova duracao"; "Novo local"; "Motivo do
+cancelamento") nao tinham nenhuma classe Tailwind de foco
+(`focus-visible:outline...`), ao contrario de botoes e links do mesmo app
+(ex.: os itens de navegacao em `components/app/portal-shell.tsx` usam
 `focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria`).
 O teste tabulou ate o campo "Novo local"/"Motivo do cancelamento" (2a
 consulta mockada, posicao 29 de 30 elementos focalizaveis) e confirmou
-`outlineStyle: 'none'` e `boxShadow: 'none'` no elemento focado. Pela
-inspecao do codigo, o mesmo padrao (ausencia de classe de foco) se repete em
-todos os `<input>` crus listados acima - o teste para no primeiro que
-encontra, entao nao ha garantia de que sejam so esses, mas sao os unicos
-`<input>` sem o componente `Campo`/`Rotulo` nesse arquivo.
+`outlineStyle: 'none'` e `boxShadow: 'none'` no elemento focado.
 
-**Recomendacao para uma fase futura (fora deste escopo):** adicionar a mesma
-classe de foco visivel ja usada em `portal-shell.tsx`
-(`focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria`)
-aos `<input>` crus de `painel-agenda.tsx`, ou migra-los para o componente
-`Campo` (que tambem nao define uma classe de foco propria hoje - vale
-confirmar se `Campo` deveria ganhar o estilo de foco no nivel do componente,
-beneficiando todo formulario do app de uma vez).
+**Segunda execucao (apos merge de `origin/main`, que trouxe a Fase 144 -
+agendamento publico - concluida pelo Codex em paralelo): 10 passam, 0
+falham.** O merge trouxe uma reescrita grande de `painel-agenda.tsx` (835
+linhas alteradas) e uma nova regra global em `octaclin-web/app/globals.css`:
 
-Login, dashboard, portal do paciente e portal do cliente passam em todos os
-6 checks, nos dois projetos (desktop e mobile).
+```css
+:focus-visible {
+  outline: 3px solid rgba(36, 123, 160, 0.35);
+  outline-offset: 2px;
+}
+```
+
+Essa regra cobre todo elemento focalizavel do site, incluindo os `<input>`
+crus da agenda que antes nao tinham foco visivel algum (eles continuam sem
+classe `focus-visible:outline` propria, mas agora herdam o indicador global).
+O achado foi resolvido **incidentalmente** pelo trabalho paralelo do Codex,
+nao por uma correcao feita nesta fase - nenhum arquivo de agenda foi tocado
+por este commit, conforme o escopo autorizado. Mantendo o registro do achado
+original acima para historico, ja que a causa raiz (inputs sem estilo de
+foco proprio) ainda existe no componente; só passou a ser coberta por uma
+regra global que poderia, em tese, ser removida ou sobrescrita no futuro sem
+que ninguem perceba que a agenda dependia dela.
+
+Login, dashboard, agenda interna, portal do paciente e portal do cliente
+passam em todos os 6 checks, nos dois projetos (desktop e mobile), na
+execucao final.
 
 ## Comandos executados
 
 ```powershell
-pnpm --dir octaclin-web test:a11y   # 8 passed, 2 failed (achado real documentado acima)
+pnpm --dir octaclin-web test:a11y   # 10 passed (apos merge da Fase 144; 8 passed/2 failed antes do merge, ver "Resultado")
 pnpm --dir octaclin-web lint        # limpo
 pnpm --dir octaclin-web typecheck   # limpo
 ```
@@ -134,5 +152,8 @@ antes de sair do navegador.
 - `/login` nao testa o fluxo de autenticacao em si (isso ja e coberto por
   `console-regression.spec.mjs`); testa apenas a pagina de login como rota
   publica isolada.
-- O achado documentado acima (foco invisivel em inputs crus da agenda)
-  permanece **nao corrigido** nesta fase, por estar fora do escopo permitido.
+- O achado original (foco invisivel em inputs crus da agenda) foi resolvido
+  incidentalmente por uma regra global de CSS trazida pelo merge da Fase 144,
+  nao por uma correcao desta fase - a causa raiz (inputs sem classe de foco
+  propria) continua no componente e vale endereçar de forma explicita em uma
+  fase futura, para nao depender apenas da regra global.
