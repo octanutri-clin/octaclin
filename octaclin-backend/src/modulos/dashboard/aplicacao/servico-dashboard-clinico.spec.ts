@@ -100,6 +100,7 @@ describe('ServicoDashboardClinico', () => {
   let servico: ServicoDashboardClinico;
   let registros: Map<Function, RegistroTeste[]>;
   let salvarOcultacao: jest.Mock;
+  let executarExecutor: jest.Mock;
 
   const profissionalUm = usuario('Professional', 'usuario-1');
   const superAdmin = usuario('SuperAdmin', 'usuario-admin');
@@ -278,9 +279,8 @@ describe('ServicoDashboardClinico', () => {
       })
     } as unknown as EntityManager;
 
-    const executor = {
-      executar: jest.fn((_tenantId: string, operacao: (manager: EntityManager) => Promise<unknown>) => operacao(gerenciador))
-    } as unknown as ExecutorTenant;
+    executarExecutor = jest.fn((_tenantId: string, operacao: (manager: EntityManager) => Promise<unknown>) => operacao(gerenciador));
+    const executor = { executar: executarExecutor } as unknown as ExecutorTenant;
     const criptografia = {
       descriptografar: jest.fn((valor: Buffer) => valor.toString().replace(/^nome-/, ''))
     } as unknown as CriptografiaDadosSensiveis;
@@ -368,27 +368,75 @@ describe('ServicoDashboardClinico', () => {
     expect(salvarOcultacao).not.toHaveBeenCalled();
   });
 
+  it('recusa profissionalId e recursoId que nao sejam UUID antes de consultar o alerta', async () => {
+    await expect(
+      servico.ocultarAlerta(
+        'tenant-1',
+        'tarefa_vencida:profissional-invalido:11111111-1111-4111-8111-111111111111',
+        profissionalUm
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    await expect(
+      servico.ocultarAlerta(
+        'tenant-1',
+        'tarefa_vencida:11111111-1111-4111-8111-111111111111:recurso-invalido',
+        profissionalUm
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(executarExecutor).not.toHaveBeenCalled();
+  });
+
   it('persiste ocultacao individual somente no proprio contexto profissional', async () => {
+    const profissionalUuid = '11111111-1111-4111-8111-111111111111';
+    const outroProfissionalUuid = '22222222-2222-4222-8222-222222222222';
+    const pacienteUuid = '33333333-3333-4333-8333-333333333333';
+    const tarefaUuid = '44444444-4444-4444-8444-444444444444';
+    (registros.get(ProfissionalOrm) as ProfissionalOrm[]).push(
+      profissional(profissionalUuid, 'usuario-uuid'),
+      profissional(outroProfissionalUuid, 'usuario-outro-uuid')
+    );
+    (registros.get(PacienteOrm) as PacienteOrm[]).push(paciente(pacienteUuid, profissionalUuid, 10));
+    (registros.get(AcompanhamentoTarefaOrm) as AcompanhamentoTarefaOrm[]).push({
+      id: tarefaUuid,
+      tenantId: 'tenant-1',
+      pacienteId: pacienteUuid,
+      profissionalId: 'usuario-uuid',
+      titulo: 'Retornar paciente',
+      categoria: 'tarefa',
+      prioridade: 'alta',
+      status: 'pendente',
+      vencimentoEm: diasAntes(2),
+      criadoEm: diasAntes(10),
+      atualizadoEm: diasAntes(2)
+    });
+    const usuarioUuid = usuario('Professional', 'usuario-uuid');
+
     const resultado = await servico.ocultarAlerta(
       'tenant-1',
-      'tarefa_vencida:profissional-1:tarefa-1',
-      profissionalUm
+      `tarefa_vencida:${profissionalUuid}:${tarefaUuid}`,
+      usuarioUuid
     );
 
     expect(resultado).toEqual({
-      alertaId: 'tarefa_vencida:profissional-1:tarefa-1',
+      alertaId: `tarefa_vencida:${profissionalUuid}:${tarefaUuid}`,
       ocultoAteEm: new Date('2026-07-28T15:00:00.000Z')
     });
     expect(salvarOcultacao).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant-1',
-        usuarioId: 'usuario-1',
-        alertaId: 'tarefa_vencida:profissional-1:tarefa-1'
+        usuarioId: 'usuario-uuid',
+        alertaId: `tarefa_vencida:${profissionalUuid}:${tarefaUuid}`
       })
     );
 
     await expect(
-      servico.ocultarAlerta('tenant-1', 'tarefa_vencida:profissional-2:tarefa-outro', profissionalUm)
+      servico.ocultarAlerta(
+        'tenant-1',
+        `tarefa_vencida:${outroProfissionalUuid}:${tarefaUuid}`,
+        usuarioUuid
+      )
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 

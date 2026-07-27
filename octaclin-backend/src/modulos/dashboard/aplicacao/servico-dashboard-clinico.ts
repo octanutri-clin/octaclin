@@ -35,6 +35,7 @@ const TIMEZONE_CLINICO_PADRAO = 'America/Sao_Paulo';
 const STATUS_PACIENTE_INATIVO = new Set(['inativo', 'pausado', 'encerrado', 'fechado']);
 const STATUS_COMUNICACAO_ALERTA = new Set(['pendente', 'falhou', 'recebido']);
 const STATUS_CONSULTA_ATIVA = new Set(['agendada', 'reagendada']);
+const UUID_VALIDO = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TIPOS_ALERTA_OCULTAVEIS = new Set([
   'tarefa_vencida',
   'atendimento_proximo',
@@ -941,8 +942,8 @@ export class ServicoDashboardClinico {
     if (
       excedente.length ||
       (!TIPOS_ALERTA_OCULTAVEIS.has(tipo) && tipo !== 'sem_retorno_risco_alto') ||
-      !/^[a-zA-Z0-9-]+$/.test(profissionalId ?? '') ||
-      !/^[a-zA-Z0-9-]+$/.test(recursoId ?? '')
+      !UUID_VALIDO.test(profissionalId ?? '') ||
+      !UUID_VALIDO.test(recursoId ?? '')
     ) {
       throw new BadRequestException('Alerta invalido.');
     }

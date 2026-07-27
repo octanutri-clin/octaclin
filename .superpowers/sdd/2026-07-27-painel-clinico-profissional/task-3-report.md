@@ -87,6 +87,21 @@ Concluida.
 - Backend build: aprovado.
 - `git diff --check`: aprovado.
 
+## Correcao de review - round 2
+
+- `profissionalId` e `recursoId` codificados no alerta agora exigem UUID valido
+  antes de qualquer execucao do contexto tenant ou consulta ao banco.
+- IDs malformados resultam em `BadRequestException`, sem propagacao de erro
+  PostgreSQL `22P02` ou resposta `500`.
+- Teste unitario cobre separadamente os dois campos invalidos e preserva o
+  cenario de ocultacao valida com fixtures UUID.
+
+## Validacoes da correcao - round 2
+
+- Jest focado do servico: aprovado, `1` suite e `11` testes.
+- Backend typecheck: aprovado nesta atualizacao.
+- `git diff --check`: aprovado nesta atualizacao.
+
 ## Preocupacoes residuais
 
 - A migration `1004` foi validada por teste de contrato SQL e compilacao, mas
