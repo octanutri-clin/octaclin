@@ -503,6 +503,16 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     e `Botao` ainda nao tem classe `focus-visible` propria e continuam
     dependendo da regra global; nao fazia parte do achado desta fase.
 
+- [x] Fase 148 - Foco visivel proprio nos componentes compartilhados de formulario/botao.
+  - `Campo`, `AreaTexto`, `Selecao` (`components/ui/campo.tsx`) e `Botao`
+    (`components/ui/botao.tsx`) passam a ter a mesma classe
+    `focus-visible:outline...` da Fase 147, em vez de depender so da regra
+    global. Esses 4 componentes sao usados em 23 arquivos/37 imports do
+    `octaclin-web`.
+  - Data: 2026-07-27.
+  - Validacoes: `pnpm --dir octaclin-web typecheck`, `lint`, `build`, `test:a11y` (10 passed), `pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs --project=desktop-chromium --reporter=list` (21 passed).
+  - Saida entregue: `fase-148-foco-visivel-componentes-compartilhados.md`.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.
