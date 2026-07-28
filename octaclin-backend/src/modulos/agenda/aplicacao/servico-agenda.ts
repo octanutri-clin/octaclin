@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager, IsNull, LessThan, MoreThan, MoreThanOrEqual } from 'typeorm';
+import { EntityManager, In, IsNull, LessThan, MoreThan, MoreThanOrEqual, QueryFailedError } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { resolverPacienteIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-paciente';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ProcessadorNotificacoes } from '../../comunicacoes/aplicacao/processador-notificacoes';
@@ -11,12 +12,13 @@ import { TemplateMensagemOrm } from '../../comunicacoes/infraestrutura/template-
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
-import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
+import { AgendaConsultaOrm, StatusAgendaConsulta } from '../infraestrutura/agenda-consulta.orm';
 import {
   CancelarConsultaAgendaDto,
   ConsultaAgendaRespostaDto,
   CriarConsultaAgendaDto,
   NotificacoesConsultaAgenda,
+  RegistrarDesfechoConsultaAgendaDto,
   RemarcarConsultaAgendaDto,
   ResultadoNotificacaoAgenda
 } from './dtos';
@@ -24,6 +26,12 @@ import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar'
 import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from './servico-google-calendar';
 
 const EVENTO_CONSULTA_AGENDADA = 'agenda.consulta.agendada';
+const EVENTO_CONSULTA_CANCELADA = 'agenda.consulta.cancelada';
+type OrigemCancelamentoConsulta = 'profissional' | 'paciente' | 'google';
+const CONSTRAINT_SOBREPOSICAO_AGENDA = 'ex_agenda_consultas_profissional_horario_ativo';
+const MENSAGEM_CONFLITO_HORARIO = 'Ja existe consulta agendada neste horario para o profissional.';
+const STATUS_CONSULTA_ATIVOS: StatusAgendaConsulta[] = ['agendada', 'reagendada'];
+const STATUS_CONSULTA_TERMINAIS: StatusAgendaConsulta[] = ['concluida', 'falta', 'cancelada'];
 
 interface ContextoConsultaCriada {
   consulta: AgendaConsultaOrm;
@@ -102,7 +110,7 @@ export class ServicoAgenda {
     const notificacoes: NotificacoesConsultaAgenda =
       dados.enviarNotificacoes === false
         ? { email: { status: 'ignorado', motivo: 'notificacoes_desativadas' }, whatsapp: { status: 'ignorado', motivo: 'notificacoes_desativadas' } }
-        : await this.enviarNotificacoes(tenantId, contexto);
+        : await this.enviarNotificacoes(tenantId, contexto, EVENTO_CONSULTA_AGENDADA);
 
     const consultaAtualizada = await this.atualizarResultadoIntegracoes(tenantId, contexto.consulta.id, google, notificacoes);
     return this.mapearResposta(consultaAtualizada, contexto.pacienteNome, contexto.profissionalNome);
@@ -143,16 +151,20 @@ export class ServicoAgenda {
     const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
       const atual = await repositorio.findOne({
-        where: { id: consultaId, tenantId, ...(profissionalIdEscopo ? { profissionalId: profissionalIdEscopo } : {}) }
+        where: { id: consultaId, tenantId, ...(profissionalIdEscopo ? { profissionalId: profissionalIdEscopo } : {}) },
+        lock: { mode: 'pessimistic_write' }
       });
       if (!atual) throw new NotFoundException('Consulta nao encontrada.');
-      if (atual.status === 'cancelada') throw new BadRequestException('Consulta cancelada nao pode ser remarcada.');
+      if (STATUS_CONSULTA_TERMINAIS.includes(atual.status)) {
+        throw new BadRequestException('Consulta encerrada nao pode ser remarcada.');
+      }
 
       await this.validarConflitoHorario(gerenciador, tenantId, atual.profissionalId, { inicioEm, fimEm }, atual.id);
       const inicioAnterior = atual.inicioEm;
       const fimAnterior = atual.fimEm;
       atual.inicioEm = inicioEm;
       atual.fimEm = fimEm;
+      atual.status = 'reagendada';
       atual.local = dados.local !== undefined ? textoOpcional(dados.local) : atual.local;
       atual.observacoes = dados.observacoes !== undefined ? textoOpcional(dados.observacoes) : atual.observacoes;
       atual.payload = this.adicionarHistorico(atual.payload, {
@@ -163,7 +175,7 @@ export class ServicoAgenda {
         inicioNovoEm: inicioEm.toISOString(),
         fimNovoEm: fimEm.toISOString()
       });
-      return repositorio.save(atual);
+      return this.salvarConsultaProtegidaContraSobreposicao(() => repositorio.save(atual));
     });
 
     if (!propagarParaGoogle) return this.mapearResposta(consulta);
@@ -194,6 +206,53 @@ export class ServicoAgenda {
     return this.mapearResposta(await this.aplicarResultadoGoogle(tenantId, consulta.id, google));
   }
 
+  async registrarDesfecho(
+    tenantId: string,
+    consultaId: string,
+    dados: RegistrarDesfechoConsultaAgendaDto,
+    usuario: UsuarioAutenticado
+  ): Promise<ConsultaAgendaRespostaDto> {
+    const profissionalIdDoUsuario = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)
+    );
+
+    if (dados.status === 'cancelada') {
+      return this.executarCancelamento(
+        tenantId,
+        consultaId,
+        {},
+        { profissionalId: profissionalIdDoUsuario },
+        'profissional',
+        true,
+        false
+      );
+    }
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
+      const consulta = await repositorio.findOne({
+        where: {
+          id: consultaId,
+          tenantId,
+          ...(profissionalIdDoUsuario ? { profissionalId: profissionalIdDoUsuario } : {})
+        },
+        lock: { mode: 'pessimistic_write' }
+      });
+      if (!consulta) throw new NotFoundException('Consulta nao encontrada.');
+      if (STATUS_CONSULTA_TERMINAIS.includes(consulta.status)) {
+        throw new BadRequestException('Consulta encerrada nao pode receber novo desfecho.');
+      }
+
+      consulta.status = dados.status;
+      consulta.payload = this.adicionarHistorico(consulta.payload, {
+        acao: 'desfecho_registrado',
+        status: dados.status,
+        registradoEm: new Date().toISOString()
+      });
+      return this.mapearResposta(await repositorio.save(consulta));
+    });
+  }
+
   async cancelarConsulta(
     tenantId: string,
     consultaId: string,
@@ -203,7 +262,25 @@ export class ServicoAgenda {
     const profissionalIdDoUsuario = await this.executorTenant.executar(tenantId, (gerenciador) =>
       resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)
     );
-    return this.executarCancelamento(tenantId, consultaId, dados, profissionalIdDoUsuario, true);
+    return this.executarCancelamento(
+      tenantId,
+      consultaId,
+      dados,
+      { profissionalId: profissionalIdDoUsuario },
+      'profissional',
+      true
+    );
+  }
+
+  async desmarcarConsultaPeloPaciente(
+    tenantId: string,
+    consultaId: string,
+    usuarioId: string
+  ): Promise<ConsultaAgendaRespostaDto> {
+    const pacienteId = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      resolverPacienteIdDoUsuario(gerenciador, tenantId, usuarioId)
+    );
+    return this.executarCancelamento(tenantId, consultaId, {}, { pacienteId }, 'paciente', true);
   }
 
   async cancelarConsultaComoSistema(
@@ -212,28 +289,43 @@ export class ServicoAgenda {
     dados: CancelarConsultaAgendaDto,
     profissionalId: string
   ): Promise<ConsultaAgendaRespostaDto> {
-    return this.executarCancelamento(tenantId, consultaId, dados, profissionalId, false);
+    return this.executarCancelamento(tenantId, consultaId, dados, { profissionalId }, 'google', false);
   }
 
   private async executarCancelamento(
     tenantId: string,
     consultaId: string,
     dados: CancelarConsultaAgendaDto,
-    profissionalIdEscopo: string | undefined,
-    propagarParaGoogle: boolean
+    escopo: { profissionalId?: string; pacienteId?: string },
+    origem: OrigemCancelamentoConsulta,
+    propagarParaGoogle: boolean,
+    permitirCancelamentoIdempotente = true
   ): Promise<ConsultaAgendaRespostaDto> {
     const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
       const atual = await repositorio.findOne({
-        where: { id: consultaId, tenantId, ...(profissionalIdEscopo ? { profissionalId: profissionalIdEscopo } : {}) }
+        where: {
+          id: consultaId,
+          tenantId,
+          ...(escopo.profissionalId ? { profissionalId: escopo.profissionalId } : {}),
+          ...(escopo.pacienteId ? { pacienteId: escopo.pacienteId } : {})
+        },
+        lock: { mode: 'pessimistic_write' }
       });
       if (!atual) throw new NotFoundException('Consulta nao encontrada.');
-      if (atual.status === 'cancelada') return atual;
+      if (atual.status === 'cancelada' && permitirCancelamentoIdempotente) return atual;
+      if (STATUS_CONSULTA_TERMINAIS.includes(atual.status)) {
+        throw new BadRequestException(
+          permitirCancelamentoIdempotente
+            ? 'Consulta encerrada nao pode ser cancelada.'
+            : 'Consulta encerrada nao pode receber novo desfecho.'
+        );
+      }
 
       atual.status = 'cancelada';
       atual.payload = this.adicionarHistorico(atual.payload, {
         acao: 'cancelada',
-        origem: propagarParaGoogle ? 'octaclin' : 'google_agenda',
+        origem,
         motivo: textoOpcional(dados.motivo),
         canceladaEm: new Date().toISOString()
       });
@@ -253,7 +345,31 @@ export class ServicoAgenda {
         })
       : { sincronizado: false as const, motivo: 'evento_google_ausente' };
 
-    return this.mapearResposta(await this.aplicarResultadoGoogle(tenantId, consulta.id, google));
+    const consultaFinal = await this.aplicarResultadoGoogle(tenantId, consulta.id, google);
+
+    if (origem === 'profissional') {
+      await this.notificarCancelamentoAoPaciente(tenantId, consultaFinal);
+    }
+
+    return this.mapearResposta(consultaFinal);
+  }
+
+  private async notificarCancelamentoAoPaciente(tenantId: string, consulta: AgendaConsultaOrm): Promise<void> {
+    const payload = (consulta.payload ?? {}) as Record<string, unknown>;
+    const emailContato = typeof payload.emailContato === 'string' ? payload.emailContato : undefined;
+    const whatsappContato = typeof payload.whatsappContato === 'string' ? payload.whatsappContato : undefined;
+    if (!emailContato && !whatsappContato) return;
+
+    const pacienteNome = this.nomePacientePayload(consulta);
+    const contexto: ContextoConsultaCriada = {
+      consulta,
+      pacienteNome,
+      profissionalNome: this.nomeProfissionalPayload(consulta),
+      emailContato,
+      whatsappContato,
+      textoMensagem: this.montarTextoMensagemCancelamento(pacienteNome, consulta.inicioEm)
+    };
+    await this.enviarNotificacoes(tenantId, contexto, EVENTO_CONSULTA_CANCELADA);
   }
 
   private async criarRegistroInterno(
@@ -287,27 +403,29 @@ export class ServicoAgenda {
       const whatsappContato = textoOpcional(dados.whatsappContato) ?? this.obterWhatsappPaciente(paciente);
       const textoMensagem = this.montarTextoMensagem(pacienteNome, inicioEm);
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
-      const consulta = await repositorio.save(
-        repositorio.create({
-          tenantId,
-          pacienteId: paciente.id,
-          profissionalId,
-          titulo: `Consulta - ${pacienteNome}`,
-          inicioEm,
-          fimEm,
-          timezone: process.env.GOOGLE_CALENDAR_TIMEZONE ?? 'America/Sao_Paulo',
-          status: 'agendada',
-          local: textoOpcional(dados.local),
-          observacoes: textoOpcional(dados.observacoes),
-          notificacoes: {},
-          payload: {
-            pacienteNome,
-            profissionalNome,
-            emailContato,
-            whatsappContato,
-            textoMensagem
-          }
-        })
+      const consulta = await this.salvarConsultaProtegidaContraSobreposicao(() =>
+        repositorio.save(
+          repositorio.create({
+            tenantId,
+            pacienteId: paciente.id,
+            profissionalId,
+            titulo: `Consulta - ${pacienteNome}`,
+            inicioEm,
+            fimEm,
+            timezone: process.env.GOOGLE_CALENDAR_TIMEZONE ?? 'America/Sao_Paulo',
+            status: 'agendada',
+            local: textoOpcional(dados.local),
+            observacoes: textoOpcional(dados.observacoes),
+            notificacoes: {},
+            payload: {
+              pacienteNome,
+              profissionalNome,
+              emailContato,
+              whatsappContato,
+              textoMensagem
+            }
+          })
+        )
       );
 
       return { consulta, pacienteNome, profissionalNome, emailContato, whatsappContato, textoMensagem };
@@ -322,7 +440,10 @@ export class ServicoAgenda {
   ): Promise<AgendaConsultaOrm> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
-      const consulta = await repositorio.findOne({ where: { id: consultaId, tenantId } });
+      const consulta = await repositorio.findOne({
+        where: { id: consultaId, tenantId },
+        lock: { mode: 'pessimistic_write' }
+      });
       if (!consulta) throw new NotFoundException('Consulta nao encontrada.');
 
       if (google.sincronizado) {
@@ -366,7 +487,7 @@ export class ServicoAgenda {
   ) {
     if (!profissionalId) return;
     const consultas = await gerenciador.getRepository(AgendaConsultaOrm).find({
-      where: { tenantId, profissionalId, status: 'agendada' },
+      where: { tenantId, profissionalId, status: In(STATUS_CONSULTA_ATIVOS) },
       take: 500
     });
     const conflitoConsulta = consultas.some(
@@ -375,7 +496,7 @@ export class ServicoAgenda {
         consulta.inicioEm < janela.fimEm &&
         consulta.fimEm > janela.inicioEm
     );
-    if (conflitoConsulta) throw new BadRequestException('Ja existe consulta agendada neste horario para o profissional.');
+    if (conflitoConsulta) throw new BadRequestException(MENSAGEM_CONFLITO_HORARIO);
 
     const conflitoExterno = await gerenciador.getRepository(AgendaBloqueioExternoOrm).exists({
       where: {
@@ -385,7 +506,33 @@ export class ServicoAgenda {
         fimEm: MoreThan(janela.inicioEm)
       }
     });
-    if (conflitoExterno) throw new BadRequestException('Ja existe consulta agendada neste horario para o profissional.');
+    if (conflitoExterno) throw new BadRequestException(MENSAGEM_CONFLITO_HORARIO);
+  }
+
+  private async salvarConsultaProtegidaContraSobreposicao(
+    operacao: () => Promise<AgendaConsultaOrm>
+  ): Promise<AgendaConsultaOrm> {
+    try {
+      return await operacao();
+    } catch (erro) {
+      if (this.ehViolacaoDaConstraintDeSobreposicao(erro)) {
+        throw new BadRequestException(MENSAGEM_CONFLITO_HORARIO);
+      }
+      throw erro;
+    }
+  }
+
+  private ehViolacaoDaConstraintDeSobreposicao(erro: unknown): boolean {
+    if (!(erro instanceof QueryFailedError)) return false;
+
+    const erroPostgres: unknown = erro.driverError;
+    if (typeof erroPostgres !== 'object' || erroPostgres === null) return false;
+    if (!('code' in erroPostgres) || !('constraint' in erroPostgres)) return false;
+
+    return (
+      erroPostgres.code === '23P01' &&
+      erroPostgres.constraint === CONSTRAINT_SOBREPOSICAO_AGENDA
+    );
   }
 
   private calcularFim(inicioEm: Date, dados: { fimEm?: string; duracaoMinutos?: number }) {
@@ -402,14 +549,14 @@ export class ServicoAgenda {
     };
   }
 
-  private async enviarNotificacoes(tenantId: string, contexto: ContextoConsultaCriada) {
+  private async enviarNotificacoes(tenantId: string, contexto: ContextoConsultaCriada, evento: string) {
     const [canais, templates] = await Promise.all([
       this.comunicacoes.listarCanais(tenantId),
       this.comunicacoes.listarTemplates(tenantId)
     ]);
 
-    const email = await this.enviarNotificacao(tenantId, 'email', contexto, canais, templates);
-    const whatsapp = await this.enviarNotificacao(tenantId, 'whatsapp', contexto, canais, templates);
+    const email = await this.enviarNotificacao(tenantId, 'email', contexto, canais, templates, evento);
+    const whatsapp = await this.enviarNotificacao(tenantId, 'whatsapp', contexto, canais, templates, evento);
     return { email, whatsapp };
   }
 
@@ -418,7 +565,8 @@ export class ServicoAgenda {
     tipo: 'email' | 'whatsapp',
     contexto: ContextoConsultaCriada,
     canais: CanalNotificacaoOrm[],
-    templates: TemplateMensagemOrm[]
+    templates: TemplateMensagemOrm[],
+    evento: string
   ): Promise<ResultadoNotificacaoAgenda> {
     const destino = tipo === 'email' ? contexto.emailContato : contexto.whatsappContato;
     if (!destino) return { status: 'ignorado', motivo: 'contato_ausente' };
@@ -426,9 +574,9 @@ export class ServicoAgenda {
     const canal = canais.find((item) => item.tipo === tipo && item.ativo);
     if (!canal) return { status: 'ignorado', motivo: 'canal_ausente' };
 
-    const template = this.selecionarTemplateNotificacao(templates, tipo, EVENTO_CONSULTA_AGENDADA);
+    const template = this.selecionarTemplateNotificacao(templates, tipo, evento);
     if (!template) return { status: 'ignorado', motivo: 'template_ausente' };
-    const payload = this.montarPayloadNotificacao(tipo, template, contexto, destino, EVENTO_CONSULTA_AGENDADA);
+    const payload = this.montarPayloadNotificacao(tipo, template, contexto, destino, evento);
 
     try {
       const mensagem = await this.comunicacoes.dispararMensagem(tenantId, {
@@ -470,7 +618,7 @@ export class ServicoAgenda {
       consultaId: contexto.consulta.id,
       consultaInicioEm: contexto.consulta.inicioEm.toISOString(),
       consultaFimEm: contexto.consulta.fimEm.toISOString(),
-      assunto: 'Consulta agendada - OctaClin',
+      assunto: evento === EVENTO_CONSULTA_CANCELADA ? 'Consulta cancelada - OctaClin' : 'Consulta agendada - OctaClin',
       texto: contexto.textoMensagem,
       observacao: contexto.textoMensagem
     };
@@ -528,6 +676,13 @@ export class ServicoAgenda {
     const hora = this.formatarHoraConsulta(inicioEm);
 
     return `Ola ${nomePaciente}, tudo bem?\n\nPassando para avisar que sua consulta foi agendada para ${data} as ${hora}.\n\nQualquer coisa estou a disposicao!`;
+  }
+
+  private montarTextoMensagemCancelamento(nomePaciente: string, inicioEm: Date) {
+    const data = this.formatarDataConsulta(inicioEm);
+    const hora = this.formatarHoraConsulta(inicioEm);
+
+    return `Ola ${nomePaciente}, tudo bem?\n\nSua consulta agendada para ${data} as ${hora} foi cancelada pelo profissional.\n\nEntre em contato para reagendar quando for conveniente.`;
   }
 
   private formatarDataConsulta(inicioEm: Date, timezone = 'America/Sao_Paulo') {

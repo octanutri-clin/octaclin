@@ -14,10 +14,12 @@ describe('ServicoConexaoGoogleCalendar', () => {
   function construirServico() {
     const gerenciadorFalso = criarGerenciadorFalso();
     const executorTenant = { executar: jest.fn((_tenantId: string, callback: (gerenciador: any) => any) => callback(gerenciadorFalso)) } as unknown as ExecutorTenant;
-    const fonteDados = { transaction: jest.fn() } as unknown as DataSource;
+    const repositorioCanaisWatch = { delete: jest.fn(async () => undefined) };
+    const fonteDados = { getRepository: jest.fn(() => repositorioCanaisWatch) } as unknown as DataSource;
     const redis = criarRedisFalso();
-    const servico = new ServicoConexaoGoogleCalendar(executorTenant, criptografia, redis as any);
-    return { servico, gerenciadorFalso, executorTenant, redis };
+    const googleCalendar = { pararCanalWatch: jest.fn(async () => undefined) };
+    const servico = new ServicoConexaoGoogleCalendar(executorTenant, criptografia, redis as any, googleCalendar as any, fonteDados);
+    return { servico, gerenciadorFalso, executorTenant, redis, googleCalendar, repositorioCanaisWatch };
   }
 
   function criarRedisFalso() {
@@ -210,6 +212,74 @@ describe('ServicoConexaoGoogleCalendar', () => {
       expect(ultimaChamada.canalWatchId).toBeUndefined();
       expect(ultimaChamada.canalRecursoId).toBeUndefined();
       expect(ultimaChamada.canalExpiraEm).toBeUndefined();
+    });
+
+    it('para o canal de watch no Google e remove o registro local quando havia canal ativo', async () => {
+      process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+      process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
+      const { servico, gerenciadorFalso, googleCalendar, repositorioCanaisWatch } = construirServico();
+      const repositorio = gerenciadorFalso.getRepository();
+      const refreshTokenOriginal = 'refresh-token-x';
+      await repositorio.save({
+        tenantId: 'tenant-1',
+        profissionalId: 'profissional-1',
+        refreshTokenCriptografado: criptografia.criptografar(refreshTokenOriginal),
+        calendarId: 'calendario-x',
+        conectadoEm: new Date(),
+        canalWatchId: 'watch-1',
+        canalRecursoId: 'recurso-1',
+        canalExpiraEm: new Date()
+      });
+
+      await servico.desconectar('tenant-1', 'profissional-1');
+
+      expect(googleCalendar.pararCanalWatch).toHaveBeenCalledWith(
+        { clientId: 'client-id', clientSecret: 'client-secret', refreshToken: refreshTokenOriginal, calendarId: 'calendario-x' },
+        'watch-1',
+        'recurso-1'
+      );
+      expect(repositorioCanaisWatch.delete).toHaveBeenCalledWith({ canalWatchId: 'watch-1' });
+    });
+
+    it('nao chama o Google e conclui a desconexao quando nao havia canal de watch ativo', async () => {
+      const { servico, gerenciadorFalso, googleCalendar, repositorioCanaisWatch } = construirServico();
+      const repositorio = gerenciadorFalso.getRepository();
+      await repositorio.save({
+        tenantId: 'tenant-1',
+        profissionalId: 'profissional-1',
+        refreshTokenCriptografado: criptografia.criptografar('refresh-token-x'),
+        calendarId: 'primary',
+        conectadoEm: new Date()
+      });
+
+      await servico.desconectar('tenant-1', 'profissional-1');
+
+      expect(googleCalendar.pararCanalWatch).not.toHaveBeenCalled();
+      expect(repositorioCanaisWatch.delete).not.toHaveBeenCalled();
+    });
+
+    it('conclui a desconexao local mesmo quando parar o canal no Google falha', async () => {
+      process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+      process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
+      const { servico, gerenciadorFalso, googleCalendar } = construirServico();
+      googleCalendar.pararCanalWatch.mockRejectedValueOnce(new Error('canal ja expirado'));
+      const repositorio = gerenciadorFalso.getRepository();
+      await repositorio.save({
+        tenantId: 'tenant-1',
+        profissionalId: 'profissional-1',
+        refreshTokenCriptografado: criptografia.criptografar('refresh-token-x'),
+        calendarId: 'primary',
+        conectadoEm: new Date(),
+        canalWatchId: 'watch-1',
+        canalRecursoId: 'recurso-1',
+        canalExpiraEm: new Date()
+      });
+
+      await expect(servico.desconectar('tenant-1', 'profissional-1')).resolves.toBeUndefined();
+
+      const chamadasSave = (repositorio.save as jest.Mock).mock.calls;
+      const ultimaChamada = chamadasSave[chamadasSave.length - 1][0];
+      expect(ultimaChamada.desconectadoEm).toBeInstanceOf(Date);
     });
   });
 });

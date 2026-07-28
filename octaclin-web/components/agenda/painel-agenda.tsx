@@ -1,6 +1,7 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   CalendarCheck,
   CheckCircle2,
@@ -11,6 +12,7 @@ import {
   MessageCircle,
   RefreshCcw,
   Save,
+  UserX,
   Video,
   XCircle
 } from 'lucide-react';
@@ -22,16 +24,17 @@ import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi } from '@/lib/ag
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
 import {
   aprovarSolicitacaoPublicaAgenda,
-  cancelarConsultaAgenda,
   carregarBootstrapAgenda,
   ConexaoGoogleAgendaStatus,
   conectarGoogleAgenda,
   ConsultaAgendaApi,
   criarConsultaAgenda,
+  DesfechoConsultaAgenda,
   desconectarGoogleAgenda,
   NotificacoesConsultaAgenda,
   obterStatusGoogleAgenda,
   recusarSolicitacaoPublicaAgenda,
+  registrarDesfechoConsulta,
   remarcarConsultaAgenda,
   rotacionarLinkPublicoAgenda
 } from '@/lib/agenda-api';
@@ -140,12 +143,47 @@ function statusConfirmacao(notificacoes: NotificacoesConsultaAgenda) {
   return 'Aguardando confirmacao';
 }
 
+function rotuloStatusConsulta(status: ConsultaAgendaApi['status']) {
+  const rotulos: Record<ConsultaAgendaApi['status'], string> = {
+    agendada: 'Agendada',
+    reagendada: 'Reagendada',
+    concluida: 'Concluida',
+    falta: 'Falta',
+    cancelada: 'Cancelada'
+  };
+  return rotulos[status];
+}
+
+function origemCancelamentoConsulta(consulta: ConsultaAgendaApi): 'profissional' | 'paciente' | 'google' | undefined {
+  const historico = Array.isArray((consulta.payload as { historico?: unknown })?.historico)
+    ? ((consulta.payload as { historico: unknown[] }).historico as Array<Record<string, unknown>>)
+    : [];
+  const ultimo = historico[historico.length - 1];
+  const origem = ultimo?.origem;
+  return origem === 'profissional' || origem === 'paciente' || origem === 'google' ? origem : undefined;
+}
+
+function rotuloStatusConsultaCompleto(consulta: ConsultaAgendaApi) {
+  if (consulta.status !== 'cancelada') return rotuloStatusConsulta(consulta.status);
+  const origem = origemCancelamentoConsulta(consulta);
+  if (origem === 'paciente') return 'Desmarcada pelo paciente';
+  if (origem === 'profissional') return 'Cancelada pelo profissional';
+  if (origem === 'google') return 'Cancelada na Google Agenda';
+  return rotuloStatusConsulta(consulta.status);
+}
+
+function consultaAtiva(consulta: ConsultaAgendaApi) {
+  return consulta.status === 'agendada' || consulta.status === 'reagendada';
+}
+
 function descricaoLinkPublico(linkPublico: LinkAgendamentoPublicoApi | null) {
   if (!linkPublico) return 'Nenhum link ativo. Rotacione para gerar o primeiro endereco publico.';
   return linkPublico.urlPublica ?? linkPublico.mensagemUrlPublica;
 }
 
 export function PainelAgenda() {
+  const parametros = useSearchParams();
+  const parametrosIniciaisAplicados = useRef(false);
   const [consultas, setConsultas] = useState<ConsultaAgendaApi[]>([]);
   const [pacientes, setPacientes] = useState<RespostaPaginada<PacienteResumo> | null>(null);
   const [profissionais, setProfissionais] = useState<RespostaPaginada<ProfissionalResumo> | null>(null);
@@ -163,7 +201,7 @@ export function PainelAgenda() {
   const [statusGoogleAgenda, setStatusGoogleAgenda] = useState<ConexaoGoogleAgendaStatus | null>(null);
 
   const pacientesLista = useMemo(() => pacientes?.itens ?? [], [pacientes]);
-  const profissionaisLista = profissionais?.itens ?? [];
+  const profissionaisLista = useMemo(() => profissionais?.itens ?? [], [profissionais]);
   const proximasConsultas = useMemo(
     () => [...consultas].sort((a, b) => new Date(a.inicioEm).getTime() - new Date(b.inicioEm).getTime()),
     [consultas]
@@ -210,6 +248,26 @@ export function PainelAgenda() {
       .then(setStatusGoogleAgenda)
       .catch(() => setStatusGoogleAgenda({ conectado: false }));
   }, []);
+
+  useEffect(() => {
+    if (parametrosIniciaisAplicados.current || !pacientesLista.length || !profissionaisLista.length) return;
+    parametrosIniciaisAplicados.current = true;
+
+    const pacienteId = parametros.get('pacienteId');
+    const profissionalId = parametros.get('profissionalId');
+    const paciente = pacienteId ? pacientePorId(pacientesLista, pacienteId) : undefined;
+    const profissionalValido = profissionalId && profissionalPorId(profissionaisLista, profissionalId) ? profissionalId : undefined;
+
+    if (!paciente && !profissionalValido) return;
+    setFormulario((atual) => ({
+      ...atual,
+      pacienteId: paciente?.id ?? atual.pacienteId,
+      profissionalId: profissionalValido ?? paciente?.profissionalResponsavelId ?? atual.profissionalId,
+      emailContato: paciente ? contatoEmail(paciente.contato) : atual.emailContato,
+      whatsappContato: paciente ? contatoWhatsapp(paciente.contato) : atual.whatsappContato
+    }));
+    setSucesso('Dados do retorno preenchidos. Confirme data e hora antes de agendar.');
+  }, [pacientesLista, profissionaisLista, parametros]);
 
   function selecionarPaciente(pacienteId: string) {
     const paciente = pacientePorId(pacientesLista, pacienteId);
@@ -303,20 +361,22 @@ export function PainelAgenda() {
     }
   }
 
-  async function cancelar(evento: FormEvent<HTMLFormElement>, consulta: ConsultaAgendaApi) {
-    evento.preventDefault();
-    const dados = new FormData(evento.currentTarget);
-    const motivo = String(dados.get('motivo') ?? '').trim();
-
+  async function registrarDesfecho(consulta: ConsultaAgendaApi, status: DesfechoConsultaAgenda) {
+    const rotulo = rotuloStatusConsulta(status).toLocaleLowerCase('pt-BR');
+    if (!window.confirm(`Registrar a consulta como ${rotulo}? Este desfecho nao podera ser alterado.`)) return;
     setErro(null);
     setSucesso(null);
     setProcessandoConsultaId(consulta.id);
     try {
-      const cancelada = await cancelarConsultaAgenda(consulta.id, { motivo: motivo || undefined });
-      atualizarConsulta(cancelada);
-      setSucesso('Consulta cancelada. Google Calendar foi atualizado conforme configuracao.');
+      const atualizada = await registrarDesfechoConsulta(consulta.id, status);
+      atualizarConsulta(atualizada);
+      setSucesso(
+        status === 'cancelada'
+          ? 'Consulta cancelada. Google Calendar foi atualizado conforme configuracao.'
+          : `Consulta registrada como ${rotulo}.`
+      );
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao cancelar consulta.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar desfecho da consulta.');
     } finally {
       setProcessandoConsultaId(null);
     }
@@ -545,7 +605,7 @@ export function PainelAgenda() {
                     type="checkbox"
                     checked={formulario.enviarNotificacoes}
                     onChange={(evento) => setFormulario((atual) => ({ ...atual, enviarNotificacoes: evento.target.checked }))}
-                    className="h-4 w-4"
+                    className="h-4 w-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
                   />
                   Enviar e-mail e mensagem ao salvar
                 </label>
@@ -729,7 +789,7 @@ export function PainelAgenda() {
                               {consulta.pacienteNome ?? paciente?.nome ?? consulta.titulo}
                             </h3>
                             <span className="rounded-md border border-primaria-suave bg-superficie-hover px-2 py-1 text-xs font-medium text-primaria-forte">
-                              {consulta.status}
+                              {rotuloStatusConsultaCompleto(consulta)}
                             </span>
                           </div>
                           <div className="mt-2 grid gap-1 text-sm text-texto-suave sm:grid-cols-2">
@@ -778,7 +838,7 @@ export function PainelAgenda() {
                         </a>
                       ) : null}
 
-                      {consulta.status === 'agendada' ? (
+                      {consultaAtiva(consulta) ? (
                         <div className="mt-3 grid gap-3 border-t border-linha pt-3 xl:grid-cols-[minmax(0,1fr)_minmax(220px,320px)]">
                           <form onSubmit={(evento) => remarcar(evento, consulta)} className="grid gap-2">
                             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_120px_minmax(140px,1fr)]">
@@ -789,7 +849,7 @@ export function PainelAgenda() {
                                   name="inicioEm"
                                   type="datetime-local"
                                   defaultValue={valorDatetimeLocal(new Date(consulta.inicioEm))}
-                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
                                 />
                               </label>
                               <label className="grid gap-1 text-xs font-semibold text-texto-suave">
@@ -802,7 +862,7 @@ export function PainelAgenda() {
                                   max={480}
                                   step={5}
                                   defaultValue={duracaoConsultaMinutos(consulta)}
-                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
                                 />
                               </label>
                               <label className="grid gap-1 text-xs font-semibold text-texto-suave">
@@ -811,7 +871,7 @@ export function PainelAgenda() {
                                   aria-label="Novo local"
                                   name="local"
                                   defaultValue={consulta.local ?? ''}
-                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
                                 />
                               </label>
                             </div>
@@ -823,23 +883,45 @@ export function PainelAgenda() {
                             </div>
                           </form>
 
-                          <form onSubmit={(evento) => cancelar(evento, consulta)} className="grid gap-2">
-                            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                              Motivo do cancelamento
-                              <input
-                                aria-label="Motivo do cancelamento"
-                                name="motivo"
-                                className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
-                                placeholder="Opcional"
-                              />
-                            </label>
-                            <div className="flex justify-end">
-                              <Botao type="submit" disabled={processandoConsultaId === consulta.id}>
-                                <XCircle size={15} />
-                                Cancelar consulta
+                          <div className="flex items-end justify-end">
+                            <div
+                              className="flex h-10 items-center gap-2"
+                              role="group"
+                              aria-label="Registrar desfecho da consulta"
+                            >
+                              <Botao
+                                type="button"
+                                className="h-9 w-9 p-0"
+                                aria-label="Concluir consulta"
+                                title="Concluir"
+                                disabled={processandoConsultaId === consulta.id}
+                                onClick={() => void registrarDesfecho(consulta, 'concluida')}
+                              >
+                                <CheckCircle2 size={17} />
+                              </Botao>
+                              <Botao
+                                type="button"
+                                className="h-9 w-9 p-0"
+                                aria-label="Registrar falta"
+                                title="Falta"
+                                disabled={processandoConsultaId === consulta.id}
+                                onClick={() => void registrarDesfecho(consulta, 'falta')}
+                              >
+                                <UserX size={17} />
+                              </Botao>
+                              <Botao
+                                type="button"
+                                variante="perigo"
+                                className="h-9 w-9 p-0"
+                                aria-label="Cancelar consulta"
+                                title="Cancelar"
+                                disabled={processandoConsultaId === consulta.id}
+                                onClick={() => void registrarDesfecho(consulta, 'cancelada')}
+                              >
+                                <XCircle size={17} />
                               </Botao>
                             </div>
-                          </form>
+                          </div>
                         </div>
                       ) : null}
                     </article>

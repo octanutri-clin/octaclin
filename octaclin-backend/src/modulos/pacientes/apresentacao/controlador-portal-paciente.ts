@@ -5,6 +5,7 @@ import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { ServicoAgenda } from '../../agenda/aplicacao/servico-agenda';
 import {
   AtualizarPerfilPacientePortalDto,
   RegistrarCheckinRapidoPortalDto,
@@ -19,6 +20,7 @@ import { ServicoPortalPaciente } from '../aplicacao/servico-portal-paciente';
 export class ControladorPortalPaciente {
   constructor(
     private readonly servicoPortal: ServicoPortalPaciente,
+    private readonly servicoAgenda: ServicoAgenda,
     private readonly servicoAuditoria: ServicoAuditoria
   ) {}
 
@@ -153,6 +155,32 @@ export class ControladorPortalPaciente {
     @Param('respostaId', ParseUUIDPipe) respostaId: string
   ) {
     return this.servicoPortal.obterFormularioRespondido(usuario.tenantId, usuario.usuarioId, respostaId);
+  }
+
+  @Post('paciente/consultas/:consultaId/desmarcar')
+  async desmarcarConsulta(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('consultaId', ParseUUIDPipe) consultaId: string
+  ) {
+    const consulta = await this.servicoAgenda.desmarcarConsultaPeloPaciente(
+      usuario.tenantId,
+      consultaId,
+      usuario.usuarioId
+    );
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'portal.paciente.consulta.desmarcar',
+      recursoTipo: 'agenda_consulta',
+      recursoId: consulta.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        origem: 'paciente'
+      }
+    });
+    return consulta;
   }
 
   private obterUserAgent(requisicao: Request): string | undefined {

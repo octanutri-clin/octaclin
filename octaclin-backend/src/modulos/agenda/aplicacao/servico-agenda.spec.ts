@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { QueryFailedError } from 'typeorm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
@@ -23,6 +24,18 @@ const usuarioProfissional: UsuarioAutenticado = {
   permissoes: []
 };
 
+function criarErroExclusao(constraint = 'ex_agenda_consultas_profissional_horario_ativo'): QueryFailedError {
+  const erroPostgres = Object.assign(new Error('conflicting key value violates exclusion constraint'), {
+    code: '23P01',
+    constraint
+  });
+  return new QueryFailedError('insert into agenda_consultas', [], erroPostgres);
+}
+
+function criarErroSobreposicaoAgenda(): QueryFailedError {
+  return criarErroExclusao();
+}
+
 function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
   let ultimoSalvo: Record<string, unknown> | null = null;
   return {
@@ -31,13 +44,45 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
       ultimoSalvo = { id: `${nome}-1`, criadoEm: new Date(), atualizadoEm: new Date(), ...entrada };
       return ultimoSalvo;
     }),
-    find: jest.fn(async () => {
+    find: jest.fn(async (criterios?: { where?: Record<string, unknown> }) => {
       if (nome === 'bloqueioExterno') return dados.bloqueiosExternos ?? [];
-      return dados.consultas ?? [];
+      const consultas = (dados.consultas ?? []) as Array<Record<string, unknown>>;
+      const status = criterios?.where?.status as { _value?: unknown[] } | string | undefined;
+      const statusAceitos = typeof status === 'string' ? [status] : status?._value;
+      return consultas.filter((consulta) => {
+        if (criterios?.where?.tenantId && consulta.tenantId !== criterios.where.tenantId) return false;
+        if (criterios?.where?.profissionalId && consulta.profissionalId !== criterios.where.profissionalId) return false;
+        return !statusAceitos || statusAceitos.includes(consulta.status);
+      });
     }),
-    findOne: jest.fn(async () => {
-      if (nome === 'paciente') return dados.paciente ?? null;
+    findOne: jest.fn(async (criterios?: { where?: Record<string, unknown> }) => {
+      if (nome === 'paciente') {
+        const pacientes =
+          (dados.pacientes as Array<Record<string, unknown>> | undefined) ??
+          (dados.paciente ? [dados.paciente as Record<string, unknown>] : []);
+        return (
+          pacientes.find((paciente) =>
+            Object.entries(criterios?.where ?? {}).every(([chave, valor]) => {
+              if (valor && typeof valor === 'object' && '_type' in (valor as Record<string, unknown>)) {
+                return (valor as { _type?: string })._type === 'isNull'
+                  ? paciente[chave] === undefined || paciente[chave] === null
+                  : true;
+              }
+              return paciente[chave] === valor;
+            })
+          ) ?? null
+        );
+      }
       if (nome === 'profissional') return dados.profissional ?? null;
+      const consultas = dados.consultas as Array<Record<string, unknown>> | undefined;
+      if (consultas && criterios?.where) {
+        const candidatas = ultimoSalvo ? [ultimoSalvo, ...consultas] : consultas;
+        return (
+          candidatas.find((consulta) =>
+            Object.entries(criterios.where ?? {}).every(([chave, valor]) => consulta[chave] === valor)
+          ) ?? null
+        );
+      }
       return dados.consulta ?? ultimoSalvo;
     }),
     exists: jest.fn(async (criterios: { where: Record<string, unknown> }) => {
@@ -132,6 +177,97 @@ function criarServico(dados: Record<string, unknown> = {}) {
 }
 
 describe('ServicoAgenda', () => {
+  it('traduz corrida de sobreposicao ao criar consulta para conflito de horario', async () => {
+    const { servico, repositorios } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      }
+    });
+    repositorios.consulta.save.mockRejectedValueOnce(criarErroSobreposicaoAgenda());
+
+    await expect(
+      servico.criarConsulta(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          inicioEm: '2026-07-22T12:00:00.000Z',
+          duracaoMinutos: 60
+        },
+        usuarioColaborador
+      )
+    ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
+  });
+
+  it('traduz corrida de sobreposicao ao remarcar consulta para conflito de horario', async () => {
+    const consultaExistente = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {},
+      payload: {}
+    };
+    const { servico, repositorios } = criarServico({ consultas: [consultaExistente] });
+    repositorios.consulta.save.mockRejectedValueOnce(criarErroSobreposicaoAgenda());
+
+    await expect(
+      servico.remarcarConsultaComoSistema(
+        'tenant-1',
+        'consulta-1',
+        {
+          inicioEm: '2026-07-23T12:00:00.000Z',
+          duracaoMinutos: 60
+        },
+        'profissional-1'
+      )
+    ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
+  });
+
+  it('preserva como erro tecnico um 23P01 originado por outra constraint', async () => {
+    const erroTecnico = criarErroExclusao('ex_outra_regra_de_exclusao');
+    const { servico, repositorios } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      }
+    });
+    repositorios.consulta.save.mockRejectedValueOnce(erroTecnico);
+
+    await expect(
+      servico.criarConsulta(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          inicioEm: '2026-07-22T12:00:00.000Z',
+          duracaoMinutos: 60
+        },
+        usuarioColaborador
+      )
+    ).rejects.toBe(erroTecnico);
+  });
+
   it('deve criar consulta, sincronizar Google Calendar e disparar notificacoes', async () => {
     const { servico, repositorios, googleCalendar, comunicacoes, processador } = criarServico({
       paciente: {
@@ -514,7 +650,8 @@ describe('ServicoAgenda', () => {
     );
 
     expect(repositorios.consulta.findOne).toHaveBeenCalledWith({
-      where: { id: 'consulta-1', tenantId: 'tenant-1', profissionalId: 'prof-1' }
+      where: { id: 'consulta-1', tenantId: 'tenant-1', profissionalId: 'prof-1' },
+      lock: { mode: 'pessimistic_write' }
     });
     expect(consulta.inicioEm).toEqual(new Date('2026-07-23T14:00:00.000Z'));
     expect(consulta.fimEm).toEqual(new Date('2026-07-23T14:45:00.000Z'));
@@ -552,7 +689,10 @@ describe('ServicoAgenda', () => {
       criadoEm: new Date('2026-07-20T12:00:00.000Z'),
       atualizadoEm: new Date('2026-07-20T12:00:00.000Z')
     };
-    const { servico, googleCalendar } = criarServico({ consulta: consultaExistente, consultas: [consultaExistente] });
+    const { servico, googleCalendar, repositorios } = criarServico({
+      consulta: consultaExistente,
+      consultas: [consultaExistente]
+    });
 
     const consulta = await servico.remarcarConsulta(
       'tenant-1',
@@ -575,6 +715,10 @@ describe('ServicoAgenda', () => {
         local: 'Sala 2'
       })
     );
+    expect(repositorios.consulta.findOne).toHaveBeenCalledWith({
+      where: { id: 'consulta-1', tenantId: 'tenant-1' },
+      lock: { mode: 'pessimistic_write' }
+    });
     expect(consulta.inicioEm).toEqual(new Date('2026-07-23T14:00:00.000Z'));
     expect(consulta.fimEm).toEqual(new Date('2026-07-23T14:45:00.000Z'));
     expect(consulta.notificacoes.googleCalendar).toEqual(expect.objectContaining({ sincronizado: true }));
@@ -607,7 +751,10 @@ describe('ServicoAgenda', () => {
       criadoEm: new Date('2026-07-20T12:00:00.000Z'),
       atualizadoEm: new Date('2026-07-20T12:00:00.000Z')
     };
-    const { servico, googleCalendar } = criarServico({ consulta: consultaExistente, consultas: [consultaExistente] });
+    const { servico, googleCalendar, repositorios } = criarServico({
+      consulta: consultaExistente,
+      consultas: [consultaExistente]
+    });
 
     const consulta = await servico.cancelarConsulta(
       'tenant-1',
@@ -617,6 +764,10 @@ describe('ServicoAgenda', () => {
     );
 
     expect(googleCalendar.cancelarEvento).toHaveBeenCalledWith({ calendarId: 'primary', eventId: 'event-1' });
+    expect(repositorios.consulta.findOne).toHaveBeenCalledWith({
+      where: { id: 'consulta-1', tenantId: 'tenant-1' },
+      lock: { mode: 'pessimistic_write' }
+    });
     expect(consulta.status).toBe('cancelada');
     expect(consulta.payload.historico).toEqual(
       expect.arrayContaining([
@@ -626,6 +777,309 @@ describe('ServicoAgenda', () => {
         })
       ])
     );
+  });
+
+  it('registra origem profissional no historico ao cancelar pelo console', async () => {
+    const consultaExistente = {
+      id: 'consulta-profissional',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {},
+      payload: {}
+    };
+    const { servico } = criarServico({ consultas: [consultaExistente] });
+
+    const consulta = await servico.cancelarConsulta(
+      'tenant-1',
+      consultaExistente.id,
+      {},
+      usuarioColaborador
+    );
+
+    expect(consulta.payload.historico).toEqual(
+      expect.arrayContaining([expect.objectContaining({ acao: 'cancelada', origem: 'profissional' })])
+    );
+  });
+
+  it('registra origem paciente somente quando a consulta pertence ao paciente autenticado', async () => {
+    const consultaExistente = {
+      id: 'consulta-paciente',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {},
+      payload: {}
+    };
+    const { servico } = criarServico({
+      consultas: [consultaExistente],
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          profissionalResponsavelId: 'profissional-1'
+        },
+        {
+          id: 'paciente-2',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-2',
+          profissionalResponsavelId: 'profissional-1'
+        }
+      ]
+    });
+    const desmarcar = (
+      servico as unknown as {
+        desmarcarConsultaPeloPaciente(
+          tenantId: string,
+          consultaId: string,
+          usuarioId: string
+        ): Promise<{ payload: Record<string, unknown> }>;
+      }
+    ).desmarcarConsultaPeloPaciente;
+
+    await expect(
+      desmarcar.call(servico, 'tenant-1', consultaExistente.id, 'usuario-paciente-2')
+    ).rejects.toThrow('Consulta nao encontrada.');
+
+    const consulta = await desmarcar.call(
+      servico,
+      'tenant-1',
+      consultaExistente.id,
+      'usuario-paciente-1'
+    );
+    expect(consulta.payload.historico).toEqual(
+      expect.arrayContaining([expect.objectContaining({ acao: 'cancelada', origem: 'paciente' })])
+    );
+  });
+
+  it('registra origem google sem converter para origem interna', async () => {
+    const consultaExistente = {
+      id: 'consulta-google',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {},
+      payload: {}
+    };
+    const { servico } = criarServico({ consultas: [consultaExistente] });
+
+    const consulta = await servico.cancelarConsultaComoSistema(
+      'tenant-1',
+      consultaExistente.id,
+      {},
+      'profissional-1'
+    );
+
+    expect(consulta.payload.historico).toEqual(
+      expect.arrayContaining([expect.objectContaining({ acao: 'cancelada', origem: 'google' })])
+    );
+  });
+
+  it('cancela o evento Google ao registrar cancelada como desfecho', async () => {
+    const consultaExistente = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      googleCalendarId: 'primary',
+      googleEventId: 'event-1',
+      notificacoes: {},
+      payload: { pacienteNome: 'Ana Paula' },
+      criadoEm: new Date('2026-07-20T12:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-20T12:00:00.000Z')
+    };
+    const { servico, googleCalendar, repositorios } = criarServico({
+      consulta: consultaExistente,
+      consultas: [consultaExistente]
+    });
+
+    const consulta = await servico.registrarDesfecho(
+      'tenant-1',
+      'consulta-1',
+      { status: 'cancelada' },
+      usuarioColaborador
+    );
+
+    expect(googleCalendar.cancelarEvento).toHaveBeenCalledWith({ calendarId: 'primary', eventId: 'event-1' });
+    expect(repositorios.consulta.findOne).toHaveBeenCalledWith({
+      where: { id: 'consulta-1', tenantId: 'tenant-1' },
+      lock: { mode: 'pessimistic_write' }
+    });
+    expect(consulta).toEqual(
+      expect.objectContaining({
+        status: 'cancelada',
+        notificacoes: expect.objectContaining({
+          googleCalendar: expect.objectContaining({ sincronizado: true })
+        })
+      })
+    );
+    await expect(
+      servico.registrarDesfecho('tenant-1', 'consulta-1', { status: 'cancelada' }, usuarioColaborador)
+    ).rejects.toThrow('Consulta encerrada nao pode receber novo desfecho.');
+    expect(googleCalendar.cancelarEvento).toHaveBeenCalledTimes(1);
+  });
+
+  it('permite ao profissional concluir apenas a propria consulta', async () => {
+    const consultaUm = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      notificacoes: {},
+      payload: {},
+      criadoEm: new Date(),
+      atualizadoEm: new Date()
+    };
+    const consultaDois = {
+      ...consultaUm,
+      id: 'consulta-2',
+      pacienteId: 'paciente-2',
+      profissionalId: 'profissional-2'
+    };
+    const { servico, repositorios } = criarServico({
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-profissional-1'
+      },
+      consultas: [consultaUm, consultaDois]
+    });
+
+    await expect(
+      servico.registrarDesfecho('tenant-1', 'consulta-1', { status: 'concluida' }, usuarioProfissional)
+    ).resolves.toEqual(expect.objectContaining({ status: 'concluida' }));
+    await expect(
+      servico.registrarDesfecho('tenant-1', 'consulta-2', { status: 'falta' }, usuarioProfissional)
+    ).rejects.toThrow('Consulta nao encontrada.');
+    expect(repositorios.consulta.findOne).toHaveBeenCalledWith({
+      where: {
+        id: 'consulta-1',
+        tenantId: 'tenant-1',
+        profissionalId: 'profissional-1'
+      },
+      lock: { mode: 'pessimistic_write' }
+    });
+  });
+
+  it('mantem consulta reagendada ativa e nao permite desfecho terminal duas vezes', async () => {
+    const consulta = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      googleCalendarId: 'primary',
+      googleEventId: 'event-1',
+      notificacoes: {},
+      payload: {},
+      criadoEm: new Date(),
+      atualizadoEm: new Date()
+    };
+    const { servico } = criarServico({
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-profissional-1'
+      },
+      consultas: [consulta]
+    });
+
+    await servico.remarcarConsulta(
+      'tenant-1',
+      'consulta-1',
+      { inicioEm: '2026-07-23T14:00:00.000Z', duracaoMinutos: 45 },
+      usuarioProfissional
+    );
+    expect(consulta.status).toBe('reagendada');
+
+    await servico.registrarDesfecho(
+      'tenant-1',
+      'consulta-1',
+      { status: 'concluida' },
+      usuarioProfissional
+    );
+    await expect(
+      servico.registrarDesfecho('tenant-1', 'consulta-1', { status: 'falta' }, usuarioProfissional)
+    ).rejects.toThrow('Consulta encerrada nao pode receber novo desfecho.');
+    await expect(
+      servico.cancelarConsulta('tenant-1', 'consulta-1', {}, usuarioProfissional)
+    ).rejects.toThrow('Consulta encerrada nao pode ser cancelada.');
+  });
+
+  it('mantem reagendada em conflito e libera horario de consulta terminal', async () => {
+    const consultaReagendada = {
+      id: 'consulta-reagendada',
+      tenantId: 'tenant-1',
+      profissionalId: 'profissional-1',
+      pacienteId: 'paciente-2',
+      status: 'reagendada',
+      inicioEm: new Date('2026-07-22T12:30:00.000Z'),
+      fimEm: new Date('2026-07-22T13:30:00.000Z')
+    };
+    const consultaConcluida = {
+      ...consultaReagendada,
+      id: 'consulta-concluida',
+      status: 'concluida'
+    };
+    const dadosBase = {
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      }
+    };
+    const entrada = {
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      inicioEm: '2026-07-22T12:00:00.000Z',
+      duracaoMinutos: 60
+    };
+
+    const servicoComReagendada = criarServico({ ...dadosBase, consultas: [consultaReagendada] }).servico;
+    await expect(
+      servicoComReagendada.criarConsulta('tenant-1', entrada, usuarioColaborador)
+    ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
+
+    const servicoComConcluida = criarServico({ ...dadosBase, consultas: [consultaConcluida] }).servico;
+    await expect(
+      servicoComConcluida.criarConsulta('tenant-1', entrada, usuarioColaborador)
+    ).resolves.toEqual(expect.objectContaining({ status: 'agendada' }));
   });
 
   it('deve respeitar contato estruturado e preferencias do portal do paciente', async () => {
@@ -757,7 +1211,8 @@ describe('ServicoAgenda', () => {
       ).rejects.toThrow('Consulta nao encontrada.');
 
       expect(repositorios.consulta.findOne).toHaveBeenCalledWith({
-        where: { id: 'consulta-1', tenantId: 'tenant-1', profissionalId: 'profissional-1' }
+        where: { id: 'consulta-1', tenantId: 'tenant-1', profissionalId: 'profissional-1' },
+        lock: { mode: 'pessimistic_write' }
       });
     });
 
@@ -805,7 +1260,8 @@ describe('ServicoAgenda', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
 
       expect(repositorioConsulta.findOne).toHaveBeenCalledWith({
-        where: { id: 'consulta-1', tenantId: 'tenant-atacante', profissionalId: 'profissional-atacante' }
+        where: { id: 'consulta-1', tenantId: 'tenant-atacante', profissionalId: 'profissional-atacante' },
+        lock: { mode: 'pessimistic_write' }
       });
     });
   });

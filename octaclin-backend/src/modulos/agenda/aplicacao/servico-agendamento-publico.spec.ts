@@ -33,6 +33,7 @@ function coincideWhere<T extends object>(registro: T, where: Partial<T> = {}): b
       if (operador._type === 'moreThan') return atual instanceof Date && operador._value instanceof Date && atual > operador._value;
       if (operador._type === 'lessThan') return atual instanceof Date && operador._value instanceof Date && atual < operador._value;
       if (operador._type === 'isNull') return atual == null;
+      if (operador._type === 'in') return Array.isArray(operador._value) && operador._value.includes(atual);
       return true;
     }
     return atual === valor;
@@ -383,7 +384,10 @@ describe('ServicoAgendamentoPublico', () => {
         where: expect.objectContaining({
           tenantId: 'tenant-1',
           profissionalId: 'profissional-1',
-          status: 'agendada',
+          status: expect.objectContaining({
+            _type: 'in',
+            _value: ['agendada', 'reagendada']
+          }),
           inicioEm: expect.objectContaining({ _value: new Date('2026-08-25T12:10:00.000Z') }),
           fimEm: expect.objectContaining({ _value: new Date('2026-07-26T12:10:00.000Z') })
         })
@@ -399,6 +403,34 @@ describe('ServicoAgendamentoPublico', () => {
         })
       })
     );
+  });
+
+  it('nao oferece como livre um horario ocupado por consulta reagendada', async () => {
+    const { servico } = criarServico({
+      link: criarLinkAtivo(),
+      profissional: criarProfissional(),
+      consultas: [
+        {
+          id: 'consulta-reagendada',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          titulo: 'Consulta reagendada',
+          inicioEm: new Date('2026-07-26T14:00:00.000Z'),
+          fimEm: new Date('2026-07-26T15:00:00.000Z'),
+          timezone: 'America/Sao_Paulo',
+          status: 'reagendada',
+          notificacoes: {},
+          payload: {},
+          criadoEm: new Date('2026-07-01T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-01T12:00:00.000Z')
+        }
+      ]
+    });
+
+    const resumo = await servico.obterAgendaPublica('token-valido', '203.0.113.5');
+
+    expect(resumo.horariosLivres).not.toContain('2026-07-26T14:00:00.000Z');
   });
 
   it('retorna resposta neutra para token ausente ou inativo', async () => {

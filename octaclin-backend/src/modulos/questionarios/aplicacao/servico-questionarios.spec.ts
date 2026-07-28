@@ -675,5 +675,95 @@ describe('ServicoQuestionarios', () => {
         servico.atualizarQuestionario('tenant-1', 'q-outro', { titulo: 'Tentativa' } as any, usuarioProfissional)
       ).rejects.toThrow('Questionario nao encontrado.');
     });
+
+    it('deve marcar envio respondido como revisado apenas pelo profissional responsavel', async () => {
+      const { servico } = criarServico(
+        dadosBase({
+          envios: [
+            {
+              id: 'envio-1',
+              tenantId: 'tenant-1',
+              questionarioId: 'q1',
+              pacienteId: 'paciente-1',
+              status: 'respondido'
+            }
+          ],
+          pacientes: [
+            {
+              id: 'paciente-1',
+              tenantId: 'tenant-1',
+              profissionalResponsavelId: 'profissional-1'
+            }
+          ]
+        })
+      );
+
+      const resultado = await servico.marcarEnvioComoRevisado('tenant-1', 'envio-1', usuarioProfissional);
+
+      expect(resultado).toEqual(
+        expect.objectContaining({
+          revisadoEm: expect.any(Date),
+          revisadoPorUsuarioId: usuarioProfissional.usuarioId
+        })
+      );
+    });
+
+    it('deve tratar envio de paciente de outro profissional como nao encontrado ao revisar', async () => {
+      const { servico } = criarServico(
+        dadosBase({
+          envios: [
+            {
+              id: 'envio-outro',
+              tenantId: 'tenant-1',
+              questionarioId: 'q1',
+              pacienteId: 'paciente-outro',
+              status: 'respondido'
+            }
+          ],
+          pacientes: [
+            {
+              id: 'paciente-outro',
+              tenantId: 'tenant-1',
+              profissionalResponsavelId: 'profissional-outro-2'
+            }
+          ]
+        })
+      );
+
+      await expect(
+        servico.marcarEnvioComoRevisado('tenant-1', 'envio-outro', usuarioProfissional)
+      ).rejects.toThrow('Envio nao encontrado.');
+    });
+
+    it('deve preservar a primeira revisao quando a acao for repetida', async () => {
+      const primeiraRevisao = new Date('2026-07-27T14:00:00.000Z');
+      const { servico } = criarServico(
+        dadosBase({
+          envios: [
+            {
+              id: 'envio-revisado',
+              tenantId: 'tenant-1',
+              questionarioId: 'q1',
+              pacienteId: 'paciente-1',
+              status: 'respondido',
+              revisadoEm: primeiraRevisao,
+              revisadoPorUsuarioId: 'usuario-revisor-original'
+            }
+          ],
+          pacientes: [
+            {
+              id: 'paciente-1',
+              tenantId: 'tenant-1',
+              profissionalResponsavelId: 'profissional-1'
+            }
+          ]
+        })
+      );
+
+      const resultado = await servico.marcarEnvioComoRevisado('tenant-1', 'envio-revisado', usuarioProfissional);
+
+      expect(resultado.revisadoEm).toBe(primeiraRevisao);
+      expect(resultado.revisadoPorUsuarioId).toBe('usuario-revisor-original');
+    });
   });
 });

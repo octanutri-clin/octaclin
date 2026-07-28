@@ -557,6 +557,46 @@ export class ServicoQuestionarios {
     });
   }
 
+  async marcarEnvioComoRevisado(
+    tenantId: string,
+    envioId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<EnvioQuestionarioOrm> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const repositorioEnvios = gerenciador.getRepository(EnvioQuestionarioOrm);
+      const envio = await repositorioEnvios.findOne({
+        where: { id: envioId, tenantId, status: 'respondido' },
+        lock: { mode: 'pessimistic_write' }
+      });
+
+      if (!envio) {
+        throw new NotFoundException('Envio nao encontrado.');
+      }
+
+      if (profissionalId) {
+        const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+          where: {
+            id: envio.pacienteId,
+            tenantId,
+            profissionalResponsavelId: profissionalId
+          }
+        });
+        if (!paciente) {
+          throw new NotFoundException('Envio nao encontrado.');
+        }
+      }
+
+      if (envio.revisadoEm) {
+        return envio;
+      }
+
+      envio.revisadoEm = new Date();
+      envio.revisadoPorUsuarioId = usuario.usuarioId;
+      return repositorioEnvios.save(envio);
+    });
+  }
+
   async listarRespostasQuestionario(
     tenantId: string,
     questionarioId: string,

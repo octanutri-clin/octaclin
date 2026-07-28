@@ -26,6 +26,12 @@ export class EnvioQuestionarioOrm {
   @Column({ name: 'respondido_em', type: 'timestamptz', nullable: true })
   respondidoEm?: Date;
 
+  @Column({ name: 'revisado_em', type: 'timestamptz', nullable: true })
+  revisadoEm?: Date;
+
+  @Column({ name: 'revisado_por_usuario_id', type: 'uuid', nullable: true })
+  revisadoPorUsuarioId?: string;
+
   @Column({ name: 'expira_em', type: 'timestamptz', nullable: true })
   expiraEm?: Date;
 }

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { decidirAcessoRota, sanitizarDestinoInicial } from './lib/server/autorizacao-rotas';
+import {
+  decidirAcessoRota,
+  resolverDestinoPermitido,
+  sanitizarDestinoInicial
+} from './lib/server/autorizacao-rotas';
 
 const COOKIE_ACCESS_TOKEN = 'octaclin_access_token';
 const COOKIE_REFRESH_TOKEN = 'octaclin_refresh_token';
@@ -81,7 +85,11 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname === '/login' && autenticado) {
-    return NextResponse.redirect(new URL(destinoInicial(request), request.url));
+    const papel = papelSessao(request);
+    const destino = papel
+      ? resolverDestinoPermitido(papel, destinoInicial(request), permissoesSessao(request))
+      : destinoInicial(request);
+    if (destino !== '/login') return NextResponse.redirect(new URL(destino, request.url));
   }
 
   return NextResponse.next({ request: { headers: requestHeaders } });

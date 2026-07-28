@@ -11,6 +11,7 @@ import {
   CancelarConsultaAgendaDto,
   CriarConsultaAgendaDto,
   RecusarSolicitacaoAgendamentoDto,
+  RegistrarDesfechoConsultaAgendaDto,
   RemarcarConsultaAgendaDto
 } from '../aplicacao/dtos';
 import { ServicoAgendamentoPublico } from '../aplicacao/servico-agendamento-publico';
@@ -184,6 +185,59 @@ export class ControladorAgenda {
         inicioEm: consulta.inicioEm,
         fimEm: consulta.fimEm,
         googleEventId: consulta.googleEventId
+      }
+    });
+    return consulta;
+  }
+
+  @Post('consultas/:consultaId/desfecho')
+  @Permissoes('agenda.consultas.criar')
+  async registrarDesfecho(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('consultaId', ParseUUIDPipe) consultaId: string,
+    @Body() dados: RegistrarDesfechoConsultaAgendaDto
+  ) {
+    return this.registrarDesfechoComOrigem(usuario, requisicao, consultaId, dados, 'agenda');
+  }
+
+  @Post('dashboard/consultas/:consultaId/desfecho')
+  @Papeis('SuperAdmin', 'Professional')
+  @Permissoes('agenda.consultas.criar')
+  async registrarDesfechoDashboard(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('consultaId', ParseUUIDPipe) consultaId: string,
+    @Body() dados: RegistrarDesfechoConsultaAgendaDto
+  ) {
+    return this.registrarDesfechoComOrigem(
+      usuario,
+      requisicao,
+      consultaId,
+      dados,
+      'dashboard_clinico'
+    );
+  }
+
+  private async registrarDesfechoComOrigem(
+    usuario: UsuarioAutenticado,
+    requisicao: Request,
+    consultaId: string,
+    dados: RegistrarDesfechoConsultaAgendaDto,
+    origem: 'agenda' | 'dashboard_clinico'
+  ) {
+    const consulta = await this.servicoAgenda.registrarDesfecho(usuario.tenantId, consultaId, dados, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'agenda.consulta.desfecho',
+      recursoTipo: 'agenda_consulta',
+      recursoId: consultaId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        status: dados.status,
+        origem
       }
     });
     return consulta;

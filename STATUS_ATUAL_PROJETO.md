@@ -7,7 +7,10 @@ Atualizado em 2026-07-27.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 144 - Agendamento publico por solicitacao (entregue em 2026-07-27).
+- Ultima fase concluida: Fase 149 - Limpeza do canal de watch do Google Calendar ao desconectar (entregue em 2026-07-27, branch `integrate/producao-hardening`). Fecha o debito das Fases 136/145: `desconectar()` agora chama `pararCanalWatch` no Google (tolerante a falha) e remove o registro local de `GoogleCanalWatchOrm`.
+- Fase 148: Foco visivel proprio nos componentes compartilhados `Campo`/`AreaTexto`/`Selecao`/`Botao` (entregue em 2026-07-27, PR #5 aberto para `main`).
+- Fase 147: Foco visivel explicito nos inputs crus da agenda (entregue em 2026-07-27). Antes dela, esta branch recebeu por merge a Fase 146 (gate de acessibilidade, feita pelo Codex na `main`).
+- Fase 145: Painel clinico do profissional e desmarcamento/cancelamento distintos (entregue em 2026-07-27, commit `22e161b` da Task 5).
 - Fase 131 aceita: producao isolada de staging confirmada em 2026-07-26, com Neon, Upstash e Render independentes, credenciais rotacionadas e ambiente/banco auditados sem staging. Para habilitar Google Calendar, falta cadastrar as credenciais OAuth e a URI de callback da Fase 136 no ambiente/projeto Google de producao.
 - Melhoria continua: Fases 138, 141 e 142 concluidas. NestJS 11.1.28, TypeORM 1.1.0 e Next.js 15.5.22 foram validados; as auditorias de producao de backend e web estao zeradas. A proxima migracao de framework sera Next.js 16/React 19, em fase dedicada por exigir refatoracao assincrona do BFF.
 - Fase 139 concluida: contratos de agenda e convite administrativo passaram a ser tipados sem `any` em codigo de producao; o BFF preserva uma fronteira central para sessao, renovacao e falhas de backend.
@@ -15,6 +18,11 @@ Atualizado em 2026-07-27.
 - Fase 143 concluida: convites `Professional` agora criam o perfil clinico vinculado ao login, deixando agenda, escopo de dados e Google Calendar prontos apos o primeiro acesso.
 - Fase 144 concluida: agenda publica por solicitacao entrou no fluxo critico com aprovacao manual segura. A solicitacao publica nao reserva horario, a aprovacao exige paciente explicito do tenant e consulta/notificacoes continuam sendo geradas apenas pela criacao normal da agenda. O token bruto do link nao e persistido e a URL copiavel requer rotacao confirmada em sessao nova.
 - Fase 142 concluida: APIs dinamicas do App Router foram migradas para `Promise`/`await`, com gate de regressao, build de producao validado e auditoria web sem vulnerabilidades.
+- Fase 145 concluida: painel clinico diario por profissional (filas de retorno,
+  risco, tarefas, formularios, solicitacoes publicas e comunicacoes) e a agenda
+  passou a distinguir cancelamento pelo profissional (notifica o paciente),
+  desmarcamento pelo paciente (alerta nao-PHI ao profissional, sem notificar o
+  proprio paciente) e cancelamento originado no Google (sem novo envio).
 - Proxima fase critica: Fase 132 - Dominio, SSL e identidade de envio. A configuracao tecnica de DNS permanece pendente ate a definicao do dominio oficial.
 - Estado: producao tecnica acessivel, mas ainda nao liberada para clientes reais.
 

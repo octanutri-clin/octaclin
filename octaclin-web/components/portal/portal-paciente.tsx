@@ -26,6 +26,7 @@ import {
   atualizarPerfilPaciente,
   CheckinRapidoPacienteApi,
   DetalheFormularioRespondidoApi,
+  desmarcarConsultaPaciente,
   exportarDadosLgpdPaciente,
   HumorCheckinRapidoPaciente,
   obterFormularioRespondidoPaciente,
@@ -360,6 +361,7 @@ export function PortalPaciente() {
   const [solicitandoLgpd, setSolicitandoLgpd] = useState(false);
   const [tipoSolicitacaoLgpd, setTipoSolicitacaoLgpd] = useState<'retificacao' | 'exclusao'>('retificacao');
   const [detalhesSolicitacaoLgpd, setDetalhesSolicitacaoLgpd] = useState('');
+  const [desmarcandoConsultaId, setDesmarcandoConsultaId] = useState<string | null>(null);
 
   async function carregar() {
     setCarregando(true);
@@ -379,6 +381,21 @@ export function PortalPaciente() {
   useEffect(() => {
     void carregar();
   }, []);
+
+  async function desmarcarConsulta(consultaId: string) {
+    setDesmarcandoConsultaId(consultaId);
+    setErro(null);
+    setSucesso(null);
+    try {
+      await desmarcarConsultaPaciente(consultaId);
+      await carregar();
+      setSucesso('Consulta desmarcada.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desmarcar consulta.');
+    } finally {
+      setDesmarcandoConsultaId(null);
+    }
+  }
 
   async function salvarPerfil(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -1190,11 +1207,23 @@ export function PortalPaciente() {
                             </span>
                           </div>
                           {consulta.local ? <p className="mt-2 text-sm text-texto-suave">{consulta.local}</p> : null}
-                          {consulta.googleEventHtmlLink ? (
-                            <a className="mt-3 inline-flex text-sm font-semibold text-primaria" href={consulta.googleEventHtmlLink}>
-                              Abrir no Google Agenda
-                            </a>
-                          ) : null}
+                          <div className="mt-3 flex flex-wrap items-center gap-3">
+                            {consulta.googleEventHtmlLink ? (
+                              <a className="inline-flex text-sm font-semibold text-primaria" href={consulta.googleEventHtmlLink}>
+                                Abrir no Google Agenda
+                              </a>
+                            ) : null}
+                            {consulta.status === 'agendada' ? (
+                              <Botao
+                                type="button"
+                                variante="perigo"
+                                disabled={desmarcandoConsultaId === consulta.id}
+                                onClick={() => void desmarcarConsulta(consulta.id)}
+                              >
+                                {desmarcandoConsultaId === consulta.id ? 'Desmarcando' : 'Desmarcar'}
+                              </Botao>
+                            ) : null}
+                          </div>
                         </article>
                       ))
                     ) : (

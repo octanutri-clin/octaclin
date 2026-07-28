@@ -8,6 +8,7 @@ import { ServicoSenhas } from '../../infraestrutura/seguranca/servico-senhas';
 import { ModuloAuth } from '../auth/modulo-auth';
 import { ModuloClientes } from '../clientes/modulo-clientes';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
+import { ModuloAgenda } from '../agenda/modulo-agenda';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { LogDiarioRapidoOrm } from '../mobile/infraestrutura/log-diario-rapido.orm';
@@ -51,7 +52,8 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
     ]),
     ModuloTenancy,
     ModuloAuth,
-    ModuloClientes
+    ModuloClientes,
+    ModuloAgenda
   ],
   controllers: [ControladorPacientes, ControladorConvitesPaciente, ControladorPortalPaciente],
   providers: [ServicoPacientes, ServicoConvitesPaciente, ServicoPortalPaciente, CriptografiaDadosSensiveis, ServicoSenhas, ServicoAuditoria],

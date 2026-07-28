@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
-export type StatusAgendaConsulta = 'agendada' | 'cancelada';
+export type StatusAgendaConsulta = 'agendada' | 'reagendada' | 'concluida' | 'falta' | 'cancelada';
 
 @Entity('agenda_consultas')
 export class AgendaConsultaOrm {

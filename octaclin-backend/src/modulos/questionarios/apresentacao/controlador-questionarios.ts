@@ -152,6 +152,58 @@ export class ControladorQuestionarios {
     return envio;
   }
 
+  @Post('questionarios/envios/:envioId/revisar')
+  @Permissoes('questionarios.gerenciar')
+  async revisarEnvio(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('envioId', ParseUUIDPipe) envioId: string
+  ) {
+    return this.revisarEnvioComOrigem(usuario, requisicao, envioId, 'questionarios');
+  }
+
+  @Post('questionarios/dashboard/envios/:envioId/revisar')
+  @Papeis('SuperAdmin', 'Professional')
+  @Permissoes('questionarios.gerenciar')
+  async revisarEnvioDashboard(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('envioId', ParseUUIDPipe) envioId: string
+  ) {
+    return this.revisarEnvioComOrigem(
+      usuario,
+      requisicao,
+      envioId,
+      'dashboard_clinico'
+    );
+  }
+
+  private async revisarEnvioComOrigem(
+    usuario: UsuarioAutenticado,
+    requisicao: Request,
+    envioId: string,
+    origem: 'questionarios' | 'dashboard_clinico'
+  ) {
+    const envio = await this.servicoQuestionarios.marcarEnvioComoRevisado(usuario.tenantId, envioId, usuario);
+    await this.registrarAuditoria(
+      usuario,
+      requisicao,
+      'questionarios.envio.revisar',
+      'envio_questionario',
+      envio.id,
+      {
+        origem,
+        revisadoEm: envio.revisadoEm
+      }
+    );
+    return {
+      id: envio.id,
+      status: envio.status,
+      revisadoEm: envio.revisadoEm,
+      revisadoPorUsuarioId: envio.revisadoPorUsuarioId
+    };
+  }
+
   @Get('questionarios/:id/respostas')
   listarRespostasQuestionario(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
     return this.servicoQuestionarios.listarRespostasQuestionario(usuario.tenantId, id, usuario);

@@ -6,6 +6,7 @@ const credenciais = {
   email: process.env.E2E_EMAIL ?? 'admin@octaclin.local',
   senha: process.env.E2E_SENHA ?? 'OctaClin@123'
 };
+const webUrl = process.env.E2E_WEB_URL ?? 'http://localhost:3000';
 
 const rotas = [
   { caminho: '/dashboard', titulo: 'Dashboard' },
@@ -33,8 +34,87 @@ const rotulosMenu = [
   'Pacientes',
   'Profissionais'
 ];
+const permissoesConsoleCompleto = [
+  'dashboard.ler',
+  'questionarios.ler',
+  'comunicacoes.mensagens.ler',
+  'agenda.consultas.ler',
+  'automacoes.gerenciar',
+  'ia.executar',
+  'mobile.operar',
+  'gamificacao.gerenciar',
+  'operacoes.auditoria.ler',
+  'pacientes.listar',
+  'profissionais.ler'
+];
 
 async function login(page) {
+  let payloadLogin;
+  let autenticado = false;
+
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      status: autenticado ? 200 : 401,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        autenticado
+          ? {
+              autenticado: true,
+              apiUrl: credenciais.apiUrl,
+              tenantSlug: credenciais.tenantSlug,
+              email: credenciais.email,
+              expiraEm: '2026-07-27T15:00:00.000Z',
+              papel: 'SuperAdmin',
+              permissoes: ['operacoes.auditoria.ler'],
+              destinoInicial: '/operacoes'
+            }
+          : { autenticado: false }
+      )
+    });
+  });
+
+  await page.route('**/api/dashboard/clinico**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: 'profissional-1', profissionalNome: 'Dra. Carla' },
+        indicadores: { consultasHoje: 1, proximas: 1, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
+        atendimentos: [{ id: 'consulta-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', inicioEm: '2026-07-22T13:00:00.000Z', fimEm: '2026-07-22T14:00:00.000Z', status: 'agendada' }],
+        semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', scoreRisco: 82, diasSemRetorno: 31, faixa: '30' }],
+        tarefasVencidas: [{ id: 'tarefa-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', titulo: 'Revisar plano alimentar', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }],
+        formulariosPendentes: [{ id: 'envio-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', questionarioId: 'questionario-1', respondidoEm: '2026-07-21T10:00:00.000Z' }],
+        solicitacoesPendentes: [{ id: 'solicitacao-1', profissionalId: 'profissional-1', solicitanteNome: 'Marina Reis', inicioEm: '2026-07-23T14:00:00.000Z', fimEm: '2026-07-23T14:30:00.000Z', expiraEm: '2026-07-23T12:00:00.000Z' }],
+        comunicacoes: [{ id: 'mensagem-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', status: 'recebido', criadoEm: '2026-07-22T10:00:00.000Z' }],
+        alertas: [{ id: 'tarefa_vencida:profissional-1:tarefa-1', tipo: 'tarefa_vencida', prioridade: 1, recursoId: 'tarefa-1', pacienteId: 'paciente-1', ocorridoEm: '2026-07-21T12:00:00.000Z', ocultavel: true }],
+        selecaoObrigatoria: false
+      })
+    });
+  });
+  await page.route('**/api/auth/login', async (route) => {
+    payloadLogin = route.request().postDataJSON();
+    autenticado = true;
+    await page.context().addCookies([
+      { name: 'octaclin_access_token', value: 'fake', url: webUrl },
+      { name: 'octaclin_refresh_token', value: 'fake', url: webUrl },
+      { name: 'octaclin_papel', value: 'SuperAdmin', url: webUrl },
+      { name: 'octaclin_destino_inicial', value: encodeURIComponent('/operacoes'), url: webUrl }
+    ]);
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        apiUrl: credenciais.apiUrl,
+        tenantSlug: credenciais.tenantSlug,
+        email: credenciais.email,
+        expiraEmSegundos: 900,
+        papel: 'SuperAdmin',
+        permissoes: permissoesConsoleCompleto,
+        destinoInicial: '/operacoes'
+      })
+    });
+  });
+
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: 'Acesso OctaClin' })).toBeVisible();
 
@@ -47,6 +127,33 @@ async function login(page) {
 
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(/\/operacoes$/);
+  expect(payloadLogin).toEqual(credenciais);
+}
+
+async function prepararSessaoConsoleMockada(page) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', url: webUrl },
+    { name: 'octaclin_refresh_token', value: 'fake', url: webUrl },
+    { name: 'octaclin_papel', value: 'SuperAdmin', url: webUrl },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/operacoes'), url: webUrl }
+  ]);
+
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        autenticado: true,
+        apiUrl: credenciais.apiUrl,
+        tenantSlug: credenciais.tenantSlug,
+        email: credenciais.email,
+        expiraEm: '2026-07-27T15:00:00.000Z',
+        papel: 'SuperAdmin',
+        permissoes: permissoesConsoleCompleto,
+        destinoInicial: '/operacoes'
+      })
+    });
+  });
 }
 
 async function assertSemOverflowHorizontal(page) {
@@ -403,9 +510,15 @@ async function prepararOperacoesMockadas(page) {
   };
 }
 
+test.describe('login do console', () => {
+  test('envia as credenciais e respeita o destino da sessao', async ({ page }) => {
+    await login(page);
+  });
+});
+
 test.describe('console operacional', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page);
+    await prepararSessaoConsoleMockada(page);
   });
 
   for (const rota of rotas) {
@@ -538,6 +651,7 @@ async function prepararDashboardMockado(page) {
       Object.assign(consulta, {
         inicioEm: '2026-07-24T13:30:00.000Z',
         fimEm: '2026-07-24T14:15:00.000Z',
+        status: 'reagendada',
         local: 'Sala 2',
         atualizadoEm: '2026-07-22T12:00:00.000Z',
         notificacoes: { googleCalendar: { sincronizado: true } }
@@ -545,17 +659,43 @@ async function prepararDashboardMockado(page) {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(consulta) });
       return;
     }
-    if (route.request().method() === 'DELETE') {
+    await route.fallback();
+  });
+
+  await page.route('**/api/agenda/consultas/consulta-1/desfecho', async (route) => {
+    const consulta = consultasAgenda.find((item) => item.id === 'consulta-1');
+    const dados = route.request().postDataJSON();
+    if (route.request().method() === 'POST' && dados.status === 'cancelada') {
       cancelouConsulta = true;
       Object.assign(consulta, {
         status: 'cancelada',
         notificacoes: { googleCalendar: { sincronizado: true } },
-        payload: { historico: [{ acao: 'cancelada', motivo: 'Paciente pediu reagendamento.' }] }
+        payload: { historico: [{ acao: 'cancelada', origem: 'octaclin' }] }
       });
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(consulta) });
       return;
     }
     await route.fallback();
+  });
+
+  await page.route('**/api/agenda/agendamento-publico', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
+  });
+
+  await page.route('**/api/agenda/solicitacoes', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ itens: [], total: 0 })
+    });
+  });
+
+  await page.route('**/api/agenda/google/status', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ conectado: true })
+    });
   });
 
   await page.route('**/api/pacientes**', async (route) => {
@@ -973,21 +1113,134 @@ async function prepararProntuarioMockado(page) {
   };
 }
 
-test.describe('dashboard profissional', () => {
-  test('agrega rotina diaria do profissional', async ({ page }) => {
+test.describe('painel clinico profissional', () => {
+  test('Professional conserva o proprio escopo e mostra filas clinicas', async ({ page }) => {
     await prepararDashboardMockado(page);
-    await page.goto('/dashboard');
+    await page.route('**/api/dashboard/clinico?*', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: 'profissional-1', profissionalNome: 'Dra. Carla' },
+        indicadores: { consultasHoje: 1, proximas: 1, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
+        atendimentos: [{ id: 'consulta-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', inicioEm: '2026-07-22T13:00:00.000Z', fimEm: '2026-07-22T14:00:00.000Z', status: 'agendada' }],
+        semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', scoreRisco: 82, diasSemRetorno: 31, faixa: '30' }],
+        tarefasVencidas: [{ id: 'tarefa-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', titulo: 'Revisar plano alimentar', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }],
+        formulariosPendentes: [{ id: 'envio-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', questionarioId: 'questionario-1', respondidoEm: '2026-07-21T10:00:00.000Z' }],
+        solicitacoesPendentes: [{ id: 'solicitacao-1', profissionalId: 'profissional-1', solicitanteNome: 'Marina Reis', inicioEm: '2026-07-23T14:00:00.000Z', fimEm: '2026-07-23T14:30:00.000Z', expiraEm: '2026-07-23T12:00:00.000Z' }],
+        comunicacoes: [{ id: 'mensagem-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', status: 'recebido', criadoEm: '2026-07-22T10:00:00.000Z' }],
+        alertas: [], selecaoObrigatoria: false
+      }) });
+    });
+    await page.goto('/dashboard?profissionalId=profissional-2');
 
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Consultas de hoje' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Painel clinico' })).toBeVisible();
     await expect(page.getByText('Ana Souza').first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Pacientes recentes' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Formularios pendentes' })).toBeVisible();
-    await expect(page.getByText('1 rascunho para publicar')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Mensagens para revisar' })).toBeVisible();
-    await expect(page.getByText('Dra., posso trocar o horario?')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Abrir agenda' })).toHaveAttribute('href', '/agenda');
+    await expect(page.getByLabel('Profissional em contexto')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Criar retorno' })).toHaveAttribute('href', /pacienteId=paciente-2/);
     await assertSemOverflowHorizontal(page);
+  });
+
+  test('SuperAdmin seleciona profissional e conclui tarefa sem overflow', async ({ page }) => {
+    let tarefaConcluida = false;
+    await prepararSessaoConsoleMockada(page);
+    await page.route('**/api/auth/session', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ autenticado: true, apiUrl: credenciais.apiUrl, tenantSlug: credenciais.tenantSlug, email: credenciais.email, expiraEm: '2026-07-27T15:00:00.000Z', papel: 'SuperAdmin', permissoes: ['dashboard.ler', 'profissionais.ler', 'pacientes.gerenciar'], destinoInicial: '/dashboard' }) });
+    });
+    await page.route('**/api/profissionais**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-1', nome: 'Dra. Carla', criadoEm: '2026-07-20T10:00:00.000Z' }, { id: 'profissional-2', tenantId: 'tenant-1', usuarioId: 'usuario-2', nome: 'Dr. Paulo', criadoEm: '2026-07-20T10:00:00.000Z' }], total: 2 }) });
+    });
+    await page.route('**/api/dashboard/clinico?*', async (route) => {
+      const selecionado = new URL(route.request().url()).searchParams.get('profissionalId');
+      const base = { contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: selecionado, profissionalNome: 'Dr. Paulo' }, indicadores: { consultasHoje: 0, proximas: 0, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 0, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 0, tarefasVencidas: tarefaConcluida ? 0 : 1, solicitacoesPendentes: 0, comunicacoesEmAlerta: 0, pacientesRiscoAlto: 0 }, atendimentos: [], semRetorno: [], formulariosPendentes: [], solicitacoesPendentes: [], comunicacoes: [], alertas: [], selecaoObrigatoria: !selecionado };
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...base, tarefasVencidas: selecionado && !tarefaConcluida ? [{ id: 'tarefa-2', pacienteId: 'paciente-2', profissionalId: selecionado, pacienteNome: 'Beatriz', titulo: 'Revisar exames', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }] : [] }) });
+    });
+    await page.route('**/api/dashboard/clinico/pacientes/paciente-2/tarefas/tarefa-2/concluir', async (route) => {
+      expect(route.request().postData()).toBeNull();
+      tarefaConcluida = true;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'tarefa-2', status: 'concluida' }) });
+    });
+    await page.goto('/dashboard');
+    await expect(page.getByLabel('Profissional em contexto')).toBeVisible();
+    await page.getByLabel('Profissional em contexto').selectOption('profissional-2');
+    await expect(page.getByText('Revisar exames')).toBeVisible();
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: 'Concluir tarefa' }).click();
+    await expect(page.getByText('Tarefa concluida.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('SuperAdmin limpa dados antigos e ignora resposta obsoleta ao trocar contexto', async ({ page }) => {
+    let liberarRespostaPaulo;
+    const respostaPauloLiberada = new Promise((resolve) => {
+      liberarRespostaPaulo = resolve;
+    });
+
+    await prepararSessaoConsoleMockada(page);
+    await page.route('**/api/auth/session', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          autenticado: true,
+          apiUrl: credenciais.apiUrl,
+          tenantSlug: credenciais.tenantSlug,
+          email: credenciais.email,
+          expiraEm: '2026-07-27T15:00:00.000Z',
+          papel: 'SuperAdmin',
+          permissoes: ['dashboard.ler', 'profissionais.ler', 'pacientes.gerenciar'],
+          destinoInicial: '/dashboard'
+        })
+      });
+    });
+    await page.route('**/api/profissionais**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          itens: [
+            { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-1', nome: 'Dra. Carla', criadoEm: '2026-07-20T10:00:00.000Z' },
+            { id: 'profissional-2', tenantId: 'tenant-1', usuarioId: 'usuario-2', nome: 'Dr. Paulo', criadoEm: '2026-07-20T10:00:00.000Z' }
+          ],
+          total: 2
+        })
+      });
+    });
+    await page.route('**/api/dashboard/clinico?*', async (route) => {
+      const profissionalId = new URL(route.request().url()).searchParams.get('profissionalId');
+      if (profissionalId === 'profissional-2') await respostaPauloLiberada;
+      const nome = profissionalId === 'profissional-2' ? 'Dr. Paulo' : 'Dra. Carla';
+      const tarefa = profissionalId === 'profissional-2' ? 'Tarefa Paulo' : 'Tarefa Carla';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId, profissionalNome: nome },
+          indicadores: { consultasHoje: 0, proximas: 0, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 0, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 0, tarefasVencidas: profissionalId ? 1 : 0, solicitacoesPendentes: 0, comunicacoesEmAlerta: 0, pacientesRiscoAlto: 0 },
+          atendimentos: [],
+          semRetorno: [],
+          tarefasVencidas: profissionalId ? [{ id: `tarefa-${profissionalId}`, pacienteId: `paciente-${profissionalId}`, profissionalId, pacienteNome: nome, titulo: tarefa, prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }] : [],
+          formulariosPendentes: [],
+          solicitacoesPendentes: [],
+          comunicacoes: [],
+          alertas: [],
+          selecaoObrigatoria: !profissionalId
+        })
+      });
+    });
+
+    await page.goto('/dashboard');
+    await expect(page.getByLabel('Profissional em contexto')).toBeVisible();
+    await page.getByLabel('Profissional em contexto').selectOption('profissional-1');
+    await expect(page.getByText('Tarefa Carla')).toBeVisible();
+
+    await page.getByLabel('Profissional em contexto').selectOption('profissional-2');
+    await expect(page.getByText('Tarefa Carla')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Concluir tarefa' })).toHaveCount(0);
+
+    await page.getByLabel('Profissional em contexto').selectOption('profissional-1');
+    await expect(page.getByText('Tarefa Carla')).toBeVisible();
+    liberarRespostaPaulo();
+    await expect(page.getByText('Tarefa Paulo')).toHaveCount(0);
+    await expect(page.getByText('Tarefa Carla')).toBeVisible();
   });
 });
 
@@ -1008,13 +1261,19 @@ test.describe('agenda de producao', () => {
     await expect.poll(() => agenda.remarcouConsulta()).toBe(true);
     await expect(page.getByText('Consulta remarcada. Google Calendar foi atualizado conforme configuracao.')).toBeVisible();
     await expect(consultaAna.getByText('24/07/2026')).toBeVisible();
+    await expect(consultaAna.getByText('Reagendada')).toBeVisible();
 
-    await consultaAna.getByLabel('Motivo do cancelamento').fill('Paciente pediu reagendamento.');
-    await consultaAna.getByRole('button', { name: 'Cancelar consulta' }).click();
+    const botaoCancelar = consultaAna.getByRole('button', { name: 'Cancelar consulta' });
+    await expect(botaoCancelar).toHaveAttribute('title', 'Cancelar');
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('Registrar a consulta como cancelada?');
+      await dialog.accept();
+    });
+    await botaoCancelar.click();
 
     await expect.poll(() => agenda.cancelouConsulta()).toBe(true);
     await expect(page.getByText('Consulta cancelada. Google Calendar foi atualizado conforme configuracao.')).toBeVisible();
-    await expect(consultaAna.getByText('cancelada')).toBeVisible();
+    await expect(consultaAna.getByText('Cancelada')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });

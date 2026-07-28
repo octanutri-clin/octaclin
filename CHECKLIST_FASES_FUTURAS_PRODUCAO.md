@@ -464,6 +464,69 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Pendencia futura: remover o shim temporario `UnsafeUnwrappedCookies` na
     migracao dedicada para Next.js 16/React 19.
 
+- [x] Fase 145 - Painel clinico do profissional e desmarcamento/cancelamento distintos.
+  - Painel clinico diario por profissional (rotina do dia, sem retorno 30/60/90+,
+    risco alto prioritario, tarefas vencidas, formularios pendentes, solicitacoes
+    publicas e comunicacoes em alerta), com acoes rapidas auditadas via
+    `origem: dashboard_clinico`. `SuperAdmin` pode selecionar profissional em
+    contexto (auditado); nenhum outro papel acessa dados de terceiro.
+  - `cancelada` continua o unico desfecho terminal da agenda; o historico da
+    consulta passou a registrar a origem (`profissional`, `paciente` ou
+    `google`), que decide a comunicacao: cancelamento pelo profissional notifica
+    o paciente por e-mail/WhatsApp conforme preferencia; desmarcamento pelo
+    paciente (portal, sessao autenticada, nunca id vindo do navegador) libera o
+    horario, cancela o evento Google uma unica vez e cria um alerta
+    operacional sem PHI para o profissional responsavel, sem notificar o
+    proprio paciente; cancelamento originado no Google nao gera novo envio.
+  - Status: concluida em 2026-07-27. Tasks 1-4 (painel clinico, formularios,
+    resumo agregado, BFF/UI) e Task 5 (desmarcamento/cancelamento, commit
+    `22e161b`) aprovadas por revisao SDD.
+  - Validacoes: `pnpm --dir octaclin-backend typecheck` e `test --runInBand`
+    (59 suites/318 testes), `pnpm --dir octaclin-web typecheck`, `lint`,
+    `build`, `test:authz` e `test:e2e:criticas` (10 jornadas, desktop/mobile).
+  - Pendencia: nenhuma dependencia externa (credencial/dominio/OAuth) para esta
+    fase; `desconectar()` do Google Calendar segue sem limpar o canal de watch
+    (debito ja registrado na Fase 136, nao reintroduzido nem agravado aqui).
+
+- [x] Fase 147 - Foco visivel explicito nos inputs crus da agenda.
+  - Endereça de forma explicita o achado da Fase 146: os 4 inputs nativos de
+    `painel-agenda.tsx` (checkbox de notificacoes, nova data/hora, nova
+    duracao, novo local) ganharam a mesma classe `focus-visible:outline...`
+    ja usada em `portal-shell.tsx`/`modal.tsx`, em vez de depender apenas da
+    regra global `:focus-visible` trazida incidentalmente pela Fase 144.
+  - Escopo unico: `octaclin-web/components/agenda/painel-agenda.tsx`. Nenhuma
+    logica, rota ou dado alterado.
+  - Data: 2026-07-27.
+  - Validacoes: `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web lint`, `pnpm --dir octaclin-web test:a11y` (10 passed).
+  - Saida entregue: `fase-147-foco-visivel-inputs-agenda.md`.
+  - Observacao: os componentes compartilhados `Campo`, `AreaTexto`, `Selecao`
+    e `Botao` ainda nao tem classe `focus-visible` propria e continuam
+    dependendo da regra global; nao fazia parte do achado desta fase.
+
+- [x] Fase 148 - Foco visivel proprio nos componentes compartilhados de formulario/botao.
+  - `Campo`, `AreaTexto`, `Selecao` (`components/ui/campo.tsx`) e `Botao`
+    (`components/ui/botao.tsx`) passam a ter a mesma classe
+    `focus-visible:outline...` da Fase 147, em vez de depender so da regra
+    global. Esses 4 componentes sao usados em 23 arquivos/37 imports do
+    `octaclin-web`.
+  - Data: 2026-07-27.
+  - Validacoes: `pnpm --dir octaclin-web typecheck`, `lint`, `build`, `test:a11y` (10 passed), `pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs --project=desktop-chromium --reporter=list` (21 passed).
+  - Saida entregue: `fase-148-foco-visivel-componentes-compartilhados.md`.
+
+- [x] Fase 149 - Limpeza do canal de watch do Google Calendar ao desconectar.
+  - Fecha o debito das Fases 136/145: `desconectar()` agora chama
+    `pararCanalWatch` (tolerante a falha, so loga warning) e remove o
+    registro de `GoogleCanalWatchOrm` antes de limpar os campos locais,
+    em vez de so limpar o estado local sem avisar o Google.
+  - Escopo: `servico-conexao-google-calendar.ts` + teste. Sem mudanca de
+    assinatura publica.
+  - Data: 2026-07-27.
+  - Validacoes: `pnpm --dir octaclin-backend typecheck`, `test --runInBand` (59 suites/321 testes), `pnpm --dir octaclin-backend build`.
+  - Saida entregue: `fase-149-limpeza-canal-watch-google-calendar.md`.
+  - Observacao: recorrencia avancada e importacao inbound por `syncToken`
+    (tambem citadas na Fase 136) continuam pendentes, fora do escopo desta
+    fase.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.

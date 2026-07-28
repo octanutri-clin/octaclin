@@ -43,9 +43,18 @@ export interface EnvioQuestionarioApi {
   status: 'pendente' | 'enviado' | 'respondido' | 'expirado';
   enviadoEm?: string;
   respondidoEm?: string;
+  revisadoEm?: string;
+  revisadoPorUsuarioId?: string;
   expiraEm?: string;
   tokenFormulario: string;
   linkFormulario: string;
+}
+
+export interface RevisaoEnvioQuestionarioApi {
+  id: string;
+  status: 'respondido';
+  revisadoEm?: string;
+  revisadoPorUsuarioId?: string;
 }
 
 export interface RespostaQuestionarioRecebidaApi {
@@ -312,6 +321,13 @@ export async function criarEnvioQuestionario(
     method: 'POST',
     body: JSON.stringify(entrada)
   });
+}
+
+export async function revisarEnvioQuestionario(envioId: string): Promise<RevisaoEnvioQuestionarioApi> {
+  return requisitar<RevisaoEnvioQuestionarioApi>(
+    `/api/questionarios/envios/${encodeURIComponent(envioId)}/revisar`,
+    { method: 'POST' }
+  );
 }
 
 export async function listarRespostasQuestionario(questionarioId: string): Promise<RespostaQuestionarioRecebidaApi[]> {
