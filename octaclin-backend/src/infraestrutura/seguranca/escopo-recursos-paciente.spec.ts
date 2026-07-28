@@ -97,14 +97,55 @@ describe('escopo de recursos de paciente', () => {
     });
   });
 
+  it('aceita o proprio paciente e resolve o vinculo pelo usuario autenticado', async () => {
+    const pacienteProprio = { id: 'paciente-1', tenantId: 'tenant-1' };
+    const paciente = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce(pacienteProprio)
+        .mockResolvedValueOnce(pacienteProprio)
+    };
+    const gerenciador = criarGerenciador(paciente, { findOne: jest.fn() });
+
+    await expect(validarPacienteNoEscopo(gerenciador, 'tenant-1', 'paciente-1', usuarios.Patient)).resolves.toBe(
+      pacienteProprio
+    );
+    expect(paciente.findOne).toHaveBeenNthCalledWith(1, {
+      where: {
+        usuarioId: 'usuario-paciente-1',
+        tenantId: 'tenant-1',
+        arquivadoEm: expect.any(Object)
+      }
+    });
+    expect(paciente.findOne).toHaveBeenNthCalledWith(2, {
+      where: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        arquivadoEm: expect.any(Object)
+      }
+    });
+  });
+
   it('retorna NotFoundException quando Patient tenta acessar paciente de outro vinculo de usuario', async () => {
-    const paciente = { findOne: jest.fn(async () => null) };
+    const paciente = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce({ id: 'paciente-proprio', tenantId: 'tenant-1' })
+        .mockResolvedValueOnce(null)
+    };
     const profissional = { findOne: jest.fn() };
     const gerenciador = criarGerenciador(paciente, profissional);
 
     await expect(validarPacienteNoEscopo(gerenciador, 'tenant-1', 'paciente-outro-usuario', usuarios.Patient)).rejects.toBeInstanceOf(
       NotFoundException
     );
+    expect(paciente.findOne).toHaveBeenCalledWith({
+      where: {
+        usuarioId: 'usuario-paciente-1',
+        tenantId: 'tenant-1',
+        arquivadoEm: expect.any(Object)
+      }
+    });
     expect(paciente.findOne).toHaveBeenCalledWith({
       where: expect.objectContaining({
         id: 'paciente-outro-usuario',
