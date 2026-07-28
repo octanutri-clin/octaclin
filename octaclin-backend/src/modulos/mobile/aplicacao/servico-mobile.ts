@@ -144,7 +144,7 @@ export class ServicoMobile {
         resultados.push({
           idLocal: item.idLocal,
           status: 'erro',
-          erro: erro instanceof Error ? erro.message : 'Falha desconhecida ao sincronizar item.'
+          erro: erro instanceof NotFoundException ? 'Paciente nao encontrado.' : 'Falha ao sincronizar item.'
         });
       }
     }

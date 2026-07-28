@@ -198,11 +198,15 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   proprio paciente, `Professional` aos pacientes responsaveis e `SuperAdmin`
   ao tenant; DTOs nao ampliam a sessao. Listas filtram no banco e escritas,
   uploads, sync e IA validam recursos. O sync Mobile ganhou `idLocal` por
-  paciente, protecao de legado e recuperacao de corrida `23505`; IA usa midia
-  autorizada, locks, cache por paciente/midia/hash, hash verificado e timeout
-  sanitizado de 1-60 segundos (padrao 15). `Collaborator` conserva somente o
-  Mobile ja admitido e nao acessa IA sem `ia.executar`. Sem migracao; cache IA
-  antigo pode apenas perder hit, sem exposicao. Ver
+  paciente, protecao de legado, recuperacao de corrida `23505` e erros estaveis
+  sem detalhes internos. IA valida sob locks respostas de check-in e
+  transcricoes/midias opcionais no mesmo tenant/paciente antes do provedor; o
+  reconhecimento valida o hash bruto da URL confiavel e usa chave de cache
+  namespaced por paciente na consulta, lock e persistencia, mantendo o provedor
+  real. `Collaborator` conserva somente o Mobile ja admitido e nao acessa IA
+  sem `ia.executar`. Sem migracao; cache IA antigo pode apenas perder hit, sem
+  `23505` ou exposicao. Gates finais: 62 suites/377 testes backend e 20 testes
+  de autorizacao web. Ver
   `fase-150a-escopo-mobile-ia.md`.
 
 ## Estado atual de uso

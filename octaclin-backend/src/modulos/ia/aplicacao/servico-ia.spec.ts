@@ -5,6 +5,7 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import { AnaliseSentimentoOrm } from '../infraestrutura/analise-sentimento.orm';
 import { ReconhecimentoAlimentarOrm } from '../infraestrutura/reconhecimento-alimentar.orm';
 import { AnalisarSentimentoDto, ReconhecerAlimentoDto } from './dtos';
@@ -42,6 +43,8 @@ interface DadosCenario {
   pacientes?: Array<Record<string, unknown>>;
   profissionais?: Array<Record<string, unknown>>;
   midias?: Array<Record<string, unknown>>;
+  respostasCheckin?: Array<Record<string, unknown>>;
+  transcricoes?: Array<Record<string, unknown>>;
   sentimentos?: Array<Record<string, unknown>>;
   reconhecimentos?: Array<Record<string, unknown>>;
 }
@@ -143,6 +146,16 @@ function dadosComDoisPacientes(): DadosCenario {
         chaveObjeto: 'tenant-1/paciente-2/imagem/midia-2'
       }
     ],
+    respostasCheckin: [
+      { id: 'resposta-1', tenantId: 'tenant-1', pacienteId: 'paciente-1' },
+      { id: 'resposta-outro-paciente', tenantId: 'tenant-1', pacienteId: 'paciente-2' },
+      { id: 'resposta-outro-tenant', tenantId: 'tenant-2', pacienteId: 'paciente-1' }
+    ],
+    transcricoes: [
+      { id: 'transcricao-1', tenantId: 'tenant-1', arquivoMidiaId: 'midia-1' },
+      { id: 'transcricao-outro-paciente', tenantId: 'tenant-1', arquivoMidiaId: 'midia-2' },
+      { id: 'transcricao-outro-tenant', tenantId: 'tenant-2', arquivoMidiaId: 'midia-1' }
+    ],
     sentimentos: [
       { id: 'sentimento-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', criadoEm },
       { id: 'sentimento-2', tenantId: 'tenant-1', pacienteId: 'paciente-2', criadoEm }
@@ -159,6 +172,8 @@ function criarServico(dados: DadosCenario = {}) {
     paciente: criarRepositorioFake('paciente', dados.pacientes ?? []),
     profissional: criarRepositorioFake('profissional', dados.profissionais ?? []),
     midia: criarRepositorioFake('midia', dados.midias ?? []),
+    respostaCheckin: criarRepositorioFake('resposta-checkin', dados.respostasCheckin ?? []),
+    transcricao: criarRepositorioFake('transcricao', dados.transcricoes ?? []),
     sentimento: criarRepositorioFake('sentimento', dados.sentimentos ?? []),
     alimento: criarRepositorioFake('alimento', dados.reconhecimentos ?? [])
   };
@@ -167,6 +182,8 @@ function criarServico(dados: DadosCenario = {}) {
       if (entidade === PacienteOrm) return repositorios.paciente;
       if (entidade === ProfissionalOrm) return repositorios.profissional;
       if (entidade === ArquivoMidiaOrm) return repositorios.midia;
+      if (entidade === RespostaCheckinOrm) return repositorios.respostaCheckin;
+      if ((entidade as { name?: string }).name === 'TranscricaoMidiaOrm') return repositorios.transcricao;
       if (entidade === AnaliseSentimentoOrm) return repositorios.sentimento;
       if (entidade === ReconhecimentoAlimentarOrm) return repositorios.alimento;
       throw new Error('Repositorio nao mapeado');
@@ -199,6 +216,23 @@ function respostaSentimento() {
 
 function hashReferencia(referencia: string): string {
   return createHash('sha256').update(referencia).digest('hex');
+}
+
+function chaveCachePaciente(pacienteId: string, hashBruto: string): string {
+  return createHash('sha256')
+    .update(pacienteId)
+    .update('\0')
+    .update(hashBruto)
+    .digest('hex');
+}
+
+function parametrosLockReconhecimento(tenantId: string, chaveCache: string): [number, number] {
+  const chave = createHash('sha256')
+    .update(tenantId)
+    .update('\0')
+    .update(chaveCache)
+    .digest();
+  return [chave.readInt32BE(0), chave.readInt32BE(4)];
 }
 
 function respostaReconhecimento(
@@ -336,6 +370,108 @@ describe('ServicoIa', () => {
     );
   });
 
+  it('valida e bloqueia a resposta de check-in autorizada antes do provedor e da persistencia', async () => {
+    global.fetch = jest.fn(async () => respostaSentimento()) as never;
+    const { servico, repositorios } = criarServico(dadosComDoisPacientes());
+
+    await servico.analisarSentimento(
+      'tenant-1',
+      {
+        pacienteId: 'paciente-1',
+        texto: 'texto clinico sensivel',
+        respostaCheckinId: 'resposta-1'
+      },
+      usuarios.Professional
+    );
+
+    expect(repositorios.respostaCheckin.findOne).toHaveBeenCalledWith({
+      where: { id: 'resposta-1', tenantId: 'tenant-1', pacienteId: 'paciente-1' },
+      lock: { mode: 'pessimistic_write' }
+    });
+    expect(repositorios.respostaCheckin.findOne.mock.invocationCallOrder[0]).toBeLessThan(
+      (global.fetch as jest.Mock).mock.invocationCallOrder[0]
+    );
+    expect(repositorios.sentimento.save).toHaveBeenCalledWith(
+      expect.objectContaining({ respostaCheckinId: 'resposta-1' })
+    );
+  });
+
+  it.each([
+    ['outro paciente', 'resposta-outro-paciente'],
+    ['outro tenant', 'resposta-outro-tenant'],
+    ['ausente', 'resposta-ausente']
+  ] as const)(
+    'rejeita resposta de check-in de %s antes do provedor e da persistencia',
+    async (_caso, respostaCheckinId) => {
+      global.fetch = jest.fn(async () => respostaSentimento()) as never;
+      const { servico, repositorios } = criarServico(dadosComDoisPacientes());
+
+      await expect(
+        servico.analisarSentimento(
+          'tenant-1',
+          { pacienteId: 'paciente-1', texto: 'texto clinico sensivel', respostaCheckinId },
+          usuarios.Professional
+        )
+      ).rejects.toBeInstanceOf(NotFoundException);
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(repositorios.sentimento.save).not.toHaveBeenCalled();
+    }
+  );
+
+  it('valida a transcricao e bloqueia sua midia autorizada antes do provedor e da persistencia', async () => {
+    global.fetch = jest.fn(async () => respostaSentimento()) as never;
+    const { servico, repositorios } = criarServico(dadosComDoisPacientes());
+
+    await servico.analisarSentimento(
+      'tenant-1',
+      {
+        pacienteId: 'paciente-1',
+        texto: 'texto clinico sensivel',
+        transcricaoMidiaId: 'transcricao-1'
+      },
+      usuarios.Professional
+    );
+
+    expect(repositorios.transcricao.findOne).toHaveBeenCalledWith({
+      where: { id: 'transcricao-1', tenantId: 'tenant-1' },
+      lock: { mode: 'pessimistic_write' }
+    });
+    expect(repositorios.midia.findOne).toHaveBeenCalledWith({
+      where: { id: 'midia-1', tenantId: 'tenant-1', pacienteId: 'paciente-1' },
+      lock: { mode: 'pessimistic_write' }
+    });
+    expect(repositorios.midia.findOne.mock.invocationCallOrder[0]).toBeLessThan(
+      (global.fetch as jest.Mock).mock.invocationCallOrder[0]
+    );
+    expect(repositorios.sentimento.save).toHaveBeenCalledWith(
+      expect.objectContaining({ transcricaoMidiaId: 'transcricao-1' })
+    );
+  });
+
+  it.each([
+    ['outro paciente', 'transcricao-outro-paciente'],
+    ['outro tenant', 'transcricao-outro-tenant'],
+    ['ausente', 'transcricao-ausente']
+  ] as const)(
+    'rejeita transcricao de %s antes do provedor e da persistencia',
+    async (_caso, transcricaoMidiaId) => {
+      global.fetch = jest.fn(async () => respostaSentimento()) as never;
+      const { servico, repositorios } = criarServico(dadosComDoisPacientes());
+
+      await expect(
+        servico.analisarSentimento(
+          'tenant-1',
+          { pacienteId: 'paciente-1', texto: 'texto clinico sensivel', transcricaoMidiaId },
+          usuarios.Professional
+        )
+      ).rejects.toBeInstanceOf(NotFoundException);
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(repositorios.sentimento.save).not.toHaveBeenCalled();
+    }
+  );
+
   it('rejeita reconhecimento fora do escopo antes de consultar midia ou provedor', async () => {
     global.fetch = jest.fn(async () => respostaReconhecimento()) as never;
     const { servico, repositorios } = criarServico(dadosComDoisPacientes());
@@ -390,7 +526,7 @@ describe('ServicoIa', () => {
         pacienteId: 'paciente-1',
         arquivoMidiaId: 'midia-1',
         provedor: 'vision-pro',
-        imagemHash: hashReferencia(URL_MIDIA_CONFIAVEL)
+        imagemHash: chaveCachePaciente('paciente-1', hashReferencia(URL_MIDIA_CONFIAVEL))
       })
     );
     expect(reconhecimento).toEqual(expect.objectContaining({ provedor: 'vision-pro' }));
@@ -432,7 +568,7 @@ describe('ServicoIa', () => {
       pacienteId: 'paciente-1',
       arquivoMidiaId: 'midia-1',
       provedor: 'vision-enterprise',
-      imagemHash: hashReferencia(URL_MIDIA_CONFIAVEL)
+      imagemHash: chaveCachePaciente('paciente-1', hashReferencia(URL_MIDIA_CONFIAVEL))
     };
     const dados = dadosComDoisPacientes();
     dados.reconhecimentos = [cache];
@@ -448,7 +584,7 @@ describe('ServicoIa', () => {
         tenantId: 'tenant-1',
         pacienteId: 'paciente-1',
         arquivoMidiaId: 'midia-1',
-        imagemHash: hashReferencia(URL_MIDIA_CONFIAVEL)
+        imagemHash: chaveCachePaciente('paciente-1', hashReferencia(URL_MIDIA_CONFIAVEL))
       }
     });
     expect(global.fetch).not.toHaveBeenCalled();
@@ -464,7 +600,7 @@ describe('ServicoIa', () => {
         pacienteId: 'paciente-2',
         arquivoMidiaId: 'midia-2',
         provedor: 'vision-pro',
-        imagemHash: hashReferencia(URL_MIDIA_CONFIAVEL)
+        imagemHash: chaveCachePaciente('paciente-2', hashReferencia(URL_MIDIA_CONFIAVEL))
       }
     ];
     const { servico } = criarServico(dados);
@@ -477,6 +613,74 @@ describe('ServicoIa', () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(reconhecimento).toEqual(expect.objectContaining({ pacienteId: 'paciente-1', arquivoMidiaId: 'midia-1' }));
+  });
+
+  it('evita 23505 e separa o mesmo provedor e hash bruto entre pacientes', async () => {
+    global.fetch = jest.fn(async () => respostaReconhecimento()) as never;
+    const dados = dadosComDoisPacientes();
+    const midiaOutroPaciente = dados.midias?.find((midia) => midia.id === 'midia-2');
+    if (!midiaOutroPaciente) throw new Error('Cenario sem midia do segundo paciente.');
+    midiaOutroPaciente.bucket = 'bucket-clinico';
+    midiaOutroPaciente.chaveObjeto = 'tenant-1/paciente-1/imagem/midia-1';
+    const { servico, gerenciador, repositorios } = criarServico(dados);
+    repositorios.alimento.save.mockImplementation(async (entrada: Record<string, unknown>) => {
+      const conflito = repositorios.alimento.registros.some(
+        (registro) =>
+          registro.tenantId === entrada.tenantId &&
+          registro.provedor === entrada.provedor &&
+          registro.imagemHash === entrada.imagemHash
+      );
+      if (conflito) {
+        throw Object.assign(
+          new Error('duplicate key value violates unique constraint "food_recognition_cache_tenant_id_provedor_imagem_hash_key"'),
+          { code: '23505' }
+        );
+      }
+      repositorios.alimento.registros.push(entrada);
+      return entrada;
+    });
+
+    await servico.reconhecerAlimento('tenant-1', dadosReconhecimento(), usuarios.SuperAdmin);
+    await servico.reconhecerAlimento(
+      'tenant-1',
+      { ...dadosReconhecimento(), pacienteId: 'paciente-2', arquivoMidiaId: 'midia-2' },
+      usuarios.SuperAdmin
+    );
+
+    const hashBruto = hashReferencia(URL_MIDIA_CONFIAVEL);
+    const chavePaciente1 = chaveCachePaciente('paciente-1', hashBruto);
+    const chavePaciente2 = chaveCachePaciente('paciente-2', hashBruto);
+    expect(chavePaciente1).not.toBe(chavePaciente2);
+    expect(repositorios.alimento.findOne).toHaveBeenNthCalledWith(1, {
+      where: {
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        arquivoMidiaId: 'midia-1',
+        imagemHash: chavePaciente1
+      }
+    });
+    expect(repositorios.alimento.findOne).toHaveBeenNthCalledWith(2, {
+      where: {
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-2',
+        arquivoMidiaId: 'midia-2',
+        imagemHash: chavePaciente2
+      }
+    });
+    expect(gerenciador.query).toHaveBeenNthCalledWith(
+      1,
+      'select pg_advisory_xact_lock($1, $2)',
+      parametrosLockReconhecimento('tenant-1', chavePaciente1)
+    );
+    expect(gerenciador.query).toHaveBeenNthCalledWith(
+      2,
+      'select pg_advisory_xact_lock($1, $2)',
+      parametrosLockReconhecimento('tenant-1', chavePaciente2)
+    );
+    expect(repositorios.alimento.save.mock.calls.map(([registro]) => registro)).toEqual([
+      expect.objectContaining({ pacienteId: 'paciente-1', provedor: 'vision-pro', imagemHash: chavePaciente1 }),
+      expect.objectContaining({ pacienteId: 'paciente-2', provedor: 'vision-pro', imagemHash: chavePaciente2 })
+    ]);
   });
 
   it('rejeita hash divergente do provedor com erro sanitizado e sem persistir', async () => {

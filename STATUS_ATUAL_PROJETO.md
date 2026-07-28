@@ -12,10 +12,15 @@ Atualizado em 2026-07-28.
   o proprio paciente; Professional, pacientes responsaveis; SuperAdmin, o
   tenant. Listas sao filtradas no banco e DTOs nao ampliam sessao. Mobile
   valida uploads/sync e trata `idLocal` por paciente, legado seguro e corrida
-  `23505`; IA valida midia autorizada com locks, cache por paciente/midia/hash,
-  hash e timeout 1-60s/padrao 15. Collaborator conserva apenas Mobile ja
-  admitido e segue sem IA por falta de `ia.executar`. Sem migracao ou mudanca
-  em Google Agenda; cache IA antigo pode apenas perder hit, sem exposicao.
+  `23505`, devolvendo erro estavel sem detalhes internos. IA valida sob locks
+  as referencias opcionais de resposta de check-in e transcricao/midia no
+  mesmo tenant/paciente antes do provedor; reconhecimento valida o hash bruto
+  da URL confiavel e usa cache namespaced por paciente na consulta, advisory
+  lock e persistencia, mantendo o provedor real. Timeout: 1-60s/padrao 15.
+  Collaborator conserva apenas Mobile ja admitido e segue sem IA por falta de
+  `ia.executar`. Sem migracao, DTO, frontend, rota, permissao ou mudanca em
+  Google Agenda; cache IA antigo pode apenas perder hit, sem `23505` ou
+  exposicao. Gates finais: 62 suites/377 testes backend e 20 testes authz web.
 - Fase 149 - Limpeza do canal de watch do Google Calendar ao desconectar (entregue em 2026-07-27, branch `integrate/producao-hardening`). Fecha o debito das Fases 136/145: `desconectar()` agora chama `pararCanalWatch` no Google (tolerante a falha) e remove o registro local de `GoogleCanalWatchOrm`.
 - Fase 148: Foco visivel proprio nos componentes compartilhados `Campo`/`AreaTexto`/`Selecao`/`Botao` (entregue em 2026-07-27, PR #5 aberto para `main`).
 - Fase 147: Foco visivel explicito nos inputs crus da agenda (entregue em 2026-07-27). Antes dela, esta branch recebeu por merge a Fase 146 (gate de acessibilidade, feita pelo Codex na `main`).

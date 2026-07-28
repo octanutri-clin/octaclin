@@ -9,9 +9,11 @@ import {
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import { AnalisarSentimentoDto, ReconhecerAlimentoDto } from './dtos';
 import { AnaliseSentimentoOrm } from '../infraestrutura/analise-sentimento.orm';
 import { ReconhecimentoAlimentarOrm } from '../infraestrutura/reconhecimento-alimentar.orm';
+import { TranscricaoMidiaOrm } from '../infraestrutura/transcricao-midia.orm';
 
 interface RespostaServicoSentimento {
   ansiedade_score: number;
@@ -62,6 +64,7 @@ export class ServicoIa {
       const paciente = await validarPacienteNoEscopo(gerenciador, tenantId, dados.pacienteId, usuario, {
         lockPessimista: true
       });
+      await this.validarReferenciasSentimento(gerenciador, tenantId, paciente.id, dados);
       const resposta = await this.postar<RespostaServicoSentimento>('/analisar-sentimento', {
         texto: dados.texto,
         contexto: dados.contexto ?? {}
@@ -114,15 +117,16 @@ export class ServicoIa {
       if (!arquivo) throw new NotFoundException('Recurso nao encontrado.');
 
       const imagemUrl = this.construirUrlMidiaConfiavel(arquivo);
-      const hashEsperado = createHash('sha256').update(imagemUrl).digest('hex');
-      await this.adquirirLockReconhecimento(gerenciador, tenantId, paciente.id, hashEsperado);
+      const hashBrutoEsperado = createHash('sha256').update(imagemUrl).digest('hex');
+      const chaveCache = this.construirChaveCacheReconhecimento(paciente.id, hashBrutoEsperado);
+      await this.adquirirLockReconhecimento(gerenciador, tenantId, chaveCache);
       const repositorio = gerenciador.getRepository(ReconhecimentoAlimentarOrm);
       const cache = await repositorio.findOne({
         where: {
           tenantId,
           pacienteId: paciente.id,
           arquivoMidiaId: arquivo.id,
-          imagemHash: hashEsperado
+          imagemHash: chaveCache
         }
       });
       if (cache) return cache;
@@ -131,7 +135,7 @@ export class ServicoIa {
         imagem_url: imagemUrl,
         contexto: dados.contexto ?? {}
       });
-      this.validarRespostaReconhecimento(resposta, hashEsperado);
+      this.validarRespostaReconhecimento(resposta, hashBrutoEsperado);
 
       return repositorio.save(
         repositorio.create({
@@ -139,7 +143,7 @@ export class ServicoIa {
           pacienteId: paciente.id,
           arquivoMidiaId: arquivo.id,
           provedor: resposta.provedor,
-          imagemHash: resposta.imagem_hash,
+          imagemHash: chaveCache,
           alimentosDetectados: resposta.alimentos_detectados,
           pesoEstimadoGramas: resposta.peso_estimado_gramas ? String(resposta.peso_estimado_gramas) : undefined,
           caloriasEstimadas: resposta.calorias_estimadas ? String(resposta.calorias_estimadas) : undefined,
@@ -169,6 +173,35 @@ export class ServicoIa {
     return { pacienteId: In(pacientes.map((paciente) => paciente.id)) };
   }
 
+  private async validarReferenciasSentimento(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string,
+    dados: AnalisarSentimentoDto
+  ): Promise<void> {
+    if (dados.respostaCheckinId) {
+      const respostaCheckin = await gerenciador.getRepository(RespostaCheckinOrm).findOne({
+        where: { id: dados.respostaCheckinId, tenantId, pacienteId },
+        lock: { mode: 'pessimistic_write' }
+      });
+      if (!respostaCheckin) throw new NotFoundException('Recurso nao encontrado.');
+    }
+
+    if (dados.transcricaoMidiaId) {
+      const transcricao = await gerenciador.getRepository(TranscricaoMidiaOrm).findOne({
+        where: { id: dados.transcricaoMidiaId, tenantId },
+        lock: { mode: 'pessimistic_write' }
+      });
+      if (!transcricao) throw new NotFoundException('Recurso nao encontrado.');
+
+      const arquivo = await gerenciador.getRepository(ArquivoMidiaOrm).findOne({
+        where: { id: transcricao.arquivoMidiaId, tenantId, pacienteId },
+        lock: { mode: 'pessimistic_write' }
+      });
+      if (!arquivo) throw new NotFoundException('Recurso nao encontrado.');
+    }
+  }
+
   private construirUrlMidiaConfiavel(arquivo: ArquivoMidiaOrm): string {
     const baseUrl = (process.env.ARMAZENAMENTO_UPLOAD_BASE_URL ?? 'http://localhost:9000').replace(/\/+$/, '');
     const bucket = arquivo.bucket.replace(/^\/+|\/+$/g, '');
@@ -179,20 +212,25 @@ export class ServicoIa {
   private async adquirirLockReconhecimento(
     gerenciador: EntityManager,
     tenantId: string,
-    pacienteId: string,
-    hashEsperado: string
+    chaveCache: string
   ): Promise<void> {
     const chave = createHash('sha256')
       .update(tenantId)
       .update('\0')
-      .update(pacienteId)
-      .update('\0')
-      .update(hashEsperado)
+      .update(chaveCache)
       .digest();
     await gerenciador.query('select pg_advisory_xact_lock($1, $2)', [
       chave.readInt32BE(0),
       chave.readInt32BE(4)
     ]);
+  }
+
+  private construirChaveCacheReconhecimento(pacienteId: string, hashBruto: string): string {
+    return createHash('sha256')
+      .update(pacienteId)
+      .update('\0')
+      .update(hashBruto)
+      .digest('hex');
   }
 
   private validarRespostaReconhecimento(

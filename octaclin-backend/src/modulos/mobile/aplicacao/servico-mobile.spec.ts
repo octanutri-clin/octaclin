@@ -358,6 +358,39 @@ describe('ServicoMobile', () => {
     }
   );
 
+  it('sanitiza erro interno do lote sem expor SQL ou nome de constraint', async () => {
+    const { servico, repositorios } = criarServico(dadosComDoisPacientes());
+    repositorios.sincronizacao.findOne.mockRejectedValueOnce(
+      new Error(
+        'duplicate key value violates unique constraint "sincronizacoes_mobile_tenant_id_id_local_key": insert into sincronizacoes_mobile'
+      )
+    );
+
+    const resultado = await servico.sincronizarLote(
+      'tenant-1',
+      {
+        itens: [
+          {
+            idLocal: 'local-erro-interno',
+            tipo: 'diario_rapido',
+            payload: { pacienteId: 'paciente-1', tipo: 'humor', valor: { nivel: 4 } }
+          }
+        ]
+      },
+      usuarios.Patient
+    );
+
+    expect(resultado.resultados).toEqual([
+      {
+        idLocal: 'local-erro-interno',
+        status: 'erro',
+        erro: 'Falha ao sincronizar item.'
+      }
+    ]);
+    expect(JSON.stringify(resultado)).not.toContain('sincronizacoes_mobile_tenant_id_id_local_key');
+    expect(JSON.stringify(resultado)).not.toContain('insert into');
+  });
+
   it('nao retorna recurso de outro paciente em colisao com idLocal legado', async () => {
     const dados = dadosComDoisPacientes();
     dados.diarios?.push({

@@ -8,9 +8,19 @@ import { ServicoIa } from './aplicacao/servico-ia';
 import { ControladorIa } from './apresentacao/controlador-ia';
 import { AnaliseSentimentoOrm } from './infraestrutura/analise-sentimento.orm';
 import { ReconhecimentoAlimentarOrm } from './infraestrutura/reconhecimento-alimentar.orm';
+import { TranscricaoMidiaOrm } from './infraestrutura/transcricao-midia.orm';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AnaliseSentimentoOrm, ReconhecimentoAlimentarOrm, UserActionLogOrm]), ModuloAuth, ModuloTenancy],
+  imports: [
+    TypeOrmModule.forFeature([
+      AnaliseSentimentoOrm,
+      ReconhecimentoAlimentarOrm,
+      TranscricaoMidiaOrm,
+      UserActionLogOrm
+    ]),
+    ModuloAuth,
+    ModuloTenancy
+  ],
   controllers: [ControladorIa],
   providers: [ServicoIa, ServicoAuditoria],
   exports: [ServicoIa]

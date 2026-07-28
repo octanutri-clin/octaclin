@@ -534,20 +534,21 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     continua negado na IA por nao possuir `ia.executar`.
   - Listas Mobile/IA sao filtradas no banco; uploads, sincronizacao Mobile e
     IA validam o recurso antes de agir. A sincronizacao usa `idLocal` por
-    paciente, preserva legado autorizado e recupera corrida `23505`.
-  - IA aceita somente midia registrada autorizada, usa locks/advisory lock,
-    cache por paciente/midia/hash, verifica hash do provedor e limita timeout a
-    1-60 segundos (padrao 15). Sem migracao; cache antigo pode perder hit, sem
+    paciente, preserva legado autorizado, recupera corrida `23505` e devolve
+    mensagens estaveis sem expor erro interno, SQL, constraint ou stack.
+  - IA valida sob locks as referencias opcionais de resposta de check-in e
+    transcricao/midia no mesmo tenant e paciente antes do fetch. Reconhecimento
+    aceita somente midia registrada autorizada, valida o hash bruto da URL
+    confiavel e usa a mesma chave de cache namespaced por paciente na consulta,
+    advisory lock e persistencia, mantendo o provedor real sem fixa-lo na
+    consulta. Sem migracao; cache antigo pode perder hit, sem `23505` ou
     exposicao entre pacientes.
   - Data: 2026-07-28.
-  - Validacoes: `pnpm --dir octaclin-backend test --runInBand` (62 suites/367
+  - Validacoes: `pnpm --dir octaclin-backend test --runInBand` (62 suites/377
     testes), `typecheck`, `build`, `pnpm --dir octaclin-web test:authz` (20
     testes), `pnpm validate:docs`, `pnpm test:confiabilidade`, `pnpm
     security:secrets` e `git diff --check`.
   - Saida entregue: `fase-150a-escopo-mobile-ia.md`.
-  - Pendencia: o lote Mobile ainda retorna `Error.message` por item; sanitizar
-    erro interno de persistencia e hardening futuro, sem mudanca de codigo
-    nesta fase.
 
 ## Backlog pos-producao
 

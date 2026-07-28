@@ -35,6 +35,7 @@ import { ExecucaoRegraOrm } from '../../modulos/automacoes/infraestrutura/execuc
 import { RegraAutomacaoOrm } from '../../modulos/automacoes/infraestrutura/regra-automacao.orm';
 import { AnaliseSentimentoOrm } from '../../modulos/ia/infraestrutura/analise-sentimento.orm';
 import { ReconhecimentoAlimentarOrm } from '../../modulos/ia/infraestrutura/reconhecimento-alimentar.orm';
+import { TranscricaoMidiaOrm } from '../../modulos/ia/infraestrutura/transcricao-midia.orm';
 import { EnvioMaterialPacienteOrm } from '../../modulos/materiais/infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../../modulos/materiais/infraestrutura/material-educativo.orm';
 import { BadgeOrm } from '../../modulos/gamificacao/infraestrutura/badge.orm';
@@ -131,6 +132,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       ExecucaoRegraOrm,
       AnaliseSentimentoOrm,
       ReconhecimentoAlimentarOrm,
+      TranscricaoMidiaOrm,
       MaterialEducativoOrm,
       EnvioMaterialPacienteOrm,
       CirculoPacientesOrm,
