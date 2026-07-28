@@ -21,7 +21,7 @@ export class ControladorIa {
 
   @Get('sentimento')
   listarAnalisesSentimento(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoIa.listarAnalisesSentimento(usuario.tenantId);
+    return this.servicoIa.listarAnalisesSentimento(usuario.tenantId, usuario);
   }
 
   @Post('sentimento')
@@ -30,7 +30,7 @@ export class ControladorIa {
     @Req() requisicao: Request,
     @Body() dados: AnalisarSentimentoDto
   ) {
-    const analise = await this.servicoIa.analisarSentimento(usuario.tenantId, dados);
+    const analise = await this.servicoIa.analisarSentimento(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'ia.sentimento.analisar', 'analise_sentimento', analise.id, {
       pacienteId: dados.pacienteId,
       respostaCheckinId: dados.respostaCheckinId,
@@ -42,7 +42,7 @@ export class ControladorIa {
 
   @Get('reconhecimento-alimentar')
   listarReconhecimentosAlimentares(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoIa.listarReconhecimentosAlimentares(usuario.tenantId);
+    return this.servicoIa.listarReconhecimentosAlimentares(usuario.tenantId, usuario);
   }
 
   @Post('reconhecimento-alimentar')
@@ -51,7 +51,7 @@ export class ControladorIa {
     @Req() requisicao: Request,
     @Body() dados: ReconhecerAlimentoDto
   ) {
-    const reconhecimento = await this.servicoIa.reconhecerAlimento(usuario.tenantId, dados);
+    const reconhecimento = await this.servicoIa.reconhecerAlimento(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'ia.reconhecimento_alimentar.criar', 'reconhecimento_alimentar', reconhecimento.id, {
       pacienteId: dados.pacienteId,
       arquivoMidiaId: dados.arquivoMidiaId,
