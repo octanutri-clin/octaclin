@@ -116,6 +116,24 @@ Inclui permissoes de `Professional` e adiciona:
 | Gamificacao | `/gamificacao` | `SuperAdmin`, `Professional` + `gamificacao.gerenciar` |
 | Operacoes | `/operacoes` | `SuperAdmin` |
 
+## Escopo efetivo de dados Mobile e IA
+
+Esta secao precisa o escopo de dados dos endpoints sem alterar a matriz de
+entrada acima. A identidade autenticada define o limite; `pacienteId` em DTO
+somente aponta o recurso a validar e nunca amplia a sessao.
+
+- Mobile: `Patient` atua somente sobre o proprio paciente; `Professional`,
+  sobre pacientes cujo responsavel e seu perfil ativo; `SuperAdmin`, sobre o
+  tenant. `Collaborator` conserva somente o acesso Mobile ja admitido pelo
+  contrato de papeis. Listas de diario, midias e acompanhantes filtram no banco
+  e uploads, escritas e sincronizacao validam o paciente/recurso.
+- IA: `Professional` fica limitado aos pacientes responsaveis e `SuperAdmin`
+  ao tenant. Embora o controlador mantenha `Collaborator` entre os papeis
+  declarados, `GuardaPermissoes` exige `ia.executar`, que ele nao possui; o
+  acesso IA continua negado. Listas filtram no banco e analise/reconhecimento
+  validam paciente e, no reconhecimento, midia registrada autorizada antes do
+  provedor externo.
+
 ## Rotas BFF sensiveis recentes
 
 | BFF | Backend | Observacao |

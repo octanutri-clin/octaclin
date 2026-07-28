@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 144 de agendamento publico por solicitacao.
+Atualizado apos a Fase 150A de escopo de dados em Mobile e IA.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -194,6 +194,16 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 147 - Foco visivel explicito nos inputs crus da agenda: os 4 inputs nativos de `painel-agenda.tsx` (checkbox de notificacoes, nova data/hora, nova duracao, novo local) ganharam a mesma classe `focus-visible:outline...` ja usada em `portal-shell.tsx`/`modal.tsx`, endereçando de forma explicita o achado documentado na Fase 146 em vez de depender apenas da regra CSS global. Ver `fase-147-foco-visivel-inputs-agenda.md`.
 - Fase 148 - Foco visivel proprio nos componentes compartilhados de formulario/botao: `Campo`, `AreaTexto`, `Selecao` e `Botao` (usados em 23 arquivos/37 imports do app) ganharam a mesma classe de foco da Fase 147, deixando de depender exclusivamente da regra CSS global. Ver `fase-148-foco-visivel-componentes-compartilhados.md`.
 - Fase 149 - Limpeza do canal de watch do Google Calendar ao desconectar: `desconectar()` passou a chamar `pararCanalWatch` (parada tolerante a falha, so loga warning) e a remover o registro de `google_canais_watch` antes de limpar os campos locais, fechando o debito das Fases 136/145 em que a desconexao so limpava estado local sem avisar o Google. Ver `fase-149-limpeza-canal-watch-google-calendar.md`.
+- Fase 150A - Escopo de dados em Mobile e IA: `Patient` ficou restrito ao
+  proprio paciente, `Professional` aos pacientes responsaveis e `SuperAdmin`
+  ao tenant; DTOs nao ampliam a sessao. Listas filtram no banco e escritas,
+  uploads, sync e IA validam recursos. O sync Mobile ganhou `idLocal` por
+  paciente, protecao de legado e recuperacao de corrida `23505`; IA usa midia
+  autorizada, locks, cache por paciente/midia/hash, hash verificado e timeout
+  sanitizado de 1-60 segundos (padrao 15). `Collaborator` conserva somente o
+  Mobile ja admitido e nao acessa IA sem `ia.executar`. Sem migracao; cache IA
+  antigo pode apenas perder hit, sem exposicao. Ver
+  `fase-150a-escopo-mobile-ia.md`.
 
 ## Estado atual de uso
 

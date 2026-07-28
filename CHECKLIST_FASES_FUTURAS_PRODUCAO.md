@@ -527,6 +527,28 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     (tambem citadas na Fase 136) continuam pendentes, fora do escopo desta
     fase.
 
+- [x] Fase 150A - Escopo de dados em Mobile e IA.
+  - `Patient` acessa somente o proprio paciente; `Professional`, somente
+    pacientes responsaveis; `SuperAdmin`, o tenant. `pacienteId` em DTO nunca
+    amplia a sessao. `Collaborator` conserva apenas o Mobile ja admitido e
+    continua negado na IA por nao possuir `ia.executar`.
+  - Listas Mobile/IA sao filtradas no banco; uploads, sincronizacao Mobile e
+    IA validam o recurso antes de agir. A sincronizacao usa `idLocal` por
+    paciente, preserva legado autorizado e recupera corrida `23505`.
+  - IA aceita somente midia registrada autorizada, usa locks/advisory lock,
+    cache por paciente/midia/hash, verifica hash do provedor e limita timeout a
+    1-60 segundos (padrao 15). Sem migracao; cache antigo pode perder hit, sem
+    exposicao entre pacientes.
+  - Data: 2026-07-28.
+  - Validacoes: `pnpm --dir octaclin-backend test --runInBand` (62 suites/367
+    testes), `typecheck`, `build`, `pnpm --dir octaclin-web test:authz` (20
+    testes), `pnpm validate:docs`, `pnpm test:confiabilidade`, `pnpm
+    security:secrets` e `git diff --check`.
+  - Saida entregue: `fase-150a-escopo-mobile-ia.md`.
+  - Pendencia: o lote Mobile ainda retorna `Error.message` por item; sanitizar
+    erro interno de persistencia e hardening futuro, sem mudanca de codigo
+    nesta fase.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.
