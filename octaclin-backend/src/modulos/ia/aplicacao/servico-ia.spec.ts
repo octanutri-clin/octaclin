@@ -10,6 +10,9 @@ import { ReconhecimentoAlimentarOrm } from '../infraestrutura/reconhecimento-ali
 import { AnalisarSentimentoDto, ReconhecerAlimentoDto } from './dtos';
 import { ServicoIa } from './servico-ia';
 
+const ARMAZENAMENTO_BASE_URL = 'https://storage.test';
+const URL_MIDIA_CONFIAVEL = `${ARMAZENAMENTO_BASE_URL}/bucket-clinico/tenant-1/paciente-1/imagem/midia-1`;
+
 const usuarios: Record<'Professional' | 'SuperAdmin', UsuarioAutenticado> = {
   Professional: {
     usuarioId: 'usuario-profissional-1',
@@ -125,8 +128,20 @@ function dadosComDoisPacientes(): DadosCenario {
       }
     ],
     midias: [
-      { id: 'midia-1', tenantId: 'tenant-1', pacienteId: 'paciente-1' },
-      { id: 'midia-2', tenantId: 'tenant-1', pacienteId: 'paciente-2' }
+      {
+        id: 'midia-1',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        bucket: 'bucket-clinico',
+        chaveObjeto: 'tenant-1/paciente-1/imagem/midia-1'
+      },
+      {
+        id: 'midia-2',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-2',
+        bucket: 'bucket-clinico',
+        chaveObjeto: 'tenant-1/paciente-2/imagem/midia-2'
+      }
     ],
     sentimentos: [
       { id: 'sentimento-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', criadoEm },
@@ -155,7 +170,8 @@ function criarServico(dados: DadosCenario = {}) {
       if (entidade === AnaliseSentimentoOrm) return repositorios.sentimento;
       if (entidade === ReconhecimentoAlimentarOrm) return repositorios.alimento;
       throw new Error('Repositorio nao mapeado');
-    })
+    }),
+    query: jest.fn(async (_sql: string, _parametros?: unknown[]) => [])
   };
   const executorTenant = {
     executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
@@ -181,28 +197,58 @@ function respostaSentimento() {
   };
 }
 
-function respostaReconhecimento() {
+function hashReferencia(referencia: string): string {
+  return createHash('sha256').update(referencia).digest('hex');
+}
+
+function respostaReconhecimento(
+  referencia = URL_MIDIA_CONFIAVEL,
+  provedor = 'vision-pro'
+) {
   return {
     ok: true,
     status: 200,
     json: async () => ({
-      provedor: 'heuristica-local',
-      imagem_hash: 'hash-provedor',
+      provedor,
+      imagem_hash: hashReferencia(referencia),
       alimentos_detectados: [{ nome: 'arroz' }],
       confianca_media: 0.92
     })
   };
 }
 
-function hashReconhecimento(pacienteId: string, referencia: string): string {
-  return createHash('sha256').update(pacienteId).update('\0').update(referencia).digest('hex');
+function dadosReconhecimento(): ReconhecerAlimentoDto {
+  return {
+    pacienteId: 'paciente-1',
+    arquivoMidiaId: 'midia-1',
+    imagemUrl: 'https://atacante.test/imagem.jpg',
+    imagemBase64: 'base64-controlado-pelo-cliente'
+  };
+}
+
+async function aguardarCondicao(condicao: () => boolean): Promise<void> {
+  for (let tentativa = 0; tentativa < 100; tentativa += 1) {
+    if (condicao()) return;
+    await new Promise<void>((resolver) => setImmediate(resolver));
+  }
+  throw new Error('Condicao de teste nao atingida.');
 }
 
 describe('ServicoIa', () => {
   const fetchOriginal = global.fetch;
+  const armazenamentoOriginal = process.env.ARMAZENAMENTO_UPLOAD_BASE_URL;
+
+  beforeEach(() => {
+    process.env.ARMAZENAMENTO_UPLOAD_BASE_URL = ARMAZENAMENTO_BASE_URL;
+  });
 
   afterEach(() => {
     global.fetch = fetchOriginal;
+    if (armazenamentoOriginal === undefined) {
+      delete process.env.ARMAZENAMENTO_UPLOAD_BASE_URL;
+    } else {
+      process.env.ARMAZENAMENTO_UPLOAD_BASE_URL = armazenamentoOriginal;
+    }
     jest.restoreAllMocks();
   });
 
@@ -256,54 +302,41 @@ describe('ServicoIa', () => {
     expect(repositorios.sentimento.save).not.toHaveBeenCalled();
   });
 
-  it('persiste analise autorizada sem texto bruto e revalida o paciente depois do provedor', async () => {
+  it('mantem lock do paciente, chamada externa e save do sentimento na mesma transacao', async () => {
     global.fetch = jest.fn(async () => respostaSentimento()) as never;
-    const { servico, repositorios } = criarServico(dadosComDoisPacientes());
+    const { servico, repositorios, executorTenant } = criarServico(dadosComDoisPacientes());
 
-    const analise = await servico.analisarSentimento(
+    await servico.analisarSentimento(
       'tenant-1',
       { pacienteId: 'paciente-1', texto: 'texto clinico sensivel' },
       usuarios.Professional
     );
 
-    expect(repositorios.paciente.findOne).toHaveBeenCalledTimes(2);
-    expect(repositorios.sentimento.save).toHaveBeenCalledWith(
-      expect.not.objectContaining({ texto: expect.any(String) })
+    expect(executorTenant.executar).toHaveBeenCalledTimes(1);
+    expect(repositorios.paciente.findOne).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1'
+      }),
+      lock: { mode: 'pessimistic_write' }
+    });
+    expect(repositorios.paciente.findOne.mock.invocationCallOrder[0]).toBeLessThan(
+      (global.fetch as jest.Mock).mock.invocationCallOrder[0]
     );
-    expect(analise).toEqual(expect.objectContaining({ tenantId: 'tenant-1', pacienteId: 'paciente-1' }));
+    expect((global.fetch as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
+      repositorios.sentimento.save.mock.invocationCallOrder[0]
+    );
   });
 
-  it('nao persiste analise quando o Professional perde responsabilidade durante a chamada externa', async () => {
-    global.fetch = jest.fn(async () => respostaSentimento()) as never;
-    const { servico, repositorios } = criarServico(dadosComDoisPacientes());
-    repositorios.paciente.findOne
-      .mockResolvedValueOnce({ id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1' })
-      .mockResolvedValueOnce(null);
-
-    await expect(
-      servico.analisarSentimento(
-        'tenant-1',
-        { pacienteId: 'paciente-1', texto: 'texto clinico sensivel' },
-        usuarios.Professional
-      )
-    ).rejects.toBeInstanceOf(NotFoundException);
-
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(repositorios.sentimento.save).not.toHaveBeenCalled();
-  });
-
-  it('rejeita reconhecimento fora do escopo antes de consultar a midia ou chamar o provedor', async () => {
+  it('rejeita reconhecimento fora do escopo antes de consultar midia ou provedor', async () => {
     global.fetch = jest.fn(async () => respostaReconhecimento()) as never;
     const { servico, repositorios } = criarServico(dadosComDoisPacientes());
 
     await expect(
       servico.reconhecerAlimento(
         'tenant-1',
-        {
-          pacienteId: 'paciente-2',
-          arquivoMidiaId: 'midia-2',
-          imagemUrl: 'https://example.com/prato.jpg'
-        },
+        { ...dadosReconhecimento(), pacienteId: 'paciente-2', arquivoMidiaId: 'midia-2' },
         usuarios.Professional
       )
     ).rejects.toBeInstanceOf(NotFoundException);
@@ -312,136 +345,203 @@ describe('ServicoIa', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('rejeita arquivo de outro paciente antes de chamar o provedor', async () => {
+  it('revalida ownership da midia com lock e rejeita divergencia antes do provedor', async () => {
     global.fetch = jest.fn(async () => respostaReconhecimento()) as never;
     const { servico, repositorios } = criarServico(dadosComDoisPacientes());
 
     await expect(
       servico.reconhecerAlimento(
         'tenant-1',
-        {
-          pacienteId: 'paciente-1',
-          arquivoMidiaId: 'midia-2',
-          imagemUrl: 'https://example.com/prato.jpg'
-        },
+        { ...dadosReconhecimento(), arquivoMidiaId: 'midia-2' },
         usuarios.Professional
       )
     ).rejects.toBeInstanceOf(NotFoundException);
 
     expect(repositorios.midia.findOne).toHaveBeenCalledWith({
-      where: { id: 'midia-2', tenantId: 'tenant-1', pacienteId: 'paciente-1' }
+      where: { id: 'midia-2', tenantId: 'tenant-1', pacienteId: 'paciente-1' },
+      lock: { mode: 'pessimistic_write' }
     });
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('retorna cache somente quando pertence ao paciente solicitado', async () => {
+  it('deriva URL e hash apenas da midia autorizada e ignora URL/base64 do cliente', async () => {
+    global.fetch = jest.fn(async () => respostaReconhecimento()) as never;
+    const { servico, repositorios } = criarServico(dadosComDoisPacientes());
+
+    const reconhecimento = await servico.reconhecerAlimento(
+      'tenant-1',
+      dadosReconhecimento(),
+      usuarios.Professional
+    );
+
+    const corpo = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body as string);
+    expect(corpo).toEqual({ imagem_url: URL_MIDIA_CONFIAVEL, contexto: {} });
+    expect(JSON.stringify(corpo)).not.toContain('atacante.test');
+    expect(JSON.stringify(corpo)).not.toContain('base64-controlado-pelo-cliente');
+    expect(repositorios.alimento.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pacienteId: 'paciente-1',
+        arquivoMidiaId: 'midia-1',
+        provedor: 'vision-pro',
+        imagemHash: hashReferencia(URL_MIDIA_CONFIAVEL)
+      })
+    );
+    expect(reconhecimento).toEqual(expect.objectContaining({ provedor: 'vision-pro' }));
+  });
+
+  it('adquire locks antes de consultar cache, chamar provedor e salvar', async () => {
+    global.fetch = jest.fn(async () => respostaReconhecimento()) as never;
+    const { servico, gerenciador, repositorios, executorTenant } = criarServico(dadosComDoisPacientes());
+
+    await servico.reconhecerAlimento('tenant-1', dadosReconhecimento(), usuarios.Professional);
+
+    expect(executorTenant.executar).toHaveBeenCalledTimes(1);
+    expect(repositorios.paciente.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({ lock: { mode: 'pessimistic_write' } })
+    );
+    expect(repositorios.midia.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({ lock: { mode: 'pessimistic_write' } })
+    );
+    expect(gerenciador.query).toHaveBeenCalledWith(
+      'select pg_advisory_xact_lock($1, $2)',
+      [expect.any(Number), expect.any(Number)]
+    );
+    expect(gerenciador.query.mock.invocationCallOrder[0]).toBeLessThan(
+      repositorios.alimento.findOne.mock.invocationCallOrder[0]
+    );
+    expect(repositorios.alimento.findOne.mock.invocationCallOrder[0]).toBeLessThan(
+      (global.fetch as jest.Mock).mock.invocationCallOrder[0]
+    );
+    expect((global.fetch as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
+      repositorios.alimento.save.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('reutiliza cache de qualquer provedor depois dos gates bloqueantes', async () => {
     global.fetch = jest.fn() as never;
-    const imagemUrl = 'https://example.com/prato.jpg';
-    const hashLocal = hashReconhecimento('paciente-1', imagemUrl);
     const cache = {
       id: 'reconhecimento-cache',
       tenantId: 'tenant-1',
       pacienteId: 'paciente-1',
-      provedor: 'heuristica-local',
-      imagemHash: hashLocal
+      arquivoMidiaId: 'midia-1',
+      provedor: 'vision-enterprise',
+      imagemHash: hashReferencia(URL_MIDIA_CONFIAVEL)
     };
     const dados = dadosComDoisPacientes();
     dados.reconhecimentos = [cache];
-    const { servico, repositorios } = criarServico(dados);
+    const { servico, gerenciador, repositorios } = criarServico(dados);
 
     await expect(
-      servico.reconhecerAlimento(
-        'tenant-1',
-        { pacienteId: 'paciente-1', arquivoMidiaId: 'midia-1', imagemUrl },
-        usuarios.Professional
-      )
+      servico.reconhecerAlimento('tenant-1', dadosReconhecimento(), usuarios.Professional)
     ).resolves.toBe(cache);
 
+    expect(gerenciador.query).toHaveBeenCalledTimes(1);
     expect(repositorios.alimento.findOne).toHaveBeenCalledWith({
       where: {
         tenantId: 'tenant-1',
         pacienteId: 'paciente-1',
-        provedor: 'heuristica-local',
-        imagemHash: hashLocal
+        arquivoMidiaId: 'midia-1',
+        imagemHash: hashReferencia(URL_MIDIA_CONFIAVEL)
       }
     });
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('ignora cache com mesmo hash pertencente a outro paciente', async () => {
+  it('nunca retorna cache de outro paciente ou outra midia', async () => {
     global.fetch = jest.fn(async () => respostaReconhecimento()) as never;
-    const imagemUrl = 'https://example.com/prato.jpg';
-    const hashOutroPaciente = hashReconhecimento('paciente-2', imagemUrl);
-    const hashPacienteSolicitado = hashReconhecimento('paciente-1', imagemUrl);
     const dados = dadosComDoisPacientes();
     dados.reconhecimentos = [
       {
         id: 'cache-outro-paciente',
         tenantId: 'tenant-1',
         pacienteId: 'paciente-2',
-        provedor: 'heuristica-local',
-        imagemHash: hashOutroPaciente
+        arquivoMidiaId: 'midia-2',
+        provedor: 'vision-pro',
+        imagemHash: hashReferencia(URL_MIDIA_CONFIAVEL)
       }
     ];
-    const { servico, repositorios } = criarServico(dados);
+    const { servico } = criarServico(dados);
 
     const reconhecimento = await servico.reconhecerAlimento(
       'tenant-1',
-      { pacienteId: 'paciente-1', arquivoMidiaId: 'midia-1', imagemUrl },
+      dadosReconhecimento(),
       usuarios.Professional
     );
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(reconhecimento).toEqual(expect.objectContaining({ pacienteId: 'paciente-1' }));
-    expect(repositorios.alimento.save).toHaveBeenCalledWith(
-      expect.objectContaining({ pacienteId: 'paciente-1', imagemHash: hashPacienteSolicitado })
-    );
-    expect(hashPacienteSolicitado).not.toBe(hashOutroPaciente);
-  });
-
-  it('revalida paciente e midia antes de persistir o reconhecimento', async () => {
-    global.fetch = jest.fn(async () => respostaReconhecimento()) as never;
-    const { servico, repositorios } = criarServico(dadosComDoisPacientes());
-
-    const reconhecimento = await servico.reconhecerAlimento(
-      'tenant-1',
-      {
-        pacienteId: 'paciente-1',
-        arquivoMidiaId: 'midia-1',
-        imagemUrl: 'https://example.com/prato.jpg'
-      },
-      usuarios.Professional
-    );
-
-    expect(repositorios.paciente.findOne).toHaveBeenCalledTimes(2);
-    expect(repositorios.midia.findOne).toHaveBeenCalledTimes(2);
     expect(reconhecimento).toEqual(expect.objectContaining({ pacienteId: 'paciente-1', arquivoMidiaId: 'midia-1' }));
   });
 
-  it('nao persiste reconhecimento quando o Professional perde responsabilidade durante a chamada externa', async () => {
-    global.fetch = jest.fn(async () => respostaReconhecimento()) as never;
+  it('rejeita hash divergente do provedor com erro sanitizado e sem persistir', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    global.fetch = jest.fn(async () => respostaReconhecimento('https://conteudo-divergente.test')) as never;
     const { servico, repositorios } = criarServico(dadosComDoisPacientes());
-    repositorios.paciente.findOne
-      .mockResolvedValueOnce({ id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1' })
-      .mockResolvedValueOnce(null);
 
-    await expect(
-      servico.reconhecerAlimento(
-        'tenant-1',
-        {
-          pacienteId: 'paciente-1',
-          arquivoMidiaId: 'midia-1',
-          imagemUrl: 'https://example.com/prato.jpg'
-        },
-        usuarios.Professional
-      )
-    ).rejects.toBeInstanceOf(NotFoundException);
+    let erroCapturado: unknown;
+    try {
+      await servico.reconhecerAlimento('tenant-1', dadosReconhecimento(), usuarios.Professional);
+    } catch (erro) {
+      erroCapturado = erro;
+    }
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(erroCapturado).toBeInstanceOf(InternalServerErrorException);
+    expect(JSON.stringify(erroCapturado)).not.toContain('conteudo-divergente');
     expect(repositorios.alimento.save).not.toHaveBeenCalled();
   });
 
-  it('sanitiza erro do provedor sem devolver o corpo externo', async () => {
+  it('serializa concorrencia e faz a segunda chamada reutilizar o cache vencedor', async () => {
+    let liberarPrimeiroFetch: ((resposta: ReturnType<typeof respostaReconhecimento>) => void) | undefined;
+    global.fetch = jest
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<ReturnType<typeof respostaReconhecimento>>((resolver) => {
+            liberarPrimeiroFetch = resolver;
+          })
+      )
+      .mockImplementation(async () => respostaReconhecimento()) as never;
+    const { servico, gerenciador, executorTenant } = criarServico(dadosComDoisPacientes());
+    let lockOcupado = false;
+    const filaLock: Array<() => void> = [];
+
+    gerenciador.query.mockImplementation(async (sql: string) => {
+      if (!sql.includes('pg_advisory_xact_lock')) return [];
+      if (lockOcupado) {
+        await new Promise<void>((resolver) => filaLock.push(resolver));
+      }
+      lockOcupado = true;
+      return [];
+    });
+    executorTenant.executar.mockImplementation(
+      async (_tenantId: string, operacao: (gerenciadorTransacional: typeof gerenciador) => Promise<unknown>) => {
+        try {
+          return await operacao(gerenciador);
+        } finally {
+          if (lockOcupado) {
+            lockOcupado = false;
+            filaLock.shift()?.();
+          }
+        }
+      }
+    );
+
+    const primeira = servico.reconhecerAlimento('tenant-1', dadosReconhecimento(), usuarios.Professional);
+    await aguardarCondicao(() => (global.fetch as jest.Mock).mock.calls.length === 1);
+    const segunda = servico.reconhecerAlimento('tenant-1', dadosReconhecimento(), usuarios.Professional);
+    await aguardarCondicao(
+      () => gerenciador.query.mock.calls.length === 2 || (global.fetch as jest.Mock).mock.calls.length === 2
+    );
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    liberarPrimeiroFetch?.(respostaReconhecimento());
+    const [vencedor, reutilizado] = await Promise.all([primeira, segunda]);
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(gerenciador.query.mock.calls[0][1]).toEqual(gerenciador.query.mock.calls[1][1]);
+    expect(vencedor).toBe(reutilizado);
+  });
+
+  it('sanitiza erro HTTP do provedor sem devolver o corpo externo', async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation();
     global.fetch = jest.fn(async () => ({
       ok: false,

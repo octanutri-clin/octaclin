@@ -10,6 +10,10 @@ export interface FiltroEscopoRecursosPaciente {
   profissionalResponsavelId?: string;
 }
 
+export interface OpcoesValidacaoPacienteNoEscopo {
+  lockPessimista?: boolean;
+}
+
 /**
  * Resolve o filtro de escopo aplicavel a recursos clinicos vinculados a um
  * paciente. A autorizacao de entrada no endpoint permanece nos guards; esta
@@ -43,7 +47,8 @@ export async function validarPacienteNoEscopo(
   gerenciador: EntityManager,
   tenantId: string,
   pacienteId: string,
-  usuario: UsuarioAutenticado
+  usuario: UsuarioAutenticado,
+  opcoes: OpcoesValidacaoPacienteNoEscopo = {}
 ): Promise<PacienteOrm> {
   const filtroEscopo = await resolverFiltroEscopoRecursosPaciente(gerenciador, tenantId, usuario);
   const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
@@ -54,7 +59,8 @@ export async function validarPacienteNoEscopo(
       ...(filtroEscopo.profissionalResponsavelId
         ? { profissionalResponsavelId: filtroEscopo.profissionalResponsavelId }
         : {})
-    }
+    },
+    ...(opcoes.lockPessimista ? { lock: { mode: 'pessimistic_write' as const } } : {})
   });
 
   if (!paciente || (filtroEscopo.pacienteId && filtroEscopo.pacienteId !== paciente.id)) {

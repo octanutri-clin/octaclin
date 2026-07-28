@@ -97,6 +97,33 @@ describe('escopo de recursos de paciente', () => {
     });
   });
 
+  it('aplica lock pessimista opcional sem alterar chamadas existentes', async () => {
+    const pacienteEncontrado = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1'
+    };
+    const paciente = { findOne: jest.fn(async () => pacienteEncontrado) };
+    const profissional = { findOne: jest.fn(async () => ({ id: 'profissional-1' })) };
+    const gerenciador = criarGerenciador(paciente, profissional);
+
+    await expect(
+      validarPacienteNoEscopo(gerenciador, 'tenant-1', 'paciente-1', usuarios.Professional, {
+        lockPessimista: true
+      })
+    ).resolves.toBe(pacienteEncontrado);
+
+    expect(paciente.findOne).toHaveBeenCalledWith({
+      where: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        arquivadoEm: expect.any(Object),
+        profissionalResponsavelId: 'profissional-1'
+      },
+      lock: { mode: 'pessimistic_write' }
+    });
+  });
+
   it('aceita o proprio paciente e resolve o vinculo pelo usuario autenticado', async () => {
     const pacienteProprio = { id: 'paciente-1', tenantId: 'tenant-1' };
     const paciente = {
