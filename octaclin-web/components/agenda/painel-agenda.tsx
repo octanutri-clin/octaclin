@@ -605,7 +605,7 @@ export function PainelAgenda() {
                     type="checkbox"
                     checked={formulario.enviarNotificacoes}
                     onChange={(evento) => setFormulario((atual) => ({ ...atual, enviarNotificacoes: evento.target.checked }))}
-                    className="h-4 w-4"
+                    className="h-4 w-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
                   />
                   Enviar e-mail e mensagem ao salvar
                 </label>
@@ -849,7 +849,7 @@ export function PainelAgenda() {
                                   name="inicioEm"
                                   type="datetime-local"
                                   defaultValue={valorDatetimeLocal(new Date(consulta.inicioEm))}
-                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
                                 />
                               </label>
                               <label className="grid gap-1 text-xs font-semibold text-texto-suave">
@@ -862,7 +862,7 @@ export function PainelAgenda() {
                                   max={480}
                                   step={5}
                                   defaultValue={duracaoConsultaMinutos(consulta)}
-                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
                                 />
                               </label>
                               <label className="grid gap-1 text-xs font-semibold text-texto-suave">
@@ -871,7 +871,7 @@ export function PainelAgenda() {
                                   aria-label="Novo local"
                                   name="local"
                                   defaultValue={consulta.local ?? ''}
-                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
                                 />
                               </label>
                             </div>

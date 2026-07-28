@@ -488,6 +488,21 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     fase; `desconectar()` do Google Calendar segue sem limpar o canal de watch
     (debito ja registrado na Fase 136, nao reintroduzido nem agravado aqui).
 
+- [x] Fase 147 - Foco visivel explicito nos inputs crus da agenda.
+  - Endereça de forma explicita o achado da Fase 146: os 4 inputs nativos de
+    `painel-agenda.tsx` (checkbox de notificacoes, nova data/hora, nova
+    duracao, novo local) ganharam a mesma classe `focus-visible:outline...`
+    ja usada em `portal-shell.tsx`/`modal.tsx`, em vez de depender apenas da
+    regra global `:focus-visible` trazida incidentalmente pela Fase 144.
+  - Escopo unico: `octaclin-web/components/agenda/painel-agenda.tsx`. Nenhuma
+    logica, rota ou dado alterado.
+  - Data: 2026-07-27.
+  - Validacoes: `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web lint`, `pnpm --dir octaclin-web test:a11y` (10 passed).
+  - Saida entregue: `fase-147-foco-visivel-inputs-agenda.md`.
+  - Observacao: os componentes compartilhados `Campo`, `AreaTexto`, `Selecao`
+    e `Botao` ainda nao tem classe `focus-visible` propria e continuam
+    dependendo da regra global; nao fazia parte do achado desta fase.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.
