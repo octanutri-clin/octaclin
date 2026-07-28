@@ -1,9 +1,11 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { GoogleCanalWatchOrm } from '../infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from '../infraestrutura/profissional-google-conexao.orm';
-import { CredenciaisGoogleCalendar } from './servico-google-calendar';
+import { CredenciaisGoogleCalendar, ServicoGoogleCalendar } from './servico-google-calendar';
 
 interface RespostaTrocaCodigoGoogle {
   access_token?: string;
@@ -31,10 +33,14 @@ const DURACAO_MAXIMA_STATE_MS = 10 * 60 * 1000;
 
 @Injectable()
 export class ServicoConexaoGoogleCalendar {
+  private readonly logger = new Logger(ServicoConexaoGoogleCalendar.name);
+
   constructor(
     private readonly executorTenant: ExecutorTenant,
     private readonly criptografia: CriptografiaDadosSensiveis,
-    @Inject(REDIS_OAUTH_STATE_GOOGLE) private readonly redis: ClienteRedisOAuthState
+    @Inject(REDIS_OAUTH_STATE_GOOGLE) private readonly redis: ClienteRedisOAuthState,
+    private readonly googleCalendar: ServicoGoogleCalendar,
+    private readonly fonteDados: DataSource
   ) {}
 
   gerarUrlAutorizacao(tenantId: string, profissionalId: string, urlCallback: string): string {
@@ -142,16 +148,48 @@ export class ServicoConexaoGoogleCalendar {
   }
 
   async desconectar(tenantId: string, profissionalId: string): Promise<void> {
+    const conexao = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      gerenciador.getRepository(ProfissionalGoogleConexaoOrm).findOne({ where: { tenantId, profissionalId } })
+    );
+    if (!conexao) return;
+
+    if (conexao.canalWatchId && conexao.canalRecursoId) {
+      await this.pararCanalWatchComTolerancia(conexao);
+      await this.fonteDados.getRepository(GoogleCanalWatchOrm).delete({ canalWatchId: conexao.canalWatchId });
+    }
+
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(ProfissionalGoogleConexaoOrm);
-      const conexao = await repositorio.findOne({ where: { tenantId, profissionalId } });
-      if (!conexao) return;
-      conexao.desconectadoEm = new Date();
-      conexao.canalWatchId = undefined;
-      conexao.canalRecursoId = undefined;
-      conexao.canalExpiraEm = undefined;
-      await repositorio.save(conexao);
+      const atual = await repositorio.findOne({ where: { tenantId, profissionalId } });
+      if (!atual) return;
+      atual.desconectadoEm = new Date();
+      atual.canalWatchId = undefined;
+      atual.canalRecursoId = undefined;
+      atual.canalExpiraEm = undefined;
+      await repositorio.save(atual);
     });
+  }
+
+  private async pararCanalWatchComTolerancia(conexao: ProfissionalGoogleConexaoOrm): Promise<void> {
+    const clientId = textoEnv(process.env.GOOGLE_CALENDAR_CLIENT_ID);
+    const clientSecret = textoEnv(process.env.GOOGLE_CALENDAR_CLIENT_SECRET);
+    if (!clientId || !clientSecret || !conexao.canalWatchId || !conexao.canalRecursoId) return;
+
+    try {
+      const credenciais: CredenciaisGoogleCalendar = {
+        clientId,
+        clientSecret,
+        refreshToken: this.criptografia.descriptografar(conexao.refreshTokenCriptografado),
+        calendarId: conexao.calendarId
+      };
+      await this.googleCalendar.pararCanalWatch(credenciais, conexao.canalWatchId, conexao.canalRecursoId);
+    } catch (erro) {
+      this.logger.warn(
+        `Falha ao parar canal de watch do Google Calendar (profissional ${conexao.profissionalId}): ${
+          erro instanceof Error ? erro.message : 'erro desconhecido'
+        }`
+      );
+    }
   }
 
   private assinarState(tenantId: string, profissionalId: string): string {

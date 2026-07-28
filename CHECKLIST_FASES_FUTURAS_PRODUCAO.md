@@ -513,6 +513,20 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Validacoes: `pnpm --dir octaclin-web typecheck`, `lint`, `build`, `test:a11y` (10 passed), `pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs --project=desktop-chromium --reporter=list` (21 passed).
   - Saida entregue: `fase-148-foco-visivel-componentes-compartilhados.md`.
 
+- [x] Fase 149 - Limpeza do canal de watch do Google Calendar ao desconectar.
+  - Fecha o debito das Fases 136/145: `desconectar()` agora chama
+    `pararCanalWatch` (tolerante a falha, so loga warning) e remove o
+    registro de `GoogleCanalWatchOrm` antes de limpar os campos locais,
+    em vez de so limpar o estado local sem avisar o Google.
+  - Escopo: `servico-conexao-google-calendar.ts` + teste. Sem mudanca de
+    assinatura publica.
+  - Data: 2026-07-27.
+  - Validacoes: `pnpm --dir octaclin-backend typecheck`, `test --runInBand` (59 suites/321 testes), `pnpm --dir octaclin-backend build`.
+  - Saida entregue: `fase-149-limpeza-canal-watch-google-calendar.md`.
+  - Observacao: recorrencia avancada e importacao inbound por `syncToken`
+    (tambem citadas na Fase 136) continuam pendentes, fora do escopo desta
+    fase.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.

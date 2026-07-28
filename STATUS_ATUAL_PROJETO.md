@@ -7,7 +7,8 @@ Atualizado em 2026-07-27.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 148 - Foco visivel proprio nos componentes compartilhados `Campo`/`AreaTexto`/`Selecao`/`Botao` (entregue em 2026-07-27, branch `integrate/producao-hardening`, PR #5 aberto para `main`).
+- Ultima fase concluida: Fase 149 - Limpeza do canal de watch do Google Calendar ao desconectar (entregue em 2026-07-27, branch `integrate/producao-hardening`). Fecha o debito das Fases 136/145: `desconectar()` agora chama `pararCanalWatch` no Google (tolerante a falha) e remove o registro local de `GoogleCanalWatchOrm`.
+- Fase 148: Foco visivel proprio nos componentes compartilhados `Campo`/`AreaTexto`/`Selecao`/`Botao` (entregue em 2026-07-27, PR #5 aberto para `main`).
 - Fase 147: Foco visivel explicito nos inputs crus da agenda (entregue em 2026-07-27). Antes dela, esta branch recebeu por merge a Fase 146 (gate de acessibilidade, feita pelo Codex na `main`).
 - Fase 145: Painel clinico do profissional e desmarcamento/cancelamento distintos (entregue em 2026-07-27, commit `22e161b` da Task 5).
 - Fase 131 aceita: producao isolada de staging confirmada em 2026-07-26, com Neon, Upstash e Render independentes, credenciais rotacionadas e ambiente/banco auditados sem staging. Para habilitar Google Calendar, falta cadastrar as credenciais OAuth e a URI de callback da Fase 136 no ambiente/projeto Google de producao.
