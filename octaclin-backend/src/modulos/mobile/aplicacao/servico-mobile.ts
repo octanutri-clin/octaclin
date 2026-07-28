@@ -1,9 +1,15 @@
-import { randomUUID } from 'crypto';
-import { Injectable } from '@nestjs/common';
-import { EntityManager } from 'typeorm';
+import { createHash, randomUUID } from 'crypto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { EntityManager, In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import {
+  resolverFiltroEscopoRecursosPaciente,
+  validarPacienteNoEscopo
+} from '../../../infraestrutura/seguranca/escopo-recursos-paciente';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { validarDuracaoMidia } from '../dominio/validacao-midia';
 import { AcompanhanteOrm } from '../infraestrutura/acompanhante.orm';
 import { ArquivoMidiaOrm } from '../infraestrutura/arquivo-midia.orm';
@@ -40,48 +46,66 @@ export class ServicoMobile {
     private readonly senhas: ServicoSenhas
   ) {}
 
-  async listarDiarioRapido(tenantId: string): Promise<LogDiarioRapidoOrm[]> {
-    return this.executorTenant.executar(tenantId, (gerenciador) =>
+  async listarDiarioRapido(tenantId: string, usuario: UsuarioAutenticado): Promise<LogDiarioRapidoOrm[]> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) =>
       gerenciador.getRepository(LogDiarioRapidoOrm).find({
-        where: { tenantId },
+        where: { tenantId, ...(await this.resolverFiltroPacienteId(gerenciador, tenantId, usuario)) },
         order: { registradoEm: 'DESC' },
         take: 50
       })
     );
   }
 
-  async registrarDiarioRapido(tenantId: string, dados: RegistrarDiarioRapidoDto): Promise<LogDiarioRapidoOrm> {
-    return this.executorTenant.executar(tenantId, async (gerenciador) => this.criarLogDiario(gerenciador, tenantId, dados));
+  async registrarDiarioRapido(
+    tenantId: string,
+    dados: RegistrarDiarioRapidoDto,
+    usuario: UsuarioAutenticado
+  ): Promise<LogDiarioRapidoOrm> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const paciente = await validarPacienteNoEscopo(gerenciador, tenantId, dados.pacienteId, usuario);
+      return this.criarLogDiario(gerenciador, tenantId, { ...dados, pacienteId: paciente.id });
+    });
   }
 
-  async listarArquivosMidia(tenantId: string): Promise<ArquivoMidiaOrm[]> {
-    return this.executorTenant.executar(tenantId, (gerenciador) =>
+  async listarArquivosMidia(tenantId: string, usuario: UsuarioAutenticado): Promise<ArquivoMidiaOrm[]> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) =>
       gerenciador.getRepository(ArquivoMidiaOrm).find({
-        where: { tenantId },
+        where: { tenantId, ...(await this.resolverFiltroPacienteId(gerenciador, tenantId, usuario)) },
         order: { criadoEm: 'DESC' },
         take: 50
       })
     );
   }
 
-  async solicitarUploadMidia(tenantId: string, dados: SolicitarUploadMidiaDto) {
-    validarDuracaoMidia(dados.tipo, dados.duracaoSegundos);
-    const bucket = process.env.ARMAZENAMENTO_BUCKET_MIDIA ?? 'octaclin-midias-local';
-    const chaveObjeto = `${tenantId}/${dados.pacienteId}/${dados.tipo}/${randomUUID()}`;
-    const uploadBaseUrl = process.env.ARMAZENAMENTO_UPLOAD_BASE_URL ?? 'http://localhost:9000';
-    const uploadUrl = `${uploadBaseUrl}/${bucket}/${chaveObjeto}`;
+  async solicitarUploadMidia(
+    tenantId: string,
+    dados: SolicitarUploadMidiaDto,
+    usuario: UsuarioAutenticado
+  ) {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      validarDuracaoMidia(dados.tipo, dados.duracaoSegundos);
+      const paciente = await validarPacienteNoEscopo(gerenciador, tenantId, dados.pacienteId, usuario);
+      const dadosAutorizados = { ...dados, pacienteId: paciente.id };
+      const bucket = process.env.ARMAZENAMENTO_BUCKET_MIDIA ?? 'octaclin-midias-local';
+      const chaveObjeto = `${tenantId}/${paciente.id}/${dados.tipo}/${randomUUID()}`;
+      const uploadBaseUrl = process.env.ARMAZENAMENTO_UPLOAD_BASE_URL ?? 'http://localhost:9000';
+      const uploadUrl = `${uploadBaseUrl}/${bucket}/${chaveObjeto}`;
+      const arquivo = await this.criarArquivoMidia(
+        gerenciador,
+        tenantId,
+        dadosAutorizados,
+        bucket,
+        chaveObjeto
+      );
 
-    const arquivo = await this.executorTenant.executar(tenantId, async (gerenciador) =>
-      this.criarArquivoMidia(gerenciador, tenantId, dados, bucket, chaveObjeto)
-    );
-
-    return { arquivo, uploadUrl };
+      return { arquivo, uploadUrl };
+    });
   }
 
-  async listarAcompanhantes(tenantId: string): Promise<AcompanhanteResumo[]> {
+  async listarAcompanhantes(tenantId: string, usuario: UsuarioAutenticado): Promise<AcompanhanteResumo[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const acompanhantes = await gerenciador.getRepository(AcompanhanteOrm).find({
-        where: { tenantId },
+        where: { tenantId, ...(await this.resolverFiltroPacienteId(gerenciador, tenantId, usuario)) },
         order: { criadoEm: 'DESC' },
         take: 50
       });
@@ -90,19 +114,31 @@ export class ServicoMobile {
     });
   }
 
-  async criarAcompanhante(tenantId: string, dados: CriarAcompanhanteDto): Promise<AcompanhanteResumo> {
+  async criarAcompanhante(
+    tenantId: string,
+    dados: CriarAcompanhanteDto,
+    usuario: UsuarioAutenticado
+  ): Promise<AcompanhanteResumo> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const acompanhante = await this.criarAcompanhanteInterno(gerenciador, tenantId, dados);
+      const paciente = await validarPacienteNoEscopo(gerenciador, tenantId, dados.pacienteId, usuario);
+      const acompanhante = await this.criarAcompanhanteInterno(gerenciador, tenantId, {
+        ...dados,
+        pacienteId: paciente.id
+      });
       return this.resumirAcompanhante(acompanhante);
     });
   }
 
-  async sincronizarLote(tenantId: string, dados: SincronizarLoteMobileDto): Promise<{ resultados: ResultadoItemSincronizacao[] }> {
+  async sincronizarLote(
+    tenantId: string,
+    dados: SincronizarLoteMobileDto,
+    usuario: UsuarioAutenticado
+  ): Promise<{ resultados: ResultadoItemSincronizacao[] }> {
     const resultados: ResultadoItemSincronizacao[] = [];
 
     for (const item of dados.itens) {
       try {
-        const recursoId = await this.sincronizarItemIdempotente(tenantId, item);
+        const recursoId = await this.sincronizarItemIdempotente(tenantId, item, usuario);
         resultados.push({ idLocal: item.idLocal, status: 'sincronizado', recursoId });
       } catch (erro) {
         resultados.push({
@@ -116,17 +152,43 @@ export class ServicoMobile {
     return { resultados };
   }
 
-  private async sincronizarItemIdempotente(tenantId: string, item: ItemSincronizacaoMobileDto): Promise<string> {
+  private async sincronizarItemIdempotente(
+    tenantId: string,
+    item: ItemSincronizacaoMobileDto,
+    usuario: UsuarioAutenticado
+  ): Promise<string> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const pacienteIdInformado = typeof item.payload.pacienteId === 'string' ? item.payload.pacienteId : '';
+      const paciente = await validarPacienteNoEscopo(gerenciador, tenantId, pacienteIdInformado, usuario);
+      const itemAutorizado: ItemSincronizacaoMobileDto = {
+        ...item,
+        payload: { ...item.payload, pacienteId: paciente.id }
+      };
       const repositorioSync = gerenciador.getRepository(SincronizacaoMobileOrm);
-      const existente = await repositorioSync.findOne({ where: { tenantId, idLocal: item.idLocal } });
-      if (existente?.recursoId) return existente.recursoId;
+      const idLocalEscopado = this.criarIdLocalEscopado(paciente.id, item.idLocal);
+      const existenteEscopado = await repositorioSync.findOne({
+        where: { tenantId, idLocal: idLocalEscopado }
+      });
+      if (existenteEscopado) {
+        if (await this.sincronizacaoPertenceAoPaciente(gerenciador, tenantId, paciente.id, item, existenteEscopado)) {
+          return existenteEscopado.recursoId as string;
+        }
+        throw new NotFoundException('Paciente nao encontrado.');
+      }
 
-      const recursoId = await this.sincronizarItem(gerenciador, tenantId, item);
+      const existenteLegado = await repositorioSync.findOne({ where: { tenantId, idLocal: item.idLocal } });
+      if (
+        existenteLegado &&
+        (await this.sincronizacaoPertenceAoPaciente(gerenciador, tenantId, paciente.id, item, existenteLegado))
+      ) {
+        return existenteLegado.recursoId as string;
+      }
+
+      const recursoId = await this.sincronizarItem(gerenciador, tenantId, itemAutorizado);
       await repositorioSync.save(
         repositorioSync.create({
           tenantId,
-          idLocal: item.idLocal,
+          idLocal: idLocalEscopado,
           tipo: item.tipo,
           status: 'sincronizado',
           recursoTipo: item.tipo,
@@ -136,6 +198,52 @@ export class ServicoMobile {
 
       return recursoId;
     });
+  }
+
+  private async resolverFiltroPacienteId(
+    gerenciador: EntityManager,
+    tenantId: string,
+    usuario: UsuarioAutenticado
+  ) {
+    const filtro = await resolverFiltroEscopoRecursosPaciente(gerenciador, tenantId, usuario);
+    if (filtro.pacienteId) return { pacienteId: filtro.pacienteId };
+    if (!filtro.profissionalResponsavelId) return {};
+
+    const pacientes = await gerenciador.getRepository(PacienteOrm).find({
+      select: { id: true },
+      where: {
+        tenantId,
+        profissionalResponsavelId: filtro.profissionalResponsavelId,
+        arquivadoEm: IsNull()
+      }
+    });
+    return { pacienteId: In(pacientes.map((paciente) => paciente.id)) };
+  }
+
+  private criarIdLocalEscopado(pacienteId: string, idLocal: string): string {
+    const hash = createHash('sha256').update(pacienteId).update('\0').update(idLocal).digest('hex');
+    return `paciente:${hash}`;
+  }
+
+  private async sincronizacaoPertenceAoPaciente(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string,
+    item: ItemSincronizacaoMobileDto,
+    sincronizacao: SincronizacaoMobileOrm
+  ): Promise<boolean> {
+    if (!sincronizacao.recursoId || (sincronizacao.recursoTipo ?? sincronizacao.tipo) !== item.tipo) {
+      return false;
+    }
+
+    const where = { id: sincronizacao.recursoId, tenantId, pacienteId };
+    if (item.tipo === 'diario_rapido') {
+      return Boolean(await gerenciador.getRepository(LogDiarioRapidoOrm).findOne({ where }));
+    }
+    if (item.tipo === 'acompanhante') {
+      return Boolean(await gerenciador.getRepository(AcompanhanteOrm).findOne({ where }));
+    }
+    return Boolean(await gerenciador.getRepository(ArquivoMidiaOrm).findOne({ where }));
   }
 
   private async sincronizarItem(gerenciador: EntityManager, tenantId: string, item: ItemSincronizacaoMobileDto): Promise<string> {
