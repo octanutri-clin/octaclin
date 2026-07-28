@@ -30,6 +30,10 @@ interface RespostaServicoAlimento {
   confianca_media?: number;
 }
 
+const IA_SERVICE_TIMEOUT_PADRAO_MS = 15000;
+const IA_SERVICE_TIMEOUT_MINIMO_MS = 1000;
+const IA_SERVICE_TIMEOUT_MAXIMO_MS = 60000;
+
 @Injectable()
 export class ServicoIa {
   private readonly logger = new Logger(ServicoIa.name);
@@ -210,35 +214,73 @@ export class ServicoIa {
 
   private async postar<T>(caminho: string, corpo: Record<string, unknown>): Promise<T> {
     const baseUrl = process.env.IA_SERVICE_URL ?? 'http://localhost:8001';
-    let resposta: Response;
-    try {
-      resposta = await fetch(`${baseUrl}${caminho}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(corpo)
-      });
-    } catch (erro) {
-      this.logger.error('Falha de comunicacao com o provedor de IA.', {
-        caminho,
-        tipoErro: erro instanceof Error ? erro.name : 'desconhecido'
-      });
-      throw this.criarErroProvedor();
-    }
-
-    if (!resposta.ok) {
-      this.logger.error('Provedor de IA respondeu com erro.', { caminho, status: resposta.status });
-      throw this.criarErroProvedor();
-    }
+    const timeoutMs = this.resolverTimeoutServicoIa();
+    const controlador = new AbortController();
+    const timer = setTimeout(() => controlador.abort(), timeoutMs);
 
     try {
-      return (await resposta.json()) as T;
-    } catch (erro) {
-      this.logger.error('Provedor de IA retornou resposta invalida.', {
-        caminho,
-        tipoErro: erro instanceof Error ? erro.name : 'desconhecido'
-      });
-      throw this.criarErroProvedor();
+      let resposta: Response;
+      try {
+        resposta = await fetch(`${baseUrl}${caminho}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(corpo),
+          signal: controlador.signal
+        });
+      } catch (erro) {
+        if (this.ehAbortError(erro)) {
+          this.logger.error('Timeout ao chamar o provedor de IA.', { caminho, timeoutMs });
+        } else {
+          this.logger.error('Falha de comunicacao com o provedor de IA.', {
+            caminho,
+            tipoErro: erro instanceof Error ? erro.name : 'desconhecido'
+          });
+        }
+        throw this.criarErroProvedor();
+      }
+
+      if (!resposta.ok) {
+        this.logger.error('Provedor de IA respondeu com erro.', { caminho, status: resposta.status });
+        throw this.criarErroProvedor();
+      }
+
+      try {
+        return (await resposta.json()) as T;
+      } catch (erro) {
+        this.logger.error('Provedor de IA retornou resposta invalida.', {
+          caminho,
+          tipoErro: erro instanceof Error ? erro.name : 'desconhecido'
+        });
+        throw this.criarErroProvedor();
+      }
+    } finally {
+      clearTimeout(timer);
     }
+  }
+
+  private resolverTimeoutServicoIa(): number {
+    const valor = process.env.IA_SERVICE_TIMEOUT_MS;
+    if (!valor || !/^\d+$/.test(valor)) return IA_SERVICE_TIMEOUT_PADRAO_MS;
+
+    const timeoutMs = Number(valor);
+    if (
+      !Number.isInteger(timeoutMs) ||
+      timeoutMs < IA_SERVICE_TIMEOUT_MINIMO_MS ||
+      timeoutMs > IA_SERVICE_TIMEOUT_MAXIMO_MS
+    ) {
+      return IA_SERVICE_TIMEOUT_PADRAO_MS;
+    }
+
+    return timeoutMs;
+  }
+
+  private ehAbortError(erro: unknown): boolean {
+    return (
+      typeof erro === 'object' &&
+      erro !== null &&
+      'name' in erro &&
+      erro.name === 'AbortError'
+    );
   }
 
   private criarErroProvedor(): InternalServerErrorException {

@@ -237,6 +237,7 @@ async function aguardarCondicao(condicao: () => boolean): Promise<void> {
 describe('ServicoIa', () => {
   const fetchOriginal = global.fetch;
   const armazenamentoOriginal = process.env.ARMAZENAMENTO_UPLOAD_BASE_URL;
+  const timeoutOriginal = process.env.IA_SERVICE_TIMEOUT_MS;
 
   beforeEach(() => {
     process.env.ARMAZENAMENTO_UPLOAD_BASE_URL = ARMAZENAMENTO_BASE_URL;
@@ -244,10 +245,16 @@ describe('ServicoIa', () => {
 
   afterEach(() => {
     global.fetch = fetchOriginal;
+    jest.useRealTimers();
     if (armazenamentoOriginal === undefined) {
       delete process.env.ARMAZENAMENTO_UPLOAD_BASE_URL;
     } else {
       process.env.ARMAZENAMENTO_UPLOAD_BASE_URL = armazenamentoOriginal;
+    }
+    if (timeoutOriginal === undefined) {
+      delete process.env.IA_SERVICE_TIMEOUT_MS;
+    } else {
+      process.env.IA_SERVICE_TIMEOUT_MS = timeoutOriginal;
     }
     jest.restoreAllMocks();
   });
@@ -543,6 +550,8 @@ describe('ServicoIa', () => {
 
   it('sanitiza erro HTTP do provedor sem devolver o corpo externo', async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
     global.fetch = jest.fn(async () => ({
       ok: false,
       status: 502,
@@ -563,5 +572,85 @@ describe('ServicoIa', () => {
 
     expect(erroCapturado).toBeInstanceOf(InternalServerErrorException);
     expect(JSON.stringify(erroCapturado)).not.toContain('segredo-do-provedor');
+    expect(clearTimeoutSpy).toHaveBeenCalledWith(setTimeoutSpy.mock.results[0].value);
+  });
+
+  it.each([
+    ['ausente', undefined, 15000],
+    ['vazio', '', 15000],
+    ['nao numerico', 'abc', 15000],
+    ['fracionario', '1500.5', 15000],
+    ['abaixo do minimo', '999', 15000],
+    ['acima do maximo', '60001', 15000],
+    ['limite minimo', '1000', 1000],
+    ['limite maximo', '60000', 60000],
+    ['inteiro intermediario', '2500', 2500]
+  ])('configura timeout %s e passa AbortSignal ao fetch', async (_caso, valor, esperado) => {
+    if (valor === undefined) {
+      delete process.env.IA_SERVICE_TIMEOUT_MS;
+    } else {
+      process.env.IA_SERVICE_TIMEOUT_MS = valor;
+    }
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+    global.fetch = jest.fn(async () => respostaSentimento()) as never;
+    const { servico } = criarServico(dadosComDoisPacientes());
+
+    await servico.analisarSentimento(
+      'tenant-1',
+      { pacienteId: 'paciente-1', texto: 'texto clinico sensivel' },
+      usuarios.SuperAdmin
+    );
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), esperado);
+    expect((global.fetch as jest.Mock).mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+    expect(clearTimeoutSpy).toHaveBeenCalledWith(setTimeoutSpy.mock.results[0].value);
+  });
+
+  it('aborta fetch no timeout e devolve erro sanitizado sem espera real', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    process.env.IA_SERVICE_TIMEOUT_MS = '1000';
+    const logger = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+    let sinalRecebido: AbortSignal | undefined;
+    global.fetch = jest.fn((_url, opcoes) => {
+      sinalRecebido = opcoes?.signal as AbortSignal;
+      return new Promise((_resolver, rejeitar) => {
+        sinalRecebido?.addEventListener(
+          'abort',
+          () => {
+            const erro = new Error('texto clinico sensivel vindo do abort');
+            erro.name = 'AbortError';
+            rejeitar(erro);
+          },
+          { once: true }
+        );
+      });
+    }) as never;
+    const { servico, repositorios } = criarServico(dadosComDoisPacientes());
+
+    const resultado = servico.analisarSentimento(
+      'tenant-1',
+      { pacienteId: 'paciente-1', texto: 'texto clinico sensivel' },
+      usuarios.SuperAdmin
+    );
+    const resultadoCapturado = resultado.catch((erro: unknown) => erro);
+    await aguardarCondicao(() => (global.fetch as jest.Mock).mock.calls.length === 1);
+    expect(sinalRecebido?.aborted).toBe(false);
+
+    await jest.advanceTimersByTimeAsync(1000);
+    const erroCapturado = await resultadoCapturado;
+
+    expect(erroCapturado).toBeInstanceOf(InternalServerErrorException);
+    expect(JSON.stringify(erroCapturado)).not.toContain('texto clinico sensivel');
+    expect(sinalRecebido?.aborted).toBe(true);
+    expect(repositorios.sentimento.save).not.toHaveBeenCalled();
+    expect(clearTimeoutSpy).toHaveBeenCalledWith(setTimeoutSpy.mock.results[0].value);
+    expect(JSON.stringify(logger.mock.calls)).not.toContain('texto clinico sensivel');
+    expect(logger).toHaveBeenCalledWith('Timeout ao chamar o provedor de IA.', {
+      caminho: '/analisar-sentimento',
+      timeoutMs: 1000
+    });
   });
 });
