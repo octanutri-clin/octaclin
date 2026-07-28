@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager, In, IsNull } from 'typeorm';
+import { EntityManager, In, IsNull, QueryFailedError } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import {
@@ -83,8 +83,8 @@ export class ServicoMobile {
     usuario: UsuarioAutenticado
   ) {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      validarDuracaoMidia(dados.tipo, dados.duracaoSegundos);
       const paciente = await validarPacienteNoEscopo(gerenciador, tenantId, dados.pacienteId, usuario);
+      validarDuracaoMidia(dados.tipo, dados.duracaoSegundos);
       const dadosAutorizados = { ...dados, pacienteId: paciente.id };
       const bucket = process.env.ARMAZENAMENTO_BUCKET_MIDIA ?? 'octaclin-midias-local';
       const chaveObjeto = `${tenantId}/${paciente.id}/${dados.tipo}/${randomUUID()}`;
@@ -157,47 +157,115 @@ export class ServicoMobile {
     item: ItemSincronizacaoMobileDto,
     usuario: UsuarioAutenticado
   ): Promise<string> {
-    return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const pacienteIdInformado = typeof item.payload.pacienteId === 'string' ? item.payload.pacienteId : '';
-      const paciente = await validarPacienteNoEscopo(gerenciador, tenantId, pacienteIdInformado, usuario);
-      const itemAutorizado: ItemSincronizacaoMobileDto = {
-        ...item,
-        payload: { ...item.payload, pacienteId: paciente.id }
-      };
-      const repositorioSync = gerenciador.getRepository(SincronizacaoMobileOrm);
-      const idLocalEscopado = this.criarIdLocalEscopado(paciente.id, item.idLocal);
-      const existenteEscopado = await repositorioSync.findOne({
-        where: { tenantId, idLocal: idLocalEscopado }
-      });
-      if (existenteEscopado) {
-        if (await this.sincronizacaoPertenceAoPaciente(gerenciador, tenantId, paciente.id, item, existenteEscopado)) {
-          return existenteEscopado.recursoId as string;
+    let pacienteIdValidado: string | undefined;
+    let idLocalEscopado: string | undefined;
+    let conflitoNaReserva = false;
+
+    try {
+      return await this.executorTenant.executar(tenantId, async (gerenciador) => {
+        const pacienteIdInformado = typeof item.payload.pacienteId === 'string' ? item.payload.pacienteId : '';
+        const paciente = await validarPacienteNoEscopo(gerenciador, tenantId, pacienteIdInformado, usuario);
+        pacienteIdValidado = paciente.id;
+        idLocalEscopado = this.criarIdLocalEscopado(paciente.id, item.idLocal);
+        const itemAutorizado: ItemSincronizacaoMobileDto = {
+          ...item,
+          payload: { ...item.payload, pacienteId: paciente.id }
+        };
+        const repositorioSync = gerenciador.getRepository(SincronizacaoMobileOrm);
+        const existenteEscopado = await repositorioSync.findOne({
+          where: { tenantId, idLocal: idLocalEscopado }
+        });
+        if (existenteEscopado) {
+          if (await this.sincronizacaoPertenceAoPaciente(gerenciador, tenantId, paciente.id, item, existenteEscopado)) {
+            return existenteEscopado.recursoId as string;
+          }
+          throw new NotFoundException('Paciente nao encontrado.');
         }
-        throw new NotFoundException('Paciente nao encontrado.');
-      }
 
-      const existenteLegado = await repositorioSync.findOne({ where: { tenantId, idLocal: item.idLocal } });
-      if (
-        existenteLegado &&
-        (await this.sincronizacaoPertenceAoPaciente(gerenciador, tenantId, paciente.id, item, existenteLegado))
-      ) {
-        return existenteLegado.recursoId as string;
-      }
+        const existenteLegado = await repositorioSync.findOne({ where: { tenantId, idLocal: item.idLocal } });
+        if (
+          existenteLegado &&
+          (await this.sincronizacaoPertenceAoPaciente(gerenciador, tenantId, paciente.id, item, existenteLegado))
+        ) {
+          return existenteLegado.recursoId as string;
+        }
 
-      const recursoId = await this.sincronizarItem(gerenciador, tenantId, itemAutorizado);
-      await repositorioSync.save(
-        repositorioSync.create({
+        let reserva: SincronizacaoMobileOrm;
+        try {
+          reserva = await repositorioSync.save(
+            repositorioSync.create({
+              tenantId,
+              idLocal: idLocalEscopado,
+              tipo: item.tipo,
+              status: 'sincronizado',
+              recursoTipo: item.tipo
+            })
+          );
+        } catch (erro) {
+          conflitoNaReserva = this.ehViolacaoChaveUnica(erro);
+          throw erro;
+        }
+
+        const recursoId = await this.sincronizarItem(gerenciador, tenantId, itemAutorizado);
+        await repositorioSync.save({
+          ...reserva,
           tenantId,
           idLocal: idLocalEscopado,
           tipo: item.tipo,
           status: 'sincronizado',
           recursoTipo: item.tipo,
           recursoId
-        })
-      );
+        });
 
-      return recursoId;
+        return recursoId;
+      });
+    } catch (erro) {
+      if (!conflitoNaReserva || !pacienteIdValidado || !idLocalEscopado) throw erro;
+      return this.recuperarSincronizacaoConcorrente(
+        tenantId,
+        item,
+        usuario,
+        pacienteIdValidado,
+        idLocalEscopado
+      );
+    }
+  }
+
+  private async recuperarSincronizacaoConcorrente(
+    tenantId: string,
+    item: ItemSincronizacaoMobileDto,
+    usuario: UsuarioAutenticado,
+    pacienteIdValidado: string,
+    idLocalEscopado: string
+  ): Promise<string> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const pacienteIdInformado = typeof item.payload.pacienteId === 'string' ? item.payload.pacienteId : '';
+      const paciente = await validarPacienteNoEscopo(gerenciador, tenantId, pacienteIdInformado, usuario);
+      if (paciente.id !== pacienteIdValidado) throw new NotFoundException('Paciente nao encontrado.');
+
+      const sincronizacao = await gerenciador.getRepository(SincronizacaoMobileOrm).findOne({
+        where: { tenantId, idLocal: idLocalEscopado }
+      });
+      if (
+        !sincronizacao ||
+        !(await this.sincronizacaoPertenceAoPaciente(gerenciador, tenantId, paciente.id, item, sincronizacao))
+      ) {
+        throw new NotFoundException('Paciente nao encontrado.');
+      }
+
+      return sincronizacao.recursoId as string;
     });
+  }
+
+  private ehViolacaoChaveUnica(erro: unknown): boolean {
+    if (!(erro instanceof QueryFailedError)) return false;
+    const erroPostgres: unknown = erro.driverError;
+    return (
+      typeof erroPostgres === 'object' &&
+      erroPostgres !== null &&
+      'code' in erroPostgres &&
+      erroPostgres.code === '23505'
+    );
   }
 
   private async resolverFiltroPacienteId(
@@ -232,7 +300,15 @@ export class ServicoMobile {
     item: ItemSincronizacaoMobileDto,
     sincronizacao: SincronizacaoMobileOrm
   ): Promise<boolean> {
-    if (!sincronizacao.recursoId || (sincronizacao.recursoTipo ?? sincronizacao.tipo) !== item.tipo) {
+    if (!sincronizacao.recursoId || sincronizacao.tipo !== item.tipo) {
+      return false;
+    }
+
+    const recursoTipo = sincronizacao.recursoTipo ?? sincronizacao.tipo;
+    const aliasLegadoMidia =
+      (item.tipo === 'midia_captura' || item.tipo === 'midia_audio') &&
+      recursoTipo === 'arquivo_midia';
+    if (recursoTipo !== item.tipo && !aliasLegadoMidia) {
       return false;
     }
 

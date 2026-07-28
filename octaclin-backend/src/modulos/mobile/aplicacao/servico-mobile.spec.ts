@@ -1,6 +1,6 @@
 import * as crypto from 'crypto';
 import { NotFoundException } from '@nestjs/common';
-import { FindOperator } from 'typeorm';
+import { FindOperator, QueryFailedError } from 'typeorm';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
@@ -88,7 +88,15 @@ function criarRepositorioFake<T extends Record<string, unknown>>(
       ...entrada
     })),
     save: jest.fn(async (entrada: T) => {
-      registros.push(entrada);
+      const indiceExistente =
+        typeof entrada.id === 'string'
+          ? registros.findIndex((registro) => registro.id === entrada.id)
+          : -1;
+      if (indiceExistente >= 0) {
+        registros[indiceExistente] = entrada;
+      } else {
+        registros.push(entrada);
+      }
       return entrada;
     }),
     find: jest.fn(async (opcoes?: { where?: Record<string, unknown> }) =>
@@ -133,10 +141,18 @@ function criarServico(dados: DadosCenario = {}) {
 
   return {
     servico,
+    gerenciador,
     repositorios,
     criptografia,
     senhas
   };
+}
+
+function criarErroChaveDuplicada(): QueryFailedError {
+  const erroPostgres = Object.assign(new Error('duplicate key value violates unique constraint'), {
+    code: '23505'
+  });
+  return new QueryFailedError('insert into sincronizacoes_mobile', [], erroPostgres);
 }
 
 function dadosComDoisPacientes(): DadosCenario {
@@ -254,7 +270,7 @@ describe('ServicoMobile', () => {
     expect(repositorios.acompanhante.save).not.toHaveBeenCalled();
   });
 
-  it('valida escopo do upload antes de gerar a chave ou persistir o arquivo', async () => {
+  it('retorna NotFound para upload fora do escopo antes de validar a duracao', async () => {
     const randomUuid = jest.spyOn(crypto, 'randomUUID');
     const { servico, repositorios } = criarServico(dadosComDoisPacientes());
 
@@ -263,9 +279,10 @@ describe('ServicoMobile', () => {
         'tenant-1',
         {
           pacienteId: 'paciente-2',
-          tipo: 'imagem',
-          mimeType: 'image/jpeg',
-          tamanhoBytes: 100
+          tipo: 'audio',
+          mimeType: 'audio/m4a',
+          tamanhoBytes: 100,
+          duracaoSegundos: 121
         },
         usuarios.Patient
       )
@@ -431,6 +448,63 @@ describe('ServicoMobile', () => {
     expect(repositorios.sincronizacao.save).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['midia_captura', 'imagem', 'image/jpeg'],
+    ['midia_audio', 'audio', 'audio/m4a']
+  ] as const)(
+    'reaproveita %s legado com recursoTipo arquivo_midia sem duplicar o arquivo',
+    async (tipo, tipoArquivo, mimeType) => {
+      const dados = dadosComDoisPacientes();
+      dados.arquivos?.push({
+        id: `arquivo-legado-${tipo}`,
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        tipo: tipoArquivo,
+        criadoEm: new Date('2026-07-28T10:00:00.000Z')
+      });
+      dados.sincronizacoes = [
+        {
+          id: `sync-legado-${tipo}`,
+          tenantId: 'tenant-1',
+          idLocal: `local-legado-${tipo}`,
+          tipo,
+          recursoTipo: 'arquivo_midia',
+          recursoId: `arquivo-legado-${tipo}`
+        }
+      ];
+      const { servico, repositorios } = criarServico(dados);
+
+      const resultado = await servico.sincronizarLote(
+        'tenant-1',
+        {
+          itens: [
+            {
+              idLocal: `local-legado-${tipo}`,
+              tipo,
+              payload: {
+                pacienteId: 'paciente-1',
+                tipo: tipoArquivo,
+                mimeType,
+                tamanhoBytes: 50
+              }
+            }
+          ]
+        },
+        usuarios.Patient
+      );
+
+      expect(resultado.resultados).toEqual([
+        {
+          idLocal: `local-legado-${tipo}`,
+          status: 'sincronizado',
+          recursoId: `arquivo-legado-${tipo}`
+        }
+      ]);
+      expect(repositorios.arquivo.save).not.toHaveBeenCalled();
+      expect(repositorios.sincronizacao.save).not.toHaveBeenCalled();
+    }
+  );
+
   it('preserva idempotencia por paciente para novas sincronizacoes', async () => {
     const { servico, repositorios } = criarServico(dadosComDoisPacientes());
     const lote: SincronizarLoteMobileDto = {
@@ -448,7 +522,82 @@ describe('ServicoMobile', () => {
 
     expect(segunda.resultados).toEqual(primeira.resultados);
     expect(repositorios.diario.save).toHaveBeenCalledTimes(1);
-    expect(repositorios.sincronizacao.save).toHaveBeenCalledTimes(1);
+    expect(repositorios.sincronizacao.save).toHaveBeenCalledTimes(2);
+    expect(repositorios.sincronizacao.save.mock.invocationCallOrder[0]).toBeLessThan(
+      repositorios.diario.save.mock.invocationCallOrder[0]
+    );
     expect(repositorios.sincronizacao.registros.at(-1)?.idLocal).not.toBe('local-novo');
+  });
+
+  it('recupera o vencedor em nova transacao quando a reserva concorrente recebe 23505', async () => {
+    const perdedor = criarServico(dadosComDoisPacientes());
+    const vencedor = criarServico({
+      ...dadosComDoisPacientes(),
+      diarios: [
+        {
+          id: 'diario-vencedor',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          registradoEm: new Date('2026-07-28T10:00:00.000Z')
+        }
+      ],
+      sincronizacoes: [
+        {
+          id: 'sync-vencedor',
+          tenantId: 'tenant-1',
+          idLocal: 'chave-escopada-vencedora',
+          tipo: 'diario_rapido',
+          status: 'sincronizado',
+          recursoTipo: 'diario_rapido',
+          recursoId: 'diario-vencedor'
+        }
+      ]
+    });
+    perdedor.repositorios.sincronizacao.save.mockRejectedValueOnce(criarErroChaveDuplicada());
+    vencedor.repositorios.sincronizacao.findOne.mockResolvedValue({
+      id: 'sync-vencedor',
+      tenantId: 'tenant-1',
+      idLocal: 'chave-escopada-vencedora',
+      tipo: 'diario_rapido',
+      status: 'sincronizado',
+      recursoTipo: 'diario_rapido',
+      recursoId: 'diario-vencedor'
+    });
+    const executorTenant = {
+      executar: jest
+        .fn()
+        .mockImplementationOnce((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao(perdedor.gerenciador)
+        )
+        .mockImplementationOnce((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao(vencedor.gerenciador)
+        )
+    };
+    const servico = new ServicoMobile(
+      executorTenant as never,
+      perdedor.criptografia as never,
+      perdedor.senhas as never
+    );
+
+    const resultado = await servico.sincronizarLote(
+      'tenant-1',
+      {
+        itens: [
+          {
+            idLocal: 'local-concorrente',
+            tipo: 'diario_rapido',
+            payload: { pacienteId: 'paciente-1', tipo: 'humor', valor: { nivel: 4 } }
+          }
+        ]
+      },
+      usuarios.Patient
+    );
+
+    expect(resultado.resultados).toEqual([
+      { idLocal: 'local-concorrente', status: 'sincronizado', recursoId: 'diario-vencedor' }
+    ]);
+    expect(executorTenant.executar).toHaveBeenCalledTimes(2);
+    expect(perdedor.repositorios.diario.save).not.toHaveBeenCalled();
+    expect(vencedor.repositorios.sincronizacao.findOne).toHaveBeenCalledTimes(1);
   });
 });
