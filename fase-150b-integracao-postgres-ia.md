@@ -15,7 +15,7 @@ prova nao usa Neon staging/producao, Render, nem o provedor de IA real.
 - Protecao de nome: o banco da URL precisa corresponder a
   `octaclin_test_<nome>`. Qualquer outro nome falha antes de abrir conexao.
 - `DataSource` TypeORM restrito as entidades do cenario; ele recria somente as
-  quatro tabelas necessarias e a extensao `uuid-ossp` usada pela geracao UUID
+  quatro tabelas necessarias e a extensao `pgcrypto` usada pela geracao UUID
   do PostgreSQL. Nenhuma migration ou configuracao de producao e reutilizada.
 - Suite de integracao preparada para validar PostgreSQL real em tres casos:
   concorrencia do mesmo paciente/midia com um unico cache e uma unica chamada

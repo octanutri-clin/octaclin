@@ -552,7 +552,7 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 
 - [ ] Fase 150B - Integracao PostgreSQL para IA.
   - Harness opt-in e destrutivo apenas para URL confirmada cujo banco tenha
-    nome `octaclin_test_<nome>`; recria schema minimo com `uuid-ossp`, sem
+    nome `octaclin_test_<nome>`; recria schema minimo com `pgcrypto`, sem
     migrations, staging ou producao.
   - A suite preparada valida lock concorrente, isolamento de cache por paciente
     e bloqueio de profissional antes do provedor simulado.
@@ -560,6 +560,14 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     descartavel; Docker, PostgreSQL local e URL de integracao nao estao
     disponiveis nesta maquina.
   - Saida parcial: `fase-150b-integracao-postgres-ia.md`.
+
+- [ ] Fase 150C - Integracao PostgreSQL para Mobile.
+  - Usa o mesmo banco descartavel da Fase 150B para provar a constraint real
+    de sincronizacao, corrida `23505`, isolamento de `idLocal` por paciente e
+    bloqueio de profissional antes de reservar o recurso.
+  - Status: em andamento em 2026-07-28. A suite esta pronta, mas requer
+    PostgreSQL exclusivo `octaclin_test_<nome>` para o aceite real.
+  - Saida parcial: `fase-150c-integracao-postgres-mobile.md`.
 
 ## Backlog pos-producao
 

@@ -126,7 +126,7 @@ literal e apaga o schema antes de executar:
 ```powershell
 $env:OCTACLIN_POSTGRES_INTEGRACAO_URL='<url do banco descartavel>'
 $env:OCTACLIN_POSTGRES_INTEGRACAO_CONFIRMAR='APAGAR'
-pnpm --dir octaclin-backend exec jest modulos/ia/aplicacao/servico-ia.postgres-integracao.spec.ts --runInBand
+pnpm --dir octaclin-backend exec jest modulos/ia/aplicacao/servico-ia.postgres-integracao.spec.ts modulos/mobile/aplicacao/servico-mobile.postgres-integracao.spec.ts --runInBand
 ```
 
 Sem as duas variaveis a suite fica ignorada; isso nao e evidencia de aceite.

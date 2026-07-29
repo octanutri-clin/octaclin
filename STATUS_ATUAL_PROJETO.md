@@ -12,6 +12,10 @@ Atualizado em 2026-07-28.
   descartavel nomeado `octaclin_test_<nome>` e confirmacao `APAGAR`; ele nao
   pode usar staging ou producao. O aceite permanece pendente enquanto nao
   houver PostgreSQL de integracao disponivel.
+- Fase 150C em andamento: a cobertura PostgreSQL da sincronizacao Mobile usa
+  a mesma base descartavel da 150B para validar corrida `23505`, idempotencia
+  por paciente e escopo profissional. O aceite das duas fases depende somente
+  da execucao no banco exclusivo de integracao.
 - Ultima fase concluida: Fase 150A - Escopo de dados em Mobile e IA (entregue
   em 2026-07-28, branch `integrate/producao-hardening`). Patient acessa somente
   o proprio paciente; Professional, pacientes responsaveis; SuperAdmin, o

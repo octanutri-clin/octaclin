@@ -3,6 +3,8 @@ import { ReconhecimentoAlimentarOrm } from '../../modulos/ia/infraestrutura/reco
 import { ArquivoMidiaOrm } from '../../modulos/mobile/infraestrutura/arquivo-midia.orm';
 import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
+import { LogDiarioRapidoOrm } from '../../modulos/mobile/infraestrutura/log-diario-rapido.orm';
+import { SincronizacaoMobileOrm } from '../../modulos/mobile/infraestrutura/sincronizacao-mobile.orm';
 
 const NOME_BANCO_INTEGRACAO = /^octaclin_test_[a-z0-9_]+$/;
 
@@ -25,43 +27,23 @@ export function criarFonteDadosPostgresIntegracao(url: string): DataSource {
   return new DataSource({
     type: 'postgres',
     url,
-    entities: [ProfissionalOrm, PacienteOrm, ArquivoMidiaOrm, ReconhecimentoAlimentarOrm],
+    entities: [
+      ProfissionalOrm,
+      PacienteOrm,
+      ArquivoMidiaOrm,
+      ReconhecimentoAlimentarOrm,
+      LogDiarioRapidoOrm,
+      SincronizacaoMobileOrm
+    ],
     logging: false
   });
 }
 
 export async function prepararSchemaPostgresIntegracao(fonteDados: DataSource): Promise<void> {
-  await fonteDados.dropDatabase();
+  await prepararSchemaBase(fonteDados);
   await fonteDados.query(`
-    create extension if not exists "uuid-ossp";
-    create table profissionais (
-      id uuid primary key default uuid_generate_v4(),
-      tenant_id uuid not null,
-      usuario_id uuid not null,
-      nome_criptografado bytea not null,
-      registro_profissional varchar(80),
-      especialidade varchar(120),
-      arquivado_em timestamptz,
-      criado_em timestamptz not null default now(),
-      atualizado_em timestamptz not null default now()
-    );
-    create table pacientes (
-      id uuid primary key default uuid_generate_v4(),
-      tenant_id uuid not null,
-      usuario_id uuid,
-      profissional_responsavel_id uuid not null,
-      nome_criptografado bytea not null,
-      contato_criptografado bytea,
-      data_nascimento date,
-      status_adesao varchar(40) not null default 'novo',
-      score_risco numeric(5,2) not null default 0,
-      ultimo_checkin_em timestamptz,
-      arquivado_em timestamptz,
-      criado_em timestamptz not null default now(),
-      atualizado_em timestamptz not null default now()
-    );
     create table arquivos_midia (
-      id uuid primary key default uuid_generate_v4(),
+      id uuid primary key default gen_random_uuid(),
       tenant_id uuid not null,
       paciente_id uuid not null,
       tipo varchar(40) not null,
@@ -74,7 +56,7 @@ export async function prepararSchemaPostgresIntegracao(fonteDados: DataSource): 
       criado_em timestamptz not null default now()
     );
     create table food_recognition_cache (
-      id uuid primary key default uuid_generate_v4(),
+      id uuid primary key default gen_random_uuid(),
       tenant_id uuid not null,
       paciente_id uuid not null,
       arquivo_midia_id uuid not null,
@@ -86,6 +68,65 @@ export async function prepararSchemaPostgresIntegracao(fonteDados: DataSource): 
       confianca_media numeric(5,2),
       criado_em timestamptz not null default now(),
       unique (tenant_id, provedor, imagem_hash)
+    );
+  `);
+}
+
+export async function prepararSchemaPostgresMobileIntegracao(fonteDados: DataSource): Promise<void> {
+  await prepararSchemaBase(fonteDados);
+  await fonteDados.query(`
+    create table logs_diario_rapido (
+      id uuid primary key default gen_random_uuid(),
+      tenant_id uuid not null,
+      paciente_id uuid not null,
+      tipo varchar(40) not null,
+      valor jsonb not null,
+      registrado_em timestamptz not null
+    );
+    create table sincronizacoes_mobile (
+      id uuid primary key default gen_random_uuid(),
+      tenant_id uuid not null,
+      id_local varchar(160) not null,
+      tipo varchar(80) not null,
+      status varchar(40) not null,
+      recurso_tipo varchar(80),
+      recurso_id uuid,
+      erro text,
+      criado_em timestamptz not null default now(),
+      unique (tenant_id, id_local)
+    );
+  `);
+}
+
+async function prepararSchemaBase(fonteDados: DataSource): Promise<void> {
+  await fonteDados.dropDatabase();
+  await fonteDados.query(`
+    create extension if not exists "pgcrypto";
+    create table profissionais (
+      id uuid primary key default gen_random_uuid(),
+      tenant_id uuid not null,
+      usuario_id uuid not null,
+      nome_criptografado bytea not null,
+      registro_profissional varchar(80),
+      especialidade varchar(120),
+      arquivado_em timestamptz,
+      criado_em timestamptz not null default now(),
+      atualizado_em timestamptz not null default now()
+    );
+    create table pacientes (
+      id uuid primary key default gen_random_uuid(),
+      tenant_id uuid not null,
+      usuario_id uuid,
+      profissional_responsavel_id uuid not null,
+      nome_criptografado bytea not null,
+      contato_criptografado bytea,
+      data_nascimento date,
+      status_adesao varchar(40) not null default 'novo',
+      score_risco numeric(5,2) not null default 0,
+      ultimo_checkin_em timestamptz,
+      arquivado_em timestamptz,
+      criado_em timestamptz not null default now(),
+      atualizado_em timestamptz not null default now()
     );
   `);
 }
