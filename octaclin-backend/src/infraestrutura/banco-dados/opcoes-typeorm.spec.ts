@@ -2,6 +2,7 @@ import { criarOpcoesTypeOrm } from './opcoes-typeorm';
 import { AdicionarDesfechosConsultaAgenda1720000001002 } from './migracoes/1720000001002-AdicionarDesfechosConsultaAgenda';
 import { AdicionarRevisaoClinicaEnviosQuestionario1720000001003 } from './migracoes/1720000001003-AdicionarRevisaoClinicaEnviosQuestionario';
 import { CriarAlertasOcultosDashboardClinico1720000001004 } from './migracoes/1720000001004-CriarAlertasOcultosDashboardClinico';
+import { ProtegerCanaisWatchGoogleAgenda1720000001005 } from './migracoes/1720000001005-ProtegerCanaisWatchGoogleAgenda';
 import { DashboardAlertaOcultoOrm } from '../../modulos/dashboard/infraestrutura/dashboard-alerta-oculto.orm';
 
 const ambienteOriginal = process.env;
@@ -56,7 +57,8 @@ describe('criarOpcoesTypeOrm', () => {
       expect.arrayContaining([
         AdicionarDesfechosConsultaAgenda1720000001002,
         AdicionarRevisaoClinicaEnviosQuestionario1720000001003,
-        CriarAlertasOcultosDashboardClinico1720000001004
+        CriarAlertasOcultosDashboardClinico1720000001004,
+        ProtegerCanaisWatchGoogleAgenda1720000001005
       ])
     );
   });

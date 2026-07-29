@@ -17,6 +17,7 @@ import { CorrigeAgendamentoPublicoPosMigracaoInicial1720000001001 } from './migr
 import { AdicionarDesfechosConsultaAgenda1720000001002 } from './migracoes/1720000001002-AdicionarDesfechosConsultaAgenda';
 import { AdicionarRevisaoClinicaEnviosQuestionario1720000001003 } from './migracoes/1720000001003-AdicionarRevisaoClinicaEnviosQuestionario';
 import { CriarAlertasOcultosDashboardClinico1720000001004 } from './migracoes/1720000001004-CriarAlertasOcultosDashboardClinico';
+import { ProtegerCanaisWatchGoogleAgenda1720000001005 } from './migracoes/1720000001005-ProtegerCanaisWatchGoogleAgenda';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -166,7 +167,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CorrigeAgendamentoPublicoPosMigracaoInicial1720000001001,
       AdicionarDesfechosConsultaAgenda1720000001002,
       AdicionarRevisaoClinicaEnviosQuestionario1720000001003,
-      CriarAlertasOcultosDashboardClinico1720000001004
+      CriarAlertasOcultosDashboardClinico1720000001004,
+      ProtegerCanaisWatchGoogleAgenda1720000001005
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

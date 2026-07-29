@@ -22,8 +22,10 @@ export class ServicoSincronizacaoGoogleCalendar {
     private readonly servicoAgenda: ServicoAgenda
   ) {}
 
-  async processarNotificacao(canalWatchId: string): Promise<void> {
-    const canal = await this.fonteDados.getRepository(GoogleCanalWatchOrm).findOne({ where: { canalWatchId } });
+  async processarNotificacao(canalWatchId: string, tenantId: string): Promise<void> {
+    const canal = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      gerenciador.getRepository(GoogleCanalWatchOrm).findOne({ where: { canalWatchId, tenantId } })
+    );
     if (!canal) {
       this.logger.warn(`Notificacao recebida para canal desconhecido/ja desconectado: ${canalWatchId}`);
       return;

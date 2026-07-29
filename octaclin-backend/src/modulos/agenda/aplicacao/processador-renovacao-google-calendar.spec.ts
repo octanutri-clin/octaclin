@@ -1,4 +1,5 @@
 import { ProfissionalGoogleConexaoOrm } from '../infraestrutura/profissional-google-conexao.orm';
+import { GoogleCanalWatchOrm } from '../infraestrutura/google-canal-watch.orm';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { ProcessadorRenovacaoGoogleCalendar } from './processador-renovacao-google-calendar';
 
@@ -60,6 +61,13 @@ describe('ProcessadorRenovacaoGoogleCalendar', () => {
                   expect(opcoes.where.tenantId).toBe(tenantId);
                   return conexoesPorTenant[tenantId] ?? [];
                 })
+              };
+            }
+            if (entidade === GoogleCanalWatchOrm) {
+              return {
+                delete: jest.fn(async () => undefined),
+                create: jest.fn((dados: unknown) => dados),
+                save: jest.fn(async (dados: unknown) => dados)
               };
             }
             throw new Error(`Repositorio nao mapeado: ${entidade.name}`);

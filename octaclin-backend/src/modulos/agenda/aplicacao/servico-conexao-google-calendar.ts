@@ -159,13 +159,14 @@ export class ServicoConexaoGoogleCalendar {
 
     if (conexao.canalWatchId && conexao.canalRecursoId) {
       await this.pararCanalWatchComTolerancia(conexao);
-      await this.fonteDados.getRepository(GoogleCanalWatchOrm).delete({ canalWatchId: conexao.canalWatchId });
     }
 
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(ProfissionalGoogleConexaoOrm);
+      const repositorioCanal = gerenciador.getRepository(GoogleCanalWatchOrm);
       const atual = await repositorio.findOne({ where: { tenantId, profissionalId } });
       if (!atual) return;
+      if (conexao.canalWatchId) await repositorioCanal.delete({ canalWatchId: conexao.canalWatchId });
       atual.desconectadoEm = new Date();
       atual.canalWatchId = undefined;
       atual.canalRecursoId = undefined;

@@ -49,11 +49,13 @@ describe('ServicoConexaoGoogleCalendar', () => {
         const salvo = { id: 'conexao-1', ...registros.get(chave), ...dados };
         registros.set(chave, salvo);
         return salvo;
-      })
+      }),
+      delete: jest.fn(async () => undefined)
     };
     return {
       getRepository: () => repositorio,
-      registros
+      registros,
+      repositorio
     };
   }
 
@@ -254,7 +256,7 @@ describe('ServicoConexaoGoogleCalendar', () => {
         'watch-1',
         'recurso-1'
       );
-      expect(repositorioCanaisWatch.delete).toHaveBeenCalledWith({ canalWatchId: 'watch-1' });
+      expect(gerenciadorFalso.repositorio.delete).toHaveBeenCalledWith({ canalWatchId: 'watch-1' });
     });
 
     it('nao chama o Google e conclui a desconexao quando nao havia canal de watch ativo', async () => {

@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from 'crypto';
+import { randomBytes } from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { DataSource, IsNull } from 'typeorm';
@@ -9,6 +9,7 @@ import { GoogleCanalWatchOrm } from '../infraestrutura/google-canal-watch.orm';
 import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar';
 import { ServicoGoogleCalendar } from './servico-google-calendar';
 import { ServicoSincronizacaoGoogleCalendar } from './servico-sincronizacao-google-calendar';
+import { gerarIdentificadorCanalWatchGoogle } from './identificador-canal-watch-google';
 
 function urlWebhook(): string {
   const base = process.env.OCTACLIN_BACKEND_URL?.trim() ?? 'http://localhost:3000';
@@ -76,31 +77,31 @@ export class ProcessadorRenovacaoGoogleCalendar {
 
     if (conexao.canalWatchId && conexao.canalRecursoId) {
       await this.googleCalendar.pararCanalWatch(credenciais, conexao.canalWatchId, conexao.canalRecursoId);
-      await this.fonteDados.getRepository(GoogleCanalWatchOrm).delete({ canalWatchId: conexao.canalWatchId });
     }
 
-    const novoCanalId = randomUUID();
+    const novoCanalId = gerarIdentificadorCanalWatchGoogle(conexao.tenantId);
     const token = randomBytes(24).toString('hex');
     const { recursoId, expiraEm } = await this.googleCalendar.criarCanalWatch(credenciais, novoCanalId, urlWebhook(), token);
 
     await this.executorTenant.executar(conexao.tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(ProfissionalGoogleConexaoOrm);
+      const repositorioCanal = gerenciador.getRepository(GoogleCanalWatchOrm);
       const atual = await repositorio.findOne({ where: { tenantId: conexao.tenantId, profissionalId: conexao.profissionalId } });
       if (!atual) return;
+      if (conexao.canalWatchId) await repositorioCanal.delete({ canalWatchId: conexao.canalWatchId });
       atual.canalWatchId = novoCanalId;
       atual.canalRecursoId = recursoId;
       atual.canalExpiraEm = expiraEm;
       await repositorio.save(atual);
+      await repositorioCanal.save(
+        repositorioCanal.create({
+          canalWatchId: novoCanalId,
+          tenantId: conexao.tenantId,
+          profissionalId: conexao.profissionalId,
+          expiraEm,
+          token
+        })
+      );
     });
-
-    await this.fonteDados.getRepository(GoogleCanalWatchOrm).save(
-      this.fonteDados.getRepository(GoogleCanalWatchOrm).create({
-        canalWatchId: novoCanalId,
-        tenantId: conexao.tenantId,
-        profissionalId: conexao.profissionalId,
-        expiraEm,
-        token
-      })
-    );
   }
 }

@@ -5,6 +5,7 @@ import { FILA_SINCRONIZACAO_GOOGLE, ServicoSincronizacaoGoogleCalendar } from '.
 
 interface JobNotificacaoGoogle {
   canalWatchId: string;
+  tenantId: string;
 }
 
 @Injectable()
@@ -18,7 +19,7 @@ export class ProcessadorSincronizacaoGoogleCalendar extends WorkerHost {
 
   async process(job: Job<JobNotificacaoGoogle>): Promise<void> {
     try {
-      await this.servicoSincronizacao.processarNotificacao(job.data.canalWatchId);
+      await this.servicoSincronizacao.processarNotificacao(job.data.canalWatchId, job.data.tenantId);
     } catch (erro) {
       this.logger.error(
         `Falha ao processar notificacao do canal ${job.data.canalWatchId}: ${erro instanceof Error ? erro.message : 'erro desconhecido'}`

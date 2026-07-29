@@ -1,9 +1,13 @@
 import { Logger } from '@nestjs/common';
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
+import { GoogleCanalWatchOrm } from '../infraestrutura/google-canal-watch.orm';
 import { SyncTokenExpiradoError, TokenRevogadoError } from './servico-google-calendar';
 import { ServicoSincronizacaoGoogleCalendar } from './servico-sincronizacao-google-calendar';
 
 describe('ServicoSincronizacaoGoogleCalendar', () => {
+  const tenantIdCanal = '11111111-1111-4111-8111-111111111111';
+  const canalWatchId = `octaclin-gcal:${tenantIdCanal}:22222222-2222-4222-8222-222222222222`;
+
   function construirDependencias() {
     const canalRegistro = {
       canalWatchId: 'canal-1',
@@ -48,12 +52,15 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
     const executorTenant = {
       executar: jest.fn((_tenantId: string, callback: (gerenciador: any) => any) =>
         callback({
-          getRepository: () => ({
+          getRepository: (entidade: unknown) => {
+            if (entidade === GoogleCanalWatchOrm) return { findOne: jest.fn(async () => canalRegistro) };
+            return {
             findOne: jest.fn(async () => null),
             create: jest.fn((dados: any) => dados),
             save: jest.fn(async (dados: any) => dados),
             delete: jest.fn(async () => undefined)
-          })
+            };
+          }
         })
       )
     };
@@ -71,7 +78,7 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
       deps.servicoAgenda as any
     );
 
-    await servico.processarNotificacao('canal-1');
+    await servico.processarNotificacao('canal-1', 'tenant-1');
 
     expect(deps.servicoAgenda.remarcarConsultaComoSistema).toHaveBeenCalledWith(
       'tenant-1',
@@ -91,7 +98,7 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
       deps.servicoAgenda as any
     );
 
-    await servico.processarNotificacao('canal-1');
+    await servico.processarNotificacao('canal-1', 'tenant-1');
 
     expect(deps.servicoAgenda.cancelarConsultaComoSistema).toHaveBeenCalledWith(
       'tenant-1',
@@ -103,7 +110,9 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
 
   it('retorna sem erro quando o canal nao existe mais (ja desconectado)', async () => {
     const deps = construirDependencias();
-    (deps.fonteDados.getRepository as any) = () => ({ findOne: jest.fn(async () => null) });
+    deps.executorTenant.executar = jest.fn((_tenantId: string, callback: (gerenciador: any) => any) =>
+      callback({ getRepository: () => ({ findOne: jest.fn(async () => null) }) })
+    );
     const servico = new ServicoSincronizacaoGoogleCalendar(
       deps.fonteDados as any,
       deps.executorTenant as any,
@@ -112,8 +121,36 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
       deps.servicoAgenda as any
     );
 
-    await expect(servico.processarNotificacao('canal-inexistente')).resolves.not.toThrow();
+    await expect(servico.processarNotificacao('canal-inexistente', 'tenant-1')).resolves.not.toThrow();
     expect(deps.googleCalendar.listarEventosAlterados).not.toHaveBeenCalled();
+  });
+
+  it('consulta o canal somente no contexto RLS do tenant recebido do webhook', async () => {
+    const deps = construirDependencias();
+    const canal = { ...deps.canalRegistro, canalWatchId, tenantId: tenantIdCanal };
+    const repositorioCanal = { findOne: jest.fn(async () => canal) };
+    deps.fonteDados.getRepository = jest.fn(() => {
+      throw new Error('nao deve ler google_canais_watch fora de ExecutorTenant');
+    });
+    deps.executorTenant.executar = jest.fn((_tenantId: string, callback: (gerenciador: any) => any) =>
+      callback({
+        getRepository: () => repositorioCanal
+      })
+    );
+    (deps.servicoConexao as any).obterConexaoAtiva = jest.fn(async () => undefined);
+
+    const servico = new ServicoSincronizacaoGoogleCalendar(
+      deps.fonteDados as any,
+      deps.executorTenant as any,
+      deps.servicoConexao as any,
+      deps.googleCalendar as any,
+      deps.servicoAgenda as any
+    );
+
+    await servico.processarNotificacao(canalWatchId, tenantIdCanal);
+
+    expect(deps.executorTenant.executar).toHaveBeenCalledWith(tenantIdCanal, expect.any(Function));
+    expect(repositorioCanal.findOne).toHaveBeenCalledWith({ where: { canalWatchId, tenantId: tenantIdCanal } });
   });
 
   it('nao interrompe o lote quando aplicarBloqueioExterno falha para um evento externo, e continua processando os demais eventos', async () => {
@@ -133,6 +170,9 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
     deps.executorTenant.executar = jest.fn((_tenantId: string, callback: (gerenciador: any) => any) =>
       callback({
         getRepository: (entidade: any) => {
+          if (entidade === GoogleCanalWatchOrm) {
+            return { findOne: jest.fn(async () => deps.canalRegistro) };
+          }
           if (entidade === AgendaBloqueioExternoOrm) {
             return {
               findOne: jest.fn(async () => null),
@@ -163,7 +203,7 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
       deps.servicoAgenda as any
     );
 
-    await expect(servico.processarNotificacao('canal-1')).resolves.not.toThrow();
+    await expect(servico.processarNotificacao('canal-1', 'tenant-1')).resolves.not.toThrow();
 
     expect(loggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('evt-externo-falho'));
 
