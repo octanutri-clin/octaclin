@@ -19,7 +19,8 @@ export interface LinkAgendaPublicaBff extends LinkAgendaPublicaBackend {
  * A URL explicita garante que o link entregue ao paciente continue publico.
  */
 export function obterOrigemPublicaAgenda(originDaRequisicao: string): string {
-  const origemConfigurada = process.env.OCTACLIN_WEB_URL?.trim() ?? process.env.NEXT_PUBLIC_WEB_URL?.trim();
+  const origemConfigurada =
+    process.env.OCTACLIN_WEB_URL?.trim() ?? process.env.NEXT_PUBLIC_WEB_URL?.trim() ?? process.env.RENDER_EXTERNAL_URL?.trim();
   return (origemConfigurada || originDaRequisicao).replace(/\/$/, '');
 }
 

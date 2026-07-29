@@ -214,6 +214,22 @@ test('URL publica configurada prevalece sobre a origem interna do proxy', () => 
   }
 });
 
+test('URL externa fornecida pelo Render substitui a origem interna quando nao ha configuracao explicita', () => {
+  const valorAnterior = process.env.RENDER_EXTERNAL_URL;
+  const origemAnterior = process.env.OCTACLIN_WEB_URL;
+  Reflect.deleteProperty(process.env, 'OCTACLIN_WEB_URL');
+  process.env.RENDER_EXTERNAL_URL = 'https://octaclin-web-producao.onrender.com';
+
+  try {
+    assert.equal(obterOrigemPublicaAgenda('http://localhost:10000'), 'https://octaclin-web-producao.onrender.com');
+  } finally {
+    if (origemAnterior === undefined) Reflect.deleteProperty(process.env, 'OCTACLIN_WEB_URL');
+    else process.env.OCTACLIN_WEB_URL = origemAnterior;
+    if (valorAnterior === undefined) Reflect.deleteProperty(process.env, 'RENDER_EXTERNAL_URL');
+    else process.env.RENDER_EXTERNAL_URL = valorAnterior;
+  }
+});
+
 test('BFF publico de leitura agrupa horarios livres sem vazar metadados internos', async () => {
   __clearCookies();
   const fetchOriginal = global.fetch;
