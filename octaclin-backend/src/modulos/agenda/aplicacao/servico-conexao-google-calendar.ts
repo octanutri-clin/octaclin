@@ -20,7 +20,11 @@ function textoEnv(valor: unknown): string | undefined {
 }
 
 function chaveAssinaturaState(): string {
-  return process.env.CRIPTOGRAFIA_CHAVE_AES_256 ?? 'octaclin-chave-local-desenvolvimento';
+  const segredo = textoEnv(process.env.GOOGLE_CALENDAR_OAUTH_STATE_SECRET);
+  if (!segredo || Buffer.byteLength(segredo, 'utf8') < 32) {
+    throw new BadRequestException('GOOGLE_CALENDAR_OAUTH_STATE_SECRET precisa ter pelo menos 32 bytes.');
+  }
+  return segredo;
 }
 
 export const REDIS_OAUTH_STATE_GOOGLE = 'REDIS_OAUTH_STATE_GOOGLE';

@@ -45,6 +45,18 @@ function validarCorsProducao() {
   if (!process.env.CRIPTOGRAFIA_CHAVE_AES_256?.trim()) {
     throw new Error('CRIPTOGRAFIA_CHAVE_AES_256 e obrigatoria em producao.');
   }
+
+  const configuracaoGoogle = [
+    process.env.GOOGLE_CALENDAR_CLIENT_ID?.trim(),
+    process.env.GOOGLE_CALENDAR_CLIENT_SECRET?.trim(),
+    process.env.GOOGLE_CALENDAR_OAUTH_STATE_SECRET?.trim()
+  ];
+  if (configuracaoGoogle.some(Boolean) && configuracaoGoogle.some((valor) => !valor)) {
+    throw new Error('GOOGLE_CALENDAR_CLIENT_ID, GOOGLE_CALENDAR_CLIENT_SECRET e GOOGLE_CALENDAR_OAUTH_STATE_SECRET devem ser configurados juntos em producao.');
+  }
+  if (configuracaoGoogle[2] && Buffer.byteLength(configuracaoGoogle[2], 'utf8') < 32) {
+    throw new Error('GOOGLE_CALENDAR_OAUTH_STATE_SECRET precisa ter pelo menos 32 bytes em producao.');
+  }
 }
 
 async function iniciarAplicacao() {

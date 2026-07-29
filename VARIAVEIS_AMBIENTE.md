@@ -9,7 +9,9 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 - Use nomes consistentes entre staging e producao.
 - Producao deve ter secrets separados de staging.
 - O backend recusa iniciar em producao se `CORS_ORIGINS`, `JWT_SEGREDO`,
-  `JWT_REFRESH_SEGREDO` ou `CRIPTOGRAFIA_CHAVE_AES_256` estiverem ausentes;
+  `JWT_REFRESH_SEGREDO` ou `CRIPTOGRAFIA_CHAVE_AES_256` estiverem ausentes.
+  Quando Google Calendar estiver configurado, tambem exige
+  `GOOGLE_CALENDAR_OAUTH_STATE_SECRET` com pelo menos 32 bytes;
   `CORS_ORIGINS` nao pode conter `*`.
 
 ## Backend
@@ -66,6 +68,7 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | --- | --- | --- | --- | --- |
 | `GOOGLE_CALENDAR_CLIENT_ID` | Sim | Client ID do OAuth Google | Render/backend | Botao redireciona ao consentimento |
 | `GOOGLE_CALENDAR_CLIENT_SECRET` | Sim | Client secret do OAuth Google | Render/backend | Callback conclui sem erro |
+| `GOOGLE_CALENDAR_OAUTH_STATE_SECRET` | Sim com OAuth Google | Segredo HMAC dedicado para state OAuth, minimo 32 bytes | Render/backend | Callback valida state sem fallback previsivel |
 | `OCTACLIN_BACKEND_URL` | Recomendado | Base publica do callback e webhook | Render/backend | URL gerada aponta para producao |
 | `OCTACLIN_WEB_URL` | Sim em producao | Retorno apos o consentimento | Render/backend | Retorna para `/agenda?google=conectado` |
 | `GOOGLE_CALENDAR_REFRESH_TOKEN` | Opcional | Compatibilidade com agenda compartilhada antiga | Render/backend | Health indica modo compativel |
