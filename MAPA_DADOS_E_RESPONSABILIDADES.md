@@ -21,3 +21,5 @@ papel de controlador ou operador nao e fixo para toda a relacao comercial.
 - Nenhuma parte deve coletar ou compartilhar dados alem do necessario.
 - Incidentes, requisicoes de titulares e suboperadores seguem o anexo juridico
   final e o runbook operacional correspondente.
+- A base legal e o papel de cada agente devem ser definidos por finalidade;
+  aceite versionado e evidencia tecnica nao dispensam essa decisao juridica.

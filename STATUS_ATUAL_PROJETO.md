@@ -7,7 +7,7 @@ Atualizado em 2026-07-29.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 158 - restore real em banco dedicado (2026-07-29). Dump custom da producao validado com 481 itens, restore concluido em Neon dedicado e contagens equivalentes em 13 tabelas criticas, 54 politicas RLS e 2 usuarios autenticaveis; nenhum dump foi retido.
+- Ultima fase concluida: Fase 159 - revisao juridico-operacional preparatoria (2026-07-29). O pacote ganhou Termo de Uso, Anexo de Tratamento de Dados e revisao rastreavel dos bloqueadores. Aprovacao por advogado, identidade empresarial, encarregado/canal, bases legais, suboperadores e transferencias continuam obrigatorios antes de venda.
 - Fase 148: Foco visivel proprio nos componentes compartilhados `Campo`/`AreaTexto`/`Selecao`/`Botao` (entregue em 2026-07-27, PR #5 aberto para `main`).
 - Fase 147: Foco visivel explicito nos inputs crus da agenda (entregue em 2026-07-27). Antes dela, esta branch recebeu por merge a Fase 146 (gate de acessibilidade, feita pelo Codex na `main`).
 - Fase 145: Painel clinico do profissional e desmarcamento/cancelamento distintos (entregue em 2026-07-27, commit `22e161b` da Task 5).
@@ -80,7 +80,7 @@ Atualizado em 2026-07-29.
 - Recorrencia operacional de backup e restore semanal conforme o runbook.
 - Producao isolada de staging.
 - Dominio, SSL e identidade de envio.
-- Checklist juridico/comercial.
+- Aceite juridico formal, identidade empresarial, canal de privacidade e publicacao das versoes legais.
 - Go-live assistido.
 - Migracao futura para Next.js 16/React 19, incluindo a remocao do shim temporario de cookies usado no BFF.
 
@@ -124,4 +124,4 @@ Atualizado em 2026-07-29.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita e restore real em banco dedicado validado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, revisao juridica e go-live assistido antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.

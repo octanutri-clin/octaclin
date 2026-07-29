@@ -4,7 +4,10 @@ import { constants } from 'node:fs';
 const arquivos = [
   'PACOTE_JURIDICO_COMERCIAL.md',
   'MODELO_CONTRATO_CLIENTE.md',
+  'TERMO_DE_USO_RASCUNHO.md',
   'POLITICA_PRIVACIDADE_RASCUNHO.md',
+  'ANEXO_TRATAMENTO_DADOS_RASCUNHO.md',
+  'REVISAO_JURIDICO_OPERACIONAL_FASE_159.md',
   'SLA_SUPORTE.md',
   'CHECKLIST_ONBOARDING_COMERCIAL.md',
   'MAPA_DADOS_E_RESPONSABILIDADES.md',
@@ -39,10 +42,26 @@ await exigirTrechos('MODELO_CONTRATO_CLIENTE.md', [
   'Revisao juridica obrigatoria',
   'tratamento de dados'
 ]);
+await exigirTrechos('TERMO_DE_USO_RASCUNHO.md', [
+  'RASCUNHO',
+  'Menores de idade',
+  'Revisao juridica'
+]);
 await exigirTrechos('POLITICA_PRIVACIDADE_RASCUNHO.md', [
   'RASCUNHO',
   'dados pessoais sensiveis',
   'direitos do titular'
+]);
+await exigirTrechos('ANEXO_TRATAMENTO_DADOS_RASCUNHO.md', [
+  'RASCUNHO',
+  'transferencias internacionais',
+  'incidentes'
+]);
+await exigirTrechos('REVISAO_JURIDICO_OPERACIONAL_FASE_159.md', [
+  'Nao e parecer',
+  'juridico',
+  'Achados bloqueadores',
+  'Aceite externo pendente'
 ]);
 await exigirTrechos('SLA_SUPORTE.md', [
   'P1',

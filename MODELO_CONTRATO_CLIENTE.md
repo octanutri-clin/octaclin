@@ -23,8 +23,9 @@ revisao juridica obrigatoria.
 
 ## Tratamento de dados
 
-- O anexo deve descrever finalidade, categorias de dados, titulares, retencao,
-  medidas de seguranca, suboperadores e canais para direitos.
+- O anexo de tratamento de dados deve descrever finalidade, categorias de
+  dados, titulares, retencao, medidas de seguranca, suboperadores,
+  transferencias internacionais, incidentes e canais para direitos.
 - A classificacao de controlador e operador deve ser feita por operacao. Para
   dados de pacientes por instrucao da consultoria, a contratante tende a atuar
   como controlador e o OctaClin como operador; para dados administrativos,
@@ -32,6 +33,8 @@ revisao juridica obrigatoria.
   definicao final depende de revisao juridica.
 - Dados pessoais sensiveis exigem finalidade, base legal e controles
   documentados compativeis com a LGPD.
+- `ANEXO_TRATAMENTO_DADOS_RASCUNHO.md` deve ser convertido em anexo final
+  aprovado antes de qualquer ativacao comercial que trate dados reais.
 
 ## Seguranca, suporte e encerramento
 

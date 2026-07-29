@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-07-23, Fase 131.
+Atualizado em 2026-07-29, Fase 159.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -34,8 +34,8 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Suporte | Pronto | `RUNBOOK_SUPORTE.md` cobre login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento. | Treinar responsavel e revisar apos piloto. |
 | Dados de staging | Pronto | Fixture sem PII real, seed `seed-staging.ts`, runbook `RUNBOOK_STAGING_DADOS.md`; `pnpm seed:staging` aplicado e validado no Neon staging (tenant `octaclin-staging`). | Reaplicar quando a Fase 131 separar staging de producao. |
 | Piloto interno | Pronto | Runbook `RUNBOOK_PILOTO_INTERNO.md` e controle `PILOTO_INTERNO_CONTROLE.md`; rodada 1 executada em 2026-07-23 com todas as jornadas manuais aprovadas e aceite registrado. | Nenhuma pendencia; repetir rodada apos mudancas relevantes de autorizacao. |
-| Producao isolada | Parcial | Runbook `RUNBOOK_PRODUCAO_ISOLADA.md` e controle `PRODUCAO_ISOLADA_CONTROLE.md`; banco Neon (`Octaclin-db-producao`, 8/8 migrations, vazio) e Redis Upstash de producao criados e validados; Render de producao ainda pendente. | Rotacionar secrets do Neon/Upstash de producao e criar servicos Render de producao separados de staging conforme o runbook. |
-| Juridico/comercial | Pendente | Checklist previsto. | Termos, politica, contrato e processo de suporte. |
+| Producao isolada | Pronto | Neon, Upstash e servicos Render exclusivos de producao aceitos na Fase 131, com credenciais rotacionadas e sem referencias a staging. | Revalidar apos mudancas relevantes de infraestrutura. |
+| Juridico/comercial | Parcial | Minutas de contrato, politica, Termo de Uso, Anexo de Tratamento, SLA, onboarding e revisao preparatoria da Fase 159. | Aceite por advogado, identidade empresarial, encarregado/canal, bases legais, suboperadores/transferencias e publicacao final. |
 | QA E2E | Parcial | Typechecks, specs focadas, Playwright visual por areas e suite de jornadas criticas com BFF mockado. | Validar em staging com dados realistas. |
 
 ## Gate antes de cada fase

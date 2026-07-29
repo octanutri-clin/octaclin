@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-29 apos a Fase 158 - restore real em banco dedicado.
+Atualizado em 2026-07-29 apos a Fase 159 - revisao juridico-operacional preparatoria.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -555,6 +555,16 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     equivalentes entre origem e destino.
   - Saida entregue: `fase-158-restore-real-banco-dedicado.md` e
     `scripts/executar-restore-dedicado.ps1`; dump temporario removido.
+
+- [x] Fase 159 - Revisao juridico-operacional preparatoria.
+  - Feita revisao documental frente a LGPD e orientacoes publicas da ANPD;
+    evidencias tecnicas, bloqueadores e aceite externo ficaram rastreaveis.
+  - Saida entregue: Termo de Uso, Anexo de Tratamento de Dados e
+    `REVISAO_JURIDICO_OPERACIONAL_FASE_159.md`, alem do reforco das minutas,
+    onboarding e teste documental.
+  - Pendencia inegociavel: aprovacao por advogado, identidade empresarial,
+    encarregado/canal, bases legais, suboperadores/transferencias e publicacao
+    final em dominio oficial.
 
 ## Backlog pos-producao
 

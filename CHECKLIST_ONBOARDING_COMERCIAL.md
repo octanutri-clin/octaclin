@@ -6,12 +6,16 @@
 - [ ] Definir plano, limites, preco, pagamento e inicio pretendido.
 - [ ] Identificar dados sensiveis e integracoes a ativar.
 - [ ] Revisar se o caso exige anexo de tratamento ou clausulas adicionais.
+- [ ] Confirmar se ha dados de menores; sem fluxo juridicamente aprovado, nao
+  ativar cadastro de menor.
 
 ## Antes de ativar o tenant
 
 - [ ] Contrato e anexos finais aprovados/assinados conforme processo definido.
 - [ ] Politica de privacidade e termos finais publicados em URL oficial.
 - [ ] Papel de controlador, operador e contato de privacidade confirmados.
+- [ ] Bases legais, suboperadores e transferencias internacionais aplicaveis
+  registrados no anexo de tratamento aprovado.
 - [ ] Administrador inicial e email de convite revisados.
 - [ ] Plano, limites, integracoes e preferencias configurados no tenant correto.
 - [ ] Canal de suporte e severidade de incidentes apresentados ao cliente.
