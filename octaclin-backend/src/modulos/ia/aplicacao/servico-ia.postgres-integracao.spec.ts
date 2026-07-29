@@ -17,6 +17,9 @@ import { ServicoIa } from './servico-ia';
 const urlIntegracao = obterUrlPostgresIntegracao();
 const descreverPostgres = urlIntegracao ? describe : describe.skip;
 
+// Neon remoto tem latencia superior ao timeout padrao unitario do Jest.
+jest.setTimeout(30_000);
+
 interface CenarioReconhecimento {
   tenantId: string;
   paciente: PacienteOrm;

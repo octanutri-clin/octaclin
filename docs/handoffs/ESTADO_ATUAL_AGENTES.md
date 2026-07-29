@@ -1,6 +1,6 @@
 # OctaClin - Estado Atual para Agentes
 
-Atualizado na Fase 151 em 2026-07-28.
+Atualizado na Fase 153 em 2026-07-29.
 
 ## Fonte de verdade
 
@@ -18,7 +18,8 @@ como estado atual.
 - Fase 150A: commit ca9e139, branch agent/fase-150a-escopo-mobile-ia, PR #6 aberta para revisao.
 - Fase 150B: commit 8d86de7, branch agent/fase-150b-integracao-postgres, baseada na 150A.
 - Fase 150C: commit 80cf5b5, branch agent/fase-150c-mobile-postgres, baseada na 150B.
-- Fase 151: esta branch, agent/fase-151-continuity, baseada na 150C.
+- Fase 151: commit f2d5581, branch agent/fase-151-continuity, baseada na 150C.
+- Fase 153: esta branch, agent/fase-153-aceite-postgres, baseada na 151.
 
 Nao faca merge em main fora da ordem das dependencias e nao faca deploy,
 alteracao de Render, Neon, Upstash, Meta, Google ou secrets sem autorizacao
@@ -27,16 +28,15 @@ explicita do usuario.
 ## Fases recentes
 
 - Fase 150A: hardening de escopo em Mobile e IA. IDs de DTO nao ampliam sessao.
-- Fase 150B: prova PostgreSQL da IA preparada; falta execucao em banco descartavel exclusivo.
-- Fase 150C: prova PostgreSQL do Mobile preparada; falta a mesma execucao de banco da 150B.
+- Fase 150B: prova PostgreSQL da IA aceita no Neon exclusivo em 2026-07-29.
+- Fase 150C: prova PostgreSQL do Mobile aceita no mesmo Neon em 2026-07-29.
 - Fase 151: handoff, governanca e documentacao de continuidade alinhados.
+- Fase 153: aceite remoto de 2 suites e 6 testes PostgreSQL concluido; sem staging ou producao.
 
 ## Bloqueios externos reais
 
-1. Criar um projeto Neon separado para testes, com banco octaclin_test_fase150b.
-   Ele e apagado durante 150B/150C e nunca pode ser staging ou producao.
-2. Fase 132 continua aguardando dominio oficial para DNS, SSL e identidade de envio.
-3. Go-live assistido continua bloqueado ate os itens externos de dominio,
+1. Fase 132 continua aguardando dominio oficial para DNS, SSL e identidade de envio.
+2. Go-live assistido continua bloqueado ate os itens externos de dominio,
    revisao juridica e validacoes operacionais do checklist.
 
 ## Protocolo de trabalho
@@ -61,5 +61,5 @@ explicita do usuario.
     pnpm security:secrets
     git diff --check
 
-Para 150B/150C, configure somente em um banco descartavel chamado
+Para repetir a prova PostgreSQL, configure somente o banco descartavel
 octaclin_test_fase150b e confirme OCTACLIN_POSTGRES_INTEGRACAO_CONFIRMAR=APAGAR.

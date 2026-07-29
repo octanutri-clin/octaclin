@@ -1,6 +1,6 @@
 # Fase 150B - Integracao PostgreSQL para IA
 
-Status: em andamento em 2026-07-28.
+Status: concluida em 2026-07-29.
 
 ## Objetivo
 
@@ -25,11 +25,9 @@ prova nao usa Neon staging/producao, Render, nem o provedor de IA real.
 
 ## Limites e dependencia externa
 
-A maquina atual nao possui Docker, PostgreSQL local nem
-`OCTACLIN_POSTGRES_INTEGRACAO_URL`. Por isso a suite de banco real permanece
-`skipped` e esta fase nao esta concluida. O aceite requer uma base descartavel
-exclusiva, por exemplo `octaclin_test_fase150b`, e a execucao com confirmacao
-explicita. Nunca use staging ou producao.
+O aceite foi executado em 2026-07-29 no projeto Neon exclusivo
+`octaclin-integration-tests`, banco `octaclin_test_fase150b`, com confirmacao
+explicita. Staging e producao nao foram usados.
 
 ## Como executar o aceite
 
@@ -39,8 +37,8 @@ $env:OCTACLIN_POSTGRES_INTEGRACAO_CONFIRMAR='APAGAR'
 pnpm --dir octaclin-backend exec jest modulos/ia/aplicacao/servico-ia.postgres-integracao.spec.ts --runInBand
 ```
 
-O resultado valido precisa conter `1 passed, 0 skipped`. A suite apaga o
-schema desse banco de teste durante a inicializacao.
+O resultado do aceite foi `1 passed, 0 skipped`, com tres cenarios ativos.
+A suite apaga o schema desse banco de teste durante a inicializacao.
 
 ## Validacoes ja executadas
 
@@ -49,5 +47,5 @@ pnpm --dir octaclin-backend exec jest infraestrutura/testes/postgres-integracao.
 pnpm --dir octaclin-backend typecheck
 ```
 
-Os guards passaram; a suite PostgreSQL ficou ignorada pela ausencia deliberada
-da URL de teste.
+Os guards passaram. O aceite PostgreSQL remoto passou em 2026-07-29; a suite
+recebeu timeout explicito de 30 segundos para acomodar latencia remota.

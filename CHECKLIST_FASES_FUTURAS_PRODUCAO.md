@@ -550,29 +550,33 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     security:secrets` e `git diff --check`.
   - Saida entregue: `fase-150a-escopo-mobile-ia.md`.
 
-- [ ] Fase 150B - Integracao PostgreSQL para IA.
+- [x] Fase 150B - Integracao PostgreSQL para IA.
   - Harness opt-in e destrutivo apenas para URL confirmada cujo banco tenha
     nome `octaclin_test_<nome>`; recria schema minimo com `pgcrypto`, sem
     migrations, staging ou producao.
   - A suite preparada valida lock concorrente, isolamento de cache por paciente
     e bloqueio de profissional antes do provedor simulado.
-  - Status: em andamento em 2026-07-28. Falta executar em PostgreSQL real
-    descartavel; Docker, PostgreSQL local e URL de integracao nao estao
-    disponiveis nesta maquina.
-  - Saida parcial: `fase-150b-integracao-postgres-ia.md`.
+  - Aceite remoto concluido em 2026-07-29 no Neon exclusivo
+    `octaclin_test_fase150b`: 1 suite/3 testes ativos aprovados.
+  - Saida: `fase-150b-integracao-postgres-ia.md`.
 
-- [ ] Fase 150C - Integracao PostgreSQL para Mobile.
+- [x] Fase 150C - Integracao PostgreSQL para Mobile.
   - Usa o mesmo banco descartavel da Fase 150B para provar a constraint real
     de sincronizacao, corrida `23505`, isolamento de `idLocal` por paciente e
     bloqueio de profissional antes de reservar o recurso.
-  - Status: em andamento em 2026-07-28. A suite esta pronta, mas requer
-    PostgreSQL exclusivo `octaclin_test_<nome>` para o aceite real.
-  - Saida parcial: `fase-150c-integracao-postgres-mobile.md`.
+  - Aceite remoto concluido em 2026-07-29 no Neon exclusivo
+    `octaclin_test_fase150b`: 1 suite/3 testes ativos aprovados.
+  - Saida: `fase-150c-integracao-postgres-mobile.md`.
 
 - [x] Fase 151 - Governanca e continuidade tecnica.
   - Criado o handoff operacional unico `docs/handoffs/ESTADO_ATUAL_AGENTES.md`, com cadeia de branches, bloqueios externos, regras de merge e protocolo de fechamento.
   - Pontos de entrada de agentes foram alinhados ao handoff canonico e o gate `pnpm test:handoff` evita retorno de estado historico como se fosse atual.
   - Data: 2026-07-28. Saida: `fase-151-governanca-continuidade.md`.
+
+- [x] Fase 153 - Aceite PostgreSQL remoto das fases 150B/150C.
+  - Aceite real executado no Neon exclusivo `octaclin_test_fase150b`: 2 suites e 6 testes ativos aprovados, sem staging ou producao.
+  - Timeout explicito para banco remoto e limpeza do artefato temporario de corrida tornam a suite repetivel.
+  - Data: 2026-07-29. Saida: `fase-153-aceite-postgres-remoto.md`.
 
 ## Backlog pos-producao
 

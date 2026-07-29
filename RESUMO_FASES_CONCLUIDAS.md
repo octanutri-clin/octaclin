@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 151 de governanca e continuidade tecnica.
+Atualizado apos a Fase 153 de aceite PostgreSQL remoto.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -213,6 +213,12 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   bloqueios reais e protocolo de trabalho. Os entrypoints de agentes foram
   alinhados e `pnpm test:handoff` impede que estados historicos voltem a ser
   apresentados como atuais. Ver `fase-151-governanca-continuidade.md`.
+- Fase 153 - Aceite PostgreSQL remoto: as suites das Fases 150B e 150C
+  passaram no banco Neon descartavel `octaclin_test_fase150b`, confirmando
+  concorrencia, constraints reais, isolamento de paciente e escopo
+  profissional em 2 suites e 6 testes. O timeout explicito e a limpeza da
+  funcao temporaria permitem repeticao segura em banco remoto. Ver
+  `fase-153-aceite-postgres-remoto.md`.
 
 ## Estado atual de uso
 

@@ -17,6 +17,9 @@ import { ServicoMobile } from './servico-mobile';
 const urlIntegracao = obterUrlPostgresIntegracao();
 const descreverPostgres = urlIntegracao ? describe : describe.skip;
 
+// Neon remoto tem latencia superior ao timeout padrao unitario do Jest.
+jest.setTimeout(30_000);
+
 interface CenarioMobile {
   tenantId: string;
   paciente: PacienteOrm;
@@ -39,6 +42,7 @@ descreverPostgres('ServicoMobile com PostgreSQL real', () => {
   });
 
   beforeEach(async () => {
+    await fonteDados.query('drop function if exists atrasar_diario_mobile() cascade');
     await fonteDados.query(
       'truncate table sincronizacoes_mobile, logs_diario_rapido, pacientes, profissionais restart identity cascade'
     );

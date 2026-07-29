@@ -1,22 +1,23 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-07-28.
+Atualizado em 2026-07-29.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Fase 150B em andamento: suite de integracao PostgreSQL isolada para os
+- Fase 150B concluida: suite de integracao PostgreSQL isolada para os
   controles de IA da Fase 150A. O harness exige uma URL explicita de banco
   descartavel nomeado `octaclin_test_<nome>` e confirmacao `APAGAR`; ele nao
-  pode usar staging ou producao. O aceite permanece pendente enquanto nao
-  houver PostgreSQL de integracao disponivel.
-- Fase 150C em andamento: a cobertura PostgreSQL da sincronizacao Mobile usa
+  nao usou staging ou producao. O aceite real passou no Neon exclusivo em
+  2026-07-29.
+- Fase 150C concluida: a cobertura PostgreSQL da sincronizacao Mobile usa
   a mesma base descartavel da 150B para validar corrida `23505`, idempotencia
-  por paciente e escopo profissional. O aceite das duas fases depende somente
-  da execucao no banco exclusivo de integracao.
-- Ultima fase concluida: Fase 151 - Governanca e continuidade tecnica (entregue em 2026-07-28, branch `agent/fase-151-continuity`). O handoff operacional unico passou a ser `docs/handoffs/ESTADO_ATUAL_AGENTES.md`; os pontos de entrada de agentes foram redirecionados e `pnpm test:handoff` bloqueia regressao para estados historicos.
+  por paciente e escopo profissional. As duas fases foram aprovadas no banco
+  exclusivo de integracao em 2026-07-29.
+- Ultima fase concluida: Fase 153 - Aceite PostgreSQL remoto das fases 150B/150C (entregue em 2026-07-29, branch `agent/fase-153-aceite-postgres`). As duas suites reais passaram no Neon exclusivo `octaclin_test_fase150b`: 2 suites e 6 testes, sem staging ou producao. Os testes agora toleram latencia remota e removem o artefato temporario de corrida antes de cada execucao.
+- Fase 151 - Governanca e continuidade tecnica (entregue em 2026-07-28, branch `agent/fase-151-continuity`). O handoff operacional unico passou a ser `docs/handoffs/ESTADO_ATUAL_AGENTES.md`; os pontos de entrada de agentes foram redirecionados e `pnpm test:handoff` bloqueia regressao para estados historicos.
 - Fase 150A - Escopo de dados em Mobile e IA (entregue
   em 2026-07-28, branch `integrate/producao-hardening`). Patient acessa somente
   o proprio paciente; Professional, pacientes responsaveis; SuperAdmin, o

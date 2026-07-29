@@ -1,6 +1,6 @@
 # Fase 150C - Integracao PostgreSQL para Mobile
 
-Status: em andamento em 2026-07-28.
+Status: concluida em 2026-07-29.
 
 ## Objetivo
 
@@ -21,10 +21,10 @@ de chave unica e bloqueio de acesso entre profissionais.
 
 ## Limites e dependencia externa
 
-Assim como a Fase 150B, a prova exige uma base exclusiva com nome
-`octaclin_test_<nome>` e confirmacao `APAGAR`. O banco tem o schema apagado
-antes de cada suite. Nao usar staging ou producao. Nesta maquina nao ha Docker,
-PostgreSQL local nem URL de integracao; por isso a fase ainda nao esta aceita.
+O aceite foi executado em 2026-07-29 no projeto Neon exclusivo
+`octaclin-integration-tests`, banco `octaclin_test_fase150b`, com confirmacao
+`APAGAR`. O banco tem o schema apagado antes de cada suite. Staging e producao
+nao foram usados.
 
 ## Como executar o aceite conjunto 150B e 150C
 
@@ -34,7 +34,8 @@ $env:OCTACLIN_POSTGRES_INTEGRACAO_CONFIRMAR='APAGAR'
 pnpm --dir octaclin-backend exec jest modulos/ia/aplicacao/servico-ia.postgres-integracao.spec.ts modulos/mobile/aplicacao/servico-mobile.postgres-integracao.spec.ts --runInBand
 ```
 
-O aceite exige `2 passed, 0 skipped`, com seis testes de integracao ativos.
+O aceite conjunto resultou em `2 passed, 0 skipped`, com seis testes de
+integracao ativos.
 
 ## Validacoes ja executadas
 
@@ -42,4 +43,6 @@ O aceite exige `2 passed, 0 skipped`, com seis testes de integracao ativos.
 pnpm --dir octaclin-backend exec jest modulos/mobile/aplicacao/servico-mobile.postgres-integracao.spec.ts --runInBand
 ```
 
-A suite foi compilada e permaneceu ignorada sem a URL de banco, como previsto.
+O aceite PostgreSQL remoto passou em 2026-07-29. O setup agora remove a funcao
+temporaria de atraso antes de cada teste, permitindo repeticao segura apos uma
+execucao interrompida; a suite usa timeout explicito de 30 segundos para Neon.
