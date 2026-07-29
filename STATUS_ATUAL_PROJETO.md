@@ -7,6 +7,11 @@ Atualizado em 2026-07-28.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 150B em andamento: suite de integracao PostgreSQL isolada para os
+  controles de IA da Fase 150A. O harness exige uma URL explicita de banco
+  descartavel nomeado `octaclin_test_<nome>` e confirmacao `APAGAR`; ele nao
+  pode usar staging ou producao. O aceite permanece pendente enquanto nao
+  houver PostgreSQL de integracao disponivel.
 - Ultima fase concluida: Fase 150A - Escopo de dados em Mobile e IA (entregue
   em 2026-07-28, branch `integrate/producao-hardening`). Patient acessa somente
   o proprio paciente; Professional, pacientes responsaveis; SuperAdmin, o

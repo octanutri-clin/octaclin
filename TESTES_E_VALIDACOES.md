@@ -116,6 +116,21 @@ pnpm --dir octaclin-backend typecheck
 
 Regra esperada: toda busca por entidade relacionada deve validar `tenantId` junto do `id`. Quando a entidade existir em outro tenant, responder como nao encontrada.
 
+## Validacao PostgreSQL destrutiva de integracao
+
+Use somente quando uma fase exigir locks, constraints ou transacoes reais do
+PostgreSQL. A URL deve apontar para uma base descartavel cujo nome seja
+`octaclin_test_<nome>`, nunca staging ou producao. A suite exige confirmacao
+literal e apaga o schema antes de executar:
+
+```powershell
+$env:OCTACLIN_POSTGRES_INTEGRACAO_URL='<url do banco descartavel>'
+$env:OCTACLIN_POSTGRES_INTEGRACAO_CONFIRMAR='APAGAR'
+pnpm --dir octaclin-backend exec jest modulos/ia/aplicacao/servico-ia.postgres-integracao.spec.ts --runInBand
+```
+
+Sem as duas variaveis a suite fica ignorada; isso nao e evidencia de aceite.
+
 ## Validacao de observabilidade
 
 Use quando alterar logs, interceptors, auditoria, healthchecks, middleware global ou bootstrap do backend:
