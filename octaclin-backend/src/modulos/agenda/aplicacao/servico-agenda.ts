@@ -104,6 +104,8 @@ export class ServicoAgenda {
       inicioEm: contexto.consulta.inicioEm,
       fimEm: contexto.consulta.fimEm,
       timezone: contexto.consulta.timezone,
+      local: contexto.consulta.local,
+      emailConvidado: contexto.emailContato,
       consultaId: contexto.consulta.id,
       credenciais
     });
@@ -199,6 +201,7 @@ export class ServicoAgenda {
           fimEm: consulta.fimEm,
           timezone: consulta.timezone,
           local: consulta.local,
+          emailConvidado: this.emailContatoPayload(consulta),
           credenciais
         })
       : { sincronizado: false as const, motivo: 'evento_google_ausente' };
@@ -720,6 +723,10 @@ export class ServicoAgenda {
 
   private nomeProfissionalPayload(consulta: AgendaConsultaOrm) {
     return typeof consulta.payload?.profissionalNome === 'string' ? consulta.payload.profissionalNome : undefined;
+  }
+
+  private emailContatoPayload(consulta: AgendaConsultaOrm) {
+    return typeof consulta.payload?.emailContato === 'string' ? consulta.payload.emailContato : undefined;
   }
 
   private obterEmailPaciente(paciente: PacienteOrm): string | undefined {

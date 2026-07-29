@@ -290,6 +290,7 @@ describe('ServicoAgenda', () => {
         profissionalId: 'profissional-1',
         inicioEm: '2026-07-22T12:00:00.000Z',
         duracaoMinutos: 60,
+        local: 'Consultorio central',
         emailContato: 'ana@example.com',
         whatsappContato: '5511992362080',
         enviarNotificacoes: true
@@ -312,7 +313,9 @@ describe('ServicoAgenda', () => {
         resumo: 'Consulta OctaClin - Ana Paula',
         inicioEm: new Date('2026-07-22T12:00:00.000Z'),
         fimEm: new Date('2026-07-22T13:00:00.000Z'),
-        timezone: 'America/Sao_Paulo'
+        timezone: 'America/Sao_Paulo',
+        local: 'Consultorio central',
+        emailConvidado: 'ana@example.com'
       })
     );
     expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
@@ -630,7 +633,7 @@ describe('ServicoAgenda', () => {
       googleEventId: 'event-1',
       googleEventHtmlLink: 'https://calendar.google/event',
       notificacoes: {},
-      payload: { pacienteNome: 'Ana Paula', profissionalNome: 'Dra Carla' },
+      payload: { pacienteNome: 'Ana Paula', profissionalNome: 'Dra Carla', emailContato: 'ana@example.com' },
       criadoEm: new Date('2026-07-20T12:00:00.000Z'),
       atualizadoEm: new Date('2026-07-20T12:00:00.000Z')
     };
@@ -685,7 +688,7 @@ describe('ServicoAgenda', () => {
       googleEventId: 'event-1',
       googleEventHtmlLink: 'https://calendar.google/event',
       notificacoes: {},
-      payload: { pacienteNome: 'Ana Paula', profissionalNome: 'Dra Carla' },
+      payload: { pacienteNome: 'Ana Paula', profissionalNome: 'Dra Carla', emailContato: 'ana@example.com' },
       criadoEm: new Date('2026-07-20T12:00:00.000Z'),
       atualizadoEm: new Date('2026-07-20T12:00:00.000Z')
     };
@@ -712,7 +715,8 @@ describe('ServicoAgenda', () => {
         eventId: 'event-1',
         inicioEm: new Date('2026-07-23T14:00:00.000Z'),
         fimEm: new Date('2026-07-23T14:45:00.000Z'),
-        local: 'Sala 2'
+        local: 'Sala 2',
+        emailConvidado: 'ana@example.com'
       })
     );
     expect(repositorios.consulta.findOne).toHaveBeenCalledWith({

@@ -14,6 +14,7 @@ interface CriarEventoGoogleEntrada {
   fimEm: Date;
   timezone: string;
   local?: string;
+  emailConvidado?: string;
   consultaId: string;
   credenciais?: CredenciaisGoogleCalendar;
 }
@@ -268,10 +269,12 @@ export class ServicoGoogleCalendar {
   }
 
   private montarCorpoEvento(entrada: CriarEventoGoogleEntrada) {
+    const emailConvidado = entrada.emailConvidado?.trim();
     return {
       summary: entrada.resumo,
       description: entrada.descricao,
       location: entrada.local,
+      ...(emailConvidado ? { attendees: [{ email: emailConvidado }] } : {}),
       start: { dateTime: entrada.inicioEm.toISOString(), timeZone: entrada.timezone },
       end: { dateTime: entrada.fimEm.toISOString(), timeZone: entrada.timezone },
       extendedProperties: { private: { octaclinConsultaId: entrada.consultaId } }

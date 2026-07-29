@@ -27,6 +27,8 @@ describe('ServicoGoogleCalendar', () => {
       inicioEm: new Date('2026-07-22T12:00:00.000Z'),
       fimEm: new Date('2026-07-22T13:00:00.000Z'),
       timezone: 'America/Sao_Paulo',
+      local: 'Consultorio central',
+      emailConvidado: 'ana@example.com',
       consultaId: 'consulta-1'
     });
 
@@ -58,6 +60,8 @@ describe('ServicoGoogleCalendar', () => {
       inicioEm: new Date('2026-07-22T12:00:00.000Z'),
       fimEm: new Date('2026-07-22T13:00:00.000Z'),
       timezone: 'America/Sao_Paulo',
+      local: 'Consultorio central',
+      emailConvidado: 'ana@example.com',
       consultaId: 'consulta-1'
     });
 
@@ -78,6 +82,8 @@ describe('ServicoGoogleCalendar', () => {
         body: JSON.stringify({
           summary: 'Consulta OctaClin - Ana',
           description: 'Consulta agendada pelo OctaClin.',
+          location: 'Consultorio central',
+          attendees: [{ email: 'ana@example.com' }],
           start: { dateTime: '2026-07-22T12:00:00.000Z', timeZone: 'America/Sao_Paulo' },
           end: { dateTime: '2026-07-22T13:00:00.000Z', timeZone: 'America/Sao_Paulo' },
           extendedProperties: { private: { octaclinConsultaId: 'consulta-1' } }
@@ -118,6 +124,7 @@ describe('ServicoGoogleCalendar', () => {
       fimEm: new Date('2026-07-23T14:45:00.000Z'),
       timezone: 'America/Sao_Paulo',
       local: 'Sala 2',
+      emailConvidado: 'ana@example.com',
       consultaId: 'consulta-1'
     });
 
@@ -131,6 +138,7 @@ describe('ServicoGoogleCalendar', () => {
           summary: 'Consulta OctaClin - Ana',
           description: 'Consulta remarcada pelo OctaClin.',
           location: 'Sala 2',
+          attendees: [{ email: 'ana@example.com' }],
           start: { dateTime: '2026-07-23T14:00:00.000Z', timeZone: 'America/Sao_Paulo' },
           end: { dateTime: '2026-07-23T14:45:00.000Z', timeZone: 'America/Sao_Paulo' },
           extendedProperties: { private: { octaclinConsultaId: 'consulta-1' } }
