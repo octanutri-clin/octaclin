@@ -127,7 +127,7 @@ export class ServicoConexaoGoogleCalendar {
         calendarId: 'primary',
         escoposConcedidos: corpo.scope,
         conectadoEm: new Date(),
-        desconectadoEm: undefined
+        desconectadoEm: null
       };
       await repositorio.save(existente ? { ...existente, ...dados } : repositorio.create(dados));
     });

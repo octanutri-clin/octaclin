@@ -24,7 +24,7 @@ export class ProfissionalGoogleConexaoOrm {
   conectadoEm: Date;
 
   @Column({ name: 'desconectado_em', type: 'timestamptz', nullable: true })
-  desconectadoEm?: Date;
+  desconectadoEm?: Date | null;
 
   @Column({ name: 'ultimo_sync_token', type: 'varchar', length: 500, nullable: true })
   ultimoSyncToken?: string;

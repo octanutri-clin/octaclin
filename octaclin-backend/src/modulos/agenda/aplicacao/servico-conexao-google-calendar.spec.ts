@@ -159,6 +159,31 @@ describe('ServicoConexaoGoogleCalendar', () => {
       expect(dadosSalvos.refreshTokenCriptografado.toString('utf8')).not.toContain(refreshTokenOriginal);
       expect(criptografia.descriptografar(dadosSalvos.refreshTokenCriptografado)).toBe(refreshTokenOriginal);
     });
+
+    it('reativa uma conexao previamente desconectada', async () => {
+      process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+      process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
+      const { servico, gerenciadorFalso } = construirServico();
+      const repositorio = gerenciadorFalso.getRepository();
+      await repositorio.save({
+        tenantId: 'tenant-1',
+        profissionalId: 'profissional-1',
+        refreshTokenCriptografado: criptografia.criptografar('token-antigo'),
+        calendarId: 'primary',
+        conectadoEm: new Date('2026-01-01T00:00:00.000Z'),
+        desconectadoEm: new Date('2026-01-02T00:00:00.000Z')
+      });
+      (global as any).fetch = jest.fn(async () => ({
+        ok: true,
+        json: async () => ({ refresh_token: 'token-novo', scope: 'https://www.googleapis.com/auth/calendar' })
+      }));
+
+      await servico.trocarCodigoPorConexao('tenant-1', 'profissional-1', 'codigo-novo', 'https://backend/agenda/google/callback');
+
+      const credenciais = await servico.obterConexaoAtiva('tenant-1', 'profissional-1');
+      expect(credenciais?.refreshToken).toBe('token-novo');
+      expect(gerenciadorFalso.registros.get('tenant-1:profissional-1').desconectadoEm).toBeNull();
+    });
   });
 
   describe('obterConexaoAtiva', () => {
