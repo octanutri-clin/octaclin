@@ -7,6 +7,7 @@ Sistema SaaS clinico para consultoria, acompanhamento de pacientes, agenda, form
 Antes de qualquer nova fase de desenvolvimento, leia:
 
 - `AGENTS.md` - guia obrigatorio para agentes de IA.
+- `docs/handoffs/ESTADO_ATUAL_AGENTES.md` - fonte canonica do estado de fases, branches, bloqueios e proxima acao.
 - `RESUMO_FASES_CONCLUIDAS.md` - resumo das fases concluidas ate aqui.
 - `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` - checklist vivo das proximas fases ate producao.
 - `DECISOES_ARQUITETURA.md` - decisoes de arquitetura ja tomadas.

@@ -569,6 +569,11 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     PostgreSQL exclusivo `octaclin_test_<nome>` para o aceite real.
   - Saida parcial: `fase-150c-integracao-postgres-mobile.md`.
 
+- [x] Fase 151 - Governanca e continuidade tecnica.
+  - Criado o handoff operacional unico `docs/handoffs/ESTADO_ATUAL_AGENTES.md`, com cadeia de branches, bloqueios externos, regras de merge e protocolo de fechamento.
+  - Pontos de entrada de agentes foram alinhados ao handoff canonico e o gate `pnpm test:handoff` evita retorno de estado historico como se fosse atual.
+  - Data: 2026-07-28. Saida: `fase-151-governanca-continuidade.md`.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.

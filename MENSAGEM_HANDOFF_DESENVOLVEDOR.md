@@ -1,39 +1,19 @@
-# OctaClin - Mensagem pronta para handoff ao desenvolvedor
+# OctaClin - Mensagem de handoff
 
-Use esta mensagem ao passar o projeto para outro desenvolvedor ou agente de IA.
+Use a mensagem abaixo para iniciar outro agente ou desenvolvedor:
 
 ```text
-Voce esta entrando no projeto OctaClin, repo privado octanutri-clin/octaclin.
+Voce vai trabalhar no repositorio privado octanutri-clin/octaclin.
 
-Antes de alterar codigo, leia:
-- AGENTS.md
-- ONBOARDING_DESENVOLVEDOR.md
-- COORDENACAO_DESENVOLVIMENTO_IA.md
-- PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md
-- CHECKLIST_FASES_FUTURAS_PRODUCAO.md
-- RESUMO_FASES_CONCLUIDAS.md
-- STATUS_ATUAL_PROJETO.md
-- HANDOFF-TECNICO-OCTACLIN.md
-- MAPA_ROTAS_PERMISSOES.md
-- TESTES_E_VALIDACOES.md
-- VARIAVEIS_AMBIENTE.md
-- RUNBOOK_PRODUCAO.md
+Antes de editar, leia nesta ordem:
+1. AGENTS.md
+2. docs/handoffs/ESTADO_ATUAL_AGENTES.md
+3. CHECKLIST_FASES_FUTURAS_PRODUCAO.md
+4. RESUMO_FASES_CONCLUIDAS.md
+5. STATUS_ATUAL_PROJETO.md
+6. O documento da fase e os runbooks pertinentes.
 
-Ultima fase concluida: Fase 105 - Evolucoes/anotacoes clinicas.
-Proxima fase: Fase 106 - Planos de acompanhamento e tarefas do paciente.
+O handoff canonico informa a branch correta, a cadeia de dependencias, bloqueios e proxima acao. Nao assuma que main contem fases ainda pendentes de integracao.
 
-Voce pode avancar por varias fases em sequencia, mas uma fase por vez.
-Ao finalizar cada fase:
-1. Crie o arquivo fase-XXX-*.md.
-2. Atualize CHECKLIST_FASES_FUTURAS_PRODUCAO.md.
-3. Atualize RESUMO_FASES_CONCLUIDAS.md e STATUS_ATUAL_PROJETO.md.
-4. Atualize MAPA_ROTAS_PERMISSOES.md se criar rota/permissao.
-5. Rode testes/typecheck/build proporcionais.
-6. Rode git diff --check e varredura de secrets.
-7. Faca commit e push.
-8. Garanta git status limpo antes de seguir para a proxima fase.
-
-Nao commite .env, tokens, senhas, dumps, logs ou secrets.
-Nao mude provedores externos sem pedir ao usuario.
-Se precisar de Render, Neon, Upstash, Google, Meta ou OpenAI, solicite acesso ou peca que o usuario execute o passo manualmente.
+Trabalhe uma fase por vez. Para concluir uma fase: valide, documente a fase, atualize checklist/resumo/status quando aplicavel, rode git diff --check, faca um commit objetivo e envie a branch. Nunca commite ou exponha secrets.
 ```

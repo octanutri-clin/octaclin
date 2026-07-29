@@ -16,7 +16,8 @@ Atualizado em 2026-07-28.
   a mesma base descartavel da 150B para validar corrida `23505`, idempotencia
   por paciente e escopo profissional. O aceite das duas fases depende somente
   da execucao no banco exclusivo de integracao.
-- Ultima fase concluida: Fase 150A - Escopo de dados em Mobile e IA (entregue
+- Ultima fase concluida: Fase 151 - Governanca e continuidade tecnica (entregue em 2026-07-28, branch `agent/fase-151-continuity`). O handoff operacional unico passou a ser `docs/handoffs/ESTADO_ATUAL_AGENTES.md`; os pontos de entrada de agentes foram redirecionados e `pnpm test:handoff` bloqueia regressao para estados historicos.
+- Fase 150A - Escopo de dados em Mobile e IA (entregue
   em 2026-07-28, branch `integrate/producao-hardening`). Patient acessa somente
   o proprio paciente; Professional, pacientes responsaveis; SuperAdmin, o
   tenant. Listas sao filtradas no banco e DTOs nao ampliam sessao. Mobile

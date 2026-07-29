@@ -10,18 +10,13 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 4. `VARIAVEIS_AMBIENTE.md` se a tarefa tocar deploy, integracoes, secrets ou ambiente.
 5. `RUNBOOK_PRODUCAO.md` se a tarefa tocar Render, Neon, Upstash, Gmail, Meta, Google Calendar ou operacao.
 6. `DECISOES_ARQUITETURA.md` se a tarefa alterar arquitetura, seguranca, tenancy, auth, dados ou integracoes.
-7. `ONBOARDING_DESENVOLVEDOR.md`, `COORDENACAO_DESENVOLVIMENTO_IA.md`, `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`, `DEVELOPMENT_LOG.md`, `RETORNO_APOS_DESENVOLVEDOR.md` e `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` quando um novo desenvolvedor/agente entrar no projeto.
+7. `docs/handoffs/ESTADO_ATUAL_AGENTES.md` para saber o estado real das branches, fases, bloqueios e proxima acao.
+8. Os handoffs historicos apenas quando forem necessarios para investigar uma decisao anterior.
 
 ## Estado atual
 
-- Produto: OctaClin.
-- LiveClin foi apenas referencia de modelagem.
-- Fase concluida mais recente no momento deste arquivo: Fase 142 - Migracao controlada do Next.js e seguranca web. A revisao juridica externa da Fase 133 continua obrigatoria antes do go-live.
-- Fase 131 foi aceita em 2026-07-26: producao esta isolada de staging. Proxima fase critica planejada: Fase 132 - dominio, SSL e identidade de envio.
-- Melhoria continua: Fases 138, 141 e 142 atualizaram NestJS para 11.1.28, TypeORM para 1.1.0 e Next.js para 15.5.22, com auditorias de producao zeradas. Preserve React 18.3.1 e o shim de cookies BFF ate uma fase dedicada de Next.js 16/React 19.
-- Fase 139 removeu `any` de codigo backend de producao e consolidou contratos de agenda/convites; preserve `requisitarBackendAutenticado` como a fronteira unica de erros BFF autenticados.
-- Fase 140 introduziu `MATRIZ_CONFIABILIDADE_TESTES.md`; atualize a matriz e seu validador sempre que adicionar ou remover um fluxo de risco alto.
-- Fase 142 introduziu `pnpm --dir octaclin-web test:next15`; toda nova rota dinamica deve receber `params`/`searchParams` assincronos e manter esse gate verde.
+- Produto: OctaClin. LiveClin foi apenas referencia de modelagem.
+- O estado operacional, a cadeia de branches e os bloqueios atuais ficam exclusivamente em `docs/handoffs/ESTADO_ATUAL_AGENTES.md`.
 - O checklist vivo das proximas fases fica em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 ## Regras de trabalho
@@ -32,7 +27,7 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 - Ao concluir uma fase, atualize `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 - Quando a fase consolidar uma capacidade do produto, atualize tambem `RESUMO_FASES_CONCLUIDAS.md`.
 - Use commits pequenos e objetivos.
-- Por padrao, faca push para `main` apos validar e commitar, pois o usuario pediu continuidade com GitHub como fonte de verdade.
+- Faca push para a branch da fase apos validar e commitar. So integre em `main` quando a cadeia de dependencias da fase estiver pronta.
 - Se outro desenvolvedor ou agente estiver trabalhando na fase atual, aguarde ou combine escopo antes de alterar a mesma area.
 - Um desenvolvedor/agente pode avancar por varias fases, desde que conclua cada fase com documentacao, validacao, commit e push antes de iniciar a proxima.
 - Nunca reverta mudancas que voce nao fez sem pedido explicito.

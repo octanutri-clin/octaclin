@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 150A de escopo de dados em Mobile e IA.
+Atualizado apos a Fase 151 de governanca e continuidade tecnica.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -208,6 +208,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   `23505` ou exposicao. Gates finais: 62 suites/377 testes backend e 20 testes
   de autorizacao web. Ver
   `fase-150a-escopo-mobile-ia.md`.
+- Fase 151 - Governanca e continuidade tecnica: criado o handoff operacional
+  unico `docs/handoffs/ESTADO_ATUAL_AGENTES.md`, com cadeia de branches,
+  bloqueios reais e protocolo de trabalho. Os entrypoints de agentes foram
+  alinhados e `pnpm test:handoff` impede que estados historicos voltem a ser
+  apresentados como atuais. Ver `fase-151-governanca-continuidade.md`.
 
 ## Estado atual de uso
 

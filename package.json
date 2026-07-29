@@ -15,6 +15,7 @@
     "test:producao-isolada": "node scripts/test-producao-isolada.mjs",
     "test:juridico-comercial": "node scripts/test-pacote-juridico-comercial.mjs",
     "test:confiabilidade": "node scripts/test-matriz-confiabilidade.mjs",
+    "test:handoff": "node scripts/test-handoff-atual.mjs",
     "validate": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1",
     "validate:docs": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -DocsOnly",
     "validate:full": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -Full"

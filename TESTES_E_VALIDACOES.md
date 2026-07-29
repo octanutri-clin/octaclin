@@ -15,6 +15,8 @@ $env:PATH='C:\Users\octav\.cache\codex-runtimes\codex-primary-runtime\dependenci
 Use quando alterar apenas `.md`:
 
 ```powershell
+pnpm test:handoff
+pnpm validate:docs
 git diff --check
 git status --short
 ```
