@@ -51,6 +51,21 @@ $env:CONFIRMAR_RESTORE_TESTE='SIM'
 powershell -ExecutionPolicy Bypass -File .\validar-backup-restore.ps1 -RestoreTeste
 ```
 
+### Neon com TimescaleDB gerenciado
+
+Quando o banco dedicado Neon gerenciar `timescaledb`, use
+`scripts/executar-restore-dedicado.ps1`. Copie a connection string do banco
+dedicado para a area de transferencia local, sem colar a credencial em chat ou
+terminal, e execute as etapas abaixo. O utilitario exclui somente a extensao
+gerenciada, compara os dados criticos e remove o dump ao final.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\executar-restore-dedicado.ps1 -BancoOrigem 'banco-producao' -BancoDestino 'banco-restore' -Etapa backup
+powershell -ExecutionPolicy Bypass -File .\scripts\executar-restore-dedicado.ps1 -BancoOrigem 'banco-producao' -BancoDestino 'banco-restore' -Etapa restore
+powershell -ExecutionPolicy Bypass -File .\scripts\executar-restore-dedicado.ps1 -BancoOrigem 'banco-producao' -BancoDestino 'banco-restore' -Etapa validar
+powershell -ExecutionPolicy Bypass -File .\scripts\executar-restore-dedicado.ps1 -BancoOrigem 'banco-producao' -BancoDestino 'banco-restore' -Etapa limpar
+```
+
 Depois do restore:
 
 1. Executar `SELECT count(*)` em tabelas criticas.
@@ -66,7 +81,9 @@ Depois do restore:
 - `pacientes`
 - `profissionais`
 - `questionarios`
-- `respostas_questionario`
+- `envios_questionario`
+- `respostas_checkin`
+- `resposta_valores`
 - `agenda_consultas`
 - `mensagens_notificacao`
 - `outbox_eventos`

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-29 apos a release controlada das Fases 154, 155 e 157.
+Atualizado em 2026-07-29 apos a Fase 158 - restore real em banco dedicado.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -269,7 +269,7 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Data: 2026-07-23.
   - Validacoes: `pnpm test:backup`, `pnpm security:secrets`, `powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly`.
   - Saida entregue: `RUNBOOK_BACKUP_RESTORE.md`, planejador seguro `scripts/backup-restore-plan.mjs`, teste `scripts/test-backup-restore-plan.mjs`, executor `validar-backup-restore.ps1`, `backups/` ignorado no Git e procedimento de restore em banco dedicado.
-  - Observacao: restore operacional real exige `RESTORE_DATABASE_URL` dedicado e `CONFIRMAR_RESTORE_TESTE=SIM`; nao foi executado contra Neon nesta fase sem um banco de restore fornecido.
+  - Observacao: a execucao operacional real foi aprovada posteriormente na Fase 158; manter teste semanal e antes de cada go-live relevante.
 
 - [x] Fase 127 - Runbooks de suporte.
   - Login, convite, falha WhatsApp, falha email, falha agenda, recuperacao de senha.
@@ -546,6 +546,15 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Staging e producao usam logins de aplicacao sem `BYPASSRLS`; a validacao
     operacional confirmou health, login controlado e isolamento RLS.
   - Data: 2026-07-29. Registro operacional mantido no runbook privado.
+
+- [x] Fase 158 - Restore real em banco dedicado.
+  - Dump custom da producao validado com 481 itens e restaurado em
+    `octaclin_restore_fase158`, sem escrita na origem.
+  - O restore exclui apenas `timescaledb`, extensao gerenciada pelo Neon;
+    13 tabelas criticas, 54 politicas RLS e 2 usuarios autenticaveis foram
+    equivalentes entre origem e destino.
+  - Saida entregue: `fase-158-restore-real-banco-dedicado.md` e
+    `scripts/executar-restore-dedicado.ps1`; dump temporario removido.
 
 ## Backlog pos-producao
 

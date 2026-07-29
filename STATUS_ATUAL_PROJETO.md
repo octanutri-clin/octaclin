@@ -7,11 +7,11 @@ Atualizado em 2026-07-29.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 155 - RLS dos canais de watch Google Calendar (release e aceite operacional em 2026-07-29). As cinco migrations Google foram aplicadas no banco usado pelo backend, e `google_canais_watch` passou a usar RLS forcado. Webhook, renovacao e desconexao usam o tenant validado antes da leitura; a Fase 157 ja aplicou papeis PostgreSQL sem `BYPASSRLS` nos dois ambientes.
+- Ultima fase concluida: Fase 158 - restore real em banco dedicado (2026-07-29). Dump custom da producao validado com 481 itens, restore concluido em Neon dedicado e contagens equivalentes em 13 tabelas criticas, 54 politicas RLS e 2 usuarios autenticaveis; nenhum dump foi retido.
 - Fase 148: Foco visivel proprio nos componentes compartilhados `Campo`/`AreaTexto`/`Selecao`/`Botao` (entregue em 2026-07-27, PR #5 aberto para `main`).
 - Fase 147: Foco visivel explicito nos inputs crus da agenda (entregue em 2026-07-27). Antes dela, esta branch recebeu por merge a Fase 146 (gate de acessibilidade, feita pelo Codex na `main`).
 - Fase 145: Painel clinico do profissional e desmarcamento/cancelamento distintos (entregue em 2026-07-27, commit `22e161b` da Task 5).
-- Fase 131 aceita: producao isolada de staging confirmada em 2026-07-26, com Neon, Upstash e Render independentes, credenciais rotacionadas e ambiente/banco auditados sem staging. Para habilitar Google Calendar, falta cadastrar as credenciais OAuth e a URI de callback da Fase 136 no ambiente/projeto Google de producao.
+- Fase 131 aceita: producao isolada de staging confirmada em 2026-07-26, com Neon, Upstash e Render independentes, credenciais rotacionadas e ambiente/banco auditados sem staging. A integracao Google Calendar de producao foi posteriormente configurada, conectada e validada.
 - Melhoria continua: Fases 138, 141 e 142 concluidas. NestJS 11.1.28, TypeORM 1.1.0 e Next.js 15.5.22 foram validados; as auditorias de producao de backend e web estao zeradas. A proxima migracao de framework sera Next.js 16/React 19, em fase dedicada por exigir refatoracao assincrona do BFF.
 - Fase 139 concluida: contratos de agenda e convite administrativo passaram a ser tipados sem `any` em codigo de producao; o BFF preserva uma fronteira central para sessao, renovacao e falhas de backend.
 - Fase 140 concluida: matriz rastreavel de riscos, testes e gates para tenant, autorizacao, BFF, integracoes, portal e operacoes.
@@ -77,7 +77,7 @@ Atualizado em 2026-07-29.
 
 - Gateway de pagamento definitivo, se a operacao manual deixar de ser suficiente.
 - Recorrencia avancada e importacao inbound do Google Calendar por `syncToken`.
-- Restore real em banco dedicado antes do go-live.
+- Recorrencia operacional de backup e restore semanal conforme o runbook.
 - Producao isolada de staging.
 - Dominio, SSL e identidade de envio.
 - Checklist juridico/comercial.
@@ -124,4 +124,4 @@ Atualizado em 2026-07-29.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, piloto interno aprovado e producao isolada aceita, mas ainda precisa de restore real em banco dedicado, dominio/identidade de envio, revisao juridica e go-live assistido antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita e restore real em banco dedicado validado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, revisao juridica e go-live assistido antes de uso comercial com clientes reais.

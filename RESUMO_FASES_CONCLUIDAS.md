@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a release controlada das Fases 154, 155 e 157.
+Atualizado em 2026-07-29 apos a Fase 158 - restore real em banco dedicado.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -202,10 +202,15 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 157 - Papel PostgreSQL restrito: os backends de staging e producao usam
   logins de aplicacao sem `BYPASSRLS`, permitindo que as policies sejam
   efetivas no runtime.
+- Fase 158 - Restore real em banco dedicado: dump custom de `Octaclin-db-producao`
+  validado (481 itens) e restaurado em `octaclin_restore_fase158`, sem escrita
+  na origem. O procedimento exclui somente `timescaledb`, gerenciado pelo Neon;
+  13 tabelas criticas, 54 politicas RLS e 2 usuarios autenticaveis ficaram
+  equivalentes. O dump temporario foi removido apos a validacao.
 
 ## Estado atual de uso
 
-O sistema esta em producao isolada aceita, com massa ficticia mantida fora do banco de producao e o piloto interno aprovado. A agenda agora tambem aceita solicitacoes publicas com aprovacao manual segura, sem reservar horario nem persistir token bruto, e distingue cancelamento pelo profissional de desmarcamento pelo paciente e de cancelamento originado no Google. O profissional conta com um painel clinico diario agregando prioridades da propria agenda de pacientes. Ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria: faltam restore real em banco dedicado, dominio/identidade de envio, revisao juridica e go-live assistido.
+O sistema esta em producao isolada aceita, com massa ficticia mantida fora do banco de producao, piloto interno aprovado e restore real em banco dedicado validado. A agenda agora tambem aceita solicitacoes publicas com aprovacao manual segura, sem reservar horario nem persistir token bruto, e distingue cancelamento pelo profissional de desmarcamento pelo paciente e de cancelamento originado no Google. O profissional conta com um painel clinico diario agregando prioridades da propria agenda de pacientes. Ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria: faltam recorrencia operacional de backup, dominio/identidade de envio, revisao juridica e go-live assistido.
 
 ## Como atualizar este arquivo
 
