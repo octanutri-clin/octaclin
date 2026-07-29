@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-27 apos a Fase 144 de agendamento publico por solicitacao.
+Atualizado em 2026-07-29 apos a release controlada das Fases 154, 155 e 157.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -526,6 +526,23 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Observacao: recorrencia avancada e importacao inbound por `syncToken`
     (tambem citadas na Fase 136) continuam pendentes, fora do escopo desta
     fase.
+
+- [x] Fase 154 - Hardening de seguranca OAuth e bootstrap.
+  - OAuth Google exige segredo HMAC dedicado e forte; producao recusa
+    configuracao parcial e o bootstrap administrativo exige chave AES.
+  - Data: 2026-07-29. Saida: `fase-154-hardening-seguranca-oauth.md`.
+
+- [x] Fase 155 - RLS dos canais de watch Google Calendar.
+  - `google_canais_watch` recebeu RLS forcado; webhook e worker resolvem o
+    tenant pelo identificador de canal antes da leitura.
+  - Validacoes da release: 29 testes focados, typecheck, build e scanner de
+    secrets aprovados.
+  - Data: 2026-07-29. Saida: `fase-155-rls-canais-watch-google.md`.
+
+- [x] Fase 157 - Papel PostgreSQL restrito.
+  - Staging e producao usam logins de aplicacao sem `BYPASSRLS`; a validacao
+    operacional confirmou health, login controlado e isolamento RLS.
+  - Data: 2026-07-29. Registro operacional mantido no runbook privado.
 
 ## Backlog pos-producao
 

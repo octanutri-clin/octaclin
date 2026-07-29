@@ -21,7 +21,7 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | `NODE_ENV` | Sim | Ambiente (`development`, `production`) | Render/backend | Logs e comportamento de producao |
 | `PORT` | Sim | Porta do backend | Render/backend | `/health` responde |
 | `CORS_ORIGINS` | Sim em producao | Origens web autorizadas, separadas por virgula e sem `*` | Render/backend | Login/BFF funciona apenas pela origem oficial |
-| `DATABASE_URL` | Sim | Conexao Neon/Postgres | Render/backend | `/health`, login e migrations |
+| `DATABASE_URL` | Sim | Conexao Neon/Postgres por papel sem `BYPASSRLS` | Render/backend | `/health`, login, migrations e RLS |
 | `BANCO_EXECUTAR_MIGRACOES` | Depende | Executar migrations automaticamente | Render/backend | Deploy sem erro de migration |
 | `REDIS_URL` | Recomendado | Filas/outbox/cache | Render/backend | Comunicacoes processam |
 | `JWT_SEGREDO` | Sim | Assinatura access token | Render/backend | Login funciona |

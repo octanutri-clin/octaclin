@@ -1,13 +1,13 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-07-27.
+Atualizado em 2026-07-29.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 149 - Limpeza do canal de watch do Google Calendar ao desconectar (entregue em 2026-07-27, branch `integrate/producao-hardening`). Fecha o debito das Fases 136/145: `desconectar()` agora chama `pararCanalWatch` no Google (tolerante a falha) e remove o registro local de `GoogleCanalWatchOrm`.
+- Ultima fase concluida: Fase 155 - RLS dos canais de watch Google Calendar (release em 2026-07-29). A migration protege `google_canais_watch`; webhook, renovacao e desconexao usam o tenant validado antes da leitura. A Fase 157 ja aplicou papeis PostgreSQL sem `BYPASSRLS` nos dois ambientes.
 - Fase 148: Foco visivel proprio nos componentes compartilhados `Campo`/`AreaTexto`/`Selecao`/`Botao` (entregue em 2026-07-27, PR #5 aberto para `main`).
 - Fase 147: Foco visivel explicito nos inputs crus da agenda (entregue em 2026-07-27). Antes dela, esta branch recebeu por merge a Fase 146 (gate de acessibilidade, feita pelo Codex na `main`).
 - Fase 145: Painel clinico do profissional e desmarcamento/cancelamento distintos (entregue em 2026-07-27, commit `22e161b` da Task 5).

@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 144 de agendamento publico por solicitacao.
+Atualizado apos a release controlada das Fases 154, 155 e 157.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -194,6 +194,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 147 - Foco visivel explicito nos inputs crus da agenda: os 4 inputs nativos de `painel-agenda.tsx` (checkbox de notificacoes, nova data/hora, nova duracao, novo local) ganharam a mesma classe `focus-visible:outline...` ja usada em `portal-shell.tsx`/`modal.tsx`, endereçando de forma explicita o achado documentado na Fase 146 em vez de depender apenas da regra CSS global. Ver `fase-147-foco-visivel-inputs-agenda.md`.
 - Fase 148 - Foco visivel proprio nos componentes compartilhados de formulario/botao: `Campo`, `AreaTexto`, `Selecao` e `Botao` (usados em 23 arquivos/37 imports do app) ganharam a mesma classe de foco da Fase 147, deixando de depender exclusivamente da regra CSS global. Ver `fase-148-foco-visivel-componentes-compartilhados.md`.
 - Fase 149 - Limpeza do canal de watch do Google Calendar ao desconectar: `desconectar()` passou a chamar `pararCanalWatch` (parada tolerante a falha, so loga warning) e a remover o registro de `google_canais_watch` antes de limpar os campos locais, fechando o debito das Fases 136/145 em que a desconexao so limpava estado local sem avisar o Google. Ver `fase-149-limpeza-canal-watch-google-calendar.md`.
+- Fase 154 - Hardening OAuth e bootstrap: producao passou a exigir state HMAC
+  dedicado no OAuth Google e chave AES no bootstrap administrativo.
+- Fase 155 - RLS dos canais de watch Google Calendar: a tabela passou a ter
+  isolamento forcado por tenant e os consumidores de webhook/worker foram
+  adaptados para estabelecer o contexto correto antes de ler ou renovar canais.
+- Fase 157 - Papel PostgreSQL restrito: os backends de staging e producao usam
+  logins de aplicacao sem `BYPASSRLS`, permitindo que as policies sejam
+  efetivas no runtime.
 
 ## Estado atual de uso
 
