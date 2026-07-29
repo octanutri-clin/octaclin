@@ -535,8 +535,11 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 - [x] Fase 155 - RLS dos canais de watch Google Calendar.
   - `google_canais_watch` recebeu RLS forcado; webhook e worker resolvem o
     tenant pelo identificador de canal antes da leitura.
-  - Validacoes da release: 29 testes focados, typecheck, build e scanner de
-    secrets aprovados.
+    - Validacoes da release: 29 testes focados, typecheck, build e scanner de
+      secrets aprovados.
+    - Aceite operacional: cinco migrations Google aplicadas no banco usado
+      pelo backend; RLS/`FORCE RLS` e policy de tenant confirmados pelo papel
+      de aplicacao, com health `200` e login invalido `401`.
   - Data: 2026-07-29. Saida: `fase-155-rls-canais-watch-google.md`.
 
 - [x] Fase 157 - Papel PostgreSQL restrito.

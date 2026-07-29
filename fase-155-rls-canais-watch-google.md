@@ -22,19 +22,27 @@ consultar globalmente a tabela quando o Google chamar o webhook.
 
 ## Transicao operacional
 
-Esta fase nao foi aplicada ao banco de producao nem enviada a `main`.
-Quando for aprovada e implantada, canais criados antes desta fase deixam de
-aceitar notificacoes imediatamente e ficam marcados para renovacao no proximo
-ciclo do cron. A renovacao preserva a conexao OAuth e cria o novo watch no
-Google; valide pelo menos uma conta Google conectada apos o deploy.
+Publicada na `main` e no backend de producao em 2026-07-29. A base operacional
+estava com as migrations do Google Calendar pendentes; as cinco migrations da
+cadeia `1720000000800` a `1720000001005` foram executadas pelo proprietario do
+Neon no banco usado pelo backend. O papel de aplicacao confirmou
+`row_security = on`, sem leitura de canais sem contexto de tenant.
+
+Canais criados antes desta fase deixam de aceitar notificacoes imediatamente e
+ficam marcados para renovacao no proximo ciclo do cron. A renovacao preserva a
+conexao OAuth e cria o novo watch no Google; valide pelo menos uma conta Google
+conectada apos o deploy.
 
 ## Validacoes
 
 - 29 testes focados de controlador, sincronizacao, renovacao, desconexao e
   registro de migration.
-- `pnpm --dir octaclin-backend typecheck`.
+- `pnpm --dir octaclin-backend typecheck` e `build`.
+- Deploy Render do commit `077c380`, health `200` e login invalido `401`.
+- Banco operacional: cinco migrations registradas, RLS e `FORCE RLS` ativos,
+  uma policy de tenant em `google_canais_watch`.
 
-## Pendencia de deploy
+## Pendencia funcional
 
-Executar somente apos revisao/merge: migration, health check, conexao Google
-de teste e verificacao de notificacao recebida para um canal renovado.
+Validar uma conexao Google Calendar real apos a renovacao do primeiro canal no
+novo formato.

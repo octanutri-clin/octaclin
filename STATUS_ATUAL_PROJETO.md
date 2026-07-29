@@ -7,7 +7,7 @@ Atualizado em 2026-07-29.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 155 - RLS dos canais de watch Google Calendar (release em 2026-07-29). A migration protege `google_canais_watch`; webhook, renovacao e desconexao usam o tenant validado antes da leitura. A Fase 157 ja aplicou papeis PostgreSQL sem `BYPASSRLS` nos dois ambientes.
+- Ultima fase concluida: Fase 155 - RLS dos canais de watch Google Calendar (release e aceite operacional em 2026-07-29). As cinco migrations Google foram aplicadas no banco usado pelo backend, e `google_canais_watch` passou a usar RLS forcado. Webhook, renovacao e desconexao usam o tenant validado antes da leitura; a Fase 157 ja aplicou papeis PostgreSQL sem `BYPASSRLS` nos dois ambientes.
 - Fase 148: Foco visivel proprio nos componentes compartilhados `Campo`/`AreaTexto`/`Selecao`/`Botao` (entregue em 2026-07-27, PR #5 aberto para `main`).
 - Fase 147: Foco visivel explicito nos inputs crus da agenda (entregue em 2026-07-27). Antes dela, esta branch recebeu por merge a Fase 146 (gate de acessibilidade, feita pelo Codex na `main`).
 - Fase 145: Painel clinico do profissional e desmarcamento/cancelamento distintos (entregue em 2026-07-27, commit `22e161b` da Task 5).
