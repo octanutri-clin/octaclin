@@ -16,7 +16,8 @@ Atualizado em 2026-07-29.
   a mesma base descartavel da 150B para validar corrida `23505`, idempotencia
   por paciente e escopo profissional. As duas fases foram aprovadas no banco
   exclusivo de integracao em 2026-07-29.
-- Ultima fase concluida: Fase 153 - Aceite PostgreSQL remoto das fases 150B/150C (entregue em 2026-07-29, branch `agent/fase-153-aceite-postgres`). As duas suites reais passaram no Neon exclusivo `octaclin_test_fase150b`: 2 suites e 6 testes, sem staging ou producao. Os testes agora toleram latencia remota e removem o artefato temporario de corrida antes de cada execucao.
+- Ultima fase concluida: Fase 154 - Hardening de seguranca OAuth e bootstrap (entregue em 2026-07-29, branch `agent/fase-154-hardening-seguranca`). OAuth Google exige segredo HMAC dedicado e producao recusa configuracao parcial; bootstrap exige chave de criptografia.
+- Fase 153 - Aceite PostgreSQL remoto das fases 150B/150C (entregue em 2026-07-29, branch `agent/fase-153-aceite-postgres`). As duas suites reais passaram no Neon exclusivo `octaclin_test_fase150b`: 2 suites e 6 testes, sem staging ou producao. Os testes agora toleram latencia remota e removem o artefato temporario de corrida antes de cada execucao.
 - Fase 151 - Governanca e continuidade tecnica (entregue em 2026-07-28, branch `agent/fase-151-continuity`). O handoff operacional unico passou a ser `docs/handoffs/ESTADO_ATUAL_AGENTES.md`; os pontos de entrada de agentes foram redirecionados e `pnpm test:handoff` bloqueia regressao para estados historicos.
 - Fase 150A - Escopo de dados em Mobile e IA (entregue
   em 2026-07-28, branch `integrate/producao-hardening`). Patient acessa somente

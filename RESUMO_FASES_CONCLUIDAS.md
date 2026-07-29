@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado apos a Fase 153 de aceite PostgreSQL remoto.
+Atualizado apos a Fase 154 de hardening OAuth e bootstrap.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -219,6 +219,10 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   profissional em 2 suites e 6 testes. O timeout explicito e a limpeza da
   funcao temporaria permitem repeticao segura em banco remoto. Ver
   `fase-153-aceite-postgres-remoto.md`.
+- Fase 154 - Hardening de seguranca OAuth e bootstrap: state OAuth Google
+  passou a exigir HMAC dedicado, forte e separado da criptografia de dados;
+  producao recusa configuracao parcial de Google e o bootstrap administrativo
+  exige chave AES. Ver `fase-154-hardening-seguranca-oauth.md`.
 
 ## Estado atual de uso
 

@@ -18,6 +18,7 @@ async function executar() {
   const tenantSlug = exigirVariavel('TENANT_SLUG');
   const adminEmail = exigirVariavel('ADMIN_EMAIL');
   const adminSenha = exigirVariavel('ADMIN_SENHA');
+  exigirVariavel('CRIPTOGRAFIA_CHAVE_AES_256');
 
   if (adminSenha.length < 8) {
     throw new Error('ADMIN_SENHA precisa ter pelo menos 8 caracteres.');

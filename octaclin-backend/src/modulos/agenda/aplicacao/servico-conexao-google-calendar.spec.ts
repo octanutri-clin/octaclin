@@ -5,10 +5,16 @@ import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar'
 
 describe('ServicoConexaoGoogleCalendar', () => {
   const criptografia = new CriptografiaDadosSensiveis();
+  const segredoState = 'state-google-calendar-teste-com-entropia-suficiente-123456';
+
+  beforeEach(() => {
+    process.env.GOOGLE_CALENDAR_OAUTH_STATE_SECRET = segredoState;
+  });
 
   afterEach(() => {
     delete (global as any).fetch;
     delete process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
+    delete process.env.GOOGLE_CALENDAR_OAUTH_STATE_SECRET;
   });
 
   function construirServico() {
@@ -64,6 +70,16 @@ describe('ServicoConexaoGoogleCalendar', () => {
     expect(decodificado).toEqual({ tenantId: 'tenant-1', profissionalId: 'profissional-1' });
   });
 
+  it('recusa iniciar OAuth sem segredo dedicado para o state', () => {
+    process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+    delete process.env.GOOGLE_CALENDAR_OAUTH_STATE_SECRET;
+    const { servico } = construirServico();
+
+    expect(() => servico.gerarUrlAutorizacao('tenant-1', 'profissional-1', 'https://backend/agenda/google/callback')).toThrow(
+      'GOOGLE_CALENDAR_OAUTH_STATE_SECRET'
+    );
+  });
+
   it('rejeita um state adulterado', async () => {
     const { servico } = construirServico();
     await expect(servico.validarEDecodificarState('valor-invalido')).rejects.toThrow();
@@ -99,7 +115,7 @@ describe('ServicoConexaoGoogleCalendar', () => {
     const payloadBase64 = Buffer.from(
       JSON.stringify({ tenantId: 'tenant-1', profissionalId: 'profissional-1', nonce: 'nonce-expirado', exp: Date.now() - 1000 })
     ).toString('base64url');
-    const chaveAssinatura = process.env.CRIPTOGRAFIA_CHAVE_AES_256 ?? 'octaclin-chave-local-desenvolvimento';
+    const chaveAssinatura = segredoState;
     const { createHmac } = await import('crypto');
     const assinatura = createHmac('sha256', chaveAssinatura).update(payloadBase64).digest('base64url');
     const stateExpirado = Buffer.from(`${payloadBase64}.${assinatura}`).toString('base64url');

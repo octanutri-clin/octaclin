@@ -90,6 +90,20 @@ describe('inicializacao da aplicacao', () => {
     expect(mockCriarAplicacao).not.toHaveBeenCalled();
   });
 
+  it('recusa OAuth Google parcialmente configurado sem segredo dedicado de state', async () => {
+    process.env.CORS_ORIGINS = 'https://app.octaclin.test';
+    process.env.JWT_SEGREDO = 'segredo-access';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'chave-criptografia-32-bytes';
+    process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+    process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
+    delete process.env.GOOGLE_CALENDAR_OAUTH_STATE_SECRET;
+
+    await expect(carregarMain()).rejects.toThrow('GOOGLE_CALENDAR_OAUTH_STATE_SECRET');
+
+    expect(mockCriarAplicacao).not.toHaveBeenCalled();
+  });
+
   it('confia em exatamente um proxy para resolver req.ip atras do proxy do Render', async () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
     process.env.JWT_SEGREDO = 'segredo-access';

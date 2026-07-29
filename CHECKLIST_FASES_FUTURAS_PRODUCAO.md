@@ -578,6 +578,11 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Timeout explicito para banco remoto e limpeza do artefato temporario de corrida tornam a suite repetivel.
   - Data: 2026-07-29. Saida: `fase-153-aceite-postgres-remoto.md`.
 
+- [x] Fase 154 - Hardening de seguranca OAuth e bootstrap.
+  - State OAuth Google exige segredo HMAC dedicado e forte; producao recusa configuracao parcial de OAuth.
+  - Bootstrap administrativo exige chave de criptografia configurada.
+  - Data: 2026-07-29. Saida: `fase-154-hardening-seguranca-oauth.md`.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.
