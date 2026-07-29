@@ -7,6 +7,7 @@ import { POST as criarSolicitacaoPublica } from '../app/api/agendamentos-publico
 import { GET as obterLinkInterno } from '../app/api/agenda/agendamento-publico/route';
 import { POST as rotacionarLinkInterno } from '../app/api/agenda/agendamento-publico/rotacionar/route';
 import { GET as listarSolicitacoesInternas } from '../app/api/agenda/solicitacoes/route';
+import { obterOrigemPublicaAgenda } from '../lib/server/agendamento-publico-bff';
 
 const { __clearCookies, __getCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -198,6 +199,18 @@ test('rotacao confirmada devolve nova URL publica sem persistir token bruto em c
   } finally {
     restaurarFetch(fetchOriginal);
     __clearCookies();
+  }
+});
+
+test('URL publica configurada prevalece sobre a origem interna do proxy', () => {
+  const valorAnterior = process.env.OCTACLIN_WEB_URL;
+  process.env.OCTACLIN_WEB_URL = 'https://octaclin-web-producao.onrender.com/';
+
+  try {
+    assert.equal(obterOrigemPublicaAgenda('http://localhost:3000'), 'https://octaclin-web-producao.onrender.com');
+  } finally {
+    if (valorAnterior === undefined) Reflect.deleteProperty(process.env, 'OCTACLIN_WEB_URL');
+    else process.env.OCTACLIN_WEB_URL = valorAnterior;
   }
 });
 
