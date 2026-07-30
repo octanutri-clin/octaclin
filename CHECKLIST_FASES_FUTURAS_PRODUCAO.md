@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 166 - painel clinico para leitura diaria.
+Atualizado em 2026-07-30 apos a Fase 167 - agenda interna visual.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -599,6 +599,42 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 - [x] Fase 166 - Painel clinico para leitura diaria.
   - Indicadores agrupados e controles de rotina com toque/foco consistentes.
   - Data: 2026-07-30. Saida: `fase-166-painel-clinico-leitura-diaria.md`.
+
+- [x] Fase 167 - Agenda interna visual.
+  - Grade semanal por profissional, horarios ocupados e Google tratado como
+    integracao opcional; a agenda interna continua ativa sem conexao externa.
+  - Data: 2026-07-30. Saida: `fase-167-agenda-interna-visual.md`.
+
+- [ ] Fase 168 - Disponibilidade e feed completo da agenda.
+  - Filtrar o feed por periodo/profissional e retornar projecao minima.
+  - Exibir bloqueios Google como `Indisponivel`, sem detalhes privados.
+  - Criar bloqueios internos manuais para intervalos, reunioes e ferias.
+  - Adicionar visoes de dia e mes sem drag-and-drop nesta etapa.
+
+- [ ] Fase 169 - Integridade historica de formularios.
+  - Guardar versao e snapshot da estrutura em cada envio.
+  - Renderizar respostas antigas pelo snapshot imutavel.
+
+- [ ] Fase 170 - Biblioteca de perguntas reutilizaveis.
+  - Busca, categoria, chave clinica estavel e inclusao em questionarios.
+  - Persistir visibilidade sem introduzir motor condicional ainda.
+
+- [ ] Fase 171 - Check-ins recorrentes por paciente.
+  - Vincular o agendamento do questionario ao paciente escolhido.
+  - Evitar disparo automatico para todos os pacientes ativos do tenant.
+
+- [ ] Fase 172 - Matriz longitudinal de respostas.
+  - Filtros por paciente, periodo, questionario e categoria.
+  - Comparar indicadores estaveis e calcular delta apenas para metricas
+    numericamente comparaveis.
+
+- [ ] Fase 173 - Check-ins consolidados no prontuario.
+  - Unificar a leitura dos formularios e do diario rapido sem migracao
+    prematura dos dois armazenamentos existentes.
+
+- [ ] Fase 174 - Separacao UX do modulo de formularios.
+  - Dividir Biblioteca, Montagem/Preview, Distribuicao e Respostas.
+  - Reutilizar os endpoints e componentes atuais antes de criar novos.
 
 ## Backlog pos-producao
 

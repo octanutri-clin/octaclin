@@ -27,6 +27,17 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 167 - Agenda interna visual
+
+- Responsavel: Codex.
+- Conclusao: 2026-07-30.
+- Commit: registrado no historico Git desta fase.
+- Push: sim.
+- Validacoes: Playwright agenda desktop/mobile, backend spec de agenda, typecheck e lint web.
+- Arquivos principais: `agenda-semanal.tsx`, `painel-agenda.tsx` e teste de regressao do console.
+- Pendencias: feed por periodo, bloqueios externos opacos e bloqueios internos manuais.
+- Proxima fase: Fase 168 - Disponibilidade e feed completo da agenda.
+
 ### Fase 162 - Portal do paciente orientado a prioridades
 
 - Responsavel: Codex.

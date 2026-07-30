@@ -543,7 +543,7 @@ test.describe('console operacional', () => {
   }
 });
 
-async function prepararDashboardMockado(page) {
+async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
   let remarcouConsulta = false;
   let cancelouConsulta = false;
   const consultasAgenda = [
@@ -694,7 +694,7 @@ async function prepararDashboardMockado(page) {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ conectado: true })
+      body: JSON.stringify({ conectado: googleConectado })
     });
   });
 
@@ -1246,6 +1246,19 @@ test.describe('painel clinico profissional', () => {
 });
 
 test.describe('agenda de producao', () => {
+  test('mantem agenda interna visual sem Google e sinaliza horarios ocupados', async ({ page }) => {
+    await prepararDashboardMockado(page, { googleConectado: false });
+    await page.goto('/agenda');
+
+    const agendaInterna = page.getByRole('region', { name: 'Agenda interna semanal' });
+    await expect(agendaInterna).toBeVisible();
+    await expect(agendaInterna.getByText('Google Agenda opcional')).toBeVisible();
+    await expect(agendaInterna.getByRole('link', { name: /Horario ocupado: Ana Souza/ })).toBeVisible();
+    await expect(agendaInterna.getByRole('button', { name: 'Semana anterior' })).toBeVisible();
+    await expect(agendaInterna.getByRole('button', { name: 'Proxima semana' })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('permite remarcar e cancelar consulta agendada', async ({ page }) => {
     const agenda = await prepararDashboardMockado(page);
     await page.goto('/agenda');
@@ -1260,7 +1273,9 @@ test.describe('agenda de producao', () => {
     await consultaAna.getByRole('button', { name: 'Remarcar' }).click();
 
     await expect.poll(() => agenda.remarcouConsulta()).toBe(true);
-    await expect(page.getByText('Consulta remarcada. Google Calendar foi atualizado conforme configuracao.')).toBeVisible();
+    await expect(
+      page.getByText('Consulta remarcada e horario atualizado na agenda interna. Integracoes processadas conforme configuracao.')
+    ).toBeVisible();
     await expect(consultaAna.getByText('24/07/2026')).toBeVisible();
     await expect(consultaAna.getByText('Reagendada')).toBeVisible();
 
@@ -1273,7 +1288,9 @@ test.describe('agenda de producao', () => {
     await botaoCancelar.click();
 
     await expect.poll(() => agenda.cancelouConsulta()).toBe(true);
-    await expect(page.getByText('Consulta cancelada. Google Calendar foi atualizado conforme configuracao.')).toBeVisible();
+    await expect(
+      page.getByText('Consulta cancelada e horario liberado na agenda interna. Integracoes processadas conforme configuracao.')
+    ).toBeVisible();
     await expect(consultaAna.getByText('Cancelada')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });

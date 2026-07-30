@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a Fase 166 - painel clinico para leitura diaria.
+Atualizado em 2026-07-30 apos a Fase 167 - agenda interna visual.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -223,6 +223,12 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 165 - Progresso do formulario publico: o paciente passou a ver quantas perguntas obrigatorias ja respondeu, com barra de progresso acessivel e sem nova persistencia.
 
 - Fase 166 - Painel clinico para leitura diaria: indicadores ganharam agrupamento explicito e os controles diarios passaram a respeitar toque e foco consistentes.
+
+- Fase 167 - Agenda interna visual: a agenda profissional ganhou grade semanal
+  por profissional, navegacao de semanas e blocos de horario para consultas
+  ativas. O Google passou a ser apresentado explicitamente como integracao
+  opcional; criacao, remarcacao e cancelamento comunicam o efeito na agenda
+  interna.
 
 ## Estado atual de uso
 

@@ -20,6 +20,7 @@ import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { AgendaSemanal } from '@/components/agenda/agenda-semanal';
 import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi } from '@/lib/agendamento-publico-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
 import {
@@ -121,8 +122,9 @@ function statusNotificacao(notificacoes: NotificacoesConsultaAgenda, canal: 'ema
   return 'Pendente';
 }
 
-function statusGoogle(consulta: ConsultaAgendaApi) {
+function statusGoogle(consulta: ConsultaAgendaApi, conectado?: boolean) {
   if (consulta.googleEventId) return 'Sincronizado';
+  if (!conectado) return 'Nao conectado (opcional)';
   const google = consulta.notificacoes?.googleCalendar;
   if (google?.motivo === 'configuracao_ausente') return 'Configurar Google';
   if (google?.motivo) return `Pendente: ${google.motivo}`;
@@ -314,7 +316,7 @@ export function PainelAgenda() {
         local: '',
         observacoes: ''
       }));
-      setSucesso('Consulta agendada. Google Calendar e notificacoes foram processados conforme configuracao.');
+      setSucesso('Consulta agendada e horario bloqueado na agenda interna. Integracoes processadas conforme configuracao.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao agendar consulta.');
     } finally {
@@ -353,7 +355,7 @@ export function PainelAgenda() {
         observacoes: consulta.observacoes || undefined
       });
       atualizarConsulta(atualizada);
-      setSucesso('Consulta remarcada. Google Calendar foi atualizado conforme configuracao.');
+      setSucesso('Consulta remarcada e horario atualizado na agenda interna. Integracoes processadas conforme configuracao.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao remarcar consulta.');
     } finally {
@@ -372,7 +374,7 @@ export function PainelAgenda() {
       atualizarConsulta(atualizada);
       setSucesso(
         status === 'cancelada'
-          ? 'Consulta cancelada. Google Calendar foi atualizado conforme configuracao.'
+          ? 'Consulta cancelada e horario liberado na agenda interna. Integracoes processadas conforme configuracao.'
           : `Consulta registrada como ${rotulo}.`
       );
     } catch (erroAtual) {
@@ -452,9 +454,29 @@ export function PainelAgenda() {
     }
   }
 
+  async function desconectarGoogle() {
+    setErro(null);
+    try {
+      await desconectarGoogleAgenda();
+      setStatusGoogleAgenda({ conectado: false });
+      setSucesso('Google Agenda desconectado. A agenda interna continua ativa.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desconectar Google Agenda.');
+    }
+  }
+
   return (
-    <div className="grid min-w-0 gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-      <div className="grid min-w-0 gap-4">
+    <div className="grid min-w-0 gap-4">
+      <AgendaSemanal
+        consultas={consultas}
+        profissionais={profissionaisLista}
+        googleConectado={statusGoogleAgenda?.conectado}
+        onConectarGoogle={conectarGoogleAgenda}
+        onDesconectarGoogle={() => void desconectarGoogle()}
+      />
+
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+        <div className="grid min-w-0 gap-4">
         <Cartao className="min-w-0">
           <CartaoCabecalho className="items-start">
             <div>
@@ -505,7 +527,7 @@ export function PainelAgenda() {
               <div>
                 <h2 className="text-base font-semibold">Novo agendamento</h2>
                 <p className="mt-1 text-sm text-texto-suave">
-                  Cria a consulta interna, sincroniza com Google Calendar e envia os avisos.
+                  Cria a consulta e bloqueia o horario na agenda interna. Google e avisos sao opcionais.
                 </p>
               </div>
               <CalendarCheck size={20} className="text-primaria" />
@@ -619,27 +641,10 @@ export function PainelAgenda() {
                 ) : null}
 
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Botao type="button" onClick={() => void carregar()} disabled={carregando || salvando}>
-                      <RefreshCcw size={16} />
-                      Atualizar
-                    </Botao>
-                    {statusGoogleAgenda?.conectado ? (
-                      <Botao
-                        type="button"
-                        variante="fantasma"
-                        onClick={() =>
-                          void desconectarGoogleAgenda().then(() => setStatusGoogleAgenda({ conectado: false }))
-                        }
-                      >
-                        Desconectar Google Agenda
-                      </Botao>
-                    ) : (
-                      <Botao type="button" variante="fantasma" onClick={conectarGoogleAgenda}>
-                        Conectar Google Agenda
-                      </Botao>
-                    )}
-                  </div>
+                  <Botao type="button" onClick={() => void carregar()} disabled={carregando || salvando}>
+                    <RefreshCcw size={16} />
+                    Atualizar
+                  </Botao>
                   <Botao type="submit" variante="primario" disabled={salvando || !pacientesLista.length}>
                     <Save size={16} />
                     Agendar
@@ -781,7 +786,11 @@ export function PainelAgenda() {
                   const paciente = pacientePorId(pacientesLista, consulta.pacienteId);
                   const profissional = profissionalPorId(profissionaisLista, consulta.profissionalId);
                   return (
-                    <article key={consulta.id} className="rounded-lg border border-linha bg-superficie p-3">
+                    <article
+                      id={`consulta-${consulta.id}`}
+                      key={consulta.id}
+                      className="scroll-mt-4 rounded-lg border border-linha bg-superficie p-3"
+                    >
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
@@ -802,7 +811,9 @@ export function PainelAgenda() {
                               <span className="truncate">{consulta.local || 'Local nao informado'}</span>
                             </p>
                             <p className="truncate">Profissional: {consulta.profissionalNome ?? profissional?.nome ?? 'Nao informado'}</p>
-                            <p className="truncate">Google Calendar: {statusGoogle(consulta)}</p>
+                            <p className="truncate">
+                              Google Calendar: {statusGoogle(consulta, statusGoogleAgenda?.conectado)}
+                            </p>
                           </div>
                         </div>
 
@@ -933,6 +944,7 @@ export function PainelAgenda() {
             )}
           </CartaoConteudo>
         </Cartao>
+        </div>
       </div>
     </div>
   );
