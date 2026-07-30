@@ -673,6 +673,7 @@ Fase XXX - Nome:
 
 - Fase 169 - Disponibilidade e feed completo da agenda:
   - Status: concluida localmente; aguardando deploy coordenado.
+  - Commit: `25811de`.
   - Data: 2026-07-30.
   - Validacoes: backend Jest, typechecks, lint e Playwright desktop/mobile.
   - Observacoes: a migration `1720000001006` deve executar antes da web.
