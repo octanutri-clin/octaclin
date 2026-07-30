@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 163 - navegacao mobile do portal do paciente.
+Atualizado em 2026-07-30 apos a Fase 164 - etapas do agendamento publico.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -587,6 +587,10 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 - [x] Fase 163 - Navegacao mobile do portal do paciente.
   - Barra inferior com os cinco destinos essenciais no celular; abas completas preservadas no desktop.
   - Data: 2026-07-30. Saida: `fase-163-navegacao-mobile-portal.md`.
+
+- [x] Fase 164 - Etapas do agendamento publico.
+  - Fluxo publico explicita escolha de horario e envio de solicitacao, sem antecipar confirmacao.
+  - Data: 2026-07-30. Saida: `fase-164-etapas-agendamento-publico.md`.
 
 ## Backlog pos-producao
 

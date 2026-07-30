@@ -287,6 +287,8 @@ test.describe('agendamento publico', () => {
     await page.goto('/agendar/token-publico');
 
     await expect(page.getByRole('heading', { name: 'Agendar com Dra. Carla' })).toBeVisible();
+    await expect(page.getByText('1. Escolha um horario')).toBeVisible();
+    await expect(page.getByText('2. Envie sua solicitacao')).toBeVisible();
     await page.getByRole('button', { name: '10:00' }).click();
     await page.getByLabel('Nome completo').fill('Ana Silva');
     await page.getByLabel('Email').fill('ana@exemplo.com');

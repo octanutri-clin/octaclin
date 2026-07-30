@@ -148,6 +148,10 @@ export function FormularioAgendamentoPublico({ token }: Props) {
                 <p className="text-sm text-texto-suave">{agenda.profissional.especialidade}</p>
               ) : null}
             </div>
+            <ol className="flex flex-wrap gap-2 text-sm text-texto-suave" aria-label="Etapas do agendamento">
+              <li className="rounded-md bg-primaria-suave px-3 py-2 font-medium text-primaria">1. Escolha um horario</li>
+              <li className="rounded-md border border-linha bg-superficie px-3 py-2">2. Envie sua solicitacao</li>
+            </ol>
             <div className="flex flex-wrap gap-2 text-sm text-texto-suave">
               <span className="inline-flex min-h-9 items-center gap-2 rounded-md border border-linha bg-superficie px-3">
                 <CalendarDays size={16} />
