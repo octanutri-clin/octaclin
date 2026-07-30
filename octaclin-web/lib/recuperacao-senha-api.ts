@@ -1,6 +1,4 @@
 export interface SolicitarRecuperacaoSenhaEntrada {
-  apiUrl?: string;
-  tenantSlug: string;
   email: string;
 }
 

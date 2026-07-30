@@ -28,7 +28,10 @@ services:
       context: ./octaclin-web
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: http://localhost:3000
+      OCTACLIN_BACKEND_URL: http://backend:3000
+      OCTACLIN_TENANT_SLUG: clinica-carla
+      OCTACLIN_API_ORIGENS_PERMITIDAS: http://backend:3000
+      OCTACLIN_COOKIE_SECURE: "false"
     ports:
       - "3001:3000"
     depends_on:

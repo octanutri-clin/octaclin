@@ -131,26 +131,19 @@ async function main() {
     'sessao antes do login precisa retornar Cache-Control no-store.'
   );
 
-  const loginApiInvalida = await requisitarJson('/api/auth/login', {
+  const loginIncompleto = await requisitarJson('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({
-      apiUrl: 'ftp://localhost:3001',
-      tenantSlug: configuracao.tenantSlug,
-      email: configuracao.email,
-      senha: configuracao.senha
-    })
+    body: JSON.stringify({ email: configuracao.email })
   });
-  assertStatus(loginApiInvalida.resposta, 400, 'login BFF com API invalida');
+  assertStatus(loginIncompleto.resposta, 400, 'login BFF incompleto');
   assert(
-    typeof loginApiInvalida.corpo?.mensagem === 'string' && loginApiInvalida.corpo.mensagem.includes('HTTP'),
-    'login BFF com API invalida precisa retornar envelope JSON com mensagem.'
+    typeof loginIncompleto.corpo?.mensagem === 'string',
+    'login BFF incompleto precisa retornar envelope JSON com mensagem.'
   );
 
   const login = await requisitarJson('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({
-      apiUrl: configuracao.apiUrl,
-      tenantSlug: configuracao.tenantSlug,
       email: configuracao.email,
       senha: configuracao.senha
     })

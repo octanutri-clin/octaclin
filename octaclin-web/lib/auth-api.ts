@@ -1,6 +1,4 @@
 export interface LoginEntrada {
-  apiUrl: string;
-  tenantSlug: string;
   email: string;
   senha: string;
 }
@@ -59,7 +57,7 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
     }
 
     if (detalhe.trim().startsWith('<!DOCTYPE html>') || detalhe.trim().startsWith('<html')) {
-      throw new Error('Falha no servidor web ao autenticar. Recarregue a aplicacao e confirme a URL do backend no campo API.');
+      throw new Error('Falha no servidor web ao autenticar. Recarregue a aplicacao e tente novamente.');
     }
 
     throw new Error(detalhe || `Falha HTTP ${resposta.status}`);

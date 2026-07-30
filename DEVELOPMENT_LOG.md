@@ -27,6 +27,17 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 168 - Acesso comercial e onboarding
+
+- Responsavel: Codex.
+- Implementacao local: 2026-07-30.
+- Commit: registrado no historico Git desta fase.
+- Push: nao; aguarda configuracao previa do Render.
+- Validacoes: Playwright login/recuperacao desktop/mobile, acessibilidade, authz, typecheck, lint e build web.
+- Arquivos principais: `login-form.tsx`, `esqueci-senha-form.tsx`, rotas BFF de auth e configuracao de acesso do servidor.
+- Pendencias: configurar `OCTACLIN_TENANT_SLUG=octaclin-admin`, publicar e validar login real.
+- Proxima fase: Fase 169 - Disponibilidade e feed completo da agenda.
+
 ### Fase 167 - Agenda interna visual
 
 - Responsavel: Codex.
@@ -36,7 +47,7 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Validacoes: Playwright agenda desktop/mobile, backend spec de agenda, typecheck e lint web.
 - Arquivos principais: `agenda-semanal.tsx`, `painel-agenda.tsx` e teste de regressao do console.
 - Pendencias: feed por periodo, bloqueios externos opacos e bloqueios internos manuais.
-- Proxima fase: Fase 168 - Disponibilidade e feed completo da agenda.
+- Proxima fase: Fase 168 - Acesso comercial e onboarding.
 
 ### Fase 162 - Portal do paciente orientado a prioridades
 

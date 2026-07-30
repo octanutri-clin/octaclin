@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ErroApiUrlInvalida, RespostaToken, normalizarApiUrlBff, salvarSessaoBff } from '@/lib/server/sessao-bff';
+import { obterConfiguracaoAcessoBff } from '@/lib/server/configuracao-acesso-bff';
+import { ErroApiUrlInvalida, RespostaToken, salvarSessaoBff } from '@/lib/server/sessao-bff';
 
 interface LoginBody {
-  apiUrl: string;
-  tenantSlug: string;
   email: string;
   senha: string;
 }
@@ -22,24 +21,35 @@ async function extrairMensagemErro(resposta: Response): Promise<string> {
   }
 
   if (texto.trim().startsWith('<!DOCTYPE html>') || texto.trim().startsWith('<html')) {
-    return 'A URL informada em API nao respondeu como backend OctaClin. Verifique se ela aponta para o NestJS, nao para a web.';
+    return 'O servico de acesso do OctaClin esta indisponivel no momento.';
   }
 
   return texto || `Falha HTTP ${resposta.status}`;
 }
 
 export async function POST(request: NextRequest) {
-  const body = (await request.json()) as LoginBody;
+  let body: LoginBody;
+  try {
+    body = (await request.json()) as LoginBody;
+  } catch {
+    return NextResponse.json({ mensagem: 'Dados de acesso invalidos.' }, { status: 400 });
+  }
+
   let resposta: Response;
   let apiUrl: string;
+  let tenantSlug: string;
 
   try {
-    apiUrl = normalizarApiUrlBff(body.apiUrl);
+    ({ apiUrl, tenantSlug } = obterConfiguracaoAcessoBff());
   } catch (erro) {
     if (erro instanceof ErroApiUrlInvalida) {
-      return NextResponse.json({ mensagem: erro.message }, { status: 400 });
+      return NextResponse.json({ mensagem: 'O servico de acesso do OctaClin esta configurado incorretamente.' }, { status: 500 });
     }
-    throw erro;
+    return NextResponse.json({ mensagem: 'O servico de acesso do OctaClin esta configurado incorretamente.' }, { status: 500 });
+  }
+
+  if (typeof body.email !== 'string' || !body.email.trim() || typeof body.senha !== 'string' || !body.senha) {
+    return NextResponse.json({ mensagem: 'Informe email e senha.' }, { status: 400 });
   }
 
   try {
@@ -47,15 +57,15 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        tenantSlug: body.tenantSlug,
-        email: body.email,
+        tenantSlug,
+        email: body.email.trim(),
         senha: body.senha
       }),
       cache: 'no-store'
     });
   } catch {
     return NextResponse.json(
-      { mensagem: 'Nao foi possivel conectar ao backend informado no campo API.' },
+      { mensagem: 'Nao foi possivel conectar ao servico de acesso do OctaClin.' },
       { status: 502 }
     );
   }
@@ -74,13 +84,13 @@ export async function POST(request: NextRequest) {
     );
   }
   salvarSessaoBff(
-    { apiUrl, tenantSlug: body.tenantSlug, email: body.email },
+    { apiUrl, tenantSlug, email: body.email.trim() },
     tokens
   );
 
   return NextResponse.json({
-    email: body.email,
-    tenantSlug: body.tenantSlug,
+    email: body.email.trim(),
+    tenantSlug,
     apiUrl,
     expiraEmSegundos: tokens.expiraEmSegundos,
     papel: tokens.papel,

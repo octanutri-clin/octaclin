@@ -168,8 +168,8 @@ runtime Node para manter paridade com staging.
    necessario configurar Build Filters manualmente.
 7. Variaveis de ambiente:
    - `NODE_ENV=production`
-   - `NEXT_PUBLIC_API_URL` e `OCTACLIN_BACKEND_URL` apontando para a URL do
-     backend de producao criado acima
+   - `OCTACLIN_BACKEND_URL` apontando para a URL do backend de producao
+   - `OCTACLIN_TENANT_SLUG` com o slug da organizacao atendida pelo servico
    - `OCTACLIN_API_ORIGENS_PERMITIDAS` restrito a essa mesma URL do backend
    - `OCTACLIN_COOKIE_SECURE=true`
    - Nao defina `PORT` manualmente: o Render injeta a variavel `PORT`

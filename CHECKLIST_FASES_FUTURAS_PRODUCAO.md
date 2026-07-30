@@ -605,34 +605,43 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     integracao opcional; a agenda interna continua ativa sem conexao externa.
   - Data: 2026-07-30. Saida: `fase-167-agenda-interna-visual.md`.
 
-- [ ] Fase 168 - Disponibilidade e feed completo da agenda.
+- [ ] Fase 168 - Acesso comercial e onboarding.
+  - Login e recuperacao solicitam apenas email/senha e email,
+    respectivamente; API e tenant sao resolvidos pelo BFF.
+  - Primeiro acesso por convite e aceites legais continuam sendo o onboarding
+    oficial ja validado para pacientes e profissionais.
+  - Implementacao e validacao local concluidas em 2026-07-30.
+  - Pendente: configurar tenant no Render web, publicar e validar login real.
+    Saida: `fase-168-acesso-comercial-onboarding.md`.
+
+- [ ] Fase 169 - Disponibilidade e feed completo da agenda.
   - Filtrar o feed por periodo/profissional e retornar projecao minima.
   - Exibir bloqueios Google como `Indisponivel`, sem detalhes privados.
   - Criar bloqueios internos manuais para intervalos, reunioes e ferias.
   - Adicionar visoes de dia e mes sem drag-and-drop nesta etapa.
 
-- [ ] Fase 169 - Integridade historica de formularios.
+- [ ] Fase 170 - Integridade historica de formularios.
   - Guardar versao e snapshot da estrutura em cada envio.
   - Renderizar respostas antigas pelo snapshot imutavel.
 
-- [ ] Fase 170 - Biblioteca de perguntas reutilizaveis.
+- [ ] Fase 171 - Biblioteca de perguntas reutilizaveis.
   - Busca, categoria, chave clinica estavel e inclusao em questionarios.
   - Persistir visibilidade sem introduzir motor condicional ainda.
 
-- [ ] Fase 171 - Check-ins recorrentes por paciente.
+- [ ] Fase 172 - Check-ins recorrentes por paciente.
   - Vincular o agendamento do questionario ao paciente escolhido.
   - Evitar disparo automatico para todos os pacientes ativos do tenant.
 
-- [ ] Fase 172 - Matriz longitudinal de respostas.
+- [ ] Fase 173 - Matriz longitudinal de respostas.
   - Filtros por paciente, periodo, questionario e categoria.
   - Comparar indicadores estaveis e calcular delta apenas para metricas
     numericamente comparaveis.
 
-- [ ] Fase 173 - Check-ins consolidados no prontuario.
+- [ ] Fase 174 - Check-ins consolidados no prontuario.
   - Unificar a leitura dos formularios e do diario rapido sem migracao
     prematura dos dois armazenamentos existentes.
 
-- [ ] Fase 174 - Separacao UX do modulo de formularios.
+- [ ] Fase 175 - Separacao UX do modulo de formularios.
   - Dividir Biblioteca, Montagem/Preview, Distribuicao e Respostas.
   - Reutilizar os endpoints e componentes atuais antes de criar novos.
 

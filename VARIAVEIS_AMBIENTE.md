@@ -85,7 +85,9 @@ como redirect URI autorizado do cliente OAuth de producao.
 | Variavel | Obrigatoria | Uso | Onde configurar | Como validar |
 | --- | --- | --- | --- | --- |
 | `OCTACLIN_COOKIE_SECURE` | Sim em producao | Cookies apenas HTTPS | Render/web | Login persiste em HTTPS |
-| `OCTACLIN_API_ORIGENS_PERMITIDAS` | Sim em producao | Allowlist de API URL | Render/web | Login aceita apenas backend correto |
+| `OCTACLIN_BACKEND_URL` | Sim | Backend usado pelo BFF antes e depois do login | Render/web | Login e recuperacao respondem |
+| `OCTACLIN_TENANT_SLUG` | Sim em producao | Organizacao atendida pelo frontend | Render/web | Login resolve o tenant sem campo tecnico |
+| `OCTACLIN_API_ORIGENS_PERMITIDAS` | Sim em producao | Allowlist da origem do backend | Render/web | BFF aceita apenas backend correto |
 | `NEXT_PUBLIC_*` | Evitar secrets | Variaveis publicas do Next | Render/web | Inspecionar bundle se necessario |
 
 ## Neon

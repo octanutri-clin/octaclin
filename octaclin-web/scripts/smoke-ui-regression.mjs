@@ -98,13 +98,13 @@ async function validarLogin() {
   assertStatus(resposta, 200, 'login');
   const html = await resposta.text();
   assertInclui(html, 'Acesso OctaClin', 'login');
-  assertInclui(html, 'API', 'login');
-  assertInclui(html, 'Tenant', 'login');
   assertInclui(html, 'Email', 'login');
   assertInclui(html, 'Senha', 'login');
-  assertInclui(html, configuracao.apiUrl, 'login');
-  assertInclui(html, configuracao.tenantSlug, 'login');
-  assertInclui(html, configuracao.email, 'login');
+  assertNaoInclui(html, '>API<', 'login');
+  assertNaoInclui(html, '>Tenant<', 'login');
+  assertNaoInclui(html, configuracao.apiUrl, 'login');
+  assertNaoInclui(html, configuracao.tenantSlug, 'login');
+  assertNaoInclui(html, configuracao.email, 'login');
   assertNaoInclui(html, configuracao.senha, 'login');
 }
 
@@ -124,8 +124,6 @@ async function autenticar() {
   const resposta = await requisitar('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({
-      apiUrl: configuracao.apiUrl,
-      tenantSlug: configuracao.tenantSlug,
       email: configuracao.email,
       senha: configuracao.senha
     })

@@ -43,22 +43,20 @@ npm run dev
 
 ## Login
 
-A rota `/login` autentica com `tenantSlug`, email e senha, salva a sessao local e redireciona para `/operacoes`.
+A rota `/login` solicita apenas email e senha, salva a sessao e redireciona para o destino permitido ao papel.
 A sessao usa cookies `HttpOnly` emitidos pelas rotas BFF do Next.js.
 Quando o access token expira ou a API retorna 401, o BFF tenta renovar a sessao via `POST /auth/renovar`.
 Em producao HTTPS, defina `OCTACLIN_COOKIE_SECURE=true` para marcar os cookies de sessao como `Secure`. Em `localhost` HTTP, mantenha sem essa variavel.
-Para restringir quais backends podem ser informados no campo `API`, defina `OCTACLIN_API_ORIGENS_PERMITIDAS` com origens separadas por virgula, por exemplo `https://api.octaclin.com,https://staging-api.octaclin.com`.
-O BFF rejeita URLs de API com protocolo diferente de HTTP/HTTPS, credenciais embutidas, query string ou hash.
+O BFF resolve `OCTACLIN_BACKEND_URL` e `OCTACLIN_TENANT_SLUG` no servidor; esses valores nao sao solicitados ao usuario.
+Defina `OCTACLIN_API_ORIGENS_PERMITIDAS` com a origem do backend autorizada para o ambiente.
 
-Campos do seed demo:
+Credenciais do seed demo:
 
-- API: `http://localhost:3001`
-- Tenant: `clinica-carla`
 - Email SuperAdmin: `admin@octaclin.local`
 - Senha: `OctaClin@123`
 
-O campo `API` deve apontar para o backend NestJS. Nao rode a web Next.js na mesma porta configurada como API; se a web estiver em `3000`, mantenha o backend em `3001`.
-Se o backend estiver fora do ar ou responder HTML no lugar de JSON, o BFF mostra uma mensagem curta em JSON tratada pela interface, nao o HTML interno de erro do Next.js.
+No ambiente local, configure `OCTACLIN_BACKEND_URL=http://localhost:3001` e `OCTACLIN_TENANT_SLUG=clinica-carla`.
+Se o backend estiver fora do ar ou responder HTML no lugar de JSON, o BFF mostra uma mensagem curta tratada pela interface.
 
 ## Operacoes
 

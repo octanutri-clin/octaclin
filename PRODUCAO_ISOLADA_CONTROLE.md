@@ -127,8 +127,8 @@ Contexto para quem retomar com acesso ao dashboard Render:
    backend (`Root Directory=octaclin-backend` combinado com `Dockerfile
    Path=octaclin-backend/Dockerfile`), variavel obrigatoria
    ausente (`JWT_SEGREDO`, `JWT_REFRESH_SEGREDO`,
-   `CRIPTOGRAFIA_CHAVE_AES_256` no backend; `NEXT_PUBLIC_API_URL`/
-   `OCTACLIN_BACKEND_URL` no web), `REDIS_URL` sem `rediss://` (TLS
+   `CRIPTOGRAFIA_CHAVE_AES_256` no backend; `OCTACLIN_BACKEND_URL` e
+   `OCTACLIN_TENANT_SLUG` no web), `REDIS_URL` sem `rediss://` (TLS
    obrigatorio, ver `configuracao-redis.ts`), `BANCO_EXECUTAR_MIGRACOES` sem
    estar `false` tentando rodar migration de novo, ou plano Free do Render
    sem recurso suficiente para o build.

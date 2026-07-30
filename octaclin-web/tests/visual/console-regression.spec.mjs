@@ -119,15 +119,15 @@ async function login(page) {
   await expect(page.getByRole('heading', { name: 'Acesso OctaClin' })).toBeVisible();
 
   const campos = page.locator('input');
-  await expect(campos).toHaveCount(4);
-  await campos.nth(0).fill(credenciais.apiUrl);
-  await campos.nth(1).fill(credenciais.tenantSlug);
-  await campos.nth(2).fill(credenciais.email);
-  await campos.nth(3).fill(credenciais.senha);
+  await expect(campos).toHaveCount(2);
+  await expect(page.getByText('API', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Tenant', { exact: true })).toHaveCount(0);
+  await campos.nth(0).fill(credenciais.email);
+  await campos.nth(1).fill(credenciais.senha);
 
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(/\/operacoes$/);
-  expect(payloadLogin).toEqual(credenciais);
+  expect(payloadLogin).toEqual({ email: credenciais.email, senha: credenciais.senha });
 }
 
 async function prepararSessaoConsoleMockada(page) {
@@ -513,6 +513,29 @@ async function prepararOperacoesMockadas(page) {
 test.describe('login do console', () => {
   test('envia as credenciais e respeita o destino da sessao', async ({ page }) => {
     await login(page);
+  });
+
+  test('recupera senha sem expor configuracao tecnica', async ({ page }) => {
+    let payloadRecuperacao;
+    await page.route('**/api/auth/recuperar-senha', async (route) => {
+      payloadRecuperacao = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ mensagem: 'Se o email estiver cadastrado, enviaremos as instrucoes.' })
+      });
+    });
+
+    await page.goto('/esqueci-senha');
+    await expect(page.getByRole('heading', { name: 'Recuperar senha' })).toBeVisible();
+    await expect(page.locator('input')).toHaveCount(1);
+    await expect(page.getByText('API', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Tenant', { exact: true })).toHaveCount(0);
+    await page.getByLabel('Email').fill(credenciais.email);
+    await page.getByRole('button', { name: 'Enviar link' }).click();
+
+    await expect(page.getByText('Se o email estiver cadastrado, enviaremos as instrucoes.')).toBeVisible();
+    expect(payloadRecuperacao).toEqual({ email: credenciais.email });
   });
 });
 

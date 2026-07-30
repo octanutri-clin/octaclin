@@ -230,6 +230,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   opcional; criacao, remarcacao e cancelamento comunicam o efeito na agenda
   interna.
 
+
 ## Estado atual de uso
 
 O sistema esta em producao isolada aceita, com massa ficticia mantida fora do banco de producao, piloto interno aprovado, restore real validado e pacote juridico ampliado. A agenda agora tambem aceita solicitacoes publicas com aprovacao manual segura, sem reservar horario nem persistir token bruto, e distingue cancelamento pelo profissional de desmarcamento pelo paciente e de cancelamento originado no Google. O profissional conta com um painel clinico diario agregando prioridades da propria agenda de pacientes. Ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria: faltam recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido.
