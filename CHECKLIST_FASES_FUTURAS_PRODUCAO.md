@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 165 - progresso do formulario publico.
+Atualizado em 2026-07-30 apos a Fase 166 - painel clinico para leitura diaria.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -595,6 +595,10 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 - [x] Fase 165 - Progresso do formulario publico.
   - Exibe progresso das perguntas obrigatorias sem alterar contrato ou envio.
   - Data: 2026-07-30. Saida: `fase-165-progresso-formulario-publico.md`.
+
+- [x] Fase 166 - Painel clinico para leitura diaria.
+  - Indicadores agrupados e controles de rotina com toque/foco consistentes.
+  - Data: 2026-07-30. Saida: `fase-166-painel-clinico-leitura-diaria.md`.
 
 ## Backlog pos-producao
 

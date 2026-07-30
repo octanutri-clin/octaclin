@@ -64,7 +64,7 @@ function podeAgir(sessao: SessaoPublica | null, permissao: string) {
 }
 
 function LinkAcao({ href, children }: { href: Route; children: React.ReactNode }) {
-  return <Link href={href} className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover">{children}</Link>;
+  return <Link href={href} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria">{children}</Link>;
 }
 
 function Indicador({ titulo, valor, detalhe, icone: Icone }: { titulo: string; valor: number; detalhe: string; icone: typeof CalendarDays }) {
@@ -187,7 +187,7 @@ export function PainelDashboard() {
     <section className="flex flex-col gap-3 border-b border-linha pb-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0"><h2 className="text-lg font-semibold text-tinta">Painel clinico</h2><p className="text-sm text-texto-suave">Prioridades diarias, pendencias e proximos atendimentos.</p></div>
       <div className="flex flex-wrap items-end gap-3">
-        <div className="flex rounded-md border border-linha p-1" aria-label="Periodo do painel clinico">{periodos.map((item) => <button key={item.valor} type="button" onClick={() => trocarPeriodo(item.valor)} className={`h-8 rounded px-3 text-sm font-medium ${periodo === item.valor ? 'bg-primaria text-white' : 'text-tinta hover:bg-superficie-hover'}`}>{item.rotulo}</button>)}</div>
+        <div className="flex rounded-md border border-linha p-1" aria-label="Periodo do painel clinico">{periodos.map((item) => <button key={item.valor} type="button" onClick={() => trocarPeriodo(item.valor)} className={`min-h-11 rounded px-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria ${periodo === item.valor ? 'bg-primaria text-white' : 'text-tinta hover:bg-superficie-hover'}`}>{item.rotulo}</button>)}</div>
         {podeContexto ? <label className="grid min-w-52 gap-1 text-xs font-semibold text-texto-suave">Profissional em contexto<Selecao aria-label="Profissional em contexto" value={profissionalId} onChange={(evento) => trocarProfissional(evento.target.value)}><option value="">Selecionar profissional</option>{profissionais.map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}</Selecao></label> : null}
       </div>
     </section>
@@ -198,12 +198,15 @@ export function PainelDashboard() {
     {carregando && !dados ? <BarraCarregamento visivel rotulo="Atualizando painel clinico" /> : null}
     {dados?.selecaoObrigatoria ? <EstadoVazio titulo="Selecione um profissional" descricao="O painel clinico requer um contexto profissional explicito." /> : null}
     {dados && !dados.selecaoObrigatoria ? <>
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <section aria-labelledby="hoje-em-foco" className="grid gap-3">
+        <div><h2 id="hoje-em-foco" className="text-base font-semibold text-tinta">Hoje em foco</h2><p className="mt-1 text-sm text-texto-suave">Indicadores para organizar a rotina clinica.</p></div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Indicador titulo="Hoje" valor={dados.indicadores.consultasHoje} detalhe={`${dados.indicadores.proximas} proximas`} icone={CalendarDays} />
         <Indicador titulo="Sem retorno" valor={dados.indicadores.semRetorno30} detalhe={`${dados.indicadores.semRetorno60} em 60d, ${dados.indicadores.semRetorno90Mais} em 90+d`} icone={UserRoundPlus} />
         <Indicador titulo="Pendencias" valor={dados.indicadores.tarefasVencidas + dados.indicadores.formulariosPendentes} detalhe={`${dados.indicadores.tarefasVencidas} tarefas, ${dados.indicadores.formulariosPendentes} formularios`} icone={ClipboardList} />
         <Indicador titulo="Comunicacoes" valor={dados.indicadores.comunicacoesEmAlerta} detalhe={`${dados.indicadores.solicitacoesPendentes} solicitacoes pendentes`} icone={MessageSquareWarning} />
         <Indicador titulo="Risco alto" valor={dados.indicadores.pacientesRiscoAlto} detalhe="Priorizar retorno clinico" icone={AlertTriangle} />
+        </div>
       </section>
       <section className="border-y border-linha py-4"><CabecalhoFila titulo="Fila de prioridade" detalhe="Alertas operacionais ordenados por prioridade." />{dados.alertas.length ? <div className="grid gap-2">{dados.alertas.map((alerta) => <div key={alerta.id} className="flex min-w-0 items-center justify-between gap-3 border-l-4 border-alerta bg-alerta-suave px-3 py-2"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{nomeAlerta(alerta.tipo)}</p><p className="text-xs text-texto-suave">Registrado em {formatarDataHora(alerta.ocorridoEm)}</p></div>{alerta.ocultavel ? <button type="button" aria-label="Ocultar alerta" title="Ocultar alerta" disabled={processando === `alerta-${alerta.id}`} onClick={() => void executar(`alerta-${alerta.id}`, 'Alerta ocultado por 24 horas.', () => ocultarAlertaDashboardClinico(alerta.id), 'Ocultar este alerta por 24 horas?')} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-texto-suave hover:bg-white disabled:opacity-50"><EyeOff size={17} /></button> : null}</div>)}</div> : <EstadoVazio titulo="Nenhum alerta clinico" descricao="Nao ha alertas prioritarios neste contexto." />}</section>
       <section className="grid gap-5 xl:grid-cols-2">

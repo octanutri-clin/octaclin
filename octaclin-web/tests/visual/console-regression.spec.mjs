@@ -1133,6 +1133,7 @@ test.describe('painel clinico profissional', () => {
 
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Painel clinico' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hoje em foco' })).toBeVisible();
     await expect(page.getByText('Ana Souza').first()).toBeVisible();
     await expect(page.getByLabel('Profissional em contexto')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Criar retorno' })).toHaveAttribute('href', /pacienteId=paciente-2/);
