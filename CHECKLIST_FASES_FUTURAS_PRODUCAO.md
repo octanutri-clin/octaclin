@@ -605,14 +605,16 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     integracao opcional; a agenda interna continua ativa sem conexao externa.
   - Data: 2026-07-30. Saida: `fase-167-agenda-interna-visual.md`.
 
-- [ ] Fase 168 - Acesso comercial e onboarding.
+- [x] Fase 168 - Acesso comercial e onboarding.
   - Login e recuperacao solicitam apenas email/senha e email,
     respectivamente; API e tenant sao resolvidos pelo BFF.
   - Primeiro acesso por convite e aceites legais continuam sendo o onboarding
     oficial ja validado para pacientes e profissionais.
-  - Implementacao e validacao local concluidas em 2026-07-30.
-  - Pendente: configurar tenant no Render web, publicar e validar login real.
-    Saida: `fase-168-acesso-comercial-onboarding.md`.
+  - Implementacao local, publicacao e validacao em producao concluidas em
+    2026-07-30.
+  - Render web configurado com backend de producao e tenant `octaclin-admin`;
+    deploy `5558a4d` Live e smoke do BFF aprovado.
+  - Saida: `fase-168-acesso-comercial-onboarding.md`.
 
 - [ ] Fase 169 - Disponibilidade e feed completo da agenda.
   - Filtrar o feed por periodo/profissional e retornar projecao minima.

@@ -230,6 +230,12 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   opcional; criacao, remarcacao e cancelamento comunicam o efeito na agenda
   interna.
 
+- Fase 168 - Acesso comercial e onboarding: login e recuperacao de senha
+  deixaram de expor API e tenant ao usuario final; o BFF passou a resolver
+  backend e organizacao por configuracao exclusiva do servidor, com falha
+  fechada em producao. O Render web foi configurado para o backend de producao
+  e tenant `octaclin-admin`; deploy e smoke funcional foram aprovados.
+
 
 ## Estado atual de uso
 

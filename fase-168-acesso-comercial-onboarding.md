@@ -1,6 +1,6 @@
 # Fase 168 - Acesso comercial e onboarding
 
-Status: implementada e validada localmente em 2026-07-30; publicacao pendente.
+Status: concluida e validada em producao em 2026-07-30.
 
 ## Objetivo
 
@@ -56,7 +56,18 @@ pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spe
 pnpm --dir octaclin-web exec playwright test tests/visual/acessibilidade.spec.mjs -g "login" --reporter=list
 ```
 
+Em producao, o servico web recebeu:
+
+```text
+OCTACLIN_BACKEND_URL=https://octaclin-backend-producao.onrender.com
+OCTACLIN_TENANT_SLUG=octaclin-admin
+```
+
+O deploy `5558a4d` ficou `Live` no Render. O smoke funcional confirmou que a
+tela possui somente email e senha e que o BFF alcanca o backend configurado:
+credenciais sinteticas invalidas retornaram `Credenciais invalidas`, sem erro
+de configuracao.
+
 ## Proxima fase
 
-Antes da Fase 169, configurar `OCTACLIN_TENANT_SLUG=octaclin-admin` no
-Render web de producao, publicar e validar o login real.
+Fase 169 - Disponibilidade e feed completo da agenda.

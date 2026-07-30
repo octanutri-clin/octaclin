@@ -16,7 +16,7 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase concluida mais recente no momento deste arquivo: Fase 167 - Agenda interna visual. A Fase 168 esta implementada localmente e aguarda configuracao/publicacao do Render. A revisao juridica externa da Fase 133 continua obrigatoria antes do go-live.
+- Fase concluida mais recente no momento deste arquivo: Fase 168 - Acesso comercial e onboarding, publicada e validada no Render. A revisao juridica externa da Fase 133 continua obrigatoria antes do go-live.
 - Fase 131 foi aceita em 2026-07-26: producao esta isolada de staging. Proxima fase critica planejada: Fase 132 - dominio, SSL e identidade de envio.
 - Melhoria continua: Fases 138, 141 e 142 atualizaram NestJS para 11.1.28, TypeORM para 1.1.0 e Next.js para 15.5.22, com auditorias de producao zeradas. Preserve React 18.3.1 e o shim de cookies BFF ate uma fase dedicada de Next.js 16/React 19.
 - Fase 139 removeu `any` de codigo backend de producao e consolidou contratos de agenda/convites; preserve `requisitarBackendAutenticado` como a fronteira unica de erros BFF autenticados.

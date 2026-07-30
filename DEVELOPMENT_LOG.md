@@ -30,12 +30,12 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 ### Fase 168 - Acesso comercial e onboarding
 
 - Responsavel: Codex.
-- Implementacao local: 2026-07-30.
-- Commit: registrado no historico Git desta fase.
-- Push: nao; aguarda configuracao previa do Render.
-- Validacoes: Playwright login/recuperacao desktop/mobile, acessibilidade, authz, typecheck, lint e build web.
+- Conclusao: 2026-07-30.
+- Commit: `5558a4d`.
+- Push: sim.
+- Validacoes: Playwright login/recuperacao desktop/mobile, acessibilidade, authz, typecheck, lint, build web, deploy Live no Render e smoke funcional do BFF em producao.
 - Arquivos principais: `login-form.tsx`, `esqueci-senha-form.tsx`, rotas BFF de auth e configuracao de acesso do servidor.
-- Pendencias: configurar `OCTACLIN_TENANT_SLUG=octaclin-admin`, publicar e validar login real.
+- Pendencias: nenhuma nesta fase.
 - Proxima fase: Fase 169 - Disponibilidade e feed completo da agenda.
 
 ### Fase 167 - Agenda interna visual
