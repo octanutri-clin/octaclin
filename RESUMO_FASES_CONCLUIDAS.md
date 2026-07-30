@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a Fase 167 - agenda interna visual.
+Atualizado em 2026-07-30 apos a validacao de producao da Fase 169.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -240,8 +240,9 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 169 - Disponibilidade e feed completo da agenda: o feed filtra por
   periodo e profissional, apresenta eventos externos apenas como
   `Indisponivel` e permite reservar ou liberar intervalos internos. A agenda
-  ganhou visoes de dia, semana e mes; a migration correspondente aguarda o
-  proximo deploy coordenado.
+  ganhou visoes de dia, semana e mes. Em producao, as migrations pendentes
+  foram alinhadas no Neon e a web foi publicada com acao de liberar horario
+  sempre visivel nos bloqueios internos.
 
 ## Estado atual de uso
 

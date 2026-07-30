@@ -1,7 +1,6 @@
 # Fase 169 - Disponibilidade e feed completo da agenda
 
-Status: concluida localmente em 2026-07-30. Requer deploy coordenado de backend
-e web para executar a migration antes da validacao em producao.
+Status: validada em producao em 2026-07-30.
 
 ## Entregue
 
@@ -14,11 +13,14 @@ e web para executar a migration antes da validacao em producao.
 - Agenda visual com visoes de dia, semana e mes, sem arrastar eventos.
 - A agenda interna permanece funcional sem uma conta Google conectada.
 
-## Deploy
+## Producao
 
-O backend deve executar a migration
-`CriarBloqueiosManuaisAgenda1720000001006` antes ou durante a publicacao da
-web. Nenhuma variavel nova e necessaria.
+- As migrations `1720000001002` a `1720000001004` e
+  `CriarBloqueiosManuaisAgenda1720000001006` foram aplicadas e registradas no
+  Neon de producao.
+- A web esta em live com o commit `5bfec09`, que mantem a acao de liberar
+  horario sempre visivel nos bloqueios internos, inclusive nos mais curtos.
+- Nenhuma variavel nova foi necessaria.
 
 ## Validacoes
 
@@ -30,6 +32,11 @@ pnpm --dir octaclin-web lint
 pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs -g "agenda de producao" --project=desktop-chromium --reporter=list
 pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs -g "agenda de producao" --project=mobile-chromium --reporter=list
 ```
+
+Validacao manual de producao: bloqueio interno criado sem erro, migrations
+confirmadas no historico do Neon e deploy web `5bfec09` concluido com servico
+em live. Dashboard e questionarios voltaram a responder apos o alinhamento do
+schema.
 
 ## Proxima fase
 

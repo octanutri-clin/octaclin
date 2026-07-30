@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 167 - agenda interna visual.
+Atualizado em 2026-07-30 apos a validacao de producao da Fase 169.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -622,6 +622,9 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Criar bloqueios internos manuais para intervalos, reunioes e ferias.
   - Adicionar visoes de dia e mes sem drag-and-drop nesta etapa.
   - Data: 2026-07-30. Saida: `fase-169-disponibilidade-feed-agenda.md`.
+  - Commit: `25811de`, `5bfec09`.
+  - Validacao de producao: migrations 1002 a 1004 e 1006 alinhadas no Neon;
+    bloqueio interno confirmado e web em live com acao de liberar horario.
 
 - [ ] Fase 170 - Integridade historica de formularios.
   - Guardar versao e snapshot da estrutura em cada envio.
@@ -672,8 +675,10 @@ Fase XXX - Nome:
 ```
 
 - Fase 169 - Disponibilidade e feed completo da agenda:
-  - Status: concluida localmente; aguardando deploy coordenado.
-  - Commit: `25811de`.
+  - Status: validada em producao.
+  - Commit: `25811de`, `5bfec09`.
   - Data: 2026-07-30.
-  - Validacoes: backend Jest, typechecks, lint e Playwright desktop/mobile.
-  - Observacoes: a migration `1720000001006` deve executar antes da web.
+  - Validacoes: backend Jest, typechecks, lint, Playwright desktop/mobile e
+    bloqueio interno manual em producao.
+  - Observacoes: migrations 1002 a 1004 e 1006 aplicadas e registradas no
+    Neon; web em live com controle de liberacao sempre acessivel.
