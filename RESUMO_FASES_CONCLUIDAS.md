@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a Fase 160 - redesenho UX/UI e especificacao Penpot.
+Atualizado em 2026-07-30 apos a Fase 161 - base visual e navegacao compartilhada.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -211,6 +211,8 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 159 - Revisao juridico-operacional preparatoria: o pacote passou a ter Termo de Uso, Anexo de Tratamento de Dados e uma revisao rastreavel dos bloqueadores juridicos. O trabalho confirmou aceites versionados, exportacao, auditoria e controles tecnicos, mas preservou como bloqueio a aprovacao por advogado, identidade empresarial, canal de privacidade, bases legais, inventario de suboperadores/transferencias e decisao sobre menores.
 
 - Fase 160 - Redesenho UX/UI e especificacao Penpot: definida a fonte de verdade visual para os portais, agendamento, formularios, console clinico, gestao e modulos avancados. O sistema visual preserva Figtree/Noto Sans, foco visivel, responsividade, componentes reutilizaveis e exemplos exclusivamente sinteticos; o portal do paciente nao deve expor score de risco clinico.
+
+- Fase 161 - Base visual e navegacao compartilhada: o console passou a agrupar modulos em Clinica, Relacionamento e Administracao sem alterar permissoes; `Botao`, `Campo` e `Selecao` adotaram alvo minimo de 44 px e o portal do paciente deixou de exibir score de risco clinico.
 
 ## Estado atual de uso
 

@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:next15": "node scripts/test-async-dynamic-apis.mjs",
+    "test:base-visual": "node scripts/test-base-visual-navegacao.mjs",
     "test:authz": "node scripts/test-autorizacao-rotas.mjs && node scripts/test-agendamento-publico-bff.mjs && node scripts/test-questionarios-revisao-bff.mjs && node scripts/test-dashboard-clinico-bff.mjs",
     "test:agendamento-publico:bff": "node scripts/test-agendamento-publico-bff.mjs",
     "test:questionarios-revisao:bff": "node scripts/test-questionarios-revisao-bff.mjs",

@@ -27,6 +27,24 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 160 - Redesenho UX/UI e especificacao Penpot
+
+- Responsavel: Codex.
+- Conclusao: 2026-07-30.
+- Commit: `b46d4da`.
+- Push: sim.
+- Validacoes: estrutura e pranchas principais verificadas no Penpot, somente dados sinteticos.
+- Proxima fase: Fase 161 - Base visual e navegacao compartilhada.
+
+### Fase 161 - Base visual e navegacao compartilhada
+
+- Responsavel: Codex.
+- Conclusao: 2026-07-30.
+- Commit: registrado no historico Git desta fase.
+- Push: sim.
+- Validacoes: teste de contrato, typecheck, lint, autorizacao, acessibilidade, build e regressao visual clinica desktop/mobile.
+- Proxima fase: redesenho aprofundado do portal do paciente.
+
 ### Fase 105 - Evolucoes/anotacoes clinicas
 
 - Responsavel: Codex.

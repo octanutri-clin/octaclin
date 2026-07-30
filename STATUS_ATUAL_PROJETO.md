@@ -7,7 +7,7 @@ Atualizado em 2026-07-30.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 160 - redesenho UX/UI e especificacao Penpot (2026-07-30). O arquivo visual cobre sistema de design, portais, agenda, console clinico, gestao e modulos avancados, com dados sinteticos e criterios de acessibilidade/responsividade. A implementacao inicia pela base visual e navegacao compartilhada.
+- Ultima fase concluida: Fase 161 - base visual e navegacao compartilhada (2026-07-30). O console agrupa seus modulos, os componentes compartilhados respeitam alvo de toque de 44 px e o portal do paciente nao revela score de risco clinico. As proximas fases aprofundam cada jornada a partir da especificacao Penpot.
 - Fase 148: Foco visivel proprio nos componentes compartilhados `Campo`/`AreaTexto`/`Selecao`/`Botao` (entregue em 2026-07-27, PR #5 aberto para `main`).
 - Fase 147: Foco visivel explicito nos inputs crus da agenda (entregue em 2026-07-27). Antes dela, esta branch recebeu por merge a Fase 146 (gate de acessibilidade, feita pelo Codex na `main`).
 - Fase 145: Painel clinico do profissional e desmarcamento/cancelamento distintos (entregue em 2026-07-27, commit `22e161b` da Task 5).

@@ -606,7 +606,7 @@ export function PortalPaciente() {
                 <p className="text-sm text-texto-suave">Ola,</p>
                 <h2 className="text-2xl font-semibold text-tinta">{portal.paciente.nome}</h2>
                 <p className="mt-1 text-sm text-texto-suave">
-                  Status {rotuloStatus(portal.paciente.statusAdesao)} - risco {portal.paciente.scoreRisco}
+                  Status {rotuloStatus(portal.paciente.statusAdesao)}
                 </p>
               </div>
               <Cartao className="p-3">

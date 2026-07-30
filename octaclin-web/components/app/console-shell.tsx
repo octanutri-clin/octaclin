@@ -20,17 +20,17 @@ import { obterSessao } from '@/lib/auth-api';
 import { PortalShell } from '@/components/app/portal-shell';
 
 const itens = [
-  { href: '/dashboard', rotulo: 'Dashboard', icone: LayoutDashboard, permissao: 'dashboard.ler' },
-  { href: '/questionarios', rotulo: 'Questionarios', icone: ClipboardList, permissao: 'questionarios.ler' },
-  { href: '/comunicacoes', rotulo: 'Comunicacoes', icone: Send, permissao: 'comunicacoes.mensagens.ler' },
-  { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays, permissao: 'agenda.consultas.ler' },
-  { href: '/automacoes', rotulo: 'Automacoes', icone: Zap, permissao: 'automacoes.gerenciar' },
-  { href: '/ia', rotulo: 'IA', icone: Brain, permissao: 'ia.executar' },
-  { href: '/mobile', rotulo: 'Mobile', icone: Smartphone, permissao: 'mobile.operar' },
-  { href: '/gamificacao', rotulo: 'Gamificacao', icone: Trophy, permissao: 'gamificacao.gerenciar' },
-  { href: '/operacoes', rotulo: 'Operacoes', icone: Settings, permissao: 'operacoes.auditoria.ler' },
-  { href: '/pacientes', rotulo: 'Pacientes', icone: HeartPulse, permissao: 'pacientes.listar' },
-  { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope, permissao: 'profissionais.ler' }
+  { href: '/dashboard', rotulo: 'Dashboard', icone: LayoutDashboard, permissao: 'dashboard.ler', grupo: 'Clinica' },
+  { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays, permissao: 'agenda.consultas.ler', grupo: 'Clinica' },
+  { href: '/pacientes', rotulo: 'Pacientes', icone: HeartPulse, permissao: 'pacientes.listar', grupo: 'Clinica' },
+  { href: '/questionarios', rotulo: 'Questionarios', icone: ClipboardList, permissao: 'questionarios.ler', grupo: 'Clinica' },
+  { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope, permissao: 'profissionais.ler', grupo: 'Clinica' },
+  { href: '/comunicacoes', rotulo: 'Comunicacoes', icone: Send, permissao: 'comunicacoes.mensagens.ler', grupo: 'Relacionamento' },
+  { href: '/automacoes', rotulo: 'Automacoes', icone: Zap, permissao: 'automacoes.gerenciar', grupo: 'Relacionamento' },
+  { href: '/operacoes', rotulo: 'Operacoes', icone: Settings, permissao: 'operacoes.auditoria.ler', grupo: 'Administracao' },
+  { href: '/ia', rotulo: 'IA', icone: Brain, permissao: 'ia.executar', grupo: 'Administracao' },
+  { href: '/mobile', rotulo: 'Mobile', icone: Smartphone, permissao: 'mobile.operar', grupo: 'Administracao' },
+  { href: '/gamificacao', rotulo: 'Gamificacao', icone: Trophy, permissao: 'gamificacao.gerenciar', grupo: 'Administracao' }
 ] as const;
 
 interface ConsoleShellProps {

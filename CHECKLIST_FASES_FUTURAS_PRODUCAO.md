@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 160 - redesenho UX/UI e especificacao Penpot.
+Atualizado em 2026-07-30 apos a Fase 161 - base visual e navegacao compartilhada.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -572,6 +572,12 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - A especificacao preserva dados sinteticos, foco visivel, responsividade e
     a regra de nao expor score clinico no portal do paciente.
   - Data: 2026-07-30. Saida: `fase-160-redesenho-ux-penpot.md`.
+
+- [x] Fase 161 - Base visual e navegacao compartilhada.
+  - Console agrupado em Clinica, Relacionamento e Administracao; controles
+    compartilhados com alvo de toque de 44 px e portal do paciente sem score
+    de risco clinico.
+  - Data: 2026-07-30. Saida: `fase-161-base-visual-navegacao.md`.
 
 ## Backlog pos-producao
 

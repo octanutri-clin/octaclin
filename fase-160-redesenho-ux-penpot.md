@@ -10,8 +10,8 @@ dados reais de pacientes.
 
 ## Entregue
 
-- Arquivo Penpot com as paginas `00 — Visão e sistema`, `01 — Portal e
-  agendamento`, `02 — Console e gestão` e `03 — Especificação`.
+- Arquivo Penpot com as paginas 00 (visao e sistema), 01 (portal e
+  agendamento), 02 (console e gestao) e 03 (especificacao).
 - Sistema visual local com tipografia Figtree/Noto Sans, cores, espacamento,
   bordas, estados e componentes reutilizaveis.
 - Especificacoes desktop e mobile para acesso, portal do paciente,

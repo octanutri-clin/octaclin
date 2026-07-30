@@ -13,7 +13,7 @@ export const Campo = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
     <input
       ref={ref}
       className={cn(
-        'h-9 w-full rounded-md border border-linha bg-white px-3 text-sm text-tinta shadow-none',
+        'min-h-11 w-full rounded-md border border-linha bg-white px-3 text-sm text-tinta shadow-none',
         focoVisivel,
         className
       )}
@@ -44,7 +44,7 @@ export const Selecao = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttri
   ({ className, ...props }, ref) => (
     <select
       ref={ref}
-      className={cn('h-9 w-full rounded-md border border-linha bg-white px-3 text-sm text-tinta', focoVisivel, className)}
+      className={cn('min-h-11 w-full rounded-md border border-linha bg-white px-3 text-sm text-tinta', focoVisivel, className)}
       {...props}
     />
   )
