@@ -601,45 +601,71 @@ export function PortalPaciente() {
 
         {portal ? (
           <>
-            <section id="resumo" className="scroll-mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_repeat(3,140px)] xl:grid-cols-[minmax(0,1fr)_repeat(8,104px)]">
-              <div>
-                <p className="text-sm text-texto-suave">Ola,</p>
-                <h2 className="text-2xl font-semibold text-tinta">{portal.paciente.nome}</h2>
-                <p className="mt-1 text-sm text-texto-suave">
-                  Status {rotuloStatus(portal.paciente.statusAdesao)}
-                </p>
+            <section id="resumo" className="scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,1fr))]">
+              <div className="self-center">
+                <p className="text-sm text-texto-suave">Ola, {portal.paciente.nome}</p>
+                <h2 className="mt-1 text-2xl font-semibold text-tinta">Seu acompanhamento hoje</h2>
+                <p className="mt-2 text-sm text-texto-suave">Status {rotuloStatus(portal.paciente.statusAdesao)}</p>
               </div>
-              <Cartao className="p-3">
-                <p className="text-xs text-texto-suave">Consultas</p>
-                <p className="text-2xl font-semibold">{portal.resumo.consultasProximas}</p>
+
+              <Cartao className="grid gap-3 p-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-tinta">Proxima acao</h3>
+                  {portal.formulariosPendentes[0] ? (
+                    <>
+                      <p className="mt-2 text-sm font-medium text-tinta">{portal.formulariosPendentes[0].titulo}</p>
+                      <p className="mt-1 text-xs text-texto-suave">Responda ate {formatarDataHora(portal.formulariosPendentes[0].expiraEm)}</p>
+                    </>
+                  ) : (
+                    <p className="mt-2 text-sm text-texto-suave">Nenhuma acao pendente agora.</p>
+                  )}
+                </div>
+                {portal.formulariosPendentes[0] ? (
+                  <a
+                    href={portal.formulariosPendentes[0].linkFormulario}
+                    className="inline-flex min-h-11 items-center justify-center rounded-md bg-primaria px-3 text-sm font-medium text-white hover:bg-primaria-forte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                  >
+                    Responder agora
+                  </a>
+                ) : null}
               </Cartao>
-              <Cartao className="p-3">
-                <p className="text-xs text-texto-suave">Formularios</p>
-                <p className="text-2xl font-semibold">{portal.resumo.formulariosPendentes}</p>
+
+              <Cartao className="grid gap-3 p-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-tinta">Proxima consulta</h3>
+                  {portal.consultasProximas[0] ? (
+                    <>
+                      <p className="mt-2 text-sm font-medium text-tinta">{portal.consultasProximas[0].titulo}</p>
+                      <p className="mt-1 text-xs text-texto-suave">{formatarDataHora(portal.consultasProximas[0].inicioEm)}</p>
+                    </>
+                  ) : (
+                    <p className="mt-2 text-sm text-texto-suave">Nenhuma consulta futura agendada.</p>
+                  )}
+                </div>
+                {portal.consultasProximas[0]?.googleEventHtmlLink ? (
+                  <a
+                    href={portal.consultasProximas[0].googleEventHtmlLink}
+                    className="inline-flex min-h-11 items-center justify-center rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                  >
+                    Abrir agenda
+                  </a>
+                ) : null}
               </Cartao>
-              <Cartao className="p-3">
-                <p className="text-xs text-texto-suave">Respondidos</p>
-                <p className="text-2xl font-semibold">{portal.resumo.formulariosRespondidos}</p>
-              </Cartao>
-              <Cartao className="p-3">
-                <p className="text-xs text-texto-suave">Mensagens</p>
-                <p className="text-2xl font-semibold">{portal.resumo.mensagensRecentes}</p>
-              </Cartao>
-              <Cartao className="p-3">
-                <p className="text-xs text-texto-suave">Tarefas</p>
-                <p className="text-2xl font-semibold">{portal.resumo.tarefasPendentes ?? tarefasAcompanhamento.length}</p>
-              </Cartao>
-              <Cartao className="p-3">
-                <p className="text-xs text-texto-suave">Materiais</p>
-                <p className="text-2xl font-semibold">{portal.resumo.materiaisDisponiveis ?? materiaisDisponiveis.length}</p>
-              </Cartao>
-              <Cartao className="p-3">
-                <p className="text-xs text-texto-suave">Check-ins</p>
-                <p className="text-2xl font-semibold">{portal.resumo.checkinsRecentes ?? diariosRecentes.length}</p>
-              </Cartao>
-              <Cartao className="p-3">
-                <p className="text-xs text-texto-suave">Notificacoes</p>
-                <p className="text-2xl font-semibold">{portal.resumo.notificacoesPendentes ?? notificacoesPendentes.length}</p>
+
+              <Cartao className="grid gap-3 p-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-tinta">Plano em andamento</h3>
+                  <p className="mt-2 text-sm font-medium text-tinta">
+                    {portal.resumo.tarefasPendentes ?? tarefasAcompanhamento.length} tarefas e {portal.resumo.materiaisDisponiveis ?? materiaisDisponiveis.length} materiais
+                  </p>
+                  <p className="mt-1 text-xs text-texto-suave">Revise seu plano para manter o acompanhamento em dia.</p>
+                </div>
+                <a
+                  href="#plano"
+                  className="inline-flex min-h-11 items-center justify-center rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                >
+                  Ver plano
+                </a>
               </Cartao>
             </section>
 

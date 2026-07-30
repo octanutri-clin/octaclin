@@ -27,6 +27,15 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 162 - Portal do paciente orientado a prioridades
+
+- Responsavel: Codex.
+- Conclusao: 2026-07-30.
+- Commit: registrado no historico Git desta fase.
+- Push: sim.
+- Validacoes: Playwright portal desktop/mobile, typecheck, lint e contrato da base visual.
+- Proxima fase: navegacao mobile propria e aprofundamento das demais telas do portal.
+
 ### Fase 160 - Redesenho UX/UI e especificacao Penpot
 
 - Responsavel: Codex.

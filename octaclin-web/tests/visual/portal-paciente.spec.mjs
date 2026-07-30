@@ -335,6 +335,10 @@ test.describe('portal do paciente', () => {
     await expect(page.getByRole('link', { name: 'Notificacoes', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Historico', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Perfil', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Seu acompanhamento hoje' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Proxima acao' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Proxima consulta' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Plano em andamento' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Proximas acoes' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Linha do tempo' })).toBeVisible();
     await expect(page.getByText('Agenda', { exact: true })).toBeVisible();
@@ -344,9 +348,8 @@ test.describe('portal do paciente', () => {
     await expect(page.getByText('Privacidade').first()).toBeVisible();
     await expect(page.getByText('Responder Check-in semanal')).toBeVisible();
     await expect(page.getByText('Consulta nutricional').first()).toBeVisible();
-    await expect(page.getByText('Tarefas', { exact: true })).toBeVisible();
-    await expect(page.getByText('Materiais', { exact: true })).toBeVisible();
-    await expect(page.getByText('Check-ins', { exact: true })).toBeVisible();
+    await expect(page.getByText('1 tarefas e 1 materiais')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Ver plano' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Check-in rapido' })).toBeVisible();
     await expect(page.getByLabel('Humor de hoje')).toBeVisible();
     await expect(page.getByLabel('Adesao ao plano')).toBeVisible();

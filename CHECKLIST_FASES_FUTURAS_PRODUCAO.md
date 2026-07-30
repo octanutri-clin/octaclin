@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 161 - base visual e navegacao compartilhada.
+Atualizado em 2026-07-30 apos a Fase 162 - portal do paciente orientado a prioridades.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -578,6 +578,11 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     compartilhados com alvo de toque de 44 px e portal do paciente sem score
     de risco clinico.
   - Data: 2026-07-30. Saida: `fase-161-base-visual-navegacao.md`.
+
+- [x] Fase 162 - Portal do paciente orientado a prioridades.
+  - Resumo reorganizado em proxima acao, proxima consulta e plano em andamento,
+    usando apenas dados ja disponiveis no portal.
+  - Data: 2026-07-30. Saida: `fase-162-portal-paciente-prioridades.md`.
 
 ## Backlog pos-producao
 
