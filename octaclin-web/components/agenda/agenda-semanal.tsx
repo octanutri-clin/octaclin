@@ -1,7 +1,7 @@
 'use client';
 
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, MapPin } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, MapPin, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import {
@@ -483,6 +483,17 @@ export function AgendaSemanal({
                       )}
                       style={{ top: topo, height: altura }}
                     >
+                      {bloqueioManual ? (
+                        <button
+                          type="button"
+                          aria-label="Liberar horario reservado"
+                          title="Liberar horario"
+                          className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded text-alerta-forte hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                          onClick={() => void removerBloqueio(item.id)}
+                        >
+                          <X size={14} />
+                        </button>
+                      ) : null}
                       {item.tipo === 'consulta' ? (
                         <a
                           href={`#consulta-${item.id}`}
@@ -503,15 +514,6 @@ export function AgendaSemanal({
                           <MapPin size={12} className="shrink-0" />
                           <span className="truncate">{item.local}</span>
                         </span>
-                      ) : null}
-                      {bloqueioManual && altura >= 84 ? (
-                        <button
-                          type="button"
-                          className="mt-1 text-left font-semibold underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
-                          onClick={() => void removerBloqueio(item.id)}
-                        >
-                          Liberar
-                        </button>
                       ) : null}
                     </div>
                   );
