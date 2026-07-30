@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-29 apos a Fase 159 - revisao juridico-operacional preparatoria.
+Atualizado em 2026-07-30 apos a Fase 160 - redesenho UX/UI e especificacao Penpot.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -565,6 +565,13 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Pendencia inegociavel: aprovacao por advogado, identidade empresarial,
     encarregado/canal, bases legais, suboperadores/transferencias e publicacao
     final em dominio oficial.
+
+- [x] Fase 160 - Redesenho UX/UI e especificacao Penpot.
+  - Fonte de verdade visual criada no Penpot para sistema visual, portais,
+    agenda, console clinico, gestao, comunicacoes e modulos avancados.
+  - A especificacao preserva dados sinteticos, foco visivel, responsividade e
+    a regra de nao expor score clinico no portal do paciente.
+  - Data: 2026-07-30. Saida: `fase-160-redesenho-ux-penpot.md`.
 
 ## Backlog pos-producao
 

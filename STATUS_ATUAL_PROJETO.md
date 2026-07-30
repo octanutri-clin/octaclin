@@ -1,13 +1,13 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-07-29.
+Atualizado em 2026-07-30.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 159 - revisao juridico-operacional preparatoria (2026-07-29). O pacote ganhou Termo de Uso, Anexo de Tratamento de Dados e revisao rastreavel dos bloqueadores. Aprovacao por advogado, identidade empresarial, encarregado/canal, bases legais, suboperadores e transferencias continuam obrigatorios antes de venda.
+- Ultima fase concluida: Fase 160 - redesenho UX/UI e especificacao Penpot (2026-07-30). O arquivo visual cobre sistema de design, portais, agenda, console clinico, gestao e modulos avancados, com dados sinteticos e criterios de acessibilidade/responsividade. A implementacao inicia pela base visual e navegacao compartilhada.
 - Fase 148: Foco visivel proprio nos componentes compartilhados `Campo`/`AreaTexto`/`Selecao`/`Botao` (entregue em 2026-07-27, PR #5 aberto para `main`).
 - Fase 147: Foco visivel explicito nos inputs crus da agenda (entregue em 2026-07-27). Antes dela, esta branch recebeu por merge a Fase 146 (gate de acessibilidade, feita pelo Codex na `main`).
 - Fase 145: Painel clinico do profissional e desmarcamento/cancelamento distintos (entregue em 2026-07-27, commit `22e161b` da Task 5).
