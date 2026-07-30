@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a Fase 162 - portal do paciente orientado a prioridades.
+Atualizado em 2026-07-30 apos a Fase 163 - navegacao mobile do portal do paciente.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -215,6 +215,8 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 161 - Base visual e navegacao compartilhada: o console passou a agrupar modulos em Clinica, Relacionamento e Administracao sem alterar permissoes; `Botao`, `Campo` e `Selecao` adotaram alvo minimo de 44 px e o portal do paciente deixou de exibir score de risco clinico.
 
 - Fase 162 - Portal do paciente orientado a prioridades: a tela inicial passou a destacar proxima acao, proxima consulta e plano em andamento em vez de oito indicadores dispersos, reutilizando os dados existentes e preservando os detalhes nas secoes abaixo.
+
+- Fase 163 - Navegacao mobile do portal do paciente: o celular passou a usar barra inferior com os cinco destinos essenciais, mantendo as abas detalhadas no desktop.
 
 ## Estado atual de uso
 

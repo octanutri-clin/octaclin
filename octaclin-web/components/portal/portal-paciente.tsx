@@ -328,6 +328,14 @@ const linksPortal = [
   { href: '#privacidade', rotulo: 'Privacidade' }
 ];
 
+const linksPortalMobile = [
+  { href: '#resumo', rotulo: 'Inicio', icone: HeartPulse },
+  { href: '#acoes', rotulo: 'Agenda', icone: CalendarDays },
+  { href: '#plano', rotulo: 'Plano', icone: Target },
+  { href: '#notificacoes', rotulo: 'Mensagens', icone: BellRing },
+  { href: '#perfil', rotulo: 'Perfil', icone: UserRound }
+];
+
 function PortalCarregando() {
   return (
     <Cartao className="grid gap-4 p-5" aria-live="polite" aria-busy="true">
@@ -582,6 +590,8 @@ export function PortalPaciente() {
       marca={{ icone: HeartPulse, rotulo: 'OctaClin', subrotulo: 'Portal do paciente' }}
       navegacao={portal ? linksPortal : []}
       navLabel="Navegacao do portal"
+      navegacaoMobile={portal ? linksPortalMobile : []}
+      navLabelMobile="Navegacao mobile do portal"
       acoes={acoesCabecalho}
       maxWidth="72rem"
     >

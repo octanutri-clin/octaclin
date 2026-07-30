@@ -328,24 +328,29 @@ test.describe('portal do paciente', () => {
     await page.goto('/portal');
 
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Navegacao do portal' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Resumo' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Acoes', exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Plano', exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Notificacoes', exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Historico', exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Perfil', exact: true })).toBeVisible();
+    if (testInfo.project.name === 'mobile-chromium') {
+      await expect(page.getByRole('navigation', { name: 'Navegacao mobile do portal' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Inicio', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Agenda', exact: true })).toBeVisible();
+    } else {
+      await expect(page.getByRole('navigation', { name: 'Navegacao do portal' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Resumo' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Acoes', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Plano', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Notificacoes', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Historico', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Perfil', exact: true })).toBeVisible();
+    }
     await expect(page.getByRole('heading', { name: 'Seu acompanhamento hoje' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Proxima acao' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Proxima consulta' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Plano em andamento' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Proximas acoes' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Linha do tempo' })).toBeVisible();
-    await expect(page.getByText('Agenda', { exact: true })).toBeVisible();
+    await expect(page.locator('#historico').getByText('Agenda', { exact: true })).toBeVisible();
     await expect(page.getByText('Formulario pendente', { exact: true })).toBeVisible();
     await expect(page.getByText('Formulario respondido', { exact: true })).toBeVisible();
     await expect(page.getByText('Mensagem', { exact: true })).toBeVisible();
-    await expect(page.getByText('Privacidade').first()).toBeVisible();
     await expect(page.getByText('Responder Check-in semanal')).toBeVisible();
     await expect(page.getByText('Consulta nutricional').first()).toBeVisible();
     await expect(page.getByText('1 tarefas e 1 materiais')).toBeVisible();

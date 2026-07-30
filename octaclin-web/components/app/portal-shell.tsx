@@ -30,6 +30,8 @@ interface PortalShellProps {
   descricao?: ReactNode;
   navegacao: ItemNavegacaoShell[];
   navLabel?: string;
+  navegacaoMobile?: ItemNavegacaoShell[];
+  navLabelMobile?: string;
   acoes?: ReactNode;
   maxWidth?: string;
   children: ReactNode;
@@ -43,6 +45,8 @@ export function PortalShell({
   descricao,
   navegacao,
   navLabel = 'Modulos',
+  navegacaoMobile = [],
+  navLabelMobile = 'Navegacao mobile',
   acoes,
   maxWidth = '1180px',
   children
@@ -135,7 +139,7 @@ export function PortalShell({
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
+    <main className={cn('min-h-screen overflow-x-hidden bg-fundo text-tinta', navegacaoMobile.length ? 'pb-20 md:pb-0' : '')}>
       <header className="border-b border-linha bg-white">
         <div
           className="mx-auto flex w-full flex-col gap-4 px-4 py-5 md:flex-row md:items-center md:justify-between lg:px-6"
@@ -169,7 +173,10 @@ export function PortalShell({
           <div className="mx-auto w-full px-4 pb-4 lg:px-6" style={{ maxWidth }}>
             <nav
               aria-label={navLabel}
-              className="flex gap-1 overflow-x-auto rounded-lg border border-linha bg-superficie p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className={cn(
+                'gap-1 overflow-x-auto rounded-lg border border-linha bg-superficie p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                navegacaoMobile.length ? 'hidden md:flex' : 'flex'
+              )}
             >
               {navegacao.map((item) => (
                 <Link
@@ -185,7 +192,25 @@ export function PortalShell({
         ) : null}
       </header>
 
-      <div className="mx-auto grid w-full gap-4 px-4 py-5 lg:px-6" style={{ maxWidth }}>
+      {navegacaoMobile.length ? (
+        <nav
+          aria-label={navLabelMobile}
+          className="fixed inset-x-0 bottom-0 z-30 grid grid-flow-col auto-cols-fr border-t border-linha bg-white px-2 py-2 shadow-[0_-1px_3px_rgba(31,41,55,0.08)] md:hidden"
+        >
+          {navegacaoMobile.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href as Route}
+              className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-md px-1 text-xs font-medium text-texto-suave hover:bg-superficie-hover hover:text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+            >
+              {item.icone ? <item.icone size={18} aria-hidden="true" /> : null}
+              <span className="truncate">{item.rotulo}</span>
+            </Link>
+          ))}
+        </nav>
+      ) : null}
+
+      <div className={cn('mx-auto grid w-full gap-4 px-4 py-5 lg:px-6', navegacaoMobile.length ? 'pb-24 md:pb-5' : '')} style={{ maxWidth }}>
         {children}
       </div>
     </main>
