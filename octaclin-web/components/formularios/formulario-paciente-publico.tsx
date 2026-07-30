@@ -68,6 +68,9 @@ export function FormularioPacientePublico({ token }: Props) {
     return grupos;
   }, [formulario]);
 
+  const perguntasObrigatorias = formulario?.perguntas.filter((pergunta) => pergunta.obrigatoria) ?? [];
+  const obrigatoriasRespondidas = perguntasObrigatorias.filter((pergunta) => valorPreenchido(respostas[pergunta.id])).length;
+
   function atualizarResposta(perguntaId: string, valor: ValorResposta) {
     setRespostas((atuais) => ({ ...atuais, [perguntaId]: valor }));
   }
@@ -141,6 +144,17 @@ export function FormularioPacientePublico({ token }: Props) {
           <p className="text-xs font-semibold uppercase text-texto-suave">OctaClin</p>
           <h1 className="mt-1 text-2xl font-semibold">{formulario.titulo}</h1>
           {formulario.descricao ? <p className="mt-2 text-sm text-texto-suave">{formulario.descricao}</p> : null}
+          {perguntasObrigatorias.length ? (
+            <div className="mt-4 grid gap-2" aria-label="Progresso do formulario">
+              <div className="flex items-center justify-between gap-3 text-xs font-medium text-texto-suave">
+                <span>Progresso</span>
+                <span>{obrigatoriasRespondidas} de {perguntasObrigatorias.length} obrigatorias respondidas</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-superficie" role="progressbar" aria-valuemin={0} aria-valuemax={perguntasObrigatorias.length} aria-valuenow={obrigatoriasRespondidas}>
+                <div className="h-full bg-primaria transition-[width]" style={{ width: `${(obrigatoriasRespondidas / perguntasObrigatorias.length) * 100}%` }} />
+              </div>
+            </div>
+          ) : null}
         </header>
 
         {erro ? (

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 164 - etapas do agendamento publico.
+Atualizado em 2026-07-30 apos a Fase 165 - progresso do formulario publico.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -591,6 +591,10 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 - [x] Fase 164 - Etapas do agendamento publico.
   - Fluxo publico explicita escolha de horario e envio de solicitacao, sem antecipar confirmacao.
   - Data: 2026-07-30. Saida: `fase-164-etapas-agendamento-publico.md`.
+
+- [x] Fase 165 - Progresso do formulario publico.
+  - Exibe progresso das perguntas obrigatorias sem alterar contrato ou envio.
+  - Data: 2026-07-30. Saida: `fase-165-progresso-formulario-publico.md`.
 
 ## Backlog pos-producao
 
