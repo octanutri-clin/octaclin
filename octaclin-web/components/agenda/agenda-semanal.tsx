@@ -1,10 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, MapPin } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
-import { Rotulo, Selecao } from '@/components/ui/campo';
-import { ConsultaAgendaApi } from '@/lib/agenda-api';
+import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
+import {
+  ConsultaAgendaApi,
+  criarBloqueioManualAgenda,
+  ItemFeedAgendaApi,
+  listarFeedAgenda,
+  removerBloqueioManualAgenda
+} from '@/lib/agenda-api';
 import { ProfissionalResumo } from '@/lib/cadastros-api';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +36,10 @@ function inicioDaSemana(data: Date) {
   inicio.setDate(inicio.getDate() - deslocamento);
   inicio.setHours(0, 0, 0, 0);
   return inicio;
+}
+
+function inicioDaGradeMes(data: Date) {
+  return inicioDaSemana(new Date(data.getFullYear(), data.getMonth(), 1));
 }
 
 function somarDias(data: Date, quantidade: number) {
@@ -83,6 +93,11 @@ function classeConsulta(consulta: ConsultaAgendaApi) {
     : 'border-primaria bg-primaria-suave text-primaria-forte';
 }
 
+function valorDatetimeLocal(data: Date) {
+  const deslocamento = data.getTimezoneOffset() * 60_000;
+  return new Date(data.getTime() - deslocamento).toISOString().slice(0, 16);
+}
+
 export function AgendaSemanal({
   consultas,
   profissionais,
@@ -93,7 +108,16 @@ export function AgendaSemanal({
   const consultasAtivas = useMemo(() => consultas.filter(consultaAtiva), [consultas]);
   const [semanaInicio, setSemanaInicio] = useState(() => inicioDaSemana(new Date()));
   const [semanaInicializada, setSemanaInicializada] = useState(false);
+  const [visao, setVisao] = useState<'dia' | 'semana' | 'mes'>('semana');
   const [profissionalId, setProfissionalId] = useState('');
+  const [itensFeed, setItensFeed] = useState<ItemFeedAgendaApi[] | null>(null);
+  const [erroFeed, setErroFeed] = useState<string | null>(null);
+  const [carregandoFeed, setCarregandoFeed] = useState(false);
+  const [bloqueio, setBloqueio] = useState(() => ({
+    tipo: 'intervalo' as const,
+    inicioEm: valorDatetimeLocal(new Date()),
+    fimEm: valorDatetimeLocal(new Date(Date.now() + 60 * 60_000))
+  }));
 
   useEffect(() => {
     if (profissionalId || !profissionais.length) return;
@@ -107,29 +131,71 @@ export function AgendaSemanal({
     setSemanaInicializada(true);
   }, [consultasAtivas, semanaInicializada]);
 
-  const dias = useMemo(() => Array.from({ length: 7 }, (_, indice) => somarDias(semanaInicio, indice)), [semanaInicio]);
-  const semanaFim = dias[6];
-  const consultasDoProfissional = useMemo(
-    () => consultasAtivas.filter((consulta) => !profissionalId || consulta.profissionalId === profissionalId),
-    [consultasAtivas, profissionalId]
+  const periodo = useMemo(() => {
+    if (visao === 'dia') {
+      const inicio = new Date(semanaInicio);
+      inicio.setHours(0, 0, 0, 0);
+      return { inicio, fim: somarDias(inicio, 1), dias: [inicio] };
+    }
+    if (visao === 'mes') {
+      const inicio = inicioDaGradeMes(semanaInicio);
+      const ultimoDia = new Date(semanaInicio.getFullYear(), semanaInicio.getMonth() + 1, 0);
+      const fim = somarDias(inicioDaSemana(ultimoDia), 7);
+      return {
+        inicio,
+        fim,
+        dias: Array.from({ length: Math.round((fim.getTime() - inicio.getTime()) / 86_400_000) }, (_, indice) => somarDias(inicio, indice))
+      };
+    }
+    const inicio = inicioDaSemana(semanaInicio);
+    return { inicio, fim: somarDias(inicio, 7), dias: Array.from({ length: 7 }, (_, indice) => somarDias(inicio, indice)) };
+  }, [semanaInicio, visao]);
+
+  useEffect(() => {
+    let cancelado = false;
+    setCarregandoFeed(true);
+    setErroFeed(null);
+    void listarFeedAgenda({ inicioEm: periodo.inicio.toISOString(), fimEm: periodo.fim.toISOString(), profissionalId: profissionalId || undefined })
+      .then((resultado) => {
+        if (!cancelado) setItensFeed(resultado);
+      })
+      .catch((erro: unknown) => {
+        if (!cancelado) setErroFeed(erro instanceof Error ? erro.message : 'Falha ao carregar disponibilidade.');
+      })
+      .finally(() => {
+        if (!cancelado) setCarregandoFeed(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [consultas, periodo.fim, periodo.inicio, profissionalId]);
+
+  const dias = periodo.dias;
+  const semanaFim = dias[dias.length - 1];
+  const itensDoProfissional = useMemo(
+    () =>
+      (itensFeed ?? consultasAtivas.map((consulta) => ({ ...consulta, tipo: 'consulta' as const }))).filter(
+        (item) => !profissionalId || item.profissionalId === profissionalId
+      ),
+    [consultasAtivas, itensFeed, profissionalId]
   );
-  const consultasDaSemana = useMemo(() => {
-    const limite = somarDias(semanaInicio, 7).getTime();
-    return consultasDoProfissional.filter((consulta) => {
-      const inicio = new Date(consulta.inicioEm).getTime();
-      return inicio >= semanaInicio.getTime() && inicio < limite;
+  const itensDaSemana = useMemo(() => {
+    const limite = periodo.fim.getTime();
+    return itensDoProfissional.filter((item) => {
+      const inicio = new Date(item.inicioEm).getTime();
+      return inicio >= periodo.inicio.getTime() && inicio < limite;
     });
-  }, [consultasDoProfissional, semanaInicio]);
+  }, [itensDoProfissional, periodo.fim, periodo.inicio]);
 
   const { horaInicial, horaFinal } = useMemo(() => {
-    if (!consultasDaSemana.length) {
+    if (!itensDaSemana.length) {
       return { horaInicial: HORA_INICIAL_PADRAO, horaFinal: HORA_FINAL_PADRAO };
     }
 
-    const menorHora = Math.min(...consultasDaSemana.map((consulta) => new Date(consulta.inicioEm).getHours()));
+    const menorHora = Math.min(...itensDaSemana.map((item) => new Date(item.inicioEm).getHours()));
     const maiorHora = Math.max(
-      ...consultasDaSemana.map((consulta) => {
-        const fim = new Date(consulta.fimEm);
+      ...itensDaSemana.map((item) => {
+        const fim = new Date(item.fimEm);
         return fim.getHours() + (fim.getMinutes() ? 1 : 0);
       })
     );
@@ -137,7 +203,7 @@ export function AgendaSemanal({
       horaInicial: Math.max(0, Math.min(HORA_INICIAL_PADRAO, menorHora)),
       horaFinal: Math.min(24, Math.max(HORA_FINAL_PADRAO, maiorHora))
     };
-  }, [consultasDaSemana]);
+  }, [itensDaSemana]);
 
   const horas = useMemo(
     () => Array.from({ length: horaFinal - horaInicial }, (_, indice) => horaInicial + indice),
@@ -147,8 +213,38 @@ export function AgendaSemanal({
   const hoje = new Date();
 
   function mudarSemana(diasParaSomar: number) {
-    setSemanaInicio((atual) => somarDias(atual, diasParaSomar));
+    setSemanaInicio((atual) => {
+      if (visao !== 'mes') return somarDias(atual, diasParaSomar);
+      return new Date(atual.getFullYear(), atual.getMonth() + Math.sign(diasParaSomar), 1);
+    });
     setSemanaInicializada(true);
+  }
+
+  async function criarBloqueio(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    try {
+      const criado = await criarBloqueioManualAgenda({
+        profissionalId: profissionalId || undefined,
+        tipo: bloqueio.tipo,
+        inicioEm: new Date(bloqueio.inicioEm).toISOString(),
+        fimEm: new Date(bloqueio.fimEm).toISOString()
+      });
+      if (criado.tipo !== 'bloqueio_manual') return;
+      setItensFeed((atuais) => (atuais ? [...atuais, criado].sort((a, b) => a.inicioEm.localeCompare(b.inicioEm)) : atuais));
+      setErroFeed(null);
+    } catch (erro) {
+      setErroFeed(erro instanceof Error ? erro.message : 'Falha ao bloquear horario.');
+    }
+  }
+
+  async function removerBloqueio(bloqueioId: string) {
+    try {
+      await removerBloqueioManualAgenda(bloqueioId);
+      setItensFeed((atuais) => atuais?.filter((item) => item.id !== bloqueioId) ?? atuais);
+      setErroFeed(null);
+    } catch (erro) {
+      setErroFeed(erro instanceof Error ? erro.message : 'Falha ao liberar horario.');
+    }
   }
 
   return (
@@ -182,18 +278,34 @@ export function AgendaSemanal({
             </label>
           ) : null}
 
-          <div className="flex items-center gap-1" role="group" aria-label="Navegar entre semanas">
+          <div className="flex h-10 items-center rounded-md border border-linha bg-white p-0.5" role="group" aria-label="Visualizacao da agenda">
+            {(['dia', 'semana', 'mes'] as const).map((opcao) => (
+              <button
+                key={opcao}
+                type="button"
+                onClick={() => setVisao(opcao)}
+                className={cn(
+                  'h-full rounded px-2 text-xs font-semibold capitalize focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
+                  visao === opcao ? 'bg-primaria text-white' : 'text-texto-suave hover:bg-superficie-hover'
+                )}
+              >
+                {opcao}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1" role="group" aria-label="Navegar entre periodos">
             <Botao
               type="button"
               className="w-11 px-0"
-              aria-label="Semana anterior"
-              title="Semana anterior"
-              onClick={() => mudarSemana(-7)}
+              aria-label={visao === 'semana' ? 'Semana anterior' : 'Periodo anterior'}
+              title={visao === 'semana' ? 'Semana anterior' : 'Periodo anterior'}
+              onClick={() => mudarSemana(visao === 'dia' ? -1 : -7)}
             >
               <ChevronLeft size={18} />
             </Botao>
             <Botao type="button" onClick={() => {
-              setSemanaInicio(inicioDaSemana(new Date()));
+              setSemanaInicio(visao === 'semana' ? inicioDaSemana(new Date()) : new Date());
               setSemanaInicializada(true);
             }}>
               Hoje
@@ -201,9 +313,9 @@ export function AgendaSemanal({
             <Botao
               type="button"
               className="w-11 px-0"
-              aria-label="Proxima semana"
-              title="Proxima semana"
-              onClick={() => mudarSemana(7)}
+              aria-label={visao === 'semana' ? 'Proxima semana' : 'Proximo periodo'}
+              title={visao === 'semana' ? 'Proxima semana' : 'Proximo periodo'}
+              onClick={() => mudarSemana(visao === 'dia' ? 1 : 7)}
             >
               <ChevronRight size={18} />
             </Botao>
@@ -229,17 +341,82 @@ export function AgendaSemanal({
         </Botao>
       </div>
 
+      <form onSubmit={(evento) => void criarBloqueio(evento)} className="grid gap-2 border-b border-linha px-4 py-3 md:grid-cols-[minmax(130px,1fr)_minmax(180px,1fr)_minmax(180px,1fr)_auto] md:items-end">
+        <label className="grid gap-1">
+          <Rotulo>Reservar como</Rotulo>
+          <Selecao
+            value={bloqueio.tipo}
+            onChange={(evento) => setBloqueio((atual) => ({ ...atual, tipo: evento.target.value as typeof atual.tipo }))}
+          >
+            <option value="intervalo">Intervalo</option>
+            <option value="reuniao">Reuniao</option>
+            <option value="ferias">Ferias</option>
+          </Selecao>
+        </label>
+        <label className="grid gap-1">
+          <Rotulo>Inicio</Rotulo>
+          <Campo
+            type="datetime-local"
+            required
+            value={bloqueio.inicioEm}
+            onChange={(evento) => setBloqueio((atual) => ({ ...atual, inicioEm: evento.target.value }))}
+          />
+        </label>
+        <label className="grid gap-1">
+          <Rotulo>Fim</Rotulo>
+          <Campo
+            type="datetime-local"
+            required
+            value={bloqueio.fimEm}
+            onChange={(evento) => setBloqueio((atual) => ({ ...atual, fimEm: evento.target.value }))}
+          />
+        </label>
+        <Botao type="submit">Bloquear horario</Botao>
+      </form>
+
+      {erroFeed ? <p role="alert" className="border-b border-alerta-borda bg-alerta-suave px-4 py-3 text-sm text-alerta-forte">{erroFeed}</p> : null}
+
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
         <p className="text-sm font-semibold text-tinta">{formatarPeriodo(semanaInicio, semanaFim)}</p>
         <p className="text-xs text-texto-suave">
-          {consultasDaSemana.length} {consultasDaSemana.length === 1 ? 'horario ocupado' : 'horarios ocupados'}
+          {itensDaSemana.length} {itensDaSemana.length === 1 ? 'horario ocupado' : 'horarios ocupados'}
+          {carregandoFeed ? ' (atualizando)' : ''}
         </p>
       </div>
 
+      {visao === 'mes' ? (
+        <div className="grid grid-cols-7 border-t border-linha">
+          {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map((dia) => (
+            <div key={dia} className="border-b border-r border-linha bg-superficie px-2 py-2 text-center text-xs font-semibold text-texto-suave last:border-r-0">
+              {dia}
+            </div>
+          ))}
+          {dias.map((dia) => {
+            const itensDoDia = itensDaSemana.filter((item) => mesmoDia(new Date(item.inicioEm), dia));
+            const foraDoMes = dia.getMonth() !== semanaInicio.getMonth();
+            return (
+              <div key={dia.toISOString()} className={cn('min-h-28 border-b border-r border-linha p-2 last:border-r-0', foraDoMes && 'bg-superficie text-texto-sutil')}>
+                <p className={cn('mb-2 text-xs font-semibold', mesmoDia(dia, hoje) && 'text-primaria-forte')}>{dia.getDate()}</p>
+                <div className="grid gap-1">
+                  {itensDoDia.slice(0, 3).map((item) => {
+                    const nome = item.tipo === 'consulta' ? item.pacienteNome ?? item.titulo : item.rotulo;
+                    return (
+                      <div key={item.id} className={cn('truncate rounded border px-1.5 py-1 text-xs', item.tipo === 'consulta' ? classeConsulta(item) : 'border-linha bg-white text-texto-suave')} title={`${formatarHora(new Date(item.inicioEm))} ${nome}`}>
+                        {formatarHora(new Date(item.inicioEm))} {nome}
+                      </div>
+                    );
+                  })}
+                  {itensDoDia.length > 3 ? <p className="text-xs text-texto-suave">+{itensDoDia.length - 3} horarios</p> : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
       <div className="max-w-full overflow-x-auto border-t border-linha">
         <div
           className="grid min-w-[980px]"
-          style={{ gridTemplateColumns: '72px repeat(7, minmax(128px, 1fr))' }}
+          style={{ gridTemplateColumns: `72px repeat(${dias.length}, minmax(128px, 1fr))` }}
         >
           <div className="border-b border-r border-linha bg-superficie" />
           {dias.map((dia) => (
@@ -267,7 +444,7 @@ export function AgendaSemanal({
           </div>
 
           {dias.map((dia) => {
-            const consultasDoDia = consultasDaSemana.filter((consulta) => mesmoDia(new Date(consulta.inicioEm), dia));
+            const itensDoDia = itensDaSemana.filter((item) => mesmoDia(new Date(item.inicioEm), dia));
             return (
               <div
                 key={`grade-${dia.toISOString()}`}
@@ -283,37 +460,60 @@ export function AgendaSemanal({
                   />
                 ))}
 
-                {consultasDoDia.map((consulta) => {
-                  const inicio = new Date(consulta.inicioEm);
-                  const fim = new Date(consulta.fimEm);
+                {itensDoDia.map((item) => {
+                  const inicio = new Date(item.inicioEm);
+                  const fim = new Date(item.fimEm);
                   const inicioDecimal = inicio.getHours() + inicio.getMinutes() / 60;
                   const fimDecimal = fim.getHours() + fim.getMinutes() / 60;
                   const topo = Math.max(0, (inicioDecimal - horaInicial) * ALTURA_HORA);
                   const altura = Math.max(44, (fimDecimal - inicioDecimal) * ALTURA_HORA);
-                  const nome = consulta.pacienteNome ?? consulta.titulo;
+                  const nome = item.tipo === 'consulta' ? item.pacienteNome ?? item.titulo : item.rotulo;
+                  const bloqueioManual = item.tipo === 'bloqueio_manual';
                   return (
-                    <a
-                      key={consulta.id}
-                      href={`#consulta-${consulta.id}`}
-                      aria-label={`Horario ocupado: ${nome}, ${formatarHora(inicio)} a ${formatarHora(fim)}`}
+                    <div
+                      key={item.id}
+                      aria-label={`${bloqueioManual ? 'Horario reservado' : 'Horario ocupado'}: ${nome}, ${formatarHora(inicio)} a ${formatarHora(fim)}`}
                       className={cn(
                         'absolute inset-x-1 z-10 overflow-hidden rounded-md border px-2 py-1.5 text-xs shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
-                        classeConsulta(consulta)
+                        item.tipo === 'consulta'
+                          ? classeConsulta(item)
+                          : bloqueioManual
+                            ? 'border-alerta-borda bg-alerta-suave text-alerta-forte'
+                            : 'border-linha bg-superficie text-texto-suave'
                       )}
                       style={{ top: topo, height: altura }}
                     >
-                      <strong className="block truncate">{nome}</strong>
+                      {item.tipo === 'consulta' ? (
+                        <a
+                          href={`#consulta-${item.id}`}
+                          aria-label={`Horario ocupado: ${nome}, ${formatarHora(inicio)} a ${formatarHora(fim)}`}
+                          className="block truncate underline-offset-2 hover:underline"
+                        >
+                          <strong>{nome}</strong>
+                        </a>
+                      ) : (
+                        <strong className="block truncate">{nome}</strong>
+                      )}
                       <span className="mt-0.5 flex items-center gap-1">
                         <Clock3 size={12} className="shrink-0" />
                         {formatarHora(inicio)} - {formatarHora(fim)}
                       </span>
-                      {consulta.local && altura >= 62 ? (
+                      {item.tipo === 'consulta' && item.local && altura >= 62 ? (
                         <span className="mt-0.5 flex items-center gap-1 truncate">
                           <MapPin size={12} className="shrink-0" />
-                          <span className="truncate">{consulta.local}</span>
+                          <span className="truncate">{item.local}</span>
                         </span>
                       ) : null}
-                    </a>
+                      {bloqueioManual && altura >= 84 ? (
+                        <button
+                          type="button"
+                          className="mt-1 text-left font-semibold underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                          onClick={() => void removerBloqueio(item.id)}
+                        >
+                          Liberar
+                        </button>
+                      ) : null}
+                    </div>
                   );
                 })}
               </div>
@@ -321,6 +521,7 @@ export function AgendaSemanal({
           })}
         </div>
       </div>
+      )}
     </section>
   );
 }

@@ -18,11 +18,13 @@ import { AdicionarDesfechosConsultaAgenda1720000001002 } from './migracoes/17200
 import { AdicionarRevisaoClinicaEnviosQuestionario1720000001003 } from './migracoes/1720000001003-AdicionarRevisaoClinicaEnviosQuestionario';
 import { CriarAlertasOcultosDashboardClinico1720000001004 } from './migracoes/1720000001004-CriarAlertasOcultosDashboardClinico';
 import { ProtegerCanaisWatchGoogleAgenda1720000001005 } from './migracoes/1720000001005-ProtegerCanaisWatchGoogleAgenda';
+import { CriarBloqueiosManuaisAgenda1720000001006 } from './migracoes/1720000001006-CriarBloqueiosManuaisAgenda';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
 import { AgendaConsultaOrm } from '../../modulos/agenda/infraestrutura/agenda-consulta.orm';
 import { AgendaBloqueioExternoOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-externo.orm';
+import { AgendaBloqueioManualOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-manual.orm';
 import { AgendaLinkPublicoOrm } from '../../modulos/agenda/infraestrutura/agenda-link-publico.orm';
 import { AgendaSolicitacaoOrm } from '../../modulos/agenda/infraestrutura/agenda-solicitacao.orm';
 import { GoogleCanalWatchOrm } from '../../modulos/agenda/infraestrutura/google-canal-watch.orm';
@@ -126,6 +128,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       ProfissionalGoogleConexaoOrm,
       GoogleCanalWatchOrm,
       AgendaBloqueioExternoOrm,
+      AgendaBloqueioManualOrm,
       AgendaLinkPublicoOrm,
       AgendaSolicitacaoOrm,
       RegraAutomacaoOrm,
@@ -168,7 +171,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AdicionarDesfechosConsultaAgenda1720000001002,
       AdicionarRevisaoClinicaEnviosQuestionario1720000001003,
       CriarAlertasOcultosDashboardClinico1720000001004,
-      ProtegerCanaisWatchGoogleAgenda1720000001005
+      ProtegerCanaisWatchGoogleAgenda1720000001005,
+      CriarBloqueiosManuaisAgenda1720000001006
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

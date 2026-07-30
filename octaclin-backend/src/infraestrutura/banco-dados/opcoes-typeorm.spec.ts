@@ -3,7 +3,9 @@ import { AdicionarDesfechosConsultaAgenda1720000001002 } from './migracoes/17200
 import { AdicionarRevisaoClinicaEnviosQuestionario1720000001003 } from './migracoes/1720000001003-AdicionarRevisaoClinicaEnviosQuestionario';
 import { CriarAlertasOcultosDashboardClinico1720000001004 } from './migracoes/1720000001004-CriarAlertasOcultosDashboardClinico';
 import { ProtegerCanaisWatchGoogleAgenda1720000001005 } from './migracoes/1720000001005-ProtegerCanaisWatchGoogleAgenda';
+import { CriarBloqueiosManuaisAgenda1720000001006 } from './migracoes/1720000001006-CriarBloqueiosManuaisAgenda';
 import { DashboardAlertaOcultoOrm } from '../../modulos/dashboard/infraestrutura/dashboard-alerta-oculto.orm';
+import { AgendaBloqueioManualOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-manual.orm';
 
 const ambienteOriginal = process.env;
 
@@ -52,13 +54,14 @@ describe('criarOpcoesTypeOrm', () => {
   it('registra a entidade e a sequencia de migrations da fase 145', () => {
     const opcoes = criarOpcoesTypeOrm();
 
-    expect(opcoes.entities).toEqual(expect.arrayContaining([DashboardAlertaOcultoOrm]));
+    expect(opcoes.entities).toEqual(expect.arrayContaining([DashboardAlertaOcultoOrm, AgendaBloqueioManualOrm]));
     expect(opcoes.migrations).toEqual(
       expect.arrayContaining([
         AdicionarDesfechosConsultaAgenda1720000001002,
         AdicionarRevisaoClinicaEnviosQuestionario1720000001003,
         CriarAlertasOcultosDashboardClinico1720000001004,
-        ProtegerCanaisWatchGoogleAgenda1720000001005
+        ProtegerCanaisWatchGoogleAgenda1720000001005,
+        CriarBloqueiosManuaisAgenda1720000001006
       ])
     );
   });

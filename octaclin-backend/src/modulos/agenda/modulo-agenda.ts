@@ -24,6 +24,7 @@ import { ProcessadorSincronizacaoGoogleCalendar } from './aplicacao/processador-
 import { ProcessadorRenovacaoGoogleCalendar } from './aplicacao/processador-renovacao-google-calendar';
 import { AgendaConsultaOrm } from './infraestrutura/agenda-consulta.orm';
 import { AgendaBloqueioExternoOrm } from './infraestrutura/agenda-bloqueio-externo.orm';
+import { AgendaBloqueioManualOrm } from './infraestrutura/agenda-bloqueio-manual.orm';
 import { AgendaLinkPublicoOrm } from './infraestrutura/agenda-link-publico.orm';
 import { AgendaSolicitacaoOrm } from './infraestrutura/agenda-solicitacao.orm';
 import { GoogleCanalWatchOrm } from './infraestrutura/google-canal-watch.orm';
@@ -39,6 +40,7 @@ import { ProfissionalGoogleConexaoOrm } from './infraestrutura/profissional-goog
       ProfissionalGoogleConexaoOrm,
       GoogleCanalWatchOrm,
       AgendaBloqueioExternoOrm,
+      AgendaBloqueioManualOrm,
       AgendaLinkPublicoOrm,
       AgendaSolicitacaoOrm
     ]),

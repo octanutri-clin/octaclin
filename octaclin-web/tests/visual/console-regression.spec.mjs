@@ -721,6 +721,24 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
     });
   });
 
+  await page.route('**/api/agenda/feed*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        ...consultasAgenda.filter((consulta) => consulta.status === 'agendada' || consulta.status === 'reagendada').map((consulta) => ({ ...consulta, tipo: 'consulta' })),
+        {
+          id: 'bloqueio-google-1',
+          tipo: 'google_indisponivel',
+          profissionalId: 'profissional-1',
+          inicioEm: '2026-07-24T15:00:00.000Z',
+          fimEm: '2026-07-24T16:00:00.000Z',
+          rotulo: 'Indisponivel'
+        }
+      ])
+    });
+  });
+
   await page.route('**/api/pacientes**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -1277,8 +1295,11 @@ test.describe('agenda de producao', () => {
     await expect(agendaInterna).toBeVisible();
     await expect(agendaInterna.getByText('Google Agenda opcional')).toBeVisible();
     await expect(agendaInterna.getByRole('link', { name: /Horario ocupado: Ana Souza/ })).toBeVisible();
+    await expect(agendaInterna.getByText('Indisponivel')).toBeVisible();
     await expect(agendaInterna.getByRole('button', { name: 'Semana anterior' })).toBeVisible();
     await expect(agendaInterna.getByRole('button', { name: 'Proxima semana' })).toBeVisible();
+    await agendaInterna.getByRole('button', { name: 'mes' }).click();
+    await expect(agendaInterna.getByText('Seg')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 

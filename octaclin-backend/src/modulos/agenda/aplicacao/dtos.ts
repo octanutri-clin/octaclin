@@ -1,5 +1,6 @@
 import { IsBoolean, IsDateString, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 import type { StatusAgendaConsulta } from '../infraestrutura/agenda-consulta.orm';
+import type { TipoBloqueioManualAgenda } from '../infraestrutura/agenda-bloqueio-manual.orm';
 import type { ResultadoGoogleCalendar } from './servico-google-calendar';
 
 export type ResultadoNotificacaoAgenda =
@@ -91,6 +92,33 @@ export class CancelarConsultaAgendaDto {
   motivo?: string;
 }
 
+export class ConsultarFeedAgendaDto {
+  @IsDateString()
+  inicioEm: string;
+
+  @IsDateString()
+  fimEm: string;
+
+  @IsOptional()
+  @IsUUID()
+  profissionalId?: string;
+}
+
+export class CriarBloqueioManualAgendaDto {
+  @IsOptional()
+  @IsUUID()
+  profissionalId?: string;
+
+  @IsIn(['intervalo', 'reuniao', 'ferias'])
+  tipo: TipoBloqueioManualAgenda;
+
+  @IsDateString()
+  inicioEm: string;
+
+  @IsDateString()
+  fimEm: string;
+}
+
 export class RegistrarDesfechoConsultaAgendaDto {
   @IsIn(['concluida', 'falta', 'cancelada'])
   status: 'concluida' | 'falta' | 'cancelada';
@@ -155,3 +183,22 @@ export interface ConsultaAgendaRespostaDto {
   criadoEm: Date;
   atualizadoEm: Date;
 }
+
+export type ItemFeedAgendaRespostaDto =
+  | (ConsultaAgendaRespostaDto & { tipo: 'consulta' })
+  | {
+      id: string;
+      tipo: 'google_indisponivel';
+      profissionalId: string;
+      inicioEm: Date;
+      fimEm: Date;
+      rotulo: 'Indisponivel';
+    }
+  | {
+      id: string;
+      tipo: 'bloqueio_manual';
+      profissionalId: string;
+      inicioEm: Date;
+      fimEm: Date;
+      rotulo: 'Intervalo' | 'Reuniao' | 'Ferias';
+    };

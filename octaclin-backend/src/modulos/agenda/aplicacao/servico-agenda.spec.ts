@@ -44,8 +44,10 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
       ultimoSalvo = { id: `${nome}-1`, criadoEm: new Date(), atualizadoEm: new Date(), ...entrada };
       return ultimoSalvo;
     }),
+    remove: jest.fn(async (entrada: Record<string, unknown>) => entrada),
     find: jest.fn(async (criterios?: { where?: Record<string, unknown> }) => {
       if (nome === 'bloqueioExterno') return dados.bloqueiosExternos ?? [];
+      if (nome === 'bloqueioManual') return dados.bloqueiosManuais ?? [];
       const consultas = (dados.consultas ?? []) as Array<Record<string, unknown>>;
       const status = criterios?.where?.status as { _value?: unknown[] } | string | undefined;
       const statusAceitos = typeof status === 'string' ? [status] : status?._value;
@@ -74,6 +76,12 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
         );
       }
       if (nome === 'profissional') return dados.profissional ?? null;
+      if (nome === 'bloqueioManual') {
+        const bloqueios = (dados.bloqueiosManuais ?? []) as Array<Record<string, unknown>>;
+        return bloqueios.find((bloqueio) =>
+          Object.entries(criterios?.where ?? {}).every(([chave, valor]) => bloqueio[chave] === valor)
+        ) ?? null;
+      }
       const consultas = dados.consultas as Array<Record<string, unknown>> | undefined;
       if (consultas && criterios?.where) {
         const candidatas = ultimoSalvo ? [ultimoSalvo, ...consultas] : consultas;
@@ -86,8 +94,8 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
       return dados.consulta ?? ultimoSalvo;
     }),
     exists: jest.fn(async (criterios: { where: Record<string, unknown> }) => {
-      if (nome === 'bloqueioExterno') {
-        const bloqueios = (dados.bloqueiosExternos ?? []) as Array<Record<string, unknown>>;
+      if (nome === 'bloqueioExterno' || nome === 'bloqueioManual') {
+        const bloqueios = (nome === 'bloqueioExterno' ? dados.bloqueiosExternos ?? [] : dados.bloqueiosManuais ?? []) as Array<Record<string, unknown>>;
         const where = criterios.where;
         return bloqueios.some((bloqueio) => {
           // Verificar tenantId e profissionalId
@@ -111,7 +119,8 @@ function criarServico(dados: Record<string, unknown> = {}) {
     consulta: criarRepositorioFake('consulta', dados),
     paciente: criarRepositorioFake('paciente', dados),
     profissional: criarRepositorioFake('profissional', dados),
-    bloqueioExterno: criarRepositorioFake('bloqueioExterno', dados)
+    bloqueioExterno: criarRepositorioFake('bloqueioExterno', dados),
+    bloqueioManual: criarRepositorioFake('bloqueioManual', dados)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -119,6 +128,7 @@ function criarServico(dados: Record<string, unknown> = {}) {
       if (entidade === PacienteOrm) return repositorios.paciente;
       if (entidade === ProfissionalOrm) return repositorios.profissional;
       if (entidade === AgendaBloqueioExternoOrm) return repositorios.bloqueioExterno;
+      if (entidade.name === 'AgendaBloqueioManualOrm') return repositorios.bloqueioManual;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -177,6 +187,100 @@ function criarServico(dados: Record<string, unknown> = {}) {
 }
 
 describe('ServicoAgenda', () => {
+  it('lista no feed apenas o intervalo solicitado e oculta os detalhes de bloqueio Google', async () => {
+    const { servico } = criarServico({
+      consultas: [
+        {
+          id: 'consulta-visivel',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          titulo: 'Consulta - Ana',
+          inicioEm: new Date('2026-08-10T12:00:00.000Z'),
+          fimEm: new Date('2026-08-10T13:00:00.000Z'),
+          timezone: 'America/Sao_Paulo',
+          status: 'agendada',
+          notificacoes: {},
+          payload: { pacienteNome: 'Ana' }
+        },
+        {
+          id: 'consulta-fora-do-periodo',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          profissionalId: 'profissional-1',
+          titulo: 'Consulta - Fora',
+          inicioEm: new Date('2026-08-20T12:00:00.000Z'),
+          fimEm: new Date('2026-08-20T13:00:00.000Z'),
+          timezone: 'America/Sao_Paulo',
+          status: 'agendada',
+          notificacoes: {},
+          payload: { pacienteNome: 'Fora' }
+        }
+      ],
+      bloqueiosExternos: [
+        {
+          id: 'bloqueio-google-1',
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          googleEventId: 'evento-privado-google',
+          inicioEm: new Date('2026-08-11T14:00:00.000Z'),
+          fimEm: new Date('2026-08-11T15:00:00.000Z')
+        }
+      ]
+    });
+
+    const resultado = await (servico as unknown as {
+      listarFeed: (tenantId: string, dados: { inicioEm: string; fimEm: string; profissionalId?: string }, usuario: UsuarioAutenticado) => Promise<unknown[]>;
+    }).listarFeed(
+      'tenant-1',
+      { inicioEm: '2026-08-10T00:00:00.000Z', fimEm: '2026-08-17T00:00:00.000Z', profissionalId: 'profissional-1' },
+      usuarioColaborador
+    );
+
+    expect(resultado).toEqual([
+      expect.objectContaining({ id: 'consulta-visivel', tipo: 'consulta' }),
+      {
+        id: 'bloqueio-google-1',
+        tipo: 'google_indisponivel',
+        profissionalId: 'profissional-1',
+        inicioEm: new Date('2026-08-11T14:00:00.000Z'),
+        fimEm: new Date('2026-08-11T15:00:00.000Z'),
+        rotulo: 'Indisponivel'
+      }
+    ]);
+    expect(JSON.stringify(resultado)).not.toContain('evento-privado-google');
+  });
+
+  it('cria e remove bloqueio manual do profissional sem expor uma consulta', async () => {
+    const bloqueio = {
+      id: 'bloqueio-manual-1',
+      tenantId: 'tenant-1',
+      profissionalId: 'profissional-1',
+      tipo: 'reuniao',
+      inicioEm: new Date('2026-08-12T10:00:00.000Z'),
+      fimEm: new Date('2026-08-12T11:00:00.000Z')
+    };
+    const profissional = { id: 'profissional-1', tenantId: 'tenant-1', arquivadoEm: null };
+    const { servico } = criarServico({ profissional });
+
+    const resultado = await servico.criarBloqueioManual(
+      'tenant-1',
+      { profissionalId: 'profissional-1', tipo: 'reuniao', inicioEm: '2026-08-12T10:00:00.000Z', fimEm: '2026-08-12T11:00:00.000Z' },
+      usuarioColaborador
+    );
+    const { servico: servicoComBloqueio, repositorios } = criarServico({ profissional, bloqueiosManuais: [bloqueio] });
+    await expect(
+      (servicoComBloqueio as unknown as { removerBloqueioManual: (tenantId: string, bloqueioId: string, usuario: UsuarioAutenticado) => Promise<{ id: string }> }).removerBloqueioManual(
+        'tenant-1',
+        'bloqueio-manual-1',
+        usuarioColaborador
+      )
+    ).resolves.toEqual({ id: 'bloqueio-manual-1' });
+
+    expect(resultado).toEqual(expect.objectContaining({ tipo: 'bloqueio_manual', rotulo: 'Reuniao' }));
+    expect(repositorios.bloqueioManual.remove).toHaveBeenCalledWith(bloqueio);
+  });
+
   it('traduz corrida de sobreposicao ao criar consulta para conflito de horario', async () => {
     const { servico, repositorios } = criarServico({
       paciente: {

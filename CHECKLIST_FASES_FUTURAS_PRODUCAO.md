@@ -616,11 +616,12 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     deploy `5558a4d` Live e smoke do BFF aprovado.
   - Saida: `fase-168-acesso-comercial-onboarding.md`.
 
-- [ ] Fase 169 - Disponibilidade e feed completo da agenda.
+- [x] Fase 169 - Disponibilidade e feed completo da agenda.
   - Filtrar o feed por periodo/profissional e retornar projecao minima.
   - Exibir bloqueios Google como `Indisponivel`, sem detalhes privados.
   - Criar bloqueios internos manuais para intervalos, reunioes e ferias.
   - Adicionar visoes de dia e mes sem drag-and-drop nesta etapa.
+  - Data: 2026-07-30. Saida: `fase-169-disponibilidade-feed-agenda.md`.
 
 - [ ] Fase 170 - Integridade historica de formularios.
   - Guardar versao e snapshot da estrutura em cada envio.
@@ -669,3 +670,9 @@ Fase XXX - Nome:
 - Validacoes: <comandos principais>
 - Observacoes: <decisoes ou pendencias>
 ```
+
+- Fase 169 - Disponibilidade e feed completo da agenda:
+  - Status: concluida localmente; aguardando deploy coordenado.
+  - Data: 2026-07-30.
+  - Validacoes: backend Jest, typechecks, lint e Playwright desktop/mobile.
+  - Observacoes: a migration `1720000001006` deve executar antes da web.

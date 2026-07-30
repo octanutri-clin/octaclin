@@ -12,11 +12,15 @@ import { TemplateMensagemOrm } from '../../comunicacoes/infraestrutura/template-
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
+import { AgendaBloqueioManualOrm, TipoBloqueioManualAgenda } from '../infraestrutura/agenda-bloqueio-manual.orm';
 import { AgendaConsultaOrm, StatusAgendaConsulta } from '../infraestrutura/agenda-consulta.orm';
 import {
   CancelarConsultaAgendaDto,
+  ConsultarFeedAgendaDto,
   ConsultaAgendaRespostaDto,
+  CriarBloqueioManualAgendaDto,
   CriarConsultaAgendaDto,
+  ItemFeedAgendaRespostaDto,
   NotificacoesConsultaAgenda,
   RegistrarDesfechoConsultaAgendaDto,
   RemarcarConsultaAgendaDto,
@@ -90,6 +94,116 @@ export class ServicoAgenda {
         take: 200
       });
       return consultas.map((consulta) => this.mapearResposta(consulta));
+    });
+  }
+
+  async listarFeed(
+    tenantId: string,
+    dados: ConsultarFeedAgendaDto,
+    usuario: UsuarioAutenticado
+  ): Promise<ItemFeedAgendaRespostaDto[]> {
+    const inicioEm = dataValida(dados.inicioEm);
+    const fimEm = dataValida(dados.fimEm);
+    if (fimEm <= inicioEm) throw new BadRequestException('Horario final deve ser posterior ao inicio do periodo.');
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const profissionalId = profissionalIdDoUsuario ?? dados.profissionalId;
+      const filtroProfissional = profissionalId ? { profissionalId } : {};
+      const sobrepoe = (item: JanelaConsulta) => item.inicioEm < fimEm && item.fimEm > inicioEm;
+
+      const [consultas, bloqueiosExternos, bloqueiosManuais] = await Promise.all([
+        gerenciador.getRepository(AgendaConsultaOrm).find({
+          where: {
+            tenantId,
+            ...filtroProfissional,
+            status: In(STATUS_CONSULTA_ATIVOS),
+            inicioEm: LessThan(fimEm),
+            fimEm: MoreThan(inicioEm)
+          },
+          order: { inicioEm: 'ASC' }
+        }),
+        gerenciador.getRepository(AgendaBloqueioExternoOrm).find({
+          where: { tenantId, ...filtroProfissional, inicioEm: LessThan(fimEm), fimEm: MoreThan(inicioEm) },
+          order: { inicioEm: 'ASC' }
+        }),
+        gerenciador.getRepository(AgendaBloqueioManualOrm).find({
+          where: { tenantId, ...filtroProfissional, inicioEm: LessThan(fimEm), fimEm: MoreThan(inicioEm) },
+          order: { inicioEm: 'ASC' }
+        })
+      ]);
+
+      return [
+        ...consultas.filter(sobrepoe).map((consulta) => ({ ...this.mapearResposta(consulta), tipo: 'consulta' as const })),
+        ...bloqueiosExternos.filter(sobrepoe).map((bloqueio) => ({
+          id: bloqueio.id,
+          tipo: 'google_indisponivel' as const,
+          profissionalId: bloqueio.profissionalId,
+          inicioEm: bloqueio.inicioEm,
+          fimEm: bloqueio.fimEm,
+          rotulo: 'Indisponivel' as const
+        })),
+        ...bloqueiosManuais.filter(sobrepoe).map((bloqueio) => ({
+          id: bloqueio.id,
+          tipo: 'bloqueio_manual' as const,
+          profissionalId: bloqueio.profissionalId,
+          inicioEm: bloqueio.inicioEm,
+          fimEm: bloqueio.fimEm,
+          rotulo: this.rotuloBloqueioManual(bloqueio.tipo)
+        }))
+      ].sort((a, b) => a.inicioEm.getTime() - b.inicioEm.getTime());
+    });
+  }
+
+  async criarBloqueioManual(
+    tenantId: string,
+    dados: CriarBloqueioManualAgendaDto,
+    usuario: UsuarioAutenticado
+  ) {
+    const inicioEm = dataValida(dados.inicioEm);
+    const fimEm = dataValida(dados.fimEm);
+    if (fimEm <= inicioEm) throw new BadRequestException('Horario final deve ser posterior ao inicio do bloqueio.');
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const profissionalId = profissionalIdDoUsuario ?? dados.profissionalId;
+      if (!profissionalId) throw new BadRequestException('Selecione um profissional para bloquear o horario.');
+
+      const profissional = await gerenciador.getRepository(ProfissionalOrm).findOne({
+        where: { id: profissionalId, tenantId, arquivadoEm: IsNull() }
+      });
+      if (!profissional) throw new NotFoundException('Profissional nao encontrado.');
+
+      await this.validarConflitoHorario(gerenciador, tenantId, profissionalId, { inicioEm, fimEm });
+      const repositorio = gerenciador.getRepository(AgendaBloqueioManualOrm);
+      const bloqueio = await repositorio.save(
+        repositorio.create({ tenantId, profissionalId, tipo: dados.tipo, inicioEm, fimEm })
+      );
+      return {
+        id: bloqueio.id,
+        tipo: 'bloqueio_manual' as const,
+        profissionalId: bloqueio.profissionalId,
+        inicioEm: bloqueio.inicioEm,
+        fimEm: bloqueio.fimEm,
+        rotulo: this.rotuloBloqueioManual(bloqueio.tipo)
+      };
+    });
+  }
+
+  async removerBloqueioManual(
+    tenantId: string,
+    bloqueioId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<{ id: string }> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const repositorio = gerenciador.getRepository(AgendaBloqueioManualOrm);
+      const bloqueio = await repositorio.findOne({
+        where: { id: bloqueioId, tenantId, ...(profissionalId ? { profissionalId } : {}) }
+      });
+      if (!bloqueio) throw new NotFoundException('Bloqueio de agenda nao encontrado.');
+      await repositorio.remove(bloqueio);
+      return { id: bloqueio.id };
     });
   }
 
@@ -510,6 +624,16 @@ export class ServicoAgenda {
       }
     });
     if (conflitoExterno) throw new BadRequestException(MENSAGEM_CONFLITO_HORARIO);
+
+    const conflitoManual = await gerenciador.getRepository(AgendaBloqueioManualOrm).exists({
+      where: {
+        tenantId,
+        profissionalId,
+        inicioEm: LessThan(janela.fimEm),
+        fimEm: MoreThan(janela.inicioEm)
+      }
+    });
+    if (conflitoManual) throw new BadRequestException(MENSAGEM_CONFLITO_HORARIO);
   }
 
   private async salvarConsultaProtegidaContraSobreposicao(
@@ -774,6 +898,15 @@ export class ServicoAgenda {
   private normalizarWhatsapp(whatsapp?: string): string | undefined {
     const normalizado = whatsapp?.replace(/\D/g, '');
     return normalizado || undefined;
+  }
+
+  private rotuloBloqueioManual(tipo: TipoBloqueioManualAgenda): 'Intervalo' | 'Reuniao' | 'Ferias' {
+    const rotulos: Record<TipoBloqueioManualAgenda, 'Intervalo' | 'Reuniao' | 'Ferias'> = {
+      intervalo: 'Intervalo',
+      reuniao: 'Reuniao',
+      ferias: 'Ferias'
+    };
+    return rotulos[tipo];
   }
 
   private mapearResposta(

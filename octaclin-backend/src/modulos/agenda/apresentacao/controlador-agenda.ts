@@ -9,6 +9,8 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import {
   AprovarSolicitacaoAgendamentoDto,
   CancelarConsultaAgendaDto,
+  ConsultarFeedAgendaDto,
+  CriarBloqueioManualAgendaDto,
   CriarConsultaAgendaDto,
   RecusarSolicitacaoAgendamentoDto,
   RegistrarDesfechoConsultaAgendaDto,
@@ -31,6 +33,53 @@ export class ControladorAgenda {
   @Get('consultas')
   listarConsultas(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoAgenda.listarConsultas(usuario.tenantId, usuario);
+  }
+
+  @Get('feed')
+  listarFeed(@UsuarioAtual() usuario: UsuarioAutenticado, @Query() dados: ConsultarFeedAgendaDto) {
+    return this.servicoAgenda.listarFeed(usuario.tenantId, dados, usuario);
+  }
+
+  @Post('bloqueios-manuais')
+  @Permissoes('agenda.consultas.criar')
+  async criarBloqueioManual(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: CriarBloqueioManualAgendaDto
+  ) {
+    const bloqueio = await this.servicoAgenda.criarBloqueioManual(usuario.tenantId, dados, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'agenda.bloqueio_manual.criar',
+      recursoTipo: 'agenda_bloqueio_manual',
+      recursoId: bloqueio.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { profissionalId: bloqueio.profissionalId, tipo: dados.tipo, inicioEm: bloqueio.inicioEm, fimEm: bloqueio.fimEm }
+    });
+    return bloqueio;
+  }
+
+  @Delete('bloqueios-manuais/:bloqueioId')
+  @Permissoes('agenda.consultas.criar')
+  async removerBloqueioManual(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('bloqueioId', ParseUUIDPipe) bloqueioId: string
+  ) {
+    const resultado = await this.servicoAgenda.removerBloqueioManual(usuario.tenantId, bloqueioId, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'agenda.bloqueio_manual.remover',
+      recursoTipo: 'agenda_bloqueio_manual',
+      recursoId: bloqueioId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {}
+    });
+    return resultado;
   }
 
   @Get('agendamento-publico')

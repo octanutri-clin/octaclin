@@ -46,6 +46,38 @@ export interface ConsultaAgendaApi {
   atualizadoEm: string;
 }
 
+export type ItemFeedAgendaApi =
+  | (ConsultaAgendaApi & { tipo: 'consulta' })
+  | {
+      id: string;
+      tipo: 'google_indisponivel';
+      profissionalId: string;
+      inicioEm: string;
+      fimEm: string;
+      rotulo: 'Indisponivel';
+    }
+  | {
+      id: string;
+      tipo: 'bloqueio_manual';
+      profissionalId: string;
+      inicioEm: string;
+      fimEm: string;
+      rotulo: 'Intervalo' | 'Reuniao' | 'Ferias';
+    };
+
+export interface ConsultarFeedAgendaEntrada {
+  inicioEm: string;
+  fimEm: string;
+  profissionalId?: string;
+}
+
+export interface CriarBloqueioManualAgendaEntrada {
+  profissionalId?: string;
+  tipo: 'intervalo' | 'reuniao' | 'ferias';
+  inicioEm: string;
+  fimEm: string;
+}
+
 export interface CriarConsultaAgendaEntrada {
   pacienteId: string;
   profissionalId?: string;
@@ -110,6 +142,27 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
 
 export async function listarConsultasAgenda(): Promise<ConsultaAgendaApi[]> {
   return requisitar<ConsultaAgendaApi[]>('/api/agenda/consultas');
+}
+
+export async function listarFeedAgenda(entrada: ConsultarFeedAgendaEntrada): Promise<ItemFeedAgendaApi[]> {
+  const parametros = new URLSearchParams({ inicioEm: entrada.inicioEm, fimEm: entrada.fimEm });
+  if (entrada.profissionalId) parametros.set('profissionalId', entrada.profissionalId);
+  return requisitar<ItemFeedAgendaApi[]>(`/api/agenda/feed?${parametros.toString()}`);
+}
+
+export async function criarBloqueioManualAgenda(
+  entrada: CriarBloqueioManualAgendaEntrada
+): Promise<ItemFeedAgendaApi> {
+  return requisitar<ItemFeedAgendaApi>('/api/agenda/bloqueios-manuais', {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
+export async function removerBloqueioManualAgenda(bloqueioId: string): Promise<void> {
+  await requisitar<{ id: string }>(`/api/agenda/bloqueios-manuais/${encodeURIComponent(bloqueioId)}`, {
+    method: 'DELETE'
+  });
 }
 
 export async function criarConsultaAgenda(entrada: CriarConsultaAgendaEntrada): Promise<ConsultaAgendaApi> {

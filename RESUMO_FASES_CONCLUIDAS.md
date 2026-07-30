@@ -237,6 +237,12 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   e tenant `octaclin-admin`; deploy e smoke funcional foram aprovados.
 
 
+- Fase 169 - Disponibilidade e feed completo da agenda: o feed filtra por
+  periodo e profissional, apresenta eventos externos apenas como
+  `Indisponivel` e permite reservar ou liberar intervalos internos. A agenda
+  ganhou visoes de dia, semana e mes; a migration correspondente aguarda o
+  proximo deploy coordenado.
+
 ## Estado atual de uso
 
 O sistema esta em producao isolada aceita, com massa ficticia mantida fora do banco de producao, piloto interno aprovado, restore real validado e pacote juridico ampliado. A agenda agora tambem aceita solicitacoes publicas com aprovacao manual segura, sem reservar horario nem persistir token bruto, e distingue cancelamento pelo profissional de desmarcamento pelo paciente e de cancelamento originado no Google. O profissional conta com um painel clinico diario agregando prioridades da propria agenda de pacientes. Ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria: faltam recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido.
