@@ -1,7 +1,7 @@
 'use client';
 
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, MapPin, X } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, List, MapPin, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import {
@@ -24,6 +24,7 @@ interface AgendaSemanalProps {
   googleConectado?: boolean;
   onConectarGoogle: () => void;
   onDesconectarGoogle: () => void;
+  onAbrirConsulta: (consultaId: string) => void;
 }
 
 function consultaAtiva(consulta: ConsultaAgendaApi) {
@@ -103,12 +104,13 @@ export function AgendaSemanal({
   profissionais,
   googleConectado,
   onConectarGoogle,
-  onDesconectarGoogle
+  onDesconectarGoogle,
+  onAbrirConsulta
 }: AgendaSemanalProps) {
   const consultasAtivas = useMemo(() => consultas.filter(consultaAtiva), [consultas]);
   const [semanaInicio, setSemanaInicio] = useState(() => inicioDaSemana(new Date()));
   const [semanaInicializada, setSemanaInicializada] = useState(false);
-  const [visao, setVisao] = useState<'dia' | 'semana' | 'mes'>('semana');
+  const [visao, setVisao] = useState<'dia' | 'semana' | 'mes' | 'lista'>('semana');
   const [profissionalId, setProfissionalId] = useState('');
   const [itensFeed, setItensFeed] = useState<ItemFeedAgendaApi[] | null>(null);
   const [erroFeed, setErroFeed] = useState<string | null>(null);
@@ -279,7 +281,7 @@ export function AgendaSemanal({
           ) : null}
 
           <div className="flex h-10 items-center rounded-md border border-linha bg-white p-0.5" role="group" aria-label="Visualizacao da agenda">
-            {(['dia', 'semana', 'mes'] as const).map((opcao) => (
+            {(['dia', 'semana', 'mes', 'lista'] as const).map((opcao) => (
               <button
                 key={opcao}
                 type="button"
@@ -289,7 +291,7 @@ export function AgendaSemanal({
                   visao === opcao ? 'bg-primaria text-white' : 'text-texto-suave hover:bg-superficie-hover'
                 )}
               >
-                {opcao}
+                {opcao === 'lista' ? <><List size={14} aria-hidden="true" />Lista</> : opcao}
               </button>
             ))}
           </div>
@@ -384,7 +386,25 @@ export function AgendaSemanal({
         </p>
       </div>
 
-      {visao === 'mes' ? (
+      {visao === 'lista' ? (
+        <div className="divide-y divide-linha border-t border-linha" aria-label="Lista de horarios do periodo">
+          {itensDaSemana.length ? itensDaSemana.map((item) => {
+            const inicio = new Date(item.inicioEm);
+            const fim = new Date(item.fimEm);
+            const nome = item.tipo === 'consulta' ? item.pacienteNome ?? item.titulo : item.rotulo;
+            const consulta = item.tipo === 'consulta';
+            return (
+              <div key={item.id} className="flex min-w-0 flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-tinta">{nome}</p>
+                  <p className="text-xs text-texto-suave">{formatarDia(inicio)} · {formatarHora(inicio)} - {formatarHora(fim)} · {consulta ? 'Consulta' : item.tipo === 'bloqueio_manual' ? 'Horario reservado' : 'Indisponivel'}</p>
+                </div>
+                {consulta ? <Botao type="button" onClick={() => onAbrirConsulta(item.id)} aria-label={`Abrir detalhes de ${nome}`}>Abrir detalhes</Botao> : null}
+              </div>
+            );
+          }) : <p className="px-4 py-8 text-sm text-texto-suave">Nenhum horario ocupado neste periodo.</p>}
+        </div>
+      ) : visao === 'mes' ? (
         <div className="grid grid-cols-7 border-t border-linha">
           {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map((dia) => (
             <div key={dia} className="border-b border-r border-linha bg-superficie px-2 py-2 text-center text-xs font-semibold text-texto-suave last:border-r-0">
@@ -495,13 +515,14 @@ export function AgendaSemanal({
                         </button>
                       ) : null}
                       {item.tipo === 'consulta' ? (
-                        <a
-                          href={`#consulta-${item.id}`}
+                        <button
+                          type="button"
                           aria-label={`Horario ocupado: ${nome}, ${formatarHora(inicio)} a ${formatarHora(fim)}`}
-                          className="block truncate underline-offset-2 hover:underline"
+                          className="block max-w-full truncate text-left underline-offset-2 hover:underline"
+                          onClick={() => onAbrirConsulta(item.id)}
                         >
                           <strong>{nome}</strong>
-                        </a>
+                        </button>
                       ) : (
                         <strong className="block truncate">{nome}</strong>
                       )}

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 177 - qualidade transversal e componentes compartilhados.
+Atualizado em 2026-07-30 apos a Fase 178 - agenda profissional completa.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -711,12 +711,20 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Data: 2026-07-30. Saida: `fase-177-qualidade-transversal-componentes.md`.
   - Producao: web publicada no commit `ebd7887`; `/health` retornou `200`.
 
-- [ ] Fase 178 - Agenda profissional completa.
+- [x] Fase 178 - Agenda profissional completa.
   - Evoluir as visoes existentes de dia, semana, mes e lista com contexto
     operacional, painel lateral ou modal para criacao e edicao e conflitos
     visiveis.
   - Incluir acoes rapidas para concluir, reagendar, falta, cancelar ou liberar
     horario, preservando agenda interna sem exigir Google Agenda.
+  - Entregue: a lista foi adicionada as visoes internas; horarios ocupados
+    abrem detalhes e remarcacao em modal; desfechos clinicos usam confirmacao
+    acessivel e o cancelamento explicita a liberacao do horario interno.
+  - Validacoes: quatro cenarios Playwright de agenda em desktop/mobile,
+    typecheck, 10 cenarios de acessibilidade, 22 testes de autorizacao e build
+    da web.
+  - Data: 2026-07-30. Saida: `fase-178-agenda-profissional-completa.md`.
+  - Producao: pendente de publicacao e health check.
 
 - [ ] Fase 179 - Lista de pacientes.
   - Criar busca central, filtros salvos, risco, responsavel, ultima consulta e

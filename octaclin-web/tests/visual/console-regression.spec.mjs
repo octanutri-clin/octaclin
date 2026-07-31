@@ -1294,12 +1294,19 @@ test.describe('agenda de producao', () => {
     const agendaInterna = page.getByRole('region', { name: 'Agenda interna semanal' });
     await expect(agendaInterna).toBeVisible();
     await expect(agendaInterna.getByText('Google Agenda opcional')).toBeVisible();
-    await expect(agendaInterna.getByRole('link', { name: /Horario ocupado: Ana Souza/ })).toBeVisible();
+    await expect(agendaInterna.getByRole('button', { name: /Horario ocupado: Ana Souza/ })).toBeVisible();
     await expect(agendaInterna.getByText('Indisponivel')).toBeVisible();
     await expect(agendaInterna.getByRole('button', { name: 'Semana anterior' })).toBeVisible();
     await expect(agendaInterna.getByRole('button', { name: 'Proxima semana' })).toBeVisible();
     await agendaInterna.getByRole('button', { name: 'mes' }).click();
     await expect(agendaInterna.getByText('Seg')).toBeVisible();
+    await agendaInterna.getByRole('button', { name: 'lista' }).click();
+    await expect(agendaInterna.getByRole('button', { name: /Abrir detalhes de Ana Souza/ })).toBeVisible();
+    await agendaInterna.getByRole('button', { name: /Abrir detalhes de Ana Souza/ }).click();
+    const detalhes = page.getByRole('dialog', { name: 'Detalhes da consulta' });
+    await expect(detalhes).toBeVisible();
+    await expect(detalhes.getByText(/Google Agenda:/)).toBeVisible();
+    await expect(detalhes.getByRole('button', { name: 'Remarcar' })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 
@@ -1325,11 +1332,11 @@ test.describe('agenda de producao', () => {
 
     const botaoCancelar = consultaAna.getByRole('button', { name: 'Cancelar consulta' });
     await expect(botaoCancelar).toHaveAttribute('title', 'Cancelar');
-    page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('Registrar a consulta como cancelada?');
-      await dialog.accept();
-    });
     await botaoCancelar.click();
+    const confirmacao = page.getByRole('dialog', { name: 'Cancelar consulta' });
+    await expect(confirmacao).toBeVisible();
+    await expect(confirmacao.getByText(/libera o horario na agenda interna/)).toBeVisible();
+    await confirmacao.getByRole('button', { name: 'Cancelar consulta', exact: true }).click();
 
     await expect.poll(() => agenda.cancelouConsulta()).toBe(true);
     await expect(

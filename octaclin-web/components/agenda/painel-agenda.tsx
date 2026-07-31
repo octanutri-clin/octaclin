@@ -20,6 +20,7 @@ import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { AgendaSemanal } from '@/components/agenda/agenda-semanal';
 import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi } from '@/lib/agendamento-publico-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
@@ -201,6 +202,8 @@ export function PainelAgenda() {
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [statusGoogleAgenda, setStatusGoogleAgenda] = useState<ConexaoGoogleAgendaStatus | null>(null);
+  const [consultaSelecionadaId, setConsultaSelecionadaId] = useState<string | null>(null);
+  const [desfechoPendente, setDesfechoPendente] = useState<{ consulta: ConsultaAgendaApi; status: DesfechoConsultaAgenda } | null>(null);
 
   const pacientesLista = useMemo(() => pacientes?.itens ?? [], [pacientes]);
   const profissionaisLista = useMemo(() => profissionais?.itens ?? [], [profissionais]);
@@ -211,6 +214,10 @@ export function PainelAgenda() {
   const solicitacoesPendentes = useMemo(
     () => solicitacoes.filter((solicitacao) => solicitacao.status === 'pendente' || solicitacao.status === 'processando'),
     [solicitacoes]
+  );
+  const consultaSelecionada = useMemo(
+    () => consultas.find((consulta) => consulta.id === consultaSelecionadaId) ?? null,
+    [consultaSelecionadaId, consultas]
   );
 
   async function carregar() {
@@ -365,7 +372,6 @@ export function PainelAgenda() {
 
   async function registrarDesfecho(consulta: ConsultaAgendaApi, status: DesfechoConsultaAgenda) {
     const rotulo = rotuloStatusConsulta(status).toLocaleLowerCase('pt-BR');
-    if (!window.confirm(`Registrar a consulta como ${rotulo}? Este desfecho nao podera ser alterado.`)) return;
     setErro(null);
     setSucesso(null);
     setProcessandoConsultaId(consulta.id);
@@ -377,11 +383,17 @@ export function PainelAgenda() {
           ? 'Consulta cancelada e horario liberado na agenda interna. Integracoes processadas conforme configuracao.'
           : `Consulta registrada como ${rotulo}.`
       );
+      return true;
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar desfecho da consulta.');
+      return false;
     } finally {
       setProcessandoConsultaId(null);
     }
+  }
+
+  function solicitarDesfecho(consulta: ConsultaAgendaApi, status: DesfechoConsultaAgenda) {
+    setDesfechoPendente({ consulta, status });
   }
 
   async function copiarLinkPublico() {
@@ -473,7 +485,44 @@ export function PainelAgenda() {
         googleConectado={statusGoogleAgenda?.conectado}
         onConectarGoogle={conectarGoogleAgenda}
         onDesconectarGoogle={() => void desconectarGoogle()}
+        onAbrirConsulta={setConsultaSelecionadaId}
       />
+
+      <Modal
+        aberto={Boolean(consultaSelecionada)}
+        aoFechar={() => setConsultaSelecionadaId(null)}
+        titulo="Detalhes da consulta"
+        descricao={consultaSelecionada ? `${consultaSelecionada.pacienteNome ?? consultaSelecionada.titulo} · ${formatarDataHora(consultaSelecionada.inicioEm)}` : undefined}
+        className="max-w-3xl"
+      >
+        {consultaSelecionada ? (
+          <div className="grid gap-4">
+            <div className="grid gap-2 rounded-md border border-linha bg-superficie p-3 text-sm text-texto-suave sm:grid-cols-2">
+              <p>Local: {consultaSelecionada.local || 'Nao informado'}</p>
+              <p>Google Agenda: {statusGoogle(consultaSelecionada, statusGoogleAgenda?.conectado)}</p>
+              <p>E-mail: {statusNotificacao(consultaSelecionada.notificacoes, 'email')}</p>
+              <p>WhatsApp: {statusNotificacao(consultaSelecionada.notificacoes, 'whatsapp')}</p>
+            </div>
+            {consultaAtiva(consultaSelecionada) ? (
+              <form onSubmit={(evento) => remarcar(evento, consultaSelecionada)} className="grid gap-3 border-t border-linha pt-4">
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px_minmax(140px,1fr)]">
+                  <label className="grid gap-1"><Rotulo>Nova data e hora</Rotulo><Campo aria-label="Nova data e hora" name="inicioEm" type="datetime-local" defaultValue={valorDatetimeLocal(new Date(consultaSelecionada.inicioEm))} /></label>
+                  <label className="grid gap-1"><Rotulo>Nova duracao</Rotulo><Campo aria-label="Nova duracao" name="duracaoMinutos" type="number" min={15} max={480} step={5} defaultValue={duracaoConsultaMinutos(consultaSelecionada)} /></label>
+                  <label className="grid gap-1"><Rotulo>Novo local</Rotulo><Campo aria-label="Novo local" name="local" defaultValue={consultaSelecionada.local ?? ''} /></label>
+                </div>
+                <div className="flex flex-wrap justify-between gap-2">
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Registrar desfecho da consulta">
+                    <Botao type="button" disabled={processandoConsultaId === consultaSelecionada.id} onClick={() => solicitarDesfecho(consultaSelecionada, 'concluida')}><CheckCircle2 size={16} />Concluida</Botao>
+                    <Botao type="button" disabled={processandoConsultaId === consultaSelecionada.id} onClick={() => solicitarDesfecho(consultaSelecionada, 'falta')}><UserX size={16} />Falta</Botao>
+                    <Botao type="button" variante="perigo" disabled={processandoConsultaId === consultaSelecionada.id} onClick={() => solicitarDesfecho(consultaSelecionada, 'cancelada')}><XCircle size={16} />Cancelar</Botao>
+                  </div>
+                  <Botao type="submit" variante="primario" disabled={processandoConsultaId === consultaSelecionada.id}><RefreshCcw size={16} />Remarcar</Botao>
+                </div>
+              </form>
+            ) : null}
+          </div>
+        ) : null}
+      </Modal>
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
         <div className="grid min-w-0 gap-4">
@@ -906,7 +955,7 @@ export function PainelAgenda() {
                                 aria-label="Concluir consulta"
                                 title="Concluir"
                                 disabled={processandoConsultaId === consulta.id}
-                                onClick={() => void registrarDesfecho(consulta, 'concluida')}
+                                onClick={() => solicitarDesfecho(consulta, 'concluida')}
                               >
                                 <CheckCircle2 size={17} />
                               </Botao>
@@ -916,7 +965,7 @@ export function PainelAgenda() {
                                 aria-label="Registrar falta"
                                 title="Falta"
                                 disabled={processandoConsultaId === consulta.id}
-                                onClick={() => void registrarDesfecho(consulta, 'falta')}
+                                onClick={() => solicitarDesfecho(consulta, 'falta')}
                               >
                                 <UserX size={17} />
                               </Botao>
@@ -927,7 +976,7 @@ export function PainelAgenda() {
                                 aria-label="Cancelar consulta"
                                 title="Cancelar"
                                 disabled={processandoConsultaId === consulta.id}
-                                onClick={() => void registrarDesfecho(consulta, 'cancelada')}
+                                onClick={() => solicitarDesfecho(consulta, 'cancelada')}
                               >
                                 <XCircle size={17} />
                               </Botao>
@@ -946,6 +995,20 @@ export function PainelAgenda() {
         </Cartao>
         </div>
       </div>
+      <ModalConfirmacao
+        aberto={Boolean(desfechoPendente)}
+        titulo={desfechoPendente?.status === 'cancelada' ? 'Cancelar consulta' : desfechoPendente ? `Registrar ${rotuloStatusConsulta(desfechoPendente.status).toLocaleLowerCase('pt-BR')}` : 'Confirmar desfecho'}
+        mensagem={desfechoPendente?.status === 'cancelada' ? 'Cancelar a consulta libera o horario na agenda interna e processa as integracoes configuradas.' : 'Este desfecho nao podera ser alterado.'}
+        rotuloConfirmar={desfechoPendente?.status === 'cancelada' ? 'Cancelar consulta' : `Registrar ${desfechoPendente ? rotuloStatusConsulta(desfechoPendente.status).toLocaleLowerCase('pt-BR') : 'desfecho'}`}
+        confirmando={Boolean(desfechoPendente && processandoConsultaId === desfechoPendente.consulta.id)}
+        aoCancelar={() => setDesfechoPendente(null)}
+        aoConfirmar={() => {
+          if (!desfechoPendente) return;
+          void registrarDesfecho(desfechoPendente.consulta, desfechoPendente.status).then((concluida) => {
+            if (concluida) setDesfechoPendente(null);
+          });
+        }}
+      />
     </div>
   );
 }
