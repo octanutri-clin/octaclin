@@ -647,7 +647,8 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Evitar disparo automatico para todos os pacientes ativos do tenant.
   - Data: 2026-07-30. Saida: `fase-172-checkins-recorrentes-paciente.md`.
   - Validacoes: Jest de questionarios/datasource, typecheck e build de backend/web.
-  - Deploy: migration `1720000001009` deve ser aplicada antes da publicacao do backend.
+  - Producao: migration `1720000001009` aplicada e registrada no Neon; backend
+    e web publicados pelo Render no commit `56bc06d`.
 
 - [ ] Fase 173 - Matriz longitudinal de respostas.
   - Filtros por paciente, periodo, questionario e categoria.

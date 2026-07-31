@@ -260,7 +260,8 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 172 - Check-ins recorrentes por paciente: a recorrencia passou a exigir
   e persistir o paciente alvo, criando somente um envio por execucao. Regras
   legadas sem paciente sao desativadas e profissionais respeitam o paciente sob
-  sua responsabilidade.
+  sua responsabilidade. A migration `1720000001009` foi aplicada no Neon de
+  producao e o commit `56bc06d` foi publicado pelo Render.
 
 ## Estado atual de uso
 

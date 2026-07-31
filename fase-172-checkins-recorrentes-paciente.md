@@ -1,7 +1,6 @@
 # Fase 172 - Check-ins recorrentes por paciente
 
-Status: concluida localmente em 2026-07-30. Requer aplicar a migration antes
-do deploy de producao.
+Status: concluida e publicada em producao em 2026-07-30.
 
 ## Entregue
 
@@ -13,11 +12,13 @@ do deploy de producao.
   responsabilidade; SuperAdmin e Collaborator preservam o escopo do tenant.
 - O editor passou a exibir o seletor do paciente no bloco de check-in recorrente.
 
-## Deploy
+## Producao
 
-Aplicar `VincularAgendamentoQuestionarioPaciente1720000001009` no Neon de
-producao antes ou junto da publicacao do backend. A migration adiciona
-`paciente_id`, desativa regras legadas sem paciente e cria o indice de execucao.
+A migration `VincularAgendamentoQuestionarioPaciente1720000001009` foi aplicada
+e registrada no Neon de producao. Ela adiciona `paciente_id`, desativa regras
+legadas sem paciente e cria o indice de execucao. O commit `56bc06d` foi
+publicado no Render; o health check do backend retornou `200` e uma rota
+protegida da web retornou `401` sem sessao, como esperado.
 
 ## Validacoes
 
