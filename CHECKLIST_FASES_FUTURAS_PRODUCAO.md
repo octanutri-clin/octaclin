@@ -672,7 +672,8 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Reutilizar os endpoints e componentes atuais antes de criar novos.
   - Data: 2026-07-30. Saida: `fase-175-separacao-ux-formularios.md`.
   - Validacoes: BFF de revisao, preview, typecheck e build da web.
-  - Deploy: sem migration; publicacao pendente.
+  - Producao: sem migration; backend e web publicados pelo Render no commit
+    `84bbbef`, com health checks `200`.
 
 ## Backlog pos-producao
 

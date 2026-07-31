@@ -277,6 +277,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 175 - Separacao UX do modulo de formularios: a experiencia foi dividida
   em Montagem, Biblioteca, Distribuicao e Respostas, mantendo os endpoints e
   componentes existentes e isolando a leitura clinica do trabalho de edicao.
+  Backend e web foram publicados pelo Render no commit `84bbbef`.
 
 ## Estado atual de uso
 
