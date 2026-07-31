@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
@@ -405,6 +406,21 @@ describe('ServicoPacientes', () => {
         }
       ],
       [
+        LogDiarioRapidoOrm,
+        {
+          find: jest.fn(async () => [
+            {
+              id: 'diario-1',
+              tenantId: 'tenant-1',
+              pacienteId: 'paciente-1',
+              tipo: 'humor',
+              valor: { humor: 'bem', adesaoPlano: 85, sintomas: 'Sono leve' },
+              registradoEm: new Date('2026-07-21T18:00:00.000Z')
+            }
+          ])
+        }
+      ],
+      [
         QuestionarioOrm,
         {
           find: jest.fn(async () => [
@@ -466,6 +482,7 @@ describe('ServicoPacientes', () => {
       consultas: 1,
       formulariosPendentes: 1,
       respostas: 1,
+      checkinsRapidos: 1,
       mensagens: 1,
       evolucoes: 0,
       tarefasPendentes: 0,
@@ -474,6 +491,7 @@ describe('ServicoPacientes', () => {
     expect(prontuario.linhaDoTempo.map((evento: { tipo: string }) => evento.tipo)).toEqual([
       'mensagem',
       'consulta',
+      'checkin_rapido',
       'resposta_formulario',
       'formulario'
     ]);
@@ -484,6 +502,13 @@ describe('ServicoPacientes', () => {
       })
     );
     expect(prontuario.linhaDoTempo[2]).toEqual(
+      expect.objectContaining({
+        tipo: 'checkin_rapido',
+        titulo: 'Check-in rapido',
+        descricao: 'Humor: bem - Adesao ao plano: 85% - Sintomas: Sono leve'
+      })
+    );
+    expect(prontuario.linhaDoTempo[3]).toEqual(
       expect.objectContaining({
         titulo: 'Resposta de Check-in semanal',
         descricao: 'Score final 74.5'
@@ -508,6 +533,7 @@ describe('ServicoPacientes', () => {
       [AgendaConsultaOrm, { find: jest.fn(async () => []) }],
       [EnvioQuestionarioOrm, { find: jest.fn(async () => []) }],
       [RespostaCheckinOrm, { find: jest.fn(async () => []) }],
+      [LogDiarioRapidoOrm, { find: jest.fn(async () => []) }],
       [QuestionarioOrm, { find: jest.fn(async () => []) }],
       [MensagemNotificacaoOrm, { find: jest.fn(async () => []) }],
       [AcompanhamentoTarefaOrm, { find: jest.fn(async () => []) }],
@@ -599,6 +625,7 @@ describe('ServicoPacientes', () => {
       [AgendaConsultaOrm, { find: jest.fn(async () => []) }],
       [EnvioQuestionarioOrm, { find: jest.fn(async () => []) }],
       [RespostaCheckinOrm, { find: jest.fn(async () => []) }],
+      [LogDiarioRapidoOrm, { find: jest.fn(async () => []) }],
       [QuestionarioOrm, { find: jest.fn(async () => []) }],
       [MensagemNotificacaoOrm, { find: jest.fn(async () => []) }],
       [EvolucaoClinicaOrm, { find: jest.fn(async () => []) }],

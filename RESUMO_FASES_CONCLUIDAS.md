@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a Fase 173 - matriz longitudinal de respostas.
+Atualizado em 2026-07-30 apos a Fase 174 - check-ins consolidados no prontuario.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -268,6 +268,10 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   somente de indicadores numericos estaveis, preservando o escopo do
   profissional e a compatibilidade com respostas historicas. Backend e web
   foram publicados pelo Render no commit `b34113f`.
+
+- Fase 174 - Check-ins consolidados no prontuario: respostas de formularios e
+  registros de diario rapido agora compartilham a mesma linha do tempo clinica,
+  sem migracao entre tabelas e com contador proprio no resumo do paciente.
 
 ## Estado atual de uso
 

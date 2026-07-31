@@ -93,6 +93,7 @@ export type TipoEventoProntuarioPaciente =
   | 'consulta'
   | 'formulario'
   | 'resposta_formulario'
+  | 'checkin_rapido'
   | 'mensagem'
   | 'evolucao_clinica'
   | 'tarefa_acompanhamento';
@@ -114,6 +115,7 @@ export interface ProntuarioPacienteRespostaDto {
     consultas: number;
     formulariosPendentes: number;
     respostas: number;
+    checkinsRapidos: number;
     mensagens: number;
     evolucoes: number;
     tarefasPendentes: number;

@@ -113,6 +113,7 @@ function rotuloTipo(tipo: EventoProntuarioPacienteApi['tipo']) {
     consulta: 'Consulta',
     formulario: 'Formulario',
     resposta_formulario: 'Resposta',
+    checkin_rapido: 'Check-in rapido',
     mensagem: 'Mensagem',
     evolucao_clinica: 'Evolucao',
     tarefa_acompanhamento: 'Tarefa'
@@ -369,7 +370,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <CartaoResumo titulo="Consultas" valor={String(dados.resumo.consultas)} detalhe="Eventos de agenda vinculados" />
         <CartaoResumo titulo="Formularios pendentes" valor={String(dados.resumo.formulariosPendentes)} detalhe="Envios aguardando resposta" />
-        <CartaoResumo titulo="Respostas" valor={String(dados.resumo.respostas)} detalhe="Check-ins finalizados ou em andamento" />
+        <CartaoResumo titulo="Respostas" valor={String(dados.resumo.respostas)} detalhe="Formularios finalizados ou em andamento" />
+        <CartaoResumo titulo="Check-ins rapidos" valor={String(dados.resumo.checkinsRapidos ?? 0)} detalhe="Registros pelo portal ou mobile" />
         <CartaoResumo titulo="Evolucoes" valor={String(dados.resumo.evolucoes ?? 0)} detalhe={`${dados.resumo.mensagens} mensagens registradas`} />
         <CartaoResumo titulo="Tarefas" valor={String(dados.resumo.tarefasPendentes ?? 0)} detalhe={`${dados.resumo.tarefasPendentes ?? 0} tarefas pendentes`} />
       </section>
@@ -637,7 +639,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         <article className="grid gap-3">
           <div className="rounded-md border border-linha bg-white p-4">
             <h2 className="text-base font-semibold text-tinta">Linha do tempo clinica</h2>
-            <p className="mt-1 text-sm text-texto-suave">Consultas, formularios, respostas e mensagens em ordem cronologica.</p>
+            <p className="mt-1 text-sm text-texto-suave">Consultas, formularios, check-ins, respostas e mensagens em ordem cronologica.</p>
           </div>
           <LinhaDoTempo eventos={eventos} />
         </article>

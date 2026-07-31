@@ -5,6 +5,7 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cliente';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
@@ -275,7 +276,7 @@ export class ServicoPacientes {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const pacienteOrm = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
 
-      const [consultas, envios, respostas, mensagens, evolucoes, tarefas] = await Promise.all([
+      const [consultas, envios, respostas, diarios, mensagens, evolucoes, tarefas] = await Promise.all([
         gerenciador.getRepository(AgendaConsultaOrm).find({
           where: { tenantId, pacienteId },
           order: { inicioEm: 'DESC' },
@@ -289,6 +290,11 @@ export class ServicoPacientes {
         gerenciador.getRepository(RespostaCheckinOrm).find({
           where: { tenantId, pacienteId },
           order: { finalizadoEm: 'DESC' },
+          take: 30
+        }),
+        gerenciador.getRepository(LogDiarioRapidoOrm).find({
+          where: { tenantId, pacienteId },
+          order: { registradoEm: 'DESC' },
           take: 30
         }),
         gerenciador.getRepository(MensagemNotificacaoOrm).find({
@@ -324,6 +330,7 @@ export class ServicoPacientes {
             questionariosPorId.get(enviosPorId.get(resposta.envioQuestionarioId)?.questionarioId ?? '')?.titulo
           )
         ),
+        ...diarios.map((diario) => this.mapearEventoCheckinRapido(diario)),
         ...mensagens.map((mensagem) => this.mapearEventoMensagem(mensagem)),
         ...evolucoes.map((evolucao) => this.mapearEventoEvolucao(evolucao)),
         ...tarefas.map((tarefa) => this.mapearEventoTarefa(tarefa))
@@ -337,6 +344,7 @@ export class ServicoPacientes {
           consultas: consultas.length,
           formulariosPendentes: envios.filter((envio) => envio.status === 'pendente' || envio.status === 'enviado').length,
           respostas: respostas.length,
+          checkinsRapidos: diarios.length,
           mensagens: mensagens.length,
           evolucoes: evolucoes.length,
           tarefasPendentes: tarefas.filter((tarefa) => tarefa.status === 'pendente' || tarefa.status === 'em_andamento').length,
@@ -484,6 +492,32 @@ export class ServicoPacientes {
       metadados: {
         scoreFinal: resposta.scoreFinal
       }
+    };
+  }
+
+  private mapearEventoCheckinRapido(diario: LogDiarioRapidoOrm): EventoProntuarioPacienteDto {
+    const titulos: Record<LogDiarioRapidoOrm['tipo'], string> = {
+      refeicao: 'Registro de refeicao',
+      humor: 'Check-in rapido',
+      agua: 'Registro de agua',
+      atividade: 'Registro de atividade'
+    };
+    const detalhes = [
+      typeof diario.valor.humor === 'string' ? `Humor: ${diario.valor.humor}` : undefined,
+      typeof diario.valor.adesaoPlano === 'number' ? `Adesao ao plano: ${diario.valor.adesaoPlano}%` : undefined,
+      typeof diario.valor.sintomas === 'string' && diario.valor.sintomas.trim() ? `Sintomas: ${diario.valor.sintomas.trim()}` : undefined,
+      typeof diario.valor.observacoes === 'string' && diario.valor.observacoes.trim() ? diario.valor.observacoes.trim() : undefined
+    ].filter((detalhe): detalhe is string => Boolean(detalhe));
+
+    return {
+      id: diario.id,
+      tipo: 'checkin_rapido',
+      titulo: titulos[diario.tipo],
+      descricao: detalhes.join(' - ') || undefined,
+      data: diario.registradoEm,
+      status: 'registrado',
+      origemId: diario.id,
+      metadados: { tipoDiario: diario.tipo }
     };
   }
 
