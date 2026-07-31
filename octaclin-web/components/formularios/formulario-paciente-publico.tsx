@@ -38,6 +38,19 @@ function valorPreenchido(valor: ValorResposta | undefined) {
   return true;
 }
 
+function formatarExpiracao(valor: string) {
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return null;
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(data);
+}
+
 export function FormularioPacientePublico({ token }: Props) {
   const [formulario, setFormulario] = useState<FormularioPublico | null>(null);
   const [respostas, setRespostas] = useState<Record<string, ValorResposta>>({});
@@ -126,7 +139,7 @@ export function FormularioPacientePublico({ token }: Props) {
     );
   }
 
-  if (!formulario || erro) {
+  if (!formulario) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-fundo px-4">
         <section className="flex w-full max-w-xl items-start gap-3 border border-perigo-borda bg-perigo-suave p-4 text-sm text-perigo">
@@ -144,6 +157,9 @@ export function FormularioPacientePublico({ token }: Props) {
           <p className="text-xs font-semibold uppercase text-texto-suave">OctaClin</p>
           <h1 className="mt-1 text-2xl font-semibold">{formulario.titulo}</h1>
           {formulario.descricao ? <p className="mt-2 text-sm text-texto-suave">{formulario.descricao}</p> : null}
+          {formulario.expiraEm && formatarExpiracao(formulario.expiraEm) ? (
+            <p className="mt-3 text-sm text-texto-suave">Disponivel ate {formatarExpiracao(formulario.expiraEm)}.</p>
+          ) : null}
           {perguntasObrigatorias.length ? (
             <div className="mt-4 grid gap-2" aria-label="Progresso do formulario">
               <div className="flex items-center justify-between gap-3 text-xs font-medium text-texto-suave">
@@ -158,9 +174,9 @@ export function FormularioPacientePublico({ token }: Props) {
         </header>
 
         {erro ? (
-          <div className="flex items-center gap-2 border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
+          <div className="flex items-center gap-2 border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo" role="alert">
             <AlertTriangle className="h-4 w-4" />
-            {erro}
+            <span>{erro} Revise e tente enviar novamente.</span>
           </div>
         ) : null}
 

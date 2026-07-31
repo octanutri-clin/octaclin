@@ -129,6 +129,9 @@ export function FormularioAgendamentoPublico({ token }: Props) {
                 {horarioSelecionado ? formatarDataHora(horarioSelecionado, agenda.timezone) : 'Horario selecionado'} com{' '}
                 {agenda.profissional.nomeExibicao}.
               </p>
+              <p className="text-sm text-texto-suave">
+                A equipe confirmara a disponibilidade pelo contato informado. Este pedido ainda nao confirma a consulta.
+              </p>
             </CartaoConteudo>
           </Cartao>
         </section>
@@ -161,6 +164,10 @@ export function FormularioAgendamentoPublico({ token }: Props) {
                 <Clock size={16} />
                 {agenda.duracaoMinutos} minutos por atendimento
               </span>
+              <span className="inline-flex min-h-9 items-center gap-2 rounded-md border border-linha bg-superficie px-3">
+                <Clock size={16} />
+                Horarios em {agenda.timezone.replace('_', ' ')}
+              </span>
             </div>
           </section>
 
@@ -187,6 +194,8 @@ export function FormularioAgendamentoPublico({ token }: Props) {
                           type="button"
                           variante={horarioSelecionado === horario.inicioEm ? 'primario' : 'secundario'}
                           className="h-10 w-full"
+                          aria-pressed={horarioSelecionado === horario.inicioEm}
+                          aria-label={`Selecionar ${horario.rotulo} em ${dia.rotulo}`}
                           onClick={() => setHorarioSelecionado(horario.inicioEm)}
                         >
                           {horario.rotulo}
@@ -215,11 +224,12 @@ export function FormularioAgendamentoPublico({ token }: Props) {
           </CartaoCabecalho>
           <CartaoConteudo>
             <form onSubmit={enviarSolicitacao} className="grid gap-4">
-              <div className="grid gap-2 rounded-lg border border-linha bg-superficie px-4 py-3">
+              <div className="grid gap-2 rounded-lg border border-linha bg-superficie px-4 py-3" aria-live="polite">
                 <span className="text-xs font-semibold uppercase text-texto-suave">Horario escolhido</span>
                 <span className="text-sm font-medium text-tinta">
                   {horarioSelecionado ? formatarDataHora(horarioSelecionado, agenda.timezone) : 'Selecione um horario'}
                 </span>
+                <span className="text-xs text-texto-suave">Fuso horario: {agenda.timezone.replace('_', ' ')}</span>
               </div>
 
               <label className="grid gap-1">
@@ -272,7 +282,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
                 </p>
                 <p className="inline-flex items-center gap-2">
                   <MessageCircle size={16} />
-                  Nenhum dado interno de pacientes ou agenda completa fica visivel aqui.
+                  O horario so sera reservado apos a confirmacao da equipe.
                 </p>
               </div>
 

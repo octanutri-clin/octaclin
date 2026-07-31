@@ -289,7 +289,9 @@ test.describe('agendamento publico', () => {
     await expect(page.getByRole('heading', { name: 'Agendar com Dra. Carla' })).toBeVisible();
     await expect(page.getByText('1. Escolha um horario')).toBeVisible();
     await expect(page.getByText('2. Envie sua solicitacao')).toBeVisible();
+    await expect(page.getByText('Horarios em America/Sao Paulo')).toBeVisible();
     await page.getByRole('button', { name: '10:00' }).click();
+    await expect(page.getByText('Fuso horario: America/Sao Paulo')).toBeVisible();
     await page.getByLabel('Nome completo').fill('Ana Silva');
     await page.getByLabel('Email').fill('ana@exemplo.com');
     await page.getByLabel('WhatsApp').fill('5511999999999');
@@ -298,6 +300,7 @@ test.describe('agendamento publico', () => {
 
     await expect.poll(() => pagina.solicitacaoEnviada()).not.toBeNull();
     await expect(page.getByText('Solicitacao enviada para analise.')).toBeVisible();
+    await expect(page.getByText(/Este pedido ainda nao confirma a consulta/i)).toBeVisible();
     await expect(page.getByText('pacienteId')).toHaveCount(0);
     await assertSemOverflowHorizontal(page);
   });
