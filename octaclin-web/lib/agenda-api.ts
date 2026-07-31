@@ -211,8 +211,16 @@ export interface ConexaoGoogleAgendaStatus {
   conectado: boolean;
 }
 
+export interface ConexaoGoogleProfissionalStatus extends ConexaoGoogleAgendaStatus {
+  profissionalId: string;
+}
+
 export async function obterStatusGoogleAgenda(): Promise<ConexaoGoogleAgendaStatus> {
   return requisitar<ConexaoGoogleAgendaStatus>('/api/agenda/google/status');
+}
+
+export async function listarStatusGoogleProfissionais(): Promise<ConexaoGoogleProfissionalStatus[]> {
+  return requisitar<ConexaoGoogleProfissionalStatus[]>('/api/agenda/google/profissionais/status');
 }
 
 export function conectarGoogleAgenda(): void {

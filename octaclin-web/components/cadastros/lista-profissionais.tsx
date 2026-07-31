@@ -7,6 +7,7 @@ import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/compone
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { Tabela, TabelaCabecalho, TabelaConteudo, TabelaLinha, TabelaLinhas, TabelaVazia } from '@/components/ui/tabela';
 import { obterSessao } from '@/lib/auth-api';
+import { listarStatusGoogleProfissionais } from '@/lib/agenda-api';
 import {
   ProfissionalResumo,
   RespostaPaginada,
@@ -61,9 +62,16 @@ export function ListaProfissionais() {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [podeGerenciar, setPodeGerenciar] = useState(false);
   const [profissionalParaArquivar, setProfissionalParaArquivar] = useState<ProfissionalResumo | null>(null);
+  const [googlePorProfissional, setGooglePorProfissional] = useState<Map<string, boolean>>(new Map());
 
   useEffect(() => {
-    void obterSessao().then((sessao) => setPodeGerenciar(Boolean(sessao?.permissoes?.includes('profissionais.gerenciar'))));
+    void obterSessao().then(async (sessao) => {
+      setPodeGerenciar(Boolean(sessao?.permissoes?.includes('profissionais.gerenciar')));
+      if (sessao?.papel === 'SuperAdmin') {
+        const status = await listarStatusGoogleProfissionais().catch(() => []);
+        setGooglePorProfissional(new Map(status.map((item) => [item.profissionalId, item.conectado])));
+      }
+    });
   }, []);
 
   async function carregar() {
@@ -258,17 +266,18 @@ export function ListaProfissionais() {
 
       <Tabela>
         <TabelaConteudo larguraMinima="820px">
-          <TabelaCabecalho className="grid-cols-[1.2fr_0.9fr_1fr_0.7fr_96px]">
+          <TabelaCabecalho className="grid-cols-[1.2fr_0.9fr_1fr_0.7fr_0.8fr_96px]">
             <span>Profissional</span>
             <span>Registro</span>
             <span>Especialidade</span>
             <span>Criado em</span>
+            <span>Google Agenda</span>
             <span>Acoes</span>
           </TabelaCabecalho>
           <TabelaLinhas>
             {dados?.itens.length ? (
               dados.itens.map((profissional) => (
-                <TabelaLinha key={profissional.id} className="grid-cols-[1.2fr_0.9fr_1fr_0.7fr_96px]">
+                <TabelaLinha key={profissional.id} className="grid-cols-[1.2fr_0.9fr_1fr_0.7fr_0.8fr_96px]">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <Stethoscope size={16} className="shrink-0 text-primaria" />
@@ -279,6 +288,7 @@ export function ListaProfissionais() {
                   <span>{profissional.registroProfissional ?? '-'}</span>
                   <span>{profissional.especialidade ?? '-'}</span>
                   <span>{formatarData(profissional.criadoEm)}</span>
+                  <span className="text-sm text-texto-suave">{googlePorProfissional.has(profissional.id) ? (googlePorProfissional.get(profissional.id) ? 'Conectada' : 'Desconectada') : '-'}</span>
                   <div className="flex justify-end gap-1">
                     {podeGerenciar ? (
                       <>

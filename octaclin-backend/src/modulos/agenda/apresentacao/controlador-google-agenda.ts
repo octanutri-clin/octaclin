@@ -58,6 +58,17 @@ export class ControladorGoogleAgenda {
     return { conectado: Boolean(credenciais) };
   }
 
+  @Get('profissionais/status')
+  @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
+  @Papeis('SuperAdmin')
+  @Permissoes('profissionais.ler')
+  async statusProfissionais(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    const conexoes = await this.executorTenant.executar(usuario.tenantId, (gerenciador) =>
+      gerenciador.getRepository(ProfissionalGoogleConexaoOrm).find({ where: { tenantId: usuario.tenantId } })
+    );
+    return conexoes.map((conexao) => ({ profissionalId: conexao.profissionalId, conectado: !conexao.desconectadoEm }));
+  }
+
   @Post('desconectar')
   @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
   @Papeis('SuperAdmin', 'Professional')
