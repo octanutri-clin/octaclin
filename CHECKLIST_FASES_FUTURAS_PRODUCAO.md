@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-31 apos a Fase 191 - acesso e ativacao do usuario.
+Atualizado em 2026-07-31 apos a Fase 192 - centro clinico diario e agenda profissional.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -890,7 +890,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `ecc:security-reviewer`, opus): sem achado confirmado introduzido por esta
     fase.
 
-- [ ] Fase 192 - Centro clinico diario e agenda profissional.
+- [x] Fase 192 - Centro clinico diario e agenda profissional.
   - Reorganizar o dashboard em Agora, Proximos e Pendentes, priorizando fila
     clinica e acoes rapidas antes de indicadores agregados.
   - Tornar o calendario a superficie principal da agenda; mover criacao e
@@ -901,6 +901,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     confirmacao e sincronizacao apenas quando configurada.
   - Aceite: jornadas completas de criar, editar, bloquear, liberar, concluir,
     faltar e cancelar validadas em desktop e celular.
+  - Status: concluida em 2026-07-31. Dashboard reagrupado em Agora/Proximos/
+    Pendentes (indicadores agregados movidos para o final); criacao de
+    consulta virou modal ("Nova consulta"); edicao duplicada na lista
+    consolidada num botao "Gerenciar consulta" que abre o modal ja usado pelo
+    calendario; liberar horario reservado ganhou confirmacao. Corrigido de
+    quebra um bug real de mobile no componente `Modal` compartilhado (sem
+    scroll/max-height, formulario ficava inacessivel em tela curta).
+  - Data: 2026-07-31. Saida: `fase-192-centro-clinico-agenda-profissional.md`.
+  - Validacoes: `pnpm --dir octaclin-web typecheck`, `lint`, `build`,
+    Playwright (`jornadas-criticas`, `console-regression`, `acessibilidade` =
+    68 testes), `test:authz` (22 verificacoes), `security:secrets`,
+    `validar-preflight.ps1 -DocsOnly`. Sem mudanca de backend nesta fase.
 
 - [ ] Fase 193 - Pacientes e prontuario orientados a conduta.
   - Evoluir a lista com busca dominante, filtros realmente persistidos,

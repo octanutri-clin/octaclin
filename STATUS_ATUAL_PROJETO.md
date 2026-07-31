@@ -7,11 +7,16 @@ Atualizado em 2026-07-31.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 191 - acesso e ativacao do usuario (2026-07-31).
-  Login, recuperacao de senha e primeiro acesso do paciente compartilham um
-  shell de autenticacao unico, com mostrar/ocultar senha, aviso de Caps Lock,
-  tratamento unificado de link expirado/invalido e ativacao do paciente em 2
-  etapas (senha, aceites legais).
+- Ultima fase concluida: Fase 192 - centro clinico diario e agenda profissional
+  (2026-07-31). Dashboard reagrupado em Agora/Proximos/Pendentes; agenda com
+  criacao em modal, edicao consolidada num unico botao "Gerenciar consulta" e
+  confirmacao ao liberar horario reservado. Corrigido tambem um bug de mobile
+  no componente `Modal` compartilhado (sem scroll/max-height).
+- Fase 191: acesso e ativacao do usuario (2026-07-31). Login, recuperacao de
+  senha e primeiro acesso do paciente compartilham um shell de autenticacao
+  unico, com mostrar/ocultar senha, aviso de Caps Lock, tratamento unificado
+  de link expirado/invalido e ativacao do paciente em 2 etapas (senha, aceites
+  legais).
 - Fase 190: arquitetura de navegacao e sistema visual definitivo (2026-07-31).
   O console separa Clinica, Relacionamento, Gestao e SuperAdmin, com contexto
   da sessao e atalhos por permissao.

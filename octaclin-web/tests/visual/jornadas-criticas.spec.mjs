@@ -861,7 +861,8 @@ test.describe('jornadas criticas de producao', () => {
     await expect.poll(() => profissionalFluxo.pacienteCriado()?.nome).toBe('Ana Jornada');
 
     await page.goto('/agenda');
-    const formularioAgenda = page.locator('form').filter({ hasText: 'Novo agendamento' });
+    await page.getByRole('button', { name: 'Nova consulta' }).click();
+    const formularioAgenda = page.getByRole('dialog', { name: 'Nova consulta' });
     await formularioAgenda.getByLabel('Paciente').selectOption('paciente-jornada');
     await formularioAgenda.getByLabel('Profissional').selectOption('profissional-1');
     await formularioAgenda.getByLabel('Data e hora').fill('2026-08-10T10:00');

@@ -1332,10 +1332,13 @@ test.describe('agenda de producao', () => {
     const consultaAna = page.locator('article').filter({ hasText: 'Ana Souza' });
     await expect(consultaAna).toBeVisible();
 
-    await consultaAna.getByLabel('Nova data e hora').fill('2026-07-24T10:30');
-    await consultaAna.getByLabel('Nova duracao').fill('45');
-    await consultaAna.getByLabel('Novo local').fill('Sala 2');
-    await consultaAna.getByRole('button', { name: 'Remarcar' }).click();
+    await consultaAna.getByRole('button', { name: 'Gerenciar consulta' }).click();
+    const detalhes = page.getByRole('dialog', { name: 'Detalhes da consulta' });
+    await expect(detalhes).toBeVisible();
+    await detalhes.getByLabel('Nova data e hora').fill('2026-07-24T10:30');
+    await detalhes.getByLabel('Nova duracao').fill('45');
+    await detalhes.getByLabel('Novo local').fill('Sala 2');
+    await detalhes.getByRole('button', { name: 'Remarcar' }).click();
 
     await expect.poll(() => agenda.remarcouConsulta()).toBe(true);
     await expect(
@@ -1344,9 +1347,7 @@ test.describe('agenda de producao', () => {
     await expect(consultaAna.getByText('24/07/2026')).toBeVisible();
     await expect(consultaAna.getByText('Reagendada')).toBeVisible();
 
-    const botaoCancelar = consultaAna.getByRole('button', { name: 'Cancelar consulta' });
-    await expect(botaoCancelar).toHaveAttribute('title', 'Cancelar');
-    await botaoCancelar.click();
+    await detalhes.getByRole('button', { name: 'Cancelar', exact: true }).click();
     const confirmacao = page.getByRole('dialog', { name: 'Cancelar consulta' });
     await expect(confirmacao).toBeVisible();
     await expect(confirmacao.getByText(/libera o horario na agenda interna/)).toBeVisible();

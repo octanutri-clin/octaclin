@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-31 apos a Fase 191 - acesso e ativacao do usuario.
+Atualizado em 2026-07-31 apos a Fase 192 - centro clinico diario e agenda profissional.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -374,6 +374,16 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   paciente passou a ter 2 etapas (senha, aceites legais) com foco anunciado a
   leitor de tela em cada transicao. Revisao de seguranca focada nao encontrou
   achado introduzido pela fase.
+
+- Fase 192 - Centro clinico diario e agenda profissional: o dashboard do
+  profissional foi reagrupado em Agora, Proximos e Pendentes, priorizando fila
+  clinica e atendimentos do dia acima dos indicadores agregados (movidos para
+  o final). Na agenda, criacao de consulta virou modal ("Nova consulta") e a
+  edicao duplicada na lista foi consolidada num unico botao "Gerenciar
+  consulta" que abre o mesmo modal do calendario; liberar horario reservado
+  passou a exigir confirmacao. A correcao encontrada durante a validacao (o
+  componente `Modal` compartilhado sem scroll/max-height) beneficia todo uso
+  existente de modal no app.
 
 ## Estado atual de uso
 

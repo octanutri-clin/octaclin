@@ -202,6 +202,7 @@ export function PainelAgenda() {
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [statusGoogleAgenda, setStatusGoogleAgenda] = useState<ConexaoGoogleAgendaStatus | null>(null);
+  const [modalCriarAberto, setModalCriarAberto] = useState(false);
   const [consultaSelecionadaId, setConsultaSelecionadaId] = useState<string | null>(null);
   const [desfechoPendente, setDesfechoPendente] = useState<{ consulta: ConsultaAgendaApi; status: DesfechoConsultaAgenda } | null>(null);
 
@@ -488,6 +489,14 @@ export function PainelAgenda() {
         onAbrirConsulta={setConsultaSelecionadaId}
       />
 
+      {erro ? <AlertaOperacional mensagem={erro} /> : null}
+      {sucesso ? (
+        <div className="flex items-start gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
+          <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
+          <span>{sucesso}</span>
+        </div>
+      ) : null}
+
       <Modal
         aberto={Boolean(consultaSelecionada)}
         aoFechar={() => setConsultaSelecionadaId(null)}
@@ -570,19 +579,13 @@ export function PainelAgenda() {
           </CartaoConteudo>
         </Cartao>
 
-        <Cartao id="novo-agendamento" className="min-w-0 scroll-mt-28">
+        <Modal
+          aberto={modalCriarAberto}
+          aoFechar={() => setModalCriarAberto(false)}
+          titulo="Nova consulta"
+          descricao="Cria a consulta e bloqueia o horario na agenda interna. Google e avisos sao opcionais."
+        >
           <form onSubmit={salvar}>
-            <CartaoCabecalho className="items-start">
-              <div>
-                <h2 className="text-base font-semibold">Novo agendamento</h2>
-                <p className="mt-1 text-sm text-texto-suave">
-                  Cria a consulta e bloqueia o horario na agenda interna. Google e avisos sao opcionais.
-                </p>
-              </div>
-              <CalendarCheck size={20} className="text-primaria" />
-            </CartaoCabecalho>
-
-            <CartaoConteudo>
               <div className="grid gap-3">
                 <label className="grid gap-1">
                   <Rotulo>Paciente</Rotulo>
@@ -681,14 +684,6 @@ export function PainelAgenda() {
                   Enviar e-mail e mensagem ao salvar
                 </label>
 
-                {erro ? <AlertaOperacional mensagem={erro} /> : null}
-                {sucesso ? (
-                  <div className="flex items-start gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
-                    <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
-                    <span>{sucesso}</span>
-                  </div>
-                ) : null}
-
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                   <Botao type="button" onClick={() => void carregar()} disabled={carregando || salvando}>
                     <RefreshCcw size={16} />
@@ -700,9 +695,8 @@ export function PainelAgenda() {
                   </Botao>
                 </div>
               </div>
-            </CartaoConteudo>
           </form>
-        </Cartao>
+        </Modal>
       </div>
 
       <div className="grid min-w-0 gap-4">
@@ -826,7 +820,13 @@ export function PainelAgenda() {
               <h2 className="text-base font-semibold">Consultas agendadas</h2>
               <p className="mt-1 text-sm text-texto-suave">{proximasConsultas.length} consultas no periodo carregado</p>
             </div>
-            <BarraCarregamento visivel={carregando} rotulo="Carregando agenda" />
+            <div className="flex items-center gap-3">
+              <BarraCarregamento visivel={carregando} rotulo="Carregando agenda" />
+              <Botao type="button" variante="primario" onClick={() => setModalCriarAberto(true)}>
+                <CalendarCheck size={16} />
+                Nova consulta
+              </Botao>
+            </div>
           </CartaoCabecalho>
           <CartaoConteudo>
             {proximasConsultas.length ? (
@@ -899,89 +899,11 @@ export function PainelAgenda() {
                       ) : null}
 
                       {consultaAtiva(consulta) ? (
-                        <div className="mt-3 grid gap-3 border-t border-linha pt-3 xl:grid-cols-[minmax(0,1fr)_minmax(220px,320px)]">
-                          <form onSubmit={(evento) => remarcar(evento, consulta)} className="grid gap-2">
-                            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_120px_minmax(140px,1fr)]">
-                              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                                Nova data e hora
-                                <input
-                                  aria-label="Nova data e hora"
-                                  name="inicioEm"
-                                  type="datetime-local"
-                                  defaultValue={valorDatetimeLocal(new Date(consulta.inicioEm))}
-                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
-                                />
-                              </label>
-                              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                                Nova duracao
-                                <input
-                                  aria-label="Nova duracao"
-                                  name="duracaoMinutos"
-                                  type="number"
-                                  min={15}
-                                  max={480}
-                                  step={5}
-                                  defaultValue={duracaoConsultaMinutos(consulta)}
-                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
-                                />
-                              </label>
-                              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                                Novo local
-                                <input
-                                  aria-label="Novo local"
-                                  name="local"
-                                  defaultValue={consulta.local ?? ''}
-                                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
-                                />
-                              </label>
-                            </div>
-                            <div className="flex justify-end">
-                              <Botao type="submit" disabled={processandoConsultaId === consulta.id}>
-                                <RefreshCcw size={15} />
-                                Remarcar
-                              </Botao>
-                            </div>
-                          </form>
-
-                          <div className="flex items-end justify-end">
-                            <div
-                              className="flex h-10 items-center gap-2"
-                              role="group"
-                              aria-label="Registrar desfecho da consulta"
-                            >
-                              <Botao
-                                type="button"
-                                className="h-9 w-9 p-0"
-                                aria-label="Concluir consulta"
-                                title="Concluir"
-                                disabled={processandoConsultaId === consulta.id}
-                                onClick={() => solicitarDesfecho(consulta, 'concluida')}
-                              >
-                                <CheckCircle2 size={17} />
-                              </Botao>
-                              <Botao
-                                type="button"
-                                className="h-9 w-9 p-0"
-                                aria-label="Registrar falta"
-                                title="Falta"
-                                disabled={processandoConsultaId === consulta.id}
-                                onClick={() => solicitarDesfecho(consulta, 'falta')}
-                              >
-                                <UserX size={17} />
-                              </Botao>
-                              <Botao
-                                type="button"
-                                variante="perigo"
-                                className="h-9 w-9 p-0"
-                                aria-label="Cancelar consulta"
-                                title="Cancelar"
-                                disabled={processandoConsultaId === consulta.id}
-                                onClick={() => solicitarDesfecho(consulta, 'cancelada')}
-                              >
-                                <XCircle size={17} />
-                              </Botao>
-                            </div>
-                          </div>
+                        <div className="mt-3 flex justify-end border-t border-linha pt-3">
+                          <Botao type="button" onClick={() => setConsultaSelecionadaId(consulta.id)}>
+                            <RefreshCcw size={15} />
+                            Gerenciar consulta
+                          </Botao>
                         </div>
                       ) : null}
                     </article>

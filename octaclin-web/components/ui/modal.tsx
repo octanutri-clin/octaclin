@@ -75,9 +75,9 @@ export function Modal({ aberto, aoFechar, titulo, descricao, children, className
         aria-modal="true"
         aria-labelledby={tituloId}
         aria-describedby={descricao ? descricaoId : undefined}
-        className={cn('relative z-10 w-full max-w-lg rounded-lg border border-linha bg-white shadow-lg', className)}
+        className={cn('relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col rounded-lg border border-linha bg-white shadow-lg', className)}
       >
-        <div className="flex items-center justify-between gap-2 border-b border-linha px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-linha px-4 py-3">
           <h2 id={tituloId} className="text-sm font-semibold text-tinta">
             {titulo}
           </h2>
@@ -91,11 +91,11 @@ export function Modal({ aberto, aoFechar, titulo, descricao, children, className
           </button>
         </div>
         {descricao ? (
-          <p id={descricaoId} className="px-4 pt-3 text-sm text-texto-suave">
+          <p id={descricaoId} className="shrink-0 px-4 pt-3 text-sm text-texto-suave">
             {descricao}
           </p>
         ) : null}
-        <div className="p-4">{children}</div>
+        <div className="overflow-y-auto p-4">{children}</div>
       </div>
     </div>,
     document.body

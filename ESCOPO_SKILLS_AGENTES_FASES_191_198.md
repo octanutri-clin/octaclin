@@ -52,6 +52,10 @@ ou dado sensivel (ver tabela abaixo).
 - Skill: `ui-ux-pro-max --domain ux "navigation modal"`.
 - Agente: `ecc:database-reviewer` (conflito/bloqueio de horario).
 - Agente: `ecc:e2e-runner` (jornadas dia/semana/mes/lista via Playwright).
+- Executado: implementacao direta (sonnet, sem subagente — mudanca coube num
+  unico fluxo de edicao sequencial). `ecc:database-reviewer` nao acionado por
+  zero diff de backend nesta fase. Playwright rodado direto (68 cenarios), sem
+  precisar do agente `ecc:e2e-runner` separado. Ver `fase-192-centro-clinico-agenda-profissional.md`.
 
 ### Fase 193 - Pacientes e prontuario orientados a conduta
 - Skill: `ecc:healthcare-emr-patterns` (padrao de prontuario/timeline clinica).

@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, List, MapPin, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
+import { ModalConfirmacao } from '@/components/ui/modal';
 import {
   ConsultaAgendaApi,
   criarBloqueioManualAgenda,
@@ -120,6 +121,8 @@ export function AgendaSemanal({
     inicioEm: valorDatetimeLocal(new Date()),
     fimEm: valorDatetimeLocal(new Date(Date.now() + 60 * 60_000))
   }));
+  const [bloqueioParaLiberar, setBloqueioParaLiberar] = useState<string | null>(null);
+  const [liberandoBloqueio, setLiberandoBloqueio] = useState(false);
 
   useEffect(() => {
     if (profissionalId || !profissionais.length) return;
@@ -509,7 +512,7 @@ export function AgendaSemanal({
                           aria-label="Liberar horario reservado"
                           title="Liberar horario"
                           className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded text-alerta-forte hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
-                          onClick={() => void removerBloqueio(item.id)}
+                          onClick={() => setBloqueioParaLiberar(item.id)}
                         >
                           <X size={14} />
                         </button>
@@ -545,6 +548,23 @@ export function AgendaSemanal({
         </div>
       </div>
       )}
+
+      <ModalConfirmacao
+        aberto={Boolean(bloqueioParaLiberar)}
+        titulo="Liberar horario reservado"
+        mensagem="O horario volta a ficar disponivel na agenda interna imediatamente."
+        rotuloConfirmar="Liberar horario"
+        confirmando={liberandoBloqueio}
+        aoCancelar={() => setBloqueioParaLiberar(null)}
+        aoConfirmar={() => {
+          if (!bloqueioParaLiberar) return;
+          setLiberandoBloqueio(true);
+          void removerBloqueio(bloqueioParaLiberar).then(() => {
+            setLiberandoBloqueio(false);
+            setBloqueioParaLiberar(null);
+          });
+        }}
+      />
     </section>
   );
 }
