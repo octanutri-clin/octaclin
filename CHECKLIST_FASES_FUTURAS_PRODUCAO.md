@@ -696,6 +696,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     preview e 10 jornadas criticas Playwright (desktop/mobile), alem de
     `test:next15`, typecheck e build da web.
   - Data: 2026-07-30. Saida: `fase-176-validacao-ponta-a-ponta-formularios-checkins.md`.
+  - Producao: web publicada no commit `9e6f227`; `/health` retornou `200`.
 
 - [ ] Fase 177 - Qualidade transversal e componentes compartilhados.
   - Consolidar campos, selects, textareas, badges, tabs, feedback, modais e

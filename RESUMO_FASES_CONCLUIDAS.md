@@ -285,6 +285,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   `cookies()` no BFF, que causava sessao ausente em rotas autenticadas no
   Next.js 15. O acesso agora aguarda a API dinamica na fronteira compartilhada;
   os fluxos de agenda, portal e demais BFFs autenticados herdam a correcao.
+  A web foi publicada no commit `9e6f227` e o health check retornou `200`.
 
 ## Estado atual de uso
 

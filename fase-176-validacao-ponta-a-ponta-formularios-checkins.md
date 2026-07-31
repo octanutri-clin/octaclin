@@ -1,7 +1,6 @@
 # Fase 176 - Validacao ponta a ponta de formularios e check-ins
 
-Status: concluida localmente em 2026-07-30; aguardando publicacao e smoke de
-producao.
+Status: concluida e publicada em producao em 2026-07-30.
 
 ## Escopo validado
 
@@ -33,6 +32,11 @@ pnpm --dir octaclin-web build
 
 Resultados: 43 testes backend, 22 testes BFF/autorizacao, 3 testes de preview
 e 10 jornadas criticas Playwright passaram.
+
+## Producao
+
+A web foi publicada no commit `9e6f227`. O endpoint
+`https://octaclin-web-producao.onrender.com/health` retornou `200`.
 
 ## Proxima fase
 
