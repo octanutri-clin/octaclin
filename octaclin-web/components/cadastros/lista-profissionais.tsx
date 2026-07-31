@@ -154,6 +154,7 @@ export function ListaProfissionais() {
             <p className="mt-1 text-sm text-texto-suave">
               {dados ? `${dados.total} registros encontrados` : 'Carregando registros'}
             </p>
+            <p className="mt-1 text-xs text-texto-sutil">Somente quem possui permissao de gerenciar profissionais pode criar, editar ou arquivar acessos.</p>
           </div>
           <div className="flex gap-2">
             {editandoId ? (
@@ -273,7 +274,7 @@ export function ListaProfissionais() {
                       <Stethoscope size={16} className="shrink-0 text-primaria" />
                       <strong className="truncate">{profissional.nome}</strong>
                     </div>
-                    <p className="mt-1 break-all text-xs text-texto-suave">{profissional.id}</p>
+                    <p className="mt-1 text-xs text-texto-suave">Acesso clinico ativo</p>
                   </div>
                   <span>{profissional.registroProfissional ?? '-'}</span>
                   <span>{profissional.especialidade ?? '-'}</span>
