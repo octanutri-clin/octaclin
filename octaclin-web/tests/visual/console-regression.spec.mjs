@@ -1456,7 +1456,7 @@ test.describe('prontuario do paciente', () => {
     await page.getByRole('button', { name: 'Enviar material' }).click();
 
     await expect.poll(() => prontuario.enviouMaterial()).toBe(true);
-    await expect(page.getByText('Material enviado ao paciente.')).toBeVisible();
+    await expect(page.getByText('Material enviado ao paciente.', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Materiais enviados' })).toBeVisible();
     await expect(page.locator('article').filter({ hasText: 'Guia de hidratacao' })).toBeVisible();
     await expect(page.getByText('Ler antes do retorno.')).toBeVisible();
