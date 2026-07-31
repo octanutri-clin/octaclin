@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-31 apos a Fase 182 - agendamento e formularios publicos.
+Atualizado em 2026-07-31 apos a Fase 183 - editor de formularios completo.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -327,6 +327,12 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   na tela apos falha de envio e mostram expiracao quando o backend a fornece.
   O commit `c869591` foi enviado para publicacao; rascunho persistente e marca
   configuravel da clinica aguardam suporte contratual da API.
+
+- Fase 183 - Editor de formularios completo: o editor passou a indicar versao,
+  rascunho/publicacao/arquivamento e alteracoes pendentes separadas para o
+  formulario e a pergunta em edicao. Preview, distribuicao, biblioteca e
+  respostas continuam isolados; a alca de reordenacao preserva teclado e foco
+  visivel. O commit `edb2391` foi enviado para deploy no Render.
 
 ## Estado atual de uso
 

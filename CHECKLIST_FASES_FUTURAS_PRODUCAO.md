@@ -779,11 +779,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Producao: publicacao acionada pelo Render no commit `c869591`; health check
     do artefato atualizado deve ser confirmado apos o deploy.
 
-- [ ] Fase 183 - Editor de formularios completo.
+- [x] Fase 183 - Editor de formularios completo.
   - Evoluir a separacao ja entregue na Fase 175 com estrutura, edicao, preview,
     distribuicao e respostas claramente independentes.
   - Adicionar preview simultaneo, reordenacao acessivel, versao publicada,
     rascunho e alteracoes pendentes.
+  - Entregue: versao e estado do formulario visiveis; alteracoes pendentes de
+    formulario e pergunta diferenciadas; foco visivel no controle de
+    reordenacao por teclado; preview mantido durante a edicao.
+  - Validacoes: tres testes de preview, typecheck e build da web.
+  - Data: 2026-07-31. Saida: `fase-183-editor-formularios-completo.md`.
+  - Producao: publicacao acionada pelo Render no commit `edb2391`; health check
+    do artefato atualizado deve ser confirmado apos o deploy.
 
 - [ ] Fase 184 - Central de comunicacoes.
   - Estruturar lista de conversas, conversa ativa e contexto do paciente.
