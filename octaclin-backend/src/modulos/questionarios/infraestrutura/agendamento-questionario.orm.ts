@@ -11,6 +11,9 @@ export class AgendamentoQuestionarioOrm {
   @Column({ name: 'questionario_id', type: 'uuid' })
   questionarioId: string;
 
+  @Column({ name: 'paciente_id', type: 'uuid', nullable: true })
+  pacienteId?: string;
+
   @Column({ name: 'regra_cron', type: 'varchar', length: 120, nullable: true })
   regraCron?: string;
 

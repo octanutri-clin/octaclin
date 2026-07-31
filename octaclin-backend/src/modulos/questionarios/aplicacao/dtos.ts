@@ -205,6 +205,9 @@ export class CriarAgendamentoQuestionarioDto {
   @IsUUID()
   questionarioId: string;
 
+  @IsUUID()
+  pacienteId: string;
+
   @ValidateIf((dados: CriarAgendamentoQuestionarioDto) => !dados.dataFixa)
   @IsString()
   regraCron?: string;

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 171 - biblioteca de perguntas reutilizaveis.
+Atualizado em 2026-07-30 apos a Fase 172 - check-ins recorrentes por paciente.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -642,9 +642,12 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Producao: migration `1720000001008` aplicada e registrada no Neon;
     backend e web publicados pelo Render no commit `af7d337`.
 
-- [ ] Fase 172 - Check-ins recorrentes por paciente.
+- [x] Fase 172 - Check-ins recorrentes por paciente.
   - Vincular o agendamento do questionario ao paciente escolhido.
   - Evitar disparo automatico para todos os pacientes ativos do tenant.
+  - Data: 2026-07-30. Saida: `fase-172-checkins-recorrentes-paciente.md`.
+  - Validacoes: Jest de questionarios/datasource, typecheck e build de backend/web.
+  - Deploy: migration `1720000001009` deve ser aplicada antes da publicacao do backend.
 
 - [ ] Fase 173 - Matriz longitudinal de respostas.
   - Filtros por paciente, periodo, questionario e categoria.

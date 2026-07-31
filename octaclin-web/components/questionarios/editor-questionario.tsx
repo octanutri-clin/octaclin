@@ -142,6 +142,7 @@ export function EditorQuestionario() {
   const [descricao, setDescricao] = useState('Protocolo operacional de acompanhamento clinico.');
   const [status, setStatus] = useState<'rascunho' | 'publicado' | 'arquivado'>('rascunho');
   const [regraCron, setRegraCron] = useState('0 8 * * 1');
+  const [pacienteAgendamentoId, setPacienteAgendamentoId] = useState('');
   const [pacienteEnvioId, setPacienteEnvioId] = useState('');
   const [linkFormulario, setLinkFormulario] = useState('');
   const [erro, setErro] = useState<string | null>(null);
@@ -247,6 +248,7 @@ export function EditorQuestionario() {
       setQuestionarios(bootstrap.questionarios.itens);
       setModelos(bootstrap.modelos);
       setBibliotecaPerguntas(biblioteca);
+      setPacienteAgendamentoId(bootstrap.pacientes[0]?.id ?? '');
       setPacienteEnvioId(bootstrap.pacientes[0]?.id ?? '');
 
       const primeiro = bootstrap.questionarios.itens[0];
@@ -295,7 +297,6 @@ export function EditorQuestionario() {
       await criarNovoQuestionario();
       return;
     }
-
     setSalvando(true);
     setErro(null);
     setSucesso(null);
@@ -429,6 +430,11 @@ export function EditorQuestionario() {
       setSucesso(null);
       return;
     }
+    if (!pacienteAgendamentoId) {
+      setErro('Selecione um paciente para o check-in recorrente.');
+      setSucesso(null);
+      return;
+    }
 
     setSalvando(true);
     setErro(null);
@@ -436,10 +442,11 @@ export function EditorQuestionario() {
     try {
       await criarAgendamentoQuestionario({
         questionarioId: questionarioAtual.id,
+        pacienteId: pacienteAgendamentoId,
         regraCron,
         timezone: 'America/Sao_Paulo'
       });
-      setSucesso('Agendamento criado.');
+      setSucesso('Check-in recorrente criado para o paciente selecionado.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar agendamento.');
     } finally {
@@ -747,11 +754,24 @@ export function EditorQuestionario() {
             </div>
             <div className="space-y-1.5">
               <Rotulo htmlFor="cron">Cron</Rotulo>
-              <div className="flex gap-2">
-                <Campo id="cron" value={regraCron} onChange={(event) => setRegraCron(event.target.value)} />
-                <Botao type="button" aria-label="Agendar" onClick={agendar} disabled={salvando}>
+              <div className="grid gap-2">
+                <Selecao
+                  id="paciente-agendamento"
+                  value={pacienteAgendamentoId}
+                  onChange={(event) => setPacienteAgendamentoId(event.target.value)}
+                  aria-label="Paciente do check-in recorrente"
+                >
+                  <option value="">Selecione o paciente</option>
+                  {pacientes.map((paciente) => (
+                    <option key={paciente.id} value={paciente.id}>{paciente.nome}</option>
+                  ))}
+                </Selecao>
+                <div className="flex gap-2">
+                  <Campo id="cron" value={regraCron} onChange={(event) => setRegraCron(event.target.value)} />
+                  <Botao type="button" aria-label="Criar check-in recorrente" onClick={agendar} disabled={salvando}>
                   <CalendarClock className="h-4 w-4" />
-                </Botao>
+                  </Botao>
+                </div>
               </div>
             </div>
             <div className="space-y-2 rounded-md border border-linha bg-superficie p-3">

@@ -316,6 +316,7 @@ export class ControladorQuestionarios {
     const agendamento = await this.servicoQuestionarios.criarAgendamento(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'questionarios.agendamento.criar', 'agendamento_questionario', agendamento.id, {
       questionarioId: dados.questionarioId,
+      pacienteId: dados.pacienteId,
       timezone: dados.timezone
     });
     return agendamento;

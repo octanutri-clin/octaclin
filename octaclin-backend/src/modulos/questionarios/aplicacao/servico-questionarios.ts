@@ -596,11 +596,13 @@ export class ServicoQuestionarios {
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, dados.questionarioId, usuario);
+      await this.garantirPacienteAtivoDoProfissional(gerenciador, tenantId, dados.pacienteId, usuario);
 
       return gerenciador.getRepository(AgendamentoQuestionarioOrm).save(
         gerenciador.getRepository(AgendamentoQuestionarioOrm).create({
           tenantId,
           questionarioId: dados.questionarioId,
+          pacienteId: dados.pacienteId,
           regraCron: dados.regraCron,
           dataFixa: dados.dataFixa ? new Date(dados.dataFixa) : undefined,
           timezone: dados.timezone ?? 'America/Sao_Paulo',
@@ -621,10 +623,7 @@ export class ServicoQuestionarios {
       const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
       const snapshotEstrutura = await this.capturarSnapshotEstruturaQuestionario(gerenciador, tenantId, questionario);
 
-      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-        where: { id: dados.pacienteId, tenantId, arquivadoEm: IsNull() }
-      });
-      if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+      await this.garantirPacienteAtivoDoProfissional(gerenciador, tenantId, dados.pacienteId, usuario);
 
       const agora = new Date();
       return gerenciador.getRepository(EnvioQuestionarioOrm).save(
@@ -997,12 +996,14 @@ export class ServicoQuestionarios {
         const snapshotEstrutura = questionario
           ? await this.capturarSnapshotEstruturaQuestionario(gerenciador, tenantId, questionario)
           : undefined;
-        const pacientes = await gerenciador.getRepository(PacienteOrm).find({
-          where: { tenantId, arquivadoEm: IsNull() }
-        });
+        const paciente = agendamento.pacienteId
+          ? await gerenciador.getRepository(PacienteOrm).findOne({
+              where: { id: agendamento.pacienteId, tenantId, arquivadoEm: IsNull() }
+            })
+          : null;
 
-        await gerenciador.getRepository(EnvioQuestionarioOrm).save(
-          pacientes.map((paciente) =>
+        if (paciente) {
+          await gerenciador.getRepository(EnvioQuestionarioOrm).save(
             gerenciador.getRepository(EnvioQuestionarioOrm).create({
               tenantId,
               questionarioId: agendamento.questionarioId,
@@ -1011,15 +1012,15 @@ export class ServicoQuestionarios {
               status: 'pendente',
               snapshotEstrutura
             })
-          )
-        );
-        totalEnvios += pacientes.length;
+          );
+          totalEnvios += 1;
+        }
 
         agendamento.ultimaExecucaoEm = agora;
         agendamento.proximaExecucaoEm = agendamento.regraCron
           ? this.calcularProximaExecucao(agendamento.regraCron, undefined, agendamento.timezone, agora)
           : undefined;
-        agendamento.ativo = Boolean(agendamento.regraCron);
+        agendamento.ativo = Boolean(agendamento.regraCron && paciente);
         await gerenciador.getRepository(AgendamentoQuestionarioOrm).save(agendamento);
       }
 
@@ -1167,6 +1168,25 @@ export class ServicoQuestionarios {
   private normalizarChaveClinica(chaveClinica?: string): string | undefined {
     const normalizada = chaveClinica?.trim();
     return normalizada || undefined;
+  }
+
+  private async garantirPacienteAtivoDoProfissional(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<PacienteOrm> {
+    const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+      where: {
+        id: pacienteId,
+        tenantId,
+        arquivadoEm: IsNull(),
+        ...(profissionalId ? { profissionalResponsavelId: profissionalId } : {})
+      }
+    });
+    if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+    return paciente;
   }
 
   private async anexarOpcoes(gerenciador: EntityManager, pergunta: PerguntaOrm): Promise<PerguntaComOpcoes> {

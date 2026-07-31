@@ -322,6 +322,7 @@ export async function reordenarPerguntas(questionarioId: string, perguntas: { id
 
 export async function criarAgendamentoQuestionario(entrada: {
   questionarioId: string;
+  pacienteId: string;
   regraCron?: string;
   dataFixa?: string;
   timezone?: string;

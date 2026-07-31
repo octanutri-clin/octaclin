@@ -2,6 +2,7 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { ServicoQuestionarios } from './servico-questionarios';
 import { CategoriaPerguntaOrm } from '../infraestrutura/categoria-pergunta.orm';
+import { AgendamentoQuestionarioOrm } from '../infraestrutura/agendamento-questionario.orm';
 import { EnvioQuestionarioOrm } from '../infraestrutura/envio-questionario.orm';
 import { OpcaoPerguntaOrm } from '../infraestrutura/opcao-pergunta.orm';
 import { PerguntaOrm } from '../infraestrutura/pergunta.orm';
@@ -34,6 +35,7 @@ function criarRepositorioFake(
     | 'envio'
     | 'respostaCheckin'
     | 'respostaValor'
+    | 'agendamento'
     | 'paciente'
     | 'profissional',
   dados: Record<string, any>
@@ -101,6 +103,14 @@ function criarRepositorioFake(
       const valores = (valorConsulta as { _value?: unknown[] })._value ?? [];
       return valores.includes(valorItem);
     }
+    if (
+      valorConsulta &&
+      typeof valorConsulta === 'object' &&
+      '_type' in valorConsulta &&
+      (valorConsulta as { _type?: string })._type === 'lessThanOrEqual'
+    ) {
+      return new Date(String(valorItem)).getTime() <= new Date(String((valorConsulta as { _value?: unknown })._value)).getTime();
+    }
     return valorItem === valorConsulta;
   }
 }
@@ -114,6 +124,7 @@ function criarServico(dados: Record<string, any>) {
     envio: criarRepositorioFake('envio', dados),
     respostaCheckin: criarRepositorioFake('respostaCheckin', dados),
     respostaValor: criarRepositorioFake('respostaValor', dados),
+    agendamento: criarRepositorioFake('agendamento', dados),
     paciente: criarRepositorioFake('paciente', dados),
     profissional: criarRepositorioFake('profissional', { profissionals: dados.profissionals ?? [] })
   };
@@ -126,6 +137,7 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === EnvioQuestionarioOrm) return repositorios.envio;
       if (entidade === RespostaCheckinOrm) return repositorios.respostaCheckin;
       if (entidade === RespostaValorOrm) return repositorios.respostaValor;
+      if (entidade === AgendamentoQuestionarioOrm) return repositorios.agendamento;
       if (entidade === ProfissionalOrm) return repositorios.profissional;
       if (entidade.name === 'PacienteOrm') return repositorios.paciente;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
@@ -166,6 +178,60 @@ describe('ServicoQuestionarios', () => {
         })
       ])
     );
+  });
+
+  it('deve gerar check-in recorrente apenas para o paciente vinculado ao agendamento', async () => {
+    const { servico, dados } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q-1', tenantId: 'tenant-1', titulo: 'Check-in', versao: 1 }],
+      perguntas: [],
+      opcaos: [],
+      agendamentos: [
+        {
+          id: 'agendamento-1',
+          tenantId: 'tenant-1',
+          questionarioId: 'q-1',
+          pacienteId: 'paciente-alvo',
+          ativo: true,
+          proximaExecucaoEm: new Date('2026-07-29T08:00:00.000Z')
+        }
+      ],
+      envios: [],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: [
+        { id: 'paciente-alvo', tenantId: 'tenant-1', arquivadoEm: undefined },
+        { id: 'paciente-nao-selecionado', tenantId: 'tenant-1', arquivadoEm: undefined }
+      ]
+    });
+
+    const total = await servico.processarAgendamentosVencidos('tenant-1', new Date('2026-07-30T08:00:00.000Z'));
+
+    expect(total).toBe(1);
+    expect(dados.envios).toHaveLength(1);
+    expect(dados.envios[0]).toEqual(expect.objectContaining({ pacienteId: 'paciente-alvo', agendamentoId: 'agendamento-1' }));
+  });
+
+  it('deve persistir o paciente escolhido ao criar um check-in recorrente', async () => {
+    const { servico } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q-1', tenantId: 'tenant-1', versao: 1 }],
+      perguntas: [],
+      opcaos: [],
+      agendamentos: [],
+      envios: [],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1', arquivadoEm: undefined }]
+    });
+
+    const agendamento = await servico.criarAgendamento(
+      'tenant-1',
+      { questionarioId: 'q-1', pacienteId: 'paciente-1', regraCron: '0 8 * * 1' },
+      usuarioColaborador
+    );
+
+    expect(agendamento).toEqual(expect.objectContaining({ questionarioId: 'q-1', pacienteId: 'paciente-1', ativo: true }));
   });
 
   it('deve listar apenas perguntas visiveis da biblioteca do tenant com busca e categoria', async () => {

@@ -6,6 +6,7 @@ import { ProtegerCanaisWatchGoogleAgenda1720000001005 } from './migracoes/172000
 import { CriarBloqueiosManuaisAgenda1720000001006 } from './migracoes/1720000001006-CriarBloqueiosManuaisAgenda';
 import { AdicionarSnapshotEstruturaEnviosQuestionario1720000001007 } from './migracoes/1720000001007-AdicionarSnapshotEstruturaEnviosQuestionario';
 import { AdicionarBibliotecaPerguntas1720000001008 } from './migracoes/1720000001008-AdicionarBibliotecaPerguntas';
+import { VincularAgendamentoQuestionarioPaciente1720000001009 } from './migracoes/1720000001009-VincularAgendamentoQuestionarioPaciente';
 import { DashboardAlertaOcultoOrm } from '../../modulos/dashboard/infraestrutura/dashboard-alerta-oculto.orm';
 import { AgendaBloqueioManualOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-manual.orm';
 
@@ -65,7 +66,8 @@ describe('criarOpcoesTypeOrm', () => {
         ProtegerCanaisWatchGoogleAgenda1720000001005,
         CriarBloqueiosManuaisAgenda1720000001006,
         AdicionarSnapshotEstruturaEnviosQuestionario1720000001007,
-        AdicionarBibliotecaPerguntas1720000001008
+        AdicionarBibliotecaPerguntas1720000001008,
+        VincularAgendamentoQuestionarioPaciente1720000001009
       ])
     );
   });
