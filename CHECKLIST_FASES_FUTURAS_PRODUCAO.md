@@ -737,7 +737,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     lista em desktop/mobile, typecheck de backend/web, 10 cenarios de
     acessibilidade, 22 testes de autorizacao e build da web.
   - Data: 2026-07-30. Saida: `fase-179-lista-pacientes.md`.
-  - Producao: pendente de publicacao e health checks.
+  - Producao: backend e web publicados no commit `0dcb17a`; ambos os health
+    checks retornaram `200`.
 
 - [ ] Fase 180 - Prontuario clinico.
   - Aplicar cabecalho persistente com paciente, situacao e acoes rapidas.

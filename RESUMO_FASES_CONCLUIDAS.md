@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a Fase 178 - agenda profissional completa.
+Atualizado em 2026-07-30 apos a Fase 179 - lista de pacientes.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -301,6 +301,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   cancelar, o horario interno e liberado e somente as integracoes configuradas
   sao processadas. A web foi publicada no commit `b0e3144` e o health check
   retornou `200`.
+
+- Fase 179 - Lista de pacientes: o retorno de pacientes agora inclui ultima
+  consulta concluida e proxima consulta ativa dentro do tenant e do escopo do
+  profissional. A lista passou a ter busca, filtros, atalhos de prioridade,
+  proxima acao explicita, tabela desktop e leitura adequada no celular. Backend
+  e web foram publicados no commit `0dcb17a`; ambos os health checks
+  retornaram `200`.
 
 ## Estado atual de uso
 

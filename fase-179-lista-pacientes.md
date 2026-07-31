@@ -1,7 +1,6 @@
 # Fase 179 - Lista de pacientes
 
-Status: codigo concluido e validado localmente em 2026-07-30. Publicacao em
-producao pendente.
+Status: concluida e publicada em producao em 2026-07-30.
 
 ## Entregue
 
@@ -32,7 +31,8 @@ de producao foram aprovados.
 
 ## Producao
 
-Pendente de publicacao e verificacao dos endpoints de health.
+Backend e web foram publicados no commit `0dcb17a`. Os endpoints de health
+retornaram `200`.
 
 ## Proxima fase
 
