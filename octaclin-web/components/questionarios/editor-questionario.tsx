@@ -165,6 +165,8 @@ export function EditorQuestionario() {
   const [salvando, setSalvando] = useState(false);
   const [confirmandoArquivarQuestionario, setConfirmandoArquivarQuestionario] = useState(false);
   const [previewAberto, setPreviewAberto] = useState(false);
+  const [alteracoesQuestionarioPendentes, setAlteracoesQuestionarioPendentes] = useState(false);
+  const [alteracoesPerguntaPendentes, setAlteracoesPerguntaPendentes] = useState(false);
   const [respostasRecebidas, setRespostasRecebidas] = useState<RespostaQuestionarioRecebidaApi[]>([]);
   const [leituraClinica, setLeituraClinica] = useState<LeituraClinicaQuestionarioApi | null>(null);
   const [carregandoRespostas, setCarregandoRespostas] = useState(false);
@@ -274,6 +276,8 @@ export function EditorQuestionario() {
     setDescricao(questionario.descricao ?? '');
     setStatus(questionario.status);
     setLinkFormulario('');
+    setAlteracoesQuestionarioPendentes(false);
+    setAlteracoesPerguntaPendentes(false);
     await Promise.all([carregarPerguntas(questionario.id), carregarRespostas(questionario.id)]);
   }
 
@@ -346,6 +350,7 @@ export function EditorQuestionario() {
       const atualizado = await atualizarQuestionario(questionarioAtual.id, { titulo, descricao, status });
       setQuestionarioAtual(atualizado);
       setQuestionarios((atuais) => atuais.map((item) => (item.id === atualizado.id ? atualizado : item)));
+      setAlteracoesQuestionarioPendentes(false);
       setSucesso('Questionario salvo.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar questionario.');
@@ -458,6 +463,7 @@ export function EditorQuestionario() {
           ? [atualizada, ...atuais.filter((pergunta) => pergunta.id !== atualizada.id)]
           : atuais.filter((pergunta) => pergunta.id !== atualizada.id)
       );
+      setAlteracoesPerguntaPendentes(false);
       setSucesso('Pergunta salva.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar pergunta.');
@@ -507,6 +513,7 @@ export function EditorQuestionario() {
       setStatus('arquivado');
       setQuestionarioAtual(atualizado);
       setQuestionarios((atuais) => atuais.map((item) => (item.id === atualizado.id ? atualizado : item)));
+      setAlteracoesQuestionarioPendentes(false);
       setSucesso('Questionario arquivado.');
       setConfirmandoArquivarQuestionario(false);
     } catch (erroAtual) {
@@ -543,6 +550,7 @@ export function EditorQuestionario() {
   }
 
   function atualizarPerguntaLocal(campo: keyof PerguntaEditor, valor: string | number | boolean) {
+    setAlteracoesPerguntaPendentes(true);
     setPerguntas((atuais) =>
       atuais.map((pergunta) => (pergunta.id === selecionadaId ? { ...pergunta, [campo]: valor } : pergunta))
     );
@@ -594,6 +602,7 @@ export function EditorQuestionario() {
   }
 
   function trocarTipoPergunta(tipo: TipoPergunta) {
+    setAlteracoesPerguntaPendentes(true);
     setPerguntas((atuais) =>
       atuais.map((pergunta) =>
         pergunta.id === selecionadaId
@@ -609,6 +618,7 @@ export function EditorQuestionario() {
   }
 
   function atualizarConfiguracao(chave: string, valor: unknown) {
+    setAlteracoesPerguntaPendentes(true);
     setPerguntas((atuais) =>
       atuais.map((pergunta) =>
         pergunta.id === selecionadaId ? { ...pergunta, configuracao: { ...pergunta.configuracao, [chave]: valor } } : pergunta
@@ -617,6 +627,7 @@ export function EditorQuestionario() {
   }
 
   function atualizarOpcao(indice: number, campo: 'rotulo' | 'valor' | 'imagemUrl', valor: string) {
+    setAlteracoesPerguntaPendentes(true);
     setPerguntas((atuais) =>
       atuais.map((pergunta) =>
         pergunta.id === selecionadaId
@@ -632,6 +643,7 @@ export function EditorQuestionario() {
   }
 
   function adicionarOpcao() {
+    setAlteracoesPerguntaPendentes(true);
     setPerguntas((atuais) =>
       atuais.map((pergunta) =>
         pergunta.id === selecionadaId
@@ -652,6 +664,7 @@ export function EditorQuestionario() {
   }
 
   function removerOpcao(indice: number) {
+    setAlteracoesPerguntaPendentes(true);
     setPerguntas((atuais) =>
       atuais.map((pergunta) =>
         pergunta.id === selecionadaId
@@ -675,6 +688,14 @@ export function EditorQuestionario() {
     <section className="grid gap-4">
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       {sucesso ? <AlertaSucesso mensagem={sucesso} /> : null}
+
+      {alteracoesQuestionarioPendentes || alteracoesPerguntaPendentes ? (
+        <p className="text-sm text-alerta-forte" role="status">
+          Alteracoes pendentes: {alteracoesQuestionarioPendentes ? 'formulario' : ''}
+          {alteracoesQuestionarioPendentes && alteracoesPerguntaPendentes ? ' e ' : ''}
+          {alteracoesPerguntaPendentes ? 'pergunta selecionada' : ''}. Salve antes de trocar de formulario.
+        </p>
+      ) : null}
 
       <Abas identificador="questionarios" abas={areasQuestionarios} ativaId={areaAtiva} aoMudar={(id) => setAreaAtiva(id as AreaQuestionarios)} rotulo="Areas de trabalho dos questionarios" />
 
@@ -783,7 +804,10 @@ export function EditorQuestionario() {
         <Cartao>
           <CartaoCabecalho>
             <CartaoTitulo>Questionario</CartaoTitulo>
-            <Etiqueta variante={status === 'publicado' ? 'sucesso' : status === 'arquivado' ? 'neutra' : 'alerta'}>{status}</Etiqueta>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-texto-suave">Versao {questionarioAtual?.versao ?? 1}</span>
+              <Etiqueta variante={status === 'publicado' ? 'sucesso' : status === 'arquivado' ? 'neutra' : 'alerta'}>{status}</Etiqueta>
+            </div>
           </CartaoCabecalho>
           <CartaoConteudo className="space-y-4">
             <div className="space-y-1.5">
@@ -830,18 +854,18 @@ export function EditorQuestionario() {
             </div>
             <div className="space-y-1.5">
               <Rotulo htmlFor="titulo">Titulo</Rotulo>
-              <Campo id="titulo" value={titulo} onChange={(event) => setTitulo(event.target.value)} />
+              <Campo id="titulo" value={titulo} onChange={(event) => { setTitulo(event.target.value); setAlteracoesQuestionarioPendentes(true); }} />
             </div>
             <div className="space-y-1.5">
               <Rotulo htmlFor="descricao">Descricao</Rotulo>
-              <AreaTexto id="descricao" value={descricao} onChange={(event) => setDescricao(event.target.value)} />
+              <AreaTexto id="descricao" value={descricao} onChange={(event) => { setDescricao(event.target.value); setAlteracoesQuestionarioPendentes(true); }} />
             </div>
             <div className="space-y-1.5">
               <Rotulo htmlFor="status">Status</Rotulo>
               <Selecao
                 id="status"
                 value={status}
-                onChange={(event) => setStatus(event.target.value as 'rascunho' | 'publicado' | 'arquivado')}
+                onChange={(event) => { setStatus(event.target.value as 'rascunho' | 'publicado' | 'arquivado'); setAlteracoesQuestionarioPendentes(true); }}
               >
                 <option value="rascunho">Rascunho</option>
                 <option value="publicado">Publicado</option>

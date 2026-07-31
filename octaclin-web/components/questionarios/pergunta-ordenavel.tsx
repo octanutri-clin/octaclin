@@ -45,7 +45,7 @@ export function PerguntaOrdenavel({ pergunta, selecionada, categoriaNome, catego
       )}
     >
       <button
-        className="flex h-9 w-9 items-center justify-center rounded-md text-texto-suave hover:bg-superficie-hover"
+        className="flex h-9 w-9 items-center justify-center rounded-md text-texto-suave hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
         aria-label="Reordenar pergunta"
         {...attributes}
         {...listeners}
