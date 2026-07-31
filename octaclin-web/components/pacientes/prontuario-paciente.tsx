@@ -17,6 +17,7 @@ import {
   UserRound
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Abas } from '@/components/ui/abas';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import {
   criarMaterial,
@@ -65,6 +66,18 @@ interface FormularioEnvioMaterial {
   materialId: string;
   observacao: string;
 }
+
+type AbaProntuario = 'resumo' | 'evolucoes' | 'plano' | 'formularios' | 'mensagens' | 'materiais' | 'historico';
+
+const abasProntuario: Array<{ id: AbaProntuario; rotulo: string }> = [
+  { id: 'resumo', rotulo: 'Resumo' },
+  { id: 'evolucoes', rotulo: 'Evolucoes' },
+  { id: 'plano', rotulo: 'Plano' },
+  { id: 'formularios', rotulo: 'Formularios' },
+  { id: 'mensagens', rotulo: 'Mensagens' },
+  { id: 'materiais', rotulo: 'Materiais' },
+  { id: 'historico', rotulo: 'Historico' }
+];
 
 const formularioEvolucaoInicial: FormularioEvolucao = {
   titulo: '',
@@ -198,6 +211,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [formularioTarefa, setFormularioTarefa] = useState<FormularioTarefa>(formularioTarefaInicial);
   const [formularioMaterial, setFormularioMaterial] = useState<FormularioMaterial>(formularioMaterialInicial);
   const [formularioEnvioMaterial, setFormularioEnvioMaterial] = useState<FormularioEnvioMaterial>(formularioEnvioMaterialInicial);
+  const [abaAtiva, setAbaAtiva] = useState<AbaProntuario>('resumo');
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -318,6 +332,13 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   }, [carregar]);
 
   const eventos = useMemo(() => dados?.linhaDoTempo ?? [], [dados?.linhaDoTempo]);
+  const evolucoes = useMemo(() => eventos.filter((evento) => evento.tipo === 'evolucao_clinica'), [eventos]);
+  const tarefas = useMemo(() => eventos.filter((evento) => evento.tipo === 'tarefa_acompanhamento'), [eventos]);
+  const formularios = useMemo(
+    () => eventos.filter((evento) => evento.tipo === 'formulario' || evento.tipo === 'resposta_formulario' || evento.tipo === 'checkin_rapido'),
+    [eventos]
+  );
+  const mensagens = useMemo(() => eventos.filter((evento) => evento.tipo === 'mensagem'), [eventos]);
 
   if (carregando) return <BarraCarregamento visivel rotulo="Carregando prontuario do paciente" />;
 
@@ -337,7 +358,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-linha bg-white p-4">
+      <div className="sticky top-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-md border border-linha bg-white p-4 shadow-sm">
         <div className="flex min-w-0 items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primaria-suave text-primaria">
             <UserRound size={22} />
@@ -364,22 +385,42 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <RefreshCcw size={16} />
             Atualizar
           </Botao>
+          <Botao type="button" variante="primario" onClick={() => setAbaAtiva('evolucoes')}>
+            <Stethoscope size={16} />
+            Nova evolucao
+          </Botao>
+          <Botao type="button" variante="secundario" onClick={() => setAbaAtiva('plano')}>
+            <CheckSquare size={16} />
+            Nova tarefa
+          </Botao>
         </div>
       </div>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <CartaoResumo titulo="Consultas" valor={String(dados.resumo.consultas)} detalhe="Eventos de agenda vinculados" />
-        <CartaoResumo titulo="Formularios pendentes" valor={String(dados.resumo.formulariosPendentes)} detalhe="Envios aguardando resposta" />
-        <CartaoResumo titulo="Respostas" valor={String(dados.resumo.respostas)} detalhe="Formularios finalizados ou em andamento" />
-        <CartaoResumo titulo="Check-ins rapidos" valor={String(dados.resumo.checkinsRapidos ?? 0)} detalhe="Registros pelo portal ou mobile" />
-        <CartaoResumo titulo="Evolucoes" valor={String(dados.resumo.evolucoes ?? 0)} detalhe={`${dados.resumo.mensagens} mensagens registradas`} />
-        <CartaoResumo titulo="Tarefas" valor={String(dados.resumo.tarefasPendentes ?? 0)} detalhe={`${dados.resumo.tarefasPendentes ?? 0} tarefas pendentes`} />
-      </section>
+      <Abas identificador="prontuario" abas={abasProntuario} ativaId={abaAtiva} aoMudar={(id) => setAbaAtiva(id as AbaProntuario)} rotulo="Areas do prontuario" />
 
       {sucesso ? (
         <div className="rounded-md border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">{sucesso}</div>
       ) : null}
 
+      <div id={`prontuario-${abaAtiva}-painel`} role="tabpanel" aria-labelledby={`prontuario-${abaAtiva}-aba`} className="grid gap-4">
+      {abaAtiva === 'resumo' ? (
+        <>
+          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <CartaoResumo titulo="Consultas" valor={String(dados.resumo.consultas)} detalhe="Eventos de agenda vinculados" />
+            <CartaoResumo titulo="Formularios pendentes" valor={String(dados.resumo.formulariosPendentes)} detalhe="Envios aguardando resposta" />
+            <CartaoResumo titulo="Respostas" valor={String(dados.resumo.respostas)} detalhe="Formularios finalizados ou em andamento" />
+            <CartaoResumo titulo="Check-ins rapidos" valor={String(dados.resumo.checkinsRapidos ?? 0)} detalhe="Registros pelo portal ou mobile" />
+            <CartaoResumo titulo="Evolucoes" valor={String(dados.resumo.evolucoes ?? 0)} detalhe={`${dados.resumo.mensagens} mensagens registradas`} />
+            <CartaoResumo titulo="Tarefas" valor={String(dados.resumo.tarefasPendentes ?? 0)} detalhe={`${dados.resumo.tarefasPendentes ?? 0} tarefas pendentes`} />
+          </section>
+          <section className="grid gap-3">
+            <div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Linha de cuidado</h2><p className="mt-1 text-sm text-texto-suave">Ultimos eventos que orientam a proxima conduta.</p></div>
+            <LinhaDoTempo eventos={eventos.slice(0, 4)} />
+          </section>
+        </>
+      ) : null}
+
+      {abaAtiva === 'evolucoes' ? <>
       <form onSubmit={registrarEvolucao} className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div>
           <h2 className="text-base font-semibold text-tinta">Nova evolucao clinica</h2>
@@ -429,6 +470,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
       </form>
 
+      <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Evolucoes recentes</h2></div><LinhaDoTempo eventos={evolucoes} /></section>
+      </> : null}
+
+      {abaAtiva === 'plano' ? <>
       <form onSubmit={registrarTarefa} className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div>
           <h2 className="text-base font-semibold text-tinta">Plano de acompanhamento</h2>
@@ -501,7 +546,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
       </form>
 
-      <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
+      <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Plano em acompanhamento</h2></div><LinhaDoTempo eventos={tarefas} /></section>
+      </> : null}
+
+      {abaAtiva === 'materiais' ? <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-tinta">Biblioteca de materiais</h2>
@@ -633,9 +681,13 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <p className="text-sm text-texto-suave">Nenhum material enviado ao paciente.</p>
           )}
         </div>
-      </section>
+      </section> : null}
 
-      <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
+      {abaAtiva === 'formularios' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Formularios e check-ins</h2><p className="mt-1 text-sm text-texto-suave">Envios, respostas e check-ins vinculados ao paciente.</p></div><LinhaDoTempo eventos={formularios} /></section> : null}
+
+      {abaAtiva === 'mensagens' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Mensagens do paciente</h2><p className="mt-1 text-sm text-texto-suave">Historico de comunicacoes registradas.</p></div><LinhaDoTempo eventos={mensagens} /></section> : null}
+
+      {abaAtiva === 'historico' ? <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
         <article className="grid gap-3">
           <div className="rounded-md border border-linha bg-white p-4">
             <h2 className="text-base font-semibold text-tinta">Linha do tempo clinica</h2>
@@ -662,7 +714,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             Abrir comunicacoes
           </Link>
         </aside>
-      </section>
+      </section> : null}
+      </div>
     </div>
   );
 }

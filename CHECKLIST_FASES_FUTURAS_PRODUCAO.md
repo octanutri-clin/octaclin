@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 179 - lista de pacientes.
+Atualizado em 2026-07-30 apos a Fase 180 - prontuario clinico.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -740,10 +740,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Producao: backend e web publicados no commit `0dcb17a`; ambos os health
     checks retornaram `200`.
 
-- [ ] Fase 180 - Prontuario clinico.
+- [x] Fase 180 - Prontuario clinico.
   - Aplicar cabecalho persistente com paciente, situacao e acoes rapidas.
   - Organizar resumo, evolucoes, plano, formularios, mensagens, materiais e
     historico, incluindo a linha de cuidado e menos informacao simultanea.
+  - Entregue: cabecalho clinico fixo, comandos rapidos, abas acessiveis e
+    linha de cuidado compacta; os contextos filtram a mesma linha do tempo sem
+    duplicar dados ou endpoints.
+  - Validacoes: oito cenarios Playwright do prontuario em desktop/mobile,
+    typecheck, 10 cenarios de acessibilidade, 22 testes de autorizacao e build
+    da web.
+  - Data: 2026-07-30. Saida: `fase-180-prontuario-clinico.md`.
+  - Producao: pendente de publicacao e health check.
 
 - [ ] Fase 181 - Portal completo do paciente.
   - Organizar consulta, plano, check-ins, tarefas, materiais, formularios,

@@ -1375,6 +1375,8 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByRole('heading', { name: 'Prontuario do paciente' })).toBeVisible();
     await expect(page.getByText('Ana Souza')).toBeVisible();
     await expect(page.getByText('Risco 82 pontos')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Linha de cuidado' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Historico' }).click();
     await expect(page.getByRole('heading', { name: 'Linha do tempo clinica' })).toBeVisible();
     await expect(page.getByText('Mensagem recebida')).toBeVisible();
     await expect(page.getByText('Estou com duvida no plano.')).toBeVisible();
@@ -1389,6 +1391,7 @@ test.describe('prontuario do paciente', () => {
     const prontuario = await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');
 
+    await page.getByRole('tab', { name: 'Evolucoes' }).click();
     await page.getByLabel('Titulo da evolucao').fill('Conduta ajustada');
     await page.getByLabel('Tipo da evolucao').selectOption('ajuste_plano');
     await page.getByLabel('Conteudo da evolucao').fill('Aumentar ingestao de agua no periodo da tarde.');
@@ -1405,6 +1408,7 @@ test.describe('prontuario do paciente', () => {
     const prontuario = await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');
 
+    await page.getByRole('tab', { name: 'Plano' }).click();
     await page.getByLabel('Titulo da tarefa').fill('Beber agua no periodo da tarde');
     await page.getByLabel('Categoria da tarefa').selectOption('meta');
     await page.getByLabel('Prioridade da tarefa').selectOption('media');
@@ -1416,6 +1420,7 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Tarefa de acompanhamento prescrita.')).toBeVisible();
     await expect(page.getByText('Beber agua no periodo da tarde')).toBeVisible();
     await expect(page.getByText('Meta diaria de 1 litro entre 13h e 18h.')).toBeVisible();
+    await page.getByRole('tab', { name: 'Resumo' }).click();
     await expect(page.getByText('1 tarefas pendentes')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
@@ -1424,6 +1429,7 @@ test.describe('prontuario do paciente', () => {
     const prontuario = await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');
 
+    await page.getByRole('tab', { name: 'Materiais' }).click();
     await page.getByLabel('Titulo do material').fill('Guia de hidratacao');
     await page.getByLabel('Tipo do material').selectOption('link');
     await page.getByLabel('Categoria do material').fill('Habitos');
