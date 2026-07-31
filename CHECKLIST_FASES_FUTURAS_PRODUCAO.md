@@ -806,6 +806,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     capacidade, sem jargao tecnico.
   - Mostrar Google Agenda por profissional e restringir troca de painel ao
     SuperAdmin, de forma identificavel.
+  - Etapa inicial: capacidade de gerenciar equipe explicitada e ID interno
+    removido da lista. Saida: `fase-185-profissionais-permissoes-integracoes.md`.
 
 - [ ] Fase 186 - Conta, assinatura e ativacao do cliente.
   - Separar conta, equipe, assinatura, uso, configuracoes e dados fiscais.
