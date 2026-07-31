@@ -117,9 +117,9 @@ function descreverHistoricoConvite(item: {
   revogadoEm?: string;
 }) {
   if (item.status === 'usado' && item.usadoEm) return `Usado em ${formatarData(item.usadoEm)}`;
-  if (item.status === 'revogado' && item.revogadoPorUsuarioId) return `Revogado por ${item.revogadoPorUsuarioId}`;
-  if (item.reenviadoPorUsuarioId) return `Reenviado por ${item.reenviadoPorUsuarioId}`;
-  if (item.criadoPorUsuarioId) return `Criado por ${item.criadoPorUsuarioId}`;
+  if (item.status === 'revogado' && item.revogadoPorUsuarioId) return 'Convite revogado';
+  if (item.reenviadoPorUsuarioId) return 'Convite reenviado';
+  if (item.criadoPorUsuarioId) return 'Convite criado';
   return 'Evento registrado';
 }
 
