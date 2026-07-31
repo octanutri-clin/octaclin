@@ -709,6 +709,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Validacoes: typecheck, preview de questionarios, `test:next15`, 10 testes
     Playwright de acessibilidade em desktop/mobile e build da web.
   - Data: 2026-07-30. Saida: `fase-177-qualidade-transversal-componentes.md`.
+  - Producao: web publicada no commit `ebd7887`; `/health` retornou `200`.
 
 - [ ] Fase 178 - Agenda profissional completa.
   - Evoluir as visoes existentes de dia, semana, mes e lista com contexto

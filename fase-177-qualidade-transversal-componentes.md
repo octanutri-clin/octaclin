@@ -1,7 +1,6 @@
 # Fase 177 - Qualidade transversal e componentes compartilhados
 
-Status: concluida localmente em 2026-07-30; aguardando publicacao e smoke de
-producao.
+Status: concluida e publicada em producao em 2026-07-30.
 
 ## Entregue
 
@@ -24,6 +23,11 @@ pnpm --dir octaclin-web build
 
 Resultados: preview e APIs dinamicas passaram; os 10 cenarios Playwright de
 acessibilidade passaram em desktop e celular; build de producao aprovado.
+
+## Producao
+
+A web foi publicada no commit `ebd7887`. O endpoint
+`https://octaclin-web-producao.onrender.com/health` retornou `200`.
 
 ## Proxima fase
 

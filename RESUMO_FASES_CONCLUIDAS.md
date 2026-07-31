@@ -291,7 +291,8 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   selects e textareas passaram a comunicar estados invalido e desabilitado;
   feedback agora inclui sucesso, carregamento anunciado e permissao negada.
   As abas reutilizaveis oferecem navegacao por setas, Home e End, com foco e
-  relacionamentos ARIA; o editor de formularios foi migrado para essa base.
+  relacionamentos ARIA; o editor de formularios foi migrado para essa base. A
+  web foi publicada no commit `ebd7887` e o health check retornou `200`.
 
 ## Estado atual de uso
 
