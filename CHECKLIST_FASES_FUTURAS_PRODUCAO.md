@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a validacao de producao da Fase 169.
+Atualizado em 2026-07-30 apos a Fase 170 - integridade historica de formularios.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -626,9 +626,12 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Validacao de producao: migrations 1002 a 1004 e 1006 alinhadas no Neon;
     bloqueio interno confirmado e web em live com acao de liberar horario.
 
-- [ ] Fase 170 - Integridade historica de formularios.
+- [x] Fase 170 - Integridade historica de formularios.
   - Guardar versao e snapshot da estrutura em cada envio.
   - Renderizar respostas antigas pelo snapshot imutavel.
+  - Data: 2026-07-30. Saida: `fase-170-integridade-historica-formularios.md`.
+  - Validacoes: Jest de questionarios/datasource, typecheck e build do backend.
+  - Deploy: migration `1720000001007` deve ser aplicada antes da publicacao do backend.
 
 - [ ] Fase 171 - Biblioteca de perguntas reutilizaveis.
   - Busca, categoria, chave clinica estavel e inclusao em questionarios.

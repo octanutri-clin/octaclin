@@ -1,4 +1,32 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import type { TipoPergunta } from '../dominio/tipos-pergunta';
+
+export interface OpcaoSnapshotQuestionario {
+  id: string;
+  rotulo: string;
+  valor: string;
+  imagemUrl?: string;
+  ordem: number;
+}
+
+export interface PerguntaSnapshotQuestionario {
+  id: string;
+  categoriaId: string;
+  tipo: TipoPergunta;
+  enunciado: string;
+  peso: string;
+  obrigatoria: boolean;
+  configuracao: Record<string, unknown>;
+  ordem: number;
+  opcoes: OpcaoSnapshotQuestionario[];
+}
+
+export interface SnapshotEstruturaQuestionario {
+  versaoQuestionario: number;
+  titulo: string;
+  descricao?: string;
+  perguntas: PerguntaSnapshotQuestionario[];
+}
 
 @Entity('envios_questionario')
 export class EnvioQuestionarioOrm {
@@ -34,4 +62,7 @@ export class EnvioQuestionarioOrm {
 
   @Column({ name: 'expira_em', type: 'timestamptz', nullable: true })
   expiraEm?: Date;
+
+  @Column({ name: 'snapshot_estrutura', type: 'jsonb', nullable: true })
+  snapshotEstrutura?: SnapshotEstruturaQuestionario;
 }

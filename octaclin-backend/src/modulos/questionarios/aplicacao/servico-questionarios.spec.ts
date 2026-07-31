@@ -373,13 +373,88 @@ describe('ServicoQuestionarios', () => {
     );
   });
 
+  it('deve abrir o formulario pela estrutura capturada no envio', async () => {
+    const { servico } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Titulo alterado', descricao: 'Descricao alterada' }],
+      perguntas: [
+        {
+          id: 'p1',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'sim_nao',
+          enunciado: 'Pergunta alterada',
+          peso: '1',
+          obrigatoria: false,
+          configuracao: {},
+          ordem: 1
+        }
+      ],
+      opcaos: [],
+      envios: [
+        {
+          id: 'envio-1',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          pacienteId: 'paciente-1',
+          status: 'enviado',
+          snapshotEstrutura: {
+            versaoQuestionario: 1,
+            titulo: 'Check-in original',
+            descricao: 'Descricao original',
+            perguntas: [
+              {
+                id: 'p1',
+                categoriaId: 'cat-1',
+                tipo: 'sim_nao',
+                enunciado: 'Pergunta original',
+                peso: '1',
+                obrigatoria: true,
+                configuracao: {},
+                ordem: 1,
+                opcoes: []
+              }
+            ]
+          }
+        }
+      ],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: []
+    });
+
+    const formulario = await servico.obterFormularioPaciente(servico.gerarTokenFormularioPaciente('tenant-1', 'envio-1'));
+
+    expect(formulario).toEqual(
+      expect.objectContaining({
+        titulo: 'Check-in original',
+        descricao: 'Descricao original',
+        perguntas: [expect.objectContaining({ id: 'p1', enunciado: 'Pergunta original', obrigatoria: true })]
+      })
+    );
+  });
+
   it('deve criar envio manual com link publico de formulario', async () => {
     process.env.OCTACLIN_WEB_URL = 'https://app.octaclin.test';
     const { servico, dados } = criarServico({
       categorias: [],
-      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in', descricao: 'Descricao' }],
-      perguntas: [],
-      opcaos: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in', descricao: 'Descricao', versao: 3 }],
+      perguntas: [
+        {
+          id: 'p1',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'multipla_escolha',
+          enunciado: 'Como foi sua semana?',
+          peso: '1',
+          obrigatoria: true,
+          configuracao: { multipla: false },
+          ordem: 1
+        }
+      ],
+      opcaos: [{ id: 'opcao-1', tenantId: 'tenant-1', perguntaId: 'p1', rotulo: 'Boa', valor: 'boa', ordem: 1 }],
       envios: [],
       respostaCheckins: [],
       respostaValors: [],
@@ -401,6 +476,18 @@ describe('ServicoQuestionarios', () => {
       })
     );
     expect(dados.envios[0]).toEqual(expect.objectContaining({ questionarioId: 'q1', pacienteId: 'paciente-1', enviadoEm: expect.any(Date) }));
+    expect(dados.envios[0].snapshotEstrutura).toEqual({
+      versaoQuestionario: 3,
+      titulo: 'Check-in',
+      descricao: 'Descricao',
+      perguntas: [
+        expect.objectContaining({
+          id: 'p1',
+          enunciado: 'Como foi sua semana?',
+          opcoes: [expect.objectContaining({ id: 'opcao-1', rotulo: 'Boa', valor: 'boa' })]
+        })
+      ]
+    });
   });
 
   it('deve finalizar formulario salvando respostas e marcando envio como respondido', async () => {

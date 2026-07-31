@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a validacao de producao da Fase 169.
+Atualizado em 2026-07-30 apos a Fase 170 - integridade historica de formularios.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -243,6 +243,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   ganhou visoes de dia, semana e mes. Em producao, as migrations pendentes
   foram alinhadas no Neon e a web foi publicada com acao de liberar horario
   sempre visivel nos bloqueios internos.
+
+- Fase 170 - Integridade historica de formularios: cada envio novo preserva
+  um snapshot imutavel da versao, titulo, descricao, perguntas, configuracoes
+  e opcoes. Formularios publicos e a leitura de respostas preferem essa
+  estrutura historica, com fallback compativel para envios anteriores.
 
 ## Estado atual de uso
 

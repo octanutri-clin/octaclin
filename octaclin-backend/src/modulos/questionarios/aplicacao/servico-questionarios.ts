@@ -25,7 +25,11 @@ import {
 } from './dtos';
 import { AgendamentoQuestionarioOrm } from '../infraestrutura/agendamento-questionario.orm';
 import { CategoriaPerguntaOrm } from '../infraestrutura/categoria-pergunta.orm';
-import { EnvioQuestionarioOrm } from '../infraestrutura/envio-questionario.orm';
+import {
+  EnvioQuestionarioOrm,
+  PerguntaSnapshotQuestionario,
+  SnapshotEstruturaQuestionario
+} from '../infraestrutura/envio-questionario.orm';
 import { OpcaoPerguntaOrm } from '../infraestrutura/opcao-pergunta.orm';
 import { PerguntaOrm } from '../infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../infraestrutura/questionario.orm';
@@ -40,7 +44,7 @@ export interface FormularioPacientePublico {
   descricao?: string;
   status: string;
   expiraEm?: Date;
-  perguntas: PerguntaComOpcoes[];
+  perguntas: PerguntaSnapshotQuestionario[];
 }
 
 export interface EnvioQuestionarioManualResposta extends EnvioQuestionarioOrm {
@@ -530,7 +534,8 @@ export class ServicoQuestionarios {
     usuario: UsuarioAutenticado
   ): Promise<EnvioQuestionarioManualResposta> {
     const envio = await this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const snapshotEstrutura = await this.capturarSnapshotEstruturaQuestionario(gerenciador, tenantId, questionario);
 
       const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
         where: { id: dados.pacienteId, tenantId, arquivadoEm: IsNull() }
@@ -545,7 +550,8 @@ export class ServicoQuestionarios {
           pacienteId: dados.pacienteId,
           status: 'enviado',
           enviadoEm: agora,
-          expiraEm: dados.expiraEm ? new Date(dados.expiraEm) : new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000)
+          expiraEm: dados.expiraEm ? new Date(dados.expiraEm) : new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000),
+          snapshotEstrutura
         })
       );
     });
@@ -636,7 +642,7 @@ export class ServicoQuestionarios {
         .map((resposta) => {
           const envio = enviosPorId.get(resposta.envioQuestionarioId);
           const respostas = (valoresPorResposta.get(resposta.id) ?? []).flatMap((valor) => {
-            const pergunta = perguntasPorId.get(valor.perguntaId);
+            const pergunta = envio?.snapshotEstrutura?.perguntas.find((item) => item.id === valor.perguntaId) ?? perguntasPorId.get(valor.perguntaId);
             if (!pergunta) return [];
             return {
               perguntaId: pergunta.id,
@@ -808,6 +814,17 @@ export class ServicoQuestionarios {
       const envio = await gerenciador.getRepository(EnvioQuestionarioOrm).findOne({ where: { id: envioId, tenantId } });
       this.validarEnvioFormulario(envio);
 
+      if (envio.snapshotEstrutura) {
+        return {
+          envioId: envio.id,
+          titulo: envio.snapshotEstrutura.titulo,
+          descricao: envio.snapshotEstrutura.descricao,
+          status: envio.status,
+          expiraEm: envio.expiraEm,
+          perguntas: envio.snapshotEstrutura.perguntas
+        };
+      }
+
       const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
         where: { id: envio.questionarioId, tenantId }
       });
@@ -834,7 +851,7 @@ export class ServicoQuestionarios {
       const envio = await repositorioEnvios.findOne({ where: { id: envioId, tenantId } });
       this.validarEnvioFormulario(envio);
 
-      const perguntas = await this.listarPerguntasComOpcoesPorQuestionario(gerenciador, tenantId, envio.questionarioId);
+      const perguntas = envio.snapshotEstrutura?.perguntas ?? (await this.listarPerguntasComOpcoesPorQuestionario(gerenciador, tenantId, envio.questionarioId));
       this.validarRespostasObrigatorias(perguntas, dados.respostas);
 
       const agora = new Date();
@@ -890,6 +907,12 @@ export class ServicoQuestionarios {
 
       let totalEnvios = 0;
       for (const agendamento of agendamentos) {
+        const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
+          where: { id: agendamento.questionarioId, tenantId }
+        });
+        const snapshotEstrutura = questionario
+          ? await this.capturarSnapshotEstruturaQuestionario(gerenciador, tenantId, questionario)
+          : undefined;
         const pacientes = await gerenciador.getRepository(PacienteOrm).find({
           where: { tenantId, arquivadoEm: IsNull() }
         });
@@ -901,7 +924,8 @@ export class ServicoQuestionarios {
               questionarioId: agendamento.questionarioId,
               pacienteId: paciente.id,
               agendamentoId: agendamento.id,
-              status: 'pendente'
+              status: 'pendente',
+              snapshotEstrutura
             })
           )
         );
@@ -969,7 +993,10 @@ export class ServicoQuestionarios {
     if (envio.status === 'expirado' || (envio.expiraEm && envio.expiraEm <= new Date())) throw new GoneException('Formulario expirado.');
   }
 
-  private validarRespostasObrigatorias(perguntas: PerguntaOrm[], respostas: { perguntaId: string; valor: unknown }[]) {
+  private validarRespostasObrigatorias(
+    perguntas: Pick<PerguntaOrm, 'id' | 'obrigatoria' | 'enunciado'>[],
+    respostas: { perguntaId: string; valor: unknown }[]
+  ) {
     const respostasPorPergunta = new Map(respostas.map((resposta) => [resposta.perguntaId, resposta.valor]));
     const idsPerguntas = new Set(perguntas.map((pergunta) => pergunta.id));
 
@@ -1021,6 +1048,36 @@ export class ServicoQuestionarios {
     });
 
     return perguntas.map((pergunta) => Object.assign(pergunta, { opcoes: opcoesPorPergunta.get(pergunta.id) ?? [] }));
+  }
+
+  private async capturarSnapshotEstruturaQuestionario(
+    gerenciador: EntityManager,
+    tenantId: string,
+    questionario: QuestionarioOrm
+  ): Promise<SnapshotEstruturaQuestionario> {
+    const perguntas = await this.listarPerguntasComOpcoesPorQuestionario(gerenciador, tenantId, questionario.id);
+    return {
+      versaoQuestionario: questionario.versao,
+      titulo: questionario.titulo,
+      descricao: questionario.descricao,
+      perguntas: perguntas.map((pergunta) => ({
+        id: pergunta.id,
+        categoriaId: pergunta.categoriaId,
+        tipo: pergunta.tipo,
+        enunciado: pergunta.enunciado,
+        peso: pergunta.peso,
+        obrigatoria: pergunta.obrigatoria,
+        configuracao: JSON.parse(JSON.stringify(pergunta.configuracao ?? {})),
+        ordem: pergunta.ordem,
+        opcoes: pergunta.opcoes.map((opcao) => ({
+          id: opcao.id,
+          rotulo: opcao.rotulo,
+          valor: opcao.valor,
+          imagemUrl: opcao.imagemUrl,
+          ordem: opcao.ordem
+        }))
+      }))
+    };
   }
 
   private async anexarOpcoes(gerenciador: EntityManager, pergunta: PerguntaOrm): Promise<PerguntaComOpcoes> {

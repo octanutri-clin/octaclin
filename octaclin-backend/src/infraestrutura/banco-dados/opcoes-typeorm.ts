@@ -19,6 +19,7 @@ import { AdicionarRevisaoClinicaEnviosQuestionario1720000001003 } from './migrac
 import { CriarAlertasOcultosDashboardClinico1720000001004 } from './migracoes/1720000001004-CriarAlertasOcultosDashboardClinico';
 import { ProtegerCanaisWatchGoogleAgenda1720000001005 } from './migracoes/1720000001005-ProtegerCanaisWatchGoogleAgenda';
 import { CriarBloqueiosManuaisAgenda1720000001006 } from './migracoes/1720000001006-CriarBloqueiosManuaisAgenda';
+import { AdicionarSnapshotEstruturaEnviosQuestionario1720000001007 } from './migracoes/1720000001007-AdicionarSnapshotEstruturaEnviosQuestionario';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -172,7 +173,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AdicionarRevisaoClinicaEnviosQuestionario1720000001003,
       CriarAlertasOcultosDashboardClinico1720000001004,
       ProtegerCanaisWatchGoogleAgenda1720000001005,
-      CriarBloqueiosManuaisAgenda1720000001006
+      CriarBloqueiosManuaisAgenda1720000001006,
+      AdicionarSnapshotEstruturaEnviosQuestionario1720000001007
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,
