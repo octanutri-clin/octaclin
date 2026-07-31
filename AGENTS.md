@@ -25,6 +25,7 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 - Fase 140 introduziu `MATRIZ_CONFIABILIDADE_TESTES.md`; atualize a matriz e seu validador sempre que adicionar ou remover um fluxo de risco alto.
 - Fase 142 introduziu `pnpm --dir octaclin-web test:next15`; toda nova rota dinamica deve receber `params`/`searchParams` assincronos e manter esse gate verde.
 - O checklist vivo das proximas fases fica em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
+- Para as Fases 191 a 198 (bloco de redesenho), o mapeamento de skills/agentes/plugins do Claude Code a usar em cada fase fica em `ESCOPO_SKILLS_AGENTES_FASES_191_198.md`; leia-o antes de iniciar qualquer fase desse bloco.
 
 ## Regras de trabalho
 
