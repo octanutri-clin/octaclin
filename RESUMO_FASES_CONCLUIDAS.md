@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-31 apos a Fase 184 - central de comunicacoes.
+Atualizado em 2026-07-31 apos a Fase 191 - acesso e ativacao do usuario.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -364,6 +364,16 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   com contexto da sessao, atalhos por permissao, menu de conta e carregamento
   compartilhado. IA, Mobile e Gamificacao continuam autorizados por rota, mas
   sairam do menu diario. O commit de implementacao e `e371ae0`.
+
+- Fase 191 - Acesso e ativacao do usuario: `/login`, `/esqueci-senha`,
+  `/recuperar-senha` e `/primeiro-acesso` passaram a compartilhar um shell de
+  autenticacao unico (`AuthShell`). Campos de senha ganharam botao de
+  mostrar/ocultar e aviso de Caps Lock (`CampoSenha`). O tratamento de link
+  expirado/invalido foi unificado entre recuperacao de senha e primeiro
+  acesso (`classificarFalhaToken`/`EstadoFalhaToken`), e o primeiro acesso do
+  paciente passou a ter 2 etapas (senha, aceites legais) com foco anunciado a
+  leitor de tela em cada transicao. Revisao de seguranca focada nao encontrou
+  achado introduzido pela fase.
 
 ## Estado atual de uso
 

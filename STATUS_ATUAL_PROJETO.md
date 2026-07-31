@@ -7,9 +7,14 @@ Atualizado em 2026-07-31.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 190 - arquitetura de navegacao e sistema visual
-  definitivo (2026-07-31). O console agora separa Clinica, Relacionamento,
-  Gestao e SuperAdmin, com contexto da sessao e atalhos por permissao.
+- Ultima fase concluida: Fase 191 - acesso e ativacao do usuario (2026-07-31).
+  Login, recuperacao de senha e primeiro acesso do paciente compartilham um
+  shell de autenticacao unico, com mostrar/ocultar senha, aviso de Caps Lock,
+  tratamento unificado de link expirado/invalido e ativacao do paciente em 2
+  etapas (senha, aceites legais).
+- Fase 190: arquitetura de navegacao e sistema visual definitivo (2026-07-31).
+  O console separa Clinica, Relacionamento, Gestao e SuperAdmin, com contexto
+  da sessao e atalhos por permissao.
 - Fase 148: Foco visivel proprio nos componentes compartilhados `Campo`/`AreaTexto`/`Selecao`/`Botao` (entregue em 2026-07-27, PR #5 aberto para `main`).
 - Fase 147: Foco visivel explicito nos inputs crus da agenda (entregue em 2026-07-27). Antes dela, esta branch recebeu por merge a Fase 146 (gate de acessibilidade, feita pelo Codex na `main`).
 - Fase 145: Painel clinico do profissional e desmarcamento/cancelamento distintos (entregue em 2026-07-27, commit `22e161b` da Task 5).

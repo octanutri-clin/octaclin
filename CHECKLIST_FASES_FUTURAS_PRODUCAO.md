@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 181 - portal completo do paciente.
+Atualizado em 2026-07-31 apos a Fase 191 - acesso e ativacao do usuario.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -864,7 +864,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `fase-190-arquitetura-navegacao-sistema-visual.md`. Implementacao:
     `e371ae0`.
 
-- [ ] Fase 191 - Acesso e ativacao do usuario.
+- [x] Fase 191 - Acesso e ativacao do usuario.
   - Unificar login, recuperacao de senha e primeiro acesso em um shell de
     autenticacao consistente, sem API, tenant ou detalhes internos.
   - Adicionar exibicao de senha, aviso de Caps Lock, tratamento de token
@@ -873,6 +873,22 @@ publicado antes de ampliar a superficie de mudancas visuais.
     marketing ou transmitir credenciais para destinos externos.
   - Aceite: fluxos de sucesso, erro, expiracao e retorno ao login cobertos em
     desktop e celular, com teclado e leitores de tela.
+  - Status: concluida em 2026-07-31. `AuthShell` unificou as 4 rotas;
+    `CampoSenha` adicionou mostrar/ocultar senha e aviso de Caps Lock;
+    `classificarFalhaToken`/`EstadoFalhaToken` unificaram o tratamento de link
+    expirado/invalido entre recuperacao de senha e primeiro acesso; primeiro
+    acesso passou a ter 2 etapas (senha, aceites) com foco movido por
+    leitor de tela a cada transicao. Etapa de "dados" nao criada por falta de
+    contrato de backend com campos coletaveis nesse ponto (ver
+    `fase-191-acesso-ativacao-usuario.md`).
+  - Data: 2026-07-31. Saida: `fase-191-acesso-ativacao-usuario.md`.
+  - Validacoes: `pnpm --dir octaclin-web typecheck`, `lint`, Playwright
+    (`acesso-ativacao.spec.mjs`, `primeiro-acesso-paciente.spec.mjs`,
+    `acessibilidade.spec.mjs` = 28 testes; `jornadas-criticas.spec.mjs` = 10
+    testes), `test:authz` (22 verificacoes), `build`, `security:secrets`,
+    `validar-preflight.ps1 -DocsOnly`. Revisao de seguranca focada (agente
+    `ecc:security-reviewer`, opus): sem achado confirmado introduzido por esta
+    fase.
 
 - [ ] Fase 192 - Centro clinico diario e agenda profissional.
   - Reorganizar o dashboard em Agora, Proximos e Pendentes, priorizando fila

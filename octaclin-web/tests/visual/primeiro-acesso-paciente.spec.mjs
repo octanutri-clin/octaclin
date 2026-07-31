@@ -131,12 +131,15 @@ test.describe('primeiro acesso do paciente', () => {
 
     await expect(page.getByRole('heading', { name: 'Primeiro acesso' })).toBeVisible();
     await expect(page.getByText('Ana Paula')).toBeVisible();
+
+    await page.locator('input[type="password"]').nth(0).fill('SenhaPaciente@123');
+    await page.locator('input[type="password"]').nth(1).fill('SenhaPaciente@123');
+    await page.getByRole('button', { name: 'Continuar' }).click();
+
     await expect(page.getByLabel('Aceito os Termos de uso do OctaClin')).toBeVisible();
     await expect(page.getByLabel('Aceito a Politica de privacidade')).toBeVisible();
     await expect(page.getByLabel('Autorizo o tratamento dos meus dados de saude')).toBeVisible();
 
-    await page.locator('input[type="password"]').nth(0).fill('SenhaPaciente@123');
-    await page.locator('input[type="password"]').nth(1).fill('SenhaPaciente@123');
     await page.getByLabel('Aceito os Termos de uso do OctaClin').check();
     await page.getByLabel('Aceito a Politica de privacidade').check();
     await page.getByLabel('Autorizo o tratamento dos meus dados de saude').check();

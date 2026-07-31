@@ -41,6 +41,11 @@ ou dado sensivel (ver tabela abaixo).
 - Skill: `ecc:frontend-a11y` (Caps Lock, show/hide senha, leitor de tela).
 - Skill: `ui-ux-pro-max --domain ux "forms error focus"`.
 - Agente: `ecc:security-reviewer` (token expirado e fluxo de auth = fronteira sensivel).
+- Executado: implementacao direta (sonnet, sem subagente) + `ecc:security-reviewer`
+  em `opus` no fechamento da fase, exatamente como planejado. `ui-ux-pro-max`
+  nao foi consultado via `search.py` nesta fase (padroes de UX ja bem
+  definidos pelo checklist); ver `fase-191-acesso-ativacao-usuario.md` para o
+  registro completo.
 
 ### Fase 192 - Centro clinico diario e agenda profissional
 - Skill: `superpowers:subagent-driven-development` (dashboard, calendario e painel lateral sao tarefas paralelas independentes).
