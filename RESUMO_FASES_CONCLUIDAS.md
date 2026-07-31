@@ -272,6 +272,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 174 - Check-ins consolidados no prontuario: respostas de formularios e
   registros de diario rapido agora compartilham a mesma linha do tempo clinica,
   sem migracao entre tabelas e com contador proprio no resumo do paciente.
+  Backend e web foram publicados pelo Render no commit `0eb4d43`.
 
 ## Estado atual de uso
 

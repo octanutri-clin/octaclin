@@ -664,7 +664,8 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     prematura dos dois armazenamentos existentes.
   - Data: 2026-07-30. Saida: `fase-174-checkins-consolidados-prontuario.md`.
   - Validacoes: Jest de pacientes/controlador, typecheck e build de backend/web.
-  - Deploy: sem migration; publicacao pendente.
+  - Producao: sem migration; backend e web publicados pelo Render no commit
+    `0eb4d43`, com health checks `200`.
 
 - [ ] Fase 175 - Separacao UX do modulo de formularios.
   - Dividir Biblioteca, Montagem/Preview, Distribuicao e Respostas.
