@@ -266,7 +266,8 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 173 - Matriz longitudinal de respostas: filtros por paciente,
   questionario, categoria e periodo agora comparam valores atuais e anteriores
   somente de indicadores numericos estaveis, preservando o escopo do
-  profissional e a compatibilidade com respostas historicas.
+  profissional e a compatibilidade com respostas historicas. Backend e web
+  foram publicados pelo Render no commit `b34113f`.
 
 ## Estado atual de uso
 

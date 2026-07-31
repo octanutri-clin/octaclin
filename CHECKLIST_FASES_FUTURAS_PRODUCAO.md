@@ -656,7 +656,8 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     numericamente comparaveis.
   - Data: 2026-07-30. Saida: `fase-173-matriz-longitudinal-respostas.md`.
   - Validacoes: Jest de questionarios/controlador, typecheck e build de backend/web.
-  - Deploy: sem migration; publicacao pendente.
+  - Producao: sem migration; backend e web publicados pelo Render no commit
+    `b34113f`, com health checks `200`.
 
 - [ ] Fase 174 - Check-ins consolidados no prontuario.
   - Unificar a leitura dos formularios e do diario rapido sem migracao

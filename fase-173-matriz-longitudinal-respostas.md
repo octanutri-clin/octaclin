@@ -1,6 +1,6 @@
 # Fase 173 - Matriz longitudinal de respostas
 
-Status: concluida localmente em 2026-07-30. Publicacao de producao pendente.
+Status: concluida e publicada em producao em 2026-07-30.
 
 ## Entregue
 
@@ -25,6 +25,11 @@ pnpm --dir octaclin-backend build
 pnpm --dir octaclin-web typecheck
 pnpm --dir octaclin-web build
 ```
+
+## Producao
+
+Nao houve migration. Backend e web foram publicados pelo Render no commit
+`b34113f`; os health checks dos dois servicos retornaram `200`.
 
 ## Proxima fase
 
