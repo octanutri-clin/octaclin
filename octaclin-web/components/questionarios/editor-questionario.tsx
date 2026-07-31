@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { AlertTriangle, Archive, BookOpen, CalendarClock, Check, CheckCircle2, ClipboardList, Copy, Eye, LibraryBig, Link2, Plus, RefreshCcw, Save, Settings2, Trash2, Wand2 } from 'lucide-react';
+import { AlertTriangle, Archive, BookOpen, CalendarClock, Check, CheckCircle2, ClipboardList, Copy, Eye, LibraryBig, Link2, Plus, RefreshCcw, Save, Settings2, Trash2, TrendingUp, Wand2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { ModalConfirmacao } from '@/components/ui/modal';
@@ -11,6 +11,7 @@ import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import {
   CategoriaPerguntaApi,
   LeituraClinicaQuestionarioApi,
+  MatrizLongitudinalRespostasApi,
   ModeloQuestionarioApi,
   PerguntaApi,
   QuestionarioApi,
@@ -29,6 +30,7 @@ import {
   listarBibliotecaPerguntas,
   listarPerguntas,
   obterLeituraClinicaQuestionario,
+  obterMatrizLongitudinalRespostas,
   reordenarPerguntas
 } from '@/lib/questionarios-api';
 import { PacienteResumo, ProfissionalResumo } from '@/lib/cadastros-api';
@@ -156,6 +158,13 @@ export function EditorQuestionario() {
   const [carregandoRespostas, setCarregandoRespostas] = useState(false);
   const [pacienteFiltroRespostas, setPacienteFiltroRespostas] = useState('');
   const [buscaRespostas, setBuscaRespostas] = useState('');
+  const [matrizLongitudinal, setMatrizLongitudinal] = useState<MatrizLongitudinalRespostasApi | null>(null);
+  const [carregandoMatriz, setCarregandoMatriz] = useState(false);
+  const [pacienteFiltroMatriz, setPacienteFiltroMatriz] = useState('');
+  const [questionarioFiltroMatriz, setQuestionarioFiltroMatriz] = useState('');
+  const [categoriaFiltroMatriz, setCategoriaFiltroMatriz] = useState('');
+  const [inicioFiltroMatriz, setInicioFiltroMatriz] = useState('');
+  const [fimFiltroMatriz, setFimFiltroMatriz] = useState('');
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -227,6 +236,25 @@ export function EditorQuestionario() {
     }
   }
 
+  async function carregarMatrizLongitudinal() {
+    setCarregandoMatriz(true);
+    setErro(null);
+    try {
+      const matriz = await obterMatrizLongitudinalRespostas({
+        pacienteId: pacienteFiltroMatriz || undefined,
+        questionarioId: questionarioFiltroMatriz || undefined,
+        categoriaId: categoriaFiltroMatriz || undefined,
+        inicioEm: inicioFiltroMatriz || undefined,
+        fimEm: fimFiltroMatriz || undefined
+      });
+      setMatrizLongitudinal(matriz);
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar a matriz longitudinal.');
+    } finally {
+      setCarregandoMatriz(false);
+    }
+  }
+
   async function selecionarQuestionario(questionario: QuestionarioApi) {
     setQuestionarioAtual(questionario);
     setTitulo(questionario.titulo);
@@ -250,6 +278,7 @@ export function EditorQuestionario() {
       setBibliotecaPerguntas(biblioteca);
       setPacienteAgendamentoId(bootstrap.pacientes[0]?.id ?? '');
       setPacienteEnvioId(bootstrap.pacientes[0]?.id ?? '');
+      setPacienteFiltroMatriz(bootstrap.pacientes[0]?.id ?? '');
 
       const primeiro = bootstrap.questionarios.itens[0];
       if (primeiro) {
@@ -1356,6 +1385,93 @@ export function EditorQuestionario() {
               {carregandoRespostas ? 'Carregando respostas.' : 'Nenhuma resposta encontrada para os filtros atuais.'}
             </div>
           )}
+        </div>
+      </Cartao>
+
+      <Cartao className="overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-linha px-4 py-3">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-texto-suave" />
+            <h2 className="text-sm font-semibold text-tinta">Matriz longitudinal</h2>
+          </div>
+          <Botao type="button" onClick={() => void carregarMatrizLongitudinal()} disabled={carregandoMatriz}>
+            <RefreshCcw className="h-4 w-4" />
+            {carregandoMatriz ? 'Atualizando matriz' : 'Atualizar matriz'}
+          </Botao>
+        </div>
+        <div className="grid gap-4 p-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <label className="space-y-1.5">
+              <Rotulo htmlFor="matriz-paciente">Paciente</Rotulo>
+              <Selecao id="matriz-paciente" value={pacienteFiltroMatriz} onChange={(event) => setPacienteFiltroMatriz(event.target.value)}>
+                <option value="">Todos os pacientes</option>
+                {pacientes.map((paciente) => <option key={paciente.id} value={paciente.id}>{paciente.nome}</option>)}
+              </Selecao>
+            </label>
+            <label className="space-y-1.5">
+              <Rotulo htmlFor="matriz-questionario">Questionario</Rotulo>
+              <Selecao id="matriz-questionario" value={questionarioFiltroMatriz} onChange={(event) => setQuestionarioFiltroMatriz(event.target.value)}>
+                <option value="">Todos os questionarios</option>
+                {questionarios.map((questionario) => <option key={questionario.id} value={questionario.id}>{questionario.titulo}</option>)}
+              </Selecao>
+            </label>
+            <label className="space-y-1.5">
+              <Rotulo htmlFor="matriz-categoria">Categoria</Rotulo>
+              <Selecao id="matriz-categoria" value={categoriaFiltroMatriz} onChange={(event) => setCategoriaFiltroMatriz(event.target.value)}>
+                <option value="">Todas as categorias</option>
+                {categorias.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>)}
+              </Selecao>
+            </label>
+            <label className="space-y-1.5">
+              <Rotulo htmlFor="matriz-inicio">De</Rotulo>
+              <Campo id="matriz-inicio" type="date" value={inicioFiltroMatriz} onChange={(event) => setInicioFiltroMatriz(event.target.value)} />
+            </label>
+            <label className="space-y-1.5">
+              <Rotulo htmlFor="matriz-fim">Ate</Rotulo>
+              <Campo id="matriz-fim" type="date" value={fimFiltroMatriz} onChange={(event) => setFimFiltroMatriz(event.target.value)} />
+            </label>
+          </div>
+
+          {matrizLongitudinal ? (
+            <>
+              <p className="text-sm text-texto-suave">
+                {matrizLongitudinal.resumo.totalIndicadores} indicadores comparaveis em {matrizLongitudinal.resumo.totalRespostas} respostas.
+              </p>
+              {matrizLongitudinal.indicadores.length ? (
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {matrizLongitudinal.indicadores.map((indicador) => {
+                    const paciente = pacientesPorId.get(indicador.pacienteId);
+                    return (
+                      <article key={`${indicador.pacienteId}-${indicador.questionarioId}-${indicador.perguntaId}`} className="rounded-md border border-linha bg-superficie p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-tinta">{indicador.enunciado}</p>
+                            <p className="text-xs text-texto-suave">{paciente?.nome ?? 'Paciente'} · {indicador.questionarioTitulo}</p>
+                          </div>
+                          {typeof indicador.delta === 'number' ? (
+                            <span className={indicador.delta >= 0 ? 'text-sm font-semibold text-sucesso-forte' : 'text-sm font-semibold text-perigo'}>
+                              {indicador.delta >= 0 ? '+' : ''}{indicador.delta}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                          <div className="rounded-md border border-linha bg-white px-3 py-2">
+                            <p className="text-xs text-texto-suave">Atual</p>
+                            <p className="font-semibold text-tinta">{formatarValorResposta(indicador.atual.valor)} {indicador.unidade ?? ''}</p>
+                          </div>
+                          <div className="rounded-md border border-linha bg-white px-3 py-2">
+                            <p className="text-xs text-texto-suave">Anterior</p>
+                            <p className="font-semibold text-tinta">{indicador.anterior ? `${formatarValorResposta(indicador.anterior.valor)} ${indicador.unidade ?? ''}` : 'Sem comparacao'}</p>
+                          </div>
+                        </div>
+                        <p className="mt-2 text-xs text-texto-suave">Atualizado em {formatarDataResposta(indicador.atual.finalizadoEm)}</p>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : <p className="text-sm text-texto-suave">Nenhum indicador numerico comparavel foi encontrado para os filtros atuais.</p>}
+            </>
+          ) : <p className="text-sm text-texto-suave">Escolha os filtros e atualize para comparar as duas respostas mais recentes de cada indicador.</p>}
         </div>
       </Cartao>
 

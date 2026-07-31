@@ -894,6 +894,74 @@ describe('ServicoQuestionarios', () => {
     ]);
   });
 
+  it('deve montar matriz longitudinal apenas para indicadores numericos comparaveis', async () => {
+    const anterior = new Date('2026-07-12T12:00:00.000Z');
+    const atual = new Date('2026-07-19T12:00:00.000Z');
+    const { servico } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in semanal' }],
+      perguntas: [],
+      opcaos: [],
+      envios: [
+        {
+          id: 'envio-anterior',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          pacienteId: 'paciente-1',
+          snapshotEstrutura: {
+            perguntas: [
+              { id: 'peso', categoriaId: 'medidas', tipo: 'metrica', enunciado: 'Peso', configuracao: { unidade: 'kg' } },
+              { id: 'nota', categoriaId: 'medidas', tipo: 'texto_longo', enunciado: 'Observacao', configuracao: {} }
+            ]
+          }
+        },
+        {
+          id: 'envio-atual',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          pacienteId: 'paciente-1',
+          snapshotEstrutura: {
+            perguntas: [
+              { id: 'peso', categoriaId: 'medidas', tipo: 'metrica', enunciado: 'Peso', configuracao: { unidade: 'kg' } },
+              { id: 'nota', categoriaId: 'medidas', tipo: 'texto_longo', enunciado: 'Observacao', configuracao: {} }
+            ]
+          }
+        }
+      ],
+      respostaCheckins: [
+        { id: 'resposta-anterior', tenantId: 'tenant-1', pacienteId: 'paciente-1', envioQuestionarioId: 'envio-anterior', finalizadoEm: anterior },
+        { id: 'resposta-atual', tenantId: 'tenant-1', pacienteId: 'paciente-1', envioQuestionarioId: 'envio-atual', finalizadoEm: atual }
+      ],
+      respostaValors: [
+        { id: 'valor-1', tenantId: 'tenant-1', respostaCheckinId: 'resposta-anterior', perguntaId: 'peso', valor: 81 },
+        { id: 'valor-2', tenantId: 'tenant-1', respostaCheckinId: 'resposta-anterior', perguntaId: 'nota', valor: 'Sem observacoes' },
+        { id: 'valor-3', tenantId: 'tenant-1', respostaCheckinId: 'resposta-atual', perguntaId: 'peso', valor: 79.5 }
+      ],
+      pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1' }]
+    });
+
+    const matriz = await servico.obterMatrizLongitudinalRespostas(
+      'tenant-1',
+      { pacienteId: 'paciente-1', categoriaId: 'medidas' },
+      usuarioColaborador
+    );
+
+    expect(matriz.resumo).toEqual(
+      expect.objectContaining({ totalRespostas: 2, totalIndicadores: 1, primeiraRespostaEm: anterior, ultimaRespostaEm: atual })
+    );
+    expect(matriz.indicadores).toEqual([
+      expect.objectContaining({
+        pacienteId: 'paciente-1',
+        perguntaId: 'peso',
+        tipo: 'metrica',
+        unidade: 'kg',
+        atual: { valor: 79.5, finalizadoEm: atual },
+        anterior: { valor: 81, finalizadoEm: anterior },
+        delta: -1.5
+      })
+    ]);
+  });
+
   describe('escopo pacientes_responsaveis para Professional', () => {
     function dadosBase(extra: Record<string, any> = {}) {
       return {
@@ -1037,6 +1105,46 @@ describe('ServicoQuestionarios', () => {
 
       expect(resultado.revisadoEm).toBe(primeiraRevisao);
       expect(resultado.revisadoPorUsuarioId).toBe('usuario-revisor-original');
+    });
+
+    it('deve limitar a matriz longitudinal aos pacientes do profissional', async () => {
+      const { servico } = criarServico(
+        dadosBase({
+          questionarios: [{ id: 'q-meu', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Meu check-in' }],
+          perguntas: [
+            {
+              id: 'peso',
+              tenantId: 'tenant-1',
+              questionarioId: 'q-meu',
+              categoriaId: 'medidas',
+              tipo: 'metrica',
+              enunciado: 'Peso',
+              configuracao: { unidade: 'kg' }
+            }
+          ],
+          envios: [
+            { id: 'envio-meu', tenantId: 'tenant-1', questionarioId: 'q-meu', pacienteId: 'paciente-meu' },
+            { id: 'envio-outro', tenantId: 'tenant-1', questionarioId: 'q-meu', pacienteId: 'paciente-outro' }
+          ],
+          respostaCheckins: [
+            { id: 'resposta-minha', tenantId: 'tenant-1', pacienteId: 'paciente-meu', envioQuestionarioId: 'envio-meu', finalizadoEm: new Date('2026-07-20T12:00:00.000Z') },
+            { id: 'resposta-outra', tenantId: 'tenant-1', pacienteId: 'paciente-outro', envioQuestionarioId: 'envio-outro', finalizadoEm: new Date('2026-07-20T12:00:00.000Z') }
+          ],
+          respostaValors: [
+            { id: 'valor-meu', tenantId: 'tenant-1', respostaCheckinId: 'resposta-minha', perguntaId: 'peso', valor: 80 },
+            { id: 'valor-outro', tenantId: 'tenant-1', respostaCheckinId: 'resposta-outra', perguntaId: 'peso', valor: 65 }
+          ],
+          pacientes: [
+            { id: 'paciente-meu', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1' },
+            { id: 'paciente-outro', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-outro-2' }
+          ]
+        })
+      );
+
+      const matriz = await servico.obterMatrizLongitudinalRespostas('tenant-1', {}, usuarioProfissional);
+
+      expect(matriz.indicadores).toHaveLength(1);
+      expect(matriz.indicadores[0]).toEqual(expect.objectContaining({ pacienteId: 'paciente-meu', atual: { valor: 80, finalizadoEm: expect.any(Date) } }));
     });
   });
 });

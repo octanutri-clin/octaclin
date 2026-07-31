@@ -235,6 +235,28 @@ export class CriarEnvioQuestionarioManualDto {
   expiraEm?: string;
 }
 
+export class FiltrosMatrizLongitudinalDto {
+  @IsOptional()
+  @IsUUID()
+  pacienteId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  questionarioId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  categoriaId?: string;
+
+  @IsOptional()
+  @IsISO8601()
+  inicioEm?: string;
+
+  @IsOptional()
+  @IsISO8601()
+  fimEm?: string;
+}
+
 export class RespostaFormularioPacienteDto {
   @IsUUID()
   perguntaId: string;

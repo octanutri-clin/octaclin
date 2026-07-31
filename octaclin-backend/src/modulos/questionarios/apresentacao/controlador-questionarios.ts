@@ -28,6 +28,7 @@ import {
   CriarQuestionarioAPartirModeloDto,
   CriarQuestionarioDto,
   DuplicarQuestionarioDto,
+  FiltrosMatrizLongitudinalDto,
   IncluirPerguntaBibliotecaDto,
   ReordenarPerguntasDto
 } from '../aplicacao/dtos';
@@ -134,6 +135,14 @@ export class ControladorQuestionarios {
       profissionalId: dados.profissionalId
     });
     return questionario;
+  }
+
+  @Get('questionarios/matriz-longitudinal')
+  obterMatrizLongitudinal(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Query() filtros: FiltrosMatrizLongitudinalDto
+  ) {
+    return this.servicoQuestionarios.obterMatrizLongitudinalRespostas(usuario.tenantId, filtros, usuario);
   }
 
   @Patch('questionarios/:id')

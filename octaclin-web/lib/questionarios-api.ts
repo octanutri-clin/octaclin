@@ -103,6 +103,36 @@ export interface LeituraClinicaQuestionarioApi {
   respostas: RespostaQuestionarioRecebidaApi[];
 }
 
+export interface MatrizLongitudinalRespostasApi {
+  filtros: {
+    pacienteId?: string;
+    questionarioId?: string;
+    categoriaId?: string;
+    inicioEm?: string;
+    fimEm?: string;
+  };
+  resumo: {
+    totalRespostas: number;
+    totalIndicadores: number;
+    primeiraRespostaEm?: string;
+    ultimaRespostaEm?: string;
+  };
+  indicadores: {
+    pacienteId: string;
+    questionarioId: string;
+    questionarioTitulo: string;
+    perguntaId: string;
+    categoriaId: string;
+    enunciado: string;
+    tipo: Extract<TipoPergunta, 'likert' | 'linear' | 'metrica'>;
+    unidade?: string;
+    atual: { valor: number; finalizadoEm: string };
+    anterior?: { valor: number; finalizadoEm: string };
+    delta?: number;
+    historico: { valor: number; finalizadoEm: string }[];
+  }[];
+}
+
 export interface ModeloQuestionarioApi {
   id: string;
   titulo: string;
@@ -364,6 +394,15 @@ export async function obterLeituraClinicaQuestionario(
   return requisitar<LeituraClinicaQuestionarioApi>(
     `/api/questionarios/${questionarioId}/respostas/leitura-clinica${consulta ? `?${consulta}` : ''}`
   );
+}
+
+export async function obterMatrizLongitudinalRespostas(filtros: MatrizLongitudinalRespostasApi['filtros']) {
+  const parametros = new URLSearchParams();
+  Object.entries(filtros).forEach(([chave, valor]) => {
+    if (valor) parametros.set(chave, valor);
+  });
+  const consulta = parametros.toString();
+  return requisitar<MatrizLongitudinalRespostasApi>(`/api/questionarios/matriz-longitudinal${consulta ? `?${consulta}` : ''}`);
 }
 
 export async function carregarBootstrapQuestionarios(): Promise<BootstrapQuestionarios> {

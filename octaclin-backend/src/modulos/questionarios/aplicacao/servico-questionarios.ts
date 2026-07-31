@@ -20,6 +20,7 @@ import {
   CriarQuestionarioAPartirModeloDto,
   CriarQuestionarioDto,
   DuplicarQuestionarioDto,
+  FiltrosMatrizLongitudinalDto,
   FinalizarFormularioPacienteDto,
   ReordenarPerguntasDto
 } from './dtos';
@@ -100,6 +101,30 @@ export interface LeituraClinicaQuestionario {
     distribuicao: { valor: string; total: number }[];
   }[];
   respostas: RespostaQuestionarioRecebida[];
+}
+
+export interface MatrizLongitudinalRespostas {
+  filtros: FiltrosMatrizLongitudinalDto;
+  resumo: {
+    totalRespostas: number;
+    totalIndicadores: number;
+    primeiraRespostaEm?: Date;
+    ultimaRespostaEm?: Date;
+  };
+  indicadores: {
+    pacienteId: string;
+    questionarioId: string;
+    questionarioTitulo: string;
+    perguntaId: string;
+    categoriaId: string;
+    enunciado: string;
+    tipo: Extract<TipoPergunta, 'likert' | 'linear' | 'metrica'>;
+    unidade?: string;
+    atual: { valor: number; finalizadoEm: Date };
+    anterior?: { valor: number; finalizadoEm: Date };
+    delta?: number;
+    historico: { valor: number; finalizadoEm: Date }[];
+  }[];
 }
 
 @Injectable()
@@ -838,6 +863,126 @@ export class ServicoQuestionarios {
       perguntas: perguntasAgregadas,
       respostas: respostasFiltradas
     };
+  }
+
+  async obterMatrizLongitudinalRespostas(
+    tenantId: string,
+    filtros: FiltrosMatrizLongitudinalDto,
+    usuario: UsuarioAutenticado
+  ): Promise<MatrizLongitudinalRespostas> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const questionarios = await gerenciador.getRepository(QuestionarioOrm).find({
+        where: { tenantId, ...(profissionalId ? { profissionalId } : {}) }
+      });
+      const questionariosFiltrados = filtros.questionarioId
+        ? questionarios.filter((questionario) => questionario.id === filtros.questionarioId)
+        : questionarios;
+      const questionariosPorId = new Map(questionariosFiltrados.map((questionario) => [questionario.id, questionario]));
+      if (!questionariosPorId.size) {
+        return { filtros, resumo: { totalRespostas: 0, totalIndicadores: 0 }, indicadores: [] };
+      }
+      const perguntas = await gerenciador.getRepository(PerguntaOrm).find({
+        where: { tenantId, questionarioId: In([...questionariosPorId.keys()]) }
+      });
+      const perguntasPorId = new Map(perguntas.map((pergunta) => [pergunta.id, pergunta]));
+
+      const envios = await gerenciador.getRepository(EnvioQuestionarioOrm).find({
+        where: { tenantId, questionarioId: In([...questionariosPorId.keys()]) }
+      });
+      const enviosFiltrados = filtros.pacienteId ? envios.filter((envio) => envio.pacienteId === filtros.pacienteId) : envios;
+      const pacientesPermitidos = profissionalId
+        ? new Set(
+            (
+              await gerenciador.getRepository(PacienteOrm).find({
+                where: { tenantId, profissionalResponsavelId: profissionalId }
+              })
+            ).map((paciente) => paciente.id)
+          )
+        : undefined;
+      const enviosVisiveis = pacientesPermitidos ? enviosFiltrados.filter((envio) => pacientesPermitidos.has(envio.pacienteId)) : enviosFiltrados;
+      const enviosPorId = new Map(enviosVisiveis.map((envio) => [envio.id, envio]));
+      const respostas = enviosPorId.size
+        ? await gerenciador.getRepository(RespostaCheckinOrm).find({
+            where: { tenantId, envioQuestionarioId: In([...enviosPorId.keys()]) }
+          })
+        : [];
+      const inicioEm = filtros.inicioEm ? new Date(filtros.inicioEm) : undefined;
+      const fimEm = filtros.fimEm ? new Date(filtros.fimEm) : undefined;
+      if (fimEm && filtros.fimEm?.length === 10) fimEm.setHours(23, 59, 59, 999);
+      const respostasFiltradas = respostas.filter(
+        (resposta) =>
+          resposta.finalizadoEm &&
+          (!inicioEm || resposta.finalizadoEm >= inicioEm) &&
+          (!fimEm || resposta.finalizadoEm <= fimEm)
+      );
+      const valores = respostasFiltradas.length
+        ? await gerenciador.getRepository(RespostaValorOrm).find({
+            where: { tenantId, respostaCheckinId: In(respostasFiltradas.map((resposta) => resposta.id)) }
+          })
+        : [];
+      const respostasPorId = new Map(respostasFiltradas.map((resposta) => [resposta.id, resposta]));
+      const indicadoresPorChave = new Map<string, MatrizLongitudinalRespostas['indicadores'][number]>();
+
+      valores.forEach((valor) => {
+        const resposta = respostasPorId.get(valor.respostaCheckinId);
+        const envio = resposta ? enviosPorId.get(resposta.envioQuestionarioId) : undefined;
+        const pergunta = envio?.snapshotEstrutura?.perguntas.find((item) => item.id === valor.perguntaId) ?? perguntasPorId.get(valor.perguntaId);
+        const numero = Number(valor.valor);
+        if (
+          !resposta?.finalizadoEm ||
+          !envio ||
+          !pergunta ||
+          !['likert', 'linear', 'metrica'].includes(pergunta.tipo) ||
+          !Number.isFinite(numero) ||
+          (filtros.categoriaId && pergunta.categoriaId !== filtros.categoriaId)
+        ) {
+          return;
+        }
+
+        const chave = `${resposta.pacienteId}:${envio.questionarioId}:${pergunta.id}`;
+        const indicador: MatrizLongitudinalRespostas['indicadores'][number] = indicadoresPorChave.get(chave) ?? {
+          pacienteId: resposta.pacienteId,
+          questionarioId: envio.questionarioId,
+          questionarioTitulo: questionariosPorId.get(envio.questionarioId)?.titulo ?? 'Questionario',
+          perguntaId: pergunta.id,
+          categoriaId: pergunta.categoriaId,
+          enunciado: pergunta.enunciado,
+          tipo: pergunta.tipo as Extract<TipoPergunta, 'likert' | 'linear' | 'metrica'>,
+          unidade: typeof pergunta.configuracao.unidade === 'string' ? pergunta.configuracao.unidade : undefined,
+          atual: { valor: numero, finalizadoEm: resposta.finalizadoEm },
+          historico: []
+        };
+        indicador.historico.push({ valor: numero, finalizadoEm: resposta.finalizadoEm });
+        indicadoresPorChave.set(chave, indicador);
+      });
+
+      const indicadores = [...indicadoresPorChave.values()]
+        .map((indicador) => {
+          const historico = indicador.historico.sort((a, b) => b.finalizadoEm.getTime() - a.finalizadoEm.getTime());
+          const [atual, anterior] = historico;
+          return {
+            ...indicador,
+            atual,
+            anterior,
+            delta: anterior ? this.arredondarMedia(atual.valor - anterior.valor, 1) : undefined,
+            historico
+          };
+        })
+        .sort((a, b) => b.atual.finalizadoEm.getTime() - a.atual.finalizadoEm.getTime());
+      const datas = respostasFiltradas.map((resposta) => resposta.finalizadoEm as Date).sort((a, b) => a.getTime() - b.getTime());
+
+      return {
+        filtros,
+        resumo: {
+          totalRespostas: respostasFiltradas.length,
+          totalIndicadores: indicadores.length,
+          primeiraRespostaEm: datas[0],
+          ultimaRespostaEm: datas.at(-1)
+        },
+        indicadores
+      };
+    });
   }
 
   private async garantirQuestionarioDoProfissional(
