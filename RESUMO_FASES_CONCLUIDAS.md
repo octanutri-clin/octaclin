@@ -339,10 +339,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   mantendo templates aprovados, contexto clinico e estados de entrega. O commit
   `72e6d18` foi enviado para deploy no Render.
 
-- Fase 185 (etapa inicial) - Profissionais: a lista passou a explicar a
-  capacidade necessária para gerenciar a equipe e nao exibe mais o ID interno
-  do profissional. Estado individual da Google Agenda permanece dependente de
-  contrato de API antes da conclusao completa da fase.
+- Fase 185 - Profissionais, permissoes e integracoes: a lista explica a
+  capacidade de gerir equipe, nao expoe ID interno e mostra ao SuperAdmin o
+  estado conectado/desconectado da Google Agenda por profissional. O contrato
+  nao retorna tokens ou dados de calendario. O commit `806d676` foi enviado
+  para deploy no Render.
 
 ## Estado atual de uso
 

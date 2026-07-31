@@ -801,13 +801,15 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Data: 2026-07-31. Saida: `fase-184-central-comunicacoes.md`.
   - Producao: deploy acionado pelo Render no commit `72e6d18`.
 
-- [ ] Fase 185 - Profissionais, permissoes e integracoes.
+- [x] Fase 185 - Profissionais, permissoes e integracoes.
   - Exibir diretorio de profissionais, situacao do acesso e permissoes por
     capacidade, sem jargao tecnico.
   - Mostrar Google Agenda por profissional e restringir troca de painel ao
     SuperAdmin, de forma identificavel.
-  - Etapa inicial: capacidade de gerenciar equipe explicitada e ID interno
-    removido da lista. Saida: `fase-185-profissionais-permissoes-integracoes.md`.
+  - Entregue: capacidade de gerenciar equipe explicitada, ID interno removido e
+    situacao Google por profissional exclusiva ao SuperAdmin.
+  - Validacoes: typecheck backend e web.
+  - Data: 2026-07-31. Saida: `fase-185-profissionais-permissoes-integracoes.md`.
 
 - [ ] Fase 186 - Conta, assinatura e ativacao do cliente.
   - Separar conta, equipe, assinatura, uso, configuracoes e dados fiscais.
