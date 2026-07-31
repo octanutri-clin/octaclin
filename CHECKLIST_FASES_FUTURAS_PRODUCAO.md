@@ -811,10 +811,13 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Validacoes: typecheck backend e web.
   - Data: 2026-07-31. Saida: `fase-185-profissionais-permissoes-integracoes.md`.
 
-- [ ] Fase 186 - Conta, assinatura e ativacao do cliente.
+- [x] Fase 186 - Conta, assinatura e ativacao do cliente.
   - Separar conta, equipe, assinatura, uso, configuracoes e dados fiscais.
   - Explicar limites, consumo e proximos passos sem exibir IDs ou detalhes
     internos no fluxo comercial.
+  - Validacoes: typecheck da web. Data: 2026-07-31.
+  - Saida: `fase-186-conta-assinatura-ativacao.md`; deploy acionado pelo Render
+    no commit `0954847`.
 
 - [ ] Fase 187 - Modulos avancados.
   - Reorganizar automacoes, IA, operacoes mobile, gamificacao e operacoes
