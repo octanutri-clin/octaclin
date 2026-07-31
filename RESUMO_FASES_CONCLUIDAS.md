@@ -247,7 +247,9 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 170 - Integridade historica de formularios: cada envio novo preserva
   um snapshot imutavel da versao, titulo, descricao, perguntas, configuracoes
   e opcoes. Formularios publicos e a leitura de respostas preferem essa
-  estrutura historica, com fallback compativel para envios anteriores.
+  estrutura historica, com fallback compativel para envios anteriores. A
+  migration `1720000001007` foi aplicada no Neon de producao e o backend
+  publicado pelo Render no commit `ceffdce`.
 
 ## Estado atual de uso
 

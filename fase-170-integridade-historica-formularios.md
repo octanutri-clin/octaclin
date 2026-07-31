@@ -1,7 +1,6 @@
 # Fase 170 - Integridade historica de formularios
 
-Status: concluida localmente em 2026-07-30. Requer aplicar a migration antes
-do deploy de producao.
+Status: concluida e validada em producao em 2026-07-30.
 
 ## Entregue
 
@@ -14,11 +13,12 @@ do deploy de producao.
 - Envios manuais e os criados por agendamentos recorrentes capturam a mesma
   estrutura imutavel.
 
-## Deploy
+## Producao
 
-Aplicar `AdicionarSnapshotEstruturaEnviosQuestionario1720000001007` no Neon
-de producao antes ou junto da publicacao do backend. A coluna e anulavel para
-preservar os envios existentes. Nenhuma variavel nova e necessaria.
+A migration `AdicionarSnapshotEstruturaEnviosQuestionario1720000001007` foi
+aplicada e registrada no Neon de producao. A coluna e anulavel para preservar
+os envios existentes. O backend foi publicado pelo auto-deploy do Render no
+commit `ceffdce`. Nenhuma variavel nova e necessaria.
 
 ## Validacoes
 

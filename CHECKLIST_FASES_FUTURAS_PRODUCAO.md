@@ -631,7 +631,8 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Renderizar respostas antigas pelo snapshot imutavel.
   - Data: 2026-07-30. Saida: `fase-170-integridade-historica-formularios.md`.
   - Validacoes: Jest de questionarios/datasource, typecheck e build do backend.
-  - Deploy: migration `1720000001007` deve ser aplicada antes da publicacao do backend.
+  - Producao: migration `1720000001007` aplicada e registrada no Neon;
+    backend publicado pelo Render no commit `ceffdce`.
 
 - [ ] Fase 171 - Biblioteca de perguntas reutilizaveis.
   - Busca, categoria, chave clinica estavel e inclusao em questionarios.
