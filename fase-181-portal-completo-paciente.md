@@ -1,6 +1,6 @@
 # Fase 181 - Portal completo do paciente
 
-Status: codigo concluido e validado localmente em 2026-07-30. Publicacao em producao pendente.
+Status: concluida e publicada em producao em 2026-07-31.
 
 ## Entregue
 
@@ -16,6 +16,10 @@ Status: codigo concluido e validado localmente em 2026-07-30. Publicacao em prod
 - Quatro cenarios Playwright do portal passaram em desktop e celular.
 - Typecheck aprovado; os gates de acessibilidade, autorizacao e build
   concluiram com sucesso antes do limite do invólucro de execucao.
+
+## Producao
+
+- Web publicada no commit `9549a50`; `/health` retornou `200` em 2026-07-31.
 
 ## Proxima fase
 

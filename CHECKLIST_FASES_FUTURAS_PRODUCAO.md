@@ -762,13 +762,22 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Validacoes: quatro cenarios Playwright do portal em desktop/mobile,
     typecheck, acessibilidade, autorizacao e build aprovados.
   - Data: 2026-07-30. Saida: `fase-181-portal-completo-paciente.md`.
-  - Producao: pendente de publicacao e health check.
+  - Producao: web publicada no commit `9549a50`; `/health` retornou `200` em
+    2026-07-31.
 
-- [ ] Fase 182 - Agendamento e formularios publicos.
+- [x] Fase 182 - Agendamento e formularios publicos.
   - Aplicar identidade da clinica, fuso horario, indisponibilidade, escolha de
     data/horario no celular e resumo final da solicitacao.
   - Evoluir rascunho e retomada de formularios somente quando o backend
     suportar a persistencia segura.
+  - Entregue: fuso explicito, selecao anunciada e resumo honesto de solicitacao;
+    a falha de envio do formulario nao descarta respostas preenchidas.
+  - Limite: a API ainda nao oferece identidade visual de clinica nem rascunho
+    persistente seguro; ambos permanecem fora deste incremento.
+  - Validacoes: quatro cenarios Playwright desktop/mobile, typecheck e build.
+  - Data: 2026-07-31. Saida: `fase-182-agendamento-formularios-publicos.md`.
+  - Producao: publicacao acionada pelo Render no commit `c869591`; health check
+    do artefato atualizado deve ser confirmado apos o deploy.
 
 - [ ] Fase 183 - Editor de formularios completo.
   - Evoluir a separacao ja entregue na Fase 175 com estrutura, edicao, preview,

@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a Fase 180 - prontuario clinico.
+Atualizado em 2026-07-31 apos a Fase 182 - agendamento e formularios publicos.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -315,6 +315,18 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   resumo abre com uma Linha de cuidado compacta, reduzindo a densidade sem
   duplicar dados. A web foi publicada no commit `a0b3f1a` e o health check
   retornou `200`.
+
+- Fase 181 - Portal completo do paciente: navegacao por tarefas no desktop e
+  celular passou a direcionar agenda, check-ins, plano, formularios, mensagens,
+  perfil e privacidade sem expor risco clinico. A web foi publicada no commit
+  `9549a50`; `/health` retornou `200`.
+
+- Fase 182 - Agendamento e formularios publicos: o paciente visualiza fuso e
+  horario selecionado com semantica acessivel e recebe confirmacao honesta de
+  solicitacao, sem reserva prematura. Formularios publicos preservam respostas
+  na tela apos falha de envio e mostram expiracao quando o backend a fornece.
+  O commit `c869591` foi enviado para publicacao; rascunho persistente e marca
+  configuravel da clinica aguardam suporte contratual da API.
 
 ## Estado atual de uso
 
