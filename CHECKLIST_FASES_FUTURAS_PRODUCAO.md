@@ -667,9 +667,12 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Producao: sem migration; backend e web publicados pelo Render no commit
     `0eb4d43`, com health checks `200`.
 
-- [ ] Fase 175 - Separacao UX do modulo de formularios.
+- [x] Fase 175 - Separacao UX do modulo de formularios.
   - Dividir Biblioteca, Montagem/Preview, Distribuicao e Respostas.
   - Reutilizar os endpoints e componentes atuais antes de criar novos.
+  - Data: 2026-07-30. Saida: `fase-175-separacao-ux-formularios.md`.
+  - Validacoes: BFF de revisao, preview, typecheck e build da web.
+  - Deploy: sem migration; publicacao pendente.
 
 ## Backlog pos-producao
 

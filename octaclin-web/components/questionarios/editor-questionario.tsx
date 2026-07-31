@@ -48,6 +48,15 @@ const tipos: { valor: TipoPergunta; rotulo: string }[] = [
   { valor: 'sim_nao', rotulo: 'Sim/Nao' }
 ];
 
+type AreaQuestionarios = 'montagem' | 'biblioteca' | 'distribuicao' | 'respostas';
+
+const areasQuestionarios: { id: AreaQuestionarios; rotulo: string }[] = [
+  { id: 'montagem', rotulo: 'Montagem' },
+  { id: 'biblioteca', rotulo: 'Biblioteca' },
+  { id: 'distribuicao', rotulo: 'Distribuicao' },
+  { id: 'respostas', rotulo: 'Respostas' }
+];
+
 function mapearPergunta(pergunta: PerguntaApi): PerguntaEditor {
   return {
     id: pergunta.id,
@@ -165,6 +174,7 @@ export function EditorQuestionario() {
   const [categoriaFiltroMatriz, setCategoriaFiltroMatriz] = useState('');
   const [inicioFiltroMatriz, setInicioFiltroMatriz] = useState('');
   const [fimFiltroMatriz, setFimFiltroMatriz] = useState('');
+  const [areaAtiva, setAreaAtiva] = useState<AreaQuestionarios>('montagem');
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -673,7 +683,24 @@ export function EditorQuestionario() {
         </div>
       ) : null}
 
-      <div className="flex justify-end gap-2">
+      <nav role="tablist" aria-label="Areas de trabalho dos questionarios" className="flex flex-wrap gap-2 border-b border-linha pb-3">
+        {areasQuestionarios.map((area) => (
+          <button
+            key={area.id}
+            type="button"
+            role="tab"
+            aria-selected={areaAtiva === area.id}
+            onClick={() => setAreaAtiva(area.id)}
+            className={areaAtiva === area.id
+              ? 'rounded-md bg-primaria px-3 py-2 text-sm font-semibold text-white'
+              : 'rounded-md border border-linha bg-white px-3 py-2 text-sm font-semibold text-texto-suave hover:bg-superficie-hover'}
+          >
+            {area.rotulo}
+          </button>
+        ))}
+      </nav>
+
+      {areaAtiva === 'montagem' ? <div className="flex justify-end gap-2">
         <Botao onClick={carregar} disabled={carregando}>
           <RefreshCcw className="h-4 w-4" />
           {carregando ? 'Atualizando' : 'Atualizar'}
@@ -699,11 +726,80 @@ export function EditorQuestionario() {
           <Save className="h-4 w-4" />
           {questionarioAtual ? 'Salvar questionario' : 'Criar questionario'}
         </Botao>
-      </div>
+      </div> : null}
 
-      {previewAberto ? <PreviewQuestionarioPaciente titulo={titulo} descricao={descricao} perguntas={perguntas} /> : null}
+      {areaAtiva === 'montagem' && previewAberto ? <PreviewQuestionarioPaciente titulo={titulo} descricao={descricao} perguntas={perguntas} /> : null}
 
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(420px,1fr)_360px]">
+      {areaAtiva === 'biblioteca' ? (
+        <Cartao className="overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+            <LibraryBig className="h-4 w-4 text-primaria" />
+            <h2 className="text-sm font-semibold text-tinta">Biblioteca de perguntas</h2>
+          </div>
+          <div className="grid gap-3 p-4">
+            <div className="grid gap-2 sm:grid-cols-[1fr_220px]">
+              <Campo type="search" value={buscaBiblioteca} onChange={(event) => setBuscaBiblioteca(event.target.value)} placeholder="Buscar por enunciado ou chave clinica" aria-label="Buscar na biblioteca de perguntas" />
+              <Selecao value={categoriaBibliotecaId} onChange={(event) => setCategoriaBibliotecaId(event.target.value)} aria-label="Filtrar categoria da biblioteca">
+                <option value="">Todas as categorias</option>
+                {categorias.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>)}
+              </Selecao>
+            </div>
+            <p className="text-sm text-texto-suave">Selecione um formulario em Montagem para incluir uma copia independente da pergunta.</p>
+            <ul className="grid gap-2">
+              {perguntasBibliotecaVisiveis.length ? perguntasBibliotecaVisiveis.map((pergunta) => (
+                <li key={pergunta.id} className="flex items-center justify-between gap-3 rounded-md border border-linha bg-white p-3">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-tinta">{pergunta.enunciado}</span>
+                    <span className="block truncate text-xs text-texto-suave">{categoriasPorId.get(pergunta.categoriaId)?.nome ?? 'Sem categoria'}{pergunta.chaveClinica ? ` - ${pergunta.chaveClinica}` : ''}</span>
+                  </span>
+                  <Botao type="button" onClick={() => void incluirDaBiblioteca(pergunta.id)} disabled={salvando || !questionarioAtual} aria-label={`Incluir ${pergunta.enunciado}`}>
+                    <Plus className="h-4 w-4" /> Incluir
+                  </Botao>
+                </li>
+              )) : <li className="rounded-md border border-linha p-4 text-sm text-texto-suave">Nenhuma pergunta reutilizavel encontrada.</li>}
+            </ul>
+          </div>
+        </Cartao>
+      ) : null}
+
+      {areaAtiva === 'distribuicao' ? (
+        <Cartao className="overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
+            <Link2 className="h-4 w-4 text-primaria" />
+            <h2 className="text-sm font-semibold text-tinta">Distribuicao do formulario</h2>
+          </div>
+          <div className="grid gap-4 p-4 lg:grid-cols-2">
+            <div className="grid gap-3 rounded-md border border-linha bg-superficie p-3">
+              <div>
+                <p className="text-sm font-semibold text-tinta">Check-in recorrente</p>
+                <p className="text-xs text-texto-suave">Agenda um envio para um paciente especifico.</p>
+              </div>
+              <Selecao value={pacienteAgendamentoId} onChange={(event) => setPacienteAgendamentoId(event.target.value)} aria-label="Paciente do check-in recorrente">
+                <option value="">Selecione o paciente</option>
+                {pacientes.map((paciente) => <option key={paciente.id} value={paciente.id}>{paciente.nome}</option>)}
+              </Selecao>
+              <div className="flex gap-2">
+                <Campo value={regraCron} onChange={(event) => setRegraCron(event.target.value)} aria-label="Regra cron do check-in" />
+                <Botao type="button" onClick={agendar} disabled={salvando || !questionarioAtual} aria-label="Criar check-in recorrente"><CalendarClock className="h-4 w-4" /></Botao>
+              </div>
+            </div>
+            <div className="grid gap-3 rounded-md border border-linha bg-superficie p-3">
+              <div>
+                <p className="text-sm font-semibold text-tinta">Envio individual</p>
+                <p className="text-xs text-texto-suave">Gera o link publico para uma resposta unica.</p>
+              </div>
+              <Selecao value={pacienteEnvioId} onChange={(event) => setPacienteEnvioId(event.target.value)} aria-label="Paciente do envio individual">
+                <option value="">Selecione o paciente</option>
+                {pacientes.map((paciente) => <option key={paciente.id} value={paciente.id}>{paciente.nome}</option>)}
+              </Selecao>
+              <Botao type="button" onClick={() => void gerarLinkFormulario()} disabled={salvando || !questionarioAtual}><Link2 className="h-4 w-4" /> Gerar link</Botao>
+              {linkFormulario ? <Campo readOnly value={linkFormulario} onFocus={(event) => event.currentTarget.select()} aria-label="Link publico do formulario" /> : null}
+            </div>
+          </div>
+        </Cartao>
+      ) : null}
+
+      {areaAtiva === 'montagem' ? <section className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(420px,1fr)_360px]">
         <Cartao>
           <CartaoCabecalho>
             <CartaoTitulo>Questionario</CartaoTitulo>
@@ -1239,8 +1335,9 @@ export function EditorQuestionario() {
             <div className="p-4 text-sm text-texto-suave">Selecione ou crie uma pergunta.</div>
           )}
         </Cartao>
-      </section>
+      </section> : null}
 
+      {areaAtiva === 'respostas' ? <>
       <Cartao className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-linha px-4 py-3">
           <div className="flex items-center gap-2">
@@ -1474,6 +1571,7 @@ export function EditorQuestionario() {
           ) : <p className="text-sm text-texto-suave">Escolha os filtros e atualize para comparar as duas respostas mais recentes de cada indicador.</p>}
         </div>
       </Cartao>
+      </> : null}
 
       <ModalConfirmacao
         aberto={confirmandoArquivarQuestionario}
