@@ -819,9 +819,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Saida: `fase-186-conta-assinatura-ativacao.md`; deploy acionado pelo Render
     no commit `0954847`.
 
-- [ ] Fase 187 - Modulos avancados.
+- [x] Fase 187 - Modulos avancados.
   - Reorganizar automacoes, IA, operacoes mobile, gamificacao e operacoes
     administrativas como fluxos de produto, com revisao humana para IA.
+  - Validacoes: typecheck da web. Data: 2026-07-31.
+  - Saida: `fase-187-modulos-avancados.md`; deploy acionado pelo Render no
+    commit `43d59df`.
 
 - [ ] Fase 188 - Validacao de usabilidade.
   - Exercitar primeiro acesso, novo paciente, agendamento, prontuario,

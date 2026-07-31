@@ -350,6 +350,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   Convites suportam a ativacao e o historico nao exibe IDs internos. O commit
   `0954847` foi enviado para deploy no Render.
 
+- Fase 187 - Modulos avancados: automacoes, IA, operacoes, mobile e
+  gamificacao mantem fluxos proprios; a IA agora explicita que seus resultados
+  exigem revisao profissional antes de qualquer conduta. O commit `43d59df`
+  foi enviado para deploy no Render.
+
 ## Estado atual de uso
 
 O sistema esta em producao isolada aceita, com massa ficticia mantida fora do banco de producao, piloto interno aprovado, restore real validado e pacote juridico ampliado. A agenda agora tambem aceita solicitacoes publicas com aprovacao manual segura, sem reservar horario nem persistir token bruto, e distingue cancelamento pelo profissional de desmarcamento pelo paciente e de cancelamento originado no Google. O profissional conta com um painel clinico diario agregando prioridades da propria agenda de pacientes. Ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria: faltam recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido.
