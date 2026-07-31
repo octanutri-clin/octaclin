@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a Fase 176 - validacao ponta a ponta de formularios e check-ins.
+Atualizado em 2026-07-30 apos a Fase 177 - qualidade transversal e componentes compartilhados.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -286,6 +286,12 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   Next.js 15. O acesso agora aguarda a API dinamica na fronteira compartilhada;
   os fluxos de agenda, portal e demais BFFs autenticados herdam a correcao.
   A web foi publicada no commit `9e6f227` e o health check retornou `200`.
+
+- Fase 177 - Qualidade transversal e componentes compartilhados: campos,
+  selects e textareas passaram a comunicar estados invalido e desabilitado;
+  feedback agora inclui sucesso, carregamento anunciado e permissao negada.
+  As abas reutilizaveis oferecem navegacao por setas, Home e End, com foco e
+  relacionamentos ARIA; o editor de formularios foi migrado para essa base.
 
 ## Estado atual de uso
 

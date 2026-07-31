@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 176 - validacao ponta a ponta de formularios e check-ins.
+Atualizado em 2026-07-30 apos a Fase 177 - qualidade transversal e componentes compartilhados.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -698,11 +698,17 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Data: 2026-07-30. Saida: `fase-176-validacao-ponta-a-ponta-formularios-checkins.md`.
   - Producao: web publicada no commit `9e6f227`; `/health` retornou `200`.
 
-- [ ] Fase 177 - Qualidade transversal e componentes compartilhados.
+- [x] Fase 177 - Qualidade transversal e componentes compartilhados.
   - Consolidar campos, selects, textareas, badges, tabs, feedback, modais e
     estados de carregamento, vazio, erro, sucesso e permissao negada.
   - Validar foco, teclado, contraste, leitores de tela e responsividade antes
     de redesenhar telas maiores.
+  - Entregue: campos com estados invalido/desabilitado, feedback semantico de
+    sucesso/carregamento/permissao e abas reutilizaveis com setas, Home e End.
+  - O editor de formularios passou a usar as primitivas de feedback e abas.
+  - Validacoes: typecheck, preview de questionarios, `test:next15`, 10 testes
+    Playwright de acessibilidade em desktop/mobile e build da web.
+  - Data: 2026-07-30. Saida: `fase-177-qualidade-transversal-componentes.md`.
 
 - [ ] Fase 178 - Agenda profissional completa.
   - Evoluir as visoes existentes de dia, semana, mes e lista com contexto

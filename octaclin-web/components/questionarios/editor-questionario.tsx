@@ -3,11 +3,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { AlertTriangle, Archive, BookOpen, CalendarClock, Check, CheckCircle2, ClipboardList, Copy, Eye, LibraryBig, Link2, Plus, RefreshCcw, Save, Settings2, Trash2, TrendingUp, Wand2 } from 'lucide-react';
+import { Archive, BookOpen, CalendarClock, Check, ClipboardList, Copy, Eye, LibraryBig, Link2, Plus, RefreshCcw, Save, Settings2, Trash2, TrendingUp, Wand2 } from 'lucide-react';
+import { Abas } from '@/components/ui/abas';
 import { Botao } from '@/components/ui/botao';
+import { Etiqueta } from '@/components/ui/etiqueta';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
+import { AlertaOperacional, AlertaSucesso } from '@/components/ui/feedback';
 import {
   CategoriaPerguntaApi,
   LeituraClinicaQuestionarioApi,
@@ -670,35 +673,12 @@ export function EditorQuestionario() {
 
   return (
     <section className="grid gap-4">
-      {erro ? (
-        <div className="flex items-center gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
-          <AlertTriangle size={16} />
-          {erro}
-        </div>
-      ) : null}
-      {sucesso ? (
-        <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
-          <CheckCircle2 size={16} />
-          {sucesso}
-        </div>
-      ) : null}
+      {erro ? <AlertaOperacional mensagem={erro} /> : null}
+      {sucesso ? <AlertaSucesso mensagem={sucesso} /> : null}
 
-      <nav role="tablist" aria-label="Areas de trabalho dos questionarios" className="flex flex-wrap gap-2 border-b border-linha pb-3">
-        {areasQuestionarios.map((area) => (
-          <button
-            key={area.id}
-            type="button"
-            role="tab"
-            aria-selected={areaAtiva === area.id}
-            onClick={() => setAreaAtiva(area.id)}
-            className={areaAtiva === area.id
-              ? 'rounded-md bg-primaria px-3 py-2 text-sm font-semibold text-white'
-              : 'rounded-md border border-linha bg-white px-3 py-2 text-sm font-semibold text-texto-suave hover:bg-superficie-hover'}
-          >
-            {area.rotulo}
-          </button>
-        ))}
-      </nav>
+      <Abas identificador="questionarios" abas={areasQuestionarios} ativaId={areaAtiva} aoMudar={(id) => setAreaAtiva(id as AreaQuestionarios)} rotulo="Areas de trabalho dos questionarios" />
+
+      <div id={`questionarios-${areaAtiva}-painel`} role="tabpanel" aria-labelledby={`questionarios-${areaAtiva}-aba`}>
 
       {areaAtiva === 'montagem' ? <div className="flex justify-end gap-2">
         <Botao onClick={carregar} disabled={carregando}>
@@ -803,6 +783,7 @@ export function EditorQuestionario() {
         <Cartao>
           <CartaoCabecalho>
             <CartaoTitulo>Questionario</CartaoTitulo>
+            <Etiqueta variante={status === 'publicado' ? 'sucesso' : status === 'arquivado' ? 'neutra' : 'alerta'}>{status}</Etiqueta>
           </CartaoCabecalho>
           <CartaoConteudo className="space-y-4">
             <div className="space-y-1.5">
@@ -1582,6 +1563,7 @@ export function EditorQuestionario() {
         aoConfirmar={() => void arquivarQuestionario()}
         aoCancelar={() => setConfirmandoArquivarQuestionario(false)}
       />
+      </div>
     </section>
   );
 }
