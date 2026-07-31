@@ -872,7 +872,7 @@ test.describe('jornadas criticas de producao', () => {
     await formularioAgenda.getByLabel('Observacoes').fill('Jornada critica com notificacoes.');
     await formularioAgenda.getByRole('button', { name: 'Agendar' }).click();
 
-    await expect(page.getByText('Consulta agendada. Google Calendar e notificacoes foram processados conforme configuracao.')).toBeVisible();
+    await expect(page.getByText('Consulta agendada e horario bloqueado na agenda interna. Integracoes processadas conforme configuracao.')).toBeVisible();
     await expect.poll(() => profissionalFluxo.consultaCriada()).toMatchObject({
       pacienteId: 'paciente-jornada',
       profissionalId: 'profissional-1',
@@ -974,6 +974,6 @@ test.describe('jornadas criticas de producao', () => {
 
     await expect.poll(() => paciente.desmarcou()).toBe(true);
     await expect(page.getByText('Consulta desmarcada.')).toBeVisible();
-    await expect(page.getByText('Nenhuma consulta futura agendada.')).toBeVisible();
+    await expect(page.locator('#resumo').getByText('Nenhuma consulta futura agendada.')).toBeVisible();
   });
 });

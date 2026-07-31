@@ -1,4 +1,4 @@
-import { cookies, type UnsafeUnwrappedCookies } from 'next/headers';
+import { cookies } from 'next/headers';
 import { sessaoPossuiPermissao } from './permissoes-bff';
 
 const nomes = {
@@ -125,11 +125,11 @@ export function normalizarApiUrlBff(apiUrl: string): string {
   return `${url.origin}${caminhoBase}`;
 }
 
-export function salvarSessaoBff(
+export async function salvarSessaoBff(
   entrada: { apiUrl: string; tenantSlug: string; email: string },
   resposta: RespostaToken
 ) {
-  const jar = (cookies() as unknown as UnsafeUnwrappedCookies);
+  const jar = await cookies();
   const maxAge = 60 * 60 * 24 * 30;
   const apiUrlNormalizada = normalizarApiUrlBff(entrada.apiUrl);
   jar.set(nomes.accessToken, resposta.accessToken, { ...cookieBase, maxAge: resposta.expiraEmSegundos });
@@ -144,8 +144,8 @@ export function salvarSessaoBff(
   if (resposta.destinoInicial) jar.set(nomes.destinoInicial, codificar(resposta.destinoInicial), { ...cookieBase, maxAge });
 }
 
-export function obterSessaoBff(): SessaoBff | null {
-  const jar = (cookies() as unknown as UnsafeUnwrappedCookies);
+export async function obterSessaoBff(): Promise<SessaoBff | null> {
+  const jar = await cookies();
   const accessToken = jar.get(nomes.accessToken)?.value;
   const refreshToken = jar.get(nomes.refreshToken)?.value;
   const apiUrl = jar.get(nomes.apiUrl)?.value;
@@ -173,8 +173,8 @@ export function obterSessaoBff(): SessaoBff | null {
   };
 }
 
-export function limparSessaoBff() {
-  const jar = (cookies() as unknown as UnsafeUnwrappedCookies);
+export async function limparSessaoBff() {
+  const jar = await cookies();
   Object.values(nomes).forEach((nome) => jar.delete(nome));
 }
 
@@ -214,17 +214,17 @@ async function renovarSessao(sessao: SessaoBff): Promise<SessaoBff | null> {
       cache: 'no-store'
     });
   } catch {
-    limparSessaoBff();
+    await limparSessaoBff();
     return null;
   }
 
   if (!resposta.ok) {
-    limparSessaoBff();
+    await limparSessaoBff();
     return null;
   }
 
   const tokens = (await resposta.json()) as RespostaToken;
-  salvarSessaoBff(
+  await salvarSessaoBff(
     { apiUrl: sessao.apiUrl, tenantSlug: sessao.tenantSlug, email: sessao.email },
     tokens
   );
@@ -242,7 +242,7 @@ async function renovarSessao(sessao: SessaoBff): Promise<SessaoBff | null> {
 }
 
 export async function obterSessaoValidaBff(): Promise<SessaoBff> {
-  const sessao = obterSessaoBff();
+  const sessao = await obterSessaoBff();
   if (!sessao) throw new ErroSessaoAusente();
   if (!sessaoExpiraEmBreve(sessao)) return sessao;
 
@@ -266,7 +266,7 @@ export async function requisitarBackendAutenticado(caminho: string, init?: Reque
   try {
     apiUrl = normalizarApiUrlBff(sessao.apiUrl);
   } catch {
-    limparSessaoBff();
+    await limparSessaoBff();
     throw new ErroSessaoAusente();
   }
 
@@ -304,7 +304,7 @@ export async function requisitarBackendAutenticado(caminho: string, init?: Reque
 }
 
 export async function revogarSessaoAtual() {
-  const sessao = obterSessaoBff();
+  const sessao = await obterSessaoBff();
   if (sessao) {
     try {
       await fetch(`${normalizarApiUrlBff(sessao.apiUrl)}/auth/sair`, {
@@ -318,5 +318,5 @@ export async function revogarSessaoAtual() {
     }
   }
 
-  limparSessaoBff();
+  await limparSessaoBff();
 }

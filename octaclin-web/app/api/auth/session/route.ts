@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { obterSessaoBff } from '@/lib/server/sessao-bff';
 
-export function GET() {
-  const sessao = obterSessaoBff();
+export async function GET() {
+  const sessao = await obterSessaoBff();
   if (!sessao) return NextResponse.json({ autenticado: false }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
 
   return NextResponse.json({

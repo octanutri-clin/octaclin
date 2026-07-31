@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a Fase 175 - separacao UX do modulo de formularios.
+Atualizado em 2026-07-30 apos a Fase 176 - validacao ponta a ponta de formularios e check-ins.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -278,6 +278,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   em Montagem, Biblioteca, Distribuicao e Respostas, mantendo os endpoints e
   componentes existentes e isolando a leitura clinica do trabalho de edicao.
   Backend e web foram publicados pelo Render no commit `84bbbef`.
+
+- Fase 176 - Validacao ponta a ponta de formularios e check-ins: a cobertura
+  de questionarios, check-ins e prontuario foi reexecutada junto das jornadas
+  criticas desktop/mobile. A validacao revelou e corrigiu a leitura sincrona de
+  `cookies()` no BFF, que causava sessao ausente em rotas autenticadas no
+  Next.js 15. O acesso agora aguarda a API dinamica na fronteira compartilhada;
+  os fluxos de agenda, portal e demais BFFs autenticados herdam a correcao.
 
 ## Estado atual de uso
 

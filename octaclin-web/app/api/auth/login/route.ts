@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       { status: 502 }
     );
   }
-  salvarSessaoBff(
+  await salvarSessaoBff(
     { apiUrl, tenantSlug, email: body.email.trim() },
     tokens
   );

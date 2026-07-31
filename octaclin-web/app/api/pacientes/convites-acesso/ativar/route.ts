@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (ativacao.accessToken && ativacao.refreshToken && ativacao.expiraEmSegundos) {
-    salvarSessaoBff(
+    await salvarSessaoBff(
       { apiUrl, tenantSlug: ativacao.tenantSlug ?? ativacao.tenantId, email: ativacao.email },
       ativacao
     );

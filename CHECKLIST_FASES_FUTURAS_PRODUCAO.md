@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos o registro do roadmap UX/UI das Fases 176 a 188.
+Atualizado em 2026-07-30 apos a Fase 176 - validacao ponta a ponta de formularios e check-ins.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -680,74 +680,89 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
 As Fases 168 e 169 ja foram usadas para acesso comercial e disponibilidade da
 agenda. As Fases 170 a 175 tambem ja foram concluidas com os escopos registrados
 acima. Este bloco preserva essa numeracao e registra o proximo ciclo sem
-renumerar ou reinterpretar entregas ja publicadas.
+renumerar ou reinterpretar entregas ja publicadas. A validacao ponta a ponta
+abaixo precede o redesenho transversal porque confirma o ciclo clinico ja
+publicado antes de ampliar a superficie de mudancas visuais.
 
-- [ ] Fase 176 - Qualidade transversal e componentes compartilhados.
+- [x] Fase 176 - Validacao ponta a ponta de formularios e check-ins.
+  - Validar o ciclo de montar formulario, reutilizar biblioteca, distribuir,
+    responder como paciente, analisar respostas e matriz longitudinal.
+  - Confirmar a entrada correspondente no prontuario, em desktop e celular,
+    corrigindo somente defeitos comprovados durante a jornada.
+  - Correcao confirmada: BFF autenticado passou a aguardar `cookies()` no
+    Next.js 15, eliminando falha de sessao nas rotas de agenda e demais rotas
+    autenticadas que usam a mesma fronteira.
+  - Validacoes: 43 testes backend, 22 testes BFF/autorizacao, 3 testes de
+    preview e 10 jornadas criticas Playwright (desktop/mobile), alem de
+    `test:next15`, typecheck e build da web.
+  - Data: 2026-07-30. Saida: `fase-176-validacao-ponta-a-ponta-formularios-checkins.md`.
+
+- [ ] Fase 177 - Qualidade transversal e componentes compartilhados.
   - Consolidar campos, selects, textareas, badges, tabs, feedback, modais e
     estados de carregamento, vazio, erro, sucesso e permissao negada.
   - Validar foco, teclado, contraste, leitores de tela e responsividade antes
     de redesenhar telas maiores.
 
-- [ ] Fase 177 - Agenda profissional completa.
+- [ ] Fase 178 - Agenda profissional completa.
   - Evoluir as visoes existentes de dia, semana, mes e lista com contexto
     operacional, painel lateral ou modal para criacao e edicao e conflitos
     visiveis.
   - Incluir acoes rapidas para concluir, reagendar, falta, cancelar ou liberar
     horario, preservando agenda interna sem exigir Google Agenda.
 
-- [ ] Fase 178 - Lista de pacientes.
+- [ ] Fase 179 - Lista de pacientes.
   - Criar busca central, filtros salvos, risco, responsavel, ultima consulta e
     proxima acao; manter cadastro fora da tabela principal.
   - Tornar linhas acionaveis no desktop e a lista adequada ao celular.
 
-- [ ] Fase 179 - Prontuario clinico.
+- [ ] Fase 180 - Prontuario clinico.
   - Aplicar cabecalho persistente com paciente, situacao e acoes rapidas.
   - Organizar resumo, evolucoes, plano, formularios, mensagens, materiais e
     historico, incluindo a linha de cuidado e menos informacao simultanea.
 
-- [ ] Fase 180 - Portal completo do paciente.
+- [ ] Fase 181 - Portal completo do paciente.
   - Organizar consulta, plano, check-ins, tarefas, materiais, formularios,
     mensagens e privacidade por tarefas claras e linguagem nao tecnica.
   - Nunca expor score ou classificacao de risco clinico ao paciente.
 
-- [ ] Fase 181 - Agendamento e formularios publicos.
+- [ ] Fase 182 - Agendamento e formularios publicos.
   - Aplicar identidade da clinica, fuso horario, indisponibilidade, escolha de
     data/horario no celular e resumo final da solicitacao.
   - Evoluir rascunho e retomada de formularios somente quando o backend
     suportar a persistencia segura.
 
-- [ ] Fase 182 - Editor de formularios completo.
+- [ ] Fase 183 - Editor de formularios completo.
   - Evoluir a separacao ja entregue na Fase 175 com estrutura, edicao, preview,
     distribuicao e respostas claramente independentes.
   - Adicionar preview simultaneo, reordenacao acessivel, versao publicada,
     rascunho e alteracoes pendentes.
 
-- [ ] Fase 183 - Central de comunicacoes.
+- [ ] Fase 184 - Central de comunicacoes.
   - Estruturar lista de conversas, conversa ativa e contexto do paciente.
   - Incluir filtros por canal, responsavel, pendencia e falha, templates,
     respostas rapidas, entrega e navegacao progressiva no celular.
 
-- [ ] Fase 184 - Profissionais, permissoes e integracoes.
+- [ ] Fase 185 - Profissionais, permissoes e integracoes.
   - Exibir diretorio de profissionais, situacao do acesso e permissoes por
     capacidade, sem jargao tecnico.
   - Mostrar Google Agenda por profissional e restringir troca de painel ao
     SuperAdmin, de forma identificavel.
 
-- [ ] Fase 185 - Conta, assinatura e ativacao do cliente.
+- [ ] Fase 186 - Conta, assinatura e ativacao do cliente.
   - Separar conta, equipe, assinatura, uso, configuracoes e dados fiscais.
   - Explicar limites, consumo e proximos passos sem exibir IDs ou detalhes
     internos no fluxo comercial.
 
-- [ ] Fase 186 - Modulos avancados.
+- [ ] Fase 187 - Modulos avancados.
   - Reorganizar automacoes, IA, operacoes mobile, gamificacao e operacoes
     administrativas como fluxos de produto, com revisao humana para IA.
 
-- [ ] Fase 187 - Validacao de usabilidade.
+- [ ] Fase 188 - Validacao de usabilidade.
   - Exercitar primeiro acesso, novo paciente, agendamento, prontuario,
     formulario e comunicacao com dados sinteticos.
   - Registrar screenshots desktop/mobile e corrigir dificuldades observadas.
 
-- [ ] Fase 188 - Consolidacao visual no Penpot e rollout progressivo.
+- [ ] Fase 189 - Consolidacao visual no Penpot e rollout progressivo.
   - Atualizar o sistema de design e o mapeamento entre componentes Penpot e
     frontend.
   - Registrar permissoes e comportamentos definitivos e liberar telas por
