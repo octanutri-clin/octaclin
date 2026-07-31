@@ -792,10 +792,14 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Producao: publicacao acionada pelo Render no commit `edb2391`; health check
     do artefato atualizado deve ser confirmado apos o deploy.
 
-- [ ] Fase 184 - Central de comunicacoes.
+- [x] Fase 184 - Central de comunicacoes.
   - Estruturar lista de conversas, conversa ativa e contexto do paciente.
   - Incluir filtros por canal, responsavel, pendencia e falha, templates,
     respostas rapidas, entrega e navegacao progressiva no celular.
+  - Entregue: inbox com contexto, status de entrega, templates e notas; busca e
+    filtros de entrada, acompanhamento e falha.
+  - Data: 2026-07-31. Saida: `fase-184-central-comunicacoes.md`.
+  - Producao: deploy acionado pelo Render no commit `72e6d18`.
 
 - [ ] Fase 185 - Profissionais, permissoes e integracoes.
   - Exibir diretorio de profissionais, situacao do acesso e permissoes por
