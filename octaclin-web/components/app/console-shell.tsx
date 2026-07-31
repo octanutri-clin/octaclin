@@ -1,37 +1,53 @@
 'use client';
 
+import Link from 'next/link';
+import type { Route } from 'next';
 import type { ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Brain,
+  Bell,
   CalendarDays,
+  CalendarPlus,
   ClipboardList,
-  LayoutDashboard,
   HeartPulse,
+  LayoutDashboard,
   Send,
   Settings,
-  Smartphone,
   Stethoscope,
-  Trophy,
+  UserRoundPlus,
   UsersRound,
   Zap
 } from 'lucide-react';
-import { obterSessao } from '@/lib/auth-api';
+import { obterSessao, type SessaoPublica } from '@/lib/auth-api';
 import { PortalShell } from '@/components/app/portal-shell';
+import { cn } from '@/lib/utils';
 
 const itens = [
-  { href: '/dashboard', rotulo: 'Dashboard', icone: LayoutDashboard, permissao: 'dashboard.ler', grupo: 'Clinica' },
+  { href: '/dashboard', rotulo: 'Hoje', icone: LayoutDashboard, permissao: 'dashboard.ler', grupo: 'Clinica' },
   { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays, permissao: 'agenda.consultas.ler', grupo: 'Clinica' },
   { href: '/pacientes', rotulo: 'Pacientes', icone: HeartPulse, permissao: 'pacientes.listar', grupo: 'Clinica' },
-  { href: '/questionarios', rotulo: 'Questionarios', icone: ClipboardList, permissao: 'questionarios.ler', grupo: 'Clinica' },
-  { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope, permissao: 'profissionais.ler', grupo: 'Clinica' },
+  { href: '/questionarios', rotulo: 'Formularios', icone: ClipboardList, permissao: 'questionarios.ler', grupo: 'Clinica' },
   { href: '/comunicacoes', rotulo: 'Comunicacoes', icone: Send, permissao: 'comunicacoes.mensagens.ler', grupo: 'Relacionamento' },
   { href: '/automacoes', rotulo: 'Automacoes', icone: Zap, permissao: 'automacoes.gerenciar', grupo: 'Relacionamento' },
-  { href: '/operacoes', rotulo: 'Operacoes', icone: Settings, permissao: 'operacoes.auditoria.ler', grupo: 'Administracao' },
-  { href: '/ia', rotulo: 'IA', icone: Brain, permissao: 'ia.executar', grupo: 'Administracao' },
-  { href: '/mobile', rotulo: 'Mobile', icone: Smartphone, permissao: 'mobile.operar', grupo: 'Administracao' },
-  { href: '/gamificacao', rotulo: 'Gamificacao', icone: Trophy, permissao: 'gamificacao.gerenciar', grupo: 'Administracao' }
+  { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope, permissao: 'profissionais.ler', grupo: 'Gestao' },
+  { href: '/operacoes', rotulo: 'Operacoes', icone: Settings, permissao: 'operacoes.auditoria.ler', grupo: 'SuperAdmin' }
 ] as const;
+
+const nomesPapel: Record<string, string> = {
+  SuperAdmin: 'SuperAdmin',
+  Professional: 'Profissional',
+  Collaborator: 'Colaborador',
+  Patient: 'Paciente',
+  Client: 'Gestor da conta'
+};
+
+function humanizarWorkspace(slug: string) {
+  return slug
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase())
+    .join(' ');
+}
 
 interface ConsoleShellProps {
   titulo: string;
@@ -40,19 +56,46 @@ interface ConsoleShellProps {
   children: ReactNode;
 }
 
+function AtalhoShell({ href, rotulo, icone }: { href: string; rotulo: string; icone: ReactNode }) {
+  return (
+    <Link
+      href={href as Route}
+      aria-label={rotulo}
+      title={rotulo}
+      className={cn(
+        'inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors',
+        'hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria'
+      )}
+    >
+      {icone}
+      <span className="hidden xl:inline">{rotulo}</span>
+    </Link>
+  );
+}
+
 export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShellProps) {
-  const [permissoes, setPermissoes] = useState<string[] | null>(null);
+  const [sessao, setSessao] = useState<SessaoPublica | null>();
 
   useEffect(() => {
-    void obterSessao()
-      .then((sessao) => setPermissoes(sessao?.permissoes?.length ? sessao.permissoes : null))
-      .catch(() => setPermissoes(null));
+    void obterSessao().then(setSessao).catch(() => setSessao(null));
   }, []);
 
-  const itensVisiveis = useMemo(() => {
-    if (!permissoes) return [];
-    return itens.filter((item) => permissoes.includes(item.permissao));
-  }, [permissoes]);
+  const permissoes = sessao?.permissoes ?? [];
+  const itensVisiveis = itens.filter((item) => permissoes.includes(item.permissao));
+
+  const atalhos = sessao ? (
+    <>
+      {permissoes.includes('agenda.consultas.criar') ? (
+        <AtalhoShell href="/agenda#novo-agendamento" rotulo="Agendar" icone={<CalendarPlus size={16} />} />
+      ) : null}
+      {permissoes.includes('pacientes.gerenciar') ? (
+        <AtalhoShell href="/pacientes#novo-paciente" rotulo="Novo paciente" icone={<UserRoundPlus size={16} />} />
+      ) : null}
+      {permissoes.includes('comunicacoes.mensagens.ler') ? (
+        <AtalhoShell href="/comunicacoes" rotulo="Notificacoes" icone={<Bell size={16} />} />
+      ) : null}
+    </>
+  ) : null;
 
   return (
     <PortalShell
@@ -61,8 +104,14 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
       titulo={titulo}
       subtitulo={subtitulo}
       navegacao={itensVisiveis}
+      navegacaoCarregando={sessao === undefined}
+      contextoUsuario={sessao ? {
+        email: sessao.email,
+        papel: nomesPapel[sessao.papel ?? ''] ?? 'Usuario',
+        workspace: humanizarWorkspace(sessao.tenantSlug)
+      } : undefined}
       navLabel="Modulos do console"
-      acoes={acoes}
+      acoes={<>{atalhos}{acoes}</>}
       maxWidth="1500px"
     >
       {children}

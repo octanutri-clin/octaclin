@@ -4,9 +4,10 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { Fragment, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, type LucideIcon } from 'lucide-react';
+import { ChevronDown, LogOut, UserRound, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Botao } from '@/components/ui/botao';
+import { Esqueleto } from '@/components/ui/feedback';
 import { sair } from '@/lib/auth-api';
 
 export interface ItemNavegacaoShell {
@@ -22,6 +23,12 @@ interface MarcaShell {
   subrotulo: string;
 }
 
+interface ContextoUsuarioShell {
+  email: string;
+  papel: string;
+  workspace: string;
+}
+
 interface PortalShellProps {
   variante: 'sidebar' | 'tabs';
   marca?: MarcaShell;
@@ -29,10 +36,12 @@ interface PortalShellProps {
   subtitulo: string;
   descricao?: ReactNode;
   navegacao: ItemNavegacaoShell[];
+  navegacaoCarregando?: boolean;
   navLabel?: string;
   navegacaoMobile?: ItemNavegacaoShell[];
   navLabelMobile?: string;
   acoes?: ReactNode;
+  contextoUsuario?: ContextoUsuarioShell;
   maxWidth?: string;
   children: ReactNode;
 }
@@ -44,10 +53,12 @@ export function PortalShell({
   subtitulo,
   descricao,
   navegacao,
+  navegacaoCarregando = false,
   navLabel = 'Modulos',
   navegacaoMobile = [],
   navLabelMobile = 'Navegacao mobile',
   acoes,
+  contextoUsuario,
   maxWidth = '1180px',
   children
 }: PortalShellProps) {
@@ -66,9 +77,43 @@ export function PortalShell({
     </Botao>
   );
 
+  const menuConta = contextoUsuario ? (
+    <details className="relative">
+      <summary
+        aria-label="Abrir menu da conta"
+        className={cn(
+          'flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md border border-linha bg-white px-2 text-left text-sm transition-colors',
+          'hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria [&::-webkit-details-marker]:hidden'
+        )}
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primaria-suave text-primaria-forte">
+          <UserRound size={17} aria-hidden="true" />
+        </span>
+        <span className="hidden min-w-0 sm:block">
+          <span className="block max-w-44 truncate text-xs font-semibold text-tinta">{contextoUsuario.email}</span>
+          <span className="block text-xs text-texto-suave">{contextoUsuario.papel}</span>
+        </span>
+        <ChevronDown size={15} className="text-texto-suave" aria-hidden="true" />
+      </summary>
+      <div className="absolute right-0 z-40 mt-2 w-72 rounded-lg border border-linha bg-white p-3 shadow-lg">
+        <p className="text-xs font-semibold uppercase text-texto-sutil">Workspace</p>
+        <p className="mt-1 truncate text-sm font-semibold text-tinta">{contextoUsuario.workspace}</p>
+        <p className="mt-3 truncate text-sm text-texto-suave">{contextoUsuario.email}</p>
+        <p className="text-xs text-texto-sutil">{contextoUsuario.papel}</p>
+        <div className="mt-3 border-t border-linha pt-2">{botaoSair}</div>
+      </div>
+    </details>
+  ) : botaoSair;
+
   if (variante === 'sidebar') {
     return (
       <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
+        <a
+          href="#conteudo-principal"
+          className="fixed left-3 top-3 z-[60] -translate-y-20 rounded-md bg-tinta px-3 py-2 text-sm font-semibold text-white focus:translate-y-0"
+        >
+          Pular para o conteudo
+        </a>
         <div className="grid min-h-screen min-w-0 lg:grid-cols-[248px_minmax(0,1fr)]">
           <aside className="sticky top-0 z-20 min-w-0 overflow-hidden border-b border-linha bg-white lg:h-screen lg:overflow-visible lg:border-b-0 lg:border-r">
             {marca ? (
@@ -86,7 +131,11 @@ export function PortalShell({
               aria-label={navLabel}
               className="flex min-w-0 max-w-full gap-1 overflow-x-auto border-t border-linha px-3 py-2 [scrollbar-width:none] lg:grid lg:overflow-visible lg:px-3 lg:py-3 [&::-webkit-scrollbar]:hidden"
             >
-              {navegacao.map((item, indice) => {
+              {navegacaoCarregando ? (
+                <div className="grid min-w-56 gap-2 px-1 py-1 lg:min-w-0" aria-hidden="true">
+                  {Array.from({ length: 4 }, (_, indice) => <Esqueleto key={indice} className="h-11 w-full" />)}
+                </div>
+              ) : navegacao.map((item, indice) => {
                 const ativo = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
                   <Fragment key={item.href}>
@@ -125,11 +174,11 @@ export function PortalShell({
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
                   {acoes}
-                  {botaoSair}
+                  {menuConta}
                 </div>
               </div>
             </header>
-            <div className="mx-auto w-full px-4 py-4 lg:px-6 lg:py-5" style={{ maxWidth }}>
+            <div id="conteudo-principal" className="mx-auto w-full scroll-mt-24 px-4 py-4 lg:px-6 lg:py-5" style={{ maxWidth }}>
               {children}
             </div>
           </section>
@@ -166,7 +215,7 @@ export function PortalShell({
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             {acoes}
-            {botaoSair}
+            {menuConta}
           </div>
         </div>
         {navegacao.length ? (
@@ -182,7 +231,11 @@ export function PortalShell({
                 <Link
                   key={item.href}
                   href={item.href as Route}
-                  className="inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm font-medium text-texto-suave hover:bg-white hover:text-tinta"
+                  aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
+                  className={cn(
+                    'inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm font-medium hover:bg-white hover:text-tinta',
+                    pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'bg-white text-primaria' : 'text-texto-suave'
+                  )}
                 >
                   {item.rotulo}
                 </Link>
@@ -201,7 +254,11 @@ export function PortalShell({
             <Link
               key={item.href}
               href={item.href as Route}
-              className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-md px-1 text-xs font-medium text-texto-suave hover:bg-superficie-hover hover:text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+              aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
+              className={cn(
+                'flex min-h-12 flex-col items-center justify-center gap-1 rounded-md px-1 text-xs font-medium hover:bg-superficie-hover hover:text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
+                pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'text-primaria' : 'text-texto-suave'
+              )}
             >
               {item.icone ? <item.icone size={18} aria-hidden="true" /> : null}
               <span className="truncate">{item.rotulo}</span>
@@ -210,7 +267,7 @@ export function PortalShell({
         </nav>
       ) : null}
 
-      <div className={cn('mx-auto grid w-full gap-4 px-4 py-5 lg:px-6', navegacaoMobile.length ? 'pb-24 md:pb-5' : '')} style={{ maxWidth }}>
+      <div id="conteudo-principal" className={cn('mx-auto grid w-full scroll-mt-24 gap-4 px-4 py-5 lg:px-6', navegacaoMobile.length ? 'pb-24 md:pb-5' : '')} style={{ maxWidth }}>
         {children}
       </div>
     </main>

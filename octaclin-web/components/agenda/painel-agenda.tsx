@@ -570,7 +570,7 @@ export function PainelAgenda() {
           </CartaoConteudo>
         </Cartao>
 
-        <Cartao className="min-w-0">
+        <Cartao id="novo-agendamento" className="min-w-0 scroll-mt-28">
           <form onSubmit={salvar}>
             <CartaoCabecalho className="items-start">
               <div>
