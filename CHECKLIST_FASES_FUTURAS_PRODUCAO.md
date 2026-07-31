@@ -639,7 +639,8 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Persistir visibilidade sem introduzir motor condicional ainda.
   - Data: 2026-07-30. Saida: `fase-171-biblioteca-perguntas-reutilizaveis.md`.
   - Validacoes: Jest de questionarios/datasource, typecheck e build de backend/web.
-  - Deploy: migration `1720000001008` deve ser aplicada antes da publicacao do backend.
+  - Producao: migration `1720000001008` aplicada e registrada no Neon;
+    backend e web publicados pelo Render no commit `af7d337`.
 
 - [ ] Fase 172 - Check-ins recorrentes por paciente.
   - Vincular o agendamento do questionario ao paciente escolhido.

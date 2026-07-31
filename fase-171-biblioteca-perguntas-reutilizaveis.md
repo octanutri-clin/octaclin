@@ -1,7 +1,6 @@
 # Fase 171 - Biblioteca de perguntas reutilizaveis
 
-Status: concluida localmente em 2026-07-30. Requer aplicar a migration antes
-do deploy de producao.
+Status: concluida e validada em producao em 2026-07-30.
 
 ## Entregue
 
@@ -15,11 +14,14 @@ do deploy de producao.
   catalogo; pode ser disponibilizada depois pelo editor.
 - A visibilidade e persistida sem introduzir regras condicionais de exibicao.
 
-## Deploy
+## Producao
 
-Aplicar `AdicionarBibliotecaPerguntas1720000001008` no Neon de producao antes
-ou junto da publicacao do backend. Ela adiciona `chave_clinica`,
-`visivel_biblioteca` e um indice parcial para a consulta da biblioteca.
+A migration `AdicionarBibliotecaPerguntas1720000001008` foi aplicada e
+registrada no Neon de producao. Ela adiciona `chave_clinica`,
+`visivel_biblioteca` e um indice parcial para a consulta da biblioteca. Backend
+e web foram publicados pelo Render no commit `af7d337`; o health check do
+backend retornou `200` e a rota protegida da biblioteca retornou `401` sem
+sessao, como esperado.
 
 ## Validacoes
 

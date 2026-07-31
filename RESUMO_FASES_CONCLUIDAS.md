@@ -254,6 +254,8 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 171 - Biblioteca de perguntas reutilizaveis: perguntas do tenant podem
   receber chave clinica e visibilidade na biblioteca, ser encontradas por busca
   ou categoria e incluidas como copias independentes com configuracao e opcoes.
+  A migration `1720000001008` foi aplicada no Neon de producao e backend/web
+  foram publicados pelo Render no commit `af7d337`.
 
 ## Estado atual de uso
 
