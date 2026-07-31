@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a Fase 177 - qualidade transversal e componentes compartilhados.
+Atualizado em 2026-07-30 apos a Fase 178 - agenda profissional completa.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -293,6 +293,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   As abas reutilizaveis oferecem navegacao por setas, Home e End, com foco e
   relacionamentos ARIA; o editor de formularios foi migrado para essa base. A
   web foi publicada no commit `ebd7887` e o health check retornou `200`.
+
+- Fase 178 - Agenda profissional completa: a agenda interna ganhou a visao de
+  lista e detalhes de consulta em modal, mantendo dia, semana e mes. O modal
+  concentra situacao da integracao Google, contato, local e remarcacao; os
+  desfechos de concluir, falta e cancelamento usam confirmacao acessivel. Ao
+  cancelar, o horario interno e liberado e somente as integracoes configuradas
+  sao processadas. A web foi publicada no commit `b0e3144` e o health check
+  retornou `200`.
 
 ## Estado atual de uso
 

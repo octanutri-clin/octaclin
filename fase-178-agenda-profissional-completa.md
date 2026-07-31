@@ -1,7 +1,6 @@
 # Fase 178 - Agenda profissional completa
 
-Status: codigo concluido e validado localmente em 2026-07-30. Publicacao em
-producao pendente.
+Status: concluida e publicada em producao em 2026-07-30.
 
 ## Entregue
 
@@ -30,7 +29,8 @@ de producao foram aprovados.
 
 ## Producao
 
-Pendente de publicacao e verificacao do endpoint de health.
+A web foi publicada no commit `b0e3144`. O endpoint
+`https://octaclin-web-producao.onrender.com/health` retornou `200`.
 
 ## Proxima fase
 

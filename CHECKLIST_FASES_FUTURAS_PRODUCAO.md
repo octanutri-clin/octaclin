@@ -724,7 +724,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     typecheck, 10 cenarios de acessibilidade, 22 testes de autorizacao e build
     da web.
   - Data: 2026-07-30. Saida: `fase-178-agenda-profissional-completa.md`.
-  - Producao: pendente de publicacao e health check.
+  - Producao: web publicada no commit `b0e3144`; `/health` retornou `200`.
 
 - [ ] Fase 179 - Lista de pacientes.
   - Criar busca central, filtros salvos, risco, responsavel, ultima consulta e
