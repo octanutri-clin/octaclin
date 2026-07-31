@@ -946,7 +946,7 @@ test.describe('jornadas criticas de producao', () => {
     await page.goto('/portal');
 
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
-    await expect(page.locator('#acoes').getByText('Consulta por solicitacao publica')).toBeVisible();
+    await expect(page.locator('#agenda').getByText('Consulta por solicitacao publica')).toBeVisible();
     await expect(page.locator('#notificacoes').getByText('Consulta agendada')).toBeVisible();
     await expect(page.locator('#notificacoes').getByText('Lembrete de consulta').first()).toBeVisible();
   });
@@ -957,7 +957,7 @@ test.describe('jornadas criticas de producao', () => {
     await page.goto('/portal');
 
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
-    await expect(page.locator('#acoes').getByText('Consulta inicial')).toBeVisible();
+    await expect(page.locator('#agenda').getByText('Consulta inicial')).toBeVisible();
     await expect(page.locator('#notificacoes').getByText('Consulta agendada')).toBeVisible();
     await expect(page.locator('#notificacoes').getByText('Lembrete de consulta').first()).toBeVisible();
     await expect(page.locator('#plano').getByText('Responder check-in inicial')).toBeVisible();
@@ -968,7 +968,7 @@ test.describe('jornadas criticas de producao', () => {
     const paciente = await prepararPaciente(page);
 
     await page.goto('/portal');
-    await expect(page.locator('#acoes').getByText('Consulta inicial')).toBeVisible();
+    await expect(page.locator('#agenda').getByText('Consulta inicial')).toBeVisible();
 
     await page.getByRole('button', { name: 'Desmarcar' }).click();
 

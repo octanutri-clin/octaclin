@@ -826,16 +826,20 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Saida: `fase-187-modulos-avancados.md`; deploy acionado pelo Render no
     commit `43d59df`.
 
-- [ ] Fase 188 - Validacao de usabilidade.
+- [x] Fase 188 - Validacao de usabilidade.
   - Exercitar primeiro acesso, novo paciente, agendamento, prontuario,
     formulario e comunicacao com dados sinteticos.
   - Registrar screenshots desktop/mobile e corrigir dificuldades observadas.
+  - Validacoes: 10 jornadas criticas, 10 testes de acessibilidade e 22 testes
+    de autorizacao/BFF. Saida: `fase-188-validacao-usabilidade.md`.
 
 - [ ] Fase 189 - Consolidacao visual no Penpot e rollout progressivo.
   - Atualizar o sistema de design e o mapeamento entre componentes Penpot e
     frontend.
   - Registrar permissoes e comportamentos definitivos e liberar telas por
     etapas em producao.
+  - Consolidacao local: `fase-189-consolidacao-visual-rollout.md`; falta
+    gravacao no Penpot quando o MCP de escrita estiver disponivel.
 
 ## Backlog pos-producao
 
