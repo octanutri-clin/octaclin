@@ -334,11 +334,12 @@ test.describe('portal do paciente', () => {
       await expect(page.getByRole('link', { name: 'Agenda', exact: true })).toBeVisible();
     } else {
       await expect(page.getByRole('navigation', { name: 'Navegacao do portal' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Resumo' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Acoes', exact: true })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Plano', exact: true })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Notificacoes', exact: true })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Historico', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Inicio' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Sua agenda', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Check-ins', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Seu plano', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Formularios', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Mensagens', exact: true })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Perfil', exact: true })).toBeVisible();
     }
     await expect(page.getByRole('heading', { name: 'Seu acompanhamento hoje' })).toBeVisible();
@@ -347,7 +348,7 @@ test.describe('portal do paciente', () => {
     await expect(page.getByRole('heading', { name: 'Plano em andamento' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Proximas acoes' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Linha do tempo' })).toBeVisible();
-    await expect(page.locator('#historico').getByText('Agenda', { exact: true })).toBeVisible();
+    await expect(page.locator('#agenda').getByText('Consulta nutricional').first()).toBeVisible();
     await expect(page.getByText('Formulario pendente', { exact: true })).toBeVisible();
     await expect(page.getByText('Formulario respondido', { exact: true })).toBeVisible();
     await expect(page.getByText('Mensagem', { exact: true })).toBeVisible();
@@ -378,13 +379,7 @@ test.describe('portal do paciente', () => {
       'https://materiais.octaclin.test/hidratacao'
     );
     await expect(page.getByRole('heading', { name: 'Notificacoes do paciente' })).toBeVisible();
-    await expect(page.locator('#notificacoes').getByText('Pendentes', { exact: true })).toBeVisible();
-    await expect(page.locator('#notificacoes').getByText('Historico', { exact: true })).toBeVisible();
-    await expect(page.locator('#notificacoes').getByText('Lembrete de consulta').first()).toBeVisible();
-    await expect(page.locator('#notificacoes').getByText('Sua consulta sera amanha.').first()).toBeVisible();
-    await expect(page.locator('#notificacoes').getByText('WhatsApp').first()).toBeVisible();
-    await expect(page.locator('#notificacoes').getByText('Consulta agendada')).toBeVisible();
-    await expect(page.locator('#notificacoes').getByText('E-mail')).toBeVisible();
+    await expect(page.locator('#mensagens').getByText('Consulta agendada').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Meu perfil' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Privacidade' })).toBeVisible();
     await expect(page.getByText('Documentos legais')).toBeVisible();

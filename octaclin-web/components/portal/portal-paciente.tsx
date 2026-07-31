@@ -319,20 +319,21 @@ function atualizarPortalComCheckin(
 }
 
 const linksPortal = [
-  { href: '#resumo', rotulo: 'Resumo' },
-  { href: '#acoes', rotulo: 'Acoes' },
-  { href: '#plano', rotulo: 'Plano' },
-  { href: '#notificacoes', rotulo: 'Notificacoes' },
-  { href: '#historico', rotulo: 'Historico' },
+  { href: '#resumo', rotulo: 'Inicio' },
+  { href: '#agenda', rotulo: 'Sua agenda' },
+  { href: '#checkin-rapido', rotulo: 'Check-ins' },
+  { href: '#plano', rotulo: 'Seu plano' },
+  { href: '#formularios', rotulo: 'Formularios' },
+  { href: '#mensagens', rotulo: 'Mensagens' },
   { href: '#perfil', rotulo: 'Perfil' },
   { href: '#privacidade', rotulo: 'Privacidade' }
 ];
 
 const linksPortalMobile = [
   { href: '#resumo', rotulo: 'Inicio', icone: HeartPulse },
-  { href: '#acoes', rotulo: 'Agenda', icone: CalendarDays },
+  { href: '#agenda', rotulo: 'Agenda', icone: CalendarDays },
   { href: '#plano', rotulo: 'Plano', icone: Target },
-  { href: '#notificacoes', rotulo: 'Mensagens', icone: BellRing },
+  { href: '#checkin-rapido', rotulo: 'Check-ins', icone: SmilePlus },
   { href: '#perfil', rotulo: 'Perfil', icone: UserRound }
 ];
 
@@ -679,7 +680,7 @@ export function PortalPaciente() {
               </Cartao>
             </section>
 
-            <Cartao id="acoes" className="scroll-mt-4">
+            <Cartao id="agenda" className="scroll-mt-4">
               <CartaoCabecalho>
                 <CartaoTitulo icone={<ClipboardList className="h-4 w-4" />}>Proximas acoes</CartaoTitulo>
               </CartaoCabecalho>
@@ -1126,7 +1127,7 @@ export function PortalPaciente() {
                   </form>
                 </Cartao>
 
-                <Cartao>
+                <Cartao id="formularios" className="scroll-mt-4">
                   <CartaoCabecalho>
                     <CartaoTitulo icone={<ClipboardList className="h-4 w-4" />}>Formularios pendentes</CartaoTitulo>
                   </CartaoCabecalho>
@@ -1269,7 +1270,7 @@ export function PortalPaciente() {
                 </Cartao>
               </div>
 
-              <Cartao>
+              <Cartao id="mensagens" className="scroll-mt-4">
                 <CartaoCabecalho>
                   <CartaoTitulo icone={<MessageCircle className="h-4 w-4" />}>Mensagens recentes</CartaoTitulo>
                 </CartaoCabecalho>

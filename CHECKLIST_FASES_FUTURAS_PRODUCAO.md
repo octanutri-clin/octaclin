@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 180 - prontuario clinico.
+Atualizado em 2026-07-30 apos a Fase 181 - portal completo do paciente.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -753,10 +753,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Data: 2026-07-30. Saida: `fase-180-prontuario-clinico.md`.
   - Producao: web publicada no commit `a0b3f1a`; `/health` retornou `200`.
 
-- [ ] Fase 181 - Portal completo do paciente.
+- [x] Fase 181 - Portal completo do paciente.
   - Organizar consulta, plano, check-ins, tarefas, materiais, formularios,
     mensagens e privacidade por tarefas claras e linguagem nao tecnica.
   - Nunca expor score ou classificacao de risco clinico ao paciente.
+  - Entregue: navegacao por tarefas no desktop e celular para agenda,
+    check-ins, plano, formularios, mensagens, perfil e privacidade.
+  - Validacoes: quatro cenarios Playwright do portal em desktop/mobile,
+    typecheck, acessibilidade, autorizacao e build aprovados.
+  - Data: 2026-07-30. Saida: `fase-181-portal-completo-paciente.md`.
+  - Producao: pendente de publicacao e health check.
 
 - [ ] Fase 182 - Agendamento e formularios publicos.
   - Aplicar identidade da clinica, fuso horario, indisponibilidade, escolha de
