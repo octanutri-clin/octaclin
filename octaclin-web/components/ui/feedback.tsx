@@ -54,6 +54,29 @@ export function BarraCarregamento({ visivel, rotulo = 'Atualizando dados' }: Bar
   );
 }
 
+export function Esqueleto({ className }: { className?: string }) {
+  return <div aria-hidden="true" className={cn('animate-pulse rounded-md bg-linha/70', className)} />;
+}
+
+export function EsqueletoPagina({ rotulo = 'Carregando conteudo' }: { rotulo?: string }) {
+  return (
+    <div role="status" aria-live="polite" aria-label={rotulo} className="grid gap-4">
+      <span className="sr-only">{rotulo}</span>
+      <div className="flex items-center justify-between gap-4">
+        <div className="grid w-full max-w-md gap-2">
+          <Esqueleto className="h-5 w-40" />
+          <Esqueleto className="h-4 w-full" />
+        </div>
+        <Esqueleto className="h-11 w-32" />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }, (_, indice) => <Esqueleto key={indice} className="h-28 w-full" />)}
+      </div>
+      <Esqueleto className="h-48 w-full" />
+    </div>
+  );
+}
+
 interface EstadoVazioProps {
   titulo: string;
   descricao?: string;

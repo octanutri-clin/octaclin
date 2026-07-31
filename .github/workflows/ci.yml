@@ -126,6 +126,9 @@ jobs:
       E2E_TENANT_SLUG: clinica-carla
       E2E_EMAIL: admin@octaclin.local
       E2E_SENHA: OctaClin@123
+      E2E_REUSE_EXISTING_SERVER: "true"
+      OCTACLIN_BACKEND_URL: http://localhost:3001
+      OCTACLIN_TENANT_SLUG: clinica-carla
     steps:
       - uses: actions/checkout@v4
 

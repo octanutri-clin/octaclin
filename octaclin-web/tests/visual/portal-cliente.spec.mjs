@@ -387,8 +387,8 @@ test.describe('portal do cliente', () => {
     await expect(historicoConvites.getByText('3 eventos de convite')).toBeVisible();
     await expect(historicoConvites.getByText('prof@octaclin.local')).toBeVisible();
     await expect(historicoConvites.getByText('Usado em 24/07/26')).toBeVisible();
-    await expect(historicoConvites.getByText('Reenviado por cliente-2')).toBeVisible();
-    await expect(historicoConvites.getByText('Revogado por cliente-2')).toBeVisible();
+    await expect(historicoConvites.getByText('Convite reenviado', { exact: true })).toBeVisible();
+    await expect(historicoConvites.getByText('Convite revogado', { exact: true })).toBeVisible();
     await expect(page.getByText('Acesso profissional separado')).toBeVisible();
     const assinatura = page.locator('#assinatura');
     await expect(assinatura.getByText('Profissional')).toBeVisible();

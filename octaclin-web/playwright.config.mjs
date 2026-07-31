@@ -4,6 +4,7 @@ const baseURL = process.env.E2E_WEB_URL ?? 'http://localhost:3000';
 const servidorVisual = new URL(baseURL);
 const usaServidorLocal = ['localhost', '127.0.0.1'].includes(servidorVisual.hostname);
 const portaServidor = servidorVisual.port || '3000';
+const reutilizaServidorExistente = process.env.E2E_REUSE_EXISTING_SERVER === 'true';
 
 export default defineConfig({
   testDir: './tests/visual',
@@ -21,7 +22,7 @@ export default defineConfig({
         command: `pnpm exec next dev --hostname ${servidorVisual.hostname} --port ${portaServidor}`,
         url: new URL('/login', servidorVisual.origin).href,
         timeout: 120_000,
-        reuseExistingServer: !process.env.CI
+        reuseExistingServer: reutilizaServidorExistente || !process.env.CI
       }
     : undefined,
   use: {

@@ -841,6 +841,123 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Consolidacao local: `fase-189-consolidacao-visual-rollout.md`; falta
     gravacao no Penpot quando o MCP de escrita estiver disponivel.
 
+- [x] Fase 190 - Arquitetura de navegacao e sistema visual definitivo.
+  - Reorganizar o console em Clinica, Relacionamento, Gestao e SuperAdmin,
+    removendo IA, Mobile e Gamificacao da navegacao principal quando nao forem
+    jornadas autonomas de uso diario.
+  - Evoluir o shell compartilhado com contexto da clinica e do profissional,
+    acoes rapidas, notificacoes, perfil e comportamento responsivo previsivel.
+  - Consolidar tokens, tipografia, densidade, paineis laterais, menus,
+    tooltips, skeletons, feedback e estados de permissao sem criar um segundo
+    sistema de componentes.
+  - Preservar Figtree/Noto Sans, alvos de toque de 44 px, foco visivel e a
+    paleta semantica; usar a Linha de cuidado como assinatura visual funcional.
+  - Aceite: navegacao por permissao validada em desktop e celular, componentes
+    compartilhados documentados e nenhuma regressao nos gates de autorizacao,
+    acessibilidade e jornadas criticas.
+  - Entregue: menu diario reorganizado, modulos avancados fora da navegacao
+    principal, contexto da sessao, atalhos por permissao, menu de conta,
+    skeleton compartilhado e estado ativo consistente.
+  - Validacoes: contrato visual, typecheck, 48 cenarios Playwright do console,
+    10 de acessibilidade, 22 de autorizacao/BFF e build de producao.
+  - Data: 2026-07-31. Saida:
+    `fase-190-arquitetura-navegacao-sistema-visual.md`. Implementacao:
+    `e371ae0`.
+
+- [ ] Fase 191 - Acesso e ativacao do usuario.
+  - Unificar login, recuperacao de senha e primeiro acesso em um shell de
+    autenticacao consistente, sem API, tenant ou detalhes internos.
+  - Adicionar exibicao de senha, aviso de Caps Lock, tratamento de token
+    expirado e ativacao orientada por etapas para senha, dados e aceites.
+  - Manter o login objetivo e operacional, sem transformar a tela em pagina de
+    marketing ou transmitir credenciais para destinos externos.
+  - Aceite: fluxos de sucesso, erro, expiracao e retorno ao login cobertos em
+    desktop e celular, com teclado e leitores de tela.
+
+- [ ] Fase 192 - Centro clinico diario e agenda profissional.
+  - Reorganizar o dashboard em Agora, Proximos e Pendentes, priorizando fila
+    clinica e acoes rapidas antes de indicadores agregados.
+  - Tornar o calendario a superficie principal da agenda; mover criacao e
+    edicao para painel lateral ou modal e manter dia, semana, mes e lista.
+  - Exibir conflitos, bloqueios, solicitacoes publicas, integracao Google e
+    notificacoes no contexto sem tornar o Google obrigatorio.
+  - Preservar concluir, reagendar, falta, cancelar e liberar horario, com
+    confirmacao e sincronizacao apenas quando configurada.
+  - Aceite: jornadas completas de criar, editar, bloquear, liberar, concluir,
+    faltar e cancelar validadas em desktop e celular.
+
+- [ ] Fase 193 - Pacientes e prontuario orientados a conduta.
+  - Evoluir a lista com busca dominante, filtros realmente persistidos,
+    cadastro em painel lateral, risco, responsavel e proxima acao.
+  - Refinar o prontuario com cabecalho persistente, conduta atual, timeline
+    filtravel, Linha de cuidado e protecao contra perda de evolucao em edicao.
+  - Manter resumo, evolucoes, plano, formularios, mensagens, materiais e
+    historico separados, reduzindo cartoes e informacao simultanea.
+  - Aceite: novo paciente, busca, filtro, agendamento de retorno, evolucao,
+    tarefa e consulta ao historico cobertos por testes de jornada e permissao.
+
+- [ ] Fase 194 - Formularios, editor e leitura longitudinal.
+  - Separar o modulo em Formularios, Editor, Biblioteca, Distribuicoes e
+    Respostas, reduzindo responsabilidades do componente atual.
+  - Organizar o editor com estrutura, edicao e preview simultaneo; preservar
+    versoes, rascunho, publicacao, reordenacao por teclado e aviso de alteracao
+    nao salva.
+  - Substituir regra cron exposta por configuracao de recorrencia em linguagem
+    comum e manter o contrato tecnico encapsulado.
+  - Priorizar leitura clinica, comparacao longitudinal e revisao nas respostas,
+    sem duplicar dados do prontuario.
+  - Aceite: montar, publicar, distribuir, responder, revisar e comparar um
+    formulario de ponta a ponta em desktop e celular.
+
+- [ ] Fase 195 - Portal do paciente e jornadas publicas.
+  - Reduzir a pagina inicial do portal a proxima consulta, proxima acao e
+    progresso do plano, substituindo excesso de cartoes por areas orientadas a
+    tarefa e navegacao inferior no celular.
+  - Refinar agenda, check-ins, tarefas, materiais, formularios, mensagens,
+    perfil e privacidade com linguagem simples e sem risco clinico exposto.
+  - Aplicar identidade configuravel da clinica, servico, local, fuso horario e
+    resumo final no agendamento publico quando a API oferecer esses dados.
+  - Implementar rascunho e retomada de formulario somente com persistencia
+    segura no backend; nao simular continuidade entre dispositivos.
+  - Aceite: portal, desmarcacao, solicitacao publica e formulario publico
+    validados com dados sinteticos em desktop e celular.
+
+- [ ] Fase 196 - Comunicacoes, equipe e conta do cliente.
+  - Estruturar comunicacoes em conversas, mensagem ativa e contexto do
+    paciente; mover canais e templates para configuracoes administrativas.
+  - Separar profissionais em diretorio, acesso, permissoes, disponibilidade e
+    integracoes, mantendo troca de contexto exclusiva do SuperAdmin.
+  - Dividir o portal comercial em ativacao, assinatura, consumo, equipe,
+    configuracoes, marca, integracoes e perfil fiscal.
+  - Aceite: responder conversa, tratar falha, convidar usuario, ajustar
+    permissao e compreender plano/limites sem IDs ou jargao tecnico.
+
+- [ ] Fase 197 - Racionalizacao dos modulos avancados.
+  - Integrar IA aos fluxos clinicos e de comunicacao, com origem, limitacoes e
+    decisao obrigatoria de aceitar, editar ou rejeitar a sugestao.
+  - Transformar Automacoes em modelos e regras descritas como Quando/Fazer,
+    com simulacao e historico antes da ativacao.
+  - Absorver operacoes mobile tecnicas na area administrativa e manter
+    Gamificacao opcional, priorizando metas individuais e adesao; comunidade e
+    ranking permanecem desativados por padrao ate validacao de produto.
+  - Reorganizar Operacoes, exclusiva do SuperAdmin, em Saude, Incidentes,
+    Comunicacoes, LGPD, Auditoria e Filas com detalhes progressivos.
+  - Aceite: nenhum modulo tecnico sem uso recorrente ocupa a navegacao
+    principal; IA nunca executa conduta sem revisao humana registrada.
+
+- [ ] Fase 198 - Validacao final de usabilidade e consolidacao visual.
+  - Executar jornadas completas com profissional, administrador e paciente
+    usando dados sinteticos, incluindo primeiro acesso, agenda, prontuario,
+    formulario, comunicacao, equipe e conta.
+  - Capturar screenshots Playwright em desktop e celular, validar contraste,
+    teclado, foco, leitores de tela, estados vazios, erro, sucesso e permissao.
+  - Atualizar Penpot, mapeamento de componentes e documentacao com o resultado
+    implementado, registrando divergencias deliberadas entre desenho e codigo.
+  - Liberar o redesenho progressivamente em producao, com health checks,
+    observabilidade e plano de reversao por incremento.
+  - Aceite: gates funcionais, visuais, acessibilidade, autorizacao e build
+    aprovados; checklist, resumo de fases e documento individual atualizados.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.

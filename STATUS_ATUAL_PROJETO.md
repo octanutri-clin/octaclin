@@ -1,13 +1,15 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-07-30.
+Atualizado em 2026-07-31.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 165 - progresso do formulario publico (2026-07-30). Formularios publicos mostram o andamento das perguntas obrigatorias, sem alterar envio, dados ou integracoes.
+- Ultima fase concluida: Fase 190 - arquitetura de navegacao e sistema visual
+  definitivo (2026-07-31). O console agora separa Clinica, Relacionamento,
+  Gestao e SuperAdmin, com contexto da sessao e atalhos por permissao.
 - Fase 148: Foco visivel proprio nos componentes compartilhados `Campo`/`AreaTexto`/`Selecao`/`Botao` (entregue em 2026-07-27, PR #5 aberto para `main`).
 - Fase 147: Foco visivel explicito nos inputs crus da agenda (entregue em 2026-07-27). Antes dela, esta branch recebeu por merge a Fase 146 (gate de acessibilidade, feita pelo Codex na `main`).
 - Fase 145: Painel clinico do profissional e desmarcamento/cancelamento distintos (entregue em 2026-07-27, commit `22e161b` da Task 5).

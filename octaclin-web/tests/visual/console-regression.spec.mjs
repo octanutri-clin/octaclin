@@ -22,29 +22,29 @@ const rotas = [
 ];
 
 const rotulosMenu = [
-  'Dashboard',
-  'Questionarios',
+  'Hoje',
+  'Formularios',
   'Comunicacoes',
   'Agenda',
   'Automacoes',
-  'IA',
-  'Mobile',
-  'Gamificacao',
   'Operacoes',
   'Pacientes',
   'Profissionais'
 ];
+const rotulosForaMenuDiario = ['IA', 'Mobile', 'Gamificacao'];
 const permissoesConsoleCompleto = [
   'dashboard.ler',
   'questionarios.ler',
   'comunicacoes.mensagens.ler',
   'agenda.consultas.ler',
+  'agenda.consultas.criar',
   'automacoes.gerenciar',
   'ia.executar',
   'mobile.operar',
   'gamificacao.gerenciar',
   'operacoes.auditoria.ler',
   'pacientes.listar',
+  'pacientes.gerenciar',
   'profissionais.ler'
 ];
 
@@ -551,8 +551,20 @@ test.describe('console operacional', () => {
       await expect(page.getByText('OctaClin').first()).toBeVisible();
       await expect(page.getByText('Console clinico')).toBeVisible();
 
+      const navegacao = page.getByRole('navigation', { name: 'Modulos do console' });
       for (const rotulo of rotulosMenu) {
-        await expect(page.getByRole('link', { name: rotulo })).toBeVisible();
+        await expect(navegacao.getByRole('link', { name: rotulo })).toBeVisible();
+      }
+      for (const rotulo of rotulosForaMenuDiario) {
+        await expect(navegacao.getByRole('link', { name: rotulo })).toHaveCount(0);
+      }
+
+      if (rota.caminho === '/dashboard') {
+        await expect(page.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda#novo-agendamento');
+        await expect(page.getByRole('link', { name: 'Novo paciente' })).toHaveAttribute('href', '/pacientes#novo-paciente');
+        await expect(page.getByRole('link', { name: 'Notificacoes' })).toHaveAttribute('href', '/comunicacoes');
+        await page.locator('summary[aria-label="Abrir menu da conta"]').click();
+        await expect(page.getByText('Clinica Carla')).toBeVisible();
       }
 
       await expect(page.locator('body')).not.toContainText('__NEXT_ERROR__');
@@ -1444,7 +1456,7 @@ test.describe('prontuario do paciente', () => {
     await page.getByRole('button', { name: 'Enviar material' }).click();
 
     await expect.poll(() => prontuario.enviouMaterial()).toBe(true);
-    await expect(page.getByText('Material enviado ao paciente.')).toBeVisible();
+    await expect(page.getByText('Material enviado ao paciente.', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Materiais enviados' })).toBeVisible();
     await expect(page.locator('article').filter({ hasText: 'Guia de hidratacao' })).toBeVisible();
     await expect(page.getByText('Ler antes do retorno.')).toBeVisible();

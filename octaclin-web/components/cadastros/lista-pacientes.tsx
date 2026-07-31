@@ -313,7 +313,7 @@ export function ListaPacientes() {
         </Cartao>
       ) : null}
 
-      <Cartao>
+      <Cartao id="novo-paciente" className="scroll-mt-28">
         <form onSubmit={salvar}>
         <CartaoCabecalho>
           <CartaoTitulo icone={editandoId ? <Edit3 size={18} className="text-primaria" /> : <Plus size={18} className="text-primaria" />}>
