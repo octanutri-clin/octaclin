@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 172 - check-ins recorrentes por paciente.
+Atualizado em 2026-07-30 apos o registro do roadmap UX/UI das Fases 176 a 188.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -674,6 +674,84 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Validacoes: BFF de revisao, preview, typecheck e build da web.
   - Producao: sem migration; backend e web publicados pelo Render no commit
     `84bbbef`, com health checks `200`.
+
+## Roadmap UX/UI canonico apos a Fase 175
+
+As Fases 168 e 169 ja foram usadas para acesso comercial e disponibilidade da
+agenda. As Fases 170 a 175 tambem ja foram concluidas com os escopos registrados
+acima. Este bloco preserva essa numeracao e registra o proximo ciclo sem
+renumerar ou reinterpretar entregas ja publicadas.
+
+- [ ] Fase 176 - Qualidade transversal e componentes compartilhados.
+  - Consolidar campos, selects, textareas, badges, tabs, feedback, modais e
+    estados de carregamento, vazio, erro, sucesso e permissao negada.
+  - Validar foco, teclado, contraste, leitores de tela e responsividade antes
+    de redesenhar telas maiores.
+
+- [ ] Fase 177 - Agenda profissional completa.
+  - Evoluir as visoes existentes de dia, semana, mes e lista com contexto
+    operacional, painel lateral ou modal para criacao e edicao e conflitos
+    visiveis.
+  - Incluir acoes rapidas para concluir, reagendar, falta, cancelar ou liberar
+    horario, preservando agenda interna sem exigir Google Agenda.
+
+- [ ] Fase 178 - Lista de pacientes.
+  - Criar busca central, filtros salvos, risco, responsavel, ultima consulta e
+    proxima acao; manter cadastro fora da tabela principal.
+  - Tornar linhas acionaveis no desktop e a lista adequada ao celular.
+
+- [ ] Fase 179 - Prontuario clinico.
+  - Aplicar cabecalho persistente com paciente, situacao e acoes rapidas.
+  - Organizar resumo, evolucoes, plano, formularios, mensagens, materiais e
+    historico, incluindo a linha de cuidado e menos informacao simultanea.
+
+- [ ] Fase 180 - Portal completo do paciente.
+  - Organizar consulta, plano, check-ins, tarefas, materiais, formularios,
+    mensagens e privacidade por tarefas claras e linguagem nao tecnica.
+  - Nunca expor score ou classificacao de risco clinico ao paciente.
+
+- [ ] Fase 181 - Agendamento e formularios publicos.
+  - Aplicar identidade da clinica, fuso horario, indisponibilidade, escolha de
+    data/horario no celular e resumo final da solicitacao.
+  - Evoluir rascunho e retomada de formularios somente quando o backend
+    suportar a persistencia segura.
+
+- [ ] Fase 182 - Editor de formularios completo.
+  - Evoluir a separacao ja entregue na Fase 175 com estrutura, edicao, preview,
+    distribuicao e respostas claramente independentes.
+  - Adicionar preview simultaneo, reordenacao acessivel, versao publicada,
+    rascunho e alteracoes pendentes.
+
+- [ ] Fase 183 - Central de comunicacoes.
+  - Estruturar lista de conversas, conversa ativa e contexto do paciente.
+  - Incluir filtros por canal, responsavel, pendencia e falha, templates,
+    respostas rapidas, entrega e navegacao progressiva no celular.
+
+- [ ] Fase 184 - Profissionais, permissoes e integracoes.
+  - Exibir diretorio de profissionais, situacao do acesso e permissoes por
+    capacidade, sem jargao tecnico.
+  - Mostrar Google Agenda por profissional e restringir troca de painel ao
+    SuperAdmin, de forma identificavel.
+
+- [ ] Fase 185 - Conta, assinatura e ativacao do cliente.
+  - Separar conta, equipe, assinatura, uso, configuracoes e dados fiscais.
+  - Explicar limites, consumo e proximos passos sem exibir IDs ou detalhes
+    internos no fluxo comercial.
+
+- [ ] Fase 186 - Modulos avancados.
+  - Reorganizar automacoes, IA, operacoes mobile, gamificacao e operacoes
+    administrativas como fluxos de produto, com revisao humana para IA.
+
+- [ ] Fase 187 - Validacao de usabilidade.
+  - Exercitar primeiro acesso, novo paciente, agendamento, prontuario,
+    formulario e comunicacao com dados sinteticos.
+  - Registrar screenshots desktop/mobile e corrigir dificuldades observadas.
+
+- [ ] Fase 188 - Consolidacao visual no Penpot e rollout progressivo.
+  - Atualizar o sistema de design e o mapeamento entre componentes Penpot e
+    frontend.
+  - Registrar permissoes e comportamentos definitivos e liberar telas por
+    etapas em producao.
 
 ## Backlog pos-producao
 
