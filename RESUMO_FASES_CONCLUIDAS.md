@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a Fase 179 - lista de pacientes.
+Atualizado em 2026-07-30 apos a Fase 180 - prontuario clinico.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -308,6 +308,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   proxima acao explicita, tabela desktop e leitura adequada no celular. Backend
   e web foram publicados no commit `0dcb17a`; ambos os health checks
   retornaram `200`.
+
+- Fase 180 - Prontuario clinico: o prontuario passou a separar resumo,
+  evolucoes, plano, formularios, mensagens, materiais e historico em abas
+  acessiveis. O cabecalho clinico permanece visivel com acoes rapidas e o
+  resumo abre com uma Linha de cuidado compacta, reduzindo a densidade sem
+  duplicar dados. A web foi publicada no commit `a0b3f1a` e o health check
+  retornou `200`.
 
 ## Estado atual de uso
 

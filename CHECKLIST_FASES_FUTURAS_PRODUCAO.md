@@ -751,7 +751,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     typecheck, 10 cenarios de acessibilidade, 22 testes de autorizacao e build
     da web.
   - Data: 2026-07-30. Saida: `fase-180-prontuario-clinico.md`.
-  - Producao: pendente de publicacao e health check.
+  - Producao: web publicada no commit `a0b3f1a`; `/health` retornou `200`.
 
 - [ ] Fase 181 - Portal completo do paciente.
   - Organizar consulta, plano, check-ins, tarefas, materiais, formularios,

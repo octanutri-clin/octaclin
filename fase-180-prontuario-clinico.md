@@ -1,7 +1,6 @@
 # Fase 180 - Prontuario clinico
 
-Status: codigo concluido e validado localmente em 2026-07-30. Publicacao em
-producao pendente.
+Status: concluida e publicada em producao em 2026-07-30.
 
 ## Entregue
 
@@ -31,7 +30,8 @@ foram aprovados.
 
 ## Producao
 
-Pendente de publicacao e verificacao do endpoint de health.
+A web foi publicada no commit `a0b3f1a`. O endpoint
+`https://octaclin-web-producao.onrender.com/health` retornou `200`.
 
 ## Proxima fase
 
