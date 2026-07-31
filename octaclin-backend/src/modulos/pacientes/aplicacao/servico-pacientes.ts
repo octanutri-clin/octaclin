@@ -83,7 +83,19 @@ export class ServicoPacientes {
         take: limiteNormalizado
       });
 
-      return { itens: itens.map((paciente) => this.mapearResposta(paciente)), total };
+      const pacientesIds = itens.map((paciente) => paciente.id);
+      const consultas = pacientesIds.length
+        ? await gerenciador.getRepository(AgendaConsultaOrm).find({
+            where: { tenantId, pacienteId: In(pacientesIds) },
+            order: { inicioEm: 'DESC' }
+          })
+        : [];
+      const resumoConsultas = this.resumirConsultasPorPaciente(consultas);
+
+      return {
+        itens: itens.map((paciente) => this.mapearResposta(paciente, resumoConsultas.get(paciente.id))),
+        total
+      };
     });
   }
 
@@ -140,7 +152,10 @@ export class ServicoPacientes {
     });
   }
 
-  private mapearResposta(paciente: PacienteOrm): PacienteRespostaDto {
+  private mapearResposta(
+    paciente: PacienteOrm,
+    resumoConsultas?: { ultimaConsultaConcluidaEm?: Date; proximaConsultaEm?: Date }
+  ): PacienteRespostaDto {
     return {
       id: paciente.id,
       tenantId: paciente.tenantId,
@@ -152,9 +167,33 @@ export class ServicoPacientes {
       statusAdesao: paciente.statusAdesao,
       scoreRisco: paciente.scoreRisco,
       ultimoCheckinEm: paciente.ultimoCheckinEm,
+      ultimaConsultaConcluidaEm: resumoConsultas?.ultimaConsultaConcluidaEm,
+      proximaConsultaEm: resumoConsultas?.proximaConsultaEm,
       criadoEm: paciente.criadoEm,
       atualizadoEm: paciente.atualizadoEm
     };
+  }
+
+  private resumirConsultasPorPaciente(consultas: AgendaConsultaOrm[]) {
+    const agora = new Date();
+    const resumo = new Map<string, { ultimaConsultaConcluidaEm?: Date; proximaConsultaEm?: Date }>();
+
+    for (const consulta of consultas) {
+      const atual = resumo.get(consulta.pacienteId) ?? {};
+      if (consulta.status === 'concluida' && !atual.ultimaConsultaConcluidaEm) {
+        atual.ultimaConsultaConcluidaEm = consulta.inicioEm;
+      }
+      if (
+        (consulta.status === 'agendada' || consulta.status === 'reagendada') &&
+        consulta.inicioEm >= agora &&
+        (!atual.proximaConsultaEm || consulta.inicioEm < atual.proximaConsultaEm)
+      ) {
+        atual.proximaConsultaEm = consulta.inicioEm;
+      }
+      resumo.set(consulta.pacienteId, atual);
+    }
+
+    return resumo;
   }
 
   async criarEvolucaoClinica(

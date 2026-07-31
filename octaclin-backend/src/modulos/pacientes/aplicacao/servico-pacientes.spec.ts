@@ -18,13 +18,16 @@ function criarGerenciadorFake(repositorio: Record<string, unknown>) {
       getRepository: jest.fn((entidade: unknown) => {
         if (entidade === PacienteOrm) return repositorio.paciente;
         if (entidade === ProfissionalOrm) return repositorio.profissional;
+        if (entidade === AgendaConsultaOrm) return repositorio.agenda ?? { find: jest.fn(async () => []) };
         return repositorio.paciente;
       })
     };
   }
 
   return {
-    getRepository: jest.fn().mockReturnValue(repositorio)
+    getRepository: jest.fn((entidade: unknown) =>
+      entidade === AgendaConsultaOrm ? repositorio.agenda ?? { find: jest.fn(async () => []) } : repositorio
+    )
   };
 }
 
@@ -104,6 +107,39 @@ describe('ServicoPacientes', () => {
     await servico.listar('tenant-1', usuarioColaborador, 1, 500);
 
     expect(repositorio.findAndCount).toHaveBeenCalledWith(expect.objectContaining({ take: 100 }));
+  });
+
+  it('deve incluir a ultima consulta concluida e a proxima consulta do proprio tenant', async () => {
+    const agora = Date.now();
+    const repositorioPacientes = {
+      findAndCount: jest.fn(async () => [[
+        {
+          id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1',
+          nomeCriptografado: Buffer.from('cripto:Maria'), statusAdesao: 'em_acompanhamento', scoreRisco: '20',
+          criadoEm: new Date(agora - 10_000), atualizadoEm: new Date(agora - 10_000)
+        }
+      ], 1])
+    };
+    const repositorioAgenda = {
+      find: jest.fn(async () => [
+        { pacienteId: 'paciente-1', status: 'concluida', inicioEm: new Date(agora - 86_400_000) },
+        { pacienteId: 'paciente-1', status: 'agendada', inicioEm: new Date(agora + 172_800_000) },
+        { pacienteId: 'paciente-1', status: 'agendada', inicioEm: new Date(agora + 86_400_000) }
+      ])
+    };
+    const servico = new ServicoPacientes(
+      { executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => operacao(criarGerenciadorFake({ paciente: repositorioPacientes, agenda: repositorioAgenda }))) } as never,
+      { descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', '')) } as never,
+      limitesPermitidos as never
+    );
+
+    const resposta = await servico.listar('tenant-1', usuarioColaborador);
+
+    expect(repositorioAgenda.find).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 'tenant-1', pacienteId: expect.any(Object) } }));
+    expect(resposta.itens[0]).toEqual(expect.objectContaining({
+      ultimaConsultaConcluidaEm: new Date(agora - 86_400_000),
+      proximaConsultaEm: new Date(agora + 86_400_000)
+    }));
   });
 
   it('deve bloquear criacao de paciente quando limite do plano for atingido', async () => {

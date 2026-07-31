@@ -14,6 +14,8 @@ export interface PacienteResumo {
   statusAdesao: string;
   scoreRisco: string;
   ultimoCheckinEm?: string;
+  ultimaConsultaConcluidaEm?: string;
+  proximaConsultaEm?: string;
   criadoEm: string;
 }
 

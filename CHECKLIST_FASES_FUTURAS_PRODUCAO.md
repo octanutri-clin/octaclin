@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-30 apos a Fase 178 - agenda profissional completa.
+Atualizado em 2026-07-30 apos a Fase 179 - lista de pacientes.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -726,10 +726,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Data: 2026-07-30. Saida: `fase-178-agenda-profissional-completa.md`.
   - Producao: web publicada no commit `b0e3144`; `/health` retornou `200`.
 
-- [ ] Fase 179 - Lista de pacientes.
+- [x] Fase 179 - Lista de pacientes.
   - Criar busca central, filtros salvos, risco, responsavel, ultima consulta e
     proxima acao; manter cadastro fora da tabela principal.
   - Tornar linhas acionaveis no desktop e a lista adequada ao celular.
+  - Entregue: resumo de ultima consulta concluida e proxima consulta no retorno
+    protegido; busca, filtros por risco/responsavel/situacao e atalhos de
+    prioridade; tabela desktop e lista mobile com acoes diretas.
+  - Validacoes: 17 testes do servico de pacientes, dois cenarios Playwright da
+    lista em desktop/mobile, typecheck de backend/web, 10 cenarios de
+    acessibilidade, 22 testes de autorizacao e build da web.
+  - Data: 2026-07-30. Saida: `fase-179-lista-pacientes.md`.
+  - Producao: pendente de publicacao e health checks.
 
 - [ ] Fase 180 - Prontuario clinico.
   - Aplicar cabecalho persistente com paciente, situacao e acoes rapidas.

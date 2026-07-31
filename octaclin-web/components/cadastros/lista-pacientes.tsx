@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { FormEvent, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Trash2, X } from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Search, Trash2, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
+import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
+import { Etiqueta } from '@/components/ui/etiqueta';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { Tabela, TabelaCabecalho, TabelaConteudo, TabelaLinha, TabelaLinhas, TabelaVazia } from '@/components/ui/tabela';
 import { criarConvitePaciente } from '@/lib/convites-paciente-api';
@@ -74,6 +76,19 @@ function nomeProfissional(profissionais: ProfissionalResumo[], id: string) {
   return profissionais.find((profissional) => profissional.id === id)?.nome ?? id;
 }
 
+function nivelRisco(paciente: PacienteResumo) {
+  const score = Number(paciente.scoreRisco);
+  if (paciente.statusAdesao === 'risco' || score >= 70) return 'alto';
+  if (score >= 40) return 'medio';
+  return 'baixo';
+}
+
+function proximaAcao(paciente: PacienteResumo) {
+  if (nivelRisco(paciente) === 'alto') return 'Revisar risco';
+  if (!paciente.proximaConsultaEm) return 'Agendar retorno';
+  return `Consulta em ${formatarData(paciente.proximaConsultaEm)}`;
+}
+
 export function ListaPacientes() {
   const [dados, setDados] = useState<RespostaPaginada<PacienteResumo> | null>(null);
   const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
@@ -87,6 +102,11 @@ export function ListaPacientes() {
   const [formulario, setFormulario] = useState<FormularioPaciente>(formularioInicial);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [pacienteParaArquivar, setPacienteParaArquivar] = useState<PacienteResumo | null>(null);
+  const [busca, setBusca] = useState('');
+  const [filtroRisco, setFiltroRisco] = useState<'todos' | 'alto' | 'medio' | 'baixo'>('todos');
+  const [filtroProfissional, setFiltroProfissional] = useState('todos');
+  const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [apenasSemProximaConsulta, setApenasSemProximaConsulta] = useState(false);
 
   async function carregar() {
     setCarregando(true);
@@ -200,6 +220,17 @@ export function ListaPacientes() {
     void carregar();
   }, []);
 
+  const pacientesFiltrados = useMemo(() => {
+    const termo = busca.trim().toLocaleLowerCase('pt-BR');
+    return (dados?.itens ?? []).filter((paciente) =>
+      (!termo || `${paciente.nome} ${paciente.contato ?? ''}`.toLocaleLowerCase('pt-BR').includes(termo)) &&
+      (filtroRisco === 'todos' || nivelRisco(paciente) === filtroRisco) &&
+      (filtroProfissional === 'todos' || paciente.profissionalResponsavelId === filtroProfissional) &&
+      (filtroStatus === 'todos' || paciente.statusAdesao === filtroStatus) &&
+      (!apenasSemProximaConsulta || !paciente.proximaConsultaEm)
+    );
+  }, [apenasSemProximaConsulta, busca, dados?.itens, filtroProfissional, filtroRisco, filtroStatus]);
+
   return (
     <section className="grid gap-4">
       <Cartao>
@@ -221,6 +252,42 @@ export function ListaPacientes() {
               <RefreshCcw size={16} />
               {carregando ? 'Atualizando' : 'Atualizar'}
             </Botao>
+          </div>
+        </CartaoConteudo>
+      </Cartao>
+
+      <Cartao>
+        <CartaoConteudo className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_180px]">
+          <label className="grid gap-1">
+            <Rotulo htmlFor="busca-pacientes">Buscar pacientes</Rotulo>
+            <span className="relative">
+              <Search aria-hidden="true" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-texto-suave" />
+              <Campo id="busca-pacientes" value={busca} onChange={(evento) => setBusca(evento.target.value)} placeholder="Nome ou contato" className="pl-9" />
+            </span>
+          </label>
+          <label className="grid gap-1">
+            <Rotulo htmlFor="filtro-risco">Risco</Rotulo>
+            <Selecao id="filtro-risco" value={filtroRisco} onChange={(evento) => { setFiltroRisco(evento.target.value as typeof filtroRisco); setApenasSemProximaConsulta(false); }}>
+              <option value="todos">Todos os riscos</option><option value="alto">Alto</option><option value="medio">Medio</option><option value="baixo">Baixo</option>
+            </Selecao>
+          </label>
+          <label className="grid gap-1">
+            <Rotulo htmlFor="filtro-profissional">Responsavel</Rotulo>
+            <Selecao id="filtro-profissional" value={filtroProfissional} onChange={(evento) => { setFiltroProfissional(evento.target.value); setApenasSemProximaConsulta(false); }}>
+              <option value="todos">Todos</option>{profissionais.map((profissional) => <option key={profissional.id} value={profissional.id}>{profissional.nome}</option>)}
+            </Selecao>
+          </label>
+          <label className="grid gap-1">
+            <Rotulo htmlFor="filtro-status">Situacao</Rotulo>
+            <Selecao id="filtro-status" value={filtroStatus} onChange={(evento) => { setFiltroStatus(evento.target.value); setApenasSemProximaConsulta(false); }}>
+              <option value="todos">Todas</option><option value="novo">Novo</option><option value="aderente">Aderente</option><option value="em_acompanhamento">Em acompanhamento</option><option value="risco">Risco</option>
+            </Selecao>
+          </label>
+          <div className="flex flex-wrap gap-2 lg:col-span-4" aria-label="Filtros salvos">
+            <Botao type="button" variante="fantasma" onClick={() => { setBusca(''); setFiltroRisco('todos'); setFiltroStatus('todos'); setFiltroProfissional('todos'); setApenasSemProximaConsulta(false); }}>Todos</Botao>
+            <Botao type="button" variante="fantasma" onClick={() => { setBusca(''); setFiltroRisco('alto'); setFiltroStatus('todos'); setFiltroProfissional('todos'); setApenasSemProximaConsulta(false); }}>Alta prioridade</Botao>
+            <Botao type="button" variante="fantasma" onClick={() => { setBusca(''); setFiltroRisco('todos'); setFiltroStatus('todos'); setFiltroProfissional('todos'); setApenasSemProximaConsulta(true); }}>Sem consulta futura</Botao>
+            <span className="self-center text-xs text-texto-suave">{pacientesFiltrados.length} de {dados?.total ?? 0} pacientes</span>
           </div>
         </CartaoConteudo>
       </Cartao>
@@ -342,23 +409,25 @@ export function ListaPacientes() {
         </form>
       </Cartao>
 
-      <Tabela>
+      <Tabela className="hidden lg:block">
         <TabelaConteudo larguraMinima="840px">
-          <TabelaCabecalho className="grid-cols-[1.2fr_1fr_0.8fr_0.7fr_172px]">
+          <TabelaCabecalho className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_172px]">
             <span>Paciente</span>
             <span>Responsavel</span>
             <span>Status</span>
             <span>Risco</span>
+            <span>Ultima consulta</span>
+            <span>Proxima acao</span>
             <span>Acoes</span>
           </TabelaCabecalho>
           <TabelaLinhas>
-            {dados?.itens.length ? (
-              dados.itens.map((paciente) => (
-                <TabelaLinha key={paciente.id} className="grid-cols-[1.2fr_1fr_0.8fr_0.7fr_172px]">
+            {pacientesFiltrados.length ? (
+              pacientesFiltrados.map((paciente) => (
+                <TabelaLinha key={paciente.id} className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_172px] hover:bg-superficie-hover">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <HeartPulse size={16} className="shrink-0 text-primaria" />
-                      <strong className="truncate">{paciente.nome}</strong>
+                      <Link href={`/pacientes/${paciente.id}` as Route} className="truncate font-semibold hover:underline">{paciente.nome}</Link>
                     </div>
                     <p className="mt-1 text-xs text-texto-suave">{paciente.contato ?? paciente.id}</p>
                     <p className="mt-1 text-xs text-texto-suave">Nascimento: {formatarData(paciente.dataNascimento)}</p>
@@ -366,10 +435,10 @@ export function ListaPacientes() {
                   <span className="break-all text-xs text-texto-suave">
                     {nomeProfissional(profissionais, paciente.profissionalResponsavelId)}
                   </span>
-                  <span className={`h-fit rounded-sm px-2 py-1 text-xs font-semibold ${statusClasse(paciente.statusAdesao)}`}>
-                    {paciente.statusAdesao}
-                  </span>
-                  <span className="font-semibold">{Number(paciente.scoreRisco).toFixed(1)}</span>
+                  <Etiqueta className={statusClasse(paciente.statusAdesao)}>{paciente.statusAdesao}</Etiqueta>
+                  <Etiqueta variante={nivelRisco(paciente) === 'alto' ? 'perigo' : nivelRisco(paciente) === 'medio' ? 'alerta' : 'sucesso'}>{nivelRisco(paciente)} {Number(paciente.scoreRisco).toFixed(1)}</Etiqueta>
+                  <span className="text-xs text-texto-suave">{formatarData(paciente.ultimaConsultaConcluidaEm)}</span>
+                  <span className="text-xs font-medium text-tinta">{proximaAcao(paciente)}</span>
                   <div className="flex justify-end gap-1">
                     <Link
                       href={`/pacientes/${paciente.id}` as Route}
@@ -405,11 +474,27 @@ export function ListaPacientes() {
                 </TabelaLinha>
               ))
             ) : (
-              <TabelaVazia mensagem="Nenhum paciente carregado." />
+              <TabelaVazia mensagem="Nenhum paciente encontrado com estes filtros." />
             )}
           </TabelaLinhas>
         </TabelaConteudo>
       </Tabela>
+
+      <div className="grid gap-3 lg:hidden">
+        {pacientesFiltrados.map((paciente) => (
+          <Cartao key={paciente.id}>
+            <CartaoConteudo className="grid gap-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0"><Link href={`/pacientes/${paciente.id}` as Route} className="font-semibold text-tinta hover:underline">{paciente.nome}</Link><p className="mt-1 truncate text-xs text-texto-suave">{paciente.contato ?? paciente.id}</p></div>
+                <Etiqueta variante={nivelRisco(paciente) === 'alto' ? 'perigo' : nivelRisco(paciente) === 'medio' ? 'alerta' : 'sucesso'}>{nivelRisco(paciente)} {Number(paciente.scoreRisco).toFixed(1)}</Etiqueta>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs text-texto-suave"><span>Responsavel<br /><strong className="text-tinta">{nomeProfissional(profissionais, paciente.profissionalResponsavelId)}</strong></span><span>Ultima consulta<br /><strong className="text-tinta">{formatarData(paciente.ultimaConsultaConcluidaEm)}</strong></span><span className="col-span-2">Proxima acao<br /><strong className="text-tinta">{proximaAcao(paciente)}</strong></span></div>
+              <div className="flex flex-wrap gap-1"><Link href={`/pacientes/${paciente.id}` as Route} className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta hover:bg-superficie-hover">Abrir prontuario</Link><Botao type="button" variante="fantasma" onClick={() => editar(paciente)} aria-label={`Editar ${paciente.nome}`}><Edit3 size={16} /></Botao><Botao type="button" variante="fantasma" onClick={() => setPacienteParaArquivar(paciente)} aria-label={`Arquivar ${paciente.nome}`}><Trash2 size={16} /></Botao></div>
+            </CartaoConteudo>
+          </Cartao>
+        ))}
+        {!pacientesFiltrados.length ? <p className="px-1 py-6 text-sm text-texto-suave">Nenhum paciente encontrado com estes filtros.</p> : null}
+      </div>
 
       <ModalConfirmacao
         aberto={pacienteParaArquivar !== null}

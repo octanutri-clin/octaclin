@@ -85,6 +85,8 @@ export interface PacienteRespostaDto {
   statusAdesao: string;
   scoreRisco: string;
   ultimoCheckinEm?: Date;
+  ultimaConsultaConcluidaEm?: Date;
+  proximaConsultaEm?: Date;
   criadoEm: Date;
   atualizadoEm: Date;
 }

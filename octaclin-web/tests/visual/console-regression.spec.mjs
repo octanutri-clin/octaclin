@@ -754,6 +754,8 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
             statusAdesao: 'risco',
             scoreRisco: '82',
             ultimoCheckinEm: '2026-07-21T12:00:00.000Z',
+            ultimaConsultaConcluidaEm: '2026-07-10T12:00:00.000Z',
+            proximaConsultaEm: '2026-07-31T12:00:00.000Z',
             criadoEm: '2026-07-21T10:00:00.000Z'
           },
           {
@@ -1343,6 +1345,24 @@ test.describe('agenda de producao', () => {
       page.getByText('Consulta cancelada e horario liberado na agenda interna. Integracoes processadas conforme configuracao.')
     ).toBeVisible();
     await expect(consultaAna.getByText('Cancelada')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+});
+
+test.describe('lista de pacientes operacional', () => {
+  test('filtra prioridades e mostra o resumo clinico na lista', async ({ page }) => {
+    await prepararDashboardMockado(page);
+    await page.goto('/pacientes');
+
+    await expect(page.getByRole('heading', { name: 'Pacientes', exact: true })).toBeVisible();
+    await expect(page.locator('body')).toContainText('Ultima consulta');
+    await expect(page.locator('body')).toContainText('Revisar risco');
+    await page.getByRole('button', { name: 'Alta prioridade' }).click();
+    await expect(page.locator('body')).toContainText('Ana Souza');
+    await expect(page.locator('body')).not.toContainText('Bruno Lima');
+    await page.getByRole('button', { name: 'Sem consulta futura' }).click();
+    await expect(page.locator('body')).toContainText('Bruno Lima');
+    await expect(page.locator('body')).toContainText('Agendar retorno');
     await assertSemOverflowHorizontal(page);
   });
 });
