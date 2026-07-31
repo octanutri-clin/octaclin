@@ -132,6 +132,7 @@ export function PainelIa() {
             <p className="mt-1 text-sm text-texto-suave">
               {analises.length} analises, {reconhecimentos.length} reconhecimentos persistidos
             </p>
+            <p className="mt-1 text-xs text-texto-sutil">Resultados de IA sao sugestoes operacionais e exigem revisao do profissional antes de qualquer conduta.</p>
           </div>
           <Botao onClick={carregar} disabled={carregando}>
             <RefreshCcw size={16} />
