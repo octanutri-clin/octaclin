@@ -349,7 +349,8 @@ export function PainelComunicacoes() {
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [conversaSelecionadaId, setConversaSelecionadaId] = useState<string | null>(null);
-  const [filtroConversas, setFiltroConversas] = useState<'todas' | 'recebidas' | 'falhas'>('todas');
+  const [filtroConversas, setFiltroConversas] = useState<'todas' | 'recebidas' | 'falhas' | 'acompanhamento'>('todas');
+  const [buscaConversas, setBuscaConversas] = useState('');
   const [pacienteAssociacaoId, setPacienteAssociacaoId] = useState('');
   const [atualizarContatoPaciente, setAtualizarContatoPaciente] = useState(true);
   const [textoNotaWhatsapp, setTextoNotaWhatsapp] = useState('');
@@ -372,10 +373,14 @@ export function PainelComunicacoes() {
     [canais, mensagens, pacientes?.itens, templates]
   );
   const conversasFiltradas = useMemo(() => {
-    if (filtroConversas === 'recebidas') return conversasWhatsapp.filter((conversa) => conversa.recebidas > 0);
-    if (filtroConversas === 'falhas') return conversasWhatsapp.filter((conversa) => conversa.pendentes > 0);
-    return conversasWhatsapp;
-  }, [conversasWhatsapp, filtroConversas]);
+    const termo = buscaConversas.trim().toLocaleLowerCase('pt-BR');
+    return conversasWhatsapp.filter((conversa) => {
+      if (filtroConversas === 'recebidas' && conversa.recebidas === 0) return false;
+      if (filtroConversas === 'falhas' && conversa.pendentes === 0) return false;
+      if (filtroConversas === 'acompanhamento' && conversa.statusAtendimento !== 'acompanhamento') return false;
+      return !termo || [conversa.titulo, conversa.contato, conversa.ultimaMensagem].some((texto) => texto.toLocaleLowerCase('pt-BR').includes(termo));
+    });
+  }, [buscaConversas, conversasWhatsapp, filtroConversas]);
   const conversaSelecionada = useMemo(
     () => conversasWhatsapp.find((conversa) => conversa.id === conversaSelecionadaId) ?? conversasFiltradas[0],
     [conversaSelecionadaId, conversasFiltradas, conversasWhatsapp]
@@ -911,17 +916,20 @@ export function PainelComunicacoes() {
               </p>
             </div>
           </div>
-          <div className="flex rounded-md border border-linha bg-fundo p-1 text-xs font-semibold text-texto-suave">
-            {(['todas', 'recebidas', 'falhas'] as const).map((filtro) => (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Campo value={buscaConversas} onChange={(evento) => setBuscaConversas(evento.target.value)} placeholder="Buscar conversa" aria-label="Buscar conversa por paciente, contato ou mensagem" className="w-full sm:w-56" />
+            <div className="flex rounded-md border border-linha bg-fundo p-1 text-xs font-semibold text-texto-suave">
+            {(['todas', 'recebidas', 'acompanhamento', 'falhas'] as const).map((filtro) => (
               <button
                 key={filtro}
                 type="button"
                 onClick={() => setFiltroConversas(filtro)}
                 className={`rounded px-3 py-1.5 ${filtroConversas === filtro ? 'bg-white text-tinta shadow-sm' : ''}`}
               >
-                {filtro === 'todas' ? 'Todas' : filtro === 'recebidas' ? 'Com entrada' : 'Com falha'}
+                {filtro === 'todas' ? 'Todas' : filtro === 'recebidas' ? 'Com entrada' : filtro === 'acompanhamento' ? 'Acompanhar' : 'Com falha'}
               </button>
             ))}
+            </div>
           </div>
         </CartaoCabecalho>
         {conversasFiltradas.length ? (
