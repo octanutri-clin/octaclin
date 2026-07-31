@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-30 apos a Fase 170 - integridade historica de formularios.
+Atualizado em 2026-07-30 apos a Fase 171 - biblioteca de perguntas reutilizaveis.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -250,6 +250,10 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   estrutura historica, com fallback compativel para envios anteriores. A
   migration `1720000001007` foi aplicada no Neon de producao e o backend
   publicado pelo Render no commit `ceffdce`.
+
+- Fase 171 - Biblioteca de perguntas reutilizaveis: perguntas do tenant podem
+  receber chave clinica e visibilidade na biblioteca, ser encontradas por busca
+  ou categoria e incluidas como copias independentes com configuracao e opcoes.
 
 ## Estado atual de uso
 

@@ -28,6 +28,7 @@ import {
   CriarQuestionarioAPartirModeloDto,
   CriarQuestionarioDto,
   DuplicarQuestionarioDto,
+  IncluirPerguntaBibliotecaDto,
   ReordenarPerguntasDto
 } from '../aplicacao/dtos';
 import { ServicoQuestionarios } from '../aplicacao/servico-questionarios';
@@ -59,6 +60,36 @@ export class ControladorQuestionarios {
   @Get('categorias-pergunta')
   listarCategorias(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoQuestionarios.listarCategorias(usuario.tenantId);
+  }
+
+  @Get('biblioteca-perguntas')
+  listarBibliotecaPerguntas(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Query('busca') busca?: string,
+    @Query('categoriaId') categoriaId?: string
+  ) {
+    return this.servicoQuestionarios.listarBibliotecaPerguntas(usuario.tenantId, { busca, categoriaId });
+  }
+
+  @Post('biblioteca-perguntas/:perguntaId/incluir')
+  @Permissoes('questionarios.gerenciar')
+  async incluirPerguntaBiblioteca(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('perguntaId', ParseUUIDPipe) perguntaId: string,
+    @Body() dados: IncluirPerguntaBibliotecaDto
+  ) {
+    const pergunta = await this.servicoQuestionarios.incluirPerguntaBiblioteca(
+      usuario.tenantId,
+      perguntaId,
+      dados.questionarioId,
+      usuario
+    );
+    await this.registrarAuditoria(usuario, requisicao, 'questionarios.biblioteca.incluir', 'pergunta', pergunta.id, {
+      perguntaBibliotecaId: perguntaId,
+      questionarioId: dados.questionarioId
+    });
+    return pergunta;
   }
 
   @Post('questionarios')

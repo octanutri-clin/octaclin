@@ -42,7 +42,11 @@ function criarRepositorioFake(
 
   return {
     create: jest.fn((entrada: Record<string, unknown>) => entrada),
-    count: jest.fn(async () => itens.length),
+    count: jest.fn(async (consulta?: { where?: Record<string, unknown> }) =>
+      consulta?.where
+        ? itens.filter((item) => Object.entries(consulta.where ?? {}).every(([chave, valor]) => corresponde(item[chave], valor))).length
+        : itens.length
+    ),
     find: jest.fn(async (consulta?: { where?: Record<string, unknown>; order?: Record<string, 'ASC' | 'DESC'> }) => {
       const filtrados = consulta?.where
         ? itens.filter((item) => Object.entries(consulta.where ?? {}).every(([chave, valor]) => corresponde(item[chave], valor)))
@@ -162,6 +166,122 @@ describe('ServicoQuestionarios', () => {
         })
       ])
     );
+  });
+
+  it('deve listar apenas perguntas visiveis da biblioteca do tenant com busca e categoria', async () => {
+    const { servico } = criarServico({
+      questionarios: [],
+      categorias: [],
+      perguntas: [
+        {
+          id: 'p-adesao',
+          tenantId: 'tenant-1',
+          questionarioId: 'q-1',
+          categoriaId: 'cat-nutricao',
+          tipo: 'likert',
+          enunciado: 'Como foi sua adesao ao plano?',
+          peso: '1',
+          obrigatoria: true,
+          configuracao: {},
+          ordem: 1,
+          chaveClinica: 'adesao-plano',
+          visivelBiblioteca: true
+        },
+        {
+          id: 'p-oculta',
+          tenantId: 'tenant-1',
+          questionarioId: 'q-1',
+          categoriaId: 'cat-nutricao',
+          tipo: 'likert',
+          enunciado: 'Pergunta privada',
+          peso: '1',
+          obrigatoria: true,
+          configuracao: {},
+          ordem: 2,
+          visivelBiblioteca: false
+        },
+        {
+          id: 'p-outro-tenant',
+          tenantId: 'tenant-2',
+          questionarioId: 'q-2',
+          categoriaId: 'cat-nutricao',
+          tipo: 'likert',
+          enunciado: 'Adesao de outro tenant',
+          peso: '1',
+          obrigatoria: true,
+          configuracao: {},
+          ordem: 1,
+          visivelBiblioteca: true
+        }
+      ],
+      opcaos: [],
+      envios: [],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: []
+    });
+
+    await expect(servico.listarBibliotecaPerguntas('tenant-1', { busca: 'adesao', categoriaId: 'cat-nutricao' })).resolves.toEqual([
+      expect.objectContaining({ id: 'p-adesao', chaveClinica: 'adesao-plano' })
+    ]);
+  });
+
+  it('deve incluir na ordem final uma copia independente da pergunta da biblioteca', async () => {
+    const { servico, dados } = criarServico({
+      questionarios: [{ id: 'q-destino', tenantId: 'tenant-1', versao: 2 }],
+      categorias: [],
+      perguntas: [
+        {
+          id: 'p-existente',
+          tenantId: 'tenant-1',
+          questionarioId: 'q-destino',
+          categoriaId: 'cat-1',
+          tipo: 'texto_longo',
+          enunciado: 'Pergunta existente',
+          peso: '1',
+          obrigatoria: true,
+          configuracao: {},
+          ordem: 1,
+          visivelBiblioteca: false
+        },
+        {
+          id: 'p-biblioteca',
+          tenantId: 'tenant-1',
+          questionarioId: 'q-origem',
+          categoriaId: 'cat-1',
+          tipo: 'multipla_escolha',
+          enunciado: 'Quais refeicoes voce realizou?',
+          peso: '2',
+          obrigatoria: true,
+          configuracao: { multipla: true },
+          ordem: 1,
+          chaveClinica: 'refeicoes-realizadas',
+          visivelBiblioteca: true
+        }
+      ],
+      opcaos: [
+        { id: 'op-1', tenantId: 'tenant-1', perguntaId: 'p-biblioteca', rotulo: 'Cafe', valor: 'cafe', ordem: 1 },
+        { id: 'op-2', tenantId: 'tenant-1', perguntaId: 'p-biblioteca', rotulo: 'Almoco', valor: 'almoco', ordem: 2 }
+      ],
+      envios: [],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: []
+    });
+
+    const incluida = await servico.incluirPerguntaBiblioteca('tenant-1', 'p-biblioteca', 'q-destino', usuarioColaborador);
+
+    expect(incluida).toEqual(
+      expect.objectContaining({
+        id: expect.not.stringMatching('p-biblioteca'),
+        questionarioId: 'q-destino',
+        ordem: 2,
+        chaveClinica: 'refeicoes-realizadas',
+        visivelBiblioteca: false,
+        opcoes: [expect.objectContaining({ rotulo: 'Cafe' }), expect.objectContaining({ rotulo: 'Almoco' })]
+      })
+    );
+    expect(dados.questionarios[0].versao).toBe(3);
   });
 
   it('deve substituir opcoes ao atualizar pergunta de multipla escolha', async () => {

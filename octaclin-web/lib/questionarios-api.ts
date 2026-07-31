@@ -125,6 +125,8 @@ export interface PerguntaApi {
   configuracao: Record<string, unknown>;
   opcoes?: OpcaoPerguntaApi[];
   ordem: number;
+  chaveClinica?: string;
+  visivelBiblioteca: boolean;
 }
 
 export interface OpcaoPerguntaApi {
@@ -161,6 +163,8 @@ export interface SalvarPerguntaEntrada {
   enunciado: string;
   peso: number;
   obrigatoria: boolean;
+  chaveClinica?: string;
+  visivelBiblioteca?: boolean;
   configuracao?: Record<string, unknown>;
   opcoes?: {
     rotulo: string;
@@ -274,6 +278,21 @@ export async function duplicarQuestionario(id: string, entrada: { titulo?: strin
 
 export async function listarPerguntas(questionarioId: string): Promise<PerguntaApi[]> {
   return requisitar<PerguntaApi[]>(`/api/questionarios/${questionarioId}/perguntas`);
+}
+
+export async function listarBibliotecaPerguntas(filtros: { busca?: string; categoriaId?: string } = {}): Promise<PerguntaApi[]> {
+  const parametros = new URLSearchParams();
+  if (filtros.busca) parametros.set('busca', filtros.busca);
+  if (filtros.categoriaId) parametros.set('categoriaId', filtros.categoriaId);
+  const consulta = parametros.toString();
+  return requisitar<PerguntaApi[]>(`/api/biblioteca-perguntas${consulta ? `?${consulta}` : ''}`);
+}
+
+export async function incluirPerguntaBiblioteca(questionarioId: string, perguntaId: string): Promise<PerguntaApi> {
+  return requisitar<PerguntaApi>(`/api/biblioteca-perguntas/${perguntaId}/incluir`, {
+    method: 'POST',
+    body: JSON.stringify({ questionarioId })
+  });
 }
 
 export async function criarPergunta(questionarioId: string, entrada: SalvarPerguntaEntrada): Promise<PerguntaApi> {

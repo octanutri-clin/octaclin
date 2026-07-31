@@ -121,6 +121,15 @@ export class CriarPerguntaDto {
   obrigatoria?: boolean;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  chaveClinica?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  visivelBiblioteca?: boolean;
+
+  @IsOptional()
   @IsObject()
   configuracao?: Record<string, unknown>;
 
@@ -154,6 +163,15 @@ export class AtualizarPerguntaDto {
   @IsOptional()
   @IsBoolean()
   obrigatoria?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  chaveClinica?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  visivelBiblioteca?: boolean;
 
   @IsOptional()
   @IsObject()
@@ -198,6 +216,11 @@ export class CriarAgendamentoQuestionarioDto {
   @IsOptional()
   @IsString()
   timezone?: string;
+}
+
+export class IncluirPerguntaBibliotecaDto {
+  @IsUUID()
+  questionarioId: string;
 }
 
 export class CriarEnvioQuestionarioManualDto {

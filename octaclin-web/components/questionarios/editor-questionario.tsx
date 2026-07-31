@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { AlertTriangle, Archive, BookOpen, CalendarClock, Check, CheckCircle2, ClipboardList, Copy, Eye, Link2, Plus, RefreshCcw, Save, Settings2, Trash2, Wand2 } from 'lucide-react';
+import { AlertTriangle, Archive, BookOpen, CalendarClock, Check, CheckCircle2, ClipboardList, Copy, Eye, LibraryBig, Link2, Plus, RefreshCcw, Save, Settings2, Trash2, Wand2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { ModalConfirmacao } from '@/components/ui/modal';
@@ -25,6 +25,8 @@ import {
   criarQuestionarioAPartirModelo,
   criarQuestionario,
   duplicarQuestionario,
+  incluirPerguntaBiblioteca,
+  listarBibliotecaPerguntas,
   listarPerguntas,
   obterLeituraClinicaQuestionario,
   reordenarPerguntas
@@ -60,7 +62,9 @@ function mapearPergunta(pergunta: PerguntaApi): PerguntaEditor {
       imagemUrl: opcao.imagemUrl,
       ordem: opcao.ordem
     })),
-    ordem: pergunta.ordem
+    ordem: pergunta.ordem,
+    chaveClinica: pergunta.chaveClinica,
+    visivelBiblioteca: pergunta.visivelBiblioteca ?? false
   };
 }
 
@@ -130,6 +134,9 @@ export function EditorQuestionario() {
   const [modelos, setModelos] = useState<ModeloQuestionarioApi[]>([]);
   const [questionarioAtual, setQuestionarioAtual] = useState<QuestionarioApi | null>(null);
   const [perguntas, setPerguntas] = useState<PerguntaEditor[]>([]);
+  const [bibliotecaPerguntas, setBibliotecaPerguntas] = useState<PerguntaApi[]>([]);
+  const [buscaBiblioteca, setBuscaBiblioteca] = useState('');
+  const [categoriaBibliotecaId, setCategoriaBibliotecaId] = useState('');
   const [selecionadaId, setSelecionadaId] = useState<string | null>(null);
   const [titulo, setTitulo] = useState('Check-in semanal de adesao');
   const [descricao, setDescricao] = useState('Protocolo operacional de acompanhamento clinico.');
@@ -158,6 +165,14 @@ export function EditorQuestionario() {
   const categoriasPorId = useMemo(() => new Map(categorias.map((categoria) => [categoria.id, categoria])), [categorias]);
   const pacientesPorId = useMemo(() => new Map(pacientes.map((paciente) => [paciente.id, paciente])), [pacientes]);
   const scoreTotal = perguntas.reduce((total, pergunta) => total + pergunta.peso, 0);
+  const perguntasBibliotecaVisiveis = useMemo(() => {
+    const busca = buscaBiblioteca.trim().toLocaleLowerCase('pt-BR');
+    return bibliotecaPerguntas.filter((pergunta) => {
+      if (pergunta.questionarioId === questionarioAtual?.id) return false;
+      if (categoriaBibliotecaId && pergunta.categoriaId !== categoriaBibliotecaId) return false;
+      return !busca || [pergunta.enunciado, pergunta.chaveClinica ?? ''].some((texto) => texto.toLocaleLowerCase('pt-BR').includes(busca));
+    });
+  }, [bibliotecaPerguntas, buscaBiblioteca, categoriaBibliotecaId, questionarioAtual?.id]);
   const perguntasLeituraFiltradas = useMemo(() => {
     const termo = buscaRespostas.trim().toLocaleLowerCase('pt-BR');
     const itens = leituraClinica?.perguntas ?? [];
@@ -225,12 +240,13 @@ export function EditorQuestionario() {
     setErro(null);
     setSucesso(null);
     try {
-      const bootstrap = await carregarBootstrapQuestionarios();
+      const [bootstrap, biblioteca] = await Promise.all([carregarBootstrapQuestionarios(), listarBibliotecaPerguntas()]);
       setCategorias(bootstrap.categorias);
       setProfissionais(bootstrap.profissionais);
       setPacientes(bootstrap.pacientes);
       setQuestionarios(bootstrap.questionarios.itens);
       setModelos(bootstrap.modelos);
+      setBibliotecaPerguntas(biblioteca);
       setPacienteEnvioId(bootstrap.pacientes[0]?.id ?? '');
 
       const primeiro = bootstrap.questionarios.itens[0];
@@ -354,7 +370,8 @@ export function EditorQuestionario() {
         enunciado: 'Nova pergunta',
         peso: 1,
         obrigatoria: true,
-        configuracao: configuracaoPadrao('likert')
+        configuracao: configuracaoPadrao('likert'),
+        visivelBiblioteca: false
       });
       const mapeada = mapearPergunta(criada);
       setPerguntas((atuais) => [...atuais, mapeada]);
@@ -380,6 +397,8 @@ export function EditorQuestionario() {
         enunciado: perguntaSelecionada.enunciado,
         peso: perguntaSelecionada.peso,
         obrigatoria: perguntaSelecionada.obrigatoria,
+        chaveClinica: perguntaSelecionada.chaveClinica,
+        visivelBiblioteca: perguntaSelecionada.visivelBiblioteca ?? false,
         configuracao: perguntaSelecionada.configuracao,
         opcoes:
           perguntaSelecionada.tipo === 'multipla_escolha'
@@ -391,6 +410,11 @@ export function EditorQuestionario() {
             : []
       });
       setPerguntas((atuais) => atuais.map((pergunta) => (pergunta.id === atualizada.id ? mapearPergunta(atualizada) : pergunta)));
+      setBibliotecaPerguntas((atuais) =>
+        atualizada.visivelBiblioteca
+          ? [atualizada, ...atuais.filter((pergunta) => pergunta.id !== atualizada.id)]
+          : atuais.filter((pergunta) => pergunta.id !== atualizada.id)
+      );
       setSucesso('Pergunta salva.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar pergunta.');
@@ -496,6 +520,25 @@ export function EditorQuestionario() {
       setSucesso('Link do formulario gerado.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao gerar link do formulario.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function incluirDaBiblioteca(perguntaBibliotecaId: string) {
+    if (!questionarioAtual) return;
+
+    setSalvando(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const incluida = await incluirPerguntaBiblioteca(questionarioAtual.id, perguntaBibliotecaId);
+      const mapeada = mapearPergunta(incluida);
+      setPerguntas((atuais) => [...atuais, mapeada]);
+      setSelecionadaId(mapeada.id);
+      setSucesso('Pergunta incluida da biblioteca.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao incluir pergunta da biblioteca.');
     } finally {
       setSalvando(false);
     }
@@ -746,6 +789,55 @@ export function EditorQuestionario() {
               Nova
             </Botao>
           </div>
+          <details className="border-b border-linha bg-superficie px-4 py-3">
+            <summary className="flex cursor-pointer items-center gap-2 text-sm font-medium text-tinta">
+              <LibraryBig className="h-4 w-4 text-primaria" />
+              Biblioteca de perguntas
+            </summary>
+            <div className="mt-3 grid gap-2">
+              <div className="grid gap-2 sm:grid-cols-[1fr_180px]">
+                <Campo
+                  type="search"
+                  value={buscaBiblioteca}
+                  onChange={(event) => setBuscaBiblioteca(event.target.value)}
+                  placeholder="Buscar por enunciado ou chave clinica"
+                  aria-label="Buscar na biblioteca de perguntas"
+                />
+                <Selecao
+                  value={categoriaBibliotecaId}
+                  onChange={(event) => setCategoriaBibliotecaId(event.target.value)}
+                  aria-label="Filtrar categoria da biblioteca"
+                >
+                  <option value="">Todas as categorias</option>
+                  {categorias.map((categoria) => (
+                    <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>
+                  ))}
+                </Selecao>
+              </div>
+              <ul className="grid gap-2">
+                {perguntasBibliotecaVisiveis.length ? perguntasBibliotecaVisiveis.map((pergunta) => (
+                  <li key={pergunta.id} className="flex items-center justify-between gap-3 rounded-md border border-linha bg-white px-3 py-2">
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-tinta">{pergunta.enunciado}</span>
+                      <span className="block truncate text-xs text-texto-suave">
+                        {categoriasPorId.get(pergunta.categoriaId)?.nome ?? 'Sem categoria'}
+                        {pergunta.chaveClinica ? ` - ${pergunta.chaveClinica}` : ''}
+                      </span>
+                    </span>
+                    <Botao
+                      type="button"
+                      aria-label={`Incluir ${pergunta.enunciado}`}
+                      onClick={() => void incluirDaBiblioteca(pergunta.id)}
+                      disabled={salvando || !questionarioAtual}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Incluir
+                    </Botao>
+                  </li>
+                )) : <li className="py-2 text-sm text-texto-suave">Nenhuma pergunta reutilizavel encontrada.</li>}
+              </ul>
+            </div>
+          </details>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={aoFinalizarArraste}>
             <SortableContext items={perguntas.map((pergunta) => pergunta.id)} strategy={verticalListSortingStrategy}>
               <ul className="max-h-[calc(100vh-230px)] overflow-auto">
@@ -827,6 +919,15 @@ export function EditorQuestionario() {
                 </Selecao>
               </div>
               <div className="space-y-1.5">
+                <Rotulo htmlFor="chave-clinica">Chave clinica</Rotulo>
+                <Campo
+                  id="chave-clinica"
+                  value={perguntaSelecionada.chaveClinica ?? ''}
+                  onChange={(event) => atualizarPerguntaLocal('chaveClinica', event.target.value)}
+                  placeholder="Ex.: adesao-semanal"
+                />
+              </div>
+              <div className="space-y-1.5">
                 <Rotulo htmlFor="secao">Secao</Rotulo>
                 <Campo
                   id="secao"
@@ -840,6 +941,18 @@ export function EditorQuestionario() {
                   type="checkbox"
                   checked={perguntaSelecionada.obrigatoria}
                   onChange={(event) => atualizarPerguntaLocal('obrigatoria', event.target.checked)}
+                  className="h-5 w-5 accent-primaria"
+                />
+              </label>
+              <label className="flex items-center justify-between rounded-md border border-linha bg-fundo px-3 py-2">
+                <span>
+                  <span className="block text-sm font-medium text-tinta">Disponivel na biblioteca</span>
+                  <span className="block text-xs text-texto-suave">Permite reutilizar uma copia desta pergunta em outros formularios.</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={perguntaSelecionada.visivelBiblioteca ?? false}
+                  onChange={(event) => atualizarPerguntaLocal('visivelBiblioteca', event.target.checked)}
                   className="h-5 w-5 accent-primaria"
                 />
               </label>

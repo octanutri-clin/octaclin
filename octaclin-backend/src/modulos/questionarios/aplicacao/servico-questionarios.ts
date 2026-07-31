@@ -316,7 +316,9 @@ export class ServicoQuestionarios {
             peso: perguntaOriginal.peso,
             obrigatoria: perguntaOriginal.obrigatoria,
             configuracao: JSON.parse(JSON.stringify(perguntaOriginal.configuracao ?? {})),
-            ordem: perguntaOriginal.ordem
+            ordem: perguntaOriginal.ordem,
+            chaveClinica: perguntaOriginal.chaveClinica,
+            visivelBiblioteca: false
           })
         );
         mapaPerguntas.set(perguntaOriginal.id, perguntaDuplicada.id);
@@ -371,7 +373,9 @@ export class ServicoQuestionarios {
           peso: String(dados.peso),
           obrigatoria: dados.obrigatoria ?? true,
           configuracao: normalizarConfiguracaoPergunta(dados.tipo, dados.configuracao),
-          ordem: totalPerguntas + 1
+          ordem: totalPerguntas + 1,
+          chaveClinica: this.normalizarChaveClinica(dados.chaveClinica),
+          visivelBiblioteca: dados.visivelBiblioteca ?? false
         })
       );
 
@@ -407,6 +411,84 @@ export class ServicoQuestionarios {
     });
   }
 
+  async listarBibliotecaPerguntas(
+    tenantId: string,
+    filtros: { busca?: string; categoriaId?: string } = {}
+  ): Promise<PerguntaComOpcoes[]> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const perguntas = await gerenciador.getRepository(PerguntaOrm).find({
+        where: {
+          tenantId,
+          visivelBiblioteca: true,
+          ...(filtros.categoriaId ? { categoriaId: filtros.categoriaId } : {})
+        },
+        order: { ordem: 'ASC' }
+      });
+      const busca = filtros.busca?.trim().toLocaleLowerCase('pt-BR');
+      const filtradas = busca
+        ? perguntas.filter((pergunta) =>
+            [pergunta.enunciado, pergunta.chaveClinica ?? ''].some((texto) => texto.toLocaleLowerCase('pt-BR').includes(busca))
+          )
+        : perguntas;
+      return this.anexarOpcoesLote(gerenciador, filtradas);
+    });
+  }
+
+  async incluirPerguntaBiblioteca(
+    tenantId: string,
+    perguntaId: string,
+    questionarioId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<PerguntaComOpcoes> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const repositorioPerguntas = gerenciador.getRepository(PerguntaOrm);
+      const origem = await repositorioPerguntas.findOne({
+        where: { id: perguntaId, tenantId, visivelBiblioteca: true }
+      });
+      if (!origem) throw new NotFoundException('Pergunta da biblioteca nao encontrada.');
+
+      const totalPerguntas = await repositorioPerguntas.count({ where: { tenantId, questionarioId } });
+      const copia = await repositorioPerguntas.save(
+        repositorioPerguntas.create({
+          tenantId,
+          questionarioId,
+          categoriaId: origem.categoriaId,
+          tipo: origem.tipo,
+          enunciado: origem.enunciado,
+          peso: origem.peso,
+          obrigatoria: origem.obrigatoria,
+          configuracao: JSON.parse(JSON.stringify(origem.configuracao ?? {})),
+          ordem: totalPerguntas + 1,
+          chaveClinica: origem.chaveClinica,
+          visivelBiblioteca: false
+        })
+      );
+      const opcoes = await gerenciador.getRepository(OpcaoPerguntaOrm).find({
+        where: { tenantId, perguntaId: origem.id },
+        order: { ordem: 'ASC' }
+      });
+      if (opcoes.length) {
+        await gerenciador.getRepository(OpcaoPerguntaOrm).save(
+          opcoes.map((opcao) =>
+            gerenciador.getRepository(OpcaoPerguntaOrm).create({
+              tenantId,
+              perguntaId: copia.id,
+              rotulo: opcao.rotulo,
+              valor: opcao.valor,
+              imagemUrl: opcao.imagemUrl,
+              ordem: opcao.ordem
+            })
+          )
+        );
+      }
+
+      questionario.versao += 1;
+      await gerenciador.getRepository(QuestionarioOrm).save(questionario);
+      return this.anexarOpcoes(gerenciador, copia);
+    });
+  }
+
   async atualizarPergunta(
     tenantId: string,
     questionarioId: string,
@@ -434,6 +516,8 @@ export class ServicoQuestionarios {
       if (dados.enunciado !== undefined) pergunta.enunciado = dados.enunciado;
       if (dados.peso !== undefined) pergunta.peso = String(dados.peso);
       if (dados.obrigatoria !== undefined) pergunta.obrigatoria = dados.obrigatoria;
+      if (dados.chaveClinica !== undefined) pergunta.chaveClinica = this.normalizarChaveClinica(dados.chaveClinica);
+      if (dados.visivelBiblioteca !== undefined) pergunta.visivelBiblioteca = dados.visivelBiblioteca;
       if (dados.configuracao !== undefined || dados.tipo !== undefined) {
         pergunta.configuracao = normalizarConfiguracaoPergunta(tipoFinal, dados.configuracao ?? pergunta.configuracao);
       }
@@ -1078,6 +1162,11 @@ export class ServicoQuestionarios {
         }))
       }))
     };
+  }
+
+  private normalizarChaveClinica(chaveClinica?: string): string | undefined {
+    const normalizada = chaveClinica?.trim();
+    return normalizada || undefined;
   }
 
   private async anexarOpcoes(gerenciador: EntityManager, pergunta: PerguntaOrm): Promise<PerguntaComOpcoes> {

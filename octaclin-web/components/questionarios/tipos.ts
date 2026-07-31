@@ -23,6 +23,8 @@ export interface PerguntaEditor {
   configuracao: Record<string, unknown>;
   opcoes: OpcaoPerguntaEditor[];
   ordem: number;
+  chaveClinica?: string;
+  visivelBiblioteca?: boolean;
 }
 
 export interface OpcaoPerguntaEditor {

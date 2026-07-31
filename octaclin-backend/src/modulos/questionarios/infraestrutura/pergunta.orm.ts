@@ -32,4 +32,10 @@ export class PerguntaOrm {
 
   @Column({ type: 'integer', default: 0 })
   ordem: number;
+
+  @Column({ name: 'chave_clinica', type: 'varchar', length: 120, nullable: true })
+  chaveClinica?: string;
+
+  @Column({ name: 'visivel_biblioteca', type: 'boolean', default: false })
+  visivelBiblioteca: boolean;
 }
