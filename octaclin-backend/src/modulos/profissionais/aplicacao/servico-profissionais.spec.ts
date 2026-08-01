@@ -1,4 +1,6 @@
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { ProfissionalOrm } from '../infraestrutura/profissional.orm';
 import { ServicoProfissionais } from './servico-profissionais';
 
@@ -30,6 +32,42 @@ function criarRepositorioFake() {
 }
 
 describe('ServicoProfissionais', () => {
+  it('deve revogar o acesso ao arquivar um profissional', async () => {
+    const repositorioProfissionais = {
+      findOne: jest.fn(async () => ({ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-1' })),
+      update: jest.fn(async () => ({ affected: 1 }))
+    };
+    const repositorioUsuarios = { update: jest.fn(async () => ({ affected: 1 })) };
+    const repositorioRefreshTokens = { update: jest.fn(async () => ({ affected: 1 })) };
+    const servico = new ServicoProfissionais(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao({
+            getRepository: jest.fn((entidade: unknown) => {
+              if (entidade === ProfissionalOrm) return repositorioProfissionais;
+              if (entidade === UsuarioOrm) return repositorioUsuarios;
+              if (entidade === RefreshTokenOrm) return repositorioRefreshTokens;
+              throw new Error('Repositorio nao mapeado.');
+            })
+          })
+        )
+      } as never,
+      { gerarHashBusca: jest.fn(), criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+      { gerarHash: jest.fn() } as never
+    );
+
+    await servico.arquivar('tenant-1', 'profissional-1');
+
+    expect(repositorioUsuarios.update).toHaveBeenCalledWith(
+      { id: 'usuario-1', tenantId: 'tenant-1' },
+      { ativo: false }
+    );
+    expect(repositorioRefreshTokens.update).toHaveBeenCalledWith(
+      { tenantId: 'tenant-1', usuarioId: 'usuario-1' },
+      { revogadoEm: expect.any(Date) }
+    );
+  });
+
   it('deve criar usuario profissional e perfil no mesmo contexto tenant', async () => {
     const repositorioUsuarios = criarRepositorioFake();
     const repositorioProfissionais = criarRepositorioFake();

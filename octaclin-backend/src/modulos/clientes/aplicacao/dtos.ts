@@ -30,6 +30,27 @@ export class CriarUsuarioClienteDto {
   especialidade?: string;
 }
 
+export class AtualizarPapelUsuarioClienteDto {
+  @IsIn(['Professional', 'Collaborator'])
+  role: PapelUsuarioClienteCriavel;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(180)
+  nomeProfissional?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  registroProfissional?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  especialidade?: string;
+}
+
 export class SolicitarAjusteAssinaturaClienteDto {
   @IsIn(['upgrade', 'downgrade', 'revisao_limite'])
   acao: 'upgrade' | 'downgrade' | 'revisao_limite';

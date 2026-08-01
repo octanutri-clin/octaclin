@@ -1,10 +1,11 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Edit3, Plus, RefreshCcw, Save, Stethoscope, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CheckCircle2, Edit3, Link2, Plus, RefreshCcw, Save, Stethoscope, Trash2, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { ModalConfirmacao } from '@/components/ui/modal';
+import { Abas } from '@/components/ui/abas';
 import { Tabela, TabelaCabecalho, TabelaConteudo, TabelaLinha, TabelaLinhas, TabelaVazia } from '@/components/ui/tabela';
 import { obterSessao } from '@/lib/auth-api';
 import { listarStatusGoogleProfissionais } from '@/lib/agenda-api';
@@ -52,6 +53,7 @@ function montarPayload(formulario: FormularioProfissional, editandoId: string | 
 }
 
 export function ListaProfissionais() {
+  const [areaAtiva, setAreaAtiva] = useState<'diretorio' | 'disponibilidade' | 'integracoes'>('diretorio');
   const [dados, setDados] = useState<RespostaPaginada<ProfissionalResumo> | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
@@ -63,13 +65,18 @@ export function ListaProfissionais() {
   const [podeGerenciar, setPodeGerenciar] = useState(false);
   const [profissionalParaArquivar, setProfissionalParaArquivar] = useState<ProfissionalResumo | null>(null);
   const [googlePorProfissional, setGooglePorProfissional] = useState<Map<string, boolean>>(new Map());
+  const [statusGoogleIndisponivel, setStatusGoogleIndisponivel] = useState(false);
 
   useEffect(() => {
     void obterSessao().then(async (sessao) => {
       setPodeGerenciar(Boolean(sessao?.permissoes?.includes('profissionais.gerenciar')));
       if (sessao?.papel === 'SuperAdmin') {
-        const status = await listarStatusGoogleProfissionais().catch(() => []);
-        setGooglePorProfissional(new Map(status.map((item) => [item.profissionalId, item.conectado])));
+        try {
+          const status = await listarStatusGoogleProfissionais();
+          setGooglePorProfissional(new Map(status.map((item) => [item.profissionalId, item.conectado])));
+        } catch {
+          setStatusGoogleIndisponivel(true);
+        }
       }
     });
   }, []);
@@ -192,6 +199,20 @@ export function ListaProfissionais() {
         </div>
       ) : null}
 
+      <Abas
+        identificador="equipe-clinica"
+        rotulo="Areas da equipe clinica"
+        abas={[
+          { id: 'diretorio', rotulo: 'Diretorio' },
+          { id: 'disponibilidade', rotulo: 'Disponibilidade' },
+          { id: 'integracoes', rotulo: 'Integracoes' }
+        ]}
+        ativaId={areaAtiva}
+        aoMudar={(id) => setAreaAtiva(id as typeof areaAtiva)}
+      />
+
+      {areaAtiva === 'diretorio' ? (
+      <div id="equipe-clinica-diretorio-painel" role="tabpanel" aria-labelledby="equipe-clinica-diretorio-aba" className="grid gap-4">
       {podeGerenciar ? (
       <Cartao>
         <form onSubmit={salvar}>
@@ -317,6 +338,63 @@ export function ListaProfissionais() {
           </TabelaLinhas>
         </TabelaConteudo>
       </Tabela>
+      </div>
+      ) : null}
+
+      {areaAtiva === 'disponibilidade' ? (
+        <section id="equipe-clinica-disponibilidade-painel" role="tabpanel" aria-labelledby="equipe-clinica-disponibilidade-aba" className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {dados?.itens.length ? dados.itens.map((profissional) => (
+            <Cartao key={profissional.id}>
+              <CartaoConteudo className="grid gap-3">
+                <div className="flex items-start gap-3">
+                  <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-primaria" />
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-semibold">{profissional.nome}</h3>
+                    <p className="mt-1 text-xs text-texto-suave">Agenda interna disponivel mesmo sem integracao externa.</p>
+                  </div>
+                </div>
+                <a className="inline-flex min-h-11 items-center justify-center rounded-md border border-linha px-3 text-sm font-semibold text-primaria hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria" href={`/agenda?profissionalId=${profissional.id}`} aria-label={`Abrir agenda de ${profissional.nome}`}>
+                  Abrir agenda
+                </a>
+              </CartaoConteudo>
+            </Cartao>
+          )) : <EstadoEquipeVazia />}
+        </section>
+      ) : null}
+
+      {areaAtiva === 'integracoes' ? (
+        <section id="equipe-clinica-integracoes-painel" role="tabpanel" aria-labelledby="equipe-clinica-integracoes-aba" className="grid gap-4">
+          <div className="flex items-start gap-3 rounded-md border border-linha bg-superficie px-4 py-3 text-sm">
+            <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-primaria" />
+            <div>
+              <p className="font-semibold">Acesso e permissoes</p>
+              <p className="mt-1 text-texto-suave">Convites e permissoes ficam na area Equipe da conta.</p>
+            </div>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {dados?.itens.length ? dados.itens.map((profissional) => {
+              const conectado = googlePorProfissional.get(profissional.id);
+              return (
+                <Cartao key={profissional.id}>
+                  <CartaoConteudo>
+                    <h3 className="text-sm font-semibold">{profissional.nome}</h3>
+                    <p className="mt-2 text-sm text-texto-suave">
+                       {statusGoogleIndisponivel
+                         ? 'Estado da Google Agenda indisponivel'
+                         : conectado === true
+                           ? 'Google Agenda conectada'
+                           : conectado === false
+                             ? 'Google Agenda desconectada'
+                             : 'Google Agenda nao configurada'}
+                    </p>
+                    <p className="mt-1 text-xs text-texto-sutil">A agenda interna continua funcionando independentemente desta integracao.</p>
+                  </CartaoConteudo>
+                </Cartao>
+              );
+            }) : <EstadoEquipeVazia />}
+          </div>
+        </section>
+      ) : null}
 
       <ModalConfirmacao
         aberto={profissionalParaArquivar !== null}
@@ -329,4 +407,8 @@ export function ListaProfissionais() {
       />
     </section>
   );
+}
+
+function EstadoEquipeVazia() {
+  return <p className="rounded-md border border-linha bg-superficie p-4 text-sm text-texto-suave">Nenhum profissional carregado.</p>;
 }

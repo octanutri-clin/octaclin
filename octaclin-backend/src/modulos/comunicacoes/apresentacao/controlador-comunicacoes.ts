@@ -43,9 +43,9 @@ export class ControladorComunicacoes {
   }
 
   @Get('canais')
-  @Permissoes('comunicacoes.canais.gerenciar')
-  listarCanais(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoComunicacoes.listarCanais(usuario.tenantId);
+  async listarCanais(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    const canais = await this.servicoComunicacoes.listarCanais(usuario.tenantId);
+    return canais.map(({ id, tipo, nome, ativo }) => ({ id, tipo, nome, ativo, configuracao: {} }));
   }
 
   @Post('templates')
@@ -64,9 +64,16 @@ export class ControladorComunicacoes {
   }
 
   @Get('templates')
-  @Permissoes('comunicacoes.templates.gerenciar')
-  listarTemplates(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoComunicacoes.listarTemplates(usuario.tenantId);
+  async listarTemplates(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    const templates = await this.servicoComunicacoes.listarTemplates(usuario.tenantId);
+    return templates.map(({ id, canal, codigoExterno, nome, conteudo, aprovado }) => ({
+      id,
+      canal,
+      codigoExterno,
+      nome,
+      conteudo,
+      aprovado
+    }));
   }
 
   @Get('mensagens')
@@ -83,13 +90,14 @@ export class ControladorComunicacoes {
   ) {
     const mensagem = await this.servicoComunicacoes.dispararMensagem(usuario.tenantId, dados);
     await this.processadorNotificacoes.processarMensagem(usuario.tenantId, mensagem.id, { propagarErro: false });
+    const mensagemAtualizada = await this.servicoComunicacoes.obterMensagem(usuario.tenantId, mensagem.id);
     await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.mensagem.disparar', 'mensagem_notificacao', mensagem.id, {
       pacienteId: dados.pacienteId,
       canalId: dados.canalId,
       templateId: dados.templateId,
-      status: mensagem.status
+      status: mensagemAtualizada.status
     });
-    return mensagem;
+    return mensagemAtualizada;
   }
 
   @Post('whatsapp/associar-contato')

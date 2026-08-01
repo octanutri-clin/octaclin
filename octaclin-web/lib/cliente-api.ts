@@ -184,6 +184,13 @@ export interface CriarUsuarioClienteEntrada {
   especialidade?: string;
 }
 
+export interface AtualizarPapelUsuarioClienteEntrada {
+  role: PapelUsuarioClienteCriavelApi;
+  nomeProfissional?: string;
+  registroProfissional?: string;
+  especialidade?: string;
+}
+
 async function extrairMensagemErro(resposta: Response): Promise<string> {
   const texto = await resposta.text();
   try {
@@ -275,6 +282,19 @@ export async function criarUsuarioCliente(entrada: CriarUsuarioClienteEntrada): 
 export async function desativarUsuarioCliente(id: string): Promise<void> {
   const resposta = await fetch(`/api/cliente/usuarios/${id}`, { method: 'DELETE' });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+}
+
+export async function atualizarPapelUsuarioCliente(
+  id: string,
+  entrada: AtualizarPapelUsuarioClienteEntrada
+): Promise<UsuarioClienteApi> {
+  const resposta = await fetch(`/api/cliente/usuarios/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entrada)
+  });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<UsuarioClienteApi>;
 }
 
 export async function reenviarConviteUsuarioCliente(usuarioId: string): Promise<UsuarioClienteApi> {

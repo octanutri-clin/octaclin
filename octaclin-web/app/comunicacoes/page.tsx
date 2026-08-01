@@ -3,7 +3,7 @@ import { PainelComunicacoes } from '@/components/comunicacoes/painel-comunicacoe
 
 export default function ComunicacoesPage() {
   return (
-    <ConsoleShell titulo="Comunicacoes" subtitulo="Canais e mensagens">
+    <ConsoleShell titulo="Comunicacoes" subtitulo="Conversas e relacionamento com pacientes">
       <PainelComunicacoes />
     </ConsoleShell>
   );

@@ -8,6 +8,7 @@ import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import {
   AtualizarConfiguracoesClienteDto,
+  AtualizarPapelUsuarioClienteDto,
   AtualizarPerfilEmpresaClienteDto,
   CriarUsuarioClienteDto,
   SolicitarAjusteAssinaturaClienteDto
@@ -149,6 +150,28 @@ export class ControladorPortalCliente {
   @Permissoes('cliente.usuarios.desativar')
   desativarUsuario(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
     return this.servicoUsuariosCliente.desativar(usuario.tenantId, usuario.usuarioId, id);
+  }
+
+  @Patch('usuarios/:id')
+  @Permissoes('cliente.usuarios.gerenciar')
+  async atualizarPapelUsuario(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dados: AtualizarPapelUsuarioClienteDto
+  ) {
+    const atualizado = await this.servicoUsuariosCliente.atualizarPapel(usuario.tenantId, usuario.usuarioId, id, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'cliente.usuario.alterar_papel',
+      recursoTipo: 'usuario',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { role: atualizado.role }
+    });
+    return atualizado;
   }
 
   @Post('usuarios/:id/convite/reenvio')

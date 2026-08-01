@@ -46,7 +46,7 @@ async function assertCamposComLabelAcessivel(page) {
 async function contarElementosFocalizaveis(page) {
   return page.evaluate(() => {
     const seletor =
-      'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+      'a[href]:not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])';
     return Array.from(document.querySelectorAll(seletor)).filter((elemento) => {
       const retangulo = elemento.getBoundingClientRect();
       return retangulo.width > 0 && retangulo.height > 0;
@@ -62,6 +62,8 @@ async function contarElementosFocalizaveis(page) {
 // Tab sem foco perdido" quanto "foco visivel em controles principais" em uma
 // unica passada.
 async function assertTabPreservaEExibeFoco(page) {
+  // O toolbar de desenvolvimento do Next nao pertence ao produto e pode capturar Tab fora da viewport.
+  await page.locator('nextjs-portal').evaluateAll((elementos) => elementos.forEach((elemento) => elemento.remove()));
   const totalFocalizaveis = await contarElementosFocalizaveis(page);
   expect(totalFocalizaveis, 'Nenhum elemento focalizavel encontrado na pagina').toBeGreaterThan(0);
 

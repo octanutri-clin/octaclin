@@ -97,6 +97,16 @@ export class ServicoComunicacoes {
     });
   }
 
+  async obterMensagem(tenantId: string, mensagemId: string): Promise<MensagemNotificacaoOrm> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const mensagem = await gerenciador.getRepository(MensagemNotificacaoOrm).findOne({
+        where: { id: mensagemId, tenantId }
+      });
+      if (!mensagem) throw new NotFoundException('Mensagem de notificacao nao encontrada.');
+      return mensagem;
+    });
+  }
+
   async associarContatoWhatsapp(tenantId: string, dados: AssociarContatoWhatsappDto) {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorioPacientes = gerenciador.getRepository(PacienteOrm);

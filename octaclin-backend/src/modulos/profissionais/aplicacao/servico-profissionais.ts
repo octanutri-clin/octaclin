@@ -6,6 +6,7 @@ import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguran
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
 import { AtualizarProfissionalDto, CriarProfissionalDto, ProfissionalRespostaDto } from './dtos';
 import { ProfissionalOrm } from '../infraestrutura/profissional.orm';
 
@@ -107,7 +108,11 @@ export class ServicoProfissionais {
 
   async arquivar(tenantId: string, profissionalId: string): Promise<void> {
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const resultado = await gerenciador.getRepository(ProfissionalOrm).update(
+      const repositorio = gerenciador.getRepository(ProfissionalOrm);
+      const profissional = await repositorio.findOne({ where: { id: profissionalId, tenantId, arquivadoEm: IsNull() } });
+      if (!profissional) throw new NotFoundException('Profissional nao encontrado.');
+
+      const resultado = await repositorio.update(
         { id: profissionalId, tenantId, arquivadoEm: IsNull() },
         { arquivadoEm: new Date() }
       );
@@ -115,6 +120,14 @@ export class ServicoProfissionais {
       if (!resultado.affected) {
         throw new NotFoundException('Profissional nao encontrado.');
       }
+      await gerenciador.getRepository(UsuarioOrm).update(
+        { id: profissional.usuarioId, tenantId },
+        { ativo: false }
+      );
+      await gerenciador.getRepository(RefreshTokenOrm).update(
+        { tenantId, usuarioId: profissional.usuarioId },
+        { revogadoEm: new Date() }
+      );
     });
   }
 

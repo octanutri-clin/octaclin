@@ -37,6 +37,7 @@ export type PermissaoOctaClin =
   | 'cliente.usuarios.ler'
   | 'cliente.usuarios.convidar'
   | 'cliente.usuarios.desativar'
+  | 'cliente.usuarios.gerenciar'
   | 'cliente.convites.gerenciar'
   | 'cliente.configuracoes.gerenciar';
 
@@ -55,6 +56,7 @@ const permissoesCliente = [
   'cliente.usuarios.ler',
   'cliente.usuarios.convidar',
   'cliente.usuarios.desativar',
+  'cliente.usuarios.gerenciar',
   'cliente.convites.gerenciar',
   'cliente.configuracoes.gerenciar'
 ] as const satisfies readonly PermissaoOctaClin[];

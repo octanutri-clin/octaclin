@@ -12,7 +12,10 @@ const referenciasObrigatorias = [
   'octaclin-backend/src/modulos/auth/aplicacao/servico-auth.spec.ts',
   'octaclin-backend/src/modulos/agenda/aplicacao/servico-sincronizacao-google-calendar.spec.ts',
   'octaclin-web/scripts/test-autorizacao-rotas.mjs',
-  'octaclin-web/scripts/smoke-e2e-bff.mjs'
+  'octaclin-web/scripts/smoke-e2e-bff.mjs',
+  'octaclin-backend/src/modulos/clientes/aplicacao/servico-usuarios-cliente.spec.ts',
+  'octaclin-backend/src/modulos/comunicacoes/apresentacao/controlador-comunicacoes.spec.ts',
+  'octaclin-web/tests/visual/fase-196-comunicacoes-equipe.spec.mjs'
 ];
 
 for (const referencia of referenciasObrigatorias) {

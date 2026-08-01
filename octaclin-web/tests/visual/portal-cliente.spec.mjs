@@ -26,6 +26,7 @@ async function prepararSessaoCliente(page, opcoes = {}) {
           'cliente.usuarios.ler',
           'cliente.usuarios.convidar',
           'cliente.usuarios.desativar',
+          'cliente.usuarios.gerenciar',
           'cliente.convites.gerenciar',
           'cliente.configuracoes.gerenciar'
         ],
@@ -160,6 +161,24 @@ async function prepararSessaoCliente(page, opcoes = {}) {
         ativo: true,
         criadoEm: '2026-07-22T10:00:00.000Z',
         atualizadoEm: '2026-07-22T10:00:00.000Z'
+      })
+    });
+  });
+
+  await page.route('**/api/cliente/usuarios/colaborador-1', async (route) => {
+    const corpo = JSON.parse(route.request().postData() ?? '{}');
+    expect(corpo).toEqual({ role: 'Professional', nomeProfissional: 'Dra. Agenda' });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'colaborador-1',
+        tenantId: 'tenant-1',
+        email: 'agenda@octaclin.local',
+        role: 'Professional',
+        ativo: true,
+        criadoEm: '2026-07-12T10:00:00.000Z',
+        atualizadoEm: '2026-08-01T10:00:00.000Z'
       })
     });
   });
@@ -346,22 +365,57 @@ async function assertSemOverflowHorizontal(page) {
 }
 
 test.describe('portal do cliente', () => {
+  test('divide a conta por tarefas e nao expoe identificadores internos', async ({ page }) => {
+    await prepararSessaoCliente(page);
+    await page.goto('/cliente');
+
+    const areas = page.getByRole('tablist', { name: 'Areas da conta' });
+    for (const nome of ['Ativacao', 'Assinatura', 'Consumo', 'Equipe', 'Preferencias', 'Marca', 'Integracoes', 'Dados fiscais']) {
+      await expect(areas.getByRole('tab', { name: nome })).toBeVisible();
+    }
+
+    await expect(areas.getByRole('tab', { name: 'Ativacao' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('heading', { name: 'Ativacao da clinica' })).toBeVisible();
+    await expect(page.getByText('tenant-1')).toHaveCount(0);
+    await expect(page.getByText('cliente-1')).toHaveCount(0);
+    await expect(page.getByText('conta_cliente')).toHaveCount(0);
+    await expect(page.getByText('manual_admin')).toHaveCount(0);
+
+    await areas.getByRole('tab', { name: 'Assinatura' }).click();
+    await expect(page.locator('#assinatura').getByText('Renova em 22/08/26')).toBeVisible();
+
+    await areas.getByRole('tab', { name: 'Consumo' }).click();
+    await expect(page.locator('#assinatura').getByText('Mensagens no mes')).toBeVisible();
+
+    await areas.getByRole('tab', { name: 'Equipe' }).click();
+    await expect(page.locator('#gestao-usuarios').getByRole('heading', { name: 'Gerenciar usuarios' })).toBeVisible();
+    await page.getByLabel('Permissao de agenda@octaclin.local').selectOption('Professional');
+    await page.getByLabel('Nome profissional de agenda@octaclin.local').fill('Dra. Agenda');
+    await page.getByRole('button', { name: 'Salvar acesso de agenda@octaclin.local' }).click();
+    await expect(page.getByText('Permissoes do usuario atualizadas. O novo acesso vale no proximo login.')).toBeVisible();
+
+    await areas.getByRole('tab', { name: 'Marca' }).click();
+    await expect(page.getByRole('heading', { name: 'Identidade da clinica' })).toBeVisible();
+
+    await areas.getByRole('tab', { name: 'Dados fiscais' }).click();
+    await expect(page.locator('#perfil-fiscal').getByRole('heading', { name: 'Perfil fiscal' })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('renderiza base de conta sem expor console ou portal do paciente', async ({ page }, testInfo) => {
     await prepararSessaoCliente(page);
     await page.goto('/cliente', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     await expect(page.getByRole('heading', { name: 'Portal do cliente' })).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Navegacao do cliente' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Conta' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Assinatura' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Usuarios' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Configuracoes' })).toBeVisible();
+    const areas = page.getByRole('tablist', { name: 'Areas da conta' });
+    await expect(areas).toBeVisible();
     const resumoConta = page.locator('#conta');
     await expect(resumoConta.getByText('Resumo da conta')).toBeVisible();
     await expect(resumoConta.getByText('Clinica Octa Real')).toBeVisible();
-    await expect(resumoConta.getByText('clinica-octa-real')).toBeVisible();
     await expect(resumoConta.getByText('Profissional')).toBeVisible();
     await expect(page.getByText('4 usuarios ativos')).toBeVisible();
+
+    await areas.getByRole('tab', { name: 'Equipe' }).click();
     await expect(page.getByText('2 profissionais')).toBeVisible();
     await expect(page.getByText('1 paciente')).toBeVisible();
     const gestaoUsuarios = page.locator('#gestao-usuarios');
@@ -371,7 +425,7 @@ test.describe('portal do cliente', () => {
     await expect(gestaoUsuarios.getByText('Senha inicial')).toHaveCount(0);
     await expect(gestaoUsuarios.getByText('gestor@octaclin.local')).toBeVisible();
     await expect(gestaoUsuarios.locator('span').filter({ hasText: 'agenda@octaclin.local' })).toBeVisible();
-    await expect(gestaoUsuarios.locator('span').filter({ hasText: 'Collaborator' })).toBeVisible();
+    await expect(gestaoUsuarios.getByLabel('Permissao de agenda@octaclin.local')).toHaveValue('Collaborator');
     const convitesUsuarios = page.locator('#convites-usuarios');
     await expect(convitesUsuarios.getByRole('heading', { name: 'Convites pendentes' })).toBeVisible();
     await expect(convitesUsuarios.getByText('agenda@octaclin.local')).toBeVisible();
@@ -390,33 +444,47 @@ test.describe('portal do cliente', () => {
     await expect(historicoConvites.getByText('Convite reenviado', { exact: true })).toBeVisible();
     await expect(historicoConvites.getByText('Convite revogado', { exact: true })).toBeVisible();
     await expect(page.getByText('Acesso profissional separado')).toBeVisible();
+
+    await areas.getByRole('tab', { name: 'Assinatura' }).click();
     const assinatura = page.locator('#assinatura');
     await expect(assinatura.getByText('Profissional')).toBeVisible();
     await expect(assinatura.getByText('Renova em 22/08/26')).toBeVisible();
-    await expect(assinatura.getByText('Usuarios administrativos', { exact: true })).toBeVisible();
-    await expect(assinatura.getByText('3 / 3')).toBeVisible();
-    await expect(assinatura.getByText('Limite atingido')).toBeVisible();
-    await expect(assinatura.getByText('Mensagens no mes')).toBeVisible();
-    await expect(assinatura.getByText('790 / 1000')).toBeVisible();
     await expect(assinatura.getByText('Plano recomendado')).toBeVisible();
     await expect(assinatura.locator('p').filter({ hasText: /^Clinica$/ })).toBeVisible();
     await expect(assinatura.getByRole('button', { name: 'Solicitar upgrade para Clinica' })).toBeVisible();
     await expect(assinatura.getByRole('button', { name: 'Pedir revisao de limite' })).toBeVisible();
     await assinatura.getByRole('button', { name: 'Solicitar upgrade para Clinica' }).click();
     await expect(assinatura.getByText('Solicitacao de upgrade enviada.')).toBeVisible();
+
+    await areas.getByRole('tab', { name: 'Consumo' }).click();
+    await expect(assinatura.getByText('Usuarios administrativos', { exact: true })).toBeVisible();
+    await expect(assinatura.getByText('3 / 3')).toBeVisible();
+    await expect(assinatura.getByText('Limite atingido')).toBeVisible();
+    await expect(assinatura.getByText('Mensagens no mes')).toBeVisible();
+    await expect(assinatura.getByText('790 / 1000')).toBeVisible();
+
+    await areas.getByRole('tab', { name: 'Preferencias' }).click();
     const configuracoes = page.locator('#configuracoes');
-    await expect(configuracoes.getByRole('heading', { name: 'Configuracoes da conta' })).toBeVisible();
+    await expect(configuracoes.getByRole('heading', { name: 'Preferencias da conta' })).toBeVisible();
     await expect(configuracoes.getByLabel('Nome da clinica')).toHaveValue('Clinica Octa Real');
     await expect(configuracoes.getByLabel('Timezone')).toHaveValue('America/Sao_Paulo');
     await expect(configuracoes.getByLabel('Idioma')).toHaveValue('pt-BR');
+    await configuracoes.getByRole('button', { name: 'Salvar configuracoes' }).click();
+    await expect(configuracoes.getByText('Configuracoes salvas.')).toBeVisible();
+
+    await areas.getByRole('tab', { name: 'Marca' }).click();
     await expect(configuracoes.getByLabel('Email remetente')).toHaveValue('contato@octaclin.com.br');
+    await configuracoes.getByLabel('Nome exibido').fill('Octa Prime');
+    await configuracoes.getByRole('button', { name: 'Salvar configuracoes' }).click();
+
+    await areas.getByRole('tab', { name: 'Integracoes' }).click();
     await expect(configuracoes.getByRole('checkbox', { name: 'Email' })).toBeChecked();
     await expect(configuracoes.getByRole('checkbox', { name: 'WhatsApp' })).toBeChecked();
-    await configuracoes.getByLabel('Nome exibido').fill('Octa Prime');
     await configuracoes.getByRole('checkbox', { name: 'WhatsApp' }).uncheck();
     await configuracoes.getByRole('button', { name: 'Salvar configuracoes' }).click();
     await expect(configuracoes.getByText('Configuracoes salvas.')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Perfil fiscal' })).toBeVisible();
+
+    await areas.getByRole('tab', { name: 'Dados fiscais' }).click();
     const perfilFiscal = page.locator('#perfil-fiscal');
     await expect(perfilFiscal.getByRole('heading', { name: 'Perfil fiscal' })).toBeVisible();
     await expect(perfilFiscal.getByLabel('Tipo de pessoa')).toHaveValue('pj');
@@ -443,9 +511,12 @@ test.describe('portal do cliente', () => {
     await prepararSessaoCliente(page, { statusAssinatura: 'suspensa' });
     await page.goto('/cliente');
 
+    const areas = page.getByRole('tablist', { name: 'Areas da conta' });
+    await areas.getByRole('tab', { name: 'Assinatura' }).click();
     const assinatura = page.locator('#assinatura');
-    await expect(assinatura.getByText('Assinatura suspensa com origem manual_admin.')).toBeVisible();
+    await expect(assinatura.getByText('Assinatura suspensa.')).toBeVisible();
     await expect(assinatura.getByText('Novas acoes estao bloqueadas, mas os dados existentes continuam disponiveis.')).toBeVisible();
+    await areas.getByRole('tab', { name: 'Equipe' }).click();
     await expect(page.locator('#gestao-usuarios').getByRole('button', { name: 'Assinatura bloqueada' })).toBeDisabled();
     await assertSemOverflowHorizontal(page);
   });
@@ -454,6 +525,7 @@ test.describe('portal do cliente', () => {
     await prepararSessaoCliente(page);
     await page.goto('/cliente');
 
+    await page.getByRole('tablist', { name: 'Areas da conta' }).getByRole('tab', { name: 'Equipe' }).click();
     const gestaoUsuarios = page.locator('#gestao-usuarios');
     await gestaoUsuarios.getByLabel('Papel').selectOption('Professional');
 

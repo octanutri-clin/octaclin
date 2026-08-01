@@ -27,6 +27,7 @@ describe('Matriz de permissoes OctaClin', () => {
     expect(permissoes).toContain('cliente.usuarios.ler');
     expect(permissoes).toContain('cliente.usuarios.convidar');
     expect(permissoes).toContain('cliente.usuarios.desativar');
+    expect(permissoes).toContain('cliente.usuarios.gerenciar');
     expect(permissoes).toContain('cliente.convites.gerenciar');
     expect(permissoes).not.toContain('console.acessar');
     expect(permissoes).not.toContain('portal.acessar');
