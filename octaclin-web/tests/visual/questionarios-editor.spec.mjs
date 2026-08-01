@@ -59,4 +59,28 @@ test.describe('Editor de questionarios', () => {
     await page.getByLabel('Selecionar').selectOption('q-2');
     await expect(page.getByLabel('Titulo')).toHaveValue('Avaliacao mensal');
   });
+
+  test('gera recorrencia semanal em linguagem comum sem expor cron', async ({ page }) => {
+    let corpoAgendamento = null;
+    await criarSessao(page);
+    await mockarBff(page);
+    await page.route('**/api/agendamentos-questionario', async (route) => {
+      corpoAgendamento = route.request().postDataJSON();
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 'agendamento-1' }) });
+    });
+    await page.goto('/questionarios');
+
+    await page.getByRole('tab', { name: 'Distribuicoes' }).click();
+    await expect(page.getByText('Cron', { exact: true })).toHaveCount(0);
+
+    await page.getByLabel('Paciente do check-in recorrente').selectOption('paciente-1');
+    await page.getByLabel('Frequencia').selectOption('semanal');
+    await page.getByLabel('Dia da semana').selectOption('1');
+    await page.getByLabel('Horario').fill('08:00');
+    await page.getByRole('button', { name: 'Criar check-in recorrente' }).click();
+
+    await expect.poll(() => corpoAgendamento).toEqual(
+      expect.objectContaining({ regraCron: '0 8 * * 1', pacienteId: 'paciente-1' })
+    );
+  });
 });
