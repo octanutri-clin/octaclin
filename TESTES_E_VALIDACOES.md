@@ -235,6 +235,12 @@ pnpm test:e2e:criticas
 
 A suite `octaclin-web/tests/visual/jornadas-criticas.spec.mjs` valida convite administrativo, criacao de paciente, agendamento com email/WhatsApp/Google Calendar e portal do paciente com notificacoes/plano. O comando raiz usa `validar-jornadas-criticas.ps1` para subir o Next temporariamente e encerrar a porta ao final.
 
+A suite `octaclin-web/tests/visual/questionarios-editor.spec.mjs` (Fase 194) valida a guarda de alteracoes nao salvas do editor de questionarios, a recorrencia de check-in em linguagem comum (sem expor cron) e o preview simultaneo em telas largas:
+
+```powershell
+pnpm --dir octaclin-web exec playwright test tests/visual/questionarios-editor.spec.mjs --reporter=list
+```
+
 ## Dados realistas de staging
 
 Use quando alterar massa de staging, seeds ou dados de QA:

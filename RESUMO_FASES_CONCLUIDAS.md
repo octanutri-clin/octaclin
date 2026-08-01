@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-31 apos a Fase 193 - pacientes e prontuario orientados a conduta.
+Atualizado em 2026-08-01 apos a Fase 194 - formularios, editor e leitura longitudinal.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -392,6 +392,17 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   de aba do prontuario ou voltar para a lista). Corrigidos os atalhos do
   dashboard `#novo-paciente` e `#novo-agendamento`, que tinham parado de abrir
   o formulario correto apos os formularios virarem modal nas Fases 190/192.
+- Fase 194 - Formularios, editor e leitura longitudinal: o editor de
+  questionarios (1593 linhas, ~35 `useState` em um unico componente) foi
+  dividido em 5 areas (Formularios/Editor/Biblioteca/Distribuicoes/
+  Respostas) sobre um hook unico de estado (`useWorkspaceQuestionarios`).
+  O preview do paciente passou a ficar simultaneo a edicao (sem toggle). O
+  campo de cron cru, que aparecia duas vezes na tela, virou um seletor de
+  recorrencia em linguagem comum (frequencia/dia da semana/horario) sem
+  mudar o contrato do backend. A guarda de alteracoes nao salvas, que so
+  tinha um banner de texto sem enforcement, ganhou `beforeunload` +
+  confirmacao real (mesmo padrao da Fase 193). Ver
+  `fase-194-formularios-editor-leitura-longitudinal.md`.
 
 ## Estado atual de uso
 

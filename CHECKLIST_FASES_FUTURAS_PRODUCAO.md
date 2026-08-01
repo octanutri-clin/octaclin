@@ -936,7 +936,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     68 testes), `test:authz` (22 verificacoes), `security:secrets`,
     `validar-preflight.ps1 -DocsOnly`.
 
-- [ ] Fase 194 - Formularios, editor e leitura longitudinal.
+- [x] Fase 194 - Formularios, editor e leitura longitudinal.
   - Separar o modulo em Formularios, Editor, Biblioteca, Distribuicoes e
     Respostas, reduzindo responsabilidades do componente atual.
   - Organizar o editor com estrutura, edicao e preview simultaneo; preservar
@@ -948,6 +948,25 @@ publicado antes de ampliar a superficie de mudancas visuais.
     sem duplicar dados do prontuario.
   - Aceite: montar, publicar, distribuir, responder, revisar e comparar um
     formulario de ponta a ponta em desktop e celular.
+  - Status: concluida em 2026-08-01. `EditorQuestionario` (1593 linhas, ~35
+    `useState`) virou container de ~60 linhas: estado extraido para o hook
+    `useWorkspaceQuestionarios`, UI dividida em `AreaFormularios`,
+    `AreaEditor`, `AreaBiblioteca`, `AreaDistribuicao`, `AreaRespostas`.
+    Preview do paciente passou a ser simultaneo (3 colunas, sem toggle).
+    Cron cru substituido por `SeletorRecorrencia` em linguagem comum
+    (frequencia/dia da semana/horario), sem mudar o contrato do backend.
+    Corrigida a guarda de alteracoes nao salvas, que so tinha um banner de
+    texto sem `beforeunload`/confirmacao real (mesmo padrao da Fase 193).
+    Versao, leitura clinica e matriz longitudinal ja estavam prontas e so
+    foram realocadas.
+  - Data: 2026-08-01. Saida:
+    `fase-194-formularios-editor-leitura-longitudinal.md`.
+  - Validacoes: `pnpm --dir octaclin-web typecheck`, `lint`, `build`,
+    Playwright novo (`questionarios-editor.spec.mjs` = 6 testes),
+    `test:questionarios-revisao:bff`, `test:questionarios-preview`,
+    `test:authz` (22 verificacoes), Playwright de regressao
+    (`jornadas-criticas`, `console-regression`, `acessibilidade` = 68
+    testes), `security:secrets`.
 
 - [ ] Fase 195 - Portal do paciente e jornadas publicas.
   - Reduzir a pagina inicial do portal a proxima consulta, proxima acao e

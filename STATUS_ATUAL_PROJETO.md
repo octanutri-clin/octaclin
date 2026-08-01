@@ -1,17 +1,26 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-07-31.
+Atualizado em 2026-08-01.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 193 - pacientes e prontuario orientados a
-  conduta (2026-07-31). Filtros da lista de pacientes agora persistem na URL;
-  cadastro/edicao de paciente virou modal; evolucao clinica em edicao ganhou
-  protecao contra perda (beforeunload + confirmacao ao trocar de aba/sair).
-  Corrigidos os atalhos `#novo-paciente`/`#novo-agendamento` do dashboard.
+- Ultima fase concluida: Fase 194 - formularios, editor e leitura
+  longitudinal (2026-08-01). O editor de questionarios (1593 linhas
+  monoliticas) foi dividido em 5 areas (Formularios/Editor/Biblioteca/
+  Distribuicoes/Respostas) sobre um hook unico de estado
+  (`useWorkspaceQuestionarios`); o preview do paciente passou a ser
+  simultaneo a edicao; o campo de cron cru virou um seletor de recorrencia
+  em linguagem comum; e a guarda de alteracoes nao salvas (que so tinha
+  banner de texto) ganhou `beforeunload` + confirmacao real, como na Fase
+  193. Cobertura Playwright nova para essa pagina (0 testes antes, 6 agora).
+- Fase 193: pacientes e prontuario orientados a conduta (2026-07-31).
+  Filtros da lista de pacientes agora persistem na URL; cadastro/edicao de
+  paciente virou modal; evolucao clinica em edicao ganhou protecao contra
+  perda (beforeunload + confirmacao ao trocar de aba/sair). Corrigidos os
+  atalhos `#novo-paciente`/`#novo-agendamento` do dashboard.
 - Fase 192: centro clinico diario e agenda profissional (2026-07-31).
   Dashboard reagrupado em Agora/Proximos/Pendentes; agenda com criacao em
   modal, edicao consolidada num unico botao "Gerenciar consulta" e
