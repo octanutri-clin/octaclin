@@ -31,7 +31,8 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 - Responsavel: Codex com subagentes de Mobile/Gamificacao e revisao independente.
 - Conclusao: 2026-08-01.
-- Push: pendente de commit, PR e aplicacao das migrations em producao.
+- Commit: `3117592`.
+- Push: sim, branch publicada e PR draft #10 aberta contra `main`.
 - Validacoes: backend 69 suites/395 testes, lint, typechecks, builds, authz,
   Next 15, Playwright desktop/mobile, smoke BFF real, IA Python, secrets e
   confiabilidade.
@@ -39,7 +40,7 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
   Gamificacao e Operacoes; `painel-ia.tsx`, `painel-automacoes.tsx`,
   `painel-operacoes.tsx` e migrations `1011/1012`.
 - Pendencias: aplicar migrations `1011/1012` antes do deploy se migrations
-  automaticas estiverem desabilitadas.
+  automaticas estiverem desabilitadas; revisar e integrar a PR #10.
 - Proxima fase: Fase 198 - Validacao final de usabilidade e consolidacao visual.
 
 ### Fase 196 - Comunicacoes, equipe e conta do cliente

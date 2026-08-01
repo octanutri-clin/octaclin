@@ -12,10 +12,10 @@ const rotasProtegidas = [
   { caminho: '/profissionais', titulo: 'Profissionais', subtitulo: 'Equipe clinica' },
   { caminho: '/questionarios', titulo: 'Editor de Questionarios', subtitulo: 'Protocolos e check-ins' },
   { caminho: '/comunicacoes', titulo: 'Comunicacoes', subtitulo: 'Conversas e relacionamento com pacientes' },
-  { caminho: '/automacoes', titulo: 'Automacoes', subtitulo: 'Regras clinicas' },
-  { caminho: '/ia', titulo: 'IA clinica', subtitulo: 'Modelos assistivos' },
-  { caminho: '/mobile', titulo: 'Mobile', subtitulo: 'App e sincronizacao' },
-  { caminho: '/gamificacao', titulo: 'Gamificacao', subtitulo: 'Comunidade e conquistas' }
+  { caminho: '/automacoes', titulo: 'Automacoes', subtitulo: 'Quando acontecer, fazer com seguranca' },
+  { caminho: '/ia', titulo: 'Sugestoes assistidas', subtitulo: 'Revisao humana obrigatoria' },
+  { caminho: '/mobile', titulo: 'Confiabilidade OctaClin', subtitulo: 'Operacoes' },
+  { caminho: '/gamificacao', titulo: 'Metas e adesao', subtitulo: 'Recurso opcional por paciente' }
 ];
 
 const referenciasExternasProibidas = [

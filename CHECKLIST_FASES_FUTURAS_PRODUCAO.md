@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-01 apos a conclusao local da Fase 197.
+Atualizado em 2026-08-01 apos a publicacao da Fase 197 na PR #10.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1025,7 +1025,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Comunicacoes, LGPD, Auditoria e Filas com detalhes progressivos.
   - Aceite: nenhum modulo tecnico sem uso recorrente ocupa a navegacao
     principal; IA nunca executa conduta sem revisao humana registrada.
-  - Status: concluida e validada localmente em 2026-08-01. Sugestoes de IA
+  - Status: concluida, validada localmente e publicada na PR #10 em 2026-08-01. Sugestoes de IA
     agora informam fonte/limitacoes e ficam pendentes ate aceitar, editar ou
     rejeitar; automacoes nascem como rascunho e exigem simulacao persistida;
     Mobile foi absorvido por Operacoes com escopo por papel; Gamificacao virou
