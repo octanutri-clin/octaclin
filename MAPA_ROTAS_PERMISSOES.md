@@ -91,6 +91,14 @@ Inclui permissoes de `Professional` e adiciona:
 | `/gamificacao` | SuperAdmin, Professional | `gamificacao.gerenciar` |
 | `/operacoes` | SuperAdmin | `operacoes.auditoria.ler` |
 | `/portal` | Patient | `portal.acessar` |
+| `/portal/agenda` | Patient | `portal.acessar` |
+| `/portal/checkins` | Patient | `portal.acessar` |
+| `/portal/plano` | Patient | `portal.acessar` |
+| `/portal/formularios` | Patient | `portal.acessar` |
+| `/portal/mensagens` | Patient | `portal.acessar` |
+| `/portal/perfil` | Patient | `portal.acessar` |
+| `/portal/privacidade` | Patient | `portal.acessar` |
+| `/portal/mais` | Patient | `portal.acessar` |
 | `/cliente` | Client | `cliente.acessar` |
 
 ## Controllers backend principais

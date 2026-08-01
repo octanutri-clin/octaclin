@@ -1,7 +1,7 @@
 # Fase 195 - Portal do paciente e jornadas publicas
 
-Status: plano revisado em 2026-08-01. Executar em tres partes independentes,
-com um commit validado por parte e fechamento documental unico da Fase 195.
+Status: executado em 2026-08-01 em tres partes independentes, com um commit
+validado por parte e fechamento documental unico da Fase 195.
 
 ## Objetivo
 

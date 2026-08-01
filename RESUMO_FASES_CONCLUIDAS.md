@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-01 apos a Fase 194 - formularios, editor e leitura longitudinal.
+Atualizado em 2026-08-01 apos a Fase 195 - portal do paciente e jornadas publicas.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -403,6 +403,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   tinha um banner de texto sem enforcement, ganhou `beforeunload` +
   confirmacao real (mesmo padrao da Fase 193). Ver
   `fase-194-formularios-editor-leitura-longitudinal.md`.
+- Fase 195 - Portal do paciente e jornadas publicas: portal autenticado
+  dividido em nove rotas com um unico bootstrap e navegacao mobile propria;
+  inicio focado nas tres prioridades e sem score clinico. Agendamento publico
+  com identidade/fuso e revisao antes da solicitacao. Formulario publico com
+  rascunho versionado no backend, retomada apos reload, validacao estrutural,
+  limite de abuso, BFF sem credenciais e limpeza ao responder ou expirar. Ver
+  `fase-195-portal-paciente-jornadas-publicas.md`.
 
 ## Estado atual de uso
 

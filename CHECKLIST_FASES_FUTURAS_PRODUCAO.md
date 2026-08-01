@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-01 apos a correcao complementar da Fase 194.
+Atualizado em 2026-08-01 apos a conclusao da Fase 195.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -968,7 +968,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     (`jornadas-criticas`, `console-regression`, `acessibilidade` = 68
     testes), `security:secrets`.
 
-- [ ] Fase 195 - Portal do paciente e jornadas publicas.
+- [x] Fase 195 - Portal do paciente e jornadas publicas.
   - Reduzir a pagina inicial do portal a proxima consulta, proxima acao e
     progresso do plano, substituindo excesso de cartoes por areas orientadas a
     tarefa e navegacao inferior no celular.
@@ -980,6 +980,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     segura no backend; nao simular continuidade entre dispositivos.
   - Aceite: portal, desmarcacao, solicitacao publica e formulario publico
     validados com dados sinteticos em desktop e celular.
+  - Status: concluida em 2026-08-01 nos blocos 195A, 195B e 195C. Portal
+    dividido em nove rotas com bootstrap unico; agendamento publico com
+    identidade, fuso e confirmacao; formulario publico com rascunho
+    versionado no backend, retomada, validacao estrutural, limite de abuso e
+    limpeza ao responder ou expirar.
+  - Data: 2026-08-01. Saida:
+    `fase-195-portal-paciente-jornadas-publicas.md`.
+  - Validacoes: backend 64 suites/351 testes, typechecks, lint, build, authz
+    (23), Next dinamico (50), Playwright desktop/mobile (14), acessibilidade
+    do portal (2), `security:secrets` e `test:confiabilidade`.
 
 - [ ] Fase 196 - Comunicacoes, equipe e conta do cliente.
   - Estruturar comunicacoes em conversas, mensagem ativa e contexto do

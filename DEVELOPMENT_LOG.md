@@ -27,6 +27,20 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 195 - Portal do paciente e jornadas publicas
+
+- Responsavel: Codex com subagente de portal e revisao independente de seguranca.
+- Conclusao: 2026-08-01.
+- Commits funcionais: `97c98ab`, `0da5738`, `cb6a491`.
+- Push: pendente da integracao da branch validada.
+- Validacoes: backend 64 suites/351 testes, typechecks, lint, build, authz,
+  Next 15, Playwright desktop/mobile, acessibilidade, secrets e confiabilidade.
+- Arquivos principais: `components/portal`, agenda/formulario publico,
+  migration 1010 e `segredo-formulario-publico.ts`.
+- Pendencias: confirmar o segredo dedicado no Render antes do deploy; nenhuma
+  migration foi executada manualmente contra banco ambiguo.
+- Proxima fase: Fase 196 - Comunicacoes, equipe e conta do cliente.
+
 ### Fase 168 - Acesso comercial e onboarding
 
 - Responsavel: Codex.
