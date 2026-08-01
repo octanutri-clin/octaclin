@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import type { Route } from 'next';
 import { FormEvent, useEffect, useState } from 'react';
 import {
   AlertTriangle,
@@ -11,6 +13,7 @@ import {
   ClipboardList,
   ExternalLink,
   HeartPulse,
+  Menu,
   MessageCircle,
   RefreshCcw,
   Save,
@@ -30,13 +33,13 @@ import {
   exportarDadosLgpdPaciente,
   HumorCheckinRapidoPaciente,
   obterFormularioRespondidoPaciente,
-  obterPortalPaciente,
   CanalPreferidoComunicacaoPaciente,
   PortalPacienteApi,
   registrarCheckinRapidoPaciente,
   registrarConsentimentoLgpdPaciente,
   registrarSolicitacaoLgpdPaciente
 } from '@/lib/portal-api';
+import { usePortalPaciente } from '@/components/portal/portal-contexto';
 
 interface FormularioPerfilPaciente {
   nome: string;
@@ -254,7 +257,7 @@ function montarLinhaTempoPortal(portal: PortalPacienteApi): ItemLinhaTempoPortal
       id: `formulario-respondido-${formulario.respostaId}`,
       tipo: 'Formulario respondido',
       titulo: formulario.titulo,
-      descricao: formulario.scoreFinal ? `Score ${formulario.scoreFinal}` : rotuloStatus(formulario.status),
+      descricao: rotuloStatus(formulario.status),
       data: formulario.finalizadoEm ?? formulario.respondidoEm
     })),
     ...portal.mensagensRecentes.map((mensagem) => ({
@@ -319,22 +322,23 @@ function atualizarPortalComCheckin(
 }
 
 const linksPortal = [
-  { href: '#resumo', rotulo: 'Inicio' },
-  { href: '#agenda', rotulo: 'Sua agenda' },
-  { href: '#checkin-rapido', rotulo: 'Check-ins' },
-  { href: '#plano', rotulo: 'Seu plano' },
-  { href: '#formularios', rotulo: 'Formularios' },
-  { href: '#mensagens', rotulo: 'Mensagens' },
-  { href: '#perfil', rotulo: 'Perfil' },
-  { href: '#privacidade', rotulo: 'Privacidade' }
+  { href: '/portal', rotulo: 'Inicio' },
+  { href: '/portal/agenda', rotulo: 'Agenda' },
+  { href: '/portal/checkins', rotulo: 'Check-ins' },
+  { href: '/portal/plano', rotulo: 'Plano' },
+  { href: '/portal/formularios', rotulo: 'Formularios' },
+  { href: '/portal/mensagens', rotulo: 'Mensagens' },
+  { href: '/portal/perfil', rotulo: 'Perfil' },
+  { href: '/portal/privacidade', rotulo: 'Privacidade' },
+  { href: '/portal/mais', rotulo: 'Mais' }
 ];
 
 const linksPortalMobile = [
-  { href: '#resumo', rotulo: 'Inicio', icone: HeartPulse },
-  { href: '#agenda', rotulo: 'Agenda', icone: CalendarDays },
-  { href: '#plano', rotulo: 'Plano', icone: Target },
-  { href: '#checkin-rapido', rotulo: 'Check-ins', icone: SmilePlus },
-  { href: '#perfil', rotulo: 'Perfil', icone: UserRound }
+  { href: '/portal', rotulo: 'Inicio', icone: HeartPulse },
+  { href: '/portal/agenda', rotulo: 'Agenda', icone: CalendarDays },
+  { href: '/portal/plano', rotulo: 'Plano', icone: Target },
+  { href: '/portal/checkins', rotulo: 'Check-ins', icone: SmilePlus },
+  { href: '/portal/mais', rotulo: 'Mais', icone: Menu }
 ];
 
 function PortalCarregando() {
@@ -354,14 +358,15 @@ function PortalCarregando() {
   );
 }
 
-export function PortalPaciente() {
-  const [portal, setPortal] = useState<PortalPacienteApi | null>(null);
+type SecaoPortal = 'inicio' | 'agenda' | 'checkins' | 'plano' | 'formularios' | 'mensagens' | 'perfil' | 'privacidade' | 'mais';
+
+export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
+  const { portal, setPortal, carregando, erroCarregamento, carregar } = usePortalPaciente();
   const [detalheFormulario, setDetalheFormulario] = useState<DetalheFormularioRespondidoApi | null>(null);
   const [formularioPerfil, setFormularioPerfil] = useState<FormularioPerfilPaciente>(formularioPerfilVazio);
   const [formularioCheckin, setFormularioCheckin] = useState<FormularioCheckinRapido>(formularioCheckinInicial);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
-  const [carregando, setCarregando] = useState(true);
   const [carregandoDetalheId, setCarregandoDetalheId] = useState<string | null>(null);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [salvandoCheckin, setSalvandoCheckin] = useState(false);
@@ -372,24 +377,9 @@ export function PortalPaciente() {
   const [detalhesSolicitacaoLgpd, setDetalhesSolicitacaoLgpd] = useState('');
   const [desmarcandoConsultaId, setDesmarcandoConsultaId] = useState<string | null>(null);
 
-  async function carregar() {
-    setCarregando(true);
-    setErro(null);
-    setSucesso(null);
-    try {
-      const portalAtualizado = await obterPortalPaciente();
-      setPortal(portalAtualizado);
-      setFormularioPerfil(montarFormularioPerfil(portalAtualizado));
-    } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar portal.');
-    } finally {
-      setCarregando(false);
-    }
-  }
-
   useEffect(() => {
-    void carregar();
-  }, []);
+    if (portal) setFormularioPerfil(montarFormularioPerfil(portal));
+  }, [portal]);
 
   async function desmarcarConsulta(consultaId: string) {
     setDesmarcandoConsultaId(consultaId);
@@ -575,6 +565,8 @@ export function PortalPaciente() {
   const diariosRecentes = portal?.diariosRecentes ?? [];
   const notificacoesPaciente = portal?.notificacoesPaciente ?? [];
   const notificacoesPendentes = notificacoesPaciente.filter((notificacao) => ehNotificacaoPendente(notificacao.status));
+  const navegacaoPortal = secao === 'inicio' ? linksPortal : linksPortal.map((item, indice) => indice === 0 ? { ...item, href: '/portal?origem=navegacao' } : item);
+  const navegacaoPortalMobile = secao === 'inicio' ? linksPortalMobile : linksPortalMobile.map((item, indice) => indice === 0 ? { ...item, href: '/portal?origem=navegacao' } : item);
 
   const acoesCabecalho = (
     <Botao type="button" onClick={() => void carregar()} disabled={carregando}>
@@ -589,9 +581,9 @@ export function PortalPaciente() {
       titulo="Portal do paciente"
       subtitulo="OctaClin"
       marca={{ icone: HeartPulse, rotulo: 'OctaClin', subrotulo: 'Portal do paciente' }}
-      navegacao={portal ? linksPortal : []}
+      navegacao={portal ? navegacaoPortal : []}
       navLabel="Navegacao do portal"
-      navegacaoMobile={portal ? linksPortalMobile : []}
+      navegacaoMobile={portal ? navegacaoPortalMobile : []}
       navLabelMobile="Navegacao mobile do portal"
       acoes={acoesCabecalho}
       maxWidth="72rem"
@@ -612,7 +604,7 @@ export function PortalPaciente() {
 
         {portal ? (
           <>
-            <section id="resumo" className="scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,1fr))]">
+            <section id="resumo" className={secao === 'inicio' ? 'scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,1fr))]' : 'hidden'}>
               <div className="self-center">
                 <p className="text-sm text-texto-suave">Ola, {portal.paciente.nome}</p>
                 <h2 className="mt-1 text-2xl font-semibold text-tinta">Seu acompanhamento hoje</h2>
@@ -671,16 +663,16 @@ export function PortalPaciente() {
                   </p>
                   <p className="mt-1 text-xs text-texto-suave">Revise seu plano para manter o acompanhamento em dia.</p>
                 </div>
-                <a
-                  href="#plano"
+                <Link
+                  href="/portal/plano"
                   className="inline-flex min-h-11 items-center justify-center rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
                 >
                   Ver plano
-                </a>
+                </Link>
               </Cartao>
             </section>
 
-            <Cartao id="agenda" className="scroll-mt-4">
+            <Cartao id="acoes" className="hidden">
               <CartaoCabecalho>
                 <CartaoTitulo icone={<ClipboardList className="h-4 w-4" />}>Proximas acoes</CartaoTitulo>
               </CartaoCabecalho>
@@ -724,7 +716,7 @@ export function PortalPaciente() {
               </CartaoConteudo>
             </Cartao>
 
-            <section id="checkin-rapido" className="scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <section id="checkin-rapido" className={secao === 'checkins' ? 'scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]' : 'hidden'}>
               <Cartao>
                 <CartaoCabecalho>
                   <CartaoTitulo icone={<SmilePlus className="h-4 w-4" />}>Check-in rapido</CartaoTitulo>
@@ -817,7 +809,7 @@ export function PortalPaciente() {
               </Cartao>
             </section>
 
-            <section id="plano" className="scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <section id="plano" className={secao === 'plano' ? 'scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]' : 'hidden'}>
               <Cartao>
                 <CartaoCabecalho>
                   <CartaoTitulo icone={<Target className="h-4 w-4" />}>Plano de acompanhamento</CartaoTitulo>
@@ -895,7 +887,7 @@ export function PortalPaciente() {
               </Cartao>
             </section>
 
-            <Cartao id="notificacoes" className="scroll-mt-4">
+            <Cartao id="notificacoes" className={secao === 'mensagens' ? 'scroll-mt-4' : 'hidden'}>
               <CartaoCabecalho>
                 <div className="flex items-center gap-2">
                   <BellRing className="h-4 w-4 text-texto-suave" />
@@ -979,7 +971,26 @@ export function PortalPaciente() {
               </CartaoConteudo>
             </Cartao>
 
-            <Cartao id="historico" className="scroll-mt-4">
+            {secao === 'mais' ? (
+              <Cartao>
+                <CartaoCabecalho>
+                  <CartaoTitulo icone={<Menu className="h-4 w-4" />}>Mais opcoes</CartaoTitulo>
+                </CartaoCabecalho>
+                <CartaoConteudo className="grid gap-3 sm:grid-cols-2">
+                  {linksPortal.slice(4, 8).map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href as Route}
+                      className="inline-flex min-h-11 items-center justify-between rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                    >
+                      {item.rotulo}
+                    </Link>
+                  ))}
+                </CartaoConteudo>
+              </Cartao>
+            ) : null}
+
+            <Cartao id="historico" className={secao === 'mais' ? 'scroll-mt-4' : 'hidden'}>
               <CartaoCabecalho>
                 <CartaoTitulo icone={<Clock3 className="h-4 w-4" />}>Linha do tempo</CartaoTitulo>
               </CartaoCabecalho>
@@ -1003,9 +1014,9 @@ export function PortalPaciente() {
               </CartaoConteudo>
             </Cartao>
 
-            <section className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+            <section className="grid gap-4">
               <div className="grid gap-4">
-                <Cartao id="perfil" className="scroll-mt-4">
+                <Cartao id="perfil" className={secao === 'perfil' ? 'scroll-mt-4' : 'hidden'}>
                   <CartaoCabecalho>
                     <CartaoTitulo icone={<UserRound className="h-4 w-4" />}>Meu perfil</CartaoTitulo>
                   </CartaoCabecalho>
@@ -1127,7 +1138,7 @@ export function PortalPaciente() {
                   </form>
                 </Cartao>
 
-                <Cartao id="formularios" className="scroll-mt-4">
+                <Cartao id="formularios" className={secao === 'formularios' ? 'scroll-mt-4' : 'hidden'}>
                   <CartaoCabecalho>
                     <CartaoTitulo icone={<ClipboardList className="h-4 w-4" />}>Formularios pendentes</CartaoTitulo>
                   </CartaoCabecalho>
@@ -1155,7 +1166,7 @@ export function PortalPaciente() {
                   </CartaoConteudo>
                 </Cartao>
 
-                <Cartao>
+                <Cartao className={secao === 'formularios' ? undefined : 'hidden'}>
                   <CartaoCabecalho>
                     <CartaoTitulo icone={<CheckCircle2 className="h-4 w-4" />}>Historico de formularios</CartaoTitulo>
                   </CartaoCabecalho>
@@ -1171,7 +1182,7 @@ export function PortalPaciente() {
                               </p>
                             </div>
                             <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                              {formulario.scoreFinal ? `Score ${formulario.scoreFinal}` : rotuloStatus(formulario.status)}
+                              {rotuloStatus(formulario.status)}
                             </span>
                           </div>
                           <Botao
@@ -1190,14 +1201,13 @@ export function PortalPaciente() {
                   </CartaoConteudo>
                 </Cartao>
 
-                {detalheFormulario ? (
+                {detalheFormulario && secao === 'formularios' ? (
                   <Cartao>
                     <CartaoCabecalho>
                       <div>
                         <h2 className="text-sm font-semibold">{detalheFormulario.titulo}</h2>
                         <p className="mt-1 text-xs text-texto-suave">
                           Finalizado em {formatarDataHora(detalheFormulario.finalizadoEm)}
-                          {detalheFormulario.scoreFinal ? ` - score ${detalheFormulario.scoreFinal}` : ''}
                         </p>
                       </div>
                       <Botao type="button" variante="fantasma" onClick={() => setDetalheFormulario(null)}>
@@ -1216,9 +1226,6 @@ export function PortalPaciente() {
                               </span>
                             </dt>
                             <dd className="mt-2 break-words text-sm text-texto-suave">{formatarValor(resposta.valor)}</dd>
-                            {resposta.scorePonderado ? (
-                              <p className="mt-2 text-xs font-semibold text-texto-suave">Score {resposta.scorePonderado}</p>
-                            ) : null}
                           </div>
                         ))}
                       </dl>
@@ -1226,7 +1233,7 @@ export function PortalPaciente() {
                   </Cartao>
                 ) : null}
 
-                <Cartao>
+                <Cartao className={secao === 'agenda' ? undefined : 'hidden'}>
                   <CartaoCabecalho>
                     <CartaoTitulo icone={<CalendarDays className="h-4 w-4" />}>Proximas consultas</CartaoTitulo>
                   </CartaoCabecalho>
@@ -1270,7 +1277,7 @@ export function PortalPaciente() {
                 </Cartao>
               </div>
 
-              <Cartao id="mensagens" className="scroll-mt-4">
+              <Cartao id="mensagens" className={secao === 'mensagens' ? 'scroll-mt-4' : 'hidden'}>
                 <CartaoCabecalho>
                   <CartaoTitulo icone={<MessageCircle className="h-4 w-4" />}>Mensagens recentes</CartaoTitulo>
                 </CartaoCabecalho>
@@ -1294,7 +1301,7 @@ export function PortalPaciente() {
                 </CartaoConteudo>
               </Cartao>
 
-              <Cartao id="privacidade" className="scroll-mt-4">
+              <Cartao id="privacidade" className={secao === 'privacidade' ? 'scroll-mt-4' : 'hidden'}>
                 <CartaoCabecalho>
                   <CartaoTitulo icone={<ShieldCheck className="h-4 w-4" />}>Privacidade</CartaoTitulo>
                 </CartaoCabecalho>
@@ -1449,7 +1456,7 @@ export function PortalPaciente() {
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-base font-semibold">Portal indisponivel</h2>
-                  <p className="mt-1 break-words text-sm text-texto-suave">{erro ?? 'Nao foi possivel carregar suas informacoes.'}</p>
+                  <p className="mt-1 break-words text-sm text-texto-suave">{erroCarregamento ?? 'Nao foi possivel carregar suas informacoes.'}</p>
                 </div>
               </div>
               <div>
