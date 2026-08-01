@@ -551,6 +551,10 @@ async function prepararJornadaSolicitacaoPublica(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
+        clinica: {
+          nome: 'Clinica Carla',
+          corPrimaria: '#197d8f'
+        },
         profissional: {
           nomeExibicao: 'Dra. Carla',
           especialidade: 'Nutricao clinica'
@@ -898,7 +902,8 @@ test.describe('jornadas criticas de producao', () => {
     await page.getByLabel('Email').fill('ana.silva@example.com');
     await page.getByLabel('WhatsApp').fill('5511999999999');
     await page.getByLabel('Observacoes').fill('Prefiro atendimento online.');
-    await page.getByRole('button', { name: 'Enviar solicitacao' }).click();
+    await page.getByRole('button', { name: 'Revisar solicitacao' }).click();
+    await page.getByRole('button', { name: 'Confirmar solicitacao' }).click();
 
     await expect(page.getByText('Solicitacao enviada para analise.')).toBeVisible();
     await expect.poll(() => jornada.solicitacaoEnviada()).toMatchObject({
@@ -945,10 +950,12 @@ test.describe('jornadas criticas de producao', () => {
     await expect.poll(() => jornada.notificacoesCriadas().length).toBe(2);
 
     await jornada.ativarSessaoPaciente();
-    await page.goto('/portal');
+    await page.goto('/portal/agenda');
 
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
-    await expect(page.locator('#agenda').getByText('Consulta por solicitacao publica')).toBeVisible();
+    const proximasConsultas = page.getByRole('heading', { name: 'Proximas consultas' }).locator('..').locator('..');
+    await expect(proximasConsultas.getByText('Consulta por solicitacao publica')).toBeVisible();
+    await page.goto('/portal/mensagens');
     await expect(page.locator('#notificacoes').getByText('Consulta agendada')).toBeVisible();
     await expect(page.locator('#notificacoes').getByText('Lembrete de consulta').first()).toBeVisible();
   });
@@ -956,12 +963,15 @@ test.describe('jornadas criticas de producao', () => {
   test('paciente acessa portal com consulta, notificacoes e plano visiveis', async ({ page }) => {
     await prepararPaciente(page);
 
-    await page.goto('/portal');
+    await page.goto('/portal/agenda');
 
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
-    await expect(page.locator('#agenda').getByText('Consulta inicial')).toBeVisible();
+    const proximasConsultas = page.getByRole('heading', { name: 'Proximas consultas' }).locator('..').locator('..');
+    await expect(proximasConsultas.getByText('Consulta inicial')).toBeVisible();
+    await page.goto('/portal/mensagens');
     await expect(page.locator('#notificacoes').getByText('Consulta agendada')).toBeVisible();
     await expect(page.locator('#notificacoes').getByText('Lembrete de consulta').first()).toBeVisible();
+    await page.goto('/portal/plano');
     await expect(page.locator('#plano').getByText('Responder check-in inicial')).toBeVisible();
     await expect(page.locator('#plano').getByText('Orientacoes iniciais')).toBeVisible();
   });
@@ -969,13 +979,14 @@ test.describe('jornadas criticas de producao', () => {
   test('paciente desmarca a propria consulta e ela some da lista de proximas consultas', async ({ page }) => {
     const paciente = await prepararPaciente(page);
 
-    await page.goto('/portal');
-    await expect(page.locator('#agenda').getByText('Consulta inicial')).toBeVisible();
+    await page.goto('/portal/agenda');
+    const proximasConsultas = page.getByRole('heading', { name: 'Proximas consultas' }).locator('..').locator('..');
+    await expect(proximasConsultas.getByText('Consulta inicial')).toBeVisible();
 
     await page.getByRole('button', { name: 'Desmarcar' }).click();
 
     await expect.poll(() => paciente.desmarcou()).toBe(true);
     await expect(page.getByText('Consulta desmarcada.')).toBeVisible();
-    await expect(page.locator('#resumo').getByText('Nenhuma consulta futura agendada.')).toBeVisible();
+    await expect(proximasConsultas.getByText('Nenhuma consulta futura agendada.')).toBeVisible();
   });
 });
