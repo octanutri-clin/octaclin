@@ -66,6 +66,12 @@ export interface PacienteBadgeApi {
   conquistadoEm: string;
 }
 
+export interface ConfiguracaoGamificacaoApi {
+  metasBadgesHabilitados: boolean;
+  comunidadeHabilitada: boolean;
+  rankingHabilitado: boolean;
+}
+
 export interface BootstrapGamificacao {
   profissionais: RespostaPaginada<ProfissionalResumo>;
   pacientes: RespostaPaginada<PacienteResumo>;
@@ -192,13 +198,37 @@ export async function concederBadge(entrada: { pacienteId: string; badgeId: stri
   });
 }
 
-export async function carregarBootstrapGamificacao(): Promise<BootstrapGamificacao> {
+export async function obterConfiguracaoGamificacao(): Promise<ConfiguracaoGamificacaoApi> {
+  return requisitar<ConfiguracaoGamificacaoApi>('/api/gamificacao/configuracao');
+}
+
+export async function atualizarConfiguracaoGamificacao(
+  entrada: Partial<ConfiguracaoGamificacaoApi>
+): Promise<ConfiguracaoGamificacaoApi> {
+  return requisitar<ConfiguracaoGamificacaoApi>('/api/gamificacao/configuracao', {
+    method: 'PATCH',
+    body: JSON.stringify(entrada)
+  });
+}
+
+export async function carregarBootstrapGamificacao(
+  configuracao: ConfiguracaoGamificacaoApi
+): Promise<BootstrapGamificacao> {
+  if (!configuracao.metasBadgesHabilitados && !configuracao.comunidadeHabilitada) {
+    return {
+      profissionais: { itens: [], total: 0 },
+      pacientes: { itens: [], total: 0 },
+      circulos: [],
+      desafios: [],
+      badges: []
+    };
+  }
   const [profissionais, pacientes, circulos, desafios, badges] = await Promise.all([
     listarProfissionais(),
     listarPacientes(),
-    listarCirculos(),
-    listarDesafios(),
-    listarBadges()
+    configuracao.comunidadeHabilitada ? listarCirculos() : Promise.resolve([]),
+    configuracao.metasBadgesHabilitados ? listarDesafios() : Promise.resolve([]),
+    configuracao.metasBadgesHabilitados ? listarBadges() : Promise.resolve([])
   ]);
   return { profissionais, pacientes, circulos, desafios, badges };
 }

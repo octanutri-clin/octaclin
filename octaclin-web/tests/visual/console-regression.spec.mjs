@@ -16,9 +16,9 @@ const rotas = [
   { caminho: '/questionarios', titulo: 'Editor de Questionarios' },
   { caminho: '/comunicacoes', titulo: 'Comunicacoes' },
   { caminho: '/automacoes', titulo: 'Automacoes' },
-  { caminho: '/ia', titulo: 'IA clinica' },
-  { caminho: '/mobile', titulo: 'Mobile' },
-  { caminho: '/gamificacao', titulo: 'Gamificacao' }
+  { caminho: '/ia', titulo: 'Sugestoes assistidas' },
+  { caminho: '/mobile', titulo: 'Confiabilidade OctaClin' },
+  { caminho: '/gamificacao', titulo: 'Metas e adesao' }
 ];
 
 const rotulosMenu = [
@@ -1471,14 +1471,16 @@ test.describe('operacoes LGPD', () => {
     const operacoes = await prepararOperacoesMockadas(page);
     await page.goto('/operacoes');
 
+    await page.getByRole('tab', { name: 'Incidentes' }).click();
     await expect(page.getByRole('heading', { name: 'Alertas operacionais' })).toBeVisible();
     await expect(page.getByText('Outbox com eventos pendentes atrasados')).toBeVisible();
+    await page.getByRole('tab', { name: 'Comunicacoes' }).click();
     await expect(page.getByRole('heading', { name: 'Central de comunicacao' })).toBeVisible();
     await expect(page.getByText('SMTP indisponivel')).toBeVisible();
+    await page.getByRole('tab', { name: 'LGPD' }).click();
     await expect(page.getByRole('heading', { name: 'Solicitacoes LGPD' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Retencao e exclusao programada' })).toBeVisible();
     await expect(page.getByText('11 itens vencidos')).toBeVisible();
-    await expect(page.getByText('Auditoria operacional')).toBeVisible();
     await page.getByRole('button', { name: 'Programar retencao LGPD' }).click();
     await expect.poll(() => operacoes.programouRetencao()).toBe(true);
     await expect(page.getByText('Retencao LGPD programada: RET-20260723120000.')).toBeVisible();
@@ -1500,6 +1502,8 @@ test.describe('operacoes LGPD', () => {
     await expect(page.getByText('Seu pedido LGPD LGPD-123 esta em tratamento. Protocolo: LGPD-123.')).toBeVisible();
     await page.getByRole('button', { name: 'Copiar resposta LGPD-123' }).click();
     await expect(page.getByText('Resposta LGPD copiada para LGPD-123.')).toBeVisible();
+    await page.getByRole('tab', { name: 'Auditoria' }).click();
+    await expect(page.getByRole('heading', { name: 'Auditoria sensivel' })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });
@@ -1509,6 +1513,7 @@ test.describe('operacoes assinatura', () => {
     const operacoes = await prepararOperacoesMockadas(page);
     await page.goto('/operacoes');
 
+    await page.getByRole('tab', { name: 'Filas' }).click();
     await expect(page.getByRole('heading', { name: 'Assinaturas' })).toBeVisible();
     await expect(page.getByText('Mais usuarios administrativos.')).toBeVisible();
     await page.getByRole('button', { name: 'Aplicar Clinica' }).click();

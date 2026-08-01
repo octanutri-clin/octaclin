@@ -7,10 +7,10 @@ Atualizado em 2026-08-01.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 196 - comunicacoes, equipe e conta do cliente
-  (2026-08-01). Comunicacoes, profissionais e portal comercial foram separados
-  por tarefas; falhas de envio ganharam nova tentativa contextual; e o gestor
-  pode ajustar o papel da equipe com auditoria e revogacao de sessoes antigas.
+- Ultima fase concluida localmente: Fase 197 - racionalizacao dos modulos
+  avancados (2026-08-01). IA exige decisao humana registrada, Automacoes exige
+  simulacao antes da ativacao, Mobile foi absorvido por Operacoes, Gamificacao
+  e opt-in e Operacoes foi organizada em seis areas exclusivas do SuperAdmin.
 - Fase 194: formularios, editor e leitura longitudinal (2026-08-01). O editor
   de questionarios (1593 linhas
   monoliticas) foi dividido em 5 areas (Formularios/Editor/Biblioteca/
@@ -93,6 +93,11 @@ Atualizado em 2026-08-01.
 - WhatsApp Meta com envio, webhook, status, inbox, associacao e notas.
 - Painel operacional LGPD.
 - Auditoria e outbox operacional.
+- Sugestoes assistidas de IA com fonte, limitacoes e revisao humana obrigatoria.
+- Automacoes em rascunho com simulacao persistida antes da ativacao.
+- Gamificacao opcional por tenant, com comunidade e ranking desligados por padrao.
+- Operacoes SuperAdmin separadas em Saude, Incidentes, Comunicacoes, LGPD,
+  Auditoria e Filas; sincronizacao mobile fica nessa area administrativa.
 - Runbooks de producao, backup/restore, rotacao de secrets e suporte.
 - Suite Playwright de jornadas criticas com contratos BFF mockados.
 - Massa ficticia de staging aplicada e validada no Neon staging (tenant `octaclin-staging`).
@@ -156,3 +161,7 @@ Atualizado em 2026-08-01.
 ## Risco principal atual
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
+
+Proxima fase de produto: Fase 198 - validacao final de usabilidade e
+consolidacao visual. As migrations `1011` e `1012` da Fase 197 devem preceder
+o deploy correspondente quando `BANCO_EXECUTAR_MIGRACOES=false`.

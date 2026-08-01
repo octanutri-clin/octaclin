@@ -11,6 +11,9 @@ export class SincronizacaoMobileOrm {
   @Column({ name: 'id_local', type: 'varchar', length: 160 })
   idLocal: string;
 
+  @Column({ name: 'paciente_id', type: 'uuid', nullable: true })
+  pacienteId?: string;
+
   @Column({ type: 'varchar', length: 80 })
   tipo: string;
 

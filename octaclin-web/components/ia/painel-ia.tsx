@@ -1,17 +1,20 @@
 'use client';
 
+import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
-import { Brain, CheckCircle2, Image as ImageIcon, RefreshCcw, ScanSearch, Sparkles } from 'lucide-react';
+import { Brain, Check, CheckCircle2, FileHeart, Image as ImageIcon, MessageSquare, Pencil, RefreshCcw, ScanSearch, Sparkles, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import {
   AnaliseSentimentoApi,
+  DecisaoRevisaoIaApi,
   ReconhecimentoAlimentarApi,
   analisarSentimento,
   carregarBootstrapIa,
-  reconhecerAlimento
+  reconhecerAlimento,
+  revisarSugestaoIa
 } from '@/lib/ia-api';
 import { PacienteResumo, RespostaPaginada } from '@/lib/cadastros-api';
 
@@ -49,6 +52,27 @@ function resumirJson(valor: unknown) {
   return JSON.stringify(valor);
 }
 
+function rotuloRevisao(status?: string) {
+  const rotulos: Record<string, string> = {
+    pendente: 'Revisao pendente',
+    aceita: 'Aceita pelo profissional',
+    editada: 'Editada pelo profissional',
+    rejeitada: 'Rejeitada pelo profissional'
+  };
+  return rotulos[status ?? 'pendente'] ?? 'Revisao pendente';
+}
+
+function limitacoesSentimento(explicacao: Record<string, unknown>) {
+  return Array.isArray(explicacao.limitacoes)
+    ? explicacao.limitacoes.filter((item): item is string => typeof item === 'string')
+    : [];
+}
+
+function rotuloSinal(analise: AnaliseSentimentoApi) {
+  if ((analise.revisaoHumana?.status ?? 'pendente') === 'pendente') return 'Aguardando revisao';
+  return analise.alertaDisparado ? 'Alerta' : 'Monitorar';
+}
+
 export function PainelIa() {
   const [pacientes, setPacientes] = useState<RespostaPaginada<PacienteResumo> | null>(null);
   const [sentimento, setSentimento] = useState<FormularioSentimento>(sentimentoInicial);
@@ -59,6 +83,8 @@ export function PainelIa() {
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [processando, setProcessando] = useState(false);
+  const [revisandoId, setRevisandoId] = useState<string | null>(null);
+  const [observacoes, setObservacoes] = useState<Record<string, string>>({});
 
   async function carregar() {
     setCarregando(true);
@@ -116,6 +142,44 @@ export function PainelIa() {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao reconhecer alimento.');
     } finally {
       setProcessando(false);
+    }
+  }
+
+  async function revisarSentimento(id: string, decisao: DecisaoRevisaoIaApi) {
+    setRevisandoId(id);
+    setErro(null);
+    try {
+      const atualizada = await revisarSugestaoIa<AnaliseSentimentoApi>(
+        'sentimento',
+        id,
+        decisao,
+        decisao === 'editada' ? { interpretacaoProfissional: observacoes[id] } : undefined
+      );
+      setAnalises((atuais) => atuais.map((item) => (item.id === id ? atualizada : item)));
+      setSucesso('Revisao humana registrada.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar revisao.');
+    } finally {
+      setRevisandoId(null);
+    }
+  }
+
+  async function revisarAlimento(id: string, decisao: DecisaoRevisaoIaApi) {
+    setRevisandoId(id);
+    setErro(null);
+    try {
+      const atualizado = await revisarSugestaoIa<ReconhecimentoAlimentarApi>(
+        'reconhecimento-alimentar',
+        id,
+        decisao,
+        decisao === 'editada' ? { alimentosCorrigidos: observacoes[id] } : undefined
+      );
+      setReconhecimentos((atuais) => atuais.map((item) => (item.id === id ? atualizado : item)));
+      setSucesso('Revisao humana registrada.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar revisao.');
+    } finally {
+      setRevisandoId(null);
     }
   }
 
@@ -282,7 +346,7 @@ export function PainelIa() {
                   <div className="flex items-center justify-between gap-3">
                     <strong className="truncate">{analise.modelo}</strong>
                     <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-texto-suave">
-                      {analise.alertaDisparado ? 'Alerta' : 'Monitorar'}
+                      {rotuloSinal(analise)}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs text-texto-suave">
@@ -291,7 +355,45 @@ export function PainelIa() {
                     <span>Motivacao: {formatarScore(analise.motivacaoScore)}</span>
                     <span>Confusao: {formatarScore(analise.confusaoScore)}</span>
                   </div>
-                  <p className="break-all text-xs text-texto-suave">Explicacao: {resumirJson(analise.explicacao)}</p>
+                  <p className="break-all text-xs text-texto-suave">Sugestao original: {resumirJson(analise.explicacao)}</p>
+                  <p className="text-xs text-texto-suave">Fonte: {analise.modelo}.</p>
+                  <p className="text-xs text-texto-suave">Limitacoes: {limitacoesSentimento(analise.explicacao).join(' ') || 'O resultado exige avaliacao clinica.'}</p>
+                  <strong className="text-xs">{rotuloRevisao(analise.revisaoHumana?.status)}</strong>
+                  {analise.revisaoHumana?.status === 'editada' && analise.revisaoHumana.conteudoEditado ? (
+                    <p className="break-all rounded-md border border-linha bg-fundo px-3 py-2 text-xs font-medium">
+                      Resultado revisado: {resumirJson(analise.revisaoHumana.conteudoEditado)}
+                    </p>
+                  ) : null}
+                  {(analise.revisaoHumana?.status ?? 'pendente') === 'pendente' ? (
+                    <div className="grid gap-2">
+                      <AreaTexto
+                        aria-label={`Observacao da revisao ${analise.id}`}
+                        placeholder="Informe a interpretacao clinica corrigida"
+                        value={observacoes[analise.id] ?? ''}
+                        onChange={(evento) => setObservacoes((atuais) => ({ ...atuais, [analise.id]: evento.target.value }))}
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <Botao type="button" onClick={() => void revisarSentimento(analise.id, 'aceita')} disabled={revisandoId === analise.id}>
+                          <Check size={16} /> Aceitar
+                        </Botao>
+                        <Botao type="button" onClick={() => void revisarSentimento(analise.id, 'editada')} disabled={revisandoId === analise.id || !observacoes[analise.id]?.trim()}>
+                          <Pencil size={16} /> Editar e aceitar
+                        </Botao>
+                        <Botao type="button" variante="perigo" onClick={() => void revisarSentimento(analise.id, 'rejeitada')} disabled={revisandoId === analise.id}>
+                          <X size={16} /> Rejeitar
+                        </Botao>
+                      </div>
+                    </div>
+                  ) : analise.revisaoHumana.status !== 'rejeitada' ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Link className="inline-flex min-h-11 items-center gap-2 rounded-md border border-linha px-3 text-sm font-medium" href={`/pacientes/${analise.pacienteId}`}>
+                        <FileHeart size={16} /> Abrir prontuario
+                      </Link>
+                      <Link className="inline-flex min-h-11 items-center gap-2 rounded-md border border-linha px-3 text-sm font-medium" href="/comunicacoes">
+                        <MessageSquare size={16} /> Preparar comunicacao
+                      </Link>
+                    </div>
+                  ) : null}
                 </div>
               ))
             ) : (
@@ -318,7 +420,40 @@ export function PainelIa() {
                     {item.caloriasEstimadas ? `${formatarScore(item.caloriasEstimadas)} kcal` : 'Calorias nao estimadas'}
                     {item.pesoEstimadoGramas ? ` | ${formatarScore(item.pesoEstimadoGramas)} g` : ''}
                   </p>
-                  <p className="break-all text-xs text-texto-suave">Alimentos: {resumirJson(item.alimentosDetectados)}</p>
+                  <p className="break-all text-xs text-texto-suave">Sugestao original: {resumirJson(item.alimentosDetectados)}</p>
+                  <p className="text-xs text-texto-suave">Fonte: {item.provedor}.</p>
+                  <p className="text-xs text-texto-suave">Limitacoes: {item.limitacoes?.join(' ') || 'A estimativa exige confirmacao profissional.'}</p>
+                  <strong className="text-xs">{rotuloRevisao(item.revisaoHumana?.status)}</strong>
+                  {item.revisaoHumana?.status === 'editada' && item.revisaoHumana.conteudoEditado ? (
+                    <p className="break-all rounded-md border border-linha bg-fundo px-3 py-2 text-xs font-medium">
+                      Resultado revisado: {resumirJson(item.revisaoHumana.conteudoEditado)}
+                    </p>
+                  ) : null}
+                  {(item.revisaoHumana?.status ?? 'pendente') === 'pendente' ? (
+                    <div className="grid gap-2">
+                      <AreaTexto
+                        aria-label={`Observacao da revisao ${item.id}`}
+                        placeholder="Informe os alimentos ou porcoes corrigidos"
+                        value={observacoes[item.id] ?? ''}
+                        onChange={(evento) => setObservacoes((atuais) => ({ ...atuais, [item.id]: evento.target.value }))}
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <Botao type="button" onClick={() => void revisarAlimento(item.id, 'aceita')} disabled={revisandoId === item.id}>
+                          <Check size={16} /> Aceitar
+                        </Botao>
+                        <Botao type="button" onClick={() => void revisarAlimento(item.id, 'editada')} disabled={revisandoId === item.id || !observacoes[item.id]?.trim()}>
+                          <Pencil size={16} /> Editar e aceitar
+                        </Botao>
+                        <Botao type="button" variante="perigo" onClick={() => void revisarAlimento(item.id, 'rejeitada')} disabled={revisandoId === item.id}>
+                          <X size={16} /> Rejeitar
+                        </Botao>
+                      </div>
+                    </div>
+                  ) : item.revisaoHumana.status !== 'rejeitada' ? (
+                    <Link className="inline-flex min-h-11 items-center gap-2 rounded-md border border-linha px-3 text-sm font-medium" href={`/pacientes/${item.pacienteId}`}>
+                      <FileHeart size={16} /> Abrir prontuario
+                    </Link>
+                  ) : null}
                 </div>
               ))
             ) : (

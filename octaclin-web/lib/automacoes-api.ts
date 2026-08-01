@@ -90,6 +90,20 @@ export async function avaliarRegraAutomacao(entrada: AvaliarRegraEntrada): Promi
   });
 }
 
+export async function simularRegraAutomacao(entrada: AvaliarRegraEntrada): Promise<ExecucaoRegraApi> {
+  return requisitar<ExecucaoRegraApi>('/api/automacoes/simulacoes', {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
+export async function alterarAtivacaoRegra(id: string, ativa: boolean): Promise<RegraAutomacaoApi> {
+  return requisitar<RegraAutomacaoApi>(`/api/automacoes/regras/${id}/ativacao`, {
+    method: 'PATCH',
+    body: JSON.stringify({ ativa })
+  });
+}
+
 export async function listarExecucoesAutomacao(): Promise<ExecucaoRegraApi[]> {
   return requisitar<ExecucaoRegraApi[]>('/api/automacoes/avaliacoes');
 }

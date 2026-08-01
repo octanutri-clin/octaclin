@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity, AlertTriangle, CheckCircle2, CreditCard, Download, History, RefreshCcw, Scale, Search, Smartphone, Undo2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { Abas } from '@/components/ui/abas';
 import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { SessaoPublica, obterSessao, sair } from '@/lib/auth-api';
@@ -173,9 +174,21 @@ function chaveSolicitacaoAssinatura(solicitacao: SolicitacaoAssinaturaOperaciona
   return `${solicitacao.tenantId}:${solicitacao.solicitadoEm}:${solicitacao.planoDesejado ?? solicitacao.planoAtualId}`;
 }
 
+type AreaOperacoes = 'saude' | 'incidentes' | 'comunicacoes' | 'lgpd' | 'auditoria' | 'filas';
+
+const areasOperacoes = [
+  { id: 'saude', rotulo: 'Saude' },
+  { id: 'incidentes', rotulo: 'Incidentes' },
+  { id: 'comunicacoes', rotulo: 'Comunicacoes' },
+  { id: 'lgpd', rotulo: 'LGPD' },
+  { id: 'auditoria', rotulo: 'Auditoria' },
+  { id: 'filas', rotulo: 'Filas' }
+];
+
 export function PainelOperacoes() {
   const router = useRouter();
   const [sessao, setSessao] = useState<SessaoPublica | null>(null);
+  const [areaAtiva, setAreaAtiva] = useState<AreaOperacoes>('saude');
   const [dados, setDados] = useState<DadosOperacionais | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
@@ -728,7 +741,21 @@ export function PainelOperacoes() {
           }
         />
 
-        <section className="grid gap-3 md:grid-cols-4">
+        <Abas
+          identificador="operacoes"
+          abas={areasOperacoes}
+          ativaId={areaAtiva}
+          aoMudar={(id) => setAreaAtiva(id as AreaOperacoes)}
+          rotulo="Areas de operacoes"
+        />
+
+        <section
+          id="operacoes-saude-painel"
+          role="tabpanel"
+          aria-labelledby="operacoes-saude-aba"
+          hidden={areaAtiva !== 'saude'}
+          className="grid gap-3 md:grid-cols-4"
+        >
           {metricas.map((item) => (
             <Cartao key={item.rotulo}>
               <CartaoConteudo>
@@ -742,7 +769,12 @@ export function PainelOperacoes() {
           ))}
         </section>
 
-        <Cartao>
+        <Cartao
+          id="operacoes-incidentes-painel"
+          role="tabpanel"
+          aria-labelledby="operacoes-incidentes-aba"
+          hidden={areaAtiva !== 'incidentes'}
+        >
           <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
             <div>
               <div className="flex items-center gap-2">
@@ -782,7 +814,12 @@ export function PainelOperacoes() {
           )}
         </Cartao>
 
-        <Cartao>
+        <Cartao
+          id="operacoes-comunicacoes-painel"
+          role="tabpanel"
+          aria-labelledby="operacoes-comunicacoes-aba"
+          hidden={areaAtiva !== 'comunicacoes'}
+        >
           <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
             <div>
               <div className="flex items-center gap-2">
@@ -911,7 +948,7 @@ export function PainelOperacoes() {
           </div>
         </Cartao>
 
-        <Cartao>
+        <Cartao hidden={areaAtiva !== 'filas'}>
           <CartaoCabecalho>
             <div className="flex items-center gap-2">
               <CreditCard size={19} className="text-primaria" />
@@ -983,7 +1020,12 @@ export function PainelOperacoes() {
           </div>
         </Cartao>
 
-        <Cartao>
+        <Cartao
+          id="operacoes-lgpd-painel"
+          role="tabpanel"
+          aria-labelledby="operacoes-lgpd-aba"
+          hidden={areaAtiva !== 'lgpd'}
+        >
           <CartaoCabecalho className="flex-col items-start lg:flex-row lg:items-center">
             <div className="flex items-center gap-2">
               <Scale size={19} className="text-primaria" />
@@ -1226,7 +1268,12 @@ export function PainelOperacoes() {
           </div>
         </Cartao>
 
-        <Cartao>
+        <Cartao
+          id="operacoes-auditoria-painel"
+          role="tabpanel"
+          aria-labelledby="operacoes-auditoria-aba"
+          hidden={areaAtiva !== 'auditoria'}
+        >
           <CartaoCabecalho className="flex-col items-start lg:flex-row lg:items-center">
             <div className="flex items-center gap-2">
               <History size={19} className="text-primaria" />
@@ -1337,7 +1384,13 @@ export function PainelOperacoes() {
           </div>
         </Cartao>
 
-        <section className="grid gap-5 lg:grid-cols-[1.35fr_0.9fr]">
+        <section
+          id="operacoes-filas-painel"
+          role="tabpanel"
+          aria-labelledby="operacoes-filas-aba"
+          hidden={areaAtiva !== 'filas'}
+          className="grid gap-5 lg:grid-cols-[1.35fr_0.9fr]"
+        >
           <Cartao>
             <CartaoCabecalho>
               <div>

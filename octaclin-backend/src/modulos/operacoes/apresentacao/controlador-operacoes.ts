@@ -1,8 +1,9 @@
 import { Body, Controller, Get, Header, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
-import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
+import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
+import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoOperacoes } from '../aplicacao/servico-operacoes';
 
@@ -36,8 +37,9 @@ class AplicarPlanoAssinaturaOperacionalDto {
 }
 
 @Controller('operacoes')
-@UseGuards(GuardaJwt, GuardaPapeis)
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
 @Papeis('SuperAdmin')
+@Permissoes('operacoes.auditoria.ler')
 export class ControladorOperacoes {
   constructor(private readonly servicoOperacoes: ServicoOperacoes) {}
 
@@ -93,6 +95,7 @@ export class ControladorOperacoes {
   }
 
   @Post('outbox/:id/reprocessar')
+  @Permissoes('operacoes.outbox.reprocessar')
   reprocessarOutbox(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id') id: string) {
     return this.servicoOperacoes.reprocessarOutbox(usuario.tenantId, id);
   }
@@ -120,6 +123,7 @@ export class ControladorOperacoes {
   }
 
   @Post('comunicacoes/falhas/:id/reprocessar')
+  @Permissoes('operacoes.outbox.reprocessar')
   reprocessarFalhaComunicacao(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id') id: string) {
     return this.servicoOperacoes.reprocessarFalhaComunicacao(usuario.tenantId, id);
   }

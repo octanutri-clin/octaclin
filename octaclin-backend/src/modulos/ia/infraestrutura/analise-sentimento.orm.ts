@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { RevisaoHumanaIa } from '../dominio/revisao-humana';
 
 @Entity('ai_sentiment_analysis')
 export class AnaliseSentimentoOrm {
@@ -37,6 +38,9 @@ export class AnaliseSentimentoOrm {
 
   @Column({ name: 'alerta_disparado', type: 'boolean', default: false })
   alertaDisparado: boolean;
+
+  @Column({ name: 'revisao_humana', type: 'jsonb', default: { status: 'pendente' } })
+  revisaoHumana: RevisaoHumanaIa;
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;

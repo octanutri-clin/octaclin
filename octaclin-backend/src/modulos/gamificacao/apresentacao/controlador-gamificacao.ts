@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
@@ -7,6 +7,7 @@ import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import {
+  AtualizarConfiguracaoGamificacaoDto,
   AtualizarProgressoDesafioDto,
   ConcederBadgeDto,
   CriarBadgeDto,
@@ -26,6 +27,37 @@ export class ControladorGamificacao {
     private readonly servicoGamificacao: ServicoGamificacao,
     private readonly servicoAuditoria: ServicoAuditoria
   ) {}
+
+  @Get('configuracao')
+  async obterConfiguracao(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request) {
+    const configuracao = await this.servicoGamificacao.obterConfiguracao(usuario.tenantId);
+    await this.registrarAuditoria(
+      usuario,
+      requisicao,
+      'gamificacao.configuracao.ler',
+      'tenant_configuracao',
+      usuario.tenantId
+    );
+    return configuracao;
+  }
+
+  @Patch('configuracao')
+  async atualizarConfiguracao(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: AtualizarConfiguracaoGamificacaoDto
+  ) {
+    const configuracao = await this.servicoGamificacao.atualizarConfiguracao(usuario.tenantId, dados);
+    await this.registrarAuditoria(
+      usuario,
+      requisicao,
+      'gamificacao.configuracao.atualizar',
+      'tenant_configuracao',
+      usuario.tenantId,
+      { ...dados }
+    );
+    return configuracao;
+  }
 
   @Get('circulos')
   listarCirculos(@UsuarioAtual() usuario: UsuarioAutenticado) {
@@ -53,7 +85,7 @@ export class ControladorGamificacao {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dados: EntrarCirculoDto
   ) {
-    const membro = await this.servicoGamificacao.entrarCirculo(usuario.tenantId, id, dados);
+    const membro = await this.servicoGamificacao.entrarCirculo(usuario.tenantId, id, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'gamificacao.circulo.membro_entrar', 'membro_circulo', membro.id, {
       circuloId: id,
       pacienteId: dados.pacienteId
@@ -67,7 +99,7 @@ export class ControladorGamificacao {
     @Req() requisicao: Request,
     @Body() dados: CriarPostDto
   ) {
-    const post = await this.servicoGamificacao.criarPost(usuario.tenantId, dados);
+    const post = await this.servicoGamificacao.criarPost(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'gamificacao.post.criar', 'post_comunidade', post.id, {
       circuloId: dados.circuloId,
       pacienteId: dados.pacienteId,
@@ -102,7 +134,7 @@ export class ControladorGamificacao {
     @Req() requisicao: Request,
     @Body() dados: AtualizarProgressoDesafioDto
   ) {
-    const progresso = await this.servicoGamificacao.atualizarProgresso(usuario.tenantId, dados);
+    const progresso = await this.servicoGamificacao.atualizarProgresso(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'gamificacao.desafio.progresso_atualizar', 'participacao_desafio', progresso.id, {
       desafioId: dados.desafioId,
       pacienteId: dados.pacienteId,
@@ -113,7 +145,7 @@ export class ControladorGamificacao {
 
   @Get('desafios/:id/ranking')
   ranking(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
-    return this.servicoGamificacao.ranking(usuario.tenantId, id);
+    return this.servicoGamificacao.ranking(usuario.tenantId, id, usuario);
   }
 
   @Get('badges')
@@ -140,7 +172,7 @@ export class ControladorGamificacao {
     @Req() requisicao: Request,
     @Body() dados: ConcederBadgeDto
   ) {
-    const concessao = await this.servicoGamificacao.concederBadge(usuario.tenantId, dados);
+    const concessao = await this.servicoGamificacao.concederBadge(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'gamificacao.badge.conceder', 'paciente_badge', concessao.id, {
       pacienteId: dados.pacienteId,
       badgeId: dados.badgeId

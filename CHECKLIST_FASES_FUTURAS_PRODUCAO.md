@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-01 apos a conclusao da Fase 195.
+Atualizado em 2026-08-01 apos a publicacao da Fase 197 na PR #10.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1013,7 +1013,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     acessibilidade da conta (2), `security:secrets` e
     `test:confiabilidade`.
 
-- [ ] Fase 197 - Racionalizacao dos modulos avancados.
+- [x] Fase 197 - Racionalizacao dos modulos avancados.
   - Integrar IA aos fluxos clinicos e de comunicacao, com origem, limitacoes e
     decisao obrigatoria de aceitar, editar ou rejeitar a sugestao.
   - Transformar Automacoes em modelos e regras descritas como Quando/Fazer,
@@ -1025,6 +1025,20 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Comunicacoes, LGPD, Auditoria e Filas com detalhes progressivos.
   - Aceite: nenhum modulo tecnico sem uso recorrente ocupa a navegacao
     principal; IA nunca executa conduta sem revisao humana registrada.
+  - Status: concluida, validada localmente e publicada na PR #10 em 2026-08-01. Sugestoes de IA
+    agora informam fonte/limitacoes e ficam pendentes ate aceitar, editar ou
+    rejeitar; automacoes nascem como rascunho e exigem simulacao persistida;
+    Mobile foi absorvido por Operacoes com escopo por papel; Gamificacao virou
+    opt-in com comunidade/ranking desligados; e Operacoes foi dividida nas seis
+    areas planejadas.
+  - Data: 2026-08-01. Saida:
+    `fase-197-racionalizacao-modulos-avancados.md`.
+  - Validacoes: backend 69 suites/395 testes, lint, typechecks, builds,
+    autorizacao/BFF (23), Next dinamico (53), Playwright da fase em desktop e
+    celular (6), smoke BFF real, testes Python da IA (2), `security:secrets` e
+    `test:confiabilidade`.
+  - Operacao: migrations `1011` e `1012` devem ser aplicadas antes do primeiro
+    deploy da fase quando a execucao automatica estiver desabilitada.
 
 - [ ] Fase 198 - Validacao final de usabilidade e consolidacao visual.
   - Executar jornadas completas com profissional, administrador e paciente

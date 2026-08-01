@@ -15,7 +15,7 @@ import { ServicoMobile } from '../aplicacao/servico-mobile';
 
 @Controller('mobile')
 @UseGuards(GuardaJwt, GuardaPapeis)
-@Papeis('SuperAdmin', 'Professional', 'Collaborator', 'Patient')
+@Papeis('SuperAdmin', 'Professional', 'Patient')
 export class ControladorMobile {
   constructor(
     private readonly servicoMobile: ServicoMobile,
@@ -24,7 +24,7 @@ export class ControladorMobile {
 
   @Get('diario-rapido')
   listarDiarioRapido(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoMobile.listarDiarioRapido(usuario.tenantId);
+    return this.servicoMobile.listarDiarioRapido(usuario.tenantId, usuario);
   }
 
   @Post('diario-rapido')
@@ -33,7 +33,7 @@ export class ControladorMobile {
     @Req() requisicao: Request,
     @Body() dados: RegistrarDiarioRapidoDto
   ) {
-    const diario = await this.servicoMobile.registrarDiarioRapido(usuario.tenantId, dados);
+    const diario = await this.servicoMobile.registrarDiarioRapido(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'mobile.diario_rapido.registrar', 'log_diario_rapido', diario.id, {
       pacienteId: dados.pacienteId,
       tipo: dados.tipo
@@ -43,7 +43,7 @@ export class ControladorMobile {
 
   @Get('midias/uploads')
   listarArquivosMidia(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoMobile.listarArquivosMidia(usuario.tenantId);
+    return this.servicoMobile.listarArquivosMidia(usuario.tenantId, usuario);
   }
 
   @Post('midias/uploads')
@@ -52,7 +52,7 @@ export class ControladorMobile {
     @Req() requisicao: Request,
     @Body() dados: SolicitarUploadMidiaDto
   ) {
-    const upload = await this.servicoMobile.solicitarUploadMidia(usuario.tenantId, dados);
+    const upload = await this.servicoMobile.solicitarUploadMidia(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'mobile.midia.upload_solicitar', 'arquivo_midia', upload.arquivo.id, {
       pacienteId: dados.pacienteId,
       tipo: dados.tipo,
@@ -64,7 +64,7 @@ export class ControladorMobile {
 
   @Get('acompanhantes')
   listarAcompanhantes(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoMobile.listarAcompanhantes(usuario.tenantId);
+    return this.servicoMobile.listarAcompanhantes(usuario.tenantId, usuario);
   }
 
   @Post('acompanhantes')
@@ -73,7 +73,7 @@ export class ControladorMobile {
     @Req() requisicao: Request,
     @Body() dados: CriarAcompanhanteDto
   ) {
-    const acompanhante = await this.servicoMobile.criarAcompanhante(usuario.tenantId, dados);
+    const acompanhante = await this.servicoMobile.criarAcompanhante(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'mobile.acompanhante.criar', 'acompanhante', acompanhante.id, {
       pacienteId: dados.pacienteId,
       possuiContato: Boolean(dados.contato)
@@ -87,7 +87,7 @@ export class ControladorMobile {
     @Req() requisicao: Request,
     @Body() dados: SincronizarLoteMobileDto
   ) {
-    const lote = await this.servicoMobile.sincronizarLote(usuario.tenantId, dados);
+    const lote = await this.servicoMobile.sincronizarLote(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'mobile.sincronizacao_lote.executar', 'sincronizacao_mobile', undefined, {
       totalItens: dados.itens.length,
       tipos: Array.from(new Set(dados.itens.map((item) => item.tipo))),

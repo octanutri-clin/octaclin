@@ -3,7 +3,7 @@ import { PainelGamificacao } from '@/components/gamificacao/painel-gamificacao';
 
 export default function GamificacaoPage() {
   return (
-    <ConsoleShell titulo="Gamificacao" subtitulo="Comunidade e conquistas">
+    <ConsoleShell titulo="Metas e adesao" subtitulo="Recurso opcional por paciente">
       <PainelGamificacao />
     </ConsoleShell>
   );

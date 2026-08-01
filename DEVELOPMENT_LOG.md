@@ -27,6 +27,22 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 197 - Racionalizacao dos modulos avancados
+
+- Responsavel: Codex com subagentes de Mobile/Gamificacao e revisao independente.
+- Conclusao: 2026-08-01.
+- Commit: `3117592`.
+- Push: sim, branch publicada e PR draft #10 aberta contra `main`.
+- Validacoes: backend 69 suites/395 testes, lint, typechecks, builds, authz,
+  Next 15, Playwright desktop/mobile, smoke BFF real, IA Python, secrets e
+  confiabilidade.
+- Arquivos principais: servicos/controladores de IA, Automacoes, Mobile,
+  Gamificacao e Operacoes; `painel-ia.tsx`, `painel-automacoes.tsx`,
+  `painel-operacoes.tsx` e migrations `1011/1012`.
+- Pendencias: aplicar migrations `1011/1012` antes do deploy se migrations
+  automaticas estiverem desabilitadas; revisar e integrar a PR #10.
+- Proxima fase: Fase 198 - Validacao final de usabilidade e consolidacao visual.
+
 ### Fase 196 - Comunicacoes, equipe e conta do cliente
 
 - Responsavel: Codex com auditorias paralelas de comunicacoes, equipe e conta.
