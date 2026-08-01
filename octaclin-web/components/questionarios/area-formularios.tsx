@@ -60,7 +60,7 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
               value={questionarioAtual?.id ?? ''}
               onChange={(event) => {
                 const escolhido = questionarios.find((item) => item.id === event.target.value);
-                if (escolhido) void selecionarQuestionario(escolhido);
+                void selecionarQuestionario(escolhido ?? null);
               }}
             >
               <option value="">Novo questionario</option>

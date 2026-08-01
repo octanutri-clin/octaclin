@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-31 apos a Fase 193 - pacientes e prontuario orientados a conduta.
+Atualizado em 2026-08-01 apos a correcao complementar da Fase 194.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 

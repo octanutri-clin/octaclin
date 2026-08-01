@@ -13,7 +13,7 @@ export function AreaDistribuicao({ workspace }: { workspace: WorkspaceQuestionar
     pacientes, pacienteAgendamentoId, setPacienteAgendamentoId, agendar, salvando, questionarioAtual,
     pacienteEnvioId, setPacienteEnvioId, gerarLinkFormulario, linkFormulario
   } = workspace;
-  const [recorrencia, setRecorrencia] = useState<RecorrenciaEscolhida>({});
+  const [recorrencia, setRecorrencia] = useState<RecorrenciaEscolhida>({ regraCron: '0 8 * * 1' });
 
   return (
     <Cartao className="overflow-hidden">
