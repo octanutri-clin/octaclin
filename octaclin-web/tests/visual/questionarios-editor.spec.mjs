@@ -1,0 +1,62 @@
+import { expect, test } from '@playwright/test';
+
+const usuarioProfissional = {
+  autenticado: true,
+  apiUrl: 'http://localhost:3001',
+  tenantSlug: 'clinica-carla',
+  email: 'dra.carla@octaclin.local',
+  expiraEm: '2026-12-31T15:00:00.000Z',
+  papel: 'Professional',
+  permissoes: ['dashboard.ler', 'questionarios.ler', 'questionarios.gerenciar'],
+  destinoInicial: '/questionarios'
+};
+
+async function criarSessao(page) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: 'Professional', domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/questionarios'), domain: 'localhost', path: '/' }
+  ]);
+}
+
+const questionarios = [
+  { id: 'q-1', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Check-in semanal', descricao: 'Adesao', status: 'rascunho', versao: 1, criadoEm: '2026-07-01T10:00:00.000Z', atualizadoEm: '2026-07-01T10:00:00.000Z' },
+  { id: 'q-2', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Avaliacao mensal', descricao: 'Metricas', status: 'publicado', versao: 2, criadoEm: '2026-07-02T10:00:00.000Z', atualizadoEm: '2026-07-02T10:00:00.000Z' }
+];
+
+async function mockarBff(page) {
+  await page.route('**/api/auth/session', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(usuarioProfissional) }));
+  await page.route('**/api/categorias-pergunta', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 'cat-1', tenantId: 'tenant-1', nome: 'Nutricao', iconeSvg: 'utensils', corHex: '#247BA0', ordem: 1 }]) }));
+  await page.route('**/api/profissionais*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'profissional-1', tenantId: 'tenant-1', nome: 'Dra. Carla' }], total: 1 }) }));
+  await page.route('**/api/pacientes*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'paciente-1', tenantId: 'tenant-1', nome: 'Joana' }], total: 1 }) }));
+  await page.route('**/api/questionarios/modelos', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }));
+  await page.route('**/api/biblioteca-perguntas*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }));
+  await page.route('**/api/questionarios?*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: questionarios, total: 2 }) }));
+  await page.route('**/api/questionarios/q-1/perguntas', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { id: 'p-1', tenantId: 'tenant-1', questionarioId: 'q-1', categoriaId: 'cat-1', tipo: 'likert', enunciado: 'Como foi sua semana?', peso: '1', obrigatoria: true, configuracao: {}, opcoes: [], ordem: 1, visivelBiblioteca: false }
+  ]) }));
+  await page.route('**/api/questionarios/q-2/perguntas', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }));
+  await page.route('**/api/questionarios/*/respostas/leitura-clinica*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ questionarioId: 'q-1', resumo: { totalRespostas: 0, totalPacientes: 0, totalPerguntas: 0, mediaRespostasPorEnvio: 0 }, pacientes: [], perguntas: [], respostas: [] }) }));
+}
+
+test.describe('Editor de questionarios', () => {
+  test('bloqueia troca de formulario com alteracao nao salva ate confirmar', async ({ page }) => {
+    await criarSessao(page);
+    await mockarBff(page);
+    await page.goto('/questionarios');
+
+    await page.getByRole('tab', { name: 'Formularios' }).click();
+    const titulo = page.getByLabel('Titulo');
+    await expect(titulo).toHaveValue('Check-in semanal');
+    await titulo.fill('Check-in semanal (editado)');
+
+    page.once('dialog', (dialog) => dialog.dismiss());
+    await page.getByLabel('Selecionar').selectOption('q-2');
+    await expect(titulo).toHaveValue('Check-in semanal (editado)');
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByLabel('Selecionar').selectOption('q-2');
+    await expect(page.getByLabel('Titulo')).toHaveValue('Avaliacao mensal');
+  });
+});
