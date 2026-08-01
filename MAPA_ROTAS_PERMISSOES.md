@@ -87,7 +87,7 @@ Inclui permissoes de `Professional` e adiciona:
 | `/comunicacoes` | SuperAdmin, Professional, Collaborator | `comunicacoes.mensagens.ler` |
 | `/automacoes` | SuperAdmin, Professional | `automacoes.gerenciar` |
 | `/ia` | SuperAdmin, Professional | `ia.executar` |
-| `/mobile` | SuperAdmin, Professional | `mobile.operar` |
+| `/mobile` | Redireciona para `/operacoes`; APIs preservadas para Patient, Professional e SuperAdmin | `mobile.operar` |
 | `/gamificacao` | SuperAdmin, Professional | `gamificacao.gerenciar` |
 | `/operacoes` | SuperAdmin | `operacoes.auditoria.ler` |
 | `/portal` | Patient | `portal.acessar` |
@@ -120,7 +120,7 @@ Inclui permissoes de `Professional` e adiciona:
 | Webhook WhatsApp | `/comunicacoes/webhooks/whatsapp` | Publico validado por token/assinatura |
 | Automacoes | `/automacoes` | `SuperAdmin`, `Professional` + `automacoes.gerenciar` |
 | IA | `/ia` | `SuperAdmin`, `Professional` + `ia.executar` |
-| Mobile | `/mobile` | `SuperAdmin`, `Professional`, `Collaborator`, `Patient` |
+| Mobile | `/mobile` | Redireciona para Operacoes; backend permite `SuperAdmin`, `Professional` e `Patient` com escopo proprio |
 | Gamificacao | `/gamificacao` | `SuperAdmin`, `Professional` + `gamificacao.gerenciar` |
 | Operacoes | `/operacoes` | `SuperAdmin` |
 
@@ -160,7 +160,7 @@ Inclui permissoes de `Professional` e adiciona:
 - BFF do cliente valida permissao antes de proxyar.
 - Middleware web usa permissoes da sessao para bloquear rotas operacionais.
 - UI esconde menus e acoes sem permissao.
-- Pendente para fases futuras: testes negativos cross-tenant mais amplos e refinamento de permissoes no app/mobile.
+- Pendente para fases futuras: testes negativos cross-tenant mais amplos nos modulos ainda nao cobertos.
 
 ## Regra de atualizacao
 

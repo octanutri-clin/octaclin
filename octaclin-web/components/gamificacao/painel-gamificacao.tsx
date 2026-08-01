@@ -9,6 +9,7 @@ import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/
 import {
   BadgeApi,
   CirculoPacientesApi,
+  ConfiguracaoGamificacaoApi,
   DesafioApi,
   ParticipacaoDesafioApi,
   carregarBootstrapGamificacao,
@@ -19,7 +20,9 @@ import {
   criarDesafio,
   criarPost,
   entrarCirculo,
-  atualizarProgressoDesafio
+  atualizarProgressoDesafio,
+  atualizarConfiguracaoGamificacao,
+  obterConfiguracaoGamificacao
 } from '@/lib/gamificacao-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
 
@@ -96,6 +99,8 @@ function resumirJson(valor: unknown) {
 }
 
 export function PainelGamificacao() {
+  const [configuracao, setConfiguracao] = useState<ConfiguracaoGamificacaoApi | null>(null);
+  const [configuracaoEdicao, setConfiguracaoEdicao] = useState<ConfiguracaoGamificacaoApi | null>(null);
   const [profissionais, setProfissionais] = useState<RespostaPaginada<ProfissionalResumo> | null>(null);
   const [pacientes, setPacientes] = useState<RespostaPaginada<PacienteResumo> | null>(null);
   const [circulos, setCirculos] = useState<CirculoPacientesApi[]>([]);
@@ -111,14 +116,17 @@ export function PainelGamificacao() {
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
-  async function carregar() {
+  async function carregar(configuracaoAtual?: ConfiguracaoGamificacaoApi) {
     setCarregando(true);
     setErro(null);
     setSucesso(null);
     try {
-      const bootstrap = await carregarBootstrapGamificacao();
+      const configuracaoCarregada = configuracaoAtual ?? await obterConfiguracaoGamificacao();
+      const bootstrap = await carregarBootstrapGamificacao(configuracaoCarregada);
       const profissionalId = bootstrap.profissionais.itens[0]?.id ?? '';
       const pacienteId = bootstrap.pacientes.itens[0]?.id ?? '';
+      setConfiguracao(configuracaoCarregada);
+      setConfiguracaoEdicao(configuracaoCarregada);
       setProfissionais(bootstrap.profissionais);
       setPacientes(bootstrap.pacientes);
       setCirculos(bootstrap.circulos);
@@ -132,6 +140,23 @@ export function PainelGamificacao() {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar gamificacao.');
     } finally {
       setCarregando(false);
+    }
+  }
+
+  async function salvarConfiguracao(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!configuracaoEdicao) return;
+    setSalvando(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const atualizada = await atualizarConfiguracaoGamificacao(configuracaoEdicao);
+      await carregar(atualizada);
+      setSucesso('Configuracao de gamificacao atualizada.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar configuracao.');
+    } finally {
+      setSalvando(false);
     }
   }
 
@@ -252,12 +277,15 @@ export function PainelGamificacao() {
       <Cartao>
       <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-base font-semibold">Gamificacao</h2>
+          <h2 className="text-base font-semibold">Metas e adesao</h2>
           <p className="mt-1 text-sm text-texto-suave">
-            {circulos.length} circulos, {desafios.length} desafios, {badges.length} badges persistidos
+            {configuracao?.metasBadgesHabilitados
+              ? `${desafios.length} metas e ${badges.length} conquistas individuais`
+              : 'Recursos desabilitados por padrao'}
           </p>
+          <p className="mt-1 text-xs text-texto-sutil">Cada area exige ativacao explicita da conta.</p>
         </div>
-        <Botao onClick={carregar} disabled={carregando}>
+        <Botao onClick={() => void carregar()} disabled={carregando}>
           <RefreshCcw size={16} />
           {carregando ? 'Atualizando' : 'Atualizar'}
         </Botao>
@@ -273,7 +301,40 @@ export function PainelGamificacao() {
         </div>
       ) : null}
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      <Cartao>
+        <form onSubmit={salvarConfiguracao}>
+          <CartaoCabecalho>
+            <CartaoTitulo>Ativacao opcional</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo className="grid gap-3">
+            <div className="grid gap-2 md:grid-cols-3">
+              {configuracaoEdicao ? ([
+                ['metasBadgesHabilitados', 'Metas e badges'],
+                ['comunidadeHabilitada', 'Comunidade'],
+                ['rankingHabilitado', 'Ranking']
+              ] as const).map(([chave, rotulo]) => (
+                <label key={chave} className="inline-flex h-10 items-center gap-2 rounded-md border border-linha bg-fundo px-3 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={configuracaoEdicao[chave]}
+                    onChange={(evento) => setConfiguracaoEdicao((atual) => atual ? { ...atual, [chave]: evento.target.checked } : atual)}
+                    className="h-5 w-5 accent-primaria"
+                  />
+                  {rotulo}
+                </label>
+              )) : null}
+            </div>
+            <div className="flex justify-end">
+              <Botao type="submit" variante="primario" disabled={salvando || carregando || !configuracaoEdicao}>
+                <Save size={16} />
+                Salvar ativacao
+              </Botao>
+            </div>
+          </CartaoConteudo>
+        </form>
+      </Cartao>
+
+      {configuracao?.comunidadeHabilitada ? <section className="grid gap-4 xl:grid-cols-2">
         <Cartao>
         <form onSubmit={salvarCirculo}>
           <CartaoCabecalho>
@@ -417,9 +478,9 @@ export function PainelGamificacao() {
           </CartaoConteudo>
         </form>
         </Cartao>
-      </section>
+      </section> : null}
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      {configuracao?.metasBadgesHabilitados ? <section className="grid gap-4 xl:grid-cols-2">
         <Cartao>
         <form onSubmit={salvarDesafio}>
           <CartaoCabecalho>
@@ -562,10 +623,11 @@ export function PainelGamificacao() {
           </CartaoConteudo>
         </form>
         </Cartao>
-      </section>
+      </section> : null}
 
+      {configuracao && (configuracao.rankingHabilitado || configuracao.metasBadgesHabilitados || configuracao.comunidadeHabilitada) ? (
       <section className="grid gap-4 xl:grid-cols-2">
-        <Cartao>
+        {configuracao.rankingHabilitado ? <Cartao>
           <CartaoCabecalho>
             <CartaoTitulo>Ranking</CartaoTitulo>
           </CartaoCabecalho>
@@ -592,17 +654,18 @@ export function PainelGamificacao() {
               </Botao>
             </div>
           ) : null}
-        </Cartao>
+        </Cartao> : null}
 
-        <Cartao>
+        {configuracao.metasBadgesHabilitados || configuracao.comunidadeHabilitada ? <Cartao>
           <CartaoCabecalho>
             <CartaoTitulo>Registros persistidos</CartaoTitulo>
           </CartaoCabecalho>
           <div className="grid gap-3 p-4 text-sm">
-            <div className="rounded-md border border-linha bg-fundo p-3">
+            {configuracao.comunidadeHabilitada ? <div className="rounded-md border border-linha bg-fundo p-3">
               <p className="text-xs font-semibold uppercase text-texto-suave">Circulos</p>
               <p className="mt-1 text-tinta">{circulos.map((item) => item.nome).join(', ') || 'Nenhum circulo criado.'}</p>
-            </div>
+            </div> : null}
+            {configuracao.metasBadgesHabilitados ? <>
             <div className="rounded-md border border-linha bg-fundo p-3">
               <p className="text-xs font-semibold uppercase text-texto-suave">Desafios</p>
               <p className="mt-1 text-tinta">{desafios.map((item) => item.titulo).join(', ') || 'Nenhum desafio criado.'}</p>
@@ -611,9 +674,11 @@ export function PainelGamificacao() {
               <p className="text-xs font-semibold uppercase text-texto-suave">Badges</p>
               <p className="mt-1 text-tinta">{badges.map((item) => item.nome).join(', ') || 'Nenhum badge criado.'}</p>
             </div>
+            </> : null}
           </div>
-        </Cartao>
+        </Cartao> : null}
       </section>
+      ) : null}
     </section>
   );
 }

@@ -3,7 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditoria';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
 import { ModuloAuth } from '../auth/modulo-auth';
+import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
+import { ProfissionalOrm } from '../profissionais/infraestrutura/profissional.orm';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
+import { TenantConfiguracaoOrm } from '../tenancy/infraestrutura/tenant-configuracao.orm';
 import { ServicoGamificacao } from './aplicacao/servico-gamificacao';
 import { ControladorGamificacao } from './apresentacao/controlador-gamificacao';
 import { BadgeOrm } from './infraestrutura/badge.orm';
@@ -26,6 +29,9 @@ import { PostComunidadeOrm } from './infraestrutura/post-comunidade.orm';
       ParticipacaoDesafioOrm,
       BadgeOrm,
       PacienteBadgeOrm,
+      PacienteOrm,
+      ProfissionalOrm,
+      TenantConfiguracaoOrm,
       UserActionLogOrm
     ]),
     ModuloAuth,

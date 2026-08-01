@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
@@ -6,7 +6,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AnalisarSentimentoDto, ReconhecerAlimentoDto } from '../aplicacao/dtos';
+import { AnalisarSentimentoDto, ReconhecerAlimentoDto, RevisarSugestaoIaDto } from '../aplicacao/dtos';
 import { ServicoIa } from '../aplicacao/servico-ia';
 
 @Controller('ia')
@@ -21,7 +21,7 @@ export class ControladorIa {
 
   @Get('sentimento')
   listarAnalisesSentimento(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoIa.listarAnalisesSentimento(usuario.tenantId);
+    return this.servicoIa.listarAnalisesSentimento(usuario.tenantId, usuario);
   }
 
   @Post('sentimento')
@@ -30,7 +30,7 @@ export class ControladorIa {
     @Req() requisicao: Request,
     @Body() dados: AnalisarSentimentoDto
   ) {
-    const analise = await this.servicoIa.analisarSentimento(usuario.tenantId, dados);
+    const analise = await this.servicoIa.analisarSentimento(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'ia.sentimento.analisar', 'analise_sentimento', analise.id, {
       pacienteId: dados.pacienteId,
       respostaCheckinId: dados.respostaCheckinId,
@@ -42,7 +42,7 @@ export class ControladorIa {
 
   @Get('reconhecimento-alimentar')
   listarReconhecimentosAlimentares(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoIa.listarReconhecimentosAlimentares(usuario.tenantId);
+    return this.servicoIa.listarReconhecimentosAlimentares(usuario.tenantId, usuario);
   }
 
   @Post('reconhecimento-alimentar')
@@ -51,11 +51,44 @@ export class ControladorIa {
     @Req() requisicao: Request,
     @Body() dados: ReconhecerAlimentoDto
   ) {
-    const reconhecimento = await this.servicoIa.reconhecerAlimento(usuario.tenantId, dados);
+    const reconhecimento = await this.servicoIa.reconhecerAlimento(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'ia.reconhecimento_alimentar.criar', 'reconhecimento_alimentar', reconhecimento.id, {
       pacienteId: dados.pacienteId,
       arquivoMidiaId: dados.arquivoMidiaId,
       totalAlimentos: reconhecimento.alimentosDetectados.length
+    });
+    return reconhecimento;
+  }
+
+  @Patch('sentimento/:id/revisao')
+  async revisarAnaliseSentimento(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dados: RevisarSugestaoIaDto
+  ) {
+    const analise = await this.servicoIa.revisarAnaliseSentimento(usuario.tenantId, id, dados, usuario);
+    await this.registrarAuditoria(usuario, requisicao, 'ia.sentimento.revisar', 'analise_sentimento', id, {
+      decisao: dados.decisao
+    });
+    return analise;
+  }
+
+  @Patch('reconhecimento-alimentar/:id/revisao')
+  async revisarReconhecimentoAlimentar(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dados: RevisarSugestaoIaDto
+  ) {
+    const reconhecimento = await this.servicoIa.revisarReconhecimentoAlimentar(
+      usuario.tenantId,
+      id,
+      dados,
+      usuario
+    );
+    await this.registrarAuditoria(usuario, requisicao, 'ia.reconhecimento_alimentar.revisar', 'reconhecimento_alimentar', id, {
+      decisao: dados.decisao
     });
     return reconhecimento;
   }

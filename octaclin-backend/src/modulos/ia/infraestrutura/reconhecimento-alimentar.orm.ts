@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { RevisaoHumanaIa } from '../dominio/revisao-humana';
 
 @Entity('food_recognition_cache')
 export class ReconhecimentoAlimentarOrm {
@@ -31,6 +32,12 @@ export class ReconhecimentoAlimentarOrm {
 
   @Column({ name: 'confianca_media', type: 'numeric', precision: 5, scale: 2, nullable: true })
   confiancaMedia?: string;
+
+  @Column({ name: 'revisao_humana', type: 'jsonb', default: { status: 'pendente' } })
+  revisaoHumana: RevisaoHumanaIa;
+
+  @Column({ type: 'jsonb', default: [] })
+  limitacoes: string[];
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;

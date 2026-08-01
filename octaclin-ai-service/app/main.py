@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from typing import Any
 import hashlib
-import os
 import re
 
 app = FastAPI(title="OctaClin AI Service", version="0.1.0")
@@ -34,6 +33,7 @@ class RespostaReconhecimentoAlimentar(BaseModel):
     peso_estimado_gramas: float | None = None
     calorias_estimadas: float | None = None
     confianca_media: float | None = None
+    limitacoes: list[str]
 
 
 PALAVRAS_ANSIEDADE = {"ansioso", "ansiosa", "preocupado", "preocupada", "medo", "nervoso", "nervosa"}
@@ -64,18 +64,17 @@ def analisar_sentimento(requisicao: RequisicaoSentimento) -> RespostaSentimento:
     motivacao = max(10.0, pontuar(texto, PALAVRAS_MOTIVACAO))
     confusao = pontuar(texto, PALAVRAS_CONFUSAO)
 
-    if os.getenv("OPENAI_API_KEY"):
-        provedor = "openai-ready"
-    else:
-        provedor = "heuristica-local"
-
     return RespostaSentimento(
         ansiedade_score=ansiedade,
         frustracao_score=frustracao,
         motivacao_score=motivacao,
         confusao_score=confusao,
         explicacao={
-            "provedor": provedor,
+            "provedor": "heuristica-local",
+            "limitacoes": [
+                "Analise lexical sem compreensao clinica do prontuario completo.",
+                "Negacoes, ironia e contexto cultural podem alterar a interpretacao.",
+            ],
             "sinais": {
                 "ansiedade": sorted(PALAVRAS_ANSIEDADE.intersection(texto.lower().split())),
                 "frustracao": sorted(PALAVRAS_FRUSTRACAO.intersection(texto.lower().split())),
@@ -113,4 +112,8 @@ def reconhecer_alimento(requisicao: RequisicaoReconhecimentoAlimentar) -> Respos
         peso_estimado_gramas=350.0,
         calorias_estimadas=calorias,
         confianca_media=round(confianca, 2),
+        limitacoes=[
+            "Estimativa visual dependente da qualidade e do enquadramento da imagem.",
+            "Porcao, ingredientes e modo de preparo precisam de confirmacao profissional.",
+        ],
     )

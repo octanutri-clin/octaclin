@@ -1,4 +1,5 @@
-import { IsObject, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsIn, IsObject, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { DecisaoRevisaoIa } from '../dominio/revisao-humana';
 
 export class AnalisarSentimentoDto {
   @IsUUID()
@@ -38,4 +39,18 @@ export class ReconhecerAlimentoDto {
   @IsOptional()
   @IsObject()
   contexto?: Record<string, unknown>;
+}
+
+export class RevisarSugestaoIaDto {
+  @IsIn(['aceita', 'editada', 'rejeitada'])
+  decisao: DecisaoRevisaoIa;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  observacao?: string;
+
+  @IsOptional()
+  @IsObject()
+  conteudoEditado?: Record<string, unknown>;
 }

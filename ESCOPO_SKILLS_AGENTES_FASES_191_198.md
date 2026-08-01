@@ -86,6 +86,10 @@ ou dado sensivel (ver tabela abaixo).
 - Agente: `ecc:security-reviewer` (IA nunca executa conduta sem revisao humana = guardrail).
 - Agente: `ecc:silent-failure-hunter` (simulacao/historico antes de ativar automacao).
 - Sem skill de UI dedicada: fase e sobretudo logica/guardrail, nao peca visual nova.
+- Executado: implementacao principal com subagentes independentes para Mobile e
+  Gamificacao, seguida de revisao read-only transversal. A revisao encontrou e
+  fechou registro ausente de migration, colisao idempotente entre pacientes,
+  resultado editado de IA oculto e divergencia no gate de ativacao.
 
 ### Fase 198 - Validacao final de usabilidade e consolidacao visual
 - Skill: `superpowers:verification-before-completion`.

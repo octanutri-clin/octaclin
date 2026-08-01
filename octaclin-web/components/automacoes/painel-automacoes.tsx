@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { CheckCircle2, Play, Plus, RefreshCcw, Save, SlidersHorizontal, Zap } from 'lucide-react';
+import { CheckCircle2, Pause, Play, Plus, RefreshCcw, Save, SlidersHorizontal } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
@@ -9,9 +9,10 @@ import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/
 import {
   ExecucaoRegraApi,
   RegraAutomacaoApi,
-  avaliarRegraAutomacao,
+  alterarAtivacaoRegra,
   carregarBootstrapAutomacoes,
-  criarRegraAutomacao
+  criarRegraAutomacao,
+  simularRegraAutomacao
 } from '@/lib/automacoes-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
 
@@ -23,7 +24,6 @@ interface FormularioRegra {
   operador: 'igual' | 'maior_que' | 'maior_ou_igual' | 'menor_que' | 'inclui';
   valor: string;
   acaoTipo: string;
-  ativa: boolean;
 }
 
 interface FormularioAvaliacao {
@@ -42,8 +42,7 @@ const regraInicial: FormularioRegra = {
   campo: 'checkinsPerdidos',
   operador: 'maior_ou_igual',
   valor: '3',
-  acaoTipo: 'notificar_profissional',
-  ativa: true
+  acaoTipo: 'notificar_profissional'
 };
 
 const avaliacaoInicial: FormularioAvaliacao = {
@@ -66,6 +65,24 @@ function nomeProfissional(profissionais: ProfissionalResumo[], id: string) {
 
 function resumirJson(valor: unknown) {
   return JSON.stringify(valor);
+}
+
+function descreverGatilho(gatilho: Record<string, unknown>) {
+  const rotulos: Record<string, string> = {
+    'checkin.atrasado': 'um check-in estiver atrasado',
+    'questionario.respondido': 'um formulario for respondido',
+    'paciente.risco_alto': 'um paciente entrar em risco alto'
+  };
+  return rotulos[String(gatilho.tipo)] ?? resumirJson(gatilho);
+}
+
+function descreverAcao(acoes: Array<Record<string, unknown>>) {
+  const rotulos: Record<string, string> = {
+    notificar_profissional: 'notificar o profissional',
+    enviar_template: 'enviar uma mensagem aprovada',
+    criar_tarefa: 'criar uma tarefa de acompanhamento'
+  };
+  return acoes.map((acao) => rotulos[String(acao.tipo)] ?? resumirJson(acao)).join(', ');
 }
 
 export function PainelAutomacoes() {
@@ -125,11 +142,11 @@ export function PainelAutomacoes() {
           }
         ],
         acoes: [{ tipo: formularioRegra.acaoTipo }],
-        ativa: formularioRegra.ativa
+        ativa: false
       });
       setRegras((atuais) => [criada, ...atuais]);
       setFormularioAvaliacao((atual) => ({ ...atual, regraId: criada.id }));
-      setSucesso('Regra criada.');
+      setSucesso('Regra salva como rascunho. Simule antes de ativar.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar regra.');
     } finally {
@@ -137,14 +154,14 @@ export function PainelAutomacoes() {
     }
   }
 
-  async function avaliar(evento: FormEvent<HTMLFormElement>) {
+  async function simular(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setSalvando(true);
     setErro(null);
     setSucesso(null);
 
     try {
-      const execucao = await avaliarRegraAutomacao({
+      const execucao = await simularRegraAutomacao({
         regraId: formularioAvaliacao.regraId,
         pacienteId: formularioAvaliacao.pacienteId || undefined,
         contexto: {
@@ -155,9 +172,24 @@ export function PainelAutomacoes() {
         }
       });
       setExecucoes((atuais) => [execucao, ...atuais].slice(0, 8));
-      setSucesso(`Avaliacao criada com status ${execucao.status}.`);
+      setSucesso(execucao.resultado.executar ? 'Simulacao concluida: a regra seria executada.' : 'Simulacao concluida: as condicoes nao foram atendidas.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao avaliar regra.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao simular regra.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function alternarAtivacao(regra: RegraAutomacaoApi) {
+    setSalvando(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const atualizada = await alterarAtivacaoRegra(regra.id, !regra.ativa);
+      setRegras((atuais) => atuais.map((item) => (item.id === regra.id ? atualizada : item)));
+      setSucesso(atualizada.ativa ? 'Regra ativada.' : 'Regra pausada.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao alterar a regra.');
     } finally {
       setSalvando(false);
     }
@@ -172,9 +204,9 @@ export function PainelAutomacoes() {
       <Cartao>
         <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-base font-semibold">Regras de automacao</h2>
+            <h2 className="text-base font-semibold">Modelos e regras</h2>
             <p className="mt-1 text-sm text-texto-suave">
-              {regras.length} regras, {execucoes.length} avaliacoes persistidas
+              {regras.length} regras, {execucoes.length} simulacoes e execucoes no historico
             </p>
           </div>
           <Botao onClick={carregar} disabled={carregando}>
@@ -290,15 +322,9 @@ export function PainelAutomacoes() {
               </Selecao>
             </div>
           </div>
-          <label className="mt-3 flex items-center justify-between rounded-md border border-linha bg-fundo px-3 py-2">
-            <span className="text-sm font-medium text-tinta">Ativa</span>
-            <input
-              type="checkbox"
-              checked={formularioRegra.ativa}
-              onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, ativa: evento.target.checked }))}
-              className="h-5 w-5 accent-primaria"
-            />
-          </label>
+          <p className="mt-3 rounded-md border border-linha bg-fundo px-3 py-2 text-sm text-texto-suave">
+            Toda regra nova fica em rascunho. Simule o resultado antes de ativar.
+          </p>
           <div className="mt-3 flex justify-end">
             <Botao type="submit" variante="primario" disabled={salvando || !profissionais?.itens.length}>
               <Save size={16} />
@@ -324,8 +350,17 @@ export function PainelAutomacoes() {
                     </span>
                   </div>
                   <p className="truncate text-xs text-texto-suave">{nomeProfissional(profissionais?.itens ?? [], regra.profissionalId)}</p>
-                  <p className="break-all text-xs text-texto-suave">Gatilho: {resumirJson(regra.gatilho)}</p>
-                  <p className="break-all text-xs text-texto-suave">Condicoes: {resumirJson(regra.condicoes)}</p>
+                  <p className="text-xs text-texto-suave"><strong>Quando:</strong> {descreverGatilho(regra.gatilho)}.</p>
+                  <p className="text-xs text-texto-suave"><strong>Fazer:</strong> {descreverAcao(regra.acoes)}.</p>
+                  <Botao
+                    type="button"
+                    onClick={() => void alternarAtivacao(regra)}
+                    disabled={salvando || (!regra.ativa && !execucoes.some((item) => item.regraId === regra.id && item.resultado.simulacao === true))}
+                    aria-label={`${regra.ativa ? 'Pausar' : 'Ativar'} ${regra.nome}`}
+                  >
+                    {regra.ativa ? <Pause size={16} /> : <Play size={16} />}
+                    {regra.ativa ? 'Pausar' : 'Ativar'}
+                  </Botao>
                 </div>
               ))
             ) : (
@@ -337,9 +372,9 @@ export function PainelAutomacoes() {
 
       <section className="grid gap-4 xl:grid-cols-[1fr_420px]">
         <Cartao>
-        <form onSubmit={avaliar}>
+        <form onSubmit={simular}>
           <CartaoCabecalho>
-            <CartaoTitulo icone={<Play size={18} className="text-primaria" />}>Avaliar regra</CartaoTitulo>
+            <CartaoTitulo icone={<Play size={18} className="text-primaria" />}>Simular antes de ativar</CartaoTitulo>
           </CartaoCabecalho>
           <CartaoConteudo>
           <div className="grid gap-3 md:grid-cols-2">
@@ -354,9 +389,7 @@ export function PainelAutomacoes() {
                 <option value="" disabled>
                   Selecione
                 </option>
-                {regras
-                  .filter((regra) => regra.ativa)
-                  .map((regra) => (
+                {regras.map((regra) => (
                     <option key={regra.id} value={regra.id}>
                       {regra.nome}
                     </option>
@@ -422,8 +455,8 @@ export function PainelAutomacoes() {
           </div>
           <div className="mt-3 flex justify-end">
             <Botao type="submit" variante="primario" disabled={salvando || !formularioAvaliacao.regraId}>
-              <Zap size={16} />
-              Solicitar avaliacao
+              <Play size={16} />
+              Simular sem executar
             </Botao>
           </div>
           </CartaoConteudo>
@@ -432,14 +465,14 @@ export function PainelAutomacoes() {
 
         <Cartao>
           <CartaoCabecalho>
-            <CartaoTitulo>Avaliacoes recentes</CartaoTitulo>
+            <CartaoTitulo>Historico recente</CartaoTitulo>
           </CartaoCabecalho>
           <div className="max-h-[420px] divide-y divide-linha overflow-auto">
             {execucoes.length ? (
               execucoes.map((execucao) => (
                 <div key={execucao.id} className="grid gap-2 px-4 py-3 text-sm">
                   <div className="flex items-center justify-between gap-3">
-                    <strong className="truncate">{execucao.id}</strong>
+                    <strong className="truncate">{execucao.resultado.simulacao === true ? 'Simulacao' : 'Execucao'}</strong>
                     <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-texto-suave">
                       {execucao.status}
                     </span>

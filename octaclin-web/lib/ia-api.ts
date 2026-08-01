@@ -13,6 +13,7 @@ export interface AnaliseSentimentoApi {
   confusaoScore: string;
   explicacao: Record<string, unknown>;
   alertaDisparado: boolean;
+  revisaoHumana: RevisaoHumanaIaApi;
   criadoEm: string;
 }
 
@@ -27,7 +28,19 @@ export interface ReconhecimentoAlimentarApi {
   pesoEstimadoGramas?: string;
   caloriasEstimadas?: string;
   confiancaMedia?: string;
+  limitacoes: string[];
+  revisaoHumana: RevisaoHumanaIaApi;
   criadoEm: string;
+}
+
+export type DecisaoRevisaoIaApi = 'aceita' | 'editada' | 'rejeitada';
+
+export interface RevisaoHumanaIaApi {
+  status: 'pendente' | DecisaoRevisaoIaApi;
+  revisadoPor?: string;
+  revisadoEm?: string;
+  observacao?: string;
+  conteudoEditado?: Record<string, unknown>;
 }
 
 export interface AnalisarSentimentoEntrada {
@@ -99,6 +112,18 @@ export async function reconhecerAlimento(entrada: ReconhecerAlimentoEntrada): Pr
 
 export async function listarReconhecimentosAlimentares(): Promise<ReconhecimentoAlimentarApi[]> {
   return requisitar<ReconhecimentoAlimentarApi[]>('/api/ia/reconhecimento-alimentar');
+}
+
+export async function revisarSugestaoIa<T extends AnaliseSentimentoApi | ReconhecimentoAlimentarApi>(
+  tipo: 'sentimento' | 'reconhecimento-alimentar',
+  id: string,
+  decisao: DecisaoRevisaoIaApi,
+  conteudoEditado?: Record<string, unknown>
+): Promise<T> {
+  return requisitar<T>(`/api/ia/${tipo}/${id}/revisao`, {
+    method: 'PATCH',
+    body: JSON.stringify({ decisao, conteudoEditado })
+  });
 }
 
 export async function carregarBootstrapIa(): Promise<BootstrapIa> {

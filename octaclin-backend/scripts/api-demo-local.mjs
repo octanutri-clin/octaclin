@@ -457,7 +457,7 @@ const servidor = http.createServer(async (requisicao, resposta) => {
         gatilho: body.gatilho ?? {},
         condicoes: body.condicoes ?? [],
         acoes: body.acoes ?? [],
-        ativa: body.ativa ?? true,
+        ativa: false,
         criadoEm: new Date().toISOString()
       };
       estado.regrasAutomacao.unshift(regra);
@@ -471,6 +471,35 @@ const servidor = http.createServer(async (requisicao, resposta) => {
     }
 
     if (requisicao.method === 'GET' && url.pathname === '/automacoes/avaliacoes') return json(resposta, 200, estado.execucoesRegra);
+
+    if (requisicao.method === 'POST' && url.pathname === '/automacoes/simulacoes') {
+      const body = await lerJson(requisicao);
+      const regra = estado.regrasAutomacao.find((item) => item.id === body.regraId);
+      if (!regra) return json(resposta, 404, { mensagem: 'Regra de automacao nao encontrada.' });
+      const executar = regra.condicoes.every((condicao) => Number(body.contexto?.[condicao.campo]) >= Number(condicao.valor));
+      const execucao = {
+        id: randomUUID(),
+        tenantId,
+        regraId: regra.id,
+        pacienteId: body.pacienteId,
+        status: executar ? 'executado' : 'ignorado',
+        resultado: { simulacao: true, executar, acoesPlanejadas: executar ? regra.acoes : [], contexto: body.contexto ?? {} },
+        criadoEm: new Date().toISOString()
+      };
+      estado.execucoesRegra.unshift(execucao);
+      return json(resposta, 201, execucao);
+    }
+
+    const ativacaoRegra = url.pathname.match(/^\/automacoes\/regras\/([^/]+)\/ativacao$/);
+    if (requisicao.method === 'PATCH' && ativacaoRegra) {
+      const body = await lerJson(requisicao);
+      const regra = estado.regrasAutomacao.find((item) => item.id === ativacaoRegra[1]);
+      if (!regra) return json(resposta, 404, { mensagem: 'Regra de automacao nao encontrada.' });
+      const simulada = estado.execucoesRegra.some((item) => item.regraId === regra.id && item.resultado?.simulacao === true);
+      if (body.ativa && !simulada) return json(resposta, 400, { mensagem: 'Simule a regra antes de ativa-la.' });
+      regra.ativa = Boolean(body.ativa);
+      return json(resposta, 200, regra);
+    }
 
     if (requisicao.method === 'POST' && url.pathname === '/automacoes/avaliacoes') {
       const body = await lerJson(requisicao);
@@ -512,8 +541,9 @@ const servidor = http.createServer(async (requisicao, resposta) => {
         frustracaoScore: String(frustracao),
         motivacaoScore: String(motivacao),
         confusaoScore: String(textoEntrada.includes('confuso') ? 66.7 : 22.4),
-        explicacao: { provedor: 'api-demo-local', contexto: body.contexto ?? {}, heuristica: 'palavras-chave' },
-        alertaDisparado: frustracao >= 70,
+        explicacao: { provedor: 'heuristica-local', contexto: body.contexto ?? {}, heuristica: 'palavras-chave', limitacoes: ['Analise lexical sem prontuario completo.'] },
+        alertaDisparado: false,
+        revisaoHumana: { status: 'pendente' },
         criadoEm: new Date().toISOString()
       };
       estado.analisesSentimento.unshift(analise);
@@ -524,6 +554,16 @@ const servidor = http.createServer(async (requisicao, resposta) => {
         alertaDisparado: analise.alertaDisparado
       });
       return json(resposta, 201, analise);
+    }
+
+    const revisaoSentimento = url.pathname.match(/^\/ia\/sentimento\/([^/]+)\/revisao$/);
+    if (requisicao.method === 'PATCH' && revisaoSentimento) {
+      const body = await lerJson(requisicao);
+      const analise = estado.analisesSentimento.find((item) => item.id === revisaoSentimento[1]);
+      if (!analise) return json(resposta, 404, { mensagem: 'Sugestao de IA nao encontrada.' });
+      analise.revisaoHumana = { status: body.decisao, conteudoEditado: body.conteudoEditado, revisadoEm: new Date().toISOString() };
+      analise.alertaDisparado = body.decisao !== 'rejeitada' && Number(analise.frustracaoScore) >= 70;
+      return json(resposta, 200, analise);
     }
 
     if (requisicao.method === 'GET' && url.pathname === '/ia/reconhecimento-alimentar') {
@@ -548,6 +588,8 @@ const servidor = http.createServer(async (requisicao, resposta) => {
         pesoEstimadoGramas: '420.00',
         caloriasEstimadas: '610.00',
         confiancaMedia: '85.00',
+        limitacoes: ['Estimativa visual que exige confirmacao profissional.'],
+        revisaoHumana: { status: 'pendente' },
         criadoEm: new Date().toISOString()
       };
       estado.reconhecimentosAlimentares.unshift(reconhecimento);
@@ -557,6 +599,15 @@ const servidor = http.createServer(async (requisicao, resposta) => {
         totalAlimentos: reconhecimento.alimentosDetectados.length
       });
       return json(resposta, 201, reconhecimento);
+    }
+
+    const revisaoAlimento = url.pathname.match(/^\/ia\/reconhecimento-alimentar\/([^/]+)\/revisao$/);
+    if (requisicao.method === 'PATCH' && revisaoAlimento) {
+      const body = await lerJson(requisicao);
+      const reconhecimento = estado.reconhecimentosAlimentares.find((item) => item.id === revisaoAlimento[1]);
+      if (!reconhecimento) return json(resposta, 404, { mensagem: 'Sugestao de IA nao encontrada.' });
+      reconhecimento.revisaoHumana = { status: body.decisao, conteudoEditado: body.conteudoEditado, revisadoEm: new Date().toISOString() };
+      return json(resposta, 200, reconhecimento);
     }
 
     if (requisicao.method === 'GET' && url.pathname === '/mobile/diario-rapido') return json(resposta, 200, estado.diariosRapidos);

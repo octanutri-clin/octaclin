@@ -1,5 +1,19 @@
 import { IsBoolean, IsISO8601, IsNumber, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 
+export class AtualizarConfiguracaoGamificacaoDto {
+  @IsOptional()
+  @IsBoolean()
+  metasBadgesHabilitados?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  comunidadeHabilitada?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  rankingHabilitado?: boolean;
+}
+
 export class CriarCirculoDto {
   @IsUUID()
   profissionalId: string;

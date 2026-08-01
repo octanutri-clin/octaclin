@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-01 apos a Fase 195 - portal do paciente e jornadas publicas.
+Atualizado em 2026-08-01 apos a Fase 197 - racionalizacao dos modulos avancados.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -417,6 +417,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   portal comercial foi dividido em oito tarefas e passou a permitir ajuste
   auditado entre equipe administrativa e profissional, sem IDs ou papeis
   internos na interface. Ver `fase-196-comunicacoes-equipe-conta.md`.
+- Fase 197 - Racionalizacao dos modulos avancados: IA passou a persistir fonte,
+  limitacoes e decisao humana de aceitar, editar ou rejeitar antes de liberar
+  alerta ou acao subsequente. Automacoes nascem inativas e exigem simulacao
+  persistida. Mobile foi absorvido por Operacoes e passou a respeitar escopo
+  por paciente/profissional; a idempotencia tambem foi isolada por paciente.
+  Gamificacao virou opt-in, com comunidade e ranking desligados por padrao.
+  Operacoes foi dividida em Saude, Incidentes, Comunicacoes, LGPD, Auditoria e
+  Filas. Ver `fase-197-racionalizacao-modulos-avancados.md`.
 
 ## Estado atual de uso
 

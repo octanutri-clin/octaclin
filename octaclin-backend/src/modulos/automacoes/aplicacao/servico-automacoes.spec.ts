@@ -1,6 +1,7 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ExecucaoRegraOrm } from '../infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from '../infraestrutura/regra-automacao.orm';
 import { ServicoAutomacoes } from './servico-automacoes';
@@ -25,9 +26,15 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
   return {
     create: jest.fn((entrada: Record<string, unknown>) => ({ id: `${nome}-1`, ...entrada })),
     save: jest.fn(async (entrada: Record<string, unknown>) => entrada),
-    find: jest.fn(async () => dados.regras ?? []),
-    findOne: jest.fn(async () => {
+    find: jest.fn(async () => {
+      if (nome === 'regra') return dados.regras ?? [];
+      if (nome === 'execucao') return dados.execucoes ?? [];
+      return [];
+    }),
+    findOne: jest.fn(async (opcoes?: { where?: Record<string, unknown> }) => {
       if (nome === 'profissional') return dados.profissional ?? null;
+      if (nome === 'execucao') return dados.execucao ?? null;
+      if (nome === 'paciente') return dados.paciente === null ? null : dados.paciente ?? { id: 'paciente-1', tenantId: 'tenant-1' };
       return dados.regra ?? null;
     })
   };
@@ -37,13 +44,15 @@ function criarServico(dados: Record<string, unknown> = {}) {
   const repositorios = {
     regra: criarRepositorioFake('regra', dados),
     execucao: criarRepositorioFake('execucao', dados),
-    profissional: criarRepositorioFake('profissional', dados)
+    profissional: criarRepositorioFake('profissional', dados),
+    paciente: criarRepositorioFake('paciente', dados)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === RegraAutomacaoOrm) return repositorios.regra;
       if (entidade === ExecucaoRegraOrm) return repositorios.execucao;
       if (entidade === ProfissionalOrm) return repositorios.profissional;
+      if (entidade === PacienteOrm) return repositorios.paciente;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -75,8 +84,70 @@ describe('ServicoAutomacoes', () => {
 
     expect(executorTenant.executar).toHaveBeenCalledWith('tenant-1', expect.any(Function));
     expect(repositorios.regra.save).toHaveBeenCalledWith(
-      expect.objectContaining({ tenantId: 'tenant-1', profissionalId: 'profissional-1', ativa: true })
+      expect.objectContaining({ tenantId: 'tenant-1', profissionalId: 'profissional-1', ativa: false })
     );
+  });
+
+  it('deve simular regra inativa e persistir o historico sem enfileirar acoes', async () => {
+    const { servico, fila, repositorios } = criarServico({
+      regra: {
+        id: 'regra-1',
+        tenantId: 'tenant-1',
+        ativa: false,
+        condicoes: [{ campo: 'checkinsPerdidos', operador: 'maior_ou_igual', valor: 3 }],
+        acoes: [{ tipo: 'notificar_profissional' }]
+      }
+    });
+
+    const simulacao = await servico.simularRegra(
+      'tenant-1',
+      { regraId: 'regra-1', pacienteId: 'paciente-1', contexto: { checkinsPerdidos: 3 } },
+      usuarioColaborador
+    );
+
+    expect(simulacao).toEqual(
+      expect.objectContaining({
+        status: 'executado',
+        resultado: expect.objectContaining({ simulacao: true, executar: true })
+      })
+    );
+    expect(repositorios.regra.findOne).toHaveBeenCalledWith({
+      where: { id: 'regra-1', tenantId: 'tenant-1' }
+    });
+    expect(fila.add).not.toHaveBeenCalled();
+  });
+
+  it('deve bloquear ativacao antes de uma simulacao persistida', async () => {
+    const { servico } = criarServico({
+      regra: { id: 'regra-1', tenantId: 'tenant-1', ativa: false },
+      execucao: null
+    });
+
+    await expect(
+      servico.alterarAtivacao('tenant-1', 'regra-1', true, usuarioColaborador)
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('deve ativar regra depois de uma simulacao persistida', async () => {
+    const regra = { id: 'regra-1', tenantId: 'tenant-1', ativa: false };
+    const { servico, repositorios } = criarServico({
+      regra,
+      execucao: { id: 'execucao-1', tenantId: 'tenant-1', regraId: 'regra-1', resultado: { simulacao: true } }
+    });
+
+    await expect(
+      servico.alterarAtivacao('tenant-1', 'regra-1', true, usuarioColaborador)
+    ).resolves.toEqual(expect.objectContaining({ ativa: true }));
+    expect(repositorios.execucao.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: 'tenant-1',
+          regraId: 'regra-1',
+          resultado: expect.objectContaining({ _type: 'jsonContains' })
+        })
+      })
+    );
+    expect(repositorios.regra.save).toHaveBeenCalledWith(regra);
   });
 
   it('deve solicitar avaliacao com busca isolada por tenant e job idempotente', async () => {
@@ -156,6 +227,39 @@ describe('ServicoAutomacoes', () => {
         servico.solicitarAvaliacao('tenant-1', { regraId: 'regra-de-outro' }, usuarioProfissional)
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(repositorios.execucao.save).not.toHaveBeenCalled();
+    });
+
+    it('deve listar somente execucoes das regras do proprio profissional', async () => {
+      const { servico, repositorios } = criarServico({
+        profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' },
+        regras: [{ id: 'regra-1', profissionalId: 'profissional-1' }]
+      });
+
+      await servico.listarExecucoes('tenant-1', usuarioProfissional);
+
+      expect(repositorios.regra.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ profissionalId: 'profissional-1' }) })
+      );
+      expect(repositorios.execucao.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ regraId: expect.anything() }) })
+      );
+    });
+
+    it('deve rejeitar simulacao para paciente fora da responsabilidade profissional', async () => {
+      const { servico, fila } = criarServico({
+        profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' },
+        regra: { id: 'regra-1', tenantId: 'tenant-1', profissionalId: 'profissional-1', ativa: false, condicoes: [], acoes: [] },
+        paciente: null
+      });
+
+      await expect(
+        servico.simularRegra(
+          'tenant-1',
+          { regraId: 'regra-1', pacienteId: 'paciente-outro', contexto: {} },
+          usuarioProfissional
+        )
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(fila.add).not.toHaveBeenCalled();
     });
   });
 });

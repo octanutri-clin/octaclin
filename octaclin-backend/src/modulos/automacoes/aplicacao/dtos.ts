@@ -34,3 +34,8 @@ export class AvaliarRegraDto {
   @IsObject()
   contexto?: Record<string, unknown>;
 }
+
+export class AlterarAtivacaoRegraDto {
+  @IsBoolean()
+  ativa: boolean;
+}

@@ -39,14 +39,20 @@ function cabecalhoCookie() {
 }
 
 async function requisitar(caminho, init = {}) {
-  const resposta = await fetch(url(caminho), {
-    ...init,
-    headers: {
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(cookies.size ? { Cookie: cabecalhoCookie() } : {}),
-      ...init.headers
-    }
-  });
+  let resposta;
+  try {
+    resposta = await fetch(url(caminho), {
+      ...init,
+      signal: init.signal ?? AbortSignal.timeout(60_000),
+      headers: {
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(cookies.size ? { Cookie: cabecalhoCookie() } : {}),
+        ...init.headers
+      }
+    });
+  } catch (erro) {
+    throw new Error(`Falha ao requisitar ${caminho}: ${erro instanceof Error ? erro.message : 'erro desconhecido'}`);
+  }
 
   armazenarCookies(resposta.headers);
   return resposta;
@@ -167,9 +173,9 @@ async function main() {
   await assertPaginaProtegida('/questionarios', 'Editor de Questionarios');
   await assertPaginaProtegida('/comunicacoes', 'Comunicacoes');
   await assertPaginaProtegida('/automacoes', 'Automacoes');
-  await assertPaginaProtegida('/ia', 'IA clinica');
-  await assertPaginaProtegida('/mobile', 'Mobile');
-  await assertPaginaProtegida('/gamificacao', 'Gamificacao');
+  await assertPaginaProtegida('/ia', 'Sugestoes assistidas');
+  await assertPaginaProtegida('/mobile', 'Confiabilidade OctaClin');
+  await assertPaginaProtegida('/gamificacao', 'Metas e adesao');
 
   const pacientes = await requisitarJson('/api/pacientes?pagina=1&limite=5');
   assertStatus(pacientes.resposta, 200, 'listagem de pacientes');
@@ -290,11 +296,29 @@ async function main() {
       nome: `Regra E2E ${sufixo}`,
       gatilho: { tipo: 'checkin.atrasado' },
       condicoes: [{ campo: 'checkinsPerdidos', operador: 'maior_ou_igual', valor: 3 }],
-      acoes: [{ tipo: 'notificar_profissional' }],
-      ativa: true
+      acoes: [{ tipo: 'notificar_profissional' }]
     })
   });
   assert(regraCriada.id, 'criacao de regra de automacao: id ausente.');
+  assert(regraCriada.ativa === false, 'regra nova precisa iniciar como rascunho.');
+
+  const simulacaoRegra = await requisitarJsonStatus('/api/automacoes/simulacoes', 201, 'simulacao de regra de automacao', {
+    method: 'POST',
+    body: JSON.stringify({
+      regraId: regraCriada.id,
+      pacienteId: pacienteCriado.id,
+      contexto: { status: 'risco', checkinsPerdidos: 3, frustracaoScore: 72 }
+    })
+  });
+  assert(simulacaoRegra.resultado?.simulacao === true, 'simulacao precisa ficar registrada no historico.');
+
+  const regraAtivada = await requisitarJsonStatus(
+    `/api/automacoes/regras/${regraCriada.id}/ativacao`,
+    200,
+    'ativacao de regra simulada',
+    { method: 'PATCH', body: JSON.stringify({ ativa: true }) }
+  );
+  assert(regraAtivada.ativa === true, 'regra simulada precisa aceitar ativacao.');
 
   const execucaoRegra = await requisitarJsonStatus('/api/automacoes/avaliacoes', 201, 'avaliacao de regra de automacao', {
     method: 'POST',
@@ -321,7 +345,15 @@ async function main() {
     })
   });
   assert(analiseSentimento.id, 'analise de sentimento: id ausente.');
-  assert(analiseSentimento.alertaDisparado === true, 'analise de sentimento deveria disparar alerta no texto demo.');
+  assert(analiseSentimento.alertaDisparado === false, 'analise pendente nao pode disparar alerta clinico.');
+  const analiseRevisada = await requisitarJsonStatus(
+    `/api/ia/sentimento/${analiseSentimento.id}/revisao`,
+    200,
+    'revisao humana de sentimento',
+    { method: 'PATCH', body: JSON.stringify({ decisao: 'aceita' }) }
+  );
+  assert(analiseRevisada.revisaoHumana?.status === 'aceita', 'revisao humana de sentimento nao foi persistida.');
+  assert(analiseRevisada.alertaDisparado === true, 'alerta revisado deveria refletir o score aceito.');
   const analisesSentimento = await requisitarJsonStatus('/api/ia/sentimento', 200, 'listagem de analises de sentimento');
   assert(Array.isArray(analisesSentimento), 'listagem de analises de sentimento precisa ser lista.');
   assert(
@@ -345,6 +377,13 @@ async function main() {
   );
   assert(reconhecimentoAlimentar.id, 'reconhecimento alimentar: id ausente.');
   assert(Array.isArray(reconhecimentoAlimentar.alimentosDetectados), 'reconhecimento alimentar precisa retornar alimentos.');
+  const reconhecimentoRevisado = await requisitarJsonStatus(
+    `/api/ia/reconhecimento-alimentar/${reconhecimentoAlimentar.id}/revisao`,
+    200,
+    'revisao humana do reconhecimento alimentar',
+    { method: 'PATCH', body: JSON.stringify({ decisao: 'aceita' }) }
+  );
+  assert(reconhecimentoRevisado.revisaoHumana?.status === 'aceita', 'revisao alimentar nao foi persistida.');
   const reconhecimentosAlimentares = await requisitarJsonStatus(
     '/api/ia/reconhecimento-alimentar',
     200,
