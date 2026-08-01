@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-07-31 apos a Fase 192 - centro clinico diario e agenda profissional.
+Atualizado em 2026-07-31 apos a Fase 193 - pacientes e prontuario orientados a conduta.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -384,6 +384,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   passou a exigir confirmacao. A correcao encontrada durante a validacao (o
   componente `Modal` compartilhado sem scroll/max-height) beneficia todo uso
   existente de modal no app.
+
+- Fase 193 - Pacientes e prontuario orientados a conduta: filtros da lista de
+  pacientes passaram a sincronizar com a URL (persistem em reload/navegacao);
+  cadastro/edicao de paciente virou modal; evolucao clinica em edicao ganhou
+  protecao contra perda (aviso nativo ao fechar a aba, confirmacao ao trocar
+  de aba do prontuario ou voltar para a lista). Corrigidos os atalhos do
+  dashboard `#novo-paciente` e `#novo-agendamento`, que tinham parado de abrir
+  o formulario correto apos os formularios virarem modal nas Fases 190/192.
 
 ## Estado atual de uso
 

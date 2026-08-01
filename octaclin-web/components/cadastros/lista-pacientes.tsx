@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Search, Trash2, X } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Search, Trash2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
-import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
+import { Cartao, CartaoConteudo } from '@/components/ui/cartao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Etiqueta } from '@/components/ui/etiqueta';
-import { ModalConfirmacao } from '@/components/ui/modal';
+import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { Tabela, TabelaCabecalho, TabelaConteudo, TabelaLinha, TabelaLinhas, TabelaVazia } from '@/components/ui/tabela';
 import { criarConvitePaciente } from '@/lib/convites-paciente-api';
 import {
@@ -90,6 +91,10 @@ function proximaAcao(paciente: PacienteResumo) {
 }
 
 export function ListaPacientes() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const parametrosUrl = useSearchParams();
+  const hashAplicado = useRef(false);
   const [dados, setDados] = useState<RespostaPaginada<PacienteResumo> | null>(null);
   const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
   const [erro, setErro] = useState<string | null>(null);
@@ -101,12 +106,32 @@ export function ListaPacientes() {
   const [linkConvite, setLinkConvite] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<FormularioPaciente>(formularioInicial);
   const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [modalPacienteAberto, setModalPacienteAberto] = useState(false);
   const [pacienteParaArquivar, setPacienteParaArquivar] = useState<PacienteResumo | null>(null);
-  const [busca, setBusca] = useState('');
-  const [filtroRisco, setFiltroRisco] = useState<'todos' | 'alto' | 'medio' | 'baixo'>('todos');
-  const [filtroProfissional, setFiltroProfissional] = useState('todos');
-  const [filtroStatus, setFiltroStatus] = useState('todos');
-  const [apenasSemProximaConsulta, setApenasSemProximaConsulta] = useState(false);
+  const [busca, setBusca] = useState(() => parametrosUrl.get('busca') ?? '');
+  const [filtroRisco, setFiltroRisco] = useState<'todos' | 'alto' | 'medio' | 'baixo'>(
+    () => (parametrosUrl.get('risco') as 'todos' | 'alto' | 'medio' | 'baixo') || 'todos'
+  );
+  const [filtroProfissional, setFiltroProfissional] = useState(() => parametrosUrl.get('profissional') ?? 'todos');
+  const [filtroStatus, setFiltroStatus] = useState(() => parametrosUrl.get('status') ?? 'todos');
+  const [apenasSemProximaConsulta, setApenasSemProximaConsulta] = useState(() => parametrosUrl.get('semRetorno') === '1');
+
+  useEffect(() => {
+    const parametros = new URLSearchParams();
+    if (busca) parametros.set('busca', busca);
+    if (filtroRisco !== 'todos') parametros.set('risco', filtroRisco);
+    if (filtroProfissional !== 'todos') parametros.set('profissional', filtroProfissional);
+    if (filtroStatus !== 'todos') parametros.set('status', filtroStatus);
+    if (apenasSemProximaConsulta) parametros.set('semRetorno', '1');
+    const query = parametros.toString();
+    router.replace((query ? `${pathname}?${query}` : pathname) as Route, { scroll: false });
+  }, [apenasSemProximaConsulta, busca, filtroProfissional, filtroRisco, filtroStatus, pathname, router]);
+
+  useEffect(() => {
+    if (hashAplicado.current) return;
+    hashAplicado.current = true;
+    if (window.location.hash === '#novo-paciente') setModalPacienteAberto(true);
+  }, []);
 
   async function carregar() {
     setCarregando(true);
@@ -143,6 +168,7 @@ export function ListaPacientes() {
       }
       setFormulario({ ...formularioInicial, profissionalResponsavelId: profissionais[0]?.id ?? '' });
       setEditandoId(null);
+      setModalPacienteAberto(false);
       await carregar();
       setSucesso(mensagem);
     } catch (erroAtual) {
@@ -154,6 +180,7 @@ export function ListaPacientes() {
 
   function editar(paciente: PacienteResumo) {
     setEditandoId(paciente.id);
+    setModalPacienteAberto(true);
     setFormulario({
       profissionalResponsavelId: paciente.profissionalResponsavelId,
       nome: paciente.nome,
@@ -213,6 +240,7 @@ export function ListaPacientes() {
 
   function cancelarEdicao() {
     setEditandoId(null);
+    setModalPacienteAberto(false);
     setFormulario({ ...formularioInicial, profissionalResponsavelId: profissionais[0]?.id ?? '' });
   }
 
@@ -242,15 +270,13 @@ export function ListaPacientes() {
             </p>
           </div>
           <div className="flex gap-2">
-            {editandoId ? (
-              <Botao type="button" variante="fantasma" onClick={cancelarEdicao}>
-                <X size={16} />
-                Cancelar
-              </Botao>
-            ) : null}
             <Botao onClick={carregar} disabled={carregando}>
               <RefreshCcw size={16} />
               {carregando ? 'Atualizando' : 'Atualizar'}
+            </Botao>
+            <Botao type="button" variante="primario" onClick={() => { setEditandoId(null); setFormulario({ ...formularioInicial, profissionalResponsavelId: profissionais[0]?.id ?? '' }); setModalPacienteAberto(true); }}>
+              <Plus size={16} />
+              Novo paciente
             </Botao>
           </div>
         </CartaoConteudo>
@@ -313,14 +339,12 @@ export function ListaPacientes() {
         </Cartao>
       ) : null}
 
-      <Cartao id="novo-paciente" className="scroll-mt-28">
+      <Modal
+        aberto={modalPacienteAberto}
+        aoFechar={cancelarEdicao}
+        titulo={editandoId ? 'Editar paciente' : 'Novo paciente'}
+      >
         <form onSubmit={salvar}>
-        <CartaoCabecalho>
-          <CartaoTitulo icone={editandoId ? <Edit3 size={18} className="text-primaria" /> : <Plus size={18} className="text-primaria" />}>
-            {editandoId ? 'Editar paciente' : 'Novo paciente'}
-          </CartaoTitulo>
-        </CartaoCabecalho>
-        <CartaoConteudo>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-6">
           <label className="grid gap-1 text-xs font-semibold text-texto-suave lg:col-span-2">
             Profissional
@@ -405,9 +429,8 @@ export function ListaPacientes() {
             {salvando ? 'Salvando' : 'Salvar'}
           </Botao>
         </div>
-        </CartaoConteudo>
         </form>
-      </Cartao>
+      </Modal>
 
       <Tabela className="hidden lg:block">
         <TabelaConteudo larguraMinima="840px">

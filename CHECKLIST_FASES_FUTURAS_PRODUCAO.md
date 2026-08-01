@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-07-31 apos a Fase 192 - centro clinico diario e agenda profissional.
+Atualizado em 2026-07-31 apos a Fase 193 - pacientes e prontuario orientados a conduta.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -914,7 +914,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     68 testes), `test:authz` (22 verificacoes), `security:secrets`,
     `validar-preflight.ps1 -DocsOnly`. Sem mudanca de backend nesta fase.
 
-- [ ] Fase 193 - Pacientes e prontuario orientados a conduta.
+- [x] Fase 193 - Pacientes e prontuario orientados a conduta.
   - Evoluir a lista com busca dominante, filtros realmente persistidos,
     cadastro em painel lateral, risco, responsavel e proxima acao.
   - Refinar o prontuario com cabecalho persistente, conduta atual, timeline
@@ -923,6 +923,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     historico separados, reduzindo cartoes e informacao simultanea.
   - Aceite: novo paciente, busca, filtro, agendamento de retorno, evolucao,
     tarefa e consulta ao historico cobertos por testes de jornada e permissao.
+  - Status: concluida em 2026-07-31. Risco/responsavel/proxima acao,
+    cabecalho persistente, Linha de cuidado e abas ja vinham das Fases
+    179/180. Novo nesta fase: filtros da lista sincronizados na URL,
+    cadastro/edicao de paciente em modal, protecao contra perda de evolucao
+    (beforeunload + confirmacao ao trocar de aba/sair), e correcao dos
+    atalhos `#novo-paciente`/`#novo-agendamento` do dashboard que tinham
+    parado de funcionar apos as Fases 190/192.
+  - Data: 2026-07-31. Saida: `fase-193-pacientes-prontuario-conduta.md`.
+  - Validacoes: `pnpm --dir octaclin-web typecheck`, `lint`, `build`,
+    Playwright (`jornadas-criticas`, `console-regression`, `acessibilidade` =
+    68 testes), `test:authz` (22 verificacoes), `security:secrets`,
+    `validar-preflight.ps1 -DocsOnly`.
 
 - [ ] Fase 194 - Formularios, editor e leitura longitudinal.
   - Separar o modulo em Formularios, Editor, Biblioteca, Distribuicoes e

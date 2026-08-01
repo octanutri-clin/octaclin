@@ -850,7 +850,8 @@ test.describe('jornadas criticas de producao', () => {
     const profissionalFluxo = await prepararProfissional(page);
 
     await page.goto('/pacientes');
-    const formularioPaciente = page.locator('form').filter({ hasText: 'Novo paciente' });
+    await page.getByRole('button', { name: 'Novo paciente' }).click();
+    const formularioPaciente = page.getByRole('dialog', { name: 'Novo paciente' });
     await formularioPaciente.getByLabel('Profissional').selectOption('profissional-1');
     await formularioPaciente.getByLabel('Nome').fill('Ana Jornada');
     await formularioPaciente.getByLabel('Contato').fill('5511999999999');

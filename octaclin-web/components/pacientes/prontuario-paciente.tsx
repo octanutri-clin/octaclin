@@ -331,6 +331,22 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     void carregar();
   }, [carregar]);
 
+  const evolucaoNaoSalva = Boolean(formularioEvolucao.titulo.trim() || formularioEvolucao.conteudo.trim());
+
+  useEffect(() => {
+    function aoTentarFecharAba(evento: BeforeUnloadEvent) {
+      if (!evolucaoNaoSalva) return;
+      evento.preventDefault();
+      evento.returnValue = '';
+    }
+    window.addEventListener('beforeunload', aoTentarFecharAba);
+    return () => window.removeEventListener('beforeunload', aoTentarFecharAba);
+  }, [evolucaoNaoSalva]);
+
+  function confirmarSaidaComEvolucaoNaoSalva() {
+    return !evolucaoNaoSalva || window.confirm('Voce tem uma evolucao clinica nao salva. Sair sem salvar?');
+  }
+
   const eventos = useMemo(() => dados?.linhaDoTempo ?? [], [dados?.linhaDoTempo]);
   const evolucoes = useMemo(() => eventos.filter((evento) => evento.tipo === 'evolucao_clinica'), [eventos]);
   const tarefas = useMemo(() => eventos.filter((evento) => evento.tipo === 'tarefa_acompanhamento'), [eventos]);
@@ -376,6 +392,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/pacientes"
+            onClick={(evento) => {
+              if (!confirmarSaidaComEvolucaoNaoSalva()) evento.preventDefault();
+            }}
             className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
           >
             <ArrowLeft size={16} />
@@ -396,7 +415,16 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
       </div>
 
-      <Abas identificador="prontuario" abas={abasProntuario} ativaId={abaAtiva} aoMudar={(id) => setAbaAtiva(id as AbaProntuario)} rotulo="Areas do prontuario" />
+      <Abas
+        identificador="prontuario"
+        abas={abasProntuario}
+        ativaId={abaAtiva}
+        aoMudar={(id) => {
+          if (!confirmarSaidaComEvolucaoNaoSalva()) return;
+          setAbaAtiva(id as AbaProntuario);
+        }}
+        rotulo="Areas do prontuario"
+      />
 
       {sucesso ? (
         <div className="rounded-md border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">{sucesso}</div>

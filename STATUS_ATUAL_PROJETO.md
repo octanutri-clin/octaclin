@@ -7,9 +7,14 @@ Atualizado em 2026-07-31.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 192 - centro clinico diario e agenda profissional
-  (2026-07-31). Dashboard reagrupado em Agora/Proximos/Pendentes; agenda com
-  criacao em modal, edicao consolidada num unico botao "Gerenciar consulta" e
+- Ultima fase concluida: Fase 193 - pacientes e prontuario orientados a
+  conduta (2026-07-31). Filtros da lista de pacientes agora persistem na URL;
+  cadastro/edicao de paciente virou modal; evolucao clinica em edicao ganhou
+  protecao contra perda (beforeunload + confirmacao ao trocar de aba/sair).
+  Corrigidos os atalhos `#novo-paciente`/`#novo-agendamento` do dashboard.
+- Fase 192: centro clinico diario e agenda profissional (2026-07-31).
+  Dashboard reagrupado em Agora/Proximos/Pendentes; agenda com criacao em
+  modal, edicao consolidada num unico botao "Gerenciar consulta" e
   confirmacao ao liberar horario reservado. Corrigido tambem um bug de mobile
   no componente `Modal` compartilhado (sem scroll/max-height).
 - Fase 191: acesso e ativacao do usuario (2026-07-31). Login, recuperacao de

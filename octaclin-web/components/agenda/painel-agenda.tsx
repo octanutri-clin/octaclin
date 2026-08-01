@@ -260,6 +260,10 @@ export function PainelAgenda() {
   }, []);
 
   useEffect(() => {
+    if (window.location.hash === '#novo-agendamento') setModalCriarAberto(true);
+  }, []);
+
+  useEffect(() => {
     if (parametrosIniciaisAplicados.current || !pacientesLista.length || !profissionaisLista.length) return;
     parametrosIniciaisAplicados.current = true;
 
