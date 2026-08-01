@@ -83,4 +83,15 @@ test.describe('Editor de questionarios', () => {
       expect.objectContaining({ regraCron: '0 8 * * 1', pacienteId: 'paciente-1' })
     );
   });
+
+  test('mostra preview lado a lado com a edicao em telas largas', async ({ page }) => {
+    await criarSessao(page);
+    await mockarBff(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/questionarios');
+
+    await page.getByRole('tab', { name: 'Editor' }).click();
+    await expect(page.getByText('Preview do paciente')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Preview paciente/ })).toHaveCount(0);
+  });
 });
