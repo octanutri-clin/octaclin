@@ -238,6 +238,7 @@ test('BFF publico de leitura agrupa horarios livres sem vazar metadados internos
     new Response(
       JSON.stringify({
         profissionalNome: 'Dra. Carla',
+        clinica: { nome: 'Clinica Bem Estar', corPrimaria: '#0ea5e9' },
         timezone: 'America/Sao_Paulo',
         duracaoMinutos: 50,
         horariosLivres: ['2026-08-03T13:00:00.000Z', '2026-08-03T14:00:00.000Z']
@@ -252,11 +253,15 @@ test('BFF publico de leitura agrupa horarios livres sem vazar metadados internos
     const resposta = await obterAgendaPublica(new Request('http://localhost:3000/api/agendamentos-publicos/token-publico'), {
       params: Promise.resolve({ token: 'token-publico' })
     });
-    const corpo = (await resposta.json()) as { dias: Array<{ horarios: Array<{ inicioEm: string; rotulo: string }> }> };
+    const corpo = (await resposta.json()) as {
+      clinica: { nome: string; corPrimaria: string };
+      dias: Array<{ horarios: Array<{ inicioEm: string; rotulo: string }> }>;
+    };
 
     assert.equal(resposta.status, 200);
     assert.equal(corpo.dias.length, 1);
     assert.equal(corpo.dias[0]?.horarios.length, 2);
+    assert.deepEqual(corpo.clinica, { nome: 'Clinica Bem Estar', corPrimaria: '#0ea5e9' });
   } finally {
     restaurarFetch(fetchOriginal);
   }

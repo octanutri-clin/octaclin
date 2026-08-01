@@ -22,6 +22,7 @@ async function prepararPaginaPublica(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
+        clinica: { nome: 'Clinica Bem Estar', corPrimaria: '#0ea5e9' },
         profissional: {
           nomeExibicao: 'Dra. Carla',
           especialidade: 'Nutricao clinica'
@@ -286,9 +287,11 @@ test.describe('agendamento publico', () => {
 
     await page.goto('/agendar/token-publico');
 
+    await expect(page.getByText('Clinica Bem Estar', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Agendar com Dra. Carla' })).toBeVisible();
     await expect(page.getByText('1. Escolha um horario')).toBeVisible();
-    await expect(page.getByText('2. Envie sua solicitacao')).toBeVisible();
+    await expect(page.getByText('2. Informe seus dados')).toBeVisible();
+    await expect(page.getByText('3. Revise e confirme')).toBeVisible();
     await expect(page.getByText('Horarios em America/Sao Paulo')).toBeVisible();
     await page.getByRole('button', { name: '10:00' }).click();
     await expect(page.getByText('Fuso horario: America/Sao Paulo')).toBeVisible();
@@ -296,7 +299,12 @@ test.describe('agendamento publico', () => {
     await page.getByLabel('Email').fill('ana@exemplo.com');
     await page.getByLabel('WhatsApp').fill('5511999999999');
     await page.getByLabel('Observacoes').fill('Prefiro atendimento online.');
-    await page.getByRole('button', { name: 'Enviar solicitacao' }).click();
+    await page.getByRole('button', { name: 'Revisar solicitacao' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Revise sua solicitacao' })).toBeVisible();
+    await expect(page.getByText('Ana Silva', { exact: true })).toBeVisible();
+    expect(pagina.solicitacaoEnviada()).toBeNull();
+    await page.getByRole('button', { name: 'Confirmar solicitacao' }).click();
 
     await expect.poll(() => pagina.solicitacaoEnviada()).not.toBeNull();
     await expect(page.getByText('Solicitacao enviada para analise.')).toBeVisible();

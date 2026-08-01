@@ -79,12 +79,14 @@ export async function GET(_: Request, props: { params: Promise<{ token: string }
 
   const agenda = JSON.parse(corpo) as {
     profissionalNome: string;
+    clinica: { nome: string; corPrimaria: string };
     timezone: string;
     duracaoMinutos: number;
     horariosLivres: string[];
   };
 
   return NextResponse.json({
+    clinica: agenda.clinica,
     profissional: {
       nomeExibicao: agenda.profissionalNome
     },

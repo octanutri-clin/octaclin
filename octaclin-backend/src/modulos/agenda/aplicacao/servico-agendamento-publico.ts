@@ -7,6 +7,8 @@ import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguran
 import { ServicoProtecaoAbuso } from '../../auth/aplicacao/servico-protecao-abuso';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
+import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
 import { AgendaLinkPublicoOrm } from '../infraestrutura/agenda-link-publico.orm';
@@ -62,6 +64,10 @@ interface ContextoAprovacaoSolicitacao {
 
 export interface ResumoAgendaPublica {
   profissionalNome: string;
+  clinica: {
+    nome: string;
+    corPrimaria: string;
+  };
   timezone: string;
   duracaoMinutos: number;
   horariosLivres: string[];
@@ -117,6 +123,30 @@ function sobrepoe(janela: FaixaHorario, intervalo: FaixaHorario): boolean {
   return intervalo.inicioEm < janela.fimEm && intervalo.fimEm > janela.inicioEm;
 }
 
+function timezoneValido(valor: string): boolean {
+  try {
+    new Intl.DateTimeFormat('pt-BR', { timeZone: valor }).format();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function normalizarIdentidadeAgendaPublica(valor: Record<string, unknown>, nomeTenant?: string) {
+  const marca = valor.marca && typeof valor.marca === 'object' ? (valor.marca as Record<string, unknown>) : {};
+  const nomeConfigurado = typeof marca.nomeExibido === 'string' ? marca.nomeExibido.trim() : '';
+  const corConfigurada = typeof marca.corPrimaria === 'string' ? marca.corPrimaria.trim() : '';
+  const timezoneConfigurado = typeof valor.timezone === 'string' ? valor.timezone.trim() : '';
+
+  return {
+    clinica: {
+      nome: nomeConfigurado || nomeTenant?.trim() || 'OctaClin',
+      corPrimaria: /^#[0-9a-fA-F]{6}$/.test(corConfigurada) ? corConfigurada : '#197d8f'
+    },
+    timezone: timezoneConfigurado && timezoneValido(timezoneConfigurado) ? timezoneConfigurado : TIMEZONE_PADRAO
+  };
+}
+
 export function solicitacaoPendenteExpirou(expiraEm: Date, agora = new Date()): boolean {
   return expiraEm.getTime() <= agora.getTime();
 }
@@ -134,19 +164,26 @@ export class ServicoAgendamentoPublico {
   async obterAgendaPublica(token: string, ip: string): Promise<ResumoAgendaPublica> {
     const link = await this.resolverLinkAtivo(token, ip, 'consulta');
     return this.executorTenant.executar(link.tenantId, async (gerenciador) => {
-      const profissional = await gerenciador.getRepository(ProfissionalOrm).findOne({
-        where: { id: link.profissionalId, tenantId: link.tenantId, arquivadoEm: IsNull() }
-      });
+      const [profissional, configuracao, tenant] = await Promise.all([
+        gerenciador.getRepository(ProfissionalOrm).findOne({
+          where: { id: link.profissionalId, tenantId: link.tenantId, arquivadoEm: IsNull() }
+        }),
+        gerenciador.getRepository(TenantConfiguracaoOrm).findOne({
+          where: { tenantId: link.tenantId, chave: 'conta_cliente' }
+        }),
+        gerenciador.getRepository(TenantOrm).findOne({ where: { id: link.tenantId } })
+      ]);
       if (!profissional) throw new NotFoundException(MENSAGEM_LINK_INDISPONIVEL);
 
-      const timezone = process.env.GOOGLE_CALENDAR_TIMEZONE ?? TIMEZONE_PADRAO;
+      const identidade = normalizarIdentidadeAgendaPublica(configuracao?.valor ?? {}, tenant?.nome);
       const agora = new Date(Date.now());
       const fimJanela = new Date(agora.getTime() + JANELA_DISPONIBILIDADE_MS);
       const ocupacoes = await this.listarOcupacoes(gerenciador, link.tenantId, link.profissionalId, agora, fimJanela);
 
       return {
         profissionalNome: this.criptografia.descriptografar(profissional.nomeCriptografado),
-        timezone,
+        clinica: identidade.clinica,
+        timezone: identidade.timezone,
         duracaoMinutos: link.duracaoMinutos,
         horariosLivres: this.calcularHorariosLivres(agora, fimJanela, link.duracaoMinutos, ocupacoes)
       };
