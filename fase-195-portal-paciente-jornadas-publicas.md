@@ -54,9 +54,11 @@ portal aprovados; scanner de secrets e matriz de confiabilidade sem achados.
 ## Operacao
 
 - A migration nao foi executada manualmente contra uma URL de banco ambigua.
-- Antes do primeiro deploy deste commit, confirmar no backend do Render que
-  `FORMULARIO_PUBLICO_SEGREDO` possui ao menos 32 bytes. O deploy aplica a
-  migration conforme a politica de migrations do ambiente.
+- `FORMULARIO_PUBLICO_SEGREDO` foi configurado no backend de producao do
+  Render em 2026-08-01 com valor novo de pelo menos 32 bytes, sem registrar o
+  segredo em codigo ou documentacao.
+- O deploy da integracao aplica a migration conforme a politica de migrations
+  do ambiente.
 
 ## Proxima fase
 
