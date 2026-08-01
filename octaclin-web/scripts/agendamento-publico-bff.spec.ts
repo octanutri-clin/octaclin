@@ -4,6 +4,7 @@ import * as nextHeaders from 'next/headers';
 import { NextRequest } from 'next/server';
 import { GET as obterAgendaPublica } from '../app/api/agendamentos-publicos/[token]/route';
 import { POST as criarSolicitacaoPublica } from '../app/api/agendamentos-publicos/[token]/solicitacoes/route';
+import { PATCH as salvarRascunhoFormularioPublico } from '../app/api/formularios/[token]/rascunho/route';
 import { GET as obterLinkInterno } from '../app/api/agenda/agendamento-publico/route';
 import { POST as rotacionarLinkInterno } from '../app/api/agenda/agendamento-publico/rotacionar/route';
 import { GET as listarSolicitacoesInternas } from '../app/api/agenda/solicitacoes/route';
@@ -211,6 +212,43 @@ test('URL publica configurada prevalece sobre a origem interna do proxy', () => 
   } finally {
     if (valorAnterior === undefined) Reflect.deleteProperty(process.env, 'OCTACLIN_WEB_URL');
     else process.env.OCTACLIN_WEB_URL = valorAnterior;
+  }
+});
+
+test('BFF de rascunho publico nao encaminha Cookie ou Authorization ao backend', async () => {
+  __clearCookies();
+  const fetchOriginal = global.fetch;
+  let headersBackend: Headers | null = null;
+
+  global.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+    headersBackend = new Headers(init?.headers);
+    return new Response(JSON.stringify({ rascunhoVersao: 1, rascunhoAtualizadoEm: '2026-08-01T12:00:00.000Z' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }) as typeof global.fetch;
+
+  try {
+    const requisicao = new Request('http://localhost:3000/api/formularios/token-publico/rascunho', {
+      method: 'PATCH',
+      headers: {
+        Authorization: 'Bearer segredo',
+        Cookie: 'octaclin_access_token=segredo',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ versaoBase: 0, respostas: [] })
+    });
+    const resposta = await salvarRascunhoFormularioPublico(requisicao, {
+      params: Promise.resolve({ token: 'token-publico' })
+    });
+
+    assert.equal(resposta.status, 200);
+    const headersAtuais = headersBackend as unknown as Headers;
+    assert.equal(headersAtuais.get('authorization'), null);
+    assert.equal(headersAtuais.get('cookie'), null);
+    assert.equal(headersAtuais.get('content-type'), 'application/json');
+  } finally {
+    restaurarFetch(fetchOriginal);
   }
 });
 

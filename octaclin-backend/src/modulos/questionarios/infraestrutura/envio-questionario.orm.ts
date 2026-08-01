@@ -28,6 +28,11 @@ export interface SnapshotEstruturaQuestionario {
   perguntas: PerguntaSnapshotQuestionario[];
 }
 
+export interface RespostaRascunhoQuestionario {
+  perguntaId: string;
+  valor: unknown;
+}
+
 @Entity('envios_questionario')
 export class EnvioQuestionarioOrm {
   @PrimaryGeneratedColumn('uuid')
@@ -65,4 +70,13 @@ export class EnvioQuestionarioOrm {
 
   @Column({ name: 'snapshot_estrutura', type: 'jsonb', nullable: true })
   snapshotEstrutura?: SnapshotEstruturaQuestionario;
+
+  @Column({ name: 'respostas_rascunho', type: 'jsonb', nullable: true })
+  respostasRascunho?: RespostaRascunhoQuestionario[];
+
+  @Column({ name: 'rascunho_atualizado_em', type: 'timestamptz', nullable: true })
+  rascunhoAtualizadoEm?: Date;
+
+  @Column({ name: 'rascunho_versao', type: 'integer', default: 0 })
+  rascunhoVersao?: number;
 }

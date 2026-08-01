@@ -9,7 +9,8 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 - Use nomes consistentes entre staging e producao.
 - Producao deve ter secrets separados de staging.
 - O backend recusa iniciar em producao se `CORS_ORIGINS`, `JWT_SEGREDO`,
-  `JWT_REFRESH_SEGREDO` ou `CRIPTOGRAFIA_CHAVE_AES_256` estiverem ausentes.
+  `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256` ou
+  `FORMULARIO_PUBLICO_SEGREDO` estiverem ausentes.
   Quando Google Calendar estiver configurado, tambem exige
   `GOOGLE_CALENDAR_OAUTH_STATE_SECRET` com pelo menos 32 bytes;
   `CORS_ORIGINS` nao pode conter `*`.
@@ -27,6 +28,7 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | `JWT_SEGREDO` | Sim | Assinatura access token | Render/backend | Login funciona |
 | `JWT_REFRESH_SEGREDO` | Sim | Assinatura refresh token | Render/backend | Renovacao de sessao funciona |
 | `CRIPTOGRAFIA_CHAVE_AES_256` | Sim | Criptografia de PII | Render/backend | Dados sensiveis salvam/leem |
+| `FORMULARIO_PUBLICO_SEGREDO` | Sim em producao | Assinatura dedicada dos links publicos de formularios, minimo 32 bytes | Render/backend | Link de formulario abre e aceita rascunho/resposta |
 | `OCTACLIN_WEB_URL` | Sim | Links de convite/recuperacao | Render/backend | Link de email aponta para web correta |
 | `WEB_URL` | Opcional | Fallback para links | Render/backend | Links gerados |
 | `EXPOR_LINK_RECUPERACAO_SENHA` | Nao em producao | Expor link em resposta para debug | Local/staging restrito | API retorna link quando esperado |
@@ -119,6 +121,7 @@ Rotacionar imediatamente se exposto:
 - `JWT_SEGREDO`
 - `JWT_REFRESH_SEGREDO`
 - `CRIPTOGRAFIA_CHAVE_AES_256`
+- `FORMULARIO_PUBLICO_SEGREDO`
 
 Depois da rotacao:
 

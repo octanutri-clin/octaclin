@@ -1,9 +1,10 @@
-import { BadRequestException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { EntityManager, In, IsNull, LessThanOrEqual } from 'typeorm';
 import * as cronParser from 'cron-parser';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
+import { obterSegredoFormularioPublico } from '../../../infraestrutura/seguranca/segredo-formulario-publico';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { normalizarConfiguracaoPergunta } from '../dominio/configuracao-pergunta';
@@ -22,7 +23,8 @@ import {
   DuplicarQuestionarioDto,
   FiltrosMatrizLongitudinalDto,
   FinalizarFormularioPacienteDto,
-  ReordenarPerguntasDto
+  ReordenarPerguntasDto,
+  SalvarRascunhoFormularioPacienteDto
 } from './dtos';
 import { AgendamentoQuestionarioOrm } from '../infraestrutura/agendamento-questionario.orm';
 import { CategoriaPerguntaOrm } from '../infraestrutura/categoria-pergunta.orm';
@@ -46,6 +48,9 @@ export interface FormularioPacientePublico {
   status: string;
   expiraEm?: Date;
   perguntas: PerguntaSnapshotQuestionario[];
+  respostasRascunho?: { perguntaId: string; valor: unknown }[];
+  rascunhoAtualizadoEm?: Date;
+  rascunhoVersao: number;
 }
 
 export interface EnvioQuestionarioManualResposta extends EnvioQuestionarioOrm {
@@ -1049,7 +1054,10 @@ export class ServicoQuestionarios {
           descricao: envio.snapshotEstrutura.descricao,
           status: envio.status,
           expiraEm: envio.expiraEm,
-          perguntas: envio.snapshotEstrutura.perguntas
+          perguntas: envio.snapshotEstrutura.perguntas,
+          respostasRascunho: envio.respostasRascunho,
+          rascunhoAtualizadoEm: envio.rascunhoAtualizadoEm,
+          rascunhoVersao: envio.rascunhoVersao ?? 0
         };
       }
 
@@ -1066,8 +1074,44 @@ export class ServicoQuestionarios {
         descricao: questionario.descricao,
         status: envio.status,
         expiraEm: envio.expiraEm,
-        perguntas
+        perguntas,
+        respostasRascunho: envio.respostasRascunho,
+        rascunhoAtualizadoEm: envio.rascunhoAtualizadoEm,
+        rascunhoVersao: envio.rascunhoVersao ?? 0
       };
+    });
+  }
+
+  async salvarRascunhoFormularioPaciente(token: string, dados: SalvarRascunhoFormularioPacienteDto) {
+    const { tenantId, envioId } = this.validarTokenFormulario(token);
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(EnvioQuestionarioOrm);
+      const envio = await repositorio.findOne({ where: { id: envioId, tenantId } });
+      this.validarEnvioFormulario(envio);
+
+      const versaoAtual = envio.rascunhoVersao ?? 0;
+      if (versaoAtual !== dados.versaoBase) {
+        throw new ConflictException('Rascunho atualizado em outro dispositivo.');
+      }
+
+      const perguntas = envio.snapshotEstrutura?.perguntas ??
+        (await this.listarPerguntasComOpcoesPorQuestionario(gerenciador, tenantId, envio.questionarioId));
+      this.validarEstruturaRespostas(perguntas, dados.respostas);
+
+      const agora = new Date();
+      const proximaVersao = versaoAtual + 1;
+      const resultado = await repositorio.update(
+        { id: envioId, tenantId, status: envio.status, rascunhoVersao: versaoAtual },
+        {
+          respostasRascunho: dados.respostas.map((resposta) => ({ perguntaId: resposta.perguntaId, valor: resposta.valor })) as never,
+          rascunhoAtualizadoEm: agora,
+          rascunhoVersao: proximaVersao
+        }
+      );
+      if (!resultado.affected) throw new ConflictException('Rascunho atualizado em outro dispositivo.');
+
+      return { rascunhoVersao: proximaVersao, rascunhoAtualizadoEm: agora };
     });
   }
 
@@ -1080,6 +1124,7 @@ export class ServicoQuestionarios {
       this.validarEnvioFormulario(envio);
 
       const perguntas = envio.snapshotEstrutura?.perguntas ?? (await this.listarPerguntasComOpcoesPorQuestionario(gerenciador, tenantId, envio.questionarioId));
+      this.validarEstruturaRespostas(perguntas, dados.respostas);
       this.validarRespostasObrigatorias(perguntas, dados.respostas);
 
       const agora = new Date();
@@ -1106,6 +1151,9 @@ export class ServicoQuestionarios {
 
       envio.status = 'respondido';
       envio.respondidoEm = agora;
+      envio.respostasRascunho = undefined;
+      envio.rascunhoAtualizadoEm = undefined;
+      envio.rascunhoVersao = 0;
       await repositorioEnvios.save(envio);
 
       const paciente = await gerenciador.getRepository(PacienteOrm).findOne({ where: { id: envio.pacienteId, tenantId } });
@@ -1125,6 +1173,22 @@ export class ServicoQuestionarios {
 
   async processarAgendamentosVencidos(tenantId: string, agora = new Date()): Promise<number> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorioEnvios = gerenciador.getRepository(EnvioQuestionarioOrm);
+      const enviosExpirados = await repositorioEnvios.find({
+        where: {
+          tenantId,
+          status: In(['pendente', 'enviado']),
+          expiraEm: LessThanOrEqual(agora)
+        }
+      });
+      for (const envio of enviosExpirados) {
+        envio.status = 'expirado';
+        envio.respostasRascunho = undefined;
+        envio.rascunhoAtualizadoEm = undefined;
+        envio.rascunhoVersao = 0;
+      }
+      if (enviosExpirados.length) await repositorioEnvios.save(enviosExpirados);
+
       const agendamentos = await gerenciador.getRepository(AgendamentoQuestionarioOrm).find({
         where: {
           tenantId,
@@ -1196,7 +1260,7 @@ export class ServicoQuestionarios {
   }
 
   private segredoFormulario() {
-    return process.env.FORMULARIO_PUBLICO_SEGREDO ?? process.env.JWT_SEGREDO ?? 'dev-formulario-publico-secret';
+    return obterSegredoFormularioPublico();
   }
 
   private assinarTokenFormulario(tenantId: string, envioId: string) {
@@ -1221,6 +1285,65 @@ export class ServicoQuestionarios {
     if (!envio) throw new NotFoundException('Envio de questionario nao encontrado.');
     if (envio.status === 'respondido') throw new GoneException('Formulario ja respondido.');
     if (envio.status === 'expirado' || (envio.expiraEm && envio.expiraEm <= new Date())) throw new GoneException('Formulario expirado.');
+  }
+
+  private validarEstruturaRespostas(
+    perguntas: Pick<PerguntaSnapshotQuestionario, 'id' | 'tipo' | 'configuracao' | 'opcoes'>[],
+    respostas: { perguntaId: string; valor: unknown }[]
+  ) {
+    const perguntasPorId = new Map(perguntas.map((pergunta) => [pergunta.id, pergunta]));
+    const ids = new Set<string>();
+
+    for (const resposta of respostas) {
+      if (ids.has(resposta.perguntaId)) throw new BadRequestException('Resposta duplicada para a mesma pergunta.');
+      ids.add(resposta.perguntaId);
+
+      const pergunta = perguntasPorId.get(resposta.perguntaId);
+      if (!pergunta) throw new BadRequestException('Resposta contem pergunta inexistente no formulario.');
+
+      const serializado = JSON.stringify(resposta.valor);
+      if (Buffer.byteLength(serializado ?? 'null', 'utf8') > 16 * 1024) {
+        throw new BadRequestException('Valor de resposta excede o limite permitido.');
+      }
+
+      const configuracao = pergunta.configuracao ?? {};
+      const valor = resposta.valor;
+      const numeroConfig = (chave: string, padrao: number) => {
+        const numero = Number(configuracao[chave]);
+        return Number.isFinite(numero) ? numero : padrao;
+      };
+
+      if (pergunta.tipo === 'sim_nao' && typeof valor !== 'boolean') {
+        throw new BadRequestException('Resposta possui tipo invalido para a pergunta.');
+      }
+      if (['likert', 'linear', 'metrica'].includes(pergunta.tipo)) {
+        const minimo = pergunta.tipo === 'likert' ? numeroConfig('escalaMin', 1) : numeroConfig('minimo', 0);
+        const maximo = pergunta.tipo === 'likert' ? numeroConfig('escalaMax', 5) : numeroConfig('maximo', pergunta.tipo === 'linear' ? 10 : 100);
+        if (typeof valor !== 'number' || !Number.isFinite(valor) || valor < minimo || valor > maximo) {
+          throw new BadRequestException('Resposta possui tipo invalido ou valor fora da faixa permitida.');
+        }
+      }
+      if (pergunta.tipo === 'texto_longo') {
+        const limite = Math.min(numeroConfig('limiteCaracteres', 1000), 16 * 1024);
+        if (typeof valor !== 'string' || valor.length > limite) {
+          throw new BadRequestException('Resposta possui tipo invalido ou texto acima do limite permitido.');
+        }
+      }
+      if (pergunta.tipo === 'multipla_escolha') {
+        const valores = Array.isArray(valor) ? valor : [valor];
+        const multipla = configuracao.multipla === true;
+        const permitidos = new Set(pergunta.opcoes.map((opcao) => opcao.valor));
+        if ((!multipla && Array.isArray(valor)) || valores.some((item) => typeof item !== 'string' || !permitidos.has(item))) {
+          throw new BadRequestException('Resposta possui opcao invalida para a pergunta.');
+        }
+      }
+      if (pergunta.tipo === 'upload_midia') {
+        const maxArquivos = numeroConfig('maxArquivos', 1);
+        if (!Array.isArray(valor) || valor.length > maxArquivos || valor.some((item) => typeof item !== 'string')) {
+          throw new BadRequestException('Resposta possui tipo invalido para o envio de arquivos.');
+        }
+      }
+    }
   }
 
   private validarRespostasObrigatorias(

@@ -7,6 +7,7 @@ import { CriarBloqueiosManuaisAgenda1720000001006 } from './migracoes/1720000001
 import { AdicionarSnapshotEstruturaEnviosQuestionario1720000001007 } from './migracoes/1720000001007-AdicionarSnapshotEstruturaEnviosQuestionario';
 import { AdicionarBibliotecaPerguntas1720000001008 } from './migracoes/1720000001008-AdicionarBibliotecaPerguntas';
 import { VincularAgendamentoQuestionarioPaciente1720000001009 } from './migracoes/1720000001009-VincularAgendamentoQuestionarioPaciente';
+import { AdicionarRascunhoEnviosQuestionario1720000001010 } from './migracoes/1720000001010-AdicionarRascunhoEnviosQuestionario';
 import { DashboardAlertaOcultoOrm } from '../../modulos/dashboard/infraestrutura/dashboard-alerta-oculto.orm';
 import { AgendaBloqueioManualOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-manual.orm';
 
@@ -67,7 +68,8 @@ describe('criarOpcoesTypeOrm', () => {
         CriarBloqueiosManuaisAgenda1720000001006,
         AdicionarSnapshotEstruturaEnviosQuestionario1720000001007,
         AdicionarBibliotecaPerguntas1720000001008,
-        VincularAgendamentoQuestionarioPaciente1720000001009
+        VincularAgendamentoQuestionarioPaciente1720000001009,
+        AdicionarRascunhoEnviosQuestionario1720000001010
       ])
     );
   });

@@ -267,6 +267,19 @@ export class RespostaFormularioPacienteDto {
 
 export class FinalizarFormularioPacienteDto {
   @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => RespostaFormularioPacienteDto)
+  respostas: RespostaFormularioPacienteDto[];
+}
+
+export class SalvarRascunhoFormularioPacienteDto {
+  @IsInt()
+  @Min(0)
+  versaoBase: number;
+
+  @IsArray()
+  @ArrayMaxSize(100)
   @ValidateNested({ each: true })
   @Type(() => RespostaFormularioPacienteDto)
   respostas: RespostaFormularioPacienteDto[];

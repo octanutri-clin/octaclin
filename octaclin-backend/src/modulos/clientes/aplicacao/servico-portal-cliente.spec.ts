@@ -89,6 +89,8 @@ function criarServico(dados: {
 }
 
 describe('ServicoPortalCliente', () => {
+  afterEach(() => jest.useRealTimers());
+
   it('deve montar resumo real da conta do cliente pelo tenant autenticado', async () => {
     const { servico, repositorioTenants, repositorioUsuarios, executorTenant } = criarServico({
       tenants: [
@@ -179,6 +181,7 @@ describe('ServicoPortalCliente', () => {
   });
 
   it('deve montar assinatura SaaS com plano configurado, uso real e alertas de limite', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-31T12:00:00.000Z'));
     const { servico } = criarServico({
       tenants: [
         {

@@ -26,11 +26,13 @@ contratos existentes e adicionar persistencia de rascunho somente no backend.
 - Rascunho publico usa o token assinado ja existente, limite de abuso, limites
   de payload e a mesma validacao estrutural das respostas finais, permitindo
   apenas que perguntas obrigatorias ainda estejam vazias.
+- A assinatura usa `FORMULARIO_PUBLICO_SEGREDO` dedicado, obrigatorio e com
+  pelo menos 32 bytes em producao, sem fallback para JWT.
 - O frontend serializa salvamentos para impedir que uma resposta antiga
-  sobrescreva uma edicao nova no mesmo dispositivo. Edicoes simultaneas em
-  dispositivos diferentes usam ultimo salvamento como regra explicita.
+  sobrescreva uma edicao nova no mesmo dispositivo. O backend usa versao
+  otimista e retorna conflito quando outro dispositivo salvou antes.
 - O rascunho e apagado na finalizacao para minimizar duplicacao de dado
-  clinico.
+  clinico e tambem quando o envio expira.
 - A migration sera validada apenas em banco local ou no banco de integracao
   explicitamente confirmado. Nunca executar contra URL ambigua.
 
@@ -89,7 +91,8 @@ contratos existentes e adicionar persistencia de rascunho somente no backend.
 Adicionar em `envios_questionario`:
 
 - `respostas_rascunho jsonb null`;
-- `rascunho_atualizado_em timestamptz null`.
+- `rascunho_atualizado_em timestamptz null`;
+- `rascunho_versao integer not null default 0`.
 
 A migration deve possuir `up` e `down`, ser registrada em
 `opcoes-typeorm.ts` e coberta pelo teste de sequencia de migrations.
@@ -97,12 +100,15 @@ A migration deve possuir `up` e `down`, ser registrada em
 ### Contrato
 
 - `GET /formularios/:token` retorna `respostasRascunho` quando existente.
-- `PATCH /formularios/:token/rascunho` aceita no maximo 100 respostas.
+- `PATCH /formularios/:token/rascunho` aceita `versaoBase` e no maximo 100
+  respostas; versao obsoleta retorna conflito sem sobrescrever dados.
 - Cada resposta aceita `perguntaId` UUID e `valor` JSON limitado a 16 KiB;
   perguntas duplicadas ou fora do snapshot/questionario sao rejeitadas.
 - O endpoint consome limite de abuso atomico por envio/token antes da escrita.
 - `POST /formularios/:token/respostas` reutiliza a validacao estrutural,
   valida obrigatorias e limpa o rascunho na mesma transacao logica.
+- O processamento recorrente marca envios vencidos como expirados e elimina
+  qualquer rascunho remanescente.
 
 ### Frontend
 
