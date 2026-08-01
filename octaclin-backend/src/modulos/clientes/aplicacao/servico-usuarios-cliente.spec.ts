@@ -1,7 +1,10 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { TokenRedefinicaoSenhaOrm } from '../../auth/infraestrutura/token-redefinicao-senha.orm';
+import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { ServicoUsuariosCliente } from './servico-usuarios-cliente';
 
 function criarRepositorioFake(usuarios: Record<string, any>[]) {
@@ -56,6 +59,7 @@ function criarServico(
   const repositorioUsuarios = criarRepositorioFake(usuarios);
   const repositorioTokens = criarRepositorioFake(tokens);
   const repositorioProfissionais = criarRepositorioFake(profissionais);
+  const repositorioRefreshTokens = criarRepositorioFake([]);
   const executorTenant = {
     executar: jest.fn((_tenantId: string, callback: any) =>
       callback({
@@ -63,6 +67,7 @@ function criarServico(
           if (entidade === UsuarioOrm) return repositorioUsuarios;
           if (entidade === TokenRedefinicaoSenhaOrm) return repositorioTokens;
           if (entidade === ProfissionalOrm) return repositorioProfissionais;
+          if (entidade === RefreshTokenOrm) return repositorioRefreshTokens;
           throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
         }
       })
@@ -88,6 +93,7 @@ function criarServico(
     repositorioUsuarios,
     repositorioTokens,
     repositorioProfissionais,
+    repositorioRefreshTokens,
     executorTenant,
     criptografia,
     senhas,
@@ -97,6 +103,89 @@ function criarServico(
 }
 
 describe('ServicoUsuariosCliente', () => {
+  it('deve promover colaborador, provisionar perfil profissional e revogar sessoes anteriores', async () => {
+    const { servico, repositorioUsuarios, repositorioProfissionais, repositorioRefreshTokens } = criarServico([
+      {
+        id: 'colaborador-1',
+        tenantId: 'tenant-1',
+        emailCriptografado: Buffer.from('email:agenda@octaclin.local'),
+        emailHash: 'hash:agenda@octaclin.local',
+        senhaHash: 'senha',
+        role: 'Collaborator',
+        ativo: true,
+        criadoEm: new Date('2026-07-20T10:00:00.000Z'),
+        atualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+      }
+    ]);
+
+    const resposta = await servico.atualizarPapel('tenant-1', 'cliente-1', 'colaborador-1', {
+      role: 'Professional',
+      nomeProfissional: 'Dra. Carla',
+      especialidade: 'Nutricao'
+    });
+
+    expect(resposta.role).toBe('Professional');
+    expect(repositorioUsuarios.save).toHaveBeenCalledWith(expect.objectContaining({ role: 'Professional' }));
+    expect(repositorioProfissionais.save).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: 'tenant-1', usuarioId: 'colaborador-1', especialidade: 'Nutricao' })
+    );
+    expect(repositorioRefreshTokens.update).toHaveBeenCalledWith(
+      { tenantId: 'tenant-1', usuarioId: 'colaborador-1' },
+      { revogadoEm: expect.any(Date) }
+    );
+  });
+
+  it('deve impedir o gestor de alterar o proprio papel', async () => {
+    const { servico, repositorioUsuarios } = criarServico([]);
+
+    await expect(
+      servico.atualizarPapel('tenant-1', 'cliente-1', 'cliente-1', { role: 'Collaborator' })
+    ).rejects.toThrow('O gestor logado nao pode alterar o proprio acesso.');
+    expect(repositorioUsuarios.save).not.toHaveBeenCalled();
+  });
+
+  it('deve impedir reduzir acesso profissional com pacientes ainda vinculados', async () => {
+    const usuario = {
+      id: 'profissional-1',
+      tenantId: 'tenant-1',
+      role: 'Professional',
+      ativo: true,
+      emailCriptografado: Buffer.from('email:prof@octaclin.local')
+    };
+    const repositorioUsuarios = { findOne: jest.fn(async () => usuario), save: jest.fn() };
+    const repositorioProfissionais = {
+      findOne: jest.fn(async () => ({ id: 'perfil-1', tenantId: 'tenant-1', usuarioId: usuario.id }))
+    };
+    const repositorioPacientes = { count: jest.fn(async () => 1) };
+    const repositorioConsultas = { count: jest.fn(async () => 0) };
+    const executorTenant = {
+      executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+        operacao({
+          getRepository: jest.fn((entidade: unknown) => {
+            if (entidade === UsuarioOrm) return repositorioUsuarios;
+            if (entidade === ProfissionalOrm) return repositorioProfissionais;
+            if (entidade === PacienteOrm) return repositorioPacientes;
+            if (entidade === AgendaConsultaOrm) return repositorioConsultas;
+            throw new Error('Repositorio nao mapeado.');
+          })
+        })
+      )
+    };
+    const servico = new ServicoUsuariosCliente(
+      executorTenant as never,
+      { descriptografar: jest.fn(() => 'prof@octaclin.local') } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never
+    );
+
+    await expect(
+      servico.atualizarPapel('tenant-1', 'cliente-1', usuario.id, { role: 'Collaborator' })
+    ).rejects.toThrow('Reatribua pacientes e consultas futuras antes de remover o acesso profissional.');
+    expect(repositorioUsuarios.save).not.toHaveBeenCalled();
+  });
+
   it('deve limitar abuso na criacao de convites administrativos antes de consultar limite do plano', async () => {
     const limites = { checarLimite: jest.fn(async () => ({ permitido: true })) };
     const protecaoAbuso = {

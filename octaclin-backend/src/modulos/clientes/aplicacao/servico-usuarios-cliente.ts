@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager } from 'typeorm';
+import { EntityManager, In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
@@ -10,11 +10,15 @@ import {
   ServicoProtecaoAbuso
 } from '../../auth/aplicacao/servico-protecao-abuso';
 import { TokenRedefinicaoSenhaOrm } from '../../auth/infraestrutura/token-redefinicao-senha.orm';
+import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
 import { AdaptadorEmailSmtp } from '../../comunicacoes/infraestrutura/adaptadores/adaptador-email-smtp';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import {
   ConviteUsuarioClienteRespostaDto,
+  AtualizarPapelUsuarioClienteDto,
   CriarUsuarioClienteDto,
   HistoricoConviteUsuarioClienteRespostaDto,
   PapelUsuarioClienteAdministrativo,
@@ -268,6 +272,74 @@ export class ServicoUsuariosCliente {
       }
 
       await repositorio.update({ id: usuarioId, tenantId }, { ativo: false });
+    });
+  }
+
+  async atualizarPapel(
+    tenantId: string,
+    usuarioAtualId: string,
+    usuarioId: string,
+    dados: AtualizarPapelUsuarioClienteDto
+  ): Promise<UsuarioClienteRespostaDto> {
+    if (usuarioAtualId === usuarioId) {
+      throw new ForbiddenException('O gestor logado nao pode alterar o proprio acesso.');
+    }
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorioUsuarios = gerenciador.getRepository(UsuarioOrm);
+      const usuario = await repositorioUsuarios.findOne({ where: { id: usuarioId, tenantId } });
+      if (!usuario || !this.ehPapelAdministrativo(usuario.role) || usuario.role === 'Client') {
+        throw new NotFoundException('Usuario administrativo nao encontrado.');
+      }
+      if (usuario.role === dados.role) return this.mapearResposta(usuario);
+
+      const repositorioProfissionais = gerenciador.getRepository(ProfissionalOrm);
+      const perfil = await repositorioProfissionais.findOne({ where: { tenantId, usuarioId } });
+
+      if (dados.role === 'Professional') {
+        if (!perfil && !dados.nomeProfissional?.trim()) {
+          throw new BadRequestException('Informe o nome do profissional para liberar o acesso clinico.');
+        }
+        if (perfil) {
+          perfil.arquivadoEm = null;
+          if (dados.nomeProfissional?.trim()) perfil.nomeCriptografado = this.criptografia.criptografar(dados.nomeProfissional.trim());
+          if (dados.registroProfissional !== undefined) perfil.registroProfissional = dados.registroProfissional.trim() || undefined;
+          if (dados.especialidade !== undefined) perfil.especialidade = dados.especialidade.trim() || undefined;
+          await repositorioProfissionais.save(perfil);
+        } else {
+          await repositorioProfissionais.save(
+            repositorioProfissionais.create({
+              tenantId,
+              usuarioId,
+              nomeCriptografado: this.criptografia.criptografar(dados.nomeProfissional!.trim()),
+              registroProfissional: dados.registroProfissional?.trim() || undefined,
+              especialidade: dados.especialidade?.trim() || undefined
+            })
+          );
+        }
+      } else if (perfil && !perfil.arquivadoEm) {
+        const [pacientesVinculados, consultasFuturas] = await Promise.all([
+          gerenciador.getRepository(PacienteOrm).count({
+            where: { tenantId, profissionalResponsavelId: perfil.id, arquivadoEm: IsNull() }
+          }),
+          gerenciador.getRepository(AgendaConsultaOrm).count({
+            where: { tenantId, profissionalId: perfil.id, status: In(['agendada', 'reagendada']) }
+          })
+        ]);
+        if (pacientesVinculados || consultasFuturas) {
+          throw new ConflictException('Reatribua pacientes e consultas futuras antes de remover o acesso profissional.');
+        }
+        perfil.arquivadoEm = new Date();
+        await repositorioProfissionais.save(perfil);
+      }
+
+      usuario.role = dados.role;
+      const atualizado = await repositorioUsuarios.save(usuario);
+      await gerenciador.getRepository(RefreshTokenOrm).update(
+        { tenantId, usuarioId },
+        { revogadoEm: new Date() }
+      );
+      return this.mapearResposta(atualizado);
     });
   }
 

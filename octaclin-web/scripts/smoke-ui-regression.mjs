@@ -11,7 +11,7 @@ const rotasProtegidas = [
   { caminho: '/pacientes', titulo: 'Pacientes', subtitulo: 'Acompanhamento clinico' },
   { caminho: '/profissionais', titulo: 'Profissionais', subtitulo: 'Equipe clinica' },
   { caminho: '/questionarios', titulo: 'Editor de Questionarios', subtitulo: 'Protocolos e check-ins' },
-  { caminho: '/comunicacoes', titulo: 'Comunicacoes', subtitulo: 'Canais e mensagens' },
+  { caminho: '/comunicacoes', titulo: 'Comunicacoes', subtitulo: 'Conversas e relacionamento com pacientes' },
   { caminho: '/automacoes', titulo: 'Automacoes', subtitulo: 'Regras clinicas' },
   { caminho: '/ia', titulo: 'IA clinica', subtitulo: 'Modelos assistivos' },
   { caminho: '/mobile', titulo: 'Mobile', subtitulo: 'App e sincronizacao' },

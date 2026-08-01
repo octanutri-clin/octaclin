@@ -835,6 +835,7 @@ test.describe('jornadas criticas de producao', () => {
     const cliente = await prepararCliente(page);
 
     await page.goto('/cliente');
+    await page.getByRole('tablist', { name: 'Areas da conta' }).getByRole('tab', { name: 'Equipe' }).click();
     const gestaoUsuarios = page.locator('#gestao-usuarios');
     await expect(gestaoUsuarios.getByRole('heading', { name: 'Gerenciar usuarios' })).toBeVisible();
 

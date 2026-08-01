@@ -22,6 +22,7 @@ import {
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { ModalConfirmacao } from '@/components/ui/modal';
+import { Abas } from '@/components/ui/abas';
 import { obterSessao } from '@/lib/auth-api';
 import { PortalShell } from '@/components/app/portal-shell';
 import {
@@ -37,6 +38,7 @@ import {
   RespostaUsuariosClienteApi,
   ResumoPortalClienteApi,
   atualizarConfiguracoesCliente,
+  atualizarPapelUsuarioCliente,
   atualizarPerfilEmpresaCliente,
   criarUsuarioCliente,
   desativarUsuarioCliente,
@@ -50,14 +52,6 @@ import {
   revogarConviteUsuarioCliente,
   solicitarAjusteAssinaturaCliente
 } from '@/lib/cliente-api';
-
-const navegacao = [
-  { href: '#conta', rotulo: 'Conta', permissao: 'cliente.acessar' },
-  { href: '#assinatura', rotulo: 'Assinatura', permissao: 'cliente.assinatura.ler' },
-  { href: '#usuarios', rotulo: 'Usuarios', permissao: 'cliente.usuarios.ler' },
-  { href: '#configuracoes', rotulo: 'Configuracoes', permissao: 'cliente.configuracoes.gerenciar' },
-  { href: '#perfil-fiscal', rotulo: 'Perfil fiscal', permissao: 'cliente.configuracoes.gerenciar' }
-] as const;
 
 function formatarQuantidade(valor: number, singular: string, plural: string) {
   return `${valor} ${valor === 1 ? singular : plural}`;
@@ -95,6 +89,20 @@ function descreverAlertaSaas(status: 'atencao' | 'excedido') {
 
 function assinaturaBloqueada(status?: string) {
   return status === 'suspensa' || status === 'cancelada';
+}
+
+function rotuloPapel(papel: string) {
+  if (papel === 'Client') return 'Gestor da conta';
+  if (papel === 'Professional') return 'Profissional';
+  if (papel === 'Collaborator') return 'Equipe administrativa';
+  return 'Acesso da equipe';
+}
+
+function rotuloStatusAssinatura(status?: string) {
+  if (status === 'ativa') return 'Assinatura ativa';
+  if (status === 'suspensa') return 'Assinatura suspensa';
+  if (status === 'cancelada') return 'Assinatura cancelada';
+  return 'Assinatura em atualizacao';
 }
 
 const proximosPlanos: Record<PlanoSaasIdApi, { id?: PlanoSaasIdApi; nome: string; detalhe: string }> = {
@@ -183,6 +191,7 @@ const formularioPerfilEmpresaInicial: AtualizarPerfilEmpresaClienteEntrada = {
 };
 
 export function PortalCliente() {
+  const [areaAtiva, setAreaAtiva] = useState<'ativacao' | 'assinatura' | 'consumo' | 'equipe' | 'preferencias' | 'marca' | 'integracoes' | 'fiscal'>('ativacao');
   const [resumo, setResumo] = useState<ResumoPortalClienteApi | null>(null);
   const [usuarios, setUsuarios] = useState<RespostaUsuariosClienteApi | null>(null);
   const [convites, setConvites] = useState<RespostaConvitesUsuarioClienteApi | null>(null);
@@ -212,6 +221,9 @@ export function PortalCliente() {
   const [salvandoConfiguracoes, setSalvandoConfiguracoes] = useState(false);
   const [salvandoPerfilEmpresa, setSalvandoPerfilEmpresa] = useState(false);
   const [desativandoUsuarioId, setDesativandoUsuarioId] = useState<string | null>(null);
+  const [ajustandoUsuarioId, setAjustandoUsuarioId] = useState<string | null>(null);
+  const [papeisUsuarios, setPapeisUsuarios] = useState<Record<string, PapelUsuarioClienteCriavelApi>>({});
+  const [nomesProfissionais, setNomesProfissionais] = useState<Record<string, string>>({});
   const [acaoConviteUsuarioId, setAcaoConviteUsuarioId] = useState<string | null>(null);
   const [formularioUsuario, setFormularioUsuario] = useState(formularioUsuarioInicial);
   const [formularioConfiguracoes, setFormularioConfiguracoes] = useState(formularioConfiguracoesInicial);
@@ -243,6 +255,7 @@ export function PortalCliente() {
   const podeLerUsuarios = possuiPermissao('cliente.usuarios.ler');
   const podeConvidarUsuarios = possuiPermissao('cliente.usuarios.convidar');
   const podeDesativarUsuarios = possuiPermissao('cliente.usuarios.desativar');
+  const podeAjustarUsuarios = possuiPermissao('cliente.usuarios.gerenciar');
   const podeGerenciarConvites = possuiPermissao('cliente.convites.gerenciar');
   const podeGerenciarConfiguracoes = possuiPermissao('cliente.configuracoes.gerenciar');
 
@@ -401,6 +414,27 @@ export function PortalCliente() {
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desativar usuario.');
     } finally {
       setDesativandoUsuarioId(null);
+    }
+  }
+
+  async function ajustarPapelUsuario(id: string, papelAtual: string) {
+    const role = papeisUsuarios[id] ?? papelAtual;
+    if (role !== 'Professional' && role !== 'Collaborator') return;
+    setAjustandoUsuarioId(id);
+    setErroUsuarios(null);
+    setSucessoUsuarios(null);
+
+    try {
+      await atualizarPapelUsuarioCliente(id, {
+        role,
+        ...(role === 'Professional' ? { nomeProfissional: nomesProfissionais[id]?.trim() || undefined } : {})
+      });
+      await carregarUsuarios();
+      setSucessoUsuarios('Permissoes do usuario atualizadas. O novo acesso vale no proximo login.');
+    } catch (erroAtual) {
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar permissoes do usuario.');
+    } finally {
+      setAjustandoUsuarioId(null);
     }
   }
 
@@ -605,7 +639,7 @@ export function PortalCliente() {
       {
         rotulo: 'Unidade ativa',
         valor: resumo?.conta.nome ?? 'Carregando conta',
-        detalhe: resumo ? resumo.conta.slug : 'Atualizando dados da conta'
+        detalhe: resumo ? 'Dados principais da clinica' : 'Atualizando dados da conta'
       },
       {
         rotulo: 'Plano atual',
@@ -622,14 +656,17 @@ export function PortalCliente() {
     ],
     [resumo]
   );
-  const navegacaoVisivel = useMemo(
-    () => navegacao.filter((item) => permissoes.includes(item.permissao)),
-    [permissoes]
-  );
   const podeVerGestaoUsuarios = podeLerUsuarios || podeConvidarUsuarios || podeGerenciarConvites;
   const alertasAssinatura = resumo?.assinatura.alertas ?? [];
   const planoRecomendado = resumo ? obterProximoPlano(resumo.assinatura.planoId) : null;
   const bloqueioAssinatura = assinaturaBloqueada(resumo?.assinatura.status);
+  const etapasAtivacao = [
+    { rotulo: 'Dados da clinica', concluida: Boolean(resumo?.conta.nome) },
+    { rotulo: 'Equipe com acesso', concluida: Boolean(usuarios?.total) },
+    { rotulo: 'Comunicacoes definidas', concluida: Boolean(configuracoes && Object.values(configuracoes.canaisPadrao).some(Boolean)) },
+    { rotulo: 'Dados fiscais', concluida: Boolean(perfilEmpresa?.nomeLegal) }
+  ];
+  const etapasConcluidas = etapasAtivacao.filter((etapa) => etapa.concluida).length;
 
   const acoesCabecalho = (
     <div className="inline-flex w-fit items-center gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm font-medium text-texto-forte">
@@ -651,7 +688,7 @@ export function PortalCliente() {
       titulo="Portal do cliente"
       subtitulo="Conta OctaClin"
       descricao={descricaoCabecalho}
-      navegacao={navegacaoVisivel}
+      navegacao={[]}
       navLabel="Navegacao do cliente"
       acoes={acoesCabecalho}
       maxWidth="1180px"
@@ -669,6 +706,41 @@ export function PortalCliente() {
           </section>
         ) : null}
 
+        <Abas
+          identificador="conta-cliente"
+          rotulo="Areas da conta"
+          abas={[
+            { id: 'ativacao', rotulo: 'Ativacao' },
+            { id: 'assinatura', rotulo: 'Assinatura' },
+            { id: 'consumo', rotulo: 'Consumo' },
+            { id: 'equipe', rotulo: 'Equipe' },
+            { id: 'preferencias', rotulo: 'Preferencias' },
+            { id: 'marca', rotulo: 'Marca' },
+            { id: 'integracoes', rotulo: 'Integracoes' },
+            { id: 'fiscal', rotulo: 'Dados fiscais' }
+          ]}
+          ativaId={areaAtiva}
+          aoMudar={(id) => setAreaAtiva(id as typeof areaAtiva)}
+        />
+
+        {areaAtiva === 'ativacao' ? (
+        <div id="conta-cliente-ativacao-painel" role="tabpanel" aria-labelledby="conta-cliente-ativacao-aba" className="grid gap-4">
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo icone={<CheckCircle2 className="h-4 w-4" />}>Ativacao da clinica</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
+            <p className="text-sm text-texto-suave">{etapasConcluidas} de {etapasAtivacao.length} etapas concluidas</p>
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {etapasAtivacao.map((etapa) => (
+                <div key={etapa.rotulo} className="flex min-h-11 items-center gap-2 rounded-md border border-linha bg-superficie px-3 text-sm">
+                  <CheckCircle2 className={`h-4 w-4 shrink-0 ${etapa.concluida ? 'text-sucesso-forte' : 'text-texto-sutil'}`} aria-hidden="true" />
+                  <span>{etapa.rotulo}: {etapa.concluida ? 'concluido' : 'pendente'}</span>
+                </div>
+              ))}
+            </div>
+          </CartaoConteudo>
+        </Cartao>
         <Cartao id="conta" className="scroll-mt-4">
           <CartaoCabecalho>
             <CartaoTitulo icone={<Building2 className="h-4 w-4" />}>Resumo da conta</CartaoTitulo>
@@ -683,18 +755,24 @@ export function PortalCliente() {
             ))}
           </CartaoConteudo>
         </Cartao>
+        </div>
+        ) : null}
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4">
+          {areaAtiva === 'assinatura' || areaAtiva === 'consumo' ? (
           <Cartao id="assinatura" className="scroll-mt-4">
             <CartaoCabecalho>
-              <CartaoTitulo icone={<CreditCard className="h-4 w-4" />}>Assinatura</CartaoTitulo>
+              <CartaoTitulo icone={<CreditCard className="h-4 w-4" />}>
+                {areaAtiva === 'assinatura' ? 'Assinatura' : 'Consumo'}
+              </CartaoTitulo>
             </CartaoCabecalho>
             <CartaoConteudo className="grid gap-3">
+              {areaAtiva === 'assinatura' ? (
               <article className="rounded-md border border-linha bg-superficie p-3">
                 <p className="text-xs text-texto-suave">Status</p>
                 <p className="mt-1 text-base font-semibold">{resumo?.assinatura.plano ?? 'Carregando plano'}</p>
                 <p className="mt-1 text-sm text-texto-suave">
-                  {resumo ? `Assinatura ${resumo.assinatura.status} com origem ${resumo.assinatura.origem}.` : 'Atualizando assinatura da conta.'}
+                  {resumo ? `${rotuloStatusAssinatura(resumo.assinatura.status)}.` : 'Atualizando assinatura da conta.'}
                 </p>
                 {resumo?.assinatura.renovacaoEm ? (
                   <p className="mt-1 text-xs font-medium text-texto-forte">Renova em {formatarData(resumo.assinatura.renovacaoEm)}</p>
@@ -706,6 +784,8 @@ export function PortalCliente() {
                   </div>
                 ) : null}
               </article>
+              ) : null}
+              {areaAtiva === 'consumo' ? (
               <div className="grid gap-2">
                 {recursosSaas.map((recurso) => {
                   const uso = resumo?.assinatura.uso[recurso.chave] ?? 0;
@@ -738,6 +818,8 @@ export function PortalCliente() {
                   );
                 })}
               </div>
+              ) : null}
+              {areaAtiva === 'assinatura' ? (
               <article className="rounded-md border border-linha bg-superficie p-3">
                 <p className="text-xs text-texto-suave">Plano recomendado</p>
                 <p className="mt-1 text-base font-semibold">{planoRecomendado?.nome ?? 'Carregando recomendacao'}</p>
@@ -780,9 +862,12 @@ export function PortalCliente() {
                   </Botao>
                 </div>
               </article>
+              ) : null}
             </CartaoConteudo>
           </Cartao>
+          ) : null}
 
+          {areaAtiva === 'equipe' ? (
           <Cartao id="usuarios" className="scroll-mt-4">
             <CartaoCabecalho>
               <CartaoTitulo icone={<UsersRound className="h-4 w-4" />}>Usuarios</CartaoTitulo>
@@ -790,10 +875,8 @@ export function PortalCliente() {
             <CartaoConteudo className="grid gap-3">
               <article className="rounded-md border border-linha bg-superficie p-3">
                 <p className="text-xs text-texto-suave">Gestor da conta</p>
-                <p className="mt-1 break-words text-base font-semibold">{resumo?.acesso.usuarioId ?? 'Carregando usuario'}</p>
-                <p className="mt-1 text-sm text-texto-suave">
-                  {resumo ? `${resumo.acesso.papel} com escopo ${resumo.acesso.escopoDados}.` : 'Validando escopo da sessao.'}
-                </p>
+                <p className="mt-1 break-words text-base font-semibold">Acesso de gestao ativo</p>
+                <p className="mt-1 text-sm text-texto-suave">Assinatura, equipe e configuracoes respeitam as permissoes concedidas.</p>
               </article>
               <article className="rounded-md border border-linha bg-superficie p-3">
                 <p className="text-xs text-texto-suave">Separacao de acesso</p>
@@ -809,9 +892,10 @@ export function PortalCliente() {
               </article>
             </CartaoConteudo>
           </Cartao>
+          ) : null}
         </div>
 
-        {podeVerGestaoUsuarios ? (
+        {podeVerGestaoUsuarios && areaAtiva === 'equipe' ? (
         <Cartao id="gestao-usuarios" className="scroll-mt-4" aria-busy={carregandoUsuarios}>
           <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
             <div>
@@ -863,8 +947,8 @@ export function PortalCliente() {
                     setFormularioUsuario((atual) => ({ ...atual, role: evento.target.value as PapelUsuarioClienteCriavelApi }))
                   }
                 >
-                  <option value="Collaborator">Collaborator</option>
-                  <option value="Professional">Professional</option>
+                  <option value="Collaborator">Equipe administrativa</option>
+                  <option value="Professional">Profissional</option>
                 </select>
               </label>
               {formularioUsuario.role === 'Professional' ? (
@@ -929,7 +1013,7 @@ export function PortalCliente() {
                     <div key={convite.id} className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[1fr_150px_160px_180px] lg:items-center">
                       <div className="min-w-0">
                         <p className="break-all font-medium">{convite.email}</p>
-                        <p className="mt-1 text-xs text-texto-suave">{convite.role}</p>
+                        <p className="mt-1 text-xs text-texto-suave">{rotuloPapel(convite.role)}</p>
                       </div>
                       <span>{convite.status}</span>
                       <span>Expira em {formatarData(convite.expiraEm)}</span>
@@ -990,7 +1074,7 @@ export function PortalCliente() {
                     <div key={convite.id} className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[1fr_140px_180px_1fr] lg:items-center">
                       <div className="min-w-0">
                         <p className="break-all font-medium">{convite.email}</p>
-                        <p className="mt-1 text-xs text-texto-suave">{convite.role}</p>
+                        <p className="mt-1 text-xs text-texto-suave">{rotuloPapel(convite.role)}</p>
                       </div>
                       <span className="w-fit rounded-md border border-linha bg-superficie px-2 py-1 text-xs font-semibold uppercase text-texto-suave">
                         {convite.status}
@@ -1012,22 +1096,73 @@ export function PortalCliente() {
             {podeLerUsuarios ? (
             <div className="overflow-x-auto rounded-md border border-linha bg-white">
               <div className="min-w-[760px]">
-                <div className="grid grid-cols-[1.4fr_160px_120px_140px_96px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-texto-suave">
+                <div className="grid grid-cols-[1.4fr_190px_100px_120px_150px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-texto-suave">
                   <span>Email</span>
                   <span>Papel</span>
                   <span>Status</span>
                   <span>Ultimo login</span>
-                  <span>Acoes</span>
+                  <span>Acesso</span>
                 </div>
                 <div className="divide-y divide-linha">
                   {usuarios?.itens.length ? (
                     usuarios.itens.map((usuario) => (
-                      <div key={usuario.id} className="grid grid-cols-[1.4fr_160px_120px_140px_96px] gap-3 px-4 py-3 text-sm">
+                      <div key={usuario.id} className="grid grid-cols-[1.4fr_190px_100px_120px_150px] gap-3 px-4 py-3 text-sm">
                         <span className="break-all font-medium">{usuario.email}</span>
-                        <span>{usuario.role}</span>
+                        <div className="grid gap-2">
+                          {usuario.role === 'Client' ? (
+                            <span>{rotuloPapel(usuario.role)}</span>
+                          ) : (
+                            <>
+                              <select
+                                className="h-9 rounded-md border border-linha bg-white px-2 text-sm"
+                                aria-label={`Permissao de ${usuario.email}`}
+                                value={papeisUsuarios[usuario.id] ?? usuario.role}
+                                disabled={!podeAjustarUsuarios || ajustandoUsuarioId === usuario.id}
+                                onChange={(evento) =>
+                                  setPapeisUsuarios((atual) => ({
+                                    ...atual,
+                                    [usuario.id]: evento.target.value as PapelUsuarioClienteCriavelApi
+                                  }))
+                                }
+                              >
+                                <option value="Collaborator">Equipe administrativa</option>
+                                <option value="Professional">Profissional</option>
+                              </select>
+                              {(papeisUsuarios[usuario.id] ?? usuario.role) === 'Professional' && usuario.role !== 'Professional' ? (
+                                <input
+                                  className="h-9 rounded-md border border-linha bg-white px-2 text-sm"
+                                  aria-label={`Nome profissional de ${usuario.email}`}
+                                  placeholder="Nome profissional"
+                                  value={nomesProfissionais[usuario.id] ?? ''}
+                                  onChange={(evento) =>
+                                    setNomesProfissionais((atual) => ({ ...atual, [usuario.id]: evento.target.value }))
+                                  }
+                                />
+                              ) : null}
+                            </>
+                          )}
+                        </div>
                         <span>{usuario.ativo ? 'Ativo' : 'Inativo'}</span>
                         <span>{formatarData(usuario.ultimoLoginEm)}</span>
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-1">
+                          {usuario.role !== 'Client' ? (
+                            <Botao
+                              type="button"
+                              variante="fantasma"
+                              onClick={() => void ajustarPapelUsuario(usuario.id, usuario.role)}
+                              disabled={
+                                !podeAjustarUsuarios ||
+                                ajustandoUsuarioId === usuario.id ||
+                                (papeisUsuarios[usuario.id] ?? usuario.role) === usuario.role ||
+                                ((papeisUsuarios[usuario.id] ?? usuario.role) === 'Professional' &&
+                                  usuario.role !== 'Professional' &&
+                                  !nomesProfissionais[usuario.id]?.trim())
+                              }
+                              aria-label={`Salvar acesso de ${usuario.email}`}
+                            >
+                              <Save size={16} />
+                            </Botao>
+                          ) : null}
                           <Botao
                             type="button"
                             variante="fantasma"
@@ -1051,12 +1186,12 @@ export function PortalCliente() {
         </Cartao>
         ) : null}
 
-        {podeGerenciarConfiguracoes ? (
+        {podeGerenciarConfiguracoes && ['preferencias', 'marca', 'integracoes'].includes(areaAtiva) ? (
           <Cartao id="configuracoes" className="scroll-mt-4" aria-busy={carregandoConfiguracoes}>
             <CartaoCabecalho>
               <ShieldCheck className="h-4 w-4 text-texto-suave" />
               <div>
-                <h2 className="text-sm font-semibold">Configuracoes da conta</h2>
+                <h2 className="text-sm font-semibold">{areaAtiva === 'marca' ? 'Identidade da clinica' : areaAtiva === 'integracoes' ? 'Integracoes da conta' : 'Preferencias da conta'}</h2>
                 <p className="mt-1 text-sm text-texto-suave">
                   {configuracoes ? `Atualizado em ${formatarData(configuracoes.atualizadoEm)}` : 'Carregando preferencias da conta'}
                 </p>
@@ -1077,6 +1212,7 @@ export function PortalCliente() {
               ) : null}
 
               <div className="grid gap-3 md:grid-cols-2">
+                {areaAtiva === 'preferencias' ? (
                 <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Nome da clinica
                   <input
@@ -1087,6 +1223,8 @@ export function PortalCliente() {
                     maxLength={160}
                   />
                 </label>
+                ) : null}
+                {areaAtiva === 'marca' ? (
                 <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Nome exibido
                   <input
@@ -1102,6 +1240,8 @@ export function PortalCliente() {
                     maxLength={120}
                   />
                 </label>
+                ) : null}
+                {areaAtiva === 'preferencias' ? (
                 <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Timezone
                   <select
@@ -1115,6 +1255,8 @@ export function PortalCliente() {
                     <option value="America/Recife">America/Recife</option>
                   </select>
                 </label>
+                ) : null}
+                {areaAtiva === 'preferencias' ? (
                 <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Idioma
                   <select
@@ -1132,6 +1274,8 @@ export function PortalCliente() {
                     <option value="es">es</option>
                   </select>
                 </label>
+                ) : null}
+                {areaAtiva === 'marca' ? (
                 <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Email remetente
                   <input
@@ -1147,6 +1291,8 @@ export function PortalCliente() {
                     maxLength={180}
                   />
                 </label>
+                ) : null}
+                {areaAtiva === 'marca' ? (
                 <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Cor primaria
                   <input
@@ -1161,8 +1307,10 @@ export function PortalCliente() {
                     }
                   />
                 </label>
+                ) : null}
               </div>
 
+              {areaAtiva === 'integracoes' ? (
               <fieldset className="rounded-md border border-linha bg-superficie p-3">
                 <legend className="px-1 text-xs font-semibold text-texto-suave">Canais padrao</legend>
                 <div className="mt-2 grid gap-2 md:grid-cols-3">
@@ -1190,6 +1338,7 @@ export function PortalCliente() {
                   ))}
                 </div>
               </fieldset>
+              ) : null}
 
               <div className="flex justify-end">
                 <Botao type="submit" variante="primario" disabled={salvandoConfiguracoes || carregandoConfiguracoes}>
@@ -1201,7 +1350,7 @@ export function PortalCliente() {
           </Cartao>
         ) : null}
 
-        {podeGerenciarConfiguracoes ? (
+        {podeGerenciarConfiguracoes && areaAtiva === 'fiscal' ? (
           <Cartao id="perfil-fiscal" className="scroll-mt-4" aria-busy={carregandoPerfilEmpresa}>
             <CartaoCabecalho>
               <FileText className="h-4 w-4 text-texto-suave" />

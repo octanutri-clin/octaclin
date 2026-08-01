@@ -7,12 +7,10 @@ Atualizado em 2026-08-01.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 195 - portal do paciente e jornadas publicas
-  (2026-08-01). O portal foi dividido em nove rotas com estado compartilhado;
-  o agendamento publico ganhou identidade da clinica, fuso e revisao; e o
-  formulario publico passou a salvar rascunho versionado no backend, sem
-  armazenamento local, com validacao, limite de abuso e limpeza na resposta
-  ou expiracao.
+- Ultima fase concluida: Fase 196 - comunicacoes, equipe e conta do cliente
+  (2026-08-01). Comunicacoes, profissionais e portal comercial foram separados
+  por tarefas; falhas de envio ganharam nova tentativa contextual; e o gestor
+  pode ajustar o papel da equipe com auditoria e revogacao de sessoes antigas.
 - Fase 194: formularios, editor e leitura longitudinal (2026-08-01). O editor
   de questionarios (1593 linhas
   monoliticas) foi dividido em 5 areas (Formularios/Editor/Biblioteca/
@@ -62,6 +60,7 @@ Atualizado em 2026-08-01.
 
 - Login unificado por perfil.
 - Permissoes finas para Client, Professional e Collaborator.
+- Ajuste auditado entre acesso profissional e equipe administrativa.
 - BFF com cookies HttpOnly.
 - Roteamento por papel.
 - Console operacional.

@@ -1,6 +1,30 @@
 import { ControladorPortalCliente } from './controlador-portal-cliente';
 
 describe('ControladorPortalCliente', () => {
+  it('deve auditar a alteracao de papel sem registrar dados clinicos', async () => {
+    const servicoUsuariosCliente = {
+      atualizarPapel: jest.fn(async () => ({ id: 'usuario-2', role: 'Professional' }))
+    };
+    const servicoAuditoria = { registrar: jest.fn(async () => undefined) };
+    const controlador = new ControladorPortalCliente({} as never, servicoUsuariosCliente as never, servicoAuditoria as never);
+
+    await controlador.atualizarPapelUsuario(
+      { tenantId: 'tenant-1', usuarioId: 'cliente-1' } as never,
+      { ip: '127.0.0.1', headers: { 'user-agent': 'jest' } } as never,
+      'usuario-2',
+      { role: 'Professional', nomeProfissional: 'Dra. Carla' }
+    );
+
+    expect(servicoAuditoria.registrar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        acao: 'cliente.usuario.alterar_papel',
+        recursoId: 'usuario-2',
+        metadados: { role: 'Professional' }
+      })
+    );
+    expect(JSON.stringify(servicoAuditoria.registrar.mock.calls)).not.toContain('Dra. Carla');
+  });
+
   it('deve auditar atualizacao do perfil fiscal da empresa sem registrar documento em metadados', async () => {
     const perfil = {
       tenantId: 'tenant-1',

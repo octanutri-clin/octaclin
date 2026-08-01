@@ -410,6 +410,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   rascunho versionado no backend, retomada apos reload, validacao estrutural,
   limite de abuso, BFF sem credenciais e limpeza ao responder ou expirar. Ver
   `fase-195-portal-paciente-jornadas-publicas.md`.
+- Fase 196 - Comunicacoes, equipe e conta do cliente: comunicacoes passaram a
+  abrir em conversas, com composicao e configuracoes separadas, nova tentativa
+  pela mensagem falha e estado persistido de entrega. Profissionais ganharam
+  diretorio, disponibilidade e integracoes; arquivamento revoga o acesso. O
+  portal comercial foi dividido em oito tarefas e passou a permitir ajuste
+  auditado entre equipe administrativa e profissional, sem IDs ou papeis
+  internos na interface. Ver `fase-196-comunicacoes-equipe-conta.md`.
 
 ## Estado atual de uso
 

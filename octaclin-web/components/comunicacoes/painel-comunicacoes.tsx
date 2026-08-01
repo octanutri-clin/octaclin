@@ -6,6 +6,8 @@ import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { Abas } from '@/components/ui/abas';
+import { obterSessao } from '@/lib/auth-api';
 import {
   CanalNotificacaoApi,
   MensagemNotificacaoApi,
@@ -183,6 +185,15 @@ function formatarStatusMeta(status?: string) {
   return mapa[status] ?? status;
 }
 
+function rotuloStatusMensagem(status: MensagemNotificacaoApi['status']) {
+  if (status === 'falhou') return 'Nao entregue';
+  if (status === 'enviado') return 'Enviada';
+  if (status === 'processando') return 'Enviando';
+  if (status === 'recebido') return 'Recebida';
+  if (status === 'nota') return 'Nota interna';
+  return 'Aguardando envio';
+}
+
 function formatarDataIso(data?: string) {
   if (!data) return undefined;
   const dataFormatada = new Date(data);
@@ -266,7 +277,7 @@ function montarConversasWhatsapp(
   templates: TemplateMensagemApi[],
   pacientes: PacienteResumo[]
 ): ConversaWhatsapp[] {
-  const grupos = new Map<string, ConversaWhatsapp & { ultimaOrdenacao: number }>();
+  const grupos = new Map<string, ConversaWhatsapp & { ultimaOrdenacao: number; statusAtendimentoOrdenacao: number }>();
 
   for (const mensagem of mensagens) {
     const canal = obterCanal(canais, mensagem);
@@ -296,6 +307,7 @@ function montarConversasWhatsapp(
         pendentes: mensagem.status === 'falhou' ? 1 : 0,
         statusAtendimento:
           statusAtendimento === 'acompanhamento' || statusAtendimento === 'resolvido' ? statusAtendimento : undefined,
+        statusAtendimentoOrdenacao: statusAtendimento ? dataOrdenacao : 0,
         mensagens: [mensagem],
         ultimaOrdenacao: dataOrdenacao
       });
@@ -308,8 +320,12 @@ function montarConversasWhatsapp(
     conversa.pendentes += mensagem.status === 'falhou' ? 1 : 0;
     conversa.mensagens.push(mensagem);
     if (!conversa.pacienteId && mensagem.pacienteId) conversa.pacienteId = mensagem.pacienteId;
-    if (statusAtendimento === 'acompanhamento' || statusAtendimento === 'resolvido') {
+    if (
+      (statusAtendimento === 'acompanhamento' || statusAtendimento === 'resolvido') &&
+      dataOrdenacao > conversa.statusAtendimentoOrdenacao
+    ) {
       conversa.statusAtendimento = statusAtendimento;
+      conversa.statusAtendimentoOrdenacao = dataOrdenacao;
     }
     if (dataOrdenacao > conversa.ultimaOrdenacao) {
       conversa.ultimaMensagem = resumirMensagem(mensagem, templates);
@@ -337,6 +353,7 @@ function montarConversasWhatsapp(
 }
 
 export function PainelComunicacoes() {
+  const [areaAtiva, setAreaAtiva] = useState<'conversas' | 'nova' | 'configuracoes'>('conversas');
   const [canais, setCanais] = useState<CanalNotificacaoApi[]>([]);
   const [templates, setTemplates] = useState<TemplateMensagemApi[]>([]);
   const [mensagens, setMensagens] = useState<MensagemNotificacaoApi[]>([]);
@@ -355,6 +372,7 @@ export function PainelComunicacoes() {
   const [atualizarContatoPaciente, setAtualizarContatoPaciente] = useState(true);
   const [textoNotaWhatsapp, setTextoNotaWhatsapp] = useState('');
   const [statusAtendimentoNota, setStatusAtendimentoNota] = useState<'acompanhamento' | 'resolvido'>('acompanhamento');
+  const [podeConfigurar, setPodeConfigurar] = useState(false);
 
   const templatesCompativeis = useMemo(
     () => templates.filter((template) => template.canal === canais.find((canal) => canal.id === formularioMensagem.canalId)?.tipo),
@@ -475,7 +493,11 @@ export function PainelComunicacoes() {
         }
       });
       setMensagens((atuais) => [mensagem, ...atuais].slice(0, 200));
-      setSucesso(`Mensagem criada com status ${mensagem.status}.`);
+      setSucesso(
+        mensagem.status === 'falhou'
+          ? 'Nao foi possivel entregar a mensagem. Revise os dados e tente novamente.'
+          : `Mensagem ${rotuloStatusMensagem(mensagem.status).toLocaleLowerCase('pt-BR')}.`
+      );
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao disparar mensagem.');
     } finally {
@@ -483,22 +505,26 @@ export function PainelComunicacoes() {
     }
   }
 
-  function prepararRespostaWhatsapp(conversa: ConversaWhatsapp) {
-    const canalWhatsapp = canais.find((canal) => canal.tipo === 'whatsapp' && canal.ativo);
-    const templateWhatsapp =
+  function prepararRespostaWhatsapp(conversa: ConversaWhatsapp, mensagemFalha?: MensagemNotificacaoApi) {
+    const canalWhatsapp = canais.find((canal) => canal.id === mensagemFalha?.canalId) ?? canais.find((canal) => canal.tipo === 'whatsapp' && canal.ativo);
+    const templateWhatsapp = templates.find((template) => template.id === mensagemFalha?.templateId) ??
       templates.find((template) => template.canal === 'whatsapp' && template.aprovado && template.codigoExterno === 'hello_world') ??
       templates.find((template) => template.canal === 'whatsapp' && template.aprovado);
     const pacienteId = conversa.pacienteId ?? formularioMensagem.pacienteId;
+    const destino = mensagemFalha
+      ? obterContatoMensagem(mensagemFalha, obterUltimoStatusMeta(mensagemFalha.payload))
+      : conversa.contato;
 
     setFormularioMensagem((atual) => ({
       ...atual,
       pacienteId,
       canalId: canalWhatsapp?.id ?? atual.canalId,
       templateId: templateWhatsapp?.id ?? atual.templateId,
-      destino: conversa.contato,
+      destino,
       observacao: `Resposta manual para ${conversa.titulo}.`
     }));
-    setSucesso('Conversa preparada no disparo manual.');
+    setAreaAtiva('nova');
+    setSucesso(mensagemFalha ? 'Mensagem preparada para uma nova tentativa.' : 'Conversa preparada para resposta.');
   }
 
   async function associarConversaWhatsapp(conversa: ConversaWhatsapp) {
@@ -554,6 +580,12 @@ export function PainelComunicacoes() {
 
   useEffect(() => {
     void carregar();
+    void obterSessao().then((sessao) => {
+      const permissoes = sessao?.permissoes ?? [];
+      setPodeConfigurar(
+        permissoes.includes('comunicacoes.canais.gerenciar') && permissoes.includes('comunicacoes.templates.gerenciar')
+      );
+    });
   }, []);
 
   useEffect(() => {
@@ -600,7 +632,20 @@ export function PainelComunicacoes() {
         </div>
       ) : null}
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      <Abas
+        identificador="comunicacoes"
+        rotulo="Areas de comunicacao"
+        abas={[
+          { id: 'conversas', rotulo: 'Conversas' },
+          { id: 'nova', rotulo: 'Nova mensagem' },
+          ...(podeConfigurar ? [{ id: 'configuracoes', rotulo: 'Configuracoes' }] : [])
+        ]}
+        ativaId={areaAtiva}
+        aoMudar={(id) => setAreaAtiva(id as typeof areaAtiva)}
+      />
+
+      {areaAtiva === 'configuracoes' ? (
+      <section id="comunicacoes-configuracoes-painel" role="tabpanel" aria-labelledby="comunicacoes-configuracoes-aba" className="grid gap-4 xl:grid-cols-2">
         <Cartao>
         <form onSubmit={salvarCanal}>
           <CartaoCabecalho>
@@ -772,8 +817,10 @@ export function PainelComunicacoes() {
         </form>
         </Cartao>
       </section>
+      ) : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1fr_420px]">
+      {areaAtiva === 'nova' ? (
+      <section id="comunicacoes-nova-painel" role="tabpanel" aria-labelledby="comunicacoes-nova-aba" className="grid gap-4">
         <Cartao>
         <form onSubmit={enviarMensagem}>
           <CartaoCabecalho>
@@ -866,7 +913,11 @@ export function PainelComunicacoes() {
           </CartaoConteudo>
         </form>
         </Cartao>
+      </section>
+      ) : null}
 
+      {areaAtiva === 'configuracoes' ? (
+      <section className="grid gap-4">
         <Cartao>
           <CartaoCabecalho>
             <CartaoTitulo>Inventario ativo</CartaoTitulo>
@@ -904,7 +955,10 @@ export function PainelComunicacoes() {
           </div>
         </Cartao>
       </section>
+      ) : null}
 
+      {areaAtiva === 'conversas' ? (
+      <div id="comunicacoes-conversas-painel" role="tabpanel" aria-labelledby="comunicacoes-conversas-aba" className="grid gap-4">
       <Cartao>
         <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
           <div className="flex items-center gap-2">
@@ -1082,7 +1136,7 @@ export function PainelComunicacoes() {
                             <p className="break-words">{resumirMensagem(mensagem, templates)}</p>
                             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium text-texto-suave">
                               <span>{nota ? 'Nota interna' : recebida ? 'Recebida' : 'Enviada'} {formatarDataIso(mensagem.criadoEm) ?? 'sem data'}</span>
-                              <span className={`rounded-sm border px-1.5 py-0.5 ${corStatusMensagem(mensagem.status)}`}>{mensagem.status}</span>
+                              <span className={`rounded-sm border px-1.5 py-0.5 ${corStatusMensagem(mensagem.status)}`}>{rotuloStatusMensagem(mensagem.status)}</span>
                               {nota ? (
                                 <span className="rounded-sm border border-alerta-borda bg-white px-1.5 py-0.5 text-alerta-forte">
                                   {obterTextoPayload(mensagem.payload, 'statusAtendimento') === 'resolvido' ? 'resolvido' : 'acompanhamento'}
@@ -1090,11 +1144,19 @@ export function PainelComunicacoes() {
                               ) : null}
                               {!recebida && ultimoStatusMeta?.status ? (
                                 <span className={`rounded-sm border px-1.5 py-0.5 ${corStatusMeta(ultimoStatusMeta.status)}`}>
-                                  Meta: {formatarStatusMeta(ultimoStatusMeta.status)}
+                                  Entrega: {formatarStatusMeta(ultimoStatusMeta.status)}
                                 </span>
                               ) : null}
                             </div>
-                            {mensagem.erro ? <p className="mt-2 break-words text-xs font-medium text-perigo-forte">{mensagem.erro}</p> : null}
+                            {mensagem.status === 'falhou' ? (
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <p className="text-xs font-medium text-perigo-forte">Nao foi possivel concluir o envio.</p>
+                                <Botao type="button" variante="fantasma" onClick={() => prepararRespostaWhatsapp(conversaSelecionada, mensagem)}>
+                                  <RefreshCcw size={14} />
+                                  Tentar novamente
+                                </Botao>
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       );
@@ -1141,7 +1203,7 @@ export function PainelComunicacoes() {
                     {direcao === 'recebida' || direcao === 'nota' ? (
                       <p className="mt-1 break-words text-xs text-texto-suave">{resumirMensagem(mensagem, templates)}</p>
                     ) : null}
-                    {mensagem.erro ? <p className="mt-1 break-words text-xs font-medium text-perigo-forte">{mensagem.erro}</p> : null}
+                    {mensagem.status === 'falhou' ? <p className="mt-1 text-xs font-medium text-perigo-forte">Nao foi possivel concluir o envio.</p> : null}
                   </div>
                   <span
                     className={`w-fit rounded-sm border px-2 py-1 text-xs font-semibold ${corStatusMensagem(mensagem.status)}`}
@@ -1175,6 +1237,8 @@ export function PainelComunicacoes() {
           )}
         </div>
       </Cartao>
+      </div>
+      ) : null}
     </section>
   );
 }

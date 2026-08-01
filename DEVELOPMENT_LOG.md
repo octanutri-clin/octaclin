@@ -27,6 +27,19 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 196 - Comunicacoes, equipe e conta do cliente
+
+- Responsavel: Codex com auditorias paralelas de comunicacoes, equipe e conta.
+- Conclusao: 2026-08-01.
+- Push: sim, branch publicada e integrada por PR em `main`.
+- Validacoes: backend 65 suites/358 testes, lint, typechecks, builds, authz,
+  Next 15, Playwright desktop/mobile, acessibilidade, secrets e confiabilidade.
+- Arquivos principais: `painel-comunicacoes.tsx`,
+  `lista-profissionais.tsx`, `portal-cliente.tsx`, servicos/controladores de
+  comunicacoes, profissionais e usuarios do cliente.
+- Pendencias: nenhuma migration; usuarios alterados devem autenticar novamente.
+- Proxima fase: Fase 197 - Racionalizacao dos modulos avancados.
+
 ### Fase 195 - Portal do paciente e jornadas publicas
 
 - Responsavel: Codex com subagente de portal e revisao independente de seguranca.

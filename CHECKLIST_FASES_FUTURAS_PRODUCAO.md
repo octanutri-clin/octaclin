@@ -991,7 +991,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     (23), Next dinamico (50), Playwright desktop/mobile (14), acessibilidade
     do portal (2), `security:secrets` e `test:confiabilidade`.
 
-- [ ] Fase 196 - Comunicacoes, equipe e conta do cliente.
+- [x] Fase 196 - Comunicacoes, equipe e conta do cliente.
   - Estruturar comunicacoes em conversas, mensagem ativa e contexto do
     paciente; mover canais e templates para configuracoes administrativas.
   - Separar profissionais em diretorio, acesso, permissoes, disponibilidade e
@@ -1000,6 +1000,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     configuracoes, marca, integracoes e perfil fiscal.
   - Aceite: responder conversa, tratar falha, convidar usuario, ajustar
     permissao e compreender plano/limites sem IDs ou jargao tecnico.
+  - Status: concluida em 2026-08-01. Comunicacoes foram separadas em
+    conversas, nova mensagem e configuracoes com nova tentativa por mensagem
+    falha e erro tecnico oculto. Profissionais foram separados em diretorio,
+    disponibilidade e integracoes; arquivar agora revoga o acesso. A conta
+    comercial foi dividida em oito areas e ganhou ajuste auditado de papel com
+    revogacao de sessoes antigas.
+  - Data: 2026-08-01. Saida:
+    `fase-196-comunicacoes-equipe-conta.md`.
+  - Validacoes: backend 65 suites/358 testes, lint, typechecks, builds,
+    autorizacao/BFF (23), Next dinamico (50), Playwright desktop/mobile (12),
+    acessibilidade da conta (2), `security:secrets` e
+    `test:confiabilidade`.
 
 - [ ] Fase 197 - Racionalizacao dos modulos avancados.
   - Integrar IA aos fluxos clinicos e de comunicacao, com origem, limitacoes e
