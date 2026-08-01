@@ -158,7 +158,7 @@ test.describe('primeiro acesso do paciente', () => {
 
     await expect(page).toHaveURL(/\/portal$/);
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
-    await expect(page.getByText('Nenhuma acao pendente para hoje.')).toBeVisible();
+    await expect(page.getByText('Nenhuma acao pendente agora.')).toBeVisible();
   });
 
   test('orienta paciente quando o link esta sem token', async ({ page }) => {

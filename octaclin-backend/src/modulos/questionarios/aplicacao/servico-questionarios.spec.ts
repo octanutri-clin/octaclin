@@ -74,6 +74,11 @@ function criarRepositorioFake(
       const restantes = itens.filter((item) => !Object.entries(where).every(([chave, valor]) => item[chave] === valor));
       itens.splice(0, itens.length, ...restantes);
       return { affected: removidos.length };
+    }),
+    update: jest.fn(async (where: Record<string, unknown>, valores: Record<string, unknown>) => {
+      const encontrados = itens.filter((item) => Object.entries(where).every(([chave, valor]) => corresponde(item[chave], valor)));
+      encontrados.forEach((item) => Object.assign(item, valores));
+      return { affected: encontrados.length };
     })
   };
 
@@ -232,6 +237,26 @@ describe('ServicoQuestionarios', () => {
     );
 
     expect(agendamento).toEqual(expect.objectContaining({ questionarioId: 'q-1', pacienteId: 'paciente-1', ativo: true }));
+  });
+
+  it('remove rascunhos de envios expirados durante o processamento recorrente', async () => {
+    const agora = new Date('2026-08-01T12:00:00.000Z');
+    const { servico, dados } = criarServico({
+      categorias: [], questionarios: [], perguntas: [], opcaos: [], agendamentos: [],
+      envios: [{
+        id: 'envio-expirado', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1',
+        status: 'enviado', expiraEm: new Date('2026-08-01T11:00:00.000Z'),
+        respostasRascunho: [{ perguntaId: 'p1', valor: true }], rascunhoVersao: 3,
+        rascunhoAtualizadoEm: new Date('2026-08-01T10:00:00.000Z')
+      }],
+      respostaCheckins: [], respostaValors: [], pacientes: []
+    });
+
+    await servico.processarAgendamentosVencidos('tenant-1', agora);
+
+    expect(dados.envios[0]).toEqual(expect.objectContaining({ status: 'expirado', rascunhoVersao: 0 }));
+    expect(dados.envios[0].respostasRascunho).toBeUndefined();
+    expect(dados.envios[0].rascunhoAtualizadoEm).toBeUndefined();
   });
 
   it('deve listar apenas perguntas visiveis da biblioteca do tenant com busca e categoria', async () => {
@@ -707,7 +732,11 @@ describe('ServicoQuestionarios', () => {
         }
       ],
       opcaos: [],
-      envios: [{ id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'enviado' }],
+      envios: [{
+        id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'enviado',
+        respostasRascunho: [{ perguntaId: 'p2', valor: 'Rascunho antigo' }], rascunhoVersao: 2,
+        rascunhoAtualizadoEm: new Date('2026-07-20T10:00:00.000Z')
+      }],
       respostaCheckins: [],
       respostaValors: [],
       pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1', ultimoCheckinEm: null }]
@@ -731,7 +760,70 @@ describe('ServicoQuestionarios', () => {
     );
     expect(dados.envios[0].status).toBe('respondido');
     expect(dados.envios[0].respondidoEm).toBeInstanceOf(Date);
+    expect(dados.envios[0].respostasRascunho).toBeUndefined();
+    expect(dados.envios[0].rascunhoAtualizadoEm).toBeUndefined();
+    expect(dados.envios[0].rascunhoVersao).toBe(0);
     expect(dados.pacientes[0].ultimoCheckinEm).toBeInstanceOf(Date);
+  });
+
+  it('salva e retoma rascunho publico com versao monotona', async () => {
+    const { servico, dados } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in' }],
+      perguntas: [{
+        id: 'p1', tenantId: 'tenant-1', questionarioId: 'q1', categoriaId: 'cat-1', tipo: 'sim_nao',
+        enunciado: 'Treinou?', peso: '1', obrigatoria: true, configuracao: {}, ordem: 1
+      }],
+      opcaos: [],
+      envios: [{ id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'enviado', rascunhoVersao: 0 }],
+      respostaCheckins: [], respostaValors: [], pacientes: []
+    });
+    const token = servico.gerarTokenFormularioPaciente('tenant-1', 'envio-1');
+    const apiRascunho = servico as unknown as {
+      salvarRascunhoFormularioPaciente(token: string, dados: { versaoBase: number; respostas: { perguntaId: string; valor: unknown }[] }): Promise<{ rascunhoVersao: number }>;
+    };
+
+    await expect(apiRascunho.salvarRascunhoFormularioPaciente(token, {
+      versaoBase: 0,
+      respostas: [{ perguntaId: 'p1', valor: true }]
+    })).resolves.toEqual({ rascunhoVersao: 1, rascunhoAtualizadoEm: expect.any(Date) });
+
+    expect(dados.envios[0]).toEqual(expect.objectContaining({
+      respostasRascunho: [{ perguntaId: 'p1', valor: true }],
+      rascunhoVersao: 1,
+      rascunhoAtualizadoEm: expect.any(Date)
+    }));
+    await expect(servico.obterFormularioPaciente(token)).resolves.toEqual(expect.objectContaining({
+      respostasRascunho: [{ perguntaId: 'p1', valor: true }],
+      rascunhoVersao: 1
+    }));
+  });
+
+  it('rejeita rascunho obsoleto, pergunta duplicada e valor de tipo invalido', async () => {
+    const { servico } = criarServico({
+      categorias: [], questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in' }],
+      perguntas: [{
+        id: 'p1', tenantId: 'tenant-1', questionarioId: 'q1', categoriaId: 'cat-1', tipo: 'sim_nao',
+        enunciado: 'Treinou?', peso: '1', obrigatoria: true, configuracao: {}, ordem: 1
+      }],
+      opcaos: [],
+      envios: [{ id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'enviado', rascunhoVersao: 1 }],
+      respostaCheckins: [], respostaValors: [], pacientes: []
+    });
+    const token = servico.gerarTokenFormularioPaciente('tenant-1', 'envio-1');
+    const apiRascunho = servico as unknown as {
+      salvarRascunhoFormularioPaciente(token: string, dados: { versaoBase: number; respostas: { perguntaId: string; valor: unknown }[] }): Promise<unknown>;
+    };
+
+    await expect(apiRascunho.salvarRascunhoFormularioPaciente(token, {
+      versaoBase: 0, respostas: [{ perguntaId: 'p1', valor: true }]
+    })).rejects.toThrow('Rascunho atualizado em outro dispositivo.');
+    await expect(apiRascunho.salvarRascunhoFormularioPaciente(token, {
+      versaoBase: 1, respostas: [{ perguntaId: 'p1', valor: true }, { perguntaId: 'p1', valor: false }]
+    })).rejects.toThrow('Resposta duplicada');
+    await expect(apiRascunho.salvarRascunhoFormularioPaciente(token, {
+      versaoBase: 1, respostas: [{ perguntaId: 'p1', valor: 'sim' }]
+    })).rejects.toThrow('tipo invalido');
   });
 
   it('deve listar respostas recebidas por questionario com valores por pergunta', async () => {

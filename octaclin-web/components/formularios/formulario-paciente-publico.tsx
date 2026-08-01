@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Send } from 'lucide-react';
 import {
   carregarFormularioPublico,
   enviarFormularioPublico,
+  salvarRascunhoFormularioPublico,
   FormularioPublico,
   PerguntaFormularioPublico
 } from '@/lib/formularios-publicos-api';
@@ -58,12 +59,22 @@ export function FormularioPacientePublico({ token }: Props) {
   const [enviado, setEnviado] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [estadoRascunho, setEstadoRascunho] = useState<'inativo' | 'salvando' | 'salvo' | 'erro'>('inativo');
+  const [houveEdicao, setHouveEdicao] = useState(false);
+  const versaoRascunhoRef = useRef(0);
+  const pendenteRascunhoRef = useRef<{ perguntaId: string; valor: unknown }[] | null>(null);
+  const salvamentoRascunhoRef = useRef<Promise<void> | null>(null);
+  const suspenderRascunhoRef = useRef(false);
 
   useEffect(() => {
     setCarregando(true);
     carregarFormularioPublico(token)
       .then((resposta) => {
         setFormulario(resposta);
+        setRespostas(Object.fromEntries((resposta.respostasRascunho ?? []).map((item) => [item.perguntaId, item.valor as ValorResposta])));
+        versaoRascunhoRef.current = resposta.rascunhoVersao ?? 0;
+        setEstadoRascunho(resposta.respostasRascunho?.length ? 'salvo' : 'inativo');
+        setHouveEdicao(false);
         setErro(null);
       })
       .catch((erroAtual) => setErro(erroAtual instanceof Error ? erroAtual.message : 'Formulario indisponivel.'))
@@ -84,8 +95,52 @@ export function FormularioPacientePublico({ token }: Props) {
   const perguntasObrigatorias = formulario?.perguntas.filter((pergunta) => pergunta.obrigatoria) ?? [];
   const obrigatoriasRespondidas = perguntasObrigatorias.filter((pergunta) => valorPreenchido(respostas[pergunta.id])).length;
 
+  const montarRespostas = useCallback((valores: Record<string, ValorResposta>) => (
+    (formulario?.perguntas ?? [])
+      .filter((pergunta) => valorPreenchido(valores[pergunta.id]))
+      .map((pergunta) => ({ perguntaId: pergunta.id, valor: valores[pergunta.id] }))
+  ), [formulario]);
+
+  const enfileirarRascunho = useCallback((respostasAtuais: { perguntaId: string; valor: unknown }[]) => {
+    pendenteRascunhoRef.current = respostasAtuais;
+    if (salvamentoRascunhoRef.current) return salvamentoRascunhoRef.current;
+
+    const executar = async () => {
+      while (pendenteRascunhoRef.current && !suspenderRascunhoRef.current) {
+        const proximo = pendenteRascunhoRef.current;
+        pendenteRascunhoRef.current = null;
+        setEstadoRascunho('salvando');
+        try {
+          const salvo = await salvarRascunhoFormularioPublico(token, versaoRascunhoRef.current, proximo);
+          versaoRascunhoRef.current = salvo.rascunhoVersao;
+          setEstadoRascunho('salvo');
+        } catch (erroAtual) {
+          pendenteRascunhoRef.current = null;
+          setEstadoRascunho('erro');
+          setErro(erroAtual instanceof Error ? erroAtual.message : 'Nao foi possivel salvar o rascunho.');
+        }
+      }
+    };
+
+    const promessa = executar().finally(() => {
+      salvamentoRascunhoRef.current = null;
+    });
+    salvamentoRascunhoRef.current = promessa;
+    return promessa;
+  }, [token]);
+
+  useEffect(() => {
+    if (!formulario || !houveEdicao || enviado || suspenderRascunhoRef.current) return;
+    const temporizador = window.setTimeout(() => {
+      void enfileirarRascunho(montarRespostas(respostas));
+    }, 800);
+    return () => window.clearTimeout(temporizador);
+  }, [enfileirarRascunho, enviado, formulario, houveEdicao, montarRespostas, respostas]);
+
   function atualizarResposta(perguntaId: string, valor: ValorResposta) {
     setRespostas((atuais) => ({ ...atuais, [perguntaId]: valor }));
+    setHouveEdicao(true);
+    setEstadoRascunho('inativo');
   }
 
   function alternarCheckbox(perguntaId: string, valor: string) {
@@ -105,14 +160,15 @@ export function FormularioPacientePublico({ token }: Props) {
     setSalvando(true);
     setErro(null);
     try {
+      await enfileirarRascunho(montarRespostas(respostas));
+      suspenderRascunhoRef.current = true;
       await enviarFormularioPublico(
         token,
-        formulario.perguntas
-          .filter((pergunta) => valorPreenchido(respostas[pergunta.id]))
-          .map((pergunta) => ({ perguntaId: pergunta.id, valor: respostas[pergunta.id] }))
+        montarRespostas(respostas)
       );
       setEnviado(true);
     } catch (erroAtual) {
+      suspenderRascunhoRef.current = false;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Nao foi possivel enviar as respostas.');
     } finally {
       setSalvando(false);
@@ -170,6 +226,15 @@ export function FormularioPacientePublico({ token }: Props) {
                 <div className="h-full bg-primaria transition-[width]" style={{ width: `${(obrigatoriasRespondidas / perguntasObrigatorias.length) * 100}%` }} />
               </div>
             </div>
+          ) : null}
+          {estadoRascunho !== 'inativo' ? (
+            <p className="mt-3 text-xs text-texto-suave" aria-live="polite">
+              {estadoRascunho === 'salvando'
+                ? 'Salvando rascunho'
+                : estadoRascunho === 'salvo'
+                  ? 'Rascunho salvo'
+                  : 'Falha ao salvar rascunho'}
+            </p>
           ) : null}
         </header>
 
@@ -248,10 +313,10 @@ function CampoPergunta({
 
       {pergunta.tipo === 'sim_nao' ? (
         <div className="grid grid-cols-2 gap-2">
-          <Botao type="button" variante={valor === true ? 'primario' : 'secundario'} onClick={() => aoAlterar(true)}>
+          <Botao type="button" aria-pressed={valor === true} variante={valor === true ? 'primario' : 'secundario'} onClick={() => aoAlterar(true)}>
             {texto(pergunta.configuracao, 'rotuloSim', 'Sim')}
           </Botao>
-          <Botao type="button" variante={valor === false ? 'primario' : 'secundario'} onClick={() => aoAlterar(false)}>
+          <Botao type="button" aria-pressed={valor === false} variante={valor === false ? 'primario' : 'secundario'} onClick={() => aoAlterar(false)}>
             {texto(pergunta.configuracao, 'rotuloNao', 'Nao')}
           </Botao>
         </div>

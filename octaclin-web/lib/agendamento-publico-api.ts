@@ -12,9 +12,12 @@ export interface DiaAgendaPublicaApi {
 }
 
 export interface AgendaPublicaApi {
+  clinica: {
+    nome: string;
+    corPrimaria: string;
+  };
   profissional: {
     nomeExibicao: string;
-    especialidade?: string;
   };
   timezone: string;
   duracaoMinutos: number;

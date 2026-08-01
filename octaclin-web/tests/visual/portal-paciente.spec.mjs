@@ -195,6 +195,7 @@ const portalPaciente = {
 
 async function prepararPortal(page) {
   let registrouCheckin = false;
+  let carregamentos = 0;
 
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -204,6 +205,7 @@ async function prepararPortal(page) {
   ]);
 
   await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
+    carregamentos += 1;
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(portalPaciente) });
   });
   await page.route('**/api/portal/paciente/formularios-respondidos/**', async (route) => {
@@ -301,7 +303,10 @@ async function prepararPortal(page) {
     });
   });
 
-  return { registrouCheckin: () => registrouCheckin };
+  return {
+    carregamentos: () => carregamentos,
+    registrouCheckin: () => registrouCheckin
+  };
 }
 
 async function prepararSessaoPaciente(page) {
@@ -323,89 +328,46 @@ async function assertSemOverflowHorizontal(page) {
 }
 
 test.describe('portal do paciente', () => {
-  test('renderiza prioridades, perfil e privacidade sem regressao visual', async ({ page }, testInfo) => {
+  test('mantem a pagina inicial focada nas tres prioridades e sem scores clinicos', async ({ page }) => {
     const portal = await prepararPortal(page);
     await page.goto('/portal');
 
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
-    if (testInfo.project.name === 'mobile-chromium') {
-      await expect(page.getByRole('navigation', { name: 'Navegacao mobile do portal' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Inicio', exact: true })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Agenda', exact: true })).toBeVisible();
-    } else {
-      await expect(page.getByRole('navigation', { name: 'Navegacao do portal' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Inicio' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Sua agenda', exact: true })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Check-ins', exact: true })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Seu plano', exact: true })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Formularios', exact: true })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Mensagens', exact: true })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Perfil', exact: true })).toBeVisible();
-    }
     await expect(page.getByRole('heading', { name: 'Seu acompanhamento hoje' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Proxima acao' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Proxima consulta' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Plano em andamento' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Proximas acoes' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Linha do tempo' })).toBeVisible();
-    await expect(page.locator('#agenda').getByText('Consulta nutricional').first()).toBeVisible();
-    await expect(page.getByText('Formulario pendente', { exact: true })).toBeVisible();
-    await expect(page.getByText('Formulario respondido', { exact: true })).toBeVisible();
-    await expect(page.getByText('Mensagem', { exact: true })).toBeVisible();
-    await expect(page.getByText('Responder Check-in semanal')).toBeVisible();
-    await expect(page.getByText('Consulta nutricional').first()).toBeVisible();
     await expect(page.getByText('1 tarefas e 1 materiais')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Ver plano' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Check-in rapido' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Meu perfil' })).toHaveCount(0);
+    await expect(page.getByText(/score\s+87[,.]40/i)).toHaveCount(0);
+    expect(portal.carregamentos()).toBe(1);
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('navega por rotas reais com um unico carregamento do portal', async ({ page }, testInfo) => {
+    const portal = await prepararPortal(page);
+    await page.goto('/portal');
+
+    if (testInfo.project.name === 'mobile-chromium') {
+      const navegacao = page.getByRole('navigation', { name: 'Navegacao mobile do portal' });
+      await expect(navegacao.getByRole('link')).toHaveCount(5);
+      await expect(navegacao.getByRole('link', { name: 'Mais', exact: true })).toBeVisible();
+      await navegacao.getByRole('link', { name: 'Agenda', exact: true }).click();
+    } else {
+      await page.getByRole('navigation', { name: 'Navegacao do portal' }).getByRole('link', { name: 'Agenda', exact: true }).click();
+    }
+
+    await expect(page).toHaveURL(/\/portal\/agenda$/);
+    await expect(page.getByRole('heading', { name: 'Proximas consultas' })).toBeVisible();
+
+    const navegacao = page.getByRole('navigation', {
+      name: testInfo.project.name === 'mobile-chromium' ? 'Navegacao mobile do portal' : 'Navegacao do portal'
+    });
+    await navegacao.getByRole('link', { name: 'Check-ins', exact: true }).click();
+    await expect(page).toHaveURL(/\/portal\/checkins$/);
     await expect(page.getByRole('heading', { name: 'Check-in rapido' })).toBeVisible();
-    await expect(page.getByLabel('Humor de hoje')).toBeVisible();
-    await expect(page.getByLabel('Adesao ao plano')).toBeVisible();
-    await expect(page.getByLabel('Sintomas ou sinais')).toBeVisible();
-    await expect(page.getByLabel('Observacoes do dia')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Diario recente' })).toBeVisible();
-    await expect(page.locator('#checkin-rapido').getByText('Humor Bem')).toBeVisible();
-    await expect(page.locator('#checkin-rapido').getByText('Adesao 80%')).toBeVisible();
-    await expect(page.locator('#checkin-rapido').getByText('Sono leve')).toBeVisible();
-    await expect(page.locator('#checkin-rapido').getByText('Consegui seguir o plano no almoco.')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Plano de acompanhamento' })).toBeVisible();
-    await expect(page.locator('#plano').getByText('Registrar agua diariamente')).toBeVisible();
-    await expect(page.locator('#plano').getByText('Meta de 2 litros por dia.')).toBeVisible();
-    await expect(page.locator('#plano').getByText('Alta')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Materiais do plano' })).toBeVisible();
-    await expect(page.locator('#plano').getByText('Guia de hidratacao')).toBeVisible();
-    await expect(page.locator('#plano').getByText('Orientacoes para hidratar melhor.')).toBeVisible();
-    await expect(page.locator('#plano').getByText('Ler antes da proxima consulta.')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Abrir Guia de hidratacao' })).toHaveAttribute(
-      'href',
-      'https://materiais.octaclin.test/hidratacao'
-    );
-    await expect(page.getByRole('heading', { name: 'Notificacoes do paciente' })).toBeVisible();
-    await expect(page.locator('#mensagens').getByText('Consulta agendada').first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Meu perfil' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Privacidade' })).toBeVisible();
-    await expect(page.getByText('Documentos legais')).toBeVisible();
-    await expect(page.locator('#privacidade').getByText('Termos de uso')).toBeVisible();
-    await expect(page.locator('#privacidade').getByText('Politica de privacidade')).toBeVisible();
-    await expect(page.locator('#privacidade').getByText('Consentimento LGPD')).toBeVisible();
-    await expect(page.locator('#privacidade').getByText('Pendente')).toBeVisible();
-    await expect(page.locator('#privacidade').getByText('Aceito').first()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Baixar meus dados' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Enviar solicitacao LGPD' })).toBeVisible();
-    await expect(page.getByText('Meus protocolos LGPD')).toBeVisible();
-    await expect(page.getByText('LGPD-123', { exact: true })).toBeVisible();
-    await expect(page.getByText('Em tratamento')).toBeVisible();
-    await expect(page.getByText('Validando cadastro.')).toBeVisible();
-    await expect(page.getByText('Atualizacao da solicitacao LGPD LGPD-123')).toBeVisible();
-
-    await page.getByRole('button', { name: 'Ver respostas' }).click();
-    await expect(page.getByText('Mantive boa adesao durante a semana.')).toBeVisible();
-
-    await page.getByRole('button', { name: 'Baixar meus dados' }).click();
-    await expect(page.getByText('Exportacao LGPD completa gerada para Ana Paula. Hash 0123456789ab.')).toBeVisible();
-
-    await page.getByLabel('Tipo de solicitacao LGPD').selectOption('retificacao');
-    await page.getByLabel('Detalhes da solicitacao').fill('Atualizar telefone cadastrado.');
-    await page.getByRole('button', { name: 'Enviar solicitacao LGPD' }).click();
-    await expect(page.getByText('Solicitacao LGPD registrada: LGPD-123.')).toBeVisible();
 
     await page.getByLabel('Humor de hoje').selectOption('muito_bem');
     await page.getByLabel('Adesao ao plano').fill('90');
@@ -413,11 +375,33 @@ test.describe('portal do paciente', () => {
     await page.getByLabel('Observacoes do dia').fill('Mantive o plano no cafe da manha.');
     await page.getByRole('button', { name: 'Registrar check-in' }).click();
     await expect.poll(() => portal.registrouCheckin()).toBe(true);
-    await expect(page.getByText('Check-in registrado.')).toBeVisible();
-    await assertSemOverflowHorizontal(page);
 
-    const screenshot = await page.screenshot({ fullPage: true });
-    await testInfo.attach(`${testInfo.project.name}-portal-paciente.png`, { body: screenshot, contentType: 'image/png' });
+    await navegacao.getByRole('link', { name: 'Mais', exact: true }).click();
+    await expect(page).toHaveURL(/\/portal\/mais$/);
+    await page.locator('#conteudo-principal').getByRole('link', { name: 'Formularios', exact: true }).click();
+    await expect(page).toHaveURL(/\/portal\/formularios$/);
+    await expect(page.getByRole('heading', { name: 'Formularios pendentes' })).toBeVisible();
+    await page.getByRole('button', { name: 'Ver respostas' }).click();
+    await expect(page.getByText('Mantive boa adesao durante a semana.')).toBeVisible();
+    await expect(page.getByText(/score\s+87[,.]40/i)).toHaveCount(0);
+
+    expect(portal.carregamentos()).toBe(1);
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('mantem a jornada de privacidade na rota dedicada', async ({ page }) => {
+    await prepararPortal(page);
+    await page.goto('/portal/privacidade');
+
+    await expect(page.getByRole('heading', { name: 'Privacidade' })).toBeVisible();
+    await page.getByRole('button', { name: 'Baixar meus dados' }).click();
+    await expect(page.getByText('Exportacao LGPD completa gerada para Ana Paula. Hash 0123456789ab.')).toBeVisible();
+    await page.getByLabel('Tipo de solicitacao LGPD').selectOption('retificacao');
+    await page.getByLabel('Detalhes da solicitacao').fill('Atualizar telefone cadastrado.');
+    await page.getByRole('button', { name: 'Enviar solicitacao LGPD' }).click();
+    await expect(page.getByText('Solicitacao LGPD registrada: LGPD-123.')).toBeVisible();
+
+    await assertSemOverflowHorizontal(page);
   });
 
   test('exibe estado de erro acionavel quando o portal nao carrega', async ({ page }) => {

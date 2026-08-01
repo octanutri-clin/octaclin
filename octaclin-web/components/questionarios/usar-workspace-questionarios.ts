@@ -238,8 +238,22 @@ export function useWorkspaceQuestionarios() {
     }
   }
 
-  async function selecionarQuestionario(questionario: QuestionarioApi) {
-    if (questionario.id !== questionarioAtual?.id && !confirmarTrocaComAlteracoesPendentes()) return;
+  async function selecionarQuestionario(questionario: QuestionarioApi | null) {
+    if (questionario?.id !== questionarioAtual?.id && !confirmarTrocaComAlteracoesPendentes()) return;
+    if (!questionario) {
+      setQuestionarioAtual(null);
+      setTitulo('');
+      setDescricao('');
+      setStatus('rascunho');
+      setPerguntas([]);
+      setSelecionadaId(null);
+      setLinkFormulario('');
+      setRespostasRecebidas([]);
+      setLeituraClinica(null);
+      setAlteracoesQuestionarioPendentes(false);
+      setAlteracoesPerguntaPendentes(false);
+      return;
+    }
     setQuestionarioAtual(questionario);
     setTitulo(questionario.titulo);
     setDescricao(questionario.descricao ?? '');

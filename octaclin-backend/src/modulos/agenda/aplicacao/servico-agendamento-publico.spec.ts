@@ -11,6 +11,8 @@ import { AgendaSolicitacaoOrm } from '../infraestrutura/agenda-solicitacao.orm';
 import { CriarSolicitacaoAgendamentoPublicoDto } from './dtos';
 import { ServicoAgenda } from './servico-agenda';
 import { ServicoAgendamentoPublico, solicitacaoPendenteExpirou } from './servico-agendamento-publico';
+import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
+import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 
 interface EstadoFalso {
   links?: AgendaLinkPublicoOrm[];
@@ -23,6 +25,8 @@ interface EstadoFalso {
   criarConsultaImpl?: (tenantId: string, entrada: Record<string, unknown>, usuario: UsuarioAutenticado) => Promise<unknown>;
   cancelarConsultaImpl?: (tenantId: string, consultaId: string, usuario: UsuarioAutenticado) => Promise<unknown>;
   falharAtualizacaoFinal?: boolean;
+  configuracaoTenant?: TenantConfiguracaoOrm | null;
+  tenant?: TenantOrm | null;
 }
 
 function coincideWhere<T extends object>(registro: T, where: Partial<T> = {}): boolean {
@@ -111,6 +115,18 @@ function criarRepositorioBloqueio(estado: EstadoFalso) {
   };
 }
 
+function criarRepositorioConfiguracaoTenant(estado: EstadoFalso) {
+  return {
+    findOne: jest.fn(async () => estado.configuracaoTenant ?? null)
+  };
+}
+
+function criarRepositorioTenant(estado: EstadoFalso) {
+  return {
+    findOne: jest.fn(async () => estado.tenant ?? null)
+  };
+}
+
 function criarRepositorioSolicitacao(estado: EstadoFalso) {
   const solicitacoes = [...(estado.solicitacoes ?? [])];
   let ultimoSalvo: AgendaSolicitacaoOrm | null = null;
@@ -170,7 +186,9 @@ function criarServico(estado: EstadoFalso = {}) {
     profissional: criarRepositorioProfissional(estado),
     consulta: criarRepositorioConsulta(estado),
     bloqueio: criarRepositorioBloqueio(estado),
-    solicitacao: criarRepositorioSolicitacao(estado)
+    solicitacao: criarRepositorioSolicitacao(estado),
+    configuracaoTenant: criarRepositorioConfiguracaoTenant(estado),
+    tenant: criarRepositorioTenant(estado)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -179,6 +197,8 @@ function criarServico(estado: EstadoFalso = {}) {
       if (entidade === AgendaConsultaOrm) return repositorios.consulta;
       if (entidade === AgendaBloqueioExternoOrm) return repositorios.bloqueio;
       if (entidade === AgendaSolicitacaoOrm) return repositorios.solicitacao;
+      if (entidade === TenantConfiguracaoOrm) return repositorios.configuracaoTenant;
+      if (entidade === TenantOrm) return repositorios.tenant;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -372,6 +392,7 @@ describe('ServicoAgendamentoPublico', () => {
       repositorios.link.findOne.mock.invocationCallOrder[0]
     );
     expect(resumo.profissionalNome).toBe('Dra. Carla');
+    expect((resumo as typeof resumo & { clinica?: unknown }).clinica).toEqual({ nome: 'OctaClin', corPrimaria: '#197d8f' });
     expect(resumo.timezone).toBe('America/Sao_Paulo');
     expect(resumo.duracaoMinutos).toBe(60);
     expect(resumo.horariosLivres).toContain('2026-07-26T13:00:00.000Z');
@@ -403,6 +424,49 @@ describe('ServicoAgendamentoPublico', () => {
         })
       })
     );
+  });
+
+  it('aplica identidade e timezone configurados pelo tenant na agenda publica', async () => {
+    const { servico } = criarServico({
+      link: criarLinkAtivo(),
+      profissional: criarProfissional(),
+      tenant: { id: 'tenant-1', nome: 'Clinica Origem', slug: 'clinica-origem', status: 'ativo' } as TenantOrm,
+      configuracaoTenant: {
+        id: 'config-1',
+        tenantId: 'tenant-1',
+        chave: 'conta_cliente',
+        valor: {
+          marca: { nomeExibido: 'Clinica Bem Estar', corPrimaria: '#0ea5e9' },
+          timezone: 'America/Recife'
+        },
+        criadoEm: new Date('2026-07-01T12:00:00.000Z')
+      } as TenantConfiguracaoOrm
+    });
+
+    const resumo = await servico.obterAgendaPublica('token-valido', '203.0.113.5');
+
+    expect((resumo as typeof resumo & { clinica?: unknown }).clinica).toEqual({ nome: 'Clinica Bem Estar', corPrimaria: '#0ea5e9' });
+    expect(resumo.timezone).toBe('America/Recife');
+  });
+
+  it('usa fallbacks seguros para cor e timezone invalidos', async () => {
+    const { servico } = criarServico({
+      link: criarLinkAtivo(),
+      profissional: criarProfissional(),
+      tenant: { id: 'tenant-1', nome: 'Clinica Origem', slug: 'clinica-origem', status: 'ativo' } as TenantOrm,
+      configuracaoTenant: {
+        id: 'config-1',
+        tenantId: 'tenant-1',
+        chave: 'conta_cliente',
+        valor: { marca: { nomeExibido: ' ', corPrimaria: 'javascript:alert(1)' }, timezone: 'Fuso/Invalido' },
+        criadoEm: new Date('2026-07-01T12:00:00.000Z')
+      } as TenantConfiguracaoOrm
+    });
+
+    const resumo = await servico.obterAgendaPublica('token-valido', '203.0.113.5');
+
+    expect((resumo as typeof resumo & { clinica?: unknown }).clinica).toEqual({ nome: 'Clinica Origem', corPrimaria: '#197d8f' });
+    expect(resumo.timezone).toBe('America/Sao_Paulo');
   });
 
   it('nao oferece como livre um horario ocupado por consulta reagendada', async () => {

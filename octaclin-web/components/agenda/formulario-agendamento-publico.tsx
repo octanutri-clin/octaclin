@@ -11,6 +11,7 @@ import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo } from '@/components/ui/campo';
 import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao';
 import { AlertaOperacional, EstadoVazio } from '@/components/ui/feedback';
+import { Modal } from '@/components/ui/modal';
 
 interface Props {
   token: string;
@@ -52,6 +53,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
+  const [revisando, setRevisando] = useState(false);
 
   useEffect(() => {
     setCarregando(true);
@@ -72,7 +74,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
     [agenda]
   );
 
-  async function enviarSolicitacao(evento: FormEvent<HTMLFormElement>) {
+  function revisarSolicitacao(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!agenda) return;
 
@@ -82,6 +84,12 @@ export function FormularioAgendamentoPublico({ token }: Props) {
     }
 
     setErro(null);
+    setRevisando(true);
+  }
+
+  async function confirmarSolicitacao() {
+    if (!agenda || !horarioSelecionado) return;
+
     setSalvando(true);
     try {
       await criarSolicitacaoAgendaPublica(token, {
@@ -91,6 +99,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
         observacao: formulario.observacao.trim() || undefined,
         inicioEm: horarioSelecionado
       });
+      setRevisando(false);
       setSucesso(true);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Nao foi possivel enviar a solicitacao.');
@@ -140,20 +149,22 @@ export function FormularioAgendamentoPublico({ token }: Props) {
   }
 
   return (
+    <>
     <main className="min-h-screen bg-fundo px-4 py-6 text-tinta">
       <section className="mx-auto grid w-full max-w-6xl gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,420px)]">
         <div className="grid gap-4">
-          <section className="grid gap-3 rounded-lg border border-linha bg-white px-5 py-6">
-            <p className="text-xs font-semibold uppercase text-texto-suave">OctaClin</p>
+          <section
+            className="grid gap-3 rounded-lg border border-t-4 border-linha bg-white px-5 py-6"
+            style={{ borderTopColor: agenda.clinica.corPrimaria }}
+          >
+            <p className="text-xs font-semibold uppercase text-texto-suave">{agenda.clinica.nome}</p>
             <div className="grid gap-2">
               <h1 className="text-2xl font-semibold">Agendar com {agenda.profissional.nomeExibicao}</h1>
-              {agenda.profissional.especialidade ? (
-                <p className="text-sm text-texto-suave">{agenda.profissional.especialidade}</p>
-              ) : null}
             </div>
             <ol className="flex flex-wrap gap-2 text-sm text-texto-suave" aria-label="Etapas do agendamento">
               <li className="rounded-md bg-primaria-suave px-3 py-2 font-medium text-primaria">1. Escolha um horario</li>
-              <li className="rounded-md border border-linha bg-superficie px-3 py-2">2. Envie sua solicitacao</li>
+              <li className="rounded-md border border-linha bg-superficie px-3 py-2">2. Informe seus dados</li>
+              <li className="rounded-md border border-linha bg-superficie px-3 py-2">3. Revise e confirme</li>
             </ol>
             <div className="flex flex-wrap gap-2 text-sm text-texto-suave">
               <span className="inline-flex min-h-9 items-center gap-2 rounded-md border border-linha bg-superficie px-3">
@@ -223,7 +234,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
             <Send size={20} className="text-primaria" />
           </CartaoCabecalho>
           <CartaoConteudo>
-            <form onSubmit={enviarSolicitacao} className="grid gap-4">
+            <form onSubmit={revisarSolicitacao} className="grid gap-4">
               <div className="grid gap-2 rounded-lg border border-linha bg-superficie px-4 py-3" aria-live="polite">
                 <span className="text-xs font-semibold uppercase text-texto-suave">Horario escolhido</span>
                 <span className="text-sm font-medium text-tinta">
@@ -295,12 +306,33 @@ export function FormularioAgendamentoPublico({ token }: Props) {
                 disabled={salvando || !agenda.dias.length}
               >
                 <Send size={16} />
-                {salvando ? 'Enviando solicitacao' : 'Enviar solicitacao'}
+                Revisar solicitacao
               </Botao>
             </form>
           </CartaoConteudo>
         </Cartao>
       </section>
     </main>
+    <Modal
+      aberto={revisando}
+      aoFechar={() => setRevisando(false)}
+      titulo="Revise sua solicitacao"
+      descricao="Confira os dados antes de enviar. O horario ainda dependera da confirmacao da equipe."
+    >
+      <dl className="grid gap-3 text-sm">
+        <div><dt className="text-xs font-semibold text-texto-suave">Clinica</dt><dd>{agenda.clinica.nome}</dd></div>
+        <div><dt className="text-xs font-semibold text-texto-suave">Profissional</dt><dd>{agenda.profissional.nomeExibicao}</dd></div>
+        <div><dt className="text-xs font-semibold text-texto-suave">Horario</dt><dd>{horarioSelecionado ? formatarDataHora(horarioSelecionado, agenda.timezone) : ''}</dd></div>
+        <div><dt className="text-xs font-semibold text-texto-suave">Nome</dt><dd>{formulario.nome.trim()}</dd></div>
+        <div><dt className="text-xs font-semibold text-texto-suave">Email</dt><dd className="break-all">{formulario.email.trim()}</dd></div>
+      </dl>
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
+        <Botao type="button" variante="secundario" onClick={() => setRevisando(false)} disabled={salvando}>Voltar e editar</Botao>
+        <Botao type="button" variante="primario" onClick={() => void confirmarSolicitacao()} disabled={salvando}>
+          {salvando ? 'Enviando solicitacao' : 'Confirmar solicitacao'}
+        </Botao>
+      </div>
+    </Modal>
+    </>
   );
 }

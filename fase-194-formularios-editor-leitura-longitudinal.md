@@ -2,6 +2,12 @@
 
 Status: concluida e validada localmente em 2026-08-01.
 
+Correcao complementar em 2026-08-01: a recorrencia exibida por padrao
+(semanal, segunda-feira, 08:00) passou a ser enviada mesmo sem o usuario
+alterar os controles, e a opcao `Novo questionario` passou a limpar o
+questionario atual e abrir efetivamente o modo de criacao. Ambos os fluxos
+receberam cobertura Playwright em desktop e mobile.
+
 ## Ja satisfeito por fases anteriores (sem trabalho novo)
 
 - "Preservar versoes" do checklist: o contador `versao` (inteiro,
@@ -102,6 +108,9 @@ verificacoes de autorizacao/BFF aprovadas; 68 cenarios Playwright de
 regressao (jornadas criticas, console, acessibilidade) aprovados, incluindo
 `/questionarios renderiza sem regressao visual` sem novas violacoes de
 acessibilidade nas 5 abas; scanner de secrets sem achados.
+
+Na correcao complementar, os 2 fluxos corrigidos foram executados em desktop
+e mobile, totalizando 4 cenarios adicionais aprovados.
 
 ## Proxima fase
 

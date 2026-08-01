@@ -74,14 +74,24 @@ test.describe('Editor de questionarios', () => {
     await expect(page.getByText('Cron', { exact: true })).toHaveCount(0);
 
     await page.getByLabel('Paciente do check-in recorrente').selectOption('paciente-1');
-    await page.getByLabel('Frequencia').selectOption('semanal');
-    await page.getByLabel('Dia da semana').selectOption('1');
-    await page.getByLabel('Horario').fill('08:00');
     await page.getByRole('button', { name: 'Criar check-in recorrente' }).click();
 
     await expect.poll(() => corpoAgendamento).toEqual(
       expect.objectContaining({ regraCron: '0 8 * * 1', pacienteId: 'paciente-1' })
     );
+  });
+
+  test('inicia um novo questionario pela opcao do seletor', async ({ page }) => {
+    await criarSessao(page);
+    await mockarBff(page);
+    await page.goto('/questionarios');
+
+    await page.getByRole('tab', { name: 'Formularios' }).click();
+    await page.getByLabel('Selecionar').selectOption('');
+
+    await expect(page.getByLabel('Titulo')).toHaveValue('');
+    await expect(page.getByLabel('Descricao')).toHaveValue('');
+    await expect(page.getByRole('button', { name: 'Criar questionario' })).toBeVisible();
   });
 
   test('mostra preview lado a lado com a edicao em telas largas', async ({ page }) => {

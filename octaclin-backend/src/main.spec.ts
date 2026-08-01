@@ -38,6 +38,7 @@ describe('inicializacao da aplicacao', () => {
     jest.resetModules();
     jest.clearAllMocks();
     process.env = { ...ambienteOriginal, NODE_ENV: 'production' };
+    process.env.FORMULARIO_PUBLICO_SEGREDO = 'segredo-formulario-publico-32-bytes';
     delete process.env.CORS_ORIGINS;
     mockCriarAplicacao.mockResolvedValue(mockAplicacao);
   });
@@ -86,6 +87,18 @@ describe('inicializacao da aplicacao', () => {
     delete process.env.CRIPTOGRAFIA_CHAVE_AES_256;
 
     await expect(carregarMain()).rejects.toThrow('CRIPTOGRAFIA_CHAVE_AES_256');
+
+    expect(mockCriarAplicacao).not.toHaveBeenCalled();
+  });
+
+  it('recusa iniciar em producao sem segredo dedicado de formulario publico', async () => {
+    process.env.CORS_ORIGINS = 'https://app.octaclin.test';
+    process.env.JWT_SEGREDO = 'segredo-access';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'chave-criptografia-32-bytes';
+    delete process.env.FORMULARIO_PUBLICO_SEGREDO;
+
+    await expect(carregarMain()).rejects.toThrow('FORMULARIO_PUBLICO_SEGREDO');
 
     expect(mockCriarAplicacao).not.toHaveBeenCalled();
   });

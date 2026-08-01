@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { InterceptorLogRequisicao } from './infraestrutura/observabilidade/interceptor-log-requisicao';
 import { middlewareCorrelacao } from './infraestrutura/observabilidade/middleware-correlacao';
 import { ModuloAplicacao } from './modulo-aplicacao';
+import { obterSegredoFormularioPublico } from './infraestrutura/seguranca/segredo-formulario-publico';
 
 function obterOrigensCors(): boolean | string[] {
   const valor = process.env.CORS_ORIGINS;
@@ -45,6 +46,8 @@ function validarCorsProducao() {
   if (!process.env.CRIPTOGRAFIA_CHAVE_AES_256?.trim()) {
     throw new Error('CRIPTOGRAFIA_CHAVE_AES_256 e obrigatoria em producao.');
   }
+
+  obterSegredoFormularioPublico();
 
   const configuracaoGoogle = [
     process.env.GOOGLE_CALENDAR_CLIENT_ID?.trim(),

@@ -12,6 +12,7 @@ const arquivos = [
   'scripts/agendamento-publico-bff.spec.ts',
   'app/api/agendamentos-publicos/[token]/route.ts',
   'app/api/agendamentos-publicos/[token]/solicitacoes/route.ts',
+  'app/api/formularios/[token]/rascunho/route.ts',
   'app/api/agenda/agendamento-publico/route.ts',
   'app/api/agenda/agendamento-publico/rotacionar/route.ts',
   'app/api/agenda/solicitacoes/route.ts',

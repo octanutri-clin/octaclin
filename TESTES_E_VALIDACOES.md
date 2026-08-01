@@ -241,6 +241,20 @@ A suite `octaclin-web/tests/visual/questionarios-editor.spec.mjs` (Fase 194) val
 pnpm --dir octaclin-web exec playwright test tests/visual/questionarios-editor.spec.mjs --reporter=list
 ```
 
+## Portal e jornadas publicas da Fase 195
+
+```powershell
+pnpm --dir octaclin-backend test --runInBand
+pnpm --dir octaclin-web test:authz
+pnpm --dir octaclin-web exec playwright test tests/visual/portal-paciente.spec.mjs tests/visual/agendamento-publico.spec.mjs tests/visual/formulario-publico.spec.mjs --reporter=list
+pnpm --dir octaclin-web exec playwright test tests/visual/acessibilidade.spec.mjs --grep "portal do paciente" --reporter=list
+```
+
+Esses gates cobrem navegacao autenticada com um bootstrap, ausencia de score
+clinico, confirmacao do agendamento publico, rascunho versionado, retomada sem
+storage local, BFF publico sem credenciais, expiracao/limpeza e acessibilidade
+em desktop e celular.
+
 ## Dados realistas de staging
 
 Use quando alterar massa de staging, seeds ou dados de QA:

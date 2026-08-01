@@ -25,6 +25,9 @@ export interface FormularioPublico {
   status: string;
   expiraEm?: string;
   perguntas: PerguntaFormularioPublico[];
+  respostasRascunho?: RespostaFormularioPublico[];
+  rascunhoAtualizadoEm?: string;
+  rascunhoVersao: number;
 }
 
 export interface RespostaFormularioPublico {
@@ -43,7 +46,13 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
 
   if (!resposta.ok) {
     const detalhe = await resposta.text();
-    throw new Error(detalhe || `Falha HTTP ${resposta.status}`);
+    try {
+      const corpo = JSON.parse(detalhe) as { message?: string; mensagem?: string };
+      throw new Error(corpo.mensagem ?? corpo.message ?? detalhe);
+    } catch (erro) {
+      if (erro instanceof SyntaxError) throw new Error(detalhe || `Falha HTTP ${resposta.status}`);
+      throw erro;
+    }
   }
 
   return resposta.json() as Promise<T>;
@@ -58,4 +67,18 @@ export function enviarFormularioPublico(token: string, respostas: RespostaFormul
     method: 'POST',
     body: JSON.stringify({ respostas })
   });
+}
+
+export function salvarRascunhoFormularioPublico(
+  token: string,
+  versaoBase: number,
+  respostas: RespostaFormularioPublico[]
+) {
+  return requisitar<{ rascunhoVersao: number; rascunhoAtualizadoEm: string }>(
+    `/api/formularios/${encodeURIComponent(token)}/rascunho`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ versaoBase, respostas })
+    }
+  );
 }

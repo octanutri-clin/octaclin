@@ -7,8 +7,14 @@ Atualizado em 2026-08-01.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 194 - formularios, editor e leitura
-  longitudinal (2026-08-01). O editor de questionarios (1593 linhas
+- Ultima fase concluida: Fase 195 - portal do paciente e jornadas publicas
+  (2026-08-01). O portal foi dividido em nove rotas com estado compartilhado;
+  o agendamento publico ganhou identidade da clinica, fuso e revisao; e o
+  formulario publico passou a salvar rascunho versionado no backend, sem
+  armazenamento local, com validacao, limite de abuso e limpeza na resposta
+  ou expiracao.
+- Fase 194: formularios, editor e leitura longitudinal (2026-08-01). O editor
+  de questionarios (1593 linhas
   monoliticas) foi dividido em 5 areas (Formularios/Editor/Biblioteca/
   Distribuicoes/Respostas) sobre um hook unico de estado
   (`useWorkspaceQuestionarios`); o preview do paciente passou a ser
