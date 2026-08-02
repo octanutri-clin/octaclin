@@ -1,15 +1,16 @@
 # Fase 200 - Upload seguro e anexos clinicos
 
-Status: implementacao local validada e migration `1014` aplicada em producao;
-bucket R2, rollout e smoke real pendentes.
+Status: implementacao local validada, migration `1014` aplicada em producao e
+bucket B2 provisionado; merge, rollout da branch e smoke pela interface
+pendentes.
 
 ## Entregue no codigo
 
 - Upload direto para bucket privado S3-compativel por URL pre-assinada de 5
   minutos, sem expor credenciais ao navegador.
-- A escrita exige `If-None-Match: *`; o objeto validado e promovido de
-  `pendentes/` para `confirmados/`, e a URL publica nunca escreve na chave
-  clinica definitiva.
+- A escrita usa `If-None-Match: *` por padrao; no B2 essa protecao e desligada
+  somente na chave aleatoria de `pendentes/`, que nunca e a chave clinica
+  definitiva. O objeto validado e promovido para `confirmados/`.
 - Confirmacao server-side por `HEAD` e leitura real do objeto; tamanho, MIME,
   metadados e SHA-256 nao confiam no cliente.
 - Limite de 25 MB e allowlist por assinatura de arquivo para PDF, JPEG, PNG,
@@ -43,21 +44,23 @@ bucket R2, rollout e smoke real pendentes.
 
 - Provedor escolhido: Backblaze B2, bucket privado e criptografado
   `octaclin-midias-clinicas-producao`, regiao `us-east-005`.
-- Credencial S3 deve ter apenas leitura e escrita de objetos nesse bucket.
+- Credencial S3 esta restrita ao bucket de producao e nao acessa outros
+  buckets da conta.
 - CORS permite a origem `https://octaclin-web-producao.onrender.com`, metodos
   `PUT`, `GET` e `HEAD`, e headers `content-type` e `x-amz-meta-*`.
 - `ARMAZENAMENTO_S3_IF_NONE_MATCH=false` e obrigatorio no B2 porque o
   `PutObject` condicional responde `501 NotImplemented`; nos demais provedores
   o bloqueio continua ativo por padrao.
-- Regra de lifecycle remove objetos do prefixo `pendentes/` apos 1 dia; o
-  backend tambem libera reservas vencidas antes de novos uploads.
+- Regra de lifecycle oculta objetos do prefixo `pendentes/` apos 1 dia e os
+  exclui definitivamente apos mais 1 dia; o backend tambem libera reservas
+  vencidas antes de novos uploads.
 - Variaveis: `ARMAZENAMENTO_S3_ENDPOINT`, `ARMAZENAMENTO_S3_REGION`,
   `ARMAZENAMENTO_S3_ACCESS_KEY_ID`, `ARMAZENAMENTO_S3_SECRET_ACCESS_KEY`,
   `ARMAZENAMENTO_BUCKET_MIDIA` e `ARMAZENAMENTO_S3_IF_NONE_MATCH`.
 
 ## Validacoes locais
 
-- Backend: 74 suites, 417 testes, typecheck e build.
+- Backend: 74 suites, 418 testes, typecheck e build.
 - Fluxos focados apos revisao de seguranca: 23 testes.
 - Web: typecheck, build, 58 rotas Next 15 e 23 testes de autorizacao/BFF.
 - Playwright de anexos no prontuario: desktop e mobile.
@@ -69,9 +72,17 @@ bucket R2, rollout e smoke real pendentes.
 
 1. Repetir a migration `1014` no banco de integracao explicitamente
    identificado; producao ja foi aplicada e confirmada.
-2. Criar o bucket privado, lifecycle de `pendentes/` e token restrito no
-   Cloudflare R2.
-3. Configurar as cinco variaveis no backend Render e fazer deploy.
-4. Validar upload, abertura e exclusao reais com arquivo sintetico no
+2. Integrar a branch, configurar `ARMAZENAMENTO_S3_IF_NONE_MATCH=false` e
+   fazer o deploy do codigo da fase.
+3. Validar upload, abertura e exclusao reais com arquivo sintetico no
    prontuario e em formulario publico.
-5. Reexecutar health, login, scanner de secrets e smoke de producao.
+4. Reexecutar health, login, scanner de secrets e smoke de producao.
+
+## Evidencia do provedor
+
+- Bucket privado e criptografado criado em 2026-08-02.
+- CORS S3 confirmado por preflight e upload `200`, limitado a origem web de
+  producao.
+- Lifecycle relido pela API com prefixo exclusivo `pendentes/` e prazos `1/1`.
+- Smoke sintetico confirmou `PUT`, `HEAD`, copia com metadados, download
+  assinado, integridade byte a byte e exclusao; objetos de teste removidos.
