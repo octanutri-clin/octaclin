@@ -170,6 +170,8 @@ Atualizado em 2026-08-02.
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
-Proxima pendencia tecnica: rollout da Fase 201 no Render. Antes de escalar o
-backend, separar os papeis `web` e `worker` e registrar a entrega sintetica
-unica exigida pelo aceite.
+Proxima pendencia tecnica: rollout da Fase 201 no Render (separar os papeis
+`web` e `worker` e registrar a entrega sintetica unica exigida pelo aceite)
+e, em paralelo, a regressao visual Playwright + verificacao de contraste AA
+da Fase 202 (sistema visual: tokens, tipografia e elevacao), implementada
+localmente em 2026-08-02.

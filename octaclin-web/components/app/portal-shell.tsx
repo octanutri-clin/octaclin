@@ -115,21 +115,21 @@ export function PortalShell({
           Pular para o conteudo
         </a>
         <div className="grid min-h-screen min-w-0 lg:grid-cols-[248px_minmax(0,1fr)]">
-          <aside className="sticky top-0 z-20 min-w-0 overflow-hidden border-b border-linha bg-white lg:h-screen lg:overflow-visible lg:border-b-0 lg:border-r">
+          <aside className="sticky top-0 z-20 min-w-0 overflow-hidden bg-neutro-900 text-white lg:h-screen lg:overflow-visible">
             {marca ? (
               <div className="flex items-center gap-2 px-4 py-3 lg:px-5 lg:py-4">
                 <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primaria text-white">
                   <marca.icone size={19} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold">{marca.rotulo}</p>
-                  <p className="text-xs text-texto-suave">{marca.subrotulo}</p>
+                  <p className="text-sm font-bold text-white">{marca.rotulo}</p>
+                  <p className="text-xs text-neutro-400">{marca.subrotulo}</p>
                 </div>
               </div>
             ) : null}
             <nav
               aria-label={navLabel}
-              className="flex min-w-0 max-w-full gap-1 overflow-x-auto border-t border-linha px-3 py-2 [scrollbar-width:none] lg:grid lg:overflow-visible lg:px-3 lg:py-3 [&::-webkit-scrollbar]:hidden"
+              className="flex min-w-0 max-w-full gap-1 overflow-x-auto border-t border-neutro-800 px-3 py-2 [scrollbar-width:none] lg:grid lg:overflow-visible lg:px-3 lg:py-3 [&::-webkit-scrollbar]:hidden"
             >
               {navegacaoCarregando ? (
                 <div className="grid min-w-56 gap-2 px-1 py-1 lg:min-w-0" aria-hidden="true">
@@ -140,7 +140,7 @@ export function PortalShell({
                 return (
                   <Fragment key={item.href}>
                     {item.grupo && item.grupo !== navegacao[indice - 1]?.grupo ? (
-                      <p className="hidden px-3 pt-3 text-xs font-semibold uppercase text-texto-sutil first:pt-0 lg:block">
+                      <p className="hidden px-3 pt-3 text-xs font-semibold uppercase text-neutro-500 first:pt-0 lg:block">
                         {item.grupo}
                       </p>
                     ) : null}
@@ -148,9 +148,11 @@ export function PortalShell({
                       href={item.href as Route}
                       aria-current={ativo ? 'page' : undefined}
                       className={cn(
-                        'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium text-texto-suave transition-colors',
+                        'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border-l-[3px] px-3 text-sm font-medium transition-colors',
                         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
-                        ativo ? 'bg-primaria-suave text-primaria' : 'hover:bg-superficie-hover hover:text-tinta'
+                        ativo
+                          ? 'border-l-primaria bg-white/10 text-white'
+                          : 'border-l-transparent text-neutro-400 hover:bg-white/5 hover:text-white'
                       )}
                     >
                       {item.icone ? <item.icone size={17} className="shrink-0" /> : null}

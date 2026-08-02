@@ -1092,9 +1092,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
     documentado em `fase-201-confiabilidade-processadores-multiplas-instancias.md`
     e registrar uma entrega sintetica unica antes de marcar como concluida.
 
-- [ ] Fase 202 - Sistema visual: tokens, tipografia e elevacao.
+- [x] Fase 202 - Sistema visual: tokens, tipografia e elevacao.
   - Consolidar tokens semanticos, hierarquia tipografica, foco, espacamento,
     elevacao e estados visuais sem criar um segundo design system.
+  - Implementado localmente em 2026-08-02; ver `fase-202-sistema-visual-tokens-tipografia-elevacao.md`.
+    Regressao visual Playwright e verificacao AA ainda pendentes de execucao.
 
 - [ ] Fase 203 - Componentes compartilhados e fim dos sistemas paralelos.
   - Reusar primitives existentes e consolidar aviso, status, avatar, tooltip,

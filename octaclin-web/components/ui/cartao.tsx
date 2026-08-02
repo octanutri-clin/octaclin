@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 export const Cartao = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('rounded-lg border border-linha bg-white', className)} {...props} />
+    <div ref={ref} className={cn('rounded-lg bg-white shadow-cartao', className)} {...props} />
   )
 );
 Cartao.displayName = 'Cartao';
@@ -25,7 +25,7 @@ interface CartaoTituloProps extends React.HTMLAttributes<HTMLHeadingElement> {
 
 export const CartaoTitulo = React.forwardRef<HTMLHeadingElement, CartaoTituloProps>(
   ({ className, icone, children, ...props }, ref) => (
-    <h2 ref={ref} className={cn('flex items-center gap-2 text-sm font-semibold text-tinta', className)} {...props}>
+    <h2 ref={ref} className={cn('flex items-center gap-2 text-md font-semibold text-tinta', className)} {...props}>
       {icone ? <span className="text-texto-suave">{icone}</span> : null}
       {children}
     </h2>
@@ -38,6 +38,6 @@ export function CartaoSubtitulo({ className, ...props }: React.HTMLAttributes<HT
 }
 
 export const CartaoConteudo = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn('p-4', className)} {...props} />
+  ({ className, ...props }, ref) => <div ref={ref} className={cn('p-cartao', className)} {...props} />
 );
 CartaoConteudo.displayName = 'CartaoConteudo';

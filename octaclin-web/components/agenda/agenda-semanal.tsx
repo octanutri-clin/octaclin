@@ -89,10 +89,16 @@ function consultaMaisProxima(consultas: ConsultaAgendaApi[]) {
   )[0];
 }
 
+const BARRA_STATUS_CONSULTA: Record<ConsultaAgendaApi['status'], string> = {
+  agendada: 'border-l-primaria text-tinta',
+  reagendada: 'border-l-alerta text-tinta',
+  concluida: 'border-l-sucesso text-tinta',
+  falta: 'border-l-perigo text-tinta',
+  cancelada: 'border-l-neutro-400 text-texto-suave'
+};
+
 function classeConsulta(consulta: ConsultaAgendaApi) {
-  return consulta.status === 'reagendada'
-    ? 'border-alerta-borda bg-alerta-suave text-alerta-forte'
-    : 'border-primaria bg-primaria-suave text-primaria-forte';
+  return BARRA_STATUS_CONSULTA[consulta.status];
 }
 
 function valorDatetimeLocal(data: Date) {
@@ -424,7 +430,7 @@ export function AgendaSemanal({
                   {itensDoDia.slice(0, 3).map((item) => {
                     const nome = item.tipo === 'consulta' ? item.pacienteNome ?? item.titulo : item.rotulo;
                     return (
-                      <div key={item.id} className={cn('truncate rounded border px-1.5 py-1 text-xs', item.tipo === 'consulta' ? classeConsulta(item) : 'border-linha bg-white text-texto-suave')} title={`${formatarHora(new Date(item.inicioEm))} ${nome}`}>
+                      <div key={item.id} className={cn('truncate rounded-sm border border-linha border-l-[3px] bg-white px-1.5 py-1 text-xs', item.tipo === 'consulta' ? classeConsulta(item) : 'border-l-neutro-400 text-texto-suave')} title={`${formatarHora(new Date(item.inicioEm))} ${nome}`}>
                         {formatarHora(new Date(item.inicioEm))} {nome}
                       </div>
                     );
@@ -497,12 +503,12 @@ export function AgendaSemanal({
                       key={item.id}
                       aria-label={`${bloqueioManual ? 'Horario reservado' : 'Horario ocupado'}: ${nome}, ${formatarHora(inicio)} a ${formatarHora(fim)}`}
                       className={cn(
-                        'absolute inset-x-1 z-10 overflow-hidden rounded-md border px-2 py-1.5 text-xs shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
+                        'absolute inset-x-1 z-10 overflow-hidden rounded-md border border-linha border-l-[3px] bg-white px-2 py-1.5 text-xs shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
                         item.tipo === 'consulta'
                           ? classeConsulta(item)
                           : bloqueioManual
-                            ? 'border-alerta-borda bg-alerta-suave text-alerta-forte'
-                            : 'border-linha bg-superficie text-texto-suave'
+                            ? 'border-l-alerta text-alerta-forte'
+                            : 'border-l-neutro-400 text-texto-suave'
                       )}
                       style={{ top: topo, height: altura }}
                     >

@@ -28,16 +28,51 @@ const config: Config = {
         perigo: '#C0392B',
         'perigo-forte': '#A93226',
         'perigo-suave': '#FFF4F1',
-        'perigo-borda': '#EFB8AD'
+        'perigo-borda': '#EFB8AD',
+        neutro: {
+          50: '#F7F8FA',
+          100: '#EEF1F4',
+          200: '#E3E7ED',
+          300: '#D9DEE8',
+          400: '#B8C0CE',
+          500: '#8A94A3',
+          600: '#596273',
+          700: '#3F4757',
+          800: '#2A3140',
+          900: '#1B2130',
+          950: '#11151F'
+        }
       },
       borderRadius: {
-        lg: '8px',
-        md: '6px',
-        sm: '4px'
+        xl: '16px',
+        lg: '12px',
+        md: '8px',
+        sm: '6px'
+      },
+      fontSize: {
+        xs: ['0.75rem', { lineHeight: '1.35' }],
+        sm: ['0.875rem', { lineHeight: '1.5' }],
+        md: ['0.9375rem', { lineHeight: '1.5' }],
+        base: ['1rem', { lineHeight: '1.5' }],
+        lg: ['1.125rem', { lineHeight: '1.4' }],
+        xl: ['1.25rem', { lineHeight: '1.35' }],
+        '2xl': ['1.5rem', { lineHeight: '1.3' }]
+      },
+      boxShadow: {
+        sm: '0 1px 2px 0 rgba(31, 41, 55, 0.06)',
+        lg: '0 8px 24px -4px rgba(31, 41, 55, 0.16), 0 2px 8px -2px rgba(31, 41, 55, 0.08)',
+        cartao:
+          'inset 0 0 0 1px rgba(217, 222, 232, 0.6), 0 1px 2px 0 rgba(31, 41, 55, 0.06), 0 1px 3px 1px rgba(31, 41, 55, 0.08)'
+      },
+      spacing: {
+        campo: '0.75rem',
+        cartao: '1.25rem',
+        secao: '2rem'
       },
       fontFamily: {
-        heading: ['var(--font-figtree)', 'system-ui', 'sans-serif'],
-        body: ['var(--font-noto-sans)', 'system-ui', 'sans-serif']
+        heading: ['var(--font-plex-sans)', 'system-ui', 'sans-serif'],
+        body: ['var(--font-plex-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-plex-mono)', 'ui-monospace', 'monospace']
       }
     }
   },
