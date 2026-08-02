@@ -4,10 +4,12 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { Fragment, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronDown, LogOut, UserRound, type LucideIcon } from 'lucide-react';
+import { ChevronDown, LogOut, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Avatar } from '@/components/ui/avatar';
 import { Botao } from '@/components/ui/botao';
 import { Esqueleto } from '@/components/ui/feedback';
+import { Menu } from '@/components/ui/menu';
 import { sair } from '@/lib/auth-api';
 
 export interface ItemNavegacaoShell {
@@ -78,31 +80,32 @@ export function PortalShell({
   );
 
   const menuConta = contextoUsuario ? (
-    <details className="relative">
-      <summary
-        aria-label="Abrir menu da conta"
-        className={cn(
-          'flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md border border-linha bg-white px-2 text-left text-sm transition-colors',
-          'hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria [&::-webkit-details-marker]:hidden'
-        )}
-      >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primaria-suave text-primaria-forte">
-          <UserRound size={17} aria-hidden="true" />
-        </span>
-        <span className="hidden min-w-0 sm:block">
-          <span className="block max-w-44 truncate text-xs font-semibold text-tinta">{contextoUsuario.email}</span>
-          <span className="block text-xs text-texto-suave">{contextoUsuario.papel}</span>
-        </span>
-        <ChevronDown size={15} className="text-texto-suave" aria-hidden="true" />
-      </summary>
-      <div className="absolute right-0 z-40 mt-2 w-72 rounded-lg border border-linha bg-white p-3 shadow-lg">
-        <p className="text-xs font-semibold uppercase text-texto-sutil">Workspace</p>
-        <p className="mt-1 truncate text-sm font-semibold text-tinta">{contextoUsuario.workspace}</p>
-        <p className="mt-3 truncate text-sm text-texto-suave">{contextoUsuario.email}</p>
-        <p className="text-xs text-texto-sutil">{contextoUsuario.papel}</p>
-        <div className="mt-3 border-t border-linha pt-2">{botaoSair}</div>
-      </div>
-    </details>
+    <Menu
+      className="w-72 p-3"
+      gatilho={
+        <button
+          type="button"
+          aria-label="Abrir menu da conta"
+          className={cn(
+            'flex min-h-11 items-center gap-2 rounded-md border border-linha bg-white px-2 text-left text-sm transition-colors',
+            'hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria'
+          )}
+        >
+          <Avatar id={contextoUsuario.email} nome={contextoUsuario.email} tamanho="sm" />
+          <span className="hidden min-w-0 sm:block">
+            <span className="block max-w-44 truncate text-xs font-semibold text-tinta">{contextoUsuario.email}</span>
+            <span className="block text-xs text-texto-suave">{contextoUsuario.papel}</span>
+          </span>
+          <ChevronDown size={15} className="text-texto-suave" aria-hidden="true" />
+        </button>
+      }
+    >
+      <p className="px-1 text-xs font-semibold uppercase text-texto-sutil">Workspace</p>
+      <p className="mt-1 truncate px-1 text-sm font-semibold text-tinta">{contextoUsuario.workspace}</p>
+      <p className="mt-3 truncate px-1 text-sm text-texto-suave">{contextoUsuario.email}</p>
+      <p className="px-1 text-xs text-texto-sutil">{contextoUsuario.papel}</p>
+      <div className="mt-3 border-t border-linha pt-2">{botaoSair}</div>
+    </Menu>
   ) : botaoSair;
 
   if (variante === 'sidebar') {

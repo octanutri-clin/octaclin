@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
+import { Etiqueta } from '@/components/ui/etiqueta';
 import { PortalShell } from '@/components/app/portal-shell';
 import {
   atualizarPerfilPaciente,
@@ -794,9 +795,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                             <p className="text-sm font-semibold">Humor {rotuloHumor(diario.humor)}</p>
                             <p className="mt-1 text-xs text-texto-suave">{formatarDataHora(diario.registradoEm)}</p>
                           </div>
-                          <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                            Adesao {diario.adesaoPlano}%
-                          </span>
+                          <Etiqueta>Adesao {diario.adesaoPlano}%</Etiqueta>
                         </div>
                         {diario.sintomas ? <p className="mt-3 break-words text-sm text-texto-suave">{diario.sintomas}</p> : null}
                         {diario.observacoes ? <p className="mt-2 break-words text-sm text-texto-forte">{diario.observacoes}</p> : null}
@@ -826,12 +825,8 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                             </p>
                           </div>
                           <div className="flex shrink-0 flex-wrap gap-2">
-                            <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                              {rotuloStatus(tarefa.status)}
-                            </span>
-                            <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                              {rotuloPrioridade(tarefa.prioridade)}
-                            </span>
+                            <Etiqueta>{rotuloStatus(tarefa.status)}</Etiqueta>
+                            <Etiqueta>{rotuloPrioridade(tarefa.prioridade)}</Etiqueta>
                           </div>
                         </div>
                         {tarefa.descricao ? <p className="mt-3 break-words text-sm text-texto-suave">{tarefa.descricao}</p> : null}
@@ -859,9 +854,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                               {material.categoria ? ` - ${material.categoria}` : ''}
                             </p>
                           </div>
-                          <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                            {rotuloStatus(material.status)}
-                          </span>
+                          <Etiqueta>{rotuloStatus(material.status)}</Etiqueta>
                         </div>
                         {material.resumo ? <p className="mt-3 break-words text-sm text-texto-suave">{material.resumo}</p> : null}
                         {material.observacao ? <p className="mt-2 break-words text-xs text-texto-suave">{material.observacao}</p> : null}
@@ -914,9 +907,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                               {notificacao.evento ? ` - ${notificacao.evento}` : ''}
                             </p>
                           </div>
-                          <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                            {rotuloStatus(notificacao.status)}
-                          </span>
+                          <Etiqueta>{rotuloStatus(notificacao.status)}</Etiqueta>
                         </div>
                         <p className="mt-3 line-clamp-3 break-words text-sm text-texto-suave">
                           {notificacao.texto || 'Notificacao registrada no acompanhamento.'}
@@ -944,9 +935,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                             <p className="break-words text-sm font-semibold">{notificacao.titulo}</p>
                             <p className="mt-1 text-xs text-texto-suave">{rotuloCanalNotificacao(notificacao.canal)}</p>
                           </div>
-                          <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                            {rotuloStatus(notificacao.status)}
-                          </span>
+                          <Etiqueta>{rotuloStatus(notificacao.status)}</Etiqueta>
                         </div>
                         <p className="mt-2 line-clamp-2 break-words text-sm text-texto-suave">
                           {notificacao.texto || 'Notificacao registrada no acompanhamento.'}
@@ -998,9 +987,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                 {linhaTempo.length ? (
                   linhaTempo.map((item) => (
                     <article key={item.id} className="grid gap-2 rounded-md border border-linha bg-superficie p-3 sm:grid-cols-[150px_minmax(0,1fr)_140px] sm:items-start">
-                      <span className="w-fit rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                        {item.tipo}
-                      </span>
+                      <Etiqueta className="w-fit">{item.tipo}</Etiqueta>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold">{item.titulo}</p>
                         <p className="mt-1 line-clamp-2 break-words text-xs text-texto-suave">{item.descricao}</p>
@@ -1181,9 +1168,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                                 Respondido em {formatarDataHora(formulario.finalizadoEm ?? formulario.respondidoEm)}
                               </p>
                             </div>
-                            <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                              {rotuloStatus(formulario.status)}
-                            </span>
+                            <Etiqueta>{rotuloStatus(formulario.status)}</Etiqueta>
                           </div>
                           <Botao
                             type="button"
@@ -1221,9 +1206,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                           <div key={resposta.perguntaId} className="rounded-md border border-linha bg-superficie p-3">
                             <dt className="flex flex-wrap items-start justify-between gap-2 text-sm font-semibold">
                               <span>{resposta.enunciado}</span>
-                              <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-medium text-texto-suave">
-                                {resposta.obrigatoria ? 'Obrigatoria' : 'Opcional'}
-                              </span>
+                              <Etiqueta>{resposta.obrigatoria ? 'Obrigatoria' : 'Opcional'}</Etiqueta>
                             </dt>
                             <dd className="mt-2 break-words text-sm text-texto-suave">{formatarValor(resposta.valor)}</dd>
                           </div>
@@ -1246,9 +1229,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                               <p className="text-sm font-semibold">{consulta.titulo}</p>
                               <p className="text-xs text-texto-suave">{formatarDataHora(consulta.inicioEm)}</p>
                             </div>
-                            <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                              {rotuloStatus(consulta.status)}
-                            </span>
+                            <Etiqueta>{rotuloStatus(consulta.status)}</Etiqueta>
                           </div>
                           {consulta.local ? <p className="mt-2 text-sm text-texto-suave">{consulta.local}</p> : null}
                           <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -1287,9 +1268,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                       <article key={mensagem.id} className="rounded-md border border-linha bg-superficie p-3">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <p className="text-sm font-semibold">{mensagem.titulo}</p>
-                          <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                            {rotuloStatus(mensagem.status)}
-                          </span>
+                          <Etiqueta>{rotuloStatus(mensagem.status)}</Etiqueta>
                         </div>
                         <p className="mt-2 text-sm text-texto-suave">{mensagem.texto || 'Mensagem registrada no acompanhamento.'}</p>
                         <p className="mt-3 text-xs text-texto-suave">{formatarDataHora(mensagem.enviadoEm ?? mensagem.criadoEm)}</p>
@@ -1393,9 +1372,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                               <p className="break-words text-sm font-semibold">{solicitacao.protocolo}</p>
                               <p className="mt-1 text-xs text-texto-suave">{rotuloTipoSolicitacaoLgpd(solicitacao.tipo)}</p>
                             </div>
-                            <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                              {rotuloStatusSolicitacaoLgpd(solicitacao.status)}
-                            </span>
+                            <Etiqueta>{rotuloStatusSolicitacaoLgpd(solicitacao.status)}</Etiqueta>
                           </div>
                           {solicitacao.detalhes ? <p className="mt-2 break-words text-sm text-texto-forte">{solicitacao.detalhes}</p> : null}
                           <dl className="mt-3 grid gap-2 text-xs text-texto-suave sm:grid-cols-2">
@@ -1430,9 +1407,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                         <article key={consentimento.id} className="rounded-md border border-linha bg-superficie p-3">
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <p className="text-sm font-semibold">{rotuloConsentimento(consentimento.tipo)}</p>
-                            <span className="rounded-full border border-linha bg-white px-2 py-1 text-xs font-semibold text-texto-suave">
-                              {consentimento.versao}
-                            </span>
+                            <Etiqueta>{consentimento.versao}</Etiqueta>
                           </div>
                           <p className="mt-2 text-xs text-texto-suave">{formatarDataHora(consentimento.aceitoEm)}</p>
                         </article>

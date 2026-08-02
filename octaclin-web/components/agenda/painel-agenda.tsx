@@ -205,6 +205,7 @@ export function PainelAgenda() {
   const [modalCriarAberto, setModalCriarAberto] = useState(false);
   const [consultaSelecionadaId, setConsultaSelecionadaId] = useState<string | null>(null);
   const [desfechoPendente, setDesfechoPendente] = useState<{ consulta: ConsultaAgendaApi; status: DesfechoConsultaAgenda } | null>(null);
+  const [rotacionarLinkPendente, setRotacionarLinkPendente] = useState(false);
 
   const pacientesLista = useMemo(() => pacientes?.itens ?? [], [pacientes]);
   const profissionaisLista = useMemo(() => profissionais?.itens ?? [], [profissionais]);
@@ -412,12 +413,11 @@ export function PainelAgenda() {
     }
   }
 
-  async function rotacionarLink() {
-    const confirmado = window.confirm(
-      'Rotacionar o link invalida a URL publica anterior imediatamente. Deseja continuar?'
-    );
-    if (!confirmado) return;
+  function rotacionarLink() {
+    setRotacionarLinkPendente(true);
+  }
 
+  async function executarRotacaoLink() {
     setErro(null);
     setSucesso(null);
     setProcessandoSolicitacaoId('rotacionar-link');
@@ -933,6 +933,18 @@ export function PainelAgenda() {
           void registrarDesfecho(desfechoPendente.consulta, desfechoPendente.status).then((concluida) => {
             if (concluida) setDesfechoPendente(null);
           });
+        }}
+      />
+      <ModalConfirmacao
+        aberto={rotacionarLinkPendente}
+        titulo="Rotacionar link publico"
+        mensagem="Rotacionar o link invalida a URL publica anterior imediatamente. Deseja continuar?"
+        rotuloConfirmar="Confirmar rotacao"
+        confirmando={processandoSolicitacaoId === 'rotacionar-link'}
+        aoCancelar={() => setRotacionarLinkPendente(false)}
+        aoConfirmar={() => {
+          setRotacionarLinkPendente(false);
+          void executarRotacaoLink();
         }}
       />
     </div>

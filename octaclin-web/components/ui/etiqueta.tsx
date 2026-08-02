@@ -18,3 +18,22 @@ export interface EtiquetaProps extends React.HTMLAttributes<HTMLSpanElement> {
 export function Etiqueta({ variante = 'neutra', className, ...props }: EtiquetaProps) {
   return <span className={cn('inline-flex min-h-6 items-center rounded-sm border px-2 text-xs font-semibold', estilos[variante], className)} {...props} />;
 }
+
+export interface StatusEtiquetaConfig {
+  rotulo: string;
+  variante?: VarianteEtiqueta;
+}
+
+interface EtiquetaStatusProps<T extends string> extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'children'> {
+  status: T;
+  mapa: Record<T, StatusEtiquetaConfig>;
+}
+
+export function EtiquetaStatus<T extends string>({ status, mapa, className, ...props }: EtiquetaStatusProps<T>) {
+  const configuracao = mapa[status];
+  return (
+    <Etiqueta variante={configuracao.variante ?? 'neutra'} className={className} {...props}>
+      {configuracao.rotulo}
+    </Etiqueta>
+  );
+}

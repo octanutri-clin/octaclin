@@ -929,11 +929,9 @@ test.describe('jornadas criticas de producao', () => {
     await expect(solicitacao.getByLabel('Paciente para aprovar')).toHaveValue('');
     await expect(solicitacao.getByRole('button', { name: 'Aprovar solicitacao' })).toBeDisabled();
 
-    page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('invalida a URL publica anterior');
-      await dialog.accept();
-    });
     await page.getByRole('button', { name: 'Rotacionar link' }).click();
+    await expect(page.getByText('invalida a URL publica anterior')).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmar rotacao' }).click();
 
     await expect.poll(() => jornada.urlPublica()).toBe('https://octaclin.local/agendar/token-rotacionado');
     await expect(page.getByText('https://octaclin.local/agendar/token-rotacionado')).toBeVisible();

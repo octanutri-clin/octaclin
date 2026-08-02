@@ -16,12 +16,19 @@ export function TabelaConteudo({ className, larguraMinima = '840px', style, ...p
   return <div className={cn('min-w-0', className)} style={{ minWidth: larguraMinima, ...style }} {...props} />;
 }
 
-export const TabelaCabecalho = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+type DensidadeTabela = 'padrao' | 'compacta';
+
+interface TabelaCabecalhoProps extends React.HTMLAttributes<HTMLDivElement> {
+  densidade?: DensidadeTabela;
+}
+
+export const TabelaCabecalho = React.forwardRef<HTMLDivElement, TabelaCabecalhoProps>(
+  ({ className, densidade = 'padrao', ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        'grid gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-texto-suave',
+        'grid gap-3 border-b border-linha px-4 text-xs font-semibold uppercase text-texto-suave',
+        densidade === 'compacta' ? 'py-2' : 'py-3',
         className
       )}
       {...props}
@@ -35,8 +42,14 @@ export const TabelaLinhas = React.forwardRef<HTMLDivElement, React.HTMLAttribute
 );
 TabelaLinhas.displayName = 'TabelaLinhas';
 
-export const TabelaLinha = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn('grid gap-3 px-4 py-3 text-sm', className)} {...props} />
+interface TabelaLinhaProps extends React.HTMLAttributes<HTMLDivElement> {
+  densidade?: DensidadeTabela;
+}
+
+export const TabelaLinha = React.forwardRef<HTMLDivElement, TabelaLinhaProps>(
+  ({ className, densidade = 'padrao', ...props }, ref) => (
+    <div className={cn('grid gap-3 px-4 text-sm', densidade === 'compacta' ? 'py-2' : 'py-3', className)} ref={ref} {...props} />
+  )
 );
 TabelaLinha.displayName = 'TabelaLinha';
 

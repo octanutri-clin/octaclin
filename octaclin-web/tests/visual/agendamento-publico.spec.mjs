@@ -321,11 +321,9 @@ test.describe('agendamento publico', () => {
     await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Link publico de agendamento' })).toBeVisible();
     await expect(page.getByText(/token bruto nao e persistido/i)).toBeVisible();
-    page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('invalida a URL publica anterior');
-      await dialog.accept();
-    });
     await page.getByRole('button', { name: 'Rotacionar link' }).click();
+    await expect(page.getByText('invalida a URL publica anterior')).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmar rotacao' }).click();
 
     await expect.poll(() => agenda.rotacionouLink()).toBe(true);
     await expect(page.getByText('https://octaclin.local/agendar/token-rotacionado')).toBeVisible();

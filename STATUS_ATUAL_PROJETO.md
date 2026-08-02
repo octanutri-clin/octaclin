@@ -7,6 +7,14 @@ Atualizado em 2026-08-02.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 203 (parcial): componentes compartilhados, em 2026-08-02. 7
+  componentes novos (Aviso, EtiquetaStatus, Avatar, Dica, Menu,
+  CabecalhoSecao, Metrica), 2 window.confirm mecanicos eliminados e os 13
+  badges ad hoc de `portal-paciente.tsx` migrados; lint, typecheck, build,
+  test:a11y (10/10) e 64 testes Playwright de regressao aprovados. Falta:
+  2 window.confirm de guarda de navegacao, migracao de botoes ad hoc,
+  adocao dos componentes novos nas demais telas. Ver
+  `fase-203-componentes-compartilhados-fim-sistemas-paralelos.md`.
 - Ultima fase concluida: Fase 202 - sistema visual (tokens, tipografia e
   elevacao), em 2026-08-02. Tokens semanticos, escala tipografica/raio/sombra,
   troca para IBM Plex Sans+Mono, cartao/sidebar/botao/agenda atualizados; lint,
@@ -176,5 +184,7 @@ Atualizado em 2026-08-02.
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
 Proxima pendencia tecnica: rollout da Fase 201 no Render (separar os papeis
-`web` e `worker` e registrar a entrega sintetica unica exigida pelo aceite).
-A Fase 202 esta concluida, incluindo o gate de acessibilidade/contraste.
+`web` e `worker` e registrar a entrega sintetica unica exigida pelo aceite),
+e concluir a Fase 203 (2 window.confirm de guarda de navegacao ainda
+pendentes, migracao de botoes ad hoc e adocao dos componentes novos nas
+telas listadas no diagnostico).

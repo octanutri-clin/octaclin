@@ -1,6 +1,71 @@
 import type { ReactNode } from 'react';
-import { AlertTriangle, CheckCircle2, Inbox, Loader2, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Inbox, Info, Loader2, ShieldAlert, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+type VarianteAviso = 'info' | 'sucesso' | 'alerta' | 'erro';
+
+const iconePorVarianteAviso: Record<VarianteAviso, typeof Info> = {
+  info: Info,
+  sucesso: CheckCircle2,
+  alerta: AlertTriangle,
+  erro: AlertTriangle
+};
+
+const estiloPorVarianteAviso: Record<VarianteAviso, string> = {
+  info: 'border-linha bg-white text-tinta',
+  sucesso: 'border-sucesso-borda bg-sucesso-suave text-sucesso-forte',
+  alerta: 'border-alerta-borda bg-alerta-suave text-alerta-forte',
+  erro: 'border-perigo-borda bg-perigo-suave text-perigo'
+};
+
+interface AvisoProps {
+  variante?: VarianteAviso;
+  mensagem: string;
+  aoFechar?: () => void;
+  className?: string;
+}
+
+export function Aviso({ variante = 'info', mensagem, aoFechar, className }: AvisoProps) {
+  const Icone = iconePorVarianteAviso[variante];
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={cn(
+        'pointer-events-auto flex items-start gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg',
+        estiloPorVarianteAviso[variante],
+        className
+      )}
+    >
+      <Icone size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
+      <span className="min-w-0 flex-1 break-words">{mensagem}</span>
+      {aoFechar ? (
+        <button
+          type="button"
+          onClick={aoFechar}
+          aria-label="Fechar aviso"
+          className="shrink-0 rounded text-current/70 hover:text-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+        >
+          <X size={14} />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+export function AvisoRegiao({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div
+      aria-live="polite"
+      className={cn(
+        'pointer-events-none fixed inset-x-0 top-4 z-[70] flex flex-col items-center gap-2 px-4 sm:left-auto sm:right-4 sm:items-end',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
 
 interface AlertaOperacionalProps {
   mensagem: string;

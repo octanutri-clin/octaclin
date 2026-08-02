@@ -563,7 +563,7 @@ test.describe('console operacional', () => {
         await expect(page.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda#novo-agendamento');
         await expect(page.getByRole('link', { name: 'Novo paciente' })).toHaveAttribute('href', '/pacientes#novo-paciente');
         await expect(page.getByRole('link', { name: 'Notificacoes' })).toHaveAttribute('href', '/comunicacoes');
-        await page.locator('summary[aria-label="Abrir menu da conta"]').click();
+        await page.locator('button[aria-label="Abrir menu da conta"]').click();
         await expect(page.getByText('Clinica Carla')).toBeVisible();
       }
 
@@ -1275,8 +1275,9 @@ test.describe('painel clinico profissional', () => {
     await expect(page.getByLabel('Profissional em contexto')).toBeVisible();
     await page.getByLabel('Profissional em contexto').selectOption('profissional-2');
     await expect(page.getByText('Revisar exames')).toBeVisible();
-    page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Concluir tarefa' }).click();
+    await expect(page.getByRole('dialog', { name: 'Confirmar acao' })).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: 'Confirmar' }).click();
     await expect(page.getByText('Tarefa concluida.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });

@@ -31,6 +31,7 @@ import {
 import { Botao } from '@/components/ui/botao';
 import { Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { ModalConfirmacao } from '@/components/ui/modal';
 
 const periodos: { valor: PeriodoDashboardClinico; rotulo: string }[] = [
   { valor: 'hoje', rotulo: 'Hoje' },
@@ -86,6 +87,9 @@ export function PainelDashboard() {
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [processando, setProcessando] = useState<string | null>(null);
+  const [confirmacaoPendente, setConfirmacaoPendente] = useState<
+    { chave: string; mensagem: string; acao: () => Promise<unknown>; confirmar: string } | null
+  >(null);
   const sequenciaRequisicao = useRef(0);
   const controladorRequisicao = useRef<AbortController | null>(null);
 
@@ -165,8 +169,7 @@ export function PainelDashboard() {
     setProfissionalId(novoProfissionalId);
   }
 
-  async function executar(chave: string, mensagem: string, acao: () => Promise<unknown>, confirmar?: string) {
-    if (confirmar && !window.confirm(confirmar)) return;
+  async function executarAcao(chave: string, mensagem: string, acao: () => Promise<unknown>) {
     setProcessando(chave);
     setErro(null);
     setSucesso(null);
@@ -179,6 +182,14 @@ export function PainelDashboard() {
     } finally {
       setProcessando(null);
     }
+  }
+
+  async function executar(chave: string, mensagem: string, acao: () => Promise<unknown>, confirmar?: string) {
+    if (confirmar) {
+      setConfirmacaoPendente({ chave, mensagem, acao, confirmar });
+      return;
+    }
+    await executarAcao(chave, mensagem, acao);
   }
 
   if (carregando && !dados && sessao === null) return <BarraCarregamento visivel rotulo="Carregando painel clinico" />;
@@ -232,5 +243,18 @@ export function PainelDashboard() {
         </div>
       </section>
     </> : null}
+    <ModalConfirmacao
+      aberto={Boolean(confirmacaoPendente)}
+      titulo="Confirmar acao"
+      mensagem={confirmacaoPendente?.confirmar ?? ''}
+      confirmando={processando === confirmacaoPendente?.chave}
+      aoCancelar={() => setConfirmacaoPendente(null)}
+      aoConfirmar={() => {
+        if (!confirmacaoPendente) return;
+        const pendente = confirmacaoPendente;
+        setConfirmacaoPendente(null);
+        void executarAcao(pendente.chave, pendente.mensagem, pendente.acao);
+      }}
+    />
   </div>;
 }
