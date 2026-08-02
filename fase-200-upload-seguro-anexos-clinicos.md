@@ -1,8 +1,8 @@
 # Fase 200 - Upload seguro e anexos clinicos
 
-Status: codigo integrado e publicado em producao, migration `1014` aplicada em
-producao, bucket B2 operacional e smoke autenticado aprovado; somente a
-migration de integracao permanece pendente.
+Status: concluida em 2026-08-02. Codigo publicado, bucket B2 operacional,
+smokes autenticado e publico aprovados e migration `1014` aplicada em producao
+e integracao.
 
 ## Entregue no codigo
 
@@ -39,6 +39,10 @@ migration de integracao permanece pendente.
 - Producao validada em 2026-08-02: migration presente no historico, 5 colunas,
   2 constraints e o indice unico confirmados. A URL owner temporaria foi
   removida apos o uso.
+- Integracao validada em 2026-08-02 no banco exclusivo
+  `octaclin_test_fase150b`: conexao direta com `neondb_owner`, uma migration
+  nova aplicada e historico final com 27 de 27 migrations executadas, incluindo
+  `ProtegerArquivosMidia1720000001014`.
 
 ## Provedor e ambiente
 
@@ -68,10 +72,12 @@ migration de integracao permanece pendente.
 - Revisao adversarial fechou sobrescrita pos-confirmacao, exclusao por paciente,
   reserva de cota, expiracao de pendentes e limites de abuso.
 
-## Gates pendentes
+## Gates encerrados
 
-1. Repetir a migration `1014` no banco de integracao explicitamente
-   identificado; producao ja foi aplicada e confirmada.
+- Migration `1014` confirmada em producao e repetida no banco de integracao
+  explicitamente identificado.
+- Credencial owner usada somente durante a operacao e removida do clipboard ao
+  final.
 
 ## Rollout de producao
 

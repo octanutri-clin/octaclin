@@ -1068,19 +1068,20 @@ publicado antes de ampliar a superficie de mudancas visuais.
     profissional. Em producao, a migration `1013` foi aplicada e o backfill
     atualizou 1 paciente; a repeticao idempotente atualizou 0.
 
-- [ ] Fase 200 - Upload seguro e anexos clinicos.
+- [x] Fase 200 - Upload seguro e anexos clinicos.
   - Escolher o provedor de objetos, usar URL pre-assinada curta e confirmar o
     objeto no backend antes de contabilizar ou exibir o anexo.
   - Aceite: metadados do cliente nao alteram cota; anexos respeitam escopo,
     auditoria, retencao e exclusao.
-  - Em andamento em 2026-08-02: implementacao local, jornadas desktop/mobile e
+  - Concluida em 2026-08-02: implementacao local, jornadas desktop/mobile e
     migration `1014` validadas; bucket privado Backblaze B2, CORS, lifecycle e
     smoke S3 real aprovados. PR `#13`, CI e deploy de backend/web no merge
     `369fffc` aprovados, com health `200`. O defeito de compatibilidade visto no
     primeiro smoke foi corrigido pelo PR `#14`, merge `9e2478b`; prontuario e
     formulario publico passaram em producao, com exclusao dos dados sinteticos.
-    Resta somente a migration no banco de integracao explicitamente confirmado.
-  - Saida parcial: `fase-200-upload-seguro-anexos-clinicos.md`.
+    A migration foi confirmada em producao e aplicada no banco de integracao
+    `octaclin_test_fase150b`, cujo historico terminou com 27 de 27 migrations.
+  - Saida: `fase-200-upload-seguro-anexos-clinicos.md`.
 
 - [ ] Fase 201 - Confiabilidade dos processadores em multiplas instancias.
   - Consolidar infraestrutura de filas/agendadores, separar papeis web/worker

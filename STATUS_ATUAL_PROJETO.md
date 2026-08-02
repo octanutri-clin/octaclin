@@ -7,11 +7,11 @@ Atualizado em 2026-08-02.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 199 - busca, filtros e paginacao server-side, em
-  2026-08-02. No banco de integracao, 503 pacientes foram reindexados e a busca
-  pos-backfill levou 133,7 ms sem atravessar o escopo profissional. Em producao,
-  a migration `1013` foi aplicada no banco explicitamente confirmado e o
-  backfill atualizou 1 paciente; a repeticao idempotente atualizou 0.
+- Ultima fase concluida: Fase 200 - upload seguro e anexos clinicos, em
+  2026-08-02. O bucket privado Backblaze B2, os fluxos autenticado e publico e
+  a exclusao foram validados em producao. A migration `1014` esta aplicada em
+  producao e no banco de integracao `octaclin_test_fase150b`, com historico de
+  27 de 27 migrations executadas.
 - Fase 194: formularios, editor e leitura longitudinal (2026-08-01). O editor
   de questionarios (1593 linhas
   monoliticas) foi dividido em 5 areas (Formularios/Editor/Biblioteca/
@@ -166,9 +166,6 @@ Atualizado em 2026-08-02.
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
-Fase 200 em andamento: upload seguro e anexos clinicos estao publicados em
-producao. O PR `#14`, merge `9e2478b`, corrigiu o ultimo defeito de
-compatibilidade do Backblaze B2; CI, health e smokes autenticado e publico
-passaram, incluindo exibicao, abertura, integridade e exclusao. A migration
-`1014` esta aplicada em producao com `neondb_owner`; resta somente repeti-la no
-banco de integracao explicitamente confirmado.
+Proxima pendencia tecnica: Fase 201 - confiabilidade dos processadores em
+multiplas instancias. Antes de escalar o backend, filas e agendadores precisam
+garantir idempotencia e no maximo um efeito externo por evento concorrente.
