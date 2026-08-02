@@ -1,8 +1,7 @@
 # Fase 199 - Busca, filtros e paginacao server-side
 
-Status: implementada e validada localmente e no banco exclusivo de integracao
-em 2026-08-02. O rollout de producao permanece bloqueado ate a confirmacao
-explicita do banco, migration `1013` e backfill antes do deploy.
+Status: concluida em 2026-08-02, com validacao local, integracao, migration e
+backfill de producao.
 
 ## Entregue no codigo
 
@@ -49,15 +48,18 @@ explicita do banco, migration `1013` e backfill antes do deploy.
   `pnpm --dir octaclin-backend smoke:busca-pacientes`; ele exige confirmacao
   exata em `CONFIRMAR_BANCO_BUSCA` e `CONFIRMAR_MASSA_SINTETICA=SIM`.
 
-## Gate operacional de producao pendente
+## Rollout de producao
 
-1. Confirmar explicitamente o banco de producao pela propria `DATABASE_URL`.
-2. Fazer backup/branch de recuperacao.
-3. Aplicar a migration `1013`.
-4. Executar o backfill com a chave de criptografia de producao e o nome exato
-   do banco confirmado.
-5. Publicar o backend apenas depois desses passos, pois
-   `BANCO_EXECUTAR_MIGRACOES=false`.
+- Branch Neon `production` com Backup & Restore ativo.
+- Banco confirmado pela propria URL: `Octaclin-db-producao`.
+- Apenas a migration `AdicionarIndiceBuscaPacientes1720000001013` estava
+  pendente; foi aplicada em transacao e a verificacao posterior retornou zero
+  migrations pendentes.
+- O backfill executado com a chave de criptografia do backend atualizou 1
+  paciente.
+- A repeticao imediata atualizou 0 pacientes, comprovando idempotencia.
+- URL, chave, variaveis temporarias e area de transferencia foram limpas depois
+  da operacao.
 
 ## Proxima fase
 

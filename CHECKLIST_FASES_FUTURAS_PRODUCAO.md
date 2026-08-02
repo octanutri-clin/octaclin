@@ -1057,15 +1057,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     registra execucoes adicionais de testes.
   - Saida: `fase-198-validacao-usabilidade-consolidacao-visual.md`.
 
-- [ ] Fase 199 - Busca, filtros e paginacao server-side.
+- [x] Fase 199 - Busca, filtros e paginacao server-side.
   - Implementar busca sobre PII cifrada com indice cego de tokens/prefixos,
     filtros no backend e paginacao real para pacientes, profissionais e
     formularios.
   - Aceite: 500 pacientes sinteticos pesquisaveis em menos de 1s, sem vazamento
     entre tenants ou profissionais; migration e backfill reversiveis.
-  - Progresso em 2026-08-02: codigo e banco de integracao aprovados; 503
+  - Concluida em 2026-08-02: codigo e banco de integracao aprovados; 503
     pacientes reindexados e busca pos-backfill em 133,7 ms, isolada por
-    profissional. Falta o rollout de producao antes do merge/deploy.
+    profissional. Em producao, a migration `1013` foi aplicada e o backfill
+    atualizou 1 paciente; a repeticao idempotente atualizou 0.
 
 - [ ] Fase 200 - Upload seguro e anexos clinicos.
   - Escolher o provedor de objetos, usar URL pre-assinada curta e confirmar o

@@ -431,14 +431,16 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   `TESTES_E_VALIDACOES.md`; o aceite nao declara execucoes adicionais de testes.
   Ver `fase-198-validacao-usabilidade-consolidacao-visual.md`.
 
-- Fase 199 - Busca, filtros e paginacao server-side (implementacao e integracao):
+- Fase 199 - Busca, filtros e paginacao server-side:
   pacientes ganharam indice cego por tenant para pesquisar nome e contato sem
   descriptografar a tabela; filtros e paginacao passaram a ocorrer no backend
   antes da resposta. Profissionais e formularios tambem ganharam paginacao
   server-side. No banco exclusivo `octaclin_test_fase150b`, a migration `1013`
   foi aplicada, 503 pacientes foram reindexados e a busca em 500 pacientes
   sinteticos levou 133,7 ms apos o backfill, sem atravessar o escopo do
-  profissional. O rollout de producao permanece pendente antes do merge/deploy.
+  profissional. Em producao, a migration `1013` foi aplicada no banco
+  explicitamente confirmado; o backfill atualizou 1 paciente e a repeticao
+  idempotente atualizou 0.
 
 ## Estado atual de uso
 
