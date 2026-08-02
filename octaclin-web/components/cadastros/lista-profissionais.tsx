@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CalendarDays, CheckCircle2, Edit3, Link2, Plus, RefreshCcw, Save, Stethoscope, Trash2, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
@@ -66,6 +66,8 @@ export function ListaProfissionais() {
   const [profissionalParaArquivar, setProfissionalParaArquivar] = useState<ProfissionalResumo | null>(null);
   const [googlePorProfissional, setGooglePorProfissional] = useState<Map<string, boolean>>(new Map());
   const [statusGoogleIndisponivel, setStatusGoogleIndisponivel] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const limite = 25;
 
   useEffect(() => {
     void obterSessao().then(async (sessao) => {
@@ -81,18 +83,18 @@ export function ListaProfissionais() {
     });
   }, []);
 
-  async function carregar() {
+  const carregar = useCallback(async () => {
     setCarregando(true);
     setErro(null);
     setSucesso(null);
     try {
-      setDados(await listarProfissionais());
+      setDados(await listarProfissionais({ pagina, limite }));
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar profissionais.');
     } finally {
       setCarregando(false);
     }
-  }
+  }, [pagina]);
 
   async function salvar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -158,7 +160,9 @@ export function ListaProfissionais() {
 
   useEffect(() => {
     void carregar();
-  }, []);
+  }, [carregar]);
+
+  const totalPaginas = Math.max(1, Math.ceil((dados?.total ?? 0) / limite));
 
   return (
     <section className="grid gap-4">
@@ -338,6 +342,19 @@ export function ListaProfissionais() {
           </TabelaLinhas>
         </TabelaConteudo>
       </Tabela>
+      <nav className="flex flex-wrap items-center justify-between gap-3" aria-label="Paginacao de profissionais">
+        <p className="text-sm text-texto-suave">
+          Pagina {pagina} de {totalPaginas} | {dados?.total ?? 0} profissionais
+        </p>
+        <div className="flex gap-2">
+          <Botao type="button" variante="secundario" onClick={() => setPagina((atual) => Math.max(1, atual - 1))} disabled={pagina <= 1 || carregando}>
+            Anterior
+          </Botao>
+          <Botao type="button" variante="secundario" onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))} disabled={pagina >= totalPaginas || carregando}>
+            Proxima
+          </Botao>
+        </div>
+      </nav>
       </div>
       ) : null}
 

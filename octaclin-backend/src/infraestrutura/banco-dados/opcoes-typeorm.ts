@@ -25,6 +25,7 @@ import { VincularAgendamentoQuestionarioPaciente1720000001009 } from './migracoe
 import { AdicionarRascunhoEnviosQuestionario1720000001010 } from './migracoes/1720000001010-AdicionarRascunhoEnviosQuestionario';
 import { AdicionarRevisaoHumanaIa1720000001011 } from './migracoes/1720000001011-AdicionarRevisaoHumanaIa';
 import { IsolarIdempotenciaMobilePorPaciente1720000001012 } from './migracoes/1720000001012-IsolarIdempotenciaMobilePorPaciente';
+import { AdicionarIndiceBuscaPacientes1720000001013 } from './migracoes/1720000001013-AdicionarIndiceBuscaPacientes';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -184,7 +185,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       VincularAgendamentoQuestionarioPaciente1720000001009,
       AdicionarRascunhoEnviosQuestionario1720000001010,
       AdicionarRevisaoHumanaIa1720000001011,
-      IsolarIdempotenciaMobilePorPaciente1720000001012
+      IsolarIdempotenciaMobilePorPaciente1720000001012,
+      AdicionarIndiceBuscaPacientes1720000001013
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

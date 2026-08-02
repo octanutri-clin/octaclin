@@ -264,8 +264,15 @@ export async function garantirCategoriasPadrao(): Promise<CategoriaPerguntaApi[]
   return listarCategorias();
 }
 
-export async function listarQuestionarios(): Promise<RespostaPaginada<QuestionarioApi>> {
-  return requisitar<RespostaPaginada<QuestionarioApi>>('/api/questionarios?pagina=1&limite=25');
+export async function listarQuestionarios(
+  filtros: { pagina?: number; limite?: number; busca?: string } = {}
+): Promise<RespostaPaginada<QuestionarioApi>> {
+  const parametros = new URLSearchParams({
+    pagina: String(filtros.pagina ?? 1),
+    limite: String(filtros.limite ?? 25)
+  });
+  if (filtros.busca) parametros.set('busca', filtros.busca);
+  return requisitar<RespostaPaginada<QuestionarioApi>>(`/api/questionarios?${parametros.toString()}`);
 }
 
 export async function listarModelosQuestionario(): Promise<ModeloQuestionarioApi[]> {
@@ -405,12 +412,14 @@ export async function obterMatrizLongitudinalRespostas(filtros: MatrizLongitudin
   return requisitar<MatrizLongitudinalRespostasApi>(`/api/questionarios/matriz-longitudinal${consulta ? `?${consulta}` : ''}`);
 }
 
-export async function carregarBootstrapQuestionarios(): Promise<BootstrapQuestionarios> {
+export async function carregarBootstrapQuestionarios(
+  filtrosQuestionarios: { pagina?: number; limite?: number; busca?: string } = {}
+): Promise<BootstrapQuestionarios> {
   const [categorias, profissionais, pacientes, questionarios, modelos] = await Promise.all([
     garantirCategoriasPadrao(),
     listarProfissionais().then((resposta) => resposta.itens),
     listarPacientes().then((resposta) => resposta.itens),
-    listarQuestionarios(),
+    listarQuestionarios(filtrosQuestionarios),
     listarModelosQuestionario()
   ]);
 

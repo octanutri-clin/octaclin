@@ -752,36 +752,42 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
   });
 
   await page.route('**/api/pacientes**', async (route) => {
+    const parametros = new URL(route.request().url()).searchParams;
+    const pacientes = [
+      {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nome: 'Ana Souza',
+        contato: '11999990000',
+        statusAdesao: 'risco',
+        scoreRisco: '82',
+        ultimoCheckinEm: '2026-07-21T12:00:00.000Z',
+        ultimaConsultaConcluidaEm: '2026-07-10T12:00:00.000Z',
+        proximaConsultaEm: '2026-07-31T12:00:00.000Z',
+        criadoEm: '2026-07-21T10:00:00.000Z'
+      },
+      {
+        id: 'paciente-2',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nome: 'Bruno Lima',
+        contato: '11988880000',
+        statusAdesao: 'em_acompanhamento',
+        scoreRisco: '34',
+        criadoEm: '2026-07-18T10:00:00.000Z'
+      }
+    ].filter((paciente) => {
+      if (parametros.get('risco') === 'alto' && Number(paciente.scoreRisco) < 70) return false;
+      if (parametros.get('semProximaConsulta') === 'true' && paciente.proximaConsultaEm) return false;
+      return true;
+    });
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        itens: [
-          {
-            id: 'paciente-1',
-            tenantId: 'tenant-1',
-            profissionalResponsavelId: 'profissional-1',
-            nome: 'Ana Souza',
-            contato: '11999990000',
-            statusAdesao: 'risco',
-            scoreRisco: '82',
-            ultimoCheckinEm: '2026-07-21T12:00:00.000Z',
-            ultimaConsultaConcluidaEm: '2026-07-10T12:00:00.000Z',
-            proximaConsultaEm: '2026-07-31T12:00:00.000Z',
-            criadoEm: '2026-07-21T10:00:00.000Z'
-          },
-          {
-            id: 'paciente-2',
-            tenantId: 'tenant-1',
-            profissionalResponsavelId: 'profissional-1',
-            nome: 'Bruno Lima',
-            contato: '11988880000',
-            statusAdesao: 'em_acompanhamento',
-            scoreRisco: '34',
-            criadoEm: '2026-07-18T10:00:00.000Z'
-          }
-        ],
-        total: 2
+        itens: pacientes,
+        total: pacientes.length
       })
     });
   });

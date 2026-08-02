@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager, In, IsNull } from 'typeorm';
+import { And, ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThanOrEqual, Not, Raw } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
@@ -22,7 +22,8 @@ import {
   EvolucaoClinicaRespostaDto,
   PacienteRespostaDto,
   ProntuarioPacienteRespostaDto,
-  TarefaAcompanhamentoRespostaDto
+  TarefaAcompanhamentoRespostaDto,
+  ListarPacientesDto
 } from './dtos';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
@@ -52,6 +53,7 @@ export class ServicoPacientes {
         profissionalResponsavelId,
         nomeCriptografado: this.criptografia.criptografar(dados.nome),
         contatoCriptografado: dados.contato ? this.criptografia.criptografar(dados.contato) : undefined,
+        buscaHashes: this.criptografia.gerarHashesBuscaPii(tenantId, [dados.nome, dados.contato]),
         dataNascimento: dados.dataNascimento,
         statusAdesao: 'novo',
         scoreRisco: '0'
@@ -65,19 +67,27 @@ export class ServicoPacientes {
     tenantId: string,
     usuario: UsuarioAutenticado,
     pagina = 1,
-    limite = 25
+    limite = 25,
+    filtros: ListarPacientesDto = new ListarPacientesDto()
   ): Promise<{ itens: PacienteRespostaDto[]; total: number }> {
     const paginaNormalizada = Math.max(1, pagina);
     const limiteNormalizado = Math.min(100, Math.max(1, limite));
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const hashesBusca = filtros.busca?.trim()
+        ? this.criptografia.gerarHashesConsultaPii(tenantId, filtros.busca)
+        : undefined;
+      if (filtros.busca?.trim() && !hashesBusca?.length) return { itens: [], total: 0 };
+
+      const where = this.montarFiltrosListagem(
+        tenantId,
+        profissionalResponsavelId ?? filtros.profissionalId,
+        filtros,
+        hashesBusca
+      );
       const [itens, total] = await gerenciador.getRepository(PacienteOrm).findAndCount({
-        where: {
-          tenantId,
-          arquivadoEm: IsNull(),
-          ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
-        },
+        where,
         order: { criadoEm: 'DESC' },
         skip: (paginaNormalizada - 1) * limiteNormalizado,
         take: limiteNormalizado
@@ -125,6 +135,12 @@ export class ServicoPacientes {
       }
       if (dados.nome) paciente.nomeCriptografado = this.criptografia.criptografar(dados.nome);
       if (dados.contato) paciente.contatoCriptografado = this.criptografia.criptografar(dados.contato);
+      if (dados.nome || dados.contato) {
+        paciente.buscaHashes = this.criptografia.gerarHashesBuscaPii(tenantId, [
+          dados.nome ?? this.criptografia.descriptografar(paciente.nomeCriptografado),
+          dados.contato ?? this.mapearContato(paciente)
+        ]);
+      }
       if (dados.dataNascimento) paciente.dataNascimento = dados.dataNascimento;
       if (dados.statusAdesao) paciente.statusAdesao = dados.statusAdesao;
       if (dados.scoreRisco !== undefined) paciente.scoreRisco = String(dados.scoreRisco);
@@ -172,6 +188,49 @@ export class ServicoPacientes {
       criadoEm: paciente.criadoEm,
       atualizadoEm: paciente.atualizadoEm
     };
+  }
+
+  private montarFiltrosListagem(
+    tenantId: string,
+    profissionalResponsavelId: string | undefined,
+    filtros: ListarPacientesDto,
+    hashesBusca?: string[]
+  ): FindOptionsWhere<PacienteOrm> | FindOptionsWhere<PacienteOrm>[] {
+    const base: FindOptionsWhere<PacienteOrm> = {
+      tenantId,
+      arquivadoEm: IsNull(),
+      ...(profissionalResponsavelId ? { profissionalResponsavelId } : {}),
+      ...(filtros.status ? { statusAdesao: filtros.status } : {}),
+      ...(hashesBusca?.length ? { buscaHashes: ArrayContains(hashesBusca) } : {}),
+      ...(filtros.semProximaConsulta
+        ? {
+            id: Raw(
+              (alias) => `NOT EXISTS (
+                SELECT 1 FROM agenda_consultas consulta
+                WHERE consulta.paciente_id = ${alias}
+                  AND consulta.tenant_id = :tenantBusca
+                  AND consulta.status IN ('agendada', 'reagendada')
+                  AND consulta.inicio_em >= NOW()
+              )`,
+              { tenantBusca: tenantId }
+            )
+          }
+        : {})
+    };
+
+    if (filtros.risco === 'alto') {
+      if (filtros.status) {
+        return filtros.status === 'risco' ? base : { ...base, scoreRisco: MoreThanOrEqual('70') };
+      }
+      return [{ ...base, statusAdesao: 'risco' }, { ...base, scoreRisco: MoreThanOrEqual('70') }];
+    }
+    if (filtros.risco === 'medio') {
+      return { ...base, statusAdesao: filtros.status ?? Not('risco'), scoreRisco: And(MoreThanOrEqual('40'), LessThan('70')) };
+    }
+    if (filtros.risco === 'baixo') {
+      return { ...base, statusAdesao: filtros.status ?? Not('risco'), scoreRisco: LessThan('40') };
+    }
+    return base;
   }
 
   private resumirConsultasPorPaciente(consultas: AgendaConsultaOrm[]) {

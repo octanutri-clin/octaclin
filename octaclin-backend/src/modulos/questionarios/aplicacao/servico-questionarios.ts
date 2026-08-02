@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'crypto';
-import { EntityManager, In, IsNull, LessThanOrEqual } from 'typeorm';
+import { EntityManager, ILike, In, IsNull, LessThanOrEqual } from 'typeorm';
 import * as cronParser from 'cron-parser';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -179,7 +179,8 @@ export class ServicoQuestionarios {
     tenantId: string,
     usuario: UsuarioAutenticado,
     pagina = 1,
-    limite = 25
+    limite = 25,
+    busca?: string
   ): Promise<{ itens: QuestionarioOrm[]; total: number }> {
     const paginaNormalizada = Math.max(1, pagina);
     const limiteNormalizado = Math.min(100, Math.max(1, limite));
@@ -187,7 +188,11 @@ export class ServicoQuestionarios {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const [itens, total] = await gerenciador.getRepository(QuestionarioOrm).findAndCount({
-        where: { tenantId, ...(profissionalId ? { profissionalId } : {}) },
+        where: {
+          tenantId,
+          ...(profissionalId ? { profissionalId } : {}),
+          ...(busca?.trim() ? { titulo: ILike(`%${busca.trim()}%`) } : {})
+        },
         order: { atualizadoEm: 'DESC' },
         skip: (paginaNormalizada - 1) * limiteNormalizado,
         take: limiteNormalizado

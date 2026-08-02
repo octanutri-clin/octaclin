@@ -3,6 +3,7 @@ import {
   IsDateString,
   IsEmail,
   IsIn,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -13,6 +14,7 @@ import {
   Min,
   MinLength
 } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import type {
   CategoriaTarefaAcompanhamento,
   PrioridadeTarefaAcompanhamento,
@@ -40,8 +42,39 @@ export class CriarPacienteDto {
 
 export class ListarPacientesDto {
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  pagina = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limite = 25;
+
+  @IsOptional()
   @IsString()
+  @MaxLength(180)
   busca?: string;
+
+  @IsOptional()
+  @IsIn(['alto', 'medio', 'baixo'])
+  risco?: 'alto' | 'medio' | 'baixo';
+
+  @IsOptional()
+  @IsUUID()
+  profissionalId?: string;
+
+  @IsOptional()
+  @IsIn(['novo', 'aderente', 'em_acompanhamento', 'risco', 'inativo'])
+  status?: 'novo' | 'aderente' | 'em_acompanhamento' | 'risco' | 'inativo';
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  semProximaConsulta?: boolean;
 }
 
 export class AtualizarPacienteDto {

@@ -84,3 +84,17 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
 
 - Decisao: continuar por fases numeradas.
 - Consequencia: cada fase deve ter commit, validacao e documentacao propria. O checklist vivo deve ser atualizado.
+
+## ADR-017 - Busca sobre PII cifrada
+
+- Decisao: a busca server-side de pacientes usa indice cego de tokens e
+  prefixos normalizados, nunca uma coluna derivada em texto claro.
+- Protecao: cada entrada usa HMAC-SHA256 com chave derivada da chave AES,
+  separacao de dominio e `tenantId`; SHA-256 sem chave nao e aceito para nome
+  ou contato.
+- Limite: somente prefixos com 3 a 32 caracteres sao indexados. Busca por trecho
+  arbitrario no meio de um token nao faz parte do contrato.
+- Operacao: migration cria a coluna e o indice; backfill descriptografa e
+  reindexa pela aplicacao somente contra banco explicitamente confirmado.
+- Consequencia: rotacao da chave AES exige reindexacao coordenada dos hashes de
+  busca junto da recriptografia dos dados.

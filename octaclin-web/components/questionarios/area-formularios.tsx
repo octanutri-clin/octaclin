@@ -1,6 +1,6 @@
 'use client';
 
-import { Archive, BookOpen, Copy, RefreshCcw, Save, Wand2 } from 'lucide-react';
+import { Archive, BookOpen, Copy, RefreshCcw, Save, Search, Wand2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Etiqueta } from '@/components/ui/etiqueta';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
@@ -13,10 +13,12 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
     carregando, carregar, salvando, duplicarAtual, questionarioAtual, status,
     setConfirmandoArquivarQuestionario, salvarQuestionario,
     questionarios, selecionarQuestionario, modelos, criarAPartirModelo,
+    buscaQuestionarios, setBuscaQuestionarios, paginaQuestionarios, totalQuestionarios, carregarPaginaQuestionarios,
     titulo, setTitulo, setAlteracoesQuestionarioPendentes,
     descricao, setDescricao, setStatus, perguntas, scoreTotal,
     confirmandoArquivarQuestionario, arquivarQuestionario
   } = workspace;
+  const totalPaginas = Math.max(1, Math.ceil(totalQuestionarios / 25));
 
   return (
     <div className="grid gap-4">
@@ -54,6 +56,26 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
         </CartaoCabecalho>
         <CartaoConteudo className="space-y-4">
           <div className="space-y-1.5">
+            <Rotulo htmlFor="busca-questionario">Buscar formulario</Rotulo>
+            <div className="flex gap-2">
+              <Campo
+                id="busca-questionario"
+                value={buscaQuestionarios}
+                onChange={(event) => setBuscaQuestionarios(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    void carregarPaginaQuestionarios(1);
+                  }
+                }}
+                placeholder="Titulo do formulario"
+              />
+              <Botao type="button" variante="secundario" onClick={() => void carregarPaginaQuestionarios(1)} disabled={carregando} aria-label="Buscar formularios">
+                <Search className="h-4 w-4" />
+              </Botao>
+            </div>
+          </div>
+          <div className="space-y-1.5">
             <Rotulo htmlFor="questionario">Selecionar</Rotulo>
             <Selecao
               id="questionario"
@@ -68,6 +90,13 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
                 <option key={questionario.id} value={questionario.id}>{questionario.titulo}</option>
               ))}
             </Selecao>
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <span className="text-xs text-texto-suave">Pagina {paginaQuestionarios} de {totalPaginas} | {totalQuestionarios} formularios</span>
+              <div className="flex gap-2">
+                <Botao type="button" variante="fantasma" onClick={() => void carregarPaginaQuestionarios(Math.max(1, paginaQuestionarios - 1))} disabled={carregando || paginaQuestionarios <= 1}>Anterior</Botao>
+                <Botao type="button" variante="fantasma" onClick={() => void carregarPaginaQuestionarios(Math.min(totalPaginas, paginaQuestionarios + 1))} disabled={carregando || paginaQuestionarios >= totalPaginas}>Proxima</Botao>
+              </div>
+            </div>
           </div>
           <div className="space-y-2 rounded-md border border-linha bg-superficie p-3">
             <div className="flex items-center gap-2">

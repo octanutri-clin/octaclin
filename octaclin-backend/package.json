@@ -15,7 +15,9 @@
     "seed:demo": "ts-node src/infraestrutura/banco-dados/seeds/seed-demo.ts",
     "seed:staging": "ts-node src/infraestrutura/banco-dados/seeds/seed-staging.ts",
     "criar-admin:producao": "ts-node src/infraestrutura/banco-dados/seeds/criar-admin-producao.ts",
+    "backfill:indices-busca": "ts-node src/infraestrutura/banco-dados/backfills/backfill-indices-busca-pacientes.ts",
     "smoke:operacoes": "ts-node src/infraestrutura/smoke/smoke-operacoes.ts",
+    "smoke:busca-pacientes": "ts-node src/infraestrutura/smoke/smoke-busca-pacientes.ts",
     "gmail:oauth-token": "node scripts/gmail-oauth-token.mjs",
     "mock:api": "node scripts/api-demo-local.mjs"
   },

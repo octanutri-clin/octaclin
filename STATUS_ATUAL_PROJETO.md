@@ -7,11 +7,11 @@ Atualizado em 2026-08-02.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 198 - validacao final de usabilidade e
-  consolidacao visual, aceita pelo usuario em 2026-08-02. Os gates tecnicos do
-  ciclo permanecem rastreados nas Fases 191 a 197 e em
-  `TESTES_E_VALIDACOES.md`. Proxima fase: Fase 199 - busca, filtros e paginacao
-  server-side.
+- Ultima fase concluida: Fase 199 - busca, filtros e paginacao server-side, em
+  2026-08-02. No banco de integracao, 503 pacientes foram reindexados e a busca
+  pos-backfill levou 133,7 ms sem atravessar o escopo profissional. Em producao,
+  a migration `1013` foi aplicada no banco explicitamente confirmado e o
+  backfill atualizou 1 paciente; a repeticao idempotente atualizou 0.
 - Fase 194: formularios, editor e leitura longitudinal (2026-08-01). O editor
   de questionarios (1593 linhas
   monoliticas) foi dividido em 5 areas (Formularios/Editor/Biblioteca/
@@ -166,6 +166,6 @@ Atualizado em 2026-08-02.
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
-Proxima fase de produto: Fase 198 - validacao final de usabilidade e
-consolidacao visual. As migrations `1011` e `1012` da Fase 197 devem preceder
-o deploy correspondente quando `BANCO_EXECUTAR_MIGRACOES=false`.
+Proxima fase de produto: Fase 200 - upload seguro e anexos clinicos, usando
+armazenamento de objetos privado, URLs pre-assinadas curtas e confirmacao do
+objeto real no backend.

@@ -15,8 +15,11 @@ export async function GET(request: NextRequest) {
   try {
     const pagina = request.nextUrl.searchParams.get('pagina') ?? '1';
     const limite = request.nextUrl.searchParams.get('limite') ?? '25';
+    const busca = request.nextUrl.searchParams.get('busca');
+    const parametros = new URLSearchParams({ pagina, limite });
+    if (busca) parametros.set('busca', busca);
     return respostaProxy(
-      await requisitarBackendAutenticado(`/questionarios?pagina=${encodeURIComponent(pagina)}&limite=${encodeURIComponent(limite)}`)
+      await requisitarBackendAutenticado(`/questionarios?${parametros.toString()}`)
     );
   } catch (erro) {
     if (erro instanceof ErroSessaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 401 });
