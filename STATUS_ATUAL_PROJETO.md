@@ -7,11 +7,16 @@ Atualizado em 2026-08-02.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 200 - upload seguro e anexos clinicos, em
-  2026-08-02. O bucket privado Backblaze B2, os fluxos autenticado e publico e
-  a exclusao foram validados em producao. A migration `1014` esta aplicada em
-  producao e no banco de integracao `octaclin_test_fase150b`, com historico de
-  27 de 27 migrations executadas.
+- Ultima fase concluida: Fase 202 - sistema visual (tokens, tipografia e
+  elevacao), em 2026-08-02. Tokens semanticos, escala tipografica/raio/sombra,
+  troca para IBM Plex Sans+Mono, cartao/sidebar/botao/agenda atualizados; lint,
+  typecheck, build, gate de acessibilidade (10/10) e regressao do portal do
+  cliente (8/8) aprovados. Ver `fase-202-sistema-visual-tokens-tipografia-elevacao.md`.
+- Fase 200: upload seguro e anexos clinicos, em 2026-08-02. O bucket privado
+  Backblaze B2, os fluxos autenticado e publico e a exclusao foram validados
+  em producao. A migration `1014` esta aplicada em producao e no banco de
+  integracao `octaclin_test_fase150b`, com historico de 27 de 27 migrations
+  executadas.
 - Fase 201: implementacao local concluida em 2026-08-02. O rollout ainda exige
   separar o backend Render como `web` e criar um `worker` com Redis compartilhado
   antes de permitir escala horizontal; ver
@@ -171,7 +176,5 @@ Atualizado em 2026-08-02.
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
 Proxima pendencia tecnica: rollout da Fase 201 no Render (separar os papeis
-`web` e `worker` e registrar a entrega sintetica unica exigida pelo aceite)
-e, em paralelo, a regressao visual Playwright + verificacao de contraste AA
-da Fase 202 (sistema visual: tokens, tipografia e elevacao), implementada
-localmente em 2026-08-02.
+`web` e `worker` e registrar a entrega sintetica unica exigida pelo aceite).
+A Fase 202 esta concluida, incluindo o gate de acessibilidade/contraste.

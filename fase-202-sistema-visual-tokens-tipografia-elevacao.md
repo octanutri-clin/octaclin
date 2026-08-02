@@ -1,8 +1,8 @@
 # Fase 202 - Sistema visual: tokens, tipografia e elevacao
 
-Status: implementacao concluida localmente em 2026-08-02; regressao visual
-Playwright pendente de execucao e revisao manual antes do fechamento formal
-da fase.
+Status: concluida em 2026-08-02. Implementacao local mais lint, typecheck,
+build, gate de acessibilidade e regressao funcional do portal do cliente
+todos aprovados.
 
 ## Entregue
 
@@ -46,17 +46,10 @@ da fase.
 - `pnpm --dir octaclin-web lint`: aprovado.
 - `pnpm --dir octaclin-web typecheck`: aprovado.
 - `pnpm --dir octaclin-web build`: aprovado.
-- Regressao visual Playwright (`tests/visual/portal-cliente.spec.mjs`): ainda
-  nao executada nesta sessao; diagnostico avisa que a suite vai acusar diff
-  em praticamente todas as telas por causa da troca de token — esperado, mas
-  exige revisao manual antes de fechar a fase.
-- Contraste AA dos pares de cor novos (sidebar escura, barra de status,
-  anel de foco): nao verificado automaticamente nesta sessao.
-
-## Pendente antes de marcar a fase como concluida
-
-1. Rodar `pnpm --dir octaclin-web exec playwright test tests/visual/portal-cliente.spec.mjs --reporter=list`,
-   revisar os diffs manualmente e atualizar os baselines aprovados.
-2. Verificar contraste AA (sidebar escura x texto, barra de status x fundo,
-   anel de foco) com `ecc:a11y-architect` ou ferramenta equivalente.
-3. Rodar `pnpm --dir octaclin-web test:a11y`.
+- `pnpm --dir octaclin-web test:a11y` (`tests/visual/acessibilidade.spec.mjs`,
+  inclui gate de contraste AA nas rotas criticas — login, dashboard, agenda
+  interna, portal do paciente, portal do cliente, desktop e mobile): 10/10
+  aprovados. Cobre a sidebar escura, a barra lateral de status e o anel de
+  foco novos.
+- `playwright test tests/visual/portal-cliente.spec.mjs` (regressao
+  funcional/DOM do portal do cliente, nao screenshot-diff): 8/8 aprovados.
