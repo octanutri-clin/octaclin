@@ -425,6 +425,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   Gamificacao virou opt-in, com comunidade e ranking desligados por padrao.
   Operacoes foi dividida em Saude, Incidentes, Comunicacoes, LGPD, Auditoria e
   Filas. Ver `fase-197-racionalizacao-modulos-avancados.md`.
+- Fase 198 - Validacao final de usabilidade e consolidacao visual: o usuario
+  confirmou em 2026-08-02 o aceite das jornadas e gates do bloco 191-197. As
+  evidencias tecnicas permanecem nos documentos individuais e em
+  `TESTES_E_VALIDACOES.md`; o aceite nao declara execucoes adicionais de testes.
+  Ver `fase-198-validacao-usabilidade-consolidacao-visual.md`.
 
 ## Estado atual de uso
 

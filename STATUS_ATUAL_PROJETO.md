@@ -1,16 +1,17 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-01.
+Atualizado em 2026-08-02.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida localmente: Fase 197 - racionalizacao dos modulos
-  avancados (2026-08-01). IA exige decisao humana registrada, Automacoes exige
-  simulacao antes da ativacao, Mobile foi absorvido por Operacoes, Gamificacao
-  e opt-in e Operacoes foi organizada em seis areas exclusivas do SuperAdmin.
+- Ultima fase concluida: Fase 198 - validacao final de usabilidade e
+  consolidacao visual, aceita pelo usuario em 2026-08-02. Os gates tecnicos do
+  ciclo permanecem rastreados nas Fases 191 a 197 e em
+  `TESTES_E_VALIDACOES.md`. Proxima fase: Fase 199 - busca, filtros e paginacao
+  server-side.
 - Fase 194: formularios, editor e leitura longitudinal (2026-08-01). O editor
   de questionarios (1593 linhas
   monoliticas) foi dividido em 5 areas (Formularios/Editor/Biblioteca/

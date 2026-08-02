@@ -1,8 +1,8 @@
 # OctaClin - Diagnostico de melhorias e roadmap das Fases 199 a 218
 
-Criado em 2026-08-01, apos a conclusao da Fase 197 e com a Fase 198 (validacao
-final de usabilidade e consolidacao visual) ainda aberta no
-`CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
+Criado em 2026-08-01, apos a conclusao da Fase 197. A Fase 198 (validacao
+final de usabilidade e consolidacao visual) foi aceita pelo usuario em
+2026-08-02 e encerrada no `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 
 Este arquivo e um **diagnostico tecnico e de produto**, nao um substituto do
 roadmap. Ele complementa:
@@ -25,6 +25,10 @@ com tres agentes em paralelo:
 | `ecc:architect` | opus | Lacunas funcionais de dominio, fricoes operacionais, riscos de arquitetura |
 
 Cada achado abaixo cita arquivo e linha verificados na leitura, nao suposicao.
+
+As referencias `ecc:*` identificam skills e agentes exclusivos do ambiente
+Claude Code usado na auditoria original. Elas devem ser preservadas para esse
+ambiente e nao implicam instalacao, substituicao ou mapeamento no Codex.
 
 ## Criterio de prioridade
 
@@ -113,9 +117,12 @@ resolvida.
 
 1. Decidir e registrar em `DECISOES_ARQUITETURA.md` a estrategia de busca sobre
    PII cifrada. Recomendacao: **indice cego** com HMAC de tokens normalizados
-   (minusculo, sem acento, sem pontuacao), coluna dedicada e indexada, que
-   permite busca por prefixo/termo sem decifrar e sem expor o texto. Alternativa
-   inferior: coluna de busca derivada em claro apenas com iniciais.
+   (minusculo, sem acento, sem pontuacao), armazenando hashes separados dos
+   tokens e dos prefixos explicitamente suportados. Um HMAC do nome completo
+   permite apenas igualdade e, sozinho, nao permite busca parcial. Definir
+   tamanho minimo/maximo dos prefixos para limitar enumeracao e crescimento do
+   indice. Alternativa inferior: coluna de busca derivada em claro apenas com
+   iniciais.
 2. Mover busca, filtros (risco, status, profissional responsavel) e ordenacao
    para `servico-pacientes.listar`, **preservando o escopo por profissional
    responsavel** (`pacientes_responsaveis`) ja validado desde a Fase 130.
@@ -300,8 +307,10 @@ ser feita em dois lugares, e a divergencia e silenciosa.
 **Outros**
 
 - Criterio de aceite: com **duas instancias simultaneas em staging**, o mesmo
-  evento de notificacao e processado exatamente uma vez, comprovado por teste
-  automatizado de corrida entre dois consumidores.
+  evento pode ser entregue novamente pela fila, mas produz no maximo um efeito
+  externo observavel, comprovado por chave de idempotencia, deduplicacao
+  persistente e teste automatizado de corrida entre dois consumidores. Nao
+  prometer semantica absoluta de `exactly once` para provedores externos.
 - **Gate tecnico explicito: nao escalar o Render para mais de uma instancia de
   backend antes desta fase.** Registrar esse bloqueio em
   `CHECKLIST_GO_LIVE.md` e `RUNBOOK_PRODUCAO.md`.

@@ -1040,7 +1040,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Operacao: migrations `1011` e `1012` devem ser aplicadas antes do primeiro
     deploy da fase quando a execucao automatica estiver desabilitada.
 
-- [ ] Fase 198 - Validacao final de usabilidade e consolidacao visual.
+- [x] Fase 198 - Validacao final de usabilidade e consolidacao visual.
   - Executar jornadas completas com profissional, administrador e paciente
     usando dados sinteticos, incluindo primeiro acesso, agenda, prontuario,
     formulario, comunicacao, equipe e conta.
@@ -1052,6 +1052,97 @@ publicado antes de ampliar a superficie de mudancas visuais.
     observabilidade e plano de reversao por incremento.
   - Aceite: gates funcionais, visuais, acessibilidade, autorizacao e build
     aprovados; checklist, resumo de fases e documento individual atualizados.
+  - Status: concluida por aceite do usuario em 2026-08-02. Os resultados
+    tecnicos permanecem rastreados nas Fases 191 a 197; este aceite nao
+    registra execucoes adicionais de testes.
+  - Saida: `fase-198-validacao-usabilidade-consolidacao-visual.md`.
+
+- [ ] Fase 199 - Busca, filtros e paginacao server-side.
+  - Implementar busca sobre PII cifrada com indice cego de tokens/prefixos,
+    filtros no backend e paginacao real para pacientes, profissionais e
+    formularios.
+  - Aceite: 500 pacientes sinteticos pesquisaveis em menos de 1s, sem vazamento
+    entre tenants ou profissionais; migration e backfill reversiveis.
+
+- [ ] Fase 200 - Upload seguro e anexos clinicos.
+  - Escolher o provedor de objetos, usar URL pre-assinada curta e confirmar o
+    objeto no backend antes de contabilizar ou exibir o anexo.
+  - Aceite: metadados do cliente nao alteram cota; anexos respeitam escopo,
+    auditoria, retencao e exclusao.
+
+- [ ] Fase 201 - Confiabilidade dos processadores em multiplas instancias.
+  - Consolidar infraestrutura de filas/agendadores, separar papeis web/worker
+    e aplicar idempotencia e deduplicacao persistentes.
+  - Aceite: duas instancias concorrentes produzem no maximo um efeito externo
+    por evento; nao escalar o backend antes deste gate.
+
+- [ ] Fase 202 - Sistema visual: tokens, tipografia e elevacao.
+  - Consolidar tokens semanticos, hierarquia tipografica, foco, espacamento,
+    elevacao e estados visuais sem criar um segundo design system.
+
+- [ ] Fase 203 - Componentes compartilhados e fim dos sistemas paralelos.
+  - Reusar primitives existentes e consolidar aviso, status, avatar, tooltip,
+    menu, cabecalho de secao e metricas; eliminar confirmacoes nativas.
+
+- [ ] Fase 204 - Data fetching, resiliencia e code splitting.
+  - Cancelar requisicoes obsoletas, adicionar loading/error boundaries e
+    carregar apenas as secoes necessarias das rotas extensas.
+
+- [ ] Fase 205 - Recall automatico de retorno.
+  - Adicionar gatilho de inatividade ao motor de automacoes, respeitando
+    profissional responsavel, opt-in, simulacao e limite de frequencia.
+
+- [ ] Fase 206 - Teleconsulta por link na consulta.
+  - Adicionar modalidade e link externo seguro, reutilizando agenda,
+    lembretes, comunicacoes e portal; nao construir video proprio.
+
+- [ ] Fase 207 - Antropometria e evolucao de medidas.
+  - Modelar avaliacoes seriadas, protocolos registrados e visualizacao
+    longitudinal acessivel no prontuario e portal.
+
+- [ ] Fase 208 - Documentos clinicos gerados.
+  - Gerar declaracoes e relatorios auditados com identidade da clinica,
+    impressao/PDF e entrega pelos canais existentes.
+
+- [ ] Fase 209 - Financeiro da consulta e pacote de sessoes.
+  - Registrar valores, pagamentos, recibos, recebimentos e pacotes opcionais;
+    manter gateway e NFS-e fora deste MVP.
+
+- [ ] Fase 210 - Notificacoes in-app e tempo real.
+  - Implementar central de notificacoes e atualizacao via SSE com isolamento
+    por tenant/profissional e fallback por recarga periodica.
+
+- [ ] Fase 211 - Importacao em massa e exportacoes do cliente.
+  - Importar pacientes com preview e idempotencia; exportar dados autorizados
+    com auditoria e relatorio de erros.
+
+- [ ] Fase 212 - Desfazer, lixeira e restauracao.
+  - Permitir desfazer imediato e restauracao auditada de registros arquivados,
+    preservando autorizacao e vinculos.
+
+- [ ] Fase 213 - Command palette e atalhos de teclado.
+  - Oferecer navegacao, busca e acoes frequentes por teclado depois da busca
+    server-side da Fase 199.
+
+- [ ] Fase 214 - Refatoracao dos monolitos.
+  - Dividir apenas `portal-cliente` e `painel-operacoes`, preservando
+    comportamento e usando o padrao validado na Fase 194.
+
+- [ ] Fase 215 - Performance de backend.
+  - Medir pool, agregacoes e latencia antes de introduzir cache; preservar RLS
+    e isolamento multi-tenant em qualquer otimizacao.
+
+- [ ] Fase 216 - Plano alimentar e calculo nutricional (MVP).
+  - Executar somente apos decisao comercial; registrar formulas, versoes,
+    origem dos alimentos e validacao clinica.
+
+- [ ] Fase 217 - PWA do portal do paciente.
+  - Tornar o portal instalavel e suportar operacoes offline idempotentes sem
+    manter dado clinico no dispositivo apos logout.
+
+- [ ] Fase 218 - API publica, chaves por tenant e webhooks.
+  - Criar superficie versionada, chaves escopadas e webhooks assinados com
+    reentrega, auditoria e limites por tenant.
 
 ## Backlog pos-producao
 
