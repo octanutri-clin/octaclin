@@ -41,17 +41,19 @@ bucket R2, rollout e smoke real pendentes.
 
 ## Provedor e ambiente
 
-- Provedor escolhido: Cloudflare R2, bucket privado
-  `octaclin-midias-producao`.
+- Provedor escolhido: Backblaze B2, bucket privado e criptografado
+  `octaclin-midias-clinicas-producao`, regiao `us-east-005`.
 - Credencial S3 deve ter apenas leitura e escrita de objetos nesse bucket.
 - CORS permite a origem `https://octaclin-web-producao.onrender.com`, metodos
-  `PUT`, `GET` e `HEAD`, e headers `content-type`, `if-none-match` e
-  `x-amz-meta-*`.
+  `PUT`, `GET` e `HEAD`, e headers `content-type` e `x-amz-meta-*`.
+- `ARMAZENAMENTO_S3_IF_NONE_MATCH=false` e obrigatorio no B2 porque o
+  `PutObject` condicional responde `501 NotImplemented`; nos demais provedores
+  o bloqueio continua ativo por padrao.
 - Regra de lifecycle remove objetos do prefixo `pendentes/` apos 1 dia; o
   backend tambem libera reservas vencidas antes de novos uploads.
 - Variaveis: `ARMAZENAMENTO_S3_ENDPOINT`, `ARMAZENAMENTO_S3_REGION`,
-  `ARMAZENAMENTO_S3_ACCESS_KEY_ID`, `ARMAZENAMENTO_S3_SECRET_ACCESS_KEY` e
-  `ARMAZENAMENTO_BUCKET_MIDIA`.
+  `ARMAZENAMENTO_S3_ACCESS_KEY_ID`, `ARMAZENAMENTO_S3_SECRET_ACCESS_KEY`,
+  `ARMAZENAMENTO_BUCKET_MIDIA` e `ARMAZENAMENTO_S3_IF_NONE_MATCH`.
 
 ## Validacoes locais
 

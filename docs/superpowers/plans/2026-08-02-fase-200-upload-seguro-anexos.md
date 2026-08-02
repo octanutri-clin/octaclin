@@ -7,7 +7,9 @@ confirmado no backend e acessivel apenas por URL curta e autorizada.
 
 ## Decisoes
 
-- Cloudflare R2 via protocolo S3; bucket privado e credencial por ambiente.
+- Backblaze B2 via protocolo S3; bucket privado e credencial por ambiente.
+- Escrita condicional permanece ativa por padrao e pode ser desativada no B2,
+  que responde `501 NotImplemented` para `If-None-Match` em `PutObject`.
 - Upload direto do navegador por URL assinada de 5 minutos.
 - Backend baixa no maximo 25 MB na confirmacao para validar assinatura e hash.
 - Metadados, tamanho e MIME enviados pelo cliente sao apenas declaracoes; o

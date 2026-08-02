@@ -52,6 +52,9 @@ export class ServicoArmazenamentoObjetos {
   }): Promise<string> {
     const { cliente, bucket } = this.obterConfiguracao();
     const headersMetadados = new Set(Object.keys(entrada.metadados).map((chave) => `x-amz-meta-${chave.toLowerCase()}`));
+    const usarIfNoneMatch = process.env.ARMAZENAMENTO_S3_IF_NONE_MATCH !== 'false';
+    const headersAssinados = new Set(['content-type']);
+    if (usarIfNoneMatch) headersAssinados.add('if-none-match');
     return getSignedUrl(
       cliente,
       new PutObjectCommand({
@@ -59,13 +62,13 @@ export class ServicoArmazenamentoObjetos {
         Key: entrada.chaveObjeto,
         ContentType: entrada.mimeType,
         ContentLength: entrada.tamanhoMaximoBytes,
-        IfNoneMatch: '*',
+        ...(usarIfNoneMatch ? { IfNoneMatch: '*' } : {}),
         Metadata: entrada.metadados
       }),
       {
         expiresIn: EXPIRACAO_URL_SEGUNDOS,
         unhoistableHeaders: headersMetadados,
-        signableHeaders: new Set(['content-type', 'if-none-match'])
+        signableHeaders: headersAssinados
       }
     );
   }
