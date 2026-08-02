@@ -192,7 +192,7 @@ export class ServicoMobile {
       uploadUrl,
       uploadHeaders: {
         'Content-Type': dados.mimeType,
-        'If-None-Match': '*',
+        ...(this.armazenamento.usarIfNoneMatch ? { 'If-None-Match': '*' } : {}),
         ...Object.fromEntries(Object.entries(metadadosUpload).map(([chave, valor]) => [`x-amz-meta-${chave}`, valor]))
       },
       expiraEmSegundos: 300

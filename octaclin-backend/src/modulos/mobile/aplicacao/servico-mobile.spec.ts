@@ -70,7 +70,7 @@ function criarRepositorioFake(nome: string, itens: Record<string, unknown>[]) {
   };
 }
 
-function criarServico(dados: DadosFake = {}) {
+function criarServico(dados: DadosFake = {}, usarIfNoneMatch = true) {
   const repositorios = {
     paciente: criarRepositorioFake('paciente', dados.pacientes ?? []),
     profissional: criarRepositorioFake('profissional', dados.profissionais ?? []),
@@ -98,6 +98,7 @@ function criarServico(dados: DadosFake = {}) {
   const senhas = { gerarHash: jest.fn((valor: string) => `hash:${valor}`) };
   const armazenamento = {
     bucket: 'octaclin-midias-teste',
+    usarIfNoneMatch,
     criarUploadAssinado: jest.fn(async () => 'https://upload.example/assinado'),
     inspecionarObjeto: jest.fn(async () => ({
       tamanhoBytes: 321,
@@ -249,6 +250,23 @@ describe('ServicoMobile', () => {
       'x-amz-meta-envioid': 'envio-1',
       'x-amz-meta-perguntaid': 'pergunta-1'
     });
+  });
+
+  it('omite escrita condicional do contrato quando o provedor nao a suporta', async () => {
+    const { servico } = criarServico({ pacientes }, false);
+
+    const resultado = await servico.solicitarUploadMidia(
+      'tenant-1',
+      {
+        pacienteId: 'paciente-1',
+        tipo: 'documento',
+        mimeType: 'application/pdf',
+        tamanhoBytes: 1024
+      },
+      usuarioPaciente
+    );
+
+    expect(resultado.uploadHeaders).not.toHaveProperty('If-None-Match');
   });
 
   it('confirma pelo objeto real e ignora tamanho e hash declarados anteriormente', async () => {

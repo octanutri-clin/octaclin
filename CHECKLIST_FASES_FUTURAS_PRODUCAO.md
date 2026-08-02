@@ -1075,8 +1075,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
     auditoria, retencao e exclusao.
   - Em andamento em 2026-08-02: implementacao local, jornadas desktop/mobile e
     migration `1014` validadas; bucket privado Backblaze B2, CORS, lifecycle e
-    smoke S3 real aprovados. Restam merge, deploy da branch, migration no banco
-    de integracao explicitamente confirmado e smoke pela interface.
+    smoke S3 real aprovados. PR `#13`, CI e deploy de backend/web no merge
+    `369fffc` aprovados, com health `200`. Restam migration no banco de
+    integracao explicitamente confirmado e smoke autenticado pela interface.
   - Saida parcial: `fase-200-upload-seguro-anexos-clinicos.md`.
 
 - [ ] Fase 201 - Confiabilidade dos processadores em multiplas instancias.

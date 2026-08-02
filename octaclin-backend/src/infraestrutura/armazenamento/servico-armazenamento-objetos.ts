@@ -44,6 +44,10 @@ export class ServicoArmazenamentoObjetos {
     return this.obterConfiguracao().bucket;
   }
 
+  get usarIfNoneMatch(): boolean {
+    return process.env.ARMAZENAMENTO_S3_IF_NONE_MATCH !== 'false';
+  }
+
   async criarUploadAssinado(entrada: {
     chaveObjeto: string;
     mimeType: string;
@@ -52,7 +56,7 @@ export class ServicoArmazenamentoObjetos {
   }): Promise<string> {
     const { cliente, bucket } = this.obterConfiguracao();
     const headersMetadados = new Set(Object.keys(entrada.metadados).map((chave) => `x-amz-meta-${chave.toLowerCase()}`));
-    const usarIfNoneMatch = process.env.ARMAZENAMENTO_S3_IF_NONE_MATCH !== 'false';
+    const usarIfNoneMatch = this.usarIfNoneMatch;
     const headersAssinados = new Set(['content-type']);
     if (usarIfNoneMatch) headersAssinados.add('if-none-match');
     return getSignedUrl(

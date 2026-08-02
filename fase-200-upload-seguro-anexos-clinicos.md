@@ -1,8 +1,8 @@
 # Fase 200 - Upload seguro e anexos clinicos
 
-Status: implementacao local validada, migration `1014` aplicada em producao e
-bucket B2 provisionado; merge, rollout da branch e smoke pela interface
-pendentes.
+Status: codigo integrado e publicado em producao, migration `1014` aplicada em
+producao e bucket B2 operacional; migration de integracao e smoke autenticado
+pela interface pendentes.
 
 ## Entregue no codigo
 
@@ -72,11 +72,19 @@ pendentes.
 
 1. Repetir a migration `1014` no banco de integracao explicitamente
    identificado; producao ja foi aplicada e confirmada.
-2. Integrar a branch, configurar `ARMAZENAMENTO_S3_IF_NONE_MATCH=false` e
-   fazer o deploy do codigo da fase.
-3. Validar upload, abertura e exclusao reais com arquivo sintetico no
+2. Validar upload, abertura e exclusao reais com arquivo sintetico no
    prontuario e em formulario publico.
-4. Reexecutar health, login, scanner de secrets e smoke de producao.
+3. Reexecutar login e smoke autenticado de producao.
+
+## Rollout de producao
+
+- PR `#13` integrada na `main` pelo merge `369fffc` em 2026-08-02.
+- Backend Render publicado no merge `369fffc`, com as seis variaveis do B2 e
+  `ARMAZENAMENTO_S3_IF_NONE_MATCH=false`; health respondeu `200`.
+- Frontend Render publicado no mesmo merge `369fffc`.
+- CI da `main` aprovado nos cinco jobs: backend, web, mobile, IA e demo local
+  smoke. O demo foi alinhado para listar somente arquivos confirmados.
+- Scanner local de secrets aprovado sem credenciais reais no repositorio.
 
 ## Evidencia do provedor
 
