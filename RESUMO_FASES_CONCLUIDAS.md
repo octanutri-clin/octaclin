@@ -442,6 +442,16 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   explicitamente confirmado; o backfill atualizou 1 paciente e a repeticao
   idempotente atualizou 0.
 
+- Fase 200 - Upload seguro e anexos clinicos: anexos passaram a usar upload
+  direto por URL pre-assinada curta para bucket privado Backblaze B2, com
+  validacao server-side de tamanho, MIME, assinatura e SHA-256 antes da
+  confirmacao. Prontuario, formulario publico e operacoes mobile respeitam
+  tenant, paciente, cota, auditoria, retencao e exclusao. Smokes autenticado e
+  publico passaram em producao; a migration `1014` foi confirmada em producao e
+  aplicada no banco de integracao `octaclin_test_fase150b`, encerrando o
+  historico com 27 de 27 migrations executadas. Ver
+  `fase-200-upload-seguro-anexos-clinicos.md`.
+
 ## Estado atual de uso
 
 O sistema esta em producao isolada aceita, com massa ficticia mantida fora do banco de producao, piloto interno aprovado, restore real validado e pacote juridico ampliado. A agenda agora tambem aceita solicitacoes publicas com aprovacao manual segura, sem reservar horario nem persistir token bruto, e distingue cancelamento pelo profissional de desmarcamento pelo paciente e de cancelamento originado no Google. O profissional conta com um painel clinico diario agregando prioridades da propria agenda de pacientes. Ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria: faltam recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido.
