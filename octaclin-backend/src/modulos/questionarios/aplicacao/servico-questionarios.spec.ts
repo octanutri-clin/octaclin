@@ -1,5 +1,6 @@
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
 import { ServicoQuestionarios } from './servico-questionarios';
 import { CategoriaPerguntaOrm } from '../infraestrutura/categoria-pergunta.orm';
 import { AgendamentoQuestionarioOrm } from '../infraestrutura/agendamento-questionario.orm';
@@ -37,6 +38,7 @@ function criarRepositorioFake(
     | 'respostaValor'
     | 'agendamento'
     | 'paciente'
+    | 'arquivoMidia'
     | 'profissional',
   dados: Record<string, any>
 ) {
@@ -141,6 +143,7 @@ function criarServico(dados: Record<string, any>) {
     respostaValor: criarRepositorioFake('respostaValor', dados),
     agendamento: criarRepositorioFake('agendamento', dados),
     paciente: criarRepositorioFake('paciente', dados),
+    arquivoMidia: criarRepositorioFake('arquivoMidia', { arquivoMidias: dados.arquivoMidias ?? [] }),
     profissional: criarRepositorioFake('profissional', { profissionals: dados.profissionals ?? [] })
   };
   const gerenciador = {
@@ -154,6 +157,7 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === RespostaValorOrm) return repositorios.respostaValor;
       if (entidade === AgendamentoQuestionarioOrm) return repositorios.agendamento;
       if (entidade === ProfissionalOrm) return repositorios.profissional;
+      if (entidade === ArquivoMidiaOrm) return repositorios.arquivoMidia;
       if (entidade.name === 'PacienteOrm') return repositorios.paciente;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
@@ -774,6 +778,40 @@ describe('ServicoQuestionarios', () => {
     expect(dados.envios[0].rascunhoAtualizadoEm).toBeUndefined();
     expect(dados.envios[0].rascunhoVersao).toBe(0);
     expect(dados.pacientes[0].ultimoCheckinEm).toBeInstanceOf(Date);
+  });
+
+  it('aceita apenas anexo confirmado do mesmo paciente, envio e pergunta', async () => {
+    const { servico, dados } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Exames' }],
+      perguntas: [{
+        id: 'p-upload', tenantId: 'tenant-1', questionarioId: 'q1', categoriaId: 'cat-1', tipo: 'upload_midia',
+        enunciado: 'Anexe o exame', peso: '1', obrigatoria: true, configuracao: { maxArquivos: 1 }, ordem: 1
+      }],
+      opcaos: [],
+      envios: [{ id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'enviado' }],
+      arquivoMidias: [
+        {
+          id: 'arquivo-correto', tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'confirmado',
+          metadados: { vinculo: { envioid: 'envio-1', perguntaid: 'p-upload' } }
+        },
+        {
+          id: 'arquivo-estranho', tenantId: 'tenant-1', pacienteId: 'paciente-2', status: 'confirmado',
+          metadados: { vinculo: { envioid: 'envio-2', perguntaid: 'p-upload' } }
+        }
+      ],
+      respostaCheckins: [], respostaValors: [], pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1' }]
+    });
+    const token = servico.gerarTokenFormularioPaciente('tenant-1', 'envio-1');
+
+    await expect(servico.finalizarFormularioPaciente(token, {
+      respostas: [{ perguntaId: 'p-upload', valor: ['arquivo-estranho'] }]
+    })).rejects.toThrow('Anexo nao pertence a este formulario.');
+    expect(dados.respostaCheckins).toHaveLength(0);
+
+    await expect(servico.finalizarFormularioPaciente(token, {
+      respostas: [{ perguntaId: 'p-upload', valor: ['arquivo-correto'] }]
+    })).resolves.toEqual(expect.objectContaining({ status: 'respondido' }));
   });
 
   it('salva e retoma rascunho publico com versao monotona', async () => {

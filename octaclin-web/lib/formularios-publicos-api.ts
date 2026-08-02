@@ -35,6 +35,12 @@ export interface RespostaFormularioPublico {
   valor: unknown;
 }
 
+interface UploadFormularioPublico {
+  arquivo: { id: string };
+  uploadUrl: string;
+  uploadHeaders: Record<string, string>;
+}
+
 async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
   const resposta = await fetch(caminho, {
     ...init,
@@ -80,5 +86,22 @@ export function salvarRascunhoFormularioPublico(
       method: 'PATCH',
       body: JSON.stringify({ versaoBase, respostas })
     }
+  );
+}
+
+export function solicitarUploadFormularioPublico(
+  token: string,
+  entrada: { perguntaId: string; nomeArquivo: string; mimeType: string; tamanhoBytes: number }
+) {
+  return requisitar<UploadFormularioPublico>(`/api/formularios/${encodeURIComponent(token)}/anexos`, {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
+export function confirmarUploadFormularioPublico(token: string, arquivoId: string, perguntaId: string) {
+  return requisitar<{ id: string }>(
+    `/api/formularios/${encodeURIComponent(token)}/anexos/${encodeURIComponent(arquivoId)}/confirmacao`,
+    { method: 'POST', body: JSON.stringify({ perguntaId }) }
   );
 }

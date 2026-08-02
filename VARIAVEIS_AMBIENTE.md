@@ -92,6 +92,22 @@ como redirect URI autorizado do cliente OAuth de producao.
 | `OCTACLIN_API_ORIGENS_PERMITIDAS` | Sim em producao | Allowlist da origem do backend | Render/web | BFF aceita apenas backend correto |
 | `NEXT_PUBLIC_*` | Evitar secrets | Variaveis publicas do Next | Render/web | Inspecionar bundle se necessario |
 
+## Armazenamento de anexos
+
+| Variavel | Obrigatoria | Uso | Onde configurar | Como validar |
+| --- | --- | --- | --- | --- |
+| `ARMAZENAMENTO_S3_ENDPOINT` | Sim | Endpoint do bucket privado S3-compativel | Render/backend | Assinatura e `HEAD` funcionam |
+| `ARMAZENAMENTO_S3_REGION` | Sim | Regiao informada pelo provedor | Render/backend | Cliente S3 inicializa |
+| `ARMAZENAMENTO_S3_ACCESS_KEY_ID` | Sim | Chave restrita ao bucket | Render/backend | Upload real funciona |
+| `ARMAZENAMENTO_S3_SECRET_ACCESS_KEY` | Sim | Segredo da chave restrita | Render/backend | Nunca aparece na web/logs |
+| `ARMAZENAMENTO_BUCKET_MIDIA` | Sim | Nome do bucket privado | Render/backend | Objeto fica no bucket esperado |
+| `ARMAZENAMENTO_S3_IF_NONE_MATCH` | Nao | `false` apenas quando o provedor nao aceita escrita condicional, como Backblaze B2 | Render/backend | Upload assinado nao retorna `501` |
+
+O bucket nao pode ter acesso publico. O CORS deve liberar somente a origem web
+do ambiente, `PUT`, `GET` e `HEAD`, `content-type`, `if-none-match` e
+`x-amz-meta-*`. Configure lifecycle de 1 dia apenas no prefixo `pendentes/`.
+Use bucket e credencial diferentes em staging e producao.
+
 ## Neon
 
 Secrets ficam no painel Neon e em `DATABASE_URL` no Render. Nao registrar usuario/senha reais em docs.
@@ -122,6 +138,8 @@ Rotacionar imediatamente se exposto:
 - `JWT_REFRESH_SEGREDO`
 - `CRIPTOGRAFIA_CHAVE_AES_256`
 - `FORMULARIO_PUBLICO_SEGREDO`
+- `ARMAZENAMENTO_S3_ACCESS_KEY_ID`
+- `ARMAZENAMENTO_S3_SECRET_ACCESS_KEY`
 
 Depois da rotacao:
 

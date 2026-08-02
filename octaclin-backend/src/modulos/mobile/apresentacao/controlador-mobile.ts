@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
+import { ServicoProtecaoAbuso } from '../../auth/aplicacao/servico-protecao-abuso';
 import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
@@ -19,7 +20,8 @@ import { ServicoMobile } from '../aplicacao/servico-mobile';
 export class ControladorMobile {
   constructor(
     private readonly servicoMobile: ServicoMobile,
-    private readonly servicoAuditoria: ServicoAuditoria
+    private readonly servicoAuditoria: ServicoAuditoria,
+    private readonly protecaoAbuso: ServicoProtecaoAbuso
   ) {}
 
   @Get('diario-rapido')
@@ -42,8 +44,11 @@ export class ControladorMobile {
   }
 
   @Get('midias/uploads')
-  listarArquivosMidia(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoMobile.listarArquivosMidia(usuario.tenantId, usuario);
+  listarArquivosMidia(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Query('pacienteId', new ParseUUIDPipe({ optional: true })) pacienteId?: string
+  ) {
+    return this.servicoMobile.listarArquivosMidia(usuario.tenantId, usuario, pacienteId);
   }
 
   @Post('midias/uploads')
@@ -52,6 +57,12 @@ export class ControladorMobile {
     @Req() requisicao: Request,
     @Body() dados: SolicitarUploadMidiaDto
   ) {
+    await this.protecaoAbuso.consumirTentativa(`mobile:upload:${usuario.tenantId}:${usuario.usuarioId}`, {
+      maxTentativas: 30,
+      janelaMs: 15 * 60 * 1000,
+      bloqueioMs: 15 * 60 * 1000,
+      mensagemBloqueio: 'Muitos uploads em pouco tempo. Tente novamente em alguns minutos.'
+    });
     const upload = await this.servicoMobile.solicitarUploadMidia(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'mobile.midia.upload_solicitar', 'arquivo_midia', upload.arquivo.id, {
       pacienteId: dados.pacienteId,
@@ -60,6 +71,43 @@ export class ControladorMobile {
       tamanhoBytes: dados.tamanhoBytes
     });
     return upload;
+  }
+
+  @Post('midias/uploads/:arquivoId/confirmacao')
+  async confirmarUploadMidia(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('arquivoId', ParseUUIDPipe) arquivoId: string
+  ) {
+    const arquivo = await this.servicoMobile.confirmarUploadMidia(usuario.tenantId, arquivoId, usuario);
+    await this.registrarAuditoria(usuario, requisicao, 'mobile.midia.upload_confirmar', 'arquivo_midia', arquivoId, {
+      pacienteId: arquivo.pacienteId,
+      mimeType: arquivo.mimeType,
+      tamanhoBytes: arquivo.tamanhoBytes
+    });
+    return arquivo;
+  }
+
+  @Post('midias/uploads/:arquivoId/acesso')
+  async gerarAcessoArquivoMidia(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('arquivoId', ParseUUIDPipe) arquivoId: string
+  ) {
+    const acesso = await this.servicoMobile.gerarAcessoArquivoMidia(usuario.tenantId, arquivoId, usuario);
+    await this.registrarAuditoria(usuario, requisicao, 'mobile.midia.visualizar', 'arquivo_midia', arquivoId);
+    return acesso;
+  }
+
+  @Delete('midias/uploads/:arquivoId')
+  async excluirArquivoMidia(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('arquivoId', ParseUUIDPipe) arquivoId: string
+  ) {
+    await this.servicoMobile.excluirArquivoMidia(usuario.tenantId, arquivoId, usuario);
+    await this.registrarAuditoria(usuario, requisicao, 'mobile.midia.excluir', 'arquivo_midia', arquivoId);
+    return { status: 'excluido' };
   }
 
   @Get('acompanhantes')

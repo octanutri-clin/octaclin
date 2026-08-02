@@ -98,3 +98,19 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
   reindexa pela aplicacao somente contra banco explicitamente confirmado.
 - Consequencia: rotacao da chave AES exige reindexacao coordenada dos hashes de
   busca junto da recriptografia dos dados.
+
+## ADR-018 - Armazenamento de anexos clinicos
+
+- Decisao: usar bucket privado Cloudflare R2 pela API S3, com credencial e
+  bucket separados por ambiente.
+- Fluxo: o navegador envia por URL pre-assinada curta; o backend confirma o
+  objeto real, MIME, tamanho, metadados e SHA-256 antes de exibir ou contabilizar.
+- Protecao: bucket/chave e credenciais nao fazem parte dos DTOs publicos; acesso
+  de leitura tambem usa URL curta depois de autorizacao por tenant e paciente.
+- Imutabilidade: o PUT assinado exige criacao condicional; depois da inspecao o
+  backend promove `pendentes/` para `confirmados/`, prefixo que nunca e exposto
+  para escrita do navegador.
+- Abuso: a reserva de cota e serializada por tenant, uploads sao limitados e o
+  lifecycle do provedor remove temporarios abandonados.
+- Consequencia: o backend le arquivos de ate 25 MB na confirmacao. Streaming e
+  antivirus dedicado so entram quando volume ou risco medido exigirem.

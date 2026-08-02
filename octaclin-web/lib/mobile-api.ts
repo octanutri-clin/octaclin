@@ -2,6 +2,7 @@ import { PacienteResumo, RespostaPaginada, listarPacientes } from './cadastros-a
 
 export type TipoDiarioRapido = 'refeicao' | 'humor' | 'agua' | 'atividade';
 export type TipoMidiaMobile = 'imagem' | 'audio' | 'video' | 'documento';
+export type CategoriaAnexoClinico = 'exame' | 'documento' | 'foto' | 'diario';
 export type TipoItemSincronizacao = 'diario_rapido' | 'midia_captura' | 'midia_audio' | 'acompanhante';
 
 export interface LogDiarioRapidoApi {
@@ -15,21 +16,23 @@ export interface LogDiarioRapidoApi {
 
 export interface ArquivoMidiaApi {
   id: string;
-  tenantId: string;
   pacienteId: string;
   tipo: TipoMidiaMobile;
-  bucket: string;
-  chaveObjeto: string;
+  categoria: CategoriaAnexoClinico;
+  nomeArquivo?: string;
   mimeType: string;
   tamanhoBytes: string;
   hashConteudo?: string;
-  metadados: Record<string, unknown>;
+  status: 'pendente' | 'confirmado' | 'excluido';
   criadoEm: string;
+  confirmadoEm?: string;
 }
 
 export interface UploadMidiaApi {
   arquivo: ArquivoMidiaApi;
   uploadUrl: string;
+  uploadHeaders: Record<string, string>;
+  expiraEmSegundos: number;
 }
 
 export interface AcompanhanteApi {
@@ -62,6 +65,8 @@ export interface SolicitarUploadMidiaEntrada {
   tipo: TipoMidiaMobile;
   mimeType: string;
   tamanhoBytes: number;
+  categoria?: CategoriaAnexoClinico;
+  nomeArquivo?: string;
   duracaoSegundos?: number;
   hashConteudo?: string;
 }
@@ -135,8 +140,22 @@ export async function solicitarUploadMidia(entrada: SolicitarUploadMidiaEntrada)
   });
 }
 
-export async function listarArquivosMidia(): Promise<ArquivoMidiaApi[]> {
-  return requisitar<ArquivoMidiaApi[]>('/api/mobile/midias/uploads');
+export async function listarArquivosMidia(pacienteId?: string): Promise<ArquivoMidiaApi[]> {
+  return requisitar<ArquivoMidiaApi[]>(`/api/mobile/midias/uploads${pacienteId ? `?pacienteId=${encodeURIComponent(pacienteId)}` : ''}`);
+}
+
+export async function confirmarUploadMidia(arquivoId: string): Promise<ArquivoMidiaApi> {
+  return requisitar<ArquivoMidiaApi>(`/api/mobile/midias/uploads/${encodeURIComponent(arquivoId)}/confirmacao`, { method: 'POST' });
+}
+
+export async function obterAcessoArquivoMidia(arquivoId: string): Promise<{ url: string; expiraEmSegundos: number }> {
+  return requisitar<{ url: string; expiraEmSegundos: number }>(`/api/mobile/midias/uploads/${encodeURIComponent(arquivoId)}/acesso`, {
+    method: 'POST'
+  });
+}
+
+export async function excluirArquivoMidia(arquivoId: string): Promise<void> {
+  await requisitar(`/api/mobile/midias/uploads/${encodeURIComponent(arquivoId)}`, { method: 'DELETE' });
 }
 
 export async function criarAcompanhante(entrada: CriarAcompanhanteEntrada): Promise<AcompanhanteApi> {

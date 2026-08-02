@@ -6,6 +6,7 @@ import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-ten
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { obterSegredoFormularioPublico } from '../../../infraestrutura/seguranca/segredo-formulario-publico';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { normalizarConfiguracaoPergunta } from '../dominio/configuracao-pergunta';
 import { MODELOS_QUESTIONARIO, ModeloQuestionarioResumo, resumirModeloQuestionario } from '../dominio/modelos-questionario';
@@ -1045,6 +1046,16 @@ export class ServicoQuestionarios {
     return `${tenantId}.${envioId}.${assinatura}`;
   }
 
+  async obterContextoFormularioPaciente(token: string) {
+    const { tenantId, envioId } = this.validarTokenFormulario(token);
+    const formulario = await this.obterFormularioPaciente(token);
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const envio = await gerenciador.getRepository(EnvioQuestionarioOrm).findOne({ where: { id: envioId, tenantId } });
+      this.validarEnvioFormulario(envio);
+      return { tenantId, envioId, pacienteId: envio.pacienteId, perguntas: formulario.perguntas };
+    });
+  }
+
   async obterFormularioPaciente(token: string): Promise<FormularioPacientePublico> {
     const { tenantId, envioId } = this.validarTokenFormulario(token);
 
@@ -1103,6 +1114,7 @@ export class ServicoQuestionarios {
       const perguntas = envio.snapshotEstrutura?.perguntas ??
         (await this.listarPerguntasComOpcoesPorQuestionario(gerenciador, tenantId, envio.questionarioId));
       this.validarEstruturaRespostas(perguntas, dados.respostas);
+      await this.validarAnexosFormulario(gerenciador, tenantId, envio, perguntas, dados.respostas);
 
       const agora = new Date();
       const proximaVersao = versaoAtual + 1;
@@ -1131,6 +1143,7 @@ export class ServicoQuestionarios {
       const perguntas = envio.snapshotEstrutura?.perguntas ?? (await this.listarPerguntasComOpcoesPorQuestionario(gerenciador, tenantId, envio.questionarioId));
       this.validarEstruturaRespostas(perguntas, dados.respostas);
       this.validarRespostasObrigatorias(perguntas, dados.respostas);
+      await this.validarAnexosFormulario(gerenciador, tenantId, envio, perguntas, dados.respostas);
 
       const agora = new Date();
       const respostaCheckin = await gerenciador.getRepository(RespostaCheckinOrm).save(
@@ -1366,6 +1379,34 @@ export class ServicoQuestionarios {
     if (obrigatoriaSemResposta) {
       throw new BadRequestException(`Pergunta obrigatoria sem resposta: ${obrigatoriaSemResposta.enunciado}`);
     }
+  }
+
+  private async validarAnexosFormulario(
+    gerenciador: EntityManager,
+    tenantId: string,
+    envio: EnvioQuestionarioOrm,
+    perguntas: Pick<PerguntaOrm, 'id' | 'tipo'>[],
+    respostas: { perguntaId: string; valor: unknown }[]
+  ): Promise<void> {
+    const perguntasUpload = new Set(perguntas.filter((pergunta) => pergunta.tipo === 'upload_midia').map((pergunta) => pergunta.id));
+    const referencias = respostas.flatMap((resposta) =>
+      perguntasUpload.has(resposta.perguntaId) && Array.isArray(resposta.valor)
+        ? resposta.valor.map((arquivoId) => ({ arquivoId: String(arquivoId), perguntaId: resposta.perguntaId }))
+        : []
+    );
+    if (referencias.length === 0) return;
+
+    const ids = referencias.map((referencia) => referencia.arquivoId);
+    if (new Set(ids).size !== ids.length) throw new BadRequestException('Anexo duplicado no formulario.');
+    const arquivos = await gerenciador.getRepository(ArquivoMidiaOrm).find({
+      where: { id: In(ids), tenantId, pacienteId: envio.pacienteId, status: 'confirmado' }
+    });
+    const porId = new Map(arquivos.map((arquivo) => [arquivo.id, arquivo]));
+    const invalido = referencias.some(({ arquivoId, perguntaId }) => {
+      const vinculo = porId.get(arquivoId)?.metadados?.vinculo as Record<string, string> | undefined;
+      return vinculo?.envioid !== envio.id || vinculo.perguntaid !== perguntaId;
+    });
+    if (invalido) throw new BadRequestException('Anexo nao pertence a este formulario.');
   }
 
   private montarLinkFormulario(token: string) {

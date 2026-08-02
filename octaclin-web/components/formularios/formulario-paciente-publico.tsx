@@ -1,11 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Send } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Send, UploadCloud } from 'lucide-react';
 import {
   carregarFormularioPublico,
   enviarFormularioPublico,
   salvarRascunhoFormularioPublico,
+  solicitarUploadFormularioPublico,
+  confirmarUploadFormularioPublico,
   FormularioPublico,
   PerguntaFormularioPublico
 } from '@/lib/formularios-publicos-api';
@@ -148,6 +150,27 @@ export function FormularioPacientePublico({ token }: Props) {
     atualizarResposta(perguntaId, atuais.includes(valor) ? atuais.filter((item) => item !== valor) : [...atuais, valor]);
   }
 
+  async function enviarArquivos(pergunta: PerguntaFormularioPublico, arquivos: File[]): Promise<string[]> {
+    const ids: string[] = [];
+    for (const arquivo of arquivos) {
+      const solicitacao = await solicitarUploadFormularioPublico(token, {
+        perguntaId: pergunta.id,
+        nomeArquivo: arquivo.name,
+        mimeType: arquivo.type,
+        tamanhoBytes: arquivo.size
+      });
+      const envio = await fetch(solicitacao.uploadUrl, {
+        method: 'PUT',
+        headers: solicitacao.uploadHeaders,
+        body: arquivo
+      });
+      if (!envio.ok) throw new Error('Nao foi possivel armazenar o arquivo.');
+      const confirmado = await confirmarUploadFormularioPublico(token, solicitacao.arquivo.id, pergunta.id);
+      ids.push(confirmado.id);
+    }
+    return ids;
+  }
+
   async function enviar() {
     if (!formulario) return;
 
@@ -258,6 +281,8 @@ export function FormularioPacientePublico({ token }: Props) {
                   valor={respostas[pergunta.id]}
                   aoAlterar={(valor) => atualizarResposta(pergunta.id, valor)}
                   aoAlternarCheckbox={(valor) => alternarCheckbox(pergunta.id, valor)}
+                  aoEnviarArquivos={(arquivos) => enviarArquivos(pergunta, arquivos)}
+                  aoErro={setErro}
                 />
               ))}
             </div>
@@ -277,14 +302,19 @@ function CampoPergunta({
   pergunta,
   valor,
   aoAlterar,
-  aoAlternarCheckbox
+  aoAlternarCheckbox,
+  aoEnviarArquivos,
+  aoErro
 }: {
   pergunta: PerguntaFormularioPublico;
   valor?: ValorResposta;
   aoAlterar: (valor: ValorResposta) => void;
   aoAlternarCheckbox: (valor: string) => void;
+  aoEnviarArquivos: (arquivos: File[]) => Promise<string[]>;
+  aoErro: (mensagem: string | null) => void;
 }) {
   const multipla = pergunta.configuracao.multipla === true;
+  const [enviandoArquivos, setEnviandoArquivos] = useState(false);
 
   return (
     <fieldset className="grid gap-3 rounded-md border border-linha bg-superficie p-4">
@@ -384,13 +414,34 @@ function CampoPergunta({
       ) : null}
 
       {pergunta.tipo === 'upload_midia' ? (
-        <input
-          type="file"
-          multiple={numero(pergunta.configuracao, 'maxArquivos', 1) > 1}
-          accept={Array.isArray(pergunta.configuracao.tiposAceitos) ? pergunta.configuracao.tiposAceitos.join(',') : 'image/*'}
-          onChange={(event) => aoAlterar(Array.from(event.target.files ?? []).map((arquivo) => arquivo.name))}
-          className="rounded-md border border-linha bg-white px-3 py-2 text-sm"
-        />
+        <div className="grid gap-2">
+          <input
+            type="file"
+            aria-label={pergunta.enunciado}
+            multiple={numero(pergunta.configuracao, 'maxArquivos', 1) > 1}
+            accept={Array.isArray(pergunta.configuracao.tiposAceitos) ? pergunta.configuracao.tiposAceitos.join(',') : 'image/*'}
+            disabled={enviandoArquivos}
+            onChange={async (event) => {
+              const arquivos = Array.from(event.target.files ?? []);
+              if (!arquivos.length) return;
+              setEnviandoArquivos(true);
+              aoErro(null);
+              try {
+                aoAlterar(await aoEnviarArquivos(arquivos));
+              } catch (erroAtual) {
+                event.target.value = '';
+                aoErro(erroAtual instanceof Error ? erroAtual.message : 'Nao foi possivel enviar o arquivo.');
+              } finally {
+                setEnviandoArquivos(false);
+              }
+            }}
+            className="min-h-11 rounded-md border border-linha bg-white px-3 py-2 text-sm"
+          />
+          <p className="flex items-center gap-2 text-xs text-texto-suave" aria-live="polite">
+            <UploadCloud size={14} />
+            {enviandoArquivos ? 'Enviando e verificando arquivo' : Array.isArray(valor) && valor.length ? `${valor.length} arquivo(s) anexado(s)` : 'Nenhum arquivo anexado'}
+          </p>
+        </div>
       ) : null}
     </fieldset>
   );

@@ -80,6 +80,7 @@ function criarServico(dados: DadosFake = {}) {
     sincronizacao: criarRepositorioFake('sincronizacao', dados.sincronizacoes ?? [])
   };
   const gerenciador = {
+    query: jest.fn(async () => undefined),
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === PacienteOrm) return repositorios.paciente;
       if (entidade === ProfissionalOrm) return repositorios.profissional;
@@ -95,12 +96,35 @@ function criarServico(dados: DadosFake = {}) {
   };
   const criptografia = { criptografar: jest.fn((valor: string) => `enc:${valor}`) };
   const senhas = { gerarHash: jest.fn((valor: string) => `hash:${valor}`) };
+  const armazenamento = {
+    bucket: 'octaclin-midias-teste',
+    criarUploadAssinado: jest.fn(async () => 'https://upload.example/assinado'),
+    inspecionarObjeto: jest.fn(async () => ({
+      tamanhoBytes: 321,
+      mimeType: 'application/pdf',
+      hashConteudo: 'sha256-real'
+    })),
+    criarDownloadAssinado: jest.fn(async () => 'https://download.example/assinado'),
+    promoverObjeto: jest.fn(async () => undefined),
+    excluirObjeto: jest.fn(async () => undefined)
+  };
+  const portalCliente = {
+    checarLimite: jest.fn(async () => ({ permitido: true, restante: null }))
+  };
 
   return {
-    servico: new ServicoMobile(executorTenant as never, criptografia as never, senhas as never),
+    servico: new ServicoMobile(
+      executorTenant as never,
+      criptografia as never,
+      senhas as never,
+      armazenamento as never,
+      portalCliente as never
+    ),
     repositorios,
     criptografia,
-    senhas
+    senhas,
+    armazenamento,
+    portalCliente
   };
 }
 
@@ -152,14 +176,204 @@ describe('ServicoMobile', () => {
       pacientes,
       profissionais: [{ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }],
       arquivos: [
-        { id: 'arquivo-1', tenantId: 'tenant-1', pacienteId: 'paciente-1' },
-        { id: 'arquivo-2', tenantId: 'tenant-1', pacienteId: 'paciente-2' }
+        { id: 'arquivo-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'confirmado' },
+        { id: 'arquivo-pendente', tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'pendente' },
+        { id: 'arquivo-2', tenantId: 'tenant-1', pacienteId: 'paciente-2', status: 'confirmado' }
       ]
     });
 
     const arquivos = await servico.listarArquivosMidia('tenant-1', usuarioProfissional);
 
     expect(arquivos).toEqual([expect.objectContaining({ id: 'arquivo-1', pacienteId: 'paciente-1' })]);
+  });
+
+  it('cria upload assinado sem confiar metadados do cliente', async () => {
+    const { servico, repositorios, armazenamento, criptografia } = criarServico({ pacientes });
+
+    const resultado = await servico.solicitarUploadMidia(
+      'tenant-1',
+      {
+        pacienteId: 'paciente-1',
+        tipo: 'documento',
+        categoria: 'exame',
+        nomeArquivo: 'hemograma.pdf',
+        mimeType: 'application/pdf',
+        tamanhoBytes: 999_999,
+        hashConteudo: 'hash-forjado'
+      },
+      usuarioPaciente
+    );
+
+    expect(resultado.uploadUrl).toBe('https://upload.example/assinado');
+    expect(resultado.uploadHeaders).toEqual(expect.objectContaining({
+      'Content-Type': 'application/pdf',
+      'If-None-Match': '*',
+      'x-amz-meta-tenantid': 'tenant-1',
+      'x-amz-meta-pacienteid': 'paciente-1'
+    }));
+    expect(repositorios.arquivo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'pendente',
+        tamanhoBytes: '0',
+        hashConteudo: undefined,
+        mimeType: 'application/pdf',
+        categoria: 'exame'
+      })
+    );
+    expect(criptografia.criptografar).toHaveBeenCalledWith('hemograma.pdf');
+    expect(armazenamento.criarUploadAssinado).toHaveBeenCalledWith(
+      expect.objectContaining({ mimeType: 'application/pdf', tamanhoMaximoBytes: 999_999 })
+    );
+  });
+
+  it('devolve todos os metadados assinados ao formulario publico', async () => {
+    const { servico } = criarServico({ pacientes });
+
+    const resultado = await servico.solicitarUploadMidiaFormularioPublico(
+      'tenant-1',
+      {
+        pacienteId: 'paciente-1',
+        tipo: 'documento',
+        mimeType: 'application/pdf',
+        tamanhoBytes: 1024
+      },
+      { envioid: 'envio-1', perguntaid: 'pergunta-1' }
+    );
+
+    expect(resultado.uploadHeaders).toEqual({
+      'Content-Type': 'application/pdf',
+      'If-None-Match': '*',
+      'x-amz-meta-tenantid': 'tenant-1',
+      'x-amz-meta-pacienteid': 'paciente-1',
+      'x-amz-meta-arquivoid': expect.any(String),
+      'x-amz-meta-envioid': 'envio-1',
+      'x-amz-meta-perguntaid': 'pergunta-1'
+    });
+  });
+
+  it('confirma pelo objeto real e ignora tamanho e hash declarados anteriormente', async () => {
+    const arquivo = {
+      id: 'arquivo-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      tipo: 'documento',
+      bucket: 'bucket',
+      chaveObjeto: 'tenant-1/paciente-1/documento/arquivo-1',
+      mimeType: 'application/pdf',
+      tamanhoBytes: '0',
+      hashConteudo: undefined,
+      status: 'pendente'
+    };
+    const { servico, repositorios, armazenamento } = criarServico({ pacientes, arquivos: [arquivo] });
+    const chavePendente = arquivo.chaveObjeto;
+
+    const confirmado = await servico.confirmarUploadMidia('tenant-1', 'arquivo-1', usuarioPaciente);
+
+    expect(armazenamento.inspecionarObjeto).toHaveBeenCalledWith(
+      'bucket',
+      chavePendente,
+      'documento',
+      { arquivoid: 'arquivo-1', pacienteid: 'paciente-1', tenantid: 'tenant-1' }
+    );
+    expect(armazenamento.promoverObjeto).toHaveBeenCalledWith(
+      'bucket',
+      chavePendente,
+      'confirmados/tenant-1/paciente-1/documento/arquivo-1'
+    );
+    expect(repositorios.arquivo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chaveObjeto: 'confirmados/tenant-1/paciente-1/documento/arquivo-1',
+        status: 'confirmado',
+        tamanhoBytes: '321',
+        mimeType: 'application/pdf',
+        hashConteudo: 'sha256-real'
+      })
+    );
+    expect(confirmado).toEqual(expect.objectContaining({ status: 'confirmado', tamanhoBytes: '321' }));
+  });
+
+  it('impede formulario publico de confirmar anexo de outro paciente', async () => {
+    const arquivo = {
+      id: 'arquivo-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      tipo: 'documento',
+      bucket: 'bucket',
+      chaveObjeto: 'tenant-1/paciente-1/documento/arquivo-1',
+      status: 'pendente'
+    };
+    const { servico, armazenamento } = criarServico({ pacientes, arquivos: [arquivo] });
+
+    await expect(
+      servico.confirmarUploadMidiaFormularioPublico('tenant-1', 'arquivo-1', 'paciente-2', {
+        envioid: 'envio-2',
+        perguntaid: 'pergunta-2'
+      })
+    ).rejects.toThrow('Anexo nao encontrado.');
+    expect(armazenamento.inspecionarObjeto).not.toHaveBeenCalled();
+  });
+
+  it('exclui o objeto antes de retirar o anexo do prontuario', async () => {
+    const arquivo = {
+      id: 'arquivo-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      tipo: 'documento',
+      bucket: 'bucket',
+      chaveObjeto: 'tenant-1/paciente-1/documento/arquivo-1',
+      status: 'confirmado'
+    };
+    const { servico, repositorios, armazenamento } = criarServico({ pacientes, arquivos: [arquivo] });
+
+    await servico.excluirArquivoMidia('tenant-1', 'arquivo-1', usuarioSuperAdmin);
+
+    expect(armazenamento.excluirObjeto).toHaveBeenCalledWith('bucket', arquivo.chaveObjeto);
+    expect(repositorios.arquivo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'excluido' }));
+  });
+
+  it('impede Patient de excluir anexos incorporados ao prontuario', async () => {
+    const { servico, armazenamento } = criarServico({
+      pacientes,
+      arquivos: [{ id: 'arquivo-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'confirmado' }]
+    });
+
+    await expect(servico.excluirArquivoMidia('tenant-1', 'arquivo-1', usuarioPaciente)).rejects.toThrow(
+      'Paciente nao pode excluir anexo do prontuario.'
+    );
+    expect(armazenamento.excluirObjeto).not.toHaveBeenCalled();
+  });
+
+  it('reserva a cota do plano antes de emitir uma URL assinada', async () => {
+    const { servico, portalCliente, armazenamento } = criarServico({ pacientes });
+    portalCliente.checarLimite.mockResolvedValueOnce({ permitido: true, restante: 1 } as never);
+
+    await expect(
+      servico.solicitarUploadMidia(
+        'tenant-1',
+        { pacienteId: 'paciente-1', tipo: 'documento', mimeType: 'application/pdf', tamanhoBytes: 2 * 1024 * 1024 },
+        usuarioPaciente
+      )
+    ).rejects.toThrow('Limite de armazenamento do plano atingido.');
+    expect(armazenamento.criarUploadAssinado).not.toHaveBeenCalled();
+  });
+
+  it('remove objeto rejeitado pela inspecao e nao o confirma', async () => {
+    const arquivo = {
+      id: 'arquivo-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      tipo: 'documento',
+      bucket: 'bucket',
+      chaveObjeto: 'tenant-1/paciente-1/documento/arquivo-1',
+      status: 'pendente'
+    };
+    const { servico, repositorios, armazenamento } = criarServico({ pacientes, arquivos: [arquivo] });
+    armazenamento.inspecionarObjeto.mockRejectedValueOnce(new Error('conteudo invalido'));
+
+    await expect(servico.confirmarUploadMidia('tenant-1', 'arquivo-1', usuarioPaciente)).rejects.toThrow('conteudo invalido');
+
+    expect(armazenamento.excluirObjeto).toHaveBeenCalledWith('bucket', arquivo.chaveObjeto);
+    expect(repositorios.arquivo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'excluido' }));
   });
 
   it('deve impedir Professional de gravar para paciente de outro responsavel', async () => {

@@ -121,6 +121,35 @@ de producao, migration, backfill e somente entao deploy. A migration e aditiva;
 o `down` remove indice e coluna. O backfill pode ser repetido sem duplicar
 dados.
 
+### Fase 200 - anexos clinicos
+
+Antes do deploy, criar bucket privado e token S3 restrito ao bucket. Nao usar
+dominio publico do R2. Configurar CORS apenas para a origem web do ambiente e
+manter credenciais diferentes entre staging e producao.
+
+No CORS, permitir `PUT`, `GET` e `HEAD` e os headers `content-type`,
+`if-none-match` e `x-amz-meta-*`. Criar uma regra de lifecycle que remova, apos
+1 dia, apenas objetos com prefixo `pendentes/`; nunca aplicar essa regra ao
+prefixo `confirmados/`.
+
+Com `BANCO_EXECUTAR_MIGRACOES=false`, aplicar a migration `1014` com role
+`neondb_owner`; a `DATABASE_URL` permanente do backend continua usando a role
+sem `BYPASSRLS` `octaclin_app_producao`.
+
+```powershell
+$env:DATABASE_URL='<url owner do banco explicitamente confirmado>'
+pnpm --dir octaclin-backend migration:run
+pnpm --dir octaclin-backend run typeorm -- migration:show
+Remove-Item Env:DATABASE_URL
+```
+
+Depois do deploy, usar somente arquivo sintetico para validar: solicitar URL,
+enviar, confirmar, abrir e excluir. Confirmar no provedor que o objeto foi
+removido e nos logs que nao houve URL assinada, token ou nome clinico exposto.
+
+Rollback de aplicacao: reverter o deploy. Nao executar o `down` da migration se
+ja houver anexos reais; as colunas sao aditivas e podem permanecer sem uso.
+
 ### Backup e restore
 
 Antes de go-live e antes de migrations sensiveis:

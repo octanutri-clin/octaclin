@@ -8,6 +8,7 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
   ValidateNested
 } from 'class-validator';
@@ -38,6 +39,15 @@ export class SolicitarUploadMidiaDto {
   @IsNumber()
   @Min(1)
   tamanhoBytes: number;
+
+  @IsOptional()
+  @IsIn(['exame', 'documento', 'foto', 'diario'])
+  categoria?: 'exame' | 'documento' | 'foto' | 'diario';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  nomeArquivo?: string;
 
   @IsOptional()
   @IsNumber()

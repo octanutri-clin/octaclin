@@ -4,7 +4,9 @@ import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditor
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
 import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../../infraestrutura/seguranca/servico-senhas';
+import { ServicoArmazenamentoObjetos } from '../../infraestrutura/armazenamento/servico-armazenamento-objetos';
 import { ModuloAuth } from '../auth/modulo-auth';
+import { ModuloClientes } from '../clientes/modulo-clientes';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoMobile } from './aplicacao/servico-mobile';
 import { ControladorMobile } from './apresentacao/controlador-mobile';
@@ -17,10 +19,11 @@ import { SincronizacaoMobileOrm } from './infraestrutura/sincronizacao-mobile.or
   imports: [
     TypeOrmModule.forFeature([LogDiarioRapidoOrm, ArquivoMidiaOrm, AcompanhanteOrm, SincronizacaoMobileOrm, UserActionLogOrm]),
     ModuloAuth,
+    ModuloClientes,
     ModuloTenancy
   ],
   controllers: [ControladorMobile],
-  providers: [ServicoMobile, CriptografiaDadosSensiveis, ServicoSenhas, ServicoAuditoria],
+  providers: [ServicoMobile, CriptografiaDadosSensiveis, ServicoSenhas, ServicoAuditoria, ServicoArmazenamentoObjetos],
   exports: [ServicoMobile]
 })
 export class ModuloMobile {}
