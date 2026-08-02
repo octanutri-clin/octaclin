@@ -630,7 +630,9 @@ const servidor = http.createServer(async (requisicao, resposta) => {
       return json(resposta, 201, log);
     }
 
-    if (requisicao.method === 'GET' && url.pathname === '/mobile/midias/uploads') return json(resposta, 200, estado.arquivosMidia);
+    if (requisicao.method === 'GET' && url.pathname === '/mobile/midias/uploads') {
+      return json(resposta, 200, estado.arquivosMidia.filter((arquivo) => arquivo.status === 'confirmado'));
+    }
 
     if (requisicao.method === 'POST' && url.pathname === '/mobile/midias/uploads') {
       const body = await lerJson(requisicao);
@@ -645,6 +647,7 @@ const servidor = http.createServer(async (requisicao, resposta) => {
         tamanhoBytes: String(body.tamanhoBytes),
         hashConteudo: body.hashConteudo,
         metadados: { duracaoSegundos: body.duracaoSegundos },
+        status: 'pendente',
         criadoEm: new Date().toISOString()
       };
       estado.arquivosMidia.unshift(arquivo);
