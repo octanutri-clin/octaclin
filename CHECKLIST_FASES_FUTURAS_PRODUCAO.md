@@ -1074,7 +1074,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Aceite: metadados do cliente nao alteram cota; anexos respeitam escopo,
     auditoria, retencao e exclusao.
   - Em andamento em 2026-08-02: implementacao local e jornadas desktop/mobile
-    validadas; Cloudflare R2, migration `1014` e smoke real ainda sao gates.
+    validadas; migration `1014` aplicada e verificada em producao. Cloudflare
+    R2, rollout e smoke real ainda sao gates.
   - Saida parcial: `fase-200-upload-seguro-anexos-clinicos.md`.
 
 - [ ] Fase 201 - Confiabilidade dos processadores em multiplas instancias.

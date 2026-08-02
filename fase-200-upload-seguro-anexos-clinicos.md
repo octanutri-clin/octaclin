@@ -1,7 +1,7 @@
 # Fase 200 - Upload seguro e anexos clinicos
 
-Status: implementacao local validada; migration `1014`, bucket R2 e rollout de
-producao pendentes.
+Status: implementacao local validada e migration `1014` aplicada em producao;
+bucket R2, rollout e smoke real pendentes.
 
 ## Entregue no codigo
 
@@ -35,6 +35,9 @@ producao pendentes.
   provedor e, por isso, nao sao exibidos automaticamente.
 - Aplicar com role `neondb_owner`; manter `octaclin_app_producao` apenas no
   runtime.
+- Producao validada em 2026-08-02: migration presente no historico, 5 colunas,
+  2 constraints e o indice unico confirmados. A URL owner temporaria foi
+  removida apos o uso.
 
 ## Provedor e ambiente
 
@@ -62,8 +65,8 @@ producao pendentes.
 
 ## Gates pendentes
 
-1. Aplicar e confirmar a migration `1014` em banco de integracao e producao
-   explicitamente identificados.
+1. Repetir a migration `1014` no banco de integracao explicitamente
+   identificado; producao ja foi aplicada e confirmada.
 2. Criar o bucket privado, lifecycle de `pendentes/` e token restrito no
    Cloudflare R2.
 3. Configurar as cinco variaveis no backend Render e fazer deploy.

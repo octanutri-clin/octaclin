@@ -168,5 +168,6 @@ O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao i
 
 Fase 200 em andamento: upload seguro e anexos clinicos ja foram implementados
 e validados localmente com URLs pre-assinadas curtas e confirmacao do objeto
-real. Permanecem pendentes o bucket privado Cloudflare R2, a migration `1014`
-com role de owner e o smoke real antes do aceite da fase.
+real. A migration `1014` foi aplicada e verificada em producao com
+`neondb_owner`; permanecem pendentes o bucket privado Cloudflare R2, o rollout
+e o smoke real antes do aceite da fase.

@@ -139,7 +139,7 @@ sem `BYPASSRLS` `octaclin_app_producao`.
 ```powershell
 $env:DATABASE_URL='<url owner do banco explicitamente confirmado>'
 pnpm --dir octaclin-backend migration:run
-pnpm --dir octaclin-backend migration:show
+pnpm --dir octaclin-backend run typeorm -- migration:show
 Remove-Item Env:DATABASE_URL
 ```
 
