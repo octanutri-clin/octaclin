@@ -46,6 +46,21 @@ export interface SalvarProfissionalEntrada {
   especialidade?: string;
 }
 
+export interface FiltrosPacientes {
+  pagina?: number;
+  limite?: number;
+  busca?: string;
+  risco?: 'alto' | 'medio' | 'baixo';
+  profissionalId?: string;
+  status?: string;
+  semProximaConsulta?: boolean;
+}
+
+export interface FiltrosPaginacao {
+  pagina?: number;
+  limite?: number;
+}
+
 class ErroApiCadastros extends Error {
   constructor(
     public readonly status: number,
@@ -87,8 +102,17 @@ async function requisitarSemConteudo(caminho: string, init?: RequestInit): Promi
   }
 }
 
-export async function listarPacientes(): Promise<RespostaPaginada<PacienteResumo>> {
-  return requisitar<RespostaPaginada<PacienteResumo>>('/api/pacientes?pagina=1&limite=25');
+export async function listarPacientes(filtros: FiltrosPacientes = {}): Promise<RespostaPaginada<PacienteResumo>> {
+  const parametros = new URLSearchParams({
+    pagina: String(filtros.pagina ?? 1),
+    limite: String(filtros.limite ?? 25)
+  });
+  if (filtros.busca?.trim()) parametros.set('busca', filtros.busca.trim());
+  if (filtros.risco) parametros.set('risco', filtros.risco);
+  if (filtros.profissionalId) parametros.set('profissionalId', filtros.profissionalId);
+  if (filtros.status) parametros.set('status', filtros.status);
+  if (filtros.semProximaConsulta) parametros.set('semProximaConsulta', 'true');
+  return requisitar<RespostaPaginada<PacienteResumo>>(`/api/pacientes?${parametros}`);
 }
 
 export async function criarPaciente(entrada: SalvarPacienteEntrada): Promise<PacienteResumo> {
@@ -109,8 +133,12 @@ export async function arquivarPaciente(id: string): Promise<void> {
   return requisitarSemConteudo(`/api/pacientes/${id}`, { method: 'DELETE' });
 }
 
-export async function listarProfissionais(): Promise<RespostaPaginada<ProfissionalResumo>> {
-  return requisitar<RespostaPaginada<ProfissionalResumo>>('/api/profissionais?pagina=1&limite=25');
+export async function listarProfissionais(filtros: FiltrosPaginacao = {}): Promise<RespostaPaginada<ProfissionalResumo>> {
+  const parametros = new URLSearchParams({
+    pagina: String(filtros.pagina ?? 1),
+    limite: String(filtros.limite ?? 25)
+  });
+  return requisitar<RespostaPaginada<ProfissionalResumo>>(`/api/profissionais?${parametros}`);
 }
 
 export async function criarProfissional(entrada: SalvarProfissionalEntrada): Promise<ProfissionalResumo> {

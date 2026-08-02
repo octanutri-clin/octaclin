@@ -71,7 +71,8 @@ describe('ServicoPacientes', () => {
     };
     const criptografia = {
       criptografar: jest.fn((valor: string) => Buffer.from(`criptografado:${valor}`)),
-      descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('criptografado:', ''))
+      descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('criptografado:', '')),
+      gerarHashesBuscaPii: jest.fn(() => ['hash-busca'])
     };
     const servico = new ServicoPacientes(executorTenant as never, criptografia as never, limitesPermitidos as never);
 
@@ -107,6 +108,45 @@ describe('ServicoPacientes', () => {
     await servico.listar('tenant-1', usuarioColaborador, 1, 500);
 
     expect(repositorio.findAndCount).toHaveBeenCalledWith(expect.objectContaining({ take: 100 }));
+  });
+
+  it('deve aplicar busca e filtros no banco antes da paginacao', async () => {
+    const repositorio = { findAndCount: jest.fn(async () => [[], 0]) };
+    const criptografia = {
+      gerarHashesConsultaPii: jest.fn(() => ['hash-ana']),
+      descriptografar: jest.fn()
+    };
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao(criarGerenciadorFake(repositorio))
+        )
+      } as never,
+      criptografia as never,
+      limitesPermitidos as never
+    );
+
+    await servico.listar('tenant-1', usuarioColaborador, 2, 25, {
+      pagina: 2,
+      limite: 25,
+      busca: 'Ana',
+      profissionalId: '11111111-1111-4111-8111-111111111111',
+      status: 'aderente',
+      semProximaConsulta: true
+    });
+
+    expect(criptografia.gerarHashesConsultaPii).toHaveBeenCalledWith('tenant-1', 'Ana');
+    expect(repositorio.findAndCount).toHaveBeenCalledWith(expect.objectContaining({
+      skip: 25,
+      take: 25,
+      where: expect.objectContaining({
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: '11111111-1111-4111-8111-111111111111',
+        statusAdesao: 'aderente',
+        buscaHashes: expect.objectContaining({ _type: 'arrayContains', _value: ['hash-ana'] }),
+        id: expect.objectContaining({ _type: 'raw' })
+      })
+    }));
   });
 
   it('deve incluir a ultima consulta concluida e a proxima consulta do proprio tenant', async () => {
@@ -753,7 +793,7 @@ describe('ServicoPacientes', () => {
             operacao(criarGerenciadorFake({ paciente: repositorioPacientes, profissional: repositorioProfissionais }))
           )
         } as never,
-        { criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+        { criptografar: jest.fn(), descriptografar: jest.fn(), gerarHashesBuscaPii: jest.fn(() => []) } as never,
         limitesPermitidos as never
       );
 
@@ -777,7 +817,7 @@ describe('ServicoPacientes', () => {
             operacao(criarGerenciadorFake(repositorioPacientes))
           )
         } as never,
-        { criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+        { criptografar: jest.fn(), descriptografar: jest.fn(), gerarHashesBuscaPii: jest.fn(() => []) } as never,
         limitesPermitidos as never
       );
 
@@ -801,7 +841,7 @@ describe('ServicoPacientes', () => {
             operacao(criarGerenciadorFake({ paciente: repositorioPacientes, profissional: repositorioProfissionais }))
           )
         } as never,
-        { criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+        { criptografar: jest.fn(), descriptografar: jest.fn(), gerarHashesBuscaPii: jest.fn(() => []) } as never,
         limitesPermitidos as never
       );
 

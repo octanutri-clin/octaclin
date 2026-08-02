@@ -571,6 +571,14 @@ export class ServicoPortalPaciente {
         paciente.contatoCriptografado = this.criptografia.criptografar(this.serializarContato(contatoAtualizado));
       }
 
+      if (dados.nome?.trim() || dados.email !== undefined || dados.whatsapp !== undefined) {
+        paciente.buscaHashes = this.criptografia.gerarHashesBuscaPii(tenantId, [
+          dados.nome?.trim() ?? this.criptografia.descriptografar(paciente.nomeCriptografado),
+          contatoAtualizado.email,
+          contatoAtualizado.whatsapp
+        ]);
+      }
+
       return this.mapearPerfilPaciente(await repositorio.save(paciente));
     });
   }

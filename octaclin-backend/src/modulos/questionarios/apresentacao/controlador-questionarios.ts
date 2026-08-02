@@ -111,9 +111,10 @@ export class ControladorQuestionarios {
   listarQuestionarios(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Query('pagina', new ParseIntPipe({ optional: true })) pagina = 1,
-    @Query('limite', new ParseIntPipe({ optional: true })) limite = 25
+    @Query('limite', new ParseIntPipe({ optional: true })) limite = 25,
+    @Query('busca') busca?: string
   ) {
-    return this.servicoQuestionarios.listarQuestionarios(usuario.tenantId, usuario, pagina, limite);
+    return this.servicoQuestionarios.listarQuestionarios(usuario.tenantId, usuario, pagina, limite, busca);
   }
 
   @Get('questionarios/modelos')

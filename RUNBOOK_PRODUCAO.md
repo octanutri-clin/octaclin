@@ -90,6 +90,25 @@ Validacoes:
 - login;
 - uma leitura e uma escrita por dominio alterado.
 
+### Fase 199 - indice de busca de pacientes
+
+Com `BANCO_EXECUTAR_MIGRACOES=false`, aplicar a migration `1013` antes do
+deploy do backend. O backfill nunca deve ser executado usando apenas contexto
+visual ou nome de ambiente; a confirmacao precisa coincidir com o nome presente
+na propria `DATABASE_URL`.
+
+```powershell
+$env:DATABASE_URL='<url do banco explicitamente confirmado>'
+$env:CONFIRMAR_BANCO_BACKFILL='<nome exato do banco na DATABASE_URL>'
+pnpm --dir octaclin-backend migration:run
+pnpm --dir octaclin-backend backfill:indices-busca
+```
+
+Ordem obrigatoria: backup/branch, staging, teste de busca e isolamento, janela
+de producao, migration, backfill e somente entao deploy. A migration e aditiva;
+o `down` remove indice e coluna. O backfill pode ser repetido sem duplicar
+dados.
+
 ### Backup e restore
 
 Antes de go-live e antes de migrations sensiveis:

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Search, Trash2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoConteudo } from '@/components/ui/cartao';
@@ -115,6 +115,8 @@ export function ListaPacientes() {
   const [filtroProfissional, setFiltroProfissional] = useState(() => parametrosUrl.get('profissional') ?? 'todos');
   const [filtroStatus, setFiltroStatus] = useState(() => parametrosUrl.get('status') ?? 'todos');
   const [apenasSemProximaConsulta, setApenasSemProximaConsulta] = useState(() => parametrosUrl.get('semRetorno') === '1');
+  const [pagina, setPagina] = useState(() => Math.max(1, Number(parametrosUrl.get('pagina') ?? 1) || 1));
+  const limite = 25;
 
   useEffect(() => {
     const parametros = new URLSearchParams();
@@ -123,9 +125,10 @@ export function ListaPacientes() {
     if (filtroProfissional !== 'todos') parametros.set('profissional', filtroProfissional);
     if (filtroStatus !== 'todos') parametros.set('status', filtroStatus);
     if (apenasSemProximaConsulta) parametros.set('semRetorno', '1');
+    if (pagina > 1) parametros.set('pagina', String(pagina));
     const query = parametros.toString();
     router.replace((query ? `${pathname}?${query}` : pathname) as Route, { scroll: false });
-  }, [apenasSemProximaConsulta, busca, filtroProfissional, filtroRisco, filtroStatus, pathname, router]);
+  }, [apenasSemProximaConsulta, busca, filtroProfissional, filtroRisco, filtroStatus, pagina, pathname, router]);
 
   useEffect(() => {
     if (hashAplicado.current) return;
@@ -133,12 +136,23 @@ export function ListaPacientes() {
     if (window.location.hash === '#novo-paciente') setModalPacienteAberto(true);
   }, []);
 
-  async function carregar() {
+  const carregar = useCallback(async () => {
     setCarregando(true);
     setErro(null);
     setSucesso(null);
     try {
-      const [pacientes, profissionaisResposta] = await Promise.all([listarPacientes(), listarProfissionais()]);
+      const [pacientes, profissionaisResposta] = await Promise.all([
+        listarPacientes({
+          pagina,
+          limite,
+          busca: busca || undefined,
+          risco: filtroRisco === 'todos' ? undefined : filtroRisco,
+          profissionalId: filtroProfissional === 'todos' ? undefined : filtroProfissional,
+          status: filtroStatus === 'todos' ? undefined : filtroStatus,
+          semProximaConsulta: apenasSemProximaConsulta
+        }),
+        listarProfissionais({ limite: 100 })
+      ]);
       setDados(pacientes);
       setProfissionais(profissionaisResposta.itens);
       setFormulario((atual) => ({
@@ -150,7 +164,7 @@ export function ListaPacientes() {
     } finally {
       setCarregando(false);
     }
-  }
+  }, [apenasSemProximaConsulta, busca, filtroProfissional, filtroRisco, filtroStatus, pagina]);
 
   async function salvar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -245,19 +259,12 @@ export function ListaPacientes() {
   }
 
   useEffect(() => {
-    void carregar();
-  }, []);
+    const atraso = window.setTimeout(() => void carregar(), 300);
+    return () => window.clearTimeout(atraso);
+  }, [carregar]);
 
-  const pacientesFiltrados = useMemo(() => {
-    const termo = busca.trim().toLocaleLowerCase('pt-BR');
-    return (dados?.itens ?? []).filter((paciente) =>
-      (!termo || `${paciente.nome} ${paciente.contato ?? ''}`.toLocaleLowerCase('pt-BR').includes(termo)) &&
-      (filtroRisco === 'todos' || nivelRisco(paciente) === filtroRisco) &&
-      (filtroProfissional === 'todos' || paciente.profissionalResponsavelId === filtroProfissional) &&
-      (filtroStatus === 'todos' || paciente.statusAdesao === filtroStatus) &&
-      (!apenasSemProximaConsulta || !paciente.proximaConsultaEm)
-    );
-  }, [apenasSemProximaConsulta, busca, dados?.itens, filtroProfissional, filtroRisco, filtroStatus]);
+  const pacientesFiltrados = dados?.itens ?? [];
+  const totalPaginas = Math.max(1, Math.ceil((dados?.total ?? 0) / limite));
 
   return (
     <section className="grid gap-4">
@@ -288,32 +295,32 @@ export function ListaPacientes() {
             <Rotulo htmlFor="busca-pacientes">Buscar pacientes</Rotulo>
             <span className="relative">
               <Search aria-hidden="true" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-texto-suave" />
-              <Campo id="busca-pacientes" value={busca} onChange={(evento) => setBusca(evento.target.value)} placeholder="Nome ou contato" className="pl-9" />
+              <Campo id="busca-pacientes" value={busca} onChange={(evento) => { setBusca(evento.target.value); setPagina(1); }} placeholder="Nome ou contato (minimo 3 caracteres)" className="pl-9" />
             </span>
           </label>
           <label className="grid gap-1">
             <Rotulo htmlFor="filtro-risco">Risco</Rotulo>
-            <Selecao id="filtro-risco" value={filtroRisco} onChange={(evento) => { setFiltroRisco(evento.target.value as typeof filtroRisco); setApenasSemProximaConsulta(false); }}>
+            <Selecao id="filtro-risco" value={filtroRisco} onChange={(evento) => { setFiltroRisco(evento.target.value as typeof filtroRisco); setApenasSemProximaConsulta(false); setPagina(1); }}>
               <option value="todos">Todos os riscos</option><option value="alto">Alto</option><option value="medio">Medio</option><option value="baixo">Baixo</option>
             </Selecao>
           </label>
           <label className="grid gap-1">
             <Rotulo htmlFor="filtro-profissional">Responsavel</Rotulo>
-            <Selecao id="filtro-profissional" value={filtroProfissional} onChange={(evento) => { setFiltroProfissional(evento.target.value); setApenasSemProximaConsulta(false); }}>
+            <Selecao id="filtro-profissional" value={filtroProfissional} onChange={(evento) => { setFiltroProfissional(evento.target.value); setApenasSemProximaConsulta(false); setPagina(1); }}>
               <option value="todos">Todos</option>{profissionais.map((profissional) => <option key={profissional.id} value={profissional.id}>{profissional.nome}</option>)}
             </Selecao>
           </label>
           <label className="grid gap-1">
             <Rotulo htmlFor="filtro-status">Situacao</Rotulo>
-            <Selecao id="filtro-status" value={filtroStatus} onChange={(evento) => { setFiltroStatus(evento.target.value); setApenasSemProximaConsulta(false); }}>
+            <Selecao id="filtro-status" value={filtroStatus} onChange={(evento) => { setFiltroStatus(evento.target.value); setApenasSemProximaConsulta(false); setPagina(1); }}>
               <option value="todos">Todas</option><option value="novo">Novo</option><option value="aderente">Aderente</option><option value="em_acompanhamento">Em acompanhamento</option><option value="risco">Risco</option>
             </Selecao>
           </label>
           <div className="flex flex-wrap gap-2 lg:col-span-4" aria-label="Filtros salvos">
-            <Botao type="button" variante="fantasma" onClick={() => { setBusca(''); setFiltroRisco('todos'); setFiltroStatus('todos'); setFiltroProfissional('todos'); setApenasSemProximaConsulta(false); }}>Todos</Botao>
-            <Botao type="button" variante="fantasma" onClick={() => { setBusca(''); setFiltroRisco('alto'); setFiltroStatus('todos'); setFiltroProfissional('todos'); setApenasSemProximaConsulta(false); }}>Alta prioridade</Botao>
-            <Botao type="button" variante="fantasma" onClick={() => { setBusca(''); setFiltroRisco('todos'); setFiltroStatus('todos'); setFiltroProfissional('todos'); setApenasSemProximaConsulta(true); }}>Sem consulta futura</Botao>
-            <span className="self-center text-xs text-texto-suave">{pacientesFiltrados.length} de {dados?.total ?? 0} pacientes</span>
+            <Botao type="button" variante="fantasma" onClick={() => { setBusca(''); setFiltroRisco('todos'); setFiltroStatus('todos'); setFiltroProfissional('todos'); setApenasSemProximaConsulta(false); setPagina(1); }}>Todos</Botao>
+            <Botao type="button" variante="fantasma" onClick={() => { setBusca(''); setFiltroRisco('alto'); setFiltroStatus('todos'); setFiltroProfissional('todos'); setApenasSemProximaConsulta(false); setPagina(1); }}>Alta prioridade</Botao>
+            <Botao type="button" variante="fantasma" onClick={() => { setBusca(''); setFiltroRisco('todos'); setFiltroStatus('todos'); setFiltroProfissional('todos'); setApenasSemProximaConsulta(true); setPagina(1); }}>Sem consulta futura</Botao>
+            <span className="self-center text-xs text-texto-suave">{dados?.total ?? 0} pacientes encontrados</span>
           </div>
         </CartaoConteudo>
       </Cartao>
@@ -518,6 +525,20 @@ export function ListaPacientes() {
         ))}
         {!pacientesFiltrados.length ? <p className="px-1 py-6 text-sm text-texto-suave">Nenhum paciente encontrado com estes filtros.</p> : null}
       </div>
+
+      <nav className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" aria-label="Paginacao de pacientes">
+        <p className="text-sm text-texto-suave" aria-live="polite">
+          Pagina {pagina} de {totalPaginas} | {dados?.total ?? 0} pacientes
+        </p>
+        <div className="flex gap-2">
+          <Botao type="button" variante="secundario" onClick={() => setPagina((atual) => Math.max(1, atual - 1))} disabled={pagina <= 1 || carregando}>
+            Anterior
+          </Botao>
+          <Botao type="button" variante="secundario" onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))} disabled={pagina >= totalPaginas || carregando}>
+            Proxima
+          </Botao>
+        </div>
+      </nav>
 
       <ModalConfirmacao
         aberto={pacienteParaArquivar !== null}

@@ -74,7 +74,9 @@ function criarServico(dados: Record<string, unknown>) {
 
   return {
     servico: new ServicoComunicacoes(executorTenant as never, fila as never, {
-      criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`))
+      criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`)),
+      descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8').replace('cripto:', '')),
+      gerarHashesBuscaPii: jest.fn(() => ['hash-busca'])
     } as never),
     fila,
     repositorios
@@ -201,7 +203,7 @@ describe('ServicoComunicacoes', () => {
       payload: { destino: '5511992362080', observacao: 'Resposta' }
     };
     const { servico, repositorios } = criarServico({
-      paciente: { id: 'paciente-1', tenantId: 'tenant-1' },
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1', nomeCriptografado: Buffer.from('cripto:Ana') },
       mensagens: [mensagemRecebida, mensagemEnviada, { id: 'mensagem-3', tenantId: 'tenant-1', payload: { remetente: '5511888888888' } }]
     });
 

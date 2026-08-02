@@ -22,6 +22,7 @@ import {
   incluirPerguntaBiblioteca,
   listarBibliotecaPerguntas,
   listarPerguntas,
+  listarQuestionarios,
   obterLeituraClinicaQuestionario,
   obterMatrizLongitudinalRespostas,
   reordenarPerguntas
@@ -114,6 +115,9 @@ export function useWorkspaceQuestionarios() {
   const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
   const [pacientes, setPacientes] = useState<PacienteResumo[]>([]);
   const [questionarios, setQuestionarios] = useState<QuestionarioApi[]>([]);
+  const [buscaQuestionarios, setBuscaQuestionarios] = useState('');
+  const [paginaQuestionarios, setPaginaQuestionarios] = useState(1);
+  const [totalQuestionarios, setTotalQuestionarios] = useState(0);
   const [modelos, setModelos] = useState<ModeloQuestionarioApi[]>([]);
   const [questionarioAtual, setQuestionarioAtual] = useState<QuestionarioApi | null>(null);
   const [perguntas, setPerguntas] = useState<PerguntaEditor[]>([]);
@@ -238,8 +242,8 @@ export function useWorkspaceQuestionarios() {
     }
   }
 
-  async function selecionarQuestionario(questionario: QuestionarioApi | null) {
-    if (questionario?.id !== questionarioAtual?.id && !confirmarTrocaComAlteracoesPendentes()) return;
+  async function selecionarQuestionario(questionario: QuestionarioApi | null, confirmacaoRealizada = false) {
+    if (questionario?.id !== questionarioAtual?.id && !confirmacaoRealizada && !confirmarTrocaComAlteracoesPendentes()) return;
     if (!questionario) {
       setQuestionarioAtual(null);
       setTitulo('');
@@ -274,6 +278,7 @@ export function useWorkspaceQuestionarios() {
       setProfissionais(bootstrap.profissionais);
       setPacientes(bootstrap.pacientes);
       setQuestionarios(bootstrap.questionarios.itens);
+      setTotalQuestionarios(bootstrap.questionarios.total);
       setModelos(bootstrap.modelos);
       setBibliotecaPerguntas(biblioteca);
       setPacienteAgendamentoId(bootstrap.pacientes[0]?.id ?? '');
@@ -297,6 +302,24 @@ export function useWorkspaceQuestionarios() {
     }
   }
 
+  async function carregarPaginaQuestionarios(pagina: number, busca = buscaQuestionarios) {
+    if (!confirmarTrocaComAlteracoesPendentes()) return;
+    setCarregando(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const resposta = await listarQuestionarios({ pagina, limite: 25, busca: busca.trim() || undefined });
+      setQuestionarios(resposta.itens);
+      setTotalQuestionarios(resposta.total);
+      setPaginaQuestionarios(pagina);
+      await selecionarQuestionario(resposta.itens[0] ?? null, true);
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar questionarios.');
+    } finally {
+      setCarregando(false);
+    }
+  }
+
   async function criarNovoQuestionario() {
     const profissionalId = profissionais[0]?.id;
     if (!profissionalId) {
@@ -312,6 +335,7 @@ export function useWorkspaceQuestionarios() {
       const criado = await criarQuestionario({ profissionalId, titulo, descricao });
       const atualizados = [criado, ...questionarios];
       setQuestionarios(atualizados);
+      setTotalQuestionarios((total) => total + 1);
       await selecionarQuestionario(criado);
       setSucesso('Questionario criado.');
     } catch (erroAtual) {
@@ -351,6 +375,7 @@ export function useWorkspaceQuestionarios() {
     try {
       const duplicado = await duplicarQuestionario(questionarioAtual.id);
       setQuestionarios((atuais) => [duplicado, ...atuais]);
+      setTotalQuestionarios((total) => total + 1);
       await selecionarQuestionario(duplicado);
       setSucesso('Questionario duplicado.');
     } catch (erroAtual) {
@@ -374,6 +399,7 @@ export function useWorkspaceQuestionarios() {
     try {
       const criado = await criarQuestionarioAPartirModelo(modelo.id, { profissionalId });
       setQuestionarios((atuais) => [criado, ...atuais]);
+      setTotalQuestionarios((total) => total + 1);
       await selecionarQuestionario(criado);
       setSucesso(`Modelo aplicado: ${modelo.titulo}.`);
     } catch (erroAtual) {
@@ -690,6 +716,10 @@ export function useWorkspaceQuestionarios() {
     profissionais,
     pacientes,
     questionarios,
+    buscaQuestionarios,
+    setBuscaQuestionarios,
+    paginaQuestionarios,
+    totalQuestionarios,
     modelos,
     questionarioAtual,
     perguntas,
@@ -757,6 +787,7 @@ export function useWorkspaceQuestionarios() {
     carregarMatrizLongitudinal,
     selecionarQuestionario,
     carregar,
+    carregarPaginaQuestionarios,
     criarNovoQuestionario,
     salvarQuestionario,
     duplicarAtual,

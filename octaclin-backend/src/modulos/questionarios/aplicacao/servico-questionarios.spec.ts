@@ -59,11 +59,12 @@ function criarRepositorioFake(
     findOne: jest.fn(async (consulta: { where: Record<string, unknown> }) =>
       itens.find((item) => Object.entries(consulta.where).every(([chave, valor]) => corresponde(item[chave], valor))) ?? null
     ),
-    findAndCount: jest.fn(async (consulta?: { where?: Record<string, unknown> }) => {
+    findAndCount: jest.fn(async (consulta?: { where?: Record<string, unknown>; skip?: number; take?: number }) => {
       const filtrados = consulta?.where
         ? itens.filter((item) => Object.entries(consulta.where ?? {}).every(([chave, valor]) => corresponde(item[chave], valor)))
         : [...itens];
-      return [filtrados, filtrados.length];
+      const inicio = consulta?.skip ?? 0;
+      return [filtrados.slice(inicio, inicio + (consulta?.take ?? filtrados.length)), filtrados.length];
     }),
     save: jest.fn(async (entrada: Record<string, any> | Record<string, any>[]) => {
       if (Array.isArray(entrada)) return Promise.all(entrada.map((item) => salvar(item)));
@@ -107,6 +108,15 @@ function criarRepositorioFake(
     ) {
       const valores = (valorConsulta as { _value?: unknown[] })._value ?? [];
       return valores.includes(valorItem);
+    }
+    if (
+      valorConsulta &&
+      typeof valorConsulta === 'object' &&
+      '_type' in valorConsulta &&
+      (valorConsulta as { _type?: string })._type === 'ilike'
+    ) {
+      const trecho = String((valorConsulta as { _value?: unknown })._value ?? '').replaceAll('%', '').toLocaleLowerCase('pt-BR');
+      return String(valorItem ?? '').toLocaleLowerCase('pt-BR').includes(trecho);
     }
     if (
       valorConsulta &&
@@ -1095,6 +1105,23 @@ describe('ServicoQuestionarios', () => {
       const resultado = await servico.listarQuestionarios('tenant-1', usuarioProfissional);
 
       expect(resultado.itens.map((item) => item.id)).toEqual(['q-meu']);
+    });
+
+    it('deve buscar titulo e paginar questionarios no servidor', async () => {
+      const { servico } = criarServico(
+        dadosBase({
+          questionarios: [
+            { id: 'q-1', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Adesao inicial', versao: 1 },
+            { id: 'q-2', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Adesao semanal', versao: 1 },
+            { id: 'q-3', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Sono', versao: 1 }
+          ]
+        })
+      );
+
+      const resultado = await servico.listarQuestionarios('tenant-1', usuarioProfissional, 2, 1, 'adesao');
+
+      expect(resultado.total).toBe(2);
+      expect(resultado.itens.map((item) => item.id)).toEqual(['q-2']);
     });
 
     it('deve tratar questionario de outro profissional como nao encontrado ao atualizar', async () => {

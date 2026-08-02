@@ -120,6 +120,7 @@ async function executarSeed() {
         usuarioId: ids.usuarioPaciente,
         profissionalResponsavelId: ids.profissional,
         nomeCriptografado: criptografia.criptografar('Paciente Demo'),
+        buscaHashes: criptografia.gerarHashesBuscaPii(ids.tenant, ['Paciente Demo', '+55 11 90000-0000']),
         contatoCriptografado: criptografia.criptografar('+55 11 90000-0000'),
         dataNascimento: '1992-04-18',
         statusAdesao: 'em_acompanhamento',

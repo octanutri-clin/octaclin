@@ -5,8 +5,13 @@ export async function GET(request: NextRequest) {
   try {
     const pagina = request.nextUrl.searchParams.get('pagina') ?? '1';
     const limite = request.nextUrl.searchParams.get('limite') ?? '25';
+    const parametros = new URLSearchParams({ pagina, limite });
+    for (const nome of ['busca', 'risco', 'profissionalId', 'status', 'semProximaConsulta']) {
+      const valor = request.nextUrl.searchParams.get(nome);
+      if (valor) parametros.set(nome, valor);
+    }
     const resposta = await requisitarBackendAutenticado(
-      `/pacientes?pagina=${encodeURIComponent(pagina)}&limite=${encodeURIComponent(limite)}`
+      `/pacientes?${parametros}`
     );
     return new NextResponse(await resposta.text(), {
       status: resposta.status,

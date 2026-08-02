@@ -157,6 +157,7 @@ async function executarSeed() {
           usuarioId: paciente.usuarioId,
           profissionalResponsavelId: paciente.profissionalResponsavelId,
           nomeCriptografado: criptografia.criptografar(paciente.nome),
+          buscaHashes: criptografia.gerarHashesBuscaPii(fixture.tenant.id, [paciente.nome, paciente.contato]),
           contatoCriptografado: paciente.contato ? criptografia.criptografar(paciente.contato) : undefined,
           dataNascimento: paciente.dataNascimento,
           statusAdesao: paciente.statusAdesao,

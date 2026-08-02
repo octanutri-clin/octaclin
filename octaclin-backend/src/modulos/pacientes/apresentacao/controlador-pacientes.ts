@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   ParseUUIDPipe,
   Patch,
   Post,
@@ -19,7 +18,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto } from '../aplicacao/dtos';
+import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ListarPacientesDto } from '../aplicacao/dtos';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
 
 @Controller('pacientes')
@@ -58,10 +57,15 @@ export class ControladorPacientes {
   async listar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
-    @Query('pagina', new ParseIntPipe({ optional: true })) pagina = 1,
-    @Query('limite', new ParseIntPipe({ optional: true })) limite = 25
+    @Query() filtros: ListarPacientesDto
   ) {
-    const resultado = await this.servicoPacientes.listar(usuario.tenantId, usuario, pagina, limite);
+    const resultado = await this.servicoPacientes.listar(
+      usuario.tenantId,
+      usuario,
+      filtros.pagina,
+      filtros.limite,
+      filtros
+    );
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -69,7 +73,7 @@ export class ControladorPacientes {
       recursoTipo: 'paciente',
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
-      metadados: { pagina, limite, total: resultado.total }
+      metadados: { pagina: filtros.pagina, limite: filtros.limite, total: resultado.total }
     });
     return resultado;
   }

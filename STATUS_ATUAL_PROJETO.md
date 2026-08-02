@@ -10,8 +10,9 @@ Atualizado em 2026-08-02.
 - Ultima fase concluida: Fase 198 - validacao final de usabilidade e
   consolidacao visual, aceita pelo usuario em 2026-08-02. Os gates tecnicos do
   ciclo permanecem rastreados nas Fases 191 a 197 e em
-  `TESTES_E_VALIDACOES.md`. Proxima fase: Fase 199 - busca, filtros e paginacao
-  server-side.
+  `TESTES_E_VALIDACOES.md`. A Fase 199 - busca, filtros e paginacao server-side
+  esta implementada e validada localmente; permanece aberta ate migration,
+  backfill e ensaio de 500 pacientes em banco explicitamente confirmado.
 - Fase 194: formularios, editor e leitura longitudinal (2026-08-01). O editor
   de questionarios (1593 linhas
   monoliticas) foi dividido em 5 areas (Formularios/Editor/Biblioteca/

@@ -20,6 +20,9 @@ export class PacienteOrm {
   @Column({ name: 'contato_criptografado', type: 'bytea', nullable: true })
   contatoCriptografado?: Buffer;
 
+  @Column({ name: 'busca_hashes', type: 'text', array: true, default: () => "'{}'::text[]" })
+  buscaHashes: string[];
+
   @Column({ name: 'data_nascimento', type: 'date', nullable: true })
   dataNascimento?: string;
 

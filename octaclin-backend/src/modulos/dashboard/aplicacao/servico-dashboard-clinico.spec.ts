@@ -63,6 +63,7 @@ function paciente(
     tenantId: 'tenant-1',
     profissionalResponsavelId,
     nomeCriptografado: Buffer.from(`nome-${id}`),
+    buscaHashes: [],
     statusAdesao: 'em_acompanhamento',
     scoreRisco: '10',
     criadoEm: diasAntes(criadoHaDias),

@@ -106,7 +106,8 @@ function criarServico(dados: Record<string, any>) {
   };
   const criptografia = {
     descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8').replace('cripto:', '')),
-    criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`))
+    criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`)),
+    gerarHashesBuscaPii: jest.fn(() => ['hash-busca'])
   };
 
   return { servico: new ServicoPortalPaciente(executorTenant as never, criptografia as never), repositorios };

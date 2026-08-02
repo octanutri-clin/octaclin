@@ -136,6 +136,10 @@ export class ServicoComunicacoes {
       const contatoPacienteAtualizado = Boolean(dados.atualizarContatoPaciente && !paciente.contatoCriptografado);
       if (contatoPacienteAtualizado) {
         paciente.contatoCriptografado = this.criptografia.criptografar(dados.contato);
+        paciente.buscaHashes = this.criptografia.gerarHashesBuscaPii(tenantId, [
+          this.criptografia.descriptografar(paciente.nomeCriptografado),
+          dados.contato
+        ]);
         await repositorioPacientes.save(paciente);
       }
 
