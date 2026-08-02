@@ -1,8 +1,8 @@
 # Fase 200 - Upload seguro e anexos clinicos
 
 Status: codigo integrado e publicado em producao, migration `1014` aplicada em
-producao e bucket B2 operacional; migration de integracao e smoke autenticado
-pela interface pendentes.
+producao, bucket B2 operacional e smoke autenticado aprovado; somente a
+migration de integracao permanece pendente.
 
 ## Entregue no codigo
 
@@ -72,9 +72,6 @@ pela interface pendentes.
 
 1. Repetir a migration `1014` no banco de integracao explicitamente
    identificado; producao ja foi aplicada e confirmada.
-2. Validar upload, abertura e exclusao reais com arquivo sintetico no
-   prontuario e em formulario publico.
-3. Reexecutar login e smoke autenticado de producao.
 
 ## Rollout de producao
 
@@ -85,6 +82,16 @@ pela interface pendentes.
 - CI da `main` aprovado nos cinco jobs: backend, web, mobile, IA e demo local
   smoke. O demo foi alinhado para listar somente arquivos confirmados.
 - Scanner local de secrets aprovado sem credenciais reais no repositorio.
+- O primeiro smoke de interface revelou que o contrato ainda devolvia
+  `If-None-Match` mesmo quando a assinatura o omitia. A fonte compartilhada foi
+  corrigida no PR `#14`, merge `9e2478b`, com 22 testes focados, typecheck,
+  build e os cinco jobs do CI aprovados; o backend ficou `Live` nesse merge.
+- Smoke autenticado final aprovado no prontuario: solicitacao `201`, `PUT` B2
+  `200`, confirmacao `201`, exibicao na aba Anexos, abertura assinada, download
+  integro e exclusao pela confirmacao da interface.
+- Smoke publico aprovado com formulario sintetico: abertura `200`, solicitacao
+  `201`, contrato sem `If-None-Match`, `PUT` B2 `200` e confirmacao `201`. O
+  anexo foi excluido e o formulario tecnico foi arquivado.
 
 ## Evidencia do provedor
 
@@ -94,3 +101,5 @@ pela interface pendentes.
 - Lifecycle relido pela API com prefixo exclusivo `pendentes/` e prazos `1/1`.
 - Smoke sintetico confirmou `PUT`, `HEAD`, copia com metadados, download
   assinado, integridade byte a byte e exclusao; objetos de teste removidos.
+- Os smokes autenticado e publico de producao repetiram o ciclo completo pelo
+  BFF e deixaram a lista final do paciente sem anexos sinteticos.
