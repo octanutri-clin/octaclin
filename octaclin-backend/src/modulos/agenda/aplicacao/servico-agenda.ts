@@ -5,7 +5,6 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { resolverPacienteIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-paciente';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { ProcessadorNotificacoes } from '../../comunicacoes/aplicacao/processador-notificacoes';
 import { ServicoComunicacoes } from '../../comunicacoes/aplicacao/servico-comunicacoes';
 import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
 import { TemplateMensagemOrm } from '../../comunicacoes/infraestrutura/template-mensagem.orm';
@@ -77,7 +76,6 @@ export class ServicoAgenda {
     private readonly criptografia: CriptografiaDadosSensiveis,
     private readonly googleCalendar: ServicoGoogleCalendar,
     private readonly comunicacoes: ServicoComunicacoes,
-    private readonly processadorNotificacoes: ProcessadorNotificacoes,
     private readonly servicoConexao: ServicoConexaoGoogleCalendar
   ) {}
 
@@ -712,8 +710,8 @@ export class ServicoAgenda {
         templateId: template.id,
         payload
       });
-      await this.processadorNotificacoes.processarMensagem(tenantId, mensagem.id, { propagarErro: false });
-      return { status: 'enviado', mensagemId: mensagem.id };
+      await this.comunicacoes.publicarEventoNotificacao(tenantId, mensagem.id);
+      return { status: 'pendente', mensagemId: mensagem.id };
     } catch (erro) {
       return { status: 'falhou', erro: erro instanceof Error ? erro.message : 'Falha ao disparar notificacao.' };
     }

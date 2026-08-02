@@ -160,10 +160,8 @@ function criarServico(dados: Record<string, unknown> = {}) {
     ]),
     dispararMensagem: jest.fn(async (_tenantId: string, entrada: { canalId: string }) => ({
       id: entrada.canalId === 'canal-email' ? 'mensagem-email' : 'mensagem-whatsapp'
-    }))
-  };
-  const processador = {
-    processarMensagem: jest.fn(async () => undefined)
+    })),
+    publicarEventoNotificacao: jest.fn(async () => undefined)
   };
   const servicoConexao = {
     obterConexaoAtiva: jest.fn(async () => (dados.credenciaisGoogle as unknown) ?? undefined)
@@ -175,13 +173,11 @@ function criarServico(dados: Record<string, unknown> = {}) {
       criptografia,
       googleCalendar as never,
       comunicacoes as never,
-      processador as never,
       servicoConexao as never
     ),
     repositorios,
     googleCalendar,
     comunicacoes,
-    processador,
     servicoConexao
   };
 }
@@ -373,7 +369,7 @@ describe('ServicoAgenda', () => {
   });
 
   it('deve criar consulta, sincronizar Google Calendar e disparar notificacoes', async () => {
-    const { servico, repositorios, googleCalendar, comunicacoes, processador } = criarServico({
+    const { servico, repositorios, googleCalendar, comunicacoes } = criarServico({
       paciente: {
         id: 'paciente-1',
         tenantId: 'tenant-1',
@@ -446,11 +442,11 @@ describe('ServicoAgenda', () => {
         })
       })
     );
-    expect(processador.processarMensagem).toHaveBeenCalledWith('tenant-1', 'mensagem-email', { propagarErro: false });
-    expect(processador.processarMensagem).toHaveBeenCalledWith('tenant-1', 'mensagem-whatsapp', { propagarErro: false });
+    expect(comunicacoes.publicarEventoNotificacao).toHaveBeenCalledWith('tenant-1', 'mensagem-email');
+    expect(comunicacoes.publicarEventoNotificacao).toHaveBeenCalledWith('tenant-1', 'mensagem-whatsapp');
     expect(consulta.googleEventId).toBe('event-1');
-    expect(consulta.notificacoes.email).toEqual(expect.objectContaining({ status: 'enviado' }));
-    expect(consulta.notificacoes.whatsapp).toEqual(expect.objectContaining({ status: 'enviado' }));
+    expect(consulta.notificacoes.email).toEqual(expect.objectContaining({ status: 'pendente' }));
+    expect(consulta.notificacoes.whatsapp).toEqual(expect.objectContaining({ status: 'pendente' }));
   });
 
   it('deve resolver credenciais Google do profissional conectado e repassar ao criar evento no Google Calendar', async () => {
@@ -1305,7 +1301,6 @@ describe('ServicoAgenda', () => {
         { descriptografar: jest.fn() } as never,
         {} as never,
         {} as never,
-        {} as never,
         { obterConexaoAtiva: jest.fn(async () => undefined) } as never
       );
 
@@ -1352,7 +1347,6 @@ describe('ServicoAgenda', () => {
           )
         } as never,
         { descriptografar: jest.fn() } as never,
-        {} as never,
         {} as never,
         {} as never,
         { obterConexaoAtiva: jest.fn(async () => undefined) } as never

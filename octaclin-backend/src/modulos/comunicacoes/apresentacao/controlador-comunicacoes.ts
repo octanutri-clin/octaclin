@@ -13,7 +13,6 @@ import {
   DispararMensagemDto,
   RegistrarNotaWhatsappDto
 } from '../aplicacao/dtos';
-import { ProcessadorNotificacoes } from '../aplicacao/processador-notificacoes';
 import { ServicoComunicacoes } from '../aplicacao/servico-comunicacoes';
 
 @Controller('comunicacoes')
@@ -23,7 +22,6 @@ import { ServicoComunicacoes } from '../aplicacao/servico-comunicacoes';
 export class ControladorComunicacoes {
   constructor(
     private readonly servicoComunicacoes: ServicoComunicacoes,
-    private readonly processadorNotificacoes: ProcessadorNotificacoes,
     private readonly servicoAuditoria: ServicoAuditoria
   ) {}
 
@@ -89,7 +87,7 @@ export class ControladorComunicacoes {
     @Body() dados: DispararMensagemDto
   ) {
     const mensagem = await this.servicoComunicacoes.dispararMensagem(usuario.tenantId, dados);
-    await this.processadorNotificacoes.processarMensagem(usuario.tenantId, mensagem.id, { propagarErro: false });
+    await this.servicoComunicacoes.publicarEventoNotificacao(usuario.tenantId, mensagem.id);
     const mensagemAtualizada = await this.servicoComunicacoes.obterMensagem(usuario.tenantId, mensagem.id);
     await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.mensagem.disparar', 'mensagem_notificacao', mensagem.id, {
       pacienteId: dados.pacienteId,

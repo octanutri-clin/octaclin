@@ -12,6 +12,10 @@ Atualizado em 2026-08-02.
   a exclusao foram validados em producao. A migration `1014` esta aplicada em
   producao e no banco de integracao `octaclin_test_fase150b`, com historico de
   27 de 27 migrations executadas.
+- Fase 201: implementacao local concluida em 2026-08-02. O rollout ainda exige
+  separar o backend Render como `web` e criar um `worker` com Redis compartilhado
+  antes de permitir escala horizontal; ver
+  `fase-201-confiabilidade-processadores-multiplas-instancias.md`.
 - Fase 194: formularios, editor e leitura longitudinal (2026-08-01). O editor
   de questionarios (1593 linhas
   monoliticas) foi dividido em 5 areas (Formularios/Editor/Biblioteca/
@@ -166,6 +170,6 @@ Atualizado em 2026-08-02.
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
-Proxima pendencia tecnica: Fase 201 - confiabilidade dos processadores em
-multiplas instancias. Antes de escalar o backend, filas e agendadores precisam
-garantir idempotencia e no maximo um efeito externo por evento concorrente.
+Proxima pendencia tecnica: rollout da Fase 201 no Render. Antes de escalar o
+backend, separar os papeis `web` e `worker` e registrar a entrega sintetica
+unica exigida pelo aceite.

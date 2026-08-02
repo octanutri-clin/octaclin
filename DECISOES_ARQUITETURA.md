@@ -114,3 +114,14 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
   lifecycle do provedor remove temporarios abandonados.
 - Consequencia: o backend le arquivos de ate 25 MB na confirmacao. Streaming e
   antivirus dedicado so entram quando volume ou risco medido exigirem.
+
+## ADR-019 - Processadores distribuidos
+
+- Decisao: separar HTTP e processamento assincrono pelo papel
+  `OCTACLIN_PROCESSO`; `web` recebe requisicoes e `worker` consome filas e
+  cron. `all` e apenas compatibilidade local/transitoria.
+- Protecao: comunicacoes/outbox/automacoes usam reivindicacao persistente antes
+  de processar; Google Calendar usa exclusao transacional por profissional.
+- Consequencia: Redis e obrigatorio para worker em producao. Nao escalar o
+  papel `web` enquanto o worker e a validacao de entrega unica nao estiverem
+  configurados no ambiente.

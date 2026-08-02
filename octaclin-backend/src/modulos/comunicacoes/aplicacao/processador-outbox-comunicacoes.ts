@@ -62,9 +62,14 @@ export class ProcessadorOutboxComunicacoes {
     evento: OutboxEventoOrm
   ): Promise<void> {
     try {
+      const reivindicacao = await repositorio.update(
+        { id: evento.id, tenantId, status: 'pendente', processadoEm: IsNull() },
+        { status: 'processando', tentativas: evento.tentativas + 1 }
+      );
+      if (!reivindicacao.affected) return;
+
       evento.status = 'processando';
       evento.tentativas += 1;
-      await repositorio.save(evento);
       const mensagemId = String(evento.payload.mensagemId);
       if (this.deveProcessarDiretamente()) {
         await this.processadorNotificacoes.processarMensagem(tenantId, mensagemId);

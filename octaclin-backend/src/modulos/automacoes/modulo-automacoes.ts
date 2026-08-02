@@ -15,6 +15,9 @@ import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm'
 import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
 import { ExecucaoRegraOrm } from './infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from './infraestrutura/regra-automacao.orm';
+import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
+
+const processadores = deveExecutarProcessadores() ? [ProcessadorAutomacoes, ProcessadorLembretesAgenda] : [];
 
 @Module({
   imports: [
@@ -25,7 +28,7 @@ import { RegraAutomacaoOrm } from './infraestrutura/regra-automacao.orm';
     ModuloComunicacoes
   ],
   controllers: [ControladorAutomacoes],
-  providers: [ServicoAutomacoes, ServicoLembretesAgenda, ProcessadorAutomacoes, ProcessadorLembretesAgenda, ServicoAuditoria],
+  providers: [ServicoAutomacoes, ServicoLembretesAgenda, ...processadores, ServicoAuditoria],
   exports: [ServicoAutomacoes, ServicoLembretesAgenda]
 })
 export class ModuloAutomacoes {}

@@ -5,6 +5,8 @@ import { InterceptorLogRequisicao } from './infraestrutura/observabilidade/inter
 import { middlewareCorrelacao } from './infraestrutura/observabilidade/middleware-correlacao';
 import { ModuloAplicacao } from './modulo-aplicacao';
 import { obterSegredoFormularioPublico } from './infraestrutura/seguranca/segredo-formulario-publico';
+import { obterPapelProcesso } from './infraestrutura/processamento/papel-processo';
+import { redisConfigurado } from './modulos/comunicacoes/aplicacao/configuracao-redis';
 
 function obterOrigensCors(): boolean | string[] {
   const valor = process.env.CORS_ORIGINS;
@@ -63,6 +65,14 @@ function validarCorsProducao() {
 }
 
 async function iniciarAplicacao() {
+  const papel = obterPapelProcesso();
+  if (process.env.NODE_ENV === 'production' && papel !== 'web' && !redisConfigurado()) {
+    throw new Error('REDIS_URL ou REDIS_HOST deve ser configurado para executar processadores em producao.');
+  }
+  if (papel === 'worker') {
+    await NestFactory.createApplicationContext(ModuloAplicacao);
+    return;
+  }
   const aplicacao = await NestFactory.create(ModuloAplicacao);
   const servidorHttp = aplicacao.getHttpAdapter().getInstance();
   servidorHttp.set('trust proxy', 1);

@@ -3,7 +3,6 @@ import { Between } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
-import { ProcessadorNotificacoes } from '../../comunicacoes/aplicacao/processador-notificacoes';
 import { ServicoComunicacoes } from '../../comunicacoes/aplicacao/servico-comunicacoes';
 import { TipoCanalNotificacao } from '../../comunicacoes/dominio/canal-notificacao';
 import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
@@ -18,7 +17,7 @@ type TipoCanalLembrete = Extract<TipoCanalNotificacao, 'email' | 'whatsapp'>;
 type CanalPreferidoPaciente = TipoCanalLembrete | 'qualquer';
 
 type ResultadoCanalLembrete =
-  | { status: 'enviado'; mensagemId: string }
+  | { status: 'pendente' | 'enviado'; mensagemId: string }
   | { status: 'ignorado'; motivo: string }
   | { status: 'falhou'; erro: string };
 
@@ -60,7 +59,6 @@ export class ServicoLembretesAgenda {
   constructor(
     private readonly executorTenant: ExecutorTenant,
     private readonly comunicacoes: ServicoComunicacoes,
-    private readonly processadorNotificacoes: ProcessadorNotificacoes,
     private readonly criptografia: CriptografiaDadosSensiveis
   ) {}
 
@@ -94,7 +92,7 @@ export class ServicoLembretesAgenda {
         whatsapp = await this.enviarLembrete(tenantId, 'whatsapp', consulta, canais, templates, preferencias);
       }
 
-      const status = email.status === 'enviado' || whatsapp.status === 'enviado' ? 'processado' : 'ignorado';
+      const status = email.status !== 'ignorado' || whatsapp.status !== 'ignorado' ? 'processado' : 'ignorado';
       const registro = {
         status,
         ...(motivo ? { motivo } : {}),
@@ -168,8 +166,8 @@ export class ServicoLembretesAgenda {
         templateId: template.id,
         payload: this.montarPayload(tipo, template, consulta, destino)
       });
-      await this.processadorNotificacoes.processarMensagem(tenantId, mensagem.id, { propagarErro: false });
-      return { status: 'enviado', mensagemId: mensagem.id };
+      await this.comunicacoes.publicarEventoNotificacao(tenantId, mensagem.id);
+      return { status: 'pendente', mensagemId: mensagem.id };
     } catch (erro) {
       return { status: 'falhou', erro: erro instanceof Error ? erro.message : 'Falha ao enviar lembrete.' };
     }

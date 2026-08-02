@@ -38,6 +38,7 @@ describe('inicializacao da aplicacao', () => {
     jest.resetModules();
     jest.clearAllMocks();
     process.env = { ...ambienteOriginal, NODE_ENV: 'production' };
+    process.env.OCTACLIN_PROCESSO = 'web';
     process.env.FORMULARIO_PUBLICO_SEGREDO = 'segredo-formulario-publico-32-bytes';
     delete process.env.CORS_ORIGINS;
     mockCriarAplicacao.mockResolvedValue(mockAplicacao);

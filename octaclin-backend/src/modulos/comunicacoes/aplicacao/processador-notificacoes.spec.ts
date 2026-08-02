@@ -16,6 +16,7 @@ function criarProcessador(adaptadorEmail: { enviar: jest.Mock }) {
   const canal = { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email' };
   const template = { id: 'template-1', tenantId: 'tenant-1', canal: 'email' };
   const repositorioMensagens = {
+    update: jest.fn(async () => ({ affected: 1 })),
     findOne: jest.fn(async () => mensagem),
     save: jest.fn(async (entrada: Record<string, unknown>) => entrada)
   };
@@ -78,5 +79,15 @@ describe('ProcessadorNotificacoes', () => {
     await expect(processador.processarMensagem('tenant-1', 'mensagem-1')).rejects.toThrow('SMTP indisponivel');
 
     expect(mensagem.status).toBe('falhou');
+  });
+
+  it('nao chama o adaptador quando outra instancia ja reivindicou a mensagem', async () => {
+    const adaptadorEmail = { enviar: jest.fn(async () => ({ idExterno: 'email-1' })) };
+    const { processador, repositorioMensagens } = criarProcessador(adaptadorEmail);
+    repositorioMensagens.update.mockResolvedValue({ affected: 0 });
+
+    await processador.processarMensagem('tenant-1', 'mensagem-1');
+
+    expect(adaptadorEmail.enviar).not.toHaveBeenCalled();
   });
 });

@@ -10,7 +10,6 @@ import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
 import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
 import { ProcessadorNotificacoes } from './aplicacao/processador-notificacoes';
 import { ProcessadorOutboxComunicacoes } from './aplicacao/processador-outbox-comunicacoes';
-import { criarConexaoRedis } from './aplicacao/configuracao-redis';
 import { FILA_NOTIFICACOES, ServicoComunicacoes } from './aplicacao/servico-comunicacoes';
 import { ServicoWebhookWhatsapp } from './aplicacao/servico-webhook-whatsapp';
 import { ControladorComunicacoes } from './apresentacao/controlador-comunicacoes';
@@ -21,12 +20,12 @@ import { AdaptadorWhatsAppMeta } from './infraestrutura/adaptadores/adaptador-wh
 import { CanalNotificacaoOrm } from './infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from './infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from './infraestrutura/template-mensagem.orm';
+import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
+
+const processadores = deveExecutarProcessadores() ? [ProcessadorNotificacoes, ProcessadorOutboxComunicacoes] : [];
 
 @Module({
   imports: [
-    BullModule.forRoot({
-      connection: criarConexaoRedis()
-    }),
     BullModule.registerQueue({ name: FILA_NOTIFICACOES }),
     TypeOrmModule.forFeature([
       CanalNotificacaoOrm,
@@ -45,12 +44,11 @@ import { TemplateMensagemOrm } from './infraestrutura/template-mensagem.orm';
     ServicoWebhookWhatsapp,
     ServicoAuditoria,
     CriptografiaDadosSensiveis,
-    ProcessadorNotificacoes,
-    ProcessadorOutboxComunicacoes,
+    ...processadores,
     AdaptadorWhatsAppMeta,
     AdaptadorEmailSmtp,
     AdaptadorPushPlaceholder
   ],
-  exports: [ServicoComunicacoes, ProcessadorNotificacoes]
+  exports: [ServicoComunicacoes]
 })
 export class ModuloComunicacoes {}

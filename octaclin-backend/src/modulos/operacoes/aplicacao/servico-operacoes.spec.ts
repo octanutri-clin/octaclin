@@ -242,8 +242,8 @@ function criarServico(
     )
   };
 
-  const processadorNotificacoes = {
-    processarMensagem: jest.fn(async () => undefined)
+  const comunicacoes = {
+    publicarEventoNotificacao: jest.fn(async () => undefined)
   };
   const googleCalendar = {
     criarEvento: jest.fn(async () => ({
@@ -282,13 +282,13 @@ function criarServico(
   return {
     servico: new ServicoOperacoes(
       executorTenant as never,
-      processadorNotificacoes as never,
+      comunicacoes as never,
       googleCalendar as never,
       servicoConexaoGoogle as never,
       servicoSaude as never
     ),
     repositorios,
-    processadorNotificacoes,
+    comunicacoes,
     googleCalendar,
     servicoConexaoGoogle,
     servicoSaude
@@ -517,14 +517,14 @@ describe('ServicoOperacoes', () => {
   });
 
   it('deve reprocessar mensagem falha pela central de comunicacao', async () => {
-    const { servico, repositorios, processadorNotificacoes } = criarServico();
+    const { servico, repositorios, comunicacoes } = criarServico();
 
     await servico.reprocessarFalhaComunicacao('tenant-1', 'mensagem:mensagem-email-1');
 
     expect(repositorios.mensagens.save).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'mensagem-email-1', status: 'pendente', erro: undefined, enviadoEm: undefined })
     );
-    expect(processadorNotificacoes.processarMensagem).toHaveBeenCalledWith('tenant-1', 'mensagem-email-1', { propagarErro: false });
+    expect(comunicacoes.publicarEventoNotificacao).toHaveBeenCalledWith('tenant-1', 'mensagem-email-1');
   });
 
   it('deve reprocessar falha de Google Calendar pela central de comunicacao', async () => {

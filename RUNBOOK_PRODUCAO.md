@@ -186,6 +186,19 @@ Acao:
 3. Validar logs do backend.
 4. Reprocessar outbox quando disponivel.
 
+### Topologia multi-instancia (Fase 201)
+
+- O servico HTTP usa `OCTACLIN_PROCESSO=web` e pode escalar horizontalmente.
+- Um unico Background Worker Render usa `OCTACLIN_PROCESSO=worker`; ele executa
+  consumidores BullMQ, lembretes e renovacao/reconciliacao Google Calendar.
+- Durante a transicao, `all` e somente compatibilidade. Nao escalar o backend
+  enquanto ele estiver nesse papel.
+- Web e worker compartilham o mesmo Redis e banco runtime, mas o worker nao
+  recebe dominio, health check HTTP ou CORS.
+- Antes de escalar web, validar uma notificacao sintetica com uma unica entrega
+  e outbox `processado`; registrar a evidencia em
+  `fase-201-confiabilidade-processadores-multiplas-instancias.md`.
+
 ## Email
 
 Provedores suportados:

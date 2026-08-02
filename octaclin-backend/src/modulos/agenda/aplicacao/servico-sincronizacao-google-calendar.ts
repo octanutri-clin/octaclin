@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { ServicoExclusaoProcessador } from '../../../infraestrutura/processamento/servico-exclusao-processador';
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
 import { GoogleCanalWatchOrm } from '../infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from '../infraestrutura/profissional-google-conexao.orm';
@@ -19,7 +20,8 @@ export class ServicoSincronizacaoGoogleCalendar {
     private readonly executorTenant: ExecutorTenant,
     private readonly servicoConexao: ServicoConexaoGoogleCalendar,
     private readonly googleCalendar: ServicoGoogleCalendar,
-    private readonly servicoAgenda: ServicoAgenda
+    private readonly servicoAgenda: ServicoAgenda,
+    private readonly exclusaoProcessador?: ServicoExclusaoProcessador
   ) {}
 
   async processarNotificacao(canalWatchId: string, tenantId: string): Promise<void> {
@@ -35,6 +37,13 @@ export class ServicoSincronizacaoGoogleCalendar {
   }
 
   async reconciliar(tenantId: string, profissionalId: string): Promise<void> {
+    if (!this.exclusaoProcessador) return this.reconciliarComExclusao(tenantId, profissionalId);
+    await this.exclusaoProcessador.executar(tenantId, `google-sync:${profissionalId}`, () =>
+      this.reconciliarComExclusao(tenantId, profissionalId)
+    );
+  }
+
+  async reconciliarComExclusao(tenantId: string, profissionalId: string): Promise<void> {
     const credenciais = await this.servicoConexao.obterConexaoAtiva(tenantId, profissionalId);
     if (!credenciais) return;
 

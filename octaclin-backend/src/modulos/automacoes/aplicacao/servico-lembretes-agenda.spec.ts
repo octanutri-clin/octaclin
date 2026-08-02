@@ -64,21 +64,18 @@ function criarServico(dados: Record<string, unknown> = {}) {
     ),
     dispararMensagem: jest.fn(async (_tenantId: string, entrada: { canalId: string }) => ({
       id: entrada.canalId === 'canal-email' ? 'mensagem-email' : 'mensagem-whatsapp'
-    }))
-  };
-  const processador = {
-    processarMensagem: jest.fn(async () => undefined)
+    })),
+    publicarEventoNotificacao: jest.fn(async () => undefined)
   };
   const criptografia = {
     descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8').replace('cripto:', ''))
   };
 
   return {
-    servico: new ServicoLembretesAgenda(executorTenant as never, comunicacoes as never, processador as never, criptografia as never),
+    servico: new ServicoLembretesAgenda(executorTenant as never, comunicacoes as never, criptografia as never),
     repositorioConsultas,
     repositorioPacientes,
     comunicacoes,
-    processador
   };
 }
 
@@ -101,7 +98,7 @@ describe('ServicoLembretesAgenda', () => {
         whatsappContato: '5511992362080'
       }
     };
-    const { servico, repositorioConsultas, comunicacoes, processador } = criarServico({ consultas: [consulta] });
+    const { servico, repositorioConsultas, comunicacoes } = criarServico({ consultas: [consulta] });
 
     const resultado = await servico.processarLembretesConsulta('tenant-1', new Date('2026-07-22T12:00:00.000Z'));
 
@@ -139,16 +136,16 @@ describe('ServicoLembretesAgenda', () => {
         })
       })
     );
-    expect(processador.processarMensagem).toHaveBeenCalledWith('tenant-1', 'mensagem-email', { propagarErro: false });
-    expect(processador.processarMensagem).toHaveBeenCalledWith('tenant-1', 'mensagem-whatsapp', { propagarErro: false });
+    expect(comunicacoes.publicarEventoNotificacao).toHaveBeenCalledWith('tenant-1', 'mensagem-email');
+    expect(comunicacoes.publicarEventoNotificacao).toHaveBeenCalledWith('tenant-1', 'mensagem-whatsapp');
     expect(repositorioConsultas.save).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'consulta-1',
         notificacoes: expect.objectContaining({
           lembrete24h: expect.objectContaining({
             status: 'processado',
-            email: { status: 'enviado', mensagemId: 'mensagem-email' },
-            whatsapp: { status: 'enviado', mensagemId: 'mensagem-whatsapp' }
+            email: { status: 'pendente', mensagemId: 'mensagem-email' },
+            whatsapp: { status: 'pendente', mensagemId: 'mensagem-whatsapp' }
           })
         })
       })
@@ -225,7 +222,7 @@ describe('ServicoLembretesAgenda', () => {
         notificacoes: expect.objectContaining({
           lembrete24h: expect.objectContaining({
             email: { status: 'ignorado', motivo: 'canal_nao_preferido' },
-            whatsapp: { status: 'enviado', mensagemId: 'mensagem-whatsapp' }
+            whatsapp: { status: 'pendente', mensagemId: 'mensagem-whatsapp' }
           })
         })
       })

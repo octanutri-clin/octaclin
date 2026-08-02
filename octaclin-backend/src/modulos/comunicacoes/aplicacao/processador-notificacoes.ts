@@ -1,6 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Job } from 'bullmq';
+import { In } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { FILA_NOTIFICACOES } from './servico-comunicacoes';
 import { AdaptadorEmailSmtp } from '../infraestrutura/adaptadores/adaptador-email-smtp';
@@ -45,14 +46,16 @@ export class ProcessadorNotificacoes extends WorkerHost {
 
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorioMensagens = gerenciador.getRepository(MensagemNotificacaoOrm);
+      const reivindicacao = await repositorioMensagens.update(
+        { id: mensagemId, tenantId, status: In(['pendente', 'falhou']) },
+        { status: 'processando' }
+      );
+      if (!reivindicacao.affected) return;
+
       const mensagem = await repositorioMensagens.findOne({
         where: { id: mensagemId, tenantId }
       });
       if (!mensagem) throw new NotFoundException('Mensagem de notificacao nao encontrada.');
-      if (mensagem.status === 'enviado') return;
-
-      mensagem.status = 'processando';
-      await repositorioMensagens.save(mensagem);
 
       try {
         const canal = await gerenciador.getRepository(CanalNotificacaoOrm).findOneByOrFail({

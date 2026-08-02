@@ -4,6 +4,7 @@ import type { TipoBloqueioManualAgenda } from '../infraestrutura/agenda-bloqueio
 import type { ResultadoGoogleCalendar } from './servico-google-calendar';
 
 export type ResultadoNotificacaoAgenda =
+  | { status: 'pendente'; mensagemId: string }
   | { status: 'enviado'; mensagemId: string }
   | { status: 'ignorado'; motivo: string }
   | { status: 'falhou'; erro: string };

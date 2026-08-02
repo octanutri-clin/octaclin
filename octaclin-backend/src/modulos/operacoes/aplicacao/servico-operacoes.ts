@@ -9,7 +9,7 @@ import { ServicoConexaoGoogleCalendar } from '../../agenda/aplicacao/servico-con
 import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from '../../agenda/aplicacao/servico-google-calendar';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { PlanoSaasId, resolverPlanoSaas } from '../../clientes/dominio/planos-saas';
-import { ProcessadorNotificacoes } from '../../comunicacoes/aplicacao/processador-notificacoes';
+import { ServicoComunicacoes } from '../../comunicacoes/aplicacao/servico-comunicacoes';
 import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
@@ -261,7 +261,7 @@ export interface ResultadoAlertasOperacionais {
 export class ServicoOperacoes {
   constructor(
     private readonly executorTenant: ExecutorTenant,
-    private readonly processadorNotificacoes: ProcessadorNotificacoes,
+    private readonly comunicacoes: ServicoComunicacoes,
     private readonly googleCalendar: ServicoGoogleCalendar,
     private readonly servicoConexaoGoogle: ServicoConexaoGoogleCalendar,
     private readonly servicoSaude: ServicoSaude
@@ -970,7 +970,7 @@ export class ServicoOperacoes {
       mensagem.erro = undefined;
       mensagem.enviadoEm = undefined;
       await repositorio.save(mensagem);
-      await this.processadorNotificacoes.processarMensagem(tenantId, mensagem.id, { propagarErro: false });
+      await this.comunicacoes.publicarEventoNotificacao(tenantId, mensagem.id);
 
       const canal = mensagem.canalId
         ? await gerenciador.getRepository(CanalNotificacaoOrm).findOne({ where: { id: mensagem.canalId, tenantId } })

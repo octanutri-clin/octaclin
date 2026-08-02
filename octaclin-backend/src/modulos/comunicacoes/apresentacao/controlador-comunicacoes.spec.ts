@@ -14,7 +14,7 @@ describe('ControladorComunicacoes', () => {
         }
       ])
     };
-    const controlador = new ControladorComunicacoes(servico as never, {} as never, {} as never);
+    const controlador = new ControladorComunicacoes(servico as never, {} as never);
 
     const resposta = await controlador.listarCanais({ tenantId: 'tenant-1' } as never);
 
@@ -28,11 +28,11 @@ describe('ControladorComunicacoes', () => {
     const mensagemAtualizada = { id: 'mensagem-1', status: 'falhou' };
     const servico = {
       dispararMensagem: jest.fn(async () => mensagemCriada),
+      publicarEventoNotificacao: jest.fn(async () => undefined),
       obterMensagem: jest.fn(async () => mensagemAtualizada)
     };
-    const processador = { processarMensagem: jest.fn(async () => undefined) };
     const auditoria = { registrar: jest.fn(async () => undefined) };
-    const controlador = new ControladorComunicacoes(servico as never, processador as never, auditoria as never);
+    const controlador = new ControladorComunicacoes(servico as never, auditoria as never);
 
     const resposta = await controlador.dispararMensagem(
       { tenantId: 'tenant-1', usuarioId: 'usuario-1' } as never,
@@ -41,6 +41,7 @@ describe('ControladorComunicacoes', () => {
     );
 
     expect(resposta).toBe(mensagemAtualizada);
+    expect(servico.publicarEventoNotificacao).toHaveBeenCalledWith('tenant-1', 'mensagem-1');
     expect(auditoria.registrar).toHaveBeenCalledWith(
       expect.objectContaining({ metadados: expect.objectContaining({ status: 'falhou' }) })
     );

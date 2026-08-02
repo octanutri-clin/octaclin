@@ -14,17 +14,21 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
   Quando Google Calendar estiver configurado, tambem exige
   `GOOGLE_CALENDAR_OAUTH_STATE_SECRET` com pelo menos 32 bytes;
   `CORS_ORIGINS` nao pode conter `*`.
+- Na Fase 201, processos que executam filas em producao tambem exigem Redis e
+  devem receber papel explicito antes de escalar: `web` para HTTP e `worker`
+  para consumidores/cron.
 
 ## Backend
 
 | Variavel | Obrigatoria | Uso | Onde configurar | Como validar |
 | --- | --- | --- | --- | --- |
 | `NODE_ENV` | Sim | Ambiente (`development`, `production`) | Render/backend | Logs e comportamento de producao |
+| `OCTACLIN_PROCESSO` | Sim no rollout multi-instancia | `web`, `worker` ou `all` (somente compatibilidade/local) | Render/backend e worker | HTTP nao consome jobs; worker nao abre porta HTTP |
 | `PORT` | Sim | Porta do backend | Render/backend | `/health` responde |
 | `CORS_ORIGINS` | Sim em producao | Origens web autorizadas, separadas por virgula e sem `*` | Render/backend | Login/BFF funciona apenas pela origem oficial |
 | `DATABASE_URL` | Sim | Conexao Neon/Postgres por papel sem `BYPASSRLS` | Render/backend | `/health`, login, migrations e RLS |
 | `BANCO_EXECUTAR_MIGRACOES` | Depende | Executar migrations automaticamente | Render/backend | Deploy sem erro de migration |
-| `REDIS_URL` | Recomendado | Filas/outbox/cache | Render/backend | Comunicacoes processam |
+| `REDIS_URL` | Sim para worker em producao | Filas/outbox/cache | Render/backend e worker | Comunicacoes processam |
 | `JWT_SEGREDO` | Sim | Assinatura access token | Render/backend | Login funciona |
 | `JWT_REFRESH_SEGREDO` | Sim | Assinatura refresh token | Render/backend | Renovacao de sessao funciona |
 | `CRIPTOGRAFIA_CHAVE_AES_256` | Sim | Criptografia de PII | Render/backend | Dados sensiveis salvam/leem |

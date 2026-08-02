@@ -23,13 +23,16 @@ export class ProcessadorAutomacoes extends WorkerHost {
   async process(job: Job<JobAutomacao>): Promise<void> {
     await this.executorTenant.executar(job.data.tenantId, async (gerenciador) => {
       const repositorioExecucoes = gerenciador.getRepository(ExecucaoRegraOrm);
+      const reivindicacao = await repositorioExecucoes.update(
+        { id: job.data.execucaoId, tenantId: job.data.tenantId, status: 'pendente' },
+        { status: 'processando' }
+      );
+      if (!reivindicacao.affected) return;
+
       const execucao = await repositorioExecucoes.findOne({
         where: { id: job.data.execucaoId, tenantId: job.data.tenantId }
       });
       if (!execucao) throw new NotFoundException('Execucao de regra nao encontrada.');
-
-      execucao.status = 'processando';
-      await repositorioExecucoes.save(execucao);
 
       const regra = await gerenciador.getRepository(RegraAutomacaoOrm).findOne({
         where: { id: execucao.regraId, tenantId: job.data.tenantId, ativa: true }

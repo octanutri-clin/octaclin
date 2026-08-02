@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { DataSource, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { ServicoExclusaoProcessador } from '../../../infraestrutura/processamento/servico-exclusao-processador';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { ProfissionalGoogleConexaoOrm } from '../infraestrutura/profissional-google-conexao.orm';
 import { GoogleCanalWatchOrm } from '../infraestrutura/google-canal-watch.orm';
@@ -27,7 +28,8 @@ export class ProcessadorRenovacaoGoogleCalendar {
     private readonly executorTenant: ExecutorTenant,
     private readonly servicoConexao: ServicoConexaoGoogleCalendar,
     private readonly googleCalendar: ServicoGoogleCalendar,
-    private readonly servicoSincronizacao: ServicoSincronizacaoGoogleCalendar
+    private readonly servicoSincronizacao: ServicoSincronizacaoGoogleCalendar,
+    private readonly exclusaoProcessador?: ServicoExclusaoProcessador
   ) {}
 
   @Cron('0 3 * * *')
@@ -44,10 +46,21 @@ export class ProcessadorRenovacaoGoogleCalendar {
 
         for (const conexao of conexoes) {
           try {
-            if (this.precisaRenovar(conexao)) {
-              await this.renovarCanal(conexao);
-            }
-            await this.servicoSincronizacao.reconciliar(conexao.tenantId, conexao.profissionalId);
+            const executarExclusivo = this.exclusaoProcessador
+              ? (operacao: () => Promise<void>) => this.exclusaoProcessador!.executar(tenant.id, `google-watch:${conexao.profissionalId}`, operacao)
+              : (operacao: () => Promise<void>) => operacao();
+            await executarExclusivo(async () => {
+              const atual = this.exclusaoProcessador
+                ? await this.obterConexaoAtual(conexao.tenantId, conexao.profissionalId)
+                : conexao;
+              if (!atual) return;
+              if (this.precisaRenovar(atual)) await this.renovarCanal(atual);
+              if (this.exclusaoProcessador) {
+                await this.servicoSincronizacao.reconciliarComExclusao(conexao.tenantId, conexao.profissionalId);
+              } else {
+                await this.servicoSincronizacao.reconciliar(conexao.tenantId, conexao.profissionalId);
+              }
+            });
           } catch (erro) {
             this.logger.warn(
               `Falha ao renovar/reconciliar canal do profissional ${conexao.profissionalId}: ${
@@ -69,6 +82,12 @@ export class ProcessadorRenovacaoGoogleCalendar {
   private precisaRenovar(conexao: ProfissionalGoogleConexaoOrm): boolean {
     if (!conexao.canalWatchId || !conexao.canalExpiraEm) return true;
     return conexao.canalExpiraEm.getTime() - Date.now() < JANELA_RENOVACAO_MS;
+  }
+
+  private obterConexaoAtual(tenantId: string, profissionalId: string): Promise<ProfissionalGoogleConexaoOrm | null> {
+    return this.executorTenant.executar(tenantId, (gerenciador) =>
+      gerenciador.getRepository(ProfissionalGoogleConexaoOrm).findOne({ where: { tenantId, profissionalId } })
+    );
   }
 
   private async renovarCanal(conexao: ProfissionalGoogleConexaoOrm): Promise<void> {
