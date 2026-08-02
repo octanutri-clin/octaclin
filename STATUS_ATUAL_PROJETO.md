@@ -135,6 +135,9 @@ Atualizado em 2026-08-01.
 - `AGENTS.md`: guia para agentes de IA.
 - `RESUMO_FASES_CONCLUIDAS.md`: retrospectiva.
 - `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`: roadmap vivo.
+- `DIAGNOSTICO_MELHORIAS_FASES_199_218.md`: diagnostico de design, frontend e
+  produto feito em 2026-08-01 sobre o codigo real, com as Fases 199 a 218 em
+  ordem de prioridade, skill/agente por fase e decisoes de "nao fazer".
 - `PREFLIGHT_PRODUCAO.md`: prontidao por area e gates de fase.
 - `HANDOFF-TECNICO-OCTACLIN.md`: handoff tecnico.
 - `DECISOES_ARQUITETURA.md`: decisoes.
