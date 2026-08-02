@@ -166,9 +166,9 @@ Atualizado em 2026-08-02.
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
-Fase 200 em andamento: upload seguro e anexos clinicos ja foram implementados
-e publicados em producao pelo merge `369fffc`, com CI completo e health `200`.
-A migration `1014` foi aplicada e verificada em producao com `neondb_owner`.
-O bucket privado Backblaze B2, CORS, lifecycle e smoke S3 real foram aprovados;
-permanecem pendentes a migration no banco de integracao explicitamente
-confirmado e o smoke autenticado pela interface.
+Fase 200 em andamento: upload seguro e anexos clinicos estao publicados em
+producao. O PR `#14`, merge `9e2478b`, corrigiu o ultimo defeito de
+compatibilidade do Backblaze B2; CI, health e smokes autenticado e publico
+passaram, incluindo exibicao, abertura, integridade e exclusao. A migration
+`1014` esta aplicada em producao com `neondb_owner`; resta somente repeti-la no
+banco de integracao explicitamente confirmado.

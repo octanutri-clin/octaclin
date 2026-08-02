@@ -1076,8 +1076,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Em andamento em 2026-08-02: implementacao local, jornadas desktop/mobile e
     migration `1014` validadas; bucket privado Backblaze B2, CORS, lifecycle e
     smoke S3 real aprovados. PR `#13`, CI e deploy de backend/web no merge
-    `369fffc` aprovados, com health `200`. Restam migration no banco de
-    integracao explicitamente confirmado e smoke autenticado pela interface.
+    `369fffc` aprovados, com health `200`. O defeito de compatibilidade visto no
+    primeiro smoke foi corrigido pelo PR `#14`, merge `9e2478b`; prontuario e
+    formulario publico passaram em producao, com exclusao dos dados sinteticos.
+    Resta somente a migration no banco de integracao explicitamente confirmado.
   - Saida parcial: `fase-200-upload-seguro-anexos-clinicos.md`.
 
 - [ ] Fase 201 - Confiabilidade dos processadores em multiplas instancias.
