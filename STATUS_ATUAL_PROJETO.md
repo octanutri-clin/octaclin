@@ -11,8 +11,10 @@ Atualizado em 2026-08-02.
   consolidacao visual, aceita pelo usuario em 2026-08-02. Os gates tecnicos do
   ciclo permanecem rastreados nas Fases 191 a 197 e em
   `TESTES_E_VALIDACOES.md`. A Fase 199 - busca, filtros e paginacao server-side
-  esta implementada e validada localmente; permanece aberta ate migration,
-  backfill e ensaio de 500 pacientes em banco explicitamente confirmado.
+  esta implementada e validada localmente e no banco exclusivo de integracao:
+  503 pacientes foram reindexados e a busca pos-backfill levou 133,7 ms, sem
+  atravessar o escopo profissional. Permanece aberta somente para migration e
+  backfill no banco de producao explicitamente confirmado antes do deploy.
 - Fase 194: formularios, editor e leitura longitudinal (2026-08-01). O editor
   de questionarios (1593 linhas
   monoliticas) foi dividido em 5 areas (Formularios/Editor/Biblioteca/
@@ -167,6 +169,7 @@ Atualizado em 2026-08-02.
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
-Proxima fase de produto: Fase 198 - validacao final de usabilidade e
-consolidacao visual. As migrations `1011` e `1012` da Fase 197 devem preceder
-o deploy correspondente quando `BANCO_EXECUTAR_MIGRACOES=false`.
+Proxima fase de produto: concluir o rollout controlado da Fase 199 em producao
+e, depois, iniciar a Fase 200 - upload seguro e anexos clinicos. A migration
+`1013` e o backfill devem preceder o deploy da Fase 199 porque
+`BANCO_EXECUTAR_MIGRACOES=false`.

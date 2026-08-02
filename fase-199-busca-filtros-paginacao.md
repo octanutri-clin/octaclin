@@ -1,7 +1,8 @@
 # Fase 199 - Busca, filtros e paginacao server-side
 
-Status: implementada e validada localmente em 2026-08-02. O fechamento depende
-da migration/backfill e do ensaio de 500 pacientes em banco confirmado.
+Status: implementada e validada localmente e no banco exclusivo de integracao
+em 2026-08-02. O rollout de producao permanece bloqueado ate a confirmacao
+explicita do banco, migration `1013` e backfill antes do deploy.
 
 ## Entregue no codigo
 
@@ -31,15 +32,32 @@ da migration/backfill e do ensaio de 500 pacientes em banco confirmado.
 - Busca/paginacao de pacientes: 2 jornadas Playwright em desktop e mobile.
 - `git diff --check` sem erro.
 
-## Gate operacional pendente
+## Validacao no banco de integracao
 
-1. Confirmar o banco de integracao, nunca producao por inferencia.
-2. Aplicar a migration `1013`.
-3. Executar o backfill com o nome exato do banco confirmado.
-4. Inserir/usar 500 pacientes sinteticos e medir busca abaixo de 1 segundo,
-   incluindo isolamento entre tenant e profissional.
-5. Repetir a migration e o backfill em producao antes do deploy do codigo,
-   pois `BANCO_EXECUTAR_MIGRACOES=false`.
+- Alvo confirmado pela propria `DATABASE_URL`: `octaclin_test_fase150b`, no
+  projeto Neon `octaclin-integration-tests`.
+- As 26 migrations pendentes foram aplicadas, incluindo
+  `1720000001013-AdicionarIndiceBuscaPacientes`.
+- `seed:staging` foi executado com dados sinteticos.
+- O smoke criou 500 pacientes, comprovou o isolamento por profissional e mediu
+  a busca em 129,2 ms.
+- Os indices foram removidos intencionalmente e o backfill reindexou 503
+  pacientes.
+- A busca repetida depois do backfill retornou o paciente esperado em 133,7 ms,
+  sem resultado no escopo de outro profissional.
+- O comando reutilizavel e
+  `pnpm --dir octaclin-backend smoke:busca-pacientes`; ele exige confirmacao
+  exata em `CONFIRMAR_BANCO_BUSCA` e `CONFIRMAR_MASSA_SINTETICA=SIM`.
+
+## Gate operacional de producao pendente
+
+1. Confirmar explicitamente o banco de producao pela propria `DATABASE_URL`.
+2. Fazer backup/branch de recuperacao.
+3. Aplicar a migration `1013`.
+4. Executar o backfill com a chave de criptografia de producao e o nome exato
+   do banco confirmado.
+5. Publicar o backend apenas depois desses passos, pois
+   `BANCO_EXECUTAR_MIGRACOES=false`.
 
 ## Proxima fase
 

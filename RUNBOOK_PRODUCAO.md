@@ -104,6 +104,18 @@ pnpm --dir octaclin-backend migration:run
 pnpm --dir octaclin-backend backfill:indices-busca
 ```
 
+No banco de integracao confirmado, validar o indice e o isolamento com dados
+sinteticos:
+
+```powershell
+$env:CONFIRMAR_BANCO_BUSCA='<nome exato do banco na DATABASE_URL>'
+$env:CONFIRMAR_MASSA_SINTETICA='SIM'
+pnpm --dir octaclin-backend smoke:busca-pacientes
+```
+
+O smoke insere 500 pacientes sinteticos do tenant de staging; nunca deve ser
+executado no banco de producao.
+
 Ordem obrigatoria: backup/branch, staging, teste de busca e isolamento, janela
 de producao, migration, backfill e somente entao deploy. A migration e aditiva;
 o `down` remove indice e coluna. O backfill pode ser repetido sem duplicar

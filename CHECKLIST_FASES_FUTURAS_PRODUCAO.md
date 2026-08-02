@@ -1063,6 +1063,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
     formularios.
   - Aceite: 500 pacientes sinteticos pesquisaveis em menos de 1s, sem vazamento
     entre tenants ou profissionais; migration e backfill reversiveis.
+  - Progresso em 2026-08-02: codigo e banco de integracao aprovados; 503
+    pacientes reindexados e busca pos-backfill em 133,7 ms, isolada por
+    profissional. Falta o rollout de producao antes do merge/deploy.
 
 - [ ] Fase 200 - Upload seguro e anexos clinicos.
   - Escolher o provedor de objetos, usar URL pre-assinada curta e confirmar o

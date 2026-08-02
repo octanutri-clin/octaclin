@@ -431,6 +431,15 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   `TESTES_E_VALIDACOES.md`; o aceite nao declara execucoes adicionais de testes.
   Ver `fase-198-validacao-usabilidade-consolidacao-visual.md`.
 
+- Fase 199 - Busca, filtros e paginacao server-side (implementacao e integracao):
+  pacientes ganharam indice cego por tenant para pesquisar nome e contato sem
+  descriptografar a tabela; filtros e paginacao passaram a ocorrer no backend
+  antes da resposta. Profissionais e formularios tambem ganharam paginacao
+  server-side. No banco exclusivo `octaclin_test_fase150b`, a migration `1013`
+  foi aplicada, 503 pacientes foram reindexados e a busca em 500 pacientes
+  sinteticos levou 133,7 ms apos o backfill, sem atravessar o escopo do
+  profissional. O rollout de producao permanece pendente antes do merge/deploy.
+
 ## Estado atual de uso
 
 O sistema esta em producao isolada aceita, com massa ficticia mantida fora do banco de producao, piloto interno aprovado, restore real validado e pacote juridico ampliado. A agenda agora tambem aceita solicitacoes publicas com aprovacao manual segura, sem reservar horario nem persistir token bruto, e distingue cancelamento pelo profissional de desmarcamento pelo paciente e de cancelamento originado no Google. O profissional conta com um painel clinico diario agregando prioridades da propria agenda de pacientes. Ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria: faltam recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido.
