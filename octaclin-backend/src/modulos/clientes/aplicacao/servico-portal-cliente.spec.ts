@@ -227,8 +227,9 @@ describe('ServicoPortalCliente', () => {
         { id: 'questionario-arquivado', tenantId: 'tenant-1', status: 'arquivado' }
       ],
       arquivos: [
-        { id: 'arquivo-1', tenantId: 'tenant-1', tamanhoBytes: String(5 * 1024 * 1024) },
-        { id: 'arquivo-2', tenantId: 'tenant-1', tamanhoBytes: String(6 * 1024 * 1024) }
+        { id: 'arquivo-1', tenantId: 'tenant-1', status: 'confirmado', tamanhoBytes: String(5 * 1024 * 1024) },
+        { id: 'arquivo-2', tenantId: 'tenant-1', status: 'confirmado', tamanhoBytes: String(6 * 1024 * 1024) },
+        { id: 'arquivo-pendente', tenantId: 'tenant-1', status: 'pendente', tamanhoBytes: String(900 * 1024 * 1024) }
       ]
     });
 

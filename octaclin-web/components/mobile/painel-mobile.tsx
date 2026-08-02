@@ -14,6 +14,7 @@ import {
   TipoDiarioRapido,
   TipoMidiaMobile,
   carregarBootstrapMobile,
+  confirmarUploadMidia,
   criarAcompanhante,
   registrarDiarioRapido,
   sincronizarLoteMobile,
@@ -29,11 +30,7 @@ interface FormularioDiario {
 
 interface FormularioUpload {
   pacienteId: string;
-  tipo: TipoMidiaMobile;
-  mimeType: string;
-  tamanhoBytes: string;
   duracaoSegundos: string;
-  hashConteudo: string;
 }
 
 interface FormularioAcompanhante {
@@ -57,11 +54,7 @@ const diarioInicial: FormularioDiario = {
 
 const uploadInicial: FormularioUpload = {
   pacienteId: '',
-  tipo: 'imagem',
-  mimeType: 'image/jpeg',
-  tamanhoBytes: '245000',
-  duracaoSegundos: '',
-  hashConteudo: 'demo-hash-prato'
+  duracaoSegundos: ''
 };
 
 const acompanhanteInicial: FormularioAcompanhante = {
@@ -88,6 +81,13 @@ function resumirJson(valor: unknown) {
   return JSON.stringify(valor);
 }
 
+function tipoDoArquivo(arquivo: File): TipoMidiaMobile {
+  if (arquivo.type.startsWith('image/')) return 'imagem';
+  if (arquivo.type.startsWith('audio/')) return 'audio';
+  if (arquivo.type.startsWith('video/')) return 'video';
+  return 'documento';
+}
+
 export function PainelMobile() {
   const [pacientes, setPacientes] = useState<RespostaPaginada<PacienteResumo> | null>(null);
   const [diario, setDiario] = useState<FormularioDiario>(diarioInicial);
@@ -97,7 +97,7 @@ export function PainelMobile() {
   const [logsDiario, setLogsDiario] = useState<LogDiarioRapidoApi[]>([]);
   const [arquivosMidia, setArquivosMidia] = useState<ArquivoMidiaApi[]>([]);
   const [acompanhantes, setAcompanhantes] = useState<AcompanhanteApi[]>([]);
-  const [uploadUrl, setUploadUrl] = useState<string | null>(null);
+  const [arquivoUpload, setArquivoUpload] = useState<File | null>(null);
   const [resultadoSincronizacao, setResultadoSincronizacao] = useState<RespostaSincronizacaoMobile | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
@@ -156,17 +156,23 @@ export function PainelMobile() {
     setErro(null);
     setSucesso(null);
     try {
+      if (!arquivoUpload) throw new Error('Selecione um arquivo.');
       const resposta = await solicitarUploadMidia({
         pacienteId: upload.pacienteId,
-        tipo: upload.tipo,
-        mimeType: upload.mimeType,
-        tamanhoBytes: Number(upload.tamanhoBytes || 1),
-        duracaoSegundos: upload.duracaoSegundos ? Number(upload.duracaoSegundos) : undefined,
-        hashConteudo: upload.hashConteudo || undefined
+        tipo: tipoDoArquivo(arquivoUpload),
+        categoria: 'diario',
+        nomeArquivo: arquivoUpload.name,
+        mimeType: arquivoUpload.type,
+        tamanhoBytes: arquivoUpload.size,
+        duracaoSegundos: upload.duracaoSegundos ? Number(upload.duracaoSegundos) : undefined
       });
-      setUploadUrl(resposta.uploadUrl);
-      setArquivosMidia((atuais) => [resposta.arquivo, ...atuais].slice(0, 50));
-      setSucesso('Upload de midia solicitado.');
+      const envio = await fetch(resposta.uploadUrl, { method: 'PUT', headers: resposta.uploadHeaders, body: arquivoUpload });
+      if (!envio.ok) throw new Error('O armazenamento recusou o arquivo.');
+      const confirmado = await confirmarUploadMidia(resposta.arquivo.id);
+      setArquivosMidia((atuais) => [confirmado, ...atuais].slice(0, 50));
+      setArquivoUpload(null);
+      evento.currentTarget.reset();
+      setSucesso('Midia enviada e confirmada.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao solicitar upload.');
     } finally {
@@ -339,36 +345,13 @@ export function PainelMobile() {
                 ))}
               </Selecao>
             </div>
-            <div className="space-y-1.5">
-              <Rotulo htmlFor="mobile-upload-tipo">Tipo</Rotulo>
-              <Selecao
-                id="mobile-upload-tipo"
-                value={upload.tipo}
-                onChange={(evento) => setUpload((atual) => ({ ...atual, tipo: evento.target.value as TipoMidiaMobile }))}
-              >
-                <option value="imagem">Imagem</option>
-                <option value="audio">Audio</option>
-                <option value="video">Video</option>
-                <option value="documento">Documento</option>
-              </Selecao>
-            </div>
-            <div className="space-y-1.5">
-              <Rotulo htmlFor="mobile-upload-mime">MIME</Rotulo>
+            <div className="space-y-1.5 md:col-span-2">
+              <Rotulo htmlFor="mobile-upload-arquivo">Arquivo</Rotulo>
               <Campo
-                id="mobile-upload-mime"
-                value={upload.mimeType}
-                onChange={(evento) => setUpload((atual) => ({ ...atual, mimeType: evento.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Rotulo htmlFor="mobile-upload-tamanho">Bytes</Rotulo>
-              <Campo
-                id="mobile-upload-tamanho"
-                type="number"
-                min={1}
-                value={upload.tamanhoBytes}
-                onChange={(evento) => setUpload((atual) => ({ ...atual, tamanhoBytes: evento.target.value }))}
+                id="mobile-upload-arquivo"
+                type="file"
+                accept="application/pdf,image/jpeg,image/png,image/webp,audio/mpeg,audio/mp4,audio/ogg,audio/wav,video/mp4,video/webm"
+                onChange={(evento) => setArquivoUpload(evento.target.files?.[0] ?? null)}
                 required
               />
             </div>
@@ -383,17 +366,9 @@ export function PainelMobile() {
                 onChange={(evento) => setUpload((atual) => ({ ...atual, duracaoSegundos: evento.target.value }))}
               />
             </div>
-            <div className="space-y-1.5 md:col-span-2">
-              <Rotulo htmlFor="mobile-upload-hash">Hash</Rotulo>
-              <Campo
-                id="mobile-upload-hash"
-                value={upload.hashConteudo}
-                onChange={(evento) => setUpload((atual) => ({ ...atual, hashConteudo: evento.target.value }))}
-              />
-            </div>
           </div>
           <div className="mt-3 flex justify-end">
-            <Botao type="submit" variante="primario" disabled={salvando || !upload.pacienteId}>
+            <Botao type="submit" variante="primario" disabled={salvando || !upload.pacienteId || !arquivoUpload}>
               <CloudUpload size={16} />
               Solicitar
             </Botao>
@@ -551,10 +526,6 @@ export function PainelMobile() {
             <CartaoTitulo>Resultados</CartaoTitulo>
           </CartaoCabecalho>
           <div className="grid gap-3 p-4 text-sm">
-            <div className="rounded-md border border-linha bg-fundo p-3">
-              <p className="text-xs font-semibold uppercase text-texto-suave">Upload URL</p>
-              <p className="mt-1 break-all text-xs text-tinta">{uploadUrl ?? 'Nenhum upload solicitado.'}</p>
-            </div>
             <div className="rounded-md border border-linha bg-fundo p-3">
               <p className="text-xs font-semibold uppercase text-texto-suave">Midias</p>
               <p className="mt-1 break-all text-xs text-tinta">

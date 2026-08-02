@@ -284,3 +284,20 @@ export class SalvarRascunhoFormularioPacienteDto {
   @Type(() => RespostaFormularioPacienteDto)
   respostas: RespostaFormularioPacienteDto[];
 }
+
+export class SolicitarUploadFormularioPacienteDto {
+  @IsUUID()
+  perguntaId: string;
+
+  @IsString()
+  @MaxLength(180)
+  nomeArquivo: string;
+
+  @IsString()
+  @MaxLength(120)
+  mimeType: string;
+
+  @IsNumber()
+  @Min(1)
+  tamanhoBytes: number;
+}

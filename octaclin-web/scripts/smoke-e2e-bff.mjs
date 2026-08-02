@@ -411,24 +411,33 @@ async function main() {
     'listagem de diario rapido nao retornou diario criado.'
   );
 
-  const uploadMidia = await requisitarJsonStatus('/api/mobile/midias/uploads', 201, 'solicitacao de upload mobile', {
+  const solicitacaoUploadMidia = await requisitarJson('/api/mobile/midias/uploads', {
     method: 'POST',
     body: JSON.stringify({
       pacienteId: pacienteCriado.id,
       tipo: 'imagem',
       mimeType: 'image/jpeg',
-      tamanhoBytes: 245000,
-      hashConteudo: `hash-${sufixo}`
+      tamanhoBytes: 245000
     })
   });
-  assert(uploadMidia.arquivo?.id, 'solicitacao de upload mobile: arquivo ausente.');
-  assert(typeof uploadMidia.uploadUrl === 'string', 'solicitacao de upload mobile: uploadUrl ausente.');
-  const arquivosMidia = await requisitarJsonStatus('/api/mobile/midias/uploads', 200, 'listagem de midias mobile');
-  assert(Array.isArray(arquivosMidia), 'listagem de midias mobile precisa ser lista.');
-  assert(
-    arquivosMidia.some((item) => item.id === uploadMidia.arquivo.id),
-    'listagem de midias mobile nao retornou arquivo criado.'
-  );
+  if (solicitacaoUploadMidia.resposta.status === 503) {
+    assert(
+      String(solicitacaoUploadMidia.corpo?.message ?? solicitacaoUploadMidia.corpo?.mensagem).includes('Armazenamento'),
+      'upload sem provedor deve falhar fechado com mensagem de armazenamento.'
+    );
+  } else {
+    assertStatus(solicitacaoUploadMidia.resposta, 201, 'solicitacao de upload mobile');
+    const uploadMidia = solicitacaoUploadMidia.corpo;
+    assert(uploadMidia.arquivo?.id, 'solicitacao de upload mobile: arquivo ausente.');
+    assert(uploadMidia.arquivo.status === 'pendente', 'arquivo deve permanecer pendente antes do envio real.');
+    assert(typeof uploadMidia.uploadUrl === 'string', 'solicitacao de upload mobile: uploadUrl ausente.');
+    const arquivosMidia = await requisitarJsonStatus('/api/mobile/midias/uploads', 200, 'listagem de midias mobile');
+    assert(Array.isArray(arquivosMidia), 'listagem de midias mobile precisa ser lista.');
+    assert(
+      !arquivosMidia.some((item) => item.id === uploadMidia.arquivo.id),
+      'arquivo pendente nao pode aparecer antes da confirmacao do objeto real.'
+    );
+  }
 
   const acompanhanteCriado = await requisitarJsonStatus('/api/mobile/acompanhantes', 201, 'criacao de acompanhante', {
     method: 'POST',

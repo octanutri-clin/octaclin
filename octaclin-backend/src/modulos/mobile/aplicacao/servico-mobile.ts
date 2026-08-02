@@ -1,11 +1,13 @@
 import { randomUUID } from 'crypto';
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
+import { ServicoArmazenamentoObjetos, validarUploadSolicitado } from '../../../infraestrutura/armazenamento/servico-armazenamento-objetos';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cliente';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { validarDuracaoMidia } from '../dominio/validacao-midia';
 import { AcompanhanteOrm } from '../infraestrutura/acompanhante.orm';
@@ -35,12 +37,28 @@ export interface AcompanhanteResumo {
   criadoEm: Date;
 }
 
+export interface ArquivoMidiaResumo {
+  id: string;
+  pacienteId: string;
+  tipo: ArquivoMidiaOrm['tipo'];
+  categoria: ArquivoMidiaOrm['categoria'];
+  nomeArquivo?: string;
+  mimeType: string;
+  tamanhoBytes: string;
+  hashConteudo?: string;
+  status: ArquivoMidiaOrm['status'];
+  criadoEm: Date;
+  confirmadoEm?: Date;
+}
+
 @Injectable()
 export class ServicoMobile {
   constructor(
     private readonly executorTenant: ExecutorTenant,
     private readonly criptografia: CriptografiaDadosSensiveis,
-    private readonly senhas: ServicoSenhas
+    private readonly senhas: ServicoSenhas,
+    private readonly armazenamento: ServicoArmazenamentoObjetos,
+    private readonly portalCliente: ServicoPortalCliente
   ) {}
 
   async listarDiarioRapido(tenantId: string, usuario: UsuarioAutenticado): Promise<LogDiarioRapidoOrm[]> {
@@ -65,30 +83,228 @@ export class ServicoMobile {
     });
   }
 
-  async listarArquivosMidia(tenantId: string, usuario: UsuarioAutenticado): Promise<ArquivoMidiaOrm[]> {
+  async listarArquivosMidia(
+    tenantId: string,
+    usuario: UsuarioAutenticado,
+    pacienteId?: string
+  ): Promise<ArquivoMidiaResumo[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      if (pacienteId) await this.garantirPacientePermitido(gerenciador, tenantId, pacienteId, usuario);
       const pacienteIds = await this.listarPacienteIdsPermitidos(gerenciador, tenantId, usuario);
-      return gerenciador.getRepository(ArquivoMidiaOrm).find({
-        where: { tenantId, ...(pacienteIds ? { pacienteId: In(pacienteIds) } : {}) },
+      const arquivos = await gerenciador.getRepository(ArquivoMidiaOrm).find({
+        where: {
+          tenantId,
+          status: 'confirmado',
+          ...(pacienteId ? { pacienteId } : pacienteIds ? { pacienteId: In(pacienteIds) } : {})
+        },
         order: { criadoEm: 'DESC' },
         take: 50
       });
+      return arquivos.map((arquivo) => this.resumirArquivo(arquivo));
     });
   }
 
-  async solicitarUploadMidia(tenantId: string, dados: SolicitarUploadMidiaDto, usuario: UsuarioAutenticado) {
-    validarDuracaoMidia(dados.tipo, dados.duracaoSegundos);
-    const bucket = process.env.ARMAZENAMENTO_BUCKET_MIDIA ?? 'octaclin-midias-local';
-    const chaveObjeto = `${tenantId}/${dados.pacienteId}/${dados.tipo}/${randomUUID()}`;
-    const uploadBaseUrl = process.env.ARMAZENAMENTO_UPLOAD_BASE_URL ?? 'http://localhost:9000';
-    const uploadUrl = `${uploadBaseUrl}/${bucket}/${chaveObjeto}`;
+  async solicitarUploadMidia(
+    tenantId: string,
+    dados: SolicitarUploadMidiaDto,
+    usuario: UsuarioAutenticado,
+    vinculo: Record<string, string> = {}
+  ) {
+    return this.solicitarUploadMidiaInterno(tenantId, dados, vinculo, (gerenciador) =>
+      this.garantirPacientePermitido(gerenciador, tenantId, dados.pacienteId, usuario)
+    );
+  }
 
-    const arquivo = await this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirPacientePermitido(gerenciador, tenantId, dados.pacienteId, usuario);
-      return this.criarArquivoMidia(gerenciador, tenantId, dados, bucket, chaveObjeto);
+  async solicitarUploadMidiaFormularioPublico(
+    tenantId: string,
+    dados: SolicitarUploadMidiaDto,
+    vinculo: Record<string, string>
+  ) {
+    return this.solicitarUploadMidiaInterno(tenantId, dados, vinculo, (gerenciador) =>
+      this.garantirPacienteExistente(gerenciador, tenantId, dados.pacienteId)
+    );
+  }
+
+  private async solicitarUploadMidiaInterno(
+    tenantId: string,
+    dados: SolicitarUploadMidiaDto,
+    vinculo: Record<string, string>,
+    autorizarPaciente: (gerenciador: EntityManager) => Promise<void>
+  ) {
+    validarDuracaoMidia(dados.tipo, dados.duracaoSegundos);
+    validarUploadSolicitado(dados.tipo, dados.mimeType, dados.tamanhoBytes);
+    const id = randomUUID();
+    const bucket = this.armazenamento.bucket;
+    const chaveObjeto = `pendentes/${tenantId}/${dados.pacienteId}/${dados.tipo}/${id}`;
+
+    const { arquivo, expirados } = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await gerenciador.query('SELECT pg_advisory_xact_lock(hashtext($1))', [tenantId]);
+      await autorizarPaciente(gerenciador);
+      const repositorio = gerenciador.getRepository(ArquivoMidiaOrm);
+      const agora = Date.now();
+      const pendentes = await repositorio.find({ where: { tenantId, status: 'pendente' } });
+      const expirados = pendentes.filter((item) => item.criadoEm && agora - item.criadoEm.getTime() >= 24 * 60 * 60 * 1000);
+      for (const item of expirados) {
+        item.status = 'excluido';
+        item.excluidoEm = new Date(agora);
+        await repositorio.save(item);
+      }
+
+      const limite = await this.portalCliente.checarLimite(tenantId, 'armazenamentoMb');
+      const reservadoBytes = pendentes
+        .filter((item) => !expirados.includes(item))
+        .reduce((total, item) => total + Number(item.metadados?.tamanhoSolicitadoBytes ?? 0), 0);
+      if (!limite.permitido || (limite.restante !== null && reservadoBytes + dados.tamanhoBytes > limite.restante * 1024 * 1024)) {
+        throw new ForbiddenException(limite.mensagem ?? 'Limite de armazenamento do plano atingido.');
+      }
+
+      const arquivo = await repositorio.save(
+        repositorio.create({
+          id,
+          tenantId,
+          pacienteId: dados.pacienteId,
+          tipo: dados.tipo,
+          categoria: dados.categoria ?? (dados.tipo === 'imagem' ? 'foto' : dados.tipo === 'documento' ? 'documento' : 'diario'),
+          bucket,
+          chaveObjeto,
+          mimeType: dados.mimeType,
+          tamanhoBytes: '0',
+          hashConteudo: undefined,
+          status: 'pendente',
+          nomeOriginalCriptografado: dados.nomeArquivo ? this.criptografia.criptografar(dados.nomeArquivo) : undefined,
+          metadados: { duracaoSegundos: dados.duracaoSegundos, tamanhoSolicitadoBytes: dados.tamanhoBytes, vinculo }
+        })
+      );
+      return { arquivo, expirados };
     });
 
-    return { arquivo, uploadUrl };
+    await Promise.allSettled(expirados.map((item) => this.armazenamento.excluirObjeto(item.bucket, item.chaveObjeto)));
+
+    const metadadosUpload = { tenantid: tenantId, pacienteid: dados.pacienteId, arquivoid: arquivo.id, ...vinculo };
+    const uploadUrl = await this.armazenamento.criarUploadAssinado({
+      chaveObjeto,
+      mimeType: dados.mimeType,
+      tamanhoMaximoBytes: dados.tamanhoBytes,
+      metadados: metadadosUpload
+    });
+    return {
+      arquivo: this.resumirArquivo(arquivo),
+      uploadUrl,
+      uploadHeaders: {
+        'Content-Type': dados.mimeType,
+        'If-None-Match': '*',
+        ...Object.fromEntries(Object.entries(metadadosUpload).map(([chave, valor]) => [`x-amz-meta-${chave}`, valor]))
+      },
+      expiraEmSegundos: 300
+    };
+  }
+
+  async confirmarUploadMidia(
+    tenantId: string,
+    arquivoId: string,
+    usuario: UsuarioAutenticado,
+    vinculoEsperado: Record<string, string> = {}
+  ): Promise<ArquivoMidiaResumo> {
+    return this.confirmarUploadMidiaInterno(
+      tenantId,
+      arquivoId,
+      vinculoEsperado,
+      (gerenciador) => this.obterArquivoPermitido(gerenciador, tenantId, arquivoId, usuario)
+    );
+  }
+
+  async confirmarUploadMidiaFormularioPublico(
+    tenantId: string,
+    arquivoId: string,
+    pacienteId: string,
+    vinculoEsperado: Record<string, string>
+  ): Promise<ArquivoMidiaResumo> {
+    return this.confirmarUploadMidiaInterno(
+      tenantId,
+      arquivoId,
+      vinculoEsperado,
+      (gerenciador) => this.obterArquivoDoFormulario(gerenciador, tenantId, arquivoId, pacienteId)
+    );
+  }
+
+  private async confirmarUploadMidiaInterno(
+    tenantId: string,
+    arquivoId: string,
+    vinculoEsperado: Record<string, string>,
+    obterArquivo: (gerenciador: EntityManager) => Promise<ArquivoMidiaOrm>
+  ): Promise<ArquivoMidiaResumo> {
+    const arquivo = await this.executorTenant.executar(tenantId, obterArquivo);
+    if (arquivo.status === 'confirmado') return this.resumirArquivo(arquivo);
+    if (arquivo.status !== 'pendente') throw new BadRequestException('Anexo nao pode ser confirmado.');
+    const vinculo = (arquivo.metadados?.vinculo ?? {}) as Record<string, string>;
+    if (Object.entries(vinculoEsperado).some(([chave, valor]) => vinculo[chave] !== valor)) {
+      throw new NotFoundException('Anexo nao encontrado.');
+    }
+
+    let inspecao: { tamanhoBytes: number; mimeType: string; hashConteudo: string };
+    const chaveConfirmada = `confirmados/${tenantId}/${arquivo.pacienteId}/${arquivo.tipo}/${arquivo.id}`;
+    try {
+      inspecao = await this.armazenamento.inspecionarObjeto(arquivo.bucket, arquivo.chaveObjeto, arquivo.tipo, {
+        tenantid: tenantId,
+        pacienteid: arquivo.pacienteId,
+        arquivoid: arquivo.id,
+        ...vinculo
+      });
+      await this.armazenamento.promoverObjeto(arquivo.bucket, arquivo.chaveObjeto, chaveConfirmada);
+    } catch (erro) {
+      await Promise.allSettled([
+        this.armazenamento.excluirObjeto(arquivo.bucket, arquivo.chaveObjeto),
+        this.executorTenant.executar(tenantId, async (gerenciador) => {
+          const atual = await obterArquivo(gerenciador);
+          atual.status = 'excluido';
+          atual.excluidoEm = new Date();
+          await gerenciador.getRepository(ArquivoMidiaOrm).save(atual);
+        })
+      ]);
+      throw erro;
+    }
+    try {
+      const confirmado = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+        const atual = await obterArquivo(gerenciador);
+        if (atual.status === 'confirmado') return this.resumirArquivo(atual);
+        if (atual.status !== 'pendente') throw new BadRequestException('Anexo nao pode ser confirmado.');
+        Object.assign(atual, inspecao, {
+          chaveObjeto: chaveConfirmada,
+          tamanhoBytes: String(inspecao.tamanhoBytes),
+          status: 'confirmado',
+          confirmadoEm: new Date()
+        });
+        return this.resumirArquivo(await gerenciador.getRepository(ArquivoMidiaOrm).save(atual));
+      });
+      await Promise.allSettled([this.armazenamento.excluirObjeto(arquivo.bucket, arquivo.chaveObjeto)]);
+      return confirmado;
+    } catch (erro) {
+      await Promise.allSettled([this.armazenamento.excluirObjeto(arquivo.bucket, chaveConfirmada)]);
+      throw erro;
+    }
+  }
+
+  async gerarAcessoArquivoMidia(tenantId: string, arquivoId: string, usuario: UsuarioAutenticado) {
+    const arquivo = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      this.obterArquivoPermitido(gerenciador, tenantId, arquivoId, usuario)
+    );
+    if (arquivo.status !== 'confirmado') throw new NotFoundException('Anexo nao encontrado.');
+    return { url: await this.armazenamento.criarDownloadAssinado(arquivo.bucket, arquivo.chaveObjeto), expiraEmSegundos: 300 };
+  }
+
+  async excluirArquivoMidia(tenantId: string, arquivoId: string, usuario: UsuarioAutenticado): Promise<void> {
+    if (usuario.papel === 'Patient') throw new ForbiddenException('Paciente nao pode excluir anexo do prontuario.');
+    const arquivo = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      this.obterArquivoPermitido(gerenciador, tenantId, arquivoId, usuario)
+    );
+    if (arquivo.status === 'excluido') return;
+    await this.armazenamento.excluirObjeto(arquivo.bucket, arquivo.chaveObjeto);
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const atual = await this.obterArquivoPermitido(gerenciador, tenantId, arquivoId, usuario);
+      atual.status = 'excluido';
+      atual.excluidoEm = new Date();
+      await gerenciador.getRepository(ArquivoMidiaOrm).save(atual);
+    });
   }
 
   async listarAcompanhantes(tenantId: string, usuario: UsuarioAutenticado): Promise<AcompanhanteResumo[]> {
@@ -184,20 +400,7 @@ export class ServicoMobile {
       return acompanhante.id;
     }
 
-    const payloadMidia = item.payload as Record<string, unknown>;
-    const dadosMidia: SolicitarUploadMidiaDto = {
-      pacienteId: String(payloadMidia.pacienteId),
-      tipo: item.tipo === 'midia_audio' ? 'audio' : (payloadMidia.tipo as SolicitarUploadMidiaDto['tipo']) ?? 'imagem',
-      mimeType: String(payloadMidia.mimeType ?? (item.tipo === 'midia_audio' ? 'audio/m4a' : 'image/jpeg')),
-      tamanhoBytes: Number(payloadMidia.tamanhoBytes ?? 1),
-      duracaoSegundos: payloadMidia.duracaoSegundos ? Number(payloadMidia.duracaoSegundos) : undefined,
-      hashConteudo: payloadMidia.hashConteudo ? String(payloadMidia.hashConteudo) : undefined
-    };
-    validarDuracaoMidia(dadosMidia.tipo, dadosMidia.duracaoSegundos);
-    const bucket = process.env.ARMAZENAMENTO_BUCKET_MIDIA ?? 'octaclin-midias-local';
-    const chaveObjeto = `${tenantId}/${dadosMidia.pacienteId}/${dadosMidia.tipo}/${randomUUID()}`;
-    const arquivo = await this.criarArquivoMidia(gerenciador, tenantId, dadosMidia, bucket, chaveObjeto);
-    return arquivo.id;
+    throw new BadRequestException('Midias devem ser enviadas pelo fluxo de upload assinado.');
   }
 
   private async criarLogDiario(
@@ -212,28 +415,6 @@ export class ServicoMobile {
         tipo: dados.tipo,
         valor: dados.valor,
         registradoEm: new Date()
-      })
-    );
-  }
-
-  private async criarArquivoMidia(
-    gerenciador: EntityManager,
-    tenantId: string,
-    dados: SolicitarUploadMidiaDto,
-    bucket: string,
-    chaveObjeto: string
-  ): Promise<ArquivoMidiaOrm> {
-    return gerenciador.getRepository(ArquivoMidiaOrm).save(
-      gerenciador.getRepository(ArquivoMidiaOrm).create({
-        tenantId,
-        pacienteId: dados.pacienteId,
-        tipo: dados.tipo,
-        bucket,
-        chaveObjeto,
-        mimeType: dados.mimeType,
-        tamanhoBytes: String(dados.tamanhoBytes),
-        hashConteudo: dados.hashConteudo,
-        metadados: { duracaoSegundos: dados.duracaoSegundos }
       })
     );
   }
@@ -303,6 +484,13 @@ export class ServicoMobile {
     if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
   }
 
+  private async garantirPacienteExistente(gerenciador: EntityManager, tenantId: string, pacienteId: string): Promise<void> {
+    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+      where: { id: pacienteId, tenantId, arquivadoEm: IsNull() }
+    });
+    if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+  }
+
   private resumirAcompanhante(item: AcompanhanteOrm): AcompanhanteResumo {
     return {
       id: item.id,
@@ -310,6 +498,49 @@ export class ServicoMobile {
       pacienteId: item.pacienteId,
       ativo: item.ativo,
       criadoEm: item.criadoEm
+    };
+  }
+
+  private async obterArquivoPermitido(
+    gerenciador: EntityManager,
+    tenantId: string,
+    arquivoId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<ArquivoMidiaOrm> {
+    const arquivo = await gerenciador.getRepository(ArquivoMidiaOrm).findOne({ where: { id: arquivoId, tenantId } });
+    if (!arquivo) throw new NotFoundException('Anexo nao encontrado.');
+    await this.garantirPacientePermitido(gerenciador, tenantId, arquivo.pacienteId, usuario);
+    return arquivo;
+  }
+
+  private async obterArquivoDoFormulario(
+    gerenciador: EntityManager,
+    tenantId: string,
+    arquivoId: string,
+    pacienteId: string
+  ): Promise<ArquivoMidiaOrm> {
+    const arquivo = await gerenciador.getRepository(ArquivoMidiaOrm).findOne({
+      where: { id: arquivoId, tenantId, pacienteId }
+    });
+    if (!arquivo) throw new NotFoundException('Anexo nao encontrado.');
+    return arquivo;
+  }
+
+  private resumirArquivo(arquivo: ArquivoMidiaOrm): ArquivoMidiaResumo {
+    return {
+      id: arquivo.id,
+      pacienteId: arquivo.pacienteId,
+      tipo: arquivo.tipo,
+      categoria: arquivo.categoria,
+      nomeArquivo: arquivo.nomeOriginalCriptografado && Buffer.isBuffer(arquivo.nomeOriginalCriptografado)
+        ? this.criptografia.descriptografar(arquivo.nomeOriginalCriptografado)
+        : undefined,
+      mimeType: arquivo.mimeType,
+      tamanhoBytes: arquivo.tamanhoBytes,
+      hashConteudo: arquivo.hashConteudo,
+      status: arquivo.status,
+      criadoEm: arquivo.criadoEm,
+      confirmadoEm: arquivo.confirmadoEm
     };
   }
 }

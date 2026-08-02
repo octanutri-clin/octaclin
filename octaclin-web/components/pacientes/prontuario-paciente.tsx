@@ -7,18 +7,23 @@ import {
   CalendarDays,
   CheckSquare,
   ClipboardList,
+  Download,
   FileText,
   LinkIcon,
   MessageSquareText,
+  Paperclip,
   RefreshCcw,
   Save,
   Send,
   Stethoscope,
+  Trash2,
+  UploadCloud,
   UserRound
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { ModalConfirmacao } from '@/components/ui/modal';
 import {
   criarMaterial,
   enviarMaterialPaciente,
@@ -28,6 +33,16 @@ import {
   type MaterialEducativoApi,
   type TipoMaterialEducativoApi
 } from '@/lib/materiais-api';
+import {
+  confirmarUploadMidia,
+  excluirArquivoMidia,
+  listarArquivosMidia,
+  obterAcessoArquivoMidia,
+  solicitarUploadMidia,
+  type ArquivoMidiaApi,
+  type CategoriaAnexoClinico,
+  type TipoMidiaMobile
+} from '@/lib/mobile-api';
 import {
   criarEvolucaoClinica,
   criarTarefaAcompanhamento,
@@ -67,7 +82,7 @@ interface FormularioEnvioMaterial {
   observacao: string;
 }
 
-type AbaProntuario = 'resumo' | 'evolucoes' | 'plano' | 'formularios' | 'mensagens' | 'materiais' | 'historico';
+type AbaProntuario = 'resumo' | 'evolucoes' | 'plano' | 'formularios' | 'mensagens' | 'materiais' | 'anexos' | 'historico';
 
 const abasProntuario: Array<{ id: AbaProntuario; rotulo: string }> = [
   { id: 'resumo', rotulo: 'Resumo' },
@@ -76,6 +91,7 @@ const abasProntuario: Array<{ id: AbaProntuario; rotulo: string }> = [
   { id: 'formularios', rotulo: 'Formularios' },
   { id: 'mensagens', rotulo: 'Mensagens' },
   { id: 'materiais', rotulo: 'Materiais' },
+  { id: 'anexos', rotulo: 'Anexos' },
   { id: 'historico', rotulo: 'Historico' }
 ];
 
@@ -119,6 +135,19 @@ function formatarData(valor?: string) {
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return valor;
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeZone: 'UTC' }).format(data);
+}
+
+function formatarTamanho(bytes: string) {
+  const valor = Number(bytes);
+  if (!Number.isFinite(valor)) return '-';
+  if (valor < 1024 * 1024) return `${Math.max(1, Math.round(valor / 1024))} KB`;
+  return `${(valor / (1024 * 1024)).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`;
+}
+
+function tipoMidiaDoArquivo(arquivo: File): TipoMidiaMobile {
+  if (arquivo.type.startsWith('image/')) return 'imagem';
+  if (arquivo.type === 'application/pdf') return 'documento';
+  throw new Error('Selecione uma imagem JPEG, PNG, WebP ou um PDF.');
 }
 
 function rotuloTipo(tipo: EventoProntuarioPacienteApi['tipo']) {
@@ -200,11 +229,17 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [dados, setDados] = useState<ProntuarioPacienteApi | null>(null);
   const [materiais, setMateriais] = useState<MaterialEducativoApi[]>([]);
   const [materiaisPaciente, setMateriaisPaciente] = useState<EnvioMaterialPacienteApi[]>([]);
+  const [anexos, setAnexos] = useState<ArquivoMidiaApi[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [salvandoEvolucao, setSalvandoEvolucao] = useState(false);
   const [salvandoTarefa, setSalvandoTarefa] = useState(false);
   const [salvandoMaterial, setSalvandoMaterial] = useState(false);
   const [enviandoMaterial, setEnviandoMaterial] = useState(false);
+  const [enviandoAnexo, setEnviandoAnexo] = useState(false);
+  const [excluindoAnexo, setExcluindoAnexo] = useState(false);
+  const [arquivoAnexo, setArquivoAnexo] = useState<File | null>(null);
+  const [categoriaAnexo, setCategoriaAnexo] = useState<CategoriaAnexoClinico>('exame');
+  const [anexoParaExcluir, setAnexoParaExcluir] = useState<ArquivoMidiaApi | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [formularioEvolucao, setFormularioEvolucao] = useState<FormularioEvolucao>(formularioEvolucaoInicial);
@@ -217,14 +252,16 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     setCarregando(true);
     setErro(null);
     try {
-      const [prontuario, biblioteca, enviados] = await Promise.all([
+      const [prontuario, biblioteca, enviados, anexosPaciente] = await Promise.all([
         obterProntuarioPaciente(pacienteId),
         listarMateriais(),
-        listarMateriaisPaciente(pacienteId)
+        listarMateriaisPaciente(pacienteId),
+        listarArquivosMidia(pacienteId)
       ]);
       setDados(prontuario);
       setMateriais(biblioteca);
       setMateriaisPaciente(enviados);
+      setAnexos(anexosPaciente);
       setFormularioEnvioMaterial((atual) => ({
         ...atual,
         materialId: atual.materialId || biblioteca[0]?.id || ''
@@ -324,6 +361,73 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao enviar material ao paciente.');
     } finally {
       setEnviandoMaterial(false);
+    }
+  }
+
+  async function enviarAnexo(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!arquivoAnexo) return;
+    const formulario = evento.currentTarget;
+    setEnviandoAnexo(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const solicitacao = await solicitarUploadMidia({
+        pacienteId,
+        tipo: tipoMidiaDoArquivo(arquivoAnexo),
+        categoria: categoriaAnexo,
+        nomeArquivo: arquivoAnexo.name,
+        mimeType: arquivoAnexo.type,
+        tamanhoBytes: arquivoAnexo.size
+      });
+      const upload = await fetch(solicitacao.uploadUrl, {
+        method: 'PUT',
+        headers: solicitacao.uploadHeaders,
+        body: arquivoAnexo
+      });
+      if (!upload.ok) throw new Error('O armazenamento recusou o arquivo. Tente novamente.');
+      await confirmarUploadMidia(solicitacao.arquivo.id);
+      setAnexos(await listarArquivosMidia(pacienteId));
+      setArquivoAnexo(null);
+      formulario.reset();
+      setSucesso('Anexo confirmado e incluido no prontuario.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao enviar anexo.');
+    } finally {
+      setEnviandoAnexo(false);
+    }
+  }
+
+  async function abrirAnexo(anexo: ArquivoMidiaApi) {
+    const novaAba = window.open('', '_blank');
+    setErro(null);
+    try {
+      const acesso = await obterAcessoArquivoMidia(anexo.id);
+      if (novaAba) {
+        novaAba.opener = null;
+        novaAba.location.href = acesso.url;
+      } else {
+        window.location.assign(acesso.url);
+      }
+    } catch (erroAtual) {
+      novaAba?.close();
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao abrir anexo.');
+    }
+  }
+
+  async function confirmarExclusaoAnexo() {
+    if (!anexoParaExcluir) return;
+    setExcluindoAnexo(true);
+    setErro(null);
+    try {
+      await excluirArquivoMidia(anexoParaExcluir.id);
+      setAnexoParaExcluir(null);
+      setAnexos(await listarArquivosMidia(pacienteId));
+      setSucesso('Anexo excluido do prontuario.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao excluir anexo.');
+    } finally {
+      setExcluindoAnexo(false);
     }
   }
 
@@ -711,6 +815,81 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
       </section> : null}
 
+      {abaAtiva === 'anexos' ? (
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+          <form onSubmit={enviarAnexo} className="grid h-fit gap-4 rounded-md border border-linha bg-white p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primaria-suave text-primaria">
+                <UploadCloud size={18} />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-tinta">Adicionar anexo clinico</h2>
+                <p className="mt-1 text-sm text-texto-suave">PDF ou imagem de ate 25 MB.</p>
+              </div>
+            </div>
+            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+              Categoria
+              <select
+                className="h-11 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                value={categoriaAnexo}
+                onChange={(evento) => setCategoriaAnexo(evento.target.value as CategoriaAnexoClinico)}
+              >
+                <option value="exame">Exame</option>
+                <option value="documento">Documento</option>
+                <option value="foto">Foto</option>
+              </select>
+            </label>
+            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+              Arquivo
+              <input
+                className="min-h-11 rounded-md border border-linha bg-white px-3 py-2 text-sm font-normal text-tinta file:mr-3 file:rounded-md file:border-0 file:bg-primaria-suave file:px-3 file:py-2 file:font-medium file:text-primaria"
+                type="file"
+                accept="application/pdf,image/jpeg,image/png,image/webp"
+                onChange={(evento) => setArquivoAnexo(evento.target.files?.[0] ?? null)}
+                required
+              />
+            </label>
+            <Botao type="submit" variante="primario" disabled={enviandoAnexo || !arquivoAnexo}>
+              <UploadCloud size={16} />
+              {enviandoAnexo ? 'Enviando' : 'Enviar anexo'}
+            </Botao>
+          </form>
+
+          <div className="grid content-start gap-3">
+            <div className="rounded-md border border-linha bg-white p-4">
+              <h2 className="text-base font-semibold text-tinta">Anexos do paciente</h2>
+              <p className="mt-1 text-sm text-texto-suave">Arquivos confirmados e armazenados de forma privada.</p>
+            </div>
+            {anexos.length ? anexos.map((anexo) => (
+              <article key={anexo.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-linha bg-white p-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-superficie-hover text-primaria">
+                    <Paperclip size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="break-words text-sm font-semibold text-tinta">{anexo.nomeArquivo ?? `Anexo ${anexo.id.slice(0, 8)}`}</h3>
+                    <p className="mt-1 text-xs text-texto-suave">
+                      {anexo.categoria} - {formatarTamanho(anexo.tamanhoBytes)} - {formatarDataHora(anexo.confirmadoEm ?? anexo.criadoEm)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Botao type="button" variante="secundario" onClick={() => void abrirAnexo(anexo)}>
+                    <Download size={16} />
+                    Abrir
+                  </Botao>
+                  <Botao type="button" variante="fantasma" onClick={() => setAnexoParaExcluir(anexo)} aria-label={`Excluir ${anexo.nomeArquivo ?? 'anexo'}`}>
+                    <Trash2 size={16} />
+                  </Botao>
+                </div>
+              </article>
+            )) : (
+              <EstadoVazio titulo="Nenhum anexo clinico" descricao="Exames, documentos e fotos confirmados aparecerao aqui." />
+            )}
+          </div>
+        </section>
+      ) : null}
+
       {abaAtiva === 'formularios' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Formularios e check-ins</h2><p className="mt-1 text-sm text-texto-suave">Envios, respostas e check-ins vinculados ao paciente.</p></div><LinhaDoTempo eventos={formularios} /></section> : null}
 
       {abaAtiva === 'mensagens' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Mensagens do paciente</h2><p className="mt-1 text-sm text-texto-suave">Historico de comunicacoes registradas.</p></div><LinhaDoTempo eventos={mensagens} /></section> : null}
@@ -743,6 +922,15 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           </Link>
         </aside>
       </section> : null}
+      <ModalConfirmacao
+        aberto={Boolean(anexoParaExcluir)}
+        titulo="Excluir anexo clinico"
+        mensagem="O arquivo sera removido do armazenamento e nao podera mais ser aberto."
+        rotuloConfirmar="Excluir anexo"
+        confirmando={excluindoAnexo}
+        aoConfirmar={() => void confirmarExclusaoAnexo()}
+        aoCancelar={() => setAnexoParaExcluir(null)}
+      />
       </div>
     </div>
   );

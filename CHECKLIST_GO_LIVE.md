@@ -53,6 +53,9 @@ ainda pendentes).
 - [ ] Logs e alertas configurados.
 - [ ] Runbooks revisados.
 - [ ] Suporte treinado com `RUNBOOK_SUPORTE.md`.
+- [ ] Bucket privado de anexos separado por ambiente, sem acesso publico.
+- [ ] CORS do bucket exige `if-none-match` e lifecycle de 1 dia cobre apenas `pendentes/`.
+- [ ] Upload, confirmacao, leitura e exclusao de anexo sintetico validados em producao.
 
 ## Integracoes
 

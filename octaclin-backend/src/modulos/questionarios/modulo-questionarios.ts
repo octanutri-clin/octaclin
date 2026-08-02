@@ -7,6 +7,7 @@ import { ModuloAuth } from '../auth/modulo-auth';
 import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
 import { TenantOrm } from '../tenancy/infraestrutura/tenant.orm';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
+import { ModuloMobile } from '../mobile/modulo-mobile';
 import { ServicoQuestionarios } from './aplicacao/servico-questionarios';
 import { ProcessadorAgendamentosQuestionario } from './aplicacao/processador-agendamentos';
 import { ControladorFormulariosPublicos } from './apresentacao/controlador-formularios-publicos';
@@ -37,7 +38,8 @@ import { RespostaValorOrm } from './infraestrutura/resposta-valor.orm';
       UserActionLogOrm
     ]),
     ModuloAuth,
-    ModuloTenancy
+    ModuloTenancy,
+    ModuloMobile
   ],
   controllers: [ControladorQuestionarios, ControladorFormulariosPublicos],
   providers: [ServicoQuestionarios, ProcessadorAgendamentosQuestionario, ServicoAuditoria],

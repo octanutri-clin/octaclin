@@ -401,7 +401,7 @@ export class ServicoPortalCliente {
       const pacientes = await gerenciador.getRepository(PacienteOrm).find({ where: { tenantId } });
       const mensagens = await gerenciador.getRepository(MensagemNotificacaoOrm).find({ where: { tenantId } });
       const questionarios = await gerenciador.getRepository(QuestionarioOrm).find({ where: { tenantId } });
-      const arquivos = await gerenciador.getRepository(ArquivoMidiaOrm).find({ where: { tenantId } });
+      const arquivos = await gerenciador.getRepository(ArquivoMidiaOrm).find({ where: { tenantId, status: 'confirmado' } });
       const inicioMes = new Date();
       inicioMes.setUTCDate(1);
       inicioMes.setUTCHours(0, 0, 0, 0);

@@ -881,6 +881,7 @@ async function prepararProntuarioMockado(page) {
   let criouTarefa = false;
   let criouMaterial = false;
   let enviouMaterial = false;
+  let anexos = [];
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -1164,6 +1165,56 @@ async function prepararProntuarioMockado(page) {
           : []
       )
     });
+  });
+
+  await page.route('https://upload.example/**', async (route) => {
+    await route.fulfill({ status: 200, body: '' });
+  });
+
+  await page.route('**/api/mobile/midias/uploads**', async (route) => {
+    const requisicao = route.request();
+    const url = new URL(requisicao.url());
+    if (url.pathname.endsWith('/confirmacao')) {
+      const confirmado = {
+        id: 'anexo-1',
+        pacienteId: 'paciente-1',
+        tipo: 'documento',
+        categoria: 'exame',
+        nomeArquivo: 'hemograma.pdf',
+        mimeType: 'application/pdf',
+        tamanhoBytes: '18',
+        hashConteudo: 'sha256-real',
+        status: 'confirmado',
+        criadoEm: '2026-07-22T20:00:00.000Z',
+        confirmadoEm: '2026-07-22T20:00:01.000Z'
+      };
+      anexos = [confirmado];
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(confirmado) });
+      return;
+    }
+    if (url.pathname.endsWith('/acesso')) {
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ url: 'https://download.example/anexo-1', expiraEmSegundos: 300 }) });
+      return;
+    }
+    if (requisicao.method() === 'DELETE') {
+      anexos = [];
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'excluido' }) });
+      return;
+    }
+    if (requisicao.method() === 'POST') {
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          arquivo: { id: 'anexo-1', pacienteId: 'paciente-1', tipo: 'documento', categoria: 'exame', mimeType: 'application/pdf', tamanhoBytes: '0', status: 'pendente', criadoEm: '2026-07-22T20:00:00.000Z' },
+          uploadUrl: 'https://upload.example/anexo-1',
+          uploadHeaders: { 'Content-Type': 'application/pdf' },
+          expiraEmSegundos: 300
+        })
+      });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(anexos) });
   });
 
   return {
@@ -1467,6 +1518,27 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByRole('heading', { name: 'Materiais enviados' })).toBeVisible();
     await expect(page.locator('article').filter({ hasText: 'Guia de hidratacao' })).toBeVisible();
     await expect(page.getByText('Ler antes do retorno.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('envia, confirma e exclui anexo clinico', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tab', { name: 'Anexos' }).click();
+    await page.getByLabel('Categoria').selectOption('exame');
+    await page.getByLabel('Arquivo').setInputFiles({
+      name: 'hemograma.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.7 sintetico')
+    });
+    await page.getByRole('button', { name: 'Enviar anexo' }).click();
+
+    await expect(page.getByText('Anexo confirmado e incluido no prontuario.')).toBeVisible();
+    await expect(page.getByText('hemograma.pdf')).toBeVisible();
+    await page.getByRole('button', { name: 'Excluir hemograma.pdf' }).click();
+    await page.getByRole('button', { name: 'Excluir anexo', exact: true }).click();
+    await expect(page.getByText('Nenhum anexo clinico')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });

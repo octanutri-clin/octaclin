@@ -166,6 +166,7 @@ Atualizado em 2026-08-02.
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
-Proxima fase de produto: Fase 200 - upload seguro e anexos clinicos, usando
-armazenamento de objetos privado, URLs pre-assinadas curtas e confirmacao do
-objeto real no backend.
+Fase 200 em andamento: upload seguro e anexos clinicos ja foram implementados
+e validados localmente com URLs pre-assinadas curtas e confirmacao do objeto
+real. Permanecem pendentes o bucket privado Cloudflare R2, a migration `1014`
+com role de owner e o smoke real antes do aceite da fase.

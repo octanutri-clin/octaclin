@@ -30,6 +30,21 @@ export class ArquivoMidiaOrm {
   @Column({ name: 'hash_conteudo', type: 'varchar', length: 128, nullable: true })
   hashConteudo?: string;
 
+  @Column({ type: 'varchar', length: 20, default: 'pendente' })
+  status: 'pendente' | 'confirmado' | 'excluido';
+
+  @Column({ type: 'varchar', length: 20, default: 'documento' })
+  categoria: 'exame' | 'documento' | 'foto' | 'diario';
+
+  @Column({ name: 'nome_original_criptografado', type: 'bytea', nullable: true })
+  nomeOriginalCriptografado?: Buffer;
+
+  @Column({ name: 'confirmado_em', type: 'timestamptz', nullable: true })
+  confirmadoEm?: Date;
+
+  @Column({ name: 'excluido_em', type: 'timestamptz', nullable: true })
+  excluidoEm?: Date;
+
   @Column({ type: 'jsonb', default: {} })
   metadados: Record<string, unknown>;
 
