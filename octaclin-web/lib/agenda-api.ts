@@ -144,10 +144,13 @@ export async function listarConsultasAgenda(): Promise<ConsultaAgendaApi[]> {
   return requisitar<ConsultaAgendaApi[]>('/api/agenda/consultas');
 }
 
-export async function listarFeedAgenda(entrada: ConsultarFeedAgendaEntrada): Promise<ItemFeedAgendaApi[]> {
+export async function listarFeedAgenda(
+  entrada: ConsultarFeedAgendaEntrada,
+  opcoes?: { signal?: AbortSignal }
+): Promise<ItemFeedAgendaApi[]> {
   const parametros = new URLSearchParams({ inicioEm: entrada.inicioEm, fimEm: entrada.fimEm });
   if (entrada.profissionalId) parametros.set('profissionalId', entrada.profissionalId);
-  return requisitar<ItemFeedAgendaApi[]>(`/api/agenda/feed?${parametros.toString()}`);
+  return requisitar<ItemFeedAgendaApi[]>(`/api/agenda/feed?${parametros.toString()}`, { signal: opcoes?.signal });
 }
 
 export async function criarBloqueioManualAgenda(

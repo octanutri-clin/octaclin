@@ -672,14 +672,14 @@ export function PainelOperacoes() {
 
       setSessao(sessaoAtual);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- redirecionarParaLogin nao e useCallback; incluir recriaria o efeito a cada render
   }, [router]);
 
   useEffect(() => {
     if (sessao) {
       void carregar();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carregar nao e useCallback; so deve rodar quando a sessao mudar
   }, [sessao]);
 
   const metricas = [

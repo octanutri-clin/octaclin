@@ -219,8 +219,8 @@ export async function solicitarAjusteAssinaturaCliente(
   return resposta.json() as Promise<SolicitacaoAjusteAssinaturaClienteApi>;
 }
 
-export async function obterConfiguracoesCliente(): Promise<ConfiguracoesPortalClienteApi> {
-  const resposta = await fetch('/api/cliente/configuracoes', { cache: 'no-store' });
+export async function obterConfiguracoesCliente(opcoes?: { signal?: AbortSignal }): Promise<ConfiguracoesPortalClienteApi> {
+  const resposta = await fetch('/api/cliente/configuracoes', { cache: 'no-store', signal: opcoes?.signal });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
   return resposta.json() as Promise<ConfiguracoesPortalClienteApi>;
 }
@@ -235,8 +235,8 @@ export async function atualizarConfiguracoesCliente(entrada: AtualizarConfigurac
   return resposta.json() as Promise<ConfiguracoesPortalClienteApi>;
 }
 
-export async function obterPerfilEmpresaCliente(): Promise<PerfilEmpresaClienteApi> {
-  const resposta = await fetch('/api/cliente/perfil-empresa', { cache: 'no-store' });
+export async function obterPerfilEmpresaCliente(opcoes?: { signal?: AbortSignal }): Promise<PerfilEmpresaClienteApi> {
+  const resposta = await fetch('/api/cliente/perfil-empresa', { cache: 'no-store', signal: opcoes?.signal });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
   return resposta.json() as Promise<PerfilEmpresaClienteApi>;
 }
@@ -251,20 +251,20 @@ export async function atualizarPerfilEmpresaCliente(entrada: AtualizarPerfilEmpr
   return resposta.json() as Promise<PerfilEmpresaClienteApi>;
 }
 
-export async function listarUsuariosCliente(): Promise<RespostaUsuariosClienteApi> {
-  const resposta = await fetch('/api/cliente/usuarios', { cache: 'no-store' });
+export async function listarUsuariosCliente(opcoes?: { signal?: AbortSignal }): Promise<RespostaUsuariosClienteApi> {
+  const resposta = await fetch('/api/cliente/usuarios', { cache: 'no-store', signal: opcoes?.signal });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
   return resposta.json() as Promise<RespostaUsuariosClienteApi>;
 }
 
-export async function listarConvitesUsuariosCliente(): Promise<RespostaConvitesUsuarioClienteApi> {
-  const resposta = await fetch('/api/cliente/usuarios/convites', { cache: 'no-store' });
+export async function listarConvitesUsuariosCliente(opcoes?: { signal?: AbortSignal }): Promise<RespostaConvitesUsuarioClienteApi> {
+  const resposta = await fetch('/api/cliente/usuarios/convites', { cache: 'no-store', signal: opcoes?.signal });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
   return resposta.json() as Promise<RespostaConvitesUsuarioClienteApi>;
 }
 
-export async function listarHistoricoConvitesUsuariosCliente(): Promise<RespostaHistoricoConvitesUsuarioClienteApi> {
-  const resposta = await fetch('/api/cliente/usuarios/convites/historico', { cache: 'no-store' });
+export async function listarHistoricoConvitesUsuariosCliente(opcoes?: { signal?: AbortSignal }): Promise<RespostaHistoricoConvitesUsuarioClienteApi> {
+  const resposta = await fetch('/api/cliente/usuarios/convites/historico', { cache: 'no-store', signal: opcoes?.signal });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
   return resposta.json() as Promise<RespostaHistoricoConvitesUsuarioClienteApi>;
 }

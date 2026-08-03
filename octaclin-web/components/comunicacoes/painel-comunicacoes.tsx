@@ -403,6 +403,7 @@ export function PainelComunicacoes() {
     () => conversasWhatsapp.find((conversa) => conversa.id === conversaSelecionadaId) ?? conversasFiltradas[0],
     [conversaSelecionadaId, conversasFiltradas, conversasWhatsapp]
   );
+  const pacienteAssociacaoIdEfetivo = pacienteAssociacaoId || pacientes?.itens[0]?.id || '';
 
   async function carregar() {
     setCarregando(true);
@@ -528,7 +529,7 @@ export function PainelComunicacoes() {
   }
 
   async function associarConversaWhatsapp(conversa: ConversaWhatsapp) {
-    if (!pacienteAssociacaoId) {
+    if (!pacienteAssociacaoIdEfetivo) {
       setErro('Selecione um paciente para associar.');
       return;
     }
@@ -539,7 +540,7 @@ export function PainelComunicacoes() {
     try {
       const resultado = await associarContatoWhatsapp({
         contato: conversa.contato,
-        pacienteId: pacienteAssociacaoId,
+        pacienteId: pacienteAssociacaoIdEfetivo,
         atualizarContatoPaciente
       });
       setSucesso(`${resultado.mensagensAtualizadas} mensagens vinculadas ao paciente.`);
@@ -587,18 +588,6 @@ export function PainelComunicacoes() {
       );
     });
   }, []);
-
-  useEffect(() => {
-    if (!conversaSelecionadaId && conversasWhatsapp[0]) {
-      setConversaSelecionadaId(conversasWhatsapp[0].id);
-    }
-  }, [conversaSelecionadaId, conversasWhatsapp]);
-
-  useEffect(() => {
-    if (!pacienteAssociacaoId && pacientes?.itens[0]) {
-      setPacienteAssociacaoId(pacientes.itens[0].id);
-    }
-  }, [pacienteAssociacaoId, pacientes?.itens]);
 
   useEffect(() => {
     if (!templatesCompativeis.some((template) => template.id === formularioMensagem.templateId)) {
@@ -1054,7 +1043,7 @@ export function PainelComunicacoes() {
                           <Rotulo htmlFor="whatsapp-associar-paciente">Associar contato a paciente</Rotulo>
                           <Selecao
                             id="whatsapp-associar-paciente"
-                            value={pacienteAssociacaoId}
+                            value={pacienteAssociacaoIdEfetivo}
                             onChange={(evento) => setPacienteAssociacaoId(evento.target.value)}
                           >
                             <option value="" disabled>
@@ -1080,7 +1069,7 @@ export function PainelComunicacoes() {
                       <Botao
                         type="button"
                         variante="primario"
-                        disabled={salvando || !pacienteAssociacaoId}
+                        disabled={salvando || !pacienteAssociacaoIdEfetivo}
                         onClick={() => associarConversaWhatsapp(conversaSelecionada)}
                       >
                         <Save size={16} />

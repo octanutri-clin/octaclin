@@ -24,6 +24,7 @@ import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/compone
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { Abas } from '@/components/ui/abas';
 import { obterSessao } from '@/lib/auth-api';
+import { useRequisicaoCancelavel } from '@/lib/hooks';
 import { PortalShell } from '@/components/app/portal-shell';
 import {
   AtualizarConfiguracoesClienteEntrada,
@@ -231,6 +232,12 @@ export function PortalCliente() {
   const [permissoes, setPermissoes] = useState<string[]>([]);
   const [permissoesCarregadas, setPermissoesCarregadas] = useState(false);
 
+  const iniciarRequisicaoUsuarios = useRequisicaoCancelavel();
+  const iniciarRequisicaoConvites = useRequisicaoCancelavel();
+  const iniciarRequisicaoHistoricoConvites = useRequisicaoCancelavel();
+  const iniciarRequisicaoConfiguracoes = useRequisicaoCancelavel();
+  const iniciarRequisicaoPerfilEmpresa = useRequisicaoCancelavel();
+
   useEffect(() => {
     let ativo = true;
 
@@ -283,50 +290,61 @@ export function PortalCliente() {
   }, []);
 
   const carregarUsuarios = useCallback(async () => {
+    const { signal, ehAtual } = iniciarRequisicaoUsuarios();
     setCarregandoUsuarios(true);
     setErroUsuarios(null);
 
     try {
-      setUsuarios(await listarUsuariosCliente());
+      const dados = await listarUsuariosCliente({ signal });
+      if (ehAtual()) setUsuarios(dados);
     } catch (erroAtual) {
+      if (signal.aborted || !ehAtual()) return;
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar usuarios da conta.');
     } finally {
-      setCarregandoUsuarios(false);
+      if (ehAtual()) setCarregandoUsuarios(false);
     }
-  }, []);
+  }, [iniciarRequisicaoUsuarios]);
 
   const carregarConvites = useCallback(async () => {
+    const { signal, ehAtual } = iniciarRequisicaoConvites();
     setCarregandoConvites(true);
     setErroUsuarios(null);
 
     try {
-      setConvites(await listarConvitesUsuariosCliente());
+      const dados = await listarConvitesUsuariosCliente({ signal });
+      if (ehAtual()) setConvites(dados);
     } catch (erroAtual) {
+      if (signal.aborted || !ehAtual()) return;
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar convites administrativos.');
     } finally {
-      setCarregandoConvites(false);
+      if (ehAtual()) setCarregandoConvites(false);
     }
-  }, []);
+  }, [iniciarRequisicaoConvites]);
 
   const carregarHistoricoConvites = useCallback(async () => {
+    const { signal, ehAtual } = iniciarRequisicaoHistoricoConvites();
     setCarregandoHistoricoConvites(true);
     setErroUsuarios(null);
 
     try {
-      setHistoricoConvites(await listarHistoricoConvitesUsuariosCliente());
+      const dados = await listarHistoricoConvitesUsuariosCliente({ signal });
+      if (ehAtual()) setHistoricoConvites(dados);
     } catch (erroAtual) {
+      if (signal.aborted || !ehAtual()) return;
       setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar historico de convites.');
     } finally {
-      setCarregandoHistoricoConvites(false);
+      if (ehAtual()) setCarregandoHistoricoConvites(false);
     }
-  }, []);
+  }, [iniciarRequisicaoHistoricoConvites]);
 
   const carregarConfiguracoes = useCallback(async () => {
+    const { signal, ehAtual } = iniciarRequisicaoConfiguracoes();
     setCarregandoConfiguracoes(true);
     setErroConfiguracoes(null);
 
     try {
-      const dados = await obterConfiguracoesCliente();
+      const dados = await obterConfiguracoesCliente({ signal });
+      if (!ehAtual()) return;
       setConfiguracoes(dados);
       setFormularioConfiguracoes({
         nome: dados.nome,
@@ -336,18 +354,21 @@ export function PortalCliente() {
         marca: dados.marca
       });
     } catch (erroAtual) {
+      if (signal.aborted || !ehAtual()) return;
       setErroConfiguracoes(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar configuracoes da conta.');
     } finally {
-      setCarregandoConfiguracoes(false);
+      if (ehAtual()) setCarregandoConfiguracoes(false);
     }
-  }, []);
+  }, [iniciarRequisicaoConfiguracoes]);
 
   const carregarPerfilEmpresa = useCallback(async () => {
+    const { signal, ehAtual } = iniciarRequisicaoPerfilEmpresa();
     setCarregandoPerfilEmpresa(true);
     setErroPerfilEmpresa(null);
 
     try {
-      const dados = await obterPerfilEmpresaCliente();
+      const dados = await obterPerfilEmpresaCliente({ signal });
+      if (!ehAtual()) return;
       setPerfilEmpresa(dados);
       setFormularioPerfilEmpresa({
         tipoPessoa: dados.tipoPessoa,
@@ -362,11 +383,12 @@ export function PortalCliente() {
         fiscal: dados.fiscal
       });
     } catch (erroAtual) {
+      if (signal.aborted || !ehAtual()) return;
       setErroPerfilEmpresa(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar perfil fiscal.');
     } finally {
-      setCarregandoPerfilEmpresa(false);
+      if (ehAtual()) setCarregandoPerfilEmpresa(false);
     }
-  }, []);
+  }, [iniciarRequisicaoPerfilEmpresa]);
 
   async function convidarUsuario(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();

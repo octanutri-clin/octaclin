@@ -6,6 +6,7 @@ import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Dica } from '@/components/ui/dica';
 import { ModalConfirmacao } from '@/components/ui/modal';
+import { useRequisicaoCancelavel } from '@/lib/hooks';
 import {
   ConsultaAgendaApi,
   criarBloqueioManualAgenda,
@@ -123,6 +124,7 @@ export function AgendaSemanal({
   const [itensFeed, setItensFeed] = useState<ItemFeedAgendaApi[] | null>(null);
   const [erroFeed, setErroFeed] = useState<string | null>(null);
   const [carregandoFeed, setCarregandoFeed] = useState(false);
+  const iniciarRequisicaoFeed = useRequisicaoCancelavel();
   const [bloqueio, setBloqueio] = useState(() => ({
     tipo: 'intervalo' as const,
     inicioEm: valorDatetimeLocal(new Date()),
@@ -164,23 +166,24 @@ export function AgendaSemanal({
   }, [semanaInicio, visao]);
 
   useEffect(() => {
-    let cancelado = false;
+    const { signal, ehAtual } = iniciarRequisicaoFeed();
     setCarregandoFeed(true);
     setErroFeed(null);
-    void listarFeedAgenda({ inicioEm: periodo.inicio.toISOString(), fimEm: periodo.fim.toISOString(), profissionalId: profissionalId || undefined })
+    void listarFeedAgenda(
+      { inicioEm: periodo.inicio.toISOString(), fimEm: periodo.fim.toISOString(), profissionalId: profissionalId || undefined },
+      { signal }
+    )
       .then((resultado) => {
-        if (!cancelado) setItensFeed(resultado);
+        if (ehAtual()) setItensFeed(resultado);
       })
       .catch((erro: unknown) => {
-        if (!cancelado) setErroFeed(erro instanceof Error ? erro.message : 'Falha ao carregar disponibilidade.');
+        if (signal.aborted || !ehAtual()) return;
+        setErroFeed(erro instanceof Error ? erro.message : 'Falha ao carregar disponibilidade.');
       })
       .finally(() => {
-        if (!cancelado) setCarregandoFeed(false);
+        if (ehAtual()) setCarregandoFeed(false);
       });
-    return () => {
-      cancelado = true;
-    };
-  }, [consultas, periodo.fim, periodo.inicio, profissionalId]);
+  }, [consultas, periodo.fim, periodo.inicio, profissionalId, iniciarRequisicaoFeed]);
 
   const dias = periodo.dias;
   const semanaFim = dias[dias.length - 1];

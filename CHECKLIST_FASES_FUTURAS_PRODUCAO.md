@@ -1113,6 +1113,14 @@ publicado antes de ampliar a superficie de mudancas visuais.
 - [ ] Fase 204 - Data fetching, resiliencia e code splitting.
   - Cancelar requisicoes obsoletas, adicionar loading/error boundaries e
     carregar apenas as secoes necessarias das rotas extensas.
+  - Parcial em 2026-08-03: hook `useRequisicaoCancelavel` criado e validado
+    com teste de race condition; aplicado em `portal-cliente.tsx` (5
+    loaders) e `agenda-semanal.tsx` (feed). `error.tsx`/`loading.tsx` na
+    raiz, 2 Suspense com fallback nulo corrigidos, 2 estados derivados
+    movidos para render. Falta: `painel-operacoes.tsx` (~15 loaders),
+    `painel-comunicacoes.tsx`/`portal-paciente.tsx` (parcial), next/dynamic
+    no portal do paciente, Server Components para cliente/operacoes. Ver
+    `fase-204-data-fetching-resiliencia-code-splitting.md`.
 
 - [ ] Fase 205 - Recall automatico de retorno.
   - Adicionar gatilho de inatividade ao motor de automacoes, respeitando

@@ -37,7 +37,7 @@ export function EditorQuestionario() {
 
   useEffect(() => {
     void carregar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carregar nao e useCallback; deve rodar apenas na montagem
   }, []);
 
   return (
