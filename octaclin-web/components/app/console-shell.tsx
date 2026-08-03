@@ -20,7 +20,8 @@ import {
 } from 'lucide-react';
 import { obterSessao, type SessaoPublica } from '@/lib/auth-api';
 import { PortalShell } from '@/components/app/portal-shell';
-import { cn } from '@/lib/utils';
+import { classesBotao } from '@/components/ui/botao';
+import { Dica } from '@/components/ui/dica';
 
 const itens = [
   { href: '/dashboard', rotulo: 'Hoje', icone: LayoutDashboard, permissao: 'dashboard.ler', grupo: 'Clinica' },
@@ -58,18 +59,12 @@ interface ConsoleShellProps {
 
 function AtalhoShell({ href, rotulo, icone }: { href: string; rotulo: string; icone: ReactNode }) {
   return (
-    <Link
-      href={href as Route}
-      aria-label={rotulo}
-      title={rotulo}
-      className={cn(
-        'inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors',
-        'hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria'
-      )}
-    >
-      {icone}
-      <span className="hidden xl:inline">{rotulo}</span>
-    </Link>
+    <Dica texto={rotulo}>
+      <Link href={href as Route} aria-label={rotulo} className={classesBotao()}>
+        {icone}
+        <span className="hidden xl:inline">{rotulo}</span>
+      </Link>
+    </Dica>
   );
 }
 

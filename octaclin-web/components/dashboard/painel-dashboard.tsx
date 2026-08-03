@@ -28,9 +28,10 @@ import {
   type ResumoDashboardClinicoApi,
   type StatusConsultaClinica
 } from '@/lib/dashboard-api';
-import { Botao } from '@/components/ui/botao';
+import { Botao, classesBotao } from '@/components/ui/botao';
 import { Selecao } from '@/components/ui/campo';
-import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { AlertaOperacional, Aviso, AvisoRegiao, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { Metrica } from '@/components/ui/metrica';
 import { ModalConfirmacao } from '@/components/ui/modal';
 
 const periodos: { valor: PeriodoDashboardClinico; rotulo: string }[] = [
@@ -65,11 +66,7 @@ function podeAgir(sessao: SessaoPublica | null, permissao: string) {
 }
 
 function LinkAcao({ href, children }: { href: Route; children: React.ReactNode }) {
-  return <Link href={href} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria">{children}</Link>;
-}
-
-function Indicador({ titulo, valor, detalhe, icone: Icone }: { titulo: string; valor: number; detalhe: string; icone: typeof CalendarDays }) {
-  return <article className="min-w-0 rounded-md border border-linha bg-white p-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold uppercase text-texto-suave">{titulo}</p><p className="mt-1 text-2xl font-semibold text-tinta">{valor}</p><p className="mt-1 text-xs text-texto-suave">{detalhe}</p></div><Icone size={18} className="shrink-0 text-primaria" /></div></article>;
+  return <Link href={href} className={classesBotao()}>{children}</Link>;
 }
 
 function CabecalhoFila({ titulo, detalhe, children }: { titulo: string; detalhe: string; children?: React.ReactNode }) {
@@ -205,7 +202,11 @@ export function PainelDashboard() {
 
     {superAdmin ? <AlertaOperacional mensagem={profissionalId ? `Voce esta acompanhando o painel de ${contextoSelecionado?.nome ?? dados?.contexto.profissionalNome ?? 'outro profissional'}. Acoes serao registradas em auditoria.` : 'Selecione um profissional para acessar o contexto clinico. Apenas SuperAdmin pode trocar este contexto.'} /> : null}
     {erro ? <div className="grid gap-3"><AlertaOperacional mensagem={erro} /><Botao type="button" onClick={() => void carregar()}><RefreshCcw size={16} />Tentar novamente</Botao></div> : null}
-    {sucesso ? <p role="status" className="rounded-md border border-sucesso bg-sucesso-suave px-3 py-2 text-sm font-medium text-sucesso-forte">{sucesso}</p> : null}
+    {sucesso ? (
+      <AvisoRegiao>
+        <Aviso variante="sucesso" mensagem={sucesso} aoFechar={() => setSucesso(null)} />
+      </AvisoRegiao>
+    ) : null}
     {carregando && !dados ? <BarraCarregamento visivel rotulo="Atualizando painel clinico" /> : null}
     {dados?.selecaoObrigatoria ? <EstadoVazio titulo="Selecione um profissional" descricao="O painel clinico requer um contexto profissional explicito." /> : null}
     {dados && !dados.selecaoObrigatoria ? <>
@@ -235,11 +236,11 @@ export function PainelDashboard() {
       <section aria-labelledby="hoje-em-foco" className="grid gap-3 border-t border-linha pt-4">
         <div><h2 id="hoje-em-foco" className="text-base font-semibold text-tinta">Hoje em foco</h2><p className="mt-1 text-sm text-texto-suave">Indicadores para organizar a rotina clinica.</p></div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <Indicador titulo="Hoje" valor={dados.indicadores.consultasHoje} detalhe={`${dados.indicadores.proximas} proximas`} icone={CalendarDays} />
-        <Indicador titulo="Sem retorno" valor={dados.indicadores.semRetorno30} detalhe={`${dados.indicadores.semRetorno60} em 60d, ${dados.indicadores.semRetorno90Mais} em 90+d`} icone={UserRoundPlus} />
-        <Indicador titulo="Pendencias" valor={dados.indicadores.tarefasVencidas + dados.indicadores.formulariosPendentes} detalhe={`${dados.indicadores.tarefasVencidas} tarefas, ${dados.indicadores.formulariosPendentes} formularios`} icone={ClipboardList} />
-        <Indicador titulo="Comunicacoes" valor={dados.indicadores.comunicacoesEmAlerta} detalhe={`${dados.indicadores.solicitacoesPendentes} solicitacoes pendentes`} icone={MessageSquareWarning} />
-        <Indicador titulo="Risco alto" valor={dados.indicadores.pacientesRiscoAlto} detalhe="Priorizar retorno clinico" icone={AlertTriangle} />
+        <Metrica rotulo="Hoje" valor={dados.indicadores.consultasHoje} delta={{ valor: `${dados.indicadores.proximas} proximas`, tipo: 'neutro' }} icone={<CalendarDays size={18} />} />
+        <Metrica rotulo="Sem retorno" valor={dados.indicadores.semRetorno30} delta={{ valor: `${dados.indicadores.semRetorno60} em 60d, ${dados.indicadores.semRetorno90Mais} em 90+d`, tipo: 'neutro' }} icone={<UserRoundPlus size={18} />} />
+        <Metrica rotulo="Pendencias" valor={dados.indicadores.tarefasVencidas + dados.indicadores.formulariosPendentes} delta={{ valor: `${dados.indicadores.tarefasVencidas} tarefas, ${dados.indicadores.formulariosPendentes} formularios`, tipo: 'neutro' }} icone={<ClipboardList size={18} />} />
+        <Metrica rotulo="Comunicacoes" valor={dados.indicadores.comunicacoesEmAlerta} delta={{ valor: `${dados.indicadores.solicitacoesPendentes} solicitacoes pendentes`, tipo: 'neutro' }} icone={<MessageSquareWarning size={18} />} />
+        <Metrica rotulo="Risco alto" valor={dados.indicadores.pacientesRiscoAlto} delta={{ valor: 'Priorizar retorno clinico', tipo: 'neutro' }} icone={<AlertTriangle size={18} />} />
         </div>
       </section>
     </> : null}

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { Abas } from '@/components/ui/abas';
 import { AlertaOperacional, AlertaSucesso } from '@/components/ui/feedback';
+import { ModalConfirmacao } from '@/components/ui/modal';
 import { AreaBiblioteca } from './area-biblioteca';
 import { AreaDistribuicao } from './area-distribuicao';
 import { AreaEditor } from './area-editor';
@@ -22,7 +23,17 @@ const areasQuestionarios: { id: AreaQuestionarios; rotulo: string }[] = [
 
 export function EditorQuestionario() {
   const workspace = useWorkspaceQuestionarios();
-  const { erro, sucesso, alteracoesQuestionarioPendentes, alteracoesPerguntaPendentes, areaAtiva, setAreaAtiva, carregar } = workspace;
+  const {
+    erro,
+    sucesso,
+    alteracoesQuestionarioPendentes,
+    alteracoesPerguntaPendentes,
+    areaAtiva,
+    setAreaAtiva,
+    carregar,
+    confirmacaoTrocaPendente,
+    setConfirmacaoTrocaPendente
+  } = workspace;
 
   useEffect(() => {
     void carregar();
@@ -51,6 +62,19 @@ export function EditorQuestionario() {
         {areaAtiva === 'distribuicao' ? <AreaDistribuicao workspace={workspace} /> : null}
         {areaAtiva === 'respostas' ? <AreaRespostas workspace={workspace} /> : null}
       </div>
+
+      <ModalConfirmacao
+        aberto={Boolean(confirmacaoTrocaPendente)}
+        titulo="Alteracoes nao salvas"
+        mensagem="Voce tem alteracoes nao salvas neste formulario ou pergunta. Trocar mesmo assim?"
+        rotuloConfirmar="Trocar mesmo assim"
+        aoCancelar={() => setConfirmacaoTrocaPendente(null)}
+        aoConfirmar={() => {
+          const acao = confirmacaoTrocaPendente;
+          setConfirmacaoTrocaPendente(null);
+          acao?.();
+        }}
+      />
     </section>
   );
 }

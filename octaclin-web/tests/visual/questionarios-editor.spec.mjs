@@ -51,12 +51,13 @@ test.describe('Editor de questionarios', () => {
     await expect(titulo).toHaveValue('Check-in semanal');
     await titulo.fill('Check-in semanal (editado)');
 
-    page.once('dialog', (dialog) => dialog.dismiss());
     await page.getByLabel('Selecionar').selectOption('q-2');
+    await expect(page.getByText('Voce tem alteracoes nao salvas')).toBeVisible();
+    await page.getByRole('button', { name: 'Cancelar' }).click();
     await expect(titulo).toHaveValue('Check-in semanal (editado)');
 
-    page.once('dialog', (dialog) => dialog.accept());
     await page.getByLabel('Selecionar').selectOption('q-2');
+    await page.getByRole('button', { name: 'Trocar mesmo assim' }).click();
     await expect(page.getByLabel('Titulo')).toHaveValue('Avaliacao mensal');
   });
 

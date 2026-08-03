@@ -1,21 +1,23 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-02.
+Atualizado em 2026-08-03.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Fase 203 (parcial): componentes compartilhados, em 2026-08-02. 7
-  componentes novos (Aviso, EtiquetaStatus, Avatar, Dica, Menu,
-  CabecalhoSecao, Metrica), 2 window.confirm mecanicos eliminados e os 13
-  badges ad hoc de `portal-paciente.tsx` migrados; lint, typecheck, build,
-  test:a11y (10/10) e 64 testes Playwright de regressao aprovados. Falta:
-  2 window.confirm de guarda de navegacao, migracao de botoes ad hoc,
-  adocao dos componentes novos nas demais telas. Ver
+- Ultima fase concluida: Fase 203 - componentes compartilhados e fim dos
+  sistemas paralelos, em 2026-08-03 (2 rodadas). 7 componentes novos
+  (Aviso, EtiquetaStatus, Avatar, Dica, Menu, CabecalhoSecao, Metrica),
+  zero `window.confirm` no repo, botoes ad hoc unificados via
+  `classesBotao`, Aviso/Metrica adotados nos pontos citados no
+  diagnostico, tooltips migrados para Dica; lint, typecheck, build,
+  test:a11y (10/10) e 88 testes Playwright de regressao aprovados. Debito
+  tecnico de baixo risco (nao bloqueia producao): linhas de 1000+
+  caracteres de `painel-dashboard.tsx`, adocao ampla de CabecalhoSecao. Ver
   `fase-203-componentes-compartilhados-fim-sistemas-paralelos.md`.
-- Ultima fase concluida: Fase 202 - sistema visual (tokens, tipografia e
+- Fase 202: sistema visual (tokens, tipografia e
   elevacao), em 2026-08-02. Tokens semanticos, escala tipografica/raio/sombra,
   troca para IBM Plex Sans+Mono, cartao/sidebar/botao/agenda atualizados; lint,
   typecheck, build, gate de acessibilidade (10/10) e regressao do portal do
@@ -184,7 +186,5 @@ Atualizado em 2026-08-02.
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
 Proxima pendencia tecnica: rollout da Fase 201 no Render (separar os papeis
-`web` e `worker` e registrar a entrega sintetica unica exigida pelo aceite),
-e concluir a Fase 203 (2 window.confirm de guarda de navegacao ainda
-pendentes, migracao de botoes ad hoc e adocao dos componentes novos nas
-telas listadas no diagnostico).
+`web` e `worker` e registrar a entrega sintetica unica exigida pelo aceite).
+A Fase 203 esta concluida.

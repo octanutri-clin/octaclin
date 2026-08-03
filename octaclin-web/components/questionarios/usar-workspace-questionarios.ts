@@ -138,6 +138,11 @@ export function useWorkspaceQuestionarios() {
   const [confirmandoArquivarQuestionario, setConfirmandoArquivarQuestionario] = useState(false);
   const [previewAberto, setPreviewAberto] = useState(false);
   const [alteracoesQuestionarioPendentes, setAlteracoesQuestionarioPendentes] = useState(false);
+  const [confirmacaoTrocaPendente, setConfirmacaoTrocaPendente] = useState<(() => void) | null>(null);
+
+  function possuiAlteracoesPendentes() {
+    return alteracoesQuestionarioPendentes || alteracoesPerguntaPendentes;
+  }
   const [alteracoesPerguntaPendentes, setAlteracoesPerguntaPendentes] = useState(false);
   const [respostasRecebidas, setRespostasRecebidas] = useState<RespostaQuestionarioRecebidaApi[]>([]);
   const [leituraClinica, setLeituraClinica] = useState<LeituraClinicaQuestionarioApi | null>(null);
@@ -243,7 +248,10 @@ export function useWorkspaceQuestionarios() {
   }
 
   async function selecionarQuestionario(questionario: QuestionarioApi | null, confirmacaoRealizada = false) {
-    if (questionario?.id !== questionarioAtual?.id && !confirmacaoRealizada && !confirmarTrocaComAlteracoesPendentes()) return;
+    if (questionario?.id !== questionarioAtual?.id && !confirmacaoRealizada && possuiAlteracoesPendentes()) {
+      setConfirmacaoTrocaPendente(() => () => void selecionarQuestionario(questionario, true));
+      return;
+    }
     if (!questionario) {
       setQuestionarioAtual(null);
       setTitulo('');
@@ -303,7 +311,14 @@ export function useWorkspaceQuestionarios() {
   }
 
   async function carregarPaginaQuestionarios(pagina: number, busca = buscaQuestionarios) {
-    if (!confirmarTrocaComAlteracoesPendentes()) return;
+    if (possuiAlteracoesPendentes()) {
+      setConfirmacaoTrocaPendente(() => () => void carregarPaginaQuestionariosInterno(pagina, busca));
+      return;
+    }
+    await carregarPaginaQuestionariosInterno(pagina, busca);
+  }
+
+  async function carregarPaginaQuestionariosInterno(pagina: number, busca = buscaQuestionarios) {
     setCarregando(true);
     setErro(null);
     setSucesso(null);
@@ -704,13 +719,6 @@ export function useWorkspaceQuestionarios() {
     return () => window.removeEventListener('beforeunload', aoTentarFecharAba);
   }, [alteracoesQuestionarioPendentes, alteracoesPerguntaPendentes]);
 
-  function confirmarTrocaComAlteracoesPendentes() {
-    return (
-      !(alteracoesQuestionarioPendentes || alteracoesPerguntaPendentes) ||
-      window.confirm('Voce tem alteracoes nao salvas neste formulario ou pergunta. Trocar mesmo assim?')
-    );
-  }
-
   return {
     categorias,
     profissionais,
@@ -805,7 +813,8 @@ export function useWorkspaceQuestionarios() {
     atualizarOpcao,
     adicionarOpcao,
     removerOpcao,
-    confirmarTrocaComAlteracoesPendentes
+    confirmacaoTrocaPendente,
+    setConfirmacaoTrocaPendente
   };
 }
 

@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, List, MapPin, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
+import { Dica } from '@/components/ui/dica';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import {
   ConsultaAgendaApi,
@@ -306,30 +307,32 @@ export function AgendaSemanal({
           </div>
 
           <div className="flex items-center gap-1" role="group" aria-label="Navegar entre periodos">
-            <Botao
-              type="button"
-              className="w-11 px-0"
-              aria-label={visao === 'semana' ? 'Semana anterior' : 'Periodo anterior'}
-              title={visao === 'semana' ? 'Semana anterior' : 'Periodo anterior'}
-              onClick={() => mudarSemana(visao === 'dia' ? -1 : -7)}
-            >
-              <ChevronLeft size={18} />
-            </Botao>
+            <Dica texto={visao === 'semana' ? 'Semana anterior' : 'Periodo anterior'}>
+              <Botao
+                type="button"
+                className="w-11 px-0"
+                aria-label={visao === 'semana' ? 'Semana anterior' : 'Periodo anterior'}
+                onClick={() => mudarSemana(visao === 'dia' ? -1 : -7)}
+              >
+                <ChevronLeft size={18} />
+              </Botao>
+            </Dica>
             <Botao type="button" onClick={() => {
               setSemanaInicio(visao === 'semana' ? inicioDaSemana(new Date()) : new Date());
               setSemanaInicializada(true);
             }}>
               Hoje
             </Botao>
-            <Botao
-              type="button"
-              className="w-11 px-0"
-              aria-label={visao === 'semana' ? 'Proxima semana' : 'Proximo periodo'}
-              title={visao === 'semana' ? 'Proxima semana' : 'Proximo periodo'}
-              onClick={() => mudarSemana(visao === 'dia' ? 1 : 7)}
-            >
-              <ChevronRight size={18} />
-            </Botao>
+            <Dica texto={visao === 'semana' ? 'Proxima semana' : 'Proximo periodo'}>
+              <Botao
+                type="button"
+                className="w-11 px-0"
+                aria-label={visao === 'semana' ? 'Proxima semana' : 'Proximo periodo'}
+                onClick={() => mudarSemana(visao === 'dia' ? 1 : 7)}
+              >
+                <ChevronRight size={18} />
+              </Botao>
+            </Dica>
           </div>
         </div>
       </header>
@@ -513,15 +516,16 @@ export function AgendaSemanal({
                       style={{ top: topo, height: altura }}
                     >
                       {bloqueioManual ? (
-                        <button
-                          type="button"
-                          aria-label="Liberar horario reservado"
-                          title="Liberar horario"
-                          className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded text-alerta-forte hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
-                          onClick={() => setBloqueioParaLiberar(item.id)}
-                        >
-                          <X size={14} />
-                        </button>
+                        <Dica texto="Liberar horario">
+                          <button
+                            type="button"
+                            aria-label="Liberar horario reservado"
+                            className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded text-alerta-forte hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                            onClick={() => setBloqueioParaLiberar(item.id)}
+                          >
+                            <X size={14} />
+                          </button>
+                        </Dica>
                       ) : null}
                       {item.tipo === 'consulta' ? (
                         <button

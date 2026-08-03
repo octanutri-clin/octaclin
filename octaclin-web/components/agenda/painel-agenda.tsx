@@ -19,7 +19,7 @@ import {
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
-import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { AlertaOperacional, Aviso, AvisoRegiao, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { AgendaSemanal } from '@/components/agenda/agenda-semanal';
 import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi } from '@/lib/agendamento-publico-api';
@@ -495,10 +495,9 @@ export function PainelAgenda() {
 
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       {sucesso ? (
-        <div className="flex items-start gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
-          <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
-          <span>{sucesso}</span>
-        </div>
+        <AvisoRegiao>
+          <Aviso variante="sucesso" mensagem={sucesso} aoFechar={() => setSucesso(null)} />
+        </AvisoRegiao>
       ) : null}
 
       <Modal

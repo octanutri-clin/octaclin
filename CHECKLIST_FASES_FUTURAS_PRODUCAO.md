@@ -1099,15 +1099,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Lint, typecheck, build, gate de acessibilidade (10/10) e regressao do
     portal do cliente (8/8) aprovados.
 
-- [ ] Fase 203 - Componentes compartilhados e fim dos sistemas paralelos.
+- [x] Fase 203 - Componentes compartilhados e fim dos sistemas paralelos.
   - Reusar primitives existentes e consolidar aviso, status, avatar, tooltip,
     menu, cabecalho de secao e metricas; eliminar confirmacoes nativas.
-  - Parcialmente concluida em 2026-08-02: os 7 componentes criados, 2 dos 4
-    `window.confirm` eliminados e os 13 badges ad hoc de `portal-paciente.tsx`
-    migrados. Ver `fase-203-componentes-compartilhados-fim-sistemas-paralelos.md`
-    para o que falta (2 window.confirm de guarda de navegacao, migracao de
-    botoes ad hoc, adocao de Aviso/CabecalhoSecao/Metrica nas telas, tooltips
-    Dica, quebra de linhas de 1000+ caracteres).
+  - Concluida em 2026-08-03 (2 rodadas): zero `window.confirm` no repo,
+    botoes ad hoc migrados para `classesBotao`, `Aviso`/`Metrica` adotados
+    nos pontos citados, tooltips migrados para `Dica`. Ver
+    `fase-203-componentes-compartilhados-fim-sistemas-paralelos.md`. Ficam
+    como debito tecnico de baixo risco (nao bloqueiam producao): linhas de
+    1000+ caracteres de `painel-dashboard.tsx` e adocao ampla de
+    `CabecalhoSecao` nas demais telas.
 
 - [ ] Fase 204 - Data fetching, resiliencia e code splitting.
   - Cancelar requisicoes obsoletas, adicionar loading/error boundaries e

@@ -1,67 +1,77 @@
 # Fase 203 - Componentes compartilhados e fim dos sistemas paralelos
 
-Status: parcialmente concluida em 2026-08-02. Os 7 componentes novos, a
-eliminacao dos `window.confirm` mecanicos e a migracao dos 13 badges ad hoc
-de `portal-paciente.tsx` estao prontos e validados. Migracao dos botoes
-reimplementados a mao, adocao de `Aviso`/`CabecalhoSecao`/`Metrica` nas
-demais telas e quebra das linhas de 1000+ caracteres do
-`painel-dashboard.tsx` ficam para uma proxima rodada.
+Status: quase concluida em 2026-08-03. Duas rodadas: a primeira entregou os
+7 componentes novos, eliminou 2 dos 4 `window.confirm` e migrou os 13
+badges ad hoc de `portal-paciente.tsx`. A segunda rodada eliminou os 2
+`window.confirm` restantes, migrou os botoes ad hoc para uma fonte unica de
+classes, adotou `Aviso`/`Metrica` nos pontos citados no diagnostico e
+migrou os tooltips nativos para `Dica`. So falta quebrar as linhas de
+1000+ caracteres de `painel-dashboard.tsx` (item cosmetico, sem criterio de
+aceite funcional) e a adocao ampla de `CabecalhoSecao` nas ~30 telas do
+diagnostico (fora do escopo critico da fase).
 
-## Entregue
+## Entregue (rodada 1, 2026-08-02)
 
 - `ui/feedback.tsx`: `Aviso` (toast, `role="status" aria-live="polite"`) e
   `AvisoRegiao` (wrapper fixo, nao empurra layout).
 - `ui/etiqueta.tsx`: `EtiquetaStatus<T>` generico (mapa `status -> {rotulo,
   variante}` fornecido pelo chamador).
-- `ui/avatar.tsx` (novo): iniciais sobre cor derivada de hash do id, sobre a
-  paleta de tokens existente.
-- `ui/dica.tsx` (novo): tooltip acessivel (hover + foco, sem atraso,
-  `Escape` fecha, `role="tooltip"` + `aria-describedby`).
-- `ui/menu.tsx` (novo): `Menu`/`ItemMenu` — dropdown com `role="menu"`,
-  fecha ao clicar fora e no `Escape`.
-- `ui/cabecalho-secao.tsx` (novo): padrao titulo+descricao+acoes.
-- `ui/metrica.tsx` (novo): promove o padrao `Indicador` do
-  `painel-dashboard.tsx`, com `numeros-tabulares` e delta opcional.
-- `ui/tabela.tsx`: prop `densidade` (`padrao`/`compacta`) em
-  `TabelaCabecalho`/`TabelaLinha`.
-- `painel-dashboard.tsx` e `painel-agenda.tsx`: os 2 `window.confirm`
-  mecanicos (`executar()` do dashboard, `rotacionarLink()` da agenda) agora
-  usam `ModalConfirmacao`. Testes Playwright que dependiam do dialog nativo
-  atualizados (`jornadas-criticas.spec.mjs`, `agendamento-publico.spec.mjs`,
-  `console-regression.spec.mjs`).
+- `ui/avatar.tsx`, `ui/dica.tsx`, `ui/menu.tsx`, `ui/cabecalho-secao.tsx`,
+  `ui/metrica.tsx` (novos).
+- `ui/tabela.tsx`: prop `densidade` (`padrao`/`compacta`).
+- `painel-dashboard.tsx` e `painel-agenda.tsx`: 2 dos 4 `window.confirm`
+  mecanicos migrados para `ModalConfirmacao`.
 - `app/portal-shell.tsx`: menu de conta migrado de `<details>` para `Menu` +
-  `Avatar` (substitui o `UserRound` generico). Seletor de teste
-  `summary[aria-label=...]` atualizado para `button[aria-label=...]`.
-- `portal-paciente.tsx`: os 13 badges ad hoc (`<span className="rounded-full
-  border border-linha bg-white ...">`) substituidos por `Etiqueta`.
+  `Avatar`.
+- `portal-paciente.tsx`: 13 badges ad hoc migrados para `Etiqueta`.
 
-## Nao feito nesta rodada (fica para a proxima)
+## Entregue (rodada 2, 2026-08-03)
 
-- 2 `window.confirm` restantes sao guardas de navegacao sincronas
-  (`prontuario-paciente.tsx:451` `confirmarSaidaComEvolucaoNaoSalva`,
-  `usar-workspace-questionarios.ts:710` `confirmarTrocaComAlteracoesPendentes`).
-  Converte-los para `ModalConfirmacao` exige trocar o fluxo de
-  sincrono (`if (!confirmar()) return/preventDefault()`) para assincrono
-  atraves de multiplos call sites e de um hook consumido por outro
-  componente — risco real de regressao na protecao contra perda de dados
-  endurecida nas Fases 193/194. Nao foi feito sem ler toda a cadeia de
-  chamadas com calma. **Criterio de aceite "zero window.confirm no repo"
-  ainda nao esta cumprido.**
-- `LinkAcao` (`painel-dashboard.tsx:67`), `AtalhoShell`
-  (`console-shell.tsx:66`) e os botoes ad hoc de `portal-paciente.tsx:629,
-  651, 668, 688, 702` continuam reimplementando `Botao` a mao.
+- **Zero `window.confirm` no repo** (criterio de aceite cumprido). Os 2
+  restantes eram guardas sincronas de navegacao:
+  - `prontuario-paciente.tsx`: `confirmarSaidaComEvolucaoNaoSalva` removida;
+    o `Link` "Voltar para pacientes" e a troca de aba so interceptam
+    (`preventDefault`) quando ha evolucao nao salva, preservando o
+    comportamento nativo do `Link` (clique do meio, nova aba) no caminho
+    comum. `ModalConfirmacao` proprio ("Sair sem salvar").
+  - `usar-workspace-questionarios.ts`: `confirmarTrocaComAlteracoesPendentes`
+    virou estado `confirmacaoTrocaPendente` (acao adiada) exportado pelo
+    hook; `editor-questionario.tsx` (unico consumidor) renderiza o
+    `ModalConfirmacao`. `selecionarQuestionario`/`carregarPaginaQuestionarios`
+    guardam via esse estado em vez de bloquear sincronamente.
+  - Testes Playwright atualizados: `jornadas-criticas.spec.mjs`,
+    `agendamento-publico.spec.mjs`, `console-regression.spec.mjs`,
+    `questionarios-editor.spec.mjs` (dialog nativo -> clique no modal;
+    seletor `summary[...]` do menu antigo -> `button[...]`).
+- `ui/botao.tsx`: extraido `classesBotao({ variante, tamanho, className })`
+  como fonte unica de verdade das classes do botao (usado pelo proprio
+  `Botao` e por qualquer `<Link>`/`<a>` que precise do mesmo tratamento
+  visual, ja que `Botao` renderiza `<button>` e nao pode virar link).
+  Migrados: `LinkAcao` (`painel-dashboard.tsx`), `AtalhoShell`
+  (`console-shell.tsx`) e os 8 links estilizados como botao de
+  `portal-paciente.tsx` (alturas `h-9`/`min-h-11` divergentes unificadas).
+- `Aviso`/`AvisoRegiao` adotados nos 3 blocos de sucesso inline citados no
+  diagnostico (`painel-dashboard.tsx`, `painel-agenda.tsx`,
+  `portal-paciente.tsx:599`) — viraram toast fixo em vez de empurrar layout.
+- `Metrica` substituiu o `Indicador` local de `painel-dashboard.tsx` (5
+  usos, com `numeros-tabulares` embutido).
+- `Dica` substituiu os `title=` nativos interativos: botoes de navegacao de
+  periodo e "Liberar horario" em `agenda-semanal.tsx`, `AtalhoShell` em
+  `console-shell.tsx`. O chip decorativo do mes (nao interativo, sem
+  `tabindex`) manteve `title=` nativo de proposito — nao faz sentido dar
+  foco de teclado a um resumo visual sem acao.
+
+## Nao feito (fora do escopo critico, sem risco de regressao conhecido)
+
+- Quebrar as linhas de 1000+ caracteres de JSX em `painel-dashboard.tsx`:
+  puramente cosmetico/legibilidade, sem criterio de aceite funcional
+  associado. Fica para quando o arquivo for tocado por outro motivo.
+- `CabecalhoSecao` nao foi adotado nas ~30 telas que o diagnostico lista
+  (apenas criado); e um padrao repetido a mao, mas a adocao em massa e
+  trabalho mecanico de alto volume melhor feito continuamente conforme cada
+  tela for editada, nao de uma vez.
 - `classeCampo` paralelo em `portal-paciente.tsx:93` (diverge de
   `ui/campo.tsx`) nao foi unificado.
-- `Aviso`/`CabecalhoSecao`/`Metrica` foram criados mas ainda nao adotados
-  nas ~30 telas que o diagnostico lista (blocos inline de
-  `painel-dashboard.tsx:197`, `painel-agenda.tsx:498`,
-  `portal-paciente.tsx:599`; o padrao titulo+descricao+acoes espalhado; o
-  `Indicador` local do `painel-dashboard.tsx` continua em uso, nao foi
-  trocado pelo `Metrica` novo).
-- Tooltips `title=` nativos (`agenda-semanal.tsx:307,321,427`,
-  `console-shell.tsx:64`) nao foram migrados para `Dica`.
-- Linhas de 1000+ caracteres de JSX em `painel-dashboard.tsx` nao foram
-  quebradas.
 - Overrides de foco locais em `campo.tsx`, `abas.tsx`, `modal.tsx`
   (pendencia ja registrada na Fase 202).
 
@@ -71,21 +81,6 @@ demais telas e quebra das linhas de 1000+ caracteres do
 - `pnpm --dir octaclin-web typecheck`: aprovado.
 - `pnpm --dir octaclin-web build`: aprovado.
 - `pnpm --dir octaclin-web test:a11y`: 10/10 aprovados.
-- `playwright test tests/visual/jornadas-criticas.spec.mjs
-  tests/visual/agendamento-publico.spec.mjs
-  tests/visual/console-regression.spec.mjs`: 64/64 aprovados (2 regressoes
-  encontradas e corrigidas nesta mesma rodada: dialog nativo esperado pelo
-  teste onde agora ha modal; seletor `summary[...]` do menu de conta antigo).
-
-## Pendente antes de marcar a fase como concluida
-
-1. Decidir e implementar a conversao segura dos 2 `window.confirm` de guarda
-   de navegacao (ou registrar formalmente como excecao aceita, ja que
-   protegem contra perda de dados clinicos e o padrao assincrono de modal
-   muda o contrato da funcao para todos os call sites).
-2. Migrar `LinkAcao`, `AtalhoShell` e os botoes ad hoc de
-   `portal-paciente.tsx` para `Botao`.
-3. Adotar `Aviso`, `CabecalhoSecao` e `Metrica` nas telas listadas no
-   diagnostico.
-4. Migrar os `title=` nativos para `Dica`.
-5. Quebrar as linhas de 1000+ caracteres de `painel-dashboard.tsx`.
+- `playwright test` em `jornadas-criticas`, `agendamento-publico`,
+  `console-regression`, `questionarios-editor`, `portal-cliente`,
+  `portal-paciente`: 88/88 aprovados.

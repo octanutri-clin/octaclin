@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
@@ -247,6 +248,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [formularioMaterial, setFormularioMaterial] = useState<FormularioMaterial>(formularioMaterialInicial);
   const [formularioEnvioMaterial, setFormularioEnvioMaterial] = useState<FormularioEnvioMaterial>(formularioEnvioMaterialInicial);
   const [abaAtiva, setAbaAtiva] = useState<AbaProntuario>('resumo');
+  const [saidaPendente, setSaidaPendente] = useState<{ tipo: 'voltar' } | { tipo: 'aba'; id: AbaProntuario } | null>(null);
+  const router = useRouter();
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -447,10 +450,6 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     return () => window.removeEventListener('beforeunload', aoTentarFecharAba);
   }, [evolucaoNaoSalva]);
 
-  function confirmarSaidaComEvolucaoNaoSalva() {
-    return !evolucaoNaoSalva || window.confirm('Voce tem uma evolucao clinica nao salva. Sair sem salvar?');
-  }
-
   const eventos = useMemo(() => dados?.linhaDoTempo ?? [], [dados?.linhaDoTempo]);
   const evolucoes = useMemo(() => eventos.filter((evento) => evento.tipo === 'evolucao_clinica'), [eventos]);
   const tarefas = useMemo(() => eventos.filter((evento) => evento.tipo === 'tarefa_acompanhamento'), [eventos]);
@@ -497,7 +496,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <Link
             href="/pacientes"
             onClick={(evento) => {
-              if (!confirmarSaidaComEvolucaoNaoSalva()) evento.preventDefault();
+              if (!evolucaoNaoSalva) return;
+              evento.preventDefault();
+              setSaidaPendente({ tipo: 'voltar' });
             }}
             className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
           >
@@ -524,8 +525,11 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         abas={abasProntuario}
         ativaId={abaAtiva}
         aoMudar={(id) => {
-          if (!confirmarSaidaComEvolucaoNaoSalva()) return;
-          setAbaAtiva(id as AbaProntuario);
+          if (!evolucaoNaoSalva) {
+            setAbaAtiva(id as AbaProntuario);
+            return;
+          }
+          setSaidaPendente({ tipo: 'aba', id: id as AbaProntuario });
         }}
         rotulo="Areas do prontuario"
       />
@@ -930,6 +934,20 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         confirmando={excluindoAnexo}
         aoConfirmar={() => void confirmarExclusaoAnexo()}
         aoCancelar={() => setAnexoParaExcluir(null)}
+      />
+      <ModalConfirmacao
+        aberto={Boolean(saidaPendente)}
+        titulo="Sair sem salvar"
+        mensagem="Voce tem uma evolucao clinica nao salva. Sair sem salvar?"
+        rotuloConfirmar="Sair sem salvar"
+        aoCancelar={() => setSaidaPendente(null)}
+        aoConfirmar={() => {
+          if (!saidaPendente) return;
+          const pendente = saidaPendente;
+          setSaidaPendente(null);
+          if (pendente.tipo === 'voltar') router.push('/pacientes');
+          else setAbaAtiva(pendente.id);
+        }}
       />
       </div>
     </div>

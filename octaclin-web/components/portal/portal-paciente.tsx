@@ -22,9 +22,10 @@ import {
   Target,
   UserRound
 } from 'lucide-react';
-import { Botao } from '@/components/ui/botao';
+import { Botao, classesBotao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { Etiqueta } from '@/components/ui/etiqueta';
+import { Aviso, AvisoRegiao } from '@/components/ui/feedback';
 import { PortalShell } from '@/components/app/portal-shell';
 import {
   atualizarPerfilPaciente,
@@ -597,10 +598,9 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
         ) : null}
 
         {sucesso ? (
-          <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
-            <CheckCircle2 size={16} />
-            {sucesso}
-          </div>
+          <AvisoRegiao>
+            <Aviso variante="sucesso" mensagem={sucesso} aoFechar={() => setSucesso(null)} />
+          </AvisoRegiao>
         ) : null}
 
         {portal ? (
@@ -627,7 +627,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                 {portal.formulariosPendentes[0] ? (
                   <a
                     href={portal.formulariosPendentes[0].linkFormulario}
-                    className="inline-flex min-h-11 items-center justify-center rounded-md bg-primaria px-3 text-sm font-medium text-white hover:bg-primaria-forte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                    className={classesBotao({ variante: 'primario' })}
                   >
                     Responder agora
                   </a>
@@ -649,7 +649,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                 {portal.consultasProximas[0]?.googleEventHtmlLink ? (
                   <a
                     href={portal.consultasProximas[0].googleEventHtmlLink}
-                    className="inline-flex min-h-11 items-center justify-center rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                    className={classesBotao()}
                   >
                     Abrir agenda
                   </a>
@@ -666,7 +666,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                 </div>
                 <Link
                   href="/portal/plano"
-                  className="inline-flex min-h-11 items-center justify-center rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                  className={classesBotao()}
                 >
                   Ver plano
                 </Link>
@@ -686,7 +686,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                     </div>
                     <a
                       href={formulario.linkFormulario}
-                      className="inline-flex h-9 w-full min-w-0 max-w-full items-center justify-center rounded-md bg-primaria px-3 text-sm font-medium text-white hover:bg-primaria-forte sm:w-auto sm:max-w-[260px]"
+                      className={classesBotao({ variante: 'primario', tamanho: 'sm', className: 'w-full min-w-0 max-w-full sm:w-auto sm:max-w-[260px]' })}
                     >
                       <span className="truncate">Responder {formulario.titulo}</span>
                     </a>
@@ -700,7 +700,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                       <p className="mt-1 text-xs text-texto-suave">{formatarDataHora(consulta.inicioEm)}</p>
                     </div>
                     {consulta.googleEventHtmlLink ? (
-                      <a className="inline-flex h-9 w-full shrink-0 items-center justify-center rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover sm:w-auto" href={consulta.googleEventHtmlLink}>
+                      <a className={classesBotao({ tamanho: 'sm', className: 'w-full shrink-0 sm:w-auto' })} href={consulta.googleEventHtmlLink}>
                         Abrir agenda
                       </a>
                     ) : (
@@ -865,7 +865,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                             target="_blank"
                             rel="noreferrer"
                             aria-label={`Abrir ${material.titulo}`}
-                            className="mt-3 inline-flex h-9 max-w-full items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover"
+                            className={classesBotao({ tamanho: 'sm', className: 'mt-3 max-w-full' })}
                           >
                             <ExternalLink className="h-4 w-4 shrink-0" />
                             <span className="truncate">Abrir material</span>
@@ -970,7 +970,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                     <Link
                       key={item.href}
                       href={item.href as Route}
-                      className="inline-flex min-h-11 items-center justify-between rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                      className={classesBotao({ className: 'justify-between' })}
                     >
                       {item.rotulo}
                     </Link>
@@ -1141,7 +1141,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                           </div>
                           <a
                             href={formulario.linkFormulario}
-                            className="inline-flex h-9 items-center justify-center rounded-md bg-primaria px-3 text-sm font-medium text-white hover:bg-primaria-forte"
+                            className={classesBotao({ variante: 'primario', tamanho: 'sm' })}
                           >
                             Responder
                           </a>
