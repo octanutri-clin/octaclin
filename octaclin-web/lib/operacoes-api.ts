@@ -304,7 +304,8 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
   return resposta.json() as Promise<T>;
 }
 
-export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
+export async function carregarDadosOperacionais(opcoes?: { signal?: AbortSignal }): Promise<DadosOperacionais> {
+  const signal = opcoes?.signal;
   const [
     alertasOperacionais,
     resumo,
@@ -318,17 +319,17 @@ export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
     retencaoDados,
     solicitacoesAssinatura
   ] = await Promise.all([
-    carregarAlertasOperacionais(),
-    requisitar<ResumoOperacional>('/api/operacoes/resumo'),
-    requisitar<OutboxFalha[]>('/api/operacoes/outbox/falhas?limite=50'),
-    requisitar<SincronizacaoMobile[]>('/api/operacoes/mobile/sincronizacoes?limite=50'),
-    requisitar<AuditoriaOperacional[]>('/api/operacoes/auditoria?limite=50'),
-    carregarAuditoriaOperacionalPaginada({ pagina: 1, limite: 25 }),
-    carregarFalhasOutboxPaginadas({ pagina: 1, limite: 25 }),
-    carregarFalhasComunicacao({ pagina: 1, limite: 25 }),
-    carregarSolicitacoesLgpd({ pagina: 1, limite: 25 }),
-    carregarRetencaoDadosOperacional(),
-    carregarSolicitacoesAssinatura({ pagina: 1, limite: 25 })
+    carregarAlertasOperacionais({ signal }),
+    requisitar<ResumoOperacional>('/api/operacoes/resumo', { signal }),
+    requisitar<OutboxFalha[]>('/api/operacoes/outbox/falhas?limite=50', { signal }),
+    requisitar<SincronizacaoMobile[]>('/api/operacoes/mobile/sincronizacoes?limite=50', { signal }),
+    requisitar<AuditoriaOperacional[]>('/api/operacoes/auditoria?limite=50', { signal }),
+    carregarAuditoriaOperacionalPaginada({ pagina: 1, limite: 25 }, { signal }),
+    carregarFalhasOutboxPaginadas({ pagina: 1, limite: 25 }, { signal }),
+    carregarFalhasComunicacao({ pagina: 1, limite: 25 }, { signal }),
+    carregarSolicitacoesLgpd({ pagina: 1, limite: 25 }, { signal }),
+    carregarRetencaoDadosOperacional({ signal }),
+    carregarSolicitacoesAssinatura({ pagina: 1, limite: 25 }, { signal })
   ]);
 
   return {
@@ -346,8 +347,8 @@ export async function carregarDadosOperacionais(): Promise<DadosOperacionais> {
   };
 }
 
-export async function carregarAlertasOperacionais(): Promise<ResultadoAlertasOperacionais> {
-  return requisitar<ResultadoAlertasOperacionais>('/api/operacoes/alertas');
+export async function carregarAlertasOperacionais(opcoes?: { signal?: AbortSignal }): Promise<ResultadoAlertasOperacionais> {
+  return requisitar<ResultadoAlertasOperacionais>('/api/operacoes/alertas', { signal: opcoes?.signal });
 }
 
 export async function carregarAuditoriaOperacional(
@@ -365,56 +366,69 @@ export async function carregarAuditoriaOperacional(
 }
 
 export async function carregarAuditoriaOperacionalPaginada(
-  filtros: FiltrosAuditoriaOperacional
+  filtros: FiltrosAuditoriaOperacional,
+  opcoes?: { signal?: AbortSignal }
 ): Promise<ResultadoPaginado<AuditoriaOperacional>> {
   const parametros = montarParametros(filtros);
   if (!parametros.has('pagina')) parametros.set('pagina', '1');
   if (!parametros.has('limite')) parametros.set('limite', '25');
 
-  return requisitar<ResultadoPaginado<AuditoriaOperacional>>(`/api/operacoes/auditoria/paginada?${parametros.toString()}`);
+  return requisitar<ResultadoPaginado<AuditoriaOperacional>>(`/api/operacoes/auditoria/paginada?${parametros.toString()}`, {
+    signal: opcoes?.signal
+  });
 }
 
 export async function carregarFalhasOutboxPaginadas(
-  filtros: FiltrosOutboxOperacional
+  filtros: FiltrosOutboxOperacional,
+  opcoes?: { signal?: AbortSignal }
 ): Promise<ResultadoPaginado<OutboxFalha>> {
   const parametros = montarParametros(filtros);
   if (!parametros.has('pagina')) parametros.set('pagina', '1');
   if (!parametros.has('limite')) parametros.set('limite', '25');
 
-  return requisitar<ResultadoPaginado<OutboxFalha>>(`/api/operacoes/outbox/falhas/paginada?${parametros.toString()}`);
+  return requisitar<ResultadoPaginado<OutboxFalha>>(`/api/operacoes/outbox/falhas/paginada?${parametros.toString()}`, {
+    signal: opcoes?.signal
+  });
 }
 
 export async function carregarFalhasComunicacao(
-  filtros: FiltrosFalhasComunicacao
+  filtros: FiltrosFalhasComunicacao,
+  opcoes?: { signal?: AbortSignal }
 ): Promise<ResultadoPaginado<FalhaComunicacaoOperacional> & { resumo: ResumoFalhasComunicacao }> {
   const parametros = montarParametros(filtros);
   if (!parametros.has('pagina')) parametros.set('pagina', '1');
   if (!parametros.has('limite')) parametros.set('limite', '25');
 
   return requisitar<ResultadoPaginado<FalhaComunicacaoOperacional> & { resumo: ResumoFalhasComunicacao }>(
-    `/api/operacoes/comunicacoes/falhas?${parametros.toString()}`
+    `/api/operacoes/comunicacoes/falhas?${parametros.toString()}`,
+    { signal: opcoes?.signal }
   );
 }
 
 export async function carregarSolicitacoesLgpd(
-  filtros: FiltrosSolicitacoesLgpd
+  filtros: FiltrosSolicitacoesLgpd,
+  opcoes?: { signal?: AbortSignal }
 ): Promise<ResultadoPaginado<SolicitacaoLgpdOperacional>> {
   const parametros = montarParametros(filtros);
   if (!parametros.has('pagina')) parametros.set('pagina', '1');
   if (!parametros.has('limite')) parametros.set('limite', '25');
 
-  return requisitar<ResultadoPaginado<SolicitacaoLgpdOperacional>>(`/api/operacoes/lgpd/solicitacoes?${parametros.toString()}`);
+  return requisitar<ResultadoPaginado<SolicitacaoLgpdOperacional>>(`/api/operacoes/lgpd/solicitacoes?${parametros.toString()}`, {
+    signal: opcoes?.signal
+  });
 }
 
 export async function carregarSolicitacoesAssinatura(
-  filtros: FiltrosSolicitacoesAssinatura
+  filtros: FiltrosSolicitacoesAssinatura,
+  opcoes?: { signal?: AbortSignal }
 ): Promise<ResultadoPaginado<SolicitacaoAssinaturaOperacional>> {
   const parametros = montarParametros(filtros);
   if (!parametros.has('pagina')) parametros.set('pagina', '1');
   if (!parametros.has('limite')) parametros.set('limite', '25');
 
   return requisitar<ResultadoPaginado<SolicitacaoAssinaturaOperacional>>(
-    `/api/operacoes/assinaturas/solicitacoes?${parametros.toString()}`
+    `/api/operacoes/assinaturas/solicitacoes?${parametros.toString()}`,
+    { signal: opcoes?.signal }
   );
 }
 
@@ -446,9 +460,13 @@ export async function atualizarSolicitacaoLgpd(
   );
 }
 
-export async function obterDetalheSolicitacaoLgpd(protocolo: string): Promise<DetalheSolicitacaoLgpdOperacional> {
+export async function obterDetalheSolicitacaoLgpd(
+  protocolo: string,
+  opcoes?: { signal?: AbortSignal }
+): Promise<DetalheSolicitacaoLgpdOperacional> {
   return requisitar<DetalheSolicitacaoLgpdOperacional>(
-    `/api/operacoes/lgpd/solicitacoes/${encodeURIComponent(protocolo)}`
+    `/api/operacoes/lgpd/solicitacoes/${encodeURIComponent(protocolo)}`,
+    { signal: opcoes?.signal }
   );
 }
 
@@ -463,8 +481,8 @@ export async function prepararRespostaSolicitacaoLgpd(protocolo: string): Promis
   );
 }
 
-export async function carregarRetencaoDadosOperacional(): Promise<RetencaoDadosOperacional> {
-  return requisitar<RetencaoDadosOperacional>('/api/operacoes/lgpd/retencao');
+export async function carregarRetencaoDadosOperacional(opcoes?: { signal?: AbortSignal }): Promise<RetencaoDadosOperacional> {
+  return requisitar<RetencaoDadosOperacional>('/api/operacoes/lgpd/retencao', { signal: opcoes?.signal });
 }
 
 export async function programarRetencaoDadosOperacional(): Promise<ProgramacaoRetencaoDadosOperacional> {

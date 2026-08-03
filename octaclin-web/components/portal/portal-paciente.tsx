@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { FormEvent, useEffect, useState } from 'react';
+import { useRequisicaoCancelavel } from '@/lib/hooks';
 import {
   AlertTriangle,
   BellRing,
@@ -364,6 +365,7 @@ type SecaoPortal = 'inicio' | 'agenda' | 'checkins' | 'plano' | 'formularios' | 
 
 export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   const { portal, setPortal, carregando, erroCarregamento, carregar } = usePortalPaciente();
+  const iniciarRequisicaoDetalheFormulario = useRequisicaoCancelavel();
   const [detalheFormulario, setDetalheFormulario] = useState<DetalheFormularioRespondidoApi | null>(null);
   const [formularioPerfil, setFormularioPerfil] = useState<FormularioPerfilPaciente>(formularioPerfilVazio);
   const [formularioCheckin, setFormularioCheckin] = useState<FormularioCheckinRapido>(formularioCheckinInicial);
@@ -446,14 +448,18 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   }
 
   async function abrirFormularioRespondido(respostaId: string) {
+    const { signal, ehAtual } = iniciarRequisicaoDetalheFormulario();
     setCarregandoDetalheId(respostaId);
     setErro(null);
     try {
-      setDetalheFormulario(await obterFormularioRespondidoPaciente(respostaId));
+      const detalhe = await obterFormularioRespondidoPaciente(respostaId, { signal });
+      if (!ehAtual()) return;
+      setDetalheFormulario(detalhe);
     } catch (erroAtual) {
+      if (!ehAtual()) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar formulario respondido.');
     } finally {
-      setCarregandoDetalheId(null);
+      if (ehAtual()) setCarregandoDetalheId(null);
     }
   }
 

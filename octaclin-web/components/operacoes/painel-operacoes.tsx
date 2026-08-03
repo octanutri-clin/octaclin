@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useRequisicaoCancelavel } from '@/lib/hooks';
 import { Activity, AlertTriangle, CheckCircle2, CreditCard, Download, History, RefreshCcw, Scale, Search, Smartphone, Undo2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
@@ -187,6 +188,13 @@ const areasOperacoes = [
 
 export function PainelOperacoes() {
   const router = useRouter();
+  const iniciarRequisicaoDados = useRequisicaoCancelavel();
+  const iniciarRequisicaoAuditoria = useRequisicaoCancelavel();
+  const iniciarRequisicaoOutbox = useRequisicaoCancelavel();
+  const iniciarRequisicaoFalhasComunicacao = useRequisicaoCancelavel();
+  const iniciarRequisicaoAssinatura = useRequisicaoCancelavel();
+  const iniciarRequisicaoLgpd = useRequisicaoCancelavel();
+  const iniciarRequisicaoDetalheLgpd = useRequisicaoCancelavel();
   const [sessao, setSessao] = useState<SessaoPublica | null>(null);
   const [areaAtiva, setAreaAtiva] = useState<AreaOperacoes>('saude');
   const [dados, setDados] = useState<DadosOperacionais | null>(null);
@@ -264,18 +272,21 @@ export function PainelOperacoes() {
       return;
     }
 
+    const { signal, ehAtual } = iniciarRequisicaoDados();
     setCarregando(true);
     setErro(null);
     setSucesso(null);
     try {
-      const resposta = await executarAutenticado(carregarDadosOperacionais);
+      const resposta = await executarAutenticado(() => carregarDadosOperacionais({ signal }));
+      if (!ehAtual()) return;
       if (resposta) setDados(resposta);
       setDetalheLgpd(null);
       setRespostaLgpd(null);
     } catch (erroAtual) {
+      if (!ehAtual()) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar operacoes.');
     } finally {
-      setCarregando(false);
+      if (ehAtual()) setCarregando(false);
     }
   }
 
@@ -319,11 +330,15 @@ export function PainelOperacoes() {
     evento.preventDefault();
     if (!sessao) return;
 
+    const { signal, ehAtual } = iniciarRequisicaoAuditoria();
     setCarregandoAuditoria(true);
     setErro(null);
     setSucesso(null);
     try {
-      const auditoria = await executarAutenticado(() => carregarAuditoriaOperacionalPaginada({ ...filtrosAuditoria, pagina: 1 }));
+      const auditoria = await executarAutenticado(() =>
+        carregarAuditoriaOperacionalPaginada({ ...filtrosAuditoria, pagina: 1 }, { signal })
+      );
+      if (!ehAtual()) return;
       if (auditoria) {
         setFiltrosAuditoria((atual) => ({ ...atual, pagina: auditoria.pagina }));
         setDados((dadosAtuais) =>
@@ -331,9 +346,10 @@ export function PainelOperacoes() {
         );
       }
     } catch (erroAtual) {
+      if (!ehAtual()) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar auditoria.');
     } finally {
-      setCarregandoAuditoria(false);
+      if (ehAtual()) setCarregandoAuditoria(false);
     }
   }
 
@@ -341,11 +357,15 @@ export function PainelOperacoes() {
     evento.preventDefault();
     if (!sessao) return;
 
+    const { signal, ehAtual } = iniciarRequisicaoOutbox();
     setCarregando(true);
     setErro(null);
     setSucesso(null);
     try {
-      const falhasPaginadas = await executarAutenticado(() => carregarFalhasOutboxPaginadas({ ...filtrosOutbox, pagina: 1 }));
+      const falhasPaginadas = await executarAutenticado(() =>
+        carregarFalhasOutboxPaginadas({ ...filtrosOutbox, pagina: 1 }, { signal })
+      );
+      if (!ehAtual()) return;
       if (falhasPaginadas) {
         setFiltrosOutbox((atual) => ({ ...atual, pagina: falhasPaginadas.pagina }));
         setDados((dadosAtuais) =>
@@ -353,21 +373,24 @@ export function PainelOperacoes() {
         );
       }
     } catch (erroAtual) {
+      if (!ehAtual()) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar outbox.');
     } finally {
-      setCarregando(false);
+      if (ehAtual()) setCarregando(false);
     }
   }
 
   async function trocarPaginaAuditoria(proximaPagina: number) {
     if (!sessao || proximaPagina < 1) return;
+    const { signal, ehAtual } = iniciarRequisicaoAuditoria();
     setCarregandoAuditoria(true);
     setErro(null);
     setSucesso(null);
     try {
       const auditoria = await executarAutenticado(() =>
-        carregarAuditoriaOperacionalPaginada({ ...filtrosAuditoria, pagina: proximaPagina })
+        carregarAuditoriaOperacionalPaginada({ ...filtrosAuditoria, pagina: proximaPagina }, { signal })
       );
+      if (!ehAtual()) return;
       if (auditoria) {
         setFiltrosAuditoria((atual) => ({ ...atual, pagina: auditoria.pagina }));
         setDados((dadosAtuais) =>
@@ -375,21 +398,24 @@ export function PainelOperacoes() {
         );
       }
     } catch (erroAtual) {
+      if (!ehAtual()) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao paginar auditoria.');
     } finally {
-      setCarregandoAuditoria(false);
+      if (ehAtual()) setCarregandoAuditoria(false);
     }
   }
 
   async function trocarPaginaOutbox(proximaPagina: number) {
     if (!sessao || proximaPagina < 1) return;
+    const { signal, ehAtual } = iniciarRequisicaoOutbox();
     setCarregando(true);
     setErro(null);
     setSucesso(null);
     try {
       const falhasPaginadas = await executarAutenticado(() =>
-        carregarFalhasOutboxPaginadas({ ...filtrosOutbox, pagina: proximaPagina })
+        carregarFalhasOutboxPaginadas({ ...filtrosOutbox, pagina: proximaPagina }, { signal })
       );
+      if (!ehAtual()) return;
       if (falhasPaginadas) {
         setFiltrosOutbox((atual) => ({ ...atual, pagina: falhasPaginadas.pagina }));
         setDados((dadosAtuais) =>
@@ -397,29 +423,33 @@ export function PainelOperacoes() {
         );
       }
     } catch (erroAtual) {
+      if (!ehAtual()) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao paginar outbox.');
     } finally {
-      setCarregando(false);
+      if (ehAtual()) setCarregando(false);
     }
   }
 
   async function trocarPaginaFalhasComunicacao(proximaPagina: number) {
     if (!sessao || proximaPagina < 1) return;
+    const { signal, ehAtual } = iniciarRequisicaoFalhasComunicacao();
     setCarregando(true);
     setErro(null);
     setSucesso(null);
     try {
       const falhasComunicacao = await executarAutenticado(() =>
-        carregarFalhasComunicacao({ ...filtrosFalhasComunicacao, pagina: proximaPagina })
+        carregarFalhasComunicacao({ ...filtrosFalhasComunicacao, pagina: proximaPagina }, { signal })
       );
+      if (!ehAtual()) return;
       if (falhasComunicacao) {
         setFiltrosFalhasComunicacao((atual) => ({ ...atual, pagina: falhasComunicacao.pagina }));
         setDados((dadosAtuais) => (dadosAtuais ? { ...dadosAtuais, falhasComunicacao } : dadosAtuais));
       }
     } catch (erroAtual) {
+      if (!ehAtual()) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao paginar central de comunicacao.');
     } finally {
-      setCarregando(false);
+      if (ehAtual()) setCarregando(false);
     }
   }
 
@@ -427,42 +457,53 @@ export function PainelOperacoes() {
     evento.preventDefault();
     if (!sessao) return;
 
+    const { signal, ehAtual } = iniciarRequisicaoFalhasComunicacao();
     setCarregando(true);
     setErro(null);
     setSucesso(null);
     try {
-      const falhasComunicacao = await executarAutenticado(() => carregarFalhasComunicacao({ ...filtrosFalhasComunicacao, pagina: 1 }));
+      const falhasComunicacao = await executarAutenticado(() =>
+        carregarFalhasComunicacao({ ...filtrosFalhasComunicacao, pagina: 1 }, { signal })
+      );
+      if (!ehAtual()) return;
       if (falhasComunicacao) {
         setFiltrosFalhasComunicacao((atual) => ({ ...atual, pagina: falhasComunicacao.pagina }));
         setDados((dadosAtuais) => (dadosAtuais ? { ...dadosAtuais, falhasComunicacao } : dadosAtuais));
       }
     } catch (erroAtual) {
+      if (!ehAtual()) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar central de comunicacao.');
     } finally {
-      setCarregando(false);
+      if (ehAtual()) setCarregando(false);
     }
   }
 
   async function recarregarSolicitacoesAssinatura(opcoes: { preservarMensagem?: boolean } = {}) {
     if (!sessao) return;
 
+    const { signal, ehAtual } = iniciarRequisicaoAssinatura();
     setCarregandoAssinatura(true);
     setErro(null);
     if (!opcoes.preservarMensagem) setSucesso(null);
     try {
       const solicitacoesAssinatura = await executarAutenticado(() =>
-        carregarSolicitacoesAssinatura({
-          pagina: dados?.solicitacoesAssinatura.pagina ?? 1,
-          limite: dados?.solicitacoesAssinatura.limite ?? 25
-        })
+        carregarSolicitacoesAssinatura(
+          {
+            pagina: dados?.solicitacoesAssinatura.pagina ?? 1,
+            limite: dados?.solicitacoesAssinatura.limite ?? 25
+          },
+          { signal }
+        )
       );
+      if (!ehAtual()) return;
       if (solicitacoesAssinatura) {
         setDados((dadosAtuais) => (dadosAtuais ? { ...dadosAtuais, solicitacoesAssinatura } : dadosAtuais));
       }
     } catch (erroAtual) {
+      if (!ehAtual()) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar solicitacoes de assinatura.');
     } finally {
-      setCarregandoAssinatura(false);
+      if (ehAtual()) setCarregandoAssinatura(false);
     }
   }
 
@@ -497,38 +538,46 @@ export function PainelOperacoes() {
     evento.preventDefault();
     if (!sessao) return;
 
+    const { signal, ehAtual } = iniciarRequisicaoLgpd();
     setCarregandoLgpd(true);
     setErro(null);
     setSucesso(null);
     try {
-      const solicitacoesLgpd = await executarAutenticado(() => carregarSolicitacoesLgpd({ ...filtrosLgpd, pagina: 1 }));
+      const solicitacoesLgpd = await executarAutenticado(() => carregarSolicitacoesLgpd({ ...filtrosLgpd, pagina: 1 }, { signal }));
+      if (!ehAtual()) return;
       if (solicitacoesLgpd) {
         setFiltrosLgpd((atual) => ({ ...atual, pagina: solicitacoesLgpd.pagina }));
         setDados((dadosAtuais) => (dadosAtuais ? { ...dadosAtuais, solicitacoesLgpd } : dadosAtuais));
       }
     } catch (erroAtual) {
+      if (!ehAtual()) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar solicitacoes LGPD.');
     } finally {
-      setCarregandoLgpd(false);
+      if (ehAtual()) setCarregandoLgpd(false);
     }
   }
 
   async function trocarPaginaLgpd(proximaPagina: number) {
     if (!sessao || proximaPagina < 1) return;
 
+    const { signal, ehAtual } = iniciarRequisicaoLgpd();
     setCarregandoLgpd(true);
     setErro(null);
     setSucesso(null);
     try {
-      const solicitacoesLgpd = await executarAutenticado(() => carregarSolicitacoesLgpd({ ...filtrosLgpd, pagina: proximaPagina }));
+      const solicitacoesLgpd = await executarAutenticado(() =>
+        carregarSolicitacoesLgpd({ ...filtrosLgpd, pagina: proximaPagina }, { signal })
+      );
+      if (!ehAtual()) return;
       if (solicitacoesLgpd) {
         setFiltrosLgpd((atual) => ({ ...atual, pagina: solicitacoesLgpd.pagina }));
         setDados((dadosAtuais) => (dadosAtuais ? { ...dadosAtuais, solicitacoesLgpd } : dadosAtuais));
       }
     } catch (erroAtual) {
+      if (!ehAtual()) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao paginar solicitacoes LGPD.');
     } finally {
-      setCarregandoLgpd(false);
+      if (ehAtual()) setCarregandoLgpd(false);
     }
   }
 
@@ -574,19 +623,22 @@ export function PainelOperacoes() {
   async function carregarDetalheLgpd(protocolo: string, opcoes: { preservarMensagem?: boolean } = {}) {
     if (!sessao) return;
 
+    const { signal, ehAtual } = iniciarRequisicaoDetalheLgpd();
     setCarregandoDetalheLgpd(true);
     setErro(null);
     if (!opcoes.preservarMensagem) setSucesso(null);
     try {
-      const detalhe = await executarAutenticado(() => obterDetalheSolicitacaoLgpd(protocolo));
+      const detalhe = await executarAutenticado(() => obterDetalheSolicitacaoLgpd(protocolo, { signal }));
+      if (!ehAtual()) return;
       if (detalhe) {
         setDetalheLgpd(detalhe);
         setRespostaLgpd(null);
       }
     } catch (erroAtual) {
+      if (!ehAtual()) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar detalhe LGPD.');
     } finally {
-      setCarregandoDetalheLgpd(false);
+      if (ehAtual()) setCarregandoDetalheLgpd(false);
     }
   }
 

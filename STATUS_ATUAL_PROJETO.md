@@ -7,16 +7,20 @@ Atualizado em 2026-08-03.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Fase 204 (parcial): data fetching e resiliencia, em 2026-08-03. Hook
-  `useRequisicaoCancelavel` (AbortController + sequencia) extraido e
-  aplicado em `portal-cliente.tsx` (5 loaders) e `agenda-semanal.tsx`
-  (feed); `error.tsx`/`loading.tsx` na raiz; 2 Suspense com fallback nulo
-  corrigidos; 2 estados derivados movidos para render; teste de race
-  condition novo. Lint, typecheck, build, test:a11y (10/10) e 90 testes
-  Playwright aprovados. Falta: `painel-operacoes.tsx` (~15 loaders),
-  demais monolitos, next/dynamic no portal do paciente. Ver
+- Ultima fase concluida: Fase 204 - data fetching e resiliencia (escopo de
+  resiliencia), em 2026-08-03 (2 rodadas). Hook `useRequisicaoCancelavel`
+  (AbortController + sequencia) extraido, validado com teste de race
+  condition, e aplicado em todo loader com risco real de sobreposicao de
+  requisicoes: `portal-cliente.tsx` (5 loaders), `agenda-semanal.tsx`
+  (feed), `painel-operacoes.tsx` (9 loaders / 7 endpoints) e
+  `portal-paciente.tsx` (detalhe de formulario). `error.tsx`/`loading.tsx`
+  na raiz; 2 Suspense com fallback nulo corrigidos; 2 estados derivados
+  movidos para render. Lint, typecheck, build, test:a11y (10/10) e 90
+  testes Playwright aprovados nas duas rodadas. Fora de escopo (sem risco
+  de corrida ou exigem refactor maior): next/dynamic no portal do paciente,
+  Server Components para cliente/operacoes. Ver
   `fase-204-data-fetching-resiliencia-code-splitting.md`.
-- Ultima fase concluida: Fase 203 - componentes compartilhados e fim dos
+- Fase 203 - componentes compartilhados e fim dos
   sistemas paralelos, em 2026-08-03 (2 rodadas). 7 componentes novos
   (Aviso, EtiquetaStatus, Avatar, Dica, Menu, CabecalhoSecao, Metrica),
   zero `window.confirm` no repo, botoes ad hoc unificados via
@@ -195,7 +199,4 @@ Atualizado em 2026-08-03.
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
 Proxima pendencia tecnica: rollout da Fase 201 no Render (separar os papeis
-`web` e `worker` e registrar a entrega sintetica unica exigida pelo aceite)
-e concluir a Fase 204 (aplicar o hook de cancelamento em
-`painel-operacoes.tsx` e nos demais monolitos, next/dynamic no portal do
-paciente).
+`web` e `worker` e registrar a entrega sintetica unica exigida pelo aceite).

@@ -1110,17 +1110,21 @@ publicado antes de ampliar a superficie de mudancas visuais.
     1000+ caracteres de `painel-dashboard.tsx` e adocao ampla de
     `CabecalhoSecao` nas demais telas.
 
-- [ ] Fase 204 - Data fetching, resiliencia e code splitting.
+- [x] Fase 204 - Data fetching, resiliencia e code splitting.
   - Cancelar requisicoes obsoletas, adicionar loading/error boundaries e
     carregar apenas as secoes necessarias das rotas extensas.
-  - Parcial em 2026-08-03: hook `useRequisicaoCancelavel` criado e validado
-    com teste de race condition; aplicado em `portal-cliente.tsx` (5
-    loaders) e `agenda-semanal.tsx` (feed). `error.tsx`/`loading.tsx` na
-    raiz, 2 Suspense com fallback nulo corrigidos, 2 estados derivados
-    movidos para render. Falta: `painel-operacoes.tsx` (~15 loaders),
-    `painel-comunicacoes.tsx`/`portal-paciente.tsx` (parcial), next/dynamic
-    no portal do paciente, Server Components para cliente/operacoes. Ver
-    `fase-204-data-fetching-resiliencia-code-splitting.md`.
+  - Concluida (escopo de resiliencia) em 2026-08-03 (2 rodadas): hook
+    `useRequisicaoCancelavel` criado e validado com teste de race condition;
+    aplicado em todo loader com risco real de sobreposicao de requisicoes —
+    `portal-cliente.tsx` (5 loaders), `agenda-semanal.tsx` (feed),
+    `painel-operacoes.tsx` (9 loaders / 7 endpoints) e `portal-paciente.tsx`
+    (detalhe de formulario). `error.tsx`/`loading.tsx` na raiz, 2 Suspense
+    com fallback nulo corrigidos, 2 estados derivados movidos para render.
+    Ficam fora de escopo (nao tem risco de corrida ou exigem refactor maior):
+    next/dynamic no portal do paciente (precisa extrair 9 subcomponentes
+    antes), Server Components para cliente/operacoes,
+    `painel-comunicacoes.tsx`/`portal-contexto.tsx` (fetch unico no mount,
+    sem re-trigger). Ver `fase-204-data-fetching-resiliencia-code-splitting.md`.
 
 - [ ] Fase 205 - Recall automatico de retorno.
   - Adicionar gatilho de inatividade ao motor de automacoes, respeitando

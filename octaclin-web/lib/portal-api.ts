@@ -309,8 +309,14 @@ export async function desmarcarConsultaPaciente(consultaId: string): Promise<voi
   }
 }
 
-export async function obterFormularioRespondidoPaciente(respostaId: string): Promise<DetalheFormularioRespondidoApi> {
-  const resposta = await fetch(`/api/portal/paciente/formularios-respondidos/${respostaId}`, { cache: 'no-store' });
+export async function obterFormularioRespondidoPaciente(
+  respostaId: string,
+  opcoes?: { signal?: AbortSignal }
+): Promise<DetalheFormularioRespondidoApi> {
+  const resposta = await fetch(`/api/portal/paciente/formularios-respondidos/${respostaId}`, {
+    cache: 'no-store',
+    signal: opcoes?.signal
+  });
   if (!resposta.ok) {
     throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
   }
