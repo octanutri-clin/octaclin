@@ -4,7 +4,13 @@ import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-ten
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { ServicoComunicacoes } from '../../comunicacoes/aplicacao/servico-comunicacoes';
-import { TipoCanalNotificacao } from '../../comunicacoes/dominio/canal-notificacao';
+import {
+  PreferenciasComunicacaoPaciente,
+  TipoCanalDireto,
+  dentroHorarioPermitido,
+  interpretarPreferenciasComunicacao,
+  preferenciasComunicacaoPadrao
+} from '../../comunicacoes/dominio/preferencias-comunicacao';
 import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
 import { TemplateMensagemOrm } from '../../comunicacoes/infraestrutura/template-mensagem.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
@@ -13,8 +19,7 @@ const EVENTO_LEMBRETE_CONSULTA = 'agenda.consulta.lembrete';
 const JANELA_LEMBRETE_INICIO_HORAS = 23;
 const JANELA_LEMBRETE_FIM_HORAS = 25;
 
-type TipoCanalLembrete = Extract<TipoCanalNotificacao, 'email' | 'whatsapp'>;
-type CanalPreferidoPaciente = TipoCanalLembrete | 'qualquer';
+type TipoCanalLembrete = TipoCanalDireto;
 
 type ResultadoCanalLembrete =
   | { status: 'pendente' | 'enviado'; mensagemId: string }
@@ -26,33 +31,6 @@ interface ResultadoProcessamentoLembretes {
   lembretesProcessados: number;
   lembretesIgnorados: number;
 }
-
-interface PreferenciasComunicacaoPaciente {
-  email: boolean;
-  whatsapp: boolean;
-  canalPreferido: CanalPreferidoPaciente;
-  horarioPermitido: {
-    inicio: string;
-    fim: string;
-    timezone: string;
-  };
-  contatos: {
-    email?: string;
-    whatsapp?: string;
-  };
-}
-
-const PREFERENCIAS_COMUNICACAO_PADRAO: PreferenciasComunicacaoPaciente = {
-  email: true,
-  whatsapp: true,
-  canalPreferido: 'qualquer',
-  horarioPermitido: {
-    inicio: '08:00',
-    fim: '20:00',
-    timezone: 'America/Sao_Paulo'
-  },
-  contatos: {}
-};
 
 @Injectable()
 export class ServicoLembretesAgenda {
@@ -83,7 +61,7 @@ export class ServicoLembretesAgenda {
       let whatsapp: ResultadoCanalLembrete;
       let motivo: string | undefined;
 
-      if (!this.dentroHorarioPermitido(agora, preferencias.horarioPermitido)) {
+      if (!dentroHorarioPermitido(agora, preferencias.horarioPermitido)) {
         motivo = 'fora_horario_preferido';
         email = { status: 'ignorado', motivo };
         whatsapp = { status: 'ignorado', motivo };
@@ -283,112 +261,9 @@ export class ServicoLembretesAgenda {
   private async obterPreferenciasPaciente(tenantId: string, pacienteId: string): Promise<PreferenciasComunicacaoPaciente> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const paciente = await gerenciador.getRepository(PacienteOrm).findOne({ where: { tenantId, id: pacienteId } });
-      if (!paciente?.contatoCriptografado) return this.preferenciasPadrao();
-
-      const contato = this.criptografia.descriptografar(paciente.contatoCriptografado);
-      try {
-        const parseado = JSON.parse(contato) as {
-          email?: unknown;
-          whatsapp?: unknown;
-          preferencias?: {
-            email?: unknown;
-            whatsapp?: unknown;
-            canalPreferido?: unknown;
-            horarioPermitido?: unknown;
-          };
-        };
-        return {
-          email: typeof parseado.preferencias?.email === 'boolean' ? parseado.preferencias.email : true,
-          whatsapp: typeof parseado.preferencias?.whatsapp === 'boolean' ? parseado.preferencias.whatsapp : true,
-          canalPreferido: this.normalizarCanalPreferido(parseado.preferencias?.canalPreferido),
-          horarioPermitido: this.normalizarHorarioPermitido(parseado.preferencias?.horarioPermitido),
-          contatos: {
-            email: typeof parseado.email === 'string' ? this.normalizarEmail(parseado.email) : undefined,
-            whatsapp: typeof parseado.whatsapp === 'string' ? this.normalizarWhatsapp(parseado.whatsapp) : undefined
-          }
-        };
-      } catch {
-        return contato.includes('@')
-          ? { ...this.preferenciasPadrao(), contatos: { email: this.normalizarEmail(contato) } }
-          : { ...this.preferenciasPadrao(), contatos: { whatsapp: this.normalizarWhatsapp(contato) } };
-      }
+      if (!paciente?.contatoCriptografado) return preferenciasComunicacaoPadrao();
+      return interpretarPreferenciasComunicacao(this.criptografia.descriptografar(paciente.contatoCriptografado));
     });
-  }
-
-  private preferenciasPadrao(): PreferenciasComunicacaoPaciente {
-    return {
-      ...PREFERENCIAS_COMUNICACAO_PADRAO,
-      horarioPermitido: { ...PREFERENCIAS_COMUNICACAO_PADRAO.horarioPermitido },
-      contatos: {}
-    };
-  }
-
-  private normalizarCanalPreferido(valor: unknown): CanalPreferidoPaciente {
-    return valor === 'email' || valor === 'whatsapp' || valor === 'qualquer' ? valor : 'qualquer';
-  }
-
-  private normalizarHorarioPermitido(valor: unknown): PreferenciasComunicacaoPaciente['horarioPermitido'] {
-    if (!valor || typeof valor !== 'object' || Array.isArray(valor)) return { ...PREFERENCIAS_COMUNICACAO_PADRAO.horarioPermitido };
-    const horario = valor as Record<string, unknown>;
-    return {
-      inicio:
-        typeof horario.inicio === 'string' && this.horarioValido(horario.inicio)
-          ? horario.inicio
-          : PREFERENCIAS_COMUNICACAO_PADRAO.horarioPermitido.inicio,
-      fim:
-        typeof horario.fim === 'string' && this.horarioValido(horario.fim)
-          ? horario.fim
-          : PREFERENCIAS_COMUNICACAO_PADRAO.horarioPermitido.fim,
-      timezone:
-        typeof horario.timezone === 'string' && horario.timezone.trim()
-          ? horario.timezone.trim().slice(0, 80)
-          : PREFERENCIAS_COMUNICACAO_PADRAO.horarioPermitido.timezone
-    };
-  }
-
-  private dentroHorarioPermitido(agora: Date, horario: PreferenciasComunicacaoPaciente['horarioPermitido']): boolean {
-    const atual = this.minutosDoDia(this.formatarHoraPreferencia(agora, horario.timezone));
-    const inicio = this.minutosDoDia(horario.inicio);
-    const fim = this.minutosDoDia(horario.fim);
-    if (inicio <= fim) return atual >= inicio && atual <= fim;
-    return atual >= inicio || atual <= fim;
-  }
-
-  private formatarHoraPreferencia(data: Date, timezone: string) {
-    try {
-      return new Intl.DateTimeFormat('en-GB', {
-        timeZone: timezone,
-        hour: '2-digit',
-        minute: '2-digit',
-        hourCycle: 'h23'
-      }).format(data);
-    } catch {
-      return new Intl.DateTimeFormat('en-GB', {
-        timeZone: PREFERENCIAS_COMUNICACAO_PADRAO.horarioPermitido.timezone,
-        hour: '2-digit',
-        minute: '2-digit',
-        hourCycle: 'h23'
-      }).format(data);
-    }
-  }
-
-  private minutosDoDia(horario: string): number {
-    const [horas, minutos] = horario.split(':').map((parte) => Number(parte));
-    return horas * 60 + minutos;
-  }
-
-  private normalizarEmail(email?: string): string | undefined {
-    const normalizado = email?.trim().toLowerCase();
-    return normalizado || undefined;
-  }
-
-  private normalizarWhatsapp(whatsapp?: string): string | undefined {
-    const normalizado = whatsapp?.replace(/\D/g, '');
-    return normalizado || undefined;
-  }
-
-  private horarioValido(valor: string): boolean {
-    return /^([01]\d|2[0-3]):[0-5]\d$/.test(valor);
   }
 
   private formatarData(data: Date, timezone = 'America/Sao_Paulo') {

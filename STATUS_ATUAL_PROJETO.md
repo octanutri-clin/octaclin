@@ -7,7 +7,19 @@ Atualizado em 2026-08-03.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 204 - data fetching e resiliencia (escopo de
+- Ultima fase concluida: Fase 205 - recall automatico de retorno, em
+  2026-08-03. Gatilho de inatividade (`paciente.inativo`) somado ao motor de
+  automacoes: seleciona pacientes sem consulta concluida ha N dias, restrito
+  ao profissional dono da regra e a quem aceita receber mensagens, com
+  simulacao obrigatoria que lista nominalmente quem seria contatado e o motivo
+  de cada exclusao. Teto comercial contra spam (intervalo minimo entre recalls
+  e limite por rodada, presos em faixa no servidor). Cron diario para a rodada
+  real; leitura de preferencias de comunicacao virou dominio compartilhado com
+  os lembretes de agenda. Revisoes de falha silenciosa (3 achados corrigidos,
+  um critico) e de seguranca (sem achados criticos/altos) executadas.
+  453 testes de backend, 84 de regressao visual, a11y 10/10, lint/typecheck/
+  build aprovados. Ver `fase-205-recall-automatico-retorno.md`.
+- Fase 204 - data fetching e resiliencia (escopo de
   resiliencia), em 2026-08-03 (2 rodadas). Hook `useRequisicaoCancelavel`
   (AbortController + sequencia) extraido, validado com teste de race
   condition, e aplicado em todo loader com risco real de sobreposicao de

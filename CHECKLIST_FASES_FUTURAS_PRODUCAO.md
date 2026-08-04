@@ -1126,9 +1126,22 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `painel-comunicacoes.tsx`/`portal-contexto.tsx` (fetch unico no mount,
     sem re-trigger). Ver `fase-204-data-fetching-resiliencia-code-splitting.md`.
 
-- [ ] Fase 205 - Recall automatico de retorno.
+- [x] Fase 205 - Recall automatico de retorno.
   - Adicionar gatilho de inatividade ao motor de automacoes, respeitando
     profissional responsavel, opt-in, simulacao e limite de frequencia.
+  - Concluida em 2026-08-03: gatilho `paciente.inativo` no motor existente,
+    com dominio puro de selecao (`recall-inatividade.ts`), servico de
+    simulacao/envio, cron diario e rota `POST /automacoes/recall/simulacoes`.
+    Simulacao lista os pacientes que seriam contatados e o motivo de cada
+    exclusao. Teto contra spam: intervalo minimo entre recalls (padrao 30
+    dias) e limite por rodada (padrao 25, maximo 200), presos em faixa no
+    servidor. Leitura de preferencias de comunicacao extraida para
+    `comunicacoes/dominio/preferencias-comunicacao.ts`, compartilhada com os
+    lembretes de agenda. Revisoes `ecc:silent-failure-hunter` (3 achados
+    corrigidos, incluindo um critico de furo no teto de frequencia) e
+    `ecc:security-reviewer` (sem achados criticos/altos) executadas.
+    453 testes de backend, 84 de regressao visual e a11y 10/10 aprovados. Ver
+    `fase-205-recall-automatico-retorno.md`.
 
 - [ ] Fase 206 - Teleconsulta por link na consulta.
   - Adicionar modalidade e link externo seguro, reutilizando agenda,

@@ -12,9 +12,12 @@ import {
   alterarAtivacaoRegra,
   carregarBootstrapAutomacoes,
   criarRegraAutomacao,
+  simularRecallAutomacao,
   simularRegraAutomacao
 } from '@/lib/automacoes-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
+
+const GATILHO_INATIVIDADE = 'paciente.inativo';
 
 interface FormularioRegra {
   profissionalId: string;
@@ -24,6 +27,9 @@ interface FormularioRegra {
   operador: 'igual' | 'maior_que' | 'maior_ou_igual' | 'menor_que' | 'inclui';
   valor: string;
   acaoTipo: string;
+  diasSemConsulta: string;
+  intervaloMinimoDias: string;
+  limitePorExecucao: string;
 }
 
 interface FormularioAvaliacao {
@@ -42,7 +48,10 @@ const regraInicial: FormularioRegra = {
   campo: 'checkinsPerdidos',
   operador: 'maior_ou_igual',
   valor: '3',
-  acaoTipo: 'notificar_profissional'
+  acaoTipo: 'notificar_profissional',
+  diasSemConsulta: '60',
+  intervaloMinimoDias: '30',
+  limitePorExecucao: '25'
 };
 
 const avaliacaoInicial: FormularioAvaliacao = {
@@ -68,12 +77,83 @@ function resumirJson(valor: unknown) {
 }
 
 function descreverGatilho(gatilho: Record<string, unknown>) {
+  if (String(gatilho.tipo) === GATILHO_INATIVIDADE) {
+    return `um paciente ficar ${gatilho.diasSemConsulta ?? 60} dias sem consulta concluida`;
+  }
   const rotulos: Record<string, string> = {
     'checkin.atrasado': 'um check-in estiver atrasado',
     'questionario.respondido': 'um formulario for respondido',
     'paciente.risco_alto': 'um paciente entrar em risco alto'
   };
   return rotulos[String(gatilho.tipo)] ?? resumirJson(gatilho);
+}
+
+const MOTIVOS_EXCLUSAO_RECALL: Record<string, string> = {
+  opt_out: 'pediu para nao receber mensagens',
+  sem_contato: 'sem contato cadastrado',
+  contato_ilegivel: 'contato nao pode ser lido (falha tecnica, avise o suporte)',
+  status_adesao_fora_do_filtro: 'fora do status de adesao filtrado',
+  consulta_recente: 'teve consulta recente',
+  recall_recente: 'ja recebeu recall dentro do intervalo minimo',
+  limite_por_execucao: 'ficou fora do limite desta rodada'
+};
+
+interface CandidatoRecallApi {
+  pacienteId: string;
+  diasSemConsulta: number | null;
+}
+
+interface ExclusaoRecallApi {
+  pacienteId: string;
+  motivo: string;
+}
+
+function nomePaciente(pacientes: PacienteResumo[], id: string) {
+  return pacientes.find((paciente) => paciente.id === id)?.nome ?? id;
+}
+
+function ResumoRecall({
+  candidatos,
+  excluidos,
+  pacientes
+}: {
+  candidatos: CandidatoRecallApi[];
+  excluidos: ExclusaoRecallApi[];
+  pacientes: PacienteResumo[];
+}) {
+  return (
+    <div className="grid gap-2 text-xs">
+      <div>
+        <strong>Seriam contatados ({candidatos.length}):</strong>
+        {candidatos.length ? (
+          <ul className="mt-1 grid gap-0.5 text-texto-suave">
+            {candidatos.map((candidato) => (
+              <li key={candidato.pacienteId}>
+                {nomePaciente(pacientes, candidato.pacienteId)}
+                {candidato.diasSemConsulta === null
+                  ? ' - nunca concluiu consulta'
+                  : ` - ${candidato.diasSemConsulta} dias sem consulta`}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-1 text-texto-suave">Ninguem nesta rodada.</p>
+        )}
+      </div>
+      {excluidos.length ? (
+        <div>
+          <strong>Fora ({excluidos.length}):</strong>
+          <ul className="mt-1 grid gap-0.5 text-texto-suave">
+            {excluidos.map((excluido) => (
+              <li key={`${excluido.pacienteId}-${excluido.motivo}`}>
+                {nomePaciente(pacientes, excluido.pacienteId)} - {MOTIVOS_EXCLUSAO_RECALL[excluido.motivo] ?? excluido.motivo}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function descreverAcao(acoes: Array<Record<string, unknown>>) {
@@ -96,6 +176,7 @@ export function PainelAutomacoes() {
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const gatilhoInatividadeSelecionado = formularioRegra.gatilhoTipo === GATILHO_INATIVIDADE;
 
   async function carregar() {
     setCarregando(true);
@@ -129,19 +210,32 @@ export function PainelAutomacoes() {
     setErro(null);
     setSucesso(null);
 
+    const ehInatividade = formularioRegra.gatilhoTipo === GATILHO_INATIVIDADE;
+
     try {
       const criada = await criarRegraAutomacao({
         profissionalId: formularioRegra.profissionalId,
         nome: formularioRegra.nome.trim(),
-        gatilho: { tipo: formularioRegra.gatilhoTipo },
-        condicoes: [
-          {
-            campo: formularioRegra.campo,
-            operador: formularioRegra.operador,
-            valor: valorCondicao(formularioRegra.valor)
-          }
-        ],
-        acoes: [{ tipo: formularioRegra.acaoTipo }],
+        // Inatividade nao usa condicao sobre contexto: quem seleciona os pacientes e o
+        // proprio gatilho, com os limites de frequencia dentro dele.
+        gatilho: ehInatividade
+          ? {
+              tipo: GATILHO_INATIVIDADE,
+              diasSemConsulta: Number(formularioRegra.diasSemConsulta || 60),
+              intervaloMinimoDias: Number(formularioRegra.intervaloMinimoDias || 30),
+              limitePorExecucao: Number(formularioRegra.limitePorExecucao || 25)
+            }
+          : { tipo: formularioRegra.gatilhoTipo },
+        condicoes: ehInatividade
+          ? []
+          : [
+              {
+                campo: formularioRegra.campo,
+                operador: formularioRegra.operador,
+                valor: valorCondicao(formularioRegra.valor)
+              }
+            ],
+        acoes: [{ tipo: ehInatividade ? 'enviar_template' : formularioRegra.acaoTipo }],
         ativa: false
       });
       setRegras((atuais) => [criada, ...atuais]);
@@ -175,6 +269,26 @@ export function PainelAutomacoes() {
       setSucesso(execucao.resultado.executar ? 'Simulacao concluida: a regra seria executada.' : 'Simulacao concluida: as condicoes nao foram atendidas.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao simular regra.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function simularRecall(regra: RegraAutomacaoApi) {
+    setSalvando(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const execucao = await simularRecallAutomacao(regra.id);
+      setExecucoes((atuais) => [execucao, ...atuais].slice(0, 8));
+      const total = Number(execucao.resultado.totalCandidatos ?? 0);
+      setSucesso(
+        total
+          ? `Simulacao concluida: ${total} paciente(s) seriam contatados. Confira a lista antes de ativar.`
+          : 'Simulacao concluida: nenhum paciente seria contatado agora.'
+      );
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao simular recall.');
     } finally {
       setSalvando(false);
     }
@@ -270,60 +384,108 @@ export function PainelAutomacoes() {
                 <option value="checkin.atrasado">Check-in atrasado</option>
                 <option value="questionario.respondido">Questionario respondido</option>
                 <option value="paciente.risco_alto">Paciente em risco alto</option>
+                <option value={GATILHO_INATIVIDADE}>Paciente sem consulta ha muito tempo</option>
               </Selecao>
             </div>
-            <div className="space-y-1.5">
-              <Rotulo htmlFor="regra-campo">Campo</Rotulo>
-              <Campo
-                id="regra-campo"
-                value={formularioRegra.campo}
-                onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, campo: evento.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Rotulo htmlFor="regra-operador">Operador</Rotulo>
-              <Selecao
-                id="regra-operador"
-                value={formularioRegra.operador}
-                onChange={(evento) =>
-                  setFormularioRegra((atual) => ({
-                    ...atual,
-                    operador: evento.target.value as FormularioRegra['operador']
-                  }))
-                }
-              >
-                <option value="igual">Igual</option>
-                <option value="maior_que">Maior que</option>
-                <option value="maior_ou_igual">Maior ou igual</option>
-                <option value="menor_que">Menor que</option>
-                <option value="inclui">Inclui</option>
-              </Selecao>
-            </div>
-            <div className="space-y-1.5">
-              <Rotulo htmlFor="regra-valor">Valor</Rotulo>
-              <Campo
-                id="regra-valor"
-                value={formularioRegra.valor}
-                onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, valor: evento.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Rotulo htmlFor="regra-acao">Acao</Rotulo>
-              <Selecao
-                id="regra-acao"
-                value={formularioRegra.acaoTipo}
-                onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, acaoTipo: evento.target.value }))}
-              >
-                <option value="notificar_profissional">Notificar profissional</option>
-                <option value="enviar_template">Enviar template</option>
-                <option value="criar_tarefa">Criar tarefa</option>
-              </Selecao>
-            </div>
+            {gatilhoInatividadeSelecionado ? (
+              <>
+                <div className="space-y-1.5">
+                  <Rotulo htmlFor="regra-dias-sem-consulta">Dias sem consulta</Rotulo>
+                  <Campo
+                    id="regra-dias-sem-consulta"
+                    type="number"
+                    min={7}
+                    value={formularioRegra.diasSemConsulta}
+                    onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, diasSemConsulta: evento.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Rotulo htmlFor="regra-intervalo-minimo">Intervalo minimo entre recalls (dias)</Rotulo>
+                  <Campo
+                    id="regra-intervalo-minimo"
+                    type="number"
+                    min={1}
+                    value={formularioRegra.intervaloMinimoDias}
+                    onChange={(evento) =>
+                      setFormularioRegra((atual) => ({ ...atual, intervaloMinimoDias: evento.target.value }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Rotulo htmlFor="regra-limite-execucao">Limite de pacientes por rodada</Rotulo>
+                  <Campo
+                    id="regra-limite-execucao"
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={formularioRegra.limitePorExecucao}
+                    onChange={(evento) =>
+                      setFormularioRegra((atual) => ({ ...atual, limitePorExecucao: evento.target.value }))
+                    }
+                    required
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Rotulo htmlFor="regra-campo">Campo</Rotulo>
+                  <Campo
+                    id="regra-campo"
+                    value={formularioRegra.campo}
+                    onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, campo: evento.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Rotulo htmlFor="regra-operador">Operador</Rotulo>
+                  <Selecao
+                    id="regra-operador"
+                    value={formularioRegra.operador}
+                    onChange={(evento) =>
+                      setFormularioRegra((atual) => ({
+                        ...atual,
+                        operador: evento.target.value as FormularioRegra['operador']
+                      }))
+                    }
+                  >
+                    <option value="igual">Igual</option>
+                    <option value="maior_que">Maior que</option>
+                    <option value="maior_ou_igual">Maior ou igual</option>
+                    <option value="menor_que">Menor que</option>
+                    <option value="inclui">Inclui</option>
+                  </Selecao>
+                </div>
+                <div className="space-y-1.5">
+                  <Rotulo htmlFor="regra-valor">Valor</Rotulo>
+                  <Campo
+                    id="regra-valor"
+                    value={formularioRegra.valor}
+                    onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, valor: evento.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Rotulo htmlFor="regra-acao">Acao</Rotulo>
+                  <Selecao
+                    id="regra-acao"
+                    value={formularioRegra.acaoTipo}
+                    onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, acaoTipo: evento.target.value }))}
+                  >
+                    <option value="notificar_profissional">Notificar profissional</option>
+                    <option value="enviar_template">Enviar template</option>
+                    <option value="criar_tarefa">Criar tarefa</option>
+                  </Selecao>
+                </div>
+              </>
+            )}
           </div>
           <p className="mt-3 rounded-md border border-linha bg-fundo px-3 py-2 text-sm text-texto-suave">
-            Toda regra nova fica em rascunho. Simule o resultado antes de ativar.
+            {gatilhoInatividadeSelecionado
+              ? 'O recall so alcanca pacientes deste profissional que aceitam receber mensagens. Simule para ver a lista exata antes de ativar.'
+              : 'Toda regra nova fica em rascunho. Simule o resultado antes de ativar.'}
           </p>
           <div className="mt-3 flex justify-end">
             <Botao type="submit" variante="primario" disabled={salvando || !profissionais?.itens.length}>
@@ -352,6 +514,17 @@ export function PainelAutomacoes() {
                   <p className="truncate text-xs text-texto-suave">{nomeProfissional(profissionais?.itens ?? [], regra.profissionalId)}</p>
                   <p className="text-xs text-texto-suave"><strong>Quando:</strong> {descreverGatilho(regra.gatilho)}.</p>
                   <p className="text-xs text-texto-suave"><strong>Fazer:</strong> {descreverAcao(regra.acoes)}.</p>
+                  {String(regra.gatilho.tipo) === GATILHO_INATIVIDADE ? (
+                    <Botao
+                      type="button"
+                      onClick={() => void simularRecall(regra)}
+                      disabled={salvando}
+                      aria-label={`Simular recall de ${regra.nome}`}
+                    >
+                      <Play size={16} />
+                      Simular recall
+                    </Botao>
+                  ) : null}
                   <Botao
                     type="button"
                     onClick={() => void alternarAtivacao(regra)}
@@ -478,7 +651,15 @@ export function PainelAutomacoes() {
                     </span>
                   </div>
                   <p className="break-all text-xs text-texto-suave">Regra: {execucao.regraId}</p>
-                  <p className="break-all text-xs text-texto-suave">Resultado: {resumirJson(execucao.resultado)}</p>
+                  {execucao.resultado.gatilho === GATILHO_INATIVIDADE && Array.isArray(execucao.resultado.candidatos) ? (
+                    <ResumoRecall
+                      candidatos={execucao.resultado.candidatos as CandidatoRecallApi[]}
+                      excluidos={(execucao.resultado.excluidos ?? []) as ExclusaoRecallApi[]}
+                      pacientes={pacientes?.itens ?? []}
+                    />
+                  ) : (
+                    <p className="break-all text-xs text-texto-suave">Resultado: {resumirJson(execucao.resultado)}</p>
+                  )}
                 </div>
               ))
             ) : (

@@ -39,3 +39,8 @@ export class AlterarAtivacaoRegraDto {
   @IsBoolean()
   ativa: boolean;
 }
+
+export class SimularRecallDto {
+  @IsUUID()
+  regraId: string;
+}
