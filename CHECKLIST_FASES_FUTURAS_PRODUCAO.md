@@ -1140,7 +1140,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
     lembretes de agenda. Revisoes `ecc:silent-failure-hunter` (3 achados
     corrigidos, incluindo um critico de furo no teto de frequencia) e
     `ecc:security-reviewer` (sem achados criticos/altos) executadas.
-    453 testes de backend, 84 de regressao visual e a11y 10/10 aprovados. Ver
+    Rodada extra fechou o achado de timeout: `rodada-por-tenant.ts` novo
+    isola falha e aplica timeout por tenant nos 5 crons do backend — dois
+    deles (`processador-agendamentos`, `processador-outbox-comunicacoes`) nao
+    tinham isolamento nenhum e abortavam a rodada inteira na primeira excecao.
+    457 testes de backend, 84 de regressao visual e a11y 10/10 aprovados. Ver
     `fase-205-recall-automatico-retorno.md`.
 
 - [ ] Fase 206 - Teleconsulta por link na consulta.

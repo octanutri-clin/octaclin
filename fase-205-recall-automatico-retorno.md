@@ -117,13 +117,34 @@ paciente.
   antes de qualquer outro filtro, nos dois caminhos (simulacao e envio real).
   Sem PII em log, auditoria ou resposta da API — so UUIDs e codigos de motivo.
 
+## Rodada extra: isolamento e timeout nos crons (2026-08-03)
+
+O achado de timeout tinha sido adiado com a justificativa "e a forma de todos
+os crons do repo". Ao medir o tamanho da correcao, a justificativa se mostrou
+errada e o problema, maior:
+
+- `questionarios/processador-agendamentos.ts` (a cada 1 min) e
+  `comunicacoes/processador-outbox-comunicacoes.ts` (a cada 30s) **nao tinham
+  isolamento nenhum** por tenant — nem `try/catch`. Uma excecao em qualquer
+  tenant abortava a rodada e deixava todos os tenants seguintes sem
+  processamento, sem nada no log. O do outbox e justamente o caminho de
+  entrega das mensagens, a rede de seguranca usada na correcao do recall.
+- Os outros tres (`lembretes-agenda`, `recall-inatividade`,
+  `renovacao-google-calendar`) tinham `try/catch`, mas nenhum tinha timeout: o
+  `catch` pega rejeicao, nao travamento.
+
+`infraestrutura/processamento/rodada-por-tenant.ts` (novo) concentra o laco
+"busca tenants ativos, itera, isola falha, aplica timeout", que estava copiado
+cinco vezes. Os cinco processadores passaram a usa-lo. O timeout nao cancela a
+operacao travada (JavaScript nao permite) — impede que ela prenda a fila, e a
+rodada segue para o proximo tenant registrando o estouro. Padrao de 120s;
+outbox usa 25s por rodar a cada 30s.
+
+4 testes novos, incluindo verificacao de que o temporizador nao fica pendente
+quando o tenant termina antes do timeout.
+
 ## Nao feito
 
-- **Timeout por tenant no cron.** Um tenant travado bloqueia os seguintes ate
-  o dia seguinte. Real, mas e a forma de todos os crons do repo
-  (`processador-lembretes-agenda.ts` inclusive); corrigir so no recall
-  deixaria o repo inconsistente sem eliminar o problema. Cabe em uma rodada
-  propria que trate os crons como conjunto.
 - **Log no fallback de timezone invalido** (`preferencias-comunicacao.ts`).
   Exigiria injetar logger em funcao de dominio pura, ou devolver sinal de
   fallback so para logar. Custo maior que o beneficio para um caso que so
@@ -146,8 +167,9 @@ paciente.
 ## Validacao local
 
 - `pnpm --dir octaclin-backend typecheck`: aprovado.
-- `pnpm --dir octaclin-backend test --runInBand`: 453/453 aprovados
-  (27 novos: 14 de dominio, 13 de servico).
+- `pnpm --dir octaclin-backend test --runInBand`: 457/457 aprovados
+  (31 novos: 14 de dominio de recall, 13 de servico de recall, 4 de rodada por
+  tenant).
 - `pnpm --dir octaclin-web lint`: aprovado.
 - `pnpm --dir octaclin-web typecheck`: aprovado.
 - `pnpm --dir octaclin-web build`: aprovado, rota

@@ -11,6 +11,7 @@ import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar'
 import { ServicoGoogleCalendar } from './servico-google-calendar';
 import { ServicoSincronizacaoGoogleCalendar } from './servico-sincronizacao-google-calendar';
 import { gerarIdentificadorCanalWatchGoogle } from './identificador-canal-watch-google';
+import { executarPorTenantAtivo } from '../../../infraestrutura/processamento/rodada-por-tenant';
 
 function urlWebhook(): string {
   const base = process.env.OCTACLIN_BACKEND_URL?.trim() ?? 'http://localhost:3000';
@@ -34,49 +35,39 @@ export class ProcessadorRenovacaoGoogleCalendar {
 
   @Cron('0 3 * * *')
   async renovarCanaisEReconciliar(): Promise<void> {
-    const tenants = await this.fonteDados.getRepository(TenantOrm).find({ where: { status: 'ativo' } });
+    await executarPorTenantAtivo(this.fonteDados, this.logger, 'Renovacao Google Calendar', async (tenantId) => {
+      const conexoes = await this.executorTenant.executar(tenantId, (gerenciador) =>
+        gerenciador
+          .getRepository(ProfissionalGoogleConexaoOrm)
+          .find({ where: { tenantId, desconectadoEm: IsNull() } })
+      );
 
-    for (const tenant of tenants) {
-      try {
-        const conexoes = await this.executorTenant.executar(tenant.id, (gerenciador) =>
-          gerenciador
-            .getRepository(ProfissionalGoogleConexaoOrm)
-            .find({ where: { tenantId: tenant.id, desconectadoEm: IsNull() } })
-        );
-
-        for (const conexao of conexoes) {
-          try {
-            const executarExclusivo = this.exclusaoProcessador
-              ? (operacao: () => Promise<void>) => this.exclusaoProcessador!.executar(tenant.id, `google-watch:${conexao.profissionalId}`, operacao)
-              : (operacao: () => Promise<void>) => operacao();
-            await executarExclusivo(async () => {
-              const atual = this.exclusaoProcessador
-                ? await this.obterConexaoAtual(conexao.tenantId, conexao.profissionalId)
-                : conexao;
-              if (!atual) return;
-              if (this.precisaRenovar(atual)) await this.renovarCanal(atual);
-              if (this.exclusaoProcessador) {
-                await this.servicoSincronizacao.reconciliarComExclusao(conexao.tenantId, conexao.profissionalId);
-              } else {
-                await this.servicoSincronizacao.reconciliar(conexao.tenantId, conexao.profissionalId);
-              }
-            });
-          } catch (erro) {
-            this.logger.warn(
-              `Falha ao renovar/reconciliar canal do profissional ${conexao.profissionalId}: ${
-                erro instanceof Error ? erro.message : 'erro desconhecido'
-              }`
-            );
-          }
+      for (const conexao of conexoes) {
+        try {
+          const executarExclusivo = this.exclusaoProcessador
+            ? (operacao: () => Promise<void>) => this.exclusaoProcessador!.executar(tenantId, `google-watch:${conexao.profissionalId}`, operacao)
+            : (operacao: () => Promise<void>) => operacao();
+          await executarExclusivo(async () => {
+            const atual = this.exclusaoProcessador
+              ? await this.obterConexaoAtual(conexao.tenantId, conexao.profissionalId)
+              : conexao;
+            if (!atual) return;
+            if (this.precisaRenovar(atual)) await this.renovarCanal(atual);
+            if (this.exclusaoProcessador) {
+              await this.servicoSincronizacao.reconciliarComExclusao(conexao.tenantId, conexao.profissionalId);
+            } else {
+              await this.servicoSincronizacao.reconciliar(conexao.tenantId, conexao.profissionalId);
+            }
+          });
+        } catch (erro) {
+          this.logger.warn(
+            `Falha ao renovar/reconciliar canal do profissional ${conexao.profissionalId}: ${
+              erro instanceof Error ? erro.message : 'erro desconhecido'
+            }`
+          );
         }
-      } catch (erro) {
-        this.logger.warn(
-          `Falha ao processar renovacao de canais Google Calendar do tenant ${tenant.id}: ${
-            erro instanceof Error ? erro.message : 'erro desconhecido'
-          }`
-        );
       }
-    }
+    });
   }
 
   private precisaRenovar(conexao: ProfissionalGoogleConexaoOrm): boolean {

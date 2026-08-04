@@ -17,7 +17,13 @@ Atualizado em 2026-08-03.
   real; leitura de preferencias de comunicacao virou dominio compartilhado com
   os lembretes de agenda. Revisoes de falha silenciosa (3 achados corrigidos,
   um critico) e de seguranca (sem achados criticos/altos) executadas.
-  453 testes de backend, 84 de regressao visual, a11y 10/10, lint/typecheck/
+  Rodada extra no mesmo dia fechou o achado de timeout dos crons:
+  `infraestrutura/processamento/rodada-por-tenant.ts` passou a concentrar o
+  laco por tenant dos 5 processadores agendados, com isolamento de falha e
+  timeout. Dois deles (agendamentos de questionario e outbox de comunicacoes)
+  nao tinham isolamento nenhum e abortavam a rodada inteira na primeira
+  excecao, deixando os tenants seguintes sem processamento.
+  457 testes de backend, 84 de regressao visual, a11y 10/10, lint/typecheck/
   build aprovados. Ver `fase-205-recall-automatico-retorno.md`.
 - Fase 204 - data fetching e resiliencia (escopo de
   resiliencia), em 2026-08-03 (2 rodadas). Hook `useRequisicaoCancelavel`

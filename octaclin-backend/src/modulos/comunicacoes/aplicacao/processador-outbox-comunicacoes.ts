@@ -3,7 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, IsNull, Repository } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
-import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
+import { executarPorTenantAtivo } from '../../../infraestrutura/processamento/rodada-por-tenant';
 import { redisConfigurado } from './configuracao-redis';
 import { ProcessadorNotificacoes } from './processador-notificacoes';
 import { ServicoComunicacoes } from './servico-comunicacoes';
@@ -21,22 +21,28 @@ export class ProcessadorOutboxComunicacoes {
 
   @Cron('*/30 * * * * *')
   async processarPendentes(): Promise<void> {
-    const tenants = await this.fonteDados.getRepository(TenantOrm).find({ where: { status: 'ativo' } });
+    // Timeout curto: esta rodada roda a cada 30s e e o caminho de entrega das mensagens.
+    // Um tenant lento nao pode atrasar a entrega dos demais.
+    await executarPorTenantAtivo(
+      this.fonteDados,
+      this.logger,
+      'Outbox de comunicacoes',
+      async (tenantId) => {
+        await this.executorTenant.executar(tenantId, async (gerenciador) => {
+          const repositorio = gerenciador.getRepository(OutboxEventoOrm);
+          const eventos = await repositorio.find({
+            where: { tenantId, tipo: 'notificacao.enviar', status: 'pendente', processadoEm: IsNull() },
+            order: { criadoEm: 'ASC' },
+            take: 100
+          });
 
-    for (const tenant of tenants) {
-      await this.executorTenant.executar(tenant.id, async (gerenciador) => {
-        const repositorio = gerenciador.getRepository(OutboxEventoOrm);
-        const eventos = await repositorio.find({
-          where: { tenantId: tenant.id, tipo: 'notificacao.enviar', status: 'pendente', processadoEm: IsNull() },
-          order: { criadoEm: 'ASC' },
-          take: 100
+          for (const evento of eventos) {
+            await this.processarEvento(tenantId, repositorio, evento);
+          }
         });
-
-        for (const evento of eventos) {
-          await this.processarEvento(tenant.id, repositorio, evento);
-        }
-      });
-    }
+      },
+      { timeoutMs: 25_000 }
+    );
   }
 
   async processarMensagemPendente(tenantId: string, mensagemId: string): Promise<void> {
