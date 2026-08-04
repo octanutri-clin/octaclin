@@ -13,9 +13,19 @@ import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-q
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import {
+  calcularAntropometria,
+  compararAvaliacoes,
+  dataCivil,
+  idadeNaData
+} from '../dominio/antropometria';
+import type { MedidasAntropometricas, ResultadoAntropometrico } from '../dominio/antropometria';
+import {
   AtualizarPacienteDto,
   AtualizarTarefaAcompanhamentoDto,
+  AvaliacaoAntropometricaRespostaDto,
+  CriarAvaliacaoAntropometricaDto,
   CriarEvolucaoClinicaDto,
+  SerieAntropometricaRespostaDto,
   CriarPacienteDto,
   CriarTarefaAcompanhamentoDto,
   EventoProntuarioPacienteDto,
@@ -26,6 +36,7 @@ import {
   ListarPacientesDto
 } from './dtos';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
+import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
@@ -457,6 +468,139 @@ export class ServicoPacientes {
     const limite = await this.portalCliente.checarLimite(tenantId, recurso);
     if (!limite.permitido) {
       throw new ForbiddenException(limite.mensagem ?? 'Limite do plano atingido para esta acao.');
+    }
+  }
+
+  /**
+   * Avaliacao antropometrica. Append-only: o calculo e feito uma vez, na hora,
+   * e gravado junto com o protocolo, a formula, o sexo e a idade usados. Ler o
+   * historico nunca recalcula — se o dominio mudar amanha, o registro antigo
+   * continua mostrando o numero que o profissional viu e assinou.
+   */
+  async registrarAvaliacaoAntropometrica(
+    tenantId: string,
+    pacienteId: string,
+    autorUsuarioId: string,
+    dados: CriarAvaliacaoAntropometricaDto,
+    usuario: UsuarioAutenticado
+  ): Promise<AvaliacaoAntropometricaRespostaDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const paciente = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+
+      const avaliadaEm = dados.avaliadaEm ?? dataCivil(new Date());
+      const protocolo = dados.protocolo ?? 'nenhum';
+      const idadeAnos = idadeNaData(paciente.dataNascimento, avaliadaEm);
+      const medidas: MedidasAntropometricas = {
+        pesoKg: dados.pesoKg,
+        alturaCm: dados.alturaCm,
+        circunferencias: dados.circunferencias,
+        dobras: dados.dobras
+      };
+      const resultado = calcularAntropometria({ medidas, protocolo, sexo: dados.sexo, idadeAnos });
+
+      const repositorio = gerenciador.getRepository(AvaliacaoAntropometricaOrm);
+      const avaliacao = await repositorio.save(
+        repositorio.create({
+          tenantId,
+          pacienteId,
+          autorUsuarioId,
+          avaliadaEm,
+          protocolo: resultado.protocoloAplicado,
+          sexo: dados.sexo,
+          idadeAnos,
+          medidasCriptografadas: this.criptografia.criptografar(JSON.stringify(medidas)),
+          resultadoCriptografado: this.criptografia.criptografar(JSON.stringify(resultado)),
+          formulaAplicada: resultado.formulaAplicada,
+          observacoesCriptografadas: dados.observacoes?.trim()
+            ? this.criptografia.criptografar(dados.observacoes.trim())
+            : undefined
+        })
+      );
+
+      return this.mapearAvaliacaoAntropometrica(avaliacao);
+    });
+  }
+
+  async listarAvaliacoesAntropometricas(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<SerieAntropometricaRespostaDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const registros = await gerenciador.getRepository(AvaliacaoAntropometricaOrm).find({
+        where: { tenantId, pacienteId, excluidaEm: IsNull() },
+        order: { avaliadaEm: 'DESC', criadoEm: 'DESC' },
+        take: 100
+      });
+
+      const avaliacoes = registros.map((registro) => this.mapearAvaliacaoAntropometrica(registro));
+      const [atual, anterior] = avaliacoes;
+      const deltaUltimas =
+        atual && anterior
+          ? compararAvaliacoes(
+              { ...anterior.resultado, pesoKg: anterior.medidas.pesoKg },
+              { ...atual.resultado, pesoKg: atual.medidas.pesoKg }
+            )
+          : [];
+
+      return { avaliacoes, deltaUltimas };
+    });
+  }
+
+  /** Exclusao logica: registro errado sai da serie sem sumir do banco. */
+  async excluirAvaliacaoAntropometrica(
+    tenantId: string,
+    pacienteId: string,
+    avaliacaoId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<{ id: string }> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const repositorio = gerenciador.getRepository(AvaliacaoAntropometricaOrm);
+      const avaliacao = await repositorio.findOne({
+        where: { id: avaliacaoId, tenantId, pacienteId, excluidaEm: IsNull() }
+      });
+      if (!avaliacao) throw new NotFoundException('Avaliacao antropometrica nao encontrada.');
+
+      avaliacao.excluidaEm = new Date();
+      await repositorio.save(avaliacao);
+      return { id: avaliacao.id };
+    });
+  }
+
+  private mapearAvaliacaoAntropometrica(
+    avaliacao: AvaliacaoAntropometricaOrm
+  ): AvaliacaoAntropometricaRespostaDto {
+    return {
+      id: avaliacao.id,
+      pacienteId: avaliacao.pacienteId,
+      avaliadaEm: avaliacao.avaliadaEm,
+      protocolo: avaliacao.protocolo,
+      sexo: avaliacao.sexo,
+      idadeAnos: avaliacao.idadeAnos,
+      medidas: this.lerJsonCriptografado<MedidasAntropometricas>(avaliacao.medidasCriptografadas, {}),
+      resultado: this.lerJsonCriptografado<ResultadoAntropometrico>(avaliacao.resultadoCriptografado, {
+        protocoloAplicado: 'nenhum',
+        avisos: ['registro_ilegivel']
+      }),
+      formulaAplicada: avaliacao.formulaAplicada,
+      observacoes: avaliacao.observacoesCriptografadas
+        ? this.criptografia.descriptografar(avaliacao.observacoesCriptografadas)
+        : undefined,
+      criadoEm: avaliacao.criadoEm
+    };
+  }
+
+  /**
+   * Falha de descriptografia nao pode virar avaliacao vazia parecendo cadastro
+   * incompleto: devolve o padrao com aviso explicito de registro ilegivel.
+   */
+  private lerJsonCriptografado<T>(conteudo: Buffer, padrao: T): T {
+    try {
+      return JSON.parse(this.criptografia.descriptografar(conteudo)) as T;
+    } catch {
+      return padrao;
     }
   }
 

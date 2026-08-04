@@ -12,7 +12,8 @@ import {
   Max,
   MaxLength,
   Min,
-  MinLength
+  MinLength,
+  ValidateNested
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import type {
@@ -21,6 +22,14 @@ import type {
   StatusTarefaAcompanhamento
 } from '../infraestrutura/acompanhamento-tarefa.orm';
 import type { TipoEvolucaoClinica, VisibilidadeEvolucaoClinica } from '../infraestrutura/evolucao-clinica.orm';
+import { PROTOCOLOS_COMPOSICAO } from '../dominio/antropometria';
+import type {
+  DeltaAntropometrico,
+  MedidasAntropometricas,
+  ProtocoloComposicao,
+  ResultadoAntropometrico,
+  SexoBiologico
+} from '../dominio/antropometria';
 
 export class CriarPacienteDto {
   @IsUUID()
@@ -384,4 +393,86 @@ export class RegistrarSolicitacaoLgpdPortalDto {
   @IsString()
   @MaxLength(1000)
   detalhes?: string;
+}
+
+export class CircunferenciasDto {
+  @IsOptional() @IsNumber() @Min(10) @Max(300) cintura?: number;
+  @IsOptional() @IsNumber() @Min(10) @Max(300) quadril?: number;
+  @IsOptional() @IsNumber() @Min(10) @Max(300) abdomen?: number;
+  @IsOptional() @IsNumber() @Min(10) @Max(300) braco?: number;
+  @IsOptional() @IsNumber() @Min(10) @Max(300) coxa?: number;
+  @IsOptional() @IsNumber() @Min(10) @Max(300) panturrilha?: number;
+}
+
+export class DobrasCutaneasDto {
+  @IsOptional() @IsNumber() @Min(2) @Max(80) peitoral?: number;
+  @IsOptional() @IsNumber() @Min(2) @Max(80) axilarMedia?: number;
+  @IsOptional() @IsNumber() @Min(2) @Max(80) triceps?: number;
+  @IsOptional() @IsNumber() @Min(2) @Max(80) subescapular?: number;
+  @IsOptional() @IsNumber() @Min(2) @Max(80) abdominal?: number;
+  @IsOptional() @IsNumber() @Min(2) @Max(80) suprailiaca?: number;
+  @IsOptional() @IsNumber() @Min(2) @Max(80) coxa?: number;
+  @IsOptional() @IsNumber() @Min(2) @Max(80) panturrilha?: number;
+}
+
+export class CriarAvaliacaoAntropometricaDto {
+  /** Data civil da avaliacao. Ausente, o servico usa a data de hoje na clinica. */
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'avaliadaEm deve estar no formato AAAA-MM-DD.' })
+  avaliadaEm?: string;
+
+  @IsOptional()
+  @IsIn(PROTOCOLOS_COMPOSICAO)
+  protocolo?: ProtocoloComposicao;
+
+  @IsOptional()
+  @IsIn(['masculino', 'feminino'])
+  sexo?: SexoBiologico;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(500)
+  pesoKg?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(30)
+  @Max(250)
+  alturaCm?: number;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CircunferenciasDto)
+  circunferencias?: CircunferenciasDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => DobrasCutaneasDto)
+  dobras?: DobrasCutaneasDto;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  observacoes?: string;
+}
+
+export interface AvaliacaoAntropometricaRespostaDto {
+  id: string;
+  pacienteId: string;
+  avaliadaEm: string;
+  protocolo: ProtocoloComposicao;
+  sexo?: SexoBiologico;
+  idadeAnos?: number;
+  medidas: MedidasAntropometricas;
+  resultado: ResultadoAntropometrico;
+  formulaAplicada?: string;
+  observacoes?: string;
+  criadoEm: Date;
+}
+
+export interface SerieAntropometricaRespostaDto {
+  avaliacoes: AvaliacaoAntropometricaRespostaDto[];
+  /** Comparacao entre as duas mais recentes, ja calculada para o painel. */
+  deltaUltimas: DeltaAntropometrico[];
 }

@@ -925,3 +925,201 @@ describe('ServicoPacientes', () => {
     });
   });
 });
+
+describe('ServicoPacientes - avaliacao antropometrica', () => {
+  const criptografiaFake = () => ({
+    criptografar: jest.fn((valor: string) => Buffer.from(`criptografado:${valor}`)),
+    descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('criptografado:', '')),
+    gerarHashesBuscaPii: jest.fn(() => ['hash-busca'])
+  });
+
+  function montarServico(opcoes: { avaliacoes?: Record<string, unknown>[] } = {}) {
+    const paciente = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      dataNascimento: '1990-06-15',
+      arquivadoEm: null
+    };
+    const repositorioAvaliacoes = {
+      create: jest.fn((dados: Record<string, unknown>) => dados),
+      save: jest.fn(async (dados: Record<string, unknown>) => ({
+        id: 'avaliacao-1',
+        criadoEm: new Date('2026-08-04T12:00:00.000Z'),
+        ...dados
+      })),
+      find: jest.fn(async () => opcoes.avaliacoes ?? []),
+      findOne: jest.fn(async () => (opcoes.avaliacoes ?? [])[0] ?? null)
+    };
+    const gerenciador = {
+      getRepository: jest.fn((entidade: unknown) =>
+        entidade === PacienteOrm ? { findOne: jest.fn(async () => paciente) } : repositorioAvaliacoes
+      )
+    };
+    const executorTenant = {
+      executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+        operacao(gerenciador)
+      )
+    };
+    const criptografia = criptografiaFake();
+    const servico = new ServicoPacientes(
+      executorTenant as never,
+      criptografia as never,
+      limitesPermitidos as never
+    );
+    return { servico, repositorioAvaliacoes, criptografia };
+  }
+
+  it('deve calcular na gravacao e persistir medidas e resultado criptografados', async () => {
+    const { servico, repositorioAvaliacoes, criptografia } = montarServico();
+
+    const avaliacao = await servico.registrarAvaliacaoAntropometrica(
+      'tenant-1',
+      'paciente-1',
+      'usuario-colaborador-1',
+      {
+        avaliadaEm: '2026-08-04',
+        protocolo: 'pollock_3',
+        sexo: 'masculino',
+        pesoKg: 80,
+        alturaCm: 180,
+        dobras: { peitoral: 10, abdominal: 20, coxa: 15 }
+      },
+      usuarioColaborador
+    );
+
+    expect(avaliacao.resultado.imc).toBe(24.69);
+    expect(avaliacao.protocolo).toBe('pollock_3');
+    // Idade e snapshot do momento: 36 anos completos em 2026-08-04 para nascimento 1990-06-15.
+    expect(avaliacao.idadeAnos).toBe(36);
+    expect(avaliacao.formulaAplicada).toContain('Jackson & Pollock 1978');
+
+    const gravado = repositorioAvaliacoes.save.mock.calls[0][0] as Record<string, unknown>;
+    expect(Buffer.isBuffer(gravado.medidasCriptografadas)).toBe(true);
+    expect(Buffer.isBuffer(gravado.resultadoCriptografado)).toBe(true);
+    // A formula fica em claro: descreve o metodo, nao o paciente.
+    expect(gravado.formulaAplicada).toContain('Jackson & Pollock 1978');
+    expect(criptografia.criptografar).toHaveBeenCalledWith(expect.stringContaining('"pesoKg":80'));
+  });
+
+  it('nao deve recalcular no historico: le o resultado gravado, nao o dominio atual', async () => {
+    const resultadoAntigo = { imc: 99.9, percentualGordura: 42, protocoloAplicado: 'faulkner', avisos: [] };
+    const { servico } = montarServico({
+      avaliacoes: [
+        {
+          id: 'avaliacao-antiga',
+          pacienteId: 'paciente-1',
+          avaliadaEm: '2020-01-10',
+          protocolo: 'faulkner',
+          idadeAnos: 30,
+          medidasCriptografadas: Buffer.from('criptografado:{"pesoKg":70}'),
+          resultadoCriptografado: Buffer.from(`criptografado:${JSON.stringify(resultadoAntigo)}`),
+          formulaAplicada: 'Faulkner 1968',
+          criadoEm: new Date('2020-01-10T12:00:00.000Z')
+        }
+      ]
+    });
+
+    const serie = await servico.listarAvaliacoesAntropometricas('tenant-1', 'paciente-1', usuarioColaborador);
+
+    // IMC 99,9 seria recusado pelo dominio hoje; o registro historico volta como esta.
+    expect(serie.avaliacoes[0].resultado.imc).toBe(99.9);
+    expect(serie.avaliacoes[0].formulaAplicada).toBe('Faulkner 1968');
+  });
+
+  it('deve devolver delta entre as duas avaliacoes mais recentes', async () => {
+    const registro = (id: string, data: string, peso: number, imc: number) => ({
+      id,
+      pacienteId: 'paciente-1',
+      avaliadaEm: data,
+      protocolo: 'nenhum',
+      medidasCriptografadas: Buffer.from(`criptografado:${JSON.stringify({ pesoKg: peso })}`),
+      resultadoCriptografado: Buffer.from(
+        `criptografado:${JSON.stringify({ imc, protocoloAplicado: 'nenhum', avisos: [] })}`
+      ),
+      criadoEm: new Date(`${data}T12:00:00.000Z`)
+    });
+    const { servico } = montarServico({
+      avaliacoes: [registro('a2', '2026-08-04', 78.1, 25.5), registro('a1', '2026-06-04', 82.4, 26.9)]
+    });
+
+    const serie = await servico.listarAvaliacoesAntropometricas('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(serie.deltaUltimas).toEqual([
+      { campo: 'pesoKg', anterior: 82.4, atual: 78.1, variacao: -4.3 },
+      { campo: 'imc', anterior: 26.9, atual: 25.5, variacao: -1.4 }
+    ]);
+  });
+
+  it('nao deve devolver delta com uma unica avaliacao', async () => {
+    const { servico } = montarServico({
+      avaliacoes: [
+        {
+          id: 'a1',
+          pacienteId: 'paciente-1',
+          avaliadaEm: '2026-08-04',
+          protocolo: 'nenhum',
+          medidasCriptografadas: Buffer.from('criptografado:{"pesoKg":80}'),
+          resultadoCriptografado: Buffer.from('criptografado:{"protocoloAplicado":"nenhum","avisos":[]}'),
+          criadoEm: new Date()
+        }
+      ]
+    });
+
+    const serie = await servico.listarAvaliacoesAntropometricas('tenant-1', 'paciente-1', usuarioColaborador);
+    expect(serie.deltaUltimas).toEqual([]);
+  });
+
+  it('deve sinalizar registro ilegivel em vez de devolver avaliacao vazia', async () => {
+    const { servico } = montarServico({
+      avaliacoes: [
+        {
+          id: 'a1',
+          pacienteId: 'paciente-1',
+          avaliadaEm: '2026-08-04',
+          protocolo: 'nenhum',
+          medidasCriptografadas: Buffer.from('criptografado:isso-nao-e-json'),
+          resultadoCriptografado: Buffer.from('criptografado:isso-nao-e-json'),
+          criadoEm: new Date()
+        }
+      ]
+    });
+
+    const serie = await servico.listarAvaliacoesAntropometricas('tenant-1', 'paciente-1', usuarioColaborador);
+    expect(serie.avaliacoes[0].resultado.avisos).toContain('registro_ilegivel');
+  });
+
+  it('deve excluir logicamente, sem apagar do banco', async () => {
+    const { servico, repositorioAvaliacoes } = montarServico({
+      avaliacoes: [{ id: 'avaliacao-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', excluidaEm: null }]
+    });
+
+    await servico.excluirAvaliacaoAntropometrica('tenant-1', 'paciente-1', 'avaliacao-1', usuarioColaborador);
+
+    const salvo = repositorioAvaliacoes.save.mock.calls[0][0] as Record<string, unknown>;
+    expect(salvo.excluidaEm).toBeInstanceOf(Date);
+  });
+
+  it('deve tratar paciente de outro profissional como inexistente ao registrar avaliacao', async () => {
+    const gerenciador = { getRepository: jest.fn(() => ({ findOne: jest.fn(async () => null) })) };
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao(gerenciador)
+        )
+      } as never,
+      criptografiaFake() as never,
+      limitesPermitidos as never
+    );
+
+    await expect(
+      servico.registrarAvaliacaoAntropometrica(
+        'tenant-1',
+        'paciente-de-outro',
+        'usuario-profissional-1',
+        { pesoKg: 80 },
+        usuarioProfissional
+      )
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+});

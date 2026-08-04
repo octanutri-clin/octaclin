@@ -28,6 +28,7 @@ import { ControladorPortalPaciente } from './apresentacao/controlador-portal-pac
 import { AcompanhamentoTarefaOrm } from './infraestrutura/acompanhamento-tarefa.orm';
 import { ConvitePacienteOrm } from './infraestrutura/convite-paciente.orm';
 import { EvolucaoClinicaOrm } from './infraestrutura/evolucao-clinica.orm';
+import { AvaliacaoAntropometricaOrm } from './infraestrutura/avaliacao-antropometrica.orm';
 import { PacienteOrm } from './infraestrutura/paciente.orm';
 
 @Module({
@@ -38,6 +39,7 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
       ConvitePacienteOrm,
       AcompanhamentoTarefaOrm,
       EvolucaoClinicaOrm,
+      AvaliacaoAntropometricaOrm,
       UsuarioOrm,
       ConsentimentoLgpdOrm,
       UserActionLogOrm,

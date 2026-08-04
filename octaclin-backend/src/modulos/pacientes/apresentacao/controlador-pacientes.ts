@@ -18,7 +18,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ListarPacientesDto } from '../aplicacao/dtos';
+import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ListarPacientesDto } from '../aplicacao/dtos';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
 
 @Controller('pacientes')
@@ -157,6 +157,87 @@ export class ControladorPacientes {
       metadados: { evolucaoId: evolucao.id, tipo: evolucao.tipo, visibilidade: evolucao.visibilidade }
     });
     return evolucao;
+  }
+
+  @Get(':id/avaliacoes-antropometricas')
+  async listarAvaliacoesAntropometricas(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    const serie = await this.servicoPacientes.listarAvaliacoesAntropometricas(usuario.tenantId, id, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.antropometria.listar',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { total: serie.avaliacoes.length }
+    });
+    return serie;
+  }
+
+  @Post(':id/avaliacoes-antropometricas')
+  @Permissoes('pacientes.gerenciar')
+  async registrarAvaliacaoAntropometrica(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dados: CriarAvaliacaoAntropometricaDto
+  ) {
+    const avaliacao = await this.servicoPacientes.registrarAvaliacaoAntropometrica(
+      usuario.tenantId,
+      id,
+      usuario.usuarioId,
+      dados,
+      usuario
+    );
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.antropometria.registrar',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      // Medida e resultado sao dado clinico: so o metodo entra na auditoria.
+      metadados: {
+        avaliacaoId: avaliacao.id,
+        protocolo: avaliacao.protocolo,
+        avaliadaEm: avaliacao.avaliadaEm,
+        avisos: avaliacao.resultado.avisos.length
+      }
+    });
+    return avaliacao;
+  }
+
+  @Delete(':id/avaliacoes-antropometricas/:avaliacaoId')
+  @Permissoes('pacientes.gerenciar')
+  async excluirAvaliacaoAntropometrica(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('avaliacaoId', ParseUUIDPipe) avaliacaoId: string
+  ) {
+    const excluida = await this.servicoPacientes.excluirAvaliacaoAntropometrica(
+      usuario.tenantId,
+      id,
+      avaliacaoId,
+      usuario
+    );
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.antropometria.excluir',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { avaliacaoId: excluida.id }
+    });
+    return excluida;
   }
 
   @Get(':id/tarefas-acompanhamento')
