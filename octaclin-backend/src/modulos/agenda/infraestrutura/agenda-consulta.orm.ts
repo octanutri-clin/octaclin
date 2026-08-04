@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import type { ModalidadeConsulta } from '../dominio/teleconsulta';
 
 export type StatusAgendaConsulta = 'agendada' | 'reagendada' | 'concluida' | 'falta' | 'cancelada';
 
@@ -30,6 +31,13 @@ export class AgendaConsultaOrm {
 
   @Column({ type: 'varchar', length: 40, default: 'agendada' })
   status: StatusAgendaConsulta;
+
+  @Column({ type: 'varchar', length: 20, default: 'presencial' })
+  modalidade: ModalidadeConsulta;
+
+  /** Endereco da sala externa (Meet/Zoom/Whereby). Nunca vai para log nem auditoria. */
+  @Column({ name: 'link_teleconsulta', type: 'text', nullable: true })
+  linkTeleconsulta?: string;
 
   @Column({ type: 'varchar', length: 180, nullable: true })
   local?: string;

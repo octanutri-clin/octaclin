@@ -125,3 +125,28 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
 - Consequencia: Redis e obrigatorio para worker em producao. Nao escalar o
   papel `web` enquanto o worker e a validacao de entrega unica nao estiverem
   configurados no ambiente.
+
+## ADR-020 - Teleconsulta por link externo
+
+- Decisao: nao construir plataforma de video propria. A consulta ganha
+  `modalidade` (`presencial`/`online`) e `link_teleconsulta`, apontando para
+  Meet, Zoom, Whereby ou qualquer sala externa que a clinica ja use.
+- Motivo: a demanda comercial e ter o campo, nao ter o codec. Video proprio
+  significa midia server, TURN, gravacao, banda e conformidade de midia clinica
+  a custo desproporcional para o mesmo resultado na comparacao de venda.
+- Protecao: apenas `https` e aceito (`linkTeleconsultaValido`); consulta
+  presencial nunca guarda link, invariante travada tambem por CHECK no banco.
+  O link nao aparece em log nem em auditoria — so em mensagem ao paciente,
+  no evento do Google Agenda do proprio profissional e na resposta autenticada.
+- Janela: o backend so devolve o link no campo estruturado
+  `consultasProximas[].linkTeleconsulta` de 1h antes ate 30min depois do fim, e
+  nunca para consulta cancelada ou encerrada. **A janela e reducao de superficie
+  e clareza de interface, nao segredo:** o mesmo link foi entregue por email e
+  WhatsApp no agendamento, e o texto dessa mensagem continua visivel no
+  historico do portal. Quem trata o link como segredo esta enganado — sala
+  externa e protegida pelo provedor (codigo de sala, sala de espera), nao pelo
+  OctaClin.
+- Consequencia: a clinica administra a propria sala. Sala persistente por
+  profissional, gravacao e sala de espera ficam de fora ate haver demanda
+  medida. **Esta decisao nao deve ser reaberta sem numero de venda perdida por
+  falta de video proprio.**

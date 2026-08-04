@@ -23,6 +23,8 @@ export interface NotificacoesConsultaAgenda {
   confirmacaoPaciente?: DetalheNotificacaoAgenda;
 }
 
+export type ModalidadeConsulta = 'presencial' | 'online';
+
 export interface ConsultaAgendaApi {
   id: string;
   tenantId: string;
@@ -35,6 +37,8 @@ export interface ConsultaAgendaApi {
   fimEm: string;
   timezone: string;
   status: 'agendada' | 'reagendada' | 'concluida' | 'falta' | 'cancelada';
+  modalidade: ModalidadeConsulta;
+  linkTeleconsulta?: string;
   local?: string;
   observacoes?: string;
   googleCalendarId?: string;
@@ -84,6 +88,8 @@ export interface CriarConsultaAgendaEntrada {
   inicioEm: string;
   fimEm?: string;
   duracaoMinutos?: number;
+  modalidade?: ModalidadeConsulta;
+  linkTeleconsulta?: string;
   local?: string;
   observacoes?: string;
   emailContato?: string;
@@ -95,6 +101,8 @@ export interface RemarcarConsultaAgendaEntrada {
   inicioEm: string;
   fimEm?: string;
   duracaoMinutos?: number;
+  modalidade?: ModalidadeConsulta;
+  linkTeleconsulta?: string;
   local?: string;
   observacoes?: string;
 }

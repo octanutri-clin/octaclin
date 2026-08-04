@@ -89,6 +89,7 @@ function consulta(
     inicioEm,
     fimEm: new Date(inicioEm.getTime() + 60 * 60 * 1000),
     timezone: 'America/Sao_Paulo',
+    modalidade: 'presencial',
     status,
     notificacoes: {},
     payload: {},

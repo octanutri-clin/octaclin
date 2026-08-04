@@ -1237,8 +1237,27 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                             </div>
                             <Etiqueta>{rotuloStatus(consulta.status)}</Etiqueta>
                           </div>
-                          {consulta.local ? <p className="mt-2 text-sm text-texto-suave">{consulta.local}</p> : null}
+                          {consulta.modalidade === 'online' ? (
+                            <p className="mt-2 text-sm text-texto-suave">
+                              Consulta online.{' '}
+                              {consulta.linkTeleconsulta
+                                ? 'A sala ja esta aberta.'
+                                : 'O link para entrar aparece aqui 1 hora antes do horario.'}
+                            </p>
+                          ) : consulta.local ? (
+                            <p className="mt-2 text-sm text-texto-suave">{consulta.local}</p>
+                          ) : null}
                           <div className="mt-3 flex flex-wrap items-center gap-3">
+                            {consulta.linkTeleconsulta ? (
+                              <a
+                                className={classesBotao({ variante: 'primario' })}
+                                href={consulta.linkTeleconsulta}
+                                target="_blank"
+                                rel="noreferrer noopener"
+                              >
+                                Entrar na consulta
+                              </a>
+                            ) : null}
                             {consulta.googleEventHtmlLink ? (
                               <a className="inline-flex text-sm font-semibold text-primaria" href={consulta.googleEventHtmlLink}>
                                 Abrir no Google Agenda

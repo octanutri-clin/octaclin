@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Between } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { normalizarLinkTeleconsulta, normalizarModalidadeConsulta } from '../../agenda/dominio/teleconsulta';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { ServicoComunicacoes } from '../../comunicacoes/aplicacao/servico-comunicacoes';
 import {
@@ -163,13 +164,20 @@ export class ServicoLembretesAgenda {
     const nomePaciente = this.textoPayload(consulta, 'pacienteNome') ?? consulta.titulo;
     const dataConsulta = this.formatarData(consulta.inicioEm, consulta.timezone);
     const horaConsulta = this.formatarHora(consulta.inicioEm, consulta.timezone);
-    const texto = `Ola ${nomePaciente}, tudo bem?\n\nPassando para lembrar que sua consulta esta agendada para ${dataConsulta} as ${horaConsulta}.\n\nQualquer coisa estou a disposicao!`;
+    const modalidade = normalizarModalidadeConsulta(consulta.modalidade);
+    const linkTeleconsulta = modalidade === 'online' ? normalizarLinkTeleconsulta(consulta.linkTeleconsulta) : undefined;
+    const online = linkTeleconsulta
+      ? `\n\nSua consulta e online. Entre por este link no horario: ${linkTeleconsulta}`
+      : '';
+    const texto = `Ola ${nomePaciente}, tudo bem?\n\nPassando para lembrar que sua consulta esta agendada para ${dataConsulta} as ${horaConsulta}.${online}\n\nQualquer coisa estou a disposicao!`;
     const payload: Record<string, unknown> = {
       destino,
       evento: EVENTO_LEMBRETE_CONSULTA,
       consultaId: consulta.id,
       consultaInicioEm: consulta.inicioEm.toISOString(),
       consultaFimEm: consulta.fimEm.toISOString(),
+      modalidade,
+      ...(linkTeleconsulta ? { linkTeleconsulta } : {}),
       nomePaciente,
       profissionalNome: this.textoPayload(consulta, 'profissionalNome'),
       dataConsulta,
@@ -186,6 +194,7 @@ export class ServicoLembretesAgenda {
       nomePaciente,
       dataConsulta,
       horaConsulta,
+      linkTeleconsulta,
       textoMensagem: texto
     });
     return {

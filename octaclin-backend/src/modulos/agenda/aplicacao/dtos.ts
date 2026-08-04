@@ -1,6 +1,7 @@
-import { IsBoolean, IsDateString, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsBoolean, IsDateString, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUrl, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 import type { StatusAgendaConsulta } from '../infraestrutura/agenda-consulta.orm';
 import type { TipoBloqueioManualAgenda } from '../infraestrutura/agenda-bloqueio-manual.orm';
+import { MODALIDADES_CONSULTA, ModalidadeConsulta } from '../dominio/teleconsulta';
 import type { ResultadoGoogleCalendar } from './servico-google-calendar';
 
 export type ResultadoNotificacaoAgenda =
@@ -35,6 +36,15 @@ export class CriarConsultaAgendaDto {
   @Min(15)
   @Max(480)
   duracaoMinutos?: number;
+
+  @IsOptional()
+  @IsIn(MODALIDADES_CONSULTA)
+  modalidade?: ModalidadeConsulta;
+
+  @IsOptional()
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @MaxLength(500)
+  linkTeleconsulta?: string;
 
   @IsOptional()
   @IsString()
@@ -74,6 +84,15 @@ export class RemarcarConsultaAgendaDto {
   @Min(15)
   @Max(480)
   duracaoMinutos?: number;
+
+  @IsOptional()
+  @IsIn(MODALIDADES_CONSULTA)
+  modalidade?: ModalidadeConsulta;
+
+  @IsOptional()
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @MaxLength(500)
+  linkTeleconsulta?: string;
 
   @IsOptional()
   @IsString()
@@ -174,6 +193,8 @@ export interface ConsultaAgendaRespostaDto {
   fimEm: Date;
   timezone: string;
   status: StatusAgendaConsulta;
+  modalidade: ModalidadeConsulta;
+  linkTeleconsulta?: string;
   local?: string;
   observacoes?: string;
   googleCalendarId?: string;

@@ -152,6 +152,69 @@ describe('ServicoLembretesAgenda', () => {
     );
   });
 
+  it('deve incluir o link da sala no lembrete de consulta online', async () => {
+    const consulta = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-23T12:00:00.000Z'),
+      fimEm: new Date('2026-07-23T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      modalidade: 'online',
+      linkTeleconsulta: 'https://meet.google.com/abc-defg-hij',
+      notificacoes: {},
+      payload: { pacienteNome: 'Ana Paula', emailContato: 'ana@example.com' }
+    };
+    const { servico, comunicacoes } = criarServico({ consultas: [consulta] });
+
+    await servico.processarLembretesConsulta('tenant-1', new Date('2026-07-22T12:00:00.000Z'));
+
+    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+      'tenant-1',
+      expect.objectContaining({
+        canalId: 'canal-email',
+        payload: expect.objectContaining({
+          modalidade: 'online',
+          linkTeleconsulta: 'https://meet.google.com/abc-defg-hij',
+          texto: expect.stringContaining('https://meet.google.com/abc-defg-hij')
+        })
+      })
+    );
+  });
+
+  it('nao deve incluir link no lembrete quando a consulta e presencial', async () => {
+    const consulta = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-23T12:00:00.000Z'),
+      fimEm: new Date('2026-07-23T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      modalidade: 'presencial',
+      linkTeleconsulta: 'https://meet.google.com/abc-defg-hij',
+      notificacoes: {},
+      payload: { pacienteNome: 'Ana Paula', emailContato: 'ana@example.com' }
+    };
+    const { servico, comunicacoes } = criarServico({ consultas: [consulta] });
+
+    await servico.processarLembretesConsulta('tenant-1', new Date('2026-07-22T12:00:00.000Z'));
+
+    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+      'tenant-1',
+      expect.objectContaining({
+        canalId: 'canal-email',
+        payload: expect.objectContaining({
+          modalidade: 'presencial',
+          texto: expect.not.stringContaining('meet.google.com')
+        })
+      })
+    );
+  });
+
   it('deve ignorar consulta com lembrete ja processado sem reenviar mensagens', async () => {
     const { servico, repositorioConsultas, comunicacoes } = criarServico({
       consultas: [

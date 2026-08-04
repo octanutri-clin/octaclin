@@ -449,6 +449,170 @@ describe('ServicoAgenda', () => {
     expect(consulta.notificacoes.whatsapp).toEqual(expect.objectContaining({ status: 'pendente' }));
   });
 
+  it('deve gravar consulta online com link e levar o link para notificacao e evento Google', async () => {
+    const { servico, repositorios, googleCalendar, comunicacoes } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      }
+    });
+
+    const consulta = await servico.criarConsulta(
+      'tenant-1',
+      {
+        pacienteId: 'paciente-1',
+        profissionalId: 'profissional-1',
+        inicioEm: '2026-07-22T12:00:00.000Z',
+        duracaoMinutos: 60,
+        modalidade: 'online',
+        linkTeleconsulta: 'https://meet.google.com/abc-defg-hij',
+        emailContato: 'ana@example.com',
+        enviarNotificacoes: true
+      },
+      usuarioColaborador
+    );
+
+    expect(repositorios.consulta.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modalidade: 'online',
+        linkTeleconsulta: 'https://meet.google.com/abc-defg-hij'
+      })
+    );
+    expect(consulta.modalidade).toBe('online');
+    expect(consulta.linkTeleconsulta).toBe('https://meet.google.com/abc-defg-hij');
+    expect(googleCalendar.criarEvento).toHaveBeenCalledWith(
+      expect.objectContaining({
+        descricao: expect.stringContaining('Sala online: https://meet.google.com/abc-defg-hij')
+      })
+    );
+    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+      'tenant-1',
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          modalidade: 'online',
+          linkTeleconsulta: 'https://meet.google.com/abc-defg-hij',
+          texto: expect.stringContaining('https://meet.google.com/abc-defg-hij')
+        })
+      })
+    );
+  });
+
+  it('nao deve guardar link quando a consulta e presencial', async () => {
+    const { servico, repositorios, googleCalendar } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      }
+    });
+
+    const consulta = await servico.criarConsulta(
+      'tenant-1',
+      {
+        pacienteId: 'paciente-1',
+        profissionalId: 'profissional-1',
+        inicioEm: '2026-07-22T12:00:00.000Z',
+        duracaoMinutos: 60,
+        linkTeleconsulta: 'https://meet.google.com/abc-defg-hij',
+        enviarNotificacoes: false
+      },
+      usuarioColaborador
+    );
+
+    expect(consulta.modalidade).toBe('presencial');
+    expect(consulta.linkTeleconsulta).toBeUndefined();
+    expect(repositorios.consulta.save).toHaveBeenCalledWith(
+      expect.objectContaining({ modalidade: 'presencial', linkTeleconsulta: undefined })
+    );
+    expect(googleCalendar.criarEvento).toHaveBeenCalledWith(
+      expect.objectContaining({ descricao: expect.not.stringContaining('Sala online') })
+    );
+  });
+
+  it('deve limpar o link ao remarcar trocando a consulta para presencial', async () => {
+    const { servico, repositorios } = criarServico({
+      consultas: [
+        {
+          id: 'consulta-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          titulo: 'Consulta - Ana Paula',
+          inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+          fimEm: new Date('2026-07-22T13:00:00.000Z'),
+          timezone: 'America/Sao_Paulo',
+          modalidade: 'online',
+          linkTeleconsulta: 'https://meet.google.com/abc-defg-hij',
+          status: 'agendada',
+          notificacoes: {},
+          payload: {},
+          criadoEm: new Date(),
+          atualizadoEm: new Date()
+        }
+      ]
+    });
+
+    const consulta = await servico.remarcarConsulta(
+      'tenant-1',
+      'consulta-1',
+      { inicioEm: '2026-07-23T12:00:00.000Z', duracaoMinutos: 60, modalidade: 'presencial' },
+      usuarioColaborador
+    );
+
+    expect(consulta.modalidade).toBe('presencial');
+    expect(consulta.linkTeleconsulta).toBeUndefined();
+    expect(repositorios.consulta.save).toHaveBeenCalledWith(
+      expect.objectContaining({ modalidade: 'presencial', linkTeleconsulta: undefined })
+    );
+  });
+
+  it('deve preservar o link ao remarcar consulta online sem informar modalidade', async () => {
+    const { servico } = criarServico({
+      consultas: [
+        {
+          id: 'consulta-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          titulo: 'Consulta - Ana Paula',
+          inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+          fimEm: new Date('2026-07-22T13:00:00.000Z'),
+          timezone: 'America/Sao_Paulo',
+          modalidade: 'online',
+          linkTeleconsulta: 'https://meet.google.com/abc-defg-hij',
+          status: 'agendada',
+          notificacoes: {},
+          payload: {},
+          criadoEm: new Date(),
+          atualizadoEm: new Date()
+        }
+      ]
+    });
+
+    const consulta = await servico.remarcarConsulta(
+      'tenant-1',
+      'consulta-1',
+      { inicioEm: '2026-07-23T12:00:00.000Z', duracaoMinutos: 60 },
+      usuarioColaborador
+    );
+
+    expect(consulta.modalidade).toBe('online');
+    expect(consulta.linkTeleconsulta).toBe('https://meet.google.com/abc-defg-hij');
+  });
+
   it('deve resolver credenciais Google do profissional conectado e repassar ao criar evento no Google Calendar', async () => {
     const credenciaisDoProfissional = {
       clientId: 'client-profissional-1',
@@ -925,7 +1089,7 @@ describe('ServicoAgenda', () => {
       notificacoes: {},
       payload: {}
     };
-    const { servico } = criarServico({
+    const { servico, repositorios } = criarServico({
       consultas: [consultaExistente],
       pacientes: [
         {
@@ -948,7 +1112,7 @@ describe('ServicoAgenda', () => {
           tenantId: string,
           consultaId: string,
           usuarioId: string
-        ): Promise<{ payload: Record<string, unknown> }>;
+        ): Promise<{ id: string; status: string }>;
       }
     ).desmarcarConsultaPeloPaciente;
 
@@ -962,9 +1126,54 @@ describe('ServicoAgenda', () => {
       consultaExistente.id,
       'usuario-paciente-1'
     );
-    expect(consulta.payload.historico).toEqual(
-      expect.arrayContaining([expect.objectContaining({ acao: 'cancelada', origem: 'paciente' })])
+    expect(repositorios.consulta.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          historico: expect.arrayContaining([expect.objectContaining({ acao: 'cancelada', origem: 'paciente' })])
+        })
+      })
     );
+    // Resposta do paciente e estreita de proposito: sem payload, sem link de sala,
+    // sem contatos e sem ids do Google.
+    expect(consulta).toEqual({ id: consultaExistente.id, status: 'cancelada' });
+  });
+
+  it('nao deve devolver link de teleconsulta nem payload ao paciente que desmarca a propria consulta', async () => {
+    const { servico } = criarServico({
+      consultas: [
+        {
+          id: 'consulta-online',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          titulo: 'Consulta - Ana Paula',
+          inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+          fimEm: new Date('2026-07-22T13:00:00.000Z'),
+          timezone: 'America/Sao_Paulo',
+          modalidade: 'online',
+          linkTeleconsulta: 'https://meet.google.com/abc-defg-hij',
+          status: 'agendada',
+          notificacoes: {},
+          payload: { emailContato: 'ana@example.com', whatsappContato: '5511992362080' },
+          criadoEm: new Date(),
+          atualizadoEm: new Date()
+        }
+      ],
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          profissionalResponsavelId: 'profissional-1'
+        }
+      ]
+    });
+
+    const resposta = await servico.desmarcarConsultaPeloPaciente('tenant-1', 'consulta-online', 'usuario-paciente-1');
+
+    expect(resposta).toEqual({ id: 'consulta-online', status: 'cancelada' });
+    expect(JSON.stringify(resposta)).not.toContain('meet.google.com');
+    expect(JSON.stringify(resposta)).not.toContain('ana@example.com');
   });
 
   it('registra origem google sem converter para origem interna', async () => {

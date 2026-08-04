@@ -5,6 +5,11 @@ import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-ten
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { obterSegredoFormularioPublico } from '../../../infraestrutura/seguranca/segredo-formulario-publico';
+import {
+  ModalidadeConsulta,
+  linkTeleconsultaParaPaciente,
+  normalizarModalidadeConsulta
+} from '../../agenda/dominio/teleconsulta';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
@@ -90,6 +95,9 @@ export interface ResumoPortalPaciente {
     inicioEm: Date;
     fimEm: Date;
     status: string;
+    modalidade: ModalidadeConsulta;
+    /** Preenchido apenas dentro da janela de abertura da sala. */
+    linkTeleconsulta?: string;
     local?: string;
     googleEventHtmlLink?: string;
   }[];
@@ -374,6 +382,8 @@ export class ServicoPortalPaciente {
         inicioEm: consulta.inicioEm,
         fimEm: consulta.fimEm,
         status: consulta.status,
+        modalidade: normalizarModalidadeConsulta(consulta.modalidade),
+        linkTeleconsulta: linkTeleconsultaParaPaciente(consulta),
         local: consulta.local,
         googleEventHtmlLink: consulta.googleEventHtmlLink
       }));

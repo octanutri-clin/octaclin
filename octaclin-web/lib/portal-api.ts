@@ -46,6 +46,9 @@ export interface PortalPacienteApi {
     inicioEm: string;
     fimEm: string;
     status: string;
+    modalidade: 'presencial' | 'online';
+    /** Backend so envia dentro da janela de abertura da sala. */
+    linkTeleconsulta?: string;
     local?: string;
     googleEventHtmlLink?: string;
   }[];

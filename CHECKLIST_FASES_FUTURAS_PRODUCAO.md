@@ -1147,9 +1147,27 @@ publicado antes de ampliar a superficie de mudancas visuais.
     457 testes de backend, 84 de regressao visual e a11y 10/10 aprovados. Ver
     `fase-205-recall-automatico-retorno.md`.
 
-- [ ] Fase 206 - Teleconsulta por link na consulta.
+- [x] Fase 206 - Teleconsulta por link na consulta.
   - Adicionar modalidade e link externo seguro, reutilizando agenda,
     lembretes, comunicacoes e portal; nao construir video proprio.
+  - Concluida em 2026-08-04: `agenda_consultas` ganhou `modalidade`
+    (`presencial`/`online`) e `link_teleconsulta`, com CHECK no banco travando
+    a invariante de que consulta presencial nunca guarda link. Dominio puro
+    `agenda/dominio/teleconsulta.ts` aceita so `https` e libera o link ao
+    paciente apenas de 1h antes ate 30min depois do fim, nunca em consulta
+    cancelada ou encerrada — fora da janela o campo nem sai do backend. Link
+    entra na confirmacao, no lembrete de 24h (payload e texto, inclusive como
+    parametro de template WhatsApp) e na descricao do evento Google do
+    profissional; nao entra em log, auditoria nem mensagem de cancelamento.
+    Painel da agenda troca o campo Local por Link da sala conforme a
+    modalidade, com copia rapida no card e no modal; portal mostra "Entrar na
+    consulta" so na janela valida. Decisao de nao construir video proprio
+    registrada como ADR-020 em `DECISOES_ARQUITETURA.md`. Revisao
+    `ecc:security-reviewer`: sem achado critico; um alto corrigido — a rota de
+    desmarcar do portal devolvia o DTO completo do console ao paciente (link
+    cru fora da janela, contatos e ids do Google no `payload`), agora devolve
+    so `{ id, status }`. 475 testes de backend e 136 de regressao visual/a11y
+    aprovados. Ver `fase-206-teleconsulta-por-link.md`.
 
 - [ ] Fase 207 - Antropometria e evolucao de medidas.
   - Modelar avaliacoes seriadas, protocolos registrados e visualizacao

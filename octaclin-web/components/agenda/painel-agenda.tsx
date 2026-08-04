@@ -30,6 +30,7 @@ import {
   ConexaoGoogleAgendaStatus,
   conectarGoogleAgenda,
   ConsultaAgendaApi,
+  ModalidadeConsulta,
   criarConsultaAgenda,
   DesfechoConsultaAgenda,
   desconectarGoogleAgenda,
@@ -46,6 +47,8 @@ interface FormularioAgenda {
   profissionalId: string;
   inicioEm: string;
   duracaoMinutos: number;
+  modalidade: ModalidadeConsulta;
+  linkTeleconsulta: string;
   local: string;
   emailContato: string;
   whatsappContato: string;
@@ -58,6 +61,8 @@ const formularioInicial: FormularioAgenda = {
   profissionalId: '',
   inicioEm: '',
   duracaoMinutos: 50,
+  modalidade: 'presencial',
+  linkTeleconsulta: '',
   local: '',
   emailContato: '',
   whatsappContato: '',
@@ -316,7 +321,10 @@ export function PainelAgenda() {
         profissionalId: formulario.profissionalId || undefined,
         inicioEm: new Date(formulario.inicioEm).toISOString(),
         duracaoMinutos: formulario.duracaoMinutos,
-        local: formulario.local || undefined,
+        modalidade: formulario.modalidade,
+        linkTeleconsulta:
+          formulario.modalidade === 'online' ? formulario.linkTeleconsulta.trim() || undefined : undefined,
+        local: formulario.modalidade === 'online' ? undefined : formulario.local || undefined,
         emailContato: formulario.emailContato || undefined,
         whatsappContato: formulario.whatsappContato || undefined,
         observacoes: formulario.observacoes || undefined,
@@ -326,6 +334,7 @@ export function PainelAgenda() {
       setFormulario((atual) => ({
         ...atual,
         inicioEm: proximoHorarioPadrao(),
+        linkTeleconsulta: '',
         local: '',
         observacoes: ''
       }));
@@ -351,6 +360,8 @@ export function PainelAgenda() {
     const inicioLocal = String(dados.get('inicioEm') ?? '');
     const duracaoMinutos = Number(dados.get('duracaoMinutos') ?? duracaoConsultaMinutos(consulta));
     const local = String(dados.get('local') ?? '').trim();
+    const modalidade = String(dados.get('modalidade') ?? 'presencial') === 'online' ? 'online' : 'presencial';
+    const linkTeleconsulta = String(dados.get('linkTeleconsulta') ?? '').trim();
 
     if (!inicioLocal) {
       setErro('Informe a nova data e hora da consulta.');
@@ -364,6 +375,8 @@ export function PainelAgenda() {
       const atualizada = await remarcarConsultaAgenda(consulta.id, {
         inicioEm: new Date(inicioLocal).toISOString(),
         duracaoMinutos,
+        modalidade,
+        linkTeleconsulta: modalidade === 'online' ? linkTeleconsulta || undefined : undefined,
         local: local || undefined,
         observacoes: consulta.observacoes || undefined
       });
@@ -410,6 +423,16 @@ export function PainelAgenda() {
       setSucesso('Link publico copiado.');
     } catch {
       setErro('Nao foi possivel copiar o link publico.');
+    }
+  }
+
+  async function copiarLinkTeleconsulta(link: string) {
+    try {
+      await navigator.clipboard?.writeText(link);
+      setErro(null);
+      setSucesso('Link da sala copiado.');
+    } catch {
+      setErro('Nao foi possivel copiar o link da sala.');
     }
   }
 
@@ -510,17 +533,60 @@ export function PainelAgenda() {
         {consultaSelecionada ? (
           <div className="grid gap-4">
             <div className="grid gap-2 rounded-md border border-linha bg-superficie p-3 text-sm text-texto-suave sm:grid-cols-2">
-              <p>Local: {consultaSelecionada.local || 'Nao informado'}</p>
+              <p>Modalidade: {consultaSelecionada.modalidade === 'online' ? 'Online (teleconsulta)' : 'Presencial'}</p>
+              {consultaSelecionada.modalidade === 'online' ? (
+                <p>Sala: {consultaSelecionada.linkTeleconsulta ? 'link cadastrado' : 'link nao cadastrado'}</p>
+              ) : (
+                <p>Local: {consultaSelecionada.local || 'Nao informado'}</p>
+              )}
               <p>Google Agenda: {statusGoogle(consultaSelecionada, statusGoogleAgenda?.conectado)}</p>
               <p>E-mail: {statusNotificacao(consultaSelecionada.notificacoes, 'email')}</p>
               <p>WhatsApp: {statusNotificacao(consultaSelecionada.notificacoes, 'whatsapp')}</p>
             </div>
+            {consultaSelecionada.modalidade === 'online' && consultaSelecionada.linkTeleconsulta ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-linha bg-superficie p-3">
+                <a
+                  className="min-w-0 flex-1 truncate text-sm font-medium text-primaria hover:underline"
+                  href={consultaSelecionada.linkTeleconsulta}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {consultaSelecionada.linkTeleconsulta}
+                </a>
+                <Botao
+                  type="button"
+                  onClick={() => void copiarLinkTeleconsulta(consultaSelecionada.linkTeleconsulta as string)}
+                >
+                  <Video size={16} />
+                  Copiar link
+                </Botao>
+              </div>
+            ) : null}
             {consultaAtiva(consultaSelecionada) ? (
               <form onSubmit={(evento) => remarcar(evento, consultaSelecionada)} className="grid gap-3 border-t border-linha pt-4">
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px_minmax(140px,1fr)]">
                   <label className="grid gap-1"><Rotulo>Nova data e hora</Rotulo><Campo aria-label="Nova data e hora" name="inicioEm" type="datetime-local" defaultValue={valorDatetimeLocal(new Date(consultaSelecionada.inicioEm))} /></label>
                   <label className="grid gap-1"><Rotulo>Nova duracao</Rotulo><Campo aria-label="Nova duracao" name="duracaoMinutos" type="number" min={15} max={480} step={5} defaultValue={duracaoConsultaMinutos(consultaSelecionada)} /></label>
                   <label className="grid gap-1"><Rotulo>Novo local</Rotulo><Campo aria-label="Novo local" name="local" defaultValue={consultaSelecionada.local ?? ''} /></label>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
+                  <label className="grid gap-1">
+                    <Rotulo>Modalidade</Rotulo>
+                    <Selecao aria-label="Modalidade" name="modalidade" defaultValue={consultaSelecionada.modalidade}>
+                      <option value="presencial">Presencial</option>
+                      <option value="online">Online (teleconsulta)</option>
+                    </Selecao>
+                  </label>
+                  <label className="grid gap-1">
+                    <Rotulo>Link da sala</Rotulo>
+                    <Campo
+                      aria-label="Link da sala"
+                      name="linkTeleconsulta"
+                      type="url"
+                      defaultValue={consultaSelecionada.linkTeleconsulta ?? ''}
+                      placeholder="https://meet.google.com/abc-defg-hij"
+                    />
+                  </label>
                 </div>
                 <div className="flex flex-wrap justify-between gap-2">
                   <div className="flex flex-wrap gap-2" role="group" aria-label="Registrar desfecho da consulta">
@@ -640,13 +706,47 @@ export function PainelAgenda() {
                 </div>
 
                 <label className="grid gap-1">
-                  <Rotulo>Local</Rotulo>
-                  <Campo
-                    value={formulario.local}
-                    onChange={(evento) => setFormulario((atual) => ({ ...atual, local: evento.target.value }))}
-                    placeholder="Consultorio, videochamada ou endereco"
-                  />
+                  <Rotulo>Modalidade</Rotulo>
+                  <Selecao
+                    value={formulario.modalidade}
+                    onChange={(evento) =>
+                      setFormulario((atual) => ({ ...atual, modalidade: evento.target.value as ModalidadeConsulta }))
+                    }
+                  >
+                    <option value="presencial">Presencial</option>
+                    <option value="online">Online (teleconsulta)</option>
+                  </Selecao>
                 </label>
+
+                {formulario.modalidade === 'online' ? (
+                  <div className="grid gap-1">
+                    <label className="grid gap-1">
+                      <Rotulo>Link da sala</Rotulo>
+                      <Campo
+                        type="url"
+                        aria-describedby="ajuda-link-teleconsulta"
+                        value={formulario.linkTeleconsulta}
+                        onChange={(evento) =>
+                          setFormulario((atual) => ({ ...atual, linkTeleconsulta: evento.target.value }))
+                        }
+                        placeholder="https://meet.google.com/abc-defg-hij"
+                      />
+                    </label>
+                    <p id="ajuda-link-teleconsulta" className="text-xs text-texto-suave">
+                      Cole o link do Meet, Zoom ou Whereby. O link fica visivel para quem sera atendido a partir de 1
+                      hora antes e ate 30 minutos depois do fim.
+                    </p>
+                  </div>
+                ) : (
+                  <label className="grid gap-1">
+                    <Rotulo>Local</Rotulo>
+                    <Campo
+                      value={formulario.local}
+                      onChange={(evento) => setFormulario((atual) => ({ ...atual, local: evento.target.value }))}
+                      placeholder="Consultorio ou endereco"
+                    />
+                  </label>
+                )}
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="grid gap-1">
@@ -860,7 +960,13 @@ export function PainelAgenda() {
                             </p>
                             <p className="flex min-w-0 items-center gap-2">
                               <Video size={15} className="shrink-0" />
-                              <span className="truncate">{consulta.local || 'Local nao informado'}</span>
+                              <span className="truncate">
+                                {consulta.modalidade === 'online'
+                                  ? consulta.linkTeleconsulta
+                                    ? 'Online - sala cadastrada'
+                                    : 'Online - sala nao cadastrada'
+                                  : consulta.local || 'Local nao informado'}
+                              </span>
                             </p>
                             <p className="truncate">Profissional: {consulta.profissionalNome ?? profissional?.nome ?? 'Nao informado'}</p>
                             <p className="truncate">
@@ -888,6 +994,26 @@ export function PainelAgenda() {
                           </span>
                         </div>
                       </div>
+
+                      {consulta.modalidade === 'online' && consulta.linkTeleconsulta ? (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <a
+                            href={consulta.linkTeleconsulta}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="min-w-0 flex-1 truncate text-sm font-medium text-primaria hover:underline"
+                          >
+                            {consulta.linkTeleconsulta}
+                          </a>
+                          <Botao
+                            type="button"
+                            onClick={() => void copiarLinkTeleconsulta(consulta.linkTeleconsulta as string)}
+                          >
+                            <Video size={15} />
+                            Copiar link
+                          </Botao>
+                        </div>
+                      ) : null}
 
                       {consulta.observacoes ? <p className="mt-3 text-sm text-texto-suave">{consulta.observacoes}</p> : null}
                       {consulta.googleEventHtmlLink ? (

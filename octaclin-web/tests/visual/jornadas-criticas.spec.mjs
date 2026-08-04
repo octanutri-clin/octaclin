@@ -387,8 +387,18 @@ async function prepararPaciente(page) {
                 inicioEm: '2026-08-10T13:00:00.000Z',
                 fimEm: '2026-08-10T13:50:00.000Z',
                 status: 'agendada',
-                local: 'Online',
+                modalidade: 'online',
+                linkTeleconsulta: 'https://meet.google.com/abc-defg-hij',
                 googleEventHtmlLink: 'https://calendar.google.com/event?eid=teste'
+              },
+              {
+                id: 'consulta-jornada-sem-sala',
+                titulo: 'Retorno online',
+                inicioEm: '2026-09-10T13:00:00.000Z',
+                fimEm: '2026-09-10T13:50:00.000Z',
+                status: 'agendada',
+                modalidade: 'online',
+                googleEventHtmlLink: 'https://calendar.google.com/event?eid=teste-2'
               }
             ],
         formulariosPendentes: [],
@@ -892,6 +902,32 @@ test.describe('jornadas criticas de producao', () => {
     await expect(consulta.getByText('Enviado')).toHaveCount(2);
   });
 
+  test('agenda troca local por link de sala ao marcar a consulta como online', async ({ page }) => {
+    const profissionalFluxo = await prepararProfissional(page);
+
+    await page.goto('/agenda');
+    await page.getByRole('button', { name: 'Nova consulta' }).click();
+    const formularioAgenda = page.getByRole('dialog', { name: 'Nova consulta' });
+
+    // Presencial nao expoe nenhum campo de video.
+    await expect(formularioAgenda.getByLabel('Local')).toBeVisible();
+    await expect(formularioAgenda.getByLabel('Link da sala')).toHaveCount(0);
+
+    await formularioAgenda.getByLabel('Modalidade').selectOption('online');
+    await expect(formularioAgenda.getByLabel('Local')).toHaveCount(0);
+
+    await formularioAgenda.getByLabel('Paciente').selectOption('paciente-1');
+    await formularioAgenda.getByLabel('Profissional').selectOption('profissional-1');
+    await formularioAgenda.getByLabel('Data e hora').fill('2026-08-10T10:00');
+    await formularioAgenda.getByLabel('Link da sala').fill('https://meet.google.com/abc-defg-hij');
+    await formularioAgenda.getByRole('button', { name: 'Agendar' }).click();
+
+    await expect.poll(() => profissionalFluxo.consultaCriada()).toMatchObject({
+      modalidade: 'online',
+      linkTeleconsulta: 'https://meet.google.com/abc-defg-hij'
+    });
+  });
+
   test('solicitacao publica segue para aprovacao manual antes de gerar consulta e notificacoes', async ({ page }) => {
     const jornada = await prepararJornadaSolicitacaoPublica(page);
 
@@ -967,6 +1003,12 @@ test.describe('jornadas criticas de producao', () => {
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
     const proximasConsultas = page.getByRole('heading', { name: 'Proximas consultas' }).locator('..').locator('..');
     await expect(proximasConsultas.getByText('Consulta inicial')).toBeVisible();
+    // Teleconsulta: link so aparece dentro da janela; fora dela o paciente ve a explicacao, nao o endereco.
+    await expect(proximasConsultas.getByRole('link', { name: 'Entrar na consulta' })).toHaveAttribute(
+      'href',
+      'https://meet.google.com/abc-defg-hij'
+    );
+    await expect(proximasConsultas.getByText('O link para entrar aparece aqui 1 hora antes do horario.')).toBeVisible();
     await page.goto('/portal/mensagens');
     await expect(page.locator('#notificacoes').getByText('Consulta agendada')).toBeVisible();
     await expect(page.locator('#notificacoes').getByText('Lembrete de consulta').first()).toBeVisible();
@@ -982,7 +1024,7 @@ test.describe('jornadas criticas de producao', () => {
     const proximasConsultas = page.getByRole('heading', { name: 'Proximas consultas' }).locator('..').locator('..');
     await expect(proximasConsultas.getByText('Consulta inicial')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Desmarcar' }).click();
+    await page.getByRole('button', { name: 'Desmarcar' }).first().click();
 
     await expect.poll(() => paciente.desmarcou()).toBe(true);
     await expect(page.getByText('Consulta desmarcada.')).toBeVisible();

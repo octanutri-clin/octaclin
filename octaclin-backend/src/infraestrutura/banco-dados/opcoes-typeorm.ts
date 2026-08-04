@@ -27,6 +27,7 @@ import { AdicionarRevisaoHumanaIa1720000001011 } from './migracoes/1720000001011
 import { IsolarIdempotenciaMobilePorPaciente1720000001012 } from './migracoes/1720000001012-IsolarIdempotenciaMobilePorPaciente';
 import { AdicionarIndiceBuscaPacientes1720000001013 } from './migracoes/1720000001013-AdicionarIndiceBuscaPacientes';
 import { ProtegerArquivosMidia1720000001014 } from './migracoes/1720000001014-ProtegerArquivosMidia';
+import { AdicionarTeleconsultaAgenda1720000001015 } from './migracoes/1720000001015-AdicionarTeleconsultaAgenda';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -188,7 +189,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AdicionarRevisaoHumanaIa1720000001011,
       IsolarIdempotenciaMobilePorPaciente1720000001012,
       AdicionarIndiceBuscaPacientes1720000001013,
-      ProtegerArquivosMidia1720000001014
+      ProtegerArquivosMidia1720000001014,
+      AdicionarTeleconsultaAgenda1720000001015
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

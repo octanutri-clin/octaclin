@@ -1,13 +1,30 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-03.
+Atualizado em 2026-08-04.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 205 - recall automatico de retorno, em
+- Ultima fase concluida: Fase 206 - teleconsulta por link na consulta, em
+  2026-08-04. A consulta ganhou modalidade (`presencial`/`online`) e link de
+  sala externa, sem construir plataforma de video — decisao registrada como
+  ADR-020. Dominio puro `agenda/dominio/teleconsulta.ts` aceita apenas `https`
+  e libera o link ao paciente somente de 1 hora antes ate 30 minutos depois do
+  fim, nunca em consulta cancelada ou encerrada; fora da janela o link nem sai
+  do backend. Consulta presencial nunca guarda link, invariante travada por
+  CHECK na migration `1720000001015`. O link acompanha a confirmacao, o
+  lembrete de 24h e o evento Google do profissional, e fica fora de log,
+  auditoria e mensagem de cancelamento. Painel da agenda troca Local por Link
+  da sala conforme a modalidade, com copia rapida; portal do paciente mostra
+  "Entrar na consulta" apenas dentro da janela. A revisao de seguranca pegou um
+  achado alto que a fase tornou caro: a rota de desmarcar do portal devolvia ao
+  paciente o DTO completo do console (link cru fora da janela, mais
+  `emailContato`, `whatsappContato` e ids do Google no `payload`); agora devolve
+  so `{ id, status }`. 475 testes de backend, 136 de regressao visual/a11y,
+  lint/typecheck/build aprovados. Ver `fase-206-teleconsulta-por-link.md`.
+- Fase 205 - recall automatico de retorno, em
   2026-08-03. Gatilho de inatividade (`paciente.inativo`) somado ao motor de
   automacoes: seleciona pacientes sem consulta concluida ha N dias, restrito
   ao profissional dono da regra e a quem aceita receber mensagens, com

@@ -14,6 +14,11 @@ import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-exte
 import { AgendaBloqueioManualOrm, TipoBloqueioManualAgenda } from '../infraestrutura/agenda-bloqueio-manual.orm';
 import { AgendaConsultaOrm, StatusAgendaConsulta } from '../infraestrutura/agenda-consulta.orm';
 import {
+  ModalidadeConsulta,
+  normalizarLinkTeleconsulta,
+  normalizarModalidadeConsulta
+} from '../dominio/teleconsulta';
+import {
   CancelarConsultaAgendaDto,
   ConsultarFeedAgendaDto,
   ConsultaAgendaRespostaDto,
@@ -67,6 +72,28 @@ function dataValida(valor: string): Date {
 
 function textoOpcional(valor?: string): string | undefined {
   return valor?.trim() || undefined;
+}
+
+/**
+ * Invariante unica da teleconsulta: consulta presencial nunca carrega link. Sem isso
+ * um toggle de modalidade deixaria sala de video pendurada em consulta de consultorio,
+ * e o painel do paciente exibiria botao de entrar em consulta que nao e online.
+ */
+function resolverTeleconsulta(
+  dados: { modalidade?: ModalidadeConsulta; linkTeleconsulta?: string },
+  atual?: { modalidade?: ModalidadeConsulta | string; linkTeleconsulta?: string }
+): { modalidade: ModalidadeConsulta; linkTeleconsulta?: string } {
+  const modalidade =
+    dados.modalidade !== undefined
+      ? normalizarModalidadeConsulta(dados.modalidade)
+      : normalizarModalidadeConsulta(atual?.modalidade);
+  if (modalidade !== 'online') return { modalidade, linkTeleconsulta: undefined };
+
+  const link =
+    dados.linkTeleconsulta !== undefined
+      ? normalizarLinkTeleconsulta(dados.linkTeleconsulta)
+      : normalizarLinkTeleconsulta(atual?.linkTeleconsulta);
+  return { modalidade, linkTeleconsulta: link };
 }
 
 @Injectable()
@@ -279,6 +306,9 @@ export class ServicoAgenda {
       atual.inicioEm = inicioEm;
       atual.fimEm = fimEm;
       atual.status = 'reagendada';
+      const teleconsulta = resolverTeleconsulta(dados, atual);
+      atual.modalidade = teleconsulta.modalidade;
+      atual.linkTeleconsulta = teleconsulta.linkTeleconsulta;
       atual.local = dados.local !== undefined ? textoOpcional(dados.local) : atual.local;
       atual.observacoes = dados.observacoes !== undefined ? textoOpcional(dados.observacoes) : atual.observacoes;
       atual.payload = this.adicionarHistorico(atual.payload, {
@@ -387,15 +417,21 @@ export class ServicoAgenda {
     );
   }
 
+  /**
+   * Unico caminho de agenda exposto ao paciente. Devolve so id e status: a resposta
+   * completa e do console (payload com contatos, nomes, ids do Google e link de sala)
+   * e nao passa pela janela de exibicao da teleconsulta.
+   */
   async desmarcarConsultaPeloPaciente(
     tenantId: string,
     consultaId: string,
     usuarioId: string
-  ): Promise<ConsultaAgendaRespostaDto> {
+  ): Promise<{ id: string; status: StatusAgendaConsulta }> {
     const pacienteId = await this.executorTenant.executar(tenantId, (gerenciador) =>
       resolverPacienteIdDoUsuario(gerenciador, tenantId, usuarioId)
     );
-    return this.executarCancelamento(tenantId, consultaId, {}, { pacienteId }, 'paciente', true);
+    const consulta = await this.executarCancelamento(tenantId, consultaId, {}, { pacienteId }, 'paciente', true);
+    return { id: consulta.id, status: consulta.status };
   }
 
   async cancelarConsultaComoSistema(
@@ -516,7 +552,8 @@ export class ServicoAgenda {
       const profissionalNome = profissional ? this.criptografia.descriptografar(profissional.nomeCriptografado) : undefined;
       const emailContato = textoOpcional(dados.emailContato) ?? this.obterEmailPaciente(paciente);
       const whatsappContato = textoOpcional(dados.whatsappContato) ?? this.obterWhatsappPaciente(paciente);
-      const textoMensagem = this.montarTextoMensagem(pacienteNome, inicioEm);
+      const teleconsulta = resolverTeleconsulta(dados);
+      const textoMensagem = this.montarTextoMensagem(pacienteNome, inicioEm, teleconsulta.linkTeleconsulta);
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
       const consulta = await this.salvarConsultaProtegidaContraSobreposicao(() =>
         repositorio.save(
@@ -529,6 +566,8 @@ export class ServicoAgenda {
             fimEm,
             timezone: process.env.GOOGLE_CALENDAR_TIMEZONE ?? 'America/Sao_Paulo',
             status: 'agendada',
+            modalidade: teleconsulta.modalidade,
+            linkTeleconsulta: teleconsulta.linkTeleconsulta,
             local: textoOpcional(dados.local),
             observacoes: textoOpcional(dados.observacoes),
             notificacoes: {},
@@ -736,6 +775,7 @@ export class ServicoAgenda {
     destino: string,
     evento: string
   ) {
+    const linkTeleconsulta = this.linkParaEnvio(contexto.consulta, evento);
     const payload: Record<string, unknown> = {
       destino,
       nomePaciente: contexto.pacienteNome,
@@ -745,13 +785,15 @@ export class ServicoAgenda {
       consultaFimEm: contexto.consulta.fimEm.toISOString(),
       assunto: evento === EVENTO_CONSULTA_CANCELADA ? 'Consulta cancelada - OctaClin' : 'Consulta agendada - OctaClin',
       texto: contexto.textoMensagem,
-      observacao: contexto.textoMensagem
+      observacao: contexto.textoMensagem,
+      modalidade: normalizarModalidadeConsulta(contexto.consulta.modalidade),
+      ...(linkTeleconsulta ? { linkTeleconsulta } : {})
     };
 
     if (tipo !== 'whatsapp') return payload;
 
     const idioma = this.obterTextoConteudo(template, 'idioma');
-    const components = this.montarComponentesTemplateWhatsapp(template, contexto);
+    const components = this.montarComponentesTemplateWhatsapp(template, contexto, linkTeleconsulta);
     return {
       ...payload,
       evento,
@@ -760,7 +802,11 @@ export class ServicoAgenda {
     };
   }
 
-  private montarComponentesTemplateWhatsapp(template: TemplateMensagemOrm, contexto: ContextoConsultaCriada) {
+  private montarComponentesTemplateWhatsapp(
+    template: TemplateMensagemOrm,
+    contexto: ContextoConsultaCriada,
+    linkTeleconsulta?: string
+  ) {
     const parametros = Array.isArray(template.conteudo?.parametros)
       ? template.conteudo.parametros.filter((parametro): parametro is string => typeof parametro === 'string')
       : [];
@@ -771,13 +817,13 @@ export class ServicoAgenda {
         type: 'body',
         parameters: parametros.map((parametro) => ({
           type: 'text',
-          text: this.valorParametroTemplate(parametro, contexto)
+          text: this.valorParametroTemplate(parametro, contexto, linkTeleconsulta)
         }))
       }
     ];
   }
 
-  private valorParametroTemplate(parametro: string, contexto: ContextoConsultaCriada) {
+  private valorParametroTemplate(parametro: string, contexto: ContextoConsultaCriada, linkTeleconsulta?: string) {
     const dataConsulta = this.formatarDataConsulta(contexto.consulta.inicioEm, contexto.consulta.timezone);
     const horaConsulta = this.formatarHoraConsulta(contexto.consulta.inicioEm, contexto.consulta.timezone);
     const mapa: Record<string, string | undefined> = {
@@ -786,6 +832,7 @@ export class ServicoAgenda {
       dataConsulta,
       horaConsulta,
       localConsulta: contexto.consulta.local,
+      linkTeleconsulta,
       textoMensagem: contexto.textoMensagem
     };
     return mapa[parametro] ?? '';
@@ -796,11 +843,21 @@ export class ServicoAgenda {
     return typeof valor === 'string' && valor.trim() ? valor.trim() : undefined;
   }
 
-  private montarTextoMensagem(nomePaciente: string, inicioEm: Date) {
+  private montarTextoMensagem(nomePaciente: string, inicioEm: Date, linkTeleconsulta?: string) {
     const data = this.formatarDataConsulta(inicioEm);
     const hora = this.formatarHoraConsulta(inicioEm);
+    const online = linkTeleconsulta
+      ? `\n\nSua consulta e online. Entre por este link no horario: ${linkTeleconsulta}`
+      : '';
 
-    return `Ola ${nomePaciente}, tudo bem?\n\nPassando para avisar que sua consulta foi agendada para ${data} as ${hora}.\n\nQualquer coisa estou a disposicao!`;
+    return `Ola ${nomePaciente}, tudo bem?\n\nPassando para avisar que sua consulta foi agendada para ${data} as ${hora}.${online}\n\nQualquer coisa estou a disposicao!`;
+  }
+
+  /** Link so acompanha eventos que ainda vao acontecer: cancelamento nao leva sala. */
+  private linkParaEnvio(consulta: AgendaConsultaOrm, evento: string) {
+    if (evento === EVENTO_CONSULTA_CANCELADA) return undefined;
+    if (normalizarModalidadeConsulta(consulta.modalidade) !== 'online') return undefined;
+    return normalizarLinkTeleconsulta(consulta.linkTeleconsulta);
   }
 
   private montarTextoMensagemCancelamento(nomePaciente: string, inicioEm: Date) {
@@ -832,6 +889,9 @@ export class ServicoAgenda {
       `Paciente: ${contexto.pacienteNome}`,
       contexto.profissionalNome ? `Profissional: ${contexto.profissionalNome}` : undefined,
       contexto.consulta.local ? `Local: ${contexto.consulta.local}` : undefined,
+      normalizarModalidadeConsulta(contexto.consulta.modalidade) === 'online' && contexto.consulta.linkTeleconsulta
+        ? `Sala online: ${contexto.consulta.linkTeleconsulta}`
+        : undefined,
       contexto.consulta.observacoes ? `Observacoes: ${contexto.consulta.observacoes}` : undefined,
       '',
       'Evento criado automaticamente pelo OctaClin.'
@@ -925,6 +985,8 @@ export class ServicoAgenda {
       fimEm: consulta.fimEm,
       timezone: consulta.timezone,
       status: consulta.status,
+      modalidade: normalizarModalidadeConsulta(consulta.modalidade),
+      linkTeleconsulta: consulta.linkTeleconsulta,
       local: consulta.local,
       observacoes: consulta.observacoes,
       googleCalendarId: consulta.googleCalendarId,
