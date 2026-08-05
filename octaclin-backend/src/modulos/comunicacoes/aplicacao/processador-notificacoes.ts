@@ -3,6 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { In } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { FILA_NOTIFICACOES } from './servico-comunicacoes';
 import { AdaptadorEmailSmtp } from '../infraestrutura/adaptadores/adaptador-email-smtp';
 import { AdaptadorNotificacao } from '../infraestrutura/adaptadores/adaptador-notificacao';
@@ -11,6 +12,7 @@ import { AdaptadorWhatsAppMeta } from '../infraestrutura/adaptadores/adaptador-w
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
+import { lerPayloadMensagem } from './cripto-conteudo-mensagem';
 
 interface JobEnvioNotificacao {
   tenantId: string;
@@ -28,7 +30,8 @@ export class ProcessadorNotificacoes extends WorkerHost {
     private readonly executorTenant: ExecutorTenant,
     private readonly whatsapp: AdaptadorWhatsAppMeta,
     private readonly email: AdaptadorEmailSmtp,
-    private readonly push: AdaptadorPushPlaceholder
+    private readonly push: AdaptadorPushPlaceholder,
+    private readonly criptografia: CriptografiaDadosSensiveis
   ) {
     super();
   }
@@ -67,7 +70,13 @@ export class ProcessadorNotificacoes extends WorkerHost {
           tenantId
         });
         const adaptador = this.obterAdaptador(canal.tipo);
-        const resultado = await adaptador.enviar({ canal, template, payload: mensagem.payload });
+        // Payload remontado vai so para o adaptador; a entidade continua com o
+        // conteudo cifrado a parte, entao o save abaixo nao o escreve em claro.
+        const resultado = await adaptador.enviar({
+          canal,
+          template,
+          payload: lerPayloadMensagem(mensagem, this.criptografia)
+        });
 
         mensagem.status = 'enviado';
         mensagem.enviadoEm = new Date();

@@ -64,6 +64,7 @@ describe('ServicoWebhookWhatsapp', () => {
     };
 
     const criptografia = {
+      criptografar: jest.fn((valor: string) => Buffer.from(valor, 'utf8')),
       descriptografar: jest.fn((valor: Buffer) => valor.toString())
     };
 
@@ -163,19 +164,26 @@ describe('ServicoWebhookWhatsapp', () => {
         tenantId: 'tenant-1',
         pacienteId: 'paciente-1',
         canalId: 'canal-whatsapp',
-        status: 'recebido',
-        payload: expect.objectContaining({
-          direcao: 'recebida',
-          origem: 'whatsapp',
-          idExterno: 'wamid-in-1',
-          remetente: '5511999999999',
-          phoneNumberId: 'phone-1',
-          tipo: 'text',
-          texto: 'Oi, preciso remarcar.',
-          timestamp: '1780000000'
-        })
+        status: 'recebido'
       })
     );
+
+    // O roteamento fica em claro; o texto escrito pelo paciente, nao.
+    const [[gravada]] = repositorioMensagens.save.mock.calls;
+    expect(gravada.payload).toEqual({
+      direcao: 'recebida',
+      origem: 'whatsapp',
+      idExterno: 'wamid-in-1',
+      remetente: '5511999999999',
+      phoneNumberId: 'phone-1',
+      tipo: 'text',
+      timestamp: '1780000000'
+    });
+    expect(gravada.payload).not.toHaveProperty('texto');
+    expect(JSON.stringify(gravada.payload)).not.toContain('Oi, preciso remarcar.');
+    expect(JSON.parse(gravada.conteudoCriptografado.toString('utf8'))).toEqual({
+      texto: 'Oi, preciso remarcar.'
+    });
     expect(repositorioMensagens.save).toHaveBeenCalledTimes(1);
   });
 
@@ -221,16 +229,15 @@ describe('ServicoWebhookWhatsapp', () => {
     ).resolves.toEqual({ criadas: 1, ignoradas: 0 });
 
     expect(repositorioMensagens.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        pacienteId: 'paciente-1',
-        status: 'recebido',
-        payload: expect.objectContaining({
-          idExterno: 'wamid-in-2',
-          remetente: '5511999999999',
-          texto: 'Obrigado.'
-        })
-      })
+      expect.objectContaining({ pacienteId: 'paciente-1', status: 'recebido' })
     );
+
+    const [[gravada]] = repositorioMensagens.save.mock.calls;
+    expect(gravada.payload).toEqual(
+      expect.objectContaining({ idExterno: 'wamid-in-2', remetente: '5511999999999' })
+    );
+    expect(gravada.payload).not.toHaveProperty('texto');
+    expect(JSON.parse(gravada.conteudoCriptografado.toString('utf8'))).toEqual({ texto: 'Obrigado.' });
   });
 
   it('deve marcar consulta como confirmada quando paciente responde confirmo ao lembrete', async () => {

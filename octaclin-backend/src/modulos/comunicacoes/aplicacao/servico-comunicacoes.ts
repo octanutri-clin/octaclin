@@ -18,6 +18,7 @@ import {
 import { redisConfigurado } from './configuracao-redis';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
+import { aplicarConteudoMensagem, comPayloadCompleto } from './cripto-conteudo-mensagem';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
 
 export const FILA_NOTIFICACOES = 'notificacoes';
@@ -82,18 +83,20 @@ export class ServicoComunicacoes {
         const pacienteIds = pacientes.map((paciente) => paciente.id);
         if (!pacienteIds.length) return [];
 
-        return gerenciador.getRepository(MensagemNotificacaoOrm).find({
+        const mensagens = await gerenciador.getRepository(MensagemNotificacaoOrm).find({
           where: { tenantId, pacienteId: In(pacienteIds) },
           order: { criadoEm: 'DESC' },
           take: 200
         });
+        return mensagens.map((mensagem) => comPayloadCompleto(mensagem, this.criptografia));
       }
 
-      return gerenciador.getRepository(MensagemNotificacaoOrm).find({
+      const mensagens = await gerenciador.getRepository(MensagemNotificacaoOrm).find({
         where: { tenantId },
         order: { criadoEm: 'DESC' },
         take: 200
       });
+      return mensagens.map((mensagem) => comPayloadCompleto(mensagem, this.criptografia));
     });
   }
 
@@ -103,7 +106,7 @@ export class ServicoComunicacoes {
         where: { id: mensagemId, tenantId }
       });
       if (!mensagem) throw new NotFoundException('Mensagem de notificacao nao encontrada.');
-      return mensagem;
+      return comPayloadCompleto(mensagem, this.criptografia);
     });
   }
 
@@ -167,22 +170,26 @@ export class ServicoComunicacoes {
       }
 
       const repositorioMensagens = gerenciador.getRepository(MensagemNotificacaoOrm);
-      return repositorioMensagens.save(
-        repositorioMensagens.create({
-          tenantId,
-          pacienteId: dados.pacienteId,
-          status: 'nota',
-          payload: {
-            origem: 'whatsapp',
-            direcao: 'nota',
-            tipo: 'nota_interna',
-            contato: dados.contato,
-            texto,
-            statusAtendimento: dados.statusAtendimento,
-            registradoEm: new Date().toISOString()
-          }
-        })
+      const nota = repositorioMensagens.create({
+        tenantId,
+        pacienteId: dados.pacienteId,
+        status: 'nota'
+      });
+      aplicarConteudoMensagem(
+        nota,
+        {
+          origem: 'whatsapp',
+          direcao: 'nota',
+          tipo: 'nota_interna',
+          contato: dados.contato,
+          texto,
+          statusAtendimento: dados.statusAtendimento,
+          registradoEm: new Date().toISOString()
+        },
+        this.criptografia
       );
+
+      return comPayloadCompleto(await repositorioMensagens.save(nota), this.criptografia);
     });
   }
 
@@ -207,16 +214,15 @@ export class ServicoComunicacoes {
       });
       if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
 
-      const mensagemCriada = await gerenciador.getRepository(MensagemNotificacaoOrm).save(
-        gerenciador.getRepository(MensagemNotificacaoOrm).create({
-          tenantId,
-          pacienteId: dados.pacienteId,
-          canalId: canal.id,
-          templateId: template.id,
-          status: 'pendente',
-          payload: dados.payload
-        })
-      );
+      const novaMensagem = gerenciador.getRepository(MensagemNotificacaoOrm).create({
+        tenantId,
+        pacienteId: dados.pacienteId,
+        canalId: canal.id,
+        templateId: template.id,
+        status: 'pendente'
+      });
+      aplicarConteudoMensagem(novaMensagem, dados.payload, this.criptografia);
+      const mensagemCriada = await gerenciador.getRepository(MensagemNotificacaoOrm).save(novaMensagem);
 
       await gerenciador.getRepository(OutboxEventoOrm).save(
         gerenciador.getRepository(OutboxEventoOrm).create({

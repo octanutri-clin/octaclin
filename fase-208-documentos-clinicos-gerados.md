@@ -161,10 +161,8 @@ a agenda **ja** grava `nomePaciente`, `profissionalNome`, `consultaInicioEm`,
 declaracao nao acrescenta classe nova de dado — sao os mesmos campos que a
 tabela ja recebe desde a fase da agenda.
 
-O problema e real e e **sistemico**, nao desta fase: payload de notificacao
-deveria ser criptografado. Fica registrado como pendencia propria. E foi
-exatamente por antecipar isso que o relatorio de alta nao vai por e-mail: ali o
-dado **seria** novo.
+O problema e real e e **sistemico**, nao desta fase. Foi resolvido logo em
+seguida, em commit proprio — ver a secao abaixo.
 
 ## Nao feito
 
@@ -186,18 +184,54 @@ dado **seria** novo.
 - **Codigo de verificacao / QR de autenticidade.** Quem recebe o papel nao tem
   como conferir contra o sistema. Precisa de rota publica de verificacao, que e
   fronteira de confianca nova.
-- **Criptografia do payload de notificacao.** Pendencia sistemica levantada pela
-  revisao de seguranca, descrita acima. Nao e desta fase e nao pode ser resolvida
-  so aqui.
 - **Retencao explicita de `documentos_emitidos`.** Nada apaga registro hoje, mas
   o prazo minimo varia por conselho e e decisao de produto.
+
+## Seguimento: conteudo de notificacao criptografado
+
+Feito logo depois da fase, em commit separado, antes da 209 — a 209 poe o recibo
+no mesmo caminho de e-mail, entao seriam dois emissores para consertar em vez de
+um.
+
+`mensagens_notificacao.conteudo_criptografado` passou a guardar texto, assunto,
+nomes, parametros de template WhatsApp e link de teleconsulta. A coluna `payload`
+ficou com o que a infra realmente precisa ler: roteamento, classificacao e os
+campos que o webhook consulta em SQL (`payload #>> '{idExterno}'` e
+`#>> '{resultadoEnvio,idExterno}'`).
+
+**Allowlist do que fica em claro, nao denylist do que criptografa.** Campo novo
+entra no payload a todo momento; com denylist, um campo de conteudo novo vaza
+calado ate alguem notar. Com allowlist ele e criptografado por padrao e, se a
+infra precisava dele em claro, quebra na hora e em teste — direcao segura de
+errar.
+
+O alcance passou da fase: a confirmacao de consulta e o lembrete de 24h ja
+gravavam nome do paciente e o texto inteiro em claro desde a fase da agenda, e a
+mensagem **recebida** do paciente pelo WhatsApp gravava o que ele mesmo
+escreveu. Tudo isso passou a ser cifrado.
+
+Dois testes que existiam afirmavam `texto` em claro no payload da mensagem
+recebida — codificavam o vazamento como esperado. Foram invertidos.
+
+Nao feito de proposito:
+
+- **`destino` e `remetente` continuam em claro.** Sao contato do paciente, mas
+  `mensagemPertenceAoContatoWhatsapp` casa mensagem por contato e o webhook
+  consulta por eles. Criptografar exige hash deterministico com indice, que e
+  outro trabalho.
+- **Linhas antigas ficam como estao.** A coluna e nulavel e a leitura devolve o
+  payload em claro quando nao ha conteudo cifrado, entao historico e seed
+  continuam abrindo. Cifrar o que ja esta gravado precisa de script com a chave
+  em maos e de decisao sobre o que fazer com o que nao descriptografar — nao dava
+  para embutir na migracao.
 
 ## Validacao local
 
 - `pnpm --dir octaclin-backend typecheck`: aprovado.
-- `pnpm --dir octaclin-backend test --runInBand`: 555/555 aprovados
-  (40 novos: 16 de dominio, 21 de servico, 1 de migration, 2 do adaptador de
-  e-mail).
+- `pnpm --dir octaclin-backend test --runInBand`: 568/568 aprovados
+  (53 novos: 16 de dominio de documento, 21 de servico de documento, 9 de
+  dominio de conteudo de mensagem, 2 de migration, 2 do adaptador de e-mail e
+  3 do servico de comunicacoes).
 - `pnpm --dir octaclin-web lint`: aprovado.
 - `pnpm --dir octaclin-web typecheck`: aprovado.
 - `pnpm --dir octaclin-web build`: aprovado, 5 rotas novas registradas.

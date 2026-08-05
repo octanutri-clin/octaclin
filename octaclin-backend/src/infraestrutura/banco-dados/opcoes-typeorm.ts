@@ -30,6 +30,7 @@ import { ProtegerArquivosMidia1720000001014 } from './migracoes/1720000001014-Pr
 import { AdicionarTeleconsultaAgenda1720000001015 } from './migracoes/1720000001015-AdicionarTeleconsultaAgenda';
 import { CriarAvaliacoesAntropometricas1720000001016 } from './migracoes/1720000001016-CriarAvaliacoesAntropometricas';
 import { CriarDocumentosEmitidos1720000001017 } from './migracoes/1720000001017-CriarDocumentosEmitidos';
+import { CriptografarConteudoNotificacoes1720000001018 } from './migracoes/1720000001018-CriptografarConteudoNotificacoes';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -198,7 +199,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       ProtegerArquivosMidia1720000001014,
       AdicionarTeleconsultaAgenda1720000001015,
       CriarAvaliacoesAntropometricas1720000001016,
-      CriarDocumentosEmitidos1720000001017
+      CriarDocumentosEmitidos1720000001017,
+      CriptografarConteudoNotificacoes1720000001018
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

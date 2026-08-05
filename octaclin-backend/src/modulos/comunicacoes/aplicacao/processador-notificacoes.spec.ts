@@ -40,11 +40,16 @@ function criarProcessador(adaptadorEmail: { enviar: jest.Mock }) {
     )
   };
   const adaptadorPlaceholder = { enviar: jest.fn() };
+  const criptografia = {
+    criptografar: jest.fn((valor: string) => Buffer.from(valor, 'utf8')),
+    descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8'))
+  };
   const processador = new ProcessadorNotificacoes(
     executorTenant as never,
     adaptadorPlaceholder as never,
     adaptadorEmail as never,
-    adaptadorPlaceholder as never
+    adaptadorPlaceholder as never,
+    criptografia as never
   );
 
   return { processador, mensagem, repositorioMensagens };

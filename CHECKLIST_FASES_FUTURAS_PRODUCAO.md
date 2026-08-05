@@ -1232,10 +1232,17 @@ publicado antes de ampliar a superficie de mudancas visuais.
     no lugar do nome; **a agenda usava o mesmo caminho** e um nome contendo
     `{{linkTeleconsulta}}` vazaria o link da sala. Valor de variavel passou a ser
     escapado no corpo HTML, e `emitidoPor` deixou de escapar do DTO.
-  - Pendencia sistemica registrada: `mensagens_notificacao.payload` e jsonb em
-    claro. A declaracao vai por ali porque a agenda ja grava os mesmos campos
-    (nome, datas, ate `linkTeleconsulta`) desde a fase da agenda; o relatorio de
-    alta **nao vai**, porque ali o dado seria novo.
+  - Seguimento ja entregue, em commit separado: `mensagens_notificacao` ganhou
+    `conteudo_criptografado`. Texto, assunto, nomes, parametros de template
+    WhatsApp e link de teleconsulta sairam do jsonb em claro; ficou no `payload`
+    so o que a infra roteia e o que o webhook consulta em SQL. A divisao usa
+    **allowlist do que fica em claro**, entao campo novo e criptografado por
+    padrao. Alcance maior que a fase: confirmacao e lembrete de consulta ja
+    gravavam nome e texto em claro, e a mensagem recebida gravava o que o
+    paciente escreveu. Dois testes afirmavam o vazamento como esperado e foram
+    invertidos. `destino`/`remetente` seguem em claro (casamento por contato
+    depende deles) e linhas antigas nao foram cifradas — coluna nulavel, leitura
+    cai no payload em claro.
   - 555 testes de backend e 140 de regressao visual/a11y aprovados. Ver
     `fase-208-documentos-clinicos-gerados.md`.
 

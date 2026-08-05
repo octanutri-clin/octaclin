@@ -21,8 +21,16 @@ export class MensagemNotificacaoOrm {
   @Column({ type: 'varchar', length: 40, default: 'pendente' })
   status: StatusMensagemNotificacao;
 
+  /**
+   * Somente o que a infra roteia, casa e consulta em SQL. O conteudo da mensagem
+   * fica em `conteudoCriptografado` — ver `dominio/conteudo-mensagem.ts`.
+   */
   @Column({ type: 'jsonb', default: {} })
   payload: Record<string, unknown>;
+
+  /** Texto, assunto e nomes. Nulavel: linha gravada antes da Fase 208 nao tem. */
+  @Column({ name: 'conteudo_criptografado', type: 'bytea', nullable: true })
+  conteudoCriptografado?: Buffer;
 
   @Column({ type: 'text', nullable: true })
   erro?: string;

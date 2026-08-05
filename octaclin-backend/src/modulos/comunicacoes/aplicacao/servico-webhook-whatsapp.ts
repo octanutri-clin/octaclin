@@ -7,6 +7,7 @@ import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
+import { aplicarConteudoMensagem } from './cripto-conteudo-mensagem';
 
 export interface StatusWebhookWhatsapp {
   id?: string;
@@ -203,25 +204,29 @@ export class ServicoWebhookWhatsapp {
       envioAnterior?.pacienteId;
     const criadaEm = this.converterTimestampMeta(entrada.mensagem.timestamp) ?? new Date();
 
-    await repositorioMensagens.save(
-      repositorioMensagens.create({
-        tenantId,
-        pacienteId,
-        canalId: canal.id,
-        status: 'recebido',
-        payload: this.limparObjeto({
-          direcao: 'recebida',
-          origem: 'whatsapp',
-          idExterno,
-          remetente: entrada.mensagem.from,
-          phoneNumberId: entrada.phoneNumberId,
-          tipo: entrada.mensagem.type,
-          texto: entrada.mensagem.text?.body,
-          timestamp: entrada.mensagem.timestamp
-        }),
-        criadoEm: criadaEm
-      })
+    const recebida = repositorioMensagens.create({
+      tenantId,
+      pacienteId,
+      canalId: canal.id,
+      status: 'recebido',
+      criadoEm: criadaEm
+    });
+    // Texto escrito pelo proprio paciente: nao fica em claro no payload.
+    aplicarConteudoMensagem(
+      recebida,
+      this.limparObjeto({
+        direcao: 'recebida',
+        origem: 'whatsapp',
+        idExterno,
+        remetente: entrada.mensagem.from,
+        phoneNumberId: entrada.phoneNumberId,
+        tipo: entrada.mensagem.type,
+        texto: entrada.mensagem.text?.body,
+        timestamp: entrada.mensagem.timestamp
+      }),
+      this.criptografia
     );
+    await repositorioMensagens.save(recebida);
     await this.registrarConfirmacaoConsulta(repositorioConsultas, tenantId, entrada, envioAnterior, criadaEm);
 
     return true;

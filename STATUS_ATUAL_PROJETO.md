@@ -25,8 +25,12 @@ Atualizado em 2026-08-05.
   registro de um profissional escrita por outro. A revisao de seguranca achou um
   defeito compartilhado corrigido na origem: o adaptador SMTP reexpandia
   variaveis sobre texto ja renderizado, e a agenda usava o mesmo caminho — nome de
-  paciente contendo `{{linkTeleconsulta}}` vazaria o link da sala. Pendencia
-  sistemica registrada: `mensagens_notificacao.payload` e jsonb em claro. 555
+  paciente contendo `{{linkTeleconsulta}}` vazaria o link da sala. Em seguimento
+  imediato, ainda antes da 209, `mensagens_notificacao` ganhou
+  `conteudo_criptografado`: texto, assunto, nomes e link de teleconsulta sairam
+  do jsonb em claro, com allowlist do que fica legivel para a infra rotear e
+  consultar. Isso alcancou tambem a agenda, que gravava nome e texto em claro
+  desde a propria fase, e a mensagem recebida do paciente pelo WhatsApp. 568
   testes de backend, 140 de regressao visual/a11y, lint/typecheck/build
   aprovados. Ver `fase-208-documentos-clinicos-gerados.md`.
 - Fase 207 - antropometria e evolucao de medidas, em

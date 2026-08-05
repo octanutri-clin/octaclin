@@ -316,3 +316,70 @@ describe('ServicoComunicacoes', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
+
+describe('ServicoComunicacoes - conteudo fora do payload em claro', () => {
+  /*
+   * `mensagens_notificacao.payload` e jsonb legivel por quem alcancar o banco ou
+   * um backup. Antes disto, toda confirmacao de consulta gravava ali o nome do
+   * paciente e o texto inteiro da mensagem; a declaracao de comparecimento da
+   * Fase 208 gravava o corpo do documento.
+   */
+  it('grava roteamento em claro e conteudo criptografado ao disparar', async () => {
+    const { servico, repositorios } = criarServico({
+      canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
+    });
+
+    await servico.dispararMensagem('tenant-1', {
+      pacienteId: 'paciente-1',
+      canalId: 'canal-1',
+      templateId: 'template-1',
+      payload: {
+        destino: 'ana@example.com',
+        assunto: 'Declaracao de comparecimento',
+        texto: 'Declaro que Ana Souza compareceu em 15/07/2026.',
+        nomePaciente: 'Ana Souza',
+        consultaId: 'consulta-1'
+      }
+    });
+
+    const [[gravada]] = repositorios.mensagem.save.mock.calls;
+
+    expect(gravada.payload).toEqual({ destino: 'ana@example.com', consultaId: 'consulta-1' });
+    expect(JSON.stringify(gravada.payload)).not.toContain('Ana Souza');
+    expect(JSON.stringify(gravada.payload)).not.toContain('compareceu');
+    expect(Buffer.isBuffer(gravada.conteudoCriptografado)).toBe(true);
+  });
+
+  it('devolve o payload remontado na leitura, para a tela nao ficar sem texto', async () => {
+    const { servico } = criarServico({
+      mensagem: {
+        id: 'mensagem-1',
+        tenantId: 'tenant-1',
+        payload: { destino: 'ana@example.com' },
+        conteudoCriptografado: Buffer.from(`cripto:${JSON.stringify({ texto: 'Ola Ana.' })}`)
+      }
+    });
+
+    const mensagem = await servico.obterMensagem('tenant-1', 'mensagem-1');
+
+    expect(mensagem.payload).toEqual({ destino: 'ana@example.com', texto: 'Ola Ana.' });
+  });
+
+  it('nao derruba a leitura quando o conteudo esta ilegivel', async () => {
+    const { servico } = criarServico({
+      mensagem: {
+        id: 'mensagem-1',
+        tenantId: 'tenant-1',
+        payload: { destino: 'ana@example.com' },
+        conteudoCriptografado: Buffer.from('ruido-sem-json')
+      }
+    });
+
+    const mensagem = await servico.obterMensagem('tenant-1', 'mensagem-1');
+
+    expect(mensagem.payload.destino).toBe('ana@example.com');
+    expect(mensagem.payload.conteudoIlegivel).toBe(true);
+  });
+});
