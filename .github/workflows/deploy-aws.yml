@@ -28,7 +28,7 @@ jobs:
             context: octaclin-ai-service
             repository_secret: AWS_ECR_AI_REPOSITORY
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
