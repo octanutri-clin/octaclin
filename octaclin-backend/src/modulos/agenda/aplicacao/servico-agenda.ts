@@ -13,6 +13,8 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaBloqueioManualOrm, TipoBloqueioManualAgenda } from '../infraestrutura/agenda-bloqueio-manual.orm';
 import { AgendaConsultaOrm, StatusAgendaConsulta } from '../infraestrutura/agenda-consulta.orm';
+import { PacoteSessaoOrm } from '../infraestrutura/pacote-sessao.orm';
+import { calcularConsumoPacote, pacoteVencido } from '../dominio/financeiro-consulta';
 import {
   ModalidadeConsulta,
   normalizarLinkTeleconsulta,
@@ -553,6 +555,7 @@ export class ServicoAgenda {
       const emailContato = textoOpcional(dados.emailContato) ?? this.obterEmailPaciente(paciente);
       const whatsappContato = textoOpcional(dados.whatsappContato) ?? this.obterWhatsappPaciente(paciente);
       const teleconsulta = resolverTeleconsulta(dados);
+      const financeiro = await this.resolverFinanceiroDaConsulta(gerenciador, tenantId, paciente.id, dados);
       const textoMensagem = this.montarTextoMensagem(pacienteNome, inicioEm, teleconsulta.linkTeleconsulta);
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
       const consulta = await this.salvarConsultaProtegidaContraSobreposicao(() =>
@@ -570,6 +573,7 @@ export class ServicoAgenda {
             linkTeleconsulta: teleconsulta.linkTeleconsulta,
             local: textoOpcional(dados.local),
             observacoes: textoOpcional(dados.observacoes),
+            ...financeiro,
             notificacoes: {},
             payload: {
               pacienteNome,
@@ -584,6 +588,65 @@ export class ServicoAgenda {
 
       return { consulta, pacienteNome, profissionalNome, emailContato, whatsappContato, textoMensagem };
     });
+  }
+
+  /**
+   * Financeiro da consulta no momento em que ela nasce.
+   *
+   * Consulta vinculada a pacote entra com **valor zero** e forma `pacote`: o
+   * dinheiro ja foi cobrado no pacote e contar de novo aqui inflaria o
+   * faturamento do mes com atendimento que ninguem pagou duas vezes. A mesma
+   * invariante esta no `check` da tabela — o servico so devolve mensagem melhor.
+   */
+  private async resolverFinanceiroDaConsulta(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string,
+    dados: CriarConsultaAgendaDto
+  ): Promise<
+    Pick<AgendaConsultaOrm, 'valorCentavos' | 'formaPagamento' | 'statusPagamento' | 'pagoEm' | 'pacoteId'>
+  > {
+    if (!dados.pacoteId) {
+      return {
+        valorCentavos: dados.valorCentavos ?? 0,
+        formaPagamento: dados.formaPagamento,
+        statusPagamento: 'pendente',
+        pagoEm: undefined,
+        pacoteId: undefined
+      };
+    }
+
+    const pacote = await gerenciador.getRepository(PacoteSessaoOrm).findOne({
+      where: { id: dados.pacoteId, tenantId, pacienteId, canceladoEm: IsNull() }
+    });
+    if (!pacote) throw new NotFoundException('Pacote de sessoes nao encontrado para este paciente.');
+    if (pacoteVencido(pacote.validadeEm, new Date())) {
+      throw new BadRequestException('Pacote de sessoes vencido. Contrate um novo pacote antes de agendar.');
+    }
+
+    const consultasDoPacote = await gerenciador.getRepository(AgendaConsultaOrm).find({
+      where: { tenantId, pacoteId: pacote.id },
+      select: { status: true },
+      take: 500
+    });
+    const consumo = calcularConsumoPacote(
+      pacote.sessoesContratadas,
+      consultasDoPacote.map((consulta) => consulta.status)
+    );
+    if (consumo.esgotado) {
+      throw new BadRequestException(
+        `Pacote sem sessoes disponiveis (${consumo.consumidas} usadas e ${consumo.reservadas} agendadas de ${consumo.contratadas}).`
+      );
+    }
+
+    // O status vem do pacote: quem deve, deve o pacote inteiro, nao a sessao.
+    return {
+      valorCentavos: 0,
+      formaPagamento: 'pacote',
+      statusPagamento: pacote.statusPagamento === 'pago' ? 'pago' : 'pendente',
+      pagoEm: pacote.statusPagamento === 'pago' ? (pacote.pagoEm ?? new Date()) : undefined,
+      pacoteId: pacote.id
+    };
   }
 
   private async atualizarResultadoIntegracoes(
@@ -967,6 +1030,11 @@ export class ServicoAgenda {
     return rotulos[tipo];
   }
 
+  /** Mesmo mapeamento da agenda, para quem edita a consulta por outro caminho. */
+  mapearRespostaPublica(consulta: AgendaConsultaOrm): ConsultaAgendaRespostaDto {
+    return this.mapearResposta(consulta);
+  }
+
   private mapearResposta(
     consulta: AgendaConsultaOrm,
     pacienteNome?: string,
@@ -992,6 +1060,11 @@ export class ServicoAgenda {
       googleCalendarId: consulta.googleCalendarId,
       googleEventId: consulta.googleEventId,
       googleEventHtmlLink: consulta.googleEventHtmlLink,
+      valorCentavos: consulta.valorCentavos ?? 0,
+      formaPagamento: consulta.formaPagamento,
+      statusPagamento: consulta.statusPagamento ?? 'pendente',
+      pagoEm: consulta.pagoEm,
+      pacoteId: consulta.pacoteId,
       notificacoes: (consulta.notificacoes ?? {}) as NotificacoesConsultaAgenda,
       payload,
       criadoEm: consulta.criadoEm,

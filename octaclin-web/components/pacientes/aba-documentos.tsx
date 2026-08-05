@@ -5,6 +5,7 @@ import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { BarraCarregamento } from '@/components/ui/feedback';
+import { formatarValorBRL, listarConsultasAgenda } from '@/lib/agenda-api';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
 import {
   DocumentoClinicoApi,
@@ -29,8 +30,12 @@ interface AbaDocumentosProps {
 
 const ROTULO_TIPO: Record<TipoDocumentoClinicoApi, string> = {
   declaracao_comparecimento: 'Declaracao de comparecimento',
-  relatorio_alta: 'Relatorio de alta'
+  relatorio_alta: 'Relatorio de alta',
+  recibo_consulta: 'Recibo'
 };
+
+/** Tipos que saem de uma consulta especifica e por isso exigem o seletor. */
+const TIPOS_COM_CONSULTA: TipoDocumentoClinicoApi[] = ['declaracao_comparecimento', 'recibo_consulta'];
 
 const MOTIVO_ENVIO: Record<string, string> = {
   contato_ausente: 'Paciente sem e-mail cadastrado ou que optou por nao receber e-mail.',
@@ -62,6 +67,7 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
   const [conteudo, setConteudo] = useState('');
   const [cidadeEmissao, setCidadeEmissao] = useState('');
   const [documentoAbertoId, setDocumentoAbertoId] = useState<string | null>(null);
+  const [consultasPagas, setConsultasPagas] = useState<ConsultaConcluidaOpcao[]>([]);
   const iniciarRequisicao = useRequisicaoCancelavel();
 
   const carregar = useCallback(async () => {
@@ -83,6 +89,37 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
     void carregar();
   }, [carregar]);
 
+  /**
+   * Recibo sai de consulta **paga**, nao de consulta concluida: a lista da linha
+   * do tempo nao carrega pagamento, entao ela vem da agenda. Consulta de pacote
+   * fica de fora — o valor dela foi pago no pacote.
+   */
+  useEffect(() => {
+    if (tipo !== 'recibo_consulta' || consultasPagas.length) return;
+    let ativo = true;
+    void listarConsultasAgenda()
+      .then((consultas) => {
+        if (!ativo) return;
+        setConsultasPagas(
+          consultas
+            .filter(
+              (consulta) =>
+                consulta.pacienteId === pacienteId &&
+                consulta.statusPagamento === 'pago' &&
+                !consulta.pacoteId
+            )
+            .map((consulta) => ({
+              id: consulta.id,
+              rotulo: `${formatarInstante(consulta.inicioEm)} - ${formatarValorBRL(consulta.valorCentavos)}`
+            }))
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      ativo = false;
+    };
+  }, [consultasPagas.length, pacienteId, tipo]);
+
   const documentoAberto = useMemo(
     () => documentos.find((documento) => documento.id === documentoAbertoId) ?? null,
     [documentoAbertoId, documentos]
@@ -96,7 +133,7 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
     try {
       const documento = await emitirDocumentoClinico(pacienteId, {
         tipo,
-        ...(tipo === 'declaracao_comparecimento' && consultaId ? { consultaId } : {}),
+        ...(TIPOS_COM_CONSULTA.includes(tipo) && consultaId ? { consultaId } : {}),
         ...(tipo === 'relatorio_alta' && conteudo.trim() ? { conteudo: conteudo.trim() } : {}),
         ...(cidadeEmissao.trim() ? { cidadeEmissao: cidadeEmissao.trim() } : {})
       });
@@ -142,6 +179,7 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
   }
 
   const semConsultaConcluida = consultasConcluidas.length === 0;
+  const opcoesConsulta = tipo === 'recibo_consulta' ? consultasPagas : consultasConcluidas;
 
   return (
     <div className="grid gap-4">
@@ -171,21 +209,22 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
                 >
                   <option value="declaracao_comparecimento">Declaracao de comparecimento</option>
                   <option value="relatorio_alta">Relatorio de alta</option>
+                  <option value="recibo_consulta">Recibo</option>
                 </Selecao>
               </label>
 
-              {tipo === 'declaracao_comparecimento' ? (
+              {TIPOS_COM_CONSULTA.includes(tipo) ? (
                 <label className="grid gap-1">
                   <Rotulo>Consulta</Rotulo>
                   <Selecao
                     required
                     value={consultaId}
-                    disabled={semConsultaConcluida}
+                    disabled={opcoesConsulta.length === 0}
                     aria-describedby="ajuda-consulta-documento"
                     onChange={(evento) => setConsultaId(evento.target.value)}
                   >
                     <option value="">Selecione</option>
-                    {consultasConcluidas.map((consulta) => (
+                    {opcoesConsulta.map((consulta) => (
                       <option key={consulta.id} value={consulta.id}>
                         {consulta.rotulo}
                       </option>
@@ -218,17 +257,21 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
                   type="submit"
                   variante="primario"
                   carregando={salvando}
-                  disabled={salvando || (tipo === 'declaracao_comparecimento' && semConsultaConcluida)}
+                  disabled={salvando || (TIPOS_COM_CONSULTA.includes(tipo) && opcoesConsulta.length === 0)}
                 >
                   Emitir documento
                 </Botao>
               </div>
 
-              {tipo === 'declaracao_comparecimento' ? (
+              {TIPOS_COM_CONSULTA.includes(tipo) ? (
                 <p id="ajuda-consulta-documento" className="text-xs text-texto-suave sm:col-span-2">
-                  {semConsultaConcluida
-                    ? 'Nenhuma consulta concluida ate agora. A declaracao so sai de consulta ja concluida.'
-                    : 'A lista traz apenas consultas concluidas.'}
+                  {tipo === 'recibo_consulta'
+                    ? opcoesConsulta.length === 0
+                      ? 'Nenhuma consulta com pagamento registrado nos ultimos 30 dias. Registre o pagamento na agenda antes de emitir o recibo.'
+                      : 'A lista traz apenas consultas com pagamento registrado. Consulta paga por pacote nao gera recibo proprio.'
+                    : semConsultaConcluida
+                      ? 'Nenhuma consulta concluida ate agora. A declaracao so sai de consulta ja concluida.'
+                      : 'A lista traz apenas consultas concluidas.'}
                 </p>
               ) : null}
             </form>

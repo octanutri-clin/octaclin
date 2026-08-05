@@ -25,6 +25,56 @@ export interface NotificacoesConsultaAgenda {
 
 export type ModalidadeConsulta = 'presencial' | 'online';
 
+export type StatusPagamentoConsulta = 'pendente' | 'pago' | 'isento';
+
+export type FormaPagamentoConsulta =
+  | 'dinheiro'
+  | 'pix'
+  | 'cartao_credito'
+  | 'cartao_debito'
+  | 'transferencia'
+  | 'convenio'
+  | 'pacote';
+
+export const ROTULOS_FORMA_PAGAMENTO: Record<FormaPagamentoConsulta, string> = {
+  dinheiro: 'Dinheiro',
+  pix: 'Pix',
+  cartao_credito: 'Cartao de credito',
+  cartao_debito: 'Cartao de debito',
+  transferencia: 'Transferencia',
+  convenio: 'Convenio',
+  pacote: 'Pacote de sessoes'
+};
+
+export const ROTULOS_STATUS_PAGAMENTO: Record<StatusPagamentoConsulta, string> = {
+  pendente: 'Pendente',
+  pago: 'Pago',
+  isento: 'Isento'
+};
+
+/** Dinheiro trafega em centavos inteiros; a virgula so aparece aqui. */
+export function formatarValorBRL(centavos: number): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((centavos ?? 0) / 100);
+}
+
+/**
+ * "1.800,00", "1800,00", "180.00" e "R$ 180" viram centavos. Campo de dinheiro
+ * digitado a mao recebe as tres formas, e recusar a virgula so faz o usuario
+ * errar.
+ *
+ * Regra do ponto: **com virgula presente, ponto e separador de milhar**
+ * (`1.800,00` = 180000); sem virgula, ponto e decimal (`180.00` = 18000). E a
+ * unica leitura que nao transforma um preco em cem vezes ele mesmo.
+ */
+export function centavosDeTexto(texto: string): number | undefined {
+  const limpo = texto.replace(/[^\d,.]/g, '');
+  if (!limpo) return undefined;
+  const normalizado = limpo.includes(',') ? limpo.replace(/\./g, '').replace(',', '.') : limpo;
+  const numero = Number(normalizado);
+  if (!Number.isFinite(numero) || numero < 0) return undefined;
+  return Math.round(numero * 100);
+}
+
 export interface ConsultaAgendaApi {
   id: string;
   tenantId: string;
@@ -44,6 +94,11 @@ export interface ConsultaAgendaApi {
   googleCalendarId?: string;
   googleEventId?: string;
   googleEventHtmlLink?: string;
+  valorCentavos: number;
+  formaPagamento?: FormaPagamentoConsulta;
+  statusPagamento: StatusPagamentoConsulta;
+  pagoEm?: string;
+  pacoteId?: string;
   notificacoes: NotificacoesConsultaAgenda;
   payload: Record<string, unknown>;
   criadoEm: string;
@@ -95,6 +150,68 @@ export interface CriarConsultaAgendaEntrada {
   emailContato?: string;
   whatsappContato?: string;
   enviarNotificacoes?: boolean;
+  valorCentavos?: number;
+  formaPagamento?: FormaPagamentoConsulta;
+  pacoteId?: string;
+}
+
+export interface RegistrarPagamentoConsultaEntrada {
+  statusPagamento: StatusPagamentoConsulta;
+  valorCentavos?: number;
+  formaPagamento?: FormaPagamentoConsulta;
+  pagoEm?: string;
+}
+
+export interface PacoteSessaoApi {
+  id: string;
+  pacienteId: string;
+  pacienteNome?: string;
+  profissionalId?: string;
+  titulo: string;
+  sessoesContratadas: number;
+  sessoesConsumidas: number;
+  sessoesReservadas: number;
+  sessoesDisponiveis: number;
+  valorTotalCentavos: number;
+  formaPagamento?: FormaPagamentoConsulta;
+  statusPagamento: StatusPagamentoConsulta;
+  pagoEm?: string;
+  validadeEm?: string;
+  vencido: boolean;
+  canceladoEm?: string;
+  criadoEm: string;
+}
+
+export interface CriarPacoteSessaoEntrada {
+  pacienteId: string;
+  profissionalId?: string;
+  titulo: string;
+  sessoesContratadas: number;
+  valorTotalCentavos?: number;
+  formaPagamento?: FormaPagamentoConsulta;
+  statusPagamento?: StatusPagamentoConsulta;
+  validadeEm?: string;
+}
+
+export interface LinhaRecebimentoProfissionalApi {
+  profissionalId?: string;
+  profissionalNome: string;
+  consultas: number;
+  recebidoCentavos: number;
+  pendenteCentavos: number;
+  isentas: number;
+}
+
+export interface ResumoRecebimentosApi {
+  inicioEm: string;
+  fimEm: string;
+  consultas: number;
+  recebidoCentavos: number;
+  pendenteCentavos: number;
+  isentas: number;
+  pacotesRecebidoCentavos: number;
+  pacotesPendenteCentavos: number;
+  porProfissional: LinhaRecebimentoProfissionalApi[];
 }
 
 export interface RemarcarConsultaAgendaEntrada {
@@ -240,6 +357,42 @@ export function conectarGoogleAgenda(): void {
 
 export async function desconectarGoogleAgenda(): Promise<void> {
   await requisitar<{ desconectado: boolean }>('/api/agenda/google/desconectar', { method: 'POST' });
+}
+
+export async function registrarPagamentoConsulta(
+  consultaId: string,
+  entrada: RegistrarPagamentoConsultaEntrada
+): Promise<ConsultaAgendaApi> {
+  return requisitar<ConsultaAgendaApi>(`/api/agenda/consultas/${consultaId}/pagamento`, {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
+export async function obterRecebimentosAgenda(entrada: {
+  inicioEm: string;
+  fimEm: string;
+  profissionalId?: string;
+}): Promise<ResumoRecebimentosApi> {
+  const parametros = new URLSearchParams({ inicioEm: entrada.inicioEm, fimEm: entrada.fimEm });
+  if (entrada.profissionalId) parametros.set('profissionalId', entrada.profissionalId);
+  return requisitar<ResumoRecebimentosApi>(`/api/agenda/financeiro/recebimentos?${parametros.toString()}`);
+}
+
+export async function listarPacotesSessao(pacienteId?: string): Promise<PacoteSessaoApi[]> {
+  const parametros = pacienteId ? `?pacienteId=${encodeURIComponent(pacienteId)}` : '';
+  return requisitar<PacoteSessaoApi[]>(`/api/agenda/pacotes${parametros}`);
+}
+
+export async function criarPacoteSessao(entrada: CriarPacoteSessaoEntrada): Promise<PacoteSessaoApi> {
+  return requisitar<PacoteSessaoApi>('/api/agenda/pacotes', {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
+export async function cancelarPacoteSessao(pacoteId: string): Promise<PacoteSessaoApi> {
+  return requisitar<PacoteSessaoApi>(`/api/agenda/pacotes/${pacoteId}`, { method: 'DELETE' });
 }
 
 export async function obterLinkPublicoAgenda(): Promise<LinkAgendamentoPublicoApi | null> {

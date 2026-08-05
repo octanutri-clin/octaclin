@@ -1246,9 +1246,42 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - 555 testes de backend e 140 de regressao visual/a11y aprovados. Ver
     `fase-208-documentos-clinicos-gerados.md`.
 
-- [ ] Fase 209 - Financeiro da consulta e pacote de sessoes.
+- [x] Fase 209 - Financeiro da consulta e pacote de sessoes.
   - Registrar valores, pagamentos, recibos, recebimentos e pacotes opcionais;
     manter gateway e NFS-e fora deste MVP.
+  - Concluida em 2026-08-05. Dinheiro e **inteiro em centavos em todo lugar**
+    (`agenda/dominio/financeiro-consulta.ts`); nao existe casa decimal
+    atravessando servico, banco ou HTTP, porque `0.1 + 0.2` fecharia o mes errado
+    por centavos inexplicaveis. Valor fracionado, negativo ou acima do teto e
+    recusado, nao arredondado.
+  - Migration `1720000001019` poe duas invariantes no banco: `"pago" exige
+    pago_em` (e vice-versa), porque pago sem data nao fecha conciliacao; e
+    consulta de pacote com valor proprio e proibida, porque faria o mesmo
+    atendimento entrar duas vezes no total do mes. `pacotes_sessao` nasce com RLS
+    forcada.
+  - Consulta cancelada **nunca** entra no faturamento (criterio de aceite),
+    aplicado na soma e tambem no registro de pagamento. Consulta isenta conta
+    como atendimento mas nao vira "a receber" que ninguem vai cobrar.
+  - Recibo entrou como terceiro tipo do gerador da Fase 208, **sem codigo de
+    geracao novo**, com indice unico parcial por consulta: dois recibos vivos do
+    mesmo atendimento e o caminho para o paciente declarar a mesma despesa duas
+    vezes. Recibo so sai de consulta com pagamento registrado.
+  - Pacote de sessoes: `falta` consome sessao, `cancelada` devolve a vaga,
+    consulta ja agendada conta como reservada — pacote de 10 nao aceita a 11a.
+    Pacote vencido nao recebe consulta nova, e a validade e por data, entao
+    "31/12" vale o dia 31 inteiro.
+  - Aba Financeiro em `/cliente` com recebido, a receber, isentos e quebra por
+    profissional. Consultas e pacotes em linhas separadas, pelo mesmo motivo da
+    invariante do banco.
+  - Permissao nova `agenda.financeiro.ler` (SuperAdmin, Professional, Client).
+    Collaborator registra pagamento e nao ve o faturamento da casa. Professional
+    so ve o proprio: o escopo sobrescreve o `profissionalId` pedido pelo cliente.
+    Toda rota de dinheiro audita, inclusive a leitura.
+  - Sem gateway (o pendente e o da assinatura do tenant, outro fluxo) e sem
+    NFS-e (prefeitura por municipio nao cabe em MVP). Recibo sai sem CPF do
+    pagador: o cadastro de paciente nao guarda CPF.
+  - 596 testes de backend aprovados, typecheck e lint limpos. Ver
+    `fase-209-financeiro-consulta-pacote-sessoes.md`.
 
 - [ ] Fase 210 - Notificacoes in-app e tempo real.
   - Implementar central de notificacoes e atualizacao via SSE com isolamento

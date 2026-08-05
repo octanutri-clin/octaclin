@@ -12,11 +12,12 @@
  * comparecimento nao tem essa restricao: atesta presenca, nao condicao de saude.
  */
 
-export type TipoDocumentoClinico = 'declaracao_comparecimento' | 'relatorio_alta';
+export type TipoDocumentoClinico = 'declaracao_comparecimento' | 'relatorio_alta' | 'recibo_consulta';
 
 export const TIPOS_DOCUMENTO_CLINICO: readonly TipoDocumentoClinico[] = [
   'declaracao_comparecimento',
-  'relatorio_alta'
+  'relatorio_alta',
+  'recibo_consulta'
 ];
 
 export interface ModeloDocumento {
@@ -49,6 +50,16 @@ const VARIAVEIS_ESPECIFICAS: Record<TipoDocumentoClinico, readonly string[]> = {
     'metasConcluidas',
     'metasTotais',
     'conteudo'
+  ],
+  recibo_consulta: [
+    'dataConsulta',
+    'horaInicio',
+    'horaFim',
+    'duracaoMinutos',
+    'modalidade',
+    'valor',
+    'formaPagamento',
+    'dataPagamento'
   ]
 };
 
@@ -84,6 +95,25 @@ export const MODELOS_PADRAO: Record<TipoDocumentoClinico, ModeloDocumento> = {
       'Metas do plano concluidas: {{metasConcluidas}} de {{metasTotais}}',
       '',
       '{{conteudo}}',
+      '',
+      '{{cidadeEmissao}}, {{dataEmissao}}.',
+      '',
+      '{{profissionalNome}}',
+      '{{profissionalEspecialidade}} - {{profissionalRegistro}}'
+    ].join('\n')
+  },
+  recibo_consulta: {
+    titulo: 'Recibo',
+    corpo: [
+      'Recebi de {{pacienteNome}} a importancia de {{valor}}, referente a atendimento',
+      'realizado em {{dataConsulta}}, das {{horaInicio}} as {{horaFim}}, na modalidade',
+      '{{modalidade}}.',
+      '',
+      'Forma de pagamento: {{formaPagamento}}',
+      'Data do pagamento: {{dataPagamento}}',
+      '',
+      '{{clinicaNome}} - {{clinicaDocumento}}',
+      '{{clinicaEndereco}}',
       '',
       '{{cidadeEmissao}}, {{dataEmissao}}.',
       '',

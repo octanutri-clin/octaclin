@@ -16,6 +16,7 @@ export type PermissaoOctaClin =
   | 'questionarios.gerenciar'
   | 'agenda.consultas.ler'
   | 'agenda.consultas.criar'
+  | 'agenda.financeiro.ler'
   | 'comunicacoes.canais.gerenciar'
   | 'comunicacoes.templates.gerenciar'
   | 'comunicacoes.mensagens.ler'
@@ -58,7 +59,10 @@ const permissoesCliente = [
   'cliente.usuarios.desativar',
   'cliente.usuarios.gerenciar',
   'cliente.convites.gerenciar',
-  'cliente.configuracoes.gerenciar'
+  'cliente.configuracoes.gerenciar',
+  // Faturamento e o numero que o dono da clinica olha; quem opera a recepcao
+  // registra pagamento (agenda.consultas.criar) mas nao ve o total da casa.
+  'agenda.financeiro.ler'
 ] as const satisfies readonly PermissaoOctaClin[];
 
 const permissoesColaborador = [
@@ -85,7 +89,8 @@ const permissoesProfissional = [
   'automacoes.gerenciar',
   'ia.executar',
   'mobile.operar',
-  'gamificacao.gerenciar'
+  'gamificacao.gerenciar',
+  'agenda.financeiro.ler'
 ] as const satisfies readonly PermissaoOctaClin[];
 
 const permissoesSuperAdmin = [

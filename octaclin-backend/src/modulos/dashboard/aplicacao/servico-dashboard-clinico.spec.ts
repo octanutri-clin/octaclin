@@ -91,6 +91,8 @@ function consulta(
     timezone: 'America/Sao_Paulo',
     modalidade: 'presencial',
     status,
+    valorCentavos: 0,
+    statusPagamento: 'pendente',
     notificacoes: {},
     payload: {},
     criadoEm: diasAntes(100),

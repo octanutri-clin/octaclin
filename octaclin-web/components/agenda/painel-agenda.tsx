@@ -10,6 +10,7 @@ import {
   Link2,
   Mail,
   MessageCircle,
+  BadgeDollarSign,
   RefreshCcw,
   Save,
   UserX,
@@ -22,6 +23,7 @@ import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, Aviso, AvisoRegiao, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { AgendaSemanal } from '@/components/agenda/agenda-semanal';
+import { PacotesSessao } from '@/components/agenda/pacotes-sessao';
 import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi } from '@/lib/agendamento-publico-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
 import {
@@ -38,9 +40,23 @@ import {
   obterStatusGoogleAgenda,
   recusarSolicitacaoPublicaAgenda,
   registrarDesfechoConsulta,
+  registrarPagamentoConsulta,
+  listarPacotesSessao,
+  PacoteSessaoApi,
   remarcarConsultaAgenda,
-  rotacionarLinkPublicoAgenda
+  rotacionarLinkPublicoAgenda,
+  centavosDeTexto,
+  formatarValorBRL,
+  FormaPagamentoConsulta,
+  ROTULOS_FORMA_PAGAMENTO,
+  ROTULOS_STATUS_PAGAMENTO,
+  StatusPagamentoConsulta
 } from '@/lib/agenda-api';
+
+const FORMAS_PAGAMENTO = Object.keys(ROTULOS_FORMA_PAGAMENTO).filter(
+  // Pacote nao e escolha manual: vem de consulta vinculada a pacote de sessoes.
+  (forma): forma is FormaPagamentoConsulta => forma !== 'pacote'
+);
 
 interface FormularioAgenda {
   pacienteId: string;
@@ -54,6 +70,10 @@ interface FormularioAgenda {
   whatsappContato: string;
   observacoes: string;
   enviarNotificacoes: boolean;
+  /** Digitado como texto ("180,00"); vira centavos so no envio. */
+  valor: string;
+  formaPagamento: FormaPagamentoConsulta | '';
+  pacoteId: string;
 }
 
 const formularioInicial: FormularioAgenda = {
@@ -67,7 +87,10 @@ const formularioInicial: FormularioAgenda = {
   emailContato: '',
   whatsappContato: '',
   observacoes: '',
-  enviarNotificacoes: true
+  enviarNotificacoes: true,
+  valor: '',
+  formaPagamento: '',
+  pacoteId: ''
 };
 
 function valorDatetimeLocal(data: Date) {
@@ -194,6 +217,8 @@ export function PainelAgenda() {
   const parametrosIniciaisAplicados = useRef(false);
   const [consultas, setConsultas] = useState<ConsultaAgendaApi[]>([]);
   const [pacientes, setPacientes] = useState<RespostaPaginada<PacienteResumo> | null>(null);
+  const [pacotesDisponiveis, setPacotesDisponiveis] = useState<PacoteSessaoApi[]>([]);
+  const [versaoPacotes, setVersaoPacotes] = useState(0);
   const [profissionais, setProfissionais] = useState<RespostaPaginada<ProfissionalResumo> | null>(null);
   const [linkPublico, setLinkPublico] = useState<LinkAgendamentoPublicoApi | null>(null);
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoAgendaPublicaApi[]>([]);
@@ -269,6 +294,34 @@ export function PainelAgenda() {
     if (window.location.hash === '#novo-agendamento') setModalCriarAberto(true);
   }, []);
 
+  /** Pacotes com vaga do paciente escolhido: e o que a consulta pode consumir. */
+  useEffect(() => {
+    const pacienteId = formulario.pacienteId;
+    if (!pacienteId) {
+      setPacotesDisponiveis([]);
+      return;
+    }
+    let ativo = true;
+    void listarPacotesSessao(pacienteId)
+      .then((pacotes) => {
+        if (!ativo) return;
+        const comVaga = pacotes.filter(
+          (pacote) => !pacote.canceladoEm && !pacote.vencido && pacote.sessoesDisponiveis > 0
+        );
+        setPacotesDisponiveis(comVaga);
+        // Trocar de paciente nao pode deixar o pacote do paciente anterior selecionado.
+        setFormulario((atual) =>
+          atual.pacoteId && !comVaga.some((pacote) => pacote.id === atual.pacoteId)
+            ? { ...atual, pacoteId: '' }
+            : atual
+        );
+      })
+      .catch(() => setPacotesDisponiveis([]));
+    return () => {
+      ativo = false;
+    };
+  }, [formulario.pacienteId, versaoPacotes]);
+
   useEffect(() => {
     if (parametrosIniciaisAplicados.current || !pacientesLista.length || !profissionaisLista.length) return;
     parametrosIniciaisAplicados.current = true;
@@ -328,9 +381,14 @@ export function PainelAgenda() {
         emailContato: formulario.emailContato || undefined,
         whatsappContato: formulario.whatsappContato || undefined,
         observacoes: formulario.observacoes || undefined,
-        enviarNotificacoes: formulario.enviarNotificacoes
+        enviarNotificacoes: formulario.enviarNotificacoes,
+        // Consulta de pacote nao leva valor proprio: o backend recusa a combinacao.
+        valorCentavos: formulario.pacoteId ? undefined : centavosDeTexto(formulario.valor),
+        formaPagamento: formulario.pacoteId ? undefined : formulario.formaPagamento || undefined,
+        pacoteId: formulario.pacoteId || undefined
       });
       setConsultas((atuais) => [criada, ...atuais]);
+      if (criada.pacoteId) setVersaoPacotes((atual) => atual + 1);
       setFormulario((atual) => ({
         ...atual,
         inicioEm: proximoHorarioPadrao(),
@@ -406,6 +464,32 @@ export function PainelAgenda() {
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar desfecho da consulta.');
       return false;
+    } finally {
+      setProcessandoConsultaId(null);
+    }
+  }
+
+  async function registrarPagamento(evento: FormEvent<HTMLFormElement>, consulta: ConsultaAgendaApi) {
+    evento.preventDefault();
+    const campos = new FormData(evento.currentTarget);
+    const statusPagamento = String(campos.get('statusPagamento') ?? 'pendente') as StatusPagamentoConsulta;
+    const valorCentavos = centavosDeTexto(String(campos.get('valor') ?? ''));
+    const formaPagamento = String(campos.get('formaPagamento') ?? '') as FormaPagamentoConsulta | '';
+
+    setErro(null);
+    setSucesso(null);
+    setProcessandoConsultaId(consulta.id);
+    try {
+      atualizarConsulta(
+        await registrarPagamentoConsulta(consulta.id, {
+          statusPagamento,
+          valorCentavos,
+          formaPagamento: formaPagamento || undefined
+        })
+      );
+      setSucesso(`Pagamento registrado como ${ROTULOS_STATUS_PAGAMENTO[statusPagamento].toLocaleLowerCase('pt-BR')}.`);
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar pagamento.');
     } finally {
       setProcessandoConsultaId(null);
     }
@@ -562,6 +646,73 @@ export function PainelAgenda() {
                 </Botao>
               </div>
             ) : null}
+            {consultaSelecionada.status !== 'cancelada' ? (
+              <form
+                onSubmit={(evento) => void registrarPagamento(evento, consultaSelecionada)}
+                className="grid gap-3 border-t border-linha pt-4"
+              >
+                <p className="text-sm font-semibold">
+                  Financeiro:{' '}
+                  <span className="font-normal text-texto-suave">
+                    {formatarValorBRL(consultaSelecionada.valorCentavos)} -{' '}
+                    {ROTULOS_STATUS_PAGAMENTO[consultaSelecionada.statusPagamento]}
+                    {consultaSelecionada.formaPagamento
+                      ? ` (${ROTULOS_FORMA_PAGAMENTO[consultaSelecionada.formaPagamento]})`
+                      : ''}
+                  </span>
+                </p>
+                {consultaSelecionada.pacoteId ? (
+                  <p className="text-xs text-texto-suave">
+                    Consulta de pacote de sessoes. O valor foi cobrado no pacote, nao nesta sessao.
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <label className="grid gap-1">
+                        <Rotulo>Valor</Rotulo>
+                        <Campo
+                          aria-label="Valor da consulta"
+                          name="valor"
+                          inputMode="decimal"
+                          defaultValue={
+                            consultaSelecionada.valorCentavos
+                              ? (consultaSelecionada.valorCentavos / 100).toFixed(2).replace('.', ',')
+                              : ''
+                          }
+                          placeholder="180,00"
+                        />
+                      </label>
+                      <label className="grid gap-1">
+                        <Rotulo>Forma</Rotulo>
+                        <Selecao aria-label="Forma de pagamento" name="formaPagamento" defaultValue={consultaSelecionada.formaPagamento ?? ''}>
+                          <option value="">Selecione</option>
+                          {FORMAS_PAGAMENTO.map((forma) => (
+                            <option key={forma} value={forma}>
+                              {ROTULOS_FORMA_PAGAMENTO[forma]}
+                            </option>
+                          ))}
+                        </Selecao>
+                      </label>
+                      <label className="grid gap-1">
+                        <Rotulo>Status</Rotulo>
+                        <Selecao aria-label="Status do pagamento" name="statusPagamento" defaultValue={consultaSelecionada.statusPagamento}>
+                          <option value="pendente">Pendente</option>
+                          <option value="pago">Pago</option>
+                          <option value="isento">Isento</option>
+                        </Selecao>
+                      </label>
+                    </div>
+                    <div className="flex justify-end">
+                      <Botao type="submit" disabled={processandoConsultaId === consultaSelecionada.id}>
+                        <BadgeDollarSign size={16} />
+                        Registrar pagamento
+                      </Botao>
+                    </div>
+                  </>
+                )}
+              </form>
+            ) : null}
+
             {consultaAtiva(consultaSelecionada) ? (
               <form onSubmit={(evento) => remarcar(evento, consultaSelecionada)} className="grid gap-3 border-t border-linha pt-4">
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px_minmax(140px,1fr)]">
@@ -604,6 +755,11 @@ export function PainelAgenda() {
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
         <div className="grid min-w-0 gap-4">
+        <PacotesSessao
+          pacientes={pacientesLista}
+          pacienteIdSugerido={formulario.pacienteId}
+          aoMudar={() => setVersaoPacotes((atual) => atual + 1)}
+        />
         <Cartao className="min-w-0">
           <CartaoCabecalho className="items-start">
             <div>
@@ -765,6 +921,54 @@ export function PainelAgenda() {
                       onChange={(evento) => setFormulario((atual) => ({ ...atual, whatsappContato: evento.target.value }))}
                       placeholder="5511999999999"
                     />
+                  </label>
+                </div>
+
+                {pacotesDisponiveis.length ? (
+                  <label className="grid gap-1">
+                    <Rotulo>Pacote de sessoes</Rotulo>
+                    <Selecao
+                      value={formulario.pacoteId}
+                      onChange={(evento) => setFormulario((atual) => ({ ...atual, pacoteId: evento.target.value }))}
+                    >
+                      <option value="">Consulta avulsa</option>
+                      {pacotesDisponiveis.map((pacote) => (
+                        <option key={pacote.id} value={pacote.id}>
+                          {pacote.titulo} - {pacote.sessoesDisponiveis} de {pacote.sessoesContratadas} disponiveis
+                        </option>
+                      ))}
+                    </Selecao>
+                  </label>
+                ) : null}
+
+                <div className={`grid gap-3 sm:grid-cols-2 ${formulario.pacoteId ? 'hidden' : ''}`}>
+                  <label className="grid gap-1">
+                    <Rotulo>Valor da consulta</Rotulo>
+                    <Campo
+                      inputMode="decimal"
+                      value={formulario.valor}
+                      onChange={(evento) => setFormulario((atual) => ({ ...atual, valor: evento.target.value }))}
+                      placeholder="180,00"
+                    />
+                  </label>
+                  <label className="grid gap-1">
+                    <Rotulo>Forma de pagamento</Rotulo>
+                    <Selecao
+                      value={formulario.formaPagamento}
+                      onChange={(evento) =>
+                        setFormulario((atual) => ({
+                          ...atual,
+                          formaPagamento: evento.target.value as FormaPagamentoConsulta | ''
+                        }))
+                      }
+                    >
+                      <option value="">Definir depois</option>
+                      {FORMAS_PAGAMENTO.map((forma) => (
+                        <option key={forma} value={forma}>
+                          {ROTULOS_FORMA_PAGAMENTO[forma]}
+                        </option>
+                      ))}
+                    </Selecao>
                   </label>
                 </div>
 

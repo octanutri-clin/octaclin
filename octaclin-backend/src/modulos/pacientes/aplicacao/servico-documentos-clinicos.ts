@@ -10,6 +10,7 @@ import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-ten
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { ROTULOS_FORMA_PAGAMENTO, formatarValorBRL } from '../../agenda/dominio/financeiro-consulta';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cliente';
 import { ServicoComunicacoes } from '../../comunicacoes/aplicacao/servico-comunicacoes';
@@ -51,7 +52,13 @@ interface CabecalhoDocumento {
  * telemetria de entrega. A alta e impressa e entregue na consulta de
  * encerramento, que e como ela acontece na clinica.
  */
-const TIPOS_ENVIAVEIS_POR_EMAIL: readonly TipoDocumentoClinico[] = ['declaracao_comparecimento'];
+const TIPOS_ENVIAVEIS_POR_EMAIL: readonly TipoDocumentoClinico[] = [
+  'declaracao_comparecimento',
+  'recibo_consulta'
+];
+
+/** Tipos que exigem consulta de origem. Sem ela o documento nao prova nada. */
+const TIPOS_COM_CONSULTA: readonly TipoDocumentoClinico[] = ['declaracao_comparecimento', 'recibo_consulta'];
 
 @Injectable()
 export class ServicoDocumentosClinicos {
@@ -98,6 +105,7 @@ export class ServicoDocumentosClinicos {
         dataEmissao: this.dataExtenso(emitidoEm, timezone),
         cidadeEmissao: dados.cidadeEmissao?.trim() || perfil.endereco.cidade,
         ...(consulta ? this.variaveisDaConsulta(consulta) : {}),
+        ...(dados.tipo === 'recibo_consulta' && consulta ? this.variaveisDoRecibo(consulta, timezone) : {}),
         ...(dados.tipo === 'relatorio_alta'
           ? await this.variaveisDoAcompanhamento(
               gerenciador,
@@ -258,9 +266,9 @@ export class ServicoDocumentosClinicos {
     paciente: PacienteOrm,
     dados: EmitirDocumentoClinicoDto
   ): Promise<AgendaConsultaOrm | undefined> {
-    if (dados.tipo !== 'declaracao_comparecimento') return undefined;
+    if (!TIPOS_COM_CONSULTA.includes(dados.tipo)) return undefined;
     if (!dados.consultaId) {
-      throw new BadRequestException('Declaracao de comparecimento exige a consulta de origem.');
+      throw new BadRequestException('Este documento exige a consulta de origem.');
     }
 
     const consulta = await gerenciador.getRepository(AgendaConsultaOrm).findOne({
@@ -268,7 +276,21 @@ export class ServicoDocumentosClinicos {
     });
     if (!consulta) throw new NotFoundException('Consulta nao encontrada para este paciente.');
 
-    // Criterio de aceite da fase: so consulta concluida gera declaracao.
+    if (dados.tipo === 'recibo_consulta') {
+      // Recibo declara dinheiro que entrou. Emitir antes do pagamento e declarar
+      // recebimento que nao aconteceu — e o paciente fica com a prova disso.
+      if (consulta.statusPagamento !== 'pago') {
+        throw new BadRequestException('Recibo so pode ser emitido a partir de consulta com pagamento registrado.');
+      }
+      if (consulta.pacoteId) {
+        throw new BadRequestException(
+          'Consulta de pacote nao gera recibo proprio: o valor foi pago no pacote de sessoes.'
+        );
+      }
+      return consulta;
+    }
+
+    // Criterio de aceite da fase 208: so consulta concluida gera declaracao.
     if (consulta.status !== 'concluida') {
       throw new BadRequestException(
         'Declaracao de comparecimento so pode ser emitida a partir de consulta concluida.'
@@ -357,6 +379,15 @@ export class ServicoDocumentosClinicos {
       horaFim: this.hora(consulta.fimEm, timezone),
       duracaoMinutos: String(duracaoMinutos),
       modalidade: consulta.modalidade === 'online' ? 'online' : 'presencial'
+    };
+  }
+
+  /** Dinheiro sai do inteiro em centavos direto para "R$ 180,00". */
+  private variaveisDoRecibo(consulta: AgendaConsultaOrm, timezone: string): Record<string, string> {
+    return {
+      valor: formatarValorBRL(consulta.valorCentavos ?? 0),
+      formaPagamento: consulta.formaPagamento ? ROTULOS_FORMA_PAGAMENTO[consulta.formaPagamento] : '',
+      dataPagamento: consulta.pagoEm ? this.dataCurta(consulta.pagoEm, timezone) : ''
     };
   }
 

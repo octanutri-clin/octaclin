@@ -14,6 +14,9 @@ import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../profissionais/infraestrutura/profissional.orm';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ControladorAgenda } from './apresentacao/controlador-agenda';
+import { ControladorFinanceiroAgenda } from './apresentacao/controlador-financeiro-agenda';
+import { ServicoFinanceiroAgenda } from './aplicacao/servico-financeiro-agenda';
+import { PacoteSessaoOrm } from './infraestrutura/pacote-sessao.orm';
 import { ControladorAgendamentoPublico } from './apresentacao/controlador-agendamento-publico';
 import { ControladorGoogleAgenda } from './apresentacao/controlador-google-agenda';
 import { ServicoAgendamentoPublico } from './aplicacao/servico-agendamento-publico';
@@ -47,16 +50,23 @@ const processadores = deveExecutarProcessadores()
       AgendaBloqueioExternoOrm,
       AgendaBloqueioManualOrm,
       AgendaLinkPublicoOrm,
-      AgendaSolicitacaoOrm
+      AgendaSolicitacaoOrm,
+      PacoteSessaoOrm
     ]),
     BullModule.registerQueue({ name: FILA_SINCRONIZACAO_GOOGLE }),
     ModuloAuth,
     ModuloTenancy,
     ModuloComunicacoes
   ],
-  controllers: [ControladorAgenda, ControladorAgendamentoPublico, ControladorGoogleAgenda],
+  controllers: [
+    ControladorAgenda,
+    ControladorFinanceiroAgenda,
+    ControladorAgendamentoPublico,
+    ControladorGoogleAgenda
+  ],
   providers: [
     ServicoAgenda,
+    ServicoFinanceiroAgenda,
     ServicoAgendamentoPublico,
     ServicoGoogleCalendar,
     ServicoConexaoGoogleCalendar,

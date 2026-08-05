@@ -1,5 +1,6 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import type { ModalidadeConsulta } from '../dominio/teleconsulta';
+import type { FormaPagamentoConsulta, StatusPagamentoConsulta } from '../dominio/financeiro-consulta';
 
 export type StatusAgendaConsulta = 'agendada' | 'reagendada' | 'concluida' | 'falta' | 'cancelada';
 
@@ -53,6 +54,22 @@ export class AgendaConsultaOrm {
 
   @Column({ name: 'google_event_html_link', type: 'text', nullable: true })
   googleEventHtmlLink?: string;
+
+  /** Dinheiro em centavos inteiros. Zero quando a consulta sai de pacote. */
+  @Column({ name: 'valor_centavos', type: 'int', default: 0 })
+  valorCentavos: number;
+
+  @Column({ name: 'forma_pagamento', type: 'varchar', length: 30, nullable: true })
+  formaPagamento?: FormaPagamentoConsulta;
+
+  @Column({ name: 'status_pagamento', type: 'varchar', length: 20, default: 'pendente' })
+  statusPagamento: StatusPagamentoConsulta;
+
+  @Column({ name: 'pago_em', type: 'timestamptz', nullable: true })
+  pagoEm?: Date;
+
+  @Column({ name: 'pacote_id', type: 'uuid', nullable: true })
+  pacoteId?: string;
 
   @Column({ type: 'jsonb', default: {} })
   notificacoes: Record<string, unknown>;

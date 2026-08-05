@@ -27,6 +27,7 @@ import { obterSessao } from '@/lib/auth-api';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
 import { PortalShell } from '@/components/app/portal-shell';
 import { ModelosDocumentoCliente } from './modelos-documento';
+import { RecebimentosCliente } from './recebimentos-cliente';
 import {
   AtualizarConfiguracoesClienteEntrada,
   AtualizarPerfilEmpresaClienteEntrada,
@@ -194,7 +195,16 @@ const formularioPerfilEmpresaInicial: AtualizarPerfilEmpresaClienteEntrada = {
 
 export function PortalCliente() {
   const [areaAtiva, setAreaAtiva] = useState<
-    'ativacao' | 'assinatura' | 'consumo' | 'equipe' | 'preferencias' | 'marca' | 'documentos' | 'integracoes' | 'fiscal'
+    | 'ativacao'
+    | 'assinatura'
+    | 'consumo'
+    | 'financeiro'
+    | 'equipe'
+    | 'preferencias'
+    | 'marca'
+    | 'documentos'
+    | 'integracoes'
+    | 'fiscal'
   >('ativacao');
   const [resumo, setResumo] = useState<ResumoPortalClienteApi | null>(null);
   const [usuarios, setUsuarios] = useState<RespostaUsuariosClienteApi | null>(null);
@@ -268,6 +278,7 @@ export function PortalCliente() {
   const podeAjustarUsuarios = possuiPermissao('cliente.usuarios.gerenciar');
   const podeGerenciarConvites = possuiPermissao('cliente.convites.gerenciar');
   const podeGerenciarConfiguracoes = possuiPermissao('cliente.configuracoes.gerenciar');
+  const podeLerFinanceiro = possuiPermissao('agenda.financeiro.ler');
 
   useEffect(() => {
     let ativo = true;
@@ -738,6 +749,7 @@ export function PortalCliente() {
             { id: 'ativacao', rotulo: 'Ativacao' },
             { id: 'assinatura', rotulo: 'Assinatura' },
             { id: 'consumo', rotulo: 'Consumo' },
+            ...(podeLerFinanceiro ? [{ id: 'financeiro', rotulo: 'Financeiro' }] : []),
             { id: 'equipe', rotulo: 'Equipe' },
             { id: 'preferencias', rotulo: 'Preferencias' },
             { id: 'marca', rotulo: 'Marca' },
@@ -1374,6 +1386,17 @@ export function PortalCliente() {
               </div>
             </form>
           </Cartao>
+        ) : null}
+
+        {podeLerFinanceiro && areaAtiva === 'financeiro' ? (
+          <div
+            id="conta-cliente-financeiro-painel"
+            role="tabpanel"
+            aria-labelledby="conta-cliente-financeiro-aba"
+            className="grid gap-4"
+          >
+            <RecebimentosCliente />
+          </div>
         ) : null}
 
         {podeGerenciarConfiguracoes && areaAtiva === 'documentos' ? (

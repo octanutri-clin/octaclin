@@ -542,3 +542,59 @@ describe('ServicoDocumentosClinicos - autoria e escopo do relatorio de alta', ()
     });
   });
 });
+
+describe('ServicoDocumentosClinicos - recibo da consulta', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const consultaPaga = (sobrescrever: Partial<AgendaConsultaOrm> = {}) =>
+    consultaConcluida({
+      statusPagamento: 'pago',
+      valorCentavos: 18000,
+      formaPagamento: 'pix',
+      pagoEm: new Date('2026-08-04T14:10:00.000Z'),
+      ...sobrescrever
+    });
+
+  it('emite recibo com valor, forma de pagamento e dados fiscais da clinica', async () => {
+    const { servico } = montarServico({ consulta: consultaPaga() });
+
+    const documento = await servico.emitir('tenant-1', 'paciente-1', usuario, {
+      tipo: 'recibo_consulta',
+      consultaId: 'consulta-1'
+    });
+
+    expect(documento.corpo).toContain('Ana Souza');
+    expect(documento.corpo).toContain('180,00');
+    expect(documento.corpo).toContain('Pix');
+    expect(documento.corpo).toContain('04/08/2026');
+    // Dados fiscais reais do tenant: criterio de aceite da fase.
+    expect(documento.corpo).toContain('12.345.678/0001-90');
+    expect(documento.variaveisVazias).toEqual([]);
+  });
+
+  it('recusa recibo de consulta sem pagamento registrado', async () => {
+    const { servico } = montarServico({ consulta: consultaPaga({ statusPagamento: 'pendente' }) });
+
+    await expect(
+      servico.emitir('tenant-1', 'paciente-1', usuario, { tipo: 'recibo_consulta', consultaId: 'consulta-1' })
+    ).rejects.toThrow(/pagamento registrado/);
+  });
+
+  it('recusa recibo de consulta paga por pacote, que nao tem valor proprio', async () => {
+    const { servico } = montarServico({
+      consulta: consultaPaga({ pacoteId: 'pacote-1', valorCentavos: 0, formaPagamento: 'pacote' })
+    });
+
+    await expect(
+      servico.emitir('tenant-1', 'paciente-1', usuario, { tipo: 'recibo_consulta', consultaId: 'consulta-1' })
+    ).rejects.toThrow(/pacote/);
+  });
+
+  it('recusa recibo sem consulta de origem', async () => {
+    const { servico } = montarServico({});
+
+    await expect(
+      servico.emitir('tenant-1', 'paciente-1', usuario, { tipo: 'recibo_consulta' })
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});

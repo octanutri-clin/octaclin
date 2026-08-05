@@ -244,7 +244,7 @@ export async function excluirAvaliacaoAntropometrica(
   return resposta.json() as Promise<{ id: string }>;
 }
 
-export type TipoDocumentoClinicoApi = 'declaracao_comparecimento' | 'relatorio_alta';
+export type TipoDocumentoClinicoApi = 'declaracao_comparecimento' | 'relatorio_alta' | 'recibo_consulta';
 
 export interface DocumentoClinicoApi {
   id: string;

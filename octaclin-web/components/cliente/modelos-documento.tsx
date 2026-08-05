@@ -15,7 +15,8 @@ import {
 
 const ROTULO_TIPO: Record<string, string> = {
   declaracao_comparecimento: 'Declaracao de comparecimento',
-  relatorio_alta: 'Relatorio de alta'
+  relatorio_alta: 'Relatorio de alta',
+  recibo_consulta: 'Recibo'
 };
 
 export function ModelosDocumentoCliente() {

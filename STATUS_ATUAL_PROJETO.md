@@ -7,7 +7,29 @@ Atualizado em 2026-08-05.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 208 - documentos clinicos gerados, em 2026-08-05.
+- Ultima fase concluida: Fase 209 - financeiro da consulta e pacote de sessoes,
+  em 2026-08-05. A consulta passou a ter valor, forma de pagamento e status
+  (pendente/pago/isento), com **dinheiro em inteiro de centavos em todo lugar** —
+  nenhuma casa decimal atravessa servico, banco ou HTTP, porque `0.1 + 0.2`
+  fecharia o mes errado por centavos que ninguem explica. O banco guarda duas
+  invariantes que o servico sozinho nao garante: "pago" exige data de pagamento
+  (pago sem data nao concilia), e consulta de pacote nao pode ter valor proprio
+  (faria o mesmo atendimento entrar duas vezes no total do mes). Consulta
+  cancelada nunca entra no faturamento, e consulta isenta conta como atendimento
+  sem virar "a receber" que ninguem vai cobrar. O recibo entrou como terceiro
+  tipo do gerador da Fase 208, **sem codigo de geracao novo**, com indice unico
+  parcial por consulta e emissao so a partir de pagamento registrado. Pacote de
+  sessoes chegou como agrupador opcional: `falta` consome sessao, `cancelada`
+  devolve a vaga, consulta agendada ja conta como reservada — pacote de 10 nao
+  aceita a 11a — e pacote vencido nao recebe consulta nova. Aba Financeiro em
+  `/cliente` fecha o periodo com recebido, a receber e quebra por profissional,
+  com consultas e pacotes em linhas separadas. Permissao nova
+  `agenda.financeiro.ler`: a recepcao registra pagamento mas nao ve o faturamento
+  da casa, e Professional so ve o proprio (o escopo sobrescreve o filtro pedido
+  pelo cliente). Gateway e NFS-e ficaram fora de proposito. 596 testes de
+  backend, typecheck e lint aprovados. Ver
+  `fase-209-financeiro-consulta-pacote-sessoes.md`.
+- Fase 208 - documentos clinicos gerados, em 2026-08-05.
   O produto passou a emitir declaracao de comparecimento e relatorio de alta com
   a identidade da clinica, auditoria em toda rota (inclusive na leitura) e
   impressao/PDF pelo navegador, **sem nenhuma biblioteca de PDF**. Dois tipos com

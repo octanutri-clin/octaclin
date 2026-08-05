@@ -23,6 +23,7 @@ Atualizado apos a Fase 108. Este arquivo documenta o estado atual de papeis, per
 - `cliente.usuarios.desativar`
 - `cliente.convites.gerenciar`
 - `cliente.configuracoes.gerenciar`
+- `agenda.financeiro.ler`
 
 ### Patient
 
@@ -60,6 +61,7 @@ Inclui permissoes de `Collaborator` e adiciona:
 - `mobile.operar`
 - `gamificacao.gerenciar`
 - `materiais.gerenciar`
+- `agenda.financeiro.ler`
 
 ### SuperAdmin
 
@@ -115,6 +117,7 @@ Inclui permissoes de `Professional` e adiciona:
 | Questionarios | `/questionarios`, `/categorias-pergunta`, `/agendamentos-questionario` | `SuperAdmin`, `Professional`, `Collaborator` + `questionarios.ler`/`questionarios.gerenciar` |
 | Formularios publicos | `/formularios` | Publico com token |
 | Agenda | `/agenda` | `SuperAdmin`, `Professional`, `Collaborator` + `agenda.consultas.ler`/`agenda.consultas.criar` |
+| Financeiro da agenda | `/agenda` (pagamento, recebimentos, pacotes) | Pagamento e pacotes: `SuperAdmin`, `Professional`, `Collaborator` + `agenda.consultas.criar`. Recebimentos: `SuperAdmin`, `Professional`, `Client` + `agenda.financeiro.ler` |
 | Comunicacoes | `/comunicacoes` | `SuperAdmin`, `Professional`, `Collaborator` + permissoes de mensagens/canais/templates |
 | Materiais | `/materiais` | `SuperAdmin`, `Professional`, `Collaborator` + `materiais.ler`/`materiais.gerenciar` |
 | Webhook WhatsApp | `/comunicacoes/webhooks/whatsapp` | Publico validado por token/assinatura |
@@ -143,6 +146,10 @@ Inclui permissoes de `Professional` e adiciona:
 | `/api/operacoes/assinaturas/plano` | `/operacoes/assinaturas/plano` | POST exige `SuperAdmin`; aplica plano manualmente no tenant atual |
 | `/api/agenda/consultas` | `/agenda/consultas` | GET exige `agenda.consultas.ler`; POST exige `agenda.consultas.criar`; cria consulta, valida conflito e sincroniza Google quando configurado |
 | `/api/agenda/consultas/[consultaId]` | `/agenda/consultas/:consultaId` | PATCH/DELETE exigem `agenda.consultas.criar`; remarcam/cancelam consulta e sincronizam Google quando configurado |
+| `/api/agenda/consultas/[consultaId]/pagamento` | `/agenda/consultas/:consultaId/pagamento` | POST exige `agenda.consultas.criar`; registra valor, forma e status de pagamento; recusa consulta cancelada e consulta de pacote; backend audita |
+| `/api/agenda/financeiro/recebimentos` | `/agenda/financeiro/recebimentos` | GET exige `agenda.financeiro.ler` (`SuperAdmin`, `Professional`, `Client`); fecha o periodo com recebido, pendente e quebra por profissional; `Professional` so ve o proprio escopo; backend audita a leitura |
+| `/api/agenda/pacotes` | `/agenda/pacotes` | GET exige `agenda.consultas.ler`; POST exige `agenda.consultas.criar`; lista e cria pacotes de sessao do paciente |
+| `/api/agenda/pacotes/[pacoteId]` | `/agenda/pacotes/:pacoteId` | DELETE exige `agenda.consultas.criar`; cancela o pacote sem apagar historico |
 | `/api/pacientes/[id]/prontuario` | `/pacientes/:id/prontuario` | GET exige sessao operacional com `pacientes.ler`; backend audita leitura sensivel do prontuario |
 | `/api/pacientes/[id]/evolucoes` | `/pacientes/:id/evolucoes` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e criacao de anotacoes privadas |
 | `/api/pacientes/[id]/tarefas-acompanhamento` | `/pacientes/:id/tarefas-acompanhamento` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e prescricao de tarefas |

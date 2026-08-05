@@ -31,10 +31,12 @@ import { AdicionarTeleconsultaAgenda1720000001015 } from './migracoes/1720000001
 import { CriarAvaliacoesAntropometricas1720000001016 } from './migracoes/1720000001016-CriarAvaliacoesAntropometricas';
 import { CriarDocumentosEmitidos1720000001017 } from './migracoes/1720000001017-CriarDocumentosEmitidos';
 import { CriptografarConteudoNotificacoes1720000001018 } from './migracoes/1720000001018-CriptografarConteudoNotificacoes';
+import { AdicionarFinanceiroConsulta1720000001019 } from './migracoes/1720000001019-AdicionarFinanceiroConsulta';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
 import { AgendaConsultaOrm } from '../../modulos/agenda/infraestrutura/agenda-consulta.orm';
+import { PacoteSessaoOrm } from '../../modulos/agenda/infraestrutura/pacote-sessao.orm';
 import { AgendaBloqueioExternoOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaBloqueioManualOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-manual.orm';
 import { AgendaLinkPublicoOrm } from '../../modulos/agenda/infraestrutura/agenda-link-publico.orm';
@@ -141,6 +143,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       TemplateMensagemOrm,
       MensagemNotificacaoOrm,
       AgendaConsultaOrm,
+      PacoteSessaoOrm,
       ProfissionalGoogleConexaoOrm,
       GoogleCanalWatchOrm,
       AgendaBloqueioExternoOrm,
@@ -200,7 +203,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AdicionarTeleconsultaAgenda1720000001015,
       CriarAvaliacoesAntropometricas1720000001016,
       CriarDocumentosEmitidos1720000001017,
-      CriptografarConteudoNotificacoes1720000001018
+      CriptografarConteudoNotificacoes1720000001018,
+      AdicionarFinanceiroConsulta1720000001019
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,
