@@ -17,9 +17,11 @@ export interface PortalPacienteApi {
     id: string;
     nome: string;
     statusAdesao: string;
-    scoreRisco: string;
+    /** `scoreRisco` nao existe aqui: e triagem interna, regra da Fase 161. */
     ultimoCheckinEm?: string;
   };
+  /** Peso e data, so. Sem IMC, sem percentual de gordura, sem classificacao. */
+  evolucaoPeso?: { data: string; pesoKg: number }[];
   perfil: {
     contato?: string;
     email?: string;

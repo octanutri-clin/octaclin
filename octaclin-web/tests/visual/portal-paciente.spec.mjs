@@ -28,6 +28,11 @@ const portalPaciente = {
     notificacoesPendentes: 1,
     notificacoesHistorico: 2
   },
+  evolucaoPeso: [
+    { data: '2026-05-10', pesoKg: 82.4 },
+    { data: '2026-06-14', pesoKg: 80.1 },
+    { data: '2026-07-19', pesoKg: 78.6 }
+  ],
   consultasProximas: [
     {
       id: 'consulta-1',
@@ -343,6 +348,27 @@ test.describe('portal do paciente', () => {
     await expect(page.getByRole('heading', { name: 'Meu perfil' })).toHaveCount(0);
     await expect(page.getByText(/score\s+87[,.]40/i)).toHaveCount(0);
     expect(portal.carregamentos()).toBe(1);
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('mostra a curva de peso sem numero clinico derivado junto', async ({ page }) => {
+    await prepararPortal(page);
+    await page.goto('/portal/checkins');
+
+    await expect(page.getByRole('heading', { name: 'Sua evolucao de peso' })).toBeVisible();
+    // Rotulo direto do ultimo ponto.
+    const curva = page.getByRole('img', { name: /Evolucao de Peso em kg/ });
+    await expect(curva).toBeVisible();
+
+    // A alternativa textual e obrigatoria: o grafico nao pode ser o unico caminho.
+    await page.getByText('Ver valores em tabela').click();
+    await expect(page.getByRole('cell', { name: '82,4' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '78,6' })).toBeVisible();
+
+    // Regra da Fase 161: peso e do paciente, leitura clinica derivada nao.
+    for (const proibido of ['IMC', 'Gordura corporal', 'Massa magra', 'Eutrofia', 'Sobrepeso', 'Risco']) {
+      await expect(page.getByText(proibido, { exact: false })).toHaveCount(0);
+    }
     await assertSemOverflowHorizontal(page);
   });
 

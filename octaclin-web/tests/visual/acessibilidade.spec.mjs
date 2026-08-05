@@ -472,6 +472,11 @@ const portalPacienteFixture = {
     notificacoesPendentes: 1,
     notificacoesHistorico: 2
   },
+  evolucaoPeso: [
+    { data: '2026-05-10', pesoKg: 82.4 },
+    { data: '2026-06-14', pesoKg: 80.1 },
+    { data: '2026-07-19', pesoKg: 78.6 }
+  ],
   consultasProximas: [
     {
       id: 'consulta-1',

@@ -11,6 +11,8 @@ import {
   normalizarModalidadeConsulta
 } from '../../agenda/dominio/teleconsulta';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
+import type { MedidasAntropometricas } from '../dominio/antropometria';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../../materiais/infraestrutura/material-educativo.orm';
@@ -61,7 +63,11 @@ export interface ResumoPortalPaciente {
     id: string;
     nome: string;
     statusAdesao: string;
-    scoreRisco: string;
+    /**
+     * `scoreRisco` NAO entra aqui. E triagem interna da clinica; devolver ao
+     * proprio paciente um numero de risco clinico sem leitura profissional junto
+     * e a regra que a Fase 161 fechou. Estava vazando neste payload ate a Fase 207.
+     */
     ultimoCheckinEm?: Date;
   };
   perfil: {
@@ -89,6 +95,11 @@ export interface ResumoPortalPaciente {
     notificacoesPendentes: number;
     notificacoesHistorico: number;
   };
+  /**
+   * So peso e data. Sem IMC, sem percentual de gordura, sem classificacao: o
+   * paciente ve a propria curva, e a leitura clinica continua sendo da consulta.
+   */
+  evolucaoPeso: { data: string; pesoKg: number }[];
   consultasProximas: {
     id: string;
     titulo: string;
@@ -376,6 +387,19 @@ export class ServicoPortalPaciente {
       });
       const consentimentos = await this.listarConsentimentosPaciente(gerenciador, tenantId);
 
+      const avaliacoes = await gerenciador.getRepository(AvaliacaoAntropometricaOrm).find({
+        where: { tenantId, pacienteId: paciente.id, excluidaEm: IsNull() },
+        order: { avaliadaEm: 'DESC' },
+        take: 24
+      });
+      const evolucaoPeso = avaliacoes
+        .map((avaliacao) => {
+          const medidas = this.lerMedidasAvaliacao(avaliacao.medidasCriptografadas);
+          return typeof medidas.pesoKg === 'number' ? { data: avaliacao.avaliadaEm, pesoKg: medidas.pesoKg } : null;
+        })
+        .filter((ponto): ponto is { data: string; pesoKg: number } => ponto !== null)
+        .reverse();
+
       const consultasProximas = consultas.map((consulta) => ({
         id: consulta.id,
         titulo: consulta.titulo,
@@ -460,8 +484,7 @@ export class ServicoPortalPaciente {
           id: paciente.id,
           nome: this.criptografia.descriptografar(paciente.nomeCriptografado),
           statusAdesao: paciente.statusAdesao,
-          scoreRisco: paciente.scoreRisco,
-          ultimoCheckinEm: paciente.ultimoCheckinEm
+            ultimoCheckinEm: paciente.ultimoCheckinEm
         },
         perfil: {
           contato: contato.email ?? contato.whatsapp,
@@ -483,6 +506,7 @@ export class ServicoPortalPaciente {
           notificacoesPendentes: notificacoesPaciente.filter((notificacao) => this.ehNotificacaoPendente(notificacao.status)).length,
           notificacoesHistorico: notificacoesPaciente.length
         },
+        evolucaoPeso,
         consultasProximas,
         formulariosPendentes,
         formulariosRespondidos,
@@ -653,6 +677,15 @@ export class ServicoPortalPaciente {
         lgpd: this.mapearLgpd(await this.listarConsentimentosPaciente(gerenciador, tenantId), paciente.id, usuarioId)
       };
     });
+  }
+
+  /** Registro ilegivel sai da curva em silencio: o paciente nao tem o que fazer com erro tecnico. */
+  private lerMedidasAvaliacao(conteudo: Buffer): MedidasAntropometricas {
+    try {
+      return JSON.parse(this.criptografia.descriptografar(conteudo)) as MedidasAntropometricas;
+    } catch {
+      return {};
+    }
   }
 
   async exportarDadosLgpd(tenantId: string, usuarioId: string): Promise<ExportacaoDadosLgpdPaciente> {
@@ -883,7 +916,6 @@ export class ServicoPortalPaciente {
         id: paciente.id,
         nome: this.criptografia.descriptografar(paciente.nomeCriptografado),
         statusAdesao: paciente.statusAdesao,
-        scoreRisco: paciente.scoreRisco,
         ultimoCheckinEm: paciente.ultimoCheckinEm
       },
       perfil: {

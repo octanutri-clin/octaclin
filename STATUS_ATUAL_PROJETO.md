@@ -1,13 +1,31 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-04.
+Atualizado em 2026-08-05.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 206 - teleconsulta por link na consulta, em
+- Ultima fase concluida: Fase 207 - antropometria e evolucao de medidas, em
+  2026-08-05, em duas rodadas. O produto passou a ter peso, altura,
+  circunferencias, dobras e composicao corporal por 5 protocolos (Pollock 3 e 7
+  dobras, Faulkner, Guedes, com Siri), IMC classificado por faixa etaria
+  (Lipschitz para 60+, como o SISVAN), RCQ e circunferencia de cintura. A
+  avaliacao e append-only: calcula uma vez na gravacao e guarda protocolo,
+  formula, sexo e idade junto, entao o historico nunca recalcula. Aba de
+  antropometria no prontuario e curva de peso no portal do paciente. O primeiro
+  grafico do repositorio (`components/ui/grafico-evolucao.tsx`) e SVG inline,
+  **sem dependencia nova**, serie unica com seletor de metrica — decidido pelo
+  validador da skill `dataviz`, que reprovou a paleta categorica da Fase 202 no
+  teste de daltonismo. Revisao clinica confirmou todos os coeficientes e sitios
+  de dobra, e pegou dois criticos de borda (Pollock invertendo em obesidade
+  grave e um limiar de RCQ sem fonte). Corrigido de quebra um vazamento anterior
+  a fase: `scoreRisco` ia no payload do portal do paciente, contra a regra da
+  Fase 161. 515 testes de backend, 138 de regressao visual/a11y,
+  lint/typecheck/build aprovados. Ver
+  `fase-207-antropometria-evolucao-medidas.md`.
+- Fase 206 - teleconsulta por link na consulta, em
   2026-08-04. A consulta ganhou modalidade (`presencial`/`online`) e link de
   sala externa, sem construir plataforma de video — decisao registrada como
   ADR-020. Dominio puro `agenda/dominio/teleconsulta.ts` aceita apenas `https`

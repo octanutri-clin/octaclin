@@ -1169,9 +1169,35 @@ publicado antes de ampliar a superficie de mudancas visuais.
     so `{ id, status }`. 475 testes de backend e 136 de regressao visual/a11y
     aprovados. Ver `fase-206-teleconsulta-por-link.md`.
 
-- [ ] Fase 207 - Antropometria e evolucao de medidas.
+- [x] Fase 207 - Antropometria e evolucao de medidas.
   - Modelar avaliacoes seriadas, protocolos registrados e visualizacao
     longitudinal acessivel no prontuario e portal.
+  - Concluida em 2026-08-05, em duas rodadas. Dominio
+    `pacientes/dominio/antropometria.ts` com 5 protocolos de composicao
+    corporal (Pollock 3 e 7 dobras, Faulkner, Guedes, Siri), IMC com corte por
+    faixa etaria, RCQ e circunferencia de cintura. Tabela
+    `avaliacoes_antropometricas` append-only com RLS: o calculo acontece uma vez
+    na gravacao e vai criptografado junto do protocolo, da formula, do sexo e da
+    idade usados, entao ler o historico nunca recalcula. Aba de antropometria no
+    prontuario revela so as dobras que o protocolo exige para o sexo informado.
+    Grafico `components/ui/grafico-evolucao.tsx` em SVG inline, **sem
+    dependencia nova**, com tabela alternativa e navegacao por teclado; portal do
+    paciente ganhou a curva de peso, so peso e data.
+  - Serie unica com seletor de metrica, decidido pelo validador da skill
+    `dataviz`: a paleta categorica dos tokens da Fase 202 **reprova** no teste de
+    daltonismo (`sucesso` x `alerta` com dE 4,7 sob protanopia). Serie unica
+    tambem elimina o eixo duplo que peso e percentual exigiriam.
+  - Revisao `ecc:healthcare-reviewer`: coeficientes e sitios de dobra de todos os
+    protocolos conferidos contra as publicacoes originais, todos corretos. Dois
+    achados criticos corrigidos nas bordas: Pollock invertia acima do vertice da
+    quadratica (mais gordura medida devolvia menos percentual, em obesidade
+    grave) e o limiar "moderado" de RCQ nao existia na OMS 2008 e estava citado
+    como se fosse.
+  - Corrigido vazamento anterior a esta fase: `scoreRisco` ia no payload do
+    portal do paciente, contra a regra da Fase 161. O teste existente afirmava o
+    score como esperado; foi invertido para guardar a regra.
+  - 515 testes de backend e 138 de regressao visual/a11y aprovados. Ver
+    `fase-207-antropometria-evolucao-medidas.md`.
 
 - [ ] Fase 208 - Documentos clinicos gerados.
   - Gerar declaracoes e relatorios auditados com identidade da clinica,

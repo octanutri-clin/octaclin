@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
+import { AbaAntropometria } from './aba-antropometria';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import {
@@ -83,12 +84,13 @@ interface FormularioEnvioMaterial {
   observacao: string;
 }
 
-type AbaProntuario = 'resumo' | 'evolucoes' | 'plano' | 'formularios' | 'mensagens' | 'materiais' | 'anexos' | 'historico';
+type AbaProntuario = 'resumo' | 'evolucoes' | 'plano' | 'antropometria' | 'formularios' | 'mensagens' | 'materiais' | 'anexos' | 'historico';
 
 const abasProntuario: Array<{ id: AbaProntuario; rotulo: string }> = [
   { id: 'resumo', rotulo: 'Resumo' },
   { id: 'evolucoes', rotulo: 'Evolucoes' },
   { id: 'plano', rotulo: 'Plano' },
+  { id: 'antropometria', rotulo: 'Antropometria' },
   { id: 'formularios', rotulo: 'Formularios' },
   { id: 'mensagens', rotulo: 'Mensagens' },
   { id: 'materiais', rotulo: 'Materiais' },
@@ -818,6 +820,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           )}
         </div>
       </section> : null}
+
+      {abaAtiva === 'antropometria' ? <AbaAntropometria pacienteId={pacienteId} podeGerenciar /> : null}
 
       {abaAtiva === 'anexos' ? (
         <section className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">

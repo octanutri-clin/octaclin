@@ -132,3 +132,114 @@ export async function criarTarefaAcompanhamento(
 
   return resposta.json() as Promise<TarefaAcompanhamentoApi>;
 }
+
+export type ProtocoloComposicao = 'nenhum' | 'pollock_3' | 'pollock_7' | 'faulkner' | 'guedes';
+export type SexoBiologico = 'masculino' | 'feminino';
+
+export interface MedidasAntropometricasApi {
+  pesoKg?: number;
+  alturaCm?: number;
+  circunferencias?: Record<string, number | undefined>;
+  dobras?: Record<string, number | undefined>;
+}
+
+export interface ResultadoAntropometricoApi {
+  imc?: number;
+  classificacaoImc?: string;
+  rcq?: number;
+  classificacaoRcq?: string;
+  circunferenciaCinturaCm?: number;
+  classificacaoCircunferenciaCintura?: string;
+  percentualGordura?: number;
+  massaGordaKg?: number;
+  massaMagraKg?: number;
+  protocoloAplicado: ProtocoloComposicao;
+  formulaAplicada?: string;
+  avisos: string[];
+}
+
+export interface AvaliacaoAntropometricaApi {
+  id: string;
+  pacienteId: string;
+  avaliadaEm: string;
+  protocolo: ProtocoloComposicao;
+  sexo?: SexoBiologico;
+  idadeAnos?: number;
+  medidas: MedidasAntropometricasApi;
+  resultado: ResultadoAntropometricoApi;
+  formulaAplicada?: string;
+  observacoes?: string;
+  criadoEm: string;
+}
+
+export interface DeltaAntropometricoApi {
+  campo: string;
+  anterior: number;
+  atual: number;
+  variacao: number;
+}
+
+export interface SerieAntropometricaApi {
+  avaliacoes: AvaliacaoAntropometricaApi[];
+  deltaUltimas: DeltaAntropometricoApi[];
+}
+
+export interface RegistrarAvaliacaoAntropometricaEntrada {
+  avaliadaEm?: string;
+  protocolo?: ProtocoloComposicao;
+  sexo?: SexoBiologico;
+  pesoKg?: number;
+  alturaCm?: number;
+  circunferencias?: Record<string, number>;
+  dobras?: Record<string, number>;
+  observacoes?: string;
+}
+
+export async function listarAvaliacoesAntropometricas(
+  pacienteId: string,
+  opcoes: { signal?: AbortSignal } = {}
+): Promise<SerieAntropometricaApi> {
+  const resposta = await fetch(
+    `/api/pacientes/${encodeURIComponent(pacienteId)}/avaliacoes-antropometricas`,
+    { cache: 'no-store', signal: opcoes.signal }
+  );
+  if (!resposta.ok) {
+    const detalhe = await resposta.text();
+    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+  }
+
+  return resposta.json() as Promise<SerieAntropometricaApi>;
+}
+
+export async function registrarAvaliacaoAntropometrica(
+  pacienteId: string,
+  entrada: RegistrarAvaliacaoAntropometricaEntrada
+): Promise<AvaliacaoAntropometricaApi> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/avaliacoes-antropometricas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entrada)
+  });
+  if (!resposta.ok) {
+    const detalhe = await resposta.text();
+    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+  }
+
+  return resposta.json() as Promise<AvaliacaoAntropometricaApi>;
+}
+
+export async function excluirAvaliacaoAntropometrica(
+  pacienteId: string,
+  avaliacaoId: string
+): Promise<{ id: string }> {
+  const resposta = await fetch(
+    `/api/pacientes/${encodeURIComponent(pacienteId)}/avaliacoes-antropometricas/${encodeURIComponent(avaliacaoId)}`,
+    { method: 'DELETE' }
+  );
+  if (!resposta.ok) {
+    const detalhe = await resposta.text();
+    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+  }
+
+  return resposta.json() as Promise<{ id: string }>;
+}

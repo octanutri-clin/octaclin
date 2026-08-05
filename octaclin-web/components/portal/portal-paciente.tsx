@@ -20,10 +20,12 @@ import {
   Save,
   ShieldCheck,
   SmilePlus,
+  TrendingUp,
   Target,
   UserRound
 } from 'lucide-react';
 import { Botao, classesBotao } from '@/components/ui/botao';
+import { GraficoEvolucao } from '@/components/ui/grafico-evolucao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { Etiqueta } from '@/components/ui/etiqueta';
 import { Aviso, AvisoRegiao } from '@/components/ui/feedback';
@@ -722,6 +724,22 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                 ) : null}
               </CartaoConteudo>
             </Cartao>
+
+            {portal.evolucaoPeso?.length ? (
+              <Cartao className={secao === 'checkins' ? 'scroll-mt-4' : 'hidden'}>
+                <CartaoCabecalho>
+                  <CartaoTitulo icone={<TrendingUp className="h-4 w-4" />}>Sua evolucao de peso</CartaoTitulo>
+                </CartaoCabecalho>
+                <CartaoConteudo>
+                  <GraficoEvolucao
+                    pontos={portal.evolucaoPeso.map((ponto) => ({ data: ponto.data, valor: ponto.pesoKg }))}
+                    rotulo="Peso"
+                    unidade="kg"
+                    descricao="Medidas registradas pela sua nutricionista nas consultas. A leitura do que os numeros significam e feita junto com ela."
+                  />
+                </CartaoConteudo>
+              </Cartao>
+            ) : null}
 
             <section id="checkin-rapido" className={secao === 'checkins' ? 'scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]' : 'hidden'}>
               <Cartao>

@@ -12,6 +12,7 @@ import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-
 import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-valor.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
+import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
 import { ServicoPortalPaciente } from './servico-portal-paciente';
 
 function criarRepositorioFake(nome: string, dados: Record<string, any>) {
@@ -98,6 +99,7 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === MaterialEducativoOrm) return repositorios.material;
       if (entidade === EnvioMaterialPacienteOrm) return repositorios.envioMaterial;
       if (entidade === LogDiarioRapidoOrm) return repositorios.diario;
+      if (entidade === AvaliacaoAntropometricaOrm) return { find: jest.fn(async () => []) };
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -363,10 +365,13 @@ describe('ServicoPortalPaciente', () => {
       expect.objectContaining({
         id: 'paciente-1',
         nome: 'Ana Paula',
-        statusAdesao: 'aderente',
-        scoreRisco: '12.50'
+        statusAdesao: 'aderente'
       })
     );
+    // Regra da Fase 161: score de risco e triagem interna e nao volta para o
+    // paciente. Este payload devolvia `scoreRisco: '12.50'` ate a Fase 207.
+    expect(portal.paciente).not.toHaveProperty('scoreRisco');
+    expect(JSON.stringify(portal)).not.toContain('scoreRisco');
     expect(portal.resumo).toEqual({
       consultasProximas: 1,
       formulariosPendentes: 1,
