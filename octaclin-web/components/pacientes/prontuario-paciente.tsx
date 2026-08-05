@@ -24,6 +24,7 @@ import {
 import { Botao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { AbaAntropometria } from './aba-antropometria';
+import { AbaDocumentos, ConsultaConcluidaOpcao } from './aba-documentos';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import {
@@ -84,7 +85,17 @@ interface FormularioEnvioMaterial {
   observacao: string;
 }
 
-type AbaProntuario = 'resumo' | 'evolucoes' | 'plano' | 'antropometria' | 'formularios' | 'mensagens' | 'materiais' | 'anexos' | 'historico';
+type AbaProntuario =
+  | 'resumo'
+  | 'evolucoes'
+  | 'plano'
+  | 'antropometria'
+  | 'formularios'
+  | 'documentos'
+  | 'mensagens'
+  | 'materiais'
+  | 'anexos'
+  | 'historico';
 
 const abasProntuario: Array<{ id: AbaProntuario; rotulo: string }> = [
   { id: 'resumo', rotulo: 'Resumo' },
@@ -92,6 +103,7 @@ const abasProntuario: Array<{ id: AbaProntuario; rotulo: string }> = [
   { id: 'plano', rotulo: 'Plano' },
   { id: 'antropometria', rotulo: 'Antropometria' },
   { id: 'formularios', rotulo: 'Formularios' },
+  { id: 'documentos', rotulo: 'Documentos' },
   { id: 'mensagens', rotulo: 'Mensagens' },
   { id: 'materiais', rotulo: 'Materiais' },
   { id: 'anexos', rotulo: 'Anexos' },
@@ -460,6 +472,17 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     [eventos]
   );
   const mensagens = useMemo(() => eventos.filter((evento) => evento.tipo === 'mensagem'), [eventos]);
+  /** So consulta concluida gera declaracao; o backend recusa o resto de qualquer forma. */
+  const consultasConcluidas = useMemo<ConsultaConcluidaOpcao[]>(
+    () =>
+      eventos
+        .filter((evento) => evento.tipo === 'consulta' && evento.status === 'concluida')
+        .map((evento) => ({
+          id: evento.origemId ?? evento.id,
+          rotulo: `${formatarDataHora(evento.data)} - ${evento.titulo}`
+        })),
+    [eventos]
+  );
 
   if (carregando) return <BarraCarregamento visivel rotulo="Carregando prontuario do paciente" />;
 
@@ -822,6 +845,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       </section> : null}
 
       {abaAtiva === 'antropometria' ? <AbaAntropometria pacienteId={pacienteId} podeGerenciar /> : null}
+
+      {abaAtiva === 'documentos' ? (
+        <AbaDocumentos pacienteId={pacienteId} podeGerenciar consultasConcluidas={consultasConcluidas} />
+      ) : null}
 
       {abaAtiva === 'anexos' ? (
         <section className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">

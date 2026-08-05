@@ -47,11 +47,31 @@ function familiaIpConfiguracao(valor: unknown): 4 | 6 {
   return Number(valor) === 6 ? 6 : 4;
 }
 
-function substituirVariaveis(texto: string, payload: Record<string, unknown>): string {
+function escaparHtml(valor: string): string {
+  return valor
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Substitui `{{variavel}}` pelo valor do payload.
+ *
+ * `escapar` liga no ramo HTML: o template e do tenant e pode conter marcacao de
+ * proposito, mas o **valor** vem de cadastro (nome de paciente, texto de
+ * documento) e nunca deve virar marcacao no e-mail que sai.
+ */
+function substituirVariaveis(
+  texto: string,
+  payload: Record<string, unknown>,
+  escapar = false
+): string {
   return texto.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_, chave: string) => {
     const valor = payload[chave];
     if (valor === undefined || valor === null) return '';
-    return String(valor);
+    return escapar ? escaparHtml(String(valor)) : String(valor);
   });
 }
 
@@ -140,13 +160,16 @@ export class AdaptadorEmailSmtp implements AdaptadorNotificacao {
       textoConfiguracao(process.env.EMAIL_REMETENTE) ??
       user;
     const destino = textoConfiguracao(contexto.payload.destino);
+    // Conteudo vindo do payload ja foi montado por quem disparou: e texto final.
+    const assuntoDoPayload = textoConfiguracao(contexto.payload.assunto);
+    const htmlDoPayload = textoConfiguracao(contexto.payload.html);
+    const textoDoPayload = textoConfiguracao(contexto.payload.texto);
+
     const assuntoBase =
-      textoConfiguracao(contexto.payload.assunto) ??
-      textoConfiguracao(contexto.template.conteudo.assunto) ??
-      contexto.template.nome;
-    const htmlBase = textoConfiguracao(contexto.payload.html) ?? textoConfiguracao(contexto.template.conteudo.html);
+      assuntoDoPayload ?? textoConfiguracao(contexto.template.conteudo.assunto) ?? contexto.template.nome;
+    const htmlBase = htmlDoPayload ?? textoConfiguracao(contexto.template.conteudo.html);
     const textoBase =
-      textoConfiguracao(contexto.payload.texto) ??
+      textoDoPayload ??
       textoConfiguracao(contexto.template.conteudo.texto) ??
       textoConfiguracao(contexto.template.conteudo.corpo);
 
@@ -154,12 +177,19 @@ export class AdaptadorEmailSmtp implements AdaptadorNotificacao {
     if (!remetente) throw new InternalServerErrorException('Remetente de email nao configurado.');
     if (!htmlBase && !textoBase) throw new InternalServerErrorException('Template de email sem conteudo.');
 
+    /*
+     * So o texto do template passa pela substituicao. Rodar de novo sobre o
+     * conteudo do payload faria segunda passada em texto ja renderizado: um nome
+     * de paciente contendo `{{destino}}` seria trocado pelo e-mail dele na
+     * mensagem que sai. Passada unica no dominio nao vale nada se a infra
+     * expande de novo.
+     */
     return {
       destino,
       remetente,
-      assunto: substituirVariaveis(assuntoBase, contexto.payload),
-      texto: textoBase ? substituirVariaveis(textoBase, contexto.payload) : undefined,
-      html: htmlBase ? substituirVariaveis(htmlBase, contexto.payload) : undefined
+      assunto: assuntoDoPayload ? assuntoBase : substituirVariaveis(assuntoBase, contexto.payload),
+      texto: !textoBase ? undefined : textoDoPayload ? textoBase : substituirVariaveis(textoBase, contexto.payload),
+      html: !htmlBase ? undefined : htmlDoPayload ? htmlBase : substituirVariaveis(htmlBase, contexto.payload, true)
     };
   }
 

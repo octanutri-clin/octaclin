@@ -7,7 +7,29 @@ Atualizado em 2026-08-05.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 207 - antropometria e evolucao de medidas, em
+- Ultima fase concluida: Fase 208 - documentos clinicos gerados, em 2026-08-05.
+  O produto passou a emitir declaracao de comparecimento e relatorio de alta com
+  a identidade da clinica, auditoria em toda rota (inclusive na leitura) e
+  impressao/PDF pelo navegador, **sem nenhuma biblioteca de PDF**. Dois tipos com
+  modelo padrao em codigo e override por tenant em `tenant_configuracoes` — sem
+  tabela de modelos, entao clinica nova emite no primeiro dia. Tabela
+  `documentos_emitidos` append-only com RLS forcada guarda o texto renderizado,
+  nao modelo mais variaveis: modelo editado depois nao reescreve documento que ja
+  esta com terceiro. Declaracao so sai de consulta concluida, e o banco tambem
+  segura isso (CHECK e indice unico parcial por consulta). Atestado ficou de fora
+  de proposito: e ato privativo de medico e o produto atende tambem
+  nutricionista, psicologo e educador fisico. A revisao clinica pegou tres altos
+  — documento saindo sem nome e registro do profissional (com o aviso invisivel na
+  folha, por causa da classe `nao-imprimir`), relatorio de alta somando consultas
+  e metas de todos os profissionais da clinica, e alta podendo sair sob o
+  registro de um profissional escrita por outro. A revisao de seguranca achou um
+  defeito compartilhado corrigido na origem: o adaptador SMTP reexpandia
+  variaveis sobre texto ja renderizado, e a agenda usava o mesmo caminho — nome de
+  paciente contendo `{{linkTeleconsulta}}` vazaria o link da sala. Pendencia
+  sistemica registrada: `mensagens_notificacao.payload` e jsonb em claro. 555
+  testes de backend, 140 de regressao visual/a11y, lint/typecheck/build
+  aprovados. Ver `fase-208-documentos-clinicos-gerados.md`.
+- Fase 207 - antropometria e evolucao de medidas, em
   2026-08-05, em duas rodadas. O produto passou a ter peso, altura,
   circunferencias, dobras e composicao corporal por 5 protocolos (Pollock 3 e 7
   dobras, Faulkner, Guedes, com Siri), IMC classificado por faixa etaria

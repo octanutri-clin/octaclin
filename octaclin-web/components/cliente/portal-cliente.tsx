@@ -26,6 +26,7 @@ import { Abas } from '@/components/ui/abas';
 import { obterSessao } from '@/lib/auth-api';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
 import { PortalShell } from '@/components/app/portal-shell';
+import { ModelosDocumentoCliente } from './modelos-documento';
 import {
   AtualizarConfiguracoesClienteEntrada,
   AtualizarPerfilEmpresaClienteEntrada,
@@ -192,7 +193,9 @@ const formularioPerfilEmpresaInicial: AtualizarPerfilEmpresaClienteEntrada = {
 };
 
 export function PortalCliente() {
-  const [areaAtiva, setAreaAtiva] = useState<'ativacao' | 'assinatura' | 'consumo' | 'equipe' | 'preferencias' | 'marca' | 'integracoes' | 'fiscal'>('ativacao');
+  const [areaAtiva, setAreaAtiva] = useState<
+    'ativacao' | 'assinatura' | 'consumo' | 'equipe' | 'preferencias' | 'marca' | 'documentos' | 'integracoes' | 'fiscal'
+  >('ativacao');
   const [resumo, setResumo] = useState<ResumoPortalClienteApi | null>(null);
   const [usuarios, setUsuarios] = useState<RespostaUsuariosClienteApi | null>(null);
   const [convites, setConvites] = useState<RespostaConvitesUsuarioClienteApi | null>(null);
@@ -738,6 +741,7 @@ export function PortalCliente() {
             { id: 'equipe', rotulo: 'Equipe' },
             { id: 'preferencias', rotulo: 'Preferencias' },
             { id: 'marca', rotulo: 'Marca' },
+            { id: 'documentos', rotulo: 'Documentos' },
             { id: 'integracoes', rotulo: 'Integracoes' },
             { id: 'fiscal', rotulo: 'Dados fiscais' }
           ]}
@@ -1370,6 +1374,17 @@ export function PortalCliente() {
               </div>
             </form>
           </Cartao>
+        ) : null}
+
+        {podeGerenciarConfiguracoes && areaAtiva === 'documentos' ? (
+          <div
+            id="conta-cliente-documentos-painel"
+            role="tabpanel"
+            aria-labelledby="conta-cliente-documentos-aba"
+            className="grid gap-4"
+          >
+            <ModelosDocumentoCliente />
+          </div>
         ) : null}
 
         {podeGerenciarConfiguracoes && areaAtiva === 'fiscal' ? (

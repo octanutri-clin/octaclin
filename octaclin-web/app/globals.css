@@ -64,3 +64,50 @@ time,
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Impressao de documento clinico.
+ *
+ * Esconde tudo por visibilidade e devolve so a folha, em vez de marcar cada
+ * peca do shell com "nao imprimir": o shell nao sabe que existe folha, e uma
+ * tela nova nao precisa lembrar de se esconder. A folha vai para o fluxo
+ * absoluto no topo para nao herdar as margens da aplicacao.
+ */
+@media print {
+  html,
+  body {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .folha-documento,
+  .folha-documento * {
+    visibility: visible;
+  }
+
+  .folha-documento {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .nao-imprimir {
+    display: none !important;
+  }
+
+  @page {
+    margin: 20mm;
+  }
+}

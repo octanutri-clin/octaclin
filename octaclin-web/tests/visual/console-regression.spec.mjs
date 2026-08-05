@@ -882,6 +882,8 @@ async function prepararProntuarioMockado(page) {
   let criouMaterial = false;
   let enviouMaterial = false;
   let anexos = [];
+  let documentos = [];
+  let corpoDocumentoEmitido = null;
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -957,6 +959,15 @@ async function prepararProntuarioMockado(page) {
         descricao: 'Online',
         data: '2026-07-22T13:00:00.000Z',
         status: 'agendada'
+      },
+      {
+        id: 'consulta-0',
+        tipo: 'consulta',
+        titulo: 'Primeira consulta',
+        descricao: 'Presencial',
+        data: '2026-07-15T13:00:00.000Z',
+        status: 'concluida',
+        origemId: 'consulta-0'
       },
       {
         id: 'resposta-1',
@@ -1217,7 +1228,39 @@ async function prepararProntuarioMockado(page) {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(anexos) });
   });
 
+  await page.route('**/api/pacientes/paciente-1/documentos', async (route) => {
+    if (route.request().method() === 'POST') {
+      corpoDocumentoEmitido = route.request().postDataJSON();
+      documentos = [
+        {
+          id: 'documento-1',
+          tipo: 'declaracao_comparecimento',
+          titulo: 'Declaracao de comparecimento',
+          corpo: 'Declaro que Ana Souza compareceu em 15/07/2026.',
+          paragrafos: ['Declaro que Ana Souza compareceu em 15/07/2026.', 'Recife, 05 de agosto de 2026.'],
+          cabecalho: {
+            clinicaNome: 'Clinica Carla',
+            clinicaDocumento: '12.345.678/0001-90',
+            clinicaEndereco: 'Rua A, 10 - Recife/PE',
+            profissionalNome: 'Dra. Carla',
+            profissionalRegistro: 'CRN-6 1234',
+            profissionalEspecialidade: 'Nutricao clinica'
+          },
+          consultaId: 'consulta-0',
+          emitidoEm: '2026-08-05T12:00:00.000Z',
+          podeEnviarPorEmail: true,
+          variaveisVazias: []
+        }
+      ];
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(documentos[0]) });
+      return;
+    }
+
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(documentos) });
+  });
+
   return {
+    corpoDocumentoEmitido: () => corpoDocumentoEmitido,
     criouEvolucao: () => criouEvolucao,
     criouTarefa: () => criouTarefa,
     criouMaterial: () => criouMaterial,
@@ -1455,6 +1498,35 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Resposta de Check-in semanal')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Check-in semanal', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Voltar para pacientes' })).toHaveAttribute('href', '/pacientes');
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('emite declaracao apenas a partir de consulta concluida', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tab', { name: 'Documentos' }).click();
+
+    // Consulta agendada nao entra no seletor: declaracao nasce de comparecimento.
+    const opcoes = await page.getByLabel('Consulta').locator('option').allTextContents();
+    expect(opcoes.some((texto) => texto.includes('Primeira consulta'))).toBe(true);
+    expect(opcoes.some((texto) => texto.includes('Consulta de retorno'))).toBe(false);
+
+    await page.getByLabel('Consulta').selectOption('consulta-0');
+    await page.getByRole('button', { name: 'Emitir documento' }).click();
+
+    await expect.poll(() => prontuario.corpoDocumentoEmitido()).toEqual({
+      tipo: 'declaracao_comparecimento',
+      consultaId: 'consulta-0'
+    });
+    await expect(page.getByText('Declaracao de comparecimento emitida. Confira antes de imprimir.')).toBeVisible();
+
+    // A folha impressa carrega a identidade da clinica e a identificacao do profissional.
+    const folha = page.getByRole('region', { name: 'Visualizacao do documento' });
+    await expect(folha.getByText('Clinica Carla')).toBeVisible();
+    await expect(folha.getByText('12.345.678/0001-90')).toBeVisible();
+    await expect(folha.getByText('Declaro que Ana Souza compareceu em 15/07/2026.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Imprimir / salvar PDF' })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 

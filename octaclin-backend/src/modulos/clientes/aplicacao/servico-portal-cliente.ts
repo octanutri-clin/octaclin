@@ -1,4 +1,4 @@
-import { NotFoundException, Injectable } from '@nestjs/common';
+import { BadRequestException, NotFoundException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
@@ -9,11 +9,24 @@ import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensag
 import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
+import {
+  TIPOS_DOCUMENTO_CLINICO,
+  resolverModelo,
+  validarModelo,
+  variaveisDoTipo
+} from '../../pacientes/dominio/documentos-clinicos';
+import type { TipoDocumentoClinico } from '../../pacientes/dominio/documentos-clinicos';
 import { LimitesPlanoSaas, PlanoSaasId, RecursoLimitavelSaas, resolverPlanoSaas } from '../dominio/planos-saas';
-import { AtualizarConfiguracoesClienteDto, AtualizarPerfilEmpresaClienteDto, SolicitarAjusteAssinaturaClienteDto } from './dtos';
+import {
+  AtualizarConfiguracoesClienteDto,
+  AtualizarModelosDocumentoClienteDto,
+  AtualizarPerfilEmpresaClienteDto,
+  SolicitarAjusteAssinaturaClienteDto
+} from './dtos';
 
 const CHAVE_CONFIGURACOES_CONTA = 'conta_cliente';
 const CHAVE_PERFIL_EMPRESA = 'perfil_empresa';
+const CHAVE_MODELOS_DOCUMENTO = 'modelos_documento';
 const CHAVE_PLANO_SAAS = 'plano_saas';
 const CHAVE_INTERESSE_ASSINATURA = 'assinatura_interesse';
 
@@ -103,6 +116,20 @@ export interface ConfiguracoesPortalCliente {
     corPrimaria: string;
   };
   atualizadoEm: Date;
+}
+
+export interface ModeloDocumentoCliente {
+  tipo: TipoDocumentoClinico;
+  titulo: string;
+  corpo: string;
+  /** Falso quando o texto veio do padrao do produto, nao do tenant. */
+  personalizado: boolean;
+  variaveis: string[];
+}
+
+export interface ModelosDocumentoCliente {
+  tenantId: string;
+  modelos: ModeloDocumentoCliente[];
 }
 
 export interface PerfilEmpresaCliente {
@@ -365,6 +392,87 @@ export class ServicoPortalCliente {
     });
 
     return this.obterPerfilEmpresa(tenantId);
+  }
+
+  /**
+   * Modelos de documento do tenant. Guardados como **override** por cima do
+   * padrao que vive no dominio: tenant que nunca configurou nada ja emite
+   * documento, e tipo novo entra sem migracao de dados.
+   */
+  async obterModelosDocumento(tenantId: string): Promise<ModelosDocumentoCliente> {
+    await this.obterTenantAtivo(tenantId);
+    const configuracao = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      gerenciador.getRepository(TenantConfiguracaoOrm).findOne({
+        where: { tenantId, chave: CHAVE_MODELOS_DOCUMENTO }
+      })
+    );
+
+    return this.mapearModelosDocumento(tenantId, configuracao?.valor);
+  }
+
+  async atualizarModelosDocumento(
+    tenantId: string,
+    dados: AtualizarModelosDocumentoClienteDto
+  ): Promise<ModelosDocumentoCliente> {
+    await this.obterTenantAtivo(tenantId);
+
+    const erros = TIPOS_DOCUMENTO_CLINICO.flatMap((tipo) => {
+      const modelo = dados[tipo];
+      return modelo ? validarModelo(tipo, modelo).map((erro) => `${tipo}:${erro}`) : [];
+    });
+    if (erros.length) {
+      throw new BadRequestException(`Modelo de documento invalido. ${erros.join(', ')}`);
+    }
+
+    const valor: Record<string, unknown> = {};
+    for (const tipo of TIPOS_DOCUMENTO_CLINICO) {
+      const modelo = dados[tipo];
+      if (!modelo) continue;
+      valor[tipo] = {
+        titulo: this.texto(modelo.titulo, ''),
+        corpo: this.texto(modelo.corpo, '')
+      };
+    }
+
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(TenantConfiguracaoOrm);
+      const atual = await repositorio.findOne({
+        where: { tenantId, chave: CHAVE_MODELOS_DOCUMENTO }
+      });
+      await repositorio.save(
+        repositorio.create({
+          id: atual?.id,
+          tenantId,
+          chave: CHAVE_MODELOS_DOCUMENTO,
+          valor,
+          criadoEm: atual?.criadoEm
+        })
+      );
+    });
+
+    return this.obterModelosDocumento(tenantId);
+  }
+
+  private mapearModelosDocumento(tenantId: string, valor?: Record<string, unknown>): ModelosDocumentoCliente {
+    const salvos = valor ?? {};
+
+    return {
+      tenantId,
+      modelos: TIPOS_DOCUMENTO_CLINICO.map((tipo) => {
+        const salvo = this.objeto(salvos[tipo]);
+        const efetivo = resolverModelo(tipo, {
+          titulo: this.texto(salvo.titulo, ''),
+          corpo: this.texto(salvo.corpo, '')
+        });
+        return {
+          tipo,
+          titulo: efetivo.titulo,
+          corpo: efetivo.corpo,
+          personalizado: Boolean(this.texto(salvo.titulo, '') || this.texto(salvo.corpo, '')),
+          variaveis: variaveisDoTipo(tipo)
+        };
+      })
+    };
   }
 
   private async obterTenantAtivo(tenantId: string): Promise<TenantOrm> {

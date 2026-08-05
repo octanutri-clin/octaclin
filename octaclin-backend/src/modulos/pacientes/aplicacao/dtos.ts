@@ -23,6 +23,8 @@ import type {
 } from '../infraestrutura/acompanhamento-tarefa.orm';
 import type { TipoEvolucaoClinica, VisibilidadeEvolucaoClinica } from '../infraestrutura/evolucao-clinica.orm';
 import { PROTOCOLOS_COMPOSICAO } from '../dominio/antropometria';
+import { TIPOS_DOCUMENTO_CLINICO } from '../dominio/documentos-clinicos';
+import type { TipoDocumentoClinico } from '../dominio/documentos-clinicos';
 import type {
   DeltaAntropometrico,
   MedidasAntropometricas,
@@ -475,4 +477,62 @@ export interface SerieAntropometricaRespostaDto {
   avaliacoes: AvaliacaoAntropometricaRespostaDto[];
   /** Comparacao entre as duas mais recentes, ja calculada para o painel. */
   deltaUltimas: DeltaAntropometrico[];
+}
+
+export class EmitirDocumentoClinicoDto {
+  @IsIn(TIPOS_DOCUMENTO_CLINICO as unknown as string[])
+  tipo: TipoDocumentoClinico;
+
+  /** Obrigatoria para declaracao de comparecimento; validada no servico. */
+  @IsOptional()
+  @IsUUID()
+  consultaId?: string;
+
+  /** Texto livre do profissional no relatorio de alta. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  conteudo?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  cidadeEmissao?: string;
+}
+
+export class CancelarDocumentoClinicoDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  motivo?: string;
+}
+
+export interface DocumentoClinicoRespostaDto {
+  id: string;
+  tipo: TipoDocumentoClinico;
+  titulo: string;
+  corpo: string;
+  paragrafos: string[];
+  cabecalho?: {
+    clinicaNome: string;
+    clinicaDocumento: string;
+    clinicaEndereco: string;
+    profissionalNome: string;
+    profissionalRegistro: string;
+    profissionalEspecialidade: string;
+  };
+  consultaId?: string;
+  emitidoEm: string;
+  canceladoEm?: string;
+  motivoCancelamento?: string;
+  enviadoEm?: string;
+  podeEnviarPorEmail: boolean;
+  /** Variaveis do modelo que nao encontraram valor; a interface avisa quem emitiu. */
+  variaveisVazias: string[];
+}
+
+export interface ResultadoEnvioDocumentoDto {
+  status: 'pendente' | 'ignorado';
+  motivo?: 'contato_ausente' | 'canal_ausente' | 'template_ausente';
+  mensagemId?: string;
 }

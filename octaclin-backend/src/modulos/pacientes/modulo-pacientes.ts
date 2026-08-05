@@ -9,6 +9,7 @@ import { ModuloAuth } from '../auth/modulo-auth';
 import { ModuloClientes } from '../clientes/modulo-clientes';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ModuloAgenda } from '../agenda/modulo-agenda';
+import { ModuloComunicacoes } from '../comunicacoes/modulo-comunicacoes';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { LogDiarioRapidoOrm } from '../mobile/infraestrutura/log-diario-rapido.orm';
@@ -20,15 +21,18 @@ import { RespostaCheckinOrm } from '../questionarios/infraestrutura/resposta-che
 import { RespostaValorOrm } from '../questionarios/infraestrutura/resposta-valor.orm';
 import { UsuarioOrm } from '../usuarios/infraestrutura/usuario.orm';
 import { ServicoConvitesPaciente } from './aplicacao/servico-convites-paciente';
+import { ServicoDocumentosClinicos } from './aplicacao/servico-documentos-clinicos';
 import { ServicoPacientes } from './aplicacao/servico-pacientes';
 import { ServicoPortalPaciente } from './aplicacao/servico-portal-paciente';
 import { ControladorConvitesPaciente } from './apresentacao/controlador-convites-paciente';
+import { ControladorDocumentosClinicos } from './apresentacao/controlador-documentos-clinicos';
 import { ControladorPacientes } from './apresentacao/controlador-pacientes';
 import { ControladorPortalPaciente } from './apresentacao/controlador-portal-paciente';
 import { AcompanhamentoTarefaOrm } from './infraestrutura/acompanhamento-tarefa.orm';
 import { ConvitePacienteOrm } from './infraestrutura/convite-paciente.orm';
 import { EvolucaoClinicaOrm } from './infraestrutura/evolucao-clinica.orm';
 import { AvaliacaoAntropometricaOrm } from './infraestrutura/avaliacao-antropometrica.orm';
+import { DocumentoEmitidoOrm } from './infraestrutura/documento-emitido.orm';
 import { PacienteOrm } from './infraestrutura/paciente.orm';
 
 @Module({
@@ -40,6 +44,7 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
       AcompanhamentoTarefaOrm,
       EvolucaoClinicaOrm,
       AvaliacaoAntropometricaOrm,
+      DocumentoEmitidoOrm,
       UsuarioOrm,
       ConsentimentoLgpdOrm,
       UserActionLogOrm,
@@ -55,10 +60,24 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
     ModuloTenancy,
     ModuloAuth,
     ModuloClientes,
-    ModuloAgenda
+    ModuloAgenda,
+    ModuloComunicacoes
   ],
-  controllers: [ControladorPacientes, ControladorConvitesPaciente, ControladorPortalPaciente],
-  providers: [ServicoPacientes, ServicoConvitesPaciente, ServicoPortalPaciente, CriptografiaDadosSensiveis, ServicoSenhas, ServicoAuditoria],
-  exports: [ServicoPacientes, ServicoConvitesPaciente, ServicoPortalPaciente]
+  controllers: [
+    ControladorPacientes,
+    ControladorConvitesPaciente,
+    ControladorPortalPaciente,
+    ControladorDocumentosClinicos
+  ],
+  providers: [
+    ServicoPacientes,
+    ServicoConvitesPaciente,
+    ServicoPortalPaciente,
+    ServicoDocumentosClinicos,
+    CriptografiaDadosSensiveis,
+    ServicoSenhas,
+    ServicoAuditoria
+  ],
+  exports: [ServicoPacientes, ServicoConvitesPaciente, ServicoPortalPaciente, ServicoDocumentosClinicos]
 })
 export class ModuloPacientes {}

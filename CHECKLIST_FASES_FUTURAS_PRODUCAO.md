@@ -1199,9 +1199,45 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - 515 testes de backend e 138 de regressao visual/a11y aprovados. Ver
     `fase-207-antropometria-evolucao-medidas.md`.
 
-- [ ] Fase 208 - Documentos clinicos gerados.
+- [x] Fase 208 - Documentos clinicos gerados.
   - Gerar declaracoes e relatorios auditados com identidade da clinica,
     impressao/PDF e entrega pelos canais existentes.
+  - Concluida em 2026-08-05. Dominio `pacientes/dominio/documentos-clinicos.ts`
+    com dois tipos (declaracao de comparecimento e relatorio de alta), modelo
+    padrao em codigo e override por tenant em `tenant_configuracoes` — sem tabela
+    de modelos e sem seed, entao clinica nova emite no primeiro dia. Variavel
+    desconhecida no modelo do tenant e erro de salvamento, nao aviso: modelo com
+    typo sairia com buraco no lugar do nome e so o paciente descobriria.
+  - Tabela `documentos_emitidos` append-only com RLS forcada, corpo e cabecalho
+    criptografados. Guarda o texto **renderizado**, nao modelo mais variaveis:
+    modelo editado depois nao reescreve documento que ja esta na mao de terceiro.
+    Duas invariantes no banco — declaracao exige `consulta_id`, e indice unico
+    parcial impede duas declaracoes vivas para a mesma consulta.
+  - Declaracao so sai de consulta `concluida` (criterio de aceite), auditoria em
+    toda rota **inclusive na leitura**, e impressao por `@media print` sem
+    nenhuma biblioteca de PDF.
+  - Atestado ficou de fora de proposito: e ato privativo de medico e o produto
+    atende tambem nutricionista, psicologo e educador fisico.
+  - Revisao `ecc:healthcare-reviewer`: tres achados altos corrigidos. Documento
+    podia sair sem nome nem registro de conselho do profissional, e o unico aviso
+    tinha a classe `nao-imprimir` — nao saia na folha. Relatorio de alta somava
+    consultas e metas de **todos** os profissionais, contando a quem recebe o
+    papel que o paciente tambem e atendido por outra especialidade. E a alta
+    podia sair sob o registro de um profissional escrita por outro; agora exige
+    que quem emite seja o creditado, e profissional arquivado nao assina.
+  - Revisao `ecc:security-reviewer`: isolamento por tenant e por profissional,
+    RLS e ausencia de IDOR confirmados. Corrigido na origem um defeito
+    compartilhado — o adaptador SMTP reexpandia variaveis sobre texto ja
+    renderizado, entao paciente chamado `{{destino}}` receberia o proprio e-mail
+    no lugar do nome; **a agenda usava o mesmo caminho** e um nome contendo
+    `{{linkTeleconsulta}}` vazaria o link da sala. Valor de variavel passou a ser
+    escapado no corpo HTML, e `emitidoPor` deixou de escapar do DTO.
+  - Pendencia sistemica registrada: `mensagens_notificacao.payload` e jsonb em
+    claro. A declaracao vai por ali porque a agenda ja grava os mesmos campos
+    (nome, datas, ate `linkTeleconsulta`) desde a fase da agenda; o relatorio de
+    alta **nao vai**, porque ali o dado seria novo.
+  - 555 testes de backend e 140 de regressao visual/a11y aprovados. Ver
+    `fase-208-documentos-clinicos-gerados.md`.
 
 - [ ] Fase 209 - Financeiro da consulta e pacote de sessoes.
   - Registrar valores, pagamentos, recibos, recebimentos e pacotes opcionais;

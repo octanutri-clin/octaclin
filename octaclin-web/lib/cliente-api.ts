@@ -307,3 +307,42 @@ export async function revogarConviteUsuarioCliente(usuarioId: string): Promise<v
   const resposta = await fetch(`/api/cliente/usuarios/${usuarioId}/convite`, { method: 'DELETE' });
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
 }
+
+export type TipoDocumentoClinicoClienteApi = 'declaracao_comparecimento' | 'relatorio_alta';
+
+export interface ModeloDocumentoClienteApi {
+  tipo: TipoDocumentoClinicoClienteApi;
+  titulo: string;
+  corpo: string;
+  personalizado: boolean;
+  variaveis: string[];
+}
+
+export interface ModelosDocumentoClienteApi {
+  tenantId: string;
+  modelos: ModeloDocumentoClienteApi[];
+}
+
+export type AtualizarModelosDocumentoEntrada = Partial<
+  Record<TipoDocumentoClinicoClienteApi, { titulo?: string; corpo?: string }>
+>;
+
+export async function obterModelosDocumentoCliente(opcoes?: {
+  signal?: AbortSignal;
+}): Promise<ModelosDocumentoClienteApi> {
+  const resposta = await fetch('/api/cliente/modelos-documento', { cache: 'no-store', signal: opcoes?.signal });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<ModelosDocumentoClienteApi>;
+}
+
+export async function atualizarModelosDocumentoCliente(
+  entrada: AtualizarModelosDocumentoEntrada
+): Promise<ModelosDocumentoClienteApi> {
+  const resposta = await fetch('/api/cliente/modelos-documento', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entrada)
+  });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<ModelosDocumentoClienteApi>;
+}

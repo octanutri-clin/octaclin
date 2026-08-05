@@ -29,6 +29,7 @@ import { AdicionarIndiceBuscaPacientes1720000001013 } from './migracoes/17200000
 import { ProtegerArquivosMidia1720000001014 } from './migracoes/1720000001014-ProtegerArquivosMidia';
 import { AdicionarTeleconsultaAgenda1720000001015 } from './migracoes/1720000001015-AdicionarTeleconsultaAgenda';
 import { CriarAvaliacoesAntropometricas1720000001016 } from './migracoes/1720000001016-CriarAvaliacoesAntropometricas';
+import { CriarDocumentosEmitidos1720000001017 } from './migracoes/1720000001017-CriarDocumentosEmitidos';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -66,6 +67,7 @@ import { ConvitePacienteOrm } from '../../modulos/pacientes/infraestrutura/convi
 import { AcompanhamentoTarefaOrm } from '../../modulos/pacientes/infraestrutura/acompanhamento-tarefa.orm';
 import { EvolucaoClinicaOrm } from '../../modulos/pacientes/infraestrutura/evolucao-clinica.orm';
 import { AvaliacaoAntropometricaOrm } from '../../modulos/pacientes/infraestrutura/avaliacao-antropometrica.orm';
+import { DocumentoEmitidoOrm } from '../../modulos/pacientes/infraestrutura/documento-emitido.orm';
 import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { AgendamentoQuestionarioOrm } from '../../modulos/questionarios/infraestrutura/agendamento-questionario.orm';
@@ -125,6 +127,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AcompanhamentoTarefaOrm,
       EvolucaoClinicaOrm,
       AvaliacaoAntropometricaOrm,
+      DocumentoEmitidoOrm,
       CategoriaPerguntaOrm,
       QuestionarioOrm,
       PerguntaOrm,
@@ -194,7 +197,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AdicionarIndiceBuscaPacientes1720000001013,
       ProtegerArquivosMidia1720000001014,
       AdicionarTeleconsultaAgenda1720000001015,
-      CriarAvaliacoesAntropometricas1720000001016
+      CriarAvaliacoesAntropometricas1720000001016,
+      CriarDocumentosEmitidos1720000001017
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

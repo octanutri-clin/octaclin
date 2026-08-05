@@ -2,6 +2,7 @@ import { IsBoolean, IsEmail, IsHexColor, IsIn, IsNotEmpty, IsObject, IsOptional,
 import { Type } from 'class-transformer';
 import type { PapelUsuario } from '../../auth/dominio/usuario-autenticado';
 import type { PlanoSaasId } from '../dominio/planos-saas';
+import { TAMANHO_MAXIMO_CORPO, TAMANHO_MAXIMO_TITULO } from '../../pacientes/dominio/documentos-clinicos';
 
 export type PapelUsuarioClienteAdministrativo = Extract<PapelUsuario, 'Client' | 'Professional' | 'Collaborator'>;
 export type PapelUsuarioClienteCriavel = Extract<PapelUsuario, 'Professional' | 'Collaborator'>;
@@ -298,4 +299,34 @@ export class AtualizarPerfilEmpresaClienteDto {
   @ValidateNested()
   @Type(() => FiscalEmpresaClienteDto)
   fiscal: FiscalEmpresaClienteDto;
+}
+
+export class ModeloDocumentoClienteDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(TAMANHO_MAXIMO_TITULO)
+  titulo?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(TAMANHO_MAXIMO_CORPO)
+  corpo?: string;
+}
+
+/**
+ * Cada tipo e opcional: ausente significa "continua no padrao do produto".
+ * Conteudo das variaveis e validado no servico, contra o catalogo do tipo.
+ */
+export class AtualizarModelosDocumentoClienteDto {
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ModeloDocumentoClienteDto)
+  declaracao_comparecimento?: ModeloDocumentoClienteDto;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ModeloDocumentoClienteDto)
+  relatorio_alta?: ModeloDocumentoClienteDto;
 }

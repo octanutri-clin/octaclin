@@ -8,6 +8,7 @@ import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import {
   AtualizarConfiguracoesClienteDto,
+  AtualizarModelosDocumentoClienteDto,
   AtualizarPapelUsuarioClienteDto,
   AtualizarPerfilEmpresaClienteDto,
   CriarUsuarioClienteDto,
@@ -68,6 +69,33 @@ export class ControladorPortalCliente {
   @Permissoes('cliente.configuracoes.gerenciar')
   atualizarConfiguracoes(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: AtualizarConfiguracoesClienteDto) {
     return this.servicoPortalCliente.atualizarConfiguracoes(usuario.tenantId, dados);
+  }
+
+  @Get('modelos-documento')
+  @Permissoes('cliente.configuracoes.gerenciar')
+  obterModelosDocumento(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoPortalCliente.obterModelosDocumento(usuario.tenantId);
+  }
+
+  @Patch('modelos-documento')
+  @Permissoes('cliente.configuracoes.gerenciar')
+  async atualizarModelosDocumento(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: AtualizarModelosDocumentoClienteDto
+  ) {
+    const modelos = await this.servicoPortalCliente.atualizarModelosDocumento(usuario.tenantId, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'cliente.modelos_documento.atualizar',
+      recursoTipo: 'tenant',
+      recursoId: usuario.tenantId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { tipos: Object.keys(dados) }
+    });
+    return modelos;
   }
 
   @Get('perfil-empresa')

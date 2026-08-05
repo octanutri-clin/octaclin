@@ -138,4 +138,39 @@ describe('AdaptadorEmailSmtp', () => {
       }
     });
   });
+
+  /*
+   * Corpo vindo do payload ja foi renderizado por quem disparou. Segunda passada
+   * aqui trocaria `{{destino}}` dentro do nome do paciente pelo e-mail dele.
+   */
+  it('nao reexpande variaveis em conteudo que ja veio pronto no payload', async () => {
+    await new AdaptadorEmailSmtp().enviar({
+      canal: { configuracao: {} },
+      template: { nome: 'Documento', conteudo: {} },
+      payload: {
+        destino: 'paciente@example.com',
+        assunto: 'Declaracao de comparecimento',
+        texto: 'Declaro que {{destino}} Silva compareceu.'
+      }
+    } as never);
+
+    const [[argumentos]] = sendMail.mock.calls;
+    expect(argumentos.text).toBe('Declaro que {{destino}} Silva compareceu.');
+    expect(argumentos.text).not.toContain('paciente@example.com');
+  });
+
+  it('escapa o valor da variavel ao montar o corpo HTML do template', async () => {
+    await new AdaptadorEmailSmtp().enviar({
+      canal: { configuracao: {} },
+      template: { nome: 'Aviso', conteudo: { html: '<p>Ola {{nome}}</p>' } },
+      payload: {
+        destino: 'paciente@example.com',
+        assunto: 'Aviso',
+        nome: '<script>alert(1)</script>'
+      }
+    } as never);
+
+    const [[argumentos]] = sendMail.mock.calls;
+    expect(argumentos.html).toBe('<p>Ola &lt;script&gt;alert(1)&lt;/script&gt;</p>');
+  });
 });
