@@ -464,7 +464,7 @@ describe('ServicoOperacoes', () => {
   it('deve exportar falhas de outbox em CSV sem payload bruto', async () => {
     const { servico } = criarServico();
 
-    await expect(servico.exportarFalhasOutboxCsv('tenant-1')).resolves.toContain('"criadoEm","tipo","status","tentativas","erro","mensagemId"');
+    await expect(servico.exportarFalhasOutboxCsv('tenant-1')).resolves.toContain('criadoEm,tipo,status,tentativas,erro,mensagemId');
   });
 
   it('deve consolidar central de falhas de comunicacao por origem e canal', async () => {
@@ -654,9 +654,9 @@ describe('ServicoOperacoes', () => {
     const { servico } = criarServico();
 
     await expect(servico.exportarSolicitacaoLgpdCsv('tenant-1', 'LGPD-123')).resolves.toContain(
-      '"protocolo","pacienteId","tipo","status","criadoEm","responsavelId","detalhes"'
+      'protocolo,pacienteId,tipo,status,criadoEm,responsavelId,detalhes'
     );
-    await expect(servico.exportarSolicitacaoLgpdCsv('tenant-1', 'LGPD-123')).resolves.toContain('"LGPD-123","paciente-1","retificacao","recebida"');
+    await expect(servico.exportarSolicitacaoLgpdCsv('tenant-1', 'LGPD-123')).resolves.toContain('LGPD-123,paciente-1,retificacao,recebida');
     await expect(servico.exportarSolicitacaoLgpdCsv('tenant-1', 'LGPD-123')).resolves.not.toContain('usuarioPacienteId');
   });
 

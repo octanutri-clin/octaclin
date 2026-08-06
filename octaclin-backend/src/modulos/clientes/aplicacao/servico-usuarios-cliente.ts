@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
+import { montarCsv } from '../../../infraestrutura/exportacao/csv';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
@@ -196,26 +197,22 @@ export class ServicoUsuariosCliente {
       'motivo_revogacao',
       'email_erro'
     ];
-    const linhas = historico.itens.map((item) =>
-      [
-        item.email,
-        item.role,
-        item.status,
-        this.dataIso(item.criadoEm),
-        this.dataIso(item.expiraEm),
-        this.dataIso(item.usadoEm),
-        this.dataIso(item.revogadoEm),
-        item.criadoPorUsuarioId ?? '',
-        item.reenviadoPorUsuarioId ?? '',
-        item.revogadoPorUsuarioId ?? '',
-        item.motivoRevogacao ?? '',
-        item.emailErro ?? ''
-      ]
-        .map((valor) => this.campoCsv(valor))
-        .join(',')
-    );
+    const linhas = historico.itens.map((item) => [
+      item.email,
+      item.role,
+      item.status,
+      this.dataIso(item.criadoEm),
+      this.dataIso(item.expiraEm),
+      this.dataIso(item.usadoEm),
+      this.dataIso(item.revogadoEm),
+      item.criadoPorUsuarioId ?? '',
+      item.reenviadoPorUsuarioId ?? '',
+      item.revogadoPorUsuarioId ?? '',
+      item.motivoRevogacao ?? '',
+      item.emailErro ?? ''
+    ]);
 
-    return [cabecalho.join(','), ...linhas].join('\n');
+    return montarCsv(cabecalho, linhas);
   }
 
   async reenviarConvite(tenantId: string, usuarioExecutorId: string, usuarioId: string): Promise<UsuarioClienteRespostaDto> {
@@ -541,7 +538,4 @@ export class ServicoUsuariosCliente {
     return valor instanceof Date ? valor.toISOString() : '';
   }
 
-  private campoCsv(valor: string) {
-    return /[",\n\r]/.test(valor) ? `"${valor.replace(/"/g, '""')}"` : valor;
-  }
 }

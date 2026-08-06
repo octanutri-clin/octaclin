@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Between, EntityManager, FindOptionsWhere, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { montarCsv } from '../../../infraestrutura/exportacao/csv';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
@@ -1408,13 +1409,7 @@ export class ServicoOperacoes {
   }
 
   private montarCsv(cabecalho: string[], linhas: unknown[][]): string {
-    const conteudo = [cabecalho, ...linhas].map((linha) => linha.map((valor) => this.escaparCsv(valor)).join(',')).join('\n');
-    return `${conteudo}\n`;
-  }
-
-  private escaparCsv(valor: unknown): string {
-    const seguro = String(valor ?? '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""');
-    return `"${seguro}"`;
+    return montarCsv(cabecalho, linhas);
   }
 
   private serializarData(valor?: Date): string {
