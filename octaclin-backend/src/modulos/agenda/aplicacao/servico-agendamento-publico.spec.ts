@@ -13,6 +13,7 @@ import { ServicoAgenda } from './servico-agenda';
 import { ServicoAgendamentoPublico, solicitacaoPendenteExpirou } from './servico-agendamento-publico';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 
 interface EstadoFalso {
   links?: AgendaLinkPublicoOrm[];
@@ -199,6 +200,10 @@ function criarServico(estado: EstadoFalso = {}) {
       if (entidade === AgendaSolicitacaoOrm) return repositorios.solicitacao;
       if (entidade === TenantConfiguracaoOrm) return repositorios.configuracaoTenant;
       if (entidade === TenantOrm) return repositorios.tenant;
+      // Tenant sem usuario ativo: a solicitacao nasce sem destinatario e o
+      // publicador da Fase 210 sai antes de escrever. O fan-out em si esta
+      // coberto em registrar-notificacao.spec.ts.
+      if (entidade === UsuarioOrm) return { find: jest.fn(async () => []) };
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };

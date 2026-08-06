@@ -1,13 +1,34 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-05.
+Atualizado em 2026-08-06.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 209 - financeiro da consulta e pacote de sessoes,
+- Ultima fase concluida: Fase 210 - notificacoes in-app e tempo real, em
+  2026-08-06. O sino do console deixou de ser um link estatico e passou a contar
+  de verdade: centro de notificacoes por usuario com estado lido/nao lido para
+  mensagem recebida, solicitacao publica de agendamento, formulario respondido e
+  falha de envio. A tabela `notificacoes` (migration `1720000001020`, RLS
+  forcada) grava **uma linha por usuario destinatario** e **nao tem coluna de
+  titulo nem de corpo** — o texto vem do tipo na interface e o nome do paciente e
+  resolvido na leitura, sob o escopo de quem le, para o centro de notificacoes
+  nao virar uma segunda copia em claro do que a Fase 208 passou a cifrar. Quem
+  recebe e funcao pura testada: SuperAdmin e Collaborator veem tudo do tenant,
+  Professional so o proprio escopo, e evento **sem** dono identificado nao vai
+  para profissional nenhum, em vez de ir para todos. Na leitura o filtro e o
+  `usuarioId` do JWT, inclusive ao marcar como lida. Indice unico por evento com
+  `orIgnore` impede que webhook reentregue da Meta infle o contador, e a
+  publicacao entra na mesma transacao do fato de origem. **SSE foi trocado por
+  polling** (5s no sino, 20s nos paineis) por decisao explicita: a Fase 201 esta
+  com rollout pendente e o backend roda em uma instancia, entao o fan-out via
+  Redis nao teria funcao, e SSE aberto por aba manteria a instancia Render
+  acordada 24/7. Poll so com aba visivel e falha de poll nao pinta erro na tela.
+  620 testes de backend, typecheck, lint, `test:authz` e build web aprovados. Ver
+  `fase-210-notificacoes-in-app-tempo-real.md`.
+- Fase 209 - financeiro da consulta e pacote de sessoes,
   em 2026-08-05. A consulta passou a ter valor, forma de pagamento e status
   (pendente/pago/isento), com **dinheiro em inteiro de centavos em todo lugar** —
   nenhuma casa decimal atravessa servico, banco ou HTTP, porque `0.1 + 0.2`

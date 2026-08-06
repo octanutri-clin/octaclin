@@ -17,6 +17,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { obterSessao, type SessaoPublica } from '@/lib/auth-api';
+import { INTERVALO_ATUALIZACAO_PAINEL_MS, useAtualizacaoPeriodica } from '@/lib/hooks';
 import { listarProfissionais, type ProfissionalResumo } from '@/lib/cadastros-api';
 import {
   carregarResumoDashboardClinico,
@@ -114,7 +115,10 @@ export function PainelDashboard() {
     }
   }, [parametros, superAdmin]);
 
-  const carregar = useCallback(async () => {
+  // `silencioso` e a atualizacao automatica da Fase 210: recarrega sem esvaziar
+  // o painel nem pintar erro, senao a tela piscaria a cada intervalo e uma falha
+  // de rede transitoria viraria alarme no meio do atendimento.
+  const carregar = useCallback(async (silencioso = false) => {
     if (sessao && !superAdmin && !profissional) {
       setCarregando(false);
       setErro('Seu perfil nao possui acesso ao painel clinico.');
@@ -124,21 +128,26 @@ export function PainelDashboard() {
     const controlador = new AbortController();
     controladorRequisicao.current = controlador;
     const sequencia = ++sequenciaRequisicao.current;
-    setDados(null);
-    setCarregando(true);
-    setErro(null);
+    if (!silencioso) {
+      setDados(null);
+      setCarregando(true);
+      setErro(null);
+    }
     try {
       const novosDados = await carregarResumoDashboardClinico({
         periodo,
         profissionalId: superAdmin ? profissionalId || undefined : undefined,
         signal: controlador.signal
       });
-      if (sequencia === sequenciaRequisicao.current) setDados(novosDados);
+      if (sequencia === sequenciaRequisicao.current) {
+        setDados(novosDados);
+        if (silencioso) setErro(null);
+      }
     } catch (erroAtual) {
-      if (controlador.signal.aborted || sequencia !== sequenciaRequisicao.current) return;
+      if (silencioso || controlador.signal.aborted || sequencia !== sequenciaRequisicao.current) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar o painel clinico.');
     } finally {
-      if (sequencia === sequenciaRequisicao.current) setCarregando(false);
+      if (!silencioso && sequencia === sequenciaRequisicao.current) setCarregando(false);
     }
   }, [periodo, profissional, profissionalId, sessao, superAdmin]);
 
@@ -146,6 +155,12 @@ export function PainelDashboard() {
     if (sessao !== null) void carregar();
     return () => controladorRequisicao.current?.abort();
   }, [carregar, sessao]);
+
+  const recarregarEmSegundoPlano = useCallback(() => {
+    if (sessao !== null) void carregar(true);
+  }, [carregar, sessao]);
+
+  useAtualizacaoPeriodica(recarregarEmSegundoPlano, INTERVALO_ATUALIZACAO_PAINEL_MS);
 
   const podeConcluirTarefa = podeAgir(sessao, 'pacientes.gerenciar');
   const podeRevisarFormulario = podeAgir(sessao, 'questionarios.gerenciar');

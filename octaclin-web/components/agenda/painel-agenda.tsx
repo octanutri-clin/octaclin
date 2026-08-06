@@ -26,6 +26,7 @@ import { AgendaSemanal } from '@/components/agenda/agenda-semanal';
 import { PacotesSessao } from '@/components/agenda/pacotes-sessao';
 import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi } from '@/lib/agendamento-publico-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
+import { INTERVALO_ATUALIZACAO_PAINEL_MS, useAtualizacaoPeriodica } from '@/lib/hooks';
 import {
   aprovarSolicitacaoPublicaAgenda,
   carregarBootstrapAgenda,
@@ -252,9 +253,14 @@ export function PainelAgenda() {
     [consultaSelecionadaId, consultas]
   );
 
-  async function carregar() {
-    setCarregando(true);
-    setErro(null);
+  // `silencioso` e a atualizacao automatica da Fase 210: a fila de solicitacoes
+  // e a agenda do dia se atualizam sem spinner e sem apagar o que esta sendo
+  // digitado. Falha de poll nao vira erro na tela.
+  async function carregar(silencioso = false) {
+    if (!silencioso) {
+      setCarregando(true);
+      setErro(null);
+    }
     try {
       const bootstrap = await carregarBootstrapAgenda();
       setConsultas(bootstrap.consultas);
@@ -273,16 +279,20 @@ export function PainelAgenda() {
           whatsappContato: atual.whatsappContato || contatoWhatsapp(paciente?.contato)
         };
       });
+      if (silencioso) setErro(null);
     } catch (erroAtual) {
+      if (silencioso) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar agenda.');
     } finally {
-      setCarregando(false);
+      if (!silencioso) setCarregando(false);
     }
   }
 
   useEffect(() => {
     void carregar();
   }, []);
+
+  useAtualizacaoPeriodica(() => void carregar(true), INTERVALO_ATUALIZACAO_PAINEL_MS);
 
   useEffect(() => {
     void obterStatusGoogleAgenda()

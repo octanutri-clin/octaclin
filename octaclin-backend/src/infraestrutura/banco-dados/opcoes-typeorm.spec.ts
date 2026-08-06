@@ -11,6 +11,7 @@ import { AdicionarRascunhoEnviosQuestionario1720000001010 } from './migracoes/17
 import { AdicionarRevisaoHumanaIa1720000001011 } from './migracoes/1720000001011-AdicionarRevisaoHumanaIa';
 import { IsolarIdempotenciaMobilePorPaciente1720000001012 } from './migracoes/1720000001012-IsolarIdempotenciaMobilePorPaciente';
 import { AdicionarIndiceBuscaPacientes1720000001013 } from './migracoes/1720000001013-AdicionarIndiceBuscaPacientes';
+import { CriarNotificacoesUsuario1720000001020 } from './migracoes/1720000001020-CriarNotificacoesUsuario';
 import { DashboardAlertaOcultoOrm } from '../../modulos/dashboard/infraestrutura/dashboard-alerta-oculto.orm';
 import { AgendaBloqueioManualOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-manual.orm';
 
@@ -75,7 +76,8 @@ describe('criarOpcoesTypeOrm', () => {
         AdicionarRascunhoEnviosQuestionario1720000001010,
         AdicionarRevisaoHumanaIa1720000001011,
         IsolarIdempotenciaMobilePorPaciente1720000001012,
-        AdicionarIndiceBuscaPacientes1720000001013
+        AdicionarIndiceBuscaPacientes1720000001013,
+        CriarNotificacoesUsuario1720000001020
       ])
     );
   });

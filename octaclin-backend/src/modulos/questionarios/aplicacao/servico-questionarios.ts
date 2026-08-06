@@ -7,6 +7,7 @@ import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguran
 import { obterSegredoFormularioPublico } from '../../../infraestrutura/seguranca/segredo-formulario-publico';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
+import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { normalizarConfiguracaoPergunta } from '../dominio/configuracao-pergunta';
 import { MODELOS_QUESTIONARIO, ModeloQuestionarioResumo, resumirModeloQuestionario } from '../dominio/modelos-questionario';
@@ -1179,6 +1180,13 @@ export class ServicoQuestionarios {
         paciente.ultimoCheckinEm = agora;
         await gerenciador.getRepository(PacienteOrm).save(paciente);
       }
+
+      await registrarNotificacao(gerenciador, tenantId, {
+        tipo: 'formulario_respondido',
+        recursoTipo: 'envio_questionario',
+        recursoId: envio.id,
+        pacienteId: envio.pacienteId
+      });
 
       return {
         envioId: envio.id,

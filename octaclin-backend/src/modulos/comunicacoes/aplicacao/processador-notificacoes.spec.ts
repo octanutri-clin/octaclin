@@ -2,6 +2,7 @@ import { ProcessadorNotificacoes } from './processador-notificacoes';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 
 function criarProcessador(adaptadorEmail: { enviar: jest.Mock }) {
   const mensagem = {
@@ -26,11 +27,16 @@ function criarProcessador(adaptadorEmail: { enviar: jest.Mock }) {
   const repositorioTemplates = {
     findOneByOrFail: jest.fn(async () => template)
   };
+  // Tenant sem usuario ativo: a falha de envio nao tem destinatario e o
+  // publicador da Fase 210 sai antes de escrever. Quem cobre o fan-out em si e
+  // registrar-notificacao.spec.ts.
+  const repositorioUsuarios = { find: jest.fn(async () => []) };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === MensagemNotificacaoOrm) return repositorioMensagens;
       if (entidade === CanalNotificacaoOrm) return repositorioCanais;
       if (entidade === TemplateMensagemOrm) return repositorioTemplates;
+      if (entidade === UsuarioOrm) return repositorioUsuarios;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };

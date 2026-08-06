@@ -452,6 +452,19 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   historico com 27 de 27 migrations executadas. Ver
   `fase-200-upload-seguro-anexos-clinicos.md`.
 
+- Fase 210 - Notificacoes in-app e tempo real: o sino do console deixou de ser um
+  link estatico e passou a contar de verdade. Centro de notificacoes por usuario
+  com estado lido/nao lido cobrindo mensagem recebida, solicitacao publica de
+  agendamento, formulario respondido e falha de envio; inbox de comunicacoes,
+  fila de solicitacoes e agenda do dia se atualizam sozinhas. A tabela
+  `notificacoes` nao guarda titulo nem corpo — o texto vem do tipo e o nome do
+  paciente e resolvido na leitura, para nao virar uma segunda copia em claro do
+  que a Fase 208 cifrou. Professional so recebe evento do proprio escopo, e
+  evento sem dono identificado nao vai para profissional nenhum. Atualizacao por
+  polling (5s no sino, 20s nos paineis) em vez de SSE, com decisao registrada:
+  com a Fase 201 sem rollout, o backend roda em uma instancia e o fan-out via
+  Redis nao teria funcao. Ver `fase-210-notificacoes-in-app-tempo-real.md`.
+
 ## Estado atual de uso
 
 O sistema esta em producao isolada aceita, com massa ficticia mantida fora do banco de producao, piloto interno aprovado, restore real validado e pacote juridico ampliado. A agenda agora tambem aceita solicitacoes publicas com aprovacao manual segura, sem reservar horario nem persistir token bruto, e distingue cancelamento pelo profissional de desmarcamento pelo paciente e de cancelamento originado no Google. O profissional conta com um painel clinico diario agregando prioridades da propria agenda de pacientes. Ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria: faltam recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido.

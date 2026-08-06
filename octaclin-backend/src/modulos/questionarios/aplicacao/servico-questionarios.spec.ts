@@ -159,6 +159,10 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === ProfissionalOrm) return repositorios.profissional;
       if (entidade === ArquivoMidiaOrm) return repositorios.arquivoMidia;
       if (entidade.name === 'PacienteOrm') return repositorios.paciente;
+      // Tenant sem usuario ativo: o formulario respondido nao tem destinatario e
+      // o publicador da Fase 210 sai antes de escrever. O fan-out em si esta
+      // coberto em registrar-notificacao.spec.ts.
+      if (entidade.name === 'UsuarioOrm') return { find: jest.fn(async () => []) };
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };

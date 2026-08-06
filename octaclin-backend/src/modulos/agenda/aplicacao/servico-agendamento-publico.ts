@@ -6,6 +6,7 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { ServicoProtecaoAbuso } from '../../auth/aplicacao/servico-protecao-abuso';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
@@ -216,7 +217,7 @@ export class ServicoAgendamentoPublico {
       const repositorio = gerenciador.getRepository(AgendaSolicitacaoOrm);
       const observacao = textoOpcional(dados.observacao);
 
-      await repositorio.save(
+      const solicitacao = await repositorio.save(
         repositorio.create({
           tenantId: link.tenantId,
           profissionalId: link.profissionalId,
@@ -229,6 +230,15 @@ export class ServicoAgendamentoPublico {
           expiraEm: inicioEm
         })
       );
+
+      // Solicitacao publica so existe se alguem da clinica olhar; ate a Fase 210
+      // ela dependia de o usuario abrir a tela certa por conta propria.
+      await registrarNotificacao(gerenciador, link.tenantId, {
+        tipo: 'solicitacao_agendamento',
+        recursoTipo: 'agenda_solicitacao',
+        recursoId: solicitacao.id,
+        profissionalId: link.profissionalId
+      });
 
       return { status: 'pendente' };
     });

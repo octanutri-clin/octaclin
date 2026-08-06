@@ -13,6 +13,7 @@ import { ModuloGamificacao } from './modulos/gamificacao/modulo-gamificacao';
 import { ModuloIa } from './modulos/ia/modulo-ia';
 import { ModuloMateriais } from './modulos/materiais/modulo-materiais';
 import { ModuloMobile } from './modulos/mobile/modulo-mobile';
+import { ModuloNotificacoes } from './modulos/notificacoes/modulo-notificacoes';
 import { ModuloOperacoes } from './modulos/operacoes/modulo-operacoes';
 import { ModuloPacientes } from './modulos/pacientes/modulo-pacientes';
 import { ModuloProfissionais } from './modulos/profissionais/modulo-profissionais';
@@ -37,6 +38,7 @@ import { ModuloUsuarios } from './modulos/usuarios/modulo-usuarios';
     ModuloPacientes,
     ModuloQuestionarios,
     ModuloComunicacoes,
+    ModuloNotificacoes,
     ModuloDashboard,
     ModuloAgenda,
     ModuloMateriais,

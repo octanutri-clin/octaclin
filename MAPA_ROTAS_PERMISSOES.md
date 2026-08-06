@@ -119,6 +119,7 @@ Inclui permissoes de `Professional` e adiciona:
 | Agenda | `/agenda` | `SuperAdmin`, `Professional`, `Collaborator` + `agenda.consultas.ler`/`agenda.consultas.criar` |
 | Financeiro da agenda | `/agenda` (pagamento, recebimentos, pacotes) | Pagamento e pacotes: `SuperAdmin`, `Professional`, `Collaborator` + `agenda.consultas.criar`. Recebimentos: `SuperAdmin`, `Professional`, `Client` + `agenda.financeiro.ler` |
 | Comunicacoes | `/comunicacoes` | `SuperAdmin`, `Professional`, `Collaborator` + permissoes de mensagens/canais/templates |
+| Notificacoes | `/notificacoes` | `SuperAdmin`, `Professional`, `Collaborator` + `console.acessar`; cada usuario le e marca apenas as proprias, pelo `usuarioId` do JWT |
 | Materiais | `/materiais` | `SuperAdmin`, `Professional`, `Collaborator` + `materiais.ler`/`materiais.gerenciar` |
 | Webhook WhatsApp | `/comunicacoes/webhooks/whatsapp` | Publico validado por token/assinatura |
 | Automacoes | `/automacoes` | `SuperAdmin`, `Professional` + `automacoes.gerenciar` |
@@ -150,6 +151,8 @@ Inclui permissoes de `Professional` e adiciona:
 | `/api/agenda/financeiro/recebimentos` | `/agenda/financeiro/recebimentos` | GET exige `agenda.financeiro.ler` (`SuperAdmin`, `Professional`, `Client`); fecha o periodo com recebido, pendente e quebra por profissional; `Professional` so ve o proprio escopo; backend audita a leitura |
 | `/api/agenda/pacotes` | `/agenda/pacotes` | GET exige `agenda.consultas.ler`; POST exige `agenda.consultas.criar`; lista e cria pacotes de sessao do paciente |
 | `/api/agenda/pacotes/[pacoteId]` | `/agenda/pacotes/:pacoteId` | DELETE exige `agenda.consultas.criar`; cancela o pacote sem apagar historico |
+| `/api/notificacoes` | `/notificacoes` | GET exige `console.acessar`; devolve contador de nao lidas e as ultimas notificacoes do proprio usuario; o filtro e o `usuarioId` do JWT, nunca um id de requisicao |
+| `/api/notificacoes/lidas` | `/notificacoes/lidas` | POST exige `console.acessar`; marca as proprias notificacoes como lidas (todas quando o corpo nao traz ids); id de outro usuario nao e alcancado pelo update |
 | `/api/pacientes/[id]/prontuario` | `/pacientes/:id/prontuario` | GET exige sessao operacional com `pacientes.ler`; backend audita leitura sensivel do prontuario |
 | `/api/pacientes/[id]/evolucoes` | `/pacientes/:id/evolucoes` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e criacao de anotacoes privadas |
 | `/api/pacientes/[id]/tarefas-acompanhamento` | `/pacientes/:id/tarefas-acompanhamento` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e prescricao de tarefas |

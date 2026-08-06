@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 import { In } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
 import { FILA_NOTIFICACOES } from './servico-comunicacoes';
 import { AdaptadorEmailSmtp } from '../infraestrutura/adaptadores/adaptador-email-smtp';
 import { AdaptadorNotificacao } from '../infraestrutura/adaptadores/adaptador-notificacao';
@@ -89,6 +90,14 @@ export class ProcessadorNotificacoes extends WorkerHost {
         mensagem.status = 'falhou';
         mensagem.erro = erro instanceof Error ? erro.message : 'Falha desconhecida no envio.';
         await repositorioMensagens.save(mensagem);
+        // Falha de envio era visivel so para quem abrisse a central de falhas
+        // (Fase 112). O lembrete que nao chegou vira consulta perdida.
+        await registrarNotificacao(gerenciador, tenantId, {
+          tipo: 'falha_envio',
+          recursoTipo: 'mensagem_notificacao',
+          recursoId: mensagem.id,
+          pacienteId: mensagem.pacienteId
+        });
         erroProcessamento = erro;
       }
     });

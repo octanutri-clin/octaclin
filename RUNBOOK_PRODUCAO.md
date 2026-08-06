@@ -150,6 +150,27 @@ removido e nos logs que nao houve URL assinada, token ou nome clinico exposto.
 Rollback de aplicacao: reverter o deploy. Nao executar o `down` da migration se
 ja houver anexos reais; as colunas sao aditivas e podem permanecer sem uso.
 
+### Notificacoes in-app (Fase 210)
+
+Com `BANCO_EXECUTAR_MIGRACOES=false`, aplicar a migration `1720000001020` com
+role `neondb_owner` pelo mesmo procedimento das migrations acima. Ela e aditiva:
+cria a tabela `notificacoes` com RLS forcada e nao altera tabela existente.
+
+Nao ha conexao persistente para operar. A atualizacao e por polling do navegador:
+5s no sino do console e 20s nos paineis de agenda, comunicacoes e dashboard, e
+so enquanto a aba esta visivel. Aba em segundo plano nao gera requisicao, o que
+importa no plano Render atual: conexao aberta o tempo todo manteria a instancia
+acordada e consumiria as horas mensais.
+
+Se o backend estiver hibernado, o poll falha em silencio e o sino mantem o ultimo
+estado; nao aparece erro na tela e a rodada seguinte se recupera sozinha. Um sino
+parado por muito tempo e sintoma de backend fora, nao de bug do sino — verificar
+por `/health` antes de investigar a fase.
+
+A tabela cresce sem expurgo automatico. A consulta quente usa indice parcial
+sobre nao lidas e a listagem usa `limit`, entao o efeito e de disco e nao de
+latencia; acompanhar o tamanho junto com as demais tabelas no Neon.
+
 ### Backup e restore
 
 Antes de go-live e antes de migrations sensiveis:

@@ -1283,9 +1283,38 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - 596 testes de backend aprovados, typecheck e lint limpos. Ver
     `fase-209-financeiro-consulta-pacote-sessoes.md`.
 
-- [ ] Fase 210 - Notificacoes in-app e tempo real.
-  - Implementar central de notificacoes e atualizacao via SSE com isolamento
+- [x] Fase 210 - Notificacoes in-app e tempo real.
+  - Implementar central de notificacoes e atualizacao automatica com isolamento
     por tenant/profissional e fallback por recarga periodica.
+  - Concluida em 2026-08-06. Tabela `notificacoes` (migration `1720000001020`)
+    com RLS forcada e **uma linha por usuario destinatario**: lido/nao lido e
+    coluna, nao join. O sino do console deixou de ser link estatico e passou a
+    contar de verdade.
+  - A tabela **nao tem coluna de titulo nem de corpo**. O texto vem do `tipo` na
+    interface e o nome do paciente e resolvido na leitura, sob o escopo de quem
+    le; sem isso o centro de notificacoes seria uma segunda copia em claro
+    exatamente do que a Fase 208 passou a cifrar.
+  - Isolamento em funcao pura testada: SuperAdmin e Collaborator recebem tudo do
+    tenant; Professional so quando e o dono identificado do evento; evento **sem**
+    dono nao vai para profissional nenhum, em vez de ir para todos. Patient e
+    Client nunca recebem. Na leitura, o filtro e o `usuarioId` do JWT — inclusive
+    ao marcar como lida, onde o id vem do cliente.
+  - Indice unico `(tenant, usuario, tipo, recurso)` com `orIgnore`: webhook da
+    Meta reentregue e outbox reprocessado nao inflam o contador. A publicacao
+    entra na mesma transacao do fato de origem.
+  - **SSE trocado por polling** (5s no sino, 20s nos paineis), por decisao
+    explicita do usuario: a Fase 201 esta com rollout pendente e roda uma
+    instancia so, entao o fan-out via Redis resolveria problema inexistente; SSE
+    aberto por aba manteria a instancia Render acordada 24/7; e o criterio de
+    aceite ja exigia recarga periodica como fallback. Retomar SSE quando a Fase
+    201 estiver em producao com mais de uma instancia.
+  - Poll so com aba visivel, recarga imediata ao voltar, e falha de poll nao
+    pinta erro na tela — vale tambem durante cold start do backend.
+  - Sem permissao nova (`console.acessar` basta) e sem auditoria de leitura: a
+    notificacao carrega ponteiro, nao dado clinico.
+  - 620 testes de backend, typecheck, lint, `test:authz`, `test:next15` e build
+    web aprovados. Ver `fase-210-notificacoes-in-app-tempo-real.md`.
+  - Pendente: aplicar a migration `1720000001020` em producao.
 
 - [ ] Fase 211 - Importacao em massa e exportacoes do cliente.
   - Importar pacientes com preview e idempotencia; exportar dados autorizados

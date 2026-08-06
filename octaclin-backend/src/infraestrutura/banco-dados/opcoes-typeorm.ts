@@ -32,6 +32,7 @@ import { CriarAvaliacoesAntropometricas1720000001016 } from './migracoes/1720000
 import { CriarDocumentosEmitidos1720000001017 } from './migracoes/1720000001017-CriarDocumentosEmitidos';
 import { CriptografarConteudoNotificacoes1720000001018 } from './migracoes/1720000001018-CriptografarConteudoNotificacoes';
 import { AdicionarFinanceiroConsulta1720000001019 } from './migracoes/1720000001019-AdicionarFinanceiroConsulta';
+import { CriarNotificacoesUsuario1720000001020 } from './migracoes/1720000001020-CriarNotificacoesUsuario';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -47,6 +48,7 @@ import { RefreshTokenOrm } from '../../modulos/auth/infraestrutura/refresh-token
 import { TokenRedefinicaoSenhaOrm } from '../../modulos/auth/infraestrutura/token-redefinicao-senha.orm';
 import { CanalNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { NotificacaoOrm } from '../../modulos/notificacoes/infraestrutura/notificacao.orm';
 import { TemplateMensagemOrm } from '../../modulos/comunicacoes/infraestrutura/template-mensagem.orm';
 import { ExecucaoRegraOrm } from '../../modulos/automacoes/infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from '../../modulos/automacoes/infraestrutura/regra-automacao.orm';
@@ -142,6 +144,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CanalNotificacaoOrm,
       TemplateMensagemOrm,
       MensagemNotificacaoOrm,
+      NotificacaoOrm,
       AgendaConsultaOrm,
       PacoteSessaoOrm,
       ProfissionalGoogleConexaoOrm,
@@ -204,7 +207,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CriarAvaliacoesAntropometricas1720000001016,
       CriarDocumentosEmitidos1720000001017,
       CriptografarConteudoNotificacoes1720000001018,
-      AdicionarFinanceiroConsulta1720000001019
+      AdicionarFinanceiroConsulta1720000001019,
+      CriarNotificacoesUsuario1720000001020
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

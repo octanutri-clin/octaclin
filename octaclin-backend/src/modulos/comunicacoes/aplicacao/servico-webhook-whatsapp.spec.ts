@@ -1,6 +1,8 @@
 import { ServicoWebhookWhatsapp } from './servico-webhook-whatsapp';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 
@@ -50,7 +52,8 @@ describe('ServicoWebhookWhatsapp', () => {
           tenantId: 'tenant-1',
           contatoCriptografado: Buffer.from(opcoes?.contatoPaciente ?? '5511999999999')
         }
-      ])
+      ]),
+      findOne: jest.fn(async () => ({ profissionalResponsavelId: 'profissional-ana' }))
     };
     const repositorioConsultas = {
       findOne: jest.fn(async () => opcoes?.consulta ?? null),
@@ -68,6 +71,28 @@ describe('ServicoWebhookWhatsapp', () => {
       descriptografar: jest.fn((valor: Buffer) => valor.toString())
     };
 
+    const repositorioUsuarios = {
+      find: jest.fn(async () => [
+        { id: 'usuario-admin', role: 'SuperAdmin' },
+        { id: 'usuario-ana', role: 'Professional' },
+        { id: 'usuario-bruno', role: 'Professional' }
+      ])
+    };
+    const repositorioProfissionais = {
+      findOne: jest.fn(async () => ({ usuarioId: 'usuario-ana' }))
+    };
+    const notificacoesGravadas: Record<string, unknown>[] = [];
+    const construtorInsercao: Record<string, jest.Mock> = {
+      insert: jest.fn(() => construtorInsercao),
+      into: jest.fn(() => construtorInsercao),
+      values: jest.fn((linhas: Record<string, unknown>[]) => {
+        notificacoesGravadas.push(...linhas);
+        return construtorInsercao;
+      }),
+      orIgnore: jest.fn(() => construtorInsercao),
+      execute: jest.fn(async () => ({ identifiers: notificacoesGravadas.map(() => ({ id: 'notificacao' })) }))
+    };
+
     const executorTenant = {
       executar: jest.fn(async (_tenantId, operacao) =>
         operacao({
@@ -76,8 +101,11 @@ describe('ServicoWebhookWhatsapp', () => {
             if (entidade === CanalNotificacaoOrm) return repositorioCanais;
             if (entidade === PacienteOrm) return repositorioPacientes;
             if (entidade === AgendaConsultaOrm) return repositorioConsultas;
+            if (entidade === UsuarioOrm) return repositorioUsuarios;
+            if (entidade === ProfissionalOrm) return repositorioProfissionais;
             return repositorioMensagens;
-          })
+          }),
+          createQueryBuilder: jest.fn(() => construtorInsercao)
         })
       )
     };
@@ -89,6 +117,7 @@ describe('ServicoWebhookWhatsapp', () => {
       repositorioCanais,
       repositorioPacientes,
       repositorioConsultas,
+      notificacoesGravadas,
       criptografia,
       executorTenant
     };
@@ -290,5 +319,36 @@ describe('ServicoWebhookWhatsapp', () => {
         })
       })
     );
+  });
+
+  it('avisa o console sobre a mensagem recebida sem copiar o texto do paciente', async () => {
+    const { servico, notificacoesGravadas } = criarServico();
+
+    await servico.registrarMensagensRecebidas([
+      {
+        phoneNumberId: 'phone-1',
+        mensagem: {
+          id: 'wamid-in-1',
+          from: '5511999999999',
+          timestamp: '1780000001',
+          type: 'text',
+          text: { body: 'Preciso remarcar minha consulta' }
+        }
+      }
+    ]);
+
+    // SuperAdmin (visao total) e a profissional responsavel pelo paciente.
+    expect(notificacoesGravadas.map((linha) => linha.usuarioId)).toEqual(['usuario-admin', 'usuario-ana']);
+    // Bruno atende outros pacientes: mensagem dela nao aparece no sino dele.
+    expect(notificacoesGravadas.map((linha) => linha.usuarioId)).not.toContain('usuario-bruno');
+
+    // A notificacao aponta para a mensagem; o texto do paciente continua so no
+    // campo cifrado da Fase 208.
+    expect(JSON.stringify(notificacoesGravadas)).not.toContain('remarcar');
+    expect(notificacoesGravadas[0]).toMatchObject({
+      tipo: 'mensagem_recebida',
+      recursoTipo: 'mensagem_notificacao',
+      pacienteId: 'paciente-1'
+    });
   });
 });

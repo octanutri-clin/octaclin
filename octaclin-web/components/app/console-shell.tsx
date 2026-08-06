@@ -5,7 +5,6 @@ import type { Route } from 'next';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import {
-  Bell,
   CalendarDays,
   CalendarPlus,
   ClipboardList,
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react';
 import { obterSessao, type SessaoPublica } from '@/lib/auth-api';
 import { PortalShell } from '@/components/app/portal-shell';
+import { SinoNotificacoes } from '@/components/app/sino-notificacoes';
 import { classesBotao } from '@/components/ui/botao';
 import { Dica } from '@/components/ui/dica';
 
@@ -86,9 +86,7 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
       {permissoes.includes('pacientes.gerenciar') ? (
         <AtalhoShell href="/pacientes#novo-paciente" rotulo="Novo paciente" icone={<UserRoundPlus size={16} />} />
       ) : null}
-      {permissoes.includes('comunicacoes.mensagens.ler') ? (
-        <AtalhoShell href="/comunicacoes" rotulo="Notificacoes" icone={<Bell size={16} />} />
-      ) : null}
+      {permissoes.includes('console.acessar') ? <SinoNotificacoes /> : null}
     </>
   ) : null;
 

@@ -8,6 +8,7 @@ import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { Abas } from '@/components/ui/abas';
 import { obterSessao } from '@/lib/auth-api';
+import { INTERVALO_ATUALIZACAO_PAINEL_MS, useAtualizacaoPeriodica } from '@/lib/hooks';
 import {
   CanalNotificacaoApi,
   MensagemNotificacaoApi,
@@ -405,10 +406,15 @@ export function PainelComunicacoes() {
   );
   const pacienteAssociacaoIdEfetivo = pacienteAssociacaoId || pacientes?.itens[0]?.id || '';
 
-  async function carregar() {
-    setCarregando(true);
-    setErro(null);
-    setSucesso(null);
+  // `silencioso` e a atualizacao automatica da Fase 210: a inbox se atualiza sem
+  // spinner e sem limpar o que o usuario acabou de digitar no formulario. Falha
+  // de poll nao vira erro na tela — a proxima rodada corrige.
+  async function carregar(silencioso = false) {
+    if (!silencioso) {
+      setCarregando(true);
+      setErro(null);
+      setSucesso(null);
+    }
     try {
       const bootstrap = await carregarBootstrapComunicacoes();
       setCanais(bootstrap.canais);
@@ -421,12 +427,16 @@ export function PainelComunicacoes() {
         canalId: atual.canalId || bootstrap.canais[0]?.id || '',
         templateId: atual.templateId || bootstrap.templates[0]?.id || ''
       }));
+      if (silencioso) setErro(null);
     } catch (erroAtual) {
+      if (silencioso) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar comunicacoes.');
     } finally {
-      setCarregando(false);
+      if (!silencioso) setCarregando(false);
     }
   }
+
+  useAtualizacaoPeriodica(() => void carregar(true), INTERVALO_ATUALIZACAO_PAINEL_MS);
 
   async function salvarCanal(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -605,7 +615,7 @@ export function PainelComunicacoes() {
             {canais.length} canais, {templates.length} templates, {mensagens.length} mensagens persistidas
           </p>
         </div>
-        <Botao onClick={carregar} disabled={carregando}>
+        <Botao onClick={() => void carregar()} disabled={carregando}>
           <RefreshCcw size={16} />
           {carregando ? 'Atualizando' : 'Atualizar'}
         </Botao>

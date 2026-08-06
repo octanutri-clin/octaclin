@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
@@ -148,14 +149,7 @@ export class ServicoWebhookWhatsapp {
         const canal = await this.obterCanalWhatsapp(gerenciador.getRepository(CanalNotificacaoOrm), tenant.id, entrada.phoneNumberId);
         if (!canal) return false;
 
-        return this.registrarMensagemNoTenant(
-          gerenciador.getRepository(MensagemNotificacaoOrm),
-          gerenciador.getRepository(PacienteOrm),
-          gerenciador.getRepository(AgendaConsultaOrm),
-          tenant.id,
-          canal,
-          entrada
-        );
+        return this.registrarMensagemNoTenant(gerenciador, tenant.id, canal, entrada);
       });
       if (criada) return true;
     }
@@ -182,13 +176,14 @@ export class ServicoWebhookWhatsapp {
   }
 
   private async registrarMensagemNoTenant(
-    repositorioMensagens: Repository<MensagemNotificacaoOrm>,
-    repositorioPacientes: Repository<PacienteOrm>,
-    repositorioConsultas: Repository<AgendaConsultaOrm>,
+    gerenciador: EntityManager,
     tenantId: string,
     canal: CanalNotificacaoOrm,
     entrada: MensagemRecebidaWebhookWhatsapp
   ): Promise<boolean> {
+    const repositorioMensagens = gerenciador.getRepository(MensagemNotificacaoOrm);
+    const repositorioPacientes = gerenciador.getRepository(PacienteOrm);
+    const repositorioConsultas = gerenciador.getRepository(AgendaConsultaOrm);
     const idExterno = entrada.mensagem.id;
     if (!idExterno || !entrada.mensagem.from) return false;
 
@@ -227,6 +222,12 @@ export class ServicoWebhookWhatsapp {
       this.criptografia
     );
     await repositorioMensagens.save(recebida);
+    await registrarNotificacao(gerenciador, tenantId, {
+      tipo: 'mensagem_recebida',
+      recursoTipo: 'mensagem_notificacao',
+      recursoId: recebida.id,
+      pacienteId
+    });
     await this.registrarConfirmacaoConsulta(repositorioConsultas, tenantId, entrada, envioAnterior, criadaEm);
 
     return true;
