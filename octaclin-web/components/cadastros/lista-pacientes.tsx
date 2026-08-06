@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Search, Trash2 } from 'lucide-react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Download, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Search, Trash2, Upload } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
+import { ImportacaoPacientes } from '@/components/cadastros/importacao-pacientes';
 import { Cartao, CartaoConteudo } from '@/components/ui/cartao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Etiqueta } from '@/components/ui/etiqueta';
@@ -116,6 +117,19 @@ export function ListaPacientes() {
   const [filtroStatus, setFiltroStatus] = useState(() => parametrosUrl.get('status') ?? 'todos');
   const [apenasSemProximaConsulta, setApenasSemProximaConsulta] = useState(() => parametrosUrl.get('semRetorno') === '1');
   const [pagina, setPagina] = useState(() => Math.max(1, Number(parametrosUrl.get('pagina') ?? 1) || 1));
+  const [modalImportacaoAberto, setModalImportacaoAberto] = useState(false);
+
+  /** Mesmos filtros da listagem: o CSV sai do que esta na tela, nao da base inteira. */
+  const urlExportacao = useMemo(() => {
+    const parametros = new URLSearchParams();
+    if (busca) parametros.set('busca', busca);
+    if (filtroRisco !== 'todos') parametros.set('risco', filtroRisco);
+    if (filtroProfissional !== 'todos') parametros.set('profissionalId', filtroProfissional);
+    if (filtroStatus !== 'todos') parametros.set('status', filtroStatus);
+    if (apenasSemProximaConsulta) parametros.set('semProximaConsulta', 'true');
+    const query = parametros.toString();
+    return `/api/pacientes/exportar.csv${query ? `?${query}` : ''}`;
+  }, [apenasSemProximaConsulta, busca, filtroProfissional, filtroRisco, filtroStatus]);
   const limite = 25;
 
   useEffect(() => {
@@ -276,11 +290,22 @@ export function ListaPacientes() {
               {dados ? `${dados.total} registros encontrados` : 'Carregando registros'}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Botao onClick={carregar} disabled={carregando}>
               <RefreshCcw size={16} />
               {carregando ? 'Atualizando' : 'Atualizar'}
             </Botao>
+            <Botao type="button" onClick={() => setModalImportacaoAberto(true)}>
+              <Upload size={16} />
+              Importar CSV
+            </Botao>
+            <a
+              href={urlExportacao}
+              className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-md border border-linha bg-superficie px-3 text-sm font-medium text-texto-forte hover:bg-white"
+            >
+              <Download size={16} />
+              Exportar CSV
+            </a>
             <Botao type="button" variante="primario" onClick={() => { setEditandoId(null); setFormulario({ ...formularioInicial, profissionalResponsavelId: profissionais[0]?.id ?? '' }); setModalPacienteAberto(true); }}>
               <Plus size={16} />
               Novo paciente
@@ -539,6 +564,16 @@ export function ListaPacientes() {
           </Botao>
         </div>
       </nav>
+
+      <ImportacaoPacientes
+        aberto={modalImportacaoAberto}
+        profissionais={profissionais}
+        aoFechar={() => setModalImportacaoAberto(false)}
+        aoConcluir={() => {
+          setModalImportacaoAberto(false);
+          void carregar();
+        }}
+      />
 
       <ModalConfirmacao
         aberto={pacienteParaArquivar !== null}

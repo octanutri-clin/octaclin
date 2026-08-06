@@ -22,6 +22,7 @@ import { RespostaValorOrm } from '../questionarios/infraestrutura/resposta-valor
 import { UsuarioOrm } from '../usuarios/infraestrutura/usuario.orm';
 import { ServicoConvitesPaciente } from './aplicacao/servico-convites-paciente';
 import { ServicoDocumentosClinicos } from './aplicacao/servico-documentos-clinicos';
+import { ServicoImportacaoPacientes } from './aplicacao/servico-importacao-pacientes';
 import { ServicoPacientes } from './aplicacao/servico-pacientes';
 import { ServicoPortalPaciente } from './aplicacao/servico-portal-paciente';
 import { ControladorConvitesPaciente } from './apresentacao/controlador-convites-paciente';
@@ -71,6 +72,7 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
   ],
   providers: [
     ServicoPacientes,
+    ServicoImportacaoPacientes,
     ServicoConvitesPaciente,
     ServicoPortalPaciente,
     ServicoDocumentosClinicos,

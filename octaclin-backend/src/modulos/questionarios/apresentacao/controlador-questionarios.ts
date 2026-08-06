@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
@@ -248,6 +249,28 @@ export class ControladorQuestionarios {
   @Get('questionarios/:id/respostas')
   listarRespostasQuestionario(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
     return this.servicoQuestionarios.listarRespostasQuestionario(usuario.tenantId, id, usuario);
+  }
+
+  @Get('questionarios/:id/respostas/exportar.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="octaclin-respostas-formulario.csv"')
+  async exportarRespostasCsv(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    const csv = await this.servicoQuestionarios.exportarRespostasCsv(usuario.tenantId, id, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'questionarios.respostas.exportar_csv',
+      recursoTipo: 'questionario',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: requisicao.headers['user-agent'],
+      metadados: { linhas: Math.max(csv.trim().split('\n').length - 1, 0) }
+    });
+    return csv;
   }
 
   @Get('questionarios/:id/respostas/leitura-clinica')

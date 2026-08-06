@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
@@ -38,6 +38,31 @@ export class ControladorAgenda {
   @Get('feed')
   listarFeed(@UsuarioAtual() usuario: UsuarioAutenticado, @Query() dados: ConsultarFeedAgendaDto) {
     return this.servicoAgenda.listarFeed(usuario.tenantId, dados, usuario);
+  }
+
+  @Get('consultas/exportar.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="octaclin-agenda.csv"')
+  async exportarConsultasCsv(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Query() dados: ConsultarFeedAgendaDto
+  ) {
+    const csv = await this.servicoAgenda.exportarConsultasCsv(usuario.tenantId, dados, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'agenda.consultas.exportar_csv',
+      recursoTipo: 'agenda_consulta',
+      ip: requisicao.ip,
+      userAgent: requisicao.headers['user-agent'],
+      metadados: {
+        inicioEm: dados.inicioEm,
+        fimEm: dados.fimEm,
+        linhas: Math.max(csv.trim().split('\n').length - 1, 0)
+      }
+    });
+    return csv;
   }
 
   @Post('bloqueios-manuais')

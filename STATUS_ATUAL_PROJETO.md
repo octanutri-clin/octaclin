@@ -7,7 +7,32 @@ Atualizado em 2026-08-06.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 210 - notificacoes in-app e tempo real, em
+- Ultima fase concluida: Fase 211 - importacao em massa e exportacoes do
+  cliente, em 2026-08-06. Clinica com carteira formada passou a migrar por
+  planilha: importacao em duas etapas onde a previa valida e devolve o relatorio
+  **sem gravar nada**, e o relatorio traz **uma entrada por linha do arquivo**,
+  inclusive as recusadas, com o numero da linha original — linha invalida que
+  some sem aviso e o pior resultado possivel de uma importacao. O leitor aguenta
+  planilha suja de verdade (BOM do Excel, CRLF, separador `;` do pt-BR, tab,
+  campo citado com quebra de linha dentro, cabecalho acentuado). Deduplicacao por
+  nome normalizado + data de nascimento **dentro da carteira do profissional
+  responsavel**, entao reimportar o mesmo arquivo nao cria nada e paciente de
+  outro profissional nunca e revelado como "duplicado". Professional so importa
+  para a propria carteira: o `profissionalResponsavelId` do corpo e ignorado.
+  Freios de abuso: `pacientes.gerenciar` na rota, 500 linhas por requisicao, 1 MB
+  de corpo, e o excedente do plano marcado como `limite_plano` em vez de estourar
+  o limite. Exportacao de pacientes, respostas de formulario e agenda saiu
+  **reaproveitando a listagem que ja tem o escopo**, e nao uma consulta paralela;
+  o CSV da agenda descarta bloqueio do Google, que existe no feed so como
+  "Indisponivel" para nao vazar compromisso pessoal. Toda exportacao registra na
+  auditoria o volume levado, nao so o clique. O CSV do produto virou fonte unica
+  com defesa contra injecao de formula (`=HYPERLINK` num nome de paciente
+  executava ao abrir a planilha). Criterio de aceite coberto por teste: 200
+  pacientes com 5 linhas invalidas produzem 195 criados e as 5 linhas
+  identificadas. 679 testes de backend em 98 suites, typecheck, lint,
+  `test:authz`, `test:next15` e build web aprovados. Sem migration. Ver
+  `fase-211-importacao-massa-exportacoes-cliente.md`.
+- Fase 210 - notificacoes in-app e tempo real, em
   2026-08-06. O sino do console deixou de ser um link estatico e passou a contar
   de verdade: centro de notificacoes por usuario com estado lido/nao lido para
   mensagem recebida, solicitacao publica de agendamento, formulario respondido e

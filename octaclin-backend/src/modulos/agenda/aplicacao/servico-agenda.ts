@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, In, IsNull, LessThan, MoreThan, MoreThanOrEqual, QueryFailedError } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { montarCsv } from '../../../infraestrutura/exportacao/csv';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverPacienteIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-paciente';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -122,6 +123,54 @@ export class ServicoAgenda {
       });
       return consultas.map((consulta) => this.mapearResposta(consulta));
     });
+  }
+
+  /**
+   * Exportacao da agenda do periodo. Sai do feed ja filtrado por escopo e
+   * descarta tudo que nao for consulta — bloqueio do Google entra no feed como
+   * "Indisponivel" justamente para nao vazar o compromisso pessoal do
+   * profissional, e num CSV isso seria permanente.
+   */
+  async exportarConsultasCsv(
+    tenantId: string,
+    dados: ConsultarFeedAgendaDto,
+    usuario: UsuarioAutenticado
+  ): Promise<string> {
+    const itens = await this.listarFeed(tenantId, dados, usuario);
+    const consultas = itens.filter(
+      (item): item is Extract<ItemFeedAgendaRespostaDto, { tipo: 'consulta' }> => item.tipo === 'consulta'
+    );
+
+    return montarCsv(
+      [
+        'id',
+        'pacienteId',
+        'pacienteNome',
+        'profissionalId',
+        'titulo',
+        'inicioEm',
+        'fimEm',
+        'timezone',
+        'status',
+        'modalidade',
+        'local',
+        'valorCentavos'
+      ],
+      consultas.map((consulta) => [
+        consulta.id,
+        consulta.pacienteId ?? '',
+        consulta.pacienteNome ?? '',
+        consulta.profissionalId,
+        consulta.titulo ?? '',
+        consulta.inicioEm.toISOString(),
+        consulta.fimEm.toISOString(),
+        consulta.timezone ?? '',
+        consulta.status,
+        consulta.modalidade ?? '',
+        consulta.local ?? '',
+        consulta.valorCentavos ?? 0
+      ])
+    );
   }
 
   async listarFeed(

@@ -157,6 +157,10 @@ Inclui permissoes de `Professional` e adiciona:
 | `/api/pacientes/[id]/evolucoes` | `/pacientes/:id/evolucoes` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e criacao de anotacoes privadas |
 | `/api/pacientes/[id]/tarefas-acompanhamento` | `/pacientes/:id/tarefas-acompanhamento` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e prescricao de tarefas |
 | `/api/pacientes/[id]/tarefas-acompanhamento/[tarefaId]` | `/pacientes/:id/tarefas-acompanhamento/:tarefaId` | PATCH exige `pacientes.gerenciar`; backend audita alteracao de status da tarefa |
+| `/api/pacientes/exportar.csv` | `/pacientes/exportar.csv` | GET exige `pacientes.listar`; sai da mesma listagem com escopo por profissional, teto de 5000 linhas; backend audita a exportacao com o volume levado |
+| `/api/pacientes/importar` | `/pacientes/importar` e `/pacientes/importar/previa` | POST exige `pacientes.gerenciar` (Collaborator nao importa); `?previa=1` valida sem gravar; Professional importa so para a propria carteira (responsavel do corpo ignorado); teto de 500 linhas e 1 MB; backend audita total/criados/duplicados/invalidos |
+| `/api/agenda/consultas/exportar.csv` | `/agenda/consultas/exportar.csv` | GET exige `agenda.consultas.ler`; sai do feed com escopo e descarta bloqueio do Google; backend audita periodo e volume |
+| `/api/questionarios/[id]/respostas/exportar.csv` | `/questionarios/:id/respostas/exportar.csv` | GET exige `questionarios.ler`; uma coluna por pergunta; questionario de outro profissional segue barrado pela mesma checagem da listagem; backend audita o volume |
 | `/api/materiais` | `/materiais` | GET exige `materiais.ler`; POST exige `materiais.gerenciar`; backend audita criacao |
 | `/api/materiais/pacientes/[pacienteId]` | `/materiais/pacientes/:pacienteId` | GET exige `materiais.ler` e `pacientes.ler`; POST exige `materiais.gerenciar` e `pacientes.gerenciar`; backend audita envio ao paciente |
 

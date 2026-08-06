@@ -1,4 +1,4 @@
-import { campoCsv, montarCsv } from './csv';
+import { analisarCsv, campoCsv, montarCsv } from './csv';
 
 describe('campoCsv', () => {
   it('deixa passar valor simples sem aspas', () => {
@@ -62,5 +62,84 @@ describe('montarCsv', () => {
 
   it('produz so o cabecalho quando nao ha linhas', () => {
     expect(montarCsv(['nome'], [])).toBe('nome\n');
+  });
+});
+
+describe('analisarCsv', () => {
+  it('le cabecalho e linhas de um arquivo limpo', () => {
+    const resultado = analisarCsv('nome,contato\nMaria,maria@octaclin.test\nJoao,11988887777\n');
+
+    expect(resultado.cabecalho).toEqual(['nome', 'contato']);
+    expect(resultado.linhas).toEqual([
+      { numero: 2, campos: ['Maria', 'maria@octaclin.test'] },
+      { numero: 3, campos: ['Joao', '11988887777'] }
+    ]);
+  });
+
+  it('ignora BOM que o Excel grava no inicio do arquivo', () => {
+    expect(analisarCsv('﻿nome\nMaria\n').cabecalho).toEqual(['nome']);
+  });
+
+  it('aceita CRLF do Windows', () => {
+    expect(analisarCsv('nome\r\nMaria\r\n').linhas).toEqual([{ numero: 2, campos: ['Maria'] }]);
+  });
+
+  it('detecta ponto e virgula, que e o separador do Excel em pt-BR', () => {
+    const resultado = analisarCsv('nome;contato\nMaria;11988887777\n');
+
+    expect(resultado.cabecalho).toEqual(['nome', 'contato']);
+    expect(resultado.linhas[0].campos).toEqual(['Maria', '11988887777']);
+  });
+
+  it('detecta tabulacao de planilha colada como texto', () => {
+    expect(analisarCsv('nome\tcontato\nMaria\t11988887777').cabecalho).toEqual(['nome', 'contato']);
+  });
+
+  it('respeita campo citado com separador, aspas e quebra de linha dentro', () => {
+    const resultado = analisarCsv('nome,obs\n"Souza, Maria","disse ""oi""\nna consulta"\n');
+
+    expect(resultado.linhas[0].campos).toEqual(['Souza, Maria', 'disse "oi"\nna consulta']);
+  });
+
+  it('conta o numero da linha do arquivo mesmo com campo multilinha', () => {
+    const resultado = analisarCsv('nome,obs\n"Maria","a\nb"\nJoao,c\n');
+
+    expect(resultado.linhas.map((linha) => linha.numero)).toEqual([2, 4]);
+  });
+
+  it('descarta linhas em branco no meio e no fim, que planilha exporta as centenas', () => {
+    const resultado = analisarCsv('nome\nMaria\n\n   \nJoao\n\n\n');
+
+    expect(resultado.linhas.map((linha) => linha.campos[0])).toEqual(['Maria', 'Joao']);
+  });
+
+  it('apara espaco em volta do campo nao citado', () => {
+    expect(analisarCsv('nome , contato\n Maria , 11988887777 ').cabecalho).toEqual(['nome', 'contato']);
+    expect(analisarCsv('nome, contato\n Maria , 11988887777 ').linhas[0].campos).toEqual([
+      'Maria',
+      '11988887777'
+    ]);
+  });
+
+  it('preserva espaco dentro de campo citado', () => {
+    expect(analisarCsv('nome\n" Maria "').linhas[0].campos).toEqual([' Maria ']);
+  });
+
+  it('normaliza cabecalho para minusculo sem acento, para casar "Nome" e "nome"', () => {
+    expect(analisarCsv('Nome;Data de Nascimento\nMaria;2000-01-01').cabecalho).toEqual([
+      'nome',
+      'data de nascimento'
+    ]);
+  });
+
+  it('devolve vazio para conteudo sem nada util', () => {
+    expect(analisarCsv('   \n\n')).toEqual({ cabecalho: [], linhas: [] });
+  });
+
+  it('mantem linha com contagem de colunas diferente, para o validador acusar', () => {
+    const resultado = analisarCsv('nome,contato\nMaria\nJoao,x,y');
+
+    expect(resultado.linhas[0].campos).toEqual(['Maria']);
+    expect(resultado.linhas[1].campos).toEqual(['Joao', 'x', 'y']);
   });
 });

@@ -10,7 +10,7 @@ import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
-import { ServicoPacientes } from './servico-pacientes';
+import { LIMITE_LINHAS_EXPORTACAO, ServicoPacientes } from './servico-pacientes';
 
 function criarGerenciadorFake(repositorio: Record<string, unknown>) {
   if ('paciente' in repositorio || 'profissional' in repositorio) {
@@ -108,6 +108,90 @@ describe('ServicoPacientes', () => {
     await servico.listar('tenant-1', usuarioColaborador, 1, 500);
 
     expect(repositorio.findAndCount).toHaveBeenCalledWith(expect.objectContaining({ take: 100 }));
+  });
+
+  describe('exportarCsv', () => {
+    function montarServicoExportacao(paginas: Array<Array<Record<string, unknown>>>) {
+      let chamada = 0;
+      const repositorio = {
+        findAndCount: jest.fn(async () => {
+          const pagina = paginas[chamada] ?? [];
+          chamada += 1;
+          return [pagina, paginas.flat().length];
+        })
+      };
+      const servico = new ServicoPacientes(
+        {
+          executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+            operacao(criarGerenciadorFake(repositorio))
+          )
+        } as never,
+        {
+          descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('criptografado:', '')),
+          gerarHashesConsultaPii: jest.fn(() => ['hash'])
+        } as never,
+        limitesPermitidos as never
+      );
+      return { servico, repositorio };
+    }
+
+    const pacienteOrm = (id: string, nome: string) => ({
+      id,
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from(`criptografado:${nome}`),
+      dataNascimento: '1990-05-04',
+      statusAdesao: 'novo',
+      scoreRisco: '0',
+      criadoEm: new Date('2026-01-02T10:00:00.000Z')
+    });
+
+    it('exporta CSV com cabecalho e uma linha por paciente', async () => {
+      const { servico } = montarServicoExportacao([[pacienteOrm('paciente-1', 'Maria Souza')]]);
+
+      const csv = await servico.exportarCsv('tenant-1', usuarioColaborador);
+
+      const [cabecalho, primeira] = csv.trim().split('\n');
+      expect(cabecalho).toContain('nome');
+      expect(primeira).toContain('Maria Souza');
+    });
+
+    it('neutraliza nome com formula, que chega do proprio cadastro', async () => {
+      const { servico } = montarServicoExportacao([[pacienteOrm('paciente-1', '=HYPERLINK("http://x")')]]);
+
+      const csv = await servico.exportarCsv('tenant-1', usuarioColaborador);
+
+      expect(csv).toContain(`"'=HYPERLINK`);
+    });
+
+    it('mantem o escopo da listagem: exporta paginando a mesma consulta filtrada', async () => {
+      const { servico, repositorio } = montarServicoExportacao([
+        [pacienteOrm('paciente-1', 'Maria')],
+        []
+      ]);
+
+      await servico.exportarCsv('tenant-1', usuarioColaborador, {
+        pagina: 1,
+        limite: 100,
+        status: 'aderente'
+      } as never);
+
+      expect(repositorio.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ statusAdesao: 'aderente' }) })
+      );
+    });
+
+    it('para de paginar no teto de exportacao em vez de varrer a base inteira', async () => {
+      const paginaCheia = Array.from({ length: 100 }, (_item, indice) =>
+        pacienteOrm(`paciente-${indice}`, `Paciente ${indice}`)
+      );
+      const { servico, repositorio } = montarServicoExportacao(Array.from({ length: 100 }, () => paginaCheia));
+
+      const csv = await servico.exportarCsv('tenant-1', usuarioColaborador);
+
+      expect(csv.trim().split('\n')).toHaveLength(LIMITE_LINHAS_EXPORTACAO + 1);
+      expect(repositorio.findAndCount.mock.calls.length).toBeLessThanOrEqual(LIMITE_LINHAS_EXPORTACAO / 100);
+    });
   });
 
   it('deve aplicar busca e filtros no banco antes da paginacao', async () => {

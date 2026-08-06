@@ -1318,9 +1318,23 @@ publicado antes de ampliar a superficie de mudancas visuais.
     aplicadas apos backup validado; RLS, policies, indices e saude detalhada do
     backend conferidos.
 
-- [ ] Fase 211 - Importacao em massa e exportacoes do cliente.
+- [x] Fase 211 - Importacao em massa e exportacoes do cliente.
   - Importar pacientes com preview e idempotencia; exportar dados autorizados
     com auditoria e relatorio de erros.
+  - Concluida em 2026-08-06. CSV unificado em `infraestrutura/exportacao/csv.ts`
+    com defesa contra injecao de formula e leitor de CSV sujo (BOM, CRLF, `;`,
+    tab, campo multilinha) que preserva o numero da linha original. Importacao em
+    duas etapas (`/pacientes/importar/previa` nao grava nada) com relatorio de
+    **uma entrada por linha**, deduplicacao por nome + nascimento dentro da
+    carteira do responsavel (reimportar nao duplica), teto de 500 linhas, corpo
+    de 1 MB e respeito ao restante do plano. Professional so importa para a
+    propria carteira: o responsavel vindo do corpo e ignorado. Exportacao de
+    pacientes, respostas de formulario e agenda reaproveita a listagem que ja tem
+    o escopo, registra o volume na auditoria e exclui bloqueio do Google do CSV
+    da agenda. Criterio de aceite coberto por teste: 200 pacientes com 5 linhas
+    invalidas produzem 195 criados e as 5 linhas identificadas. 679 testes de
+    backend, typecheck, lint, `test:authz`, `test:next15` e build web aprovados.
+    Sem migration. Ver `fase-211-importacao-massa-exportacoes-cliente.md`.
 
 - [ ] Fase 212 - Desfazer, lixeira e restauracao.
   - Permitir desfazer imediato e restauracao auditada de registros arquivados,

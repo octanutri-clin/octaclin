@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { EntityManager, ILike, In, IsNull, LessThanOrEqual } from 'typeorm';
 import * as cronParser from 'cron-parser';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { montarCsv } from '../../../infraestrutura/exportacao/csv';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { obterSegredoFormularioPublico } from '../../../infraestrutura/seguranca/segredo-formulario-publico';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
@@ -783,6 +784,41 @@ export class ServicoQuestionarios {
           };
         });
     });
+  }
+
+  /**
+   * Exportacao das respostas em formato largo: uma linha por resposta e uma
+   * coluna por pergunta, que e como a clinica usa a planilha. Reaproveita
+   * `listarRespostasQuestionario`, entao o questionario de outro profissional
+   * continua barrado pela mesma checagem.
+   */
+  async exportarRespostasCsv(tenantId: string, questionarioId: string, usuario: UsuarioAutenticado): Promise<string> {
+    const respostas = await this.listarRespostasQuestionario(tenantId, questionarioId, usuario);
+
+    const enunciadoPorPergunta = new Map<string, string>();
+    respostas.forEach((resposta) =>
+      resposta.respostas.forEach((item) => {
+        if (!enunciadoPorPergunta.has(item.perguntaId)) enunciadoPorPergunta.set(item.perguntaId, item.enunciado);
+      })
+    );
+    const perguntasIds = [...enunciadoPorPergunta.keys()];
+
+    return montarCsv(
+      ['respostaId', 'pacienteId', 'finalizadoEm', ...perguntasIds.map((id) => enunciadoPorPergunta.get(id) ?? id)],
+      respostas.map((resposta) => {
+        const valores = new Map(resposta.respostas.map((item) => [item.perguntaId, item.valor]));
+        return [
+          resposta.respostaId,
+          resposta.pacienteId,
+          resposta.finalizadoEm?.toISOString() ?? '',
+          ...perguntasIds.map((id) => {
+            const valor = valores.get(id);
+            if (valor === undefined || valor === null) return '';
+            return typeof valor === 'object' ? JSON.stringify(valor) : valor;
+          })
+        ];
+      })
+    );
   }
 
   async obterLeituraClinicaQuestionario(

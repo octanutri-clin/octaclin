@@ -183,6 +183,49 @@ function criarServico(dados: Record<string, unknown> = {}) {
 }
 
 describe('ServicoAgenda', () => {
+  it('exporta em CSV so as consultas do periodo, sem bloqueio nem detalhe do Google', async () => {
+    const { servico } = criarServico({
+      consultas: [
+        {
+          id: 'consulta-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          titulo: 'Consulta - Ana',
+          inicioEm: new Date('2026-08-10T12:00:00.000Z'),
+          fimEm: new Date('2026-08-10T13:00:00.000Z'),
+          timezone: 'America/Sao_Paulo',
+          status: 'agendada',
+          notificacoes: {},
+          payload: { pacienteNome: 'Ana' }
+        }
+      ],
+      bloqueiosExternos: [
+        {
+          id: 'bloqueio-google-1',
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          googleEventId: 'evento-privado-google',
+          inicioEm: new Date('2026-08-11T14:00:00.000Z'),
+          fimEm: new Date('2026-08-11T15:00:00.000Z')
+        }
+      ]
+    });
+
+    const csv = await servico.exportarConsultasCsv(
+      'tenant-1',
+      { inicioEm: '2026-08-10T00:00:00.000Z', fimEm: '2026-08-17T00:00:00.000Z' },
+      usuarioColaborador
+    );
+    const linhas = csv.trim().split('\n');
+
+    expect(linhas[0]).toContain('pacienteNome');
+    expect(linhas).toHaveLength(2);
+    expect(linhas[1]).toContain('consulta-1');
+    expect(csv).not.toContain('evento-privado-google');
+    expect(csv).not.toContain('bloqueio-google-1');
+  });
+
   it('lista no feed apenas o intervalo solicitado e oculta os detalhes de bloqueio Google', async () => {
     const { servico } = criarServico({
       consultas: [

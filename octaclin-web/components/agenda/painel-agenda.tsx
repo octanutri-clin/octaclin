@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clipboard,
   Clock,
+  Download,
   Link2,
   Mail,
   MessageCircle,
@@ -238,6 +239,16 @@ export function PainelAgenda() {
   const [desfechoPendente, setDesfechoPendente] = useState<{ consulta: ConsultaAgendaApi; status: DesfechoConsultaAgenda } | null>(null);
   const [rotacionarLinkPendente, setRotacionarLinkPendente] = useState(false);
 
+  /** Janela fixa de 90 dias para tras e para frente: o painel nao carrega periodo escolhido. */
+  const urlExportacaoAgenda = useMemo(() => {
+    const noventaDias = 90 * 24 * 60 * 60 * 1000;
+    const agora = Date.now();
+    const parametros = new URLSearchParams({
+      inicioEm: new Date(agora - noventaDias).toISOString(),
+      fimEm: new Date(agora + noventaDias).toISOString()
+    });
+    return `/api/agenda/consultas/exportar.csv?${parametros}`;
+  }, []);
   const pacientesLista = useMemo(() => pacientes?.itens ?? [], [pacientes]);
   const profissionaisLista = useMemo(() => profissionais?.itens ?? [], [profissionais]);
   const proximasConsultas = useMemo(
@@ -1137,8 +1148,15 @@ export function PainelAgenda() {
               <h2 className="text-base font-semibold">Consultas agendadas</h2>
               <p className="mt-1 text-sm text-texto-suave">{proximasConsultas.length} consultas no periodo carregado</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <BarraCarregamento visivel={carregando} rotulo="Carregando agenda" />
+              <a
+                href={urlExportacaoAgenda}
+                className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-md border border-linha bg-superficie px-3 text-sm font-medium text-texto-forte hover:bg-white"
+              >
+                <Download size={16} />
+                Exportar CSV (90 dias)
+              </a>
               <Botao type="button" variante="primario" onClick={() => setModalCriarAberto(true)}>
                 <CalendarCheck size={16} />
                 Nova consulta

@@ -464,6 +464,21 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   polling (5s no sino, 20s nos paineis) em vez de SSE, com decisao registrada:
   com a Fase 201 sem rollout, o backend roda em uma instancia e o fan-out via
   Redis nao teria funcao. Ver `fase-210-notificacoes-in-app-tempo-real.md`.
+- Fase 211 - Importacao em massa e exportacoes do cliente: clinica com carteira
+  formada passou a migrar por planilha, e o cliente passou a levar os proprios
+  dados. Importacao em duas etapas — a previa valida e devolve o relatorio sem
+  gravar nada — com **uma entrada por linha do arquivo**, inclusive as recusadas,
+  pelo numero da linha original; o leitor aguenta planilha suja (BOM, CRLF,
+  separador `;`, tab, campo citado multilinha). Deduplicacao por nome
+  normalizado + nascimento dentro da carteira do profissional responsavel:
+  reimportar nao duplica, e paciente de outro profissional nunca aparece como
+  "duplicado". Professional importa so para a propria carteira. Freios de abuso:
+  `pacientes.gerenciar`, 500 linhas por requisicao, 1 MB de corpo e respeito ao
+  restante do plano. Exportacao de pacientes, respostas de formulario e agenda
+  reaproveita a listagem que ja aplica o escopo, exclui bloqueio do Google do CSV
+  da agenda e registra o volume levado na auditoria. O CSV do produto virou fonte
+  unica com defesa contra injecao de formula. Ver
+  `fase-211-importacao-massa-exportacoes-cliente.md`.
 
 ## Estado atual de uso
 

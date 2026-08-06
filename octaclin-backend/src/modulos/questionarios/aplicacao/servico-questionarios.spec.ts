@@ -947,6 +947,56 @@ describe('ServicoQuestionarios', () => {
     ]);
   });
 
+  it('deve exportar respostas em CSV com uma coluna por pergunta', async () => {
+    const finalizadoEm = new Date('2026-07-20T12:00:00.000Z');
+    const { servico } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in semanal' }],
+      perguntas: [
+        {
+          id: 'p1',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'sim_nao',
+          enunciado: 'Treinou?',
+          peso: '1',
+          obrigatoria: true,
+          configuracao: {},
+          ordem: 1
+        },
+        {
+          id: 'p2',
+          tenantId: 'tenant-1',
+          questionarioId: 'q1',
+          categoriaId: 'cat-1',
+          tipo: 'texto_longo',
+          enunciado: 'Observacoes, gerais',
+          peso: '1',
+          obrigatoria: false,
+          configuracao: {},
+          ordem: 2
+        }
+      ],
+      opcaos: [],
+      envios: [{ id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'respondido' }],
+      respostaCheckins: [
+        { id: 'resposta-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', envioQuestionarioId: 'envio-1', finalizadoEm }
+      ],
+      respostaValors: [
+        { id: 'valor-1', tenantId: 'tenant-1', respostaCheckinId: 'resposta-1', perguntaId: 'p1', valor: true },
+        { id: 'valor-2', tenantId: 'tenant-1', respostaCheckinId: 'resposta-1', perguntaId: 'p2', valor: '=SUM(A1)' }
+      ],
+      pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1', ultimoCheckinEm: finalizadoEm }]
+    });
+
+    const csv = await servico.exportarRespostasCsv('tenant-1', 'q1', usuarioColaborador);
+    const [cabecalho, linha] = csv.trim().split('\n');
+
+    expect(cabecalho).toBe('respostaId,pacienteId,finalizadoEm,Treinou?,"Observacoes, gerais"');
+    expect(linha).toBe(`resposta-1,paciente-1,2026-07-20T12:00:00.000Z,true,"'=SUM(A1)"`);
+  });
+
   it('deve agregar leitura clinica filtrada por paciente', async () => {
     const respostaPaciente1 = new Date('2026-07-20T12:00:00.000Z');
     const respostaPaciente2 = new Date('2026-07-19T12:00:00.000Z');

@@ -1,6 +1,6 @@
 'use client';
 
-import { ClipboardList, RefreshCcw, TrendingUp } from 'lucide-react';
+import { ClipboardList, Download, RefreshCcw, TrendingUp } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao } from '@/components/ui/cartao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
@@ -26,14 +26,25 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             <ClipboardList className="h-4 w-4 text-texto-suave" />
             <h2 className="text-sm font-semibold text-tinta">Leitura clinica das respostas</h2>
           </div>
-          <Botao
-            type="button"
-            onClick={() => void carregarRespostas(questionarioAtual?.id, pacienteFiltroRespostas)}
-            disabled={carregandoRespostas || !questionarioAtual}
-          >
-            <RefreshCcw className="h-4 w-4" />
-            {carregandoRespostas ? 'Atualizando respostas' : 'Atualizar respostas'}
-          </Botao>
+          <div className="flex flex-wrap items-center gap-2">
+            <Botao
+              type="button"
+              onClick={() => void carregarRespostas(questionarioAtual?.id, pacienteFiltroRespostas)}
+              disabled={carregandoRespostas || !questionarioAtual}
+            >
+              <RefreshCcw className="h-4 w-4" />
+              {carregandoRespostas ? 'Atualizando respostas' : 'Atualizar respostas'}
+            </Botao>
+            {questionarioAtual ? (
+              <a
+                href={`/api/questionarios/${questionarioAtual.id}/respostas/exportar.csv`}
+                className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-md border border-linha bg-superficie px-3 text-sm font-medium text-texto-forte hover:bg-white"
+              >
+                <Download className="h-4 w-4" />
+                Exportar CSV
+              </a>
+            ) : null}
+          </div>
         </div>
 
         <div className="grid gap-4 p-4">

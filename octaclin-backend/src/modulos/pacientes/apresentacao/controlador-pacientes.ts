@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -18,7 +19,8 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ListarPacientesDto } from '../aplicacao/dtos';
+import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarPacientesDto } from '../aplicacao/dtos';
+import { ServicoImportacaoPacientes } from '../aplicacao/servico-importacao-pacientes';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
 
 @Controller('pacientes')
@@ -28,6 +30,7 @@ import { ServicoPacientes } from '../aplicacao/servico-pacientes';
 export class ControladorPacientes {
   constructor(
     private readonly servicoPacientes: ServicoPacientes,
+    private readonly servicoImportacao: ServicoImportacaoPacientes,
     private readonly servicoAuditoria: ServicoAuditoria
   ) {}
 
@@ -76,6 +79,62 @@ export class ControladorPacientes {
       metadados: { pagina: filtros.pagina, limite: filtros.limite, total: resultado.total }
     });
     return resultado;
+  }
+
+  @Get('exportar.csv')
+  @Permissoes('pacientes.listar')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="octaclin-pacientes.csv"')
+  async exportarCsv(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Query() filtros: ListarPacientesDto
+  ) {
+    const csv = await this.servicoPacientes.exportarCsv(usuario.tenantId, usuario, filtros);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.exportar_csv',
+      recursoTipo: 'paciente',
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      // Exportacao em massa de PHI: a trilha registra o volume levado, nao so
+      // que alguem clicou em exportar.
+      metadados: { linhas: Math.max(csv.trim().split('\n').length - 1, 0), filtros: { ...filtros } }
+    });
+    return csv;
+  }
+
+  @Post('importar/previa')
+  @Permissoes('pacientes.gerenciar')
+  previaImportacao(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: ImportarPacientesDto) {
+    return this.servicoImportacao.previa(usuario.tenantId, usuario, dados);
+  }
+
+  @Post('importar')
+  @Permissoes('pacientes.gerenciar')
+  async importar(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: ImportarPacientesDto
+  ) {
+    const relatorio = await this.servicoImportacao.importar(usuario.tenantId, usuario, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.importar_csv',
+      recursoTipo: 'paciente',
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        total: relatorio.total,
+        criados: relatorio.criados,
+        duplicados: relatorio.duplicados,
+        invalidos: relatorio.invalidos,
+        bloqueadosPorPlano: relatorio.bloqueadosPorPlano
+      }
+    });
+    return relatorio;
   }
 
   @Get(':id')

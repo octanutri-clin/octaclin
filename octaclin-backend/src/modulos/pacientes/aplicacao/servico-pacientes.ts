@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { And, ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThanOrEqual, Not, Raw } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { montarCsv } from '../../../infraestrutura/exportacao/csv';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cliente';
@@ -39,6 +40,13 @@ import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
+
+/**
+ * Teto de linhas por exportacao. Exportacao em massa de PHI e vetor de
+ * exfiltracao: acima disto o caminho e o protocolo LGPD, nao um GET.
+ */
+export const LIMITE_LINHAS_EXPORTACAO = 5000;
+const PAGINA_EXPORTACAO = 100;
 
 @Injectable()
 export class ServicoPacientes {
@@ -118,6 +126,66 @@ export class ServicoPacientes {
         total
       };
     });
+  }
+
+  /**
+   * Exportacao da carteira em CSV.
+   *
+   * Pagina a propria `listar` de proposito: o escopo por profissional, o filtro
+   * e a busca ja moram la, e uma consulta paralela so para exportar seria a
+   * segunda chance de vazar paciente de outro profissional.
+   */
+  async exportarCsv(
+    tenantId: string,
+    usuario: UsuarioAutenticado,
+    filtros: ListarPacientesDto = new ListarPacientesDto()
+  ): Promise<string> {
+    const linhas: unknown[][] = [];
+
+    for (let pagina = 1; linhas.length < LIMITE_LINHAS_EXPORTACAO; pagina += 1) {
+      const { itens } = await this.listar(tenantId, usuario, pagina, PAGINA_EXPORTACAO, filtros);
+      if (!itens.length) break;
+
+      for (const paciente of itens) {
+        if (linhas.length >= LIMITE_LINHAS_EXPORTACAO) break;
+        linhas.push([
+          paciente.id,
+          paciente.nome,
+          paciente.contato ?? '',
+          paciente.dataNascimento ?? '',
+          paciente.statusAdesao,
+          paciente.scoreRisco,
+          paciente.profissionalResponsavelId,
+          this.serializarData(paciente.ultimaConsultaConcluidaEm),
+          this.serializarData(paciente.proximaConsultaEm),
+          this.serializarData(paciente.ultimoCheckinEm),
+          this.serializarData(paciente.criadoEm)
+        ]);
+      }
+      if (itens.length < PAGINA_EXPORTACAO) break;
+    }
+
+    return montarCsv(
+      [
+        'id',
+        'nome',
+        'contato',
+        'dataNascimento',
+        'statusAdesao',
+        'scoreRisco',
+        'profissionalResponsavelId',
+        'ultimaConsultaConcluidaEm',
+        'proximaConsultaEm',
+        'ultimoCheckinEm',
+        'criadoEm'
+      ],
+      linhas
+    );
+  }
+
+  private serializarData(valor?: Date | string): string {
+    if (!valor) return '';
+    return valor instanceof Date ? valor.toISOString() : valor;
   }
 
   async obterPorId(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<PacienteRespostaDto> {

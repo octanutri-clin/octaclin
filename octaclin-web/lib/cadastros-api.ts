@@ -102,6 +102,39 @@ async function requisitarSemConteudo(caminho: string, init?: RequestInit): Promi
   }
 }
 
+export type SituacaoLinhaImportacao = 'valido' | 'invalido' | 'duplicado' | 'limite_plano';
+
+export interface LinhaImportacaoPaciente {
+  linha: number;
+  nome?: string;
+  contato?: string;
+  dataNascimento?: string;
+  situacao: SituacaoLinhaImportacao;
+  erros: string[];
+}
+
+export interface RelatorioImportacaoPacientes {
+  total: number;
+  validos: number;
+  duplicados: number;
+  invalidos: number;
+  bloqueadosPorPlano: number;
+  criados: number;
+  linhas: LinhaImportacaoPaciente[];
+}
+
+/** `previa: true` valida e devolve o relatorio sem gravar nada. */
+export async function importarPacientes(
+  conteudo: string,
+  opcoes: { previa?: boolean; profissionalResponsavelId?: string } = {}
+): Promise<RelatorioImportacaoPacientes> {
+  return requisitar<RelatorioImportacaoPacientes>(`/api/pacientes/importar${opcoes.previa ? '?previa=1' : ''}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conteudo, profissionalResponsavelId: opcoes.profissionalResponsavelId })
+  });
+}
+
 export async function listarPacientes(filtros: FiltrosPacientes = {}): Promise<RespostaPaginada<PacienteResumo>> {
   const parametros = new URLSearchParams({
     pagina: String(filtros.pagina ?? 1),

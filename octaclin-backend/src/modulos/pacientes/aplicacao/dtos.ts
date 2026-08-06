@@ -88,6 +88,21 @@ export class ListarPacientesDto {
   semProximaConsulta?: boolean;
 }
 
+export class ImportarPacientesDto {
+  /**
+   * Conteudo do CSV como texto. O teto de 1 MB e freio de abuso no corpo da
+   * requisicao — o teto de linhas util fica em `LIMITE_LINHAS_IMPORTACAO`.
+   */
+  @IsString()
+  @MaxLength(1_000_000)
+  conteudo: string;
+
+  /** Ignorado quando quem importa e Professional: ali vale sempre o proprio vinculo. */
+  @IsOptional()
+  @IsUUID()
+  profissionalResponsavelId?: string;
+}
+
 export class AtualizarPacienteDto {
   @IsOptional()
   @IsUUID()
