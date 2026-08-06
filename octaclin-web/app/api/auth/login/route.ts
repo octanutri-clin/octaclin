@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { comEsperaDeColdStart } from '@/lib/server/cold-start-bff';
 import { obterConfiguracaoAcessoBff } from '@/lib/server/configuracao-acesso-bff';
 import { ErroApiUrlInvalida, RespostaToken, salvarSessaoBff } from '@/lib/server/sessao-bff';
 
@@ -52,17 +53,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ mensagem: 'Informe email e senha.' }, { status: 400 });
   }
 
+  // Autenticar de novo e seguro (nao cria nem altera nada), e a espera evita que
+  // um backend apenas hibernando apareca como "servico de acesso indisponivel".
+  // Credencial errada volta 401, que nao e status de cold start e nao repete —
+  // entao isto nao multiplica tentativa falha contra o bloqueio por senha.
   try {
-    resposta = await fetch(`${apiUrl}/auth/login`, {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tenantSlug,
-        email: body.email.trim(),
-        senha: body.senha
-      }),
-      cache: 'no-store'
-    });
+    resposta = await comEsperaDeColdStart(
+      () =>
+        fetch(`${apiUrl}/auth/login`, {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tenantSlug,
+            email: body.email.trim(),
+            senha: body.senha
+          }),
+          cache: 'no-store'
+        }),
+      true
+    );
   } catch {
     return NextResponse.json(
       { mensagem: 'Nao foi possivel conectar ao servico de acesso do OctaClin.' },

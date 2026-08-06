@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { comEsperaDeColdStart, ehStatusColdStart, metodoIdempotente } from './cold-start-bff';
 import { sessaoPossuiPermissao } from './permissoes-bff';
 
 const nomes = {
@@ -282,9 +283,12 @@ export async function requisitarBackendAutenticado(caminho: string, init?: Reque
       cache: 'no-store'
     });
 
+  // Backend hibernado leva ~30s para subir; sem isto a espera vira 500 na tela.
+  const podeRepetir = metodoIdempotente(init);
+
   let resposta: Response;
   try {
-    resposta = await executar();
+    resposta = await comEsperaDeColdStart(executar, podeRepetir);
   } catch {
     return respostaJsonBff(502, 'Nao foi possivel conectar ao backend configurado para esta sessao.');
   }
@@ -294,10 +298,16 @@ export async function requisitarBackendAutenticado(caminho: string, init?: Reque
     if (!renovada) throw new ErroSessaoAusente();
     sessao = renovada;
     try {
-      resposta = await executar();
+      resposta = await comEsperaDeColdStart(executar, podeRepetir);
     } catch {
       return respostaJsonBff(502, 'Nao foi possivel conectar ao backend configurado para esta sessao.');
     }
+  }
+
+  // Metodo que muda estado nao e repetido: devolve aviso honesto em vez do HTML
+  // da borda, que a interface exibiria como falha definitiva.
+  if (ehStatusColdStart(resposta.status)) {
+    return respostaJsonBff(503, 'O backend do OctaClin esta iniciando. Tente novamente em alguns segundos.');
   }
 
   return normalizarRespostaBackend(resposta, `Proxy BFF ${caminho}`);
