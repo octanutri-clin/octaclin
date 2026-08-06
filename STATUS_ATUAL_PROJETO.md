@@ -26,7 +26,9 @@ Atualizado em 2026-08-06.
   com rollout pendente e o backend roda em uma instancia, entao o fan-out via
   Redis nao teria funcao, e SSE aberto por aba manteria a instancia Render
   acordada 24/7. Poll so com aba visivel e falha de poll nao pinta erro na tela.
-  620 testes de backend, typecheck, lint, `test:authz` e build web aprovados. Ver
+  620 testes de backend, typecheck, lint, `test:authz` e build web aprovados. O
+  rollout de producao aplicou `1015` a `1020` apos backup validado e confirmou
+  RLS, policies, indices, `/health` e `/health/detalhado`. Ver
   `fase-210-notificacoes-in-app-tempo-real.md`.
 - Fase 209 - financeiro da consulta e pacote de sessoes,
   em 2026-08-05. A consulta passou a ter valor, forma de pagamento e status

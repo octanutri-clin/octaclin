@@ -1314,7 +1314,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
     notificacao carrega ponteiro, nao dado clinico.
   - 620 testes de backend, typecheck, lint, `test:authz`, `test:next15` e build
     web aprovados. Ver `fase-210-notificacoes-in-app-tempo-real.md`.
-  - Pendente: aplicar a migration `1720000001020` em producao.
+  - Rollout de producao concluido em 2026-08-06: migrations `1015` a `1020`
+    aplicadas apos backup validado; RLS, policies, indices e saude detalhada do
+    backend conferidos.
 
 - [ ] Fase 211 - Importacao em massa e exportacoes do cliente.
   - Importar pacientes com preview e idempotencia; exportar dados autorizados

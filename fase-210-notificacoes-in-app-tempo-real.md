@@ -141,10 +141,16 @@ Fechando as pendencias da fase, dois gates existentes mostraram-se cegos:
   cobertas pelo gate que a `MATRIZ_CONFIABILIDADE_TESTES.md` aponta como
   protecao de "Registro de migrations". Todas foram incluidas junto com a `1020`.
 
-## Pendente de producao
+## Rollout de producao
 
-Aplicar a migration `1720000001020` no banco de producao pelo procedimento do
-`RUNBOOK_PRODUCAO.md`. O CI nao executa migrations.
+Em 2026-08-06, o banco `Octaclin-db-producao` recebeu as migrations pendentes
+`1720000001015` a `1720000001020` com a role `neondb_owner`, apos backup logico
+validado. O pos-check confirmou todas como executadas, RLS forcada e policy de
+tenant nas novas tabelas, indices esperados e campos/constraints de agenda.
+
+O backend respondeu `200` em `/health` e `/health/detalhado` apos o rollout.
+O CI nao executa migrations; proximas migrations de producao continuam seguindo
+o procedimento do `RUNBOOK_PRODUCAO.md`.
 
 `console-regression.spec.mjs` e `jornadas-criticas.spec.mjs` nao foram
 executados: exigem backend e banco reais (`E2E_API_URL`, credenciais de tenant),
