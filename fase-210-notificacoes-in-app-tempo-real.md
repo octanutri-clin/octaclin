@@ -115,14 +115,37 @@ apontado ja e auditada onde precisa ser.
 
 - Backend: 96 suites e 620 testes aprovados (596 antes da fase).
 - Typecheck do backend aprovado.
-- Web: typecheck, lint, `test:authz` e `test:next15` (66 arquivos) aprovados.
+- Web: typecheck, lint, `test:authz`, `test:next15` (66 arquivos) e
+  `test:base-visual` aprovados.
 - `pnpm --dir octaclin-web build` aprovado.
+- `pnpm --dir octaclin-web test:a11y`: 10 testes aprovados em desktop e mobile.
 - Testes novos cobrem: destinatarios por papel (incluindo a nao entrega a
   profissional fora do escopo), fan-out e `orIgnore`, derivacao do responsavel
   pelo paciente, isolamento por `usuarioId` na leitura e na marcacao, e a
   notificacao criada pelo webhook sem copiar o texto do paciente.
 
+### Dois gates que estavam passando sem olhar
+
+Fechando as pendencias da fase, dois gates existentes mostraram-se cegos:
+
+- **`acessibilidade.spec.mjs`**: a sessao mockada do papel Professional nao tinha
+  `console.acessar`, entao o sino nao renderizava e o gate aprovava sem nunca
+  avaliar o botao novo. A permissao foi adicionada ao mock (o papel a tem de
+  verdade em `auth/dominio/permissoes.ts`), `/api/notificacoes` foi mockado, e o
+  teste do dashboard agora **afirma** que o sino esta em tela com o nome
+  acessivel e a contagem. Sem essa afirmacao, uma permissao faltando no mock
+  voltaria a esvaziar o gate em silencio.
+- **`opcoes-typeorm.spec.ts`**: a lista de migrations registradas parava na
+  `1013`. As migrations `1014` a `1019` — anexos, teleconsulta, antropometria,
+  documentos emitidos, cifra de conteudo e financeiro — nunca estiveram
+  cobertas pelo gate que a `MATRIZ_CONFIABILIDADE_TESTES.md` aponta como
+  protecao de "Registro de migrations". Todas foram incluidas junto com a `1020`.
+
 ## Pendente de producao
 
 Aplicar a migration `1720000001020` no banco de producao pelo procedimento do
 `RUNBOOK_PRODUCAO.md`. O CI nao executa migrations.
+
+`console-regression.spec.mjs` e `jornadas-criticas.spec.mjs` nao foram
+executados: exigem backend e banco reais (`E2E_API_URL`, credenciais de tenant),
+indisponiveis na maquina de desenvolvimento. Rodar antes do go-live.

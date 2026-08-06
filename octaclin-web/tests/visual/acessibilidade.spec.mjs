@@ -177,6 +177,10 @@ async function prepararDashboardMockado(page) {
         expiraEm: '2026-07-22T15:00:00.000Z',
         papel: 'Professional',
         permissoes: [
+          // `console.acessar` faz parte do papel Professional em
+          // `auth/dominio/permissoes.ts`; sem ela aqui o sino de notificacoes da
+          // Fase 210 nao renderiza e o gate passaria sem olhar para ele.
+          'console.acessar',
           'dashboard.ler',
           'agenda.consultas.ler',
           'agenda.consultas.criar',
@@ -185,6 +189,28 @@ async function prepararDashboardMockado(page) {
           'comunicacoes.mensagens.ler'
         ],
         destinoInicial: '/dashboard'
+      })
+    });
+  });
+
+  await page.route('**/api/notificacoes**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        naoLidas: 2,
+        itens: [
+          {
+            id: '11111111-1111-4111-8111-111111111111',
+            tipo: 'mensagem_recebida',
+            pacienteId: '22222222-2222-4222-8222-222222222222',
+            pacienteNome: 'Paciente Sintetico',
+            recursoTipo: 'mensagem_notificacao',
+            recursoId: '33333333-3333-4333-8333-333333333333',
+            lidoEm: null,
+            criadoEm: '2026-08-06T10:00:00.000Z'
+          }
+        ]
       })
     });
   });
@@ -674,6 +700,10 @@ test.describe('gate de acessibilidade - rotas criticas', () => {
     await prepararDashboardMockado(page);
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    // O sino da Fase 210 precisa estar em tela para as checagens abaixo o
+    // cobrirem. Sem esta linha, uma permissao faltando no mock faria o gate
+    // passar sem nunca olhar para o botao.
+    await expect(page.getByRole('button', { name: 'Notificacoes, 2 nao lidas' })).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
   });
 

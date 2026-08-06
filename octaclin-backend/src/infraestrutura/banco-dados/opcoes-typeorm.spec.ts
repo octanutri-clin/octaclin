@@ -11,6 +11,12 @@ import { AdicionarRascunhoEnviosQuestionario1720000001010 } from './migracoes/17
 import { AdicionarRevisaoHumanaIa1720000001011 } from './migracoes/1720000001011-AdicionarRevisaoHumanaIa';
 import { IsolarIdempotenciaMobilePorPaciente1720000001012 } from './migracoes/1720000001012-IsolarIdempotenciaMobilePorPaciente';
 import { AdicionarIndiceBuscaPacientes1720000001013 } from './migracoes/1720000001013-AdicionarIndiceBuscaPacientes';
+import { ProtegerArquivosMidia1720000001014 } from './migracoes/1720000001014-ProtegerArquivosMidia';
+import { AdicionarTeleconsultaAgenda1720000001015 } from './migracoes/1720000001015-AdicionarTeleconsultaAgenda';
+import { CriarAvaliacoesAntropometricas1720000001016 } from './migracoes/1720000001016-CriarAvaliacoesAntropometricas';
+import { CriarDocumentosEmitidos1720000001017 } from './migracoes/1720000001017-CriarDocumentosEmitidos';
+import { CriptografarConteudoNotificacoes1720000001018 } from './migracoes/1720000001018-CriptografarConteudoNotificacoes';
+import { AdicionarFinanceiroConsulta1720000001019 } from './migracoes/1720000001019-AdicionarFinanceiroConsulta';
 import { CriarNotificacoesUsuario1720000001020 } from './migracoes/1720000001020-CriarNotificacoesUsuario';
 import { DashboardAlertaOcultoOrm } from '../../modulos/dashboard/infraestrutura/dashboard-alerta-oculto.orm';
 import { AgendaBloqueioManualOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-manual.orm';
@@ -77,6 +83,12 @@ describe('criarOpcoesTypeOrm', () => {
         AdicionarRevisaoHumanaIa1720000001011,
         IsolarIdempotenciaMobilePorPaciente1720000001012,
         AdicionarIndiceBuscaPacientes1720000001013,
+        ProtegerArquivosMidia1720000001014,
+        AdicionarTeleconsultaAgenda1720000001015,
+        CriarAvaliacoesAntropometricas1720000001016,
+        CriarDocumentosEmitidos1720000001017,
+        CriptografarConteudoNotificacoes1720000001018,
+        AdicionarFinanceiroConsulta1720000001019,
         CriarNotificacoesUsuario1720000001020
       ])
     );
