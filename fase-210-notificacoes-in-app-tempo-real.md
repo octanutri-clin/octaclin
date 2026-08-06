@@ -152,6 +152,28 @@ O backend respondeu `200` em `/health` e `/health/detalhado` apos o rollout.
 O CI nao executa migrations; proximas migrations de producao continuam seguindo
 o procedimento do `RUNBOOK_PRODUCAO.md`.
 
+### O rollout revelou uma deriva de cinco migrations
+
+A fase previa aplicar so a `1020`. O rollout aplicou `1015` a `1020`, ou seja,
+producao estava **cinco migrations atras do codigo**: teleconsulta (Fase 206),
+antropometria (207), documentos emitidos (208), cifra de conteudo de mensagem e
+financeiro da consulta (209). Aquelas features estavam implantadas sem o schema
+delas — entidades apontando para colunas inexistentes — e nada apontava para
+isso: `/health/detalhado` respondia `200`, porque o check de banco e um
+`SELECT 1`, que passa igual com o schema errado.
+
+Contribuiu para a deriva passar batida uma inferencia errada registrada em
+2026-08-05: concluiu-se que a migration `1019` ja estava em producao porque as
+rotas da Fase 209 devolviam `401`. Nao provam nada — o `401` vem do guard de
+autenticacao, antes de qualquer acesso ao banco.
+
+Correcao aplicada em seguida, fora do escopo da fase: `/health/detalhado` ganhou
+`checks.migracoes`, que marca `falha` quando ha migration pendente e nomeia o
+comando a rodar. O `/health` simples continua estatico de proposito — migration
+pendente nao pode fazer o Render derrubar a instancia, so acender o alarme para
+quem opera. Ver `MATRIZ_CONFIABILIDADE_TESTES.md`, linha "Schema de producao
+atras do codigo".
+
 `console-regression.spec.mjs` e `jornadas-criticas.spec.mjs` nao foram
 executados: exigem backend e banco reais (`E2E_API_URL`, credenciais de tenant),
 indisponiveis na maquina de desenvolvimento. Rodar antes do go-live.

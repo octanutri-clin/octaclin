@@ -315,8 +315,23 @@ Campos principais:
 
 - `status: ok`: backend, banco e configuracoes criticas estao prontos.
 - `status: degradado`: backend e banco respondem, mas alguma integracao opcional esta ausente/incompleta.
-- `status: falha`: dependencia critica falhou, hoje principalmente banco.
-- `checks.banco`: executa `SELECT 1`.
+- `status: falha`: dependencia critica falhou — banco fora do ar ou schema atras
+  do codigo.
+- `checks.banco`: executa `SELECT 1`. Atencao: isso prova conexao viva, **nao**
+  schema correto. Use `checks.migracoes` para isso.
+- `checks.migracoes`: acusa migrations pendentes. `falha` aqui significa que o
+  banco esta atras do codigo implantado: as entidades apontam para colunas que
+  nao existem e as features da fase correspondente nao funcionam, ainda que o
+  login e o `/health` respondam normalmente. A correcao e rodar
+  `pnpm --dir octaclin-backend migration:run` pelo procedimento de migration
+  deste runbook, nunca reverter o deploy.
+
+  Este check existe porque em 2026-08-06 producao estava cinco migrations atras
+  (`1015` a `1019`) e nada apontava para isso: `/health/detalhado` respondia
+  `200`, e as Fases 206 a 209 estavam no ar com o schema faltando. Nao inferir
+  estado de migration por codigo HTTP de rota autenticada — `401` vem do guard,
+  antes de qualquer acesso ao banco, e nao prova nada.
+
 - `checks.redis`: valida se Redis/Upstash esta configurado.
 - `checks.email`: valida SMTP ou Gmail API.
 - `checks.whatsapp`: valida token e phone number id Meta.

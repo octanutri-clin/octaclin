@@ -24,6 +24,7 @@ export interface HealthDetalhado {
   checks: {
     backend: CheckHealth;
     banco: CheckHealth;
+    migracoes: CheckHealth;
     redis: CheckHealth;
     email: CheckHealth;
     whatsapp: CheckHealth;
@@ -50,6 +51,7 @@ export class ServicoSaude {
     const checks = {
       backend: this.verificarBackend(),
       banco: await this.verificarBanco(),
+      migracoes: await this.verificarMigracoes(),
       redis: await this.verificarRedis(),
       email: this.verificarEmail(),
       whatsapp: this.verificarWhatsapp(),
@@ -87,6 +89,37 @@ export class ServicoSaude {
         status: 'falha',
         mensagem: mensagemErro(erro)
       };
+    }
+  }
+
+  /**
+   * Banco atras do codigo e falha, nao degradacao.
+   *
+   * Em 2026-08-06 producao estava cinco migrations atras (`1015` a `1019`): as
+   * features das Fases 206 a 209 nao tinham como funcionar, entidades apontavam
+   * para colunas inexistentes, e este endpoint respondia `200` o tempo todo. O
+   * `SELECT 1` do check de banco passa igual com o schema errado — conexao viva
+   * nao quer dizer schema certo. Sem este check a deriva so aparece quando um
+   * usuario abre a tela.
+   */
+  private async verificarMigracoes(): Promise<CheckHealth> {
+    try {
+      if (!this.fonteDados.isInitialized) {
+        return { status: 'falha', mensagem: 'DataSource nao inicializado.' };
+      }
+
+      const registradas = this.fonteDados.migrations.length;
+      if (!(await this.fonteDados.showMigrations())) {
+        return { status: 'ok', detalhes: { registradas } };
+      }
+
+      return {
+        status: 'falha',
+        mensagem: 'Migrations pendentes; o schema esta atras do codigo. Rode pnpm --dir octaclin-backend migration:run.',
+        detalhes: { registradas }
+      };
+    } catch (erro) {
+      return { status: 'falha', mensagem: mensagemErro(erro) };
     }
   }
 

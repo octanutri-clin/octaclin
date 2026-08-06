@@ -22,7 +22,9 @@ describe('ServicoSaude', () => {
   it('deve retornar health detalhado sem expor secrets quando dependencias criticas estiverem configuradas', async () => {
     const fonteDados = {
       isInitialized: true,
-      query: jest.fn(async () => [{ ok: 1 }])
+      query: jest.fn(async () => [{ ok: 1 }]),
+      migrations: [{ name: "Migracao1" }],
+      showMigrations: jest.fn(async () => false)
     };
     const servico = new ServicoSaude(fonteDados as never, { ping: jest.fn(async () => 'PONG') } as never);
 
@@ -45,6 +47,10 @@ describe('ServicoSaude', () => {
       isInitialized: true,
       query: jest.fn(async () => {
         throw new Error('database unavailable');
+      }),
+      migrations: [{ name: 'Migracao1' }],
+      showMigrations: jest.fn(async () => {
+        throw new Error('database unavailable');
       })
     } as never);
 
@@ -64,7 +70,9 @@ describe('ServicoSaude', () => {
     const servico = new ServicoSaude(
       {
         isInitialized: true,
-        query: jest.fn(async () => [{ ok: 1 }])
+        query: jest.fn(async () => [{ ok: 1 }]),
+      migrations: [{ name: "Migracao1" }],
+      showMigrations: jest.fn(async () => false)
       } as never,
       redis as never
     );
@@ -80,7 +88,9 @@ describe('ServicoSaude', () => {
     const servico = new ServicoSaude(
       {
         isInitialized: true,
-        query: jest.fn(async () => [{ ok: 1 }])
+        query: jest.fn(async () => [{ ok: 1 }]),
+      migrations: [{ name: "Migracao1" }],
+      showMigrations: jest.fn(async () => false)
       } as never,
       { ping: jest.fn(async () => 'PONG') } as never
     );
@@ -101,7 +111,9 @@ describe('ServicoSaude', () => {
     const servico = new ServicoSaude(
       {
         isInitialized: true,
-        query: jest.fn(async () => [{ ok: 1 }])
+        query: jest.fn(async () => [{ ok: 1 }]),
+      migrations: [{ name: "Migracao1" }],
+      showMigrations: jest.fn(async () => false)
       } as never,
       redis as never
     );
@@ -129,7 +141,9 @@ describe('ServicoSaude', () => {
 
     const servico = new ServicoSaude({
       isInitialized: true,
-      query: jest.fn(async () => [{ ok: 1 }])
+      query: jest.fn(async () => [{ ok: 1 }]),
+      migrations: [{ name: "Migracao1" }],
+      showMigrations: jest.fn(async () => false)
     } as never);
 
     const resposta = await servico.verificarDetalhado();
@@ -139,5 +153,70 @@ describe('ServicoSaude', () => {
     expect(resposta.checks.email.status).toBe('degradado');
     expect(resposta.checks.whatsapp.status).toBe('degradado');
     expect(resposta.checks.googleCalendar.status).toBe('degradado');
+  });
+
+  // Em 2026-08-06 o banco de producao estava cinco migrations atras do codigo
+  // (`1015` a `1019`), e `/health/detalhado` respondia 200 assim mesmo. As
+  // features das Fases 206 a 209 nao tinham como funcionar e nada apontava para
+  // isso. Estes testes existem para que a deriva volte a ser visivel.
+  it('marca migrations pendentes como falha, porque o schema atras do codigo quebra feature em silencio', async () => {
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }]),
+        migrations: [{ name: 'Migracao1' }, { name: 'Migracao2' }],
+        showMigrations: jest.fn(async () => true)
+      } as never,
+      { ping: jest.fn(async () => 'PONG') } as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.checks.migracoes.status).toBe('falha');
+    expect(resposta.status).toBe('falha');
+    // O operador precisa saber o que rodar, nao so que algo esta errado.
+    expect(resposta.checks.migracoes.mensagem).toContain('migration:run');
+  });
+
+  it('marca migrations em dia como ok', async () => {
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }]),
+        migrations: [{ name: 'Migracao1' }, { name: 'Migracao2' }],
+        showMigrations: jest.fn(async () => false)
+      } as never,
+      { ping: jest.fn(async () => 'PONG') } as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.checks.migracoes).toEqual({
+      status: 'ok',
+      detalhes: { registradas: 2 }
+    });
+    expect(resposta.status).toBe('ok');
+  });
+
+  it('nao derruba o health inteiro quando a checagem de migrations falha', async () => {
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }]),
+        migrations: [{ name: 'Migracao1' }],
+        showMigrations: jest.fn(async () => {
+          throw new Error('permission denied for table migrations');
+        })
+      } as never,
+      { ping: jest.fn(async () => 'PONG') } as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.checks.migracoes.status).toBe('falha');
+    expect(resposta.checks.migracoes.mensagem).toBe('permission denied for table migrations');
+    // Os demais checks continuam sendo avaliados e reportados.
+    expect(resposta.checks.banco.status).toBe('ok');
+    expect(resposta.checks.redis.status).toBe('ok');
   });
 });
