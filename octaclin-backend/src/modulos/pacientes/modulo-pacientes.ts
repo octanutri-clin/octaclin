@@ -13,6 +13,11 @@ import { ModuloComunicacoes } from '../comunicacoes/modulo-comunicacoes';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { LogDiarioRapidoOrm } from '../mobile/infraestrutura/log-diario-rapido.orm';
+import { PlanoAlimentarItemOrm } from '../planos-alimentares/infraestrutura/plano-alimentar-item.orm';
+import { PlanoAlimentarRefeicaoOrm } from '../planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
+import { PlanoAlimentarSubstituicaoOrm } from '../planos-alimentares/infraestrutura/plano-alimentar-substituicao.orm';
+import { PlanoAlimentarVersaoOrm } from '../planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
+import { PlanoAlimentarOrm } from '../planos-alimentares/infraestrutura/plano-alimentar.orm';
 import { ProfissionalOrm } from '../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../questionarios/infraestrutura/envio-questionario.orm';
 import { PerguntaOrm } from '../questionarios/infraestrutura/pergunta.orm';
@@ -56,7 +61,12 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
       RespostaCheckinOrm,
       RespostaValorOrm,
       MensagemNotificacaoOrm,
-      LogDiarioRapidoOrm
+      LogDiarioRapidoOrm,
+      PlanoAlimentarOrm,
+      PlanoAlimentarVersaoOrm,
+      PlanoAlimentarRefeicaoOrm,
+      PlanoAlimentarItemOrm,
+      PlanoAlimentarSubstituicaoOrm
     ]),
     ModuloTenancy,
     ModuloAuth,

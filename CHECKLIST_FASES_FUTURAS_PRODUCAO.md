@@ -1380,9 +1380,28 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Cache foi conscientemente adiado por falta de gargalo medido. Sem migration
     ou alteracao em producao. Saida: `fase-215-performance-backend.md`.
 
-- [ ] Fase 216 - Plano alimentar e calculo nutricional (MVP).
-  - Executar somente apos decisao comercial; registrar formulas, versoes,
-    origem dos alimentos e validacao clinica.
+- [x] Fase 216 - Plano alimentar e calculo nutricional (MVP).
+  - Concluida em 2026-08-08. Editor profissional no prontuario e plano
+    publicado no portal do paciente, com rascunho, revisao humana, publicacao,
+    versoes imutaveis, historico, arquivamento, refeicoes e substituicoes.
+  - Calculo server-side com Mifflin-St Jeor, Harris-Benedict revisada e
+    FAO/OMS/UNU, fonte e versao registradas. Condicao especial bloqueia o fluxo
+    automatico; formula exige confirmacao de aplicabilidade pelo profissional.
+  - Catalogo TACO oficial versionado: 583 alimentos; ausencia de fibra/sodio
+    continua ausente e nao vira zero. Snapshot de composicao e calculo fica
+    criptografado na versao publicada.
+  - Migration `1720000001021`: sete tabelas, RLS forcada nas cinco clinicas,
+    FKs compostas por tenant, uma policy por tabela, triggers de imutabilidade e
+    publicacao, e auditoria transacional.
+  - Banco de integracao `octaclin_test_fase150b` atualizado de 27/34 para 34/34
+    migrations; RLS/policies/triggers e carga TACO validados. Producao permanece
+    pendente ate backup e URL owner explicitamente confirmados.
+  - Revisao independente concluida: concorrencia na reatribuicao, selecao da
+    publicacao mais recente, identidade do catalogo, descarte de rascunho,
+    chaves de reordenacao, impressao e permissoes da aba foram endurecidos.
+  - 107 suites e 770 testes backend, typechecks, lint, BFF 5/5, authz, Next 15
+    e build web de 116 paginas aprovados. Ver
+    `fase-216-plano-alimentar-calculo-nutricional.md`.
 
 - [ ] Fase 217 - PWA do portal do paciente.
   - Tornar o portal instalavel e suportar operacoes offline idempotentes sem

@@ -33,6 +33,7 @@ import { CriarDocumentosEmitidos1720000001017 } from './migracoes/1720000001017-
 import { CriptografarConteudoNotificacoes1720000001018 } from './migracoes/1720000001018-CriptografarConteudoNotificacoes';
 import { AdicionarFinanceiroConsulta1720000001019 } from './migracoes/1720000001019-AdicionarFinanceiroConsulta';
 import { CriarNotificacoesUsuario1720000001020 } from './migracoes/1720000001020-CriarNotificacoesUsuario';
+import { CriarPlanosAlimentares1720000001021 } from './migracoes/1720000001021-CriarPlanosAlimentares';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -87,6 +88,13 @@ import { TenantConfiguracaoOrm } from '../../modulos/tenancy/infraestrutura/tena
 import { TenantOrm } from '../../modulos/tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../modulos/usuarios/infraestrutura/usuario.orm';
 import { DashboardAlertaOcultoOrm } from '../../modulos/dashboard/infraestrutura/dashboard-alerta-oculto.orm';
+import { AlimentoComposicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/alimento-composicao.orm';
+import { FonteComposicaoAlimentoOrm } from '../../modulos/planos-alimentares/infraestrutura/fonte-composicao-alimento.orm';
+import { PlanoAlimentarItemOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-item.orm';
+import { PlanoAlimentarRefeicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
+import { PlanoAlimentarSubstituicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-substituicao.orm';
+import { PlanoAlimentarVersaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
+import { PlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar.orm';
 
 function criarConexaoBanco() {
   if (process.env.DATABASE_URL) {
@@ -191,6 +199,13 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AcompanhanteOrm,
       SincronizacaoMobileOrm,
       DashboardAlertaOcultoOrm,
+      PlanoAlimentarOrm,
+      PlanoAlimentarVersaoOrm,
+      PlanoAlimentarRefeicaoOrm,
+      PlanoAlimentarItemOrm,
+      PlanoAlimentarSubstituicaoOrm,
+      FonteComposicaoAlimentoOrm,
+      AlimentoComposicaoOrm,
       UserActionLogOrm,
       OutboxEventoOrm
     ],
@@ -227,7 +242,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CriarDocumentosEmitidos1720000001017,
       CriptografarConteudoNotificacoes1720000001018,
       AdicionarFinanceiroConsulta1720000001019,
-      CriarNotificacoesUsuario1720000001020
+      CriarNotificacoesUsuario1720000001020,
+      CriarPlanosAlimentares1720000001021
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

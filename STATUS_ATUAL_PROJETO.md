@@ -1,13 +1,23 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-06.
+Atualizado em 2026-08-08.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Ultima fase concluida: Fase 211 - importacao em massa e exportacoes do
+- Ultima fase concluida: Fase 216 - plano alimentar e calculo nutricional.
+  Profissional monta, revisa, publica e versiona planos no prontuario; o
+  paciente recebe somente a versao publicada atual no portal. Calculo
+  energetico e composicao rodam no backend, com fonte/versao, snapshots
+  criptografados, confirmacao clinica e bloqueio de condicoes especiais neste
+  MVP. Catalogo TACO versionado com 583 alimentos. Migration `1021` e catalogo
+  validados no banco de integracao, agora com 34/34 migrations; rollout de
+  producao ainda requer backup e URL owner explicitamente confirmados. 107
+  suites e 770 testes backend, typechecks, lint, authz, Next 15 e builds
+  aprovados. Ver `fase-216-plano-alimentar-calculo-nutricional.md`.
+- Fase 211 - importacao em massa e exportacoes do
   cliente, em 2026-08-06. Clinica com carteira formada passou a migrar por
   planilha: importacao em duas etapas onde a previa valida e devolve o relatorio
   **sem gravar nada**, e o relatorio traz **uma entrada por linha do arquivo**,

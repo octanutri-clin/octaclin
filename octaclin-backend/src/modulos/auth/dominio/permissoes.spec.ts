@@ -43,9 +43,13 @@ describe('Matriz de permissoes OctaClin', () => {
     expect(possuiPermissao('Professional', 'dashboard.ler')).toBe(true);
     expect(possuiPermissao('Professional', 'agenda.consultas.criar')).toBe(true);
     expect(possuiPermissao('Professional', 'pacientes.gerenciar')).toBe(true);
+    expect(possuiPermissao('Professional', 'planos_alimentares.ler')).toBe(true);
+    expect(possuiPermissao('Professional', 'planos_alimentares.gerenciar')).toBe(true);
     expect(possuiPermissao('Professional', 'questionarios.gerenciar')).toBe(true);
     expect(possuiPermissao('Collaborator', 'profissionais.gerenciar')).toBe(false);
     expect(possuiPermissao('Collaborator', 'pacientes.gerenciar')).toBe(false);
+    expect(possuiPermissao('Collaborator', 'planos_alimentares.ler')).toBe(false);
+    expect(possuiPermissao('Collaborator', 'planos_alimentares.gerenciar')).toBe(false);
     expect(possuiPermissao('Collaborator', 'questionarios.gerenciar')).toBe(false);
     expect(possuiPermissao('Collaborator', 'automacoes.gerenciar')).toBe(false);
     expect(possuiPermissao('Collaborator', 'ia.executar')).toBe(false);

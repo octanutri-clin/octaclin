@@ -45,6 +45,7 @@ import {
   registrarSolicitacaoLgpdPaciente
 } from '@/lib/portal-api';
 import { usePortalPaciente } from '@/components/portal/portal-contexto';
+import { PlanoAlimentarPaciente } from '@/components/portal/plano-alimentar-paciente';
 
 interface FormularioPerfilPaciente {
   nome: string;
@@ -832,7 +833,10 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
               </Cartao>
             </section>
 
-            <section id="plano" className={secao === 'plano' ? 'scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]' : 'hidden'}>
+            <section id="plano" className={secao === 'plano' ? 'scroll-mt-4 grid gap-4' : 'hidden'}>
+              <PlanoAlimentarPaciente plano={portal.planoAlimentar} />
+
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] print:hidden">
               <Cartao>
                 <CartaoCabecalho>
                   <CartaoTitulo icone={<Target className="h-4 w-4" />}>Plano de acompanhamento</CartaoTitulo>
@@ -902,6 +906,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                   )}
                 </CartaoConteudo>
               </Cartao>
+              </div>
             </section>
 
             <Cartao id="notificacoes" className={secao === 'mensagens' ? 'scroll-mt-4' : 'hidden'}>

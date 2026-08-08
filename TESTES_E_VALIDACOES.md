@@ -335,6 +335,24 @@ pnpm --dir octaclin-backend migration:run
 
 ## Validacao antes de commit
 
+### Fase 216 - plano alimentar
+
+```powershell
+pnpm --dir octaclin-backend test -- --runInBand
+pnpm --dir octaclin-backend typecheck
+pnpm --dir octaclin-backend build
+pnpm --dir octaclin-web test:planos-alimentares:bff
+pnpm --dir octaclin-web test:authz
+pnpm --dir octaclin-web test:next15
+pnpm --dir octaclin-web typecheck
+pnpm --dir octaclin-web lint
+pnpm --dir octaclin-web build
+```
+
+Depois da migration em banco confirmado, validar RLS forcada, policies,
+triggers, indices, fonte TACO e contagem de alimentos conforme
+`fase-216-plano-alimentar-calculo-nutricional.md`.
+
 Sempre:
 
 ```powershell

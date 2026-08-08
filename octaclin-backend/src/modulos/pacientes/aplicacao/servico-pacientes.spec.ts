@@ -1066,6 +1066,45 @@ describe('ServicoPacientes', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(repositorioPacientes.save).not.toHaveBeenCalled();
     });
+
+    it('deve travar a linha do paciente durante reatribuicao administrativa', async () => {
+      const paciente = {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Maria'),
+        statusAdesao: 'novo',
+        scoreRisco: '0'
+      };
+      const repositorioPacientes = {
+        findOne: jest.fn(async () => paciente),
+        save: jest.fn(async (dados: Record<string, unknown>) => dados)
+      };
+      const repositorioProfissionais = {
+        findOne: jest.fn(async () => ({ id: 'profissional-2', tenantId: 'tenant-1' }))
+      };
+      const servico = new ServicoPacientes(
+        {
+          executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+            operacao(criarGerenciadorFake({ paciente: repositorioPacientes, profissional: repositorioProfissionais }))
+          )
+        } as never,
+        { criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+        limitesPermitidos as never
+      );
+
+      await servico.atualizar(
+        'tenant-1',
+        'paciente-1',
+        { profissionalResponsavelId: 'profissional-2' },
+        usuarioColaborador
+      );
+
+      expect(repositorioPacientes.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({ lock: { mode: 'pessimistic_write' } })
+      );
+      expect(paciente.profissionalResponsavelId).toBe('profissional-2');
+    });
   });
 });
 

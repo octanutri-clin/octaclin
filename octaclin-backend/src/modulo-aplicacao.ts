@@ -16,6 +16,7 @@ import { ModuloMobile } from './modulos/mobile/modulo-mobile';
 import { ModuloNotificacoes } from './modulos/notificacoes/modulo-notificacoes';
 import { ModuloOperacoes } from './modulos/operacoes/modulo-operacoes';
 import { ModuloPacientes } from './modulos/pacientes/modulo-pacientes';
+import { ModuloPlanosAlimentares } from './modulos/planos-alimentares/modulo-planos-alimentares';
 import { ModuloProfissionais } from './modulos/profissionais/modulo-profissionais';
 import { ModuloQuestionarios } from './modulos/questionarios/modulo-questionarios';
 import { ModuloSaude } from './modulos/saude/modulo-saude';
@@ -36,6 +37,7 @@ import { ModuloUsuarios } from './modulos/usuarios/modulo-usuarios';
     ModuloUsuarios,
     ModuloProfissionais,
     ModuloPacientes,
+    ModuloPlanosAlimentares,
     ModuloQuestionarios,
     ModuloComunicacoes,
     ModuloNotificacoes,

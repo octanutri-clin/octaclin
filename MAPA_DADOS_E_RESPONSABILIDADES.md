@@ -12,6 +12,7 @@ papel de controlador ou operador nao e fixo para toda a relacao comercial.
 | Seguranca e auditoria | logs, identificadores e eventos de acesso | corresponsavel por uso adequado | controlador para seguranca do servico, conforme analise | retencao e acesso restrito |
 | Suporte | dados minimizados do chamado | controlador do proprio chamado | operador ou controlador conforme finalidade | sanitizacao e trilha de atendimento |
 | Provedores tecnicos | dados estritamente necessarios ao servico | controlador ou instrutor conforme operacao | contratante do suboperador | inventario e contrato aplicavel |
+| Plano alimentar e calculo nutricional | antropometria selecionada, estimativas, metas, refeicoes, porcoes e orientacoes | controlador e responsavel pela decisao clinica | operador, quando processar e armazenar por instrucao | revisao humana, versionamento imutavel, RLS, criptografia e minimizacao no portal |
 
 ## Responsabilidades propostas
 
@@ -23,3 +24,6 @@ papel de controlador ou operador nao e fixo para toda a relacao comercial.
   final e o runbook operacional correspondente.
 - A base legal e o papel de cada agente devem ser definidos por finalidade;
   aceite versionado e evidencia tecnica nao dispensam essa decisao juridica.
+- Equacoes nutricionais sao estimativas populacionais. O OctaClin registra a
+  formula, fonte, versao e confirmacao do profissional, mas nao substitui a
+  avaliacao clinica nem autoriza calculo automatico em condicao especial.

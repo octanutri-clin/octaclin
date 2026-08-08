@@ -120,8 +120,53 @@ export interface PortalPacienteApi {
     criadoEm: string;
     atualizadoEm: string;
   }[];
+  planoAlimentar?: PlanoAlimentarPacienteApi;
   diariosRecentes?: CheckinRapidoPacienteApi[];
   lgpd: LgpdPortalPacienteApi;
+}
+
+export interface NutrientesPlanoAlimentarPacienteApi {
+  energiaKcal?: number;
+  proteinasG?: number;
+  carboidratosG?: number;
+  gordurasG?: number;
+  fibrasG?: number;
+  sodioMg?: number;
+}
+
+export interface SubstituicaoPlanoAlimentarPacienteApi {
+  id: string;
+  descricao: string;
+  quantidade: number;
+  unidade: string;
+  porcaoGramas: number;
+  nutrientes: NutrientesPlanoAlimentarPacienteApi;
+}
+
+export interface ItemPlanoAlimentarPacienteApi extends SubstituicaoPlanoAlimentarPacienteApi {
+  substituicoes: SubstituicaoPlanoAlimentarPacienteApi[];
+}
+
+export interface PlanoAlimentarPacienteApi {
+  id: string;
+  titulo: string;
+  numeroVersao: number;
+  publicadoEm: string;
+  objetivo?: string;
+  orientacoes?: string;
+  metaEnergeticaKcal?: number;
+  macros?: {
+    carboidratosG?: number;
+    proteinasG?: number;
+    gordurasG?: number;
+  };
+  refeicoes: {
+    id: string;
+    nome: string;
+    horarioLocal?: string;
+    orientacoes?: string;
+    itens: ItemPlanoAlimentarPacienteApi[];
+  }[];
 }
 
 export interface CheckinRapidoPacienteApi {

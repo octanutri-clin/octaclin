@@ -14,6 +14,7 @@
     "test:agendamento-publico:bff": "node scripts/test-agendamento-publico-bff.mjs",
     "test:questionarios-revisao:bff": "node scripts/test-questionarios-revisao-bff.mjs",
     "test:importacao-pacientes": "node scripts/test-importacao-pacientes.mjs",
+    "test:planos-alimentares:bff": "node scripts/test-planos-alimentares-bff.mjs",
     "test:e2e:criticas": "playwright test tests/visual/jornadas-criticas.spec.mjs --reporter=list",
     "test:a11y": "playwright test tests/visual/acessibilidade.spec.mjs --reporter=list",
     "test:questionarios-preview": "node scripts/test-questionarios-preview.mjs",

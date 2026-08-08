@@ -121,6 +121,7 @@ Inclui permissoes de `Professional` e adiciona:
 | Comunicacoes | `/comunicacoes` | `SuperAdmin`, `Professional`, `Collaborator` + permissoes de mensagens/canais/templates |
 | Notificacoes | `/notificacoes` | `SuperAdmin`, `Professional`, `Collaborator` + `console.acessar`; cada usuario le e marca apenas as proprias, pelo `usuarioId` do JWT |
 | Materiais | `/materiais` | `SuperAdmin`, `Professional`, `Collaborator` + `materiais.ler`/`materiais.gerenciar` |
+| Planos alimentares | `/pacientes/:pacienteId/planos-alimentares`, `/planos-alimentares/alimentos` | `SuperAdmin`, `Professional` + `planos_alimentares.ler`/`planos_alimentares.gerenciar`; Professional limitado a propria carteira |
 | Webhook WhatsApp | `/comunicacoes/webhooks/whatsapp` | Publico validado por token/assinatura |
 | Automacoes | `/automacoes` | `SuperAdmin`, `Professional` + `automacoes.gerenciar` |
 | IA | `/ia` | `SuperAdmin`, `Professional` + `ia.executar` |
@@ -157,6 +158,9 @@ Inclui permissoes de `Professional` e adiciona:
 | `/api/pacientes/[id]/evolucoes` | `/pacientes/:id/evolucoes` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e criacao de anotacoes privadas |
 | `/api/pacientes/[id]/tarefas-acompanhamento` | `/pacientes/:id/tarefas-acompanhamento` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e prescricao de tarefas |
 | `/api/pacientes/[id]/tarefas-acompanhamento/[tarefaId]` | `/pacientes/:id/tarefas-acompanhamento/:tarefaId` | PATCH exige `pacientes.gerenciar`; backend audita alteracao de status da tarefa |
+| `/api/pacientes/[id]/planos-alimentares` | `/pacientes/:id/planos-alimentares` | GET exige `planos_alimentares.ler`; POST exige `planos_alimentares.gerenciar`; backend fixa tenant e escopo do profissional pelo JWT |
+| `/api/pacientes/[id]/planos-alimentares/[planoId]/*` | `/pacientes/:id/planos-alimentares/:planoId/*` | Rascunho, revisao, publicacao, nova versao e arquivamento exigem permissao especifica; publicacao audita e preserva snapshot imutavel |
+| `/api/pacientes/[id]/planos-alimentares/alimentos` | `/planos-alimentares/alimentos` | Busca autenticada de catalogo global; sem escrita HTTP e sem dado clinico no catalogo |
 | `/api/pacientes/exportar.csv` | `/pacientes/exportar.csv` | GET exige `pacientes.listar`; sai da mesma listagem com escopo por profissional, teto de 5000 linhas; backend audita a exportacao com o volume levado |
 | `/api/pacientes/importar` | `/pacientes/importar` e `/pacientes/importar/previa` | POST exige `pacientes.gerenciar` (Collaborator nao importa); `?previa=1` valida sem gravar; Professional importa so para a propria carteira (responsavel do corpo ignorado); teto de 500 linhas e 1 MB; backend audita total/criados/duplicados/invalidos |
 | `/api/agenda/consultas/exportar.csv` | `/agenda/consultas/exportar.csv` | GET exige `agenda.consultas.ler`; sai do feed com escopo e descarta bloqueio do Google; backend audita periodo e volume |

@@ -512,6 +512,21 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   leituras por rodada sem erro ou fila e o canario exigiu role sem `BYPASSRLS`,
   RLS forcado e zero pacientes visiveis fora do contexto de tenant. Cache foi
   adiado por falta de gargalo medido. Ver `fase-215-performance-backend.md`.
+- Fase 216 - Plano alimentar e calculo nutricional: o prontuario ganhou editor
+  de plano com rascunho, revisao, publicacao, nova versao, historico imutavel,
+  refeicoes, porcoes e substituicoes; o paciente ve apenas a publicacao atual em
+  linguagem simples e pode imprimir/salvar PDF. Tres equacoes energeticas rodam
+  somente no backend, com formula, fonte e versao registradas, confirmacao do
+  profissional e bloqueio integral para condicao especial neste MVP. O catalogo
+  TACO oficial virou artefato deterministico de 583 alimentos, com ausencias
+  preservadas e snapshot criptografado por versao. As cinco tabelas clinicas
+  usam RLS forcada e filhos de versao publicada sao imutaveis no banco. No
+  banco de integracao, migrations 1015 a 1021 foram aplicadas e o estado ficou
+  34/34; RLS, policies, triggers e catalogo foram conferidos. Rollout de
+  producao continua separado e pendente. A revisao independente tambem fechou
+  concorrencia na reatribuicao, selecao temporal da publicacao, identidade do
+  catalogo, protecao de rascunho, reordenacao, impressao e permissao da aba. Ver
+  `fase-216-plano-alimentar-calculo-nutricional.md`.
 
 ## Estado atual de uso
 

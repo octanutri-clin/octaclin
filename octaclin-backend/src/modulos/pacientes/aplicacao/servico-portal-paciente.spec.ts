@@ -10,6 +10,11 @@ import { PerguntaOrm } from '../../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-valor.orm';
+import { PlanoAlimentarItemOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-item.orm';
+import { PlanoAlimentarRefeicaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
+import { PlanoAlimentarSubstituicaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-substituicao.orm';
+import { PlanoAlimentarVersaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
+import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
@@ -82,7 +87,12 @@ function criarServico(dados: Record<string, any>) {
     tarefa: criarRepositorioFake('tarefa', dados),
     material: criarRepositorioFake('material', dados),
     envioMaterial: criarRepositorioFake('envioMaterial', dados),
-    diario: criarRepositorioFake('diario', dados)
+    diario: criarRepositorioFake('diario', dados),
+    planoAlimentar: criarRepositorioFake('planoAlimentar', dados),
+    planoAlimentarVersao: criarRepositorioFake('planoAlimentarVersao', dados),
+    planoAlimentarRefeicao: criarRepositorioFake('planoAlimentarRefeicao', dados),
+    planoAlimentarItem: criarRepositorioFake('planoAlimentarItem', dados),
+    planoAlimentarSubstituicao: criarRepositorioFake('planoAlimentarSubstituicao', dados)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -99,6 +109,11 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === MaterialEducativoOrm) return repositorios.material;
       if (entidade === EnvioMaterialPacienteOrm) return repositorios.envioMaterial;
       if (entidade === LogDiarioRapidoOrm) return repositorios.diario;
+      if (entidade === PlanoAlimentarOrm) return repositorios.planoAlimentar;
+      if (entidade === PlanoAlimentarVersaoOrm) return repositorios.planoAlimentarVersao;
+      if (entidade === PlanoAlimentarRefeicaoOrm) return repositorios.planoAlimentarRefeicao;
+      if (entidade === PlanoAlimentarItemOrm) return repositorios.planoAlimentarItem;
+      if (entidade === PlanoAlimentarSubstituicaoOrm) return repositorios.planoAlimentarSubstituicao;
       if (entidade === AvaliacaoAntropometricaOrm) return { find: jest.fn(async () => []) };
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
@@ -119,6 +134,292 @@ describe('ServicoPortalPaciente', () => {
   beforeEach(() => {
     process.env.OCTACLIN_WEB_URL = 'https://app.octaclin.test';
     process.env.FORMULARIO_PUBLICO_SEGREDO = 'segredo-teste-formulario';
+  });
+
+  it('deve expor a publicacao mais recente mesmo quando existe um plano em rascunho mais novo', async () => {
+    const publicadoEm = new Date('2026-08-08T12:00:00.000Z');
+    const { servico } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          profissionalResponsavelId: 'profissional-1',
+          statusAdesao: 'aderente'
+        }
+      ],
+      planoAlimentars: [
+        {
+          id: 'plano-rascunho-novo',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          tituloCriptografado: Buffer.from('cripto:Rascunho mais novo'),
+          versaoPublicadaAtualId: null,
+          criadoEm: new Date('2026-08-07T12:00:00.000Z')
+        },
+        {
+          id: 'plano-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          tituloCriptografado: Buffer.from('cripto:Plano alimentar de agosto'),
+          versaoPublicadaAtualId: 'versao-publicada-1',
+          criadoEm: new Date('2026-08-01T12:00:00.000Z')
+        }
+      ],
+      planoAlimentarVersaos: [
+        {
+          id: 'versao-publicada-1',
+          tenantId: 'tenant-1',
+          planoId: 'plano-1',
+          numero: 2,
+          publicadaEm: publicadoEm,
+          objetivosCriptografados: Buffer.from('cripto:Melhorar a regularidade das refeicoes.'),
+          observacoesCriptografadas: Buffer.from('cripto:Prefira alimentos in natura.'),
+          calculoSnapshotCriptografado: Buffer.from(
+            'cripto:{"metaEnergeticaKcal":2000,"metasMacronutrientes":{"carboidratosG":250,"proteinasG":100,"gordurasG":66.7},"formula":"mifflin","fatorAtividade":1.5,"metabolismoRepousoKcal":1300,"sexo":"feminino","idadeAnos":36,"alertasInternos":["revisar"]}'
+          ),
+          totaisSnapshotCriptografado: Buffer.from(
+            'cripto:{"energiaKcal":1988,"proteinasG":98,"carboidratosG":247,"gordurasG":67}'
+          ),
+          avaliacaoAntropometricaId: 'avaliacao-1',
+          formulaCodigo: 'mifflin_st_jeor_1990',
+          revisadaPorUsuarioId: 'usuario-profissional-1',
+          hashConteudo: 'hash-interno'
+        }
+      ],
+      planoAlimentarRefeicaos: [
+        {
+          id: 'refeicao-1',
+          tenantId: 'tenant-1',
+          versaoId: 'versao-publicada-1',
+          ordem: 1,
+          nomeCriptografado: Buffer.from('cripto:Cafe da manha'),
+          horarioLocal: '08:00:00',
+          orientacoesCriptografadas: Buffer.from('cripto:Consumir com calma.')
+        }
+      ],
+      planoAlimentarItems: [
+        {
+          id: 'item-1',
+          tenantId: 'tenant-1',
+          refeicaoId: 'refeicao-1',
+          ordem: 1,
+          descricaoCriptografada: Buffer.from('cripto:Mamao'),
+          quantidade: '1.000',
+          unidade: 'fatia',
+          porcaoGramas: '100.000',
+          composicaoSnapshotCriptografada: Buffer.from(
+            'cripto:{"origem":"catalogo","fonte":{"nome":"TACO","codigoExterno":"segredo"},"nutrientesPor100g":{"energiaKcal":45},"nutrientesPorcao":{"energiaKcal":45,"proteinasG":0.8,"carboidratosG":11.6,"gordurasG":0.1}}'
+          )
+        }
+      ],
+      planoAlimentarSubstituicaos: [
+        {
+          id: 'substituicao-1',
+          tenantId: 'tenant-1',
+          itemId: 'item-1',
+          ordem: 1,
+          descricaoCriptografada: Buffer.from('cripto:Melao'),
+          quantidade: '1.000',
+          unidade: 'fatia',
+          porcaoGramas: '100.000',
+          composicaoSnapshotCriptografada: Buffer.from(
+            'cripto:{"origem":"manual","nutrientesPorcao":{"energiaKcal":29,"proteinasG":0.7,"carboidratosG":7.5,"gordurasG":0}}'
+          )
+        }
+      ]
+    });
+
+    const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+
+    expect(portal.planoAlimentar).toEqual({
+      id: 'plano-1',
+      titulo: 'Plano alimentar de agosto',
+      numeroVersao: 2,
+      publicadoEm,
+      objetivo: 'Melhorar a regularidade das refeicoes.',
+      orientacoes: 'Prefira alimentos in natura.',
+      metaEnergeticaKcal: 2000,
+      macros: { carboidratosG: 250, proteinasG: 100, gordurasG: 66.7 },
+      refeicoes: [
+        {
+          id: 'refeicao-1',
+          nome: 'Cafe da manha',
+          horarioLocal: '08:00:00',
+          orientacoes: 'Consumir com calma.',
+          itens: [
+            {
+              id: 'item-1',
+              descricao: 'Mamao',
+              quantidade: 1,
+              unidade: 'fatia',
+              porcaoGramas: 100,
+              nutrientes: { energiaKcal: 45, proteinasG: 0.8, carboidratosG: 11.6, gordurasG: 0.1 },
+              substituicoes: [
+                {
+                  id: 'substituicao-1',
+                  descricao: 'Melao',
+                  quantidade: 1,
+                  unidade: 'fatia',
+                  porcaoGramas: 100,
+                  nutrientes: { energiaKcal: 29, proteinasG: 0.7, carboidratosG: 7.5, gordurasG: 0 }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+    const payload = JSON.stringify(portal.planoAlimentar);
+    for (const campoInterno of [
+      'formula',
+      'fatorAtividade',
+      'metabolismoRepousoKcal',
+      'sexo',
+      'idadeAnos',
+      'alertasInternos',
+      'avaliacaoAntropometricaId',
+      'revisadaPorUsuarioId',
+      'hashConteudo',
+      'fonte',
+      'codigoExterno'
+    ]) {
+      expect(payload).not.toContain(campoInterno);
+    }
+  });
+
+  it('escolhe publicadaEm mais recente entre planos ativos, independentemente de criadoEm', async () => {
+    const { servico } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula')
+        }
+      ],
+      planoAlimentars: [
+        {
+          id: 'plano-criado-depois',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          tituloCriptografado: Buffer.from('cripto:Publicacao antiga'),
+          versaoPublicadaAtualId: 'versao-antiga',
+          criadoEm: new Date('2026-08-07T12:00:00.000Z')
+        },
+        {
+          id: 'plano-criado-antes',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          tituloCriptografado: Buffer.from('cripto:Publicacao mais recente'),
+          versaoPublicadaAtualId: 'versao-recente',
+          criadoEm: new Date('2026-08-01T12:00:00.000Z')
+        }
+      ],
+      planoAlimentarVersaos: [
+        {
+          id: 'versao-antiga',
+          tenantId: 'tenant-1',
+          planoId: 'plano-criado-depois',
+          numero: 1,
+          publicadaEm: new Date('2026-08-05T12:00:00.000Z')
+        },
+        {
+          id: 'versao-recente',
+          tenantId: 'tenant-1',
+          planoId: 'plano-criado-antes',
+          numero: 3,
+          publicadaEm: new Date('2026-08-08T12:00:00.000Z')
+        }
+      ]
+    });
+
+    const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+
+    expect(portal.planoAlimentar).toEqual(
+      expect.objectContaining({
+        id: 'plano-criado-antes',
+        titulo: 'Publicacao mais recente',
+        numeroVersao: 3
+      })
+    );
+  });
+
+  it('nunca deve expor rascunho quando o plano nao possui publicacao atual', async () => {
+    const { servico } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula')
+        }
+      ],
+      planoAlimentars: [
+        {
+          id: 'plano-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          tituloCriptografado: Buffer.from('cripto:Rascunho sigiloso'),
+          versaoPublicadaAtualId: 'rascunho-1',
+          criadoEm: new Date('2026-08-01T12:00:00.000Z')
+        }
+      ],
+      planoAlimentarVersaos: [
+        {
+          id: 'rascunho-1',
+          tenantId: 'tenant-1',
+          planoId: 'plano-1',
+          numero: 1,
+          objetivosCriptografados: Buffer.from('cripto:Nao publicar')
+        }
+      ]
+    });
+
+    const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+
+    expect(portal).not.toHaveProperty('planoAlimentar');
+    expect(JSON.stringify(portal)).not.toContain('Rascunho sigiloso');
+    expect(JSON.stringify(portal)).not.toContain('Nao publicar');
+  });
+
+  it('nao deve seguir ponteiro de versao pertencente a outro plano ou tenant', async () => {
+    const { servico } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula')
+        }
+      ],
+      planoAlimentars: [
+        {
+          id: 'plano-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          tituloCriptografado: Buffer.from('cripto:Plano da Ana'),
+          versaoPublicadaAtualId: 'versao-alheia',
+          criadoEm: new Date('2026-08-01T12:00:00.000Z')
+        }
+      ],
+      planoAlimentarVersaos: [
+        {
+          id: 'versao-alheia',
+          tenantId: 'tenant-2',
+          planoId: 'plano-outro-paciente',
+          numero: 9,
+          publicadaEm: new Date('2026-08-08T12:00:00.000Z'),
+          objetivosCriptografados: Buffer.from('cripto:Dado de outro paciente')
+        }
+      ]
+    });
+
+    const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+
+    expect(portal).not.toHaveProperty('planoAlimentar');
+    expect(JSON.stringify(portal)).not.toContain('Dado de outro paciente');
   });
 
   it('deve montar portal autenticado somente com dados do paciente logado', async () => {

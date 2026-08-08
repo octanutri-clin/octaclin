@@ -17,6 +17,11 @@ import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensag
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../../materiais/infraestrutura/material-educativo.orm';
 import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
+import { PlanoAlimentarItemOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-item.orm';
+import { PlanoAlimentarRefeicaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
+import { PlanoAlimentarSubstituicaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-substituicao.orm';
+import { PlanoAlimentarVersaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
+import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { PerguntaOrm } from '../../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
@@ -49,6 +54,50 @@ interface ContatoPacientePortal {
     canalPreferido: CanalPreferidoComunicacao;
     horarioPermitido: HorarioPermitidoComunicacao;
   };
+}
+
+interface NutrientesPlanoAlimentarPortal {
+  energiaKcal?: number;
+  proteinasG?: number;
+  carboidratosG?: number;
+  gordurasG?: number;
+  fibrasG?: number;
+  sodioMg?: number;
+}
+
+interface SubstituicaoPlanoAlimentarPortal {
+  id: string;
+  descricao: string;
+  quantidade: number;
+  unidade: string;
+  porcaoGramas: number;
+  nutrientes: NutrientesPlanoAlimentarPortal;
+}
+
+interface ItemPlanoAlimentarPortal extends SubstituicaoPlanoAlimentarPortal {
+  substituicoes: SubstituicaoPlanoAlimentarPortal[];
+}
+
+export interface PlanoAlimentarPortalPaciente {
+  id: string;
+  titulo: string;
+  numeroVersao: number;
+  publicadoEm: Date;
+  objetivo?: string;
+  orientacoes?: string;
+  metaEnergeticaKcal?: number;
+  macros?: {
+    carboidratosG?: number;
+    proteinasG?: number;
+    gordurasG?: number;
+  };
+  refeicoes: {
+    id: string;
+    nome: string;
+    horarioLocal?: string;
+    orientacoes?: string;
+    itens: ItemPlanoAlimentarPortal[];
+  }[];
 }
 
 const CANAL_PREFERIDO_PADRAO: CanalPreferidoComunicacao = 'qualquer';
@@ -168,6 +217,7 @@ export interface ResumoPortalPaciente {
     atualizadoEm: Date;
   }[];
   diariosRecentes: CheckinRapidoPortalPaciente[];
+  planoAlimentar?: PlanoAlimentarPortalPaciente;
   lgpd: LgpdPortalPaciente;
 }
 
@@ -322,6 +372,8 @@ export class ServicoPortalPaciente {
         where: { tenantId, usuarioId, arquivadoEm: IsNull() }
       });
       if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
+
+      const planoAlimentar = await this.obterPlanoAlimentarPublicado(gerenciador, tenantId, paciente.id);
 
       const consultas = (
         await gerenciador.getRepository(AgendaConsultaOrm).find({
@@ -515,9 +567,169 @@ export class ServicoPortalPaciente {
         tarefasAcompanhamento,
         materiaisDisponiveis,
         diariosRecentes,
+        ...(planoAlimentar ? { planoAlimentar } : {}),
         lgpd: this.mapearLgpd(consentimentos, paciente.id, usuarioId)
       };
     });
+  }
+
+  private async obterPlanoAlimentarPublicado(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string
+  ): Promise<PlanoAlimentarPortalPaciente | undefined> {
+    const planos = await gerenciador.getRepository(PlanoAlimentarOrm).find({
+      where: { tenantId, pacienteId, arquivadoEm: IsNull() }
+    });
+    const planosComPublicacao = planos.filter(
+      (plano): plano is PlanoAlimentarOrm & { versaoPublicadaAtualId: string } =>
+        Boolean(plano.versaoPublicadaAtualId)
+    );
+    if (!planosComPublicacao.length) return undefined;
+
+    const repositorioVersoes = gerenciador.getRepository(PlanoAlimentarVersaoOrm);
+    const versoes = await repositorioVersoes.find({
+      where: {
+        tenantId,
+        id: In(planosComPublicacao.map((plano) => plano.versaoPublicadaAtualId)),
+        descartadaEm: IsNull()
+      },
+      order: { publicadaEm: 'DESC' }
+    });
+    const planoPorVersao = new Map(planosComPublicacao.map((plano) => [plano.versaoPublicadaAtualId, plano]));
+    const versao = versoes.find(
+      (candidata) =>
+        Boolean(candidata.publicadaEm) && planoPorVersao.get(candidata.id)?.id === candidata.planoId
+    );
+    const plano = versao ? planoPorVersao.get(versao.id) : undefined;
+    if (!plano || !versao?.publicadaEm) return undefined;
+
+    const refeicoes = await gerenciador.getRepository(PlanoAlimentarRefeicaoOrm).find({
+      where: { tenantId, versaoId: versao.id },
+      order: { ordem: 'ASC' }
+    });
+    const refeicaoIds = refeicoes.map((refeicao) => refeicao.id);
+    const itens = refeicaoIds.length
+      ? await gerenciador.getRepository(PlanoAlimentarItemOrm).find({
+          where: { tenantId, refeicaoId: In(refeicaoIds) },
+          order: { ordem: 'ASC' }
+        })
+      : [];
+    const itemIds = itens.map((item) => item.id);
+    const substituicoes = itemIds.length
+      ? await gerenciador.getRepository(PlanoAlimentarSubstituicaoOrm).find({
+          where: { tenantId, itemId: In(itemIds) },
+          order: { ordem: 'ASC' }
+        })
+      : [];
+
+    const substituicoesPorItem = new Map<string, PlanoAlimentarSubstituicaoOrm[]>();
+    for (const substituicao of substituicoes) {
+      const atuais = substituicoesPorItem.get(substituicao.itemId) ?? [];
+      atuais.push(substituicao);
+      substituicoesPorItem.set(substituicao.itemId, atuais);
+    }
+    const itensPorRefeicao = new Map<string, PlanoAlimentarItemOrm[]>();
+    for (const item of itens) {
+      const atuais = itensPorRefeicao.get(item.refeicaoId) ?? [];
+      atuais.push(item);
+      itensPorRefeicao.set(item.refeicaoId, atuais);
+    }
+
+    const calculo = this.lerSnapshotCriptografado(versao.calculoSnapshotCriptografado);
+    const metasMacronutrientes = this.lerRegistro(calculo.metasMacronutrientes);
+    const macros = this.mapearMacrosPaciente(metasMacronutrientes);
+    const metaEnergeticaKcal = this.lerNumeroNaoNegativo(calculo.metaEnergeticaKcal);
+
+    return {
+      id: plano.id,
+      titulo: this.criptografia.descriptografar(plano.tituloCriptografado),
+      numeroVersao: versao.numero,
+      publicadoEm: versao.publicadaEm!,
+      ...(versao.objetivosCriptografados
+        ? { objetivo: this.criptografia.descriptografar(versao.objetivosCriptografados) }
+        : {}),
+      ...(versao.observacoesCriptografadas
+        ? { orientacoes: this.criptografia.descriptografar(versao.observacoesCriptografadas) }
+        : {}),
+      ...(metaEnergeticaKcal !== undefined ? { metaEnergeticaKcal } : {}),
+      ...(macros ? { macros } : {}),
+      refeicoes: refeicoes
+        .sort((a, b) => a.ordem - b.ordem)
+        .map((refeicao) => ({
+          id: refeicao.id,
+          nome: this.criptografia.descriptografar(refeicao.nomeCriptografado),
+          ...(refeicao.horarioLocal ? { horarioLocal: refeicao.horarioLocal } : {}),
+          ...(refeicao.orientacoesCriptografadas
+            ? { orientacoes: this.criptografia.descriptografar(refeicao.orientacoesCriptografadas) }
+            : {}),
+          itens: (itensPorRefeicao.get(refeicao.id) ?? [])
+            .sort((a, b) => a.ordem - b.ordem)
+            .map((item) => ({
+              id: item.id,
+              descricao: this.criptografia.descriptografar(item.descricaoCriptografada),
+              quantidade: Number(item.quantidade),
+              unidade: item.unidade,
+              porcaoGramas: Number(item.porcaoGramas),
+              nutrientes: this.mapearNutrientesPaciente(
+                this.lerSnapshotCriptografado(item.composicaoSnapshotCriptografada)
+              ),
+              substituicoes: (substituicoesPorItem.get(item.id) ?? [])
+                .sort((a, b) => a.ordem - b.ordem)
+                .map((substituicao) => ({
+                  id: substituicao.id,
+                  descricao: this.criptografia.descriptografar(substituicao.descricaoCriptografada),
+                  quantidade: Number(substituicao.quantidade),
+                  unidade: substituicao.unidade,
+                  porcaoGramas: Number(substituicao.porcaoGramas),
+                  nutrientes: this.mapearNutrientesPaciente(
+                    this.lerSnapshotCriptografado(substituicao.composicaoSnapshotCriptografada)
+                  )
+                }))
+            }))
+        }))
+    };
+  }
+
+  private lerSnapshotCriptografado(valor?: Buffer): Record<string, unknown> {
+    if (!valor) return {};
+    try {
+      return this.lerRegistro(JSON.parse(this.criptografia.descriptografar(valor)));
+    } catch {
+      return {};
+    }
+  }
+
+  private lerRegistro(valor: unknown): Record<string, unknown> {
+    return valor && typeof valor === 'object' && !Array.isArray(valor) ? (valor as Record<string, unknown>) : {};
+  }
+
+  private lerNumeroNaoNegativo(valor: unknown): number | undefined {
+    return typeof valor === 'number' && Number.isFinite(valor) && valor >= 0 ? valor : undefined;
+  }
+
+  private mapearNutrientesPaciente(snapshot: Record<string, unknown>): NutrientesPlanoAlimentarPortal {
+    const nutrientesPorcao = this.lerRegistro(snapshot.nutrientesPorcao);
+    const nutrientesLegados = this.lerRegistro(snapshot.nutrientes);
+    const origem = Object.keys(nutrientesPorcao).length
+      ? nutrientesPorcao
+      : Object.keys(nutrientesLegados).length
+        ? nutrientesLegados
+        : snapshot;
+    return Object.fromEntries(
+      (['energiaKcal', 'proteinasG', 'carboidratosG', 'gordurasG', 'fibrasG', 'sodioMg'] as const)
+        .map((campo) => [campo, this.lerNumeroNaoNegativo(origem[campo])] as const)
+        .filter((entrada): entrada is readonly [typeof entrada[0], number] => entrada[1] !== undefined)
+    );
+  }
+
+  private mapearMacrosPaciente(snapshot: Record<string, unknown>): PlanoAlimentarPortalPaciente['macros'] | undefined {
+    const macros = Object.fromEntries(
+      (['carboidratosG', 'proteinasG', 'gordurasG'] as const)
+        .map((campo) => [campo, this.lerNumeroNaoNegativo(snapshot[campo])] as const)
+        .filter((entrada): entrada is readonly [typeof entrada[0], number] => entrada[1] !== undefined)
+    );
+    return Object.keys(macros).length ? macros : undefined;
   }
 
   async registrarCheckinRapido(

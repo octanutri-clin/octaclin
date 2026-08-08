@@ -228,7 +228,13 @@ export class ServicoPacientes {
     usuario: UsuarioAutenticado
   ): Promise<PacienteRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const paciente = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const paciente = await this.garantirPacienteExiste(
+        gerenciador,
+        tenantId,
+        pacienteId,
+        usuario,
+        dados.profissionalResponsavelId !== undefined
+      );
       const repositorio = gerenciador.getRepository(PacienteOrm);
 
       if (dados.profissionalResponsavelId) {
@@ -720,7 +726,8 @@ export class ServicoPacientes {
     gerenciador: EntityManager,
     tenantId: string,
     pacienteId: string,
-    usuario: UsuarioAutenticado
+    usuario: UsuarioAutenticado,
+    bloquear = false
   ) {
     const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
     const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
@@ -729,7 +736,8 @@ export class ServicoPacientes {
         tenantId,
         arquivadoEm: IsNull(),
         ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
-      }
+      },
+      ...(bloquear ? { lock: { mode: 'pessimistic_write' as const } } : {})
     });
 
     if (!paciente) {

@@ -25,8 +25,10 @@ import { Botao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { AbaAntropometria } from './aba-antropometria';
 import { AbaDocumentos, ConsultaConcluidaOpcao } from './aba-documentos';
+import { PlanoAlimentarProfissional } from './plano-alimentar-profissional';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
+import { obterSessao } from '@/lib/auth-api';
 import {
   criarMaterial,
   enviarMaterialPaciente,
@@ -88,7 +90,8 @@ interface FormularioEnvioMaterial {
 type AbaProntuario =
   | 'resumo'
   | 'evolucoes'
-  | 'plano'
+  | 'acompanhamento'
+  | 'plano_alimentar'
   | 'antropometria'
   | 'formularios'
   | 'documentos'
@@ -97,10 +100,11 @@ type AbaProntuario =
   | 'anexos'
   | 'historico';
 
-const abasProntuario: Array<{ id: AbaProntuario; rotulo: string }> = [
+const abasProntuario: Array<{ id: AbaProntuario; rotulo: string; permissao?: string }> = [
   { id: 'resumo', rotulo: 'Resumo' },
   { id: 'evolucoes', rotulo: 'Evolucoes' },
-  { id: 'plano', rotulo: 'Plano' },
+  { id: 'acompanhamento', rotulo: 'Acompanhamento' },
+  { id: 'plano_alimentar', rotulo: 'Plano alimentar', permissao: 'planos_alimentares.ler' },
   { id: 'antropometria', rotulo: 'Antropometria' },
   { id: 'formularios', rotulo: 'Formularios' },
   { id: 'documentos', rotulo: 'Documentos' },
@@ -262,6 +266,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [formularioMaterial, setFormularioMaterial] = useState<FormularioMaterial>(formularioMaterialInicial);
   const [formularioEnvioMaterial, setFormularioEnvioMaterial] = useState<FormularioEnvioMaterial>(formularioEnvioMaterialInicial);
   const [abaAtiva, setAbaAtiva] = useState<AbaProntuario>('resumo');
+  const [planoAlimentarNaoSalvo, setPlanoAlimentarNaoSalvo] = useState(false);
+  const [permissoes, setPermissoes] = useState<string[]>([]);
   const [saidaPendente, setSaidaPendente] = useState<{ tipo: 'voltar' } | { tipo: 'aba'; id: AbaProntuario } | null>(null);
   const router = useRouter();
 
@@ -452,17 +458,44 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     void carregar();
   }, [carregar]);
 
+  useEffect(() => {
+    let ativo = true;
+    void obterSessao()
+      .then((sessao) => {
+        if (ativo) setPermissoes(sessao?.permissoes ?? []);
+      })
+      .catch(() => {
+        if (ativo) setPermissoes([]);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
   const evolucaoNaoSalva = Boolean(formularioEvolucao.titulo.trim() || formularioEvolucao.conteudo.trim());
+  const alteracoesNaoSalvas = evolucaoNaoSalva || planoAlimentarNaoSalvo;
+  const abasDisponiveis = useMemo(
+    () => abasProntuario.filter((aba) => !aba.permissao || permissoes.includes(aba.permissao)),
+    [permissoes]
+  );
+
+  function solicitarTrocaAba(id: AbaProntuario) {
+    if (!alteracoesNaoSalvas) {
+      setAbaAtiva(id);
+      return;
+    }
+    setSaidaPendente({ tipo: 'aba', id });
+  }
 
   useEffect(() => {
     function aoTentarFecharAba(evento: BeforeUnloadEvent) {
-      if (!evolucaoNaoSalva) return;
+      if (!alteracoesNaoSalvas) return;
       evento.preventDefault();
       evento.returnValue = '';
     }
     window.addEventListener('beforeunload', aoTentarFecharAba);
     return () => window.removeEventListener('beforeunload', aoTentarFecharAba);
-  }, [evolucaoNaoSalva]);
+  }, [alteracoesNaoSalvas]);
 
   const eventos = useMemo(() => dados?.linhaDoTempo ?? [], [dados?.linhaDoTempo]);
   const evolucoes = useMemo(() => eventos.filter((evento) => evento.tipo === 'evolucao_clinica'), [eventos]);
@@ -521,7 +554,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <Link
             href="/pacientes"
             onClick={(evento) => {
-              if (!evolucaoNaoSalva) return;
+              if (!alteracoesNaoSalvas) return;
               evento.preventDefault();
               setSaidaPendente({ tipo: 'voltar' });
             }}
@@ -534,11 +567,11 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <RefreshCcw size={16} />
             Atualizar
           </Botao>
-          <Botao type="button" variante="primario" onClick={() => setAbaAtiva('evolucoes')}>
+          <Botao type="button" variante="primario" onClick={() => solicitarTrocaAba('evolucoes')}>
             <Stethoscope size={16} />
             Nova evolucao
           </Botao>
-          <Botao type="button" variante="secundario" onClick={() => setAbaAtiva('plano')}>
+          <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('acompanhamento')}>
             <CheckSquare size={16} />
             Nova tarefa
           </Botao>
@@ -547,14 +580,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
       <Abas
         identificador="prontuario"
-        abas={abasProntuario}
+        abas={abasDisponiveis}
         ativaId={abaAtiva}
         aoMudar={(id) => {
-          if (!evolucaoNaoSalva) {
-            setAbaAtiva(id as AbaProntuario);
-            return;
-          }
-          setSaidaPendente({ tipo: 'aba', id: id as AbaProntuario });
+          solicitarTrocaAba(id as AbaProntuario);
         }}
         rotulo="Areas do prontuario"
       />
@@ -634,7 +663,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Evolucoes recentes</h2></div><LinhaDoTempo eventos={evolucoes} /></section>
       </> : null}
 
-      {abaAtiva === 'plano' ? <>
+      {abaAtiva === 'acompanhamento' ? <>
       <form onSubmit={registrarTarefa} className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div>
           <h2 className="text-base font-semibold text-tinta">Plano de acompanhamento</h2>
@@ -709,6 +738,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
       <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Plano em acompanhamento</h2></div><LinhaDoTempo eventos={tarefas} /></section>
       </> : null}
+
+      {abaAtiva === 'plano_alimentar' ? (
+        <PlanoAlimentarProfissional pacienteId={pacienteId} aoAlterarRascunho={setPlanoAlimentarNaoSalvo} />
+      ) : null}
 
       {abaAtiva === 'materiais' ? <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -969,7 +1002,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       <ModalConfirmacao
         aberto={Boolean(saidaPendente)}
         titulo="Sair sem salvar"
-        mensagem="Voce tem uma evolucao clinica nao salva. Sair sem salvar?"
+        mensagem="Voce tem alteracoes clinicas nao salvas. Sair sem salvar?"
         rotuloConfirmar="Sair sem salvar"
         aoCancelar={() => setSaidaPendente(null)}
         aoConfirmar={() => {

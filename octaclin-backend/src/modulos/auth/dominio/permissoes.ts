@@ -12,6 +12,8 @@ export type PermissaoOctaClin =
   | 'pacientes.listar'
   | 'pacientes.ler'
   | 'pacientes.gerenciar'
+  | 'planos_alimentares.ler'
+  | 'planos_alimentares.gerenciar'
   | 'questionarios.ler'
   | 'questionarios.gerenciar'
   | 'agenda.consultas.ler'
@@ -81,6 +83,8 @@ const permissoesColaborador = [
 const permissoesProfissional = [
   ...permissoesColaborador,
   'pacientes.gerenciar',
+  'planos_alimentares.ler',
+  'planos_alimentares.gerenciar',
   'questionarios.gerenciar',
   'materiais.gerenciar',
   'profissionais.ler',

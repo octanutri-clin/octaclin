@@ -19,6 +19,8 @@
     "smoke:operacoes": "ts-node src/infraestrutura/smoke/smoke-operacoes.ts",
     "smoke:busca-pacientes": "ts-node src/infraestrutura/smoke/smoke-busca-pacientes.ts",
     "performance:backend": "ts-node src/infraestrutura/performance/benchmark-backend.ts",
+    "catalogo:taco:gerar": "ts-node scripts/importar-catalogo-taco.ts",
+    "catalogo:taco:carregar": "ts-node scripts/carregar-catalogo-taco.ts",
     "gmail:oauth-token": "node scripts/gmail-oauth-token.mjs",
     "mock:api": "node scripts/api-demo-local.mjs"
   },

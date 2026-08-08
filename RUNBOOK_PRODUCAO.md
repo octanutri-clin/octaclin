@@ -166,6 +166,48 @@ removido e nos logs que nao houve URL assinada, token ou nome clinico exposto.
 Rollback de aplicacao: reverter o deploy. Nao executar o `down` da migration se
 ja houver anexos reais; as colunas sao aditivas e podem permanecer sem uso.
 
+### Fase 216 - plano alimentar e catalogo TACO
+
+Com `BANCO_EXECUTAR_MIGRACOES=false`, aplicar a migration
+`1720000001021-CriarPlanosAlimentares` com role owner. Antes de executar,
+`migration:show` deve indicar somente a `1021` como pendente; qualquer outra
+pendencia exige interrupcao e diagnostico do banco-alvo.
+
+```powershell
+$env:DATABASE_URL='<url owner do banco explicitamente confirmado>'
+pnpm --dir octaclin-backend migration:show
+pnpm --dir octaclin-backend migration:run
+pnpm --dir octaclin-backend migration:show
+Remove-Item Env:DATABASE_URL
+```
+
+Validar as cinco tabelas clinicas com `relrowsecurity=true` e
+`relforcerowsecurity=true`, uma policy `isolamento_tenant_*` em cada uma e os
+triggers de imutabilidade/publicacao. As tabelas de fonte e alimento sao
+catalogo global e nao contem dado de paciente.
+
+Depois da migration, carregar o artefato TACO. O comando recusa banco cujo nome
+nao coincida exatamente com `TACO_BANCO_ESPERADO`:
+
+```powershell
+$env:DATABASE_URL='<url owner do banco explicitamente confirmado>'
+$env:TACO_CONFIRMAR_CARGA='true'
+$env:TACO_BANCO_ESPERADO='<nome exato do banco>'
+pnpm --dir octaclin-backend catalogo:taco:carregar
+Remove-Item Env:DATABASE_URL
+Remove-Item Env:TACO_CONFIRMAR_CARGA
+Remove-Item Env:TACO_BANCO_ESPERADO
+```
+
+Esperado: uma fonte `taco_nepa_unicamp` e 583 alimentos para a versao atual.
+A carga e idempotente e nao remove catalogo anterior. Nao regenerar o JSON em
+producao; o artefato versionado no repositorio e a entrada do carregador.
+
+No smoke, usar somente paciente sintetico: criar rascunho, selecionar avaliacao,
+salvar, revisar, publicar e conferir o portal. Condicao especial deve ser
+recusada. O portal nao pode exibir formula, metabolismo, antropometria, hash ou
+fonte interna.
+
 ### Notificacoes in-app (Fase 210)
 
 Com `BANCO_EXECUTAR_MIGRACOES=false`, aplicar a migration `1720000001020` com
