@@ -65,6 +65,9 @@ contexto clinico; elas nao precisam virar itens separados no menu lateral.
 
 ## Estado de rollout
 
-Implementacao e validacao local concluidas. A confirmacao de deploy e o smoke
-autenticado de producao devem ser registrados depois que backend e web estiverem
-`Live` no mesmo commit.
+Implementacao e validacao local concluidas. Backend e web entraram `Live` no
+commit `ed5ae4f` em 2026-08-08. O smoke publico confirmou `/health` com HTTP 200,
+a rota autenticada do catalogo alimentar com HTTP 401 sem sessao (rota presente
+e protegida, nao 404) e `/login` da web com HTTP 200. O smoke visual autenticado
+do menu e de `Meus recebimentos` permanece pendente porque nao havia sessao
+profissional ativa no navegador; nenhuma credencial antiga foi reutilizada.

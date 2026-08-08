@@ -1408,7 +1408,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `scripts` na raiz compilada, voltou a gerar `dist/main.js` e agora valida o
     artefato antes de liberar o deploy. A auditoria de acesso tambem tornou IA,
     metas/adesao e recebimentos proprios encontraveis para `Professional`, sem
-    alterar as permissoes. Ver `AUDITORIA_ACESSO_PROFISSIONAL_2026-08-08.md`.
+    alterar as permissoes. Backend e web confirmados `Live` no commit `ed5ae4f`;
+    smoke publico aprovado. Ver
+    `AUDITORIA_ACESSO_PROFISSIONAL_2026-08-08.md`.
 
 - [ ] Fase 217 - PWA do portal do paciente.
   - Tornar o portal instalavel e suportar operacoes offline idempotentes sem

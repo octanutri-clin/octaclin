@@ -13,7 +13,9 @@ Atualizado em 2026-08-08.
   resumo de recebimentos do proprio profissional quando permitido, sem expor a
   comparacao da clinica. O artefato do backend tambem foi corrigido para voltar
   a produzir `dist/main.js` em build limpo, com uma verificacao obrigatoria no
-  script de build. Ver `AUDITORIA_ACESSO_PROFISSIONAL_2026-08-08.md`.
+  script de build. Backend e web estao `Live` no commit `ed5ae4f`; smoke publico
+  de saude, rota protegida e login aprovado. Ver
+  `AUDITORIA_ACESSO_PROFISSIONAL_2026-08-08.md`.
 - Ultima fase concluida: Fase 216 - plano alimentar e calculo nutricional.
   Profissional monta, revisa, publica e versiona planos no prontuario; o
   paciente recebe somente a versao publicada atual no portal. Calculo

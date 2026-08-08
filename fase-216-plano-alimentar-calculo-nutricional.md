@@ -140,7 +140,9 @@ iniciar porque o build limpo passou a emitir `dist/src/main.js`, enquanto o
 comando do Render exige `dist/main.js`. A correcao exclui `scripts` do build de
 producao, limpa a saida antiga e valida explicitamente a existencia de
 `dist/main.js`. O problema era de empacotamento e nao exigiu nova migration nem
-alteracao nos dados da Fase 216.
+alteracao nos dados da Fase 216. Backend e web entraram `Live` no commit
+`ed5ae4f`; `/health`, a protecao da rota do catalogo e o login web passaram no
+smoke publico.
 
 ## Fora do MVP
 
