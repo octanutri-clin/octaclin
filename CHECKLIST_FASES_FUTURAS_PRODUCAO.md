@@ -1437,6 +1437,20 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Evidencias: `fase-218-api-publica-chaves-webhooks.md` e
     `API_PUBLICA_V1.md`.
 
+- [ ] Fase 219 - Backup automatizado, retencao e restore recorrente.
+  - [x] Workflow diario/manual, validacao segura de configuracao e testes de
+    contrato implementados.
+  - [x] Dump PostgreSQL 18, checksum, cifragem, verificacao remota e limpeza
+    efemera implementados.
+  - [x] Retencao 8/29/93 dias declarada por prefixo e validada pelo workflow.
+  - [x] Restore semanal/forcado em banco dedicado com verificacao de dados,
+    migrations e RLS implementado.
+  - [ ] Role Neon de backup, bucket/chave B2 e banco de restore provisionados.
+  - [ ] Environment `production-backup` configurado sem expor secrets.
+  - [ ] Primeira execucao manual com restore aprovada.
+  - [ ] Cron habilitado e primeira execucao agendada aprovada.
+  - Evidencia: `fase-219-backup-automatizado-retencao-restore.md`.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.

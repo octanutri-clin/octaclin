@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-07-29, Fase 159.
+Atualizado em 2026-08-08, Fase 219 em ativacao.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -30,7 +30,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Auditoria | Parcial | Auditoria operacional, convites administrativos, perfil fiscal, LGPD, agenda e leituras sensiveis. | Cobrir mutacoes sensiveis restantes conforme surgirem. |
 | Billing/assinatura | Parcial | Modelo de planos, limites, uso, alertas, solicitacao manual de upgrade/revisao, controle manual administrativo e bloqueios suaves para novas criacoes. | Expandir bloqueios para mensagens/formularios/armazenamento; gateway definitivo se necessario. |
 | Observabilidade | Parcial | Healthchecks, logs estruturados, request ID, alertas operacionais e runbooks. | Persistir historico de alertas e integrar notificacao externa se necessario. |
-| Backups/restore | Parcial | Runbook, planejador seguro, script de backup, validacao estrutural e restore real aprovado em banco dedicado na Fase 158. | Configurar recorrencia e repetir o teste semanalmente. |
+| Backups/restore | Parcial | Restore real aprovado na Fase 158; workflow diario, B2 privado, retencao e restore semanal implementados na Fase 219. | Provisionar recursos externos, aprovar a primeira execucao manual e a primeira rodada agendada. |
 | Suporte | Pronto | `RUNBOOK_SUPORTE.md` cobre login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento. | Treinar responsavel e revisar apos piloto. |
 | Dados de staging | Pronto | Fixture sem PII real, seed `seed-staging.ts`, runbook `RUNBOOK_STAGING_DADOS.md`; `pnpm seed:staging` aplicado e validado no Neon staging (tenant `octaclin-staging`). | Reaplicar quando a Fase 131 separar staging de producao. |
 | Piloto interno | Pronto | Runbook `RUNBOOK_PILOTO_INTERNO.md` e controle `PILOTO_INTERNO_CONTROLE.md`; rodada 1 executada em 2026-07-23 com todas as jornadas manuais aprovadas e aceite registrado. | Nenhuma pendencia; repetir rodada apos mudancas relevantes de autorizacao. |

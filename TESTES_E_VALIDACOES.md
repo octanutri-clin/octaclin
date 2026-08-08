@@ -335,6 +335,23 @@ pnpm --dir octaclin-backend migration:run
 
 ## Validacao antes de commit
 
+### Fase 219 - backup automatizado
+
+```powershell
+pnpm test:backup-producao
+pnpm test:backup
+pnpm security:secrets
+powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
+```
+
+O teste de contrato exige role dedicada na origem, banco de restore separado,
+endpoint B2 oficial, cron com habilitacao explicita, AES256, lifecycle e limpeza
+do runner. Ele tambem rejeita publicacao do dump como GitHub Artifact.
+
+O aceite real exige uma execucao manual do workflow com `restore_test=true` e,
+depois, uma execucao pelo cron. Nenhum desses testes pode usar staging como se
+fosse producao nem imprimir connection strings.
+
 ### Fase 218 - API publica e webhooks
 
 ```powershell

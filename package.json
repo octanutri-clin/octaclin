@@ -7,6 +7,7 @@
     "test:security": "node scripts/test-scan-secrets.mjs",
     "backup:plan": "node scripts/backup-restore-plan.mjs",
     "test:backup": "node scripts/test-backup-restore-plan.mjs",
+    "test:backup-producao": "node scripts/test-backup-producao.mjs",
     "test:suporte": "node scripts/test-runbook-suporte.mjs",
     "test:e2e:criticas": "powershell -ExecutionPolicy Bypass -File ./validar-jornadas-criticas.ps1",
     "test:staging-fixtures": "node scripts/test-staging-fixtures.mjs",

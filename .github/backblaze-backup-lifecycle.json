@@ -1,0 +1,31 @@
+{
+  "Rules": [
+    {
+      "ID": "octaclin-daily",
+      "Filter": { "Prefix": "daily/" },
+      "Status": "Enabled",
+      "Expiration": { "Days": 8 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 1 }
+    },
+    {
+      "ID": "octaclin-weekly",
+      "Filter": { "Prefix": "weekly/" },
+      "Status": "Enabled",
+      "Expiration": { "Days": 29 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 1 }
+    },
+    {
+      "ID": "octaclin-monthly",
+      "Filter": { "Prefix": "monthly/" },
+      "Status": "Enabled",
+      "Expiration": { "Days": 93 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 1 }
+    },
+    {
+      "ID": "octaclin-multipart-incompleto",
+      "Filter": { "Prefix": "" },
+      "Status": "Enabled",
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 1 }
+    }
+  ]
+}

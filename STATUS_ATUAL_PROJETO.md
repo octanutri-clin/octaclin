@@ -24,6 +24,10 @@ Atualizado em 2026-08-08.
   `1022` validada em producao (35/35), backend/web publicados no commit
   `9572704` e smoke de chave confirmou `200/403/401`. Ver
   `fase-218-api-publica-chaves-webhooks.md` e `API_PUBLICA_V1.md`.
+- Fase 219 em ativacao: automacao diaria de backup, retencao B2 e restore
+  semanal foi implementada com cron bloqueado por padrao. Faltam provisionar a
+  role de leitura, o bucket/chave exclusivos, o banco de restore e aprovar as
+  duas primeiras execucoes antes de declarar a fase concluida.
 - Fase 217 - PWA do portal do paciente. O portal e
   instalavel, mantem somente recursos publicos no cache e oferece fila offline
   cifrada e idempotente para check-in e formulario sem anexo. Nenhum dado
@@ -382,7 +386,8 @@ Atualizado em 2026-08-08.
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
-Proxima fase de produto: definir a partir dos bloqueadores restantes de go-live.
+Proxima fase operacional: concluir a ativacao externa da Fase 219 e registrar
+evidencias de backup e restore reais antes de abrir outro modulo.
 Permanece como pendencia operacional o rollout da Fase 201 no Render (separar
 os papeis `web` e `worker` e registrar a entrega sintetica unica exigida pelo
 aceite).

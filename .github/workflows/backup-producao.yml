@@ -1,0 +1,203 @@
+name: Backup producao
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      restore_test:
+        description: "Executar restore no banco dedicado nesta rodada"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Backup cifrado e restore recorrente
+    if: github.event_name == 'workflow_dispatch' || vars.OCTACLIN_BACKUP_AUTOMATICO_HABILITADO == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production-backup
+    env:
+      OCTACLIN_BACKUP_DATABASE_URL: ${{ secrets.OCTACLIN_BACKUP_DATABASE_URL }}
+      OCTACLIN_BACKUP_DATABASE_EXPECTED: Octaclin-db-producao
+      OCTACLIN_BACKUP_ROLE_EXPECTED: octaclin_backup_producao
+      OCTACLIN_RESTORE_DATABASE_URL: ${{ secrets.OCTACLIN_RESTORE_DATABASE_URL }}
+      OCTACLIN_RESTORE_DATABASE_EXPECTED: ${{ vars.OCTACLIN_RESTORE_DATABASE_EXPECTED }}
+      OCTACLIN_RESTORE_ROLE_EXPECTED: neondb_owner
+      B2_BACKUP_ENDPOINT: ${{ vars.B2_BACKUP_ENDPOINT }}
+      B2_BACKUP_REGION: ${{ vars.B2_BACKUP_REGION }}
+      B2_BACKUP_BUCKET: ${{ vars.B2_BACKUP_BUCKET }}
+      B2_BACKUP_KEY_ID: ${{ secrets.B2_BACKUP_KEY_ID }}
+      B2_BACKUP_APPLICATION_KEY: ${{ secrets.B2_BACKUP_APPLICATION_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.B2_BACKUP_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_BACKUP_APPLICATION_KEY }}
+      AWS_DEFAULT_REGION: ${{ vars.B2_BACKUP_REGION }}
+      AWS_EC2_METADATA_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validar configuracao sem imprimir secrets
+        run: node scripts/backup-producao.mjs validar
+
+      - name: Validar bucket privado e politica de retencao
+        run: |
+          set -euo pipefail
+          ACL="$(aws s3api get-bucket-acl --bucket "$B2_BACKUP_BUCKET" --endpoint-url "$B2_BACKUP_ENDPOINT" --output json)"
+          test "$(printf '%s' "$ACL" | jq '[.Grants[] | select(.Grantee.URI? | contains("AllUsers"))] | length')" = "0"
+          CICLO="$(aws s3api get-bucket-lifecycle-configuration --bucket "$B2_BACKUP_BUCKET" --endpoint-url "$B2_BACKUP_ENDPOINT" --output json)"
+          printf '%s' "$CICLO" | jq -e '
+            def regra($id; $prefixo; $dias):
+              any(.Rules[]; .ID == $id and .Status == "Enabled" and .Filter.Prefix == $prefixo and .Expiration.Days == $dias);
+            regra("octaclin-daily"; "daily/"; 8) and
+            regra("octaclin-weekly"; "weekly/"; 29) and
+            regra("octaclin-monthly"; "monthly/"; 93)
+          ' >/dev/null
+
+      - name: Preparar diretorio efemero
+        id: plano
+        shell: bash
+        run: |
+          set -euo pipefail
+          BACKUP_DIR="$RUNNER_TEMP/octaclin-backup"
+          mkdir -p "$BACKUP_DIR"
+          chmod 700 "$BACKUP_DIR"
+          BACKUP_FILE="octaclin-postgres-$(date -u +%Y%m%dT%H%M%SZ).dump"
+          echo "backup_dir=$BACKUP_DIR" >> "$GITHUB_OUTPUT"
+          echo "backup_file=$BACKUP_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Gerar dump PostgreSQL 18
+        env:
+          BACKUP_DIR: ${{ steps.plano.outputs.backup_dir }}
+          BACKUP_FILE: ${{ steps.plano.outputs.backup_file }}
+          DATABASE_URL: ${{ secrets.OCTACLIN_BACKUP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -e DATABASE_URL -e BACKUP_FILE \
+            -v "$BACKUP_DIR:/backup" \
+            postgres:18 \
+            sh -euc 'pg_dump --format=custom --no-owner --no-acl --exclude-extension=timescaledb --file="/backup/$BACKUP_FILE" "$DATABASE_URL"'
+          test -s "$BACKUP_DIR/$BACKUP_FILE"
+
+      - name: Validar estrutura e checksum
+        id: integridade
+        env:
+          BACKUP_DIR: ${{ steps.plano.outputs.backup_dir }}
+          BACKUP_FILE: ${{ steps.plano.outputs.backup_file }}
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$BACKUP_DIR:/backup:ro" postgres:18 \
+            pg_restore --list "/backup/$BACKUP_FILE" >/dev/null
+          SHA256="$(sha256sum "$BACKUP_DIR/$BACKUP_FILE" | awk '{print $1}')"
+          printf '%s\n' "$SHA256" > "$BACKUP_DIR/$BACKUP_FILE.sha256"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Enviar para bucket privado B2
+        id: upload
+        env:
+          BACKUP_DIR: ${{ steps.plano.outputs.backup_dir }}
+          BACKUP_FILE: ${{ steps.plano.outputs.backup_file }}
+          SHA256: ${{ steps.integridade.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          command -v aws >/dev/null
+          DESTINOS="$(node scripts/backup-producao.mjs destinos "$BACKUP_FILE")"
+          DAILY_KEY="$(printf '%s' "$DESTINOS" | jq -r '.destinos[0]')"
+          echo "daily_key=$DAILY_KEY" >> "$GITHUB_OUTPUT"
+          while IFS= read -r CHAVE; do
+            aws s3 cp "$BACKUP_DIR/$BACKUP_FILE" "s3://$B2_BACKUP_BUCKET/$CHAVE" \
+              --endpoint-url "$B2_BACKUP_ENDPOINT" --sse AES256 \
+              --metadata "sha256=$SHA256" --no-progress --only-show-errors
+            aws s3 cp "$BACKUP_DIR/$BACKUP_FILE.sha256" "s3://$B2_BACKUP_BUCKET/$CHAVE.sha256" \
+              --endpoint-url "$B2_BACKUP_ENDPOINT" --sse AES256 \
+              --content-type text/plain --no-progress --only-show-errors
+          done < <(printf '%s' "$DESTINOS" | jq -r '.destinos[]')
+
+      - name: Verificar objeto remoto
+        env:
+          BACKUP_DIR: ${{ steps.plano.outputs.backup_dir }}
+          BACKUP_FILE: ${{ steps.plano.outputs.backup_file }}
+          DAILY_KEY: ${{ steps.upload.outputs.daily_key }}
+          SHA256: ${{ steps.integridade.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          REMOTE_SIZE="$(aws s3api head-object --bucket "$B2_BACKUP_BUCKET" --key "$DAILY_KEY" --endpoint-url "$B2_BACKUP_ENDPOINT" --query ContentLength --output text)"
+          REMOTE_HASH="$(aws s3api head-object --bucket "$B2_BACKUP_BUCKET" --key "$DAILY_KEY" --endpoint-url "$B2_BACKUP_ENDPOINT" --query 'Metadata.sha256' --output text)"
+          REMOTE_SSE="$(aws s3api head-object --bucket "$B2_BACKUP_BUCKET" --key "$DAILY_KEY" --endpoint-url "$B2_BACKUP_ENDPOINT" --query ServerSideEncryption --output text)"
+          LOCAL_SIZE="$(stat -c %s "$BACKUP_DIR/$BACKUP_FILE")"
+          test "$REMOTE_SIZE" = "$LOCAL_SIZE"
+          test "$REMOTE_HASH" = "$SHA256"
+          test "$REMOTE_SSE" = "AES256"
+
+      - name: Decidir restore recorrente
+        id: restore
+        env:
+          FORCAR_RESTORE: ${{ github.event_name == 'workflow_dispatch' && inputs.restore_test || false }}
+        run: |
+          set -euo pipefail
+          EXECUTAR=false
+          if [ "$FORCAR_RESTORE" = "true" ] || [ "$(TZ=America/Sao_Paulo date +%u)" = "7" ]; then EXECUTAR=true; fi
+          echo "executar=$EXECUTAR" >> "$GITHUB_OUTPUT"
+
+      - name: Validar destino de restore
+        if: steps.restore.outputs.executar == 'true'
+        run: node scripts/backup-producao.mjs validar-restore
+
+      - name: Baixar, conferir e restaurar objeto armazenado
+        if: steps.restore.outputs.executar == 'true'
+        env:
+          BACKUP_DIR: ${{ steps.plano.outputs.backup_dir }}
+          DAILY_KEY: ${{ steps.upload.outputs.daily_key }}
+          SHA256: ${{ steps.integridade.outputs.sha256 }}
+          RESTORE_DATABASE_URL: ${{ secrets.OCTACLIN_RESTORE_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          RESTORE_FILE="$BACKUP_DIR/restore-validacao.dump"
+          aws s3 cp "s3://$B2_BACKUP_BUCKET/$DAILY_KEY" "$RESTORE_FILE" \
+            --endpoint-url "$B2_BACKUP_ENDPOINT" --no-progress --only-show-errors
+          test "$(sha256sum "$RESTORE_FILE" | awk '{print $1}')" = "$SHA256"
+          docker run --rm -e RESTORE_DATABASE_URL \
+            -v "$BACKUP_DIR:/backup:ro" postgres:18 \
+            sh -euc 'pg_restore --clean --if-exists --no-owner --no-acl --dbname "$RESTORE_DATABASE_URL" /backup/restore-validacao.dump'
+
+      - name: Validar restore dedicado
+        if: steps.restore.outputs.executar == 'true'
+        env:
+          RESTORE_DATABASE_URL: ${{ secrets.OCTACLIN_RESTORE_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          docker run --rm -e RESTORE_DATABASE_URL postgres:18 \
+            psql "$RESTORE_DATABASE_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align --command \
+            "select case when exists (select 1 from migrations where name='CriarIntegracoesApiPublica1720000001022') and (select count(*) from tenants) > 0 and (select count(*) from usuarios) > 0 and (select count(*) from pg_class where relname in ('api_chaves','webhook_assinaturas','webhook_entregas') and relrowsecurity and relforcerowsecurity) = 3 then 'RESTORE_VALIDO' else cast(1/0 as text) end" \
+            | grep -qx RESTORE_VALIDO
+
+      - name: Resumo operacional
+        if: success()
+        env:
+          BACKUP_FILE: ${{ steps.plano.outputs.backup_file }}
+          EXECUTOU_RESTORE: ${{ steps.restore.outputs.executar }}
+        run: |
+          {
+            echo "## Backup de producao"
+            echo "- Arquivo: \`$BACKUP_FILE\`"
+            echo "- Dump e objeto remoto: validados"
+            echo "- Cifragem B2: AES256"
+            echo "- Restore dedicado executado: $EXECUTOU_RESTORE"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Limpar dados do runner
+        if: always()
+        env:
+          BACKUP_DIR: ${{ steps.plano.outputs.backup_dir }}
+        run: |
+          if [ -n "${BACKUP_DIR:-}" ] && [[ "$BACKUP_DIR" == "$RUNNER_TEMP/"* ]]; then
+            rm -rf -- "$BACKUP_DIR"
+          fi

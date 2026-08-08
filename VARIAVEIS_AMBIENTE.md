@@ -116,6 +116,23 @@ do ambiente, `PUT`, `GET` e `HEAD`, `content-type`, `if-none-match` e
 `x-amz-meta-*`. Configure lifecycle de 1 dia apenas no prefixo `pendentes/`.
 Use bucket e credencial diferentes em staging e producao.
 
+## Backup automatizado no GitHub
+
+Estas configuracoes pertencem exclusivamente ao GitHub Environment
+`production-backup`; nao devem ser copiadas para Render ou para o backend.
+
+| Nome | Tipo | Uso |
+| --- | --- | --- |
+| `OCTACLIN_BACKUP_DATABASE_URL` | Secret | Neon producao com role `octaclin_backup_producao` |
+| `OCTACLIN_RESTORE_DATABASE_URL` | Secret | Neon dedicado de restore com `neondb_owner` |
+| `B2_BACKUP_KEY_ID` | Secret | Chave restrita ao bucket de backup |
+| `B2_BACKUP_APPLICATION_KEY` | Secret | Segredo da chave B2 de backup |
+| `OCTACLIN_RESTORE_DATABASE_EXPECTED` | Variable | Nome exato do banco dedicado de restore |
+| `B2_BACKUP_ENDPOINT` | Variable | Endpoint S3 HTTPS oficial da regiao B2 |
+| `B2_BACKUP_REGION` | Variable | Regiao do bucket B2 |
+| `B2_BACKUP_BUCKET` | Variable | Bucket privado exclusivo de backup |
+| `OCTACLIN_BACKUP_AUTOMATICO_HABILITADO` | Variable | `true` somente depois do primeiro restore aprovado |
+
 ## Neon
 
 Secrets ficam no painel Neon e em `DATABASE_URL` no Render. Nao registrar usuario/senha reais em docs.
