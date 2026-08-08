@@ -85,5 +85,10 @@ export async function obterPermissoes(): Promise<ContextoAcessoPublico> {
 }
 
 export async function sair(): Promise<void> {
-  await fetch('/api/auth/sair', { method: 'POST' });
+  try {
+    await fetch('/api/auth/sair', { method: 'POST' });
+  } finally {
+    const { purgarDadosPrivadosPwa } = await import('./pwa-private-queue');
+    await purgarDadosPrivadosPwa();
+  }
 }

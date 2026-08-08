@@ -154,3 +154,13 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Push: sim.
 - Validacoes: backend specs de agenda/Google Calendar, backend/web typecheck, authz, Playwright agenda/dashboard desktop/mobile, backend/web build, preflight docs e varredura de secrets.
 - Proxima fase: Fase 109 - Templates aprovados e mapeamento Meta WhatsApp.
+
+### Fase 217 - PWA do portal do paciente
+
+- Responsavel: Codex.
+- Conclusao: 2026-08-08.
+- Commit: registrado no historico Git desta fase.
+- Push: sim.
+- Validacoes: 107 suites/773 testes backend, typecheck backend/web, build web,
+  contrato de seguranca PWA e 6 cenarios Playwright desktop/mobile.
+- Proxima fase: Fase 218 - API publica, chaves por tenant e webhooks.

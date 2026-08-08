@@ -784,6 +784,33 @@ describe('ServicoQuestionarios', () => {
     expect(dados.pacientes[0].ultimoCheckinEm).toBeInstanceOf(Date);
   });
 
+  it('deve devolver a resposta existente ao repetir a finalizacao do formulario', async () => {
+    const respondidoEm = new Date('2026-08-08T12:00:00.000Z');
+    const { servico, dados, repositorios } = criarServico({
+      categorias: [], questionarios: [], perguntas: [], opcaos: [],
+      envios: [{
+        id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1',
+        status: 'respondido', respondidoEm
+      }],
+      respostaCheckins: [{
+        id: 'resposta-1', tenantId: 'tenant-1', pacienteId: 'paciente-1',
+        envioQuestionarioId: 'envio-1', finalizadoEm: respondidoEm
+      }],
+      respostaValors: [], pacientes: [], arquivoMidias: []
+    });
+    const token = servico.gerarTokenFormularioPaciente('tenant-1', 'envio-1');
+
+    const resultado = await servico.finalizarFormularioPaciente(token, { respostas: [] });
+
+    expect(resultado).toEqual({
+      envioId: 'envio-1', respostaCheckinId: 'resposta-1', status: 'respondido', respondidoEm
+    });
+    expect(dados.respostaCheckins).toHaveLength(1);
+    expect(repositorios.envio.findOne).toHaveBeenCalledWith(expect.objectContaining({
+      lock: { mode: 'pessimistic_write' }
+    }));
+  });
+
   it('aceita apenas anexo confirmado do mesmo paciente, envio e pergunta', async () => {
     const { servico, dados } = criarServico({
       categorias: [],

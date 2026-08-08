@@ -83,7 +83,7 @@ uma permite cobranca burlada.
 
 ## Fase 199 - Busca, filtros e paginacao server-side
 
-**Como esta hoje**
+**Estado entregue em 2026-08-08**
 
 `octaclin-web/lib/cadastros-api.ts:91` sempre chama
 `/api/pacientes?pagina=1&limite=25`. O componente
@@ -1312,10 +1312,10 @@ Enquanto isso nao existir, o nutricionista mantem Word/Excel — ou o concorrent
 
 **Como esta hoje**
 
-Sem `manifest.json` e sem service worker. O modulo `mobile` do backend serve
-sincronizacao e midia para um app que **nao existe no repositorio**. O portal e
-responsivo (Fase 163 entregou navegacao inferior no celular), mas nao instalavel
-e sem push.
+O repositorio possui `octaclin-mobile`; ele permanece como cliente nativo
+separado. O portal passou a ter manifest, icones, service worker de cache
+estritamente publico e operacoes offline transitorias. Push continua fora do
+escopo.
 
 **Problema**
 
@@ -1324,8 +1324,8 @@ tela inicial e check-in que funciona com rede ruim sao os dois ganhos concretos.
 
 **Solucao**
 
-1. Manifest, icones e service worker com cache do shell e das telas de plano e
-   check-in.
+1. Manifest, icones e service worker com cache apenas de assets versionados e
+   uma tela offline neutra. HTML protegido e dado clinico nao entram no cache.
 2. Check-in e resposta de formulario offline com sincronizacao posterior
    **idempotente**, reaproveitando o rascunho versionado da Fase 195.
 3. Avaliar push de lembrete apenas onde a plataforma permitir, sem prometer
@@ -1349,9 +1349,9 @@ tela inicial e check-in que funciona com rede ruim sao os dois ganhos concretos.
 - Criterio de aceite: portal instalavel em Android e iOS; check-in feito em modo
   aviao sincroniza sem duplicar ao voltar a rede; **nenhum dado clinico
   permanece em cache apos logout**.
-- Decidir antes o destino do modulo `mobile` do backend: ele serve um app que
-  nao existe. Ou o PWA passa a consumi-lo, ou ele deveria ser removido.
-  Registrar a decisao em `DECISOES_ARQUITETURA.md`.
+- Destino do modulo `mobile` decidido no ADR-021: ele continua atendendo o app
+  nativo existente; o PWA preserva os endpoints do portal e compartilha apenas
+  o padrao/tabela de idempotencia.
 
 ---
 

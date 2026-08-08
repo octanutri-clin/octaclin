@@ -1,3 +1,5 @@
+import { criarIdOperacaoPwa, ehFalhaDeRede, enfileirarOperacaoPwa } from './pwa-private-queue';
+
 export type CanalPreferidoComunicacaoPaciente = 'email' | 'whatsapp' | 'qualquer';
 export type HumorCheckinRapidoPaciente = 'muito_bem' | 'bem' | 'neutro' | 'mal' | 'muito_mal';
 
@@ -262,6 +264,8 @@ export interface RegistrarConsentimentoLgpdEntrada {
 }
 
 export interface RegistrarCheckinRapidoEntrada {
+  idLocal?: string;
+  pacienteIdEsperado?: string;
   humor: HumorCheckinRapidoPaciente;
   adesaoPlano: number;
   sintomas?: string;
@@ -395,6 +399,26 @@ export async function registrarCheckinRapidoPaciente(dados: RegistrarCheckinRapi
     throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
   }
   return resposta.json() as Promise<CheckinRapidoPacienteApi>;
+}
+
+export async function registrarOuEnfileirarCheckinRapidoPaciente(
+  dados: Omit<RegistrarCheckinRapidoEntrada, 'idLocal'>
+): Promise<{ estado: 'enviado'; checkin: CheckinRapidoPacienteApi } | { estado: 'pendente' }> {
+  const idLocal = criarIdOperacaoPwa('checkin');
+  const entrada = { ...dados, idLocal };
+  try {
+    return { estado: 'enviado', checkin: await registrarCheckinRapidoPaciente(entrada) };
+  } catch (erro) {
+    if (!ehFalhaDeRede(erro)) throw erro;
+    await enfileirarOperacaoPwa({
+      id: idLocal,
+      tipo: 'checkin',
+      endpoint: '/api/portal/paciente/checkins',
+      method: 'POST',
+      payload: entrada
+    });
+    return { estado: 'pendente' };
+  }
 }
 
 export async function registrarConsentimentoLgpdPaciente(

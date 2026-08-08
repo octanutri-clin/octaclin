@@ -1,4 +1,5 @@
 import type { TipoPergunta } from './questionarios-api';
+import { criarIdOperacaoPwa, ehFalhaDeRede, enfileirarOperacaoPwa } from './pwa-private-queue';
 
 export interface OpcaoFormularioPublico {
   id: string;
@@ -73,6 +74,31 @@ export function enviarFormularioPublico(token: string, respostas: RespostaFormul
     method: 'POST',
     body: JSON.stringify({ respostas })
   });
+}
+
+export async function enviarOuEnfileirarFormularioPublico(
+  token: string,
+  respostas: RespostaFormularioPublico[],
+  permitirFilaOffline: boolean
+): Promise<'enviado' | 'pendente'> {
+  try {
+    await enviarFormularioPublico(token, respostas);
+    return 'enviado';
+  } catch (erro) {
+    if (!ehFalhaDeRede(erro)) throw erro;
+    if (!permitirFilaOffline) {
+      throw new Error('Reconecte-se antes de enviar um formulario com anexos.');
+    }
+    const id = criarIdOperacaoPwa('formulario');
+    await enfileirarOperacaoPwa({
+      id,
+      tipo: 'formulario',
+      endpoint: `/api/formularios/${encodeURIComponent(token)}/respostas`,
+      method: 'POST',
+      payload: { respostas }
+    });
+    return 'pendente';
+  }
 }
 
 export function salvarRascunhoFormularioPublico(

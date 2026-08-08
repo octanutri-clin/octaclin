@@ -32,7 +32,7 @@ export function Aviso({ variante = 'info', mensagem, aoFechar, className }: Avis
       role="status"
       aria-live="polite"
       className={cn(
-        'pointer-events-auto flex items-start gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg',
+        'pointer-events-none flex items-start gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg',
         estiloPorVarianteAviso[variante],
         className
       )}
@@ -44,7 +44,7 @@ export function Aviso({ variante = 'info', mensagem, aoFechar, className }: Avis
           type="button"
           onClick={aoFechar}
           aria-label="Fechar aviso"
-          className="shrink-0 rounded text-current/70 hover:text-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+          className="pointer-events-auto shrink-0 rounded text-current/70 hover:text-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
         >
           <X size={14} />
         </button>

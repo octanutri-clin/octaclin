@@ -40,12 +40,14 @@ import {
   obterFormularioRespondidoPaciente,
   CanalPreferidoComunicacaoPaciente,
   PortalPacienteApi,
-  registrarCheckinRapidoPaciente,
+  registrarOuEnfileirarCheckinRapidoPaciente,
   registrarConsentimentoLgpdPaciente,
   registrarSolicitacaoLgpdPaciente
 } from '@/lib/portal-api';
 import { usePortalPaciente } from '@/components/portal/portal-contexto';
 import { PlanoAlimentarPaciente } from '@/components/portal/plano-alimentar-paciente';
+import { StatusPwaPortal } from '@/components/pwa/status-pwa-portal';
+import { assinarOperacoesSincronizadas } from '@/lib/pwa-private-queue';
 
 interface FormularioPerfilPaciente {
   nome: string;
@@ -388,6 +390,12 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
     if (portal) setFormularioPerfil(montarFormularioPerfil(portal));
   }, [portal]);
 
+  useEffect(() => assinarOperacoesSincronizadas((tipo) => {
+    if (tipo !== 'checkin') return;
+    void carregar();
+    setSucesso('Check-in offline sincronizado.');
+  }), [carregar]);
+
   async function desmarcarConsulta(consultaId: string) {
     setDesmarcandoConsultaId(consultaId);
     setErro(null);
@@ -473,15 +481,20 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
     setSucesso(null);
     try {
       const adesaoPlano = Math.max(0, Math.min(100, Number(formularioCheckin.adesaoPlano || 0)));
-      const checkin = await registrarCheckinRapidoPaciente({
+      const resultado = await registrarOuEnfileirarCheckinRapidoPaciente({
+        pacienteIdEsperado: portal?.paciente.id,
         humor: formularioCheckin.humor,
         adesaoPlano,
         sintomas: formularioCheckin.sintomas.trim() || undefined,
         observacoes: formularioCheckin.observacoes.trim() || undefined
       });
-      setPortal((atual) => atualizarPortalComCheckin(atual, checkin));
+      if (resultado.estado === 'enviado') {
+        setPortal((atual) => atualizarPortalComCheckin(atual, resultado.checkin));
+      }
       setFormularioCheckin(formularioCheckinInicial);
-      setSucesso('Check-in registrado.');
+      setSucesso(resultado.estado === 'enviado'
+        ? 'Check-in registrado.'
+        : 'Check-in salvo neste dispositivo. Ele sera enviado quando a conexao voltar.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar check-in.');
     } finally {
@@ -580,10 +593,13 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   const navegacaoPortalMobile = secao === 'inicio' ? linksPortalMobile : linksPortalMobile.map((item, indice) => indice === 0 ? { ...item, href: '/portal?origem=navegacao' } : item);
 
   const acoesCabecalho = (
-    <Botao type="button" onClick={() => void carregar()} disabled={carregando}>
-      <RefreshCcw className="h-4 w-4" />
-      {carregando ? 'Atualizando' : 'Atualizar'}
-    </Botao>
+    <div className="flex flex-wrap items-center gap-2">
+      <StatusPwaPortal />
+      <Botao type="button" onClick={() => void carregar()} disabled={carregando}>
+        <RefreshCcw className="h-4 w-4" />
+        {carregando ? 'Atualizando' : 'Atualizar'}
+      </Botao>
+    </div>
   );
 
   return (

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
+import { PwaRuntime } from '@/components/pwa/pwa-runtime';
 
 const plexSans = IBM_Plex_Sans({
   subsets: ['latin'],
@@ -18,14 +19,18 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'OctaClin - Console Operacional',
-  description: 'Console operacional para jornadas clinicas, automacoes, mobile, gamificacao e acompanhamento do OctaClin.'
+  title: 'OctaClin',
+  description: 'Cuidado clinico, agenda e acompanhamento em um unico lugar.',
+  applicationName: 'OctaClin',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'OctaClin' },
+  icons: { apple: '/icons/octaclin-192.png' }
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="pt-BR" className={`${plexSans.variable} ${plexMono.variable}`}>
-      <body>{children}</body>
+      <body><PwaRuntime>{children}</PwaRuntime></body>
     </html>
   );
 }

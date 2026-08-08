@@ -528,6 +528,12 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   concorrencia na reatribuicao, selecao temporal da publicacao, identidade do
   catalogo, protecao de rascunho, reordenacao, impressao e permissao da aba. Ver
   `fase-216-plano-alimentar-calculo-nutricional.md`.
+- Fase 217 - PWA do portal do paciente: portal instalavel com manifest, icones,
+  service worker de cache apenas publico e tela offline neutra. Check-in e
+  formulario sem anexo suportam queda de rede com fila IndexedDB cifrada,
+  chave somente em memoria, idempotencia transacional e limpeza no logout/401.
+  O app `octaclin-mobile` permanece separado e nenhuma projecao clinica entra
+  no Cache Storage. Ver `fase-217-pwa-portal-paciente.md`.
 
 ## Estado atual de uso
 

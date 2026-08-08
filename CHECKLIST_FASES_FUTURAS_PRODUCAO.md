@@ -1412,9 +1412,14 @@ publicado antes de ampliar a superficie de mudancas visuais.
     smoke publico e aceite visual autenticado aprovados. Ver
     `AUDITORIA_ACESSO_PROFISSIONAL_2026-08-08.md`.
 
-- [ ] Fase 217 - PWA do portal do paciente.
-  - Tornar o portal instalavel e suportar operacoes offline idempotentes sem
-    manter dado clinico no dispositivo apos logout.
+- [x] Fase 217 - PWA do portal do paciente.
+  - Portal instalavel com manifest, icones, service worker de cache publico e
+    tela offline neutra.
+  - Check-in e formulario sem anexo usam fila IndexedDB cifrada, chave apenas
+    em memoria, repeticao idempotente e limpeza no logout/HTTP 401.
+  - APIs, HTML protegido e dados clinicos nao entram no Cache Storage. O app
+    nativo `octaclin-mobile` permanece separado. Ver
+    `fase-217-pwa-portal-paciente.md`.
 
 - [ ] Fase 218 - API publica, chaves por tenant e webhooks.
   - Criar superficie versionada, chaves escopadas e webhooks assinados com

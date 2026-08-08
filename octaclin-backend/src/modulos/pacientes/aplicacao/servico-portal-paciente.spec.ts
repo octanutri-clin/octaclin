@@ -5,6 +5,7 @@ import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensag
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../../materiais/infraestrutura/material-educativo.orm';
 import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
+import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { PerguntaOrm } from '../../questionarios/infraestrutura/pergunta.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
@@ -88,6 +89,7 @@ function criarServico(dados: Record<string, any>) {
     material: criarRepositorioFake('material', dados),
     envioMaterial: criarRepositorioFake('envioMaterial', dados),
     diario: criarRepositorioFake('diario', dados),
+    sincronizacao: criarRepositorioFake('sincronizacao', dados),
     planoAlimentar: criarRepositorioFake('planoAlimentar', dados),
     planoAlimentarVersao: criarRepositorioFake('planoAlimentarVersao', dados),
     planoAlimentarRefeicao: criarRepositorioFake('planoAlimentarRefeicao', dados),
@@ -109,6 +111,7 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === MaterialEducativoOrm) return repositorios.material;
       if (entidade === EnvioMaterialPacienteOrm) return repositorios.envioMaterial;
       if (entidade === LogDiarioRapidoOrm) return repositorios.diario;
+      if (entidade === SincronizacaoMobileOrm) return repositorios.sincronizacao;
       if (entidade === PlanoAlimentarOrm) return repositorios.planoAlimentar;
       if (entidade === PlanoAlimentarVersaoOrm) return repositorios.planoAlimentarVersao;
       if (entidade === PlanoAlimentarRefeicaoOrm) return repositorios.planoAlimentarRefeicao;
@@ -846,7 +849,8 @@ describe('ServicoPortalPaciente', () => {
       envios: [],
       questionarios: [],
       mensagens: [],
-      diarios: []
+      diarios: [],
+      sincronizacaos: []
     });
 
     const checkin = await (servico as any).registrarCheckinRapido('tenant-1', 'usuario-paciente-1', {
@@ -888,6 +892,48 @@ describe('ServicoPortalPaciente', () => {
         ultimoCheckinEm: expect.any(Date)
       })
     );
+  });
+
+  it('deve reaproveitar check-in quando a mesma operacao offline for reenviada', async () => {
+    const dados = {
+      pacientes: [{
+        id: 'paciente-1', tenantId: 'tenant-1', usuarioId: 'usuario-paciente-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula'), arquivadoEm: null
+      }],
+      consultas: [], envios: [], questionarios: [], mensagens: [],
+      diarios: [], sincronizacaos: []
+    };
+    const { servico, repositorios } = criarServico(dados);
+    const entrada = { idLocal: 'pwa-checkin-1', humor: 'bem' as const, adesaoPlano: 80 };
+
+    const primeiro = await servico.registrarCheckinRapido('tenant-1', 'usuario-paciente-1', entrada);
+    const repetido = await servico.registrarCheckinRapido('tenant-1', 'usuario-paciente-1', entrada);
+
+    expect(repetido.id).toBe(primeiro.id);
+    expect(dados.diarios).toHaveLength(1);
+    expect(dados.sincronizacaos).toHaveLength(1);
+    expect(repositorios.paciente.findOne).toHaveBeenCalledWith(expect.objectContaining({
+      lock: { mode: 'pessimistic_write' }
+    }));
+  });
+
+  it('deve rejeitar fila offline vinculada a outro paciente', async () => {
+    const dados = {
+      pacientes: [{
+        id: '11111111-1111-4111-8111-111111111111', tenantId: 'tenant-1',
+        usuarioId: 'usuario-paciente-1', nomeCriptografado: Buffer.from('cripto:Ana'), arquivadoEm: null
+      }],
+      consultas: [], envios: [], questionarios: [], mensagens: [], diarios: [], sincronizacaos: []
+    };
+    const { servico } = criarServico(dados);
+
+    await expect(servico.registrarCheckinRapido('tenant-1', 'usuario-paciente-1', {
+      idLocal: 'pwa-checkin-outra-conta',
+      pacienteIdEsperado: '22222222-2222-4222-8222-222222222222',
+      humor: 'bem',
+      adesaoPlano: 80
+    })).rejects.toBeInstanceOf(ForbiddenException);
+    expect(dados.diarios).toHaveLength(0);
   });
 
   it('deve mostrar protocolos LGPD do paciente com status operacional consolidado', async () => {

@@ -150,3 +150,20 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
   profissional, gravacao e sala de espera ficam de fora ate haver demanda
   medida. **Esta decisao nao deve ser reaberta sem numero de venda perdida por
   falta de video proprio.**
+
+## ADR-021 - PWA, cache clinico e aplicativo mobile
+
+- Decisao: o portal do paciente e instalavel como PWA, mas seu service worker
+  guarda somente assets publicos versionados e uma tela offline neutra.
+- Privacidade: APIs, HTML autenticado e projecoes clinicas nao entram no Cache
+  Storage. Operacoes offline ficam cifradas no IndexedDB com AES-GCM e chave
+  nao exportavel apenas em memoria; logout ou HTTP 401 elimina a fila.
+- Idempotencia: check-in usa `idLocal` persistido em
+  `sincronizacoes_mobile`; formulario e idempotente pelo proprio envio e lock
+  transacional.
+- Mobile: `octaclin-mobile` existe e continua como cliente nativo separado. O
+  PWA usa os endpoints do portal, nao `/mobile`, para preservar autorizacao,
+  projecao segura e auditoria; apenas o padrao de idempotencia e compartilhado.
+- Consequencia: fechar ou recarregar a pagina elimina uma fila cuja chave foi
+  perdida. Persistencia clinica offline entre reinicios e push exigem fase
+  propria e nao podem reutilizar Web Storage.

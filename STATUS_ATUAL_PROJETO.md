@@ -295,6 +295,8 @@ Atualizado em 2026-08-08.
 - Agenda publica por solicitacao, com link compartilhavel, fila interna de aprovacao manual e criacao de consulta so apos selecao explicita de paciente.
 - Comunicacoes por email.
 - WhatsApp Meta com envio, webhook, status, inbox, associacao e notas.
+- Portal do paciente instalavel como PWA, com operacoes offline transitorias e
+  cifradas para check-in e formulario sem anexo, sem cache clinico persistente.
 - Painel operacional LGPD.
 - Auditoria e outbox operacional.
 - Sugestoes assistidas de IA com fonte, limitacoes e revisao humana obrigatoria.
@@ -369,5 +371,7 @@ Atualizado em 2026-08-08.
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
-Proxima pendencia tecnica: rollout da Fase 201 no Render (separar os papeis
-`web` e `worker` e registrar a entrega sintetica unica exigida pelo aceite).
+Proxima fase de produto: Fase 218 - API publica, chaves por tenant e webhooks.
+Permanece como pendencia operacional o rollout da Fase 201 no Render (separar
+os papeis `web` e `worker` e registrar a entrega sintetica unica exigida pelo
+aceite).

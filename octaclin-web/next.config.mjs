@@ -17,6 +17,30 @@ const nextConfig = {
       { source: '/', destination: '/dashboard', permanent: false },
       { source: '/mobile', destination: '/operacoes', permanent: false }
     ];
+  },
+  async headers() {
+    return [
+      {
+        source: '/sw.js',
+        headers: [
+          { key: 'Content-Type', value: 'application/javascript; charset=utf-8' },
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self'" }
+        ]
+      },
+      {
+        source: '/api/:path*',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store, max-age=0' }]
+      },
+      {
+        source: '/portal/:path*',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store, max-age=0' }]
+      },
+      {
+        source: '/portal',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store, max-age=0' }]
+      }
+    ];
   }
 };
 

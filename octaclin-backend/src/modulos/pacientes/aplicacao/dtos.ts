@@ -356,6 +356,15 @@ export class AtualizarPerfilPacientePortalDto {
 }
 
 export class RegistrarCheckinRapidoPortalDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  idLocal?: string;
+
+  @IsOptional()
+  @IsUUID()
+  pacienteIdEsperado?: string;
+
   @IsIn(['muito_bem', 'bem', 'neutro', 'mal', 'muito_mal'])
   humor: 'muito_bem' | 'bem' | 'neutro' | 'mal' | 'muito_mal';
 

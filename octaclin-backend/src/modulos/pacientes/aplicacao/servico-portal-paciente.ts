@@ -17,6 +17,7 @@ import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensag
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../../materiais/infraestrutura/material-educativo.orm';
 import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
+import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
 import { PlanoAlimentarItemOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-item.orm';
 import { PlanoAlimentarRefeicaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
 import { PlanoAlimentarSubstituicaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-substituicao.orm';
@@ -740,9 +741,26 @@ export class ServicoPortalPaciente {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorioPacientes = gerenciador.getRepository(PacienteOrm);
       const paciente = await repositorioPacientes.findOne({
-        where: { tenantId, usuarioId, arquivadoEm: IsNull() }
+        where: { tenantId, usuarioId, arquivadoEm: IsNull() },
+        lock: { mode: 'pessimistic_write' }
       });
       if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
+      if (dados.pacienteIdEsperado && dados.pacienteIdEsperado !== paciente.id) {
+        throw new ForbiddenException('A operacao offline pertence a outra sessao de paciente.');
+      }
+
+      const repositorioSincronizacoes = gerenciador.getRepository(SincronizacaoMobileOrm);
+      if (dados.idLocal) {
+        const sincronizacaoExistente = await repositorioSincronizacoes.findOne({
+          where: { tenantId, pacienteId: paciente.id, idLocal: dados.idLocal }
+        });
+        if (sincronizacaoExistente?.recursoId) {
+          const diarioExistente = await gerenciador.getRepository(LogDiarioRapidoOrm).findOne({
+            where: { id: sincronizacaoExistente.recursoId, tenantId, pacienteId: paciente.id }
+          });
+          if (diarioExistente) return this.mapearCheckinRapido(diarioExistente);
+        }
+      }
 
       const registradoEm = new Date();
       const valor = {
@@ -766,6 +784,20 @@ export class ServicoPortalPaciente {
 
       paciente.ultimoCheckinEm = registradoEm;
       await repositorioPacientes.save(paciente);
+
+      if (dados.idLocal) {
+        await repositorioSincronizacoes.save(
+          repositorioSincronizacoes.create({
+            tenantId,
+            pacienteId: paciente.id,
+            idLocal: dados.idLocal,
+            tipo: 'portal_checkin',
+            status: 'sincronizado',
+            recursoTipo: 'log_diario_rapido',
+            recursoId: diario.id
+          })
+        );
+      }
 
       return this.mapearCheckinRapido(diario);
     });

@@ -1174,7 +1174,23 @@ export class ServicoQuestionarios {
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorioEnvios = gerenciador.getRepository(EnvioQuestionarioOrm);
-      const envio = await repositorioEnvios.findOne({ where: { id: envioId, tenantId } });
+      const envio = await repositorioEnvios.findOne({
+        where: { id: envioId, tenantId },
+        lock: { mode: 'pessimistic_write' }
+      });
+      if (envio?.status === 'respondido') {
+        const respostaExistente = await gerenciador.getRepository(RespostaCheckinOrm).findOne({
+          where: { envioQuestionarioId: envio.id, tenantId }
+        });
+        if (respostaExistente) {
+          return {
+            envioId: envio.id,
+            respostaCheckinId: respostaExistente.id,
+            status: envio.status,
+            respondidoEm: envio.respondidoEm ?? respostaExistente.finalizadoEm
+          };
+        }
+      }
       this.validarEnvioFormulario(envio);
 
       const perguntas = envio.snapshotEstrutura?.perguntas ?? (await this.listarPerguntasComOpcoesPorQuestionario(gerenciador, tenantId, envio.questionarioId));

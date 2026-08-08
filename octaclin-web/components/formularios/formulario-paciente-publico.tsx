@@ -4,13 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Send, UploadCloud } from 'lucide-react';
 import {
   carregarFormularioPublico,
-  enviarFormularioPublico,
+  enviarOuEnfileirarFormularioPublico,
   salvarRascunhoFormularioPublico,
   solicitarUploadFormularioPublico,
   confirmarUploadFormularioPublico,
   FormularioPublico,
   PerguntaFormularioPublico
 } from '@/lib/formularios-publicos-api';
+import { assinarOperacoesSincronizadas, ehFalhaDeRede } from '@/lib/pwa-private-queue';
 import { Botao } from '@/components/ui/botao';
 import { Campo } from '@/components/ui/campo';
 
@@ -59,9 +60,10 @@ export function FormularioPacientePublico({ token }: Props) {
   const [respostas, setRespostas] = useState<Record<string, ValorResposta>>({});
   const [erro, setErro] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
+  const [envioPendente, setEnvioPendente] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
-  const [estadoRascunho, setEstadoRascunho] = useState<'inativo' | 'salvando' | 'salvo' | 'erro'>('inativo');
+  const [estadoRascunho, setEstadoRascunho] = useState<'inativo' | 'salvando' | 'salvo' | 'offline' | 'erro'>('inativo');
   const [houveEdicao, setHouveEdicao] = useState(false);
   const versaoRascunhoRef = useRef(0);
   const pendenteRascunhoRef = useRef<{ perguntaId: string; valor: unknown }[] | null>(null);
@@ -82,6 +84,12 @@ export function FormularioPacientePublico({ token }: Props) {
       .catch((erroAtual) => setErro(erroAtual instanceof Error ? erroAtual.message : 'Formulario indisponivel.'))
       .finally(() => setCarregando(false));
   }, [token]);
+
+  useEffect(() => assinarOperacoesSincronizadas((tipo) => {
+    if (tipo !== 'formulario' || !envioPendente) return;
+    setEnvioPendente(false);
+    setEnviado(true);
+  }), [envioPendente]);
 
   const secoes = useMemo(() => {
     const grupos: { nome: string; perguntas: PerguntaFormularioPublico[] }[] = [];
@@ -118,8 +126,12 @@ export function FormularioPacientePublico({ token }: Props) {
           setEstadoRascunho('salvo');
         } catch (erroAtual) {
           pendenteRascunhoRef.current = null;
-          setEstadoRascunho('erro');
-          setErro(erroAtual instanceof Error ? erroAtual.message : 'Nao foi possivel salvar o rascunho.');
+          if (ehFalhaDeRede(erroAtual)) {
+            setEstadoRascunho('offline');
+          } else {
+            setEstadoRascunho('erro');
+            setErro(erroAtual instanceof Error ? erroAtual.message : 'Nao foi possivel salvar o rascunho.');
+          }
         }
       }
     };
@@ -185,11 +197,16 @@ export function FormularioPacientePublico({ token }: Props) {
     try {
       await enfileirarRascunho(montarRespostas(respostas));
       suspenderRascunhoRef.current = true;
-      await enviarFormularioPublico(
-        token,
-        montarRespostas(respostas)
+      const possuiAnexo = formulario.perguntas.some(
+        (pergunta) => pergunta.tipo === 'upload_midia' && valorPreenchido(respostas[pergunta.id])
       );
-      setEnviado(true);
+      const resultado = await enviarOuEnfileirarFormularioPublico(
+        token,
+        montarRespostas(respostas),
+        !possuiAnexo
+      );
+      if (resultado === 'pendente') setEnvioPendente(true);
+      else setEnviado(true);
     } catch (erroAtual) {
       suspenderRascunhoRef.current = false;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Nao foi possivel enviar as respostas.');
@@ -213,6 +230,20 @@ export function FormularioPacientePublico({ token }: Props) {
           <CheckCircle2 className="mx-auto h-8 w-8 text-sucesso-forte" />
           <h1 className="text-xl font-semibold text-tinta">Respostas enviadas</h1>
           <p className="text-sm text-texto-suave">Seu formulario foi registrado com sucesso.</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (envioPendente) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-fundo px-4">
+        <section className="grid w-full max-w-xl gap-3 rounded-lg border border-alerta-borda bg-white p-6 text-center">
+          <CheckCircle2 className="mx-auto h-8 w-8 text-alerta" />
+          <h1 className="text-xl font-semibold text-tinta">Respostas salvas neste dispositivo</h1>
+          <p className="text-sm text-texto-suave">
+            Mantenha esta pagina aberta. O envio sera feito automaticamente quando a conexao voltar.
+          </p>
         </section>
       </main>
     );
@@ -256,6 +287,8 @@ export function FormularioPacientePublico({ token }: Props) {
                 ? 'Salvando rascunho'
                 : estadoRascunho === 'salvo'
                   ? 'Rascunho salvo'
+                  : estadoRascunho === 'offline'
+                    ? 'Sem conexao. Suas respostas continuam nesta pagina'
                   : 'Falha ao salvar rascunho'}
             </p>
           ) : null}
