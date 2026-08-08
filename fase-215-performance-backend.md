@@ -78,6 +78,12 @@ numerica equivalente.
 - `typecheck` e build backend aprovados;
 - scanner de secrets e `git diff --check` aprovados;
 - benchmark remoto: 150 leituras, zero erro, RLS aprovado e fila maxima zero.
+- deploy automatico validado por `/health/pronto`: HTTP 200, banco e 33
+  migrations prontos, pool sem espera;
+- jobs CI de backend, web, IA e mobile aprovados. O workflow geral permaneceu
+  vermelho somente pelos mesmos quatro smokes visuais ja presentes no commit
+  anterior: link `Notificacoes` no dashboard e atalho `g a`, em desktop/mobile.
+  A fase nao alterou frontend nem esses testes.
 
-Nao houve migration, seed, escrita em dados de negocio ou alteracao em
-producao.
+Nao houve migration, seed, escrita em dados de negocio nem alteracao de
+variavel ou credencial de producao.
