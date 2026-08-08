@@ -53,6 +53,16 @@ curl https://<backend-render-url>/health
 curl https://<backend-render-url>/health/detalhado
 ```
 
+Para readiness de deploy e monitoramento use tambem:
+
+```powershell
+curl https://<backend-render-url>/health/pronto
+```
+
+Esse endpoint responde `503` quando o banco estiver indisponivel ou houver
+migration pendente. `/health/detalhado` permanece compativel para diagnostico e
+inclui latencia do `SELECT 1` e contadores sanitizados do pool Postgres.
+
 Depois validar manualmente:
 
 - login web;
@@ -73,6 +83,12 @@ Depois validar manualmente:
 Fornecedor atual: Neon PostgreSQL.
 
 Runbook dedicado: `RUNBOOK_BACKUP_RESTORE.md`.
+
+Roles criadas pelo Console/API/CLI do Neon recebem privilegios administrativos
+e nao devem ser usadas como login runtime nem como evidencia de RLS. Crie a
+role da aplicacao por SQL, conceda apenas `CONNECT`, `USAGE` de schema, acesso
+necessario a tabelas/sequencias e confirme `rolsuper=false` e
+`rolbypassrls=false`. Use `neondb_owner` somente para migrations e administracao.
 
 Antes de migration sensivel:
 

@@ -225,6 +225,32 @@ Quando mexer em Gmail, Meta, Calendar, Redis ou Render:
 5. Conferir logs.
 6. Atualizar `RUNBOOK_PRODUCAO.md` ou `VARIAVEIS_AMBIENTE.md` se necessario.
 
+## Performance do backend
+
+O runner da Fase 215 faz somente leituras e usa `PERF_DATABASE_URL`, nunca a
+`DATABASE_URL` corrente. Ele recusa banco de producao e exige confirmacao exata
+do nome; banco remoto de teste exige um segundo aceite explicito.
+
+```powershell
+$env:PERF_DATABASE_URL='<url do banco de integracao>'
+$env:PERF_CONFIRMAR_BANCO='octaclin_test_fase150b'
+$env:CONFIRMAR_PERFORMANCE_REMOTA='SIM'
+$env:PERF_TENANT_SLUG='octaclin-staging'
+pnpm --dir octaclin-backend performance:backend
+Remove-Item Env:PERF_DATABASE_URL
+Remove-Item Env:PERF_CONFIRMAR_BANCO
+Remove-Item Env:CONFIRMAR_PERFORMANCE_REMOTA
+Remove-Item Env:PERF_TENANT_SLUG
+```
+
+O resultado registra p50/p95/p99, maximo e maior fila observada no pool para a
+agregacao do portal do cliente. O runner tambem recusa role com `SUPERUSER` ou
+`BYPASSRLS`, exige RLS habilitado e forcado em `pacientes`, valida que nenhuma
+linha fica visivel sem tenant e confirma o contexto dentro de `ExecutorTenant`.
+Crie a role de benchmark por SQL: roles criadas pelo Console Neon recebem
+privilegios administrativos e nao servem para validar RLS. Nao execute contra
+producao.
+
 ## Suite E2E de jornadas criticas
 
 Use antes de go-live, ao alterar portal do cliente, pacientes, agenda, comunicacoes ou portal do paciente:

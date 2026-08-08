@@ -1217,15 +1217,18 @@ Com Neon (limite de conexoes) e Render, a transacao por leitura e o **primeiro
 gargalo real de concorrencia** — nao aparece com 5 usuarios e aparece de uma vez
 com 50.
 
-**Solucao**
+**Solucao entregue**
 
-1. Avaliar `SET LOCAL` fora de transacao para leituras, ou pool dedicado de
-   leitura, **sem enfraquecer o RLS** — a garantia de tenant e inegociavel.
-2. Introduzir cache de leitura no Redis para dashboard clinico e resumos, com
-   invalidacao por evento.
-3. Fechar as agregacoes sem teto que sobrarem da Fase 199.
-4. Introduzir prefixo `/v1` na superficie que virara publica (preparacao para a
-   Fase 218), mantendo o BFF interno inalterado.
+1. Preservado o `ExecutorTenant` transacional: escopo local fora de transacao
+   nao e alternativa segura para conexoes reutilizadas pelo pool.
+2. O resumo/limites do portal passou de tres transacoes e sete leituras com
+   materializacao integral para uma transacao, uma configuracao e uma consulta
+   agregada.
+3. Pool ganhou limites explicitos; health ganhou latencia, contadores
+   sanitizados, timeout e readiness de banco/migrations.
+4. Cache e prefixo `/v1` nao entraram nesta fase. Nao houve fila no pool que
+   justificasse cache, e o versionamento pertence a superficie publica da Fase
+   218.
 
 **Skill**
 
@@ -1243,11 +1246,12 @@ com 50.
 
 **Outros**
 
-- Criterio de aceite: teste de carga em staging com N conexoes simultaneas antes
-  e depois; **teste negativo de isolamento multi-tenant continua passando** apos
-  qualquer mudanca no `executor-tenant`.
-- **Nao comecar por cache.** Medir primeiro: se o gargalo for o pool, cache nao
-  resolve e adiciona risco de vazamento.
+- Aceite concluido no banco dedicado `octaclin_test_fase150b`: 150 leituras por
+  execucao, concorrencias 1/5/10, zero erro e zero fila maxima no pool.
+- O canario recusou a role do Console Neon com privilegio elevado. A medicao
+  aceita usou role criada por SQL sem `BYPASSRLS`, RLS habilitado/forcado, zero
+  pacientes visiveis sem tenant e contexto correto dentro da transacao.
+- Evidencia detalhada em `fase-215-performance-backend.md`.
 
 ---
 

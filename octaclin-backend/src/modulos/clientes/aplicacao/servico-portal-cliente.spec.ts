@@ -61,6 +61,41 @@ function criarServico(dados: {
     })
   };
   const gerenciador = {
+    query: jest.fn(async (_sql: string, parametros: unknown[]) => {
+      const tenantId = String(parametros[0]);
+      const inicioMes = parametros[1] as Date;
+      const usuariosAtivos = dados.usuarios.filter((item) => item.tenantId === tenantId && item.ativo === true);
+      const pacientesAtivos = (dados.pacientes ?? []).filter(
+        (item) => item.tenantId === tenantId && !item.arquivadoEm
+      );
+      const mensagensMes = (dados.mensagens ?? []).filter(
+        (item) => item.tenantId === tenantId && item.criadoEm >= inicioMes
+      );
+      const formulariosAtivos = (dados.questionarios ?? []).filter(
+        (item) => item.tenantId === tenantId && item.status !== 'arquivado'
+      );
+      const armazenamentoBytes = (dados.arquivos ?? [])
+        .filter((item) => item.tenantId === tenantId && item.status === 'confirmado')
+        .reduce((total, item) => total + Number(item.tamanhoBytes || 0), 0);
+
+      return [
+        {
+          usuarios_total_ativos: String(usuariosAtivos.length),
+          usuarios_clientes: String(usuariosAtivos.filter((item) => item.role === 'Client').length),
+          usuarios_profissionais: String(
+            usuariosAtivos.filter((item) => ['SuperAdmin', 'Professional', 'Collaborator'].includes(item.role)).length
+          ),
+          usuarios_pacientes: String(usuariosAtivos.filter((item) => item.role === 'Patient').length),
+          uso_usuarios_administrativos: String(
+            usuariosAtivos.filter((item) => ['Client', 'Professional', 'Collaborator'].includes(item.role)).length
+          ),
+          uso_pacientes: String(pacientesAtivos.length),
+          uso_mensagens_mes: String(mensagensMes.length),
+          uso_formularios_ativos: String(formulariosAtivos.length),
+          uso_armazenamento_bytes: String(armazenamentoBytes)
+        }
+      ];
+    }),
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === UsuarioOrm) return repositorioUsuarios;
       if (entidade === TenantConfiguracaoOrm) return repositorioConfiguracoes;
@@ -84,6 +119,7 @@ function criarServico(dados: {
     repositorioMensagens,
     repositorioQuestionarios,
     repositorioArquivos,
+    gerenciador,
     executorTenant
   };
 }
@@ -92,7 +128,7 @@ describe('ServicoPortalCliente', () => {
   afterEach(() => jest.useRealTimers());
 
   it('deve montar resumo real da conta do cliente pelo tenant autenticado', async () => {
-    const { servico, repositorioTenants, repositorioUsuarios, executorTenant } = criarServico({
+    const { servico, repositorioTenants, repositorioUsuarios, gerenciador, executorTenant } = criarServico({
       tenants: [
         {
           id: 'tenant-1',
@@ -125,7 +161,9 @@ describe('ServicoPortalCliente', () => {
 
     expect(repositorioTenants.findOne).toHaveBeenCalledWith({ where: { id: 'tenant-1', status: 'ativo' } });
     expect(executorTenant.executar).toHaveBeenCalledWith('tenant-1', expect.any(Function));
-    expect(repositorioUsuarios.find).toHaveBeenCalledWith({ where: { tenantId: 'tenant-1', ativo: true } });
+    expect(executorTenant.executar).toHaveBeenCalledTimes(1);
+    expect(gerenciador.query).toHaveBeenCalledTimes(1);
+    expect(repositorioUsuarios.find).not.toHaveBeenCalled();
     expect(resumo).toEqual({
       conta: {
         tenantId: 'tenant-1',

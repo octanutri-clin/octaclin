@@ -28,6 +28,9 @@ describe('criarOpcoesTypeOrm', () => {
     process.env = { ...ambienteOriginal };
     delete process.env.DATABASE_URL;
     delete process.env.BANCO_SSL;
+    delete process.env.BANCO_POOL_MAX;
+    delete process.env.BANCO_POOL_CONNECTION_TIMEOUT_MS;
+    delete process.env.BANCO_POOL_IDLE_TIMEOUT_MS;
   });
 
   afterAll(() => {
@@ -63,6 +66,37 @@ describe('criarOpcoesTypeOrm', () => {
     expect(opcoes.password).toBe('local');
     expect(opcoes.database).toBe('octaclin_local');
     expect(opcoes.ssl).toBe(false);
+  });
+
+  it('configura o pool Postgres com defaults finitos e permite ajuste por ambiente', () => {
+    const padrao = criarOpcoesTypeOrm() as unknown as Record<string, unknown>;
+    expect(padrao.extra).toEqual({
+      max: 10,
+      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 30000
+    });
+
+    process.env.BANCO_POOL_MAX = '6';
+    process.env.BANCO_POOL_CONNECTION_TIMEOUT_MS = '2500';
+    process.env.BANCO_POOL_IDLE_TIMEOUT_MS = '45000';
+
+    const ajustado = criarOpcoesTypeOrm() as unknown as Record<string, unknown>;
+    expect(ajustado.extra).toEqual({
+      max: 6,
+      connectionTimeoutMillis: 2500,
+      idleTimeoutMillis: 45000
+    });
+  });
+
+  it.each([
+    ['BANCO_POOL_MAX', '0'],
+    ['BANCO_POOL_MAX', '51'],
+    ['BANCO_POOL_CONNECTION_TIMEOUT_MS', 'abc'],
+    ['BANCO_POOL_IDLE_TIMEOUT_MS', '-1']
+  ])('rejeita configuracao invalida do pool em %s', (nome, valor) => {
+    process.env[nome] = valor;
+
+    expect(() => criarOpcoesTypeOrm()).toThrow(nome);
   });
 
   it('registra a entidade e a sequencia de migrations das fases clinicas', () => {

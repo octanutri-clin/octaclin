@@ -113,6 +113,25 @@ function criarConexaoBanco() {
   };
 }
 
+function inteiroConfiguracao(nome: string, padrao: number, minimo: number, maximo: number): number {
+  const valor = process.env[nome]?.trim();
+  if (!valor) return padrao;
+
+  const numero = Number(valor);
+  if (!Number.isInteger(numero) || numero < minimo || numero > maximo) {
+    throw new Error(`${nome} deve ser um inteiro entre ${minimo} e ${maximo}.`);
+  }
+  return numero;
+}
+
+function criarOpcoesPoolPostgres() {
+  return {
+    max: inteiroConfiguracao('BANCO_POOL_MAX', 10, 1, 50),
+    connectionTimeoutMillis: inteiroConfiguracao('BANCO_POOL_CONNECTION_TIMEOUT_MS', 5000, 100, 60000),
+    idleTimeoutMillis: inteiroConfiguracao('BANCO_POOL_IDLE_TIMEOUT_MS', 30000, 1000, 300000)
+  };
+}
+
 export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
   const conexao = criarConexaoBanco();
 
@@ -212,6 +231,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,
-    logging: process.env.NODE_ENV !== 'production'
+    logging: process.env.NODE_ENV !== 'production',
+    extra: criarOpcoesPoolPostgres()
   };
 }

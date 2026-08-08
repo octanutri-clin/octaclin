@@ -28,6 +28,10 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | `CORS_ORIGINS` | Sim em producao | Origens web autorizadas, separadas por virgula e sem `*` | Render/backend | Login/BFF funciona apenas pela origem oficial |
 | `DATABASE_URL` | Sim | Conexao Neon/Postgres por papel sem `BYPASSRLS` | Render/backend | `/health`, login, migrations e RLS |
 | `BANCO_EXECUTAR_MIGRACOES` | Depende | Executar migrations automaticamente | Render/backend | Deploy sem erro de migration |
+| `BANCO_POOL_MAX` | Nao | Maximo de conexoes por processo, padrao 10 | Render/backend e worker | `/health/detalhado` mostra limite e uso do pool |
+| `BANCO_POOL_CONNECTION_TIMEOUT_MS` | Nao | Prazo para obter/conectar cliente Postgres, padrao 5000 ms | Render/backend e worker | Saturacao falha em prazo finito |
+| `BANCO_POOL_IDLE_TIMEOUT_MS` | Nao | Tempo ocioso antes de liberar conexao, padrao 30000 ms | Render/backend e worker | Conexoes ociosas retornam ao Neon |
+| `BANCO_HEALTH_TIMEOUT_MS` | Nao | Prazo dos checks de banco e migrations, padrao 1500 ms | Render/backend | `/health/pronto` nao fica pendurado |
 | `REDIS_URL` | Sim para worker em producao | Filas/outbox/cache | Render/backend e worker | Comunicacoes processam |
 | `JWT_SEGREDO` | Sim | Assinatura access token | Render/backend | Login funciona |
 | `JWT_REFRESH_SEGREDO` | Sim | Assinatura refresh token | Render/backend | Renovacao de sessao funciona |

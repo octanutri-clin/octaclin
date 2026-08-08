@@ -8,6 +8,7 @@ const mockAplicacao = {
   })),
   use: jest.fn(),
   useGlobalInterceptors: jest.fn(),
+  enableShutdownHooks: jest.fn(),
   enableCors: jest.fn(),
   useGlobalPipes: jest.fn(),
   listen: jest.fn().mockResolvedValue(undefined)
@@ -128,5 +129,6 @@ describe('inicializacao da aplicacao', () => {
 
     expect(mockCriarAplicacao).toHaveBeenCalled();
     expect(mockServidorHttp.set).toHaveBeenCalledWith('trust proxy', 1);
+    expect(mockAplicacao.enableShutdownHooks).toHaveBeenCalledTimes(1);
   });
 });

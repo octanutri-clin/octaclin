@@ -1371,9 +1371,14 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `test:authz` (35), Next 15 (69 arquivos) e build (116 paginas) aprovados.
     Sem backend ou migration. Ver `fase-214-refatoracao-monolitos.md`.
 
-- [ ] Fase 215 - Performance de backend.
-  - Medir pool, agregacoes e latencia antes de introduzir cache; preservar RLS
-    e isolamento multi-tenant em qualquer otimizacao.
+- [x] Fase 215 - Performance de backend.
+  - Resumo/limites do cliente agregados em uma transacao tenant; pool,
+    readiness, timeout, metricas e shutdown controlado adicionados.
+  - Benchmark no banco dedicado: 150 leituras por execucao, concorrencias
+    1/5/10, zero erro e zero fila maxima. Canario confirmou role sem
+    `BYPASSRLS`, RLS forcado e zero pacientes visiveis sem tenant.
+  - Cache foi conscientemente adiado por falta de gargalo medido. Sem migration
+    ou alteracao em producao. Saida: `fase-215-performance-backend.md`.
 
 - [ ] Fase 216 - Plano alimentar e calculo nutricional (MVP).
   - Executar somente apos decisao comercial; registrar formulas, versoes,

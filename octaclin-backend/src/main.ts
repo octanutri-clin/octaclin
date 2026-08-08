@@ -70,10 +70,12 @@ async function iniciarAplicacao() {
     throw new Error('REDIS_URL ou REDIS_HOST deve ser configurado para executar processadores em producao.');
   }
   if (papel === 'worker') {
-    await NestFactory.createApplicationContext(ModuloAplicacao);
+    const aplicacao = await NestFactory.createApplicationContext(ModuloAplicacao);
+    aplicacao.enableShutdownHooks();
     return;
   }
   const aplicacao = await NestFactory.create(ModuloAplicacao);
+  aplicacao.enableShutdownHooks();
   const servidorHttp = aplicacao.getHttpAdapter().getInstance();
   servidorHttp.set('trust proxy', 1);
   aplicacao.use(middlewareCorrelacao);

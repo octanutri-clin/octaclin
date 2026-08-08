@@ -1,14 +1,9 @@
 import { BadRequestException, NotFoundException, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
-import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { contextoAcessoPorPapel } from '../../auth/dominio/permissoes';
-import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
-import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
-import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
-import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import {
   TIPOS_DOCUMENTO_CLINICO,
   resolverModelo,
@@ -23,6 +18,7 @@ import {
   AtualizarPerfilEmpresaClienteDto,
   SolicitarAjusteAssinaturaClienteDto
 } from './dtos';
+import { SQL_METRICAS_CONTA_CLIENTE } from './consulta-metricas-conta-cliente';
 
 const CHAVE_CONFIGURACOES_CONTA = 'conta_cliente';
 const CHAVE_PERFIL_EMPRESA = 'perfil_empresa';
@@ -31,6 +27,23 @@ const CHAVE_PLANO_SAAS = 'plano_saas';
 const CHAVE_INTERESSE_ASSINATURA = 'assinatura_interesse';
 
 type UsoPlanoSaas = Record<RecursoLimitavelSaas, number>;
+
+interface MetricasContaCliente {
+  usuarios: ResumoPortalCliente['usuarios'];
+  uso: UsoPlanoSaas;
+}
+
+interface LinhaMetricasContaCliente {
+  usuarios_total_ativos: string;
+  usuarios_clientes: string;
+  usuarios_profissionais: string;
+  usuarios_pacientes: string;
+  uso_usuarios_administrativos: string;
+  uso_pacientes: string;
+  uso_mensagens_mes: string;
+  uso_formularios_ativos: string;
+  uso_armazenamento_bytes: string;
+}
 
 interface AlertaPlanoSaas {
   recurso: RecursoLimitavelSaas;
@@ -182,12 +195,18 @@ export class ServicoPortalCliente {
     });
     if (!tenant) throw new NotFoundException('Conta cliente nao encontrada.');
 
-    const [usuarios, assinatura] = await Promise.all([
-      this.executorTenant.executar(tenantId, (gerenciador) =>
-        gerenciador.getRepository(UsuarioOrm).find({ where: { tenantId, ativo: true } })
-      ),
-      this.obterAssinatura(tenantId)
-    ]);
+    const { metricas, assinatura } = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const [configuracao, metricasConta] = await Promise.all([
+        gerenciador.getRepository(TenantConfiguracaoOrm).findOne({
+          where: { tenantId, chave: CHAVE_PLANO_SAAS }
+        }),
+        this.obterMetricasConta(gerenciador, tenantId)
+      ]);
+      return {
+        metricas: metricasConta,
+        assinatura: this.montarAssinatura(configuracao?.valor, metricasConta.uso)
+      };
+    });
     const contexto = contextoAcessoPorPapel('Client');
 
     return {
@@ -209,12 +228,7 @@ export class ServicoPortalCliente {
         uso: assinatura.uso,
         alertas: assinatura.alertas
       },
-      usuarios: {
-        totalAtivos: usuarios.length,
-        clientes: usuarios.filter((usuario) => usuario.role === 'Client').length,
-        profissionais: usuarios.filter((usuario) => ['SuperAdmin', 'Professional', 'Collaborator'].includes(usuario.role)).length,
-        pacientes: usuarios.filter((usuario) => usuario.role === 'Patient').length
-      },
+      usuarios: metricas.usuarios,
       acesso: {
         usuarioId,
         papel: 'Client',
@@ -484,14 +498,20 @@ export class ServicoPortalCliente {
   }
 
   private async obterAssinatura(tenantId: string) {
-    const configuracao = await this.executorTenant.executar(tenantId, (gerenciador) =>
-      gerenciador.getRepository(TenantConfiguracaoOrm).findOne({
-        where: { tenantId, chave: CHAVE_PLANO_SAAS }
-      })
-    );
-    const valor = configuracao?.valor ?? {};
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const [configuracao, metricas] = await Promise.all([
+        gerenciador.getRepository(TenantConfiguracaoOrm).findOne({
+          where: { tenantId, chave: CHAVE_PLANO_SAAS }
+        }),
+        this.obterMetricasConta(gerenciador, tenantId)
+      ]);
+      return this.montarAssinatura(configuracao?.valor, metricas.uso);
+    });
+  }
+
+  private montarAssinatura(valorConfiguracao: Record<string, unknown> | undefined, uso: UsoPlanoSaas) {
+    const valor = valorConfiguracao ?? {};
     const plano = resolverPlanoSaas(valor.planoId);
-    const uso = await this.calcularUsoPlano(tenantId);
 
     return {
       plano,
@@ -503,29 +523,36 @@ export class ServicoPortalCliente {
     };
   }
 
-  private async calcularUsoPlano(tenantId: string): Promise<UsoPlanoSaas> {
-    return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const usuarios = await gerenciador.getRepository(UsuarioOrm).find({ where: { tenantId, ativo: true } });
-      const pacientes = await gerenciador.getRepository(PacienteOrm).find({ where: { tenantId } });
-      const mensagens = await gerenciador.getRepository(MensagemNotificacaoOrm).find({ where: { tenantId } });
-      const questionarios = await gerenciador.getRepository(QuestionarioOrm).find({ where: { tenantId } });
-      const arquivos = await gerenciador.getRepository(ArquivoMidiaOrm).find({ where: { tenantId, status: 'confirmado' } });
-      const inicioMes = new Date();
-      inicioMes.setUTCDate(1);
-      inicioMes.setUTCHours(0, 0, 0, 0);
+  private async obterMetricasConta(gerenciador: EntityManager, tenantId: string): Promise<MetricasContaCliente> {
+    const inicioMes = new Date();
+    inicioMes.setUTCDate(1);
+    inicioMes.setUTCHours(0, 0, 0, 0);
 
-      return {
-        usuariosAdministrativos: usuarios.filter((usuario) =>
-          ['Client', 'Professional', 'Collaborator'].includes(usuario.role)
-        ).length,
-        pacientes: pacientes.filter((paciente) => !paciente.arquivadoEm).length,
-        mensagensMes: mensagens.filter((mensagem) => mensagem.criadoEm >= inicioMes).length,
-        formulariosAtivos: questionarios.filter((questionario) => questionario.status !== 'arquivado').length,
-        armazenamentoMb: Math.ceil(
-          arquivos.reduce((total, arquivo) => total + Number(arquivo.tamanhoBytes || 0), 0) / (1024 * 1024)
-        )
-      };
-    });
+    const linhas = (await gerenciador.query(SQL_METRICAS_CONTA_CLIENTE, [tenantId, inicioMes])) as LinhaMetricasContaCliente[];
+    const linha = linhas[0];
+    if (!linha) throw new Error('Falha ao calcular metricas da conta cliente.');
+
+    return {
+      usuarios: {
+        totalAtivos: this.numeroAgregado(linha.usuarios_total_ativos),
+        clientes: this.numeroAgregado(linha.usuarios_clientes),
+        profissionais: this.numeroAgregado(linha.usuarios_profissionais),
+        pacientes: this.numeroAgregado(linha.usuarios_pacientes)
+      },
+      uso: {
+        usuariosAdministrativos: this.numeroAgregado(linha.uso_usuarios_administrativos),
+        pacientes: this.numeroAgregado(linha.uso_pacientes),
+        mensagensMes: this.numeroAgregado(linha.uso_mensagens_mes),
+        formulariosAtivos: this.numeroAgregado(linha.uso_formularios_ativos),
+        armazenamentoMb: Math.ceil(this.numeroAgregado(linha.uso_armazenamento_bytes) / (1024 * 1024))
+      }
+    };
+  }
+
+  private numeroAgregado(valor: unknown): number {
+    const numero = Number(valor);
+    if (!Number.isFinite(numero) || numero < 0) throw new Error('Metrica agregada invalida.');
+    return numero;
   }
 
   private montarAlertasPlano(limites: LimitesPlanoSaas, uso: UsoPlanoSaas): AlertaPlanoSaas[] {

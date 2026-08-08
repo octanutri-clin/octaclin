@@ -40,6 +40,11 @@ function mensagemErro(erro: unknown): string {
   return erro instanceof Error ? erro.message : 'Falha desconhecida.';
 }
 
+function timeoutHealthBancoMs(): number {
+  const configurado = Number(process.env.BANCO_HEALTH_TIMEOUT_MS ?? 1500);
+  return Number.isInteger(configurado) && configurado >= 10 && configurado <= 10000 ? configurado : 1500;
+}
+
 @Injectable()
 export class ServicoSaude {
   constructor(
@@ -48,11 +53,16 @@ export class ServicoSaude {
   ) {}
 
   async verificarDetalhado(): Promise<HealthDetalhado> {
+    const [banco, migracoes, redis] = await Promise.all([
+      this.verificarBanco(),
+      this.verificarMigracoes(),
+      this.verificarRedis()
+    ]);
     const checks = {
       backend: this.verificarBackend(),
-      banco: await this.verificarBanco(),
-      migracoes: await this.verificarMigracoes(),
-      redis: await this.verificarRedis(),
+      banco,
+      migracoes,
+      redis,
       email: this.verificarEmail(),
       whatsapp: this.verificarWhatsapp(),
       googleCalendar: this.verificarGoogleCalendar()
@@ -82,14 +92,37 @@ export class ServicoSaude {
         return { status: 'falha', mensagem: 'DataSource nao inicializado.' };
       }
 
-      await this.fonteDados.query('SELECT 1');
-      return { status: 'ok' };
+      const inicio = performance.now();
+      await this.executarComTimeout(this.fonteDados.query('SELECT 1'), timeoutHealthBancoMs());
+      const latenciaMs = Math.round((performance.now() - inicio) * 10) / 10;
+      return {
+        status: 'ok',
+        detalhes: {
+          latenciaMs,
+          ...this.obterMetricasPoolPostgres()
+        }
+      };
     } catch (erro) {
       return {
         status: 'falha',
         mensagem: mensagemErro(erro)
       };
     }
+  }
+
+  private obterMetricasPoolPostgres(): Record<string, number> {
+    const opcoes = (this.fonteDados.options ?? {}) as { extra?: { max?: unknown } };
+    const driver = (this.fonteDados.driver ?? {}) as unknown as {
+      master?: { totalCount?: unknown; idleCount?: unknown; waitingCount?: unknown };
+    };
+    const metricas: Record<string, number> = {};
+
+    if (typeof opcoes.extra?.max === 'number') metricas.poolMax = opcoes.extra.max;
+    if (typeof driver.master?.totalCount === 'number') metricas.poolTotal = driver.master.totalCount;
+    if (typeof driver.master?.idleCount === 'number') metricas.poolOciosas = driver.master.idleCount;
+    if (typeof driver.master?.waitingCount === 'number') metricas.poolAguardando = driver.master.waitingCount;
+
+    return metricas;
   }
 
   /**
@@ -109,7 +142,7 @@ export class ServicoSaude {
       }
 
       const registradas = this.fonteDados.migrations.length;
-      if (!(await this.fonteDados.showMigrations())) {
+      if (!(await this.executarComTimeout(this.fonteDados.showMigrations(), timeoutHealthBancoMs()))) {
         return { status: 'ok', detalhes: { registradas } };
       }
 

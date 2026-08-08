@@ -505,6 +505,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   formatadores e areas coesas. APIs, permissoes e comportamento foram
   preservados e os mesmos 14 cenarios Playwright passaram antes e depois em
   desktop e celular. Ver `fase-214-refatoracao-monolitos.md`.
+- Fase 215 - Performance de backend: o resumo e os limites da conta cliente
+  deixaram de materializar tabelas inteiras em tres transacoes e passaram a uma
+  transacao com agregacao SQL. Pool, readiness, timeouts, metricas sanitizadas e
+  shutdown controlado ficaram explicitos. O benchmark remoto executou 150
+  leituras por rodada sem erro ou fila e o canario exigiu role sem `BYPASSRLS`,
+  RLS forcado e zero pacientes visiveis fora do contexto de tenant. Cache foi
+  adiado por falta de gargalo medido. Ver `fase-215-performance-backend.md`.
 
 ## Estado atual de uso
 

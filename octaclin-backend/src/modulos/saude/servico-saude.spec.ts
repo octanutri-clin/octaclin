@@ -13,6 +13,7 @@ describe('ServicoSaude', () => {
     process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
     process.env.GOOGLE_CALENDAR_REFRESH_TOKEN = 'refresh-token';
     process.env.REDIS_URL = 'rediss://default:senha@redis.example.com:6379';
+    delete process.env.BANCO_HEALTH_TIMEOUT_MS;
   });
 
   afterAll(() => {
@@ -23,6 +24,10 @@ describe('ServicoSaude', () => {
     const fonteDados = {
       isInitialized: true,
       query: jest.fn(async () => [{ ok: 1 }]),
+      options: { extra: { max: 8 } },
+      driver: {
+        master: { totalCount: 5, idleCount: 3, waitingCount: 1 }
+      },
       migrations: [{ name: "Migracao1" }],
       showMigrations: jest.fn(async () => false)
     };
@@ -32,6 +37,13 @@ describe('ServicoSaude', () => {
 
     expect(resposta.status).toBe('ok');
     expect(resposta.checks.banco.status).toBe('ok');
+    expect(resposta.checks.banco.detalhes).toEqual({
+      latenciaMs: expect.any(Number),
+      poolMax: 8,
+      poolTotal: 5,
+      poolOciosas: 3,
+      poolAguardando: 1
+    });
     expect(resposta.checks.redis.status).toBe('ok');
     expect(resposta.checks.email.status).toBe('ok');
     expect(resposta.checks.whatsapp.status).toBe('ok');
@@ -63,6 +75,23 @@ describe('ServicoSaude', () => {
         mensagem: 'database unavailable'
       })
     );
+  });
+
+  it('deve encerrar o check quando o pool nao entregar conexao dentro do prazo', async () => {
+    process.env.BANCO_HEALTH_TIMEOUT_MS = '10';
+    const servico = new ServicoSaude({
+      isInitialized: true,
+      query: jest.fn(() => new Promise(() => undefined)),
+      migrations: [],
+      showMigrations: jest.fn(async () => false)
+    } as never);
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.checks.banco).toEqual({
+      status: 'falha',
+      mensagem: 'Tempo esgotado.'
+    });
   });
 
   it('deve validar Redis por PING antes de marcar o check como saudavel', async () => {
