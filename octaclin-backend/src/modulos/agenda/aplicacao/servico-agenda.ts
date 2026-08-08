@@ -35,11 +35,13 @@ import {
 } from './dtos';
 import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar';
 import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from './servico-google-calendar';
+import { registrarEventoWebhook } from '../../integracoes/aplicacao/registrar-evento-webhook';
 
 const EVENTO_CONSULTA_AGENDADA = 'agenda.consulta.agendada';
 const EVENTO_CONSULTA_CANCELADA = 'agenda.consulta.cancelada';
 type OrigemCancelamentoConsulta = 'profissional' | 'paciente' | 'google';
 const CONSTRAINT_SOBREPOSICAO_AGENDA = 'ex_agenda_consultas_profissional_horario_ativo';
+const CONSTRAINT_REFERENCIA_EXTERNA_AGENDA = 'ux_agenda_consultas_referencia_externa';
 const MENSAGEM_CONFLITO_HORARIO = 'Ja existe consulta agendada neste horario para o profissional.';
 const STATUS_CONSULTA_ATIVOS: StatusAgendaConsulta[] = ['agendada', 'reagendada'];
 const STATUS_CONSULTA_TERMINAIS: StatusAgendaConsulta[] = ['concluida', 'falta', 'cancelada'];
@@ -51,6 +53,7 @@ interface ContextoConsultaCriada {
   emailContato?: string;
   whatsappContato?: string;
   textoMensagem: string;
+  reutilizada?: boolean;
 }
 
 interface JanelaConsulta {
@@ -284,7 +287,25 @@ export class ServicoAgenda {
   }
 
   async criarConsulta(tenantId: string, dados: CriarConsultaAgendaDto, usuario: UsuarioAutenticado): Promise<ConsultaAgendaRespostaDto> {
-    const contexto = await this.criarRegistroInterno(tenantId, dados, usuario);
+    const referenciaExterna = dados.referenciaExterna?.trim();
+    if (referenciaExterna) {
+      const existente = await this.executorTenant.executar(tenantId, (gerenciador) =>
+        gerenciador.getRepository(AgendaConsultaOrm).findOne({ where: { tenantId, referenciaExterna } })
+      );
+      if (existente) return this.mapearResposta(existente);
+    }
+    let contexto: ContextoConsultaCriada;
+    try {
+      contexto = await this.criarRegistroInterno(tenantId, { ...dados, referenciaExterna }, usuario);
+    } catch (erro) {
+      if (!referenciaExterna || !this.ehConflitoReferenciaExterna(erro)) throw erro;
+      const existente = await this.executorTenant.executar(tenantId, (gerenciador) =>
+        gerenciador.getRepository(AgendaConsultaOrm).findOne({ where: { tenantId, referenciaExterna } })
+      );
+      if (!existente) throw erro;
+      return this.mapearResposta(existente);
+    }
+    if (contexto.reutilizada) return this.mapearResposta(contexto.consulta);
     const credenciais = contexto.consulta.profissionalId
       ? await this.servicoConexao.obterConexaoAtiva(tenantId, contexto.consulta.profissionalId)
       : undefined;
@@ -531,7 +552,21 @@ export class ServicoAgenda {
         motivo: textoOpcional(dados.motivo),
         canceladaEm: new Date().toISOString()
       });
-      return repositorio.save(atual);
+      const cancelada = await repositorio.save(atual);
+      await registrarEventoWebhook(gerenciador, tenantId, {
+        evento: 'consulta.cancelada',
+        recursoTipo: 'agenda_consulta',
+        recursoId: cancelada.id,
+        dados: {
+          consultaId: cancelada.id,
+          pacienteId: cancelada.pacienteId,
+          profissionalId: cancelada.profissionalId,
+          referenciaExterna: cancelada.referenciaExterna,
+          inicioEm: cancelada.inicioEm.toISOString(),
+          status: cancelada.status
+        }
+      });
+      return cancelada;
     });
 
     if (!propagarParaGoogle) return this.mapearResposta(consulta);
@@ -607,6 +642,20 @@ export class ServicoAgenda {
       const financeiro = await this.resolverFinanceiroDaConsulta(gerenciador, tenantId, paciente.id, dados);
       const textoMensagem = this.montarTextoMensagem(pacienteNome, inicioEm, teleconsulta.linkTeleconsulta);
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
+      if (dados.referenciaExterna) {
+        const existente = await repositorio.findOne({ where: { tenantId, referenciaExterna: dados.referenciaExterna } });
+        if (existente) {
+          return {
+            consulta: existente,
+            pacienteNome: this.nomePacientePayload(existente),
+            profissionalNome: this.nomeProfissionalPayload(existente),
+            emailContato: this.emailContatoPayload(existente),
+            whatsappContato: this.whatsappContatoPayload(existente),
+            textoMensagem: typeof existente.payload?.textoMensagem === 'string' ? existente.payload.textoMensagem : '',
+            reutilizada: true
+          };
+        }
+      }
       const consulta = await this.salvarConsultaProtegidaContraSobreposicao(() =>
         repositorio.save(
           repositorio.create({
@@ -622,6 +671,7 @@ export class ServicoAgenda {
             linkTeleconsulta: teleconsulta.linkTeleconsulta,
             local: textoOpcional(dados.local),
             observacoes: textoOpcional(dados.observacoes),
+            referenciaExterna: dados.referenciaExterna?.trim(),
             ...financeiro,
             notificacoes: {},
             payload: {
@@ -634,6 +684,21 @@ export class ServicoAgenda {
           })
         )
       );
+
+      await registrarEventoWebhook(gerenciador, tenantId, {
+        evento: 'consulta.criada',
+        recursoTipo: 'agenda_consulta',
+        recursoId: consulta.id,
+        dados: {
+          consultaId: consulta.id,
+          pacienteId: consulta.pacienteId,
+          profissionalId: consulta.profissionalId,
+          referenciaExterna: consulta.referenciaExterna,
+          inicioEm: consulta.inicioEm.toISOString(),
+          fimEm: consulta.fimEm.toISOString(),
+          status: consulta.status
+        }
+      });
 
       return { consulta, pacienteNome, profissionalNome, emailContato, whatsappContato, textoMensagem };
     });
@@ -1023,6 +1088,16 @@ export class ServicoAgenda {
     return typeof consulta.payload?.emailContato === 'string' ? consulta.payload.emailContato : undefined;
   }
 
+  private ehConflitoReferenciaExterna(erro: unknown): boolean {
+    if (!(erro instanceof QueryFailedError)) return false;
+    const postgres = erro.driverError as { code?: string; constraint?: string } | undefined;
+    return postgres?.code === '23505' && postgres.constraint === CONSTRAINT_REFERENCIA_EXTERNA_AGENDA;
+  }
+
+  private whatsappContatoPayload(consulta: AgendaConsultaOrm) {
+    return typeof consulta.payload?.whatsappContato === 'string' ? consulta.payload.whatsappContato : undefined;
+  }
+
   private obterEmailPaciente(paciente: PacienteOrm): string | undefined {
     if (!paciente.contatoCriptografado) return undefined;
     const contato = this.obterContatoPaciente(paciente);
@@ -1095,6 +1170,7 @@ export class ServicoAgenda {
       tenantId: consulta.tenantId,
       pacienteId: consulta.pacienteId,
       pacienteNome: pacienteNome ?? (typeof payload.pacienteNome === 'string' ? payload.pacienteNome : undefined),
+      referenciaExterna: consulta.referenciaExterna,
       profissionalId: consulta.profissionalId,
       profissionalNome: profissionalNome ?? (typeof payload.profissionalNome === 'string' ? payload.profissionalNome : undefined),
       titulo: consulta.titulo,

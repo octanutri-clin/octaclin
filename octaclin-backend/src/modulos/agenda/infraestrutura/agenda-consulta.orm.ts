@@ -46,6 +46,9 @@ export class AgendaConsultaOrm {
   @Column({ type: 'text', nullable: true })
   observacoes?: string;
 
+  @Column({ name: 'referencia_externa', type: 'varchar', length: 180, nullable: true })
+  referenciaExterna?: string;
+
   @Column({ name: 'google_calendar_id', type: 'varchar', length: 220, nullable: true })
   googleCalendarId?: string;
 

@@ -91,6 +91,11 @@ export class CriarConsultaAgendaDto {
   @IsOptional()
   @IsUUID()
   pacoteId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  referenciaExterna?: string;
 }
 
 export class RegistrarPagamentoConsultaDto {
@@ -278,6 +283,7 @@ export interface ConsultaAgendaRespostaDto {
   tenantId: string;
   pacienteId: string;
   pacienteNome?: string;
+  referenciaExterna?: string;
   profissionalId?: string;
   profissionalNome?: string;
   titulo: string;

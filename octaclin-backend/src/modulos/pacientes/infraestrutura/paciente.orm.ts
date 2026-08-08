@@ -26,6 +26,9 @@ export class PacienteOrm {
   @Column({ name: 'data_nascimento', type: 'date', nullable: true })
   dataNascimento?: string;
 
+  @Column({ name: 'referencia_externa', type: 'varchar', length: 180, nullable: true })
+  referenciaExterna?: string;
+
   @Column({ name: 'status_adesao', type: 'varchar', length: 40, default: 'novo' })
   statusAdesao: string;
 

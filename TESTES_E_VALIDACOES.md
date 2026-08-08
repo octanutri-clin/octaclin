@@ -335,6 +335,27 @@ pnpm --dir octaclin-backend migration:run
 
 ## Validacao antes de commit
 
+### Fase 218 - API publica e webhooks
+
+```powershell
+pnpm --dir octaclin-backend test -- --runInBand
+pnpm --dir octaclin-backend typecheck
+pnpm --dir octaclin-backend build
+pnpm --dir octaclin-web test:authz
+pnpm --dir octaclin-web test:next15
+pnpm --dir octaclin-web typecheck
+pnpm --dir octaclin-web lint
+pnpm --dir octaclin-web build
+pnpm security:secrets
+powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
+```
+
+Depois da migration `1022` em producao confirmada, conferir RLS forcada e
+policy nas tres tabelas, todos os indices, as FKs compostas e as colunas
+`referencia_externa`. O smoke usa apenas dados sinteticos e cobre chave valida,
+escopo negado, revogacao imediata, repeticao idempotente, assinatura HMAC sobre
+corpo bruto e historico da entrega. Ver `RUNBOOK_PRODUCAO.md`.
+
 ### Fase 216 - plano alimentar
 
 ```powershell

@@ -18,8 +18,13 @@ Atualizado em 2026-08-08.
   menu, IA, metas/adesao, recebimentos proprios e a ausencia de entradas de
   outros papeis. Ver
   `AUDITORIA_ACESSO_PROFISSIONAL_2026-08-08.md`.
-- Ultima fase concluida: Fase 216 - plano alimentar e calculo nutricional.
-  Profissional monta, revisa, publica e versiona planos no prontuario; o
+- Ultima fase concluida: Fase 217 - PWA do portal do paciente. O portal e
+  instalavel, mantem somente recursos publicos no cache e oferece fila offline
+  cifrada e idempotente para check-in e formulario sem anexo. Nenhum dado
+  clinico, HTML autenticado ou API protegida entra no Cache Storage. Ver
+  `fase-217-pwa-portal-paciente.md`.
+- Fase 216 - plano alimentar e calculo nutricional. Profissional monta, revisa,
+  publica e versiona planos no prontuario; o
   paciente recebe somente a versao publicada atual no portal. Calculo
   energetico e composicao rodam no backend, com fonte/versao, snapshots
   criptografados, confirmacao clinica e bloqueio de condicoes especiais neste
@@ -54,6 +59,11 @@ Atualizado em 2026-08-08.
   identificadas. 679 testes de backend em 98 suites, typecheck, lint,
   `test:authz`, `test:next15` e build web aprovados. Sem migration. Ver
   `fase-211-importacao-massa-exportacoes-cliente.md`.
+- Fase 218 em rollout controlado: API `/v1`, chaves escopadas por tenant,
+  idempotencia por referencia externa e webhooks assinados foram implementados
+  localmente. A migration aditiva `1022` foi aplicada primeiro e validada no
+  banco de producao, agora em 35/35; push, deploy e smoke ainda estao pendentes. Ver
+  `fase-218-api-publica-chaves-webhooks.md` e `API_PUBLICA_V1.md`.
 - Fase 210 - notificacoes in-app e tempo real, em
   2026-08-06. O sino do console deixou de ser um link estatico e passou a contar
   de verdade: centro de notificacoes por usuario com estado lido/nao lido para

@@ -233,6 +233,76 @@ A tabela cresce sem expurgo automatico. A consulta quente usa indice parcial
 sobre nao lidas e a listagem usa `limit`, entao o efeito e de disco e nao de
 latencia; acompanhar o tamanho junto com as demais tabelas no Neon.
 
+### API publica e webhooks (Fase 218)
+
+O codigo da Fase 218 depende da migration aditiva
+`CriarIntegracoesApiPublica1720000001022`. Como producao usa
+`BANCO_EXECUTAR_MIGRACOES=false`, aplicar o schema **antes** do deploy do codigo.
+Use somente a URL explicitamente confirmada de `Octaclin-db-producao` com role
+`neondb_owner`. A role `octaclin_app_producao` nao deve executar migrations.
+
+```powershell
+$url = '<URL owner de producao confirmada>'
+try {
+  $env:DATABASE_URL = $url
+  pnpm --dir octaclin-backend run typeorm -- migration:show
+  # Parar se qualquer migration alem da 1022 estiver pendente.
+  pnpm --dir octaclin-backend migration:run
+  pnpm --dir octaclin-backend run typeorm -- migration:show
+} finally {
+  Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+  $url = $null
+}
+```
+
+Nunca executar seed com essa URL ativa. Em falha, nao rodar `migration:revert`:
+registrar o erro com credenciais redigidas e investigar o estado transacional.
+
+Verificacao obrigatoria no SQL Editor do mesmo banco:
+
+```sql
+select relname, relrowsecurity, relforcerowsecurity
+from pg_class
+where relname in ('api_chaves', 'webhook_assinaturas', 'webhook_entregas')
+order by relname;
+
+select tablename, policyname
+from pg_policies
+where tablename in ('api_chaves', 'webhook_assinaturas', 'webhook_entregas')
+order by tablename, policyname;
+
+select tablename, indexname
+from pg_indexes
+where tablename in (
+  'api_chaves', 'webhook_assinaturas', 'webhook_entregas',
+  'pacientes', 'agenda_consultas'
+)
+and (indexname like '%api_chaves%' or indexname like '%webhook_%'
+  or indexname in ('ux_pacientes_referencia_externa', 'ux_agenda_consultas_referencia_externa'))
+order by tablename, indexname;
+
+select table_name, column_name
+from information_schema.columns
+where (table_name = 'pacientes' or table_name = 'agenda_consultas')
+  and column_name = 'referencia_externa'
+order by table_name;
+```
+
+Esperado: RLS `t|t` nas tres tabelas; policies
+`isolamento_tenant_api_chaves`, `isolamento_tenant_webhook_assinaturas` e
+`isolamento_tenant_webhook_entregas`; indices da migration; e duas colunas de
+referencia externa. Conferir tambem as FKs compostas descritas em
+`fase-218-api-publica-chaves-webhooks.md`.
+
+Depois do deploy, criar credenciais somente com dados sinteticos. Confirmar:
+
+1. chave aparece completa uma vez e chamadas sem escopo recebem HTTP 403;
+2. repetir o mesmo `referenciaExterna` devolve o mesmo ID;
+3. chave revogada recebe HTTP 401 na chamada seguinte;
+4. webhook recebe o corpo minimo e HMAC valido conforme `API_PUBLICA_V1.md`;
+5. entrega 2xx aparece como entregue e uma falha pode ser reprocessada;
+6. remover ou revogar todas as credenciais usadas no aceite.
+
 ### Backup e restore
 
 Antes de go-live e antes de migrations sensiveis:

@@ -1,6 +1,7 @@
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
+import { WebhookAssinaturaOrm } from '../../integracoes/infraestrutura/webhook-assinatura.orm';
 import { ServicoQuestionarios } from './servico-questionarios';
 import { CategoriaPerguntaOrm } from '../infraestrutura/categoria-pergunta.orm';
 import { AgendamentoQuestionarioOrm } from '../infraestrutura/agendamento-questionario.orm';
@@ -163,6 +164,7 @@ function criarServico(dados: Record<string, any>) {
       // o publicador da Fase 210 sai antes de escrever. O fan-out em si esta
       // coberto em registrar-notificacao.spec.ts.
       if (entidade.name === 'UsuarioOrm') return { find: jest.fn(async () => []) };
+      if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };

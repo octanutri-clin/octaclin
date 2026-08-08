@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { And, ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThanOrEqual, Not, Raw } from 'typeorm';
+import { And, ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThanOrEqual, Not, QueryFailedError, Raw } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { montarCsv } from '../../../infraestrutura/exportacao/csv';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -13,6 +13,7 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
+import { registrarEventoWebhook } from '../../integracoes/aplicacao/registrar-evento-webhook';
 import {
   calcularAntropometria,
   compararAvaliacoes,
@@ -47,6 +48,7 @@ import { PacienteOrm } from '../infraestrutura/paciente.orm';
  */
 export const LIMITE_LINHAS_EXPORTACAO = 5000;
 const PAGINA_EXPORTACAO = 100;
+const CONSTRAINT_REFERENCIA_EXTERNA_PACIENTE = 'ux_pacientes_referencia_externa';
 
 @Injectable()
 export class ServicoPacientes {
@@ -57,29 +59,67 @@ export class ServicoPacientes {
   ) {}
 
   async criar(tenantId: string, dados: CriarPacienteDto, usuario: UsuarioAutenticado): Promise<PacienteRespostaDto> {
+    const referenciaExterna = dados.referenciaExterna?.trim();
+    if (referenciaExterna) {
+      const existente = await this.executorTenant.executar(tenantId, (gerenciador) =>
+        gerenciador.getRepository(PacienteOrm).findOne({ where: { tenantId, referenciaExterna } })
+      );
+      if (existente) return this.mapearResposta(existente);
+    }
     await this.garantirLimitePermitido(tenantId, 'pacientes');
 
-    return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const repositorio = gerenciador.getRepository(PacienteOrm);
-      const profissionalResponsavelId =
-        usuario.papel === 'Professional'
-          ? await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)
-          : dados.profissionalResponsavelId;
+    try {
+      return await this.executorTenant.executar(tenantId, async (gerenciador) => {
+        const repositorio = gerenciador.getRepository(PacienteOrm);
+        if (referenciaExterna) {
+          const existente = await repositorio.findOne({ where: { tenantId, referenciaExterna } });
+          if (existente) return this.mapearResposta(existente);
+        }
+        const profissionalResponsavelId =
+          usuario.papel === 'Professional'
+            ? await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)
+            : dados.profissionalResponsavelId;
 
-      await this.garantirProfissionalResponsavelExiste(gerenciador, tenantId, profissionalResponsavelId);
-      const paciente = repositorio.create({
-        tenantId,
-        profissionalResponsavelId,
-        nomeCriptografado: this.criptografia.criptografar(dados.nome),
-        contatoCriptografado: dados.contato ? this.criptografia.criptografar(dados.contato) : undefined,
-        buscaHashes: this.criptografia.gerarHashesBuscaPii(tenantId, [dados.nome, dados.contato]),
-        dataNascimento: dados.dataNascimento,
-        statusAdesao: 'novo',
-        scoreRisco: '0'
+        await this.garantirProfissionalResponsavelExiste(gerenciador, tenantId, profissionalResponsavelId);
+        const paciente = repositorio.create({
+          tenantId,
+          profissionalResponsavelId,
+          nomeCriptografado: this.criptografia.criptografar(dados.nome),
+          contatoCriptografado: dados.contato ? this.criptografia.criptografar(dados.contato) : undefined,
+          buscaHashes: this.criptografia.gerarHashesBuscaPii(tenantId, [dados.nome, dados.contato]),
+          dataNascimento: dados.dataNascimento,
+          referenciaExterna,
+          statusAdesao: 'novo',
+          scoreRisco: '0'
+        });
+
+        const salvo = await repositorio.save(paciente);
+        await registrarEventoWebhook(gerenciador, tenantId, {
+          evento: 'paciente.criado',
+          recursoTipo: 'paciente',
+          recursoId: salvo.id,
+          dados: {
+            pacienteId: salvo.id,
+            profissionalResponsavelId: salvo.profissionalResponsavelId,
+            referenciaExterna: salvo.referenciaExterna
+          }
+        });
+        return this.mapearResposta(salvo);
       });
+    } catch (erro) {
+      if (!referenciaExterna || !this.ehConflitoReferenciaExterna(erro)) throw erro;
+      const existente = await this.executorTenant.executar(tenantId, (gerenciador) =>
+        gerenciador.getRepository(PacienteOrm).findOne({ where: { tenantId, referenciaExterna } })
+      );
+      if (!existente) throw erro;
+      return this.mapearResposta(existente);
+    }
+  }
 
-      return this.mapearResposta(await repositorio.save(paciente));
-    });
+  private ehConflitoReferenciaExterna(erro: unknown): boolean {
+    if (!(erro instanceof QueryFailedError)) return false;
+    const postgres = erro.driverError as { code?: string; constraint?: string } | undefined;
+    return postgres?.code === '23505' && postgres.constraint === CONSTRAINT_REFERENCIA_EXTERNA_PACIENTE;
   }
 
   async listar(
@@ -308,6 +348,7 @@ export class ServicoPacientes {
       nome: this.criptografia.descriptografar(paciente.nomeCriptografado),
       contato: this.mapearContato(paciente),
       dataNascimento: paciente.dataNascimento,
+      referenciaExterna: paciente.referenciaExterna,
       statusAdesao: paciente.statusAdesao,
       scoreRisco: paciente.scoreRisco,
       ultimoCheckinEm: paciente.ultimoCheckinEm,

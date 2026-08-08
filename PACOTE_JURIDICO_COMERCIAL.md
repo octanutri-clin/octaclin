@@ -40,6 +40,23 @@ regulatoria aplicavel a cada cliente.
 6. Confirmar os itens criticos de `CHECKLIST_GO_LIVE.md`, incluindo dominio,
    identidade de envio e recorrencia operacional de backup.
 
+## Integracoes externas e API publica
+
+Antes de um cliente habilitar chave de API ou webhook, registrar no onboarding:
+
+1. finalidade, categorias de dados e escopos estritamente necessarios;
+2. identidade e papel do sistema receptor, incluindo eventual suboperador;
+3. base legal, contrato, retencao, descarte e canal para incidentes;
+4. transferencia internacional e local de tratamento, quando aplicavel;
+5. responsavel pela custodia e rotacao das credenciais;
+6. procedimento para revogar acesso e atender direitos do titular.
+
+O OctaClin fornece isolamento por tenant, chaves escopadas, eventos minimos,
+assinatura HMAC, auditoria e revogacao. Esses controles tecnicos nao substituem
+a avaliacao juridica do compartilhamento nem autorizam enviar dados sem
+finalidade e base legal definidas. Atualizar contrato e anexo de tratamento
+antes de disponibilizar a integracao a clientes reais.
+
 ## Referencias oficiais consultadas
 
 - [Lei no 13.709/2018 - LGPD](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709compilado.htm)

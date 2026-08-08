@@ -9,6 +9,7 @@ import { obterSegredoFormularioPublico } from '../../../infraestrutura/seguranca
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
 import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
+import { registrarEventoWebhook } from '../../integracoes/aplicacao/registrar-evento-webhook';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { normalizarConfiguracaoPergunta } from '../dominio/configuracao-pergunta';
 import { MODELOS_QUESTIONARIO, ModeloQuestionarioResumo, resumirModeloQuestionario } from '../dominio/modelos-questionario';
@@ -1238,6 +1239,19 @@ export class ServicoQuestionarios {
         recursoTipo: 'envio_questionario',
         recursoId: envio.id,
         pacienteId: envio.pacienteId
+      });
+
+      await registrarEventoWebhook(gerenciador, tenantId, {
+        evento: 'formulario.respondido',
+        recursoTipo: 'envio_questionario',
+        recursoId: envio.id,
+        dados: {
+          envioId: envio.id,
+          questionarioId: envio.questionarioId,
+          pacienteId: envio.pacienteId,
+          respostaId: respostaCheckin.id,
+          respondidoEm: agora.toISOString()
+        }
       });
 
       return {

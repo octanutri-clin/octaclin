@@ -19,6 +19,8 @@ Este checklist deve ser concluido antes de incluir clientes reais de consultoria
 - [ ] JWT e refresh secrets fortes e exclusivos.
 - [ ] Chave AES forte e exclusiva.
 - [ ] Rate limiting em login, recuperacao, convites e webhooks sensiveis.
+- [ ] Chaves de API e webhooks de aceite revogados; consumidores reais usam
+  escopo minimo, cofre de secrets e validacao HMAC em tempo constante.
 - [ ] Testes negativos multi-tenant.
 - [ ] Permissoes por papel revisadas.
 

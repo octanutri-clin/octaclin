@@ -11,6 +11,7 @@ import { ModuloComunicacoes } from './modulos/comunicacoes/modulo-comunicacoes';
 import { ModuloDashboard } from './modulos/dashboard/modulo-dashboard';
 import { ModuloGamificacao } from './modulos/gamificacao/modulo-gamificacao';
 import { ModuloIa } from './modulos/ia/modulo-ia';
+import { ModuloIntegracoes } from './modulos/integracoes/modulo-integracoes';
 import { ModuloMateriais } from './modulos/materiais/modulo-materiais';
 import { ModuloMobile } from './modulos/mobile/modulo-mobile';
 import { ModuloNotificacoes } from './modulos/notificacoes/modulo-notificacoes';
@@ -45,6 +46,7 @@ import { ModuloUsuarios } from './modulos/usuarios/modulo-usuarios';
     ModuloAgenda,
     ModuloMateriais,
     ModuloIa,
+    ModuloIntegracoes,
     ModuloAutomacoes,
     ModuloGamificacao,
     ModuloMobile,

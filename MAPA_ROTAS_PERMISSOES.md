@@ -1,6 +1,6 @@
 # OctaClin - Mapa de rotas e permissoes
 
-Atualizado apos a Fase 108. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
+Atualizado durante a Fase 218. Este arquivo documenta o estado atual de papeis, permissoes e rotas para evitar regressao ao refinar autorizacao.
 
 ## Papeis
 
@@ -117,6 +117,8 @@ navegacao principal.
 | Auth | `/auth` | Publico/autenticado conforme rota |
 | Health | `/health` | Publico |
 | Cliente | `/cliente` | `Client` + permissoes `cliente.*` por acao |
+| Gestao de integracoes | `/cliente/integracoes` | `Client` + `cliente.configuracoes.gerenciar` |
+| API publica | `/v1` | Chave do tenant + escopo exigido por operacao |
 | Portal paciente | `/portal` | `Patient` |
 | Pacientes | `/pacientes` | `SuperAdmin`, `Professional`, `Collaborator` + `pacientes.listar`/`pacientes.ler`/`pacientes.gerenciar` |
 | Convites paciente | `/pacientes/.../convites-acesso` | `SuperAdmin`, `Professional`, `Collaborator` para criacao; publico para ativacao |
@@ -143,6 +145,7 @@ navegacao principal.
 | `/api/cliente/resumo` | `/cliente/resumo` | Resumo real da conta do cliente |
 | `/api/cliente/assinatura/interesse` | `/cliente/assinatura/interesse` | POST exige `cliente.assinatura.ler`; registra solicitacao comercial manual de upgrade/revisao |
 | `/api/cliente/configuracoes` | `/cliente/configuracoes` | GET/PATCH exigem `cliente.configuracoes.gerenciar` |
+| `/api/cliente/integracoes/*` | `/cliente/integracoes/*` | GET/POST/DELETE exigem `Client` e `cliente.configuracoes.gerenciar`; permite gerir chaves, webhooks e entregas sem devolver hashes ou segredos persistidos |
 | `/api/cliente/perfil-empresa` | `/cliente/perfil-empresa` | GET/PATCH exigem `cliente.configuracoes.gerenciar`; PATCH audita `cliente.perfil_empresa.atualizar` |
 | `/api/cliente/usuarios` | `/cliente/usuarios` | GET exige `cliente.usuarios.ler`; POST exige `cliente.usuarios.convidar` |
 | `/api/cliente/usuarios/[id]` | `/cliente/usuarios/:id` | DELETE exige `cliente.usuarios.desativar` |

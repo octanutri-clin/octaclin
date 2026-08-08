@@ -49,6 +49,11 @@ export class CriarPacienteDto {
   @IsOptional()
   @IsDateString()
   dataNascimento?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  referenciaExterna?: string;
 }
 
 export class ListarPacientesDto {
@@ -147,6 +152,7 @@ export interface PacienteRespostaDto {
   nome: string;
   contato?: string;
   dataNascimento?: string;
+  referenciaExterna?: string;
   statusAdesao: string;
   scoreRisco: string;
   ultimoCheckinEm?: Date;

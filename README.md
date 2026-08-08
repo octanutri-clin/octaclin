@@ -28,6 +28,7 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 - `RUNBOOK_SUPORTE.md` - atendimento de suporte para login, convites, senha, WhatsApp, email e agenda.
 - `RUNBOOK_STAGING_DADOS.md` - massa ficticia de staging para demonstracao e QA.
 - `CHECKLIST_GO_LIVE.md` - criterios antes de incluir clientes reais.
+- `API_PUBLICA_V1.md` - contrato da API publica, chaves e webhooks assinados.
 
 ## Estrutura
 

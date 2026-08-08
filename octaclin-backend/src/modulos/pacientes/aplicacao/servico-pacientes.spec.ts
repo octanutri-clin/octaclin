@@ -1,4 +1,5 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { QueryFailedError } from 'typeorm';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
@@ -7,6 +8,7 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
+import { WebhookAssinaturaOrm } from '../../integracoes/infraestrutura/webhook-assinatura.orm';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
@@ -16,6 +18,7 @@ function criarGerenciadorFake(repositorio: Record<string, unknown>) {
   if ('paciente' in repositorio || 'profissional' in repositorio) {
     return {
       getRepository: jest.fn((entidade: unknown) => {
+        if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
         if (entidade === PacienteOrm) return repositorio.paciente;
         if (entidade === ProfissionalOrm) return repositorio.profissional;
         if (entidade === AgendaConsultaOrm) return repositorio.agenda ?? { find: jest.fn(async () => []) };
@@ -25,9 +28,10 @@ function criarGerenciadorFake(repositorio: Record<string, unknown>) {
   }
 
   return {
-    getRepository: jest.fn((entidade: unknown) =>
-      entidade === AgendaConsultaOrm ? repositorio.agenda ?? { find: jest.fn(async () => []) } : repositorio
-    )
+    getRepository: jest.fn((entidade: unknown) => {
+      if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
+      return entidade === AgendaConsultaOrm ? repositorio.agenda ?? { find: jest.fn(async () => []) } : repositorio;
+    })
   };
 }
 
@@ -52,6 +56,58 @@ const usuarioProfissional: UsuarioAutenticado = {
 };
 
 describe('ServicoPacientes', () => {
+  it('reutiliza o paciente vencedor quando duas criacoes usam a mesma referencia externa', async () => {
+    const existente = {
+      id: 'paciente-existente',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('criptografado:Maria'),
+      buscaHashes: [],
+      referenciaExterna: 'crm-42',
+      statusAdesao: 'novo',
+      scoreRisco: '0',
+      criadoEm: new Date(),
+      atualizadoEm: new Date()
+    };
+    const erroPostgres = Object.assign(new Error('duplicate key'), {
+      code: '23505',
+      constraint: 'ux_pacientes_referencia_externa'
+    });
+    const repositorioPacientes = {
+      findOne: jest.fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(existente),
+      create: jest.fn((dados: Record<string, unknown>) => dados),
+      save: jest.fn(async () => {
+        throw new QueryFailedError('insert into pacientes', [], erroPostgres);
+      })
+    };
+    const gerenciador = criarGerenciadorFake({
+      paciente: repositorioPacientes,
+      profissional: { findOne: jest.fn(async () => ({ id: 'profissional-1', tenantId: 'tenant-1' })) }
+    });
+    const executorTenant = {
+      executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => operacao(gerenciador))
+    };
+    const criptografia = {
+      criptografar: jest.fn((valor: string) => Buffer.from(`criptografado:${valor}`)),
+      descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('criptografado:', '')),
+      gerarHashesBuscaPii: jest.fn(() => ['hash-busca'])
+    };
+    const servico = new ServicoPacientes(executorTenant as never, criptografia as never, limitesPermitidos as never);
+
+    const resposta = await servico.criar(
+      'tenant-1',
+      { profissionalResponsavelId: 'profissional-1', nome: 'Maria', referenciaExterna: '  crm-42  ' },
+      usuarioColaborador
+    );
+
+    expect(resposta.id).toBe('paciente-existente');
+    expect(repositorioPacientes.findOne).toHaveBeenNthCalledWith(1, { where: { tenantId: 'tenant-1', referenciaExterna: 'crm-42' } });
+    expect(repositorioPacientes.findOne).toHaveBeenLastCalledWith({ where: { tenantId: 'tenant-1', referenciaExterna: 'crm-42' } });
+  });
+
   it('deve criar paciente dentro do contexto do tenant e criptografar dados sensiveis', async () => {
     const repositorioPacientes = {
       create: jest.fn((dados: Record<string, unknown>) => dados),

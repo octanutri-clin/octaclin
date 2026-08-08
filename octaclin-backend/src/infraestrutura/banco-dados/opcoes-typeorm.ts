@@ -34,6 +34,7 @@ import { CriptografarConteudoNotificacoes1720000001018 } from './migracoes/17200
 import { AdicionarFinanceiroConsulta1720000001019 } from './migracoes/1720000001019-AdicionarFinanceiroConsulta';
 import { CriarNotificacoesUsuario1720000001020 } from './migracoes/1720000001020-CriarNotificacoesUsuario';
 import { CriarPlanosAlimentares1720000001021 } from './migracoes/1720000001021-CriarPlanosAlimentares';
+import { CriarIntegracoesApiPublica1720000001022 } from './migracoes/1720000001022-CriarIntegracoesApiPublica';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -89,6 +90,9 @@ import { TenantOrm } from '../../modulos/tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../modulos/usuarios/infraestrutura/usuario.orm';
 import { DashboardAlertaOcultoOrm } from '../../modulos/dashboard/infraestrutura/dashboard-alerta-oculto.orm';
 import { AlimentoComposicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/alimento-composicao.orm';
+import { ApiChaveOrm } from '../../modulos/integracoes/infraestrutura/api-chave.orm';
+import { WebhookAssinaturaOrm } from '../../modulos/integracoes/infraestrutura/webhook-assinatura.orm';
+import { WebhookEntregaOrm } from '../../modulos/integracoes/infraestrutura/webhook-entrega.orm';
 import { FonteComposicaoAlimentoOrm } from '../../modulos/planos-alimentares/infraestrutura/fonte-composicao-alimento.orm';
 import { PlanoAlimentarItemOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-item.orm';
 import { PlanoAlimentarRefeicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
@@ -207,7 +211,10 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       FonteComposicaoAlimentoOrm,
       AlimentoComposicaoOrm,
       UserActionLogOrm,
-      OutboxEventoOrm
+      OutboxEventoOrm,
+      ApiChaveOrm,
+      WebhookAssinaturaOrm,
+      WebhookEntregaOrm
     ],
     migrations: [
       CriarFundacaoOctaClin1720000000000,
@@ -243,7 +250,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CriptografarConteudoNotificacoes1720000001018,
       AdicionarFinanceiroConsulta1720000001019,
       CriarNotificacoesUsuario1720000001020,
-      CriarPlanosAlimentares1720000001021
+      CriarPlanosAlimentares1720000001021,
+      CriarIntegracoesApiPublica1720000001022
     ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

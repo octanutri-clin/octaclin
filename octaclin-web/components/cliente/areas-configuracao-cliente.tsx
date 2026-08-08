@@ -8,6 +8,7 @@ import { ModelosDocumentoCliente } from './modelos-documento';
 import { formatarData } from './portal-cliente-dominio';
 import { RecebimentosCliente } from './recebimentos-cliente';
 import { PortalClienteController } from './use-portal-cliente';
+import { IntegracoesApiCliente } from './integracoes-api-cliente';
 
 type Props = { portal: PortalClienteController };
 
@@ -229,6 +230,8 @@ export function AreasConfiguracaoCliente({ portal }: Props) {
           <ModelosDocumentoCliente />
         </div>
       ) : null}
+
+      {podeGerenciarConfiguracoes && areaAtiva === 'integracoes' ? <IntegracoesApiCliente /> : null}
     </>
   );
 }

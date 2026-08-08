@@ -4,6 +4,7 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { WebhookAssinaturaOrm } from '../../integracoes/infraestrutura/webhook-assinatura.orm';
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
 import { ServicoAgenda } from './servico-agenda';
@@ -34,6 +35,14 @@ function criarErroExclusao(constraint = 'ex_agenda_consultas_profissional_horari
 
 function criarErroSobreposicaoAgenda(): QueryFailedError {
   return criarErroExclusao();
+}
+
+function criarErroReferenciaExternaAgenda(): QueryFailedError {
+  const erroPostgres = Object.assign(new Error('duplicate key'), {
+    code: '23505',
+    constraint: 'ux_agenda_consultas_referencia_externa'
+  });
+  return new QueryFailedError('insert into agenda_consultas', [], erroPostgres);
 }
 
 function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
@@ -129,6 +138,7 @@ function criarServico(dados: Record<string, unknown> = {}) {
       if (entidade === ProfissionalOrm) return repositorios.profissional;
       if (entidade === AgendaBloqueioExternoOrm) return repositorios.bloqueioExterno;
       if (entidade.name === 'AgendaBloqueioManualOrm') return repositorios.bloqueioManual;
+      if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -183,6 +193,60 @@ function criarServico(dados: Record<string, unknown> = {}) {
 }
 
 describe('ServicoAgenda', () => {
+  it('reutiliza a consulta vencedora em corrida pela mesma referencia externa', async () => {
+    const existente = {
+      id: 'consulta-existente',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      modalidade: 'presencial',
+      referenciaExterna: 'erp-99',
+      notificacoes: {},
+      payload: {},
+      criadoEm: new Date(),
+      atualizadoEm: new Date()
+    };
+    const { servico, repositorios, googleCalendar, comunicacoes } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      }
+    });
+    repositorios.consulta.findOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(existente);
+    repositorios.consulta.save.mockRejectedValueOnce(criarErroReferenciaExternaAgenda());
+
+    const resposta = await servico.criarConsulta(
+      'tenant-1',
+      {
+        pacienteId: 'paciente-1',
+        profissionalId: 'profissional-1',
+        inicioEm: '2026-07-22T12:00:00.000Z',
+        duracaoMinutos: 60,
+        referenciaExterna: '  erp-99  '
+      },
+      usuarioColaborador
+    );
+
+    expect(resposta.id).toBe('consulta-existente');
+    expect(googleCalendar.criarEvento).not.toHaveBeenCalled();
+    expect(comunicacoes.dispararMensagem).not.toHaveBeenCalled();
+  });
+
   it('exporta em CSV so as consultas do periodo, sem bloqueio nem detalhe do Google', async () => {
     const { servico } = criarServico({
       consultas: [
