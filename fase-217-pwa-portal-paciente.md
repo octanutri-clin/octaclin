@@ -1,6 +1,6 @@
 # Fase 217 - PWA do portal do paciente
 
-Status: implementacao concluida em 2026-08-08. Nao exige migration.
+Status: implementacao e rollout concluidos em 2026-08-08. Nao exige migration.
 
 ## Objetivo
 
@@ -59,3 +59,11 @@ compartilham a tabela/padrao de idempotencia, sem duplicar o dado clinico.
 - formulario com upload offline;
 - persistencia da fila depois de fechar ou recarregar o navegador;
 - substituicao do aplicativo nativo existente.
+
+## Rollout
+
+Commit `7f6631b` publicado no `main`. Em producao, manifest e service worker
+responderam HTTP 200 com a versao da fase; `/sw.js` retornou
+`Cache-Control: no-cache, no-store, must-revalidate`; API sem sessao e rota
+protegida retornaram `private, no-store`; `/portal/checkins` redirecionou ao
+login e o backend respondeu `status=ok` em `/health`.

@@ -159,7 +159,7 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 - Responsavel: Codex.
 - Conclusao: 2026-08-08.
-- Commit: registrado no historico Git desta fase.
+- Commit: `7f6631b`.
 - Push: sim.
 - Validacoes: 107 suites/773 testes backend, typecheck backend/web, build web,
   contrato de seguranca PWA e 6 cenarios Playwright desktop/mobile.
