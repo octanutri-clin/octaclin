@@ -175,9 +175,11 @@ pendencia exige interrupcao e diagnostico do banco-alvo.
 
 ```powershell
 $env:DATABASE_URL='<url owner do banco explicitamente confirmado>'
-pnpm --dir octaclin-backend migration:show
-pnpm --dir octaclin-backend migration:run
-pnpm --dir octaclin-backend migration:show
+Push-Location octaclin-backend
+pnpm run typeorm -- migration:show
+pnpm migration:run
+pnpm run typeorm -- migration:show
+Pop-Location
 Remove-Item Env:DATABASE_URL
 ```
 
@@ -193,7 +195,9 @@ nao coincida exatamente com `TACO_BANCO_ESPERADO`:
 $env:DATABASE_URL='<url owner do banco explicitamente confirmado>'
 $env:TACO_CONFIRMAR_CARGA='true'
 $env:TACO_BANCO_ESPERADO='<nome exato do banco>'
-pnpm --dir octaclin-backend catalogo:taco:carregar
+Push-Location octaclin-backend
+pnpm catalogo:taco:carregar
+Pop-Location
 Remove-Item Env:DATABASE_URL
 Remove-Item Env:TACO_CONFIRMAR_CARGA
 Remove-Item Env:TACO_BANCO_ESPERADO

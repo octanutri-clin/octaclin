@@ -126,6 +126,12 @@ O PDF usa a impressao nativa para nao criar uma segunda representacao clinica.
    portal.
 6. Repetir em producao somente apos backup e confirmacao explicita do banco.
 
+Rollout concluido em producao em 2026-08-08: `Octaclin-db-producao` foi
+confirmado com role `neondb_owner`, a migration `1021` deixou o banco em 34/34,
+e a carga TACO registrou a versao `taco-4a-cmvcol-taco3-v1` com 583 alimentos.
+RLS forcada, cinco policies, seis triggers e os indices esperados foram
+verificados por consulta direta. Nenhuma credencial foi persistida.
+
 O backend de producao deve continuar com `BANCO_EXECUTAR_MIGRACOES=false` e
 role runtime sem `BYPASSRLS`.
 

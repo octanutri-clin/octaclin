@@ -13,8 +13,9 @@ Atualizado em 2026-08-08.
   energetico e composicao rodam no backend, com fonte/versao, snapshots
   criptografados, confirmacao clinica e bloqueio de condicoes especiais neste
   MVP. Catalogo TACO versionado com 583 alimentos. Migration `1021` e catalogo
-  validados no banco de integracao, agora com 34/34 migrations; rollout de
-  producao ainda requer backup e URL owner explicitamente confirmados. 107
+  validados no banco de integracao, agora com 34/34 migrations. Em 2026-08-08,
+  a migration `1021` e o TACO com 583 alimentos tambem foram validados em
+  producao, incluindo RLS, policies, triggers e indices. 107
   suites e 770 testes backend, typechecks, lint, authz, Next 15 e builds
   aprovados. Ver `fase-216-plano-alimentar-calculo-nutricional.md`.
 - Fase 211 - importacao em massa e exportacoes do

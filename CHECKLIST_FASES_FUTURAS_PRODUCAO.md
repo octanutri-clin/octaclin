@@ -1394,8 +1394,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     FKs compostas por tenant, uma policy por tabela, triggers de imutabilidade e
     publicacao, e auditoria transacional.
   - Banco de integracao `octaclin_test_fase150b` atualizado de 27/34 para 34/34
-    migrations; RLS/policies/triggers e carga TACO validados. Producao permanece
-    pendente ate backup e URL owner explicitamente confirmados.
+    migrations; RLS/policies/triggers e carga TACO validados.
+  - Rollout de producao concluido em 2026-08-08 no banco
+    `Octaclin-db-producao`: migration `1021`, RLS forcada, cinco policies, seis
+    triggers, indices e TACO versionado com 583 alimentos confirmados.
   - Revisao independente concluida: concorrencia na reatribuicao, selecao da
     publicacao mais recente, identidade do catalogo, descarte de rascunho,
     chaves de reordenacao, impressao e permissoes da aba foram endurecidos.

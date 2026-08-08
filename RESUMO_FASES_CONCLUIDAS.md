@@ -522,8 +522,9 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   preservadas e snapshot criptografado por versao. As cinco tabelas clinicas
   usam RLS forcada e filhos de versao publicada sao imutaveis no banco. No
   banco de integracao, migrations 1015 a 1021 foram aplicadas e o estado ficou
-  34/34; RLS, policies, triggers e catalogo foram conferidos. Rollout de
-  producao continua separado e pendente. A revisao independente tambem fechou
+  34/34; RLS, policies, triggers e catalogo foram conferidos. Em 2026-08-08, a
+  migration `1021` e o catalogo com 583 alimentos foram aplicados e verificados
+  tambem em producao. A revisao independente tambem fechou
   concorrencia na reatribuicao, selecao temporal da publicacao, identidade do
   catalogo, protecao de rascunho, reordenacao, impressao e permissao da aba. Ver
   `fase-216-plano-alimentar-calculo-nutricional.md`.
