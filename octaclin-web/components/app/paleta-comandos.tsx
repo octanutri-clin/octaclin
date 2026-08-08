@@ -4,6 +4,7 @@ import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  BrainCircuit,
   CalendarDays,
   CalendarPlus,
   ClipboardList,
@@ -14,6 +15,7 @@ import {
   Send,
   Settings,
   Stethoscope,
+  Trophy,
   UserRoundPlus,
   Zap,
   type LucideIcon
@@ -38,6 +40,8 @@ const ICONES: Record<string, LucideIcon> = {
   'navegar-questionarios': ClipboardList,
   'navegar-comunicacoes': Send,
   'navegar-automacoes': Zap,
+  'navegar-ia': BrainCircuit,
+  'navegar-gamificacao': Trophy,
   'navegar-profissionais': Stethoscope,
   'navegar-operacoes': Settings,
   'novo-agendamento': CalendarPlus,

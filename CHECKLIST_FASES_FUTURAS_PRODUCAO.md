@@ -1404,6 +1404,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - 107 suites e 770 testes backend, typechecks, lint, BFF 5/5, authz, Next 15
     e build web de 116 paginas aprovados. Ver
     `fase-216-plano-alimentar-calculo-nutricional.md`.
+  - Correcao transversal de 2026-08-08: o build limpo deixou de incluir
+    `scripts` na raiz compilada, voltou a gerar `dist/main.js` e agora valida o
+    artefato antes de liberar o deploy. A auditoria de acesso tambem tornou IA,
+    metas/adesao e recebimentos proprios encontraveis para `Professional`, sem
+    alterar as permissoes. Ver `AUDITORIA_ACESSO_PROFISSIONAL_2026-08-08.md`.
 
 - [ ] Fase 217 - PWA do portal do paciente.
   - Tornar o portal instalavel e suportar operacoes offline idempotentes sem

@@ -135,6 +135,13 @@ verificados por consulta direta. Nenhuma credencial foi persistida.
 O backend de producao deve continuar com `BANCO_EXECUTAR_MIGRACOES=false` e
 role runtime sem `BYPASSRLS`.
 
+No primeiro deploy de aplicacao apos o rollout, o backend falhou antes de
+iniciar porque o build limpo passou a emitir `dist/src/main.js`, enquanto o
+comando do Render exige `dist/main.js`. A correcao exclui `scripts` do build de
+producao, limpa a saida antiga e valida explicitamente a existencia de
+`dist/main.js`. O problema era de empacotamento e nao exigiu nova migration nem
+alteracao nos dados da Fase 216.
+
 ## Fora do MVP
 
 - pediatria, gestacao, lactacao, terapia nutricional e outras condicoes

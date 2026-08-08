@@ -25,9 +25,11 @@ import { AlertaOperacional, Aviso, AvisoRegiao, BarraCarregamento, EstadoVazio }
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { AgendaSemanal } from '@/components/agenda/agenda-semanal';
 import { PacotesSessao } from '@/components/agenda/pacotes-sessao';
+import { ResumoRecebimentos } from '@/components/cliente/recebimentos-cliente';
 import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi } from '@/lib/agendamento-publico-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
 import { INTERVALO_ATUALIZACAO_PAINEL_MS, useAtualizacaoPeriodica } from '@/lib/hooks';
+import { obterSessao } from '@/lib/auth-api';
 import {
   aprovarSolicitacaoPublicaAgenda,
   carregarBootstrapAgenda,
@@ -238,6 +240,7 @@ export function PainelAgenda() {
   const [consultaSelecionadaId, setConsultaSelecionadaId] = useState<string | null>(null);
   const [desfechoPendente, setDesfechoPendente] = useState<{ consulta: ConsultaAgendaApi; status: DesfechoConsultaAgenda } | null>(null);
   const [rotacionarLinkPendente, setRotacionarLinkPendente] = useState(false);
+  const [podeLerFinanceiro, setPodeLerFinanceiro] = useState(false);
 
   /** Janela fixa de 90 dias para tras e para frente: o painel nao carrega periodo escolhido. */
   const urlExportacaoAgenda = useMemo(() => {
@@ -301,6 +304,20 @@ export function PainelAgenda() {
 
   useEffect(() => {
     void carregar();
+  }, []);
+
+  useEffect(() => {
+    let ativo = true;
+    void obterSessao()
+      .then((sessao) => {
+        if (ativo) setPodeLerFinanceiro(Boolean(sessao?.permissoes?.includes('agenda.financeiro.ler')));
+      })
+      .catch(() => {
+        if (ativo) setPodeLerFinanceiro(false);
+      });
+    return () => {
+      ativo = false;
+    };
   }, []);
 
   useAtualizacaoPeriodica(() => void carregar(true), INTERVALO_ATUALIZACAO_PAINEL_MS);
@@ -1283,6 +1300,7 @@ export function PainelAgenda() {
         </Cartao>
         </div>
       </div>
+      {podeLerFinanceiro ? <ResumoRecebimentos contexto="profissional" /> : null}
       <ModalConfirmacao
         aberto={Boolean(desfechoPendente)}
         titulo={desfechoPendente?.status === 'cancelada' ? 'Cancelar consulta' : desfechoPendente ? `Registrar ${rotuloStatusConsulta(desfechoPendente.status).toLocaleLowerCase('pt-BR')}` : 'Confirmar desfecho'}

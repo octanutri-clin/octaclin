@@ -103,6 +103,13 @@ Inclui permissoes de `Professional` e adiciona:
 | `/portal/mais` | Patient | `portal.acessar` |
 | `/cliente` | Client | `cliente.acessar` |
 
+As rotas `/ia` e `/gamificacao` ficam no grupo `Ferramentas` do menu do
+console e tambem na paleta de comandos. O resumo financeiro proprio fica dentro
+de `/agenda`, condicionado a `agenda.financeiro.ler`; para `Professional`, a
+interface nao renderiza a quebra `Por profissional`. Rotas clinicas internas ao
+prontuario continuam agrupadas em `/pacientes/[id]`, em vez de ocupar a
+navegacao principal.
+
 ## Controllers backend principais
 
 | Controller | Prefixo | Papeis atuais |

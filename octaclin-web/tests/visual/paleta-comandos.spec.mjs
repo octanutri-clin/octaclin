@@ -111,6 +111,7 @@ test('gatilho restaura foco, escape fecha e modal nao cria overflow', async ({ p
 test('sequencia global executa apenas comando permitido', async ({ page }) => {
   await preparar(page);
   await page.goto('/pacientes');
+  await expect(page.getByRole('button', { name: /Buscar no OctaClin/ })).toBeVisible();
 
   await page.keyboard.press('g');
   await page.keyboard.press('a');

@@ -27,11 +27,13 @@ const rotulosMenu = [
   'Comunicacoes',
   'Agenda',
   'Automacoes',
+  'IA assistida',
+  'Metas e adesao',
   'Operacoes',
   'Pacientes',
   'Profissionais'
 ];
-const rotulosForaMenuDiario = ['IA', 'Mobile', 'Gamificacao'];
+const rotulosForaMenuDiario = ['Mobile'];
 const permissoesConsoleCompleto = [
   'dashboard.ler',
   'questionarios.ler',
@@ -640,6 +642,7 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
           'dashboard.ler',
           'agenda.consultas.ler',
           'agenda.consultas.criar',
+          'agenda.financeiro.ler',
           'pacientes.listar',
           'questionarios.ler',
           'comunicacoes.mensagens.ler'
@@ -722,6 +725,31 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ itens: [], total: 0 })
+    });
+  });
+
+  await page.route('**/api/agenda/financeiro/recebimentos**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        inicioEm: '2026-07-01T00:00:00.000Z',
+        fimEm: '2026-07-31T23:59:59.000Z',
+        consultas: 2,
+        recebidoCentavos: 18000,
+        pendenteCentavos: 18000,
+        isentas: 0,
+        pacotesRecebidoCentavos: 0,
+        pacotesPendenteCentavos: 0,
+        porProfissional: [{
+          profissionalId: 'profissional-1',
+          profissionalNome: 'Dra. Carla',
+          consultas: 2,
+          recebidoCentavos: 18000,
+          pendenteCentavos: 18000,
+          isentas: 0
+        }]
+      })
     });
   });
 
@@ -1422,6 +1450,8 @@ test.describe('agenda de producao', () => {
     await expect(detalhes).toBeVisible();
     await expect(detalhes.getByText(/Google Agenda:/)).toBeVisible();
     await expect(detalhes.getByRole('button', { name: 'Remarcar' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Meus recebimentos' })).toBeVisible();
+    await expect(page.getByText('R$ 180,00').first()).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 

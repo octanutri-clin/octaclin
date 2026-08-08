@@ -7,12 +7,14 @@ import { useEffect, useState } from 'react';
 import {
   CalendarDays,
   CalendarPlus,
+  BrainCircuit,
   ClipboardList,
   HeartPulse,
   LayoutDashboard,
   Send,
   Settings,
   Stethoscope,
+  Trophy,
   UserRoundPlus,
   UsersRound,
   Zap
@@ -31,6 +33,8 @@ const itens = [
   { href: '/questionarios', rotulo: 'Formularios', icone: ClipboardList, permissao: 'questionarios.ler', grupo: 'Clinica', papeis: undefined },
   { href: '/comunicacoes', rotulo: 'Comunicacoes', icone: Send, permissao: 'comunicacoes.mensagens.ler', grupo: 'Relacionamento', papeis: undefined },
   { href: '/automacoes', rotulo: 'Automacoes', icone: Zap, permissao: 'automacoes.gerenciar', grupo: 'Relacionamento', papeis: undefined },
+  { href: '/ia', rotulo: 'IA assistida', icone: BrainCircuit, permissao: 'ia.executar', grupo: 'Ferramentas', papeis: ['SuperAdmin', 'Professional'] },
+  { href: '/gamificacao', rotulo: 'Metas e adesao', icone: Trophy, permissao: 'gamificacao.gerenciar', grupo: 'Ferramentas', papeis: ['SuperAdmin', 'Professional'] },
   { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope, permissao: 'profissionais.ler', grupo: 'Gestao', papeis: undefined },
   { href: '/operacoes', rotulo: 'Operacoes', icone: Settings, permissao: 'operacoes.auditoria.ler', grupo: 'SuperAdmin', papeis: ['SuperAdmin'] }
 ] as const;

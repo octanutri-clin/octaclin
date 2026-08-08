@@ -14,6 +14,8 @@ test('filtra comandos por permissao e por papel antes de exibir', () => {
   const superAdmin = comandosPermitidos({ papel: 'SuperAdmin', permissoes });
 
   assert.ok(profissional.some((comando) => comando.id === 'navegar-dashboard'));
+  assert.ok(profissional.some((comando) => comando.id === 'navegar-ia'));
+  assert.ok(profissional.some((comando) => comando.id === 'navegar-gamificacao'));
   assert.ok(!profissional.some((comando) => comando.id === 'navegar-operacoes'));
   assert.ok(!colaborador.some((comando) => comando.id === 'navegar-dashboard'));
   assert.ok(!colaborador.some((comando) => comando.id === 'navegar-operacoes'));

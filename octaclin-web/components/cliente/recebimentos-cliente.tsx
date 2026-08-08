@@ -18,7 +18,11 @@ function mesCorrente() {
   return { inicio: emTexto(primeiro), fim: emTexto(ultimo) };
 }
 
-export function RecebimentosCliente() {
+interface ResumoRecebimentosProps {
+  contexto?: 'gestor' | 'profissional';
+}
+
+export function ResumoRecebimentos({ contexto = 'gestor' }: ResumoRecebimentosProps) {
   const padrao = mesCorrente();
   const [inicio, setInicio] = useState(padrao.inicio);
   const [fim, setFim] = useState(padrao.fim);
@@ -77,7 +81,9 @@ export function RecebimentosCliente() {
 
       <Cartao>
         <CartaoCabecalho className="flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <CartaoTitulo icone={<BadgeDollarSign className="h-4 w-4" />}>Recebimentos</CartaoTitulo>
+          <CartaoTitulo icone={<BadgeDollarSign className="h-4 w-4" />}>
+            {contexto === 'profissional' ? 'Meus recebimentos' : 'Recebimentos'}
+          </CartaoTitulo>
           <BarraCarregamento visivel={carregando} rotulo="Carregando recebimentos" />
         </CartaoCabecalho>
         <CartaoConteudo className="grid gap-4">
@@ -114,7 +120,7 @@ export function RecebimentosCliente() {
         </CartaoConteudo>
       </Cartao>
 
-      <Cartao>
+      {contexto === 'gestor' ? <Cartao>
         <CartaoCabecalho>
           <CartaoTitulo>Por profissional</CartaoTitulo>
         </CartaoCabecalho>
@@ -147,7 +153,11 @@ export function RecebimentosCliente() {
             </div>
           )}
         </CartaoConteudo>
-      </Cartao>
+      </Cartao> : null}
     </div>
   );
+}
+
+export function RecebimentosCliente() {
+  return <ResumoRecebimentos contexto="gestor" />;
 }

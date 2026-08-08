@@ -7,6 +7,13 @@ Atualizado em 2026-08-08.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Auditoria transversal de acesso do profissional concluida em 2026-08-08.
+  IA assistida e metas/adesao, ja implementadas e autorizadas, voltaram a ser
+  encontraveis no menu e na paleta de comandos. A agenda passou a exibir o
+  resumo de recebimentos do proprio profissional quando permitido, sem expor a
+  comparacao da clinica. O artefato do backend tambem foi corrigido para voltar
+  a produzir `dist/main.js` em build limpo, com uma verificacao obrigatoria no
+  script de build. Ver `AUDITORIA_ACESSO_PROFISSIONAL_2026-08-08.md`.
 - Ultima fase concluida: Fase 216 - plano alimentar e calculo nutricional.
   Profissional monta, revisa, publica e versiona planos no prontuario; o
   paciente recebe somente a versao publicada atual no portal. Calculo

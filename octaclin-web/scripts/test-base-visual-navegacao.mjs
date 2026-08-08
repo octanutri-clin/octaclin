@@ -12,15 +12,23 @@ const portalPaciente = ler('components/portal/portal-paciente.tsx');
 const botao = ler('components/ui/botao.tsx');
 const campo = ler('components/ui/campo.tsx');
 
-for (const grupo of ['Clinica', 'Relacionamento', 'Gestao', 'SuperAdmin']) {
+for (const grupo of ['Clinica', 'Relacionamento', 'Ferramentas', 'Gestao', 'SuperAdmin']) {
   assert.match(consoleShell, new RegExp(`grupo: '${grupo}'`), `grupo ${grupo} ausente no console`);
 }
 
-for (const rotaAvancada of ['/ia', '/mobile', '/gamificacao']) {
-  assert.doesNotMatch(
+for (const rotaAvancada of ['/ia', '/gamificacao']) {
+  assert.match(
     consoleShell,
     new RegExp(`href: '${rotaAvancada}'`),
-    `${rotaAvancada} nao deve ocupar a navegacao principal`
+    `${rotaAvancada} deve estar acessivel no grupo Ferramentas`
+  );
+}
+
+for (const rotaRetirada of ['/mobile']) {
+  assert.doesNotMatch(
+    consoleShell,
+    new RegExp(`href: '${rotaRetirada}'`),
+    `${rotaRetirada} nao deve ocupar a navegacao principal`
   );
 }
 

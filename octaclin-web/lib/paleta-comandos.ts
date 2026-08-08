@@ -78,6 +78,28 @@ export const COMANDOS_PALETA: readonly ComandoPaleta[] = [
     termos: ['regra', 'recall', 'lembrete']
   },
   {
+    id: 'navegar-ia',
+    rotulo: 'IA assistida',
+    descricao: 'Revisar sugestoes clinicas assistidas',
+    href: '/ia',
+    grupo: 'Navegacao',
+    permissao: 'ia.executar',
+    papeisPermitidos: ['SuperAdmin', 'Professional'],
+    atalho: 'G I',
+    termos: ['inteligencia', 'sentimento', 'reconhecimento', 'revisao']
+  },
+  {
+    id: 'navegar-gamificacao',
+    rotulo: 'Metas e adesao',
+    descricao: 'Configurar metas, badges e adesao',
+    href: '/gamificacao',
+    grupo: 'Navegacao',
+    permissao: 'gamificacao.gerenciar',
+    papeisPermitidos: ['SuperAdmin', 'Professional'],
+    atalho: 'G M',
+    termos: ['gamificacao', 'meta', 'badge', 'adesao']
+  },
+  {
     id: 'navegar-profissionais',
     rotulo: 'Profissionais',
     descricao: 'Equipe clinica, acessos e agendas',
