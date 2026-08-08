@@ -5,6 +5,7 @@ import {
   Get,
   Header,
   Param,
+  ParseIntPipe,
   ParseUUIDPipe,
   Patch,
   Post,
@@ -77,6 +78,27 @@ export class ControladorPacientes {
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
       metadados: { pagina: filtros.pagina, limite: filtros.limite, total: resultado.total }
+    });
+    return resultado;
+  }
+
+  @Get('arquivados')
+  @Permissoes('pacientes.listar')
+  async listarArquivados(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Query('pagina', new ParseIntPipe({ optional: true })) pagina = 1,
+    @Query('limite', new ParseIntPipe({ optional: true })) limite = 25
+  ) {
+    const resultado = await this.servicoPacientes.listarArquivados(usuario.tenantId, usuario, pagina, limite);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.lixeira.listar',
+      recursoTipo: 'paciente',
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { pagina, limite, total: resultado.total }
     });
     return resultado;
   }
@@ -427,6 +449,25 @@ export class ControladorPacientes {
       metadados: { statusAdesao: dados.statusAdesao }
     });
     return paciente;
+  }
+
+  @Patch(':id/restaurar')
+  @Permissoes('pacientes.gerenciar')
+  async restaurar(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    await this.servicoPacientes.restaurar(usuario.tenantId, id, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.restaurar',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao)
+    });
   }
 
   @Delete(':id')

@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CalendarDays, CheckCircle2, Edit3, Link2, Plus, RefreshCcw, Save, Stethoscope, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ArchiveRestore, CalendarDays, CheckCircle2, Edit3, Link2, Plus, RefreshCcw, Save, Stethoscope, Trash2, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { ModalConfirmacao } from '@/components/ui/modal';
@@ -16,7 +16,9 @@ import {
   arquivarProfissional,
   atualizarProfissional,
   criarProfissional,
-  listarProfissionais
+  listarProfissionais,
+  listarProfissionaisArquivados,
+  restaurarProfissional
 } from '@/lib/cadastros-api';
 
 interface FormularioProfissional {
@@ -53,13 +55,17 @@ function montarPayload(formulario: FormularioProfissional, editandoId: string | 
 }
 
 export function ListaProfissionais() {
-  const [areaAtiva, setAreaAtiva] = useState<'diretorio' | 'disponibilidade' | 'integracoes'>('diretorio');
+  const [areaAtiva, setAreaAtiva] = useState<'diretorio' | 'disponibilidade' | 'integracoes' | 'lixeira'>('diretorio');
   const [dados, setDados] = useState<RespostaPaginada<ProfissionalResumo> | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [arquivandoId, setArquivandoId] = useState<string | null>(null);
+  const [restaurandoId, setRestaurandoId] = useState<string | null>(null);
+  const [arquivados, setArquivados] = useState<ProfissionalResumo[]>([]);
+  const [carregandoLixeira, setCarregandoLixeira] = useState(false);
+  const [ultimoArquivado, setUltimoArquivado] = useState<ProfissionalResumo | null>(null);
   const [formulario, setFormulario] = useState<FormularioProfissional>(formularioInicial);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [podeGerenciar, setPodeGerenciar] = useState(false);
@@ -71,7 +77,10 @@ export function ListaProfissionais() {
 
   useEffect(() => {
     void obterSessao().then(async (sessao) => {
-      setPodeGerenciar(Boolean(sessao?.permissoes?.includes('profissionais.gerenciar')));
+      setPodeGerenciar(
+        sessao?.papel === 'SuperAdmin'
+        && Boolean(sessao.permissoes?.includes('profissionais.gerenciar'))
+      );
       if (sessao?.papel === 'SuperAdmin') {
         try {
           const status = await listarStatusGoogleProfissionais();
@@ -145,11 +154,40 @@ export function ListaProfissionais() {
       if (editandoId === profissional.id) cancelarEdicao();
       await carregar();
       setSucesso('Profissional arquivado.');
+      setUltimoArquivado(profissional);
       setProfissionalParaArquivar(null);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao arquivar profissional.');
     } finally {
       setArquivandoId(null);
+    }
+  }
+
+  async function carregarLixeira() {
+    setCarregandoLixeira(true);
+    setErro(null);
+    try {
+      setArquivados((await listarProfissionaisArquivados({ limite: 100 })).itens);
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar a lixeira de profissionais.');
+    } finally {
+      setCarregandoLixeira(false);
+    }
+  }
+
+  async function restaurar(profissional: ProfissionalResumo) {
+    setRestaurandoId(profissional.id);
+    setErro(null);
+    try {
+      await restaurarProfissional(profissional.id);
+      setArquivados((atuais) => atuais.filter((item) => item.id !== profissional.id));
+      setUltimoArquivado((atual) => atual?.id === profissional.id ? null : atual);
+      await carregar();
+      setSucesso(`${profissional.nome} foi restaurado e podera entrar novamente.`);
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao restaurar profissional.');
+    } finally {
+      setRestaurandoId(null);
     }
   }
 
@@ -197,9 +235,14 @@ export function ListaProfissionais() {
         </div>
       ) : null}
       {sucesso ? (
-        <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
           <CheckCircle2 size={16} />
-          {sucesso}
+          <span className="flex-1">{sucesso}</span>
+          {ultimoArquivado ? (
+            <Botao type="button" tamanho="sm" variante="fantasma" onClick={() => void restaurar(ultimoArquivado)} carregando={restaurandoId === ultimoArquivado.id}>
+              <ArchiveRestore size={14} /> Desfazer
+            </Botao>
+          ) : null}
         </div>
       ) : null}
 
@@ -209,10 +252,14 @@ export function ListaProfissionais() {
         abas={[
           { id: 'diretorio', rotulo: 'Diretorio' },
           { id: 'disponibilidade', rotulo: 'Disponibilidade' },
-          { id: 'integracoes', rotulo: 'Integracoes' }
+          { id: 'integracoes', rotulo: 'Integracoes' },
+          ...(podeGerenciar ? [{ id: 'lixeira', rotulo: 'Lixeira' }] : [])
         ]}
         ativaId={areaAtiva}
-        aoMudar={(id) => setAreaAtiva(id as typeof areaAtiva)}
+        aoMudar={(id) => {
+          setAreaAtiva(id as typeof areaAtiva);
+          if (id === 'lixeira') void carregarLixeira();
+        }}
       />
 
       {areaAtiva === 'diretorio' ? (
@@ -375,6 +422,28 @@ export function ListaProfissionais() {
                 </a>
               </CartaoConteudo>
             </Cartao>
+          )) : <EstadoEquipeVazia />}
+        </section>
+      ) : null}
+
+      {areaAtiva === 'lixeira' ? (
+        <section id="equipe-clinica-lixeira-painel" role="tabpanel" aria-labelledby="equipe-clinica-lixeira-aba" className="grid gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-texto-suave">Restaurar reativa o login, mas mantem as sessoes antigas revogadas.</p>
+            <Botao type="button" tamanho="sm" onClick={() => void carregarLixeira()} carregando={carregandoLixeira}>
+              <RefreshCcw size={14} /> Atualizar
+            </Botao>
+          </div>
+          {arquivados.length ? arquivados.map((profissional) => (
+            <div key={profissional.id} className="flex flex-wrap items-center gap-3 rounded-md border border-linha bg-white p-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{profissional.nome}</p>
+                <p className="text-xs text-texto-suave">Arquivado em {formatarData(profissional.arquivadoEm ?? undefined)}</p>
+              </div>
+              <Botao type="button" tamanho="sm" onClick={() => void restaurar(profissional)} carregando={restaurandoId === profissional.id}>
+                <ArchiveRestore size={14} /> Restaurar acesso
+              </Botao>
+            </div>
           )) : <EstadoEquipeVazia />}
         </section>
       ) : null}

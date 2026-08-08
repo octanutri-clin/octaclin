@@ -1342,9 +1342,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     aprovados. Sem migration. Ver
     `fase-211-importacao-massa-exportacoes-cliente.md`.
 
-- [ ] Fase 212 - Desfazer, lixeira e restauracao.
-  - Permitir desfazer imediato e restauracao auditada de registros arquivados,
-    preservando autorizacao e vinculos.
+- [x] Fase 212 - Desfazer, lixeira e restauracao.
+  - Concluida em 2026-08-08. Pacientes e profissionais agora possuem lixeira,
+    restauracao auditada e desfazer imediato na web. Paciente restaurado
+    preserva os vinculos, respeita carteira e limite do plano; novos
+    arquivamentos preservam a situacao clinica. Profissional restaurado reativa
+    o login sem reviver refresh tokens revogados. Gestao da equipe permanece
+    exclusiva de SuperAdmin e todos os BFFs falham fechados por permissao.
+    697 testes de backend, typechecks, lint, `test:authz`, `test:next15` e build
+    web aprovados. Sem migration. Ver
+    `fase-212-desfazer-lixeira-restauracao.md`.
 
 - [ ] Fase 213 - Command palette e atalhos de teclado.
   - Oferecer navegacao, busca e acoes frequentes por teclado depois da busca

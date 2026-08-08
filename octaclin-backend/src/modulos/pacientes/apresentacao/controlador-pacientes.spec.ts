@@ -162,4 +162,25 @@ describe('ControladorPacientes', () => {
       ]);
     });
   });
+
+  describe('lixeira e restauracao', () => {
+    it('audita leitura da lixeira e restauracao do paciente', async () => {
+      const listarArquivados = jest.fn().mockResolvedValue({ itens: [], total: 0 });
+      const restaurar = jest.fn().mockResolvedValue(undefined);
+      const { controlador, registrar, requisicao } = criarCenario({ listarArquivados, restaurar });
+
+      await controlador.listarArquivados(usuario, requisicao, 1, 25);
+      await controlador.restaurar(usuario, requisicao, 'paciente-1');
+
+      expect(listarArquivados).toHaveBeenCalledWith('tenant-1', usuario, 1, 25);
+      expect(restaurar).toHaveBeenCalledWith('tenant-1', 'paciente-1', usuario);
+      expect(registrar).toHaveBeenCalledWith(expect.objectContaining({ acao: 'pacientes.lixeira.listar' }));
+      expect(registrar).toHaveBeenCalledWith(expect.objectContaining({ acao: 'pacientes.restaurar', recursoId: 'paciente-1' }));
+    });
+
+    it('protege lixeira e restauracao com as permissoes adequadas', () => {
+      expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPacientes.prototype.listarArquivados)).toEqual(['pacientes.listar']);
+      expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPacientes.prototype.restaurar)).toEqual(['pacientes.gerenciar']);
+    });
+  });
 });

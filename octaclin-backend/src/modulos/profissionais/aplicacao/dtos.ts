@@ -47,6 +47,7 @@ export interface ProfissionalRespostaDto {
   nome: string;
   registroProfissional?: string;
   especialidade?: string;
+  arquivadoEm?: Date | null;
   criadoEm: Date;
   atualizadoEm: Date;
 }

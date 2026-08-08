@@ -36,7 +36,7 @@ export class PacienteOrm {
   ultimoCheckinEm?: Date;
 
   @Column({ name: 'arquivado_em', type: 'timestamptz', nullable: true })
-  arquivadoEm?: Date;
+  arquivadoEm?: Date | null;
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;

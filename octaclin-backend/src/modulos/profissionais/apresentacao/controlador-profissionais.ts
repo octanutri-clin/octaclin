@@ -74,6 +74,28 @@ export class ControladorProfissionais {
     return resultado;
   }
 
+  @Get('arquivados')
+  @Papeis('SuperAdmin')
+  @Permissoes('profissionais.gerenciar')
+  async listarArquivados(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Query('pagina', new ParseIntPipe({ optional: true })) pagina = 1,
+    @Query('limite', new ParseIntPipe({ optional: true })) limite = 25
+  ) {
+    const resultado = await this.servicoProfissionais.listarArquivados(usuario.tenantId, pagina, limite);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'profissionais.lixeira.listar',
+      recursoTipo: 'profissional',
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { pagina, limite, total: resultado.total }
+    });
+    return resultado;
+  }
+
   @Get(':id')
   async obter(
     @UsuarioAtual() usuario: UsuarioAutenticado,
@@ -113,6 +135,26 @@ export class ControladorProfissionais {
       metadados: { especialidade: dados.especialidade }
     });
     return profissional;
+  }
+
+  @Patch(':id/restaurar')
+  @Papeis('SuperAdmin')
+  @Permissoes('profissionais.gerenciar')
+  async restaurar(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    await this.servicoProfissionais.restaurar(usuario.tenantId, id);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'profissionais.restaurar',
+      recursoTipo: 'profissional',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao)
+    });
   }
 
   @Delete(':id')

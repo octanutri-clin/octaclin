@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { IsNull } from 'typeorm';
+import { IsNull, Not } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -68,6 +68,24 @@ export class ServicoProfissionais {
     });
   }
 
+  async listarArquivados(
+    tenantId: string,
+    pagina = 1,
+    limite = 25
+  ): Promise<{ itens: ProfissionalRespostaDto[]; total: number }> {
+    const paginaNormalizada = Math.max(1, pagina);
+    const limiteNormalizado = Math.min(100, Math.max(1, limite));
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const [itens, total] = await gerenciador.getRepository(ProfissionalOrm).findAndCount({
+        where: { tenantId, arquivadoEm: Not(IsNull()) },
+        order: { arquivadoEm: 'DESC' },
+        skip: (paginaNormalizada - 1) * limiteNormalizado,
+        take: limiteNormalizado
+      });
+      return { itens: itens.map((profissional) => this.mapearResposta(profissional)), total };
+    });
+  }
+
   async obterPorId(tenantId: string, profissionalId: string, usuario: UsuarioAutenticado): Promise<ProfissionalRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
@@ -131,6 +149,26 @@ export class ServicoProfissionais {
     });
   }
 
+  async restaurar(tenantId: string, profissionalId: string): Promise<void> {
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(ProfissionalOrm);
+      const profissional = await repositorio.findOne({
+        where: { id: profissionalId, tenantId, arquivadoEm: Not(IsNull()) }
+      });
+      if (!profissional) throw new NotFoundException('Profissional arquivado nao encontrado.');
+
+      const resultado = await repositorio.update(
+        { id: profissionalId, tenantId, arquivadoEm: Not(IsNull()) },
+        { arquivadoEm: null }
+      );
+      if (!resultado.affected) throw new NotFoundException('Profissional arquivado nao encontrado.');
+      await gerenciador.getRepository(UsuarioOrm).update(
+        { id: profissional.usuarioId, tenantId },
+        { ativo: true }
+      );
+    });
+  }
+
   private mapearResposta(profissional: ProfissionalOrm): ProfissionalRespostaDto {
     return {
       id: profissional.id,
@@ -139,6 +177,7 @@ export class ServicoProfissionais {
       nome: this.criptografia.descriptografar(profissional.nomeCriptografado),
       registroProfissional: profissional.registroProfissional,
       especialidade: profissional.especialidade,
+      arquivadoEm: profissional.arquivadoEm,
       criadoEm: profissional.criadoEm,
       atualizadoEm: profissional.atualizadoEm
     };

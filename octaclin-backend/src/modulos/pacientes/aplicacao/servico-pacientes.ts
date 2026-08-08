@@ -128,6 +128,32 @@ export class ServicoPacientes {
     });
   }
 
+  async listarArquivados(
+    tenantId: string,
+    usuario: UsuarioAutenticado,
+    pagina = 1,
+    limite = 25
+  ): Promise<{ itens: PacienteRespostaDto[]; total: number }> {
+    const paginaNormalizada = Math.max(1, pagina);
+    const limiteNormalizado = Math.min(100, Math.max(1, limite));
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const [itens, total] = await gerenciador.getRepository(PacienteOrm).findAndCount({
+        where: {
+          tenantId,
+          arquivadoEm: Not(IsNull()),
+          ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
+        },
+        order: { arquivadoEm: 'DESC' },
+        skip: (paginaNormalizada - 1) * limiteNormalizado,
+        take: limiteNormalizado
+      });
+
+      return { itens: itens.map((paciente) => this.mapearResposta(paciente)), total };
+    });
+  }
+
   /**
    * Exportacao da carteira em CSV.
    *
@@ -238,12 +264,29 @@ export class ServicoPacientes {
           arquivadoEm: IsNull(),
           ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
         },
-        { arquivadoEm: new Date(), statusAdesao: 'inativo' }
+        { arquivadoEm: new Date() }
       );
 
       if (!resultado.affected) {
         throw new NotFoundException('Paciente nao encontrado.');
       }
+    });
+  }
+
+  async restaurar(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<void> {
+    await this.garantirLimitePermitido(tenantId, 'pacientes');
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const resultado = await gerenciador.getRepository(PacienteOrm).update(
+        {
+          id: pacienteId,
+          tenantId,
+          arquivadoEm: Not(IsNull()),
+          ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
+        },
+        { arquivadoEm: null }
+      );
+      if (!resultado.affected) throw new NotFoundException('Paciente arquivado nao encontrado.');
     });
   }
 
@@ -264,6 +307,7 @@ export class ServicoPacientes {
       ultimoCheckinEm: paciente.ultimoCheckinEm,
       ultimaConsultaConcluidaEm: resumoConsultas?.ultimaConsultaConcluidaEm,
       proximaConsultaEm: resumoConsultas?.proximaConsultaEm,
+      arquivadoEm: paciente.arquivadoEm,
       criadoEm: paciente.criadoEm,
       atualizadoEm: paciente.atualizadoEm
     };

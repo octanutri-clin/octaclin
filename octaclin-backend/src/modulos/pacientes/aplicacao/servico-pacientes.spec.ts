@@ -496,6 +496,65 @@ describe('ServicoPacientes', () => {
     );
   });
 
+  describe('lixeira e restauracao', () => {
+    it('lista somente arquivados e preserva o escopo do Professional', async () => {
+      const repositorioProfissionais = {
+        findOne: jest.fn(async () => ({ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }))
+      };
+      const repositorioPacientes = {
+        findAndCount: jest.fn(async () => [[{
+          id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1',
+          nomeCriptografado: Buffer.from('cripto:Maria'), statusAdesao: 'aderente', scoreRisco: '20',
+          arquivadoEm: new Date('2026-08-01T10:00:00.000Z'), criadoEm: new Date('2026-01-01T10:00:00.000Z')
+        }], 1])
+      };
+      const servico = new ServicoPacientes(
+        { executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao(criarGerenciadorFake({ paciente: repositorioPacientes, profissional: repositorioProfissionais }))) } as never,
+        { descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', '')) } as never,
+        limitesPermitidos as never
+      );
+
+      const resultado = await servico.listarArquivados('tenant-1', usuarioProfissional, 1, 25);
+
+      expect(repositorioPacientes.findAndCount).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1', arquivadoEm: expect.any(Object) })
+      }));
+      expect(resultado.itens[0]).toEqual(expect.objectContaining({ nome: 'Maria', arquivadoEm: new Date('2026-08-01T10:00:00.000Z') }));
+    });
+
+    it('arquiva sem apagar o status clinico anterior', async () => {
+      const repositorio = { update: jest.fn(async () => ({ affected: 1 })) };
+      const servico = new ServicoPacientes(
+        { executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => operacao(criarGerenciadorFake(repositorio))) } as never,
+        {} as never,
+        limitesPermitidos as never
+      );
+
+      await servico.arquivar('tenant-1', 'paciente-1', usuarioColaborador);
+
+      expect(repositorio.update).toHaveBeenCalledWith(expect.any(Object), { arquivadoEm: expect.any(Date) });
+    });
+
+    it('restaura paciente arquivado somente se houver vaga no plano', async () => {
+      const repositorio = { update: jest.fn(async () => ({ affected: 1 })) };
+      const portalCliente = { checarLimite: jest.fn(async () => ({ permitido: true })) };
+      const servico = new ServicoPacientes(
+        { executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => operacao(criarGerenciadorFake(repositorio))) } as never,
+        {} as never,
+        portalCliente as never
+      );
+
+      await servico.restaurar('tenant-1', 'paciente-1', usuarioColaborador);
+
+      expect(portalCliente.checarLimite).toHaveBeenCalledWith('tenant-1', 'pacientes');
+      expect(repositorio.update).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'paciente-1', tenantId: 'tenant-1', arquivadoEm: expect.any(Object) }),
+        { arquivadoEm: null }
+      );
+    });
+  });
+
   it('deve montar prontuario longitudinal do paciente com agenda, formularios, respostas e mensagens', async () => {
     const paciente = {
       id: 'paciente-1',

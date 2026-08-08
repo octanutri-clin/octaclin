@@ -4,7 +4,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Download, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Search, Trash2, Upload } from 'lucide-react';
+import { AlertTriangle, ArchiveRestore, CheckCircle2, Download, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Search, Trash2, Upload } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { ImportacaoPacientes } from '@/components/cadastros/importacao-pacientes';
 import { Cartao, CartaoConteudo } from '@/components/ui/cartao';
@@ -12,6 +12,7 @@ import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Etiqueta } from '@/components/ui/etiqueta';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { Tabela, TabelaCabecalho, TabelaConteudo, TabelaLinha, TabelaLinhas, TabelaVazia } from '@/components/ui/tabela';
+import { obterSessao } from '@/lib/auth-api';
 import { criarConvitePaciente } from '@/lib/convites-paciente-api';
 import {
   PacienteResumo,
@@ -22,7 +23,9 @@ import {
   atualizarPaciente,
   criarPaciente,
   listarPacientes,
-  listarProfissionais
+  listarPacientesArquivados,
+  listarProfissionais,
+  restaurarPaciente
 } from '@/lib/cadastros-api';
 
 type StatusPaciente = 'novo' | 'aderente' | 'em_acompanhamento' | 'risco' | 'inativo';
@@ -103,6 +106,11 @@ export function ListaPacientes() {
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [arquivandoId, setArquivandoId] = useState<string | null>(null);
+  const [restaurandoId, setRestaurandoId] = useState<string | null>(null);
+  const [arquivados, setArquivados] = useState<PacienteResumo[]>([]);
+  const [lixeiraAberta, setLixeiraAberta] = useState(false);
+  const [carregandoLixeira, setCarregandoLixeira] = useState(false);
+  const [ultimoArquivado, setUltimoArquivado] = useState<PacienteResumo | null>(null);
   const [convidandoId, setConvidandoId] = useState<string | null>(null);
   const [linkConvite, setLinkConvite] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<FormularioPaciente>(formularioInicial);
@@ -118,6 +126,7 @@ export function ListaPacientes() {
   const [apenasSemProximaConsulta, setApenasSemProximaConsulta] = useState(() => parametrosUrl.get('semRetorno') === '1');
   const [pagina, setPagina] = useState(() => Math.max(1, Number(parametrosUrl.get('pagina') ?? 1) || 1));
   const [modalImportacaoAberto, setModalImportacaoAberto] = useState(false);
+  const [podeGerenciar, setPodeGerenciar] = useState(false);
 
   /** Mesmos filtros da listagem: o CSV sai do que esta na tela, nao da base inteira. */
   const urlExportacao = useMemo(() => {
@@ -131,6 +140,12 @@ export function ListaPacientes() {
     return `/api/pacientes/exportar.csv${query ? `?${query}` : ''}`;
   }, [apenasSemProximaConsulta, busca, filtroProfissional, filtroRisco, filtroStatus]);
   const limite = 25;
+
+  useEffect(() => {
+    void obterSessao().then((sessao) => {
+      setPodeGerenciar(Boolean(sessao?.permissoes?.includes('pacientes.gerenciar')));
+    });
+  }, []);
 
   useEffect(() => {
     const parametros = new URLSearchParams();
@@ -232,11 +247,42 @@ export function ListaPacientes() {
       if (editandoId === paciente.id) cancelarEdicao();
       await carregar();
       setSucesso('Paciente arquivado.');
+      setUltimoArquivado(paciente);
       setPacienteParaArquivar(null);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao arquivar paciente.');
     } finally {
       setArquivandoId(null);
+    }
+  }
+
+  async function carregarLixeira() {
+    setCarregandoLixeira(true);
+    setErro(null);
+    try {
+      const resposta = await listarPacientesArquivados({ limite: 100 });
+      setArquivados(resposta.itens);
+      setLixeiraAberta(true);
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar a lixeira de pacientes.');
+    } finally {
+      setCarregandoLixeira(false);
+    }
+  }
+
+  async function restaurar(paciente: PacienteResumo) {
+    setRestaurandoId(paciente.id);
+    setErro(null);
+    try {
+      await restaurarPaciente(paciente.id);
+      setArquivados((atuais) => atuais.filter((item) => item.id !== paciente.id));
+      setUltimoArquivado((atual) => atual?.id === paciente.id ? null : atual);
+      await carregar();
+      setSucesso(`${paciente.nome} foi restaurado.`);
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao restaurar paciente.');
+    } finally {
+      setRestaurandoId(null);
     }
   }
 
@@ -295,9 +341,15 @@ export function ListaPacientes() {
               <RefreshCcw size={16} />
               {carregando ? 'Atualizando' : 'Atualizar'}
             </Botao>
-            <Botao type="button" onClick={() => setModalImportacaoAberto(true)}>
-              <Upload size={16} />
-              Importar CSV
+            {podeGerenciar ? (
+              <Botao type="button" onClick={() => setModalImportacaoAberto(true)}>
+                <Upload size={16} />
+                Importar CSV
+              </Botao>
+            ) : null}
+            <Botao type="button" onClick={() => void carregarLixeira()} disabled={carregandoLixeira}>
+              <ArchiveRestore size={16} />
+              {carregandoLixeira ? 'Carregando' : 'Lixeira'}
             </Botao>
             <a
               href={urlExportacao}
@@ -306,10 +358,12 @@ export function ListaPacientes() {
               <Download size={16} />
               Exportar CSV
             </a>
-            <Botao type="button" variante="primario" onClick={() => { setEditandoId(null); setFormulario({ ...formularioInicial, profissionalResponsavelId: profissionais[0]?.id ?? '' }); setModalPacienteAberto(true); }}>
-              <Plus size={16} />
-              Novo paciente
-            </Botao>
+            {podeGerenciar ? (
+              <Botao type="button" variante="primario" onClick={() => { setEditandoId(null); setFormulario({ ...formularioInicial, profissionalResponsavelId: profissionais[0]?.id ?? '' }); setModalPacienteAberto(true); }}>
+                <Plus size={16} />
+                Novo paciente
+              </Botao>
+            ) : null}
           </div>
         </CartaoConteudo>
       </Cartao>
@@ -357,9 +411,14 @@ export function ListaPacientes() {
         </div>
       ) : null}
       {sucesso ? (
-        <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
           <CheckCircle2 size={16} />
-          {sucesso}
+          <span className="flex-1">{sucesso}</span>
+          {ultimoArquivado && podeGerenciar ? (
+            <Botao type="button" tamanho="sm" variante="fantasma" onClick={() => void restaurar(ultimoArquivado)} carregando={restaurandoId === ultimoArquivado.id}>
+              <ArchiveRestore size={14} /> Desfazer
+            </Botao>
+          ) : null}
         </div>
       ) : null}
       {linkConvite ? (
@@ -503,28 +562,32 @@ export function ListaPacientes() {
                     >
                       <FileText size={16} />
                     </Link>
-                    <Botao
-                      type="button"
-                      variante="fantasma"
-                      onClick={() => void convidar(paciente)}
-                      disabled={Boolean(paciente.usuarioId) || convidandoId === paciente.id}
-                      aria-label="Convidar paciente"
-                      title={paciente.usuarioId ? 'Paciente ja possui acesso' : 'Convidar paciente'}
-                    >
-                      <KeyRound size={16} />
-                    </Botao>
-                    <Botao type="button" variante="fantasma" onClick={() => editar(paciente)} aria-label="Editar paciente">
-                      <Edit3 size={16} />
-                    </Botao>
-                    <Botao
-                      type="button"
-                      variante="fantasma"
-                      onClick={() => setPacienteParaArquivar(paciente)}
-                      disabled={arquivandoId === paciente.id}
-                      aria-label="Arquivar paciente"
-                    >
-                      <Trash2 size={16} />
-                    </Botao>
+                    {podeGerenciar ? (
+                      <>
+                        <Botao
+                          type="button"
+                          variante="fantasma"
+                          onClick={() => void convidar(paciente)}
+                          disabled={Boolean(paciente.usuarioId) || convidandoId === paciente.id}
+                          aria-label="Convidar paciente"
+                          title={paciente.usuarioId ? 'Paciente ja possui acesso' : 'Convidar paciente'}
+                        >
+                          <KeyRound size={16} />
+                        </Botao>
+                        <Botao type="button" variante="fantasma" onClick={() => editar(paciente)} aria-label="Editar paciente">
+                          <Edit3 size={16} />
+                        </Botao>
+                        <Botao
+                          type="button"
+                          variante="fantasma"
+                          onClick={() => setPacienteParaArquivar(paciente)}
+                          disabled={arquivandoId === paciente.id}
+                          aria-label="Arquivar paciente"
+                        >
+                          <Trash2 size={16} />
+                        </Botao>
+                      </>
+                    ) : null}
                   </div>
                 </TabelaLinha>
               ))
@@ -544,7 +607,15 @@ export function ListaPacientes() {
                 <Etiqueta variante={nivelRisco(paciente) === 'alto' ? 'perigo' : nivelRisco(paciente) === 'medio' ? 'alerta' : 'sucesso'}>{nivelRisco(paciente)} {Number(paciente.scoreRisco).toFixed(1)}</Etiqueta>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs text-texto-suave"><span>Responsavel<br /><strong className="text-tinta">{nomeProfissional(profissionais, paciente.profissionalResponsavelId)}</strong></span><span>Ultima consulta<br /><strong className="text-tinta">{formatarData(paciente.ultimaConsultaConcluidaEm)}</strong></span><span className="col-span-2">Proxima acao<br /><strong className="text-tinta">{proximaAcao(paciente)}</strong></span></div>
-              <div className="flex flex-wrap gap-1"><Link href={`/pacientes/${paciente.id}` as Route} className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta hover:bg-superficie-hover">Abrir prontuario</Link><Botao type="button" variante="fantasma" onClick={() => editar(paciente)} aria-label={`Editar ${paciente.nome}`}><Edit3 size={16} /></Botao><Botao type="button" variante="fantasma" onClick={() => setPacienteParaArquivar(paciente)} aria-label={`Arquivar ${paciente.nome}`}><Trash2 size={16} /></Botao></div>
+              <div className="flex flex-wrap gap-1">
+                <Link href={`/pacientes/${paciente.id}` as Route} className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta hover:bg-superficie-hover">Abrir prontuario</Link>
+                {podeGerenciar ? (
+                  <>
+                    <Botao type="button" variante="fantasma" onClick={() => editar(paciente)} aria-label={`Editar ${paciente.nome}`}><Edit3 size={16} /></Botao>
+                    <Botao type="button" variante="fantasma" onClick={() => setPacienteParaArquivar(paciente)} aria-label={`Arquivar ${paciente.nome}`}><Trash2 size={16} /></Botao>
+                  </>
+                ) : null}
+              </div>
             </CartaoConteudo>
           </Cartao>
         ))}
@@ -574,6 +645,26 @@ export function ListaPacientes() {
           void carregar();
         }}
       />
+
+      <Modal aberto={lixeiraAberta} aoFechar={() => setLixeiraAberta(false)} titulo="Lixeira de pacientes" descricao="Restaure cadastros arquivados sem perder prontuario, agenda ou vinculos.">
+        {arquivados.length ? (
+          <ul className="grid max-h-[60vh] gap-2 overflow-y-auto">
+            {arquivados.map((paciente) => (
+              <li key={paciente.id} className="flex flex-wrap items-center gap-3 rounded-md border border-linha p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-texto-forte">{paciente.nome}</p>
+                  <p className="text-xs text-texto-suave">Arquivado em {formatarData(paciente.arquivadoEm ?? undefined)}</p>
+                </div>
+                {podeGerenciar ? (
+                  <Botao type="button" tamanho="sm" onClick={() => void restaurar(paciente)} carregando={restaurandoId === paciente.id}>
+                    <ArchiveRestore size={14} /> Restaurar
+                  </Botao>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : <p className="py-8 text-center text-sm text-texto-suave">Nenhum paciente arquivado.</p>}
+      </Modal>
 
       <ModalConfirmacao
         aberto={pacienteParaArquivar !== null}

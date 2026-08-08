@@ -483,6 +483,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   relatorio, sem apagar os demais cadastros. O convite retorna como link para
   compartilhamento e a quantidade criada entra na auditoria. Ver
   `fase-211-importacao-massa-exportacoes-cliente.md`.
+- Fase 212 - Desfazer, lixeira e restauracao: pacientes e profissionais
+  arquivados passaram a ter listagem e recuperacao auditadas, com acao imediata
+  de desfazer na interface. A restauracao reutiliza o mesmo registro e preserva
+  prontuario, agenda e vinculos; pacientes continuam sujeitos a carteira e ao
+  limite do plano. Novos arquivamentos de paciente preservam a situacao clinica.
+  Restaurar profissional reativa o login, mas nao revive sessoes revogadas, e
+  toda gestao da equipe continua exclusiva de SuperAdmin. Ver
+  `fase-212-desfazer-lixeira-restauracao.md`.
 
 ## Estado atual de uso
 

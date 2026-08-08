@@ -16,6 +16,7 @@ export interface PacienteResumo {
   ultimoCheckinEm?: string;
   ultimaConsultaConcluidaEm?: string;
   proximaConsultaEm?: string;
+  arquivadoEm?: string | null;
   criadoEm: string;
 }
 
@@ -26,6 +27,7 @@ export interface ProfissionalResumo {
   nome: string;
   registroProfissional?: string;
   especialidade?: string;
+  arquivadoEm?: string | null;
   criadoEm: string;
 }
 
@@ -175,6 +177,15 @@ export async function arquivarPaciente(id: string): Promise<void> {
   return requisitarSemConteudo(`/api/pacientes/${id}`, { method: 'DELETE' });
 }
 
+export async function listarPacientesArquivados(filtros: FiltrosPaginacao = {}): Promise<RespostaPaginada<PacienteResumo>> {
+  const parametros = new URLSearchParams({ pagina: String(filtros.pagina ?? 1), limite: String(filtros.limite ?? 25) });
+  return requisitar<RespostaPaginada<PacienteResumo>>(`/api/pacientes/arquivados?${parametros}`);
+}
+
+export async function restaurarPaciente(id: string): Promise<void> {
+  return requisitarSemConteudo(`/api/pacientes/${encodeURIComponent(id)}/restaurar`, { method: 'PATCH' });
+}
+
 export async function listarProfissionais(filtros: FiltrosPaginacao = {}): Promise<RespostaPaginada<ProfissionalResumo>> {
   const parametros = new URLSearchParams({
     pagina: String(filtros.pagina ?? 1),
@@ -199,4 +210,13 @@ export async function atualizarProfissional(id: string, entrada: SalvarProfissio
 
 export async function arquivarProfissional(id: string): Promise<void> {
   return requisitarSemConteudo(`/api/profissionais/${id}`, { method: 'DELETE' });
+}
+
+export async function listarProfissionaisArquivados(filtros: FiltrosPaginacao = {}): Promise<RespostaPaginada<ProfissionalResumo>> {
+  const parametros = new URLSearchParams({ pagina: String(filtros.pagina ?? 1), limite: String(filtros.limite ?? 25) });
+  return requisitar<RespostaPaginada<ProfissionalResumo>>(`/api/profissionais/arquivados?${parametros}`);
+}
+
+export async function restaurarProfissional(id: string): Promise<void> {
+  return requisitarSemConteudo(`/api/profissionais/${encodeURIComponent(id)}/restaurar`, { method: 'PATCH' });
 }

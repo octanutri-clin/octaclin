@@ -152,6 +152,7 @@ export interface PacienteRespostaDto {
   ultimoCheckinEm?: Date;
   ultimaConsultaConcluidaEm?: Date;
   proximaConsultaEm?: Date;
+  arquivadoEm?: Date | null;
   criadoEm: Date;
   atualizadoEm: Date;
 }

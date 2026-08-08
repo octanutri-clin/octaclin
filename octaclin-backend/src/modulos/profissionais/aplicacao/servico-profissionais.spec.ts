@@ -68,6 +68,54 @@ describe('ServicoProfissionais', () => {
     );
   });
 
+  it('deve listar profissionais arquivados sem misturar ativos', async () => {
+    const repositorio = { findAndCount: jest.fn(async () => [[{
+      id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-1',
+      nomeCriptografado: Buffer.from('cripto:Dra. Carla'), arquivadoEm: new Date('2026-08-01T10:00:00.000Z'),
+      criadoEm: new Date('2026-01-01T10:00:00.000Z'), atualizadoEm: new Date('2026-08-01T10:00:00.000Z')
+    }], 1]) };
+    const servico = new ServicoProfissionais(
+      { executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+        operacao({ getRepository: jest.fn(() => repositorio) })) } as never,
+      { descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', '')) } as never,
+      {} as never
+    );
+
+    const resultado = await servico.listarArquivados('tenant-1', 1, 25);
+
+    expect(repositorio.findAndCount).toHaveBeenCalledWith(expect.objectContaining({
+      where: { tenantId: 'tenant-1', arquivadoEm: expect.any(Object) }
+    }));
+    expect(resultado.itens[0]).toEqual(expect.objectContaining({ nome: 'Dra. Carla', arquivadoEm: expect.any(Date) }));
+  });
+
+  it('deve restaurar o perfil e reativar o usuario sem restaurar refresh tokens antigos', async () => {
+    const repositorioProfissionais = {
+      findOne: jest.fn(async () => ({ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-1', arquivadoEm: new Date() })),
+      update: jest.fn(async () => ({ affected: 1 }))
+    };
+    const repositorioUsuarios = { update: jest.fn(async () => ({ affected: 1 })) };
+    const repositorioRefreshTokens = { update: jest.fn(async () => ({ affected: 1 })) };
+    const servico = new ServicoProfissionais(
+      { executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => operacao({
+        getRepository: jest.fn((entidade: unknown) => {
+          if (entidade === ProfissionalOrm) return repositorioProfissionais;
+          if (entidade === UsuarioOrm) return repositorioUsuarios;
+          if (entidade === RefreshTokenOrm) return repositorioRefreshTokens;
+          throw new Error('Repositorio nao mapeado.');
+        })
+      })) } as never,
+      {} as never,
+      {} as never
+    );
+
+    await servico.restaurar('tenant-1', 'profissional-1');
+
+    expect(repositorioProfissionais.update).toHaveBeenCalledWith(expect.any(Object), { arquivadoEm: null });
+    expect(repositorioUsuarios.update).toHaveBeenCalledWith({ id: 'usuario-1', tenantId: 'tenant-1' }, { ativo: true });
+    expect(repositorioRefreshTokens.update).not.toHaveBeenCalled();
+  });
+
   it('deve criar usuario profissional e perfil no mesmo contexto tenant', async () => {
     const repositorioUsuarios = criarRepositorioFake();
     const repositorioProfissionais = criarRepositorioFake();
