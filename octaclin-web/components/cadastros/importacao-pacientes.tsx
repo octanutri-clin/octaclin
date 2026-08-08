@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertTriangle, CheckCircle2, Upload } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Link2, Paperclip, Upload } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Modal } from '@/components/ui/modal';
 import {
@@ -10,6 +10,7 @@ import {
   RelatorioImportacaoPacientes,
   importarPacientes
 } from '@/lib/cadastros-api';
+import { enviarAnexosImportados, type ResultadoAnexosImportacao } from '@/lib/importacao-pacientes-anexos';
 
 interface ImportacaoPacientesProps {
   aberto: boolean;
@@ -41,6 +42,9 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
   const [conteudo, setConteudo] = useState('');
   const [nomeArquivo, setNomeArquivo] = useState('');
   const [profissionalId, setProfissionalId] = useState('');
+  const [enviarConvite, setEnviarConvite] = useState(false);
+  const [anexos, setAnexos] = useState<File[]>([]);
+  const [resultadoAnexos, setResultadoAnexos] = useState<ResultadoAnexosImportacao | null>(null);
   const [relatorio, setRelatorio] = useState<RelatorioImportacaoPacientes | null>(null);
   const [importado, setImportado] = useState(false);
   const [processando, setProcessando] = useState(false);
@@ -49,6 +53,9 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
   function reiniciar() {
     setConteudo('');
     setNomeArquivo('');
+    setEnviarConvite(false);
+    setAnexos([]);
+    setResultadoAnexos(null);
     setRelatorio(null);
     setImportado(false);
     setErro(null);
@@ -58,6 +65,8 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
     if (!arquivo) return;
     setRelatorio(null);
     setImportado(false);
+    setAnexos([]);
+    setResultadoAnexos(null);
     setErro(null);
     setNomeArquivo(arquivo.name);
     setConteudo(await arquivo.text());
@@ -69,9 +78,17 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
     try {
       const resultado = await importarPacientes(conteudo, {
         previa,
-        profissionalResponsavelId: profissionalId || undefined
+        profissionalResponsavelId: profissionalId || undefined,
+        enviarConvite
       });
-      setRelatorio(resultado);
+      if (!previa && resultado.linhas.some((linha) => linha.pacienteId && linha.anexo)) {
+        const uploads = await enviarAnexosImportados(resultado.linhas, anexos);
+        resultado.linhas = uploads.linhas;
+        setResultadoAnexos(uploads);
+      } else {
+        setResultadoAnexos(null);
+      }
+      setRelatorio({ ...resultado });
       setImportado(!previa);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao processar o arquivo.');
@@ -80,7 +97,9 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
     }
   }
 
-  const linhasComProblema = relatorio?.linhas.filter((linha) => linha.situacao !== 'valido') ?? [];
+  const linhasComDetalhe = relatorio?.linhas.filter(
+    (linha) => linha.situacao !== 'valido' || (linha.avisos?.length ?? 0) > 0 || Boolean(linha.linkConvite)
+  ) ?? [];
 
   return (
     <Modal
@@ -90,7 +109,7 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
         aoFechar();
       }}
       titulo="Importar pacientes"
-      descricao="Envie um CSV com as colunas nome, contato e data de nascimento. Nada e gravado antes da previa."
+      descricao="Envie um CSV com nome, contato, data de nascimento e, opcionalmente, anexo. Nada e gravado antes da previa."
     >
       <div className="grid gap-4">
         <label className="grid gap-1 text-xs font-semibold text-texto-suave">
@@ -108,7 +127,11 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
           <select
             className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
             value={profissionalId}
-            onChange={(evento) => setProfissionalId(evento.target.value)}
+            onChange={(evento) => {
+              setProfissionalId(evento.target.value);
+              setRelatorio(null);
+              setImportado(false);
+            }}
           >
             <option value="">Selecione o profissional</option>
             {profissionais.map((profissional) => (
@@ -120,6 +143,42 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
           <span className="text-[11px] font-normal text-texto-suave">
             Se voce e o profissional da conta, a importacao usa sempre a sua propria carteira.
           </span>
+        </label>
+
+        <label className="flex min-h-11 items-start gap-3 rounded-md border border-linha bg-superficie p-3 text-sm text-tinta">
+          <input
+            type="checkbox"
+            className="mt-0.5 size-4 shrink-0"
+            checked={enviarConvite}
+            onChange={(evento) => {
+              setEnviarConvite(evento.target.checked);
+              setRelatorio(null);
+              setImportado(false);
+            }}
+          />
+          <span>
+            <strong className="block font-semibold text-texto-forte">Criar convite para o portal</strong>
+            Pacientes cujo contato for um e-mail receberao um link de ativacao no relatorio.
+          </span>
+        </label>
+
+        <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+          Anexos mencionados no CSV (opcional)
+          <input
+            type="file"
+            multiple
+            accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+            className="rounded-md border border-linha bg-white p-2 text-sm font-normal text-tinta"
+            onChange={(evento) => setAnexos(Array.from(evento.target.files ?? []))}
+          />
+          <span className="text-[11px] font-normal text-texto-suave">
+            O nome precisa corresponder a coluna anexo. JPEG, PNG, WebP ou PDF; os limites seguros da Fase 200 continuam valendo.
+          </span>
+          {anexos.length ? (
+            <span className="flex items-center gap-1 text-[11px] font-medium text-tinta">
+              <Paperclip size={12} /> {anexos.length} arquivo(s) selecionado(s)
+            </span>
+          ) : null}
         </label>
 
         {erro ? (
@@ -141,18 +200,45 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
               {relatorio.duplicados} ja cadastrado(s) - {relatorio.invalidos} com erro
               {relatorio.bloqueadosPorPlano ? ` - ${relatorio.bloqueadosPorPlano} fora do limite do plano` : ''}
             </p>
+            {importado && enviarConvite ? (
+              <p className="text-xs text-texto-suave">{relatorio.convitesCriados ?? 0} convite(s) criado(s).</p>
+            ) : null}
+            {importado && resultadoAnexos ? (
+              <p className="text-xs text-texto-suave">
+                {resultadoAnexos.confirmados} anexo(s) confirmado(s)
+                {resultadoAnexos.naoSelecionados ? ` - ${resultadoAnexos.naoSelecionados} nao selecionado(s)` : ''}
+                {resultadoAnexos.falhas ? ` - ${resultadoAnexos.falhas} com falha` : ''}.
+              </p>
+            ) : null}
 
-            {linhasComProblema.length ? (
+            {linhasComDetalhe.length ? (
               <div className="max-h-60 overflow-y-auto rounded-md bg-superficie p-2">
                 <ul className="grid gap-1 text-xs">
-                  {linhasComProblema.map((linha) => (
-                    <li key={linha.linha} className="flex flex-wrap gap-x-2">
-                      <span className="font-semibold">Linha {linha.linha}</span>
-                      <span className={COR_SITUACAO[linha.situacao]}>{ROTULO_SITUACAO[linha.situacao]}</span>
-                      <span className="text-texto-suave">
-                        {linha.nome ? `${linha.nome} - ` : ''}
-                        {linha.erros.join(' ')}
+                  {linhasComDetalhe.map((linha) => (
+                    <li key={linha.linha} className="grid gap-1 border-b border-linha/70 py-1.5 last:border-0">
+                      <span className="flex flex-wrap gap-x-2">
+                        <span className="font-semibold">Linha {linha.linha}</span>
+                        <span className={COR_SITUACAO[linha.situacao]}>{ROTULO_SITUACAO[linha.situacao]}</span>
+                        <span className="text-texto-suave">
+                          {linha.nome ? `${linha.nome}${linha.erros.length ? ' - ' : ''}` : ''}
+                          {linha.erros.join(' ')}
+                        </span>
                       </span>
+                      {(linha.avisos ?? []).map((aviso) => (
+                        <span key={aviso} className="flex items-start gap-1 text-amber-800">
+                          <AlertTriangle size={12} className="mt-0.5 shrink-0" /> {aviso}
+                        </span>
+                      ))}
+                      {linha.linkConvite ? (
+                        <a
+                          href={linha.linkConvite}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 font-semibold text-acao hover:underline"
+                        >
+                          <Link2 size={12} /> Abrir convite de {linha.nome ?? `linha ${linha.linha}`}
+                        </a>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

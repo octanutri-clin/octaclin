@@ -477,7 +477,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   restante do plano. Exportacao de pacientes, respostas de formulario e agenda
   reaproveita a listagem que ja aplica o escopo, exclui bloqueio do Google do CSV
   da agenda e registra o volume levado na auditoria. O CSV do produto virou fonte
-  unica com defesa contra injecao de formula. Ver
+  unica com defesa contra injecao de formula. Extensao de 2026-08-08 adicionou
+  anexo opcional por linha pelo upload assinado da Fase 200 e convite opcional do
+  portal depois do commit do paciente; falhas ficam isoladas e visiveis no
+  relatorio, sem apagar os demais cadastros. O convite retorna como link para
+  compartilhamento e a quantidade criada entra na auditoria. Ver
   `fase-211-importacao-massa-exportacoes-cliente.md`.
 
 ## Estado atual de uso

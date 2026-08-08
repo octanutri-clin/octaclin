@@ -131,7 +131,8 @@ export class ControladorPacientes {
         criados: relatorio.criados,
         duplicados: relatorio.duplicados,
         invalidos: relatorio.invalidos,
-        bloqueadosPorPlano: relatorio.bloqueadosPorPlano
+        bloqueadosPorPlano: relatorio.bloqueadosPorPlano,
+        convitesCriados: relatorio.convitesCriados
       }
     });
     return relatorio;

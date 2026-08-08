@@ -101,6 +101,12 @@ export class ImportarPacientesDto {
   @IsOptional()
   @IsUUID()
   profissionalResponsavelId?: string;
+
+  /** Cria convite de portal para cada paciente importado com e-mail no contato. */
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  enviarConvite?: boolean;
 }
 
 export class AtualizarPacienteDto {

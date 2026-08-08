@@ -108,12 +108,35 @@ esta na tela, nao da base inteira) e "Importar CSV" abre o modal de duas etapas
 com o relatorio linha a linha. Exportacao usa `<a href>`, o padrao que o portal
 do cliente ja usava, sem fetch nem blob.
 
+### Extensao: anexos e convites de portal (2026-08-08)
+
+A coluna opcional `anexo` (tambem aceita `arquivo`, `exame` ou `documento`) liga
+cada linha ao arquivo local de mesmo nome. O paciente e criado primeiro e o
+relatorio devolve seu `pacienteId`; so entao a web envia o binario pelo upload
+assinado da Fase 200, preservando validacao de formato, tamanho, cota e acesso.
+JPEG, PNG, WebP e PDF sao aceitos. Ate tres anexos sao processados em paralelo.
+
+Falha ou ausencia de um arquivo nao desfaz o paciente nem interrompe o restante
+do lote. O resultado mostra anexos confirmados, nao selecionados e com falha, e
+registra o motivo na linha correspondente.
+
+O operador tambem pode pedir a criacao de convite do portal. A previa avisa
+quando o contato nao e um e-mail; na importacao, cada paciente elegivel recebe
+um convite separado e o relatorio mostra o link de ativacao. Convite com falha
+nao desfaz o cadastro. A criacao ocorre **depois do commit do paciente**: abrir
+uma segunda transacao antes disso fazia o convite nao enxergar o registro ainda
+nao confirmado. A quantidade criada entra na auditoria da importacao.
+
+O convite e gerado para compartilhamento pelo operador; esta extensao nao faz
+disparo automatico por e-mail.
+
 ## Testes
 
 - `csv.spec.ts`: 28 casos - citacao RFC 4180, injecao de formula, negativo, e a
   leitura suja (BOM, CRLF, `;`, tab, multilinha, numeracao de linha, colunas
   faltando).
-- `servico-importacao-pacientes.spec.ts`: 19 casos, incluindo o criterio de
+- `servico-importacao-pacientes.spec.ts`: 28 casos, incluindo anexos, convites,
+  falha parcial e o criterio de
   aceite da fase — 200 pacientes com 5 linhas invalidas produzem 195 criados e
   as 5 linhas no relatorio com o numero certo (9, 49, 89, 129, 169).
 - Exportacao coberta em `servico-pacientes.spec.ts` (escopo, teto, formula),
@@ -123,8 +146,9 @@ do cliente ja usava, sem fetch nem blob.
 
 ## Validacoes
 
-679 testes de backend em 98 suites, `typecheck` do backend, e no web
-`typecheck`, `lint`, `test:authz` (5), `test:next15` (67 arquivos) e `build`.
+688 testes de backend em 98 suites, `typecheck` do backend, e no web
+`typecheck`, `lint`, `test:authz`, `test:next15` (67 arquivos),
+`test:importacao-pacientes` (3) e `build` (114 paginas).
 
 Nenhuma migration nesta fase: importacao e exportacao usam o schema existente.
 
@@ -136,8 +160,11 @@ executados — exigem backend e banco reais. Rodar antes do go-live.
 - A deteccao de duplicidade carrega a carteira do profissional e descriptografa
   em memoria, porque nao ha coluna de deduplicacao no banco. Aguenta a escala de
   uma clinica; se virar gargalo, criar `chave_deduplicacao` com indice.
-- A importacao nao traz anexos (depende da Fase 200) e nao cria convite de
-  acesso ao portal: o paciente entra como cadastro, o convite continua acao
-  separada.
+- Cada linha aceita um anexo por nome. O arquivo precisa ser selecionado no
+  navegador e o formato fica limitado ao contrato seguro da Fase 200. Como o
+  upload ocorre depois do cadastro, uma falha fica explicita para nova tentativa
+  e nao apaga o paciente criado.
+- O convite e criado e devolvido como link; envio automatico por e-mail continua
+  fora deste fluxo.
 - A exportacao da agenda usa janela fixa de 90 dias para tras e para frente,
   porque o painel nao carrega periodo escolhido pelo usuario.

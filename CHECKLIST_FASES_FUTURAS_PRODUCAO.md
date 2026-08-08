@@ -1332,9 +1332,15 @@ publicado antes de ampliar a superficie de mudancas visuais.
     pacientes, respostas de formulario e agenda reaproveita a listagem que ja tem
     o escopo, registra o volume na auditoria e exclui bloqueio do Google do CSV
     da agenda. Criterio de aceite coberto por teste: 200 pacientes com 5 linhas
-    invalidas produzem 195 criados e as 5 linhas identificadas. 679 testes de
-    backend, typecheck, lint, `test:authz`, `test:next15` e build web aprovados.
-    Sem migration. Ver `fase-211-importacao-massa-exportacoes-cliente.md`.
+    invalidas produzem 195 criados e as 5 linhas identificadas.
+  - Extensao concluida em 2026-08-08: coluna opcional `anexo` usa o upload
+    assinado da Fase 200 depois da criacao do paciente, com falha isolada por
+    linha; convite opcional de portal e criado depois do commit do paciente,
+    devolve o link no relatorio e registra a quantidade na auditoria. A previa
+    avisa contatos sem e-mail. 688 testes de backend, typecheck, lint,
+    `test:authz`, `test:next15`, `test:importacao-pacientes` e build web
+    aprovados. Sem migration. Ver
+    `fase-211-importacao-massa-exportacoes-cliente.md`.
 
 - [ ] Fase 212 - Desfazer, lixeira e restauracao.
   - Permitir desfazer imediato e restauracao auditada de registros arquivados,

@@ -40,6 +40,7 @@ function montarServico(opcoes: {
   limite?: { permitido: boolean; restante?: number | null; mensagem?: string };
   profissionalVinculadoId?: string;
 } = {}) {
+  let transacaoImportacaoAtiva = false;
   const salvos: Array<Record<string, unknown>> = [];
   const repositorioPacientes = {
     find: jest.fn(async () => opcoes.existentes ?? []),
@@ -61,9 +62,14 @@ function montarServico(opcoes: {
     )
   };
   const executorTenant = {
-    executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
-      operacao(gerenciador)
-    )
+    executar: jest.fn(async (_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => {
+      transacaoImportacaoAtiva = true;
+      try {
+        return await operacao(gerenciador);
+      } finally {
+        transacaoImportacaoAtiva = false;
+      }
+    })
   };
   const portalCliente = {
     checarLimite: jest.fn(async () => ({
@@ -73,13 +79,22 @@ function montarServico(opcoes: {
     }))
   };
 
+  const convites = {
+    criarConvite: jest.fn(async () => {
+      if (transacaoImportacaoAtiva) throw new Error('Paciente ainda nao confirmado pela transacao de importacao.');
+      return { linkAtivacao: 'https://app.octaclin.test/ativar/token-1' };
+    })
+  };
+
   return {
     servico: new ServicoImportacaoPacientes(
       executorTenant as never,
       criptografiaFake as never,
-      portalCliente as never
+      portalCliente as never,
+      convites as never
     ),
     repositorioPacientes,
+    convites,
     salvos
   };
 }
@@ -279,6 +294,131 @@ describe('ServicoImportacaoPacientes', () => {
           where: expect.objectContaining({ tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1' })
         })
       );
+    });
+  });
+
+  describe('anexos', () => {
+    it('devolve o id do paciente criado e o anexo declarado, para o upload acontecer depois', async () => {
+      const { servico } = montarServico();
+
+      const relatorio = await servico.importar('tenant-1', usuarioColaborador, {
+        conteudo: 'nome,anexo\nMaria Souza,hemograma-maria.pdf',
+        profissionalResponsavelId: 'profissional-1'
+      });
+
+      expect(relatorio.linhas[0]).toEqual(
+        expect.objectContaining({ pacienteId: 'novo-1', anexo: 'hemograma-maria.pdf', situacao: 'valido' })
+      );
+    });
+
+    it('nao devolve pacienteId na previa, que nao cria nada', async () => {
+      const { servico } = montarServico();
+
+      const relatorio = await servico.previa('tenant-1', usuarioColaborador, {
+        conteudo: 'nome,anexo\nMaria Souza,hemograma-maria.pdf',
+        profissionalResponsavelId: 'profissional-1'
+      });
+
+      expect(relatorio.linhas[0].pacienteId).toBeUndefined();
+      expect(relatorio.linhas[0].anexo).toBe('hemograma-maria.pdf');
+    });
+
+    it('avisa quando a linha recusada declarava anexo, que ficara sem dono', async () => {
+      const { servico } = montarServico();
+
+      const relatorio = await servico.importar('tenant-1', usuarioColaborador, {
+        conteudo: 'nome,anexo\n,orfao.pdf',
+        profissionalResponsavelId: 'profissional-1'
+      });
+
+      expect(relatorio.linhas[0].situacao).toBe('invalido');
+      expect(relatorio.linhas[0].avisos.join(' ').toLowerCase()).toContain('anexo');
+    });
+  });
+
+  describe('convite de portal', () => {
+    it('cria convite para cada paciente importado com email, quando pedido', async () => {
+      const { servico, convites } = montarServico();
+
+      const relatorio = await servico.importar('tenant-1', usuarioColaborador, {
+        conteudo: 'nome,contato\nMaria Souza,maria@octaclin.test',
+        profissionalResponsavelId: 'profissional-1',
+        enviarConvite: true
+      });
+
+      expect(convites.criarConvite).toHaveBeenCalledWith('tenant-1', 'usuario-colaborador-1', 'novo-1', {
+        email: 'maria@octaclin.test'
+      });
+      expect(relatorio.linhas[0].linkConvite).toBe('https://app.octaclin.test/ativar/token-1');
+      expect(relatorio.convitesCriados).toBe(1);
+    });
+
+    it('nao cria convite quando nao foi pedido', async () => {
+      const { servico, convites } = montarServico();
+
+      await servico.importar('tenant-1', usuarioColaborador, {
+        conteudo: 'nome,contato\nMaria Souza,maria@octaclin.test',
+        profissionalResponsavelId: 'profissional-1'
+      });
+
+      expect(convites.criarConvite).not.toHaveBeenCalled();
+    });
+
+    it('avisa em vez de falhar quando o contato nao e email', async () => {
+      const { servico, convites } = montarServico();
+
+      const relatorio = await servico.importar('tenant-1', usuarioColaborador, {
+        conteudo: 'nome,contato\nJoao Lima,11988887777',
+        profissionalResponsavelId: 'profissional-1',
+        enviarConvite: true
+      });
+
+      expect(convites.criarConvite).not.toHaveBeenCalled();
+      expect(relatorio.linhas[0].situacao).toBe('valido');
+      expect(relatorio.convitesCriados).toBe(0);
+      expect(relatorio.linhas[0].avisos.join(' ').toLowerCase()).toContain('convite');
+    });
+
+    it('nao perde o paciente quando o convite falha: importacao segue e o aviso fica na linha', async () => {
+      const { servico, convites, salvos } = montarServico();
+      convites.criarConvite.mockRejectedValueOnce(new Error('Paciente ja possui acesso ativo.'));
+
+      const relatorio = await servico.importar('tenant-1', usuarioColaborador, {
+        conteudo: 'nome,contato\nMaria Souza,maria@octaclin.test\nJoao Lima,joao@octaclin.test',
+        profissionalResponsavelId: 'profissional-1',
+        enviarConvite: true
+      });
+
+      expect(salvos).toHaveLength(2);
+      expect(relatorio.criados).toBe(2);
+      expect(relatorio.convitesCriados).toBe(1);
+      expect(relatorio.linhas[0].avisos.join(' ')).toContain('Paciente ja possui acesso ativo.');
+    });
+
+    it('nao cria convite na previa', async () => {
+      const { servico, convites } = montarServico();
+
+      const relatorio = await servico.previa('tenant-1', usuarioColaborador, {
+        conteudo: 'nome,contato\nMaria Souza,maria@octaclin.test',
+        profissionalResponsavelId: 'profissional-1',
+        enviarConvite: true
+      });
+
+      expect(convites.criarConvite).not.toHaveBeenCalled();
+      expect(relatorio.linhas[0].avisos).toEqual([]);
+    });
+
+    it('avisa ja na previa quando o contato nao pode receber convite', async () => {
+      const { servico, convites } = montarServico();
+
+      const relatorio = await servico.previa('tenant-1', usuarioColaborador, {
+        conteudo: 'nome,contato\nJoao Lima,11988887777',
+        profissionalResponsavelId: 'profissional-1',
+        enviarConvite: true
+      });
+
+      expect(convites.criarConvite).not.toHaveBeenCalled();
+      expect(relatorio.linhas[0].avisos.join(' ').toLowerCase()).toContain('convite');
     });
   });
 

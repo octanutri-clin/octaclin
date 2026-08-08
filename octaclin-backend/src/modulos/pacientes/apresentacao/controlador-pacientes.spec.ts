@@ -34,6 +34,7 @@ describe('ControladorPacientes', () => {
           invalidos: 1,
           bloqueadosPorPlano: 0,
           criados: 1,
+          convitesCriados: 1,
           linhas: []
         }),
         ...servicos
@@ -138,7 +139,13 @@ describe('ControladorPacientes', () => {
       expect(registrar).toHaveBeenCalledWith(
         expect.objectContaining({
           acao: 'pacientes.importar_csv',
-          metadados: expect.objectContaining({ total: 3, criados: 1, duplicados: 1, invalidos: 1 })
+          metadados: expect.objectContaining({
+            total: 3,
+            criados: 1,
+            duplicados: 1,
+            invalidos: 1,
+            convitesCriados: 1
+          })
         })
       );
     });

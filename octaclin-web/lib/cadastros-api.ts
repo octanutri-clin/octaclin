@@ -109,8 +109,12 @@ export interface LinhaImportacaoPaciente {
   nome?: string;
   contato?: string;
   dataNascimento?: string;
+  anexo?: string;
+  pacienteId?: string;
+  linkConvite?: string;
   situacao: SituacaoLinhaImportacao;
   erros: string[];
+  avisos: string[];
 }
 
 export interface RelatorioImportacaoPacientes {
@@ -120,18 +124,23 @@ export interface RelatorioImportacaoPacientes {
   invalidos: number;
   bloqueadosPorPlano: number;
   criados: number;
+  convitesCriados: number;
   linhas: LinhaImportacaoPaciente[];
 }
 
 /** `previa: true` valida e devolve o relatorio sem gravar nada. */
 export async function importarPacientes(
   conteudo: string,
-  opcoes: { previa?: boolean; profissionalResponsavelId?: string } = {}
+  opcoes: { previa?: boolean; profissionalResponsavelId?: string; enviarConvite?: boolean } = {}
 ): Promise<RelatorioImportacaoPacientes> {
   return requisitar<RelatorioImportacaoPacientes>(`/api/pacientes/importar${opcoes.previa ? '?previa=1' : ''}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ conteudo, profissionalResponsavelId: opcoes.profissionalResponsavelId })
+    body: JSON.stringify({
+      conteudo,
+      profissionalResponsavelId: opcoes.profissionalResponsavelId,
+      enviarConvite: opcoes.enviarConvite
+    })
   });
 }
 
