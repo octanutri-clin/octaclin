@@ -17,6 +17,7 @@
     "test:e2e:criticas": "playwright test tests/visual/jornadas-criticas.spec.mjs --reporter=list",
     "test:a11y": "playwright test tests/visual/acessibilidade.spec.mjs --reporter=list",
     "test:questionarios-preview": "node scripts/test-questionarios-preview.mjs",
+    "test:paleta": "playwright test tests/visual/paleta-comandos.spec.mjs --reporter=list",
     "smoke:visual": "playwright test",
     "smoke:ui": "node scripts/smoke-ui-regression.mjs",
     "smoke:e2e:bff": "node scripts/smoke-e2e-bff.mjs",

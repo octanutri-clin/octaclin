@@ -491,6 +491,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   Restaurar profissional reativa o login, mas nao revive sessoes revogadas, e
   toda gestao da equipe continua exclusiva de SuperAdmin. Ver
   `fase-212-desfazer-lixeira-restauracao.md`.
+- Fase 213 - Paleta de comandos e atalhos de teclado: o console passou a abrir
+  navegacao e acoes frequentes por busca global ou teclado, sempre filtradas
+  pelo papel e pelas permissoes da sessao. Pacientes autorizados aparecem pela
+  busca server-side da Fase 199, sem carregar a carteira inteira no navegador.
+  O fluxo funciona por setas, Enter, Escape e sequencias globais, com foco e
+  responsividade validados em desktop e celular. Ver
+  `fase-213-paleta-comandos-atalhos.md`.
 
 ## Estado atual de uso
 

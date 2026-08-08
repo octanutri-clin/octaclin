@@ -38,15 +38,18 @@ executar(process.execPath, [
   'scripts/autorizacao-rotas.spec.ts',
   'scripts/permissoes-bff.spec.ts',
   'scripts/cold-start-bff.spec.ts',
+  'scripts/paleta-comandos.spec.ts',
   'lib/server/autorizacao-rotas.ts',
   'lib/server/permissoes-bff.ts',
-  'lib/server/cold-start-bff.ts'
+  'lib/server/cold-start-bff.ts',
+  'lib/paleta-comandos.ts'
 ]);
 
 executar(process.execPath, [
   '--test',
   join(pastaTemporaria, 'scripts', 'autorizacao-rotas.spec.js'),
   join(pastaTemporaria, 'scripts', 'permissoes-bff.spec.js'),
-  join(pastaTemporaria, 'scripts', 'cold-start-bff.spec.js')
+  join(pastaTemporaria, 'scripts', 'cold-start-bff.spec.js'),
+  join(pastaTemporaria, 'scripts', 'paleta-comandos.spec.js')
 ]);
 rmSync(pastaTemporaria, { recursive: true, force: true });

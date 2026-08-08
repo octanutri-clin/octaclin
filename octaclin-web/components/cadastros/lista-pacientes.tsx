@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArchiveRestore, CheckCircle2, Download, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Search, Trash2, Upload } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { ImportacaoPacientes } from '@/components/cadastros/importacao-pacientes';
@@ -98,7 +98,6 @@ export function ListaPacientes() {
   const router = useRouter();
   const pathname = usePathname();
   const parametrosUrl = useSearchParams();
-  const hashAplicado = useRef(false);
   const [dados, setDados] = useState<RespostaPaginada<PacienteResumo> | null>(null);
   const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
   const [erro, setErro] = useState<string | null>(null);
@@ -160,10 +159,13 @@ export function ListaPacientes() {
   }, [apenasSemProximaConsulta, busca, filtroProfissional, filtroRisco, filtroStatus, pagina, pathname, router]);
 
   useEffect(() => {
-    if (hashAplicado.current) return;
-    hashAplicado.current = true;
-    if (window.location.hash === '#novo-paciente') setModalPacienteAberto(true);
-  }, []);
+    function abrirPeloAtalho() {
+      if (podeGerenciar && window.location.hash === '#novo-paciente') setModalPacienteAberto(true);
+    }
+    abrirPeloAtalho();
+    window.addEventListener('hashchange', abrirPeloAtalho);
+    return () => window.removeEventListener('hashchange', abrirPeloAtalho);
+  }, [podeGerenciar]);
 
   const carregar = useCallback(async () => {
     setCarregando(true);

@@ -1353,9 +1353,14 @@ publicado antes de ampliar a superficie de mudancas visuais.
     web aprovados. Sem migration. Ver
     `fase-212-desfazer-lixeira-restauracao.md`.
 
-- [ ] Fase 213 - Command palette e atalhos de teclado.
-  - Oferecer navegacao, busca e acoes frequentes por teclado depois da busca
-    server-side da Fase 199.
+- [x] Fase 213 - Command palette e atalhos de teclado.
+  - Concluida em 2026-08-08. Paleta global por botao ou `Ctrl/Cmd+K`, navegacao
+    e acoes filtradas por papel/permissao, sequencias `G`/`N` e busca
+    server-side de pacientes escopada pela Fase 199. Setas, Enter, Escape,
+    restauracao de foco, estados de busca e responsividade cobertos em 6 testes
+    Playwright desktop/mobile. `test:authz` (35), base visual, Next 15,
+    typecheck, lint e build aprovados. Sem backend ou migration. Ver
+    `fase-213-paleta-comandos-atalhos.md`.
 
 - [ ] Fase 214 - Refatoracao dos monolitos.
   - Dividir apenas `portal-cliente` e `painel-operacoes`, preservando

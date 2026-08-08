@@ -312,7 +312,12 @@ export function PainelAgenda() {
   }, []);
 
   useEffect(() => {
-    if (window.location.hash === '#novo-agendamento') setModalCriarAberto(true);
+    function abrirPeloAtalho() {
+      if (window.location.hash === '#novo-agendamento') setModalCriarAberto(true);
+    }
+    abrirPeloAtalho();
+    window.addEventListener('hashchange', abrirPeloAtalho);
+    return () => window.removeEventListener('hashchange', abrirPeloAtalho);
   }, []);
 
   /** Pacotes com vaga do paciente escolhido: e o que a consulta pode consumir. */

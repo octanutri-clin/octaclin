@@ -19,19 +19,20 @@ import {
 } from 'lucide-react';
 import { obterSessao, type SessaoPublica } from '@/lib/auth-api';
 import { PortalShell } from '@/components/app/portal-shell';
+import { PaletaComandos } from '@/components/app/paleta-comandos';
 import { SinoNotificacoes } from '@/components/app/sino-notificacoes';
 import { classesBotao } from '@/components/ui/botao';
 import { Dica } from '@/components/ui/dica';
 
 const itens = [
-  { href: '/dashboard', rotulo: 'Hoje', icone: LayoutDashboard, permissao: 'dashboard.ler', grupo: 'Clinica' },
-  { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays, permissao: 'agenda.consultas.ler', grupo: 'Clinica' },
-  { href: '/pacientes', rotulo: 'Pacientes', icone: HeartPulse, permissao: 'pacientes.listar', grupo: 'Clinica' },
-  { href: '/questionarios', rotulo: 'Formularios', icone: ClipboardList, permissao: 'questionarios.ler', grupo: 'Clinica' },
-  { href: '/comunicacoes', rotulo: 'Comunicacoes', icone: Send, permissao: 'comunicacoes.mensagens.ler', grupo: 'Relacionamento' },
-  { href: '/automacoes', rotulo: 'Automacoes', icone: Zap, permissao: 'automacoes.gerenciar', grupo: 'Relacionamento' },
-  { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope, permissao: 'profissionais.ler', grupo: 'Gestao' },
-  { href: '/operacoes', rotulo: 'Operacoes', icone: Settings, permissao: 'operacoes.auditoria.ler', grupo: 'SuperAdmin' }
+  { href: '/dashboard', rotulo: 'Hoje', icone: LayoutDashboard, permissao: 'dashboard.ler', grupo: 'Clinica', papeis: ['SuperAdmin', 'Professional'] },
+  { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays, permissao: 'agenda.consultas.ler', grupo: 'Clinica', papeis: undefined },
+  { href: '/pacientes', rotulo: 'Pacientes', icone: HeartPulse, permissao: 'pacientes.listar', grupo: 'Clinica', papeis: undefined },
+  { href: '/questionarios', rotulo: 'Formularios', icone: ClipboardList, permissao: 'questionarios.ler', grupo: 'Clinica', papeis: undefined },
+  { href: '/comunicacoes', rotulo: 'Comunicacoes', icone: Send, permissao: 'comunicacoes.mensagens.ler', grupo: 'Relacionamento', papeis: undefined },
+  { href: '/automacoes', rotulo: 'Automacoes', icone: Zap, permissao: 'automacoes.gerenciar', grupo: 'Relacionamento', papeis: undefined },
+  { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope, permissao: 'profissionais.ler', grupo: 'Gestao', papeis: undefined },
+  { href: '/operacoes', rotulo: 'Operacoes', icone: Settings, permissao: 'operacoes.auditoria.ler', grupo: 'SuperAdmin', papeis: ['SuperAdmin'] }
 ] as const;
 
 const nomesPapel: Record<string, string> = {
@@ -76,10 +77,14 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
   }, []);
 
   const permissoes = sessao?.permissoes ?? [];
-  const itensVisiveis = itens.filter((item) => permissoes.includes(item.permissao));
+  const itensVisiveis = itens.filter((item) =>
+    permissoes.includes(item.permissao)
+    && (!item.papeis || Boolean(sessao?.papel && item.papeis.some((papel) => papel === sessao.papel)))
+  );
 
   const atalhos = sessao ? (
     <>
+      <PaletaComandos sessao={sessao} />
       {permissoes.includes('agenda.consultas.criar') ? (
         <AtalhoShell href="/agenda#novo-agendamento" rotulo="Agendar" icone={<CalendarPlus size={16} />} />
       ) : null}
