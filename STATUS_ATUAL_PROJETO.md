@@ -18,7 +18,13 @@ Atualizado em 2026-08-08.
   menu, IA, metas/adesao, recebimentos proprios e a ausencia de entradas de
   outros papeis. Ver
   `AUDITORIA_ACESSO_PROFISSIONAL_2026-08-08.md`.
-- Ultima fase concluida: Fase 217 - PWA do portal do paciente. O portal e
+- Ultima fase concluida: Fase 218 - API publica, chaves por tenant e webhooks.
+  API `/v1` com escopos e rate limit, idempotencia por referencia externa,
+  webhooks HMAC com outbox resiliente e gestao pelo portal `Client`. Migration
+  `1022` validada em producao (35/35), backend/web publicados no commit
+  `9572704` e smoke de chave confirmou `200/403/401`. Ver
+  `fase-218-api-publica-chaves-webhooks.md` e `API_PUBLICA_V1.md`.
+- Fase 217 - PWA do portal do paciente. O portal e
   instalavel, mantem somente recursos publicos no cache e oferece fila offline
   cifrada e idempotente para check-in e formulario sem anexo. Nenhum dado
   clinico, HTML autenticado ou API protegida entra no Cache Storage. Ver
@@ -59,11 +65,6 @@ Atualizado em 2026-08-08.
   identificadas. 679 testes de backend em 98 suites, typecheck, lint,
   `test:authz`, `test:next15` e build web aprovados. Sem migration. Ver
   `fase-211-importacao-massa-exportacoes-cliente.md`.
-- Fase 218 em rollout controlado: API `/v1`, chaves escopadas por tenant,
-  idempotencia por referencia externa e webhooks assinados foram implementados
-  localmente. A migration aditiva `1022` foi aplicada primeiro e validada no
-  banco de producao, agora em 35/35; push, deploy e smoke ainda estao pendentes. Ver
-  `fase-218-api-publica-chaves-webhooks.md` e `API_PUBLICA_V1.md`.
 - Fase 210 - notificacoes in-app e tempo real, em
   2026-08-06. O sino do console deixou de ser um link estatico e passou a contar
   de verdade: centro de notificacoes por usuario com estado lido/nao lido para
@@ -381,7 +382,7 @@ Atualizado em 2026-08-08.
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
 
-Proxima fase de produto: Fase 218 - API publica, chaves por tenant e webhooks.
+Proxima fase de produto: definir a partir dos bloqueadores restantes de go-live.
 Permanece como pendencia operacional o rollout da Fase 201 no Render (separar
 os papeis `web` e `worker` e registrar a entrega sintetica unica exigida pelo
 aceite).

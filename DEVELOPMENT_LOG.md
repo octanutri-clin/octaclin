@@ -169,14 +169,14 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 - Responsavel: Codex.
 - Inicio: 2026-08-08.
-- Conclusao: pendente de rollout em producao.
-- Commit: pendente.
-- Push: pendente; migration `1022` ja aplicada antes do deploy.
+- Conclusao: 2026-08-08.
+- Commit: `9572704`.
+- Push: sim; backend e web confirmados nas rotas novas.
 - Validacoes: 113 suites/801 testes backend, typecheck/build backend,
   authz/Next 15/typecheck/lint/build web, preflight e secrets aprovados.
 - Arquivos principais: `octaclin-backend/src/modulos/integracoes`, migration
   `1022`, gestao em `octaclin-web/components/cliente/integracoes-api-cliente.tsx`
   e `API_PUBLICA_V1.md`.
-- Pendencias: push/deploy e smoke de credencial/webhook. Migration 35/35,
-  RLS/indices/FKs e builds ja aprovados.
-- Proxima fase: definir depois do aceite completo da Fase 218.
+- Pendencias: entrega a receptor externo real no onboarding da primeira
+  integracao aprovada; nao e pendencia de codigo da fase.
+- Proxima fase: definir a partir dos bloqueadores restantes de go-live.

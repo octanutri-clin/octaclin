@@ -534,6 +534,17 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   chave somente em memoria, idempotencia transacional e limpeza no logout/401.
   O app `octaclin-mobile` permanece separado e nenhuma projecao clinica entra
   no Cache Storage. Ver `fase-217-pwa-portal-paciente.md`.
+- Fase 218 - API publica, chaves por tenant e webhooks: superficie `/v1` para
+  pacientes e agenda com escopos, hash de segredo, expiracao, rotacao,
+  revogacao imediata e rate limit Redis que falha fechado. Escritas usam
+  `referenciaExterna` idempotente inclusive sob concorrencia. Eventos minimos
+  entram no mesmo commit da mutacao e saem por outbox HMAC com deduplicacao,
+  seis tentativas, recuperacao de lease, historico e protecao SSRF/DNS rebinding.
+  O gestor `Client` administra credenciais e entregas sem recuperar hashes ou
+  segredos cifrados. Migration `1022` validada em producao com RLS forcada,
+  policies, indices e FKs; banco 35/35. Commit `9572704`, backend/web live e
+  smoke de chave `200/403/401` aprovado. Ver
+  `fase-218-api-publica-chaves-webhooks.md` e `API_PUBLICA_V1.md`.
 
 ## Estado atual de uso
 

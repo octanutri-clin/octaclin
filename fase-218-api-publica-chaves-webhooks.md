@@ -2,10 +2,10 @@
 
 ## Status
 
-- Implementacao e testes locais: concluidos em 2026-08-08.
-- Migration de producao: aplicada e validada em 2026-08-08 com role
-  `neondb_owner`; banco em 35/35 migrations.
-- Rollout de producao: pendente de push/deploy e smoke autenticado.
+- Concluida e publicada em producao em 2026-08-08.
+- Commit funcional: `9572704`.
+- Migration `1022` validada com role `neondb_owner`; banco em 35/35.
+- Backend `/v1` e BFF de gestao confirmados no deploy novo.
 
 ## Entrega
 
@@ -76,10 +76,15 @@ A migration `1720000001022-CriarIntegracoesApiPublica`:
 7. Cadastrar endpoint sintetico, provocar um evento, validar HMAC/corpo bruto e
    confirmar historico; remover a credencial de aceite ao terminar.
 
-## Pendente
+## Aceite de producao
 
 - [x] Migration `1022` aplicada e validada em producao.
 - [x] Builds e validacoes finais aprovados.
-- [ ] Push/deploy em producao.
-- [ ] Smoke de chave, escopos, revogacao, idempotencia e webhook assinado.
-- [ ] Checklist, resumo e status atual marcados como concluidos.
+- [x] Commit `9572704` enviado; backend e web servindo as rotas novas.
+- [x] Chave temporaria: leitura `200`, escopo negado `403`, revogacao `401` e
+  remocao da credencial de aceite.
+- [x] Assinatura HMAC sobre corpo bruto, retry, lease, deduplicacao e SSRF
+  aprovados na suite automatizada.
+- [ ] Entrega para um receptor externo real sera validada no onboarding da
+  primeira integracao aprovada. Nao foi usado capturador publico com IDs de
+  producao apenas para fechar a fase.

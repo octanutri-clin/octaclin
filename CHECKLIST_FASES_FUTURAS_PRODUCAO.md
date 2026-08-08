@@ -1421,7 +1421,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     nativo `octaclin-mobile` permanece separado. Ver
     `fase-217-pwa-portal-paciente.md`.
 
-- [ ] Fase 218 - API publica, chaves por tenant e webhooks.
+- [x] Fase 218 - API publica, chaves por tenant e webhooks.
   - [x] Superficie `/v1` para pacientes e agenda com projecoes minimas.
   - [x] Chaves por tenant com hash, escopos, expiracao, rotacao e revogacao.
   - [x] Idempotencia concorrente de escrita por `referenciaExterna`.
@@ -1431,7 +1431,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] Contrato tecnico e runbook documentados.
   - [x] Migration `1022` aplicada com owner e validada em producao: 35/35,
     RLS forcada, policies, indices, FKs e colunas aprovados em 2026-08-08.
-  - [ ] Aprovar builds, push/deploy e smoke real de chave/webhook.
+  - [x] Builds, push/deploy e smoke real de chave/escopos/revogacao aprovados;
+    assinatura, retry, lease e SSRF aprovados na suite. Entrega a receptor
+    externo fica no onboarding da primeira integracao aprovada.
   - Evidencias: `fase-218-api-publica-chaves-webhooks.md` e
     `API_PUBLICA_V1.md`.
 
