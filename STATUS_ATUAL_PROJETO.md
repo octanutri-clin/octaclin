@@ -14,7 +14,9 @@ Atualizado em 2026-08-08.
   comparacao da clinica. O artefato do backend tambem foi corrigido para voltar
   a produzir `dist/main.js` em build limpo, com uma verificacao obrigatoria no
   script de build. Backend e web estao `Live` no commit `ed5ae4f`; smoke publico
-  de saude, rota protegida e login aprovado. Ver
+  de saude, rota protegida e login aprovado. O aceite autenticado confirmou o
+  menu, IA, metas/adesao, recebimentos proprios e a ausencia de entradas de
+  outros papeis. Ver
   `AUDITORIA_ACESSO_PROFISSIONAL_2026-08-08.md`.
 - Ultima fase concluida: Fase 216 - plano alimentar e calculo nutricional.
   Profissional monta, revisa, publica e versiona planos no prontuario; o

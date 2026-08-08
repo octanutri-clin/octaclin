@@ -1409,7 +1409,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     artefato antes de liberar o deploy. A auditoria de acesso tambem tornou IA,
     metas/adesao e recebimentos proprios encontraveis para `Professional`, sem
     alterar as permissoes. Backend e web confirmados `Live` no commit `ed5ae4f`;
-    smoke publico aprovado. Ver
+    smoke publico e aceite visual autenticado aprovados. Ver
     `AUDITORIA_ACESSO_PROFISSIONAL_2026-08-08.md`.
 
 - [ ] Fase 217 - PWA do portal do paciente.
