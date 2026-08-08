@@ -498,6 +498,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   O fluxo funciona por setas, Enter, Escape e sequencias globais, com foco e
   responsividade validados em desktop e celular. Ver
   `fase-213-paleta-comandos-atalhos.md`.
+- Fase 214 - Refatoracao dos monolitos: o portal do cliente e o painel de
+  operacoes deixaram de concentrar composicao, estado, requisicoes e todas as
+  areas visuais no mesmo arquivo. Os containers passaram de 1.797 para 111 e de
+  1.565 para 100 linhas, respectivamente, com hooks de orquestracao, dominio,
+  formatadores e areas coesas. APIs, permissoes e comportamento foram
+  preservados e os mesmos 14 cenarios Playwright passaram antes e depois em
+  desktop e celular. Ver `fase-214-refatoracao-monolitos.md`.
 
 ## Estado atual de uso
 

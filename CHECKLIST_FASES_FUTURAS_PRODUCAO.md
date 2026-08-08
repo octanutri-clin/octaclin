@@ -1362,9 +1362,14 @@ publicado antes de ampliar a superficie de mudancas visuais.
     typecheck, lint e build aprovados. Sem backend ou migration. Ver
     `fase-213-paleta-comandos-atalhos.md`.
 
-- [ ] Fase 214 - Refatoracao dos monolitos.
-  - Dividir apenas `portal-cliente` e `painel-operacoes`, preservando
-    comportamento e usando o padrao validado na Fase 194.
+- [x] Fase 214 - Refatoracao dos monolitos.
+  - Concluida em 2026-08-08. `portal-cliente` passou de 1.797 para 111 linhas e
+    `painel-operacoes`, de 1.565 para 100, com hooks de orquestracao, dominio,
+    formatadores e areas visuais coesas. APIs, permissoes, textos, abas e testes
+    permaneceram compativeis. Os 14 cenarios Playwright confiaveis passaram
+    antes e depois da extracao em desktop/mobile; typecheck, lint, base visual,
+    `test:authz` (35), Next 15 (69 arquivos) e build (116 paginas) aprovados.
+    Sem backend ou migration. Ver `fase-214-refatoracao-monolitos.md`.
 
 - [ ] Fase 215 - Performance de backend.
   - Medir pool, agregacoes e latencia antes de introduzir cache; preservar RLS
