@@ -133,7 +133,7 @@ export class ServicoConvitesPaciente {
     const tenantId = extrairTenantToken(dados.token);
     const contextoPaciente = contextoAcessoPorPapel('Patient');
 
-    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+    const ativacao = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorioConvites = gerenciador.getRepository(ConvitePacienteOrm);
       const convite = await repositorioConvites.findOne({
         where: { tenantId, tokenHash: tokenHash(dados.token) }
@@ -186,17 +186,27 @@ export class ServicoConvitesPaciente {
       convite!.aceitoEm = new Date();
       convite!.usuarioId = usuario.id;
       await repositorioConvites.save(convite!);
-      const sessao = await this.servicoAuth.emitirSessaoUsuario(usuario);
-
       return {
         pacienteId: paciente.id,
         usuarioId: usuario.id,
         tenantId,
         email,
-        ...sessao,
-        destinoInicial: contextoPaciente.destinoInicial
+        usuario
       };
     });
+
+    // O refresh token referencia o usuario criado acima. A sessao precisa ser
+    // emitida somente depois do commit para evitar uma segunda transacao lendo
+    // um usuario ainda invisivel.
+    const sessao = await this.servicoAuth.emitirSessaoUsuario(ativacao.usuario);
+    return {
+      pacienteId: ativacao.pacienteId,
+      usuarioId: ativacao.usuarioId,
+      tenantId: ativacao.tenantId,
+      email: ativacao.email,
+      ...sessao,
+      destinoInicial: contextoPaciente.destinoInicial
+    };
   }
 
   private validarConvite(convite?: ConvitePacienteOrm | null): asserts convite is ConvitePacienteOrm {

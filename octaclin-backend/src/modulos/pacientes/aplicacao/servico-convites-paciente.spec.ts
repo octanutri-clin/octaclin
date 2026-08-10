@@ -25,6 +25,7 @@ function criarRepositorioFake(nome: string, dados: Record<string, any>) {
 }
 
 function criarServico(dados: Record<string, any> = {}) {
+  const ordem: string[] = [];
   const repositorios = {
     convite: criarRepositorioFake('convite', dados),
     paciente: criarRepositorioFake('paciente', dados),
@@ -41,9 +42,11 @@ function criarServico(dados: Record<string, any> = {}) {
     })
   };
   const executorTenant = {
-    executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
-      operacao(gerenciador)
-    )
+    executar: jest.fn(async (_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => {
+      const resultado = await operacao(gerenciador);
+      ordem.push('transacao_encerrada');
+      return resultado;
+    })
   };
   const criptografia = {
     criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`)),
@@ -54,22 +57,26 @@ function criarServico(dados: Record<string, any> = {}) {
     gerarHash: jest.fn((senha: string) => `senha:${senha}`)
   } as unknown as ServicoSenhas;
   const servicoAuth = {
-    emitirSessaoUsuario: jest.fn(async () => ({
-      accessToken: 'access-token-paciente',
-      refreshToken: 'refresh-token-paciente',
-      tipoToken: 'Bearer',
-      expiraEmSegundos: 15 * 60,
-      papel: 'Patient',
-      permissoes: ['portal.paciente.acessar'],
-      escopoDados: 'paciente',
-      destinoInicial: '/portal'
-    }))
+    emitirSessaoUsuario: jest.fn(async () => {
+      ordem.push('sessao_emitida');
+      return {
+        accessToken: 'access-token-paciente',
+        refreshToken: 'refresh-token-paciente',
+        tipoToken: 'Bearer',
+        expiraEmSegundos: 15 * 60,
+        papel: 'Patient',
+        permissoes: ['portal.paciente.acessar'],
+        escopoDados: 'paciente',
+        destinoInicial: '/portal'
+      };
+    })
   };
 
   return {
     servico: new ServicoConvitesPaciente(executorTenant as never, criptografia as never, senhas, servicoAuth as never),
     repositorios,
     servicoAuth,
+    ordem,
     dados
   };
 }
@@ -120,10 +127,11 @@ describe('ServicoConvitesPaciente', () => {
       },
       convites: []
     };
-    const { servico, repositorios, servicoAuth } = criarServico(dados);
+    const { servico, repositorios, servicoAuth, ordem } = criarServico(dados);
     const convite = await servico.criarConvite('tenant-1', 'usuario-profissional-1', 'paciente-1', {
       email: 'ana@example.com'
     });
+    ordem.length = 0;
 
     const ativacao = await servico.ativarConvite({
       token: convite.token,
@@ -193,6 +201,7 @@ describe('ServicoConvitesPaciente', () => {
       })
     );
     expect(servicoAuth.emitirSessaoUsuario).toHaveBeenCalledWith(expect.objectContaining({ id: 'usuario-1', role: 'Patient' }));
+    expect(ordem).toEqual(['transacao_encerrada', 'sessao_emitida']);
     expect(ativacao).toEqual({
       pacienteId: 'paciente-1',
       usuarioId: 'usuario-1',
