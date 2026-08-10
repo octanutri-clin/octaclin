@@ -240,7 +240,7 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 - Responsavel: Codex.
 - Inicio: 2026-08-10.
-- Status: em validacao de producao.
+- Status: concluida em producao.
 - Diagnostico: OAuth individual e canal watch do Google estavam ativos, mas a
   conexao permanecia sem `syncToken` e sem bloqueios externos; webhooks
   chegavam sem conclusao da reconciliacao.
@@ -251,5 +251,10 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
   limpeza fora do horizonte antes do aceite final.
 - Validacoes locais: 27 testes focados, builds/typechecks, lint web e sintaxe do
   helper aprovados.
-- Pendencias: deploy, smoke inbound da agenda e rotacao/teste real do Gmail.
+- Producao: `syncToken` e bloqueios externos validados com janela 30/400 dias;
+  OAuth Gmail publicado e renovado; Gmail aceitou envio real; health detalhado
+  integralmente `ok`; `OCTACLIN_PROCESSO=all` restaurado enquanto nao houver
+  worker dedicado.
+- Seguranca operacional: nenhum segredo entrou em logs ou documentacao e todos
+  os temporarios da rotacao foram apagados.
 - Documento: `fase-222-confiabilidade-google-agenda-gmail.md`.

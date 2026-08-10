@@ -63,8 +63,8 @@ ainda pendentes).
 
 ## Integracoes
 
-- [ ] Gmail/SMTP ou Gmail API validado em producao.
-- [ ] Google Calendar validado em producao.
+- [x] Gmail API validada em producao com OAuth renovado e envio controlado.
+- [x] Google Calendar validado em producao com `syncToken` e espelhamento inbound.
 - [ ] Meta WhatsApp token permanente configurado.
 - [ ] Webhook WhatsApp validado.
 - [ ] Templates WhatsApp aprovados e mapeados.

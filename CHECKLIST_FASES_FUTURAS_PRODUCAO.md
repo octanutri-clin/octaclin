@@ -1478,7 +1478,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] Gates finais, commit e push aprovados.
   - Evidencia: `fase-221-regressao-e2e-producao-isolada.md`.
 
-- [ ] Fase 222 - Confiabilidade Google Agenda e Gmail.
+- [x] Fase 222 - Confiabilidade Google Agenda e Gmail.
   - [x] Diagnosticar conexao, canal watch, `syncToken` e bloqueios externos em
     producao sem expor credenciais.
   - [x] Garantir carga inicial no callback e reconciliacao manual autenticada.
@@ -1486,8 +1486,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] Limitar recorrencias a uma janela movel e limpar bloqueios fora dela.
   - [x] Expor `Sincronizar agora` na agenda do profissional.
   - [x] Endurecer o helper de renovacao Gmail para nao imprimir refresh token.
-  - [ ] Validar espelhamento Google para OctaClin depois do deploy.
-  - [ ] Renovar o OAuth Gmail e validar uma entrega real controlada.
+  - [x] Validar espelhamento Google para OctaClin depois do deploy.
+  - [x] Renovar o OAuth Gmail e validar uma entrega real controlada.
+  - [x] Confirmar `OCTACLIN_PROCESSO=all` enquanto o worker dedicado estiver
+    adiado.
   - Evidencia: `fase-222-confiabilidade-google-agenda-gmail.md`.
 
 ## Backlog pos-producao

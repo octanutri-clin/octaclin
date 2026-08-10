@@ -566,6 +566,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   ativacao do paciente; o acesso administrativo legado foi desativado somente
   depois do novo acesso passar. Ver
   `fase-221-regressao-e2e-producao-isolada.md`.
+- Fase 222 - Confiabilidade Google Agenda e Gmail: o callback e a recuperacao
+  manual passaram a reconciliar eventos externos com carga inicial de 30 dias
+  anteriores e 400 futuros, `syncToken`, limpeza fora da janela e renovacao
+  semanal. O OAuth Gmail foi publicado, renovado sem expor o refresh token e
+  aceitou envio real; o health de producao ficou integralmente `ok`. Enquanto
+  o worker dedicado estiver adiado, o backend voltou a operar como `all`. Ver
+  `fase-222-confiabilidade-google-agenda-gmail.md`.
 
 ## Estado atual de uso
 

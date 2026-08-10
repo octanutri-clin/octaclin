@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-08-10, durante a Fase 221.
+Atualizado em 2026-08-10, ao concluir a Fase 222.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -23,8 +23,8 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Portal do profissional | Parcial | Dashboard diario, console operacional, pacientes, prontuario/linha do tempo, evolucoes clinicas privadas, tarefas/metas/check-ins de acompanhamento, biblioteca/envio de materiais, agenda, formularios e comunicacoes. | Agenda de producao e UX final de rotina. |
 | Portal do paciente | Parcial | Primeiro acesso, historico, perfil, formularios, LGPD, tarefas, materiais, check-ins e notificacoes. | QA E2E com jornada real e dados realistas. |
 | Formularios | Pronto | Editor, modelos, preview, coleta, respostas e leitura clinica. | QA E2E com jornada real e dados realistas. |
-| Agenda | Parcial | Agenda interna com Google Calendar, comunicacoes no agendamento, conflito local por profissional, remarcacao/cancelamento e recuperacao inbound manual implementados. | Validar em producao a carga inicial e o espelhamento por `syncToken` da Fase 222. |
-| Email | Parcial | Integracao Gmail API e fallback SMTP implementados. | Corrigir a renovacao OAuth observada na Fase 221 ou validar SMTP ponta a ponta; depois concluir identidade de envio e SPF/DKIM/DMARC quando houver dominio proprio. |
+| Agenda | Pronto | Agenda interna e Google Calendar validados em producao com mutacoes outbound, carga inicial limitada, `syncToken`, bloqueios externos e reconciliacao manual. | Monitorar renovacao semanal do canal e falhas de sincronizacao. |
+| Email | Pronto | Gmail API com OAuth de producao renovado, health `ok` e envio real controlado aceito; fallback SMTP preservado. | Concluir identidade de envio e SPF/DKIM/DMARC quando houver dominio proprio. |
 | WhatsApp | Parcial | Envio, webhook, status, inbox, associacao, notas, templates por evento e automacoes. | Validar templates reais aprovados em producao. |
 | LGPD | Pronto | Portal paciente, painel operacional LGPD, consentimentos versionados, retencao programada e exportacao completa. | Revisao juridica/comercial antes do go-live. |
 | Auditoria | Parcial | Auditoria operacional, convites administrativos, perfil fiscal, LGPD, agenda e leituras sensiveis. | Cobrir mutacoes sensiveis restantes conforme surgirem. |
@@ -82,8 +82,7 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Corrigir e validar a entrega de email em producao: a Gmail API registrou falha
-na renovacao OAuth durante a Fase 221. Depois disso, dominio, aceite juridico e
-go-live assistido continuam como gates para clientes reais. O
+Dominio, identidade de envio, aceite juridico e go-live assistido continuam
+como gates para clientes reais. O
 rollout separado de `web`/`worker` da Fase 201 pode permanecer adiado enquanto
 exigir custo de infraestrutura sem beneficio para o piloto atual.

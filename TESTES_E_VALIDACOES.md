@@ -451,4 +451,9 @@ O aceite de producao exige um evento externo sintetico visivel no feed interno,
 `syncToken` persistido e uma entrega Gmail real controlada. Nao registrar
 refresh tokens, connection strings ou payloads clinicos na evidencia.
 
+Aceite executado em 2026-08-10: `syncToken` persistido, bloqueios externos
+limitados a janela movel, Gmail OAuth com escopo `gmail.send`, envio real aceito
+pelo Gmail, health detalhado integralmente `ok` e processo Render confirmado
+como `all`. Todos os arquivos temporarios da rotacao foram removidos.
+
 Executar o checklist completo em `CHECKLIST_GO_LIVE.md`.

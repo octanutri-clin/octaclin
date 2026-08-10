@@ -1,6 +1,6 @@
 # Fase 222 - Confiabilidade Google Agenda e Gmail
 
-Status: em validacao de producao em 2026-08-10.
+Status: concluida em producao em 2026-08-10.
 
 ## Problema observado
 
@@ -35,10 +35,25 @@ Status: em validacao de producao em 2026-08-10.
 - O primeiro smoke produziu `syncToken`, mas revelou 8.530 instancias de um
   recorrente expandido ate 2040; a janela movel foi adicionada antes do aceite.
 
-## Pendente de producao
+## Evidencia de producao
 
-- Publicar backend e web e executar `Sincronizar agora` com evento externo
-  sintetico, confirmando bloqueio no feed e `syncToken` persistido.
-- Confirmar `OCTACLIN_PROCESSO=all` enquanto nao houver worker dedicado.
-- Renovar `GMAIL_REFRESH_TOKEN`, testar envio real controlado e apagar todos os
-  arquivos/variaveis temporarios usados na rotacao.
+- Backend e web publicados nos commits `f58268a` e `4273aa5`.
+- A reconciliacao inicial persistiu `syncToken` sem falhas consecutivas. Depois
+  do limite de recorrencias, o banco manteve 2.904 bloqueios externos, 2.658
+  futuros e horizonte maximo em 2027-09-14, sem consultas ativas residuais.
+- O OAuth Gmail foi publicado em modo de producao e renovado com um cliente
+  dedicado. A troca do refresh token retornou Bearer valido com escopo
+  `gmail.send` e o Gmail aceitou uma mensagem real controlada.
+- O health detalhado retornou `ok` para backend, banco, migrations, Redis,
+  email com provedor `gmail_api` e Google Calendar.
+- `OCTACLIN_PROCESSO` foi corrigido de `web` para `all`, pois o worker dedicado
+  continua adiado, e o novo deploy permaneceu saudavel.
+- Arquivos temporarios, copias DPAPI e area de transferencia usados na rotacao
+  foram removidos; nenhum token ou segredo foi registrado na evidencia.
+
+## Resultado
+
+- Eventos externos do Google voltam a bloquear a agenda interna dentro da
+  janela movel, com reconciliacao incremental e recuperacao manual.
+- Mutacoes OctaClin continuam sincronizando com o Google Calendar.
+- A Gmail API de producao voltou a renovar credenciais e enviar mensagens.
