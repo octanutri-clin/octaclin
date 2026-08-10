@@ -87,6 +87,10 @@ voltar a `false` nas rodadas seguintes. Confirme o resumo, o objeto remoto e o
 restore antes de mudar a ultima variable para `true`. A primeira rodada do cron
 tambem deve ser acompanhada.
 
+Aceite inicial concluido em 2026-08-09 nas execucoes `31346127174` (restore
+completo) e `31346290507` (caminho operacional com cron habilitado). Acompanhe
+as proximas rodadas em GitHub Actions > `Backup producao`.
+
 ## Pre-requisitos locais
 
 - `node`.

@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-01 apos a Fase 197 - racionalizacao dos modulos avancados.
+Atualizado em 2026-08-09 apos a Fase 219 - backup automatizado e restore recorrente.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -545,10 +545,17 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   policies, indices e FKs; banco 35/35. Commit `9572704`, backend/web live e
   smoke de chave `200/403/401` aprovado. Ver
   `fase-218-api-publica-chaves-webhooks.md` e `API_PUBLICA_V1.md`.
+- Fase 219 - Backup automatizado, retencao e restore recorrente: GitHub Actions
+  gera dump PostgreSQL 18 diariamente com role Neon dedicada, confere SHA-256,
+  envia ao bucket B2 privado com AES256 e conserva copias diarias, semanais e
+  mensais. Aos domingos ou sob demanda, baixa o proprio objeto e restaura no
+  banco dedicado antes de validar migration, dados essenciais e RLS. O cron
+  esta ativo; duas execucoes reais foram aprovadas. Ver
+  `fase-219-backup-automatizado-retencao-restore.md`.
 
 ## Estado atual de uso
 
-O sistema esta em producao isolada aceita, com massa ficticia mantida fora do banco de producao, piloto interno aprovado, restore real validado e pacote juridico ampliado. A agenda agora tambem aceita solicitacoes publicas com aprovacao manual segura, sem reservar horario nem persistir token bruto, e distingue cancelamento pelo profissional de desmarcamento pelo paciente e de cancelamento originado no Google. O profissional conta com um painel clinico diario agregando prioridades da propria agenda de pacientes. Ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria: faltam recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido.
+O sistema esta em producao isolada aceita, com massa ficticia mantida fora do banco de producao, piloto interno aprovado, backup/restore recorrente ativo e pacote juridico ampliado. A agenda agora tambem aceita solicitacoes publicas com aprovacao manual segura, sem reservar horario nem persistir token bruto, e distingue cancelamento pelo profissional de desmarcamento pelo paciente e de cancelamento originado no Google. O profissional conta com um painel clinico diario agregando prioridades da propria agenda de pacientes. Ainda nao deve ser tratado como 100% pronto para clientes reais de consultoria: faltam dominio/identidade de envio, aceite juridico formal e go-live assistido.
 
 ## Como atualizar este arquivo
 

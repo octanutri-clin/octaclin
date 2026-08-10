@@ -50,7 +50,8 @@ ainda pendentes).
 - [ ] Render services de producao configurados.
 - [ ] Dominio oficial configurado.
 - [ ] SSL ativo.
-- [ ] Backups configurados conforme `RUNBOOK_BACKUP_RESTORE.md`.
+- [x] Backups configurados conforme `RUNBOOK_BACKUP_RESTORE.md` (Fase 219):
+  B2 privado, retencao, checksum, AES256, restore semanal e cron ativo.
 - [x] Restore real testado em banco dedicado (Fase 158, 2026-07-29): dump custom validado, restauracao no Neon dedicado e comparacao de tabelas, RLS e usuarios autenticaveis aprovadas.
 - [ ] Logs e alertas configurados.
 - [ ] Runbooks revisados.

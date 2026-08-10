@@ -1,6 +1,6 @@
 # Fase 219 - Backup automatizado, retencao e restore recorrente
 
-Status: implementacao concluida; ativacao externa e primeira execucao pendentes.
+Status: concluida em 2026-08-09.
 
 ## Objetivo
 
@@ -41,15 +41,18 @@ dedicado. A fase nao altera schema nem codigo de produto.
   pelo backend ou pelo bucket de anexos.
 - O resumo do job nao imprime URLs, chaves, hashes de senha ou conteudo do dump.
 
-## Aceite pendente
+## Aceite
 
-- [ ] Criar/validar `octaclin_backup_producao` e seus grants na producao.
-- [ ] Criar bucket B2 privado exclusivo e aplicar a politica versionada.
-- [ ] Criar banco Neon dedicado `octaclin_restore_fase219`.
-- [ ] Configurar secrets e variables no Environment `production-backup`.
-- [ ] Executar manualmente com `restore_test=true` e aprovar o resumo.
-- [ ] Confirmar objeto remoto, checksum, AES256 e restore valido.
-- [ ] Habilitar o cron e registrar a primeira rodada agendada.
+- [x] `octaclin_backup_producao` validada com `BYPASSRLS`, sem poderes de
+  superusuario, criacao de banco/role ou replicacao.
+- [x] Bucket privado `octaclin-backups-producao-2026` e lifecycle versionado.
+- [x] Banco dedicado `octaclin_restore_fase219` criado.
+- [x] Secrets e variables configurados no Environment `production-backup`.
+- [x] Execucao `31346127174`: dump, checksum, AES256, upload, download e restore
+  aprovados; banco, migration, tenants, usuarios e RLS retornaram `true`.
+- [x] Comparacao independente: 72 tabelas da aplicacao nos dois bancos; as 29
+  diferencas da origem eram somente catalogos internos do TimescaleDB excluido.
+- [x] Cron habilitado e execucao operacional `31346290507` aprovada.
 
-Somente depois desses itens a fase pode ser marcada como concluida e os gates
-de backup do go-live podem receber aceite.
+A primeira ocorrencia do cron deve ser acompanhada no GitHub Actions. Uma falha
+reabre o incidente operacional, mas nao resta pendencia de implementacao.

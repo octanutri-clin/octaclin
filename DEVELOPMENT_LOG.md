@@ -179,4 +179,21 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
   e `API_PUBLICA_V1.md`.
 - Pendencias: entrega a receptor externo real no onboarding da primeira
   integracao aprovada; nao e pendencia de codigo da fase.
-- Proxima fase: definir a partir dos bloqueadores restantes de go-live.
+- Proxima fase: Fase 219 - backup automatizado, retencao e restore recorrente.
+
+### Fase 219 - Backup automatizado, retencao e restore recorrente
+
+- Responsavel: Codex.
+- Inicio: 2026-08-08.
+- Conclusao: 2026-08-09.
+- Commits principais: `892b9d4`, `3bc1467`, `403bd0f`.
+- Push: sim; workflow ativo no `main`.
+- Validacoes: contrato local, secrets/preflight, bucket privado, lifecycle,
+  SHA-256, AES256, restore e gate estrutural nas execucoes `31346127174` e
+  `31346290507`.
+- Arquivos principais: `.github/workflows/backup-producao.yml`,
+  `.github/backblaze-backup-lifecycle.json`, `scripts/backup-producao.mjs` e
+  `RUNBOOK_BACKUP_RESTORE.md`.
+- Pendencias: acompanhar a primeira ocorrencia automatica; falha reabre
+  incidente operacional.
+- Proxima fase: Fase 220 - observabilidade e alertas externos de producao.

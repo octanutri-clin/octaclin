@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-08.
+Atualizado em 2026-08-09.
 
 ## Snapshot
 
@@ -18,16 +18,17 @@ Atualizado em 2026-08-08.
   menu, IA, metas/adesao, recebimentos proprios e a ausencia de entradas de
   outros papeis. Ver
   `AUDITORIA_ACESSO_PROFISSIONAL_2026-08-08.md`.
-- Ultima fase concluida: Fase 218 - API publica, chaves por tenant e webhooks.
+- Fase 218 - API publica, chaves por tenant e webhooks.
   API `/v1` com escopos e rate limit, idempotencia por referencia externa,
   webhooks HMAC com outbox resiliente e gestao pelo portal `Client`. Migration
   `1022` validada em producao (35/35), backend/web publicados no commit
   `9572704` e smoke de chave confirmou `200/403/401`. Ver
   `fase-218-api-publica-chaves-webhooks.md` e `API_PUBLICA_V1.md`.
-- Fase 219 em ativacao: automacao diaria de backup, retencao B2 e restore
-  semanal foi implementada com cron bloqueado por padrao. Faltam provisionar a
-  role de leitura, o bucket/chave exclusivos, o banco de restore e aprovar as
-  duas primeiras execucoes antes de declarar a fase concluida.
+- Ultima fase concluida: Fase 219 - backup automatizado, retencao e restore
+  recorrente. Role Neon dedicada, banco de restore, bucket B2 privado,
+  lifecycle 8/29/93, GitHub Environment e cron estao ativos. As execucoes
+  `31346127174` e `31346290507` aprovaram dump, checksum, AES256, upload,
+  download, restore, migration, dados essenciais e RLS.
 - Fase 217 - PWA do portal do paciente. O portal e
   instalavel, mantem somente recursos publicos no cache e oferece fila offline
   cifrada e idempotente para check-in e formulario sem anexo. Nenhum dado
@@ -384,10 +385,13 @@ Atualizado em 2026-08-08.
 
 ## Risco principal atual
 
-O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao isolada aceita, restore real validado e pacote juridico ampliado, mas ainda precisa de recorrencia operacional de backup, dominio/identidade de envio, aceite juridico formal e go-live assistido antes de uso comercial com clientes reais.
+O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao
+isolada aceita, backup/restore recorrente ativo e pacote juridico ampliado, mas
+ainda precisa de dominio/identidade de envio, aceite juridico formal e go-live
+assistido antes de uso comercial com clientes reais.
 
-Proxima fase operacional: concluir a ativacao externa da Fase 219 e registrar
-evidencias de backup e restore reais antes de abrir outro modulo.
+Proxima fase recomendada: Fase 220 - consolidar observabilidade e alertas
+externos de producao, incluindo falha de backup, saude, filas e integracoes.
 Permanece como pendencia operacional o rollout da Fase 201 no Render (separar
 os papeis `web` e `worker` e registrar a entrega sintetica unica exigida pelo
 aceite).

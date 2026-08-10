@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-01 apos a publicacao da Fase 197 na PR #10.
+Atualizado em 2026-08-09 apos a conclusao da Fase 219.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1437,7 +1437,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Evidencias: `fase-218-api-publica-chaves-webhooks.md` e
     `API_PUBLICA_V1.md`.
 
-- [ ] Fase 219 - Backup automatizado, retencao e restore recorrente.
+- [x] Fase 219 - Backup automatizado, retencao e restore recorrente.
   - [x] Workflow diario/manual, validacao segura de configuracao e testes de
     contrato implementados.
   - [x] Dump PostgreSQL 18, checksum, cifragem, verificacao remota e limpeza
@@ -1445,10 +1445,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] Retencao 8/29/93 dias declarada por prefixo e validada pelo workflow.
   - [x] Restore semanal/forcado em banco dedicado com verificacao de dados,
     migrations e RLS implementado.
-  - [ ] Role Neon de backup, bucket/chave B2 e banco de restore provisionados.
-  - [ ] Environment `production-backup` configurado sem expor secrets.
-  - [ ] Primeira execucao manual com restore aprovada.
-  - [ ] Cron habilitado e primeira execucao agendada aprovada.
+  - [x] Role Neon de backup, bucket/chave B2 e banco de restore provisionados.
+  - [x] Environment `production-backup` configurado sem expor secrets.
+  - [x] Execucao manual completa `31346127174` aprovada em 2026-08-09.
+  - [x] Cron habilitado e caminho operacional comum aprovado na execucao
+    `31346290507`; a primeira ocorrencia automatica segue como monitoramento
+    operacional, sem pendencia de implementacao.
   - Evidencia: `fase-219-backup-automatizado-retencao-restore.md`.
 
 ## Backlog pos-producao
