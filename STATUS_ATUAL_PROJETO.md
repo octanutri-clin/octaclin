@@ -35,6 +35,10 @@ Atualizado em 2026-08-10.
   A fase corrigiu o status Google do administrador e a emissao prematura de
   sessao na ativacao do paciente; o acesso administrativo legado foi desativado
   com sessoes revogadas depois da aprovacao do substituto.
+- Fase 222 em validacao: a confiabilidade Google Agenda/Gmail recebeu carga
+  inicial no callback, reconciliacao manual na agenda e helper OAuth Gmail sem
+  impressao do refresh token. Faltam deploy, smoke inbound e rotacao Gmail para
+  concluir a fase. Ver `fase-222-confiabilidade-google-agenda-gmail.md`.
 - Fase 219 - backup automatizado, retencao e restore recorrente. Role Neon
   dedicada, banco de restore, bucket B2 privado, lifecycle 8/29/93, GitHub
   Environment e cron estao ativos. As execucoes `31346127174` e `31346290507`

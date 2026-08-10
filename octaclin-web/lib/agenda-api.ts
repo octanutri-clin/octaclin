@@ -361,6 +361,10 @@ export async function desconectarGoogleAgenda(): Promise<void> {
   await requisitar<{ desconectado: boolean }>('/api/agenda/google/desconectar', { method: 'POST' });
 }
 
+export async function sincronizarGoogleAgenda(): Promise<{ sincronizado: boolean; motivo?: string }> {
+  return requisitar<{ sincronizado: boolean; motivo?: string }>('/api/agenda/google/sincronizar', { method: 'POST' });
+}
+
 export async function registrarPagamentoConsulta(
   consultaId: string,
   entrada: RegistrarPagamentoConsultaEntrada

@@ -12,7 +12,7 @@ import { ProfissionalGoogleConexaoOrm } from '../infraestrutura/profissional-goo
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { ServicoConexaoGoogleCalendar } from '../aplicacao/servico-conexao-google-calendar';
 import { ServicoGoogleCalendar } from '../aplicacao/servico-google-calendar';
-import { FILA_SINCRONIZACAO_GOOGLE } from '../aplicacao/servico-sincronizacao-google-calendar';
+import { FILA_SINCRONIZACAO_GOOGLE, ServicoSincronizacaoGoogleCalendar } from '../aplicacao/servico-sincronizacao-google-calendar';
 import { extrairTenantIdDoCanalWatchGoogle, gerarIdentificadorCanalWatchGoogle } from '../aplicacao/identificador-canal-watch-google';
 import { urlCallbackGoogleAgenda, urlWebhookGoogleAgenda } from './urls-google-agenda';
 
@@ -24,6 +24,7 @@ export class ControladorGoogleAgenda {
     private readonly servicoConexao: ServicoConexaoGoogleCalendar,
     private readonly googleCalendar: ServicoGoogleCalendar,
     private readonly executorTenant: ExecutorTenant,
+    private readonly servicoSincronizacao: ServicoSincronizacaoGoogleCalendar,
     @InjectQueue(FILA_SINCRONIZACAO_GOOGLE) private readonly filaSincronizacao: Queue
   ) {}
 
@@ -43,6 +44,7 @@ export class ControladorGoogleAgenda {
     const { tenantId, profissionalId } = await this.servicoConexao.validarEDecodificarState(state);
     await this.servicoConexao.trocarCodigoPorConexao(tenantId, profissionalId, code, urlCallbackGoogleAgenda());
     await this.criarCanalParaProfissional(tenantId, profissionalId);
+    await this.servicoSincronizacao.reconciliar(tenantId, profissionalId);
 
     const urlWeb = process.env.OCTACLIN_WEB_URL?.trim() ?? '/';
     return { url: `${urlWeb.replace(/\/$/, '')}/agenda?google=conectado`, statusCode: 302 };
@@ -80,6 +82,18 @@ export class ControladorGoogleAgenda {
     const profissionalId = await this.resolverProfissionalIdObrigatorio(usuario);
     await this.servicoConexao.desconectar(usuario.tenantId, profissionalId);
     return { desconectado: true };
+  }
+
+  @Post('sincronizar')
+  @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
+  @Papeis('Professional')
+  @Permissoes('agenda.consultas.ler')
+  async sincronizar(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    const profissionalId = await this.resolverProfissionalIdObrigatorio(usuario);
+    const credenciais = await this.servicoConexao.obterConexaoAtiva(usuario.tenantId, profissionalId);
+    if (!credenciais) return { sincronizado: false, motivo: 'google_nao_conectado' };
+    await this.servicoSincronizacao.reconciliar(usuario.tenantId, profissionalId);
+    return { sincronizado: true };
   }
 
   @Post('notificacoes')

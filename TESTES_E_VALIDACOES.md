@@ -435,4 +435,20 @@ ativacao.
 
 ## Validacao antes de go-live
 
+### Fase 222 - Google Agenda e Gmail
+
+```powershell
+pnpm --dir octaclin-backend test -- --runInBand src/modulos/agenda/apresentacao/controlador-google-agenda.spec.ts src/modulos/agenda/aplicacao/servico-google-calendar.spec.ts src/modulos/agenda/aplicacao/servico-sincronizacao-google-calendar.spec.ts src/infraestrutura/processamento/papel-processo.spec.ts
+pnpm --dir octaclin-backend typecheck
+pnpm --dir octaclin-backend build
+pnpm --dir octaclin-web typecheck
+pnpm --dir octaclin-web lint
+pnpm --dir octaclin-web build
+node --check octaclin-backend/scripts/gmail-oauth-token.mjs
+```
+
+O aceite de producao exige um evento externo sintetico visivel no feed interno,
+`syncToken` persistido e uma entrega Gmail real controlada. Nao registrar
+refresh tokens, connection strings ou payloads clinicos na evidencia.
+
 Executar o checklist completo em `CHECKLIST_GO_LIVE.md`.

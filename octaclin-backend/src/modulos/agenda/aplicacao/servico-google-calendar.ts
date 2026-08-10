@@ -51,6 +51,8 @@ export interface EventoGoogleAlterado {
   fimEm?: Date;
 }
 
+const JANELA_INICIAL_SINCRONIZACAO_DIAS = 30;
+
 interface RespostaTokenGoogle {
   access_token?: string;
   error?: string;
@@ -191,7 +193,13 @@ export class ServicoGoogleCalendar {
 
     do {
       const parametros = new URLSearchParams({ showDeleted: 'true', singleEvents: 'true' });
-      if (syncToken) parametros.set('syncToken', syncToken);
+      if (syncToken) {
+        parametros.set('syncToken', syncToken);
+      } else {
+        const inicioJanela = new Date();
+        inicioJanela.setUTCDate(inicioJanela.getUTCDate() - JANELA_INICIAL_SINCRONIZACAO_DIAS);
+        parametros.set('timeMin', inicioJanela.toISOString());
+      }
       if (pageToken) parametros.set('pageToken', pageToken);
 
       const resposta = await fetch(

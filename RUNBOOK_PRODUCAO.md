@@ -374,6 +374,18 @@ Falhas comuns:
 - bloqueio de seguranca do Google;
 - timeout de rede.
 
+Rotacao segura da Gmail API:
+
+1. Copiar `GMAIL_CLIENT_ID` e `GMAIL_CLIENT_SECRET` do Render somente para
+   variaveis da sessao local.
+2. Definir `GMAIL_REFRESH_TOKEN_OUTPUT` como arquivo temporario inexistente e
+   executar `node octaclin-backend/scripts/gmail-oauth-token.mjs`.
+3. Autorizar a conta remetente e substituir apenas `GMAIL_REFRESH_TOKEN` no
+   Render, sem registrar o valor em terminal, commit ou documentacao.
+4. Apagar o arquivo temporario, remover as tres variaveis locais e limpar a
+   area de transferencia.
+5. Implantar e confirmar uma entrega real controlada.
+
 ## WhatsApp Meta
 
 Componentes:
@@ -410,6 +422,8 @@ Validacao:
 2. Confirmar evento no Google Calendar.
 3. Confirmar email/mensagem de agendamento ao paciente.
 4. Conferir logs em caso de erro.
+5. Criar um evento externo sintetico no Google e usar `Sincronizar agora`.
+6. Confirmar que o horario aparece como indisponivel na agenda interna.
 
 Falhas comuns:
 
@@ -418,6 +432,14 @@ Falhas comuns:
 - conflito de horario;
 - timezone errado;
 - credenciais ausentes.
+- `OCTACLIN_PROCESSO=web` sem worker separado;
+- fila Redis sem consumidor ou carga inicial sem `syncToken`.
+
+Quando o canal estiver conectado, mas eventos externos nao aparecerem, use o
+comando `Sincronizar agora` como recuperacao. Enquanto nao houver worker
+dedicado, mantenha `OCTACLIN_PROCESSO=all`. A sincronizacao inicial limita o
+historico a 30 dias e continua trazendo eventos futuros; as incrementais usam
+somente o `syncToken` persistido.
 
 ## Healthchecks recomendados
 

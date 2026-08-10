@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-10 durante a validacao da Fase 221.
+Atualizado em 2026-08-10 durante a validacao da Fase 222.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1477,6 +1477,17 @@ publicado antes de ampliar a superficie de mudancas visuais.
     os tres aceites legais sinteticos; sessao inicial revogada depois do smoke.
   - [x] Gates finais, commit e push aprovados.
   - Evidencia: `fase-221-regressao-e2e-producao-isolada.md`.
+
+- [ ] Fase 222 - Confiabilidade Google Agenda e Gmail.
+  - [x] Diagnosticar conexao, canal watch, `syncToken` e bloqueios externos em
+    producao sem expor credenciais.
+  - [x] Garantir carga inicial no callback e reconciliacao manual autenticada.
+  - [x] Limitar a carga inicial sem combinar `timeMin` com `syncToken`.
+  - [x] Expor `Sincronizar agora` na agenda do profissional.
+  - [x] Endurecer o helper de renovacao Gmail para nao imprimir refresh token.
+  - [ ] Validar espelhamento Google para OctaClin depois do deploy.
+  - [ ] Renovar o OAuth Gmail e validar uma entrega real controlada.
+  - Evidencia: `fase-222-confiabilidade-google-agenda-gmail.md`.
 
 ## Backlog pos-producao
 

@@ -35,7 +35,7 @@ import { GoogleCanalWatchOrm } from './infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from './infraestrutura/profissional-google-conexao.orm';
 
 const processadores = deveExecutarProcessadores()
-  ? [ServicoSincronizacaoGoogleCalendar, ProcessadorSincronizacaoGoogleCalendar, ProcessadorRenovacaoGoogleCalendar]
+  ? [ProcessadorSincronizacaoGoogleCalendar, ProcessadorRenovacaoGoogleCalendar]
   : [];
 
 @Module({
@@ -70,6 +70,7 @@ const processadores = deveExecutarProcessadores()
     ServicoAgendamentoPublico,
     ServicoGoogleCalendar,
     ServicoConexaoGoogleCalendar,
+    ServicoSincronizacaoGoogleCalendar,
     { provide: REDIS_OAUTH_STATE_GOOGLE, useFactory: () => new Redis(criarConexaoRedis()) },
     ServicoExclusaoProcessador,
     ...processadores,

@@ -40,6 +40,7 @@ import {
   criarConsultaAgenda,
   DesfechoConsultaAgenda,
   desconectarGoogleAgenda,
+  sincronizarGoogleAgenda,
   NotificacoesConsultaAgenda,
   obterStatusGoogleAgenda,
   recusarSolicitacaoPublicaAgenda,
@@ -236,6 +237,7 @@ export function PainelAgenda() {
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [statusGoogleAgenda, setStatusGoogleAgenda] = useState<ConexaoGoogleAgendaStatus | null>(null);
+  const [sincronizandoGoogle, setSincronizandoGoogle] = useState(false);
   const [modalCriarAberto, setModalCriarAberto] = useState(false);
   const [consultaSelecionadaId, setConsultaSelecionadaId] = useState<string | null>(null);
   const [desfechoPendente, setDesfechoPendente] = useState<{ consulta: ConsultaAgendaApi; status: DesfechoConsultaAgenda } | null>(null);
@@ -632,6 +634,22 @@ export function PainelAgenda() {
     }
   }
 
+  async function sincronizarGoogle() {
+    setErro(null);
+    setSucesso(null);
+    setSincronizandoGoogle(true);
+    try {
+      const resultado = await sincronizarGoogleAgenda();
+      if (!resultado.sincronizado) throw new Error('Conecte a Google Agenda antes de sincronizar.');
+      await carregar(true);
+      setSucesso('Google Agenda sincronizada com a agenda interna.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao sincronizar Google Agenda.');
+    } finally {
+      setSincronizandoGoogle(false);
+    }
+  }
+
   return (
     <div className="grid min-w-0 gap-4">
       <AgendaSemanal
@@ -641,6 +659,8 @@ export function PainelAgenda() {
         googlePodeGerenciar={statusGoogleAgenda?.podeGerenciar}
         onConectarGoogle={conectarGoogleAgenda}
         onDesconectarGoogle={() => void desconectarGoogle()}
+        onSincronizarGoogle={() => void sincronizarGoogle()}
+        sincronizandoGoogle={sincronizandoGoogle}
         onAbrirConsulta={setConsultaSelecionadaId}
       />
 

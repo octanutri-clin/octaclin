@@ -297,6 +297,29 @@ describe('ServicoGoogleCalendar', () => {
     ]);
   });
 
+  it('limita apenas a sincronizacao inicial e nao combina timeMin com syncToken', async () => {
+    const urlsEventos: string[] = [];
+    global.fetch = jest.fn(async (url: string) => {
+      if (String(url).includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'token-janela' }), { status: 200 });
+      }
+      urlsEventos.push(String(url));
+      return new Response(JSON.stringify({ items: [], nextSyncToken: 'sync-novo' }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const servico = new ServicoGoogleCalendar();
+    const credenciais = { clientId: 'c', clientSecret: 's', refreshToken: 'r', calendarId: 'cal-1' };
+    await servico.listarEventosAlterados(credenciais);
+    await servico.listarEventosAlterados(credenciais, 'sync-existente');
+
+    const urlInicial = new URL(urlsEventos[0]);
+    const urlIncremental = new URL(urlsEventos[1]);
+    expect(urlInicial.searchParams.get('timeMin')).toBeTruthy();
+    expect(urlInicial.searchParams.has('syncToken')).toBe(false);
+    expect(urlIncremental.searchParams.get('syncToken')).toBe('sync-existente');
+    expect(urlIncremental.searchParams.has('timeMin')).toBe(false);
+  });
+
   it('listarEventosAlterados percorre todas as paginas via nextPageToken e so usa o nextSyncToken da ultima pagina', async () => {
     let chamada = 0;
     global.fetch = jest.fn(async (url: string) => {

@@ -235,3 +235,18 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Pendencia externa a fase: renovar as credenciais Gmail API ou validar o
   provedor SMTP; os envios de recuperacao registraram falha de refresh OAuth.
 - Documento: `fase-221-regressao-e2e-producao-isolada.md`.
+
+### Fase 222 - Confiabilidade Google Agenda e Gmail
+
+- Responsavel: Codex.
+- Inicio: 2026-08-10.
+- Status: em validacao de producao.
+- Diagnostico: OAuth individual e canal watch do Google estavam ativos, mas a
+  conexao permanecia sem `syncToken` e sem bloqueios externos; webhooks
+  chegavam sem conclusao da reconciliacao.
+- Entrega local: carga inicial no callback, reconciliacao manual, janela
+  inicial limitada, comando na agenda e helper Gmail sem exposicao do token.
+- Validacoes locais: 27 testes focados, builds/typechecks, lint web e sintaxe do
+  helper aprovados.
+- Pendencias: deploy, smoke inbound da agenda e rotacao/teste real do Gmail.
+- Documento: `fase-222-confiabilidade-google-agenda-gmail.md`.

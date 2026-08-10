@@ -1,7 +1,7 @@
 'use client';
 
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, List, MapPin, X } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, List, MapPin, RefreshCcw, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Dica } from '@/components/ui/dica';
@@ -28,6 +28,8 @@ interface AgendaSemanalProps {
   googlePodeGerenciar?: boolean;
   onConectarGoogle: () => void;
   onDesconectarGoogle: () => void;
+  onSincronizarGoogle: () => void;
+  sincronizandoGoogle?: boolean;
   onAbrirConsulta: (consultaId: string) => void;
 }
 
@@ -116,6 +118,8 @@ export function AgendaSemanal({
   googlePodeGerenciar,
   onConectarGoogle,
   onDesconectarGoogle,
+  onSincronizarGoogle,
+  sincronizandoGoogle,
   onAbrirConsulta
 }: AgendaSemanalProps) {
   const consultasAtivas = useMemo(() => consultas.filter(consultaAtiva), [consultas]);
@@ -354,13 +358,22 @@ export function AgendaSemanal({
           </p>
         </div>
         {googlePodeGerenciar !== false ? (
-          <Botao
-            type="button"
-            variante="fantasma"
-            onClick={googleConectado ? onDesconectarGoogle : onConectarGoogle}
-          >
-            {googleConectado ? 'Desconectar Google' : 'Conectar Google'}
-          </Botao>
+          <div className="flex flex-wrap items-center gap-2">
+            {googleConectado ? (
+              <Botao type="button" variante="fantasma" onClick={onSincronizarGoogle} disabled={sincronizandoGoogle}>
+                <RefreshCcw size={16} aria-hidden="true" />
+                {sincronizandoGoogle ? 'Sincronizando' : 'Sincronizar agora'}
+              </Botao>
+            ) : null}
+            <Botao
+              type="button"
+              variante="fantasma"
+              onClick={googleConectado ? onDesconectarGoogle : onConectarGoogle}
+              disabled={sincronizandoGoogle}
+            >
+              {googleConectado ? 'Desconectar Google' : 'Conectar Google'}
+            </Botao>
+          </div>
         ) : null}
       </div>
 

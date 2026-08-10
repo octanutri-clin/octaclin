@@ -1,4 +1,7 @@
 import http from 'node:http';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { URL } from 'node:url';
 
 const clientId = process.env.GMAIL_CLIENT_ID;
@@ -6,9 +9,13 @@ const clientSecret = process.env.GMAIL_CLIENT_SECRET;
 const port = Number(process.env.GMAIL_OAUTH_PORT || 8765);
 const redirectUri = `http://127.0.0.1:${port}/oauth2callback`;
 const escopo = 'https://www.googleapis.com/auth/gmail.send';
+const estadoEsperado = randomBytes(32).toString('hex');
+const arquivoSaida = process.env.GMAIL_REFRESH_TOKEN_OUTPUT
+  ? resolve(process.env.GMAIL_REFRESH_TOKEN_OUTPUT)
+  : undefined;
 
-if (!clientId || !clientSecret) {
-  console.error('Defina GMAIL_CLIENT_ID e GMAIL_CLIENT_SECRET antes de executar este script.');
+if (!clientId || !clientSecret || !arquivoSaida) {
+  console.error('Defina GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET e GMAIL_REFRESH_TOKEN_OUTPUT antes de executar este script.');
   process.exit(1);
 }
 
@@ -23,9 +30,15 @@ const servidor = http.createServer(async (req, res) => {
 
     const codigo = url.searchParams.get('code');
     const erro = url.searchParams.get('error');
-    if (erro || !codigo) {
+    const estadoRecebido = url.searchParams.get('state');
+    const estadoValido = Boolean(
+      estadoRecebido &&
+        estadoRecebido.length === estadoEsperado.length &&
+        timingSafeEqual(Buffer.from(estadoRecebido), Buffer.from(estadoEsperado))
+    );
+    if (erro || !codigo || !estadoValido) {
       res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end(`Falha no OAuth: ${erro ?? 'codigo ausente'}`);
+      res.end(`Falha no OAuth: ${erro ?? (!estadoValido ? 'state invalido' : 'codigo ausente')}`);
       servidor.close();
       return;
     }
@@ -53,7 +66,8 @@ const servidor = http.createServer(async (req, res) => {
 
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end('<h1>OctaClin Gmail autorizado</h1><p>Volte ao Codex. O refresh token foi capturado.</p>');
-    console.log(`GMAIL_REFRESH_TOKEN=${corpo.refresh_token}`);
+    writeFileSync(arquivoSaida, corpo.refresh_token, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+    console.log(`Refresh token gravado no arquivo temporario informado (${Buffer.byteLength(corpo.refresh_token)} bytes).`);
     servidor.close();
   } catch (erro) {
     res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -71,6 +85,7 @@ servidor.listen(port, '127.0.0.1', () => {
   authUrl.searchParams.set('scope', escopo);
   authUrl.searchParams.set('access_type', 'offline');
   authUrl.searchParams.set('prompt', 'consent');
+  authUrl.searchParams.set('state', estadoEsperado);
 
   console.log(`Abra esta URL no navegador e autorize a conta Gmail:\n${authUrl.toString()}`);
   console.log(`Redirect URI usado: ${redirectUri}`);
