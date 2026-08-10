@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-08-09, apos a Fase 219.
+Atualizado em 2026-08-09, apos a Fase 220.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -29,7 +29,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | LGPD | Pronto | Portal paciente, painel operacional LGPD, consentimentos versionados, retencao programada e exportacao completa. | Revisao juridica/comercial antes do go-live. |
 | Auditoria | Parcial | Auditoria operacional, convites administrativos, perfil fiscal, LGPD, agenda e leituras sensiveis. | Cobrir mutacoes sensiveis restantes conforme surgirem. |
 | Billing/assinatura | Parcial | Modelo de planos, limites, uso, alertas, solicitacao manual de upgrade/revisao, controle manual administrativo e bloqueios suaves para novas criacoes. | Expandir bloqueios para mensagens/formularios/armazenamento; gateway definitivo se necessario. |
-| Observabilidade | Parcial | Healthchecks, logs estruturados, request ID, alertas operacionais e runbooks. | Persistir historico de alertas e integrar notificacao externa se necessario. |
+| Observabilidade | Pronto | Healthchecks, logs estruturados, request ID, alertas operacionais e monitor externo de saude/backup com incidentes deduplicados. | Acompanhar issues e reforcar o monitoramento nas primeiras 48 horas do go-live. |
 | Backups/restore | Pronto | Workflow diario ativo, B2 privado com retencao 8/29/93, checksum/AES256 e restore semanal aprovado na Fase 219. | Acompanhar falhas do cron e repetir restore semanalmente. |
 | Suporte | Pronto | `RUNBOOK_SUPORTE.md` cobre login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento. | Treinar responsavel e revisar apos piloto. |
 | Dados de staging | Pronto | Fixture sem PII real, seed `seed-staging.ts`, runbook `RUNBOOK_STAGING_DADOS.md`; `pnpm seed:staging` aplicado e validado no Neon staging (tenant `octaclin-staging`). | Reaplicar quando a Fase 131 separar staging de producao. |
@@ -82,8 +82,9 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Fase 131 - Producao isolada de staging em andamento. Estrutura entregue em
-2026-07-23 (`RUNBOOK_PRODUCAO_ISOLADA.md`, `PRODUCAO_ISOLADA_CONTROLE.md`).
-Falta provisionar de fato o banco Neon, o Redis Upstash e os servicos Render
-de producao, separados do ambiente hoje usado como staging, e registrar cada
-etapa em `PRODUCAO_ISOLADA_CONTROLE.md` ate o aceite final.
+Fase 221 - regressao ponta a ponta pos-fases 200-220 em producao isolada, com
+dados sinteticos e jornadas de Client, Professional e paciente. O objetivo e
+fechar defeitos observados antes de dominio, aceite juridico e entrada de
+clientes reais. O rollout separado de `web`/`worker` da Fase 201 continua como
+gate anterior ao lancamento, mas pode permanecer adiado enquanto exigir custo
+de infraestrutura sem beneficio para o piloto atual.

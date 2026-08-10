@@ -1453,13 +1453,13 @@ publicado antes de ampliar a superficie de mudancas visuais.
     operacional, sem pendencia de implementacao.
   - Evidencia: `fase-219-backup-automatizado-retencao-restore.md`.
 
-- [ ] Fase 220 - Observabilidade e alertas externos de producao.
+- [x] Fase 220 - Observabilidade e alertas externos de producao.
   - [x] Monitor externo de readiness, dependencias e login implementado.
   - [x] Incidentes deduplicados de saude e backup implementados em GitHub
     Issues, com fechamento automatico na recuperacao.
   - [x] Contrato local, permissoes minimas e varredura de secrets aprovados.
-  - [ ] Variaveis do repositorio configuradas, execucao manual aprovada e cron
-    habilitado.
+  - [x] Variaveis do repositorio configuradas, execucao manual `31346835747`
+    aprovada e cron habilitado.
   - Evidencia: `fase-220-observabilidade-alertas-externos.md`.
 
 ## Backlog pos-producao

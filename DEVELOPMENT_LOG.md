@@ -197,3 +197,18 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Pendencias: acompanhar a primeira ocorrencia automatica; falha reabre
   incidente operacional.
 - Proxima fase: Fase 220 - observabilidade e alertas externos de producao.
+
+### Fase 220 - Observabilidade e alertas externos de producao
+
+- Responsavel: Codex.
+- Inicio e conclusao: 2026-08-09.
+- Commit de implementacao: `19ff4b5`.
+- Push: sim; workflow ativo no `main`.
+- Validacoes: contrato local, permissoes minimas, secrets/preflight e execucao
+  real `31346835747` com readiness, dependencias e web aprovadas.
+- Arquivos principais: `.github/workflows/monitor-producao.yml`,
+  `scripts/monitor-producao.mjs` e
+  `fase-220-observabilidade-alertas-externos.md`.
+- Pendencias: acompanhar a primeira ocorrencia automatica; falhas passam a ser
+  incidentes operacionais, nao pendencias de implementacao.
+- Proxima fase: Fase 221 - regressao ponta a ponta pos-fases 200-220.

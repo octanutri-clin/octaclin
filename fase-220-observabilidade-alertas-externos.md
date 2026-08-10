@@ -1,6 +1,6 @@
 # Fase 220 - Observabilidade e alertas externos de producao
 
-Status: em validacao operacional em 2026-08-09.
+Status: concluida em 2026-08-09.
 
 ## Objetivo
 
@@ -48,10 +48,12 @@ codigo de produto.
 ## Aceite
 
 - [x] Contratos locais, formato e varredura de secrets aprovados.
-- [ ] Variaveis publicas de producao configuradas no GitHub.
-- [ ] Execucao manual real aprovada sem criar incidente.
-- [ ] Cron ativado somente depois do teste manual.
-- [ ] Falha do backup acompanhada por incidente deduplicado.
+- [x] Variaveis publicas de producao configuradas no GitHub.
+- [x] Execucao manual real `31346835747` aprovada sem criar incidente:
+  readiness 599 ms, dependencias 42 ms e web 99 ms, todas na primeira tentativa.
+- [x] Cron ativado somente depois do teste manual.
+- [x] Conclusao do backup ligada ao incidente deduplicado pelo evento
+  `workflow_run`; falha abre e recuperacao fecha a issue propria.
 
 Nao ha migration nesta fase. Quando houver dominio oficial, as duas variaveis
 de URL e a allowlist do validador devem ser atualizadas no mesmo rollout.

@@ -24,11 +24,16 @@ Atualizado em 2026-08-09.
   `1022` validada em producao (35/35), backend/web publicados no commit
   `9572704` e smoke de chave confirmou `200/403/401`. Ver
   `fase-218-api-publica-chaves-webhooks.md` e `API_PUBLICA_V1.md`.
-- Ultima fase concluida: Fase 219 - backup automatizado, retencao e restore
-  recorrente. Role Neon dedicada, banco de restore, bucket B2 privado,
-  lifecycle 8/29/93, GitHub Environment e cron estao ativos. As execucoes
-  `31346127174` e `31346290507` aprovaram dump, checksum, AES256, upload,
-  download, restore, migration, dados essenciais e RLS.
+- Ultima fase concluida: Fase 220 - observabilidade e alertas externos. O
+  GitHub Actions verifica readiness, dependencias e login a cada 30 minutos,
+  abre incidentes deduplicados para saude ou backup e os fecha na recuperacao.
+  A execucao real `31346835747` passou na primeira tentativa e o cron foi
+  habilitado somente depois do aceite manual.
+- Fase 219 - backup automatizado, retencao e restore recorrente. Role Neon
+  dedicada, banco de restore, bucket B2 privado, lifecycle 8/29/93, GitHub
+  Environment e cron estao ativos. As execucoes `31346127174` e `31346290507`
+  aprovaram dump, checksum, AES256, upload, download, restore, migration, dados
+  essenciais e RLS.
 - Fase 217 - PWA do portal do paciente. O portal e
   instalavel, mantem somente recursos publicos no cache e oferece fila offline
   cifrada e idempotente para check-in e formulario sem anexo. Nenhum dado
@@ -390,8 +395,9 @@ isolada aceita, backup/restore recorrente ativo e pacote juridico ampliado, mas
 ainda precisa de dominio/identidade de envio, aceite juridico formal e go-live
 assistido antes de uso comercial com clientes reais.
 
-Proxima fase recomendada: Fase 220 - consolidar observabilidade e alertas
-externos de producao, incluindo falha de backup, saude, filas e integracoes.
+Proxima fase recomendada: Fase 221 - regressao ponta a ponta pos-fases 200-220
+na producao isolada, com dados sinteticos e jornadas de Client, Professional e
+paciente.
 Permanece como pendencia operacional o rollout da Fase 201 no Render (separar
 os papeis `web` e `worker` e registrar a entrega sintetica unica exigida pelo
 aceite).

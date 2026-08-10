@@ -552,6 +552,12 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   banco dedicado antes de validar migration, dados essenciais e RLS. O cron
   esta ativo; duas execucoes reais foram aprovadas. Ver
   `fase-219-backup-automatizado-retencao-restore.md`.
+- Fase 220 - Observabilidade e alertas externos de producao: GitHub Actions
+  verifica readiness, dependencias e login a cada 30 minutos, com retentativas
+  adequadas ao cold start do Render. Falhas persistentes de saude e do workflow
+  de backup abrem issues deduplicadas, fechadas automaticamente na recuperacao,
+  sem payloads ou dados clinicos. A execucao manual `31346835747` passou e o
+  cron foi ativado. Ver `fase-220-observabilidade-alertas-externos.md`.
 
 ## Estado atual de uso
 

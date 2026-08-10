@@ -53,7 +53,8 @@ ainda pendentes).
 - [x] Backups configurados conforme `RUNBOOK_BACKUP_RESTORE.md` (Fase 219):
   B2 privado, retencao, checksum, AES256, restore semanal e cron ativo.
 - [x] Restore real testado em banco dedicado (Fase 158, 2026-07-29): dump custom validado, restauracao no Neon dedicado e comparacao de tabelas, RLS e usuarios autenticaveis aprovadas.
-- [ ] Logs e alertas configurados.
+- [x] Logs e alertas configurados: logs correlacionados, alertas internos e
+  monitor externo de saude/backup da Fase 220 ativos.
 - [ ] Runbooks revisados.
 - [ ] Suporte treinado com `RUNBOOK_SUPORTE.md`.
 - [ ] Bucket privado de anexos separado por ambiente, sem acesso publico.
