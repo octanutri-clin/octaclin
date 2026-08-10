@@ -69,6 +69,7 @@ assert.match(workflow, /OCTACLIN_RESTORE_ROLE_EXPECTED: neondb_owner/);
 assert.match(workflow, /--exclude-extension=timescaledb/);
 assert.match(workflow, /--sse AES256/);
 assert.match(workflow, /get-bucket-lifecycle-configuration/);
+assert.match(workflow, /\.Grantee\.URI\? \/\/ ""/);
 assert.match(workflow, /if: always\(\)/);
 assert.doesNotMatch(workflow, /upload-artifact/);
 assert.doesNotMatch(workflow, /neondb_owner.*OCTACLIN_BACKUP_DATABASE_URL/);

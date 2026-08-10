@@ -51,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           ACL="$(aws s3api get-bucket-acl --bucket "$B2_BACKUP_BUCKET" --endpoint-url "$B2_BACKUP_ENDPOINT" --output json)"
-          test "$(printf '%s' "$ACL" | jq '[.Grants[] | select(.Grantee.URI? | contains("AllUsers"))] | length')" = "0"
+          test "$(printf '%s' "$ACL" | jq '[.Grants[] | select((.Grantee.URI? // "") | contains("AllUsers"))] | length')" = "0"
           CICLO="$(aws s3api get-bucket-lifecycle-configuration --bucket "$B2_BACKUP_BUCKET" --endpoint-url "$B2_BACKUP_ENDPOINT" --output json)"
           printf '%s' "$CICLO" | jq -e '
             def regra($id; $prefixo; $dias):
