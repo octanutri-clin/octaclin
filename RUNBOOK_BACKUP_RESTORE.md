@@ -81,9 +81,11 @@ Variables no mesmo Environment:
 - `B2_BACKUP_BUCKET`
 - `OCTACLIN_BACKUP_AUTOMATICO_HABILITADO=false`
 
-Execute primeiro `workflow_dispatch` com `restore_test=true`. Confirme o
-resumo, o objeto remoto e o restore antes de mudar a ultima variable para
-`true`. A primeira rodada do cron tambem deve ser acompanhada.
+Execute primeiro `workflow_dispatch` com `restore_test=true` e
+`configurar_retencao=true`. Esta ultima opcao e um bootstrap explicito e deve
+voltar a `false` nas rodadas seguintes. Confirme o resumo, o objeto remoto e o
+restore antes de mudar a ultima variable para `true`. A primeira rodada do cron
+tambem deve ser acompanhada.
 
 ## Pre-requisitos locais
 

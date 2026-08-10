@@ -23,6 +23,8 @@ dedicado. A fase nao altera schema nem codigo de produto.
   upload;
 - retencao declarada em `.github/backblaze-backup-lifecycle.json`: 8 dias para
   `daily/`, 29 para `weekly/` e 93 para `monthly/`;
+- bootstrap manual e opt-in da politica; execucoes normais apenas validam o
+  lifecycle ja aplicado;
 - restore semanal ou forcado em banco Neon dedicado, seguido por validacao de
   migrations, tenants, usuarios e RLS forcada da Fase 218;
 - nenhum dump e publicado como GitHub Artifact; temporarios sao removidos em
@@ -51,4 +53,3 @@ dedicado. A fase nao altera schema nem codigo de produto.
 
 Somente depois desses itens a fase pode ser marcada como concluida e os gates
 de backup do go-live podem receber aceite.
-

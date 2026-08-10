@@ -10,6 +10,11 @@ on:
         required: true
         default: false
         type: boolean
+      configurar_retencao:
+        description: "Aplicar a politica B2 versionada antes do backup"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -46,6 +51,15 @@ jobs:
 
       - name: Validar configuracao sem imprimir secrets
         run: node scripts/backup-producao.mjs validar
+
+      - name: Aplicar politica de retencao versionada
+        if: github.event_name == 'workflow_dispatch' && inputs.configurar_retencao
+        run: |
+          set -euo pipefail
+          aws s3api put-bucket-lifecycle-configuration \
+            --bucket "$B2_BACKUP_BUCKET" \
+            --endpoint-url "$B2_BACKUP_ENDPOINT" \
+            --lifecycle-configuration file://.github/backblaze-backup-lifecycle.json
 
       - name: Validar bucket privado e politica de retencao
         run: |
