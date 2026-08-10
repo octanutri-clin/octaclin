@@ -125,6 +125,9 @@ assert.match(
   /OCTACLIN_BACKUP_ROLE_EXPECTED: octaclin_backup_producao/,
 );
 assert.match(workflow, /OCTACLIN_RESTORE_ROLE_EXPECTED: neondb_owner/);
+assert.match(workflow, /from public\.migrations/);
+assert.match(workflow, /from public\.tenants/);
+assert.match(workflow, /from public\.usuarios/);
 assert.match(workflow, /--exclude-extension=timescaledb/);
 assert.match(workflow, /--sse AES256/);
 assert.match(workflow, /get-bucket-lifecycle-configuration/);
