@@ -15,6 +15,24 @@
       "NoncurrentVersionExpiration": { "NoncurrentDays": 1 }
     },
     {
+      "ID": "octaclin-daily-delete-markers",
+      "Filter": { "Prefix": "daily/" },
+      "Status": "Enabled",
+      "Expiration": { "ExpiredObjectDeleteMarker": true }
+    },
+    {
+      "ID": "octaclin-weekly-delete-markers",
+      "Filter": { "Prefix": "weekly/" },
+      "Status": "Enabled",
+      "Expiration": { "ExpiredObjectDeleteMarker": true }
+    },
+    {
+      "ID": "octaclin-monthly-delete-markers",
+      "Filter": { "Prefix": "monthly/" },
+      "Status": "Enabled",
+      "Expiration": { "ExpiredObjectDeleteMarker": true }
+    },
+    {
       "ID": "octaclin-monthly",
       "Filter": { "Prefix": "monthly/" },
       "Status": "Enabled",
