@@ -24,17 +24,17 @@ Atualizado em 2026-08-10.
   `1022` validada em producao (35/35), backend/web publicados no commit
   `9572704` e smoke de chave confirmou `200/403/401`. Ver
   `fase-218-api-publica-chaves-webhooks.md` e `API_PUBLICA_V1.md`.
-- Ultima fase concluida: Fase 220 - observabilidade e alertas externos. O
+- Fase 220 - observabilidade e alertas externos. O
   GitHub Actions verifica readiness, dependencias e login a cada 30 minutos,
   abre incidentes deduplicados para saude ou backup e os fecha na recuperacao.
   A execucao real `31346835747` passou na primeira tentativa e o cron foi
   habilitado somente depois do aceite manual.
-- Fase 221 em validacao: o gate autenticado somente leitura foi implementado e
-  os papeis `Professional` e `Client` passaram em suas superficies autorizadas.
-  O primeiro smoke de `SuperAdmin` revelou HTTP 500 no status Google; a
-  correcao local impede que o administrador gerencie a conexao individual do
-  profissional e aguarda deploy/reteste. O acesso `Patient` e a substituicao
-  segura do `SuperAdmin` legado permanecem pendentes.
+- Ultima fase concluida: Fase 221 - regressao E2E em producao isolada. Os papeis
+  `Professional`, `SuperAdmin`, `Client` e `Patient` passaram nos smokes
+  autenticados somente leitura e foram bloqueados fora de suas superficies.
+  A fase corrigiu o status Google do administrador e a emissao prematura de
+  sessao na ativacao do paciente; o acesso administrativo legado foi desativado
+  com sessoes revogadas depois da aprovacao do substituto.
 - Fase 219 - backup automatizado, retencao e restore recorrente. Role Neon
   dedicada, banco de restore, bucket B2 privado, lifecycle 8/29/93, GitHub
   Environment e cron estao ativos. As execucoes `31346127174` e `31346290507`
@@ -401,9 +401,10 @@ isolada aceita, backup/restore recorrente ativo e pacote juridico ampliado, mas
 ainda precisa de dominio/identidade de envio, aceite juridico formal e go-live
 assistido antes de uso comercial com clientes reais.
 
-Proxima fase recomendada: Fase 221 - regressao ponta a ponta pos-fases 200-220
-na producao isolada, com dados sinteticos e jornadas de Client, Professional e
-paciente.
+Proximo passo recomendado: corrigir e validar a entrega de email em producao. O
+provedor Gmail API registrou falha ao renovar o token OAuth nos envios de
+recuperacao; renovar as credenciais ou validar a configuracao SMTP antes do
+onboarding de clientes reais.
 Permanece como pendencia operacional o rollout da Fase 201 no Render (separar
 os papeis `web` e `worker` e registrar a entrega sintetica unica exigida pelo
 aceite).

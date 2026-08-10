@@ -95,7 +95,7 @@ ainda pendentes).
   (Fase 221, 2026-08-10).
 - [x] Smoke autenticado somente leitura do papel `Client` em producao (Fase
   221, 2026-08-10).
-- [ ] Smokes autenticados somente leitura dos papeis `SuperAdmin` e `Patient`
+- [x] Smokes autenticados somente leitura dos papeis `SuperAdmin` e `Patient`
   em producao (Fase 221).
 - [x] Teste manual com paciente realista.
 - [x] Massa ficticia de staging aplicada conforme `RUNBOOK_STAGING_DADOS.md`.

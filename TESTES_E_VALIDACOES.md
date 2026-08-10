@@ -429,7 +429,9 @@ O smoke real exige opt-in, URL oficial, papel, email e senha apenas na sessao
 do processo. Execute uma vez para cada papel conforme
 `fase-221-regressao-e2e-producao-isolada.md`. O teste autentica, le as rotas
 permitidas, confirma um redirecionamento de autorizacao e nao aciona comandos
-de negocio.
+de negocio. Em 2026-08-10, os quatro papeis foram aprovados em producao; o
+`Patient` percorreu as nove areas do portal depois da correcao transacional de
+ativacao.
 
 ## Validacao antes de go-live
 

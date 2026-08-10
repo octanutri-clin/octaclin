@@ -558,6 +558,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   de backup abrem issues deduplicadas, fechadas automaticamente na recuperacao,
   sem payloads ou dados clinicos. A execucao manual `31346835747` passou e o
   cron foi ativado. Ver `fase-220-observabilidade-alertas-externos.md`.
+- Fase 221 - Regressao E2E em producao isolada: gate Playwright autenticado,
+  explicito e somente leitura para `Professional`, `SuperAdmin`, `Client` e
+  `Patient`. Os quatro papeis passaram em suas superficies e foram bloqueados
+  fora delas, sem HTTP 5xx, falha de rede real, erro de pagina ou console. A
+  fase corrigiu o status Google do administrador e a ordem transacional da
+  ativacao do paciente; o acesso administrativo legado foi desativado somente
+  depois do novo acesso passar. Ver
+  `fase-221-regressao-e2e-producao-isolada.md`.
 
 ## Estado atual de uso
 

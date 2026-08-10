@@ -1462,18 +1462,20 @@ publicado antes de ampliar a superficie de mudancas visuais.
     aprovada e cron habilitado.
   - Evidencia: `fase-220-observabilidade-alertas-externos.md`.
 
-- [ ] Fase 221 - Regressao E2E em producao isolada.
+- [x] Fase 221 - Regressao E2E em producao isolada.
   - [x] Gate reutilizavel, explicito e somente leitura implementado.
   - [x] Papel `Professional` aprovado em todos os nove modulos autorizados e
     bloqueado em `/operacoes`.
   - [x] Papel `Client` aprovado no portal do cliente e bloqueado no console.
-  - [ ] Papel `SuperAdmin` aprovado depois do deploy da correcao que impede
+  - [x] Papel `SuperAdmin` aprovado depois do deploy da correcao que impede
     gerenciar a conexao Google individual do profissional.
-  - [ ] Papel `Patient` aprovado em todas as areas do portal e bloqueado no
+  - [x] Papel `Patient` aprovado em todas as areas do portal e bloqueado no
     console.
-  - [ ] Acesso `SuperAdmin` legado desativado e refresh tokens revogados
+  - [x] Acesso `SuperAdmin` legado desativado e refresh tokens revogados
     somente depois do novo acesso ser aprovado em producao.
-  - [ ] Gates finais, commit e push aprovados.
+  - [x] Ativacao transacional do paciente corrigida e validada em producao com
+    os tres aceites legais sinteticos; sessao inicial revogada depois do smoke.
+  - [x] Gates finais, commit e push aprovados.
   - Evidencia: `fase-221-regressao-e2e-producao-isolada.md`.
 
 ## Backlog pos-producao

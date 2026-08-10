@@ -1,6 +1,6 @@
 # Fase 221 - Regressao E2E em producao isolada
 
-Status: em validacao desde 2026-08-10.
+Status: concluida em 2026-08-10.
 
 ## Objetivo
 
@@ -68,10 +68,14 @@ exit $codigo
   console.
 - [x] `Client` aprovado em 2026-08-10 no portal do cliente e bloqueado no
   console.
-- [ ] `SuperAdmin` aprovado em sessao isolada depois do deploy da correcao de
-  Google Agenda.
-- [ ] `Patient` aprovado em sessao isolada.
-- [ ] Gates finais de formato, secrets e preflight aprovados.
+- [x] `SuperAdmin` aprovado em sessao isolada depois do deploy da correcao de
+  Google Agenda, com acesso ao console e Operacoes e bloqueio dos portais.
+- [x] `Patient` aprovado em sessao isolada nas nove areas do portal e bloqueado
+  no console; a conta sintetica registrou os aceites LGPD, Termos de Uso e
+  Politica de Privacidade na versao `2026-07`.
+- [x] Acesso `SuperAdmin` legado desativado, com sessoes e tokens de
+  recuperacao revogados, somente depois da aprovacao do novo acesso.
+- [x] Gates finais de formato, secrets, contrato e preflight aprovados.
 
 ## Defeito encontrado durante a validacao
 
@@ -82,9 +86,19 @@ status disponivel, devolve `podeGerenciar: false` ao `SuperAdmin` e limita
 conectar/desconectar Google ao proprio `Professional`. A interface explica que
 a conexao e individual e oculta os comandos indevidos.
 
-O acesso administrativo legado nao pode ser descriptografado com a chave AES
-atual. Ele deve permanecer ativo somente ate o novo `SuperAdmin` passar no
-deploy; depois disso, deve ser desativado e ter seus refresh tokens revogados.
+O acesso administrativo legado nao podia ser descriptografado com a chave AES
+atual. Depois da aprovacao do novo `SuperAdmin`, ele foi desativado e seus
+refresh tokens e tokens de recuperacao foram revogados.
 
-A fase somente pode ser marcada como concluida depois das quatro sessoes
-isoladas passarem e da substituicao segura do acesso administrativo legado.
+Na primeira tentativa de ativacao do `Patient`, a transacao criava o usuario e
+tentava emitir a sessao em uma segunda transacao antes do commit. A FK de
+`refresh_tokens` nao enxergava o usuario ainda nao confirmado e a ativacao
+retornava HTTP 500 com rollback integral. O commit `b5293a9` passou a concluir
+usuario, vinculo, consentimentos e convite antes de emitir a sessao. A regressao
+unitaria confirmou essa ordem, a ativacao em producao foi aprovada e a sessao
+inicial foi explicitamente revogada depois do smoke.
+
+As quatro sessoes isoladas passaram sem HTTP 5xx, falha de rede real, excecao
+de pagina ou erro de console. A falha de renovacao do token Gmail API observada
+nos envios de recuperacao permanece como pendencia operacional independente da
+autorizacao e da regressao desta fase.

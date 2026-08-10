@@ -24,7 +24,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Portal do paciente | Parcial | Primeiro acesso, historico, perfil, formularios, LGPD, tarefas, materiais, check-ins e notificacoes. | QA E2E com jornada real e dados realistas. |
 | Formularios | Pronto | Editor, modelos, preview, coleta, respostas e leitura clinica. | QA E2E com jornada real e dados realistas. |
 | Agenda | Parcial | Agenda interna com Google Calendar, comunicacoes no agendamento, conflito local por profissional, remarcacao e cancelamento sincronizados com Google. | Recorrencia avancada, importacao inbound por `syncToken` e painel de disponibilidade. |
-| Email | Parcial | Envio validado com Gmail. | Identidade de envio, SPF/DKIM/DMARC quando houver dominio proprio. |
+| Email | Parcial | Integracao Gmail API e fallback SMTP implementados. | Corrigir a renovacao OAuth observada na Fase 221 ou validar SMTP ponta a ponta; depois concluir identidade de envio e SPF/DKIM/DMARC quando houver dominio proprio. |
 | WhatsApp | Parcial | Envio, webhook, status, inbox, associacao, notas, templates por evento e automacoes. | Validar templates reais aprovados em producao. |
 | LGPD | Pronto | Portal paciente, painel operacional LGPD, consentimentos versionados, retencao programada e exportacao completa. | Revisao juridica/comercial antes do go-live. |
 | Auditoria | Parcial | Auditoria operacional, convites administrativos, perfil fiscal, LGPD, agenda e leituras sensiveis. | Cobrir mutacoes sensiveis restantes conforme surgirem. |
@@ -36,7 +36,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Piloto interno | Pronto | Runbook `RUNBOOK_PILOTO_INTERNO.md` e controle `PILOTO_INTERNO_CONTROLE.md`; rodada 1 executada em 2026-07-23 com todas as jornadas manuais aprovadas e aceite registrado. | Nenhuma pendencia; repetir rodada apos mudancas relevantes de autorizacao. |
 | Producao isolada | Pronto | Neon, Upstash e servicos Render exclusivos de producao aceitos na Fase 131, com credenciais rotacionadas e sem referencias a staging. | Revalidar apos mudancas relevantes de infraestrutura. |
 | Juridico/comercial | Parcial | Minutas de contrato, politica, Termo de Uso, Anexo de Tratamento, SLA, onboarding e revisao preparatoria da Fase 159. | Aceite por advogado, identidade empresarial, encarregado/canal, bases legais, suboperadores/transferencias e publicacao final. |
-| QA E2E | Parcial | Typechecks, specs focadas, Playwright visual por areas, jornadas criticas com BFF mockado e smokes reais somente leitura de `Professional` e `Client` aprovados na Fase 221. | Publicar e retestar a correcao de `SuperAdmin` e concluir a sessao de `Patient`; mutacoes continuam exigindo staging com dados sinteticos. |
+| QA E2E | Pronto | Typechecks, specs focadas, Playwright visual por areas, jornadas criticas com BFF mockado e smokes reais somente leitura dos quatro papeis aprovados na Fase 221. | Mutacoes continuam exigindo staging com dados sinteticos; repetir os smokes apos mudancas relevantes de autorizacao. |
 
 ## Gate antes de cada fase
 
@@ -82,9 +82,8 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Concluir a Fase 221 com as sessoes somente leitura de `SuperAdmin` e `Patient`.
-Os papeis `Professional` e `Client` ja foram aprovados em producao. Depois
-disso, dominio, aceite
-juridico e go-live assistido continuam como gates para clientes reais. O
+Corrigir e validar a entrega de email em producao: a Gmail API registrou falha
+na renovacao OAuth durante a Fase 221. Depois disso, dominio, aceite juridico e
+go-live assistido continuam como gates para clientes reais. O
 rollout separado de `web`/`worker` da Fase 201 pode permanecer adiado enquanto
 exigir custo de infraestrutura sem beneficio para o piloto atual.

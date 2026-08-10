@@ -217,15 +217,21 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 - Responsavel: Codex.
 - Inicio: 2026-08-10.
-- Status: em validacao.
-- Entrega parcial: gate Playwright autenticado, explicito e somente leitura
+- Conclusao: 2026-08-10.
+- Status: concluida.
+- Entrega: gate Playwright autenticado, explicito e somente leitura
   para `Professional`, `SuperAdmin`, `Client` e `Patient`.
-- Evidencia atual: `Professional` e `Client` aprovados em suas superficies e
-  bloqueados fora delas; zero HTTP 5xx, falha de rede real, erro de pagina ou
-  console nessas execucoes.
+- Evidencia: os quatro papeis foram aprovados em suas superficies e bloqueados
+  fora delas; zero HTTP 5xx, falha de rede real, erro de pagina ou console nas
+  execucoes finais.
 - Defeito encontrado: o status Google do `SuperAdmin` tentava resolver perfil
   profissional e retornava HTTP 500. A correcao foi implementada e validada
-  localmente, mantendo conectar/desconectar exclusivo do profissional.
-- Pendencias: publicar e retestar `SuperAdmin`, criar e validar `Patient`,
-  substituir com seguranca o acesso administrativo legado e rodar gates finais.
+  e publicada, mantendo conectar/desconectar exclusivo do profissional.
+- Segundo defeito encontrado: a ativacao do paciente emitia a sessao antes do
+  commit do usuario. O commit `b5293a9` separou as operacoes; teste unitario,
+  ativacao em producao e smoke do portal passaram.
+- Seguranca operacional: o acesso `SuperAdmin` legado foi desativado e suas
+  sessoes revogadas somente depois da aprovacao do substituto.
+- Pendencia externa a fase: renovar as credenciais Gmail API ou validar o
+  provedor SMTP; os envios de recuperacao registraram falha de refresh OAuth.
 - Documento: `fase-221-regressao-e2e-producao-isolada.md`.
