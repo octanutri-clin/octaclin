@@ -15,8 +15,10 @@ Status: em validacao de producao em 2026-08-10.
 - O reconciliador Google fica disponivel no processo HTTP; apenas consumidores
   BullMQ e cron continuam condicionados ao papel do processo.
 - O callback OAuth executa a primeira reconciliacao depois de criar o canal.
-- A carga inicial considera os ultimos 30 dias e eventos futuros; chamadas com
-  `syncToken` nao combinam filtros incompativeis.
+- A carga inicial considera os ultimos 30 dias e os proximos 400 dias;
+  chamadas com `syncToken` nao combinam filtros incompativeis.
+- A renovacao semanal reinicia o token para mover a janela e uma carga completa
+  bem-sucedida remove bloqueios externos fora do horizonte.
 - `POST /agenda/google/sincronizar` oferece recuperacao autenticada e exclusiva
   do profissional conectado.
 - A agenda ganhou o comando `Sincronizar agora`, com estado de processamento e
@@ -30,6 +32,8 @@ Status: em validacao de producao em 2026-08-10.
 - Typecheck e build do backend aprovados.
 - Typecheck, lint e build do web aprovados; a nova rota BFF consta no artefato.
 - `node --check octaclin-backend/scripts/gmail-oauth-token.mjs` aprovado.
+- O primeiro smoke produziu `syncToken`, mas revelou 8.530 instancias de um
+  recorrente expandido ate 2040; a janela movel foi adicionada antes do aceite.
 
 ## Pendente de producao
 

@@ -102,6 +102,8 @@ export class ProcessadorRenovacaoGoogleCalendar {
       atual.canalWatchId = novoCanalId;
       atual.canalRecursoId = recursoId;
       atual.canalExpiraEm = expiraEm;
+      atual.ultimoSyncToken = undefined;
+      atual.falhasConsecutivasSincronizacao = 0;
       await repositorio.save(atual);
       await repositorioCanal.save(
         repositorioCanal.create({

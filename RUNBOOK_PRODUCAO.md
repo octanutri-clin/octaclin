@@ -437,9 +437,9 @@ Falhas comuns:
 
 Quando o canal estiver conectado, mas eventos externos nao aparecerem, use o
 comando `Sincronizar agora` como recuperacao. Enquanto nao houver worker
-dedicado, mantenha `OCTACLIN_PROCESSO=all`. A sincronizacao inicial limita o
-historico a 30 dias e continua trazendo eventos futuros; as incrementais usam
-somente o `syncToken` persistido.
+dedicado, mantenha `OCTACLIN_PROCESSO=all`. A sincronizacao inicial limita a
+janela a 30 dias anteriores e 400 dias futuros; a renovacao semanal move esse
+horizonte. As incrementais usam somente o `syncToken` persistido.
 
 ## Healthchecks recomendados
 

@@ -52,6 +52,12 @@ export interface EventoGoogleAlterado {
 }
 
 const JANELA_INICIAL_SINCRONIZACAO_DIAS = 30;
+const HORIZONTE_INICIAL_SINCRONIZACAO_DIAS = 400;
+
+export interface JanelaSincronizacaoGoogleCalendar {
+  inicioEm: Date;
+  fimEm: Date;
+}
 
 interface RespostaTokenGoogle {
   access_token?: string;
@@ -185,20 +191,30 @@ export class ServicoGoogleCalendar {
   async listarEventosAlterados(
     credenciais: CredenciaisGoogleCalendar,
     syncToken?: string
-  ): Promise<{ eventos: EventoGoogleAlterado[]; proximoSyncToken?: string }> {
+  ): Promise<{
+    eventos: EventoGoogleAlterado[];
+    proximoSyncToken?: string;
+    janelaInicial?: JanelaSincronizacaoGoogleCalendar;
+  }> {
     const accessToken = await this.obterAccessToken(credenciais.clientId, credenciais.clientSecret, credenciais.refreshToken);
     const eventos: EventoGoogleAlterado[] = [];
     let proximoSyncToken: string | undefined;
     let pageToken: string | undefined;
+    const agora = new Date();
+    const janelaInicial = syncToken
+      ? undefined
+      : {
+          inicioEm: new Date(agora.getTime() - JANELA_INICIAL_SINCRONIZACAO_DIAS * 24 * 60 * 60 * 1000),
+          fimEm: new Date(agora.getTime() + HORIZONTE_INICIAL_SINCRONIZACAO_DIAS * 24 * 60 * 60 * 1000)
+        };
 
     do {
       const parametros = new URLSearchParams({ showDeleted: 'true', singleEvents: 'true' });
       if (syncToken) {
         parametros.set('syncToken', syncToken);
-      } else {
-        const inicioJanela = new Date();
-        inicioJanela.setUTCDate(inicioJanela.getUTCDate() - JANELA_INICIAL_SINCRONIZACAO_DIAS);
-        parametros.set('timeMin', inicioJanela.toISOString());
+      } else if (janelaInicial) {
+        parametros.set('timeMin', janelaInicial.inicioEm.toISOString());
+        parametros.set('timeMax', janelaInicial.fimEm.toISOString());
       }
       if (pageToken) parametros.set('pageToken', pageToken);
 
@@ -227,7 +243,7 @@ export class ServicoGoogleCalendar {
       pageToken = corpo.nextPageToken;
     } while (pageToken);
 
-    return { eventos, proximoSyncToken };
+    return { eventos, proximoSyncToken, janelaInicial };
   }
 
   async criarCanalWatch(

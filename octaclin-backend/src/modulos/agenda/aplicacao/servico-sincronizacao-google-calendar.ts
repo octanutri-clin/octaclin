@@ -7,7 +7,13 @@ import { GoogleCanalWatchOrm } from '../infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from '../infraestrutura/profissional-google-conexao.orm';
 import { ServicoAgenda } from './servico-agenda';
 import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar';
-import { EventoGoogleAlterado, ServicoGoogleCalendar, SyncTokenExpiradoError, TokenRevogadoError } from './servico-google-calendar';
+import {
+  EventoGoogleAlterado,
+  JanelaSincronizacaoGoogleCalendar,
+  ServicoGoogleCalendar,
+  SyncTokenExpiradoError,
+  TokenRevogadoError
+} from './servico-google-calendar';
 
 export const FILA_SINCRONIZACAO_GOOGLE = 'sincronizacao-google-calendar';
 
@@ -49,7 +55,11 @@ export class ServicoSincronizacaoGoogleCalendar {
 
     const syncToken = await this.obterSyncTokenArmazenado(tenantId, profissionalId);
 
-    let resultado: { eventos: EventoGoogleAlterado[]; proximoSyncToken?: string };
+    let resultado: {
+      eventos: EventoGoogleAlterado[];
+      proximoSyncToken?: string;
+      janelaInicial?: JanelaSincronizacaoGoogleCalendar;
+    };
     try {
       resultado = await this.googleCalendar.listarEventosAlterados(credenciais, syncToken);
     } catch (erro) {
@@ -64,7 +74,7 @@ export class ServicoSincronizacaoGoogleCalendar {
       resultado = await this.googleCalendar.listarEventosAlterados(credenciais, undefined);
     }
 
-    const { eventos, proximoSyncToken } = resultado;
+    const { eventos, proximoSyncToken, janelaInicial } = resultado;
     let houveFalha = false;
 
     for (const evento of eventos) {
@@ -81,6 +91,7 @@ export class ServicoSincronizacaoGoogleCalendar {
     const LIMITE_FALHAS_CONSECUTIVAS = 5;
     if (proximoSyncToken) {
       if (!houveFalha) {
+        if (janelaInicial) await this.removerBloqueiosForaDaJanela(tenantId, profissionalId, janelaInicial);
         await this.armazenarSyncTokenEResetarFalhas(tenantId, profissionalId, proximoSyncToken);
       } else {
         const falhas = await this.incrementarFalhasConsecutivas(tenantId, profissionalId);
@@ -92,6 +103,26 @@ export class ServicoSincronizacaoGoogleCalendar {
         }
       }
     }
+  }
+
+  private async removerBloqueiosForaDaJanela(
+    tenantId: string,
+    profissionalId: string,
+    janela: JanelaSincronizacaoGoogleCalendar
+  ): Promise<void> {
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await gerenciador
+        .getRepository(AgendaBloqueioExternoOrm)
+        .createQueryBuilder()
+        .delete()
+        .where('tenant_id = :tenantId', { tenantId })
+        .andWhere('profissional_id = :profissionalId', { profissionalId })
+        .andWhere('(fim_em <= :inicioEm OR inicio_em >= :fimEm)', {
+          inicioEm: janela.inicioEm,
+          fimEm: janela.fimEm
+        })
+        .execute();
+    });
   }
 
   private async obterSyncTokenArmazenado(tenantId: string, profissionalId: string): Promise<string | undefined> {

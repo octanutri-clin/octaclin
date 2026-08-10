@@ -1483,6 +1483,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     producao sem expor credenciais.
   - [x] Garantir carga inicial no callback e reconciliacao manual autenticada.
   - [x] Limitar a carga inicial sem combinar `timeMin` com `syncToken`.
+  - [x] Limitar recorrencias a uma janela movel e limpar bloqueios fora dela.
   - [x] Expor `Sincronizar agora` na agenda do profissional.
   - [x] Endurecer o helper de renovacao Gmail para nao imprimir refresh token.
   - [ ] Validar espelhamento Google para OctaClin depois do deploy.

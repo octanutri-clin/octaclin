@@ -305,6 +305,61 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
     loggerWarnSpy.mockRestore();
   });
 
+  it('remove bloqueios fora da janela depois de uma sincronizacao inicial concluida', async () => {
+    const deps = construirDependencias();
+    const executarDelete = jest.fn(async () => undefined);
+    const queryBuilder = {
+      delete: jest.fn(),
+      where: jest.fn(),
+      andWhere: jest.fn(),
+      execute: executarDelete
+    };
+    queryBuilder.delete.mockReturnValue(queryBuilder);
+    queryBuilder.where.mockReturnValue(queryBuilder);
+    queryBuilder.andWhere.mockReturnValue(queryBuilder);
+
+    deps.googleCalendar.listarEventosAlterados = jest.fn(async () => ({
+      eventos: [],
+      proximoSyncToken: 'sync-limitado',
+      janelaInicial: {
+        inicioEm: new Date('2026-07-11T00:00:00.000Z'),
+        fimEm: new Date('2027-09-14T00:00:00.000Z')
+      }
+    }));
+    deps.executorTenant.executar = jest.fn((_tenantId: string, callback: (gerenciador: any) => any) =>
+      callback({
+        getRepository: () => ({
+          findOne: jest.fn(async () => ({
+            tenantId: 'tenant-1',
+            profissionalId: 'prof-1',
+            ultimoSyncToken: undefined,
+            falhasConsecutivasSincronizacao: 0
+          })),
+          save: jest.fn(async (dados: any) => dados),
+          createQueryBuilder: jest.fn(() => queryBuilder)
+        })
+      })
+    );
+
+    const servico = new ServicoSincronizacaoGoogleCalendar(
+      deps.fonteDados as any,
+      deps.executorTenant as any,
+      deps.servicoConexao as any,
+      deps.googleCalendar as any,
+      deps.servicoAgenda as any
+    );
+    await servico.reconciliar('tenant-1', 'prof-1');
+
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      '(fim_em <= :inicioEm OR inicio_em >= :fimEm)',
+      expect.objectContaining({
+        inicioEm: new Date('2026-07-11T00:00:00.000Z'),
+        fimEm: new Date('2027-09-14T00:00:00.000Z')
+      })
+    );
+    expect(executarDelete).toHaveBeenCalledTimes(1);
+  });
+
   it('avanca o syncToken apos 5 falhas consecutivas ao aplicar eventos, e loga em nivel error (retentativa limitada)', async () => {
     const deps = construirDependencias();
     deps.servicoAgenda.remarcarConsultaComoSistema = jest.fn(async () => {

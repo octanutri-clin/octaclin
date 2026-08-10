@@ -246,6 +246,9 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
   chegavam sem conclusao da reconciliacao.
 - Entrega local: carga inicial no callback, reconciliacao manual, janela
   inicial limitada, comando na agenda e helper Gmail sem exposicao do token.
+- Primeiro smoke: `syncToken` persistido sem falhas; uma recorrencia ate 2040
+  gerou 8.530 bloqueios, levando ao hardening de janela movel 30/400 dias e
+  limpeza fora do horizonte antes do aceite final.
 - Validacoes locais: 27 testes focados, builds/typechecks, lint web e sintaxe do
   helper aprovados.
 - Pendencias: deploy, smoke inbound da agenda e rotacao/teste real do Gmail.

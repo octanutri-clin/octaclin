@@ -315,9 +315,11 @@ describe('ServicoGoogleCalendar', () => {
     const urlInicial = new URL(urlsEventos[0]);
     const urlIncremental = new URL(urlsEventos[1]);
     expect(urlInicial.searchParams.get('timeMin')).toBeTruthy();
+    expect(urlInicial.searchParams.get('timeMax')).toBeTruthy();
     expect(urlInicial.searchParams.has('syncToken')).toBe(false);
     expect(urlIncremental.searchParams.get('syncToken')).toBe('sync-existente');
     expect(urlIncremental.searchParams.has('timeMin')).toBe(false);
+    expect(urlIncremental.searchParams.has('timeMax')).toBe(false);
   });
 
   it('listarEventosAlterados percorre todas as paginas via nextPageToken e so usa o nextSyncToken da ultima pagina', async () => {
