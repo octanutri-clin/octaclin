@@ -337,10 +337,12 @@ export async function carregarBootstrapAgenda(): Promise<BootstrapAgenda> {
 
 export interface ConexaoGoogleAgendaStatus {
   conectado: boolean;
+  podeGerenciar?: boolean;
 }
 
-export interface ConexaoGoogleProfissionalStatus extends ConexaoGoogleAgendaStatus {
+export interface ConexaoGoogleProfissionalStatus {
   profissionalId: string;
+  conectado: boolean;
 }
 
 export async function obterStatusGoogleAgenda(): Promise<ConexaoGoogleAgendaStatus> {

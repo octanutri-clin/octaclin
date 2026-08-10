@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-09.
+Atualizado em 2026-08-10.
 
 ## Snapshot
 
@@ -29,6 +29,12 @@ Atualizado em 2026-08-09.
   abre incidentes deduplicados para saude ou backup e os fecha na recuperacao.
   A execucao real `31346835747` passou na primeira tentativa e o cron foi
   habilitado somente depois do aceite manual.
+- Fase 221 em validacao: o gate autenticado somente leitura foi implementado e
+  os papeis `Professional` e `Client` passaram em suas superficies autorizadas.
+  O primeiro smoke de `SuperAdmin` revelou HTTP 500 no status Google; a
+  correcao local impede que o administrador gerencie a conexao individual do
+  profissional e aguarda deploy/reteste. O acesso `Patient` e a substituicao
+  segura do `SuperAdmin` legado permanecem pendentes.
 - Fase 219 - backup automatizado, retencao e restore recorrente. Role Neon
   dedicada, banco de restore, bucket B2 privado, lifecycle 8/29/93, GitHub
   Environment e cron estao ativos. As execucoes `31346127174` e `31346290507`

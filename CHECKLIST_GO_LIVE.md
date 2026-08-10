@@ -91,6 +91,12 @@ ainda pendentes).
 - [x] E2E de jornada critica passando (`pnpm test:e2e:criticas`, 6/6).
 - [x] Teste manual com usuario cliente realista.
 - [x] Teste manual com profissional realista.
+- [x] Smoke autenticado somente leitura do papel `Professional` em producao
+  (Fase 221, 2026-08-10).
+- [x] Smoke autenticado somente leitura do papel `Client` em producao (Fase
+  221, 2026-08-10).
+- [ ] Smokes autenticados somente leitura dos papeis `SuperAdmin` e `Patient`
+  em producao (Fase 221).
 - [x] Teste manual com paciente realista.
 - [x] Massa ficticia de staging aplicada conforme `RUNBOOK_STAGING_DADOS.md`.
 

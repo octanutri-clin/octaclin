@@ -212,3 +212,20 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Pendencias: acompanhar a primeira ocorrencia automatica; falhas passam a ser
   incidentes operacionais, nao pendencias de implementacao.
 - Proxima fase: Fase 221 - regressao ponta a ponta pos-fases 200-220.
+
+### Fase 221 - Regressao E2E em producao isolada
+
+- Responsavel: Codex.
+- Inicio: 2026-08-10.
+- Status: em validacao.
+- Entrega parcial: gate Playwright autenticado, explicito e somente leitura
+  para `Professional`, `SuperAdmin`, `Client` e `Patient`.
+- Evidencia atual: `Professional` e `Client` aprovados em suas superficies e
+  bloqueados fora delas; zero HTTP 5xx, falha de rede real, erro de pagina ou
+  console nessas execucoes.
+- Defeito encontrado: o status Google do `SuperAdmin` tentava resolver perfil
+  profissional e retornava HTTP 500. A correcao foi implementada e validada
+  localmente, mantendo conectar/desconectar exclusivo do profissional.
+- Pendencias: publicar e retestar `SuperAdmin`, criar e validar `Patient`,
+  substituir com seguranca o acesso administrativo legado e rodar gates finais.
+- Documento: `fase-221-regressao-e2e-producao-isolada.md`.

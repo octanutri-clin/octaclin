@@ -25,6 +25,7 @@ interface AgendaSemanalProps {
   consultas: ConsultaAgendaApi[];
   profissionais: ProfissionalResumo[];
   googleConectado?: boolean;
+  googlePodeGerenciar?: boolean;
   onConectarGoogle: () => void;
   onDesconectarGoogle: () => void;
   onAbrirConsulta: (consultaId: string) => void;
@@ -112,6 +113,7 @@ export function AgendaSemanal({
   consultas,
   profissionais,
   googleConectado,
+  googlePodeGerenciar,
   onConectarGoogle,
   onDesconectarGoogle,
   onAbrirConsulta
@@ -344,18 +346,22 @@ export function AgendaSemanal({
         <div className="min-w-0">
           <p className="text-sm font-semibold text-tinta">Google Agenda opcional</p>
           <p className="text-xs text-texto-suave">
-            {googleConectado
+            {googlePodeGerenciar === false
+              ? 'A conexao e individual e deve ser feita pelo proprio profissional.'
+              : googleConectado
               ? 'Sincronizacao conectada; a agenda interna continua sendo a fonte principal.'
               : 'Nao conectado; a agenda interna permanece ativa e bloqueando horarios.'}
           </p>
         </div>
-        <Botao
-          type="button"
-          variante="fantasma"
-          onClick={googleConectado ? onDesconectarGoogle : onConectarGoogle}
-        >
-          {googleConectado ? 'Desconectar Google' : 'Conectar Google'}
-        </Botao>
+        {googlePodeGerenciar !== false ? (
+          <Botao
+            type="button"
+            variante="fantasma"
+            onClick={googleConectado ? onDesconectarGoogle : onConectarGoogle}
+          >
+            {googleConectado ? 'Desconectar Google' : 'Conectar Google'}
+          </Botao>
+        ) : null}
       </div>
 
       <form onSubmit={(evento) => void criarBloqueio(evento)} className="grid gap-2 border-b border-linha px-4 py-3 md:grid-cols-[minmax(130px,1fr)_minmax(180px,1fr)_minmax(180px,1fr)_auto] md:items-end">

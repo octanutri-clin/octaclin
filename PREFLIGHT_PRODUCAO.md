@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-08-09, apos a Fase 220.
+Atualizado em 2026-08-10, durante a Fase 221.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -36,7 +36,7 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Piloto interno | Pronto | Runbook `RUNBOOK_PILOTO_INTERNO.md` e controle `PILOTO_INTERNO_CONTROLE.md`; rodada 1 executada em 2026-07-23 com todas as jornadas manuais aprovadas e aceite registrado. | Nenhuma pendencia; repetir rodada apos mudancas relevantes de autorizacao. |
 | Producao isolada | Pronto | Neon, Upstash e servicos Render exclusivos de producao aceitos na Fase 131, com credenciais rotacionadas e sem referencias a staging. | Revalidar apos mudancas relevantes de infraestrutura. |
 | Juridico/comercial | Parcial | Minutas de contrato, politica, Termo de Uso, Anexo de Tratamento, SLA, onboarding e revisao preparatoria da Fase 159. | Aceite por advogado, identidade empresarial, encarregado/canal, bases legais, suboperadores/transferencias e publicacao final. |
-| QA E2E | Parcial | Typechecks, specs focadas, Playwright visual por areas e suite de jornadas criticas com BFF mockado. | Validar em staging com dados realistas. |
+| QA E2E | Parcial | Typechecks, specs focadas, Playwright visual por areas, jornadas criticas com BFF mockado e smokes reais somente leitura de `Professional` e `Client` aprovados na Fase 221. | Publicar e retestar a correcao de `SuperAdmin` e concluir a sessao de `Patient`; mutacoes continuam exigindo staging com dados sinteticos. |
 
 ## Gate antes de cada fase
 
@@ -82,9 +82,9 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Fase 221 - regressao ponta a ponta pos-fases 200-220 em producao isolada, com
-dados sinteticos e jornadas de Client, Professional e paciente. O objetivo e
-fechar defeitos observados antes de dominio, aceite juridico e entrada de
-clientes reais. O rollout separado de `web`/`worker` da Fase 201 continua como
-gate anterior ao lancamento, mas pode permanecer adiado enquanto exigir custo
-de infraestrutura sem beneficio para o piloto atual.
+Concluir a Fase 221 com as sessoes somente leitura de `SuperAdmin` e `Patient`.
+Os papeis `Professional` e `Client` ja foram aprovados em producao. Depois
+disso, dominio, aceite
+juridico e go-live assistido continuam como gates para clientes reais. O
+rollout separado de `web`/`worker` da Fase 201 pode permanecer adiado enquanto
+exigir custo de infraestrutura sem beneficio para o piloto atual.

@@ -541,6 +541,19 @@ link da execucao e o horario para diagnosticar no Render. Se o cron estiver
 desabilitado, conferir `OCTACLIN_MONITOR_AUTOMATICO_HABILITADO` nas Repository
 Variables do GitHub.
 
+### Regressao autenticada somente leitura da Fase 221
+
+Execute o gate de `fase-221-regressao-e2e-producao-isolada.md` separadamente
+para `Professional`, `SuperAdmin`, `Client` e `Patient`. Confirme a identidade da conta antes
+de cada rodada, leia a senha via clipboard e remova todas as variaveis no
+`finally`. Nao reutilize senha em argumento de linha de comando, arquivo,
+GitHub Actions ou historico do terminal.
+
+Falha em HTTP 5xx, rede, console, pagina, login ou autorizacao bloqueia o
+aceite. `net::ERR_ABORTED` provocado pela navegacao deliberada entre telas e o
+unico cancelamento ignorado. Nao use este smoke para criar dados ou validar
+mutacoes; essas jornadas exigem massa sintetica e ambiente dedicado.
+
 ## Incidentes
 
 Para atendimento operacional detalhado de login, convites, recuperacao de senha, WhatsApp, email e agenda, use `RUNBOOK_SUPORTE.md`. As secoes abaixo sao apenas o resumo de resposta rapida.

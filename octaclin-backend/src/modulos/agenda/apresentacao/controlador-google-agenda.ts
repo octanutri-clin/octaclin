@@ -29,7 +29,7 @@ export class ControladorGoogleAgenda {
 
   @Get('conectar')
   @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
-  @Papeis('SuperAdmin', 'Professional')
+  @Papeis('Professional')
   @Permissoes('agenda.consultas.ler')
   async conectar(@UsuarioAtual() usuario: UsuarioAutenticado): Promise<{ url: string }> {
     const profissionalId = await this.resolverProfissionalIdObrigatorio(usuario);
@@ -53,9 +53,12 @@ export class ControladorGoogleAgenda {
   @Papeis('SuperAdmin', 'Professional')
   @Permissoes('agenda.consultas.ler')
   async status(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    if (usuario.papel === 'SuperAdmin') {
+      return { conectado: false, podeGerenciar: false };
+    }
     const profissionalId = await this.resolverProfissionalIdObrigatorio(usuario);
     const credenciais = await this.servicoConexao.obterConexaoAtiva(usuario.tenantId, profissionalId);
-    return { conectado: Boolean(credenciais) };
+    return { conectado: Boolean(credenciais), podeGerenciar: true };
   }
 
   @Get('profissionais/status')
@@ -71,7 +74,7 @@ export class ControladorGoogleAgenda {
 
   @Post('desconectar')
   @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
-  @Papeis('SuperAdmin', 'Professional')
+  @Papeis('Professional')
   @Permissoes('agenda.consultas.ler')
   async desconectar(@UsuarioAtual() usuario: UsuarioAutenticado) {
     const profissionalId = await this.resolverProfissionalIdObrigatorio(usuario);

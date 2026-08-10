@@ -144,6 +144,19 @@ devem conter credenciais, query string ou caminhos.
 | `OCTACLIN_MONITOR_WEB_URL` | Variable | URL base HTTPS oficial da web de producao |
 | `OCTACLIN_MONITOR_AUTOMATICO_HABILITADO` | Variable | `true` somente depois da execucao manual aprovada |
 
+## Smoke local de producao somente leitura
+
+Estas variaveis nunca pertencem ao Render, GitHub ou a arquivos `.env`. Use
+somente na sessao temporaria do PowerShell e remova todas no `finally`.
+
+| Nome | Uso |
+| --- | --- |
+| `E2E_PRODUCAO_READONLY` | Opt-in literal `true` para permitir o smoke real |
+| `E2E_WEB_URL` | URL base HTTPS oficial da web no Render |
+| `E2E_EMAIL` | Conta do papel validado |
+| `E2E_PAPEL` | `Professional`, `SuperAdmin`, `Client` ou `Patient` esperado |
+| `E2E_SENHA` | Senha recebida de forma efemera, preferencialmente via clipboard |
+
 ## Neon
 
 Secrets ficam no painel Neon e em `DATABASE_URL` no Render. Nao registrar usuario/senha reais em docs.

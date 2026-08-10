@@ -625,7 +625,7 @@ export function PainelAgenda() {
     setErro(null);
     try {
       await desconectarGoogleAgenda();
-      setStatusGoogleAgenda({ conectado: false });
+      setStatusGoogleAgenda({ conectado: false, podeGerenciar: true });
       setSucesso('Google Agenda desconectado. A agenda interna continua ativa.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desconectar Google Agenda.');
@@ -638,6 +638,7 @@ export function PainelAgenda() {
         consultas={consultas}
         profissionais={profissionaisLista}
         googleConectado={statusGoogleAgenda?.conectado}
+        googlePodeGerenciar={statusGoogleAgenda?.podeGerenciar}
         onConectarGoogle={conectarGoogleAgenda}
         onDesconectarGoogle={() => void desconectarGoogle()}
         onAbrirConsulta={setConsultaSelecionadaId}

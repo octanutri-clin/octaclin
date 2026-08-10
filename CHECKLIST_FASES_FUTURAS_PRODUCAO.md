@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-09 apos a conclusao da Fase 219.
+Atualizado em 2026-08-10 durante a validacao da Fase 221.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1461,6 +1461,20 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] Variaveis do repositorio configuradas, execucao manual `31346835747`
     aprovada e cron habilitado.
   - Evidencia: `fase-220-observabilidade-alertas-externos.md`.
+
+- [ ] Fase 221 - Regressao E2E em producao isolada.
+  - [x] Gate reutilizavel, explicito e somente leitura implementado.
+  - [x] Papel `Professional` aprovado em todos os nove modulos autorizados e
+    bloqueado em `/operacoes`.
+  - [x] Papel `Client` aprovado no portal do cliente e bloqueado no console.
+  - [ ] Papel `SuperAdmin` aprovado depois do deploy da correcao que impede
+    gerenciar a conexao Google individual do profissional.
+  - [ ] Papel `Patient` aprovado em todas as areas do portal e bloqueado no
+    console.
+  - [ ] Acesso `SuperAdmin` legado desativado e refresh tokens revogados
+    somente depois do novo acesso ser aprovado em producao.
+  - [ ] Gates finais, commit e push aprovados.
+  - Evidencia: `fase-221-regressao-e2e-producao-isolada.md`.
 
 ## Backlog pos-producao
 

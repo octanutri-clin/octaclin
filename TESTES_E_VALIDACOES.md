@@ -417,6 +417,20 @@ Antes de finalizar resposta:
 git log --oneline --max-count=5
 ```
 
+### Fase 221 - smoke autenticado somente leitura em producao
+
+O contrato e seguro para CI/local e nao acessa producao:
+
+```powershell
+pnpm test:producao:readonly:contrato
+```
+
+O smoke real exige opt-in, URL oficial, papel, email e senha apenas na sessao
+do processo. Execute uma vez para cada papel conforme
+`fase-221-regressao-e2e-producao-isolada.md`. O teste autentica, le as rotas
+permitidas, confirma um redirecionamento de autorizacao e nao aciona comandos
+de negocio.
+
 ## Validacao antes de go-live
 
 Executar o checklist completo em `CHECKLIST_GO_LIVE.md`.

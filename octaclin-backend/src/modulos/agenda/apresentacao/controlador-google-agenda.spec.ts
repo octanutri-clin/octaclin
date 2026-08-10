@@ -58,4 +58,20 @@ describe('ControladorGoogleAgenda', () => {
     expect(deps.executorTenant.executar).not.toHaveBeenCalled();
     expect(deps.filaSincronizacao.add).not.toHaveBeenCalled();
   });
+
+  it('representa Google individual como indisponivel para SuperAdmin sem resolver perfil profissional', async () => {
+    const deps = construirControlador();
+
+    await expect(
+      deps.controlador.status({
+        usuarioId: '44444444-4444-4444-8444-444444444444',
+        tenantId: TENANT_ID,
+        papel: 'SuperAdmin',
+        emailHash: 'hash-superadmin',
+        permissoes: ['agenda.consultas.ler']
+      })
+    ).resolves.toEqual({ conectado: false, podeGerenciar: false });
+
+    expect(deps.executorTenant.executar).not.toHaveBeenCalled();
+  });
 });
