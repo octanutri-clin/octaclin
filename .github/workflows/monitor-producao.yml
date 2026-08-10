@@ -1,0 +1,76 @@
+name: Monitor producao
+
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Backup producao"]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: octaclin-monitor-${{ github.event_name }}
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  OCTACLIN_MONITOR_BACKEND_URL: ${{ vars.OCTACLIN_MONITOR_BACKEND_URL }}
+  OCTACLIN_MONITOR_WEB_URL: ${{ vars.OCTACLIN_MONITOR_WEB_URL }}
+
+jobs:
+  saude:
+    name: Saude externa
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && vars.OCTACLIN_MONITOR_AUTOMATICO_HABILITADO == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verificar backend, dependencias e web
+        run: node scripts/monitor-producao.mjs
+
+      - name: Abrir incidente deduplicado
+        if: failure()
+        env:
+          TITULO: "[Alerta producao] Saude externa indisponivel"
+        run: |
+          EXISTENTE="$(gh issue list --state open --limit 100 --json number,title --jq '.[] | select(.title == env.TITULO) | .number' | head -n1)"
+          if [ -z "$EXISTENTE" ]; then
+            gh issue create --title "$TITULO" --body "O monitor externo falhou. Diagnosticar sem publicar payloads ou credenciais. Execucao: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi
+
+      - name: Fechar incidente recuperado
+        if: success()
+        env:
+          TITULO: "[Alerta producao] Saude externa indisponivel"
+        run: |
+          gh issue list --state open --limit 100 --json number,title --jq '.[] | select(.title == env.TITULO) | .number' | while read -r NUMERO; do
+            gh issue close "$NUMERO" --comment "Saude recuperada na execucao $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          done
+
+  backup:
+    name: Resultado do backup
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Abrir ou fechar incidente de backup
+        env:
+          CONCLUSAO: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          TITULO: "[Alerta producao] Backup automatico falhou"
+        run: |
+          EXISTENTE="$(gh issue list --state open --limit 100 --json number,title --jq '.[] | select(.title == env.TITULO) | .number' | head -n1)"
+          if [ "$CONCLUSAO" != "success" ]; then
+            if [ -z "$EXISTENTE" ]; then
+              gh issue create --title "$TITULO" --body "O backup nao concluiu com sucesso. Verificar a execucao sem copiar secrets para a issue: $RUN_URL"
+            fi
+          elif [ -n "$EXISTENTE" ]; then
+            gh issue close "$EXISTENTE" --comment "Backup recuperado: $RUN_URL"
+          fi

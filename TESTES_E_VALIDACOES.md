@@ -335,6 +335,19 @@ pnpm --dir octaclin-backend migration:run
 
 ## Validacao antes de commit
 
+### Fase 220 - monitor e alertas externos
+
+```powershell
+pnpm test:monitor-producao
+pnpm security:secrets
+powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
+```
+
+O teste exige URLs HTTPS sem credenciais, contratos saudaveis dos dois
+healthchecks, identidade da web, retentativas, permissao minima do workflow e
+controle explicito antes de ativar o cron. O aceite real exige uma execucao
+manual com as URLs oficiais de producao configuradas no repositorio.
+
 ### Fase 219 - backup automatizado
 
 ```powershell

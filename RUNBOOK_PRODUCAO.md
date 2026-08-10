@@ -515,6 +515,32 @@ Fluxo de resposta:
 4. Se houver alerta de integracao, seguir o runbook especifico do provedor.
 5. Usar `requestId` dos logs da Fase 124 quando houver erro em uma requisicao especifica.
 
+### Monitor externo da Fase 220
+
+O workflow `Monitor producao` verifica a cada 30 minutos, quando habilitado:
+
+- `/health/pronto`, incluindo banco e migrations;
+- `/health/detalhado`, incluindo Redis, email, WhatsApp e Google Calendar;
+- `/login`, sem autenticar, para confirmar que a web entrega a identidade
+  OctaClin.
+
+Falha persistente abre a issue `[Alerta producao] Saude externa indisponivel`.
+O workflow tambem acompanha `Backup producao` e usa a issue
+`[Alerta producao] Backup automatico falhou`. As issues sao deduplicadas e
+fechadas pelo proprio workflow na recuperacao.
+
+Execucao manual:
+
+```powershell
+gh workflow run monitor-producao.yml --ref main
+gh run list --workflow monitor-producao.yml --limit 5
+```
+
+Nao copie o corpo de health, logs integrais ou credenciais para a issue. Use o
+link da execucao e o horario para diagnosticar no Render. Se o cron estiver
+desabilitado, conferir `OCTACLIN_MONITOR_AUTOMATICO_HABILITADO` nas Repository
+Variables do GitHub.
+
 ## Incidentes
 
 Para atendimento operacional detalhado de login, convites, recuperacao de senha, WhatsApp, email e agenda, use `RUNBOOK_SUPORTE.md`. As secoes abaixo sao apenas o resumo de resposta rapida.

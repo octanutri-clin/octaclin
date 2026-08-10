@@ -133,6 +133,17 @@ Estas configuracoes pertencem exclusivamente ao GitHub Environment
 | `B2_BACKUP_BUCKET` | Variable | Bucket privado exclusivo de backup |
 | `OCTACLIN_BACKUP_AUTOMATICO_HABILITADO` | Variable | `true` somente depois do primeiro restore aprovado |
 
+## Monitor externo no GitHub
+
+Estas configuracoes sao GitHub Repository Variables. Nao sao secrets e nao
+devem conter credenciais, query string ou caminhos.
+
+| Nome | Tipo | Uso |
+| --- | --- | --- |
+| `OCTACLIN_MONITOR_BACKEND_URL` | Variable | URL base HTTPS oficial do backend de producao |
+| `OCTACLIN_MONITOR_WEB_URL` | Variable | URL base HTTPS oficial da web de producao |
+| `OCTACLIN_MONITOR_AUTOMATICO_HABILITADO` | Variable | `true` somente depois da execucao manual aprovada |
+
 ## Neon
 
 Secrets ficam no painel Neon e em `DATABASE_URL` no Render. Nao registrar usuario/senha reais em docs.
