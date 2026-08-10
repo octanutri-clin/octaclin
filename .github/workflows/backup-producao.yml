@@ -189,8 +189,8 @@ jobs:
         run: |
           set -euo pipefail
           docker run --rm -e RESTORE_DATABASE_URL postgres:18 \
-            psql "$RESTORE_DATABASE_URL" --set ON_ERROR_STOP=1 --set expected_db="$OCTACLIN_RESTORE_DATABASE_EXPECTED" --tuples-only --no-align --command \
-            "select case when current_database() = :'expected_db' and exists (select 1 from public.migrations where name='CriarIntegracoesApiPublica1720000001022') and (select count(*) from public.tenants) > 0 and (select count(*) from public.usuarios) > 0 and (select count(*) from pg_catalog.pg_class where relname in ('api_chaves','webhook_assinaturas','webhook_entregas') and relrowsecurity and relforcerowsecurity) = 3 then 'RESTORE_VALIDO' else cast(1/0 as text) end" \
+            psql "$RESTORE_DATABASE_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align --command \
+            "select case when current_database() = 'octaclin_restore_fase219' and exists (select 1 from public.migrations where name='CriarIntegracoesApiPublica1720000001022') and (select count(*) from public.tenants) > 0 and (select count(*) from public.usuarios) > 0 and (select count(*) from pg_catalog.pg_class where relname in ('api_chaves','webhook_assinaturas','webhook_entregas') and relrowsecurity and relforcerowsecurity) = 3 then 'RESTORE_VALIDO' else cast(1/0 as text) end" \
             | grep -qx RESTORE_VALIDO
 
       - name: Resumo operacional
