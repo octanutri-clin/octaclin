@@ -203,6 +203,32 @@ export interface PaginaLinhaTempoProntuarioDto {
   proximoCursor?: string;
 }
 
+export class ListarLinhaTempoProntuarioDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(256)
+  cursor?: string;
+
+  @IsOptional()
+  @IsIn(['consulta', 'formulario', 'resposta_formulario', 'checkin_rapido', 'mensagem', 'evolucao_clinica', 'tarefa_acompanhamento'])
+  tipo?: TipoEventoProntuarioPaciente;
+
+  @IsOptional()
+  @IsDateString()
+  inicio?: string;
+
+  @IsOptional()
+  @IsDateString()
+  fim?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limite?: number = 20;
+}
+
 export class CriarEvolucaoClinicaDto {
   @IsString()
   @MaxLength(180)

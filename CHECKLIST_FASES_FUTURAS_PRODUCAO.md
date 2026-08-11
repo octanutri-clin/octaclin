@@ -1596,8 +1596,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
     auditoria e sem descricao descriptografada no historico.
   - Incremento 3 concluido: cadastro inicial separado em identificacao, contato
     e responsavel/acompanhamento; convite de portal mantido como proxima acao
-    segura apos salvar. Permanecem pendentes a expansao contratual do cadastro,
-    filtros, atalhos de detalhe, categorizacao de anexos e validacao clinica.
+    segura apos salvar.
+  - Incremento 4 concluido: timeline filtra por tipo e periodo no servidor,
+    com DTO validado e cursor estavel preservado no recorte.
+    Permanecem pendentes a expansao contratual do cadastro, atalhos de detalhe,
+    categorizacao de anexos e validacao clinica.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

@@ -106,11 +106,14 @@ export async function obterProntuarioPaciente(pacienteId: string): Promise<Pront
 
 export async function listarLinhaDoTempoPaginada(
   pacienteId: string,
-  opcoes: { cursor?: string; limite?: number; signal?: AbortSignal } = {}
+  opcoes: { cursor?: string; limite?: number; tipo?: TipoEventoProntuarioPaciente; inicio?: string; fim?: string; signal?: AbortSignal } = {}
 ): Promise<PaginaLinhaDoTempoProntuarioApi> {
   const parametros = new URLSearchParams();
   if (opcoes.cursor) parametros.set('cursor', opcoes.cursor);
   if (opcoes.limite) parametros.set('limite', String(opcoes.limite));
+  if (opcoes.tipo) parametros.set('tipo', opcoes.tipo);
+  if (opcoes.inicio) parametros.set('inicio', opcoes.inicio);
+  if (opcoes.fim) parametros.set('fim', opcoes.fim);
   const consulta = parametros.size ? `?${parametros.toString()}` : '';
   const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/prontuario/timeline${consulta}`, {
     cache: 'no-store',

@@ -58,6 +58,7 @@ import {
   type PaginaLinhaDoTempoProntuarioApi,
   type PrioridadeTarefaAcompanhamentoApi,
   type ProntuarioPacienteApi,
+  type TipoEventoProntuarioPaciente,
   type TipoEvolucaoClinicaApi
 } from '@/lib/prontuario-api';
 
@@ -87,6 +88,12 @@ interface FormularioMaterial {
 interface FormularioEnvioMaterial {
   materialId: string;
   observacao: string;
+}
+
+interface FiltrosHistorico {
+  tipo?: TipoEventoProntuarioPaciente;
+  inicio?: string;
+  fim?: string;
 }
 
 type AbaProntuario =
@@ -299,6 +306,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [formularioEnvioMaterial, setFormularioEnvioMaterial] = useState<FormularioEnvioMaterial>(formularioEnvioMaterialInicial);
   const [abaAtiva, setAbaAtiva] = useState<AbaProntuario>('resumo');
   const [historicoSolicitado, setHistoricoSolicitado] = useState(false);
+  const [tipoHistorico, setTipoHistorico] = useState<TipoEventoProntuarioPaciente | 'todos'>('todos');
+  const [inicioHistorico, setInicioHistorico] = useState('');
+  const [fimHistorico, setFimHistorico] = useState('');
   const [areaAtiva, setAreaAtiva] = useState<AreaProntuario>('resumo');
   const [planoAlimentarNaoSalvo, setPlanoAlimentarNaoSalvo] = useState(false);
   const [permissoes, setPermissoes] = useState<string[]>([]);
@@ -330,11 +340,23 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     }
   }, [pacienteId]);
 
-  const carregarHistorico = useCallback(async (cursor?: string) => {
+  const filtrosHistorico = useMemo<FiltrosHistorico>(
+    () => ({
+      tipo: tipoHistorico === 'todos' ? undefined : tipoHistorico,
+      inicio: inicioHistorico ? `${inicioHistorico}T00:00:00.000Z` : undefined,
+      fim: fimHistorico ? `${fimHistorico}T23:59:59.999Z` : undefined
+    }),
+    [fimHistorico, inicioHistorico, tipoHistorico]
+  );
+
+  const carregarHistorico = useCallback(async (
+    cursor?: string,
+    filtros = filtrosHistorico
+  ) => {
     setCarregandoHistorico(true);
     setErroHistorico(null);
     try {
-      const pagina = await listarLinhaDoTempoPaginada(pacienteId, { cursor, limite: 20 });
+      const pagina = await listarLinhaDoTempoPaginada(pacienteId, { cursor, limite: 20, ...filtros });
       setPaginaHistorico((anterior) =>
         cursor && anterior
           ? { ...pagina, itens: [...anterior.itens, ...pagina.itens] }
@@ -345,7 +367,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     } finally {
       setCarregandoHistorico(false);
     }
-  }, [pacienteId]);
+  }, [filtrosHistorico, pacienteId]);
 
   async function registrarEvolucao(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -567,6 +589,20 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     const area = areasDisponiveis.find((item) => item.id === id);
     if (!area) return;
     solicitarTrocaAba(area.abaInicial);
+  }
+
+  function aplicarFiltrosHistorico(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setPaginaHistorico(null);
+    void carregarHistorico();
+  }
+
+  function limparFiltrosHistorico() {
+    setTipoHistorico('todos');
+    setInicioHistorico('');
+    setFimHistorico('');
+    setPaginaHistorico(null);
+    void carregarHistorico(undefined, {});
   }
 
   useEffect(() => {
@@ -1083,6 +1119,33 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <h2 className="text-base font-semibold text-tinta">Linha do tempo clinica</h2>
             <p className="mt-1 text-sm text-texto-suave">Consultas, formularios, check-ins, respostas e mensagens em ordem cronologica.</p>
           </div>
+          <form onSubmit={aplicarFiltrosHistorico} className="grid gap-3 rounded-md border border-linha bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+              Tipo de evento
+              <select className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta" value={tipoHistorico} onChange={(evento) => setTipoHistorico(evento.target.value as TipoEventoProntuarioPaciente | 'todos')}>
+                <option value="todos">Todos os eventos</option>
+                <option value="consulta">Consultas</option>
+                <option value="formulario">Formularios enviados</option>
+                <option value="resposta_formulario">Respostas de formularios</option>
+                <option value="checkin_rapido">Check-ins rapidos</option>
+                <option value="mensagem">Mensagens</option>
+                <option value="evolucao_clinica">Evolucoes clinicas</option>
+                <option value="tarefa_acompanhamento">Tarefas de acompanhamento</option>
+              </select>
+            </label>
+            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+              A partir de
+              <input className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta" type="date" value={inicioHistorico} onChange={(evento) => setInicioHistorico(evento.target.value)} />
+            </label>
+            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+              Ate
+              <input className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta" type="date" value={fimHistorico} onChange={(evento) => setFimHistorico(evento.target.value)} />
+            </label>
+            <div className="flex items-end gap-2">
+              <Botao type="submit" variante="primario" disabled={carregandoHistorico}>Filtrar</Botao>
+              <Botao type="button" variante="secundario" disabled={carregandoHistorico || (tipoHistorico === 'todos' && !inicioHistorico && !fimHistorico)} onClick={limparFiltrosHistorico}>Limpar</Botao>
+            </div>
+          </form>
           {erroHistorico ? (
             <div className="grid gap-3">
               <AlertaOperacional mensagem={`Falha ao carregar linha do tempo: ${erroHistorico}`} />

@@ -238,6 +238,24 @@ e `pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.
 Resultado: dois cenarios aprovados, cobrindo a abertura do cadastro e as secoes
 em desktop e celular.
 
+## Incremento 4 - filtros server-side da timeline
+
+Entregue em 2026-08-11. A subarea Historico agora filtra por um tipo de evento
+e por periodo. O filtro chega ao endpoint paginado como DTO validado, e a
+consulta aplica as condicoes antes do limite e do cursor. O cursor continua
+ordenado por `data DESC, id DESC`, portanto carregar eventos anteriores preserva
+o mesmo recorte sem usar offset.
+
+O BFF autenticado encaminha somente `cursor`, `limite`, `tipo`, `inicio` e
+`fim`; datas invertidas sao recusadas. A consulta continua dentro de
+`ExecutorTenant`, preservando RLS, o escopo do profissional e a auditoria de
+leitura. Nenhum conteudo criptografado foi acrescentado ao contrato.
+
+Validacoes: `pnpm --dir octaclin-backend test -- servico-pacientes.spec.ts
+--runInBand`, typechecks backend/web, lint e a regressao de 14 cenarios do
+prontuario em desktop e mobile. A cobertura inclui a troca de tipo no filtro e
+confirma que a lista exibida muda conforme a resposta do servidor.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica

@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  DefaultValuePipe,
   Get,
   Header,
   Param,
@@ -21,7 +20,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarPacientesDto } from '../aplicacao/dtos';
+import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarLinhaTempoProntuarioDto, ListarPacientesDto } from '../aplicacao/dtos';
 import { ServicoImportacaoPacientes } from '../aplicacao/servico-importacao-pacientes';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
 
@@ -185,15 +184,13 @@ export class ControladorPacientes {
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
     @Param('id', ParseUUIDPipe) id: string,
-    @Query('cursor') cursor?: string,
-    @Query('limite', new DefaultValuePipe(20), ParseIntPipe) limite?: number
+    @Query() filtros: ListarLinhaTempoProntuarioDto
   ) {
     const pagina = await this.servicoPacientes.listarLinhaDoTempoPaginada(
       usuario.tenantId,
       id,
       usuario,
-      cursor,
-      limite
+      filtros
     );
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,

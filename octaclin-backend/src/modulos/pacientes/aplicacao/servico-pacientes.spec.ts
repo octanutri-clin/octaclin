@@ -1396,13 +1396,31 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
       limitesPermitidos as never
     );
 
-    const pagina = await servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador, undefined, 1);
+    const pagina = await servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador, {
+      limite: 1,
+      tipo: 'evolucao_clinica',
+      inicio: '2026-08-01T00:00:00.000Z',
+      fim: '2026-08-31T23:59:59.999Z'
+    });
 
     expect(pagina.itens).toHaveLength(1);
     expect(pagina.itens[0]).toEqual(expect.objectContaining({ titulo: 'Ajuste de conduta' }));
     expect(pagina.itens[0]).not.toHaveProperty('descricao');
     expect(pagina.proximoCursor).toBeTruthy();
-    expect(query.mock.calls[0][1]).toEqual(['tenant-1', 'paciente-1', null, null, 2]);
-    await expect(servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador, 'invalido')).rejects.toBeInstanceOf(BadRequestException);
+    expect(query.mock.calls[0][1]).toEqual([
+      'tenant-1',
+      'paciente-1',
+      null,
+      null,
+      'evolucao_clinica',
+      '2026-08-01T00:00:00.000Z',
+      '2026-08-31T23:59:59.999Z',
+      2
+    ]);
+    await expect(servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador, { cursor: 'invalido' })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador, {
+      inicio: '2026-09-01T00:00:00.000Z',
+      fim: '2026-08-01T00:00:00.000Z'
+    })).rejects.toBeInstanceOf(BadRequestException);
   });
 });

@@ -31,6 +31,7 @@ import {
   CriarPacienteDto,
   CriarTarefaAcompanhamentoDto,
   EventoProntuarioPacienteDto,
+  ListarLinhaTempoProntuarioDto,
   TipoEventoProntuarioPaciente,
   EvolucaoClinicaRespostaDto,
   PacienteRespostaDto,
@@ -646,13 +647,18 @@ export class ServicoPacientes {
     tenantId: string,
     pacienteId: string,
     usuario: UsuarioAutenticado,
-    cursor?: string,
-    limite = LIMITE_PADRAO_TIMELINE
+    filtros: ListarLinhaTempoProntuarioDto = new ListarLinhaTempoProntuarioDto()
   ): Promise<PaginaLinhaTempoProntuarioDto> {
+    const limite = filtros.limite ?? LIMITE_PADRAO_TIMELINE;
     if (!Number.isInteger(limite) || limite < 1 || limite > LIMITE_MAXIMO_TIMELINE) {
       throw new BadRequestException(`O limite da timeline deve estar entre 1 e ${LIMITE_MAXIMO_TIMELINE}.`);
     }
-    const cursorDecodificado = cursor ? this.decodificarCursorTimeline(cursor) : undefined;
+    const cursorDecodificado = filtros.cursor ? this.decodificarCursorTimeline(filtros.cursor) : undefined;
+    const inicio = filtros.inicio ? new Date(filtros.inicio) : undefined;
+    const fim = filtros.fim ? new Date(filtros.fim) : undefined;
+    if (inicio && fim && inicio > fim) {
+      throw new BadRequestException('A data inicial da timeline deve ser anterior a data final.');
+    }
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
@@ -686,12 +692,24 @@ export class ServicoPacientes {
             jsonb_build_object('categoria', categoria, 'prioridade', prioridade, 'profissionalId', profissional_id, 'concluidoEm', concluido_em)
           FROM acompanhamento_tarefas WHERE tenant_id = $1 AND paciente_id = $2
         ) AS timeline
-        WHERE $3::timestamptz IS NULL
+        WHERE ($3::timestamptz IS NULL
           OR data < $3::timestamptz
-          OR (data = $3::timestamptz AND id::text < $4::text)
+          OR (data = $3::timestamptz AND id::text < $4::text))
+          AND ($5::text IS NULL OR tipo = $5::text)
+          AND ($6::timestamptz IS NULL OR data >= $6::timestamptz)
+          AND ($7::timestamptz IS NULL OR data <= $7::timestamptz)
         ORDER BY data DESC, id DESC
-        LIMIT $5
-      `, [tenantId, pacienteId, cursorDecodificado?.data ?? null, cursorDecodificado?.id ?? null, limite + 1]);
+        LIMIT $8
+      `, [
+        tenantId,
+        pacienteId,
+        cursorDecodificado?.data ?? null,
+        cursorDecodificado?.id ?? null,
+        filtros.tipo ?? null,
+        inicio?.toISOString() ?? null,
+        fim?.toISOString() ?? null,
+        limite + 1
+      ]);
 
       const itens = linhas.slice(0, limite).map((linha) => ({
         id: linha.id,
