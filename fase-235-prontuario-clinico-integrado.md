@@ -320,6 +320,26 @@ origens, que poderao ganhar seletores em suas respectivas telas. Os testes
 unitarios cobrem o vinculo valido e recusam a referencia a consulta de outro
 paciente antes da emissao da URL de upload.
 
+## Incremento 10 - fundacao contratual do cadastro progressivo
+
+Entregue em 2026-08-11. A migration aditiva
+`1720000001023-CriarPerfisCadastroPaciente` criou `pacientes_perfis` sem
+alterar nem preencher registros existentes em `pacientes`. Ela separa quatro
+blocos cifrados por finalidade: identificacao, contato, operacao e fiscal.
+Cada perfil e vinculado a um unico paciente no mesmo tenant.
+
+A tabela usa RLS forcada com a policy
+`isolamento_tenant_pacientes_perfis`. A verificacao realizada diretamente em
+producao confirmou `relrowsecurity=true`, `relforcerowsecurity=true`, a policy
+de isolamento e os indices de tenant, chave primaria e unicidade
+tenant/paciente. A migration foi aplicada como a unica pendencia do banco de
+producao, com todas as migrations marcadas como executadas depois da operacao.
+
+Este incremento ainda nao exibe nem migra dados para a nova estrutura. O
+proximo incremento deve introduzir contratos, autorizacao por secao e interface
+de salvamento explicito, preservando o cadastro legado ate que cada secao seja
+adotada de forma segura.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica

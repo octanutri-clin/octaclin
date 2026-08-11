@@ -1611,7 +1611,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Incremento 9 concluido: anexos podem guardar vinculo clinico tipado; o
     backend valida origem no mesmo tenant e paciente, e a tela permite ligar o
     upload a consulta sem criar outra fonte de verdade.
-    Permanecem pendentes a expansao contratual do cadastro e validacao clinica.
+  - Incremento 10 concluido: migration aditiva `1023` criou
+    `pacientes_perfis` com blocos cifrados por finalidade, unicidade por
+    tenant/paciente e RLS forcada. Aplicada e verificada em producao sem
+    backfill; contratos, autorizacao por secao e tela progressiva permanecem
+    pendentes.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.
