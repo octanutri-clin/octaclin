@@ -16,16 +16,19 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase concluida mais recente no momento deste arquivo: Fase 197 -
-  racionalizacao dos modulos avancados, validada localmente. A revisao
-  juridica externa da Fase 133 continua obrigatoria antes do go-live.
-- Fase 131 foi aceita em 2026-07-26: producao esta isolada de staging. Proxima fase critica planejada: Fase 132 - dominio, SSL e identidade de envio.
+- Fase concluida mais recente no momento deste arquivo: Fase 223 - verdade
+  operacional do go-live. Ela reconciliou as evidencias das Fases 200 a 222 e
+  separou capacidade entregue de gates externos ou ainda nao validados.
+- Producao isolada foi aceita na Fase 131; backup/restore, observabilidade,
+  smokes somente leitura dos quatro papeis, Gmail e Google Agenda foram
+  validados nas Fases 219 a 222. Isso nao substitui dominio, identidade de
+  envio, revisao juridica, jornadas mutaveis em staging e onboarding assistido.
 - Melhoria continua: Fases 138, 141 e 142 atualizaram NestJS para 11.1.28, TypeORM para 1.1.0 e Next.js para 15.5.22, com auditorias de producao zeradas. Preserve React 18.3.1 e o shim de cookies BFF ate uma fase dedicada de Next.js 16/React 19.
 - Fase 139 removeu `any` de codigo backend de producao e consolidou contratos de agenda/convites; preserve `requisitarBackendAutenticado` como a fronteira unica de erros BFF autenticados.
 - Fase 140 introduziu `MATRIZ_CONFIABILIDADE_TESTES.md`; atualize a matriz e seu validador sempre que adicionar ou remover um fluxo de risco alto.
 - Fase 142 introduziu `pnpm --dir octaclin-web test:next15`; toda nova rota dinamica deve receber `params`/`searchParams` assincronos e manter esse gate verde.
 - O checklist vivo das proximas fases fica em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
-- Para as Fases 191 a 198 (bloco de redesenho), o mapeamento de skills/agentes/plugins do Claude Code a usar em cada fase fica em `ESCOPO_SKILLS_AGENTES_FASES_191_198.md`; leia-o antes de iniciar qualquer fase desse bloco.
+- Para as Fases 191 a 198 (bloco de redesenho), o mapeamento de skills/agentes/plugins do Claude Code a usar em cada fase fica em `ESCOPO_SKILLS_AGENTES_FASES_191_198.md`; leia-o ao revisar esse historico ou tocar as telas correspondentes.
 
 ## Regras de trabalho
 

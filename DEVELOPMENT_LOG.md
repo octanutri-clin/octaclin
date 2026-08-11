@@ -258,3 +258,17 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Seguranca operacional: nenhum segredo entrou em logs ou documentacao e todos
   os temporarios da rotacao foram apagados.
 - Documento: `fase-222-confiabilidade-google-agenda-gmail.md`.
+
+### Fase 223 - Verdade operacional do go-live
+
+- Responsavel: Codex.
+- Inicio e conclusao: 2026-08-10.
+- Status: concluida.
+- Entrega: auditoria documental das evidencias das Fases 200 a 222, com
+  reconciliacao de checklist, preflight, resumo, status e handoffs de agentes.
+- Decisao: o primeiro piloto assistido pode usar o controle manual ja entregue
+  para assinatura e limites; gateway de pagamento fica nao bloqueador ate haver
+  decisao comercial/fiscal de provedor.
+- Gates mantidos: dominio/identidade, juridico, jornadas mutaveis em staging,
+  onboarding/suporte, operacao de lancamento e WhatsApp caso seja vendido.
+- Documento: `fase-223-verdade-operacional-go-live.md`.

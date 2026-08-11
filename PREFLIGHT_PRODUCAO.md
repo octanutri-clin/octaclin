@@ -1,6 +1,6 @@
 # OctaClin - Preflight de producao
 
-Atualizado em 2026-08-10, ao concluir a Fase 222.
+Atualizado em 2026-08-10, ao concluir a Fase 223.
 
 Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaClin para clientes reais. Ele complementa `CHECKLIST_GO_LIVE.md`, que continua sendo o checklist completo de liberacao.
 
@@ -31,12 +31,13 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Billing/assinatura | Parcial | Modelo de planos, limites, uso, alertas, solicitacao manual de upgrade/revisao, controle manual administrativo e bloqueios suaves para novas criacoes. | Expandir bloqueios para mensagens/formularios/armazenamento; gateway definitivo se necessario. |
 | Observabilidade | Pronto | Healthchecks, logs estruturados, request ID, alertas operacionais e monitor externo de saude/backup com incidentes deduplicados. | Acompanhar issues e reforcar o monitoramento nas primeiras 48 horas do go-live. |
 | Backups/restore | Pronto | Workflow diario ativo, B2 privado com retencao 8/29/93, checksum/AES256 e restore semanal aprovado na Fase 219. | Acompanhar falhas do cron e repetir restore semanalmente. |
-| Suporte | Pronto | `RUNBOOK_SUPORTE.md` cobre login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento. | Treinar responsavel e revisar apos piloto. |
+| Suporte | Parcial | `RUNBOOK_SUPORTE.md` cobre login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento. | Treinar responsavel, exercitar runbook e revisar apos piloto. |
 | Dados de staging | Pronto | Fixture sem PII real, seed `seed-staging.ts`, runbook `RUNBOOK_STAGING_DADOS.md`; `pnpm seed:staging` aplicado e validado no Neon staging (tenant `octaclin-staging`). | Reaplicar quando a Fase 131 separar staging de producao. |
 | Piloto interno | Pronto | Runbook `RUNBOOK_PILOTO_INTERNO.md` e controle `PILOTO_INTERNO_CONTROLE.md`; rodada 1 executada em 2026-07-23 com todas as jornadas manuais aprovadas e aceite registrado. | Nenhuma pendencia; repetir rodada apos mudancas relevantes de autorizacao. |
 | Producao isolada | Pronto | Neon, Upstash e servicos Render exclusivos de producao aceitos na Fase 131, com credenciais rotacionadas e sem referencias a staging. | Revalidar apos mudancas relevantes de infraestrutura. |
 | Juridico/comercial | Parcial | Minutas de contrato, politica, Termo de Uso, Anexo de Tratamento, SLA, onboarding e revisao preparatoria da Fase 159. | Aceite por advogado, identidade empresarial, encarregado/canal, bases legais, suboperadores/transferencias e publicacao final. |
-| QA E2E | Pronto | Typechecks, specs focadas, Playwright visual por areas, jornadas criticas com BFF mockado e smokes reais somente leitura dos quatro papeis aprovados na Fase 221. | Mutacoes continuam exigindo staging com dados sinteticos; repetir os smokes apos mudancas relevantes de autorizacao. |
+| QA E2E | Parcial | Typechecks, specs focadas, Playwright visual por areas, jornadas criticas com BFF mockado e smokes reais somente leitura dos quatro papeis aprovados na Fase 221. | Validar jornadas mutaveis em staging com dados sinteticos e repetir os smokes apos mudancas relevantes de autorizacao. |
+| Governanca de go-live | Pronto | Fase 223 reconciliou checklist, preflight e handoffs com evidencias das Fases 200 a 222. | Manter a classificacao atualizada a cada aceite externo ou nova validacao. |
 
 ## Gate antes de cada fase
 
@@ -82,7 +83,8 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Dominio, identidade de envio, aceite juridico e go-live assistido continuam
-como gates para clientes reais. O
-rollout separado de `web`/`worker` da Fase 201 pode permanecer adiado enquanto
-exigir custo de infraestrutura sem beneficio para o piloto atual.
+Antes de clientes reais, permanecem bloqueadores: dominio e identidade de
+envio, aceite juridico, jornadas mutaveis em staging, onboarding/suporte
+assistido e a validacao WhatsApp caso esse canal faca parte da oferta inicial.
+O rollout separado de `web`/`worker` da Fase 201 pode permanecer adiado
+enquanto exigir custo de infraestrutura sem beneficio para o piloto atual.

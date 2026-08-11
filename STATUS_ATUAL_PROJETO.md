@@ -7,6 +7,14 @@ Atualizado em 2026-08-10.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 223 - verdade operacional do go-live. Os documentos operacionais foram
+  reconciliados com as evidencias das Fases 200 a 222: producao isolada,
+  anexos, billing manual, backups, observabilidade, Calendar/Gmail e smokes de
+  leitura estao entregues. Permanecem gates para clientes reais: dominio e
+  identidade de envio, aceite juridico, jornadas mutaveis em staging,
+  onboarding/suporte e WhatsApp se contratado na oferta inicial. O gateway de
+  pagamento nao bloqueia o primeiro piloto assistido porque ja existe controle
+  manual de assinatura e limites.
 - Auditoria transversal de acesso do profissional concluida em 2026-08-08.
   IA assistida e metas/adesao, ja implementadas e autorizadas, voltaram a ser
   encontraveis no menu e na paleta de comandos. A agenda passou a exibir o

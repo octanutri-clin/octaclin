@@ -12,17 +12,17 @@ Este checklist deve ser concluido antes de incluir clientes reais de consultoria
 
 ## Seguranca
 
-- [ ] Secrets de staging e producao separados.
-- [ ] Nenhum secret no GitHub.
+- [x] Secrets de staging e producao separados (Fase 131).
+- [x] Nenhum secret rastreado no GitHub na varredura documental corrente (Fase 223).
 - [ ] `OCTACLIN_COOKIE_SECURE=true` em producao.
 - [ ] `OCTACLIN_API_ORIGENS_PERMITIDAS` restrito ao backend oficial.
 - [ ] JWT e refresh secrets fortes e exclusivos.
 - [ ] Chave AES forte e exclusiva.
-- [ ] Rate limiting em login, recuperacao, convites e webhooks sensiveis.
+- [x] Rate limiting em login, recuperacao, convites e webhooks sensiveis.
 - [ ] Chaves de API e webhooks de aceite revogados; consumidores reais usam
   escopo minimo, cofre de secrets e validacao HMAC em tempo constante.
-- [ ] Testes negativos multi-tenant.
-- [ ] Permissoes por papel revisadas.
+- [x] Testes negativos multi-tenant nas rotas criticas revisadas.
+- [x] Permissoes por papel revisadas, incluindo smoke de quatro papeis (Fase 221).
 
 ## LGPD e juridico
 
@@ -44,10 +44,10 @@ Processo de provisionamento em `RUNBOOK_PRODUCAO_ISOLADA.md`, acompanhamento em
 `PRODUCAO_ISOLADA_CONTROLE.md` (estrutura entregue em 2026-07-23; recursos
 ainda pendentes).
 
-- [ ] Producao separada de staging.
-- [ ] Banco Neon de producao criado.
-- [ ] Redis Upstash de producao criado.
-- [ ] Render services de producao configurados.
+- [x] Producao separada de staging (Fase 131).
+- [x] Banco Neon de producao criado.
+- [x] Redis Upstash de producao criado.
+- [x] Render services de producao configurados.
 - [ ] Dominio oficial configurado.
 - [ ] SSL ativo.
 - [x] Backups configurados conforme `RUNBOOK_BACKUP_RESTORE.md` (Fase 219):
@@ -57,9 +57,9 @@ ainda pendentes).
   monitor externo de saude/backup da Fase 220 ativos.
 - [ ] Runbooks revisados.
 - [ ] Suporte treinado com `RUNBOOK_SUPORTE.md`.
-- [ ] Bucket privado de anexos separado por ambiente, sem acesso publico.
-- [ ] CORS do bucket exige `if-none-match` e lifecycle de 1 dia cobre apenas `pendentes/`.
-- [ ] Upload, confirmacao, leitura e exclusao de anexo sintetico validados em producao.
+- [x] Bucket privado de anexos separado por ambiente, sem acesso publico (Fase 200).
+- [x] CORS do bucket exige `if-none-match` e lifecycle de 1 dia cobre apenas `pendentes/`.
+- [x] Upload, confirmacao, leitura e exclusao de anexo sintetico validados em producao.
 
 ## Integracoes
 
@@ -74,11 +74,11 @@ ainda pendentes).
 
 ## Billing e limites
 
-- [ ] Planos definidos.
-- [ ] Limites por plano aplicados.
-- [ ] Status de assinatura por tenant.
-- [ ] Processo de pagamento ou controle manual definido.
-- [ ] Bloqueios suaves por limite/inadimplencia testados.
+- [x] Planos definidos.
+- [x] Limites por plano aplicados.
+- [x] Status de assinatura por tenant.
+- [x] Processo manual de pagamento e controle administrativo definido.
+- [x] Bloqueios suaves por limite/inadimplencia testados.
 
 ## QA
 
@@ -87,7 +87,7 @@ ainda pendentes).
 - [x] Typecheck web passando.
 - [x] Build web passando.
 - [x] Testes de autorizacao web passando.
-- [ ] Playwright visual passando.
+- [x] Playwright visual por areas aprovado nas Fases 198 e 203.
 - [x] E2E de jornada critica passando (`pnpm test:e2e:criticas`, 6/6).
 - [x] Teste manual com usuario cliente realista.
 - [x] Teste manual com profissional realista.

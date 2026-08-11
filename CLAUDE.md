@@ -7,9 +7,11 @@ Voce esta trabalhando no projeto OctaClin.
 - Produto: OctaClin, SaaS clinico multi-tenant para consultoria, acompanhamento de pacientes, agenda, formularios, comunicacoes e portais por perfil.
 - Repositorio GitHub: `https://github.com/octanutri-clin/octaclin`
 - Branch principal: `main`
-- Ultima fase concluida: Fase 129 - Staging com dados realistas.
-- Proxima fase planejada: Fase 130 - Piloto interno controlado.
-- Ultimo commit conhecido: `6f8ba93 Adiciona massa realista de staging`.
+- Ultima fase concluida: Fase 223 - Verdade operacional do go-live.
+- Proxima fase recomendada: Fase 224 - Oferta comercial, planos e processo de
+  ativacao assistida. Confirme a prioridade no checklist antes de iniciar.
+- Ultimo commit conhecido: consulte `git log --oneline --max-count=8`; este
+  arquivo nao deve fixar um hash que rapidamente fica defasado.
 
 ## Antes de desenvolver
 
@@ -62,6 +64,10 @@ Ja existem:
 - backup/restore documentado;
 - suite E2E critica;
 - massa ficticia de staging pronta.
+- producao isolada, backups/restore, monitoramento externo e smokes de leitura
+  dos quatro papeis em producao;
+- Gmail API e Google Calendar com OAuth de producao e sincronizacao validada;
+- controle manual de planos, limites e assinatura para venda assistida.
 
 Fase 128 adicionou:
 
@@ -80,42 +86,12 @@ Fase 129 adicionou:
 
 ## Proxima fase
 
-Execute a Fase 130 - Piloto interno controlado.
-
-Objetivo:
-
-Criar a estrutura operacional para um piloto interno controlado antes do go-live real. O piloto deve permitir testar o OctaClin com poucos usuarios ficticios/autorizados, registrar problemas, acompanhar decisoes de aceite e definir criterios claros para avancar ou bloquear producao.
-
-Escopo sugerido:
-
-1. Criar um runbook/checklist de piloto interno:
-   - quem participa;
-   - quais perfis testar: cliente, profissional, paciente, suporte/operador;
-   - quais jornadas executar;
-   - criterios de sucesso;
-   - criterios de bloqueio;
-   - como registrar bugs;
-   - como decidir aceite do piloto.
-2. Criar um arquivo de acompanhamento do piloto, por exemplo `RUNBOOK_PILOTO_INTERNO.md` ou `PILOTO_INTERNO_CONTROLE.md`.
-3. Conectar esse material ao `CHECKLIST_GO_LIVE.md`, `PREFLIGHT_PRODUCAO.md`, `STATUS_ATUAL_PROJETO.md` e `TESTES_E_VALIDACOES.md`.
-4. Se fizer sentido, criar um validador documental simples para garantir secoes obrigatorias.
-5. Nao convidar clientes reais ainda. Esta fase e preparacao e controle do piloto.
-
-Validacoes esperadas:
-
-```powershell
-git diff --check
-pnpm security:secrets
-powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
-```
-
-Se criar teste documental, rode tambem o novo teste.
-
-Depois da Fase 130:
-
-- Commit sugerido: `Adiciona controle de piloto interno`
-- Push para `main`
-- Atualizar o roadmap para apontar a Fase 131 - Producao isolada de staging.
+Use `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` como fonte de verdade. A sequencia
+pos-Fase 223 inicia pela Fase 224 - oferta comercial, planos e ativacao
+assistida; as fases 225 a 233 registram dominio e identidade, juridico,
+pagamentos, onboarding, seguranca, WhatsApp, E2E mutavel, operacao e piloto
+real. Nao trate uma fase como concluida sem atualizar seus documentos vivos e
+sem distinguir validacao local, staging e producao.
 
 ## Dependencias operacionais
 
@@ -128,11 +104,13 @@ $env:DATABASE_URL='<url do Neon staging>'
 pnpm seed:staging
 ```
 
-Nao avance para producao real sem:
+Nao avance para clientes reais sem:
 
 - restore real em banco dedicado;
 - massa ficticia aplicada e validada no staging;
 - piloto interno controlado;
 - producao isolada de staging;
-- dominio/SSL/identidade de envio;
-- checklist juridico/comercial.
+- dominio e identidade de envio;
+- aceite juridico/comercial;
+- jornadas mutaveis em staging com dados sinteticos;
+- onboarding e suporte assistido preparados.

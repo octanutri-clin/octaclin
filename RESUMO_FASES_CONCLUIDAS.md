@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-09 apos a Fase 219 - backup automatizado e restore recorrente.
+Atualizado em 2026-08-10 apos a Fase 223 - verdade operacional do go-live.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -573,6 +573,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   aceitou envio real; o health de producao ficou integralmente `ok`. Enquanto
   o worker dedicado estiver adiado, o backend voltou a operar como `all`. Ver
   `fase-222-confiabilidade-google-agenda-gmail.md`.
+- Fase 223 - Verdade operacional do go-live: os documentos vivos passaram a
+  refletir a evidencia efetiva das Fases 200 a 222. Producao isolada, anexos,
+  controle manual de planos, backups, observabilidade, Calendar/Gmail e smokes
+  de leitura nao devem mais aparecer como trabalho ausente. Dominio/identidade,
+  juridico, jornadas mutaveis, onboarding/suporte e WhatsApp condicional seguem
+  como gates explicitos antes de clientes reais. Ver
+  `fase-223-verdade-operacional-go-live.md`.
 
 ## Estado atual de uso
 

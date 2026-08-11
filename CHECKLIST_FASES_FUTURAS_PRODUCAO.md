@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-10 durante a validacao da Fase 222.
+Atualizado em 2026-08-10 durante a conclusao da Fase 223.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1491,6 +1491,78 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] Confirmar `OCTACLIN_PROCESSO=all` enquanto o worker dedicado estiver
     adiado.
   - Evidencia: `fase-222-confiabilidade-google-agenda-gmail.md`.
+
+### Bloco pos-222 - Go-live comercial assistido
+
+- [x] Fase 223 - Verdade operacional do go-live.
+  - Reconciliar checklist, preflight, resumo, status e handoffs com as
+    evidencias das Fases 200 a 222.
+  - Distinguir capacidade entregue, validacao somente leitura, validacao
+    mutavel, dependencia externa e decisao comercial.
+  - Confirmar que gateway de pagamento pode permanecer posterior ao primeiro
+    piloto assistido, pois o controle manual de assinatura e limites existe.
+  - Data: 2026-08-10.
+  - Evidencia: `fase-223-verdade-operacional-go-live.md`.
+
+- [ ] Fase 224 - Oferta comercial, planos e ativacao assistida. [BLOQUEADOR]
+  - Definir ICP, oferta inicial, preco, inclusoes/exclusoes, limite por plano,
+    politica de upgrade/cancelamento e responsavel comercial.
+  - Transformar o controle manual ja entregue em roteiro de venda, cobranca e
+    ativacao que uma pessoa consiga executar sem depender de memoria tecnica.
+  - Criterio de aceite: uma clinica sintetica percorre proposta, aceite,
+    contrato, configuracao, criacao de usuarios e confirmacao de ativacao.
+
+- [ ] Fase 225 - Dominio, identidade e comunicacoes transacionais. [BLOQUEADOR]
+  - Configurar dominio oficial, DNS, SSL, remetente, SPF, DKIM, DMARC, paginas
+    publicas e redirecionamentos autorizados de OAuth.
+  - Atualizar origens CORS/cookies e executar smoke controlado de email e
+    Google Calendar no dominio definitivo.
+
+- [ ] Fase 226 - Fechamento juridico e privacidade comercial. [BLOQUEADOR]
+  - Submeter minutas ao advogado, completar dados empresariais, encarregado,
+    canal LGPD, suboperadores, transferencias e publicacao controlada.
+  - Registrar versoes e aceite das politicas aplicaveis a cada cliente.
+
+- [ ] Fase 227 - Gateway de pagamento e conciliacao automatica. [NAO BLOQUEADOR]
+  - Avaliar gateway, notas/recibos, webhooks, dunning e conciliacao sem
+    substituir o controle manual antes de sua necessidade comercial comprovada.
+  - Nao iniciar sem decisao de provedor, modelo fiscal e titularidade.
+
+- [ ] Fase 228 - Onboarding e suporte assistido. [BLOQUEADOR]
+  - Executar a ativacao de ponta a ponta com dados sinteticos: clinica,
+    profissionais, pacientes, convite, permissao, agenda, formulario e canal
+    de suporte.
+  - Exercitar `RUNBOOK_SUPORTE.md`, definir responsavel e registrar SLA de
+    primeira resposta e escalonamento.
+
+- [ ] Fase 229 - Fechamento de seguranca operacional. [BLOQUEADOR]
+  - Verificar variaveis ativas de cookie, CORS, JWT/refresh, AES, secrets e
+    escopos de integracao sem imprimir valores; registrar somente a evidencia.
+  - Rodar revisao de dependencias, secrets e permissoes de ambientes antes da
+    primeira conta real.
+
+- [ ] Fase 230 - Aceite WhatsApp de producao. [CONDICIONAL]
+  - Necessaria se WhatsApp estiver incluido na oferta inicial: token permanente,
+    webhook, templates aprovados, lembrete, recebimento e reprocessamento.
+  - Se o canal ficar fora da oferta inicial, manter desligado ou claramente em
+    beta ate o aceite.
+
+- [ ] Fase 231 - Jornadas E2E mutaveis em staging. [BLOQUEADOR]
+  - Validar criacao, edicao, cancelamento/reagendamento, formulario, convite,
+    upload e comunicacao com massa sintetica e isolamento por tenant.
+  - Manter producao apenas para smokes controlados e sem mutacao de negocio.
+
+- [ ] Fase 232 - Operacao de lancamento. [BLOQUEADOR]
+  - Definir janela, responsavel de monitoramento, triagem de incidentes,
+    acompanhamento de backups/alertas e plano de rollback comunicacional.
+  - Realizar exercicio de incidente com dados sinteticos antes do primeiro
+    cliente.
+
+- [ ] Fase 233 - Primeiro cliente piloto assistido. [BLOQUEADOR]
+  - Selecionar um cliente, colher contrato/consentimento, ativar manualmente e
+    acompanhar as primeiras 48 horas com feedback priorizado.
+  - Criterio de aceite: nenhuma falha P0/P1 aberta e decisao explicita de
+    expandir, corrigir ou pausar a comercializacao.
 
 ## Backlog pos-producao
 

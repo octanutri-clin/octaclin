@@ -457,3 +457,17 @@ pelo Gmail, health detalhado integralmente `ok` e processo Render confirmado
 como `all`. Todos os arquivos temporarios da rotacao foram removidos.
 
 Executar o checklist completo em `CHECKLIST_GO_LIVE.md`.
+
+### Fase 223 - verdade operacional do go-live
+
+Fase exclusivamente documental. Validar sem tocar banco, variaveis ou servicos:
+
+```powershell
+git diff --check
+pnpm security:secrets
+powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
+```
+
+O aceite exige que as afirmacoes marcadas como prontas apontem para evidencia
+existente e que gates externos, fluxos mutaveis e itens condicionais permanecam
+explicitamente pendentes.
