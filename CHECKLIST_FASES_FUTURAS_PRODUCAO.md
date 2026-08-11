@@ -1592,6 +1592,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.
+  - Reestruturar cadastro em identificacao/contato, responsavel/operacao,
+    ativacao do portal e dados fiscais opcionais, sem misturar campos clinicos,
+    fiscais e de acesso ou expor identificadores fora de sua permissao.
   - Exames/fotos, prescricoes e acompanhamento gestacional permanecem fora do
     escopo e seguem nas Fases 236, 237 e 238, respectivamente.
   - Criterio de aceite: profissional encontra a proxima conduta em uma tela;

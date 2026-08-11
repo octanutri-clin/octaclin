@@ -51,6 +51,43 @@ segura das informacoes publicadas para ele.
   outro profissional; nenhum outro papel troca de painel ou enxerga pacientes
   de outro responsavel fora das regras existentes.
 
+### Cadastro, ativacao e qualidade dos dados do paciente
+
+- Substituir o formulario unico e extenso por quatro secoes progressivas:
+  **identificacao e contato**, **responsavel/operacao**, **acesso ao portal** e
+  **dados fiscais opcionais**. Dados clinicos detalhados continuam em anamnese,
+  avaliacoes e formularios, nunca escondidos no cadastro administrativo.
+- **Identificacao e contato**: nome completo, nome de uso/preferido opcional,
+  data de nascimento, telefone em formato internacional E.164, e-mail, canal
+  preferido e endereco apenas quando houver finalidade definida. CEP, cidade e
+  estado sao estruturados, mas nao obrigatorios por padrao.
+- **Dados sensiveis e de contexto**: campos de sexo, identidade, condicao
+  gestacional/lactacao, restricoes e alergias nao ficam como pre-selecao
+  administrativa. Quando necessarios ao cuidado, devem ser opcionais, possuir
+  origem e data de atualizacao, ter visibilidade clinica apropriada e apontar
+  para anamnese ou avaliacao que os fundamenta.
+- **Responsavel e operacao**: profissional responsavel, status do
+  acompanhamento, origem/indicacao, tags do tenant, proxima revisao e contato
+  responsavel/representante quando aplicavel. Tags nao substituem dado clinico
+  ou permissao.
+- **Portal do paciente**: ativacao por convite, estado de acesso, reenvio,
+  revogacao, ultimo acesso, preferencias de comunicacao e aceites existentes.
+  Nunca exibir token, URL secreta permanente ou credencial na tela cadastral.
+- **Dados fiscais**: CPF ou identificacao do pagador ficam opcionais e em
+  bloco separado, com finalidade explicita para recibo/documento quando
+  aplicavel. Pagador pode ser diferente do paciente; profissionais sem
+  permissao financeira nao leem esse bloco.
+- Validar formato no cliente e no servidor, normalizar telefone/e-mail sem
+  perder o valor exibido, indicar campos faltantes e manter salvamento
+  explicito por secao. Falha de validacao nao pode apagar edicoes locais.
+- Oferecer deteccao de possivel duplicidade apenas dentro do mesmo tenant,
+  baseada em identificadores normalizados e sem revelar cadastro de outra
+  clinica. A fusao, se criada, exige revisao, auditoria e preservacao de
+  documentos/versoes, nunca exclusao silenciosa.
+- Arquivar/desativar o paciente em vez de exclusao imediata; os fluxos de
+  retencao, exportacao e exclusao da Fase 118/119 permanecem a unica via para
+  solicitacoes definitivas de dados.
+
 ### Resumo orientado a conduta
 
 - Blocos priorizados: proxima consulta, pacientes sem retorno, plano publicado,
@@ -174,6 +211,19 @@ expandir a superficie de mudancas clinicas.
 - Anexos continuam em armazenamento privado; a interface usa URL assinada de
   curta duracao e nunca URL publica persistente.
 
+### Cadastro e limites de dados
+
+- Separar DTOs e rotas de contato, acesso, clinica e financeiro; uma tela
+  comum nao autoriza leitura/escrita de todos os grupos.
+- Aplicar RLS forcada, auditoria de leitura/escrita de dado fiscal sensivel e
+  permissoes de campo no BFF. `Professional` so administra pacientes do proprio
+  contexto; excecao transversal continua exclusiva de `SuperAdmin`.
+- Preservar compatibilidade com pacientes existentes: campos novos sao nulos ou
+  opcionais, migram sem inventar valores e nao bloqueiam leitura do prontuario.
+- O portal recebe somente nome de uso apropriado, contato necessario e estado
+  de acesso; nunca CPF, anotacoes internas, tags administrativas ou dados de
+  outro responsavel.
+
 ## Plano de execucao
 
 1. Auditar contratos, permissoes, indices e componentes atuais; registrar uma
@@ -183,11 +233,14 @@ expandir a superficie de mudancas clinicas.
 3. Implementar a projecao de resumo/timeline e contratos BFF de leitura.
 4. Implementar cabecalho, navegacao, filtros, acoes rapidas e deep links para
    as telas existentes, sem mover regras de dominio para o frontend.
-5. Categorizar anexos e conectar seus links aos eventos de consulta/avaliacao
+5. Implementar o cadastro progressivo, os contratos separados, qualidade de
+   dados, ativacao do portal e bloco fiscal opcional, preservando os pacientes
+   existentes.
+6. Categorizar anexos e conectar seus links aos eventos de consulta/avaliacao
    quando a fonte ja permitir esse relacionamento.
-6. Executar testes de tenant/RLS, autorizacao por papel, regressao dos modulos
+7. Executar testes de tenant/RLS, autorizacao por papel, regressao dos modulos
    existentes, acessibilidade, screenshots desktop/mobile e benchmark.
-7. Liberar em staging com dados sinteticos; fazer aceite com profissional e
+8. Liberar em staging com dados sinteticos; fazer aceite com profissional e
    somente entao habilitar em producao de forma progressiva.
 
 ## Criterios de aceite
@@ -203,6 +256,11 @@ expandir a superficie de mudancas clinicas.
   outros modulos clinicos.
 - SuperAdmin ve de forma explicitamente identificada somente o painel que esta
   autorizado a acompanhar.
+- Cadastro divide dados de contato, operacao, portal e fiscal; profissional sem
+  permissao financeira nao le identificacao do pagador; portal nao recebe dado
+  interno ou fiscal.
+- Cadastro de paciente existente abre sem perda de dados; duplicidade potencial
+  nao cruza tenant e arquivamento nao apaga documento, avaliacao ou historico.
 - Desktop e mobile passam testes de foco, teclado, leitor de tela, contraste e
   estados vazios/erro/carregamento.
 - Jornadas mutaveis permanecem em staging; producao recebe apenas rollout
