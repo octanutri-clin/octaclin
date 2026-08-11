@@ -20,7 +20,10 @@ function criarRepositorioFake(nome: string, dados: Record<string, any>) {
     findOne: jest.fn(async (consulta: { where: Record<string, unknown> }) => {
       if (nome === 'paciente') return dados.paciente ?? null;
       return itens.find((item) => Object.entries(consulta.where).every(([chave, valor]) => item[chave] === valor)) ?? null;
-    })
+    }),
+    find: jest.fn(async (consulta: { where: Record<string, unknown> }) =>
+      itens.filter((item) => Object.entries(consulta.where).every(([chave, valor]) => item[chave] === valor || (valor && typeof valor === 'object' && item[chave] == null)))
+    )
   };
 }
 
@@ -242,5 +245,24 @@ describe('ServicoConvitesPaciente', () => {
     await expect(
       servico.criarConvite('tenant-1', 'usuario-profissional-1', 'paciente-1', { email: 'ana@example.com' })
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('deve revogar convites pendentes antes de reemitir um novo link', async () => {
+    const convitePendente = {
+      id: 'convite-anterior',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      status: 'pendente',
+      revogadoEm: null
+    };
+    const { servico, repositorios, dados } = criarServico({
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1', usuarioId: null },
+      convites: [convitePendente]
+    });
+
+    await servico.criarConvite('tenant-1', 'usuario-profissional-1', 'paciente-1', { email: 'ana@example.com' });
+
+    expect(dados.convites[0]).toEqual(expect.objectContaining({ status: 'revogado', revogadoEm: expect.any(Date) }));
+    expect(repositorios.convite.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'convite-anterior', status: 'revogado' }));
   });
 });

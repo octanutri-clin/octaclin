@@ -72,6 +72,16 @@ export class ServicoConvitesPaciente {
       if (paciente.usuarioId) throw new ConflictException('Paciente ja possui acesso ativo.');
 
       const repositorio = gerenciador.getRepository(ConvitePacienteOrm);
+      const convitesPendentes = await repositorio.find({
+        where: { tenantId, pacienteId, status: 'pendente', revogadoEm: IsNull() }
+      });
+      const revogadoEm = new Date();
+      for (const convitePendente of convitesPendentes) {
+        convitePendente.status = 'revogado';
+        convitePendente.revogadoEm = revogadoEm;
+        await repositorio.save(convitePendente);
+      }
+
       return repositorio.save(
         repositorio.create({
           tenantId,

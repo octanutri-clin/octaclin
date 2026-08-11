@@ -388,6 +388,23 @@ Sexo e condicao biologica nao sao devolvidos para `Collaborator` pela leitura
 geral do perfil; permanecem disponiveis somente para `Professional` e
 `SuperAdmin` no contexto do prontuario.
 
+## Incremento 14 - ativacao segura do portal pelo prontuario
+
+Entregue em 2026-08-11. A ficha cadastral agora oferece uma secao de acesso ao
+portal para quem possui permissao de gerenciar pacientes. Ela usa somente o
+e-mail que foi salvo no bloco cifrado de contato, exige esse dado antes da
+emissao e mostra o link de ativacao apenas no momento em que ele e criado.
+
+Uma nova emissao revoga todos os convites pendentes anteriores do mesmo
+paciente dentro da transacao do tenant antes de criar o novo token. Assim, o
+profissional pode corrigir o e-mail ou reenviar o acesso sem deixar multiplos
+links validos. O token continua armazenado somente como hash, expira em sete
+dias e nao aparece em historicos, auditoria ou leitura posterior do prontuario.
+
+Validacoes: teste unitario do servico de convites (incluindo revogacao do link
+anterior), typecheck backend/web e lint web. A validacao de convite real e
+ativacao com dados sinteticos permanece como aceite de staging da fase.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica

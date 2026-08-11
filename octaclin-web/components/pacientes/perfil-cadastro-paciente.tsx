@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { BadgeDollarSign, ContactRound, Save } from 'lucide-react';
+import { BadgeDollarSign, ContactRound, KeyRound, Link2, Save } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AlertaOperacional, BarraCarregamento } from '@/components/ui/feedback';
 import { Modal } from '@/components/ui/modal';
 import { obterSessao } from '@/lib/auth-api';
+import { criarConvitePaciente } from '@/lib/convites-paciente-api';
 import {
   FiscalCadastroPacienteApi,
   PerfilCadastroPacienteApi,
@@ -61,6 +62,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
   const [salvando, setSalvando] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
+  const [linkConvite, setLinkConvite] = useState<string | null>(null);
 
   useEffect(() => {
     void obterSessao().then((sessao) => {
@@ -93,6 +95,34 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
     setSucesso(null);
     setNomeCompleto(nomeInicial);
     setDataNascimento(nascimentoInicial ?? '');
+    setLinkConvite(null);
+  }
+
+  async function criarConvitePortal() {
+    const email = perfil.contato?.email?.trim();
+    if (!email) {
+      setErro('Salve um e-mail de contato antes de criar o convite de acesso.');
+      return;
+    }
+
+    setSalvando('portal');
+    setErro(null);
+    setSucesso(null);
+    setLinkConvite(null);
+    try {
+      const convite = await criarConvitePaciente(pacienteId, email);
+      setLinkConvite(convite.linkAtivacao);
+      try {
+        await navigator.clipboard.writeText(convite.linkAtivacao);
+        setSucesso('Convite criado e link copiado. A emissao anterior, se existia, foi revogada.');
+      } catch {
+        setSucesso('Convite criado. Copie o link temporario exibido abaixo.');
+      }
+    } catch (erroAtual) {
+      setErro(mensagemErro(erroAtual));
+    } finally {
+      setSalvando(null);
+    }
   }
 
   async function salvarIdentificacao() {
@@ -198,6 +228,17 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
                 <Campo rotulo="Contato do responsavel"><input className="campo" value={perfil.operacao?.responsavel?.contato ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, contato: evento.target.value } } }))} /></Campo>
               </div>
               <SalvarSecao carregando={salvando === 'operacao'} aoSalvar={() => void salvar('operacao')} />
+            </Secao>
+
+            <Secao titulo="Acesso ao portal" descricao="Gere um convite somente apos conferir os dados de contato. O link expira e uma nova emissao invalida o convite pendente anterior.">
+              <p className="text-sm text-texto-suave">E-mail de acesso: {perfil.contato?.email || 'Nao informado'}</p>
+              <div className="flex flex-wrap justify-end gap-2">
+                {linkConvite ? <Botao type="button" variante="secundario" onClick={() => void navigator.clipboard.writeText(linkConvite)}><Link2 size={16} /> Copiar link</Botao> : null}
+                <Botao type="button" variante="secundario" onClick={() => void criarConvitePortal()} disabled={salvando === 'portal'}>
+                  <KeyRound size={16} /> {salvando === 'portal' ? 'Criando convite' : 'Criar convite seguro'}
+                </Botao>
+              </div>
+              {linkConvite ? <p className="break-all rounded-md border border-linha bg-superficie-hover px-3 py-2 text-xs text-texto-suave">{linkConvite}</p> : null}
             </Secao>
 
             {podeVerFiscal ? <Secao titulo="Dados fiscais opcionais" descricao="Visivel apenas para quem tem permissao financeira.">

@@ -1628,6 +1628,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
     nascimento, contato estruturado, endereco, Instagram, categoria/tags e
     condicao biologica opcional para sexo feminino. CPF segue cifrado e
     restrito ao bloco fiscal; falta validar a jornada autenticada em staging.
+  - Incremento 14 concluido: a ficha permite criar o convite de portal a partir
+    do e-mail salvo; cada nova emissao revoga os convites pendentes anteriores
+    do paciente, sem registrar ou reexibir token em claro.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.
