@@ -303,6 +303,73 @@ Depois do deploy, criar credenciais somente com dados sinteticos. Confirmar:
 5. entrega 2xx aparece como entregue e uma falha pode ser reprocessada;
 6. remover ou revogar todas as credenciais usadas no aceite.
 
+### Exames laboratoriais e evolucao fotografica (Fase 236)
+
+Antes de disponibilizar a interface de exames, aplicar a migration aditiva
+`CriarExamesEFotosClinicas1720000001024` primeiro em staging. Use somente a
+URL owner do banco de testes explicitamente confirmado. Nao use URL de
+producao, nem a role de aplicacao. `migration:show` deve indicar somente a
+`1024` como pendente; se houver outra, interromper e revisar o banco-alvo.
+
+```powershell
+$url = '<URL owner do banco de staging confirmada>'
+try {
+  $env:DATABASE_URL = $url
+  pnpm --dir octaclin-backend run typeorm -- migration:show
+  # Parar se alguma migration alem da 1024 estiver pendente.
+  pnpm --dir octaclin-backend migration:run
+  pnpm --dir octaclin-backend run typeorm -- migration:show
+} finally {
+  Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+  $url = $null
+}
+```
+
+Nao executar seed, `migration:revert` ou o `down` com essa URL ativa. Em caso
+de falha, preservar o erro com a URL redigida e investigar o estado antes de
+qualquer nova tentativa.
+
+No SQL Editor do mesmo banco de staging, validar:
+
+```sql
+select relname, relrowsecurity, relforcerowsecurity
+from pg_class
+where relname in (
+  'coletas_exames_laboratoriais',
+  'marcadores_exames_laboratoriais',
+  'consentimentos_evolucao_fotografica',
+  'evolucoes_fotograficas'
+)
+order by relname;
+
+select tablename, policyname
+from pg_policies
+where tablename in (
+  'coletas_exames_laboratoriais',
+  'marcadores_exames_laboratoriais',
+  'consentimentos_evolucao_fotografica',
+  'evolucoes_fotograficas'
+)
+order by tablename, policyname;
+
+select tablename, indexname
+from pg_indexes
+where tablename in (
+  'coletas_exames_laboratoriais',
+  'marcadores_exames_laboratoriais',
+  'consentimentos_evolucao_fotografica',
+  'evolucoes_fotograficas'
+)
+order by tablename, indexname;
+```
+
+Esperado: quatro linhas com RLS `t|t`; as policies
+`isolamento_tenant_coletas_exames`, `isolamento_tenant_marcadores_exames`,
+`isolamento_tenant_consentimentos_fotos` e `isolamento_tenant_evolucoes_fotos`;
+e os quatro indices `idx_*` da migration, alem das chaves primarias. So depois
+disso usar uma conta e paciente sinteticos autorizados para registrar uma
+coleta, listar a serie e confirmar auditoria sem valor clinico no log.
+
 ### Backup e restore
 
 Antes de go-live e antes de migrations sensiveis:

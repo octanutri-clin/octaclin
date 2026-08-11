@@ -1659,7 +1659,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     deploy compativel ate a aplicacao da migration `1024` em staging.
   - Proximo incremento: aplicar e validar a migration `1024` em staging antes
     da tela profissional de exames; fotos seguem bloqueadas ate o fluxo proprio
-    de consentimento e captura.
+    de consentimento e captura. O procedimento e as consultas de verificacao
+    estao em `RUNBOOK_PRODUCAO.md`.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
 - [ ] Fase 237 - Prescricoes, metas e orientacoes terapeuticas. [IMPORTANTE - POS PILOTO]

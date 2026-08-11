@@ -86,6 +86,13 @@ em staging e validada com uma conta sintetica autorizada.
 
 Validacoes: typecheck, lint e build do frontend, alem de `git diff --check`.
 
+## Pre-condicao de staging
+
+O procedimento de aplicacao e verificacao da migration `1024` foi registrado
+no `RUNBOOK_PRODUCAO.md`. A execucao exige URL owner de staging explicitamente
+confirmada e deve parar caso `migration:show` apresente pendencia diferente da
+`1024`. A tela profissional continua bloqueada ate esse aceite de schema.
+
 ## Contrato inicial de exames
 
 - Uma coleta tem paciente, autor, data de coleta, data de recebimento opcional,
