@@ -35,7 +35,9 @@ export class ServicoPerfilCadastroPaciente {
         where: { tenantId, pacienteId }
       });
       return {
-        identificacao: this.descriptografarBloco(perfil?.identificacaoCriptografada),
+        identificacao: usuario.papel === 'Professional' || usuario.papel === 'SuperAdmin'
+          ? this.descriptografarBloco(perfil?.identificacaoCriptografada)
+          : undefined,
         contato: this.descriptografarBloco(perfil?.contatoCriptografado),
         operacao: this.descriptografarBloco(perfil?.operacaoCriptografada),
         atualizadoEm: perfil?.atualizadoEm

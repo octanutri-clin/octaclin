@@ -384,6 +384,10 @@ clinica consiga organizar a carteira sem confundir classificacao administrativa
 com informacao clinica. Campos vazios podem ser removidos sem enviar valores
 invalidos ao backend.
 
+Sexo e condicao biologica nao sao devolvidos para `Collaborator` pela leitura
+geral do perfil; permanecem disponiveis somente para `Professional` e
+`SuperAdmin` no contexto do prontuario.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica

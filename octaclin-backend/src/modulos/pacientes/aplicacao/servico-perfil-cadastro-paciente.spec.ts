@@ -86,6 +86,21 @@ describe('ServicoPerfilCadastroPaciente', () => {
     expect(resposta).not.toHaveProperty('fiscal');
   });
 
+  it('nao entrega identificacao clinica complementar ao colaborador', async () => {
+    const { servico } = criarCenario({
+      perfil: {
+        pacienteId: 'paciente-1',
+        tenantId: usuario.tenantId,
+        identificacaoCriptografada: Buffer.from(JSON.stringify({ sexo: 'feminino', condicaoBiologica: 'gestante' }))
+      }
+    });
+    const colaborador: UsuarioAutenticado = { ...usuario, papel: 'Collaborator', permissoes: ['pacientes.ler'] };
+
+    const resposta = await servico.obter(usuario.tenantId, 'paciente-1', colaborador);
+
+    expect(resposta.identificacao).toBeUndefined();
+  });
+
   it('recusa fiscal sem permissao financeira e paciente fora do escopo', async () => {
     const { servico } = criarCenario({ paciente: null });
 
