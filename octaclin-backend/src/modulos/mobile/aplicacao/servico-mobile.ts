@@ -8,10 +8,13 @@ import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguran
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cliente';
+import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { AvaliacaoAntropometricaOrm } from '../../pacientes/infraestrutura/avaliacao-antropometrica.orm';
+import { DocumentoEmitidoOrm } from '../../pacientes/infraestrutura/documento-emitido.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { validarDuracaoMidia } from '../dominio/validacao-midia';
 import { AcompanhanteOrm } from '../infraestrutura/acompanhante.orm';
-import { ArquivoMidiaOrm } from '../infraestrutura/arquivo-midia.orm';
+import { ArquivoMidiaOrm, VinculoClinicoArquivo } from '../infraestrutura/arquivo-midia.orm';
 import { LogDiarioRapidoOrm } from '../infraestrutura/log-diario-rapido.orm';
 import { SincronizacaoMobileOrm } from '../infraestrutura/sincronizacao-mobile.orm';
 import {
@@ -19,7 +22,8 @@ import {
   ItemSincronizacaoMobileDto,
   RegistrarDiarioRapidoDto,
   SincronizarLoteMobileDto,
-  SolicitarUploadMidiaDto
+  SolicitarUploadMidiaDto,
+  VinculoClinicoAnexoDto
 } from './dtos';
 
 export interface ResultadoItemSincronizacao {
@@ -47,6 +51,7 @@ export interface ArquivoMidiaResumo {
   tamanhoBytes: string;
   hashConteudo?: string;
   status: ArquivoMidiaOrm['status'];
+  vinculoClinico?: VinculoClinicoArquivo;
   criadoEm: Date;
   confirmadoEm?: Date;
 }
@@ -110,6 +115,9 @@ export class ServicoMobile {
     usuario: UsuarioAutenticado,
     vinculo: Record<string, string> = {}
   ) {
+    if (dados.vinculoClinico && usuario.papel === 'Patient') {
+      throw new ForbiddenException('Paciente nao pode vincular anexo a registro clinico.');
+    }
     return this.solicitarUploadMidiaInterno(tenantId, dados, vinculo, (gerenciador) =>
       this.garantirPacientePermitido(gerenciador, tenantId, dados.pacienteId, usuario)
     );
@@ -140,6 +148,9 @@ export class ServicoMobile {
     const { arquivo, expirados } = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       await gerenciador.query('SELECT pg_advisory_xact_lock(hashtext($1))', [tenantId]);
       await autorizarPaciente(gerenciador);
+      const vinculoClinico = dados.vinculoClinico
+        ? await this.validarVinculoClinico(gerenciador, tenantId, dados.pacienteId, dados.vinculoClinico)
+        : undefined;
       const repositorio = gerenciador.getRepository(ArquivoMidiaOrm);
       const agora = Date.now();
       const pendentes = await repositorio.find({ where: { tenantId, status: 'pendente' } });
@@ -172,7 +183,7 @@ export class ServicoMobile {
           hashConteudo: undefined,
           status: 'pendente',
           nomeOriginalCriptografado: dados.nomeArquivo ? this.criptografia.criptografar(dados.nomeArquivo) : undefined,
-          metadados: { duracaoSegundos: dados.duracaoSegundos, tamanhoSolicitadoBytes: dados.tamanhoBytes, vinculo }
+          metadados: { duracaoSegundos: dados.duracaoSegundos, tamanhoSolicitadoBytes: dados.tamanhoBytes, vinculo, vinculoClinico }
         })
       );
       return { arquivo, expirados };
@@ -180,7 +191,13 @@ export class ServicoMobile {
 
     await Promise.allSettled(expirados.map((item) => this.armazenamento.excluirObjeto(item.bucket, item.chaveObjeto)));
 
-    const metadadosUpload = { tenantid: tenantId, pacienteid: dados.pacienteId, arquivoid: arquivo.id, ...vinculo };
+    const metadadosUpload = {
+      tenantid: tenantId,
+      pacienteid: dados.pacienteId,
+      arquivoid: arquivo.id,
+      ...vinculo,
+      ...this.metadadosVinculoClinico(dados.vinculoClinico)
+    };
     const uploadUrl = await this.armazenamento.criarUploadAssinado({
       chaveObjeto,
       mimeType: dados.mimeType,
@@ -248,7 +265,8 @@ export class ServicoMobile {
         tenantid: tenantId,
         pacienteid: arquivo.pacienteId,
         arquivoid: arquivo.id,
-        ...vinculo
+        ...vinculo,
+        ...this.metadadosVinculoClinico(this.extrairVinculoClinico(arquivo.metadados?.vinculoClinico))
       });
       await this.armazenamento.promoverObjeto(arquivo.bucket, arquivo.chaveObjeto, chaveConfirmada);
     } catch (erro) {
@@ -539,8 +557,40 @@ export class ServicoMobile {
       tamanhoBytes: arquivo.tamanhoBytes,
       hashConteudo: arquivo.hashConteudo,
       status: arquivo.status,
+      vinculoClinico: this.extrairVinculoClinico(arquivo.metadados?.vinculoClinico),
       criadoEm: arquivo.criadoEm,
       confirmadoEm: arquivo.confirmadoEm
     };
+  }
+
+  private async validarVinculoClinico(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string,
+    vinculo: VinculoClinicoAnexoDto
+  ): Promise<VinculoClinicoArquivo> {
+    const onde = { id: vinculo.recursoId, tenantId, pacienteId };
+    const encontrado =
+      vinculo.tipo === 'consulta'
+        ? await gerenciador.getRepository(AgendaConsultaOrm).findOne({ where: onde })
+        : vinculo.tipo === 'avaliacao_antropometrica'
+          ? await gerenciador.getRepository(AvaliacaoAntropometricaOrm).findOne({ where: { ...onde, excluidaEm: IsNull() } })
+          : await gerenciador.getRepository(DocumentoEmitidoOrm).findOne({ where: onde });
+    if (!encontrado) throw new NotFoundException('Vinculo clinico nao encontrado.');
+    return { tipo: vinculo.tipo, recursoId: vinculo.recursoId };
+  }
+
+  private metadadosVinculoClinico(vinculo?: VinculoClinicoArquivo | VinculoClinicoAnexoDto): Record<string, string> {
+    return vinculo ? { vinculoclinicotipo: vinculo.tipo, vinculoclinicoid: vinculo.recursoId } : {};
+  }
+
+  private extrairVinculoClinico(valor: unknown): VinculoClinicoArquivo | undefined {
+    if (!valor || typeof valor !== 'object') return undefined;
+    const candidato = valor as Partial<VinculoClinicoArquivo>;
+    if (
+      (candidato.tipo !== 'consulta' && candidato.tipo !== 'avaliacao_antropometrica' && candidato.tipo !== 'documento_emitido') ||
+      typeof candidato.recursoId !== 'string'
+    ) return undefined;
+    return { tipo: candidato.tipo, recursoId: candidato.recursoId };
   }
 }

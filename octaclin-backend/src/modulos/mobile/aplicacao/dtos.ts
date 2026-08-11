@@ -15,6 +15,14 @@ import {
 import { Type } from 'class-transformer';
 import { TipoMidiaMobile } from '../dominio/validacao-midia';
 
+export class VinculoClinicoAnexoDto {
+  @IsIn(['consulta', 'avaliacao_antropometrica', 'documento_emitido'])
+  tipo: 'consulta' | 'avaliacao_antropometrica' | 'documento_emitido';
+
+  @IsUUID()
+  recursoId: string;
+}
+
 export class RegistrarDiarioRapidoDto {
   @IsUUID()
   pacienteId: string;
@@ -58,6 +66,11 @@ export class SolicitarUploadMidiaDto {
   @IsOptional()
   @IsString()
   hashConteudo?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => VinculoClinicoAnexoDto)
+  vinculoClinico?: VinculoClinicoAnexoDto;
 }
 
 export class CriarAcompanhanteDto {

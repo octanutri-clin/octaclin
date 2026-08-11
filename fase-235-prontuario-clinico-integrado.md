@@ -304,6 +304,22 @@ evolucao ou plano alimentar ainda nao salvo, tanto ele quanto os demais atalhos
 passam pela confirmacao explicita antes da troca de contexto. A regressao cobre
 os tres atalhos novos e essa protecao em desktop e mobile.
 
+## Incremento 9 - anexos vinculados ao contexto clinico
+
+Entregue em 2026-08-11 sem migration. `arquivos_midia.metadados`, que ja e
+privado e confirmado junto ao objeto, passou a registrar opcionalmente a
+origem clinica tipada. O backend reconhece consulta, avaliacao antropometrica e
+documento emitido, valida que o recurso pertence ao mesmo tenant e paciente e
+repete a referencia nos metadados assinados do upload. O portal e o paciente
+nao podem criar esse vinculo clinico.
+
+Na interface do profissional, o envio de anexo oferece a associacao opcional a
+uma consulta listada no prontuario e sinaliza o vinculo existente sem expor
+conteudo adicional. O contrato permanece extensivel para as outras duas
+origens, que poderao ganhar seletores em suas respectivas telas. Os testes
+unitarios cobrem o vinculo valido e recusam a referencia a consulta de outro
+paciente antes da emissao da URL de upload.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica

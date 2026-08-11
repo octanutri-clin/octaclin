@@ -1,6 +1,11 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { TipoMidiaMobile } from '../dominio/validacao-midia';
 
+export type VinculoClinicoArquivo = {
+  tipo: 'consulta' | 'avaliacao_antropometrica' | 'documento_emitido';
+  recursoId: string;
+};
+
 @Entity('arquivos_midia')
 export class ArquivoMidiaOrm {
   @PrimaryGeneratedColumn('uuid')

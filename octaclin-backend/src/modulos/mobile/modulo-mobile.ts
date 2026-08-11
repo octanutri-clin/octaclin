@@ -6,7 +6,10 @@ import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/cript
 import { ServicoSenhas } from '../../infraestrutura/seguranca/servico-senhas';
 import { ServicoArmazenamentoObjetos } from '../../infraestrutura/armazenamento/servico-armazenamento-objetos';
 import { ModuloAuth } from '../auth/modulo-auth';
+import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { ModuloClientes } from '../clientes/modulo-clientes';
+import { AvaliacaoAntropometricaOrm } from '../pacientes/infraestrutura/avaliacao-antropometrica.orm';
+import { DocumentoEmitidoOrm } from '../pacientes/infraestrutura/documento-emitido.orm';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoMobile } from './aplicacao/servico-mobile';
 import { ControladorMobile } from './apresentacao/controlador-mobile';
@@ -17,7 +20,16 @@ import { SincronizacaoMobileOrm } from './infraestrutura/sincronizacao-mobile.or
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([LogDiarioRapidoOrm, ArquivoMidiaOrm, AcompanhanteOrm, SincronizacaoMobileOrm, UserActionLogOrm]),
+    TypeOrmModule.forFeature([
+      LogDiarioRapidoOrm,
+      ArquivoMidiaOrm,
+      AcompanhanteOrm,
+      SincronizacaoMobileOrm,
+      UserActionLogOrm,
+      AgendaConsultaOrm,
+      AvaliacaoAntropometricaOrm,
+      DocumentoEmitidoOrm
+    ]),
     ModuloAuth,
     ModuloClientes,
     ModuloTenancy

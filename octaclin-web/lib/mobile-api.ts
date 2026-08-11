@@ -3,6 +3,11 @@ import { PacienteResumo, RespostaPaginada, listarPacientes } from './cadastros-a
 export type TipoDiarioRapido = 'refeicao' | 'humor' | 'agua' | 'atividade';
 export type TipoMidiaMobile = 'imagem' | 'audio' | 'video' | 'documento';
 export type CategoriaAnexoClinico = 'exame' | 'documento' | 'foto' | 'diario';
+export type TipoVinculoClinicoAnexo = 'consulta' | 'avaliacao_antropometrica' | 'documento_emitido';
+export interface VinculoClinicoAnexoApi {
+  tipo: TipoVinculoClinicoAnexo;
+  recursoId: string;
+}
 export type TipoItemSincronizacao = 'diario_rapido' | 'midia_captura' | 'midia_audio' | 'acompanhante';
 
 export interface LogDiarioRapidoApi {
@@ -24,6 +29,7 @@ export interface ArquivoMidiaApi {
   tamanhoBytes: string;
   hashConteudo?: string;
   status: 'pendente' | 'confirmado' | 'excluido';
+  vinculoClinico?: VinculoClinicoAnexoApi;
   criadoEm: string;
   confirmadoEm?: string;
 }
@@ -69,6 +75,7 @@ export interface SolicitarUploadMidiaEntrada {
   nomeArquivo?: string;
   duracaoSegundos?: number;
   hashConteudo?: string;
+  vinculoClinico?: VinculoClinicoAnexoApi;
 }
 
 export interface CriarAcompanhanteEntrada {

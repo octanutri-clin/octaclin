@@ -1733,6 +1733,7 @@ test.describe('prontuario do paciente', () => {
 
     await page.getByRole('tab', { name: 'Documentos' }).click();
     await page.getByRole('tablist', { name: 'Subareas de Documentos' }).getByRole('tab', { name: 'Anexos' }).click();
+    await expect(page.getByLabel('Vincular a consulta')).toBeVisible();
     await page.getByLabel('Categoria do novo anexo').selectOption('exame');
     await page.getByLabel('Arquivo').setInputFiles({
       name: 'hemograma.pdf',

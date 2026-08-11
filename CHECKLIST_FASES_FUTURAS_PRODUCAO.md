@@ -1608,8 +1608,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Incremento 8 concluido: cabecalho contextual oferece agenda, formularios e
     anexos, preservando paciente na agenda e confirmacao antes de descartar
     rascunho clinico.
-    Permanecem pendentes a expansao contratual do cadastro, vinculo de anexos a
-    eventos clinicos e validacao clinica.
+  - Incremento 9 concluido: anexos podem guardar vinculo clinico tipado; o
+    backend valida origem no mesmo tenant e paciente, e a tela permite ligar o
+    upload a consulta sem criar outra fonte de verdade.
+    Permanecem pendentes a expansao contratual do cadastro e validacao clinica.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

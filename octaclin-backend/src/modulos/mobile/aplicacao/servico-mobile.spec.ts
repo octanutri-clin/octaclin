@@ -1,4 +1,5 @@
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { AcompanhanteOrm } from '../infraestrutura/acompanhante.orm';
@@ -42,6 +43,7 @@ const usuarioColaborador: UsuarioAutenticado = {
 interface DadosFake {
   pacientes?: Record<string, unknown>[];
   profissionais?: Record<string, unknown>[];
+  consultas?: Record<string, unknown>[];
   diarios?: Record<string, unknown>[];
   arquivos?: Record<string, unknown>[];
   acompanhantes?: Record<string, unknown>[];
@@ -74,6 +76,7 @@ function criarServico(dados: DadosFake = {}, usarIfNoneMatch = true) {
   const repositorios = {
     paciente: criarRepositorioFake('paciente', dados.pacientes ?? []),
     profissional: criarRepositorioFake('profissional', dados.profissionais ?? []),
+    consulta: criarRepositorioFake('consulta', dados.consultas ?? []),
     diario: criarRepositorioFake('diario', dados.diarios ?? []),
     arquivo: criarRepositorioFake('arquivo', dados.arquivos ?? []),
     acompanhante: criarRepositorioFake('acompanhante', dados.acompanhantes ?? []),
@@ -84,6 +87,7 @@ function criarServico(dados: DadosFake = {}, usarIfNoneMatch = true) {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === PacienteOrm) return repositorios.paciente;
       if (entidade === ProfissionalOrm) return repositorios.profissional;
+      if (entidade === AgendaConsultaOrm) return repositorios.consulta;
       if (entidade === LogDiarioRapidoOrm) return repositorios.diario;
       if (entidade === ArquivoMidiaOrm) return repositorios.arquivo;
       if (entidade === AcompanhanteOrm) return repositorios.acompanhante;
@@ -225,6 +229,79 @@ describe('ServicoMobile', () => {
     expect(armazenamento.criarUploadAssinado).toHaveBeenCalledWith(
       expect.objectContaining({ mimeType: 'application/pdf', tamanhoMaximoBytes: 999_999 })
     );
+  });
+
+  it('vincula anexo a consulta existente do mesmo paciente', async () => {
+    const { servico, repositorios, armazenamento } = criarServico({
+      pacientes,
+      profissionais: [{ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }],
+      consultas: [{ id: 'consulta-1', tenantId: 'tenant-1', pacienteId: 'paciente-1' }]
+    });
+
+    await servico.solicitarUploadMidia(
+      'tenant-1',
+      {
+        pacienteId: 'paciente-1',
+        tipo: 'documento',
+        mimeType: 'application/pdf',
+        tamanhoBytes: 1024,
+        vinculoClinico: { tipo: 'consulta', recursoId: 'consulta-1' }
+      } as never,
+      usuarioProfissional
+    );
+
+    expect(repositorios.arquivo.save).toHaveBeenCalledWith(expect.objectContaining({
+      metadados: expect.objectContaining({
+        vinculoClinico: { tipo: 'consulta', recursoId: 'consulta-1' }
+      })
+    }));
+    expect(armazenamento.criarUploadAssinado).toHaveBeenCalledWith(expect.objectContaining({
+      metadados: expect.objectContaining({ vinculoclinicotipo: 'consulta', vinculoclinicoid: 'consulta-1' })
+    }));
+  });
+
+  it('recusa vinculo clinico que pertence a outro paciente', async () => {
+    const { servico, repositorios, armazenamento } = criarServico({
+      pacientes,
+      profissionais: [{ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }],
+      consultas: [{ id: 'consulta-2', tenantId: 'tenant-1', pacienteId: 'paciente-2' }]
+    });
+
+    await expect(
+      servico.solicitarUploadMidia(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          tipo: 'documento',
+          mimeType: 'application/pdf',
+          tamanhoBytes: 1024,
+          vinculoClinico: { tipo: 'consulta', recursoId: 'consulta-2' }
+        } as never,
+        usuarioProfissional
+      )
+    ).rejects.toThrow('Vinculo clinico nao encontrado.');
+    expect(repositorios.arquivo.save).not.toHaveBeenCalled();
+    expect(armazenamento.criarUploadAssinado).not.toHaveBeenCalled();
+  });
+
+  it('impede Patient de criar vinculo clinico no proprio upload', async () => {
+    const { servico, repositorios, armazenamento } = criarServico({ pacientes });
+
+    await expect(
+      servico.solicitarUploadMidia(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          tipo: 'documento',
+          mimeType: 'application/pdf',
+          tamanhoBytes: 1024,
+          vinculoClinico: { tipo: 'consulta', recursoId: 'consulta-1' }
+        } as never,
+        usuarioPaciente
+      )
+    ).rejects.toThrow('Paciente nao pode vincular anexo a registro clinico.');
+    expect(repositorios.arquivo.save).not.toHaveBeenCalled();
+    expect(armazenamento.criarUploadAssinado).not.toHaveBeenCalled();
   });
 
   it('devolve todos os metadados assinados ao formulario publico', async () => {

@@ -312,6 +312,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [excluindoAnexo, setExcluindoAnexo] = useState(false);
   const [arquivoAnexo, setArquivoAnexo] = useState<File | null>(null);
   const [categoriaAnexo, setCategoriaAnexo] = useState<CategoriaAnexoClinico>('exame');
+  const [consultaVinculadaId, setConsultaVinculadaId] = useState('');
   const [filtroCategoriaAnexo, setFiltroCategoriaAnexo] = useState<CategoriaAnexoClinico | 'todas'>('todas');
   const [anexoParaExcluir, setAnexoParaExcluir] = useState<ArquivoMidiaApi | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -493,7 +494,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         categoria: categoriaAnexo,
         nomeArquivo: arquivoAnexo.name,
         mimeType: arquivoAnexo.type,
-        tamanhoBytes: arquivoAnexo.size
+        tamanhoBytes: arquivoAnexo.size,
+        vinculoClinico: consultaVinculadaId ? { tipo: 'consulta', recursoId: consultaVinculadaId } : undefined
       });
       const upload = await fetch(solicitacao.uploadUrl, {
         method: 'PUT',
@@ -504,6 +506,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       await confirmarUploadMidia(solicitacao.arquivo.id);
       setAnexos(await listarArquivosMidia(pacienteId));
       setArquivoAnexo(null);
+      setConsultaVinculadaId('');
       formulario.reset();
       setSucesso('Anexo confirmado e incluido no prontuario.');
     } catch (erroAtual) {
@@ -1134,6 +1137,22 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               </select>
             </label>
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+              Vincular a consulta
+              <select
+                className="h-11 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                value={consultaVinculadaId}
+                onChange={(evento) => setConsultaVinculadaId(evento.target.value)}
+              >
+                <option value="">Sem vinculo clinico</option>
+                {dados.linhaDoTempo.filter((evento) => evento.tipo === 'consulta').map((consulta) => (
+                  <option key={consulta.id} value={consulta.id}>
+                    {consulta.titulo} - {formatarDataHora(consulta.data)}
+                  </option>
+                ))}
+              </select>
+              <span className="font-normal text-texto-suave">Opcional. O anexo continua privado e sera associado somente a esta consulta.</span>
+            </label>
+            <label className="grid gap-1 text-xs font-semibold text-texto-suave">
               Arquivo
               <input
                 className="min-h-11 rounded-md border border-linha bg-white px-3 py-2 text-sm font-normal text-tinta file:mr-3 file:rounded-md file:border-0 file:bg-primaria-suave file:px-3 file:py-2 file:font-medium file:text-primaria"
@@ -1179,6 +1198,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                     <p className="mt-1 text-xs text-texto-suave">
                       {anexo.categoria} - {formatarTamanho(anexo.tamanhoBytes)} - {formatarDataHora(anexo.confirmadoEm ?? anexo.criadoEm)}
                     </p>
+                    {anexo.vinculoClinico?.tipo === 'consulta' ? (
+                      <p className="mt-1 text-xs font-medium text-primaria">Vinculado a uma consulta</p>
+                    ) : null}
                   </div>
                 </div>
                 <div className="flex gap-2">
