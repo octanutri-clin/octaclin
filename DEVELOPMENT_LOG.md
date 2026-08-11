@@ -272,3 +272,14 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Gates mantidos: dominio/identidade, juridico, jornadas mutaveis em staging,
   onboarding/suporte, operacao de lancamento e WhatsApp caso seja vendido.
 - Documento: `fase-223-verdade-operacional-go-live.md`.
+
+### Fase 224 - Oferta comercial, planos e ativacao assistida
+
+- Responsavel: Codex.
+- Inicio: 2026-08-10.
+- Status: preparada, aguardando decisoes comerciais do responsavel pelo
+  produto antes do aceite.
+- Entrega: contrato operacional reutilizavel, pacotes propostos sem preco,
+  estados de ativacao, fronteiras de seguranca e checklist de onboarding
+  ampliado.
+- Documento: `CAPACIDADE_OFERTA_COMERCIAL_ATIVACAO_ASSISTIDA.md`.

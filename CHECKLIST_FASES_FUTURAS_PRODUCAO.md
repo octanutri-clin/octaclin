@@ -1504,11 +1504,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Data: 2026-08-10.
   - Evidencia: `fase-223-verdade-operacional-go-live.md`.
 
-- [ ] Fase 224 - Oferta comercial, planos e ativacao assistida. [BLOQUEADOR]
+- [ ] Fase 224 - Oferta comercial, planos e ativacao assistida. [BLOQUEADOR - AGUARDA DECISAO COMERCIAL]
   - Definir ICP, oferta inicial, preco, inclusoes/exclusoes, limite por plano,
     politica de upgrade/cancelamento e responsavel comercial.
   - Transformar o controle manual ja entregue em roteiro de venda, cobranca e
     ativacao que uma pessoa consiga executar sem depender de memoria tecnica.
+  - Contrato operacional e checklist entregues em 2026-08-10:
+    `CAPACIDADE_OFERTA_COMERCIAL_ATIVACAO_ASSISTIDA.md` e
+    `CHECKLIST_ONBOARDING_COMERCIAL.md`.
+  - Pendente de aceite do responsavel pelo produto: preco, moeda, periodicidade,
+    pagamento, teste/cancelamento, canal comercial, migracao e WhatsApp.
   - Criterio de aceite: uma clinica sintetica percorre proposta, aceite,
     contrato, configuracao, criacao de usuarios e confirmacao de ativacao.
 

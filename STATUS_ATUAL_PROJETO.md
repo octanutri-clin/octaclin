@@ -7,6 +7,11 @@ Atualizado em 2026-08-10.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 224 - oferta comercial e ativacao assistida foi estruturada sem inventar
+  preco ou condicao contratual. O contrato operacional define pacotes,
+  responsabilidades, estados, seguranca e a sequencia manual ja suportada pelo
+  produto. O aceite comercial permanece pendente das decisoes de preco, moeda,
+  periodicidade, pagamento, teste/cancelamento, migracao e WhatsApp.
 - Fase 223 - verdade operacional do go-live. Os documentos operacionais foram
   reconciliados com as evidencias das Fases 200 a 222: producao isolada,
   anexos, billing manual, backups, observabilidade, Calendar/Gmail e smokes de
