@@ -73,6 +73,19 @@ de laudo permanecem fora deste incremento.
 
 Validacoes: teste unitario da criacao cifrada, typecheck e build do backend.
 
+## Incremento 3 - BFF autenticado de exames
+
+Entregue localmente em 2026-08-11. As rotas Next.js `GET` e `POST` de exames
+laboratoriais usam a sessao HTTP do usuario para encaminhar a requisicao ao
+backend, sem expor token no navegador ou incluir dado clinico na URL. O contrato
+de frontend tipa coleta e marcador e preserva respostas de erro do backend.
+
+Nenhuma tela importa esse contrato neste incremento. Assim, a entrega continua
+compativel com producao enquanto a migration `1024` nao for aplicada primeiro
+em staging e validada com uma conta sintetica autorizada.
+
+Validacoes: typecheck, lint e build do frontend, alem de `git diff --check`.
+
 ## Contrato inicial de exames
 
 - Uma coleta tem paciente, autor, data de coleta, data de recebimento opcional,

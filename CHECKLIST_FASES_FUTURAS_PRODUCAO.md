@@ -1654,8 +1654,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Incremento 2 concluido localmente: servico e rotas de exames registram
     coleta/marcadores cifrados, respeitam carteira, permissao e auditoria, sem
     interpretar resultado ou expor dados ao portal.
-  - Proximo incremento: BFF e tela profissional de exames; fotos seguem
-    bloqueadas ate o fluxo proprio de consentimento e captura.
+  - Incremento 3 concluido localmente: BFF autenticado e contrato de frontend
+    de exames foram adicionados sem tela ou chamada automatica, mantendo o
+    deploy compativel ate a aplicacao da migration `1024` em staging.
+  - Proximo incremento: aplicar e validar a migration `1024` em staging antes
+    da tela profissional de exames; fotos seguem bloqueadas ate o fluxo proprio
+    de consentimento e captura.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
 - [ ] Fase 237 - Prescricoes, metas e orientacoes terapeuticas. [IMPORTANTE - POS PILOTO]
