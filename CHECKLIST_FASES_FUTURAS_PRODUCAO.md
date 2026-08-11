@@ -1648,8 +1648,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Fundacao definida: exames por coleta/marcador e fotos por protocolo usam
     anexos privados, RLS forcada, auditoria, consentimento separado e retencao
     documentada; nao ha diagnostico automatico nem acesso pelo portal.
-  - Proximo incremento: migrations aditivas para coletas, marcadores,
-    protocolos, consentimentos e series de fotos, antes de criar a interface.
+  - Incremento 1 concluido localmente: migration aditiva `1024` cria coletas,
+    marcadores, consentimentos e series de fotos com valores clinicos cifrados,
+    RLS forcada e indices. Nao ha backfill nem aplicacao em ambiente remoto.
+  - Proximo incremento: servicos, autorizacao e auditoria de exames antes de
+    criar a interface ou liberar upload fotografico.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
 - [ ] Fase 237 - Prescricoes, metas e orientacoes terapeuticas. [IMPORTANTE - POS PILOTO]

@@ -41,6 +41,22 @@ metadados e acesso autorizado, nunca URL publica persistente.
 5. **Aceite**: tenant/RLS, papeis, auditoria, retencao, desktop/mobile e jornada
    sintetica de consentir, anexar, visualizar, revogar e excluir logicamente.
 
+## Incremento 1 - fundacao persistente
+
+Entregue localmente em 2026-08-11. A migration aditiva `1024` cria quatro
+tabelas novas: coletas laboratoriais, marcadores, consentimentos fotograficos e
+series fotograficas. As estruturas usam colunas cifradas para resultado,
+laboratorio, observacao, protocolo e evidencia; referencias entre colecao,
+marcador e consentimento incluem `tenant_id` para impedir vinculo cruzado.
+
+Todas as tabelas recebem RLS habilitada e forcada, policy por `app.tenant_id` e
+indices para leitura longitudinal. Nenhum objeto de storage, valor clinico ou
+foto foi migrado, preenchido ou publicado. A migration ainda nao foi aplicada
+em staging ou producao.
+
+Validacoes: teste unitario da migration, `pnpm --dir octaclin-backend typecheck`,
+`pnpm --dir octaclin-backend build` e `git diff --check`.
+
 ## Contrato inicial de exames
 
 - Uma coleta tem paciente, autor, data de coleta, data de recebimento opcional,
