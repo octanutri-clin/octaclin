@@ -1601,8 +1601,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     com DTO validado e cursor estavel preservado no recorte.
   - Incremento 5 concluido: atalhos da timeline levam para agenda ou subarea
     clinica correspondente sem criar outra fonte de verdade.
-    Permanecem pendentes a expansao contratual do cadastro, categorizacao de
-    anexos e validacao clinica.
+  - Incremento 6 concluido: anexos privados podem ser filtrados por categoria,
+    com contagens e estado vazio contextual.
+    Permanecem pendentes a expansao contratual do cadastro, vinculo de anexos a
+    eventos clinicos e validacao clinica.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

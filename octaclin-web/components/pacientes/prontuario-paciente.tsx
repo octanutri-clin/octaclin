@@ -312,6 +312,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [excluindoAnexo, setExcluindoAnexo] = useState(false);
   const [arquivoAnexo, setArquivoAnexo] = useState<File | null>(null);
   const [categoriaAnexo, setCategoriaAnexo] = useState<CategoriaAnexoClinico>('exame');
+  const [filtroCategoriaAnexo, setFiltroCategoriaAnexo] = useState<CategoriaAnexoClinico | 'todas'>('todas');
   const [anexoParaExcluir, setAnexoParaExcluir] = useState<ArquivoMidiaApi | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [erroHistorico, setErroHistorico] = useState<string | null>(null);
@@ -657,6 +658,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     [eventos]
   );
   const mensagens = useMemo(() => eventos.filter((evento) => evento.tipo === 'mensagem'), [eventos]);
+  const anexosFiltrados = useMemo(
+    () => filtroCategoriaAnexo === 'todas' ? anexos : anexos.filter((anexo) => anexo.categoria === filtroCategoriaAnexo),
+    [anexos, filtroCategoriaAnexo]
+  );
   /** So consulta concluida gera declaracao; o backend recusa o resto de qualquer forma. */
   const consultasConcluidas = useMemo<ConsultaConcluidaOpcao[]>(
     () =>
@@ -1064,7 +1069,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               </div>
             </div>
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-              Categoria
+              Categoria do novo anexo
               <select
                 className="h-11 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
                 value={categoriaAnexo}
@@ -1093,10 +1098,24 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
           <div className="grid content-start gap-3">
             <div className="rounded-md border border-linha bg-white p-4">
-              <h2 className="text-base font-semibold text-tinta">Anexos do paciente</h2>
-              <p className="mt-1 text-sm text-texto-suave">Arquivos confirmados e armazenados de forma privada.</p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-tinta">Anexos do paciente</h2>
+                  <p className="mt-1 text-sm text-texto-suave">Arquivos confirmados e armazenados de forma privada.</p>
+                </div>
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                  Filtrar anexos por categoria
+                  <select className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta" value={filtroCategoriaAnexo} onChange={(evento) => setFiltroCategoriaAnexo(evento.target.value as CategoriaAnexoClinico | 'todas')}>
+                    <option value="todas">Todas ({anexos.length})</option>
+                    <option value="exame">Exames ({anexos.filter((anexo) => anexo.categoria === 'exame').length})</option>
+                    <option value="documento">Documentos ({anexos.filter((anexo) => anexo.categoria === 'documento').length})</option>
+                    <option value="foto">Fotos ({anexos.filter((anexo) => anexo.categoria === 'foto').length})</option>
+                    <option value="diario">Diarios ({anexos.filter((anexo) => anexo.categoria === 'diario').length})</option>
+                  </select>
+                </label>
+              </div>
             </div>
-            {anexos.length ? anexos.map((anexo) => (
+            {anexosFiltrados.length ? anexosFiltrados.map((anexo) => (
               <article key={anexo.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-linha bg-white p-4">
                 <div className="flex min-w-0 items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-superficie-hover text-primaria">
@@ -1120,7 +1139,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 </div>
               </article>
             )) : (
-              <EstadoVazio titulo="Nenhum anexo clinico" descricao="Exames, documentos e fotos confirmados aparecerao aqui." />
+              <EstadoVazio
+                titulo={anexos.length ? 'Nenhum anexo nesta categoria' : 'Nenhum anexo clinico'}
+                descricao={anexos.length ? 'Altere o filtro para consultar os demais arquivos confirmados.' : 'Exames, documentos e fotos confirmados aparecerao aqui.'}
+              />
             )}
           </div>
         </section>

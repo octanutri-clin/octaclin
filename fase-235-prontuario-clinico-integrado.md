@@ -267,6 +267,18 @@ existente, em vez de navegar silenciosamente para longe de um rascunho.
 Validacoes: lint, typecheck e 14 cenarios do prontuario em desktop/mobile. A
 regressao filtra uma evolucao e confirma a abertura de sua subarea de detalhe.
 
+## Incremento 6 - leitura categorizada de anexos
+
+Entregue em 2026-08-11. A subarea Anexos passa a filtrar os arquivos privados
+ja confirmados por exame, documento, foto ou diario, exibindo contagens e um
+estado vazio que diferencia categoria sem arquivos de paciente sem anexos. O
+campo de envio foi renomeado para `Categoria do novo anexo`, evitando ambiguidade
+para leitores de tela e automacao.
+
+O arquivo continua privado, confirmado antes de aparecer e acessado somente por
+URL assinada apos autorizacao. Vinculo opcional a consulta, avaliacao ou
+documento ainda exige contrato de dados e nao foi simulado nesta entrega.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica

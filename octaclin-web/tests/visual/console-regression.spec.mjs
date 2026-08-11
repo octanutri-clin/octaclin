@@ -1713,7 +1713,7 @@ test.describe('prontuario do paciente', () => {
 
     await page.getByRole('tab', { name: 'Documentos' }).click();
     await page.getByRole('tablist', { name: 'Subareas de Documentos' }).getByRole('tab', { name: 'Anexos' }).click();
-    await page.getByLabel('Categoria').selectOption('exame');
+    await page.getByLabel('Categoria do novo anexo').selectOption('exame');
     await page.getByLabel('Arquivo').setInputFiles({
       name: 'hemograma.pdf',
       mimeType: 'application/pdf',
@@ -1722,6 +1722,10 @@ test.describe('prontuario do paciente', () => {
     await page.getByRole('button', { name: 'Enviar anexo' }).click();
 
     await expect(page.getByText('Anexo confirmado e incluido no prontuario.')).toBeVisible();
+    await expect(page.getByText('hemograma.pdf')).toBeVisible();
+    await page.getByLabel('Filtrar anexos por categoria').selectOption('foto');
+    await expect(page.getByText('Nenhum anexo nesta categoria')).toBeVisible();
+    await page.getByLabel('Filtrar anexos por categoria').selectOption('exame');
     await expect(page.getByText('hemograma.pdf')).toBeVisible();
     await page.getByRole('button', { name: 'Excluir hemograma.pdf' }).click();
     await page.getByRole('button', { name: 'Excluir anexo', exact: true }).click();
