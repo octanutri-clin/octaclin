@@ -29,10 +29,12 @@ import { ServicoConvitesPaciente } from './aplicacao/servico-convites-paciente';
 import { ServicoDocumentosClinicos } from './aplicacao/servico-documentos-clinicos';
 import { ServicoImportacaoPacientes } from './aplicacao/servico-importacao-pacientes';
 import { ServicoPacientes } from './aplicacao/servico-pacientes';
+import { ServicoPerfilCadastroPaciente } from './aplicacao/servico-perfil-cadastro-paciente';
 import { ServicoPortalPaciente } from './aplicacao/servico-portal-paciente';
 import { ControladorConvitesPaciente } from './apresentacao/controlador-convites-paciente';
 import { ControladorDocumentosClinicos } from './apresentacao/controlador-documentos-clinicos';
 import { ControladorPacientes } from './apresentacao/controlador-pacientes';
+import { ControladorPerfilCadastroPaciente } from './apresentacao/controlador-perfil-cadastro-paciente';
 import { ControladorPortalPaciente } from './apresentacao/controlador-portal-paciente';
 import { AcompanhamentoTarefaOrm } from './infraestrutura/acompanhamento-tarefa.orm';
 import { ConvitePacienteOrm } from './infraestrutura/convite-paciente.orm';
@@ -40,11 +42,13 @@ import { EvolucaoClinicaOrm } from './infraestrutura/evolucao-clinica.orm';
 import { AvaliacaoAntropometricaOrm } from './infraestrutura/avaliacao-antropometrica.orm';
 import { DocumentoEmitidoOrm } from './infraestrutura/documento-emitido.orm';
 import { PacienteOrm } from './infraestrutura/paciente.orm';
+import { PerfilCadastroPacienteOrm } from './infraestrutura/perfil-cadastro-paciente.orm';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       PacienteOrm,
+      PerfilCadastroPacienteOrm,
       ProfissionalOrm,
       ConvitePacienteOrm,
       AcompanhamentoTarefaOrm,
@@ -76,12 +80,14 @@ import { PacienteOrm } from './infraestrutura/paciente.orm';
   ],
   controllers: [
     ControladorPacientes,
+    ControladorPerfilCadastroPaciente,
     ControladorConvitesPaciente,
     ControladorPortalPaciente,
     ControladorDocumentosClinicos
   ],
   providers: [
     ServicoPacientes,
+    ServicoPerfilCadastroPaciente,
     ServicoImportacaoPacientes,
     ServicoConvitesPaciente,
     ServicoPortalPaciente,

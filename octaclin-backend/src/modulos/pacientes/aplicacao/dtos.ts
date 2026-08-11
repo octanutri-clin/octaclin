@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsArray,
   IsDateString,
   IsEmail,
   IsIn,
@@ -8,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  ArrayMaxSize,
   Matches,
   Max,
   MaxLength,
@@ -142,6 +144,61 @@ export class AtualizarPacienteDto {
   @Min(0)
   @Max(100)
   scoreRisco?: number;
+}
+
+export class AtualizarIdentificacaoCadastroPacienteDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  nomeUso?: string;
+}
+
+export class EnderecoCadastroPacienteDto {
+  @IsOptional() @IsString() @MaxLength(12) cep?: string;
+  @IsOptional() @IsString() @MaxLength(160) logradouro?: string;
+  @IsOptional() @IsString() @MaxLength(30) numero?: string;
+  @IsOptional() @IsString() @MaxLength(80) complemento?: string;
+  @IsOptional() @IsString() @MaxLength(80) bairro?: string;
+  @IsOptional() @IsString() @MaxLength(100) cidade?: string;
+  @IsOptional() @IsString() @MaxLength(2) estado?: string;
+}
+
+export class AtualizarContatoCadastroPacienteDto {
+  @IsOptional() @IsEmail() @MaxLength(180) email?: string;
+  @IsOptional() @Matches(/^\+[1-9]\d{7,14}$/) telefone?: string;
+  @IsOptional() @IsIn(['email', 'whatsapp', 'telefone']) canalPreferido?: 'email' | 'whatsapp' | 'telefone';
+  @IsOptional() @ValidateNested() @Type(() => EnderecoCadastroPacienteDto) endereco?: EnderecoCadastroPacienteDto;
+}
+
+export class ResponsavelCadastroPacienteDto {
+  @IsOptional() @IsString() @MaxLength(180) nome?: string;
+  @IsOptional() @IsString() @MaxLength(80) parentesco?: string;
+  @IsOptional() @IsString() @MaxLength(180) contato?: string;
+}
+
+export class AtualizarOperacaoCadastroPacienteDto {
+  @IsOptional() @IsString() @MaxLength(100) origem?: string;
+  @IsOptional() @IsArray() @ArrayMaxSize(12) @IsString({ each: true }) @MaxLength(40, { each: true }) tags?: string[];
+  @IsOptional() @IsDateString() proximaRevisaoEm?: string;
+  @IsOptional() @ValidateNested() @Type(() => ResponsavelCadastroPacienteDto) responsavel?: ResponsavelCadastroPacienteDto;
+}
+
+export class AtualizarFiscalCadastroPacienteDto {
+  @IsOptional() @IsString() @MaxLength(180) nomePagador?: string;
+  @IsOptional() @Matches(/^[0-9.\/-]{11,18}$/) documentoPagador?: string;
+  @IsOptional() @IsEmail() @MaxLength(180) emailRecibo?: string;
+  @IsOptional() @ValidateNested() @Type(() => EnderecoCadastroPacienteDto) enderecoCobranca?: EnderecoCadastroPacienteDto;
+}
+
+export interface PerfilCadastroPacienteRespostaDto {
+  identificacao?: AtualizarIdentificacaoCadastroPacienteDto;
+  contato?: AtualizarContatoCadastroPacienteDto;
+  operacao?: AtualizarOperacaoCadastroPacienteDto;
+  atualizadoEm?: Date;
+}
+
+export interface FiscalCadastroPacienteRespostaDto extends AtualizarFiscalCadastroPacienteDto {
+  atualizadoEm?: Date;
 }
 
 export interface PacienteRespostaDto {

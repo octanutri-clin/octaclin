@@ -340,6 +340,23 @@ proximo incremento deve introduzir contratos, autorizacao por secao e interface
 de salvamento explicito, preservando o cadastro legado ate que cada secao seja
 adotada de forma segura.
 
+## Incremento 11 - contratos de perfil por finalidade
+
+Entregue em 2026-08-11. O backend passou a expor identificacao complementar,
+contato estruturado e operacao em rotas separadas, sempre respeitando RLS e o
+escopo da carteira do Professional. Cada salvamento cifra apenas a secao
+alterada e preserva os demais blocos. O cadastro anterior continua como fonte
+de nome, responsavel, status e contato legado durante a transicao.
+
+Dados fiscais usam rotas distintas e exigem simultaneamente `pacientes.ler` ou
+`pacientes.gerenciar` e `agenda.financeiro.ler`, conforme a operacao. Eles nao
+aparecem na leitura comum do perfil. Leitura e alteracao de cada secao recebem
+eventos de auditoria sem registrar os valores sensiveis.
+
+O BFF do Next.js encaminha os contratos autenticados. A proxima entrega e a
+superficie de cadastro no prontuario, com salvamento explicito por secao e
+sem alterar o formulario legado de criacao/listagem.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica

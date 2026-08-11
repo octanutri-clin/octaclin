@@ -1616,6 +1616,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     tenant/paciente e RLS forcada. Aplicada e verificada em producao sem
     backfill; contratos, autorizacao por secao e tela progressiva permanecem
     pendentes.
+  - Incremento 11 concluido: contratos e BFF separados para identificacao,
+    contato e operacao; fiscal permanece fora da leitura comum e exige tambem
+    `agenda.financeiro.ler`. Cada secao e cifrada e auditada sem gravar seus
+    valores; falta conectar a interface de cadastro progressivo.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

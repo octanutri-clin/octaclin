@@ -77,6 +77,7 @@ import { EvolucaoClinicaOrm } from '../../modulos/pacientes/infraestrutura/evolu
 import { AvaliacaoAntropometricaOrm } from '../../modulos/pacientes/infraestrutura/avaliacao-antropometrica.orm';
 import { DocumentoEmitidoOrm } from '../../modulos/pacientes/infraestrutura/documento-emitido.orm';
 import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm';
+import { PerfilCadastroPacienteOrm } from '../../modulos/pacientes/infraestrutura/perfil-cadastro-paciente.orm';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { AgendamentoQuestionarioOrm } from '../../modulos/questionarios/infraestrutura/agendamento-questionario.orm';
 import { CategoriaPerguntaOrm } from '../../modulos/questionarios/infraestrutura/categoria-pergunta.orm';
@@ -160,6 +161,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       ConsentimentoLgpdOrm,
       ProfissionalOrm,
       PacienteOrm,
+      PerfilCadastroPacienteOrm,
       ConvitePacienteOrm,
       AcompanhamentoTarefaOrm,
       EvolucaoClinicaOrm,
