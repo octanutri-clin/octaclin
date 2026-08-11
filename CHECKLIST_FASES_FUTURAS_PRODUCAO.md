@@ -1571,6 +1571,20 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Criterio de aceite: nenhuma falha P0/P1 aberta e decisao explicita de
     expandir, corrigir ou pausar a comercializacao.
 
+- [ ] Fase 234 - Editor de planos alimentares avancado e catalogo multifonte. [IMPORTANTE - POS PILOTO]
+  - Evoluir o MVP da Fase 216 com editor de refeicoes, modelos, grupos de
+    substituicao, resumo nutricional persistente, lista de compras e projecao
+    simplificada para o paciente.
+  - Estruturar catalogo versionado e rastreavel para TACO, TBCA versao 7.3,
+    IBGE/POF e Tucunduva. TBCA 7.3 e versao da TBCA, nao uma fonte separada.
+  - Nao carregar fonte externa sem artefato oficial, checksum, origem, versao,
+    direito de uso comercial aprovado e teste de importacao. Tucunduva fica
+    bloqueada ate haver licenca escrita e entrega estruturada.
+  - Criterio de aceite: fontes ativas com proveniencia; planos existentes
+    imutaveis; busca multifonte sem mescla silenciosa; substituicoes auditaveis
+    e portal expondo somente alternativas liberadas.
+  - Especificacao: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.
