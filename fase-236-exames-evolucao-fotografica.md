@@ -57,6 +57,22 @@ em staging ou producao.
 Validacoes: teste unitario da migration, `pnpm --dir octaclin-backend typecheck`,
 `pnpm --dir octaclin-backend build` e `git diff --check`.
 
+## Incremento 2 - servico de exames e auditoria
+
+Entregue localmente em 2026-08-11. O backend agora permite registrar uma coleta
+com marcadores e listar a serie do paciente por rotas protegidas. Marcador,
+resultado, unidade, referencia e metodo sao cifrados como um unico payload;
+laboratorio e observacoes tambem sao cifrados. Nenhuma classificacao de normal,
+alterado ou critico e calculada pelo sistema.
+
+O servico executa dentro de `ExecutorTenant`, resolve a carteira do
+Professional antes da leitura e rejeita paciente arquivado ou fora do escopo.
+As rotas exigem `pacientes.ler` para leitura e `pacientes.gerenciar` para
+criacao, e registram auditoria sem valores clinicos. A interface e os anexos
+de laudo permanecem fora deste incremento.
+
+Validacoes: teste unitario da criacao cifrada, typecheck e build do backend.
+
 ## Contrato inicial de exames
 
 - Uma coleta tem paciente, autor, data de coleta, data de recebimento opcional,

@@ -146,6 +146,23 @@ export class AtualizarPacienteDto {
   scoreRisco?: number;
 }
 
+export class MarcadorExameLaboratorialDto {
+  @IsString() @MaxLength(120) nome: string;
+  @IsString() @MaxLength(80) valor: string;
+  @IsOptional() @IsString() @MaxLength(40) unidade?: string;
+  @IsOptional() @IsString() @MaxLength(160) referencia?: string;
+  @IsOptional() @IsString() @MaxLength(120) metodo?: string;
+}
+
+export class CriarColetaExameLaboratorialDto {
+  @IsDateString() coletadaEm: string;
+  @IsOptional() @IsDateString() recebidaEm?: string;
+  @IsOptional() @IsString() @MaxLength(180) laboratorio?: string;
+  @IsOptional() @IsString() @MaxLength(4000) observacoes?: string;
+  @IsArray() @ArrayMaxSize(100) @ValidateNested({ each: true }) @Type(() => MarcadorExameLaboratorialDto)
+  marcadores: MarcadorExameLaboratorialDto[];
+}
+
 export class AtualizarIdentificacaoCadastroPacienteDto {
   @IsOptional()
   @IsString()

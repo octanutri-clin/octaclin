@@ -30,11 +30,13 @@ import { ServicoDocumentosClinicos } from './aplicacao/servico-documentos-clinic
 import { ServicoImportacaoPacientes } from './aplicacao/servico-importacao-pacientes';
 import { ServicoPacientes } from './aplicacao/servico-pacientes';
 import { ServicoPerfilCadastroPaciente } from './aplicacao/servico-perfil-cadastro-paciente';
+import { ServicoExamesLaboratoriais } from './aplicacao/servico-exames-laboratoriais';
 import { ServicoPortalPaciente } from './aplicacao/servico-portal-paciente';
 import { ControladorConvitesPaciente } from './apresentacao/controlador-convites-paciente';
 import { ControladorDocumentosClinicos } from './apresentacao/controlador-documentos-clinicos';
 import { ControladorPacientes } from './apresentacao/controlador-pacientes';
 import { ControladorPerfilCadastroPaciente } from './apresentacao/controlador-perfil-cadastro-paciente';
+import { ControladorExamesLaboratoriais } from './apresentacao/controlador-exames-laboratoriais';
 import { ControladorPortalPaciente } from './apresentacao/controlador-portal-paciente';
 import { AcompanhamentoTarefaOrm } from './infraestrutura/acompanhamento-tarefa.orm';
 import { ConvitePacienteOrm } from './infraestrutura/convite-paciente.orm';
@@ -81,6 +83,7 @@ import { PerfilCadastroPacienteOrm } from './infraestrutura/perfil-cadastro-paci
   controllers: [
     ControladorPacientes,
     ControladorPerfilCadastroPaciente,
+    ControladorExamesLaboratoriais,
     ControladorConvitesPaciente,
     ControladorPortalPaciente,
     ControladorDocumentosClinicos
@@ -88,6 +91,7 @@ import { PerfilCadastroPacienteOrm } from './infraestrutura/perfil-cadastro-paci
   providers: [
     ServicoPacientes,
     ServicoPerfilCadastroPaciente,
+    ServicoExamesLaboratoriais,
     ServicoImportacaoPacientes,
     ServicoConvitesPaciente,
     ServicoPortalPaciente,

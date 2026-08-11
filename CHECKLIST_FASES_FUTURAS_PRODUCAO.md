@@ -1651,8 +1651,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Incremento 1 concluido localmente: migration aditiva `1024` cria coletas,
     marcadores, consentimentos e series de fotos com valores clinicos cifrados,
     RLS forcada e indices. Nao ha backfill nem aplicacao em ambiente remoto.
-  - Proximo incremento: servicos, autorizacao e auditoria de exames antes de
-    criar a interface ou liberar upload fotografico.
+  - Incremento 2 concluido localmente: servico e rotas de exames registram
+    coleta/marcadores cifrados, respeitam carteira, permissao e auditoria, sem
+    interpretar resultado ou expor dados ao portal.
+  - Proximo incremento: BFF e tela profissional de exames; fotos seguem
+    bloqueadas ate o fluxo proprio de consentimento e captura.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
 - [ ] Fase 237 - Prescricoes, metas e orientacoes terapeuticas. [IMPORTANTE - POS PILOTO]
