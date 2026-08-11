@@ -182,6 +182,21 @@ typecheck aprovados. A Fase 235 permanece em execucao: projecao BFF/timeline
 paginada, cadastro progressivo, categorizacao de anexos e validacao clinica
 ainda nao foram entregues.
 
+## Incremento 2 - decisao para a timeline paginada
+
+Auditoria concluida em 2026-08-11. O endpoint atual nao carrega o historico
+inteiro: ele limita cada fonte e devolve no maximo 80 eventos combinados. Isso
+evita uma leitura ilimitada, mas nao oferece cursor, filtros server-side ou
+uma ordenacao global reutilizavel entre as sete origens.
+
+Tambem foi identificado que a projecao atual ainda descriptografa conteudo de
+evolucoes e mensagens para preencher a descricao de cartoes. O proximo
+incremento deve substituir esse comportamento por uma leitura paginada de
+metadados, com desempate deterministico por data/tipo/id e detalhe clinico
+carregado apenas pela subarea autorizada. Nao sera introduzida paginacao por
+offset no navegador: ela causaria duplicacao ou salto quando um novo evento for
+registrado entre duas leituras.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica

@@ -1592,6 +1592,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Incremento 1 concluido: navegacao principal/subareas, acoes rapidas e
     financeiro condicionado por permissao. Permanecem pendentes a projecao BFF,
     timeline paginada, cadastro progressivo e validacao clinica.
+  - Incremento 2 definido: a timeline atual e limitada, mas nao paginada e
+    ainda usa conteudo descriptografado em cartoes; a nova leitura usara cursor
+    estavel e metadados autorizados antes de carregar qualquer detalhe clinico.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.
