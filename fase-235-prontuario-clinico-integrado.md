@@ -218,6 +218,26 @@ Resultado: 35 testes unitarios do servico de pacientes e 14 cenarios visuais do
 prontuario foram aprovados. Cadastro progressivo, filtros de timeline, atalhos
 para detalhe, categorizacao de anexos e validacao clinica permanecem pendentes.
 
+## Incremento 3 - cadastro inicial orientado por secoes
+
+Entregue em 2026-08-11 sem alterar o modelo persistido. O modal de paciente
+passou a organizar o contrato existente em tres secoes: **Identificacao**
+(nome completo e data de nascimento), **Contato** (e-mail ou telefone) e
+**Responsavel e acompanhamento** (profissional, situacao e indicador de risco
+somente na edicao). Depois da criacao, a interface informa o proximo passo real:
+usar o convite existente na lista para ativar o portal com link seguro.
+
+Esta etapa nao introduz campos decorativos sem origem de dados. Nome de uso,
+telefone e e-mail estruturados, canal preferido, endereco, representante,
+origem, tags, dados fiscais e preferencias de comunicacao requerem um contrato
+de dados, permissao, criptografia, auditoria e migration dedicados antes de
+entrarem no cadastro. Dados clinicos continuam nos modulos clinicos apropriados.
+
+Validacoes: `pnpm --dir octaclin-web lint`, `pnpm --dir octaclin-web typecheck`
+e `pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs -g "lista de pacientes operacional" --project=desktop-chromium --project=mobile-chromium --reporter=list`.
+Resultado: dois cenarios aprovados, cobrindo a abertura do cadastro e as secoes
+em desktop e celular.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica

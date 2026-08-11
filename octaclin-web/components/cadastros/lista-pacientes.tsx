@@ -438,85 +438,111 @@ export function ListaPacientes() {
         titulo={editandoId ? 'Editar paciente' : 'Novo paciente'}
       >
         <form onSubmit={salvar}>
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-6">
-          <label className="grid gap-1 text-xs font-semibold text-texto-suave lg:col-span-2">
-            Profissional
-            <select
-              className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
-              value={formulario.profissionalResponsavelId}
-              onChange={(evento) => setFormulario((atual) => ({ ...atual, profissionalResponsavelId: evento.target.value }))}
-              required
-            >
-              <option value="" disabled>
-                Selecione
-              </option>
-              {profissionais.map((profissional) => (
-                <option key={profissional.id} value={profissional.id}>
-                  {profissional.nome}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-xs font-semibold text-texto-suave lg:col-span-2">
-            Nome
-            <input
-              className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
-              value={formulario.nome}
-              onChange={(evento) => setFormulario((atual) => ({ ...atual, nome: evento.target.value }))}
-              required
-            />
-          </label>
-          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-            Contato
-            <input
-              className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
-              value={formulario.contato}
-              onChange={(evento) => setFormulario((atual) => ({ ...atual, contato: evento.target.value }))}
-            />
-          </label>
-          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-            Nascimento
-            <input
-              className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
-              type="date"
-              value={formulario.dataNascimento}
-              onChange={(evento) => setFormulario((atual) => ({ ...atual, dataNascimento: evento.target.value }))}
-            />
-          </label>
-          {editandoId ? (
-            <>
+          <div className="grid gap-5">
+            <section aria-labelledby="paciente-identificacao" className="grid gap-3">
+              <div>
+                <h3 id="paciente-identificacao" className="text-sm font-semibold text-tinta">Identificacao</h3>
+                <p className="mt-1 text-xs text-texto-suave">Dados basicos para reconhecer o paciente no atendimento.</p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                  Nome completo
+                  <input
+                    className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+                    autoComplete="name"
+                    value={formulario.nome}
+                    onChange={(evento) => setFormulario((atual) => ({ ...atual, nome: evento.target.value }))}
+                    required
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                  Data de nascimento
+                  <input
+                    className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+                    type="date"
+                    value={formulario.dataNascimento}
+                    onChange={(evento) => setFormulario((atual) => ({ ...atual, dataNascimento: evento.target.value }))}
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section aria-labelledby="paciente-contato" className="grid gap-3 border-t border-linha pt-5">
+              <div>
+                <h3 id="paciente-contato" className="text-sm font-semibold text-tinta">Contato</h3>
+                <p className="mt-1 text-xs text-texto-suave">Informe um e-mail ou telefone usado para comunicacoes e convite do portal.</p>
+              </div>
               <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                Status
-                <select
-                  className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
-                  value={formulario.statusAdesao}
-                  onChange={(evento) =>
-                    setFormulario((atual) => ({ ...atual, statusAdesao: evento.target.value as StatusPaciente }))
-                  }
-                >
-                  <option value="novo">novo</option>
-                  <option value="aderente">aderente</option>
-                  <option value="em_acompanhamento">em_acompanhamento</option>
-                  <option value="risco">risco</option>
-                  <option value="inativo">inativo</option>
-                </select>
-              </label>
-              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                Risco
+                E-mail ou telefone
                 <input
                   className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  value={formulario.scoreRisco}
-                  onChange={(evento) => setFormulario((atual) => ({ ...atual, scoreRisco: evento.target.value }))}
+                  placeholder="nome@exemplo.com ou +55 11 99999-9999"
+                  value={formulario.contato}
+                  onChange={(evento) => setFormulario((atual) => ({ ...atual, contato: evento.target.value }))}
                 />
               </label>
-            </>
-          ) : null}
-        </div>
-        <div className="mt-3 flex justify-end">
+            </section>
+
+            <section aria-labelledby="paciente-operacao" className="grid gap-3 border-t border-linha pt-5">
+              <div>
+                <h3 id="paciente-operacao" className="text-sm font-semibold text-tinta">Responsavel e acompanhamento</h3>
+                <p className="mt-1 text-xs text-texto-suave">Defina quem acompanha o paciente. Status e risco so aparecem na edicao para evitar classificacao prematura.</p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                  Profissional responsavel
+                  <select
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    value={formulario.profissionalResponsavelId}
+                    onChange={(evento) => setFormulario((atual) => ({ ...atual, profissionalResponsavelId: evento.target.value }))}
+                    required
+                  >
+                    <option value="" disabled>Selecione</option>
+                    {profissionais.map((profissional) => (
+                      <option key={profissional.id} value={profissional.id}>{profissional.nome}</option>
+                    ))}
+                  </select>
+                </label>
+                {editandoId ? (
+                  <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                    Situacao do acompanhamento
+                    <select
+                      className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                      value={formulario.statusAdesao}
+                      onChange={(evento) => setFormulario((atual) => ({ ...atual, statusAdesao: evento.target.value as StatusPaciente }))}
+                    >
+                      <option value="novo">Novo</option>
+                      <option value="aderente">Aderente</option>
+                      <option value="em_acompanhamento">Em acompanhamento</option>
+                      <option value="risco">Requer atencao</option>
+                      <option value="inativo">Inativo</option>
+                    </select>
+                  </label>
+                ) : null}
+                {editandoId ? (
+                  <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                    Indicador de risco (0 a 100)
+                    <input
+                      className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      value={formulario.scoreRisco}
+                      onChange={(evento) => setFormulario((atual) => ({ ...atual, scoreRisco: evento.target.value }))}
+                    />
+                  </label>
+                ) : null}
+              </div>
+            </section>
+
+            {!editandoId ? (
+              <section aria-label="Acesso ao portal" className="rounded-md border border-primaria/20 bg-primaria-suave p-3 text-sm text-tinta">
+                Salve o cadastro primeiro. Depois, use a acao de convite na lista para liberar o acesso seguro ao portal do paciente.
+              </section>
+            ) : null}
+          </div>
+          <div className="mt-5 flex justify-end">
           <Botao type="submit" variante="primario" disabled={salvando || !profissionais.length}>
             <Save size={16} />
             {salvando ? 'Salvando' : 'Salvar'}

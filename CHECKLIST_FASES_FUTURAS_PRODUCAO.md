@@ -1594,8 +1594,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Incremento 2 concluido: BFF autenticado e timeline paginada por cursor,
     com metadados minimos, ordenacao `data/id`, limite de 20 (maximo 50),
     auditoria e sem descricao descriptografada no historico.
-    Permanecem pendentes cadastro progressivo, filtros, atalhos de detalhe,
-    categorizacao de anexos e validacao clinica.
+  - Incremento 3 concluido: cadastro inicial separado em identificacao, contato
+    e responsavel/acompanhamento; convite de portal mantido como proxima acao
+    segura apos salvar. Permanecem pendentes a expansao contratual do cadastro,
+    filtros, atalhos de detalhe, categorizacao de anexos e validacao clinica.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

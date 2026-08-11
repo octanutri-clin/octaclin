@@ -644,6 +644,7 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
           'agenda.consultas.criar',
           'agenda.financeiro.ler',
           'pacientes.listar',
+          'pacientes.gerenciar',
           'questionarios.ler',
           'comunicacoes.mensagens.ler'
         ],
@@ -1547,6 +1548,13 @@ test.describe('lista de pacientes operacional', () => {
     await page.getByRole('button', { name: 'Sem consulta futura' }).click();
     await expect(page.locator('body')).toContainText('Bruno Lima');
     await expect(page.locator('body')).toContainText('Agendar retorno');
+
+    await page.getByRole('button', { name: 'Novo paciente' }).click();
+    await expect(page.getByRole('heading', { name: 'Identificacao' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Contato' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Responsavel e acompanhamento' })).toBeVisible();
+    await expect(page.getByLabel('E-mail ou telefone')).toBeVisible();
+    await expect(page.getByText('Salve o cadastro primeiro. Depois, use a acao de convite na lista para liberar o acesso seguro ao portal do paciente.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });
