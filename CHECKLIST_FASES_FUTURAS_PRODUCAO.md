@@ -1603,6 +1603,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     clinica correspondente sem criar outra fonte de verdade.
   - Incremento 6 concluido: anexos privados podem ser filtrados por categoria,
     com contagens e estado vazio contextual.
+  - Incremento 7 concluido: resumo destaca proxima conduta acionavel e proxima
+    consulta a partir de dados existentes, sem inferencia clinica nova.
     Permanecem pendentes a expansao contratual do cadastro, vinculo de anexos a
     eventos clinicos e validacao clinica.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por

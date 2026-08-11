@@ -662,6 +662,22 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     () => filtroCategoriaAnexo === 'todas' ? anexos : anexos.filter((anexo) => anexo.categoria === filtroCategoriaAnexo),
     [anexos, filtroCategoriaAnexo]
   );
+  const proximaConsulta = useMemo(
+    () => eventos.find((evento) => evento.tipo === 'consulta' && (evento.status === 'agendada' || evento.status === 'reagendada')),
+    [eventos]
+  );
+  const proximaConduta = useMemo(() => {
+    if ((dados?.resumo.tarefasPendentes ?? 0) > 0) {
+      return { titulo: 'Revisar tarefa pendente', descricao: `${dados?.resumo.tarefasPendentes} tarefa(s) ainda aguardam acompanhamento.`, aba: 'acompanhamento' as AbaProntuario, acao: 'Abrir tarefas pendentes' };
+    }
+    if ((dados?.resumo.formulariosPendentes ?? 0) > 0) {
+      return { titulo: 'Revisar formulario pendente', descricao: `${dados?.resumo.formulariosPendentes} envio(s) ainda aguardam resposta do paciente.`, aba: 'formularios' as AbaProntuario, acao: 'Abrir formularios pendentes' };
+    }
+    if (proximaConsulta) {
+      return { titulo: 'Preparar proxima consulta', descricao: `${proximaConsulta.titulo} em ${formatarDataHora(proximaConsulta.data)}.`, aba: 'historico' as AbaProntuario, acao: 'Ver historico clinico' };
+    }
+    return { titulo: 'Registrar a proxima conduta', descricao: 'Nao ha pendencias operacionais identificadas no prontuario.', aba: 'evolucoes' as AbaProntuario, acao: 'Registrar evolucao' };
+  }, [dados?.resumo.formulariosPendentes, dados?.resumo.tarefasPendentes, proximaConsulta]);
   /** So consulta concluida gera declaracao; o backend recusa o resto de qualquer forma. */
   const consultasConcluidas = useMemo<ConsultaConcluidaOpcao[]>(
     () =>
@@ -768,6 +784,21 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       >
       {abaAtiva === 'resumo' ? (
         <>
+          <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)]">
+            <article className="grid gap-3 rounded-md border border-primaria/30 bg-primaria-suave p-4">
+              <div>
+                <p className="text-xs font-semibold uppercase text-primaria">Proxima conduta</p>
+                <h2 className="mt-2 text-base font-semibold text-tinta">{proximaConduta.titulo}</h2>
+                <p className="mt-1 text-sm text-texto-suave">{proximaConduta.descricao}</p>
+              </div>
+              <div><Botao type="button" variante="primario" onClick={() => solicitarTrocaAba(proximaConduta.aba)}>{proximaConduta.acao}</Botao></div>
+            </article>
+            <article className="grid gap-2 rounded-md border border-linha bg-white p-4">
+              <p className="text-xs font-semibold uppercase text-texto-suave">Proxima consulta</p>
+              <h2 className="text-base font-semibold text-tinta">{proximaConsulta?.titulo ?? 'Nenhuma consulta agendada'}</h2>
+              <p className="text-sm text-texto-suave">{proximaConsulta ? formatarDataHora(proximaConsulta.data) : 'Use a agenda para definir o proximo encontro.'}</p>
+            </article>
+          </section>
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <CartaoResumo titulo="Consultas" valor={String(dados.resumo.consultas)} detalhe="Eventos de agenda vinculados" />
             <CartaoResumo titulo="Formularios pendentes" valor={String(dados.resumo.formulariosPendentes)} detalhe="Envios aguardando resposta" />

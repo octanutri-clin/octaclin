@@ -1580,6 +1580,9 @@ test.describe('prontuario do paciente', () => {
     await expect(areas.getByRole('tab', { name: 'Plano' })).toBeVisible();
     await expect(areas.getByRole('tab', { name: 'Documentos' })).toBeVisible();
     await expect(areas.getByRole('tab', { name: 'Financeiro' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Revisar formulario pendente' })).toBeVisible();
+    await page.getByRole('button', { name: 'Abrir formularios pendentes' }).click();
+    await expect(page.getByRole('heading', { name: 'Formularios e check-ins' })).toBeVisible();
 
     await areas.getByRole('tab', { name: 'Plano' }).click();
     await expect(page.getByRole('heading', { name: 'Plano de acompanhamento' })).toBeVisible();

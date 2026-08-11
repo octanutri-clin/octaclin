@@ -279,6 +279,18 @@ O arquivo continua privado, confirmado antes de aparecer e acessado somente por
 URL assinada apos autorizacao. Vinculo opcional a consulta, avaliacao ou
 documento ainda exige contrato de dados e nao foi simulado nesta entrega.
 
+## Incremento 7 - resumo orientado a proxima conduta
+
+Entregue em 2026-08-11. O resumo do prontuario passa a destacar uma unica
+proxima conduta acionavel, priorizando tarefa pendente, formulario pendente,
+proxima consulta e, por ultimo, o registro de evolucao. Um segundo cartao exibe
+a proxima consulta ou orienta o uso da agenda quando nao houver encontro
+agendado.
+
+A prioridade deriva apenas de contadores e eventos ja existentes; nao calcula
+score novo, adesao implicita ou diagnostico. O atalho abre a subarea adequada e
+continua submetido a protecao contra perda de rascunho.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica
