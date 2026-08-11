@@ -7,9 +7,9 @@ Voce esta trabalhando no projeto OctaClin.
 - Produto: OctaClin, SaaS clinico multi-tenant para consultoria, acompanhamento de pacientes, agenda, formularios, comunicacoes e portais por perfil.
 - Repositorio GitHub: `https://github.com/octanutri-clin/octaclin`
 - Branch principal: `main`
-- Ultima fase concluida: Fase 223 - Verdade operacional do go-live.
-- Proxima fase recomendada: Fase 224 - Oferta comercial, planos e processo de
-  ativacao assistida. Confirme a prioridade no checklist antes de iniciar.
+- Ultima fase concluida: Fase 224 - Oferta comercial e ativacao assistida.
+- Proxima fase recomendada: Fase 225 - Dominio, identidade e comunicacoes
+  transacionais. Confirme a prioridade no checklist antes de iniciar.
 - Ultimo commit conhecido: consulte `git log --oneline --max-count=8`; este
   arquivo nao deve fixar um hash que rapidamente fica defasado.
 

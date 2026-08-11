@@ -16,9 +16,9 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase concluida mais recente no momento deste arquivo: Fase 223 - verdade
-  operacional do go-live. Ela reconciliou as evidencias das Fases 200 a 222 e
-  separou capacidade entregue de gates externos ou ainda nao validados.
+- Fase concluida mais recente no momento deste arquivo: Fase 224 - oferta
+  comercial e ativacao assistida. O contrato operacional, os pacotes e o fluxo
+  manual foram aceitos; a proxima fase e dominio, identidade e comunicacoes.
 - Producao isolada foi aceita na Fase 131; backup/restore, observabilidade,
   smokes somente leitura dos quatro papeis, Gmail e Google Agenda foram
   validados nas Fases 219 a 222. Isso nao substitui dominio, identidade de

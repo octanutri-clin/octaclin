@@ -1,8 +1,7 @@
 # Capacidade - Oferta comercial e ativacao assistida
 
-Status: preparada na Fase 224 em 2026-08-10. A oferta nao pode ser divulgada
-nem ativar cliente real antes das decisoes marcadas como abertas e dos gates
-legais de `PACOTE_JURIDICO_COMERCIAL.md`.
+Status: aceita na Fase 224 em 2026-08-11. A oferta nao pode ser divulgada nem
+ativar cliente real antes dos gates legais de `PACOTE_JURIDICO_COMERCIAL.md`.
 
 ## Capacidade
 
@@ -42,6 +41,8 @@ banco de dados.
 ### Pacote Profissional assistido
 
 - Plano tecnico: `profissional`.
+- Preco: R$ 99 por mes no pagamento trimestral antecipado, ou R$ 119 por mes
+  no pagamento mensal manual antecipado.
 - Inclui: agenda interna, Google Agenda opcional por profissional, pacientes,
   prontuario, formularios, check-ins, tarefas, materiais, portais, email e
   suporte assistido.
@@ -51,6 +52,8 @@ banco de dados.
 ### Pacote Clinica assistido
 
 - Plano tecnico: `clinica`.
+- Preco: R$ 199 por mes no pagamento trimestral antecipado, ou R$ 249 por mes
+  no pagamento mensal manual antecipado.
 - Inclui o pacote Profissional e a capacidade adicional do plano para equipe e
   carteira maior.
 - Requer que o cliente designe um administrador e um responsavel operacional
@@ -60,6 +63,20 @@ banco de dados.
 
 - Nao e oferta de autoatendimento. Exige proposta individual, revisao juridica,
   limites, integracoes, seguranca e suporte acordados antes de ativar o tenant.
+
+### Politicas comerciais aceitas
+
+- Pagamento inicial: PIX/manual antecipado. Gateway permanece posterior a
+  necessidade comercial comprovada.
+- Demonstracao: somente ambiente com dados sinteticos. Nao existe teste com
+  dados clinicos reais antes de dominio, juridico e seguranca estarem aceitos.
+- Cancelamento: aviso de 30 dias; ao fim do periodo, a assinatura passa a
+  `suspensa` e usa bloqueio suave. Dados permanecem acessiveis e exportaveis.
+- Migracao: importacao CSV padrao esta incluida. Migracao assistida, limpeza de
+  planilha ou integracao especifica exige escopo e valor separados.
+- WhatsApp: fora da oferta inicial ate seu aceite operacional de producao.
+- Suporte: ativacao assistida, acompanhamento reforcado de 48 horas e suporte
+  operacional; nunca suporte clinico.
 
 ## Contrato de implementacao
 
@@ -123,20 +140,17 @@ informal, print ou mensagem sem registro comercial autorizado.
   aprovados.
 - Nao substituir revisao juridica, contabil ou comercial.
 
-## Decisoes abertas que bloqueiam a oferta publica
+## Decisoes operacionais ainda pendentes
 
-1. Preco, moeda, periodicidade, forma de pagamento e politica de reajuste dos
-   pacotes Profissional e Clinica.
-2. Prazo de teste, se houver, e regra de conversao/cancelamento.
-3. Canal comercial que guardara proposta, contrato e comprovante de pagamento.
-4. Politica de migracao/importacao assistida e eventual valor adicional.
-5. Se WhatsApp entra na oferta inicial ou fica explicitamente indisponivel.
-6. Identidade empresarial e dominio oficiais, que tambem condicionam as
+1. Escolher o sistema comercial privado que guardara proposta, contrato e
+   comprovante de pagamento.
+2. Definir o reajuste anual antes da primeira renovacao; nao criar clausula sem
+   revisao juridica.
+3. Concluir identidade empresarial e dominio oficiais, que tambem condicionam
    comunicacoes transacionais e documentos finais.
 
 ## Handoff
 
-Depois das seis decisoes abertas, o responsavel pelo produto deve registrar as
-condicoes em processo comercial privado, marcar a Fase 224 como aceita e
-seguir para Fase 225. A Fase 228 exercita este contrato com uma clinica
-sintetica; a Fase 233 o aplica ao primeiro cliente real aprovado.
+O responsavel pelo produto deve registrar cada proposta em processo comercial
+privado e seguir para Fase 225. A Fase 228 exercita este contrato com uma
+clinica sintetica; a Fase 233 o aplica ao primeiro cliente real aprovado.

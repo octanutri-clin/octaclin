@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-10 durante a conclusao da Fase 223.
+Atualizado em 2026-08-11 durante a conclusao da Fase 224.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1504,7 +1504,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Data: 2026-08-10.
   - Evidencia: `fase-223-verdade-operacional-go-live.md`.
 
-- [ ] Fase 224 - Oferta comercial, planos e ativacao assistida. [BLOQUEADOR - AGUARDA DECISAO COMERCIAL]
+- [x] Fase 224 - Oferta comercial, planos e ativacao assistida. [BLOQUEADOR RESOLVIDO]
   - Definir ICP, oferta inicial, preco, inclusoes/exclusoes, limite por plano,
     politica de upgrade/cancelamento e responsavel comercial.
   - Transformar o controle manual ja entregue em roteiro de venda, cobranca e
@@ -1512,8 +1512,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Contrato operacional e checklist entregues em 2026-08-10:
     `CAPACIDADE_OFERTA_COMERCIAL_ATIVACAO_ASSISTIDA.md` e
     `CHECKLIST_ONBOARDING_COMERCIAL.md`.
-  - Pendente de aceite do responsavel pelo produto: preco, moeda, periodicidade,
-    pagamento, teste/cancelamento, canal comercial, migracao e WhatsApp.
+  - Aceite comercial em 2026-08-11: Profissional R$ 99 trimestral/R$ 119 mensal;
+    Clinica R$ 199 trimestral/R$ 249 mensal; PIX antecipado; demonstracao
+    sintetica; cancelamento com aviso de 30 dias; migracao por escopo; WhatsApp
+    fora da oferta inicial e suporte reforcado de 48 horas.
   - Criterio de aceite: uma clinica sintetica percorre proposta, aceite,
     contrato, configuracao, criacao de usuarios e confirmacao de ativacao.
 

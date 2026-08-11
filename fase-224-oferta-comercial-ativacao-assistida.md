@@ -1,7 +1,7 @@
 # Fase 224 - Oferta comercial, planos e ativacao assistida
 
-Status: preparada em 2026-08-10; aguarda aceite comercial do responsavel pelo
-produto antes de ser marcada como concluida.
+Status: concluida em 2026-08-11, com aceite comercial do responsavel pelo
+produto.
 
 ## Objetivo
 
@@ -28,19 +28,19 @@ para um piloto assistido porque o estado tecnico de plano e limites e aplicado
 por uma superficie autorizada. Cobranca, contrato e comprovante ficam fora do
 repositorio e da auditoria tecnica.
 
-## Aceite ainda necessario
+## Aceite comercial registrado
 
-O responsavel pelo produto precisa definir, fora do Git:
+- Profissional: R$ 99 por mes no trimestral antecipado ou R$ 119 por mes no
+  mensal manual antecipado.
+- Clinica: R$ 199 por mes no trimestral antecipado ou R$ 249 por mes no mensal
+  manual antecipado.
+- Pagamento por PIX/manual antecipado; gateway fica posterior.
+- Demonstracao somente sintetica; cancelamento com aviso de 30 dias e bloqueio
+  suave; migracao assistida cobrada por escopo; WhatsApp fora da oferta inicial;
+  ativacao e suporte reforcado por 48 horas.
 
-1. preco, moeda, periodicidade, pagamento e reajuste;
-2. prazo de teste e cancelamento;
-3. processo comercial que guarda proposta, contrato e comprovantes;
-4. migracao/importacao e eventual valor adicional;
-5. inclusao ou exclusao explicita de WhatsApp na oferta inicial;
-6. identidade empresarial e dominio oficiais.
-
-Sem essas decisoes, a fase nao deve ser marcada como concluida e a oferta nao
-deve ser divulgada como pacote comercial final.
+Permanecem gates de go-live, nao pendencias desta fase: sistema comercial
+privado, reajuste anual juridicamente revisado, dominio e identidade oficiais.
 
 ## Validacao
 
@@ -54,6 +54,4 @@ powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
 
 ## Proximo passo
 
-Registrar as seis decisoes no processo comercial privado e marcar o aceite da
-Fase 224. Em seguida, seguir para a Fase 225 - dominio, identidade e
-comunicacoes transacionais.
+Seguir para a Fase 225 - dominio, identidade e comunicacoes transacionais.

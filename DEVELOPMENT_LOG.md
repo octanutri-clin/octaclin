@@ -277,9 +277,11 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 - Responsavel: Codex.
 - Inicio: 2026-08-10.
-- Status: preparada, aguardando decisoes comerciais do responsavel pelo
-  produto antes do aceite.
+- Conclusao: 2026-08-11.
+- Status: concluida com aceite comercial.
 - Entrega: contrato operacional reutilizavel, pacotes propostos sem preco,
   estados de ativacao, fronteiras de seguranca e checklist de onboarding
-  ampliado.
+  ampliado. Profissional R$ 99 trimestral/R$ 119 mensal; Clinica R$ 199
+  trimestral/R$ 249 mensal; PIX antecipado, demonstracao sintetica,
+  cancelamento em 30 dias, migracao por escopo e WhatsApp fora da oferta.
 - Documento: `CAPACIDADE_OFERTA_COMERCIAL_ATIVACAO_ASSISTIDA.md`.

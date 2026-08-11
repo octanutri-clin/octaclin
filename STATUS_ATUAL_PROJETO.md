@@ -7,11 +7,11 @@ Atualizado em 2026-08-10.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Fase 224 - oferta comercial e ativacao assistida foi estruturada sem inventar
-  preco ou condicao contratual. O contrato operacional define pacotes,
-  responsabilidades, estados, seguranca e a sequencia manual ja suportada pelo
-  produto. O aceite comercial permanece pendente das decisoes de preco, moeda,
-  periodicidade, pagamento, teste/cancelamento, migracao e WhatsApp.
+- Fase 224 - oferta comercial e ativacao assistida concluida. O pacote
+  Profissional foi aceito a R$ 99 trimestral/R$ 119 mensal; Clinica a R$ 199
+  trimestral/R$ 249 mensal. O inicio usa PIX antecipado, demonstracao
+  sintetica, cancelamento com aviso de 30 dias, migracao por escopo, WhatsApp
+  fora da oferta e acompanhamento reforcado de 48 horas.
 - Fase 223 - verdade operacional do go-live. Os documentos operacionais foram
   reconciliados com as evidencias das Fases 200 a 222: producao isolada,
   anexos, billing manual, backups, observabilidade, Calendar/Gmail e smokes de
