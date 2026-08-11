@@ -1607,6 +1607,8 @@ test.describe('prontuario do paciente', () => {
     await page.getByRole('button', { name: 'Filtrar' }).click();
     await expect(page.getByText('Ajuste de conduta')).toBeVisible();
     await expect(page.getByText('Mensagem recebida')).not.toBeVisible();
+    await page.getByRole('button', { name: 'Abrir detalhe de Ajuste de conduta' }).click();
+    await expect(page.getByRole('heading', { name: 'Nova evolucao clinica' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Voltar para pacientes' })).toHaveAttribute('href', '/pacientes');
     await assertSemOverflowHorizontal(page);
   });

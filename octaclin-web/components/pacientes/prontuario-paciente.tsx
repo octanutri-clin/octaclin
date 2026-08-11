@@ -242,7 +242,13 @@ function CartaoResumo({ titulo, valor, detalhe }: { titulo: string; valor: strin
   );
 }
 
-function LinhaDoTempo({ eventos }: { eventos: EventoProntuarioPacienteApi[] }) {
+function LinhaDoTempo({
+  eventos,
+  aoAbrirEvento
+}: {
+  eventos: EventoProntuarioPacienteApi[];
+  aoAbrirEvento?: (evento: EventoProntuarioPacienteApi) => void;
+}) {
   if (!eventos.length) {
     return <EstadoVazio titulo="Sem eventos no prontuario" descricao="Agenda, formularios, respostas e mensagens aparecerao aqui." />;
   }
@@ -270,6 +276,16 @@ function LinhaDoTempo({ eventos }: { eventos: EventoProntuarioPacienteApi[] }) {
                   <span className={`mt-2 inline-flex rounded-md px-2 py-1 text-xs font-semibold ${classeStatus(evento.status)}`}>
                     {evento.status}
                   </span>
+                ) : null}
+                {aoAbrirEvento ? (
+                  <button
+                    type="button"
+                    onClick={() => aoAbrirEvento(evento)}
+                    className="mt-2 block text-xs font-semibold text-primaria hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                    aria-label={`Abrir detalhe de ${evento.titulo}`}
+                  >
+                    Abrir detalhe
+                  </button>
                 ) : null}
               </div>
             </div>
@@ -603,6 +619,24 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     setFimHistorico('');
     setPaginaHistorico(null);
     void carregarHistorico(undefined, {});
+  }
+
+  function abrirDetalheEvento(evento: EventoProntuarioPacienteApi) {
+    if (evento.tipo === 'consulta') {
+      router.push(`/agenda?consultaId=${encodeURIComponent(evento.origemId ?? evento.id)}`);
+      return;
+    }
+
+    const abaPorTipo: Partial<Record<TipoEventoProntuarioPaciente, AbaProntuario>> = {
+      evolucao_clinica: 'evolucoes',
+      tarefa_acompanhamento: 'acompanhamento',
+      mensagem: 'mensagens',
+      formulario: 'formularios',
+      resposta_formulario: 'formularios',
+      checkin_rapido: 'formularios'
+    };
+    const destino = abaPorTipo[evento.tipo];
+    if (destino) solicitarTrocaAba(destino);
   }
 
   useEffect(() => {
@@ -1154,7 +1188,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           ) : (
             <>
               <BarraCarregamento visivel={carregandoHistorico && !paginaHistorico} rotulo="Carregando linha do tempo" />
-              <LinhaDoTempo eventos={paginaHistorico?.itens ?? []} />
+              <LinhaDoTempo eventos={paginaHistorico?.itens ?? []} aoAbrirEvento={abrirDetalheEvento} />
               {paginaHistorico?.proximoCursor ? (
                 <div><Botao type="button" variante="secundario" disabled={carregandoHistorico} onClick={() => void carregarHistorico(paginaHistorico.proximoCursor)}>
                   {carregandoHistorico ? 'Carregando eventos' : 'Carregar eventos anteriores'}

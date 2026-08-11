@@ -1599,8 +1599,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     segura apos salvar.
   - Incremento 4 concluido: timeline filtra por tipo e periodo no servidor,
     com DTO validado e cursor estavel preservado no recorte.
-    Permanecem pendentes a expansao contratual do cadastro, atalhos de detalhe,
-    categorizacao de anexos e validacao clinica.
+  - Incremento 5 concluido: atalhos da timeline levam para agenda ou subarea
+    clinica correspondente sem criar outra fonte de verdade.
+    Permanecem pendentes a expansao contratual do cadastro, categorizacao de
+    anexos e validacao clinica.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

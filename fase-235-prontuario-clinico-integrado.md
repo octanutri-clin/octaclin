@@ -256,6 +256,17 @@ Validacoes: `pnpm --dir octaclin-backend test -- servico-pacientes.spec.ts
 prontuario em desktop e mobile. A cobertura inclui a troca de tipo no filtro e
 confirma que a lista exibida muda conforme a resposta do servidor.
 
+## Incremento 5 - atalhos contextuais da timeline
+
+Entregue em 2026-08-11. Cada evento da timeline possui uma acao de detalhe.
+Consultas levam para a agenda, que mantem a fonte de verdade operacional;
+evolucoes, tarefas, mensagens, formularios e check-ins abrem a subarea correta
+do prontuario. A troca interna reutiliza a protecao contra perda de edicao ja
+existente, em vez de navegar silenciosamente para longe de um rascunho.
+
+Validacoes: lint, typecheck e 14 cenarios do prontuario em desktop/mobile. A
+regressao filtra uma evolucao e confirma a abertura de sua subarea de detalhe.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica
