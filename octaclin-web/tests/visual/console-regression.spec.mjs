@@ -1590,6 +1590,23 @@ test.describe('prontuario do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('oferece atalhos seguros para as acoes frequentes do paciente', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await expect(page.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda?pacienteId=paciente-1');
+    await page.getByRole('button', { name: 'Formularios', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Formularios e check-ins' })).toBeVisible();
+    await page.getByRole('button', { name: 'Anexar', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Anexos do paciente' })).toBeVisible();
+
+    await page.getByRole('tab', { name: 'Atendimentos' }).click();
+    await page.getByLabel('Titulo da evolucao').fill('Rascunho clinico');
+    await page.getByRole('link', { name: 'Agendar' }).click();
+    await expect(page.getByRole('heading', { name: 'Sair sem salvar' })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('exibe linha do tempo clinica consolidada', async ({ page }) => {
     await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');

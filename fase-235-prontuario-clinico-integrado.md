@@ -291,6 +291,19 @@ A prioridade deriva apenas de contadores e eventos ja existentes; nao calcula
 score novo, adesao implicita ou diagnostico. O atalho abre a subarea adequada e
 continua submetido a protecao contra perda de rascunho.
 
+## Incremento 8 - atalhos operacionais no cabecalho
+
+Entregue em 2026-08-11. O cabecalho persistente passa a reunir os acessos
+frequentes do profissional no contexto do paciente: agendar consulta,
+registrar evolucao, prescrever tarefa, abrir formularios/check-ins e anexar
+documento. Os atalhos internos reutilizam as subareas existentes, sem criar
+rotas paralelas ou duplicar estado clinico.
+
+O atalho de agenda conserva o identificador do paciente na URL. Quando houver
+evolucao ou plano alimentar ainda nao salvo, tanto ele quanto os demais atalhos
+passam pela confirmacao explicita antes da troca de contexto. A regressao cobre
+os tres atalhos novos e essa protecao em desktop e mobile.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica

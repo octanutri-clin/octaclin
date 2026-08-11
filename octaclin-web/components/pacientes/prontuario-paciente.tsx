@@ -329,7 +329,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [areaAtiva, setAreaAtiva] = useState<AreaProntuario>('resumo');
   const [planoAlimentarNaoSalvo, setPlanoAlimentarNaoSalvo] = useState(false);
   const [permissoes, setPermissoes] = useState<string[]>([]);
-  const [saidaPendente, setSaidaPendente] = useState<{ tipo: 'voltar' } | { tipo: 'aba'; id: AbaProntuario } | null>(null);
+  const [saidaPendente, setSaidaPendente] = useState<
+    { tipo: 'voltar' } | { tipo: 'agenda' } | { tipo: 'aba'; id: AbaProntuario } | null
+  >(null);
   const router = useRouter();
 
   const carregar = useCallback(async () => {
@@ -725,6 +727,18 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
+            href={`/agenda?pacienteId=${encodeURIComponent(pacienteId)}`}
+            onClick={(evento) => {
+              if (!alteracoesNaoSalvas) return;
+              evento.preventDefault();
+              setSaidaPendente({ tipo: 'agenda' });
+            }}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+          >
+            <CalendarDays size={16} />
+            Agendar
+          </Link>
+          <Link
             href="/pacientes"
             onClick={(evento) => {
               if (!alteracoesNaoSalvas) return;
@@ -747,6 +761,14 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('acompanhamento')}>
             <CheckSquare size={16} />
             Nova tarefa
+          </Botao>
+          <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('formularios')}>
+            <ClipboardList size={16} />
+            Formularios
+          </Botao>
+          <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('anexos')}>
+            <Paperclip size={16} />
+            Anexar
           </Botao>
         </div>
       </div>
@@ -1291,6 +1313,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           const pendente = saidaPendente;
           setSaidaPendente(null);
           if (pendente.tipo === 'voltar') router.push('/pacientes');
+          else if (pendente.tipo === 'agenda') router.push(`/agenda?pacienteId=${encodeURIComponent(pacienteId)}`);
           else aplicarAba(pendente.id);
         }}
       />

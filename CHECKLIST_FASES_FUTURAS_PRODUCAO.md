@@ -1605,6 +1605,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
     com contagens e estado vazio contextual.
   - Incremento 7 concluido: resumo destaca proxima conduta acionavel e proxima
     consulta a partir de dados existentes, sem inferencia clinica nova.
+  - Incremento 8 concluido: cabecalho contextual oferece agenda, formularios e
+    anexos, preservando paciente na agenda e confirmacao antes de descartar
+    rascunho clinico.
     Permanecem pendentes a expansao contratual do cadastro, vinculo de anexos a
     eventos clinicos e validacao clinica.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
