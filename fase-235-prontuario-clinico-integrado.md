@@ -1,6 +1,6 @@
 # Fase 235 - Prontuario clinico integrado e navegacao orientada a conduta
 
-Status: planejada. Fase importante de produto e UX, posterior ao piloto
+Status: em execucao. Fase importante de produto e UX, posterior ao piloto
 assistido. Ela consolida capacidades clinicas ja entregues; nao substitui os
 bloqueadores de go-live comercial das Fases 225, 226, 228, 229, 231, 232 e 233.
 
@@ -148,6 +148,39 @@ fase:
 - acompanhamento gestacional;
 - pediatria, lactacao, terapia nutricional e recomendacao clinica por IA;
 - atestado ou documento reservado a profissao/regulacao especifica.
+
+## Incremento 1 - navegacao orientada a conduta
+
+Entregue localmente em 2026-08-11. O prontuario deixou de expor onze abas no
+primeiro nivel e passou a seis areas principais:
+
+1. **Resumo**;
+2. **Atendimentos**: evolucoes, historico e mensagens;
+3. **Avaliacoes**: antropometria, formularios e check-ins;
+4. **Plano**: acompanhamento, plano alimentar e materiais;
+5. **Documentos**: documentos e anexos;
+6. **Financeiro**, exibido somente a quem possui `agenda.financeiro.ler` e com
+   atalho para a agenda, que continua sendo a fonte de verdade de consultas,
+   pacotes, pagamentos e recibos.
+
+As acoes rapidas do cabecalho continuam abrindo a subarea correta. Nenhum
+contrato clinico, regra de dominio, integracao ou permissao foi relaxado. A
+nova navegacao foi coberta na regressao mockada, inclusive o caso em que o
+financeiro nao deve ser exibido sem permissao.
+
+Validacoes do incremento:
+
+```powershell
+pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs -g "prontuario do paciente" --project=desktop-chromium --project=mobile-chromium --reporter=list
+pnpm --dir octaclin-web lint
+pnpm --dir octaclin-web typecheck
+git diff --check
+```
+
+Resultado: 14 cenarios de prontuario aprovados em desktop e mobile, lint e
+typecheck aprovados. A Fase 235 permanece em execucao: projecao BFF/timeline
+paginada, cadastro progressivo, categorizacao de anexos e validacao clinica
+ainda nao foram entregues.
 
 ## Sequencia posterior obrigatoria
 

@@ -1585,10 +1585,13 @@ publicado antes de ampliar a superficie de mudancas visuais.
     e portal expondo somente alternativas liberadas.
   - Especificacao: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
 
-- [ ] Fase 235 - Prontuario clinico integrado e navegacao orientada a conduta. [IMPORTANTE - POS PILOTO]
+- [~] Fase 235 - Prontuario clinico integrado e navegacao orientada a conduta. [IMPORTANTE - POS PILOTO]
   - Consolidar em seis areas: Resumo, Atendimentos, Avaliacoes, Plano,
     Documentos e Financeiro, reaproveitando os modulos entregues sem criar uma
     segunda fonte de verdade.
+  - Incremento 1 concluido: navegacao principal/subareas, acoes rapidas e
+    financeiro condicionado por permissao. Permanecem pendentes a projecao BFF,
+    timeline paginada, cadastro progressivo e validacao clinica.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

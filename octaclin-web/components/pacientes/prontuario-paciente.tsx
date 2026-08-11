@@ -98,7 +98,10 @@ type AbaProntuario =
   | 'mensagens'
   | 'materiais'
   | 'anexos'
-  | 'historico';
+  | 'historico'
+  | 'financeiro';
+
+type AreaProntuario = 'resumo' | 'atendimentos' | 'avaliacoes' | 'plano' | 'documentos' | 'financeiro';
 
 const abasProntuario: Array<{ id: AbaProntuario; rotulo: string; permissao?: string }> = [
   { id: 'resumo', rotulo: 'Resumo' },
@@ -113,6 +116,30 @@ const abasProntuario: Array<{ id: AbaProntuario; rotulo: string; permissao?: str
   { id: 'anexos', rotulo: 'Anexos' },
   { id: 'historico', rotulo: 'Historico' }
 ];
+
+const areasProntuario: Array<{ id: AreaProntuario; rotulo: string; abaInicial: AbaProntuario; permissao?: string }> = [
+  { id: 'resumo', rotulo: 'Resumo', abaInicial: 'resumo' },
+  { id: 'atendimentos', rotulo: 'Atendimentos', abaInicial: 'evolucoes' },
+  { id: 'avaliacoes', rotulo: 'Avaliacoes', abaInicial: 'antropometria' },
+  { id: 'plano', rotulo: 'Plano', abaInicial: 'acompanhamento' },
+  { id: 'documentos', rotulo: 'Documentos', abaInicial: 'documentos' },
+  { id: 'financeiro', rotulo: 'Financeiro', abaInicial: 'financeiro', permissao: 'agenda.financeiro.ler' }
+];
+
+const areaPorAba: Record<AbaProntuario, AreaProntuario> = {
+  resumo: 'resumo',
+  evolucoes: 'atendimentos',
+  historico: 'atendimentos',
+  mensagens: 'atendimentos',
+  antropometria: 'avaliacoes',
+  formularios: 'avaliacoes',
+  acompanhamento: 'plano',
+  plano_alimentar: 'plano',
+  materiais: 'plano',
+  documentos: 'documentos',
+  anexos: 'documentos',
+  financeiro: 'financeiro'
+};
 
 const formularioEvolucaoInicial: FormularioEvolucao = {
   titulo: '',
@@ -266,6 +293,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [formularioMaterial, setFormularioMaterial] = useState<FormularioMaterial>(formularioMaterialInicial);
   const [formularioEnvioMaterial, setFormularioEnvioMaterial] = useState<FormularioEnvioMaterial>(formularioEnvioMaterialInicial);
   const [abaAtiva, setAbaAtiva] = useState<AbaProntuario>('resumo');
+  const [areaAtiva, setAreaAtiva] = useState<AreaProntuario>('resumo');
   const [planoAlimentarNaoSalvo, setPlanoAlimentarNaoSalvo] = useState(false);
   const [permissoes, setPermissoes] = useState<string[]>([]);
   const [saidaPendente, setSaidaPendente] = useState<{ tipo: 'voltar' } | { tipo: 'aba'; id: AbaProntuario } | null>(null);
@@ -478,13 +506,32 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     () => abasProntuario.filter((aba) => !aba.permissao || permissoes.includes(aba.permissao)),
     [permissoes]
   );
+  const areasDisponiveis = useMemo(
+    () => areasProntuario.filter((area) => !area.permissao || permissoes.includes(area.permissao)),
+    [permissoes]
+  );
+  const abasDaAreaAtiva = useMemo(
+    () => abasDisponiveis.filter((aba) => areaPorAba[aba.id] === areaAtiva),
+    [abasDisponiveis, areaAtiva]
+  );
+
+  function aplicarAba(id: AbaProntuario) {
+    setAreaAtiva(areaPorAba[id]);
+    setAbaAtiva(id);
+  }
 
   function solicitarTrocaAba(id: AbaProntuario) {
     if (!alteracoesNaoSalvas) {
-      setAbaAtiva(id);
+      aplicarAba(id);
       return;
     }
     setSaidaPendente({ tipo: 'aba', id });
+  }
+
+  function solicitarTrocaArea(id: AreaProntuario) {
+    const area = areasDisponiveis.find((item) => item.id === id);
+    if (!area) return;
+    solicitarTrocaAba(area.abaInicial);
   }
 
   useEffect(() => {
@@ -579,20 +626,36 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       </div>
 
       <Abas
-        identificador="prontuario"
-        abas={abasDisponiveis}
-        ativaId={abaAtiva}
+        identificador="prontuario-area"
+        abas={areasDisponiveis}
+        ativaId={areaAtiva}
         aoMudar={(id) => {
-          solicitarTrocaAba(id as AbaProntuario);
+          solicitarTrocaArea(id as AreaProntuario);
         }}
-        rotulo="Areas do prontuario"
+        rotulo="Areas principais do prontuario"
       />
 
       {sucesso ? (
         <div className="rounded-md border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">{sucesso}</div>
       ) : null}
 
-      <div id={`prontuario-${abaAtiva}-painel`} role="tabpanel" aria-labelledby={`prontuario-${abaAtiva}-aba`} className="grid gap-4">
+      <div id={`prontuario-area-${areaAtiva}-painel`} role="tabpanel" aria-labelledby={`prontuario-area-${areaAtiva}-aba`} className="grid gap-4">
+      {abasDaAreaAtiva.length > 1 ? (
+        <Abas
+          identificador="prontuario-subarea"
+          abas={abasDaAreaAtiva}
+          ativaId={abaAtiva}
+          aoMudar={(id) => solicitarTrocaAba(id as AbaProntuario)}
+          rotulo={`Subareas de ${areasProntuario.find((area) => area.id === areaAtiva)?.rotulo ?? 'prontuario'}`}
+          className="border-none pb-0"
+        />
+      ) : null}
+      <div
+        id={`prontuario-subarea-${abaAtiva}-painel`}
+        role={abasDaAreaAtiva.length > 1 ? 'tabpanel' : undefined}
+        aria-labelledby={abasDaAreaAtiva.length > 1 ? `prontuario-subarea-${abaAtiva}-aba` : undefined}
+        className="grid gap-4"
+      >
       {abaAtiva === 'resumo' ? (
         <>
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
@@ -958,6 +1021,23 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </section>
       ) : null}
 
+      {abaAtiva === 'financeiro' ? (
+        <section className="grid gap-3 rounded-md border border-linha bg-white p-4 sm:max-w-2xl">
+          <h2 className="text-base font-semibold text-tinta">Financeiro do paciente</h2>
+          <p className="text-sm text-texto-suave">
+            Consultas, pacotes, pagamentos e recibos permanecem registrados na agenda para preservar a fonte de verdade financeira.
+          </p>
+          <div>
+            <Link
+              href={`/agenda?pacienteId=${encodeURIComponent(pacienteId)}`}
+              className="inline-flex min-h-11 items-center rounded-md bg-primaria px-3 text-sm font-semibold text-white hover:bg-primaria-forte focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+            >
+              Abrir financeiro na agenda
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
       {abaAtiva === 'formularios' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Formularios e check-ins</h2><p className="mt-1 text-sm text-texto-suave">Envios, respostas e check-ins vinculados ao paciente.</p></div><LinhaDoTempo eventos={formularios} /></section> : null}
 
       {abaAtiva === 'mensagens' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Mensagens do paciente</h2><p className="mt-1 text-sm text-texto-suave">Historico de comunicacoes registradas.</p></div><LinhaDoTempo eventos={mensagens} /></section> : null}
@@ -990,6 +1070,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           </Link>
         </aside>
       </section> : null}
+      </div>
       <ModalConfirmacao
         aberto={Boolean(anexoParaExcluir)}
         titulo="Excluir anexo clinico"
@@ -1010,7 +1091,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           const pendente = saidaPendente;
           setSaidaPendente(null);
           if (pendente.tipo === 'voltar') router.push('/pacientes');
-          else setAbaAtiva(pendente.id);
+          else aplicarAba(pendente.id);
         }}
       />
       </div>
