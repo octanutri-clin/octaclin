@@ -55,10 +55,13 @@ export function PerfilCadastroPaciente({ pacienteId }: Props) {
     }
   }, [pacienteId, podeVerFiscal]);
 
+  useEffect(() => {
+    if (aberto) void carregar();
+  }, [aberto, carregar]);
+
   function abrir() {
     setAberto(true);
     setSucesso(null);
-    void carregar();
   }
 
   async function salvar(secao: 'identificacao' | 'contato' | 'operacao' | 'fiscal') {
