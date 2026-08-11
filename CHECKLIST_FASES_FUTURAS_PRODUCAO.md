@@ -1585,6 +1585,37 @@ publicado antes de ampliar a superficie de mudancas visuais.
     e portal expondo somente alternativas liberadas.
   - Especificacao: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
 
+- [ ] Fase 235 - Prontuario clinico integrado e navegacao orientada a conduta. [IMPORTANTE - POS PILOTO]
+  - Consolidar em seis areas: Resumo, Atendimentos, Avaliacoes, Plano,
+    Documentos e Financeiro, reaproveitando os modulos entregues sem criar uma
+    segunda fonte de verdade.
+  - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
+    metadados autorizados, filtros, acoes rapidas e deep links, com protecao
+    integral por tenant, papel e responsavel.
+  - Exames/fotos, prescricoes e acompanhamento gestacional permanecem fora do
+    escopo e seguem nas Fases 236, 237 e 238, respectivamente.
+  - Criterio de aceite: profissional encontra a proxima conduta em uma tela;
+    timeline respeita permissoes e imutabilidade; paciente nao recebe dados
+    internos; desktop/mobile passam as jornadas e a acessibilidade.
+  - Especificacao: `fase-235-prontuario-clinico-integrado.md`.
+
+- [ ] Fase 236 - Exames laboratoriais e evolucao fotografica. [IMPORTANTE - POS PILOTO]
+  - Modelar exames por coleta/marcador e fotos por protocolo, com anexos
+    privados, consentimento, retencao, origem e evolucao sem diagnostico
+    automatico.
+
+- [ ] Fase 237 - Prescricoes, metas e orientacoes terapeuticas. [IMPORTANTE - POS PILOTO]
+  - Estruturar metas, suplementos, produtos, formulas manipuladas e orientacoes
+    com autoria, versao, validade, historico e revisao do escopo profissional.
+
+- [ ] Fase 238 - Acompanhamento gestacional especializado. [OPCIONAL - CLINICO]
+  - Criar somente apos protocolo, consentimentos, curvas e limites de uso serem
+    validados pelo responsavel clinico; nao reutilizar regras genericas.
+
+- [ ] Fase 239 - Validacao clinica e de usabilidade do prontuario. [IMPORTANTE - POS PILOTO]
+  - Validar jornadas sinteticas e aceite com profissionais antes de expandir a
+    superficie clinica para pacientes reais.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.
