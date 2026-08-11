@@ -357,6 +357,19 @@ O BFF do Next.js encaminha os contratos autenticados. A proxima entrega e a
 superficie de cadastro no prontuario, com salvamento explicito por secao e
 sem alterar o formulario legado de criacao/listagem.
 
+## Incremento 12 - cadastro progressivo no prontuario
+
+Entregue em 2026-08-11. O cabecalho do prontuario passou a oferecer a acao
+`Cadastro` para quem possui `pacientes.gerenciar`. A janela organiza o trabalho
+em identificacao complementar, contato/endereco, operacao/responsavel e, apenas
+para quem tem permissao financeira, dados fiscais opcionais.
+
+Cada bloco possui salvamento proprio, feedback de sucesso/erro e campos com
+foco visivel. A tela nao mostra o bloco fiscal para quem nao possui
+`agenda.financeiro.ler`; a protecao do backend continua sendo a garantia final.
+Nome, responsavel, status, risco e contato legado permanecem preservados no
+cadastro existente enquanto a clinica adota gradualmente os dados estruturados.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica

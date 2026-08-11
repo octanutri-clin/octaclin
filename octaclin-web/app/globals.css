@@ -39,6 +39,21 @@ textarea {
   font: inherit;
 }
 
+/* Campos do cadastro progressivo: densidade consistente em modal desktop/mobile. */
+.campo {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--linha-base);
+  border-radius: 6px;
+  background: var(--superficie-base);
+  padding: 0 12px;
+  color: var(--texto-corpo);
+}
+
+.campo:focus-visible {
+  border-color: rgb(var(--anel-foco));
+}
+
 table,
 time,
 .numeros-tabulares {

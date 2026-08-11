@@ -1620,6 +1620,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     contato e operacao; fiscal permanece fora da leitura comum e exige tambem
     `agenda.financeiro.ler`. Cada secao e cifrada e auditada sem gravar seus
     valores; falta conectar a interface de cadastro progressivo.
+  - Incremento 12 concluido: prontuario oferece cadastro por secoes com
+    salvamento explicito, feedback e bloco fiscal condicionado a permissao.
+    O formulario legado continua compativel durante a adocao gradual; faltam
+    testes de jornada em staging e a ativacao de portal apos revisao cadastral.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

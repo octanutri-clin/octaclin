@@ -25,6 +25,7 @@ import { Botao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { AbaAntropometria } from './aba-antropometria';
 import { AbaDocumentos, ConsultaConcluidaOpcao } from './aba-documentos';
+import { PerfilCadastroPaciente } from './perfil-cadastro-paciente';
 import { PlanoAlimentarProfissional } from './plano-alimentar-profissional';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
@@ -741,6 +742,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <CalendarDays size={16} />
             Agendar
           </Link>
+          <PerfilCadastroPaciente pacienteId={pacienteId} />
           <Link
             href="/pacientes"
             onClick={(evento) => {
