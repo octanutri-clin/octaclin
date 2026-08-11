@@ -1644,10 +1644,13 @@ publicado antes de ampliar a superficie de mudancas visuais.
     internos; desktop/mobile passam as jornadas e a acessibilidade.
   - Especificacao: `fase-235-prontuario-clinico-integrado.md`.
 
-- [ ] Fase 236 - Exames laboratoriais e evolucao fotografica. [IMPORTANTE - POS PILOTO]
-  - Modelar exames por coleta/marcador e fotos por protocolo, com anexos
-    privados, consentimento, retencao, origem e evolucao sem diagnostico
-    automatico.
+- [~] Fase 236 - Exames laboratoriais e evolucao fotografica. [IMPORTANTE - POS PILOTO]
+  - Fundacao definida: exames por coleta/marcador e fotos por protocolo usam
+    anexos privados, RLS forcada, auditoria, consentimento separado e retencao
+    documentada; nao ha diagnostico automatico nem acesso pelo portal.
+  - Proximo incremento: migrations aditivas para coletas, marcadores,
+    protocolos, consentimentos e series de fotos, antes de criar a interface.
+  - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
 - [ ] Fase 237 - Prescricoes, metas e orientacoes terapeuticas. [IMPORTANTE - POS PILOTO]
   - Estruturar metas, suplementos, produtos, formulas manipuladas e orientacoes
