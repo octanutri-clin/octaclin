@@ -946,6 +946,46 @@ async function prepararProntuarioMockado(page) {
     });
   });
 
+  await page.route('**/api/pacientes/paciente-1/prontuario/timeline**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            id: 'mensagem-1',
+            tipo: 'mensagem',
+            titulo: 'Mensagem recebida',
+            data: '2026-07-22T16:00:00.000Z',
+            status: 'recebido'
+          },
+          {
+            id: 'consulta-1',
+            tipo: 'consulta',
+            titulo: 'Consulta de retorno',
+            data: '2026-07-22T13:00:00.000Z',
+            status: 'agendada',
+            origemId: 'consulta-1'
+          },
+          {
+            id: 'resposta-1',
+            tipo: 'resposta_formulario',
+            titulo: 'Resposta de Check-in semanal',
+            data: '2026-07-21T15:00:00.000Z',
+            status: 'finalizado'
+          },
+          {
+            id: 'envio-1',
+            tipo: 'formulario',
+            titulo: 'Formulario',
+            data: '2026-07-20T13:00:00.000Z',
+            status: 'enviado'
+          }
+        ]
+      })
+    });
+  });
+
   await page.route('**/api/pacientes/paciente-1/prontuario', async (route) => {
     const eventos = [
       ...(criouTarefa
@@ -1542,10 +1582,10 @@ test.describe('prontuario do paciente', () => {
     await page.getByRole('tablist', { name: 'Subareas de Atendimentos' }).getByRole('tab', { name: 'Historico' }).click();
     await expect(page.getByRole('heading', { name: 'Linha do tempo clinica' })).toBeVisible();
     await expect(page.getByText('Mensagem recebida')).toBeVisible();
-    await expect(page.getByText('Estou com duvida no plano.')).toBeVisible();
+    await expect(page.getByText('Estou com duvida no plano.')).not.toBeVisible();
     await expect(page.getByText('Consulta de retorno')).toBeVisible();
     await expect(page.getByText('Resposta de Check-in semanal')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Check-in semanal', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Formulario', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Voltar para pacientes' })).toHaveAttribute('href', '/pacientes');
     await assertSemOverflowHorizontal(page);
   });

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  DefaultValuePipe,
   Get,
   Header,
   Param,
@@ -177,6 +178,34 @@ export class ControladorPacientes {
       userAgent: this.obterUserAgent(requisicao)
     });
     return paciente;
+  }
+
+  @Get(':id/prontuario/timeline')
+  async listarLinhaDoTempoPaginada(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('cursor') cursor?: string,
+    @Query('limite', new DefaultValuePipe(20), ParseIntPipe) limite?: number
+  ) {
+    const pagina = await this.servicoPacientes.listarLinhaDoTempoPaginada(
+      usuario.tenantId,
+      id,
+      usuario,
+      cursor,
+      limite
+    );
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.prontuario.timeline.listar',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { eventos: pagina.itens.length, paginada: true }
+    });
+    return pagina;
   }
 
   @Get(':id/prontuario')

@@ -51,9 +51,11 @@ import {
 import {
   criarEvolucaoClinica,
   criarTarefaAcompanhamento,
+  listarLinhaDoTempoPaginada,
   obterProntuarioPaciente,
   type CategoriaTarefaAcompanhamentoApi,
   type EventoProntuarioPacienteApi,
+  type PaginaLinhaDoTempoProntuarioApi,
   type PrioridadeTarefaAcompanhamentoApi,
   type ProntuarioPacienteApi,
   type TipoEvolucaoClinicaApi
@@ -273,10 +275,12 @@ function LinhaDoTempo({ eventos }: { eventos: EventoProntuarioPacienteApi[] }) {
 
 export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [dados, setDados] = useState<ProntuarioPacienteApi | null>(null);
+  const [paginaHistorico, setPaginaHistorico] = useState<PaginaLinhaDoTempoProntuarioApi | null>(null);
   const [materiais, setMateriais] = useState<MaterialEducativoApi[]>([]);
   const [materiaisPaciente, setMateriaisPaciente] = useState<EnvioMaterialPacienteApi[]>([]);
   const [anexos, setAnexos] = useState<ArquivoMidiaApi[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
   const [salvandoEvolucao, setSalvandoEvolucao] = useState(false);
   const [salvandoTarefa, setSalvandoTarefa] = useState(false);
   const [salvandoMaterial, setSalvandoMaterial] = useState(false);
@@ -287,12 +291,14 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [categoriaAnexo, setCategoriaAnexo] = useState<CategoriaAnexoClinico>('exame');
   const [anexoParaExcluir, setAnexoParaExcluir] = useState<ArquivoMidiaApi | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [erroHistorico, setErroHistorico] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [formularioEvolucao, setFormularioEvolucao] = useState<FormularioEvolucao>(formularioEvolucaoInicial);
   const [formularioTarefa, setFormularioTarefa] = useState<FormularioTarefa>(formularioTarefaInicial);
   const [formularioMaterial, setFormularioMaterial] = useState<FormularioMaterial>(formularioMaterialInicial);
   const [formularioEnvioMaterial, setFormularioEnvioMaterial] = useState<FormularioEnvioMaterial>(formularioEnvioMaterialInicial);
   const [abaAtiva, setAbaAtiva] = useState<AbaProntuario>('resumo');
+  const [historicoSolicitado, setHistoricoSolicitado] = useState(false);
   const [areaAtiva, setAreaAtiva] = useState<AreaProntuario>('resumo');
   const [planoAlimentarNaoSalvo, setPlanoAlimentarNaoSalvo] = useState(false);
   const [permissoes, setPermissoes] = useState<string[]>([]);
@@ -321,6 +327,23 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar prontuario.');
     } finally {
       setCarregando(false);
+    }
+  }, [pacienteId]);
+
+  const carregarHistorico = useCallback(async (cursor?: string) => {
+    setCarregandoHistorico(true);
+    setErroHistorico(null);
+    try {
+      const pagina = await listarLinhaDoTempoPaginada(pacienteId, { cursor, limite: 20 });
+      setPaginaHistorico((anterior) =>
+        cursor && anterior
+          ? { ...pagina, itens: [...anterior.itens, ...pagina.itens] }
+          : pagina
+      );
+    } catch (erroAtual) {
+      setErroHistorico(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar a linha do tempo.');
+    } finally {
+      setCarregandoHistorico(false);
     }
   }, [pacienteId]);
 
@@ -485,6 +508,18 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  useEffect(() => {
+    setPaginaHistorico(null);
+    setErroHistorico(null);
+    setHistoricoSolicitado(false);
+  }, [pacienteId]);
+
+  useEffect(() => {
+    if (abaAtiva !== 'historico' || historicoSolicitado) return;
+    setHistoricoSolicitado(true);
+    void carregarHistorico();
+  }, [abaAtiva, carregarHistorico, historicoSolicitado]);
 
   useEffect(() => {
     let ativo = true;
@@ -1048,7 +1083,22 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <h2 className="text-base font-semibold text-tinta">Linha do tempo clinica</h2>
             <p className="mt-1 text-sm text-texto-suave">Consultas, formularios, check-ins, respostas e mensagens em ordem cronologica.</p>
           </div>
-          <LinhaDoTempo eventos={eventos} />
+          {erroHistorico ? (
+            <div className="grid gap-3">
+              <AlertaOperacional mensagem={`Falha ao carregar linha do tempo: ${erroHistorico}`} />
+              <div><Botao type="button" variante="secundario" onClick={() => void carregarHistorico()}>Tentar novamente</Botao></div>
+            </div>
+          ) : (
+            <>
+              <BarraCarregamento visivel={carregandoHistorico && !paginaHistorico} rotulo="Carregando linha do tempo" />
+              <LinhaDoTempo eventos={paginaHistorico?.itens ?? []} />
+              {paginaHistorico?.proximoCursor ? (
+                <div><Botao type="button" variante="secundario" disabled={carregandoHistorico} onClick={() => void carregarHistorico(paginaHistorico.proximoCursor)}>
+                  {carregandoHistorico ? 'Carregando eventos' : 'Carregar eventos anteriores'}
+                </Botao></div>
+              ) : null}
+            </>
+          )}
         </article>
 
         <aside className="grid h-fit gap-3 rounded-md border border-linha bg-white p-4">

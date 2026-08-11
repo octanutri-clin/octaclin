@@ -182,20 +182,41 @@ typecheck aprovados. A Fase 235 permanece em execucao: projecao BFF/timeline
 paginada, cadastro progressivo, categorizacao de anexos e validacao clinica
 ainda nao foram entregues.
 
-## Incremento 2 - decisao para a timeline paginada
+## Incremento 2 - timeline paginada de metadados
 
 Auditoria concluida em 2026-08-11. O endpoint atual nao carrega o historico
 inteiro: ele limita cada fonte e devolve no maximo 80 eventos combinados. Isso
 evita uma leitura ilimitada, mas nao oferece cursor, filtros server-side ou
 uma ordenacao global reutilizavel entre as sete origens.
 
-Tambem foi identificado que a projecao atual ainda descriptografa conteudo de
-evolucoes e mensagens para preencher a descricao de cartoes. O proximo
-incremento deve substituir esse comportamento por uma leitura paginada de
-metadados, com desempate deterministico por data/tipo/id e detalhe clinico
-carregado apenas pela subarea autorizada. Nao sera introduzida paginacao por
-offset no navegador: ela causaria duplicacao ou salto quando um novo evento for
-registrado entre duas leituras.
+Tambem foi identificado que a projecao anterior ainda descriptografava conteudo
+de evolucoes e mensagens para preencher a descricao de cartoes. Esse ponto foi
+substituido em 2026-08-11 por `GET /pacientes/:id/prontuario/timeline`, uma
+leitura dentro de `ExecutorTenant` que agrega apenas metadados de consultas,
+formularios, check-ins, mensagens, evolucoes e tarefas. A leitura preserva o
+escopo de responsavel do profissional, registra auditoria e nao seleciona
+campos criptografados de conteudo.
+
+O contrato usa cursor opaco com ordenacao deterministica por `data DESC, id
+DESC`, limite padrao de 20 e teto de 50 eventos. O BFF autenticado entrega essa
+pagina exclusivamente para a subarea Historico, que permite carregar eventos
+anteriores sem usar offset nem recorrer a descricao descriptografada do
+prontuario legado. Falha, vazio e carregamento possuem estado proprio e a
+primeira pagina nunca volta a expor o texto de mensagens ou evolucoes.
+
+Validacoes do incremento:
+
+```powershell
+pnpm --dir octaclin-backend test -- servico-pacientes.spec.ts --runInBand
+pnpm --dir octaclin-backend typecheck
+pnpm --dir octaclin-web typecheck
+pnpm --dir octaclin-web lint
+pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs -g "prontuario do paciente" --project=desktop-chromium --project=mobile-chromium --reporter=list
+```
+
+Resultado: 35 testes unitarios do servico de pacientes e 14 cenarios visuais do
+prontuario foram aprovados. Cadastro progressivo, filtros de timeline, atalhos
+para detalhe, categorizacao de anexos e validacao clinica permanecem pendentes.
 
 ## Sequencia posterior obrigatoria
 
@@ -235,8 +256,7 @@ expandir a superficie de mudancas clinicas.
   links de detalhe. Nenhum identificador interno de outro tenant ou dado do
   portal deve entrar no contrato.
 - Paginar no servidor, ordenar por instante do evento e usar cursores estaveis
-  quando houver dados suficientes para isso. Eventos com mesma data precisam de
-  desempate deterministico.
+  com desempate deterministico por identificador quando houver mesma data.
 - Adicionar indices somente depois do plano de consulta confirmar necessidade;
   benchmark deve medir leitura de resumo e timeline em massa sintetica.
 

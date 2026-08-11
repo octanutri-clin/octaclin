@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { And, ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThanOrEqual, Not, QueryFailedError, Raw } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { montarCsv } from '../../../infraestrutura/exportacao/csv';
@@ -31,8 +31,10 @@ import {
   CriarPacienteDto,
   CriarTarefaAcompanhamentoDto,
   EventoProntuarioPacienteDto,
+  TipoEventoProntuarioPaciente,
   EvolucaoClinicaRespostaDto,
   PacienteRespostaDto,
+  PaginaLinhaTempoProntuarioDto,
   ProntuarioPacienteRespostaDto,
   TarefaAcompanhamentoRespostaDto,
   ListarPacientesDto
@@ -48,7 +50,24 @@ import { PacienteOrm } from '../infraestrutura/paciente.orm';
  */
 export const LIMITE_LINHAS_EXPORTACAO = 5000;
 const PAGINA_EXPORTACAO = 100;
+const LIMITE_PADRAO_TIMELINE = 20;
+const LIMITE_MAXIMO_TIMELINE = 50;
 const CONSTRAINT_REFERENCIA_EXTERNA_PACIENTE = 'ux_pacientes_referencia_externa';
+
+interface CursorTimeline {
+  data: string;
+  id: string;
+}
+
+interface LinhaTimelinePaginada {
+  id: string;
+  tipo: TipoEventoProntuarioPaciente;
+  titulo: string;
+  data: Date | string;
+  status?: string | null;
+  origemId?: string | null;
+  metadados?: Record<string, unknown> | null;
+}
 
 @Injectable()
 export class ServicoPacientes {
@@ -623,6 +642,76 @@ export class ServicoPacientes {
     });
   }
 
+  async listarLinhaDoTempoPaginada(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado,
+    cursor?: string,
+    limite = LIMITE_PADRAO_TIMELINE
+  ): Promise<PaginaLinhaTempoProntuarioDto> {
+    if (!Number.isInteger(limite) || limite < 1 || limite > LIMITE_MAXIMO_TIMELINE) {
+      throw new BadRequestException(`O limite da timeline deve estar entre 1 e ${LIMITE_MAXIMO_TIMELINE}.`);
+    }
+    const cursorDecodificado = cursor ? this.decodificarCursorTimeline(cursor) : undefined;
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const linhas = await gerenciador.query<LinhaTimelinePaginada[]>(`
+        SELECT * FROM (
+          SELECT id, 'consulta'::text AS tipo, titulo, inicio_em AS data, status, id AS "origemId",
+            jsonb_build_object('fimEm', fim_em) AS metadados
+          FROM agenda_consultas WHERE tenant_id = $1 AND paciente_id = $2
+          UNION ALL
+          SELECT id, 'formulario'::text, 'Formulario', COALESCE(enviado_em, expira_em, 'epoch'::timestamptz), status, questionario_id,
+            jsonb_build_object('envioQuestionarioId', id, 'expiraEm', expira_em)
+          FROM envios_questionario WHERE tenant_id = $1 AND paciente_id = $2
+          UNION ALL
+          SELECT id, 'resposta_formulario'::text, 'Resposta de formulario', COALESCE(finalizado_em, criado_em),
+            CASE WHEN finalizado_em IS NULL THEN 'em_andamento' ELSE 'finalizado' END, envio_questionario_id, '{}'::jsonb
+          FROM respostas_checkin WHERE tenant_id = $1 AND paciente_id = $2
+          UNION ALL
+          SELECT id, 'checkin_rapido'::text, 'Check-in rapido', registrado_em, 'registrado', id,
+            jsonb_build_object('tipoDiario', tipo)
+          FROM logs_diario_rapido WHERE tenant_id = $1 AND paciente_id = $2
+          UNION ALL
+          SELECT id, 'mensagem'::text, CASE WHEN status = 'recebido' THEN 'Mensagem recebida' ELSE 'Mensagem' END,
+            COALESCE(enviado_em, criado_em), status, id, '{}'::jsonb
+          FROM mensagens_notificacao WHERE tenant_id = $1 AND paciente_id = $2
+          UNION ALL
+          SELECT id, 'evolucao_clinica'::text, titulo, criado_em, tipo, id,
+            jsonb_build_object('autorUsuarioId', autor_usuario_id, 'visibilidade', visibilidade)
+          FROM evolucoes_clinicas WHERE tenant_id = $1 AND paciente_id = $2
+          UNION ALL
+          SELECT id, 'tarefa_acompanhamento'::text, titulo, COALESCE(vencimento_em, criado_em), status, id,
+            jsonb_build_object('categoria', categoria, 'prioridade', prioridade, 'profissionalId', profissional_id, 'concluidoEm', concluido_em)
+          FROM acompanhamento_tarefas WHERE tenant_id = $1 AND paciente_id = $2
+        ) AS timeline
+        WHERE $3::timestamptz IS NULL
+          OR data < $3::timestamptz
+          OR (data = $3::timestamptz AND id::text < $4::text)
+        ORDER BY data DESC, id DESC
+        LIMIT $5
+      `, [tenantId, pacienteId, cursorDecodificado?.data ?? null, cursorDecodificado?.id ?? null, limite + 1]);
+
+      const itens = linhas.slice(0, limite).map((linha) => ({
+        id: linha.id,
+        tipo: linha.tipo,
+        titulo: linha.titulo,
+        data: new Date(linha.data),
+        status: linha.status ?? undefined,
+        origemId: linha.origemId ?? undefined,
+        metadados: linha.metadados ?? undefined
+      }));
+      const ultimo = itens.at(-1);
+      return {
+        itens,
+        proximoCursor: linhas.length > limite && ultimo
+          ? this.codificarCursorTimeline({ data: ultimo.data.toISOString(), id: ultimo.id })
+          : undefined
+      };
+    });
+  }
+
   private async garantirLimitePermitido(tenantId: string, recurso: 'pacientes') {
     const limite = await this.portalCliente.checarLimite(tenantId, recurso);
     if (!limite.permitido) {
@@ -847,6 +936,23 @@ export class ServicoPacientes {
       return undefined;
     } catch {
       return contato;
+    }
+  }
+
+  private codificarCursorTimeline(cursor: CursorTimeline): string {
+    return Buffer.from(JSON.stringify(cursor)).toString('base64url');
+  }
+
+  private decodificarCursorTimeline(cursor: string): CursorTimeline {
+    try {
+      const decodificado = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as Partial<CursorTimeline>;
+      if (typeof decodificado.data !== 'string' || Number.isNaN(new Date(decodificado.data).getTime())) throw new Error('data');
+      if (typeof decodificado.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(decodificado.id)) {
+        throw new Error('id');
+      }
+      return { data: new Date(decodificado.data).toISOString(), id: decodificado.id };
+    } catch {
+      throw new BadRequestException('Cursor da timeline invalido.');
     }
   }
 

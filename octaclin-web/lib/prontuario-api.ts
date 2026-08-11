@@ -39,6 +39,11 @@ export interface ProntuarioPacienteApi {
   linhaDoTempo: EventoProntuarioPacienteApi[];
 }
 
+export interface PaginaLinhaDoTempoProntuarioApi {
+  itens: EventoProntuarioPacienteApi[];
+  proximoCursor?: string;
+}
+
 export interface CriarEvolucaoClinicaEntrada {
   titulo: string;
   conteudo: string;
@@ -97,6 +102,26 @@ export async function obterProntuarioPaciente(pacienteId: string): Promise<Pront
   }
 
   return resposta.json() as Promise<ProntuarioPacienteApi>;
+}
+
+export async function listarLinhaDoTempoPaginada(
+  pacienteId: string,
+  opcoes: { cursor?: string; limite?: number; signal?: AbortSignal } = {}
+): Promise<PaginaLinhaDoTempoProntuarioApi> {
+  const parametros = new URLSearchParams();
+  if (opcoes.cursor) parametros.set('cursor', opcoes.cursor);
+  if (opcoes.limite) parametros.set('limite', String(opcoes.limite));
+  const consulta = parametros.size ? `?${parametros.toString()}` : '';
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/prontuario/timeline${consulta}`, {
+    cache: 'no-store',
+    signal: opcoes.signal
+  });
+  if (!resposta.ok) {
+    const detalhe = await resposta.text();
+    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+  }
+
+  return resposta.json() as Promise<PaginaLinhaDoTempoProntuarioApi>;
 }
 
 export async function criarEvolucaoClinica(

@@ -198,6 +198,11 @@ export interface ProntuarioPacienteRespostaDto {
   linhaDoTempo: EventoProntuarioPacienteDto[];
 }
 
+export interface PaginaLinhaTempoProntuarioDto {
+  itens: EventoProntuarioPacienteDto[];
+  proximoCursor?: string;
+}
+
 export class CriarEvolucaoClinicaDto {
   @IsString()
   @MaxLength(180)

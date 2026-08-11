@@ -1590,11 +1590,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Documentos e Financeiro, reaproveitando os modulos entregues sem criar uma
     segunda fonte de verdade.
   - Incremento 1 concluido: navegacao principal/subareas, acoes rapidas e
-    financeiro condicionado por permissao. Permanecem pendentes a projecao BFF,
-    timeline paginada, cadastro progressivo e validacao clinica.
-  - Incremento 2 definido: a timeline atual e limitada, mas nao paginada e
-    ainda usa conteudo descriptografado em cartoes; a nova leitura usara cursor
-    estavel e metadados autorizados antes de carregar qualquer detalhe clinico.
+    financeiro condicionado por permissao.
+  - Incremento 2 concluido: BFF autenticado e timeline paginada por cursor,
+    com metadados minimos, ordenacao `data/id`, limite de 20 (maximo 50),
+    auditoria e sem descricao descriptografada no historico.
+    Permanecem pendentes cadastro progressivo, filtros, atalhos de detalhe,
+    categorizacao de anexos e validacao clinica.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
@@ -1359,5 +1359,50 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
         usuarioProfissional
       )
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('pagina a timeline por cursor sem descriptografar conteudo clinico', async () => {
+    const query = jest.fn(async (_sql: string, _params: unknown[]) => [
+      {
+        id: '00000000-0000-4000-8000-000000000002',
+        tipo: 'evolucao_clinica',
+        titulo: 'Ajuste de conduta',
+        data: '2026-08-11T10:00:00.000Z',
+        status: 'ajuste_plano',
+        origemId: '00000000-0000-4000-8000-000000000002',
+        metadados: { visibilidade: 'privada' }
+      },
+      {
+        id: '00000000-0000-4000-8000-000000000001',
+        tipo: 'mensagem',
+        titulo: 'Mensagem recebida',
+        data: '2026-08-10T10:00:00.000Z',
+        status: 'recebido',
+        origemId: '00000000-0000-4000-8000-000000000001',
+        metadados: {}
+      }
+    ]);
+    const paciente = {
+      id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('criptografado:Maria'), statusAdesao: 'novo', scoreRisco: '0',
+      criadoEm: new Date(), atualizadoEm: new Date()
+    };
+    const servico = new ServicoPacientes(
+      { executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => operacao({
+        query,
+        getRepository: jest.fn(() => ({ findOne: jest.fn(async () => paciente) }))
+      })) } as never,
+      criptografiaFake() as never,
+      limitesPermitidos as never
+    );
+
+    const pagina = await servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador, undefined, 1);
+
+    expect(pagina.itens).toHaveLength(1);
+    expect(pagina.itens[0]).toEqual(expect.objectContaining({ titulo: 'Ajuste de conduta' }));
+    expect(pagina.itens[0]).not.toHaveProperty('descricao');
+    expect(pagina.proximoCursor).toBeTruthy();
+    expect(query.mock.calls[0][1]).toEqual(['tenant-1', 'paciente-1', null, null, 2]);
+    await expect(servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador, 'invalido')).rejects.toBeInstanceOf(BadRequestException);
   });
 });
