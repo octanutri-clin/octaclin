@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -49,6 +49,9 @@ export class ServicoPerfilCadastroPaciente {
     dados: AtualizarIdentificacaoCadastroPacienteDto,
     usuario: UsuarioAutenticado
   ): Promise<AtualizarIdentificacaoCadastroPacienteDto> {
+    if (dados.condicaoBiologica && dados.sexo !== 'feminino') {
+      throw new BadRequestException('A condicao biologica so pode ser registrada para sexo feminino.');
+    }
     return this.atualizarBloco(tenantId, pacienteId, 'identificacaoCriptografada', dados, usuario);
   }
 
@@ -58,7 +61,8 @@ export class ServicoPerfilCadastroPaciente {
     dados: AtualizarContatoCadastroPacienteDto,
     usuario: UsuarioAutenticado
   ): Promise<AtualizarContatoCadastroPacienteDto> {
-    return this.atualizarBloco(tenantId, pacienteId, 'contatoCriptografado', dados, usuario);
+    const telefone = dados.ddi && dados.celular ? `${dados.ddi}${dados.celular}` : dados.telefone;
+    return this.atualizarBloco(tenantId, pacienteId, 'contatoCriptografado', { ...dados, telefone }, usuario);
   }
 
   async atualizarOperacao(

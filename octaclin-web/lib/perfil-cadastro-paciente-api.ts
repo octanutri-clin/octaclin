@@ -11,15 +11,23 @@ export interface EnderecoCadastroPacienteApi {
 }
 
 export interface PerfilCadastroPacienteApi {
-  identificacao?: { nomeUso?: string };
+  identificacao?: {
+    nomeUso?: string;
+    sexo?: 'feminino' | 'masculino' | 'intersexo' | 'nao_informar';
+    condicaoBiologica?: 'nao_gestante' | 'gestante' | 'lactante' | 'menopausa';
+  };
   contato?: {
     email?: string;
     telefone?: string;
+    ddi?: string;
+    celular?: string;
+    instagram?: string;
     canalPreferido?: CanalPreferidoPaciente;
     endereco?: EnderecoCadastroPacienteApi;
   };
   operacao?: {
     origem?: string;
+    categoria?: string;
     tags?: string[];
     proximaRevisaoEm?: string;
     responsavel?: { nome?: string; parentesco?: string; contato?: string };
@@ -28,6 +36,7 @@ export interface PerfilCadastroPacienteApi {
 }
 
 export interface FiscalCadastroPacienteApi {
+  cpf?: string;
   nomePagador?: string;
   documentoPagador?: string;
   emailRecibo?: string;
@@ -61,4 +70,16 @@ export function salvarSecaoCadastroPaciente<T extends object>(
     method: 'PATCH',
     body: JSON.stringify(dados)
   });
+}
+
+export async function atualizarDadosBasicosPaciente(
+  pacienteId: string,
+  dados: { nome?: string; dataNascimento?: string }
+): Promise<void> {
+  const resposta = await fetch(`/api/pacientes/${pacienteId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dados)
+  });
+  if (!resposta.ok) throw new Error((await resposta.text()) || `Falha HTTP ${resposta.status}`);
 }

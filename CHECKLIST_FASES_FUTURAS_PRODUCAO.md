@@ -1624,6 +1624,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     salvamento explicito, feedback e bloco fiscal condicionado a permissao.
     O formulario legado continua compativel durante a adocao gradual; faltam
     testes de jornada em staging e a ativacao de portal apos revisao cadastral.
+  - Incremento 13 concluido: ficha robusta inclui nome, apelido, sexo,
+    nascimento, contato estruturado, endereco, Instagram, categoria/tags e
+    condicao biologica opcional para sexo feminino. CPF segue cifrado e
+    restrito ao bloco fiscal; falta validar a jornada autenticada em staging.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

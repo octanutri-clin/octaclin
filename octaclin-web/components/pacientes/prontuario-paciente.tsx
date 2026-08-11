@@ -742,7 +742,12 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <CalendarDays size={16} />
             Agendar
           </Link>
-          <PerfilCadastroPaciente pacienteId={pacienteId} />
+          <PerfilCadastroPaciente
+            pacienteId={pacienteId}
+            nomeCompleto={dados.paciente.nome}
+            dataNascimento={dados.paciente.dataNascimento}
+            aoAtualizarFicha={() => void carregar()}
+          />
           <Link
             href="/pacientes"
             onClick={(evento) => {

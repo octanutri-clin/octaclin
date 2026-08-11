@@ -57,23 +57,23 @@ segura das informacoes publicadas para ele.
   **identificacao e contato**, **responsavel/operacao**, **acesso ao portal** e
   **dados fiscais opcionais**. Dados clinicos detalhados continuam em anamnese,
   avaliacoes e formularios, nunca escondidos no cadastro administrativo.
-- **Identificacao e contato**: nome completo, nome de uso/preferido opcional,
-  data de nascimento, telefone em formato internacional E.164, e-mail, canal
-  preferido e endereco apenas quando houver finalidade definida. CEP, cidade e
-  estado sao estruturados, mas nao obrigatorios por padrao.
-- **Dados sensiveis e de contexto**: campos de sexo, identidade, condicao
-  gestacional/lactacao, restricoes e alergias nao ficam como pre-selecao
-  administrativa. Quando necessarios ao cuidado, devem ser opcionais, possuir
-  origem e data de atualizacao, ter visibilidade clinica apropriada e apontar
-  para anamnese ou avaliacao que os fundamenta.
+- **Identificacao e contato**: nome completo, apelido/nome de uso opcional,
+  sexo, data de nascimento, e-mail, DDI, celular com DDD, Instagram e endereco
+  estruturado (CEP, endereco, bairro, cidade e estado). Telefone consolidado em
+  E.164 permanece disponivel apenas como derivado tecnico do DDI e celular.
+- **Dados sensiveis e de contexto**: sexo e condicao biologica feminina
+  (nao gestante, gestante, lactante ou menopausa) sao opcionais, cifrados,
+  sem valor pre-selecionado e restritos ao contexto clinico autorizado.
+  Restricoes, alergias, identidade e demais dados de cuidado continuam em
+  anamnese ou avaliacao, nunca escondidos no cadastro administrativo.
 - **Responsavel e operacao**: profissional responsavel, status do
-  acompanhamento, origem/indicacao, tags do tenant, proxima revisao e contato
-  responsavel/representante quando aplicavel. Tags nao substituem dado clinico
-  ou permissao.
+  acompanhamento, origem/indicacao, categoria do paciente, tags do tenant,
+  proxima revisao e contato responsavel/representante quando aplicavel. Tags e
+  categoria nao substituem dado clinico ou permissao.
 - **Portal do paciente**: ativacao por convite, estado de acesso, reenvio,
   revogacao, ultimo acesso, preferencias de comunicacao e aceites existentes.
   Nunca exibir token, URL secreta permanente ou credencial na tela cadastral.
-- **Dados fiscais**: CPF ou identificacao do pagador ficam opcionais e em
+- **Dados fiscais**: CPF do paciente e identificacao do pagador ficam opcionais e em
   bloco separado, com finalidade explicita para recibo/documento quando
   aplicavel. Pagador pode ser diferente do paciente; profissionais sem
   permissao financeira nao leem esse bloco.
@@ -369,6 +369,20 @@ foco visivel. A tela nao mostra o bloco fiscal para quem nao possui
 `agenda.financeiro.ler`; a protecao do backend continua sendo a garantia final.
 Nome, responsavel, status, risco e contato legado permanecem preservados no
 cadastro existente enquanto a clinica adota gradualmente os dados estruturados.
+
+## Incremento 13 - ficha cadastral robusta
+
+Entregue em 2026-08-11 conforme definicao de produto. A ficha passou a cobrir
+nome completo, apelido, sexo, nascimento, e-mail, DDI, celular com DDD, CEP,
+endereco, bairro, cidade, estado e usuario do Instagram. Para sexo feminino,
+a condicao biologica opcional aceita somente nao gestante, gestante, lactante
+ou menopausa; o backend recusa uma combinacao incompativel.
+
+CPF do paciente permanece cifrado no bloco fiscal, com a mesma barreira de
+permissao financeira. Categoria e tags foram separadas na operacao para que a
+clinica consiga organizar a carteira sem confundir classificacao administrativa
+com informacao clinica. Campos vazios podem ser removidos sem enviar valores
+invalidos ao backend.
 
 ## Sequencia posterior obrigatoria
 

@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
@@ -91,5 +91,14 @@ describe('ServicoPerfilCadastroPaciente', () => {
 
     await expect(servico.obterFiscal(usuario.tenantId, 'paciente-1', usuario)).rejects.toBeInstanceOf(ForbiddenException);
     await expect(servico.obter(usuario.tenantId, 'paciente-1', usuario)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('recusa condicao biologica quando o sexo informado nao e feminino', async () => {
+    const { servico } = criarCenario();
+
+    await expect(servico.atualizarIdentificacao(usuario.tenantId, 'paciente-1', {
+      sexo: 'masculino',
+      condicaoBiologica: 'gestante'
+    }, usuario)).rejects.toBeInstanceOf(BadRequestException);
   });
 });

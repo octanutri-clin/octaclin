@@ -151,6 +151,14 @@ export class AtualizarIdentificacaoCadastroPacienteDto {
   @IsString()
   @MaxLength(180)
   nomeUso?: string;
+
+  @IsOptional()
+  @IsIn(['feminino', 'masculino', 'intersexo', 'nao_informar'])
+  sexo?: 'feminino' | 'masculino' | 'intersexo' | 'nao_informar';
+
+  @IsOptional()
+  @IsIn(['nao_gestante', 'gestante', 'lactante', 'menopausa'])
+  condicaoBiologica?: 'nao_gestante' | 'gestante' | 'lactante' | 'menopausa';
 }
 
 export class EnderecoCadastroPacienteDto {
@@ -166,6 +174,9 @@ export class EnderecoCadastroPacienteDto {
 export class AtualizarContatoCadastroPacienteDto {
   @IsOptional() @IsEmail() @MaxLength(180) email?: string;
   @IsOptional() @Matches(/^\+[1-9]\d{7,14}$/) telefone?: string;
+  @IsOptional() @Matches(/^\+[1-9]\d{0,2}$/) ddi?: string;
+  @IsOptional() @Matches(/^\d{10,11}$/) celular?: string;
+  @IsOptional() @IsString() @MaxLength(80) instagram?: string;
   @IsOptional() @IsIn(['email', 'whatsapp', 'telefone']) canalPreferido?: 'email' | 'whatsapp' | 'telefone';
   @IsOptional() @ValidateNested() @Type(() => EnderecoCadastroPacienteDto) endereco?: EnderecoCadastroPacienteDto;
 }
@@ -178,12 +189,14 @@ export class ResponsavelCadastroPacienteDto {
 
 export class AtualizarOperacaoCadastroPacienteDto {
   @IsOptional() @IsString() @MaxLength(100) origem?: string;
+  @IsOptional() @IsString() @MaxLength(80) categoria?: string;
   @IsOptional() @IsArray() @ArrayMaxSize(12) @IsString({ each: true }) @MaxLength(40, { each: true }) tags?: string[];
   @IsOptional() @IsDateString() proximaRevisaoEm?: string;
   @IsOptional() @ValidateNested() @Type(() => ResponsavelCadastroPacienteDto) responsavel?: ResponsavelCadastroPacienteDto;
 }
 
 export class AtualizarFiscalCadastroPacienteDto {
+  @IsOptional() @Matches(/^\d{11}$/) cpf?: string;
   @IsOptional() @IsString() @MaxLength(180) nomePagador?: string;
   @IsOptional() @Matches(/^[0-9.\/-]{11,18}$/) documentoPagador?: string;
   @IsOptional() @IsEmail() @MaxLength(180) emailRecibo?: string;
