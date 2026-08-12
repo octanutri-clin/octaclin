@@ -141,6 +141,18 @@ consentimento, captura e retencao.
 Validacoes: `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web lint`,
 `pnpm --dir octaclin-web build` e `git diff --check`.
 
+## Incremento 8 - contrato de vinculo de arquivo
+
+Entregue localmente em 2026-08-12. A migration aditiva `1025` prepara a tabela
+de vinculo entre uma serie fotografica e um arquivo privado. Cada arquivo pode
+pertencer a uma unica serie no tenant, o vinculo exige mesma serie/tenant e usa
+RLS forcada com policy propria. Nenhuma imagem, URL ou captura e criada por
+esta migration.
+
+A `1025` ainda nao deve ser aplicada remotamente: o proximo incremento precisa
+usar esse vinculo ao solicitar e confirmar upload, exigindo consentimento ativo
+e protocolo antes de liberar a tela de captura.
+
 ## Incremento 5 - gate de contrato do BFF
 
 Entregue localmente em 2026-08-12. O teste `test:exames-laboratoriais:bff`
@@ -177,8 +189,24 @@ mostra somente versão, datas e estado. A revogacao usa confirmacao explicita.
 A interface informa que a captura de imagens ainda esta indisponivel. Nao ha
 upload, URL assinada, galeria ou acesso ao portal do paciente neste incremento.
 
+O gate `test:consentimentos-fotograficos:bff` valida sessao ausente antes de
+qualquer chamada, encaminhamento de registro e revogacao com identificadores
+codificados. Ele usa stubs locais e nao acessa dados clinicos.
+
 Validacoes: `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web lint`,
 `pnpm --dir octaclin-web build` e `git diff --check`.
+
+## Incremento 8 - contrato de vinculo de arquivo
+
+Preparado localmente em 2026-08-12. A migration aditiva `1025` cria o vinculo
+entre serie fotografica e objeto privado: um arquivo pertence a uma unica serie
+no tenant e o relacionamento usa RLS forcada e policy propria. A migration nao
+cria imagens, URLs ou capturas e ainda nao foi aplicada fora do ambiente local.
+
+Antes de enviar este incremento ao GitHub e ao Render, a `1025` deve ser
+aplicada com a URL owner de producao explicitamente confirmada. So depois o
+proximo incremento podera solicitar e confirmar upload exigindo consentimento
+ativo e protocolo.
 - Um marcador pertence a uma coleta e carrega nome, resultado, unidade, faixa de
   referencia e metodo como payload cifrado. Valores nao sao normalizados nem
   comparados automaticamente enquanto nao houver protocolo clinico aprovado.

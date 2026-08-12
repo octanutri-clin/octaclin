@@ -37,6 +37,7 @@ import { CriarPlanosAlimentares1720000001021 } from './migracoes/1720000001021-C
 import { CriarIntegracoesApiPublica1720000001022 } from './migracoes/1720000001022-CriarIntegracoesApiPublica';
 import { CriarPerfisCadastroPaciente1720000001023 } from './migracoes/1720000001023-CriarPerfisCadastroPaciente';
 import { CriarExamesEFotosClinicas1720000001024 } from './migracoes/1720000001024-CriarExamesEFotosClinicas';
+import { VincularArquivosEvolucaoFotografica1720000001025 } from './migracoes/1720000001025-VincularArquivosEvolucaoFotografica';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -265,7 +266,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarPlanosAlimentares1720000001021,
         CriarIntegracoesApiPublica1720000001022,
         CriarPerfisCadastroPaciente1720000001023,
-        CriarExamesEFotosClinicas1720000001024
+        CriarExamesEFotosClinicas1720000001024,
+        VincularArquivosEvolucaoFotografica1720000001025
       ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

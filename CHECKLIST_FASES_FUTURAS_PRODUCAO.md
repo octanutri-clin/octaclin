@@ -1676,6 +1676,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
     cifrado e revogavel, com prazo de retencao e auditoria sem evidencia.
   - Incremento 7 concluido localmente: BFF e subaba profissional registram,
     exibem e revogam consentimento sem expor evidencia ou habilitar captura.
+  - Gate local de BFF aprovado: sessao ausente, registro e revogacao foram
+    exercitados sem acessar backend ou dados clinicos.
+  - Incremento 8 preparado localmente: migration `1025` cria vinculo unico,
+    isolado por tenant, entre serie fotografica e arquivo privado. Aplicar em
+    producao antes de enviar a migration ao Render.
   - Proximo incremento: vinculo auditavel entre arquivo privado, consentimento
     e protocolo; captura continua bloqueada ate esse contrato.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
