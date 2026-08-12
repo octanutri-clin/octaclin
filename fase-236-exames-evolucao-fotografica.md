@@ -200,7 +200,7 @@ Validacoes: `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web lint`,
 
 ## Incremento 9 - captura profissional com vinculo seguro
 
-Entregue localmente em 2026-08-12. A subaba profissional permite selecionar um
+Publicado em producao em 2026-08-12. A subaba profissional permite selecionar um
 consentimento ativo, informar protocolo/data/observacao e enviar uma imagem para
 armazenamento privado. A serie e criada com protocolo e observacao cifrados; a
 URL assinada de upload expira e nao e persistida na aplicacao.
@@ -219,6 +219,10 @@ fora de escopo.
 Validacoes: testes unitarios de consentimento/vinculo no backend, gate BFF de
 sessao e encaminhamento, typecheck/lint dos dois projetos, build do Next.js e
 `git diff --check`.
+
+Aceite operacional pendente: usar uma conta e paciente sinteticos para registrar
+consentimento, enviar uma imagem de teste e confirmar abertura por URL temporaria.
+Nao criar registros clinicos reais somente para validar o fluxo.
 - Um marcador pertence a uma coleta e carrega nome, resultado, unidade, faixa de
   referencia e metodo como payload cifrado. Valores nao sao normalizados nem
   comparados automaticamente enquanto nao houver protocolo clinico aprovado.

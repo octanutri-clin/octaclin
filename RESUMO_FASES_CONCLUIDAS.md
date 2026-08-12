@@ -602,7 +602,8 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   vinculando arquivos privados a series por tenant, com RLS forcada e policy
   verificada. A captura profissional passou a exigir consentimento ativo,
   retencao valida e imagem privada, com confirmacao atomica do vinculo e acesso
-  posterior por URL assinada temporaria; o portal permanece sem fotos. Ver
+  posterior por URL assinada temporaria; o portal permanece sem fotos. O
+  aceite operacional com conta e imagem sinteticas ainda e pendente. Ver
   `fase-236-exames-evolucao-fotografica.md`.
 
 ## Estado atual de uso

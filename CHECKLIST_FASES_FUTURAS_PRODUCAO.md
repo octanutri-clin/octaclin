@@ -1682,12 +1682,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     isolado por tenant, entre serie fotografica e arquivo privado. O schema
     foi validado com RLS habilitada e forcada, policy propria, indice da serie
     e restricoes compostas de tenant/serie e tenant/arquivo.
-  - Incremento 9 concluido localmente: profissional cria serie cifrada e envia
+  - Incremento 9 publicado em producao: profissional cria serie cifrada e envia
     imagem privada somente com consentimento ativo; a confirmacao exige serie,
     paciente, tipo de midia, prazo de retencao e grava o vinculo na mesma
     transacao tenant-scoped. A abertura usa URL assinada temporaria.
-  - Proximo incremento: aceite controlado em staging e producao para exercitar
-    uma imagem sintetica, sem expor foto no portal nem criar URL permanente.
+  - Pendente de aceite operacional: exercitar em producao uma imagem sintetica
+    com conta de teste, sem expor foto no portal nem criar URL permanente.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
 - [ ] Fase 237 - Prescricoes, metas e orientacoes terapeuticas. [IMPORTANTE - POS PILOTO]
