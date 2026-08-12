@@ -591,8 +591,10 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   fotograficas usa valores clinicos cifrados, RLS forcada e isolamento por
   tenant. Em 2026-08-12, a migration `1024` foi aplicada em staging e no banco
   de producao, com as 37 migrations concluidas, policies e indices verificados
-  e sem inserir dados clinicos. A tela profissional e a jornada sintetica ainda
-  permanecem pendentes. Ver `fase-236-exames-evolucao-fotografica.md`.
+  e sem inserir dados clinicos. A tela profissional de exames foi entregue
+  localmente com serie e registro por coleta; a jornada sintetica e o fluxo de
+  fotos por consentimento ainda permanecem pendentes. Ver
+  `fase-236-exames-evolucao-fotografica.md`.
 
 ## Estado atual de uso
 

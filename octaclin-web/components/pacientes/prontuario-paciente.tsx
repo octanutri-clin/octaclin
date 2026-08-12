@@ -24,6 +24,7 @@ import {
 import { Botao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { AbaAntropometria } from './aba-antropometria';
+import { AbaExamesLaboratoriais } from './aba-exames-laboratoriais';
 import { AbaDocumentos, ConsultaConcluidaOpcao } from './aba-documentos';
 import { PerfilCadastroPaciente } from './perfil-cadastro-paciente';
 import { PlanoAlimentarProfissional } from './plano-alimentar-profissional';
@@ -103,6 +104,7 @@ type AbaProntuario =
   | 'acompanhamento'
   | 'plano_alimentar'
   | 'antropometria'
+  | 'exames_laboratoriais'
   | 'formularios'
   | 'documentos'
   | 'mensagens'
@@ -119,6 +121,7 @@ const abasProntuario: Array<{ id: AbaProntuario; rotulo: string; permissao?: str
   { id: 'acompanhamento', rotulo: 'Acompanhamento' },
   { id: 'plano_alimentar', rotulo: 'Plano alimentar', permissao: 'planos_alimentares.ler' },
   { id: 'antropometria', rotulo: 'Antropometria' },
+  { id: 'exames_laboratoriais', rotulo: 'Exames laboratoriais' },
   { id: 'formularios', rotulo: 'Formularios' },
   { id: 'documentos', rotulo: 'Documentos' },
   { id: 'mensagens', rotulo: 'Mensagens' },
@@ -142,6 +145,7 @@ const areaPorAba: Record<AbaProntuario, AreaProntuario> = {
   historico: 'atendimentos',
   mensagens: 'atendimentos',
   antropometria: 'avaliacoes',
+  exames_laboratoriais: 'avaliacoes',
   formularios: 'avaliacoes',
   acompanhamento: 'plano',
   plano_alimentar: 'plano',
@@ -1113,7 +1117,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
       </section> : null}
 
-      {abaAtiva === 'antropometria' ? <AbaAntropometria pacienteId={pacienteId} podeGerenciar /> : null}
+      {abaAtiva === 'antropometria' ? <AbaAntropometria pacienteId={pacienteId} podeGerenciar={permissoes.includes('pacientes.gerenciar')} /> : null}
+
+      {abaAtiva === 'exames_laboratoriais' ? <AbaExamesLaboratoriais pacienteId={pacienteId} podeGerenciar={permissoes.includes('pacientes.gerenciar')} /> : null}
 
       {abaAtiva === 'documentos' ? (
         <AbaDocumentos pacienteId={pacienteId} podeGerenciar consultasConcluidas={consultasConcluidas} />

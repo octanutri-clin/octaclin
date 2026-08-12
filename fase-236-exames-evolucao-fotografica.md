@@ -124,6 +124,22 @@ banco, migrations e Redis TLS saudaveis.
 - Uma coleta tem paciente, autor, data de coleta, data de recebimento opcional,
   laboratorio e observacao, todos os campos identificaveis ou clinicos
   cifrados quando aplicavel.
+
+## Incremento 4 - interface profissional de exames
+
+Entregue localmente em 2026-08-12. A subaba **Exames laboratoriais** foi
+incluida em Avaliacoes do prontuario. Ela apresenta a serie por coleta, com
+marcadores, unidades, referencias, metodo, laboratorio e observacoes; tambem
+permite incluir uma nova coleta com marcadores dinamicos para quem possui
+`pacientes.gerenciar`.
+
+A interface chama somente o BFF autenticado ja existente e nao classifica,
+compara contra faixa de referencia, emite alerta clinico nem exibe resultados
+no portal do paciente. Fotos continuam fora da tela ate a entrega especifica de
+consentimento, captura e retencao.
+
+Validacoes: `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web lint`,
+`pnpm --dir octaclin-web build` e `git diff --check`.
 - Um marcador pertence a uma coleta e carrega nome, resultado, unidade, faixa de
   referencia e metodo como payload cifrado. Valores nao sao normalizados nem
   comparados automaticamente enquanto nao houver protocolo clinico aprovado.

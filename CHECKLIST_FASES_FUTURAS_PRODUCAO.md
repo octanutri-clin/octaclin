@@ -1666,8 +1666,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
     somente a `1024` estava pendente; apos a aplicacao, 37/37 migrations, RLS
     forcada, quatro policies, indices esperados e health detalhado ficaram
     aprovados, sem inserir dados clinicos.
-  - Proximo incremento: tela profissional de exames e jornada sintetica; fotos
-    seguem bloqueadas ate o fluxo proprio de consentimento e captura.
+  - Incremento 4 concluido localmente: subaba profissional de exames no
+    prontuario lista coletas/marcadores e registra nova coleta pelo BFF, sem
+    classificacao clinica nem exposicao ao portal.
+  - Proximo incremento: jornada sintetica de exames; fotos seguem bloqueadas
+    ate o fluxo proprio de consentimento e captura.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
 - [ ] Fase 237 - Prescricoes, metas e orientacoes terapeuticas. [IMPORTANTE - POS PILOTO]
