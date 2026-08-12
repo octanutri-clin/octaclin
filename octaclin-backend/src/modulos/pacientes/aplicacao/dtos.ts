@@ -163,6 +163,12 @@ export class CriarColetaExameLaboratorialDto {
   marcadores: MarcadorExameLaboratorialDto[];
 }
 
+export class RegistrarConsentimentoEvolucaoFotograficaDto {
+  @IsString() @MaxLength(40) versao: string;
+  @IsDateString() retencaoAte: string;
+  @IsOptional() @IsString() @MaxLength(4000) evidencia?: string;
+}
+
 export class AtualizarIdentificacaoCadastroPacienteDto {
   @IsOptional()
   @IsString()

@@ -593,8 +593,10 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   de producao, com as 37 migrations concluidas, policies e indices verificados
   e sem inserir dados clinicos. A tela profissional de exames foi entregue
   localmente com serie e registro por coleta; a jornada sintetica e o fluxo de
-  fotos por consentimento ainda permanecem pendentes. O BFF tem gate proprio
-  para sessao, encaminhamento e erros de validacao. Ver
+  fotos por consentimento ainda permanecem pendentes. O backend agora registra
+  consentimento fotografico versionado, cifrado e revogavel, mas ainda bloqueia
+  a captura ate o vinculo seguro de arquivo. O BFF tem gate proprio para sessao,
+  encaminhamento e erros de validacao. Ver
   `fase-236-exames-evolucao-fotografica.md`.
 
 ## Estado atual de uso

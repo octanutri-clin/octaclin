@@ -151,6 +151,21 @@ backend. O teste usa stubs locais e nao acessa dados clinicos ou producao.
 Validacoes: `pnpm --dir octaclin-web test:exames-laboratoriais:bff`,
 `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web lint` e
 `git diff --check`.
+
+## Incremento 6 - consentimento fotografico seguro
+
+Entregue localmente em 2026-08-12. O backend passou a registrar, listar e
+revogar consentimentos fotograficos versionados. A evidencia opcional e cifrada
+em repouso, nunca retorna na API e a auditoria registra apenas identificador,
+versao e prazo. A retencao deve ser atual ou futura; a revogacao e logica e
+imediata.
+
+Nao existe rota de captura ou upload fotografico neste incremento. Essa barreira
+e intencional: a proxima entrega deve criar um vinculo auditavel entre arquivo
+privado, consentimento ativo e protocolo antes de liberar qualquer imagem.
+
+Validacoes: teste unitario de cifra/prazo/revogacao, typecheck e build do
+backend, alem de `git diff --check`.
 - Um marcador pertence a uma coleta e carrega nome, resultado, unidade, faixa de
   referencia e metodo como payload cifrado. Valores nao sao normalizados nem
   comparados automaticamente enquanto nao houver protocolo clinico aprovado.

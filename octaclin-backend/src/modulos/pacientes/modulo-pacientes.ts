@@ -31,12 +31,14 @@ import { ServicoImportacaoPacientes } from './aplicacao/servico-importacao-pacie
 import { ServicoPacientes } from './aplicacao/servico-pacientes';
 import { ServicoPerfilCadastroPaciente } from './aplicacao/servico-perfil-cadastro-paciente';
 import { ServicoExamesLaboratoriais } from './aplicacao/servico-exames-laboratoriais';
+import { ServicoConsentimentosEvolucaoFotografica } from './aplicacao/servico-consentimentos-evolucao-fotografica';
 import { ServicoPortalPaciente } from './aplicacao/servico-portal-paciente';
 import { ControladorConvitesPaciente } from './apresentacao/controlador-convites-paciente';
 import { ControladorDocumentosClinicos } from './apresentacao/controlador-documentos-clinicos';
 import { ControladorPacientes } from './apresentacao/controlador-pacientes';
 import { ControladorPerfilCadastroPaciente } from './apresentacao/controlador-perfil-cadastro-paciente';
 import { ControladorExamesLaboratoriais } from './apresentacao/controlador-exames-laboratoriais';
+import { ControladorConsentimentosEvolucaoFotografica } from './apresentacao/controlador-consentimentos-evolucao-fotografica';
 import { ControladorPortalPaciente } from './apresentacao/controlador-portal-paciente';
 import { AcompanhamentoTarefaOrm } from './infraestrutura/acompanhamento-tarefa.orm';
 import { ConvitePacienteOrm } from './infraestrutura/convite-paciente.orm';
@@ -45,6 +47,7 @@ import { AvaliacaoAntropometricaOrm } from './infraestrutura/avaliacao-antropome
 import { DocumentoEmitidoOrm } from './infraestrutura/documento-emitido.orm';
 import { PacienteOrm } from './infraestrutura/paciente.orm';
 import { PerfilCadastroPacienteOrm } from './infraestrutura/perfil-cadastro-paciente.orm';
+import { ConsentimentoEvolucaoFotograficaOrm } from './infraestrutura/consentimento-evolucao-fotografica.orm';
 
 @Module({
   imports: [
@@ -72,7 +75,8 @@ import { PerfilCadastroPacienteOrm } from './infraestrutura/perfil-cadastro-paci
       PlanoAlimentarVersaoOrm,
       PlanoAlimentarRefeicaoOrm,
       PlanoAlimentarItemOrm,
-      PlanoAlimentarSubstituicaoOrm
+      PlanoAlimentarSubstituicaoOrm,
+      ConsentimentoEvolucaoFotograficaOrm
     ]),
     ModuloTenancy,
     ModuloAuth,
@@ -84,6 +88,7 @@ import { PerfilCadastroPacienteOrm } from './infraestrutura/perfil-cadastro-paci
     ControladorPacientes,
     ControladorPerfilCadastroPaciente,
     ControladorExamesLaboratoriais,
+    ControladorConsentimentosEvolucaoFotografica,
     ControladorConvitesPaciente,
     ControladorPortalPaciente,
     ControladorDocumentosClinicos
@@ -92,6 +97,7 @@ import { PerfilCadastroPacienteOrm } from './infraestrutura/perfil-cadastro-paci
     ServicoPacientes,
     ServicoPerfilCadastroPaciente,
     ServicoExamesLaboratoriais,
+    ServicoConsentimentosEvolucaoFotografica,
     ServicoImportacaoPacientes,
     ServicoConvitesPaciente,
     ServicoPortalPaciente,

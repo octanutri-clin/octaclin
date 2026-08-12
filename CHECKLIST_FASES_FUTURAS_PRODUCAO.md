@@ -1672,8 +1672,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Incremento 5 concluido localmente: gate de BFF cobre sessao ausente,
     codificacao do paciente, criacao e preservacao de erro do backend sem usar
     dados clinicos ou producao.
-  - Proximo incremento: jornada sintetica de exames; fotos seguem bloqueadas
-    ate o fluxo proprio de consentimento e captura.
+  - Incremento 6 concluido localmente: consentimento fotografico versionado,
+    cifrado e revogavel, com prazo de retencao e auditoria sem evidencia.
+  - Proximo incremento: BFF e tela de consentimento; captura continua bloqueada
+    ate o vinculo auditavel entre arquivo privado, consentimento e protocolo.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
 - [ ] Fase 237 - Prescricoes, metas e orientacoes terapeuticas. [IMPORTANTE - POS PILOTO]
