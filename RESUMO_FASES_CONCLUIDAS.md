@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-11 apos a Fase 224 - oferta comercial e ativacao assistida.
+Atualizado em 2026-08-12 apos o aceite de schema em producao da Fase 236.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -586,6 +586,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   antecipado, demonstracao sintetica, bloqueio suave apos aviso de 30 dias,
   migracao por escopo, WhatsApp fora da oferta e suporte reforcado por 48 horas
   foram aceitos. Ver `fase-224-oferta-comercial-ativacao-assistida.md`.
+- Fase 236 (incrementos em andamento) - Exames laboratoriais e evolucao
+  fotografica: a fundacao de coletas, marcadores, consentimentos e series
+  fotograficas usa valores clinicos cifrados, RLS forcada e isolamento por
+  tenant. Em 2026-08-12, a migration `1024` foi aplicada em staging e no banco
+  de producao, com as 37 migrations concluidas, policies e indices verificados
+  e sem inserir dados clinicos. A tela profissional e a jornada sintetica ainda
+  permanecem pendentes. Ver `fase-236-exames-evolucao-fotografica.md`.
 
 ## Estado atual de uso
 

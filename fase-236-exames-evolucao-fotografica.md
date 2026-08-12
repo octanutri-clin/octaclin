@@ -51,8 +51,8 @@ marcador e consentimento incluem `tenant_id` para impedir vinculo cruzado.
 
 Todas as tabelas recebem RLS habilitada e forcada, policy por `app.tenant_id` e
 indices para leitura longitudinal. Nenhum objeto de storage, valor clinico ou
-foto foi migrado, preenchido ou publicado. A migration ainda nao foi aplicada
-em staging ou producao.
+foto foi migrado, preenchido ou publicado. A migration foi aplicada e validada
+em staging e producao, sem backfill.
 
 Validacoes: teste unitario da migration, `pnpm --dir octaclin-backend typecheck`,
 `pnpm --dir octaclin-backend build` e `git diff --check`.
@@ -80,9 +80,9 @@ laboratoriais usam a sessao HTTP do usuario para encaminhar a requisicao ao
 backend, sem expor token no navegador ou incluir dado clinico na URL. O contrato
 de frontend tipa coleta e marcador e preserva respostas de erro do backend.
 
-Nenhuma tela importa esse contrato neste incremento. Assim, a entrega continua
-compativel com producao enquanto a migration `1024` nao for aplicada primeiro
-em staging e validada com uma conta sintetica autorizada.
+Nenhuma tela importa esse contrato neste incremento. Assim, a entrega permanece
+compativel enquanto a interface profissional e a jornada sintetica ainda nao
+forem disponibilizadas.
 
 Validacoes: typecheck, lint e build do frontend, alem de `git diff --check`.
 
@@ -107,6 +107,17 @@ quatro tabelas da `1024`, a verificacao confirmou RLS e FORCE RLS ativos, uma
 policy de isolamento por tenant em cada tabela e os indices de serie e coleta
 esperados. Nenhum dado de paciente, foto, anexo ou integracao externa foi
 criado durante este aceite.
+
+## Aceite de schema em producao
+
+Realizado em 2026-08-12 no banco `Octaclin-db-producao`, com role owner
+explicitamente confirmada. Antes da execucao, `migration:show` indicou somente
+`CriarExamesEFotosClinicas1720000001024` pendente; apos a aplicacao, as 37
+migrations ficaram concluidas. As quatro tabelas da fase tiveram RLS e FORCE
+RLS confirmados, as quatro policies de isolamento por tenant foram encontradas
+e os indices de serie/coleta esperados estavam presentes. Nenhum dado clinico
+ou de paciente foi inserido. O health detalhado do backend retornou `ok`, com
+banco, migrations e Redis TLS saudaveis.
 
 ## Contrato inicial de exames
 

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-11 durante a conclusao da Fase 224.
+Atualizado em 2026-08-12 durante o aceite de schema em producao da Fase 236.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1648,9 +1648,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Fundacao definida: exames por coleta/marcador e fotos por protocolo usam
     anexos privados, RLS forcada, auditoria, consentimento separado e retencao
     documentada; nao ha diagnostico automatico nem acesso pelo portal.
-  - Incremento 1 concluido localmente: migration aditiva `1024` cria coletas,
+  - Incremento 1 concluido: migration aditiva `1024` cria coletas,
     marcadores, consentimentos e series de fotos com valores clinicos cifrados,
-    RLS forcada e indices. Nao ha backfill nem aplicacao em ambiente remoto.
+    RLS forcada e indices. Nao ha backfill.
   - Incremento 2 concluido localmente: servico e rotas de exames registram
     coleta/marcadores cifrados, respeitam carteira, permissao e auditoria, sem
     interpretar resultado ou expor dados ao portal.
@@ -1662,6 +1662,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Aceite de schema concluido em `octaclin_test_fase150b`: migrations
     `1022`--`1024` aplicadas; `1024` teve RLS forcada, quatro policies e os
     indices esperados verificados sem inserir dados clinicos.
+  - Aceite de schema concluido em `Octaclin-db-producao` em 2026-08-12:
+    somente a `1024` estava pendente; apos a aplicacao, 37/37 migrations, RLS
+    forcada, quatro policies, indices esperados e health detalhado ficaram
+    aprovados, sem inserir dados clinicos.
   - Proximo incremento: tela profissional de exames e jornada sintetica; fotos
     seguem bloqueadas ate o fluxo proprio de consentimento e captura.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
