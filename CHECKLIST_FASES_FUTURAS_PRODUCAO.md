@@ -1674,8 +1674,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     dados clinicos ou producao.
   - Incremento 6 concluido localmente: consentimento fotografico versionado,
     cifrado e revogavel, com prazo de retencao e auditoria sem evidencia.
-  - Proximo incremento: BFF e tela de consentimento; captura continua bloqueada
-    ate o vinculo auditavel entre arquivo privado, consentimento e protocolo.
+  - Incremento 7 concluido localmente: BFF e subaba profissional registram,
+    exibem e revogam consentimento sem expor evidencia ou habilitar captura.
+  - Proximo incremento: vinculo auditavel entre arquivo privado, consentimento
+    e protocolo; captura continua bloqueada ate esse contrato.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
 - [ ] Fase 237 - Prescricoes, metas e orientacoes terapeuticas. [IMPORTANTE - POS PILOTO]

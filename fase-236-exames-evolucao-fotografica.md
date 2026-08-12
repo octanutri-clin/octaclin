@@ -166,6 +166,19 @@ privado, consentimento ativo e protocolo antes de liberar qualquer imagem.
 
 Validacoes: teste unitario de cifra/prazo/revogacao, typecheck e build do
 backend, alem de `git diff --check`.
+
+## Incremento 7 - BFF e tela de consentimento
+
+Entregue localmente em 2026-08-12. A subaba **Evolucao fotografica** agora
+permite ao profissional listar, registrar e revogar consentimentos por meio de
+BFF autenticado. A evidência digitada nunca volta para o navegador; a tela
+mostra somente versão, datas e estado. A revogacao usa confirmacao explicita.
+
+A interface informa que a captura de imagens ainda esta indisponivel. Nao ha
+upload, URL assinada, galeria ou acesso ao portal do paciente neste incremento.
+
+Validacoes: `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web lint`,
+`pnpm --dir octaclin-web build` e `git diff --check`.
 - Um marcador pertence a uma coleta e carrega nome, resultado, unidade, faixa de
   referencia e metodo como payload cifrado. Valores nao sao normalizados nem
   comparados automaticamente enquanto nao houver protocolo clinico aprovado.
