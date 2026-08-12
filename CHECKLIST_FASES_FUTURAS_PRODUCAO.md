@@ -1678,9 +1678,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     exibem e revogam consentimento sem expor evidencia ou habilitar captura.
   - Gate local de BFF aprovado: sessao ausente, registro e revogacao foram
     exercitados sem acessar backend ou dados clinicos.
-  - Incremento 8 preparado localmente: migration `1025` cria vinculo unico,
-    isolado por tenant, entre serie fotografica e arquivo privado. Aplicar em
-    producao antes de enviar a migration ao Render.
+  - Incremento 8 aplicado em producao: migration `1025` cria vinculo unico,
+    isolado por tenant, entre serie fotografica e arquivo privado. O schema
+    foi validado com RLS habilitada e forcada, policy propria, indice da serie
+    e restricoes compostas de tenant/serie e tenant/arquivo.
   - Proximo incremento: vinculo auditavel entre arquivo privado, consentimento
     e protocolo; captura continua bloqueada ate esse contrato.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.

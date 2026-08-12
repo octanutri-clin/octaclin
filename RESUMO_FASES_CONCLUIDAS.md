@@ -597,7 +597,10 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   consentimento fotografico versionado, cifrado e revogavel, mas ainda bloqueia
   a captura ate o vinculo seguro de arquivo. O profissional ja administra o
   consentimento em subaba propria, sem exposicao de evidencia. O BFF tem gate
-  proprio para sessao, encaminhamento e erros de validacao. Ver
+  proprio para sessao, encaminhamento e erros de validacao. A migration `1025`
+  tambem foi aplicada em producao, elevando o historico a 38 migrations e
+  vinculando arquivos privados a series por tenant, com RLS forcada e policy
+  verificada; a captura segue bloqueada ate o fluxo seguro de upload. Ver
   `fase-236-exames-evolucao-fotografica.md`.
 
 ## Estado atual de uso
