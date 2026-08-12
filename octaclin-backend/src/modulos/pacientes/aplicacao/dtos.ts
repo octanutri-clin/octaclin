@@ -5,6 +5,7 @@ import {
   IsEmail,
   IsIn,
   IsInt,
+  IsMimeType,
   IsNumber,
   IsOptional,
   IsString,
@@ -167,6 +168,17 @@ export class RegistrarConsentimentoEvolucaoFotograficaDto {
   @IsString() @MaxLength(40) versao: string;
   @IsDateString() retencaoAte: string;
   @IsOptional() @IsString() @MaxLength(4000) evidencia?: string;
+}
+
+/** Dados de uma unica foto clinica; o binario segue apenas para armazenamento privado. */
+export class SolicitarUploadEvolucaoFotograficaDto {
+  @IsUUID() consentimentoId: string;
+  @IsString() @MaxLength(500) protocolo: string;
+  @IsDateString() capturadaEm: string;
+  @IsOptional() @IsString() @MaxLength(4000) observacoes?: string;
+  @IsMimeType() mimeType: string;
+  @IsNumber() @Min(1) @Max(20 * 1024 * 1024) tamanhoBytes: number;
+  @IsOptional() @IsString() @MaxLength(180) nomeArquivo?: string;
 }
 
 export class AtualizarIdentificacaoCadastroPacienteDto {

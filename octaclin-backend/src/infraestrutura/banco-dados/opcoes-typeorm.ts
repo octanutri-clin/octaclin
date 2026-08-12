@@ -84,6 +84,7 @@ import { ColetaExameLaboratorialOrm } from '../../modulos/pacientes/infraestrutu
 import { MarcadorExameLaboratorialOrm } from '../../modulos/pacientes/infraestrutura/marcador-exame-laboratorial.orm';
 import { ConsentimentoEvolucaoFotograficaOrm } from '../../modulos/pacientes/infraestrutura/consentimento-evolucao-fotografica.orm';
 import { EvolucaoFotograficaOrm } from '../../modulos/pacientes/infraestrutura/evolucao-fotografica.orm';
+import { EvolucaoFotograficaArquivoOrm } from '../../modulos/pacientes/infraestrutura/evolucao-fotografica-arquivo.orm';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { AgendamentoQuestionarioOrm } from '../../modulos/questionarios/infraestrutura/agendamento-questionario.orm';
 import { CategoriaPerguntaOrm } from '../../modulos/questionarios/infraestrutura/categoria-pergunta.orm';
@@ -172,6 +173,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       MarcadorExameLaboratorialOrm,
       ConsentimentoEvolucaoFotograficaOrm,
       EvolucaoFotograficaOrm,
+      EvolucaoFotograficaArquivoOrm,
       ConvitePacienteOrm,
       AcompanhamentoTarefaOrm,
       EvolucaoClinicaOrm,

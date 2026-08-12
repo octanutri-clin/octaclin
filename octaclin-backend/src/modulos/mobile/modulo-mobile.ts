@@ -10,6 +10,9 @@ import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm'
 import { ModuloClientes } from '../clientes/modulo-clientes';
 import { AvaliacaoAntropometricaOrm } from '../pacientes/infraestrutura/avaliacao-antropometrica.orm';
 import { DocumentoEmitidoOrm } from '../pacientes/infraestrutura/documento-emitido.orm';
+import { ConsentimentoEvolucaoFotograficaOrm } from '../pacientes/infraestrutura/consentimento-evolucao-fotografica.orm';
+import { EvolucaoFotograficaArquivoOrm } from '../pacientes/infraestrutura/evolucao-fotografica-arquivo.orm';
+import { EvolucaoFotograficaOrm } from '../pacientes/infraestrutura/evolucao-fotografica.orm';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoMobile } from './aplicacao/servico-mobile';
 import { ControladorMobile } from './apresentacao/controlador-mobile';
@@ -29,6 +32,9 @@ import { SincronizacaoMobileOrm } from './infraestrutura/sincronizacao-mobile.or
       AgendaConsultaOrm,
       AvaliacaoAntropometricaOrm,
       DocumentoEmitidoOrm
+      ,ConsentimentoEvolucaoFotograficaOrm
+      ,EvolucaoFotograficaOrm
+      ,EvolucaoFotograficaArquivoOrm
     ]),
     ModuloAuth,
     ModuloClientes,

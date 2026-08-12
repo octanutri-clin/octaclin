@@ -11,6 +11,9 @@ import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cl
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { AvaliacaoAntropometricaOrm } from '../../pacientes/infraestrutura/avaliacao-antropometrica.orm';
 import { DocumentoEmitidoOrm } from '../../pacientes/infraestrutura/documento-emitido.orm';
+import { ConsentimentoEvolucaoFotograficaOrm } from '../../pacientes/infraestrutura/consentimento-evolucao-fotografica.orm';
+import { EvolucaoFotograficaArquivoOrm } from '../../pacientes/infraestrutura/evolucao-fotografica-arquivo.orm';
+import { EvolucaoFotograficaOrm } from '../../pacientes/infraestrutura/evolucao-fotografica.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { validarDuracaoMidia } from '../dominio/validacao-midia';
 import { AcompanhanteOrm } from '../infraestrutura/acompanhante.orm';
@@ -226,7 +229,8 @@ export class ServicoMobile {
       tenantId,
       arquivoId,
       vinculoEsperado,
-      (gerenciador) => this.obterArquivoPermitido(gerenciador, tenantId, arquivoId, usuario)
+      (gerenciador) => this.obterArquivoPermitido(gerenciador, tenantId, arquivoId, usuario),
+      usuario
     );
   }
 
@@ -248,7 +252,8 @@ export class ServicoMobile {
     tenantId: string,
     arquivoId: string,
     vinculoEsperado: Record<string, string>,
-    obterArquivo: (gerenciador: EntityManager) => Promise<ArquivoMidiaOrm>
+    obterArquivo: (gerenciador: EntityManager) => Promise<ArquivoMidiaOrm>,
+    usuario?: UsuarioAutenticado
   ): Promise<ArquivoMidiaResumo> {
     const arquivo = await this.executorTenant.executar(tenantId, obterArquivo);
     if (arquivo.status === 'confirmado') return this.resumirArquivo(arquivo);
@@ -292,7 +297,9 @@ export class ServicoMobile {
           status: 'confirmado',
           confirmadoEm: new Date()
         });
-        return this.resumirArquivo(await gerenciador.getRepository(ArquivoMidiaOrm).save(atual));
+        const salvo = await gerenciador.getRepository(ArquivoMidiaOrm).save(atual);
+        await this.confirmarVinculoEvolucaoFotografica(gerenciador, tenantId, salvo, usuario);
+        return this.resumirArquivo(salvo);
       });
       await Promise.allSettled([this.armazenamento.excluirObjeto(arquivo.bucket, arquivo.chaveObjeto)]);
       return confirmado;
@@ -575,7 +582,9 @@ export class ServicoMobile {
         ? await gerenciador.getRepository(AgendaConsultaOrm).findOne({ where: onde })
         : vinculo.tipo === 'avaliacao_antropometrica'
           ? await gerenciador.getRepository(AvaliacaoAntropometricaOrm).findOne({ where: { ...onde, excluidaEm: IsNull() } })
-          : await gerenciador.getRepository(DocumentoEmitidoOrm).findOne({ where: onde });
+          : vinculo.tipo === 'documento_emitido'
+            ? await gerenciador.getRepository(DocumentoEmitidoOrm).findOne({ where: onde })
+            : await gerenciador.getRepository(EvolucaoFotograficaOrm).findOne({ where: { ...onde, excluidaEm: IsNull() } });
     if (!encontrado) throw new NotFoundException('Vinculo clinico nao encontrado.');
     return { tipo: vinculo.tipo, recursoId: vinculo.recursoId };
   }
@@ -588,9 +597,31 @@ export class ServicoMobile {
     if (!valor || typeof valor !== 'object') return undefined;
     const candidato = valor as Partial<VinculoClinicoArquivo>;
     if (
-      (candidato.tipo !== 'consulta' && candidato.tipo !== 'avaliacao_antropometrica' && candidato.tipo !== 'documento_emitido') ||
+      (candidato.tipo !== 'consulta' && candidato.tipo !== 'avaliacao_antropometrica' && candidato.tipo !== 'documento_emitido' && candidato.tipo !== 'evolucao_fotografica') ||
       typeof candidato.recursoId !== 'string'
     ) return undefined;
     return { tipo: candidato.tipo, recursoId: candidato.recursoId };
+  }
+
+  /** A confirmacao do objeto e o vinculo clinico ocorrem na mesma transacao tenant-scoped. */
+  private async confirmarVinculoEvolucaoFotografica(gerenciador: EntityManager, tenantId: string, arquivo: ArquivoMidiaOrm, usuario?: UsuarioAutenticado): Promise<void> {
+    const vinculo = this.extrairVinculoClinico(arquivo.metadados?.vinculoClinico);
+    if (vinculo?.tipo !== 'evolucao_fotografica') return;
+    if (usuario?.papel === 'Patient') throw new ForbiddenException('Paciente nao pode confirmar imagem de evolucao fotografica.');
+    if (arquivo.tipo !== 'imagem' || arquivo.categoria !== 'foto') {
+      throw new BadRequestException('Arquivo de evolucao fotografica deve ser uma imagem clinica.');
+    }
+    const evolucao = await gerenciador.getRepository(EvolucaoFotograficaOrm).findOne({
+      where: { id: vinculo.recursoId, tenantId, pacienteId: arquivo.pacienteId, excluidaEm: IsNull() }
+    });
+    if (!evolucao) throw new NotFoundException('Serie fotografica nao encontrada.');
+    const consentimento = await gerenciador.getRepository(ConsentimentoEvolucaoFotograficaOrm).findOne({
+      where: { id: evolucao.consentimentoId, tenantId, pacienteId: arquivo.pacienteId, revogadoEm: IsNull() }
+    });
+    if (!consentimento || consentimento.retencaoAte < new Date().toISOString().slice(0, 10)) {
+      throw new BadRequestException('O consentimento fotografico nao esta mais ativo.');
+    }
+    const repositorio = gerenciador.getRepository(EvolucaoFotograficaArquivoOrm);
+    await repositorio.save(repositorio.create({ tenantId, evolucaoFotograficaId: evolucao.id, arquivoMidiaId: arquivo.id }));
   }
 }

@@ -3,6 +3,8 @@ import test from 'node:test';
 import * as nextHeaders from 'next/headers';
 import { GET, POST as registrar } from '../app/api/pacientes/[id]/evolucoes-fotograficas/consentimentos/route';
 import { POST as revogar } from '../app/api/pacientes/[id]/evolucoes-fotograficas/consentimentos/[consentimentoId]/revogacao/route';
+import { GET as listarSeries } from '../app/api/pacientes/[id]/evolucoes-fotograficas/route';
+import { POST as solicitarUpload } from '../app/api/pacientes/[id]/evolucoes-fotograficas/uploads/route';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & { __clearCookies: () => void; __setCookies: (cookies: Record<string, string>) => void; };
 
@@ -33,6 +35,21 @@ test('BFF fotografico encaminha registro e revogacao com identificadores codific
     assert.deepEqual(chamadas, [
       ['http://backend.octaclin.local/pacientes/paciente%2F1/evolucoes-fotograficas/consentimentos', 'POST', corpo],
       ['http://backend.octaclin.local/pacientes/paciente%2F1/evolucoes-fotograficas/consentimentos/consentimento%2F1/revogacao', 'POST', undefined]
+    ]);
+  } finally { restaurarFetch(original); }
+});
+
+test('BFF fotografico lista series e encaminha solicitacao de upload sem criar URL no frontend', async () => {
+  __setCookies(sessao());
+  const original = global.fetch; const chamadas: Array<[string, string, string | undefined]> = [];
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => { chamadas.push([String(entrada), init?.method ?? 'GET', init?.body?.toString()]); return Response.json({ ok: true }); }) as typeof global.fetch;
+  try {
+    const corpo = JSON.stringify({ consentimentoId: 'consentimento-1', protocolo: 'Frente', capturadaEm: '2026-08-12', mimeType: 'image/jpeg', tamanhoBytes: 1024 });
+    await listarSeries(new Request('http://localhost/api/fotos') as never, { params: Promise.resolve({ id: 'paciente/1' }) });
+    await solicitarUpload(new Request('http://localhost/api/fotos', { method: 'POST', body: corpo }) as never, { params: Promise.resolve({ id: 'paciente/1' }) });
+    assert.deepEqual(chamadas, [
+      ['http://backend.octaclin.local/pacientes/paciente%2F1/evolucoes-fotograficas', 'GET', undefined],
+      ['http://backend.octaclin.local/pacientes/paciente%2F1/evolucoes-fotograficas/uploads', 'POST', corpo]
     ]);
   } finally { restaurarFetch(original); }
 });

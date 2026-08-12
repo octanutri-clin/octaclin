@@ -2,7 +2,7 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeor
 import { TipoMidiaMobile } from '../dominio/validacao-midia';
 
 export type VinculoClinicoArquivo = {
-  tipo: 'consulta' | 'avaliacao_antropometrica' | 'documento_emitido';
+  tipo: 'consulta' | 'avaliacao_antropometrica' | 'documento_emitido' | 'evolucao_fotografica';
   recursoId: string;
 };
 

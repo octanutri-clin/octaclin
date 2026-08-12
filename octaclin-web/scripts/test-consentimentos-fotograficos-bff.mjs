@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const temporaria = mkdtempSync(join(tmpdir(), 'octaclin-consentimentos-fotos-bff-'));
-const arquivos = ['scripts/consentimentos-fotograficos-bff.spec.ts', 'app/api/pacientes/[id]/evolucoes-fotograficas/consentimentos/route.ts', 'app/api/pacientes/[id]/evolucoes-fotograficas/consentimentos/[consentimentoId]/revogacao/route.ts', 'lib/server/cold-start-bff.ts', 'lib/server/permissoes-bff.ts', 'lib/server/sessao-bff.ts'];
+const arquivos = ['scripts/consentimentos-fotograficos-bff.spec.ts', 'app/api/pacientes/[id]/evolucoes-fotograficas/route.ts', 'app/api/pacientes/[id]/evolucoes-fotograficas/uploads/route.ts', 'app/api/pacientes/[id]/evolucoes-fotograficas/consentimentos/route.ts', 'app/api/pacientes/[id]/evolucoes-fotograficas/consentimentos/[consentimentoId]/revogacao/route.ts', 'lib/server/cold-start-bff.ts', 'lib/server/permissoes-bff.ts', 'lib/server/sessao-bff.ts'];
 function executar(comando, args, cwd = raiz) { const resultado = spawnSync(comando, args, { cwd, stdio: 'inherit' }); if (resultado.status !== 0) { rmSync(temporaria, { recursive: true, force: true }); process.exit(resultado.status ?? 1); } }
 writeFileSync(join(temporaria, 'tsconfig.json'), JSON.stringify({ extends: join(raiz, 'tsconfig.json'), compilerOptions: { noEmit: false, outDir: temporaria, rootDir: raiz, module: 'commonjs', moduleResolution: 'node', target: 'ES2022' }, files: arquivos.map((arquivo) => join(raiz, arquivo)) }, null, 2));
 executar(process.execPath, [join(raiz, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', join(temporaria, 'tsconfig.json')]);

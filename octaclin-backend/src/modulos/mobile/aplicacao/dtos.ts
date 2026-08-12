@@ -16,8 +16,8 @@ import { Type } from 'class-transformer';
 import { TipoMidiaMobile } from '../dominio/validacao-midia';
 
 export class VinculoClinicoAnexoDto {
-  @IsIn(['consulta', 'avaliacao_antropometrica', 'documento_emitido'])
-  tipo: 'consulta' | 'avaliacao_antropometrica' | 'documento_emitido';
+  @IsIn(['consulta', 'avaliacao_antropometrica', 'documento_emitido', 'evolucao_fotografica'])
+  tipo: 'consulta' | 'avaliacao_antropometrica' | 'documento_emitido' | 'evolucao_fotografica';
 
   @IsUUID()
   recursoId: string;

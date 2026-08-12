@@ -10,6 +10,7 @@ import { ModuloClientes } from '../clientes/modulo-clientes';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ModuloAgenda } from '../agenda/modulo-agenda';
 import { ModuloComunicacoes } from '../comunicacoes/modulo-comunicacoes';
+import { ModuloMobile } from '../mobile/modulo-mobile';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { LogDiarioRapidoOrm } from '../mobile/infraestrutura/log-diario-rapido.orm';
@@ -32,6 +33,7 @@ import { ServicoPacientes } from './aplicacao/servico-pacientes';
 import { ServicoPerfilCadastroPaciente } from './aplicacao/servico-perfil-cadastro-paciente';
 import { ServicoExamesLaboratoriais } from './aplicacao/servico-exames-laboratoriais';
 import { ServicoConsentimentosEvolucaoFotografica } from './aplicacao/servico-consentimentos-evolucao-fotografica';
+import { ServicoEvolucoesFotograficas } from './aplicacao/servico-evolucoes-fotograficas';
 import { ServicoPortalPaciente } from './aplicacao/servico-portal-paciente';
 import { ControladorConvitesPaciente } from './apresentacao/controlador-convites-paciente';
 import { ControladorDocumentosClinicos } from './apresentacao/controlador-documentos-clinicos';
@@ -39,6 +41,7 @@ import { ControladorPacientes } from './apresentacao/controlador-pacientes';
 import { ControladorPerfilCadastroPaciente } from './apresentacao/controlador-perfil-cadastro-paciente';
 import { ControladorExamesLaboratoriais } from './apresentacao/controlador-exames-laboratoriais';
 import { ControladorConsentimentosEvolucaoFotografica } from './apresentacao/controlador-consentimentos-evolucao-fotografica';
+import { ControladorEvolucoesFotograficas } from './apresentacao/controlador-evolucoes-fotograficas';
 import { ControladorPortalPaciente } from './apresentacao/controlador-portal-paciente';
 import { AcompanhamentoTarefaOrm } from './infraestrutura/acompanhamento-tarefa.orm';
 import { ConvitePacienteOrm } from './infraestrutura/convite-paciente.orm';
@@ -48,6 +51,8 @@ import { DocumentoEmitidoOrm } from './infraestrutura/documento-emitido.orm';
 import { PacienteOrm } from './infraestrutura/paciente.orm';
 import { PerfilCadastroPacienteOrm } from './infraestrutura/perfil-cadastro-paciente.orm';
 import { ConsentimentoEvolucaoFotograficaOrm } from './infraestrutura/consentimento-evolucao-fotografica.orm';
+import { EvolucaoFotograficaOrm } from './infraestrutura/evolucao-fotografica.orm';
+import { EvolucaoFotograficaArquivoOrm } from './infraestrutura/evolucao-fotografica-arquivo.orm';
 
 @Module({
   imports: [
@@ -76,19 +81,23 @@ import { ConsentimentoEvolucaoFotograficaOrm } from './infraestrutura/consentime
       PlanoAlimentarRefeicaoOrm,
       PlanoAlimentarItemOrm,
       PlanoAlimentarSubstituicaoOrm,
-      ConsentimentoEvolucaoFotograficaOrm
+      ConsentimentoEvolucaoFotograficaOrm,
+      EvolucaoFotograficaOrm,
+      EvolucaoFotograficaArquivoOrm
     ]),
     ModuloTenancy,
     ModuloAuth,
     ModuloClientes,
     ModuloAgenda,
-    ModuloComunicacoes
+    ModuloComunicacoes,
+    ModuloMobile
   ],
   controllers: [
     ControladorPacientes,
     ControladorPerfilCadastroPaciente,
     ControladorExamesLaboratoriais,
     ControladorConsentimentosEvolucaoFotografica,
+    ControladorEvolucoesFotograficas,
     ControladorConvitesPaciente,
     ControladorPortalPaciente,
     ControladorDocumentosClinicos
@@ -98,6 +107,7 @@ import { ConsentimentoEvolucaoFotograficaOrm } from './infraestrutura/consentime
     ServicoPerfilCadastroPaciente,
     ServicoExamesLaboratoriais,
     ServicoConsentimentosEvolucaoFotografica,
+    ServicoEvolucoesFotograficas,
     ServicoImportacaoPacientes,
     ServicoConvitesPaciente,
     ServicoPortalPaciente,

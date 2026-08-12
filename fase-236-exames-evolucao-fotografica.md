@@ -198,18 +198,27 @@ codificados. Ele usa stubs locais e nao acessa dados clinicos.
 Validacoes: `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web lint`,
 `pnpm --dir octaclin-web build` e `git diff --check`.
 
-## Incremento 8 - contrato de vinculo de arquivo
+## Incremento 9 - captura profissional com vinculo seguro
 
-Aplicado em producao em 2026-08-12. A migration aditiva `1025` cria o vinculo
-entre serie fotografica e objeto privado: um arquivo pertence a uma unica serie
-no tenant e o relacionamento usa RLS forcada e policy propria. A migration nao
-cria imagens, URLs ou capturas. A verificacao de producao confirmou RLS
-habilitada e forcada, a policy `isolamento_tenant_evolucoes_fotograficas_arquivos`,
-o indice da serie e as restricoes compostas de tenant/serie.
+Entregue localmente em 2026-08-12. A subaba profissional permite selecionar um
+consentimento ativo, informar protocolo/data/observacao e enviar uma imagem para
+armazenamento privado. A serie e criada com protocolo e observacao cifrados; a
+URL assinada de upload expira e nao e persistida na aplicacao.
 
-O proximo incremento podera solicitar e confirmar upload exigindo consentimento
-ativo e protocolo. A captura permanece bloqueada ate esse fluxo ser entregue e
-validado.
+Na confirmacao, a mesma transacao tenant-scoped exige que a serie pertenca ao
+paciente, que o arquivo seja uma imagem da categoria `foto`, e que o
+consentimento siga ativo dentro do prazo de retencao. So entao o objeto
+confirmado e vinculado a tabela `evolucoes_fotograficas_arquivos`. Se a
+validacao falhar, o arquivo nao e associado a serie.
+
+A listagem exibe somente metadados e permite abrir cada imagem por URL assinada
+temporaria para o profissional autorizado. O portal do paciente, URLs
+permanentes, galeria publica, comparacao automatica e inferencia clinica seguem
+fora de escopo.
+
+Validacoes: testes unitarios de consentimento/vinculo no backend, gate BFF de
+sessao e encaminhamento, typecheck/lint dos dois projetos, build do Next.js e
+`git diff --check`.
 - Um marcador pertence a uma coleta e carrega nome, resultado, unidade, faixa de
   referencia e metodo como payload cifrado. Valores nao sao normalizados nem
   comparados automaticamente enquanto nao houver protocolo clinico aprovado.

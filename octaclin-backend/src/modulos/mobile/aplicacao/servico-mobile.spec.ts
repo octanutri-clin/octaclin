@@ -1,6 +1,9 @@
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { ConsentimentoEvolucaoFotograficaOrm } from '../../pacientes/infraestrutura/consentimento-evolucao-fotografica.orm';
+import { EvolucaoFotograficaArquivoOrm } from '../../pacientes/infraestrutura/evolucao-fotografica-arquivo.orm';
+import { EvolucaoFotograficaOrm } from '../../pacientes/infraestrutura/evolucao-fotografica.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { AcompanhanteOrm } from '../infraestrutura/acompanhante.orm';
 import { ArquivoMidiaOrm } from '../infraestrutura/arquivo-midia.orm';
@@ -48,6 +51,9 @@ interface DadosFake {
   arquivos?: Record<string, unknown>[];
   acompanhantes?: Record<string, unknown>[];
   sincronizacoes?: Record<string, unknown>[];
+  evolucoesFotograficas?: Record<string, unknown>[];
+  consentimentosFotograficos?: Record<string, unknown>[];
+  vinculosFotograficos?: Record<string, unknown>[];
 }
 
 function correspondeValor(atual: unknown, esperado: unknown): boolean {
@@ -81,6 +87,9 @@ function criarServico(dados: DadosFake = {}, usarIfNoneMatch = true) {
     arquivo: criarRepositorioFake('arquivo', dados.arquivos ?? []),
     acompanhante: criarRepositorioFake('acompanhante', dados.acompanhantes ?? []),
     sincronizacao: criarRepositorioFake('sincronizacao', dados.sincronizacoes ?? [])
+    ,evolucaoFotografica: criarRepositorioFake('evolucao-fotografica', dados.evolucoesFotograficas ?? [])
+    ,consentimentoFotografico: criarRepositorioFake('consentimento-fotografico', dados.consentimentosFotograficos ?? [])
+    ,vinculoFotografico: criarRepositorioFake('vinculo-fotografico', dados.vinculosFotograficos ?? [])
   };
   const gerenciador = {
     query: jest.fn(async () => undefined),
@@ -92,6 +101,9 @@ function criarServico(dados: DadosFake = {}, usarIfNoneMatch = true) {
       if (entidade === ArquivoMidiaOrm) return repositorios.arquivo;
       if (entidade === AcompanhanteOrm) return repositorios.acompanhante;
       if (entidade === SincronizacaoMobileOrm) return repositorios.sincronizacao;
+      if (entidade === EvolucaoFotograficaOrm) return repositorios.evolucaoFotografica;
+      if (entidade === ConsentimentoEvolucaoFotograficaOrm) return repositorios.consentimentoFotografico;
+      if (entidade === EvolucaoFotograficaArquivoOrm) return repositorios.vinculoFotografico;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -385,6 +397,45 @@ describe('ServicoMobile', () => {
       })
     );
     expect(confirmado).toEqual(expect.objectContaining({ status: 'confirmado', tamanhoBytes: '321' }));
+  });
+
+  it('vincula a imagem a serie apenas com consentimento fotografico ainda ativo', async () => {
+    const arquivo = {
+      id: 'arquivo-foto-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', tipo: 'imagem', categoria: 'foto',
+      bucket: 'bucket', chaveObjeto: 'pendentes/foto', mimeType: 'image/jpeg', tamanhoBytes: '0', status: 'pendente',
+      metadados: { vinculoClinico: { tipo: 'evolucao_fotografica', recursoId: 'evolucao-1' } }
+    };
+    const { servico, repositorios, armazenamento } = criarServico({
+      pacientes,
+      arquivos: [arquivo],
+      evolucoesFotograficas: [{ id: 'evolucao-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', consentimentoId: 'consentimento-1' }],
+      consentimentosFotograficos: [{ id: 'consentimento-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', retencaoAte: '2030-01-01' }]
+    });
+    armazenamento.inspecionarObjeto.mockResolvedValueOnce({ tamanhoBytes: 321, mimeType: 'image/jpeg', hashConteudo: 'sha256-foto' });
+
+    await servico.confirmarUploadMidia('tenant-1', 'arquivo-foto-1', usuarioSuperAdmin);
+
+    expect(repositorios.vinculoFotografico.save).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'tenant-1', evolucaoFotograficaId: 'evolucao-1', arquivoMidiaId: 'arquivo-foto-1'
+    }));
+  });
+
+  it('impede Patient de confirmar uma imagem clinica mesmo conhecendo o identificador do arquivo', async () => {
+    const arquivo = {
+      id: 'arquivo-foto-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', tipo: 'imagem', categoria: 'foto',
+      bucket: 'bucket', chaveObjeto: 'pendentes/foto', mimeType: 'image/jpeg', tamanhoBytes: '0', status: 'pendente',
+      metadados: { vinculoClinico: { tipo: 'evolucao_fotografica', recursoId: 'evolucao-1' } }
+    };
+    const { servico, repositorios, armazenamento } = criarServico({
+      pacientes,
+      arquivos: [arquivo],
+      evolucoesFotograficas: [{ id: 'evolucao-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', consentimentoId: 'consentimento-1' }],
+      consentimentosFotograficos: [{ id: 'consentimento-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', retencaoAte: '2030-01-01' }]
+    });
+    armazenamento.inspecionarObjeto.mockResolvedValueOnce({ tamanhoBytes: 321, mimeType: 'image/jpeg', hashConteudo: 'sha256-foto' });
+
+    await expect(servico.confirmarUploadMidia('tenant-1', 'arquivo-foto-1', usuarioPaciente)).rejects.toThrow('Paciente nao pode confirmar imagem');
+    expect(repositorios.vinculoFotografico.save).not.toHaveBeenCalled();
   });
 
   it('impede formulario publico de confirmar anexo de outro paciente', async () => {
