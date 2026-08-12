@@ -140,6 +140,17 @@ consentimento, captura e retencao.
 
 Validacoes: `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web lint`,
 `pnpm --dir octaclin-web build` e `git diff --check`.
+
+## Incremento 5 - gate de contrato do BFF
+
+Entregue localmente em 2026-08-12. O teste `test:exames-laboratoriais:bff`
+cobre sessao ausente sem chamada ao backend, encaminhamento de leitura e criacao
+com identificador de paciente codificado e preservacao do erro de validacao do
+backend. O teste usa stubs locais e nao acessa dados clinicos ou producao.
+
+Validacoes: `pnpm --dir octaclin-web test:exames-laboratoriais:bff`,
+`pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web lint` e
+`git diff --check`.
 - Um marcador pertence a uma coleta e carrega nome, resultado, unidade, faixa de
   referencia e metodo como payload cifrado. Valores nao sao normalizados nem
   comparados automaticamente enquanto nao houver protocolo clinico aprovado.

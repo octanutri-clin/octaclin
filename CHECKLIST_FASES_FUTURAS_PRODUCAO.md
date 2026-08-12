@@ -1669,6 +1669,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Incremento 4 concluido localmente: subaba profissional de exames no
     prontuario lista coletas/marcadores e registra nova coleta pelo BFF, sem
     classificacao clinica nem exposicao ao portal.
+  - Incremento 5 concluido localmente: gate de BFF cobre sessao ausente,
+    codificacao do paciente, criacao e preservacao de erro do backend sem usar
+    dados clinicos ou producao.
   - Proximo incremento: jornada sintetica de exames; fotos seguem bloqueadas
     ate o fluxo proprio de consentimento e captura.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
