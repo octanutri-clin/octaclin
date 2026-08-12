@@ -1659,10 +1659,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
     deploy compativel ate a aplicacao da migration `1024` em staging.
   - Correcao de entrega: a migration `1024` foi registrada na lista explicita
     do TypeORM em 2026-08-12, pois sem esse registro o CLI nao a carregava.
-  - Proximo incremento: aplicar e validar a migration `1024` em staging antes
-    da tela profissional de exames; fotos seguem bloqueadas ate o fluxo proprio
-    de consentimento e captura. O procedimento e as consultas de verificacao
-    estao em `RUNBOOK_PRODUCAO.md`.
+  - Aceite de schema concluido em `octaclin_test_fase150b`: migrations
+    `1022`--`1024` aplicadas; `1024` teve RLS forcada, quatro policies e os
+    indices esperados verificados sem inserir dados clinicos.
+  - Proximo incremento: tela profissional de exames e jornada sintetica; fotos
+    seguem bloqueadas ate o fluxo proprio de consentimento e captura.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
 - [ ] Fase 237 - Prescricoes, metas e orientacoes terapeuticas. [IMPORTANTE - POS PILOTO]

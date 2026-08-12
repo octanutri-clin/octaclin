@@ -98,6 +98,16 @@ Ela ja existia no repositorio, mas nao era carregada pelo `migration:show`; o
 ajuste foi validado com typecheck e teste da propria migration antes da nova
 tentativa em staging.
 
+## Aceite de schema em staging
+
+Realizado em 2026-08-12 no banco isolado `octaclin_test_fase150b`, com role
+owner. As migrations `1022`, `1023` e `1024` foram aplicadas de forma aditiva;
+o `migration:show` passou a indicar as 37 migrations como concluidas. Para as
+quatro tabelas da `1024`, a verificacao confirmou RLS e FORCE RLS ativos, uma
+policy de isolamento por tenant em cada tabela e os indices de serie e coleta
+esperados. Nenhum dado de paciente, foto, anexo ou integracao externa foi
+criado durante este aceite.
+
 ## Contrato inicial de exames
 
 - Uma coleta tem paciente, autor, data de coleta, data de recebimento opcional,
