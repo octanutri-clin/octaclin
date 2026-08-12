@@ -36,6 +36,7 @@ import { CriarNotificacoesUsuario1720000001020 } from './migracoes/1720000001020
 import { CriarPlanosAlimentares1720000001021 } from './migracoes/1720000001021-CriarPlanosAlimentares';
 import { CriarIntegracoesApiPublica1720000001022 } from './migracoes/1720000001022-CriarIntegracoesApiPublica';
 import { CriarPerfisCadastroPaciente1720000001023 } from './migracoes/1720000001023-CriarPerfisCadastroPaciente';
+import { CriarExamesEFotosClinicas1720000001024 } from './migracoes/1720000001024-CriarExamesEFotosClinicas';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -261,10 +262,11 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CriptografarConteudoNotificacoes1720000001018,
       AdicionarFinanceiroConsulta1720000001019,
       CriarNotificacoesUsuario1720000001020,
-      CriarPlanosAlimentares1720000001021,
-      CriarIntegracoesApiPublica1720000001022,
-      CriarPerfisCadastroPaciente1720000001023
-    ],
+        CriarPlanosAlimentares1720000001021,
+        CriarIntegracoesApiPublica1720000001022,
+        CriarPerfisCadastroPaciente1720000001023,
+        CriarExamesEFotosClinicas1720000001024
+      ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,
     logging: process.env.NODE_ENV !== 'production',

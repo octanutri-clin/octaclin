@@ -93,6 +93,11 @@ no `RUNBOOK_PRODUCAO.md`. A execucao exige URL owner de staging explicitamente
 confirmada e deve parar caso `migration:show` apresente pendencia diferente da
 `1024`. A tela profissional continua bloqueada ate esse aceite de schema.
 
+Em 2026-08-12, a migration `1024` foi incluida na lista explicita do TypeORM.
+Ela ja existia no repositorio, mas nao era carregada pelo `migration:show`; o
+ajuste foi validado com typecheck e teste da propria migration antes da nova
+tentativa em staging.
+
 ## Contrato inicial de exames
 
 - Uma coleta tem paciente, autor, data de coleta, data de recebimento opcional,

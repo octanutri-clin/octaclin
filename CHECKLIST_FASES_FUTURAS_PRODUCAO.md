@@ -1657,6 +1657,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Incremento 3 concluido localmente: BFF autenticado e contrato de frontend
     de exames foram adicionados sem tela ou chamada automatica, mantendo o
     deploy compativel ate a aplicacao da migration `1024` em staging.
+  - Correcao de entrega: a migration `1024` foi registrada na lista explicita
+    do TypeORM em 2026-08-12, pois sem esse registro o CLI nao a carregava.
   - Proximo incremento: aplicar e validar a migration `1024` em staging antes
     da tela profissional de exames; fotos seguem bloqueadas ate o fluxo proprio
     de consentimento e captura. O procedimento e as consultas de verificacao
