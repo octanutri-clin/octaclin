@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
@@ -29,6 +29,14 @@ export class ControladorEvolucoesFotograficas {
     const resultado = await this.servico.solicitarUpload(usuario.tenantId, pacienteId, dados, usuario);
     await this.auditar(usuario, requisicao, 'pacientes.evolucao_fotografica.upload_solicitar', pacienteId, { evolucaoFotograficaId: resultado.evolucaoId, arquivoId: resultado.upload.arquivo.id, mimeType: dados.mimeType, tamanhoBytes: dados.tamanhoBytes });
     return resultado;
+  }
+
+  @Delete(':id/evolucoes-fotograficas/:evolucaoId')
+  @Permissoes('pacientes.gerenciar')
+  async excluir(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Param('id', ParseUUIDPipe) pacienteId: string, @Param('evolucaoId', ParseUUIDPipe) evolucaoId: string) {
+    const resultado = await this.servico.excluir(usuario.tenantId, pacienteId, evolucaoId, usuario);
+    await this.auditar(usuario, requisicao, 'pacientes.evolucao_fotografica.excluir', pacienteId, { evolucaoFotograficaId: evolucaoId, arquivosRemovidos: resultado.arquivosRemovidos });
+    return { status: 'excluida' };
   }
 
   private async auditar(usuario: UsuarioAutenticado, requisicao: Request, acao: string, pacienteId: string, metadados: Record<string, unknown>) {

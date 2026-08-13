@@ -1,13 +1,23 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { Camera, ExternalLink, ShieldCheck, ShieldOff, UploadCloud } from 'lucide-react';
+import { Camera, ExternalLink, ShieldCheck, ShieldOff, Trash2, UploadCloud } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo } from '@/components/ui/campo';
 import { AlertaOperacional, AlertaSucesso, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { listarConsentimentosFotograficos, registrarConsentimentoFotografico, revogarConsentimentoFotografico, type ConsentimentoFotograficoApi } from '@/lib/consentimentos-fotograficos-api';
-import { confirmarUploadEvolucaoFotografica, listarEvolucoesFotograficas, obterAcessoEvolucaoFotografica, solicitarEvolucaoFotografica, type EvolucaoFotograficaApi } from '@/lib/evolucoes-fotograficas-api';
+import { confirmarUploadEvolucaoFotografica, excluirEvolucaoFotografica, listarEvolucoesFotograficas, obterAcessoEvolucaoFotografica, solicitarEvolucaoFotografica, type EvolucaoFotograficaApi } from '@/lib/evolucoes-fotograficas-api';
+
+const protocolosPadrao = [
+  { valor: 'frontal', rotulo: 'Frontal' },
+  { valor: 'lateral', rotulo: 'Lateral' },
+  { valor: 'costas', rotulo: 'Costas' },
+  { valor: 'total', rotulo: 'Total' },
+  { valor: 'adicionar', rotulo: 'Adicionar' }
+] as const;
+
+type TipoProtocolo = (typeof protocolosPadrao)[number]['valor'];
 
 function formatarData(valor: string) {
   const data = new Date(`${valor.slice(0, 10)}T12:00:00Z`);
@@ -29,10 +39,13 @@ export function AbaEvolucaoFotografica({ pacienteId, podeGerenciar }: AbaEvoluca
   const [paraRevogar, setParaRevogar] = useState<ConsentimentoFotograficoApi | null>(null);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [consentimentoId, setConsentimentoId] = useState('');
-  const [protocolo, setProtocolo] = useState('Frente, lateral e costas');
+  const [tipoProtocolo, setTipoProtocolo] = useState<TipoProtocolo>('frontal');
+  const [protocoloPersonalizado, setProtocoloPersonalizado] = useState('');
   const [capturadaEm, setCapturadaEm] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [enviandoFoto, setEnviandoFoto] = useState(false);
+  const [paraExcluir, setParaExcluir] = useState<EvolucaoFotograficaApi | null>(null);
+  const [excluindoFoto, setExcluindoFoto] = useState(false);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -75,21 +88,37 @@ export function AbaEvolucaoFotografica({ pacienteId, podeGerenciar }: AbaEvoluca
     evento.preventDefault();
     // React pode limpar currentTarget durante as operacoes assincronas de upload.
     const formulario = evento.currentTarget;
+    const protocolo = tipoProtocolo === 'adicionar'
+      ? protocoloPersonalizado.trim()
+      : protocolosPadrao.find((item) => item.valor === tipoProtocolo)?.rotulo ?? '';
     if (!arquivo) { setErro('Selecione uma imagem para a evolucao fotografica.'); return; }
+    if (!protocolo) { setErro('Informe o protocolo personalizado da imagem.'); return; }
     setEnviandoFoto(true); setErro(null); setSucesso(null);
     try {
       const solicitacao = await solicitarEvolucaoFotografica(pacienteId, {
-        consentimentoId, protocolo: protocolo.trim(), capturadaEm, observacoes: observacoes.trim() || undefined,
+        consentimentoId, protocolo, capturadaEm, observacoes: observacoes.trim() || undefined,
         mimeType: arquivo.type, tamanhoBytes: arquivo.size, nomeArquivo: arquivo.name
       });
       const envio = await fetch(solicitacao.upload.uploadUrl, { method: 'PUT', headers: solicitacao.upload.uploadHeaders, body: arquivo });
       if (!envio.ok) throw new Error('O armazenamento recusou a imagem. Tente novamente.');
       await confirmarUploadEvolucaoFotografica(solicitacao.upload.arquivo.id);
-      setArquivo(null); setObservacoes(''); formulario.reset();
+      setArquivo(null); setObservacoes(''); setTipoProtocolo('frontal'); setProtocoloPersonalizado(''); formulario.reset();
       setSucesso('Imagem confirmada e vinculada a serie fotografica com consentimento ativo.');
       await carregar();
     } catch (erroAtual) { setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao enviar imagem.'); }
     finally { setEnviandoFoto(false); }
+  }
+
+  async function confirmarExclusao() {
+    if (!paraExcluir) return;
+    setErro(null); setSucesso(null); setExcluindoFoto(true);
+    try {
+      await excluirEvolucaoFotografica(pacienteId, paraExcluir.id);
+      setParaExcluir(null);
+      setSucesso('Serie fotografica e imagens enviadas foram excluidas permanentemente.');
+      await carregar();
+    } catch (erroAtual) { setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao excluir a serie fotografica.'); }
+    finally { setExcluindoFoto(false); }
   }
 
   async function abrirImagem(arquivoId: string) {
@@ -108,9 +137,10 @@ export function AbaEvolucaoFotografica({ pacienteId, podeGerenciar }: AbaEvoluca
     {erro ? <AlertaOperacional mensagem={erro} /> : null}
     {sucesso ? <AlertaSucesso mensagem={sucesso} /> : null}
     {podeGerenciar ? <form onSubmit={registrar} className="grid gap-3 rounded-md border border-linha bg-white p-4"><div><h3 className="text-sm font-semibold text-tinta">Registrar consentimento</h3><p className="mt-1 text-sm text-texto-suave">Registre a versao aceita e o prazo de retencao antes de qualquer captura futura.</p></div><div className="grid gap-3 md:grid-cols-2"><div className="grid gap-1"><Rotulo htmlFor="foto-versao">Versao do consentimento</Rotulo><Campo id="foto-versao" value={versao} onChange={(evento) => setVersao(evento.target.value)} maxLength={40} required /></div><div className="grid gap-1"><Rotulo htmlFor="foto-retencao">Retencao ate</Rotulo><Campo id="foto-retencao" type="date" value={retencaoAte} onChange={(evento) => setRetencaoAte(evento.target.value)} required /></div></div><div className="grid gap-1"><Rotulo htmlFor="foto-evidencia">Evidencia do aceite</Rotulo><AreaTexto id="foto-evidencia" value={evidencia} onChange={(evento) => setEvidencia(evento.target.value)} maxLength={4000} /></div><div className="flex justify-end"><Botao type="submit" variante="primario" carregando={salvando}><ShieldCheck size={16} />Registrar consentimento</Botao></div></form> : null}
-    {podeGerenciar ? <form onSubmit={enviarFoto} className="grid gap-3 rounded-md border border-linha bg-white p-4"><div><h3 className="text-sm font-semibold text-tinta">Adicionar imagem clinica</h3><p className="mt-1 text-sm text-texto-suave">A imagem fica privada. O envio e confirmado somente se o consentimento ainda estiver ativo.</p></div>{consentimentosAtivos.length ? <><div className="grid gap-3 md:grid-cols-2"><div className="grid gap-1"><Rotulo htmlFor="foto-consentimento">Consentimento ativo</Rotulo><select id="foto-consentimento" className="h-10 rounded-md border border-linha bg-white px-3 text-sm" value={consentimentoId} onChange={(evento) => setConsentimentoId(evento.target.value)} required><option value="">Selecione</option>{consentimentosAtivos.map((item) => <option key={item.id} value={item.id}>{item.versao} · ate {formatarData(item.retencaoAte)}</option>)}</select></div><div className="grid gap-1"><Rotulo htmlFor="foto-data">Data da captura</Rotulo><Campo id="foto-data" type="date" value={capturadaEm} onChange={(evento) => setCapturadaEm(evento.target.value)} required /></div></div><div className="grid gap-1"><Rotulo htmlFor="foto-protocolo">Protocolo</Rotulo><Campo id="foto-protocolo" value={protocolo} onChange={(evento) => setProtocolo(evento.target.value)} maxLength={500} required /></div><div className="grid gap-1"><Rotulo htmlFor="foto-arquivo">Imagem</Rotulo><Campo id="foto-arquivo" type="file" accept="image/jpeg,image/png,image/webp" onChange={(evento) => setArquivo(evento.target.files?.[0] ?? null)} required /></div><div className="grid gap-1"><Rotulo htmlFor="foto-observacoes">Observacoes</Rotulo><AreaTexto id="foto-observacoes" value={observacoes} onChange={(evento) => setObservacoes(evento.target.value)} maxLength={4000} /></div><div className="flex justify-end"><Botao type="submit" variante="primario" carregando={enviandoFoto} disabled={!arquivo || !consentimentoId}><UploadCloud size={16} />Enviar imagem</Botao></div></> : <EstadoVazio titulo="Consentimento ativo necessario" descricao="Registre ou renove um consentimento dentro do prazo de retencao antes de enviar imagens." />}</form> : null}
+    {podeGerenciar ? <form onSubmit={enviarFoto} className="grid gap-3 rounded-md border border-linha bg-white p-4"><div><h3 className="text-sm font-semibold text-tinta">Adicionar imagem clinica</h3><p className="mt-1 text-sm text-texto-suave">A imagem fica privada. O envio e confirmado somente se o consentimento ainda estiver ativo.</p></div>{consentimentosAtivos.length ? <><div className="grid gap-3 md:grid-cols-2"><div className="grid gap-1"><Rotulo htmlFor="foto-consentimento">Consentimento ativo</Rotulo><select id="foto-consentimento" className="h-10 rounded-md border border-linha bg-white px-3 text-sm" value={consentimentoId} onChange={(evento) => setConsentimentoId(evento.target.value)} required><option value="">Selecione</option>{consentimentosAtivos.map((item) => <option key={item.id} value={item.id}>{item.versao} · ate {formatarData(item.retencaoAte)}</option>)}</select></div><div className="grid gap-1"><Rotulo htmlFor="foto-data">Data da captura</Rotulo><Campo id="foto-data" type="date" value={capturadaEm} onChange={(evento) => setCapturadaEm(evento.target.value)} required /></div></div><div className="grid gap-1"><Rotulo htmlFor="foto-protocolo">Protocolo</Rotulo><select id="foto-protocolo" className="h-10 rounded-md border border-linha bg-white px-3 text-sm" value={tipoProtocolo} onChange={(evento) => setTipoProtocolo(evento.target.value as TipoProtocolo)}>{protocolosPadrao.map((item) => <option key={item.valor} value={item.valor}>{item.rotulo}</option>)}</select></div>{tipoProtocolo === 'adicionar' ? <div className="grid gap-1"><Rotulo htmlFor="foto-protocolo-personalizado">Novo protocolo</Rotulo><Campo id="foto-protocolo-personalizado" value={protocoloPersonalizado} onChange={(evento) => setProtocoloPersonalizado(evento.target.value)} maxLength={500} required /></div> : null}<div className="grid gap-1"><Rotulo htmlFor="foto-arquivo">Imagem</Rotulo><Campo id="foto-arquivo" type="file" accept="image/jpeg,image/png,image/webp" onChange={(evento) => setArquivo(evento.target.files?.[0] ?? null)} required /></div><div className="grid gap-1"><Rotulo htmlFor="foto-observacoes">Observacoes</Rotulo><AreaTexto id="foto-observacoes" value={observacoes} onChange={(evento) => setObservacoes(evento.target.value)} maxLength={4000} /></div><div className="flex justify-end"><Botao type="submit" variante="primario" carregando={enviandoFoto} disabled={!arquivo || !consentimentoId}><UploadCloud size={16} />Enviar imagem</Botao></div></> : <EstadoVazio titulo="Consentimento ativo necessario" descricao="Registre ou renove um consentimento dentro do prazo de retencao antes de enviar imagens." />}</form> : null}
     <div className="grid gap-3"><h3 className="text-sm font-semibold text-tinta">Historico de consentimentos</h3>{itens.length ? itens.map((item) => <article key={item.id} className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-linha bg-white p-4"><div><p className="text-sm font-semibold text-tinta">{item.versao}</p><p className="mt-1 text-sm text-texto-suave">Registrado em {formatarData(item.consentidoEm)} · Retencao ate {formatarData(item.retencaoAte)}</p><p className="mt-1 text-xs font-medium text-texto-suave">{item.ativo ? 'Ativo' : `Revogado em ${item.revogadoEm ? formatarData(item.revogadoEm) : '-'}`}</p></div>{item.ativo && podeGerenciar ? <Botao type="button" variante="perigo" tamanho="sm" onClick={() => setParaRevogar(item)}><ShieldOff size={15} />Revogar</Botao> : null}</article>) : <EstadoVazio titulo="Nenhum consentimento registrado" descricao="A captura permanece indisponivel ate que um consentimento ativo exista e o vinculo seguro de arquivo seja entregue." />}</div>
-    <div className="grid gap-3"><h3 className="text-sm font-semibold text-tinta">Series fotograficas</h3>{evolucoes.length ? evolucoes.map((item) => <article key={item.id} className="rounded-md border border-linha bg-white p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-sm font-semibold text-tinta">{formatarData(item.capturadaEm)}</p><p className="mt-1 text-sm text-texto-suave">{item.protocolo}</p>{item.observacoes ? <p className="mt-2 text-sm text-texto-suave">{item.observacoes}</p> : null}</div><span className="text-xs font-medium text-texto-suave">{item.arquivos.length} imagem(ns)</span></div>{item.arquivos.length ? <div className="mt-3 flex flex-wrap gap-2">{item.arquivos.map((imagem) => <Botao key={imagem.id} type="button" tamanho="sm" variante="secundario" onClick={() => void abrirImagem(imagem.id)}><ExternalLink size={15} />{imagem.nomeArquivo || 'Abrir imagem'}</Botao>)}</div> : <p className="mt-3 text-sm text-texto-suave">Envio pendente ou imagem nao confirmada.</p>}</article>) : <EstadoVazio titulo="Nenhuma imagem clinica confirmada" descricao="As series confirmadas aparecerao aqui; imagens nao sao exibidas no portal do paciente." />}</div>
+    <div className="grid gap-3"><h3 className="text-sm font-semibold text-tinta">Series fotograficas</h3>{evolucoes.length ? evolucoes.map((item) => <article key={item.id} className="rounded-md border border-linha bg-white p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-sm font-semibold text-tinta">{formatarData(item.capturadaEm)}</p><p className="mt-1 text-sm text-texto-suave">Protocolo: {item.protocolo}</p>{item.observacoes ? <p className="mt-2 text-sm text-texto-suave">{item.observacoes}</p> : null}</div><div className="flex items-center gap-2"><span className="text-xs font-medium text-texto-suave">{item.arquivos.length} imagem(ns)</span>{podeGerenciar ? <Botao type="button" variante="perigo" tamanho="sm" onClick={() => setParaExcluir(item)}><Trash2 size={15} />Excluir</Botao> : null}</div></div>{item.arquivos.length ? <div className="mt-3 flex flex-wrap gap-2">{item.arquivos.map((imagem) => <Botao key={imagem.id} type="button" tamanho="sm" variante="secundario" onClick={() => void abrirImagem(imagem.id)}><ExternalLink size={15} />{imagem.nomeArquivo || 'Abrir imagem'}</Botao>)}</div> : <p className="mt-3 text-sm text-texto-suave">Envio pendente ou imagem nao confirmada.</p>}</article>) : <EstadoVazio titulo="Nenhuma imagem clinica confirmada" descricao="As series confirmadas aparecerao aqui; imagens nao sao exibidas no portal do paciente." />}</div>
     <ModalConfirmacao aberto={Boolean(paraRevogar)} titulo="Revogar consentimento fotografico" mensagem="A revogacao impede novas capturas vinculadas a este consentimento. O historico sera preservado." rotuloConfirmar="Revogar consentimento" confirmando={salvando} aoCancelar={() => setParaRevogar(null)} aoConfirmar={() => void confirmarRevogacao()} />
+    <ModalConfirmacao aberto={Boolean(paraExcluir)} titulo="Excluir serie fotografica" mensagem="Esta acao remove permanentemente as imagens enviadas e a serie fotografica. Essa operacao nao pode ser desfeita." rotuloConfirmar="Excluir permanentemente" confirmando={excluindoFoto} aoCancelar={() => setParaExcluir(null)} aoConfirmar={() => void confirmarExclusao()} />
   </section>;
 }

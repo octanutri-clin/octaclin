@@ -225,6 +225,24 @@ referencia antes dos `await`s de upload e confirmacao. Assim, o reset posterior
 nao depende de `evento.currentTarget`, que pode ser nulo apos a operacao
 assincrona.
 
+## Incremento 10 - protocolos e exclusao permanente de serie
+
+Entregue localmente em 2026-08-13. O profissional seleciona `Frontal`,
+`Lateral`, `Costas` ou `Total` para classificar cada serie. Ao selecionar
+`Adicionar`, a tela abre um campo obrigatorio para registrar um protocolo
+personalizado sem perder as categorias padronizadas.
+
+A acao `Excluir` exige confirmacao explicita e permissao
+`pacientes.gerenciar`. O backend confirma a carteira do paciente, remove cada
+objeto do armazenamento privado e, em seguida, remove o vinculo, o registro de
+upload e a serie no mesmo escopo de tenant. A auditoria retida nao inclui
+imagem, protocolo ou observacao: guarda somente a identidade da serie e a
+quantidade de arquivos removidos.
+
+Validacoes: teste unitario de remocao de objeto/vinculos/serie,
+`pnpm --dir octaclin-web test:consentimentos-fotograficos:bff`, typecheck,
+lint, builds de backend/frontend e `git diff --check`.
+
 Aceite operacional pendente: usar uma conta e paciente sinteticos para registrar
 consentimento, enviar uma imagem de teste e confirmar abertura por URL temporaria.
 Nao criar registros clinicos reais somente para validar o fluxo.
@@ -254,8 +272,8 @@ Nao criar registros clinicos reais somente para validar o fluxo.
 
 - Nenhum papel nao autorizado le exame, foto, consentimento ou URL assinada de
   outro paciente/tenant.
-- Nova coleta e nova foto preservam o historico anterior; exclusao e logica e
-  auditada.
+- Nova coleta e nova foto preservam o historico anterior; a exclusao de serie
+  e permanente, confirmada e auditada sem reter seu conteudo clinico.
 - Uma foto nao pode ser enviada sem consentimento ativo e dentro do prazo de
   retencao documentado.
 - A tela indica dado ausente e fonte do resultado, sem diagnostico por cor ou

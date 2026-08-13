@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { ServicoArmazenamentoObjetos } from '../../../infraestrutura/armazenamento/servico-armazenamento-objetos';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
@@ -26,7 +27,8 @@ export class ServicoEvolucoesFotograficas {
   constructor(
     private readonly executorTenant: ExecutorTenant,
     private readonly criptografia: CriptografiaDadosSensiveis,
-    private readonly servicoMobile: ServicoMobile
+    private readonly servicoMobile: ServicoMobile,
+    private readonly armazenamento: ServicoArmazenamentoObjetos
   ) {}
 
   async solicitarUpload(tenantId: string, pacienteId: string, dados: SolicitarUploadEvolucaoFotograficaDto, usuario: UsuarioAutenticado) {
@@ -108,6 +110,45 @@ export class ServicoEvolucoesFotograficas {
           }))
       }));
     });
+  }
+
+  async excluir(tenantId: string, pacienteId: string, evolucaoId: string, usuario: UsuarioAutenticado): Promise<{ arquivosRemovidos: number }> {
+    const arquivos = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
+      const evolucao = await gerenciador.getRepository(EvolucaoFotograficaOrm).findOne({
+        where: { id: evolucaoId, tenantId, pacienteId, excluidaEm: IsNull() }
+      });
+      if (!evolucao) throw new NotFoundException('Serie fotografica nao encontrada.');
+
+      const vinculos = await gerenciador.getRepository(EvolucaoFotograficaArquivoOrm).find({
+        where: { tenantId, evolucaoFotograficaId: evolucaoId }
+      });
+      const arquivoIds = vinculos.map((vinculo) => vinculo.arquivoMidiaId);
+      if (!arquivoIds.length) return [];
+      const arquivosMidia = await gerenciador.getRepository(ArquivoMidiaOrm).find({
+        where: { tenantId, pacienteId, id: In(arquivoIds), categoria: 'foto' }
+      });
+      if (arquivosMidia.length !== arquivoIds.length) {
+        throw new BadRequestException('A serie fotografica possui arquivos inconsistentes e nao pode ser excluida.');
+      }
+      return arquivosMidia.map((arquivo) => ({ id: arquivo.id, bucket: arquivo.bucket, chaveObjeto: arquivo.chaveObjeto }));
+    });
+
+    await Promise.all(arquivos.map((arquivo) => this.armazenamento.excluirObjeto(arquivo.bucket, arquivo.chaveObjeto)));
+
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
+      const evolucao = await gerenciador.getRepository(EvolucaoFotograficaOrm).findOne({
+        where: { id: evolucaoId, tenantId, pacienteId, excluidaEm: IsNull() }
+      });
+      if (!evolucao) throw new NotFoundException('Serie fotografica nao encontrada.');
+
+      await gerenciador.getRepository(EvolucaoFotograficaArquivoOrm).delete({ tenantId, evolucaoFotograficaId: evolucaoId });
+      if (arquivos.length) await gerenciador.getRepository(ArquivoMidiaOrm).delete({ tenantId, pacienteId, id: In(arquivos.map((arquivo) => arquivo.id)) });
+      await gerenciador.getRepository(EvolucaoFotograficaOrm).delete({ id: evolucaoId, tenantId, pacienteId });
+    });
+
+    return { arquivosRemovidos: arquivos.length };
   }
 
   private async garantirConsentimentoAtivo(gerenciador: EntityManager, tenantId: string, pacienteId: string, consentimentoId: string) {

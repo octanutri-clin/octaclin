@@ -39,4 +39,8 @@ export function solicitarEvolucaoFotografica(pacienteId: string, entrada: Solici
   return requisitar<{ evolucaoId: string; upload: UploadMidiaApi }>(`${base(pacienteId)}/uploads`, { method: 'POST', body: JSON.stringify(entrada) });
 }
 
+export function excluirEvolucaoFotografica(pacienteId: string, evolucaoId: string) {
+  return requisitar<{ status: 'excluida' }>(`${base(pacienteId)}/${encodeURIComponent(evolucaoId)}`, { method: 'DELETE' });
+}
+
 export { confirmarUploadMidia as confirmarUploadEvolucaoFotografica, obterAcessoArquivoMidia as obterAcessoEvolucaoFotografica };

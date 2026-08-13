@@ -14,6 +14,8 @@ import { ModuloMobile } from '../mobile/modulo-mobile';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { LogDiarioRapidoOrm } from '../mobile/infraestrutura/log-diario-rapido.orm';
+import { ArquivoMidiaOrm } from '../mobile/infraestrutura/arquivo-midia.orm';
+import { ServicoArmazenamentoObjetos } from '../../infraestrutura/armazenamento/servico-armazenamento-objetos';
 import { PlanoAlimentarItemOrm } from '../planos-alimentares/infraestrutura/plano-alimentar-item.orm';
 import { PlanoAlimentarRefeicaoOrm } from '../planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
 import { PlanoAlimentarSubstituicaoOrm } from '../planos-alimentares/infraestrutura/plano-alimentar-substituicao.orm';
@@ -83,7 +85,8 @@ import { EvolucaoFotograficaArquivoOrm } from './infraestrutura/evolucao-fotogra
       PlanoAlimentarSubstituicaoOrm,
       ConsentimentoEvolucaoFotograficaOrm,
       EvolucaoFotograficaOrm,
-      EvolucaoFotograficaArquivoOrm
+      EvolucaoFotograficaArquivoOrm,
+      ArquivoMidiaOrm
     ]),
     ModuloTenancy,
     ModuloAuth,
@@ -108,6 +111,7 @@ import { EvolucaoFotograficaArquivoOrm } from './infraestrutura/evolucao-fotogra
     ServicoExamesLaboratoriais,
     ServicoConsentimentosEvolucaoFotografica,
     ServicoEvolucoesFotograficas,
+    ServicoArmazenamentoObjetos,
     ServicoImportacaoPacientes,
     ServicoConvitesPaciente,
     ServicoPortalPaciente,

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-12 durante o aceite de schema em producao da Fase 236.
+Atualizado em 2026-08-13 com o gerenciamento de series fotograficas da Fase 236.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1689,6 +1689,14 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Correcao operacional em 2026-08-13: o reset da tela usa a referencia do
     formulario capturada antes dos `await`s, evitando erro apos um upload ja
     confirmado.
+  - Incremento 10 concluido localmente: protocolos fotograficos padronizados
+    (`Frontal`, `Lateral`, `Costas` e `Total`) separam as series; `Adicionar`
+    revela campo para categoria personalizada. A exclusao confirmada remove o
+    objeto privado, os vinculos, o registro de upload e a serie; a auditoria
+    preserva somente identificadores tecnicos e quantidade de arquivos.
+  - Validacoes do Incremento 10: teste unitario de exclusao privada, gate BFF
+    de sessao/encaminhamento, typecheck, lint e builds de backend/frontend
+    aprovados localmente. Nao exige migration.
   - Pendente de aceite operacional: exercitar em producao uma imagem sintetica
     com conta de teste, sem expor foto no portal nem criar URL permanente.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.

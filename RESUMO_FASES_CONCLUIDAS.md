@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-12 apos o aceite de schema em producao da Fase 236.
+Atualizado em 2026-08-13 com o gerenciamento de series fotograficas da Fase 236.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -603,7 +603,11 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   verificada. A captura profissional passou a exigir consentimento ativo,
   retencao valida e imagem privada, com confirmacao atomica do vinculo e acesso
   posterior por URL assinada temporaria; o portal permanece sem fotos. O
-  aceite operacional com conta e imagem sinteticas ainda e pendente. Ver
+  profissional agora seleciona protocolos padronizados ou cria uma categoria
+  personalizada. Tambem pode excluir uma serie com confirmacao, removendo o
+  objeto privado, upload, vinculos e serie; permanece somente auditoria tecnica
+  sem conteudo clinico. O aceite operacional com conta e imagem sinteticas
+  ainda e pendente. Ver
   `fase-236-exames-evolucao-fotografica.md`.
 
 ## Estado atual de uso
