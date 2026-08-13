@@ -168,6 +168,19 @@ seja booleano falha fechado e gera atencao no painel. A configuracao especifica
 do tenant, administrada pelo SuperAdmin, tem precedencia e fica em
 `tenant_configuracoes`; nao editar diretamente no banco.
 
+## Servico interno de IA
+
+| Variavel | Obrigatoria | Uso | Onde configurar | Como validar |
+| --- | --- | --- | --- | --- |
+| `IA_SERVICE_URL` | Sim para habilitar IA | URL privada/base do FastAPI | Render/backend | Health do servico e teste autenticado controlado |
+| `IA_SERVICE_TOKEN` | Sim para habilitar IA | Segredo compartilhado, aleatorio e com no minimo 32 caracteres | Render/backend e Render/IA, como secret | POST sem token retorna 401 e backend autenticado recebe 200 |
+| `IA_SERVICE_TIMEOUT_MS` | Nao | Timeout entre 1.000 e 60.000 ms; padrao 15.000 | Render/backend | Falha lenta retorna timeout sanitizado |
+
+Nunca usar token da OpenAI como `IA_SERVICE_TOKEN`. Gere um segredo dedicado,
+configure o mesmo valor nos dois servicos e mantenha `ia.clinica=false` ate o
+aceite. O segredo, URLs assinadas, texto clinico e corpos de resposta nao podem
+aparecer em logs, tickets ou documentos versionados.
+
 ## Smoke local de producao somente leitura
 
 Estas variaveis nunca pertencem ao Render, GitHub ou a arquivos `.env`. Use

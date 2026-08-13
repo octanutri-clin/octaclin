@@ -1807,17 +1807,28 @@ publicado antes de ampliar a superficie de mudancas visuais.
     execucoes agendadas.
   - Evidencia: `fase-240-estabilizacao-main-verdade-operacional.md`.
 
-- [ ] Fase 241 - Hardening de IA e Mobile legado. [IMPORTANTE - CONDICIONAL]
+- [x] Fase 241 - Hardening da IA clinica. [IMPORTANTE - CONDICIONAL]
   - Reaproveitar seletivamente as protecoes do PR draft `#6`, sem merge direto
     do branch antigo: vinculo de midia/referencias ao tenant e paciente,
     idempotencia concorrente, timeout, erro sanitizado e autenticacao entre
     backend e servico de IA.
-  - Gate: obrigatoria antes de oferecer IA ou Mobile comercialmente; pode ficar
-    adiada se esses modulos permanecerem desativados na oferta inicial.
+  - Gate: obrigatoria antes de oferecer IA comercialmente; a flag permanece
+    desabilitada ate segredo compartilhado e aceite sintetico no tenant piloto.
+  - Escopo Mobile removido desta fase para impedir integracao do branch legado.
+  - Concluida em 2026-08-13: referencias e midia isoladas por tenant/paciente,
+    hash verificado ponta a ponta, lock concorrente, rate limit, timeout,
+    resposta limitada, erro sanitizado e autenticacao NestJS/FastAPI. A UI usa
+    apenas imagens confirmadas e exige revisao humana. PR `#40`, commit
+    `ec578a6` e CI `31749993251` aprovados; sem migration e sem ativar a flag.
+  - Evidencia: `fase-241-hardening-ia-clinica.md`.
+
+- [ ] Fase 243 - Modernizacao e hardening do Mobile. [CONDICIONAL]
   - Achado da Fase 229: Expo SDK 52 carrega `tar@6.2.1` pela CLI com alerta
     critico e outras dependencias transitivas antigas. Atualizar o SDK de forma
     incremental e suportada, executar `expo install --fix`, `expo-doctor`,
     typecheck e audit zerado antes de distribuir qualquer build Mobile.
+  - Gate: manter `mobile.sync=false` e o Mobile fora da oferta ate concluir a
+    atualizacao, autorizacao por paciente, testes offline e distribuicao segura.
 
 - [x] Fase 242 - Observabilidade interna e rollout seguro. [IMPORTANTE]
   - Complementar o monitor externo da Fase 220 com agregacao de erros e traces
@@ -1830,6 +1841,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     para IA/Mobile, avaliador offline, gate no CI e rollback documentado.
   - Limite: a telemetria e por processo; multiplas instancias continuam
     bloqueadas ate existir agregacao externa ou distribuida.
+  - Integracao aprovada: PR `#39`, merge `32559bd` e CI `31747184400` verde,
+    incluindo o smoke completo com 162 testes Playwright.
   - Evidencia: `fase-242-observabilidade-interna-rollout-seguro.md`.
 
 ## Backlog pos-producao

@@ -41,6 +41,11 @@ async function prepararSessao(page) {
     contentType: 'application/json',
     body: JSON.stringify({ itens: [{ id: profissionalId, nome: 'Profissional Teste' }], total: 1 })
   }));
+  await page.route('**/api/mobile/midias/uploads**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: '[]'
+  }));
 }
 
 test.describe('Fase 197 - modulos avancados', () => {
@@ -82,6 +87,63 @@ test.describe('Fase 197 - modulos avancados', () => {
     await expect(page.getByText('Editada pelo profissional')).toBeVisible();
     await expect(page.getByText(/Resultado revisado:.*Frustracao pontual/)).toBeVisible();
     await expect(page.getByRole('link', { name: 'Abrir prontuario' })).toHaveAttribute('href', `/pacientes/${pacienteId}`);
+  });
+
+  test('reconhece alimento somente a partir de imagem clinica confirmada', async ({ page }) => {
+    const arquivoId = '66666666-6666-4666-8666-666666666666';
+    await page.unroute('**/api/mobile/midias/uploads**');
+    await page.route('**/api/mobile/midias/uploads**', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{
+        id: arquivoId,
+        pacienteId,
+        tipo: 'imagem',
+        categoria: 'diario',
+        nomeArquivo: 'almoco-sintetico.jpg',
+        mimeType: 'image/jpeg',
+        tamanhoBytes: '1024',
+        hashConteudo: 'a'.repeat(64),
+        status: 'confirmado',
+        criadoEm: agora,
+        confirmadoEm: agora
+      }])
+    }));
+    await page.route('**/api/ia/sentimento', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+    await page.route('**/api/ia/reconhecimento-alimentar', async (route) => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      }
+      expect(route.request().postDataJSON()).toEqual({
+        pacienteId,
+        arquivoMidiaId: arquivoId,
+        contexto: { observacao: 'Prato sintetico com arroz.' }
+      });
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: '77777777-7777-4777-8777-777777777777',
+          tenantId: 'tenant-1',
+          pacienteId,
+          arquivoMidiaId: arquivoId,
+          provedor: 'heuristica-local',
+          imagemHash: 'a'.repeat(64),
+          alimentosDetectados: [{ nome: 'arroz' }],
+          confiancaMedia: '0.72',
+          limitacoes: ['Exige revisao profissional.'],
+          revisaoHumana: { status: 'pendente' },
+          criadoEm: agora
+        })
+      });
+    });
+
+    await page.goto('/ia');
+    await expect(page.getByLabel('Arquivo midia')).toContainText('almoco-sintetico.jpg');
+    await expect(page.getByLabel('Imagem URL')).toHaveCount(0);
+    await page.getByLabel('Observacao').fill('Prato sintetico com arroz.');
+    await page.getByRole('button', { name: 'Reconhecer' }).click();
+    await expect(page.getByText('Reconhecimento alimentar criado por heuristica-local.')).toBeVisible();
   });
 
   test('simula regra rascunho antes de permitir ativacao', async ({ page }) => {

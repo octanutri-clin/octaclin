@@ -2,29 +2,74 @@ import os
 import unittest
 from unittest.mock import patch
 
-from app.main import (
-    RequisicaoReconhecimentoAlimentar,
-    RequisicaoSentimento,
-    analisar_sentimento,
-    reconhecer_alimento,
-)
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+
+TOKEN = "token-de-servico-ia-com-no-minimo-32-caracteres"
+HASH = "a" * 64
 
 
 class ServicoIaTest(unittest.TestCase):
-    def test_nao_declara_openai_sem_chamada_real(self) -> None:
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "dummy"}):
-            resposta = analisar_sentimento(RequisicaoSentimento(texto="Estou frustrado"))
+    def setUp(self) -> None:
+        self.cliente = TestClient(app)
 
-        self.assertEqual(resposta.explicacao["provedor"], "heuristica-local")
-        self.assertTrue(resposta.explicacao["limitacoes"])
+    def test_health_permanece_publico(self) -> None:
+        resposta = self.cliente.get("/health")
+        self.assertEqual(resposta.status_code, 200)
 
-    def test_reconhecimento_informa_limitacoes(self) -> None:
-        resposta = reconhecer_alimento(
-            RequisicaoReconhecimentoAlimentar(imagem_url="https://example.com/prato.jpg")
-        )
+    def test_falha_fechada_sem_segredo_configurado(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            resposta = self.cliente.post("/analisar-sentimento", json={"texto": "Estou frustrado"})
+        self.assertEqual(resposta.status_code, 503)
 
-        self.assertEqual(resposta.provedor, "heuristica-local")
-        self.assertTrue(resposta.limitacoes)
+    def test_rejeita_credencial_incorreta(self) -> None:
+        with patch.dict(os.environ, {"IA_SERVICE_TOKEN": TOKEN}, clear=True):
+            resposta = self.cliente.post(
+                "/analisar-sentimento",
+                headers={"Authorization": "Bearer incorreto"},
+                json={"texto": "Estou frustrado"},
+            )
+        self.assertEqual(resposta.status_code, 401)
+
+    def test_analise_autenticada_nao_declara_openai_sem_chamada_real(self) -> None:
+        with patch.dict(os.environ, {"IA_SERVICE_TOKEN": TOKEN, "OPENAI_API_KEY": "dummy"}, clear=True):
+            resposta = self.cliente.post(
+                "/analisar-sentimento",
+                headers={"Authorization": f"Bearer {TOKEN}"},
+                json={"texto": "Estou frustrado"},
+            )
+        self.assertEqual(resposta.status_code, 200)
+        corpo = resposta.json()
+        self.assertEqual(corpo["explicacao"]["provedor"], "heuristica-local")
+        self.assertTrue(corpo["explicacao"]["limitacoes"])
+
+    def test_reconhecimento_preserva_hash_validado_pelo_backend(self) -> None:
+        with patch.dict(os.environ, {"IA_SERVICE_TOKEN": TOKEN}, clear=True):
+            resposta = self.cliente.post(
+                "/reconhecer-alimento",
+                headers={"Authorization": f"Bearer {TOKEN}"},
+                json={
+                    "imagem_url": "https://arquivos.example.test/prato.jpg?assinatura=secreta",
+                    "imagem_hash": HASH,
+                    "contexto": {"observacao": "Prato com arroz"},
+                },
+            )
+        self.assertEqual(resposta.status_code, 200)
+        corpo = resposta.json()
+        self.assertEqual(corpo["imagem_hash"], HASH)
+        self.assertEqual(corpo["provedor"], "heuristica-local")
+        self.assertTrue(corpo["limitacoes"])
+
+    def test_rejeita_hash_invalido(self) -> None:
+        with patch.dict(os.environ, {"IA_SERVICE_TOKEN": TOKEN}, clear=True):
+            resposta = self.cliente.post(
+                "/reconhecer-alimento",
+                headers={"Authorization": f"Bearer {TOKEN}"},
+                json={"imagem_url": "https://example.test/prato.jpg", "imagem_hash": "curto"},
+            )
+        self.assertEqual(resposta.status_code, 422)
 
 
 if __name__ == "__main__":

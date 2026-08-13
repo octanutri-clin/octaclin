@@ -27,12 +27,28 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 241 - Hardening da IA clinica
+
+- Responsavel: Codex.
+- Inicio e conclusao: 2026-08-13.
+- Commit: `ec578a6`.
+- Push: sim; PR `#40` com CI `31749993251` aprovado.
+- Validacoes: 15 testes backend focados, suite completa com 130 suites/870
+  testes, 6 testes FastAPI, lint,
+  typechecks, builds, authz, seguranca, audits zerados e 8/8 Playwright em
+  desktop/mobile.
+- Arquivos principais: servico/controlador/DTOs de IA, contrato FastAPI,
+  seletor de midia privada, runbook e variaveis de ambiente.
+- Pendencias: configurar segredo nos dois servicos e executar aceite sintetico
+  antes de habilitar `ia.clinica` no tenant piloto.
+- Proxima fase: auditoria final da Fase 235; Mobile separado na Fase 243.
+
 ### Fase 242 - Observabilidade interna e rollout seguro
 
 - Responsavel: Codex.
 - Inicio e conclusao: 2026-08-13.
-- Commit: registrado no historico Git da fase.
-- Push: pendente de integracao ao iniciar este registro.
+- Commits: `3bc948f` e `4052846`; merge `32559bd`.
+- Push: sim; PR `#39` integrada e CI `31747184400` aprovado.
 - Validacoes: 129 suites/862 testes backend, typechecks, builds, lint, authz,
   seguranca BFF, Playwright desktop/mobile e `test:rollout` aprovados.
 - Arquivos principais: servicos de telemetria/flags/rollout, aba Rollout,

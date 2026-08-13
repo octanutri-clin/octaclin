@@ -13,6 +13,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORTA: 6379
       IA_SERVICE_URL: http://ia-service:8001
+      IA_SERVICE_TOKEN: ${IA_SERVICE_TOKEN}
+      IA_SERVICE_TIMEOUT_MS: 15000
       JWT_SEGREDO: trocar-em-producao
       JWT_REFRESH_SEGREDO: trocar-em-producao-refresh
       CRIPTOGRAFIA_CHAVE_AES_256: trocar-em-producao
@@ -42,6 +44,7 @@ services:
       context: ./octaclin-ai-service
     environment:
       OPENAI_API_KEY: ""
+      IA_SERVICE_TOKEN: ${IA_SERVICE_TOKEN}
     ports:
       - "8001:8001"
 
