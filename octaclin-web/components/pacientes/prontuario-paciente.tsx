@@ -26,6 +26,7 @@ import { Abas } from '@/components/ui/abas';
 import { AbaAntropometria } from './aba-antropometria';
 import { AbaExamesLaboratoriais } from './aba-exames-laboratoriais';
 import { AbaEvolucaoFotografica } from './aba-evolucao-fotografica';
+import { AbaCondutasTerapeuticas } from './aba-condutas-terapeuticas';
 import { AbaDocumentos, ConsultaConcluidaOpcao } from './aba-documentos';
 import { PerfilCadastroPaciente } from './perfil-cadastro-paciente';
 import { PlanoAlimentarProfissional } from './plano-alimentar-profissional';
@@ -104,6 +105,7 @@ type AbaProntuario =
   | 'evolucoes'
   | 'acompanhamento'
   | 'plano_alimentar'
+  | 'condutas_terapeuticas'
   | 'antropometria'
   | 'exames_laboratoriais'
   | 'evolucao_fotografica'
@@ -122,6 +124,7 @@ const abasProntuario: Array<{ id: AbaProntuario; rotulo: string; permissao?: str
   { id: 'evolucoes', rotulo: 'Evolucoes' },
   { id: 'acompanhamento', rotulo: 'Acompanhamento' },
   { id: 'plano_alimentar', rotulo: 'Plano alimentar', permissao: 'planos_alimentares.ler' },
+  { id: 'condutas_terapeuticas', rotulo: 'Condutas terapeuticas' },
   { id: 'antropometria', rotulo: 'Antropometria' },
   { id: 'exames_laboratoriais', rotulo: 'Exames laboratoriais' },
   { id: 'evolucao_fotografica', rotulo: 'Evolucao fotografica' },
@@ -153,6 +156,7 @@ const areaPorAba: Record<AbaProntuario, AreaProntuario> = {
   formularios: 'avaliacoes',
   acompanhamento: 'plano',
   plano_alimentar: 'plano',
+  condutas_terapeuticas: 'plano',
   materiais: 'plano',
   documentos: 'documentos',
   anexos: 'documentos',
@@ -986,6 +990,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       {abaAtiva === 'plano_alimentar' ? (
         <PlanoAlimentarProfissional pacienteId={pacienteId} aoAlterarRascunho={setPlanoAlimentarNaoSalvo} />
       ) : null}
+
+      {abaAtiva === 'condutas_terapeuticas' ? <AbaCondutasTerapeuticas pacienteId={pacienteId} podeGerenciar={permissoes.includes('pacientes.gerenciar')} /> : null}
 
       {abaAtiva === 'materiais' ? <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">

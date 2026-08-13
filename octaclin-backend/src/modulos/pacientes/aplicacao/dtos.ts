@@ -25,6 +25,7 @@ import type {
   StatusTarefaAcompanhamento
 } from '../infraestrutura/acompanhamento-tarefa.orm';
 import type { TipoEvolucaoClinica, VisibilidadeEvolucaoClinica } from '../infraestrutura/evolucao-clinica.orm';
+import type { TipoCondutaTerapeutica } from '../infraestrutura/conduta-terapeutica.orm';
 import { PROTOCOLOS_COMPOSICAO } from '../dominio/antropometria';
 import { TIPOS_DOCUMENTO_CLINICO } from '../dominio/documentos-clinicos';
 import type { TipoDocumentoClinico } from '../dominio/documentos-clinicos';
@@ -393,6 +394,49 @@ export class AtualizarTarefaAcompanhamentoDto {
   @IsOptional()
   @IsIn(['pendente', 'em_andamento', 'concluida', 'cancelada'])
   status?: StatusTarefaAcompanhamento;
+}
+
+export class CriarCondutaTerapeuticaDto {
+  @IsIn(['meta', 'orientacao', 'suplemento', 'produto', 'formula_manipulada'])
+  tipo: TipoCondutaTerapeutica;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(180)
+  titulo: string;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(6000)
+  conteudo: string;
+
+  @IsOptional()
+  @IsDateString()
+  validadeInicio?: string;
+
+  @IsOptional()
+  @IsDateString()
+  validadeFim?: string;
+}
+
+export class AtualizarRascunhoCondutaTerapeuticaDto {
+  @IsString()
+  @MinLength(3)
+  @MaxLength(180)
+  titulo: string;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(6000)
+  conteudo: string;
+
+  @IsOptional()
+  @IsDateString()
+  validadeInicio?: string;
+
+  @IsOptional()
+  @IsDateString()
+  validadeFim?: string;
 }
 
 export interface TarefaAcompanhamentoRespostaDto {

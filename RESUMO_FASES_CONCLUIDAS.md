@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-13 com o gerenciamento de series fotograficas da Fase 236.
+Atualizado em 2026-08-13 com a entrega local do Incremento 1 da Fase 237.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -609,6 +609,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   sem conteudo clinico. O aceite operacional com conta e imagem sinteticas
   ainda e pendente. Ver
   `fase-236-exames-evolucao-fotografica.md`.
+- Fase 237 (Incremento 1 local) - Condutas terapeuticas versionadas: o
+  prontuario profissional agora tem rascunho, edicao, publicacao, nova versao
+  e arquivamento para meta, orientacao, suplemento, produto e formula
+  manipulada. Titulos e conteudos ficam cifrados, a auditoria nao registra seu
+  conteudo e a interface nao envia nada ao portal ou a terceiros. A migration
+  `1026` continua pendente de aplicacao e aceite de schema; portanto o recurso
+  ainda nao esta disponivel em producao. Ver
+  `fase-237-condutas-terapeuticas-versionadas.md`.
 
 ## Estado atual de uso
 

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-13 com o gerenciamento de series fotograficas da Fase 236.
+Atualizado em 2026-08-13 com o Incremento 1 da Fase 237 em validacao de schema.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1701,9 +1701,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     com conta de teste, sem expor foto no portal nem criar URL permanente.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
-- [ ] Fase 237 - Prescricoes, metas e orientacoes terapeuticas. [IMPORTANTE - POS PILOTO]
-  - Estruturar metas, suplementos, produtos, formulas manipuladas e orientacoes
-    com autoria, versao, validade, historico e revisao do escopo profissional.
+- [~] Fase 237 - Condutas terapeuticas versionadas. [IMPORTANTE - POS PILOTO]
+  - Incremento 1 concluido localmente: metas, orientacoes, suplementos,
+    produtos e formulas manipuladas possuem rascunho, publicacao, nova versao,
+    arquivamento, autoria, validade, cifra, auditoria e RLS forcada por tenant.
+  - A subarea profissional fica em Prontuario > Plano. Nao ha exposicao ao
+    portal, envio a terceiros, recomendacao automatica, dose, catalogo ou
+    assinatura digital neste incremento.
+  - Pendente de schema: aplicar e aprovar migration `1026` primeiro em
+    integracao e depois em producao com `neondb_owner`; nao ha backfill.
+  - Especificacao: `fase-237-condutas-terapeuticas-versionadas.md`.
 
 - [ ] Fase 238 - Acompanhamento gestacional especializado. [OPCIONAL - CLINICO]
   - Criar somente apos protocolo, consentimentos, curvas e limites de uso serem

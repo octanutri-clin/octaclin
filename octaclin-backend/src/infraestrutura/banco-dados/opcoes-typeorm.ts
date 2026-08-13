@@ -38,6 +38,7 @@ import { CriarIntegracoesApiPublica1720000001022 } from './migracoes/17200000010
 import { CriarPerfisCadastroPaciente1720000001023 } from './migracoes/1720000001023-CriarPerfisCadastroPaciente';
 import { CriarExamesEFotosClinicas1720000001024 } from './migracoes/1720000001024-CriarExamesEFotosClinicas';
 import { VincularArquivosEvolucaoFotografica1720000001025 } from './migracoes/1720000001025-VincularArquivosEvolucaoFotografica';
+import { CriarCondutasTerapeuticas1720000001026 } from './migracoes/1720000001026-CriarCondutasTerapeuticas';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -85,6 +86,8 @@ import { MarcadorExameLaboratorialOrm } from '../../modulos/pacientes/infraestru
 import { ConsentimentoEvolucaoFotograficaOrm } from '../../modulos/pacientes/infraestrutura/consentimento-evolucao-fotografica.orm';
 import { EvolucaoFotograficaOrm } from '../../modulos/pacientes/infraestrutura/evolucao-fotografica.orm';
 import { EvolucaoFotograficaArquivoOrm } from '../../modulos/pacientes/infraestrutura/evolucao-fotografica-arquivo.orm';
+import { CondutaTerapeuticaOrm } from '../../modulos/pacientes/infraestrutura/conduta-terapeutica.orm';
+import { CondutaTerapeuticaVersaoOrm } from '../../modulos/pacientes/infraestrutura/conduta-terapeutica-versao.orm';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { AgendamentoQuestionarioOrm } from '../../modulos/questionarios/infraestrutura/agendamento-questionario.orm';
 import { CategoriaPerguntaOrm } from '../../modulos/questionarios/infraestrutura/categoria-pergunta.orm';
@@ -174,6 +177,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       ConsentimentoEvolucaoFotograficaOrm,
       EvolucaoFotograficaOrm,
       EvolucaoFotograficaArquivoOrm,
+      CondutaTerapeuticaOrm,
+      CondutaTerapeuticaVersaoOrm,
       ConvitePacienteOrm,
       AcompanhamentoTarefaOrm,
       EvolucaoClinicaOrm,
@@ -269,7 +274,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarIntegracoesApiPublica1720000001022,
         CriarPerfisCadastroPaciente1720000001023,
         CriarExamesEFotosClinicas1720000001024,
-        VincularArquivosEvolucaoFotografica1720000001025
+        VincularArquivosEvolucaoFotografica1720000001025,
+        CriarCondutasTerapeuticas1720000001026
       ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,
