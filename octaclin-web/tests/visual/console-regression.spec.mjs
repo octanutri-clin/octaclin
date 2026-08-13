@@ -172,6 +172,7 @@ async function prepararOperacoesMockadas(page) {
   let requisitouCsvLgpd = false;
   let aplicouPlanoAssinatura = false;
   let programouRetencao = false;
+  let atualizouFlags = false;
 
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -237,6 +238,49 @@ async function prepararOperacoesMockadas(page) {
         ]
       })
     });
+  });
+  await page.route('**/api/operacoes/rollout', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ok',
+        decisaoSugerida: 'promover',
+        geradoEm: '2026-08-13T18:00:00.000Z',
+        release: { commit: 'abc123def456', servicoId: 'configurado', ambiente: 'production', papelProcesso: 'all' },
+        health: { status: 'ok', checks: { backend: 'ok', banco: 'ok', migracoes: 'ok', redis: 'ok' } },
+        telemetria: {
+          processo: { iniciadoEm: '2026-08-13T17:00:00.000Z', uptimeSegundos: 3600 },
+          http: { total: 240, sucesso: 238, errosCliente: 2, errosServidor: 0, taxaErro5xx: 0, duracaoMediaMs: 120, duracaoP95Ms: 430, amostrasDuracao: 240, porRota: [] },
+          tracesRecentes: [
+            { requestId: 'req-sintetico-1', horario: '2026-08-13T18:00:00.000Z', metodo: 'GET', rota: '/health/pronto', statusCode: 200, duracaoMs: 32, resultado: 'sucesso' }
+          ]
+        },
+        filas: [
+          { nome: 'notificacoes', status: 'ok', esperando: 2, ativas: 1, atrasadas: 0, falharam: 0, pausada: false },
+          { nome: 'google_calendar', status: 'ok', esperando: 0, ativas: 0, atrasadas: 0, falharam: 0, pausada: false },
+          { nome: 'automacoes', status: 'ok', esperando: 1, ativas: 0, atrasadas: 0, falharam: 0, pausada: false }
+        ],
+        flags: { configuracaoValida: true, flags: [{ chave: 'ia.clinica', habilitada: false, origem: 'padrao' }, { chave: 'mobile.sync', habilitada: false, origem: 'padrao' }] }
+      })
+    });
+  });
+  await page.route('**/api/operacoes/tenants', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [{ id: '00000000-0000-4000-8000-000000000002', nome: 'Clinica Piloto', slug: 'clinica-piloto', status: 'ativo', cicloVidaStatus: 'ativo', planoId: 'profissional', assinaturaStatus: 'ativa', criadoEm: '2026-08-13T12:00:00.000Z', atualizadoEm: '2026-08-13T12:00:00.000Z' }],
+        total: 1
+      })
+    });
+  });
+  await page.route('**/api/operacoes/feature-flags/**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ configuracaoValida: true, flags: [{ chave: 'ia.clinica', habilitada: false, origem: 'padrao' }, { chave: 'mobile.sync', habilitada: false, origem: 'padrao' }] }) });
+  });
+  await page.route('**/api/operacoes/feature-flags', async (route) => {
+    atualizouFlags = route.request().method() === 'POST';
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ configuracaoValida: true, flags: [{ chave: 'ia.clinica', habilitada: true, origem: 'tenant' }, { chave: 'mobile.sync', habilitada: false, origem: 'tenant' }] }) });
   });
   await page.route('**/api/operacoes/outbox/falhas**', async (route) => {
     const paginada = route.request().url().includes('/paginada');
@@ -509,7 +553,8 @@ async function prepararOperacoesMockadas(page) {
   return {
     requisitouCsvLgpd: () => requisitouCsvLgpd,
     aplicouPlanoAssinatura: () => aplicouPlanoAssinatura,
-    programouRetencao: () => programouRetencao
+    programouRetencao: () => programouRetencao,
+    atualizouFlags: () => atualizouFlags
   };
 }
 
@@ -1899,6 +1944,24 @@ test.describe('operacoes assinatura', () => {
     await page.getByRole('button', { name: 'Aplicar Clinica' }).click();
     await expect(page.getByText('Plano Clinica aplicado para clinica-carla.')).toBeVisible();
     await expect.poll(() => operacoes.aplicouPlanoAssinatura()).toBe(true);
+    await assertSemOverflowHorizontal(page);
+  });
+});
+
+test.describe('operacoes rollout seguro', () => {
+  test('mostra metricas sanitizadas e libera funcionalidades por clinica', async ({ page }) => {
+    const operacoes = await prepararOperacoesMockadas(page);
+    await page.goto('/operacoes');
+
+    await page.getByRole('tab', { name: 'Rollout' }).click();
+    await expect(page.getByRole('heading', { name: 'Release abc123def456' })).toBeVisible();
+    await expect(page.getByText('promover', { exact: true })).toBeVisible();
+    await expect(page.getByText('req-sintetico-1')).toBeVisible();
+    await page.getByLabel('Clinica', { exact: true }).selectOption('00000000-0000-4000-8000-000000000002');
+    await page.getByLabel('IA clinica').check();
+    await page.getByRole('button', { name: 'Aplicar' }).click();
+    await expect.poll(() => operacoes.atualizouFlags()).toBe(true);
+    await expect(page.getByText('Funcionalidades atualizadas para a clinica selecionada e registradas na auditoria.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });

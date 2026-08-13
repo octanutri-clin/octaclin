@@ -7,12 +7,13 @@ import { PainelOperacoesControlador } from './use-painel-operacoes';
 export function AreaIncidentes({ controlador }: { controlador: PainelOperacoesControlador }) {
   const { areaAtiva, alertasOperacionais } = controlador;
 
+  if (areaAtiva !== 'incidentes') return null;
+
   return (
     <Cartao
       id="operacoes-incidentes-painel"
       role="tabpanel"
       aria-labelledby="operacoes-incidentes-aba"
-      hidden={areaAtiva !== 'incidentes'}
     >
       <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
         <div>

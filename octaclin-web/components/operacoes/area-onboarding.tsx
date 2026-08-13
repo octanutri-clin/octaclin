@@ -161,8 +161,10 @@ export function AreaOnboarding({ ativa }: { ativa: boolean }) {
     setProtocoloExportacao('');
   }
 
+  if (!ativa) return null;
+
   return (
-    <section id="operacoes-onboarding-painel" role="tabpanel" aria-labelledby="operacoes-onboarding-aba" hidden={!ativa} className="grid gap-4">
+    <section id="operacoes-onboarding-painel" role="tabpanel" aria-labelledby="operacoes-onboarding-aba" className="grid gap-4">
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       {sucesso ? <AlertaSucesso mensagem={sucesso} /> : null}
       <BarraCarregamento visivel={carregando} rotulo="Atualizando ciclo de vida das clinicas" />

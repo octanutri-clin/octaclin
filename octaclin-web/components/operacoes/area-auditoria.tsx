@@ -19,12 +19,13 @@ export function AreaAuditoria({ controlador }: { controlador: PainelOperacoesCon
     trocarPaginaAuditoria
   } = controlador;
 
+  if (areaAtiva !== 'auditoria') return null;
+
   return (
     <Cartao
       id="operacoes-auditoria-painel"
       role="tabpanel"
       aria-labelledby="operacoes-auditoria-aba"
-      hidden={areaAtiva !== 'auditoria'}
     >
       <CartaoCabecalho className="flex-col items-start lg:flex-row lg:items-center">
         <div className="flex items-center gap-2">

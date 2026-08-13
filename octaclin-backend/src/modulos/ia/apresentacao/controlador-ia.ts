@@ -8,11 +8,13 @@ import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AnalisarSentimentoDto, ReconhecerAlimentoDto, RevisarSugestaoIaDto } from '../aplicacao/dtos';
 import { ServicoIa } from '../aplicacao/servico-ia';
+import { FeatureFlag, GuardaFeatureFlag } from '../../../infraestrutura/feature-flags/guarda-feature-flag';
 
 @Controller('ia')
-@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes, GuardaFeatureFlag)
 @Papeis('SuperAdmin', 'Professional', 'Collaborator')
 @Permissoes('ia.executar')
+@FeatureFlag('ia.clinica')
 export class ControladorIa {
   constructor(
     private readonly servicoIa: ServicoIa,

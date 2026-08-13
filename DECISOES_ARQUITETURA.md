@@ -167,3 +167,17 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
 - Consequencia: fechar ou recarregar a pagina elimina uma fila cuja chave foi
   perdida. Persistencia clinica offline entre reinicios e push exigem fase
   propria e nao podem reutilizar Web Storage.
+
+## ADR-022 - Telemetria interna e feature flags
+
+- Decisao: iniciar o piloto com telemetria HTTP sanitizada, limitada e local ao
+  processo, sem contratar provedor externo antes de haver escala medida.
+- Privacidade: nao persistir payload, query string ou PII; normalizar rotas e
+  expor somente referencia de requisicao derivada por hash.
+- Limite: buffers locais reiniciam com o processo e nao representam varias
+  instancias. Escala horizontal exige agregacao externa ou distribuida.
+- Flags: usar allowlist conhecida, defaults desabilitados e precedencia
+  `padrao -> ambiente -> tenant`, persistindo overrides no modelo existente de
+  configuracao do tenant.
+- Operacao: o painel sugere promover, observar ou rollback, mas a decisao e a
+  execucao continuam humanas e seguem `RUNBOOK_PRODUCAO.md`.

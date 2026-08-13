@@ -16,10 +16,11 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Maior fase concluida: Fase 240 - estabilizacao do `main`. O aceite mais
+- Maior fase concluida: Fase 242 - observabilidade interna e rollout seguro. O aceite mais
   recente do caminho de go-live e a Fase 232, operacao de lancamento. Fases
   228, 231 e 232 resolveram onboarding, jornadas mutaveis e protocolo da
-  janela; a proxima fase bloqueadora e a Fase 233, primeiro piloto assistido.
+  janela; a proxima fase de desenvolvimento e a Fase 241 limitada a IA, e a
+  proxima fase bloqueadora de negocio e a Fase 233, primeiro piloto assistido.
 - Producao isolada foi aceita na Fase 131; backup/restore, observabilidade,
   smokes somente leitura dos quatro papeis, Gmail e Google Agenda foram
   validados nas Fases 219 a 222. Isso nao substitui dominio, identidade de

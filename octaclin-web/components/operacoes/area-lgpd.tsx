@@ -38,12 +38,13 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
     trocarPaginaLgpd
   } = controlador;
 
+  if (areaAtiva !== 'lgpd') return null;
+
   return (
     <Cartao
       id="operacoes-lgpd-painel"
       role="tabpanel"
       aria-labelledby="operacoes-lgpd-aba"
-      hidden={areaAtiva !== 'lgpd'}
     >
       <CartaoCabecalho className="flex-col items-start lg:flex-row lg:items-center">
         <div className="flex items-center gap-2">

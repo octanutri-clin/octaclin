@@ -20,12 +20,13 @@ export function AreaComunicacoes({ controlador }: { controlador: PainelOperacoes
     trocarPaginaFalhasComunicacao
   } = controlador;
 
+  if (areaAtiva !== 'comunicacoes') return null;
+
   return (
     <Cartao
       id="operacoes-comunicacoes-painel"
       role="tabpanel"
       aria-labelledby="operacoes-comunicacoes-aba"
-      hidden={areaAtiva !== 'comunicacoes'}
     >
       <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
         <div>
