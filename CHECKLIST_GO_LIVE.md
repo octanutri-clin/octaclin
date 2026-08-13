@@ -96,6 +96,9 @@ ainda pendentes).
 - [x] Testes de autorizacao web passando.
 - [x] Playwright visual por areas aprovado nas Fases 198 e 203.
 - [x] E2E de jornada critica passando (`pnpm test:e2e:criticas`, 6/6).
+- [x] Jornadas E2E mutaveis aprovadas em branch Neon descartavel, com dois
+  tenants, role runtime, RLS forcada, Redis/MinIO efemeros e sem envio externo
+  (Fase 231, execucao `31731167549`).
 - [x] Teste manual com usuario cliente realista.
 - [x] Teste manual com profissional realista.
 - [x] Smoke autenticado somente leitura do papel `Professional` em producao

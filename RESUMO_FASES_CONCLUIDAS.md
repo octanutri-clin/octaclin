@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-13 com os aceites das Fases 236 e 239.
+Atualizado em 2026-08-13 com a conclusao e o aceite remoto da Fase 231.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -598,6 +598,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   de producao altas; Mobile Expo 52 segue bloqueado pela Fase 241. O commit
   `5674fa5` passou no CI `31724869285`, foi publicado e aprovado por smoke HTTP
   sem credenciais. Ver `fase-229-fechamento-seguranca-operacional.md`.
+- Fase 231 - Jornadas E2E mutaveis em staging: um workflow manual cria uma
+  branch Neon descartavel, aplica migrations com owner, valida a role runtime,
+  RLS forcada e isolamento de dois tenants e sobe Redis/MinIO efemeros. As
+  jornadas reais de paciente, agenda, comunicacao, convite, questionario,
+  upload e leitura clinica passaram sem envio externo na execucao
+  `31731167549`; a branch foi removida ao final. Durante o aceite, IDs de jobs
+  das filas foram adequados ao contrato atual do BullMQ. Ver
+  `fase-231-jornadas-e2e-mutaveis-staging.md`.
 - Fase 236 (aceita operacionalmente) - Exames laboratoriais e evolucao
   fotografica: a fundacao de coletas, marcadores, consentimentos e series
   fotograficas usa valores clinicos cifrados, RLS forcada e isolamento por

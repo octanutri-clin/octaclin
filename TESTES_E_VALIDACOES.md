@@ -514,3 +514,24 @@ powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
 O aceite exige que as afirmacoes marcadas como prontas apontem para evidencia
 existente e que gates externos, fluxos mutaveis e itens condicionais permanecam
 explicitamente pendentes.
+
+### Fase 231 - jornadas E2E mutaveis em staging
+
+O contrato local valida que o workflow permanece manual, descartavel e sem
+referencias a producao:
+
+```powershell
+pnpm test:e2e:staging:config
+pnpm test:staging-fixtures
+pnpm --dir octaclin-backend test -- --runInBand src/infraestrutura/e2e/alvo-staging-e2e.spec.ts
+```
+
+O aceite real deve ser disparado manualmente no workflow `OctaClin staging E2E
+mutavel`. Ele exige as variaveis `NEON_E2E_PROJECT_ID`,
+`NEON_E2E_PARENT_BRANCH_ID`, `NEON_E2E_DATABASE`, `NEON_E2E_RUNTIME_ROLE` e o
+secret `NEON_API_KEY`. Nunca apontar essas configuracoes para producao.
+
+O gate cria uma branch Neon descartavel, aplica migrations, valida role/RLS e
+dois tenants, sobe Redis e MinIO efemeros, executa backend/BFF reais e remove a
+branch com `if: always()`. Em 2026-08-13, a execucao `31731167549` passou no
+commit `04f6bb9`.

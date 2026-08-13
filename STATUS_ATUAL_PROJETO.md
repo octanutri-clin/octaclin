@@ -17,6 +17,10 @@ Atualizado em 2026-08-13.
   suites/829 testes backend, dependencias web corrigidas e cron de backup
   reabilitado. O CI `31713367178` e o backup/restore canario `31713397791`
   passaram sobre o commit `5a87461`.
+- Fase 231 concluida: o workflow manual de staging cria uma branch Neon
+  descartavel, aplica migrations, valida a role runtime, RLS forcada e dois
+  tenants, sobe Redis/MinIO efemeros e executa as jornadas mutaveis sem envio
+  externo. A execucao `31731167549` passou e removeu a branch ao final.
 - Fase 224 - oferta comercial e ativacao assistida concluida. O pacote
   Profissional foi aceito a R$ 99 trimestral/R$ 119 mensal; Clinica a R$ 199
   trimestral/R$ 249 mensal. O inicio usa PIX antecipado, demonstracao
@@ -307,9 +311,8 @@ Atualizado em 2026-08-13.
   passou a distinguir cancelamento pelo profissional (notifica o paciente),
   desmarcamento pelo paciente (alerta nao-PHI ao profissional, sem notificar o
   proprio paciente) e cancelamento originado no Google (sem novo envio).
-- A antiga Fase 132 foi substituida pela Fase 225. A Fase 229 foi aceita em
-  producao; a proxima fase executavel sem dominio e a Fase 231, seguida da
-  Fase 228 ampliada.
+- A antiga Fase 132 foi substituida pela Fase 225. As Fases 229 e 231 foram
+  aceitas; a proxima fase executavel sem dominio e a Fase 228 ampliada.
 - Estado: producao tecnica acessivel, mas ainda nao liberada para clientes reais.
 
 ## O que esta funcional
@@ -423,12 +426,12 @@ Atualizado em 2026-08-13.
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao
 isolada aceita e pacote juridico ampliado. O backup automatico foi reabilitado
-e validado com restore canario na Fase 240. Antes de clientes reais, ainda
-faltam staging mutavel confiavel, onboarding/suporte, dominio/identidade de
-envio, aceite juridico formal e go-live assistido.
+e validado com restore canario na Fase 240, e o staging mutavel foi aprovado
+na Fase 231. Antes de clientes reais, ainda faltam onboarding/suporte,
+dominio/identidade de envio, aceite juridico formal e go-live assistido.
 
-Proximo passo recomendado: executar as Fases 231 e 228 antes de preparar
-dominio, identidade de envio e go-live assistido.
+Proximo passo recomendado: executar a Fase 228 antes de preparar dominio,
+identidade de envio e go-live assistido.
 Permanece como melhoria operacional futura o rollout da Fase 201 no Render (separar
 os papeis `web` e `worker` e registrar a entrega sintetica unica exigida pelo
 aceite).

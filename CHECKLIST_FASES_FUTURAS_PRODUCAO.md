@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-13 com a conclusao e o aceite remoto da Fase 229.
+Atualizado em 2026-08-13 com a conclusao e o aceite remoto da Fase 231.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1577,12 +1577,17 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Se o canal ficar fora da oferta inicial, manter desligado ou claramente em
     beta ate o aceite.
 
-- [ ] Fase 231 - Jornadas E2E mutaveis em staging. [BLOQUEADOR]
+- [x] Fase 231 - Jornadas E2E mutaveis em staging. [BLOQUEADOR]
   - Validar criacao, edicao, cancelamento/reagendamento, formulario, convite,
     upload e comunicacao com massa sintetica e isolamento por tenant.
   - Manter producao apenas para smokes controlados e sem mutacao de negocio.
   - O ambiente deve aplicar migrations em PostgreSQL real, ser descartavel ou
     resetavel, exercitar dois tenants e validar RLS/roles antes de cada jornada.
+  - Concluida no commit `04f6bb9`: workflow manual com branch Neon
+    descartavel, migrations reais, role runtime, RLS forcada, dois tenants,
+    Redis/MinIO efemeros e jornadas mutaveis completas sem envio externo.
+    Execucao `31731167549` verde e branch removida ao final. Evidencia:
+    `fase-231-jornadas-e2e-mutaveis-staging.md`.
 
 - [ ] Fase 232 - Operacao de lancamento. [BLOQUEADOR]
   - Definir janela, responsavel de monitoramento, triagem de incidentes,
