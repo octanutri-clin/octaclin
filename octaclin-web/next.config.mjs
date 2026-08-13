@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 
+const raizFrontend = fileURLToPath(new URL('.', import.meta.url));
 const desenvolvimento = process.env.NODE_ENV === 'development';
 const politicaConteudo = [
   "default-src 'self'",
@@ -27,8 +28,12 @@ const cabecalhosSeguranca = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  outputFileTracingRoot: fileURLToPath(new URL('.', import.meta.url)),
+  outputFileTracingRoot: raizFrontend,
   typedRoutes: true,
+  webpack(config) {
+    config.resolve.alias['@'] = raizFrontend;
+    return config;
+  },
   /**
    * Redirecionamentos de rota ficam aqui, e nao em `redirect()` dentro de page.tsx.
    * Com o `loading.tsx` de raiz, o `redirect()` de server component cai dentro do
