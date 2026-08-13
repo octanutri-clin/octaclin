@@ -14,8 +14,12 @@ Este checklist deve ser concluido antes de incluir clientes reais de consultoria
 
 - [x] Secrets de staging e producao separados (Fase 131).
 - [x] Nenhum secret rastreado no GitHub na varredura documental corrente (Fase 223).
-- [ ] `OCTACLIN_COOKIE_SECURE=true` em producao.
-- [ ] `OCTACLIN_API_ORIGENS_PERMITIDAS` restrito ao backend oficial.
+- [x] `OCTACLIN_COOKIE_SECURE=true` em producao (Fase 229, validacao
+  fail-closed e smoke sintetico no build publicado).
+- [x] `OCTACLIN_API_ORIGENS_PERMITIDAS` restrito ao backend oficial (Fase 229,
+  rota publica rejeita origem externa e ausencia de `Origin`).
+- [x] CSP, HSTS, `nosniff`, bloqueio de frames, Referrer Policy e Permissions
+  Policy ativos globalmente na web de producao (Fase 229).
 - [ ] JWT e refresh secrets fortes e exclusivos.
 - [ ] Chave AES forte e exclusiva.
 - [x] Rate limiting em login, recuperacao, convites e webhooks sensiveis.

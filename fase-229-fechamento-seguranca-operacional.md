@@ -61,14 +61,19 @@ O smoke de runtime sobe o build em porta efemera, exige os seis headers,
 confirma que a mutacao same-origin alcanca a rota e que cross-site ou ausencia
 de `Origin` retornam `403`.
 
-## Pendente de producao
+## Aceite de producao
 
-- [ ] CI verde no commit da fase.
-- [ ] Deploy web `Live` no mesmo commit.
-- [ ] Seis headers presentes em `/login`.
-- [ ] POST same-origin invalido chega a rota e retorna `400`, enquanto origem
-  externa e ausencia de `Origin` retornam `403`.
-- [ ] Login sintetico/manual permanece funcional.
+- [x] CI `31724869285` verde no commit `5674fa5`.
+- [x] Deploy web `Live` no mesmo commit, com Node 22 e instalacao explicita das
+  dependencias necessarias ao build.
+- [x] Os seis headers estao presentes em `/login`; a CSP de producao nao inclui
+  `unsafe-eval`.
+- [x] POST same-origin invalido alcancou a rota e retornou `400`, enquanto
+  origem externa e ausencia de `Origin` retornaram `403`.
+- [x] O login sintetico permaneceu funcional no smoke do CI, executado sobre
+  `next start` com a configuracao fail-closed de producao.
 
-Nao liberar clientes reais antes desses itens e dos demais bloqueadores do
-`CHECKLIST_GO_LIVE.md`.
+O aceite remoto foi concluido em 2026-08-13 sem usar ou registrar credenciais.
+
+Os demais bloqueadores do `CHECKLIST_GO_LIVE.md` continuam obrigatorios antes
+de liberar clientes reais.

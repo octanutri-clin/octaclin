@@ -1,7 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-13 com a implementacao local da Fase 229, ainda pendente
-de aceite no deploy web.
+Atualizado em 2026-08-13 com a conclusao e o aceite remoto da Fase 229.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1553,7 +1552,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     proprietario sem senha definida pelo operador, plano/configuracao inicial,
     suspensao, reativacao, exportacao e encerramento auditavel.
 
-- [~] Fase 229 - Fechamento de seguranca operacional. [BLOQUEADOR]
+- [x] Fase 229 - Fechamento de seguranca operacional. [BLOQUEADOR]
   - Verificar variaveis ativas de cookie, CORS, JWT/refresh, AES, secrets e
     escopos de integracao sem imprimir valores; registrar somente a evidencia.
   - Rodar revisao de dependencias, secrets e permissoes de ambientes antes da
@@ -1567,8 +1566,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     origem/Fetch Metadata, seis headers globais, destinatarios por classe,
     Dependabot e permissao padrao `read` nos workflows. Web/backend passaram no
     audit; Mobile SDK 52 ficou explicitamente bloqueado pela Fase 241.
-  - Pendente: CI, deploy e smoke HTTP de producao. Evidencia:
-    `fase-229-fechamento-seguranca-operacional.md`.
+  - Aceite remoto concluido no commit `5674fa5`: CI `31724869285` verde,
+    deploy web `Live`, seis headers confirmados e mutacoes same-origin/cross-site
+    respondendo respectivamente `400/403`; login sintetico aprovado no smoke.
+    Evidencia: `fase-229-fechamento-seguranca-operacional.md`.
 
 - [ ] Fase 230 - Aceite WhatsApp de producao. [CONDICIONAL]
   - Necessaria se WhatsApp estiver incluido na oferta inicial: token permanente,

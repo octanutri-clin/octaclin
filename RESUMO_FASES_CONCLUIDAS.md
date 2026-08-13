@@ -589,6 +589,15 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   antecipado, demonstracao sintetica, bloqueio suave apos aviso de 30 dias,
   migracao por escopo, WhatsApp fora da oferta e suporte reforcado por 48 horas
   foram aceitos. Ver `fase-224-oferta-comercial-ativacao-assistida.md`.
+- Fase 229 - Fechamento de seguranca operacional: o BFF web agora falha
+  fechado sem cookie `Secure` e allowlist da API em producao, rejeita mutacoes
+  cross-site por `Origin` e Fetch Metadata e publica seis headers globais de
+  seguranca. Destinatarios de notificacoes foram limitados por classe de
+  evento, Dependabot passou a cobrir os cinco runtimes e os workflows mantem
+  permissao padrao somente leitura. Web/backend ficaram sem vulnerabilidades
+  de producao altas; Mobile Expo 52 segue bloqueado pela Fase 241. O commit
+  `5674fa5` passou no CI `31724869285`, foi publicado e aprovado por smoke HTTP
+  sem credenciais. Ver `fase-229-fechamento-seguranca-operacional.md`.
 - Fase 236 (aceita operacionalmente) - Exames laboratoriais e evolucao
   fotografica: a fundacao de coletas, marcadores, consentimentos e series
   fotograficas usa valores clinicos cifrados, RLS forcada e isolamento por

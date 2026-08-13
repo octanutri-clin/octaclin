@@ -16,9 +16,9 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase concluida mais recente: Fase 240 - estabilizacao do `main`. A Fase 229
-  esta implementada localmente e aguarda CI/deploy para aceite; depois dela, a
-  proxima fase bloqueadora executavel sem dominio e a Fase 231.
+- Maior fase concluida: Fase 240 - estabilizacao do `main`. O aceite mais
+  recente foi a Fase 229, validada no CI e no deploy web de producao. A proxima
+  fase bloqueadora executavel sem dominio e a Fase 231.
 - Producao isolada foi aceita na Fase 131; backup/restore, observabilidade,
   smokes somente leitura dos quatro papeis, Gmail e Google Agenda foram
   validados nas Fases 219 a 222. Isso nao substitui dominio, identidade de
