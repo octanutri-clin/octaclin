@@ -631,6 +631,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   O aceite clinico humano foi concedido pelo responsavel em 2026-08-13; os
   demais gates de go-live continuam obrigatorios. Ver
   `fase-239-validacao-clinica-usabilidade-prontuario.md`.
+- Fase 240 - Estabilizacao do main e verdade operacional: regressao Playwright
+  corrigida, testes temporais tornados deterministicos, CI backend ampliado de
+  cinco specs para 122 suites/829 testes e dependencias web de severidade alta
+  corrigidas. O commit `5a87461` passou no CI `31713367178`; o backup real
+  `31713397791` gerou o dump, enviou o artefato cifrado ao B2, restaurou no
+  banco dedicado e aprovou o canario atualizado da migration `1026` e RLS. Ver
+  `fase-240-estabilizacao-main-verdade-operacional.md`.
 
 ## Estado atual de uso
 

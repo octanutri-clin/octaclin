@@ -1759,7 +1759,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     reais.
   - Especificacao: `fase-239-validacao-clinica-usabilidade-prontuario.md`.
 
-- [~] Fase 240 - Estabilizacao do main e verdade operacional. [BLOQUEADOR]
+- [x] Fase 240 - Estabilizacao do main e verdade operacional. [BLOQUEADOR]
   - Corrigir regressao Playwright do sino/permissoes e cadastro de paciente,
     tornar os testes temporais do portal deterministas e eliminar flakiness de
     cabecalho sem alterar comportamento clinico.
@@ -1770,8 +1770,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Implementacao e gates locais aprovados em 2026-08-13: 122 suites/829 testes
     backend, 6/6 Playwright focados em desktop/mobile, lint, typechecks, builds,
     35 testes de autorizacao e audit web/backend sem vulnerabilidade conhecida.
-  - Pendente para encerrar: CI do commit publicado e uma rodada real do backup
-    com o workflow/canario atualizado.
+  - Encerrada em 2026-08-13: o commit `5a87461` passou no `OctaClin CI`
+    (`31713367178`) e o workflow `Backup producao` (`31713397791`) concluiu
+    dump, envio cifrado ao B2, restore no banco dedicado e canario da migration
+    `1026`/RLS. A variavel do cron permanece habilitada para as proximas
+    execucoes agendadas.
   - Evidencia: `fase-240-estabilizacao-main-verdade-operacional.md`.
 
 - [ ] Fase 241 - Hardening de IA e Mobile legado. [IMPORTANTE - CONDICIONAL]

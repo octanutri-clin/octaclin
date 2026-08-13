@@ -7,10 +7,10 @@ Atualizado em 2026-08-13.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Fase 240 em validacao remota: regressao do `main` corrigida localmente, CI
-  ampliado para 122 suites/829 testes backend, dependencias web corrigidas e
-  cron de backup reabilitado. Falta confirmar o CI e a rodada real do backup do
-  commit publicado antes de encerrar a fase.
+- Fase 240 concluida: regressao do `main` corrigida, CI ampliado para 122
+  suites/829 testes backend, dependencias web corrigidas e cron de backup
+  reabilitado. O CI `31713367178` e o backup/restore canario `31713397791`
+  passaram sobre o commit `5a87461`.
 - Fase 224 - oferta comercial e ativacao assistida concluida. O pacote
   Profissional foi aceito a R$ 99 trimestral/R$ 119 mensal; Clinica a R$ 199
   trimestral/R$ 249 mensal. O inicio usa PIX antecipado, demonstracao
@@ -417,13 +417,13 @@ Atualizado em 2026-08-13.
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao
 isolada aceita e pacote juridico ampliado. O backup automatico foi reabilitado
-na Fase 240 e ainda precisa da rodada real de confirmacao do novo canario. Antes
-de clientes reais, tambem faltam
-ainda precisa de dominio/identidade de envio, aceite juridico formal e go-live
-assistido antes de uso comercial com clientes reais.
+e validado com restore canario na Fase 240. Antes de clientes reais, ainda
+faltam fechamento de seguranca operacional, staging mutavel confiavel,
+onboarding/suporte, dominio/identidade de envio, aceite juridico formal e
+go-live assistido.
 
-Proximo passo recomendado: encerrar a Fase 240 e executar as Fases 229, 231 e
-228 antes de preparar dominio, identidade de envio e go-live assistido.
+Proximo passo recomendado: executar as Fases 229, 231 e 228 antes de preparar
+dominio, identidade de envio e go-live assistido.
 Permanece como melhoria operacional futura o rollout da Fase 201 no Render (separar
 os papeis `web` e `worker` e registrar a entrega sintetica unica exigida pelo
 aceite).

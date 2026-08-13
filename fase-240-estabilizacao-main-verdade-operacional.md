@@ -1,7 +1,6 @@
 # Fase 240 - Estabilizacao do main e verdade operacional
 
-Status: implementacao local concluida; validacao remota em andamento em
-2026-08-13.
+Status: concluida em 2026-08-13.
 
 ## Objetivo
 
@@ -46,3 +45,16 @@ A fase somente pode mudar para concluida quando:
    monitoramento recorrente.
 
 Nenhuma migration, seed ou mutacao clinica faz parte desta fase.
+
+## Resultado remoto
+
+- Commit validado: `5a87461`.
+- `OctaClin CI` `31713367178`: aprovado, incluindo suite backend completa,
+  builds, smokes BFF/UI e 160 cenarios Playwright (158 aprovados e 2
+  condicionais ignorados).
+- `Backup producao` `31713397791`: aprovado com dump PostgreSQL 18, checksum,
+  envio cifrado ao B2, download, restore no banco dedicado e validacao do
+  canario da migration `1026` e RLS.
+- `OCTACLIN_BACKUP_AUTOMATICO_HABILITADO=true` permanece configurada para a
+  proxima recorrencia; sua observacao e monitoramento operacional continuo, nao
+  pendencia desta entrega.

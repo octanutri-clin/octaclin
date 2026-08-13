@@ -51,7 +51,9 @@ ainda pendentes).
 - [ ] Dominio oficial configurado.
 - [ ] SSL ativo.
 - [x] Backups configurados conforme `RUNBOOK_BACKUP_RESTORE.md` (Fase 219):
-  B2 privado, retencao, checksum, AES256, restore semanal e cron ativo.
+  B2 privado, retencao, checksum, AES256, restore semanal e cron ativo. A Fase
+  240 revalidou o fluxo completo no run `31713397791`, incluindo o canario da
+  migration `1026` e RLS forcada nas tabelas recentes.
 - [x] Restore real testado em banco dedicado (Fase 158, 2026-07-29): dump custom validado, restauracao no Neon dedicado e comparacao de tabelas, RLS e usuarios autenticaveis aprovadas.
 - [x] Logs e alertas configurados: logs correlacionados, alertas internos e
   monitor externo de saude/backup da Fase 220 ativos.
