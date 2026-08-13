@@ -405,6 +405,21 @@ Validacoes: teste unitario do servico de convites (incluindo revogacao do link
 anterior), typecheck backend/web e lint web. A validacao de convite real e
 ativacao com dados sinteticos permanece como aceite de staging da fase.
 
+## Auditoria final de escopo - 2026-08-13
+
+A revisao do codigo atual confirmou que os 14 incrementos entregues formam uma
+base funcional, mas ainda nao atendem integralmente os criterios de aceite. A
+Fase 235 permanece em execucao e nao deve ser marcada como concluida.
+
+As lacunas obrigatorias foram organizadas nos Incrementos 15 a 19: completar as
+fontes e filtros da timeline; ampliar o resumo clinico; fechar qualidade
+cadastral e ciclo de acesso ao portal; explicitar contexto/autorizacao e acoes;
+e executar benchmark, acessibilidade e jornada sintetica de encerramento.
+
+A matriz de conformidade, a evidencia revisada e a ordem de execucao estao em
+`AUDITORIA_FINAL_FASE_235_2026-08-13.md`. As Fases 236, 237 e 239 ja entregues
+serao integradas, nao reimplementadas. A Fase 238 continua separada e pendente.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica
