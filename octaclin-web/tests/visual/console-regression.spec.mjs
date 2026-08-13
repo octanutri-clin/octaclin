@@ -910,6 +910,7 @@ async function prepararProntuarioMockado(page) {
   let criouTarefa = false;
   let criouMaterial = false;
   let enviouMaterial = false;
+  let condutas = [];
   let anexos = [];
   let documentos = [];
   let corpoDocumentoEmitido = null;
@@ -945,6 +946,55 @@ async function prepararProntuarioMockado(page) {
         destinoInicial: '/dashboard'
       })
     });
+  });
+
+  await page.route('**/api/pacientes/paciente-1/condutas-terapeuticas**', async (route) => {
+    const requisicao = route.request();
+    const url = new URL(requisicao.url());
+    const partes = url.pathname.split('/').filter(Boolean);
+    const acao = partes.at(-1);
+    const resposta = () => ({
+      id: 'conduta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      tipo: 'orientacao',
+      arquivadaEm: condutas[0]?.arquivadaEm,
+      versoes: condutas[0]?.versoes ?? []
+    });
+
+    if (requisicao.method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(condutas.map(() => resposta())) });
+      return;
+    }
+
+    if (requisicao.method() === 'POST' && acao === 'condutas-terapeuticas') {
+      const entrada = requisicao.postDataJSON();
+      condutas = [{
+        id: 'conduta-1',
+        arquivadaEm: undefined,
+        versoes: [{
+          id: 'conduta-versao-1', numero: 1, estado: 'rascunho', titulo: entrada.titulo,
+          conteudo: entrada.conteudo, validadeInicio: entrada.validadeInicio, validadeFim: entrada.validadeFim
+        }]
+      }];
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(resposta()) });
+      return;
+    }
+
+    if (requisicao.method() === 'POST' && condutas.length) {
+      if (acao === 'publicacao') condutas[0].versoes[0].estado = 'publicada';
+      if (acao === 'nova-versao') {
+        const publicada = condutas[0].versoes.find((versao) => versao.estado === 'publicada');
+        condutas[0].versoes.unshift({
+          ...publicada, id: 'conduta-versao-2', numero: 2, estado: 'rascunho'
+        });
+      }
+      if (acao === 'arquivamento') condutas[0].arquivadaEm = '2026-08-13T12:00:00.000Z';
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(resposta()) });
+      return;
+    }
+
+    await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ message: 'Rota mockada nao encontrada.' }) });
   });
 
   await page.route('**/api/pacientes/paciente-1/prontuario/timeline**', async (route) => {
@@ -1342,7 +1392,8 @@ async function prepararProntuarioMockado(page) {
     criouEvolucao: () => criouEvolucao,
     criouTarefa: () => criouTarefa,
     criouMaterial: () => criouMaterial,
-    enviouMaterial: () => enviouMaterial
+    enviouMaterial: () => enviouMaterial,
+    condutas: () => condutas
   };
 }
 
@@ -1697,6 +1748,44 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Meta diaria de 1 litro entre 13h e 18h.')).toBeVisible();
     await page.getByRole('tab', { name: 'Resumo' }).click();
     await expect(page.getByText('1 tarefas pendentes')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('Fase 239 - valida jornada sintetica, versionada e acessivel de conduta terapeutica', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tablist', { name: 'Areas principais do prontuario' }).getByRole('tab', { name: 'Plano' }).click();
+    const subareas = page.getByRole('tablist', { name: 'Subareas de Plano' });
+    const acompanhamento = subareas.getByRole('tab', { name: 'Acompanhamento' });
+    await acompanhamento.focus();
+    await acompanhamento.press('ArrowRight');
+    const condutas = subareas.getByRole('tab', { name: 'Condutas terapeuticas' });
+    await expect(condutas).toBeFocused();
+    await expect(condutas).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('heading', { name: 'Condutas terapeuticas' })).toBeVisible();
+    await expect(page.getByText(/mantido fora do portal/i)).toBeVisible();
+
+    await page.getByLabel('Titulo').fill('Teste sintetico de prontuario');
+    await page.getByLabel('Conteudo documentado').fill('Conteudo de validacao sem orientacao clinica.');
+    await page.getByRole('button', { name: 'Criar rascunho' }).click();
+    await expect.poll(() => prontuario.condutas()[0]?.versoes[0]?.estado).toBe('rascunho');
+    await expect(page.getByRole('button', { name: 'Publicar' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Publicar' }).click();
+    await expect.poll(() => prontuario.condutas()[0]?.versoes[0]?.estado).toBe('publicada');
+    await page.getByRole('button', { name: 'Nova versao' }).click();
+    await expect.poll(() => prontuario.condutas()[0]?.versoes).toHaveLength(2);
+    await page.getByText('Ver versoes (2)').click();
+    await expect(page.getByText('Versao 2: rascunho')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Arquivar' }).click();
+    const dialogo = page.getByRole('dialog', { name: 'Arquivar conduta terapeutica' });
+    await expect(dialogo).toBeVisible();
+    await dialogo.getByRole('button', { name: 'Arquivar conduta' }).click();
+    await expect.poll(() => prontuario.condutas()[0]?.arquivadaEm).toBeTruthy();
+    await expect(page.getByText('Conduta arquivada.')).toBeVisible();
+    await expect(page.getByText('Arquivada', { exact: true })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 

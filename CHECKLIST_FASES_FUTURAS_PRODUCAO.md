@@ -1728,9 +1728,15 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Criar somente apos protocolo, consentimentos, curvas e limites de uso serem
     validados pelo responsavel clinico; nao reutilizar regras genericas.
 
-- [ ] Fase 239 - Validacao clinica e de usabilidade do prontuario. [IMPORTANTE - POS PILOTO]
-  - Validar jornadas sinteticas e aceite com profissionais antes de expandir a
-    superficie clinica para pacientes reais.
+- [~] Fase 239 - Validacao clinica e de usabilidade do prontuario. [IMPORTANTE - POS PILOTO]
+  - Validacao tecnica concluida em 2026-08-13: `test:prontuario:validacao`
+    aprovou `18/18` jornadas sinteticas em desktop e mobile, incluindo abas,
+    teclado, overflow, evolucao, tarefas, documentos, materiais, anexos e a
+    jornada versionada de condutas terapeuticas.
+  - Pendente somente aceite clinico humano, com Professional autorizado e
+    paciente sintetico, antes de ampliar a superficie clinica para pacientes
+    reais. Nao inserir dados clinicos, imagens, anexos ou comunicacoes reais.
+  - Especificacao: `fase-239-validacao-clinica-usabilidade-prontuario.md`.
 
 ## Backlog pos-producao
 

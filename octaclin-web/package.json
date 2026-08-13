@@ -18,6 +18,7 @@
     "test:exames-laboratoriais:bff": "node scripts/test-exames-laboratoriais-bff.mjs",
     "test:consentimentos-fotograficos:bff": "node scripts/test-consentimentos-fotograficos-bff.mjs",
     "test:condutas-terapeuticas:bff": "node scripts/test-condutas-terapeuticas-bff.mjs",
+    "test:prontuario:validacao": "playwright test tests/visual/console-regression.spec.mjs --grep \"prontuario do paciente|Fase 239\" --reporter=list",
     "test:pwa": "node scripts/test-pwa-seguranca.mjs && playwright test tests/visual/pwa-portal.spec.mjs --reporter=list",
     "test:e2e:criticas": "playwright test tests/visual/jornadas-criticas.spec.mjs --reporter=list",
     "test:producao:readonly": "playwright test tests/visual/producao-readonly.spec.mjs --project=desktop-chromium --reporter=list",
