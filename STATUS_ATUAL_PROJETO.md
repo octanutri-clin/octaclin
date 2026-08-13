@@ -447,9 +447,10 @@ na Fase 231. Onboarding/suporte e operacao de lancamento foram fechados nas
 Fases 228 e 232. Antes de clientes reais ainda faltam dominio/identidade de
 envio, aceite juridico formal e o piloto assistido da Fase 233.
 
-Fase 241 em validacao final: o hardening de IA foi separado do Mobile legado,
-que agora ocupa a Fase 243 e permanece fora da oferta. A IA continua
-desativada por padrao ate configuracao do segredo e aceite sintetico. O go-live real continua dependente dos
+Fase 241 concluida no PR `#40` e CI `31749993251`: o hardening de IA foi
+separado do Mobile legado, que agora ocupa a Fase 243 e permanece fora da
+oferta. A IA continua desativada por padrao ate configuracao do segredo e
+aceite sintetico. O go-live real continua dependente dos
 bloqueadores externos e da Fase 233 com um unico cliente piloto na janela
 controlada.
 Permanece como melhoria operacional futura o rollout da Fase 201 no Render (separar

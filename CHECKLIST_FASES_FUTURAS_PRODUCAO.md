@@ -1807,7 +1807,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     execucoes agendadas.
   - Evidencia: `fase-240-estabilizacao-main-verdade-operacional.md`.
 
-- [ ] Fase 241 - Hardening da IA clinica. [IMPORTANTE - CONDICIONAL]
+- [x] Fase 241 - Hardening da IA clinica. [IMPORTANTE - CONDICIONAL]
   - Reaproveitar seletivamente as protecoes do PR draft `#6`, sem merge direto
     do branch antigo: vinculo de midia/referencias ao tenant e paciente,
     idempotencia concorrente, timeout, erro sanitizado e autenticacao entre
@@ -1815,6 +1815,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Gate: obrigatoria antes de oferecer IA comercialmente; a flag permanece
     desabilitada ate segredo compartilhado e aceite sintetico no tenant piloto.
   - Escopo Mobile removido desta fase para impedir integracao do branch legado.
+  - Concluida em 2026-08-13: referencias e midia isoladas por tenant/paciente,
+    hash verificado ponta a ponta, lock concorrente, rate limit, timeout,
+    resposta limitada, erro sanitizado e autenticacao NestJS/FastAPI. A UI usa
+    apenas imagens confirmadas e exige revisao humana. PR `#40`, commit
+    `ec578a6` e CI `31749993251` aprovados; sem migration e sem ativar a flag.
+  - Evidencia: `fase-241-hardening-ia-clinica.md`.
 
 - [ ] Fase 243 - Modernizacao e hardening do Mobile. [CONDICIONAL]
   - Achado da Fase 229: Expo SDK 52 carrega `tar@6.2.1` pela CLI com alerta

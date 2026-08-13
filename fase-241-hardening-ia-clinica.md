@@ -1,6 +1,6 @@
 # Fase 241 - Hardening da IA clinica
 
-Status: implementacao local concluida; rollout permanece desabilitado.
+Status: concluida no PR `#40`; rollout permanece desabilitado.
 
 ## Objetivo
 
@@ -77,6 +77,8 @@ adiciona seu mapeamento ORM para validar IDs sem carregar conteudo sensivel.
 - Seguranca: scanner de secrets limpo; `nanoid` transitivo elevado para 3.3.18
   apos advisory alto e audits de producao backend/web zerados.
 - `git diff --check` aprovado.
+- Remoto: CI `31749993251` aprovou Backend, Web, Mobile, FastAPI, rollout,
+  operacao e o smoke visual completo.
 
 ## Gate operacional
 

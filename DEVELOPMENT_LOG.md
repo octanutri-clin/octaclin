@@ -30,8 +30,9 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 ### Fase 241 - Hardening da IA clinica
 
 - Responsavel: Codex.
-- Inicio e conclusao local: 2026-08-13.
-- Commit/Push: pendentes da integracao do PR.
+- Inicio e conclusao: 2026-08-13.
+- Commit: `ec578a6`.
+- Push: sim; PR `#40` com CI `31749993251` aprovado.
 - Validacoes: 15 testes backend focados, suite completa com 130 suites/870
   testes, 6 testes FastAPI, lint,
   typechecks, builds, authz, seguranca, audits zerados e 8/8 Playwright em

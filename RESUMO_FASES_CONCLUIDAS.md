@@ -679,13 +679,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   e a telemetria permanece deliberadamente local ao processo. PR `#39`, merge
   `32559bd` e CI `31747184400` aprovados. Ver
   `fase-242-observabilidade-interna-rollout-seguro.md`.
-- Fase 241 (implementacao local) - Hardening da IA clinica: referencias de
+- Fase 241 - Hardening da IA clinica: referencias de
   check-in, transcricao e midia agora sao validadas por tenant/paciente; a URL
   privada e criada apenas no backend e seu SHA-256 e conferido ponta a ponta.
   O canal NestJS/FastAPI ganhou segredo dedicado, timeout, resposta limitada,
   contrato validado, erro sanitizado, rate limit e lock concorrente. Somente
   SuperAdmin e Professional acessam o modulo, sempre com revisao humana. A IA
-  segue desligada ate o aceite operacional. Ver
+  segue desligada ate o aceite operacional. PR `#40`, commit `ec578a6` e CI
+  `31749993251` aprovados, sem migration. Ver
   `fase-241-hardening-ia-clinica.md`.
 
 ## Estado atual de uso
