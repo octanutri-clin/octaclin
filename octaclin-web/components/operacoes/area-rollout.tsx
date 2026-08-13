@@ -68,6 +68,8 @@ export function AreaRollout({ controlador }: { controlador: PainelOperacoesContr
     }
   }
 
+  if (areaAtiva !== 'rollout') return null;
+
   const metricas = rollout
     ? [
         { rotulo: 'Decisao', valor: rollout.decisaoSugerida, icone: rollout.decisaoSugerida === 'rollback' ? RotateCcw : CheckCircle2 },
@@ -76,8 +78,6 @@ export function AreaRollout({ controlador }: { controlador: PainelOperacoesContr
         { rotulo: 'P95', valor: `${rollout.telemetria.http.duracaoP95Ms} ms`, icone: Gauge }
       ]
     : [];
-
-  if (areaAtiva !== 'rollout') return null;
 
   return (
     <section id="operacoes-rollout-painel" role="tabpanel" aria-labelledby="operacoes-rollout-aba" className="grid gap-4">
