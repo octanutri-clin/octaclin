@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-13 com o Incremento 1 da Fase 237 em validacao de schema.
+Atualizado em 2026-08-13 com o aceite de schema em integracao da Fase 237.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1708,8 +1708,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - A subarea profissional fica em Prontuario > Plano. Nao ha exposicao ao
     portal, envio a terceiros, recomendacao automatica, dose, catalogo ou
     assinatura digital neste incremento.
-  - Pendente de schema: aplicar e aprovar migration `1026` primeiro em
-    integracao e depois em producao com `neondb_owner`; nao ha backfill.
+  - Aceite de schema em integracao concluido: `1025` e `1026` foram aplicadas
+    em `octaclin_test_fase150b` com `neondb_owner`; historico `39/39`, RLS
+    forcada, policies por tenant e indices de versao publicada foram aprovados
+    sem inserir dados clinicos.
+  - Pendente de producao: aplicar `1026` com `neondb_owner`, backup/restore
+    recente e validacao operacional sintetica; nao ha backfill.
   - Especificacao: `fase-237-condutas-terapeuticas-versionadas.md`.
 
 - [ ] Fase 238 - Acompanhamento gestacional especializado. [OPCIONAL - CLINICO]

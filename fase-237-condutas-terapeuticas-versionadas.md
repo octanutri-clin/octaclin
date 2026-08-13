@@ -1,8 +1,7 @@
 # Fase 237 - Condutas terapeuticas versionadas
 
-Status: Incremento 1 entregue localmente em 2026-08-13. A migration `1026`
-ainda precisa ser aplicada e aprovada no banco de teste antes de qualquer
-deploy de producao.
+Status: Incremento 1 entregue localmente e com schema aprovado em integracao
+em 2026-08-13. A migration `1026` continua pendente de aplicacao em producao.
 
 ## Objetivo
 
@@ -51,13 +50,13 @@ git diff --check
 
 ## Pendente de schema e aceite
 
-1. Aplicar `CriarCondutasTerapeuticas1720000001026` somente no banco de
-   integracao usando uma URL explicitamente confirmada como nao producao.
-2. Verificar RLS forcada, duas policies, os tres indices e a unicidade parcial
-   de versao publicada.
-3. Repetir em producao somente com role `neondb_owner`, janela aprovada e
+1. Aceite de integracao concluido em `octaclin_test_fase150b` com
+   `neondb_owner`: migrations `1025` e `1026` aplicadas em ordem, historico
+   `39/39`, RLS habilitada e forcada nas tabelas novas, policies de tenant e
+   indices de serie/versao publicada verificados sem inserir dados clinicos.
+2. Repetir em producao somente com role `neondb_owner`, janela aprovada e
    backup/restore recente.
-4. Em producao, testar somente paciente e conteudo sinteticos: criar rascunho,
+3. Em producao, testar somente paciente e conteudo sinteticos: criar rascunho,
    publicar, criar nova versao, arquivar e confirmar que o portal nao exibe
    condutas.
 
