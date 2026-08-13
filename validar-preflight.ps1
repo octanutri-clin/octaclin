@@ -119,9 +119,17 @@ try {
       Invoke-Pnpm $web @('test:authz')
     }
 
+    Invoke-Step 'Web seguranca operacional' {
+      Invoke-Pnpm $web @('test:seguranca-operacional')
+    }
+
     if ($Full -and (-not $SkipBuild)) {
       Invoke-Step 'Web build' {
         Invoke-Pnpm $web @('build')
+      }
+
+      Invoke-Step 'Web seguranca runtime' {
+        Invoke-Pnpm $web @('test:seguranca-runtime')
       }
     }
   }

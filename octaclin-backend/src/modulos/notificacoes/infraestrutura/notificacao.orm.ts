@@ -1,10 +1,7 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import type { TipoNotificacao } from '../dominio/tipo-notificacao';
 
-export type TipoNotificacao =
-  | 'mensagem_recebida'
-  | 'solicitacao_agendamento'
-  | 'formulario_respondido'
-  | 'falha_envio';
+export type { TipoNotificacao } from '../dominio/tipo-notificacao';
 
 /**
  * Uma linha por usuario destinatario (fan-out na escrita). O texto exibido e

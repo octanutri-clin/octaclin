@@ -479,6 +479,28 @@ O aceite remoto exige `OctaClin CI` verde e uma rodada do workflow `Backup
 producao` usando o canario da migration `1026`. Nunca usar o banco de producao
 como destino do restore.
 
+### Fase 229 - seguranca operacional
+
+```powershell
+pnpm --dir octaclin-web test:seguranca-operacional
+pnpm --dir octaclin-web build
+pnpm --dir octaclin-web test:seguranca-runtime
+pnpm --dir octaclin-web test:authz
+pnpm --dir octaclin-backend test -- --runInBand
+pnpm --dir octaclin-web audit --prod --audit-level=high
+pnpm --dir octaclin-backend audit --prod --audit-level=high
+pnpm security:secrets
+```
+
+Depois do deploy, `/login` deve responder com CSP, HSTS,
+`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` e
+`Permissions-Policy`. Um POST sintetico invalido com origem oficial deve
+alcancar a rota e responder `400`; origem externa ou ausente deve responder
+`403`. Nao usar credenciais nesse smoke.
+
+O audit do Mobile continua gate separado da Fase 241. Expo SDK 52 nao pode ser
+distribuido enquanto seu grafo transitivo mantiver vulnerabilidade critica.
+
 ### Fase 223 - verdade operacional do go-live
 
 Fase exclusivamente documental. Validar sem tocar banco, variaveis ou servicos:

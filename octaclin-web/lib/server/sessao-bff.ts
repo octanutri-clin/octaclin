@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { comEsperaDeColdStart, ehStatusColdStart, metodoIdempotente } from './cold-start-bff';
 import { sessaoPossuiPermissao } from './permissoes-bff';
+import { validarConfiguracaoSegurancaBff } from './seguranca-bff';
 
 const nomes = {
   accessToken: 'octaclin_access_token',
@@ -15,12 +16,15 @@ const nomes = {
   destinoInicial: 'octaclin_destino_inicial'
 };
 
-const cookieBase = {
-  httpOnly: true,
-  sameSite: 'lax' as const,
-  secure: process.env.OCTACLIN_COOKIE_SECURE === 'true',
-  path: '/'
-};
+function obterCookieBase() {
+  const { cookieSecure } = validarConfiguracaoSegurancaBff();
+  return {
+    httpOnly: true,
+    sameSite: 'lax' as const,
+    secure: cookieSecure,
+    path: '/'
+  };
+}
 
 export interface RespostaToken {
   accessToken: string;
@@ -93,6 +97,7 @@ function decodificarJson<T>(valor: string | undefined): T | undefined {
 }
 
 export function normalizarApiUrlBff(apiUrl: string): string {
+  const { origensApiPermitidas } = validarConfiguracaoSegurancaBff();
   let url: URL;
 
   try {
@@ -113,12 +118,7 @@ export function normalizarApiUrlBff(apiUrl: string): string {
     throw new ErroApiUrlInvalida('O campo API deve conter apenas origem e caminho base, sem query string ou hash.');
   }
 
-  const origensPermitidas = (process.env.OCTACLIN_API_ORIGENS_PERMITIDAS ?? '')
-    .split(',')
-    .map((origem) => origem.trim().replace(/\/$/, ''))
-    .filter(Boolean);
-
-  if (origensPermitidas.length && !origensPermitidas.includes(url.origin)) {
+  if (origensApiPermitidas.length && !origensApiPermitidas.includes(url.origin)) {
     throw new ErroApiUrlInvalida('A origem informada no campo API nao esta autorizada para este ambiente.');
   }
 
@@ -133,6 +133,7 @@ export async function salvarSessaoBff(
   const jar = await cookies();
   const maxAge = 60 * 60 * 24 * 30;
   const apiUrlNormalizada = normalizarApiUrlBff(entrada.apiUrl);
+  const cookieBase = obterCookieBase();
   jar.set(nomes.accessToken, resposta.accessToken, { ...cookieBase, maxAge: resposta.expiraEmSegundos });
   jar.set(nomes.refreshToken, resposta.refreshToken, { ...cookieBase, maxAge });
   jar.set(nomes.apiUrl, codificar(apiUrlNormalizada), { ...cookieBase, maxAge });

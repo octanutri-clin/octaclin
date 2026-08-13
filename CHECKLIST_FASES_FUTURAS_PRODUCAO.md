@@ -1,6 +1,7 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-13 com a estabilizacao e reconciliacao da Fase 240.
+Atualizado em 2026-08-13 com a implementacao local da Fase 229, ainda pendente
+de aceite no deploy web.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1552,7 +1553,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     proprietario sem senha definida pelo operador, plano/configuracao inicial,
     suspensao, reativacao, exportacao e encerramento auditavel.
 
-- [ ] Fase 229 - Fechamento de seguranca operacional. [BLOQUEADOR]
+- [~] Fase 229 - Fechamento de seguranca operacional. [BLOQUEADOR]
   - Verificar variaveis ativas de cookie, CORS, JWT/refresh, AES, secrets e
     escopos de integracao sem imprimir valores; registrar somente a evidencia.
   - Rodar revisao de dependencias, secrets e permissoes de ambientes antes da
@@ -1562,6 +1563,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     globais.
   - Revisar destinatarios de notificacoes por classe de evento, especialmente
     `Collaborator`, sem ampliar visao clinica alem das capacidades delegadas.
+  - Implementacao e gates locais aprovados: BFF fail-closed, protecao de
+    origem/Fetch Metadata, seis headers globais, destinatarios por classe,
+    Dependabot e permissao padrao `read` nos workflows. Web/backend passaram no
+    audit; Mobile SDK 52 ficou explicitamente bloqueado pela Fase 241.
+  - Pendente: CI, deploy e smoke HTTP de producao. Evidencia:
+    `fase-229-fechamento-seguranca-operacional.md`.
 
 - [ ] Fase 230 - Aceite WhatsApp de producao. [CONDICIONAL]
   - Necessaria se WhatsApp estiver incluido na oferta inicial: token permanente,
@@ -1784,6 +1791,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     backend e servico de IA.
   - Gate: obrigatoria antes de oferecer IA ou Mobile comercialmente; pode ficar
     adiada se esses modulos permanecerem desativados na oferta inicial.
+  - Achado da Fase 229: Expo SDK 52 carrega `tar@6.2.1` pela CLI com alerta
+    critico e outras dependencias transitivas antigas. Atualizar o SDK de forma
+    incremental e suportada, executar `expo install --fix`, `expo-doctor`,
+    typecheck e audit zerado antes de distribuir qualquer build Mobile.
 
 - [ ] Fase 242 - Observabilidade interna e rollout seguro. [IMPORTANTE]
   - Complementar o monitor externo da Fase 220 com agregacao de erros e traces

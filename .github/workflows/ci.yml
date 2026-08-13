@@ -65,7 +65,9 @@ jobs:
       - run: pnpm install --frozen-lockfile=false
       - run: pnpm lint
       - run: pnpm typecheck
+      - run: pnpm test:seguranca-operacional
       - run: pnpm build
+      - run: pnpm test:seguranca-runtime
 
   mobile:
     name: Mobile Expo

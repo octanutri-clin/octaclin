@@ -40,12 +40,15 @@ function cabecalhoCookie() {
 
 async function requisitar(caminho, init = {}) {
   let resposta;
+  const metodo = (init.method ?? 'GET').toUpperCase();
+  const mutacao = !['GET', 'HEAD', 'OPTIONS'].includes(metodo);
   try {
     resposta = await fetch(url(caminho), {
       ...init,
       signal: init.signal ?? AbortSignal.timeout(60_000),
       headers: {
         ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(mutacao ? { Origin: new URL(configuracao.webUrl).origin, 'Sec-Fetch-Site': 'same-origin' } : {}),
         ...(cookies.size ? { Cookie: cabecalhoCookie() } : {}),
         ...init.headers
       }

@@ -46,9 +46,10 @@ npm run dev
 A rota `/login` solicita apenas email e senha, salva a sessao e redireciona para o destino permitido ao papel.
 A sessao usa cookies `HttpOnly` emitidos pelas rotas BFF do Next.js.
 Quando o access token expira ou a API retorna 401, o BFF tenta renovar a sessao via `POST /auth/renovar`.
-Em producao HTTPS, defina `OCTACLIN_COOKIE_SECURE=true` para marcar os cookies de sessao como `Secure`. Em `localhost` HTTP, mantenha sem essa variavel.
+Em producao HTTPS, `OCTACLIN_COOKIE_SECURE=true` e obrigatorio; o BFF falha fechado se cookies `Secure` ou a allowlist da API estiverem ausentes. Em `localhost` HTTP, use `false`.
 O BFF resolve `OCTACLIN_BACKEND_URL` e `OCTACLIN_TENANT_SLUG` no servidor; esses valores nao sao solicitados ao usuario.
 Defina `OCTACLIN_API_ORIGENS_PERMITIDAS` com a origem do backend autorizada para o ambiente.
+Quando a URL publica difere do host interno do proxy, defina `OCTACLIN_WEB_ORIGENS_PERMITIDAS` com as origens HTTPS da propria web. Mutacoes `/api` sem `Origin` same-origin sao recusadas.
 
 Credenciais do seed demo:
 

@@ -40,7 +40,7 @@ export async function registrarNotificacao(
     where: { tenantId, ativo: true }
   });
 
-  const destinatarios = destinatariosDaNotificacao(usuarios, usuarioIdResponsavel);
+  const destinatarios = destinatariosDaNotificacao(usuarios, usuarioIdResponsavel, evento.tipo);
   if (!destinatarios.length) return 0;
 
   // `orIgnore` casa com o indice unico (tenant, usuario, tipo, recurso): webhook

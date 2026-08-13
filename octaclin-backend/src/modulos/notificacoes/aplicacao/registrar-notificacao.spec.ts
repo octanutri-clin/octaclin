@@ -68,6 +68,25 @@ describe('registrarNotificacao', () => {
     expect(linhas.every((linha) => linha.tenantId === 'tenant-1')).toBe(true);
   });
 
+  it('mantem resposta clinica fora do sino do colaborador', async () => {
+    const { gerenciador, linhas } = criarGerenciador({
+      usuarios: [
+        { id: 'usuario-admin', role: 'SuperAdmin' },
+        { id: 'usuario-colab', role: 'Collaborator' },
+        { id: 'usuario-ana', role: 'Professional' }
+      ],
+      usuarioDoProfissional: 'usuario-ana'
+    });
+
+    await registrarNotificacao(gerenciador, 'tenant-1', {
+      ...evento,
+      tipo: 'formulario_respondido',
+      profissionalId: 'profissional-ana'
+    });
+
+    expect(linhas.map((linha) => linha.usuarioId)).toEqual(['usuario-admin', 'usuario-ana']);
+  });
+
   it('deriva o profissional responsavel a partir do paciente do evento', async () => {
     const { gerenciador, linhas, repositorioPacientes } = criarGerenciador({
       usuarios: [{ id: 'usuario-ana', role: 'Professional' }],

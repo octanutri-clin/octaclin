@@ -1,15 +1,16 @@
 import type { PapelUsuario } from '../../auth/dominio/usuario-autenticado';
+import type { TipoNotificacao } from './tipo-notificacao';
 
 export interface UsuarioDestinavel {
   id: string;
   role: PapelUsuario;
 }
 
-/**
- * Papeis que operam o console com visao de toda a casa (`tenant_total` e
- * `operacional_delegado`): recebem qualquer evento do tenant.
- */
-const PAPEIS_VISAO_TOTAL: readonly PapelUsuario[] = ['SuperAdmin', 'Collaborator'];
+const TIPOS_OPERACIONAIS_COLABORADOR: readonly TipoNotificacao[] = [
+  'mensagem_recebida',
+  'solicitacao_agendamento',
+  'falha_envio'
+];
 
 /**
  * Quem recebe o evento.
@@ -21,10 +22,15 @@ const PAPEIS_VISAO_TOTAL: readonly PapelUsuario[] = ['SuperAdmin', 'Collaborator
  */
 export function destinatariosDaNotificacao(
   usuarios: readonly UsuarioDestinavel[],
-  usuarioIdResponsavel: string | undefined
+  usuarioIdResponsavel: string | undefined,
+  tipo: TipoNotificacao
 ): string[] {
   const ids = usuarios
-    .filter((usuario) => PAPEIS_VISAO_TOTAL.includes(usuario.role))
+    .filter(
+      (usuario) =>
+        usuario.role === 'SuperAdmin' ||
+        (usuario.role === 'Collaborator' && TIPOS_OPERACIONAIS_COLABORADOR.includes(tipo))
+    )
     .map((usuario) => usuario.id);
 
   const responsavel = usuarios.find(

@@ -98,7 +98,14 @@ como redirect URI autorizado do cliente OAuth de producao.
 | `OCTACLIN_BACKEND_URL` | Sim | Backend usado pelo BFF antes e depois do login | Render/web | Login e recuperacao respondem |
 | `OCTACLIN_TENANT_SLUG` | Sim em producao | Organizacao atendida pelo frontend | Render/web | Login resolve o tenant sem campo tecnico |
 | `OCTACLIN_API_ORIGENS_PERMITIDAS` | Sim em producao | Allowlist da origem do backend | Render/web | BFF aceita apenas backend correto |
+| `OCTACLIN_WEB_ORIGENS_PERMITIDAS` | Recomendada com proxy/dominio | Origens HTTPS oficiais aceitas nas mutacoes BFF, separadas por virgula | Render/web | Origem oficial passa; origem externa recebe `403` |
 | `NEXT_PUBLIC_*` | Evitar secrets | Variaveis publicas do Next | Render/web | Inspecionar bundle se necessario |
+
+Na Fase 229, o BFF passou a falhar fechado em producao sem cookie `Secure` e
+allowlist da API. Mutacoes tambem exigem `Origin`; navegadores modernos devem
+informar `Sec-Fetch-Site: same-origin`. Configure
+`OCTACLIN_WEB_ORIGENS_PERMITIDAS` no build e runtime quando proxy, URL interna
+ou dominio customizado puderem divergir da origem publica.
 
 ## Armazenamento de anexos
 

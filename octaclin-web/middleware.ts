@@ -4,6 +4,7 @@ import {
   resolverDestinoPermitido,
   sanitizarDestinoInicial
 } from './lib/server/autorizacao-rotas';
+import { origemMutacaoPermitida } from './lib/server/seguranca-bff';
 
 const COOKIE_ACCESS_TOKEN = 'octaclin_access_token';
 const COOKIE_REFRESH_TOKEN = 'octaclin_refresh_token';
@@ -69,6 +70,13 @@ export function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.delete('x-middleware-subrequest');
 
+  if ((pathname === '/api' || pathname.startsWith('/api/')) && !origemMutacaoPermitida(request)) {
+    return NextResponse.json(
+      { mensagem: 'Origem da requisicao nao autorizada.' },
+      { status: 403, headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
+
   const rotaProtegida = ROTAS_PROTEGIDAS.some((rota) => pathname === rota || pathname.startsWith(`${rota}/`));
 
   if (rotaProtegida && !autenticado) {
@@ -97,6 +105,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/api/:path*',
     '/login',
     '/dashboard/:path*',
     '/agenda/:path*',
