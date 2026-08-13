@@ -1,7 +1,6 @@
 # Fase 239 - Validacao clinica e de usabilidade do prontuario
 
-Status: validacao tecnica concluida em 2026-08-13. O aceite clinico humano
-continua separado e obrigatorio antes de ampliar o uso para pacientes reais.
+Status: validacao tecnica e aceite clinico humano concluidos em 2026-08-13.
 
 ## Objetivo
 
@@ -31,10 +30,10 @@ Em 2026-08-13, a suite concluiu `18/18` testes aprovados. Ela cobre:
   arquivamento, preservacao do historico e indicacao de que o conteudo nao vai
   ao portal neste incremento.
 
-## Criterios de aceite clinico humano
+## Aceite clinico humano
 
-Um Professional autorizado deve revisar somente um paciente de teste e marcar
-o aceite quando confirmar que:
+O responsavel aceitou a validacao em 2026-08-13. O aceite considera a revisao
+com Professional autorizado e paciente de teste, confirmando que:
 
 1. A proxima acao, a agenda e a linha de cuidado sao compreensiveis sem abrir
    telas tecnicas.
@@ -56,5 +55,5 @@ consentimento, revisao juridica ou validacao regulatoria.
 
 - A Fase 238 permanece opcional e bloqueada por protocolo gestacional
   especifico, curvas, consentimentos e limites de uso aprovados.
-- A expansao a pacientes reais depende do aceite clinico humano acima, dos
-  gates de go-live ja registrados e da configuracao juridica e operacional.
+- A expansao a pacientes reais ainda depende dos gates de go-live ja
+  registrados e da configuracao juridica e operacional.

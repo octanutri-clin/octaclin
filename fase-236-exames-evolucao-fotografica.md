@@ -1,8 +1,9 @@
 # Fase 236 - Exames laboratoriais e evolucao fotografica
 
-Status: em execucao. Fase clinica posterior ao piloto assistido, orientada a
-registro e acompanhamento. Ela nao interpreta resultados, nao gera diagnostico
-e nao substitui a avaliacao profissional.
+Status: entregue e com aceite operacional sintetico em 2026-08-13. Fase clinica
+posterior ao piloto assistido, orientada a registro e acompanhamento. Ela nao
+interpreta resultados, nao gera diagnostico e nao substitui a avaliacao
+profissional.
 
 ## Objetivo
 
@@ -243,9 +244,9 @@ Validacoes: teste unitario de remocao de objeto/vinculos/serie,
 `pnpm --dir octaclin-web test:consentimentos-fotograficos:bff`, typecheck,
 lint, builds de backend/frontend e `git diff --check`.
 
-Aceite operacional pendente: usar uma conta e paciente sinteticos para registrar
-consentimento, enviar uma imagem de teste e confirmar abertura por URL temporaria.
-Nao criar registros clinicos reais somente para validar o fluxo.
+Aceite operacional concluido em 2026-08-13 pelo responsavel: o fluxo foi
+validado com conta e paciente sinteticos, sem usar registro clinico real. O
+portal continua sem fotos e sem URL publica persistente.
 - Um marcador pertence a uma coleta e carrega nome, resultado, unidade, faixa de
   referencia e metodo como payload cifrado. Valores nao sao normalizados nem
   comparados automaticamente enquanto nao houver protocolo clinico aprovado.

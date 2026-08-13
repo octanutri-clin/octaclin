@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-13 com a validacao tecnica da Fase 239.
+Atualizado em 2026-08-13 com os aceites das Fases 236 e 239.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -586,7 +586,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   antecipado, demonstracao sintetica, bloqueio suave apos aviso de 30 dias,
   migracao por escopo, WhatsApp fora da oferta e suporte reforcado por 48 horas
   foram aceitos. Ver `fase-224-oferta-comercial-ativacao-assistida.md`.
-- Fase 236 (incrementos em andamento) - Exames laboratoriais e evolucao
+- Fase 236 (aceita operacionalmente) - Exames laboratoriais e evolucao
   fotografica: a fundacao de coletas, marcadores, consentimentos e series
   fotograficas usa valores clinicos cifrados, RLS forcada e isolamento por
   tenant. Em 2026-08-12, a migration `1024` foi aplicada em staging e no banco
@@ -606,8 +606,8 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   profissional agora seleciona protocolos padronizados ou cria uma categoria
   personalizada. Tambem pode excluir uma serie com confirmacao, removendo o
   objeto privado, upload, vinculos e serie; permanece somente auditoria tecnica
-  sem conteudo clinico. O aceite operacional com conta e imagem sinteticas
-  ainda e pendente. Ver
+  sem conteudo clinico. O aceite operacional sintetico foi concedido pelo
+  responsavel em 2026-08-13; o portal segue sem fotos. Ver
   `fase-236-exames-evolucao-fotografica.md`.
 - Fase 237 (Incremento 1 aceito em producao) - Condutas terapeuticas versionadas: o
   prontuario profissional agora tem rascunho, edicao, publicacao, nova versao
@@ -621,12 +621,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   conteudo sintetico confirmou rascunho, publicacao, versao 2 e arquivamento;
   as duas versoes foram preservadas e condutas seguem ausentes do portal. Ver
   `fase-237-condutas-terapeuticas-versionadas.md`.
-- Fase 239 (validacao tecnica) - Prontuario: a regressao sintetica do
+- Fase 239 (aceita clinicamente) - Prontuario: a regressao sintetica do
   prontuario passou `18/18` em desktop e mobile. O gate cobre navegacao por
   areas e teclado, linha de cuidado e historico, evolucoes, tarefas,
   documentos, materiais, anexos e condutas versionadas sem exposicao ao portal.
-  O aceite clinico humano segue explicitamente pendente antes de ampliar o uso
-  para pacientes reais. Ver `fase-239-validacao-clinica-usabilidade-prontuario.md`.
+  O aceite clinico humano foi concedido pelo responsavel em 2026-08-13; os
+  demais gates de go-live continuam obrigatorios. Ver
+  `fase-239-validacao-clinica-usabilidade-prontuario.md`.
 
 ## Estado atual de uso
 

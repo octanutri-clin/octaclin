@@ -1644,7 +1644,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     internos; desktop/mobile passam as jornadas e a acessibilidade.
   - Especificacao: `fase-235-prontuario-clinico-integrado.md`.
 
-- [~] Fase 236 - Exames laboratoriais e evolucao fotografica. [IMPORTANTE - POS PILOTO]
+- [x] Fase 236 - Exames laboratoriais e evolucao fotografica. [IMPORTANTE - POS PILOTO]
   - Fundacao definida: exames por coleta/marcador e fotos por protocolo usam
     anexos privados, RLS forcada, auditoria, consentimento separado e retencao
     documentada; nao ha diagnostico automatico nem acesso pelo portal.
@@ -1697,8 +1697,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Validacoes do Incremento 10: teste unitario de exclusao privada, gate BFF
     de sessao/encaminhamento, typecheck, lint e builds de backend/frontend
     aprovados localmente. Nao exige migration.
-  - Pendente de aceite operacional: exercitar em producao uma imagem sintetica
-    com conta de teste, sem expor foto no portal nem criar URL permanente.
+  - Aceite operacional sintetico concluido em 2026-08-13 pelo responsavel. O
+    portal segue sem fotos e nao ha URL publica persistente.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
 - [~] Fase 237 - Condutas terapeuticas versionadas. [IMPORTANTE - POS PILOTO]
@@ -1728,14 +1728,15 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Criar somente apos protocolo, consentimentos, curvas e limites de uso serem
     validados pelo responsavel clinico; nao reutilizar regras genericas.
 
-- [~] Fase 239 - Validacao clinica e de usabilidade do prontuario. [IMPORTANTE - POS PILOTO]
+- [x] Fase 239 - Validacao clinica e de usabilidade do prontuario. [IMPORTANTE - POS PILOTO]
   - Validacao tecnica concluida em 2026-08-13: `test:prontuario:validacao`
     aprovou `18/18` jornadas sinteticas em desktop e mobile, incluindo abas,
     teclado, overflow, evolucao, tarefas, documentos, materiais, anexos e a
     jornada versionada de condutas terapeuticas.
-  - Pendente somente aceite clinico humano, com Professional autorizado e
-    paciente sintetico, antes de ampliar a superficie clinica para pacientes
-    reais. Nao inserir dados clinicos, imagens, anexos ou comunicacoes reais.
+  - Aceite clinico humano concedido pelo responsavel em 2026-08-13, com
+    Professional autorizado e paciente sintetico. Os gates de go-live e a
+    configuracao juridica e operacional continuam obrigatorios para pacientes
+    reais.
   - Especificacao: `fase-239-validacao-clinica-usabilidade-prontuario.md`.
 
 ## Backlog pos-producao
