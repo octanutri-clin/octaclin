@@ -136,13 +136,24 @@ jobs:
             -e MINIO_ROOT_USER="$ARMAZENAMENTO_S3_ACCESS_KEY_ID" \
             -e MINIO_ROOT_PASSWORD="$ARMAZENAMENTO_S3_SECRET_ACCESS_KEY" \
             minio/minio server /data
+          minio_pronto=0
           for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/tmp/octaclin-minio-health; then
+              minio_pronto=1
+              break
+            fi
             sleep 1
           done
-          docker run --rm --network host minio/mc alias set local \
-            http://127.0.0.1:9000 "$ARMAZENAMENTO_S3_ACCESS_KEY_ID" "$ARMAZENAMENTO_S3_SECRET_ACCESS_KEY"
-          docker run --rm --network host minio/mc mb --ignore-existing "local/$ARMAZENAMENTO_BUCKET_MIDIA"
+          test "$minio_pronto" = "1"
+          docker run --rm --network host --entrypoint /bin/sh \
+            -e ARMAZENAMENTO_S3_ACCESS_KEY_ID \
+            -e ARMAZENAMENTO_S3_SECRET_ACCESS_KEY \
+            -e ARMAZENAMENTO_BUCKET_MIDIA \
+            minio/mc -c '
+              mc alias set local http://127.0.0.1:9000 \
+                "$ARMAZENAMENTO_S3_ACCESS_KEY_ID" "$ARMAZENAMENTO_S3_SECRET_ACCESS_KEY" &&
+              mc mb --ignore-existing "local/$ARMAZENAMENTO_BUCKET_MIDIA"
+            '
 
       - name: Build backend
         working-directory: octaclin-backend
@@ -181,7 +192,10 @@ jobs:
         if: always() && steps.neon.outputs.branch_id != ''
         working-directory: octaclin-backend
         shell: bash
-        run: DATABASE_URL="$E2E_DATABASE_OWNER_URL" pnpm run typeorm -- migration:show
+        run: >-
+          DATABASE_URL="$E2E_DATABASE_OWNER_URL"
+          pnpm exec typeorm-ts-node-commonjs migration:show
+          -d src/infraestrutura/banco-dados/fonte-dados.ts
 
       - name: Publicar evidencias sem credenciais
         if: always()
