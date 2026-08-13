@@ -6,19 +6,21 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { ServicoProtecaoAbuso } from '../../auth/aplicacao/servico-protecao-abuso';
 import { AnalisarSentimentoDto, ReconhecerAlimentoDto, RevisarSugestaoIaDto } from '../aplicacao/dtos';
 import { ServicoIa } from '../aplicacao/servico-ia';
 import { FeatureFlag, GuardaFeatureFlag } from '../../../infraestrutura/feature-flags/guarda-feature-flag';
 
 @Controller('ia')
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes, GuardaFeatureFlag)
-@Papeis('SuperAdmin', 'Professional', 'Collaborator')
+@Papeis('SuperAdmin', 'Professional')
 @Permissoes('ia.executar')
 @FeatureFlag('ia.clinica')
 export class ControladorIa {
   constructor(
     private readonly servicoIa: ServicoIa,
-    private readonly servicoAuditoria: ServicoAuditoria
+    private readonly servicoAuditoria: ServicoAuditoria,
+    private readonly protecaoAbuso: ServicoProtecaoAbuso
   ) {}
 
   @Get('sentimento')
@@ -32,6 +34,7 @@ export class ControladorIa {
     @Req() requisicao: Request,
     @Body() dados: AnalisarSentimentoDto
   ) {
+    await this.consumirLimite(usuario, 'sentimento', 30);
     const analise = await this.servicoIa.analisarSentimento(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'ia.sentimento.analisar', 'analise_sentimento', analise.id, {
       pacienteId: dados.pacienteId,
@@ -53,6 +56,7 @@ export class ControladorIa {
     @Req() requisicao: Request,
     @Body() dados: ReconhecerAlimentoDto
   ) {
+    await this.consumirLimite(usuario, 'reconhecimento', 20);
     const reconhecimento = await this.servicoIa.reconhecerAlimento(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'ia.reconhecimento_alimentar.criar', 'reconhecimento_alimentar', reconhecimento.id, {
       pacienteId: dados.pacienteId,
@@ -112,6 +116,15 @@ export class ControladorIa {
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
       metadados
+    });
+  }
+
+  private consumirLimite(usuario: UsuarioAutenticado, operacao: string, maxTentativas: number) {
+    return this.protecaoAbuso.consumirTentativa(`ia:${operacao}:${usuario.tenantId}:${usuario.usuarioId}`, {
+      maxTentativas,
+      janelaMs: 15 * 60 * 1000,
+      bloqueioMs: 15 * 60 * 1000,
+      mensagemBloqueio: 'Muitas solicitacoes de IA em pouco tempo. Tente novamente em alguns minutos.'
     });
   }
 

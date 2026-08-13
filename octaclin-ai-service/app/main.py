@@ -1,14 +1,15 @@
-from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from fastapi import Depends, FastAPI, Header, HTTPException, status
+from pydantic import AnyHttpUrl, BaseModel, Field
 from typing import Any
-import hashlib
+import hmac
+import os
 import re
 
 app = FastAPI(title="OctaClin AI Service", version="0.1.0")
 
 
 class RequisicaoSentimento(BaseModel):
-    texto: str = Field(min_length=1)
+    texto: str = Field(min_length=1, max_length=5000)
     contexto: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -21,8 +22,8 @@ class RespostaSentimento(BaseModel):
 
 
 class RequisicaoReconhecimentoAlimentar(BaseModel):
-    imagem_url: str | None = None
-    imagem_base64: str | None = None
+    imagem_url: AnyHttpUrl
+    imagem_hash: str = Field(pattern=r"^[a-fA-F0-9]{64}$")
     contexto: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -42,6 +43,21 @@ PALAVRAS_MOTIVACAO = {"consegui", "melhor", "motivado", "motivada", "orgulho", "
 PALAVRAS_CONFUSAO = {"confuso", "confusa", "duvida", "nao entendi", "incerto", "incerta"}
 
 
+def autenticar_servico(authorization: str | None = Header(default=None)) -> None:
+    token_esperado = os.environ.get("IA_SERVICE_TOKEN", "").strip()
+    if len(token_esperado) < 32:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Servico de IA nao configurado.",
+        )
+    esquema, _, token_recebido = (authorization or "").partition(" ")
+    if esquema.lower() != "bearer" or not hmac.compare_digest(token_recebido, token_esperado):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credencial de servico invalida.",
+        )
+
+
 def pontuar(texto: str, palavras: set[str]) -> float:
     normalizado = texto.lower()
     ocorrencias = sum(1 for palavra in palavras if palavra in normalizado)
@@ -57,7 +73,10 @@ def health() -> dict[str, str]:
 
 
 @app.post("/analisar-sentimento", response_model=RespostaSentimento)
-def analisar_sentimento(requisicao: RequisicaoSentimento) -> RespostaSentimento:
+def analisar_sentimento(
+    requisicao: RequisicaoSentimento,
+    _: None = Depends(autenticar_servico),
+) -> RespostaSentimento:
     texto = requisicao.texto.strip()
     ansiedade = pontuar(texto, PALAVRAS_ANSIEDADE)
     frustracao = pontuar(texto, PALAVRAS_FRUSTRACAO)
@@ -86,10 +105,15 @@ def analisar_sentimento(requisicao: RequisicaoSentimento) -> RespostaSentimento:
 
 
 @app.post("/reconhecer-alimento", response_model=RespostaReconhecimentoAlimentar)
-def reconhecer_alimento(requisicao: RequisicaoReconhecimentoAlimentar) -> RespostaReconhecimentoAlimentar:
-    referencia = requisicao.imagem_base64 or requisicao.imagem_url or "sem-imagem"
-    imagem_hash = hashlib.sha256(referencia.encode("utf-8")).hexdigest()
-    descricao = str(requisicao.contexto.get("descricao", "")).lower()
+def reconhecer_alimento(
+    requisicao: RequisicaoReconhecimentoAlimentar,
+    _: None = Depends(autenticar_servico),
+) -> RespostaReconhecimentoAlimentar:
+    descricao = str(
+        requisicao.contexto.get("descricao")
+        or requisicao.contexto.get("observacao")
+        or ""
+    ).lower()
 
     alimentos: list[dict[str, Any]]
     if "salada" in descricao:
@@ -107,11 +131,11 @@ def reconhecer_alimento(requisicao: RequisicaoReconhecimentoAlimentar) -> Respos
 
     return RespostaReconhecimentoAlimentar(
         provedor="heuristica-local",
-        imagem_hash=imagem_hash,
+        imagem_hash=requisicao.imagem_hash.lower(),
         alimentos_detectados=alimentos,
         peso_estimado_gramas=350.0,
         calorias_estimadas=calorias,
-        confianca_media=round(confianca, 2),
+        confianca_media=round(confianca * 100, 2),
         limitacoes=[
             "Estimativa visual dependente da qualidade e do enquadramento da imagem.",
             "Porcao, ingredientes e modo de preparo precisam de confirmacao profissional.",

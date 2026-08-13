@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Brain, Check, CheckCircle2, FileHeart, Image as ImageIcon, MessageSquare, Pencil, RefreshCcw, ScanSearch, Sparkles, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
-import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
+import { AreaTexto, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import {
   AnaliseSentimentoApi,
@@ -17,6 +17,7 @@ import {
   revisarSugestaoIa
 } from '@/lib/ia-api';
 import { PacienteResumo, RespostaPaginada } from '@/lib/cadastros-api';
+import { ArquivoMidiaApi, listarArquivosMidia } from '@/lib/mobile-api';
 
 interface FormularioSentimento {
   pacienteId: string;
@@ -27,7 +28,6 @@ interface FormularioSentimento {
 interface FormularioAlimento {
   pacienteId: string;
   arquivoMidiaId: string;
-  imagemUrl: string;
   observacao: string;
 }
 
@@ -39,8 +39,7 @@ const sentimentoInicial: FormularioSentimento = {
 
 const alimentoInicial: FormularioAlimento = {
   pacienteId: '',
-  arquivoMidiaId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab',
-  imagemUrl: 'https://example.com/prato-demo.jpg',
+  arquivoMidiaId: '',
   observacao: 'Prato principal enviado pelo paciente.'
 };
 
@@ -79,9 +78,11 @@ export function PainelIa() {
   const [alimento, setAlimento] = useState<FormularioAlimento>(alimentoInicial);
   const [analises, setAnalises] = useState<AnaliseSentimentoApi[]>([]);
   const [reconhecimentos, setReconhecimentos] = useState<ReconhecimentoAlimentarApi[]>([]);
+  const [imagens, setImagens] = useState<ArquivoMidiaApi[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
+  const [carregandoImagens, setCarregandoImagens] = useState(false);
   const [processando, setProcessando] = useState(false);
   const [revisandoId, setRevisandoId] = useState<string | null>(null);
   const [observacoes, setObservacoes] = useState<Record<string, string>>({});
@@ -133,7 +134,6 @@ export function PainelIa() {
       const resultado = await reconhecerAlimento({
         pacienteId: alimento.pacienteId,
         arquivoMidiaId: alimento.arquivoMidiaId,
-        imagemUrl: alimento.imagemUrl || undefined,
         contexto: { observacao: alimento.observacao }
       });
       setReconhecimentos((atuais) => [resultado, ...atuais].slice(0, 6));
@@ -186,6 +186,37 @@ export function PainelIa() {
   useEffect(() => {
     void carregar();
   }, []);
+
+  useEffect(() => {
+    let ativo = true;
+    if (!alimento.pacienteId) {
+      setImagens([]);
+      return () => { ativo = false; };
+    }
+    setCarregandoImagens(true);
+    void listarArquivosMidia(alimento.pacienteId)
+      .then((arquivos) => {
+        if (!ativo) return;
+        const confirmadas = arquivos.filter((arquivo) => arquivo.tipo === 'imagem' && arquivo.status === 'confirmado');
+        setImagens(confirmadas);
+        setAlimento((atual) => ({
+          ...atual,
+          arquivoMidiaId: confirmadas.some((arquivo) => arquivo.id === atual.arquivoMidiaId)
+            ? atual.arquivoMidiaId
+            : confirmadas[0]?.id ?? ''
+        }));
+      })
+      .catch((erroAtual) => {
+        if (ativo) {
+          setImagens([]);
+          setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar imagens clinicas.');
+        }
+      })
+      .finally(() => {
+        if (ativo) setCarregandoImagens(false);
+      });
+    return () => { ativo = false; };
+  }, [alimento.pacienteId]);
 
   return (
     <section className="grid gap-4">
@@ -284,7 +315,11 @@ export function PainelIa() {
               <Selecao
                 id="ia-alimento-paciente"
                 value={alimento.pacienteId}
-                onChange={(evento) => setAlimento((atual) => ({ ...atual, pacienteId: evento.target.value }))}
+                onChange={(evento) => setAlimento((atual) => ({
+                  ...atual,
+                  pacienteId: evento.target.value,
+                  arquivoMidiaId: ''
+                }))}
                 required
               >
                 <option value="" disabled>
@@ -299,20 +334,27 @@ export function PainelIa() {
             </div>
             <div className="space-y-1.5">
               <Rotulo htmlFor="ia-alimento-arquivo">Arquivo midia</Rotulo>
-              <Campo
+              <Selecao
                 id="ia-alimento-arquivo"
                 value={alimento.arquivoMidiaId}
                 onChange={(evento) => setAlimento((atual) => ({ ...atual, arquivoMidiaId: evento.target.value }))}
                 required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Rotulo htmlFor="ia-alimento-url">Imagem URL</Rotulo>
-              <Campo
-                id="ia-alimento-url"
-                value={alimento.imagemUrl}
-                onChange={(evento) => setAlimento((atual) => ({ ...atual, imagemUrl: evento.target.value }))}
-              />
+                disabled={carregandoImagens || imagens.length === 0}
+              >
+                <option value="" disabled>
+                  {carregandoImagens ? 'Carregando imagens' : 'Selecione uma imagem confirmada'}
+                </option>
+                {imagens.map((imagem) => (
+                  <option key={imagem.id} value={imagem.id}>
+                    {imagem.nomeArquivo || `Imagem de ${new Date(imagem.criadoEm).toLocaleDateString('pt-BR')}`}
+                  </option>
+                ))}
+              </Selecao>
+              {!carregandoImagens && alimento.pacienteId && imagens.length === 0 ? (
+                <p className="text-xs text-texto-suave">
+                  Nenhuma imagem confirmada. Envie uma foto no prontuario do paciente antes de solicitar a analise.
+                </p>
+              ) : null}
             </div>
             <div className="space-y-1.5">
               <Rotulo htmlFor="ia-alimento-observacao">Observacao</Rotulo>
@@ -324,7 +366,7 @@ export function PainelIa() {
             </div>
           </div>
           <div className="mt-3 flex justify-end">
-            <Botao type="submit" variante="primario" disabled={processando || !alimento.pacienteId}>
+            <Botao type="submit" variante="primario" disabled={processando || !alimento.pacienteId || !alimento.arquivoMidiaId}>
               <ScanSearch size={16} />
               Reconhecer
             </Botao>

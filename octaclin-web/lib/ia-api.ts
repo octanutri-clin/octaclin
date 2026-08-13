@@ -54,8 +54,6 @@ export interface AnalisarSentimentoEntrada {
 export interface ReconhecerAlimentoEntrada {
   pacienteId: string;
   arquivoMidiaId: string;
-  imagemUrl?: string;
-  imagemBase64?: string;
   contexto?: Record<string, unknown>;
 }
 

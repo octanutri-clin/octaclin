@@ -696,6 +696,23 @@ A telemetria e limitada e local a cada processo; reiniciar o backend zera a
 amostra. Nao escalar para multiplas instancias ate adotar agregacao externa ou
 distribuida que preserve os mesmos limites de privacidade.
 
+### Ativacao controlada da IA clinica
+
+1. Criar um segredo aleatorio dedicado, com pelo menos 32 caracteres.
+2. Configurar `IA_SERVICE_TOKEN` com o mesmo valor no backend e no servico IA;
+   configurar `IA_SERVICE_URL` somente no backend e manter o timeout padrao.
+3. Confirmar `/health` publico no servico IA e confirmar que um POST sem token
+   retorna `401`, sem corpo clinico nos logs.
+4. Manter `ia.clinica` desabilitada e validar com dados sinteticos: profissional
+   proprio, SuperAdmin, midia confirmada, cache concorrente e revisao humana.
+5. Habilitar a flag somente no tenant piloto, observar o painel Rollout e
+   desabilitar imediatamente em caso de 5xx, timeout, fila degradada ou resposta
+   de contrato invalida.
+
+`Collaborator` nao acessa IA clinica. O reconhecimento aceita somente arquivo
+privado confirmado e vinculado ao mesmo tenant/paciente; o backend gera a URL
+assinada. Nunca inserir URL assinada, hash de arquivo ou texto clinico em logs.
+
 ## Incidentes
 
 Para atendimento operacional detalhado de login, convites, recuperacao de senha, WhatsApp, email e agenda, use `RUNBOOK_SUPORTE.md`. As secoes abaixo sao apenas o resumo de resposta rapida.

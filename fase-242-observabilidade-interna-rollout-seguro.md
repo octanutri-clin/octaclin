@@ -2,6 +2,8 @@
 
 Status: concluida em 2026-08-13.
 
+Integracao: PR `#39`, merge `32559bd` e CI `31747184400` aprovados.
+
 ## Objetivo
 
 Complementar o monitor externo da Fase 220 com sinais internos sanitizados,
@@ -66,6 +68,8 @@ locais manualmente nao e um contrato de observabilidade.
 - avaliador: `pnpm test:rollout`;
 - verificacao de artefato: `dist/main.js` aprovado;
 - migration: nao aplicavel.
+- remoto: PR `#39` integrada; CI `31747184400` aprovou backend, web,
+  Mobile, IA, rollout, operacao e o smoke completo com 162 testes visuais.
 
 ## Operacao
 
