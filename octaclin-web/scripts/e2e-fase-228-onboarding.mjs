@@ -110,18 +110,14 @@ async function executar() {
     planoId: 'clinica',
     timezone: 'America/Sao_Paulo'
   };
-  const tenant = await bff('/api/operacoes/tenants', {
-    method: 'POST',
-    status: 201,
-    body: JSON.stringify(dadosProvisionamento)
-  });
-  assert(tenant?.id && tenant?.reutilizado === false, 'Primeiro provisionamento nao criou tenant novo.');
-  const repeticao = await bff('/api/operacoes/tenants', {
-    method: 'POST',
-    status: 201,
-    body: JSON.stringify(dadosProvisionamento)
-  });
-  assert(repeticao?.id === tenant.id && repeticao?.reutilizado === true, 'Provisionamento idempotente duplicou ou mudou tenant.');
+  const [primeiro, segundo] = await Promise.all([
+    bff('/api/operacoes/tenants', { method: 'POST', status: 201, body: JSON.stringify(dadosProvisionamento) }),
+    bff('/api/operacoes/tenants', { method: 'POST', status: 201, body: JSON.stringify(dadosProvisionamento) })
+  ]);
+  const tenant = primeiro.reutilizado ? segundo : primeiro;
+  const repeticao = primeiro.reutilizado ? primeiro : segundo;
+  assert(tenant?.id && tenant?.reutilizado === false, 'Provisionamento concorrente nao criou tenant novo.');
+  assert(repeticao?.id === tenant.id && repeticao?.reutilizado === true, 'Provisionamento concorrente duplicou ou mudou tenant.');
 
   const tokenOwnerConvite = tokenDoLink(tenant.convite?.linkPrimeiroAcesso, 'Convite do proprietario');
   await api('/auth/redefinir-senha', { method: 'POST', body: JSON.stringify({ token: tokenOwnerConvite, senha: senhaOwner }) });

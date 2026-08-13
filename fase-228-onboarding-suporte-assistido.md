@@ -58,7 +58,8 @@ dois indices foram confirmados por leitura de schema.
 
 O workflow manual de staging agora tambem:
 
-1. provisiona uma clinica sintetica duas vezes e comprova idempotencia;
+1. provisiona uma clinica sintetica em duas requisicoes concorrentes e comprova
+   idempotencia;
 2. ativa o proprietario com senha propria e valida o papel `Client`;
 3. convida e ativa um profissional e valida seu escopo;
 4. cadastra e ativa um paciente com aceites legais;

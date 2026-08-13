@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { resolverTransicaoCicloVidaTenant } from './servico-ciclo-vida-tenant';
+import { QueryFailedError } from 'typeorm';
+import { ehViolacaoUnicidadePostgres, resolverTransicaoCicloVidaTenant } from './servico-ciclo-vida-tenant';
 
 describe('resolverTransicaoCicloVidaTenant', () => {
   it.each([
@@ -44,5 +45,15 @@ describe('resolverTransicaoCicloVidaTenant', () => {
 
   it('deve ser idempotente quando o estado de destino ja foi atingido', () => {
     expect(resolverTransicaoCicloVidaTenant('suspenso', { acao: 'suspender' })).toBe('suspenso');
+  });
+});
+
+describe('ehViolacaoUnicidadePostgres', () => {
+  it('deve reconhecer somente o codigo 23505 do driver Postgres', () => {
+    const duplicidade = new QueryFailedError('insert', [], Object.assign(new Error('duplicate'), { code: '23505' }));
+    const outroErro = new QueryFailedError('insert', [], Object.assign(new Error('fk'), { code: '23503' }));
+    expect(ehViolacaoUnicidadePostgres(duplicidade)).toBe(true);
+    expect(ehViolacaoUnicidadePostgres(outroErro)).toBe(false);
+    expect(ehViolacaoUnicidadePostgres(new Error('fora do driver'))).toBe(false);
   });
 });

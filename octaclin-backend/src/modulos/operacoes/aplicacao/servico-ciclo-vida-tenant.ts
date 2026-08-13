@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'crypto';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource, EntityManager, QueryFailedError } from 'typeorm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
 import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
@@ -57,6 +57,11 @@ export function resolverTransicaoCicloVidaTenant(
     throw new ConflictException(`Transicao ${dados.acao} indisponivel a partir de ${atual}.`);
   }
   return destino;
+}
+
+export function ehViolacaoUnicidadePostgres(erro: unknown): boolean {
+  if (!(erro instanceof QueryFailedError)) return false;
+  return (erro.driverError as { code?: string } | undefined)?.code === '23505';
 }
 
 export interface TenantOperacionalResumo {
@@ -118,23 +123,25 @@ export class ServicoCicloVidaTenant {
       timezone: dados.timezone?.trim() || 'America/Sao_Paulo'
     };
 
-    const contexto = await this.fonteDados.transaction(async (gerenciador) => {
-      const repositorioTenants = gerenciador.getRepository(TenantOrm);
-      const existente = await repositorioTenants.findOne({
-        where: { provisionamentoReferencia: normalizados.referencia }
-      });
-      if (existente) {
-        if (existente.slug !== normalizados.slug) {
-          throw new ConflictException('A referencia de provisionamento ja pertence a outro tenant.');
+    let contexto: ContextoProvisionamento;
+    try {
+      contexto = await this.fonteDados.transaction(async (gerenciador) => {
+        const repositorioTenants = gerenciador.getRepository(TenantOrm);
+        const existente = await repositorioTenants.findOne({
+          where: { provisionamentoReferencia: normalizados.referencia }
+        });
+        if (existente) {
+          if (existente.slug !== normalizados.slug) {
+            throw new ConflictException('A referencia de provisionamento ja pertence a outro tenant.');
+          }
+          return this.carregarContextoExistente(gerenciador, existente, normalizados.email);
         }
-        return this.carregarContextoExistente(gerenciador, existente, normalizados.email);
-      }
 
-      if (await repositorioTenants.findOne({ where: { slug: normalizados.slug } })) {
-        throw new ConflictException('Ja existe tenant com este slug.');
-      }
+        if (await repositorioTenants.findOne({ where: { slug: normalizados.slug } })) {
+          throw new ConflictException('Ja existe tenant com este slug.');
+        }
 
-      const tenant = await repositorioTenants.save(
+        const tenant = await repositorioTenants.save(
         repositorioTenants.create({
           nome: normalizados.nome,
           slug: normalizados.slug,
@@ -143,12 +150,12 @@ export class ServicoCicloVidaTenant {
           provisionamentoReferencia: normalizados.referencia
         })
       );
-      await this.aplicarContextoTenant(gerenciador, tenant.id);
+        await this.aplicarContextoTenant(gerenciador, tenant.id);
 
-      const plano = resolverPlanoSaas(dados.planoId);
-      const agora = new Date().toISOString();
-      const configuracoes = gerenciador.getRepository(TenantConfiguracaoOrm);
-      await configuracoes.save([
+        const plano = resolverPlanoSaas(dados.planoId);
+        const agora = new Date().toISOString();
+        const configuracoes = gerenciador.getRepository(TenantConfiguracaoOrm);
+        await configuracoes.save([
         configuracoes.create({
           tenantId: tenant.id,
           chave: CHAVE_CONTA_CLIENTE,
@@ -172,11 +179,11 @@ export class ServicoCicloVidaTenant {
             atualizadoEm: agora
           }
         })
-      ]);
+        ]);
 
-      const emailHash = this.criptografia.gerarHashBusca(normalizados.email);
-      const repositorioUsuarios = gerenciador.getRepository(UsuarioOrm);
-      const usuario = await repositorioUsuarios.save(
+        const emailHash = this.criptografia.gerarHashBusca(normalizados.email);
+        const repositorioUsuarios = gerenciador.getRepository(UsuarioOrm);
+        const usuario = await repositorioUsuarios.save(
         repositorioUsuarios.create({
           tenantId: tenant.id,
           emailHash,
@@ -185,12 +192,12 @@ export class ServicoCicloVidaTenant {
           role: 'Client',
           ativo: true
         })
-      );
+        );
 
-      const tokenBruto = `${tenant.id}.${randomBytes(32).toString('base64url')}`;
-      const expiraEm = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      const repositorioTokens = gerenciador.getRepository(TokenRedefinicaoSenhaOrm);
-      const token = await repositorioTokens.save(
+        const tokenBruto = `${tenant.id}.${randomBytes(32).toString('base64url')}`;
+        const expiraEm = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const repositorioTokens = gerenciador.getRepository(TokenRedefinicaoSenhaOrm);
+        const token = await repositorioTokens.save(
         repositorioTokens.create({
           tenantId: tenant.id,
           usuarioId: usuario.id,
@@ -205,10 +212,18 @@ export class ServicoCicloVidaTenant {
             convidadoEm: agora
           }
         })
-      );
+        );
 
-      return { tenant, usuario, token, tokenBruto, emailProprietario: normalizados.email, reutilizado: false };
-    });
+        return { tenant, usuario, token, tokenBruto, emailProprietario: normalizados.email, reutilizado: false };
+      });
+    } catch (erro) {
+      if (!ehViolacaoUnicidadePostgres(erro)) throw erro;
+      contexto = await this.carregarProvisionamentoConcorrente(
+        normalizados.referencia,
+        normalizados.slug,
+        normalizados.email
+      );
+    }
 
     let statusConvite: StatusConviteProprietario = contexto.reutilizado
       ? this.obterStatusConviteExistente(contexto.token)
@@ -316,6 +331,16 @@ export class ServicoCicloVidaTenant {
     });
     if (!tokens[0]) throw new ConflictException('O provisionamento existente nao possui convite rastreavel.');
     return { tenant, usuario, token: tokens[0], emailProprietario: email, reutilizado: true };
+  }
+
+  private carregarProvisionamentoConcorrente(referencia: string, slug: string, email: string) {
+    return this.fonteDados.transaction(async (gerenciador) => {
+      const tenant = await gerenciador.getRepository(TenantOrm).findOne({
+        where: { provisionamentoReferencia: referencia }
+      });
+      if (!tenant || tenant.slug !== slug) throw new ConflictException('Ja existe tenant com este slug ou referencia.');
+      return this.carregarContextoExistente(gerenciador, tenant, email);
+    });
   }
 
   private async obterResumo(tenant: TenantOrm): Promise<TenantOperacionalResumo> {
