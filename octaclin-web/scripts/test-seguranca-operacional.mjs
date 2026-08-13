@@ -40,6 +40,10 @@ executar(process.execPath, [
 
 const nextConfig = readFileSync(join(raiz, 'next.config.mjs'), 'utf8');
 const middleware = readFileSync(join(raiz, 'middleware.ts'), 'utf8');
+const smokesNode = [
+  readFileSync(join(raiz, 'scripts', 'smoke-e2e-bff.mjs'), 'utf8'),
+  readFileSync(join(raiz, 'scripts', 'smoke-ui-regression.mjs'), 'utf8')
+];
 for (const cabecalho of [
   'Content-Security-Policy',
   'Strict-Transport-Security',
@@ -54,6 +58,10 @@ assert.match(nextConfig, /source:\s*['"]\/:path\*['"]/, 'Headers devem cobrir to
 assert.match(nextConfig, /NODE_ENV\s*===\s*['"]development['"]/, 'unsafe-eval deve ficar restrito ao desenvolvimento.');
 assert.match(middleware, /origemMutacaoPermitida\(request\)/, 'Middleware deve validar a origem das mutacoes.');
 assert.match(middleware, /['"]\/api\/:path\*['"]/, 'Middleware deve cobrir todas as rotas BFF.');
+for (const smoke of smokesNode) {
+  assert.match(smoke, /Sec-Fetch-Site['"]?:\s*['"]same-origin['"]/, 'Smoke Node deve representar mutacao do navegador.');
+  assert.match(smoke, /Origin:/, 'Smoke Node deve informar a origem oficial nas mutacoes.');
+}
 
 rmSync(pastaTemporaria, { recursive: true, force: true });
 console.log('Seguranca operacional BFF: contrato aprovado.');
