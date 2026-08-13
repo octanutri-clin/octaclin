@@ -1678,14 +1678,31 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Incremento 14 concluido: a ficha permite criar o convite de portal a partir
     do e-mail salvo; cada nova emissao revoga os convites pendentes anteriores
     do paciente, sem registrar ou reexibir token em claro.
+  - Auditoria final de 2026-08-13: a fase permanece parcial. Timeline completa,
+    resumo clinico, qualidade cadastral/ciclo do portal, contexto SuperAdmin e
+    aceite tecnico ainda exigem os Incrementos 15 a 19 documentados em
+    `AUDITORIA_FINAL_FASE_235_2026-08-13.md`.
+  - Incremento 15 pendente: integrar na timeline planos, antropometrias,
+    documentos, anexos, exames, fotos e financeiro autorizados, com
+    autor/origem uniformes e filtro server-side por responsavel.
+  - Incremento 16 pendente: completar o resumo com plano publicado, ultimo
+    atendimento, tarefa vencida, falha de comunicacao e serie antropometrica
+    acessivel, sem inferencia clinica automatica.
+  - Incremento 17 pendente: indicar completude, detectar duplicidade no tenant
+    e expor estado/reenvio/revogacao/ultimo acesso do portal com auditoria.
+  - Incremento 18 pendente: identificar o contexto transversal exclusivo de
+    SuperAdmin e completar acoes rapidas autorizadas no desktop e mobile.
+  - Incremento 19 pendente: benchmark, authz, acessibilidade, regressao
+    desktop/mobile e jornada sintetica antes do encerramento.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.
   - Reestruturar cadastro em identificacao/contato, responsavel/operacao,
     ativacao do portal e dados fiscais opcionais, sem misturar campos clinicos,
     fiscais e de acesso ou expor identificadores fora de sua permissao.
-  - Exames/fotos, prescricoes e acompanhamento gestacional permanecem fora do
-    escopo e seguem nas Fases 236, 237 e 238, respectivamente.
+  - Exames/fotos e condutas terapeuticas foram entregues nas Fases 236 e 237 e
+    devem ser integrados por metadados, sem nova fonte de verdade.
+    Acompanhamento gestacional permanece fora do escopo na Fase 238.
   - Criterio de aceite: profissional encontra a proxima conduta em uma tela;
     timeline respeita permissoes e imutabilidade; paciente nao recebe dados
     internos; desktop/mobile passam as jornadas e a acessibilidade.
