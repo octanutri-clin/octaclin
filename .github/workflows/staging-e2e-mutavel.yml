@@ -1,0 +1,203 @@
+name: OctaClin staging E2E mutavel
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: octaclin-staging-e2e-mutavel
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "9"
+  NODE_ENV: production
+  E2E_WEB_URL: http://127.0.0.1:3000
+  E2E_API_URL: http://127.0.0.1:3001
+  E2E_CONFIRMAR_REMOTO: SIM
+  OCTACLIN_PROCESSO: web
+  BANCO_EXECUTAR_MIGRACOES: "false"
+  CORS_ORIGINS: http://127.0.0.1:3000
+  OCTACLIN_BACKEND_URL: http://127.0.0.1:3001
+  OCTACLIN_TENANT_SLUG: octaclin-e2e-alfa
+  OCTACLIN_COOKIE_SECURE: "true"
+  OCTACLIN_API_ORIGENS_PERMITIDAS: http://127.0.0.1:3001
+  OCTACLIN_WEB_ORIGENS_PERMITIDAS: http://127.0.0.1:3000
+  OCTACLIN_WEB_URL: http://127.0.0.1:3000
+  PORT: "3001"
+  REDIS_URL: redis://127.0.0.1:6379
+  ARMAZENAMENTO_BUCKET_MIDIA: octaclin-e2e
+  ARMAZENAMENTO_S3_ENDPOINT: http://127.0.0.1:9000
+  ARMAZENAMENTO_S3_REGION: us-east-1
+  ARMAZENAMENTO_S3_ACCESS_KEY_ID: octaclin-e2e
+  ARMAZENAMENTO_S3_SECRET_ACCESS_KEY: octaclin-e2e-secret
+  ARMAZENAMENTO_S3_IF_NONE_MATCH: "false"
+  ARMAZENAMENTO_S3_FORCE_PATH_STYLE: "true"
+
+jobs:
+  jornadas-mutaveis:
+    name: PostgreSQL real, dois tenants e jornadas mutaveis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: |
+            octaclin-backend/pnpm-lock.yaml
+            octaclin-web/pnpm-lock.yaml
+
+      - name: Validar configuracao do ambiente E2E
+        shell: bash
+        run: |
+          test -n "${{ vars.NEON_E2E_PROJECT_ID }}"
+          test -n "${{ vars.NEON_E2E_DATABASE }}"
+          test -n "${{ vars.NEON_E2E_RUNTIME_ROLE }}"
+          test -n "${{ secrets.NEON_API_KEY }}"
+
+      - name: Instalar dependencias backend
+        working-directory: octaclin-backend
+        run: pnpm install --prod=false --frozen-lockfile=false
+
+      - name: Instalar dependencias web
+        working-directory: octaclin-web
+        run: pnpm install --prod=false --frozen-lockfile=false
+
+      - name: Criar branch Neon descartavel
+        id: neon
+        uses: neondatabase/create-branch-action@v5
+        with:
+          project_id: ${{ vars.NEON_E2E_PROJECT_ID }}
+          parent: ${{ vars.NEON_E2E_PARENT_BRANCH_ID }}
+          branch_name: fase-231-${{ github.run_id }}-${{ github.run_attempt }}
+          username: neondb_owner
+          database: ${{ vars.NEON_E2E_DATABASE }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      - name: Preparar URLs e segredos sinteticos
+        shell: bash
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          OWNER_URL: ${{ steps.neon.outputs.db_url }}
+          BRANCH_ID: ${{ steps.neon.outputs.branch_id }}
+        run: |
+          RUNTIME_URL=$(neonctl connection-string "$BRANCH_ID" \
+            --project-id "${{ vars.NEON_E2E_PROJECT_ID }}" \
+            --role-name "${{ vars.NEON_E2E_RUNTIME_ROLE }}" \
+            --database-name "${{ vars.NEON_E2E_DATABASE }}" \
+            --ssl require)
+          echo "::add-mask::$OWNER_URL"
+          echo "::add-mask::$RUNTIME_URL"
+          echo "E2E_DATABASE_OWNER_URL=$OWNER_URL" >> "$GITHUB_ENV"
+          echo "E2E_DATABASE_URL=$RUNTIME_URL" >> "$GITHUB_ENV"
+          echo "DATABASE_URL=$RUNTIME_URL" >> "$GITHUB_ENV"
+          echo "E2E_CONFIRMAR_BANCO=${{ vars.NEON_E2E_DATABASE }}" >> "$GITHUB_ENV"
+          echo "E2E_RUNTIME_ROLE=${{ vars.NEON_E2E_RUNTIME_ROLE }}" >> "$GITHUB_ENV"
+          JWT_SEGREDO=$(openssl rand -hex 32)
+          JWT_REFRESH_SEGREDO=$(openssl rand -hex 32)
+          CRIPTOGRAFIA_CHAVE_AES_256=$(openssl rand -hex 32)
+          FORMULARIO_PUBLICO_SEGREDO=$(openssl rand -hex 32)
+          echo "::add-mask::$JWT_SEGREDO"
+          echo "::add-mask::$JWT_REFRESH_SEGREDO"
+          echo "::add-mask::$CRIPTOGRAFIA_CHAVE_AES_256"
+          echo "::add-mask::$FORMULARIO_PUBLICO_SEGREDO"
+          echo "JWT_SEGREDO=$JWT_SEGREDO" >> "$GITHUB_ENV"
+          echo "JWT_REFRESH_SEGREDO=$JWT_REFRESH_SEGREDO" >> "$GITHUB_ENV"
+          echo "CRIPTOGRAFIA_CHAVE_AES_256=$CRIPTOGRAFIA_CHAVE_AES_256" >> "$GITHUB_ENV"
+          echo "FORMULARIO_PUBLICO_SEGREDO=$FORMULARIO_PUBLICO_SEGREDO" >> "$GITHUB_ENV"
+
+      - name: Aplicar migrations no branch descartavel com owner
+        working-directory: octaclin-backend
+        shell: bash
+        run: DATABASE_URL="$E2E_DATABASE_OWNER_URL" pnpm migration:run
+
+      - name: Preparar fixtures e grants da role runtime
+        working-directory: octaclin-backend
+        run: pnpm e2e:staging:prepare
+
+      - name: Validar role, RLS forcado e dois tenants
+        working-directory: octaclin-backend
+        run: pnpm e2e:staging:preflight
+
+      - name: Iniciar Redis e MinIO efemeros
+        shell: bash
+        run: |
+          docker run -d --name octaclin-redis -p 6379:6379 redis:7-alpine
+          docker run -d --name octaclin-minio -p 9000:9000 \
+            -e MINIO_ROOT_USER="$ARMAZENAMENTO_S3_ACCESS_KEY_ID" \
+            -e MINIO_ROOT_PASSWORD="$ARMAZENAMENTO_S3_SECRET_ACCESS_KEY" \
+            minio/minio server /data
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            sleep 1
+          done
+          docker run --rm --network host minio/mc alias set local \
+            http://127.0.0.1:9000 "$ARMAZENAMENTO_S3_ACCESS_KEY_ID" "$ARMAZENAMENTO_S3_SECRET_ACCESS_KEY"
+          docker run --rm --network host minio/mc mb --ignore-existing "local/$ARMAZENAMENTO_BUCKET_MIDIA"
+
+      - name: Build backend
+        working-directory: octaclin-backend
+        run: pnpm build
+
+      - name: Build web
+        working-directory: octaclin-web
+        run: pnpm build
+
+      - name: Iniciar backend e web
+        shell: bash
+        run: |
+          (cd octaclin-backend && node dist/main.js > ../e2e-backend.log 2>&1) &
+          echo $! > e2e-backend.pid
+          (cd octaclin-web && pnpm exec next start -H 127.0.0.1 -p 3000 > ../e2e-web.log 2>&1) &
+          echo $! > e2e-web.pid
+
+      - name: Aguardar servicos
+        shell: bash
+        run: |
+          for i in {1..60}; do
+            if curl -fsS "$E2E_API_URL/health/pronto" >/dev/null && curl -fsS "$E2E_WEB_URL/login" >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat e2e-backend.log || true
+          cat e2e-web.log || true
+          exit 1
+
+      - name: Executar jornadas mutaveis
+        working-directory: octaclin-web
+        run: pnpm e2e:staging:mutavel
+
+      - name: Exibir migrations aplicadas
+        if: always() && steps.neon.outputs.branch_id != ''
+        working-directory: octaclin-backend
+        shell: bash
+        run: DATABASE_URL="$E2E_DATABASE_OWNER_URL" pnpm run typeorm -- migration:show
+
+      - name: Publicar evidencias sem credenciais
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fase-231-e2e-logs
+          path: |
+            e2e-backend.log
+            e2e-web.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Excluir branch Neon descartavel
+        if: always() && steps.neon.outputs.branch_id != ''
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ vars.NEON_E2E_PROJECT_ID }}
+          branch: ${{ steps.neon.outputs.branch_id }}
+          api_key: ${{ secrets.NEON_API_KEY }}

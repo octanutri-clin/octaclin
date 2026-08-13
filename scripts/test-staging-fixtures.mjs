@@ -14,6 +14,21 @@ const caminho = resolve(
 );
 
 const fixture = JSON.parse(readFileSync(caminho, 'utf8'));
+const fixtureE2E = JSON.parse(
+  readFileSync(
+    resolve(
+      import.meta.dirname,
+      '..',
+      'octaclin-backend',
+      'src',
+      'infraestrutura',
+      'banco-dados',
+      'seeds',
+      'staging-e2e-fixtures.json'
+    ),
+    'utf8'
+  )
+);
 const ids = new Set();
 const emails = [];
 const contatos = [];
@@ -70,3 +85,25 @@ for (const dominioReal of ['gmail.com', 'hotmail.com', 'outlook.com', 'icloud.co
 }
 
 assert.ok(jsonSerializado.includes('seed_staging'), 'fixture deve identificar origem seed_staging');
+
+assert.equal(fixtureE2E.tenants.length, 2, 'Fase 231 precisa exercitar exatamente dois tenants sinteticos');
+assert.match(fixtureE2E.senhaPadrao, /^OctaClinE2E@/);
+for (const tenant of fixtureE2E.tenants) {
+  registrarId(tenant.id, `tenant E2E ${tenant.slug}`);
+  assert.match(tenant.slug, /^octaclin-e2e-/);
+  assert.equal(tenant.usuarios.length, 2);
+  assert.ok(tenant.usuarios.some((usuario) => usuario.role === 'SuperAdmin'));
+  assert.ok(tenant.usuarios.some((usuario) => usuario.role === 'Professional'));
+  for (const usuario of tenant.usuarios) {
+    registrarId(usuario.id, `usuario E2E ${tenant.slug}`);
+    assert.match(usuario.email, /@octaclin\.test$/i);
+  }
+  registrarId(tenant.profissional.id, `profissional E2E ${tenant.slug}`);
+  registrarId(tenant.categoria.id, `categoria E2E ${tenant.slug}`);
+  assert.ok(tenant.usuarios.some((usuario) => usuario.id === tenant.profissional.usuarioId));
+}
+
+const jsonE2E = JSON.stringify(fixtureE2E);
+for (const proibido of ['producao', 'gmail.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'yahoo.com']) {
+  assert.equal(jsonE2E.toLowerCase().includes(proibido), false, `fixture E2E contem valor proibido: ${proibido}`);
+}

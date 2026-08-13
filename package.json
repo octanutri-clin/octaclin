@@ -13,6 +13,7 @@
     "test:suporte": "node scripts/test-runbook-suporte.mjs",
     "test:e2e:criticas": "powershell -ExecutionPolicy Bypass -File ./validar-jornadas-criticas.ps1",
     "test:staging-fixtures": "node scripts/test-staging-fixtures.mjs",
+    "test:e2e:staging:config": "node scripts/test-staging-e2e-config.mjs",
     "seed:staging": "pnpm --dir octaclin-backend seed:staging",
     "test:piloto": "node scripts/test-piloto-interno.mjs",
     "test:producao-isolada": "node scripts/test-producao-isolada.mjs",

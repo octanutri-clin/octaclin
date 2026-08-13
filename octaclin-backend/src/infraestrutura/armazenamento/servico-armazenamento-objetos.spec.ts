@@ -7,7 +7,30 @@ jest.mock('@aws-sdk/s3-request-presigner', () => ({ getSignedUrl: jest.fn(async 
 describe('detectarMimeType', () => {
   afterEach(() => {
     delete process.env.ARMAZENAMENTO_S3_IF_NONE_MATCH;
+    delete process.env.ARMAZENAMENTO_S3_FORCE_PATH_STYLE;
     jest.clearAllMocks();
+  });
+
+  it('aceita path-style explicito para armazenamento S3 local de E2E', async () => {
+    process.env.ARMAZENAMENTO_S3_ENDPOINT = 'http://127.0.0.1:9000';
+    process.env.ARMAZENAMENTO_S3_ACCESS_KEY_ID = 'chave-teste';
+    process.env.ARMAZENAMENTO_S3_SECRET_ACCESS_KEY = 'segredo-teste';
+    process.env.ARMAZENAMENTO_BUCKET_MIDIA = 'bucket-teste';
+    process.env.ARMAZENAMENTO_S3_FORCE_PATH_STYLE = 'true';
+
+    const servico = new ServicoArmazenamentoObjetos();
+    await servico.criarUploadAssinado({
+      chaveObjeto: 'pendentes/arquivo.jpg',
+      mimeType: 'image/jpeg',
+      tamanhoMaximoBytes: 3,
+      metadados: {}
+    });
+
+    const cliente = jest.mocked(getSignedUrl).mock.calls[0][0] as unknown as {
+      config: { forcePathStyle: boolean | (() => Promise<boolean>) };
+    };
+    const forcePathStyle = cliente.config.forcePathStyle;
+    expect(typeof forcePathStyle === 'function' ? await forcePathStyle() : forcePathStyle).toBe(true);
   });
 
   it('deriva o MIME do conteudo, sem confiar no cabecalho enviado', () => {

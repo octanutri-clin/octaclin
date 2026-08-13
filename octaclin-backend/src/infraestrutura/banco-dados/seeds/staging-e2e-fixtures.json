@@ -1,0 +1,65 @@
+{
+  "senhaPadrao": "OctaClinE2E@231",
+  "tenants": [
+    {
+      "id": "23100000-0000-4000-8000-000000000001",
+      "nome": "OctaClin E2E Alfa",
+      "slug": "octaclin-e2e-alfa",
+      "usuarios": [
+        {
+          "id": "23100000-0000-4000-8000-000000000011",
+          "email": "admin.alfa@octaclin.test",
+          "role": "SuperAdmin"
+        },
+        {
+          "id": "23100000-0000-4000-8000-000000000012",
+          "email": "profissional.alfa@octaclin.test",
+          "role": "Professional"
+        }
+      ],
+      "profissional": {
+        "id": "23110000-0000-4000-8000-000000000001",
+        "usuarioId": "23100000-0000-4000-8000-000000000012",
+        "nome": "Profissional E2E Alfa",
+        "registroProfissional": "CRN-E2E-ALFA",
+        "especialidade": "Nutricao clinica"
+      },
+      "categoria": {
+        "id": "23120000-0000-4000-8000-000000000001",
+        "nome": "Acompanhamento E2E",
+        "iconeSvg": "clipboard-check",
+        "corHex": "#247BA0"
+      }
+    },
+    {
+      "id": "23100000-0000-4000-8000-000000000002",
+      "nome": "OctaClin E2E Beta",
+      "slug": "octaclin-e2e-beta",
+      "usuarios": [
+        {
+          "id": "23100000-0000-4000-8000-000000000021",
+          "email": "admin.beta@octaclin.test",
+          "role": "SuperAdmin"
+        },
+        {
+          "id": "23100000-0000-4000-8000-000000000022",
+          "email": "profissional.beta@octaclin.test",
+          "role": "Professional"
+        }
+      ],
+      "profissional": {
+        "id": "23110000-0000-4000-8000-000000000002",
+        "usuarioId": "23100000-0000-4000-8000-000000000022",
+        "nome": "Profissional E2E Beta",
+        "registroProfissional": "CRN-E2E-BETA",
+        "especialidade": "Nutricao comportamental"
+      },
+      "categoria": {
+        "id": "23120000-0000-4000-8000-000000000002",
+        "nome": "Acompanhamento E2E",
+        "iconeSvg": "clipboard-check",
+        "corHex": "#2D6A4F"
+      }
+    }
+  ]
+}

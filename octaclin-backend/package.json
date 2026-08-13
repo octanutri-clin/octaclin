@@ -14,6 +14,8 @@
     "migration:revert": "npm run typeorm -- migration:revert",
     "seed:demo": "ts-node src/infraestrutura/banco-dados/seeds/seed-demo.ts",
     "seed:staging": "ts-node src/infraestrutura/banco-dados/seeds/seed-staging.ts",
+    "e2e:staging:prepare": "ts-node src/infraestrutura/e2e/preparar-ambiente-staging-e2e.ts",
+    "e2e:staging:preflight": "ts-node src/infraestrutura/e2e/validar-ambiente-staging-e2e.ts",
     "criar-admin:producao": "ts-node src/infraestrutura/banco-dados/seeds/criar-admin-producao.ts",
     "backfill:indices-busca": "ts-node src/infraestrutura/banco-dados/backfills/backfill-indices-busca-pacientes.ts",
     "smoke:operacoes": "ts-node src/infraestrutura/smoke/smoke-operacoes.ts",

@@ -130,7 +130,8 @@ export class ServicoArmazenamentoObjetos {
       cliente: new S3Client({
         endpoint,
         region: process.env.ARMAZENAMENTO_S3_REGION ?? 'auto',
-        credentials: { accessKeyId, secretAccessKey }
+        credentials: { accessKeyId, secretAccessKey },
+        forcePathStyle: process.env.ARMAZENAMENTO_S3_FORCE_PATH_STYLE === 'true'
       })
     };
     return this.configuracao;
