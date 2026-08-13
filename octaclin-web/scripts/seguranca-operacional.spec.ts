@@ -39,6 +39,19 @@ test('producao recusa allowlist de API ausente, insegura ou malformada', () => {
   assert.throws(() => validarConfiguracaoSegurancaBff(), /origens/);
 });
 
+test('producao permite HTTP somente para loopback usado pelo smoke local', () => {
+  configurarProducaoSegura();
+  process.env.OCTACLIN_API_ORIGENS_PERMITIDAS = 'http://localhost:3001,http://127.0.0.1:3001';
+
+  assert.deepEqual(validarConfiguracaoSegurancaBff().origensApiPermitidas, [
+    'http://localhost:3001',
+    'http://127.0.0.1:3001'
+  ]);
+
+  process.env.OCTACLIN_API_ORIGENS_PERMITIDAS = 'http://api.octaclin.test';
+  assert.throws(() => validarConfiguracaoSegurancaBff(), /HTTPS/);
+});
+
 test('desenvolvimento conserva HTTP local sem exigir configuracao de producao', () => {
   process.env = { ...process.env, NODE_ENV: 'development' };
   delete process.env.OCTACLIN_COOKIE_SECURE;

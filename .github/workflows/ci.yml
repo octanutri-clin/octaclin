@@ -124,6 +124,9 @@ jobs:
       E2E_REUSE_EXISTING_SERVER: "true"
       OCTACLIN_BACKEND_URL: http://localhost:3001
       OCTACLIN_TENANT_SLUG: clinica-carla
+      OCTACLIN_COOKIE_SECURE: "true"
+      OCTACLIN_API_ORIGENS_PERMITIDAS: http://localhost:3001
+      OCTACLIN_WEB_ORIGENS_PERMITIDAS: http://localhost:3000
     steps:
       - uses: actions/checkout@v7
 

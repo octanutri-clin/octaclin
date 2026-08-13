@@ -18,7 +18,8 @@ function normalizarOrigemConfigurada(valor: string, exigirHttps: boolean, nomeVa
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
     throw new ErroConfiguracaoSegurancaBff(`${nomeVariavel} deve conter apenas origens HTTP(S) validas.`);
   }
-  if (exigirHttps && url.protocol !== 'https:') {
+  const hostLoopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if (exigirHttps && url.protocol !== 'https:' && !(url.protocol === 'http:' && hostLoopback)) {
     throw new ErroConfiguracaoSegurancaBff(`${nomeVariavel} deve usar HTTPS em producao.`);
   }
   if (url.pathname !== '/' || url.search || url.hash || valor.replace(/\/$/, '') !== url.origin) {
