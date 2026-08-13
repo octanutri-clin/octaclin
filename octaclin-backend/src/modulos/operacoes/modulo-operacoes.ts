@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import Redis from 'ioredis';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
+import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditoria';
 import { ConsentimentoLgpdOrm } from '../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
 import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -16,8 +17,14 @@ import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-
 import { SincronizacaoMobileOrm } from '../mobile/infraestrutura/sincronizacao-mobile.orm';
 import { ModuloSaude } from '../saude/modulo-saude';
 import { TenantConfiguracaoOrm } from '../tenancy/infraestrutura/tenant-configuracao.orm';
+import { TenantOrm } from '../tenancy/infraestrutura/tenant.orm';
+import { UsuarioOrm } from '../usuarios/infraestrutura/usuario.orm';
+import { RefreshTokenOrm } from '../auth/infraestrutura/refresh-token.orm';
+import { TokenRedefinicaoSenhaOrm } from '../auth/infraestrutura/token-redefinicao-senha.orm';
+import { AdaptadorEmailSmtp } from '../comunicacoes/infraestrutura/adaptadores/adaptador-email-smtp';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoOperacoes } from './aplicacao/servico-operacoes';
+import { ServicoCicloVidaTenant } from './aplicacao/servico-ciclo-vida-tenant';
 import { ControladorOperacoes } from './apresentacao/controlador-operacoes';
 
 @Module({
@@ -30,7 +37,11 @@ import { ControladorOperacoes } from './apresentacao/controlador-operacoes';
       TenantConfiguracaoOrm,
       MensagemNotificacaoOrm,
       CanalNotificacaoOrm,
-      AgendaConsultaOrm
+      AgendaConsultaOrm,
+      TenantOrm,
+      UsuarioOrm,
+      RefreshTokenOrm,
+      TokenRedefinicaoSenhaOrm
     ]),
     ModuloAuth,
     ModuloTenancy,
@@ -40,6 +51,9 @@ import { ControladorOperacoes } from './apresentacao/controlador-operacoes';
   controllers: [ControladorOperacoes],
   providers: [
     ServicoOperacoes,
+    ServicoCicloVidaTenant,
+    ServicoAuditoria,
+    AdaptadorEmailSmtp,
     ServicoGoogleCalendar,
     ServicoConexaoGoogleCalendar,
     { provide: REDIS_OAUTH_STATE_GOOGLE, useFactory: () => new Redis(criarConexaoRedis()) },

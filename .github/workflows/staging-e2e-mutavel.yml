@@ -35,6 +35,7 @@ env:
   ARMAZENAMENTO_S3_SECRET_ACCESS_KEY: octaclin-e2e-secret
   ARMAZENAMENTO_S3_IF_NONE_MATCH: "false"
   ARMAZENAMENTO_S3_FORCE_PATH_STYLE: "true"
+  EXPOR_LINK_RECUPERACAO_SENHA: "true"
 
 jobs:
   jornadas-mutaveis:
@@ -187,6 +188,10 @@ jobs:
       - name: Executar jornadas mutaveis
         working-directory: octaclin-web
         run: pnpm e2e:staging:mutavel
+
+      - name: Executar onboarding e ciclo de vida da Fase 228
+        working-directory: octaclin-web
+        run: pnpm e2e:fase228:onboarding
 
       - name: Exibir migrations aplicadas
         if: always() && steps.neon.outputs.branch_id != ''

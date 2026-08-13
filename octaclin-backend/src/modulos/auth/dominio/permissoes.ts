@@ -7,6 +7,7 @@ export type PermissaoOctaClin =
   | 'dashboard.ler'
   | 'operacoes.auditoria.ler'
   | 'operacoes.outbox.reprocessar'
+  | 'operacoes.tenants.gerenciar'
   | 'profissionais.ler'
   | 'profissionais.gerenciar'
   | 'pacientes.listar'
@@ -101,6 +102,7 @@ const permissoesSuperAdmin = [
   ...permissoesProfissional,
   'operacoes.auditoria.ler',
   'operacoes.outbox.reprocessar',
+  'operacoes.tenants.gerenciar',
   'profissionais.gerenciar'
 ] as const satisfies readonly PermissaoOctaClin[];
 

@@ -119,11 +119,12 @@ test.describe('Fase 197 - modulos avancados', () => {
     await expect(page.getByText('Regra ativada.')).toBeVisible();
   });
 
-  test('organiza operacoes em seis areas e move sync mobile para filas', async ({ page }) => {
+  test('organiza operacoes em sete areas e move sync mobile para filas', async ({ page }) => {
     await page.route('**/api/operacoes/**', (route) => {
       const url = route.request().url();
       let corpo;
-      if (url.includes('/alertas')) corpo = { status: 'ok', geradoEm: agora, resumo: { total: 0, criticos: 0, atencao: 0, informativos: 0 }, itens: [] };
+      if (url.includes('/tenants')) corpo = { itens: [], total: 0 };
+      else if (url.includes('/alertas')) corpo = { status: 'ok', geradoEm: agora, resumo: { total: 0, criticos: 0, atencao: 0, informativos: 0 }, itens: [] };
       else if (url.includes('/resumo')) corpo = { outbox: { pendente: 0, processando: 0, processado: 0, falhou: 0 }, mobile: { sincronizado: 1, erro: 0 } };
       else if (url.includes('/mobile/sincronizacoes')) corpo = [{ id: 'sync-1', tenantId: 'tenant-1', idLocal: 'local-1', tipo: 'checkin', status: 'sincronizado', criadoEm: agora }];
       else if (url.includes('/lgpd/retencao')) corpo = { versao: '1', geradoEm: agora, politicas: [], resumo: { totalVencidos: 0, itens: [] } };
@@ -135,7 +136,9 @@ test.describe('Fase 197 - modulos avancados', () => {
 
     await page.goto('/operacoes');
     const areas = page.getByRole('tablist', { name: 'Areas de operacoes' });
-    await expect(areas.getByRole('tab')).toHaveCount(6);
+    await expect(areas.getByRole('tab')).toHaveCount(7);
+    await areas.getByRole('tab', { name: 'Onboarding' }).click();
+    await expect(page.getByText('Nova clinica', { exact: true })).toBeVisible();
     await areas.getByRole('tab', { name: 'Incidentes' }).click();
     await expect(page.getByRole('heading', { name: 'Alertas operacionais' })).toBeVisible();
     await areas.getByRole('tab', { name: 'Comunicacoes' }).click();

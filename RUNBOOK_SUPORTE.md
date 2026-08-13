@@ -237,6 +237,10 @@ Escalonar para desenvolvimento quando:
 
 ## Escalonamento
 
+O canal, horario, responsavel por funcao e tempos de primeira resposta estao em
+`SLA_SUPORTE.md`. No onboarding assistido, o chamado so pode ser encerrado apos
+registrar classificacao, acao tomada, resultado e proximo responsavel.
+
 Use este criterio:
 
 - P0: sistema fora do ar, login indisponivel para todos, banco indisponivel ou vazamento de secret/PII.
@@ -252,6 +256,15 @@ Ao escalar:
 4. Indicar validacoes ja executadas.
 5. Citar runbook seguido.
 6. Se houver risco de dados, pausar acoes manuais e acionar responsavel tecnico.
+
+Exercicio obrigatorio antes de ativar uma clinica real:
+
+1. Abrir chamado sintetico de falha de convite pelo canal oficial.
+2. Classificar como P2, registrar tenant sintetico, horario e evidencia mascarada.
+3. Seguir as verificacoes de convite, email, `/health/detalhado` e `/operacoes`.
+4. Escalonar ao responsavel tecnico com o texto `EXERCICIO - SEM DADOS REAIS`.
+5. Registrar primeiro retorno, resolucao simulada e encerramento sem incluir
+   senha, token, URL de banco ou dado clinico.
 
 Runbooks relacionados:
 
