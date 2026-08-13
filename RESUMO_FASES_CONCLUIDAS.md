@@ -671,6 +671,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   `31713397791` gerou o dump, enviou o artefato cifrado ao B2, restaurou no
   banco dedicado e aprovou o canario atualizado da migration `1026` e RLS. Ver
   `fase-240-estabilizacao-main-verdade-operacional.md`.
+- Fase 242 - Observabilidade interna e rollout seguro: telemetria HTTP
+  sanitizada e limitada, health, release e filas BullMQ foram reunidos na aba
+  Rollout do console SuperAdmin. Flags fail-closed por ambiente e tenant
+  passaram a proteger IA e sincronizacao mobile em lote, com auditoria,
+  avaliador offline, gate de CI e procedimento de rollback. Nao houve migration
+  e a telemetria permanece deliberadamente local ao processo. Ver
+  `fase-242-observabilidade-interna-rollout-seguro.md`.
 
 ## Estado atual de uso
 

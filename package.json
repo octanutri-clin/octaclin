@@ -11,6 +11,7 @@
     "test:monitor-producao": "node scripts/test-monitor-producao.mjs",
     "test:lancamento": "node scripts/test-operacao-lancamento.mjs",
     "exercicio:lancamento": "node scripts/operacao-lancamento.mjs",
+    "test:rollout": "node scripts/test-rollout-seguro.mjs",
     "test:producao:readonly:contrato": "node scripts/test-producao-readonly.mjs",
     "test:suporte": "node scripts/test-runbook-suporte.mjs",
     "test:e2e:criticas": "powershell -ExecutionPolicy Bypass -File ./validar-jornadas-criticas.ps1",

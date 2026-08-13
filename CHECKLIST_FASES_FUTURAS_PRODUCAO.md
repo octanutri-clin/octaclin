@@ -1819,12 +1819,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     incremental e suportada, executar `expo install --fix`, `expo-doctor`,
     typecheck e audit zerado antes de distribuir qualquer build Mobile.
 
-- [ ] Fase 242 - Observabilidade interna e rollout seguro. [IMPORTANTE]
+- [x] Fase 242 - Observabilidade interna e rollout seguro. [IMPORTANTE]
   - Complementar o monitor externo da Fase 220 com agregacao de erros e traces
     sem PHI, metricas de fila/Redis e integracoes, feature flags, canario e
     rollback documentado.
   - Gate: concluir antes de ampliar o piloto para varias clinicas ou escalar o
     backend para multiplas instancias.
+  - Concluida em 2026-08-13: telemetria HTTP sanitizada e limitada, health,
+    release e filas BullMQ no painel SuperAdmin, flags fail-closed por tenant
+    para IA/Mobile, avaliador offline, gate no CI e rollback documentado.
+  - Limite: a telemetria e por processo; multiplas instancias continuam
+    bloqueadas ate existir agregacao externa ou distribuida.
+  - Evidencia: `fase-242-observabilidade-interna-rollout-seguro.md`.
 
 ## Backlog pos-producao
 

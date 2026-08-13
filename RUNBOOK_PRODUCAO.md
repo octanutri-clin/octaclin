@@ -658,6 +658,44 @@ aceite. `net::ERR_ABORTED` provocado pela navegacao deliberada entre telas e o
 unico cancelamento ignorado. Nao use este smoke para criar dados ou validar
 mutacoes; essas jornadas exigem massa sintetica e ambiente dedicado.
 
+### Rollout interno e feature flags da Fase 242
+
+1. Abrir `/operacoes`, selecionar `Rollout` e atualizar o snapshot.
+2. Confirmar commit, ambiente e papel de processo esperados.
+3. Conferir health e filas de notificacoes, Google Calendar e automacoes.
+4. Aguardar ao menos 50 requisicoes representativas antes de promover um
+   release pelo avaliador offline.
+5. Manter duas leituras saudaveis separadas por pelo menos cinco minutos.
+
+Limiar de `rollback`: health em falha, fila indisponivel/pausada ou taxa de 5xx
+maior ou igual a 5%. Limiar de `observar`: health degradado, 5xx a partir de
+1%, p95 acima de 1.500 ms, mais de 100 itens esperando/atrasados, falha
+historica retida ou JSON de flags invalido. Falhas historicas do BullMQ exigem
+triagem e nao provam isoladamente regressao do release atual.
+
+Para um defeito restrito a IA ou sincronizacao mobile, o SuperAdmin pode
+desabilitar a flag do tenant no mesmo painel antes de decidir rollback de
+codigo. Alteracoes sao auditadas. As flags conhecidas sao `ia.clinica` e
+`mobile.sync`; ambas ficam desabilitadas na ausencia de configuracao.
+
+Para avaliar um snapshot sanitizado fora da aplicacao:
+
+```powershell
+node scripts/rollout-seguro.mjs .\snapshot-rollout.json
+```
+
+O arquivo aceita somente health e contadores documentados pelo script. Nao
+salvar nele traces, emails, IDs de pacientes, corpos HTTP ou credenciais.
+
+Rollback de codigo usa o ultimo deploy saudavel no Render. Nunca executar
+`migration:revert`, `down`, restore sobre producao, `FLUSHDB` ou `FLUSHALL` para
+corrigir uma regressao de aplicacao. Depois do rollback, repetir health e
+snapshot duas vezes antes de declarar recuperacao.
+
+A telemetria e limitada e local a cada processo; reiniciar o backend zera a
+amostra. Nao escalar para multiplas instancias ate adotar agregacao externa ou
+distribuida que preserve os mesmos limites de privacidade.
+
 ## Incidentes
 
 Para atendimento operacional detalhado de login, convites, recuperacao de senha, WhatsApp, email e agenda, use `RUNBOOK_SUPORTE.md`. As secoes abaixo sao apenas o resumo de resposta rapida.

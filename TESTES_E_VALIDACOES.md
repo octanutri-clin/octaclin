@@ -552,3 +552,22 @@ O gate cria uma branch Neon descartavel, aplica migrations, valida role/RLS e
 dois tenants, sobe Redis e MinIO efemeros, executa backend/BFF reais e remove a
 branch com `if: always()`. Em 2026-08-13, a execucao `31731167549` passou no
 commit `04f6bb9`.
+
+### Fase 242 - observabilidade interna e rollout seguro
+
+```powershell
+pnpm test:rollout
+pnpm --dir octaclin-backend test -- --runInBand src/infraestrutura/observabilidade/servico-telemetria-operacional.spec.ts src/infraestrutura/observabilidade/interceptor-log-requisicao.spec.ts src/infraestrutura/feature-flags/servico-feature-flags.spec.ts src/infraestrutura/feature-flags/guarda-feature-flag.spec.ts src/modulos/operacoes/aplicacao/servico-rollout-operacional.spec.ts src/modulos/operacoes/apresentacao/controlador-operacoes.spec.ts
+pnpm --dir octaclin-backend typecheck
+pnpm --dir octaclin-backend build
+pnpm --dir octaclin-web lint
+pnpm --dir octaclin-web typecheck
+pnpm --dir octaclin-web test:authz
+pnpm --dir octaclin-web test:seguranca-operacional
+pnpm --dir octaclin-web build
+pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs --grep "operacoes rollout seguro|operacoes LGPD|operacoes assinatura"
+```
+
+O snapshot nao pode conter payload, query string, credencial ou dado clinico.
+As rotas BFF de feature flags devem continuar exigindo
+`operacoes.tenants.gerenciar`. Nao ha migration nesta fase.

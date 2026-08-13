@@ -40,6 +40,7 @@ describe('InterceptorLogRequisicao', () => {
       expect.objectContaining({
         evento: 'http.request',
         requestId: 'req-123',
+        requestRef: expect.stringMatching(/^req_[0-9a-f]{12}$/),
         tenantId: 'tenant-1',
         usuarioId: 'usuario-1',
         metodo: 'GET',

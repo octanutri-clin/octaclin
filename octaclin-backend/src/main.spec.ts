@@ -3,6 +3,7 @@ const mockServidorHttp = {
 };
 
 const mockAplicacao = {
+  get: jest.fn(() => ({})),
   getHttpAdapter: jest.fn(() => ({
     getInstance: jest.fn(() => mockServidorHttp)
   })),

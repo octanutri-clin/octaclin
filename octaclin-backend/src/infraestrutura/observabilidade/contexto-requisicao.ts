@@ -17,6 +17,8 @@ export interface RequisicaoComContexto {
   method?: string;
   originalUrl?: string;
   url?: string;
+  baseUrl?: string;
+  route?: { path?: unknown };
   requestId?: string;
   correlacao?: ContextoCorrelacao;
   usuarioAutenticado?: UsuarioAutenticado;
@@ -43,6 +45,10 @@ function sanitizarRequestId(valor: string | undefined): string | undefined {
 }
 
 function obterRotaSegura(requisicao: RequisicaoComContexto): string | undefined {
+  const caminhoRota = requisicao.route?.path;
+  if (typeof caminhoRota === 'string' && caminhoRota) {
+    return `${requisicao.baseUrl ?? ''}${caminhoRota}`.slice(0, TAMANHO_MAXIMO_ROTA);
+  }
   const rota = requisicao.originalUrl ?? requisicao.url;
   if (!rota) return undefined;
 

@@ -33,6 +33,8 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
     trocarPaginaOutbox
   } = controlador;
 
+  if (areaAtiva !== 'filas') return null;
+
   return (
     <>
       <Cartao hidden={areaAtiva !== 'filas'}>
@@ -111,7 +113,6 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
         id="operacoes-filas-painel"
         role="tabpanel"
         aria-labelledby="operacoes-filas-aba"
-        hidden={areaAtiva !== 'filas'}
         className="grid gap-5 lg:grid-cols-[1.35fr_0.9fr]"
       >
         <Cartao>

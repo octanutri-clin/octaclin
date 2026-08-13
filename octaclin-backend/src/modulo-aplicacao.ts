@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { criarOpcoesTypeOrm } from './infraestrutura/banco-dados/opcoes-typeorm';
 import { ModuloProcessamento } from './infraestrutura/processamento/modulo-processamento';
+import { ModuloFeatureFlags } from './infraestrutura/feature-flags/modulo-feature-flags';
+import { ModuloObservabilidade } from './infraestrutura/observabilidade/modulo-observabilidade';
 import { ModuloAgenda } from './modulos/agenda/modulo-agenda';
 import { ModuloAutomacoes } from './modulos/automacoes/modulo-automacoes';
 import { ModuloAuth } from './modulos/auth/modulo-auth';
@@ -31,6 +33,8 @@ import { ModuloUsuarios } from './modulos/usuarios/modulo-usuarios';
       useFactory: criarOpcoesTypeOrm
     }),
     ModuloProcessamento,
+    ModuloFeatureFlags,
+    ModuloObservabilidade,
     ModuloSaude,
     ModuloAuth,
     ModuloClientes,

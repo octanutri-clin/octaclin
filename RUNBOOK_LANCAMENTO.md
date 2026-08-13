@@ -124,6 +124,12 @@ Depois do rollback, exigir duas leituras saudaveis separadas por pelo menos
 cinco minutos antes de declarar recuperacao. Uma resposta `200` isolada nao
 encerra o incidente.
 
+Antes de promover um release, registrar tambem o snapshot sanitizado da aba
+`Rollout` da Fase 242. A recomendacao automatica apoia o GO/NO-GO, mas nao
+substitui os responsaveis desta janela. Uma flag pode conter IA ou sincronizacao
+mobile por tenant; falha de health, fila indisponivel ou 5xx critico exige a
+matriz de rollback mesmo que as flags estejam desligadas.
+
 ## Comunicacao
 
 ### Aviso inicial

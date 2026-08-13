@@ -7,6 +7,7 @@ import { ModuloAplicacao } from './modulo-aplicacao';
 import { obterSegredoFormularioPublico } from './infraestrutura/seguranca/segredo-formulario-publico';
 import { obterPapelProcesso } from './infraestrutura/processamento/papel-processo';
 import { redisConfigurado } from './modulos/comunicacoes/aplicacao/configuracao-redis';
+import { ServicoTelemetriaOperacional } from './infraestrutura/observabilidade/servico-telemetria-operacional';
 
 function obterOrigensCors(): boolean | string[] {
   const valor = process.env.CORS_ORIGINS;
@@ -79,7 +80,7 @@ async function iniciarAplicacao() {
   const servidorHttp = aplicacao.getHttpAdapter().getInstance();
   servidorHttp.set('trust proxy', 1);
   aplicacao.use(middlewareCorrelacao);
-  aplicacao.useGlobalInterceptors(new InterceptorLogRequisicao());
+  aplicacao.useGlobalInterceptors(new InterceptorLogRequisicao(aplicacao.get(ServicoTelemetriaOperacional)));
   aplicacao.enableCors({
     origin: obterOrigensCors(),
     credentials: true

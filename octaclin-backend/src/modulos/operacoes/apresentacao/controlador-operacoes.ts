@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Header, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
@@ -10,6 +10,8 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoOperacoes } from '../aplicacao/servico-operacoes';
 import { AtualizarCicloVidaTenantDto, ProvisionarTenantDto } from '../aplicacao/dtos-ciclo-vida-tenant';
 import { ServicoCicloVidaTenant } from '../aplicacao/servico-ciclo-vida-tenant';
+import { ServicoRolloutOperacional } from '../aplicacao/servico-rollout-operacional';
+import { ServicoFeatureFlags } from '../../../infraestrutura/feature-flags/servico-feature-flags';
 
 class AtualizarSolicitacaoLgpdOperacionalDto {
   @IsIn(['em_tratamento', 'concluida', 'indeferida'])
@@ -40,6 +42,19 @@ class AplicarPlanoAssinaturaOperacionalDto {
   observacao?: string;
 }
 
+class AtualizarFeatureFlagsDto {
+  @IsUUID()
+  tenantId: string;
+
+  @IsOptional()
+  @IsBoolean()
+  iaClinica?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  mobileSync?: boolean;
+}
+
 @Controller('operacoes')
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
 @Papeis('SuperAdmin')
@@ -48,7 +63,9 @@ export class ControladorOperacoes {
   constructor(
     private readonly servicoOperacoes: ServicoOperacoes,
     private readonly cicloVidaTenant: ServicoCicloVidaTenant,
-    private readonly auditoria: ServicoAuditoria
+    private readonly auditoria: ServicoAuditoria,
+    private readonly rollout: ServicoRolloutOperacional,
+    private readonly featureFlags: ServicoFeatureFlags
   ) {}
 
   @Get('resumo')
@@ -59,6 +76,47 @@ export class ControladorOperacoes {
   @Get('alertas')
   listarAlertasOperacionais(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoOperacoes.listarAlertasOperacionais(usuario.tenantId);
+  }
+
+  @Get('rollout')
+  obterRollout(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.rollout.obter(usuario.tenantId);
+  }
+
+  @Post('feature-flags')
+  @Permissoes('operacoes.tenants.gerenciar')
+  async atualizarFeatureFlags(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: AtualizarFeatureFlagsDto
+  ) {
+    const resultado = await this.featureFlags.atualizar(dados.tenantId, {
+      ...(dados.iaClinica !== undefined ? { 'ia.clinica': dados.iaClinica } : {}),
+      ...(dados.mobileSync !== undefined ? { 'mobile.sync': dados.mobileSync } : {})
+    });
+    await this.auditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'operacoes.feature_flags.atualizar',
+      recursoTipo: 'tenant',
+      recursoId: dados.tenantId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        tenantAlvoId: dados.tenantId,
+        flagsAlteradas: Object.keys({
+          ...(dados.iaClinica !== undefined ? { 'ia.clinica': dados.iaClinica } : {}),
+          ...(dados.mobileSync !== undefined ? { 'mobile.sync': dados.mobileSync } : {})
+        })
+      }
+    });
+    return resultado;
+  }
+
+  @Get('feature-flags/:tenantId')
+  @Permissoes('operacoes.tenants.gerenciar')
+  listarFeatureFlags(@Param('tenantId', ParseUUIDPipe) tenantId: string) {
+    return this.featureFlags.listar(tenantId);
   }
 
   @Get('outbox/falhas')

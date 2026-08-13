@@ -151,6 +151,23 @@ devem conter credenciais, query string ou caminhos.
 | `OCTACLIN_MONITOR_WEB_URL` | Variable | URL base HTTPS oficial da web de producao |
 | `OCTACLIN_MONITOR_AUTOMATICO_HABILITADO` | Variable | `true` somente depois da execucao manual aprovada |
 
+## Feature flags de rollout
+
+| Variavel | Obrigatoria | Uso | Onde configurar | Como validar |
+| --- | --- | --- | --- | --- |
+| `OCTACLIN_FEATURE_FLAGS` | Nao | JSON booleano com defaults globais para flags conhecidas | Render/backend | Aba Rollout mostra origem `ambiente` e configuracao valida |
+
+Exemplo sem dados sensiveis:
+
+```json
+{"ia.clinica":false,"mobile.sync":false}
+```
+
+Omitir a variavel mantem ambas desabilitadas. JSON invalido ou valor que nao
+seja booleano falha fechado e gera atencao no painel. A configuracao especifica
+do tenant, administrada pelo SuperAdmin, tem precedencia e fica em
+`tenant_configuracoes`; nao editar diretamente no banco.
+
 ## Smoke local de producao somente leitura
 
 Estas variaveis nunca pertencem ao Render, GitHub ou a arquivos `.env`. Use

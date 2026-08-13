@@ -44,6 +44,12 @@ const smokesNode = [
   readFileSync(join(raiz, 'scripts', 'smoke-e2e-bff.mjs'), 'utf8'),
   readFileSync(join(raiz, 'scripts', 'smoke-ui-regression.mjs'), 'utf8')
 ];
+const rotaRollout = readFileSync(join(raiz, 'app', 'api', 'operacoes', 'rollout', 'route.ts'), 'utf8');
+const rotaFeatureFlags = readFileSync(join(raiz, 'app', 'api', 'operacoes', 'feature-flags', 'route.ts'), 'utf8');
+const rotaFeatureFlagsTenant = readFileSync(
+  join(raiz, 'app', 'api', 'operacoes', 'feature-flags', '[tenantId]', 'route.ts'),
+  'utf8'
+);
 for (const cabecalho of [
   'Content-Security-Policy',
   'Strict-Transport-Security',
@@ -61,6 +67,14 @@ assert.match(middleware, /['"]\/api\/:path\*['"]/, 'Middleware deve cobrir todas
 for (const smoke of smokesNode) {
   assert.match(smoke, /Sec-Fetch-Site['"]?:\s*['"]same-origin['"]/, 'Smoke Node deve representar mutacao do navegador.');
   assert.match(smoke, /Origin:/, 'Smoke Node deve informar a origem oficial nas mutacoes.');
+}
+assert.match(rotaRollout, /requisitarBackendAutenticado\(['"]\/operacoes\/rollout['"]\)/, 'Rollout deve exigir sessao BFF.');
+for (const rota of [rotaFeatureFlags, rotaFeatureFlagsTenant]) {
+  assert.match(
+    rota,
+    /exigirPermissaoBff\(['"]operacoes\.tenants\.gerenciar['"]\)/,
+    'Feature flags devem exigir permissao administrativa no BFF.'
+  );
 }
 
 rmSync(pastaTemporaria, { recursive: true, force: true });

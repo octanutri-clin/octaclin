@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bullmq';
 import Redis from 'ioredis';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
 import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditoria';
@@ -26,9 +27,18 @@ import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoOperacoes } from './aplicacao/servico-operacoes';
 import { ServicoCicloVidaTenant } from './aplicacao/servico-ciclo-vida-tenant';
 import { ControladorOperacoes } from './apresentacao/controlador-operacoes';
+import { ServicoRolloutOperacional } from './aplicacao/servico-rollout-operacional';
+import { FILA_NOTIFICACOES } from '../comunicacoes/aplicacao/servico-comunicacoes';
+import { FILA_SINCRONIZACAO_GOOGLE } from '../agenda/aplicacao/servico-sincronizacao-google-calendar';
+import { FILA_AUTOMACOES } from '../automacoes/aplicacao/servico-automacoes';
 
 @Module({
   imports: [
+    BullModule.registerQueue(
+      { name: FILA_NOTIFICACOES },
+      { name: FILA_SINCRONIZACAO_GOOGLE },
+      { name: FILA_AUTOMACOES }
+    ),
     TypeOrmModule.forFeature([
       OutboxEventoOrm,
       SincronizacaoMobileOrm,
@@ -51,6 +61,7 @@ import { ControladorOperacoes } from './apresentacao/controlador-operacoes';
   controllers: [ControladorOperacoes],
   providers: [
     ServicoOperacoes,
+    ServicoRolloutOperacional,
     ServicoCicloVidaTenant,
     ServicoAuditoria,
     AdaptadorEmailSmtp,

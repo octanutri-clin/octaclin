@@ -27,6 +27,19 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 242 - Observabilidade interna e rollout seguro
+
+- Responsavel: Codex.
+- Inicio e conclusao: 2026-08-13.
+- Commit: registrado no historico Git da fase.
+- Push: pendente de integracao ao iniciar este registro.
+- Validacoes: 129 suites/862 testes backend, typechecks, builds, lint, authz,
+  seguranca BFF, Playwright desktop/mobile e `test:rollout` aprovados.
+- Arquivos principais: servicos de telemetria/flags/rollout, aba Rollout,
+  `scripts/rollout-seguro.mjs` e runbooks.
+- Pendencias: agregacao distribuida antes de multiplas instancias.
+- Proxima fase: Fase 241 limitada ao hardening da IA.
+
 ### Fase 197 - Racionalizacao dos modulos avancados
 
 - Responsavel: Codex com subagentes de Mobile/Gamificacao e revisao independente.

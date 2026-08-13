@@ -11,12 +11,13 @@ export function AreaSaude({ controlador }: { controlador: PainelOperacoesControl
     { rotulo: 'Falharam', valor: dados?.resumo.outbox.falhou ?? 0, icone: AlertTriangle, cor: 'text-perigo' }
   ];
 
+  if (areaAtiva !== 'saude') return null;
+
   return (
     <section
       id="operacoes-saude-painel"
       role="tabpanel"
       aria-labelledby="operacoes-saude-aba"
-      hidden={areaAtiva !== 'saude'}
       className="grid gap-3 md:grid-cols-4"
     >
       {metricas.map((item) => (

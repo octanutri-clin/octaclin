@@ -11,6 +11,57 @@ export interface ResumoOperacional {
   };
 }
 
+export interface ResultadoFeatureFlags {
+  configuracaoValida: boolean;
+  flags: Array<{
+    chave: 'ia.clinica' | 'mobile.sync';
+    habilitada: boolean;
+    origem: 'padrao' | 'ambiente' | 'tenant';
+  }>;
+}
+
+export interface ResultadoRolloutOperacional {
+  status: 'ok' | 'atencao' | 'critico';
+  decisaoSugerida: 'promover' | 'observar' | 'rollback';
+  geradoEm: string;
+  release: { commit: string; servicoId: string; ambiente: string; papelProcesso: string };
+  health: { status: 'ok' | 'degradado' | 'falha'; checks: Record<string, 'ok' | 'degradado' | 'falha'> };
+  telemetria: {
+    processo: { iniciadoEm: string; uptimeSegundos: number };
+    http: {
+      total: number;
+      sucesso: number;
+      errosCliente: number;
+      errosServidor: number;
+      taxaErro5xx: number;
+      duracaoMediaMs: number;
+      duracaoP95Ms: number;
+      amostrasDuracao: number;
+      porRota: Array<{ metodo: string; rota: string; total: number; errosServidor: number; duracaoMediaMs: number; duracaoMaximaMs: number }>;
+    };
+    tracesRecentes: Array<{
+      requestId: string;
+      horario: string;
+      metodo: string;
+      rota: string;
+      statusCode: number;
+      duracaoMs: number;
+      resultado: 'sucesso' | 'erro_cliente' | 'erro_servidor';
+      erroNome?: string;
+    }>;
+  };
+  filas: Array<{
+    nome: string;
+    status: 'ok' | 'indisponivel';
+    esperando: number;
+    ativas: number;
+    atrasadas: number;
+    falharam: number;
+    pausada: boolean;
+  }>;
+  flags: ResultadoFeatureFlags;
+}
+
 export type SeveridadeAlertaOperacional = 'critico' | 'atencao' | 'informativo';
 export type StatusAlertasOperacionais = SeveridadeAlertaOperacional | 'ok';
 export type OrigemAlertaOperacional = 'deploy' | 'servico' | 'fila' | 'integracao';
@@ -216,6 +267,7 @@ export interface AssinaturaManualOperacional {
 }
 
 export interface DadosOperacionais {
+  rollout: ResultadoRolloutOperacional;
   alertasOperacionais: ResultadoAlertasOperacionais;
   resumo: ResumoOperacional;
   falhas: OutboxFalha[];
@@ -307,6 +359,7 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
 export async function carregarDadosOperacionais(opcoes?: { signal?: AbortSignal }): Promise<DadosOperacionais> {
   const signal = opcoes?.signal;
   const [
+    rollout,
     alertasOperacionais,
     resumo,
     falhas,
@@ -319,6 +372,7 @@ export async function carregarDadosOperacionais(opcoes?: { signal?: AbortSignal 
     retencaoDados,
     solicitacoesAssinatura
   ] = await Promise.all([
+    carregarRolloutOperacional({ signal }),
     carregarAlertasOperacionais({ signal }),
     requisitar<ResumoOperacional>('/api/operacoes/resumo', { signal }),
     requisitar<OutboxFalha[]>('/api/operacoes/outbox/falhas?limite=50', { signal }),
@@ -333,6 +387,7 @@ export async function carregarDadosOperacionais(opcoes?: { signal?: AbortSignal 
   ]);
 
   return {
+    rollout,
     alertasOperacionais,
     resumo,
     falhas,
@@ -345,6 +400,25 @@ export async function carregarDadosOperacionais(opcoes?: { signal?: AbortSignal 
     retencaoDados,
     solicitacoesAssinatura
   };
+}
+
+export function carregarRolloutOperacional(opcoes?: { signal?: AbortSignal }): Promise<ResultadoRolloutOperacional> {
+  return requisitar<ResultadoRolloutOperacional>('/api/operacoes/rollout', { signal: opcoes?.signal });
+}
+
+export function atualizarFeatureFlagsOperacionais(dados: {
+  tenantId: string;
+  iaClinica: boolean;
+  mobileSync: boolean;
+}): Promise<ResultadoFeatureFlags> {
+  return requisitar<ResultadoFeatureFlags>('/api/operacoes/feature-flags', {
+    method: 'POST',
+    body: JSON.stringify(dados)
+  });
+}
+
+export function carregarFeatureFlagsOperacionais(tenantId: string): Promise<ResultadoFeatureFlags> {
+  return requisitar<ResultadoFeatureFlags>(`/api/operacoes/feature-flags/${encodeURIComponent(tenantId)}`);
 }
 
 export async function carregarAlertasOperacionais(opcoes?: { signal?: AbortSignal }): Promise<ResultadoAlertasOperacionais> {

@@ -35,4 +35,14 @@ describe('contexto-requisicao', () => {
     expect(JSON.stringify(contexto)).not.toContain('ana@example.com');
     expect(JSON.stringify(contexto)).not.toContain('hash-sensivel');
   });
+
+  it('deve preferir o template Express para nao registrar identificadores concretos', () => {
+    expect(
+      obterContextoCorrelacao({
+        method: 'GET',
+        originalUrl: '/pacientes/31109579-f13e-49c0-b7f6-614306d46a0e',
+        route: { path: '/pacientes/:id' }
+      }).rota
+    ).toBe('/pacientes/:id');
+  });
 });

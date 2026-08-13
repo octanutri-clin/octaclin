@@ -13,9 +13,10 @@ import {
   SolicitarUploadMidiaDto
 } from '../aplicacao/dtos';
 import { ServicoMobile } from '../aplicacao/servico-mobile';
+import { FeatureFlag, GuardaFeatureFlag } from '../../../infraestrutura/feature-flags/guarda-feature-flag';
 
 @Controller('mobile')
-@UseGuards(GuardaJwt, GuardaPapeis)
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaFeatureFlag)
 @Papeis('SuperAdmin', 'Professional', 'Patient')
 export class ControladorMobile {
   constructor(
@@ -130,6 +131,7 @@ export class ControladorMobile {
   }
 
   @Post('sincronizacao/lote')
+  @FeatureFlag('mobile.sync')
   async sincronizarLote(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,

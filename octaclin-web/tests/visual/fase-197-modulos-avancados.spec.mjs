@@ -119,7 +119,7 @@ test.describe('Fase 197 - modulos avancados', () => {
     await expect(page.getByText('Regra ativada.')).toBeVisible();
   });
 
-  test('organiza operacoes em sete areas e move sync mobile para filas', async ({ page }) => {
+  test('organiza operacoes em oito areas e move sync mobile para filas', async ({ page }) => {
     await page.route('**/api/operacoes/**', (route) => {
       const url = route.request().url();
       let corpo;
@@ -136,7 +136,7 @@ test.describe('Fase 197 - modulos avancados', () => {
 
     await page.goto('/operacoes');
     const areas = page.getByRole('tablist', { name: 'Areas de operacoes' });
-    await expect(areas.getByRole('tab')).toHaveCount(7);
+    await expect(areas.getByRole('tab')).toHaveCount(8);
     await areas.getByRole('tab', { name: 'Onboarding' }).click();
     await expect(page.getByText('Nova clinica', { exact: true })).toBeVisible();
     await areas.getByRole('tab', { name: 'Incidentes' }).click();
