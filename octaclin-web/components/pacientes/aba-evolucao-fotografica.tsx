@@ -73,6 +73,8 @@ export function AbaEvolucaoFotografica({ pacienteId, podeGerenciar }: AbaEvoluca
 
   async function enviarFoto(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    // React pode limpar currentTarget durante as operacoes assincronas de upload.
+    const formulario = evento.currentTarget;
     if (!arquivo) { setErro('Selecione uma imagem para a evolucao fotografica.'); return; }
     setEnviandoFoto(true); setErro(null); setSucesso(null);
     try {
@@ -83,7 +85,7 @@ export function AbaEvolucaoFotografica({ pacienteId, podeGerenciar }: AbaEvoluca
       const envio = await fetch(solicitacao.upload.uploadUrl, { method: 'PUT', headers: solicitacao.upload.uploadHeaders, body: arquivo });
       if (!envio.ok) throw new Error('O armazenamento recusou a imagem. Tente novamente.');
       await confirmarUploadEvolucaoFotografica(solicitacao.upload.arquivo.id);
-      setArquivo(null); setObservacoes(''); evento.currentTarget.reset();
+      setArquivo(null); setObservacoes(''); formulario.reset();
       setSucesso('Imagem confirmada e vinculada a serie fotografica com consentimento ativo.');
       await carregar();
     } catch (erroAtual) { setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao enviar imagem.'); }

@@ -1686,6 +1686,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
     imagem privada somente com consentimento ativo; a confirmacao exige serie,
     paciente, tipo de midia, prazo de retencao e grava o vinculo na mesma
     transacao tenant-scoped. A abertura usa URL assinada temporaria.
+  - Correcao operacional em 2026-08-13: o reset da tela usa a referencia do
+    formulario capturada antes dos `await`s, evitando erro apos um upload ja
+    confirmado.
   - Pendente de aceite operacional: exercitar em producao uma imagem sintetica
     com conta de teste, sem expor foto no portal nem criar URL permanente.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.

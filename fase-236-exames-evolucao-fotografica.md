@@ -220,6 +220,11 @@ Validacoes: testes unitarios de consentimento/vinculo no backend, gate BFF de
 sessao e encaminhamento, typecheck/lint dos dois projetos, build do Next.js e
 `git diff --check`.
 
+Correcao de operacao em 2026-08-13: o formulario de imagem agora preserva sua
+referencia antes dos `await`s de upload e confirmacao. Assim, o reset posterior
+nao depende de `evento.currentTarget`, que pode ser nulo apos a operacao
+assincrona.
+
 Aceite operacional pendente: usar uma conta e paciente sinteticos para registrar
 consentimento, enviar uma imagem de teste e confirmar abertura por URL temporaria.
 Nao criar registros clinicos reais somente para validar o fluxo.
