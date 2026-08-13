@@ -90,6 +90,17 @@ role da aplicacao por SQL, conceda apenas `CONNECT`, `USAGE` de schema, acesso
 necessario a tabelas/sequencias e confirme `rolsuper=false` e
 `rolbypassrls=false`. Use `neondb_owner` somente para migrations e administracao.
 
+### Ciclo de vida de tenants (Fase 228)
+
+A migration aditiva `AdicionarCicloVidaTenants1720000001027` cria metadados
+globais de provisionamento e ciclo de vida em `tenants`. Como o ORM passa a
+selecionar essas colunas, a ordem obrigatoria e expandir o banco antes do
+deploy. Confirmar projeto, branch, banco e role `neondb_owner`; executar apenas
+se a `1027` for a unica pendente. Depois, verificar 40 migrations aplicadas,
+as colunas `provisionamento_referencia`, `ciclo_vida_status` e `encerrado_em`,
+a constraint `tenants_ciclo_vida_status_check` e os indices
+`uq_tenants_provisionamento_referencia` e `idx_tenants_ciclo_vida_status`.
+
 Antes de migration sensivel:
 
 - revisar SQL/migration;
