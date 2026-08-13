@@ -40,15 +40,8 @@ jobs:
       - run: pnpm install --frozen-lockfile=false
       - run: pnpm typecheck
       - run: pnpm build
-      - name: Specs focadas
-        run: >
-          pnpm exec jest
-          src/modulos/comunicacoes/aplicacao/servico-comunicacoes.spec.ts
-          src/modulos/automacoes/aplicacao/servico-automacoes.spec.ts
-          src/modulos/ia/aplicacao/servico-ia.spec.ts
-          src/modulos/mobile/aplicacao/servico-mobile.spec.ts
-          src/modulos/gamificacao/aplicacao/servico-gamificacao.spec.ts
-          --runInBand
+      - name: Suite completa
+        run: pnpm test -- --runInBand
 
   web:
     name: Web Next.js

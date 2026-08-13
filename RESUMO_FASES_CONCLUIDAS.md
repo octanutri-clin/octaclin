@@ -550,7 +550,10 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   envia ao bucket B2 privado com AES256 e conserva copias diarias, semanais e
   mensais. Aos domingos ou sob demanda, baixa o proprio objeto e restaura no
   banco dedicado antes de validar migration, dados essenciais e RLS. O cron
-  esta ativo; duas execucoes reais foram aprovadas. Ver
+  foi configurado e duas execucoes reais foram aprovadas. Em 2026-08-13, a
+  Fase 240 identificou que a variavel de habilitacao havia deixado de existir,
+  fazendo quatro agendas serem ignoradas; a variavel foi restaurada e o
+  canario atualizado passou a exigir a migration `1026`. Ver
   `fase-219-backup-automatizado-retencao-restore.md`.
 - Fase 220 - Observabilidade e alertas externos de producao: GitHub Actions
   verifica readiness, dependencias e login a cada 30 minutos, com retentativas

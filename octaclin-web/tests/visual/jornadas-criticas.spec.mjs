@@ -8,6 +8,7 @@ const usuarioProfissional = {
   expiraEm: '2026-07-23T15:00:00.000Z',
   papel: 'Professional',
   permissoes: [
+    'console.acessar',
     'dashboard.ler',
     'agenda.consultas.ler',
     'agenda.consultas.criar',
@@ -867,10 +868,10 @@ test.describe('jornadas criticas de producao', () => {
     await page.goto('/pacientes');
     await page.getByRole('button', { name: 'Novo paciente' }).click();
     const formularioPaciente = page.getByRole('dialog', { name: 'Novo paciente' });
-    await formularioPaciente.getByLabel('Profissional').selectOption('profissional-1');
-    await formularioPaciente.getByLabel('Nome').fill('Ana Jornada');
-    await formularioPaciente.getByLabel('Contato').fill('5511999999999');
-    await formularioPaciente.getByLabel('Nascimento').fill('1990-04-15');
+    await formularioPaciente.getByLabel('Profissional responsavel').selectOption('profissional-1');
+    await formularioPaciente.getByLabel('Nome completo').fill('Ana Jornada');
+    await formularioPaciente.getByLabel('E-mail ou telefone').fill('5511999999999');
+    await formularioPaciente.getByLabel('Data de nascimento').fill('1990-04-15');
     await formularioPaciente.getByRole('button', { name: 'Salvar' }).click();
 
     await expect(page.getByText('Paciente criado.')).toBeVisible();

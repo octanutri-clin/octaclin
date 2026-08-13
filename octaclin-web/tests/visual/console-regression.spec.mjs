@@ -35,6 +35,7 @@ const rotulosMenu = [
 ];
 const rotulosForaMenuDiario = ['Mobile'];
 const permissoesConsoleCompleto = [
+  'console.acessar',
   'dashboard.ler',
   'questionarios.ler',
   'comunicacoes.mensagens.ler',
@@ -549,7 +550,7 @@ test.describe('console operacional', () => {
   for (const rota of rotas) {
     test(`${rota.caminho} renderiza sem regressao visual`, async ({ page }, testInfo) => {
       await page.goto(rota.caminho);
-      await expect(page.locator('h1')).toHaveText(rota.titulo);
+      await expect(page.getByRole('heading', { level: 1, name: rota.titulo })).toHaveCount(1);
       await expect(page.getByText('OctaClin').first()).toBeVisible();
       await expect(page.getByText('Console clinico')).toBeVisible();
 
@@ -564,7 +565,7 @@ test.describe('console operacional', () => {
       if (rota.caminho === '/dashboard') {
         await expect(page.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda#novo-agendamento');
         await expect(page.getByRole('link', { name: 'Novo paciente' })).toHaveAttribute('href', '/pacientes#novo-paciente');
-        await expect(page.getByRole('link', { name: 'Notificacoes' })).toHaveAttribute('href', '/comunicacoes');
+        await expect(page.getByRole('button', { name: /^Notificacoes/ })).toBeVisible();
         await page.locator('button[aria-label="Abrir menu da conta"]').click();
         await expect(page.getByText('Clinica Carla')).toBeVisible();
       }

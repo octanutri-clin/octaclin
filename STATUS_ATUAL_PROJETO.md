@@ -1,12 +1,16 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-10.
+Atualizado em 2026-08-13.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 240 em validacao remota: regressao do `main` corrigida localmente, CI
+  ampliado para 122 suites/829 testes backend, dependencias web corrigidas e
+  cron de backup reabilitado. Falta confirmar o CI e a rodada real do backup do
+  commit publicado antes de encerrar a fase.
 - Fase 224 - oferta comercial e ativacao assistida concluida. O pacote
   Profissional foi aceito a R$ 99 trimestral/R$ 119 mensal; Clinica a R$ 199
   trimestral/R$ 249 mensal. O inicio usa PIX antecipado, demonstracao
@@ -297,7 +301,9 @@ Atualizado em 2026-08-10.
   passou a distinguir cancelamento pelo profissional (notifica o paciente),
   desmarcamento pelo paciente (alerta nao-PHI ao profissional, sem notificar o
   proprio paciente) e cancelamento originado no Google (sem novo envio).
-- Proxima fase critica: Fase 132 - Dominio, SSL e identidade de envio. A configuracao tecnica de DNS permanece pendente ate a definicao do dominio oficial.
+- A antiga Fase 132 foi substituida pela Fase 225. Apos encerrar a Fase 240, a
+  proxima fase executavel sem dominio e a Fase 229, seguida da Fase 231 e da
+  Fase 228 ampliada.
 - Estado: producao tecnica acessivel, mas ainda nao liberada para clientes reais.
 
 ## O que esta funcional
@@ -410,12 +416,14 @@ Atualizado em 2026-08-10.
 ## Risco principal atual
 
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao
-isolada aceita, backup/restore recorrente ativo e pacote juridico ampliado, mas
+isolada aceita e pacote juridico ampliado. O backup automatico foi reabilitado
+na Fase 240 e ainda precisa da rodada real de confirmacao do novo canario. Antes
+de clientes reais, tambem faltam
 ainda precisa de dominio/identidade de envio, aceite juridico formal e go-live
 assistido antes de uso comercial com clientes reais.
 
-Proximo passo recomendado: preparar o go-live assistido com dominio e identidade
-de envio, aceite juridico formal e revisao dos itens restantes do checklist.
+Proximo passo recomendado: encerrar a Fase 240 e executar as Fases 229, 231 e
+228 antes de preparar dominio, identidade de envio e go-live assistido.
 Permanece como melhoria operacional futura o rollout da Fase 201 no Render (separar
 os papeis `web` e `worker` e registrar a entrega sintetica unica exigida pelo
 aceite).

@@ -135,8 +135,13 @@ function criarServico(dados: Record<string, any>) {
 
 describe('ServicoPortalPaciente', () => {
   beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-08-01T12:00:00.000Z'));
     process.env.OCTACLIN_WEB_URL = 'https://app.octaclin.test';
     process.env.FORMULARIO_PUBLICO_SEGREDO = 'segredo-teste-formulario';
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('deve expor a publicacao mais recente mesmo quando existe um plano em rascunho mais novo', async () => {
@@ -1536,11 +1541,11 @@ describe('ServicoPortalPaciente', () => {
       expect.objectContaining({
         geradoEm: expect.any(Date),
         formato: 'octaclin.lgpd.exportacao_paciente.v1',
-        titular: {
+        titular: expect.objectContaining({
           pacienteId: 'paciente-1',
           nome: 'Ana Paula',
           email: 'ana@example.com'
-        },
+        }),
         escopo: expect.objectContaining({
           categorias: ['perfil', 'consultas', 'formularios', 'comunicacoes', 'acompanhamento', 'lgpd']
         }),

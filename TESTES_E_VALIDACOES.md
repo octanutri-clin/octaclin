@@ -458,6 +458,27 @@ como `all`. Todos os arquivos temporarios da rotacao foram removidos.
 
 Executar o checklist completo em `CHECKLIST_GO_LIVE.md`.
 
+### Fase 240 - estabilizacao do main
+
+O CI deve executar a suite completa do backend, nao apenas uma selecao de
+specs. O gate local equivalente e:
+
+```powershell
+pnpm --dir octaclin-backend test -- --runInBand
+pnpm --dir octaclin-backend typecheck
+pnpm --dir octaclin-backend build
+pnpm --dir octaclin-web lint
+pnpm --dir octaclin-web typecheck
+pnpm --dir octaclin-web build
+pnpm --dir octaclin-web test:authz
+pnpm --dir octaclin-web audit --prod --audit-level=high
+pnpm --dir octaclin-backend audit --prod --audit-level=high
+```
+
+O aceite remoto exige `OctaClin CI` verde e uma rodada do workflow `Backup
+producao` usando o canario da migration `1026`. Nunca usar o banco de producao
+como destino do restore.
+
 ### Fase 223 - verdade operacional do go-live
 
 Fase exclusivamente documental. Validar sem tocar banco, variaveis ou servicos:

@@ -82,7 +82,8 @@ ainda pendentes).
 
 ## QA
 
-- [x] Suite backend focada passando (suite completa: 43 suites, 204 testes).
+- [x] Suite backend completa passando (122 suites, 829 testes em 2026-08-13) e
+  configurada como gate do CI.
 - [x] Typecheck backend passando.
 - [x] Typecheck web passando.
 - [x] Build web passando.

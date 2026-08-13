@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-13 com o aceite operacional em producao da Fase 237.
+Atualizado em 2026-08-13 com a estabilizacao e reconciliacao da Fase 240.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -312,12 +312,15 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Status: aceita em 2026-07-26. Banco Neon, Redis Upstash e os servicos Render de producao estao isolados e em live; credenciais expostas foram rotacionadas, ambiente/banco auditados sem staging e runtime revalidado.
   - Ressalva: Google Calendar continua degradado pelo callback OAuth da Fase 136, sem bloquear o isolamento de producao aceito nesta fase.
 
-- [ ] Fase 132 - Dominio, SSL e identidade de envio.
+- [x] Fase 132 - Dominio, SSL e identidade de envio. [SUBSTITUIDA]
   - Dominio oficial, remetente, SPF/DKIM/DMARC quando aplicavel.
   - Saida esperada: comunicacoes confiaveis e marca consistente.
   - Status: preparacao iniciada sem dominio. Nao configurar DNS, SPF, DKIM ou
     DMARC ate existir um dominio oficial; manter as URLs Render temporarias e
     preparar a decisao de dominio, hospedagem DNS e provedor/remetente.
+  - Reclassificada em 2026-08-13: o escopo executavel passou integralmente para
+    a Fase 225, que permanece como gate canonico e evita duas fases abertas para
+    a mesma entrega.
 
 - [x] Fase 133 - Checklist juridico/comercial para clientes.
   - Termos, politica, contrato de consultoria, suporte e SLA basico.
@@ -328,14 +331,18 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
     continuam obrigatorias em `CHECKLIST_GO_LIVE.md`; esta fase nao autoriza
     convidar clientes reais isoladamente.
 
-- [ ] Fase 134 - Go-live assistido.
+- [x] Fase 134 - Go-live assistido. [SUBSTITUIDA]
   - Ativar primeiros clientes reais.
   - Monitorar logs, mensagens, agenda e suporte diariamente.
   - Saida esperada: OctaClin em producao acompanhada.
+  - Reclassificada em 2026-08-13: operacao de lancamento e primeiro piloto
+    assistido passaram para as Fases 232 e 233.
 
-- [ ] Fase 135 - Pos-go-live e melhoria continua.
+- [x] Fase 135 - Pos-go-live e melhoria continua. [RECLASSIFICADA]
   - Coletar feedback, priorizar bugs, acompanhar custos e performance.
   - Saida esperada: backlog de evolucao pos-producao.
+  - Reclassificada em 2026-08-13 como processo continuo apos a Fase 233, e nao
+    como fase finita que possa bloquear o roadmap.
 
 ### Bloco I - Melhorias adicionais (nao bloqueiam go-live)
 
@@ -833,7 +840,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Validacoes: 10 jornadas criticas, 10 testes de acessibilidade e 22 testes
     de autorizacao/BFF. Saida: `fase-188-validacao-usabilidade.md`.
 
-- [ ] Fase 189 - Consolidacao visual no Penpot e rollout progressivo.
+- [~] Fase 189 - Consolidacao visual no Penpot e rollout progressivo. [EXTERNA]
   - Atualizar o sistema de design e o mapeamento entre componentes Penpot e
     frontend.
   - Registrar permissoes e comportamentos definitivos e liberar telas por
@@ -1541,12 +1548,20 @@ publicado antes de ampliar a superficie de mudancas visuais.
     de suporte.
   - Exercitar `RUNBOOK_SUPORTE.md`, definir responsavel e registrar SLA de
     primeira resposta e escalonamento.
+  - Formalizar ciclo de vida do tenant: provisionamento idempotente, convite do
+    proprietario sem senha definida pelo operador, plano/configuracao inicial,
+    suspensao, reativacao, exportacao e encerramento auditavel.
 
 - [ ] Fase 229 - Fechamento de seguranca operacional. [BLOQUEADOR]
   - Verificar variaveis ativas de cookie, CORS, JWT/refresh, AES, secrets e
     escopos de integracao sem imprimir valores; registrar somente a evidencia.
   - Rodar revisao de dependencias, secrets e permissoes de ambientes antes da
     primeira conta real.
+  - Fazer o BFF falhar fechado em producao sem cookie `Secure` e allowlist de
+    API, validar origem/CSRF nas mutacoes e aplicar cabecalhos de seguranca
+    globais.
+  - Revisar destinatarios de notificacoes por classe de evento, especialmente
+    `Collaborator`, sem ampliar visao clinica alem das capacidades delegadas.
 
 - [ ] Fase 230 - Aceite WhatsApp de producao. [CONDICIONAL]
   - Necessaria se WhatsApp estiver incluido na oferta inicial: token permanente,
@@ -1558,6 +1573,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Validar criacao, edicao, cancelamento/reagendamento, formulario, convite,
     upload e comunicacao com massa sintetica e isolamento por tenant.
   - Manter producao apenas para smokes controlados e sem mutacao de negocio.
+  - O ambiente deve aplicar migrations em PostgreSQL real, ser descartavel ou
+    resetavel, exercitar dois tenants e validar RLS/roles antes de cada jornada.
 
 - [ ] Fase 232 - Operacao de lancamento. [BLOQUEADOR]
   - Definir janela, responsavel de monitoramento, triagem de incidentes,
@@ -1701,7 +1718,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     portal segue sem fotos e nao ha URL publica persistente.
   - Especificacao: `fase-236-exames-evolucao-fotografica.md`.
 
-- [~] Fase 237 - Condutas terapeuticas versionadas. [IMPORTANTE - POS PILOTO]
+- [x] Fase 237 - Condutas terapeuticas versionadas. [IMPORTANTE - POS PILOTO]
   - Incremento 1 concluido localmente: metas, orientacoes, suplementos,
     produtos e formulas manipuladas possuem rascunho, publicacao, nova versao,
     arquivamento, autoria, validade, cifra, auditoria e RLS forcada por tenant.
@@ -1722,6 +1739,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - A rota e os componentes publicados continuam exclusivos do prontuario
     profissional; nao existe exposicao de condutas no portal do paciente. Nao
     ha backfill.
+  - Fase encerrada em 2026-08-13 no escopo aprovado do Incremento 1. Catalogo,
+    assinatura, envio e projecao no portal exigem fase futura propria, com
+    politica clinica e autorizacao explicitas.
   - Especificacao: `fase-237-condutas-terapeuticas-versionadas.md`.
 
 - [ ] Fase 238 - Acompanhamento gestacional especializado. [OPCIONAL - CLINICO]
@@ -1738,6 +1758,36 @@ publicado antes de ampliar a superficie de mudancas visuais.
     configuracao juridica e operacional continuam obrigatorios para pacientes
     reais.
   - Especificacao: `fase-239-validacao-clinica-usabilidade-prontuario.md`.
+
+- [~] Fase 240 - Estabilizacao do main e verdade operacional. [BLOQUEADOR]
+  - Corrigir regressao Playwright do sino/permissoes e cadastro de paciente,
+    tornar os testes temporais do portal deterministas e eliminar flakiness de
+    cabecalho sem alterar comportamento clinico.
+  - Substituir specs focadas pela suite backend completa no CI; corrigir
+    dependencias web de severidade alta e validar build real.
+  - Reativar o cron de backup, atualizar o canario de restore para a migration
+    `1026` e tabelas tenant-scoped recentes e reconciliar documentos vivos.
+  - Implementacao e gates locais aprovados em 2026-08-13: 122 suites/829 testes
+    backend, 6/6 Playwright focados em desktop/mobile, lint, typechecks, builds,
+    35 testes de autorizacao e audit web/backend sem vulnerabilidade conhecida.
+  - Pendente para encerrar: CI do commit publicado e uma rodada real do backup
+    com o workflow/canario atualizado.
+  - Evidencia: `fase-240-estabilizacao-main-verdade-operacional.md`.
+
+- [ ] Fase 241 - Hardening de IA e Mobile legado. [IMPORTANTE - CONDICIONAL]
+  - Reaproveitar seletivamente as protecoes do PR draft `#6`, sem merge direto
+    do branch antigo: vinculo de midia/referencias ao tenant e paciente,
+    idempotencia concorrente, timeout, erro sanitizado e autenticacao entre
+    backend e servico de IA.
+  - Gate: obrigatoria antes de oferecer IA ou Mobile comercialmente; pode ficar
+    adiada se esses modulos permanecerem desativados na oferta inicial.
+
+- [ ] Fase 242 - Observabilidade interna e rollout seguro. [IMPORTANTE]
+  - Complementar o monitor externo da Fase 220 com agregacao de erros e traces
+    sem PHI, metricas de fila/Redis e integracoes, feature flags, canario e
+    rollback documentado.
+  - Gate: concluir antes de ampliar o piloto para varias clinicas ou escalar o
+    backend para multiplas instancias.
 
 ## Backlog pos-producao
 
