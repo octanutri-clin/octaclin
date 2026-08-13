@@ -39,4 +39,14 @@ comunicacao em 34 minutos. Nenhum dado ou ambiente real foi usado.
 - [x] Monitor de producao executado em modo somente leitura: readiness,
   dependencias e web saudaveis na primeira tentativa em 2026-08-13.
 - [x] Preflight documental e scanner de secrets aprovados.
-- [ ] CI remoto aprovado e documentacao viva atualizada.
+- [x] CI remoto aprovado e documentacao viva atualizada.
+
+## Evidencias
+
+- PR #38 integrado no merge `32a3d26`.
+- CI do PR: `31741178651`, integralmente verde.
+- CI do `main`: `31741805806`, integralmente verde.
+- Monitor remoto manual: `31741818055`, saudavel no commit integrado.
+
+A Fase 232 esta concluida. O proximo bloqueador executavel e a Fase 233, mas
+sua janela somente pode receber GO depois dos aceites externos documentados.

@@ -285,3 +285,15 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
   trimestral/R$ 249 mensal; PIX antecipado, demonstracao sintetica,
   cancelamento em 30 dias, migracao por escopo e WhatsApp fora da oferta.
 - Documento: `CAPACIDADE_OFERTA_COMERCIAL_ATIVACAO_ASSISTIDA.md`.
+
+### Fase 232 - Operacao de lancamento
+
+- Responsavel: Codex, com Octavio como responsavel primario da operacao.
+- Inicio e conclusao: 2026-08-13.
+- Status: concluida; cliente real permanece em NO-GO por gates externos.
+- Entrega: janela, papeis, GO/NO-GO, matriz P0-P3, rollback, comunicacao,
+  controle vivo e gate dedicado no CI.
+- Exercicio: `EX-SINTETICO-F232-001` aprovado sem rede ou dados reais.
+- Evidencias: PR #38, CIs `31741178651`/`31741805806` e monitor
+  `31741818055` verdes.
+- Documento: `fase-232-operacao-lancamento.md`.

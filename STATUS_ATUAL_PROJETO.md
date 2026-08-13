@@ -7,10 +7,11 @@ Atualizado em 2026-08-13.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Fase 232 concluida localmente: operacao de lancamento com janela controlada,
+- Fase 232 concluida e integrada: operacao de lancamento com janela controlada,
   responsaveis, gates GO/NO-GO, rollback, comunicacao e exercicio sintetico P0.
   A decisao atual permanece NO-GO para cliente real ate identidade publica,
-  revisao juridica e selecao do piloto da Fase 233.
+  revisao juridica e selecao do piloto da Fase 233. PR #38, CIs
+  `31741178651`/`31741805806` e monitor remoto `31741818055` aprovados.
 - Fase 228 concluida e aceita em producao: onboarding SuperAdmin,
   provisionamento idempotente, convite seguro e ciclo de vida auditavel do
   tenant. A migration `1027`, PR #37 e os CIs do rollout foram aprovados.

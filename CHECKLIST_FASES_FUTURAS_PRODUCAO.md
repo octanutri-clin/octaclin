@@ -1597,11 +1597,20 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Execucao `31731167549` verde e branch removida ao final. Evidencia:
     `fase-231-jornadas-e2e-mutaveis-staging.md`.
 
-- [ ] Fase 232 - Operacao de lancamento. [BLOQUEADOR]
+- [x] Fase 232 - Operacao de lancamento. [BLOQUEADOR RESOLVIDO]
   - Definir janela, responsavel de monitoramento, triagem de incidentes,
     acompanhamento de backups/alertas e plano de rollback comunicacional.
   - Realizar exercicio de incidente com dados sinteticos antes do primeiro
     cliente.
+  - Entrega concluida em 2026-08-13: `RUNBOOK_LANCAMENTO.md`, controle vivo,
+    gates GO/NO-GO, matriz P0-P3, rollback e comunicacao sanitizada.
+  - Exercicio `EX-SINTETICO-F232-001` aprovado sem ambiente real; monitor
+    remoto `31741818055` confirmou producao saudavel no merge `32a3d26`.
+  - PR #38, CI do PR `31741178651` e CI do `main` `31741805806` aprovados,
+    incluindo o novo gate `Operacao de lancamento` e o smoke completo.
+  - A operacao esta preparada, mas o cliente real continua em NO-GO ate os
+    bloqueadores externos e a execucao da Fase 233.
+  - Evidencia: `fase-232-operacao-lancamento.md`.
 
 - [ ] Fase 233 - Primeiro cliente piloto assistido. [BLOQUEADOR]
   - Selecionar um cliente, colher contrato/consentimento, ativar manualmente e

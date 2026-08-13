@@ -614,6 +614,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   `31731167549`; a branch foi removida ao final. Durante o aceite, IDs de jobs
   das filas foram adequados ao contrato atual do BullMQ. Ver
   `fase-231-jornadas-e2e-mutaveis-staging.md`.
+- Fase 232 - Operacao de lancamento: definida janela controlada em
+  `America/Sao_Paulo`, responsabilidades, gates GO/NO-GO, monitoramento das
+  primeiras 48 horas, triagem P0-P3, rollback sem revert cego de migration e
+  comunicacao sanitizada. O exercicio sintetico de readiness 503 aprovou
+  deteccao, pausa, rollback e duas leituras de recuperacao; o PR #38, CIs
+  `31741178651`/`31741805806` e monitor remoto `31741818055` ficaram verdes. A
+  operacao esta pronta, mas o piloto real permanece em NO-GO ate os aceites
+  externos e a Fase 233. Ver `fase-232-operacao-lancamento.md`.
 - Fase 236 (aceita operacionalmente) - Exames laboratoriais e evolucao
   fotografica: a fundacao de coletas, marcadores, consentimentos e series
   fotograficas usa valores clinicos cifrados, RLS forcada e isolamento por
