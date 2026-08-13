@@ -17,12 +17,13 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
 - Maior fase concluida: Fase 240 - estabilizacao do `main`. O aceite mais
-  recente foi a Fase 229, validada no CI e no deploy web de producao. A proxima
-  fase bloqueadora executavel sem dominio e a Fase 231.
+  recente do caminho de go-live e a Fase 232, operacao de lancamento. Fases
+  228, 231 e 232 resolveram onboarding, jornadas mutaveis e protocolo da
+  janela; a proxima fase bloqueadora e a Fase 233, primeiro piloto assistido.
 - Producao isolada foi aceita na Fase 131; backup/restore, observabilidade,
   smokes somente leitura dos quatro papeis, Gmail e Google Agenda foram
   validados nas Fases 219 a 222. Isso nao substitui dominio, identidade de
-  envio, revisao juridica, jornadas mutaveis em staging e onboarding assistido.
+  envio, revisao juridica nem o aceite real da Fase 233.
 - Melhoria continua: Fases 138, 141 e 142 atualizaram NestJS para 11.1.28, TypeORM para 1.1.0 e Next.js para 15.5.22, com auditorias de producao zeradas. Preserve React 18.3.1 e o shim de cookies BFF ate uma fase dedicada de Next.js 16/React 19.
 - Fase 139 removeu `any` de codigo backend de producao e consolidou contratos de agenda/convites; preserve `requisitarBackendAutenticado` como a fronteira unica de erros BFF autenticados.
 - Fase 140 introduziu `MATRIZ_CONFIABILIDADE_TESTES.md`; atualize a matriz e seu validador sempre que adicionar ou remover um fluxo de risco alto.

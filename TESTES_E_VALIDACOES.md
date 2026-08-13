@@ -214,6 +214,23 @@ powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
 
 Regra esperada: `RUNBOOK_SUPORTE.md` deve cobrir triagem inicial, login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento, sem padroes obvios de secrets.
 
+## Validacao da operacao de lancamento
+
+Use ao alterar janela, responsabilidades, gates GO/NO-GO, classificacao de
+incidente, rollback ou comunicacao do primeiro piloto:
+
+```powershell
+pnpm test:lancamento
+pnpm exercicio:lancamento
+pnpm test:monitor-producao
+pnpm security:secrets
+```
+
+O exercicio e inteiramente sintetico e nao deve receber URL, credencial, tenant
+ou dado real. O gate exige classificacao P0-P3, bloqueio automatico de
+lancamento inseguro, rollback sem revert cego de migration, duas leituras de
+recuperacao e comunicacao sanitizada.
+
 ## Validacao para integracoes
 
 Quando mexer em Gmail, Meta, Calendar, Redis ou Render:

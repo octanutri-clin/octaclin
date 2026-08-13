@@ -26,6 +26,8 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 - `RUNBOOK_PRODUCAO.md` - operacao, deploy, validacao e incidentes.
 - `RUNBOOK_BACKUP_RESTORE.md` - backup PostgreSQL/Neon e restore de teste.
 - `RUNBOOK_SUPORTE.md` - atendimento de suporte para login, convites, senha, WhatsApp, email e agenda.
+- `RUNBOOK_LANCAMENTO.md` - janela, GO/NO-GO, incidentes, rollback e comunicacao do primeiro piloto.
+- `OPERACAO_LANCAMENTO_CONTROLE.md` - controle vivo da janela e das primeiras 48 horas.
 - `RUNBOOK_STAGING_DADOS.md` - massa ficticia de staging para demonstracao e QA.
 - `CHECKLIST_GO_LIVE.md` - criterios antes de incluir clientes reais.
 - `API_PUBLICA_V1.md` - contrato da API publica, chaves e webhooks assinados.
@@ -59,6 +61,8 @@ Backup/restore:
 ```powershell
 pnpm test:backup
 pnpm test:suporte
+pnpm test:lancamento
+pnpm exercicio:lancamento
 pnpm backup:plan
 ```
 

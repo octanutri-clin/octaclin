@@ -31,13 +31,13 @@ Este arquivo funciona como painel rapido de prontidao antes de liberar o OctaCli
 | Billing/assinatura | Parcial | Modelo de planos, limites, uso, alertas, solicitacao manual de upgrade/revisao, controle manual administrativo e bloqueios suaves para novas criacoes. | Expandir bloqueios para mensagens/formularios/armazenamento; gateway definitivo se necessario. |
 | Observabilidade | Pronto | Healthchecks, logs estruturados, request ID, alertas operacionais e monitor externo de saude/backup com incidentes deduplicados. | Acompanhar issues e reforcar o monitoramento nas primeiras 48 horas do go-live. |
 | Backups/restore | Pronto | Workflow diario ativo, B2 privado com retencao 8/29/93, checksum/AES256 e restore semanal aprovado na Fase 219. | Acompanhar falhas do cron e repetir restore semanalmente. |
-| Suporte | Parcial | `RUNBOOK_SUPORTE.md` cobre login, convites, recuperacao de senha, WhatsApp, email, agenda e escalonamento. | Treinar responsavel, exercitar runbook e revisar apos piloto. |
+| Suporte | Pronto | `RUNBOOK_SUPORTE.md`, SLA e Fase 228 cobrem ativacao, acesso, canais e escalonamento; a Fase 232 aprovou exercicio sintetico de incidente. | Executar a janela real e revisar apos o piloto. |
 | Dados de staging | Pronto | Fixture sem PII real, seed `seed-staging.ts`, runbook `RUNBOOK_STAGING_DADOS.md`; `pnpm seed:staging` aplicado e validado no Neon staging (tenant `octaclin-staging`). | Reaplicar quando a Fase 131 separar staging de producao. |
 | Piloto interno | Pronto | Runbook `RUNBOOK_PILOTO_INTERNO.md` e controle `PILOTO_INTERNO_CONTROLE.md`; rodada 1 executada em 2026-07-23 com todas as jornadas manuais aprovadas e aceite registrado. | Nenhuma pendencia; repetir rodada apos mudancas relevantes de autorizacao. |
 | Producao isolada | Pronto | Neon, Upstash e servicos Render exclusivos de producao aceitos na Fase 131, com credenciais rotacionadas e sem referencias a staging. | Revalidar apos mudancas relevantes de infraestrutura. |
 | Juridico/comercial | Parcial | Minutas de contrato, politica, Termo de Uso, Anexo de Tratamento, SLA, onboarding e revisao preparatoria da Fase 159. | Aceite por advogado, identidade empresarial, encarregado/canal, bases legais, suboperadores/transferencias e publicacao final. |
-| QA E2E | Parcial | Typechecks, specs focadas, Playwright visual por areas, jornadas criticas com BFF mockado e smokes reais somente leitura dos quatro papeis aprovados na Fase 221. | Validar jornadas mutaveis em staging com dados sinteticos e repetir os smokes apos mudancas relevantes de autorizacao. |
-| Governanca de go-live | Pronto | Fase 223 reconciliou checklist, preflight e handoffs com evidencias das Fases 200 a 222. | Manter a classificacao atualizada a cada aceite externo ou nova validacao. |
+| QA E2E | Pronto | Alem dos gates locais e smokes dos quatro papeis, a Fase 231 aprovou jornadas mutaveis, RLS e dois tenants em branch Neon descartavel. | Repetir smokes apos mudancas relevantes e acompanhar a jornada real da Fase 233. |
+| Governanca de go-live | Pronto | Fases 223, 228 e 232 reconciliaram evidencias, onboarding e operacao da janela com GO/NO-GO e rollback. | Manter a classificacao atualizada a cada aceite externo ou nova validacao. |
 
 ## Gate antes de cada fase
 
@@ -83,8 +83,9 @@ pnpm validate
 
 ## Proximo passo recomendado
 
-Antes de clientes reais, permanecem bloqueadores: dominio e identidade de
-envio, aceite juridico, jornadas mutaveis em staging, onboarding/suporte
-assistido e a validacao WhatsApp caso esse canal faca parte da oferta inicial.
+Antes de clientes reais, permanecem bloqueadores externos: dominio e identidade
+de envio, aceite juridico e selecao/aceite do primeiro piloto da Fase 233.
+Jornadas mutaveis, onboarding, suporte e operacao da janela ja foram fechados;
+WhatsApp continua fora da oferta inicial e nao bloqueia esse piloto.
 O rollout separado de `web`/`worker` da Fase 201 pode permanecer adiado
 enquanto exigir custo de infraestrutura sem beneficio para o piloto atual.

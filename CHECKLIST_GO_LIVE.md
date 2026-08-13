@@ -61,7 +61,8 @@ ainda pendentes).
 - [x] Restore real testado em banco dedicado (Fase 158, 2026-07-29): dump custom validado, restauracao no Neon dedicado e comparacao de tabelas, RLS e usuarios autenticaveis aprovadas.
 - [x] Logs e alertas configurados: logs correlacionados, alertas internos e
   monitor externo de saude/backup da Fase 220 ativos.
-- [ ] Runbooks revisados.
+- [x] Runbooks revisados para ativacao, suporte, producao, backup e lancamento
+  (Fases 228 e 232).
 - [ ] Suporte treinado com `RUNBOOK_SUPORTE.md`.
 - [x] Bucket privado de anexos separado por ambiente, sem acesso publico (Fase 200).
 - [x] CORS do bucket exige `if-none-match` e lifecycle de 1 dia cobre apenas `pendentes/`.
@@ -112,13 +113,14 @@ ainda pendentes).
 
 ## Operacao
 
-- [ ] Processo de onboarding de novo cliente definido.
-- [ ] Processo de suporte de login/convite definido.
-- [ ] Processo de falha de email definido.
-- [ ] Processo de falha de WhatsApp definido.
-- [ ] Processo de falha de agenda definido.
-- [ ] Pessoa responsavel por monitoramento definida.
-- [ ] Janela de go-live definida.
+- [x] Processo de onboarding de novo cliente definido (Fase 228).
+- [x] Processo de suporte de login/convite definido (`RUNBOOK_SUPORTE.md`).
+- [x] Processo de falha de email definido (`RUNBOOK_SUPORTE.md`).
+- [x] Processo de falha de WhatsApp definido; canal fora da oferta inicial.
+- [x] Processo de falha de agenda definido, preservando agenda interna.
+- [x] Responsavel primario por monitoramento definido para o piloto.
+- [x] Janela de go-live definida em `RUNBOOK_LANCAMENTO.md`; a data concreta
+  pertence a Fase 233.
 
 ## Piloto interno
 
