@@ -130,7 +130,7 @@ export class ControladorGoogleAgenda {
       {
         attempts: 3,
         backoff: { type: 'exponential', delay: 5000 },
-        jobId: numeroMensagem ? `${canalWatchId}:${numeroMensagem}` : undefined,
+        jobId: numeroMensagem ? `${canalWatchId}-${numeroMensagem}` : undefined,
         removeOnComplete: 500,
         removeOnFail: 500
       }

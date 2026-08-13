@@ -65,7 +65,7 @@ describe('ControladorGoogleAgenda', () => {
     expect(deps.filaSincronizacao.add).toHaveBeenCalledWith(
       'notificacao',
       { canalWatchId: CANAL_WATCH_ID, tenantId: TENANT_ID },
-      expect.objectContaining({ jobId: `${CANAL_WATCH_ID}:9` })
+      expect.objectContaining({ jobId: `${CANAL_WATCH_ID}-9` })
     );
     expect(deps.fonteDados.getRepository).not.toHaveBeenCalledWith(GoogleCanalWatchOrm);
   });

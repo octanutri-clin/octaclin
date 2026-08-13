@@ -172,7 +172,7 @@ describe('ServicoAutomacoes', () => {
     expect(fila.add).toHaveBeenCalledWith(
       'avaliar',
       expect.objectContaining({ tenantId: 'tenant-1', execucaoId: execucao.id }),
-      expect.objectContaining({ jobId: `execucao-regra:${execucao.id}`, attempts: 3 })
+      expect.objectContaining({ jobId: `execucao-regra-${execucao.id}`, attempts: 3 })
     );
   });
 

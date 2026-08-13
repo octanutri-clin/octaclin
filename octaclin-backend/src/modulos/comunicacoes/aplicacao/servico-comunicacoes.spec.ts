@@ -138,7 +138,7 @@ describe('ServicoComunicacoes', () => {
     expect(fila.add).toHaveBeenCalledWith(
       'enviar',
       { tenantId: 'tenant-1', mensagemId: 'mensagem-1' },
-      expect.objectContaining({ jobId: 'mensagem:mensagem-1', attempts: 3 })
+      expect.objectContaining({ jobId: 'mensagem-mensagem-1', attempts: 3 })
     );
   });
 

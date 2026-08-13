@@ -246,7 +246,7 @@ export class ServicoComunicacoes {
       'enviar',
       { tenantId, mensagemId },
       {
-        jobId: `mensagem:${mensagemId}`,
+        jobId: `mensagem-${mensagemId}`,
         attempts: 3,
         backoff: { type: 'exponential', delay: 5000 },
         removeOnComplete: 1000,

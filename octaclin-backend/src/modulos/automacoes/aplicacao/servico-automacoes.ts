@@ -87,7 +87,7 @@ export class ServicoAutomacoes {
     await this.filaAutomacoes.add(
       'avaliar',
       { tenantId, execucaoId: execucao.id, contexto: dados.contexto ?? {} },
-      { jobId: `execucao-regra:${execucao.id}`, attempts: 3, backoff: { type: 'exponential', delay: 3000 } }
+      { jobId: `execucao-regra-${execucao.id}`, attempts: 3, backoff: { type: 'exponential', delay: 3000 } }
     );
 
     return execucao;
