@@ -6,7 +6,7 @@ describe('ControladorOperacoes', () => {
     const servicoOperacoes = {
       listarAlertasOperacionais: jest.fn(async () => ({ status: 'atencao', itens: [] }))
     };
-    const controlador = new ControladorOperacoes(servicoOperacoes as never);
+    const controlador = new ControladorOperacoes(servicoOperacoes as never, {} as never, {} as never);
 
     await expect(
       controlador.listarAlertasOperacionais({
@@ -27,6 +27,9 @@ describe('ControladorOperacoes', () => {
     ]);
     expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorOperacoes.prototype.reprocessarFalhaComunicacao)).toEqual([
       'operacoes.outbox.reprocessar'
+    ]);
+    expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorOperacoes.prototype.provisionarTenant)).toEqual([
+      'operacoes.tenants.gerenciar'
     ]);
   });
 });

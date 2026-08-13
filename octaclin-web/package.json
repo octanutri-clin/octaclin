@@ -35,6 +35,7 @@
     "smoke:ui": "node scripts/smoke-ui-regression.mjs",
     "smoke:e2e:bff": "node scripts/smoke-e2e-bff.mjs",
     "e2e:staging:mutavel": "node scripts/e2e-staging-mutavel.mjs",
+    "e2e:fase228:onboarding": "node scripts/e2e-fase-228-onboarding.mjs",
     "smoke:demo": "node scripts/smoke-e2e-bff.mjs"
   },
   "dependencies": {

@@ -34,7 +34,7 @@ import {
   urlExportacaoSolicitacaoLgpd
 } from '@/lib/operacoes-api';
 
-export type AreaOperacoes = 'saude' | 'incidentes' | 'comunicacoes' | 'lgpd' | 'auditoria' | 'filas';
+export type AreaOperacoes = 'onboarding' | 'saude' | 'incidentes' | 'comunicacoes' | 'lgpd' | 'auditoria' | 'filas';
 
 function chaveSolicitacaoAssinatura(solicitacao: SolicitacaoAssinaturaOperacional) {
   return `${solicitacao.tenantId}:${solicitacao.solicitadoEm}:${solicitacao.planoDesejado ?? solicitacao.planoAtualId}`;

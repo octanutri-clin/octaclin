@@ -1,11 +1,15 @@
-import { Body, Controller, Get, Header, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoOperacoes } from '../aplicacao/servico-operacoes';
+import { AtualizarCicloVidaTenantDto, ProvisionarTenantDto } from '../aplicacao/dtos-ciclo-vida-tenant';
+import { ServicoCicloVidaTenant } from '../aplicacao/servico-ciclo-vida-tenant';
 
 class AtualizarSolicitacaoLgpdOperacionalDto {
   @IsIn(['em_tratamento', 'concluida', 'indeferida'])
@@ -41,7 +45,11 @@ class AplicarPlanoAssinaturaOperacionalDto {
 @Papeis('SuperAdmin')
 @Permissoes('operacoes.auditoria.ler')
 export class ControladorOperacoes {
-  constructor(private readonly servicoOperacoes: ServicoOperacoes) {}
+  constructor(
+    private readonly servicoOperacoes: ServicoOperacoes,
+    private readonly cicloVidaTenant: ServicoCicloVidaTenant,
+    private readonly auditoria: ServicoAuditoria
+  ) {}
 
   @Get('resumo')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
@@ -151,6 +159,66 @@ export class ControladorOperacoes {
     @Body() dados: AplicarPlanoAssinaturaOperacionalDto
   ) {
     return this.servicoOperacoes.aplicarPlanoAssinatura(usuario.tenantId, usuario.usuarioId, dados);
+  }
+
+  @Get('tenants')
+  @Permissoes('operacoes.tenants.gerenciar')
+  listarTenants() {
+    return this.cicloVidaTenant.listar();
+  }
+
+  @Post('tenants')
+  @Permissoes('operacoes.tenants.gerenciar')
+  async provisionarTenant(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: ProvisionarTenantDto
+  ) {
+    const resultado = await this.cicloVidaTenant.provisionar(dados, usuario.usuarioId);
+    await this.auditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: resultado.reutilizado ? 'operacoes.tenant.provisionamento_reutilizado' : 'operacoes.tenant.provisionar',
+      recursoTipo: 'tenant',
+      recursoId: resultado.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        tenantAlvoId: resultado.id,
+        planoId: resultado.planoId,
+        cicloVidaStatus: resultado.cicloVidaStatus,
+        conviteStatus: resultado.convite?.status
+      }
+    });
+    return resultado;
+  }
+
+  @Post('tenants/:id/ciclo-vida')
+  @Permissoes('operacoes.tenants.gerenciar')
+  async atualizarCicloVidaTenant(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) tenantId: string,
+    @Body() dados: AtualizarCicloVidaTenantDto
+  ) {
+    const resultado = await this.cicloVidaTenant.atualizarCicloVida(tenantId, usuario.usuarioId, dados);
+    await this.auditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: `operacoes.tenant.${dados.acao}`,
+      recursoTipo: 'tenant',
+      recursoId: tenantId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        tenantAlvoId: tenantId,
+        cicloVidaStatus: resultado.cicloVidaStatus,
+        exportacaoConfirmada: dados.acao === 'encerrar' ? dados.exportacaoConfirmada === true : undefined,
+        protocoloExportacao: dados.acao === 'encerrar' ? dados.protocoloExportacao : undefined,
+        motivoInformado: Boolean(dados.motivo?.trim())
+      }
+    });
+    return resultado;
   }
 
   @Get('lgpd/solicitacoes')
@@ -272,5 +340,10 @@ export class ControladorOperacoes {
       fim,
       limite: Number(limite ?? 500)
     });
+  }
+
+  private obterUserAgent(requisicao: Request): string | undefined {
+    const userAgent = requisicao.headers['user-agent'];
+    return Array.isArray(userAgent) ? userAgent.join(', ') : userAgent;
   }
 }

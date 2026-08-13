@@ -10,10 +10,12 @@ import { AreaComunicacoes } from './area-comunicacoes';
 import { AreaFilas } from './area-filas';
 import { AreaIncidentes } from './area-incidentes';
 import { AreaLgpd } from './area-lgpd';
+import { AreaOnboarding } from './area-onboarding';
 import { AreaSaude } from './area-saude';
 import { AreaOperacoes, usePainelOperacoes } from './use-painel-operacoes';
 
 const areasOperacoes = [
+  { id: 'onboarding', rotulo: 'Onboarding' },
   { id: 'saude', rotulo: 'Saude' },
   { id: 'incidentes', rotulo: 'Incidentes' },
   { id: 'comunicacoes', rotulo: 'Comunicacoes' },
@@ -90,6 +92,7 @@ export function PainelOperacoes() {
       />
 
       <AreaSaude controlador={controlador} />
+      <AreaOnboarding ativa={areaAtiva === 'onboarding'} />
       <AreaIncidentes controlador={controlador} />
       <AreaComunicacoes controlador={controlador} />
       <AreaFilas controlador={controlador} />
