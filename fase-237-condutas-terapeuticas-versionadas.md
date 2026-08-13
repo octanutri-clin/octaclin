@@ -1,7 +1,7 @@
 # Fase 237 - Condutas terapeuticas versionadas
 
-Status: Incremento 1 entregue localmente e com schema aprovado em integracao
-em 2026-08-13. A migration `1026` continua pendente de aplicacao em producao.
+Status: Incremento 1 entregue localmente e com schema aprovado em integracao e
+producao em 2026-08-13. O aceite operacional sintetico permanece pendente.
 
 ## Objetivo
 
@@ -54,8 +54,10 @@ git diff --check
    `neondb_owner`: migrations `1025` e `1026` aplicadas em ordem, historico
    `39/39`, RLS habilitada e forcada nas tabelas novas, policies de tenant e
    indices de serie/versao publicada verificados sem inserir dados clinicos.
-2. Repetir em producao somente com role `neondb_owner`, janela aprovada e
-   backup/restore recente.
+2. Aceite de schema em producao concluido em `Octaclin-db-producao` com
+   `neondb_owner`: somente a `1026` estava pendente; apos a aplicacao, o
+   historico ficou em `39/39`, RLS forcada, duas policies e os indices de
+   paciente, versao e publicacao foram verificados sem inserir dados clinicos.
 3. Em producao, testar somente paciente e conteudo sinteticos: criar rascunho,
    publicar, criar nova versao, arquivar e confirmar que o portal nao exibe
    condutas.

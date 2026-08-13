@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-13 com o aceite de schema em integracao da Fase 237.
+Atualizado em 2026-08-13 com o aceite de schema em producao da Fase 237.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -616,7 +616,9 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   conteudo e a interface nao envia nada ao portal ou a terceiros. Em
   `octaclin_test_fase150b`, as migrations `1025` e `1026` foram aplicadas com
   `neondb_owner`, elevando o historico a 39 migrations e aprovando RLS,
-  policies e indices; a aplicacao em producao permanece pendente. Ver
+  policies e indices. A mesma `1026` foi aplicada e aprovada em
+  `Octaclin-db-producao`, sem inserir dados clinicos; resta o aceite
+  operacional apos deploy. Ver
   `fase-237-condutas-terapeuticas-versionadas.md`.
 
 ## Estado atual de uso
