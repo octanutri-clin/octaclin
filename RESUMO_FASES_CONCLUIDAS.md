@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-13 com o aceite de schema em producao da Fase 237.
+Atualizado em 2026-08-13 com o aceite operacional em producao da Fase 237.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -609,7 +609,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   sem conteudo clinico. O aceite operacional com conta e imagem sinteticas
   ainda e pendente. Ver
   `fase-236-exames-evolucao-fotografica.md`.
-- Fase 237 (Incremento 1 local) - Condutas terapeuticas versionadas: o
+- Fase 237 (Incremento 1 aceito em producao) - Condutas terapeuticas versionadas: o
   prontuario profissional agora tem rascunho, edicao, publicacao, nova versao
   e arquivamento para meta, orientacao, suplemento, produto e formula
   manipulada. Titulos e conteudos ficam cifrados, a auditoria nao registra seu
@@ -617,8 +617,9 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   `octaclin_test_fase150b`, as migrations `1025` e `1026` foram aplicadas com
   `neondb_owner`, elevando o historico a 39 migrations e aprovando RLS,
   policies e indices. A mesma `1026` foi aplicada e aprovada em
-  `Octaclin-db-producao`, sem inserir dados clinicos; resta o aceite
-  operacional apos deploy. Ver
+  `Octaclin-db-producao`. O aceite operacional com o `Paciente teste 1` e
+  conteudo sintetico confirmou rascunho, publicacao, versao 2 e arquivamento;
+  as duas versoes foram preservadas e condutas seguem ausentes do portal. Ver
   `fase-237-condutas-terapeuticas-versionadas.md`.
 
 ## Estado atual de uso

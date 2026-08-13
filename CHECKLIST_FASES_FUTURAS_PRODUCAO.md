@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-13 com o aceite de schema em producao da Fase 237.
+Atualizado em 2026-08-13 com o aceite operacional em producao da Fase 237.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1716,9 +1716,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     em `Octaclin-db-producao`; apos aplicacao com `neondb_owner`, historico
     `39/39`, RLS forcada, policies e indices esperados foram aprovados sem
     inserir dados clinicos.
-  - Pendente de aceite operacional: apos o deploy, validar com conteudo
-    sintetico rascunho, publicacao, nova versao, arquivamento e ausencia no
-    portal. Nao ha backfill.
+  - Aceite operacional em producao concluido com o `Paciente teste 1` e
+    conteudo sintetico: rascunho, publicacao, versao 2 e arquivamento foram
+    confirmados; o historico foi preservado e a tela exibiu `Arquivada`.
+  - A rota e os componentes publicados continuam exclusivos do prontuario
+    profissional; nao existe exposicao de condutas no portal do paciente. Nao
+    ha backfill.
   - Especificacao: `fase-237-condutas-terapeuticas-versionadas.md`.
 
 - [ ] Fase 238 - Acompanhamento gestacional especializado. [OPCIONAL - CLINICO]

@@ -1,7 +1,6 @@
 # Fase 237 - Condutas terapeuticas versionadas
 
-Status: Incremento 1 entregue localmente e com schema aprovado em integracao e
-producao em 2026-08-13. O aceite operacional sintetico permanece pendente.
+Status: Incremento 1 entregue e aceito em producao em 2026-08-13.
 
 ## Objetivo
 
@@ -48,7 +47,7 @@ pnpm --dir octaclin-web build
 git diff --check
 ```
 
-## Pendente de schema e aceite
+## Aceites de schema e operacao
 
 1. Aceite de integracao concluido em `octaclin_test_fase150b` com
    `neondb_owner`: migrations `1025` e `1026` aplicadas em ordem, historico
@@ -58,9 +57,13 @@ git diff --check
    `neondb_owner`: somente a `1026` estava pendente; apos a aplicacao, o
    historico ficou em `39/39`, RLS forcada, duas policies e os indices de
    paciente, versao e publicacao foram verificados sem inserir dados clinicos.
-3. Em producao, testar somente paciente e conteudo sinteticos: criar rascunho,
-   publicar, criar nova versao, arquivar e confirmar que o portal nao exibe
-   condutas.
+3. Aceite operacional concluido em producao com o `Paciente teste 1` e conteudo
+   explicitamente sintetico: rascunho, publicacao, criacao da versao 2 e
+   arquivamento foram confirmados. O historico preservou as duas versoes e a
+   interface confirmou o estado `Arquivada`.
+4. A revisao da superficie publicada confirmou que condutas existem somente no
+   prontuario profissional (`Prontuario > Plano`): nao ha rota ou componente
+   correspondente no portal do paciente neste incremento.
 
 ## Fora do escopo
 
