@@ -9,6 +9,8 @@
     "test:backup": "node scripts/test-backup-restore-plan.mjs",
     "test:backup-producao": "node scripts/test-backup-producao.mjs",
     "test:monitor-producao": "node scripts/test-monitor-producao.mjs",
+    "test:lancamento": "node scripts/test-operacao-lancamento.mjs",
+    "exercicio:lancamento": "node scripts/operacao-lancamento.mjs",
     "test:producao:readonly:contrato": "node scripts/test-producao-readonly.mjs",
     "test:suporte": "node scripts/test-runbook-suporte.mjs",
     "test:e2e:criticas": "powershell -ExecutionPolicy Bypass -File ./validar-jornadas-criticas.ps1",

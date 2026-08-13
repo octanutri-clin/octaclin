@@ -7,6 +7,13 @@ Atualizado em 2026-08-13.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 232 concluida localmente: operacao de lancamento com janela controlada,
+  responsaveis, gates GO/NO-GO, rollback, comunicacao e exercicio sintetico P0.
+  A decisao atual permanece NO-GO para cliente real ate identidade publica,
+  revisao juridica e selecao do piloto da Fase 233.
+- Fase 228 concluida e aceita em producao: onboarding SuperAdmin,
+  provisionamento idempotente, convite seguro e ciclo de vida auditavel do
+  tenant. A migration `1027`, PR #37 e os CIs do rollout foram aprovados.
 - Fase 229 concluida e aceita em producao: BFF fail-closed, protecao de
   mutacoes por origem/Fetch Metadata, seis headers globais, notificacoes por
   classe, Dependabot e auditoria operacional. O commit `5674fa5` passou no CI
@@ -30,8 +37,9 @@ Atualizado em 2026-08-13.
   reconciliados com as evidencias das Fases 200 a 222: producao isolada,
   anexos, billing manual, backups, observabilidade, Calendar/Gmail e smokes de
   leitura estao entregues. Permanecem gates para clientes reais: dominio e
-  identidade de envio, aceite juridico, jornadas mutaveis em staging,
-  onboarding/suporte e WhatsApp se contratado na oferta inicial. O gateway de
+  identidade de envio, aceite juridico e primeiro piloto assistido. Jornadas
+  mutaveis, onboarding e operacao da janela foram fechados nas Fases 231, 228 e
+  232; WhatsApp ficou fora da oferta inicial. O gateway de
   pagamento nao bloqueia o primeiro piloto assistido porque ja existe controle
   manual de assinatura e limites.
 - Auditoria transversal de acesso do profissional concluida em 2026-08-08.
@@ -56,7 +64,7 @@ Atualizado em 2026-08-13.
   abre incidentes deduplicados para saude ou backup e os fecha na recuperacao.
   A execucao real `31346835747` passou na primeira tentativa e o cron foi
   habilitado somente depois do aceite manual.
-- Ultima fase concluida: Fase 222 - confiabilidade Google Agenda e Gmail. O
+- Fase 222 - confiabilidade Google Agenda e Gmail. O
   espelhamento inbound passou a usar carga inicial limitada, `syncToken`, janela
   movel e reconciliacao manual; a Gmail API recebeu OAuth de producao renovado
   e aceitou envio real. O backend opera como `all` enquanto o worker dedicado
@@ -311,8 +319,8 @@ Atualizado em 2026-08-13.
   passou a distinguir cancelamento pelo profissional (notifica o paciente),
   desmarcamento pelo paciente (alerta nao-PHI ao profissional, sem notificar o
   proprio paciente) e cancelamento originado no Google (sem novo envio).
-- A antiga Fase 132 foi substituida pela Fase 225. As Fases 229 e 231 foram
-  aceitas; a proxima fase executavel sem dominio e a Fase 228 ampliada.
+- A antiga Fase 132 foi substituida pela Fase 225. As Fases 228, 229, 231 e
+  232 foram aceitas; a proxima fase bloqueadora e a Fase 233.
 - Estado: producao tecnica acessivel, mas ainda nao liberada para clientes reais.
 
 ## O que esta funcional
@@ -357,8 +365,9 @@ Atualizado em 2026-08-13.
 - Sugestoes assistidas de IA com fonte, limitacoes e revisao humana obrigatoria.
 - Automacoes em rascunho com simulacao persistida antes da ativacao.
 - Gamificacao opcional por tenant, com comunidade e ranking desligados por padrao.
-- Operacoes SuperAdmin separadas em Saude, Incidentes, Comunicacoes, LGPD,
-  Auditoria e Filas; sincronizacao mobile fica nessa area administrativa.
+- Operacoes SuperAdmin separadas em Onboarding, Saude, Incidentes,
+  Comunicacoes, LGPD, Auditoria e Filas; sincronizacao mobile fica nessa area
+  administrativa.
 - Runbooks de producao, backup/restore, rotacao de secrets e suporte.
 - Suite Playwright de jornadas criticas com contratos BFF mockados.
 - Massa ficticia de staging aplicada e validada no Neon staging (tenant `octaclin-staging`).
@@ -366,19 +375,17 @@ Atualizado em 2026-08-13.
 - Escopo de dados por profissional responsavel (`pacientes_responsaveis`) aplicado e testado em pacientes, agenda, gamificacao, profissionais, questionarios, materiais, comunicacoes e automacoes.
 - Producao isolada de staging: banco Neon, Redis Upstash e servicos Render de producao aceitos; runtime, secrets exclusivos e ausencia de staging foram revalidados na Fase 131.
 - Sincronizacao em tempo real com a Google Agenda pessoal do profissional (Fase 136, 2026-07-25): conexao OAuth individual por profissional, notificacao push do Google, eventos externos viram bloqueio de horario, mudancas feitas direto no Google aplicam automaticamente na consulta correspondente.
-- CI do GitHub verde em `701ed6b` (2026-07-26): backend, web, mobile, IA e demo local smoke, incluindo UI, BFF e Playwright.
+- CI do GitHub verde no rollout da Fase 228 em `0ffd32f` (2026-08-13): backend,
+  web, mobile, IA e demo local smoke, incluindo UI, BFF e Playwright.
 - Gate de qualidade web: lint nao interativo com as regras estritas recomendadas pelo Next.js, typecheck, build e teste de autorizacao de rotas; o lint agora tambem e exigido no CI.
 - Regressao critica de agenda em 2026-07-27: 8 testes Playwright aprovados em desktop/mobile, incluindo a nova jornada publica -> aprovacao interna -> portal do paciente.
 
 ## O que ainda falta antes de producao real
 
 - Gateway de pagamento definitivo, se a operacao manual deixar de ser suficiente.
-- Recorrencia avancada e importacao inbound do Google Calendar por `syncToken`.
-- Recorrencia operacional de backup e restore semanal conforme o runbook.
-- Producao isolada de staging.
 - Dominio, SSL e identidade de envio.
 - Aceite juridico formal, identidade empresarial, canal de privacidade e publicacao das versoes legais.
-- Go-live assistido.
+- Selecao, contrato e janela real do primeiro cliente piloto na Fase 233.
 - Migracao futura para Next.js 16/React 19, incluindo a remocao do shim temporario de cookies usado no BFF.
 
 ## Ambientes e provedores
@@ -407,6 +414,8 @@ Atualizado em 2026-08-13.
 - `RUNBOOK_PRODUCAO.md`: operacao.
 - `RUNBOOK_BACKUP_RESTORE.md`: backup PostgreSQL/Neon e restore de teste.
 - `RUNBOOK_SUPORTE.md`: suporte para login, convites, senha, WhatsApp, email e agenda.
+- `RUNBOOK_LANCAMENTO.md`: janela, GO/NO-GO, incidentes, rollback e comunicacao.
+- `OPERACAO_LANCAMENTO_CONTROLE.md`: responsaveis, gates e evidencias da janela.
 - `RUNBOOK_STAGING_DADOS.md`: massa ficticia de staging para demonstracao e QA.
 - `RUNBOOK_PILOTO_INTERNO.md`: processo do piloto interno controlado antes da producao real.
 - `PILOTO_INTERNO_CONTROLE.md`: acompanhamento vivo da rodada atual do piloto interno.
@@ -427,11 +436,12 @@ Atualizado em 2026-08-13.
 O sistema ja tem muita capacidade funcional, piloto interno aprovado, producao
 isolada aceita e pacote juridico ampliado. O backup automatico foi reabilitado
 e validado com restore canario na Fase 240, e o staging mutavel foi aprovado
-na Fase 231. Antes de clientes reais, ainda faltam onboarding/suporte,
-dominio/identidade de envio, aceite juridico formal e go-live assistido.
+na Fase 231. Onboarding/suporte e operacao de lancamento foram fechados nas
+Fases 228 e 232. Antes de clientes reais ainda faltam dominio/identidade de
+envio, aceite juridico formal e o piloto assistido da Fase 233.
 
-Proximo passo recomendado: executar a Fase 228 antes de preparar dominio,
-identidade de envio e go-live assistido.
+Proximo passo recomendado: resolver os bloqueadores externos e executar a Fase
+233 com um unico cliente piloto na janela controlada.
 Permanece como melhoria operacional futura o rollout da Fase 201 no Render (separar
 os papeis `web` e `worker` e registrar a entrega sintetica unica exigida pelo
 aceite).

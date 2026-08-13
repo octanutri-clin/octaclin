@@ -2,6 +2,10 @@
 
 Este runbook descreve como operar, validar e recuperar o OctaClin em staging/producao. Nao registre secrets neste arquivo.
 
+Para a janela do primeiro cliente, gates GO/NO-GO, responsabilidades,
+comunicacao e rollback, use tambem `RUNBOOK_LANCAMENTO.md` e registre a
+evidencia sanitizada em `OPERACAO_LANCAMENTO_CONTROLE.md`.
+
 ## Ambientes
 
 ### Local
