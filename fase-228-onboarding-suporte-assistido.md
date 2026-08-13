@@ -78,10 +78,19 @@ Nenhum email externo e enviado e a branch Neon e removida ao final.
 - Web: typecheck, lint e build Next.js com 120 paginas aprovados.
 - Seguranca: scanner local sem secrets e `git diff --check` aprovado.
 - Suporte: `pnpm test:suporte` aprovado.
-- E2E remoto: execucao `31735238058` aprovada, incluindo migration, runtime
+- E2E remoto: execucao `31736069573` aprovada, incluindo provisionamento
+  concorrente idempotente, migration, runtime
   restrita, RLS, builds, jornadas da Fase 231, jornada da Fase 228 e limpeza da
   branch descartavel.
-- Evidencia: https://github.com/octanutri-clin/octaclin/actions/runs/31735238058
+- PR #37 integrado no `main` pelo merge `dd7c9fa`; CI do PR `31737178814` e CI
+  do `main` `31737873088` aprovados, incluindo o smoke visual completo.
+- Deploy confirmado em producao: health pronto respondeu `200`, a nova rota
+  protegida do backend respondeu `401`, a nova rota BFF respondeu `401` e
+  `/operacoes` redirecionou uma sessao ausente ao login, sem mutacao de dados.
+- Evidencias:
+  - https://github.com/octanutri-clin/octaclin/actions/runs/31736069573
+  - https://github.com/octanutri-clin/octaclin/actions/runs/31737178814
+  - https://github.com/octanutri-clin/octaclin/actions/runs/31737873088
 
 ## Estado de entrega
 
@@ -89,7 +98,7 @@ Nenhum email externo e enviado e a branch Neon e removida ao final.
 - [x] Migration em ambiente descartavel.
 - [x] Jornada sintetica ponta a ponta.
 - [x] Migration de producao aplicada e verificada.
-- [ ] Merge, deploy e smoke de producao.
+- [x] Merge, deploy e smoke de producao.
 
-A fase somente deve ser marcada como concluida no checklist depois do ultimo
-item.
+A Fase 228 esta concluida. O primeiro cliente real permanece condicionado aos
+demais bloqueadores do checklist de go-live.

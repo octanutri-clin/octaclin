@@ -589,6 +589,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   antecipado, demonstracao sintetica, bloqueio suave apos aviso de 30 dias,
   migracao por escopo, WhatsApp fora da oferta e suporte reforcado por 48 horas
   foram aceitos. Ver `fase-224-oferta-comercial-ativacao-assistida.md`.
+- Fase 228 - Onboarding e suporte assistido: o console SuperAdmin passou a
+  provisionar clinicas de forma idempotente, convidar o proprietario sem senha
+  conhecida pelo operador e administrar ativacao, acompanhamento de 48 horas,
+  suspensao, reativacao, exportacao e encerramento auditavel. SLA, runbook e a
+  jornada sintetica concorrente foram aprovados. A migration `1027` foi
+  aplicada em producao com 40 migrations concluidas; o PR #37, os CIs e os
+  probes protegidos de backend/web confirmaram o rollout. Ver
+  `fase-228-onboarding-suporte-assistido.md`.
 - Fase 229 - Fechamento de seguranca operacional: o BFF web agora falha
   fechado sem cookie `Secure` e allowlist da API em producao, rejeita mutacoes
   cross-site por `Origin` e Fetch Metadata e publica seis headers globais de

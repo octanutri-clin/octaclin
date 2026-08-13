@@ -1542,7 +1542,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     substituir o controle manual antes de sua necessidade comercial comprovada.
   - Nao iniciar sem decisao de provedor, modelo fiscal e titularidade.
 
-- [ ] Fase 228 - Onboarding e suporte assistido. [BLOQUEADOR]
+- [x] Fase 228 - Onboarding e suporte assistido. [BLOQUEADOR RESOLVIDO]
   - Executar a ativacao de ponta a ponta com dados sinteticos: clinica,
     profissionais, pacientes, convite, permissao, agenda, formulario e canal
     de suporte.
@@ -1551,6 +1551,14 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Formalizar ciclo de vida do tenant: provisionamento idempotente, convite do
     proprietario sem senha definida pelo operador, plano/configuracao inicial,
     suspensao, reativacao, exportacao e encerramento auditavel.
+  - Entrega concluida em 2026-08-13: console SuperAdmin, convite seguro, ciclo
+    de vida auditavel, SLA/runbook e jornada concorrente sintetica aprovados.
+  - Migration `1720000001027` aplicada em producao com `neondb_owner`; 40
+    migrations concluidas, colunas, constraint e indices verificados.
+  - PR #37 integrado no merge `dd7c9fa`; CI do PR `31737178814`, E2E remoto
+    `31736069573` e CI do `main` `31737873088` aprovados. Backend e web novos
+    confirmados em producao por probes protegidos sem mutacao.
+  - Evidencia: `fase-228-onboarding-suporte-assistido.md`.
 
 - [x] Fase 229 - Fechamento de seguranca operacional. [BLOQUEADOR]
   - Verificar variaveis ativas de cookie, CORS, JWT/refresh, AES, secrets e
