@@ -951,7 +951,12 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
   };
 }
 
-async function prepararProntuarioMockado(page, { permissoesExtras = [] } = {}) {
+async function prepararProntuarioMockado(page, {
+  permissoesExtras = [],
+  permissoesRemovidas = [],
+  papel = 'Professional',
+  profissionalResponsavelId = 'profissional-1'
+} = {}) {
   let criouEvolucao = false;
   let criouTarefa = false;
   let criouMaterial = false;
@@ -965,7 +970,7 @@ async function prepararProntuarioMockado(page, { permissoesExtras = [] } = {}) {
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
-    { name: 'octaclin_papel', value: 'Professional', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: papel, domain: 'localhost', path: '/' },
     { name: 'octaclin_destino_inicial', value: encodeURIComponent('/dashboard'), domain: 'localhost', path: '/' }
   ]);
 
@@ -979,7 +984,7 @@ async function prepararProntuarioMockado(page, { permissoesExtras = [] } = {}) {
         tenantSlug: 'clinica-carla',
         email: 'dra.carla@octaclin.local',
         expiraEm: '2026-07-22T15:00:00.000Z',
-        papel: 'Professional',
+        papel,
         permissoes: [
           'dashboard.ler',
           'pacientes.listar',
@@ -988,10 +993,11 @@ async function prepararProntuarioMockado(page, { permissoesExtras = [] } = {}) {
           'materiais.ler',
           'materiais.gerenciar',
           'agenda.consultas.ler',
+          'agenda.consultas.criar',
           'questionarios.ler',
           'comunicacoes.mensagens.ler',
           ...permissoesExtras
-        ],
+        ].filter((permissao) => !permissoesRemovidas.includes(permissao)),
         destinoInicial: '/dashboard'
       })
     });
@@ -1315,7 +1321,7 @@ async function prepararProntuarioMockado(page, { permissoesExtras = [] } = {}) {
         paciente: {
           id: 'paciente-1',
           tenantId: 'tenant-1',
-          profissionalResponsavelId: 'profissional-1',
+          profissionalResponsavelId,
           nome: 'Ana Souza',
           contato: 'ana@example.com',
           dataNascimento: '1990-04-12',
@@ -1920,16 +1926,68 @@ test.describe('prontuario do paciente', () => {
     await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');
 
-    await expect(page.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda?pacienteId=paciente-1');
-    await page.getByRole('button', { name: 'Formularios', exact: true }).click();
+    const acoes = page.getByRole('navigation', { name: 'Acoes rapidas do paciente' });
+    await expect(acoes.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda?pacienteId=paciente-1');
+    await acoes.getByRole('button', { name: 'Formularios', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Formularios e check-ins' })).toBeVisible();
-    await page.getByRole('button', { name: 'Anexar', exact: true }).click();
+    await acoes.getByRole('button', { name: 'Anexar', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Anexos do paciente' })).toBeVisible();
 
     await page.getByRole('tab', { name: 'Atendimentos' }).click();
     await page.getByLabel('Titulo da evolucao').fill('Rascunho clinico');
-    await page.getByRole('link', { name: 'Agendar' }).click();
+    await acoes.getByRole('link', { name: 'Agendar' }).click();
     await expect(page.getByRole('heading', { name: 'Sair sem salvar' })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('identifica o contexto transversal e as acoes autorizadas apenas para SuperAdmin', async ({ page }) => {
+    await prepararProntuarioMockado(page, {
+      papel: 'SuperAdmin',
+      permissoesExtras: ['profissionais.ler', 'planos_alimentares.ler', 'agenda.financeiro.ler']
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    const contexto = page.getByRole('status').filter({ hasText: 'Contexto SuperAdmin' });
+    await expect(contexto).toBeVisible();
+    await expect(contexto).toContainText('Dra. Carla');
+    await expect(contexto).toContainText('As acoes ficam registradas no seu usuario.');
+
+    const acoes = page.getByRole('navigation', { name: 'Acoes rapidas do paciente' });
+    await expect(acoes.getByRole('button', { name: 'Nova evolucao' })).toBeVisible();
+    await expect(acoes.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda?pacienteId=paciente-1');
+    await expect(acoes.getByRole('link', { name: 'Abrir consulta' })).toHaveAttribute(
+      'href',
+      '/agenda?pacienteId=paciente-1&consultaId=consulta-1'
+    );
+    await expect(acoes.getByRole('button', { name: 'Plano atual' })).toBeVisible();
+    await expect(acoes.getByRole('button', { name: 'Revisar mensagem' })).toBeVisible();
+    await expect(acoes.getByRole('link', { name: 'Financeiro' })).toHaveAttribute('href', '/agenda?pacienteId=paciente-1&financeiro=1');
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('nao oferece troca de contexto nem acoes sem permissao a outros papeis', async ({ page }) => {
+    await prepararProntuarioMockado(page, {
+      papel: 'Collaborator',
+      profissionalResponsavelId: 'profissional-outro',
+      permissoesRemovidas: [
+        'pacientes.gerenciar',
+        'agenda.consultas.criar',
+        'questionarios.ler',
+        'comunicacoes.mensagens.ler'
+      ]
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    await expect(page.getByText('Contexto SuperAdmin')).toHaveCount(0);
+    await expect(page.getByLabel('Trocar contexto profissional')).toHaveCount(0);
+    const acoes = page.getByRole('navigation', { name: 'Acoes rapidas do paciente' });
+    await expect(acoes.getByRole('button', { name: 'Nova evolucao' })).toHaveCount(0);
+    await expect(acoes.getByRole('button', { name: 'Nova tarefa' })).toHaveCount(0);
+    await expect(acoes.getByRole('link', { name: 'Agendar' })).toHaveCount(0);
+    await expect(acoes.getByRole('button', { name: 'Formularios' })).toHaveCount(0);
+    await expect(acoes.getByRole('button', { name: 'Revisar mensagem' })).toHaveCount(0);
+    await expect(acoes.getByRole('button', { name: 'Anexar' })).toHaveCount(0);
+    await expect(acoes.getByRole('link', { name: 'Abrir consulta' })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 
@@ -1987,7 +2045,7 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Mensagem recebida')).not.toBeVisible();
     await page.getByRole('button', { name: 'Abrir detalhe de Ajuste de conduta' }).click();
     await expect(page.getByRole('heading', { name: 'Nova evolucao clinica' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Voltar para pacientes' })).toHaveAttribute('href', '/pacientes');
+    await expect(page.getByRole('link', { name: 'Voltar' })).toHaveAttribute('href', '/pacientes');
     await assertSemOverflowHorizontal(page);
   });
 

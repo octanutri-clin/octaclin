@@ -491,6 +491,31 @@ desktop/mobile, 10/10 no gate de acessibilidade e `git diff --check`. Nao houve
 migration. O GitHub Actions permanece sem creditos e nao foi usado como
 evidencia. A Fase 235 continua parcial e segue para o Incremento 18.
 
+## Incremento 18 - contexto transversal e acoes autorizadas
+
+Entregue em 2026-08-14. Quando o papel autenticado e `SuperAdmin`, o cabecalho
+identifica explicitamente o contexto transversal, apresenta o nome do
+profissional responsavel e informa que as acoes ficam registradas no usuario
+atual. Nenhum seletor de impersonacao ou contrato backend adicional foi criado;
+os outros papeis nao recebem aviso nem controle de troca de contexto.
+
+As acoes rapidas foram condicionadas por permissao e estado registrado. Nova
+evolucao, tarefa, agendamento, consulta futura, plano publicado, formularios,
+mensagens, anexos, financeiro e cadastro aparecem apenas quando o acesso e o
+estado permitem. A confirmacao de descarte de rascunho tambem preserva o deep
+link de consulta ou financeiro escolhido.
+
+No mobile, o cabecalho deixa de ser fixo e as acoes usam uma grade de duas
+colunas com alvos de 44 px, sem comprimir o prontuario em tabela. As regressoes
+Playwright cobrem SuperAdmin e papel sem permissoes em desktop/mobile; o backend
+confirma `NotFound` para Professional fora da propria carteira.
+
+Validacoes locais: 130/130 suites e 874/874 testes backend, builds backend/web,
+lint, typecheck, autorizacao e seguranca BFF, 28/28 Playwright do prontuario e
+10/10 no gate de acessibilidade. Nao houve migration. O GitHub Actions segue
+sem creditos e sua ausencia nao foi usada como aprovacao. A Fase 235 continua
+parcial e segue somente para o Incremento 19.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica

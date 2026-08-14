@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   BadgeDollarSign,
@@ -21,13 +21,14 @@ import {
   Ruler,
   Save,
   Send,
+  ShieldCheck,
   Stethoscope,
   Trash2,
   UploadCloud,
   UserRound,
   Utensils
 } from 'lucide-react';
-import { Botao } from '@/components/ui/botao';
+import { Botao, classesBotao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { AbaAntropometria } from './aba-antropometria';
 import { ResumoAntropometrico } from './resumo-antropometrico';
@@ -377,8 +378,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [areaAtiva, setAreaAtiva] = useState<AreaProntuario>('resumo');
   const [planoAlimentarNaoSalvo, setPlanoAlimentarNaoSalvo] = useState(false);
   const [permissoes, setPermissoes] = useState<string[]>([]);
+  const [papel, setPapel] = useState<string | null>(null);
   const [saidaPendente, setSaidaPendente] = useState<
-    { tipo: 'voltar' } | { tipo: 'agenda' } | { tipo: 'aba'; id: AbaProntuario } | null
+    { tipo: 'voltar' } | { tipo: 'agenda'; consultaId?: string; financeiro?: boolean } | { tipo: 'aba'; id: AbaProntuario } | null
   >(null);
   const router = useRouter();
 
@@ -620,6 +622,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         if (!ativo) return;
         const permissoesSessao = sessao?.permissoes ?? [];
         setPermissoes(permissoesSessao);
+        setPapel(sessao?.papel ?? null);
         if (!permissoesSessao.includes('profissionais.ler')) {
           setProfissionais([]);
           return;
@@ -637,7 +640,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         }
       })
       .catch(() => {
-        if (ativo) setPermissoes([]);
+        if (ativo) {
+          setPermissoes([]);
+          setPapel(null);
+        }
       });
     return () => {
       ativo = false;
@@ -751,6 +757,35 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())[0],
     [eventos]
   );
+  const ehSuperAdmin = papel === 'SuperAdmin';
+  const profissionalResponsavel = useMemo(
+    () => profissionais.find((profissional) => profissional.id === dados?.paciente.profissionalResponsavelId),
+    [dados?.paciente.profissionalResponsavelId, profissionais]
+  );
+  const nomeContextoProfissional = profissionalResponsavel?.nome ?? 'profissional responsavel';
+  const podeGerenciarPaciente = permissoes.includes('pacientes.gerenciar');
+  const podeLerAgenda = permissoes.includes('agenda.consultas.ler');
+  const podeCriarConsulta = permissoes.includes('agenda.consultas.criar');
+  const podeLerQuestionarios = permissoes.includes('questionarios.ler');
+  const podeLerMensagens = permissoes.includes('comunicacoes.mensagens.ler');
+  const podeLerPlano = permissoes.includes('planos_alimentares.ler');
+  const podeLerFinanceiro = permissoes.includes('agenda.financeiro.ler');
+
+  function destinoAgenda(opcoes: { consultaId?: string; financeiro?: boolean } = {}) {
+    const parametros = new URLSearchParams({ pacienteId });
+    if (opcoes.consultaId) parametros.set('consultaId', opcoes.consultaId);
+    if (opcoes.financeiro) parametros.set('financeiro', '1');
+    return `/agenda?${parametros.toString()}` as Route;
+  }
+
+  function protegerSaidaParaAgenda(
+    evento: MouseEvent<HTMLAnchorElement>,
+    opcoes: { consultaId?: string; financeiro?: boolean } = {}
+  ) {
+    if (!alteracoesNaoSalvas) return;
+    evento.preventDefault();
+    setSaidaPendente({ tipo: 'agenda', ...opcoes });
+  }
 
   function abrirProximaConduta() {
     const conduta = dados?.resumo.proximaConduta;
@@ -794,73 +829,130 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
   return (
     <div className="grid gap-4">
-      <div className="sticky top-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-md border border-linha bg-white p-4 shadow-sm">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primaria-suave text-primaria">
-            <UserRound size={22} />
+      <div className="z-10 grid gap-4 rounded-md border border-linha bg-white p-4 shadow-sm lg:sticky lg:top-3">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primaria-suave text-primaria">
+              <UserRound size={22} />
+            </div>
+            <div className="min-w-0">
+              <h2 className="break-words text-lg font-semibold text-tinta">{dados.paciente.nome}</h2>
+              <p className="mt-1 text-sm text-texto-suave">
+                Risco {Number(dados.paciente.scoreRisco).toFixed(0)} pontos - {dados.paciente.statusAdesao}
+              </p>
+              <p className="mt-1 text-sm text-texto-suave">
+                Contato {dados.paciente.contato ?? '-'} - Nascimento {formatarData(dados.paciente.dataNascimento)}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h2 className="break-words text-lg font-semibold text-tinta">{dados.paciente.nome}</h2>
-            <p className="mt-1 text-sm text-texto-suave">
-              Risco {Number(dados.paciente.scoreRisco).toFixed(0)} pontos - {dados.paciente.statusAdesao}
-            </p>
-            <p className="mt-1 text-sm text-texto-suave">
-              Contato {dados.paciente.contato ?? '-'} - Nascimento {formatarData(dados.paciente.dataNascimento)}
-            </p>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+            <Link
+              href="/pacientes"
+              onClick={(evento) => {
+                if (!alteracoesNaoSalvas) return;
+                evento.preventDefault();
+                setSaidaPendente({ tipo: 'voltar' });
+              }}
+              className={classesBotao({ variante: 'fantasma', tamanho: 'sm', className: 'w-full sm:w-auto' })}
+            >
+              <ArrowLeft size={16} />
+              Voltar
+            </Link>
+            <Botao type="button" tamanho="sm" className="w-full sm:w-auto" onClick={() => void carregar()}>
+              <RefreshCcw size={16} />
+              Atualizar
+            </Botao>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/agenda?pacienteId=${encodeURIComponent(pacienteId)}`}
-            onClick={(evento) => {
-              if (!alteracoesNaoSalvas) return;
-              evento.preventDefault();
-              setSaidaPendente({ tipo: 'agenda' });
-            }}
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
-          >
-            <CalendarDays size={16} />
-            Agendar
-          </Link>
-          <PerfilCadastroPaciente
-            pacienteId={pacienteId}
-            nomeCompleto={dados.paciente.nome}
-            dataNascimento={dados.paciente.dataNascimento}
-            aoAtualizarFicha={() => void carregar()}
-          />
-          <Link
-            href="/pacientes"
-            onClick={(evento) => {
-              if (!alteracoesNaoSalvas) return;
-              evento.preventDefault();
-              setSaidaPendente({ tipo: 'voltar' });
-            }}
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-linha bg-white px-3 text-sm font-medium text-tinta transition-colors hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
-          >
-            <ArrowLeft size={16} />
-            Voltar para pacientes
-          </Link>
-          <Botao type="button" onClick={() => void carregar()}>
-            <RefreshCcw size={16} />
-            Atualizar
-          </Botao>
-          <Botao type="button" variante="primario" onClick={() => solicitarTrocaAba('evolucoes')}>
-            <Stethoscope size={16} />
-            Nova evolucao
-          </Botao>
-          <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('acompanhamento')}>
-            <CheckSquare size={16} />
-            Nova tarefa
-          </Botao>
-          <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('formularios')}>
-            <ClipboardList size={16} />
-            Formularios
-          </Botao>
-          <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('anexos')}>
-            <Paperclip size={16} />
-            Anexar
-          </Botao>
-        </div>
+        {ehSuperAdmin ? (
+          <div role="status" className="flex items-start gap-3 rounded-md border border-primaria/30 bg-primaria-suave px-3 py-2 text-sm text-tinta">
+            <ShieldCheck size={18} className="mt-0.5 shrink-0 text-primaria" />
+            <div>
+              <p className="font-semibold">Contexto SuperAdmin</p>
+              <p className="mt-0.5 text-texto-suave">
+                Voce esta acompanhando o prontuario sob responsabilidade de {nomeContextoProfissional}. As acoes ficam registradas no seu usuario.
+              </p>
+            </div>
+          </div>
+        ) : null}
+        <nav aria-label="Acoes rapidas do paciente" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap">
+          {podeGerenciarPaciente ? (
+            <Botao type="button" variante="primario" className="w-full lg:w-auto" onClick={() => solicitarTrocaAba('evolucoes')}>
+              <Stethoscope size={16} />
+              Nova evolucao
+            </Botao>
+          ) : null}
+          {podeGerenciarPaciente ? (
+            <Botao type="button" variante="secundario" className="w-full lg:w-auto" onClick={() => solicitarTrocaAba('acompanhamento')}>
+              <CheckSquare size={16} />
+              Nova tarefa
+            </Botao>
+          ) : null}
+          {podeCriarConsulta ? (
+            <Link
+              href={destinoAgenda()}
+              onClick={(evento) => protegerSaidaParaAgenda(evento)}
+              className={classesBotao({ variante: 'secundario', className: 'w-full lg:w-auto' })}
+            >
+              <CalendarDays size={16} />
+              Agendar
+            </Link>
+          ) : null}
+          {podeLerAgenda && proximaConsulta ? (
+            <Link
+              href={destinoAgenda({ consultaId: proximaConsulta.origemId ?? proximaConsulta.id })}
+              onClick={(evento) => protegerSaidaParaAgenda(evento, { consultaId: proximaConsulta.origemId ?? proximaConsulta.id })}
+              className={classesBotao({ variante: 'secundario', className: 'w-full lg:w-auto' })}
+            >
+              <CalendarDays size={16} />
+              Abrir consulta
+            </Link>
+          ) : null}
+          {podeLerPlano && dados.resumo.planoAtual ? (
+            <Botao type="button" variante="secundario" className="w-full lg:w-auto" onClick={() => solicitarTrocaAba('plano_alimentar')}>
+              <Utensils size={16} />
+              Plano atual
+            </Botao>
+          ) : null}
+          {podeLerQuestionarios ? (
+            <Botao type="button" variante="secundario" className="w-full lg:w-auto" onClick={() => solicitarTrocaAba('formularios')}>
+              <ClipboardList size={16} />
+              Formularios
+            </Botao>
+          ) : null}
+          {podeLerMensagens ? (
+            <Botao type="button" variante="secundario" className="w-full lg:w-auto" onClick={() => solicitarTrocaAba('mensagens')}>
+              <MessageSquareText size={16} />
+              {dados.resumo.falhaComunicacao ? 'Revisar mensagem' : 'Mensagens'}
+            </Botao>
+          ) : null}
+          {podeGerenciarPaciente ? (
+            <Botao type="button" variante="secundario" className="w-full lg:w-auto" onClick={() => solicitarTrocaAba('anexos')}>
+              <Paperclip size={16} />
+              Anexar
+            </Botao>
+          ) : null}
+          {podeLerFinanceiro ? (
+            <Link
+              href={destinoAgenda({ financeiro: true })}
+              onClick={(evento) => protegerSaidaParaAgenda(evento, { financeiro: true })}
+              className={classesBotao({ variante: 'secundario', className: 'w-full lg:w-auto' })}
+            >
+              <BadgeDollarSign size={16} />
+              Financeiro
+            </Link>
+          ) : null}
+          {podeGerenciarPaciente ? (
+            <div className="[&>button]:w-full lg:[&>button]:w-auto">
+              <PerfilCadastroPaciente
+                pacienteId={pacienteId}
+                nomeCompleto={dados.paciente.nome}
+                dataNascimento={dados.paciente.dataNascimento}
+                aoAtualizarFicha={() => void carregar()}
+              />
+            </div>
+          ) : null}
+        </nav>
       </div>
 
       <Abas
@@ -1517,7 +1609,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           const pendente = saidaPendente;
           setSaidaPendente(null);
           if (pendente.tipo === 'voltar') router.push('/pacientes');
-          else if (pendente.tipo === 'agenda') router.push(`/agenda?pacienteId=${encodeURIComponent(pacienteId)}`);
+          else if (pendente.tipo === 'agenda') router.push(destinoAgenda(pendente));
           else aplicarAba(pendente.id);
         }}
       />
