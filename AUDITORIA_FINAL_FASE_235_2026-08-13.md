@@ -2,7 +2,7 @@
 
 ## Decisao
 
-A Fase 235 permanece **em execucao**. Os 17 incrementos registrados construiram
+A Fase 235 permanece **em execucao**. Os 18 incrementos registrados construiram
 a navegacao do prontuario, o cadastro progressivo e a base paginada da linha do
 tempo, mas ainda nao satisfazem todos os criterios de aceite da especificacao.
 
@@ -23,14 +23,14 @@ executa migration e nao modifica producao.
 | Area | Situacao | Evidencia e lacuna |
 | --- | --- | --- |
 | Navegacao em seis areas | Entregue | Resumo, Atendimentos, Avaliacoes, Plano, Documentos e Financeiro estao agrupados; Financeiro depende de permissao. |
-| Cabecalho persistente | Parcial | Nome, risco, contato e acoes frequentes existem. Faltam responsavel/proxima consulta no cabecalho, contexto explicito de SuperAdmin e parte das acoes previstas, como iniciar atendimento, abrir plano e registrar pagamento. |
+| Cabecalho persistente | Entregue | Nome, risco e contato permanecem visiveis; consulta futura, plano atual, mensagens, financeiro e criacao clinica aparecem somente conforme permissao e estado. O contexto transversal de SuperAdmin identifica o profissional responsavel sem expor IDs. |
 | Resumo orientado a conduta | Entregue | Uma unica acao operacional priorizada vem do backend; plano publicado, ultimo atendimento, tarefa vencida e falha de comunicacao respeitam permissoes. A serie antropometrica possui seletor e tabela acessivel, e adesao/sintomas so aparecem com fonte e data. |
 | Timeline paginada | Entregue | Cursor estavel, limite, periodo, tipo, responsavel, RLS e projecao sem conteudo cifrado cobrem as fontes longitudinais previstas. |
 | Cobertura longitudinal | Entregue | Planos publicados, antropometrias, documentos emitidos, anexos confirmados, exames, fotos e eventos financeiros autorizados entram por metadados, com autor/origem/responsavel uniformizados. |
 | Cadastro progressivo | Entregue | Identificacao, contato/endereco, operacao, portal e fiscal estao separados e cifrados. A ficha indica completude e campos faltantes sem bloquear legado e sugere possiveis duplicidades apenas no escopo autorizado, sem fusao automatica. |
 | Ciclo de acesso ao portal | Entregue | Estado, ultimo acesso, canal preferido e aceites autorizados sao exibidos sem token antigo. Reemissao invalida o convite pendente anterior e a revogacao explicita e auditada. |
 | Modulos clinicos conectados | Entregue parcialmente por fases posteriores | Antropometria, plano, documentos, exames/fotos e condutas possuem telas e contratos. A Fase 238 gestacional continua separada e pendente; os modulos posteriores ainda precisam entrar no resumo/timeline da 235. |
-| Autorizacao e isolamento | Base entregue | A leitura reutiliza `ExecutorTenant`, RLS e escopo de carteira. A conclusao exige regressao explicita para cada nova origem da timeline e para o contexto transversal exclusivo de SuperAdmin. |
+| Autorizacao e isolamento | Entregue | A leitura reutiliza `ExecutorTenant`, RLS e escopo de carteira. A regressao confirma que Professional recebe `NotFound` fora da propria carteira e que somente SuperAdmin recebe a identificacao transversal na interface. |
 | Responsividade e estados | Base entregue | Existem estados de carga, vazio e erro, e a Fase 239 validou jornadas sinteticas. As alteracoes residuais precisam repetir teclado, leitor de tela, desktop/mobile e permissao negada. |
 | Desempenho | Pendente | Nao foi encontrado benchmark dedicado para resumo/timeline com massa sintetica nem criterio registrado de N+1/latencia. |
 
@@ -108,12 +108,22 @@ Concluido em 2026-08-14.
 
 ### Incremento 18 - contexto, acoes e autorizacao
 
-- identificar visualmente quando SuperAdmin acompanha o contexto de outro
-  profissional;
-- completar as acoes rapidas previstas e condicionar cada uma a permissao e
-  estado do dominio;
-- adaptar as acoes para mobile sem comprimir o prontuario em tabela;
-- testar que nenhum outro papel troca ou consulta o painel de outro profissional.
+Concluido em 2026-08-14.
+
+- o prontuario identifica `Contexto SuperAdmin`, mostra o nome do profissional
+  responsavel e informa que as acoes continuam auditadas no usuario atual;
+- nao foi criado seletor de impersonacao nem endpoint transversal novo. Os
+  demais papeis nao recebem o aviso ou qualquer controle de troca de contexto;
+- nova evolucao, tarefa, agendamento, consulta futura, plano atual,
+  formularios, mensagens, anexos, financeiro e cadastro aparecem conforme a
+  permissao e, quando aplicavel, somente quando existe o estado correspondente;
+- o cabecalho deixa de ser fixo no celular e organiza as acoes em grade de duas
+  colunas, com alvos de 44 px e sem transformar o prontuario em tabela;
+- evidencias locais: backend 130/130 suites e 874/874 testes; escopo de
+  Professional e excecao SuperAdmin validados; builds backend/web, lint,
+  typecheck, authz e seguranca BFF; 28/28 Playwright do prontuario em
+  desktop/mobile e 10/10 no gate de acessibilidade. Sem migration. O GitHub
+  Actions segue indisponivel por cota e nao foi tratado como aprovado.
 
 ### Incremento 19 - aceite tecnico de encerramento
 
@@ -125,5 +135,5 @@ Concluido em 2026-08-14.
 
 ## Ordem recomendada
 
-Executar os incrementos 18 e 19 nessa ordem. A Fase 235 so pode
+Executar o Incremento 19. A Fase 235 so pode
 mudar de `[~]` para `[x]` depois do Incremento 19 e do registro das evidencias.

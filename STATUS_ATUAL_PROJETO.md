@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-13.
+Atualizado em 2026-08-14.
 
 ## Snapshot
 
@@ -39,9 +39,11 @@ Atualizado em 2026-08-13.
   com contexto operacional permissionado, relatos com fonte/data e serie
   antropometrica acessivel. O Incremento 17 adicionou completude nao bloqueante,
   deteccao assistida de duplicidade no escopo autorizado e ciclo auditado do
-  portal com estado, ultimo acesso, preferencias e aceites sem token antigo.
-  Ainda faltam contexto SuperAdmin e benchmark/aceite final nos Incrementos 18
-  e 19. A validacao dos Incrementos 16 e 17 foi local porque a cota do GitHub Actions estava
+  portal com estado, ultimo acesso, preferencias e aceites sem token antigo. O
+  Incremento 18 identificou o contexto transversal exclusivo de SuperAdmin e
+  condicionou as acoes rapidas a permissao/estado em desktop e mobile. Falta
+  somente o benchmark e aceite final do Incremento 19. A validacao dos
+  Incrementos 16 a 18 foi local porque a cota do GitHub Actions estava
   esgotada; CI ausente nao foi considerado aprovado. A matriz esta em
   `AUDITORIA_FINAL_FASE_235_2026-08-13.md`.
 - Fase 231 concluida: o workflow manual de staging cria uma branch Neon
