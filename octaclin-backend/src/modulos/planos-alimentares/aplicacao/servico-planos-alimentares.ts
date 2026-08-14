@@ -12,6 +12,7 @@ import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-ten
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import type { PermissaoOctaClin } from '../../auth/dominio/permissoes';
 import { AvaliacaoAntropometricaOrm } from '../../pacientes/infraestrutura/avaliacao-antropometrica.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import {
@@ -89,6 +90,7 @@ export class ServicoPlanosAlimentares {
 
   async listar(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado) {
     this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteNoEscopo(gerenciador, tenantId, pacienteId, usuario);
       const planos = await gerenciador.getRepository(PlanoAlimentarOrm).find({
@@ -99,7 +101,22 @@ export class ServicoPlanosAlimentares {
         },
         order: { criadoEm: 'DESC' }
       });
-      return Promise.all(planos.map((plano) => this.montarPlano(gerenciador, plano)));
+      if (!planos.length) return [];
+
+      const versoes = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).find({
+        where: { tenantId, planoId: In(planos.map((plano) => plano.id)) },
+        order: { numero: 'DESC' }
+      });
+      return planos.map((plano) => this.montarResumoPlano(plano, versoes.filter((versao) => versao.planoId === plano.id)));
+    });
+  }
+
+  async obter(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario);
+      return this.montarPlano(gerenciador, plano);
     });
   }
 
@@ -110,6 +127,7 @@ export class ServicoPlanosAlimentares {
     dados: CriarPlanoAlimentarDto
   ) {
     this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const paciente = await this.garantirPacienteNoEscopo(gerenciador, tenantId, pacienteId, usuario, true);
       const repositorioPlano = gerenciador.getRepository(PlanoAlimentarOrm);
@@ -137,6 +155,7 @@ export class ServicoPlanosAlimentares {
 
   async obterRascunho(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
     this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario);
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id);
@@ -152,6 +171,7 @@ export class ServicoPlanosAlimentares {
     dados: AtualizarRascunhoPlanoAlimentarDto
   ) {
     this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
     if (!dados.aplicabilidadeFormulaConfirmada) {
       throw new BadRequestException('Confirme explicitamente a aplicabilidade da formula antes de calcular o plano.');
     }
@@ -254,6 +274,7 @@ export class ServicoPlanosAlimentares {
 
   async revisar(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
     this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
       const rascunho = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
@@ -275,6 +296,7 @@ export class ServicoPlanosAlimentares {
 
   async publicar(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
     this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteNoEscopo(gerenciador, tenantId, pacienteId, usuario, true);
       const repositorioPlano = gerenciador.getRepository(PlanoAlimentarOrm);
@@ -332,6 +354,7 @@ export class ServicoPlanosAlimentares {
 
   async criarNovaVersao(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
     this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
       const repositorioVersao = gerenciador.getRepository(PlanoAlimentarVersaoOrm);
@@ -370,6 +393,7 @@ export class ServicoPlanosAlimentares {
 
   async arquivar(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
     this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
       const instante = new Date();
@@ -401,6 +425,7 @@ export class ServicoPlanosAlimentares {
 
   async buscarAlimentos(tenantId: string, busca: string, usuario: UsuarioAutenticado) {
     this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
     const termo = busca.trim();
     if (termo.length < 2) throw new BadRequestException('Informe ao menos dois caracteres para buscar alimentos.');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
@@ -891,7 +916,15 @@ export class ServicoPlanosAlimentares {
       where: { tenantId: plano.tenantId, planoId: plano.id },
       order: { numero: 'DESC' }
     });
-    const detalhes = await Promise.all(versoes.map((versao) => this.montarVersao(gerenciador, versao)));
+    const rascunho = versoes.find((versao) => !versao.publicadaEm && !versao.descartadaEm);
+    const publicadaAtual = versoes.find((versao) => versao.id === plano.versaoPublicadaAtualId);
+    const versoesEmDetalhe = [publicadaAtual, rascunho].filter(
+      (versao, indice, lista): versao is PlanoAlimentarVersaoOrm =>
+        Boolean(versao) && lista.findIndex((item) => item?.id === versao?.id) === indice
+    );
+    const detalhes = await Promise.all(
+      versoesEmDetalhe.map((versao) => this.montarVersao(gerenciador, versao))
+    );
     return {
       id: plano.id,
       pacienteId: plano.pacienteId,
@@ -902,7 +935,44 @@ export class ServicoPlanosAlimentares {
       atualizadoEm: plano.atualizadoEm,
       current: detalhes.find((versao) => versao.id === plano.versaoPublicadaAtualId),
       draft: detalhes.find((versao) => versao.status === 'rascunho'),
-      historico: detalhes.filter((versao) => versao.status !== 'rascunho')
+      historico: versoes
+        .filter((versao) => versao.publicadaEm || versao.descartadaEm)
+        .map((versao) => this.montarResumoVersao(versao))
+    };
+  }
+
+  private garantirPermissao(usuario: UsuarioAutenticado, permissao: PermissaoOctaClin): void {
+    if (!usuario.permissoes.includes(permissao)) {
+      throw new ForbiddenException('Permissao insuficiente para operar planos alimentares.');
+    }
+  }
+
+  private montarResumoPlano(plano: PlanoAlimentarOrm, versoes: PlanoAlimentarVersaoOrm[]) {
+    const resumos = versoes.map((versao) => this.montarResumoVersao(versao));
+    return {
+      id: plano.id,
+      pacienteId: plano.pacienteId,
+      profissionalId: plano.profissionalId,
+      titulo: this.criptografia.descriptografar(plano.tituloCriptografado),
+      criadoEm: plano.criadoEm,
+      atualizadoEm: plano.atualizadoEm,
+      current: resumos.find((versao) => versao.id === plano.versaoPublicadaAtualId),
+      draft: resumos.find((versao) => versao.status === 'rascunho'),
+      historicoQuantidade: resumos.filter((versao) => versao.status !== 'rascunho').length
+    };
+  }
+
+  private montarResumoVersao(versao: PlanoAlimentarVersaoOrm) {
+    return {
+      id: versao.id,
+      numero: versao.numero,
+      status: versao.publicadaEm ? ('publicada' as const) : versao.descartadaEm ? ('descartada' as const) : ('rascunho' as const),
+      revisadaEm: versao.revisadaEm,
+      hashConteudo: versao.hashConteudo,
+      publicadaEm: versao.publicadaEm,
+      descartadaEm: versao.descartadaEm,
+      criadoEm: versao.criadoEm,
+      atualizadoEm: versao.atualizadoEm
     };
   }
 

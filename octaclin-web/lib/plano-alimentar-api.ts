@@ -193,7 +193,24 @@ export interface PlanoAlimentarApi {
   atualizadoEm: string;
   current?: VersaoPlanoAlimentarApi;
   draft?: VersaoPlanoAlimentarApi;
-  historico: VersaoPlanoAlimentarApi[];
+  historico: VersaoPlanoAlimentarResumoApi[];
+}
+
+export type VersaoPlanoAlimentarResumoApi = Pick<
+  VersaoPlanoAlimentarApi,
+  'id' | 'numero' | 'status' | 'revisadaEm' | 'hashConteudo' | 'publicadaEm' | 'descartadaEm' | 'criadoEm' | 'atualizadoEm'
+>;
+
+export interface PlanoAlimentarResumoApi {
+  id: string;
+  pacienteId: string;
+  profissionalId: string;
+  titulo: string;
+  criadoEm: string;
+  atualizadoEm: string;
+  current?: VersaoPlanoAlimentarResumoApi;
+  draft?: VersaoPlanoAlimentarResumoApi;
+  historicoQuantidade: number;
 }
 
 export class ErroApiPlanoAlimentar extends Error {
@@ -237,7 +254,14 @@ function corpoJson(entrada: unknown): RequestInit {
 }
 
 export function listarPlanosAlimentares(pacienteId: string, signal?: AbortSignal) {
-  return requisitar<PlanoAlimentarApi[]>(basePaciente(pacienteId), { signal });
+  return requisitar<PlanoAlimentarResumoApi[]>(basePaciente(pacienteId), { signal });
+}
+
+export function obterPlanoAlimentar(pacienteId: string, planoId: string, signal?: AbortSignal) {
+  return requisitar<PlanoAlimentarApi>(
+    `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}`,
+    { signal }
+  );
 }
 
 export function criarPlanoAlimentar(pacienteId: string, titulo: string) {

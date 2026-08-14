@@ -20,6 +20,7 @@ describe('ControladorPlanosAlimentares', () => {
   beforeEach(() => {
     servico = {
       listar: jest.fn().mockResolvedValue([]),
+      obter: jest.fn().mockResolvedValue({ id: planoId }),
       criar: jest.fn().mockResolvedValue({ id: planoId }),
       obterRascunho: jest.fn().mockResolvedValue({ id: planoId }),
       atualizarRascunho: jest.fn().mockResolvedValue({ id: planoId }),
@@ -38,7 +39,7 @@ describe('ControladorPlanosAlimentares', () => {
     ]);
   });
 
-  it.each(['listar', 'obterRascunho'] as const)('usa somente planos_alimentares.ler em %s', (metodo) => {
+  it.each(['listar', 'obter', 'obterRascunho'] as const)('usa somente planos_alimentares.ler em %s', (metodo) => {
     expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPlanosAlimentares.prototype[metodo])).toEqual([
       'planos_alimentares.ler'
     ]);
@@ -54,6 +55,9 @@ describe('ControladorPlanosAlimentares', () => {
   );
 
   it('encaminha tenant, paciente, plano e usuario para o servico', async () => {
+    await controlador.obter(usuario, pacienteId, planoId);
+    expect(servico.obter).toHaveBeenCalledWith(usuario.tenantId, pacienteId, planoId, usuario);
+
     await controlador.publicar(usuario, pacienteId, planoId);
     expect(servico.publicar).toHaveBeenCalledWith(usuario.tenantId, pacienteId, planoId, usuario);
   });

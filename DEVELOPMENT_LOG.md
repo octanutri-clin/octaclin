@@ -326,3 +326,14 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Evidencias: PR #38, CIs `31741178651`/`31741805806` e monitor
   `31741818055` verdes.
 - Documento: `fase-232-operacao-lancamento.md`.
+
+### Fase 234 - Incremento 2: contratos e permissoes
+
+- Responsavel: Codex, com auditoria paralela de backend e frontend/BFF.
+- Inicio e conclusao: 2026-08-14.
+- Status: concluido localmente, sem migration.
+- Entrega: listagem resumida, detalhe sob demanda com historico leve, defesa de
+  permissao no servico, BFF dedicado e workspace de leitura sem mutacoes.
+- Validacao: 135 suites/894 testes backend, builds e typechecks, lint, gate de
+  autorizacao e Playwright desktop/mobile para leitura e gestao.
+- Documento: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.

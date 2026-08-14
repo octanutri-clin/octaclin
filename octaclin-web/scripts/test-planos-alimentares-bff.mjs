@@ -10,9 +10,13 @@ const arquivos = [
   'scripts/planos-alimentares-bff.spec.ts',
   'app/api/pacientes/[id]/planos-alimentares/_proxy.ts',
   'app/api/pacientes/[id]/planos-alimentares/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/[planoId]/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/alimentos/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/publicacao/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/[planoId]/revisao/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/[planoId]/nova-versao/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/[planoId]/arquivamento/route.ts',
   'lib/server/cold-start-bff.ts',
   'lib/server/permissoes-bff.ts',
   'lib/server/sessao-bff.ts'

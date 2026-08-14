@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -252,6 +252,57 @@ describe('ServicoPlanosAlimentares', () => {
     const consulta = repositorios.get(PlanoAlimentarOrm)!.find.mock.calls[0][0];
     expect(consulta.where).not.toHaveProperty('profissionalId');
     expect(consulta.where).toEqual(expect.objectContaining({ tenantId: TENANT_ID, pacienteId: PACIENTE_ID }));
+  });
+
+  it('lista somente resumo sem carregar refeicoes, itens ou substituicoes', async () => {
+    const resultado = await servico.listar(TENANT_ID, PACIENTE_ID, usuarioProfissional());
+
+    expect(resultado).toEqual([
+      expect.objectContaining({
+        id: PLANO_ID,
+        titulo: 'Plano principal',
+        draft: expect.objectContaining({ id: VERSAO_ID, numero: 1, status: 'rascunho' }),
+        historicoQuantidade: 0
+      })
+    ]);
+    expect(resultado[0]).not.toHaveProperty('historico');
+    expect(repositorios.get(PlanoAlimentarVersaoOrm)!.find).toHaveBeenCalledTimes(1);
+    expect(repositorios.get(PlanoAlimentarRefeicaoOrm)!.find).not.toHaveBeenCalled();
+    expect(repositorios.get(PlanoAlimentarItemOrm)!.find).not.toHaveBeenCalled();
+    expect(repositorios.get(PlanoAlimentarSubstituicaoOrm)!.find).not.toHaveBeenCalled();
+  });
+
+  it('obtem o detalhe completo somente para plano no escopo do paciente', async () => {
+    repositorios.get(PlanoAlimentarVersaoOrm)!.registros.push({
+      id: '10000000-0000-4000-8000-000000000008',
+      tenantId: TENANT_ID,
+      planoId: PLANO_ID,
+      numero: 0,
+      criadoPorUsuarioId: USUARIO_ID,
+      publicadaEm: new Date('2026-07-01T12:00:00Z')
+    });
+    const resultado = await servico.obter(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+
+    expect(resultado).toEqual(expect.objectContaining({
+      id: PLANO_ID,
+      draft: expect.objectContaining({ id: VERSAO_ID, refeicoes: [] }),
+      historico: [expect.objectContaining({ numero: 0, status: 'publicada' })]
+    }));
+    expect(repositorios.get(PlanoAlimentarRefeicaoOrm)!.find).toHaveBeenCalledTimes(1);
+
+    await expect(
+      servico.obter(TENANT_ID, PACIENTE_ID, '10000000-0000-4000-8000-000000000099', usuarioProfissional())
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('aplica permissao tambem no servico e bloqueia mutacao direta para leitor', async () => {
+    const leitor: UsuarioAutenticado = { ...usuarioProfissional(), permissoes: ['planos_alimentares.ler'] };
+
+    await expect(servico.listar(TENANT_ID, PACIENTE_ID, leitor)).resolves.toHaveLength(1);
+    await expect(
+      servico.criar(TENANT_ID, PACIENTE_ID, leitor, { titulo: 'Plano indevido' })
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(executor.executar).toHaveBeenCalledTimes(1);
   });
 
   it('trava o paciente antes de alterar o rascunho para serializar reatribuicoes', async () => {

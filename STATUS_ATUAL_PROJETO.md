@@ -18,8 +18,11 @@ Atualizado em 2026-08-14.
   somente leitura e a recarga TACO foi idempotente e auditada como `ignorada`.
   O mesmo rollout foi concluido em `Octaclin-db-producao` apos dump custom
   validado, levando producao a 43/43; proveniencia, triggers e privilegios da
-  role `octaclin_app_producao` foram aprovados. Editor, substituicoes, portal e
-  demais fluxos seguem pendentes.
+  role `octaclin_app_producao` foram aprovados. O Incremento 2 separou listagem
+  resumida de detalhe sob demanda, manteve o historico leve, aplicou permissoes
+  tambem no servico e entregou workspace somente leitura sem controles
+  mutaveis. Nao houve migration no Incremento 2; filtros multifonte, editor,
+  substituicoes, portal e demais fluxos seguem pendentes.
 - Fase 232 concluida e integrada: operacao de lancamento com janela controlada,
   responsaveis, gates GO/NO-GO, rollback, comunicacao e exercicio sintetico P0.
   A decisao atual permanece NO-GO para cliente real ate identidade publica,

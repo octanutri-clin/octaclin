@@ -688,6 +688,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   segue desligada ate o aceite operacional. PR `#40`, commit `ec578a6` e CI
   `31749993251` aprovados, sem migration. Ver
   `fase-241-hardening-ia-clinica.md`.
+- Fase 234 (Incremento 2) - Contratos e permissoes do plano alimentar:
+  listagem resumida deixou de expandir conteudo clinico, detalhe carrega apenas
+  publicacao atual e rascunho completos, e o historico permanece leve. Backend,
+  BFF e interface exigem leitura/gestao coerentes; leitores veem o plano sem
+  controles mutaveis e gestores preservam o editor. A validacao encerrou com
+  135 suites/894 testes backend, builds, typechecks, lint, autorizacao e quatro
+  cenarios Playwright desktop/mobile. Sem migration. Ver
+  `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
 
 ## Estado atual de uso
 

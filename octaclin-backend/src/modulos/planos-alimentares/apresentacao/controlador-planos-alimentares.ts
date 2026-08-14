@@ -32,6 +32,16 @@ export class ControladorPlanosAlimentares {
     return this.servico.criar(usuario.tenantId, pacienteId, usuario, dados);
   }
 
+  @Get(':planoId')
+  @Permissoes('planos_alimentares.ler')
+  obter(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Param('planoId', ParseUUIDPipe) planoId: string
+  ) {
+    return this.servico.obter(usuario.tenantId, pacienteId, planoId, usuario);
+  }
+
   @Get(':planoId/rascunho')
   @Permissoes('planos_alimentares.ler')
   obterRascunho(

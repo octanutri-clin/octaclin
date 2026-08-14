@@ -1644,10 +1644,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `Octaclin-db-producao` chegou a 43/43; TACO, proveniencia, eventos, triggers
     e privilegios somente leitura de `octaclin_app_producao` foram verificados.
     A recarga foi `no-op` auditada e nenhuma fonte externa foi carregada.
-  - Proximo incremento: contratos e permissoes da busca multifonte, listagem
-    resumida/detalhe sob demanda e modo somente leitura real para quem tem
-    `planos_alimentares.ler` sem `planos_alimentares.gerenciar`; depois, o
-    workspace profissional. TBCA, IBGE/POF e Tucunduva continuam desabilitadas.
+  - Incremento 2 concluido em 2026-08-14: listagem resumida em consultas
+    constantes, detalhe sob demanda com historico leve, autorizacao tambem no
+    servico e workspace realmente somente leitura quando falta
+    `planos_alimentares.gerenciar`. Avaliacoes antropometricas sao carregadas
+    somente para gestao e respostas obsoletas de troca de plano sao ignoradas.
+  - Validacoes do Incremento 2: 135 suites/894 testes backend, builds e
+    typechecks, lint, gate completo de autorizacao e Playwright desktop/mobile
+    para leitura e gestao. Nao houve migration.
+  - Proximo incremento: DTOs paginados e validados para planos e busca de
+    alimentos, filtros por fonte e versao historica completa sob demanda;
+    depois, ampliar o workspace profissional. TBCA, IBGE/POF e Tucunduva
+    continuam desabilitadas.
   - Especificacao: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
   - Decisao de fontes: `DECISAO_FONTES_CATALOGO_FASE_234.md`.
 

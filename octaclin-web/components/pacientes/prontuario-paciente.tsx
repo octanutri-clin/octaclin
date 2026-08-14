@@ -769,6 +769,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const podeLerQuestionarios = permissoes.includes('questionarios.ler');
   const podeLerMensagens = permissoes.includes('comunicacoes.mensagens.ler');
   const podeLerPlano = permissoes.includes('planos_alimentares.ler');
+  const podeGerenciarPlano = permissoes.includes('planos_alimentares.gerenciar');
   const podeLerFinanceiro = permissoes.includes('agenda.financeiro.ler');
 
   function destinoAgenda(opcoes: { consultaId?: string; financeiro?: boolean } = {}) {
@@ -1221,7 +1222,11 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       </> : null}
 
       {abaAtiva === 'plano_alimentar' ? (
-        <PlanoAlimentarProfissional pacienteId={pacienteId} aoAlterarRascunho={setPlanoAlimentarNaoSalvo} />
+        <PlanoAlimentarProfissional
+          pacienteId={pacienteId}
+          podeGerenciar={podeGerenciarPlano}
+          aoAlterarRascunho={setPlanoAlimentarNaoSalvo}
+        />
       ) : null}
 
       {abaAtiva === 'condutas_terapeuticas' ? <AbaCondutasTerapeuticas pacienteId={pacienteId} podeGerenciar={permissoes.includes('pacientes.gerenciar')} /> : null}

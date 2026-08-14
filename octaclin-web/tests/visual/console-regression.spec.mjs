@@ -1643,6 +1643,65 @@ async function prepararProntuarioMockado(page, {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(documentos) });
   });
 
+  await page.route('**/api/pacientes/paciente-1/planos-alimentares**', async (route) => {
+    const caminho = new URL(route.request().url()).pathname;
+    const versaoResumo = {
+      id: 'plano-versao-publicada-1',
+      numero: 1,
+      status: 'publicada',
+      publicadaEm: '2026-08-10T12:00:00.000Z',
+      criadoEm: '2026-08-09T12:00:00.000Z',
+      atualizadoEm: '2026-08-10T12:00:00.000Z'
+    };
+    const resumo = {
+      id: 'plano-alimentar-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Plano de manutencao',
+      criadoEm: '2026-08-09T12:00:00.000Z',
+      atualizadoEm: '2026-08-10T12:00:00.000Z',
+      current: versaoResumo,
+      historicoQuantidade: 1
+    };
+
+    if (route.request().method() === 'GET' && caminho.endsWith('/planos-alimentares')) {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([resumo]) });
+      return;
+    }
+    if (route.request().method() === 'GET' && caminho.endsWith('/planos-alimentares/plano-alimentar-1')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...resumo,
+          current: {
+            ...versaoResumo,
+            objetivos: 'Manter rotina alimentar equilibrada.',
+            refeicoes: [{
+              id: 'refeicao-1',
+              ordem: 0,
+              nome: 'Cafe da manha',
+              horarioLocal: '08:00',
+              itens: [{
+                id: 'item-1',
+                ordem: 0,
+                descricao: 'Aveia em flocos',
+                quantidade: 2,
+                unidade: 'colheres',
+                porcaoGramas: 30,
+                composicaoSnapshot: {},
+                substituicoes: []
+              }]
+            }]
+          },
+          historico: [versaoResumo]
+        })
+      });
+      return;
+    }
+    await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ message: 'Mutacao nao esperada.' }) });
+  });
+
   return {
     corpoDocumentoEmitido: () => corpoDocumentoEmitido,
     criouEvolucao: () => criouEvolucao,
@@ -1919,6 +1978,40 @@ test.describe('prontuario do paciente', () => {
     await areas.getByRole('tab', { name: 'Plano' }).click();
     await expect(page.getByRole('heading', { name: 'Plano de acompanhamento' })).toBeVisible();
     await expect(page.getByRole('tablist', { name: 'Subareas de Plano' }).getByRole('tab', { name: 'Acompanhamento' })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('oferece consulta real do plano sem controles mutaveis para leitor', async ({ page }) => {
+    await prepararProntuarioMockado(page, { permissoesExtras: ['planos_alimentares.ler'] });
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
+
+    await expect(page.getByText('Acesso somente para consulta.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Plano de manutencao' }).first()).toBeVisible();
+    await expect(page.getByText('Aveia em flocos')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Criar plano', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Arquivar', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Salvar rascunho', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Revisar', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Publicar', exact: true })).toHaveCount(0);
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('mantem editor disponivel para profissional com permissao de gestao', async ({ page }) => {
+    await prepararProntuarioMockado(page, {
+      permissoesExtras: ['planos_alimentares.ler', 'planos_alimentares.gerenciar']
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
+
+    await expect(page.getByLabel('Novo plano')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Criar plano' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Arquivar' })).toBeVisible();
+    await expect(page.getByText('Acesso somente para consulta.')).toHaveCount(0);
     await assertSemOverflowHorizontal(page);
   });
 
