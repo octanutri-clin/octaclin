@@ -1711,8 +1711,13 @@ publicado antes de ampliar a superficie de mudancas visuais.
     e sem cabecalho fixo. Validacao local: backend 130/130 suites e 874/874
     testes, Playwright 28/28, acessibilidade 10/10, lint, typecheck, authz,
     seguranca e builds backend/web. Sem migration; Actions indisponivel por cota.
-  - Incremento 19 pendente: benchmark, authz, acessibilidade, regressao
-    desktop/mobile e jornada sintetica antes do encerramento.
+  - Incremento 19 em execucao desde 2026-08-14: benchmark local confirmou 11
+    operacoes constantes no resumo com 1/30 registros por fonte e uma query
+    consolidada para 50/51 eventos da timeline. Backend 131/131 suites e
+    876/876 testes, Playwright 30/30 desktop/mobile, teclado, foco, contraste,
+    acessibilidade 10/10, authz, seguranca, lint, typechecks e builds passaram.
+    Faltam executar a jornada mutavel em banco efemero confirmado e reconectar
+    o arquivo Penpot; sem esses dois gates, a Fase 235 permanece `[~]`.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

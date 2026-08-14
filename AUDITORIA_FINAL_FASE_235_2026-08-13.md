@@ -127,13 +127,26 @@ Concluido em 2026-08-14.
 
 ### Incremento 19 - aceite tecnico de encerramento
 
-- benchmark de resumo/timeline com massa sintetica e verificacao de N+1;
-- suites completas de backend/web, authz, secrets e build;
-- Playwright desktop/mobile, teclado, foco, contraste e estados de permissao;
-- jornada mutavel em ambiente efemero com dados sinteticos;
-- atualizar Penpot e documentos vivos somente depois das evidencias.
+Em execucao desde 2026-08-14.
+
+- [x] benchmark sintetico compara 1 e 30 registros por fonte. O resumo mantem
+  11 operacoes de repositorio nos dois cenarios; a timeline pagina 50 de 51
+  eventos com uma query consolidada mais a validacao do paciente, sem N+1;
+- [x] suites completas locais: backend 131/131 suites e 876/876 testes,
+  builds backend/web, typechecks, lint, authz e seguranca BFF;
+- [x] Playwright 30/30 do prontuario em desktop/mobile, incluindo papel sem
+  permissao, teclado, foco visivel, contraste WCAG AA e ausencia de overflow;
+  o gate transversal de acessibilidade passou 10/10;
+- [ ] jornada mutavel em ambiente efemero: workflow, alvo e fixtures passaram
+  seus testes estaticos, mas a maquina nao possui Docker, `psql`, `neonctl` ou
+  `E2E_DATABASE_URL`; o Actions nao executa jobs enquanto a cota estiver
+  esgotada. Nenhum banco ambiguo foi reutilizado;
+- [ ] Penpot: a conexao MCP respondeu sem instancia de arquivo conectada. O
+  desenho final sera atualizado depois da reconexao e da jornada mutavel;
+- [ ] documentos de encerramento e mudanca de `[~]` para `[x]` somente apos os
+  dois gates externos acima.
 
 ## Ordem recomendada
 
-Executar o Incremento 19. A Fase 235 so pode
+Concluir os gates externos do Incremento 19. A Fase 235 so pode
 mudar de `[~]` para `[x]` depois do Incremento 19 e do registro das evidencias.

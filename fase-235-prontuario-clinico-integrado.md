@@ -516,6 +516,28 @@ lint, typecheck, autorizacao e seguranca BFF, 28/28 Playwright do prontuario e
 sem creditos e sua ausencia nao foi usada como aprovacao. A Fase 235 continua
 parcial e segue somente para o Incremento 19.
 
+## Incremento 19 - checkpoint do aceite tecnico final
+
+Em execucao desde 2026-08-14. Foi adicionado um benchmark sintetico dedicado
+ao prontuario. Com 1 ou 30 registros por fonte, o resumo executa as mesmas 11
+operacoes de repositorio. A timeline retorna 50 de 51 eventos usando uma unica
+query consolidada, alem da validacao inicial do paciente, comprovando que o
+volume de eventos nao introduz N+1.
+
+Os gates locais atuais passaram: 131/131 suites e 876/876 testes backend;
+builds backend/web; typechecks; lint; authz; seguranca operacional/runtime;
+30/30 Playwright do prontuario em desktop/mobile, incluindo teclado, foco
+visivel, contraste WCAG AA e permissao reduzida; e 10/10 no gate transversal
+de acessibilidade. Os contratos e fixtures da jornada mutavel tambem passaram
+seus testes estaticos.
+
+O encerramento permanece bloqueado por duas evidencias externas. A maquina nao
+possui Docker, `psql`, `neonctl` ou URL E2E confirmada, e o GitHub Actions nao
+executa passos enquanto a cota estiver esgotada; por seguranca, nenhum banco
+ambiguo foi reutilizado. O MCP do Penpot respondeu sem arquivo conectado. A
+Fase 235 continua `[~]` ate executar a jornada em branch/banco descartavel e
+atualizar o desenho conectado. Nao houve migration.
+
 ## Sequencia posterior obrigatoria
 
 ### Fase 236 - Exames laboratoriais e evolucao fotografica
