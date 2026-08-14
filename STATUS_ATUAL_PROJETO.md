@@ -31,9 +31,9 @@ Atualizado em 2026-08-14.
   promover, observar ou rollback. IA e sincronizacao mobile em lote ficaram
   sob flags fail-closed por tenant. A telemetria ainda e por processo e nao
   libera escalabilidade horizontal sem agregacao distribuida.
-- Auditoria final da Fase 235 concluida em 2026-08-13. A fase permanece
-  corretamente marcada como parcial: navegacao, cadastro progressivo e timeline
-  paginada existem. O Incremento 15 concluiu a cobertura longitudinal de planos,
+- Fase 235 concluida em 2026-08-14: navegacao, cadastro progressivo e timeline
+  paginada foram encerrados com aceite tecnico. O Incremento 15 concluiu a
+  cobertura longitudinal de planos,
   antropometria, documentos, anexos, exames, fotos e financeiro, com permissao,
   autoria e filtro por responsavel. O Incremento 16 concluiu o resumo acionavel,
   com contexto operacional permissionado, relatos com fonte/data e serie
@@ -41,15 +41,14 @@ Atualizado em 2026-08-14.
   deteccao assistida de duplicidade no escopo autorizado e ciclo auditado do
   portal com estado, ultimo acesso, preferencias e aceites sem token antigo. O
   Incremento 18 identificou o contexto transversal exclusivo de SuperAdmin e
-  condicionou as acoes rapidas a permissao/estado em desktop e mobile. Falta
-  concluir o aceite final do Incremento 19: o benchmark local sem N+1 e todos
-  os gates locais passaram. O Penpot foi atualizado com pranchas desktop,
-  mobile e de aceite, validadas por exportacao. Resta a jornada mutavel no
-  banco confirmado `octaclin_test_fase150b`, atualmente em 39/40 migrations;
-  a URL owner assume a role runtime por padrao e nenhuma migration foi aplicada
-  sem owner efetivo. A validacao dos
-  Incrementos 16 a 18 foi local porque a cota do GitHub Actions estava
-  esgotada; CI ausente nao foi considerado aprovado. A matriz esta em
+  condicionou as acoes rapidas a permissao/estado em desktop e mobile. O
+  Incremento 19 confirmou benchmark sem N+1 e todos os gates locais; o Penpot
+  recebeu pranchas desktop, mobile e de aceite validadas por exportacao. No
+  banco remoto isolado `octaclin_test_fase150b`, a migration 1027 levou o schema
+  a 40/40 e a jornada mutavel confirmou 76 tabelas com RLS forcada, dois tenants
+  isolados, resumo/timeline e limpeza integral dos dados e da role temporaria.
+  O GitHub Actions estava sem cota e nao executou passos; CI ausente nao foi
+  considerado aprovado. A matriz final esta em
   `AUDITORIA_FINAL_FASE_235_2026-08-13.md`.
 - Fase 231 concluida: o workflow manual de staging cria uma branch Neon
   descartavel, aplica migrations, valida a role runtime, RLS forcada e dois
