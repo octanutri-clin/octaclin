@@ -1716,8 +1716,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     consolidada para 50/51 eventos da timeline. Backend 131/131 suites e
     876/876 testes, Playwright 30/30 desktop/mobile, teclado, foco, contraste,
     acessibilidade 10/10, authz, seguranca, lint, typechecks e builds passaram.
-    Faltam executar a jornada mutavel em banco efemero confirmado e reconectar
-    o arquivo Penpot; sem esses dois gates, a Fase 235 permanece `[~]`.
+    O Penpot foi conectado e recebeu pranchas desktop 1440, mobile 390 e de
+    especificacao, validadas por exportacao e salvas na versao
+    `Fase 235 - pranchas validadas`. Resta a jornada mutavel: o banco dedicado
+    `octaclin_test_fase150b` foi confirmado em 39/40 migrations, mas a conexao
+    owner assume automaticamente a role runtime e a migration 1027 nao foi
+    aplicada sem owner efetivo. Ate esse gate, a Fase 235 permanece `[~]`.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

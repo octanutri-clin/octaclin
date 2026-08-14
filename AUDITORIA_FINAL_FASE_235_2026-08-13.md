@@ -138,15 +138,19 @@ Em execucao desde 2026-08-14.
   permissao, teclado, foco visivel, contraste WCAG AA e ausencia de overflow;
   o gate transversal de acessibilidade passou 10/10;
 - [ ] jornada mutavel em ambiente efemero: workflow, alvo e fixtures passaram
-  seus testes estaticos, mas a maquina nao possui Docker, `psql`, `neonctl` ou
-  `E2E_DATABASE_URL`; o Actions nao executa jobs enquanto a cota estiver
-  esgotada. Nenhum banco ambiguo foi reutilizado;
-- [ ] Penpot: a conexao MCP respondeu sem instancia de arquivo conectada. O
-  desenho final sera atualizado depois da reconexao e da jornada mutavel;
+  seus testes estaticos. O banco `octaclin_test_fase150b` foi confirmado e
+  inspecionado em 2026-08-14, com 39/40 migrations e a role de login
+  `neondb_owner` assumindo automaticamente `octaclin_runtime_integracao`. A
+  migration `AdicionarCicloVidaTenants1720000001027` nao foi aplicada sem uma
+  sessao owner efetiva; o Actions continua sem executar jobs por falta de cota;
+- [x] Penpot conectado e validado por exportacao. O arquivo
+  `ddb7145f-a1be-80bb-8008-682e4779bea2` recebeu as pranchas desktop 1440,
+  mobile 390 e especificacao de aceite, com a versao
+  `Fase 235 - pranchas validadas`;
 - [ ] documentos de encerramento e mudanca de `[~]` para `[x]` somente apos os
-  dois gates externos acima.
+  a jornada mutavel acima.
 
 ## Ordem recomendada
 
-Concluir os gates externos do Incremento 19. A Fase 235 so pode
+Concluir a jornada mutavel do Incremento 19. A Fase 235 so pode
 mudar de `[~]` para `[x]` depois do Incremento 19 e do registro das evidencias.

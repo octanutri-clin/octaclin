@@ -531,12 +531,22 @@ visivel, contraste WCAG AA e permissao reduzida; e 10/10 no gate transversal
 de acessibilidade. Os contratos e fixtures da jornada mutavel tambem passaram
 seus testes estaticos.
 
-O encerramento permanece bloqueado por duas evidencias externas. A maquina nao
-possui Docker, `psql`, `neonctl` ou URL E2E confirmada, e o GitHub Actions nao
-executa passos enquanto a cota estiver esgotada; por seguranca, nenhum banco
-ambiguo foi reutilizado. O MCP do Penpot respondeu sem arquivo conectado. A
-Fase 235 continua `[~]` ate executar a jornada em branch/banco descartavel e
-atualizar o desenho conectado. Nao houve migration.
+O Penpot foi conectado ao arquivo
+`ddb7145f-a1be-80bb-8008-682e4779bea2`. Foram registradas e validadas por
+exportacao as pranchas `F235 Prontuario Desktop 1440`,
+`F235 Prontuario Mobile 390` e `F235 Especificacao Aceite Incremento 19`. A
+versao nomeada `Fase 235 - pranchas validadas` preserva o checkpoint visual,
+incluindo contexto SuperAdmin, matriz de permissoes, alvos de 44 px, contraste,
+acoes rapidas e linha do cuidado.
+
+O encerramento permanece bloqueado somente pela jornada mutavel. O banco
+dedicado `octaclin_test_fase150b` foi confirmado e inspecionado, mas esta em
+39/40 migrations. Embora a URL informe `neondb_owner`, a sessao assume
+automaticamente `octaclin_runtime_integracao`, sem `BYPASSRLS`; por isso a
+migration `AdicionarCicloVidaTenants1720000001027` nao foi aplicada sem owner
+efetivo. A maquina tambem nao possui Docker, `psql` ou `neonctl`, e o GitHub
+Actions nao executa passos enquanto a cota estiver esgotada. A Fase 235
+continua `[~]`. Nenhuma migration foi executada neste checkpoint.
 
 ## Sequencia posterior obrigatoria
 

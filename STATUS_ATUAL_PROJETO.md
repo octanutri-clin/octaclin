@@ -43,8 +43,11 @@ Atualizado em 2026-08-14.
   Incremento 18 identificou o contexto transversal exclusivo de SuperAdmin e
   condicionou as acoes rapidas a permissao/estado em desktop e mobile. Falta
   concluir o aceite final do Incremento 19: o benchmark local sem N+1 e todos
-  os gates locais passaram, mas a jornada mutavel ainda requer banco efemero
-  explicitamente confirmado e o Penpot precisa ser reconectado. A validacao dos
+  os gates locais passaram. O Penpot foi atualizado com pranchas desktop,
+  mobile e de aceite, validadas por exportacao. Resta a jornada mutavel no
+  banco confirmado `octaclin_test_fase150b`, atualmente em 39/40 migrations;
+  a URL owner assume a role runtime por padrao e nenhuma migration foi aplicada
+  sem owner efetivo. A validacao dos
   Incrementos 16 a 18 foi local porque a cota do GitHub Actions estava
   esgotada; CI ausente nao foi considerado aprovado. A matriz esta em
   `AUDITORIA_FINAL_FASE_235_2026-08-13.md`.
