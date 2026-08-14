@@ -56,6 +56,12 @@ No banco isolado `octaclin_test_fase150b`:
 
 ## Rollout
 
+Rollout inicial concluido em 2026-08-14 no banco
+`Octaclin-db-producao`: backup custom validado, identidade owner confirmada,
+43/43 migrations, 583 registros com proveniencia, triggers e privilegios
+runtime aprovados. A reexecucao do carregador nao alterou o catalogo e foi
+auditada como `ignorada`.
+
 As migrations sao forward-only em producao. Antes do rollout produtivo:
 
 1. backup e restore canario aprovados;

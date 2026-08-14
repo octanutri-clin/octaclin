@@ -1634,13 +1634,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     proveniencia, trilha de importacao, transicoes auditadas, imutabilidade e
     role runtime somente leitura. O carregador TACO deixou de usar `upsert` e
     passou a validar integralmente a reexecucao.
-  - Migrations `1028`/`1029`/`1030` aprovadas somente em
+  - Migrations `1028`/`1029`/`1030` aprovadas primeiro em
     `octaclin_test_fase150b` (43/43). A identidade legada foi convertida apenas
     apos confirmar os 583 alimentos; todos ficaram vinculados a uma importacao
     concluida e com hash por registro. Ativacao sem importacao/proveniencia e
     transferencia de alimento de fonte ativa foram recusadas em provas com
-    rollback. Nenhuma fonte externa e nenhuma migration desta fase foram
-    levadas a producao.
+    rollback.
+  - Rollout de producao concluido em 2026-08-14 apos dump custom validado:
+    `Octaclin-db-producao` chegou a 43/43; TACO, proveniencia, eventos, triggers
+    e privilegios somente leitura de `octaclin_app_producao` foram verificados.
+    A recarga foi `no-op` auditada e nenhuma fonte externa foi carregada.
   - Proximo incremento: contratos e permissoes da busca multifonte, listagem
     resumida/detalhe sob demanda e modo somente leitura real para quem tem
     `planos_alimentares.ler` sem `planos_alimentares.gerenciar`; depois, o

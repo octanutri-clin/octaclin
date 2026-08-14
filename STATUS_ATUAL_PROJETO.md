@@ -16,8 +16,10 @@ Atualizado em 2026-08-14.
   fonte/alimento ativo, transferencia saindo de fonte ativa, ativacao sem
   importacao/proveniencia e transicao sem ator/motivo; a role runtime permaneceu
   somente leitura e a recarga TACO foi idempotente e auditada como `ignorada`.
-  Producao ainda nao recebeu estas migrations. Editor,
-  substituicoes, portal e demais fluxos seguem pendentes.
+  O mesmo rollout foi concluido em `Octaclin-db-producao` apos dump custom
+  validado, levando producao a 43/43; proveniencia, triggers e privilegios da
+  role `octaclin_app_producao` foram aprovados. Editor, substituicoes, portal e
+  demais fluxos seguem pendentes.
 - Fase 232 concluida e integrada: operacao de lancamento com janela controlada,
   responsaveis, gates GO/NO-GO, rollback, comunicacao e exercicio sintetico P0.
   A decisao atual permanece NO-GO para cliente real ate identidade publica,

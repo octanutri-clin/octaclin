@@ -52,8 +52,15 @@ pelo diretorio `.next` e permaneceram aprovados.
 
 Permanecem para os proximos incrementos: APIs e busca multifonte completas,
 editor profissional, modelos, grupos de substituicao, portal, adesao, lista de
-compras e validacao final. Nenhuma migration desta fase foi aplicada em
-producao neste incremento.
+compras e validacao final.
+
+Rollout de producao concluido em 2026-08-14: dump PostgreSQL custom gerado e
+validado estruturalmente antes da mudanca; banco e role confirmados como
+`Octaclin-db-producao`/`neondb_owner`; somente `1028`, `1029` e `1030` estavam
+pendentes e foram aplicadas em uma transacao, elevando o historico a 43/43.
+As provas posteriores repetiram os 583 vinculos/hashes, evento, triggers,
+privilegios somente leitura de `octaclin_app_producao`, bloqueios com rollback
+e recarga idempotente auditada como `ignorada`.
 
 O Incremento 2 comeca pelos contratos e permissoes: separar listagem resumida
 de detalhe sob demanda e propagar `podeGerenciar` ao workspace profissional.
