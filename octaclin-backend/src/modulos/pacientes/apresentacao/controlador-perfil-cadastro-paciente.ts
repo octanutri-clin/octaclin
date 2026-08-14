@@ -31,6 +31,14 @@ export class ControladorPerfilCadastroPaciente {
     return perfil;
   }
 
+  @Get(':id/perfil-cadastro/qualidade-acesso')
+  @Permissoes('pacientes.ler')
+  async obterQualidadeEAcesso(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Param('id', ParseUUIDPipe) id: string) {
+    const resposta = await this.servicoPerfil.obterQualidadeEAcesso(usuario.tenantId, id, usuario);
+    await this.auditar(usuario, requisicao, 'pacientes.perfil_cadastro.qualidade_acesso.ler', id);
+    return resposta;
+  }
+
   @Patch(':id/perfil-cadastro/identificacao')
   @Permissoes('pacientes.gerenciar')
   async atualizarIdentificacao(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Param('id', ParseUUIDPipe) id: string, @Body() dados: AtualizarIdentificacaoCadastroPacienteDto) {

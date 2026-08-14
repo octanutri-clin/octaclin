@@ -220,7 +220,7 @@ export class ServicoImportacaoPacientes {
     item: LinhaImportacaoPaciente
   ): Promise<boolean> {
     try {
-      const convite = await this.convites.criarConvite(tenantId, usuario.usuarioId, item.pacienteId as string, {
+      const convite = await this.convites.criarConvite(tenantId, usuario, item.pacienteId as string, {
         email: item.contato as string
       });
       item.linkConvite = convite.linkAtivacao;

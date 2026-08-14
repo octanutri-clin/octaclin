@@ -1680,8 +1680,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     do paciente, sem registrar ou reexibir token em claro.
   - Auditoria final de 2026-08-13: a fase permanece parcial. A timeline foi
     completada no Incremento 15 e o resumo clinico no Incremento 16; qualidade
-    cadastral/ciclo do portal, contexto SuperAdmin e aceite tecnico ainda
-    exigem os Incrementos 17 a 19 documentados em
+    contexto SuperAdmin e aceite tecnico ainda exigem os Incrementos 18 e 19 documentados em
     `AUDITORIA_FINAL_FASE_235_2026-08-13.md`.
   - Incremento 15 concluido em 2026-08-13: timeline integra planos publicados,
     antropometrias, documentos, anexos confirmados, exames, fotos e financeiro
@@ -1695,8 +1694,14 @@ publicado antes de ampliar a superficie de mudancas visuais.
     130/130 suites e 872/872 testes, Playwright 22/22, acessibilidade 10/10,
     lint, typecheck, authz, segredos e builds backend/web. GitHub Actions
     indisponivel por cota esgotada, sem presumir CI aprovado.
-  - Incremento 17 pendente: indicar completude, detectar duplicidade no tenant
-    e expor estado/reenvio/revogacao/ultimo acesso do portal com auditoria.
+  - Incremento 17 concluido em 2026-08-14: cadastro indica completude e campos
+    faltantes sem bloquear legado; duplicidades possiveis ficam limitadas ao
+    tenant e a carteira autorizada, sem fusao automatica. A ficha mostra estado
+    do portal, ultimo acesso, canal preferido e aceites permitidos sem token
+    antigo. Criacao/reemissao e revogacao explicita validam permissao/escopo e
+    sao auditadas. Validacao local: backend 130/130 suites e 874/874 testes,
+    Playwright 24/24, acessibilidade 10/10, lint, typecheck, authz, seguranca e
+    builds backend/web. Sem migration; Actions indisponivel por cota.
   - Incremento 18 pendente: identificar o contexto transversal exclusivo de
     SuperAdmin e completar acoes rapidas autorizadas no desktop e mobile.
   - Incremento 19 pendente: benchmark, authz, acessibilidade, regressao

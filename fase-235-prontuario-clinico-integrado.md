@@ -415,7 +415,8 @@ As lacunas obrigatorias foram organizadas nos Incrementos 15 a 19. O Incremento
 15 completou fontes e filtros da timeline e o 16 concluiu o resumo clinico;
 permanecem fechar qualidade cadastral e ciclo de acesso ao portal, explicitar
 contexto/autorizacao e acoes, e executar benchmark, acessibilidade e jornada
-sintetica de encerramento nos Incrementos 17 a 19.
+sintetica de encerramento nos Incrementos 18 e 19; o Incremento 17 foi
+concluido em 2026-08-14.
 
 A matriz de conformidade, a evidencia revisada e a ordem de execucao estao em
 `AUDITORIA_FINAL_FASE_235_2026-08-13.md`. As Fases 236, 237 e 239 ja entregues
@@ -443,7 +444,7 @@ legadas, permanece no Incremento 19.
 Validacoes: 130 suites/871 testes backend; 20/20 Playwright do prontuario em
 desktop/mobile; typechecks, lint, builds, authz, seguranca operacional/runtime,
 scan de secrets e audits backend/web sem vulnerabilidades conhecidas. A Fase
-235 permanece em execucao e segue para o Incremento 17.
+235 permanecia em execucao e, naquele checkpoint, seguia para o Incremento 17.
 
 ## Incremento 16 - resumo clinico acionavel
 
@@ -468,7 +469,27 @@ lint, typecheck, autorizacao BFF, scan de segredos, 22/22 Playwright do
 prontuario em desktop/mobile, 10/10 no gate de acessibilidade e
 `git diff --check`. O GitHub Actions nao foi executado porque a cota da conta
 estava esgotada; a ausencia do CI nao foi usada como evidencia de aprovacao. A
-Fase 235 permanece parcial e segue para o Incremento 17.
+Naquele checkpoint, a Fase 235 permanecia parcial e seguia para o Incremento 17.
+
+## Incremento 17 - qualidade cadastral e ciclo do portal
+
+Entregue em 2026-08-14. O cadastro agora apresenta percentual e campos
+recomendados faltantes por secao sem impedir o uso de pacientes legados. A
+checagem de possivel duplicidade cruza nome/nascimento e contato somente dentro
+do tenant e do escopo autorizado; para Professional, nao revela pacientes de
+outra carteira e nunca executa fusao automatica.
+
+A ficha consolida o estado do portal, o ultimo acesso, o canal preferido e os
+aceites legais autorizados. Tokens antigos e seus hashes nao fazem parte do
+contrato. Criacao e reemissao passaram a exigir `pacientes.gerenciar` e a
+validar a carteira no backend. A revogacao explicita do convite pendente possui
+confirmacao e auditoria; ela nao desativa uma conta que ja foi ativada.
+
+Validacoes locais: 130/130 suites e 874/874 testes backend, builds backend/web,
+lint, typecheck, autorizacao e seguranca BFF, 24/24 Playwright do prontuario em
+desktop/mobile, 10/10 no gate de acessibilidade e `git diff --check`. Nao houve
+migration. O GitHub Actions permanece sem creditos e nao foi usado como
+evidencia. A Fase 235 continua parcial e segue para o Incremento 18.
 
 ## Sequencia posterior obrigatoria
 

@@ -2,9 +2,19 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { ConvitePacienteOrm } from '../infraestrutura/convite-paciente.orm';
 import { ServicoConvitesPaciente } from './servico-convites-paciente';
+
+const usuarioProfissional: UsuarioAutenticado = {
+  usuarioId: 'usuario-profissional-1',
+  tenantId: 'tenant-1',
+  papel: 'Professional',
+  emailHash: 'hash-profissional',
+  permissoes: ['pacientes.ler', 'pacientes.gerenciar']
+};
 
 function criarRepositorioFake(nome: string, dados: Record<string, any>) {
   const itens: Record<string, any>[] = dados[`${nome}s`] ?? [];
@@ -19,7 +29,9 @@ function criarRepositorioFake(nome: string, dados: Record<string, any>) {
     }),
     findOne: jest.fn(async (consulta: { where: Record<string, unknown> }) => {
       if (nome === 'paciente') return dados.paciente ?? null;
-      return itens.find((item) => Object.entries(consulta.where).every(([chave, valor]) => item[chave] === valor)) ?? null;
+      return itens.find((item) => Object.entries(consulta.where).every(([chave, valor]) =>
+        item[chave] === valor || (valor && typeof valor === 'object' && item[chave] == null)
+      )) ?? null;
     }),
     find: jest.fn(async (consulta: { where: Record<string, unknown> }) =>
       itens.filter((item) => Object.entries(consulta.where).every(([chave, valor]) => item[chave] === valor || (valor && typeof valor === 'object' && item[chave] == null)))
@@ -35,12 +47,14 @@ function criarServico(dados: Record<string, any> = {}) {
     usuario: criarRepositorioFake('usuario', dados),
     consentimento: criarRepositorioFake('consentimento', dados)
   };
+  const profissional = { findOne: jest.fn(async () => ({ id: 'profissional-1' })) };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === ConvitePacienteOrm) return repositorios.convite;
       if (entidade === PacienteOrm) return repositorios.paciente;
       if (entidade === UsuarioOrm) return repositorios.usuario;
       if (entidade === ConsentimentoLgpdOrm) return repositorios.consentimento;
+      if (entidade === ProfissionalOrm) return profissional;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -100,7 +114,7 @@ describe('ServicoConvitesPaciente', () => {
       convites: []
     });
 
-    const convite = await servico.criarConvite('tenant-1', 'usuario-profissional-1', 'paciente-1', {
+    const convite = await servico.criarConvite('tenant-1', usuarioProfissional, 'paciente-1', {
       email: 'Ana@example.com'
     });
 
@@ -131,7 +145,7 @@ describe('ServicoConvitesPaciente', () => {
       convites: []
     };
     const { servico, repositorios, servicoAuth, ordem } = criarServico(dados);
-    const convite = await servico.criarConvite('tenant-1', 'usuario-profissional-1', 'paciente-1', {
+    const convite = await servico.criarConvite('tenant-1', usuarioProfissional, 'paciente-1', {
       email: 'ana@example.com'
     });
     ordem.length = 0;
@@ -243,7 +257,7 @@ describe('ServicoConvitesPaciente', () => {
     });
 
     await expect(
-      servico.criarConvite('tenant-1', 'usuario-profissional-1', 'paciente-1', { email: 'ana@example.com' })
+      servico.criarConvite('tenant-1', usuarioProfissional, 'paciente-1', { email: 'ana@example.com' })
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
@@ -260,9 +274,21 @@ describe('ServicoConvitesPaciente', () => {
       convites: [convitePendente]
     });
 
-    await servico.criarConvite('tenant-1', 'usuario-profissional-1', 'paciente-1', { email: 'ana@example.com' });
+    await servico.criarConvite('tenant-1', usuarioProfissional, 'paciente-1', { email: 'ana@example.com' });
 
     expect(dados.convites[0]).toEqual(expect.objectContaining({ status: 'revogado', revogadoEm: expect.any(Date) }));
     expect(repositorios.convite.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'convite-anterior', status: 'revogado' }));
+  });
+
+  it('deve revogar explicitamente apenas o convite pendente do paciente acessivel', async () => {
+    const { servico, dados } = criarServico({
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1', usuarioId: null, profissionalResponsavelId: 'profissional-1' },
+      convites: [{ id: 'convite-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'pendente', revogadoEm: null }]
+    });
+
+    const resposta = await servico.revogarConvitePendente('tenant-1', 'paciente-1', usuarioProfissional);
+
+    expect(resposta).toEqual({ conviteId: 'convite-1', revogadoEm: expect.any(Date) });
+    expect(dados.convites[0]).toEqual(expect.objectContaining({ status: 'revogado', revogadoEm: expect.any(Date) }));
   });
 });

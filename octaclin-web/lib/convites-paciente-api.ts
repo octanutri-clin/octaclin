@@ -72,6 +72,10 @@ export async function criarConvitePaciente(pacienteId: string, email: string): P
   });
 }
 
+export async function revogarConvitePaciente(pacienteId: string): Promise<{ conviteId: string; revogadoEm: string }> {
+  return requisitar(`/api/pacientes/${encodeURIComponent(pacienteId)}/convites-acesso`, { method: 'DELETE' });
+}
+
 export async function obterConvitePaciente(token: string): Promise<ConvitePacientePublicoApi> {
   return requisitar<ConvitePacientePublicoApi>(`/api/pacientes/convites-acesso/${encodeURIComponent(token)}`);
 }
