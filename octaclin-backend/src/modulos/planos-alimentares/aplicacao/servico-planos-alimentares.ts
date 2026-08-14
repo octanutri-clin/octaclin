@@ -64,7 +64,12 @@ export interface SnapshotComposicao {
     codigo: string;
     nome: string;
     versao: string;
+    baseCodigo?: string;
     hashConteudo: string;
+    checksumArquivo?: string;
+    esquemaVersao?: string;
+    publicadaEm?: string;
+    capturadaEm?: string;
   };
   nutrientesPor100g: NutrientesPor100gPlano;
   nutrientesPorcao: SubstituicaoPlanoAlimentar['nutrientes'];
@@ -399,20 +404,21 @@ export class ServicoPlanosAlimentares {
     const termo = busca.trim();
     if (termo.length < 2) throw new BadRequestException('Informe ao menos dois caracteres para buscar alimentos.');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const fontes = await gerenciador.getRepository(FonteComposicaoAlimentoOrm).find({
+        where: { situacao: 'ativa' },
+        order: { nome: 'ASC', versao: 'DESC' }
+      });
+      if (!fontes.length) return [];
+      const fontePorId = new Map(fontes.map((fonte) => [fonte.id, fonte]));
       const alimentos = await gerenciador
         .getRepository(AlimentoComposicaoOrm)
         .createQueryBuilder('alimento')
         .where('lower(alimento.nome) like lower(:busca)', { busca: `%${termo}%` })
+        .andWhere('alimento.fonte_id in (:...fonteIds)', { fonteIds: [...fontePorId.keys()] })
         .orderBy('alimento.nome', 'ASC')
         .take(50)
         .getMany();
-      const fontes = alimentos.length
-        ? await gerenciador.getRepository(FonteComposicaoAlimentoOrm).find({
-            where: { id: In([...new Set(alimentos.map((alimento) => alimento.fonteId))]) }
-          })
-        : [];
-      const fontePorId = new Map(fontes.map((fonte) => [fonte.id, fonte]));
-      return alimentos.map((alimento) => ({
+      return alimentos.filter((alimento) => fontePorId.has(alimento.fonteId)).map((alimento) => ({
         id: alimento.id,
         codigoOrigem: alimento.codigoOrigem,
         nome: alimento.nome,
@@ -424,7 +430,13 @@ export class ServicoPlanosAlimentares {
               codigo: fontePorId.get(alimento.fonteId)!.codigo,
               nome: fontePorId.get(alimento.fonteId)!.nome,
               versao: fontePorId.get(alimento.fonteId)!.versao,
-              licenca: fontePorId.get(alimento.fonteId)!.licenca
+              baseCodigo: fontePorId.get(alimento.fonteId)!.baseCodigo,
+              licenca: fontePorId.get(alimento.fonteId)!.licenca,
+              urlFonte: fontePorId.get(alimento.fonteId)!.urlFonte,
+              publicadaEm: fontePorId.get(alimento.fonteId)!.publicadaEm,
+              checksumArquivo: fontePorId.get(alimento.fonteId)!.checksumArquivo,
+              esquemaVersao: fontePorId.get(alimento.fonteId)!.esquemaVersao,
+              capturadaEm: fontePorId.get(alimento.fonteId)!.capturadaEm?.toISOString()
             }
           : undefined
       }));
@@ -553,9 +565,9 @@ export class ServicoPlanosAlimentares {
       if (!alimento) throw new BadRequestException('Alimento do catalogo nao encontrado.');
       nutrientesPor100g = this.obterNutrientesCatalogo(alimento, true)!;
       const fonte = await gerenciador.getRepository(FonteComposicaoAlimentoOrm).findOne({
-        where: { id: alimento.fonteId }
+        where: { id: alimento.fonteId, situacao: 'ativa' }
       });
-      if (!fonte) throw new BadRequestException('Fonte do alimento do catalogo nao encontrada.');
+      if (!fonte) throw new BadRequestException('Fonte do alimento nao esta ativa para uso clinico.');
       descricao = alimento.nome;
       snapshotBase = {
         origem: 'catalogo',
@@ -567,7 +579,12 @@ export class ServicoPlanosAlimentares {
           codigo: fonte.codigo,
           nome: fonte.nome,
           versao: fonte.versao,
-          hashConteudo: fonte.hashConteudo
+          baseCodigo: fonte.baseCodigo,
+          hashConteudo: fonte.hashConteudo,
+          checksumArquivo: fonte.checksumArquivo,
+          esquemaVersao: fonte.esquemaVersao,
+          publicadaEm: fonte.publicadaEm,
+          capturadaEm: fonte.capturadaEm?.toISOString()
         }
       };
     } else {

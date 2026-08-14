@@ -23,7 +23,13 @@ export interface AlimentoComposicaoApi {
     codigo: string;
     nome: string;
     versao: string;
+    baseCodigo?: string;
     licenca?: string;
+    urlFonte?: string;
+    publicadaEm?: string;
+    checksumArquivo?: string;
+    esquemaVersao?: string;
+    capturadaEm?: string;
   };
 }
 
@@ -76,7 +82,12 @@ export interface ComposicaoSnapshotApi {
     codigo: string;
     nome: string;
     versao: string;
+    baseCodigo?: string;
     hashConteudo?: string;
+    checksumArquivo?: string;
+    esquemaVersao?: string;
+    publicadaEm?: string;
+    capturadaEm?: string;
   };
   nutrientesPor100g: NutrientesPor100gApi;
   nutrientesPorcao: NutrientesPor100gApi;

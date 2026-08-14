@@ -13,6 +13,7 @@ import {
   ControladorPlanosAlimentares
 } from './apresentacao/controlador-planos-alimentares';
 import { AlimentoComposicaoOrm } from './infraestrutura/alimento-composicao.orm';
+import { CatalogoComposicaoAlimentoOrm } from './infraestrutura/catalogo-composicao-alimento.orm';
 import { FonteComposicaoAlimentoOrm } from './infraestrutura/fonte-composicao-alimento.orm';
 import { PlanoAlimentarItemOrm } from './infraestrutura/plano-alimentar-item.orm';
 import { PlanoAlimentarRefeicaoOrm } from './infraestrutura/plano-alimentar-refeicao.orm';
@@ -28,6 +29,7 @@ import { PlanoAlimentarOrm } from './infraestrutura/plano-alimentar.orm';
       PlanoAlimentarRefeicaoOrm,
       PlanoAlimentarItemOrm,
       PlanoAlimentarSubstituicaoOrm,
+      CatalogoComposicaoAlimentoOrm,
       FonteComposicaoAlimentoOrm,
       AlimentoComposicaoOrm,
       PacienteOrm,

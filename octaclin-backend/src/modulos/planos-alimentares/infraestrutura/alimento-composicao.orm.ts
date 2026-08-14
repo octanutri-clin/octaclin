@@ -10,6 +10,12 @@ export class AlimentoComposicaoOrm {
   @Column({ name: 'fonte_id', type: 'uuid' })
   fonteId: string;
 
+  @Column({ name: 'importacao_id', type: 'uuid', nullable: true })
+  importacaoId?: string;
+
+  @Column({ name: 'hash_registro', type: 'char', length: 64, nullable: true })
+  hashRegistro?: string;
+
   @Column({ name: 'codigo_origem', type: 'varchar', length: 120 })
   codigoOrigem: string;
 

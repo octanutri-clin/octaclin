@@ -1618,7 +1618,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Criterio de aceite: nenhuma falha P0/P1 aberta e decisao explicita de
     expandir, corrigir ou pausar a comercializacao.
 
-- [ ] Fase 234 - Editor de planos alimentares avancado e catalogo multifonte. [IMPORTANTE - POS PILOTO]
+- [~] Fase 234 - Editor de planos alimentares avancado e catalogo multifonte. [IMPORTANTE - POS PILOTO]
   - Evoluir o MVP da Fase 216 com editor de refeicoes, modelos, grupos de
     substituicao, resumo nutricional persistente, lista de compras e projecao
     simplificada para o paciente.
@@ -1630,7 +1630,26 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Criterio de aceite: fontes ativas com proveniencia; planos existentes
     imutaveis; busca multifonte sem mescla silenciosa; substituicoes auditaveis
     e portal expondo somente alternativas liberadas.
+  - Incremento 1 concluido em 2026-08-14: governanca versionada, familia/base,
+    proveniencia, trilha de importacao, transicoes auditadas, imutabilidade e
+    role runtime somente leitura. O carregador TACO deixou de usar `upsert` e
+    passou a validar integralmente a reexecucao.
+  - Migrations `1028`/`1029`/`1030` aprovadas primeiro em
+    `octaclin_test_fase150b` (43/43). A identidade legada foi convertida apenas
+    apos confirmar os 583 alimentos; todos ficaram vinculados a uma importacao
+    concluida e com hash por registro. Ativacao sem importacao/proveniencia e
+    transferencia de alimento de fonte ativa foram recusadas em provas com
+    rollback.
+  - Rollout de producao concluido em 2026-08-14 apos dump custom validado:
+    `Octaclin-db-producao` chegou a 43/43; TACO, proveniencia, eventos, triggers
+    e privilegios somente leitura de `octaclin_app_producao` foram verificados.
+    A recarga foi `no-op` auditada e nenhuma fonte externa foi carregada.
+  - Proximo incremento: contratos e permissoes da busca multifonte, listagem
+    resumida/detalhe sob demanda e modo somente leitura real para quem tem
+    `planos_alimentares.ler` sem `planos_alimentares.gerenciar`; depois, o
+    workspace profissional. TBCA, IBGE/POF e Tucunduva continuam desabilitadas.
   - Especificacao: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
+  - Decisao de fontes: `DECISAO_FONTES_CATALOGO_FASE_234.md`.
 
 - [x] Fase 235 - Prontuario clinico integrado e navegacao orientada a conduta. [IMPORTANTE - POS PILOTO]
   - Consolidar em seis areas: Resumo, Atendimentos, Avaliacoes, Plano,
