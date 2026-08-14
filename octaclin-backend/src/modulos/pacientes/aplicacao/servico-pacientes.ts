@@ -7,6 +7,8 @@ import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.o
 import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cliente';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
+import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
+import { PlanoAlimentarVersaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
@@ -567,7 +569,9 @@ export class ServicoPacientes {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const pacienteOrm = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
 
-      const [consultas, envios, respostas, diarios, mensagens, evolucoes, tarefas] = await Promise.all([
+      const podeLerPlanos = usuario.permissoes.includes('planos_alimentares.ler');
+      const podeLerComunicacoes = usuario.permissoes.includes('comunicacoes.mensagens.ler');
+      const [consultas, envios, respostas, diarios, mensagens, evolucoes, tarefas, planoAtual] = await Promise.all([
         gerenciador.getRepository(AgendaConsultaOrm).find({
           where: { tenantId, pacienteId },
           order: { inicioEm: 'DESC' },
@@ -602,8 +606,31 @@ export class ServicoPacientes {
           where: { tenantId, pacienteId },
           order: { vencimentoEm: 'ASC', criadoEm: 'DESC' },
           take: 100
-        })
+        }),
+        podeLerPlanos
+          ? gerenciador.getRepository(PlanoAlimentarOrm).findOne({
+              where: {
+                tenantId,
+                pacienteId,
+                arquivadoEm: IsNull(),
+                versaoPublicadaAtualId: Not(IsNull())
+              },
+              order: { atualizadoEm: 'DESC' }
+            })
+          : Promise.resolve(null)
       ]);
+
+      const versaoPlanoAtual = planoAtual?.versaoPublicadaAtualId
+        ? await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
+            where: {
+              id: planoAtual.versaoPublicadaAtualId,
+              tenantId,
+              planoId: planoAtual.id,
+              publicadaEm: Not(IsNull()),
+              descartadaEm: IsNull()
+            }
+          })
+        : null;
 
       const idsQuestionarios = Array.from(new Set(envios.map((envio) => envio.questionarioId).filter(Boolean)));
       const questionarios = idsQuestionarios.length
@@ -629,21 +656,141 @@ export class ServicoPacientes {
         .sort((a, b) => b.data.getTime() - a.data.getTime())
         .slice(0, 80);
 
+      const agora = new Date();
+      const formulariosPendentes = envios.filter((envio) => envio.status === 'pendente' || envio.status === 'enviado');
+      const tarefasPendentes = tarefas.filter((tarefa) => tarefa.status === 'pendente' || tarefa.status === 'em_andamento');
+      const tarefaVencida = tarefasPendentes.find((tarefa) => tarefa.vencimentoEm && tarefa.vencimentoEm < agora);
+      const falhaComunicacao = podeLerComunicacoes
+        ? mensagens.find((mensagem) => mensagem.status === 'falhou')
+        : undefined;
+      const ultimoAtendimento = consultas.find((consulta) => consulta.status === 'concluida');
+      const proximaConsulta = consultas
+        .filter((consulta) =>
+          (consulta.status === 'agendada' || consulta.status === 'reagendada') && consulta.inicioEm >= agora
+        )
+        .sort((a, b) => a.inicioEm.getTime() - b.inicioEm.getTime())[0];
+      const indicadoresRecentes = this.extrairIndicadoresRecentes(diarios);
+
+      const proximaConduta: ProntuarioPacienteRespostaDto['resumo']['proximaConduta'] = falhaComunicacao
+        ? {
+            tipo: 'falha_comunicacao',
+            titulo: 'Revisar falha de comunicacao',
+            descricao: 'Uma mensagem para este paciente nao foi entregue.',
+            destino: 'mensagens',
+            referenciaId: falhaComunicacao.id,
+            dataReferencia: falhaComunicacao.criadoEm
+          }
+        : tarefaVencida
+          ? {
+              tipo: 'tarefa_vencida',
+              titulo: 'Tratar tarefa vencida',
+              descricao: tarefaVencida.titulo,
+              destino: 'acompanhamento',
+              referenciaId: tarefaVencida.id,
+              dataReferencia: tarefaVencida.vencimentoEm
+            }
+          : formulariosPendentes[0]
+            ? {
+                tipo: 'formulario_pendente',
+                titulo: 'Acompanhar formulario pendente',
+                descricao: `${formulariosPendentes.length} envio(s) aguardando resposta do paciente.`,
+                destino: 'formularios',
+                referenciaId: formulariosPendentes[0].id,
+                dataReferencia: formulariosPendentes[0].enviadoEm
+              }
+            : proximaConsulta
+              ? {
+                  tipo: 'consulta_agendada',
+                  titulo: 'Preparar proxima consulta',
+                  descricao: proximaConsulta.titulo,
+                  destino: 'agenda',
+                  referenciaId: proximaConsulta.id,
+                  dataReferencia: proximaConsulta.inicioEm
+                }
+              : undefined;
+
       return {
         paciente: this.mapearResposta(pacienteOrm),
         resumo: {
           consultas: consultas.length,
-          formulariosPendentes: envios.filter((envio) => envio.status === 'pendente' || envio.status === 'enviado').length,
+          formulariosPendentes: formulariosPendentes.length,
           respostas: respostas.length,
           checkinsRapidos: diarios.length,
           mensagens: mensagens.length,
           evolucoes: evolucoes.length,
-          tarefasPendentes: tarefas.filter((tarefa) => tarefa.status === 'pendente' || tarefa.status === 'em_andamento').length,
-          ultimoEventoEm: linhaDoTempo[0]?.data
+          tarefasPendentes: tarefasPendentes.length,
+          ultimoEventoEm: linhaDoTempo[0]?.data,
+          ultimoAtendimento: ultimoAtendimento
+            ? {
+                consultaId: ultimoAtendimento.id,
+                titulo: ultimoAtendimento.titulo,
+                concluidaEm: ultimoAtendimento.inicioEm
+              }
+            : undefined,
+          planoAtual: planoAtual && versaoPlanoAtual?.publicadaEm
+            ? {
+                planoId: planoAtual.id,
+                versaoId: versaoPlanoAtual.id,
+                numeroVersao: versaoPlanoAtual.numero,
+                publicadaEm: versaoPlanoAtual.publicadaEm
+              }
+            : undefined,
+          tarefaVencida: tarefaVencida?.vencimentoEm
+            ? {
+                tarefaId: tarefaVencida.id,
+                titulo: tarefaVencida.titulo,
+                vencimentoEm: tarefaVencida.vencimentoEm
+              }
+            : undefined,
+          falhaComunicacao: falhaComunicacao
+            ? { mensagemId: falhaComunicacao.id, registradaEm: falhaComunicacao.criadoEm }
+            : undefined,
+          indicadoresRecentes,
+          proximaConduta
         },
         linhaDoTempo
       };
     });
+  }
+
+  private extrairIndicadoresRecentes(
+    diarios: LogDiarioRapidoOrm[]
+  ): ProntuarioPacienteRespostaDto['resumo']['indicadoresRecentes'] {
+    const indicadores: ProntuarioPacienteRespostaDto['resumo']['indicadoresRecentes'] = [];
+    let encontrouAdesao = false;
+    let encontrouSintomas = false;
+
+    for (const diario of diarios) {
+      if (!encontrouAdesao) {
+        const adesao = diario.valor.adesaoPlano;
+        if (typeof adesao === 'number' && Number.isFinite(adesao) && adesao >= 0 && adesao <= 100) {
+          indicadores.push({
+            tipo: 'adesao',
+            valor: `${adesao}%`,
+            fonte: 'Check-in rapido',
+            registradoEm: diario.registradoEm
+          });
+          encontrouAdesao = true;
+        }
+      }
+
+      if (!encontrouSintomas) {
+        const sintomas = diario.valor.sintomas;
+        if (typeof sintomas === 'string' && sintomas.trim()) {
+          indicadores.push({
+            tipo: 'sintomas',
+            valor: sintomas.trim().slice(0, 200),
+            fonte: 'Check-in rapido',
+            registradoEm: diario.registradoEm
+          });
+          encontrouSintomas = true;
+        }
+      }
+
+      if (encontrouAdesao && encontrouSintomas) break;
+    }
+
+    return indicadores;
   }
 
   async listarLinhaDoTempoPaginada(

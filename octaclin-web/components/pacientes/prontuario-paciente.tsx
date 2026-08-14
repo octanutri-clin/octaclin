@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -29,6 +30,7 @@ import {
 import { Botao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { AbaAntropometria } from './aba-antropometria';
+import { ResumoAntropometrico } from './resumo-antropometrico';
 import { AbaExamesLaboratoriais } from './aba-exames-laboratoriais';
 import { AbaEvolucaoFotografica } from './aba-evolucao-fotografica';
 import { AbaCondutasTerapeuticas } from './aba-condutas-terapeuticas';
@@ -279,16 +281,6 @@ function autoriaEvento(evento: EventoProntuarioPacienteApi, profissionais: Profi
   }
   if (responsavel && responsavel.id !== autor?.id) partes.push(`Responsavel: ${responsavel.nome}`);
   return partes.join(' - ');
-}
-
-function CartaoResumo({ titulo, valor, detalhe }: { titulo: string; valor: string; detalhe: string }) {
-  return (
-    <article className="rounded-md border border-linha bg-white p-4">
-      <p className="text-xs font-semibold uppercase text-texto-suave">{titulo}</p>
-      <p className="mt-2 text-2xl font-semibold text-tinta">{valor}</p>
-      <p className="mt-1 text-sm text-texto-suave">{detalhe}</p>
-    </article>
-  );
 }
 
 function LinhaDoTempo({
@@ -752,21 +744,26 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     [anexos, filtroCategoriaAnexo]
   );
   const proximaConsulta = useMemo(
-    () => eventos.find((evento) => evento.tipo === 'consulta' && (evento.status === 'agendada' || evento.status === 'reagendada')),
+    () => eventos
+      .filter((evento) => evento.tipo === 'consulta'
+        && (evento.status === 'agendada' || evento.status === 'reagendada')
+        && new Date(evento.data).getTime() >= Date.now())
+      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())[0],
     [eventos]
   );
-  const proximaConduta = useMemo(() => {
-    if ((dados?.resumo.tarefasPendentes ?? 0) > 0) {
-      return { titulo: 'Revisar tarefa pendente', descricao: `${dados?.resumo.tarefasPendentes} tarefa(s) ainda aguardam acompanhamento.`, aba: 'acompanhamento' as AbaProntuario, acao: 'Abrir tarefas pendentes' };
+
+  function abrirProximaConduta() {
+    const conduta = dados?.resumo.proximaConduta;
+    if (!conduta) return;
+    if (conduta.destino === 'agenda') {
+      const destino = conduta.referenciaId
+        ? `/agenda?consultaId=${encodeURIComponent(conduta.referenciaId)}`
+        : '/agenda';
+      router.push(destino as Route);
+      return;
     }
-    if ((dados?.resumo.formulariosPendentes ?? 0) > 0) {
-      return { titulo: 'Revisar formulario pendente', descricao: `${dados?.resumo.formulariosPendentes} envio(s) ainda aguardam resposta do paciente.`, aba: 'formularios' as AbaProntuario, acao: 'Abrir formularios pendentes' };
-    }
-    if (proximaConsulta) {
-      return { titulo: 'Preparar proxima consulta', descricao: `${proximaConsulta.titulo} em ${formatarDataHora(proximaConsulta.data)}.`, aba: 'historico' as AbaProntuario, acao: 'Ver historico clinico' };
-    }
-    return { titulo: 'Registrar a proxima conduta', descricao: 'Nao ha pendencias operacionais identificadas no prontuario.', aba: 'evolucoes' as AbaProntuario, acao: 'Registrar evolucao' };
-  }, [dados?.resumo.formulariosPendentes, dados?.resumo.tarefasPendentes, proximaConsulta]);
+    solicitarTrocaAba(conduta.destino);
+  }
   /** So consulta concluida gera declaracao; o backend recusa o resto de qualquer forma. */
   const consultasConcluidas = useMemo<ConsultaConcluidaOpcao[]>(
     () =>
@@ -902,11 +899,20 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)]">
             <article className="grid gap-3 rounded-md border border-primaria/30 bg-primaria-suave p-4">
               <div>
-                <p className="text-xs font-semibold uppercase text-primaria">Proxima conduta</p>
-                <h2 className="mt-2 text-base font-semibold text-tinta">{proximaConduta.titulo}</h2>
-                <p className="mt-1 text-sm text-texto-suave">{proximaConduta.descricao}</p>
+                <p className="text-xs font-semibold uppercase text-primaria">Proxima acao</p>
+                <h2 className="mt-2 text-base font-semibold text-tinta">
+                  {dados.resumo.proximaConduta?.titulo ?? 'Sem pendencia operacional'}
+                </h2>
+                <p className="mt-1 text-sm text-texto-suave">
+                  {dados.resumo.proximaConduta?.descricao ?? 'Nenhuma acao prioritaria foi identificada nos registros atuais.'}
+                </p>
+                {dados.resumo.proximaConduta?.dataReferencia ? (
+                  <p className="mt-2 text-xs text-texto-suave">Referencia: {formatarDataHora(dados.resumo.proximaConduta.dataReferencia)}</p>
+                ) : null}
               </div>
-              <div><Botao type="button" variante="primario" onClick={() => solicitarTrocaAba(proximaConduta.aba)}>{proximaConduta.acao}</Botao></div>
+              {dados.resumo.proximaConduta ? (
+                <div><Botao type="button" variante="primario" onClick={abrirProximaConduta}>Abrir acao</Botao></div>
+              ) : null}
             </article>
             <article className="grid gap-2 rounded-md border border-linha bg-white p-4">
               <p className="text-xs font-semibold uppercase text-texto-suave">Proxima consulta</p>
@@ -914,14 +920,78 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               <p className="text-sm text-texto-suave">{proximaConsulta ? formatarDataHora(proximaConsulta.data) : 'Use a agenda para definir o proximo encontro.'}</p>
             </article>
           </section>
-          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <CartaoResumo titulo="Consultas" valor={String(dados.resumo.consultas)} detalhe="Eventos de agenda vinculados" />
-            <CartaoResumo titulo="Formularios pendentes" valor={String(dados.resumo.formulariosPendentes)} detalhe="Envios aguardando resposta" />
-            <CartaoResumo titulo="Respostas" valor={String(dados.resumo.respostas)} detalhe="Formularios finalizados ou em andamento" />
-            <CartaoResumo titulo="Check-ins rapidos" valor={String(dados.resumo.checkinsRapidos ?? 0)} detalhe="Registros pelo portal ou mobile" />
-            <CartaoResumo titulo="Evolucoes" valor={String(dados.resumo.evolucoes ?? 0)} detalhe={`${dados.resumo.mensagens} mensagens registradas`} />
-            <CartaoResumo titulo="Tarefas" valor={String(dados.resumo.tarefasPendentes ?? 0)} detalhe={`${dados.resumo.tarefasPendentes ?? 0} tarefas pendentes`} />
+          <section aria-labelledby="contexto-operacional-titulo" className="grid gap-4 rounded-md border border-linha bg-white p-4">
+            <div>
+              <h2 id="contexto-operacional-titulo" className="text-base font-semibold text-tinta">Contexto operacional</h2>
+              <p className="mt-1 text-sm text-texto-suave">Dados registrados no prontuario e nos modulos autorizados para este acesso.</p>
+            </div>
+            <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="border-l-2 border-primaria pl-3">
+                <dt className="text-xs font-semibold text-texto-suave">Ultimo atendimento</dt>
+                <dd className="mt-1 text-sm font-medium text-tinta">{dados.resumo.ultimoAtendimento?.titulo ?? 'Nao registrado'}</dd>
+                {dados.resumo.ultimoAtendimento ? <dd className="text-xs text-texto-suave">{formatarDataHora(dados.resumo.ultimoAtendimento.concluidaEm)}</dd> : null}
+              </div>
+              <div className="border-l-2 border-primaria pl-3">
+                <dt className="text-xs font-semibold text-texto-suave">Plano atual publicado</dt>
+                <dd className="mt-1 text-sm font-medium text-tinta">
+                  {permissoes.includes('planos_alimentares.ler')
+                    ? dados.resumo.planoAtual ? `Versao ${dados.resumo.planoAtual.numeroVersao}` : 'Nenhum plano publicado'
+                    : 'Acesso nao disponivel'}
+                </dd>
+                {dados.resumo.planoAtual ? <dd className="text-xs text-texto-suave">Publicado em {formatarDataHora(dados.resumo.planoAtual.publicadaEm)}</dd> : null}
+              </div>
+              <div className="border-l-2 border-primaria pl-3">
+                <dt className="text-xs font-semibold text-texto-suave">Tarefa vencida</dt>
+                <dd className="mt-1 text-sm font-medium text-tinta">{dados.resumo.tarefaVencida?.titulo ?? 'Nenhuma'}</dd>
+                {dados.resumo.tarefaVencida ? <dd className="text-xs text-texto-suave">Venceu em {formatarDataHora(dados.resumo.tarefaVencida.vencimentoEm)}</dd> : null}
+              </div>
+              <div className="border-l-2 border-primaria pl-3">
+                <dt className="text-xs font-semibold text-texto-suave">Comunicacao</dt>
+                <dd className="mt-1 text-sm font-medium text-tinta">
+                  {permissoes.includes('comunicacoes.mensagens.ler')
+                    ? dados.resumo.falhaComunicacao ? 'Falha de entrega pendente' : 'Sem falha identificada'
+                    : 'Acesso nao disponivel'}
+                </dd>
+                {dados.resumo.falhaComunicacao ? <dd className="text-xs text-texto-suave">Registrada em {formatarDataHora(dados.resumo.falhaComunicacao.registradaEm)}</dd> : null}
+              </div>
+            </dl>
           </section>
+          <section aria-labelledby="atividade-prontuario-titulo" className="rounded-md border border-linha bg-white p-4">
+            <h2 id="atividade-prontuario-titulo" className="text-base font-semibold text-tinta">Atividade do prontuario</h2>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-6">
+              {[
+                ['Consultas', dados.resumo.consultas],
+                ['Formularios pendentes', dados.resumo.formulariosPendentes],
+                ['Respostas', dados.resumo.respostas],
+                ['Check-ins rapidos', dados.resumo.checkinsRapidos ?? 0],
+                ['Evolucoes', dados.resumo.evolucoes ?? 0],
+                ['Tarefas pendentes', dados.resumo.tarefasPendentes ?? 0]
+              ].map(([rotulo, valor]) => (
+                <div key={String(rotulo)}>
+                  <dt className="text-xs text-texto-suave">{rotulo}</dt>
+                  <dd className="mt-1 text-xl font-semibold text-tinta">{valor}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+          {(dados.resumo.indicadoresRecentes ?? []).length ? (
+            <section aria-labelledby="relatos-recentes-titulo" className="grid gap-3 rounded-md border border-linha bg-white p-4">
+              <div>
+                <h2 id="relatos-recentes-titulo" className="text-base font-semibold text-tinta">Relatos recentes</h2>
+                <p className="mt-1 text-sm text-texto-suave">Informacoes declaradas pelo paciente, com origem e data do registro.</p>
+              </div>
+              <ul className="grid gap-3 md:grid-cols-2">
+                {(dados.resumo.indicadoresRecentes ?? []).map((indicador) => (
+                  <li key={`${indicador.tipo}-${indicador.registradoEm}`} className="rounded-md border border-linha bg-superficie p-3">
+                    <p className="text-xs font-semibold uppercase text-texto-suave">{indicador.tipo === 'adesao' ? 'Adesao relatada' : 'Sintomas relatados'}</p>
+                    <p className="mt-1 text-sm font-medium text-tinta">{indicador.valor}</p>
+                    <p className="mt-2 text-xs text-texto-suave">Fonte: {indicador.fonte} em {formatarDataHora(indicador.registradoEm)}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          <ResumoAntropometrico pacienteId={pacienteId} aoAbrirDetalhes={() => solicitarTrocaAba('antropometria')} />
           <section className="grid gap-3">
             <div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Linha de cuidado</h2><p className="mt-1 text-sm text-texto-suave">Ultimos eventos que orientam a proxima conduta.</p></div>
             <LinhaDoTempo eventos={eventos.slice(0, 4)} profissionais={profissionais} />

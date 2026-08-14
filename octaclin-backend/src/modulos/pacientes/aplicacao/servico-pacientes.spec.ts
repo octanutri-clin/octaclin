@@ -4,6 +4,8 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
+import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
+import { PlanoAlimentarVersaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
@@ -761,7 +763,33 @@ describe('ServicoPacientes', () => {
       mensagens: 1,
       evolucoes: 0,
       tarefasPendentes: 0,
-      ultimoEventoEm: new Date('2026-07-22T16:00:00.000Z')
+      ultimoEventoEm: new Date('2026-07-22T16:00:00.000Z'),
+      ultimoAtendimento: undefined,
+      planoAtual: undefined,
+      tarefaVencida: undefined,
+      falhaComunicacao: undefined,
+      indicadoresRecentes: [
+        {
+          tipo: 'adesao',
+          valor: '85%',
+          fonte: 'Check-in rapido',
+          registradoEm: new Date('2026-07-21T18:00:00.000Z')
+        },
+        {
+          tipo: 'sintomas',
+          valor: 'Sono leve',
+          fonte: 'Check-in rapido',
+          registradoEm: new Date('2026-07-21T18:00:00.000Z')
+        }
+      ],
+      proximaConduta: {
+        tipo: 'formulario_pendente',
+        titulo: 'Acompanhar formulario pendente',
+        descricao: '1 envio(s) aguardando resposta do paciente.',
+        destino: 'formularios',
+        referenciaId: 'envio-1',
+        dataReferencia: new Date('2026-07-20T13:00:00.000Z')
+      }
     });
     expect(prontuario.linhaDoTempo.map((evento: { tipo: string }) => evento.tipo)).toEqual([
       'mensagem',
@@ -789,6 +817,127 @@ describe('ServicoPacientes', () => {
         descricao: 'Score final 74.5'
       })
     );
+  });
+
+  it('prioriza falha de comunicacao e projeta contexto operacional conforme permissoes', async () => {
+    const paciente = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('cripto:Maria'),
+      statusAdesao: 'em_acompanhamento',
+      scoreRisco: '40',
+      criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-01T10:00:00.000Z')
+    };
+    const repositorios = new Map<unknown, Record<string, unknown>>([
+      [PacienteOrm, { findOne: jest.fn(async () => paciente) }],
+      [
+        AgendaConsultaOrm,
+        {
+          find: jest.fn(async () => [
+            {
+              id: 'consulta-futura', tenantId: 'tenant-1', pacienteId: 'paciente-1',
+              titulo: 'Retorno', inicioEm: new Date('2099-09-10T13:00:00.000Z'),
+              fimEm: new Date('2099-09-10T14:00:00.000Z'), status: 'agendada'
+            },
+            {
+              id: 'consulta-concluida', tenantId: 'tenant-1', pacienteId: 'paciente-1',
+              titulo: 'Consulta inicial', inicioEm: new Date('2026-07-10T13:00:00.000Z'),
+              fimEm: new Date('2026-07-10T14:00:00.000Z'), status: 'concluida'
+            }
+          ])
+        }
+      ],
+      [EnvioQuestionarioOrm, { find: jest.fn(async () => []) }],
+      [RespostaCheckinOrm, { find: jest.fn(async () => []) }],
+      [LogDiarioRapidoOrm, { find: jest.fn(async () => []) }],
+      [QuestionarioOrm, { find: jest.fn(async () => []) }],
+      [EvolucaoClinicaOrm, { find: jest.fn(async () => []) }],
+      [
+        AcompanhamentoTarefaOrm,
+        {
+          find: jest.fn(async () => [{
+            id: 'tarefa-vencida', tenantId: 'tenant-1', pacienteId: 'paciente-1',
+            profissionalId: 'profissional-1', titulo: 'Revisar exames', status: 'pendente',
+            prioridade: 'alta', categoria: 'tarefa', vencimentoEm: new Date('2026-07-20T13:00:00.000Z'),
+            criadoEm: new Date('2026-07-18T13:00:00.000Z')
+          }])
+        }
+      ],
+      [
+        MensagemNotificacaoOrm,
+        {
+          find: jest.fn(async () => [{
+            id: 'mensagem-falha', tenantId: 'tenant-1', pacienteId: 'paciente-1',
+            status: 'falhou', payload: {}, criadoEm: new Date('2026-07-22T16:00:00.000Z')
+          }])
+        }
+      ],
+      [
+        PlanoAlimentarOrm,
+        {
+          findOne: jest.fn(async () => ({
+            id: 'plano-1', tenantId: 'tenant-1', pacienteId: 'paciente-1',
+            versaoPublicadaAtualId: 'versao-2', atualizadoEm: new Date('2026-07-21T12:00:00.000Z')
+          }))
+        }
+      ],
+      [
+        PlanoAlimentarVersaoOrm,
+        {
+          findOne: jest.fn(async () => ({
+            id: 'versao-2', tenantId: 'tenant-1', planoId: 'plano-1', numero: 2,
+            publicadaEm: new Date('2026-07-21T12:00:00.000Z')
+          }))
+        }
+      ]
+    ]);
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao({ getRepository: jest.fn((entidade) => repositorios.get(entidade)) })
+        )
+      } as never,
+      {
+        criptografar: jest.fn(),
+        descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', ''))
+      } as never,
+      limitesPermitidos as never
+    );
+
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', {
+      ...usuarioColaborador,
+      permissoes: ['planos_alimentares.ler', 'comunicacoes.mensagens.ler']
+    });
+
+    expect(prontuario.resumo).toEqual(expect.objectContaining({
+      ultimoAtendimento: {
+        consultaId: 'consulta-concluida',
+        titulo: 'Consulta inicial',
+        concluidaEm: new Date('2026-07-10T13:00:00.000Z')
+      },
+      planoAtual: {
+        planoId: 'plano-1',
+        versaoId: 'versao-2',
+        numeroVersao: 2,
+        publicadaEm: new Date('2026-07-21T12:00:00.000Z')
+      },
+      tarefaVencida: {
+        tarefaId: 'tarefa-vencida',
+        titulo: 'Revisar exames',
+        vencimentoEm: new Date('2026-07-20T13:00:00.000Z')
+      },
+      falhaComunicacao: {
+        mensagemId: 'mensagem-falha',
+        registradaEm: new Date('2026-07-22T16:00:00.000Z')
+      },
+      proximaConduta: expect.objectContaining({
+        tipo: 'falha_comunicacao',
+        destino: 'mensagens',
+        referenciaId: 'mensagem-falha'
+      })
+    }));
   });
 
   it('deve criar evolucao clinica privada criptografada e listar no prontuario', async () => {

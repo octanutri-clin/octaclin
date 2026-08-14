@@ -310,6 +310,40 @@ export interface ProntuarioPacienteRespostaDto {
     evolucoes: number;
     tarefasPendentes: number;
     ultimoEventoEm?: Date;
+    ultimoAtendimento?: {
+      consultaId: string;
+      titulo: string;
+      concluidaEm: Date;
+    };
+    planoAtual?: {
+      planoId: string;
+      versaoId: string;
+      numeroVersao: number;
+      publicadaEm: Date;
+    };
+    tarefaVencida?: {
+      tarefaId: string;
+      titulo: string;
+      vencimentoEm: Date;
+    };
+    falhaComunicacao?: {
+      mensagemId: string;
+      registradaEm: Date;
+    };
+    indicadoresRecentes: Array<{
+      tipo: 'adesao' | 'sintomas';
+      valor: string;
+      fonte: 'Check-in rapido';
+      registradoEm: Date;
+    }>;
+    proximaConduta?: {
+      tipo: 'falha_comunicacao' | 'tarefa_vencida' | 'formulario_pendente' | 'consulta_agendada';
+      titulo: string;
+      descricao: string;
+      destino: 'mensagens' | 'acompanhamento' | 'formularios' | 'agenda';
+      referenciaId?: string;
+      dataReferencia?: Date;
+    };
   };
   linhaDoTempo: EventoProntuarioPacienteDto[];
 }
