@@ -2,7 +2,7 @@
 
 ## Decisao
 
-A Fase 235 permanece **em execucao**. Os 14 incrementos registrados construiram
+A Fase 235 permanece **em execucao**. Os 16 incrementos registrados construiram
 a navegacao do prontuario, o cadastro progressivo e a base paginada da linha do
 tempo, mas ainda nao satisfazem todos os criterios de aceite da especificacao.
 
@@ -24,7 +24,7 @@ executa migration e nao modifica producao.
 | --- | --- | --- |
 | Navegacao em seis areas | Entregue | Resumo, Atendimentos, Avaliacoes, Plano, Documentos e Financeiro estao agrupados; Financeiro depende de permissao. |
 | Cabecalho persistente | Parcial | Nome, risco, contato e acoes frequentes existem. Faltam responsavel/proxima consulta no cabecalho, contexto explicito de SuperAdmin e parte das acoes previstas, como iniciar atendimento, abrir plano e registrar pagamento. |
-| Resumo orientado a conduta | Parcial | Ha proxima conduta, proxima consulta e contadores. Faltam plano publicado, ultimo atendimento, tarefa vencida, falha de comunicacao, serie temporal com tabela acessivel e leitura de adesao/sintomas com fonte identificada. |
+| Resumo orientado a conduta | Entregue | Uma unica acao operacional priorizada vem do backend; plano publicado, ultimo atendimento, tarefa vencida e falha de comunicacao respeitam permissoes. A serie antropometrica possui seletor e tabela acessivel, e adesao/sintomas so aparecem com fonte e data. |
 | Timeline paginada | Parcial | Cursor estavel, limite, periodo, tipo, RLS e projecao sem conteudo cifrado estao implementados. A uniao atual cobre somente consultas, envios/respostas de formulario, check-ins, mensagens, evolucoes e tarefas. |
 | Cobertura longitudinal | Pendente | Planos publicados, antropometrias, documentos emitidos, anexos confirmados, exames, fotos e eventos financeiros autorizados nao entram na timeline. Autor/origem nao sao uniformes e nao ha filtro por responsavel. |
 | Cadastro progressivo | Parcial | Identificacao, contato/endereco, operacao, portal e fiscal estao separados, cifrados e salvos por secao. Faltam indicador de completude, deteccao assistida de duplicidade no cadastro e validacao de qualidade apresentada ao usuario. |
@@ -69,12 +69,21 @@ Concluido em 2026-08-13.
 
 ### Incremento 16 - resumo clinico acionavel
 
-- incluir plano atual publicado, ultimo atendimento, tarefa vencida e falha de
-  comunicacao;
-- incorporar a serie antropometrica existente com seletor de metrica e tabela
-  alternativa acessivel;
-- mostrar adesao e sintomas apenas com fonte e data identificadas;
-- manter uma unica proxima conduta, sem inferencia ou diagnostico automatico.
+Concluido em 2026-08-13.
+
+- o backend projeta plano atual publicado, ultimo atendimento, tarefa vencida,
+  falha de comunicacao e uma unica proxima acao operacional deterministica;
+- plano e falha so aparecem com as permissoes de seus modulos, sem
+  descriptografar conteudo do plano ou da mensagem;
+- a serie antropometrica existente foi incorporada com seletor de metrica,
+  grafico e tabela HTML equivalente para tecnologia assistiva;
+- adesao e sintomas so aparecem quando declarados em check-in rapido, sempre
+  com fonte e data, sem inferencia ou diagnostico automatico;
+- evidencias locais: 130/130 suites e 872/872 testes backend, builds
+  backend/web, lint, typecheck, autorizacao BFF, scan de segredos, 22/22
+  Playwright do prontuario e 10/10 no gate de acessibilidade. O GitHub Actions
+  nao foi executado porque a cota da conta estava esgotada; essa ausencia nao
+  foi tratada como aprovacao de CI.
 
 ### Incremento 17 - qualidade cadastral e acesso ao portal
 
@@ -102,5 +111,5 @@ Concluido em 2026-08-13.
 
 ## Ordem recomendada
 
-Executar os incrementos 16, 17, 18 e 19 nessa ordem. A Fase 235 so pode
+Executar os incrementos 17, 18 e 19 nessa ordem. A Fase 235 so pode
 mudar de `[~]` para `[x]` depois do Incremento 19 e do registro das evidencias.

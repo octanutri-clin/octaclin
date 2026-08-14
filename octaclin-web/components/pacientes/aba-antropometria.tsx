@@ -6,9 +6,9 @@ import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { BarraCarregamento } from '@/components/ui/feedback';
 import { GraficoEvolucao, PontoEvolucao } from '@/components/ui/grafico-evolucao';
+import { METRICAS_ANTROPOMETRICAS } from './metricas-antropometricas';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
 import {
-  AvaliacaoAntropometricaApi,
   ProtocoloComposicao,
   SerieAntropometricaApi,
   SexoBiologico,
@@ -103,21 +103,6 @@ function traduzirAviso(aviso: string) {
   return ROTULO_AVISO[aviso] ?? aviso;
 }
 
-interface MetricaGrafico {
-  id: string;
-  rotulo: string;
-  unidade: string;
-  casas: number;
-  ler: (avaliacao: AvaliacaoAntropometricaApi) => number | undefined;
-}
-
-const METRICAS: MetricaGrafico[] = [
-  { id: 'peso', rotulo: 'Peso', unidade: 'kg', casas: 1, ler: (a) => a.medidas.pesoKg },
-  { id: 'imc', rotulo: 'IMC', unidade: 'kg/m2', casas: 2, ler: (a) => a.resultado.imc },
-  { id: 'gordura', rotulo: 'Gordura corporal', unidade: '%', casas: 1, ler: (a) => a.resultado.percentualGordura },
-  { id: 'massaMagra', rotulo: 'Massa magra', unidade: 'kg', casas: 1, ler: (a) => a.resultado.massaMagraKg }
-];
-
 const ROTULO_DELTA: Record<string, { rotulo: string; unidade: string }> = {
   pesoKg: { rotulo: 'Peso', unidade: 'kg' },
   imc: { rotulo: 'IMC', unidade: '' },
@@ -206,7 +191,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
     [formulario.protocolo, formulario.sexo]
   );
 
-  const metrica = METRICAS.find((item) => item.id === metricaId) ?? METRICAS[0];
+  const metrica = METRICAS_ANTROPOMETRICAS.find((item) => item.id === metricaId) ?? METRICAS_ANTROPOMETRICAS[0];
   const pontos: PontoEvolucao[] = useMemo(() => {
     if (!serie) return [];
     return serie.avaliacoes
@@ -295,7 +280,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
                 value={metricaId}
                 onChange={(evento) => setMetricaId(evento.target.value)}
               >
-                {METRICAS.map((item) => (
+                {METRICAS_ANTROPOMETRICAS.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.rotulo}
                   </option>

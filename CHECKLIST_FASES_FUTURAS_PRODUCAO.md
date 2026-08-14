@@ -1679,18 +1679,22 @@ publicado antes de ampliar a superficie de mudancas visuais.
     do e-mail salvo; cada nova emissao revoga os convites pendentes anteriores
     do paciente, sem registrar ou reexibir token em claro.
   - Auditoria final de 2026-08-13: a fase permanece parcial. A timeline foi
-    completada no Incremento 15; resumo clinico, qualidade cadastral/ciclo do
-    portal, contexto SuperAdmin e aceite tecnico ainda exigem os Incrementos 16
-    a 19 documentados em
+    completada no Incremento 15 e o resumo clinico no Incremento 16; qualidade
+    cadastral/ciclo do portal, contexto SuperAdmin e aceite tecnico ainda
+    exigem os Incrementos 17 a 19 documentados em
     `AUDITORIA_FINAL_FASE_235_2026-08-13.md`.
   - Incremento 15 concluido em 2026-08-13: timeline integra planos publicados,
     antropometrias, documentos, anexos confirmados, exames, fotos e financeiro
     conforme permissao; autor/origem/responsavel foram uniformizados, filtro
     server-side e deep links foram conectados, sem descriptografar conteudo.
     Cursor composto, desktop/mobile, authz, builds, secrets e audits passaram.
-  - Incremento 16 pendente: completar o resumo com plano publicado, ultimo
-    atendimento, tarefa vencida, falha de comunicacao e serie antropometrica
-    acessivel, sem inferencia clinica automatica.
+  - Incremento 16 concluido em 2026-08-13: resumo exibe plano publicado, ultimo
+    atendimento, tarefa vencida, falha de comunicacao e uma unica proxima acao
+    permissionada. Adesao/sintomas exigem fonte e data; a serie antropometrica
+    oferece seletor, grafico e tabela acessivel. Validacao local: backend
+    130/130 suites e 872/872 testes, Playwright 22/22, acessibilidade 10/10,
+    lint, typecheck, authz, segredos e builds backend/web. GitHub Actions
+    indisponivel por cota esgotada, sem presumir CI aprovado.
   - Incremento 17 pendente: indicar completude, detectar duplicidade no tenant
     e expor estado/reenvio/revogacao/ultimo acesso do portal com auditoria.
   - Incremento 18 pendente: identificar o contexto transversal exclusivo de

@@ -1228,7 +1228,7 @@ async function prepararProntuarioMockado(page, { permissoesExtras = [] } = {}) {
         tipo: 'consulta',
         titulo: 'Consulta de retorno',
         descricao: 'Online',
-        data: '2026-07-22T13:00:00.000Z',
+        data: '2026-09-22T13:00:00.000Z',
         status: 'agendada'
       },
       {
@@ -1279,9 +1279,42 @@ async function prepararProntuarioMockado(page, { permissoesExtras = [] } = {}) {
           consultas: 1,
           formulariosPendentes: 1,
           respostas: 1,
+          checkinsRapidos: 1,
           mensagens: 1,
           evolucoes: criouEvolucao ? 1 : 0,
           tarefasPendentes: criouTarefa ? 1 : 0,
+          ultimoAtendimento: {
+            consultaId: 'consulta-0',
+            titulo: 'Primeira consulta',
+            concluidaEm: '2026-07-15T13:00:00.000Z'
+          },
+          planoAtual: {
+            planoId: 'plano-1',
+            versaoId: 'plano-versao-2',
+            numeroVersao: 2,
+            publicadaEm: '2026-07-23T18:00:00.000Z'
+          },
+          tarefaVencida: {
+            tarefaId: 'tarefa-vencida',
+            titulo: 'Revisar exames pendentes',
+            vencimentoEm: '2026-07-19T13:00:00.000Z'
+          },
+          falhaComunicacao: {
+            mensagemId: 'mensagem-falha',
+            registradaEm: '2026-07-22T16:00:00.000Z'
+          },
+          indicadoresRecentes: [
+            { tipo: 'adesao', valor: '85%', fonte: 'Check-in rapido', registradoEm: '2026-07-21T18:00:00.000Z' },
+            { tipo: 'sintomas', valor: 'Sono leve', fonte: 'Check-in rapido', registradoEm: '2026-07-21T18:00:00.000Z' }
+          ],
+          proximaConduta: {
+            tipo: 'falha_comunicacao',
+            titulo: 'Revisar falha de comunicacao',
+            descricao: 'Uma mensagem para este paciente nao foi entregue.',
+            destino: 'mensagens',
+            referenciaId: 'mensagem-falha',
+            dataReferencia: '2026-07-22T16:00:00.000Z'
+          },
           ultimoEventoEm: criouTarefa
             ? '2026-07-29T18:00:00.000Z'
             : criouEvolucao
@@ -1289,6 +1322,30 @@ async function prepararProntuarioMockado(page, { permissoesExtras = [] } = {}) {
               : '2026-07-22T16:00:00.000Z'
         },
         linhaDoTempo: eventos
+      })
+    });
+  });
+
+  await page.route('**/api/pacientes/paciente-1/avaliacoes-antropometricas', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        avaliacoes: [
+          {
+            id: 'avaliacao-2', pacienteId: 'paciente-1', avaliadaEm: '2026-07-21', protocolo: 'nenhum',
+            medidas: { pesoKg: 68.2, alturaCm: 165 },
+            resultado: { imc: 25.05, protocoloAplicado: 'nenhum', avisos: [] },
+            criadoEm: '2026-07-21T13:00:00.000Z'
+          },
+          {
+            id: 'avaliacao-1', pacienteId: 'paciente-1', avaliadaEm: '2026-06-21', protocolo: 'nenhum',
+            medidas: { pesoKg: 70.4, alturaCm: 165 },
+            resultado: { imc: 25.86, protocoloAplicado: 'nenhum', avisos: [] },
+            criadoEm: '2026-06-21T13:00:00.000Z'
+          }
+        ],
+        deltaUltimas: [{ campo: 'pesoKg', anterior: 70.4, atual: 68.2, variacao: -2.2 }]
       })
     });
   });
@@ -1774,9 +1831,9 @@ test.describe('prontuario do paciente', () => {
     await expect(areas.getByRole('tab', { name: 'Plano' })).toBeVisible();
     await expect(areas.getByRole('tab', { name: 'Documentos' })).toBeVisible();
     await expect(areas.getByRole('tab', { name: 'Financeiro' })).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: 'Revisar formulario pendente' })).toBeVisible();
-    await page.getByRole('button', { name: 'Abrir formularios pendentes' }).click();
-    await expect(page.getByRole('heading', { name: 'Formularios e check-ins' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Revisar falha de comunicacao' })).toBeVisible();
+    await page.getByRole('button', { name: 'Abrir acao' }).click();
+    await expect(page.getByRole('heading', { name: 'Mensagens do paciente' })).toBeVisible();
 
     await areas.getByRole('tab', { name: 'Plano' }).click();
     await expect(page.getByRole('heading', { name: 'Plano de acompanhamento' })).toBeVisible();
@@ -1798,6 +1855,28 @@ test.describe('prontuario do paciente', () => {
     await page.getByLabel('Titulo da evolucao').fill('Rascunho clinico');
     await page.getByRole('link', { name: 'Agendar' }).click();
     await expect(page.getByRole('heading', { name: 'Sair sem salvar' })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('apresenta resumo clinico acionavel e serie antropometrica acessivel', async ({ page }) => {
+    await prepararProntuarioMockado(page, { permissoesExtras: ['planos_alimentares.ler'] });
+    await page.goto('/pacientes/paciente-1');
+
+    await expect(page.getByRole('heading', { name: 'Revisar falha de comunicacao' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Contexto operacional' })).toBeVisible();
+    await expect(page.getByText('Versao 2')).toBeVisible();
+    await expect(page.getByText('Revisar exames pendentes')).toBeVisible();
+    await expect(page.getByText('85%')).toBeVisible();
+    await expect(page.getByText(/Fonte: Check-in rapido em/).first()).toBeVisible();
+
+    const serie = page.getByRole('region', { name: 'Evolucao antropometrica' });
+    await expect(serie.getByRole('table')).toBeVisible();
+    await expect(serie.getByRole('cell', { name: '68,2 kg' })).toBeVisible();
+    await serie.getByLabel('Metrica da serie').selectOption('imc');
+    await expect(serie.getByRole('cell', { name: '25,05 kg/m2' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Abrir acao' }).click();
+    await expect(page.getByRole('heading', { name: 'Mensagens do paciente' })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 
@@ -1930,7 +2009,9 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Beber agua no periodo da tarde')).toBeVisible();
     await expect(page.getByText('Meta diaria de 1 litro entre 13h e 18h.')).toBeVisible();
     await page.getByRole('tab', { name: 'Resumo' }).click();
-    await expect(page.getByText('1 tarefas pendentes')).toBeVisible();
+    const atividade = page.getByRole('region', { name: 'Atividade do prontuario' });
+    await expect(atividade.getByText('Tarefas pendentes')).toBeVisible();
+    await expect(atividade.getByText('Tarefas pendentes').locator('..').getByText('1', { exact: true })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 

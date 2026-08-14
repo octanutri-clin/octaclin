@@ -412,10 +412,10 @@ base funcional, mas ainda nao atendem integralmente os criterios de aceite. A
 Fase 235 permanece em execucao e nao deve ser marcada como concluida.
 
 As lacunas obrigatorias foram organizadas nos Incrementos 15 a 19. O Incremento
-15 completou fontes e filtros da timeline; permanecem ampliar o resumo clinico,
-fechar qualidade cadastral e ciclo de acesso ao portal, explicitar
+15 completou fontes e filtros da timeline e o 16 concluiu o resumo clinico;
+permanecem fechar qualidade cadastral e ciclo de acesso ao portal, explicitar
 contexto/autorizacao e acoes, e executar benchmark, acessibilidade e jornada
-sintetica de encerramento nos Incrementos 16 a 19.
+sintetica de encerramento nos Incrementos 17 a 19.
 
 A matriz de conformidade, a evidencia revisada e a ordem de execucao estao em
 `AUDITORIA_FINAL_FASE_235_2026-08-13.md`. As Fases 236, 237 e 239 ja entregues
@@ -443,7 +443,32 @@ legadas, permanece no Incremento 19.
 Validacoes: 130 suites/871 testes backend; 20/20 Playwright do prontuario em
 desktop/mobile; typechecks, lint, builds, authz, seguranca operacional/runtime,
 scan de secrets e audits backend/web sem vulnerabilidades conhecidas. A Fase
-235 permanece em execucao e segue para o Incremento 16.
+235 permanece em execucao e segue para o Incremento 17.
+
+## Incremento 16 - resumo clinico acionavel
+
+Entregue em 2026-08-13. O resumo passou a consumir uma projecao operacional do
+backend com uma unica proxima acao, priorizando falha de comunicacao, tarefa
+vencida, formulario pendente e consulta futura nessa ordem. A decisao usa
+somente estados registrados e nao produz inferencia ou diagnostico clinico.
+
+Ultimo atendimento, plano atual publicado, tarefa vencida e falha de entrega
+foram organizados em contexto operacional. Plano e comunicacao respeitam as
+permissoes dos modulos, sem descriptografar conteudo para compor o resumo.
+Adesao e sintomas aparecem apenas quando declarados em check-in rapido, com
+fonte e data explicitas.
+
+A serie antropometrica existente foi reutilizada no resumo com seletor de
+metrica, grafico e tabela HTML equivalente. As definicoes de peso, IMC, gordura
+corporal e massa magra agora sao compartilhadas com a aba completa para evitar
+divergencia entre as duas apresentacoes.
+
+Validacoes locais: 130/130 suites e 872/872 testes backend, builds backend/web,
+lint, typecheck, autorizacao BFF, scan de segredos, 22/22 Playwright do
+prontuario em desktop/mobile, 10/10 no gate de acessibilidade e
+`git diff --check`. O GitHub Actions nao foi executado porque a cota da conta
+estava esgotada; a ausencia do CI nao foi usada como evidencia de aprovacao. A
+Fase 235 permanece parcial e segue para o Incremento 17.
 
 ## Sequencia posterior obrigatoria
 

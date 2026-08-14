@@ -45,6 +45,24 @@ export interface ProntuarioPacienteApi {
     evolucoes: number;
     tarefasPendentes: number;
     ultimoEventoEm?: string;
+    ultimoAtendimento?: { consultaId: string; titulo: string; concluidaEm: string };
+    planoAtual?: { planoId: string; versaoId: string; numeroVersao: number; publicadaEm: string };
+    tarefaVencida?: { tarefaId: string; titulo: string; vencimentoEm: string };
+    falhaComunicacao?: { mensagemId: string; registradaEm: string };
+    indicadoresRecentes: Array<{
+      tipo: 'adesao' | 'sintomas';
+      valor: string;
+      fonte: 'Check-in rapido';
+      registradoEm: string;
+    }>;
+    proximaConduta?: {
+      tipo: 'falha_comunicacao' | 'tarefa_vencida' | 'formulario_pendente' | 'consulta_agendada';
+      titulo: string;
+      descricao: string;
+      destino: 'mensagens' | 'acompanhamento' | 'formularios' | 'agenda';
+      referenciaId?: string;
+      dataReferencia?: string;
+    };
   };
   linhaDoTempo: EventoProntuarioPacienteApi[];
 }
