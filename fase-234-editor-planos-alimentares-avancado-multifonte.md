@@ -1,6 +1,6 @@
 # Fase 234 - Editor de planos alimentares avancado e catalogo multifonte
 
-Status: em execucao. Incremento 1 concluido em 2026-08-14. Fase importante de evolucao clinica e de produto, posterior
+Status: em execucao. Incrementos 1 e 2 concluidos em 2026-08-14. Fase importante de evolucao clinica e de produto, posterior
 ao MVP da Fase 216. Nao substitui os bloqueadores de go-live das Fases 225,
 226, 228, 229, 231, 232 e 233.
 
@@ -62,10 +62,33 @@ As provas posteriores repetiram os 583 vinculos/hashes, evento, triggers,
 privilegios somente leitura de `octaclin_app_producao`, bloqueios com rollback
 e recarga idempotente auditada como `ignorada`.
 
-O Incremento 2 comeca pelos contratos e permissoes: separar listagem resumida
-de detalhe sob demanda e propagar `podeGerenciar` ao workspace profissional.
-Quem possui apenas `planos_alimentares.ler` deve receber uma interface realmente
-somente leitura, sem acoes de criar, editar, revisar, publicar ou arquivar.
+## Incremento 2 - contratos e permissoes do workspace
+
+Concluido em 2026-08-14, sem migration de banco:
+
+- a colecao de planos passou a retornar resumos de plano e versao em duas
+  consultas constantes, sem materializar refeicoes, itens ou substituicoes;
+- o novo detalhe `GET /pacientes/:pacienteId/planos-alimentares/:planoId`
+  carrega somente publicacao atual e rascunho completos; versoes historicas
+  permanecem resumidas;
+- backend, BFF e cliente compartilham a separacao entre resumo e detalhe, com
+  IDs codificados e escopo revalidado por tenant, paciente e responsavel;
+- o servico passou a exigir `planos_alimentares.ler` ou
+  `planos_alimentares.gerenciar` como defesa adicional aos guards HTTP;
+- `podeGerenciar` agora chega ao workspace. Leitores nao recebem criacao,
+  campos editaveis, revisao, publicacao, nova versao ou arquivamento, enquanto
+  continuam podendo selecionar, atualizar, imprimir e consultar o plano;
+- avaliacoes antropometricas deixaram de ser dependencia do modo de leitura e
+  respostas obsoletas de trocas rapidas de plano sao ignoradas;
+- o gate `test:authz` passou a incluir os contratos BFF de planos e prova que
+  as seis mutacoes sao negadas antes de consultar o backend para quem possui
+  somente leitura.
+
+Validacao do incremento: 135 suites e 894 testes backend, typecheck e build
+backend, typecheck/lint/build web, gate completo de autorizacao e quatro
+cenarios Playwright em desktop/mobile para leitura e gestao. O proximo
+incremento adicionara DTOs de consulta paginada, filtros multifonte e detalhe
+historico sob demanda antes de ampliar o editor profissional.
 
 ## Escopo funcional
 

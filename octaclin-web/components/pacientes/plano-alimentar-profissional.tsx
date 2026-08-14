@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import {
   Archive,
   ArrowDown,
@@ -28,6 +28,7 @@ import {
   criarNovaVersaoPlanoAlimentar,
   criarPlanoAlimentar,
   listarPlanosAlimentares,
+  obterPlanoAlimentar,
   publicarPlanoAlimentar,
   revisarPlanoAlimentar,
   type AlimentoComposicaoApi,
@@ -35,6 +36,7 @@ import {
   type FormulaEnergeticaApi,
   type NutrientesPor100gApi,
   type PlanoAlimentarApi,
+  type PlanoAlimentarResumoApi,
   type RefeicaoPlanoAlimentarEntrada,
   type SubstituicaoPlanoAlimentarEntrada,
   type VersaoPlanoAlimentarApi
@@ -556,7 +558,9 @@ function ResumoVersao({ plano, versao }: { plano: PlanoAlimentarApi; versao: Ver
       <header className="border-b border-linha pb-4">
         <p className="text-xs font-semibold uppercase text-primaria">Plano alimentar</p>
         <h2 className="mt-1 text-xl font-semibold text-tinta">{plano.titulo}</h2>
-        <p className="mt-1 text-sm text-texto-suave">Versao {versao.numero} - publicada em {formatarData(versao.publicadaEm)}</p>
+        <p className="mt-1 text-sm text-texto-suave">
+          Versao {versao.numero} - {versao.status === 'publicada' ? `publicada em ${formatarData(versao.publicadaEm)}` : versao.status === 'descartada' ? `descartada em ${formatarData(versao.descartadaEm)}` : 'rascunho em consulta'}
+        </p>
       </header>
       <section>
         <h3 className="text-sm font-semibold text-tinta">Objetivo</h3>
@@ -596,11 +600,13 @@ function ResumoVersao({ plano, versao }: { plano: PlanoAlimentarApi; versao: Ver
 
 interface PlanoAlimentarProfissionalProps {
   pacienteId: string;
+  podeGerenciar: boolean;
   aoAlterarRascunho?: (alterado: boolean) => void;
 }
 
-export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: PlanoAlimentarProfissionalProps) {
-  const [planos, setPlanos] = useState<PlanoAlimentarApi[]>([]);
+export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAlterarRascunho }: PlanoAlimentarProfissionalProps) {
+  const [planos, setPlanos] = useState<PlanoAlimentarResumoApi[]>([]);
+  const [plano, setPlano] = useState<PlanoAlimentarApi | null>(null);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoAntropometricaApi[]>([]);
   const [planoId, setPlanoId] = useState('');
   const [formulario, setFormulario] = useState<FormularioPlano>(() => formularioInicial());
@@ -613,39 +619,48 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
   const [alterado, setAlterado] = useState(false);
   const [confirmarArquivo, setConfirmarArquivo] = useState(false);
   const [confirmarCriacao, setConfirmarCriacao] = useState(false);
+  const sequenciaCarregamento = useRef(0);
 
-  const plano = useMemo(() => planos.find((item) => item.id === planoId), [planoId, planos]);
   const somaMacros = formulario.carboidratosBasisPoints + formulario.proteinasBasisPoints + formulario.gordurasBasisPoints;
 
-  const aplicarPlano = useCallback((lista: PlanoAlimentarApi[], preferido?: string, avaliacoesAtuais: AvaliacaoAntropometricaApi[] = []) => {
-    const selecionado = lista.find((item) => item.id === preferido) ?? lista[0];
-    setPlanoId(selecionado?.id ?? '');
+  const aplicarPlano = useCallback((detalhe: PlanoAlimentarApi | null, avaliacoesAtuais: AvaliacaoAntropometricaApi[] = []) => {
+    setPlano(detalhe);
+    setPlanoId(detalhe?.id ?? '');
     const avaliacaoPadrao = avaliacoesAtuais[0]?.id ?? '';
-    setFormulario(selecionado?.draft ? formularioDaVersao(selecionado.draft, avaliacaoPadrao) : formularioInicial(avaliacaoPadrao));
+    setFormulario(detalhe?.draft ? formularioDaVersao(detalhe.draft, avaliacaoPadrao) : formularioInicial(avaliacaoPadrao));
     setAlterado(false);
     setErrosFormulario([]);
   }, []);
 
   const carregar = useCallback(async (preferido?: string) => {
+    const sequencia = ++sequenciaCarregamento.current;
     setCarregando(true);
     setErro(null);
     try {
-      const [lista, serie] = await Promise.all([
-        listarPlanosAlimentares(pacienteId),
-        listarAvaliacoesAntropometricas(pacienteId)
-      ]);
+      const lista = await listarPlanosAlimentares(pacienteId);
+      if (sequencia !== sequenciaCarregamento.current) return;
       setPlanos(lista);
+      const selecionado = lista.find((item) => item.id === preferido) ?? lista[0];
+      const [detalhe, serie] = await Promise.all([
+        selecionado ? obterPlanoAlimentar(pacienteId, selecionado.id) : Promise.resolve(null),
+        podeGerenciar ? listarAvaliacoesAntropometricas(pacienteId) : Promise.resolve({ avaliacoes: [] })
+      ]);
+      if (sequencia !== sequenciaCarregamento.current) return;
       setAvaliacoes(serie.avaliacoes);
-      aplicarPlano(lista, preferido, serie.avaliacoes);
+      aplicarPlano(detalhe, serie.avaliacoes);
     } catch (erroAtual) {
+      if (sequencia !== sequenciaCarregamento.current) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar planos alimentares.');
     } finally {
-      setCarregando(false);
+      if (sequencia === sequenciaCarregamento.current) setCarregando(false);
     }
-  }, [aplicarPlano, pacienteId]);
+  }, [aplicarPlano, pacienteId, podeGerenciar]);
 
   useEffect(() => {
     void carregar();
+    return () => {
+      sequenciaCarregamento.current += 1;
+    };
   }, [carregar]);
 
   useEffect(() => {
@@ -664,6 +679,7 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
   }, [alterado]);
 
   function atualizar(mutacao: (atual: FormularioPlano) => FormularioPlano) {
+    if (!podeGerenciar) return;
     setFormulario(mutacao);
     setAlterado(true);
     setSucesso(null);
@@ -671,6 +687,7 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
   }
 
   async function executar(rotulo: string, tarefa: () => Promise<unknown>, mensagem: string, preferido = planoId) {
+    if (!podeGerenciar) return;
     setOperacao(rotulo);
     setErro(null);
     setSucesso(null);
@@ -686,6 +703,7 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
   }
 
   async function criar() {
+    if (!podeGerenciar) return;
     const titulo = tituloNovo.trim();
     if (!titulo) return;
     setOperacao('criando');
@@ -710,7 +728,7 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
   }
 
   async function salvar() {
-    if (!plano?.draft) return;
+    if (!podeGerenciar || !plano?.draft) return;
     const erros = validarFormulario(formulario);
     setErrosFormulario(erros);
     if (erros.length) return;
@@ -721,13 +739,9 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
     );
   }
 
-  function selecionarPlano(destino: PlanoAlimentarApi) {
+  function selecionarPlano(destino: PlanoAlimentarResumoApi) {
     if (alterado) return;
-    setPlanoId(destino.id);
-    setFormulario(destino.draft ? formularioDaVersao(destino.draft, avaliacoes[0]?.id) : formularioInicial(avaliacoes[0]?.id));
-    setErro(null);
-    setSucesso(null);
-    setErrosFormulario([]);
+    void carregar(destino.id);
   }
 
   function atualizarRefeicao(indice: number, refeicao: RefeicaoFormulario) {
@@ -763,11 +777,11 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
                   </span>
                 </button>
               ))}
-              {!planos.length ? <EstadoVazio titulo="Nenhum plano alimentar" descricao="Crie o primeiro plano para iniciar o cuidado nutricional." /> : null}
+              {!planos.length ? <EstadoVazio titulo="Nenhum plano alimentar" descricao={podeGerenciar ? 'Crie o primeiro plano para iniciar o cuidado nutricional.' : 'Ainda nao existe plano disponivel para consulta.'} /> : null}
             </CartaoConteudo>
           </Cartao>
 
-          <Cartao className="border border-linha shadow-none">
+          {podeGerenciar ? <Cartao className="border border-linha shadow-none">
             <CartaoConteudo className="grid gap-2">
               <Rotulo htmlFor="titulo-novo-plano">Novo plano</Rotulo>
               <Campo id="titulo-novo-plano" value={tituloNovo} onChange={(evento) => setTituloNovo(evento.target.value)} maxLength={180} />
@@ -776,7 +790,7 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
                 Criar plano
               </Botao>
             </CartaoConteudo>
-          </Cartao>
+          </Cartao> : null}
         </aside>
 
         <main className="grid min-w-0 content-start gap-4">
@@ -786,7 +800,7 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
             {alterado ? <div role="status" className="rounded-md border border-alerta-borda bg-alerta-suave px-4 py-3 text-sm text-alerta-forte">Existem alteracoes nao salvas neste rascunho.</div> : null}
           </div>
 
-          {!plano ? <EstadoVazio titulo="Selecione ou crie um plano" descricao="O editor sera exibido depois que um plano alimentar for selecionado." /> : null}
+          {!plano ? <EstadoVazio titulo={podeGerenciar ? 'Selecione ou crie um plano' : 'Selecione um plano'} descricao={podeGerenciar ? 'O editor sera exibido depois que um plano alimentar for selecionado.' : 'O conteudo sera exibido somente para consulta.'} /> : null}
 
           {plano ? (
             <>
@@ -803,14 +817,14 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
                       <RefreshCcw size={16} /> Atualizar
                     </Botao>
                     {plano.current ? <Botao type="button" onClick={() => window.print()}><Printer size={16} /> Imprimir</Botao> : null}
-                    <Botao type="button" variante="perigo" onClick={() => setConfirmarArquivo(true)} disabled={alterado || Boolean(operacao)}>
+                    {podeGerenciar ? <Botao type="button" variante="perigo" onClick={() => setConfirmarArquivo(true)} disabled={alterado || Boolean(operacao)}>
                       <Archive size={16} /> Arquivar
-                    </Botao>
+                    </Botao> : null}
                   </div>
                 </CartaoCabecalho>
               </Cartao>
 
-              {plano.draft ? (
+              {podeGerenciar ? (plano.draft ? (
                 <form onSubmit={(evento) => { evento.preventDefault(); void salvar(); }} className="grid gap-4">
                   {errosFormulario.length ? (
                     <div role="alert" className="rounded-md border border-perigo-borda bg-perigo-suave p-4 text-sm text-perigo-forte">
@@ -958,6 +972,17 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
                 </form>
               ) : (
                 <EstadoVazio titulo="Nenhum rascunho ativo" descricao="Crie uma nova versao a partir do plano publicado para continuar a edicao." acao={plano.current ? <Botao type="button" variante="primario" carregando={operacao === 'nova-versao'} onClick={() => void executar('nova-versao', () => criarNovaVersaoPlanoAlimentar(pacienteId, plano.id), 'Nova versao criada a partir da publicacao atual.')}><Plus size={16} /> Criar nova versao</Botao> : undefined} />
+              )) : (
+                <div className="grid gap-4">
+                  <div role="status" className="rounded-md border border-linha bg-superficie px-4 py-3 text-sm text-texto-suave">
+                    Acesso somente para consulta. A edicao e a publicacao dependem da permissao de gestao de planos alimentares.
+                  </div>
+                  {plano.current || plano.draft ? (
+                    <ResumoVersao plano={plano} versao={plano.current ?? plano.draft!} />
+                  ) : (
+                    <EstadoVazio titulo="Plano sem versao disponivel" descricao="Nao ha conteudo clinico disponivel para consulta neste plano." />
+                  )}
+                </div>
               )}
 
               {plano.historico.length ? (
@@ -973,9 +998,9 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
         </main>
       </div>
 
-      {plano?.current ? <ResumoVersao plano={plano} versao={plano.current} /> : null}
+      {podeGerenciar && plano?.current ? <ResumoVersao plano={plano} versao={plano.current} /> : null}
 
-      <ModalConfirmacao
+      {podeGerenciar ? <ModalConfirmacao
         aberto={confirmarCriacao}
         titulo="Criar outro plano"
         mensagem="Existem alteracoes nao salvas no rascunho atual. Criar outro plano descartara essas alteracoes."
@@ -986,9 +1011,9 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
           setConfirmarCriacao(false);
           void criar();
         }}
-      />
+      /> : null}
 
-      <ModalConfirmacao
+      {podeGerenciar ? <ModalConfirmacao
         aberto={confirmarArquivo}
         titulo="Arquivar plano alimentar"
         mensagem="O plano deixara a lista ativa. As versoes publicadas permanecem preservadas no historico clinico."
@@ -999,7 +1024,7 @@ export function PlanoAlimentarProfissional({ pacienteId, aoAlterarRascunho }: Pl
           if (!plano) return;
           void executar('arquivando', () => arquivarPlanoAlimentar(pacienteId, plano.id), 'Plano alimentar arquivado.', '').finally(() => setConfirmarArquivo(false));
         }}
-      />
+      /> : null}
     </div>
   );
 }
