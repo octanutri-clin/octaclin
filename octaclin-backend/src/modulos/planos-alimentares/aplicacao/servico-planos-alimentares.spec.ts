@@ -90,6 +90,7 @@ function criarRepositorio<T extends { id?: string }>(iniciais: T[] = []): Reposi
     }),
     createQueryBuilder: jest.fn(() => ({
       where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       take: jest.fn().mockReturnThis(),
       getMany: jest.fn(async () => repositorio.registros)
@@ -405,6 +406,8 @@ describe('ServicoPlanosAlimentares', () => {
       codigo: 'TACO',
       nome: 'Tabela TACO',
       versao: '4',
+      baseCodigo: 'cmvcol_taco3',
+      situacao: 'ativa',
       hashConteudo: 'a'.repeat(64)
     });
 
@@ -462,9 +465,10 @@ describe('ServicoPlanosAlimentares', () => {
   });
 
   it('marca alimento incompleto como indisponivel na busca sem depender de unaccent', async () => {
+    const FONTE_ID = '10000000-0000-4000-8000-000000000013';
     repositorios.get(AlimentoComposicaoOrm)!.registros.push({
       id: '10000000-0000-4000-8000-000000000012',
-      fonteId: '10000000-0000-4000-8000-000000000013',
+      fonteId: FONTE_ID,
       codigoOrigem: 'TACO-NULL',
       nome: 'Alimento sem energia',
       baseGramas: '100',
@@ -474,6 +478,14 @@ describe('ServicoPlanosAlimentares', () => {
       lipidiosG: '1',
       fibrasG: undefined,
       sodioMg: undefined
+    });
+    repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push({
+      id: FONTE_ID,
+      codigo: 'TACO',
+      nome: 'Tabela TACO',
+      versao: '4',
+      baseCodigo: 'cmvcol_taco3',
+      situacao: 'ativa'
     });
 
     const resultado = await servico.buscarAlimentos(TENANT_ID, 'alimento', usuarioProfissional());
@@ -489,5 +501,43 @@ describe('ServicoPlanosAlimentares', () => {
     expect(queryBuilder.where).toHaveBeenCalledWith('lower(alimento.nome) like lower(:busca)', {
       busca: '%alimento%'
     });
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('alimento.fonte_id in (:...fonteIds)', {
+      fonteIds: [FONTE_ID]
+    });
+  });
+
+  it('nao pesquisa nem seleciona alimento de fonte suspensa', async () => {
+    const ALIMENTO_ID = '10000000-0000-4000-8000-000000000014';
+    const FONTE_ID = '10000000-0000-4000-8000-000000000015';
+    repositorios.get(AlimentoComposicaoOrm)!.registros.push({
+      id: ALIMENTO_ID,
+      fonteId: FONTE_ID,
+      codigoOrigem: 'FONTE-SUSPENSA',
+      nome: 'Alimento suspenso',
+      baseGramas: '100',
+      energiaKcal: '100',
+      proteinasG: '2',
+      carboidratosG: '10',
+      lipidiosG: '1'
+    });
+    repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push({
+      id: FONTE_ID,
+      codigo: 'FONTE',
+      nome: 'Fonte suspensa',
+      versao: '1',
+      baseCodigo: 'principal',
+      situacao: 'suspensa'
+    });
+
+    await expect(servico.buscarAlimentos(TENANT_ID, 'alimento', usuarioProfissional())).resolves.toEqual([]);
+    await expect(
+      servico.atualizarRascunho(
+        TENANT_ID,
+        PACIENTE_ID,
+        PLANO_ID,
+        usuarioProfissional(),
+        dadosRascunho(ALIMENTO_ID)
+      )
+    ).rejects.toThrow('nao esta ativa');
   });
 });

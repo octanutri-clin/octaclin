@@ -42,11 +42,18 @@ do banco; o carregador recusa a execucao quando o banco conectado diverge:
 $env:DATABASE_URL='<URL owner do banco confirmado>'
 $env:TACO_CONFIRMAR_CARGA='true'
 $env:TACO_BANCO_ESPERADO='octaclin_test_fase150b'
+$env:TACO_RESPONSAVEL_APROVACAO='<responsavel identificado>'
+$env:TACO_REFERENCIA_DIREITO_USO='<documento ou URL da aprovacao>'
 pnpm --dir octaclin-backend catalogo:taco:carregar
 Remove-Item Env:DATABASE_URL
 Remove-Item Env:TACO_CONFIRMAR_CARGA
 Remove-Item Env:TACO_BANCO_ESPERADO
+Remove-Item Env:TACO_RESPONSAVEL_APROVACAO
+Remove-Item Env:TACO_REFERENCIA_DIREITO_USO
 ```
 
 A carga e idempotente por fonte, versao e codigo do alimento. Ela nao remove
-registros existentes e nunca deve ser executada com um banco ambiguo.
+registros existentes e nunca deve ser executada com um banco ambiguo. A fonte
+so fica `ativa` quando checksum, esquema nutricional, referencia de direito de
+uso e responsavel pela aprovacao estiverem presentes. Novas fontes permanecem
+`em_validacao` por padrao.

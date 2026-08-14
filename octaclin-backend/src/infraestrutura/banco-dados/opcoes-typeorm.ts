@@ -40,6 +40,9 @@ import { CriarExamesEFotosClinicas1720000001024 } from './migracoes/172000000102
 import { VincularArquivosEvolucaoFotografica1720000001025 } from './migracoes/1720000001025-VincularArquivosEvolucaoFotografica';
 import { CriarCondutasTerapeuticas1720000001026 } from './migracoes/1720000001026-CriarCondutasTerapeuticas';
 import { AdicionarCicloVidaTenants1720000001027 } from './migracoes/1720000001027-AdicionarCicloVidaTenants';
+import { GovernancaCatalogoMultifonte1720000001028 } from './migracoes/1720000001028-GovernancaCatalogoMultifonte';
+import { AtivarLegadoTacoGovernado1720000001029 } from './migracoes/1720000001029-AtivarLegadoTacoGovernado';
+import { EndurecerGovernancaCatalogo1720000001030 } from './migracoes/1720000001030-EndurecerGovernancaCatalogo';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -104,6 +107,7 @@ import { TenantOrm } from '../../modulos/tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../modulos/usuarios/infraestrutura/usuario.orm';
 import { DashboardAlertaOcultoOrm } from '../../modulos/dashboard/infraestrutura/dashboard-alerta-oculto.orm';
 import { AlimentoComposicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/alimento-composicao.orm';
+import { CatalogoComposicaoAlimentoOrm } from '../../modulos/planos-alimentares/infraestrutura/catalogo-composicao-alimento.orm';
 import { ApiChaveOrm } from '../../modulos/integracoes/infraestrutura/api-chave.orm';
 import { WebhookAssinaturaOrm } from '../../modulos/integracoes/infraestrutura/webhook-assinatura.orm';
 import { WebhookEntregaOrm } from '../../modulos/integracoes/infraestrutura/webhook-entrega.orm';
@@ -231,6 +235,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       PlanoAlimentarRefeicaoOrm,
       PlanoAlimentarItemOrm,
       PlanoAlimentarSubstituicaoOrm,
+      CatalogoComposicaoAlimentoOrm,
       FonteComposicaoAlimentoOrm,
       AlimentoComposicaoOrm,
       UserActionLogOrm,
@@ -279,7 +284,10 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarExamesEFotosClinicas1720000001024,
         VincularArquivosEvolucaoFotografica1720000001025,
         CriarCondutasTerapeuticas1720000001026,
-        AdicionarCicloVidaTenants1720000001027
+        AdicionarCicloVidaTenants1720000001027,
+        GovernancaCatalogoMultifonte1720000001028,
+        AtivarLegadoTacoGovernado1720000001029,
+        EndurecerGovernancaCatalogo1720000001030
       ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

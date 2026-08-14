@@ -1,6 +1,6 @@
 # Fase 234 - Editor de planos alimentares avancado e catalogo multifonte
 
-Status: planejada. Fase importante de evolucao clinica e de produto, posterior
+Status: em execucao. Incremento 1 concluido em 2026-08-14. Fase importante de evolucao clinica e de produto, posterior
 ao MVP da Fase 216. Nao substitui os bloqueadores de go-live das Fases 225,
 226, 228, 229, 231, 232 e 233.
 
@@ -13,6 +13,52 @@ publicacao e segura para dados de composicao nutricional de mais de uma fonte.
 A Fase 216 permanece como a base: TACO versionado, calculo no backend,
 rascunho, revisao humana, publicacao imutavel, RLS e projecao segura no portal.
 Esta fase nao reabre essas garantias; ela as amplia.
+
+## Incremento 1 - governanca e imutabilidade do catalogo
+
+Concluido em 2026-08-14, sem importar novas fontes externas:
+
+- familias de catalogo separadas de versao/base, permitindo representar TBCA
+  7.3 com `BD-AIN` e `BD-B` sem colisao ou duplicacao conceitual;
+- proveniencia por versao com artefato, checksum, hash normalizado, esquema,
+  captura, direito de uso, aprovador e situacao fail-closed;
+- historico de importacao e eventos de mudanca de situacao;
+- fontes ativas/suspensas/revogadas e seus alimentos protegidos contra
+  alteracao ou exclusao; transicoes exigem ator e motivo;
+- role runtime limitada a leitura das tabelas globais do catalogo;
+- carregador TACO transacional, sem `upsert` destrutivo, com verificacao
+  integral e reexecucao idempotente;
+- snapshots novos guardam checksum, esquema e datas, enquanto snapshots
+  antigos continuam legiveis por campos opcionais;
+- migrations `1028`, `1029` e `1030` aplicadas primeiro em
+  `octaclin_test_fase150b`, com 43/43 migrations. A `1029` validou os 583
+  alimentos antes de converter a identidade legada da TACO; a `1030`
+  vinculou cada registro a uma importacao concluida, gravou hash por alimento,
+  endureceu a ativacao e protegeu tambem transferencias saindo de fonte ativa.
+
+Evidencia operacional: TACO ativa com 583 registros e 583 vinculos/hashes de
+proveniencia, checksum do artefato
+`a66b8ec5...2d14`, hash normalizado `82c22bc4...81e7`, evento auditado de
+ativacao e bloqueios reais de mutacao e ativacao sem importacao aprovados. A
+segunda execucao do carregador terminou sem alterar o catalogo e registrou a
+tentativa como `ignorada`. A decisao de fontes esta em
+`DECISAO_FONTES_CATALOGO_FASE_234.md`.
+
+Validacao do incremento: 5 suites focadas com 27 testes, suite backend completa
+com 135 suites e 890 testes, typecheck e build backend, typecheck/lint e gates
+de autorizacao web, preflight documental, scanner de secrets e `diff --check`.
+Build web e acessibilidade foram executados sequencialmente para evitar disputa
+pelo diretorio `.next` e permaneceram aprovados.
+
+Permanecem para os proximos incrementos: APIs e busca multifonte completas,
+editor profissional, modelos, grupos de substituicao, portal, adesao, lista de
+compras e validacao final. Nenhuma migration desta fase foi aplicada em
+producao neste incremento.
+
+O Incremento 2 comeca pelos contratos e permissoes: separar listagem resumida
+de detalhe sob demanda e propagar `podeGerenciar` ao workspace profissional.
+Quem possui apenas `planos_alimentares.ler` deve receber uma interface realmente
+somente leitura, sem acoes de criar, editar, revisar, publicar ou arquivar.
 
 ## Escopo funcional
 

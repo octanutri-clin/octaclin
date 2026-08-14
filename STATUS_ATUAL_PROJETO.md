@@ -7,6 +7,17 @@ Atualizado em 2026-08-14.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 234 em execucao: o Incremento 1 concluiu a fundacao de governanca do
+  catalogo multifonte sem carregar dados externos. As migrations `1028`,
+  `1029` e `1030` foram aplicadas primeiro no banco isolado
+  `octaclin_test_fase150b`, elevando-o a 43/43. A TACO legada foi convertida
+  somente apos recomputar os 583 alimentos; todos ficaram vinculados a uma
+  importacao concluida e com hash por registro. Triggers bloquearam mutacao de
+  fonte/alimento ativo, transferencia saindo de fonte ativa, ativacao sem
+  importacao/proveniencia e transicao sem ator/motivo; a role runtime permaneceu
+  somente leitura e a recarga TACO foi idempotente e auditada como `ignorada`.
+  Producao ainda nao recebeu estas migrations. Editor,
+  substituicoes, portal e demais fluxos seguem pendentes.
 - Fase 232 concluida e integrada: operacao de lancamento com janela controlada,
   responsaveis, gates GO/NO-GO, rollback, comunicacao e exercicio sintetico P0.
   A decisao atual permanece NO-GO para cliente real ate identidade publica,
