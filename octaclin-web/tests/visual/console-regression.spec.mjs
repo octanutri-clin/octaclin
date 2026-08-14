@@ -951,7 +951,7 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
   };
 }
 
-async function prepararProntuarioMockado(page) {
+async function prepararProntuarioMockado(page, { permissoesExtras = [] } = {}) {
   let criouEvolucao = false;
   let criouTarefa = false;
   let criouMaterial = false;
@@ -987,9 +987,28 @@ async function prepararProntuarioMockado(page) {
           'materiais.gerenciar',
           'agenda.consultas.ler',
           'questionarios.ler',
-          'comunicacoes.mensagens.ler'
+          'comunicacoes.mensagens.ler',
+          ...permissoesExtras
         ],
         destinoInicial: '/dashboard'
+      })
+    });
+  });
+
+  await page.route('**/api/profissionais**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [{
+          id: 'profissional-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-profissional-1',
+          nome: 'Dra. Carla',
+          especialidade: 'Nutrologia',
+          criadoEm: '2026-07-20T10:00:00.000Z'
+        }],
+        total: 1
       })
     });
   });
@@ -1044,21 +1063,96 @@ async function prepararProntuarioMockado(page) {
   });
 
   await page.route('**/api/pacientes/paciente-1/prontuario/timeline**', async (route) => {
-    const tipo = new URL(route.request().url()).searchParams.get('tipo');
+    const parametros = new URL(route.request().url()).searchParams;
+    const tipo = parametros.get('tipo');
+    const responsavelId = parametros.get('responsavelId');
     const itens = [
+      {
+        id: 'plano-versao-1',
+        tipo: 'plano_alimentar_publicado',
+        titulo: 'Plano alimentar publicado',
+        data: '2026-07-23T18:00:00.000Z',
+        status: 'publicado',
+        origem: 'Plano alimentar',
+        responsavelId: 'profissional-1',
+        autorUsuarioId: 'usuario-profissional-1'
+      },
+      {
+        id: 'avaliacao-1',
+        tipo: 'avaliacao_antropometrica',
+        titulo: 'Avaliacao antropometrica',
+        data: '2026-07-23T17:00:00.000Z',
+        status: 'registrada',
+        origem: 'Antropometria',
+        responsavelId: 'profissional-1',
+        autorUsuarioId: 'usuario-profissional-1'
+      },
+      {
+        id: 'consulta-pagamento:consulta-1',
+        tipo: 'evento_financeiro',
+        titulo: 'Pagamento de consulta',
+        data: '2026-07-23T16:00:00.000Z',
+        status: 'pago',
+        origem: 'Financeiro',
+        responsavelId: 'profissional-1'
+      },
+      {
+        id: 'documento-1',
+        tipo: 'documento_emitido',
+        titulo: 'Relatorio de alta emitido',
+        data: '2026-07-23T15:00:00.000Z',
+        status: 'emitido',
+        origem: 'Documentos',
+        responsavelId: 'profissional-1',
+        autorUsuarioId: 'usuario-profissional-1'
+      },
+      {
+        id: 'anexo-1',
+        tipo: 'anexo_confirmado',
+        titulo: 'Anexo clinico confirmado',
+        data: '2026-07-23T14:00:00.000Z',
+        status: 'confirmado',
+        origem: 'Anexos',
+        responsavelId: 'profissional-1'
+      },
+      {
+        id: 'exame-1',
+        tipo: 'exame_laboratorial',
+        titulo: 'Coleta de exames laboratoriais',
+        data: '2026-07-23T13:00:00.000Z',
+        status: 'registrada',
+        origem: 'Exames laboratoriais',
+        responsavelId: 'profissional-1',
+        autorUsuarioId: 'usuario-profissional-1'
+      },
+      {
+        id: 'foto-1',
+        tipo: 'evolucao_fotografica',
+        titulo: 'Serie fotografica clinica',
+        data: '2026-07-23T12:00:00.000Z',
+        status: 'registrada',
+        origem: 'Evolucao fotografica',
+        responsavelId: 'profissional-1',
+        autorUsuarioId: 'usuario-profissional-1'
+      },
       {
         id: 'evolucao-1',
         tipo: 'evolucao_clinica',
         titulo: 'Ajuste de conduta',
         data: '2026-07-22T18:00:00.000Z',
-        status: 'ajuste_plano'
+        status: 'ajuste_plano',
+        origem: 'Prontuario',
+        responsavelId: 'profissional-1',
+        autorUsuarioId: 'usuario-profissional-1'
       },
       {
         id: 'mensagem-1',
         tipo: 'mensagem',
         titulo: 'Mensagem recebida',
         data: '2026-07-22T16:00:00.000Z',
-        status: 'recebido'
+        status: 'recebido',
+        origem: 'Comunicacoes',
+        autorUsuarioId: 'usuario-paciente-1'
       },
       {
         id: 'consulta-1',
@@ -1073,7 +1167,9 @@ async function prepararProntuarioMockado(page) {
         tipo: 'resposta_formulario',
         titulo: 'Resposta de Check-in semanal',
         data: '2026-07-21T15:00:00.000Z',
-        status: 'finalizado'
+        status: 'finalizado',
+        origem: 'Formularios',
+        autorUsuarioId: 'usuario-paciente-1'
       },
       {
         id: 'envio-1',
@@ -1087,7 +1183,8 @@ async function prepararProntuarioMockado(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        itens: tipo ? itens.filter((item) => item.tipo === tipo) : itens
+        itens: itens.filter((item) => (!tipo || item.tipo === tipo)
+          && (!responsavelId || item.responsavelId === responsavelId))
       })
     });
   });
@@ -1705,7 +1802,9 @@ test.describe('prontuario do paciente', () => {
   });
 
   test('exibe linha do tempo clinica consolidada', async ({ page }) => {
-    await prepararProntuarioMockado(page);
+    await prepararProntuarioMockado(page, {
+      permissoesExtras: ['agenda.financeiro.ler', 'planos_alimentares.ler', 'profissionais.ler']
+    });
     await page.goto('/pacientes/paciente-1');
 
     await expect(page.getByRole('heading', { name: 'Prontuario do paciente' })).toBeVisible();
@@ -1720,6 +1819,14 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Consulta de retorno')).toBeVisible();
     await expect(page.getByText('Resposta de Check-in semanal')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Formulario', exact: true })).toBeVisible();
+    await expect(page.getByText('Plano alimentar publicado')).toBeVisible();
+    await expect(page.getByText('Avaliacao antropometrica')).toBeVisible();
+    await expect(page.getByText('Pagamento de consulta')).toBeVisible();
+    await expect(page.getByText('Origem: Plano alimentar - Autor: Dra. Carla')).toBeVisible();
+    await expect(page.getByText('Origem: Formularios - Autor: paciente')).toBeVisible();
+    await page.getByLabel('Responsavel').selectOption('profissional-1');
+    await page.getByRole('button', { name: 'Filtrar' }).click();
+    await expect(page.getByText('Pagamento de consulta')).toBeVisible();
     await page.getByLabel('Tipo de evento').selectOption('evolucao_clinica');
     await page.getByRole('button', { name: 'Filtrar' }).click();
     await expect(page.getByText('Ajuste de conduta')).toBeVisible();
@@ -1728,6 +1835,36 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByRole('heading', { name: 'Nova evolucao clinica' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Voltar para pacientes' })).toHaveAttribute('href', '/pacientes');
     await assertSemOverflowHorizontal(page);
+  });
+
+  test('abre os novos eventos na fonte de verdade correspondente', async ({ page }) => {
+    await prepararProntuarioMockado(page, {
+      permissoesExtras: ['agenda.financeiro.ler', 'planos_alimentares.ler', 'profissionais.ler']
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    const abrirHistorico = async () => {
+      await page.getByRole('tab', { name: 'Atendimentos' }).click();
+      await page.getByRole('tablist', { name: 'Subareas de Atendimentos' }).getByRole('tab', { name: 'Historico' }).click();
+    };
+    const abrirEConferir = async (titulo, area, subarea) => {
+      await page.getByRole('button', { name: `Abrir detalhe de ${titulo}` }).click();
+      await expect(page.getByRole('tablist', { name: 'Areas principais do prontuario' })
+        .getByRole('tab', { name: area, exact: true })).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByRole('tablist', { name: `Subareas de ${area}` })
+        .getByRole('tab', { name: subarea, exact: true })).toHaveAttribute('aria-selected', 'true');
+      await abrirHistorico();
+    };
+
+    await abrirHistorico();
+    await abrirEConferir('Plano alimentar publicado', 'Plano', 'Plano alimentar');
+    await abrirEConferir('Avaliacao antropometrica', 'Avaliacoes', 'Antropometria');
+    await abrirEConferir('Relatorio de alta emitido', 'Documentos', 'Documentos');
+    await abrirEConferir('Anexo clinico confirmado', 'Documentos', 'Anexos');
+    await abrirEConferir('Coleta de exames laboratoriais', 'Avaliacoes', 'Exames laboratoriais');
+    await abrirEConferir('Serie fotografica clinica', 'Avaliacoes', 'Evolucao fotografica');
+    await page.getByRole('button', { name: 'Abrir detalhe de Pagamento de consulta' }).click();
+    await expect(page).toHaveURL('/agenda?financeiro=1&pacienteId=paciente-1');
   });
 
   test('emite declaracao apenas a partir de consulta concluida', async ({ page }) => {

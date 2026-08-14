@@ -371,6 +371,7 @@ export function PainelAgenda() {
     if (parametrosIniciaisAplicados.current || !pacientesLista.length || !profissionaisLista.length) return;
     parametrosIniciaisAplicados.current = true;
 
+    if (parametros.get('financeiro') === '1') return;
     const pacienteId = parametros.get('pacienteId');
     const profissionalId = parametros.get('profissionalId');
     const paciente = pacienteId ? pacientePorId(pacientesLista, pacienteId) : undefined;
@@ -386,6 +387,14 @@ export function PainelAgenda() {
     }));
     setSucesso('Dados do retorno preenchidos. Confirme data e hora antes de agendar.');
   }, [pacientesLista, profissionaisLista, parametros]);
+
+  useEffect(() => {
+    if (!podeLerFinanceiro || parametros.get('financeiro') !== '1') return;
+    const financeiro = document.getElementById('financeiro-agenda');
+    if (!financeiro) return;
+    financeiro.scrollIntoView({ block: 'start' });
+    financeiro.focus({ preventScroll: true });
+  }, [podeLerFinanceiro, parametros]);
 
   function selecionarPaciente(pacienteId: string) {
     const paciente = pacientePorId(pacientesLista, pacienteId);
@@ -1321,7 +1330,11 @@ export function PainelAgenda() {
         </Cartao>
         </div>
       </div>
-      {podeLerFinanceiro ? <ResumoRecebimentos contexto="profissional" /> : null}
+      {podeLerFinanceiro ? (
+        <section id="financeiro-agenda" tabIndex={-1} aria-label="Financeiro da agenda" className="scroll-mt-4 focus:outline-none">
+          <ResumoRecebimentos contexto="profissional" pacienteId={parametros.get('financeiro') === '1' ? parametros.get('pacienteId') ?? undefined : undefined} />
+        </section>
+      ) : null}
       <ModalConfirmacao
         aberto={Boolean(desfechoPendente)}
         titulo={desfechoPendente?.status === 'cancelada' ? 'Cancelar consulta' : desfechoPendente ? `Registrar ${rotuloStatusConsulta(desfechoPendente.status).toLocaleLowerCase('pt-BR')}` : 'Confirmar desfecho'}

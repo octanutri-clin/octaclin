@@ -49,13 +49,23 @@ A Fase 238 continua sendo um modulo especializado independente.
 
 ### Incremento 15 - timeline longitudinal completa
 
-- adicionar planos publicados, antropometrias, documentos, anexos, exames,
-  fotos e financeiro somente quando o papel tiver permissao na fonte;
-- padronizar tipo, data, autor, origem, status e deep link sem descriptografar
-  conteudo clinico;
-- adicionar filtro server-side por responsavel e testes de tenant, carteira,
-  papel, cursor e periodo;
-- confirmar plano de consulta e indices antes de qualquer migration.
+Concluido em 2026-08-13.
+
+- a consulta paginada agrega planos publicados, antropometrias, documentos,
+  anexos confirmados, exames, fotos e eventos financeiros sem criar fonte de
+  verdade paralela;
+- plano e financeiro so entram quando o papel possui a permissao da fonte;
+  tenant e carteira continuam validados antes da consulta consolidada;
+- tipo, data, autor, responsavel, origem, status e deep link foram
+  normalizados sem selecionar ou descriptografar conteudo clinico;
+- o filtro por responsavel atravessa DTO, backend, BFF e interface; o cursor
+  aceita tambem os IDs compostos dos eventos financeiros;
+- a revisao confirmou indices nas series principais. Nenhuma migration foi
+  criada sem `EXPLAIN`; fontes legadas e anexos serao medidos no benchmark do
+  Incremento 19 antes de eventual indice aditivo;
+- evidencias: 130 suites/871 testes backend, 20/20 Playwright do prontuario em
+  desktop/mobile, typechecks, lint, builds, authz, seguranca BFF, secrets e
+  audits de dependencias zerados.
 
 ### Incremento 16 - resumo clinico acionavel
 
@@ -92,5 +102,5 @@ A Fase 238 continua sendo um modulo especializado independente.
 
 ## Ordem recomendada
 
-Executar os incrementos 15, 16, 17, 18 e 19 nessa ordem. A Fase 235 so pode
+Executar os incrementos 16, 17, 18 e 19 nessa ordem. A Fase 235 so pode
 mudar de `[~]` para `[x]` depois do Incremento 19 e do registro das evidencias.

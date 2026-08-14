@@ -33,9 +33,11 @@ Atualizado em 2026-08-13.
   libera escalabilidade horizontal sem agregacao distribuida.
 - Auditoria final da Fase 235 concluida em 2026-08-13. A fase permanece
   corretamente marcada como parcial: navegacao, cadastro progressivo e timeline
-  paginada existem, mas faltam cobertura longitudinal completa, resumo clinico,
-  qualidade cadastral/ciclo do portal, contexto SuperAdmin e benchmark/aceite
-  final. Os Incrementos 15 a 19 e a matriz de conformidade estao em
+  paginada existem. O Incremento 15 concluiu a cobertura longitudinal de planos,
+  antropometria, documentos, anexos, exames, fotos e financeiro, com permissao,
+  autoria e filtro por responsavel. Ainda faltam resumo clinico, qualidade
+  cadastral/ciclo do portal, contexto SuperAdmin e benchmark/aceite final nos
+  Incrementos 16 a 19. A matriz de conformidade esta em
   `AUDITORIA_FINAL_FASE_235_2026-08-13.md`.
 - Fase 231 concluida: o workflow manual de staging cria uma branch Neon
   descartavel, aplica migrations, valida a role runtime, RLS forcada e dois

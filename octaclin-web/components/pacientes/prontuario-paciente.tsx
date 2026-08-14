@@ -5,21 +5,26 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
+  BadgeDollarSign,
   CalendarDays,
   CheckSquare,
   ClipboardList,
   Download,
+  FlaskConical,
   FileText,
+  ImageIcon,
   LinkIcon,
   MessageSquareText,
   Paperclip,
   RefreshCcw,
+  Ruler,
   Save,
   Send,
   Stethoscope,
   Trash2,
   UploadCloud,
-  UserRound
+  UserRound,
+  Utensils
 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
@@ -33,6 +38,7 @@ import { PlanoAlimentarProfissional } from './plano-alimentar-profissional';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { obterSessao } from '@/lib/auth-api';
+import { listarProfissionais, type ProfissionalResumo } from '@/lib/cadastros-api';
 import {
   criarMaterial,
   enviarMaterialPaciente,
@@ -98,6 +104,7 @@ interface FiltrosHistorico {
   tipo?: TipoEventoProntuarioPaciente;
   inicio?: string;
   fim?: string;
+  responsavelId?: string;
 }
 
 type AbaProntuario =
@@ -226,7 +233,14 @@ function rotuloTipo(tipo: EventoProntuarioPacienteApi['tipo']) {
     checkin_rapido: 'Check-in rapido',
     mensagem: 'Mensagem',
     evolucao_clinica: 'Evolucao',
-    tarefa_acompanhamento: 'Tarefa'
+    tarefa_acompanhamento: 'Tarefa',
+    plano_alimentar_publicado: 'Plano alimentar',
+    avaliacao_antropometrica: 'Antropometria',
+    documento_emitido: 'Documento',
+    anexo_confirmado: 'Anexo',
+    exame_laboratorial: 'Exame laboratorial',
+    evolucao_fotografica: 'Evolucao fotografica',
+    evento_financeiro: 'Financeiro'
   };
   return rotulos[tipo];
 }
@@ -242,7 +256,29 @@ function iconeEvento(tipo: EventoProntuarioPacienteApi['tipo']) {
   if (tipo === 'mensagem') return MessageSquareText;
   if (tipo === 'evolucao_clinica') return Stethoscope;
   if (tipo === 'tarefa_acompanhamento') return CheckSquare;
+  if (tipo === 'plano_alimentar_publicado') return Utensils;
+  if (tipo === 'avaliacao_antropometrica') return Ruler;
+  if (tipo === 'documento_emitido') return FileText;
+  if (tipo === 'anexo_confirmado') return Paperclip;
+  if (tipo === 'exame_laboratorial') return FlaskConical;
+  if (tipo === 'evolucao_fotografica') return ImageIcon;
+  if (tipo === 'evento_financeiro') return BadgeDollarSign;
   return ClipboardList;
+}
+
+function autoriaEvento(evento: EventoProntuarioPacienteApi, profissionais: ProfissionalResumo[]) {
+  const autor = profissionais.find((profissional) => profissional.usuarioId === evento.autorUsuarioId);
+  const responsavel = profissionais.find((profissional) => profissional.id === evento.responsavelId);
+  const partes = evento.origem ? [`Origem: ${evento.origem}`] : [];
+  if (autor) partes.push(`Autor: ${autor.nome}`);
+  else if (evento.autorUsuarioId) {
+    const autoriaDoPaciente = evento.tipo === 'resposta_formulario'
+      || evento.tipo === 'checkin_rapido'
+      || (evento.tipo === 'mensagem' && evento.status === 'recebido');
+    partes.push(autoriaDoPaciente ? 'Autor: paciente' : 'Autor: equipe clinica');
+  }
+  if (responsavel && responsavel.id !== autor?.id) partes.push(`Responsavel: ${responsavel.nome}`);
+  return partes.join(' - ');
 }
 
 function CartaoResumo({ titulo, valor, detalhe }: { titulo: string; valor: string; detalhe: string }) {
@@ -257,10 +293,12 @@ function CartaoResumo({ titulo, valor, detalhe }: { titulo: string; valor: strin
 
 function LinhaDoTempo({
   eventos,
-  aoAbrirEvento
+  aoAbrirEvento,
+  profissionais = []
 }: {
   eventos: EventoProntuarioPacienteApi[];
   aoAbrirEvento?: (evento: EventoProntuarioPacienteApi) => void;
+  profissionais?: ProfissionalResumo[];
 }) {
   if (!eventos.length) {
     return <EstadoVazio titulo="Sem eventos no prontuario" descricao="Agenda, formularios, respostas e mensagens aparecerao aqui." />;
@@ -270,6 +308,7 @@ function LinhaDoTempo({
     <div className="grid gap-3">
       {eventos.map((evento) => {
         const Icone = iconeEvento(evento.tipo);
+        const autoria = autoriaEvento(evento, profissionais);
         return (
           <article key={`${evento.tipo}-${evento.id}`} className="grid gap-2 rounded-md border border-linha bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -281,6 +320,7 @@ function LinhaDoTempo({
                   <p className="text-xs font-semibold uppercase text-texto-suave">{rotuloTipo(evento.tipo)}</p>
                   <h3 className="mt-1 break-words text-sm font-semibold text-tinta">{evento.titulo}</h3>
                   {evento.descricao ? <p className="mt-1 break-words text-sm text-texto-suave">{evento.descricao}</p> : null}
+                  {autoria ? <p className="mt-1 break-words text-xs text-texto-suave">{autoria}</p> : null}
                 </div>
               </div>
               <div className="shrink-0 text-left sm:text-right">
@@ -315,6 +355,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [materiais, setMateriais] = useState<MaterialEducativoApi[]>([]);
   const [materiaisPaciente, setMateriaisPaciente] = useState<EnvioMaterialPacienteApi[]>([]);
   const [anexos, setAnexos] = useState<ArquivoMidiaApi[]>([]);
+  const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
   const [salvandoEvolucao, setSalvandoEvolucao] = useState(false);
@@ -340,6 +381,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [tipoHistorico, setTipoHistorico] = useState<TipoEventoProntuarioPaciente | 'todos'>('todos');
   const [inicioHistorico, setInicioHistorico] = useState('');
   const [fimHistorico, setFimHistorico] = useState('');
+  const [responsavelHistorico, setResponsavelHistorico] = useState('');
   const [areaAtiva, setAreaAtiva] = useState<AreaProntuario>('resumo');
   const [planoAlimentarNaoSalvo, setPlanoAlimentarNaoSalvo] = useState(false);
   const [permissoes, setPermissoes] = useState<string[]>([]);
@@ -377,9 +419,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     () => ({
       tipo: tipoHistorico === 'todos' ? undefined : tipoHistorico,
       inicio: inicioHistorico ? `${inicioHistorico}T00:00:00.000Z` : undefined,
-      fim: fimHistorico ? `${fimHistorico}T23:59:59.999Z` : undefined
+      fim: fimHistorico ? `${fimHistorico}T23:59:59.999Z` : undefined,
+      responsavelId: responsavelHistorico || undefined
     }),
-    [fimHistorico, inicioHistorico, tipoHistorico]
+    [fimHistorico, inicioHistorico, responsavelHistorico, tipoHistorico]
   );
 
   const carregarHistorico = useCallback(async (
@@ -581,8 +624,25 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   useEffect(() => {
     let ativo = true;
     void obterSessao()
-      .then((sessao) => {
-        if (ativo) setPermissoes(sessao?.permissoes ?? []);
+      .then(async (sessao) => {
+        if (!ativo) return;
+        const permissoesSessao = sessao?.permissoes ?? [];
+        setPermissoes(permissoesSessao);
+        if (!permissoesSessao.includes('profissionais.ler')) {
+          setProfissionais([]);
+          return;
+        }
+        try {
+          const todos: ProfissionalResumo[] = [];
+          for (let pagina = 1; pagina <= 20; pagina += 1) {
+            const resposta = await listarProfissionais({ pagina, limite: 100 });
+            todos.push(...resposta.itens);
+            if (todos.length >= resposta.total || resposta.itens.length === 0) break;
+          }
+          if (ativo) setProfissionais(todos);
+        } catch {
+          if (ativo) setProfissionais([]);
+        }
       })
       .catch(() => {
         if (ativo) setPermissoes([]);
@@ -636,6 +696,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     setTipoHistorico('todos');
     setInicioHistorico('');
     setFimHistorico('');
+    setResponsavelHistorico('');
     setPaginaHistorico(null);
     void carregarHistorico(undefined, {});
   }
@@ -645,6 +706,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       router.push(`/agenda?consultaId=${encodeURIComponent(evento.origemId ?? evento.id)}`);
       return;
     }
+    if (evento.tipo === 'evento_financeiro') {
+      router.push(`/agenda?financeiro=1&pacienteId=${encodeURIComponent(pacienteId)}`);
+      return;
+    }
 
     const abaPorTipo: Partial<Record<TipoEventoProntuarioPaciente, AbaProntuario>> = {
       evolucao_clinica: 'evolucoes',
@@ -652,7 +717,13 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       mensagem: 'mensagens',
       formulario: 'formularios',
       resposta_formulario: 'formularios',
-      checkin_rapido: 'formularios'
+      checkin_rapido: 'formularios',
+      plano_alimentar_publicado: 'plano_alimentar',
+      avaliacao_antropometrica: 'antropometria',
+      documento_emitido: 'documentos',
+      anexo_confirmado: 'anexos',
+      exame_laboratorial: 'exames_laboratoriais',
+      evolucao_fotografica: 'evolucao_fotografica'
     };
     const destino = abaPorTipo[evento.tipo];
     if (destino) solicitarTrocaAba(destino);
@@ -853,7 +924,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           </section>
           <section className="grid gap-3">
             <div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Linha de cuidado</h2><p className="mt-1 text-sm text-texto-suave">Ultimos eventos que orientam a proxima conduta.</p></div>
-            <LinhaDoTempo eventos={eventos.slice(0, 4)} />
+            <LinhaDoTempo eventos={eventos.slice(0, 4)} profissionais={profissionais} />
           </section>
         </>
       ) : null}
@@ -908,7 +979,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
       </form>
 
-      <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Evolucoes recentes</h2></div><LinhaDoTempo eventos={evolucoes} /></section>
+      <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Evolucoes recentes</h2></div><LinhaDoTempo eventos={evolucoes} profissionais={profissionais} /></section>
       </> : null}
 
       {abaAtiva === 'acompanhamento' ? <>
@@ -984,7 +1055,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
       </form>
 
-      <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Plano em acompanhamento</h2></div><LinhaDoTempo eventos={tarefas} /></section>
+      <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Plano em acompanhamento</h2></div><LinhaDoTempo eventos={tarefas} profissionais={profissionais} /></section>
       </> : null}
 
       {abaAtiva === 'plano_alimentar' ? (
@@ -1265,9 +1336,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </section>
       ) : null}
 
-      {abaAtiva === 'formularios' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Formularios e check-ins</h2><p className="mt-1 text-sm text-texto-suave">Envios, respostas e check-ins vinculados ao paciente.</p></div><LinhaDoTempo eventos={formularios} /></section> : null}
+      {abaAtiva === 'formularios' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Formularios e check-ins</h2><p className="mt-1 text-sm text-texto-suave">Envios, respostas e check-ins vinculados ao paciente.</p></div><LinhaDoTempo eventos={formularios} profissionais={profissionais} /></section> : null}
 
-      {abaAtiva === 'mensagens' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Mensagens do paciente</h2><p className="mt-1 text-sm text-texto-suave">Historico de comunicacoes registradas.</p></div><LinhaDoTempo eventos={mensagens} /></section> : null}
+      {abaAtiva === 'mensagens' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Mensagens do paciente</h2><p className="mt-1 text-sm text-texto-suave">Historico de comunicacoes registradas.</p></div><LinhaDoTempo eventos={mensagens} profissionais={profissionais} /></section> : null}
 
       {abaAtiva === 'historico' ? <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
         <article className="grid gap-3">
@@ -1275,7 +1346,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <h2 className="text-base font-semibold text-tinta">Linha do tempo clinica</h2>
             <p className="mt-1 text-sm text-texto-suave">Consultas, formularios, check-ins, respostas e mensagens em ordem cronologica.</p>
           </div>
-          <form onSubmit={aplicarFiltrosHistorico} className="grid gap-3 rounded-md border border-linha bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <form onSubmit={aplicarFiltrosHistorico} className="grid gap-3 rounded-md border border-linha bg-white p-4 sm:grid-cols-2 xl:grid-cols-5">
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
               Tipo de evento
               <select className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta" value={tipoHistorico} onChange={(evento) => setTipoHistorico(evento.target.value as TipoEventoProntuarioPaciente | 'todos')}>
@@ -1287,6 +1358,13 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 <option value="mensagem">Mensagens</option>
                 <option value="evolucao_clinica">Evolucoes clinicas</option>
                 <option value="tarefa_acompanhamento">Tarefas de acompanhamento</option>
+                {permissoes.includes('planos_alimentares.ler') ? <option value="plano_alimentar_publicado">Planos alimentares publicados</option> : null}
+                <option value="avaliacao_antropometrica">Avaliacoes antropometricas</option>
+                <option value="documento_emitido">Documentos emitidos</option>
+                <option value="anexo_confirmado">Anexos confirmados</option>
+                <option value="exame_laboratorial">Exames laboratoriais</option>
+                <option value="evolucao_fotografica">Evolucoes fotograficas</option>
+                {permissoes.includes('agenda.financeiro.ler') ? <option value="evento_financeiro">Eventos financeiros</option> : null}
               </select>
             </label>
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
@@ -1297,9 +1375,18 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               Ate
               <input className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta" type="date" value={fimHistorico} onChange={(evento) => setFimHistorico(evento.target.value)} />
             </label>
+            {profissionais.length ? (
+              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                Responsavel
+                <select className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta" value={responsavelHistorico} onChange={(evento) => setResponsavelHistorico(evento.target.value)}>
+                  <option value="">Todos os responsaveis</option>
+                  {profissionais.map((profissional) => <option key={profissional.id} value={profissional.id}>{profissional.nome}</option>)}
+                </select>
+              </label>
+            ) : null}
             <div className="flex items-end gap-2">
               <Botao type="submit" variante="primario" disabled={carregandoHistorico}>Filtrar</Botao>
-              <Botao type="button" variante="secundario" disabled={carregandoHistorico || (tipoHistorico === 'todos' && !inicioHistorico && !fimHistorico)} onClick={limparFiltrosHistorico}>Limpar</Botao>
+              <Botao type="button" variante="secundario" disabled={carregandoHistorico || (tipoHistorico === 'todos' && !inicioHistorico && !fimHistorico && !responsavelHistorico)} onClick={limparFiltrosHistorico}>Limpar</Botao>
             </div>
           </form>
           {erroHistorico ? (
@@ -1310,7 +1397,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           ) : (
             <>
               <BarraCarregamento visivel={carregandoHistorico && !paginaHistorico} rotulo="Carregando linha do tempo" />
-              <LinhaDoTempo eventos={paginaHistorico?.itens ?? []} aoAbrirEvento={abrirDetalheEvento} />
+              <LinhaDoTempo eventos={paginaHistorico?.itens ?? []} aoAbrirEvento={abrirDetalheEvento} profissionais={profissionais} />
               {paginaHistorico?.proximoCursor ? (
                 <div><Botao type="button" variante="secundario" disabled={carregandoHistorico} onClick={() => void carregarHistorico(paginaHistorico.proximoCursor)}>
                   {carregandoHistorico ? 'Carregando eventos' : 'Carregar eventos anteriores'}

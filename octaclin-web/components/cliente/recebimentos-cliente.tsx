@@ -20,9 +20,10 @@ function mesCorrente() {
 
 interface ResumoRecebimentosProps {
   contexto?: 'gestor' | 'profissional';
+  pacienteId?: string;
 }
 
-export function ResumoRecebimentos({ contexto = 'gestor' }: ResumoRecebimentosProps) {
+export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRecebimentosProps) {
   const padrao = mesCorrente();
   const [inicio, setInicio] = useState(padrao.inicio);
   const [fim, setFim] = useState(padrao.fim);
@@ -39,7 +40,8 @@ export function ResumoRecebimentos({ contexto = 'gestor' }: ResumoRecebimentosPr
       setResumo(
         await obterRecebimentosAgenda({
           inicioEm: new Date(`${de}T00:00:00`).toISOString(),
-          fimEm: new Date(`${ate}T23:59:59`).toISOString()
+          fimEm: new Date(`${ate}T23:59:59`).toISOString(),
+          pacienteId
         })
       );
     } catch (erroAtual) {
@@ -47,7 +49,7 @@ export function ResumoRecebimentos({ contexto = 'gestor' }: ResumoRecebimentosPr
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [pacienteId]);
 
   useEffect(() => {
     void carregar(padrao.inicio, padrao.fim);
@@ -82,7 +84,7 @@ export function ResumoRecebimentos({ contexto = 'gestor' }: ResumoRecebimentosPr
       <Cartao>
         <CartaoCabecalho className="flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CartaoTitulo icone={<BadgeDollarSign className="h-4 w-4" />}>
-            {contexto === 'profissional' ? 'Meus recebimentos' : 'Recebimentos'}
+            {pacienteId ? 'Recebimentos do paciente' : contexto === 'profissional' ? 'Meus recebimentos' : 'Recebimentos'}
           </CartaoTitulo>
           <BarraCarregamento visivel={carregando} rotulo="Carregando recebimentos" />
         </CartaoCabecalho>

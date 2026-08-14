@@ -1678,13 +1678,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Incremento 14 concluido: a ficha permite criar o convite de portal a partir
     do e-mail salvo; cada nova emissao revoga os convites pendentes anteriores
     do paciente, sem registrar ou reexibir token em claro.
-  - Auditoria final de 2026-08-13: a fase permanece parcial. Timeline completa,
-    resumo clinico, qualidade cadastral/ciclo do portal, contexto SuperAdmin e
-    aceite tecnico ainda exigem os Incrementos 15 a 19 documentados em
+  - Auditoria final de 2026-08-13: a fase permanece parcial. A timeline foi
+    completada no Incremento 15; resumo clinico, qualidade cadastral/ciclo do
+    portal, contexto SuperAdmin e aceite tecnico ainda exigem os Incrementos 16
+    a 19 documentados em
     `AUDITORIA_FINAL_FASE_235_2026-08-13.md`.
-  - Incremento 15 pendente: integrar na timeline planos, antropometrias,
-    documentos, anexos, exames, fotos e financeiro autorizados, com
-    autor/origem uniformes e filtro server-side por responsavel.
+  - Incremento 15 concluido em 2026-08-13: timeline integra planos publicados,
+    antropometrias, documentos, anexos confirmados, exames, fotos e financeiro
+    conforme permissao; autor/origem/responsavel foram uniformizados, filtro
+    server-side e deep links foram conectados, sem descriptografar conteudo.
+    Cursor composto, desktop/mobile, authz, builds, secrets e audits passaram.
   - Incremento 16 pendente: completar o resumo com plano publicado, ultimo
     atendimento, tarefa vencida, falha de comunicacao e serie antropometrica
     acessivel, sem inferencia clinica automatica.
@@ -1797,7 +1800,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
 
 - [x] Fase 239 - Validacao clinica e de usabilidade do prontuario. [IMPORTANTE - POS PILOTO]
   - Validacao tecnica concluida em 2026-08-13: `test:prontuario:validacao`
-    aprovou `18/18` jornadas sinteticas em desktop e mobile, incluindo abas,
+    aprovou `20/20` jornadas sinteticas em desktop e mobile, incluindo abas,
     teclado, overflow, evolucao, tarefas, documentos, materiais, anexos e a
     jornada versionada de condutas terapeuticas.
   - Aceite clinico humano concedido pelo responsavel em 2026-08-13, com

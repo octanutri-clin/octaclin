@@ -14,11 +14,13 @@ export async function GET(request: Request, props: Params) {
   const tipo = parametros.get('tipo');
   const inicio = parametros.get('inicio');
   const fim = parametros.get('fim');
+  const responsavelId = parametros.get('responsavelId');
   if (cursor) consulta.set('cursor', cursor);
   if (limite) consulta.set('limite', limite);
   if (tipo) consulta.set('tipo', tipo);
   if (inicio) consulta.set('inicio', inicio);
   if (fim) consulta.set('fim', fim);
+  if (responsavelId) consulta.set('responsavelId', responsavelId);
 
   try {
     const sufixo = consulta.size ? `?${consulta.toString()}` : '';

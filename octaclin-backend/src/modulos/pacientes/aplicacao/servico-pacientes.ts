@@ -67,6 +67,9 @@ interface LinhaTimelinePaginada {
   data: Date | string;
   status?: string | null;
   origemId?: string | null;
+  origem?: string | null;
+  responsavelId?: string | null;
+  autorUsuarioId?: string | null;
   metadados?: Record<string, unknown> | null;
 }
 
@@ -663,43 +666,185 @@ export class ServicoPacientes {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
       const linhas = await gerenciador.query<LinhaTimelinePaginada[]>(`
-        SELECT * FROM (
-          SELECT id, 'consulta'::text AS tipo, titulo, inicio_em AS data, status, id AS "origemId",
-            jsonb_build_object('fimEm', fim_em) AS metadados
-          FROM agenda_consultas WHERE tenant_id = $1 AND paciente_id = $2
+        WITH contexto AS (
+          SELECT profissional_responsavel_id, usuario_id
+          FROM pacientes
+          WHERE tenant_id = $1 AND id = $2
+        ), timeline AS (
+          SELECT consulta.id::text AS id, 'consulta'::text AS tipo, consulta.titulo,
+            consulta.inicio_em AS data, consulta.status, consulta.id AS "origemId",
+            'Agenda'::text AS origem,
+            COALESCE(consulta.profissional_id, contexto.profissional_responsavel_id) AS "responsavelId",
+            NULL::uuid AS "autorUsuarioId",
+            jsonb_build_object('fimEm', consulta.fim_em) AS metadados
+          FROM agenda_consultas consulta CROSS JOIN contexto
+          WHERE consulta.tenant_id = $1 AND consulta.paciente_id = $2
           UNION ALL
-          SELECT id, 'formulario'::text, 'Formulario', COALESCE(enviado_em, expira_em, 'epoch'::timestamptz), status, questionario_id,
-            jsonb_build_object('envioQuestionarioId', id, 'expiraEm', expira_em)
-          FROM envios_questionario WHERE tenant_id = $1 AND paciente_id = $2
+          SELECT envio.id::text, 'formulario'::text, 'Formulario',
+            COALESCE(envio.enviado_em, envio.expira_em, 'epoch'::timestamptz), envio.status,
+            envio.questionario_id, 'Formularios',
+            COALESCE(questionario.profissional_id, contexto.profissional_responsavel_id), NULL::uuid,
+            jsonb_build_object('envioQuestionarioId', envio.id, 'expiraEm', envio.expira_em)
+          FROM envios_questionario envio
+          LEFT JOIN questionarios questionario
+            ON questionario.tenant_id = envio.tenant_id AND questionario.id = envio.questionario_id
+          CROSS JOIN contexto
+          WHERE envio.tenant_id = $1 AND envio.paciente_id = $2
           UNION ALL
-          SELECT id, 'resposta_formulario'::text, 'Resposta de formulario', COALESCE(finalizado_em, criado_em),
-            CASE WHEN finalizado_em IS NULL THEN 'em_andamento' ELSE 'finalizado' END, envio_questionario_id, '{}'::jsonb
-          FROM respostas_checkin WHERE tenant_id = $1 AND paciente_id = $2
+          SELECT resposta.id::text, 'resposta_formulario'::text, 'Resposta de formulario',
+            COALESCE(resposta.finalizado_em, resposta.criado_em),
+            CASE WHEN resposta.finalizado_em IS NULL THEN 'em_andamento' ELSE 'finalizado' END,
+            resposta.envio_questionario_id, 'Formularios',
+            COALESCE(questionario.profissional_id, contexto.profissional_responsavel_id), contexto.usuario_id,
+            jsonb_build_object('envioQuestionarioId', resposta.envio_questionario_id)
+          FROM respostas_checkin resposta
+          LEFT JOIN envios_questionario envio
+            ON envio.tenant_id = resposta.tenant_id AND envio.id = resposta.envio_questionario_id
+          LEFT JOIN questionarios questionario
+            ON questionario.tenant_id = resposta.tenant_id AND questionario.id = envio.questionario_id
+          CROSS JOIN contexto
+          WHERE resposta.tenant_id = $1 AND resposta.paciente_id = $2
           UNION ALL
-          SELECT id, 'checkin_rapido'::text, 'Check-in rapido', registrado_em, 'registrado', id,
-            jsonb_build_object('tipoDiario', tipo)
-          FROM logs_diario_rapido WHERE tenant_id = $1 AND paciente_id = $2
+          SELECT diario.id::text, 'checkin_rapido'::text, 'Check-in rapido', diario.registrado_em,
+            'registrado', diario.id, 'Portal do paciente', contexto.profissional_responsavel_id,
+            contexto.usuario_id, jsonb_build_object('tipoDiario', diario.tipo)
+          FROM logs_diario_rapido diario CROSS JOIN contexto
+          WHERE diario.tenant_id = $1 AND diario.paciente_id = $2
           UNION ALL
-          SELECT id, 'mensagem'::text, CASE WHEN status = 'recebido' THEN 'Mensagem recebida' ELSE 'Mensagem' END,
-            COALESCE(enviado_em, criado_em), status, id, '{}'::jsonb
-          FROM mensagens_notificacao WHERE tenant_id = $1 AND paciente_id = $2
+          SELECT mensagem.id::text, 'mensagem'::text,
+            CASE WHEN mensagem.status = 'recebido' THEN 'Mensagem recebida' ELSE 'Mensagem' END,
+            COALESCE(mensagem.enviado_em, mensagem.criado_em), mensagem.status, mensagem.id,
+            'Comunicacoes', contexto.profissional_responsavel_id,
+            CASE WHEN mensagem.status = 'recebido' THEN contexto.usuario_id ELSE NULL::uuid END,
+            '{}'::jsonb
+          FROM mensagens_notificacao mensagem CROSS JOIN contexto
+          WHERE mensagem.tenant_id = $1 AND mensagem.paciente_id = $2
           UNION ALL
-          SELECT id, 'evolucao_clinica'::text, titulo, criado_em, tipo, id,
-            jsonb_build_object('autorUsuarioId', autor_usuario_id, 'visibilidade', visibilidade)
-          FROM evolucoes_clinicas WHERE tenant_id = $1 AND paciente_id = $2
+          SELECT evolucao.id::text, 'evolucao_clinica'::text, evolucao.titulo,
+            evolucao.criado_em, evolucao.tipo, evolucao.id, 'Prontuario',
+            COALESCE(profissional.id, contexto.profissional_responsavel_id), evolucao.autor_usuario_id,
+            jsonb_build_object('visibilidade', evolucao.visibilidade)
+          FROM evolucoes_clinicas evolucao
+          LEFT JOIN profissionais profissional
+            ON profissional.tenant_id = evolucao.tenant_id
+            AND profissional.usuario_id = evolucao.autor_usuario_id
+            AND profissional.arquivado_em IS NULL
+          CROSS JOIN contexto
+          WHERE evolucao.tenant_id = $1 AND evolucao.paciente_id = $2
           UNION ALL
-          SELECT id, 'tarefa_acompanhamento'::text, titulo, COALESCE(vencimento_em, criado_em), status, id,
-            jsonb_build_object('categoria', categoria, 'prioridade', prioridade, 'profissionalId', profissional_id, 'concluidoEm', concluido_em)
-          FROM acompanhamento_tarefas WHERE tenant_id = $1 AND paciente_id = $2
-        ) AS timeline
+          SELECT tarefa.id::text, 'tarefa_acompanhamento'::text, tarefa.titulo,
+            COALESCE(tarefa.vencimento_em, tarefa.criado_em), tarefa.status, tarefa.id,
+            'Acompanhamento', COALESCE(tarefa.profissional_id, contexto.profissional_responsavel_id),
+            NULL::uuid,
+            jsonb_build_object('categoria', tarefa.categoria, 'prioridade', tarefa.prioridade, 'concluidoEm', tarefa.concluido_em)
+          FROM acompanhamento_tarefas tarefa CROSS JOIN contexto
+          WHERE tarefa.tenant_id = $1 AND tarefa.paciente_id = $2
+          UNION ALL
+          SELECT versao.id::text, 'plano_alimentar_publicado'::text,
+            'Plano alimentar publicado', versao.publicada_em, 'publicado', plano.id,
+            'Plano alimentar', COALESCE(plano.profissional_id, contexto.profissional_responsavel_id),
+            COALESCE(versao.revisada_por_usuario_id, versao.criado_por_usuario_id),
+            jsonb_build_object('planoId', plano.id, 'versaoId', versao.id, 'numeroVersao', versao.numero)
+          FROM plano_alimentar_versoes versao
+          INNER JOIN planos_alimentares plano
+            ON plano.tenant_id = versao.tenant_id AND plano.id = versao.plano_id
+          CROSS JOIN contexto
+          WHERE versao.tenant_id = $1 AND plano.paciente_id = $2
+            AND versao.publicada_em IS NOT NULL AND $9::boolean
+          UNION ALL
+          SELECT avaliacao.id::text, 'avaliacao_antropometrica'::text,
+            'Avaliacao antropometrica', avaliacao.avaliada_em::timestamptz,
+            CASE WHEN avaliacao.excluida_em IS NULL THEN 'registrada' ELSE 'excluida' END,
+            avaliacao.id, 'Antropometria',
+            COALESCE(profissional.id, contexto.profissional_responsavel_id), avaliacao.autor_usuario_id,
+            jsonb_build_object('protocolo', avaliacao.protocolo)
+          FROM avaliacoes_antropometricas avaliacao
+          LEFT JOIN profissionais profissional
+            ON profissional.tenant_id = avaliacao.tenant_id
+            AND profissional.usuario_id = avaliacao.autor_usuario_id
+            AND profissional.arquivado_em IS NULL
+          CROSS JOIN contexto
+          WHERE avaliacao.tenant_id = $1 AND avaliacao.paciente_id = $2
+          UNION ALL
+          SELECT documento.id::text, 'documento_emitido'::text, documento.titulo,
+            documento.emitido_em,
+            CASE WHEN documento.cancelado_em IS NULL THEN 'emitido' ELSE 'cancelado' END,
+            documento.id, 'Documentos',
+            COALESCE(documento.profissional_id, profissional.id, contexto.profissional_responsavel_id),
+            documento.autor_usuario_id,
+            jsonb_build_object('tipoDocumento', documento.tipo, 'consultaId', documento.consulta_id, 'enviadoEm', documento.enviado_em)
+          FROM documentos_emitidos documento
+          LEFT JOIN profissionais profissional
+            ON profissional.tenant_id = documento.tenant_id
+            AND profissional.usuario_id = documento.autor_usuario_id
+            AND profissional.arquivado_em IS NULL
+          CROSS JOIN contexto
+          WHERE documento.tenant_id = $1 AND documento.paciente_id = $2
+          UNION ALL
+          SELECT arquivo.id::text, 'anexo_confirmado'::text, 'Anexo clinico confirmado',
+            arquivo.confirmado_em, 'confirmado', arquivo.id, 'Anexos',
+            contexto.profissional_responsavel_id, NULL::uuid,
+            jsonb_build_object('categoria', arquivo.categoria, 'tipoMidia', arquivo.tipo, 'mimeType', arquivo.mime_type)
+          FROM arquivos_midia arquivo CROSS JOIN contexto
+          WHERE arquivo.tenant_id = $1 AND arquivo.paciente_id = $2
+            AND arquivo.status = 'confirmado' AND arquivo.confirmado_em IS NOT NULL
+          UNION ALL
+          SELECT coleta.id::text, 'exame_laboratorial'::text, 'Coleta de exames laboratoriais',
+            coleta.coletada_em::timestamptz,
+            CASE WHEN coleta.excluida_em IS NULL THEN 'registrada' ELSE 'excluida' END,
+            coleta.id, 'Exames laboratoriais',
+            COALESCE(profissional.id, contexto.profissional_responsavel_id), coleta.autor_usuario_id,
+            jsonb_build_object('recebidaEm', coleta.recebida_em)
+          FROM coletas_exames_laboratoriais coleta
+          LEFT JOIN profissionais profissional
+            ON profissional.tenant_id = coleta.tenant_id
+            AND profissional.usuario_id = coleta.autor_usuario_id
+            AND profissional.arquivado_em IS NULL
+          CROSS JOIN contexto
+          WHERE coleta.tenant_id = $1 AND coleta.paciente_id = $2
+          UNION ALL
+          SELECT fotografia.id::text, 'evolucao_fotografica'::text, 'Serie fotografica clinica',
+            fotografia.capturada_em::timestamptz,
+            CASE WHEN fotografia.excluida_em IS NULL THEN 'registrada' ELSE 'excluida' END,
+            fotografia.id, 'Evolucao fotografica',
+            COALESCE(profissional.id, contexto.profissional_responsavel_id), fotografia.autor_usuario_id,
+            '{}'::jsonb
+          FROM evolucoes_fotograficas fotografia
+          LEFT JOIN profissionais profissional
+            ON profissional.tenant_id = fotografia.tenant_id
+            AND profissional.usuario_id = fotografia.autor_usuario_id
+            AND profissional.arquivado_em IS NULL
+          CROSS JOIN contexto
+          WHERE fotografia.tenant_id = $1 AND fotografia.paciente_id = $2
+          UNION ALL
+          SELECT ('consulta-pagamento:' || consulta.id::text), 'evento_financeiro'::text,
+            'Pagamento de consulta', consulta.pago_em, consulta.status_pagamento, consulta.id,
+            'Financeiro', COALESCE(consulta.profissional_id, contexto.profissional_responsavel_id),
+            NULL::uuid,
+            jsonb_build_object('natureza', 'consulta', 'valorCentavos', consulta.valor_centavos, 'formaPagamento', consulta.forma_pagamento)
+          FROM agenda_consultas consulta CROSS JOIN contexto
+          WHERE consulta.tenant_id = $1 AND consulta.paciente_id = $2
+            AND consulta.pago_em IS NOT NULL AND $10::boolean
+          UNION ALL
+          SELECT ('pacote-pagamento:' || pacote.id::text), 'evento_financeiro'::text,
+            'Pagamento de pacote', pacote.pago_em, pacote.status_pagamento, pacote.id,
+            'Financeiro', COALESCE(pacote.profissional_id, contexto.profissional_responsavel_id),
+            NULL::uuid,
+            jsonb_build_object('natureza', 'pacote', 'valorCentavos', pacote.valor_total_centavos, 'formaPagamento', pacote.forma_pagamento, 'canceladoEm', pacote.cancelado_em)
+          FROM pacotes_sessao pacote CROSS JOIN contexto
+          WHERE pacote.tenant_id = $1 AND pacote.paciente_id = $2
+            AND pacote.pago_em IS NOT NULL AND $10::boolean
+        )
+        SELECT * FROM timeline
         WHERE ($3::timestamptz IS NULL
           OR data < $3::timestamptz
-          OR (data = $3::timestamptz AND id::text < $4::text))
+          OR (data = $3::timestamptz AND id < $4::text))
           AND ($5::text IS NULL OR tipo = $5::text)
           AND ($6::timestamptz IS NULL OR data >= $6::timestamptz)
           AND ($7::timestamptz IS NULL OR data <= $7::timestamptz)
+          AND ($8::uuid IS NULL OR "responsavelId" = $8::uuid)
         ORDER BY data DESC, id DESC
-        LIMIT $8
+        LIMIT $11
       `, [
         tenantId,
         pacienteId,
@@ -708,6 +853,9 @@ export class ServicoPacientes {
         filtros.tipo ?? null,
         inicio?.toISOString() ?? null,
         fim?.toISOString() ?? null,
+        filtros.responsavelId ?? null,
+        usuario.permissoes.includes('planos_alimentares.ler'),
+        usuario.permissoes.includes('agenda.financeiro.ler'),
         limite + 1
       ]);
 
@@ -718,6 +866,9 @@ export class ServicoPacientes {
         data: new Date(linha.data),
         status: linha.status ?? undefined,
         origemId: linha.origemId ?? undefined,
+        origem: linha.origem ?? undefined,
+        responsavelId: linha.responsavelId ?? undefined,
+        autorUsuarioId: linha.autorUsuarioId ?? undefined,
         metadados: linha.metadados ?? undefined
       }));
       const ultimo = itens.at(-1);
@@ -965,7 +1116,12 @@ export class ServicoPacientes {
     try {
       const decodificado = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as Partial<CursorTimeline>;
       if (typeof decodificado.data !== 'string' || Number.isNaN(new Date(decodificado.data).getTime())) throw new Error('data');
-      if (typeof decodificado.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(decodificado.id)) {
+      if (
+        typeof decodificado.id !== 'string'
+        || decodificado.id.length < 1
+        || decodificado.id.length > 128
+        || !/^[A-Za-z0-9:_-]+$/.test(decodificado.id)
+      ) {
         throw new Error('id');
       }
       return { data: new Date(decodificado.data).toISOString(), id: decodificado.id };

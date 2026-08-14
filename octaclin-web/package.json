@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test:next15": "node scripts/test-async-dynamic-apis.mjs",
     "test:base-visual": "node scripts/test-base-visual-navegacao.mjs",
-    "test:authz": "node scripts/test-autorizacao-rotas.mjs && node scripts/test-agendamento-publico-bff.mjs && node scripts/test-questionarios-revisao-bff.mjs && node scripts/test-dashboard-clinico-bff.mjs",
+    "test:authz": "node scripts/test-autorizacao-rotas.mjs && node scripts/test-agendamento-publico-bff.mjs && node scripts/test-questionarios-revisao-bff.mjs && node scripts/test-dashboard-clinico-bff.mjs && node scripts/test-prontuario-timeline-bff.mjs",
     "test:seguranca-operacional": "node scripts/test-seguranca-operacional.mjs",
     "test:seguranca-runtime": "node scripts/validar-seguranca-runtime.mjs",
     "test:agendamento-publico:bff": "node scripts/test-agendamento-publico-bff.mjs",
@@ -64,6 +64,11 @@
   },
   "pnpm": {
     "overrides": {
+      "brace-expansion@1": "1.1.18",
+      "brace-expansion@5": "5.0.9",
+      "fast-uri@3": "3.1.5",
+      "js-yaml@3": "3.15.1",
+      "js-yaml@4": "4.3.1",
       "nanoid@<3.3.18": "3.3.18",
       "postcss@<=8.5.17": "8.5.23",
       "sharp@<0.35.0": "0.35.3"

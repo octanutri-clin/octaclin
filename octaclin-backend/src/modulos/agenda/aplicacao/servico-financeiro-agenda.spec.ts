@@ -47,6 +47,7 @@ function montarServico(opcoes: {
 } = {}) {
   const salvarConsulta = jest.fn(async (dados: AgendaConsultaOrm) => dados);
   let filtroConsultas: Record<string, unknown> = {};
+  let filtroPacotes: Record<string, unknown> = {};
 
   const gerenciador = {
     getRepository: jest.fn((entidade: unknown) => {
@@ -63,7 +64,10 @@ function montarServico(opcoes: {
       if (entidade === PacoteSessaoOrm) {
         return {
           findOne: jest.fn(async () => opcoes.pacote ?? null),
-          find: jest.fn(async () => opcoes.pacotes ?? []),
+          find: jest.fn(async (parametros: { where: Record<string, unknown> }) => {
+            filtroPacotes = parametros.where;
+            return opcoes.pacotes ?? [];
+          }),
           create: jest.fn((dados: Record<string, unknown>) => dados),
           save: jest.fn(async (dados: Record<string, unknown>) => ({
             id: 'pacote-1',
@@ -119,7 +123,8 @@ function montarServico(opcoes: {
       servicoAgenda as never
     ),
     salvarConsulta,
-    filtroConsultas: () => filtroConsultas
+    filtroConsultas: () => filtroConsultas,
+    filtroPacotes: () => filtroPacotes
   };
 }
 
@@ -265,6 +270,23 @@ describe('ServicoFinanceiroAgenda', () => {
       );
 
       expect(filtroConsultas().profissionalId).toBe('profissional-7');
+    });
+
+    it('deve filtrar consultas e pacotes pelo paciente do deep link financeiro', async () => {
+      const { servico, filtroConsultas, filtroPacotes } = montarServico();
+
+      await servico.resumoRecebimentos(
+        'tenant-1',
+        {
+          inicioEm: '2026-08-01T00:00:00.000Z',
+          fimEm: '2026-08-31T23:59:59.000Z',
+          pacienteId: 'paciente-1'
+        },
+        colaborador
+      );
+
+      expect(filtroConsultas().pacienteId).toBe('paciente-1');
+      expect(filtroPacotes().pacienteId).toBe('paciente-1');
     });
 
     it('deve recusar periodo invertido e periodo maior que o teto', async () => {
