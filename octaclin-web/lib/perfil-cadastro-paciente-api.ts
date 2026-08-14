@@ -44,6 +44,41 @@ export interface FiscalCadastroPacienteApi {
   atualizadoEm?: string;
 }
 
+export interface QualidadeEAcessoPacienteApi {
+  percentualPreenchido: number;
+  secoes: Array<{
+    secao: 'identificacao' | 'contato' | 'operacao' | 'fiscal';
+    titulo: string;
+    camposFaltantes: string[];
+    preenchidos: number;
+    total: number;
+    opcional?: boolean;
+  }>;
+  possiveisDuplicidades: Array<{
+    pacienteId: string;
+    nome: string;
+    motivos: Array<'nome_e_nascimento' | 'contato'>;
+  }>;
+  acessoPortal: {
+    status: 'nao_convidado' | 'convite_pendente' | 'convite_expirado' | 'convite_revogado' | 'acesso_ativo' | 'acesso_desativado';
+    email?: string;
+    conviteId?: string;
+    conviteCriadoEm?: string;
+    conviteExpiraEm?: string;
+    conviteAceitoEm?: string;
+    conviteRevogadoEm?: string;
+    ultimoAcessoEm?: string;
+    canalPreferido?: CanalPreferidoPaciente;
+    preferencias?: {
+      email?: boolean;
+      whatsapp?: boolean;
+      canalPreferido?: 'email' | 'whatsapp' | 'qualquer';
+      horarioPermitido?: { inicio?: string; fim?: string; timezone?: string };
+    };
+    aceites: Array<{ tipo: string; versao: string; aceitoEm: string }>;
+  };
+}
+
 async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
   const resposta = await fetch(caminho, {
     ...init,
@@ -55,6 +90,10 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
 
 export function obterPerfilCadastroPaciente(pacienteId: string): Promise<PerfilCadastroPacienteApi> {
   return requisitar(`/api/pacientes/${pacienteId}/perfil-cadastro`);
+}
+
+export function obterQualidadeEAcessoPaciente(pacienteId: string): Promise<QualidadeEAcessoPacienteApi> {
+  return requisitar(`/api/pacientes/${pacienteId}/perfil-cadastro/qualidade-acesso`);
 }
 
 export function obterFiscalCadastroPaciente(pacienteId: string): Promise<FiscalCadastroPacienteApi> {

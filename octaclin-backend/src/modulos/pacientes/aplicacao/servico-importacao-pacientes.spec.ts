@@ -346,7 +346,7 @@ describe('ServicoImportacaoPacientes', () => {
         enviarConvite: true
       });
 
-      expect(convites.criarConvite).toHaveBeenCalledWith('tenant-1', 'usuario-colaborador-1', 'novo-1', {
+      expect(convites.criarConvite).toHaveBeenCalledWith('tenant-1', usuarioColaborador, 'novo-1', {
         email: 'maria@octaclin.test'
       });
       expect(relatorio.linhas[0].linkConvite).toBe('https://app.octaclin.test/ativar/token-1');

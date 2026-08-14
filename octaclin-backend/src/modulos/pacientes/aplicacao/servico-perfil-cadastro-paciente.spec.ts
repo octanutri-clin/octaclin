@@ -4,6 +4,9 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { PerfilCadastroPacienteOrm } from '../infraestrutura/perfil-cadastro-paciente.orm';
+import { ConvitePacienteOrm } from '../infraestrutura/convite-paciente.orm';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { ServicoPerfilCadastroPaciente } from './servico-perfil-cadastro-paciente';
 
 const usuario: UsuarioAutenticado = {
@@ -115,5 +118,57 @@ describe('ServicoPerfilCadastroPaciente', () => {
       sexo: 'masculino',
       condicaoBiologica: 'gestante'
     }, usuario)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('projeta campos faltantes, duplicidade na carteira e acesso sem expor token', async () => {
+    const pacienteAtual = {
+      id: 'paciente-1', tenantId: usuario.tenantId, profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('Ana Silva'), contatoCriptografado: Buffer.from('ana@example.com'), dataNascimento: '1990-01-02'
+    } as PacienteOrm;
+    const candidato = {
+      id: 'paciente-2', tenantId: usuario.tenantId, profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('Ana Silva'), contatoCriptografado: Buffer.from('outro@example.com'), dataNascimento: '1990-01-02'
+    } as PacienteOrm;
+    const perfil = {
+      pacienteId: pacienteAtual.id,
+      tenantId: usuario.tenantId,
+      identificacaoCriptografada: Buffer.from(JSON.stringify({ sexo: 'feminino' })),
+      contatoCriptografado: Buffer.from(JSON.stringify({ email: 'ana@example.com', canalPreferido: 'email' })),
+      operacaoCriptografada: Buffer.from(JSON.stringify({ categoria: 'Acompanhamento' }))
+    } as PerfilCadastroPacienteOrm;
+    const gerenciador = {
+      getRepository: jest.fn((entidade: unknown) => {
+        if (entidade === PacienteOrm) return {
+          findOne: jest.fn(async () => pacienteAtual),
+          find: jest.fn(async () => [pacienteAtual, candidato])
+        };
+        if (entidade === ProfissionalOrm) return { findOne: jest.fn(async () => ({ id: 'profissional-1' })) };
+        if (entidade === PerfilCadastroPacienteOrm) return { findOne: jest.fn(async () => perfil) };
+        if (entidade === ConvitePacienteOrm) return { findOne: jest.fn(async () => ({
+          id: 'convite-1', status: 'aceito', criadoEm: new Date('2026-08-01T10:00:00Z'),
+          expiraEm: new Date('2026-08-08T10:00:00Z'), aceitoEm: new Date('2026-08-02T10:00:00Z'),
+          emailCriptografado: Buffer.from('ana@example.com'), tokenHash: 'nao-deve-aparecer'
+        })) };
+        if (entidade === UsuarioOrm) return { findOne: jest.fn(async () => ({ id: 'usuario-paciente', ativo: true, ultimoLoginEm: new Date('2026-08-10T10:00:00Z') })) };
+        if (entidade === ConsentimentoLgpdOrm) return { find: jest.fn(async () => [{ tipo: 'termos_uso', versao: '2026-07', aceitoEm: new Date('2026-08-02T10:00:00Z') }]) };
+        throw new Error('Repositorio inesperado');
+      })
+    } as unknown as EntityManager;
+    pacienteAtual.usuarioId = 'usuario-paciente';
+    const executorTenant = { executar: jest.fn(async (_tenantId, executar) => executar(gerenciador)) };
+    const criptografia = {
+      criptografar: jest.fn(),
+      descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8'))
+    };
+    const servico = new ServicoPerfilCadastroPaciente(executorTenant as never, criptografia as never);
+
+    const resposta = await servico.obterQualidadeEAcesso(usuario.tenantId, pacienteAtual.id, usuario);
+
+    expect(resposta.percentualPreenchido).toBeLessThan(100);
+    expect(resposta.secoes.find((secao) => secao.secao === 'contato')?.camposFaltantes).toContain('Celular com DDD');
+    expect(resposta.possiveisDuplicidades).toEqual([{ pacienteId: 'paciente-2', nome: 'Ana Silva', motivos: ['nome_e_nascimento'] }]);
+    expect(resposta.acessoPortal).toEqual(expect.objectContaining({ status: 'acesso_ativo', ultimoAcessoEm: expect.any(Date), canalPreferido: 'email' }));
+    expect(resposta.acessoPortal).not.toHaveProperty('token');
+    expect(resposta.acessoPortal.aceites).toEqual([{ tipo: 'termos_uso', versao: '2026-07', aceitoEm: expect.any(Date) }]);
   });
 });

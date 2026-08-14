@@ -960,6 +960,8 @@ async function prepararProntuarioMockado(page, { permissoesExtras = [] } = {}) {
   let anexos = [];
   let documentos = [];
   let corpoDocumentoEmitido = null;
+  let statusPortal = 'convite_pendente';
+  let revogouConvite = false;
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -993,6 +995,54 @@ async function prepararProntuarioMockado(page, { permissoesExtras = [] } = {}) {
         destinoInicial: '/dashboard'
       })
     });
+  });
+
+  await page.route('**/api/pacientes/paciente-1/perfil-cadastro', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        identificacao: { nomeUso: 'Ana', sexo: 'feminino', condicaoBiologica: 'nao_gestante' },
+        contato: { email: 'ana@example.com', ddi: '+55', celular: '11999999999', canalPreferido: 'email' },
+        operacao: { categoria: 'Acompanhamento', tags: ['retorno'] }
+      })
+    });
+  });
+
+  await page.route('**/api/pacientes/paciente-1/perfil-cadastro/qualidade-acesso', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        percentualPreenchido: 68,
+        secoes: [
+          { secao: 'identificacao', titulo: 'Identificacao', camposFaltantes: [], preenchidos: 5, total: 5 },
+          { secao: 'contato', titulo: 'Contato e endereco', camposFaltantes: ['CEP', 'Endereco', 'Bairro', 'Cidade', 'Estado', 'Instagram'], preenchidos: 4, total: 10 },
+          { secao: 'operacao', titulo: 'Operacao', camposFaltantes: ['Origem'], preenchidos: 2, total: 3 }
+        ],
+        possiveisDuplicidades: [{ pacienteId: 'paciente-2', nome: 'Ana Souza homonima', motivos: ['nome_e_nascimento'] }],
+        acessoPortal: {
+          status: statusPortal,
+          email: 'ana@example.com',
+          conviteId: 'convite-1',
+          conviteCriadoEm: '2026-08-10T10:00:00.000Z',
+          conviteExpiraEm: '2026-08-17T10:00:00.000Z',
+          canalPreferido: 'email',
+          preferencias: { email: true, whatsapp: false, canalPreferido: 'email', horarioPermitido: { inicio: '08:00', fim: '20:00', timezone: 'America/Sao_Paulo' } },
+          aceites: []
+        }
+      })
+    });
+  });
+
+  await page.route('**/api/pacientes/paciente-1/convites-acesso', async (route) => {
+    if (route.request().method() === 'DELETE') {
+      statusPortal = 'convite_revogado';
+      revogouConvite = true;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ conviteId: 'convite-1', revogadoEm: '2026-08-14T12:00:00.000Z' }) });
+      return;
+    }
+    await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ message: 'Metodo inesperado.' }) });
   });
 
   await page.route('**/api/profissionais**', async (route) => {
@@ -1593,7 +1643,8 @@ async function prepararProntuarioMockado(page, { permissoesExtras = [] } = {}) {
     criouTarefa: () => criouTarefa,
     criouMaterial: () => criouMaterial,
     enviouMaterial: () => enviouMaterial,
-    condutas: () => condutas
+    condutas: () => condutas,
+    revogouConvite: () => revogouConvite
   };
 }
 
@@ -1820,6 +1871,30 @@ test.describe('lista de pacientes operacional', () => {
 });
 
 test.describe('prontuario do paciente', () => {
+  test('revisa qualidade cadastral e revoga convite pendente sem expor token anterior', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente' });
+    await expect(cadastro.getByRole('heading', { name: 'Qualidade do cadastro' })).toBeVisible();
+    await expect(cadastro.getByRole('progressbar', { name: 'Percentual do cadastro preenchido' })).toHaveAttribute('aria-valuenow', '68');
+    await expect(cadastro.getByText(/Revisar: CEP, Endereco/)).toBeVisible();
+    await expect(cadastro.getByText('Possiveis cadastros duplicados')).toBeVisible();
+    await expect(cadastro.getByRole('link', { name: 'Ana Souza homonima' })).toHaveAttribute('href', '/pacientes/paciente-2');
+    await expect(cadastro.getByText('Convite pendente', { exact: true })).toBeVisible();
+    await expect(cadastro.getByText(/E-mail: permitido - WhatsApp: desativado/)).toBeVisible();
+    await expect(cadastro.locator('a[href*="primeiro-acesso"]')).toHaveCount(0);
+
+    await cadastro.getByRole('button', { name: 'Revogar convite' }).click();
+    const confirmacao = page.getByRole('dialog', { name: 'Revogar convite pendente' });
+    await confirmacao.getByRole('button', { name: 'Revogar convite' }).click();
+    await expect.poll(() => prontuario.revogouConvite()).toBe(true);
+    await expect(cadastro.getByText('Convite revogado', { exact: true })).toBeVisible();
+    await expect(cadastro.getByText('Convite pendente revogado. O link anterior nao pode mais ser utilizado.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('organiza as funcoes do prontuario em areas clinicas', async ({ page }) => {
     await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');

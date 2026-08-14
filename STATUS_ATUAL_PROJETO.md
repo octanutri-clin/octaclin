@@ -37,9 +37,11 @@ Atualizado em 2026-08-13.
   antropometria, documentos, anexos, exames, fotos e financeiro, com permissao,
   autoria e filtro por responsavel. O Incremento 16 concluiu o resumo acionavel,
   com contexto operacional permissionado, relatos com fonte/data e serie
-  antropometrica acessivel. Ainda faltam qualidade cadastral/ciclo do portal,
-  contexto SuperAdmin e benchmark/aceite final nos Incrementos 17 a 19. A
-  validacao do Incremento 16 foi local porque a cota do GitHub Actions estava
+  antropometrica acessivel. O Incremento 17 adicionou completude nao bloqueante,
+  deteccao assistida de duplicidade no escopo autorizado e ciclo auditado do
+  portal com estado, ultimo acesso, preferencias e aceites sem token antigo.
+  Ainda faltam contexto SuperAdmin e benchmark/aceite final nos Incrementos 18
+  e 19. A validacao dos Incrementos 16 e 17 foi local porque a cota do GitHub Actions estava
   esgotada; CI ausente nao foi considerado aprovado. A matriz esta em
   `AUDITORIA_FINAL_FASE_235_2026-08-13.md`.
 - Fase 231 concluida: o workflow manual de staging cria uma branch Neon

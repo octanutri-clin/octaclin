@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
-import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
+import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
+import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AtivarConvitePacienteDto, CriarConvitePacienteDto } from '../aplicacao/dtos';
 import { ServicoConvitesPaciente } from '../aplicacao/servico-convites-paciente';
@@ -16,15 +17,16 @@ export class ControladorConvitesPaciente {
   ) {}
 
   @Post('pacientes/:id/convites-acesso')
-  @UseGuards(GuardaJwt, GuardaPapeis)
+  @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
   @Papeis('SuperAdmin', 'Professional', 'Collaborator')
+  @Permissoes('pacientes.gerenciar')
   async criarConvite(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
     @Param('id', ParseUUIDPipe) pacienteId: string,
     @Body() dados: CriarConvitePacienteDto
   ) {
-    const convite = await this.servicoConvites.criarConvite(usuario.tenantId, usuario.usuarioId, pacienteId, dados);
+    const convite = await this.servicoConvites.criarConvite(usuario.tenantId, usuario, pacienteId, dados);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -35,11 +37,33 @@ export class ControladorConvitesPaciente {
       userAgent: this.obterUserAgent(requisicao),
       metadados: {
         conviteId: convite.id,
-        email: dados.email,
         expiraEm: convite.expiraEm
       }
     });
     return convite;
+  }
+
+  @Delete('pacientes/:id/convites-acesso/pendente')
+  @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
+  @Papeis('SuperAdmin', 'Professional', 'Collaborator')
+  @Permissoes('pacientes.gerenciar')
+  async revogarConvite(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) pacienteId: string
+  ) {
+    const resultado = await this.servicoConvites.revogarConvitePendente(usuario.tenantId, pacienteId, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.convite_acesso.revogar',
+      recursoTipo: 'paciente',
+      recursoId: pacienteId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { conviteId: resultado.conviteId, revogadoEm: resultado.revogadoEm }
+    });
+    return resultado;
   }
 
   @Get('pacientes/convites-acesso/:token')

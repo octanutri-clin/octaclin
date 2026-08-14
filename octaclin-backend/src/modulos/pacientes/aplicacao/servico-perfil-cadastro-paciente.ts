@@ -1,17 +1,22 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager, IsNull } from 'typeorm';
+import { ArrayOverlap, EntityManager, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import {
   AtualizarContatoCadastroPacienteDto,
   AtualizarFiscalCadastroPacienteDto,
   AtualizarIdentificacaoCadastroPacienteDto,
   AtualizarOperacaoCadastroPacienteDto,
   FiscalCadastroPacienteRespostaDto,
-  PerfilCadastroPacienteRespostaDto
+  PerfilCadastroPacienteRespostaDto,
+  QualidadeCadastroSecaoDto,
+  QualidadeEAcessoPacienteRespostaDto
 } from './dtos';
+import { ConvitePacienteOrm } from '../infraestrutura/convite-paciente.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { PerfilCadastroPacienteOrm } from '../infraestrutura/perfil-cadastro-paciente.orm';
 
@@ -87,6 +92,34 @@ export class ServicoPerfilCadastroPaciente {
     });
   }
 
+  async obterQualidadeEAcesso(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<QualidadeEAcessoPacienteRespostaDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const paciente = await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
+      const perfil = await gerenciador.getRepository(PerfilCadastroPacienteOrm).findOne({ where: { tenantId, pacienteId } });
+      const identificacao = this.descriptografarBloco<AtualizarIdentificacaoCadastroPacienteDto>(perfil?.identificacaoCriptografada);
+      const contato = this.descriptografarBloco<AtualizarContatoCadastroPacienteDto>(perfil?.contatoCriptografado);
+      const operacao = this.descriptografarBloco<AtualizarOperacaoCadastroPacienteDto>(perfil?.operacaoCriptografada);
+      const fiscal = usuario.permissoes.includes('agenda.financeiro.ler')
+        ? this.descriptografarBloco<AtualizarFiscalCadastroPacienteDto>(perfil?.fiscalCriptografado)
+        : undefined;
+
+      const secoes = this.calcularQualidade(paciente, identificacao, contato, operacao, fiscal, Boolean(fiscal || usuario.permissoes.includes('agenda.financeiro.ler')));
+      const total = secoes.reduce((soma, secao) => soma + (secao.opcional ? 0 : secao.total), 0);
+      const preenchidos = secoes.reduce((soma, secao) => soma + (secao.opcional ? 0 : secao.preenchidos), 0);
+
+      return {
+        percentualPreenchido: total ? Math.round((preenchidos / total) * 100) : 100,
+        secoes,
+        possiveisDuplicidades: await this.buscarPossiveisDuplicidades(gerenciador, tenantId, paciente, usuario, contato),
+        acessoPortal: await this.obterEstadoAcesso(gerenciador, tenantId, paciente, contato)
+      };
+    });
+  }
+
   async atualizarFiscal(
     tenantId: string,
     pacienteId: string,
@@ -119,7 +152,7 @@ export class ServicoPerfilCadastroPaciente {
     tenantId: string,
     pacienteId: string,
     usuario: UsuarioAutenticado
-  ): Promise<void> {
+  ): Promise<PacienteOrm> {
     const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
     const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
       where: {
@@ -130,6 +163,176 @@ export class ServicoPerfilCadastroPaciente {
       }
     });
     if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+    return paciente;
+  }
+
+  private calcularQualidade(
+    paciente: PacienteOrm,
+    identificacao?: AtualizarIdentificacaoCadastroPacienteDto,
+    contato?: AtualizarContatoCadastroPacienteDto,
+    operacao?: AtualizarOperacaoCadastroPacienteDto,
+    fiscal?: AtualizarFiscalCadastroPacienteDto,
+    incluirFiscal = false
+  ): QualidadeCadastroSecaoDto[] {
+    const criarSecao = (secao: QualidadeCadastroSecaoDto['secao'], titulo: string, campos: Array<[string, unknown]>, opcional = false) => {
+      const camposFaltantes = campos.filter(([, valor]) => !this.temValor(valor)).map(([rotulo]) => rotulo);
+      return { secao, titulo, camposFaltantes, preenchidos: campos.length - camposFaltantes.length, total: campos.length, opcional };
+    };
+    const secoes: QualidadeCadastroSecaoDto[] = [
+      criarSecao('identificacao', 'Identificacao', [
+        ['Nome completo', this.descriptografarSeguro(paciente.nomeCriptografado)],
+        ['Data de nascimento', paciente.dataNascimento],
+        ['Apelido ou nome de uso', identificacao?.nomeUso],
+        ['Sexo', identificacao?.sexo],
+        ...(identificacao?.sexo === 'feminino' ? [['Condicao biologica', identificacao.condicaoBiologica] as [string, unknown]] : [])
+      ]),
+      criarSecao('contato', 'Contato e endereco', [
+        ['E-mail', contato?.email], ['DDI', contato?.ddi], ['Celular com DDD', contato?.celular],
+        ['Canal preferido', contato?.canalPreferido], ['CEP', contato?.endereco?.cep],
+        ['Endereco', contato?.endereco?.logradouro], ['Bairro', contato?.endereco?.bairro],
+        ['Cidade', contato?.endereco?.cidade], ['Estado', contato?.endereco?.estado], ['Instagram', contato?.instagram]
+      ]),
+      criarSecao('operacao', 'Operacao', [
+        ['Categoria do paciente', operacao?.categoria], ['Origem', operacao?.origem], ['Etiquetas', operacao?.tags]
+      ])
+    ];
+    if (incluirFiscal) secoes.push(criarSecao('fiscal', 'Dados fiscais opcionais', [['CPF', fiscal?.cpf], ['E-mail para recibo', fiscal?.emailRecibo]], true));
+    return secoes;
+  }
+
+  private async buscarPossiveisDuplicidades(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteAtual: PacienteOrm,
+    usuario: UsuarioAutenticado,
+    contatoPerfil?: AtualizarContatoCadastroPacienteDto
+  ) {
+    const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+    const candidatos = await gerenciador.getRepository(PacienteOrm).find({
+      where: {
+        tenantId,
+        arquivadoEm: IsNull(),
+        ...(pacienteAtual.buscaHashes?.length ? { buscaHashes: ArrayOverlap(pacienteAtual.buscaHashes) } : {}),
+        ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
+      },
+      select: { id: true, nomeCriptografado: true, contatoCriptografado: true, dataNascimento: true }
+    });
+    const nomeAtual = this.normalizar(this.descriptografarSeguro(pacienteAtual.nomeCriptografado));
+    const contatoAtual = this.normalizar(contatoPerfil?.email ?? contatoPerfil?.celular ?? this.obterContatoComparavel(pacienteAtual));
+
+    return candidatos.flatMap((candidato) => {
+      if (candidato.id === pacienteAtual.id) return [];
+      const motivos: Array<'nome_e_nascimento' | 'contato'> = [];
+      const mesmoNomeNascimento = Boolean(
+        nomeAtual && pacienteAtual.dataNascimento && nomeAtual === this.normalizar(this.descriptografarSeguro(candidato.nomeCriptografado))
+        && pacienteAtual.dataNascimento === candidato.dataNascimento
+      );
+      const mesmoContato = Boolean(contatoAtual && contatoAtual === this.normalizar(this.obterContatoComparavel(candidato)));
+      if (mesmoNomeNascimento) motivos.push('nome_e_nascimento');
+      if (mesmoContato) motivos.push('contato');
+      return motivos.length ? [{ pacienteId: candidato.id, nome: this.descriptografarSeguro(candidato.nomeCriptografado) ?? 'Paciente', motivos }] : [];
+    }).slice(0, 5);
+  }
+
+  private async obterEstadoAcesso(
+    gerenciador: EntityManager,
+    tenantId: string,
+    paciente: PacienteOrm,
+    contato?: AtualizarContatoCadastroPacienteDto
+  ): Promise<QualidadeEAcessoPacienteRespostaDto['acessoPortal']> {
+    const convite = await gerenciador.getRepository(ConvitePacienteOrm).findOne({
+      where: { tenantId, pacienteId: paciente.id },
+      order: { criadoEm: 'DESC' }
+    });
+    const usuario = paciente.usuarioId
+      ? await gerenciador.getRepository(UsuarioOrm).findOne({ where: { id: paciente.usuarioId, tenantId } })
+      : null;
+    const consentimentos = paciente.usuarioId
+      ? await gerenciador.getRepository(ConsentimentoLgpdOrm).find({
+          where: { tenantId, usuarioId: paciente.usuarioId },
+          order: { aceitoEm: 'DESC' }
+        })
+      : [];
+    const aceitesPermitidos = new Set(['termos_uso', 'politica_privacidade', 'consentimento_lgpd']);
+    const aceitesUnicos = new Map<string, { tipo: string; versao: string; aceitoEm: Date }>();
+    for (const aceite of consentimentos) {
+      if (aceitesPermitidos.has(aceite.tipo) && !aceitesUnicos.has(aceite.tipo)) {
+        aceitesUnicos.set(aceite.tipo, { tipo: aceite.tipo, versao: aceite.versao, aceitoEm: aceite.aceitoEm });
+      }
+    }
+    let status: QualidadeEAcessoPacienteRespostaDto['acessoPortal']['status'] = 'nao_convidado';
+    if (usuario) status = usuario.ativo ? 'acesso_ativo' : 'acesso_desativado';
+    else if (convite?.status === 'pendente') status = convite.expiraEm <= new Date() ? 'convite_expirado' : 'convite_pendente';
+    else if (convite?.status === 'revogado') status = 'convite_revogado';
+    else if (convite?.status === 'expirado') status = 'convite_expirado';
+
+    return {
+      status,
+      email: usuario ? this.descriptografarSeguro(usuario.emailCriptografado) : contato?.email ?? (convite ? this.descriptografarSeguro(convite.emailCriptografado) : undefined),
+      conviteId: convite?.id,
+      conviteCriadoEm: convite?.criadoEm,
+      conviteExpiraEm: convite?.expiraEm,
+      conviteAceitoEm: convite?.aceitoEm,
+      conviteRevogadoEm: convite?.revogadoEm,
+      ultimoAcessoEm: usuario?.ultimoLoginEm,
+      canalPreferido: contato?.canalPreferido,
+      preferencias: this.obterPreferenciasPortal(paciente),
+      aceites: [...aceitesUnicos.values()]
+    };
+  }
+
+  private obterPreferenciasPortal(paciente: PacienteOrm): QualidadeEAcessoPacienteRespostaDto['acessoPortal']['preferencias'] {
+    const contato = this.descriptografarSeguro(paciente.contatoCriptografado);
+    if (!contato) return undefined;
+    try {
+      const parseado = JSON.parse(contato) as { preferencias?: Record<string, unknown> };
+      const preferencias = parseado.preferencias;
+      if (!preferencias || typeof preferencias !== 'object') return undefined;
+      const horario = preferencias.horarioPermitido && typeof preferencias.horarioPermitido === 'object'
+        ? preferencias.horarioPermitido as Record<string, unknown>
+        : undefined;
+      const canal = preferencias.canalPreferido;
+      return {
+        email: typeof preferencias.email === 'boolean' ? preferencias.email : undefined,
+        whatsapp: typeof preferencias.whatsapp === 'boolean' ? preferencias.whatsapp : undefined,
+        canalPreferido: canal === 'email' || canal === 'whatsapp' || canal === 'qualquer' ? canal : undefined,
+        horarioPermitido: horario ? {
+          inicio: typeof horario.inicio === 'string' ? horario.inicio : undefined,
+          fim: typeof horario.fim === 'string' ? horario.fim : undefined,
+          timezone: typeof horario.timezone === 'string' ? horario.timezone : undefined
+        } : undefined
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  private obterContatoComparavel(paciente: PacienteOrm): string | undefined {
+    const contato = this.descriptografarSeguro(paciente.contatoCriptografado);
+    if (!contato) return undefined;
+    try {
+      const parseado = JSON.parse(contato) as { email?: unknown; whatsapp?: unknown };
+      if (typeof parseado.email === 'string') return parseado.email;
+      if (typeof parseado.whatsapp === 'string') return parseado.whatsapp;
+      return undefined;
+    } catch {
+      return contato;
+    }
+  }
+
+  private temValor(valor: unknown): boolean {
+    if (Array.isArray(valor)) return valor.length > 0;
+    return valor !== undefined && valor !== null && String(valor).trim().length > 0;
+  }
+
+  private normalizar(valor?: string): string | undefined {
+    const normalizado = valor?.trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
+    return normalizado || undefined;
+  }
+
+  private descriptografarSeguro(valor?: Buffer): string | undefined {
+    if (!valor) return undefined;
+    try { return this.criptografia.descriptografar(valor); } catch { return undefined; }
   }
 
   private garantirPermissaoFinanceira(usuario: UsuarioAutenticado): void {

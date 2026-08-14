@@ -246,6 +246,47 @@ export interface PerfilCadastroPacienteRespostaDto {
   atualizadoEm?: Date;
 }
 
+export interface QualidadeCadastroSecaoDto {
+  secao: 'identificacao' | 'contato' | 'operacao' | 'fiscal';
+  titulo: string;
+  camposFaltantes: string[];
+  preenchidos: number;
+  total: number;
+  opcional?: boolean;
+}
+
+export interface PossivelDuplicidadePacienteDto {
+  pacienteId: string;
+  nome: string;
+  motivos: Array<'nome_e_nascimento' | 'contato'>;
+}
+
+export interface EstadoAcessoPortalPacienteDto {
+  status: 'nao_convidado' | 'convite_pendente' | 'convite_expirado' | 'convite_revogado' | 'acesso_ativo' | 'acesso_desativado';
+  email?: string;
+  conviteId?: string;
+  conviteCriadoEm?: Date;
+  conviteExpiraEm?: Date;
+  conviteAceitoEm?: Date;
+  conviteRevogadoEm?: Date;
+  ultimoAcessoEm?: Date;
+  canalPreferido?: 'email' | 'whatsapp' | 'telefone';
+  preferencias?: {
+    email?: boolean;
+    whatsapp?: boolean;
+    canalPreferido?: 'email' | 'whatsapp' | 'qualquer';
+    horarioPermitido?: { inicio?: string; fim?: string; timezone?: string };
+  };
+  aceites: Array<{ tipo: string; versao: string; aceitoEm: Date }>;
+}
+
+export interface QualidadeEAcessoPacienteRespostaDto {
+  percentualPreenchido: number;
+  secoes: QualidadeCadastroSecaoDto[];
+  possiveisDuplicidades: PossivelDuplicidadePacienteDto[];
+  acessoPortal: EstadoAcessoPortalPacienteDto;
+}
+
 export interface FiscalCadastroPacienteRespostaDto extends AtualizarFiscalCadastroPacienteDto {
   atualizadoEm?: Date;
 }

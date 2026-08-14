@@ -1,18 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { BadgeDollarSign, ContactRound, KeyRound, Link2, Save } from 'lucide-react';
+import { AlertTriangle, BadgeDollarSign, CheckCircle2, ContactRound, KeyRound, Link2, Save, ShieldCheck, UserRoundX } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AlertaOperacional, BarraCarregamento } from '@/components/ui/feedback';
-import { Modal } from '@/components/ui/modal';
+import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { obterSessao } from '@/lib/auth-api';
-import { criarConvitePaciente } from '@/lib/convites-paciente-api';
+import { criarConvitePaciente, revogarConvitePaciente } from '@/lib/convites-paciente-api';
 import {
   FiscalCadastroPacienteApi,
   PerfilCadastroPacienteApi,
+  QualidadeEAcessoPacienteApi,
   atualizarDadosBasicosPaciente,
   obterFiscalCadastroPaciente,
   obterPerfilCadastroPaciente,
+  obterQualidadeEAcessoPaciente,
   salvarSecaoCadastroPaciente
 } from '@/lib/perfil-cadastro-paciente-api';
 
@@ -24,6 +26,27 @@ interface Props {
 }
 
 const vazio: PerfilCadastroPacienteApi = { identificacao: {}, contato: {}, operacao: {} };
+
+const rotulosStatusPortal: Record<QualidadeEAcessoPacienteApi['acessoPortal']['status'], string> = {
+  nao_convidado: 'Ainda nao convidado',
+  convite_pendente: 'Convite pendente',
+  convite_expirado: 'Convite expirado',
+  convite_revogado: 'Convite revogado',
+  acesso_ativo: 'Acesso ativo',
+  acesso_desativado: 'Acesso desativado'
+};
+
+const rotulosAceite: Record<string, string> = {
+  termos_uso: 'Termos de uso',
+  politica_privacidade: 'Politica de privacidade',
+  consentimento_lgpd: 'Consentimento LGPD'
+};
+
+function formatarDataHora(valor?: string) {
+  if (!valor) return 'Nao registrado';
+  const data = new Date(valor);
+  return Number.isNaN(data.getTime()) ? 'Nao registrado' : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(data);
+}
 
 function mensagemErro(erro: unknown) {
   return erro instanceof Error ? erro.message : 'Nao foi possivel salvar esta secao.';
@@ -56,6 +79,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
   const [podeVerFiscal, setPodeVerFiscal] = useState(false);
   const [perfil, setPerfil] = useState<PerfilCadastroPacienteApi>(vazio);
   const [fiscal, setFiscal] = useState<FiscalCadastroPacienteApi>({});
+  const [qualidade, setQualidade] = useState<QualidadeEAcessoPacienteApi | null>(null);
   const [nomeCompleto, setNomeCompleto] = useState(nomeInicial);
   const [dataNascimento, setDataNascimento] = useState(nascimentoInicial ?? '');
   const [carregando, setCarregando] = useState(false);
@@ -63,6 +87,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [linkConvite, setLinkConvite] = useState<string | null>(null);
+  const [confirmarRevogacao, setConfirmarRevogacao] = useState(false);
 
   useEffect(() => {
     void obterSessao().then((sessao) => {
@@ -76,8 +101,12 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
     setCarregando(true);
     setErro(null);
     try {
-      const perfilAtual = await obterPerfilCadastroPaciente(pacienteId);
+      const [perfilAtual, qualidadeAtual] = await Promise.all([
+        obterPerfilCadastroPaciente(pacienteId),
+        obterQualidadeEAcessoPaciente(pacienteId)
+      ]);
       setPerfil({ identificacao: {}, contato: {}, operacao: {}, ...perfilAtual });
+      setQualidade(qualidadeAtual);
       if (podeVerFiscal) setFiscal(await obterFiscalCadastroPaciente(pacienteId));
     } catch (erroAtual) {
       setErro(mensagemErro(erroAtual));
@@ -118,6 +147,24 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
       } catch {
         setSucesso('Convite criado. Copie o link temporario exibido abaixo.');
       }
+      setQualidade(await obterQualidadeEAcessoPaciente(pacienteId));
+    } catch (erroAtual) {
+      setErro(mensagemErro(erroAtual));
+    } finally {
+      setSalvando(null);
+    }
+  }
+
+  async function revogarConvitePortal() {
+    setSalvando('revogar-portal');
+    setErro(null);
+    setSucesso(null);
+    try {
+      await revogarConvitePaciente(pacienteId);
+      setLinkConvite(null);
+      setConfirmarRevogacao(false);
+      setQualidade(await obterQualidadeEAcessoPaciente(pacienteId));
+      setSucesso('Convite pendente revogado. O link anterior nao pode mais ser utilizado.');
     } catch (erroAtual) {
       setErro(mensagemErro(erroAtual));
     } finally {
@@ -135,6 +182,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
         dataNascimento: dataNascimento || undefined
       });
       await salvarSecaoCadastroPaciente(pacienteId, 'identificacao', removerCamposVazios(perfil.identificacao ?? {}));
+      setQualidade(await obterQualidadeEAcessoPaciente(pacienteId));
       aoAtualizarFicha();
       setSucesso('Identificacao salva com seguranca.');
     } catch (erroAtual) {
@@ -153,6 +201,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
       if (secao === 'contato') await salvarSecaoCadastroPaciente(pacienteId, secao, removerCamposVazios(perfil.contato ?? {}));
       if (secao === 'operacao') await salvarSecaoCadastroPaciente(pacienteId, secao, removerCamposVazios(perfil.operacao ?? {}));
       if (secao === 'fiscal') await salvarSecaoCadastroPaciente(pacienteId, secao, removerCamposVazios(fiscal));
+      setQualidade(await obterQualidadeEAcessoPaciente(pacienteId));
       setSucesso('Secao salva com seguranca.');
     } catch (erroAtual) {
       setErro(mensagemErro(erroAtual));
@@ -174,6 +223,35 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
         {sucesso ? <p role="status" className="mb-4 rounded-md border border-sucesso-borda bg-sucesso-suave px-3 py-2 text-sm text-sucesso-forte">{sucesso}</p> : null}
         {!carregando ? (
           <div className="grid max-h-[65vh] gap-6 overflow-y-auto pr-1">
+            {qualidade ? <section className="grid gap-4 rounded-md border border-linha bg-superficie-hover p-4" aria-labelledby="qualidade-cadastro-titulo">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 id="qualidade-cadastro-titulo" className="text-sm font-semibold text-tinta">Qualidade do cadastro</h3>
+                  <p className="mt-1 text-xs text-texto-suave">Os itens abaixo orientam a revisao, mas nao bloqueiam o atendimento de pacientes antigos.</p>
+                </div>
+                <span className="text-sm font-semibold text-tinta">{qualidade.percentualPreenchido}% preenchido</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-linha" role="progressbar" aria-label="Percentual do cadastro preenchido" aria-valuemin={0} aria-valuemax={100} aria-valuenow={qualidade.percentualPreenchido}>
+                <div className="h-full bg-primaria" style={{ width: `${qualidade.percentualPreenchido}%` }} />
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {qualidade.secoes.map((secao) => <div key={secao.secao} className="rounded-md border border-linha bg-superficie px-3 py-2">
+                  <p className="text-xs font-semibold text-tinta">{secao.titulo}{secao.opcional ? ' (opcional)' : ''} - {secao.preenchidos}/{secao.total}</p>
+                  <p className="mt-1 text-xs text-texto-suave">{secao.camposFaltantes.length ? `Revisar: ${secao.camposFaltantes.join(', ')}` : 'Dados recomendados preenchidos.'}</p>
+                </div>)}
+              </div>
+              {qualidade.possiveisDuplicidades.length ? <div className="rounded-md border border-alerta-borda bg-alerta-suave p-3">
+                <p className="flex items-center gap-2 text-sm font-semibold text-alerta-forte"><AlertTriangle size={16} /> Possiveis cadastros duplicados</p>
+                <p className="mt-1 text-xs text-alerta-forte">Revise manualmente. O OctaClin nunca mescla pacientes automaticamente.</p>
+                <ul className="mt-2 grid gap-1 text-xs">
+                  {qualidade.possiveisDuplicidades.map((item) => <li key={item.pacienteId}>
+                    <a className="font-semibold underline underline-offset-2" href={`/pacientes/${item.pacienteId}`}>{item.nome}</a>
+                    {' - '}{item.motivos.includes('contato') ? 'mesmo contato' : 'mesmo nome e nascimento'}
+                  </li>)}
+                </ul>
+              </div> : null}
+            </section> : null}
+
             <Secao titulo="Identificacao" descricao="Dados de identificacao do paciente. A condicao biologica fica restrita ao contexto clinico autorizado.">
               <div className="grid gap-3 md:grid-cols-2">
                 <Campo rotulo="Nome completo"><input className="campo" autoComplete="name" value={nomeCompleto} onChange={(evento) => setNomeCompleto(evento.target.value)} required /></Campo>
@@ -230,13 +308,41 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
               <SalvarSecao carregando={salvando === 'operacao'} aoSalvar={() => void salvar('operacao')} />
             </Secao>
 
-            <Secao titulo="Acesso ao portal" descricao="Gere um convite somente apos conferir os dados de contato. O link expira e uma nova emissao invalida o convite pendente anterior.">
-              <p className="text-sm text-texto-suave">E-mail de acesso: {perfil.contato?.email || 'Nao informado'}</p>
+            <Secao titulo="Acesso ao portal" descricao="Acompanhe o ciclo de acesso sem reexibir tokens antigos. Uma nova emissao invalida o convite pendente anterior.">
+              <div className="grid gap-2 rounded-md border border-linha bg-superficie-hover p-3 md:grid-cols-2">
+                <div>
+                  <p className="text-xs font-semibold text-texto-suave">Situacao</p>
+                  <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-tinta">
+                    {qualidade?.acessoPortal.status === 'acesso_ativo' ? <CheckCircle2 size={16} className="text-sucesso-forte" /> : <ShieldCheck size={16} />}
+                    {qualidade ? rotulosStatusPortal[qualidade.acessoPortal.status] : 'Carregando'}
+                  </p>
+                </div>
+                <div><p className="text-xs font-semibold text-texto-suave">E-mail de acesso</p><p className="mt-1 break-all text-sm text-tinta">{qualidade?.acessoPortal.email || perfil.contato?.email || 'Nao informado'}</p></div>
+                <div><p className="text-xs font-semibold text-texto-suave">Ultimo acesso</p><p className="mt-1 text-sm text-tinta">{formatarDataHora(qualidade?.acessoPortal.ultimoAcessoEm)}</p></div>
+                <div><p className="text-xs font-semibold text-texto-suave">Canal preferido</p><p className="mt-1 text-sm capitalize text-tinta">{qualidade?.acessoPortal.canalPreferido || 'Nao definido'}</p></div>
+              </div>
+              {qualidade?.acessoPortal.preferencias ? <div className="rounded-md border border-linha px-3 py-2">
+                <p className="text-xs font-semibold text-texto-suave">Preferencias definidas no portal</p>
+                <p className="mt-1 text-xs text-tinta">
+                  E-mail: {qualidade.acessoPortal.preferencias.email === undefined ? 'nao informado' : qualidade.acessoPortal.preferencias.email ? 'permitido' : 'desativado'}
+                  {' - '}WhatsApp: {qualidade.acessoPortal.preferencias.whatsapp === undefined ? 'nao informado' : qualidade.acessoPortal.preferencias.whatsapp ? 'permitido' : 'desativado'}
+                  {qualidade.acessoPortal.preferencias.canalPreferido ? ` - Preferencia: ${qualidade.acessoPortal.preferencias.canalPreferido}` : ''}
+                </p>
+                {qualidade.acessoPortal.preferencias.horarioPermitido?.inicio && qualidade.acessoPortal.preferencias.horarioPermitido?.fim ? <p className="mt-1 text-xs text-texto-suave">Janela: {qualidade.acessoPortal.preferencias.horarioPermitido.inicio}-{qualidade.acessoPortal.preferencias.horarioPermitido.fim} - {qualidade.acessoPortal.preferencias.horarioPermitido.timezone || 'fuso nao informado'}</p> : null}
+              </div> : null}
+              {qualidade?.acessoPortal.status === 'convite_pendente' ? <p className="text-xs text-texto-suave">Convite atual expira em {formatarDataHora(qualidade.acessoPortal.conviteExpiraEm)}.</p> : null}
+              {qualidade?.acessoPortal.aceites.length ? <div>
+                <p className="text-xs font-semibold text-texto-suave">Aceites legais registrados</p>
+                <ul className="mt-2 grid gap-1 text-xs text-tinta">
+                  {qualidade.acessoPortal.aceites.map((aceite) => <li key={aceite.tipo} className="flex flex-wrap items-center gap-1"><CheckCircle2 size={14} className="text-sucesso-forte" /> {rotulosAceite[aceite.tipo] ?? aceite.tipo} - versao {aceite.versao} - {formatarDataHora(aceite.aceitoEm)}</li>)}
+                </ul>
+              </div> : null}
               <div className="flex flex-wrap justify-end gap-2">
                 {linkConvite ? <Botao type="button" variante="secundario" onClick={() => void navigator.clipboard.writeText(linkConvite)}><Link2 size={16} /> Copiar link</Botao> : null}
-                <Botao type="button" variante="secundario" onClick={() => void criarConvitePortal()} disabled={salvando === 'portal'}>
-                  <KeyRound size={16} /> {salvando === 'portal' ? 'Criando convite' : 'Criar convite seguro'}
-                </Botao>
+                {qualidade?.acessoPortal.status === 'convite_pendente' ? <Botao type="button" variante="perigo" onClick={() => setConfirmarRevogacao(true)} disabled={Boolean(salvando)}><UserRoundX size={16} /> Revogar convite</Botao> : null}
+                {qualidade?.acessoPortal.status !== 'acesso_ativo' && qualidade?.acessoPortal.status !== 'acesso_desativado' ? <Botao type="button" variante="secundario" onClick={() => void criarConvitePortal()} disabled={salvando === 'portal'}>
+                  <KeyRound size={16} /> {salvando === 'portal' ? 'Criando convite' : qualidade?.acessoPortal.status === 'nao_convidado' ? 'Criar convite seguro' : 'Reenviar convite'}
+                </Botao> : null}
               </div>
               {linkConvite ? <p className="break-all rounded-md border border-linha bg-superficie-hover px-3 py-2 text-xs text-texto-suave">{linkConvite}</p> : null}
             </Secao>
@@ -252,6 +358,15 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
           </div>
         ) : null}
       </Modal>
+      <ModalConfirmacao
+        aberto={confirmarRevogacao}
+        titulo="Revogar convite pendente"
+        mensagem="O link atual deixara de funcionar imediatamente. O acesso ativo de um paciente que ja concluiu o primeiro acesso nao sera alterado."
+        rotuloConfirmar="Revogar convite"
+        confirmando={salvando === 'revogar-portal'}
+        aoConfirmar={() => void revogarConvitePortal()}
+        aoCancelar={() => setConfirmarRevogacao(false)}
+      />
     </>
   );
 }

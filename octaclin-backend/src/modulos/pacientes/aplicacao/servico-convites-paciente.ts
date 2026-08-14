@@ -1,12 +1,14 @@
 import { createHash, randomBytes } from 'crypto';
 import { BadRequestException, ConflictException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
-import { IsNull } from 'typeorm';
+import { EntityManager, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
 import { contextoAcessoPorPapel } from '../../auth/dominio/permissoes';
 import { ServicoAuth } from '../../auth/aplicacao/servico-auth';
+import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { listarDocumentosLegaisPaciente } from './documentos-legais-paciente';
 import { AtivarConvitePacienteDto, CriarConvitePacienteDto } from './dtos';
@@ -56,7 +58,7 @@ export class ServicoConvitesPaciente {
 
   async criarConvite(
     tenantId: string,
-    usuarioCriadorId: string,
+    usuario: UsuarioAutenticado,
     pacienteId: string,
     dados: CriarConvitePacienteDto
   ): Promise<ConvitePacienteResposta> {
@@ -65,10 +67,7 @@ export class ServicoConvitesPaciente {
     const expiraEm = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const convite = await this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-        where: { id: pacienteId, tenantId, arquivadoEm: IsNull() }
-      });
-      if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+      const paciente = await this.obterPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
       if (paciente.usuarioId) throw new ConflictException('Paciente ja possui acesso ativo.');
 
       const repositorio = gerenciador.getRepository(ConvitePacienteOrm);
@@ -86,7 +85,7 @@ export class ServicoConvitesPaciente {
         repositorio.create({
           tenantId,
           pacienteId,
-          criadoPorUsuarioId: usuarioCriadorId,
+          criadoPorUsuarioId: usuario.usuarioId,
           emailHash: this.criptografia.gerarHashBusca(email),
           emailCriptografado: this.criptografia.criptografar(email),
           tokenHash: tokenHash(token),
@@ -110,6 +109,22 @@ export class ServicoConvitesPaciente {
       token,
       linkAtivacao: this.montarLinkAtivacao(token)
     };
+  }
+
+  async revogarConvitePendente(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<{ conviteId: string; revogadoEm: Date }> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.obterPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
+      const repositorio = gerenciador.getRepository(ConvitePacienteOrm);
+      const convite = await repositorio.findOne({
+        where: { tenantId, pacienteId, status: 'pendente', revogadoEm: IsNull() },
+        order: { criadoEm: 'DESC' }
+      });
+      if (!convite) throw new NotFoundException('Nao existe convite pendente para revogar.');
+      convite.status = 'revogado';
+      convite.revogadoEm = new Date();
+      await repositorio.save(convite);
+      return { conviteId: convite.id, revogadoEm: convite.revogadoEm };
+    });
   }
 
   async obterConvitePublico(token: string): Promise<ConvitePacientePublico> {
@@ -223,6 +238,25 @@ export class ServicoConvitesPaciente {
     if (!convite) throw new NotFoundException('Convite nao encontrado.');
     if (convite.status !== 'pendente' || convite.revogadoEm) throw new GoneException('Convite indisponivel.');
     if (convite.expiraEm <= new Date()) throw new GoneException('Convite expirado.');
+  }
+
+  private async obterPacienteAcessivel(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<PacienteOrm> {
+    const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+      where: {
+        id: pacienteId,
+        tenantId,
+        arquivadoEm: IsNull(),
+        ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
+      }
+    });
+    if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+    return paciente;
   }
 
   private montarLinkAtivacao(token: string) {
