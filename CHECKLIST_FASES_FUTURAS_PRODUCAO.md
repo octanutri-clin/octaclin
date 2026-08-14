@@ -1632,7 +1632,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     e portal expondo somente alternativas liberadas.
   - Especificacao: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
 
-- [~] Fase 235 - Prontuario clinico integrado e navegacao orientada a conduta. [IMPORTANTE - POS PILOTO]
+- [x] Fase 235 - Prontuario clinico integrado e navegacao orientada a conduta. [IMPORTANTE - POS PILOTO]
   - Consolidar em seis areas: Resumo, Atendimentos, Avaliacoes, Plano,
     Documentos e Financeiro, reaproveitando os modulos entregues sem criar uma
     segunda fonte de verdade.
@@ -1711,8 +1711,20 @@ publicado antes de ampliar a superficie de mudancas visuais.
     e sem cabecalho fixo. Validacao local: backend 130/130 suites e 874/874
     testes, Playwright 28/28, acessibilidade 10/10, lint, typecheck, authz,
     seguranca e builds backend/web. Sem migration; Actions indisponivel por cota.
-  - Incremento 19 pendente: benchmark, authz, acessibilidade, regressao
-    desktop/mobile e jornada sintetica antes do encerramento.
+  - Incremento 19 concluido em 2026-08-14: benchmark local confirmou 11
+    operacoes constantes no resumo com 1/30 registros por fonte e uma query
+    consolidada para 50/51 eventos da timeline. Backend 131/131 suites e
+    876/876 testes, Playwright 30/30 desktop/mobile, teclado, foco, contraste,
+    acessibilidade 10/10, authz, seguranca, lint, typechecks e builds passaram.
+    O Penpot foi conectado e recebeu pranchas desktop 1440, mobile 390 e de
+    especificacao, validadas por exportacao e salvas na versao
+    `Fase 235 - pranchas validadas`. No banco dedicado
+    `octaclin_test_fase150b`, a migration 1027 foi aplicada com owner e o schema
+    terminou em 40/40. O preflight confirmou role sem bypass, 76 tabelas tenant
+    com RLS forcada, zero linhas sem contexto e dois tenants isolados. A jornada
+    real criou e leu paciente, evolucao e tarefa, bloqueou acesso cruzado e
+    removeu todos os dados e a role temporaria. GitHub Actions indisponivel por
+    cota, sem presumir CI aprovado.
   - Entregar cabecalho persistente, resumo priorizado, timeline paginada por
     metadados autorizados, filtros, acoes rapidas e deep links, com protecao
     integral por tenant, papel e responsavel.

@@ -2,12 +2,13 @@
 
 ## Decisao
 
-A Fase 235 permanece **em execucao**. Os 18 incrementos registrados construiram
-a navegacao do prontuario, o cadastro progressivo e a base paginada da linha do
-tempo, mas ainda nao satisfazem todos os criterios de aceite da especificacao.
+A Fase 235 esta **concluida**. Os 19 incrementos registrados entregaram a
+navegacao do prontuario, o cadastro progressivo, a linha do tempo paginada, o
+resumo acionavel e o aceite tecnico final em banco PostgreSQL remoto isolado.
 
-Esta auditoria foi apenas de codigo e documentacao. Ela nao altera schema, nao
-executa migration e nao modifica producao.
+O encerramento aplicou somente a migration aditiva `1027` no banco dedicado de
+testes `octaclin_test_fase150b`. Nenhuma migration ou mutacao foi executada em
+producao.
 
 ## Evidencia revisada
 
@@ -32,7 +33,7 @@ executa migration e nao modifica producao.
 | Modulos clinicos conectados | Entregue parcialmente por fases posteriores | Antropometria, plano, documentos, exames/fotos e condutas possuem telas e contratos. A Fase 238 gestacional continua separada e pendente; os modulos posteriores ainda precisam entrar no resumo/timeline da 235. |
 | Autorizacao e isolamento | Entregue | A leitura reutiliza `ExecutorTenant`, RLS e escopo de carteira. A regressao confirma que Professional recebe `NotFound` fora da propria carteira e que somente SuperAdmin recebe a identificacao transversal na interface. |
 | Responsividade e estados | Base entregue | Existem estados de carga, vazio e erro, e a Fase 239 validou jornadas sinteticas. As alteracoes residuais precisam repetir teclado, leitor de tela, desktop/mobile e permissao negada. |
-| Desempenho | Pendente | Nao foi encontrado benchmark dedicado para resumo/timeline com massa sintetica nem criterio registrado de N+1/latencia. |
+| Desempenho | Entregue | Benchmark dedicado confirmou 11 operacoes constantes no resumo com 1 e 30 registros por fonte e uma consulta consolidada para 50 de 51 eventos da timeline, sem N+1. |
 
 ## Escopo ja absorvido por fases posteriores
 
@@ -127,13 +128,42 @@ Concluido em 2026-08-14.
 
 ### Incremento 19 - aceite tecnico de encerramento
 
-- benchmark de resumo/timeline com massa sintetica e verificacao de N+1;
-- suites completas de backend/web, authz, secrets e build;
-- Playwright desktop/mobile, teclado, foco, contraste e estados de permissao;
-- jornada mutavel em ambiente efemero com dados sinteticos;
-- atualizar Penpot e documentos vivos somente depois das evidencias.
+Concluido em 2026-08-14.
+
+- [x] benchmark sintetico compara 1 e 30 registros por fonte. O resumo mantem
+  11 operacoes de repositorio nos dois cenarios; a timeline pagina 50 de 51
+  eventos com uma query consolidada mais a validacao do paciente, sem N+1;
+- [x] suites completas locais: backend 131/131 suites e 876/876 testes,
+  builds backend/web, typechecks, lint, authz e seguranca BFF;
+- [x] Playwright 30/30 do prontuario em desktop/mobile, incluindo papel sem
+  permissao, teclado, foco visivel, contraste WCAG AA e ausencia de overflow;
+  o gate transversal de acessibilidade passou 10/10;
+- [x] jornada mutavel executada no banco remoto confirmado
+  `octaclin_test_fase150b`. A migration aditiva
+  `AdicionarCicloVidaTenants1720000001027` foi aplicada com `neondb_owner` e o
+  schema terminou em 40/40 migrations. O preflight confirmou role runtime sem
+  `SUPERUSER`/`BYPASSRLS`, 76 tabelas tenant com RLS forcada, zero linhas
+  visiveis sem contexto e isolamento entre dois tenants;
+- [x] a jornada criou paciente, evolucao clinica e tarefa sinteticos pelos
+  servicos reais, confirmou resumo com uma evolucao e uma tarefa pendente,
+  timeline com `evolucao_clinica` e `tarefa_acompanhamento`, e `NotFound` na
+  leitura cruzada. Ao final, paciente e dependencias foram removidos;
+- [x] a role temporaria foi revogada e excluida. A verificacao final retornou
+  zero roles `octaclin_e2e_f235_%` e zero pacientes
+  `fase235-aceite-final`. A associacao preexistente do owner com a role runtime
+  foi preservada;
+- [x] Penpot conectado e validado por exportacao. O arquivo
+  `ddb7145f-a1be-80bb-8008-682e4779bea2` recebeu as pranchas desktop 1440,
+  mobile 390 e especificacao de aceite, com a versao
+  `Fase 235 - pranchas validadas`;
+- [x] documentos de encerramento atualizados e Fase 235 alterada de `[~]` para
+  `[x]` apos todas as evidencias locais e remotas.
+
+O GitHub Actions permaneceu indisponivel por cota esgotada e seus jobs nao
+executaram passos. Essa indisponibilidade esta registrada e nao foi tratada
+como aprovacao de CI.
 
 ## Ordem recomendada
 
-Executar o Incremento 19. A Fase 235 so pode
-mudar de `[~]` para `[x]` depois do Incremento 19 e do registro das evidencias.
+Prosseguir para as fases posteriores sem reabrir o escopo da Fase 235. Qualquer
+regressao observada deve ser tratada como correcao, preservando estas evidencias.

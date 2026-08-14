@@ -177,8 +177,8 @@ pnpm --dir octaclin-web typecheck
 git diff --check
 ```
 
-Resultado: 14 cenarios de prontuario aprovados em desktop e mobile, lint e
-typecheck aprovados. A Fase 235 permanece em execucao: projecao BFF/timeline
+Resultado naquele checkpoint: 14 cenarios de prontuario aprovados em desktop e
+mobile, lint e typecheck aprovados. A Fase 235 permanecia em execucao: projecao BFF/timeline
 paginada, cadastro progressivo, categorizacao de anexos e validacao clinica
 ainda nao foram entregues.
 
@@ -407,9 +407,10 @@ ativacao com dados sinteticos permanece como aceite de staging da fase.
 
 ## Auditoria final de escopo - 2026-08-13
 
-A revisao do codigo atual confirmou que os 14 incrementos entregues formam uma
-base funcional, mas ainda nao atendem integralmente os criterios de aceite. A
-Fase 235 permanece em execucao e nao deve ser marcada como concluida.
+A revisao realizada naquele checkpoint confirmou que os 14 incrementos
+entregues formavam uma base funcional, mas ainda nao atendiam integralmente os
+criterios de aceite. A Fase 235 permanecia em execucao e nao deveria ser marcada
+como concluida antes dos incrementos residuais.
 
 As lacunas obrigatorias foram organizadas nos Incrementos 15 a 19. O Incremento
 15 completou fontes e filtros da timeline e o 16 concluiu o resumo clinico;
@@ -515,6 +516,47 @@ lint, typecheck, autorizacao e seguranca BFF, 28/28 Playwright do prontuario e
 10/10 no gate de acessibilidade. Nao houve migration. O GitHub Actions segue
 sem creditos e sua ausencia nao foi usada como aprovacao. A Fase 235 continua
 parcial e segue somente para o Incremento 19.
+
+## Incremento 19 - aceite tecnico final
+
+Concluido em 2026-08-14. Foi adicionado um benchmark sintetico dedicado
+ao prontuario. Com 1 ou 30 registros por fonte, o resumo executa as mesmas 11
+operacoes de repositorio. A timeline retorna 50 de 51 eventos usando uma unica
+query consolidada, alem da validacao inicial do paciente, comprovando que o
+volume de eventos nao introduz N+1.
+
+Os gates locais atuais passaram: 131/131 suites e 876/876 testes backend;
+builds backend/web; typechecks; lint; authz; seguranca operacional/runtime;
+30/30 Playwright do prontuario em desktop/mobile, incluindo teclado, foco
+visivel, contraste WCAG AA e permissao reduzida; e 10/10 no gate transversal
+de acessibilidade. Os contratos e fixtures da jornada mutavel tambem passaram
+seus testes estaticos.
+
+O Penpot foi conectado ao arquivo
+`ddb7145f-a1be-80bb-8008-682e4779bea2`. Foram registradas e validadas por
+exportacao as pranchas `F235 Prontuario Desktop 1440`,
+`F235 Prontuario Mobile 390` e `F235 Especificacao Aceite Incremento 19`. A
+versao nomeada `Fase 235 - pranchas validadas` preserva o checkpoint visual,
+incluindo contexto SuperAdmin, matriz de permissoes, alvos de 44 px, contraste,
+acoes rapidas e linha do cuidado.
+
+O aceite remoto usou exclusivamente o banco dedicado
+`octaclin_test_fase150b`. A migration aditiva
+`AdicionarCicloVidaTenants1720000001027` foi aplicada com `neondb_owner` e o
+schema terminou em 40/40 migrations. Uma role de login temporaria, sem
+`SUPERUSER` e sem `BYPASSRLS`, herdou somente a role runtime durante o teste.
+
+O preflight confirmou 76 tabelas tenant com RLS forcada, nenhuma linha visivel
+sem contexto e isolamento entre os tenants sinteticos Alfa e Beta. A jornada
+criou paciente, evolucao clinica e tarefa pelos servicos reais, validou resumo,
+timeline e bloqueio de leitura cruzada, e removeu todas as mutacoes no `finally`.
+A auditoria posterior confirmou zero roles temporarias e zero pacientes com a
+referencia `fase235-aceite-final`; a associacao preexistente do owner com a role
+runtime foi preservada.
+
+O GitHub Actions continua sem executar passos enquanto a cota estiver esgotada,
+e sua ausencia nao foi considerada aprovacao de CI. Com os gates locais, Penpot
+e jornada remota concluidos, a Fase 235 passa para `[x]`.
 
 ## Sequencia posterior obrigatoria
 

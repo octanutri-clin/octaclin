@@ -1965,6 +1965,47 @@ test.describe('prontuario do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('permite operar as acoes por teclado com foco visivel e contraste suficiente', async ({ page }) => {
+    await prepararProntuarioMockado(page, {
+      papel: 'SuperAdmin',
+      permissoesExtras: ['profissionais.ler', 'planos_alimentares.ler']
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    const contexto = page.getByRole('status').filter({ hasText: 'Contexto SuperAdmin' });
+    const contraste = await contexto.evaluate((elemento) => {
+      const canal = (valor) => {
+        const normalizado = valor / 255;
+        return normalizado <= 0.04045 ? normalizado / 12.92 : ((normalizado + 0.055) / 1.055) ** 2.4;
+      };
+      const rgb = (valor) => (valor.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+      const luminancia = (valor) => {
+        const [r, g, b] = rgb(valor).map(canal);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const frente = luminancia(getComputedStyle(elemento.querySelector('p')).color);
+      const fundo = luminancia(getComputedStyle(elemento).backgroundColor);
+      return (Math.max(frente, fundo) + 0.05) / (Math.min(frente, fundo) + 0.05);
+    });
+    expect(contraste).toBeGreaterThanOrEqual(4.5);
+
+    const acoes = page.getByRole('navigation', { name: 'Acoes rapidas do paciente' });
+    const anterior = acoes.getByRole('link', { name: 'Abrir consulta' });
+    const plano = acoes.getByRole('button', { name: 'Plano atual' });
+    await anterior.focus();
+    await page.keyboard.press('Tab');
+    await expect(plano).toBeFocused();
+    const foco = await plano.evaluate((elemento) => {
+      const estilo = getComputedStyle(elemento);
+      return { outlineStyle: estilo.outlineStyle, outlineWidth: estilo.outlineWidth, boxShadow: estilo.boxShadow };
+    });
+    expect((foco.outlineStyle !== 'none' && foco.outlineWidth !== '0px') || foco.boxShadow !== 'none').toBe(true);
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('tab', { name: 'Plano', exact: true })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Plano alimentar', exact: true })).toHaveAttribute('aria-selected', 'true');
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('nao oferece troca de contexto nem acoes sem permissao a outros papeis', async ({ page }) => {
     await prepararProntuarioMockado(page, {
       papel: 'Collaborator',
