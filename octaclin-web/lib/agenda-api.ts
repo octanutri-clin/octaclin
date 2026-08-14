@@ -379,9 +379,11 @@ export async function obterRecebimentosAgenda(entrada: {
   inicioEm: string;
   fimEm: string;
   profissionalId?: string;
+  pacienteId?: string;
 }): Promise<ResumoRecebimentosApi> {
   const parametros = new URLSearchParams({ inicioEm: entrada.inicioEm, fimEm: entrada.fimEm });
   if (entrada.profissionalId) parametros.set('profissionalId', entrada.profissionalId);
+  if (entrada.pacienteId) parametros.set('pacienteId', entrada.pacienteId);
   return requisitar<ResumoRecebimentosApi>(`/api/agenda/financeiro/recebimentos?${parametros.toString()}`);
 }
 

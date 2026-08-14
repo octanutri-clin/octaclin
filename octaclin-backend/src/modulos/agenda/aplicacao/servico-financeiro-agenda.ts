@@ -138,7 +138,8 @@ export class ServicoFinanceiroAgenda {
         where: {
           tenantId,
           inicioEm: Between(inicioEm, fimEm),
-          ...(profissionalId ? { profissionalId } : {})
+          ...(profissionalId ? { profissionalId } : {}),
+          ...(filtro.pacienteId ? { pacienteId: filtro.pacienteId } : {})
         },
         order: { inicioEm: 'ASC' },
         take: 5000
@@ -157,7 +158,8 @@ export class ServicoFinanceiroAgenda {
           tenantId,
           criadoEm: Between(inicioEm, fimEm),
           canceladoEm: IsNull(),
-          ...(profissionalId ? { profissionalId } : {})
+          ...(profissionalId ? { profissionalId } : {}),
+          ...(filtro.pacienteId ? { pacienteId: filtro.pacienteId } : {})
         },
         take: 2000
       });

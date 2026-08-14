@@ -166,6 +166,10 @@ export class ConsultarRecebimentosDto {
   @IsOptional()
   @IsUUID()
   profissionalId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  pacienteId?: string;
 }
 
 export class RemarcarConsultaAgendaDto {

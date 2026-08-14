@@ -7,7 +7,14 @@ export type TipoEventoProntuarioPaciente =
   | 'checkin_rapido'
   | 'mensagem'
   | 'evolucao_clinica'
-  | 'tarefa_acompanhamento';
+  | 'tarefa_acompanhamento'
+  | 'plano_alimentar_publicado'
+  | 'avaliacao_antropometrica'
+  | 'documento_emitido'
+  | 'anexo_confirmado'
+  | 'exame_laboratorial'
+  | 'evolucao_fotografica'
+  | 'evento_financeiro';
 export type TipoEvolucaoClinicaApi = 'consulta' | 'retorno' | 'observacao' | 'ajuste_plano';
 export type CategoriaTarefaAcompanhamentoApi = 'meta' | 'tarefa' | 'checkin' | 'orientacao';
 export type PrioridadeTarefaAcompanhamentoApi = 'baixa' | 'media' | 'alta';
@@ -21,6 +28,9 @@ export interface EventoProntuarioPacienteApi {
   data: string;
   status?: string;
   origemId?: string;
+  origem?: string;
+  responsavelId?: string;
+  autorUsuarioId?: string;
   metadados?: Record<string, unknown>;
 }
 
@@ -106,7 +116,15 @@ export async function obterProntuarioPaciente(pacienteId: string): Promise<Pront
 
 export async function listarLinhaDoTempoPaginada(
   pacienteId: string,
-  opcoes: { cursor?: string; limite?: number; tipo?: TipoEventoProntuarioPaciente; inicio?: string; fim?: string; signal?: AbortSignal } = {}
+  opcoes: {
+    cursor?: string;
+    limite?: number;
+    tipo?: TipoEventoProntuarioPaciente;
+    inicio?: string;
+    fim?: string;
+    responsavelId?: string;
+    signal?: AbortSignal;
+  } = {}
 ): Promise<PaginaLinhaDoTempoProntuarioApi> {
   const parametros = new URLSearchParams();
   if (opcoes.cursor) parametros.set('cursor', opcoes.cursor);
@@ -114,6 +132,7 @@ export async function listarLinhaDoTempoPaginada(
   if (opcoes.tipo) parametros.set('tipo', opcoes.tipo);
   if (opcoes.inicio) parametros.set('inicio', opcoes.inicio);
   if (opcoes.fim) parametros.set('fim', opcoes.fim);
+  if (opcoes.responsavelId) parametros.set('responsavelId', opcoes.responsavelId);
   const consulta = parametros.size ? `?${parametros.toString()}` : '';
   const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/prontuario/timeline${consulta}`, {
     cache: 'no-store',

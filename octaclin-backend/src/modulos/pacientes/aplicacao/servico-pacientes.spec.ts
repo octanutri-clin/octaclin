@@ -1370,6 +1370,9 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
         data: '2026-08-11T10:00:00.000Z',
         status: 'ajuste_plano',
         origemId: '00000000-0000-4000-8000-000000000002',
+        origem: 'Prontuario',
+        responsavelId: 'profissional-1',
+        autorUsuarioId: 'usuario-colaborador-1',
         metadados: { visibilidade: 'privada' }
       },
       {
@@ -1404,9 +1407,25 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
     });
 
     expect(pagina.itens).toHaveLength(1);
-    expect(pagina.itens[0]).toEqual(expect.objectContaining({ titulo: 'Ajuste de conduta' }));
+    expect(pagina.itens[0]).toEqual(expect.objectContaining({
+      titulo: 'Ajuste de conduta',
+      origem: 'Prontuario',
+      responsavelId: 'profissional-1',
+      autorUsuarioId: 'usuario-colaborador-1'
+    }));
     expect(pagina.itens[0]).not.toHaveProperty('descricao');
     expect(pagina.proximoCursor).toBeTruthy();
+    const sql = query.mock.calls[0][0];
+    expect(sql).toContain('plano_alimentar_versoes');
+    expect(sql).toContain('avaliacoes_antropometricas');
+    expect(sql).toContain('documentos_emitidos');
+    expect(sql).toContain('arquivos_midia');
+    expect(sql).toContain('coletas_exames_laboratoriais');
+    expect(sql).toContain('evolucoes_fotograficas');
+    expect(sql).toContain('pacotes_sessao');
+    expect(sql).toContain('AND $9::boolean');
+    expect(sql).toContain('AND $10::boolean');
+    expect(sql).not.toContain('_criptografad');
     expect(query.mock.calls[0][1]).toEqual([
       'tenant-1',
       'paciente-1',
@@ -1415,8 +1434,48 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
       'evolucao_clinica',
       '2026-08-01T00:00:00.000Z',
       '2026-08-31T23:59:59.999Z',
+      null,
+      false,
+      false,
       2
     ]);
+    const responsavelId = '00000000-0000-4000-8000-000000000099';
+    await servico.listarLinhaDoTempoPaginada(
+      'tenant-1',
+      'paciente-1',
+      {
+        ...usuarioProfissional,
+        permissoes: ['planos_alimentares.ler', 'agenda.financeiro.ler']
+      },
+      { responsavelId }
+    );
+    expect(query.mock.calls[1][1]).toEqual([
+      'tenant-1',
+      'paciente-1',
+      null,
+      null,
+      null,
+      null,
+      null,
+      responsavelId,
+      true,
+      true,
+      21
+    ]);
+    const cursorFinanceiro = Buffer.from(JSON.stringify({
+      data: '2026-08-10T10:00:00.000Z',
+      id: 'consulta-pagamento:00000000-0000-4000-8000-000000000001'
+    })).toString('base64url');
+    await servico.listarLinhaDoTempoPaginada(
+      'tenant-1',
+      'paciente-1',
+      usuarioColaborador,
+      { cursor: cursorFinanceiro }
+    );
+    expect(query.mock.calls[2][1]).toEqual(expect.arrayContaining([
+      '2026-08-10T10:00:00.000Z',
+      'consulta-pagamento:00000000-0000-4000-8000-000000000001'
+    ]));
     await expect(servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador, { cursor: 'invalido' })).rejects.toBeInstanceOf(BadRequestException);
     await expect(servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador, {
       inicio: '2026-09-01T00:00:00.000Z',

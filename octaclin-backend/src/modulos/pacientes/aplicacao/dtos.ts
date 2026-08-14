@@ -276,7 +276,14 @@ export type TipoEventoProntuarioPaciente =
   | 'checkin_rapido'
   | 'mensagem'
   | 'evolucao_clinica'
-  | 'tarefa_acompanhamento';
+  | 'tarefa_acompanhamento'
+  | 'plano_alimentar_publicado'
+  | 'avaliacao_antropometrica'
+  | 'documento_emitido'
+  | 'anexo_confirmado'
+  | 'exame_laboratorial'
+  | 'evolucao_fotografica'
+  | 'evento_financeiro';
 
 export interface EventoProntuarioPacienteDto {
   id: string;
@@ -286,6 +293,9 @@ export interface EventoProntuarioPacienteDto {
   data: Date;
   status?: string;
   origemId?: string;
+  origem?: string;
+  responsavelId?: string;
+  autorUsuarioId?: string;
   metadados?: Record<string, unknown>;
 }
 
@@ -316,8 +326,27 @@ export class ListarLinhaTempoProntuarioDto {
   cursor?: string;
 
   @IsOptional()
-  @IsIn(['consulta', 'formulario', 'resposta_formulario', 'checkin_rapido', 'mensagem', 'evolucao_clinica', 'tarefa_acompanhamento'])
+  @IsIn([
+    'consulta',
+    'formulario',
+    'resposta_formulario',
+    'checkin_rapido',
+    'mensagem',
+    'evolucao_clinica',
+    'tarefa_acompanhamento',
+    'plano_alimentar_publicado',
+    'avaliacao_antropometrica',
+    'documento_emitido',
+    'anexo_confirmado',
+    'exame_laboratorial',
+    'evolucao_fotografica',
+    'evento_financeiro'
+  ])
   tipo?: TipoEventoProntuarioPaciente;
+
+  @IsOptional()
+  @IsUUID()
+  responsavelId?: string;
 
   @IsOptional()
   @IsDateString()

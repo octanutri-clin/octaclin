@@ -411,14 +411,39 @@ A revisao do codigo atual confirmou que os 14 incrementos entregues formam uma
 base funcional, mas ainda nao atendem integralmente os criterios de aceite. A
 Fase 235 permanece em execucao e nao deve ser marcada como concluida.
 
-As lacunas obrigatorias foram organizadas nos Incrementos 15 a 19: completar as
-fontes e filtros da timeline; ampliar o resumo clinico; fechar qualidade
-cadastral e ciclo de acesso ao portal; explicitar contexto/autorizacao e acoes;
-e executar benchmark, acessibilidade e jornada sintetica de encerramento.
+As lacunas obrigatorias foram organizadas nos Incrementos 15 a 19. O Incremento
+15 completou fontes e filtros da timeline; permanecem ampliar o resumo clinico,
+fechar qualidade cadastral e ciclo de acesso ao portal, explicitar
+contexto/autorizacao e acoes, e executar benchmark, acessibilidade e jornada
+sintetica de encerramento nos Incrementos 16 a 19.
 
 A matriz de conformidade, a evidencia revisada e a ordem de execucao estao em
 `AUDITORIA_FINAL_FASE_235_2026-08-13.md`. As Fases 236, 237 e 239 ja entregues
 serao integradas, nao reimplementadas. A Fase 238 continua separada e pendente.
+
+## Incremento 15 - timeline longitudinal completa
+
+Entregue em 2026-08-13. A timeline paginada passou a integrar os metadados
+autorizados de planos alimentares publicados, avaliacoes antropometricas,
+documentos emitidos, anexos confirmados, exames laboratoriais, evolucoes
+fotograficas e pagamentos de consultas/pacotes.
+
+O contrato agora distingue origem, autor e profissional responsavel e permite
+filtrar por responsavel do backend ate a interface. Plano alimentar e financeiro
+entram somente com as permissoes de leitura de seus modulos. Os cards oferecem
+deep links para a subarea que permanece fonte de verdade, sem carregar conteudo
+clinico cifrado na consulta consolidada.
+
+O cursor foi ampliado de UUID puro para identificadores opacos limitados e
+seguros, cobrindo IDs compostos de pagamentos sem perder a ordenacao por
+`data/id`. A revisao dos indices nao justificou migration nesta entrega: o
+benchmark com massa sintetica e `EXPLAIN`, inclusive para anexos e fontes
+legadas, permanece no Incremento 19.
+
+Validacoes: 130 suites/871 testes backend; 20/20 Playwright do prontuario em
+desktop/mobile; typechecks, lint, builds, authz, seguranca operacional/runtime,
+scan de secrets e audits backend/web sem vulnerabilidades conhecidas. A Fase
+235 permanece em execucao e segue para o Incremento 16.
 
 ## Sequencia posterior obrigatoria
 
