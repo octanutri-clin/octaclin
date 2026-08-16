@@ -324,7 +324,12 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
       setBuscando(true);
       setErroBusca(null);
       try {
-        setResultados(await buscarAlimentosPlanoAlimentar(pacienteId, busca.trim(), controle.signal));
+        const pagina = await buscarAlimentosPlanoAlimentar(
+          pacienteId,
+          { busca: busca.trim(), pagina: 1, limite: 50 },
+          controle.signal
+        );
+        setResultados(pagina.itens);
       } catch (erro) {
         if (!controle.signal.aborted) {
           setErroBusca(erro instanceof Error ? erro.message : 'Falha ao buscar alimentos.');
@@ -637,7 +642,9 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     setCarregando(true);
     setErro(null);
     try {
-      const lista = await listarPlanosAlimentares(pacienteId);
+      // Seletor de planos ainda carrega tudo de uma vez; o limite maximo evita
+      // esconder um plano do profissional antes de a paginacao virar UI.
+      const { itens: lista } = await listarPlanosAlimentares(pacienteId, { pagina: 1, limite: 100 });
       if (sequencia !== sequenciaCarregamento.current) return;
       setPlanos(lista);
       const selecionado = lista.find((item) => item.id === preferido) ?? lista[0];

@@ -1,10 +1,15 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarRascunhoPlanoAlimentarDto, CriarPlanoAlimentarDto } from '../aplicacao/dtos';
+import {
+  AtualizarRascunhoPlanoAlimentarDto,
+  BuscarAlimentosDto,
+  CriarPlanoAlimentarDto,
+  ListarPlanosAlimentaresDto
+} from '../aplicacao/dtos';
 import { ServicoPlanosAlimentares } from '../aplicacao/servico-planos-alimentares';
 
 @Controller('pacientes/:pacienteId/planos-alimentares')
@@ -17,9 +22,10 @@ export class ControladorPlanosAlimentares {
   @Permissoes('planos_alimentares.ler')
   listar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
-    @Param('pacienteId', ParseUUIDPipe) pacienteId: string
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Query() consulta: ListarPlanosAlimentaresDto
   ) {
-    return this.servico.listar(usuario.tenantId, pacienteId, usuario);
+    return this.servico.listar(usuario.tenantId, pacienteId, usuario, consulta);
   }
 
   @Post()
@@ -40,6 +46,17 @@ export class ControladorPlanosAlimentares {
     @Param('planoId', ParseUUIDPipe) planoId: string
   ) {
     return this.servico.obter(usuario.tenantId, pacienteId, planoId, usuario);
+  }
+
+  @Get(':planoId/versoes/:numero')
+  @Permissoes('planos_alimentares.ler')
+  obterVersao(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Param('planoId', ParseUUIDPipe) planoId: string,
+    @Param('numero', ParseIntPipe) numero: number
+  ) {
+    return this.servico.obterVersao(usuario.tenantId, pacienteId, planoId, numero, usuario);
   }
 
   @Get(':planoId/rascunho')
@@ -114,8 +131,8 @@ export class ControladorCatalogoAlimentos {
   @Permissoes('planos_alimentares.ler')
   buscar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
-    @Query('busca') busca = ''
+    @Query() consulta: BuscarAlimentosDto
   ) {
-    return this.servico.buscarAlimentos(usuario.tenantId, busca, usuario);
+    return this.servico.buscarAlimentos(usuario.tenantId, usuario, consulta);
   }
 }

@@ -4,6 +4,7 @@ import * as nextHeaders from 'next/headers';
 import { GET as listarPlanos, POST as criarPlano } from '../app/api/pacientes/[id]/planos-alimentares/route';
 import { GET as obterPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/route';
 import { GET as buscarAlimentos } from '../app/api/pacientes/[id]/planos-alimentares/alimentos/route';
+import { GET as obterVersao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/route';
 import { PUT as salvarRascunho } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/route';
 import { POST as publicarPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/publicacao/route';
 import { POST as revisarPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/revisao/route';
@@ -212,6 +213,97 @@ test('BFF codifica a busca TACO antes de encaminhar ao catalogo global', async (
       params: Promise.resolve({ id: 'paciente-1' })
     });
     assert.equal(url, 'http://backend.octaclin.local/planos-alimentares/alimentos?busca=arroz%20%26%20feijao');
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF encaminha paginacao da listagem somente pelos parametros conhecidos', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let url = '';
+  global.fetch = (async (entrada: string | URL | Request) => {
+    url = String(entrada);
+    return Response.json({ itens: [], total: 0 });
+  }) as typeof global.fetch;
+
+  try {
+    await listarPlanos(
+      new Request('http://localhost/api/planos?pagina=3&limite=10&ordem=DROP%20TABLE'),
+      { params: Promise.resolve({ id: 'paciente-1' }) }
+    );
+    assert.equal(
+      url,
+      'http://backend.octaclin.local/pacientes/paciente-1/planos-alimentares?pagina=3&limite=10'
+    );
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF encaminha filtros multifonte da busca e descarta parametro desconhecido', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let url = '';
+  global.fetch = (async (entrada: string | URL | Request) => {
+    url = String(entrada);
+    return Response.json({ itens: [], total: 0, fontes: [] });
+  }) as typeof global.fetch;
+
+  try {
+    await buscarAlimentos(
+      new Request(
+        'http://localhost/api/alimentos?busca=arroz&pagina=2&limite=5&fonteCodigo=TBCA&versao=7.3&baseCodigo=BD-AIN&interno=1'
+      ),
+      { params: Promise.resolve({ id: 'paciente-1' }) }
+    );
+    assert.equal(
+      url,
+      'http://backend.octaclin.local/planos-alimentares/alimentos?busca=arroz&pagina=2&limite=5&fonteCodigo=TBCA&versao=7.3&baseCodigo=BD-AIN'
+    );
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF encaminha versao historica com permissao de leitura e IDs codificados', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let url = '';
+  global.fetch = (async (entrada: string | URL | Request) => {
+    url = String(entrada);
+    return Response.json({ numero: 0 });
+  }) as typeof global.fetch;
+
+  try {
+    const resposta = await obterVersao(new Request('http://localhost/api/versao'), {
+      params: Promise.resolve({ id: 'paciente/1', planoId: 'plano/1', numero: '2' })
+    });
+    assert.equal(resposta.status, 200);
+    assert.equal(
+      url,
+      'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/versoes/2'
+    );
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF recusa versao historica sem permissao de leitura antes do backend', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const original = global.fetch;
+  let chamado = false;
+  global.fetch = (async () => {
+    chamado = true;
+    throw new Error('nao deveria consultar o backend');
+  }) as typeof global.fetch;
+
+  try {
+    const resposta = await obterVersao(new Request('http://localhost/api/versao'), {
+      params: Promise.resolve({ id: 'paciente-1', planoId: 'plano-1', numero: '2' })
+    });
+    assert.equal(resposta.status, 403);
+    assert.equal(chamado, false);
   } finally {
     restaurarFetch(original);
   }

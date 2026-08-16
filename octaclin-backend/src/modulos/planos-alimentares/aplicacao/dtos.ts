@@ -28,6 +28,62 @@ export class CriarPlanoAlimentarDto {
   titulo: string;
 }
 
+// Teto de pagina: com `limite` maximo de 100, segura o OFFSET em 100.000 linhas
+// e impede que uma pagina absurda vire varredura cara no banco.
+export const PAGINA_MAXIMA = 1_000;
+
+export class ListarPlanosAlimentaresDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA)
+  pagina = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limite = 25;
+}
+
+export class BuscarAlimentosDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  busca: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA)
+  pagina = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limite = 25;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  fonteCodigo?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  versao?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  baseCodigo?: string;
+}
+
 export class NutrientesPor100gDto {
   @IsNumber({ maxDecimalPlaces: 4 })
   @Min(0)

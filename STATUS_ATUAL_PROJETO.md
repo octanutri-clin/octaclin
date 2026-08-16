@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-14.
+Atualizado em 2026-08-16.
 
 ## Snapshot
 
@@ -21,8 +21,14 @@ Atualizado em 2026-08-14.
   role `octaclin_app_producao` foram aprovados. O Incremento 2 separou listagem
   resumida de detalhe sob demanda, manteve o historico leve, aplicou permissoes
   tambem no servico e entregou workspace somente leitura sem controles
-  mutaveis. Nao houve migration no Incremento 2; filtros multifonte, editor,
-  substituicoes, portal e demais fluxos seguem pendentes.
+  mutaveis. Nao houve migration no Incremento 2. O Incremento 3, concluido em
+  2026-08-16 e tambem sem migration, paginou e validou a listagem de planos e a
+  busca de alimentos, adicionou filtros por fonte/versao/base sobre as fontes
+  ativas, escapou o curinga do LIKE (buscar `100%` casava com o catalogo
+  inteiro), abriu rota de versao historica completa sob demanda com escopo
+  revalidado e passou a filtrar os query params no BFF por allowlist. Editor de
+  refeicoes, modelos, substituicoes, portal, adesao e lista de compras seguem
+  pendentes.
 - Fase 232 concluida e integrada: operacao de lancamento com janela controlada,
   responsaveis, gates GO/NO-GO, rollback, comunicacao e exercicio sintetico P0.
   A decisao atual permanece NO-GO para cliente real ate identidade publica,

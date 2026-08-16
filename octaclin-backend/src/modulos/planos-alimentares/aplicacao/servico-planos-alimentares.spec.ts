@@ -24,6 +24,8 @@ const PACIENTE_ID = '10000000-0000-4000-8000-000000000004';
 const PLANO_ID = '10000000-0000-4000-8000-000000000005';
 const VERSAO_ID = '10000000-0000-4000-8000-000000000006';
 const AVALIACAO_ID = '10000000-0000-4000-8000-000000000007';
+// Barra invertida unica: o caractere de escape do LIKE no SQL emitido.
+const BARRA = '\\';
 
 interface RepositorioMemoria<T extends { id?: string }> {
   registros: T[];
@@ -31,6 +33,7 @@ interface RepositorioMemoria<T extends { id?: string }> {
   save: jest.Mock;
   findOne: jest.Mock;
   find: jest.Mock;
+  findAndCount: jest.Mock;
   delete: jest.Mock;
   createQueryBuilder: jest.Mock;
 }
@@ -50,6 +53,40 @@ function corresponde(registro: Record<string, unknown>, criterio: Record<string,
   });
 }
 
+interface OpcoesConsultaMemoria {
+  where?: Record<string, unknown>;
+  order?: Record<string, 'ASC' | 'DESC'>;
+  skip?: number;
+  take?: number;
+}
+
+interface ConstrutorConsultaMemoria {
+  where: jest.Mock;
+  andWhere: jest.Mock;
+  orderBy: jest.Mock;
+  addOrderBy: jest.Mock;
+  skip: jest.Mock;
+  take: jest.Mock;
+  getMany: jest.Mock;
+  getManyAndCount: jest.Mock;
+}
+
+function paginarMemoria<T>(registros: T[], opcoes: OpcoesConsultaMemoria): { pagina: T[]; total: number } {
+  let resultado = registros.filter((registro) => corresponde(registro as Record<string, unknown>, opcoes.where ?? {}));
+  for (const [campo, direcao] of Object.entries(opcoes.order ?? {})) {
+    resultado = [...resultado].sort((a, b) => {
+      const av = (a as Record<string, unknown>)[campo] as number | string | Date | undefined;
+      const bv = (b as Record<string, unknown>)[campo] as number | string | Date | undefined;
+      const comparacao = av === bv ? 0 : av === undefined ? -1 : bv === undefined ? 1 : av < bv ? -1 : 1;
+      return direcao === 'DESC' ? -comparacao : comparacao;
+    });
+  }
+  const total = resultado.length;
+  const pular = opcoes.skip ?? 0;
+  const pagina = opcoes.take === undefined ? resultado.slice(pular) : resultado.slice(pular, pular + opcoes.take);
+  return { pagina, total };
+}
+
 function criarRepositorio<T extends { id?: string }>(iniciais: T[] = []): RepositorioMemoria<T> {
   const repositorio: RepositorioMemoria<T> = {
     registros: [...iniciais],
@@ -67,19 +104,10 @@ function criarRepositorio<T extends { id?: string }>(iniciais: T[] = []): Reposi
     findOne: jest.fn(async (opcoes: { where?: Record<string, unknown> }) =>
       repositorio.registros.find((registro) => corresponde(registro as Record<string, unknown>, opcoes.where ?? {})) ?? null
     ),
-    find: jest.fn(async (opcoes: { where?: Record<string, unknown>; order?: Record<string, 'ASC' | 'DESC'>; take?: number } = {}) => {
-      let resultado = repositorio.registros.filter((registro) =>
-        corresponde(registro as Record<string, unknown>, opcoes.where ?? {})
-      );
-      for (const [campo, direcao] of Object.entries(opcoes.order ?? {})) {
-        resultado = [...resultado].sort((a, b) => {
-          const av = (a as Record<string, unknown>)[campo] as number | string | Date | undefined;
-          const bv = (b as Record<string, unknown>)[campo] as number | string | Date | undefined;
-          const comparacao = av === bv ? 0 : av === undefined ? -1 : bv === undefined ? 1 : av < bv ? -1 : 1;
-          return direcao === 'DESC' ? -comparacao : comparacao;
-        });
-      }
-      return opcoes.take ? resultado.slice(0, opcoes.take) : resultado;
+    find: jest.fn(async (opcoes: OpcoesConsultaMemoria = {}) => paginarMemoria(repositorio.registros, opcoes).pagina),
+    findAndCount: jest.fn(async (opcoes: OpcoesConsultaMemoria = {}) => {
+      const { pagina, total } = paginarMemoria(repositorio.registros, opcoes);
+      return [pagina, total] as [unknown[], number];
     }),
     delete: jest.fn(async (criterio: Record<string, unknown>) => {
       const preservados = repositorio.registros.filter(
@@ -88,13 +116,32 @@ function criarRepositorio<T extends { id?: string }>(iniciais: T[] = []): Reposi
       repositorio.registros.splice(0, repositorio.registros.length, ...preservados);
       return { affected: 1 };
     }),
-    createQueryBuilder: jest.fn(() => ({
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
-      take: jest.fn().mockReturnThis(),
-      getMany: jest.fn(async () => repositorio.registros)
-    }))
+    createQueryBuilder: jest.fn(() => {
+      const paginacao: { pular: number; levar?: number } = { pular: 0 };
+      const construtor: ConstrutorConsultaMemoria = {
+        where: jest.fn(() => construtor),
+        andWhere: jest.fn(() => construtor),
+        orderBy: jest.fn(() => construtor),
+        addOrderBy: jest.fn(() => construtor),
+        skip: jest.fn((valor: number) => {
+          paginacao.pular = valor;
+          return construtor;
+        }),
+        take: jest.fn((valor: number) => {
+          paginacao.levar = valor;
+          return construtor;
+        }),
+        getMany: jest.fn(async () => repositorio.registros),
+        getManyAndCount: jest.fn(async (): Promise<[unknown[], number]> => [
+          repositorio.registros.slice(
+            paginacao.pular,
+            paginacao.levar === undefined ? undefined : paginacao.pular + paginacao.levar
+          ),
+          repositorio.registros.length
+        ])
+      };
+      return construtor;
+    })
   };
   return repositorio;
 }
@@ -249,7 +296,7 @@ describe('ServicoPlanosAlimentares', () => {
 
     await servico.listar(TENANT_ID, PACIENTE_ID, usuarioProfissional());
 
-    const consulta = repositorios.get(PlanoAlimentarOrm)!.find.mock.calls[0][0];
+    const consulta = repositorios.get(PlanoAlimentarOrm)!.findAndCount.mock.calls[0][0];
     expect(consulta.where).not.toHaveProperty('profissionalId');
     expect(consulta.where).toEqual(expect.objectContaining({ tenantId: TENANT_ID, pacienteId: PACIENTE_ID }));
   });
@@ -257,7 +304,7 @@ describe('ServicoPlanosAlimentares', () => {
   it('lista somente resumo sem carregar refeicoes, itens ou substituicoes', async () => {
     const resultado = await servico.listar(TENANT_ID, PACIENTE_ID, usuarioProfissional());
 
-    expect(resultado).toEqual([
+    expect(resultado.itens).toEqual([
       expect.objectContaining({
         id: PLANO_ID,
         titulo: 'Plano principal',
@@ -265,7 +312,7 @@ describe('ServicoPlanosAlimentares', () => {
         historicoQuantidade: 0
       })
     ]);
-    expect(resultado[0]).not.toHaveProperty('historico');
+    expect(resultado.itens[0]).not.toHaveProperty('historico');
     expect(repositorios.get(PlanoAlimentarVersaoOrm)!.find).toHaveBeenCalledTimes(1);
     expect(repositorios.get(PlanoAlimentarRefeicaoOrm)!.find).not.toHaveBeenCalled();
     expect(repositorios.get(PlanoAlimentarItemOrm)!.find).not.toHaveBeenCalled();
@@ -298,7 +345,9 @@ describe('ServicoPlanosAlimentares', () => {
   it('aplica permissao tambem no servico e bloqueia mutacao direta para leitor', async () => {
     const leitor: UsuarioAutenticado = { ...usuarioProfissional(), permissoes: ['planos_alimentares.ler'] };
 
-    await expect(servico.listar(TENANT_ID, PACIENTE_ID, leitor)).resolves.toHaveLength(1);
+    await expect(servico.listar(TENANT_ID, PACIENTE_ID, leitor)).resolves.toEqual(
+      expect.objectContaining({ total: 1, itens: [expect.objectContaining({ id: PLANO_ID })] })
+    );
     await expect(
       servico.criar(TENANT_ID, PACIENTE_ID, leitor, { titulo: 'Plano indevido' })
     ).rejects.toBeInstanceOf(ForbiddenException);
@@ -539,9 +588,9 @@ describe('ServicoPlanosAlimentares', () => {
       situacao: 'ativa'
     });
 
-    const resultado = await servico.buscarAlimentos(TENANT_ID, 'alimento', usuarioProfissional());
+    const resultado = await servico.buscarAlimentos(TENANT_ID, usuarioProfissional(), { busca: 'alimento', pagina: 1, limite: 25 });
 
-    expect(resultado).toEqual([
+    expect(resultado.itens).toEqual([
       expect.objectContaining({
         codigoOrigem: 'TACO-NULL',
         disponivelParaCalculo: false,
@@ -549,7 +598,7 @@ describe('ServicoPlanosAlimentares', () => {
       })
     ]);
     const queryBuilder = repositorios.get(AlimentoComposicaoOrm)!.createQueryBuilder.mock.results[0].value;
-    expect(queryBuilder.where).toHaveBeenCalledWith('lower(alimento.nome) like lower(:busca)', {
+    expect(queryBuilder.where).toHaveBeenCalledWith(`lower(alimento.nome) like lower(:busca) escape '${BARRA}'`, {
       busca: '%alimento%'
     });
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('alimento.fonte_id in (:...fonteIds)', {
@@ -580,7 +629,9 @@ describe('ServicoPlanosAlimentares', () => {
       situacao: 'suspensa'
     });
 
-    await expect(servico.buscarAlimentos(TENANT_ID, 'alimento', usuarioProfissional())).resolves.toEqual([]);
+    await expect(
+      servico.buscarAlimentos(TENANT_ID, usuarioProfissional(), { busca: 'alimento', pagina: 1, limite: 25 })
+    ).resolves.toEqual(expect.objectContaining({ itens: [], total: 0 }));
     await expect(
       servico.atualizarRascunho(
         TENANT_ID,
@@ -591,4 +642,229 @@ describe('ServicoPlanosAlimentares', () => {
       )
     ).rejects.toThrow('nao esta ativa');
   });
+
+  it('pagina a listagem de planos e devolve total, pagina e tamanho sem carregar estrutura', async () => {
+    repositorios.get(PlanoAlimentarOrm)!.registros.push({
+      id: '10000000-0000-4000-8000-000000000020',
+      tenantId: TENANT_ID,
+      pacienteId: PACIENTE_ID,
+      profissionalId: PROFISSIONAL_ID,
+      criadoPorUsuarioId: USUARIO_ID,
+      tituloCriptografado: criptografia.criptografar('Plano secundario'),
+      criadoEm: new Date('2026-08-02T12:00:00Z')
+    });
+
+    const resultado = await servico.listar(TENANT_ID, PACIENTE_ID, usuarioProfissional(), {
+      pagina: 2,
+      limite: 1
+    });
+
+    expect(resultado).toEqual(
+      expect.objectContaining({ total: 2, pagina: 2, limite: 1, itens: [expect.objectContaining({ id: PLANO_ID })] })
+    );
+    expect(repositorios.get(PlanoAlimentarRefeicaoOrm)!.find).not.toHaveBeenCalled();
+    expect(repositorios.get(PlanoAlimentarItemOrm)!.find).not.toHaveBeenCalled();
+  });
+
+  it('pagina a busca de alimentos e informa o total real alem da pagina devolvida', async () => {
+    const FONTE_ID = '10000000-0000-4000-8000-000000000021';
+    repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push({
+      id: FONTE_ID,
+      codigo: 'TACO',
+      nome: 'Tabela TACO',
+      versao: '4',
+      baseCodigo: 'principal',
+      situacao: 'ativa'
+    });
+    for (const indice of [1, 2, 3]) {
+      repositorios.get(AlimentoComposicaoOrm)!.registros.push({
+        id: `10000000-0000-4000-8000-00000000003${indice}`,
+        fonteId: FONTE_ID,
+        codigoOrigem: `TACO-${indice}`,
+        nome: `Arroz tipo ${indice}`,
+        baseGramas: '100',
+        energiaKcal: '100',
+        proteinasG: '2',
+        carboidratosG: '10',
+        lipidiosG: '1'
+      });
+    }
+
+    const resultado = await servico.buscarAlimentos(TENANT_ID, usuarioProfissional(), {
+      busca: 'arroz',
+      pagina: 1,
+      limite: 2
+    });
+
+    expect(resultado).toEqual(
+      expect.objectContaining({ total: 3, pagina: 1, limite: 2 })
+    );
+    expect(resultado.itens).toHaveLength(2);
+    expect(resultado.fontes).toEqual([
+      expect.objectContaining({ codigo: 'TACO', versao: '4', baseCodigo: 'principal' })
+    ]);
+  });
+
+  it('filtra a busca por fonte e versao sem mesclar alimentos de fontes diferentes', async () => {
+    const FONTE_TACO = '10000000-0000-4000-8000-000000000041';
+    const FONTE_TBCA = '10000000-0000-4000-8000-000000000042';
+    repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push(
+      { id: FONTE_TACO, codigo: 'TACO', nome: 'Tabela TACO', versao: '4', baseCodigo: 'principal', situacao: 'ativa' },
+      { id: FONTE_TBCA, codigo: 'TBCA', nome: 'Tabela TBCA', versao: '7.3', baseCodigo: 'BD-AIN', situacao: 'ativa' }
+    );
+    repositorios.get(AlimentoComposicaoOrm)!.registros.push(
+      {
+        id: '10000000-0000-4000-8000-000000000043',
+        fonteId: FONTE_TACO,
+        codigoOrigem: 'TACO-ARROZ',
+        nome: 'Arroz taco',
+        baseGramas: '100',
+        energiaKcal: '100',
+        proteinasG: '2',
+        carboidratosG: '10',
+        lipidiosG: '1'
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000044',
+        fonteId: FONTE_TBCA,
+        codigoOrigem: 'TBCA-ARROZ',
+        nome: 'Arroz tbca',
+        baseGramas: '100',
+        energiaKcal: '110',
+        proteinasG: '3',
+        carboidratosG: '11',
+        lipidiosG: '2'
+      }
+    );
+
+    const resultado = await servico.buscarAlimentos(TENANT_ID, usuarioProfissional(), {
+      busca: 'arroz',
+      pagina: 1,
+      limite: 20,
+      fonteCodigo: 'TBCA',
+      versao: '7.3'
+    });
+
+    expect(resultado.itens).toEqual([
+      expect.objectContaining({ codigoOrigem: 'TBCA-ARROZ', fonte: expect.objectContaining({ codigo: 'TBCA', versao: '7.3' }) })
+    ]);
+  });
+
+  it('escapa curinga do like para o termo do profissional nao virar busca ampla', async () => {
+    repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push({
+      id: '10000000-0000-4000-8000-000000000051',
+      codigo: 'TACO',
+      nome: 'Tabela TACO',
+      versao: '4',
+      baseCodigo: 'principal',
+      situacao: 'ativa'
+    });
+
+    await servico.buscarAlimentos(TENANT_ID, usuarioProfissional(), {
+      busca: '100%_integral',
+      pagina: 1,
+      limite: 20
+    });
+
+    const construtor = repositorios.get(AlimentoComposicaoOrm)!.createQueryBuilder.mock.results[0].value;
+    expect(construtor.where).toHaveBeenCalledWith(
+      `lower(alimento.nome) like lower(:busca) escape '${BARRA}'`,
+      { busca: `%100${BARRA}%${BARRA}_integral%` }
+    );
+  });
+
+  it('desempata a ordenacao paginada por id para a mesma linha nao cair em duas paginas', async () => {
+    // criado_em usa default now(): planos gravados na mesma transacao empatam.
+    repositorios.get(PlanoAlimentarOrm)!.registros.push({
+      id: '10000000-0000-4000-8000-000000000071',
+      tenantId: TENANT_ID,
+      pacienteId: PACIENTE_ID,
+      profissionalId: PROFISSIONAL_ID,
+      criadoPorUsuarioId: USUARIO_ID,
+      tituloCriptografado: criptografia.criptografar('Plano empatado'),
+      criadoEm: new Date('2026-08-01T12:00:00Z')
+    });
+    repositorios.get(PlanoAlimentarOrm)!.registros[0].criadoEm = new Date('2026-08-01T12:00:00Z');
+
+    await servico.listar(TENANT_ID, PACIENTE_ID, usuarioProfissional(), { pagina: 1, limite: 1 });
+
+    expect(repositorios.get(PlanoAlimentarOrm)!.findAndCount).toHaveBeenCalledWith(
+      expect.objectContaining({ order: { criadoEm: 'DESC', id: 'DESC' } })
+    );
+
+    repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push({
+      id: '10000000-0000-4000-8000-000000000072',
+      codigo: 'TACO',
+      nome: 'Tabela TACO',
+      versao: '4',
+      baseCodigo: 'principal',
+      situacao: 'ativa'
+    });
+
+    await servico.buscarAlimentos(TENANT_ID, usuarioProfissional(), { busca: 'arroz', pagina: 1, limite: 20 });
+
+    const construtor = repositorios.get(AlimentoComposicaoOrm)!.createQueryBuilder.mock.results[0].value;
+    expect(construtor.orderBy).toHaveBeenCalledWith('alimento.nome', 'ASC');
+    expect(construtor.addOrderBy).toHaveBeenCalledWith('alimento.id', 'ASC');
+  });
+
+  it('limita a pagina para offset alto nao virar varredura cara no banco', async () => {
+    await servico.listar(TENANT_ID, PACIENTE_ID, usuarioProfissional(), { pagina: 999_999_999, limite: 100 });
+
+    const consulta = repositorios.get(PlanoAlimentarOrm)!.findAndCount.mock.calls[0][0];
+    expect(consulta.skip).toBeLessThanOrEqual(100_000);
+
+    repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push({
+      id: '10000000-0000-4000-8000-000000000081',
+      codigo: 'TACO',
+      nome: 'Tabela TACO',
+      versao: '4',
+      baseCodigo: 'principal',
+      situacao: 'ativa'
+    });
+
+    await servico.buscarAlimentos(TENANT_ID, usuarioProfissional(), {
+      busca: 'arroz',
+      pagina: 999_999_999,
+      limite: 100
+    });
+
+    const construtor = repositorios.get(AlimentoComposicaoOrm)!.createQueryBuilder.mock.results[0].value;
+    expect(construtor.skip.mock.calls[0][0]).toBeLessThanOrEqual(100_000);
+  });
+
+  it('entrega a versao historica completa somente sob demanda e so dentro do escopo', async () => {
+    const VERSAO_HISTORICA = '10000000-0000-4000-8000-000000000061';
+    const REFEICAO_ID = '10000000-0000-4000-8000-000000000062';
+    repositorios.get(PlanoAlimentarVersaoOrm)!.registros.push({
+      id: VERSAO_HISTORICA,
+      tenantId: TENANT_ID,
+      planoId: PLANO_ID,
+      numero: 0,
+      criadoPorUsuarioId: USUARIO_ID,
+      publicadaEm: new Date('2026-07-01T12:00:00Z')
+    });
+    repositorios.get(PlanoAlimentarRefeicaoOrm)!.registros.push({
+      id: REFEICAO_ID,
+      tenantId: TENANT_ID,
+      versaoId: VERSAO_HISTORICA,
+      nomeCriptografado: criptografia.criptografar('Cafe historico'),
+      ordem: 0
+    });
+
+    const resultado = await servico.obterVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, 0, usuarioProfissional());
+
+    expect(resultado).toEqual(
+      expect.objectContaining({
+        numero: 0,
+        status: 'publicada',
+        refeicoes: [expect.objectContaining({ nome: 'Cafe historico' })]
+      })
+    );
+
+    await expect(
+      servico.obterVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, 99, usuarioProfissional())
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
 });

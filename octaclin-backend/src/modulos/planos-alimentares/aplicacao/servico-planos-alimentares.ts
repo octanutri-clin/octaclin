@@ -38,7 +38,10 @@ import { PlanoAlimentarVersaoOrm } from '../infraestrutura/plano-alimentar-versa
 import { PlanoAlimentarOrm } from '../infraestrutura/plano-alimentar.orm';
 import {
   AtualizarRascunhoPlanoAlimentarDto,
+  BuscarAlimentosDto,
   CriarPlanoAlimentarDto,
+  ListarPlanosAlimentaresDto,
+  PAGINA_MAXIMA,
   NutrientesPor100gDto,
   SubstituicaoPlanoAlimentarDto
 } from './dtos';
@@ -46,6 +49,11 @@ import {
 const MOTOR_CALCULO_VERSAO = '1';
 // Limiar operacional para pedir revisao humana; nao representa limite clinico universal.
 const LIMIAR_DIVERGENCIA_NUTRICIONAL = 0.3;
+
+// `%` e `_` digitados pelo profissional sao literais na busca, nao curingas do LIKE.
+function escaparCuringaLike(termo: string): string {
+  return termo.replace(/[\\%_]/g, (caractere) => `\\${caractere}`);
+}
 
 interface MedidasAntropometricasPlano {
   pesoKg?: number;
@@ -88,26 +96,63 @@ export class ServicoPlanosAlimentares {
     private readonly criptografia: CriptografiaDadosSensiveis
   ) {}
 
-  async listar(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado) {
+  async listar(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado,
+    consulta: ListarPlanosAlimentaresDto = new ListarPlanosAlimentaresDto()
+  ) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.ler');
+    const pagina = Math.min(PAGINA_MAXIMA, Math.max(1, Math.trunc(consulta.pagina ?? 1)));
+    const limite = Math.min(100, Math.max(1, Math.trunc(consulta.limite ?? 25)));
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteNoEscopo(gerenciador, tenantId, pacienteId, usuario);
-      const planos = await gerenciador.getRepository(PlanoAlimentarOrm).find({
+      const [planos, total] = await gerenciador.getRepository(PlanoAlimentarOrm).findAndCount({
         where: {
           tenantId,
           pacienteId,
           arquivadoEm: IsNull()
         },
-        order: { criadoEm: 'DESC' }
+        // `id` desempata: criado_em usa default now() e empata entre linhas da
+        // mesma transacao, o que faria OFFSET repetir ou pular um plano.
+        order: { criadoEm: 'DESC', id: 'DESC' },
+        skip: (pagina - 1) * limite,
+        take: limite
       });
-      if (!planos.length) return [];
+      if (!planos.length) return { itens: [], total, pagina, limite };
 
       const versoes = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).find({
         where: { tenantId, planoId: In(planos.map((plano) => plano.id)) },
         order: { numero: 'DESC' }
       });
-      return planos.map((plano) => this.montarResumoPlano(plano, versoes.filter((versao) => versao.planoId === plano.id)));
+      return {
+        itens: planos.map((plano) =>
+          this.montarResumoPlano(plano, versoes.filter((versao) => versao.planoId === plano.id))
+        ),
+        total,
+        pagina,
+        limite
+      };
+    });
+  }
+
+  async obterVersao(
+    tenantId: string,
+    pacienteId: string,
+    planoId: string,
+    numero: number,
+    usuario: UsuarioAutenticado
+  ) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario);
+      const versao = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
+        where: { tenantId, planoId, numero }
+      });
+      if (!versao) throw new NotFoundException('Versao do plano alimentar nao encontrada.');
+      return this.montarVersao(gerenciador, versao);
     });
   }
 
@@ -423,27 +468,48 @@ export class ServicoPlanosAlimentares {
     });
   }
 
-  async buscarAlimentos(tenantId: string, busca: string, usuario: UsuarioAutenticado) {
+  async buscarAlimentos(
+    tenantId: string,
+    usuario: UsuarioAutenticado,
+    consulta: BuscarAlimentosDto
+  ) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.ler');
-    const termo = busca.trim();
+    const termo = (consulta.busca ?? '').trim();
     if (termo.length < 2) throw new BadRequestException('Informe ao menos dois caracteres para buscar alimentos.');
+    const pagina = Math.min(PAGINA_MAXIMA, Math.max(1, Math.trunc(consulta.pagina ?? 1)));
+    const limite = Math.min(100, Math.max(1, Math.trunc(consulta.limite ?? 25)));
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const fontes = await gerenciador.getRepository(FonteComposicaoAlimentoOrm).find({
+      const fontesAtivas = await gerenciador.getRepository(FonteComposicaoAlimentoOrm).find({
         where: { situacao: 'ativa' },
         order: { nome: 'ASC', versao: 'DESC' }
       });
-      if (!fontes.length) return [];
+      const fontes = fontesAtivas.filter(
+        (fonte) =>
+          (!consulta.fonteCodigo || fonte.codigo === consulta.fonteCodigo) &&
+          (!consulta.versao || fonte.versao === consulta.versao) &&
+          (!consulta.baseCodigo || fonte.baseCodigo === consulta.baseCodigo)
+      );
+      const fontesDisponiveis = fontesAtivas.map((fonte) => ({
+        codigo: fonte.codigo,
+        nome: fonte.nome,
+        versao: fonte.versao,
+        baseCodigo: fonte.baseCodigo
+      }));
+      if (!fontes.length) return { itens: [], total: 0, pagina, limite, fontes: fontesDisponiveis };
       const fontePorId = new Map(fontes.map((fonte) => [fonte.id, fonte]));
-      const alimentos = await gerenciador
+      const [alimentos, total] = await gerenciador
         .getRepository(AlimentoComposicaoOrm)
         .createQueryBuilder('alimento')
-        .where('lower(alimento.nome) like lower(:busca)', { busca: `%${termo}%` })
+        .where("lower(alimento.nome) like lower(:busca) escape '\\'", { busca: `%${escaparCuringaLike(termo)}%` })
         .andWhere('alimento.fonte_id in (:...fonteIds)', { fonteIds: [...fontePorId.keys()] })
         .orderBy('alimento.nome', 'ASC')
-        .take(50)
-        .getMany();
-      return alimentos.filter((alimento) => fontePorId.has(alimento.fonteId)).map((alimento) => ({
+        // `nome` nao e unico: sem desempate o OFFSET repete ou pula alimento.
+        .addOrderBy('alimento.id', 'ASC')
+        .skip((pagina - 1) * limite)
+        .take(limite)
+        .getManyAndCount();
+      const itens = alimentos.filter((alimento) => fontePorId.has(alimento.fonteId)).map((alimento) => ({
         id: alimento.id,
         codigoOrigem: alimento.codigoOrigem,
         nome: alimento.nome,
@@ -465,6 +531,7 @@ export class ServicoPlanosAlimentares {
             }
           : undefined
       }));
+      return { itens, total, pagina, limite, fontes: fontesDisponiveis };
     });
   }
 

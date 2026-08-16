@@ -21,6 +21,7 @@ describe('ControladorPlanosAlimentares', () => {
     servico = {
       listar: jest.fn().mockResolvedValue([]),
       obter: jest.fn().mockResolvedValue({ id: planoId }),
+      obterVersao: jest.fn().mockResolvedValue({ numero: 0 }),
       criar: jest.fn().mockResolvedValue({ id: planoId }),
       obterRascunho: jest.fn().mockResolvedValue({ id: planoId }),
       atualizarRascunho: jest.fn().mockResolvedValue({ id: planoId }),
@@ -39,7 +40,7 @@ describe('ControladorPlanosAlimentares', () => {
     ]);
   });
 
-  it.each(['listar', 'obter', 'obterRascunho'] as const)('usa somente planos_alimentares.ler em %s', (metodo) => {
+  it.each(['listar', 'obter', 'obterRascunho', 'obterVersao'] as const)('usa somente planos_alimentares.ler em %s', (metodo) => {
     expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPlanosAlimentares.prototype[metodo])).toEqual([
       'planos_alimentares.ler'
     ]);
@@ -55,11 +56,17 @@ describe('ControladorPlanosAlimentares', () => {
   );
 
   it('encaminha tenant, paciente, plano e usuario para o servico', async () => {
+    await controlador.listar(usuario, pacienteId, { pagina: 1, limite: 25 });
+    expect(servico.listar).toHaveBeenCalledWith(usuario.tenantId, pacienteId, usuario, { pagina: 1, limite: 25 });
+
     await controlador.obter(usuario, pacienteId, planoId);
     expect(servico.obter).toHaveBeenCalledWith(usuario.tenantId, pacienteId, planoId, usuario);
 
     await controlador.publicar(usuario, pacienteId, planoId);
     expect(servico.publicar).toHaveBeenCalledWith(usuario.tenantId, pacienteId, planoId, usuario);
+
+    await controlador.obterVersao(usuario, pacienteId, planoId, 0);
+    expect(servico.obterVersao).toHaveBeenCalledWith(usuario.tenantId, pacienteId, planoId, 0, usuario);
   });
 });
 
@@ -75,7 +82,8 @@ describe('ControladorCatalogoAlimentos', () => {
     expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorCatalogoAlimentos.prototype.buscar)).toEqual([
       'planos_alimentares.ler'
     ]);
-    await controlador.buscar(usuario, 'arroz');
-    expect(servico.buscarAlimentos).toHaveBeenCalledWith(usuario.tenantId, 'arroz', usuario);
+    const consulta = { busca: 'arroz', pagina: 1, limite: 25 };
+    await controlador.buscar(usuario, consulta);
+    expect(servico.buscarAlimentos).toHaveBeenCalledWith(usuario.tenantId, usuario, consulta);
   });
 });
