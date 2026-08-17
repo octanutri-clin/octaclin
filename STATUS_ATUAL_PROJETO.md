@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-16.
+Atualizado em 2026-08-17.
 
 ## Snapshot
 
@@ -26,9 +26,13 @@ Atualizado em 2026-08-16.
   busca de alimentos, adicionou filtros por fonte/versao/base sobre as fontes
   ativas, escapou o curinga do LIKE (buscar `100%` casava com o catalogo
   inteiro), abriu rota de versao historica completa sob demanda com escopo
-  revalidado e passou a filtrar os query params no BFF por allowlist. Editor de
-  refeicoes, modelos, substituicoes, portal, adesao e lista de compras seguem
-  pendentes.
+  revalidado e passou a filtrar os query params no BFF por allowlist. O
+  Incremento 4, concluido em 2026-08-17 e sem migration, deu ao editor uma
+  previa nutricional persistente (aside no desktop, folha inferior no mobile)
+  que compara totais e metas pelo mesmo limiar de 30% usado para barrar a
+  publicacao, reduziu a densidade da linha de alimento e levou o filtro
+  multifonte para a busca. Modelos, grupos de substituicao, receitas, portal,
+  adesao e lista de compras seguem pendentes e dependem de migration.
 - Fase 232 concluida e integrada: operacao de lancamento com janela controlada,
   responsaveis, gates GO/NO-GO, rollback, comunicacao e exercicio sintetico P0.
   A decisao atual permanece NO-GO para cliente real ate identidade publica,
