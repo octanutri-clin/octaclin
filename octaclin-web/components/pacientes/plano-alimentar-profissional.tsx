@@ -33,6 +33,7 @@ import {
   revisarPlanoAlimentar,
   type AlimentoComposicaoApi,
   type AtualizarRascunhoPlanoAlimentarEntrada,
+  type FonteCatalogoApi,
   type FormulaEnergeticaApi,
   type NutrientesPor100gApi,
   type PlanoAlimentarApi,
@@ -45,6 +46,8 @@ import {
   listarAvaliacoesAntropometricas,
   type AvaliacaoAntropometricaApi
 } from '@/lib/prontuario-api';
+import { PainelNutricional } from '@/components/pacientes/painel-nutricional';
+import { nutrientesDaPorcao } from '@/lib/nutricao-plano';
 
 const nutrientesVazios: NutrientesPor100gApi = {
   energiaKcal: 0,
@@ -298,6 +301,16 @@ function validarFormulario(formulario: FormularioPlano): string[] {
   return erros;
 }
 
+// A identidade de uma fonte e a tripla `(codigo, versao, baseCodigo)` — e o que
+// o indice unico do backend garante. `codigo` sozinho repete: a propria fase
+// modela a TBCA 7.3 como duas fontes ativas (bases BD-AIN e BD-B) com o mesmo
+// codigo e a mesma versao. Filtrar so por codigo mesclaria as duas em silencio.
+function identificarFonte(fonte: FonteCatalogoApi): string {
+  // Serializa em JSON em vez de concatenar: nenhum delimitador escolhido a
+  // mao seria comprovadamente impossivel dentro de codigo, versao ou base.
+  return JSON.stringify([fonte.codigo, fonte.versao, fonte.baseCodigo ?? '']);
+}
+
 interface EditorAlimentoProps {
   pacienteId: string;
   rotulo: string;
@@ -309,13 +322,20 @@ interface EditorAlimentoProps {
 function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: EditorAlimentoProps) {
   const id = useId();
   const [busca, setBusca] = useState('');
+  // Guarda a fonte escolhida, e nao a chave: assim o efeito de busca depende so
+  // da escolha do profissional e nunca de `fontes`, que ele proprio preenche —
+  // o que o faria disparar a si mesmo em laco.
+  const [fonteSelecionada, setFonteSelecionada] = useState<FonteCatalogoApi | null>(null);
   const [resultados, setResultados] = useState<AlimentoComposicaoApi[]>([]);
+  const [fontes, setFontes] = useState<FonteCatalogoApi[]>([]);
+  const [total, setTotal] = useState(0);
   const [buscando, setBuscando] = useState(false);
   const [erroBusca, setErroBusca] = useState<string | null>(null);
 
   useEffect(() => {
     if (busca.trim().length < 2) {
       setResultados([]);
+      setTotal(0);
       setErroBusca(null);
       return;
     }
@@ -326,10 +346,31 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
       try {
         const pagina = await buscarAlimentosPlanoAlimentar(
           pacienteId,
-          { busca: busca.trim(), pagina: 1, limite: 50 },
+          {
+            busca: busca.trim(),
+            pagina: 1,
+            limite: 50,
+            // Os tres campos vao juntos: mandar so o codigo devolveria todas as
+            // versoes e bases daquela fonte misturadas num resultado unico.
+            fonteCodigo: fonteSelecionada?.codigo,
+            versao: fonteSelecionada?.versao,
+            baseCodigo: fonteSelecionada?.baseCodigo
+          },
           controle.signal
         );
         setResultados(pagina.itens);
+        setTotal(pagina.total);
+        // As fontes ativas vem junto do resultado e independem do filtro
+        // aplicado, entao o seletor nao se esvazia ao filtrar.
+        setFontes(pagina.fontes);
+        // Se a fonte escolhida saiu das ativas (foi suspensa ou revogada), o
+        // filtro e descartado. Manter valeria um recorte que o seletor nao
+        // consegue mais exibir nem limpar.
+        setFonteSelecionada((atual) =>
+          atual && !pagina.fontes.some((fonte) => identificarFonte(fonte) === identificarFonte(atual))
+            ? null
+            : atual
+        );
       } catch (erro) {
         if (!controle.signal.aborted) {
           setErroBusca(erro instanceof Error ? erro.message : 'Falha ao buscar alimentos.');
@@ -342,7 +383,7 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
       window.clearTimeout(temporizador);
       controle.abort();
     };
-  }, [busca, pacienteId]);
+  }, [busca, fonteSelecionada, pacienteId]);
 
   function selecionar(alimento: AlimentoComposicaoApi) {
     if (!alimento.nutrientesPor100g || !alimento.disponivelParaCalculo) return;
@@ -380,39 +421,76 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
       </div>
 
       <div className="grid gap-2">
-        <Rotulo htmlFor={`${id}-busca`}>Buscar na TACO</Rotulo>
-        <div className="relative">
-          <Search aria-hidden="true" size={16} className="absolute left-3 top-3.5 text-texto-suave" />
-          <Campo
-            id={`${id}-busca`}
-            value={busca}
-            onChange={(evento) => setBusca(evento.target.value)}
-            className="pl-9"
-            placeholder="Digite pelo menos 2 caracteres"
-            autoComplete="off"
-          />
+        <Rotulo htmlFor={`${id}-busca`}>Buscar no catalogo</Rotulo>
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_12rem]">
+          <div className="relative">
+            <Search aria-hidden="true" size={16} className="absolute left-3 top-3.5 text-texto-suave" />
+            <Campo
+              id={`${id}-busca`}
+              value={busca}
+              onChange={(evento) => setBusca(evento.target.value)}
+              className="pl-9"
+              placeholder="Digite pelo menos 2 caracteres"
+              autoComplete="off"
+            />
+          </div>
+          {/* Com uma unica fonte ativa o seletor seria uma escolha sem
+              alternativa. Mas se ja houver filtro aplicado ele continua a
+              vista, senao o filtro seguiria valendo sem controle para limpa-lo. */}
+          {fontes.length > 1 || fonteSelecionada ? (
+            <div className="grid gap-1">
+              <Rotulo htmlFor={`${id}-fonte`} className="sr-only">Fonte do catalogo</Rotulo>
+              <Selecao
+                id={`${id}-fonte`}
+                value={fonteSelecionada ? identificarFonte(fonteSelecionada) : ''}
+                onChange={(evento) =>
+                  setFonteSelecionada(
+                    fontes.find((fonte) => identificarFonte(fonte) === evento.target.value) ?? null
+                  )
+                }
+              >
+                <option value="">Todas as fontes</option>
+                {fontes.map((fonte) => (
+                  <option key={identificarFonte(fonte)} value={identificarFonte(fonte)}>
+                    {[fonte.nome, fonte.versao, fonte.baseCodigo].filter(Boolean).join(' ')}
+                  </option>
+                ))}
+              </Selecao>
+            </div>
+          ) : null}
         </div>
         {buscando ? <p role="status" className="text-xs text-texto-suave">Buscando no catalogo...</p> : null}
         {erroBusca ? <p role="alert" className="text-xs text-perigo">{erroBusca}</p> : null}
         {resultados.length ? (
-          <ul className="max-h-52 overflow-y-auto rounded-md border border-linha bg-white" aria-label="Resultados da busca de alimentos">
-            {resultados.map((alimento) => (
-              <li key={alimento.id} className="border-b border-linha last:border-b-0">
-                <button
-                  type="button"
-                  disabled={!alimento.disponivelParaCalculo}
-                  onClick={() => selecionar(alimento)}
-                  className="min-h-11 w-full px-3 py-2 text-left text-sm hover:bg-superficie-hover disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-primaria"
-                >
-                  <span className="block font-medium text-tinta">{alimento.nome}</span>
-                  <span className="block text-xs text-texto-suave">
-                    {alimento.preparacao ?? alimento.fonte?.versao ?? 'TACO'}
-                    {!alimento.disponivelParaCalculo ? ' - composicao incompleta' : ''}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <>
+            <p role="status" className="text-xs text-texto-suave">
+              {total > resultados.length
+                ? `Mostrando ${resultados.length} de ${total} alimentos. Refine a busca para ver os demais.`
+                : `${total} alimento${total === 1 ? '' : 's'} encontrado${total === 1 ? '' : 's'}.`}
+            </p>
+            <ul className="max-h-52 overflow-y-auto rounded-md border border-linha bg-white" aria-label="Resultados da busca de alimentos">
+              {resultados.map((alimento) => (
+                <li key={alimento.id} className="border-b border-linha last:border-b-0">
+                  <button
+                    type="button"
+                    disabled={!alimento.disponivelParaCalculo}
+                    onClick={() => selecionar(alimento)}
+                    className="min-h-11 w-full px-3 py-2 text-left text-sm hover:bg-superficie-hover disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-primaria"
+                  >
+                    <span className="block font-medium text-tinta">{alimento.nome}</span>
+                    <span className="block text-xs text-texto-suave">
+                      {/* Fonte e versao sempre visiveis: a mesma preparacao tem
+                          valores diferentes entre tabelas, e a escolha e clinica. */}
+                      {[alimento.preparacao, alimento.fonte ? `${alimento.fonte.nome} ${alimento.fonte.versao}` : null]
+                        .filter(Boolean)
+                        .join(' - ') || 'Catalogo nutricional'}
+                      {!alimento.disponivelParaCalculo ? ' - composicao incompleta' : ''}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
         ) : null}
       </div>
 
@@ -467,24 +545,32 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
       </div>
 
       {valor.alimentoComposicaoId ? (
-        <button
-          type="button"
-          onClick={() => aoAlterar({ ...valor, alimentoComposicaoId: undefined, fonteRotulo: undefined })}
-          className="w-fit text-xs font-semibold text-primaria underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
-        >
-          Transformar em item manual
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Item de catalogo nao tem campos editaveis de nutriente, entao a
+              porcao calculada e o unico retorno nutricional da linha. */}
+          <p className="text-xs tabular-nums text-texto-suave">
+            {(() => {
+              const porcao = nutrientesDaPorcao(valor.nutrientesPor100g, valor.porcaoGramas);
+              return `${formatarNumero(porcao.energiaKcal)} kcal - C ${formatarNumero(porcao.carboidratosG, 1)} g - P ${formatarNumero(porcao.proteinasG, 1)} g - G ${formatarNumero(porcao.gordurasG, 1)} g`;
+            })()}
+          </p>
+          <button
+            type="button"
+            onClick={() => aoAlterar({ ...valor, alimentoComposicaoId: undefined, fonteRotulo: undefined })}
+            className="flex min-h-11 w-fit items-center text-xs font-semibold text-primaria underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+          >
+            Transformar em item manual
+          </button>
+        </div>
       ) : (
         <fieldset className="grid gap-2 rounded-md bg-superficie p-3">
           <legend className="px-1 text-xs font-semibold uppercase text-texto-suave">Nutrientes por 100 g</legend>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {([
               ['energiaKcal', 'Energia (kcal)'],
               ['proteinasG', 'Proteinas (g)'],
               ['carboidratosG', 'Carboidratos (g)'],
-              ['gordurasG', 'Gorduras (g)'],
-              ['fibrasG', 'Fibras (g)'],
-              ['sodioMg', 'Sodio (mg)']
+              ['gordurasG', 'Gorduras (g)']
             ] as const).map(([campo, rotuloNutriente]) => (
               <label key={campo} className="grid gap-1 text-xs font-semibold text-texto-suave">
                 {rotuloNutriente}
@@ -496,11 +582,39 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
                   onChange={(evento) =>
                     alterarNutriente(campo, evento.target.value === '' ? undefined : Number(evento.target.value))
                   }
-                  required={campo !== 'fibrasG' && campo !== 'sodioMg'}
+                  required
                 />
               </label>
             ))}
           </div>
+          {/* Fibras e sodio ficam recolhidos para a linha respirar. Os quatro
+              campos acima sao obrigatorios e por isso continuam a vista: um
+              campo required escondido reprova o envio sem o profissional ver
+              onde. */}
+          <details className="mt-1">
+            <summary className="flex min-h-11 w-fit cursor-pointer items-center text-xs font-semibold text-primaria focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria">
+              Mais nutrientes (opcional)
+            </summary>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              {([
+                ['fibrasG', 'Fibras (g)'],
+                ['sodioMg', 'Sodio (mg)']
+              ] as const).map(([campo, rotuloNutriente]) => (
+                <label key={campo} className="grid gap-1 text-xs font-semibold text-texto-suave">
+                  {rotuloNutriente}
+                  <Campo
+                    type="number"
+                    min="0"
+                    step="0.0001"
+                    value={valor.nutrientesPor100g[campo] ?? ''}
+                    onChange={(evento) =>
+                      alterarNutriente(campo, evento.target.value === '' ? undefined : Number(evento.target.value))
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+          </details>
         </fieldset>
       )}
     </fieldset>
@@ -627,6 +741,26 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const sequenciaCarregamento = useRef(0);
 
   const somaMacros = formulario.carboidratosBasisPoints + formulario.proteinasBasisPoints + formulario.gordurasBasisPoints;
+
+  const refeicoesPrevistas = formulario.refeicoes.map((refeicao) => ({
+    itens: refeicao.itens.map((item) => ({
+      porcaoGramas: item.porcaoGramas,
+      nutrientesPor100g: item.nutrientesPor100g
+    }))
+  }));
+  const pesoTotalGramas = refeicoesPrevistas.reduce(
+    (soma, refeicao) => soma + refeicao.itens.reduce((parcial, item) => parcial + (item.porcaoGramas || 0), 0),
+    0
+  );
+  // As metas vem do ultimo rascunho salvo. Enquanto houver alteracao pendente,
+  // formula/fator/ajuste podem ja ter mudado, entao a comparacao e sinalizada
+  // como defasada em vez de aparentar precisao que nao tem.
+  const metasSalvas = plano?.draft?.calculo
+    ? {
+        metaEnergeticaKcal: plano.draft.calculo.metaEnergeticaKcal,
+        metasMacronutrientes: plano.draft.calculo.metasMacronutrientes
+      }
+    : undefined;
 
   const aplicarPlano = useCallback((detalhe: PlanoAlimentarApi | null, avaliacoesAtuais: AvaliacaoAntropometricaApi[] = []) => {
     setPlano(detalhe);
@@ -832,7 +966,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
               </Cartao>
 
               {podeGerenciar ? (plano.draft ? (
-                <form onSubmit={(evento) => { evento.preventDefault(); void salvar(); }} className="grid gap-4">
+                <form onSubmit={(evento) => { evento.preventDefault(); void salvar(); }} className="grid gap-4 pb-16 lg:pb-0">
                   {errosFormulario.length ? (
                     <div role="alert" className="rounded-md border border-perigo-borda bg-perigo-suave p-4 text-sm text-perigo-forte">
                       <p className="font-semibold">Revise o rascunho antes de salvar:</p>
@@ -899,6 +1033,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Observacoes para o plano<AreaTexto value={formulario.observacoes} onChange={(evento) => atualizar((atual) => ({ ...atual, observacoes: evento.target.value }))} maxLength={8000} /></label>
                   </fieldset>
 
+                  <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
                   <div className="grid gap-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div><h3 className="text-base font-semibold text-tinta">Refeicoes e alimentos</h3><p className="text-sm text-texto-suave">A composicao selecionada e congelada quando a versao e publicada.</p></div>
@@ -937,6 +1072,13 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       </section>
                     ))}
                   </div>
+                    <PainelNutricional
+                      refeicoes={refeicoesPrevistas}
+                      pesoTotalGramas={pesoTotalGramas}
+                      metas={metasSalvas}
+                      metasDesatualizadas={alterado}
+                    />
+                  </div>
 
                   {plano.draft.calculo ? (
                     <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
@@ -971,7 +1113,11 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     </section>
                   ) : null}
 
-                  <div className="sticky bottom-3 z-10 flex flex-wrap justify-end gap-2 rounded-md border border-linha bg-white p-3 shadow-cartao">
+                  {/* No mobile a previa nutricional ocupa a base da tela. A
+                      barra de acoes sobe e fica acima dela no empilhamento:
+                      com a folha expandida, tabular ate Salvar deixaria o foco
+                      escondido atras dela (WCAG 2.2 SC 2.4.11). */}
+                  <div className="sticky bottom-20 z-30 flex flex-wrap justify-end gap-2 rounded-md border border-linha bg-white p-3 shadow-cartao lg:bottom-3 lg:z-10">
                     <Botao type="submit" variante="primario" carregando={operacao === 'salvando'} disabled={Boolean(operacao)}><Save size={16} /> Salvar rascunho</Botao>
                     <Botao type="button" carregando={operacao === 'revisando'} disabled={alterado || Boolean(operacao) || !plano.draft.calculo} onClick={() => void executar('revisando', () => revisarPlanoAlimentar(pacienteId, plano.id), 'Plano revisado. Confira a versao antes de publicar.')}><ClipboardCheck size={16} /> Revisar</Botao>
                     <Botao type="button" variante="primario" carregando={operacao === 'publicando'} disabled={alterado || Boolean(operacao) || !plano.draft.revisadaEm} onClick={() => void executar('publicando', () => publicarPlanoAlimentar(pacienteId, plano.id), 'Plano publicado para o paciente.')}><CheckCircle2 size={16} /> Publicar</Botao>

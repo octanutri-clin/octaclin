@@ -165,6 +165,106 @@ e web, lint web, `test:authz` completo (6 suites sem falha, 12 asserts do BFF de
 O proximo incremento amplia o editor profissional de refeicoes sobre esses
 contratos. TBCA, IBGE/POF e Tucunduva continuam desabilitadas.
 
+## Incremento 4 - previa nutricional, densidade da linha e fonte na busca
+
+Concluido em 2026-08-17, sem migration de banco:
+
+- entrou `octaclin-web/lib/nutricao-plano.ts`, um modulo puro que calcula a
+  previa nutricional do rascunho enquanto o profissional digita. Antes os
+  totais so apareciam depois de salvar, entao compor um plano era um ciclo de
+  digitar, salvar e conferir;
+- o modulo espelha deliberadamente o backend, nao aproxima: usa o mesmo
+  `arredondar4` com epsilon `1e-10`, deriva a porcao apenas de `porcaoGramas`
+  (a `quantidade` e a medida caseira exibida, nao um multiplicador) e repete a
+  regra de `calcularTotaisPlano` de que um unico item sem fibras ou sodio torna
+  o total **desconhecido** em vez de zero. O teste fixa o resultado contra o
+  mesmo fixture de `calculo-nutricional.spec.ts` do backend, entao uma mudanca
+  de arredondamento la quebra o teste aqui em vez de gerar divergencia silenciosa;
+- `PainelNutricional` e um `<details>` unico: aside sticky a partir de `lg` e
+  folha inferior fixa no mobile. Um so no DOM, uma so regiao viva, divulgacao
+  nativa por teclado — em vez de duplicar o conteudo por breakpoint e duplicar
+  tambem os anuncios de leitor de tela;
+- o painel compara os totais com as metas do **ultimo rascunho salvo** e marca a
+  comparacao como defasada enquanto houver alteracao pendente. O cliente nao
+  reimplementa Mifflin-St Jeor, fator de atividade nem ajuste energetico: quem
+  estima gasto continua sendo o servidor;
+- a barra de desvio usa o mesmo limiar de 30% que bloqueia a publicacao no
+  backend, entao o painel antecipa o resultado da publicacao em vez de ser um
+  indicador decorativo. O numero, o sinal e o percentual aparecem em texto; a
+  barra e leitura secundaria e nenhum estado depende so de cor;
+- a linha de alimento ficou menos densa: dos seis campos de nutriente manual,
+  os quatro obrigatorios seguem a vista e apenas fibras e sodio recolhem atras
+  de `Mais nutrientes (opcional)`. Campo `required` escondido reprovaria o envio
+  sem o profissional ver onde;
+- item vindo do catalogo passou a mostrar energia e macros da porcao na propria
+  linha. Antes o profissional escolhia um alimento da TACO e a linha nao dava
+  retorno nutricional nenhum;
+- a busca passou a consumir o que o Incremento 3 ja devolvia e a interface
+  ignorava: seletor de fonte alimentado por `fontes`, contagem real vinda de
+  `total` (`Mostrando 50 de 214`) e fonte com versao visivel em cada resultado.
+  O seletor so aparece com mais de uma fonte ativa, entao com a TACO sozinha
+  nao vira uma escolha sem alternativa.
+
+Revisao independente do incremento (React e acessibilidade), com quatro achados
+corrigidos ainda dentro dele:
+
+- **fonte filtrada pelo campo errado**: o seletor usava `codigo` como valor,
+  mas o indice unico do backend e `(catalogo_id, versao, base_codigo)` —
+  `codigo` sozinho repete. A propria fase modela a TBCA 7.3 como duas fontes
+  ativas (bases `BD-AIN` e `BD-B`) com o mesmo codigo e a mesma versao, entao
+  filtrar por codigo devolveria as duas mescladas num resultado unico, que e
+  exatamente a mescla silenciosa que o criterio de aceite proibe. A identidade
+  passou a ser a tripla completa e a busca envia `fonteCodigo`, `versao` e
+  `baseCodigo` juntos — parametros que o Incremento 3 ja aceitava e a interface
+  ignorava;
+- **foco escondido atras da folha (WCAG 2.2 SC 2.4.11, AA)**: com a previa
+  expandida no mobile, tabular ate `Salvar rascunho` levava o foco para tras do
+  painel opaco. A barra de acoes passou a ficar acima dele no empilhamento e o
+  corpo da folha ganhou espaco inferior para nao terminar sob a barra. A folha
+  tambem passou a abrir recolhida no celular, onde cobriria 60% da tela logo no
+  carregamento;
+- **regiao viva grande demais**: o corpo inteiro do painel estava sob
+  `aria-live="polite"` e os totais mudam a cada tecla, entao o leitor de tela
+  releria macros e todas as barras de desvio a cada digito. A regiao viva ficou
+  restrita a frase de alerta, que so muda ao cruzar o limiar;
+- **barra de desvio anunciada em duplicidade**: `role="img"` com `aria-label`
+  repetia a informacao que a linha de texto acima ja da por completo. A barra
+  virou decorativa (`aria-hidden`), sem perda de informacao para quem usa
+  leitor de tela.
+
+Tambem entraram dois ajustes menores: alvo de toque de 44 px no `summary` de
+`Mais nutrientes` e no botao `Transformar em item manual`, que estavam fora do
+padrao ja seguido pelos demais controles; e limpeza automatica do filtro quando
+a fonte escolhida deixa de estar ativa, para nao valer um recorte que o seletor
+nao consegue mais exibir nem limpar.
+
+Confirmado na revisao, sem alteracao: o debounce da busca com `AbortController`
+nao tem race entre requisicoes concorrentes; as chaves de lista sao estaveis e
+nenhuma usa indice; o `<details>` controlado nao dessincroniza do DOM; os campos
+obrigatorios ficam fora do collapse de proposito; e o rotulo `sr-only` do
+seletor de fonte esta corretamente associado. A memoizacao de `totaisPrevistos`
+foi avaliada e dispensada: no pior caso do DTO sao poucos milissegundos por
+tecla, e otimizar sem medir jank real seria complexidade sem retorno.
+
+Decisao registrada: a previa e calculada no cliente, e nao por uma rota de
+calculo no servidor. A fase exige que o cliente nunca seja autoridade sobre
+calorias e macros, e ele nao e — o backend recalcula tudo ao salvar e e ele
+quem barra a publicacao. Uma rota por tecla digitada nao entregaria a
+persistencia que o painel exige, e o risco de divergencia foi tratado onde ele
+mora: o teste do modulo esta preso ao fixture do backend, e o painel diz na
+propria tela que o valor oficial e recalculado ao salvar.
+
+Fora do escopo deste incremento, por dependerem de tabelas novas: receitas,
+biblioteca de refeicoes prontas, favoritos, recentes, alimentos da clinica e do
+profissional, e modelos com origem explicita. Todos exigem migration e entram no
+Incremento 5, que para no gate de banco.
+
+Debito registrado, nao bloqueante: `test:authz` e `test:nutricao-plano` nao
+rodam no CI — o job web executa apenas `lint`, `typecheck`,
+`test:seguranca-operacional`, `build` e `test:seguranca-runtime`. Os testes de
+autorizacao do BFF de planos alimentares e o novo teste da previa sao portanto
+gates locais, sem protecao de regressao automatica.
+
 ## Escopo funcional
 
 ### 1. Estrutura e ciclo de vida do plano

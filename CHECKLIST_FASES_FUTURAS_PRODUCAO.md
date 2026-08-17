@@ -1670,8 +1670,37 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `diff --check` e scanner de secrets. O `catalogo-taco.spec.ts` falha apenas
     em working tree Windows com `core.autocrlf=true`; a mesma falha foi
     reproduzida em `main` limpo e nao vem desta mudanca.
-  - Proximo incremento: ampliar o editor profissional de refeicoes sobre esses
-    contratos. TBCA, IBGE/POF e Tucunduva continuam desabilitadas.
+  - Incremento 4 concluido em 2026-08-17, sem migration: previa nutricional
+    persistente no editor (aside sticky no desktop, folha inferior no mobile),
+    calculada no cliente por modulo puro que espelha o arredondamento e as
+    regras do backend e cujo teste esta preso ao fixture de
+    `calculo-nutricional.spec.ts`. A barra de desvio usa o mesmo limiar de 30%
+    que bloqueia a publicacao, entao o painel antecipa a publicacao. A linha de
+    alimento recolheu fibras/sodio (os quatro nutrientes obrigatorios seguem a
+    vista) e passou a mostrar energia e macros da porcao para item de catalogo.
+    A busca ganhou seletor de fonte, contagem real e fonte/versao por resultado,
+    consumindo o que o Incremento 3 ja devolvia.
+  - Decisao do Incremento 4: a previa e do cliente, nao de uma rota de calculo.
+    O backend segue autoridade — recalcula ao salvar e barra a publicacao — e o
+    painel declara isso na tela. Receitas, refeicoes prontas, favoritos,
+    recentes, alimentos da clinica/profissional e modelos ficaram fora por
+    exigirem tabelas novas e entram no Incremento 5, que para no gate de banco.
+  - Revisao independente do Incremento 4 corrigiu quatro achados dentro do
+    proprio incremento: filtro de fonte usando `codigo` (nao unico — o indice e
+    `(catalogo_id, versao, base_codigo)` e a TBCA 7.3 tem duas bases ativas com
+    mesmo codigo e versao, o que produziria a mescla silenciosa que o criterio
+    de aceite proibe; passou a enviar a tripla completa); foco escondido atras
+    da folha inferior no mobile (WCAG 2.2 SC 2.4.11); regiao `aria-live`
+    cobrindo o painel inteiro e reanunciando tudo a cada tecla; e barra de
+    desvio com `role="img"` duplicando o texto adjacente. Mais dois ajustes
+    menores: alvo de toque de 44 px em dois controles e limpeza do filtro
+    quando a fonte escolhida deixa de estar ativa. Sem achado critico.
+  - Debito nao bloqueante do Incremento 4: `test:authz` e `test:nutricao-plano`
+    nao rodam no CI. O job web executa apenas `lint`, `typecheck`,
+    `test:seguranca-operacional`, `build` e `test:seguranca-runtime`, entao os
+    testes de autorizacao do BFF de planos e o da previa sao gates locais.
+  - Proximo incremento: modelos, grupos de substituicao e demais recursos que
+    dependem de migration. TBCA, IBGE/POF e Tucunduva continuam desabilitadas.
   - Especificacao: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
   - Decisao de fontes: `DECISAO_FONTES_CATALOGO_FASE_234.md`.
 
