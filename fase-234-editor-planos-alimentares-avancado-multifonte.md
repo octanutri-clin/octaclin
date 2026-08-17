@@ -265,6 +265,80 @@ rodam no CI — o job web executa apenas `lint`, `typecheck`,
 autorizacao do BFF de planos alimentares e o novo teste da previa sao portanto
 gates locais, sem protecao de regressao automatica.
 
+## Incremento 5 - modelos de plano alimentar
+
+Concluido em 2026-08-17. **Tem migration (`1031`), ainda nao aplicada em banco
+nenhum** — aguarda o gate de backup, banco identificado e execucao primeiro na
+integracao.
+
+Duas das tres coisas que o escopo parecia exigir nao precisaram de tabela:
+
+- **grupos de substituicao nao viraram tabela**: `plano_alimentar_substituicoes`
+  ja e a lista ordenada ancorada no item, com `unique (tenant_id, item_id,
+  ordem)`. O grupo `escolha uma opcao` *e* o item. Uma tabela de grupos teria
+  exatamente uma linha por item — indirecao sem informacao;
+- **modelos de origem `catalogo` nao viraram tabela**: o precedente da casa sao
+  os `MODELOS_QUESTIONARIO` da Fase 71, constantes em codigo. Mas a investigacao
+  mostrou um impedimento concreto para faze-los agora: um modelo em codigo nao
+  pode guardar `alimentoComposicaoId`, porque esse UUID e gerado por banco e
+  difere entre a base de integracao e a de producao. Um modelo de catalogo
+  portavel precisa referenciar alimento por `(fonte, versao, base,
+  codigo_origem)` — o par unico que `ux_alimentos_composicao_fonte_codigo` ja
+  garante — e resolver o UUID ao aplicar. Fica registrado para quando essa
+  resolucao existir.
+
+O que entrou:
+
+- migration `1031`, aditiva, criando `modelos_plano_alimentar` com RLS
+  habilitada e forcada, politica por `app.tenant_id`, FKs compostas por tenant
+  para `profissionais` e `usuarios`, e `unique (tenant_id, id)`;
+- constraint `modelos_plano_alimentar_origem_profissional_check`: modelo
+  `pessoal` exige profissional, modelo `clinica` proibe. Preso a um profissional,
+  o modelo da clinica deixaria de ser compartilhado no dia em que esse
+  profissional fosse desligado;
+- conteudo gravado como snapshot criptografado em JSON, e nao espelhado em
+  tabelas de refeicao e item: um modelo existe para ser copiado para dentro de um
+  rascunho, nunca para ser consultado item a item. `total_refeicoes` e
+  `total_itens` ficam em claro para a listagem mostrar o tamanho do modelo sem
+  descriptografar o conteudo de cada linha;
+- `ServicoModelosPlanoAlimentar` em arquivo proprio — o servico de planos ja
+  passava de 1.100 linhas;
+- visibilidade aplicada **na consulta**, e nao depois de buscar: pos-filtrar
+  deixaria o `total` da paginacao contando modelos que o profissional nao pode
+  ver, vazando quantos modelos os colegas mantem. Modelo pessoal de outro
+  profissional responde 404, e nao 403, para nao confirmar que existe;
+- rotas `GET`/`POST /planos-alimentares/modelos` e
+  `GET`/`DELETE /planos-alimentares/modelos/:modeloId`, com BFF por allowlist. O
+  `profissionalId` vindo do cliente e descartado na fronteira: deixar o cliente
+  escolher de quem sao os modelos pessoais listados contornaria o escopo.
+
+Decisao registrada: **aplicar um modelo nao tem rota propria**. O cliente le o
+modelo e envia as refeicoes pelo salvamento de rascunho que ja existe, que e
+onde a composicao e resolvida contra o catalogo e a fonte inativa e recusada
+(`Fonte do alimento nao esta ativa para uso clinico.`). Uma rota de aplicacao
+duplicaria essa validacao, e validacao clinica duplicada e validacao que uma
+hora diverge. O que faltava era avisar **antes** de aplicar: `obter` devolve
+`alimentosIndisponiveis`, para o profissional ver o que saiu do catalogo em vez
+de descobrir no salvamento, num erro que nao diz qual item quebrou.
+
+Detalhe que so apareceu ao ligar a interface: `entradaAlimento` omite descricao
+e nutrientes quando o item vem do catalogo, entao salvar o modelo por ela
+produziria linhas sem rotulo ao aplicar. O modelo guarda o item completo — o
+`ValidationPipe` global usa `whitelist` com `forbidNonWhitelisted`, e ambos os
+campos sao propriedades declaradas do DTO, entao passam.
+
+Validacao do incremento: 138 suites e 931 testes backend (o unico vermelho segue
+sendo o `catalogo-taco.spec.ts` ambiental de CRLF em Windows, ja reproduzido em
+`main` limpo), typecheck backend e web, lint web, `test:authz` (7 suites, 16
+asserts do BFF de planos), `test:next15` com 93 arquivos, build web,
+`git diff --check` e `pnpm security:secrets`.
+
+Fora deste incremento: familias de substituicao liberadas ao paciente e a trilha
+de escolha (migration `1032`), e os filtros por alergenico, restricao, custo e
+praticidade — estes ultimos sem previsao, porque a TACO nao carrega esses
+atributos e a propria fase determina que dado desconhecido nao vira afirmacao
+clinica.
+
 ## Escopo funcional
 
 ### 1. Estrutura e ciclo de vida do plano

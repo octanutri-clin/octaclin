@@ -1699,8 +1699,27 @@ publicado antes de ampliar a superficie de mudancas visuais.
     nao rodam no CI. O job web executa apenas `lint`, `typecheck`,
     `test:seguranca-operacional`, `build` e `test:seguranca-runtime`, entao os
     testes de autorizacao do BFF de planos e o da previa sao gates locais.
-  - Proximo incremento: modelos, grupos de substituicao e demais recursos que
-    dependem de migration. TBCA, IBGE/POF e Tucunduva continuam desabilitadas.
+  - Incremento 5 concluido em 2026-08-17 com a migration `1031` **escrita e
+    testada, mas ainda nao aplicada em banco nenhum** — aguarda backup aprovado,
+    banco identificado e execucao primeiro em `octaclin_test_fase150b`. Cria
+    `modelos_plano_alimentar` (aditiva) com RLS forcada, FKs compostas por
+    tenant e constraint ligando origem a profissional: `pessoal` exige,
+    `clinica` proibe. Conteudo em snapshot criptografado, com contagens em claro
+    para a listagem. Rotas de modelo fora de `/pacientes/[id]`, visibilidade
+    aplicada na consulta (nao pos-filtro, que vazaria o total) e 404 em vez de
+    403 para modelo pessoal alheio.
+  - Achados de desenho do Incremento 5, registrados: grupos de substituicao nao
+    precisam de tabela (o item ja e o grupo ancorado, com ordem unica); modelos
+    de origem `catalogo` ficam adiados porque um modelo em codigo nao pode
+    guardar `alimentoComposicaoId` — o UUID difere entre integracao e producao,
+    e um modelo portavel precisa referenciar `(fonte, versao, base,
+    codigo_origem)` e resolver ao aplicar. Aplicar modelo nao ganhou rota
+    propria: reusa o salvamento de rascunho, que ja recusa fonte inativa.
+  - Proximo incremento: familias de substituicao liberadas ao paciente e trilha
+    de escolha auditavel (migration `1032`). Filtros por alergenico, restricao,
+    custo e praticidade seguem sem previsao — a TACO nao carrega esses atributos
+    e dado desconhecido nao vira afirmacao clinica. TBCA, IBGE/POF e Tucunduva
+    continuam desabilitadas.
   - Especificacao: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
   - Decisao de fontes: `DECISAO_FONTES_CATALOGO_FASE_234.md`.
 

@@ -7,9 +7,11 @@ import { AvaliacaoAntropometricaOrm } from '../pacientes/infraestrutura/avaliaca
 import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../profissionais/infraestrutura/profissional.orm';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
+import { ServicoModelosPlanoAlimentar } from './aplicacao/servico-modelos-plano-alimentar';
 import { ServicoPlanosAlimentares } from './aplicacao/servico-planos-alimentares';
 import {
   ControladorCatalogoAlimentos,
+  ControladorModelosPlanoAlimentar,
   ControladorPlanosAlimentares
 } from './apresentacao/controlador-planos-alimentares';
 import { AlimentoComposicaoOrm } from './infraestrutura/alimento-composicao.orm';
@@ -19,6 +21,7 @@ import { PlanoAlimentarItemOrm } from './infraestrutura/plano-alimentar-item.orm
 import { PlanoAlimentarRefeicaoOrm } from './infraestrutura/plano-alimentar-refeicao.orm';
 import { PlanoAlimentarSubstituicaoOrm } from './infraestrutura/plano-alimentar-substituicao.orm';
 import { PlanoAlimentarVersaoOrm } from './infraestrutura/plano-alimentar-versao.orm';
+import { ModeloPlanoAlimentarOrm } from './infraestrutura/modelo-plano-alimentar.orm';
 import { PlanoAlimentarOrm } from './infraestrutura/plano-alimentar.orm';
 
 @Module({
@@ -29,6 +32,7 @@ import { PlanoAlimentarOrm } from './infraestrutura/plano-alimentar.orm';
       PlanoAlimentarRefeicaoOrm,
       PlanoAlimentarItemOrm,
       PlanoAlimentarSubstituicaoOrm,
+      ModeloPlanoAlimentarOrm,
       CatalogoComposicaoAlimentoOrm,
       FonteComposicaoAlimentoOrm,
       AlimentoComposicaoOrm,
@@ -40,8 +44,8 @@ import { PlanoAlimentarOrm } from './infraestrutura/plano-alimentar.orm';
     ModuloTenancy,
     ModuloAuth
   ],
-  controllers: [ControladorPlanosAlimentares, ControladorCatalogoAlimentos],
-  providers: [ServicoPlanosAlimentares, CriptografiaDadosSensiveis],
-  exports: [ServicoPlanosAlimentares]
+  controllers: [ControladorPlanosAlimentares, ControladorCatalogoAlimentos, ControladorModelosPlanoAlimentar],
+  providers: [ServicoPlanosAlimentares, ServicoModelosPlanoAlimentar, CriptografiaDadosSensiveis],
+  exports: [ServicoPlanosAlimentares, ServicoModelosPlanoAlimentar]
 })
 export class ModuloPlanosAlimentares {}
