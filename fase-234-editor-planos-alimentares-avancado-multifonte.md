@@ -1,6 +1,7 @@
 # Fase 234 - Editor de planos alimentares avancado e catalogo multifonte
 
-Status: em execucao. Incrementos 1 e 2 concluidos em 2026-08-14. Fase importante de evolucao clinica e de produto, posterior
+Status: em execucao. Incrementos 1 e 2 concluidos em 2026-08-14; Incremento 3
+concluido em 2026-08-16. Fase importante de evolucao clinica e de produto, posterior
 ao MVP da Fase 216. Nao substitui os bloqueadores de go-live das Fases 225,
 226, 228, 229, 231, 232 e 233.
 
@@ -89,6 +90,80 @@ backend, typecheck/lint/build web, gate completo de autorizacao e quatro
 cenarios Playwright em desktop/mobile para leitura e gestao. O proximo
 incremento adicionara DTOs de consulta paginada, filtros multifonte e detalhe
 historico sob demanda antes de ampliar o editor profissional.
+
+## Incremento 3 - consultas paginadas, filtros multifonte e historico sob demanda
+
+Concluido em 2026-08-16, sem migration de banco:
+
+- a listagem de planos passou a ser paginada e validada (`pagina`, `limite`),
+  devolvendo `{ itens, total, pagina, limite }` em vez de um array sem teto. O
+  total sai do proprio `findAndCount`, entao a contagem nao depende do tamanho
+  da pagina carregada;
+- a busca de alimentos deixou de ser um `take(50)` fixo e ganhou a mesma
+  paginacao, mais filtros opcionais por `fonteCodigo`, `versao` e `baseCodigo`.
+  A resposta carrega `fontes`, a lista das fontes ativas, para a interface
+  montar o filtro sem uma segunda rota;
+- o filtro multifonte estreita o conjunto de fontes **antes** da consulta e
+  continua partindo apenas de `situacao = 'ativa'`, entao filtrar por uma fonte
+  suspensa devolve vazio em vez de revelar seus alimentos;
+- `%` e `_` digitados pelo profissional passaram a ser escapados com
+  `ESCAPE ''`. Antes, buscar `100%` casava com o catalogo inteiro: o curinga
+  do LIKE anulava na pratica o minimo de dois caracteres;
+- nova rota `GET /pacientes/:pacienteId/planos-alimentares/:planoId/versoes/:numero`
+  entrega a versao historica completa sob demanda. O detalhe do plano continua
+  trazendo apenas publicacao atual e rascunho completos, e o historico segue
+  resumido ate alguem pedir uma versao especifica. O escopo do plano e
+  revalidado antes da leitura, entao numero de versao nao vira caminho lateral
+  para plano de outro paciente;
+- o BFF ganhou `montarConsultaPermitida`, uma allowlist explicita: somente os
+  parametros nomeados chegam ao backend e qualquer outro e descartado na
+  fronteira. A codificacao usa `encodeURIComponent` para preservar o formato ja
+  acordado nas rotas anteriores (`%20`, nao `+`).
+
+Revisao independente do incremento (seguranca, tipos e banco), com dois
+achados corrigidos ainda dentro dele:
+
+- **paginacao instavel**: `listar` ordenava so por `criadoEm` e a busca so por
+  `nome`. Nenhuma das duas colunas e unica — `criado_em` usa `default now()` e
+  empata entre linhas gravadas na mesma transacao, e `nome` repete entre fontes
+  e preparos. Com OFFSET, um empate na fronteira da pagina faz a mesma linha
+  aparecer duas vezes ou sumir. Ambas ganharam desempate por `id`;
+- **pagina sem teto**: `limite` ja era limitado a 100, mas `pagina` aceitava
+  qualquer inteiro, entao `?pagina=999999999&limite=100` virava um OFFSET
+  absurdo. Entrou `PAGINA_MAXIMA = 1000` no DTO e no clamp do servico, o mesmo
+  padrao de defesa em profundidade ja usado para `limite`.
+
+Sem achado critico ou alto. Confirmado na revisao: `obterVersao` revalida o
+escopo do plano antes de ler a versao; os filtros multifonte so estreitam o
+conjunto ja restrito a `situacao = 'ativa'`, entao filtrar por fonte suspensa
+devolve vazio; o `ESCAPE` usa parametro vinculado, sem concatenacao; e o
+allowlist do BFF descarta parametro desconhecido antes do backend. O
+`ux_plano_alimentar_versoes_numero` ja cobre `(tenant_id, plano_id, numero)`,
+entao `obterVersao` e index scan, e `montarVersao` faz tres consultas em lote,
+sem N+1.
+
+Debito registrado, nao bloqueante: a busca usa `LIKE '%termo%'`, cujo curinga a
+esquerda nao aproveita indice B-tree. Hoje o `idx_alimentos_composicao_fonte_nome`
+segura porque o catalogo ativo e so a TACO (583 itens). Quando uma fonte ativa
+passar da ordem de 10-20 mil linhas, trocar por indice trigram
+(`pg_trgm` + GIN sobre `lower(nome)`) antes de habilitar TBCA ou IBGE/POF.
+
+Decisao registrada: a rota de versao historica devolve tambem versoes
+`descartada`, e nao apenas `publicada`. Elas ja constavam do `historico`
+resumido desde a Fase 216 e pertencem ao mesmo plano, sob a mesma permissao e o
+mesmo escopo de paciente/profissional; abrir o detalhe do que ja era listado
+mantem o historico clinico auditavel sem ampliar quem pode ler.
+
+Validacao do incremento: 135 suites e 902 testes backend (o unico vermelho e o
+`catalogo-taco.spec.ts`, que falha apenas em working tree Windows com
+`core.autocrlf=true` por comparar o JSON com serializacao normalizada em LF;
+falha identica reproduzida em `main` limpo antes da mudanca), typecheck backend
+e web, lint web, `test:authz` completo (6 suites sem falha, 12 asserts do BFF de planos),
+`test:next15` com 92 arquivos, build web, `git diff --check` e
+`pnpm security:secrets`.
+
+O proximo incremento amplia o editor profissional de refeicoes sobre esses
+contratos. TBCA, IBGE/POF e Tucunduva continuam desabilitadas.
 
 ## Escopo funcional
 

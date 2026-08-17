@@ -1652,10 +1652,26 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Validacoes do Incremento 2: 135 suites/894 testes backend, builds e
     typechecks, lint, gate completo de autorizacao e Playwright desktop/mobile
     para leitura e gestao. Nao houve migration.
-  - Proximo incremento: DTOs paginados e validados para planos e busca de
-    alimentos, filtros por fonte e versao historica completa sob demanda;
-    depois, ampliar o workspace profissional. TBCA, IBGE/POF e Tucunduva
-    continuam desabilitadas.
+  - Incremento 3 concluido em 2026-08-16, sem migration: listagem de planos e
+    busca de alimentos paginadas e validadas (`{ itens, total, pagina, limite }`),
+    filtros por fonte/versao/base sobre o conjunto de fontes ativas, curinga de
+    LIKE escapado (buscar `100%` deixou de casar com o catalogo inteiro), rota
+    nova de versao historica completa sob demanda com escopo revalidado, e
+    allowlist explicita de query params no BFF.
+  - Revisao independente do Incremento 3 corrigiu dois achados dentro do
+    proprio incremento: paginacao sem desempate (`criadoEm`/`nome` nao sao
+    unicos, entao OFFSET podia repetir ou pular linha; ambas ganharam `id` como
+    criterio) e `pagina` sem teto (`PAGINA_MAXIMA = 1000` no DTO e no servico).
+    Sem achado critico ou alto. Debito nao bloqueante: `LIKE '%termo%'` nao usa
+    indice B-tree; trocar por trigram quando uma fonte ativa passar de ~10-20
+    mil linhas, antes de habilitar TBCA ou IBGE/POF.
+  - Validacoes do Incremento 3: 135 suites/902 testes backend, typechecks,
+    lint, `test:authz` (6 suites sem falha), `test:next15` (92 arquivos), build web,
+    `diff --check` e scanner de secrets. O `catalogo-taco.spec.ts` falha apenas
+    em working tree Windows com `core.autocrlf=true`; a mesma falha foi
+    reproduzida em `main` limpo e nao vem desta mudanca.
+  - Proximo incremento: ampliar o editor profissional de refeicoes sobre esses
+    contratos. TBCA, IBGE/POF e Tucunduva continuam desabilitadas.
   - Especificacao: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
   - Decisao de fontes: `DECISAO_FONTES_CATALOGO_FASE_234.md`.
 

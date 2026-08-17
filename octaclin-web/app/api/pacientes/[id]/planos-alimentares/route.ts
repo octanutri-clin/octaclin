@@ -1,13 +1,14 @@
-import { lerCorpo, executarProxyPlanoAlimentar } from './_proxy';
+import { lerCorpo, executarProxyPlanoAlimentar, montarConsultaPermitida } from './_proxy';
 
 interface Params {
   params: Promise<{ id: string }>;
 }
 
-export async function GET(_request: Request, props: Params) {
+export async function GET(request: Request, props: Params) {
   const { id } = await props.params;
+  const consulta = montarConsultaPermitida(request, ['pagina', 'limite']);
   return executarProxyPlanoAlimentar(
-    `/pacientes/${encodeURIComponent(id)}/planos-alimentares`,
+    `/pacientes/${encodeURIComponent(id)}/planos-alimentares${consulta}`,
     'planos_alimentares.ler'
   );
 }

@@ -213,6 +213,36 @@ export interface PlanoAlimentarResumoApi {
   historicoQuantidade: number;
 }
 
+export interface PaginaApi<T> {
+  itens: T[];
+  total: number;
+  pagina: number;
+  limite: number;
+}
+
+export interface FonteCatalogoApi {
+  codigo: string;
+  nome: string;
+  versao: string;
+  baseCodigo?: string;
+}
+
+export interface PaginaAlimentosApi extends PaginaApi<AlimentoComposicaoApi> {
+  fontes: FonteCatalogoApi[];
+}
+
+export interface ConsultaPaginadaPlanos {
+  pagina?: number;
+  limite?: number;
+}
+
+export interface ConsultaAlimentos extends ConsultaPaginadaPlanos {
+  busca: string;
+  fonteCodigo?: string;
+  versao?: string;
+  baseCodigo?: string;
+}
+
 export class ErroApiPlanoAlimentar extends Error {
   constructor(
     public readonly status: number,
@@ -253,8 +283,34 @@ function corpoJson(entrada: unknown): RequestInit {
   };
 }
 
-export function listarPlanosAlimentares(pacienteId: string, signal?: AbortSignal) {
-  return requisitar<PlanoAlimentarResumoApi[]>(basePaciente(pacienteId), { signal });
+function montarConsulta(valores: Record<string, string | number | undefined>): string {
+  const partes = Object.entries(valores)
+    .filter(([, valor]) => valor !== undefined && valor !== '')
+    .map(([chave, valor]) => `${chave}=${encodeURIComponent(String(valor))}`);
+  return partes.length ? `?${partes.join('&')}` : '';
+}
+
+export function listarPlanosAlimentares(
+  pacienteId: string,
+  consulta: ConsultaPaginadaPlanos = {},
+  signal?: AbortSignal
+) {
+  return requisitar<PaginaApi<PlanoAlimentarResumoApi>>(
+    `${basePaciente(pacienteId)}${montarConsulta({ pagina: consulta.pagina, limite: consulta.limite })}`,
+    { signal }
+  );
+}
+
+export function obterVersaoPlanoAlimentar(
+  pacienteId: string,
+  planoId: string,
+  numero: number,
+  signal?: AbortSignal
+) {
+  return requisitar<VersaoPlanoAlimentarApi>(
+    `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/versoes/${encodeURIComponent(String(numero))}`,
+    { signal }
+  );
 }
 
 export function obterPlanoAlimentar(pacienteId: string, planoId: string, signal?: AbortSignal) {
@@ -317,10 +373,13 @@ export function arquivarPlanoAlimentar(pacienteId: string, planoId: string) {
   );
 }
 
-export function buscarAlimentosPlanoAlimentar(pacienteId: string, busca: string, signal?: AbortSignal) {
-  const parametros = new URLSearchParams({ busca });
-  return requisitar<AlimentoComposicaoApi[]>(
-    `${basePaciente(pacienteId)}/alimentos?${parametros.toString()}`,
+export function buscarAlimentosPlanoAlimentar(
+  pacienteId: string,
+  consulta: ConsultaAlimentos,
+  signal?: AbortSignal
+) {
+  return requisitar<PaginaAlimentosApi>(
+    `${basePaciente(pacienteId)}/alimentos${montarConsulta({ ...consulta })}`,
     { signal }
   );
 }
