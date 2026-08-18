@@ -32,10 +32,16 @@ Atualizado em 2026-08-17.
   que compara totais e metas pelo mesmo limiar de 30% usado para barrar a
   publicacao, reduziu a densidade da linha de alimento e levou o filtro
   multifonte para a busca. O Incremento 5 entregou os modelos de plano alimentar
-  (pessoal e da clinica) com a migration `1031` **escrita e testada, porem ainda
-  nao aplicada em banco nenhum**: ela aguarda backup aprovado, banco identificado
-  e execucao primeiro em `octaclin_test_fase150b`. Grupos de substituicao,
-  receitas, portal, adesao e lista de compras seguem pendentes.
+  (pessoal e da clinica) e esta **em producao desde 2026-08-18** (PR #53): a
+  migration `1031` foi aplicada e verificada em `octaclin_test_fase150b` e em
+  `Octaclin-db-producao`, ambos em 44/44, depois de backup com teste de restore
+  real. O rollout expos duas falhas de infraestrutura, ambas corrigidas: o
+  Dockerfile do backend nao fixava a versao do pnpm (PR #56) e `migrationsRun`
+  no boot nao consegue aplicar DDL em producao, porque a role runtime
+  `octaclin_app_producao` nao tem `CREATE` no schema `public` — migration com
+  DDL precisa ser aplicada fora de banda com `neondb_owner` antes do deploy.
+  Grupos de substituicao, receitas, portal, adesao e lista de compras seguem
+  pendentes.
 - Fase 232 concluida e integrada: operacao de lancamento com janela controlada,
   responsaveis, gates GO/NO-GO, rollback, comunicacao e exercicio sintetico P0.
   A decisao atual permanece NO-GO para cliente real ate identidade publica,

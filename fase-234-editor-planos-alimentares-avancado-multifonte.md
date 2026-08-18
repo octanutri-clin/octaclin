@@ -256,20 +256,21 @@ propria tela que o valor oficial e recalculado ao salvar.
 
 Fora do escopo deste incremento, por dependerem de tabelas novas: receitas,
 biblioteca de refeicoes prontas, favoritos, recentes, alimentos da clinica e do
-profissional, e modelos com origem explicita. Todos exigem migration e entram no
-Incremento 5, que para no gate de banco.
+profissional, e modelos com origem explicita. Todos exigem migration e entraram no
+Incremento 5.
 
-Debito registrado, nao bloqueante: `test:authz` e `test:nutricao-plano` nao
-rodam no CI — o job web executa apenas `lint`, `typecheck`,
-`test:seguranca-operacional`, `build` e `test:seguranca-runtime`. Os testes de
-autorizacao do BFF de planos alimentares e o novo teste da previa sao portanto
-gates locais, sem protecao de regressao automatica.
+Debito quitado em 2026-08-18 (PR #55): o job web do CI passou a rodar
+`test:authz` e `test:next15` antes do `build`. Foi a ausencia desses gates que
+deixou uma quebra de contrato chegar ao `main` sem sinal.
 
 ## Incremento 5 - modelos de plano alimentar
 
-Concluido em 2026-08-17. **Tem migration (`1031`), ainda nao aplicada em banco
-nenhum** — aguarda o gate de backup, banco identificado e execucao primeiro na
-integracao.
+Concluido em 2026-08-17, mergeado e **em producao desde 2026-08-18** (PR #53).
+A migration `1031` esta aplicada e verificada nos dois bancos: integracao
+`octaclin_test_fase150b` e producao `Octaclin-db-producao`, ambos em 44/44.
+
+O gate foi cumprido na ordem: backup de producao com teste de restore real
+(workflow `backup-producao.yml`), integracao primeiro, producao depois.
 
 Duas das tres coisas que o escopo parecia exigir nao precisaram de tabela:
 
@@ -346,6 +347,36 @@ de escolha (migration `1032`), e os filtros por alergenico, restricao, custo e
 praticidade — estes ultimos sem previsao, porque a TACO nao carrega esses
 atributos e a propria fase determina que dado desconhecido nao vira afirmacao
 clinica.
+
+## Licao operacional do rollout - 2026-08-18
+
+Duas coisas quebraram no deploy que levou o Incremento 5 a producao, e nenhuma
+delas era o codigo do incremento.
+
+**1. Versao do pnpm nao fixada no Dockerfile do backend.** O CI fixa
+`PNPM_VERSION: "9"`; o Dockerfile so fazia `corepack enable` e recebia pnpm 10,
+que bloqueia lifecycle script de dependencia por padrao desde a v10.0. A
+divergencia era antiga e so apareceu quando o bump do jest para 30 trouxe
+`unrs-resolver`, a primeira dependencia do backend com build script. Corrigido
+no PR #56 com `packageManager: pnpm@9.15.9`, igualando ao que a web ja fazia.
+
+**2. `migrationsRun` no boot nao aplica DDL em producao.** Integracao conecta
+como `neondb_owner`; producao conecta como `octaclin_app_producao`, que nao tem
+`CREATE` no schema `public`. O boot tentou criar a tabela, recebeu
+`42501 permission denied for schema public` e o container saiu com status 1.
+
+Isso vale para **toda migration futura com DDL**, incluindo a `1032` do
+Incremento 6. A ordem correta e:
+
+1. merge do PR
+2. `migration:run` contra producao com `neondb_owner`
+3. deploy
+
+Grants continuam nao precisando de acao: o `neondb_owner` tem default
+privileges no schema, entao tabela nova ja nasce com
+`select, insert, update, delete` para `octaclin_app_producao`. Verificado em
+producao apos a `1031`. E o `force row level security` continua indispensavel,
+porque `neondb_owner` tem `rolbypassrls = true` — a role da aplicacao nao tem.
 
 ## Incremento 6 - desenho aprovado, ainda nao implementado
 
