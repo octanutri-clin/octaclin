@@ -1708,6 +1708,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     para a listagem. Rotas de modelo fora de `/pacientes/[id]`, visibilidade
     aplicada na consulta (nao pos-filtro, que vazaria o total) e 404 em vez de
     403 para modelo pessoal alheio.
+  - Rollout do `1031` delegado em 2026-08-18: passo a passo autocontido em
+    `HANDOFF_CODEX_MIGRATION_1031.md` (integracao primeiro, producao pelo deploy,
+    verificacoes e prova das constraints). Confirmado na analise que a tabela
+    nao precisa de `grant`: migrations rodam como `neondb_owner`, a mesma role da
+    aplicacao, e o isolamento vem do `force row level security`, igual a
+    `condutas_terapeuticas` da migration `1026`.
   - Achados de desenho do Incremento 5, registrados: grupos de substituicao nao
     precisam de tabela (o item ja e o grupo ancorado, com ordem unica); modelos
     de origem `catalogo` ficam adiados porque um modelo em codigo nao pode

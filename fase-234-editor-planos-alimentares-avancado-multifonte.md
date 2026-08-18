@@ -333,6 +333,14 @@ sendo o `catalogo-taco.spec.ts` ambiental de CRLF em Windows, ja reproduzido em
 asserts do BFF de planos), `test:next15` com 93 arquivos, build web,
 `git diff --check` e `pnpm security:secrets`.
 
+A execucao em banco foi delegada em 2026-08-18, com passo a passo autocontido em
+`HANDOFF_CODEX_MIGRATION_1031.md`: integracao primeiro, producao pelo deploy (o
+backend tem `migrationsRun` ligado e aplica no boot), mais as verificacoes de RLS
+forcada, policy, constraints e indices. Analise registrada: a tabela nao precisa
+de `grant`, porque migrations rodam como `neondb_owner` — a mesma role da
+aplicacao — e o isolamento por tenant vem do `force row level security`, que faz
+a policy valer inclusive para o dono da tabela.
+
 Fora deste incremento: familias de substituicao liberadas ao paciente e a trilha
 de escolha (migration `1032`), e os filtros por alergenico, restricao, custo e
 praticidade — estes ultimos sem previsao, porque a TACO nao carrega esses
