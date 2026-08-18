@@ -347,6 +347,51 @@ praticidade — estes ultimos sem previsao, porque a TACO nao carrega esses
 atributos e a propria fase determina que dado desconhecido nao vira afirmacao
 clinica.
 
+## Incremento 6 - desenho aprovado, ainda nao implementado
+
+Desenho validado em 2026-08-17 junto com o do Incremento 5. Registrado aqui para
+nao precisar ser re-derivado. **Nada disto foi codificado.**
+
+Migration `1032`, aditiva, sem tabela de grupos:
+
+```
+alter plano_alimentar_substituicoes
+  add liberada_para_paciente boolean not null default false
+  add preferida              boolean not null default false
+
+alter plano_alimentar_itens
+  add substituicoes_visiveis_inicialmente integer
+
+plano_alimentar_escolhas_paciente          -- append-only, trilha auditavel
+  tenant_id, id, versao_id, item_id, substituicao_id (nullable = voltou ao principal)
+  escolhido_por_usuario_id, criado_em
+  FKs compostas por tenant; RLS habilitada e forcada
+  SEM unique: e trilha de eventos, e a escolha vigente e a ultima
+```
+
+Razoes que sustentam o desenho:
+
+- **grupos de substituicao nao viram tabela**: `plano_alimentar_substituicoes` ja
+  e a lista ordenada ancorada no item, com `unique (tenant_id, item_id, ordem)`.
+  O grupo `escolha uma opcao` *e* o item; uma tabela de grupos teria exatamente
+  uma linha por item;
+- **`liberada_para_paciente` nasce `false`**: planos ja publicados nao passam a
+  expor trocas retroativamente;
+- **a escolha do paciente grava em tabela separada**, nunca na versao. E assim
+  que a imutabilidade da publicacao se mantem enquanto o paciente registra
+  trocas;
+- **sem `unique` na trilha**: a fase pede evento auditavel, e sobrescrever a
+  escolha anterior apagaria o historico que torna o evento auditavel.
+
+Fora do incremento, sem previsao: filtros por alergenico, restricao,
+intolerancia, custo e praticidade. A TACO nao carrega esses atributos, e a fase
+determina que atributo so vira filtro quando houver fonte, escopo e mecanismo de
+revisao — dado desconhecido nao vira afirmacao clinica.
+
+Ordem recomendada: so comecar depois que a `1031` estiver aplicada na
+integracao, para nao empilhar duas migrations nao aplicadas e dificultar o
+isolamento de problema quando o gate abrir.
+
 ## Escopo funcional
 
 ### 1. Estrutura e ciclo de vida do plano
