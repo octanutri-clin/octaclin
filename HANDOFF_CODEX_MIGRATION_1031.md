@@ -7,7 +7,8 @@ que gerou o codigo.
 - Aberto em: 2026-08-18
 - Solicitado por: responsavel do projeto
 - Origem do codigo: PR #53, branch `feat/fase-234-incremento-5-modelos-plano`
-- Estado: **migration escrita, testada e NAO aplicada em banco nenhum**
+- Estado: **aplicada e verificada na integracao em 2026-08-18. Producao pendente,
+  e aplica sozinha no deploy (ver Passo 2).**
 
 ## O que precisa ser feito
 
@@ -115,6 +116,32 @@ values (gen_random_uuid(), 'pessoal', null, '\x00', '\x00', 1, 1, gen_random_uui
 rollback;
 ```
 
+### Registro de execucao - 2026-08-18
+
+O Passo 1 esta concluido. A `1031` **ja constava aplicada** na integracao antes
+desta verificacao: `migration:show` trouxe
+`[X] 44 CriarModelosPlanoAlimentar1720000001031` e a tabela `migrations` tem o
+registro `id 44 / timestamp 1720000001031`. Nenhum `migration:run` foi
+disparado por este handoff.
+
+Resultado das verificacoes contra `octaclin_test_fase150b`:
+
+| Verificacao | Resultado |
+| --- | --- |
+| RLS habilitada e forcada | `t` e `t` |
+| Policy de isolamento | `isolamento_tenant_modelos_plano_alimentar` |
+| Check constraints | 4, incluindo `modelos_plano_alimentar_origem_profissional_check` |
+| Indices | `pkey`, `ux_..._tenant_id_id`, `idx_..._listagem`, `idx_..._profissional` |
+| Linhas na tabela | 0 |
+| Prova "clinica com profissional" | recusada, `23514` na constraint de origem |
+| Prova "pessoal sem profissional" | recusada, `23514` na constraint de origem |
+
+Cuidado ao repetir as provas: passar o `bytea` como literal no texto do SQL
+derruba a conexao com `08P01 invalid message format` **antes** de a constraint
+ser avaliada, e a prova parece passar pelo motivo errado. Passe o valor como
+parametro (`$1`) com um `Buffer`, e confira que o erro e `23514` com
+`constraint = modelos_plano_alimentar_origem_profissional_check`.
+
 ## Passo 2 - producao (`Octaclin-db-producao`)
 
 **So depois de o Passo 1 passar inteiro.**
@@ -173,8 +200,8 @@ Nao faz parte desta tarefa, e nao deve ser feito por conta propria:
 
 ## Criterio de aceite
 
-- [ ] Integracao em 44/44, com as quatro verificacoes conferidas
-- [ ] As duas insercoes de prova falharam como esperado
+- [x] Integracao em 44/44, com as quatro verificacoes conferidas
+- [x] As duas insercoes de prova falharam como esperado
 - [ ] Backup de producao confirmado
 - [ ] PR #53 mergeado
 - [ ] Deploy feito e `checks.migracoes` sem drift
