@@ -383,3 +383,56 @@ export function buscarAlimentosPlanoAlimentar(
     { signal }
   );
 }
+
+export type OrigemModeloApi = 'pessoal' | 'clinica';
+
+export interface ModeloPlanoAlimentarResumoApi {
+  id: string;
+  nome: string;
+  origem: OrigemModeloApi;
+  totalRefeicoes: number;
+  totalItens: number;
+  atualizadoEm: string;
+}
+
+export interface ModeloPlanoAlimentarApi extends Omit<ModeloPlanoAlimentarResumoApi, 'atualizadoEm'> {
+  refeicoes: RefeicaoPlanoAlimentarEntrada[];
+  /** Ids de catalogo do modelo cuja fonte deixou de estar ativa. */
+  alimentosIndisponiveis: string[];
+}
+
+export interface ConsultaModelos extends ConsultaPaginadaPlanos {
+  origem?: OrigemModeloApi;
+}
+
+// Modelos nao pertencem a um paciente: a rota vive fora de `/pacientes/:id`.
+const BASE_MODELOS = '/api/planos-alimentares/modelos';
+
+export function listarModelosPlanoAlimentar(consulta: ConsultaModelos = {}, signal?: AbortSignal) {
+  return requisitar<PaginaApi<ModeloPlanoAlimentarResumoApi>>(
+    `${BASE_MODELOS}${montarConsulta({
+      pagina: consulta.pagina,
+      limite: consulta.limite,
+      origem: consulta.origem
+    })}`,
+    { signal }
+  );
+}
+
+export function obterModeloPlanoAlimentar(modeloId: string, signal?: AbortSignal) {
+  return requisitar<ModeloPlanoAlimentarApi>(`${BASE_MODELOS}/${encodeURIComponent(modeloId)}`, { signal });
+}
+
+export function criarModeloPlanoAlimentar(entrada: {
+  nome: string;
+  origem: OrigemModeloApi;
+  refeicoes: RefeicaoPlanoAlimentarEntrada[];
+}) {
+  return requisitar<ModeloPlanoAlimentarResumoApi>(BASE_MODELOS, { method: 'POST', ...corpoJson(entrada) });
+}
+
+export function arquivarModeloPlanoAlimentar(modeloId: string) {
+  return requisitar<{ id: string; arquivadoEm: string }>(`${BASE_MODELOS}/${encodeURIComponent(modeloId)}`, {
+    method: 'DELETE'
+  });
+}

@@ -48,6 +48,7 @@ import {
 } from '@/lib/prontuario-api';
 import { PainelNutricional } from '@/components/pacientes/painel-nutricional';
 import { nutrientesDaPorcao } from '@/lib/nutricao-plano';
+import { ModelosPlanoAlimentar } from '@/components/pacientes/modelos-plano-alimentar';
 
 const nutrientesVazios: NutrientesPor100gApi = {
   energiaKcal: 0,
@@ -208,6 +209,58 @@ function entradaAlimento(alimento: AlimentoFormulario): SubstituicaoPlanoAliment
         descricao: alimento.descricao.trim(),
         nutrientesPor100g: alimento.nutrientesPor100g
       };
+}
+
+// Modelo guarda o item completo, e nao a entrada minima de `entradaAlimento`:
+// para item de catalogo aquela omite descricao e nutrientes, e o modelo
+// aplicado apareceria com a linha sem rotulo ate ser salvo.
+function alimentoParaModelo(alimento: AlimentoFormulario): SubstituicaoPlanoAlimentarEntrada {
+  return {
+    alimentoComposicaoId: alimento.alimentoComposicaoId,
+    descricao: alimento.descricao.trim(),
+    quantidade: alimento.quantidade,
+    unidade: alimento.unidade.trim(),
+    porcaoGramas: alimento.porcaoGramas,
+    nutrientesPor100g: alimento.nutrientesPor100g
+  };
+}
+
+function refeicoesParaModelo(formulario: FormularioPlano): RefeicaoPlanoAlimentarEntrada[] {
+  return formulario.refeicoes.map((refeicao) => ({
+    nome: refeicao.nome.trim(),
+    horarioLocal: refeicao.horarioLocal || undefined,
+    orientacoes: refeicao.orientacoes?.trim() || undefined,
+    itens: refeicao.itens.map((item) => ({
+      ...alimentoParaModelo(item),
+      substituicoes: item.substituicoes.map(alimentoParaModelo)
+    }))
+  }));
+}
+
+function alimentoDoModelo(entrada: SubstituicaoPlanoAlimentarEntrada): AlimentoFormulario {
+  return {
+    chaveCliente: novaChaveCliente('alimento'),
+    alimentoComposicaoId: entrada.alimentoComposicaoId,
+    descricao: entrada.descricao ?? '',
+    quantidade: entrada.quantidade,
+    unidade: entrada.unidade,
+    porcaoGramas: entrada.porcaoGramas,
+    nutrientesPor100g: { ...nutrientesVazios, ...(entrada.nutrientesPor100g ?? {}) },
+    fonteRotulo: entrada.alimentoComposicaoId ? 'Catalogo nutricional' : undefined
+  };
+}
+
+function refeicoesDoModelo(refeicoes: RefeicaoPlanoAlimentarEntrada[]): RefeicaoFormulario[] {
+  return refeicoes.map((refeicao) => ({
+    chaveCliente: novaChaveCliente('refeicao'),
+    nome: refeicao.nome,
+    horarioLocal: refeicao.horarioLocal?.slice(0, 5) ?? '',
+    orientacoes: refeicao.orientacoes ?? '',
+    itens: refeicao.itens.map((item) => ({
+      ...alimentoDoModelo(item),
+      substituicoes: (item.substituicoes ?? []).map(alimentoDoModelo)
+    }))
+  }));
 }
 
 function montarEntrada(formulario: FormularioPlano): AtualizarRascunhoPlanoAlimentarEntrada {
@@ -1032,6 +1085,14 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Objetivo clinico<AreaTexto value={formulario.objetivos} onChange={(evento) => atualizar((atual) => ({ ...atual, objetivos: evento.target.value }))} maxLength={4000} required /></label>
                     <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Observacoes para o plano<AreaTexto value={formulario.observacoes} onChange={(evento) => atualizar((atual) => ({ ...atual, observacoes: evento.target.value }))} maxLength={8000} /></label>
                   </fieldset>
+
+                  <ModelosPlanoAlimentar
+                    refeicoesAtuais={() => refeicoesParaModelo(formulario)}
+                    aoAplicar={(refeicoes) =>
+                      atualizar((atual) => ({ ...atual, refeicoes: refeicoesDoModelo(refeicoes) }))
+                    }
+                    desabilitado={Boolean(operacao)}
+                  />
 
                   <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
                   <div className="grid gap-4">

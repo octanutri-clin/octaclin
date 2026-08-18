@@ -20,6 +20,10 @@ import {
   ValidateNested
 } from 'class-validator';
 import { FORMULAS_ENERGETICAS, FormulaEnergetica } from '../dominio/calculo-nutricional';
+import {
+  ORIGENS_MODELO_PLANO_ALIMENTAR,
+  OrigemModeloPlanoAlimentar
+} from '../dominio/modelos-plano-alimentar';
 
 export class CriarPlanoAlimentarDto {
   @IsString()
@@ -82,6 +86,26 @@ export class BuscarAlimentosDto {
   @IsString()
   @MaxLength(40)
   baseCodigo?: string;
+}
+
+export class ListarModelosPlanoAlimentarDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA)
+  pagina = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limite = 25;
+
+  @IsOptional()
+  @IsIn(ORIGENS_MODELO_PLANO_ALIMENTAR)
+  origem?: OrigemModeloPlanoAlimentar;
 }
 
 export class NutrientesPor100gDto {
@@ -173,6 +197,25 @@ export class RefeicaoPlanoAlimentarDto {
   @ValidateNested({ each: true })
   @Type(() => ItemPlanoAlimentarDto)
   itens: ItemPlanoAlimentarDto[];
+}
+
+export class CriarModeloPlanoAlimentarDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(180)
+  nome: string;
+
+  @IsIn(ORIGENS_MODELO_PLANO_ALIMENTAR)
+  origem: OrigemModeloPlanoAlimentar;
+
+  // Mesmos limites do rascunho: um modelo so vale se puder ser aplicado, entao
+  // nao pode aceitar uma estrutura que o rascunho recusaria.
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => RefeicaoPlanoAlimentarDto)
+  refeicoes: RefeicaoPlanoAlimentarDto[];
 }
 
 export class DistribuicaoMacrosDto {

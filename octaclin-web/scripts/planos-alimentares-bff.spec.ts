@@ -10,6 +10,8 @@ import { POST as publicarPlano } from '../app/api/pacientes/[id]/planos-alimenta
 import { POST as revisarPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/revisao/route';
 import { POST as criarNovaVersao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/nova-versao/route';
 import { POST as arquivarPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/arquivamento/route';
+import { GET as listarModelos, POST as criarModelo } from '../app/api/planos-alimentares/modelos/route';
+import { GET as obterModelo, DELETE as arquivarModelo } from '../app/api/planos-alimentares/modelos/[modeloId]/route';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -304,6 +306,92 @@ test('BFF recusa versao historica sem permissao de leitura antes do backend', as
     });
     assert.equal(resposta.status, 403);
     assert.equal(chamado, false);
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF encaminha listagem de modelos so com os parametros da allowlist', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let url = '';
+  global.fetch = (async (entrada: string | URL | Request) => {
+    url = String(entrada);
+    return Response.json({ itens: [], total: 0, pagina: 1, limite: 25 });
+  }) as typeof global.fetch;
+
+  try {
+    await listarModelos(
+      new Request('http://localhost/api/planos-alimentares/modelos?pagina=2&limite=10&origem=clinica&profissionalId=alheio')
+    );
+    // `profissionalId` e descartado: deixar o cliente escolher de quem sao os
+    // modelos pessoais listados seria contornar o escopo do backend.
+    assert.equal(
+      url,
+      'http://backend.octaclin.local/planos-alimentares/modelos?pagina=2&limite=10&origem=clinica'
+    );
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF exige permissao de gerenciar para criar modelo', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let chamou = false;
+  global.fetch = (async () => {
+    chamou = true;
+    return Response.json({});
+  }) as typeof global.fetch;
+
+  try {
+    const resposta = await criarModelo(
+      new Request('http://localhost/api/planos-alimentares/modelos', { method: 'POST', body: '{}' })
+    );
+    assert.equal(resposta.status, 403);
+    assert.equal(chamou, false);
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF codifica o id do modelo ao obter e ao arquivar', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler', 'planos_alimentares.gerenciar']));
+  const original = global.fetch;
+  const urls: string[] = [];
+  const metodos: string[] = [];
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => {
+    urls.push(String(entrada));
+    metodos.push(init?.method ?? 'GET');
+    return Response.json({});
+  }) as typeof global.fetch;
+
+  try {
+    await obterModelo(new Request('http://localhost'), { params: Promise.resolve({ modeloId: 'modelo/1' }) });
+    await arquivarModelo(new Request('http://localhost'), { params: Promise.resolve({ modeloId: 'modelo/1' }) });
+    assert.equal(urls[0], 'http://backend.octaclin.local/planos-alimentares/modelos/modelo%2F1');
+    assert.equal(urls[1], 'http://backend.octaclin.local/planos-alimentares/modelos/modelo%2F1');
+    assert.equal(metodos[1], 'DELETE');
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF recusa arquivar modelo sem permissao de gerenciar', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let chamou = false;
+  global.fetch = (async () => {
+    chamou = true;
+    return Response.json({});
+  }) as typeof global.fetch;
+
+  try {
+    const resposta = await arquivarModelo(new Request('http://localhost'), {
+      params: Promise.resolve({ modeloId: 'modelo-1' })
+    });
+    assert.equal(resposta.status, 403);
+    assert.equal(chamou, false);
   } finally {
     restaurarFetch(original);
   }

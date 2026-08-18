@@ -12,6 +12,12 @@ Trabalhar uma fase por vez, mesmo quando o mesmo desenvolvedor for avancar varia
 - Proxima fase planejada: Fase 106 - Planos de acompanhamento e tarefas do paciente.
 - Pacote multifase: `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`.
 - Fonte de verdade: `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
+- **Tarefa aberta de banco (2026-08-18)**: aplicar a migration `1031` da Fase
+  234, Incremento 5, primeiro na integracao e depois em producao. Instrucoes
+  completas e autocontidas em `HANDOFF_CODEX_MIGRATION_1031.md`. O codigo ja
+  esta pronto no PR #53; nao alterar aplicacao para executar essa tarefa.
+- Aviso: as linhas de "ultima fase concluida" abaixo estao defasadas. Conferir
+  sempre `STATUS_ATUAL_PROJETO.md` e `git log` antes de confiar nelas.
 
 ## Antes de iniciar trabalho
 

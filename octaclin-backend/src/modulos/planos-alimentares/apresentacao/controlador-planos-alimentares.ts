@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
@@ -7,9 +7,12 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import {
   AtualizarRascunhoPlanoAlimentarDto,
   BuscarAlimentosDto,
+  CriarModeloPlanoAlimentarDto,
   CriarPlanoAlimentarDto,
+  ListarModelosPlanoAlimentarDto,
   ListarPlanosAlimentaresDto
 } from '../aplicacao/dtos';
+import { ServicoModelosPlanoAlimentar } from '../aplicacao/servico-modelos-plano-alimentar';
 import { ServicoPlanosAlimentares } from '../aplicacao/servico-planos-alimentares';
 
 @Controller('pacientes/:pacienteId/planos-alimentares')
@@ -134,5 +137,48 @@ export class ControladorCatalogoAlimentos {
     @Query() consulta: BuscarAlimentosDto
   ) {
     return this.servico.buscarAlimentos(usuario.tenantId, usuario, consulta);
+  }
+}
+
+@Controller('planos-alimentares/modelos')
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
+@Papeis('SuperAdmin', 'Professional')
+export class ControladorModelosPlanoAlimentar {
+  constructor(private readonly servico: ServicoModelosPlanoAlimentar) {}
+
+  @Get()
+  @Permissoes('planos_alimentares.ler')
+  listar(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Query() consulta: ListarModelosPlanoAlimentarDto
+  ) {
+    return this.servico.listar(usuario.tenantId, usuario, consulta);
+  }
+
+  @Post()
+  @Permissoes('planos_alimentares.gerenciar')
+  criar(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Body() dados: CriarModeloPlanoAlimentarDto
+  ) {
+    return this.servico.criar(usuario.tenantId, usuario, dados);
+  }
+
+  @Get(':modeloId')
+  @Permissoes('planos_alimentares.ler')
+  obter(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('modeloId', ParseUUIDPipe) modeloId: string
+  ) {
+    return this.servico.obter(usuario.tenantId, modeloId, usuario);
+  }
+
+  @Delete(':modeloId')
+  @Permissoes('planos_alimentares.gerenciar')
+  arquivar(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('modeloId', ParseUUIDPipe) modeloId: string
+  ) {
+    return this.servico.arquivar(usuario.tenantId, modeloId, usuario);
   }
 }
