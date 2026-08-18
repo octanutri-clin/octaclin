@@ -1665,7 +1665,13 @@ async function prepararProntuarioMockado(page, {
     };
 
     if (route.request().method() === 'GET' && caminho.endsWith('/planos-alimentares')) {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([resumo]) });
+      // Formato paginado desde a Fase 234, Incremento 3. Devolver o array cru
+      // faz `itens` chegar indefinido no cliente e derruba o workspace inteiro.
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ itens: [resumo], total: 1, pagina: 1, limite: 100 })
+      });
       return;
     }
     if (route.request().method() === 'GET' && caminho.endsWith('/planos-alimentares/plano-alimentar-1')) {
