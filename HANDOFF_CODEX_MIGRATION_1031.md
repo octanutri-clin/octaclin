@@ -183,17 +183,16 @@ Nao faz parte desta tarefa, e nao deve ser feito por conta propria:
 ## Observacao sobre CI
 
 Os creditos do GitHub Actions foram restabelecidos em 2026-08-18 e o CI voltou a
-executar de verdade. O PR #53 teve sua primeira verificacao real: **os seis jobs
-principais passaram** — `Backend NestJS`, `Web Next.js`, `Mobile Expo`,
-`AI FastAPI`, `Rollout seguro` e `Operacao de lancamento`. `Monitor producao` e
-`Backup producao` tambem voltaram a rodar com sucesso, entao o monitoramento de
-producao deixou de estar cego.
+executar de verdade. `Monitor producao` e `Backup producao` tambem voltaram a
+rodar com sucesso, entao o monitoramento de producao deixou de estar cego.
 
-**Falha conhecida e pre-existente, nao bloqueante para esta tarefa**: o job
-`Demo local smoke` (Playwright visual) falha com 34 testes no PR #53. A mesma
-suite falha com 35 testes em `main` (commit `6b38203`), e a comparacao dos
-conjuntos mostra que **nenhum teste falha apenas no PR** — todos ja falhavam
-antes. O job vinha sendo `skipped` em todo run desde 2026-08-14 porque depende
-dos jobs anteriores, que falhavam por cobranca, entao a quebra passou semanas
-sem ser vista. Investigar essa suite e trabalho separado, fora deste handoff e
-fora do Incremento 5.
+**O PR #53 esta verde nos sete jobs**, incluindo `Demo local smoke`, sobre a
+branch ja atualizada com o `main`. Nao ha falha conhecida pendente.
+
+Contexto util para quem executar: quando o CI voltou, o `Demo local smoke`
+acusou quatro testes de prontuario quebrados. A causa era um mock da regressao
+visual que ainda devolvia a listagem de planos como array cru, depois que o
+Incremento 3 mudou o contrato para `{ itens, total, pagina, limite }`. Corrigido
+e mergeado no PR #54. Em seguida, o PR #55 passou a rodar `test:authz` e
+`test:next15` no job web do CI, que ate entao eram gates apenas locais — foi essa
+ausencia que deixou a quebra chegar ao `main` sem sinal.
