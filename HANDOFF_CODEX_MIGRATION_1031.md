@@ -68,8 +68,22 @@ tabela em producao. Migrations de DDL precisam ser aplicadas fora de banda, com
 `neondb_owner`, antes do deploy — foi assim que a `1027` entrou na integracao e
 como as `1028`/`1029`/`1030` entraram em producao.
 
-O isolamento por tenant continua sem depender de privilegio: vem de
-`force row level security`, que a migration aplica.
+### O que continua nao precisando de acao
+
+Grants na tabela nova: **nao precisa**. O `neondb_owner` tem default privileges
+no schema (`octaclin_app_producao=arwd`), entao toda tabela que ele cria ja
+nasce com `select, insert, update, delete` para a role da aplicacao e `select`
+para `octaclin_backup_producao`. Conferido em producao apos a 1031: os grants de
+`modelos_plano_alimentar` sao identicos aos de `condutas_terapeuticas` e
+`planos_alimentares`.
+
+O isolamento por tenant tambem nao depende de privilegio: vem de
+`force row level security`, que a migration aplica. O `force` e indispensavel
+porque `neondb_owner` tem `rolbypassrls = true`. A role da aplicacao,
+`octaclin_app_producao`, tem `rolbypassrls = false` e obedece a policy.
+
+Resumo: o unico privilegio que falta em producao e o de **criar** a tabela, e ele
+falta so para a role runtime, no boot.
 
 ## Passo 1 - integracao (`octaclin_test_fase150b`)
 
