@@ -182,11 +182,18 @@ Nao faz parte desta tarefa, e nao deve ser feito por conta propria:
 
 ## Observacao sobre CI
 
-O GitHub Actions do repositorio esta bloqueado por cobranca — os jobs falham em
-3 a 5 segundos com zero steps e a mensagem *"The job was not started because
-recent account payments have failed or your spending limit needs to be
-increased"*. Isso atinge todos os PRs e tambem o workflow agendado
-`Monitor producao`, que por isso nao abre issue de incidente. **Ausencia de CI
-vermelho nao significa CI aprovado.** A validacao do PR #53 foi toda local:
-138 suites e 931 testes no backend, typechecks, lint, `test:authz`,
-`test:next15` e build web.
+Os creditos do GitHub Actions foram restabelecidos em 2026-08-18 e o CI voltou a
+executar de verdade. O PR #53 teve sua primeira verificacao real: **os seis jobs
+principais passaram** — `Backend NestJS`, `Web Next.js`, `Mobile Expo`,
+`AI FastAPI`, `Rollout seguro` e `Operacao de lancamento`. `Monitor producao` e
+`Backup producao` tambem voltaram a rodar com sucesso, entao o monitoramento de
+producao deixou de estar cego.
+
+**Falha conhecida e pre-existente, nao bloqueante para esta tarefa**: o job
+`Demo local smoke` (Playwright visual) falha com 34 testes no PR #53. A mesma
+suite falha com 35 testes em `main` (commit `6b38203`), e a comparacao dos
+conjuntos mostra que **nenhum teste falha apenas no PR** — todos ja falhavam
+antes. O job vinha sendo `skipped` em todo run desde 2026-08-14 porque depende
+dos jobs anteriores, que falhavam por cobranca, entao a quebra passou semanas
+sem ser vista. Investigar essa suite e trabalho separado, fora deste handoff e
+fora do Incremento 5.
