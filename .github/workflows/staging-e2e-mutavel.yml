@@ -75,7 +75,7 @@ jobs:
 
       - name: Criar branch Neon descartavel
         id: neon
-        uses: neondatabase/create-branch-action@v5
+        uses: neondatabase/create-branch-action@v6
         with:
           project_id: ${{ vars.NEON_E2E_PROJECT_ID }}
           parent: ${{ vars.NEON_E2E_PARENT_BRANCH_ID }}
