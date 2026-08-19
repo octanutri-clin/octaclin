@@ -12,6 +12,7 @@
     "incremental": true,
     "strict": true,
     "strictPropertyInitialization": false,
+    "types": ["jest", "node"],
     "skipLibCheck": true
   }
 }
