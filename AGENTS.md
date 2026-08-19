@@ -267,6 +267,30 @@ falha so aparece no `--frozen-lockfile` do CI, depois do merge.
 Peca `@dependabot rebase` no segundo PR mesmo quando o GitHub diz `CLEAN`, e
 espere o CI dele fechar na arvore combinada antes de mergear.
 
+### 13. Check de saude novo se mede contra a configuracao real de producao
+
+Em 2026-08-19 adicionei `checks.ia` ao `/health/detalhado` e tratei meia
+configuracao como `degradado`. Em producao existia exatamente uma das duas
+variaveis de IA, sobra de exploracao anterior. O `degradado` propagou para o
+`status` geral, o monitor externo exige `status: "ok"`, falhou as 21:42 e abriu
+a issue de incidente #72 — por uma integracao que ninguem usa.
+
+O diagnostico do check estava certo; o processo, nao. Um check novo que pode
+derrubar a saude global precisa ser conferido contra o estado real de producao
+**antes** do merge, e nao depois:
+
+```sh
+curl -s https://octaclin-backend-producao.onrender.com/health/detalhado
+```
+
+Regra pratica: severidade se define pelo uso, nao pela pureza. Integracao que
+nao esta em uso reporta e nao degrada; quando entrar em uso, o check vira sonda
+real e a severidade sobe junto.
+
+Custo: um monitor vermelho, uma issue de incidente e um PR extra de correcao.
+Este e o item 1 desta secao repetido de outra forma — nao afirmar sobre
+producao sem ler producao.
+
 ## Registro obrigatorio de erros novos
 
 Todo erro cometido daqui em diante entra nesta secao, no mesmo formato, **no
