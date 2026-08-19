@@ -29,6 +29,7 @@ export interface HealthDetalhado {
     email: CheckHealth;
     whatsapp: CheckHealth;
     googleCalendar: CheckHealth;
+    ia: CheckHealth;
   };
 }
 
@@ -65,7 +66,8 @@ export class ServicoSaude {
       redis,
       email: this.verificarEmail(),
       whatsapp: this.verificarWhatsapp(),
-      googleCalendar: this.verificarGoogleCalendar()
+      googleCalendar: this.verificarGoogleCalendar(),
+      ia: this.verificarIa()
     };
 
     return {
@@ -214,6 +216,34 @@ export class ServicoSaude {
         provedor: gmailApiConfigurado ? 'gmail_api' : 'smtp'
       }
     };
+  }
+
+  /**
+   * O servico de IA e opcional: enquanto IA_SERVICE_URL e IA_SERVICE_TOKEN nao
+   * existirem, o produto entregue nao usa IA e a ausencia nao e problema. Por
+   * isso o check responde 'ok' com configurado: false, em vez de degradar a
+   * saude geral e deixar o monitor externo vermelho por uma integracao que
+   * ninguem ligou. Meia configuracao, porem, e erro de operacao e degrada.
+   *
+   * O detalhe nunca inclui host nem token: quem precisa do endereco le a
+   * variavel no Render, nao um endpoint publico.
+   */
+  private verificarIa(): CheckHealth {
+    const url = valorDefinido('IA_SERVICE_URL');
+    const token = valorDefinido('IA_SERVICE_TOKEN');
+
+    if (!url && !token) {
+      return { status: 'ok', detalhes: { configurado: false } };
+    }
+
+    if (!url || !token) {
+      return {
+        status: 'degradado',
+        mensagem: 'Servico de IA incompleto; configure IA_SERVICE_URL e IA_SERVICE_TOKEN juntos.'
+      };
+    }
+
+    return { status: 'ok', detalhes: { configurado: true } };
   }
 
   private verificarWhatsapp(): CheckHealth {
