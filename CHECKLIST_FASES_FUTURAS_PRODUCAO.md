@@ -2003,11 +2003,15 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Origem: triagem dos PRs do Dependabot em 2026-08-18. Quatorze PRs abertos,
     cinco deles do Mobile (Fase 243). Os nove restantes se separam por causa,
     e nao por pacote.
-  - Incremento 1 - os quatro que ja passam nos 7 jobs, sem trabalho de
-    compatibilidade: `#20` FastAPI 0.115.6 para 0.141.1, `#51` uvicorn 0.32.1
-    para 0.52.3, `#31` tailwind-merge 2 para 3 e `#28` `@types/node` 26 na web.
-    Mergear em lotes pequenos, um de cada vez, para o job que quebrar apontar o
-    pacote sem ambiguidade.
+  - Incremento 1 - CONCLUIDO em 2026-08-19. Os quatro que ja passavam nos 7
+    jobs, mergeados um de cada vez com o CI de `main` verde entre um e outro:
+    `#20` FastAPI 0.115.6 para 0.141.1 (`7d666b0`), `#51` uvicorn 0.32.1 para
+    0.52.3 (`835aa50`), `#31` tailwind-merge 2.6.1 para 3.6.0 (`8b4c07b`) e
+    `#28` `@types/node` 26.2.0 na web (`d09b522`). `#51` e `#28` foram
+    recriados pelo Dependabot antes do merge: o primeiro por conflito real no
+    `requirements.txt`, o segundo de proposito, porque `pnpm-lock.yaml`
+    resolvido por auto-merge textual so falha no `--frozen-lockfile` depois do
+    merge. Evidencia: `fase-244-quitacao-divida-dependencias.md`.
   - Incremento 2 - `baseUrl` depreciado, que trava o TypeScript 6 nos dois
     projetos. `#26` (web) e `#34` (backend) falham identicamente com
     `tsconfig.json(12,5): error TS5101: Option 'baseUrl' is deprecated and will

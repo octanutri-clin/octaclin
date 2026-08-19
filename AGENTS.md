@@ -199,6 +199,18 @@ barato que uma acao errada.
   POSIX; o clipboard e `/dev/clipboard`.
 - `catalogo-taco.spec.ts` falha **sempre** em checkout Windows por CRLF e passa
   no CI. Nunca normalize esse JSON: consertar aqui quebra la.
+- Espera de CI por `gh run list --jq 'select(.name==...)'` mente. Em
+  2026-08-19, na Fase 244, um laco que saia quando nenhum run com esse nome
+  estava fora de `completed` deu o CI de `main` como encerrado enquanto ele
+  ainda rodava, e a leitura seguinte trouxe `cancelled` para um run que
+  terminou verde. A listagem e uma janela paginada e pode omitir o run por um
+  instante. Espere sempre pelo id:
+  ```sh
+  until [ "$(gh run view <id> --json status --jq .status)" = "completed" ]; do sleep 30; done
+  gh run view <id> --json jobs --jq '.jobs[].conclusion'
+  ```
+  Custo: uma afirmacao errada sobre o CI, corrigida no mesmo turno. Barato aqui,
+  caro no dia em que virar decisao de merge.
 
 ## Registro obrigatorio de erros novos
 
