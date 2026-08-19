@@ -18,6 +18,7 @@ import { ArquivoMidiaOrm } from '../mobile/infraestrutura/arquivo-midia.orm';
 import { ServicoArmazenamentoObjetos } from '../../infraestrutura/armazenamento/servico-armazenamento-objetos';
 import { PlanoAlimentarItemOrm } from '../planos-alimentares/infraestrutura/plano-alimentar-item.orm';
 import { PlanoAlimentarRefeicaoOrm } from '../planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
+import { PlanoAlimentarEscolhaPacienteOrm } from '../planos-alimentares/infraestrutura/plano-alimentar-escolha-paciente.orm';
 import { PlanoAlimentarSubstituicaoOrm } from '../planos-alimentares/infraestrutura/plano-alimentar-substituicao.orm';
 import { PlanoAlimentarVersaoOrm } from '../planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
 import { PlanoAlimentarOrm } from '../planos-alimentares/infraestrutura/plano-alimentar.orm';
@@ -87,6 +88,7 @@ import { CondutaTerapeuticaVersaoOrm } from './infraestrutura/conduta-terapeutic
       PlanoAlimentarRefeicaoOrm,
       PlanoAlimentarItemOrm,
       PlanoAlimentarSubstituicaoOrm,
+      PlanoAlimentarEscolhaPacienteOrm,
       ConsentimentoEvolucaoFotograficaOrm,
       EvolucaoFotograficaOrm,
       EvolucaoFotograficaArquivoOrm,

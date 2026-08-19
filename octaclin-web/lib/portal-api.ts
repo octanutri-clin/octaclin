@@ -145,8 +145,27 @@ export interface SubstituicaoPlanoAlimentarPacienteApi {
   nutrientes: NutrientesPlanoAlimentarPacienteApi;
 }
 
+export interface AlternativaPlanoAlimentarPacienteApi extends SubstituicaoPlanoAlimentarPacienteApi {
+  /** Recomendada pelo profissional. O backend ja devolve as preferidas antes. */
+  preferida: boolean;
+}
+
 export interface ItemPlanoAlimentarPacienteApi extends SubstituicaoPlanoAlimentarPacienteApi {
-  substituicoes: SubstituicaoPlanoAlimentarPacienteApi[];
+  /** So chegam aqui as trocas que o profissional liberou. */
+  substituicoes: AlternativaPlanoAlimentarPacienteApi[];
+  /** Ausente significa mostrar todas, sem recolher nenhuma. */
+  substituicoesVisiveisInicialmente?: number;
+  /** Ausente significa que o paciente segue no alimento principal. */
+  escolhaAtualSubstituicaoId?: string;
+}
+
+export interface EscolhaSubstituicaoPacienteApi {
+  id: string;
+  versaoId: string;
+  itemId: string;
+  substituicaoId?: string;
+  escolhidoPorUsuarioId: string;
+  criadoEm: string;
 }
 
 export interface PlanoAlimentarPacienteApi {
@@ -456,4 +475,26 @@ export async function registrarSolicitacaoLgpdPaciente(dados: {
     throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
   }
   return resposta.json() as Promise<SolicitacaoLgpdApi>;
+}
+
+/**
+ * Registra a troca escolhida pelo paciente. Sem `substituicaoId`, registra o
+ * retorno ao alimento principal, que tambem e uma decisao e vira evento.
+ */
+export async function registrarEscolhaSubstituicaoPaciente(
+  itemId: string,
+  substituicaoId?: string
+): Promise<EscolhaSubstituicaoPacienteApi> {
+  const resposta = await fetch(
+    `/api/portal/paciente/plano-alimentar/itens/${encodeURIComponent(itemId)}/escolha`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(substituicaoId ? { substituicaoId } : {})
+    }
+  );
+  if (!resposta.ok) {
+    throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
+  }
+  return resposta.json() as Promise<EscolhaSubstituicaoPacienteApi>;
 }

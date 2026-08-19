@@ -16,8 +16,22 @@ export interface SubstituicaoPlanoAlimentar {
   nutrientes: NutrientesPorcaoPlano;
 }
 
+/**
+ * Uma alternativa e uma substituicao com as duas decisoes do profissional: se o
+ * paciente pode escolhe-la e se ela vem recomendada. As duas nao entram em
+ * `SubstituicaoPlanoAlimentar` porque o item principal herda essa interface e
+ * nao e alternativa de nada — liberar ou preferir o proprio item nao significa
+ * coisa alguma.
+ */
+export interface AlternativaPlanoAlimentar extends SubstituicaoPlanoAlimentar {
+  liberadaParaPaciente: boolean;
+  preferida: boolean;
+}
+
 export interface ItemPlanoAlimentar extends SubstituicaoPlanoAlimentar {
-  substituicoes: SubstituicaoPlanoAlimentar[];
+  substituicoes: AlternativaPlanoAlimentar[];
+  /** Ausente significa mostrar todas as liberadas, sem recolher nenhuma. */
+  substituicoesVisiveisInicialmente?: number;
 }
 
 export interface RefeicaoPlanoAlimentar {
@@ -60,6 +74,20 @@ function validarItem(item: SubstituicaoPlanoAlimentar, rotulo: string): void {
   validarNutrientes(item.nutrientes);
 }
 
+function validarLimiteVisivel(item: ItemPlanoAlimentar, indiceItem: number): void {
+  const limite = item.substituicoesVisiveisInicialmente;
+  if (limite === undefined || limite === null) return;
+  const rotulo = `Item ${indiceItem + 1}: substituicoes visiveis inicialmente`;
+  if (!Number.isInteger(limite) || limite < 1 || limite > 20) {
+    throw new Error(`${rotulo} precisa ser um inteiro entre 1 e 20.`);
+  }
+  if (!item.substituicoes.length) {
+    // Limite sobre lista vazia nao descreve nada e so sobrevive ate alguem
+    // tentar interpreta-lo na tela do paciente.
+    throw new Error(`${rotulo} exige ao menos uma substituicao.`);
+  }
+}
+
 export function validarEstruturaPlano(estrutura: EstruturaPlanoAlimentar): void {
   if (!estrutura.refeicoes.length) throw new Error('Plano alimentar precisa de ao menos uma refeicao.');
   if (estrutura.refeicoes.length > 50) throw new Error('Plano alimentar excede o limite de 50 refeicoes.');
@@ -74,6 +102,7 @@ export function validarEstruturaPlano(estrutura: EstruturaPlanoAlimentar): void 
 
     refeicao.itens.forEach((item, indiceItem) => {
       validarItem(item, `Refeicao ${indiceRefeicao + 1}, item ${indiceItem + 1}`);
+      validarLimiteVisivel(item, indiceItem);
       if (item.substituicoes.length > 20) {
         throw new Error(`Item ${indiceItem + 1} excede 20 substituicoes.`);
       }

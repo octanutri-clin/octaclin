@@ -39,6 +39,12 @@ export class PlanoAlimentarSubstituicaoOrm {
   @Column({ name: 'motor_calculo_versao', type: 'varchar', length: 40 })
   motorCalculoVersao: string;
 
+  @Column({ name: 'liberada_para_paciente', type: 'boolean', default: false })
+  liberadaParaPaciente: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  preferida: boolean;
+
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 

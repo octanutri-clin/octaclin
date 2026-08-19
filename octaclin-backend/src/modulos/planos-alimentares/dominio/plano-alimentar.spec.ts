@@ -90,4 +90,57 @@ describe('plano alimentar', () => {
       })
     ).toThrow();
   });
+
+  describe('substituicoes liberadas ao paciente', () => {
+    const alternativa = {
+      descricao: 'Pao integral',
+      quantidade: 1,
+      unidade: 'fatia',
+      porcaoGramas: 30,
+      nutrientes: estrutura.refeicoes[0].itens[0].nutrientes,
+      liberadaParaPaciente: true,
+      preferida: false
+    };
+
+    function planoComItem(extra: Record<string, unknown>) {
+      return {
+        refeicoes: [
+          {
+            nome: 'Cafe da manha',
+            itens: [{ ...structuredClone(estrutura.refeicoes[0].itens[0]), ...extra }]
+          }
+        ]
+      };
+    }
+
+    it('aceita alternativas liberadas e preferidas', () => {
+      expect(() =>
+        validarEstruturaPlano(planoComItem({ substituicoes: [alternativa] }) as never)
+      ).not.toThrow();
+    });
+
+    it('recusa limite de exibicao fora de 1 a 20', () => {
+      for (const limite of [0, -1, 21, 1.5]) {
+        expect(() =>
+          validarEstruturaPlano(
+            planoComItem({ substituicoes: [alternativa], substituicoesVisiveisInicialmente: limite }) as never
+          )
+        ).toThrow(/visiveis/i);
+      }
+    });
+
+    it('aceita limite ausente, que significa mostrar todas as liberadas', () => {
+      expect(() =>
+        validarEstruturaPlano(planoComItem({ substituicoes: [alternativa] }) as never)
+      ).not.toThrow();
+    });
+
+    it('recusa limite de exibicao em item sem nenhuma alternativa', () => {
+      // Um limite de exibicao sobre lista vazia nao descreve nada e so
+      // sobrevive ate alguem tentar interpreta-lo na tela.
+      expect(() =>
+        validarEstruturaPlano(planoComItem({ substituicoes: [], substituicoesVisiveisInicialmente: 3 }) as never)
+      ).toThrow(/visiveis/i);
+    });
+  });
 });

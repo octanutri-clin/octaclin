@@ -115,6 +115,7 @@ import { WebhookEntregaOrm } from '../../modulos/integracoes/infraestrutura/webh
 import { FonteComposicaoAlimentoOrm } from '../../modulos/planos-alimentares/infraestrutura/fonte-composicao-alimento.orm';
 import { PlanoAlimentarItemOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-item.orm';
 import { PlanoAlimentarRefeicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
+import { PlanoAlimentarEscolhaPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-escolha-paciente.orm';
 import { PlanoAlimentarSubstituicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-substituicao.orm';
 import { PlanoAlimentarVersaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
 import { PlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar.orm';
@@ -236,6 +237,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       PlanoAlimentarRefeicaoOrm,
       PlanoAlimentarItemOrm,
       PlanoAlimentarSubstituicaoOrm,
+      PlanoAlimentarEscolhaPacienteOrm,
       CatalogoComposicaoAlimentoOrm,
       FonteComposicaoAlimentoOrm,
       AlimentoComposicaoOrm,

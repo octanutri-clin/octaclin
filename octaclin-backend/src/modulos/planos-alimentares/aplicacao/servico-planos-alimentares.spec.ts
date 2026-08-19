@@ -867,4 +867,107 @@ describe('ServicoPlanosAlimentares', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
+
+  describe('substituicoes liberadas ao paciente', () => {
+    function rascunhoComAlternativa(extra: Record<string, unknown> = {}) {
+      const dados = dadosRascunho();
+      dados.refeicoes[0].itens[0] = {
+        ...dados.refeicoes[0].itens[0],
+        substituicoes: [
+          {
+            descricao: 'Pao integral',
+            quantidade: 1,
+            unidade: 'fatia',
+            porcaoGramas: 30,
+            nutrientesPor100g: { energiaKcal: 250, proteinasG: 9, carboidratosG: 45, gordurasG: 3 },
+            liberadaParaPaciente: true,
+            preferida: true
+          },
+          {
+            descricao: 'Tapioca',
+            quantidade: 1,
+            unidade: 'unidade',
+            porcaoGramas: 40,
+            nutrientesPor100g: { energiaKcal: 240, proteinasG: 0, carboidratosG: 60, gordurasG: 0 },
+            liberadaParaPaciente: false,
+            preferida: false
+          }
+        ],
+        ...extra
+      } as never;
+      return dados;
+    }
+
+    it('persiste liberacao, preferencia e limite de exibicao', async () => {
+      await servico.atualizarRascunho(
+        TENANT_ID,
+        PACIENTE_ID,
+        PLANO_ID,
+        usuarioProfissional(),
+        rascunhoComAlternativa({ substituicoesVisiveisInicialmente: 1 })
+      );
+
+      const substituicoes = repositorios.get(PlanoAlimentarSubstituicaoOrm)!
+        .registros as PlanoAlimentarSubstituicaoOrm[];
+      expect(substituicoes).toHaveLength(2);
+      expect(substituicoes[0]).toEqual(
+        expect.objectContaining({ liberadaParaPaciente: true, preferida: true })
+      );
+      expect(substituicoes[1]).toEqual(
+        expect.objectContaining({ liberadaParaPaciente: false, preferida: false })
+      );
+      const itens = repositorios.get(PlanoAlimentarItemOrm)!.registros as PlanoAlimentarItemOrm[];
+      expect(itens[0].substituicoesVisiveisInicialmente).toBe(1);
+    });
+
+    it('assume nao liberada quando o profissional nao decide', async () => {
+      const dados = rascunhoComAlternativa();
+      delete (dados.refeicoes[0].itens[0].substituicoes[0] as unknown as Record<string, unknown>).liberadaParaPaciente;
+      delete (dados.refeicoes[0].itens[0].substituicoes[0] as unknown as Record<string, unknown>).preferida;
+
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dados);
+
+      // Exposicao ao paciente e decisao explicita: a ausencia nunca vira um sim.
+      expect(repositorios.get(PlanoAlimentarSubstituicaoOrm)!.registros[0]).toEqual(
+        expect.objectContaining({ liberadaParaPaciente: false, preferida: false })
+      );
+    });
+
+    it('devolve as decisoes na leitura da versao', async () => {
+      const resposta = await servico.atualizarRascunho(
+        TENANT_ID,
+        PACIENTE_ID,
+        PLANO_ID,
+        usuarioProfissional(),
+        rascunhoComAlternativa({ substituicoesVisiveisInicialmente: 2 })
+      );
+
+      const item = resposta.refeicoes[0].itens[0];
+      expect(item.substituicoesVisiveisInicialmente).toBe(2);
+      expect(item.substituicoes[0]).toEqual(
+        expect.objectContaining({ liberadaParaPaciente: true, preferida: true })
+      );
+    });
+
+    it('preserva as decisoes ao abrir uma nova versao', async () => {
+      await servico.atualizarRascunho(
+        TENANT_ID,
+        PACIENTE_ID,
+        PLANO_ID,
+        usuarioProfissional(),
+        rascunhoComAlternativa({ substituicoesVisiveisInicialmente: 1 })
+      );
+      await servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      await servico.publicar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      await servico.criarNovaVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+
+      const substituicoes = repositorios.get(PlanoAlimentarSubstituicaoOrm)!
+        .registros as PlanoAlimentarSubstituicaoOrm[];
+      // Clonar perdendo a liberacao devolveria ao paciente um plano novo sem as
+      // trocas que ele ja usava, sem ninguem ter decidido isso.
+      expect(substituicoes.filter((substituicao) => substituicao.liberadaParaPaciente)).toHaveLength(2);
+      const itens = repositorios.get(PlanoAlimentarItemOrm)!.registros as PlanoAlimentarItemOrm[];
+      expect(itens.every((item) => item.substituicoesVisiveisInicialmente === 1)).toBe(true);
+    });
+  });
 });

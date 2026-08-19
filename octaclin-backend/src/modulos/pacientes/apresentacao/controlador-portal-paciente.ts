@@ -10,6 +10,7 @@ import {
   AtualizarPerfilPacientePortalDto,
   RegistrarCheckinRapidoPortalDto,
   RegistrarConsentimentoLgpdPortalDto,
+  RegistrarEscolhaSubstituicaoPortalDto,
   RegistrarSolicitacaoLgpdPortalDto
 } from '../aplicacao/dtos';
 import { ServicoPortalPaciente } from '../aplicacao/servico-portal-paciente';
@@ -53,6 +54,38 @@ export class ControladorPortalPaciente {
       }
     });
     return checkin;
+  }
+
+  @Post('paciente/plano-alimentar/itens/:itemId/escolha')
+  async registrarEscolhaSubstituicao(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+    @Body() dados: RegistrarEscolhaSubstituicaoPortalDto
+  ) {
+    const escolha = await this.servicoPortal.registrarEscolhaSubstituicao(
+      usuario.tenantId,
+      usuario.usuarioId,
+      itemId,
+      dados
+    );
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'portal.paciente.plano_alimentar.escolha_substituicao.registrar',
+      recursoTipo: 'plano_alimentar_escolha_paciente',
+      recursoId: escolha.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        versaoId: escolha.versaoId,
+        itemId: escolha.itemId,
+        // Sem substituicao registrada, o paciente voltou ao alimento principal.
+        substituicaoId: escolha.substituicaoId ?? null,
+        retornouAoPrincipal: !escolha.substituicaoId
+      }
+    });
+    return escolha;
   }
 
   @Patch('paciente/perfil')

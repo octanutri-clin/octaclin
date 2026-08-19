@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
@@ -13,6 +13,7 @@ import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-
 import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-valor.orm';
 import { PlanoAlimentarItemOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-item.orm';
 import { PlanoAlimentarRefeicaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
+import { PlanoAlimentarEscolhaPacienteOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-escolha-paciente.orm';
 import { PlanoAlimentarSubstituicaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-substituicao.orm';
 import { PlanoAlimentarVersaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
 import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
@@ -94,7 +95,8 @@ function criarServico(dados: Record<string, any>) {
     planoAlimentarVersao: criarRepositorioFake('planoAlimentarVersao', dados),
     planoAlimentarRefeicao: criarRepositorioFake('planoAlimentarRefeicao', dados),
     planoAlimentarItem: criarRepositorioFake('planoAlimentarItem', dados),
-    planoAlimentarSubstituicao: criarRepositorioFake('planoAlimentarSubstituicao', dados)
+    planoAlimentarSubstituicao: criarRepositorioFake('planoAlimentarSubstituicao', dados),
+    planoAlimentarEscolha: criarRepositorioFake('planoAlimentarEscolha', dados)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -117,6 +119,7 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === PlanoAlimentarRefeicaoOrm) return repositorios.planoAlimentarRefeicao;
       if (entidade === PlanoAlimentarItemOrm) return repositorios.planoAlimentarItem;
       if (entidade === PlanoAlimentarSubstituicaoOrm) return repositorios.planoAlimentarSubstituicao;
+      if (entidade === PlanoAlimentarEscolhaPacienteOrm) return repositorios.planoAlimentarEscolha;
       if (entidade === AvaliacaoAntropometricaOrm) return { find: jest.fn(async () => []) };
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
@@ -234,7 +237,9 @@ describe('ServicoPortalPaciente', () => {
           porcaoGramas: '100.000',
           composicaoSnapshotCriptografada: Buffer.from(
             'cripto:{"origem":"manual","nutrientesPorcao":{"energiaKcal":29,"proteinasG":0.7,"carboidratosG":7.5,"gordurasG":0}}'
-          )
+          ),
+          liberadaParaPaciente: true,
+          preferida: false
         }
       ]
     });
@@ -271,7 +276,8 @@ describe('ServicoPortalPaciente', () => {
                   quantidade: 1,
                   unidade: 'fatia',
                   porcaoGramas: 100,
-                  nutrientes: { energiaKcal: 29, proteinasG: 0.7, carboidratosG: 7.5, gordurasG: 0 }
+                  nutrientes: { energiaKcal: 29, proteinasG: 0.7, carboidratosG: 7.5, gordurasG: 0 },
+                  preferida: false
                 }
               ]
             }
@@ -1636,5 +1642,231 @@ describe('ServicoPortalPaciente', () => {
         })
       })
     );
+  });
+
+  describe('trocas liberadas ao paciente', () => {
+    const PUBLICADO_EM = new Date('2026-08-08T12:00:00.000Z');
+
+    function cenario(
+      substituicoes: Record<string, any>[],
+      extraItem: Record<string, any> = {},
+      escolhas: Record<string, any>[] = []
+    ) {
+      return criarServico({
+        pacientes: [
+          {
+            id: 'paciente-1',
+            tenantId: 'tenant-1',
+            usuarioId: 'usuario-paciente-1',
+            nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+            profissionalResponsavelId: 'profissional-1',
+            statusAdesao: 'aderente'
+          }
+        ],
+        planoAlimentars: [
+          {
+            id: 'plano-1',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-1',
+            tituloCriptografado: Buffer.from('cripto:Plano'),
+            versaoPublicadaAtualId: 'versao-1',
+            criadoEm: new Date('2026-08-01T12:00:00.000Z')
+          }
+        ],
+        planoAlimentarVersaos: [
+          {
+            id: 'versao-1',
+            tenantId: 'tenant-1',
+            planoId: 'plano-1',
+            numero: 1,
+            publicadaEm: PUBLICADO_EM,
+            calculoSnapshotCriptografado: Buffer.from('cripto:{}'),
+            totaisSnapshotCriptografado: Buffer.from('cripto:{}')
+          }
+        ],
+        planoAlimentarRefeicaos: [
+          {
+            id: 'refeicao-1',
+            tenantId: 'tenant-1',
+            versaoId: 'versao-1',
+            ordem: 1,
+            nomeCriptografado: Buffer.from('cripto:Cafe')
+          }
+        ],
+        planoAlimentarItems: [
+          {
+            id: 'item-1',
+            tenantId: 'tenant-1',
+            refeicaoId: 'refeicao-1',
+            ordem: 1,
+            descricaoCriptografada: Buffer.from('cripto:Mamao'),
+            quantidade: '1.000',
+            unidade: 'fatia',
+            porcaoGramas: '100.000',
+            composicaoSnapshotCriptografada: Buffer.from('cripto:{"nutrientesPorcao":{"energiaKcal":45}}'),
+            ...extraItem
+          }
+        ],
+        planoAlimentarSubstituicaos: substituicoes,
+        planoAlimentarEscolhas: escolhas
+      });
+    }
+
+    function alternativa(id: string, ordem: number, extra: Record<string, any>) {
+      return {
+        id,
+        tenantId: 'tenant-1',
+        itemId: 'item-1',
+        ordem,
+        descricaoCriptografada: Buffer.from('cripto:' + id),
+        quantidade: '1.000',
+        unidade: 'fatia',
+        porcaoGramas: '100.000',
+        composicaoSnapshotCriptografada: Buffer.from('cripto:{"nutrientesPorcao":{"energiaKcal":29}}'),
+        ...extra
+      };
+    }
+
+    it('esconde do paciente a alternativa que o profissional nao liberou', async () => {
+      const { servico } = cenario([
+        alternativa('liberada', 1, { liberadaParaPaciente: true, preferida: false }),
+        alternativa('interna', 2, { liberadaParaPaciente: false, preferida: false })
+      ]);
+
+      const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+
+      expect(portal.planoAlimentar!.refeicoes[0].itens[0].substituicoes.map((troca) => troca.id)).toEqual([
+        'liberada'
+      ]);
+    });
+
+    it('coloca as preferidas na frente sem perder a ordem dentro do grupo', async () => {
+      const { servico } = cenario([
+        alternativa('comum-a', 1, { liberadaParaPaciente: true, preferida: false }),
+        alternativa('preferida-b', 2, { liberadaParaPaciente: true, preferida: true }),
+        alternativa('comum-c', 3, { liberadaParaPaciente: true, preferida: false }),
+        alternativa('preferida-d', 4, { liberadaParaPaciente: true, preferida: true })
+      ]);
+
+      const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+
+      expect(portal.planoAlimentar!.refeicoes[0].itens[0].substituicoes.map((troca) => troca.id)).toEqual([
+        'preferida-b',
+        'preferida-d',
+        'comum-a',
+        'comum-c'
+      ]);
+    });
+
+    it('entrega o limite de exibicao definido pelo profissional', async () => {
+      const { servico } = cenario(
+        [alternativa('liberada', 1, { liberadaParaPaciente: true, preferida: false })],
+        { substituicoesVisiveisInicialmente: 1 }
+      );
+
+      const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+
+      expect(portal.planoAlimentar!.refeicoes[0].itens[0].substituicoesVisiveisInicialmente).toBe(1);
+    });
+
+    it('devolve a escolha vigente, que e a ultima da trilha e nao a unica', async () => {
+      const { servico } = cenario(
+        [
+          alternativa('troca-a', 1, { liberadaParaPaciente: true, preferida: false }),
+          alternativa('troca-b', 2, { liberadaParaPaciente: true, preferida: false })
+        ],
+        {},
+        [
+          {
+            id: 'escolha-1',
+            tenantId: 'tenant-1',
+            versaoId: 'versao-1',
+            itemId: 'item-1',
+            substituicaoId: 'troca-a',
+            escolhidoPorUsuarioId: 'usuario-paciente-1',
+            criadoEm: new Date('2026-08-09T10:00:00.000Z')
+          },
+          {
+            id: 'escolha-2',
+            tenantId: 'tenant-1',
+            versaoId: 'versao-1',
+            itemId: 'item-1',
+            substituicaoId: 'troca-b',
+            escolhidoPorUsuarioId: 'usuario-paciente-1',
+            criadoEm: new Date('2026-08-10T10:00:00.000Z')
+          }
+        ]
+      );
+
+      const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+
+      expect(portal.planoAlimentar!.refeicoes[0].itens[0].escolhaAtualSubstituicaoId).toBe('troca-b');
+    });
+
+    it('registra a escolha como evento novo, sem tocar na versao publicada', async () => {
+      const { servico, repositorios } = cenario([
+        alternativa('troca-a', 1, { liberadaParaPaciente: true, preferida: false })
+      ]);
+
+      const escolha = await servico.registrarEscolhaSubstituicao('tenant-1', 'usuario-paciente-1', 'item-1', {
+        substituicaoId: 'troca-a'
+      });
+
+      expect(escolha).toEqual(
+        expect.objectContaining({ itemId: 'item-1', substituicaoId: 'troca-a', versaoId: 'versao-1' })
+      );
+      expect(repositorios.planoAlimentarVersao.save).not.toHaveBeenCalled();
+      expect(repositorios.planoAlimentarSubstituicao.save).not.toHaveBeenCalled();
+    });
+
+    it('aceita o retorno ao alimento principal como decisao registrada', async () => {
+      const { servico } = cenario([alternativa('troca-a', 1, { liberadaParaPaciente: true, preferida: false })]);
+
+      const escolha = await servico.registrarEscolhaSubstituicao('tenant-1', 'usuario-paciente-1', 'item-1', {});
+
+      expect(escolha.substituicaoId).toBeUndefined();
+    });
+
+    it('recusa escolher alternativa que o profissional nao liberou', async () => {
+      const { servico } = cenario([alternativa('interna', 1, { liberadaParaPaciente: false, preferida: false })]);
+
+      await expect(
+        servico.registrarEscolhaSubstituicao('tenant-1', 'usuario-paciente-1', 'item-1', { substituicaoId: 'interna' })
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('recusa alternativa que pertence a outro item', async () => {
+      const { servico } = cenario([
+        alternativa('troca-a', 1, { liberadaParaPaciente: true, preferida: false }),
+        { ...alternativa('troca-alheia', 1, { liberadaParaPaciente: true, preferida: false }), itemId: 'item-9' }
+      ]);
+
+      await expect(
+        servico.registrarEscolhaSubstituicao('tenant-1', 'usuario-paciente-1', 'item-1', {
+          substituicaoId: 'troca-alheia'
+        })
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('recusa registrar troca em versao que nao e a publicada atual', async () => {
+      const { servico, repositorios } = cenario([
+        alternativa('troca-a', 1, { liberadaParaPaciente: true, preferida: false })
+      ]);
+      // Versao antiga: a publicacao atual do plano ja e outra.
+      const plano = (await repositorios.planoAlimentar.findOne({ where: { id: 'plano-1' } })) as Record<string, unknown>;
+      plano.versaoPublicadaAtualId = 'versao-2';
+
+      await expect(
+        servico.registrarEscolhaSubstituicao('tenant-1', 'usuario-paciente-1', 'item-1', {})
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('recusa item que nao pertence ao plano publicado do paciente', async () => {
+      const { servico } = cenario([alternativa('troca-a', 1, { liberadaParaPaciente: true, preferida: false })]);
+
+      await expect(
+        servico.registrarEscolhaSubstituicao('tenant-1', 'usuario-paciente-1', 'item-fantasma', {})
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
   });
 });

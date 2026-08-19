@@ -42,8 +42,18 @@ export interface SubstituicaoPlanoAlimentarEntrada {
   nutrientesPor100g?: NutrientesPor100gApi;
 }
 
+// As duas decisoes do profissional sobre uma alternativa. Nao ficam em
+// `SubstituicaoPlanoAlimentarEntrada` porque o item principal estende aquela
+// interface e nao e alternativa de nada.
+export interface AlternativaPlanoAlimentarEntrada extends SubstituicaoPlanoAlimentarEntrada {
+  liberadaParaPaciente: boolean;
+  preferida: boolean;
+}
+
 export interface ItemPlanoAlimentarEntrada extends SubstituicaoPlanoAlimentarEntrada {
-  substituicoes: SubstituicaoPlanoAlimentarEntrada[];
+  substituicoes: AlternativaPlanoAlimentarEntrada[];
+  /** Ausente significa mostrar todas as liberadas ao paciente. */
+  substituicoesVisiveisInicialmente?: number;
 }
 
 export interface RefeicaoPlanoAlimentarEntrada {
@@ -104,8 +114,14 @@ export interface SubstituicaoPlanoAlimentarApi {
   composicaoSnapshot: ComposicaoSnapshotApi;
 }
 
+export interface AlternativaPlanoAlimentarApi extends SubstituicaoPlanoAlimentarApi {
+  liberadaParaPaciente: boolean;
+  preferida: boolean;
+}
+
 export interface ItemPlanoAlimentarApi extends SubstituicaoPlanoAlimentarApi {
-  substituicoes: SubstituicaoPlanoAlimentarApi[];
+  substituicoes: AlternativaPlanoAlimentarApi[];
+  substituicoesVisiveisInicialmente?: number;
 }
 
 export interface RefeicaoPlanoAlimentarApi {

@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomUUID } from 'crypto';
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
@@ -18,6 +18,7 @@ import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-m
 import { MaterialEducativoOrm } from '../../materiais/infraestrutura/material-educativo.orm';
 import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
 import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
+import { PlanoAlimentarEscolhaPacienteOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-escolha-paciente.orm';
 import { PlanoAlimentarItemOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-item.orm';
 import { PlanoAlimentarRefeicaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
 import { PlanoAlimentarSubstituicaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-substituicao.orm';
@@ -32,6 +33,7 @@ import {
   AtualizarPerfilPacientePortalDto,
   RegistrarCheckinRapidoPortalDto,
   RegistrarConsentimentoLgpdPortalDto,
+  RegistrarEscolhaSubstituicaoPortalDto,
   RegistrarSolicitacaoLgpdPortalDto
 } from './dtos';
 import { listarDocumentosLegaisPaciente } from './documentos-legais-paciente';
@@ -75,8 +77,27 @@ interface SubstituicaoPlanoAlimentarPortal {
   nutrientes: NutrientesPlanoAlimentarPortal;
 }
 
+interface AlternativaPlanoAlimentarPortal extends SubstituicaoPlanoAlimentarPortal {
+  /** Recomendada pelo profissional. Aparece antes das demais. */
+  preferida: boolean;
+}
+
 interface ItemPlanoAlimentarPortal extends SubstituicaoPlanoAlimentarPortal {
-  substituicoes: SubstituicaoPlanoAlimentarPortal[];
+  /** So chegam aqui as trocas que o profissional liberou para este paciente. */
+  substituicoes: AlternativaPlanoAlimentarPortal[];
+  /** Ausente significa mostrar todas as liberadas, sem recolher nenhuma. */
+  substituicoesVisiveisInicialmente?: number;
+  /** Ausente significa que o paciente segue no alimento principal. */
+  escolhaAtualSubstituicaoId?: string;
+}
+
+export interface EscolhaSubstituicaoPortalPaciente {
+  id: string;
+  versaoId: string;
+  itemId: string;
+  substituicaoId?: string;
+  escolhidoPorUsuarioId: string;
+  criadoEm: Date;
 }
 
 export interface PlanoAlimentarPortalPaciente {
@@ -574,6 +595,81 @@ export class ServicoPortalPaciente {
     });
   }
 
+  /**
+   * Registra a troca escolhida pelo paciente.
+   *
+   * Grava sempre uma linha nova na trilha e nunca toca na versao publicada: e
+   * assim que a imutabilidade da publicacao convive com o paciente registrando
+   * trocas. `substituicaoId` ausente significa voltar ao alimento principal,
+   * que tambem e uma decisao e por isso vira evento.
+   */
+  async registrarEscolhaSubstituicao(
+    tenantId: string,
+    usuarioId: string,
+    itemId: string,
+    dados: RegistrarEscolhaSubstituicaoPortalDto
+  ): Promise<EscolhaSubstituicaoPortalPaciente> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: { tenantId, usuarioId, arquivadoEm: IsNull() }
+      });
+      if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
+
+      const item = await gerenciador.getRepository(PlanoAlimentarItemOrm).findOne({
+        where: { tenantId, id: itemId }
+      });
+      if (!item) throw new NotFoundException('Item de plano alimentar nao encontrado.');
+      const refeicao = await gerenciador.getRepository(PlanoAlimentarRefeicaoOrm).findOne({
+        where: { tenantId, id: item.refeicaoId }
+      });
+      if (!refeicao) throw new NotFoundException('Item de plano alimentar nao encontrado.');
+      const versao = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
+        where: { tenantId, id: refeicao.versaoId }
+      });
+      if (!versao) throw new NotFoundException('Item de plano alimentar nao encontrado.');
+      // O vinculo com o paciente autenticado fecha aqui: sem este filtro, um
+      // paciente poderia escrever na trilha de um item de outro paciente do
+      // mesmo tenant.
+      const plano = await gerenciador.getRepository(PlanoAlimentarOrm).findOne({
+        where: { tenantId, id: versao.planoId, pacienteId: paciente.id, arquivadoEm: IsNull() }
+      });
+      if (!plano) throw new NotFoundException('Item de plano alimentar nao encontrado.');
+      if (plano.versaoPublicadaAtualId !== versao.id) {
+        throw new BadRequestException('A troca so pode ser registrada na versao publicada atual do plano.');
+      }
+
+      if (dados.substituicaoId) {
+        const substituicao = await gerenciador.getRepository(PlanoAlimentarSubstituicaoOrm).findOne({
+          where: { tenantId, id: dados.substituicaoId, itemId: item.id }
+        });
+        if (!substituicao) throw new NotFoundException('Substituicao nao encontrada para este item.');
+        if (substituicao.liberadaParaPaciente !== true) {
+          throw new ForbiddenException('Esta alternativa nao foi liberada para escolha do paciente.');
+        }
+      }
+
+      const repositorio = gerenciador.getRepository(PlanoAlimentarEscolhaPacienteOrm);
+      const escolha = await repositorio.save(
+        repositorio.create({
+          tenantId,
+          versaoId: versao.id,
+          itemId: item.id,
+          substituicaoId: dados.substituicaoId,
+          escolhidoPorUsuarioId: usuarioId,
+          criadoEm: new Date()
+        })
+      );
+      return {
+        id: escolha.id,
+        versaoId: escolha.versaoId,
+        itemId: escolha.itemId,
+        substituicaoId: escolha.substituicaoId,
+        escolhidoPorUsuarioId: escolha.escolhidoPorUsuarioId,
+        criadoEm: escolha.criadoEm
+      };
+    });
+  }
+
   private async obterPlanoAlimentarPublicado(
     gerenciador: EntityManager,
     tenantId: string,
@@ -619,10 +715,20 @@ export class ServicoPortalPaciente {
     const itemIds = itens.map((item) => item.id);
     const substituicoes = itemIds.length
       ? await gerenciador.getRepository(PlanoAlimentarSubstituicaoOrm).find({
-          where: { tenantId, itemId: In(itemIds) },
+          // Filtro na consulta, e nao na montagem: alternativa nao liberada e
+          // decisao interna do profissional e nao deve sair do banco a caminho
+          // do paciente.
+          where: { tenantId, itemId: In(itemIds), liberadaParaPaciente: true },
           order: { ordem: 'ASC' }
         })
       : [];
+    const escolhas = await gerenciador.getRepository(PlanoAlimentarEscolhaPacienteOrm).find({
+      where: { tenantId, versaoId: versao.id },
+      order: { criadoEm: 'ASC' }
+    });
+    // A trilha e append-only, entao a escolha vigente e a ultima linha do item.
+    const escolhaPorItem = new Map<string, string | undefined>();
+    for (const escolha of escolhas) escolhaPorItem.set(escolha.itemId, escolha.substituicaoId ?? undefined);
 
     const substituicoesPorItem = new Map<string, PlanoAlimentarSubstituicaoOrm[]>();
     for (const substituicao of substituicoes) {
@@ -675,8 +781,19 @@ export class ServicoPortalPaciente {
               nutrientes: this.mapearNutrientesPaciente(
                 this.lerSnapshotCriptografado(item.composicaoSnapshotCriptografada)
               ),
+              ...(item.substituicoesVisiveisInicialmente
+                ? { substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente }
+                : {}),
+              ...(escolhaPorItem.get(item.id)
+                ? { escolhaAtualSubstituicaoId: escolhaPorItem.get(item.id) }
+                : {}),
               substituicoes: (substituicoesPorItem.get(item.id) ?? [])
-                .sort((a, b) => a.ordem - b.ordem)
+                // Preferidas primeiro, mantendo a ordem do profissional dentro
+                // de cada grupo.
+                .sort(
+                  (a, b) =>
+                    Number(b.preferida === true) - Number(a.preferida === true) || a.ordem - b.ordem
+                )
                 .map((substituicao) => ({
                   id: substituicao.id,
                   descricao: this.criptografia.descriptografar(substituicao.descricaoCriptografada),
@@ -685,7 +802,8 @@ export class ServicoPortalPaciente {
                   porcaoGramas: Number(substituicao.porcaoGramas),
                   nutrientes: this.mapearNutrientesPaciente(
                     this.lerSnapshotCriptografado(substituicao.composicaoSnapshotCriptografada)
-                  )
+                  ),
+                  preferida: substituicao.preferida === true
                 }))
             }))
         }))

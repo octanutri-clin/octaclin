@@ -4,6 +4,7 @@ import { CalendarDays, Printer, Target } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { Etiqueta } from '@/components/ui/etiqueta';
+import { TrocasLiberadasItem } from '@/components/portal/trocas-liberadas-item';
 import type { PlanoAlimentarPacienteApi } from '@/lib/portal-api';
 
 interface PlanoAlimentarPacienteProps {
@@ -109,18 +110,7 @@ export function PlanoAlimentarPaciente({ plano }: PlanoAlimentarPacienteProps) {
                     <li key={item.id} className="border-t border-linha pt-3 first:border-t-0 first:pt-0">
                       <p className="break-words text-sm font-medium text-tinta">{item.descricao}</p>
                       <p className="mt-1 text-xs text-texto-suave">{descricaoPorcao(item.quantidade, item.unidade, item.porcaoGramas)}</p>
-                      {item.substituicoes.length ? (
-                        <div className="mt-2">
-                          <p className="text-xs font-semibold text-texto-suave">Substituicoes</p>
-                          <ul className="mt-1 grid gap-1">
-                            {item.substituicoes.map((substituicao) => (
-                              <li key={substituicao.id} className="break-words text-xs text-texto-suave">
-                                {substituicao.descricao} - {descricaoPorcao(substituicao.quantidade, substituicao.unidade, substituicao.porcaoGramas)}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
+                      <TrocasLiberadasItem item={item} descricaoPorcao={descricaoPorcao} />
                     </li>
                   ))}
                 </ul>
