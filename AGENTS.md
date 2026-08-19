@@ -28,7 +28,7 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 - Melhoria continua: Fases 138, 141 e 142 atualizaram NestJS para 11.1.28, TypeORM para 1.1.0 e Next.js para 15.5.22, com auditorias de producao zeradas. Preserve React 18.3.1 e o shim de cookies BFF ate uma fase dedicada de Next.js 16/React 19.
 - Fase 139 removeu `any` de codigo backend de producao e consolidou contratos de agenda/convites; preserve `requisitarBackendAutenticado` como a fronteira unica de erros BFF autenticados.
 - Fase 140 introduziu `MATRIZ_CONFIABILIDADE_TESTES.md`; atualize a matriz e seu validador sempre que adicionar ou remover um fluxo de risco alto.
-- Fase 142 introduziu `pnpm --dir octaclin-web test:next15`; toda nova rota dinamica deve receber `params`/`searchParams` assincronos e manter esse gate verde.
+- Fase 142 introduziu o gate de APIs dinamicas assincronas, hoje `pnpm --dir octaclin-web test:apis-dinamicas` (chamava-se `test:next15` ate a Fase 245); toda nova rota dinamica deve receber `params`/`searchParams` assincronos e manter esse gate verde.
 - O checklist vivo das proximas fases fica em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 - Para as Fases 191 a 198 (bloco de redesenho), o mapeamento de skills/agentes/plugins do Claude Code a usar em cada fase fica em `ESCOPO_SKILLS_AGENTES_FASES_191_198.md`; leia-o ao revisar esse historico ou tocar as telas correspondentes.
 

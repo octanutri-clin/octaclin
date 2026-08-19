@@ -93,7 +93,7 @@ jobs:
       # Contratos de autorizacao do BFF e validacao das APIs dinamicas do Next.
       # Rodam antes do build: sao rapidos e falham cedo quando um contrato muda.
       - run: pnpm test:authz
-      - run: pnpm test:next15
+      - run: pnpm test:apis-dinamicas
       - run: pnpm build
       - run: pnpm test:seguranca-runtime
 
