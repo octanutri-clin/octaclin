@@ -26,6 +26,7 @@ import {
   calcularTotaisPlano,
   EstruturaPlanoAlimentar,
   ItemPlanoAlimentar,
+  AlternativaPlanoAlimentar,
   SubstituicaoPlanoAlimentar,
   validarEstruturaPlano
 } from '../dominio/plano-alimentar';
@@ -628,9 +629,19 @@ export class ServicoPlanosAlimentares {
         const substituicoes = [];
         for (const substituicaoEntrada of itemEntrada.substituicoes ?? []) {
           const substituicao = await this.resolverItem(gerenciador, substituicaoEntrada);
-          substituicoes.push({ ...substituicao.dominio, snapshot: substituicao.snapshot });
+          substituicoes.push({
+            ...substituicao.dominio,
+            snapshot: substituicao.snapshot,
+            // Exposicao ao paciente e decisao explicita: a ausencia nunca vira um sim.
+            liberadaParaPaciente: substituicaoEntrada.liberadaParaPaciente === true,
+            preferida: substituicaoEntrada.preferida === true
+          });
         }
-        itens.push({ ...item.dominio, substituicoes } as ItemPlanoAlimentar);
+        itens.push({
+          ...item.dominio,
+          substituicoes,
+          substituicoesVisiveisInicialmente: itemEntrada.substituicoesVisiveisInicialmente
+        } as ItemPlanoAlimentar);
         Object.assign(itens[itens.length - 1], { snapshot: item.snapshot });
       }
       refeicoes.push({
@@ -823,12 +834,13 @@ export class ServicoPlanosAlimentares {
             unidade: item.unidade,
             porcaoGramas: item.porcaoGramas.toFixed(3),
             composicaoSnapshotCriptografada: this.criptografia.criptografar(JSON.stringify(snapshot)),
-            motorCalculoVersao: MOTOR_CALCULO_VERSAO
+            motorCalculoVersao: MOTOR_CALCULO_VERSAO,
+            substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente
           })
         );
         for (const [ordemSubstituicao, substituicao] of item.substituicoes.entries()) {
           const snapshotSubstituicao = (
-            substituicao as SubstituicaoPlanoAlimentar & { snapshot: SnapshotComposicao }
+            substituicao as AlternativaPlanoAlimentar & { snapshot: SnapshotComposicao }
           ).snapshot;
           await repositorioSubstituicao.save(
             repositorioSubstituicao.create({
@@ -841,7 +853,10 @@ export class ServicoPlanosAlimentares {
               unidade: substituicao.unidade,
               porcaoGramas: substituicao.porcaoGramas.toFixed(3),
               composicaoSnapshotCriptografada: this.criptografia.criptografar(JSON.stringify(snapshotSubstituicao)),
-              motorCalculoVersao: MOTOR_CALCULO_VERSAO
+              motorCalculoVersao: MOTOR_CALCULO_VERSAO,
+              // Exposicao ao paciente e decisao explicita: a ausencia nunca vira um sim.
+              liberadaParaPaciente: substituicao.liberadaParaPaciente === true,
+              preferida: substituicao.preferida === true
             })
           );
         }
@@ -889,7 +904,8 @@ export class ServicoPlanosAlimentares {
             unidade: item.unidade,
             porcaoGramas: item.porcaoGramas,
             composicaoSnapshotCriptografada: Buffer.from(item.composicaoSnapshotCriptografada),
-            motorCalculoVersao: item.motorCalculoVersao
+            motorCalculoVersao: item.motorCalculoVersao,
+            substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente
           })
         );
         const substituicoes = await repositorioSubstituicao.find({
@@ -908,7 +924,9 @@ export class ServicoPlanosAlimentares {
               unidade: substituicao.unidade,
               porcaoGramas: substituicao.porcaoGramas,
               composicaoSnapshotCriptografada: Buffer.from(substituicao.composicaoSnapshotCriptografada),
-              motorCalculoVersao: substituicao.motorCalculoVersao
+              motorCalculoVersao: substituicao.motorCalculoVersao,
+              liberadaParaPaciente: substituicao.liberadaParaPaciente,
+              preferida: substituicao.preferida
             })
           );
         }
@@ -1097,6 +1115,7 @@ export class ServicoPlanosAlimentares {
             unidade: item.unidade,
             porcaoGramas: Number(item.porcaoGramas),
             composicaoSnapshot: this.lerJsonCriptografado<SnapshotComposicao>(item.composicaoSnapshotCriptografada),
+            substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente,
             substituicoes: substituicoes
               .filter((substituicao) => substituicao.itemId === item.id)
               .sort((a, b) => a.ordem - b.ordem)
@@ -1110,7 +1129,9 @@ export class ServicoPlanosAlimentares {
                 porcaoGramas: Number(substituicao.porcaoGramas),
                 composicaoSnapshot: this.lerJsonCriptografado<SnapshotComposicao>(
                   substituicao.composicaoSnapshotCriptografada
-                )
+                ),
+                liberadaParaPaciente: substituicao.liberadaParaPaciente,
+                preferida: substituicao.preferida
               }))
           }))
       }))

@@ -168,12 +168,35 @@ export class SubstituicaoPlanoAlimentarDto {
   nutrientesPor100g?: NutrientesPor100gDto;
 }
 
+// As duas decisoes do profissional sobre uma alternativa. Ficam aqui, e nao em
+// `SubstituicaoPlanoAlimentarDto`, porque o item principal estende aquela classe
+// e nao e alternativa de nada.
+export class AlternativaPlanoAlimentarDto extends SubstituicaoPlanoAlimentarDto {
+  // Exposicao ao paciente e decisao explicita: omitir o campo nunca libera.
+  @IsOptional()
+  @IsBoolean()
+  liberadaParaPaciente = false;
+
+  @IsOptional()
+  @IsBoolean()
+  preferida = false;
+}
+
 export class ItemPlanoAlimentarDto extends SubstituicaoPlanoAlimentarDto {
   @IsArray()
   @ArrayMaxSize(20)
   @ValidateNested({ each: true })
-  @Type(() => SubstituicaoPlanoAlimentarDto)
-  substituicoes: SubstituicaoPlanoAlimentarDto[] = [];
+  @Type(() => AlternativaPlanoAlimentarDto)
+  substituicoes: AlternativaPlanoAlimentarDto[] = [];
+
+  // Ausente significa mostrar todas as liberadas. Zero seria um grupo de troca
+  // que nunca aparece, que e a mesma coisa que nao liberar nenhuma.
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  substituicoesVisiveisInicialmente?: number;
 }
 
 export class RefeicaoPlanoAlimentarDto {

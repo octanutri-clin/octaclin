@@ -37,6 +37,14 @@ import type {
   SexoBiologico
 } from '../dominio/antropometria';
 
+export class RegistrarEscolhaSubstituicaoPortalDto {
+  // Nulo e ausente registram o retorno ao alimento principal, que tambem e uma
+  // decisao do paciente e precisa entrar na trilha.
+  @IsOptional()
+  @IsUUID()
+  substituicaoId?: string;
+}
+
 export class CriarPacienteDto {
   @IsUUID()
   profissionalResponsavelId: string;

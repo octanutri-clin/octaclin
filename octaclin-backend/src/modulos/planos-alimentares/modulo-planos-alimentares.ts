@@ -19,6 +19,7 @@ import { CatalogoComposicaoAlimentoOrm } from './infraestrutura/catalogo-composi
 import { FonteComposicaoAlimentoOrm } from './infraestrutura/fonte-composicao-alimento.orm';
 import { PlanoAlimentarItemOrm } from './infraestrutura/plano-alimentar-item.orm';
 import { PlanoAlimentarRefeicaoOrm } from './infraestrutura/plano-alimentar-refeicao.orm';
+import { PlanoAlimentarEscolhaPacienteOrm } from './infraestrutura/plano-alimentar-escolha-paciente.orm';
 import { PlanoAlimentarSubstituicaoOrm } from './infraestrutura/plano-alimentar-substituicao.orm';
 import { PlanoAlimentarVersaoOrm } from './infraestrutura/plano-alimentar-versao.orm';
 import { ModeloPlanoAlimentarOrm } from './infraestrutura/modelo-plano-alimentar.orm';
@@ -32,6 +33,7 @@ import { PlanoAlimentarOrm } from './infraestrutura/plano-alimentar.orm';
       PlanoAlimentarRefeicaoOrm,
       PlanoAlimentarItemOrm,
       PlanoAlimentarSubstituicaoOrm,
+      PlanoAlimentarEscolhaPacienteOrm,
       ModeloPlanoAlimentarOrm,
       CatalogoComposicaoAlimentoOrm,
       FonteComposicaoAlimentoOrm,

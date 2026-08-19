@@ -378,10 +378,10 @@ privileges no schema, entao tabela nova ja nasce com
 producao apos a `1031`. E o `force row level security` continua indispensavel,
 porque `neondb_owner` tem `rolbypassrls = true` — a role da aplicacao nao tem.
 
-## Incremento 6 - desenho aprovado, ainda nao implementado
+## Incremento 6 - implementado em 2026-08-18
 
-Desenho validado em 2026-08-17 junto com o do Incremento 5. Registrado aqui para
-nao precisar ser re-derivado. **Nada disto foi codificado.**
+Desenho validado em 2026-08-17 junto com o do Incremento 5 e implementado como
+descrito, com uma correcao de premissa registrada abaixo.
 
 Migration `1032`, aditiva, sem tabela de grupos:
 
@@ -419,9 +419,48 @@ intolerancia, custo e praticidade. A TACO nao carrega esses atributos, e a fase
 determina que atributo so vira filtro quando houver fonte, escopo e mecanismo de
 revisao — dado desconhecido nao vira afirmacao clinica.
 
-Ordem recomendada: so comecar depois que a `1031` estiver aplicada na
-integracao, para nao empilhar duas migrations nao aplicadas e dificultar o
-isolamento de problema quando o gate abrir.
+### Correcao de premissa: o portal ja expunha todas as substituicoes
+
+O desenho justificava o default `false` de `liberada_para_paciente` dizendo que
+"planos ja publicados nao passam a expor trocas retroativamente". A leitura
+estava incompleta: `ServicoPortalPaciente.obterPlanoAlimentarPublicado` ja
+devolvia **todas** as substituicoes ao paciente, sem filtro nenhum. Com o
+default `false` e o filtro novo, todo plano publicado perderia em silencio as
+trocas que o paciente enxerga hoje — dentro de uma versao que e imutavel por
+contrato.
+
+A migration por isso faz backfill: `update plano_alimentar_substituicoes set
+liberada_para_paciente = true`. O default `false` continua valendo para tudo que
+for escrito daqui em diante, entao liberar segue sendo decisao explicita do
+profissional; o que nao acontece e a remocao retroativa de conteudo ja visivel.
+
+### O que entrou
+
+- migration `1032`, aditiva, como desenhada, mais o backfill acima e o check
+  `plano_alimentar_itens_substituicoes_visiveis_check` (nulo ou 1 a 20);
+- dominio: `AlternativaPlanoAlimentar` separa as duas decisoes do profissional
+  de `SubstituicaoPlanoAlimentar`, porque o item principal herda essa interface
+  e nao e alternativa de nada;
+- gravacao, clone de versao e leitura da versao carregam as decisoes. O clone
+  preserva a liberacao de proposito: perder a liberacao ao abrir a versao
+  seguinte entregaria ao paciente um plano sem as trocas que ele ja usava, sem
+  ninguem ter decidido isso;
+- portal: filtra pelas liberadas **na consulta**, ordena preferidas primeiro,
+  devolve o limite de exibicao e a escolha vigente;
+- `POST /portal/paciente/plano-alimentar/itens/:itemId/escolha`, com auditoria
+  e confirmacao explicita na interface do paciente;
+- editor do profissional: duas caixas por alternativa e o campo de limite de
+  exibicao por item.
+
+### O que ficou de fora
+
+Leitura da trilha pelo profissional. O evento e auditado e a escolha vigente
+aparece no portal, mas ainda nao existe tela ou endpoint que mostre ao
+profissional o historico de trocas do paciente. E o proximo passo natural, e nao
+um esquecimento.
+
+Ordem de rollout, pela regra da fase: merge, `migration:run` contra producao com
+`neondb_owner`, deploy. A `1032` tem DDL e o boot nao consegue aplica-la.
 
 ## Escopo funcional
 

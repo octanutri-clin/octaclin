@@ -39,6 +39,9 @@ export class PlanoAlimentarItemOrm {
   @Column({ name: 'motor_calculo_versao', type: 'varchar', length: 40 })
   motorCalculoVersao: string;
 
+  @Column({ name: 'substituicoes_visiveis_inicialmente', type: 'integer', nullable: true })
+  substituicoesVisiveisInicialmente?: number;
+
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 

@@ -64,8 +64,14 @@ interface AlimentoFormulario extends SubstituicaoPlanoAlimentarEntrada {
   fonteRotulo?: string;
 }
 
+interface AlternativaFormulario extends AlimentoFormulario {
+  liberadaParaPaciente: boolean;
+  preferida: boolean;
+}
+
 interface ItemFormulario extends AlimentoFormulario {
-  substituicoes: AlimentoFormulario[];
+  substituicoes: AlternativaFormulario[];
+  substituicoesVisiveisInicialmente?: number;
 }
 
 interface RefeicaoFormulario extends Omit<RefeicaoPlanoAlimentarEntrada, 'itens'> {
@@ -104,6 +110,12 @@ function novoAlimento(): AlimentoFormulario {
     porcaoGramas: 100,
     nutrientesPor100g: { ...nutrientesVazios }
   };
+}
+
+// Alternativa nova nasce fechada: liberar ao paciente e decisao explicita, e
+// nao um efeito colateral de adicionar uma linha.
+function novaAlternativa(): AlternativaFormulario {
+  return { ...novoAlimento(), liberadaParaPaciente: false, preferida: false };
 }
 
 function novoItem(): ItemFormulario {
@@ -163,7 +175,15 @@ function alimentoDaVersao(
       : undefined
   };
   if ('substituicoes' in alimento) {
-    return { ...base, substituicoes: alimento.substituicoes.map((item) => alimentoDaVersao(item)) };
+    return {
+      ...base,
+      substituicoes: alimento.substituicoes.map((substituicao) => ({
+        ...alimentoDaVersao(substituicao),
+        liberadaParaPaciente: substituicao.liberadaParaPaciente === true,
+        preferida: substituicao.preferida === true
+      })),
+      substituicoesVisiveisInicialmente: alimento.substituicoesVisiveisInicialmente
+    };
   }
   return base;
 }
@@ -232,7 +252,12 @@ function refeicoesParaModelo(formulario: FormularioPlano): RefeicaoPlanoAlimenta
     orientacoes: refeicao.orientacoes?.trim() || undefined,
     itens: refeicao.itens.map((item) => ({
       ...alimentoParaModelo(item),
-      substituicoes: item.substituicoes.map(alimentoParaModelo)
+      substituicoes: item.substituicoes.map((substituicao) => ({
+        ...alimentoParaModelo(substituicao),
+        liberadaParaPaciente: substituicao.liberadaParaPaciente,
+        preferida: substituicao.preferida
+      })),
+      substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente
     }))
   }));
 }
@@ -258,7 +283,12 @@ function refeicoesDoModelo(refeicoes: RefeicaoPlanoAlimentarEntrada[]): Refeicao
     orientacoes: refeicao.orientacoes ?? '',
     itens: refeicao.itens.map((item) => ({
       ...alimentoDoModelo(item),
-      substituicoes: (item.substituicoes ?? []).map(alimentoDoModelo)
+      substituicoes: (item.substituicoes ?? []).map((substituicao) => ({
+        ...alimentoDoModelo(substituicao),
+        liberadaParaPaciente: substituicao.liberadaParaPaciente === true,
+        preferida: substituicao.preferida === true
+      })),
+      substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente
     }))
   }));
 }
@@ -288,7 +318,14 @@ function montarEntrada(formulario: FormularioPlano): AtualizarRascunhoPlanoAlime
       orientacoes: refeicao.orientacoes?.trim() || undefined,
       itens: refeicao.itens.map((item) => ({
         ...entradaAlimento(item),
-        substituicoes: item.substituicoes.map(entradaAlimento)
+        substituicoes: item.substituicoes.map((substituicao) => ({
+          ...entradaAlimento(substituicao),
+          liberadaParaPaciente: substituicao.liberadaParaPaciente,
+          preferida: substituicao.preferida
+        })),
+        substituicoesVisiveisInicialmente: item.substituicoes.length
+          ? item.substituicoesVisiveisInicialmente
+          : undefined
       }))
     }))
   };
@@ -699,7 +736,7 @@ function EditorItem({ pacienteId, item, indice, total, aoAlterar, aoRemover, aoM
       <div className="ml-0 grid gap-3 border-l-2 border-primaria-suave pl-3 sm:ml-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-semibold uppercase text-texto-suave">Substituicoes</p>
-          <Botao type="button" variante="fantasma" tamanho="sm" onClick={() => aoAlterar({ ...item, substituicoes: [...item.substituicoes, novoAlimento()] })}>
+          <Botao type="button" variante="fantasma" tamanho="sm" onClick={() => aoAlterar({ ...item, substituicoes: [...item.substituicoes, novaAlternativa()] })}>
             <Plus size={15} />
             Adicionar substituicao
           </Botao>
@@ -714,11 +751,46 @@ function EditorItem({ pacienteId, item, indice, total, aoAlterar, aoRemover, aoM
               pacienteId={pacienteId}
               rotulo={`Substituicao ${indiceSubstituicao + 1}`}
               valor={substituicao}
-              aoAlterar={(valor) => aoAlterar({ ...item, substituicoes: item.substituicoes.map((atual, posicao) => posicao === indiceSubstituicao ? valor : atual) })}
+              aoAlterar={(valor) => aoAlterar({ ...item, substituicoes: item.substituicoes.map((atual, posicao) => posicao === indiceSubstituicao ? { ...atual, ...valor } : atual) })}
               aoRemover={() => aoAlterar({ ...item, substituicoes: item.substituicoes.filter((_, posicao) => posicao !== indiceSubstituicao) })}
             />
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 text-xs text-texto-suave">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-primaria"
+                  checked={substituicao.liberadaParaPaciente}
+                  onChange={(evento) => aoAlterar({ ...item, substituicoes: item.substituicoes.map((atual, posicao) => posicao === indiceSubstituicao ? { ...atual, liberadaParaPaciente: evento.target.checked } : atual) })}
+                />
+                O paciente pode escolher esta troca
+              </label>
+              <label className="flex items-center gap-2 text-xs text-texto-suave">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-primaria"
+                  checked={substituicao.preferida}
+                  onChange={(evento) => aoAlterar({ ...item, substituicoes: item.substituicoes.map((atual, posicao) => posicao === indiceSubstituicao ? { ...atual, preferida: evento.target.checked } : atual) })}
+                />
+                Recomendar esta troca
+              </label>
+            </div>
           </div>
         )) : <p className="text-sm text-texto-suave">Nenhuma substituicao cadastrada.</p>}
+        {item.substituicoes.length ? (
+          <div className="grid gap-1">
+            <Rotulo htmlFor={`visiveis-${item.chaveCliente}`}>Trocas visiveis antes de expandir</Rotulo>
+            <Campo
+              id={`visiveis-${item.chaveCliente}`}
+              type="number"
+              min={1}
+              max={20}
+              value={item.substituicoesVisiveisInicialmente ?? ''}
+              placeholder="Todas"
+              onChange={(evento) => aoAlterar({ ...item, substituicoesVisiveisInicialmente: evento.target.value ? Number(evento.target.value) : undefined })}
+            />
+            <p className="text-xs text-texto-suave">Em branco mostra todas as trocas liberadas ao paciente.</p>
+          </div>
+        ) : null}
       </div>
     </div>
   );
