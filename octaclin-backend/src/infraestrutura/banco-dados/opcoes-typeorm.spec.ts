@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from 'fs';
+import { join } from 'path';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
 import { AdicionarDesfechosConsultaAgenda1720000001002 } from './migracoes/1720000001002-AdicionarDesfechosConsultaAgenda';
 import { AdicionarRevisaoClinicaEnviosQuestionario1720000001003 } from './migracoes/1720000001003-AdicionarRevisaoClinicaEnviosQuestionario';
@@ -97,6 +99,26 @@ describe('criarOpcoesTypeOrm', () => {
     process.env[nome] = valor;
 
     expect(() => criarOpcoesTypeOrm()).toThrow(nome);
+  });
+
+  it('registra toda migration que existe na pasta, sem depender de lembrar da lista', () => {
+    // `opcoes.migrations` e uma lista explicita, e o teste vizinho usa
+    // `arrayContaining`, que por construcao nunca acusa uma migration faltando.
+    // Esquecer uma linha aqui produz um arquivo de migration que nunca roda, e
+    // o CI nao pega porque nao executa migrations.
+    const pasta = join(__dirname, 'migracoes');
+    const nomesNaPasta = readdirSync(pasta)
+      .filter((arquivo) => arquivo.endsWith('.ts') && !arquivo.endsWith('.spec.ts'))
+      .map((arquivo) => {
+        const conteudo = readFileSync(join(pasta, arquivo), 'utf8');
+        const encontrado = /export class (\w+)/.exec(conteudo);
+        if (!encontrado) throw new Error(`Migration sem classe exportada: ${arquivo}`);
+        return encontrado[1];
+      })
+      .sort();
+    const nomesRegistrados = (criarOpcoesTypeOrm().migrations as Function[]).map((classe) => classe.name).sort();
+
+    expect(nomesRegistrados).toEqual(nomesNaPasta);
   });
 
   it('registra a entidade e a sequencia de migrations das fases clinicas', () => {
