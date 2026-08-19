@@ -44,6 +44,7 @@ import { GovernancaCatalogoMultifonte1720000001028 } from './migracoes/172000000
 import { AtivarLegadoTacoGovernado1720000001029 } from './migracoes/1720000001029-AtivarLegadoTacoGovernado';
 import { EndurecerGovernancaCatalogo1720000001030 } from './migracoes/1720000001030-EndurecerGovernancaCatalogo';
 import { CriarModelosPlanoAlimentar1720000001031 } from './migracoes/1720000001031-CriarModelosPlanoAlimentar';
+import { LiberarSubstituicoesAoPaciente1720000001032 } from './migracoes/1720000001032-LiberarSubstituicoesAoPaciente';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -291,7 +292,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         GovernancaCatalogoMultifonte1720000001028,
         AtivarLegadoTacoGovernado1720000001029,
         EndurecerGovernancaCatalogo1720000001030,
-        CriarModelosPlanoAlimentar1720000001031
+        CriarModelosPlanoAlimentar1720000001031,
+        LiberarSubstituicoesAoPaciente1720000001032
       ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,
