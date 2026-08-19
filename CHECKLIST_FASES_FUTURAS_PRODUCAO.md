@@ -2023,26 +2023,27 @@ publicado antes de ampliar a superficie de mudancas visuais.
     web cai no TypeScript 7, que remove `moduleResolution=node10`.
   - Evidencia: `fase-244-quitacao-divida-dependencias.md`.
 
-- [ ] Fase 245 - Migracao do Next.js 15 para 16. [NAO BLOQUEADOR]
-  - Origem: PR `#27` do Dependabot (15.5.22 para 16.3.1), que falha no job
-    `Web Next.js` com `ERROR: This build is using Turbopack, with a \`webpack\`
-    config and no \`turbopack\` config`. O Next 16 usa Turbopack por padrao no
-    build, e a configuracao webpack do projeto deixa de ser lida.
-  - Escopo: portar a configuracao de build para `turbopack`, ou declarar
-    explicitamente o builder webpack, decidindo qual dos dois o projeto
-    mantem. Revalidar depois disso os gates proprios da web, em especial
-    `test:next15` (94 arquivos), que existe justamente para APIs dinamicas
-    assincronas e precisa ser reavaliado ou renomeado na major nova.
-  - Verificar antes de comecar: a versao de React exigida pelo Next 16 em
-    relacao ao `react@18.3.1` fixado hoje. Se a major exigir React 19, o
-    escopo cresce para uma migracao de framework e nao cabe num PR de
-    dependencia.
-  - Criterio de conclusao: `lint`, `typecheck`, `test:authz`,
-    `test:seguranca-operacional`, `test:seguranca-runtime`, `build` e o smoke
-    Playwright completo verdes na versao nova, e deploy do web no Render
-    validado com o monitor de producao.
-  - Gate: fazer isolada, sem outro PR de dependencia junto, e fora de qualquer
-    janela em que o piloto esteja em observacao.
+- [x] Fase 245 - Migracao do Next.js 15 para 16. CONCLUIDA em 2026-08-19. [NAO BLOQUEADOR]
+  - Origem: PR `#27` do Dependabot, que falhava no job `Web Next.js` porque o
+    Next 16 usa Turbopack por padrao e recusa projeto com configuracao webpack
+    e nenhuma de turbopack. Substituido pelo PR `#70`, commit `f4d92e9`.
+  - A condicao que faria a fase crescer nao se confirmou: o Next 16.3.1 aceita
+    `react ^18.2.0`, entao o `react@18.3.1` fixado continua servindo e nao houve
+    migracao de framework.
+  - Decisao de bundler: nem portar para `turbopack` nem fixar `--webpack`. O
+    bloco `webpack()` so apontava o alias `@` para a raiz, que ja vem do
+    `paths` do `tsconfig.json`, lido pelos dois bundlers. O bloco saiu inteiro.
+  - Gate `test:next15` reavaliado e renomeado para `test:apis-dinamicas`: o
+    Next 16 removeu de vez o acesso sincrono a `params`/`searchParams`, entao o
+    gate vale mais agora; so o nome estava preso a uma major que passou.
+  - Deixado de proposito: `eslint-config-next` no 15.5.22, porque o 16 exige
+    ESLint 9 com flat config, migracao de lint que nao pertence a esta fase.
+  - Validacao: 7 jobs verdes no PR e em `main`; localmente `typecheck`, `lint`,
+    `build`, `test:authz` (66 testes), `test:apis-dinamicas` (94 arquivos), os
+    dois gates de seguranca e o smoke completo com Playwright, 178 testes
+    passando e 2 pulados.
+  - Pendencia: validar o deploy da web no Render com o `Monitor producao`.
+  - Evidencia: `fase-245-migracao-next-16.md`.
 
 ## Backlog pos-producao
 
@@ -2083,6 +2084,21 @@ Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service:
   commit que ela. Fica com prazo o `ignoreDeprecations: '6.0'` do harness de
   testes da web, que cai no TypeScript 7. O `octaclin-ai-service` continua fora
   do `Monitor producao`.
+
+Fase 245 - Migracao do Next.js 15 para 16:
+- Status: concluida
+- Commit: f4d92e9
+- Data: 2026-08-19
+- Validacoes: os 7 jobs do `OctaClin CI` verdes no PR `#70` e em `main`;
+  localmente `typecheck`, `lint`, `build`, `test:authz` (7 scripts, 66 testes),
+  `test:apis-dinamicas` (94 arquivos), `test:seguranca-operacional`,
+  `test:seguranca-runtime` e o smoke completo com API demo e `next start` no ar,
+  incluindo Playwright com 178 testes passando e 2 pulados
+- Observacoes: o bloco `webpack()` foi removido em vez de portado, porque so
+  duplicava o alias `@` que ja vem do `paths` do `tsconfig.json`. O gate
+  `test:next15` virou `test:apis-dinamicas`. O `eslint-config-next` fica no 15
+  ate alguem migrar o lint para ESLint 9 com flat config. Falta validar o
+  deploy da web no Render com o `Monitor producao`.
 
 - Fase 169 - Disponibilidade e feed completo da agenda:
   - Status: validada em producao.
