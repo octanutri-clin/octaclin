@@ -1,7 +1,9 @@
 # Fase 201 - Confiabilidade dos processadores em multiplas instancias
 
-Status: implementacao concluida localmente em 2026-08-02; rollout de producao
-pendente da criacao do servico worker no Render.
+Status: implementacao concluida em 2026-08-02 e completada em 2026-08-19, apos
+auditoria que achou um furo aberto depois daquela data. Rollout de producao
+segue pendente da criacao do servico worker no Render, que e a unica etapa
+restante.
 
 ## Entregue
 
@@ -24,6 +26,34 @@ pendente da criacao do servico worker no Render.
   persistente antes de publicar/processar.
 - Sincronizacao e renovacao do Google Calendar usam trava transacional por
   profissional, evitando reconcilacao e renovacao concorrentes entre workers.
+
+## Auditoria de 2026-08-19 e a trava de rodada
+
+Antes de executar o rollout, auditei os processadores criados **depois** de
+2026-08-02, quando o codigo desta fase ficou pronto. Dois nasceram depois:
+`processador-webhooks.ts` (2026-08-08, Fase 218) e
+`processador-recall-inatividade.ts` (2026-08-03, Fase 205).
+
+O de webhooks respeita o padrao: reivindica a entrega por update condicional de
+`pendente` para `processando`, com verificacao de `affected`, antes do POST.
+
+O de recall **nao**, e o furo era real. Ele le os candidatos, envia e so entao
+registra a execucao. O teto de frequencia por paciente sai de uma leitura que
+nao e atomica com a escrita, entao duas instancias no mesmo `@Cron('0 9 * * *')`
+seriam ambas autorizadas a enviar. Cada mensagem viraria uma linha propria de
+comunicacao, legitimamente reivindicada uma vez pelo outbox — ou seja, a
+protecao existente nao pegaria: o paciente receberia o recall duas vezes. O
+rollout do worker, como documentado abaixo, entregaria essa duplicacao.
+
+A correcao vive no `executarPorTenantAtivo`, por onde passam os seis
+processadores agendados, e nao em cada um: uma trava por `(rotulo, tenant)`
+antes de entrar no tenant, liberada no `finally`. Advisory lock do Postgres, e
+nao tabela nova, porque a garantia e de rodada e nao de dado, e nao justifica
+uma migration com DDL em producao; a trava vive na sessao de um QueryRunner
+dedicado e cai sozinha se o processo morrer no meio da rodada.
+
+Commit: `6f7f5b2`. Testes cobrem tenant pulado quando outra instancia segura a
+trava, liberacao mesmo com falha da operacao, e chaves distintas por rodada.
 
 ## Rollout Render obrigatorio
 
@@ -48,10 +78,18 @@ pendente da criacao do servico worker no Render.
 
 ## Validacao local
 
+Em 2026-08-02, quando o codigo original ficou pronto:
+
 - Backend: 76 suites e 425 testes aprovados.
 - Typecheck do backend aprovado.
 - Testes novos cobrem exclusao transacional e dois workers concorrentes vendo
   o mesmo evento de outbox, com uma unica publicacao.
+
+Em 2026-08-19, com a trava de rodada:
+
+- Backend: 139 suites e **964 de 965 testes**, sendo a unica falha o
+  `catalogo-taco.spec.ts`, conhecida de checkout Windows por CRLF e verde no CI.
+- Typecheck e build do backend aprovados.
 
 ## Limite conhecido
 
