@@ -1095,9 +1095,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     e aplicar idempotencia e deduplicacao persistentes.
   - Aceite: duas instancias concorrentes produzem no maximo um efeito externo
     por evento; nao escalar o backend antes deste gate.
-  - Codigo e testes concluidos em 2026-08-02; falta executar o rollout Render
-    documentado em `fase-201-confiabilidade-processadores-multiplas-instancias.md`
-    e registrar uma entrega sintetica unica antes de marcar como concluida.
+  - Codigo e testes concluidos em 2026-08-02. A auditoria de 2026-08-19, feita
+    antes do rollout, achou um furo aberto depois daquela data: o recall de
+    inatividade (Fase 205) roda por `@Cron`, le candidatos, envia e so entao
+    registra, entao duas instancias mandariam o mesmo recall ao mesmo paciente.
+    Corrigido em `6f7f5b2` com trava de rodada por `(rotulo, tenant)` no
+    `executarPorTenantAtivo`, que cobre os seis processadores agendados de uma
+    vez, por advisory lock e sem migration.
+  - Falta executar o rollout Render documentado em
+    `fase-201-confiabilidade-processadores-multiplas-instancias.md` e registrar
+    uma entrega sintetica unica antes de marcar como concluida.
 
 - [x] Fase 202 - Sistema visual: tokens, tipografia e elevacao.
   - Consolidar tokens semanticos, hierarquia tipografica, foco, espacamento,

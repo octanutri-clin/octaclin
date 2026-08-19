@@ -38,6 +38,11 @@ describe('ProcessadorRenovacaoGoogleCalendar', () => {
     };
 
     const fonteDados = {
+    createQueryRunner: jest.fn(() => ({
+      connect: jest.fn(async () => undefined),
+      release: jest.fn(async () => undefined),
+      query: jest.fn(async (sql: string) => (sql.includes('pg_try_advisory_lock') ? [{ obtida: true }] : []))
+    })),
       getRepository: jest.fn((entidade: { name: string }) => {
         if (entidade === TenantOrm) return { find: jest.fn(async () => [tenant1, tenant2]) };
         // GoogleCanalWatchOrm nao possui RLS, entao consultas diretas via DataSource sao esperadas.
@@ -115,6 +120,11 @@ describe('ProcessadorRenovacaoGoogleCalendar', () => {
     };
 
     const fonteDados = {
+    createQueryRunner: jest.fn(() => ({
+      connect: jest.fn(async () => undefined),
+      release: jest.fn(async () => undefined),
+      query: jest.fn(async (sql: string) => (sql.includes('pg_try_advisory_lock') ? [{ obtida: true }] : []))
+    })),
       getRepository: jest.fn((entidade: { name: string }) => {
         if (entidade === TenantOrm) return { find: jest.fn(async () => [tenantQuebrado, tenantOk]) };
         return {

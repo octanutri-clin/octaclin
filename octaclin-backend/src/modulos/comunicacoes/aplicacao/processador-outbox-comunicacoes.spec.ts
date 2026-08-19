@@ -24,6 +24,11 @@ describe('ProcessadorOutboxComunicacoes', () => {
       save: jest.fn(async (entrada: OutboxEventoOrm) => entrada)
     };
     const fonteDados = {
+    createQueryRunner: jest.fn(() => ({
+      connect: jest.fn(async () => undefined),
+      release: jest.fn(async () => undefined),
+      query: jest.fn(async (sql: string) => (sql.includes('pg_try_advisory_lock') ? [{ obtida: true }] : []))
+    })),
       getRepository: (entidade: unknown) => {
         if (entidade === TenantOrm) return { find: jest.fn(async () => [{ id: 'tenant-1', status: 'ativo' }]) };
         throw new Error('Repositorio inesperado');

@@ -6,6 +6,11 @@ function criarProcessador() {
     find: jest.fn(async () => [{ id: 'tenant-1' }, { id: 'tenant-2' }])
   };
   const fonteDados = {
+  createQueryRunner: jest.fn(() => ({
+    connect: jest.fn(async () => undefined),
+    release: jest.fn(async () => undefined),
+    query: jest.fn(async (sql: string) => (sql.includes('pg_try_advisory_lock') ? [{ obtida: true }] : []))
+  })),
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === TenantOrm) return repositorioTenants;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);

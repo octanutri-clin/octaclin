@@ -15,6 +15,11 @@ describe('ProcessadorWebhooks', () => {
       )
     };
     const fonteDados = {
+    createQueryRunner: jest.fn(() => ({
+      connect: jest.fn(async () => undefined),
+      release: jest.fn(async () => undefined),
+      query: jest.fn(async (sql: string) => (sql.includes('pg_try_advisory_lock') ? [{ obtida: true }] : []))
+    })),
       getRepository: jest.fn(() => ({ find: jest.fn(async () => [{ id: 'tenant-1' }]) }))
     };
     const servico = new ProcessadorWebhooks(fonteDados as never, executor as never, {} as never);
