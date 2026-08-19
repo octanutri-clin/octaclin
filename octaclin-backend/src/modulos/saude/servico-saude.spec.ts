@@ -54,6 +54,70 @@ describe('ServicoSaude', () => {
     expect(fonteDados.query).toHaveBeenCalledWith('SELECT 1');
   });
 
+  it('reporta o servico de IA como nao configurado sem degradar a saude geral', async () => {
+    delete process.env.IA_SERVICE_URL;
+    delete process.env.IA_SERVICE_TOKEN;
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }]),
+        options: { extra: { max: 8 } },
+        driver: { master: { totalCount: 1, idleCount: 1, waitingCount: 0 } },
+        migrations: [{ name: 'Migracao1' }],
+        showMigrations: jest.fn(async () => false)
+      } as never,
+      { ping: jest.fn(async () => 'PONG') } as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.checks.ia).toEqual({ status: 'ok', detalhes: { configurado: false } });
+    expect(resposta.status).toBe('ok');
+  });
+
+  it('reporta o servico de IA configurado sem expor o token nem o host completo', async () => {
+    process.env.IA_SERVICE_URL = 'https://ia.interno.example/base';
+    process.env.IA_SERVICE_TOKEN = 'segredo-ia-de-32-caracteres-no-minimo';
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }]),
+        options: { extra: { max: 8 } },
+        driver: { master: { totalCount: 1, idleCount: 1, waitingCount: 0 } },
+        migrations: [{ name: 'Migracao1' }],
+        showMigrations: jest.fn(async () => false)
+      } as never,
+      { ping: jest.fn(async () => 'PONG') } as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.checks.ia).toEqual({ status: 'ok', detalhes: { configurado: true } });
+    expect(JSON.stringify(resposta)).not.toContain('segredo-ia');
+    expect(JSON.stringify(resposta)).not.toContain('ia.interno.example');
+  });
+
+  it('marca o servico de IA como degradado quando so metade da configuracao existe', async () => {
+    process.env.IA_SERVICE_URL = 'https://ia.interno.example';
+    delete process.env.IA_SERVICE_TOKEN;
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }]),
+        options: { extra: { max: 8 } },
+        driver: { master: { totalCount: 1, idleCount: 1, waitingCount: 0 } },
+        migrations: [{ name: 'Migracao1' }],
+        showMigrations: jest.fn(async () => false)
+      } as never,
+      { ping: jest.fn(async () => 'PONG') } as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.checks.ia.status).toBe('degradado');
+    expect(resposta.status).toBe('degradado');
+  });
+
   it('deve marcar health como falha quando banco nao responder', async () => {
     const servico = new ServicoSaude({
       isInitialized: true,
