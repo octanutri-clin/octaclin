@@ -1974,6 +1974,15 @@ publicado antes de ampliar a superficie de mudancas visuais.
     typecheck e audit zerado antes de distribuir qualquer build Mobile.
   - Gate: manter `mobile.sync=false` e o Mobile fora da oferta ate concluir a
     atualizacao, autorizacao por paciente, testes offline e distribuicao segura.
+  - Triagem de 2026-08-18: **os 37 alertas de seguranca abertos do repositorio
+    estao todos em `octaclin-mobile/pnpm-lock.yaml`** (1 critico, 26 altos, 10
+    medios), nenhum no backend, na web ou no ai-service. O alerta so sai pela
+    subida do SDK, entao o PR `#25` (Expo 52 para 57) e a alavanca; `#22`,
+    `#24`, `#29` e `#30` sao dependencias do mesmo ecossistema e devem subir
+    junto, nunca isoladas, porque o Expo fixa as versoes compativeis.
+  - Consequencia da concentracao: enquanto o Mobile estiver fora da oferta, o
+    numero de alertas do repositorio nao mede risco do produto entregue. Nao
+    tratar "37 alertas abertos" como bloqueio de producao do console/portal.
 
 - [x] Fase 242 - Observabilidade interna e rollout seguro. [IMPORTANTE]
   - Complementar o monitor externo da Fase 220 com agregacao de erros e traces
@@ -1989,6 +1998,65 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Integracao aprovada: PR `#39`, merge `32559bd` e CI `31747184400` verde,
     incluindo o smoke completo com 162 testes Playwright.
   - Evidencia: `fase-242-observabilidade-interna-rollout-seguro.md`.
+
+- [ ] Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service. [NAO BLOQUEADOR]
+  - Origem: triagem dos PRs do Dependabot em 2026-08-18. Quatorze PRs abertos,
+    cinco deles do Mobile (Fase 243). Os nove restantes se separam por causa,
+    e nao por pacote.
+  - Incremento 1 - os quatro que ja passam nos 7 jobs, sem trabalho de
+    compatibilidade: `#20` FastAPI 0.115.6 para 0.141.1, `#51` uvicorn 0.32.1
+    para 0.52.3, `#31` tailwind-merge 2 para 3 e `#28` `@types/node` 26 na web.
+    Mergear em lotes pequenos, um de cada vez, para o job que quebrar apontar o
+    pacote sem ambiguidade.
+  - Incremento 2 - `baseUrl` depreciado, que trava o TypeScript 6 nos dois
+    projetos. `#26` (web) e `#34` (backend) falham identicamente com
+    `tsconfig.json(12,5): error TS5101: Option 'baseUrl' is deprecated and will
+    stop functioning in TypeScript 7.0`. Trocar `baseUrl` por `paths` relativo
+    ao proprio `tsconfig.json` em `octaclin-backend` e `octaclin-web`, e so
+    entao mergear os dois PRs. Nao usar `ignoreDeprecations`: adia o mesmo
+    trabalho para o TypeScript 7 e deixa o aviso ligado no meio-tempo.
+  - Incremento 3 - o backend nao declara `lib` e herda de `target: ES2021`,
+    o que deixa `Array.prototype.at` (es2022) fora e trava o `@types/node` 26.
+    `#36` falha com `TS2550: Property 'at' does not exist` em tres arquivos.
+    A web ja passa (`#28`), entao o ajuste e so no
+    `octaclin-backend/tsconfig.json`. Conferir se subir `lib` nao muda o
+    `target` emitido: o Node 22 do Dockerfile suporta es2022, mas a mudanca
+    precisa ser deliberada e nao um efeito colateral.
+  - Incremento 4 - `cron-parser` 4 para 5 (`#35`), unica mudanca com efeito em
+    runtime do lote. A v5 removeu `parseExpression`; o erro e
+    `TS2339: Property 'parseExpression' does not exist` em
+    `src/modulos/questionarios/aplicacao/servico-questionarios.ts:1342`, o
+    unico ponto de chamada. Como o codigo calcula o proximo envio de
+    questionario recorrente, o incremento exige teste que fixe o proximo
+    disparo para uma expressao conhecida **antes** da troca de API, e nao
+    apenas o typecheck verde.
+  - Criterio de conclusao: nenhum PR do Dependabot aberto fora do Mobile, com
+    os 7 jobs verdes no merge de cada um, e o comportamento de agendamento
+    recorrente coberto por teste.
+  - Gate: nao bloqueador para o piloto. Nao iniciar no meio de um incremento da
+    Fase 234, porque mistura falha de dependencia com falha de produto no mesmo
+    CI vermelho.
+
+- [ ] Fase 245 - Migracao do Next.js 15 para 16. [NAO BLOQUEADOR]
+  - Origem: PR `#27` do Dependabot (15.5.22 para 16.3.1), que falha no job
+    `Web Next.js` com `ERROR: This build is using Turbopack, with a \`webpack\`
+    config and no \`turbopack\` config`. O Next 16 usa Turbopack por padrao no
+    build, e a configuracao webpack do projeto deixa de ser lida.
+  - Escopo: portar a configuracao de build para `turbopack`, ou declarar
+    explicitamente o builder webpack, decidindo qual dos dois o projeto
+    mantem. Revalidar depois disso os gates proprios da web, em especial
+    `test:next15` (94 arquivos), que existe justamente para APIs dinamicas
+    assincronas e precisa ser reavaliado ou renomeado na major nova.
+  - Verificar antes de comecar: a versao de React exigida pelo Next 16 em
+    relacao ao `react@18.3.1` fixado hoje. Se a major exigir React 19, o
+    escopo cresce para uma migracao de framework e nao cabe num PR de
+    dependencia.
+  - Criterio de conclusao: `lint`, `typecheck`, `test:authz`,
+    `test:seguranca-operacional`, `test:seguranca-runtime`, `build` e o smoke
+    Playwright completo verdes na versao nova, e deploy do web no Render
+    validado com o monitor de producao.
+  - Gate: fazer isolada, sem outro PR de dependencia junto, e fora de qualquer
+    janela em que o piloto esteja em observacao.
 
 ## Backlog pos-producao
 
