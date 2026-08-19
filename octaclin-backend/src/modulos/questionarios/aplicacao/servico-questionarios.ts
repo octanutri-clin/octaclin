@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { EntityManager, ILike, In, IsNull, LessThanOrEqual } from 'typeorm';
-import * as cronParser from 'cron-parser';
+import { CronExpressionParser } from 'cron-parser';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { montarCsv } from '../../../infraestrutura/exportacao/csv';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -1339,7 +1339,7 @@ export class ServicoQuestionarios {
     if (!regraCron) throw new BadRequestException('Regra cron ausente.');
 
     try {
-      return cronParser.parseExpression(regraCron, { currentDate: base, tz: timezone }).next().toDate();
+      return CronExpressionParser.parse(regraCron, { currentDate: base, tz: timezone }).next().toDate();
     } catch {
       throw new BadRequestException('Regra cron invalida.');
     }

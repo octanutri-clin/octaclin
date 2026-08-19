@@ -237,6 +237,36 @@ describe('ServicoQuestionarios', () => {
     expect(dados.envios[0]).toEqual(expect.objectContaining({ pacienteId: 'paciente-alvo', agendamentoId: 'agendamento-1' }));
   });
 
+  it('fixa o proximo disparo do check-in recorrente no fuso do agendamento', async () => {
+    const { servico, dados } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q-1', tenantId: 'tenant-1', titulo: 'Check-in', versao: 1 }],
+      perguntas: [],
+      opcaos: [],
+      agendamentos: [
+        {
+          id: 'agendamento-1',
+          tenantId: 'tenant-1',
+          questionarioId: 'q-1',
+          pacienteId: 'paciente-alvo',
+          ativo: true,
+          regraCron: '0 8 * * 1',
+          timezone: 'America/Sao_Paulo',
+          proximaExecucaoEm: new Date('2026-08-17T11:00:00.000Z')
+        }
+      ],
+      envios: [],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: [{ id: 'paciente-alvo', tenantId: 'tenant-1', arquivadoEm: undefined }]
+    });
+
+    await servico.processarAgendamentosVencidos('tenant-1', new Date('2026-08-19T12:00:00.000Z'));
+
+    expect(dados.agendamentos[0].proximaExecucaoEm).toEqual(new Date('2026-08-24T11:00:00.000Z'));
+    expect(dados.agendamentos[0].ultimaExecucaoEm).toEqual(new Date('2026-08-19T12:00:00.000Z'));
+  });
+
   it('deve persistir o paciente escolhido ao criar um check-in recorrente', async () => {
     const { servico } = criarServico({
       categorias: [],
