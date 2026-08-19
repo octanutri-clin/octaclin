@@ -378,7 +378,7 @@ privileges no schema, entao tabela nova ja nasce com
 producao apos a `1031`. E o `force row level security` continua indispensavel,
 porque `neondb_owner` tem `rolbypassrls = true` — a role da aplicacao nao tem.
 
-## Incremento 6 - implementado em 2026-08-18
+## Incremento 6 - em producao desde 2026-08-18
 
 Desenho validado em 2026-08-17 junto com o do Incremento 5 e implementado como
 descrito, com uma correcao de premissa registrada abaixo.
@@ -459,8 +459,54 @@ aparece no portal, mas ainda nao existe tela ou endpoint que mostre ao
 profissional o historico de trocas do paciente. E o proximo passo natural, e nao
 um esquecimento.
 
-Ordem de rollout, pela regra da fase: merge, `migration:run` contra producao com
-`neondb_owner`, deploy. A `1032` tem DDL e o boot nao consegue aplica-la.
+### Rollout executado em 2026-08-18
+
+Na ordem definida pela fase, e ela se pagou logo no primeiro passo.
+
+1. backup de producao com teste de restore real (`backup-producao.yml`, run
+   `32202727143`), disparado de proposito **depois** da `1031`, para o ponto de
+   retorno cobrir o estado atual e nao o de oito horas antes;
+2. merge do PR #59 (`6c1205c`);
+3. `1032` na integracao — **e aqui apareceu o defeito**, descrito abaixo;
+4. correcao no PR #61 (`53112a4`), depois `1032` aplicada e verificada na
+   integracao;
+5. `1032` em producao com `neondb_owner`, com a identidade conferida antes
+   (role, host `c-12`, banco `Octaclin-db-producao`);
+6. deploy do backend e do web no Render;
+7. monitor de producao (run `32204692558`): readiness, dependencias e web ok.
+
+Os dois bancos ficaram em **45/45**, e a verificacao independente do catalogo do
+Postgres passou 10/10 nos dois: RLS habilitada e forcada, politica de tenant, os
+dois indices, ausencia de unique sobre `(tenant_id, item_id)` e prova real do
+check de exibicao recusando `0` e `21` com `23514`.
+
+### O defeito que o passo da integracao pegou
+
+A `1032` foi mergeada **sem entrar no array `migrations` de
+`opcoes-typeorm.ts`**, que e explicito e nao um glob. Arquivo criado, spec da
+migration passando, 7 jobs verdes — e `migration:run` nao a aplicaria. Era
+codigo morto.
+
+Nada pegou por duas causas somadas: o CI nao executa migrations, por decisao; e
+a asercao vizinha usava `expect.arrayContaining`, que por construcao so prova a
+presenca das migrations listadas e nunca a ausencia de uma. O PR #61 troca isso
+por uma comparacao de conjunto contra os arquivos da pasta, entao esquecer uma
+linha volta a quebrar o build.
+
+O sinal foi `migration:show` contra a integracao listando 44 aplicadas e nada
+pendente, quando deveria listar a `1032` pendente. Sem o passo da integracao,
+o mesmo comando teria rodado contra producao dizendo "No migrations are
+pending", e a fase inteira teria sido dada por concluida com a tabela
+inexistente.
+
+### O backfill nao protegeu nada, na pratica
+
+A justificativa do backfill continua correta como principio, mas convem
+registrar o que os dados mostraram: no momento da aplicacao, producao tinha
+**1 plano, 1 versao, 0 versoes publicadas e 0 substituicoes**. Nao havia
+paciente enxergando troca nenhuma, entao o `update ... set
+liberada_para_paciente = true` foi um no-op nos dois ambientes. A protecao
+existe para quando houver dado; nao houve regressao evitada aqui.
 
 ## Escopo funcional
 

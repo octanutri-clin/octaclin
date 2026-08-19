@@ -40,16 +40,24 @@ Atualizado em 2026-08-17.
   no boot nao consegue aplicar DDL em producao, porque a role runtime
   `octaclin_app_producao` nao tem `CREATE` no schema `public` — migration com
   DDL precisa ser aplicada fora de banda com `neondb_owner` antes do deploy.
-  O Incremento 6, aberto no PR #59 em 2026-08-18, entrega as trocas liberadas
+  O Incremento 6 esta **em producao desde 2026-08-18** (PRs #59 e #61) e entrega as trocas liberadas
   ao paciente: o profissional marca quais alternativas o paciente pode escolher
   e quais recomenda, e cada escolha vira evento na tabela append-only
   `plano_alimentar_escolhas_paciente`, sem tocar na versao publicada. A
-  migration `1032` tem DDL, entao segue a regra nova de rollout: merge,
-  `migration:run` com `neondb_owner` contra producao, deploy. O incremento
+  migration `1032` tem DDL, entao seguiu a regra nova de rollout: merge,
+  `migration:run` com `neondb_owner` contra producao, deploy. Os dois bancos
+  estao em **45/45** e o monitor `32204692558` devolveu os tres checks ok. O
+  passo da integracao pegou um defeito antes de producao: a `1032` tinha sido
+  mergeada sem entrar no array explicito de `migrations` em
+  `opcoes-typeorm.ts`, entao `migration:run` nunca a aplicaria — corrigido no
+  PR #61, que tambem troca a asercao `arrayContaining` por comparacao de
+  conjunto contra os arquivos da pasta. O incremento
   corrigiu uma premissa do desenho: o portal ja devolvia **todas** as
   substituicoes ao paciente, sem filtro, entao a coluna
   `liberada_para_paciente` precisou de backfill `true` para que nenhum plano
-  publicado perdesse em silencio trocas ja visiveis. Receitas, adesao e lista
+  publicado perdesse em silencio trocas ja visiveis; na pratica producao tinha
+  zero versoes publicadas e zero substituicoes, entao o backfill foi um no-op e
+  nenhuma regressao real foi evitada. Receitas, adesao e lista
   de compras seguem pendentes, alem da leitura da trilha de trocas pelo
   profissional.
 - Divida de dependencias mapeada em 2026-08-18 e transformada em fase, em vez
