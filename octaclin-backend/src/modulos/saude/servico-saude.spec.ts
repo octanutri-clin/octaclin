@@ -97,7 +97,7 @@ describe('ServicoSaude', () => {
     expect(JSON.stringify(resposta)).not.toContain('ia.interno.example');
   });
 
-  it('marca o servico de IA como degradado quando so metade da configuracao existe', async () => {
+  it('mostra configuracao parcial de IA sem degradar a saude geral', async () => {
     process.env.IA_SERVICE_URL = 'https://ia.interno.example';
     delete process.env.IA_SERVICE_TOKEN;
     const servico = new ServicoSaude(
@@ -114,8 +114,12 @@ describe('ServicoSaude', () => {
 
     const resposta = await servico.verificarDetalhado();
 
-    expect(resposta.checks.ia.status).toBe('degradado');
-    expect(resposta.status).toBe('degradado');
+    expect(resposta.checks.ia).toEqual({
+      status: 'ok',
+      mensagem: expect.stringContaining('configuracao parcial'),
+      detalhes: { configurado: false, configuracaoParcial: true }
+    });
+    expect(resposta.status).toBe('ok');
   });
 
   it('deve marcar health como falha quando banco nao responder', async () => {

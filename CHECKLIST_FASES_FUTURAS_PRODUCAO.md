@@ -2049,7 +2049,14 @@ publicado antes de ampliar a superficie de mudancas visuais.
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.
-- IA clinica com guardrails e revisao humana.
+- IA clinica com guardrails e revisao humana. **Pendencia concreta aberta em
+  2026-08-19**: o backend de producao tem exatamente uma das duas variaveis de
+  IA definida (`IA_SERVICE_URL` ou `IA_SERVICE_TOKEN`), sobra de exploracao
+  anterior. O `/health/detalhado` mostra isso como `configuracaoParcial: true`
+  sem degradar a saude, porque enquanto a IA do produto nao estiver escolhida
+  isso e ruido e nao risco. Ao escolher o provedor: definir o par completo ou
+  remover a variavel avulsa, e transformar o check numa sonda real do
+  `octaclin-ai-service`, quando meia configuracao volta a ser falha.
 - Relatorios financeiros e de performance por cliente.
 - Marketplace de modelos de questionarios.
 - White-label por clinica.

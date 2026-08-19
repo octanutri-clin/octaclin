@@ -221,9 +221,18 @@ export class ServicoSaude {
   /**
    * O servico de IA e opcional: enquanto IA_SERVICE_URL e IA_SERVICE_TOKEN nao
    * existirem, o produto entregue nao usa IA e a ausencia nao e problema. Por
-   * isso o check responde 'ok' com configurado: false, em vez de degradar a
-   * saude geral e deixar o monitor externo vermelho por uma integracao que
-   * ninguem ligou. Meia configuracao, porem, e erro de operacao e degrada.
+   * isso o check nunca degrada a saude geral.
+   *
+   * Meia configuracao tambem nao degrada, e isso e uma decisao, nao descuido.
+   * Na primeira versao ela degradava, foi para producao e derrubou o monitor
+   * externo: uma das duas variaveis estava definida la, sobra de exploracao
+   * anterior, e o alerta abriu incidente por uma integracao que ninguem usa.
+   * Enquanto a IA do produto nao estiver escolhida, isso e ruido e nao risco.
+   * A configuracao parcial fica visivel no payload, para quem for ligar a IA
+   * saber que ha variavel orfa antes de configurar o par.
+   *
+   * Quando a IA entrar em uso de verdade, este check vira sonda real do
+   * ai-service e meia configuracao volta a ser falha.
    *
    * O detalhe nunca inclui host nem token: quem precisa do endereco le a
    * variavel no Render, nao um endpoint publico.
@@ -232,18 +241,19 @@ export class ServicoSaude {
     const url = valorDefinido('IA_SERVICE_URL');
     const token = valorDefinido('IA_SERVICE_TOKEN');
 
-    if (!url && !token) {
-      return { status: 'ok', detalhes: { configurado: false } };
+    if (url && token) {
+      return { status: 'ok', detalhes: { configurado: true } };
     }
 
-    if (!url || !token) {
+    if (url || token) {
       return {
-        status: 'degradado',
-        mensagem: 'Servico de IA incompleto; configure IA_SERVICE_URL e IA_SERVICE_TOKEN juntos.'
+        status: 'ok',
+        mensagem: 'Servico de IA com configuracao parcial; defina IA_SERVICE_URL e IA_SERVICE_TOKEN juntos ou remova a variavel avulsa.',
+        detalhes: { configurado: false, configuracaoParcial: true }
       };
     }
 
-    return { status: 'ok', detalhes: { configurado: true } };
+    return { status: 'ok', detalhes: { configurado: false } };
   }
 
   private verificarWhatsapp(): CheckHealth {
