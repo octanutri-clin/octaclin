@@ -45,6 +45,10 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 - Um desenvolvedor/agente pode avancar por varias fases, desde que conclua cada fase com documentacao, validacao, commit e push antes de iniciar a proxima.
 - Nunca reverta mudancas que voce nao fez sem pedido explicito.
 - Nunca commite secrets, tokens, senhas, arquivos `.env` reais, dumps de banco ou logs com credenciais.
+- Leia `## Erros ja cometidos neste repositorio` antes de afirmar qualquer coisa
+  sobre producao, antes de dizer que um teste passou e antes de editar arquivos
+  por script. Todo erro novo entra la, no formato descrito em
+  `## Registro obrigatorio de erros novos`, no mesmo commit que o corrige.
 
 ## TDD e validacao
 
@@ -69,6 +73,157 @@ pnpm --dir octaclin-web exec playwright test tests/visual/portal-cliente.spec.mj
 ```
 
 Em Windows, se `node`, `pnpm` ou `git` nao estiverem no PATH, procure os runtimes empacotados do Codex antes de desistir.
+
+## Erros ja cometidos neste repositorio: nao repetir
+
+Esta secao e obrigatoria, nao e referencia opcional. Cada item aqui custou tempo
+de verdade. A regra que os cobre todos:
+
+> **Nao conclua a partir de algo adjacente a evidencia. Conclua a partir da
+> evidencia, com um comando no mesmo turno da afirmacao.**
+
+Adjacente a evidencia significa: outro ambiente, um teste que passou por outro
+motivo, um arquivo criado mas nao registrado, um numero lembrado, uma regra que
+voce mesmo resumiu, um estado lido uma hora antes.
+
+### 1. Nunca afirme sobre producao olhando a integracao
+
+Producao conecta como `octaclin_app_producao`, **sem `CREATE` no schema
+`public`**. A integracao conecta como `neondb_owner`, que tem. Por isso
+`migrationsRun` no boot **nunca** consegue aplicar DDL em producao: falha com
+`42501 permission denied for schema public` e o container sai com codigo 1.
+
+Confira a identidade antes de qualquer frase ou comando sobre um banco. O trecho
+abaixo e fail-closed: sem casar o padrao ele nao imprime nada, entao uma string
+malformada nunca vaza.
+
+```bash
+v=$(sed 's/^DATABASE_URL=//' .env.producao)
+if [[ "$v" =~ ^([a-z]+)://([^:@/]+):[^@]*@([^:/]+)(:[0-9]+)?/([^?]+) ]]; then
+  echo "usuario : ${BASH_REMATCH[2]}"
+  echo "host    : ***.${BASH_REMATCH[3]#*.}"
+  echo "banco   : ${BASH_REMATCH[5]}"
+else
+  echo "NAO PARSEOU - nada sera impresso"
+fi
+```
+
+Integracao e host `c-10`; producao e `c-12`. Nunca cole connection string no
+chat: o usuario grava o arquivo, voce extrai so os identificadores.
+
+### 2. Um teste que passa precisa passar pelo motivo declarado
+
+Uma prova de constraint ja reportou os dois inserts como recusados — mas com
+`08P01 invalid message format`, erro de protocolo que derrubou a conexao antes
+de a constraint ser avaliada. A causa era `bytea` como literal no SQL. Quase
+virou "provas ok" sem prova nenhuma.
+
+Afirme o motivo, nao so o desfecho, e passe `bytea` como parametro:
+
+```js
+ok = erro.code === '23514' && erro.constraint === 'nome_do_check';
+await cliente.query('insert ... values ($1)', [Buffer.from([0])]);
+```
+
+Ao adicionar teste-guarda, veja-o falhar primeiro e **leia a mensagem de falha**.
+
+### 3. Nunca escreva "validado" sem nomear os gates
+
+Liste os comandos que rodaram e o resultado de cada um. Gate pulado se declara
+pulado; job `skipped` no CI e nao verificado, nao aprovado. Uma execucao parcial
+declarada como validada ja mandou uma quebra para o `main`.
+
+### 4. Criar o arquivo nao o registra
+
+`opcoes-typeorm.ts` lista migrations num **array explicito**, nao num glob. A
+migration `1032` foi mergeada com arquivo presente, spec proprio verde e 7 jobs
+verdes — e `migration:run` jamais a aplicaria.
+
+Depois de adicionar qualquer artefato, procure onde os irmaos dele sao
+registrados:
+
+```bash
+grep -rn "NomeDoIrmaoAnterior" src --include=*.ts | grep -v spec
+```
+
+Vale para migrations, entidades ORM (tambem nos `modulo-*.ts`), rotas e DTOs.
+
+**`expect.arrayContaining` nao detecta omissao.** Quando completude importa,
+compare conjuntos com `toEqual`.
+
+### 5. Numero em prosa vem de comando, nunca de lembranca
+
+Antes de escrever qualquer afirmacao de impacto, conte:
+
+```sql
+select count(*) from tabela_afetada;
+```
+
+Ja afirmei em commit e PR que um backfill evitava perda silenciosa de dados, sem
+ter contado as linhas. Eram zero.
+
+### 6. Ordem de rollout de migration com DDL, cinco passos
+
+Nunca reduza para tres. O passo 3 e o que pega erro.
+
+1. backup aprovado com teste de restore, disparado **depois** da ultima migration
+   aplicada, para o ponto de retorno cobrir o estado atual;
+2. merge;
+3. `migration:show` e `migration:run` contra a **integracao**, mais verificacao
+   independente que leia o catalogo do Postgres e prove constraints com insert
+   real em transacao revertida;
+4. `migration:run` contra producao com `neondb_owner`, identidade conferida antes;
+5. deploy, e depois `gh workflow run monitor-producao.yml`.
+
+### 7. Leia o estado no mesmo turno da acao
+
+`gh pr view N --json updatedAt,mergeStateStatus` custa uma chamada e e mais
+barato que uma acao errada.
+
+### 8. Armadilhas de ambiente que so custam tentativas
+
+- Editar arquivo por script: normalize antes de casar, porque os arquivos estao
+  em CRLF no disco e em LF no repositorio, e **sempre** guarde a falha.
+  ```js
+  let s = readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
+  if (!s.includes(de)) { console.log('NAO ENCONTRADO'); process.exit(1); }
+  ```
+- Nada de `node -e "..."` com crases nem heredoc longo: o shell expande e
+  quebra. Escreva o script num arquivo e rode `node arquivo.mjs`.
+- Nada de `sed` em conteudo com barra invertida: `(\w+)` vira `(w+)`.
+- Script que usa dependencia do repo mora dentro do pacote, nunca no scratchpad.
+- `esModuleInterop` esta desligado no backend: copie o estilo de import que o
+  repo ja usa em vez de assumir `import x from 'node:modulo'`.
+- `python3` nao existe nesta maquina. Use Node.
+- O prefixo `!` do usuario roda Git Bash, nao PowerShell. De sempre a versao
+  POSIX; o clipboard e `/dev/clipboard`.
+- `catalogo-taco.spec.ts` falha **sempre** em checkout Windows por CRLF e passa
+  no CI. Nunca normalize esse JSON: consertar aqui quebra la.
+
+## Registro obrigatorio de erros novos
+
+Todo erro cometido daqui em diante entra nesta secao, no mesmo formato, **no
+mesmo commit ou PR que o corrige**. Nao deixe para depois e nao registre so na
+memoria do agente: memoria chega como contexto de fundo e pode ser ignorada,
+este arquivo chega como instrucao e e versionado.
+
+Cada registro tem tres partes, nesta ordem:
+
+1. **O erro** — o que foi feito, com o sintoma exato pelo qual ele sera
+   reconhecido de novo: codigo de erro, mensagem literal, ou o comando que
+   mentiu. Sem generalizar: descreva o caso que aconteceu.
+2. **A solucao** — o que consertou, em comando ou trecho de codigo copiavel.
+3. **Como nao repetir** — a verificacao que passa a ser feita antes, de
+   preferencia um teste, um gate de CI ou uma linha de comando. Se der para
+   transformar em teste automatizado, transforme: regra que depende de alguem
+   lembrar volta a falhar.
+
+Registre tambem o que **custou**. Um erro que custou um deploy vermelho pesa
+diferente de um que custou uma chamada de API, e quem ler depois precisa saber
+qual dos dois esta lendo.
+
+Errar uma vez e aceitavel. Errar duas vezes o mesmo e desperdicio de tempo e de
+tokens do usuario.
 
 ## Padroes de arquitetura
 
@@ -104,12 +259,15 @@ Antes de mexer em qualquer integracao, leia `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_P
 ## Como fechar uma fase
 
 1. Rode validacoes frescas.
-2. Atualize documentacao da fase.
-3. Atualize o checklist vivo.
-4. Rode `git diff --check`.
-5. Faça commit com mensagem objetiva.
-6. Faça push.
-7. Responda ao usuario com resumo, commit e validacoes.
+2. Registre em `AGENTS.md` qualquer erro cometido durante a fase, com erro,
+   solucao e como nao repetir.
+3. Atualize documentacao da fase.
+4. Atualize o checklist vivo.
+5. Rode `git diff --check`.
+6. Faça commit com mensagem objetiva.
+7. Faça push.
+8. Responda ao usuario com resumo, commit e validacoes, nomeando cada gate que
+   rodou e cada um que nao rodou.
 
 ## Quando estiver em duvida
 
