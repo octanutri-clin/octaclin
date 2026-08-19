@@ -122,6 +122,7 @@ writeFileSync(
         rootDir: raiz,
         module: 'commonjs',
         moduleResolution: 'node',
+        ignoreDeprecations: '6.0',
         target: 'ES2022'
       },
       files: arquivos.map((arquivo) => join(raiz, arquivo))

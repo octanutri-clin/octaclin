@@ -25,7 +25,7 @@ function executar(comando, args, cwd = raiz) {
 
 writeFileSync(join(temporaria, 'tsconfig.json'), JSON.stringify({
   extends: join(raiz, 'tsconfig.json'),
-  compilerOptions: { noEmit: false, outDir: temporaria, rootDir: raiz, module: 'commonjs', moduleResolution: 'node', target: 'ES2022' },
+  compilerOptions: { noEmit: false, outDir: temporaria, rootDir: raiz, module: 'commonjs', moduleResolution: 'node', ignoreDeprecations: '6.0', target: 'ES2022' },
   files: arquivos.map((arquivo) => join(raiz, arquivo))
 }, null, 2));
 

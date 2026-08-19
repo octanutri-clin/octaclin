@@ -18,7 +18,7 @@ function executar(comando, args, cwd = raiz) {
 
 writeFileSync(join(pastaTemporaria, 'tsconfig.json'), JSON.stringify({
   extends: join(raiz, 'tsconfig.json'),
-  compilerOptions: { noEmit: false, outDir: pastaTemporaria, rootDir: raiz, module: 'commonjs', moduleResolution: 'node', target: 'ES2022' },
+  compilerOptions: { noEmit: false, outDir: pastaTemporaria, rootDir: raiz, module: 'commonjs', moduleResolution: 'node', ignoreDeprecations: '6.0', target: 'ES2022' },
   files: [
     'scripts/dashboard-clinico-bff.spec.ts',
     'app/api/dashboard/clinico/route.ts',
