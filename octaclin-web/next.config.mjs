@@ -30,10 +30,6 @@ const cabecalhosSeguranca = [
 const nextConfig = {
   outputFileTracingRoot: raizFrontend,
   typedRoutes: true,
-  webpack(config) {
-    config.resolve.alias['@'] = raizFrontend;
-    return config;
-  },
   /**
    * Redirecionamentos de rota ficam aqui, e nao em `redirect()` dentro de page.tsx.
    * Com o `loading.tsx` de raiz, o `redirect()` de server component cai dentro do
