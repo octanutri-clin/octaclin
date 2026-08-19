@@ -40,8 +40,28 @@ Atualizado em 2026-08-17.
   no boot nao consegue aplicar DDL em producao, porque a role runtime
   `octaclin_app_producao` nao tem `CREATE` no schema `public` — migration com
   DDL precisa ser aplicada fora de banda com `neondb_owner` antes do deploy.
-  Grupos de substituicao, receitas, portal, adesao e lista de compras seguem
-  pendentes.
+  O Incremento 6, aberto no PR #59 em 2026-08-18, entrega as trocas liberadas
+  ao paciente: o profissional marca quais alternativas o paciente pode escolher
+  e quais recomenda, e cada escolha vira evento na tabela append-only
+  `plano_alimentar_escolhas_paciente`, sem tocar na versao publicada. A
+  migration `1032` tem DDL, entao segue a regra nova de rollout: merge,
+  `migration:run` com `neondb_owner` contra producao, deploy. O incremento
+  corrigiu uma premissa do desenho: o portal ja devolvia **todas** as
+  substituicoes ao paciente, sem filtro, entao a coluna
+  `liberada_para_paciente` precisou de backfill `true` para que nenhum plano
+  publicado perdesse em silencio trocas ja visiveis. Receitas, adesao e lista
+  de compras seguem pendentes, alem da leitura da trilha de trocas pelo
+  profissional.
+- Divida de dependencias mapeada em 2026-08-18 e transformada em fase, em vez
+  de ficar como fila de PRs sem dono. Dos 14 PRs do Dependabot abertos, cinco
+  sao do Mobile e pertencem a **Fase 243** — e la que estao **todos os 37
+  alertas de seguranca do repositorio** (1 critico), nenhum no backend, na web
+  ou no ai-service. Os nove restantes viraram a **Fase 244** (quatro ja verdes
+  nos 7 jobs; TypeScript 6 travado por `baseUrl` depreciado nos dois
+  `tsconfig.json`; `@types/node` 26 travado pelo `lib` herdado de
+  `target: ES2021` no backend; `cron-parser` 5 removendo `parseExpression`) e
+  a **Fase 245** (Next 16, que passa a usar Turbopack por padrao e ignora a
+  configuracao webpack atual). Nenhuma das duas e bloqueadora do piloto.
 - Fase 232 concluida e integrada: operacao de lancamento com janela controlada,
   responsaveis, gates GO/NO-GO, rollback, comunicacao e exercicio sintetico P0.
   A decisao atual permanece NO-GO para cliente real ate identidade publica,
