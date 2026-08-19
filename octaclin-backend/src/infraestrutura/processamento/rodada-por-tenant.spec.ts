@@ -1,8 +1,21 @@
 import { Logger } from '@nestjs/common';
 import { executarPorTenantAtivo } from './rodada-por-tenant';
 
-function criarFonteDados(tenants: { id: string }[]) {
-  return { getRepository: jest.fn(() => ({ find: jest.fn(async () => tenants) })) } as never;
+function criarFonteDados(tenants: { id: string }[], travas: { obtida?: boolean; consultas?: unknown[][] } = {}) {
+  const consultas = travas.consultas ?? [];
+  const executor = jest.fn(async (sql: string, parametros: unknown[]) => {
+    consultas.push([sql, parametros]);
+    if (sql.includes('pg_try_advisory_lock')) return [{ obtida: travas.obtida ?? true }];
+    return [];
+  });
+  return {
+    getRepository: jest.fn(() => ({ find: jest.fn(async () => tenants) })),
+    createQueryRunner: jest.fn(() => ({
+      connect: jest.fn(async () => undefined),
+      release: jest.fn(async () => undefined),
+      query: executor
+    }))
+  } as never;
 }
 
 function criarLogger() {
@@ -22,7 +35,7 @@ describe('executarPorTenantAtivo', () => {
     );
 
     expect(visitados).toEqual(['tenant-1', 'tenant-2']);
-    expect(resultado).toEqual({ tenantsAvaliados: 2, tenantsComFalha: 0, tenantsExpirados: 0 });
+    expect(resultado).toEqual({ tenantsAvaliados: 2, tenantsComFalha: 0, tenantsExpirados: 0, tenantsIgnoradosPorTrava: 0 });
   });
 
   it('nao deve deixar a falha de um tenant impedir os seguintes', async () => {
@@ -67,6 +80,53 @@ describe('executarPorTenantAtivo', () => {
     expect(resultado).toMatchObject({ tenantsExpirados: 1 });
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('tenant-travado'));
     jest.useRealTimers();
+  });
+
+  it('pula o tenant quando outra instancia ja segura a trava da rodada', async () => {
+    const visitados: string[] = [];
+    const logger = criarLogger();
+
+    const resultado = await executarPorTenantAtivo(
+      criarFonteDados([{ id: 'tenant-1' }, { id: 'tenant-2' }], { obtida: false }),
+      logger,
+      'rodada teste',
+      async (tenantId) => {
+        visitados.push(tenantId);
+      }
+    );
+
+    expect(visitados).toEqual([]);
+    expect(resultado).toMatchObject({ tenantsAvaliados: 2, tenantsIgnoradosPorTrava: 2 });
+  });
+
+  it('libera a trava mesmo quando a operacao do tenant falha', async () => {
+    const consultas: unknown[][] = [];
+
+    await executarPorTenantAtivo(
+      criarFonteDados([{ id: 'tenant-1' }], { consultas }),
+      criarLogger(),
+      'rodada teste',
+      async () => {
+        throw new Error('Banco indisponivel.');
+      }
+    );
+
+    const sqls = consultas.map(([sql]) => String(sql));
+    expect(sqls.some((sql) => sql.includes('pg_try_advisory_lock'))).toBe(true);
+    expect(sqls.some((sql) => sql.includes('pg_advisory_unlock'))).toBe(true);
+  });
+
+  it('usa chaves diferentes para rodadas diferentes do mesmo tenant', async () => {
+    const consultasA: unknown[][] = [];
+    const consultasB: unknown[][] = [];
+
+    await executarPorTenantAtivo(criarFonteDados([{ id: 'tenant-1' }], { consultas: consultasA }), criarLogger(), 'recall', async () => undefined);
+    await executarPorTenantAtivo(criarFonteDados([{ id: 'tenant-1' }], { consultas: consultasB }), criarLogger(), 'lembretes', async () => undefined);
+
+    const chave = (consultas: unknown[][]) =>
+      (consultas.find(([sql]) => String(sql).includes('pg_try_advisory_lock')) ?? [])[1];
+
+    expect(chave(consultasA)).not.toEqual(chave(consultasB));
   });
 
   it('nao deve deixar temporizador pendente quando o tenant termina antes do timeout', async () => {
