@@ -2042,7 +2042,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `build`, `test:authz` (66 testes), `test:apis-dinamicas` (94 arquivos), os
     dois gates de seguranca e o smoke completo com Playwright, 178 testes
     passando e 2 pulados.
-  - Pendencia: validar o deploy da web no Render com o `Monitor producao`.
+  - Deploy validado: producao passou a servir o build Turbopack e o `Monitor
+    producao` voltou ok em readiness, dependencias e web (execucao `32287204104`).
   - Evidencia: `fase-245-migracao-next-16.md`.
 
 ## Backlog pos-producao
@@ -2097,8 +2098,8 @@ Fase 245 - Migracao do Next.js 15 para 16:
 - Observacoes: o bloco `webpack()` foi removido em vez de portado, porque so
   duplicava o alias `@` que ja vem do `paths` do `tsconfig.json`. O gate
   `test:next15` virou `test:apis-dinamicas`. O `eslint-config-next` fica no 15
-  ate alguem migrar o lint para ESLint 9 com flat config. Falta validar o
-  deploy da web no Render com o `Monitor producao`.
+  ate alguem migrar o lint para ESLint 9 com flat config. Deploy validado com o
+  `Monitor producao` ok nos tres checks.
 
 - Fase 169 - Disponibilidade e feed completo da agenda:
   - Status: validada em producao.

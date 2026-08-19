@@ -1,8 +1,8 @@
 # Fase 245 - Migracao do Next.js 15 para 16
 
-Status: concluida em 2026-08-19, com uma pendencia de verificacao pos-deploy
-descrita no fim. Fase nao bloqueadora do piloto, feita isolada, sem nenhum
-outro PR de dependencia junto, como o gate exigia.
+Status: concluida em 2026-08-19, inclusive a validacao pos-deploy. Fase nao
+bloqueadora do piloto, feita isolada, sem nenhum outro PR de dependencia junto,
+como o gate exigia.
 
 ## O que a fase temia, e o que era de fato
 
@@ -75,8 +75,26 @@ que `validarConfiguracaoSegurancaBff` exige em producao e que o CI define no
 nivel do job. Reproduzir o smoke local exige o conjunto **completo** de
 variaveis do job, nao so as que parecem relevantes.
 
-## Pendencia
+## Deploy validado
 
-O criterio da fase inclui **validar o deploy da web no Render com o monitor de
-producao**. O merge disparou o deploy; a confirmacao pelo `Monitor producao`
-precisa ser lida depois que ele publicar.
+O merge disparou o deploy no Render. Confirmei que producao passou a servir o
+build novo comparando os nomes de chunk: o `04pezf8jvo61v.js` do build local
+com Turbopack aparece igual em
+`https://octaclin-web-producao.onrender.com/login`.
+
+O `Monitor producao` foi disparado contra o deploy ja publicado, execucao
+`32287204104`, e voltou **ok nos tres checks**:
+
+```json
+{"status":"ok","checks":{"readiness":{"status":"ok","latenciaMs":33239,"tentativa":1},"dependencias":{"status":"ok","latenciaMs":199,"tentativa":1},"web":{"status":"ok","latenciaMs":246,"tentativa":1}}}
+```
+
+Os 33 segundos de `readiness` sao o despertar do backend hibernado no Render, e
+nao efeito da migracao: o Next 16 so mudou a web, cujo check respondeu em
+246 ms.
+
+## Pendencia que sobra
+
+Nenhuma da migracao em si. Fica anotado, fora do escopo desta fase, que o
+`eslint-config-next` continua no 15 ate alguem migrar o lint para ESLint 9 com
+flat config.

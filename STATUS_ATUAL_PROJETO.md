@@ -66,8 +66,8 @@ Atualizado em 2026-08-17.
   alertas de seguranca do repositorio** (1 critico), nenhum no backend, na web
   ou no ai-service. Os nove restantes viraram a **Fase 244**, **concluida
   em 2026-08-19**, e a **Fase 245** (Next 16 com Turbopack), **tambem
-  concluida em 2026-08-19**, restando so validar o deploy da web no Render com
-  o monitor de producao. Nenhuma das
+  concluida em 2026-08-19**, com o deploy da web no Render ja validado pelo
+  monitor de producao. Nenhuma das
   duas e bloqueadora do piloto. A Fase 244 entregou os quatro bumps simples, o
   TypeScript 6 nos dois projetos, o `@types/node` 26 no backend e o
   `cron-parser` 5 com o calculo de recorrencia coberto por teste. O TypeScript
