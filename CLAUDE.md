@@ -35,6 +35,13 @@ Leia obrigatoriamente:
 - `RUNBOOK_STAGING_DADOS.md`
 - `CHECKLIST_GO_LIVE.md`
 
+## Erros ja cometidos
+
+Leia `AGENTS.md`, secao `## Erros ja cometidos neste repositorio: nao repetir`,
+antes de afirmar qualquer coisa sobre producao, antes de dizer que um teste
+passou e antes de editar arquivos por script. Todo erro novo entra la no mesmo
+formato — erro, solucao, como nao repetir — no mesmo commit que o corrige.
+
 ## Regras de trabalho
 
 - Continue por fases numeradas.
