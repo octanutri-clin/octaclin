@@ -19,11 +19,16 @@ function executar(comando, args) {
 
 executar(process.execPath, [
   join(raiz, 'node_modules', 'typescript', 'bin', 'tsc'),
+  '--ignoreConfig',
   '--target',
   'ES2022',
   '--module',
   'commonjs',
   '--moduleResolution',
+  'node',
+  '--ignoreDeprecations',
+  '6.0',
+  '--types',
   'node',
   '--esModuleInterop',
   '--skipLibCheck',
