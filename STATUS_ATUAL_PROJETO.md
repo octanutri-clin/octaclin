@@ -64,12 +64,16 @@ Atualizado em 2026-08-17.
   de ficar como fila de PRs sem dono. Dos 14 PRs do Dependabot abertos, cinco
   sao do Mobile e pertencem a **Fase 243** — e la que estao **todos os 37
   alertas de seguranca do repositorio** (1 critico), nenhum no backend, na web
-  ou no ai-service. Os nove restantes viraram a **Fase 244** (quatro ja verdes
-  nos 7 jobs; TypeScript 6 travado por `baseUrl` depreciado nos dois
-  `tsconfig.json`; `@types/node` 26 travado pelo `lib` herdado de
-  `target: ES2021` no backend; `cron-parser` 5 removendo `parseExpression`) e
-  a **Fase 245** (Next 16, que passa a usar Turbopack por padrao e ignora a
-  configuracao webpack atual). Nenhuma das duas e bloqueadora do piloto.
+  ou no ai-service. Os nove restantes viraram a **Fase 244**, **concluida
+  em 2026-08-19**, e a **Fase 245** (Next 16, que passa a usar Turbopack por
+  padrao e ignora a configuracao webpack atual), que segue aberta. Nenhuma das
+  duas e bloqueadora do piloto. A Fase 244 entregou os quatro bumps simples, o
+  TypeScript 6 nos dois projetos, o `@types/node` 26 no backend e o
+  `cron-parser` 5 com o calculo de recorrencia coberto por teste. O TypeScript
+  6 cobrou mais do que a triagem via — `baseUrl`, `types`, `rootDir`, modulo de
+  estilo e tres mudancas no harness de testes da web — porque um erro de
+  configuracao do `tsc` esconde os erros de arquivo, licao registrada em
+  `AGENTS.md`.
 - Fase 232 concluida e integrada: operacao de lancamento com janela controlada,
   responsaveis, gates GO/NO-GO, rollback, comunicacao e exercicio sintetico P0.
   A decisao atual permanece NO-GO para cliente real ate identidade publica,

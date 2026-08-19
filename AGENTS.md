@@ -212,6 +212,61 @@ barato que uma acao errada.
   Custo: uma afirmacao errada sobre o CI, corrigida no mesmo turno. Barato aqui,
   caro no dia em que virar decisao de merge.
 
+### 9. Um erro de configuracao do tsc esconde todos os erros de arquivo
+
+Na Fase 244 o Incremento 2 foi planejado como "tirar o `baseUrl` e mergear os
+dois PRs do TypeScript 6". Virou cinco PRs. Cada correcao revelava a proxima,
+porque **enquanto existe erro de configuracao o `tsc` para ali e nunca chega a
+checar os arquivos**. Na ordem em que apareceram: `TS5101` (baseUrl), depois
+5372 erros de `@types` sumido, depois `TS5011` (rootDir), e na web `TS2882`,
+`TS5112`, `TS5107` e `TS2591`.
+
+A verificacao que passa a ser feita antes de dizer que um bump de compilador
+esta destravado: rodar o compilador alvo localmente, contra o `node_modules`
+real, sem instalar nada no projeto.
+
+```sh
+pnpm --package=typescript@6.0.3 dlx tsc --noEmit -p tsconfig.json
+```
+
+Um log de CI mostra o primeiro erro, nao todos. Custo: quatro ciclos de rebase
+do Dependabot mais CI, de 5 a 10 minutos cada, para descobrir em serie o que
+uma execucao local mostraria de uma vez.
+
+### 10. Bump de dependencia que muda API nao pode ser mergeado sozinho
+
+Ainda na Fase 244, dois PRs do Dependabot foram fechados e refeitos: `#35`
+(cron-parser 5, que removeu `parseExpression`) e `#26` (TypeScript 6 na web,
+que passou a exigir `--ignoreConfig`, flag inexistente no 5.9). Mergeados
+sozinhos, deixariam `main` quebrada ate o PR de correcao entrar, e a correcao
+nao podia entrar antes porque depende da versao nova.
+
+Regra: quando o bump exige mudanca de codigo, versao e codigo entram no mesmo
+commit, e o PR do Dependabot e fechado apontando o substituto.
+
+### 11. Lockfile regenerado por pnpm mais antigo remove metadado
+
+`pnpm --filter <pacote> add <dep>@<versao>` com o pnpm 9.15.9 fixado em
+`packageManager` apagou 10 linhas `libc:` de binarios opcionais que um pnpm
+mais novo, o do Dependabot, havia escrito. O diff do bump vinha com ruido que
+nao era do bump.
+
+Confira o diff do lock antes de commitar e restaure o que nao e seu:
+
+```sh
+git diff <pacote>/pnpm-lock.yaml | grep -E "^[-+]" | grep -v "^[-+][-+][-+]"
+```
+
+### 12. Lockfile resolvido por auto-merge do git nao e lockfile valido
+
+Dois PRs do Dependabot que tocam o mesmo `pnpm-lock.yaml` podem ficar `CLEAN`
+depois que o primeiro entra, porque o git resolve o texto linha a linha. O
+resultado pode ser coerente como texto e incoerente com o `package.json`, e a
+falha so aparece no `--frozen-lockfile` do CI, depois do merge.
+
+Peca `@dependabot rebase` no segundo PR mesmo quando o GitHub diz `CLEAN`, e
+espere o CI dele fechar na arvore combinada antes de mergear.
+
 ## Registro obrigatorio de erros novos
 
 Todo erro cometido daqui em diante entra nesta secao, no mesmo formato, **no

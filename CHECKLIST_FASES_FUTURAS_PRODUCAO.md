@@ -1999,47 +1999,29 @@ publicado antes de ampliar a superficie de mudancas visuais.
     incluindo o smoke completo com 162 testes Playwright.
   - Evidencia: `fase-242-observabilidade-interna-rollout-seguro.md`.
 
-- [ ] Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service. [NAO BLOQUEADOR]
+- [x] Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service. CONCLUIDA em 2026-08-19. [NAO BLOQUEADOR]
   - Origem: triagem dos PRs do Dependabot em 2026-08-18. Quatorze PRs abertos,
     cinco deles do Mobile (Fase 243). Os nove restantes se separam por causa,
     e nao por pacote.
-  - Incremento 1 - CONCLUIDO em 2026-08-19. Os quatro que ja passavam nos 7
-    jobs, mergeados um de cada vez com o CI de `main` verde entre um e outro:
-    `#20` FastAPI 0.115.6 para 0.141.1 (`7d666b0`), `#51` uvicorn 0.32.1 para
-    0.52.3 (`835aa50`), `#31` tailwind-merge 2.6.1 para 3.6.0 (`8b4c07b`) e
-    `#28` `@types/node` 26.2.0 na web (`d09b522`). `#51` e `#28` foram
-    recriados pelo Dependabot antes do merge: o primeiro por conflito real no
-    `requirements.txt`, o segundo de proposito, porque `pnpm-lock.yaml`
-    resolvido por auto-merge textual so falha no `--frozen-lockfile` depois do
-    merge. Evidencia: `fase-244-quitacao-divida-dependencias.md`.
-  - Incremento 2 - `baseUrl` depreciado, que trava o TypeScript 6 nos dois
-    projetos. `#26` (web) e `#34` (backend) falham identicamente com
-    `tsconfig.json(12,5): error TS5101: Option 'baseUrl' is deprecated and will
-    stop functioning in TypeScript 7.0`. Trocar `baseUrl` por `paths` relativo
-    ao proprio `tsconfig.json` em `octaclin-backend` e `octaclin-web`, e so
-    entao mergear os dois PRs. Nao usar `ignoreDeprecations`: adia o mesmo
-    trabalho para o TypeScript 7 e deixa o aviso ligado no meio-tempo.
-  - Incremento 3 - o backend nao declara `lib` e herda de `target: ES2021`,
-    o que deixa `Array.prototype.at` (es2022) fora e trava o `@types/node` 26.
-    `#36` falha com `TS2550: Property 'at' does not exist` em tres arquivos.
-    A web ja passa (`#28`), entao o ajuste e so no
-    `octaclin-backend/tsconfig.json`. Conferir se subir `lib` nao muda o
-    `target` emitido: o Node 22 do Dockerfile suporta es2022, mas a mudanca
-    precisa ser deliberada e nao um efeito colateral.
-  - Incremento 4 - `cron-parser` 4 para 5 (`#35`), unica mudanca com efeito em
-    runtime do lote. A v5 removeu `parseExpression`; o erro e
-    `TS2339: Property 'parseExpression' does not exist` em
-    `src/modulos/questionarios/aplicacao/servico-questionarios.ts:1342`, o
-    unico ponto de chamada. Como o codigo calcula o proximo envio de
-    questionario recorrente, o incremento exige teste que fixe o proximo
-    disparo para uma expressao conhecida **antes** da troca de API, e nao
-    apenas o typecheck verde.
-  - Criterio de conclusao: nenhum PR do Dependabot aberto fora do Mobile, com
-    os 7 jobs verdes no merge de cada um, e o comportamento de agendamento
-    recorrente coberto por teste.
-  - Gate: nao bloqueador para o piloto. Nao iniciar no meio de um incremento da
-    Fase 234, porque mistura falha de dependencia com falha de produto no mesmo
-    CI vermelho.
+  - Incremento 1: os quatro sem trabalho de compatibilidade, mergeados um de
+    cada vez com o CI de `main` verde entre um e outro. FastAPI 0.141.1
+    (`7d666b0`), uvicorn 0.52.3 (`835aa50`), tailwind-merge 3.6.0 (`8b4c07b`)
+    e `@types/node` 26.2.0 na web (`d09b522`).
+  - Incrementos 2 e 3: o TypeScript 6 cobrou mais do que a triagem via, porque
+    um erro de configuracao do `tsc` esconde os erros de arquivo. Foram
+    `bf3d660` (baseUrl), `9809740` (`types` e modulo de estilo), `c930747`
+    (`rootDir`), `10d99f5` (`lib ES2022`) e `5f1199e` (TypeScript 6 na web com
+    o harness de testes). Com eles entraram `1db3e28` (`@types/node` no
+    backend) e `e60e7fd` (TypeScript 6 no backend).
+  - Incremento 4: cron-parser 5 em `3c3bebd`, com teste fixando o proximo
+    disparo do check-in recorrente antes da troca de API, verificado por
+    mutacao.
+  - PRs `#35` e `#26` do Dependabot foram fechados e refeitos como `#66` e
+    `#69`: quando o bump exige mudanca de codigo, versao e codigo entram no
+    mesmo commit ou `main` fica quebrada no intervalo.
+  - Pendencia com prazo: o `ignoreDeprecations: '6.0'` do harness de testes da
+    web cai no TypeScript 7, que remove `moduleResolution=node10`.
+  - Evidencia: `fase-244-quitacao-divida-dependencias.md`.
 
 - [ ] Fase 245 - Migracao do Next.js 15 para 16. [NAO BLOQUEADOR]
   - Origem: PR `#27` do Dependabot (15.5.22 para 16.3.1), que falha no job
@@ -2084,6 +2066,23 @@ Fase XXX - Nome:
 - Validacoes: <comandos principais>
 - Observacoes: <decisoes ou pendencias>
 ```
+
+Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service:
+- Status: concluida
+- Commit: 5f1199e (ultimo da fase), sobre 7d666b0, 835aa50, 8b4c07b, d09b522,
+  bf3d660, 10d99f5, 3c3bebd, 9809740, 1db3e28, c930747 e e60e7fd
+- Data: 2026-08-19
+- Validacoes: os 7 jobs do `OctaClin CI` verdes em cada PR e em cada commit de
+  `main`; localmente `typecheck`, `lint` e `build` do backend e da web,
+  `test:authz` (7 scripts, 66 testes), `test:next15` (94 arquivos),
+  `test:seguranca-operacional`, `test:seguranca-runtime` e a suite do backend
+  com 957 de 958 testes, sendo a unica falha o `catalogo-taco.spec.ts` de CRLF
+  em Windows
+- Observacoes: PRs `#35` e `#26` do Dependabot fechados e refeitos como `#66` e
+  `#69`, porque bump que exige mudanca de codigo precisa entrar no mesmo
+  commit que ela. Fica com prazo o `ignoreDeprecations: '6.0'` do harness de
+  testes da web, que cai no TypeScript 7. O `octaclin-ai-service` continua fora
+  do `Monitor producao`.
 
 - Fase 169 - Disponibilidade e feed completo da agenda:
   - Status: validada em producao.
