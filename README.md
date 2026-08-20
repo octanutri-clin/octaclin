@@ -36,6 +36,8 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 
 - `octaclin-backend` - backend NestJS/TypeORM/PostgreSQL.
 - `octaclin-web` - frontend Next.js com BFF.
+- `octaclin-mobile` - app Expo 57 modernizado, ainda desativado e sem
+  autorizacao para distribuicao.
 - `fase-*.md` - documentacao incremental de cada fase.
 
 ## Regra de continuidade

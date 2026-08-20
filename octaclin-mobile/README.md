@@ -1,13 +1,28 @@
-# OctaClin Mobile - Fase 5
+# OctaClin Mobile - Fase 243
 
-App Expo/React Native para experiencia do paciente.
+App Expo 57/React Native para experiencia do paciente. O codigo esta
+modernizado, mas o produto Mobile permanece desativado e nao pode ser
+distribuido enquanto os gates de seguranca e produto estiverem abertos.
 
 ## Rodar localmente
 
-```bash
-npm install
-npm run start
+```powershell
+pnpm install --frozen-lockfile
+pnpm start
 ```
+
+## Validacao
+
+```powershell
+pnpm typecheck
+pnpm doctor
+pnpm test:security
+pnpm audit:security
+pnpm build:validate
+```
+
+Consulte `../fase-243-modernizacao-hardening-mobile.md` para os bloqueadores de
+distribuicao e a excecao upstream rastreada.
 
 ## Entregue
 

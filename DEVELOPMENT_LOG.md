@@ -27,6 +27,20 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 243 - Modernizacao e hardening do Mobile
+
+- Responsavel: Codex, com revisao independente read-only.
+- Inicio e conclusao: 2026-08-20.
+- Push: por PR, conforme ruleset da `main`.
+- Validacoes: install congelado, typecheck, Expo Doctor, 6 testes do gate de
+  seguranca, auditoria controlada, verificacao de alinhamento, introspeccao
+  nativa e export Android/iOS/web.
+- Arquivos principais: `octaclin-mobile`, CI e
+  `fase-243-modernizacao-hardening-mobile.md`.
+- Pendencias: dois avisos altos de `image-size` sem patch e todos os gates de
+  distribuicao; `mobile.sync=false` permanece.
+- Proxima fase: Fase 248 - estados e recuperacao das superficies clinicas.
+
 ### Fase 246 - Operacao segura de repositorio publico e reconciliacao documental
 
 - Responsavel: Codex.

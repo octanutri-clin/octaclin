@@ -7,6 +7,12 @@ Atualizado em 2026-08-20.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 243 concluida como modernizacao tecnica: Expo 57.0.15, React Native
+  0.86.2 e React 19.2.3, com Doctor, typecheck, gate de seguranca e bundles das
+  tres plataformas aprovados. Restam dois avisos altos de `image-size` sem
+  patch upstream. O app segue fora da oferta, com `mobile.sync=false` e NO-GO
+  para distribuicao ate zerar o audit e fechar autenticacao, dados locais,
+  captura real, identidade e builds assinados.
 - Fase 247 concluída: antes do piloto, o OctaClin ganhou `DESIGN.md` e
   `UX-CONTRACT.md`, scrollbar global, controles compartilhados de 44 px e
   linguagem corrigida no shell, erros globais, feedback, cadastro e exames.
@@ -83,10 +89,10 @@ Atualizado em 2026-08-20.
   publicada. Backend e web tambem voltaram a responder `200` depois do deploy
   manual no Render. Adesao e lista de compras seguem pendentes.
 - Divida de dependencias revalidada em 2026-08-20 e transformada em fase, em vez
-  de ficar como fila de PRs sem dono. Restam cinco PRs do Dependabot, todos
-  do Mobile e pertencentes a **Fase 243** — e la que estao **todos os 37
-  alertas de seguranca do repositorio** (1 critico), nenhum no backend, na web
-  ou no ai-service. Os nove restantes viraram a **Fase 244**, **concluida
+  de ficar como fila de PRs sem dono. A **Fase 243** substituiu os cinco PRs do
+  Dependabot do Mobile por uma atualizacao coordenada e removeu todos os avisos
+  corrigiveis, inclusive o critico. Os dois avisos locais residuais nao possuem
+  patch e impedem distribuir o app. Os nove restantes viraram a **Fase 244**, **concluida
   em 2026-08-19**, e a **Fase 245** (Next 16 com Turbopack), **tambem
   concluida em 2026-08-19**, com o deploy da web no Render ja validado pelo
   monitor de producao. Nenhuma das

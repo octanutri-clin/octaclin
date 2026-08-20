@@ -2001,7 +2001,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `ec578a6` e CI `31749993251` aprovados; sem migration e sem ativar a flag.
   - Evidencia: `fase-241-hardening-ia-clinica.md`.
 
-- [ ] Fase 243 - Modernizacao e hardening do Mobile. [SEGURANCA - ANTECIPAR]
+- [x] Fase 243 - Modernizacao e hardening do Mobile. CONCLUIDA em 2026-08-20. [SEGURANCA - ANTECIPAR]
   - Achado da Fase 229: Expo SDK 52 carrega `tar@6.2.1` pela CLI com alerta
     critico e outras dependencias transitivas antigas. Atualizar o SDK de forma
     incremental e suportada, executar `expo install --fix`, `expo-doctor`,
@@ -2029,6 +2029,17 @@ publicado antes de ampliar a superficie de mudancas visuais.
     estao atrasados em relacao a `main`; o `#22` falha no job Mobile e os demais
     combinam pecas de majors diferentes. Substituir por um unico PR da fase e
     encerrar os cinco como superados somente depois de CI e audit aprovados.
+  - Conclusao tecnica: Expo 57.0.15, React Native 0.86.2, React 19.2.3 e
+    TypeScript 6.0.3; `expo-av` substituido por `expo-audio`; Doctor, typecheck,
+    gate de seguranca e bundles Android/iOS/web aprovados. A auditoria local
+    caiu de 38 para 2 vulnerabilidades altas de `image-size`, ambas sem versao
+    corrigida upstream. O CI aceita somente esses dois advisories exatos e
+    falha para qualquer outro.
+  - Limite deliberado: a fase conclui a modernizacao, nao a distribuicao. O
+    audit zerado continua obrigatorio para publicar o app; `mobile.sync=false`
+    permanece, assim como os gates de autenticacao, armazenamento clinico,
+    captura real de midia, identidade, transporte e backup nativo.
+  - Evidencia: `fase-243-modernizacao-hardening-mobile.md`.
 
 - [x] Fase 242 - Observabilidade interna e rollout seguro. [IMPORTANTE]
   - Complementar o monitor externo da Fase 220 com agregacao de erros e traces
