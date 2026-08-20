@@ -1736,14 +1736,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     paginada da trilha, autorizada no escopo do paciente e apresentada no
     prontuario com contexto de versao, refeicao, alimento e retorno ao
     principal. BFF com allowlist de query e 17 testes de contrato.
-  - Incremento 8 pronto para o gate de banco em 2026-08-20: biblioteca unica
+  - Incremento 8 concluido em producao em 2026-08-20: biblioteca unica
     para receitas e refeicoes prontas, pessoal ou da clinica, com snapshots
     criptografados, listagem no escopo ja filtrado no banco, edicao,
     arquivamento, auditoria e BFF com allowlist. Aplicar apenas copia os itens
     para o rascunho; o salvamento existente continua sendo a autoridade de
-    calculo e publicacao. A migration aditiva `1033` aguarda teste em
-    `octaclin_test_fase150b`, backup aprovado e aplicacao manual com
-    `neondb_owner` antes de qualquer deploy de producao. Handoff:
+    calculo e publicacao. A migration aditiva `1033` foi aplicada primeiro em
+    `octaclin_test_fase150b` e depois em `Octaclin-db-producao`, ambas com
+    `neondb_owner`; RLS forcada, policy, indices e constraints foram
+    verificados. O backup Neon pre-migration ficou na branch
+    `backup-pre-migration-1033-20260820`. Registro operacional:
     `HANDOFF_CODEX_MIGRATION_1033.md`.
   - Proximos incrementos: adesao por refeicao e lista de compras. Filtros por alergenico, restricao, custo e praticidade
     seguem sem previsao — a TACO nao carrega esses atributos e dado desconhecido

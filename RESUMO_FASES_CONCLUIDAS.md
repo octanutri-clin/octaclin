@@ -722,9 +722,9 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 234 (Incremento 8) - Biblioteca de receitas e refeicoes prontas:
   implementacao local concluida com biblioteca pessoal/da clinica, snapshots
   criptografados, visibilidade filtrada antes da paginacao, auditoria e
-  aplicacao por copia no rascunho. A migration aditiva `1033` ainda aguarda o
-  gate operacional de integracao e producao; nao ha dado novo no banco nem
-  deploy liberado por este item. Ver
+  aplicacao por copia no rascunho. A migration aditiva `1033` foi aplicada em
+  integracao e producao com `neondb_owner`, apos branch de restauracao no Neon,
+  e teve RLS forcada, policy, indices e constraints verificadas. Ver
   `fase-234-editor-planos-alimentares-avancado-multifonte.md` e
   `HANDOFF_CODEX_MIGRATION_1033.md`.
 

@@ -1,11 +1,22 @@
-# Handoff - aplicar a migration 1033 (receitas nutricionais)
+# Registro operacional - migration 1033 (receitas nutricionais)
 
 Documento operacional do Incremento 8 da Fase 234. Nao depende da conversa
 original e nao contem connection string, token ou dado clinico.
 
 - Migration: `1720000001033-CriarReceitasNutricionais`
 - Estado do codigo: implementado e validado localmente em 2026-08-20
-- Estado do banco: **nao aplicada**
+- Estado do banco: **aplicada em integracao e producao em 2026-08-20**
+- Restore point Neon de producao: `backup-pre-migration-1033-20260820`
+
+## Execucao realizada
+
+- Integracao: `octaclin_test_fase150b`, role `neondb_owner`, com a unica
+  pendencia `CriarReceitasNutricionais1720000001033` antes da aplicacao.
+- Producao: `Octaclin-db-producao`, role `neondb_owner`, com a unica pendencia
+  `CriarReceitasNutricionais1720000001033` antes da aplicacao.
+- Pos-condicoes confirmadas nos dois bancos: registro no historico TypeORM,
+  RLS e RLS forcada, policy `isolamento_tenant_receitas_nutricionais`, indices
+  de listagem/profissional e constraints de origem, tipo, total e escopo.
 
 ## Escopo e risco
 

@@ -534,9 +534,11 @@ continua sem acesso a esta leitura profissional.
 
 ## Incremento 8 - biblioteca de receitas e refeicoes prontas
 
-Em desenvolvimento local em 2026-08-20. Este incremento fecha o primeiro dos
-modos de insercao previstos no editor sem mudar a estrutura de uma versao de
-plano ja publicada.
+Concluido em 2026-08-20. Este incremento fecha o primeiro dos modos de
+insercao previstos no editor sem mudar a estrutura de uma versao de plano ja
+publicada. A migration aditiva `1033` foi aplicada e verificada em integracao e
+producao com `neondb_owner`; RLS forcada, policy de tenant, indices e
+constraints esperados foram conferidos antes do deploy.
 
 - uma unica biblioteca cobre `receita` e `refeicao_pronta`; o tipo diferencia a
   intencao de uso, mas ambos sao compostos por itens alimentares;
@@ -550,7 +552,7 @@ plano ja publicada.
   refeicao escolhida no rascunho. O salvamento existente continua sendo a
   autoridade que resolve fontes ativas, recalcula nutrientes e barra uma
   publicacao invalida;
-- a migration sera somente aditiva, com RLS forcada, FKs compostas por tenant,
+- a migration e somente aditiva, com RLS forcada, FKs compostas por tenant,
   indices de listagem e auditoria de criar, editar e arquivar. Nenhum dado de
   paciente, plano ou catalogo existente sera reescrito.
 
