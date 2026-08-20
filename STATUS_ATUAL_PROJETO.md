@@ -1,12 +1,18 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-17.
+Atualizado em 2026-08-20.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- O repositorio e publico por decisao operacional para manter GitHub Actions
+  sem custo. A Fase 246 ativou Secret Scanning, Push Protection, Dependabot
+  Security Updates, reporte privado de vulnerabilidades e ruleset da `main`
+  com PR, checks obrigatorios, bloqueio de force-push e exclusao. Nao ha
+  segredo real versionado identificado na varredura de conteudo e historico;
+  qualquer alerta futuro exige rotacao do segredo afetado.
 - Fase 234 em execucao: o Incremento 1 concluiu a fundacao de governanca do
   catalogo multifonte sem carregar dados externos. As migrations `1028`,
   `1029` e `1030` foram aplicadas primeiro no banco isolado
@@ -75,6 +81,11 @@ Atualizado em 2026-08-17.
   estilo e tres mudancas no harness de testes da web — porque um erro de
   configuracao do `tsc` esconde os erros de arquivo, licao registrada em
   `AGENTS.md`.
+- Fase 201 recebeu correcao em 2026-08-19 (PR `#73`, merge `58229eb`): os seis
+  processadores `@Cron` agora tomam advisory lock do PostgreSQL por
+  tenant/rotulo, impedindo duas instancias de dispararem o mesmo recall ou
+  rodada. O rollout segue pendente: enquanto nao existir worker dedicado no
+  Render, a producao usa `OCTACLIN_PROCESSO=all` e nao deve ganhar replicas.
 - Fase 232 concluida e integrada: operacao de lancamento com janela controlada,
   responsaveis, gates GO/NO-GO, rollback, comunicacao e exercicio sintetico P0.
   A decisao atual permanece NO-GO para cliente real ate identidade publica,
@@ -402,7 +413,10 @@ Atualizado em 2026-08-17.
 - Fase 147: Foco visivel explicito nos inputs crus da agenda (entregue em 2026-07-27). Antes dela, esta branch recebeu por merge a Fase 146 (gate de acessibilidade, feita pelo Codex na `main`).
 - Fase 145: Painel clinico do profissional e desmarcamento/cancelamento distintos (entregue em 2026-07-27, commit `22e161b` da Task 5).
 - Fase 131 aceita: producao isolada de staging confirmada em 2026-07-26, com Neon, Upstash e Render independentes, credenciais rotacionadas e ambiente/banco auditados sem staging. A integracao Google Calendar de producao foi posteriormente configurada, conectada e validada.
-- Melhoria continua: Fases 138, 141 e 142 concluidas. NestJS 11.1.28, TypeORM 1.1.0 e Next.js 15.5.22 foram validados; as auditorias de producao de backend e web estao zeradas. A proxima migracao de framework sera Next.js 16/React 19, em fase dedicada por exigir refatoracao assincrona do BFF.
+- Melhoria continua: Fases 138, 141 e 142 concluiram NestJS 11.1.28, TypeORM
+  1.1.0 e Next.js 15.5.22; a Fase 245 concluiu Next.js 16.3.1 com Turbopack.
+  A proxima reavaliacao de framework e React 19, incluindo a remocao do shim
+  temporario de cookies do BFF.
 - Fase 139 concluida: contratos de agenda e convite administrativo passaram a ser tipados sem `any` em codigo de producao; o BFF preserva uma fronteira central para sessao, renovacao e falhas de backend.
 - Fase 140 concluida: matriz rastreavel de riscos, testes e gates para tenant, autorizacao, BFF, integracoes, portal e operacoes.
 - Fase 143 concluida: convites `Professional` agora criam o perfil clinico vinculado ao login, deixando agenda, escopo de dados e Google Calendar prontos apos o primeiro acesso.
@@ -480,11 +494,12 @@ Atualizado em 2026-08-17.
 - Dominio, SSL e identidade de envio.
 - Aceite juridico formal, identidade empresarial, canal de privacidade e publicacao das versoes legais.
 - Selecao, contrato e janela real do primeiro cliente piloto na Fase 233.
-- Migracao futura para Next.js 16/React 19, incluindo a remocao do shim temporario de cookies usado no BFF.
+- Reavaliacao futura para React 19 e remocao do shim temporario de cookies usado no BFF; Next.js 16 ja esta em producao desde a Fase 245.
 
 ## Ambientes e provedores
 
-- GitHub privado como fonte de verdade.
+- GitHub publico como fonte de verdade, com Secret Scanning, Push Protection,
+  Dependabot Security Updates e ruleset ativo na `main`.
 - Render para hospedagem.
 - Neon PostgreSQL para banco.
 - Upstash Redis para Redis/fila/cache.

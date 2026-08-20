@@ -27,6 +27,22 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 246 - Operacao segura de repositorio publico e reconciliacao documental
+
+- Responsavel: Codex.
+- Inicio e conclusao: 2026-08-20.
+- Commit: registrado no historico Git da Fase 246.
+- Push: por PR, conforme ruleset da `main`.
+- Validacoes: checkout sincronizado em `58229eb`; varredura local e historica
+  sem segredo real versionado; Secret Scanning, Push Protection, Dependabot
+  Security Updates, reporte privado e ruleset da `main` configurados; monitor e
+  backup mais recentes aprovados.
+- Arquivos principais: `AGENTS.md`, documentos vivos, `SECURITY.md` e
+  `fase-246-repositorio-publico-governanca.md`.
+- Pendencias: Fase 201 continua aberta ate worker dedicado no Render; Fase 243
+  concentra os alertas Dependabot do Mobile e permanece fora da oferta.
+- Proxima fase: Fase 234, Incremento 7, ou primeiro o rollout pago do worker.
+
 ### Fase 241 - Hardening da IA clinica
 
 - Responsavel: Codex.

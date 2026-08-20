@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-13 com a conclusao e o aceite remoto da Fase 231.
+Atualizado em 2026-08-20 com as Fases 244 a 246 e a correcao de concorrencia da Fase 201.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -26,7 +26,8 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Comunicacoes: outbox, Gmail/SMTP/Gmail API, WhatsApp Meta Cloud API e webhooks.
 - Agenda: agenda interna integrada ao Google Calendar.
 - LGPD: consentimentos, solicitacoes, exportacao, resposta e visibilidade por portal.
-- Deploy/staging: GitHub privado, Render, Neon PostgreSQL, Upstash Redis e variaveis de ambiente.
+- Deploy/staging: GitHub publico com Secret Scanning/Push Protection, Render,
+  Neon PostgreSQL, Upstash Redis e variaveis de ambiente.
 
 ## Resumo por bloco de fases
 
@@ -186,7 +187,7 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
 - Fase 141 - Migracao major do TypeORM: TypeORM 1.1.0 substituiu a linha 0.3, removendo a cadeia transitoria vulneravel; o codemod oficial nao encontrou APIs a transformar e `dotenv/config` foi tornado explicito para o datasource do CLI. Build, typecheck, CLI de migrations e 47 suites/244 testes passaram; o audit de producao backend ficou sem vulnerabilidades.
 - Fase 139 - Fortalecimento de contratos de dominio e fronteiras BFF: removidos os `any` de codigo backend de producao com contrato explicito para notificacoes de agenda e `EntityManager` nos convites administrativos. A revisao confirmou que o BFF preserva uma fronteira unica para sessao, renovacao, falha de rede e resposta HTML indevida; backend e web passaram em suas suites e builds completos.
 - Fase 140 - Cobertura de confiabilidade e regressao: criada `MATRIZ_CONFIABILIDADE_TESTES.md` e o validador `pnpm test:confiabilidade`, tornando rastreaveis os riscos de tenant, autorizacao, BFF, integracoes, portal clinico e operacoes, seus testes e gates de execucao.
-- Fase 142 - Migracao controlada do Next.js: frontend atualizado para Next.js 15.5.22 mantendo React 18.3.1; o codemod oficial converteu APIs dinamicas para `Promise`/`await`, `typedRoutes` foi estabilizado e o output tracing foi delimitado ao frontend. Overrides de PostCSS 8.5.23 e Sharp 0.35.3 eliminaram os achados de auditoria de producao web. O gate `pnpm --dir octaclin-web test:next15` protege parametros dinamicos assincronos. A migracao para Next 16/React 19 permanece futura, pois exige remover o shim temporario de cookies no BFF.
+- Fase 142 - Migracao controlada do Next.js: frontend atualizado para Next.js 15.5.22 mantendo React 18.3.1; o codemod oficial converteu APIs dinamicas para `Promise`/`await`, `typedRoutes` foi estabilizado e o output tracing foi delimitado ao frontend. Overrides de PostCSS 8.5.23 e Sharp 0.35.3 eliminaram os achados de auditoria de producao web. O gate, entao chamado `pnpm --dir octaclin-web test:next15`, protege parametros dinamicos assincronos. A Fase 245 concluiu Next.js 16; React 19 e a remocao do shim de cookies permanecem futuros.
 - Fase 143 - Onboarding de profissionais por convite: o portal do cliente solicita nome, registro profissional opcional e especialidade opcional ao convidar um `Professional`; o backend cria em uma unica transacao o usuario, o perfil profissional e o convite. O primeiro login ja recebe escopo de profissional, agenda propria e base para conectar Google Calendar.
 - Fase 144 - Agendamento publico por solicitacao: o profissional pode compartilhar um link publico para receber pedidos de horario sem reservar a agenda na hora. A solicitacao fica pendente, a aprovacao interna exige paciente explicito do tenant e a consulta/notificacoes so nascem quando o fluxo normal de agenda cria a consulta aprovada. O token bruto do link nao e persistido; uma nova sessao exige rotacao confirmada para voltar a exibir uma URL copiavel.
 - Fase 145 - Painel clinico do profissional e desmarcamento/cancelamento distintos: o dashboard do profissional passou a agregar rotina diaria, pacientes sem retorno (30/60/90+ dias, com risco), tarefas vencidas, formularios pendentes, solicitacoes publicas e comunicacoes em alerta, com `SuperAdmin` podendo selecionar profissional em contexto (sempre auditado). A agenda passou a registrar a origem de cada cancelamento (profissional, paciente ou Google) no historico: o profissional cancela e notifica o paciente pelos canais habilitados; o paciente desmarca a propria consulta pelo portal (identidade so da sessao) e gera um alerta operacional sem PHI ao profissional, sem se autonotificar; o Google cancela sem novo envio. `cancelada` continua o unico desfecho terminal do banco.
@@ -679,6 +680,22 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   e a telemetria permanece deliberadamente local ao processo. PR `#39`, merge
   `32559bd` e CI `31747184400` aprovados. Ver
   `fase-242-observabilidade-interna-rollout-seguro.md`.
+- Fase 244 - Quitacao da divida de dependencias: atualizacoes fora do Mobile,
+  incluindo TypeScript 6, `@types/node` 26, cron-parser 5 com teste de fuso,
+  FastAPI, Uvicorn e Tailwind Merge. A migracao documenta que mudancas de API
+  entram junto com o bump e que TypeScript 7 exigira migrar o harness de testes
+  da web para longe de `moduleResolution=node10`.
+- Fase 245 - Next.js 16 com Turbopack: a web migrou para Next.js 16.3.1 sem
+  trocar React 18.3.1. A configuracao webpack redundante saiu, o gate
+  `test:next15` virou `test:apis-dinamicas` e o deploy foi monitorado em
+  producao.
+- Fase 246 - Operacao segura de repositorio publico: o repositorio passou a
+  operar publicamente por decisao de custo, com Secret Scanning, Push
+  Protection, Dependabot Security Updates, reporte privado de vulnerabilidade
+  e ruleset da `main`. A varredura do conteudo e do historico nao encontrou
+  segredo real versionado; os candidatos eram fixtures ou documentacao. A
+  Fase 201 continua aberta para rollout do worker dedicado, mesmo apos a trava
+  por tenant que evita duplicacao entre instancias.
 - Fase 241 - Hardening da IA clinica: referencias de
   check-in, transcricao e midia agora sao validadas por tenant/paciente; a URL
   privada e criada apenas no backend e seu SHA-256 e conferido ponta a ponta.
