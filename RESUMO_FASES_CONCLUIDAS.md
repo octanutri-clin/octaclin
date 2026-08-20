@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-20 com as Fases 244 a 246, a correcao de concorrencia da Fase 201 e o Incremento 7 da Fase 234.
+Atualizado em 2026-08-20 com as Fases 244 a 246, a correcao de concorrencia da Fase 201 e os Incrementos 7 e 8 da Fase 234.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -719,6 +719,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   paginada e estavel, contextualiza versao/refeicao/alimento e retorno ao item
   principal, e o BFF permite somente os parametros de pagina. Nenhuma versao
   publicada e modificada e nao houve migration.
+- Fase 234 (Incremento 8) - Biblioteca de receitas e refeicoes prontas:
+  implementacao local concluida com biblioteca pessoal/da clinica, snapshots
+  criptografados, visibilidade filtrada antes da paginacao, auditoria e
+  aplicacao por copia no rascunho. A migration aditiva `1033` foi aplicada em
+  integracao e producao com `neondb_owner`, apos branch de restauracao no Neon,
+  e teve RLS forcada, policy, indices e constraints verificadas. Ver
+  `fase-234-editor-planos-alimentares-avancado-multifonte.md` e
+  `HANDOFF_CODEX_MIGRATION_1033.md`.
 
 ## Estado atual de uso
 

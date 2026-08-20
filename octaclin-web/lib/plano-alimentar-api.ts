@@ -481,3 +481,64 @@ export function arquivarModeloPlanoAlimentar(modeloId: string) {
     method: 'DELETE'
   });
 }
+
+export type TipoReceitaNutricionalApi = 'receita' | 'refeicao_pronta';
+export type OrigemReceitaNutricionalApi = 'pessoal' | 'clinica';
+
+export interface ReceitaNutricionalResumoApi {
+  id: string;
+  nome: string;
+  origem: OrigemReceitaNutricionalApi;
+  tipo: TipoReceitaNutricionalApi;
+  totalItens: number;
+  atualizadoEm: string;
+}
+
+export interface ReceitaNutricionalApi extends ReceitaNutricionalResumoApi {
+  instrucoes?: string;
+  itens: ItemPlanoAlimentarEntrada[];
+  alimentosIndisponiveis: string[];
+}
+
+export interface ConsultaReceitasNutricionais extends ConsultaPaginadaPlanos {
+  origem?: OrigemReceitaNutricionalApi;
+  tipo?: TipoReceitaNutricionalApi;
+}
+
+export interface EntradaReceitaNutricional {
+  nome: string;
+  origem: OrigemReceitaNutricionalApi;
+  tipo: TipoReceitaNutricionalApi;
+  instrucoes?: string;
+  itens: ItemPlanoAlimentarEntrada[];
+}
+
+const BASE_RECEITAS = '/api/planos-alimentares/receitas';
+
+export function listarReceitasNutricionais(consulta: ConsultaReceitasNutricionais = {}, signal?: AbortSignal) {
+  return requisitar<PaginaApi<ReceitaNutricionalResumoApi>>(
+    `${BASE_RECEITAS}${montarConsulta({ pagina: consulta.pagina, limite: consulta.limite, origem: consulta.origem, tipo: consulta.tipo })}`,
+    { signal }
+  );
+}
+
+export function obterReceitaNutricional(receitaId: string, signal?: AbortSignal) {
+  return requisitar<ReceitaNutricionalApi>(`${BASE_RECEITAS}/${encodeURIComponent(receitaId)}`, { signal });
+}
+
+export function criarReceitaNutricional(entrada: EntradaReceitaNutricional) {
+  return requisitar<ReceitaNutricionalResumoApi>(BASE_RECEITAS, { method: 'POST', ...corpoJson(entrada) });
+}
+
+export function atualizarReceitaNutricional(receitaId: string, entrada: EntradaReceitaNutricional) {
+  return requisitar<ReceitaNutricionalResumoApi>(`${BASE_RECEITAS}/${encodeURIComponent(receitaId)}`, {
+    method: 'PUT',
+    ...corpoJson(entrada)
+  });
+}
+
+export function arquivarReceitaNutricional(receitaId: string) {
+  return requisitar<{ id: string; arquivadoEm: string }>(`${BASE_RECEITAS}/${encodeURIComponent(receitaId)}`, {
+    method: 'DELETE'
+  });
+}

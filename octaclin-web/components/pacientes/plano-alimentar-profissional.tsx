@@ -37,6 +37,7 @@ import {
   type EscolhaPlanoAlimentarProfissionalApi,
   type FonteCatalogoApi,
   type FormulaEnergeticaApi,
+  type ItemPlanoAlimentarEntrada,
   type NutrientesPor100gApi,
   type PlanoAlimentarApi,
   type PlanoAlimentarResumoApi,
@@ -51,6 +52,7 @@ import {
 import { PainelNutricional } from '@/components/pacientes/painel-nutricional';
 import { nutrientesDaPorcao } from '@/lib/nutricao-plano';
 import { ModelosPlanoAlimentar } from '@/components/pacientes/modelos-plano-alimentar';
+import { BibliotecaReceitasNutricionais } from '@/components/pacientes/biblioteca-receitas-nutricionais';
 
 const nutrientesVazios: NutrientesPor100gApi = {
   energiaKcal: 0,
@@ -292,6 +294,32 @@ function refeicoesDoModelo(refeicoes: RefeicaoPlanoAlimentarEntrada[]): Refeicao
       })),
       substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente
     }))
+  }));
+}
+
+function itensDaBiblioteca(itens: ItemPlanoAlimentarEntrada[]): ItemFormulario[] {
+  return itens.map((item) => ({
+    ...alimentoDoModelo(item),
+    substituicoes: (item.substituicoes ?? []).map((substituicao) => ({
+      ...alimentoDoModelo(substituicao),
+      liberadaParaPaciente: substituicao.liberadaParaPaciente === true,
+      preferida: substituicao.preferida === true
+    })),
+    substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente
+  }));
+}
+
+function itensParaBiblioteca(itens: ItemFormulario[]): ItemPlanoAlimentarEntrada[] {
+  return itens.map((item) => ({
+    ...alimentoParaModelo(item),
+    substituicoes: item.substituicoes.map((substituicao) => ({
+      ...alimentoParaModelo(substituicao),
+      liberadaParaPaciente: substituicao.liberadaParaPaciente,
+      preferida: substituicao.preferida
+    })),
+    substituicoesVisiveisInicialmente: item.substituicoes.length
+      ? item.substituicoesVisiveisInicialmente
+      : undefined
   }));
 }
 
@@ -1190,6 +1218,23 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     aoAplicar={(refeicoes) =>
                       atualizar((atual) => ({ ...atual, refeicoes: refeicoesDoModelo(refeicoes) }))
                     }
+                    desabilitado={Boolean(operacao)}
+                  />
+
+                  <BibliotecaReceitasNutricionais
+                    refeicoes={() => formulario.refeicoes.map((refeicao) => ({
+                      chave: refeicao.chaveCliente,
+                      nome: refeicao.nome,
+                      itens: itensParaBiblioteca(refeicao.itens)
+                    }))}
+                    aoInserir={(chaveRefeicao, itens) => atualizar((atual) => ({
+                      ...atual,
+                      refeicoes: atual.refeicoes.map((refeicao) =>
+                        refeicao.chaveCliente === chaveRefeicao
+                          ? { ...refeicao, itens: [...refeicao.itens, ...itensDaBiblioteca(itens)] }
+                          : refeicao
+                      )
+                    }))}
                     desabilitado={Boolean(operacao)}
                   />
 

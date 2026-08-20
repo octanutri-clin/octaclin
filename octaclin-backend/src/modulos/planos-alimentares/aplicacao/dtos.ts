@@ -24,6 +24,12 @@ import {
   ORIGENS_MODELO_PLANO_ALIMENTAR,
   OrigemModeloPlanoAlimentar
 } from '../dominio/modelos-plano-alimentar';
+import {
+  ORIGENS_RECEITA_NUTRICIONAL,
+  OrigemReceitaNutricional,
+  TIPOS_RECEITA_NUTRICIONAL,
+  TipoReceitaNutricional
+} from '../dominio/receitas-nutricionais';
 
 export class CriarPlanoAlimentarDto {
   @IsString()
@@ -260,6 +266,57 @@ export class CriarModeloPlanoAlimentarDto {
   @Type(() => RefeicaoPlanoAlimentarDto)
   refeicoes: RefeicaoPlanoAlimentarDto[];
 }
+
+export class ListarReceitasNutricionaisDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA)
+  pagina = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limite = 25;
+
+  @IsOptional()
+  @IsIn(ORIGENS_RECEITA_NUTRICIONAL)
+  origem?: OrigemReceitaNutricional;
+
+  @IsOptional()
+  @IsIn(TIPOS_RECEITA_NUTRICIONAL)
+  tipo?: TipoReceitaNutricional;
+}
+
+export class CriarReceitaNutricionalDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(180)
+  nome: string;
+
+  @IsIn(ORIGENS_RECEITA_NUTRICIONAL)
+  origem: OrigemReceitaNutricional;
+
+  @IsIn(TIPOS_RECEITA_NUTRICIONAL)
+  tipo: TipoReceitaNutricional;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4_000)
+  instrucoes?: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => ItemPlanoAlimentarDto)
+  itens: ItemPlanoAlimentarDto[];
+}
+
+export class AtualizarReceitaNutricionalDto extends CriarReceitaNutricionalDto {}
 
 export class DistribuicaoMacrosDto {
   @IsInt()

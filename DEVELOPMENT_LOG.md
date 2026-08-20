@@ -41,7 +41,25 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
   `fase-246-repositorio-publico-governanca.md`.
 - Pendencias: Fase 201 continua aberta ate worker dedicado no Render; Fase 243
   concentra os alertas Dependabot do Mobile e permanece fora da oferta.
-- Proxima fase: Fase 234, Incremento 7, ou primeiro o rollout pago do worker.
+- Proxima fase: adesao por refeicao e lista de compras da Fase 234, ou primeiro
+  o rollout pago do worker da Fase 201.
+
+### Fase 234 - Incremento 8: receitas e refeicoes prontas
+
+- Responsavel: Codex.
+- Inicio: 2026-08-20.
+- Status: concluido em integracao e producao em 2026-08-20.
+- Entrega: biblioteca pessoal/da clinica para receita e refeicao pronta,
+  snapshots criptografados, auditoria, edicao e arquivamento. A interface copia
+  itens para uma refeicao do rascunho e exige o salvamento normal para recalcular.
+- Validacao: testes focados de servico e migration (10), BFF (20), typechecks,
+  build backend com artefato e build Next.js aprovados.
+- Validacao operacional: migration `1033` aplicada em `octaclin_test_fase150b`
+  e `Octaclin-db-producao` com `neondb_owner`; RLS forcada, policy, indices e
+  constraints confirmadas. Backup Neon: `backup-pre-migration-1033-20260820`.
+- Pendencias: adesao por refeicao e lista de compras permanecem os proximos
+  incrementos da Fase 234.
+- Documento: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
 
 ### Fase 234 - Incremento 7: leitura profissional da trilha de trocas
 
