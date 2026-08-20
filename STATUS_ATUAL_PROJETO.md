@@ -12,8 +12,9 @@ Atualizado em 2026-08-20.
   linguagem corrigida no shell, erros globais, feedback, cadastro e exames.
   A fase também removeu divergências de hidratação em agenda e prontuário;
   lint sem erros, typecheck, build, contrato visual e 10 cenários Playwright
-  de acessibilidade foram aprovados. Fases 248 e 249 tratam as superfícies
-  clínicas e a responsividade por fluxo.
+  de acessibilidade foram aprovados. O roteiro das Fases 248 a 262 agora trata
+  recuperação, navegação, jornadas clínicas, estabilidade, segurança e aceite
+  do piloto; detalhes em `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 - O repositorio e publico por decisao operacional para manter GitHub Actions
   sem custo. A Fase 246 ativou Secret Scanning, Push Protection, Dependabot
   Security Updates, reporte privado de vulnerabilidades e ruleset da `main`
@@ -81,9 +82,9 @@ Atualizado em 2026-08-20.
   recarregar, inserir no rascunho, salvar plano e arquivar sem alterar versao
   publicada. Backend e web tambem voltaram a responder `200` depois do deploy
   manual no Render. Adesao e lista de compras seguem pendentes.
-- Divida de dependencias mapeada em 2026-08-18 e transformada em fase, em vez
-  de ficar como fila de PRs sem dono. Dos 14 PRs do Dependabot abertos, cinco
-  sao do Mobile e pertencem a **Fase 243** — e la que estao **todos os 37
+- Divida de dependencias revalidada em 2026-08-20 e transformada em fase, em vez
+  de ficar como fila de PRs sem dono. Restam cinco PRs do Dependabot, todos
+  do Mobile e pertencentes a **Fase 243** — e la que estao **todos os 37
   alertas de seguranca do repositorio** (1 critico), nenhum no backend, na web
   ou no ai-service. Os nove restantes viraram a **Fase 244**, **concluida
   em 2026-08-19**, e a **Fase 245** (Next 16 com Turbopack), **tambem
@@ -96,6 +97,12 @@ Atualizado em 2026-08-20.
   estilo e tres mudancas no harness de testes da web — porque um erro de
   configuracao do `tsc` esconde os erros de arquivo, licao registrada em
   `AGENTS.md`.
+- Auditoria de PRs em 2026-08-20: `#22`, `#24`, `#25`, `#29` e `#30` estao
+  atrasados e nao devem ser integrados isoladamente; serao substituidos por um
+  PR coordenado da Fase 243. O PR manual `#6`, da antiga Fase 150A, esta
+  conflitante e foi superado pelas implementacoes e testes atuais de escopo
+  Mobile/IA; a recomendacao e encerra-lo, sem merge ou cherry-pick. Nenhum PR
+  aberto esta pronto para merge.
 - Fase 201 recebeu correcao em 2026-08-19 (PR `#73`, merge `58229eb`): os seis
   processadores `@Cron` agora tomam advisory lock do PostgreSQL por
   tenant/rotulo, impedindo duas instancias de dispararem o mesmo recall ou

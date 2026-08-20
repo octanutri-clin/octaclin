@@ -16,13 +16,16 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase mais recente concluida: Fase 246 - operacao segura de repositorio
-  publico e reconciliacao documental. Fases 244 e 245 atualizaram as
+- Fase mais recente concluida: Fase 247 - qualidade de interface e linguagem.
+  Fases 244 e 245 atualizaram as
   dependencias fora do Mobile e a web para Next.js 16 com Turbopack. A Fase
   201 recebeu a trava distribuida por tenant, mas continua pendente de worker
   dedicado no Render; o backend permanece em `OCTACLIN_PROCESSO=all` e nao
   pode escalar horizontalmente antes desse rollout. O proximo bloqueador de
-  negocio e a Fase 233, primeiro piloto assistido.
+  negocio e a Fase 233, primeiro piloto assistido. Antes dele, a sequencia de
+  melhoria continua esta registrada nas Fases 248 a 262 e em
+  `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`; a Fase 243 deve ser antecipada
+  como interrupcao de seguranca do Mobile, sem ativar o app.
 - Producao isolada foi aceita na Fase 131; backup/restore, observabilidade,
   smokes somente leitura dos quatro papeis, Gmail e Google Agenda foram
   validados nas Fases 219 a 222. Isso nao substitui dominio, identidade de
