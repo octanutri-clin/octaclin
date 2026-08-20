@@ -9,6 +9,7 @@ import {
   BuscarAlimentosDto,
   CriarModeloPlanoAlimentarDto,
   CriarPlanoAlimentarDto,
+  ListarEscolhasPlanoAlimentarDto,
   ListarModelosPlanoAlimentarDto,
   ListarPlanosAlimentaresDto
 } from '../aplicacao/dtos';
@@ -49,6 +50,17 @@ export class ControladorPlanosAlimentares {
     @Param('planoId', ParseUUIDPipe) planoId: string
   ) {
     return this.servico.obter(usuario.tenantId, pacienteId, planoId, usuario);
+  }
+
+  @Get(':planoId/escolhas-paciente')
+  @Permissoes('planos_alimentares.ler')
+  listarEscolhasPaciente(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Param('planoId', ParseUUIDPipe) planoId: string,
+    @Query() consulta: ListarEscolhasPlanoAlimentarDto
+  ) {
+    return this.servico.listarEscolhasPaciente(usuario.tenantId, pacienteId, planoId, usuario, consulta);
   }
 
   @Get(':planoId/versoes/:numero')

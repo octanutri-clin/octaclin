@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-20 com as Fases 244 a 246 e a correcao de concorrencia da Fase 201.
+Atualizado em 2026-08-20 com as Fases 244 a 246, a correcao de concorrencia da Fase 201 e o Incremento 7 da Fase 234.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -713,6 +713,12 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   135 suites/894 testes backend, builds, typechecks, lint, autorizacao e quatro
   cenarios Playwright desktop/mobile. Sem migration. Ver
   `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
+- Fase 234 (Incremento 7) - Leitura profissional da trilha de trocas:
+  profissional e SuperAdmin passam a consultar, no prontuario do paciente ja
+  autorizado, os eventos append-only de substituicoes do portal. A resposta e
+  paginada e estavel, contextualiza versao/refeicao/alimento e retorno ao item
+  principal, e o BFF permite somente os parametros de pagina. Nenhuma versao
+  publicada e modificada e nao houve migration.
 
 ## Estado atual de uso
 

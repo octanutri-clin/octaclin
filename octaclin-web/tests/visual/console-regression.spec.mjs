@@ -1674,6 +1674,31 @@ async function prepararProntuarioMockado(page, {
       });
       return;
     }
+    if (route.request().method() === 'GET' && caminho.endsWith('/escolhas-paciente')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          itens: [{
+            id: 'escolha-1',
+            versaoId: 'plano-versao-publicada-1',
+            versaoNumero: 1,
+            itemId: 'item-1',
+            refeicaoNome: 'Cafe da manha',
+            itemDescricao: 'Aveia em flocos',
+            substituicaoId: 'substituicao-1',
+            substituicaoDescricao: 'Pao integral',
+            retornouAoPrincipal: false,
+            escolhidoPorUsuarioId: 'usuario-paciente-1',
+            criadoEm: '2026-08-20T12:00:00.000Z'
+          }],
+          total: 1,
+          pagina: 1,
+          limite: 25
+        })
+      });
+      return;
+    }
     if (route.request().method() === 'GET' && caminho.endsWith('/planos-alimentares/plano-alimentar-1')) {
       await route.fulfill({
         status: 200,
@@ -1996,7 +2021,9 @@ test.describe('prontuario do paciente', () => {
 
     await expect(page.getByText('Acesso somente para consulta.')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Plano de manutencao' }).first()).toBeVisible();
-    await expect(page.getByText('Aveia em flocos')).toBeVisible();
+    await expect(page.getByText('Aveia em flocos', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Trocas registradas pelo paciente' })).toBeVisible();
+    await expect(page.getByText('Escolheu Pao integral.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Criar plano', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Arquivar', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Salvar rascunho', exact: true })).toHaveCount(0);

@@ -27,12 +27,14 @@ import {
   buscarAlimentosPlanoAlimentar,
   criarNovaVersaoPlanoAlimentar,
   criarPlanoAlimentar,
+  listarEscolhasPlanoAlimentar,
   listarPlanosAlimentares,
   obterPlanoAlimentar,
   publicarPlanoAlimentar,
   revisarPlanoAlimentar,
   type AlimentoComposicaoApi,
   type AtualizarRascunhoPlanoAlimentarEntrada,
+  type EscolhaPlanoAlimentarProfissionalApi,
   type FonteCatalogoApi,
   type FormulaEnergeticaApi,
   type NutrientesPor100gApi,
@@ -852,6 +854,9 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const [planos, setPlanos] = useState<PlanoAlimentarResumoApi[]>([]);
   const [plano, setPlano] = useState<PlanoAlimentarApi | null>(null);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoAntropometricaApi[]>([]);
+  const [escolhasPaciente, setEscolhasPaciente] = useState<EscolhaPlanoAlimentarProfissionalApi[]>([]);
+  const [carregandoEscolhas, setCarregandoEscolhas] = useState(false);
+  const [erroEscolhas, setErroEscolhas] = useState<string | null>(null);
   const [planoId, setPlanoId] = useState('');
   const [formulario, setFormulario] = useState<FormularioPlano>(() => formularioInicial());
   const [tituloNovo, setTituloNovo] = useState('Plano alimentar');
@@ -928,6 +933,28 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       sequenciaCarregamento.current += 1;
     };
   }, [carregar]);
+
+  useEffect(() => {
+    if (!planoId) {
+      setEscolhasPaciente([]);
+      setErroEscolhas(null);
+      return;
+    }
+    const controlador = new AbortController();
+    setCarregandoEscolhas(true);
+    setErroEscolhas(null);
+    void listarEscolhasPlanoAlimentar(pacienteId, planoId, { pagina: 1, limite: 25 }, controlador.signal)
+      .then((pagina) => setEscolhasPaciente(pagina.itens))
+      .catch((erroAtual: unknown) => {
+        if (controlador.signal.aborted) return;
+        setEscolhasPaciente([]);
+        setErroEscolhas(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar a trilha de trocas.');
+      })
+      .finally(() => {
+        if (!controlador.signal.aborted) setCarregandoEscolhas(false);
+      });
+    return () => controlador.abort();
+  }, [pacienteId, planoId]);
 
   useEffect(() => {
     aoAlterarRascunho?.(alterado);
@@ -1279,6 +1306,25 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                   </div>
                 </section>
               ) : null}
+
+              <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
+                <div>
+                  <div className="flex items-center gap-2"><History size={17} className="text-primaria" /><h3 className="text-sm font-semibold text-tinta">Trocas registradas pelo paciente</h3></div>
+                  <p className="mt-1 text-sm text-texto-suave">Historico auditavel das escolhas feitas no portal. O plano publicado permanece inalterado.</p>
+                </div>
+                {carregandoEscolhas ? <BarraCarregamento visivel rotulo="Carregando trocas registradas" /> : null}
+                {erroEscolhas ? <AlertaOperacional mensagem={erroEscolhas} /> : null}
+                {!carregandoEscolhas && !erroEscolhas && !escolhasPaciente.length ? <p className="text-sm text-texto-suave">Nenhuma troca foi registrada neste plano.</p> : null}
+                {escolhasPaciente.length ? <ol className="grid gap-2">
+                  {escolhasPaciente.map((escolha) => <li key={escolha.id} className="grid gap-1 border-t border-linha pt-2 first:border-t-0 first:pt-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm text-tinta"><span className="font-medium">{escolha.refeicaoNome}:</span> {escolha.itemDescricao}</p>
+                      <p className="text-sm text-texto-suave">{escolha.retornouAoPrincipal ? 'Voltou ao alimento principal.' : `Escolheu ${escolha.substituicaoDescricao ?? 'uma substituicao indisponivel'}.`}</p>
+                    </div>
+                    <p className="text-xs text-texto-suave">v{escolha.versaoNumero} - {formatarData(escolha.criadoEm)}</p>
+                  </li>)}
+                </ol> : null}
+              </section>
             </>
           ) : null}
         </main>

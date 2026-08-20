@@ -11,6 +11,7 @@ const arquivos = [
   'app/api/pacientes/[id]/planos-alimentares/_proxy.ts',
   'app/api/pacientes/[id]/planos-alimentares/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/[planoId]/escolhas-paciente/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/alimentos/route.ts',
   'app/api/planos-alimentares/modelos/route.ts',
   'app/api/planos-alimentares/modelos/[modeloId]/route.ts',

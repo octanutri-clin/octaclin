@@ -1,7 +1,8 @@
 # Fase 234 - Editor de planos alimentares avancado e catalogo multifonte
 
 Status: em execucao. Incrementos 1 e 2 concluidos em 2026-08-14; Incremento 3
-concluido em 2026-08-16. Fase importante de evolucao clinica e de produto, posterior
+concluido em 2026-08-16; Incrementos 4 e 5 concluidos em 2026-08-17;
+Incrementos 6 e 7 concluidos em 2026-08-20. Fase importante de evolucao clinica e de produto, posterior
 ao MVP da Fase 216. Nao substitui os bloqueadores de go-live das Fases 225,
 226, 228, 229, 231, 232 e 233.
 
@@ -507,6 +508,29 @@ registrar o que os dados mostraram: no momento da aplicacao, producao tinha
 paciente enxergando troca nenhuma, entao o `update ... set
 liberada_para_paciente = true` foi um no-op nos dois ambientes. A protecao
 existe para quando houver dado; nao houve regressao evitada aqui.
+
+## Incremento 7 - leitura profissional da trilha de escolhas
+
+Concluido em 2026-08-20, sem migration. A tabela append-only criada no
+Incremento 6 ja continha todas as informacoes necessarias; esta entrega apenas
+criou a leitura clinica correta sobre ela.
+
+- `GET /pacientes/:pacienteId/planos-alimentares/:planoId/escolhas-paciente`
+  exige `planos_alimentares.ler`, papel `Professional` ou `SuperAdmin` e
+  revalida o paciente no escopo antes de consultar eventos;
+- o retorno e paginado, em `criadoEm/id` decrescente, para que eventos no
+  mesmo instante nao sejam repetidos ou omitidos entre paginas;
+- cada evento traz a versao, refeicao, alimento principal, substituicao
+  escolhida ou o retorno ao principal. Textos clinicos so sao descriptografados
+  depois da autorizacao no servico;
+- o BFF aceita somente `pagina` e `limite`; a interface do prontuario mostra o
+  historico em contexto, com carregamento, vazio e erro isolados do editor.
+
+Validacao: suites focadas do backend e controlador (44 testes), contrato BFF
+(17 testes), typecheck backend/web, build Next.js 16 e Playwright desktop/mobile
+da leitura do prontuario aprovados. Nenhuma
+escrita e feita por esta rota, nenhuma versao publicada e alterada e o portal
+continua sem acesso a esta leitura profissional.
 
 ## Escopo funcional
 

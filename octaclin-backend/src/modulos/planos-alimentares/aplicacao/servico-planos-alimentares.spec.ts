@@ -10,6 +10,7 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
 import { PlanoAlimentarItemOrm } from '../infraestrutura/plano-alimentar-item.orm';
+import { PlanoAlimentarEscolhaPacienteOrm } from '../infraestrutura/plano-alimentar-escolha-paciente.orm';
 import { PlanoAlimentarRefeicaoOrm } from '../infraestrutura/plano-alimentar-refeicao.orm';
 import { PlanoAlimentarSubstituicaoOrm } from '../infraestrutura/plano-alimentar-substituicao.orm';
 import { PlanoAlimentarVersaoOrm } from '../infraestrutura/plano-alimentar-versao.orm';
@@ -264,6 +265,7 @@ describe('ServicoPlanosAlimentares', () => {
     registrar(PlanoAlimentarRefeicaoOrm);
     registrar(PlanoAlimentarItemOrm);
     registrar(PlanoAlimentarSubstituicaoOrm);
+    registrar(PlanoAlimentarEscolhaPacienteOrm);
     registrar(AlimentoComposicaoOrm);
     registrar(FonteComposicaoAlimentoOrm);
     registrar(UserActionLogOrm);
@@ -288,6 +290,86 @@ describe('ServicoPlanosAlimentares', () => {
         where: expect.objectContaining({ profissionalResponsavelId: PROFISSIONAL_ID })
       })
     );
+  });
+
+  it('lista a trilha de trocas do plano em ordem decrescente, com o contexto descriptografado', async () => {
+    const refeicaoId = '10000000-0000-4000-8000-000000000011';
+    const itemId = '10000000-0000-4000-8000-000000000012';
+    const substituicaoId = '10000000-0000-4000-8000-000000000013';
+    repositorios.get(PlanoAlimentarRefeicaoOrm)!.registros.push({
+      id: refeicaoId,
+      tenantId: TENANT_ID,
+      versaoId: VERSAO_ID,
+      ordem: 1,
+      nomeCriptografado: criptografia.criptografar('Almoco')
+    });
+    repositorios.get(PlanoAlimentarItemOrm)!.registros.push({
+      id: itemId,
+      tenantId: TENANT_ID,
+      refeicaoId,
+      ordem: 1,
+      descricaoCriptografada: criptografia.criptografar('Arroz integral')
+    });
+    repositorios.get(PlanoAlimentarSubstituicaoOrm)!.registros.push({
+      id: substituicaoId,
+      tenantId: TENANT_ID,
+      itemId,
+      ordem: 1,
+      descricaoCriptografada: criptografia.criptografar('Batata-doce')
+    });
+    repositorios.get(PlanoAlimentarEscolhaPacienteOrm)!.registros.push(
+      {
+        id: '10000000-0000-4000-8000-000000000014',
+        tenantId: TENANT_ID,
+        versaoId: VERSAO_ID,
+        itemId,
+        substituicaoId,
+        escolhidoPorUsuarioId: '10000000-0000-4000-8000-000000000015',
+        criadoEm: new Date('2026-08-20T13:00:00Z')
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000016',
+        tenantId: TENANT_ID,
+        versaoId: VERSAO_ID,
+        itemId,
+        escolhidoPorUsuarioId: '10000000-0000-4000-8000-000000000015',
+        criadoEm: new Date('2026-08-20T14:00:00Z')
+      }
+    );
+
+    await expect(
+      servico.listarEscolhasPaciente(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), { pagina: 1, limite: 25 })
+    ).resolves.toEqual({
+      itens: [
+        expect.objectContaining({
+          id: '10000000-0000-4000-8000-000000000016',
+          versaoNumero: 1,
+          refeicaoNome: 'Almoco',
+          itemDescricao: 'Arroz integral',
+          retornouAoPrincipal: true
+        }),
+        expect.objectContaining({
+          id: '10000000-0000-4000-8000-000000000014',
+          versaoNumero: 1,
+          refeicaoNome: 'Almoco',
+          itemDescricao: 'Arroz integral',
+          substituicaoDescricao: 'Batata-doce',
+          retornouAoPrincipal: false
+        })
+      ],
+      total: 2,
+      pagina: 1,
+      limite: 25
+    });
+  });
+
+  it('nao enumera a trilha de trocas para profissional fora do escopo do paciente', async () => {
+    repositorios.get(PacienteOrm)!.registros[0].profissionalResponsavelId = '10000000-0000-4000-8000-000000000099';
+
+    await expect(
+      servico.listarEscolhasPaciente(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), { pagina: 1, limite: 25 })
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(repositorios.get(PlanoAlimentarEscolhaPacienteOrm)!.findAndCount).not.toHaveBeenCalled();
   });
 
   it('permite ao responsavel atual listar o historico sem confundir autoria com autorizacao', async () => {
