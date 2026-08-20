@@ -41,7 +41,23 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
   `fase-246-repositorio-publico-governanca.md`.
 - Pendencias: Fase 201 continua aberta ate worker dedicado no Render; Fase 243
   concentra os alertas Dependabot do Mobile e permanece fora da oferta.
-- Proxima fase: Fase 234, Incremento 7, ou primeiro o rollout pago do worker.
+- Proxima fase: aplicar a migration `1033` do Incremento 8 da Fase 234 em
+  integracao, ou primeiro o rollout pago do worker.
+
+### Fase 234 - Incremento 8: receitas e refeicoes prontas
+
+- Responsavel: Codex.
+- Inicio: 2026-08-20.
+- Status: implementacao local validada; migration `1033` ainda nao aplicada.
+- Entrega: biblioteca pessoal/da clinica para receita e refeicao pronta,
+  snapshots criptografados, auditoria, edicao e arquivamento. A interface copia
+  itens para uma refeicao do rascunho e exige o salvamento normal para recalcular.
+- Validacao: testes focados de servico e migration (10), BFF (20), typechecks,
+  build backend com artefato e build Next.js aprovados.
+- Pendencias: executar `HANDOFF_CODEX_MIGRATION_1033.md` em integracao e
+  producao; adesao por refeicao e lista de compras permanecem os proximos
+  incrementos da Fase 234.
+- Documento: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
 
 ### Fase 234 - Incremento 7: leitura profissional da trilha de trocas
 

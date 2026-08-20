@@ -8,13 +8,17 @@ import {
   AtualizarRascunhoPlanoAlimentarDto,
   BuscarAlimentosDto,
   CriarModeloPlanoAlimentarDto,
+  CriarReceitaNutricionalDto,
   CriarPlanoAlimentarDto,
+  AtualizarReceitaNutricionalDto,
   ListarEscolhasPlanoAlimentarDto,
   ListarModelosPlanoAlimentarDto,
-  ListarPlanosAlimentaresDto
+  ListarPlanosAlimentaresDto,
+  ListarReceitasNutricionaisDto
 } from '../aplicacao/dtos';
 import { ServicoModelosPlanoAlimentar } from '../aplicacao/servico-modelos-plano-alimentar';
 import { ServicoPlanosAlimentares } from '../aplicacao/servico-planos-alimentares';
+import { ServicoReceitasNutricionais } from '../aplicacao/servico-receitas-nutricionais';
 
 @Controller('pacientes/:pacienteId/planos-alimentares')
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
@@ -192,5 +196,46 @@ export class ControladorModelosPlanoAlimentar {
     @Param('modeloId', ParseUUIDPipe) modeloId: string
   ) {
     return this.servico.arquivar(usuario.tenantId, modeloId, usuario);
+  }
+}
+
+@Controller('planos-alimentares/receitas')
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
+@Papeis('SuperAdmin', 'Professional')
+export class ControladorReceitasNutricionais {
+  constructor(private readonly servico: ServicoReceitasNutricionais) {}
+
+  @Get()
+  @Permissoes('planos_alimentares.ler')
+  listar(@UsuarioAtual() usuario: UsuarioAutenticado, @Query() consulta: ListarReceitasNutricionaisDto) {
+    return this.servico.listar(usuario.tenantId, usuario, consulta);
+  }
+
+  @Post()
+  @Permissoes('planos_alimentares.gerenciar')
+  criar(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: CriarReceitaNutricionalDto) {
+    return this.servico.criar(usuario.tenantId, usuario, dados);
+  }
+
+  @Get(':receitaId')
+  @Permissoes('planos_alimentares.ler')
+  obter(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('receitaId', ParseUUIDPipe) receitaId: string) {
+    return this.servico.obter(usuario.tenantId, receitaId, usuario);
+  }
+
+  @Put(':receitaId')
+  @Permissoes('planos_alimentares.gerenciar')
+  atualizar(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('receitaId', ParseUUIDPipe) receitaId: string,
+    @Body() dados: AtualizarReceitaNutricionalDto
+  ) {
+    return this.servico.atualizar(usuario.tenantId, receitaId, usuario, dados);
+  }
+
+  @Delete(':receitaId')
+  @Permissoes('planos_alimentares.gerenciar')
+  arquivar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('receitaId', ParseUUIDPipe) receitaId: string) {
+    return this.servico.arquivar(usuario.tenantId, receitaId, usuario);
   }
 }

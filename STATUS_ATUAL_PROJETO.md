@@ -65,8 +65,11 @@ Atualizado em 2026-08-20.
   zero versoes publicadas e zero substituicoes, entao o backfill foi um no-op e
   nenhuma regressao real foi evitada. O Incremento 7 concluiu a leitura
   profissional da trilha de trocas, paginada e protegida pelo escopo do
-  paciente, sem nova migration. Receitas, adesao e lista de compras seguem
-  pendentes.
+  paciente, sem nova migration. O Incremento 8 deixou pronta a biblioteca de
+  receitas e refeicoes prontas, que expande itens apenas no rascunho e preserva
+  o recalculo do backend. A migration `1033` e aditiva, registrada no
+  `DataSource` e ainda nao foi aplicada: requer integracao primeiro, backup e
+  `neondb_owner` em producao. Adesao e lista de compras seguem pendentes.
 - Divida de dependencias mapeada em 2026-08-18 e transformada em fase, em vez
   de ficar como fila de PRs sem dono. Dos 14 PRs do Dependabot abertos, cinco
   sao do Mobile e pertencem a **Fase 243** — e la que estao **todos os 37

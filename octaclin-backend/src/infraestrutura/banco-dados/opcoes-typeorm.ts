@@ -45,6 +45,7 @@ import { AtivarLegadoTacoGovernado1720000001029 } from './migracoes/172000000102
 import { EndurecerGovernancaCatalogo1720000001030 } from './migracoes/1720000001030-EndurecerGovernancaCatalogo';
 import { CriarModelosPlanoAlimentar1720000001031 } from './migracoes/1720000001031-CriarModelosPlanoAlimentar';
 import { LiberarSubstituicoesAoPaciente1720000001032 } from './migracoes/1720000001032-LiberarSubstituicoesAoPaciente';
+import { CriarReceitasNutricionais1720000001033 } from './migracoes/1720000001033-CriarReceitasNutricionais';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -120,6 +121,8 @@ import { PlanoAlimentarEscolhaPacienteOrm } from '../../modulos/planos-alimentar
 import { PlanoAlimentarSubstituicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-substituicao.orm';
 import { PlanoAlimentarVersaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
 import { PlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar.orm';
+import { ModeloPlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/modelo-plano-alimentar.orm';
+import { ReceitaNutricionalOrm } from '../../modulos/planos-alimentares/infraestrutura/receita-nutricional.orm';
 
 function criarConexaoBanco() {
   if (process.env.DATABASE_URL) {
@@ -239,6 +242,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       PlanoAlimentarItemOrm,
       PlanoAlimentarSubstituicaoOrm,
       PlanoAlimentarEscolhaPacienteOrm,
+      ModeloPlanoAlimentarOrm,
+      ReceitaNutricionalOrm,
       CatalogoComposicaoAlimentoOrm,
       FonteComposicaoAlimentoOrm,
       AlimentoComposicaoOrm,
@@ -293,7 +298,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         AtivarLegadoTacoGovernado1720000001029,
         EndurecerGovernancaCatalogo1720000001030,
         CriarModelosPlanoAlimentar1720000001031,
-        LiberarSubstituicoesAoPaciente1720000001032
+        LiberarSubstituicoesAoPaciente1720000001032,
+        CriarReceitasNutricionais1720000001033
       ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

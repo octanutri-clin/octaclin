@@ -13,6 +13,8 @@ import { POST as criarNovaVersao } from '../app/api/pacientes/[id]/planos-alimen
 import { POST as arquivarPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/arquivamento/route';
 import { GET as listarModelos, POST as criarModelo } from '../app/api/planos-alimentares/modelos/route';
 import { GET as obterModelo, DELETE as arquivarModelo } from '../app/api/planos-alimentares/modelos/[modeloId]/route';
+import { GET as listarReceitas, POST as criarReceita } from '../app/api/planos-alimentares/receitas/route';
+import { GET as obterReceita, PUT as atualizarReceita, DELETE as arquivarReceita } from '../app/api/planos-alimentares/receitas/[receitaId]/route';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -417,6 +419,72 @@ test('BFF recusa arquivar modelo sem permissao de gerenciar', async () => {
     });
     assert.equal(resposta.status, 403);
     assert.equal(chamou, false);
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF encaminha receitas com allowlist e descarta filtros de escopo', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let url = '';
+  global.fetch = (async (entrada: string | URL | Request) => {
+    url = String(entrada);
+    return Response.json({ itens: [], total: 0, pagina: 1, limite: 25 });
+  }) as typeof global.fetch;
+
+  try {
+    await listarReceitas(new Request('http://localhost/api/receitas?pagina=2&limite=10&origem=clinica&tipo=receita&profissionalId=alheio'));
+    assert.equal(
+      url,
+      'http://backend.octaclin.local/planos-alimentares/receitas?pagina=2&limite=10&origem=clinica&tipo=receita'
+    );
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF exige gerenciar para criar, editar e arquivar receitas', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let chamadas = 0;
+  global.fetch = (async () => {
+    chamadas += 1;
+    return Response.json({});
+  }) as typeof global.fetch;
+  const params = { params: Promise.resolve({ receitaId: 'receita-1' }) };
+
+  try {
+    const respostas = await Promise.all([
+      criarReceita(new Request('http://localhost/api/receitas', { method: 'POST', body: '{}' })),
+      atualizarReceita(new Request('http://localhost/api/receitas', { method: 'PUT', body: '{}' }), params),
+      arquivarReceita(new Request('http://localhost/api/receitas', { method: 'DELETE' }), params)
+    ]);
+    assert.deepEqual(respostas.map((resposta) => resposta.status), [403, 403, 403]);
+    assert.equal(chamadas, 0);
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF codifica ID de receita e preserva corpo da atualizacao', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler', 'planos_alimentares.gerenciar']));
+  const original = global.fetch;
+  const chamadas: Array<{ url: string; metodo: string; corpo?: string }> = [];
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => {
+    chamadas.push({ url: String(entrada), metodo: init?.method ?? 'GET', corpo: init?.body?.toString() });
+    return Response.json({});
+  }) as typeof global.fetch;
+  const params = { params: Promise.resolve({ receitaId: 'receita/1' }) };
+
+  try {
+    const corpo = JSON.stringify({ nome: 'Cafe' });
+    await obterReceita(new Request('http://localhost/api/receitas'), params);
+    await atualizarReceita(new Request('http://localhost/api/receitas', { method: 'PUT', body: corpo }), params);
+    assert.deepEqual(chamadas, [
+      { url: 'http://backend.octaclin.local/planos-alimentares/receitas/receita%2F1', metodo: 'GET', corpo: undefined },
+      { url: 'http://backend.octaclin.local/planos-alimentares/receitas/receita%2F1', metodo: 'PUT', corpo }
+    ]);
   } finally {
     restaurarFetch(original);
   }

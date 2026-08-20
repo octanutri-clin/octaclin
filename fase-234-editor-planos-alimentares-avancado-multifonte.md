@@ -532,6 +532,32 @@ da leitura do prontuario aprovados. Nenhuma
 escrita e feita por esta rota, nenhuma versao publicada e alterada e o portal
 continua sem acesso a esta leitura profissional.
 
+## Incremento 8 - biblioteca de receitas e refeicoes prontas
+
+Em desenvolvimento local em 2026-08-20. Este incremento fecha o primeiro dos
+modos de insercao previstos no editor sem mudar a estrutura de uma versao de
+plano ja publicada.
+
+- uma unica biblioteca cobre `receita` e `refeicao_pronta`; o tipo diferencia a
+  intencao de uso, mas ambos sao compostos por itens alimentares;
+- cada registro pertence a clinica ou ao profissional, seguindo exatamente a
+  visibilidade de modelos: a clinica e compartilhada no tenant, a pessoal so
+  aparece ao seu dono e o `SuperAdmin` pode administrar ambas;
+- nome, instrucoes e itens sao snapshots criptografados. Os itens preservam a
+  entrada aceita pelo rascunho, inclusive composicao manual e alternativas,
+  para que a biblioteca nao dependa de IDs de catalogo portaveis entre bancos;
+- aplicar uma receita nao salva nem publica o plano: copia seus itens para a
+  refeicao escolhida no rascunho. O salvamento existente continua sendo a
+  autoridade que resolve fontes ativas, recalcula nutrientes e barra uma
+  publicacao invalida;
+- a migration sera somente aditiva, com RLS forcada, FKs compostas por tenant,
+  indices de listagem e auditoria de criar, editar e arquivar. Nenhum dado de
+  paciente, plano ou catalogo existente sera reescrito.
+
+Ficam fora deste incremento receitas publicas de catalogo, sugestoes clinicas
+automaticas, calculo de custo e qualquer alegacao sobre alergeno ou restricao:
+nao ha fonte licenciada e validada para esses atributos.
+
 ## Escopo funcional
 
 ### 1. Estrutura e ciclo de vida do plano
