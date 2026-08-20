@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-13 com a conclusao e o aceite remoto da Fase 231.
+Atualizado em 2026-08-20 com a Fase 246 de operacao segura do repositorio publico.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -468,8 +468,9 @@ O OctaClin pode comecar a receber clientes reais de consultoria quando todos os 
   - Overrides de `postcss` 8.5.23 e `sharp` 0.35.3 zeraram a auditoria de
     producao do frontend. `sharp` foi autorizado explicitamente na politica
     restritiva de scripts do pnpm.
-  - Pendencia futura: remover o shim temporario `UnsafeUnwrappedCookies` na
-    migracao dedicada para Next.js 16/React 19.
+  - Historico: o shim temporario `UnsafeUnwrappedCookies` era pendencia da
+    migracao para Next.js 16/React 19. A Fase 245 concluiu Next.js 16; o shim
+    segue para reavaliacao em migracao dedicada para React 19.
 
 - [x] Fase 145 - Painel clinico do profissional e desmarcamento/cancelamento distintos.
   - Painel clinico diario por profissional (rotina do dia, sem retorno 30/60/90+,
@@ -2052,6 +2053,24 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Deploy validado: producao passou a servir o build Turbopack e o `Monitor
     producao` voltou ok em readiness, dependencias e web (execucao `32287204104`).
   - Evidencia: `fase-245-migracao-next-16.md`.
+
+- [x] Fase 246 - Operacao segura de repositorio publico e reconciliacao documental. CONCLUIDA em 2026-08-20. [BLOQUEADOR OPERACIONAL]
+  - Decisao: manter `octanutri-clin/octaclin` publico para usar GitHub Actions
+    sem custo. Nenhum secret, dado clinico, dump ou URL autenticada pode entrar
+    no Git, issues, PRs, logs ou documentacao publica.
+  - GitHub: Secret Scanning, Push Protection, Dependabot Security Updates e
+    reporte privado de vulnerabilidade ativos. O ruleset `main: PR e CI
+    obrigatorios` exige PR, sete checks, conversa resolvida, branch atualizada,
+    e bloqueia force-push e exclusao; aprovacoes ficam em zero para nao travar
+    uma equipe de um mantenedor.
+  - Auditoria: varredura local e de 594 commits sem segredo real identificado.
+    A URL em `.env.integracao` e local, ignorada e nao rastreada. Candidatos
+    historicos foram fixtures/documentacao. Alertas Dependabot abertos continuam
+    concentrados no Mobile, tratado na Fase 243, que segue fora da oferta.
+  - A Fase 201 permanece aberta: a trava por tenant do PR `#73` fecha o risco
+    de cron concorrente, mas o worker Render e a entrega sintetica unica ainda
+    sao necessarios antes de replicas.
+  - Evidencia: `fase-246-repositorio-publico-governanca.md` e `SECURITY.md`.
 
 ## Backlog pos-producao
 

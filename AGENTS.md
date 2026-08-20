@@ -16,21 +16,31 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Maior fase concluida: Fase 242 - observabilidade interna e rollout seguro. O aceite mais
-  recente do caminho de go-live e a Fase 232, operacao de lancamento. Fases
-  228, 231 e 232 resolveram onboarding, jornadas mutaveis e protocolo da
-  janela; a proxima fase de desenvolvimento e a Fase 241 limitada a IA, e a
-  proxima fase bloqueadora de negocio e a Fase 233, primeiro piloto assistido.
+- Fase mais recente concluida: Fase 246 - operacao segura de repositorio
+  publico e reconciliacao documental. Fases 244 e 245 atualizaram as
+  dependencias fora do Mobile e a web para Next.js 16 com Turbopack. A Fase
+  201 recebeu a trava distribuida por tenant, mas continua pendente de worker
+  dedicado no Render; o backend permanece em `OCTACLIN_PROCESSO=all` e nao
+  pode escalar horizontalmente antes desse rollout. O proximo bloqueador de
+  negocio e a Fase 233, primeiro piloto assistido.
 - Producao isolada foi aceita na Fase 131; backup/restore, observabilidade,
   smokes somente leitura dos quatro papeis, Gmail e Google Agenda foram
   validados nas Fases 219 a 222. Isso nao substitui dominio, identidade de
   envio, revisao juridica nem o aceite real da Fase 233.
-- Melhoria continua: Fases 138, 141 e 142 atualizaram NestJS para 11.1.28, TypeORM para 1.1.0 e Next.js para 15.5.22, com auditorias de producao zeradas. Preserve React 18.3.1 e o shim de cookies BFF ate uma fase dedicada de Next.js 16/React 19.
+- Melhoria continua: Fases 138, 141 e 142 atualizaram NestJS para 11.1.28 e
+  TypeORM para 1.1.0; a Fase 245 atualizou a web para Next.js 16.3.1 com
+  React 18.3.1 preservado. O shim de cookies BFF continua uma divida tecnica a
+  reavaliar somente numa migracao dedicada para React 19.
 - Fase 139 removeu `any` de codigo backend de producao e consolidou contratos de agenda/convites; preserve `requisitarBackendAutenticado` como a fronteira unica de erros BFF autenticados.
 - Fase 140 introduziu `MATRIZ_CONFIABILIDADE_TESTES.md`; atualize a matriz e seu validador sempre que adicionar ou remover um fluxo de risco alto.
 - Fase 142 introduziu o gate de APIs dinamicas assincronas, hoje `pnpm --dir octaclin-web test:apis-dinamicas` (chamava-se `test:next15` ate a Fase 245); toda nova rota dinamica deve receber `params`/`searchParams` assincronos e manter esse gate verde.
 - O checklist vivo das proximas fases fica em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 - Para as Fases 191 a 198 (bloco de redesenho), o mapeamento de skills/agentes/plugins do Claude Code a usar em cada fase fica em `ESCOPO_SKILLS_AGENTES_FASES_191_198.md`; leia-o ao revisar esse historico ou tocar as telas correspondentes.
+- O repositorio e publico por decisao de custo do GitHub Actions. Antes de
+  qualquer push, rode `pnpm security:secrets`; nunca publique dados clinicos,
+  dumps, `.env`, URLs com senha ou logs de integracao. Secret Scanning e Push
+  Protection estao ativos; uma deteccao exige rotacao, nao apenas remocao do
+  arquivo.
 
 ## Regras de trabalho
 
