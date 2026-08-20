@@ -1625,6 +1625,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
     acompanhar as primeiras 48 horas com feedback priorizado.
   - Criterio de aceite: nenhuma falha P0/P1 aberta e decisao explicita de
     expandir, corrigir ou pausar a comercializacao.
+  - Preparacao atualizada em 2026-08-20: `fase-233-primeiro-cliente-piloto-assistido.md`
+    consolida o registro sanitizado da janela. O estado permanece `NO-GO`: nao
+    ha cliente, dominio/identidade publica ou aceite juridico final registrados.
 
 - [~] Fase 234 - Editor de planos alimentares avancado e catalogo multifonte. [IMPORTANTE - POS PILOTO]
   - Evoluir o MVP da Fase 216 com editor de refeicoes, modelos, grupos de
@@ -1747,6 +1750,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
     verificados. O backup Neon pre-migration ficou na branch
     `backup-pre-migration-1033-20260820`. Registro operacional:
     `HANDOFF_CODEX_MIGRATION_1033.md`.
+  - Aceite visual do Incremento 8 dado em 2026-08-20: salvar, recarregar,
+    inserir em rascunho, salvar plano e arquivar foram confirmados por
+    profissional autenticado sem alterar versao publicada.
   - Proximos incrementos: adesao por refeicao e lista de compras. Filtros por alergenico, restricao, custo e praticidade
     seguem sem previsao — a TACO nao carrega esses atributos e dado desconhecido
     nao vira afirmacao clinica. TBCA, IBGE/POF e Tucunduva continuam desabilitadas.

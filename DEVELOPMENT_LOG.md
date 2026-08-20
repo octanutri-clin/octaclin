@@ -57,6 +57,9 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Validacao operacional: migration `1033` aplicada em `octaclin_test_fase150b`
   e `Octaclin-db-producao` com `neondb_owner`; RLS forcada, policy, indices e
   constraints confirmadas. Backup Neon: `backup-pre-migration-1033-20260820`.
+- Aceite visual: profissional autenticado confirmou salvar, recarregar,
+  inserir no rascunho, salvar o plano e arquivar uma receita sem alterar versao
+  publicada. Backend e web responderam `200` depois do deploy manual no Render.
 - Pendencias: adesao por refeicao e lista de compras permanecem os proximos
   incrementos da Fase 234.
 - Documento: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.

@@ -726,7 +726,9 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   integracao e producao com `neondb_owner`, apos branch de restauracao no Neon,
   e teve RLS forcada, policy, indices e constraints verificadas. Ver
   `fase-234-editor-planos-alimentares-avancado-multifonte.md` e
-  `HANDOFF_CODEX_MIGRATION_1033.md`.
+  `HANDOFF_CODEX_MIGRATION_1033.md`. O aceite visual autenticado confirmou o
+  ciclo salvar, inserir no rascunho, salvar plano e arquivar, sem alterar uma
+  versao publicada.
 
 ## Estado atual de uso
 
