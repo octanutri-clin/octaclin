@@ -2,7 +2,8 @@
 
 Data: 2026-08-20.
 
-Integracao: PR `#84`, commit de implementacao `069b7ce`.
+Integracao: PR `#84`, commits `069b7ce` e `bd91152`, merge `87b2f6a`.
+CI: execucao `32430036184`, com os sete jobs aprovados.
 
 ## Objetivo
 
@@ -39,6 +40,9 @@ migracao coordenada e suportada.
 
 O resultado local caiu de 38 para 2 vulnerabilidades. Foram eliminadas todas as
 ocorrencias corrigiveis, inclusive o alerta critico de `tar`.
+
+A API do GitHub confirmou o mesmo estado depois do merge: 2 alertas abertos,
+ambos altos e ambos no pacote `image-size`.
 
 As duas ocorrencias residuais sao `GHSA-w3rx-r6r6-pgpr` e
 `GHSA-5p2g-fcmc-qvqq`, ambas em `image-size@1.2.1`, transitiva do Metro. Em
@@ -97,6 +101,9 @@ A modernizacao tecnica da Fase 243 esta concluida. O app Mobile continua fora
 da oferta e recebe veredito **NO-GO para distribuicao**. A divida upstream e os
 PRs superados sao reconciliados no mesmo ciclo; os gates funcionais e de dados
 ficam registrados para uma futura retomada explicita do produto Mobile.
+
+Os PRs `#22`, `#24`, `#25`, `#29` e `#30` receberam referencia ao substituto e
+foram encerrados depois do CI verde e do merge do PR `#84`.
 
 ## Proxima fase recomendada
 

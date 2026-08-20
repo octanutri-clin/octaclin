@@ -2039,7 +2039,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     audit zerado continua obrigatorio para publicar o app; `mobile.sync=false`
     permanece, assim como os gates de autenticacao, armazenamento clinico,
     captura real de midia, identidade, transporte e backup nativo.
-  - Integracao: PR `#84`, commit de implementacao `069b7ce`.
+  - Integracao: PR `#84`, commits `069b7ce` e `bd91152`, merge `87b2f6a` e CI
+    `32430036184` com os sete jobs verdes. Depois do merge, o GitHub passou de
+    37 para 2 alertas, ambos altos de `image-size` sem patch. PRs `#22`, `#24`,
+    `#25`, `#29` e `#30` encerrados como superados.
   - Evidencia: `fase-243-modernizacao-hardening-mobile.md`.
 
 - [x] Fase 242 - Observabilidade interna e rollout seguro. [IMPORTANTE]
@@ -2147,11 +2150,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     de overflow ou texto cortado.
 
 - [ ] Fase 250 - Encerramento da dívida de segurança Mobile e higiene de PRs. [ESSENCIAL - SEGURANCA]
-  - Reconciliar o resultado técnico da Fase 243: confirmar os alertas
-    corrigíveis zerados no lockfile e documentar exceção temporária apenas
-    quando não houver versão corrigida compatível.
-  - Reconciliar os PRs `#22`, `#24`, `#25`, `#29` e `#30` depois da substituição
-    e encerrar o PR `#6`, conflitante e superado pelas implementações atuais de
+  - [x] Resultado da Fase 243 reconciliado: alertas corrigiveis zerados, duas
+    excecoes sem patch documentadas e gate fail-closed no CI.
+  - [x] PRs `#22`, `#24`, `#25`, `#29` e `#30` encerrados apos o merge do
+    substituto `#84`.
+  - [ ] Revalidar se surgiu patch para os dois advisories de `image-size` e
+    encerrar o PR `#6`, conflitante e superado pelas implementações atuais de
     isolamento Mobile/IA.
   - Gate: Expo Doctor, typecheck, build, audit, CI completo e `mobile.sync=false`.
 
@@ -2263,6 +2267,23 @@ Fase XXX - Nome:
 - Modelo recomendado: <modelo e nivel de raciocinio>
 - Skills/plugins: <capacidades recomendadas para a proxima fase>
 ```
+
+Fase 243 - Modernizacao e hardening do Mobile:
+- Status: concluida tecnicamente, com NO-GO para distribuicao
+- Commit: `069b7ce`, `bd91152`; merge `87b2f6a` pelo PR `#84`
+- Data: 2026-08-20
+- Validacoes: install congelado, Expo Doctor, typecheck, 6 testes do gate de
+  seguranca, auditoria, alinhamento de dependencias, introspeccao nativa,
+  bundles Android/iOS/web e os 7 jobs do CI `32430036184`
+- Observacoes: os alertas GitHub cairam de 37 para 2, ambos altos de
+  `image-size` sem patch. O gate admite apenas esses dois identificadores;
+  `mobile.sync=false` e todos os bloqueios de distribuicao permanecem. PRs
+  `#22`, `#24`, `#25`, `#29` e `#30` foram encerrados como superados.
+- Proxima fase: Fase 248 - Estados e recuperacao das superficies clinicas
+- Modelo recomendado: GPT-5.6 Sol, raciocinio `high`
+- Skills/plugins: `ecc:error-handling`, `ecc:frontend-patterns`,
+  `ecc:frontend-a11y`, `ecc:e2e-testing`,
+  `codex-engineering-guardrails:code-work`, Chrome DevTools e Playwright
 
 Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service:
 - Status: concluida
