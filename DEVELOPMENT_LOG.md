@@ -31,7 +31,8 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 - Responsavel: Codex, com revisao independente read-only.
 - Inicio e conclusao: 2026-08-20.
-- Push: por PR, conforme ruleset da `main`.
+- Commit: `069b7ce`.
+- Push: PR `#84`, conforme ruleset da `main`.
 - Validacoes: install congelado, typecheck, Expo Doctor, 6 testes do gate de
   seguranca, auditoria controlada, verificacao de alinhamento, introspeccao
   nativa e export Android/iOS/web.

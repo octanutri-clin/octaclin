@@ -2039,6 +2039,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     audit zerado continua obrigatorio para publicar o app; `mobile.sync=false`
     permanece, assim como os gates de autenticacao, armazenamento clinico,
     captura real de midia, identidade, transporte e backup nativo.
+  - Integracao: PR `#84`, commit de implementacao `069b7ce`.
   - Evidencia: `fase-243-modernizacao-hardening-mobile.md`.
 
 - [x] Fase 242 - Observabilidade interna e rollout seguro. [IMPORTANTE]

@@ -2,6 +2,8 @@
 
 Data: 2026-08-20.
 
+Integracao: PR `#84`, commit de implementacao `069b7ce`.
+
 ## Objetivo
 
 Remover a divida critica do ecossistema Expo sem ativar nem distribuir o app

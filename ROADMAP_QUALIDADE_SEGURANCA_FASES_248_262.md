@@ -69,11 +69,11 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
 
 | PR | Situação observada | Necessidade | Decisão recomendada |
 | --- | --- | --- | --- |
-| `#22` | React Native e screens isolados; branch atrás; job Mobile falha | Não serve isoladamente | Substituir pela Fase 243 e encerrar depois |
-| `#24` | Safe Area Context major isolada; branch atrás | Depende da matriz Expo alvo | Substituir pela Fase 243 e encerrar depois |
-| `#25` | Expo 52 para 57 sozinho; grande troca de lockfile; branch atrás | É a direção, não um PR integrável sozinho | Refazer coordenado na Fase 243 |
-| `#29` | Expo AV major isolada; branch atrás | Depende do SDK alvo | Substituir pela Fase 243 e encerrar depois |
-| `#30` | Expo Status Bar major isolada; branch atrás | Depende do SDK alvo | Substituir pela Fase 243 e encerrar depois |
+| `#22` | React Native e screens isolados; branch atrás; job Mobile falha | Não serve isoladamente | Substituido pelo PR `#84`; encerrar apos o CI |
+| `#24` | Safe Area Context major isolada; branch atrás | Depende da matriz Expo alvo | Substituido pelo PR `#84`; encerrar apos o CI |
+| `#25` | Expo 52 para 57 sozinho; grande troca de lockfile; branch atrás | É a direção, não um PR integrável sozinho | Substituido pelo PR `#84`; encerrar apos o CI |
+| `#29` | Expo AV major isolada; branch atrás | Depende do SDK alvo | Substituido pelo PR `#84`; encerrar apos o CI |
+| `#30` | Expo Status Bar major isolada; branch atrás | Depende da matriz Expo alvo | Substituido pelo PR `#84`; encerrar apos o CI |
 | `#6` | Fase 150A de julho, 10 commits, conflitos com `main` | Conteúdo atual já possui escopo Mobile/IA mais amplo e testes posteriores | Encerrar como superado; não tentar merge/cherry-pick |
 
 Nenhum PR aberto está pronto para merge. Não fechar automaticamente nesta
