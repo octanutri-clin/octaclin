@@ -28,7 +28,7 @@ interface Props {
 const vazio: PerfilCadastroPacienteApi = { identificacao: {}, contato: {}, operacao: {} };
 
 const rotulosStatusPortal: Record<QualidadeEAcessoPacienteApi['acessoPortal']['status'], string> = {
-  nao_convidado: 'Ainda nao convidado',
+  nao_convidado: 'Ainda não convidado',
   convite_pendente: 'Convite pendente',
   convite_expirado: 'Convite expirado',
   convite_revogado: 'Convite revogado',
@@ -38,18 +38,18 @@ const rotulosStatusPortal: Record<QualidadeEAcessoPacienteApi['acessoPortal']['s
 
 const rotulosAceite: Record<string, string> = {
   termos_uso: 'Termos de uso',
-  politica_privacidade: 'Politica de privacidade',
+  politica_privacidade: 'Política de privacidade',
   consentimento_lgpd: 'Consentimento LGPD'
 };
 
 function formatarDataHora(valor?: string) {
-  if (!valor) return 'Nao registrado';
+  if (!valor) return 'Não registrado';
   const data = new Date(valor);
-  return Number.isNaN(data.getTime()) ? 'Nao registrado' : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(data);
+  return Number.isNaN(data.getTime()) ? 'Não registrado' : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(data);
 }
 
 function mensagemErro(erro: unknown) {
-  return erro instanceof Error ? erro.message : 'Nao foi possivel salvar esta secao.';
+  return erro instanceof Error ? erro.message : 'Não foi possível salvar esta seção.';
 }
 
 function removerCamposVazios<T extends object>(valor: T): T {
@@ -164,7 +164,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
       setLinkConvite(null);
       setConfirmarRevogacao(false);
       setQualidade(await obterQualidadeEAcessoPaciente(pacienteId));
-      setSucesso('Convite pendente revogado. O link anterior nao pode mais ser utilizado.');
+      setSucesso('Convite pendente revogado. O link anterior não pode mais ser utilizado.');
     } catch (erroAtual) {
       setErro(mensagemErro(erroAtual));
     } finally {
@@ -184,7 +184,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
       await salvarSecaoCadastroPaciente(pacienteId, 'identificacao', removerCamposVazios(perfil.identificacao ?? {}));
       setQualidade(await obterQualidadeEAcessoPaciente(pacienteId));
       aoAtualizarFicha();
-      setSucesso('Identificacao salva com seguranca.');
+      setSucesso('Identificação salva com segurança.');
     } catch (erroAtual) {
       setErro(mensagemErro(erroAtual));
     } finally {
@@ -202,7 +202,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
       if (secao === 'operacao') await salvarSecaoCadastroPaciente(pacienteId, secao, removerCamposVazios(perfil.operacao ?? {}));
       if (secao === 'fiscal') await salvarSecaoCadastroPaciente(pacienteId, secao, removerCamposVazios(fiscal));
       setQualidade(await obterQualidadeEAcessoPaciente(pacienteId));
-      setSucesso('Secao salva com seguranca.');
+      setSucesso('Seção salva com segurança.');
     } catch (erroAtual) {
       setErro(mensagemErro(erroAtual));
     } finally {
@@ -217,7 +217,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
       <Botao type="button" variante="secundario" onClick={abrir} aria-label="Editar cadastro do paciente">
         <ContactRound size={16} /> Cadastro
       </Botao>
-      <Modal aberto={aberto} aoFechar={() => setAberto(false)} titulo="Cadastro do paciente" descricao="Salve cada secao separadamente. Dados clinicos pertencem a avaliacao e anamnese.">
+      <Modal aberto={aberto} aoFechar={() => setAberto(false)} titulo="Cadastro do paciente" descricao="Salve cada seção separadamente. Dados clínicos pertencem à avaliação e à anamnese.">
         {carregando ? <BarraCarregamento visivel rotulo="Carregando cadastro" /> : null}
         {erro ? <AlertaOperacional mensagem={erro} className="mb-4" /> : null}
         {sucesso ? <p role="status" className="mb-4 rounded-md border border-sucesso-borda bg-sucesso-suave px-3 py-2 text-sm text-sucesso-forte">{sucesso}</p> : null}
@@ -227,7 +227,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h3 id="qualidade-cadastro-titulo" className="text-sm font-semibold text-tinta">Qualidade do cadastro</h3>
-                  <p className="mt-1 text-xs text-texto-suave">Os itens abaixo orientam a revisao, mas nao bloqueiam o atendimento de pacientes antigos.</p>
+                  <p className="mt-1 text-xs text-texto-suave">Os itens abaixo orientam a revisão, mas não bloqueiam o atendimento de pacientes antigos.</p>
                 </div>
                 <span className="text-sm font-semibold text-tinta">{qualidade.percentualPreenchido}% preenchido</span>
               </div>
@@ -240,8 +240,8 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
                   <p className="mt-1 text-xs text-texto-suave">{secao.camposFaltantes.length ? `Revisar: ${secao.camposFaltantes.join(', ')}` : 'Dados recomendados preenchidos.'}</p>
                 </div>)}
               </div>
-              {qualidade.possiveisDuplicidades.length ? <div className="rounded-md border border-alerta-borda bg-alerta-suave p-3">
-                <p className="flex items-center gap-2 text-sm font-semibold text-alerta-forte"><AlertTriangle size={16} /> Possiveis cadastros duplicados</p>
+                {qualidade.possiveisDuplicidades.length ? <div className="rounded-md border border-alerta-borda bg-alerta-suave p-3">
+                 <p className="flex items-center gap-2 text-sm font-semibold text-alerta-forte"><AlertTriangle size={16} /> Possíveis cadastros duplicados</p>
                 <p className="mt-1 text-xs text-alerta-forte">Revise manualmente. O OctaClin nunca mescla pacientes automaticamente.</p>
                 <ul className="mt-2 grid gap-1 text-xs">
                   {qualidade.possiveisDuplicidades.map((item) => <li key={item.pacienteId}>
@@ -252,40 +252,40 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
               </div> : null}
             </section> : null}
 
-            <Secao titulo="Identificacao" descricao="Dados de identificacao do paciente. A condicao biologica fica restrita ao contexto clinico autorizado.">
+            <Secao titulo="Identificação" descricao="Dados de identificação do paciente. A condição biológica fica restrita ao contexto clínico autorizado.">
               <div className="grid gap-3 md:grid-cols-2">
                 <Campo rotulo="Nome completo"><input className="campo" autoComplete="name" value={nomeCompleto} onChange={(evento) => setNomeCompleto(evento.target.value)} required /></Campo>
                 <Campo rotulo="Apelido ou nome de uso"><input className="campo" value={perfil.identificacao?.nomeUso ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, identificacao: { ...atual.identificacao, nomeUso: evento.target.value } }))} /></Campo>
                 <Campo rotulo="Data de nascimento"><input className="campo" type="date" value={dataNascimento} onChange={(evento) => setDataNascimento(evento.target.value)} /></Campo>
                 <Campo rotulo="Sexo">
                   <select className="campo" value={perfil.identificacao?.sexo ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, identificacao: { ...atual.identificacao, sexo: evento.target.value as 'feminino' | 'masculino' | 'intersexo' | 'nao_informar' } }))}>
-                    <option value="">Nao informado</option><option value="feminino">Feminino</option><option value="masculino">Masculino</option><option value="intersexo">Intersexo</option><option value="nao_informar">Prefiro nao informar</option>
+                    <option value="">Não informado</option><option value="feminino">Feminino</option><option value="masculino">Masculino</option><option value="intersexo">Intersexo</option><option value="nao_informar">Prefiro não informar</option>
                   </select>
                 </Campo>
               </div>
-              {perfil.identificacao?.sexo === 'feminino' ? <Campo rotulo="Condicao biologica">
+              {perfil.identificacao?.sexo === 'feminino' ? <Campo rotulo="Condição biológica">
                 <select className="campo" value={perfil.identificacao?.condicaoBiologica ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, identificacao: { ...atual.identificacao, condicaoBiologica: evento.target.value as 'nao_gestante' | 'gestante' | 'lactante' | 'menopausa' } }))}>
-                  <option value="">Nao informado</option><option value="nao_gestante">Nao gestante</option><option value="gestante">Gestante</option><option value="lactante">Lactante</option><option value="menopausa">Menopausa</option>
+                  <option value="">Não informado</option><option value="nao_gestante">Não gestante</option><option value="gestante">Gestante</option><option value="lactante">Lactante</option><option value="menopausa">Menopausa</option>
                 </select>
               </Campo> : null}
               <SalvarSecao carregando={salvando === 'identificacao'} aoSalvar={() => void salvarIdentificacao()} />
             </Secao>
 
-            <Secao titulo="Contato e endereco" descricao="Dados usados para comunicacao e localizacao do paciente.">
+            <Secao titulo="Contato e endereço" descricao="Dados usados para comunicação e localização do paciente.">
               <div className="grid gap-3 md:grid-cols-2">
                 <Campo rotulo="E-mail"><input className="campo" type="email" value={perfil.contato?.email ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, email: evento.target.value } }))} /></Campo>
-                <Campo rotulo="Usuario do Instagram"><input className="campo" value={perfil.contato?.instagram ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, instagram: evento.target.value.replace(/^@/, '') } }))} /></Campo>
+                <Campo rotulo="Usuário do Instagram"><input className="campo" value={perfil.contato?.instagram ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, instagram: evento.target.value.replace(/^@/, '') } }))} /></Campo>
                 <Campo rotulo="DDI"><input className="campo" inputMode="tel" placeholder="+55" value={perfil.contato?.ddi ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, ddi: evento.target.value } }))} /></Campo>
                 <Campo rotulo="Celular com DDD"><input className="campo" inputMode="tel" placeholder="11999999999" value={perfil.contato?.celular ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, celular: evento.target.value.replace(/\D/g, '') } }))} /></Campo>
               </div>
               <Campo rotulo="Canal preferido">
                 <select className="campo" value={perfil.contato?.canalPreferido ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, canalPreferido: evento.target.value as 'email' | 'whatsapp' | 'telefone' } }))}>
-                  <option value="">Nao definido</option><option value="email">E-mail</option><option value="whatsapp">WhatsApp</option><option value="telefone">Telefone</option>
+                  <option value="">Não definido</option><option value="email">E-mail</option><option value="whatsapp">WhatsApp</option><option value="telefone">Telefone</option>
                 </select>
               </Campo>
               <div className="grid gap-3 md:grid-cols-2">
                 <Campo rotulo="CEP"><input className="campo" value={perfil.contato?.endereco?.cep ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, cep: evento.target.value } } }))} /></Campo>
-                <Campo rotulo="Endereco"><input className="campo" value={perfil.contato?.endereco?.logradouro ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, logradouro: evento.target.value } } }))} /></Campo>
+                <Campo rotulo="Endereço"><input className="campo" value={perfil.contato?.endereco?.logradouro ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, logradouro: evento.target.value } } }))} /></Campo>
                 <Campo rotulo="Bairro"><input className="campo" value={perfil.contato?.endereco?.bairro ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, bairro: evento.target.value } } }))} /></Campo>
                 <Campo rotulo="Cidade"><input className="campo" value={perfil.contato?.endereco?.cidade ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, cidade: evento.target.value } } }))} /></Campo>
                 <Campo rotulo="Estado"><input className="campo" maxLength={2} value={perfil.contato?.endereco?.estado ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, estado: evento.target.value.toUpperCase() } } }))} /></Campo>
@@ -293,15 +293,15 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
               <SalvarSecao carregando={salvando === 'contato'} aoSalvar={() => void salvar('contato')} />
             </Secao>
 
-            <Secao titulo="Operacao e responsavel" descricao="Categoria, etiquetas internas e pessoa responsavel quando aplicavel.">
+            <Secao titulo="Operação e responsável" descricao="Categoria, etiquetas internas e pessoa responsável quando aplicável.">
               <div className="grid gap-3 md:grid-cols-2">
                 <Campo rotulo="Categoria do paciente"><input className="campo" value={perfil.operacao?.categoria ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, categoria: evento.target.value } }))} /></Campo>
                 <Campo rotulo="Origem"><input className="campo" value={perfil.operacao?.origem ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, origem: evento.target.value } }))} /></Campo>
-                <Campo rotulo="Proxima revisao"><input className="campo" type="date" value={perfil.operacao?.proximaRevisaoEm ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, proximaRevisaoEm: evento.target.value } }))} /></Campo>
+                <Campo rotulo="Próxima revisão"><input className="campo" type="date" value={perfil.operacao?.proximaRevisaoEm ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, proximaRevisaoEm: evento.target.value } }))} /></Campo>
               </div>
               <Campo rotulo="Etiquetas"><input className="campo" placeholder="Ex.: retorno, esportivo" value={(perfil.operacao?.tags ?? []).join(', ')} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, tags: evento.target.value.split(',').map((tag) => tag.trim()).filter(Boolean) } }))} /></Campo>
               <div className="grid gap-3 md:grid-cols-3">
-                <Campo rotulo="Responsavel"><input className="campo" value={perfil.operacao?.responsavel?.nome ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, nome: evento.target.value } } }))} /></Campo>
+                <Campo rotulo="Responsável"><input className="campo" value={perfil.operacao?.responsavel?.nome ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, nome: evento.target.value } } }))} /></Campo>
                 <Campo rotulo="Parentesco"><input className="campo" value={perfil.operacao?.responsavel?.parentesco ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, parentesco: evento.target.value } } }))} /></Campo>
                 <Campo rotulo="Contato do responsavel"><input className="campo" value={perfil.operacao?.responsavel?.contato ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, contato: evento.target.value } } }))} /></Campo>
               </div>

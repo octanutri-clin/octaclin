@@ -123,7 +123,7 @@ export function Esqueleto({ className }: { className?: string }) {
   return <div aria-hidden="true" className={cn('animate-pulse rounded-md bg-linha/70', className)} />;
 }
 
-export function EsqueletoPagina({ rotulo = 'Carregando conteudo' }: { rotulo?: string }) {
+export function EsqueletoPagina({ rotulo = 'Carregando conteúdo' }: { rotulo?: string }) {
   return (
     <div role="status" aria-live="polite" aria-label={rotulo} className="grid gap-4">
       <span className="sr-only">{rotulo}</span>
@@ -164,8 +164,8 @@ export function EstadoPermissaoNegada({ className }: Pick<EstadoVazioProps, 'cla
   return (
     <div className={cn('flex flex-col items-center justify-center gap-2 px-4 py-8 text-center', className)} role="status">
       <ShieldAlert size={24} className="text-alerta" aria-hidden="true" />
-      <p className="text-sm font-medium text-tinta">Acesso nao autorizado</p>
-      <p className="max-w-sm text-sm text-texto-suave">Seu perfil nao possui permissao para visualizar este conteudo.</p>
+      <p className="text-sm font-medium text-tinta">Acesso não autorizado</p>
+      <p className="max-w-sm text-sm text-texto-suave">Seu perfil não possui permissão para visualizar este conteúdo.</p>
     </div>
   );
 }

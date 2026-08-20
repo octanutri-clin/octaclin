@@ -111,7 +111,7 @@ async function assertPaginaProtegida(caminho, tituloEsperado) {
   assertStatus(resposta, 200, `pagina protegida ${caminho}`);
   const html = await resposta.text();
   assert(html.includes('OctaClin'), `pagina protegida ${caminho}: marca OctaClin ausente.`);
-  assert(html.includes('Console clinico'), `pagina protegida ${caminho}: shell do console ausente.`);
+  assert(html.includes('Console clínico'), `pagina protegida ${caminho}: shell do console ausente.`);
   if (tituloEsperado) {
     assert(html.includes(tituloEsperado), `pagina protegida ${caminho}: titulo "${tituloEsperado}" ausente.`);
   }

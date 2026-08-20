@@ -243,16 +243,16 @@ export function PainelAgenda() {
   const [desfechoPendente, setDesfechoPendente] = useState<{ consulta: ConsultaAgendaApi; status: DesfechoConsultaAgenda } | null>(null);
   const [rotacionarLinkPendente, setRotacionarLinkPendente] = useState(false);
   const [podeLerFinanceiro, setPodeLerFinanceiro] = useState(false);
+  const [urlExportacaoAgenda, setUrlExportacaoAgenda] = useState<string | null>(null);
 
-  /** Janela fixa de 90 dias para tras e para frente: o painel nao carrega periodo escolhido. */
-  const urlExportacaoAgenda = useMemo(() => {
+  useEffect(() => {
     const noventaDias = 90 * 24 * 60 * 60 * 1000;
     const agora = Date.now();
     const parametros = new URLSearchParams({
       inicioEm: new Date(agora - noventaDias).toISOString(),
       fimEm: new Date(agora + noventaDias).toISOString()
     });
-    return `/api/agenda/consultas/exportar.csv?${parametros}`;
+    setUrlExportacaoAgenda(`/api/agenda/consultas/exportar.csv?${parametros}`);
   }, []);
   const pacientesLista = useMemo(() => pacientes?.itens ?? [], [pacientes]);
   const profissionaisLista = useMemo(() => profissionais?.itens ?? [], [profissionais]);
@@ -1203,8 +1203,12 @@ export function PainelAgenda() {
             <div className="flex flex-wrap items-center gap-3">
               <BarraCarregamento visivel={carregando} rotulo="Carregando agenda" />
               <a
-                href={urlExportacaoAgenda}
-                className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-md border border-linha bg-superficie px-3 text-sm font-medium text-texto-forte hover:bg-white"
+                href={urlExportacaoAgenda ?? '#'}
+                aria-disabled={!urlExportacaoAgenda}
+                onClick={(evento) => {
+                  if (!urlExportacaoAgenda) evento.preventDefault();
+                }}
+                className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-md border border-linha bg-superficie px-3 text-sm font-medium text-texto-forte hover:bg-white aria-disabled:pointer-events-none aria-disabled:opacity-60"
               >
                 <Download size={16} />
                 Exportar CSV (90 dias)

@@ -90,7 +90,7 @@ function assertNaoInclui(html, texto, contexto) {
 
 function assertShell(html, contexto) {
   assertInclui(html, 'OctaClin', contexto);
-  assertInclui(html, 'Console clinico', contexto);
+  assertInclui(html, 'Console clínico', contexto);
   for (const referencia of referenciasExternasProibidas) assertNaoInclui(html, referencia, contexto);
   assertNaoInclui(html, '__NEXT_ERROR__', contexto);
   assertNaoInclui(html, 'Application error', contexto);

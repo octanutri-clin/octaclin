@@ -371,6 +371,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [formularioEnvioMaterial, setFormularioEnvioMaterial] = useState<FormularioEnvioMaterial>(formularioEnvioMaterialInicial);
   const [abaAtiva, setAbaAtiva] = useState<AbaProntuario>('resumo');
   const [historicoSolicitado, setHistoricoSolicitado] = useState(false);
+  const [agora, setAgora] = useState<number | null>(null);
   const [tipoHistorico, setTipoHistorico] = useState<TipoEventoProntuarioPaciente | 'todos'>('todos');
   const [inicioHistorico, setInicioHistorico] = useState('');
   const [fimHistorico, setFimHistorico] = useState('');
@@ -604,6 +605,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   }, [carregar]);
 
   useEffect(() => {
+    setAgora(Date.now());
+  }, []);
+
+  useEffect(() => {
     setPaginaHistorico(null);
     setErroHistorico(null);
     setHistoricoSolicitado(false);
@@ -753,9 +758,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     () => eventos
       .filter((evento) => evento.tipo === 'consulta'
         && (evento.status === 'agendada' || evento.status === 'reagendada')
-        && new Date(evento.data).getTime() >= Date.now())
+        && agora !== null
+        && new Date(evento.data).getTime() >= agora)
       .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())[0],
-    [eventos]
+    [agora, eventos]
   );
   const ehSuperAdmin = papel === 'SuperAdmin';
   const profissionalResponsavel = useMemo(

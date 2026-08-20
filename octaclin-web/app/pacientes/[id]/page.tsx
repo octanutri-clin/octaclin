@@ -8,7 +8,7 @@ interface PacienteProntuarioPageProps {
 export default async function PacienteProntuarioPage(props: PacienteProntuarioPageProps) {
   const params = await props.params;
   return (
-    <ConsoleShell titulo="Prontuario do paciente" subtitulo="Linha do tempo clinica">
+    <ConsoleShell titulo="Prontuário do paciente" subtitulo="Linha do tempo clínica">
       <ProntuarioPaciente pacienteId={params.id} />
     </ConsoleShell>
   );
