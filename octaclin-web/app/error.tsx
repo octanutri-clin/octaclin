@@ -14,7 +14,7 @@ export default function Erro({ error, reset }: { error: Error & { digest?: strin
       <AlertTriangle size={28} className="text-alerta" aria-hidden="true" />
       <h1 className="text-lg font-semibold text-tinta">Algo deu errado</h1>
       <p className="text-sm text-texto-suave">
-        Nao foi possivel exibir esta pagina. Tente novamente; se o problema continuar, contate o suporte.
+        Não foi possível exibir esta página. Tente novamente; se o problema continuar, contate o suporte.
       </p>
       <Botao type="button" variante="primario" onClick={reset}>
         Tentar novamente

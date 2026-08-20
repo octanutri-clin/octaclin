@@ -2094,6 +2094,25 @@ publicado antes de ampliar a superficie de mudancas visuais.
     sao necessarios antes de replicas.
   - Evidencia: `fase-246-repositorio-publico-governanca.md` e `SECURITY.md`.
 
+- [x] Fase 247 - Qualidade de interface e linguagem. [IMPORTANTE - PRE-PILOTO]
+  - Concluídos: `DESIGN.md`, `UX-CONTRACT.md`, campos compartilhados de 44 px,
+    scrollbar, cópia do shell/erro/feedback/cadastro/exames e remoção de duas
+    fontes de divergência de hidratação em agenda e prontuário.
+  - Validação: lint sem erros, typecheck, build, contrato visual e 10 cenários
+    Playwright de acessibilidade em desktop e mobile.
+  - Documento: `fase-247-qualidade-interface-linguagem.md`.
+
+- [ ] Fase 248 - Estados e recuperação das superfícies clínicas. [IMPORTANTE - PRE-PILOTO]
+  - Consolidar carregamento, vazio, erro, sucesso e permissão nas telas de
+    agenda, lista de pacientes e prontuário.
+  - Corrigir falhas de interação observadas, sem alterar regras clínicas,
+    isolamento por tenant ou permissões.
+
+- [ ] Fase 249 - Densidade e responsividade do console clínico. [IMPORTANTE - PRE-PILOTO]
+  - Migrar controles locais por fluxo para os componentes compartilhados,
+    preservar selects nativos e revisar desktop e celular sem sobreposição.
+  - Prioridade: agenda, pacientes, prontuário e suas ações rápidas.
+
 ## Backlog pos-producao
 
 - App mobile real ou PWA avancado.

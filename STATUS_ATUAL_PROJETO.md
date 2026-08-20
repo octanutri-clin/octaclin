@@ -7,6 +7,13 @@ Atualizado em 2026-08-20.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 247 concluída: antes do piloto, o OctaClin ganhou `DESIGN.md` e
+  `UX-CONTRACT.md`, scrollbar global, controles compartilhados de 44 px e
+  linguagem corrigida no shell, erros globais, feedback, cadastro e exames.
+  A fase também removeu divergências de hidratação em agenda e prontuário;
+  lint sem erros, typecheck, build, contrato visual e 10 cenários Playwright
+  de acessibilidade foram aprovados. Fases 248 e 249 tratam as superfícies
+  clínicas e a responsividade por fluxo.
 - O repositorio e publico por decisao operacional para manter GitHub Actions
   sem custo. A Fase 246 ativou Secret Scanning, Push Protection, Dependabot
   Security Updates, reporte privado de vulnerabilidades e ruleset da `main`

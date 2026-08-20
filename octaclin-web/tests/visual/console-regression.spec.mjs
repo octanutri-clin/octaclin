@@ -23,10 +23,10 @@ const rotas = [
 
 const rotulosMenu = [
   'Hoje',
-  'Formularios',
-  'Comunicacoes',
+  'Formulários',
+  'Comunicações',
   'Agenda',
-  'Automacoes',
+  'Automações',
   'IA assistida',
   'Metas e adesao',
   'Operacoes',
@@ -597,9 +597,9 @@ test.describe('console operacional', () => {
       await page.goto(rota.caminho);
       await expect(page.getByRole('heading', { level: 1, name: rota.titulo })).toHaveCount(1);
       await expect(page.getByText('OctaClin').first()).toBeVisible();
-      await expect(page.getByText('Console clinico')).toBeVisible();
+      await expect(page.getByText('Console clínico')).toBeVisible();
 
-      const navegacao = page.getByRole('navigation', { name: 'Modulos do console' });
+      const navegacao = page.getByRole('navigation', { name: 'Módulos do console' });
       for (const rotulo of rotulosMenu) {
         await expect(navegacao.getByRole('link', { name: rotulo })).toBeVisible();
       }
@@ -1976,7 +1976,7 @@ test.describe('prontuario do paciente', () => {
     await expect(cadastro.getByRole('heading', { name: 'Qualidade do cadastro' })).toBeVisible();
     await expect(cadastro.getByRole('progressbar', { name: 'Percentual do cadastro preenchido' })).toHaveAttribute('aria-valuenow', '68');
     await expect(cadastro.getByText(/Revisar: CEP, Endereco/)).toBeVisible();
-    await expect(cadastro.getByText('Possiveis cadastros duplicados')).toBeVisible();
+    await expect(cadastro.getByText('Possíveis cadastros duplicados')).toBeVisible();
     await expect(cadastro.getByRole('link', { name: 'Ana Souza homonima' })).toHaveAttribute('href', '/pacientes/paciente-2');
     await expect(cadastro.getByText('Convite pendente', { exact: true })).toBeVisible();
     await expect(cadastro.getByText(/E-mail: permitido - WhatsApp: desativado/)).toBeVisible();
@@ -1987,7 +1987,7 @@ test.describe('prontuario do paciente', () => {
     await confirmacao.getByRole('button', { name: 'Revogar convite' }).click();
     await expect.poll(() => prontuario.revogouConvite()).toBe(true);
     await expect(cadastro.getByText('Convite revogado', { exact: true })).toBeVisible();
-    await expect(cadastro.getByText('Convite pendente revogado. O link anterior nao pode mais ser utilizado.')).toBeVisible();
+    await expect(cadastro.getByText('Convite pendente revogado. O link anterior não pode mais ser utilizado.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 
@@ -2186,7 +2186,7 @@ test.describe('prontuario do paciente', () => {
     });
     await page.goto('/pacientes/paciente-1');
 
-    await expect(page.getByRole('heading', { name: 'Prontuario do paciente' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Prontuário do paciente' })).toBeVisible();
     await expect(page.getByText('Ana Souza')).toBeVisible();
     await expect(page.getByText('Risco 82 pontos')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Linha de cuidado' })).toBeVisible();

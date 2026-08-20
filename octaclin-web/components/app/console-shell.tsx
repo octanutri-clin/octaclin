@@ -30,9 +30,9 @@ const itens = [
   { href: '/dashboard', rotulo: 'Hoje', icone: LayoutDashboard, permissao: 'dashboard.ler', grupo: 'Clinica', papeis: ['SuperAdmin', 'Professional'] },
   { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays, permissao: 'agenda.consultas.ler', grupo: 'Clinica', papeis: undefined },
   { href: '/pacientes', rotulo: 'Pacientes', icone: HeartPulse, permissao: 'pacientes.listar', grupo: 'Clinica', papeis: undefined },
-  { href: '/questionarios', rotulo: 'Formularios', icone: ClipboardList, permissao: 'questionarios.ler', grupo: 'Clinica', papeis: undefined },
-  { href: '/comunicacoes', rotulo: 'Comunicacoes', icone: Send, permissao: 'comunicacoes.mensagens.ler', grupo: 'Relacionamento', papeis: undefined },
-  { href: '/automacoes', rotulo: 'Automacoes', icone: Zap, permissao: 'automacoes.gerenciar', grupo: 'Relacionamento', papeis: undefined },
+  { href: '/questionarios', rotulo: 'Formulários', icone: ClipboardList, permissao: 'questionarios.ler', grupo: 'Clínica', papeis: undefined },
+  { href: '/comunicacoes', rotulo: 'Comunicações', icone: Send, permissao: 'comunicacoes.mensagens.ler', grupo: 'Relacionamento', papeis: undefined },
+  { href: '/automacoes', rotulo: 'Automações', icone: Zap, permissao: 'automacoes.gerenciar', grupo: 'Relacionamento', papeis: undefined },
   { href: '/ia', rotulo: 'IA assistida', icone: BrainCircuit, permissao: 'ia.executar', grupo: 'Ferramentas', papeis: ['SuperAdmin', 'Professional'] },
   { href: '/gamificacao', rotulo: 'Metas e adesao', icone: Trophy, permissao: 'gamificacao.gerenciar', grupo: 'Ferramentas', papeis: ['SuperAdmin', 'Professional'] },
   { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope, permissao: 'profissionais.ler', grupo: 'Gestao', papeis: undefined },
@@ -102,7 +102,7 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
   return (
     <PortalShell
       variante="sidebar"
-      marca={{ icone: UsersRound, rotulo: 'OctaClin', subrotulo: 'Console clinico' }}
+      marca={{ icone: UsersRound, rotulo: 'OctaClin', subrotulo: 'Console clínico' }}
       titulo={titulo}
       subtitulo={subtitulo}
       navegacao={itensVisiveis}
@@ -112,7 +112,7 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
         papel: nomesPapel[sessao.papel ?? ''] ?? 'Usuario',
         workspace: humanizarWorkspace(sessao.tenantSlug)
       } : undefined}
-      navLabel="Modulos do console"
+      navLabel="Módulos do console"
       acoes={<>{atalhos}{acoes}</>}
       maxWidth="1500px"
     >
