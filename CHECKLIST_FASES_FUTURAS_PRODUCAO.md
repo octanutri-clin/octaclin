@@ -1,6 +1,7 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-20 com a Fase 246 de operacao segura do repositorio publico.
+Atualizado em 2026-08-20 com a conclusao da Fase 247, a auditoria dos PRs
+abertos e o roteiro priorizado das Fases 248 a 262.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -1997,7 +1998,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `ec578a6` e CI `31749993251` aprovados; sem migration e sem ativar a flag.
   - Evidencia: `fase-241-hardening-ia-clinica.md`.
 
-- [ ] Fase 243 - Modernizacao e hardening do Mobile. [CONDICIONAL]
+- [ ] Fase 243 - Modernizacao e hardening do Mobile. [SEGURANCA - ANTECIPAR]
   - Achado da Fase 229: Expo SDK 52 carrega `tar@6.2.1` pela CLI com alerta
     critico e outras dependencias transitivas antigas. Atualizar o SDK de forma
     incremental e suportada, executar `expo install --fix`, `expo-doctor`,
@@ -2013,6 +2014,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Consequencia da concentracao: enquanto o Mobile estiver fora da oferta, o
     numero de alertas do repositorio nao mede risco do produto entregue. Nao
     tratar "37 alertas abertos" como bloqueio de producao do console/portal.
+  - Revalidacao estatica de 2026-08-20: os 37 alertas continuam abertos no
+    mesmo lockfile (1 critico, 26 altos e 10 medios), distribuidos entre 10
+    pacotes. A presenca das versoes vulneraveis e confirmada; a explorabilidade
+    no SaaS web atual nao foi demonstrada porque o app nativo nao e implantado.
+  - Decisao de prioridade: executar esta fase como interrupcao de seguranca
+    antes de iniciar uma sequencia longa de produto. Ela nao cria recursos de
+    Mobile: apenas atualiza o ecossistema de forma coordenada, valida build e
+    elimina a divida antes de qualquer distribuicao do app.
+  - PRs `#22`, `#24`, `#25`, `#29` e `#30`: nao mergear isoladamente. Todos
+    estao atrasados em relacao a `main`; o `#22` falha no job Mobile e os demais
+    combinam pecas de majors diferentes. Substituir por um unico PR da fase e
+    encerrar os cinco como superados somente depois de CI e audit aprovados.
 
 - [x] Fase 242 - Observabilidade interna e rollout seguro. [IMPORTANTE]
   - Complementar o monitor externo da Fase 220 com agregacao de erros e traces
@@ -2102,16 +2115,105 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Playwright de acessibilidade em desktop e mobile.
   - Documento: `fase-247-qualidade-interface-linguagem.md`.
 
-- [ ] Fase 248 - Estados e recuperação das superfícies clínicas. [IMPORTANTE - PRE-PILOTO]
+- [ ] Fase 248 - Estados e recuperação das superfícies clínicas. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
   - Consolidar carregamento, vazio, erro, sucesso e permissão nas telas de
     agenda, lista de pacientes e prontuário.
-  - Corrigir falhas de interação observadas, sem alterar regras clínicas,
-    isolamento por tenant ou permissões.
+  - Adicionar recuperação acionável, preservar dados digitados e impedir que
+    falhas HTTP apareçam como JSON ou erro técnico para o usuário.
+  - Gate: jornadas sintéticas de falha e recuperação em agenda, pacientes e
+    prontuário, sem alterar regras clínicas, isolamento por tenant ou permissões.
 
-- [ ] Fase 249 - Densidade e responsividade do console clínico. [IMPORTANTE - PRE-PILOTO]
+- [ ] Fase 249 - Densidade e responsividade do console clínico. [IMPORTANTE - NAO BLOQUEADOR ISOLADO]
   - Migrar controles locais por fluxo para os componentes compartilhados,
     preservar selects nativos e revisar desktop e celular sem sobreposição.
-  - Prioridade: agenda, pacientes, prontuário e suas ações rápidas.
+  - Prioridade: agenda, pacientes, prontuário e suas ações rápidas. Mobile aqui
+    significa responsividade da web, nao retomada do app Expo.
+  - Gate: screenshots comparáveis em 1440 px e 390 px, teclado, foco e ausência
+    de overflow ou texto cortado.
+
+- [ ] Fase 250 - Encerramento da dívida de segurança Mobile e higiene de PRs. [ESSENCIAL - SEGURANCA]
+  - Concluir tecnicamente a Fase 243 em um PR coordenado, zerar os alertas
+    corrigíveis do lockfile e documentar exceção temporária apenas quando não
+    houver versão corrigida compatível.
+  - Reconciliar os PRs `#22`, `#24`, `#25`, `#29` e `#30` depois da substituição
+    e encerrar o PR `#6`, conflitante e superado pelas implementações atuais de
+    isolamento Mobile/IA.
+  - Gate: Expo Doctor, typecheck, build, audit, CI completo e `mobile.sync=false`.
+
+- [ ] Fase 251 - Revisão integral de linguagem e microcopy. [IMPORTANTE - PRE-PILOTO]
+  - Auditar português, termos clínicos, nomes de ações, mensagens de erro,
+    confirmações e estados vazios em todas as rotas profissionais e do paciente.
+  - Consolidar glossário e teste estático para termos proibidos, rótulos
+    técnicos e inconsistências recorrentes.
+
+- [ ] Fase 252 - Arquitetura de navegação e descoberta de funcionalidades. [ESSENCIAL - PRE-PILOTO]
+  - Reconciliar rotas implementadas, permissões e itens visíveis por papel para
+    que nenhuma capacidade pronta fique inacessível após o login.
+  - Agrupar Clínica, Relacionamento e Administração, com busca de comandos e
+    troca de painel disponível exclusivamente ao SuperAdmin.
+
+- [ ] Fase 253 - Agenda clínica confiável e operacional. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
+  - Fechar visualizações dia, semana e lista; criar, bloquear, desbloquear,
+    concluir, remarcar, registrar falta e cancelar sem ambiguidade.
+  - Tornar conflitos, sincronização Google, notificações e solicitações públicas
+    observáveis, idempotentes e recuperáveis sem perder a agenda interna.
+
+- [ ] Fase 254 - Lista e cadastro robusto de pacientes. [ESSENCIAL - PRE-PILOTO]
+  - Consolidar busca, filtros salvos, risco, responsável, última consulta,
+    próxima ação, duplicidade e cadastro completo já modelado.
+  - Separar listagem, criação e edição; preservar contexto e rascunho em falhas.
+
+- [ ] Fase 255 - Prontuário clínico orientado à linha de cuidado. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
+  - Reorganizar resumo, evoluções, plano, formulários, mensagens, materiais e
+    histórico com cabeçalho persistente e ações rápidas autorizadas.
+  - Reduzir carga inicial e densidade, proteger alterações não salvas e manter
+    trilha de auditoria e escopo do paciente em cada aba.
+
+- [ ] Fase 256 - Formulários e check-ins ponta a ponta. [ESSENCIAL - PRE-PILOTO]
+  - Validar criação, biblioteca, versão, distribuição, rascunho do paciente,
+    resposta, leitura clínica, matriz longitudinal e registro no prontuário.
+  - Cobrir carregamento, indisponibilidade, erro, retomada e acessibilidade em
+    desktop e celular com dados sintéticos.
+
+- [ ] Fase 257 - Portal do paciente orientado por tarefas. [ESSENCIAL - PRE-PILOTO]
+  - Priorizar próxima consulta e próxima ação; organizar plano, check-ins,
+    tarefas, materiais, formulários, mensagens, perfil e privacidade.
+  - Usar linguagem simples, confirmações explícitas e nunca expor risco clínico
+    ou detalhes internos ao paciente.
+
+- [ ] Fase 258 - Central de comunicações confiável. [ESSENCIAL - PRE-PILOTO]
+  - Unificar conversas por paciente, canal, responsável e pendência; exibir
+    envio, entrega, leitura, falha, retentativa e origem da mensagem.
+  - Validar Gmail e WhatsApp com templates, idempotência, consentimento,
+    opt-out e degradação segura quando a integração estiver indisponível.
+
+- [ ] Fase 259 - Acesso, convite e ativação sem suporte manual. [ESSENCIAL - PRE-PILOTO]
+  - Revisar login, primeiro acesso, recuperação, convite, troca de senha,
+    expiração, aceites legais e mensagens de conta bloqueada ou sem permissão.
+  - Manter API e tenant fora do fluxo comercial cotidiano e validar os quatro
+    papéis com isolamento e redirecionamento corretos.
+
+- [ ] Fase 260 - Desempenho, resiliência e diagnóstico operacional. [ESSENCIAL - ESTABILIDADE]
+  - Definir orçamentos de carregamento e chamadas, eliminar cascatas de requests,
+    revisar cache/invalidação e limitar componentes clínicos muito grandes.
+  - Correlacionar erro de interface, BFF e backend sem PHI; criar runbooks para
+    falhas de banco, Redis, storage, e-mail, WhatsApp e Google Calendar.
+
+- [ ] Fase 261 - Regressão de segurança e privacidade do SaaS público. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
+  - Revalidar autenticação, autorização por papel, RLS forçada, isolamento entre
+    tenants, uploads, OAuth, webhooks, rate limit, auditoria e LGPD.
+  - Instituir SLA de dependências, SBOM, revisão de workflows e gates de secrets,
+    SAST e auditoria de produção; nenhum alerta crítico/alto aceito sem dono,
+    prazo e justificativa documentada.
+
+- [ ] Fase 262 - Aceite de usabilidade e prontidão para piloto. [BLOQUEADOR FINAL]
+  - Executar jornadas reais com dados sintéticos para SuperAdmin, cliente,
+    profissional e paciente em navegadores desktop e web móvel suportados.
+  - Consolidar defeitos P0/P1, observabilidade, backup/restore, suporte, rollback,
+    jurídico e operação. O piloto só recebe GO quando todos os gates bloqueadores
+    anteriores estiverem concluídos e as exceções residuais forem aceitas.
+
+Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 
 ## Backlog pos-producao
 
