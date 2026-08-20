@@ -3,6 +3,7 @@ import test from 'node:test';
 import * as nextHeaders from 'next/headers';
 import { GET as listarPlanos, POST as criarPlano } from '../app/api/pacientes/[id]/planos-alimentares/route';
 import { GET as obterPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/route';
+import { GET as listarEscolhasPaciente } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/escolhas-paciente/route';
 import { GET as buscarAlimentos } from '../app/api/pacientes/[id]/planos-alimentares/alimentos/route';
 import { GET as obterVersao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/route';
 import { PUT as salvarRascunho } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/route';
@@ -120,6 +121,30 @@ test('BFF encaminha detalhe com permissao de leitura e IDs codificados', async (
     assert.equal(
       chamada,
       'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1'
+    );
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF encaminha a trilha de trocas somente com paginacao permitida', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let url = '';
+  global.fetch = (async (entrada: string | URL | Request) => {
+    url = String(entrada);
+    return Response.json({ itens: [], total: 0, pagina: 2, limite: 10 });
+  }) as typeof global.fetch;
+
+  try {
+    const resposta = await listarEscolhasPaciente(
+      new Request('http://localhost/api/trocas?pagina=2&limite=10&profissionalId=alheio'),
+      { params: Promise.resolve({ id: 'paciente/1', planoId: 'plano/1' }) }
+    );
+    assert.equal(resposta.status, 200);
+    assert.equal(
+      url,
+      'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/escolhas-paciente?pagina=2&limite=10'
     );
   } finally {
     restaurarFetch(original);

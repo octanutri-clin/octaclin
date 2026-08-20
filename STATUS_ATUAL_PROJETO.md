@@ -63,9 +63,10 @@ Atualizado em 2026-08-20.
   `liberada_para_paciente` precisou de backfill `true` para que nenhum plano
   publicado perdesse em silencio trocas ja visiveis; na pratica producao tinha
   zero versoes publicadas e zero substituicoes, entao o backfill foi um no-op e
-  nenhuma regressao real foi evitada. Receitas, adesao e lista
-  de compras seguem pendentes, alem da leitura da trilha de trocas pelo
-  profissional.
+  nenhuma regressao real foi evitada. O Incremento 7 concluiu a leitura
+  profissional da trilha de trocas, paginada e protegida pelo escopo do
+  paciente, sem nova migration. Receitas, adesao e lista de compras seguem
+  pendentes.
 - Divida de dependencias mapeada em 2026-08-18 e transformada em fase, em vez
   de ficar como fila de PRs sem dono. Dos 14 PRs do Dependabot abertos, cinco
   sao do Mobile e pertencem a **Fase 243** — e la que estao **todos os 37

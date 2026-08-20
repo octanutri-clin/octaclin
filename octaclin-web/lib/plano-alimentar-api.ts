@@ -229,6 +229,20 @@ export interface PlanoAlimentarResumoApi {
   historicoQuantidade: number;
 }
 
+export interface EscolhaPlanoAlimentarProfissionalApi {
+  id: string;
+  versaoId: string;
+  versaoNumero: number;
+  itemId: string;
+  refeicaoNome: string;
+  itemDescricao: string;
+  substituicaoId?: string;
+  substituicaoDescricao?: string;
+  retornouAoPrincipal: boolean;
+  escolhidoPorUsuarioId: string;
+  criadoEm: string;
+}
+
 export interface PaginaApi<T> {
   itens: T[];
   total: number;
@@ -332,6 +346,21 @@ export function obterVersaoPlanoAlimentar(
 export function obterPlanoAlimentar(pacienteId: string, planoId: string, signal?: AbortSignal) {
   return requisitar<PlanoAlimentarApi>(
     `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}`,
+    { signal }
+  );
+}
+
+export function listarEscolhasPlanoAlimentar(
+  pacienteId: string,
+  planoId: string,
+  consulta: ConsultaPaginadaPlanos = {},
+  signal?: AbortSignal
+) {
+  return requisitar<PaginaApi<EscolhaPlanoAlimentarProfissionalApi>>(
+    `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/escolhas-paciente${montarConsulta({
+      pagina: consulta.pagina,
+      limite: consulta.limite
+    })}`,
     { signal }
   );
 }

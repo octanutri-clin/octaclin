@@ -33,6 +33,7 @@ import {
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
 import { PlanoAlimentarItemOrm } from '../infraestrutura/plano-alimentar-item.orm';
+import { PlanoAlimentarEscolhaPacienteOrm } from '../infraestrutura/plano-alimentar-escolha-paciente.orm';
 import { PlanoAlimentarRefeicaoOrm } from '../infraestrutura/plano-alimentar-refeicao.orm';
 import { PlanoAlimentarSubstituicaoOrm } from '../infraestrutura/plano-alimentar-substituicao.orm';
 import { PlanoAlimentarVersaoOrm } from '../infraestrutura/plano-alimentar-versao.orm';
@@ -41,6 +42,7 @@ import {
   AtualizarRascunhoPlanoAlimentarDto,
   BuscarAlimentosDto,
   CriarPlanoAlimentarDto,
+  ListarEscolhasPlanoAlimentarDto,
   ListarPlanosAlimentaresDto,
   PAGINA_MAXIMA,
   NutrientesPor100gDto,
@@ -83,6 +85,20 @@ export interface SnapshotComposicao {
   };
   nutrientesPor100g: NutrientesPor100gPlano;
   nutrientesPorcao: SubstituicaoPlanoAlimentar['nutrientes'];
+}
+
+export interface EscolhaPlanoAlimentarProfissional {
+  id: string;
+  versaoId: string;
+  versaoNumero: number;
+  itemId: string;
+  refeicaoNome: string;
+  itemDescricao: string;
+  substituicaoId?: string;
+  substituicaoDescricao?: string;
+  retornouAoPrincipal: boolean;
+  escolhidoPorUsuarioId: string;
+  criadoEm: Date;
 }
 
 interface ItemResolvido {
@@ -135,6 +151,83 @@ export class ServicoPlanosAlimentares {
         pagina,
         limite
       };
+    });
+  }
+
+  /**
+   * Expõe ao profissional a trilha já registrada pelo portal. A versão
+   * publicada nunca é alterada: a escolha atual continua sendo a última linha,
+   * enquanto esta leitura preserva cada retorno ao alimento principal.
+   */
+  async listarEscolhasPaciente(
+    tenantId: string,
+    pacienteId: string,
+    planoId: string,
+    usuario: UsuarioAutenticado,
+    consulta: ListarEscolhasPlanoAlimentarDto = new ListarEscolhasPlanoAlimentarDto()
+  ) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
+    const pagina = Math.min(PAGINA_MAXIMA, Math.max(1, Math.trunc(consulta.pagina ?? 1)));
+    const limite = Math.min(100, Math.max(1, Math.trunc(consulta.limite ?? 25)));
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario);
+      const versoes = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).find({
+        where: { tenantId, planoId: plano.id }
+      });
+      if (!versoes.length) return { itens: [], total: 0, pagina, limite };
+
+      const versaoPorId = new Map(versoes.map((versao) => [versao.id, versao]));
+      const repositorioEscolhas = gerenciador.getRepository(PlanoAlimentarEscolhaPacienteOrm);
+      const [escolhas, total] = await repositorioEscolhas.findAndCount({
+        where: { tenantId, versaoId: In(versoes.map((versao) => versao.id)) },
+        // `id` desempata eventos gravados no mesmo instante, para a paginação
+        // não repetir ou omitir uma escolha da trilha.
+        order: { criadoEm: 'DESC', id: 'DESC' },
+        skip: (pagina - 1) * limite,
+        take: limite
+      });
+      if (!escolhas.length) return { itens: [], total, pagina, limite };
+
+      const itemIds = [...new Set(escolhas.map((escolha) => escolha.itemId))];
+      const itens = await gerenciador.getRepository(PlanoAlimentarItemOrm).find({
+        where: { tenantId, id: In(itemIds) }
+      });
+      const itemPorId = new Map(itens.map((item) => [item.id, item]));
+      const refeicaoIds = [...new Set(itens.map((item) => item.refeicaoId))];
+      const refeicoes = refeicaoIds.length
+        ? await gerenciador.getRepository(PlanoAlimentarRefeicaoOrm).find({ where: { tenantId, id: In(refeicaoIds) } })
+        : [];
+      const refeicaoPorId = new Map(refeicoes.map((refeicao) => [refeicao.id, refeicao]));
+      const substituicaoIds = [...new Set(escolhas.flatMap((escolha) => escolha.substituicaoId ? [escolha.substituicaoId] : []))];
+      const substituicoes = substituicaoIds.length
+        ? await gerenciador.getRepository(PlanoAlimentarSubstituicaoOrm).find({
+            where: { tenantId, id: In(substituicaoIds) }
+          })
+        : [];
+      const substituicaoPorId = new Map(substituicoes.map((substituicao) => [substituicao.id, substituicao]));
+
+      const itensResposta: EscolhaPlanoAlimentarProfissional[] = escolhas.map((escolha) => {
+        const item = itemPorId.get(escolha.itemId);
+        const refeicao = item ? refeicaoPorId.get(item.refeicaoId) : undefined;
+        const substituicao = escolha.substituicaoId ? substituicaoPorId.get(escolha.substituicaoId) : undefined;
+        const versao = versaoPorId.get(escolha.versaoId)!;
+        return {
+          id: escolha.id,
+          versaoId: escolha.versaoId,
+          versaoNumero: versao.numero,
+          itemId: escolha.itemId,
+          refeicaoNome: refeicao ? this.criptografia.descriptografar(refeicao.nomeCriptografado) : 'Refeicao indisponivel',
+          itemDescricao: item ? this.criptografia.descriptografar(item.descricaoCriptografada) : 'Item indisponivel',
+          ...(escolha.substituicaoId ? { substituicaoId: escolha.substituicaoId } : {}),
+          ...(substituicao ? { substituicaoDescricao: this.criptografia.descriptografar(substituicao.descricaoCriptografada) } : {}),
+          retornouAoPrincipal: !escolha.substituicaoId,
+          escolhidoPorUsuarioId: escolha.escolhidoPorUsuarioId,
+          criadoEm: escolha.criadoEm
+        };
+      });
+      return { itens: itensResposta, total, pagina, limite };
     });
   }
 

@@ -52,6 +52,26 @@ export class ListarPlanosAlimentaresDto {
   limite = 25;
 }
 
+/**
+ * Paginação da trilha append-only de escolhas de substituição. Mantém um DTO
+ * próprio para não acoplar a API clínica ao nome da listagem de planos.
+ */
+export class ListarEscolhasPlanoAlimentarDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA)
+  pagina = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limite = 25;
+}
+
 export class BuscarAlimentosDto {
   @IsString()
   @MinLength(2)

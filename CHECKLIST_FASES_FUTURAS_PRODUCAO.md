@@ -1729,11 +1729,17 @@ publicado antes de ampliar a superficie de mudancas visuais.
     e um modelo portavel precisa referenciar `(fonte, versao, base,
     codigo_origem)` e resolver ao aplicar. Aplicar modelo nao ganhou rota
     propria: reusa o salvamento de rascunho, que ja recusa fonte inativa.
-  - Proximo incremento: familias de substituicao liberadas ao paciente e trilha
-    de escolha auditavel (migration `1032`). Filtros por alergenico, restricao,
-    custo e praticidade seguem sem previsao — a TACO nao carrega esses atributos
-    e dado desconhecido nao vira afirmacao clinica. TBCA, IBGE/POF e Tucunduva
-    continuam desabilitadas.
+  - Incremento 6 concluido em producao em 2026-08-18: familias de substituicao
+    liberadas ao paciente e trilha append-only de escolha auditavel (migration
+    `1032`).
+  - Incremento 7 concluido em 2026-08-20, sem migration: leitura profissional
+    paginada da trilha, autorizada no escopo do paciente e apresentada no
+    prontuario com contexto de versao, refeicao, alimento e retorno ao
+    principal. BFF com allowlist de query e 17 testes de contrato.
+  - Proximos incrementos: receitas/refeicoes prontas, adesao por refeicao e
+    lista de compras. Filtros por alergenico, restricao, custo e praticidade
+    seguem sem previsao — a TACO nao carrega esses atributos e dado desconhecido
+    nao vira afirmacao clinica. TBCA, IBGE/POF e Tucunduva continuam desabilitadas.
   - Especificacao: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
   - Decisao de fontes: `DECISAO_FONTES_CATALOGO_FASE_234.md`.
 

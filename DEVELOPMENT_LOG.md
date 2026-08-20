@@ -43,6 +43,20 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
   concentra os alertas Dependabot do Mobile e permanece fora da oferta.
 - Proxima fase: Fase 234, Incremento 7, ou primeiro o rollout pago do worker.
 
+### Fase 234 - Incremento 7: leitura profissional da trilha de trocas
+
+- Responsavel: Codex.
+- Inicio e conclusao: 2026-08-20.
+- Status: concluido localmente, sem migration.
+- Entrega: rota clinica paginada de eventos append-only de substituicao,
+  autorizada no escopo do paciente; BFF com allowlist e historico contextual no
+  prontuario para versao, refeicao, item e retorno ao principal.
+- Validacao: 44 testes backend/controlador, 17 testes BFF, typechecks backend e
+  web, build Next.js 16 e Playwright desktop/mobile aprovados.
+- Pendencias: receitas/refeicoes prontas, adesao por refeicao e lista de
+  compras permanecem os proximos incrementos da Fase 234.
+- Documento: `fase-234-editor-planos-alimentares-avancado-multifonte.md`.
+
 ### Fase 241 - Hardening da IA clinica
 
 - Responsavel: Codex.
