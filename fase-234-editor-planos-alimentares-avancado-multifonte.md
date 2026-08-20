@@ -540,6 +540,12 @@ publicada. A migration aditiva `1033` foi aplicada e verificada em integracao e
 producao com `neondb_owner`; RLS forcada, policy de tenant, indices e
 constraints esperados foram conferidos antes do deploy.
 
+O aceite visual autenticado em producao foi dado em 2026-08-20: salvar uma
+refeicao na biblioteca, atualizar a listagem, inserir no rascunho, salvar o
+plano e arquivar o item mantiveram o recalculo e nao alteraram plano publicado.
+O deploy manual posterior do backend e da web tambem respondeu `200` nos
+endpoints publicos de readiness e login.
+
 - uma unica biblioteca cobre `receita` e `refeicao_pronta`; o tipo diferencia a
   intencao de uso, mas ambos sao compostos por itens alimentares;
 - cada registro pertence a clinica ou ao profissional, seguindo exatamente a

@@ -1,6 +1,6 @@
 # OctaClin - Controle da operacao de lancamento
 
-Atualizado em 2026-08-13. Este arquivo nao deve conter credenciais, dados de
+Atualizado em 2026-08-20. Este arquivo nao deve conter credenciais, dados de
 paciente, telefone, email pessoal ou payload clinico.
 
 ## Responsaveis
@@ -24,6 +24,10 @@ paciente, telefone, email pessoal ou payload clinico.
 `NO-GO` para cliente real. A operacao tecnica esta preparada, mas a janela
 continua bloqueada ate revisao juridica, identidade publica/dominio e selecao do
 cliente piloto. WhatsApp, Mobile e IA nao fazem parte da oferta inicial.
+
+Em 2026-08-20, o backend e a web voltaram a responder `200` apos deploy manual
+no Render. Isso encerra a indisponibilidade tecnica pontual, mas nao altera os
+gates comerciais, juridicos ou de identidade acima.
 
 ## Checklist T-24h
 

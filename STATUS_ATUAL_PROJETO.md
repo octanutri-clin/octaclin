@@ -70,7 +70,10 @@ Atualizado em 2026-08-20.
   o recalculo do backend. A migration `1033` e aditiva, foi registrada no
   `DataSource`, aplicada primeiro em integracao e depois em producao com
   `neondb_owner`, e teve RLS forcada, policy, indices e constraints
-  verificadas. Adesao e lista de compras seguem pendentes.
+  verificadas. O aceite visual autenticado do Incremento 8 confirmou salvar,
+  recarregar, inserir no rascunho, salvar plano e arquivar sem alterar versao
+  publicada. Backend e web tambem voltaram a responder `200` depois do deploy
+  manual no Render. Adesao e lista de compras seguem pendentes.
 - Divida de dependencias mapeada em 2026-08-18 e transformada em fase, em vez
   de ficar como fila de PRs sem dono. Dos 14 PRs do Dependabot abertos, cinco
   sao do Mobile e pertencem a **Fase 243** — e la que estao **todos os 37
