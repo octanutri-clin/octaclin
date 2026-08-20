@@ -2,6 +2,8 @@
 
 Atualizado em 2026-08-20.
 
+Seleção operacional por fase: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
+
 ## Objetivo
 
 Este roteiro transforma a melhoria contínua em uma sequência verificável. Ele

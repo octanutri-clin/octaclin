@@ -11,6 +11,9 @@ Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele d
 - Ao concluir uma fase, marcar o item como concluido, registrar commit, data e principais validacoes.
 - Ao criar uma fase nova no meio do caminho, inserir aqui antes ou junto do commit da implementacao.
 - Ao terminar uma fase, atualizar tambem `RESUMO_FASES_CONCLUIDAS.md` quando a fase virar capacidade consolidada.
+- Ao terminar uma fase, registrar a recomendacao da proxima fase, modelo, nivel
+  de raciocinio e skills/plugins conforme
+  `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 - Nao remover itens pendentes sem registrar justificativa.
 - Se outro agente assumir, ele deve ler este arquivo, `RESUMO_FASES_CONCLUIDAS.md`, os arquivos `fase-*.md` recentes e o `git log`.
 
@@ -2214,6 +2217,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     anteriores estiverem concluídos e as exceções residuais forem aceitas.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
+Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 
 ## Backlog pos-producao
 
@@ -2243,6 +2247,9 @@ Fase XXX - Nome:
 - Data: YYYY-MM-DD
 - Validacoes: <comandos principais>
 - Observacoes: <decisoes ou pendencias>
+- Proxima fase: <numero e nome>
+- Modelo recomendado: <modelo e nivel de raciocinio>
+- Skills/plugins: <capacidades recomendadas para a proxima fase>
 ```
 
 Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service:

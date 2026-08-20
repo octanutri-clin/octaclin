@@ -6,11 +6,12 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 1. `RESUMO_FASES_CONCLUIDAS.md`
 2. `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`
-3. Os arquivos `fase-*.md` mais recentes relacionados ao trabalho atual.
-4. `VARIAVEIS_AMBIENTE.md` se a tarefa tocar deploy, integracoes, secrets ou ambiente.
-5. `RUNBOOK_PRODUCAO.md` se a tarefa tocar Render, Neon, Upstash, Gmail, Meta, Google Calendar ou operacao.
-6. `DECISOES_ARQUITETURA.md` se a tarefa alterar arquitetura, seguranca, tenancy, auth, dados ou integracoes.
-7. `ONBOARDING_DESENVOLVEDOR.md`, `COORDENACAO_DESENVOLVIMENTO_IA.md`, `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`, `DEVELOPMENT_LOG.md`, `RETORNO_APOS_DESENVOLVEDOR.md` e `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` quando um novo desenvolvedor/agente entrar no projeto.
+3. `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md` para as fases desse ciclo.
+4. Os arquivos `fase-*.md` mais recentes relacionados ao trabalho atual.
+5. `VARIAVEIS_AMBIENTE.md` se a tarefa tocar deploy, integracoes, secrets ou ambiente.
+6. `RUNBOOK_PRODUCAO.md` se a tarefa tocar Render, Neon, Upstash, Gmail, Meta, Google Calendar ou operacao.
+7. `DECISOES_ARQUITETURA.md` se a tarefa alterar arquitetura, seguranca, tenancy, auth, dados ou integracoes.
+8. `ONBOARDING_DESENVOLVEDOR.md`, `COORDENACAO_DESENVOLVIMENTO_IA.md`, `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`, `DEVELOPMENT_LOG.md`, `RETORNO_APOS_DESENVOLVEDOR.md` e `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` quando um novo desenvolvedor/agente entrar no projeto.
 
 ## Estado atual
 
@@ -51,6 +52,9 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 - Nao pule fase sem decisao explicita do usuario.
 - Ao concluir uma fase, crie ou atualize o arquivo `fase-XXX-*.md`.
 - Ao concluir uma fase, atualize `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
+- Ao concluir uma fase, informe no documento e na resposta final a proxima fase,
+  o modelo, o nivel de raciocinio e as skills/plugins recomendados conforme
+  `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 - Quando a fase consolidar uma capacidade do produto, atualize tambem `RESUMO_FASES_CONCLUIDAS.md`.
 - Use commits pequenos e objetivos.
 - Por padrao, faca push para `main` apos validar e commitar, pois o usuario pediu continuidade com GitHub como fonte de verdade.
