@@ -1,35 +1,83 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Audio } from 'expo-av';
-import { CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
+import {
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState
+} from 'expo-audio';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { enfileirarSincronizacao } from '@/lib/banco-local';
 import { cores } from '@/lib/tema';
 
 export default function CapturaMultimodal() {
   const [cameraPermissao, solicitarCamera] = useCameraPermissions();
-  const [microfonePermissao, solicitarMicrofone] = useMicrophonePermissions();
-  const [gravandoAudio, setGravandoAudio] = useState<Audio.Recording | null>(null);
+  const gravadorAudio = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const estadoGravacao = useAudioRecorderState(gravadorAudio, 250);
+  const finalizandoAudio = useRef(false);
+  const [gravandoAudio, setGravandoAudio] = useState(false);
   const [modoVideo, setModoVideo] = useState(false);
 
-  async function gravarAudio() {
-    if (!microfonePermissao?.granted) {
-      await solicitarMicrofone();
-      return;
-    }
+  async function finalizarAudio() {
+    if (finalizandoAudio.current) return;
+    finalizandoAudio.current = true;
 
-    if (gravandoAudio) {
-      await gravandoAudio.stopAndUnloadAsync();
-      const uri = gravandoAudio.getURI();
-      setGravandoAudio(null);
+    try {
+      if (gravadorAudio.isRecording) await gravadorAudio.stop();
+      const uri = gravadorAudio.uri;
+      setGravandoAudio(false);
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+
+      if (!uri) {
+        Alert.alert('Falha ao salvar audio', 'Nao foi possivel concluir a gravacao. Tente novamente.');
+        return;
+      }
+
       await enfileirarSincronizacao('midia_audio', { uri, tipo: 'audio', duracaoLimiteSegundos: 120 });
       Alert.alert('Audio salvo', 'Resposta por audio adicionada a fila offline.');
+    } catch {
+      setGravandoAudio(false);
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+      Alert.alert('Falha ao salvar audio', 'Nao foi possivel concluir a gravacao. Tente novamente.');
+    } finally {
+      finalizandoAudio.current = false;
+    }
+  }
+
+  useEffect(() => {
+    const encerrouNoLimite = gravandoAudio && !estadoGravacao.isRecording && estadoGravacao.durationMillis >= 119_000;
+    if (encerrouNoLimite) void finalizarAudio();
+  }, [estadoGravacao.durationMillis, estadoGravacao.isRecording, gravandoAudio]);
+
+  useEffect(() => {
+    return () => {
+      void setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+    };
+  }, []);
+
+  async function gravarAudio() {
+    if (gravandoAudio) {
+      await finalizarAudio();
       return;
     }
 
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-    const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-    setGravandoAudio(recording);
+    const permissao = await requestRecordingPermissionsAsync();
+    if (!permissao.granted) {
+      Alert.alert('Microfone bloqueado', 'Permita o acesso ao microfone para gravar uma resposta em audio.');
+      return;
+    }
+
+    try {
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await gravadorAudio.prepareToRecordAsync();
+      gravadorAudio.record({ forDuration: 120 });
+      setGravandoAudio(true);
+    } catch {
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+      Alert.alert('Falha ao iniciar audio', 'Nao foi possivel iniciar a gravacao. Tente novamente.');
+    }
   }
 
   async function registrarCaptura(tipo: 'imagem' | 'video') {

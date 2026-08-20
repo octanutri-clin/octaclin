@@ -680,6 +680,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   e a telemetria permanece deliberadamente local ao processo. PR `#39`, merge
   `32559bd` e CI `31747184400` aprovados. Ver
   `fase-242-observabilidade-interna-rollout-seguro.md`.
+- Fase 243 - Modernizacao e hardening do Mobile: o ecossistema foi elevado
+  incrementalmente do Expo 52 ao 57, com React Native 0.86.2, React 19.2.3 e
+  TypeScript 6. `expo-av` saiu em favor de `expo-audio`, o CI passou a exigir
+  lockfile congelado, Doctor, typecheck, testes de seguranca, auditoria e
+  bundles Android/iOS/web. A auditoria local caiu de 38 para 2 avisos altos de
+  `image-size` sem patch; o gate admite apenas esses dois identificadores e o
+  app continua com `mobile.sync=false` e NO-GO para distribuicao. Ver
+  `fase-243-modernizacao-hardening-mobile.md`.
 - Fase 244 - Quitacao da divida de dependencias: atualizacoes fora do Mobile,
   incluindo TypeScript 6, `@types/node` 26, cron-parser 5 com teste de fuso,
   FastAPI, Uvicorn e Tailwind Merge. A migracao documenta que mudancas de API

@@ -515,8 +515,23 @@ Depois do deploy, `/login` deve responder com CSP, HSTS,
 alcancar a rota e responder `400`; origem externa ou ausente deve responder
 `403`. Nao usar credenciais nesse smoke.
 
-O audit do Mobile continua gate separado da Fase 241. Expo SDK 52 nao pode ser
-distribuido enquanto seu grafo transitivo mantiver vulnerabilidade critica.
+## Mobile Expo - Fase 243
+
+```powershell
+pnpm --dir octaclin-mobile install --frozen-lockfile
+pnpm --dir octaclin-mobile typecheck
+pnpm --dir octaclin-mobile doctor
+pnpm --dir octaclin-mobile test:security
+pnpm --dir octaclin-mobile audit:security
+pnpm --dir octaclin-mobile build:validate
+```
+
+`audit:security` falha para qualquer vulnerabilidade nova ou excecao alterada.
+Ele admite temporariamente somente os dois advisories de `image-size@1.2.1`
+sem patch upstream; `audit:raw` mostra o resultado bruto. Essa admissao mantem
+o CI verificavel, mas nao autoriza distribuicao. O app exige audit zerado e os
+demais gates de `fase-243-modernizacao-hardening-mobile.md` antes de um build de
+loja.
 
 ### Fase 223 - verdade operacional do go-live
 

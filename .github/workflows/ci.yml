@@ -116,8 +116,12 @@ jobs:
           cache: pnpm
           cache-dependency-path: octaclin-mobile/pnpm-lock.yaml
 
-      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
+      - run: pnpm doctor
+      - run: pnpm test:security
+      - run: pnpm audit:security
+      - run: pnpm build:validate
 
   ai-service:
     name: AI FastAPI

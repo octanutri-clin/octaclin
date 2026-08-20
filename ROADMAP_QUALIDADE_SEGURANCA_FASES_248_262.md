@@ -11,14 +11,16 @@ não declara o produto pronto por quantidade de fases: cada etapa precisa reduzi
 um risco observável, ter critérios de aceite e atualizar o checklist vivo.
 
 O app Expo não é prioridade de produto, mas sua dívida de segurança não pode
-ficar indefinidamente no repositório público. Por isso a Fase 243 entra como
-interrupção de segurança antes da sequência 248-262, sem ativar nem distribuir o
-Mobile.
+ficar indefinidamente no repositório público. A Fase 243 foi concluida como
+interrupcao de seguranca antes da sequencia 248-262, sem ativar nem distribuir o
+Mobile. O resultado removeu todos os alertas corrigiveis; duas ocorrencias altas
+de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
 
 ## Ordem recomendada
 
-1. **Interrupção: Fase 243** - atualizar o ecossistema Expo de forma coordenada,
-   manter `mobile.sync=false` e substituir os cinco PRs automáticos isolados.
+1. **Interrupção concluida: Fase 243** - ecossistema Expo atualizado de forma
+   coordenada, `mobile.sync=false` preservado e cinco PRs automaticos
+   substituidos pelo PR da fase.
 2. **Fases 248-252** - corrigir estados, consistência visual, dívida de PRs,
    linguagem e descoberta de funcionalidades.
 3. **Fases 253-259** - fechar as jornadas essenciais de agenda, paciente,
@@ -54,7 +56,8 @@ Mobile.
 - Estados de carregamento, vazio, erro, sucesso, permissão negada e recuperação
   são parte do aceite, não acabamento posterior.
 - Desktop profissional é a prioridade de uso. Web móvel deve permanecer íntegra
-  e acessível; o app Expo continua desativado até a Fase 243 ser aceita.
+  e acessível; o app Expo continua desativado mesmo apos a aceitacao tecnica da
+  Fase 243, ate todos os gates de distribuicao serem fechados.
 - Correção visual exige screenshots comparáveis, teclado, foco, contraste e
   ausência de sobreposição. Correção funcional exige teste no nível adequado.
 - Cada fase atualiza seu `fase-XXX-*.md`, este roteiro quando houver mudança de
@@ -66,11 +69,11 @@ Mobile.
 
 | PR | Situação observada | Necessidade | Decisão recomendada |
 | --- | --- | --- | --- |
-| `#22` | React Native e screens isolados; branch atrás; job Mobile falha | Não serve isoladamente | Substituir pela Fase 243 e encerrar depois |
-| `#24` | Safe Area Context major isolada; branch atrás | Depende da matriz Expo alvo | Substituir pela Fase 243 e encerrar depois |
-| `#25` | Expo 52 para 57 sozinho; grande troca de lockfile; branch atrás | É a direção, não um PR integrável sozinho | Refazer coordenado na Fase 243 |
-| `#29` | Expo AV major isolada; branch atrás | Depende do SDK alvo | Substituir pela Fase 243 e encerrar depois |
-| `#30` | Expo Status Bar major isolada; branch atrás | Depende do SDK alvo | Substituir pela Fase 243 e encerrar depois |
+| `#22` | React Native e screens isolados; branch atrás; job Mobile falha | Não serve isoladamente | Substituido pelo PR `#84`; encerrar apos o CI |
+| `#24` | Safe Area Context major isolada; branch atrás | Depende da matriz Expo alvo | Substituido pelo PR `#84`; encerrar apos o CI |
+| `#25` | Expo 52 para 57 sozinho; grande troca de lockfile; branch atrás | É a direção, não um PR integrável sozinho | Substituido pelo PR `#84`; encerrar apos o CI |
+| `#29` | Expo AV major isolada; branch atrás | Depende do SDK alvo | Substituido pelo PR `#84`; encerrar apos o CI |
+| `#30` | Expo Status Bar major isolada; branch atrás | Depende da matriz Expo alvo | Substituido pelo PR `#84`; encerrar apos o CI |
 | `#6` | Fase 150A de julho, 10 commits, conflitos com `main` | Conteúdo atual já possui escopo Mobile/IA mais amplo e testes posteriores | Encerrar como superado; não tentar merge/cherry-pick |
 
 Nenhum PR aberto está pronto para merge. Não fechar automaticamente nesta
@@ -86,7 +89,8 @@ Fonte: API REST do GitHub, estado `open`, consultada em 2026-08-20. A análise
 foi estática: nenhuma aplicação, teste de exploração ou código do produto foi
 executado.
 
-- Total: **37** alertas em `octaclin-mobile/pnpm-lock.yaml`.
+- Baseline: **37** alertas em `octaclin-mobile/pnpm-lock.yaml` no GitHub e 38
+  vulnerabilidades na auditoria local.
 - Severidade: **1 crítico**, **26 altos** e **10 médios**.
 - Escopo informado pelo GitHub: `runtime` para os 37.
 - Backend, web e serviço de IA: nenhum alerta Dependabot aberto nessa coleta.
@@ -104,12 +108,24 @@ executado.
 | `nanoid` | 34 e 37 | Altos | Presença confirmada em navegação/PostCSS |
 | `image-size` | 35-36 | Altos, sem patch direto indicado | Presença confirmada via Metro; resolver pela atualização do ecossistema |
 
-Veredito: a dívida de dependências é **confirmada**. A explorabilidade contra o
+Veredito da triagem: a dívida de dependências era **confirmada**. A explorabilidade contra o
 SaaS web implantado fica como **não demonstrada/necessita revisão**, porque o
 lockfile afetado pertence ao app nativo não distribuído e vários caminhos são
 de build. O repositório público aumenta a visibilidade do atraso, mas não cria
 sozinho um caminho de ataque ao backend ou à web. O risco permanece relevante
 para builds, estações de desenvolvimento e uma futura distribuição Mobile.
+
+### Resultado da Fase 243
+
+- Expo 52 foi elevado incrementalmente ate o 57; a matriz final e Expo 57.0.15,
+  React Native 0.86.2 e React 19.2.3.
+- Todos os alertas corrigiveis foram removidos. A auditoria local atual retorna
+  somente `GHSA-w3rx-r6r6-pgpr` e `GHSA-5p2g-fcmc-qvqq`, sem versao corrigida.
+- O gate do CI admite temporariamente apenas esse conjunto imutavel e reprova
+  qualquer aviso novo, divergente ou silenciado.
+- O Mobile permanece desativado e nao distribuivel. Audit zerado, autenticacao,
+  protecao do SQLite, captura real de midia e builds assinados continuam gates
+  obrigatorios de uma futura retomada.
 
 ## Política de dependências após a Fase 250
 

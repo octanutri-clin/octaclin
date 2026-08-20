@@ -25,8 +25,10 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
   pode escalar horizontalmente antes desse rollout. O proximo bloqueador de
   negocio e a Fase 233, primeiro piloto assistido. Antes dele, a sequencia de
   melhoria continua esta registrada nas Fases 248 a 262 e em
-  `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`; a Fase 243 deve ser antecipada
-  como interrupcao de seguranca do Mobile, sem ativar o app.
+  `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`; a Fase 243 foi antecipada
+  como interrupcao de seguranca do Mobile, sem ativar o app. Essa interrupcao
+  foi concluida em 2026-08-20: Expo 57 esta validado, mas dois avisos upstream
+  sem patch e gates funcionais mantem o Mobile em NO-GO para distribuicao.
 - Producao isolada foi aceita na Fase 131; backup/restore, observabilidade,
   smokes somente leitura dos quatro papeis, Gmail e Google Agenda foram
   validados nas Fases 219 a 222. Isso nao substitui dominio, identidade de

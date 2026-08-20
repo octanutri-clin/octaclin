@@ -7,6 +7,7 @@ test-results/
 playwright-report/
 .turbo/
 .cache/
+.expo/
 *.tsbuildinfo
 __pycache__/
 *.py[cod]
