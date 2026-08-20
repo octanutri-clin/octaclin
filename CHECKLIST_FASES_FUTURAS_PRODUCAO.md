@@ -2132,9 +2132,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
     de overflow ou texto cortado.
 
 - [ ] Fase 250 - Encerramento da dívida de segurança Mobile e higiene de PRs. [ESSENCIAL - SEGURANCA]
-  - Concluir tecnicamente a Fase 243 em um PR coordenado, zerar os alertas
-    corrigíveis do lockfile e documentar exceção temporária apenas quando não
-    houver versão corrigida compatível.
+  - Reconciliar o resultado técnico da Fase 243: confirmar os alertas
+    corrigíveis zerados no lockfile e documentar exceção temporária apenas
+    quando não houver versão corrigida compatível.
   - Reconciliar os PRs `#22`, `#24`, `#25`, `#29` e `#30` depois da substituição
     e encerrar o PR `#6`, conflitante e superado pelas implementações atuais de
     isolamento Mobile/IA.
