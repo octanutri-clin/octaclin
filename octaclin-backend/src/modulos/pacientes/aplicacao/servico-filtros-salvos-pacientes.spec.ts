@@ -96,6 +96,54 @@ describe('ServicoFiltrosSalvosPacientes.criar', () => {
   });
 });
 
+describe('ServicoFiltrosSalvosPacientes.listar', () => {
+  it('devolve os pessoais do proprio profissional e todos os de clinica', async () => {
+    const { servico, repositorio, criptografia } = montar();
+    repositorio.registros = [
+      { id: 'a', tenantId: TENANT_ID, origem: 'pessoal', profissionalId: PROFISSIONAL_ID,
+        nomeCriptografado: criptografia.criptografar('Minha'), criterios: {}, arquivadoEm: null, atualizadoEm: new Date() },
+      { id: 'b', tenantId: TENANT_ID, origem: 'pessoal', profissionalId: 'outro-profissional',
+        nomeCriptografado: criptografia.criptografar('Do outro'), criterios: {}, arquivadoEm: null, atualizadoEm: new Date() },
+      { id: 'c', tenantId: TENANT_ID, origem: 'clinica', profissionalId: null,
+        nomeCriptografado: criptografia.criptografar('Da clinica'), criterios: {}, arquivadoEm: null, atualizadoEm: new Date() }
+    ];
+
+    const { itens } = await servico.listar(TENANT_ID, profissional());
+    expect(itens.map((item) => item.nome).sort()).toEqual(['Da clinica', 'Minha']);
+  });
+
+  it('nao devolve filtro arquivado', async () => {
+    const { servico, repositorio, criptografia } = montar();
+    repositorio.registros = [
+      { id: 'a', tenantId: TENANT_ID, origem: 'clinica', profissionalId: null,
+        nomeCriptografado: criptografia.criptografar('Arquivada'), criterios: {},
+        arquivadoEm: new Date(), atualizadoEm: new Date() }
+    ];
+    const { itens } = await servico.listar(TENANT_ID, profissional());
+    expect(itens).toHaveLength(0);
+  });
+});
+
+describe('ServicoFiltrosSalvosPacientes.arquivar', () => {
+  it('impede arquivar filtro pessoal de outro profissional', async () => {
+    const { servico, repositorio, criptografia } = montar();
+    repositorio.registros = [
+      { id: 'b', tenantId: TENANT_ID, origem: 'pessoal', profissionalId: 'outro-profissional',
+        nomeCriptografado: criptografia.criptografar('Do outro'), criterios: {}, arquivadoEm: null, atualizadoEm: new Date() }
+    ];
+    await expect(servico.arquivar(TENANT_ID, 'b', profissional())).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('exige pacientes.gerenciar para arquivar filtro de clinica', async () => {
+    const { servico, repositorio, criptografia } = montar();
+    repositorio.registros = [
+      { id: 'c', tenantId: TENANT_ID, origem: 'clinica', profissionalId: null,
+        nomeCriptografado: criptografia.criptografar('Da clinica'), criterios: {}, arquivadoEm: null, atualizadoEm: new Date() }
+    ];
+    await expect(servico.arquivar(TENANT_ID, 'c', colaborador())).rejects.toBeInstanceOf(ForbiddenException);
+  });
+});
+
 /** Casa a condicao do TypeORM; IsNull() chega como objeto com _type 'isNull'. */
 function casa(registro: any, condicao: any): boolean {
   return Object.entries(condicao).every(([chave, valor]: [string, any]) => {

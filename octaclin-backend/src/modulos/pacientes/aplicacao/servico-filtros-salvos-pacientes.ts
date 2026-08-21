@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -7,7 +7,7 @@ import type { PermissaoOctaClin } from '../../auth/dominio/permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { TETO_FILTROS_SALVOS, validarCriteriosFiltroSalvo } from '../dominio/filtros-salvos';
 import { FiltroSalvoPacienteOrm } from '../infraestrutura/filtro-salvo-paciente.orm';
-import { CriarFiltroSalvoDto } from './dtos-filtros-salvos';
+import { CriarFiltroSalvoDto, ListarFiltrosSalvosDto } from './dtos-filtros-salvos';
 
 /** Visoes de trabalho da lista de pacientes. Guarda criterio, nunca busca livre. */
 @Injectable()
@@ -54,6 +54,44 @@ export class ServicoFiltrosSalvosPacientes {
       });
       await repositorio.save(filtro);
       return this.resumo(filtro, nome);
+    });
+  }
+
+  async listar(tenantId: string, usuario: UsuarioAutenticado, consulta: ListarFiltrosSalvosDto = new ListarFiltrosSalvosDto()) {
+    this.garantirAcesso(usuario, 'pacientes.listar');
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const repositorio = gerenciador.getRepository(FiltroSalvoPacienteOrm);
+      const visiveis = [
+        { tenantId, origem: 'clinica' as const, arquivadoEm: IsNull() },
+        ...(profissionalId ? [{ tenantId, origem: 'pessoal' as const, profissionalId, arquivadoEm: IsNull() }] : [])
+      ];
+      const filtros = await repositorio.find({
+        where: consulta.origem ? visiveis.filter((onde) => onde.origem === consulta.origem) : visiveis,
+        order: { atualizadoEm: 'DESC', id: 'DESC' }
+      });
+      return {
+        itens: filtros.map((filtro) => this.resumo(filtro, this.criptografia.descriptografar(filtro.nomeCriptografado)))
+      };
+    });
+  }
+
+  async arquivar(tenantId: string, filtroId: string, usuario: UsuarioAutenticado) {
+    this.garantirAcesso(usuario, 'pacientes.listar');
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const repositorio = gerenciador.getRepository(FiltroSalvoPacienteOrm);
+      const filtro = await repositorio.findOne({ where: { tenantId, id: filtroId, arquivadoEm: IsNull() } });
+      if (!filtro) throw new NotFoundException('Filtro salvo nao encontrado.');
+
+      if (filtro.origem === 'clinica') {
+        this.garantirAcesso(usuario, 'pacientes.gerenciar');
+      } else if (filtro.profissionalId !== profissionalId) {
+        throw new ForbiddenException('Filtro pessoal pertence a outro profissional.');
+      }
+
+      filtro.arquivadoEm = new Date();
+      await repositorio.save(filtro);
     });
   }
 
