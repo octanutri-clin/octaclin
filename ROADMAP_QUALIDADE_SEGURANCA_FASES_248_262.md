@@ -33,7 +33,7 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
 | Fase | Entrega | Prioridade | Bloqueio |
 | --- | --- | --- | --- |
 | 248 | Estados e recuperação clínica - concluída em 2026-08-20 | Essencial | Gate aprovado |
-| 249 | Densidade e responsividade web | Importante | Não bloqueia isoladamente |
+| 249 | Densidade e responsividade web - concluida em 2026-08-20 | Importante | Gate aprovado |
 | 250 | Fechamento da dívida Mobile e PRs | Essencial/segurança | Bloqueia Mobile; prazo pré-piloto |
 | 251 | Linguagem e microcopy integral | Importante | Pré-piloto |
 | 252 | Navegação e descoberta por papel | Essencial | Pré-piloto |

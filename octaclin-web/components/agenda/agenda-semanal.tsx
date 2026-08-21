@@ -1,6 +1,6 @@
 'use client';
 
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, List, MapPin, RefreshCcw, X } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
@@ -113,6 +113,16 @@ function valorDatetimeLocal(data: Date) {
   return new Date(data.getTime() - deslocamento).toISOString().slice(0, 16);
 }
 
+function assinarTelaPequena(aoMudar: () => void) {
+  const consulta = window.matchMedia('(max-width: 639px)');
+  consulta.addEventListener('change', aoMudar);
+  return () => consulta.removeEventListener('change', aoMudar);
+}
+
+function telaPequenaAtual() {
+  return window.matchMedia('(max-width: 639px)').matches;
+}
+
 export function AgendaSemanal({
   consultas,
   profissionais,
@@ -127,7 +137,9 @@ export function AgendaSemanal({
   const consultasAtivas = useMemo(() => consultas.filter(consultaAtiva), [consultas]);
   const [semanaInicio, setSemanaInicio] = useState(() => inicioDaSemana(new Date()));
   const [semanaInicializada, setSemanaInicializada] = useState(false);
-  const [visao, setVisao] = useState<'dia' | 'semana' | 'mes' | 'lista'>('semana');
+  const [visaoEscolhida, setVisao] = useState<'dia' | 'semana' | 'mes' | 'lista' | null>(null);
+  const telaPequena = useSyncExternalStore(assinarTelaPequena, telaPequenaAtual, () => false);
+  const visao = visaoEscolhida ?? (telaPequena ? 'dia' : 'semana');
   const [profissionalId, setProfissionalId] = useState('');
   const [itensFeed, setItensFeed] = useState<ItemFeedAgendaApi[] | null>(null);
   const [falhaFeed, setFalhaFeed] = useState<FalhaInterface | null>(null);
@@ -150,7 +162,7 @@ export function AgendaSemanal({
   useEffect(() => {
     if (semanaInicializada || !consultasAtivas.length) return;
     const referencia = consultaMaisProxima(consultasAtivas);
-    setSemanaInicio(inicioDaSemana(new Date(referencia.inicioEm)));
+    setSemanaInicio(new Date(referencia.inicioEm));
     setSemanaInicializada(true);
   }, [consultasAtivas, semanaInicializada]);
 
@@ -277,7 +289,7 @@ export function AgendaSemanal({
       aria-label="Agenda interna semanal"
       className="min-w-0 overflow-hidden rounded-lg border border-linha bg-white"
     >
-      <header className="flex flex-col gap-4 border-b border-linha px-4 py-4 lg:flex-row lg:items-end lg:justify-between">
+      <header className="flex flex-col gap-3 border-b border-linha px-4 py-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <CalendarDays size={19} className="shrink-0 text-primaria" />
@@ -288,7 +300,7 @@ export function AgendaSemanal({
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end lg:flex-nowrap">
           {profissionais.length > 1 ? (
             <label className="grid min-w-[220px] gap-1">
               <Rotulo>Agenda de</Rotulo>
@@ -302,14 +314,15 @@ export function AgendaSemanal({
             </label>
           ) : null}
 
-          <div className="flex h-10 items-center rounded-md border border-linha bg-white p-0.5" role="group" aria-label="Visualizacao da agenda">
+          <div className="flex min-h-11 max-w-full items-center overflow-x-auto rounded-md border border-linha bg-white p-0.5" role="group" aria-label="Visualizacao da agenda">
             {(['dia', 'semana', 'mes', 'lista'] as const).map((opcao) => (
               <button
                 key={opcao}
                 type="button"
                 onClick={() => setVisao(opcao)}
+                aria-pressed={visao === opcao}
                 className={cn(
-                  'h-full rounded px-2 text-xs font-semibold capitalize focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
+                  'inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center gap-1 rounded px-2.5 text-xs font-semibold capitalize focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
                   visao === opcao ? 'bg-primaria text-white' : 'text-texto-suave hover:bg-superficie-hover'
                 )}
               >
@@ -424,7 +437,9 @@ export function AgendaSemanal({
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-        <p className="text-sm font-semibold text-tinta">{formatarPeriodo(semanaInicio, semanaFim)}</p>
+        <p className="text-sm font-semibold text-tinta">
+          {formatarPeriodo(visao === 'mes' ? semanaInicio : periodo.inicio, semanaFim)}
+        </p>
         <p className="text-xs text-texto-suave">
           {itensDaSemana.length} {itensDaSemana.length === 1 ? 'horario ocupado' : 'horarios ocupados'}
           {carregandoFeed ? ' (atualizando)' : ''}
@@ -480,7 +495,7 @@ export function AgendaSemanal({
       ) : (
       <div className="max-w-full overflow-x-auto border-t border-linha">
         <div
-          className="grid min-w-[980px]"
+          className={cn('grid', visao === 'dia' ? 'min-w-[300px]' : 'min-w-[980px]')}
           style={{ gridTemplateColumns: `72px repeat(${dias.length}, minmax(128px, 1fr))` }}
         >
           <div className="border-b border-r border-linha bg-superficie" />

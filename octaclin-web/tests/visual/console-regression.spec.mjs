@@ -1881,10 +1881,16 @@ test.describe('agenda de producao', () => {
   test('mantem agenda interna visual sem Google e sinaliza horarios ocupados', async ({ page }) => {
     await prepararDashboardMockado(page, { googleConectado: false });
     await page.goto('/agenda');
+    const mobile = (page.viewportSize()?.width ?? 1280) < 640;
 
     const agendaInterna = page.getByRole('region', { name: 'Agenda interna semanal' });
     await expect(agendaInterna).toBeVisible();
     await expect(agendaInterna.getByText('Google Agenda opcional')).toBeVisible();
+    if (mobile) {
+      await expect(agendaInterna.getByRole('button', { name: 'dia' })).toHaveAttribute('aria-pressed', 'true');
+      await expect(agendaInterna.getByRole('button', { name: /Horario ocupado: Bruno Lima/ })).toBeVisible();
+      await agendaInterna.getByRole('button', { name: 'semana' }).click();
+    }
     await expect(agendaInterna.getByRole('button', { name: /Horario ocupado: Ana Souza/ })).toBeVisible();
     await expect(agendaInterna.getByText('Indisponivel')).toBeVisible();
     await expect(agendaInterna.getByRole('button', { name: 'Semana anterior' })).toBeVisible();

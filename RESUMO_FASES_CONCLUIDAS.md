@@ -720,6 +720,12 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   telas, e formularios preservam o conteudo digitado para repeticao manual
   segura. O gate sintetico cobre acesso negado e recuperacao em desktop e
   mobile. Ver `fase-248-estados-recuperacao-superficies-clinicas.md`.
+- Fase 249 - Densidade e responsividade do console clinico: agenda, pacientes
+  e prontuario passaram a usar faixas de acoes e abas previsiveis, densidade
+  responsiva e alvos de 44 px. A agenda abre em dia no celular e semana no
+  desktop; a tabela de pacientes ficou compacta sem perder acoes. Penpot,
+  Playwright desktop/mobile e Lighthouse 100 validaram a entrega. Ver
+  `fase-249-densidade-responsividade-console-clinico.md`.
 - Fase 241 - Hardening da IA clinica: referencias de
   check-in, transcricao e midia agora sao validadas por tenant/paciente; a URL
   privada e criada apenas no backend e seu SHA-256 e conferido ponta a ponta.

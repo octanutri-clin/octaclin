@@ -27,6 +27,7 @@
     "test:condutas-terapeuticas:bff": "node scripts/test-condutas-terapeuticas-bff.mjs",
     "test:prontuario:validacao": "playwright test tests/visual/console-regression.spec.mjs --grep \"prontuario do paciente|Fase 239\" --reporter=list",
     "test:fase248": "playwright test tests/visual/fase-248-estados-recuperacao.spec.mjs --project=desktop-chromium --reporter=list",
+    "test:fase249": "playwright test tests/visual/fase-249-densidade-responsividade.spec.mjs --project=desktop-chromium --reporter=list",
     "test:pwa": "node scripts/test-pwa-seguranca.mjs && playwright test tests/visual/pwa-portal.spec.mjs --reporter=list",
     "test:e2e:criticas": "playwright test tests/visual/jornadas-criticas.spec.mjs --reporter=list",
     "test:producao:readonly": "playwright test tests/visual/producao-readonly.spec.mjs --project=desktop-chromium --reporter=list",

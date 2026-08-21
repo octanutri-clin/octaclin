@@ -25,6 +25,8 @@ body {
   color: var(--texto-corpo);
   font-family: var(--font-plex-sans), system-ui, sans-serif;
   letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1,

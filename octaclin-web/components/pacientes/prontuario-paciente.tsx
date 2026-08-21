@@ -40,6 +40,7 @@ import { PerfilCadastroPaciente } from './perfil-cadastro-paciente';
 import { PlanoAlimentarProfissional } from './plano-alimentar-profissional';
 import { Aviso, AvisoRegiao, BarraCarregamento, EsqueletoPagina, EstadoFalha, EstadoPermissaoNegada, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
+import { FaixaAcoes } from '@/components/ui/faixa-acoes';
 import { obterSessao } from '@/lib/auth-api';
 import { classificarFalhaInterface, type FalhaInterface } from '@/lib/erros-interface';
 import { listarProfissionais, type ProfissionalResumo } from '@/lib/cadastros-api';
@@ -897,15 +898,20 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             </div>
           </div>
         ) : null}
-        <nav aria-label="Acoes rapidas do paciente" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap">
+        <FaixaAcoes
+          role="navigation"
+          rotulo="Acoes rapidas do paciente"
+          envolverEmTelasMaiores={false}
+          className="lg:flex-wrap lg:overflow-visible"
+        >
           {podeGerenciarPaciente ? (
-            <Botao type="button" variante="primario" className="w-full lg:w-auto" onClick={() => solicitarTrocaAba('evolucoes')}>
+            <Botao type="button" variante="primario" onClick={() => solicitarTrocaAba('evolucoes')}>
               <Stethoscope size={16} />
               Nova evolucao
             </Botao>
           ) : null}
           {podeGerenciarPaciente ? (
-            <Botao type="button" variante="secundario" className="w-full lg:w-auto" onClick={() => solicitarTrocaAba('acompanhamento')}>
+            <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('acompanhamento')}>
               <CheckSquare size={16} />
               Nova tarefa
             </Botao>
@@ -914,7 +920,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <Link
               href={destinoAgenda()}
               onClick={(evento) => protegerSaidaParaAgenda(evento)}
-              className={classesBotao({ variante: 'secundario', className: 'w-full lg:w-auto' })}
+              className={classesBotao({ variante: 'secundario' })}
             >
               <CalendarDays size={16} />
               Agendar
@@ -924,32 +930,32 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <Link
               href={destinoAgenda({ consultaId: proximaConsulta.origemId ?? proximaConsulta.id })}
               onClick={(evento) => protegerSaidaParaAgenda(evento, { consultaId: proximaConsulta.origemId ?? proximaConsulta.id })}
-              className={classesBotao({ variante: 'secundario', className: 'w-full lg:w-auto' })}
+              className={classesBotao({ variante: 'secundario' })}
             >
               <CalendarDays size={16} />
               Abrir consulta
             </Link>
           ) : null}
           {podeLerPlano && dados.resumo.planoAtual ? (
-            <Botao type="button" variante="secundario" className="w-full lg:w-auto" onClick={() => solicitarTrocaAba('plano_alimentar')}>
+            <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('plano_alimentar')}>
               <Utensils size={16} />
               Plano atual
             </Botao>
           ) : null}
           {podeLerQuestionarios ? (
-            <Botao type="button" variante="secundario" className="w-full lg:w-auto" onClick={() => solicitarTrocaAba('formularios')}>
+            <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('formularios')}>
               <ClipboardList size={16} />
               Formularios
             </Botao>
           ) : null}
           {podeLerMensagens ? (
-            <Botao type="button" variante="secundario" className="w-full lg:w-auto" onClick={() => solicitarTrocaAba('mensagens')}>
+            <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('mensagens')}>
               <MessageSquareText size={16} />
               {dados.resumo.falhaComunicacao ? 'Revisar mensagem' : 'Mensagens'}
             </Botao>
           ) : null}
           {podeGerenciarPaciente ? (
-            <Botao type="button" variante="secundario" className="w-full lg:w-auto" onClick={() => solicitarTrocaAba('anexos')}>
+            <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('anexos')}>
               <Paperclip size={16} />
               Anexar
             </Botao>
@@ -958,14 +964,14 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <Link
               href={destinoAgenda({ financeiro: true })}
               onClick={(evento) => protegerSaidaParaAgenda(evento, { financeiro: true })}
-              className={classesBotao({ variante: 'secundario', className: 'w-full lg:w-auto' })}
+              className={classesBotao({ variante: 'secundario' })}
             >
               <BadgeDollarSign size={16} />
               Financeiro
             </Link>
           ) : null}
           {podeGerenciarPaciente ? (
-            <div className="[&>button]:w-full lg:[&>button]:w-auto">
+            <div>
               <PerfilCadastroPaciente
                 pacienteId={pacienteId}
                 nomeCompleto={dados.paciente.nome}
@@ -974,7 +980,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               />
             </div>
           ) : null}
-        </nav>
+        </FaixaAcoes>
       </div>
 
       <Abas

@@ -117,10 +117,10 @@ export function PortalShell({
         >
           Pular para o conteudo
         </a>
-        <div className="grid min-h-screen min-w-0 lg:grid-cols-[248px_minmax(0,1fr)]">
+        <div className="grid min-h-screen min-w-0 lg:grid-cols-[232px_minmax(0,1fr)]">
           <aside className="sticky top-0 z-20 min-w-0 overflow-hidden bg-neutro-900 text-white lg:h-screen lg:overflow-visible">
             {marca ? (
-              <div className="flex items-center gap-2 px-4 py-3 lg:px-5 lg:py-4">
+              <div className="flex items-center gap-2 px-3 py-2.5 lg:px-4 lg:py-4">
                 <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primaria text-white">
                   <marca.icone size={19} />
                 </div>
@@ -132,7 +132,7 @@ export function PortalShell({
             ) : null}
             <nav
               aria-label={navLabel}
-              className="flex min-w-0 max-w-full gap-1 overflow-x-auto border-t border-neutro-800 px-3 py-2 [scrollbar-width:none] lg:grid lg:overflow-visible lg:px-3 lg:py-3 [&::-webkit-scrollbar]:hidden"
+              className="flex min-w-0 max-w-full gap-1 overflow-x-auto border-t border-neutro-800 px-2 py-2 [scrollbar-width:none] lg:grid lg:overflow-visible lg:px-2 lg:py-3 [&::-webkit-scrollbar]:hidden"
             >
               {navegacaoCarregando ? (
                 <div className="grid min-w-56 gap-2 px-1 py-1 lg:min-w-0" aria-hidden="true">
@@ -170,20 +170,20 @@ export function PortalShell({
           <section className="min-w-0">
             <header className="border-b border-linha bg-white">
               <div
-                className="mx-auto flex w-full flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between lg:px-6"
+                className="mx-auto flex w-full flex-col gap-3 px-3 py-3 sm:px-4 md:flex-row md:items-center md:justify-between lg:px-5"
                 style={{ maxWidth }}
               >
                 <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase text-texto-suave">{subtitulo}</p>
-                  <h1 className="text-xl font-semibold text-tinta">{titulo}</h1>
+                  <h1 className="text-xl font-semibold text-tinta [text-wrap:balance]">{titulo}</h1>
                 </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">
                   {acoes}
                   {menuConta}
                 </div>
               </div>
             </header>
-            <div id="conteudo-principal" className="mx-auto w-full scroll-mt-24 px-4 py-4 lg:px-6 lg:py-5" style={{ maxWidth }}>
+            <div id="conteudo-principal" className="mx-auto w-full scroll-mt-24 px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5" style={{ maxWidth }}>
               {children}
             </div>
           </section>

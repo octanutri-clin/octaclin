@@ -38,6 +38,6 @@ export function CartaoSubtitulo({ className, ...props }: React.HTMLAttributes<HT
 }
 
 export const CartaoConteudo = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn('p-cartao', className)} {...props} />
+  ({ className, ...props }, ref) => <div ref={ref} className={cn('p-4 sm:p-cartao', className)} {...props} />
 );
 CartaoConteudo.displayName = 'CartaoConteudo';

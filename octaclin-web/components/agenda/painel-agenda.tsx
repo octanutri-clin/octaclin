@@ -18,11 +18,12 @@ import {
   Video,
   XCircle
 } from 'lucide-react';
-import { Botao } from '@/components/ui/botao';
+import { Botao, classesBotao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Aviso, AvisoRegiao, BarraCarregamento, EsqueletoPagina, EstadoFalha, EstadoPermissaoNegada, EstadoVazio } from '@/components/ui/feedback';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
+import { FaixaAcoes } from '@/components/ui/faixa-acoes';
 import { AgendaSemanal } from '@/components/agenda/agenda-semanal';
 import { PacotesSessao } from '@/components/agenda/pacotes-sessao';
 import { ResumoRecebimentos } from '@/components/cliente/recebimentos-cliente';
@@ -846,7 +847,7 @@ export function PainelAgenda() {
         ) : null}
       </Modal>
 
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.6fr)]">
         <div className="grid min-w-0 gap-4">
         <PacotesSessao
           pacientes={pacientesLista}
@@ -1220,7 +1221,7 @@ export function PainelAgenda() {
               <h2 className="text-base font-semibold">Consultas agendadas</h2>
               <p className="mt-1 text-sm text-texto-suave">{proximasConsultas.length} consultas no periodo carregado</p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
+            <FaixaAcoes rotulo="Ações das consultas agendadas">
               <BarraCarregamento visivel={carregando} rotulo="Carregando agenda" />
               <a
                 href={urlExportacaoAgenda ?? '#'}
@@ -1228,7 +1229,7 @@ export function PainelAgenda() {
                 onClick={(evento) => {
                   if (!urlExportacaoAgenda) evento.preventDefault();
                 }}
-                className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-md border border-linha bg-superficie px-3 text-sm font-medium text-texto-forte hover:bg-white aria-disabled:pointer-events-none aria-disabled:opacity-60"
+                className={classesBotao({ className: 'aria-disabled:pointer-events-none aria-disabled:opacity-60' })}
               >
                 <Download size={16} />
                 Exportar CSV (90 dias)
@@ -1237,7 +1238,7 @@ export function PainelAgenda() {
                 <CalendarCheck size={16} />
                 Nova consulta
               </Botao>
-            </div>
+            </FaixaAcoes>
           </CartaoCabecalho>
           <CartaoConteudo>
             {proximasConsultas.length ? (

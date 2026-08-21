@@ -27,7 +27,11 @@ Atualizado em 2026-08-20.
   indisponibilidade de permissao negada e nao exibem JSON ou erro tecnico. O
   gate Playwright aprovou 4 cenarios em desktop e mobile, e o Lighthouse do
   estado de falha aprovou 29 auditorias com acessibilidade 100.
-  O roteiro das Fases 249 a 262 agora trata
+- Fase 249 concluida: shell, cartoes, agenda, pacientes e prontuario usam
+  densidade responsiva, faixas de acoes/abas sem empilhamento e controles
+  criticos de 44 px. Playwright desktop/mobile e Lighthouse 100 validaram a
+  entrega, registrada tambem no Penpot com dados sinteticos.
+  O roteiro das Fases 250 a 262 agora trata
   recuperação, navegação, jornadas clínicas, estabilidade, segurança e aceite
   do piloto; detalhes em `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 - O repositorio e publico por decisao operacional para manter GitHub Actions
