@@ -227,7 +227,7 @@ export function PainelIa() {
             <p className="mt-1 text-sm text-texto-suave">
               {analises.length} analises, {reconhecimentos.length} reconhecimentos persistidos
             </p>
-            <p className="mt-1 text-xs text-texto-sutil">Resultados de IA sao sugestoes operacionais e exigem revisão do profissional antes de qualquer conduta.</p>
+            <p className="mt-1 text-xs text-texto-sutil">Resultados de IA sao sugestões operacionais e exigem revisão do profissional antes de qualquer conduta.</p>
           </div>
           <Botao onClick={carregar} disabled={carregando}>
             <RefreshCcw size={16} />
@@ -397,7 +397,7 @@ export function PainelIa() {
                     <span>Motivacao: {formatarScore(analise.motivacaoScore)}</span>
                     <span>Confusao: {formatarScore(analise.confusaoScore)}</span>
                   </div>
-                  <p className="break-all text-xs text-texto-suave">Sugestao original: {resumirJson(analise.explicacao)}</p>
+                  <p className="break-all text-xs text-texto-suave">Sugestão original: {resumirJson(analise.explicacao)}</p>
                   <p className="text-xs text-texto-suave">Fonte: {analise.modelo}.</p>
                   <p className="text-xs text-texto-suave">Limitacoes: {limitacoesSentimento(analise.explicacao).join(' ') || 'O resultado exige avaliacao clinica.'}</p>
                   <strong className="text-xs">{rotuloRevisao(analise.revisaoHumana?.status)}</strong>
@@ -462,7 +462,7 @@ export function PainelIa() {
                     {item.caloriasEstimadas ? `${formatarScore(item.caloriasEstimadas)} kcal` : 'Calorias nao estimadas'}
                     {item.pesoEstimadoGramas ? ` | ${formatarScore(item.pesoEstimadoGramas)} g` : ''}
                   </p>
-                  <p className="break-all text-xs text-texto-suave">Sugestao original: {resumirJson(item.alimentosDetectados)}</p>
+                  <p className="break-all text-xs text-texto-suave">Sugestão original: {resumirJson(item.alimentosDetectados)}</p>
                   <p className="text-xs text-texto-suave">Fonte: {item.provedor}.</p>
                   <p className="text-xs text-texto-suave">Limitacoes: {item.limitacoes?.join(' ') || 'A estimativa exige confirmacao profissional.'}</p>
                   <strong className="text-xs">{rotuloRevisao(item.revisaoHumana?.status)}</strong>

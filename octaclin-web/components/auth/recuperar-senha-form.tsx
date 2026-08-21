@@ -23,8 +23,8 @@ const conteudoFalha: Record<TipoFalhaToken, { titulo: string; mensagem: string; 
   },
   expirado: {
     titulo: 'Link expirado',
-    mensagem: 'Solicite um novo link para redefinir sua senha com seguranca.',
-    detalhe: 'Por seguranca, links antigos deixam de funcionar automaticamente.'
+    mensagem: 'Solicite um novo link para redefinir sua senha com segurança.',
+    detalhe: 'Por segurança, links antigos deixam de funcionar automaticamente.'
   },
   nao_encontrado: {
     titulo: 'Link não encontrado',

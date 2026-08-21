@@ -199,9 +199,9 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
               </Selecao>
             </label>
             <label className="space-y-1.5">
-              <Rotulo htmlFor="matriz-questionario">Questionario</Rotulo>
+              <Rotulo htmlFor="matriz-questionario">Questionário</Rotulo>
               <Selecao id="matriz-questionario" value={questionarioFiltroMatriz} onChange={(event) => setQuestionarioFiltroMatriz(event.target.value)}>
-                <option value="">Todos os questionarios</option>
+                <option value="">Todos os questionários</option>
                 {questionarios.map((questionario) => <option key={questionario.id} value={questionario.id}>{questionario.titulo}</option>)}
               </Selecao>
             </label>

@@ -5,7 +5,7 @@ export default function PaginaOffline() {
         <p className="text-xs font-semibold uppercase text-texto-suave">OctaClin</p>
         <h1 className="text-xl font-semibold">Sem conexão</h1>
         <p className="text-sm text-texto-suave">
-          Reconecte-se para carregar suas informações. Operacoes salvas nesta sessão serão enviadas automaticamente.
+          Reconecte-se para carregar suas informações. Operações salvas nesta sessão serão enviadas automaticamente.
         </p>
         <a
           href="/portal"

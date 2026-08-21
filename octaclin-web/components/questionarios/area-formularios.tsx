@@ -48,7 +48,7 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
 
       <Cartao>
         <CartaoCabecalho>
-          <CartaoTitulo>Questionario</CartaoTitulo>
+          <CartaoTitulo>Questionário</CartaoTitulo>
           <div className="flex items-center gap-2">
             <span className="text-xs text-texto-suave">Versão {questionarioAtual?.versao ?? 1}</span>
             <Etiqueta variante={status === 'publicado' ? 'sucesso' : status === 'arquivado' ? 'neutra' : 'alerta'}>{status}</Etiqueta>
@@ -85,7 +85,7 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
                 void selecionarQuestionario(escolhido ?? null);
               }}
             >
-              <option value="">Novo questionario</option>
+              <option value="">Novo questionário</option>
               {questionarios.map((questionario) => (
                 <option key={questionario.id} value={questionario.id}>{questionario.titulo}</option>
               ))}
@@ -157,7 +157,7 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
 
       <ModalConfirmacao
         aberto={confirmandoArquivarQuestionario}
-        titulo="Arquivar questionario"
+        titulo="Arquivar questionário"
         mensagem={questionarioAtual ? `Arquivar o questionario ${questionarioAtual.titulo}?` : ''}
         rotuloConfirmar="Arquivar"
         confirmando={salvando}

@@ -52,7 +52,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
                     </div>
                     {campo.obrigatoria ? (
                       <span className="shrink-0 rounded-md border border-sucesso-borda bg-sucesso-suave px-2 py-1 text-xs font-medium text-sucesso-forte">
-                        Obrigatoria
+                        Obrigatória
                       </span>
                     ) : null}
                   </div>

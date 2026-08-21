@@ -90,7 +90,7 @@ export function PainelOperacoes() {
         abas={areasOperacoes}
         ativaId={areaAtiva}
         aoMudar={(id) => setAreaAtiva(id as AreaOperacoes)}
-        rotulo="Áreas de operacoes"
+        rotulo="Áreas de operações"
       />
 
       <AreaSaude controlador={controlador} />

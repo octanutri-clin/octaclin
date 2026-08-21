@@ -382,7 +382,7 @@ export function PainelAutomacoes() {
                 onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, gatilhoTipo: evento.target.value }))}
               >
                 <option value="checkin.atrasado">Check-in atrasado</option>
-                <option value="questionario.respondido">Questionario respondido</option>
+                <option value="questionario.respondido">Questionário respondido</option>
                 <option value="paciente.risco_alto">Paciente em risco alto</option>
                 <option value={GATILHO_INATIVIDADE}>Paciente sem consulta há muito tempo</option>
               </Selecao>

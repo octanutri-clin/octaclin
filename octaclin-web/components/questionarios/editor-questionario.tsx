@@ -53,7 +53,7 @@ export function EditorQuestionario() {
         </p>
       ) : null}
 
-      <Abas identificador="questionarios" abas={areasQuestionarios} ativaId={areaAtiva} aoMudar={(id) => setAreaAtiva(id as AreaQuestionarios)} rotulo="Áreas de trabalho dos questionarios" />
+      <Abas identificador="questionarios" abas={areasQuestionarios} ativaId={areaAtiva} aoMudar={(id) => setAreaAtiva(id as AreaQuestionarios)} rotulo="Áreas de trabalho dos questionários" />
 
       <div id={`questionarios-${areaAtiva}-painel`} role="tabpanel" aria-labelledby={`questionarios-${areaAtiva}-aba`}>
         {areaAtiva === 'formularios' ? <AreaFormularios workspace={workspace} /> : null}

@@ -36,7 +36,7 @@ const itens = [
   { href: '/ia', rotulo: 'IA assistida', icone: BrainCircuit, permissao: 'ia.executar', grupo: 'Ferramentas', papeis: ['SuperAdmin', 'Professional'] },
   { href: '/gamificacao', rotulo: 'Metas e adesão', icone: Trophy, permissao: 'gamificacao.gerenciar', grupo: 'Ferramentas', papeis: ['SuperAdmin', 'Professional'] },
   { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope, permissao: 'profissionais.ler', grupo: 'Gestao', papeis: undefined },
-  { href: '/operacoes', rotulo: 'Operacoes', icone: Settings, permissao: 'operacoes.auditoria.ler', grupo: 'SuperAdmin', papeis: ['SuperAdmin'] }
+  { href: '/operacoes', rotulo: 'Operações', icone: Settings, permissao: 'operacoes.auditoria.ler', grupo: 'SuperAdmin', papeis: ['SuperAdmin'] }
 ] as const;
 
 const nomesPapel: Record<string, string> = {

@@ -3,7 +3,7 @@ import { PainelOperacoes } from '@/components/operacoes/painel-operacoes';
 
 export default function OperacoesPage() {
   return (
-    <ConsoleShell titulo="Confiabilidade OctaClin" subtitulo="Operacoes">
+    <ConsoleShell titulo="Confiabilidade OctaClin" subtitulo="Operações">
       <PainelOperacoes />
     </ConsoleShell>
   );

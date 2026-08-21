@@ -140,7 +140,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
               />
             </div>
             <label className="flex items-center justify-between rounded-md border border-linha bg-fundo px-3 py-2">
-              <span className="text-sm font-medium text-tinta">Obrigatoria</span>
+              <span className="text-sm font-medium text-tinta">Obrigatória</span>
               <input
                 type="checkbox"
                 checked={perguntaSelecionada.obrigatoria}
@@ -387,7 +387,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
                 <Check className="h-4 w-4" />
                 Contrato válido
               </div>
-              <p className="mt-1 text-xs">Edicoes sao persistidas em `PATCH /questionarios/:id/perguntas/:perguntaId`.</p>
+              <p className="mt-1 text-xs">Edicoes sao persistidas em `PATCH /questionários/:id/perguntas/:perguntaId`.</p>
             </div>
           </div>
         ) : (
