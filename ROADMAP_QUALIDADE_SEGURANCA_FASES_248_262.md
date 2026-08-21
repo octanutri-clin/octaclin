@@ -69,18 +69,18 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
 
 | PR | Situação observada | Necessidade | Decisão recomendada |
 | --- | --- | --- | --- |
-| `#22` | React Native e screens isolados; branch atrás; job Mobile falha | Não serve isoladamente | Substituido pelo PR `#84`; encerrar apos o CI |
-| `#24` | Safe Area Context major isolada; branch atrás | Depende da matriz Expo alvo | Substituido pelo PR `#84`; encerrar apos o CI |
-| `#25` | Expo 52 para 57 sozinho; grande troca de lockfile; branch atrás | É a direção, não um PR integrável sozinho | Substituido pelo PR `#84`; encerrar apos o CI |
-| `#29` | Expo AV major isolada; branch atrás | Depende do SDK alvo | Substituido pelo PR `#84`; encerrar apos o CI |
-| `#30` | Expo Status Bar major isolada; branch atrás | Depende da matriz Expo alvo | Substituido pelo PR `#84`; encerrar apos o CI |
+| `#22` | React Native e screens isolados; branch atras; job Mobile falha | Nao serve isoladamente | Encerrado; substituido pelo PR `#84` |
+| `#24` | Safe Area Context major isolada; branch atras | Depende da matriz Expo alvo | Encerrado; substituido pelo PR `#84` |
+| `#25` | Expo 52 para 57 sozinho; grande troca de lockfile; branch atras | Era a direcao, nao um PR integravel sozinho | Encerrado; substituido pelo PR `#84` |
+| `#29` | Expo AV major isolada; branch atras | Dependia do SDK alvo | Encerrado; substituido pelo PR `#84` |
+| `#30` | Expo Status Bar major isolada; branch atras | Dependia da matriz Expo alvo | Encerrado; substituido pelo PR `#84` |
 | `#6` | Fase 150A de julho, 10 commits, conflitos com `main` | Conteúdo atual já possui escopo Mobile/IA mais amplo e testes posteriores | Encerrar como superado; não tentar merge/cherry-pick |
 
-Nenhum PR aberto está pronto para merge. Não fechar automaticamente nesta
-auditoria: primeiro criar o PR substituto da Fase 243; depois registrar nos PRs
-automáticos o substituto. O PR `#6` pode ser encerrado independentemente porque
-está conflitante e a implementação atual já valida tenant, paciente,
-profissional responsável, mídia, hash, idempotência e locks em serviços mais
+O PR `#84` foi aprovado pelos sete jobs do CI `32430036184` e mergeado em
+`87b2f6a`. Os cinco PRs automaticos receberam a referencia ao substituto e foram
+encerrados. Resta aberto apenas o PR `#6`, a ser reconciliado na Fase 250; ele
+esta conflitante e a implementacao atual ja valida tenant, paciente,
+profissional responsavel, midia, hash, idempotencia e locks em servicos mais
 novos.
 
 ## Triagem dos alertas Dependabot
@@ -123,6 +123,8 @@ para builds, estações de desenvolvimento e uma futura distribuição Mobile.
   somente `GHSA-w3rx-r6r6-pgpr` e `GHSA-5p2g-fcmc-qvqq`, sem versao corrigida.
 - O gate do CI admite temporariamente apenas esse conjunto imutavel e reprova
   qualquer aviso novo, divergente ou silenciado.
+- A API do GitHub, consultada apos o merge, confirmou 2 alertas abertos, ambos
+  altos e ambos no pacote `image-size`.
 - O Mobile permanece desativado e nao distribuivel. Audit zerado, autenticacao,
   protecao do SQLite, captura real de midia e builds assinados continuam gates
   obrigatorios de uma futura retomada.

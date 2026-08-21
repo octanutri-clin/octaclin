@@ -13,6 +13,9 @@ Atualizado em 2026-08-20.
   patch upstream. O app segue fora da oferta, com `mobile.sync=false` e NO-GO
   para distribuicao ate zerar o audit e fechar autenticacao, dados locais,
   captura real, identidade e builds assinados.
+  O PR `#84` foi mergeado em `87b2f6a` com os sete jobs do CI
+  `32430036184` verdes. A API do GitHub confirmou a queda de 37 para 2 alertas;
+  os cinco PRs Dependabot substituidos foram encerrados.
 - Fase 247 concluída: antes do piloto, o OctaClin ganhou `DESIGN.md` e
   `UX-CONTRACT.md`, scrollbar global, controles compartilhados de 44 px e
   linguagem corrigida no shell, erros globais, feedback, cadastro e exames.

@@ -32,7 +32,7 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Responsavel: Codex, com revisao independente read-only.
 - Inicio e conclusao: 2026-08-20.
 - Commit: `069b7ce`.
-- Push: PR `#84`, conforme ruleset da `main`.
+- Push: PR `#84`, merge `87b2f6a`.
 - Validacoes: install congelado, typecheck, Expo Doctor, 6 testes do gate de
   seguranca, auditoria controlada, verificacao de alinhamento, introspeccao
   nativa e export Android/iOS/web.
@@ -40,6 +40,8 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
   `fase-243-modernizacao-hardening-mobile.md`.
 - Pendencias: dois avisos altos de `image-size` sem patch e todos os gates de
   distribuicao; `mobile.sync=false` permanece.
+- CI: `32430036184`, sete jobs aprovados. PRs `#22`, `#24`, `#25`, `#29` e
+  `#30` encerrados como superados.
 - Proxima fase: Fase 248 - estados e recuperacao das superficies clinicas.
 
 ### Fase 246 - Operacao segura de repositorio publico e reconciliacao documental

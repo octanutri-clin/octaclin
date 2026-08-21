@@ -686,7 +686,9 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   lockfile congelado, Doctor, typecheck, testes de seguranca, auditoria e
   bundles Android/iOS/web. A auditoria local caiu de 38 para 2 avisos altos de
   `image-size` sem patch; o gate admite apenas esses dois identificadores e o
-  app continua com `mobile.sync=false` e NO-GO para distribuicao. Ver
+  app continua com `mobile.sync=false` e NO-GO para distribuicao. PR `#84`,
+  merge `87b2f6a` e CI `32430036184` aprovados; os cinco PRs automaticos
+  superados foram encerrados. Ver
   `fase-243-modernizacao-hardening-mobile.md`.
 - Fase 244 - Quitacao da divida de dependencias: atualizacoes fora do Mobile,
   incluindo TypeScript 6, `@types/node` 26, cron-parser 5 com teste de fuso,
