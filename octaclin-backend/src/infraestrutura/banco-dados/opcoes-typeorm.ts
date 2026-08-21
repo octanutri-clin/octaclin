@@ -47,6 +47,7 @@ import { CriarModelosPlanoAlimentar1720000001031 } from './migracoes/17200000010
 import { LiberarSubstituicoesAoPaciente1720000001032 } from './migracoes/1720000001032-LiberarSubstituicoesAoPaciente';
 import { CriarReceitasNutricionais1720000001033 } from './migracoes/1720000001033-CriarReceitasNutricionais';
 import { ProtegerResolucaoAgendaPublica1720000001034 } from './migracoes/1720000001034-ProtegerResolucaoAgendaPublica';
+import { CriarFiltrosSalvosPacientes1720000001035 } from './migracoes/1720000001035-CriarFiltrosSalvosPacientes';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -301,7 +302,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarModelosPlanoAlimentar1720000001031,
         LiberarSubstituicoesAoPaciente1720000001032,
         CriarReceitasNutricionais1720000001033,
-        ProtegerResolucaoAgendaPublica1720000001034
+        ProtegerResolucaoAgendaPublica1720000001034,
+        CriarFiltrosSalvosPacientes1720000001035
       ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,
