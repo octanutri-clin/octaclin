@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
-import { DataSource, EntityManager, In, IsNull, LessThan, MoreThan } from 'typeorm';
+import { DataSource, EntityManager, In, IsNull, LessThan, LessThanOrEqual, MoreThan } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -11,6 +11,7 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
+import { AgendaBloqueioManualOrm } from '../infraestrutura/agenda-bloqueio-manual.orm';
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
 import { AgendaLinkPublicoOrm } from '../infraestrutura/agenda-link-publico.orm';
 import { AgendaSolicitacaoOrm, StatusAgendaSolicitacao } from '../infraestrutura/agenda-solicitacao.orm';
@@ -40,6 +41,7 @@ const DURACAO_PADRAO_LINK_MINUTOS = 50;
 const TIMEZONE_PADRAO = 'America/Sao_Paulo';
 const MENSAGEM_LINK_INDISPONIVEL = 'Link de agendamento indisponivel.';
 const MENSAGEM_HORARIO_INDISPONIVEL = 'Horario indisponivel.';
+const DURACAO_CLAIM_APROVACAO_MS = 5 * 60 * 1000;
 
 interface LinkPublicoAtivo {
   tenantId: string;
@@ -359,6 +361,7 @@ export class ServicoAgendamentoPublico {
           profissionalId: contexto.solicitacao.profissionalId,
           inicioEm: contexto.solicitacao.inicioEm.toISOString(),
           fimEm: contexto.solicitacao.fimEm.toISOString(),
+          referenciaExterna: `agenda-publica:${solicitacaoId}`,
           ...(contexto.observacao ? { observacoes: contexto.observacao } : {})
         },
         usuario
@@ -430,15 +433,18 @@ export class ServicoAgendamentoPublico {
 
   private async resolverLinkAtivo(token: string, ip: string, escopo: 'consulta' | 'solicitacao'): Promise<LinkPublicoAtivo> {
     const tokenHash = createHash('sha256').update(token).digest('hex');
+    const chaveAbusoGlobal = `agenda_publica:${escopo}:${ip || 'ip-desconhecido'}`;
     const chaveAbuso = `agenda_publica:${escopo}:${ip || 'ip-desconhecido'}:${tokenHash}`;
     const politica = escopo === 'consulta' ? POLITICA_PUBLICA_CONSULTA : POLITICA_PUBLICA_ENVIO;
 
+    await this.protecaoAbuso.consumirTentativa(chaveAbusoGlobal, politica);
     await this.protecaoAbuso.consumirTentativa(chaveAbuso, politica);
 
-    const link = await this.fonteDados.getRepository(AgendaLinkPublicoOrm).findOne({
-      where: { tokenHash, ativo: true }
-    });
-    if (!link?.ativo) throw new NotFoundException(MENSAGEM_LINK_INDISPONIVEL);
+    const [link] = (await this.fonteDados.query(
+      'select tenant_id as "tenantId", profissional_id as "profissionalId", duracao_minutos as "duracaoMinutos" from resolver_agenda_link_publico($1)',
+      [tokenHash]
+    )) as Array<{ tenantId: string; profissionalId: string; duracaoMinutos: number }>;
+    if (!link) throw new NotFoundException(MENSAGEM_LINK_INDISPONIVEL);
 
     return {
       tenantId: link.tenantId,
@@ -454,7 +460,7 @@ export class ServicoAgendamentoPublico {
     inicioJanela: Date,
     fimJanela: Date
   ): Promise<FaixaHorario[]> {
-    const [consultas, bloqueios] = await Promise.all([
+    const [consultas, bloqueios, bloqueiosManuais] = await Promise.all([
       gerenciador.getRepository(AgendaConsultaOrm).find({
         where: {
           tenantId,
@@ -471,10 +477,18 @@ export class ServicoAgendamentoPublico {
           inicioEm: LessThan(fimJanela),
           fimEm: MoreThan(inicioJanela)
         }
+      }),
+      gerenciador.getRepository(AgendaBloqueioManualOrm).find({
+        where: {
+          tenantId,
+          profissionalId,
+          inicioEm: LessThan(fimJanela),
+          fimEm: MoreThan(inicioJanela)
+        }
       })
     ]);
 
-    return [...consultas, ...bloqueios]
+    return [...consultas, ...bloqueios, ...bloqueiosManuais]
       .map((item) => ({ inicioEm: item.inicioEm, fimEm: item.fimEm }))
       .sort((a, b) => a.inicioEm.getTime() - b.inicioEm.getTime());
   }
@@ -605,6 +619,26 @@ export class ServicoAgendamentoPublico {
     );
 
     if (affected.affected) {
+      const claimed = await repositorio.findOne({ where: { id: solicitacaoId, tenantId } });
+      if (!claimed) throw new NotFoundException('Solicitacao nao encontrada.');
+      return claimed;
+    }
+
+    const limiteClaimAbandonado = new Date(claimedAt.getTime() - DURACAO_CLAIM_APROVACAO_MS);
+    const recuperado = await repositorio.update(
+      {
+        id: solicitacaoId,
+        tenantId,
+        status: 'processando',
+        decididaEm: LessThanOrEqual(limiteClaimAbandonado),
+        expiraEm: MoreThan(claimedAt)
+      },
+      {
+        decididaEm: claimedAt,
+        decididaPorUsuarioId: usuario.usuarioId
+      }
+    );
+    if (recuperado.affected) {
       const claimed = await repositorio.findOne({ where: { id: solicitacaoId, tenantId } });
       if (!claimed) throw new NotFoundException('Solicitacao nao encontrada.');
       return claimed;

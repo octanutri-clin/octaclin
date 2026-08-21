@@ -9,14 +9,19 @@ async function assertSemOverflowHorizontal(page) {
   expect(medidas.larguraDocumento).toBeLessThanOrEqual(medidas.larguraViewport + 1);
 }
 
-async function prepararPaginaPublica(page) {
+async function prepararPaginaPublica(page, { conflitoNaPrimeiraConfirmacao = false } = {}) {
   let solicitacaoEnviada = null;
+  let carregamentosAgenda = 0;
+  let tentativasEnvio = 0;
+  let conflitoRegistrado = false;
 
   await page.route('**/api/agendamentos-publicos/token-publico', async (route) => {
     if (route.request().method() !== 'GET') {
       await route.fallback();
       return;
     }
+    carregamentosAgenda += 1;
+    const horarioConflitanteDisponivel = !conflitoNaPrimeiraConfirmacao || !conflitoRegistrado;
 
     await route.fulfill({
       status: 200,
@@ -34,7 +39,9 @@ async function prepararPaginaPublica(page) {
             data: '2026-08-03',
             rotulo: '03/08/2026',
             horarios: [
-              { inicioEm: '2026-08-03T13:00:00.000Z', rotulo: '10:00' },
+              ...(horarioConflitanteDisponivel
+                ? [{ inicioEm: '2026-08-03T13:00:00.000Z', rotulo: '10:00' }]
+                : []),
               { inicioEm: '2026-08-03T14:00:00.000Z', rotulo: '11:00' }
             ]
           }
@@ -44,7 +51,18 @@ async function prepararPaginaPublica(page) {
   });
 
   await page.route('**/api/agendamentos-publicos/token-publico/solicitacoes', async (route) => {
+    tentativasEnvio += 1;
     solicitacaoEnviada = JSON.parse(route.request().postData() ?? '{}');
+
+    if (conflitoNaPrimeiraConfirmacao && tentativasEnvio === 1) {
+      conflitoRegistrado = true;
+      await route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Horário indisponível.' })
+      });
+      return;
+    }
 
     await route.fulfill({
       status: 201,
@@ -58,7 +76,8 @@ async function prepararPaginaPublica(page) {
   });
 
   return {
-    solicitacaoEnviada: () => solicitacaoEnviada
+    solicitacaoEnviada: () => solicitacaoEnviada,
+    carregamentosAgenda: () => carregamentosAgenda
   };
 }
 
@@ -282,6 +301,26 @@ async function prepararAgendaInterna(page) {
 }
 
 test.describe('agendamento publico', () => {
+  test('Fase 253 preserva os dados e atualiza horários quando a vaga é ocupada durante a confirmação', async ({ page }) => {
+    const pagina = await prepararPaginaPublica(page, { conflitoNaPrimeiraConfirmacao: true });
+    await page.goto('/agendar/token-publico');
+
+    await page.getByRole('button', { name: '10:00' }).click();
+    await page.getByLabel('Nome completo').fill('Ana Silva');
+    await page.getByLabel('Email').fill('ana@exemplo.com');
+    await page.getByRole('button', { name: 'Revisar solicitação' }).click();
+    const revisao = page.getByRole('dialog', { name: 'Revise sua solicitação' });
+    await revisao.getByRole('button', { name: 'Confirmar solicitação' }).click();
+
+    await expect(revisao).toBeVisible();
+    await expect(revisao.getByRole('alert')).toContainText('Horário indisponível');
+    await expect.poll(() => pagina.carregamentosAgenda()).toBeGreaterThanOrEqual(2);
+    await expect(page.getByLabel('Nome completo')).toHaveValue('Ana Silva');
+    await expect(page.getByLabel('Email')).toHaveValue('ana@exemplo.com');
+    await expect(page.getByRole('button', { name: '10:00' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '11:00' })).toBeVisible();
+  });
+
   test('envia solicitacao sem mostrar dados de outros pacientes', async ({ page }) => {
     const pagina = await prepararPaginaPublica(page);
 

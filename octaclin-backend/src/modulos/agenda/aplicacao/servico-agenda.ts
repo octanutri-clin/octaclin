@@ -253,6 +253,7 @@ export class ServicoAgenda {
       });
       if (!profissional) throw new NotFoundException('Profissional nao encontrado.');
 
+      await this.bloquearAgendaProfissional(gerenciador, tenantId, profissionalId);
       await this.validarConflitoHorario(gerenciador, tenantId, profissionalId, { inicioEm, fimEm });
       const repositorio = gerenciador.getRepository(AgendaBloqueioManualOrm);
       const bloqueio = await repositorio.save(
@@ -281,6 +282,7 @@ export class ServicoAgenda {
         where: { id: bloqueioId, tenantId, ...(profissionalId ? { profissionalId } : {}) }
       });
       if (!bloqueio) throw new NotFoundException('Bloqueio de agenda nao encontrado.');
+      await this.bloquearAgendaProfissional(gerenciador, tenantId, bloqueio.profissionalId);
       await repositorio.remove(bloqueio);
       return { id: bloqueio.id };
     });
@@ -329,6 +331,97 @@ export class ServicoAgenda {
     return this.mapearResposta(consultaAtualizada, contexto.pacienteNome, contexto.profissionalNome);
   }
 
+  async reprocessarIntegracoes(
+    tenantId: string,
+    consultaId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<ConsultaAgendaRespostaDto> {
+    const profissionalIdDoUsuario = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)
+    );
+    const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const atual = await gerenciador.getRepository(AgendaConsultaOrm).findOne({
+        where: {
+          id: consultaId,
+          tenantId,
+          ...(profissionalIdDoUsuario ? { profissionalId: profissionalIdDoUsuario } : {})
+        }
+      });
+      if (!atual) throw new NotFoundException('Consulta nao encontrada.');
+      return atual;
+    });
+
+    const credenciais = consulta.profissionalId
+      ? await this.servicoConexao.obterConexaoAtiva(tenantId, consulta.profissionalId)
+      : undefined;
+    const google = consulta.status === 'cancelada'
+      ? consulta.googleCalendarId && consulta.googleEventId
+        ? await this.googleCalendar.cancelarEvento({
+            calendarId: consulta.googleCalendarId,
+            eventId: consulta.googleEventId,
+            credenciais
+          })
+        : { sincronizado: false as const, motivo: 'evento_google_ausente' }
+      : consulta.googleCalendarId && consulta.googleEventId
+        ? await this.googleCalendar.atualizarEvento({
+            calendarId: consulta.googleCalendarId,
+            eventId: consulta.googleEventId,
+            consultaId: consulta.id,
+            resumo: consulta.titulo,
+            descricao: this.montarDescricaoEvento({
+              consulta,
+              pacienteNome: this.nomePacientePayload(consulta),
+              profissionalNome: this.nomeProfissionalPayload(consulta),
+              textoMensagem: ''
+            }),
+            inicioEm: consulta.inicioEm,
+            fimEm: consulta.fimEm,
+            timezone: consulta.timezone,
+            local: consulta.local,
+            emailConvidado: this.emailContatoPayload(consulta),
+            credenciais
+          })
+        : await this.googleCalendar.criarEvento({
+            resumo: consulta.titulo,
+            descricao: this.montarDescricaoEvento({
+              consulta,
+              pacienteNome: this.nomePacientePayload(consulta),
+              profissionalNome: this.nomeProfissionalPayload(consulta),
+              textoMensagem: ''
+            }),
+            inicioEm: consulta.inicioEm,
+            fimEm: consulta.fimEm,
+            timezone: consulta.timezone,
+            local: consulta.local,
+            emailConvidado: this.emailContatoPayload(consulta),
+            consultaId: consulta.id,
+            credenciais
+          });
+
+    const notificacoesAtuais = (consulta.notificacoes ?? {}) as NotificacoesConsultaAgenda;
+    const cancelamento = consulta.status === 'cancelada';
+    const contexto = this.contextoDeConsultaExistente(consulta, cancelamento);
+    const notificacoesReprocessadas = await this.reprocessarNotificacoes(
+      tenantId,
+      contexto,
+      cancelamento ? EVENTO_CONSULTA_CANCELADA : EVENTO_CONSULTA_AGENDADA,
+      cancelamento
+        ? { email: notificacoesAtuais.cancelamentoEmail, whatsapp: notificacoesAtuais.cancelamentoWhatsapp }
+        : { email: notificacoesAtuais.email, whatsapp: notificacoesAtuais.whatsapp }
+    );
+    const notificacoes: NotificacoesConsultaAgenda = cancelamento
+      ? {
+          ...notificacoesAtuais,
+          cancelamentoEmail: notificacoesReprocessadas.email,
+          cancelamentoWhatsapp: notificacoesReprocessadas.whatsapp,
+          googleCalendar: google
+        }
+      : { ...notificacoesAtuais, ...notificacoesReprocessadas, googleCalendar: google };
+
+    const atualizada = await this.persistirResultadoIntegracoes(tenantId, consulta.id, google, notificacoes);
+    return this.mapearResposta(atualizada);
+  }
+
   async remarcarConsulta(
     tenantId: string,
     consultaId: string,
@@ -345,9 +438,10 @@ export class ServicoAgenda {
     tenantId: string,
     consultaId: string,
     dados: RemarcarConsultaAgendaDto,
-    profissionalId: string
+    profissionalId: string,
+    googleEventId: string
   ): Promise<ConsultaAgendaRespostaDto> {
-    return this.executarRemarcacao(tenantId, consultaId, dados, profissionalId, false);
+    return this.executarRemarcacao(tenantId, consultaId, dados, profissionalId, false, googleEventId);
   }
 
   private async executarRemarcacao(
@@ -355,7 +449,8 @@ export class ServicoAgenda {
     consultaId: string,
     dados: RemarcarConsultaAgendaDto,
     profissionalIdEscopo: string | undefined,
-    propagarParaGoogle: boolean
+    propagarParaGoogle: boolean,
+    googleEventIdEscopo?: string
   ): Promise<ConsultaAgendaRespostaDto> {
     const inicioEm = dataValida(dados.inicioEm);
     const fimEm = this.calcularFim(inicioEm, dados);
@@ -364,12 +459,25 @@ export class ServicoAgenda {
     const consulta = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
       const atual = await repositorio.findOne({
-        where: { id: consultaId, tenantId, ...(profissionalIdEscopo ? { profissionalId: profissionalIdEscopo } : {}) },
+        where: {
+          id: consultaId,
+          tenantId,
+          ...(profissionalIdEscopo ? { profissionalId: profissionalIdEscopo } : {}),
+          ...(googleEventIdEscopo ? { googleEventId: googleEventIdEscopo } : {})
+        },
         lock: { mode: 'pessimistic_write' }
       });
       if (!atual) throw new NotFoundException('Consulta nao encontrada.');
+      await this.bloquearAgendaProfissional(gerenciador, tenantId, atual.profissionalId);
       if (STATUS_CONSULTA_TERMINAIS.includes(atual.status)) {
         throw new BadRequestException('Consulta encerrada nao pode ser remarcada.');
+      }
+      if (
+        !propagarParaGoogle &&
+        atual.inicioEm.getTime() === inicioEm.getTime() &&
+        atual.fimEm.getTime() === fimEm.getTime()
+      ) {
+        return atual;
       }
 
       await this.validarConflitoHorario(gerenciador, tenantId, atual.profissionalId, { inicioEm, fimEm }, atual.id);
@@ -456,6 +564,7 @@ export class ServicoAgenda {
         lock: { mode: 'pessimistic_write' }
       });
       if (!consulta) throw new NotFoundException('Consulta nao encontrada.');
+      await this.bloquearAgendaProfissional(gerenciador, tenantId, consulta.profissionalId);
       if (STATUS_CONSULTA_TERMINAIS.includes(consulta.status)) {
         throw new BadRequestException('Consulta encerrada nao pode receber novo desfecho.');
       }
@@ -510,16 +619,17 @@ export class ServicoAgenda {
     tenantId: string,
     consultaId: string,
     dados: CancelarConsultaAgendaDto,
-    profissionalId: string
+    profissionalId: string,
+    googleEventId: string
   ): Promise<ConsultaAgendaRespostaDto> {
-    return this.executarCancelamento(tenantId, consultaId, dados, { profissionalId }, 'google', false);
+    return this.executarCancelamento(tenantId, consultaId, dados, { profissionalId, googleEventId }, 'google', false);
   }
 
   private async executarCancelamento(
     tenantId: string,
     consultaId: string,
     dados: CancelarConsultaAgendaDto,
-    escopo: { profissionalId?: string; pacienteId?: string },
+    escopo: { profissionalId?: string; pacienteId?: string; googleEventId?: string },
     origem: OrigemCancelamentoConsulta,
     propagarParaGoogle: boolean,
     permitirCancelamentoIdempotente = true
@@ -531,11 +641,13 @@ export class ServicoAgenda {
           id: consultaId,
           tenantId,
           ...(escopo.profissionalId ? { profissionalId: escopo.profissionalId } : {}),
-          ...(escopo.pacienteId ? { pacienteId: escopo.pacienteId } : {})
+          ...(escopo.pacienteId ? { pacienteId: escopo.pacienteId } : {}),
+          ...(escopo.googleEventId ? { googleEventId: escopo.googleEventId } : {})
         },
         lock: { mode: 'pessimistic_write' }
       });
       if (!atual) throw new NotFoundException('Consulta nao encontrada.');
+      await this.bloquearAgendaProfissional(gerenciador, tenantId, atual.profissionalId);
       if (atual.status === 'cancelada' && permitirCancelamentoIdempotente) return atual;
       if (STATUS_CONSULTA_TERMINAIS.includes(atual.status)) {
         throw new BadRequestException(
@@ -582,20 +694,24 @@ export class ServicoAgenda {
         })
       : { sincronizado: false as const, motivo: 'evento_google_ausente' };
 
-    const consultaFinal = await this.aplicarResultadoGoogle(tenantId, consulta.id, google);
+    let consultaFinal = await this.aplicarResultadoGoogle(tenantId, consulta.id, google);
 
     if (origem === 'profissional') {
-      await this.notificarCancelamentoAoPaciente(tenantId, consultaFinal);
+      consultaFinal = await this.notificarCancelamentoAoPaciente(tenantId, consultaFinal, google);
     }
 
     return this.mapearResposta(consultaFinal);
   }
 
-  private async notificarCancelamentoAoPaciente(tenantId: string, consulta: AgendaConsultaOrm): Promise<void> {
+  private async notificarCancelamentoAoPaciente(
+    tenantId: string,
+    consulta: AgendaConsultaOrm,
+    google: ResultadoGoogleCalendar
+  ): Promise<AgendaConsultaOrm> {
     const payload = (consulta.payload ?? {}) as Record<string, unknown>;
     const emailContato = typeof payload.emailContato === 'string' ? payload.emailContato : undefined;
     const whatsappContato = typeof payload.whatsappContato === 'string' ? payload.whatsappContato : undefined;
-    if (!emailContato && !whatsappContato) return;
+    if (!emailContato && !whatsappContato) return consulta;
 
     const pacienteNome = this.nomePacientePayload(consulta);
     const contexto: ContextoConsultaCriada = {
@@ -606,7 +722,17 @@ export class ServicoAgenda {
       whatsappContato,
       textoMensagem: this.montarTextoMensagemCancelamento(pacienteNome, consulta.inicioEm)
     };
-    await this.enviarNotificacoes(tenantId, contexto, EVENTO_CONSULTA_CANCELADA);
+    const atuais = (consulta.notificacoes ?? {}) as NotificacoesConsultaAgenda;
+    const resultados = await this.reprocessarNotificacoes(tenantId, contexto, EVENTO_CONSULTA_CANCELADA, {
+      email: atuais.cancelamentoEmail,
+      whatsapp: atuais.cancelamentoWhatsapp
+    });
+    return this.persistirResultadoIntegracoes(tenantId, consulta.id, google, {
+      ...atuais,
+      cancelamentoEmail: resultados.email,
+      cancelamentoWhatsapp: resultados.whatsapp,
+      googleCalendar: google
+    });
   }
 
   private async criarRegistroInterno(
@@ -632,6 +758,7 @@ export class ServicoAgenda {
           })
         : null;
       if (profissionalId && !profissional) throw new NotFoundException('Profissional nao encontrado.');
+      await this.bloquearAgendaProfissional(gerenciador, tenantId, profissionalId);
       await this.validarConflitoHorario(gerenciador, tenantId, profissionalId, { inicioEm, fimEm });
 
       const pacienteNome = this.criptografia.descriptografar(paciente.nomeCriptografado);
@@ -850,6 +977,41 @@ export class ServicoAgenda {
     if (conflitoManual) throw new BadRequestException(MENSAGEM_CONFLITO_HORARIO);
   }
 
+  private async persistirResultadoIntegracoes(
+    tenantId: string,
+    consultaId: string,
+    google: ResultadoGoogleCalendar,
+    notificacoes: NotificacoesConsultaAgenda
+  ): Promise<AgendaConsultaOrm> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
+      const consulta = await repositorio.findOne({
+        where: { id: consultaId, tenantId },
+        lock: { mode: 'pessimistic_write' }
+      });
+      if (!consulta) throw new NotFoundException('Consulta nao encontrada.');
+      if (google.sincronizado) {
+        consulta.googleCalendarId = google.calendarId;
+        consulta.googleEventId = google.eventId;
+        consulta.googleEventHtmlLink = google.htmlLink ?? consulta.googleEventHtmlLink;
+      }
+      consulta.notificacoes = { ...notificacoes };
+      consulta.payload = { ...consulta.payload, googleCalendar: google };
+      return repositorio.save(consulta);
+    });
+  }
+
+  private async bloquearAgendaProfissional(
+    gerenciador: EntityManager,
+    tenantId: string,
+    profissionalId: string | undefined
+  ): Promise<void> {
+    if (!profissionalId) return;
+    await gerenciador.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
+      `octaclin:agenda:${tenantId}:${profissionalId}`
+    ]);
+  }
+
   private async salvarConsultaProtegidaContraSobreposicao(
     operacao: () => Promise<AgendaConsultaOrm>
   ): Promise<AgendaConsultaOrm> {
@@ -901,6 +1063,70 @@ export class ServicoAgenda {
     return { email, whatsapp };
   }
 
+  private async reprocessarNotificacoes(
+    tenantId: string,
+    contexto: ContextoConsultaCriada,
+    evento: string,
+    atuais: { email?: ResultadoNotificacaoAgenda; whatsapp?: ResultadoNotificacaoAgenda }
+  ): Promise<{ email: ResultadoNotificacaoAgenda; whatsapp: ResultadoNotificacaoAgenda }> {
+    const [canais, templates] = await Promise.all([
+      this.comunicacoes.listarCanais(tenantId),
+      this.comunicacoes.listarTemplates(tenantId)
+    ]);
+    return {
+      email: await this.reprocessarNotificacao(tenantId, 'email', contexto, canais, templates, evento, atuais.email),
+      whatsapp: await this.reprocessarNotificacao(
+        tenantId,
+        'whatsapp',
+        contexto,
+        canais,
+        templates,
+        evento,
+        atuais.whatsapp
+      )
+    };
+  }
+
+  private async reprocessarNotificacao(
+    tenantId: string,
+    tipo: 'email' | 'whatsapp',
+    contexto: ContextoConsultaCriada,
+    canais: CanalNotificacaoOrm[],
+    templates: TemplateMensagemOrm[],
+    evento: string,
+    atual?: ResultadoNotificacaoAgenda
+  ): Promise<ResultadoNotificacaoAgenda> {
+    if (atual?.status === 'pendente' || atual?.status === 'enviado') return atual;
+    if (atual?.status === 'ignorado' && !['canal_ausente', 'template_ausente'].includes(atual.motivo)) return atual;
+    if (atual?.status === 'falhou' && atual.mensagemId) {
+      try {
+        await this.comunicacoes.publicarEventoNotificacao(tenantId, atual.mensagemId);
+        return { status: 'pendente', mensagemId: atual.mensagemId };
+      } catch (erro) {
+        return {
+          status: 'falhou',
+          mensagemId: atual.mensagemId,
+          erro: erro instanceof Error ? erro.message : 'Falha ao republicar notificacao.'
+        };
+      }
+    }
+    return this.enviarNotificacao(tenantId, tipo, contexto, canais, templates, evento);
+  }
+
+  private contextoDeConsultaExistente(consulta: AgendaConsultaOrm, cancelamento: boolean): ContextoConsultaCriada {
+    const pacienteNome = this.nomePacientePayload(consulta);
+    return {
+      consulta,
+      pacienteNome,
+      profissionalNome: this.nomeProfissionalPayload(consulta),
+      emailContato: this.emailContatoPayload(consulta),
+      whatsappContato: this.whatsappContatoPayload(consulta),
+      textoMensagem: cancelamento
+        ? this.montarTextoMensagemCancelamento(pacienteNome, consulta.inicioEm)
+        : this.montarTextoMensagem(pacienteNome, consulta.inicioEm, consulta.linkTeleconsulta)
+    };
+  }
+
   private async enviarNotificacao(
     tenantId: string,
     tipo: 'email' | 'whatsapp',
@@ -926,7 +1152,15 @@ export class ServicoAgenda {
         templateId: template.id,
         payload
       });
-      await this.comunicacoes.publicarEventoNotificacao(tenantId, mensagem.id);
+      try {
+        await this.comunicacoes.publicarEventoNotificacao(tenantId, mensagem.id);
+      } catch (erro) {
+        return {
+          status: 'falhou',
+          mensagemId: mensagem.id,
+          erro: erro instanceof Error ? erro.message : 'Falha ao publicar notificacao.'
+        };
+      }
       return { status: 'pendente', mensagemId: mensagem.id };
     } catch (erro) {
       return { status: 'falhou', erro: erro instanceof Error ? erro.message : 'Falha ao disparar notificacao.' };

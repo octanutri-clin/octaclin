@@ -5,6 +5,7 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { ServicoProtecaoAbuso } from '../../auth/aplicacao/servico-protecao-abuso';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
+import { AgendaBloqueioManualOrm } from '../infraestrutura/agenda-bloqueio-manual.orm';
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
 import { AgendaLinkPublicoOrm } from '../infraestrutura/agenda-link-publico.orm';
 import { AgendaSolicitacaoOrm } from '../infraestrutura/agenda-solicitacao.orm';
@@ -22,6 +23,7 @@ interface EstadoFalso {
   profissional?: ProfissionalOrm | null;
   consultas?: AgendaConsultaOrm[];
   bloqueios?: AgendaBloqueioExternoOrm[];
+  bloqueiosManuais?: AgendaBloqueioManualOrm[];
   solicitacoes?: AgendaSolicitacaoOrm[];
   criarConsultaImpl?: (tenantId: string, entrada: Record<string, unknown>, usuario: UsuarioAutenticado) => Promise<unknown>;
   cancelarConsultaImpl?: (tenantId: string, consultaId: string, usuario: UsuarioAutenticado) => Promise<unknown>;
@@ -37,6 +39,9 @@ function coincideWhere<T extends object>(registro: T, where: Partial<T> = {}): b
       const operador = valor as { _type?: string; _value?: unknown };
       if (operador._type === 'moreThan') return atual instanceof Date && operador._value instanceof Date && atual > operador._value;
       if (operador._type === 'lessThan') return atual instanceof Date && operador._value instanceof Date && atual < operador._value;
+      if (operador._type === 'lessThanOrEqual') {
+        return atual instanceof Date && operador._value instanceof Date && atual <= operador._value;
+      }
       if (operador._type === 'isNull') return atual == null;
       if (operador._type === 'in') return Array.isArray(operador._value) && operador._value.includes(atual);
       return true;
@@ -116,6 +121,12 @@ function criarRepositorioBloqueio(estado: EstadoFalso) {
   };
 }
 
+function criarRepositorioBloqueioManual(estado: EstadoFalso) {
+  return {
+    find: jest.fn(async () => estado.bloqueiosManuais ?? [])
+  };
+}
+
 function criarRepositorioConfiguracaoTenant(estado: EstadoFalso) {
   return {
     findOne: jest.fn(async () => estado.configuracaoTenant ?? null)
@@ -187,6 +198,7 @@ function criarServico(estado: EstadoFalso = {}) {
     profissional: criarRepositorioProfissional(estado),
     consulta: criarRepositorioConsulta(estado),
     bloqueio: criarRepositorioBloqueio(estado),
+    bloqueioManual: criarRepositorioBloqueioManual(estado),
     solicitacao: criarRepositorioSolicitacao(estado),
     configuracaoTenant: criarRepositorioConfiguracaoTenant(estado),
     tenant: criarRepositorioTenant(estado)
@@ -197,6 +209,7 @@ function criarServico(estado: EstadoFalso = {}) {
       if (entidade === ProfissionalOrm) return repositorios.profissional;
       if (entidade === AgendaConsultaOrm) return repositorios.consulta;
       if (entidade === AgendaBloqueioExternoOrm) return repositorios.bloqueio;
+      if (entidade === AgendaBloqueioManualOrm) return repositorios.bloqueioManual;
       if (entidade === AgendaSolicitacaoOrm) return repositorios.solicitacao;
       if (entidade === TenantConfiguracaoOrm) return repositorios.configuracaoTenant;
       if (entidade === TenantOrm) return repositorios.tenant;
@@ -208,9 +221,19 @@ function criarServico(estado: EstadoFalso = {}) {
     })
   };
   const fonteDados = {
-    getRepository: jest.fn((entidade: { name: string }) => {
-      if (entidade === AgendaLinkPublicoOrm) return repositorios.link;
-      throw new Error(`Repositorio global nao mapeado: ${entidade.name}`);
+    query: jest.fn(async (_sql: string, parametros: [string]) => {
+      const tokenHash = parametros[0];
+      const link = repositorios.link
+        .todos()
+        .find((item) => item.tokenHash === tokenHash && item.ativo);
+      if (!link) return [];
+      return [
+        {
+          tenantId: link.tenantId,
+          profissionalId: link.profissionalId,
+          duracaoMinutos: link.duracaoMinutos
+        }
+      ];
     })
   };
   const executorTenant = {
@@ -358,7 +381,7 @@ describe('ServicoAgendamentoPublico', () => {
   });
 
   it('retorna somente resumo publico com horarios livres e bloqueia lookup apos antiabuso', async () => {
-    const { servico, protecaoAbuso, repositorios } = criarServico({
+    const { servico, fonteDados, protecaoAbuso, repositorios } = criarServico({
       link: criarLinkAtivo(),
       profissional: criarProfissional(),
       consultas: [
@@ -400,7 +423,7 @@ describe('ServicoAgendamentoPublico', () => {
 
     expect(protecaoAbuso.consumirTentativa).toHaveBeenCalled();
     expect(consumirTentativaMock.mock.invocationCallOrder[0]).toBeLessThan(
-      repositorios.link.findOne.mock.invocationCallOrder[0]
+      fonteDados.query.mock.invocationCallOrder[0]
     );
     expect(resumo.profissionalNome).toBe('Dra. Carla');
     expect((resumo as typeof resumo & { clinica?: unknown }).clinica).toEqual({ nome: 'OctaClin', corPrimaria: '#197d8f' });
@@ -509,6 +532,29 @@ describe('ServicoAgendamentoPublico', () => {
     const resumo = await servico.obterAgendaPublica('token-valido', '203.0.113.5');
 
     expect(resumo.horariosLivres).not.toContain('2026-07-26T14:00:00.000Z');
+  });
+
+  it('nao oferece como livre um horario protegido por bloqueio manual da agenda interna', async () => {
+    const { servico } = criarServico({
+      link: criarLinkAtivo(),
+      profissional: criarProfissional(),
+      bloqueiosManuais: [
+        {
+          id: 'bloqueio-manual-1',
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          inicioEm: new Date('2026-07-26T15:00:00.000Z'),
+          fimEm: new Date('2026-07-26T16:00:00.000Z'),
+          tipo: 'reuniao',
+          criadoEm: new Date('2026-07-01T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-01T12:00:00.000Z')
+        } as AgendaBloqueioManualOrm
+      ]
+    });
+
+    const resumo = await servico.obterAgendaPublica('token-valido', '203.0.113.5');
+
+    expect(resumo.horariosLivres).not.toContain('2026-07-26T15:00:00.000Z');
   });
 
   it('retorna resposta neutra para token ausente ou inativo', async () => {
@@ -801,6 +847,34 @@ describe('ServicoAgendamentoPublico', () => {
         status: 'aprovada',
         consultaId: 'consulta-claim'
       })
+    );
+  });
+
+  it('recupera um claim processando abandonado sem duplicar a consulta publica', async () => {
+    const { servico, repositorios, servicoAgenda } = criarServico({
+      profissionais: [criarProfissional()],
+      solicitacoes: [
+        criarSolicitacaoPendente({
+          id: 'sol-claim-abandonado',
+          status: 'processando',
+          decididaEm: new Date('2026-07-26T12:00:00.000Z'),
+          decididaPorUsuarioId: 'usuario-interrompido'
+        })
+      ]
+    });
+
+    await expect(
+      servico.aprovarSolicitacao(
+        'tenant-1',
+        'sol-claim-abandonado',
+        { pacienteId: 'paciente-1' },
+        usuarioProfissionalUm
+      )
+    ).resolves.toEqual(expect.objectContaining({ status: 'aprovada', consultaId: 'consulta-1' }));
+
+    expect(servicoAgenda.criarConsulta).toHaveBeenCalledTimes(1);
+    expect(repositorios.solicitacao.todos().find((item) => item.id === 'sol-claim-abandonado')).toEqual(
+      expect.objectContaining({ status: 'aprovada', consultaId: 'consulta-1' })
     );
   });
 

@@ -37,7 +37,7 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
 | 250 | Fechamento da dívida Mobile e PRs - concluida em 2026-08-20 | Essencial/segurança | Higiene aprovada; Mobile segue bloqueado pelos advisories upstream |
 | 251 | Linguagem e microcopy integral - concluida em 2026-08-21 | Importante | Gate aprovado |
 | 252 | Navegacao e descoberta por papel - concluida em 2026-08-21 | Essencial | Gate aprovado |
-| 253 | Agenda clínica confiável | Essencial | Bloqueia piloto |
+| 253 | Agenda clínica confiável - implementada em 2026-08-21 | Essencial | Rollout bloqueado pela migration 1034 |
 | 254 | Lista e cadastro de pacientes | Essencial | Pré-piloto |
 | 255 | Prontuário e linha de cuidado | Essencial | Bloqueia piloto |
 | 256 | Formulários/check-ins ponta a ponta | Essencial | Pré-piloto |
@@ -90,6 +90,21 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
   acessibilidade aprovaram a entrega.
 - A sequencia segue para a Fase 253, que fecha confiabilidade, concorrencia e
   recuperacao da agenda interna e Google Calendar.
+
+## Resultado tecnico da Fase 253
+
+- Trava transacional por tenant/profissional eliminou a corrida entre consulta
+  e bloqueio manual, preservando a agenda interna sem Google conectado.
+- Google ganhou ID de evento deterministico, vinculacao estrita nos eventos de
+  entrada e sync token preservado quando qualquer aplicacao falha.
+- Email, WhatsApp e Google podem ser reprocessados pela consulta sem duplicar
+  mensagem persistida; cancelamento usa estados proprios.
+- Agendamento publico considera bloqueios manuais, limita abuso global por IP,
+  recupera aprovacao abandonada e preserva dados ao atualizar conflito.
+- 87 testes focados, builds, autorizacao, Playwright, acessibilidade, Chrome
+  DevTools e preflight SQL em integracao aprovaram a implementacao.
+- A sequencia somente avanca para a Fase 254 depois da migration `1034`, merge,
+  deploy e smoke sintetico da Fase 253 em producao.
 
 ## Auditoria dos PRs abertos em 2026-08-20
 

@@ -135,6 +135,12 @@ Administracao. Menu, paleta e autorizacao consomem o catalogo canonico em
 horizontal: informa a area atual, revela todos os grupos por teclado e mantem
 links fechados fora da ordem de foco.
 
+Agenda usa a mesma hierarquia em semana e lista: horario, paciente/bloqueio,
+estado e acao contextual. Bloqueio manual sempre oferece `Liberar horario`;
+falha de Google, email ou WhatsApp aparece como estado operacional com
+`Tentar integracoes novamente`, sem transformar integracao opcional em bloqueio
+da agenda interna.
+
 ### Forms and overlays
 
 Campos compartilhados usam 44px, labels associados e erros em texto. Selects e

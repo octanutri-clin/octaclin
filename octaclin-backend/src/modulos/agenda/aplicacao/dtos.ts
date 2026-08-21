@@ -15,11 +15,13 @@ export type ResultadoNotificacaoAgenda =
   | { status: 'pendente'; mensagemId: string }
   | { status: 'enviado'; mensagemId: string }
   | { status: 'ignorado'; motivo: string }
-  | { status: 'falhou'; erro: string };
+  | { status: 'falhou'; erro: string; mensagemId?: string };
 
 export interface NotificacoesConsultaAgenda {
   email?: ResultadoNotificacaoAgenda;
   whatsapp?: ResultadoNotificacaoAgenda;
+  cancelamentoEmail?: ResultadoNotificacaoAgenda;
+  cancelamentoWhatsapp?: ResultadoNotificacaoAgenda;
   googleCalendar?: ResultadoGoogleCalendar;
 }
 

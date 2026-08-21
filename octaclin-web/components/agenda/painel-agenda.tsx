@@ -47,6 +47,7 @@ import {
   obterStatusGoogleAgenda,
   recusarSolicitacaoPublicaAgenda,
   registrarDesfechoConsulta,
+  reprocessarIntegracoesConsulta,
   registrarPagamentoConsulta,
   listarPacotesSessao,
   PacoteSessaoApi,
@@ -159,12 +160,28 @@ function statusNotificacao(notificacoes: NotificacoesConsultaAgenda, canal: 'ema
 }
 
 function statusGoogle(consulta: ConsultaAgendaApi, conectado?: boolean) {
+  const google = consulta.notificacoes?.googleCalendar;
+  if (google?.motivo === 'falha_google_calendar') return `Falha: ${google.erro ?? 'sincronização pendente'}`;
   if (consulta.googleEventId) return 'Sincronizado';
   if (!conectado) return 'Nao conectado (opcional)';
-  const google = consulta.notificacoes?.googleCalendar;
   if (google?.motivo === 'configuracao_ausente') return 'Configurar Google';
   if (google?.motivo) return `Pendente: ${google.motivo}`;
   return 'Pendente';
+}
+
+function integracoesPrecisamAtencao(consulta: ConsultaAgendaApi, googleConectado?: boolean) {
+  const notificacoes = consulta.notificacoes ?? {};
+  const canais = consulta.status === 'cancelada'
+    ? [notificacoes.cancelamentoEmail, notificacoes.cancelamentoWhatsapp]
+    : [notificacoes.email, notificacoes.whatsapp];
+  const notificacaoRecuperavel = canais.some(
+    (item) =>
+      item?.status === 'falhou' ||
+      (item?.status === 'ignorado' && ['canal_ausente', 'template_ausente'].includes(item.motivo ?? ''))
+  );
+  const googleRecuperavel = Boolean(googleConectado && !consulta.googleEventId) ||
+    notificacoes.googleCalendar?.motivo === 'falha_google_calendar';
+  return notificacaoRecuperavel || googleRecuperavel;
 }
 
 function statusLembrete(notificacoes: NotificacoesConsultaAgenda) {
@@ -222,6 +239,7 @@ function descricaoLinkPublico(linkPublico: LinkAgendamentoPublicoApi | null) {
 export function PainelAgenda() {
   const parametros = useSearchParams();
   const parametrosIniciaisAplicados = useRef(false);
+  const sequenciaCargaRef = useRef(0);
   const [consultas, setConsultas] = useState<ConsultaAgendaApi[]>([]);
   const [pacientes, setPacientes] = useState<RespostaPaginada<PacienteResumo> | null>(null);
   const [pacotesDisponiveis, setPacotesDisponiveis] = useState<PacoteSessaoApi[]>([]);
@@ -275,12 +293,14 @@ export function PainelAgenda() {
   // e a agenda do dia se atualizam sem spinner e sem apagar o que esta sendo
   // digitado. Falha de poll nao vira erro na tela.
   async function carregar(silencioso = false) {
+    const sequencia = ++sequenciaCargaRef.current;
     if (!silencioso) {
       setCarregando(true);
       setFalha(null);
     }
     try {
       const bootstrap = await carregarBootstrapAgenda();
+      if (sequencia !== sequenciaCargaRef.current) return;
       setConsultas(bootstrap.consultas);
       setPacientes(bootstrap.pacientes);
       setProfissionais(bootstrap.profissionais);
@@ -298,10 +318,11 @@ export function PainelAgenda() {
         };
       });
     } catch (erroAtual) {
+      if (sequencia !== sequenciaCargaRef.current) return;
       if (silencioso) return;
       setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível carregar a agenda.'));
     } finally {
-      if (!silencioso) setCarregando(false);
+      if (!silencioso && sequencia === sequenciaCargaRef.current) setCarregando(false);
     }
   }
 
@@ -652,11 +673,28 @@ export function PainelAgenda() {
       const resultado = await sincronizarGoogleAgenda();
       if (!resultado.sincronizado) throw new Error('Conecte a Google Agenda antes de sincronizar.');
       await carregar(true);
+      await obterStatusGoogleAgenda().then(setStatusGoogleAgenda).catch(() => undefined);
       setSucesso('Google Agenda sincronizada com a agenda interna.');
     } catch (erroAtual) {
+      await obterStatusGoogleAgenda().then(setStatusGoogleAgenda).catch(() => undefined);
       setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível sincronizar a Google Agenda.'));
     } finally {
       setSincronizandoGoogle(false);
+    }
+  }
+
+  async function reprocessarIntegracoes(consulta: ConsultaAgendaApi) {
+    setFalha(null);
+    setSucesso(null);
+    setProcessandoConsultaId(consulta.id);
+    try {
+      const atualizada = await reprocessarIntegracoesConsulta(consulta.id);
+      atualizarConsulta(atualizada);
+      setSucesso('Integrações processadas novamente. A agenda interna não foi alterada.');
+    } catch (erroAtual) {
+      setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível processar novamente as integrações.'));
+    } finally {
+      setProcessandoConsultaId(null);
     }
   }
 
@@ -700,6 +738,14 @@ export function PainelAgenda() {
           <Aviso variante="sucesso" mensagem={sucesso} aoFechar={() => setSucesso(null)} />
         </AvisoRegiao>
       ) : null}
+      {(statusGoogleAgenda?.falhasConsecutivas ?? 0) > 0 ? (
+        <AvisoRegiao>
+          <Aviso
+            variante="erro"
+            mensagem={`Google Agenda tem ${statusGoogleAgenda?.falhasConsecutivas} tentativa(s) pendente(s). Use Sincronizar agora; a agenda interna continua ativa.`}
+          />
+        </AvisoRegiao>
+      ) : null}
 
       <Modal
         aberto={Boolean(consultaSelecionada)}
@@ -720,7 +766,31 @@ export function PainelAgenda() {
               <p>Google Agenda: {statusGoogle(consultaSelecionada, statusGoogleAgenda?.conectado)}</p>
               <p>E-mail: {statusNotificacao(consultaSelecionada.notificacoes, 'email')}</p>
               <p>WhatsApp: {statusNotificacao(consultaSelecionada.notificacoes, 'whatsapp')}</p>
+              {consultaSelecionada.status === 'cancelada' ? (
+                <>
+                  <p>
+                    Cancelamento por e-mail:{' '}
+                    {statusNotificacao({ email: consultaSelecionada.notificacoes.cancelamentoEmail }, 'email')}
+                  </p>
+                  <p>
+                    Cancelamento por WhatsApp:{' '}
+                    {statusNotificacao({ whatsapp: consultaSelecionada.notificacoes.cancelamentoWhatsapp }, 'whatsapp')}
+                  </p>
+                </>
+              ) : null}
             </div>
+            {integracoesPrecisamAtencao(consultaSelecionada, statusGoogleAgenda?.conectado) ? (
+              <div className="flex justify-end border-t border-linha pt-4">
+                <Botao
+                  type="button"
+                  disabled={processandoConsultaId === consultaSelecionada.id}
+                  onClick={() => void reprocessarIntegracoes(consultaSelecionada)}
+                >
+                  <RefreshCcw size={16} />
+                  Tentar integrações novamente
+                </Botao>
+              </div>
+            ) : null}
             {consultaSelecionada.modalidade === 'online' && consultaSelecionada.linkTeleconsulta ? (
               <div className="flex flex-wrap items-center gap-2 rounded-md border border-linha bg-superficie p-3">
                 <a
@@ -1336,12 +1406,24 @@ export function PainelAgenda() {
                         </a>
                       ) : null}
 
-                      {consultaAtiva(consulta) ? (
-                        <div className="mt-3 flex justify-end border-t border-linha pt-3">
-                          <Botao type="button" onClick={() => setConsultaSelecionadaId(consulta.id)}>
-                            <RefreshCcw size={15} />
-                            Gerenciar consulta
-                          </Botao>
+                      {consultaAtiva(consulta) || integracoesPrecisamAtencao(consulta, statusGoogleAgenda?.conectado) ? (
+                        <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-linha pt-3">
+                          {integracoesPrecisamAtencao(consulta, statusGoogleAgenda?.conectado) ? (
+                            <Botao
+                              type="button"
+                              disabled={processandoConsultaId === consulta.id}
+                              onClick={() => void reprocessarIntegracoes(consulta)}
+                            >
+                              <RefreshCcw size={15} />
+                              Tentar integrações novamente
+                            </Botao>
+                          ) : null}
+                          {consultaAtiva(consulta) ? (
+                            <Botao type="button" onClick={() => setConsultaSelecionadaId(consulta.id)}>
+                              <RefreshCcw size={15} />
+                              Gerenciar consulta
+                            </Botao>
+                          ) : null}
                         </div>
                       ) : null}
                     </article>

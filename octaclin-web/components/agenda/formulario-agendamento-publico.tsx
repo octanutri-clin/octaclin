@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, CheckCircle2, Clock, Mail, MessageCircle, Send } from 'lucide-react';
 import {
   AgendaPublicaApi,
@@ -55,6 +55,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
   const [revisando, setRevisando] = useState(false);
+  const alertaErroModalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setCarregando(true);
@@ -104,6 +105,17 @@ export function FormularioAgendamentoPublico({ token }: Props) {
       setSucesso(true);
     } catch (erroAtual) {
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível enviar a solicitação.'));
+      try {
+        const agendaAtualizada = await carregarAgendaPublica(token);
+        setAgenda(agendaAtualizada);
+        const horarioContinuaLivre = agendaAtualizada.dias.some((dia) =>
+          dia.horarios.some((horario) => horario.inicioEm === horarioSelecionado)
+        );
+        if (!horarioContinuaLivre) setHorarioSelecionado(null);
+      } catch {
+        // O erro principal continua visivel; os dados digitados permanecem intactos.
+      }
+      requestAnimationFrame(() => alertaErroModalRef.current?.focus());
     } finally {
       setSalvando(false);
     }
@@ -327,6 +339,11 @@ export function FormularioAgendamentoPublico({ token }: Props) {
         <div><dt className="text-xs font-semibold text-texto-suave">Nome</dt><dd>{formulario.nome.trim()}</dd></div>
         <div><dt className="text-xs font-semibold text-texto-suave">Email</dt><dd className="break-all">{formulario.email.trim()}</dd></div>
       </dl>
+      {erro ? (
+        <div ref={alertaErroModalRef} tabIndex={-1} className="mt-4 focus:outline-none">
+          <AlertaOperacional mensagem={`${erro} Revise os horários disponíveis antes de tentar novamente.`} />
+        </div>
+      ) : null}
       <div className="mt-5 flex flex-wrap justify-end gap-2">
         <Botao type="button" variante="secundario" onClick={() => setRevisando(false)} disabled={salvando}>Voltar e editar</Botao>
         <Botao type="button" variante="primario" onClick={() => void confirmarSolicitacao()} disabled={salvando}>

@@ -84,7 +84,8 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
       'tenant-1',
       'consulta-1',
       { inicioEm: '2026-08-01T10:00:00.000Z', fimEm: '2026-08-01T10:50:00.000Z' },
-      'prof-1'
+      'prof-1',
+      'evt-consulta'
     );
   });
 
@@ -104,7 +105,8 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
       'tenant-1',
       'consulta-2',
       { motivo: 'Cancelado direto na Google Agenda.' },
-      'prof-1'
+      'prof-1',
+      'evt-cancelado'
     );
   });
 
@@ -211,13 +213,15 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
       'tenant-1',
       'consulta-1',
       { inicioEm: '2026-08-01T10:00:00.000Z', fimEm: '2026-08-01T10:50:00.000Z' },
-      'prof-1'
+      'prof-1',
+      'evt-consulta'
     );
     expect(deps.servicoAgenda.cancelarConsultaComoSistema).toHaveBeenCalledWith(
       'tenant-1',
       'consulta-2',
       { motivo: 'Cancelado direto na Google Agenda.' },
-      'prof-1'
+      'prof-1',
+      'evt-cancelado'
     );
 
     loggerWarnSpy.mockRestore();
@@ -360,7 +364,7 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
     expect(executarDelete).toHaveBeenCalledTimes(1);
   });
 
-  it('avanca o syncToken apos 5 falhas consecutivas ao aplicar eventos, e loga em nivel error (retentativa limitada)', async () => {
+  it('preserva o syncToken apos falhas consecutivas para nao perder alteracoes do Google', async () => {
     const deps = construirDependencias();
     deps.servicoAgenda.remarcarConsultaComoSistema = jest.fn(async () => {
       throw new Error('falha simulada ao aplicar evento');
@@ -402,13 +406,13 @@ describe('ServicoSincronizacaoGoogleCalendar', () => {
       expect(conexaoFake.ultimoSyncToken).toBe('sync-antigo');
       expect(conexaoFake.falhasConsecutivasSincronizacao).toBe(chamada);
     }
-    expect(loggerErrorSpy).not.toHaveBeenCalled();
+    expect(loggerErrorSpy).toHaveBeenCalledTimes(4);
 
     await servico.reconciliar('tenant-1', 'prof-1');
 
-    expect(conexaoFake.falhasConsecutivasSincronizacao).toBe(0);
-    expect(conexaoFake.ultimoSyncToken).toBe('novo-sync-token');
-    expect(loggerErrorSpy).toHaveBeenCalledWith(expect.stringContaining('5 falhas consecutivas'));
+    expect(conexaoFake.falhasConsecutivasSincronizacao).toBe(5);
+    expect(conexaoFake.ultimoSyncToken).toBe('sync-antigo');
+    expect(loggerErrorSpy).toHaveBeenLastCalledWith(expect.stringContaining('5 falha(s) consecutiva(s)'));
 
     loggerWarnSpy.mockRestore();
     loggerErrorSpy.mockRestore();

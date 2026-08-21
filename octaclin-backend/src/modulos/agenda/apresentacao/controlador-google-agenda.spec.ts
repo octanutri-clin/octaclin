@@ -90,7 +90,7 @@ describe('ControladorGoogleAgenda', () => {
         emailHash: 'hash-superadmin',
         permissoes: ['agenda.consultas.ler']
       })
-    ).resolves.toEqual({ conectado: false, podeGerenciar: false });
+    ).resolves.toEqual({ conectado: false, podeGerenciar: false, falhasConsecutivas: 0 });
 
     expect(deps.executorTenant.executar).not.toHaveBeenCalled();
   });

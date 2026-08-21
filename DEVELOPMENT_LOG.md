@@ -27,6 +27,22 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 253 - Agenda clinica confiavel e operacional
+
+- Responsavel: Codex, com revisoes read-only de backend/seguranca e frontend.
+- Inicio e conclusao da implementacao: 2026-08-21.
+- Commit: registrado no historico Git desta fase.
+- Push: por PR; merge aguarda migration de producao e CI verde.
+- Validacoes: 87 testes focados backend, builds backend/web, sete scripts de
+  autorizacao, 2 jornadas Playwright, gate de acessibilidade, Chrome DevTools,
+  preflight SQL isolado e varredura de segredos.
+- Arquivos principais: servicos/controladores da agenda e Google, migration
+  `1034`, BFF e componentes da agenda, testes e documento da fase.
+- Pendencias: aplicar/verificar a `1034` em producao com `neondb_owner`, integrar
+  PR e executar smoke sintetico. Suite completa backend tem somente a falha
+  TACO por `LF/CRLF` preexistente no Windows.
+- Proxima fase: Fase 254 - lista e cadastro robusto de pacientes.
+
 ### Fase 252 - Arquitetura de navegacao e descoberta de funcionalidades
 
 - Responsavel: Codex.

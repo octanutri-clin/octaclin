@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 
 export interface CredenciaisGoogleCalendar {
@@ -74,6 +75,7 @@ interface RespostaEventoGoogle {
 interface EventoGoogleBruto {
   id: string;
   status: string;
+  htmlLink?: string;
   start?: { dateTime?: string };
   end?: { dateTime?: string };
   extendedProperties?: { private?: { octaclinConsultaId?: string } };
@@ -112,17 +114,21 @@ export class ServicoGoogleCalendar {
 
     try {
       const accessToken = await this.obterAccessToken(configuracao.clientId, configuracao.clientSecret, configuracao.refreshToken);
+      const eventId = this.identificadorEvento(entrada.consultaId);
       const resposta = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(configuracao.calendarId)}/events`,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(configuracao.calendarId)}/events?sendUpdates=all`,
         {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(this.montarCorpoEvento(entrada))
+          body: JSON.stringify(this.montarCorpoEvento(entrada, eventId))
         }
       );
+      if (resposta.status === 409) {
+        return await this.recuperarEventoCriado(configuracao.calendarId, eventId, entrada.consultaId, accessToken);
+      }
       return await this.lerRespostaEvento(resposta, configuracao.calendarId, 'criar evento');
     } catch (erro) {
       return {
@@ -140,7 +146,7 @@ export class ServicoGoogleCalendar {
     try {
       const accessToken = await this.obterAccessToken(configuracao.clientId, configuracao.clientSecret, configuracao.refreshToken);
       const resposta = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(entrada.calendarId)}/events/${encodeURIComponent(entrada.eventId)}`,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(entrada.calendarId)}/events/${encodeURIComponent(entrada.eventId)}?sendUpdates=all`,
         {
           method: 'PATCH',
           headers: {
@@ -167,7 +173,7 @@ export class ServicoGoogleCalendar {
     try {
       const accessToken = await this.obterAccessToken(configuracao.clientId, configuracao.clientSecret, configuracao.refreshToken);
       const resposta = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(entrada.calendarId)}/events/${encodeURIComponent(entrada.eventId)}`,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(entrada.calendarId)}/events/${encodeURIComponent(entrada.eventId)}?sendUpdates=all`,
         {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${accessToken}` }
@@ -292,9 +298,10 @@ export class ServicoGoogleCalendar {
     return { clientId, clientSecret, refreshToken, calendarId };
   }
 
-  private montarCorpoEvento(entrada: CriarEventoGoogleEntrada) {
+  private montarCorpoEvento(entrada: CriarEventoGoogleEntrada, eventId?: string) {
     const emailConvidado = entrada.emailConvidado?.trim();
     return {
+      ...(eventId ? { id: eventId } : {}),
       summary: entrada.resumo,
       description: entrada.descricao,
       location: entrada.local,
@@ -302,6 +309,34 @@ export class ServicoGoogleCalendar {
       start: { dateTime: entrada.inicioEm.toISOString(), timeZone: entrada.timezone },
       end: { dateTime: entrada.fimEm.toISOString(), timeZone: entrada.timezone },
       extendedProperties: { private: { octaclinConsultaId: entrada.consultaId } }
+    };
+  }
+
+  private identificadorEvento(consultaId: string): string {
+    return `octaclin${createHash('sha256').update(consultaId).digest('hex')}`;
+  }
+
+  private async recuperarEventoCriado(
+    calendarId: string,
+    eventId: string,
+    consultaId: string,
+    accessToken: string
+  ): Promise<ResultadoGoogleCalendar> {
+    const resposta = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const evento = (await resposta.json()) as EventoGoogleBruto & { error?: { message?: string } };
+    if (!resposta.ok || evento.extendedProperties?.private?.octaclinConsultaId !== consultaId) {
+      throw new InternalServerErrorException(
+        `Falha ao recuperar evento Google Calendar idempotente: ${evento.error?.message ?? 'evento existente nao pertence a consulta'}`
+      );
+    }
+    return {
+      sincronizado: true,
+      calendarId,
+      eventId: evento.id,
+      htmlLink: evento.htmlLink
     };
   }
 
