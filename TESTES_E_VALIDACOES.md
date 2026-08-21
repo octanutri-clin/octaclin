@@ -643,3 +643,8 @@ Google vinculado a consulta, sync token sem avanco parcial, reprocessamento sem
 duplicar mensagens e disponibilidade publica que respeite bloqueio manual. A
 migration `1034` deve ser a unica pendente antes do rollout e a funcao publica
 deve manter `SECURITY DEFINER`, `search_path` fixo e retorno minimo.
+
+Aceite de producao em 2026-08-21: migration `1034` aplicada com 47/47 no
+TypeORM; PR `#91` integrado em `ea6ed129`; CI `32507735771`, health detalhado,
+BFF protegido, erro publico controlado e monitor `32508654126` aprovados. O
+smoke nao deve mutar dado clinico real.
