@@ -7,6 +7,7 @@ import { AlertaOperacional, BarraCarregamento } from '@/components/ui/feedback';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { obterSessao } from '@/lib/auth-api';
 import { criarConvitePaciente, revogarConvitePaciente } from '@/lib/convites-paciente-api';
+import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import {
   FiscalCadastroPacienteApi,
   PerfilCadastroPacienteApi,
@@ -49,7 +50,7 @@ function formatarDataHora(valor?: string) {
 }
 
 function mensagemErro(erro: unknown) {
-  return erro instanceof Error ? erro.message : 'Não foi possível salvar esta seção.';
+  return mensagemFalhaInterface(erro, 'Não foi possível salvar esta seção.');
 }
 
 function removerCamposVazios<T extends object>(valor: T): T {

@@ -8,6 +8,7 @@ import { AlertaOperacional, AlertaSucesso, BarraCarregamento, EstadoVazio } from
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { listarConsentimentosFotograficos, registrarConsentimentoFotografico, revogarConsentimentoFotografico, type ConsentimentoFotograficoApi } from '@/lib/consentimentos-fotograficos-api';
 import { confirmarUploadEvolucaoFotografica, excluirEvolucaoFotografica, listarEvolucoesFotograficas, obterAcessoEvolucaoFotografica, solicitarEvolucaoFotografica, type EvolucaoFotograficaApi } from '@/lib/evolucoes-fotograficas-api';
+import { mensagemFalhaInterface } from '@/lib/erros-interface';
 
 const protocolosPadrao = [
   { valor: 'frontal', rotulo: 'Frontal' },
@@ -54,7 +55,7 @@ export function AbaEvolucaoFotografica({ pacienteId, podeGerenciar }: AbaEvoluca
       const [consentimentos, series] = await Promise.all([listarConsentimentosFotograficos(pacienteId), listarEvolucoesFotograficas(pacienteId)]);
       setItens(consentimentos); setEvolucoes(series);
     }
-    catch (erroAtual) { setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar consentimentos.'); }
+    catch (erroAtual) { setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível carregar os consentimentos.')); }
     finally { setCarregando(false); }
   }, [pacienteId]);
 
@@ -68,7 +69,7 @@ export function AbaEvolucaoFotografica({ pacienteId, podeGerenciar }: AbaEvoluca
       setEvidencia('');
       setSucesso('Consentimento fotografico registrado. A captura permanece indisponivel ate a proxima entrega segura.');
       await carregar();
-    } catch (erroAtual) { setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar consentimento.'); }
+    } catch (erroAtual) { setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível registrar o consentimento.')); }
     finally { setSalvando(false); }
   }
 
@@ -80,7 +81,7 @@ export function AbaEvolucaoFotografica({ pacienteId, podeGerenciar }: AbaEvoluca
       setParaRevogar(null);
       setSucesso('Consentimento revogado. Nenhuma nova captura pode ser vinculada a ele.');
       await carregar();
-    } catch (erroAtual) { setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao revogar consentimento.'); }
+    } catch (erroAtual) { setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível revogar o consentimento.')); }
     finally { setSalvando(false); }
   }
 
@@ -105,7 +106,7 @@ export function AbaEvolucaoFotografica({ pacienteId, podeGerenciar }: AbaEvoluca
       setArquivo(null); setObservacoes(''); setTipoProtocolo('frontal'); setProtocoloPersonalizado(''); formulario.reset();
       setSucesso('Imagem confirmada e vinculada a serie fotografica com consentimento ativo.');
       await carregar();
-    } catch (erroAtual) { setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao enviar imagem.'); }
+    } catch (erroAtual) { setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível enviar a imagem.')); }
     finally { setEnviandoFoto(false); }
   }
 
@@ -117,7 +118,7 @@ export function AbaEvolucaoFotografica({ pacienteId, podeGerenciar }: AbaEvoluca
       setParaExcluir(null);
       setSucesso('Serie fotografica e imagens enviadas foram excluidas permanentemente.');
       await carregar();
-    } catch (erroAtual) { setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao excluir a serie fotografica.'); }
+    } catch (erroAtual) { setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível excluir a série fotográfica.')); }
     finally { setExcluindoFoto(false); }
   }
 
@@ -126,7 +127,7 @@ export function AbaEvolucaoFotografica({ pacienteId, podeGerenciar }: AbaEvoluca
     try {
       const acesso = await obterAcessoEvolucaoFotografica(arquivoId);
       if (aba) { aba.opener = null; aba.location.href = acesso.url; } else window.location.assign(acesso.url);
-    } catch (erroAtual) { aba?.close(); setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao abrir imagem.'); }
+    } catch (erroAtual) { aba?.close(); setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível abrir a imagem.')); }
   }
 
   if (carregando) return <BarraCarregamento visivel rotulo="Carregando consentimentos fotograficos" />;

@@ -72,6 +72,8 @@ pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spe
 pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs -g "permite registrar evolucao clinica privada|exibe linha do tempo clinica consolidada" --project=desktop-chromium --project=mobile-chromium --reporter=list
 pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs -g "permite prescrever tarefa de acompanhamento|permite registrar evolucao clinica privada|exibe linha do tempo clinica consolidada" --project=desktop-chromium --project=mobile-chromium --reporter=list
 pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs -g "permite criar material e enviar ao paciente|permite prescrever tarefa de acompanhamento|permite registrar evolucao clinica privada|exibe linha do tempo clinica consolidada" --project=desktop-chromium --project=mobile-chromium --reporter=list
+pnpm --dir octaclin-web test:fase248
+pnpm --dir octaclin-web exec playwright test tests/visual/fase-248-estados-recuperacao.spec.mjs --project=mobile-chromium --reporter=list
 ```
 
 Antes de rodar Playwright, garanta servidor limpo:

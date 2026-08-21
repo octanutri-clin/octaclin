@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-20 com as Fases 244 a 247, a correcao de concorrencia da Fase 201 e os Incrementos 7 e 8 da Fase 234.
+Atualizado em 2026-08-20 com as Fases 244 a 248, a correcao de concorrencia da Fase 201 e os Incrementos 7 e 8 da Fase 234.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -714,6 +714,12 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   durante a renderização, eliminando divergências de hidratação. Lint sem erros,
   typecheck, build, contrato visual e 10 cenários Playwright de acessibilidade
   foram aprovados. Ver `fase-247-qualidade-interface-linguagem.md`.
+- Fase 248 - Estados e recuperacao das superficies clinicas: agenda, lista de
+  pacientes e prontuario agora distinguem carregamento, indisponibilidade e
+  permissao. Falhas tecnicas sao sanitizadas em toda a composicao dessas
+  telas, e formularios preservam o conteudo digitado para repeticao manual
+  segura. O gate sintetico cobre acesso negado e recuperacao em desktop e
+  mobile. Ver `fase-248-estados-recuperacao-superficies-clinicas.md`.
 - Fase 241 - Hardening da IA clinica: referencias de
   check-in, transcricao e midia agora sao validadas por tenant/paciente; a URL
   privada e criada apenas no backend e seu SHA-256 e conferido ponta a ponta.

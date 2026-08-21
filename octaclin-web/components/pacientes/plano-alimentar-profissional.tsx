@@ -21,6 +21,7 @@ import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoSubtitulo, CartaoTitulo 
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
+import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import {
   arquivarPlanoAlimentar,
   atualizarRascunhoPlanoAlimentar,
@@ -493,7 +494,7 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
         );
       } catch (erro) {
         if (!controle.signal.aborted) {
-          setErroBusca(erro instanceof Error ? erro.message : 'Falha ao buscar alimentos.');
+          setErroBusca(mensagemFalhaInterface(erro, 'Não foi possível buscar os alimentos.'));
         }
       } finally {
         if (!controle.signal.aborted) setBuscando(false);
@@ -949,7 +950,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       aplicarPlano(detalhe, serie.avaliacoes);
     } catch (erroAtual) {
       if (sequencia !== sequenciaCarregamento.current) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar planos alimentares.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível carregar os planos alimentares.'));
     } finally {
       if (sequencia === sequenciaCarregamento.current) setCarregando(false);
     }
@@ -976,7 +977,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       .catch((erroAtual: unknown) => {
         if (controlador.signal.aborted) return;
         setEscolhasPaciente([]);
-        setErroEscolhas(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar a trilha de trocas.');
+        setErroEscolhas(mensagemFalhaInterface(erroAtual, 'Não foi possível carregar a trilha de trocas.'));
       })
       .finally(() => {
         if (!controlador.signal.aborted) setCarregandoEscolhas(false);
@@ -1017,7 +1018,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       setSucesso(mensagem);
       await carregar(preferido);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Nao foi possivel concluir a operacao.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível concluir a operação.'));
     } finally {
       setOperacao(null);
     }
@@ -1034,7 +1035,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       setSucesso('Plano criado. Complete o rascunho antes da revisao.');
       await carregar(criado.id);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar plano alimentar.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível criar o plano alimentar.'));
     } finally {
       setOperacao(null);
     }

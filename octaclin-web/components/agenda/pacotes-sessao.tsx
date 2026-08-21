@@ -18,6 +18,7 @@ import {
   listarPacotesSessao
 } from '@/lib/agenda-api';
 import { PacienteResumo } from '@/lib/cadastros-api';
+import { mensagemFalhaInterface } from '@/lib/erros-interface';
 
 const FORMAS = Object.keys(ROTULOS_FORMA_PAGAMENTO).filter(
   (forma): forma is FormaPagamentoConsulta => forma !== 'pacote'
@@ -47,7 +48,7 @@ export function PacotesSessao({ pacientes, pacienteIdSugerido, aoMudar }: Pacote
     try {
       setPacotes(await listarPacotesSessao(paciente));
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar pacotes.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível carregar os pacotes.'));
     } finally {
       setCarregando(false);
     }
@@ -80,7 +81,7 @@ export function PacotesSessao({ pacientes, pacienteIdSugerido, aoMudar }: Pacote
       await carregar(pacienteId);
       aoMudar?.();
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar pacote.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível criar o pacote.'));
     } finally {
       setSalvando(false);
     }
@@ -95,7 +96,7 @@ export function PacotesSessao({ pacientes, pacienteIdSugerido, aoMudar }: Pacote
       await carregar(pacienteId);
       aoMudar?.();
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao cancelar pacote.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível cancelar o pacote.'));
     }
   }
 

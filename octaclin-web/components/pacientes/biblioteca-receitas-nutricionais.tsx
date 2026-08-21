@@ -6,6 +6,7 @@ import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
+import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import {
   arquivarReceitaNutricional,
   criarReceitaNutricional,
@@ -69,7 +70,7 @@ export function BibliotecaReceitasNutricionais({
       const pagina = await listarReceitasNutricionais({ pagina: 1, limite: 100 });
       setItens(pagina.itens);
     } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : 'Falha ao carregar receitas.');
+      setErro(mensagemFalhaInterface(falha, 'Não foi possível carregar as receitas.'));
     } finally {
       setOcupado(null);
     }
@@ -96,7 +97,7 @@ export function BibliotecaReceitasNutricionais({
       aoInserir(refeicaoDestinoAtual, receita.itens);
       setAviso(`${ROTULO_TIPO[receita.tipo]} inserida no rascunho. Salve o plano para recalcular os totais.`);
     } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : 'Falha ao aplicar receita.');
+      setErro(mensagemFalhaInterface(falha, 'Não foi possível aplicar a receita.'));
     } finally {
       setOcupado(null);
     }
@@ -128,7 +129,7 @@ export function BibliotecaReceitasNutricionais({
       setAviso('Item salvo na biblioteca.');
       await carregar();
     } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : 'Falha ao salvar receita.');
+      setErro(mensagemFalhaInterface(falha, 'Não foi possível salvar a receita.'));
     } finally {
       setOcupado(null);
     }
@@ -146,7 +147,7 @@ export function BibliotecaReceitasNutricionais({
       setAviso('Item arquivado da biblioteca. Planos publicados nao foram alterados.');
       await carregar();
     } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : 'Falha ao arquivar receita.');
+      setErro(mensagemFalhaInterface(falha, 'Não foi possível arquivar a receita.'));
     } finally {
       setOcupado(null);
     }

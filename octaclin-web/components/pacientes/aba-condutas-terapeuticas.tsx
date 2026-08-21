@@ -7,6 +7,7 @@ import { AreaTexto, Campo, Rotulo } from '@/components/ui/campo';
 import { AlertaOperacional, AlertaSucesso, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { arquivarCondutaTerapeutica, atualizarRascunhoCondutaTerapeutica, criarCondutaTerapeutica, criarNovaVersaoCondutaTerapeutica, listarCondutasTerapeuticas, publicarCondutaTerapeutica, type CondutaTerapeuticaApi, type TipoCondutaTerapeuticaApi } from '@/lib/condutas-terapeuticas-api';
+import { mensagemFalhaInterface } from '@/lib/erros-interface';
 
 const tipos: Array<{ id: TipoCondutaTerapeuticaApi; rotulo: string }> = [
   { id: 'meta', rotulo: 'Meta' }, { id: 'orientacao', rotulo: 'Orientacao' }, { id: 'suplemento', rotulo: 'Suplemento' },
@@ -32,7 +33,7 @@ export function AbaCondutasTerapeuticas({ pacienteId, podeGerenciar }: { pacient
   const carregar = useCallback(async () => {
     setCarregando(true); setErro(null);
     try { setCondutas(await listarCondutasTerapeuticas(pacienteId)); }
-    catch (erroAtual) { setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar condutas terapeuticas.'); }
+    catch (erroAtual) { setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível carregar as condutas terapêuticas.')); }
     finally { setCarregando(false); }
   }, [pacienteId]);
   useEffect(() => { void carregar(); }, [carregar]);
@@ -51,7 +52,7 @@ export function AbaCondutasTerapeuticas({ pacienteId, podeGerenciar }: { pacient
       if (editando) await atualizarRascunhoCondutaTerapeutica(pacienteId, editando.id, entrada);
       else await criarCondutaTerapeutica(pacienteId, { ...entrada, tipo: formulario.tipo });
       setFormulario(formularioInicial); setEditando(null); setSucesso(editando ? 'Rascunho atualizado.' : 'Conduta criada como rascunho. Revise antes de publicar.'); await carregar();
-    } catch (erroAtual) { setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar conduta terapeutica.'); }
+    } catch (erroAtual) { setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível salvar a conduta terapêutica.')); }
     finally { setSalvando(false); }
   }
 
@@ -63,7 +64,7 @@ export function AbaCondutasTerapeuticas({ pacienteId, podeGerenciar }: { pacient
       if (acao === 'arquivar') { await arquivarCondutaTerapeutica(pacienteId, conduta.id); setParaArquivar(null); }
       setSucesso(acao === 'publicar' ? 'Conduta publicada para uso profissional.' : acao === 'nova-versao' ? 'Nova versao em rascunho criada.' : 'Conduta arquivada.');
       await carregar();
-    } catch (erroAtual) { setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar conduta terapeutica.'); }
+    } catch (erroAtual) { setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível atualizar a conduta terapêutica.')); }
     finally { setSalvando(false); }
   }
 

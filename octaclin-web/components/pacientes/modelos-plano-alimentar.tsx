@@ -7,6 +7,7 @@ import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Etiqueta } from '@/components/ui/etiqueta';
 import { AlertaOperacional } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
+import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import {
   arquivarModeloPlanoAlimentar,
   criarModeloPlanoAlimentar,
@@ -50,7 +51,7 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
       const pagina = await listarModelosPlanoAlimentar({ pagina: 1, limite: 100 });
       setModelos(pagina.itens);
     } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : 'Falha ao carregar modelos.');
+      setErro(mensagemFalhaInterface(falha, 'Não foi possível carregar os modelos.'));
     } finally {
       setOcupado(null);
     }
@@ -74,7 +75,7 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
           : 'Modelo aplicado ao rascunho. Revise e salve para confirmar.'
       );
     } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : 'Falha ao aplicar o modelo.');
+      setErro(mensagemFalhaInterface(falha, 'Não foi possível aplicar o modelo.'));
     } finally {
       setOcupado(null);
     }
@@ -95,7 +96,7 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
       setAviso('Modelo salvo.');
       await carregar();
     } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : 'Falha ao salvar o modelo.');
+      setErro(mensagemFalhaInterface(falha, 'Não foi possível salvar o modelo.'));
     } finally {
       setOcupado(null);
     }
@@ -112,7 +113,7 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
       setAviso('Modelo arquivado.');
       await carregar();
     } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : 'Falha ao arquivar o modelo.');
+      setErro(mensagemFalhaInterface(falha, 'Não foi possível arquivar o modelo.'));
     } finally {
       setOcupado(null);
     }

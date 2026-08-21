@@ -21,7 +21,7 @@ import {
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
-import { AlertaOperacional, Aviso, AvisoRegiao, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { Aviso, AvisoRegiao, BarraCarregamento, EsqueletoPagina, EstadoFalha, EstadoPermissaoNegada, EstadoVazio } from '@/components/ui/feedback';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { AgendaSemanal } from '@/components/agenda/agenda-semanal';
 import { PacotesSessao } from '@/components/agenda/pacotes-sessao';
@@ -30,6 +30,7 @@ import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi } from '@/lib/ag
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
 import { INTERVALO_ATUALIZACAO_PAINEL_MS, useAtualizacaoPeriodica } from '@/lib/hooks';
 import { obterSessao } from '@/lib/auth-api';
+import { classificarFalhaInterface, type FalhaInterface } from '@/lib/erros-interface';
 import {
   aprovarSolicitacaoPublicaAgenda,
   carregarBootstrapAgenda,
@@ -234,7 +235,7 @@ export function PainelAgenda() {
   const [processandoSolicitacaoId, setProcessandoSolicitacaoId] = useState<string | null>(null);
   const [motivosRecusa, setMotivosRecusa] = useState<Record<string, string>>({});
   const [pacientesPorSolicitacao, setPacientesPorSolicitacao] = useState<Record<string, string>>({});
-  const [erro, setErro] = useState<string | null>(null);
+  const [falha, setFalha] = useState<FalhaInterface | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [statusGoogleAgenda, setStatusGoogleAgenda] = useState<ConexaoGoogleAgendaStatus | null>(null);
   const [sincronizandoGoogle, setSincronizandoGoogle] = useState(false);
@@ -275,7 +276,7 @@ export function PainelAgenda() {
   async function carregar(silencioso = false) {
     if (!silencioso) {
       setCarregando(true);
-      setErro(null);
+      setFalha(null);
     }
     try {
       const bootstrap = await carregarBootstrapAgenda();
@@ -295,10 +296,9 @@ export function PainelAgenda() {
           whatsappContato: atual.whatsappContato || contatoWhatsapp(paciente?.contato)
         };
       });
-      if (silencioso) setErro(null);
     } catch (erroAtual) {
       if (silencioso) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar agenda.');
+      setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível carregar a agenda.'));
     } finally {
       if (!silencioso) setCarregando(false);
     }
@@ -409,15 +409,15 @@ export function PainelAgenda() {
 
   async function salvar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
-    setErro(null);
+    setFalha(null);
     setSucesso(null);
 
     if (!formulario.pacienteId) {
-      setErro('Selecione um paciente antes de agendar.');
+      setFalha(classificarFalhaInterface('Selecione um paciente antes de agendar.', 'Não foi possível agendar a consulta.'));
       return;
     }
     if (!formulario.inicioEm) {
-      setErro('Informe data e hora da consulta.');
+      setFalha(classificarFalhaInterface('Informe data e hora da consulta.', 'Não foi possível agendar a consulta.'));
       return;
     }
 
@@ -452,7 +452,7 @@ export function PainelAgenda() {
       }));
       setSucesso('Consulta agendada e horario bloqueado na agenda interna. Integracoes processadas conforme configuracao.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao agendar consulta.');
+      setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível agendar a consulta.'));
     } finally {
       setSalvando(false);
     }
@@ -476,11 +476,11 @@ export function PainelAgenda() {
     const linkTeleconsulta = String(dados.get('linkTeleconsulta') ?? '').trim();
 
     if (!inicioLocal) {
-      setErro('Informe a nova data e hora da consulta.');
+      setFalha(classificarFalhaInterface('Informe a nova data e hora da consulta.', 'Não foi possível remarcar a consulta.'));
       return;
     }
 
-    setErro(null);
+    setFalha(null);
     setSucesso(null);
     setProcessandoConsultaId(consulta.id);
     try {
@@ -495,7 +495,7 @@ export function PainelAgenda() {
       atualizarConsulta(atualizada);
       setSucesso('Consulta remarcada e horario atualizado na agenda interna. Integracoes processadas conforme configuracao.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao remarcar consulta.');
+      setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível remarcar a consulta.'));
     } finally {
       setProcessandoConsultaId(null);
     }
@@ -503,7 +503,7 @@ export function PainelAgenda() {
 
   async function registrarDesfecho(consulta: ConsultaAgendaApi, status: DesfechoConsultaAgenda) {
     const rotulo = rotuloStatusConsulta(status).toLocaleLowerCase('pt-BR');
-    setErro(null);
+    setFalha(null);
     setSucesso(null);
     setProcessandoConsultaId(consulta.id);
     try {
@@ -516,7 +516,7 @@ export function PainelAgenda() {
       );
       return true;
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar desfecho da consulta.');
+      setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível registrar o desfecho da consulta.'));
       return false;
     } finally {
       setProcessandoConsultaId(null);
@@ -530,7 +530,7 @@ export function PainelAgenda() {
     const valorCentavos = centavosDeTexto(String(campos.get('valor') ?? ''));
     const formaPagamento = String(campos.get('formaPagamento') ?? '') as FormaPagamentoConsulta | '';
 
-    setErro(null);
+    setFalha(null);
     setSucesso(null);
     setProcessandoConsultaId(consulta.id);
     try {
@@ -543,7 +543,7 @@ export function PainelAgenda() {
       );
       setSucesso(`Pagamento registrado como ${ROTULOS_STATUS_PAGAMENTO[statusPagamento].toLocaleLowerCase('pt-BR')}.`);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar pagamento.');
+      setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível registrar o pagamento.'));
     } finally {
       setProcessandoConsultaId(null);
     }
@@ -557,20 +557,20 @@ export function PainelAgenda() {
     if (!linkPublico?.urlPublica) return;
     try {
       await navigator.clipboard?.writeText(linkPublico.urlPublica);
-      setErro(null);
+      setFalha(null);
       setSucesso('Link publico copiado.');
     } catch {
-      setErro('Nao foi possivel copiar o link publico.');
+      setFalha(classificarFalhaInterface('Não foi possível copiar o link público.', 'Não foi possível copiar o link público.'));
     }
   }
 
   async function copiarLinkTeleconsulta(link: string) {
     try {
       await navigator.clipboard?.writeText(link);
-      setErro(null);
+      setFalha(null);
       setSucesso('Link da sala copiado.');
     } catch {
-      setErro('Nao foi possivel copiar o link da sala.');
+      setFalha(classificarFalhaInterface('Não foi possível copiar o link da sala.', 'Não foi possível copiar o link da sala.'));
     }
   }
 
@@ -579,7 +579,7 @@ export function PainelAgenda() {
   }
 
   async function executarRotacaoLink() {
-    setErro(null);
+    setFalha(null);
     setSucesso(null);
     setProcessandoSolicitacaoId('rotacionar-link');
     try {
@@ -587,7 +587,7 @@ export function PainelAgenda() {
       setLinkPublico(link);
       setSucesso('Link publico rotacionado. Copie a nova URL antes de encerrar esta sessao.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao rotacionar link publico.');
+      setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível gerar um novo link público.'));
     } finally {
       setProcessandoSolicitacaoId(null);
     }
@@ -596,11 +596,11 @@ export function PainelAgenda() {
   async function aprovarSolicitacao(solicitacao: SolicitacaoAgendaPublicaApi) {
     const pacienteId = pacientesPorSolicitacao[solicitacao.id];
     if (!pacienteId) {
-      setErro('Selecione um paciente antes de aprovar a solicitacao.');
+      setFalha(classificarFalhaInterface('Selecione um paciente antes de aprovar a solicitação.', 'Não foi possível aprovar a solicitação.'));
       return;
     }
 
-    setErro(null);
+    setFalha(null);
     setSucesso(null);
     setProcessandoSolicitacaoId(solicitacao.id);
     try {
@@ -608,14 +608,14 @@ export function PainelAgenda() {
       atualizarSolicitacao(atualizada);
       setSucesso('Solicitacao aprovada e convertida em consulta.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao aprovar solicitacao.');
+      setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível aprovar a solicitação.'));
     } finally {
       setProcessandoSolicitacaoId(null);
     }
   }
 
   async function recusarSolicitacao(solicitacao: SolicitacaoAgendaPublicaApi) {
-    setErro(null);
+    setFalha(null);
     setSucesso(null);
     setProcessandoSolicitacaoId(solicitacao.id);
     try {
@@ -626,25 +626,25 @@ export function PainelAgenda() {
       atualizarSolicitacao(atualizada);
       setSucesso('Solicitacao recusada.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao recusar solicitacao.');
+      setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível recusar a solicitação.'));
     } finally {
       setProcessandoSolicitacaoId(null);
     }
   }
 
   async function desconectarGoogle() {
-    setErro(null);
+    setFalha(null);
     try {
       await desconectarGoogleAgenda();
       setStatusGoogleAgenda({ conectado: false, podeGerenciar: true });
       setSucesso('Google Agenda desconectado. A agenda interna continua ativa.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desconectar Google Agenda.');
+      setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível desconectar a Google Agenda.'));
     }
   }
 
   async function sincronizarGoogle() {
-    setErro(null);
+    setFalha(null);
     setSucesso(null);
     setSincronizandoGoogle(true);
     try {
@@ -653,10 +653,26 @@ export function PainelAgenda() {
       await carregar(true);
       setSucesso('Google Agenda sincronizada com a agenda interna.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao sincronizar Google Agenda.');
+      setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível sincronizar a Google Agenda.'));
     } finally {
       setSincronizandoGoogle(false);
     }
+  }
+
+  const carregamentoInicial = carregando && pacientes === null && profissionais === null;
+  const falhaInicial = falha && pacientes === null && profissionais === null ? falha : null;
+
+  if (carregamentoInicial) return <EsqueletoPagina rotulo="Carregando agenda" />;
+  if (falhaInicial?.tipo === 'permissao') return <EstadoPermissaoNegada />;
+  if (falhaInicial) {
+    return (
+      <EstadoFalha
+        titulo="Não foi possível carregar a agenda"
+        descricao={falhaInicial.mensagem}
+        aoTentarNovamente={falhaInicial.recuperavel ? () => void carregar() : undefined}
+        tentando={carregando}
+      />
+    );
   }
 
   return (
@@ -673,7 +689,11 @@ export function PainelAgenda() {
         onAbrirConsulta={setConsultaSelecionadaId}
       />
 
-      {erro ? <AlertaOperacional mensagem={erro} /> : null}
+      {falha ? (
+        <AvisoRegiao>
+          <Aviso variante="erro" mensagem={falha.mensagem} aoFechar={() => setFalha(null)} />
+        </AvisoRegiao>
+      ) : null}
       {sucesso ? (
         <AvisoRegiao>
           <Aviso variante="sucesso" mensagem={sucesso} aoFechar={() => setSucesso(null)} />
