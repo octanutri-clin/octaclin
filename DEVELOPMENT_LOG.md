@@ -27,6 +27,20 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 248 - Estados e recuperacao das superficies clinicas
+
+- Responsavel: Codex.
+- Inicio e conclusao: 2026-08-20.
+- Commit: registrado no historico Git desta fase.
+- Push: por PR, conforme ruleset da `main`.
+- Validacoes: lint sem erros, typecheck, 4 cenarios Playwright em desktop e
+  mobile e Lighthouse com acessibilidade 100.
+- Arquivos principais: `octaclin-web/lib/erros-interface.ts`, componentes de
+  agenda/prontuario, teste Playwright e CI.
+- Pendencias: nenhuma da fase; avisos React pre-existentes permanecem fora do
+  escopo.
+- Proxima fase: Fase 249 - densidade e responsividade do console clinico.
+
 ### Fase 243 - Modernizacao e hardening do Mobile
 
 - Responsavel: Codex, com revisao independente read-only.

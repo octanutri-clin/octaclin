@@ -5,6 +5,7 @@ import { FlaskConical, Plus, Trash2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo } from '@/components/ui/campo';
 import { AlertaOperacional, AlertaSucesso, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import {
   criarColetaExameLaboratorial,
   listarExamesLaboratoriais,
@@ -60,7 +61,7 @@ export function AbaExamesLaboratoriais({ pacienteId, podeGerenciar }: AbaExamesL
     try {
       setColetas(await listarExamesLaboratoriais(pacienteId));
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar os exames laboratoriais.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível carregar os exames laboratoriais.'));
     } finally {
       setCarregando(false);
     }
@@ -122,7 +123,7 @@ export function AbaExamesLaboratoriais({ pacienteId, podeGerenciar }: AbaExamesL
       setSucesso('Coleta laboratorial registrada no prontuário.');
       await carregar();
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar a coleta laboratorial.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível registrar a coleta laboratorial.'));
     } finally {
       setSalvando(false);
     }

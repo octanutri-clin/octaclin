@@ -7,6 +7,7 @@ import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/compone
 import { BarraCarregamento } from '@/components/ui/feedback';
 import { formatarValorBRL, listarConsultasAgenda } from '@/lib/agenda-api';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
+import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import {
   DocumentoClinicoApi,
   TipoDocumentoClinicoApi,
@@ -79,7 +80,7 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
       setDocumentos(dados);
     } catch (erroAtual) {
       if (!ehAtual()) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar documentos.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível carregar os documentos.'));
     } finally {
       if (ehAtual()) setCarregando(false);
     }
@@ -142,7 +143,7 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
       setDocumentoAbertoId(documento.id);
       await carregar();
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao emitir documento.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível emitir o documento.'));
     } finally {
       setSalvando(false);
     }
@@ -158,7 +159,7 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
       if (documentoAbertoId === documento.id) setDocumentoAbertoId(null);
       await carregar();
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao cancelar documento.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível cancelar o documento.'));
     }
   }
 
@@ -174,7 +175,7 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
       }
       setErro(MOTIVO_ENVIO[resultado.motivo ?? ''] ?? 'Envio nao realizado.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao enviar documento.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível enviar o documento.'));
     }
   }
 

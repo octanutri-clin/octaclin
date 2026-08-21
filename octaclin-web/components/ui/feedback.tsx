@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { AlertTriangle, CheckCircle2, Inbox, Info, Loader2, ShieldAlert, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Inbox, Info, Loader2, RefreshCcw, ShieldAlert, X } from 'lucide-react';
+import { Botao } from '@/components/ui/botao';
 import { cn } from '@/lib/utils';
 
 type VarianteAviso = 'info' | 'sucesso' | 'alerta' | 'erro';
@@ -156,6 +157,36 @@ export function EstadoVazio({ titulo, descricao, acao, className }: EstadoVazioP
       <p className="text-sm font-medium text-tinta">{titulo}</p>
       {descricao ? <p className="max-w-sm text-sm text-texto-suave">{descricao}</p> : null}
       {acao ? <div className="pt-1">{acao}</div> : null}
+    </div>
+  );
+}
+
+interface EstadoFalhaProps {
+  titulo: string;
+  descricao: string;
+  aoTentarNovamente?: () => void;
+  tentando?: boolean;
+  className?: string;
+}
+
+export function EstadoFalha({ titulo, descricao, aoTentarNovamente, tentando = false, className }: EstadoFalhaProps) {
+  return (
+    <div
+      role="alert"
+      aria-busy={tentando || undefined}
+      className={cn('flex flex-col items-center justify-center gap-3 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-8 text-center', className)}
+    >
+      <AlertTriangle size={26} className="text-perigo" aria-hidden="true" />
+      <div className="grid gap-1">
+        <h2 className="text-base font-semibold text-tinta">{titulo}</h2>
+        <p className="max-w-md text-sm text-texto-suave">{descricao}</p>
+      </div>
+      {aoTentarNovamente ? (
+        <Botao type="button" variante="secundario" onClick={aoTentarNovamente} carregando={tentando}>
+          <RefreshCcw size={16} aria-hidden="true" />
+          Tentar novamente
+        </Botao>
+      ) : null}
     </div>
   );
 }

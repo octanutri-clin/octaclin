@@ -4,16 +4,18 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArchiveRestore, CheckCircle2, Download, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Search, Trash2, Upload } from 'lucide-react';
+import { ArchiveRestore, CheckCircle2, Download, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Search, Trash2, Upload } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { ImportacaoPacientes } from '@/components/cadastros/importacao-pacientes';
 import { Cartao, CartaoConteudo } from '@/components/ui/cartao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Etiqueta } from '@/components/ui/etiqueta';
+import { Aviso, AvisoRegiao, EsqueletoPagina, EstadoFalha, EstadoPermissaoNegada } from '@/components/ui/feedback';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { Tabela, TabelaCabecalho, TabelaConteudo, TabelaLinha, TabelaLinhas, TabelaVazia } from '@/components/ui/tabela';
 import { obterSessao } from '@/lib/auth-api';
 import { criarConvitePaciente } from '@/lib/convites-paciente-api';
+import { classificarFalhaInterface, type FalhaInterface } from '@/lib/erros-interface';
 import {
   PacienteResumo,
   ProfissionalResumo,
@@ -100,7 +102,8 @@ export function ListaPacientes() {
   const parametrosUrl = useSearchParams();
   const [dados, setDados] = useState<RespostaPaginada<PacienteResumo> | null>(null);
   const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
-  const [erro, setErro] = useState<string | null>(null);
+  const [falhaCarregamento, setFalhaCarregamento] = useState<FalhaInterface | null>(null);
+  const [falhaAcao, setFalhaAcao] = useState<FalhaInterface | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -143,7 +146,7 @@ export function ListaPacientes() {
   useEffect(() => {
     void obterSessao().then((sessao) => {
       setPodeGerenciar(Boolean(sessao?.permissoes?.includes('pacientes.gerenciar')));
-    });
+    }).catch(() => setPodeGerenciar(false));
   }, []);
 
   useEffect(() => {
@@ -169,7 +172,7 @@ export function ListaPacientes() {
 
   const carregar = useCallback(async () => {
     setCarregando(true);
-    setErro(null);
+    setFalhaCarregamento(null);
     setSucesso(null);
     try {
       const [pacientes, profissionaisResposta] = await Promise.all([
@@ -191,7 +194,7 @@ export function ListaPacientes() {
         profissionalResponsavelId: atual.profissionalResponsavelId || profissionaisResposta.itens[0]?.id || ''
       }));
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar pacientes.');
+      setFalhaCarregamento(classificarFalhaInterface(erroAtual, 'Não foi possível carregar os pacientes.'));
     } finally {
       setCarregando(false);
     }
@@ -200,7 +203,7 @@ export function ListaPacientes() {
   async function salvar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setSalvando(true);
-    setErro(null);
+    setFalhaAcao(null);
     setSucesso(null);
 
     try {
@@ -217,7 +220,7 @@ export function ListaPacientes() {
       await carregar();
       setSucesso(mensagem);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar paciente.');
+      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível salvar o paciente.'));
     } finally {
       setSalvando(false);
     }
@@ -241,7 +244,7 @@ export function ListaPacientes() {
     const paciente = pacienteParaArquivar;
 
     setArquivandoId(paciente.id);
-    setErro(null);
+    setFalhaAcao(null);
     setSucesso(null);
 
     try {
@@ -252,7 +255,7 @@ export function ListaPacientes() {
       setUltimoArquivado(paciente);
       setPacienteParaArquivar(null);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao arquivar paciente.');
+      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível arquivar o paciente.'));
     } finally {
       setArquivandoId(null);
     }
@@ -260,13 +263,13 @@ export function ListaPacientes() {
 
   async function carregarLixeira() {
     setCarregandoLixeira(true);
-    setErro(null);
+    setFalhaAcao(null);
     try {
       const resposta = await listarPacientesArquivados({ limite: 100 });
       setArquivados(resposta.itens);
       setLixeiraAberta(true);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar a lixeira de pacientes.');
+      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível carregar a lixeira de pacientes.'));
     } finally {
       setCarregandoLixeira(false);
     }
@@ -274,7 +277,7 @@ export function ListaPacientes() {
 
   async function restaurar(paciente: PacienteResumo) {
     setRestaurandoId(paciente.id);
-    setErro(null);
+    setFalhaAcao(null);
     try {
       await restaurarPaciente(paciente.id);
       setArquivados((atuais) => atuais.filter((item) => item.id !== paciente.id));
@@ -282,7 +285,7 @@ export function ListaPacientes() {
       await carregar();
       setSucesso(`${paciente.nome} foi restaurado.`);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao restaurar paciente.');
+      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível restaurar o paciente.'));
     } finally {
       setRestaurandoId(null);
     }
@@ -294,7 +297,7 @@ export function ListaPacientes() {
     if (!email) return;
 
     setConvidandoId(paciente.id);
-    setErro(null);
+    setFalhaAcao(null);
     setSucesso(null);
     setLinkConvite(null);
 
@@ -308,7 +311,7 @@ export function ListaPacientes() {
         setSucesso('Convite criado. Use o link exibido abaixo.');
       }
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar convite.');
+      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível criar o convite.'));
     } finally {
       setConvidandoId(null);
     }
@@ -327,6 +330,21 @@ export function ListaPacientes() {
 
   const pacientesFiltrados = dados?.itens ?? [];
   const totalPaginas = Math.max(1, Math.ceil((dados?.total ?? 0) / limite));
+
+  if (!dados && !falhaCarregamento) return <EsqueletoPagina rotulo="Carregando pacientes" />;
+  if (!dados && falhaCarregamento?.tipo === 'permissao') return <EstadoPermissaoNegada />;
+  if (!dados && falhaCarregamento) {
+    return (
+      <EstadoFalha
+        titulo="Não foi possível carregar os pacientes"
+        descricao={falhaCarregamento.mensagem}
+        aoTentarNovamente={falhaCarregamento.recuperavel ? () => void carregar() : undefined}
+        tentando={carregando}
+      />
+    );
+  }
+
+  const falhaVisivel = falhaAcao ?? falhaCarregamento;
 
   return (
     <section className="grid gap-4">
@@ -406,11 +424,17 @@ export function ListaPacientes() {
         </CartaoConteudo>
       </Cartao>
 
-      {erro ? (
-        <div className="flex items-center gap-2 rounded-lg border border-perigo-borda bg-perigo-suave px-4 py-3 text-sm text-perigo">
-          <AlertTriangle size={16} />
-          {erro}
-        </div>
+      {falhaVisivel ? (
+        <AvisoRegiao>
+          <Aviso
+            variante="erro"
+            mensagem={falhaVisivel.mensagem}
+            aoFechar={() => {
+              setFalhaAcao(null);
+              setFalhaCarregamento(null);
+            }}
+          />
+        </AvisoRegiao>
       ) : null}
       {sucesso ? (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">

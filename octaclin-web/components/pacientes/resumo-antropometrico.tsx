@@ -5,6 +5,7 @@ import { Botao } from '@/components/ui/botao';
 import { BarraCarregamento } from '@/components/ui/feedback';
 import { GraficoEvolucao, type PontoEvolucao } from '@/components/ui/grafico-evolucao';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
+import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import { listarAvaliacoesAntropometricas, type SerieAntropometricaApi } from '@/lib/prontuario-api';
 import { METRICAS_ANTROPOMETRICAS, formatarMetricaAntropometrica } from './metricas-antropometricas';
 
@@ -33,7 +34,7 @@ export function ResumoAntropometrico({ pacienteId, aoAbrirDetalhes }: ResumoAntr
       const resposta = await listarAvaliacoesAntropometricas(pacienteId, { signal });
       if (ehAtual()) setSerie(resposta);
     } catch (erroAtual) {
-      if (ehAtual()) setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar a serie antropometrica.');
+      if (ehAtual()) setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível carregar a série antropométrica.'));
     } finally {
       if (ehAtual()) setCarregando(false);
     }

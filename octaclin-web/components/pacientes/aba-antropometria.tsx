@@ -8,6 +8,7 @@ import { BarraCarregamento } from '@/components/ui/feedback';
 import { GraficoEvolucao, PontoEvolucao } from '@/components/ui/grafico-evolucao';
 import { METRICAS_ANTROPOMETRICAS } from './metricas-antropometricas';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
+import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import {
   ProtocoloComposicao,
   SerieAntropometricaApi,
@@ -176,7 +177,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
       setSerie(dados);
     } catch (erroAtual) {
       if (!ehAtual()) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar avaliacoes.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível carregar as avaliações.'));
     } finally {
       if (ehAtual()) setCarregando(false);
     }
@@ -235,7 +236,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
       setSucesso('Avaliacao registrada.');
       await carregar();
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar avaliacao.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível registrar a avaliação.'));
     } finally {
       setSalvando(false);
     }
@@ -249,7 +250,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
       setSucesso('Avaliacao removida da serie.');
       await carregar();
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao remover avaliacao.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível remover a avaliação.'));
     }
   }
 

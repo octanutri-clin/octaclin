@@ -21,7 +21,13 @@ Atualizado em 2026-08-20.
   linguagem corrigida no shell, erros globais, feedback, cadastro e exames.
   A fase também removeu divergências de hidratação em agenda e prontuário;
   lint sem erros, typecheck, build, contrato visual e 10 cenários Playwright
-  de acessibilidade foram aprovados. O roteiro das Fases 248 a 262 agora trata
+  de acessibilidade foram aprovados.
+- Fase 248 concluida: as superficies clinicas principais agora preservam
+  formularios durante falhas, oferecem recuperacao acionavel, distinguem
+  indisponibilidade de permissao negada e nao exibem JSON ou erro tecnico. O
+  gate Playwright aprovou 4 cenarios em desktop e mobile, e o Lighthouse do
+  estado de falha aprovou 29 auditorias com acessibilidade 100.
+  O roteiro das Fases 249 a 262 agora trata
   recuperação, navegação, jornadas clínicas, estabilidade, segurança e aceite
   do piloto; detalhes em `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 - O repositorio e publico por decisao operacional para manter GitHub Actions

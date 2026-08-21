@@ -38,9 +38,10 @@ import { AbaCondutasTerapeuticas } from './aba-condutas-terapeuticas';
 import { AbaDocumentos, ConsultaConcluidaOpcao } from './aba-documentos';
 import { PerfilCadastroPaciente } from './perfil-cadastro-paciente';
 import { PlanoAlimentarProfissional } from './plano-alimentar-profissional';
-import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { Aviso, AvisoRegiao, BarraCarregamento, EsqueletoPagina, EstadoFalha, EstadoPermissaoNegada, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { obterSessao } from '@/lib/auth-api';
+import { classificarFalhaInterface, type FalhaInterface } from '@/lib/erros-interface';
 import { listarProfissionais, type ProfissionalResumo } from '@/lib/cadastros-api';
 import {
   criarMaterial,
@@ -362,8 +363,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [consultaVinculadaId, setConsultaVinculadaId] = useState('');
   const [filtroCategoriaAnexo, setFiltroCategoriaAnexo] = useState<CategoriaAnexoClinico | 'todas'>('todas');
   const [anexoParaExcluir, setAnexoParaExcluir] = useState<ArquivoMidiaApi | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
-  const [erroHistorico, setErroHistorico] = useState<string | null>(null);
+  const [falhaCarregamento, setFalhaCarregamento] = useState<FalhaInterface | null>(null);
+  const [falhaHistorico, setFalhaHistorico] = useState<FalhaInterface | null>(null);
+  const [falhaAcao, setFalhaAcao] = useState<FalhaInterface | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [formularioEvolucao, setFormularioEvolucao] = useState<FormularioEvolucao>(formularioEvolucaoInicial);
   const [formularioTarefa, setFormularioTarefa] = useState<FormularioTarefa>(formularioTarefaInicial);
@@ -387,7 +389,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
   const carregar = useCallback(async () => {
     setCarregando(true);
-    setErro(null);
+    setFalhaCarregamento(null);
     try {
       const [prontuario, biblioteca, enviados, anexosPaciente] = await Promise.all([
         obterProntuarioPaciente(pacienteId),
@@ -404,7 +406,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         materialId: atual.materialId || biblioteca[0]?.id || ''
       }));
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar prontuario.');
+      setFalhaCarregamento(classificarFalhaInterface(erroAtual, 'Não foi possível carregar o prontuário.'));
     } finally {
       setCarregando(false);
     }
@@ -425,7 +427,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     filtros = filtrosHistorico
   ) => {
     setCarregandoHistorico(true);
-    setErroHistorico(null);
+    setFalhaHistorico(null);
     try {
       const pagina = await listarLinhaDoTempoPaginada(pacienteId, { cursor, limite: 20, ...filtros });
       setPaginaHistorico((anterior) =>
@@ -434,7 +436,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           : pagina
       );
     } catch (erroAtual) {
-      setErroHistorico(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar a linha do tempo.');
+      setFalhaHistorico(classificarFalhaInterface(erroAtual, 'Não foi possível carregar a linha do tempo.'));
     } finally {
       setCarregandoHistorico(false);
     }
@@ -443,7 +445,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   async function registrarEvolucao(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setSalvandoEvolucao(true);
-    setErro(null);
+    setFalhaAcao(null);
     setSucesso(null);
     try {
       await criarEvolucaoClinica(pacienteId, {
@@ -456,7 +458,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setSucesso('Evolucao clinica registrada.');
       await carregar();
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar evolucao clinica.');
+      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível registrar a evolução clínica.'));
     } finally {
       setSalvandoEvolucao(false);
     }
@@ -465,7 +467,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   async function registrarTarefa(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setSalvandoTarefa(true);
-    setErro(null);
+    setFalhaAcao(null);
     setSucesso(null);
     try {
       await criarTarefaAcompanhamento(pacienteId, {
@@ -479,7 +481,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setSucesso('Tarefa de acompanhamento prescrita.');
       await carregar();
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao prescrever tarefa de acompanhamento.');
+      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível prescrever a tarefa de acompanhamento.'));
     } finally {
       setSalvandoTarefa(false);
     }
@@ -488,7 +490,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   async function registrarMaterial(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setSalvandoMaterial(true);
-    setErro(null);
+    setFalhaAcao(null);
     setSucesso(null);
     try {
       const material = await criarMaterial({
@@ -504,7 +506,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setSucesso('Material salvo na biblioteca.');
       setMateriais(await listarMateriais());
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar material.');
+      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível salvar o material.'));
     } finally {
       setSalvandoMaterial(false);
     }
@@ -514,7 +516,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     evento.preventDefault();
     if (!formularioEnvioMaterial.materialId) return;
     setEnviandoMaterial(true);
-    setErro(null);
+    setFalhaAcao(null);
     setSucesso(null);
     try {
       await enviarMaterialPaciente(pacienteId, {
@@ -525,7 +527,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setSucesso('Material enviado ao paciente.');
       setMateriaisPaciente(await listarMateriaisPaciente(pacienteId));
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao enviar material ao paciente.');
+      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível enviar o material ao paciente.'));
     } finally {
       setEnviandoMaterial(false);
     }
@@ -536,7 +538,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     if (!arquivoAnexo) return;
     const formulario = evento.currentTarget;
     setEnviandoAnexo(true);
-    setErro(null);
+    setFalhaAcao(null);
     setSucesso(null);
     try {
       const solicitacao = await solicitarUploadMidia({
@@ -561,7 +563,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       formulario.reset();
       setSucesso('Anexo confirmado e incluido no prontuario.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao enviar anexo.');
+      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível enviar o anexo.'));
     } finally {
       setEnviandoAnexo(false);
     }
@@ -569,7 +571,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
   async function abrirAnexo(anexo: ArquivoMidiaApi) {
     const novaAba = window.open('', '_blank');
-    setErro(null);
+    setFalhaAcao(null);
     try {
       const acesso = await obterAcessoArquivoMidia(anexo.id);
       if (novaAba) {
@@ -580,21 +582,21 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       }
     } catch (erroAtual) {
       novaAba?.close();
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao abrir anexo.');
+      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível abrir o anexo.'));
     }
   }
 
   async function confirmarExclusaoAnexo() {
     if (!anexoParaExcluir) return;
     setExcluindoAnexo(true);
-    setErro(null);
+    setFalhaAcao(null);
     try {
       await excluirArquivoMidia(anexoParaExcluir.id);
       setAnexoParaExcluir(null);
       setAnexos(await listarArquivosMidia(pacienteId));
       setSucesso('Anexo excluido do prontuario.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao excluir anexo.');
+      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível excluir o anexo.'));
     } finally {
       setExcluindoAnexo(false);
     }
@@ -610,7 +612,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
   useEffect(() => {
     setPaginaHistorico(null);
-    setErroHistorico(null);
+    setFalhaHistorico(null);
     setHistoricoSolicitado(false);
   }, [pacienteId]);
 
@@ -818,17 +820,18 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     [eventos]
   );
 
-  if (carregando) return <BarraCarregamento visivel rotulo="Carregando prontuario do paciente" />;
+  if (carregando && !dados) return <EsqueletoPagina rotulo="Carregando prontuário do paciente" />;
 
-  if (erro) {
+  if (!dados && falhaCarregamento?.tipo === 'permissao') return <EstadoPermissaoNegada />;
+
+  if (!dados && falhaCarregamento) {
     return (
-      <div className="grid gap-3">
-        <AlertaOperacional mensagem={`Falha ao carregar prontuario: ${erro}`} />
-        <Botao type="button" onClick={() => void carregar()}>
-          <RefreshCcw size={16} />
-          Tentar novamente
-        </Botao>
-      </div>
+      <EstadoFalha
+        titulo="Não foi possível carregar o prontuário"
+        descricao={falhaCarregamento.mensagem}
+        aoTentarNovamente={falhaCarregamento.recuperavel ? () => void carregar() : undefined}
+        tentando={carregando}
+      />
     );
   }
 
@@ -836,6 +839,18 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
   return (
     <div className="grid gap-4">
+      {falhaAcao || (falhaCarregamento && dados) ? (
+        <AvisoRegiao>
+          <Aviso
+            variante="erro"
+            mensagem={(falhaAcao ?? falhaCarregamento)?.mensagem ?? 'Não foi possível concluir a operação.'}
+            aoFechar={() => {
+              setFalhaAcao(null);
+              setFalhaCarregamento(null);
+            }}
+          />
+        </AvisoRegiao>
+      ) : null}
       <div className="z-10 grid gap-4 rounded-md border border-linha bg-white p-4 shadow-sm lg:sticky lg:top-3">
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
@@ -1562,11 +1577,13 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               <Botao type="button" variante="secundario" disabled={carregandoHistorico || (tipoHistorico === 'todos' && !inicioHistorico && !fimHistorico && !responsavelHistorico)} onClick={limparFiltrosHistorico}>Limpar</Botao>
             </div>
           </form>
-          {erroHistorico ? (
-            <div className="grid gap-3">
-              <AlertaOperacional mensagem={`Falha ao carregar linha do tempo: ${erroHistorico}`} />
-              <div><Botao type="button" variante="secundario" onClick={() => void carregarHistorico()}>Tentar novamente</Botao></div>
-            </div>
+          {falhaHistorico ? (
+            <EstadoFalha
+              titulo="Não foi possível carregar a linha do tempo"
+              descricao={falhaHistorico.mensagem}
+              aoTentarNovamente={falhaHistorico.recuperavel ? () => void carregarHistorico() : undefined}
+              tentando={carregandoHistorico}
+            />
           ) : (
             <>
               <BarraCarregamento visivel={carregandoHistorico && !paginaHistorico} rotulo="Carregando linha do tempo" />

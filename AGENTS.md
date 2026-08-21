@@ -17,14 +17,16 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase mais recente concluida: Fase 247 - qualidade de interface e linguagem.
+- Fase mais recente concluida: Fase 248 - estados e recuperacao das superficies
+  clinicas. Agenda, pacientes e prontuario agora preservam dados digitados,
+  sanitizam erros tecnicos e distinguem indisponibilidade de falta de permissao.
   Fases 244 e 245 atualizaram as
   dependencias fora do Mobile e a web para Next.js 16 com Turbopack. A Fase
   201 recebeu a trava distribuida por tenant, mas continua pendente de worker
   dedicado no Render; o backend permanece em `OCTACLIN_PROCESSO=all` e nao
   pode escalar horizontalmente antes desse rollout. O proximo bloqueador de
   negocio e a Fase 233, primeiro piloto assistido. Antes dele, a sequencia de
-  melhoria continua esta registrada nas Fases 248 a 262 e em
+  melhoria continua esta registrada nas Fases 249 a 262 e em
   `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`; a Fase 243 foi antecipada
   como interrupcao de seguranca do Mobile, sem ativar o app. Essa interrupcao
   foi concluida em 2026-08-20: Expo 57 esta validado, mas dois avisos upstream
@@ -334,6 +336,48 @@ qual dos dois esta lendo.
 
 Errar uma vez e aceitavel. Errar duas vezes o mesmo e desperdicio de tempo e de
 tokens do usuario.
+
+### Fase 248 - glob do PowerShell, patch amplo e inspecao do navegador
+
+1. **O erro:** um `rg` com glob de chaves foi interpretado pelo PowerShell e
+   falhou com `Missing argument in parameter list`; depois um patch amplo do
+   prontuario falhou porque esperava `gap-2`, mas o arquivo tinha `gap-3`. Mais
+   tarde, `rg ... *.md` passou o curinga literalmente e falhou com erro 123.
+   **A solucao:** passar arquivos explicitamente ao `rg` e dividir patches
+   grandes em blocos com contexto relido. **Como nao repetir:** no PowerShell,
+   nao usar expansao `{a,b}` nem curinga literal como argumento de `rg`, e
+   sempre reler o trecho imediatamente antes de um patch amplo. Custo: tres
+   comandos locais, sem mudanca parcial de arquivo.
+2. **O erro:** `pnpm exec next dev` com PTY falhou em Windows com
+   `CreateProcess ... Acesso negado`. **A solucao:** iniciar o mesmo servidor
+   sem PTY e encerrar a sessao explicitamente. **Como nao repetir:** reservar
+   PTY apenas para comandos realmente interativos. Custo: uma chamada local.
+3. **O erro:** o `initScript` temporario do Chrome DevTools assumiu que todo
+   argumento de `fetch` tinha URL e gerou `Cannot read properties of undefined
+   (reading 'includes')` no carregamento RSC. **A solucao:** a validacao foi
+   baseada na arvore acessivel e rede reais, e o servidor temporario foi
+   encerrado; o codigo do produto nao foi alterado por esse script. **Como nao
+   repetir:** em mocks de navegador, normalizar `string`, `URL` e `Request`
+   antes de comparar a URL. Custo: uma navegacao adicional no DevTools.
+4. **O erro:** o primeiro `test:a11y` encontrou `Another next dev server is
+   already running` porque o processo filho do DevTools sobreviveu ao
+   encerramento da sessao pai. **A solucao:** conferir a linha de comando do
+   PID, encerrar apenas o processo pertencente ao checkout e repetir o gate,
+   que aprovou 10/10. **Como nao repetir:** depois de usar servidor manual,
+   verificar as portas 3000/3010 antes de iniciar Playwright. Custo: uma
+   execucao invalida do gate.
+5. **O erro:** `pnpm security:secrets` encontrou a credencial no arquivo local
+   e ignorado `octaclin-backend/.env.integracao`; a primeira tentativa de
+   validar so arquivos versionaveis tambem chamou o modulo por `node -e` sem
+   `process.argv[1]`, causando `ERR_INVALID_ARG_TYPE`, e depois deixou de
+   aplicar as exclusoes de diretorio do scanner. **A solucao:** confirmar com
+   `git check-ignore`/`git ls-files` que o `.env` nao e versionavel e repetir a
+   mesma varredura somente sobre `git ls-files --cached --others
+   --exclude-standard`, preservando as exclusoes originais; nenhum achado
+   restou. **Como nao repetir:** scripts ESM importados por `node -e` precisam
+   de `process.argv[1]` antes do import dinamico, e a raiz logica do scanner nao
+   pode ser perdida ao percorrer arquivos individualmente. Custo: tres comandos
+   locais; nenhum secret foi impresso, alterado ou versionado.
 
 ## Padroes de arquitetura
 

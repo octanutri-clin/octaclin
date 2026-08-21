@@ -8,6 +8,7 @@ import {
   criarSolicitacaoAgendaPublica
 } from '@/lib/agendamento-publico-api';
 import { Botao } from '@/components/ui/botao';
+import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import { AreaTexto, Campo, Rotulo } from '@/components/ui/campo';
 import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao';
 import { AlertaOperacional, EstadoVazio } from '@/components/ui/feedback';
@@ -63,7 +64,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
         setErro(null);
       })
       .catch((erroAtual) => {
-        setErro(erroAtual instanceof Error ? erroAtual.message : 'Link de agendamento indisponivel.');
+        setErro(mensagemFalhaInterface(erroAtual, 'O link de agendamento está indisponível.'));
         setAgenda(null);
       })
       .finally(() => setCarregando(false));
@@ -102,7 +103,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
       setRevisando(false);
       setSucesso(true);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Nao foi possivel enviar a solicitacao.');
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível enviar a solicitação.'));
     } finally {
       setSalvando(false);
     }

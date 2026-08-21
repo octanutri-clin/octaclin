@@ -5,8 +5,10 @@ import { CalendarDays, ChevronLeft, ChevronRight, Clock3, List, MapPin, RefreshC
 import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Dica } from '@/components/ui/dica';
+import { EstadoFalha } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
+import { classificarFalhaInterface, type FalhaInterface } from '@/lib/erros-interface';
 import {
   ConsultaAgendaApi,
   criarBloqueioManualAgenda,
@@ -128,8 +130,9 @@ export function AgendaSemanal({
   const [visao, setVisao] = useState<'dia' | 'semana' | 'mes' | 'lista'>('semana');
   const [profissionalId, setProfissionalId] = useState('');
   const [itensFeed, setItensFeed] = useState<ItemFeedAgendaApi[] | null>(null);
-  const [erroFeed, setErroFeed] = useState<string | null>(null);
+  const [falhaFeed, setFalhaFeed] = useState<FalhaInterface | null>(null);
   const [carregandoFeed, setCarregandoFeed] = useState(false);
+  const [versaoFeed, setVersaoFeed] = useState(0);
   const iniciarRequisicaoFeed = useRequisicaoCancelavel();
   const [bloqueio, setBloqueio] = useState(() => ({
     tipo: 'intervalo' as const,
@@ -174,7 +177,7 @@ export function AgendaSemanal({
   useEffect(() => {
     const { signal, ehAtual } = iniciarRequisicaoFeed();
     setCarregandoFeed(true);
-    setErroFeed(null);
+    setFalhaFeed(null);
     void listarFeedAgenda(
       { inicioEm: periodo.inicio.toISOString(), fimEm: periodo.fim.toISOString(), profissionalId: profissionalId || undefined },
       { signal }
@@ -184,12 +187,12 @@ export function AgendaSemanal({
       })
       .catch((erro: unknown) => {
         if (signal.aborted || !ehAtual()) return;
-        setErroFeed(erro instanceof Error ? erro.message : 'Falha ao carregar disponibilidade.');
+        setFalhaFeed(classificarFalhaInterface(erro, 'Não foi possível atualizar a disponibilidade da agenda.'));
       })
       .finally(() => {
         if (ehAtual()) setCarregandoFeed(false);
       });
-  }, [consultas, periodo.fim, periodo.inicio, profissionalId, iniciarRequisicaoFeed]);
+  }, [consultas, periodo.fim, periodo.inicio, profissionalId, iniciarRequisicaoFeed, versaoFeed]);
 
   const dias = periodo.dias;
   const semanaFim = dias[dias.length - 1];
@@ -252,9 +255,9 @@ export function AgendaSemanal({
       });
       if (criado.tipo !== 'bloqueio_manual') return;
       setItensFeed((atuais) => (atuais ? [...atuais, criado].sort((a, b) => a.inicioEm.localeCompare(b.inicioEm)) : atuais));
-      setErroFeed(null);
+      setFalhaFeed(null);
     } catch (erro) {
-      setErroFeed(erro instanceof Error ? erro.message : 'Falha ao bloquear horario.');
+      setFalhaFeed(classificarFalhaInterface(erro, 'Não foi possível bloquear o horário.'));
     }
   }
 
@@ -262,9 +265,9 @@ export function AgendaSemanal({
     try {
       await removerBloqueioManualAgenda(bloqueioId);
       setItensFeed((atuais) => atuais?.filter((item) => item.id !== bloqueioId) ?? atuais);
-      setErroFeed(null);
+      setFalhaFeed(null);
     } catch (erro) {
-      setErroFeed(erro instanceof Error ? erro.message : 'Falha ao liberar horario.');
+      setFalhaFeed(classificarFalhaInterface(erro, 'Não foi possível liberar o horário.'));
     }
   }
 
@@ -410,7 +413,15 @@ export function AgendaSemanal({
         <Botao type="submit">Bloquear horario</Botao>
       </form>
 
-      {erroFeed ? <p role="alert" className="border-b border-alerta-borda bg-alerta-suave px-4 py-3 text-sm text-alerta-forte">{erroFeed}</p> : null}
+      {falhaFeed ? (
+        <EstadoFalha
+          titulo="Não foi possível atualizar a agenda visual"
+          descricao={falhaFeed.mensagem}
+          aoTentarNovamente={falhaFeed.recuperavel ? () => setVersaoFeed((atual) => atual + 1) : undefined}
+          tentando={carregandoFeed}
+          className="rounded-none border-x-0 border-t-0"
+        />
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
         <p className="text-sm font-semibold text-tinta">{formatarPeriodo(semanaInicio, semanaFim)}</p>

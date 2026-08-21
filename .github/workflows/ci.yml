@@ -227,6 +227,10 @@ jobs:
         working-directory: octaclin-web
         run: pnpm smoke:visual
 
+      - name: Estados e recuperacao clinica
+        working-directory: octaclin-web
+        run: pnpm test:fase248
+
       - name: Upload service logs
         if: always()
         uses: actions/upload-artifact@v7

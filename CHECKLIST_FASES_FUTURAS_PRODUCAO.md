@@ -1,7 +1,7 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-20 com a conclusao da Fase 247, a auditoria dos PRs
-abertos e o roteiro priorizado das Fases 248 a 262.
+Atualizado em 2026-08-20 com a conclusao da Fase 248, a auditoria dos PRs
+abertos e o roteiro priorizado das Fases 249 a 262.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -2133,13 +2133,15 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Playwright de acessibilidade em desktop e mobile.
   - Documento: `fase-247-qualidade-interface-linguagem.md`.
 
-- [ ] Fase 248 - Estados e recuperação das superfícies clínicas. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
-  - Consolidar carregamento, vazio, erro, sucesso e permissão nas telas de
-    agenda, lista de pacientes e prontuário.
-  - Adicionar recuperação acionável, preservar dados digitados e impedir que
-    falhas HTTP apareçam como JSON ou erro técnico para o usuário.
-  - Gate: jornadas sintéticas de falha e recuperação em agenda, pacientes e
-    prontuário, sem alterar regras clínicas, isolamento por tenant ou permissões.
+- [x] Fase 248 - Estados e recuperação das superfícies clínicas. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
+  - Concluídos: classificador compartilhado de falhas, esqueletos iniciais,
+    estados de permissão e indisponibilidade, recuperação acionável e
+    preservação dos formulários de consulta, paciente e evolução.
+  - Mensagens técnicas, JSON, HTML, status HTTP e rotas internas foram
+    bloqueados também nos módulos internos de agenda e prontuário.
+  - Gate: 4 cenários Playwright aprovados em desktop e mobile; Lighthouse da
+    tela de falha com 100 em acessibilidade e 29 auditorias aprovadas.
+  - Documento: `fase-248-estados-recuperacao-superficies-clinicas.md`.
 
 - [ ] Fase 249 - Densidade e responsividade do console clínico. [IMPORTANTE - NAO BLOQUEADOR ISOLADO]
   - Migrar controles locais por fluxo para os componentes compartilhados,
@@ -2279,11 +2281,11 @@ Fase 243 - Modernizacao e hardening do Mobile:
   `image-size` sem patch. O gate admite apenas esses dois identificadores;
   `mobile.sync=false` e todos os bloqueios de distribuicao permanecem. PRs
   `#22`, `#24`, `#25`, `#29` e `#30` foram encerrados como superados.
-- Proxima fase: Fase 248 - Estados e recuperacao das superficies clinicas
+- Proxima fase: Fase 249 - Densidade e responsividade do console clinico
 - Modelo recomendado: GPT-5.6 Sol, raciocinio `high`
-- Skills/plugins: `ecc:error-handling`, `ecc:frontend-patterns`,
-  `ecc:frontend-a11y`, `ecc:e2e-testing`,
-  `codex-engineering-guardrails:code-work`, Chrome DevTools e Playwright
+- Skills/plugins: `ecc:frontend-design-direction`,
+  `ecc:make-interfaces-feel-better`, `ecc:design-system`,
+  `ecc:frontend-a11y`, `ecc:browser-qa`, Penpot, Chrome DevTools e Playwright
 
 Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service:
 - Status: concluida
