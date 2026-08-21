@@ -1,7 +1,7 @@
 # Fase 253 - Agenda clinica confiavel e operacional
 
-Status: implementacao concluida em 2026-08-21; rollout pendente da migration
-`1720000001034` em producao.
+Status: implementacao e migration de producao concluidas em 2026-08-21;
+rollout pendente de merge, deploy e smoke.
 
 ## Objetivo
 
@@ -62,10 +62,13 @@ TypeORM. Um preflight SQL idempotente foi validado somente no projeto Neon
 - RLS e FORCE RLS preservados em `agenda_links_publicos`;
 - hash sintetico inexistente retornou zero linhas.
 
-O preflight nao escreveu o historico TypeORM. Antes do merge que dispara
-deploy, producao deve mostrar somente a `1034` pendente, aplica-la com
-`neondb_owner` e confirmar todas as migrations como executadas. Nao usar a role
-runtime, seed, `migration:revert` ou `down`.
+Em 2026-08-21, com autorizacao humana explicita, o banco
+`Octaclin-db-producao` do projeto `royal-tooth-92809187` mostrou somente a
+`1034` pendente. A migration foi aplicada com `neondb_owner` e o TypeORM passou
+a listar 47/47 migrations executadas. A verificacao direta confirmou
+`SECURITY DEFINER`, `search_path=public, pg_temp`, retorno minimo, RLS e FORCE
+RLS ativos e zero linha para o hash sintetico. A URL foi removida da sessao no
+bloco `finally`; nenhum seed, `migration:revert` ou `down` foi executado.
 
 ## Validacoes executadas
 
@@ -95,10 +98,8 @@ Resultados:
 
 ## Aceite restante
 
-1. Aplicar e verificar a migration `1034` em producao com URL owner
-   explicitamente confirmada.
-2. Integrar o PR somente depois do schema estar expandido.
-3. Confirmar deploy, `/health/detalhado` sem migration pendente e smoke
+1. Integrar o PR com o schema de producao ja expandido.
+2. Confirmar deploy, `/health/detalhado` sem migration pendente e smoke
    sintetico de agenda interna, link publico e reprocessamento.
 
 ## Proxima fase

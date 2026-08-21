@@ -2198,9 +2198,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     observáveis, idempotentes e recuperáveis sem perder a agenda interna.
   - [x] Implementacao, testes focados, builds, autorizacao, Playwright,
     acessibilidade e preflight SQL no banco isolado concluidos em 2026-08-21.
-  - [ ] Aplicar a migration aditiva `1720000001034` com `neondb_owner` no banco
-    de producao explicitamente confirmado, verificar schema e so entao integrar
-    o PR/deploy.
+  - [x] Migration aditiva `1720000001034` aplicada em 2026-08-21 com
+    `neondb_owner` no banco de producao explicitamente confirmado; 47/47 no
+    TypeORM, funcao minima e RLS/FORCE RLS verificados.
+  - [ ] Integrar o PR, acompanhar os deploys e aprovar o smoke de producao.
   - Documento: `fase-253-agenda-clinica-confiavel-operacional.md`.
 
 - [ ] Fase 254 - Lista e cadastro robusto de pacientes. [ESSENCIAL - PRE-PILOTO]
@@ -2377,15 +2378,17 @@ Fase 252 - Arquitetura de navegacao e descoberta de funcionalidades:
   Playwright
 
 Fase 253 - Agenda clinica confiavel e operacional:
-- Status: implementacao concluida; rollout pendente da migration `1034`
+- Status: implementacao e migration `1034` concluidas; rollout pendente de
+  merge, deploy e smoke
 - Commit: registrado no historico Git da fase
 - Data: 2026-08-21
 - Validacoes: 87 testes focados backend, build backend, build web de 123 rotas,
   autorizacao, 2 jornadas Playwright, gate de acessibilidade, Chrome DevTools,
   preflight SQL em integracao e varredura de segredos
 - Observacoes: a suite backend completa passou 141/142 suites e 984/985 testes;
-  a unica falha e a comparacao canonica TACO por `LF/CRLF` no Windows. Producao
-  nao foi alterada e o PR nao deve ser integrado antes da migration `1034`.
+  a unica falha e a comparacao canonica TACO por `LF/CRLF` no Windows. A
+  migration `1034` foi aplicada com 47/47 migrations e verificacoes de funcao e
+  RLS aprovadas; falta integrar o PR e executar o smoke.
 - Proxima fase: Fase 254 - Lista e cadastro robusto de pacientes
 - Modelo recomendado: GPT-5.6 Sol, raciocinio `high`
 - Skills/plugins: `ecc:healthcare-emr-patterns`, `ecc:frontend-patterns`,
