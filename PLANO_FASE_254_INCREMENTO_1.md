@@ -1287,6 +1287,12 @@ e remover o metodo privado e o `obterContatoComparavel`.
 Atualizar `servico-perfil-cadastro-paciente.spec.ts` para construir o servico
 com o novo argumento.
 
+**Registrar `ServicoDuplicidadePacientes` em `providers` no
+`modulo-pacientes.ts` neste mesmo commit.** Sem isso a aplicacao para de subir
+por falha de injecao assim que o perfil passa a depender dele, e os specs desta
+task constroem o servico na mao, entao nao acusariam. O resto da fiacao do
+modulo continua na Task 6.
+
 - [ ] **Step 5: Rodar os dois specs e confirmar que passam**
 
 ```
@@ -1451,9 +1457,11 @@ Task 5.
 - [ ] **Step 3: Fiar no modulo**
 
 Em `modulo-pacientes.ts`: importar `FiltroSalvoPacienteOrm` no
-`TypeOrmModule.forFeature`, e acrescentar `ServicoFiltrosSalvosPacientes` e
-`ServicoDuplicidadePacientes` a `providers`, alem do
-`ControladorFiltrosSalvosPacientes` em `controllers`.
+`TypeOrmModule.forFeature`, acrescentar `ServicoFiltrosSalvosPacientes` a
+`providers` e `ControladorFiltrosSalvosPacientes` a `controllers`.
+
+`ServicoDuplicidadePacientes` **ja foi registrado na Task 5** - conferir que
+esta la e nao duplicar a entrada.
 
 - [ ] **Step 4: Rodar a suite do modulo e os portoes**
 
