@@ -25,19 +25,20 @@ import { PaletaComandos } from '@/components/app/paleta-comandos';
 import { SinoNotificacoes } from '@/components/app/sino-notificacoes';
 import { classesBotao } from '@/components/ui/botao';
 import { Dica } from '@/components/ui/dica';
+import { modulosConsolePermitidos, type IconeModuloConsole } from '@/lib/navegacao-console';
 
-const itens = [
-  { href: '/dashboard', rotulo: 'Hoje', icone: LayoutDashboard, permissao: 'dashboard.ler', grupo: 'Clínica', papeis: ['SuperAdmin', 'Professional'] },
-  { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays, permissao: 'agenda.consultas.ler', grupo: 'Clínica', papeis: undefined },
-  { href: '/pacientes', rotulo: 'Pacientes', icone: HeartPulse, permissao: 'pacientes.listar', grupo: 'Clínica', papeis: undefined },
-  { href: '/questionarios', rotulo: 'Formulários', icone: ClipboardList, permissao: 'questionarios.ler', grupo: 'Clínica', papeis: undefined },
-  { href: '/comunicacoes', rotulo: 'Comunicações', icone: Send, permissao: 'comunicacoes.mensagens.ler', grupo: 'Relacionamento', papeis: undefined },
-  { href: '/automacoes', rotulo: 'Automações', icone: Zap, permissao: 'automacoes.gerenciar', grupo: 'Relacionamento', papeis: undefined },
-  { href: '/ia', rotulo: 'IA assistida', icone: BrainCircuit, permissao: 'ia.executar', grupo: 'Ferramentas', papeis: ['SuperAdmin', 'Professional'] },
-  { href: '/gamificacao', rotulo: 'Metas e adesão', icone: Trophy, permissao: 'gamificacao.gerenciar', grupo: 'Ferramentas', papeis: ['SuperAdmin', 'Professional'] },
-  { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope, permissao: 'profissionais.ler', grupo: 'Gestao', papeis: undefined },
-  { href: '/operacoes', rotulo: 'Operações', icone: Settings, permissao: 'operacoes.auditoria.ler', grupo: 'SuperAdmin', papeis: ['SuperAdmin'] }
-] as const;
+const ICONES_MODULOS: Record<IconeModuloConsole, typeof LayoutDashboard> = {
+  dashboard: LayoutDashboard,
+  agenda: CalendarDays,
+  pacientes: HeartPulse,
+  formularios: ClipboardList,
+  comunicacoes: Send,
+  automacoes: Zap,
+  ia: BrainCircuit,
+  gamificacao: Trophy,
+  profissionais: Stethoscope,
+  operacoes: Settings
+};
 
 const nomesPapel: Record<string, string> = {
   SuperAdmin: 'SuperAdmin',
@@ -82,10 +83,12 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
   }, []);
 
   const permissoes = sessao?.permissoes ?? [];
-  const itensVisiveis = itens.filter((item) =>
-    permissoes.includes(item.permissao)
-    && (!item.papeis || Boolean(sessao?.papel && item.papeis.some((papel) => papel === sessao.papel)))
-  );
+  const itensVisiveis = modulosConsolePermitidos({ papel: sessao?.papel, permissoes }).map((modulo) => ({
+    href: modulo.href,
+    rotulo: modulo.rotulo,
+    grupo: modulo.grupo,
+    icone: ICONES_MODULOS[modulo.icone]
+  }));
 
   const atalhos = sessao ? (
     <>

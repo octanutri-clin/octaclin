@@ -27,6 +27,21 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 252 - Arquitetura de navegacao e descoberta de funcionalidades
+
+- Responsavel: Codex.
+- Inicio e conclusao: 2026-08-21.
+- Commit: registrado no historico Git desta fase.
+- Push: por PR, conforme ruleset da `main`.
+- Validacoes: typecheck, lint sem erros, build, autorizacao, base visual,
+  linguagem, 4 cenarios Playwright, 10 cenarios de acessibilidade, Chrome
+  DevTools, Lighthouse 100 e Penpot.
+- Arquivos principais: catalogo canonico, shells, paleta, autorizacao de rotas,
+  testes da navegacao e documento da fase.
+- Pendencias: nenhuma da fase; Browser MCP apresentou falha local de bootstrap,
+  coberta por Chrome DevTools e Playwright.
+- Proxima fase: Fase 253 - agenda clinica confiavel e operacional.
+
 ### Fase 251 - Revisao integral de linguagem e microcopy
 
 - Responsavel: Codex.

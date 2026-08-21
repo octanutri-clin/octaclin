@@ -2178,11 +2178,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     e Lighthouse 100.
   - Documento: `fase-251-revisao-integral-linguagem-microcopy.md`.
 
-- [ ] Fase 252 - Arquitetura de navegação e descoberta de funcionalidades. [ESSENCIAL - PRE-PILOTO]
+- [x] Fase 252 - Arquitetura de navegação e descoberta de funcionalidades. [ESSENCIAL - PRE-PILOTO]
   - Reconciliar rotas implementadas, permissões e itens visíveis por papel para
     que nenhuma capacidade pronta fique inacessível após o login.
   - Agrupar Clínica, Relacionamento e Administração, com busca de comandos e
     troca de painel disponível exclusivamente ao SuperAdmin.
+  - Concluida em 2026-08-21: catalogo canonico passou a alimentar menu, paleta e
+    autorizacao de rotas; menu mobile completo e matriz por papel foram
+    validados com dados sinteticos.
+  - Validacoes: typecheck, lint sem erros, build, autorizacao, base visual,
+    linguagem, 4 cenarios Playwright, 10 cenarios de acessibilidade, Chrome
+    DevTools e Lighthouse 100.
+  - Documento: `fase-252-arquitetura-navegacao-descoberta.md`.
 
 - [ ] Fase 253 - Agenda clínica confiável e operacional. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
   - Fechar visualizações dia, semana e lista; criar, bloquear, desbloquear,
@@ -2346,6 +2353,22 @@ Fase 251 - Revisao integral de linguagem e microcopy:
 - Skills/plugins: `ecc:codebase-onboarding`, `ecc:click-path-audit`,
   `ecc:frontend-patterns`, `ecc:frontend-a11y`,
   `codex-security:validation`, Browser, Chrome DevTools, Playwright e Penpot
+
+Fase 252 - Arquitetura de navegacao e descoberta de funcionalidades:
+- Status: concluida
+- Commit: registrado no historico Git da fase
+- Data: 2026-08-21
+- Validacoes: typecheck, lint sem erros, build de 123 rotas, autorizacao, base
+  visual, linguagem, 4 cenarios Playwright, 10 cenarios de acessibilidade,
+  Chrome DevTools, Lighthouse 100 e especificacao no Penpot
+- Observacoes: menu, paleta e autorizacao agora usam o mesmo catalogo; nenhuma
+  migration, banco, backend ou configuracao de producao foi alterada
+- Proxima fase: Fase 253 - Agenda clinica confiavel e operacional
+- Modelo recomendado: GPT-5.6 Sol, raciocinio `xhigh`
+- Skills/plugins: `ecc:nestjs-patterns`, `ecc:backend-patterns`,
+  `ecc:api-design`, `ecc:error-handling`, `ecc:e2e-testing`,
+  `codex-security:attack-path-analysis`, Context7, Browser, Chrome DevTools e
+  Playwright
 
 Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service:
 - Status: concluida

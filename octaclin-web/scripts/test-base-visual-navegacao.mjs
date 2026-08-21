@@ -8,17 +8,18 @@ const ler = (arquivo) => readFileSync(resolve(raiz, arquivo), 'utf8');
 
 const consoleShell = ler('components/app/console-shell.tsx');
 const portalShell = ler('components/app/portal-shell.tsx');
+const catalogoNavegacao = ler('lib/navegacao-console.ts');
 const portalPaciente = ler('components/portal/portal-paciente.tsx');
 const botao = ler('components/ui/botao.tsx');
 const campo = ler('components/ui/campo.tsx');
 
-for (const grupo of ['Clinica', 'Relacionamento', 'Ferramentas', 'Gestao', 'SuperAdmin']) {
-  assert.match(consoleShell, new RegExp(`grupo: '${grupo}'`), `grupo ${grupo} ausente no console`);
+for (const grupo of ['Clínica', 'Relacionamento', 'Administração']) {
+  assert.match(catalogoNavegacao, new RegExp(`'${grupo}'`), `grupo ${grupo} ausente no catalogo`);
 }
 
 for (const rotaAvancada of ['/ia', '/gamificacao']) {
   assert.match(
-    consoleShell,
+    catalogoNavegacao,
     new RegExp(`href: '${rotaAvancada}'`),
     `${rotaAvancada} deve estar acessivel no grupo Ferramentas`
   );
@@ -26,7 +27,7 @@ for (const rotaAvancada of ['/ia', '/gamificacao']) {
 
 for (const rotaRetirada of ['/mobile']) {
   assert.doesNotMatch(
-    consoleShell,
+    catalogoNavegacao,
     new RegExp(`href: '${rotaRetirada}'`),
     `${rotaRetirada} nao deve ocupar a navegacao principal`
   );
@@ -34,6 +35,8 @@ for (const rotaRetirada of ['/mobile']) {
 
 assert.match(portalShell, /grupo\?: string/, 'shell deve aceitar grupos de navegacao');
 assert.match(portalShell, /aria-current/, 'navegacao deve expor a pagina ativa');
+assert.match(portalShell, /<details/, 'navegacao mobile deve usar divulgacao nativa');
+assert.match(portalShell, /Módulos/, 'navegacao mobile deve nomear o menu de modulos');
 assert.match(portalShell, /contextoUsuario/, 'shell deve apresentar o contexto da sessao');
 assert.match(consoleShell, /#novo-agendamento/, 'console deve oferecer atalho real para novo agendamento');
 assert.match(consoleShell, /#novo-paciente/, 'console deve oferecer atalho real para novo paciente');

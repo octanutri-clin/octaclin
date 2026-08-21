@@ -36,7 +36,7 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
 | 249 | Densidade e responsividade web - concluida em 2026-08-20 | Importante | Gate aprovado |
 | 250 | Fechamento da dívida Mobile e PRs - concluida em 2026-08-20 | Essencial/segurança | Higiene aprovada; Mobile segue bloqueado pelos advisories upstream |
 | 251 | Linguagem e microcopy integral - concluida em 2026-08-21 | Importante | Gate aprovado |
-| 252 | Navegação e descoberta por papel | Essencial | Pré-piloto |
+| 252 | Navegacao e descoberta por papel - concluida em 2026-08-21 | Essencial | Gate aprovado |
 | 253 | Agenda clínica confiável | Essencial | Bloqueia piloto |
 | 254 | Lista e cadastro de pacientes | Essencial | Pré-piloto |
 | 255 | Prontuário e linha de cuidado | Essencial | Bloqueia piloto |
@@ -76,6 +76,20 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
   permaneceu verde.
 - A sequencia segue para a Fase 252, que reconcilia rotas, permissoes e
   descoberta de capacidades por papel.
+
+## Resultado da Fase 252
+
+- Um catalogo canonico reconciliou as dez rotas do console com grupos, papeis,
+  permissoes, atalhos e termos de busca.
+- Menu, paleta de comandos e autorizacao deixaram de manter inventarios
+  paralelos; Patient e Client permanecem isolados e Operacoes e exclusiva do
+  SuperAdmin.
+- O menu mobile usa disclosure nativo, exibe a area atual e revela todos os
+  grupos por teclado sem overflow.
+- Penpot, Chrome DevTools, Lighthouse 100, 4 cenarios da fase e 10 cenarios de
+  acessibilidade aprovaram a entrega.
+- A sequencia segue para a Fase 253, que fecha confiabilidade, concorrencia e
+  recuperacao da agenda interna e Google Calendar.
 
 ## Auditoria dos PRs abertos em 2026-08-20
 

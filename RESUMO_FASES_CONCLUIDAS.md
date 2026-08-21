@@ -739,6 +739,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   foram revisadas; Browser, Lighthouse 100 e Playwright desktop/mobile
   validaram contraste, foco, acessibilidade e ausencia de overflow. Ver
   `fase-251-revisao-integral-linguagem-microcopy.md`.
+- Fase 252 - Arquitetura de navegacao e descoberta: um catalogo canonico agora
+  alimenta menu, paleta de comandos e autorizacao de rotas por papel e
+  permissao. O console foi organizado em Clinica, Relacionamento e
+  Administracao; o menu mobile revela todos os modulos por teclado sem expor
+  Operacoes fora do SuperAdmin. Penpot, Chrome DevTools, Lighthouse 100 e
+  Playwright desktop/mobile validaram a entrega. Ver
+  `fase-252-arquitetura-navegacao-descoberta.md`.
 - Fase 241 - Hardening da IA clinica: referencias de
   check-in, transcricao e midia agora sao validadas por tenant/paciente; a URL
   privada e criada apenas no backend e seu SHA-256 e conferido ponta a ponta.

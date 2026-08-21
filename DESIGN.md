@@ -129,6 +129,12 @@ destrutivas. O verbo exibido no botao deve reaparecer no feedback de sucesso.
 teclado previsiveis. `Tabela` e responsavel pelo contorno e overflow de listas;
 linhas e colunas preservam dados acessiveis quando a tela fica estreita.
 
+O console agrupa capacidades somente em Clinica, Relacionamento e
+Administracao. Menu, paleta e autorizacao consomem o catalogo canonico em
+`lib/navegacao-console.ts`. No celular, um disclosure nativo substitui a faixa
+horizontal: informa a area atual, revela todos os grupos por teclado e mantem
+links fechados fora da ordem de foco.
+
 ### Forms and overlays
 
 Campos compartilhados usam 44px, labels associados e erros em texto. Selects e

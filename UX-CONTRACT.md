@@ -71,6 +71,13 @@
 
 ## Navigation and responsive behavior
 
+- Fonte canonica do console: `lib/navegacao-console.ts`; menu, paleta de
+  comandos e autorizacao de rota nao mantem catalogos paralelos.
+- Taxonomia profissional: `Clinica`, `Relacionamento` e `Administracao`.
+- Descoberta: um modulo so aparece quando papel e permissao concordam; ocultar
+  navegacao nunca substitui autorizacao no BFF/backend.
+- Em telas menores que `lg`, o console usa um disclosure nativo com todos os
+  grupos e a area atual; links fechados ficam fora da ordem de Tab.
 - Route document title policy: each new or touched route must expose an honest Portuguese title.
 - Route error / 403 page behavior: global error uses product copy and retry; permission states explain the missing capability without exposing data.
 - Sidebar/drawer/bottom-sheet transformation: shells own responsive navigation; feature screens do not add competing fixed navigation.

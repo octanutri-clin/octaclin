@@ -1,3 +1,10 @@
+import {
+  MODULOS_CONSOLE,
+  moduloConsoleParaRota,
+  moduloConsolePermitePapel,
+  permissaoExigidaParaRotaConsole
+} from '../navegacao-console';
+
 export interface DecisaoAcessoRota {
   permitir: boolean;
   redirecionarPara?: string;
@@ -5,20 +12,6 @@ export interface DecisaoAcessoRota {
 
 const ROTAS_PORTAL = ['/portal'];
 const ROTAS_CLIENTE = ['/cliente'];
-const permissoesRotasOperacionais: Record<string, string> = {
-  '/dashboard': 'dashboard.ler',
-  '/agenda': 'agenda.consultas.ler',
-  '/operacoes': 'operacoes.auditoria.ler',
-  '/questionarios': 'questionarios.ler',
-  '/comunicacoes': 'comunicacoes.mensagens.ler',
-  '/automacoes': 'automacoes.gerenciar',
-  '/ia': 'ia.executar',
-  '/mobile': 'mobile.operar',
-  '/gamificacao': 'gamificacao.gerenciar',
-  '/pacientes': 'pacientes.listar',
-  '/profissionais': 'profissionais.ler'
-};
-
 function pertenceARota(pathname: string, rotas: readonly string[]) {
   return rotas.some((rota) => pathname === rota || pathname.startsWith(`${rota}/`));
 }
@@ -28,21 +21,13 @@ export function sanitizarDestinoInicial(valor?: string) {
   return valor.startsWith('/') && !valor.startsWith('//') ? valor : '/dashboard';
 }
 
-function permissaoExigidaParaRota(pathname: string): string | undefined {
-  if (pathname.startsWith('/pacientes/')) return 'pacientes.ler';
-
-  const entrada = Object.entries(permissoesRotasOperacionais).find(
-    ([rota]) => pathname === rota || pathname.startsWith(`${rota}/`)
-  );
-  return entrada?.[1];
-}
-
 function papelPermiteRotaOperacional(pathname: string, papel: string) {
-  return !pertenceARota(pathname, ['/dashboard']) || papel === 'SuperAdmin' || papel === 'Professional';
+  const modulo = moduloConsoleParaRota(pathname);
+  return Boolean(modulo && moduloConsolePermitePapel(modulo, papel));
 }
 
 function rotaOperacionalPermitida(pathname: string, papel: string, permissoes?: string[]) {
-  const permissaoExigida = permissaoExigidaParaRota(pathname);
+  const permissaoExigida = permissaoExigidaParaRotaConsole(pathname);
   if (!permissaoExigida || !papelPermiteRotaOperacional(pathname, papel)) return false;
   return !Array.isArray(permissoes) || permissoes.includes(permissaoExigida);
 }
@@ -52,7 +37,7 @@ export function resolverDestinoPermitido(papel: string, destinoInicial?: string,
   if (papel === 'Client') return '/cliente';
 
   const destino = sanitizarDestinoInicial(destinoInicial);
-  const candidatos = [destino, ...Object.keys(permissoesRotasOperacionais)];
+  const candidatos = [destino, ...MODULOS_CONSOLE.map((modulo) => modulo.href)];
   return candidatos.find((candidato) => rotaOperacionalPermitida(candidato, papel, permissoes)) ?? '/login';
 }
 
@@ -73,7 +58,7 @@ export function decidirAcessoRota(pathname: string, papel?: string, destinoInici
     return { permitir: false, redirecionarPara: destino };
   }
 
-  const permissaoExigida = permissaoExigidaParaRota(pathname);
+  const permissaoExigida = permissaoExigidaParaRotaConsole(pathname);
   if (permissaoExigida && !rotaOperacionalPermitida(pathname, papel, permissoes)) {
     return { permitir: false, redirecionarPara: destino };
   }
