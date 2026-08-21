@@ -173,12 +173,12 @@ async function main() {
   await assertPaginaProtegida('/operacoes', 'Confiabilidade OctaClin');
   await assertPaginaProtegida('/pacientes', 'Pacientes');
   await assertPaginaProtegida('/profissionais', 'Profissionais');
-  await assertPaginaProtegida('/questionarios', 'Editor de Questionarios');
-  await assertPaginaProtegida('/comunicacoes', 'Comunicacoes');
-  await assertPaginaProtegida('/automacoes', 'Automacoes');
-  await assertPaginaProtegida('/ia', 'Sugestoes assistidas');
+  await assertPaginaProtegida('/questionarios', 'Editor de Questionários');
+  await assertPaginaProtegida('/comunicacoes', 'Comunicações');
+  await assertPaginaProtegida('/automacoes', 'Automações');
+  await assertPaginaProtegida('/ia', 'Sugestões assistidas');
   await assertPaginaProtegida('/mobile', 'Confiabilidade OctaClin');
-  await assertPaginaProtegida('/gamificacao', 'Metas e adesao');
+  await assertPaginaProtegida('/gamificacao', 'Metas e adesão');
 
   const pacientes = await requisitarJson('/api/pacientes?pagina=1&limite=5');
   assertStatus(pacientes.resposta, 200, 'listagem de pacientes');

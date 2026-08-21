@@ -3,9 +3,9 @@ export default function PaginaOffline() {
     <main className="flex min-h-screen items-center justify-center bg-fundo px-4 text-tinta">
       <section className="grid w-full max-w-md gap-3 rounded-lg border border-linha bg-white p-6 text-center shadow-sm">
         <p className="text-xs font-semibold uppercase text-texto-suave">OctaClin</p>
-        <h1 className="text-xl font-semibold">Sem conexao</h1>
+        <h1 className="text-xl font-semibold">Sem conexão</h1>
         <p className="text-sm text-texto-suave">
-          Reconecte-se para carregar suas informacoes. Operacoes salvas nesta sessao serao enviadas automaticamente.
+          Reconecte-se para carregar suas informações. Operações salvas nesta sessão serão enviadas automaticamente.
         </p>
         <a
           href="/portal"

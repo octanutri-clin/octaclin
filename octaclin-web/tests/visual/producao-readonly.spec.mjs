@@ -7,25 +7,25 @@ const senha = process.env.E2E_SENHA;
 const papel = process.env.E2E_PAPEL?.trim();
 
 const modulosConsole = [
-  { caminho: "/dashboard", titulo: "Dashboard", rotulo: "Hoje" },
+  { caminho: "/dashboard", titulo: "Hoje", rotulo: "Hoje" },
   { caminho: "/agenda", titulo: "Agenda", rotulo: "Agenda" },
   { caminho: "/pacientes", titulo: "Pacientes", rotulo: "Pacientes" },
   {
     caminho: "/questionarios",
-    titulo: "Editor de Questionarios",
-    rotulo: "Formularios",
+    titulo: "Editor de Questionários",
+    rotulo: "Formulários",
   },
   {
     caminho: "/comunicacoes",
-    titulo: "Comunicacoes",
-    rotulo: "Comunicacoes",
+    titulo: "Comunicações",
+    rotulo: "Comunicações",
   },
-  { caminho: "/automacoes", titulo: "Automacoes", rotulo: "Automacoes" },
-  { caminho: "/ia", titulo: "Sugestoes assistidas", rotulo: "IA assistida" },
+  { caminho: "/automacoes", titulo: "Automações", rotulo: "Automações" },
+  { caminho: "/ia", titulo: "Sugestões assistidas", rotulo: "IA assistida" },
   {
     caminho: "/gamificacao",
-    titulo: "Metas e adesao",
-    rotulo: "Metas e adesao",
+    titulo: "Metas e adesão",
+    rotulo: "Metas e adesão",
   },
   {
     caminho: "/profissionais",
@@ -39,7 +39,7 @@ const perfis = {
     modulos: modulosConsole,
     rotaNegada: "/operacoes",
     redirecionamento: "/dashboard",
-    rotuloProibido: "Operacoes",
+    rotuloProibido: "Operações",
   },
   SuperAdmin: {
     modulos: [
@@ -47,7 +47,7 @@ const perfis = {
       {
         caminho: "/operacoes",
         titulo: "Confiabilidade OctaClin",
-        rotulo: "Operacoes",
+        rotulo: "Operações",
       },
     ],
     rotaNegada: "/cliente",
@@ -60,7 +60,7 @@ const perfis = {
   },
   Patient: {
     modulos: [
-      { caminho: "/portal", titulo: "Portal do paciente", rotulo: "Inicio" },
+      { caminho: "/portal", titulo: "Portal do paciente", rotulo: "Início" },
       {
         caminho: "/portal/agenda",
         titulo: "Portal do paciente",
@@ -79,7 +79,7 @@ const perfis = {
       {
         caminho: "/portal/formularios",
         titulo: "Portal do paciente",
-        rotulo: "Formularios",
+        rotulo: "Formulários",
       },
       {
         caminho: "/portal/mensagens",

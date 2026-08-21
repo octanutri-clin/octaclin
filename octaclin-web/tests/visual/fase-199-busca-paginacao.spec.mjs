@@ -44,7 +44,7 @@ test('pagina alem de 25 e busca server-side persistem na URL', async ({ page }) 
   await page.goto('/pacientes');
 
   await expect(page.getByRole('link', { name: 'Paciente 1', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Proxima', exact: true }).click();
+  await page.getByRole('button', { name: 'Próxima', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Paciente 26', exact: true })).toBeVisible();
   await expect(page).toHaveURL(/pagina=2/);
 

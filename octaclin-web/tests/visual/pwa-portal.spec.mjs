@@ -59,8 +59,8 @@ async function prepararPortal(page) {
 
 async function preencherCheckin(page, observacao) {
   await page.getByLabel('Humor de hoje').selectOption('bem');
-  await page.getByLabel('Adesao ao plano').fill('85');
-  await page.getByLabel('Observacoes do dia').fill(observacao);
+  await page.getByLabel('Adesão ao plano').fill('85');
+  await page.getByLabel('Observações do dia').fill(observacao);
   await page.getByRole('button', { name: 'Registrar check-in' }).click();
 }
 

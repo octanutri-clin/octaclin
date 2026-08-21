@@ -38,7 +38,7 @@ export function PlanoAlimentarPaciente({ plano }: PlanoAlimentarPacienteProps) {
           <CartaoTitulo icone={<Target className="h-4 w-4" />}>Plano alimentar</CartaoTitulo>
         </CartaoCabecalho>
         <CartaoConteudo>
-          <p className="text-sm text-texto-suave">Seu plano alimentar ainda nao esta disponivel. Quando ele for publicado, aparecera aqui.</p>
+          <p className="text-sm text-texto-suave">Seu plano alimentar ainda não esta disponível. Quando ele for publicado, aparecera aqui.</p>
         </CartaoConteudo>
       </Cartao>
     );
@@ -47,7 +47,7 @@ export function PlanoAlimentarPaciente({ plano }: PlanoAlimentarPacienteProps) {
   const metas = [
     plano.metaEnergeticaKcal !== undefined ? { rotulo: 'Energia', valor: `${formatarNumero(plano.metaEnergeticaKcal)} kcal` } : null,
     plano.macros?.carboidratosG !== undefined ? { rotulo: 'Carboidratos', valor: `${formatarNumero(plano.macros.carboidratosG)} g` } : null,
-    plano.macros?.proteinasG !== undefined ? { rotulo: 'Proteinas', valor: `${formatarNumero(plano.macros.proteinasG)} g` } : null,
+    plano.macros?.proteinasG !== undefined ? { rotulo: 'Proteínas', valor: `${formatarNumero(plano.macros.proteinasG)} g` } : null,
     plano.macros?.gordurasG !== undefined ? { rotulo: 'Gorduras', valor: `${formatarNumero(plano.macros.gordurasG)} g` } : null
   ].filter((meta): meta is { rotulo: string; valor: string } => meta !== null);
 
@@ -76,7 +76,7 @@ export function PlanoAlimentarPaciente({ plano }: PlanoAlimentarPacienteProps) {
 
         {plano.orientacoes ? (
           <section aria-labelledby="orientacoes-plano-alimentar">
-            <h3 id="orientacoes-plano-alimentar" className="text-sm font-semibold text-tinta">Orientacoes gerais</h3>
+            <h3 id="orientacoes-plano-alimentar" className="text-sm font-semibold text-tinta">Orientações gerais</h3>
             <p className="mt-1 whitespace-pre-wrap break-words text-sm text-texto-suave">{plano.orientacoes}</p>
           </section>
         ) : null}
@@ -96,7 +96,7 @@ export function PlanoAlimentarPaciente({ plano }: PlanoAlimentarPacienteProps) {
         ) : null}
 
         <section aria-labelledby="refeicoes-plano-alimentar" className="grid gap-3">
-          <h3 id="refeicoes-plano-alimentar" className="text-sm font-semibold text-tinta">Refeicoes</h3>
+          <h3 id="refeicoes-plano-alimentar" className="text-sm font-semibold text-tinta">Refeições</h3>
           {plano.refeicoes.length ? (
             plano.refeicoes.map((refeicao) => (
               <article key={refeicao.id} className="border border-linha bg-superficie p-3 print:break-inside-avoid">
@@ -117,7 +117,7 @@ export function PlanoAlimentarPaciente({ plano }: PlanoAlimentarPacienteProps) {
               </article>
             ))
           ) : (
-            <p className="text-sm text-texto-suave">Nenhuma refeicao foi incluida nesta versao do plano.</p>
+            <p className="text-sm text-texto-suave">Nenhuma refeição foi incluida nesta versão do plano.</p>
           )}
         </section>
       </CartaoConteudo>

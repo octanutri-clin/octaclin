@@ -58,6 +58,6 @@ export function montarLinkAgendaPublicaBff(
     urlPublicaDisponivel: false,
     requerRotacaoConfirmada: true,
     mensagemUrlPublica:
-      'URL atual indisponivel nesta sessao. Por seguranca, o token bruto nao e persistido. Rotacione com confirmacao para gerar uma nova URL publica.'
+      'URL atual indisponível nesta sessão. Por segurança, o token bruto não é persistido. Rotacione com confirmação para gerar uma nova URL pública.'
   };
 }

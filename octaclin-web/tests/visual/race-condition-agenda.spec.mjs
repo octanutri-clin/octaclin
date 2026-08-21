@@ -104,5 +104,5 @@ test('troca rapida de profissional nao deixa resposta antiga sobrescrever a mais
   await seletorProfissional.selectOption('profissional-1');
 
   await expect(agendaInterna.getByText('Rodada final')).toBeVisible();
-  await expect(agendaInterna.getByText('Rodada profissional-2 (atrasada, nao deveria aparecer)')).toHaveCount(0);
+  await expect(agendaInterna.getByText('Rodada profissional-2 (atrasada, não deveria aparecer)')).toHaveCount(0);
 });

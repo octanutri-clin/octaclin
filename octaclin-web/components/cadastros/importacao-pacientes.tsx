@@ -20,7 +20,7 @@ interface ImportacaoPacientesProps {
 }
 
 const ROTULO_SITUACAO: Record<LinhaImportacaoPaciente['situacao'], string> = {
-  valido: 'Sera criado',
+  valido: 'Será criado',
   duplicado: 'Ja cadastrado',
   invalido: 'Com erro',
   limite_plano: 'Fora do limite do plano'
@@ -123,7 +123,7 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
         </label>
 
         <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-          Profissional responsavel
+          Profissional responsável
           <select
             className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
             value={profissionalId}
@@ -141,7 +141,7 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
             ))}
           </select>
           <span className="text-[11px] font-normal text-texto-suave">
-            Se voce e o profissional da conta, a importacao usa sempre a sua propria carteira.
+            Se você e o profissional da conta, a importacao usa sempre a sua propria carteira.
           </span>
         </label>
 
@@ -158,7 +158,7 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
           />
           <span>
             <strong className="block font-semibold text-texto-forte">Criar convite para o portal</strong>
-            Pacientes cujo contato for um e-mail receberao um link de ativacao no relatorio.
+            Pacientes cujo contato for um e-mail receberao um link de ativação no relatório.
           </span>
         </label>
 
@@ -197,7 +197,7 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
                 : `Previa de ${relatorio.total} linha(s): ${relatorio.validos} sera(o) criado(s).`}
             </p>
             <p className="text-xs text-texto-suave">
-              {relatorio.duplicados} ja cadastrado(s) - {relatorio.invalidos} com erro
+              {relatorio.duplicados} já cadastrado(s) - {relatorio.invalidos} com erro
               {relatorio.bloqueadosPorPlano ? ` - ${relatorio.bloqueadosPorPlano} fora do limite do plano` : ''}
             </p>
             {importado && enviarConvite ? (

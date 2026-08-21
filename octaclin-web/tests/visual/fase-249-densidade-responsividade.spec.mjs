@@ -115,7 +115,7 @@ async function prepararConsole(page) {
           proximaConsulta: consulta,
           proximaConduta: {
             titulo: 'Revisar plano alimentar',
-            descricao: 'Confirmar adesao e ajustar distribuicao das refeicoes.',
+            descricao: 'Confirmar adesão e ajustar distribuição das refeições.',
             dataReferencia: '2026-08-24T13:00:00.000Z'
           }
         },
@@ -175,7 +175,7 @@ test.describe('Fase 249 - densidade e responsividade do console clinico', () => 
     await page.reload();
     await expect(page.getByRole('button', { name: /^dia$/i })).toHaveAttribute('aria-pressed', 'true');
     await esperarSemOverflowDocumento(page);
-    await esperarAlvosMinimos(page, '[aria-label="Visualizacao da agenda"] button');
+    await esperarAlvosMinimos(page, '[aria-label="Visualização da agenda"] button');
     await page.screenshot({ path: testInfo.outputPath('agenda-390.png'), fullPage: true });
   });
 
@@ -207,12 +207,12 @@ test.describe('Fase 249 - densidade e responsividade do console clinico', () => 
     await esperarInterface(page);
     await expect(page.getByRole('heading', { name: paciente.nome })).toBeVisible();
 
-    const acoes = page.getByRole('navigation', { name: 'Acoes rapidas do paciente' });
+    const acoes = page.getByRole('navigation', { name: 'Ações rápidas do paciente' });
     await expect(acoes).toBeVisible();
     expect((await acoes.boundingBox())?.height ?? 999).toBeLessThanOrEqual(56);
-    await esperarAlvosMinimos(page, '[role="navigation"][aria-label="Acoes rapidas do paciente"] a, [role="navigation"][aria-label="Acoes rapidas do paciente"] button');
+    await esperarAlvosMinimos(page, '[role="navigation"][aria-label="Ações rápidas do paciente"] a, [role="navigation"][aria-label="Ações rápidas do paciente"] button');
 
-    const abas = page.getByRole('tablist', { name: 'Areas principais do prontuario' });
+    const abas = page.getByRole('tablist', { name: 'Áreas principais do prontuário' });
     expect((await abas.boundingBox())?.height ?? 999).toBeLessThanOrEqual(60);
     const abaAtiva = abas.getByRole('tab', { selected: true });
     const textoAbaAtiva = await abaAtiva.textContent();

@@ -66,7 +66,7 @@ test.describe('acesso e ativacao - Fase 191', () => {
     });
 
     await page.goto('/recuperar-senha?token=token-invalido');
-    await expect(page.getByRole('heading', { name: 'Link nao encontrado' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Link não encontrado' })).toBeVisible();
   });
 
   test('recuperar-senha: alterna visibilidade dos dois campos de senha', async ({ page }) => {

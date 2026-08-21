@@ -81,7 +81,7 @@ const portalPaciente = {
       id: 'mensagem-pendente-1',
       canal: 'whatsapp',
       titulo: 'Lembrete de consulta',
-      texto: 'Sua consulta sera amanha.',
+      texto: 'Sua consulta será amanha.',
       status: 'pendente',
       evento: 'agenda.consulta.lembrete',
       criadoEm: '2026-07-21T14:00:00.000Z',
@@ -155,7 +155,7 @@ const portalPaciente = {
       },
       {
         tipo: 'politica_privacidade',
-        titulo: 'Politica de privacidade',
+        titulo: 'Política de privacidade',
         versao: '2026-07',
         perfil: 'paciente',
         resumo: 'Como seus dados pessoais e de saude sao tratados.',
@@ -232,7 +232,7 @@ async function prepararPortal(page) {
             tipo: 'texto_longo',
             obrigatoria: true,
             ordem: 1,
-            valor: 'Mantive boa adesao durante a semana.'
+            valor: 'Mantive boa adesão durante a semana.'
           }
         ]
       })
@@ -339,8 +339,8 @@ test.describe('portal do paciente', () => {
 
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Seu acompanhamento hoje' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Proxima acao' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Proxima consulta' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Próxima ação' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Próxima consulta' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Plano em andamento' })).toBeVisible();
     await expect(page.getByText('1 tarefas e 1 materiais')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Ver plano' })).toBeVisible();
@@ -355,7 +355,7 @@ test.describe('portal do paciente', () => {
     await prepararPortal(page);
     await page.goto('/portal/checkins');
 
-    await expect(page.getByRole('heading', { name: 'Sua evolucao de peso' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sua evolução de peso' })).toBeVisible();
     // Rotulo direto do ultimo ponto.
     const curva = page.getByRole('img', { name: /Evolucao de Peso em kg/ });
     await expect(curva).toBeVisible();
@@ -386,7 +386,7 @@ test.describe('portal do paciente', () => {
     }
 
     await expect(page).toHaveURL(/\/portal\/agenda$/);
-    await expect(page.getByRole('heading', { name: 'Proximas consultas' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Próximas consultas' })).toBeVisible();
 
     const navegacao = page.getByRole('navigation', {
       name: testInfo.project.name === 'mobile-chromium' ? 'Navegacao mobile do portal' : 'Navegacao do portal'
@@ -396,19 +396,19 @@ test.describe('portal do paciente', () => {
     await expect(page.getByRole('heading', { name: 'Check-in rapido' })).toBeVisible();
 
     await page.getByLabel('Humor de hoje').selectOption('muito_bem');
-    await page.getByLabel('Adesao ao plano').fill('90');
+    await page.getByLabel('Adesão ao plano').fill('90');
     await page.getByLabel('Sintomas ou sinais').fill('Sem sintomas relevantes.');
-    await page.getByLabel('Observacoes do dia').fill('Mantive o plano no cafe da manha.');
+    await page.getByLabel('Observações do dia').fill('Mantive o plano no cafe da manha.');
     await page.getByRole('button', { name: 'Registrar check-in' }).click();
     await expect.poll(() => portal.registrouCheckin()).toBe(true);
 
     await navegacao.getByRole('link', { name: 'Mais', exact: true }).click();
     await expect(page).toHaveURL(/\/portal\/mais$/);
-    await page.locator('#conteudo-principal').getByRole('link', { name: 'Formularios', exact: true }).click();
+    await page.locator('#conteudo-principal').getByRole('link', { name: 'Formulários', exact: true }).click();
     await expect(page).toHaveURL(/\/portal\/formularios$/);
-    await expect(page.getByRole('heading', { name: 'Formularios pendentes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Formulários pendentes' })).toBeVisible();
     await page.getByRole('button', { name: 'Ver respostas' }).click();
-    await expect(page.getByText('Mantive boa adesao durante a semana.')).toBeVisible();
+    await expect(page.getByText('Mantive boa adesão durante a semana.')).toBeVisible();
     await expect(page.getByText(/score\s+87[,.]40/i)).toHaveCount(0);
 
     expect(portal.carregamentos()).toBe(1);
@@ -422,10 +422,10 @@ test.describe('portal do paciente', () => {
     await expect(page.getByRole('heading', { name: 'Privacidade' })).toBeVisible();
     await page.getByRole('button', { name: 'Baixar meus dados' }).click();
     await expect(page.getByText('Exportacao LGPD completa gerada para Ana Paula. Hash 0123456789ab.')).toBeVisible();
-    await page.getByLabel('Tipo de solicitacao LGPD').selectOption('retificacao');
-    await page.getByLabel('Detalhes da solicitacao').fill('Atualizar telefone cadastrado.');
-    await page.getByRole('button', { name: 'Enviar solicitacao LGPD' }).click();
-    await expect(page.getByText('Solicitacao LGPD registrada: LGPD-123.')).toBeVisible();
+    await page.getByLabel('Tipo de solicitação LGPD').selectOption('retificacao');
+    await page.getByLabel('Detalhes da solicitação').fill('Atualizar telefone cadastrado.');
+    await page.getByRole('button', { name: 'Enviar solicitação LGPD' }).click();
+    await expect(page.getByText('Solicitação LGPD registrada: LGPD-123.')).toBeVisible();
 
     await assertSemOverflowHorizontal(page);
   });
@@ -436,14 +436,14 @@ test.describe('portal do paciente', () => {
       await route.fulfill({
         status: 503,
         contentType: 'application/json',
-        body: JSON.stringify({ mensagem: 'Servico temporariamente indisponivel.' })
+        body: JSON.stringify({ mensagem: 'Servico temporariamente indisponível.' })
       });
     });
 
     await page.goto('/portal');
 
-    await expect(page.getByRole('heading', { name: 'Portal indisponivel' })).toBeVisible();
-    await expect(page.getByText('Servico temporariamente indisponivel.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Portal indisponível' })).toBeVisible();
+    await expect(page.getByText('Servico temporariamente indisponível.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Tentar novamente' })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });

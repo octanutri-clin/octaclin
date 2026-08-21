@@ -215,6 +215,23 @@ async function prepararDashboardMockado(page) {
     });
   });
 
+  await page.route('**/api/dashboard/clinico?**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z' },
+        indicadores: {
+          consultasHoje: 0, proximas: 0, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0,
+          semRetorno30: 0, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 0,
+          tarefasVencidas: 0, solicitacoesPendentes: 0, comunicacoesEmAlerta: 0, pacientesRiscoAlto: 0
+        },
+        atendimentos: [], semRetorno: [], tarefasVencidas: [], formulariosPendentes: [],
+        solicitacoesPendentes: [], comunicacoes: [], alertas: [], selecaoObrigatoria: false
+      })
+    });
+  });
+
   await page.route('**/api/agenda/consultas', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(consultasAgenda) });
   });
@@ -304,7 +321,7 @@ async function prepararDashboardMockado(page) {
           tenantId: 'tenant-1',
           pacienteId: 'paciente-1',
           status: 'recebido',
-          payload: { texto: 'Dra., posso trocar o horario?' },
+          payload: { texto: 'Dra., posso trocar o horário?' },
           criadoEm: '2026-07-22T11:30:00.000Z'
         }
       ])
@@ -352,7 +369,7 @@ async function prepararSessaoCliente(page) {
       body: JSON.stringify({
         conta: {
           tenantId: 'tenant-1',
-          nome: 'Clinica Octa Real',
+          nome: 'Clínica Octa Real',
           slug: 'clinica-octa-real',
           status: 'ativo',
           criadoEm: '2026-07-01T10:00:00.000Z',
@@ -422,13 +439,13 @@ async function prepararSessaoCliente(page) {
       contentType: 'application/json',
       body: JSON.stringify({
         tenantId: 'tenant-1',
-        nome: 'Clinica Octa Real',
+        nome: 'Clínica Octa Real',
         slug: 'clinica-octa-real',
         status: 'ativo',
         timezone: 'America/Sao_Paulo',
         idioma: 'pt-BR',
         canaisPadrao: { email: true, whatsapp: true, googleCalendar: true },
-        marca: { nomeExibido: 'Clinica Octa Real', emailRemetente: 'contato@octaclin.com.br', corPrimaria: '#197d8f' },
+        marca: { nomeExibido: 'Clínica Octa Real', emailRemetente: 'contato@octaclin.com.br', corPrimaria: '#197d8f' },
         atualizadoEm: '2026-07-20T10:00:00.000Z'
       })
     });
@@ -615,7 +632,7 @@ const portalPacienteFixture = {
       },
       {
         tipo: 'politica_privacidade',
-        titulo: 'Politica de privacidade',
+        titulo: 'Política de privacidade',
         versao: '2026-07',
         perfil: 'paciente',
         resumo: 'Como seus dados pessoais e de saude sao tratados.',
@@ -699,11 +716,11 @@ test.describe('gate de acessibilidade - rotas criticas', () => {
   test('dashboard', async ({ page }) => {
     await prepararDashboardMockado(page);
     await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hoje' })).toBeVisible();
     // O sino da Fase 210 precisa estar em tela para as checagens abaixo o
     // cobrirem. Sem esta linha, uma permissao faltando no mock faria o gate
     // passar sem nunca olhar para o botao.
-    await expect(page.getByRole('button', { name: 'Notificacoes, 2 nao lidas' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Notificações, 2 não lidas' })).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
   });
 

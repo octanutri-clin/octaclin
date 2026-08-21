@@ -530,7 +530,7 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
         <div>
           <p className="text-sm font-semibold text-tinta">{rotulo}</p>
           <p className="text-xs text-texto-suave">
-            {valor.alimentoComposicaoId ? valor.fonteRotulo ?? 'Catalogo nutricional' : 'Composicao informada manualmente'}
+            {valor.alimentoComposicaoId ? valor.fonteRotulo ?? 'Catálogo nutricional' : 'Composição informada manualmente'}
           </p>
         </div>
         {aoRemover ? (
@@ -542,7 +542,7 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
       </div>
 
       <div className="grid gap-2">
-        <Rotulo htmlFor={`${id}-busca`}>Buscar no catalogo</Rotulo>
+        <Rotulo htmlFor={`${id}-busca`}>Buscar no catálogo</Rotulo>
         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_12rem]">
           <div className="relative">
             <Search aria-hidden="true" size={16} className="absolute left-3 top-3.5 text-texto-suave" />
@@ -560,7 +560,7 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
               vista, senao o filtro seguiria valendo sem controle para limpa-lo. */}
           {fontes.length > 1 || fonteSelecionada ? (
             <div className="grid gap-1">
-              <Rotulo htmlFor={`${id}-fonte`} className="sr-only">Fonte do catalogo</Rotulo>
+              <Rotulo htmlFor={`${id}-fonte`} className="sr-only">Fonte do catálogo</Rotulo>
               <Selecao
                 id={`${id}-fonte`}
                 value={fonteSelecionada ? identificarFonte(fonteSelecionada) : ''}
@@ -580,7 +580,7 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
             </div>
           ) : null}
         </div>
-        {buscando ? <p role="status" className="text-xs text-texto-suave">Buscando no catalogo...</p> : null}
+        {buscando ? <p role="status" className="text-xs text-texto-suave">Buscando no catálogo...</p> : null}
         {erroBusca ? <p role="alert" className="text-xs text-perigo">{erroBusca}</p> : null}
         {resultados.length ? (
           <>
@@ -604,8 +604,8 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
                           valores diferentes entre tabelas, e a escolha e clinica. */}
                       {[alimento.preparacao, alimento.fonte ? `${alimento.fonte.nome} ${alimento.fonte.versao}` : null]
                         .filter(Boolean)
-                        .join(' - ') || 'Catalogo nutricional'}
-                      {!alimento.disponivelParaCalculo ? ' - composicao incompleta' : ''}
+                        .join(' - ') || 'Catálogo nutricional'}
+                      {!alimento.disponivelParaCalculo ? ' - composição incompleta' : ''}
                     </span>
                   </button>
                 </li>
@@ -834,7 +834,7 @@ function ResumoVersao({ plano, versao }: { plano: PlanoAlimentarApi; versao: Ver
         <p className="text-xs font-semibold uppercase text-primaria">Plano alimentar</p>
         <h2 className="mt-1 text-xl font-semibold text-tinta">{plano.titulo}</h2>
         <p className="mt-1 text-sm text-texto-suave">
-          Versao {versao.numero} - {versao.status === 'publicada' ? `publicada em ${formatarData(versao.publicadaEm)}` : versao.status === 'descartada' ? `descartada em ${formatarData(versao.descartadaEm)}` : 'rascunho em consulta'}
+          Versão {versao.numero} - {versao.status === 'publicada' ? `publicada em ${formatarData(versao.publicadaEm)}` : versao.status === 'descartada' ? `descartada em ${formatarData(versao.descartadaEm)}` : 'rascunho em consulta'}
         </p>
       </header>
       <section>
@@ -843,9 +843,9 @@ function ResumoVersao({ plano, versao }: { plano: PlanoAlimentarApi; versao: Ver
       </section>
       {versao.calculo ? (
         <section className="grid gap-3 rounded-md bg-superficie p-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div><p className="text-xs text-texto-suave">Meta energetica</p><p className="text-lg font-semibold text-tinta">{formatarNumero(versao.calculo.metaEnergeticaKcal)} kcal</p></div>
+          <div><p className="text-xs text-texto-suave">Meta energética</p><p className="text-lg font-semibold text-tinta">{formatarNumero(versao.calculo.metaEnergeticaKcal)} kcal</p></div>
           <div><p className="text-xs text-texto-suave">Carboidratos</p><p className="text-lg font-semibold text-tinta">{formatarNumero(versao.calculo.metasMacronutrientes.carboidratosG, 1)} g</p></div>
-          <div><p className="text-xs text-texto-suave">Proteinas</p><p className="text-lg font-semibold text-tinta">{formatarNumero(versao.calculo.metasMacronutrientes.proteinasG, 1)} g</p></div>
+          <div><p className="text-xs text-texto-suave">Proteínas</p><p className="text-lg font-semibold text-tinta">{formatarNumero(versao.calculo.metasMacronutrientes.proteinasG, 1)} g</p></div>
           <div><p className="text-xs text-texto-suave">Gorduras</p><p className="text-lg font-semibold text-tinta">{formatarNumero(versao.calculo.metasMacronutrientes.gordurasG, 1)} g</p></div>
         </section>
       ) : null}
@@ -868,7 +868,7 @@ function ResumoVersao({ plano, versao }: { plano: PlanoAlimentarApi; versao: Ver
           </section>
         ))}
       </div>
-      {versao.observacoes ? <section className="border-t border-linha pt-4"><h3 className="text-sm font-semibold text-tinta">Observacoes</h3><p className="mt-1 whitespace-pre-wrap text-sm text-texto-suave">{versao.observacoes}</p></section> : null}
+      {versao.observacoes ? <section className="border-t border-linha pt-4"><h3 className="text-sm font-semibold text-tinta">Observações</h3><p className="mt-1 whitespace-pre-wrap text-sm text-texto-suave">{versao.observacoes}</p></section> : null}
     </article>
   );
 }
@@ -1032,7 +1032,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     setErro(null);
     try {
       const criado = await criarPlanoAlimentar(pacienteId, titulo);
-      setSucesso('Plano criado. Complete o rascunho antes da revisao.');
+      setSucesso('Plano criado. Complete o rascunho antes da revisão.');
       await carregar(criado.id);
     } catch (erroAtual) {
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível criar o plano alimentar.'));
@@ -1095,11 +1095,11 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                 >
                   <span className="block break-words text-sm font-semibold text-tinta">{item.titulo}</span>
                   <span className="mt-1 block text-xs text-texto-suave">
-                    {item.draft ? `Rascunho v${item.draft.numero}` : item.current ? `Publicado v${item.current.numero}` : 'Sem versao publicada'}
+                    {item.draft ? `Rascunho v${item.draft.numero}` : item.current ? `Publicado v${item.current.numero}` : 'Sem versão publicada'}
                   </span>
                 </button>
               ))}
-              {!planos.length ? <EstadoVazio titulo="Nenhum plano alimentar" descricao={podeGerenciar ? 'Crie o primeiro plano para iniciar o cuidado nutricional.' : 'Ainda nao existe plano disponivel para consulta.'} /> : null}
+              {!planos.length ? <EstadoVazio titulo="Nenhum plano alimentar" descricao={podeGerenciar ? 'Crie o primeiro plano para iniciar o cuidado nutricional.' : 'Ainda não existe plano disponível para consulta.'} /> : null}
             </CartaoConteudo>
           </Cartao>
 
@@ -1119,10 +1119,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
           <div aria-live="polite" className="grid gap-2">
             {erro ? <AlertaOperacional mensagem={erro} /> : null}
             {sucesso ? <div role="status" className="flex items-start gap-2 rounded-md border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte"><CheckCircle2 size={17} className="mt-0.5 shrink-0" />{sucesso}</div> : null}
-            {alterado ? <div role="status" className="rounded-md border border-alerta-borda bg-alerta-suave px-4 py-3 text-sm text-alerta-forte">Existem alteracoes nao salvas neste rascunho.</div> : null}
+            {alterado ? <div role="status" className="rounded-md border border-alerta-borda bg-alerta-suave px-4 py-3 text-sm text-alerta-forte">Existem alterações não salvas neste rascunho.</div> : null}
           </div>
 
-          {!plano ? <EstadoVazio titulo={podeGerenciar ? 'Selecione ou crie um plano' : 'Selecione um plano'} descricao={podeGerenciar ? 'O editor sera exibido depois que um plano alimentar for selecionado.' : 'O conteudo sera exibido somente para consulta.'} /> : null}
+          {!plano ? <EstadoVazio titulo={podeGerenciar ? 'Selecione ou crie um plano' : 'Selecione um plano'} descricao={podeGerenciar ? 'O editor será exibido depois que um plano alimentar for selecionado.' : 'O conteúdo será exibido somente para consulta.'} /> : null}
 
           {plano ? (
             <>
@@ -1156,18 +1156,18 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                   ) : null}
 
                   <fieldset className="grid gap-4 rounded-md border border-linha bg-white p-4">
-                    <legend className="px-1 text-sm font-semibold text-tinta">Calculo energetico</legend>
+                    <legend className="px-1 text-sm font-semibold text-tinta">Cálculo energetico</legend>
                     <p className="text-sm text-texto-suave">Estimativa baseada em equacao populacional. Revise os dados e a aplicabilidade antes de definir ou publicar uma meta.</p>
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                       <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
-                        Avaliacao antropometrica
+                        Avaliação antropométrica
                         <Selecao value={formulario.avaliacaoAntropometricaId} onChange={(evento) => atualizar((atual) => ({ ...atual, avaliacaoAntropometricaId: evento.target.value }))} required>
                           <option value="">Selecione</option>
                           {avaliacoes.map((avaliacao) => <option key={avaliacao.id} value={avaliacao.id}>{formatarData(avaliacao.avaliadaEm)} - {avaliacao.medidas.pesoKg ?? '-'} kg / {avaliacao.medidas.alturaCm ?? '-'} cm</option>)}
                         </Selecao>
                       </label>
                       <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
-                        Formula
+                        Fórmula
                         <Selecao value={formulario.formula} onChange={(evento) => atualizar((atual) => ({ ...atual, formula: evento.target.value as FormulaEnergeticaApi }))}>
                           <option value="mifflin_st_jeor_1990">Mifflin-St Jeor (1990)</option>
                           <option value="harris_benedict_revisada_1984">Harris-Benedict revisada (1984)</option>
@@ -1198,20 +1198,20 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     </div>
                     <label className="flex min-h-11 items-start gap-3 rounded-md border border-linha p-3 text-sm text-tinta">
                       <input type="checkbox" className="mt-1 h-4 w-4 accent-primaria" checked={formulario.aplicabilidadeFormulaConfirmada} onChange={(evento) => atualizar((atual) => ({ ...atual, aplicabilidadeFormulaConfirmada: evento.target.checked }))} />
-                      <span>Revisei os dados da avaliacao e confirmo a aplicabilidade da formula para este paciente.</span>
+                      <span>Revisei os dados da avaliação e confirmo a aplicabilidade da fórmula para este paciente.</span>
                     </label>
                     <label className="flex min-h-11 items-start gap-3 rounded-md border border-linha p-3 text-sm text-tinta">
                       <input type="checkbox" className="mt-1 h-4 w-4 accent-primaria" checked={formulario.possuiCondicaoEspecial} onChange={(evento) => atualizar((atual) => ({ ...atual, possuiCondicaoEspecial: evento.target.checked }))} />
-                      <span>O paciente possui condicao especial que exige justificativa clinica.</span>
+                      <span>O paciente possui condicao especial que exige justificativa clínica.</span>
                     </label>
                     {formulario.possuiCondicaoEspecial ? <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Justificativa da condicao especial<AreaTexto value={formulario.justificativaCondicaoEspecial} onChange={(evento) => atualizar((atual) => ({ ...atual, justificativaCondicaoEspecial: evento.target.value }))} maxLength={2000} required /></label> : null}
-                    {formulario.possuiCondicaoEspecial ? <AlertaOperacional mensagem="O calculo automatico deste MVP nao atende condicoes especiais. Registre a justificativa e use uma conduta individual fora deste fluxo." /> : null}
+                    {formulario.possuiCondicaoEspecial ? <AlertaOperacional mensagem="O cálculo automático deste MVP não atende condições especiais. Registre a justificativa e use uma conduta individual fora deste fluxo." /> : null}
                   </fieldset>
 
                   <fieldset className="grid gap-3 rounded-md border border-linha bg-white p-4">
                     <legend className="px-1 text-sm font-semibold text-tinta">Conduta</legend>
-                    <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Objetivo clinico<AreaTexto value={formulario.objetivos} onChange={(evento) => atualizar((atual) => ({ ...atual, objetivos: evento.target.value }))} maxLength={4000} required /></label>
-                    <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Observacoes para o plano<AreaTexto value={formulario.observacoes} onChange={(evento) => atualizar((atual) => ({ ...atual, observacoes: evento.target.value }))} maxLength={8000} /></label>
+                    <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Objetivo clínico<AreaTexto value={formulario.objetivos} onChange={(evento) => atualizar((atual) => ({ ...atual, objetivos: evento.target.value }))} maxLength={4000} required /></label>
+                    <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Observações para o plano<AreaTexto value={formulario.observacoes} onChange={(evento) => atualizar((atual) => ({ ...atual, observacoes: evento.target.value }))} maxLength={8000} /></label>
                   </fieldset>
 
                   <ModelosPlanoAlimentar
@@ -1242,24 +1242,24 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                   <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
                   <div className="grid gap-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div><h3 className="text-base font-semibold text-tinta">Refeicoes e alimentos</h3><p className="text-sm text-texto-suave">A composicao selecionada e congelada quando a versao e publicada.</p></div>
-                      <Botao type="button" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: [...atual.refeicoes, novaRefeicao()] }))}><Plus size={16} /> Adicionar refeicao</Botao>
+                      <div><h3 className="text-base font-semibold text-tinta">Refeições e alimentos</h3><p className="text-sm text-texto-suave">A composição selecionada e congelada quando a versão e publicada.</p></div>
+                      <Botao type="button" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: [...atual.refeicoes, novaRefeicao()] }))}><Plus size={16} /> Adicionar refeição</Botao>
                     </div>
                     {formulario.refeicoes.map((refeicao, indiceRefeicao) => (
                       <section key={refeicao.chaveCliente} className="grid gap-4 rounded-md border border-linha bg-white p-4">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h4 className="text-sm font-semibold text-tinta">Refeicao {indiceRefeicao + 1}</h4>
+                          <h4 className="text-sm font-semibold text-tinta">Refeição {indiceRefeicao + 1}</h4>
                           <div className="flex flex-wrap gap-1">
-                            <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao - 1) }))} disabled={indiceRefeicao === 0} aria-label="Mover refeicao para cima"><ArrowUp size={15} /></Botao>
-                            <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao + 1) }))} disabled={indiceRefeicao === formulario.refeicoes.length - 1} aria-label="Mover refeicao para baixo"><ArrowDown size={15} /></Botao>
+                            <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao - 1) }))} disabled={indiceRefeicao === 0} aria-label="Mover refeição para cima"><ArrowUp size={15} /></Botao>
+                            <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao + 1) }))} disabled={indiceRefeicao === formulario.refeicoes.length - 1} aria-label="Mover refeição para baixo"><ArrowDown size={15} /></Botao>
                             <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: atual.refeicoes.filter((_, posicao) => posicao !== indiceRefeicao) }))} disabled={formulario.refeicoes.length === 1}><Trash2 size={15} /> Remover</Botao>
                           </div>
                         </div>
                         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
-                          <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Nome da refeicao<Campo value={refeicao.nome} onChange={(evento) => atualizarRefeicao(indiceRefeicao, { ...refeicao, nome: evento.target.value })} maxLength={180} required /></label>
-                          <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Horario<Campo type="time" value={refeicao.horarioLocal ?? ''} onChange={(evento) => atualizarRefeicao(indiceRefeicao, { ...refeicao, horarioLocal: evento.target.value })} /></label>
+                          <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Nome da refeição<Campo value={refeicao.nome} onChange={(evento) => atualizarRefeicao(indiceRefeicao, { ...refeicao, nome: evento.target.value })} maxLength={180} required /></label>
+                          <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Horário<Campo type="time" value={refeicao.horarioLocal ?? ''} onChange={(evento) => atualizarRefeicao(indiceRefeicao, { ...refeicao, horarioLocal: evento.target.value })} /></label>
                         </div>
-                        <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Orientacoes da refeicao<AreaTexto value={refeicao.orientacoes ?? ''} onChange={(evento) => atualizarRefeicao(indiceRefeicao, { ...refeicao, orientacoes: evento.target.value })} maxLength={2000} /></label>
+                        <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Orientações da refeição<AreaTexto value={refeicao.orientacoes ?? ''} onChange={(evento) => atualizarRefeicao(indiceRefeicao, { ...refeicao, orientacoes: evento.target.value })} maxLength={2000} /></label>
                         <div className="grid gap-3">
                           {refeicao.itens.map((item, indiceItem) => (
                             <EditorItem
@@ -1293,18 +1293,18 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                         <div><p className="text-xs text-texto-suave">Repouso estimado</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.calculo.estimativa.metabolismoRepousoKcal)} kcal</p></div>
                         <div><p className="text-xs text-texto-suave">GET estimado</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.calculo.estimativa.gastoEnergeticoTotalKcal)} kcal</p></div>
                         <div><p className="text-xs text-texto-suave">Meta ajustada</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.calculo.metaEnergeticaKcal)} kcal</p></div>
-                        <div><p className="text-xs text-texto-suave">Total das refeicoes</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.totais?.energiaKcal)} kcal</p></div>
+                        <div><p className="text-xs text-texto-suave">Total das refeições</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.totais?.energiaKcal)} kcal</p></div>
                       </div>
                       {plano.draft.calculo.alertasDivergenciaClinica?.length ? (
                         <div className="grid gap-3 rounded-md border border-alerta-borda bg-alerta-suave p-3">
                           <div>
-                            <p className="text-sm font-semibold text-alerta-forte">Divergencias que exigem revisao clinica</p>
+                            <p className="text-sm font-semibold text-alerta-forte">Divergencias que exigem revisão clínica</p>
                             <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-alerta-forte">
                               {plano.draft.calculo.alertasDivergenciaClinica.map((alerta) => <li key={alerta}>{alerta}</li>)}
                             </ul>
                           </div>
                           <label className="grid gap-1 text-xs font-semibold uppercase text-alerta-forte">
-                            Justificativa clinica para prosseguir
+                            Justificativa clínica para prosseguir
                             <AreaTexto
                               value={formulario.justificativaDivergenciaClinica}
                               onChange={(evento) => atualizar((atual) => ({ ...atual, justificativaDivergenciaClinica: evento.target.value }))}
@@ -1315,7 +1315,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                           </label>
                         </div>
                       ) : null}
-                      <details className="text-sm text-texto-suave"><summary className="cursor-pointer font-medium text-tinta">Formula e fonte</summary><p className="mt-2">{plano.draft.calculo.estimativa.formulaAplicada}</p><p className="mt-1">{plano.draft.calculo.estimativa.fonte}</p></details>
+                      <details className="text-sm text-texto-suave"><summary className="cursor-pointer font-medium text-tinta">Fórmula e fonte</summary><p className="mt-2">{plano.draft.calculo.estimativa.formulaAplicada}</p><p className="mt-1">{plano.draft.calculo.estimativa.fonte}</p></details>
                     </section>
                   ) : null}
 
@@ -1325,30 +1325,30 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       escondido atras dela (WCAG 2.2 SC 2.4.11). */}
                   <div className="sticky bottom-20 z-30 flex flex-wrap justify-end gap-2 rounded-md border border-linha bg-white p-3 shadow-cartao lg:bottom-3 lg:z-10">
                     <Botao type="submit" variante="primario" carregando={operacao === 'salvando'} disabled={Boolean(operacao)}><Save size={16} /> Salvar rascunho</Botao>
-                    <Botao type="button" carregando={operacao === 'revisando'} disabled={alterado || Boolean(operacao) || !plano.draft.calculo} onClick={() => void executar('revisando', () => revisarPlanoAlimentar(pacienteId, plano.id), 'Plano revisado. Confira a versao antes de publicar.')}><ClipboardCheck size={16} /> Revisar</Botao>
+                    <Botao type="button" carregando={operacao === 'revisando'} disabled={alterado || Boolean(operacao) || !plano.draft.calculo} onClick={() => void executar('revisando', () => revisarPlanoAlimentar(pacienteId, plano.id), 'Plano revisado. Confira a versão antes de publicar.')}><ClipboardCheck size={16} /> Revisar</Botao>
                     <Botao type="button" variante="primario" carregando={operacao === 'publicando'} disabled={alterado || Boolean(operacao) || !plano.draft.revisadaEm} onClick={() => void executar('publicando', () => publicarPlanoAlimentar(pacienteId, plano.id), 'Plano publicado para o paciente.')}><CheckCircle2 size={16} /> Publicar</Botao>
                   </div>
                 </form>
               ) : (
-                <EstadoVazio titulo="Nenhum rascunho ativo" descricao="Crie uma nova versao a partir do plano publicado para continuar a edicao." acao={plano.current ? <Botao type="button" variante="primario" carregando={operacao === 'nova-versao'} onClick={() => void executar('nova-versao', () => criarNovaVersaoPlanoAlimentar(pacienteId, plano.id), 'Nova versao criada a partir da publicacao atual.')}><Plus size={16} /> Criar nova versao</Botao> : undefined} />
+                <EstadoVazio titulo="Nenhum rascunho ativo" descricao="Crie uma nova versão a partir do plano publicado para continuar a edição." acao={plano.current ? <Botao type="button" variante="primario" carregando={operacao === 'nova-versao'} onClick={() => void executar('nova-versao', () => criarNovaVersaoPlanoAlimentar(pacienteId, plano.id), 'Nova versão criada a partir da publicação atual.')}><Plus size={16} /> Criar nova versão</Botao> : undefined} />
               )) : (
                 <div className="grid gap-4">
                   <div role="status" className="rounded-md border border-linha bg-superficie px-4 py-3 text-sm text-texto-suave">
-                    Acesso somente para consulta. A edicao e a publicacao dependem da permissao de gestao de planos alimentares.
+                    Acesso somente para consulta. A edição e a públicação dependem da permissão de gestao de planos alimentares.
                   </div>
                   {plano.current || plano.draft ? (
                     <ResumoVersao plano={plano} versao={plano.current ?? plano.draft!} />
                   ) : (
-                    <EstadoVazio titulo="Plano sem versao disponivel" descricao="Nao ha conteudo clinico disponivel para consulta neste plano." />
+                    <EstadoVazio titulo="Plano sem versão disponível" descricao="Não há conteúdo clínico disponível para consulta neste plano." />
                   )}
                 </div>
               )}
 
               {plano.historico.length ? (
                 <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
-                  <div className="flex items-center gap-2"><History size={17} className="text-primaria" /><h3 className="text-sm font-semibold text-tinta">Historico de versoes</h3></div>
+                  <div className="flex items-center gap-2"><History size={17} className="text-primaria" /><h3 className="text-sm font-semibold text-tinta">Histórico de versões</h3></div>
                   <div className="grid gap-2">
-                    {plano.historico.map((versao) => <div key={versao.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-linha pt-2 first:border-t-0 first:pt-0"><div><p className="text-sm font-medium text-tinta">Versao {versao.numero}</p><p className="text-xs text-texto-suave">{versao.status === 'publicada' ? `Publicada em ${formatarData(versao.publicadaEm)}` : `Descartada em ${formatarData(versao.descartadaEm)}`}</p></div>{versao.hashConteudo ? <span className="max-w-48 truncate font-mono text-xs text-texto-suave" title={versao.hashConteudo}>{versao.hashConteudo}</span> : null}</div>)}
+                    {plano.historico.map((versao) => <div key={versao.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-linha pt-2 first:border-t-0 first:pt-0"><div><p className="text-sm font-medium text-tinta">Versão {versao.numero}</p><p className="text-xs text-texto-suave">{versao.status === 'publicada' ? `Publicada em ${formatarData(versao.publicadaEm)}` : `Descartada em ${formatarData(versao.descartadaEm)}`}</p></div>{versao.hashConteudo ? <span className="max-w-48 truncate font-mono text-xs text-texto-suave" title={versao.hashConteudo}>{versao.hashConteudo}</span> : null}</div>)}
                   </div>
                 </section>
               ) : null}
@@ -1356,7 +1356,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
               <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
                 <div>
                   <div className="flex items-center gap-2"><History size={17} className="text-primaria" /><h3 className="text-sm font-semibold text-tinta">Trocas registradas pelo paciente</h3></div>
-                  <p className="mt-1 text-sm text-texto-suave">Historico auditavel das escolhas feitas no portal. O plano publicado permanece inalterado.</p>
+                  <p className="mt-1 text-sm text-texto-suave">Histórico auditavel das escolhas feitas no portal. O plano publicado permanece inalterado.</p>
                 </div>
                 {carregandoEscolhas ? <BarraCarregamento visivel rotulo="Carregando trocas registradas" /> : null}
                 {erroEscolhas ? <AlertaOperacional mensagem={erroEscolhas} /> : null}
@@ -1381,7 +1381,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       {podeGerenciar ? <ModalConfirmacao
         aberto={confirmarCriacao}
         titulo="Criar outro plano"
-        mensagem="Existem alteracoes nao salvas no rascunho atual. Criar outro plano descartara essas alteracoes."
+        mensagem="Existem alterações não salvas no rascunho atual. Criar outro plano descartara essas alterações."
         rotuloConfirmar="Descartar e criar"
         confirmando={operacao === 'criando'}
         aoCancelar={() => setConfirmarCriacao(false)}
@@ -1394,7 +1394,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       {podeGerenciar ? <ModalConfirmacao
         aberto={confirmarArquivo}
         titulo="Arquivar plano alimentar"
-        mensagem="O plano deixara a lista ativa. As versoes publicadas permanecem preservadas no historico clinico."
+        mensagem="O plano deixara a lista ativa. As versões publicadas permanecem preservadas no histórico clínico."
         rotuloConfirmar="Arquivar plano"
         confirmando={operacao === 'arquivando'}
         aoCancelar={() => setConfirmarArquivo(false)}

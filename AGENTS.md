@@ -17,7 +17,12 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase mais recente concluida: Fase 250 - encerramento da divida Mobile e
+- Fase mais recente concluida: Fase 251 - revisao integral de linguagem e
+  microcopy. `GUIA_VOZ_MICROCOPY.md` agora define a voz e o glossario, e o gate
+  AST `pnpm --dir octaclin-web test:linguagem` protege texto visivel sem alterar
+  contratos internos. Browser, Lighthouse e Playwright validaram desktop e
+  celular. A proxima fase e a Fase 252 - arquitetura de navegacao e descoberta
+  de funcionalidades. A Fase 250 encerrou a divida Mobile e
   higiene de PRs. Os dois advisories altos de `image-size` continuam sem patch,
   os gates locais passaram e o PR legado `#6` foi encerrado como superado. Nao
   restam PRs abertos; `mobile.sync=false` e o NO-GO de distribuicao permanecem.

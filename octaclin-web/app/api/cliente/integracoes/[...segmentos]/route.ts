@@ -31,7 +31,7 @@ async function encaminhar(request: NextRequest, contexto: Contexto, metodo: 'GET
     const { segmentos } = await contexto.params;
     const caminho = segmentos.join('/');
     if (!rotasPermitidas.some((padrao) => padrao.test(caminho))) {
-      return NextResponse.json({ mensagem: 'Rota de integracao nao permitida.' }, { status: 404 });
+      return NextResponse.json({ mensagem: 'Rota de integração não permitida.' }, { status: 404 });
     }
     const corpo = metodo === 'POST' ? await request.text() : undefined;
     const resposta = await requisitarBackendAutenticado(`/cliente/integracoes/${caminho}`, {

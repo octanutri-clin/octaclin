@@ -30,7 +30,7 @@ interface AbaDocumentosProps {
 }
 
 const ROTULO_TIPO: Record<TipoDocumentoClinicoApi, string> = {
-  declaracao_comparecimento: 'Declaracao de comparecimento',
+  declaracao_comparecimento: 'Declaração de comparecimento',
   relatorio_alta: 'Relatorio de alta',
   recibo_consulta: 'Recibo'
 };
@@ -155,7 +155,7 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
     setSucesso(null);
     try {
       await cancelarDocumentoClinico(pacienteId, documento.id, motivo);
-      setSucesso('Documento cancelado. O registro continua no historico.');
+      setSucesso('Documento cancelado. O registro continua no histórico.');
       if (documentoAbertoId === documento.id) setDocumentoAbertoId(null);
       await carregar();
     } catch (erroAtual) {
@@ -173,7 +173,7 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
         await carregar();
         return;
       }
-      setErro(MOTIVO_ENVIO[resultado.motivo ?? ''] ?? 'Envio nao realizado.');
+      setErro(MOTIVO_ENVIO[resultado.motivo ?? ''] ?? 'Envio não realizado.');
     } catch (erroAtual) {
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível enviar o documento.'));
     }
@@ -208,8 +208,8 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
                   value={tipo}
                   onChange={(evento) => setTipo(evento.target.value as TipoDocumentoClinicoApi)}
                 >
-                  <option value="declaracao_comparecimento">Declaracao de comparecimento</option>
-                  <option value="relatorio_alta">Relatorio de alta</option>
+                  <option value="declaracao_comparecimento">Declaração de comparecimento</option>
+                  <option value="relatorio_alta">Relatório de alta</option>
                   <option value="recibo_consulta">Recibo</option>
                 </Selecao>
               </label>
@@ -234,11 +234,11 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
                 </label>
               ) : (
                 <label className="grid gap-1 sm:col-span-2">
-                  <Rotulo>Texto do relatorio</Rotulo>
+                  <Rotulo>Texto do relatório</Rotulo>
                   <AreaTexto
                     rows={5}
                     value={conteudo}
-                    placeholder="Evolucao, condutas e orientacoes de encerramento."
+                    placeholder="Evolução, condutas e orientações de encerramento."
                     onChange={(evento) => setConteudo(evento.target.value)}
                   />
                 </label>
@@ -269,9 +269,9 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
                   {tipo === 'recibo_consulta'
                     ? opcoesConsulta.length === 0
                       ? 'Nenhuma consulta com pagamento registrado nos ultimos 30 dias. Registre o pagamento na agenda antes de emitir o recibo.'
-                      : 'A lista traz apenas consultas com pagamento registrado. Consulta paga por pacote nao gera recibo proprio.'
+                      : 'A lista traz apenas consultas com pagamento registrado. Consulta paga por pacote não gera recibo proprio.'
                     : semConsultaConcluida
-                      ? 'Nenhuma consulta concluida ate agora. A declaracao so sai de consulta ja concluida.'
+                      ? 'Nenhuma consulta concluída até agora. A declaração só sai de consulta já concluída.'
                       : 'A lista traz apenas consultas concluidas.'}
                 </p>
               ) : null}
@@ -335,10 +335,10 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
       </Cartao>
 
       {documentoAberto ? (
-        <section aria-label="Visualizacao do documento" className="grid gap-3">
+        <section aria-label="Visualização do documento" className="grid gap-3">
           <div className="nao-imprimir flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-texto-suave">
-              Confira o documento antes de imprimir. A impressao sai so com a folha abaixo.
+              Confira o documento antes de imprimir. A impressão sai só com a folha abaixo.
             </p>
             <Botao type="button" variante="primario" onClick={() => window.print()}>
               Imprimir / salvar PDF

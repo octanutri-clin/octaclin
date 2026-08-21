@@ -25,10 +25,10 @@ const INTERVALO_MS = 5000;
 function formatarQuando(criadoEm: string) {
   const minutos = Math.floor((Date.now() - new Date(criadoEm).getTime()) / 60000);
   if (minutos < 1) return 'agora';
-  if (minutos < 60) return `ha ${minutos} min`;
+  if (minutos < 60) return `há ${minutos} min`;
   const horas = Math.floor(minutos / 60);
-  if (horas < 24) return `ha ${horas} h`;
-  return `ha ${Math.floor(horas / 24)} d`;
+  if (horas < 24) return `há ${horas} h`;
+  return `há ${Math.floor(horas / 24)} d`;
 }
 
 function LinhaNotificacao({ notificacao }: { notificacao: NotificacaoApi }) {
@@ -40,7 +40,7 @@ function LinhaNotificacao({ notificacao }: { notificacao: NotificacaoApi }) {
     >
       <span className="flex items-center gap-2">
         {notificacao.lidoEm ? null : (
-          <span className="size-1.5 shrink-0 rounded-full bg-primaria" aria-label="Nao lida" />
+          <span className="size-1.5 shrink-0 rounded-full bg-primaria" aria-label="Não lida" />
         )}
         <span className="font-medium">{rotuloNotificacao(notificacao.tipo)}</span>
       </span>
@@ -79,7 +79,7 @@ export function SinoNotificacoes() {
       .catch(() => undefined);
   }, []);
 
-  const rotulo = naoLidas ? `Notificacoes, ${naoLidas} nao lidas` : 'Notificacoes';
+  const rotulo = naoLidas ? `Notificações, ${naoLidas} não lidas` : 'Notificações';
 
   return (
     <Menu
@@ -88,7 +88,7 @@ export function SinoNotificacoes() {
         <Dica texto={rotulo}>
           <button type="button" aria-label={rotulo} className={classesBotao({ className: 'relative' })}>
             <Bell size={16} />
-            <span className="hidden xl:inline">Notificacoes</span>
+            <span className="hidden xl:inline">Notificações</span>
             {naoLidas ? (
               <span
                 aria-hidden="true"
@@ -102,7 +102,7 @@ export function SinoNotificacoes() {
       }
     >
       <div className="flex items-center justify-between px-2 pb-1 pt-0.5">
-        <span className="text-xs font-semibold uppercase tracking-wide text-tinta-suave">Notificacoes</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-tinta-suave">Notificações</span>
         {naoLidas ? (
           <button
             type="button"

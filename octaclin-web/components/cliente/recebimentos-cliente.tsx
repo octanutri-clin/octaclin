@@ -68,7 +68,7 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
         { rotulo: 'A receber em consultas', valor: formatarValorBRL(resumo.pendenteCentavos) },
         { rotulo: 'Recebido em pacotes', valor: formatarValorBRL(resumo.pacotesRecebidoCentavos) },
         { rotulo: 'A receber em pacotes', valor: formatarValorBRL(resumo.pacotesPendenteCentavos) },
-        { rotulo: 'Atendimentos no periodo', valor: String(resumo.consultas) },
+        { rotulo: 'Atendimentos no período', valor: String(resumo.consultas) },
         { rotulo: 'Atendimentos isentos', valor: String(resumo.isentas) }
       ]
     : [];
@@ -91,7 +91,7 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
         <CartaoConteudo className="grid gap-4">
           <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" onSubmit={aplicar}>
             <label className="grid gap-1">
-              <Rotulo>Inicio</Rotulo>
+              <Rotulo>Início</Rotulo>
               <Campo type="date" value={inicio} onChange={(evento) => setInicio(evento.target.value)} />
             </label>
             <label className="grid gap-1">
@@ -101,7 +101,7 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
             <div className="flex items-end">
               <Botao type="submit" disabled={carregando}>
                 <RefreshCcw size={16} />
-                Aplicar periodo
+                Aplicar período
               </Botao>
             </div>
           </form>
@@ -116,7 +116,7 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
           </div>
 
           <p className="text-xs text-texto-suave">
-            Consulta cancelada nao entra no faturamento. Consulta paga por pacote aparece na linha de pacotes, nao na
+            Consulta cancelada não entra no faturamento. Consulta paga por pacote aparece na linha de pacotes, não na
             de consultas: contar as duas somaria o mesmo atendimento duas vezes.
           </p>
         </CartaoConteudo>
@@ -128,11 +128,11 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
         </CartaoCabecalho>
         <CartaoConteudo>
           {!resumo || resumo.porProfissional.length === 0 ? (
-            <p className="text-sm text-texto-suave">Nenhum atendimento no periodo selecionado.</p>
+            <p className="text-sm text-texto-suave">Nenhum atendimento no período selecionado.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[520px] text-sm">
-                <caption className="sr-only">Recebimentos por profissional no periodo selecionado</caption>
+                <caption className="sr-only">Recebimentos por profissional no período selecionado</caption>
                 <thead>
                   <tr className="text-left text-xs text-texto-suave">
                     <th scope="col" className="py-2">Profissional</th>

@@ -2166,11 +2166,17 @@ publicado antes de ampliar a superficie de mudancas visuais.
     aprovados. CI completo sera confirmado no PR desta fase.
   - Documento: `fase-250-encerramento-divida-mobile-higiene-prs.md`.
 
-- [ ] Fase 251 - Revisão integral de linguagem e microcopy. [IMPORTANTE - PRE-PILOTO]
+- [x] Fase 251 - Revisão integral de linguagem e microcopy. [IMPORTANTE - PRE-PILOTO]
   - Auditar português, termos clínicos, nomes de ações, mensagens de erro,
     confirmações e estados vazios em todas as rotas profissionais e do paciente.
   - Consolidar glossário e teste estático para termos proibidos, rótulos
     técnicos e inconsistências recorrentes.
+  - Concluida em 2026-08-21: guia canonico, gate AST no CI e revisao das
+    superficies profissionais, publicas e dos portais.
+  - Validacoes: linguagem, lint sem erros, typecheck, build, Playwright
+    desktop/mobile, 10 cenarios de acessibilidade, regressao das Fases 248/249
+    e Lighthouse 100.
+  - Documento: `fase-251-revisao-integral-linguagem-microcopy.md`.
 
 - [ ] Fase 252 - Arquitetura de navegação e descoberta de funcionalidades. [ESSENCIAL - PRE-PILOTO]
   - Reconciliar rotas implementadas, permissões e itens visíveis por papel para
@@ -2323,6 +2329,23 @@ Fase 250 - Encerramento da divida Mobile e higiene de PRs:
 - Skills/plugins: `ecc:brand-voice`, `ecc:frontend-a11y`,
   `ecc:make-interfaces-feel-better`, `ecc:browser-qa`, Browser e Playwright;
   Penpot apenas se a copia alterar dimensao ou hierarquia visual
+
+Fase 251 - Revisao integral de linguagem e microcopy:
+- Status: concluida
+- Commit: registrado no historico Git da fase
+- Data: 2026-08-21
+- Validacoes: gate AST e testes unitarios de linguagem, lint sem erros,
+  typecheck, build de 123 rotas, Playwright desktop/mobile, 10 cenarios de
+  acessibilidade, 6 jornadas criticas, 8 testes do BFF publico, regressoes das
+  Fases 248/249 e Lighthouse 100
+- Observacoes: nenhum backend, migration, banco ou contrato interno foi
+  alterado; os 52 avisos preexistentes de hooks permanecem fora do escopo
+- Proxima fase: Fase 252 - Arquitetura de navegacao e descoberta de
+  funcionalidades
+- Modelo recomendado: GPT-5.6 Sol, raciocinio `high`
+- Skills/plugins: `ecc:codebase-onboarding`, `ecc:click-path-audit`,
+  `ecc:frontend-patterns`, `ecc:frontend-a11y`,
+  `codex-security:validation`, Browser, Chrome DevTools, Playwright e Penpot
 
 Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service:
 - Status: concluida

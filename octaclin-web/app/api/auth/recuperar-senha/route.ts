@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     });
   } catch {
     return NextResponse.json(
-      { mensagem: 'Nao foi possivel conectar ao servico de acesso do OctaClin.' },
+      { mensagem: 'Não foi possível conectar ao servico de acesso do OctaClin.' },
       { status: 502 }
     );
   }
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   const conteudo = await resposta.text();
   if ((resposta.headers.get('Content-Type') ?? '').includes('text/html')) {
     return NextResponse.json(
-      { mensagem: 'O servico de acesso do OctaClin esta indisponivel no momento.' },
+      { mensagem: 'O servico de acesso do OctaClin esta indisponível no momento.' },
       { status: 502 }
     );
   }

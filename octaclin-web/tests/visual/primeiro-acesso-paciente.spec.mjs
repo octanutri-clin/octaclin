@@ -47,7 +47,7 @@ const portalPaciente = {
       },
       {
         tipo: 'politica_privacidade',
-        titulo: 'Politica de privacidade',
+        titulo: 'Política de privacidade',
         versao: '2026-07',
         perfil: 'paciente',
         resumo: 'Como seus dados pessoais e de saude sao tratados.',
@@ -137,11 +137,11 @@ test.describe('primeiro acesso do paciente', () => {
     await page.getByRole('button', { name: 'Continuar' }).click();
 
     await expect(page.getByLabel('Aceito os Termos de uso do OctaClin')).toBeVisible();
-    await expect(page.getByLabel('Aceito a Politica de privacidade')).toBeVisible();
+    await expect(page.getByLabel('Aceito a Política de privacidade')).toBeVisible();
     await expect(page.getByLabel('Autorizo o tratamento dos meus dados de saude')).toBeVisible();
 
     await page.getByLabel('Aceito os Termos de uso do OctaClin').check();
-    await page.getByLabel('Aceito a Politica de privacidade').check();
+    await page.getByLabel('Aceito a Política de privacidade').check();
     await page.getByLabel('Autorizo o tratamento dos meus dados de saude').check();
     await page.getByRole('button', { name: 'Ativar acesso' }).click();
 
@@ -158,13 +158,13 @@ test.describe('primeiro acesso do paciente', () => {
 
     await expect(page).toHaveURL(/\/portal$/);
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
-    await expect(page.getByText('Nenhuma acao pendente agora.')).toBeVisible();
+    await expect(page.getByText('Nenhuma ação pendente agora.')).toBeVisible();
   });
 
   test('orienta paciente quando o link esta sem token', async ({ page }) => {
     await page.goto('/primeiro-acesso');
 
-    await expect(page.getByRole('heading', { name: 'Link de primeiro acesso indisponivel' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Link de primeiro acesso indisponível' })).toBeVisible();
     await expect(page.getByText('Abra o link completo enviado pelo profissional ou solicite um novo acesso.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Solicitar novo acesso' })).toHaveAttribute('href', '/recuperar-senha');
     await expect(page.getByRole('link', { name: 'Ir para login' })).toHaveAttribute('href', '/login');
@@ -182,7 +182,7 @@ test.describe('primeiro acesso do paciente', () => {
     await page.goto(`/primeiro-acesso?token=${encodeURIComponent(tokenExpirado)}`);
 
     await expect(page.getByRole('heading', { name: 'Convite expirado' })).toBeVisible();
-    await expect(page.getByText('Solicite um novo acesso para proteger seus dados e concluir a ativacao.')).toBeVisible();
+    await expect(page.getByText('Solicite um novo acesso para proteger seus dados e concluir a ativação.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Solicitar novo acesso' })).toHaveAttribute('href', '/recuperar-senha');
   });
 
@@ -191,13 +191,13 @@ test.describe('primeiro acesso do paciente', () => {
       await route.fulfill({
         status: 404,
         contentType: 'application/json',
-        body: JSON.stringify({ mensagem: 'Convite nao encontrado.' })
+        body: JSON.stringify({ mensagem: 'Convite não encontrado.' })
       });
     });
 
     await page.goto(`/primeiro-acesso?token=${encodeURIComponent(tokenInvalido)}`);
 
-    await expect(page.getByRole('heading', { name: 'Convite nao encontrado' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Convite não encontrado' })).toBeVisible();
     await expect(page.getByText('Confira se o link foi copiado inteiro ou peca um novo convite ao profissional.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Ir para login' })).toHaveAttribute('href', '/login');
   });

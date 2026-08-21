@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     }
     const corpo = (await resposta.json()) as { url?: string };
     if (!corpo.url) {
-      return NextResponse.json({ mensagem: 'Resposta invalida do backend ao gerar URL de autorizacao.' }, { status: 502 });
+      return NextResponse.json({ mensagem: 'Resposta inválida do backend ao gerar URL de autorização.' }, { status: 502 });
     }
     return NextResponse.redirect(corpo.url);
   } catch (erro) {

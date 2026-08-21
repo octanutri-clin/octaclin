@@ -304,7 +304,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
               <div className="grid gap-3 md:grid-cols-3">
                 <Campo rotulo="Responsável"><input className="campo" value={perfil.operacao?.responsavel?.nome ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, nome: evento.target.value } } }))} /></Campo>
                 <Campo rotulo="Parentesco"><input className="campo" value={perfil.operacao?.responsavel?.parentesco ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, parentesco: evento.target.value } } }))} /></Campo>
-                <Campo rotulo="Contato do responsavel"><input className="campo" value={perfil.operacao?.responsavel?.contato ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, contato: evento.target.value } } }))} /></Campo>
+                <Campo rotulo="Contato do responsável"><input className="campo" value={perfil.operacao?.responsavel?.contato ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, contato: evento.target.value } } }))} /></Campo>
               </div>
               <SalvarSecao carregando={salvando === 'operacao'} aoSalvar={() => void salvar('operacao')} />
             </Secao>
@@ -312,30 +312,30 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
             <Secao titulo="Acesso ao portal" descricao="Acompanhe o ciclo de acesso sem reexibir tokens antigos. Uma nova emissao invalida o convite pendente anterior.">
               <div className="grid gap-2 rounded-md border border-linha bg-superficie-hover p-3 md:grid-cols-2">
                 <div>
-                  <p className="text-xs font-semibold text-texto-suave">Situacao</p>
+                  <p className="text-xs font-semibold text-texto-suave">Situação</p>
                   <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-tinta">
                     {qualidade?.acessoPortal.status === 'acesso_ativo' ? <CheckCircle2 size={16} className="text-sucesso-forte" /> : <ShieldCheck size={16} />}
                     {qualidade ? rotulosStatusPortal[qualidade.acessoPortal.status] : 'Carregando'}
                   </p>
                 </div>
-                <div><p className="text-xs font-semibold text-texto-suave">E-mail de acesso</p><p className="mt-1 break-all text-sm text-tinta">{qualidade?.acessoPortal.email || perfil.contato?.email || 'Nao informado'}</p></div>
-                <div><p className="text-xs font-semibold text-texto-suave">Ultimo acesso</p><p className="mt-1 text-sm text-tinta">{formatarDataHora(qualidade?.acessoPortal.ultimoAcessoEm)}</p></div>
-                <div><p className="text-xs font-semibold text-texto-suave">Canal preferido</p><p className="mt-1 text-sm capitalize text-tinta">{qualidade?.acessoPortal.canalPreferido || 'Nao definido'}</p></div>
+                <div><p className="text-xs font-semibold text-texto-suave">E-mail de acesso</p><p className="mt-1 break-all text-sm text-tinta">{qualidade?.acessoPortal.email || perfil.contato?.email || 'Não informado'}</p></div>
+                <div><p className="text-xs font-semibold text-texto-suave">Último acesso</p><p className="mt-1 text-sm text-tinta">{formatarDataHora(qualidade?.acessoPortal.ultimoAcessoEm)}</p></div>
+                <div><p className="text-xs font-semibold text-texto-suave">Canal preferido</p><p className="mt-1 text-sm capitalize text-tinta">{qualidade?.acessoPortal.canalPreferido || 'Não definido'}</p></div>
               </div>
               {qualidade?.acessoPortal.preferencias ? <div className="rounded-md border border-linha px-3 py-2">
-                <p className="text-xs font-semibold text-texto-suave">Preferencias definidas no portal</p>
+                <p className="text-xs font-semibold text-texto-suave">Preferências definidas no portal</p>
                 <p className="mt-1 text-xs text-tinta">
-                  E-mail: {qualidade.acessoPortal.preferencias.email === undefined ? 'nao informado' : qualidade.acessoPortal.preferencias.email ? 'permitido' : 'desativado'}
-                  {' - '}WhatsApp: {qualidade.acessoPortal.preferencias.whatsapp === undefined ? 'nao informado' : qualidade.acessoPortal.preferencias.whatsapp ? 'permitido' : 'desativado'}
+                  E-mail: {qualidade.acessoPortal.preferencias.email === undefined ? 'não informado' : qualidade.acessoPortal.preferencias.email ? 'permitido' : 'desativado'}
+                  {' - '}WhatsApp: {qualidade.acessoPortal.preferencias.whatsapp === undefined ? 'não informado' : qualidade.acessoPortal.preferencias.whatsapp ? 'permitido' : 'desativado'}
                   {qualidade.acessoPortal.preferencias.canalPreferido ? ` - Preferencia: ${qualidade.acessoPortal.preferencias.canalPreferido}` : ''}
                 </p>
-                {qualidade.acessoPortal.preferencias.horarioPermitido?.inicio && qualidade.acessoPortal.preferencias.horarioPermitido?.fim ? <p className="mt-1 text-xs text-texto-suave">Janela: {qualidade.acessoPortal.preferencias.horarioPermitido.inicio}-{qualidade.acessoPortal.preferencias.horarioPermitido.fim} - {qualidade.acessoPortal.preferencias.horarioPermitido.timezone || 'fuso nao informado'}</p> : null}
+                {qualidade.acessoPortal.preferencias.horarioPermitido?.inicio && qualidade.acessoPortal.preferencias.horarioPermitido?.fim ? <p className="mt-1 text-xs text-texto-suave">Janela: {qualidade.acessoPortal.preferencias.horarioPermitido.inicio}-{qualidade.acessoPortal.preferencias.horarioPermitido.fim} - {qualidade.acessoPortal.preferencias.horarioPermitido.timezone || 'fuso não informado'}</p> : null}
               </div> : null}
               {qualidade?.acessoPortal.status === 'convite_pendente' ? <p className="text-xs text-texto-suave">Convite atual expira em {formatarDataHora(qualidade.acessoPortal.conviteExpiraEm)}.</p> : null}
               {qualidade?.acessoPortal.aceites.length ? <div>
                 <p className="text-xs font-semibold text-texto-suave">Aceites legais registrados</p>
                 <ul className="mt-2 grid gap-1 text-xs text-tinta">
-                  {qualidade.acessoPortal.aceites.map((aceite) => <li key={aceite.tipo} className="flex flex-wrap items-center gap-1"><CheckCircle2 size={14} className="text-sucesso-forte" /> {rotulosAceite[aceite.tipo] ?? aceite.tipo} - versao {aceite.versao} - {formatarDataHora(aceite.aceitoEm)}</li>)}
+                  {qualidade.acessoPortal.aceites.map((aceite) => <li key={aceite.tipo} className="flex flex-wrap items-center gap-1"><CheckCircle2 size={14} className="text-sucesso-forte" /> {rotulosAceite[aceite.tipo] ?? aceite.tipo} - versão {aceite.versao} - {formatarDataHora(aceite.aceitoEm)}</li>)}
                 </ul>
               </div> : null}
               <div className="flex flex-wrap justify-end gap-2">
@@ -348,7 +348,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
               {linkConvite ? <p className="break-all rounded-md border border-linha bg-superficie-hover px-3 py-2 text-xs text-texto-suave">{linkConvite}</p> : null}
             </Secao>
 
-            {podeVerFiscal ? <Secao titulo="Dados fiscais opcionais" descricao="Visivel apenas para quem tem permissao financeira.">
+            {podeVerFiscal ? <Secao titulo="Dados fiscais opcionais" descricao="Visivel apenas para quem tem permissão financeira.">
               <div className="grid gap-3 md:grid-cols-2">
                 <Campo rotulo="Nome do pagador"><input className="campo" value={fiscal.nomePagador ?? ''} onChange={(evento) => setFiscal((atual) => ({ ...atual, nomePagador: evento.target.value }))} /></Campo>
                 <Campo rotulo="CPF do paciente"><input className="campo" inputMode="numeric" value={fiscal.cpf ?? ''} onChange={(evento) => setFiscal((atual) => ({ ...atual, cpf: evento.target.value.replace(/\D/g, '') }))} /></Campo>
@@ -362,7 +362,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
       <ModalConfirmacao
         aberto={confirmarRevogacao}
         titulo="Revogar convite pendente"
-        mensagem="O link atual deixara de funcionar imediatamente. O acesso ativo de um paciente que ja concluiu o primeiro acesso nao sera alterado."
+        mensagem="O link atual deixara de funcionar imediatamente. O acesso ativo de um paciente que já concluiu o primeiro acesso não será alterado."
         rotuloConfirmar="Revogar convite"
         confirmando={salvando === 'revogar-portal'}
         aoConfirmar={() => void revogarConvitePortal()}

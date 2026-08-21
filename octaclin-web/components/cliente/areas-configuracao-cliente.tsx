@@ -36,15 +36,15 @@ export function AreasConfiguracaoCliente({ portal }: Props) {
             <div>
               <h2 className="text-sm font-semibold">
                 {areaAtiva === 'marca'
-                  ? 'Identidade da clinica'
+                  ? 'Identidade da clínica'
                   : areaAtiva === 'integracoes'
-                    ? 'Integracoes da conta'
-                    : 'Preferencias da conta'}
+                    ? 'Integrações da conta'
+                    : 'Preferências da conta'}
               </h2>
               <p className="mt-1 text-sm text-texto-suave">
                 {configuracoes
                   ? `Atualizado em ${formatarData(configuracoes.atualizadoEm)}`
-                  : 'Carregando preferencias da conta'}
+                  : 'Carregando preferências da conta'}
               </p>
             </div>
           </CartaoCabecalho>
@@ -65,7 +65,7 @@ export function AreasConfiguracaoCliente({ portal }: Props) {
             <div className="grid gap-3 md:grid-cols-2">
               {areaAtiva === 'preferencias' ? (
                 <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                  Nome da clinica
+                  Nome da clínica
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
                     value={formularioConfiguracoes.nome}
@@ -202,7 +202,7 @@ export function AreasConfiguracaoCliente({ portal }: Props) {
             <div className="flex justify-end">
               <Botao type="submit" variante="primario" disabled={salvandoConfiguracoes || carregandoConfiguracoes}>
                 <Save size={16} />
-                {salvandoConfiguracoes ? 'Salvando' : 'Salvar configuracoes'}
+                {salvandoConfiguracoes ? 'Salvando' : 'Salvar configurações'}
               </Botao>
             </div>
           </form>

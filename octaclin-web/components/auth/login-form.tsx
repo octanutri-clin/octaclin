@@ -45,7 +45,7 @@ export function LoginForm() {
       subtitulo="Entre com as credenciais da sua conta."
       rodape={
         <p className="text-center text-xs text-texto-suave">
-          Seu acesso e individual e protegido. Nao compartilhe sua senha.
+          Seu acesso é individual e protegido. Não compartilhe sua senha.
         </p>
       }
     >
@@ -58,7 +58,7 @@ export function LoginForm() {
             onChange={(event) => setEmail(event.target.value)}
             type="email"
             autoComplete="email"
-            placeholder="voce@exemplo.com"
+            placeholder="você@exemplo.com"
             required
           />
         </div>

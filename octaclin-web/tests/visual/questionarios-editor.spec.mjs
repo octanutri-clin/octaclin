@@ -21,8 +21,8 @@ async function criarSessao(page) {
 }
 
 const questionarios = [
-  { id: 'q-1', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Check-in semanal', descricao: 'Adesao', status: 'rascunho', versao: 1, criadoEm: '2026-07-01T10:00:00.000Z', atualizadoEm: '2026-07-01T10:00:00.000Z' },
-  { id: 'q-2', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Avaliacao mensal', descricao: 'Metricas', status: 'publicado', versao: 2, criadoEm: '2026-07-02T10:00:00.000Z', atualizadoEm: '2026-07-02T10:00:00.000Z' }
+  { id: 'q-1', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Check-in semanal', descricao: 'Adesão', status: 'rascunho', versao: 1, criadoEm: '2026-07-01T10:00:00.000Z', atualizadoEm: '2026-07-01T10:00:00.000Z' },
+  { id: 'q-2', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Avaliação mensal', descricao: 'Metricas', status: 'publicado', versao: 2, criadoEm: '2026-07-02T10:00:00.000Z', atualizadoEm: '2026-07-02T10:00:00.000Z' }
 ];
 
 async function mockarBff(page) {
@@ -46,19 +46,19 @@ test.describe('Editor de questionarios', () => {
     await mockarBff(page);
     await page.goto('/questionarios');
 
-    await page.getByRole('tab', { name: 'Formularios' }).click();
-    const titulo = page.getByLabel('Titulo');
+    await page.getByRole('tab', { name: 'Formulários' }).click();
+    const titulo = page.getByLabel('Título');
     await expect(titulo).toHaveValue('Check-in semanal');
     await titulo.fill('Check-in semanal (editado)');
 
     await page.getByLabel('Selecionar').selectOption('q-2');
-    await expect(page.getByText('Voce tem alteracoes nao salvas')).toBeVisible();
+    await expect(page.getByText('Você tem alterações não salvas')).toBeVisible();
     await page.getByRole('button', { name: 'Cancelar' }).click();
     await expect(titulo).toHaveValue('Check-in semanal (editado)');
 
     await page.getByLabel('Selecionar').selectOption('q-2');
     await page.getByRole('button', { name: 'Trocar mesmo assim' }).click();
-    await expect(page.getByLabel('Titulo')).toHaveValue('Avaliacao mensal');
+    await expect(page.getByLabel('Título')).toHaveValue('Avaliação mensal');
   });
 
   test('gera recorrencia semanal em linguagem comum sem expor cron', async ({ page }) => {
@@ -87,12 +87,12 @@ test.describe('Editor de questionarios', () => {
     await mockarBff(page);
     await page.goto('/questionarios');
 
-    await page.getByRole('tab', { name: 'Formularios' }).click();
+    await page.getByRole('tab', { name: 'Formulários' }).click();
     await page.getByLabel('Selecionar').selectOption('');
 
-    await expect(page.getByLabel('Titulo')).toHaveValue('');
-    await expect(page.getByLabel('Descricao')).toHaveValue('');
-    await expect(page.getByRole('button', { name: 'Criar questionario' })).toBeVisible();
+    await expect(page.getByLabel('Título')).toHaveValue('');
+    await expect(page.getByLabel('Descrição')).toHaveValue('');
+    await expect(page.getByRole('button', { name: 'Criar questionário' })).toBeVisible();
   });
 
   test('mostra preview lado a lado com a edicao em telas largas', async ({ page }) => {

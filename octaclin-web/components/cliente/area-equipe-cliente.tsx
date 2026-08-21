@@ -68,14 +68,14 @@ export function AreaEquipeCliente({ portal }: Props) {
     <>
       <Cartao id="usuarios" className="scroll-mt-4">
         <CartaoCabecalho>
-          <CartaoTitulo icone={<UsersRound className="h-4 w-4" />}>Usuarios</CartaoTitulo>
+          <CartaoTitulo icone={<UsersRound className="h-4 w-4" />}>Usuários</CartaoTitulo>
         </CartaoCabecalho>
         <CartaoConteudo className="grid gap-3">
           <article className="rounded-md border border-linha bg-superficie p-3">
             <p className="text-xs text-texto-suave">Gestor da conta</p>
             <p className="mt-1 break-words text-base font-semibold">Acesso de gestao ativo</p>
             <p className="mt-1 text-sm text-texto-suave">
-              Assinatura, equipe e configuracoes respeitam as permissoes concedidas.
+              Assinatura, equipe e configurações respeitam as permissões concedidas.
             </p>
           </article>
           <article className="rounded-md border border-linha bg-superficie p-3">
@@ -87,7 +87,7 @@ export function AreaEquipeCliente({ portal }: Props) {
                     'paciente',
                     'pacientes'
                   )}`
-                : 'Profissionais e pacientes usam areas isoladas.'}
+                : 'Profissionais e pacientes usam áreas isoladas.'}
             </p>
           </article>
         </CartaoConteudo>
@@ -97,7 +97,7 @@ export function AreaEquipeCliente({ portal }: Props) {
         <Cartao id="gestao-usuarios" className="scroll-mt-4" aria-busy={carregandoUsuarios}>
           <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
             <div>
-              <h2 className="text-sm font-semibold">Gerenciar usuarios</h2>
+              <h2 className="text-sm font-semibold">Gerenciar usuários</h2>
               <p className="mt-1 text-sm text-texto-suave">
                 {usuarios ? `${usuarios.total} acessos administrativos` : 'Carregando acessos administrativos'}
               </p>
@@ -198,12 +198,12 @@ export function AreaEquipeCliente({ portal }: Props) {
                     className="w-full"
                   >
                     <UserPlus size={16} />
-                    {salvandoUsuario ? 'Convidando' : bloqueioAssinatura ? 'Assinatura bloqueada' : 'Convidar usuario'}
+                    {salvandoUsuario ? 'Convidando' : bloqueioAssinatura ? 'Assinatura bloqueada' : 'Convidar usuário'}
                   </Botao>
                 </div>
                 <p className="text-sm text-texto-suave lg:col-span-3">
                   {formularioUsuario.role === 'Professional'
-                    ? 'O convite tambem cria o perfil clinico e libera a agenda pessoal apos o primeiro acesso.'
+                    ? 'O convite também cria o perfil clínico e libera a agenda pessoal após o primeiro acesso.'
                     : 'Link de primeiro acesso enviado por email.'}
                 </p>
               </form>
@@ -280,11 +280,11 @@ export function AreaEquipeCliente({ portal }: Props) {
                   <div className="flex items-center gap-2">
                     <History size={16} className="text-texto-suave" />
                     <div>
-                      <h3 className="text-sm font-semibold">Historico de convites</h3>
+                      <h3 className="text-sm font-semibold">Histórico de convites</h3>
                       <p className="mt-1 text-xs text-texto-suave">
                         {historicoConvites
                           ? `${formatarQuantidade(historicoConvites.total, 'evento de convite', 'eventos de convite')}`
-                          : 'Carregando historico operacional'}
+                          : 'Carregando histórico operacional'}
                       </p>
                     </div>
                   </div>
@@ -318,7 +318,7 @@ export function AreaEquipeCliente({ portal }: Props) {
                       </div>
                     ))
                   ) : (
-                    <div className="px-4 py-6 text-sm text-texto-suave">Nenhum historico de convite registrado.</div>
+                    <div className="px-4 py-6 text-sm text-texto-suave">Nenhum histórico de convite registrado.</div>
                   )}
                 </div>
               </section>
@@ -330,8 +330,8 @@ export function AreaEquipeCliente({ portal }: Props) {
                   <div className="grid grid-cols-[1.4fr_190px_100px_120px_150px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-texto-suave">
                     <span>Email</span>
                     <span>Papel</span>
-                    <span>Status</span>
-                    <span>Ultimo login</span>
+                    <span>Situação</span>
+                    <span>Último login</span>
                     <span>Acesso</span>
                   </div>
                   <div className="divide-y divide-linha">
@@ -349,7 +349,7 @@ export function AreaEquipeCliente({ portal }: Props) {
                               <>
                                 <select
                                   className="h-9 rounded-md border border-linha bg-white px-2 text-sm"
-                                  aria-label={`Permissao de ${usuario.email}`}
+                                  aria-label={`Permissão de ${usuario.email}`}
                                   value={papeisUsuarios[usuario.id] ?? usuario.role}
                                   disabled={!podeAjustarUsuarios || ajustandoUsuarioId === usuario.id}
                                   onChange={(evento) =>
@@ -422,7 +422,7 @@ export function AreaEquipeCliente({ portal }: Props) {
                       ))
                     ) : (
                       <div className="px-4 py-8 text-sm text-texto-suave">
-                        Nenhum usuario administrativo carregado.
+                        Nenhum usuário administrativo carregado.
                       </div>
                     )}
                   </div>

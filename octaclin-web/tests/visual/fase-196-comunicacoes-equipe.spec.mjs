@@ -47,7 +47,7 @@ async function prepararSessao(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify([
-        { id: 'mensagem-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', canalId: 'canal-1', status: 'recebido', payload: { direcao: 'recebida', contato: '5511999999999', texto: 'Posso trocar o horario?' }, criadoEm: '2026-08-01T13:00:00.000Z' },
+        { id: 'mensagem-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', canalId: 'canal-1', status: 'recebido', payload: { direcao: 'recebida', contato: '5511999999999', texto: 'Posso trocar o horário?' }, criadoEm: '2026-08-01T13:00:00.000Z' },
         { id: 'mensagem-2', tenantId: 'tenant-1', pacienteId: 'paciente-1', canalId: 'canal-1', templateId: 'template-1', status: 'falhou', erro: 'Falha de entrega', payload: { destino: '5511999999999' }, criadoEm: '2026-08-01T13:05:00.000Z' }
       ])
     });
@@ -71,13 +71,13 @@ test.describe('Fase 196 - comunicacoes e equipe', () => {
   test('prioriza conversas e leva resposta ou falha para a composicao', async ({ page }) => {
     await page.goto('/comunicacoes');
 
-    const areas = page.getByRole('tablist', { name: 'Areas de comunicacao' });
+    const areas = page.getByRole('tablist', { name: 'Áreas de comunicação' });
     await expect(areas.getByRole('tab', { name: 'Conversas' })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('heading', { name: 'Inbox WhatsApp' })).toBeVisible();
     await expect(page.getByText('Novo canal')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Responder' })).toBeVisible();
     await expect(page.getByText('Falha de entrega')).toHaveCount(0);
-    await expect(page.getByText('Nao foi possivel concluir o envio.').first()).toBeVisible();
+    await expect(page.getByText('Não foi possível concluir o envio.').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Tentar novamente' }).click();
     await expect(areas.getByRole('tab', { name: 'Nova mensagem' })).toHaveAttribute('aria-selected', 'true');
@@ -85,7 +85,7 @@ test.describe('Fase 196 - comunicacoes e equipe', () => {
     await expect(page.getByLabel('WhatsApp de destino')).toHaveValue('5511999999999');
     await expect(page.getByLabel('Template')).toHaveValue('template-1');
 
-    await areas.getByRole('tab', { name: 'Configuracoes' }).click();
+    await areas.getByRole('tab', { name: 'Configurações' }).click();
     await expect(page.getByText('Novo canal')).toBeVisible();
     await expect(page.getByText('Novo template')).toBeVisible();
   });
@@ -93,15 +93,15 @@ test.describe('Fase 196 - comunicacoes e equipe', () => {
   test('separa diretorio, disponibilidade e integracoes da equipe clinica', async ({ page }) => {
     await page.goto('/profissionais');
 
-    const areas = page.getByRole('tablist', { name: 'Areas da equipe clinica' });
-    await expect(areas.getByRole('tab', { name: 'Diretorio' })).toHaveAttribute('aria-selected', 'true');
+    const areas = page.getByRole('tablist', { name: 'Áreas da equipe clínica' });
+    await expect(areas.getByRole('tab', { name: 'Diretório' })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByText('Dra. Carla')).toBeVisible();
 
     await areas.getByRole('tab', { name: 'Disponibilidade' }).click();
     await expect(page.getByRole('link', { name: 'Abrir agenda de Dra. Carla' })).toHaveAttribute('href', '/agenda?profissionalId=profissional-1');
 
-    await areas.getByRole('tab', { name: 'Integracoes' }).click();
+    await areas.getByRole('tab', { name: 'Integrações' }).click();
     await expect(page.getByText('Google Agenda conectada')).toBeVisible();
-    await expect(page.getByText('Convites e permissoes ficam na area Equipe da conta.')).toBeVisible();
+    await expect(page.getByText('Convites e permissões ficam na área Equipe da conta.')).toBeVisible();
   });
 });

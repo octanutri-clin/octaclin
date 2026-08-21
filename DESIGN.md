@@ -152,6 +152,11 @@ Voz objetiva: "Salvar alteracoes", "Arquivar receita" e "Nao foi possivel
 carregar" descrevem o que ocorreu e o proximo passo. Datas, horas e numeros usam
 formato brasileiro e fuso explicitado quando relevante.
 
+`GUIA_VOZ_MICROCOPY.md` e a fonte canonica para voz, glossario, acoes, erros,
+vazios, confirmacoes e permissoes. O gate
+`pnpm --dir octaclin-web test:linguagem` protege o texto visivel; IDs, enums,
+rotas e contratos internos nao podem ser adaptados para fins de apresentacao.
+
 ## Do's and Don'ts
 
 - **Do:** apresentar a proxima acao clinica com contexto, responsavel e estado.

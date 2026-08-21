@@ -1,6 +1,6 @@
 # OctaClin - Roadmap de qualidade e seguranca das Fases 248 a 262
 
-Atualizado em 2026-08-20.
+Atualizado em 2026-08-21.
 
 Seleção operacional por fase: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 
@@ -35,7 +35,7 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
 | 248 | Estados e recuperação clínica - concluída em 2026-08-20 | Essencial | Gate aprovado |
 | 249 | Densidade e responsividade web - concluida em 2026-08-20 | Importante | Gate aprovado |
 | 250 | Fechamento da dívida Mobile e PRs - concluida em 2026-08-20 | Essencial/segurança | Higiene aprovada; Mobile segue bloqueado pelos advisories upstream |
-| 251 | Linguagem e microcopy integral | Importante | Pré-piloto |
+| 251 | Linguagem e microcopy integral - concluida em 2026-08-21 | Importante | Gate aprovado |
 | 252 | Navegação e descoberta por papel | Essencial | Pré-piloto |
 | 253 | Agenda clínica confiável | Essencial | Bloqueia piloto |
 | 254 | Lista e cadastro de pacientes | Essencial | Pré-piloto |
@@ -62,6 +62,20 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
   ausência de sobreposição. Correção funcional exige teste no nível adequado.
 - Cada fase atualiza seu `fase-XXX-*.md`, este roteiro quando houver mudança de
   ordem e `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` ao ser concluída.
+
+## Resultado da Fase 251
+
+- `GUIA_VOZ_MICROCOPY.md` consolidou a voz, o glossario e os padroes de
+  mensagens em portugues brasileiro.
+- Um gate AST verifica somente texto visivel e integra o CI, preservando IDs,
+  enums, rotas e contratos internos.
+- As superficies prioritarias profissionais, publicas e dos portais foram
+  revisadas, com `Hoje` e `Painel clinico` como nomenclatura principal.
+- Browser, Lighthouse 100 e Playwright em 1440 px e 390 px aprovaram contraste,
+  foco, nomes acessiveis e ausencia de overflow; regressao das Fases 248 e 249
+  permaneceu verde.
+- A sequencia segue para a Fase 252, que reconcilia rotas, permissoes e
+  descoberta de capacidades por papel.
 
 ## Auditoria dos PRs abertos em 2026-08-20
 

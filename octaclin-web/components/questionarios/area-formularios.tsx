@@ -42,21 +42,21 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
         </Botao>
         <Botao variante="primario" onClick={salvarQuestionario} disabled={salvando}>
           <Save className="h-4 w-4" />
-          {questionarioAtual ? 'Salvar questionario' : 'Criar questionario'}
+          {questionarioAtual ? 'Salvar questionário' : 'Criar questionário'}
         </Botao>
       </div>
 
       <Cartao>
         <CartaoCabecalho>
-          <CartaoTitulo>Questionario</CartaoTitulo>
+          <CartaoTitulo>Questionário</CartaoTitulo>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-texto-suave">Versao {questionarioAtual?.versao ?? 1}</span>
+            <span className="text-xs text-texto-suave">Versão {questionarioAtual?.versao ?? 1}</span>
             <Etiqueta variante={status === 'publicado' ? 'sucesso' : status === 'arquivado' ? 'neutra' : 'alerta'}>{status}</Etiqueta>
           </div>
         </CartaoCabecalho>
         <CartaoConteudo className="space-y-4">
           <div className="space-y-1.5">
-            <Rotulo htmlFor="busca-questionario">Buscar formulario</Rotulo>
+            <Rotulo htmlFor="busca-questionario">Buscar formulário</Rotulo>
             <div className="flex gap-2">
               <Campo
                 id="busca-questionario"
@@ -68,9 +68,9 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
                     void carregarPaginaQuestionarios(1);
                   }
                 }}
-                placeholder="Titulo do formulario"
+                placeholder="Título do formulário"
               />
-              <Botao type="button" variante="secundario" onClick={() => void carregarPaginaQuestionarios(1)} disabled={carregando} aria-label="Buscar formularios">
+              <Botao type="button" variante="secundario" onClick={() => void carregarPaginaQuestionarios(1)} disabled={carregando} aria-label="Buscar formulários">
                 <Search className="h-4 w-4" />
               </Botao>
             </div>
@@ -85,16 +85,16 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
                 void selecionarQuestionario(escolhido ?? null);
               }}
             >
-              <option value="">Novo questionario</option>
+              <option value="">Novo questionário</option>
               {questionarios.map((questionario) => (
                 <option key={questionario.id} value={questionario.id}>{questionario.titulo}</option>
               ))}
             </Selecao>
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-              <span className="text-xs text-texto-suave">Pagina {paginaQuestionarios} de {totalPaginas} | {totalQuestionarios} formularios</span>
+              <span className="text-xs text-texto-suave">Página {paginaQuestionarios} de {totalPaginas} | {totalQuestionarios} formulários</span>
               <div className="flex gap-2">
                 <Botao type="button" variante="fantasma" onClick={() => void carregarPaginaQuestionarios(Math.max(1, paginaQuestionarios - 1))} disabled={carregando || paginaQuestionarios <= 1}>Anterior</Botao>
-                <Botao type="button" variante="fantasma" onClick={() => void carregarPaginaQuestionarios(Math.min(totalPaginas, paginaQuestionarios + 1))} disabled={carregando || paginaQuestionarios >= totalPaginas}>Proxima</Botao>
+                <Botao type="button" variante="fantasma" onClick={() => void carregarPaginaQuestionarios(Math.min(totalPaginas, paginaQuestionarios + 1))} disabled={carregando || paginaQuestionarios >= totalPaginas}>Próxima</Botao>
               </div>
             </div>
           </div>
@@ -123,15 +123,15 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
             </div>
           </div>
           <div className="space-y-1.5">
-            <Rotulo htmlFor="titulo">Titulo</Rotulo>
+            <Rotulo htmlFor="titulo">Título</Rotulo>
             <Campo id="titulo" value={titulo} onChange={(event) => { setTitulo(event.target.value); setAlteracoesQuestionarioPendentes(true); }} />
           </div>
           <div className="space-y-1.5">
-            <Rotulo htmlFor="descricao">Descricao</Rotulo>
+            <Rotulo htmlFor="descricao">Descrição</Rotulo>
             <AreaTexto id="descricao" value={descricao} onChange={(event) => { setDescricao(event.target.value); setAlteracoesQuestionarioPendentes(true); }} />
           </div>
           <div className="space-y-1.5">
-            <Rotulo htmlFor="status">Status</Rotulo>
+            <Rotulo htmlFor="status">Situação</Rotulo>
             <Selecao
               id="status"
               value={status}
@@ -157,7 +157,7 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
 
       <ModalConfirmacao
         aberto={confirmandoArquivarQuestionario}
-        titulo="Arquivar questionario"
+        titulo="Arquivar questionário"
         mensagem={questionarioAtual ? `Arquivar o questionario ${questionarioAtual.titulo}?` : ''}
         rotuloConfirmar="Arquivar"
         confirmando={salvando}

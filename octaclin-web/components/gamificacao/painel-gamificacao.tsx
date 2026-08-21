@@ -80,7 +80,7 @@ const desafioInicial: FormularioDesafio = {
 const badgeInicial: FormularioBadge = {
   pacienteId: '',
   nome: 'Consistencia inicial',
-  descricao: 'Primeira conquista de adesao no OctaClin.',
+  descricao: 'Primeira conquista de adesão no OctaClin.',
   iconeSvg: 'award'
 };
 
@@ -152,9 +152,9 @@ export function PainelGamificacao() {
     try {
       const atualizada = await atualizarConfiguracaoGamificacao(configuracaoEdicao);
       await carregar(atualizada);
-      setSucesso('Configuracao de gamificacao atualizada.');
+      setSucesso('Configuração de gamificacao atualizada.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar configuracao.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar configuração.');
     } finally {
       setSalvando(false);
     }
@@ -277,13 +277,13 @@ export function PainelGamificacao() {
       <Cartao>
       <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-base font-semibold">Metas e adesao</h2>
+          <h2 className="text-base font-semibold">Metas e adesão</h2>
           <p className="mt-1 text-sm text-texto-suave">
             {configuracao?.metasBadgesHabilitados
               ? `${desafios.length} metas e ${badges.length} conquistas individuais`
               : 'Recursos desabilitados por padrao'}
           </p>
-          <p className="mt-1 text-xs text-texto-sutil">Cada area exige ativacao explicita da conta.</p>
+          <p className="mt-1 text-xs text-texto-sutil">Cada área exige ativação explicita da conta.</p>
         </div>
         <Botao onClick={() => void carregar()} disabled={carregando}>
           <RefreshCcw size={16} />
@@ -304,7 +304,7 @@ export function PainelGamificacao() {
       <Cartao>
         <form onSubmit={salvarConfiguracao}>
           <CartaoCabecalho>
-            <CartaoTitulo>Ativacao opcional</CartaoTitulo>
+            <CartaoTitulo>Ativação opcional</CartaoTitulo>
           </CartaoCabecalho>
           <CartaoConteudo className="grid gap-3">
             <div className="grid gap-2 md:grid-cols-3">
@@ -327,7 +327,7 @@ export function PainelGamificacao() {
             <div className="flex justify-end">
               <Botao type="submit" variante="primario" disabled={salvando || carregando || !configuracaoEdicao}>
                 <Save size={16} />
-                Salvar ativacao
+                Salvar ativação
               </Botao>
             </div>
           </CartaoConteudo>
@@ -460,7 +460,7 @@ export function PainelGamificacao() {
               </Selecao>
             </div>
             <div className="space-y-1.5">
-              <Rotulo htmlFor="gamificacao-post-conteudo">Conteudo</Rotulo>
+              <Rotulo htmlFor="gamificacao-post-conteudo">Conteúdo</Rotulo>
               <AreaTexto
                 id="gamificacao-post-conteudo"
                 value={post.conteudo}
@@ -525,7 +525,7 @@ export function PainelGamificacao() {
               </Selecao>
             </div>
             <div className="space-y-1.5 md:col-span-2">
-              <Rotulo htmlFor="gamificacao-desafio-titulo">Titulo</Rotulo>
+              <Rotulo htmlFor="gamificacao-desafio-titulo">Título</Rotulo>
               <Campo
                 id="gamificacao-desafio-titulo"
                 value={desafio.titulo}
@@ -534,7 +534,7 @@ export function PainelGamificacao() {
               />
             </div>
             <div className="space-y-1.5 md:col-span-2">
-              <Rotulo htmlFor="gamificacao-desafio-descricao">Descricao</Rotulo>
+              <Rotulo htmlFor="gamificacao-desafio-descricao">Descrição</Rotulo>
               <AreaTexto
                 id="gamificacao-desafio-descricao"
                 value={desafio.descricao}
@@ -606,7 +606,7 @@ export function PainelGamificacao() {
               />
             </div>
             <div className="space-y-1.5">
-              <Rotulo htmlFor="gamificacao-badge-descricao">Descricao</Rotulo>
+              <Rotulo htmlFor="gamificacao-badge-descricao">Descrição</Rotulo>
               <AreaTexto
                 id="gamificacao-badge-descricao"
                 value={badge.descricao}

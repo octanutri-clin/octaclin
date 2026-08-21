@@ -152,7 +152,7 @@ export function AreaPerfilCliente({ portal }: Props) {
 
         <div className="grid gap-3 rounded-md border border-linha bg-superficie p-3 md:grid-cols-2">
           <CampoTexto
-            rotulo="Responsavel"
+            rotulo="Responsável"
             valor={formularioPerfilEmpresa.responsavel.nome}
             aoMudar={(evento) =>
               setFormularioPerfilEmpresa((atual) => ({
@@ -163,7 +163,7 @@ export function AreaPerfilCliente({ portal }: Props) {
             maxLength={120}
           />
           <CampoTexto
-            rotulo="Email do responsavel"
+            rotulo="Email do responsável"
             type="email"
             valor={formularioPerfilEmpresa.responsavel.email}
             aoMudar={(evento) =>
@@ -175,7 +175,7 @@ export function AreaPerfilCliente({ portal }: Props) {
             maxLength={180}
           />
           <CampoTexto
-            rotulo="Telefone do responsavel"
+            rotulo="Telefone do responsável"
             valor={formularioPerfilEmpresa.responsavel.telefone}
             aoMudar={(evento) =>
               setFormularioPerfilEmpresa((atual) => ({
@@ -224,7 +224,7 @@ export function AreaPerfilCliente({ portal }: Props) {
             maxLength={160}
           />
           <CampoTexto
-            rotulo="Numero"
+            rotulo="Número"
             valor={formularioPerfilEmpresa.endereco.numero}
             aoMudar={(evento) =>
               setFormularioPerfilEmpresa((atual) => ({
@@ -358,7 +358,7 @@ export function AreaPerfilCliente({ portal }: Props) {
             Preparar base para recibos
           </label>
           <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-            Observacoes fiscais
+            Observações fiscais
             <textarea
               className="min-h-24 rounded-md border border-linha bg-white px-3 py-2 text-sm font-normal text-tinta"
               value={formularioPerfilEmpresa.fiscal.observacoes}

@@ -249,7 +249,7 @@ test.describe('Fase 248 - estados e recuperacao clinica', () => {
 
     await expect(page.getByRole('heading', { name: 'Não foi possível carregar a agenda' })).toBeVisible();
     await expect(page.getByText('Internal server error')).toHaveCount(0);
-    await expect(page.getByText('/interno/nao-expor')).toHaveCount(0);
+    await expect(page.getByText('/interno/não-expor')).toHaveCount(0);
     controle.permitirRecuperacao();
     await page.getByRole('button', { name: 'Tentar novamente' }).click();
 
@@ -258,14 +258,14 @@ test.describe('Fase 248 - estados e recuperacao clinica', () => {
     const modal = page.getByRole('dialog', { name: 'Nova consulta' });
     await modal.getByLabel('Data e hora').fill('2026-08-24T10:00');
     await modal.getByLabel('Local').fill('Sala recuperada');
-    await modal.getByLabel('Observacoes').fill('Manter esta observacao apos a falha.');
+    await modal.getByLabel('Observações').fill('Manter esta observacao apos a falha.');
     await modal.getByRole('button', { name: 'Agendar' }).click();
 
     await expect(page.getByText('Não foi possível agendar a consulta. Tente novamente.')).toBeVisible();
     await expect(modal.getByLabel('Local')).toHaveValue('Sala recuperada');
-    await expect(modal.getByLabel('Observacoes')).toHaveValue('Manter esta observacao apos a falha.');
+    await expect(modal.getByLabel('Observações')).toHaveValue('Manter esta observacao apos a falha.');
     await modal.getByRole('button', { name: 'Agendar' }).click();
-    await expect(page.getByText(/Consulta agendada e horario bloqueado/)).toBeVisible();
+    await expect(page.getByText(/Consulta agendada e horário bloqueado/)).toBeVisible();
   });
 
   test('pacientes recupera a lista e preserva o cadastro digitado apos falha', async ({ page }) => {
@@ -302,15 +302,15 @@ test.describe('Fase 248 - estados e recuperacao clinica', () => {
     await page.getByRole('button', { name: 'Tentar novamente' }).click();
     await expect(page.getByText('Ana Sintetica')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Nova evolucao' }).click();
-    await page.getByLabel('Titulo da evolucao').fill('Conduta sintetica preservada');
-    await page.getByLabel('Conteudo da evolucao').fill('Conteudo digitado antes da falha.');
-    await page.getByRole('button', { name: 'Registrar evolucao' }).click();
+    await page.getByRole('button', { name: 'Nova evolução' }).click();
+    await page.getByLabel('Título da evolução').fill('Conduta sintetica preservada');
+    await page.getByLabel('Conteúdo da evolução').fill('Conteudo digitado antes da falha.');
+    await page.getByRole('button', { name: 'Registrar evolução' }).click();
 
     await expect(page.getByText('Não foi possível registrar a evolução clínica. Tente novamente.')).toBeVisible();
-    await expect(page.getByLabel('Titulo da evolucao')).toHaveValue('Conduta sintetica preservada');
-    await expect(page.getByLabel('Conteudo da evolucao')).toHaveValue('Conteudo digitado antes da falha.');
-    await page.getByRole('button', { name: 'Registrar evolucao' }).click();
-    await expect(page.getByText('Evolucao clinica registrada.')).toBeVisible();
+    await expect(page.getByLabel('Título da evolução')).toHaveValue('Conduta sintetica preservada');
+    await expect(page.getByLabel('Conteúdo da evolução')).toHaveValue('Conteudo digitado antes da falha.');
+    await page.getByRole('button', { name: 'Registrar evolução' }).click();
+    await expect(page.getByText('Evolução clínica registrada.')).toBeVisible();
   });
 });

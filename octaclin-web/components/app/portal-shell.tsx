@@ -115,7 +115,7 @@ export function PortalShell({
           href="#conteudo-principal"
           className="fixed left-3 top-3 z-[60] -translate-y-20 rounded-md bg-tinta px-3 py-2 text-sm font-semibold text-white focus:translate-y-0"
         >
-          Pular para o conteudo
+          Pular para o conteúdo
         </a>
         <div className="grid min-h-screen min-w-0 lg:grid-cols-[232px_minmax(0,1fr)]">
           <aside className="sticky top-0 z-20 min-w-0 overflow-hidden bg-neutro-900 text-white lg:h-screen lg:overflow-visible">

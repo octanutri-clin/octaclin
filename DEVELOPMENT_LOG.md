@@ -27,6 +27,22 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 251 - Revisao integral de linguagem e microcopy
+
+- Responsavel: Codex.
+- Inicio e conclusao: 2026-08-21.
+- Commit: registrado no historico Git desta fase.
+- Push: por PR, conforme ruleset da `main`.
+- Validacoes: gate AST e testes unitarios de linguagem, lint sem erros,
+  typecheck, build, Playwright desktop/mobile, 10 cenarios de acessibilidade,
+  regressoes das Fases 248/249 e Lighthouse 100.
+- Arquivos principais: `GUIA_VOZ_MICROCOPY.md`, scripts de linguagem,
+  superficies TSX, teste Playwright e CI.
+- Pendencias: nenhuma da fase; 53 avisos preexistentes de hooks permanecem fora
+  do escopo.
+- Proxima fase: Fase 252 - arquitetura de navegacao e descoberta de
+  funcionalidades.
+
 ### Fase 250 - Encerramento da divida Mobile e higiene de PRs
 
 - Responsavel: Codex.

@@ -78,7 +78,7 @@ async function prepararCliente(page) {
       body: JSON.stringify({
         conta: {
           tenantId: 'tenant-1',
-          nome: 'Clinica Octa Real',
+          nome: 'Clínica Octa Real',
           slug: 'clinica-carla',
           status: 'ativo',
           criadoEm: '2026-07-01T10:00:00.000Z',
@@ -177,7 +177,7 @@ async function prepararCliente(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        nome: 'Clinica Octa Real',
+        nome: 'Clínica Octa Real',
         timezone: 'America/Sao_Paulo',
         idioma: 'pt-BR',
         canaisPadrao: { email: true, whatsapp: true },
@@ -419,7 +419,7 @@ async function prepararPaciente(page) {
             id: 'notificacao-lembrete',
             canal: 'whatsapp',
             titulo: 'Lembrete de consulta',
-            texto: 'Sua consulta sera amanha.',
+            texto: 'Sua consulta será amanha.',
             status: 'pendente',
             evento: 'agenda.consulta.lembrete',
             criadoEm: '2026-07-23T12:00:00.000Z',
@@ -452,7 +452,7 @@ async function prepararPaciente(page) {
           {
             id: 'material-jornada',
             materialId: 'material-1',
-            titulo: 'Orientacoes iniciais',
+            titulo: 'Orientações iniciais',
             tipo: 'link',
             categoria: 'Onboarding',
             resumo: 'Material enviado apos o agendamento.',
@@ -563,7 +563,7 @@ async function prepararJornadaSolicitacaoPublica(page) {
       contentType: 'application/json',
       body: JSON.stringify({
         clinica: {
-          nome: 'Clinica Carla',
+          nome: 'Clínica Carla',
           corPrimaria: '#197d8f'
         },
         profissional: {
@@ -660,7 +660,7 @@ async function prepararJornadaSolicitacaoPublica(page) {
         requerRotacaoConfirmada: !urlPublica,
         mensagemUrlPublica: urlPublica
           ? 'URL publica disponivel ate nova rotacao confirmada.'
-          : 'URL atual indisponivel nesta sessao. Por seguranca, o token bruto nao e persistido. Rotacione com confirmacao para gerar uma nova URL publica.'
+          : 'URL atual indisponível nesta sessão. Por segurança, o token bruto não é persistido. Rotacione com confirmação para gerar uma nova URL pública.'
       })
     });
   });
@@ -724,7 +724,7 @@ async function prepararJornadaSolicitacaoPublica(page) {
       pacienteNome: pacienteAprovacao.nome,
       profissionalId: 'profissional-1',
       profissionalNome: 'Dra. Carla',
-      titulo: 'Consulta por solicitacao publica',
+      titulo: 'Consulta por solicitação pública',
       inicioEm: horarioSolicitado.inicioEm,
       fimEm: horarioSolicitado.fimEm,
       timezone: 'America/Sao_Paulo',
@@ -748,7 +748,7 @@ async function prepararJornadaSolicitacaoPublica(page) {
         id: 'mensagem-agendamento-publico',
         canal: 'email',
         titulo: 'Consulta agendada',
-        texto: 'Sua consulta foi agendada apos aprovacao manual.',
+        texto: 'Sua consulta foi agendada após aprovação manual.',
         status: 'enviado',
         evento: 'agenda.consulta.agendada',
         criadoEm: '2026-07-27T10:00:00.000Z',
@@ -758,7 +758,7 @@ async function prepararJornadaSolicitacaoPublica(page) {
         id: 'notificacao-lembrete-publico',
         canal: 'whatsapp',
         titulo: 'Lembrete de consulta',
-        texto: 'Sua consulta sera amanha.',
+        texto: 'Sua consulta será amanha.',
         status: 'pendente',
         evento: 'agenda.consulta.lembrete',
         criadoEm: '2026-07-27T10:00:00.000Z',
@@ -846,13 +846,13 @@ test.describe('jornadas criticas de producao', () => {
     const cliente = await prepararCliente(page);
 
     await page.goto('/cliente');
-    await page.getByRole('tablist', { name: 'Areas da conta' }).getByRole('tab', { name: 'Equipe' }).click();
+    await page.getByRole('tablist', { name: 'Áreas da conta' }).getByRole('tab', { name: 'Equipe' }).click();
     const gestaoUsuarios = page.locator('#gestao-usuarios');
-    await expect(gestaoUsuarios.getByRole('heading', { name: 'Gerenciar usuarios' })).toBeVisible();
+    await expect(gestaoUsuarios.getByRole('heading', { name: 'Gerenciar usuários' })).toBeVisible();
 
     await gestaoUsuarios.getByLabel('Email').fill('agenda.jornada@octaclin.local');
     await gestaoUsuarios.getByLabel('Papel').selectOption('Collaborator');
-    await gestaoUsuarios.getByRole('button', { name: 'Convidar usuario' }).click();
+    await gestaoUsuarios.getByRole('button', { name: 'Convidar usuário' }).click();
 
     await expect(gestaoUsuarios.getByText('Convite enviado por email.')).toBeVisible();
     await expect.poll(() => cliente.conviteCriado()).toEqual({
@@ -868,7 +868,7 @@ test.describe('jornadas criticas de producao', () => {
     await page.goto('/pacientes');
     await page.getByRole('button', { name: 'Novo paciente' }).click();
     const formularioPaciente = page.getByRole('dialog', { name: 'Novo paciente' });
-    await formularioPaciente.getByLabel('Profissional responsavel').selectOption('profissional-1');
+    await formularioPaciente.getByLabel('Profissional responsável').selectOption('profissional-1');
     await formularioPaciente.getByLabel('Nome completo').fill('Ana Jornada');
     await formularioPaciente.getByLabel('E-mail ou telefone').fill('5511999999999');
     await formularioPaciente.getByLabel('Data de nascimento').fill('1990-04-15');
@@ -887,10 +887,10 @@ test.describe('jornadas criticas de producao', () => {
     await formularioAgenda.getByLabel('Local').fill('Online');
     await formularioAgenda.getByLabel('Email').fill('ana.jornada@example.com');
     await formularioAgenda.getByLabel('WhatsApp').fill('5511999999999');
-    await formularioAgenda.getByLabel('Observacoes').fill('Jornada critica com notificacoes.');
+    await formularioAgenda.getByLabel('Observações').fill('Jornada critica com notificacoes.');
     await formularioAgenda.getByRole('button', { name: 'Agendar' }).click();
 
-    await expect(page.getByText('Consulta agendada e horario bloqueado na agenda interna. Integracoes processadas conforme configuracao.')).toBeVisible();
+    await expect(page.getByText('Consulta agendada e horário bloqueado na agenda interna. Integrações processadas conforme configuração.')).toBeVisible();
     await expect.poll(() => profissionalFluxo.consultaCriada()).toMatchObject({
       pacienteId: 'paciente-jornada',
       profissionalId: 'profissional-1',
@@ -939,11 +939,11 @@ test.describe('jornadas criticas de producao', () => {
     await page.getByLabel('Nome completo').fill('Ana Silva');
     await page.getByLabel('Email').fill('ana.silva@example.com');
     await page.getByLabel('WhatsApp').fill('5511999999999');
-    await page.getByLabel('Observacoes').fill('Prefiro atendimento online.');
-    await page.getByRole('button', { name: 'Revisar solicitacao' }).click();
-    await page.getByRole('button', { name: 'Confirmar solicitacao' }).click();
+    await page.getByLabel('Observações').fill('Prefiro atendimento online.');
+    await page.getByRole('button', { name: 'Revisar solicitação' }).click();
+    await page.getByRole('button', { name: 'Confirmar solicitação' }).click();
 
-    await expect(page.getByText('Solicitacao enviada para analise.')).toBeVisible();
+    await expect(page.getByText('Solicitação enviada para análise.')).toBeVisible();
     await expect.poll(() => jornada.solicitacaoEnviada()).toMatchObject({
       nome: 'Ana Silva',
       email: 'ana.silva@example.com',
@@ -958,39 +958,39 @@ test.describe('jornadas criticas de producao', () => {
     await jornada.ativarSessaoProfissional();
     await page.goto('/agenda');
 
-    await expect(page.getByRole('heading', { name: 'Link publico de agendamento' })).toBeVisible();
-    await expect(page.getByText(/token bruto nao e persistido/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Link público de agendamento' })).toBeVisible();
+    await expect(page.getByText(/token bruto não é persistido/i)).toBeVisible();
     const solicitacao = page.locator('article').filter({ hasText: 'Ana Silva' });
     await expect(solicitacao).toBeVisible();
-    await expect(solicitacao.getByRole('button', { name: 'Aprovar solicitacao' })).toBeVisible();
+    await expect(solicitacao.getByRole('button', { name: 'Aprovar solicitação' })).toBeVisible();
     await expect(solicitacao.getByLabel('Paciente para aprovar')).toHaveValue('');
-    await expect(solicitacao.getByRole('button', { name: 'Aprovar solicitacao' })).toBeDisabled();
+    await expect(solicitacao.getByRole('button', { name: 'Aprovar solicitação' })).toBeDisabled();
 
     await page.getByRole('button', { name: 'Rotacionar link' }).click();
-    await expect(page.getByText('invalida a URL publica anterior')).toBeVisible();
-    await page.getByRole('button', { name: 'Confirmar rotacao' }).click();
+    await expect(page.getByText('invalida a URL pública anterior')).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmar rotação' }).click();
 
     await expect.poll(() => jornada.urlPublica()).toBe('https://octaclin.local/agendar/token-rotacionado');
     await expect(page.getByText('https://octaclin.local/agendar/token-rotacionado')).toBeVisible();
 
     await solicitacao.getByLabel('Paciente para aprovar').selectOption('paciente-1');
-    await expect(solicitacao.getByRole('button', { name: 'Aprovar solicitacao' })).toBeEnabled();
-    await solicitacao.getByRole('button', { name: 'Aprovar solicitacao' }).click();
+    await expect(solicitacao.getByRole('button', { name: 'Aprovar solicitação' })).toBeEnabled();
+    await solicitacao.getByRole('button', { name: 'Aprovar solicitação' }).click();
 
     await expect.poll(() => jornada.consultaCriada()).toMatchObject({
       pacienteId: 'paciente-1',
       profissionalId: 'profissional-1',
-      titulo: 'Consulta por solicitacao publica'
+      titulo: 'Consulta por solicitação pública'
     });
-    await expect(page.getByText('Solicitacao aprovada e convertida em consulta.')).toBeVisible();
+    await expect(page.getByText('Solicitação aprovada e convertida em consulta.')).toBeVisible();
     await expect.poll(() => jornada.notificacoesCriadas().length).toBe(2);
 
     await jornada.ativarSessaoPaciente();
     await page.goto('/portal/agenda');
 
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
-    const proximasConsultas = page.getByRole('heading', { name: 'Proximas consultas' }).locator('..').locator('..');
-    await expect(proximasConsultas.getByText('Consulta por solicitacao publica')).toBeVisible();
+    const proximasConsultas = page.getByRole('heading', { name: 'Próximas consultas' }).locator('..').locator('..');
+    await expect(proximasConsultas.getByText('Consulta por solicitação pública')).toBeVisible();
     await page.goto('/portal/mensagens');
     await expect(page.locator('#notificacoes').getByText('Consulta agendada')).toBeVisible();
     await expect(page.locator('#notificacoes').getByText('Lembrete de consulta').first()).toBeVisible();
@@ -1002,27 +1002,27 @@ test.describe('jornadas criticas de producao', () => {
     await page.goto('/portal/agenda');
 
     await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
-    const proximasConsultas = page.getByRole('heading', { name: 'Proximas consultas' }).locator('..').locator('..');
+    const proximasConsultas = page.getByRole('heading', { name: 'Próximas consultas' }).locator('..').locator('..');
     await expect(proximasConsultas.getByText('Consulta inicial')).toBeVisible();
     // Teleconsulta: link so aparece dentro da janela; fora dela o paciente ve a explicacao, nao o endereco.
     await expect(proximasConsultas.getByRole('link', { name: 'Entrar na consulta' })).toHaveAttribute(
       'href',
       'https://meet.google.com/abc-defg-hij'
     );
-    await expect(proximasConsultas.getByText('O link para entrar aparece aqui 1 hora antes do horario.')).toBeVisible();
+    await expect(proximasConsultas.getByText('O link para entrar aparece aqui 1 hora antes do horário.')).toBeVisible();
     await page.goto('/portal/mensagens');
     await expect(page.locator('#notificacoes').getByText('Consulta agendada')).toBeVisible();
     await expect(page.locator('#notificacoes').getByText('Lembrete de consulta').first()).toBeVisible();
     await page.goto('/portal/plano');
     await expect(page.locator('#plano').getByText('Responder check-in inicial')).toBeVisible();
-    await expect(page.locator('#plano').getByText('Orientacoes iniciais')).toBeVisible();
+    await expect(page.locator('#plano').getByText('Orientações iniciais')).toBeVisible();
   });
 
   test('paciente desmarca a propria consulta e ela some da lista de proximas consultas', async ({ page }) => {
     const paciente = await prepararPaciente(page);
 
     await page.goto('/portal/agenda');
-    const proximasConsultas = page.getByRole('heading', { name: 'Proximas consultas' }).locator('..').locator('..');
+    const proximasConsultas = page.getByRole('heading', { name: 'Próximas consultas' }).locator('..').locator('..');
     await expect(proximasConsultas.getByText('Consulta inicial')).toBeVisible();
 
     await page.getByRole('button', { name: 'Desmarcar' }).first().click();

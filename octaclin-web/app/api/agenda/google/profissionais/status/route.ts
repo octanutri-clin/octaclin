@@ -6,6 +6,6 @@ export async function GET() {
     const resposta = await requisitarBackendAutenticado('/agenda/google/profissionais/status');
     return new NextResponse(await resposta.text(), { status: resposta.status, headers: { 'Content-Type': resposta.headers.get('Content-Type') ?? 'application/json' } });
   } catch {
-    return NextResponse.json({ mensagem: 'Falha ao consultar integracoes da equipe.' }, { status: 500 });
+    return NextResponse.json({ mensagem: 'Falha ao consultar integrações da equipe.' }, { status: 500 });
   }
 }

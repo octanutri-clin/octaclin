@@ -21,24 +21,24 @@ type Etapa = 'senha' | 'aceites';
 
 const conteudoFalha: Record<TipoFalhaToken, { titulo: string; mensagem: string; detalhe: string }> = {
   sem_token: {
-    titulo: 'Link de primeiro acesso indisponivel',
+    titulo: 'Link de primeiro acesso indisponível',
     mensagem: 'Abra o link completo enviado pelo profissional ou solicite um novo acesso.',
-    detalhe: 'O link precisa conter o codigo seguro do convite para ativar o portal.'
+    detalhe: 'O link precisa conter o código seguro do convite para ativar o portal.'
   },
   expirado: {
     titulo: 'Convite expirado',
-    mensagem: 'Solicite um novo acesso para proteger seus dados e concluir a ativacao.',
-    detalhe: 'Por seguranca, links antigos deixam de funcionar automaticamente.'
+    mensagem: 'Solicite um novo acesso para proteger seus dados e concluir a ativação.',
+    detalhe: 'Por segurança, links antigos deixam de funcionar automaticamente.'
   },
   nao_encontrado: {
-    titulo: 'Convite nao encontrado',
+    titulo: 'Convite não encontrado',
     mensagem: 'Confira se o link foi copiado inteiro ou peca um novo convite ao profissional.',
-    detalhe: 'Nao encontramos um convite ativo com o codigo informado.'
+    detalhe: 'Não encontramos um convite ativo com o código informado.'
   },
   indisponivel: {
-    titulo: 'Nao foi possivel validar o convite',
+    titulo: 'Não foi possível validar o convite',
     mensagem: 'Tente novamente em instantes ou fale com o profissional para receber um novo link.',
-    detalhe: 'A validacao do convite nao retornou uma resposta esperada.'
+    detalhe: 'A validação do convite não retornou uma resposta esperada.'
   }
 };
 
@@ -102,7 +102,7 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
   function avancarParaAceites() {
     setErro(null);
     if (!senhaValida) {
-      setErro('A senha precisa ter ao menos 8 caracteres e bater com a confirmacao.');
+      setErro('A senha precisa ter ao menos 8 caracteres e bater com a confirmação.');
       return;
     }
     setEtapa('aceites');
@@ -151,7 +151,7 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
         <div className="grid gap-4">
           <div className="flex items-start gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
             <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
-            <span>Acesso ativado. Agora voce pode entrar no portal do paciente.</span>
+            <span>Acesso ativado. Agora você pode entrar no portal do paciente.</span>
           </div>
           <Link
             href="/login"
@@ -167,7 +167,7 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
           <div className="rounded-md border border-linha bg-superficie px-3 py-3 text-sm">
             <p className="font-medium">{convite.nomePaciente}</p>
             <p className="mt-1 text-texto-suave">{convite.email}</p>
-            <p className="mt-1 text-xs text-texto-suave">Convite valido ate {formatarData(convite.expiraEm)}</p>
+            <p className="mt-1 text-xs text-texto-suave">Convite válido até {formatarData(convite.expiraEm)}</p>
           </div>
 
           <h2
@@ -221,7 +221,7 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
                   onChange={(evento) => setAceiteTermosUso(evento.target.checked)}
                   className="mt-0.5 h-4 w-4"
                 />
-                Aceito os Termos de uso do OctaClin, versao {versaoLegalPaciente}.
+                Aceito os Termos de uso do OctaClin, versão {versaoLegalPaciente}.
               </label>
 
               <label className="flex items-start gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm text-texto-suave">
@@ -231,7 +231,7 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
                   onChange={(evento) => setAceitePoliticaPrivacidade(evento.target.checked)}
                   className="mt-0.5 h-4 w-4"
                 />
-                Aceito a Politica de privacidade, versao {versaoLegalPaciente}.
+                Aceito a Política de privacidade, versão {versaoLegalPaciente}.
               </label>
 
               <label className="flex items-start gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm text-texto-suave">
@@ -241,7 +241,7 @@ export function PrimeiroAcessoForm({ tokenInicial }: PrimeiroAcessoFormProps) {
                   onChange={(evento) => setAceiteLgpd(evento.target.checked)}
                   className="mt-0.5 h-4 w-4"
                 />
-                Autorizo o tratamento dos meus dados de saude para uso do portal OctaClin e acompanhamento clinico.
+                Autorizo o tratamento dos meus dados de saude para uso do portal OctaClin e acompanhamento clínico.
               </label>
 
               {erro ? (

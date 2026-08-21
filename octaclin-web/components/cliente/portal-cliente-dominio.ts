@@ -35,10 +35,10 @@ export function formatarData(valor?: string) {
 }
 
 export const recursosSaas: { chave: RecursoLimitavelSaasApi; rotulo: string }[] = [
-  { chave: 'usuariosAdministrativos', rotulo: 'Usuarios administrativos' },
+  { chave: 'usuariosAdministrativos', rotulo: 'Usuários administrativos' },
   { chave: 'pacientes', rotulo: 'Pacientes' },
-  { chave: 'mensagensMes', rotulo: 'Mensagens no mes' },
-  { chave: 'formulariosAtivos', rotulo: 'Formularios ativos' },
+  { chave: 'mensagensMes', rotulo: 'Mensagens no mês' },
+  { chave: 'formulariosAtivos', rotulo: 'Formulários ativos' },
   { chave: 'armazenamentoMb', rotulo: 'Armazenamento' }
 ];
 
@@ -79,21 +79,21 @@ const proximosPlanos: Record<PlanoSaasIdApi, { id?: PlanoSaasIdApi; nome: string
   gratuito: {
     id: 'profissional',
     nome: 'Profissional',
-    detalhe: 'Mais pacientes, formularios e mensagens para operacao individual.'
+    detalhe: 'Mais pacientes, formulários e mensagens para operação individual.'
   },
   profissional: {
     id: 'clinica',
-    nome: 'Clinica',
-    detalhe: 'Mais usuarios administrativos e margem para crescer a operacao.'
+    nome: 'Clínica',
+    detalhe: 'Mais usuários administrativos e margem para crescer a operação.'
   },
   clinica: {
     id: 'enterprise',
     nome: 'Enterprise',
-    detalhe: 'Limites sob medida para operacoes maiores ou multiunidade.'
+    detalhe: 'Limites sob medida para operações maiores ou multiunidade.'
   },
   enterprise: {
     nome: 'Plano atual sob medida',
-    detalhe: 'Solicite revisao comercial quando precisar ajustar contrato ou capacidade.'
+    detalhe: 'Solicite revisão comercial quando precisar ajustar contrato ou capacidade.'
   }
 };
 

@@ -198,7 +198,7 @@ export function PainelAutomacoes() {
         pacienteId: atual.pacienteId || bootstrap.pacientes.itens[0]?.id || ''
       }));
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar automacoes.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar automações.');
     } finally {
       setCarregando(false);
     }
@@ -266,7 +266,7 @@ export function PainelAutomacoes() {
         }
       });
       setExecucoes((atuais) => [execucao, ...atuais].slice(0, 8));
-      setSucesso(execucao.resultado.executar ? 'Simulacao concluida: a regra seria executada.' : 'Simulacao concluida: as condicoes nao foram atendidas.');
+      setSucesso(execucao.resultado.executar ? 'Simulação concluída: a regra seria executada.' : 'Simulação concluída: as condições não foram atendidas.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao simular regra.');
     } finally {
@@ -284,8 +284,8 @@ export function PainelAutomacoes() {
       const total = Number(execucao.resultado.totalCandidatos ?? 0);
       setSucesso(
         total
-          ? `Simulacao concluida: ${total} paciente(s) seriam contatados. Confira a lista antes de ativar.`
-          : 'Simulacao concluida: nenhum paciente seria contatado agora.'
+          ? `Simulação concluída: ${total} paciente(s) seriam contatados. Confira a lista antes de ativar.`
+          : 'Simulação concluída: nenhum paciente seria contatado agora.'
       );
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao simular recall.');
@@ -320,7 +320,7 @@ export function PainelAutomacoes() {
           <div>
             <h2 className="text-base font-semibold">Modelos e regras</h2>
             <p className="mt-1 text-sm text-texto-suave">
-              {regras.length} regras, {execucoes.length} simulacoes e execucoes no historico
+              {regras.length} regras, {execucoes.length} simulacoes e execucoes no histórico
             </p>
           </div>
           <Botao onClick={carregar} disabled={carregando}>
@@ -382,9 +382,9 @@ export function PainelAutomacoes() {
                 onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, gatilhoTipo: evento.target.value }))}
               >
                 <option value="checkin.atrasado">Check-in atrasado</option>
-                <option value="questionario.respondido">Questionario respondido</option>
+                <option value="questionario.respondido">Questionário respondido</option>
                 <option value="paciente.risco_alto">Paciente em risco alto</option>
-                <option value={GATILHO_INATIVIDADE}>Paciente sem consulta ha muito tempo</option>
+                <option value={GATILHO_INATIVIDADE}>Paciente sem consulta há muito tempo</option>
               </Selecao>
             </div>
             {gatilhoInatividadeSelecionado ? (
@@ -468,7 +468,7 @@ export function PainelAutomacoes() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Rotulo htmlFor="regra-acao">Acao</Rotulo>
+                  <Rotulo htmlFor="regra-acao">Ação</Rotulo>
                   <Selecao
                     id="regra-acao"
                     value={formularioRegra.acaoTipo}
@@ -484,7 +484,7 @@ export function PainelAutomacoes() {
           </div>
           <p className="mt-3 rounded-md border border-linha bg-fundo px-3 py-2 text-sm text-texto-suave">
             {gatilhoInatividadeSelecionado
-              ? 'O recall so alcanca pacientes deste profissional que aceitam receber mensagens. Simule para ver a lista exata antes de ativar.'
+              ? 'O recall só alcanca pacientes deste profissional que aceitam receber mensagens. Simule para ver a lista exata antes de ativar.'
               : 'Toda regra nova fica em rascunho. Simule o resultado antes de ativar.'}
           </p>
           <div className="mt-3 flex justify-end">
@@ -585,7 +585,7 @@ export function PainelAutomacoes() {
               </Selecao>
             </div>
             <div className="space-y-1.5">
-              <Rotulo htmlFor="avaliacao-status">Status</Rotulo>
+              <Rotulo htmlFor="avaliacao-status">Situação</Rotulo>
               <Selecao
                 id="avaliacao-status"
                 value={formularioAvaliacao.status}
@@ -618,7 +618,7 @@ export function PainelAutomacoes() {
               />
             </div>
             <div className="space-y-1.5 md:col-span-2">
-              <Rotulo htmlFor="avaliacao-observacao">Observacao</Rotulo>
+              <Rotulo htmlFor="avaliacao-observacao">Observação</Rotulo>
               <AreaTexto
                 id="avaliacao-observacao"
                 value={formularioAvaliacao.observacao}
@@ -638,14 +638,14 @@ export function PainelAutomacoes() {
 
         <Cartao>
           <CartaoCabecalho>
-            <CartaoTitulo>Historico recente</CartaoTitulo>
+            <CartaoTitulo>Histórico recente</CartaoTitulo>
           </CartaoCabecalho>
           <div className="max-h-[420px] divide-y divide-linha overflow-auto">
             {execucoes.length ? (
               execucoes.map((execucao) => (
                 <div key={execucao.id} className="grid gap-2 px-4 py-3 text-sm">
                   <div className="flex items-center justify-between gap-3">
-                    <strong className="truncate">{execucao.resultado.simulacao === true ? 'Simulacao' : 'Execucao'}</strong>
+                    <strong className="truncate">{execucao.resultado.simulacao === true ? 'Simulação' : 'Execução'}</strong>
                     <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-texto-suave">
                       {execucao.status}
                     </span>
@@ -663,7 +663,7 @@ export function PainelAutomacoes() {
                 </div>
               ))
             ) : (
-              <EstadoVazio titulo="Nenhuma avaliacao persistida." />
+              <EstadoVazio titulo="Nenhuma avaliação persistida." />
             )}
           </div>
         </Cartao>

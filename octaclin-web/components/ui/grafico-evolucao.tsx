@@ -89,7 +89,7 @@ export function GraficoEvolucao({ pontos, rotulo, unidade, casas = 1, descricao 
   if (!geometria) {
     return (
       <p className="rounded-md border border-linha bg-superficie p-4 text-sm text-texto-suave">
-        Sem avaliacoes suficientes para desenhar a curva de {rotulo.toLowerCase()}.
+        Sem avaliações suficientes para desenhar a curva de {rotulo.toLowerCase()}.
       </p>
     );
   }
@@ -197,7 +197,7 @@ export function GraficoEvolucao({ pontos, rotulo, unidade, casas = 1, descricao 
         <summary className="cursor-pointer text-texto-suave">Ver valores em tabela</summary>
         <table className="mt-2 w-full border-collapse text-left">
           <caption className="sr-only">
-            {rotulo} em {unidade}, por data de avaliacao
+            {rotulo} em {unidade}, por data de avaliação
           </caption>
           <thead>
             <tr>

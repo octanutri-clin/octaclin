@@ -81,13 +81,13 @@ export function SeletorRecorrencia({ onAlterar }: Props) {
 
       {frequencia === 'diaria' || frequencia === 'semanal' ? (
         <label className="space-y-1.5">
-          <Rotulo>Horario</Rotulo>
-          <Campo type="time" aria-label="Horario" value={horario} onChange={(event) => atualizar({ horario: event.target.value })} />
+          <Rotulo>Horário</Rotulo>
+          <Campo type="time" aria-label="Horário" value={horario} onChange={(event) => atualizar({ horario: event.target.value })} />
         </label>
       ) : (
         <label className="space-y-1.5">
-          <Rotulo>Data e horario</Rotulo>
-          <Campo type="datetime-local" aria-label="Data e horario" value={dataEspecifica} onChange={(event) => atualizar({ dataEspecifica: event.target.value })} />
+          <Rotulo>Data e horário</Rotulo>
+          <Campo type="datetime-local" aria-label="Data e horário" value={dataEspecifica} onChange={(event) => atualizar({ dataEspecifica: event.target.value })} />
         </label>
       )}
     </div>

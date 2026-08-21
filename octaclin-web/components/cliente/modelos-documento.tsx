@@ -14,7 +14,7 @@ import {
 } from '@/lib/cliente-api';
 
 const ROTULO_TIPO: Record<string, string> = {
-  declaracao_comparecimento: 'Declaracao de comparecimento',
+  declaracao_comparecimento: 'Declaração de comparecimento',
   relatorio_alta: 'Relatorio de alta',
   recibo_consulta: 'Recibo'
 };
@@ -58,7 +58,7 @@ export function ModelosDocumentoCliente() {
     try {
       const dados = await atualizarModelosDocumentoCliente(rascunho);
       setModelos(dados.modelos);
-      setSucesso('Modelos salvos. Documentos ja emitidos nao mudam.');
+      setSucesso('Modelos salvos. Documentos já emitidos não mudam.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar modelos.');
     } finally {
@@ -103,7 +103,7 @@ export function ModelosDocumentoCliente() {
               </legend>
 
               <label className="grid gap-1">
-                <Rotulo>Titulo</Rotulo>
+                <Rotulo>Título</Rotulo>
                 <Campo
                   value={rascunho[modelo.tipo]?.titulo ?? ''}
                   onChange={(evento) =>

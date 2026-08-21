@@ -9,16 +9,16 @@ const credenciais = {
 const webUrl = process.env.E2E_WEB_URL ?? 'http://localhost:3000';
 
 const rotas = [
-  { caminho: '/dashboard', titulo: 'Dashboard' },
+  { caminho: '/dashboard', titulo: 'Hoje' },
   { caminho: '/operacoes', titulo: 'Confiabilidade OctaClin' },
   { caminho: '/pacientes', titulo: 'Pacientes' },
   { caminho: '/profissionais', titulo: 'Profissionais' },
-  { caminho: '/questionarios', titulo: 'Editor de Questionarios' },
-  { caminho: '/comunicacoes', titulo: 'Comunicacoes' },
-  { caminho: '/automacoes', titulo: 'Automacoes' },
-  { caminho: '/ia', titulo: 'Sugestoes assistidas' },
+  { caminho: '/questionarios', titulo: 'Editor de Questionários' },
+  { caminho: '/comunicacoes', titulo: 'Comunicações' },
+  { caminho: '/automacoes', titulo: 'Automações' },
+  { caminho: '/ia', titulo: 'Sugestões assistidas' },
   { caminho: '/mobile', titulo: 'Confiabilidade OctaClin' },
-  { caminho: '/gamificacao', titulo: 'Metas e adesao' }
+  { caminho: '/gamificacao', titulo: 'Metas e adesão' }
 ];
 
 const rotulosMenu = [
@@ -28,8 +28,8 @@ const rotulosMenu = [
   'Agenda',
   'Automações',
   'IA assistida',
-  'Metas e adesao',
-  'Operacoes',
+  'Metas e adesão',
+  'Operações',
   'Pacientes',
   'Profissionais'
 ];
@@ -230,8 +230,8 @@ async function prepararOperacoesMockadas(page) {
             id: 'integracao.comunicacoes.falhas',
             severidade: 'atencao',
             origem: 'integracao',
-            titulo: 'Falhas de comunicacao aguardam tratamento',
-            mensagem: 'Existem falhas reprocessaveis ou pendentes na central de comunicacoes.',
+            titulo: 'Falhas de comunicação aguardam tratamento',
+            mensagem: 'Existem falhas reprocessaveis ou pendentes na central de comunicações.',
             acaoSugerida: 'Abrir /operacoes/comunicacoes/falhas.',
             valor: 1
           }
@@ -302,7 +302,7 @@ async function prepararOperacoesMockadas(page) {
             canal: 'email',
             tipo: 'agenda.consulta.lembrete',
             referenciaId: 'mensagem-email-1',
-            erro: 'SMTP indisponivel',
+            erro: 'SMTP indisponível',
             criadoEm: '2026-07-22T12:00:00.000Z',
             reprocessavel: true,
             resumo: 'ana@example.com'
@@ -339,7 +339,7 @@ async function prepararOperacoesMockadas(page) {
             planoAtualId: 'profissional',
             planoAtual: 'Profissional',
             planoDesejado: 'clinica',
-            observacao: 'Mais usuarios administrativos.',
+            observacao: 'Mais usuários administrativos.',
             solicitadoPorUsuarioId: 'cliente-1',
             solicitadoEm: '2026-07-22T10:00:00.000Z',
             ...(aplicouPlanoAssinatura
@@ -365,7 +365,7 @@ async function prepararOperacoesMockadas(page) {
       body: JSON.stringify({
         tenantId: 'clinica-carla',
         planoId: 'clinica',
-        plano: 'Clinica',
+        plano: 'Clínica',
         status: 'ativa',
         origem: 'operacao_manual',
         atualizadoPorUsuarioId: 'admin-1',
@@ -393,9 +393,9 @@ async function prepararOperacoesMockadas(page) {
           protocolo: 'LGPD-123',
           pacienteId: 'paciente-1',
           status: 'em_tratamento',
-          assuntoEmail: 'Atualizacao da solicitacao LGPD LGPD-123',
-          corpoEmail: 'Ola,\\n\\nSeu pedido LGPD LGPD-123 esta em tratamento.\\n\\nProtocolo: LGPD-123.\\n\\nEquipe OctaClin',
-          textoWhatsapp: 'Seu pedido LGPD LGPD-123 esta em tratamento. Protocolo: LGPD-123.',
+          assuntoEmail: 'Atualização da solicitação LGPD LGPD-123',
+          corpoEmail: 'Olá,\\n\\nSeu pedido LGPD LGPD-123 está em tratamento.\\n\\nProtocolo: LGPD-123.\\n\\nEquipe OctaClin',
+          textoWhatsapp: 'Seu pedido LGPD LGPD-123 está em tratamento. Protocolo: LGPD-123.',
           canaisSugeridos: ['email', 'whatsapp'],
           geradoEm: '2026-07-22T12:00:00.000Z'
         })
@@ -506,7 +506,7 @@ async function prepararOperacoesMockadas(page) {
             diasRetencao: 180,
             acao: 'excluir',
             baseLegal: 'Minimizacao operacional',
-            descricao: 'Eventos processados sao elegiveis para limpeza apos 180 dias.'
+            descricao: 'Eventos processados sao elegiveis para limpeza após 180 dias.'
           }
         ],
         resumo: {
@@ -610,9 +610,9 @@ test.describe('console operacional', () => {
       if (rota.caminho === '/dashboard') {
         await expect(page.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda#novo-agendamento');
         await expect(page.getByRole('link', { name: 'Novo paciente' })).toHaveAttribute('href', '/pacientes#novo-paciente');
-        await expect(page.getByRole('button', { name: /^Notificacoes/ })).toBeVisible();
+        await expect(page.getByRole('button', { name: /^Notificações/ })).toBeVisible();
         await page.locator('button[aria-label="Abrir menu da conta"]').click();
-        await expect(page.getByText('Clinica Carla')).toBeVisible();
+        await expect(page.getByText('Clínica Carla')).toBeVisible();
       }
 
       await expect(page.locator('body')).not.toContainText('__NEXT_ERROR__');
@@ -820,7 +820,7 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
           profissionalId: 'profissional-1',
           inicioEm: '2026-07-24T15:00:00.000Z',
           fimEm: '2026-07-24T16:00:00.000Z',
-          rotulo: 'Indisponivel'
+          rotulo: 'Indisponível'
         }
       ])
     });
@@ -929,7 +929,7 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
           tenantId: 'tenant-1',
           pacienteId: 'paciente-1',
           status: 'recebido',
-          payload: { texto: 'Dra., posso trocar o horario?' },
+          payload: { texto: 'Dra., posso trocar o horário?' },
           criadoEm: '2026-07-22T11:30:00.000Z'
         },
         {
@@ -1022,9 +1022,9 @@ async function prepararProntuarioMockado(page, {
       body: JSON.stringify({
         percentualPreenchido: 68,
         secoes: [
-          { secao: 'identificacao', titulo: 'Identificacao', camposFaltantes: [], preenchidos: 5, total: 5 },
-          { secao: 'contato', titulo: 'Contato e endereco', camposFaltantes: ['CEP', 'Endereco', 'Bairro', 'Cidade', 'Estado', 'Instagram'], preenchidos: 4, total: 10 },
-          { secao: 'operacao', titulo: 'Operacao', camposFaltantes: ['Origem'], preenchidos: 2, total: 3 }
+          { secao: 'identificacao', titulo: 'Identificação', camposFaltantes: [], preenchidos: 5, total: 5 },
+          { secao: 'contato', titulo: 'Contato e endereço', camposFaltantes: ['CEP', 'Endereco', 'Bairro', 'Cidade', 'Estado', 'Instagram'], preenchidos: 4, total: 10 },
+          { secao: 'operacao', titulo: 'Operação', camposFaltantes: ['Origem'], preenchidos: 2, total: 3 }
         ],
         possiveisDuplicidades: [{ pacienteId: 'paciente-2', nome: 'Ana Souza homonima', motivos: ['nome_e_nascimento'] }],
         acessoPortal: {
@@ -1136,7 +1136,7 @@ async function prepararProntuarioMockado(page, {
       {
         id: 'avaliacao-1',
         tipo: 'avaliacao_antropometrica',
-        titulo: 'Avaliacao antropometrica',
+        titulo: 'Avaliação antropométrica',
         data: '2026-07-23T17:00:00.000Z',
         status: 'registrada',
         origem: 'Antropometria',
@@ -1155,7 +1155,7 @@ async function prepararProntuarioMockado(page, {
       {
         id: 'documento-1',
         tipo: 'documento_emitido',
-        titulo: 'Relatorio de alta emitido',
+        titulo: 'Relatório de alta emitido',
         data: '2026-07-23T15:00:00.000Z',
         status: 'emitido',
         origem: 'Documentos',
@@ -1165,7 +1165,7 @@ async function prepararProntuarioMockado(page, {
       {
         id: 'anexo-1',
         tipo: 'anexo_confirmado',
-        titulo: 'Anexo clinico confirmado',
+        titulo: 'Anexo clínico confirmado',
         data: '2026-07-23T14:00:00.000Z',
         status: 'confirmado',
         origem: 'Anexos',
@@ -1184,7 +1184,7 @@ async function prepararProntuarioMockado(page, {
       {
         id: 'foto-1',
         tipo: 'evolucao_fotografica',
-        titulo: 'Serie fotografica clinica',
+        titulo: 'Série fotográfica clínica',
         data: '2026-07-23T12:00:00.000Z',
         status: 'registrada',
         origem: 'Evolucao fotografica',
@@ -1230,7 +1230,7 @@ async function prepararProntuarioMockado(page, {
       {
         id: 'envio-1',
         tipo: 'formulario',
-        titulo: 'Formulario',
+        titulo: 'Formulário',
         data: '2026-07-20T13:00:00.000Z',
         status: 'enviado'
       }
@@ -1252,8 +1252,8 @@ async function prepararProntuarioMockado(page, {
             {
               id: 'tarefa-1',
               tipo: 'tarefa_acompanhamento',
-              titulo: 'Beber agua no periodo da tarde',
-              descricao: 'Meta diaria de 1 litro entre 13h e 18h.',
+              titulo: 'Beber agua no período da tarde',
+              descricao: 'Meta diária de 1 litro entre 13h e 18h.',
               data: '2026-07-29T18:00:00.000Z',
               status: 'pendente'
             }
@@ -1265,7 +1265,7 @@ async function prepararProntuarioMockado(page, {
               id: 'evolucao-1',
               tipo: 'evolucao_clinica',
               titulo: 'Conduta ajustada',
-              descricao: 'Aumentar ingestao de agua no periodo da tarde.',
+              descricao: 'Aumentar ingestao de agua no período da tarde.',
               data: '2026-07-22T18:00:00.000Z',
               status: 'ajuste_plano'
             }
@@ -1365,8 +1365,8 @@ async function prepararProntuarioMockado(page, {
           ],
           proximaConduta: {
             tipo: 'falha_comunicacao',
-            titulo: 'Revisar falha de comunicacao',
-            descricao: 'Uma mensagem para este paciente nao foi entregue.',
+            titulo: 'Revisar falha de comunicação',
+            descricao: 'Uma mensagem para este paciente não foi entregue.',
             destino: 'mensagens',
             referenciaId: 'mensagem-falha',
             dataReferencia: '2026-07-22T16:00:00.000Z'
@@ -1442,8 +1442,8 @@ async function prepararProntuarioMockado(page, {
           tenantId: 'tenant-1',
           pacienteId: 'paciente-1',
           profissionalId: 'usuario-profissional-1',
-          titulo: 'Beber agua no periodo da tarde',
-          descricao: 'Meta diaria de 1 litro entre 13h e 18h.',
+          titulo: 'Beber agua no período da tarde',
+          descricao: 'Meta diária de 1 litro entre 13h e 18h.',
           categoria: 'meta',
           prioridade: 'media',
           status: 'pendente',
@@ -1619,11 +1619,11 @@ async function prepararProntuarioMockado(page, {
         {
           id: 'documento-1',
           tipo: 'declaracao_comparecimento',
-          titulo: 'Declaracao de comparecimento',
+          titulo: 'Declaração de comparecimento',
           corpo: 'Declaro que Ana Souza compareceu em 15/07/2026.',
           paragrafos: ['Declaro que Ana Souza compareceu em 15/07/2026.', 'Recife, 05 de agosto de 2026.'],
           cabecalho: {
-            clinicaNome: 'Clinica Carla',
+            clinicaNome: 'Clínica Carla',
             clinicaDocumento: '12.345.678/0001-90',
             clinicaEndereco: 'Rua A, 10 - Recife/PE',
             profissionalNome: 'Dra. Carla',
@@ -1762,8 +1762,8 @@ test.describe('painel clinico profissional', () => {
     });
     await page.goto('/dashboard?profissionalId=profissional-2');
 
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Painel clinico' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'painel clínico' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Painel clínico' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Hoje em foco' })).toBeVisible();
     await expect(page.getByText('Ana Souza').first()).toBeVisible();
     await expect(page.getByLabel('Profissional em contexto')).toHaveCount(0);
@@ -1795,9 +1795,9 @@ test.describe('painel clinico profissional', () => {
     await page.getByLabel('Profissional em contexto').selectOption('profissional-2');
     await expect(page.getByText('Revisar exames')).toBeVisible();
     await page.getByRole('button', { name: 'Concluir tarefa' }).click();
-    await expect(page.getByRole('dialog', { name: 'Confirmar acao' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Confirmar ação' })).toBeVisible();
     await page.getByRole('dialog').getByRole('button', { name: 'Confirmar' }).click();
-    await expect(page.getByText('Tarefa concluida.')).toBeVisible();
+    await expect(page.getByText('Tarefa concluída.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 
@@ -1892,10 +1892,10 @@ test.describe('agenda de producao', () => {
       await agendaInterna.getByRole('button', { name: 'semana' }).click();
     }
     await expect(agendaInterna.getByRole('button', { name: /Horario ocupado: Ana Souza/ })).toBeVisible();
-    await expect(agendaInterna.getByText('Indisponivel')).toBeVisible();
+    await expect(agendaInterna.getByText('Indisponível')).toBeVisible();
     await expect(agendaInterna.getByRole('button', { name: 'Semana anterior' })).toBeVisible();
-    await expect(agendaInterna.getByRole('button', { name: 'Proxima semana' })).toBeVisible();
-    await agendaInterna.getByRole('button', { name: 'mes' }).click();
+    await expect(agendaInterna.getByRole('button', { name: 'Próxima semana' })).toBeVisible();
+    await agendaInterna.getByRole('button', { name: 'mês' }).click();
     await expect(agendaInterna.getByText('Seg')).toBeVisible();
     await agendaInterna.getByRole('button', { name: 'lista' }).click();
     await expect(agendaInterna.getByRole('button', { name: /Abrir detalhes de Ana Souza/ })).toBeVisible();
@@ -1927,7 +1927,7 @@ test.describe('agenda de producao', () => {
 
     await expect.poll(() => agenda.remarcouConsulta()).toBe(true);
     await expect(
-      page.getByText('Consulta remarcada e horario atualizado na agenda interna. Integracoes processadas conforme configuracao.')
+      page.getByText('Consulta remarcada e horário atualizado na agenda interna. Integrações processadas conforme configuração.')
     ).toBeVisible();
     await expect(consultaAna.getByText('24/07/2026')).toBeVisible();
     await expect(consultaAna.getByText('Reagendada')).toBeVisible();
@@ -1935,12 +1935,12 @@ test.describe('agenda de producao', () => {
     await detalhes.getByRole('button', { name: 'Cancelar', exact: true }).click();
     const confirmacao = page.getByRole('dialog', { name: 'Cancelar consulta' });
     await expect(confirmacao).toBeVisible();
-    await expect(confirmacao.getByText(/libera o horario na agenda interna/)).toBeVisible();
+    await expect(confirmacao.getByText(/libera o horário na agenda interna/)).toBeVisible();
     await confirmacao.getByRole('button', { name: 'Cancelar consulta', exact: true }).click();
 
     await expect.poll(() => agenda.cancelouConsulta()).toBe(true);
     await expect(
-      page.getByText('Consulta cancelada e horario liberado na agenda interna. Integracoes processadas conforme configuracao.')
+      page.getByText('Consulta cancelada e horário liberado na agenda interna. Integrações processadas conforme configuração.')
     ).toBeVisible();
     await expect(consultaAna.getByText('Cancelada')).toBeVisible();
     await assertSemOverflowHorizontal(page);
@@ -1953,7 +1953,7 @@ test.describe('lista de pacientes operacional', () => {
     await page.goto('/pacientes');
 
     await expect(page.getByRole('heading', { name: 'Pacientes', exact: true })).toBeVisible();
-    await expect(page.locator('body')).toContainText('Ultima consulta');
+    await expect(page.locator('body')).toContainText('Última consulta');
     await expect(page.locator('body')).toContainText('Revisar risco');
     await page.getByRole('button', { name: 'Alta prioridade' }).click();
     await expect(page.locator('body')).toContainText('Ana Souza');
@@ -1963,11 +1963,11 @@ test.describe('lista de pacientes operacional', () => {
     await expect(page.locator('body')).toContainText('Agendar retorno');
 
     await page.getByRole('button', { name: 'Novo paciente' }).click();
-    await expect(page.getByRole('heading', { name: 'Identificacao' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Identificação' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Contato' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Responsavel e acompanhamento' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Responsável e acompanhamento' })).toBeVisible();
     await expect(page.getByLabel('E-mail ou telefone')).toBeVisible();
-    await expect(page.getByText('Salve o cadastro primeiro. Depois, use a acao de convite na lista para liberar o acesso seguro ao portal do paciente.')).toBeVisible();
+    await expect(page.getByText('Salve o cadastro primeiro. Depois, use a ação de convite na lista para liberar o acesso seguro ao portal do paciente.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });
@@ -2001,20 +2001,20 @@ test.describe('prontuario do paciente', () => {
     await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');
 
-    const areas = page.getByRole('tablist', { name: 'Areas principais do prontuario' });
+    const areas = page.getByRole('tablist', { name: 'Áreas principais do prontuário' });
     await expect(areas.getByRole('tab', { name: 'Resumo' })).toBeVisible();
     await expect(areas.getByRole('tab', { name: 'Atendimentos' })).toBeVisible();
-    await expect(areas.getByRole('tab', { name: 'Avaliacoes' })).toBeVisible();
+    await expect(areas.getByRole('tab', { name: 'Avaliações' })).toBeVisible();
     await expect(areas.getByRole('tab', { name: 'Plano' })).toBeVisible();
     await expect(areas.getByRole('tab', { name: 'Documentos' })).toBeVisible();
     await expect(areas.getByRole('tab', { name: 'Financeiro' })).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: 'Revisar falha de comunicacao' })).toBeVisible();
-    await page.getByRole('button', { name: 'Abrir acao' }).click();
+    await expect(page.getByRole('heading', { name: 'Revisar falha de comunicação' })).toBeVisible();
+    await page.getByRole('button', { name: 'Abrir ação' }).click();
     await expect(page.getByRole('heading', { name: 'Mensagens do paciente' })).toBeVisible();
 
     await areas.getByRole('tab', { name: 'Plano' }).click();
     await expect(page.getByRole('heading', { name: 'Plano de acompanhamento' })).toBeVisible();
-    await expect(page.getByRole('tablist', { name: 'Subareas de Plano' }).getByRole('tab', { name: 'Acompanhamento' })).toBeVisible();
+    await expect(page.getByRole('tablist', { name: 'Subáreas de Plano' }).getByRole('tab', { name: 'Acompanhamento' })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 
@@ -2058,15 +2058,15 @@ test.describe('prontuario do paciente', () => {
     await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');
 
-    const acoes = page.getByRole('navigation', { name: 'Acoes rapidas do paciente' });
+    const acoes = page.getByRole('navigation', { name: 'Ações rápidas do paciente' });
     await expect(acoes.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda?pacienteId=paciente-1');
-    await acoes.getByRole('button', { name: 'Formularios', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Formularios e check-ins' })).toBeVisible();
+    await acoes.getByRole('button', { name: 'Formulários', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Formulários e check-ins' })).toBeVisible();
     await acoes.getByRole('button', { name: 'Anexar', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Anexos do paciente' })).toBeVisible();
 
     await page.getByRole('tab', { name: 'Atendimentos' }).click();
-    await page.getByLabel('Titulo da evolucao').fill('Rascunho clinico');
+    await page.getByLabel('Título da evolução').fill('Rascunho clinico');
     await acoes.getByRole('link', { name: 'Agendar' }).click();
     await expect(page.getByRole('heading', { name: 'Sair sem salvar' })).toBeVisible();
     await assertSemOverflowHorizontal(page);
@@ -2082,10 +2082,10 @@ test.describe('prontuario do paciente', () => {
     const contexto = page.getByRole('status').filter({ hasText: 'Contexto SuperAdmin' });
     await expect(contexto).toBeVisible();
     await expect(contexto).toContainText('Dra. Carla');
-    await expect(contexto).toContainText('As acoes ficam registradas no seu usuario.');
+    await expect(contexto).toContainText('As ações ficam registradas no seu usuário.');
 
-    const acoes = page.getByRole('navigation', { name: 'Acoes rapidas do paciente' });
-    await expect(acoes.getByRole('button', { name: 'Nova evolucao' })).toBeVisible();
+    const acoes = page.getByRole('navigation', { name: 'Ações rápidas do paciente' });
+    await expect(acoes.getByRole('button', { name: 'Nova evolução' })).toBeVisible();
     await expect(acoes.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda?pacienteId=paciente-1');
     await expect(acoes.getByRole('link', { name: 'Abrir consulta' })).toHaveAttribute(
       'href',
@@ -2121,7 +2121,7 @@ test.describe('prontuario do paciente', () => {
     });
     expect(contraste).toBeGreaterThanOrEqual(4.5);
 
-    const acoes = page.getByRole('navigation', { name: 'Acoes rapidas do paciente' });
+    const acoes = page.getByRole('navigation', { name: 'Ações rápidas do paciente' });
     const anterior = acoes.getByRole('link', { name: 'Abrir consulta' });
     const plano = acoes.getByRole('button', { name: 'Plano atual' });
     await anterior.focus();
@@ -2153,11 +2153,11 @@ test.describe('prontuario do paciente', () => {
 
     await expect(page.getByText('Contexto SuperAdmin')).toHaveCount(0);
     await expect(page.getByLabel('Trocar contexto profissional')).toHaveCount(0);
-    const acoes = page.getByRole('navigation', { name: 'Acoes rapidas do paciente' });
-    await expect(acoes.getByRole('button', { name: 'Nova evolucao' })).toHaveCount(0);
+    const acoes = page.getByRole('navigation', { name: 'Ações rápidas do paciente' });
+    await expect(acoes.getByRole('button', { name: 'Nova evolução' })).toHaveCount(0);
     await expect(acoes.getByRole('button', { name: 'Nova tarefa' })).toHaveCount(0);
     await expect(acoes.getByRole('link', { name: 'Agendar' })).toHaveCount(0);
-    await expect(acoes.getByRole('button', { name: 'Formularios' })).toHaveCount(0);
+    await expect(acoes.getByRole('button', { name: 'Formulários' })).toHaveCount(0);
     await expect(acoes.getByRole('button', { name: 'Revisar mensagem' })).toHaveCount(0);
     await expect(acoes.getByRole('button', { name: 'Anexar' })).toHaveCount(0);
     await expect(acoes.getByRole('link', { name: 'Abrir consulta' })).toBeVisible();
@@ -2168,20 +2168,20 @@ test.describe('prontuario do paciente', () => {
     await prepararProntuarioMockado(page, { permissoesExtras: ['planos_alimentares.ler'] });
     await page.goto('/pacientes/paciente-1');
 
-    await expect(page.getByRole('heading', { name: 'Revisar falha de comunicacao' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Revisar falha de comunicação' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Contexto operacional' })).toBeVisible();
-    await expect(page.getByText('Versao 2')).toBeVisible();
+    await expect(page.getByText('Versão 2')).toBeVisible();
     await expect(page.getByText('Revisar exames pendentes')).toBeVisible();
     await expect(page.getByText('85%')).toBeVisible();
     await expect(page.getByText(/Fonte: Check-in rapido em/).first()).toBeVisible();
 
-    const serie = page.getByRole('region', { name: 'Evolucao antropometrica' });
+    const serie = page.getByRole('region', { name: 'Evolução antropométrica' });
     await expect(serie.getByRole('table')).toBeVisible();
     await expect(serie.getByRole('cell', { name: '68,2 kg' })).toBeVisible();
-    await serie.getByLabel('Metrica da serie').selectOption('imc');
+    await serie.getByLabel('Metrica da série').selectOption('imc');
     await expect(serie.getByRole('cell', { name: '25,05 kg/m2' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Abrir acao' }).click();
+    await page.getByRole('button', { name: 'Abrir ação' }).click();
     await expect(page.getByRole('heading', { name: 'Mensagens do paciente' })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
@@ -2197,19 +2197,19 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Risco 82 pontos')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Linha de cuidado' })).toBeVisible();
     await page.getByRole('tab', { name: 'Atendimentos' }).click();
-    await page.getByRole('tablist', { name: 'Subareas de Atendimentos' }).getByRole('tab', { name: 'Historico' }).click();
-    await expect(page.getByRole('heading', { name: 'Linha do tempo clinica' })).toBeVisible();
+    await page.getByRole('tablist', { name: 'Subáreas de Atendimentos' }).getByRole('tab', { name: 'Histórico' }).click();
+    await expect(page.getByRole('heading', { name: 'Linha do tempo clínica' })).toBeVisible();
     await expect(page.getByText('Mensagem recebida')).toBeVisible();
     await expect(page.getByText('Estou com duvida no plano.')).not.toBeVisible();
     await expect(page.getByText('Consulta de retorno')).toBeVisible();
     await expect(page.getByText('Resposta de Check-in semanal')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Formulario', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Formulário', exact: true })).toBeVisible();
     await expect(page.getByText('Plano alimentar publicado')).toBeVisible();
-    await expect(page.getByText('Avaliacao antropometrica')).toBeVisible();
+    await expect(page.getByText('Avaliação antropométrica')).toBeVisible();
     await expect(page.getByText('Pagamento de consulta')).toBeVisible();
     await expect(page.getByText('Origem: Plano alimentar - Autor: Dra. Carla')).toBeVisible();
-    await expect(page.getByText('Origem: Formularios - Autor: paciente')).toBeVisible();
-    await page.getByLabel('Responsavel').selectOption('profissional-1');
+    await expect(page.getByText('Origem: Formulários - Autor: paciente')).toBeVisible();
+    await page.getByLabel('Responsável').selectOption('profissional-1');
     await page.getByRole('button', { name: 'Filtrar' }).click();
     await expect(page.getByText('Pagamento de consulta')).toBeVisible();
     await page.getByLabel('Tipo de evento').selectOption('evolucao_clinica');
@@ -2217,7 +2217,7 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Ajuste de conduta')).toBeVisible();
     await expect(page.getByText('Mensagem recebida')).not.toBeVisible();
     await page.getByRole('button', { name: 'Abrir detalhe de Ajuste de conduta' }).click();
-    await expect(page.getByRole('heading', { name: 'Nova evolucao clinica' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Nova evolução clínica' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Voltar' })).toHaveAttribute('href', '/pacientes');
     await assertSemOverflowHorizontal(page);
   });
@@ -2230,24 +2230,24 @@ test.describe('prontuario do paciente', () => {
 
     const abrirHistorico = async () => {
       await page.getByRole('tab', { name: 'Atendimentos' }).click();
-      await page.getByRole('tablist', { name: 'Subareas de Atendimentos' }).getByRole('tab', { name: 'Historico' }).click();
+      await page.getByRole('tablist', { name: 'Subáreas de Atendimentos' }).getByRole('tab', { name: 'Histórico' }).click();
     };
     const abrirEConferir = async (titulo, area, subarea) => {
       await page.getByRole('button', { name: `Abrir detalhe de ${titulo}` }).click();
-      await expect(page.getByRole('tablist', { name: 'Areas principais do prontuario' })
+      await expect(page.getByRole('tablist', { name: 'Áreas principais do prontuário' })
         .getByRole('tab', { name: area, exact: true })).toHaveAttribute('aria-selected', 'true');
-      await expect(page.getByRole('tablist', { name: `Subareas de ${area}` })
+      await expect(page.getByRole('tablist', { name: `Subáreas de ${area}` })
         .getByRole('tab', { name: subarea, exact: true })).toHaveAttribute('aria-selected', 'true');
       await abrirHistorico();
     };
 
     await abrirHistorico();
     await abrirEConferir('Plano alimentar publicado', 'Plano', 'Plano alimentar');
-    await abrirEConferir('Avaliacao antropometrica', 'Avaliacoes', 'Antropometria');
-    await abrirEConferir('Relatorio de alta emitido', 'Documentos', 'Documentos');
-    await abrirEConferir('Anexo clinico confirmado', 'Documentos', 'Anexos');
-    await abrirEConferir('Coleta de exames laboratoriais', 'Avaliacoes', 'Exames laboratoriais');
-    await abrirEConferir('Serie fotografica clinica', 'Avaliacoes', 'Evolucao fotografica');
+    await abrirEConferir('Avaliação antropométrica', 'Avaliações', 'Antropometria');
+    await abrirEConferir('Relatório de alta emitido', 'Documentos', 'Documentos');
+    await abrirEConferir('Anexo clínico confirmado', 'Documentos', 'Anexos');
+    await abrirEConferir('Coleta de exames laboratoriais', 'Avaliações', 'Exames laboratoriais');
+    await abrirEConferir('Série fotográfica clínica', 'Avaliações', 'Evolução fotográfica');
     await page.getByRole('button', { name: 'Abrir detalhe de Pagamento de consulta' }).click();
     await expect(page).toHaveURL('/agenda?financeiro=1&pacienteId=paciente-1');
   });
@@ -2270,11 +2270,11 @@ test.describe('prontuario do paciente', () => {
       tipo: 'declaracao_comparecimento',
       consultaId: 'consulta-0'
     });
-    await expect(page.getByText('Declaracao de comparecimento emitida. Confira antes de imprimir.')).toBeVisible();
+    await expect(page.getByText('Declaração de comparecimento emitida. Confira antes de imprimir.')).toBeVisible();
 
     // A folha impressa carrega a identidade da clinica e a identificacao do profissional.
-    const folha = page.getByRole('region', { name: 'Visualizacao do documento' });
-    await expect(folha.getByText('Clinica Carla')).toBeVisible();
+    const folha = page.getByRole('region', { name: 'Visualização do documento' });
+    await expect(folha.getByText('Clínica Carla')).toBeVisible();
     await expect(folha.getByText('12.345.678/0001-90')).toBeVisible();
     await expect(folha.getByText('Declaro que Ana Souza compareceu em 15/07/2026.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Imprimir / salvar PDF' })).toBeVisible();
@@ -2286,15 +2286,15 @@ test.describe('prontuario do paciente', () => {
     await page.goto('/pacientes/paciente-1');
 
     await page.getByRole('tab', { name: 'Atendimentos' }).click();
-    await page.getByLabel('Titulo da evolucao').fill('Conduta ajustada');
-    await page.getByLabel('Tipo da evolucao').selectOption('ajuste_plano');
-    await page.getByLabel('Conteudo da evolucao').fill('Aumentar ingestao de agua no periodo da tarde.');
-    await page.getByRole('button', { name: 'Registrar evolucao' }).click();
+    await page.getByLabel('Título da evolução').fill('Conduta ajustada');
+    await page.getByLabel('Tipo da evolução').selectOption('ajuste_plano');
+    await page.getByLabel('Conteúdo da evolução').fill('Aumentar ingestao de agua no periodo da tarde.');
+    await page.getByRole('button', { name: 'Registrar evolução' }).click();
 
     await expect.poll(() => prontuario.criouEvolucao()).toBe(true);
-    await expect(page.getByText('Evolucao clinica registrada.')).toBeVisible();
+    await expect(page.getByText('Evolução clínica registrada.')).toBeVisible();
     await expect(page.getByText('Conduta ajustada')).toBeVisible();
-    await expect(page.getByText('Aumentar ingestao de agua no periodo da tarde.')).toBeVisible();
+    await expect(page.getByText('Aumentar ingestao de agua no período da tarde.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 
@@ -2303,19 +2303,19 @@ test.describe('prontuario do paciente', () => {
     await page.goto('/pacientes/paciente-1');
 
     await page.getByRole('tab', { name: 'Plano' }).click();
-    await page.getByLabel('Titulo da tarefa').fill('Beber agua no periodo da tarde');
+    await page.getByLabel('Título da tarefa').fill('Beber agua no periodo da tarde');
     await page.getByLabel('Categoria da tarefa').selectOption('meta');
     await page.getByLabel('Prioridade da tarefa').selectOption('media');
     await page.getByLabel('Vencimento da tarefa').fill('2026-07-29T15:00');
-    await page.getByLabel('Descricao da tarefa').fill('Meta diaria de 1 litro entre 13h e 18h.');
+    await page.getByLabel('Descrição da tarefa').fill('Meta diaria de 1 litro entre 13h e 18h.');
     await page.getByRole('button', { name: 'Prescrever tarefa' }).click();
 
     await expect.poll(() => prontuario.criouTarefa()).toBe(true);
     await expect(page.getByText('Tarefa de acompanhamento prescrita.')).toBeVisible();
-    await expect(page.getByText('Beber agua no periodo da tarde')).toBeVisible();
-    await expect(page.getByText('Meta diaria de 1 litro entre 13h e 18h.')).toBeVisible();
+    await expect(page.getByText('Beber agua no período da tarde')).toBeVisible();
+    await expect(page.getByText('Meta diária de 1 litro entre 13h e 18h.')).toBeVisible();
     await page.getByRole('tab', { name: 'Resumo' }).click();
-    const atividade = page.getByRole('region', { name: 'Atividade do prontuario' });
+    const atividade = page.getByRole('region', { name: 'Atividade do prontuário' });
     await expect(atividade.getByText('Tarefas pendentes')).toBeVisible();
     await expect(atividade.getByText('Tarefas pendentes').locator('..').getByText('1', { exact: true })).toBeVisible();
     await assertSemOverflowHorizontal(page);
@@ -2325,32 +2325,32 @@ test.describe('prontuario do paciente', () => {
     const prontuario = await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');
 
-    await page.getByRole('tablist', { name: 'Areas principais do prontuario' }).getByRole('tab', { name: 'Plano' }).click();
-    const subareas = page.getByRole('tablist', { name: 'Subareas de Plano' });
+    await page.getByRole('tablist', { name: 'Áreas principais do prontuário' }).getByRole('tab', { name: 'Plano' }).click();
+    const subareas = page.getByRole('tablist', { name: 'Subáreas de Plano' });
     const acompanhamento = subareas.getByRole('tab', { name: 'Acompanhamento' });
     await acompanhamento.focus();
     await acompanhamento.press('ArrowRight');
-    const condutas = subareas.getByRole('tab', { name: 'Condutas terapeuticas' });
+    const condutas = subareas.getByRole('tab', { name: 'Condutas terapêuticas' });
     await expect(condutas).toBeFocused();
     await expect(condutas).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('heading', { name: 'Condutas terapeuticas' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Condutas terapêuticas' })).toBeVisible();
     await expect(page.getByText(/mantido fora do portal/i)).toBeVisible();
 
-    await page.getByLabel('Titulo').fill('Teste sintetico de prontuario');
-    await page.getByLabel('Conteudo documentado').fill('Conteudo de validacao sem orientacao clinica.');
+    await page.getByLabel('Título').fill('Teste sintetico de prontuario');
+    await page.getByLabel('Conteúdo documentado').fill('Conteudo de validacao sem orientacao clinica.');
     await page.getByRole('button', { name: 'Criar rascunho' }).click();
     await expect.poll(() => prontuario.condutas()[0]?.versoes[0]?.estado).toBe('rascunho');
     await expect(page.getByRole('button', { name: 'Publicar' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Publicar' }).click();
     await expect.poll(() => prontuario.condutas()[0]?.versoes[0]?.estado).toBe('publicada');
-    await page.getByRole('button', { name: 'Nova versao' }).click();
+    await page.getByRole('button', { name: 'Nova versão' }).click();
     await expect.poll(() => prontuario.condutas()[0]?.versoes).toHaveLength(2);
-    await page.getByText('Ver versoes (2)').click();
-    await expect(page.getByText('Versao 2: rascunho')).toBeVisible();
+    await page.getByText('Ver versões (2)').click();
+    await expect(page.getByText('Versão 2: rascunho')).toBeVisible();
 
     await page.getByRole('button', { name: 'Arquivar' }).click();
-    const dialogo = page.getByRole('dialog', { name: 'Arquivar conduta terapeutica' });
+    const dialogo = page.getByRole('dialog', { name: 'Arquivar conduta terapêutica' });
     await expect(dialogo).toBeVisible();
     await dialogo.getByRole('button', { name: 'Arquivar conduta' }).click();
     await expect.poll(() => prontuario.condutas()[0]?.arquivadaEm).toBeTruthy();
@@ -2364,8 +2364,8 @@ test.describe('prontuario do paciente', () => {
     await page.goto('/pacientes/paciente-1');
 
     await page.getByRole('tab', { name: 'Plano' }).click();
-    await page.getByRole('tablist', { name: 'Subareas de Plano' }).getByRole('tab', { name: 'Materiais' }).click();
-    await page.getByLabel('Titulo do material').fill('Guia de hidratacao');
+    await page.getByRole('tablist', { name: 'Subáreas de Plano' }).getByRole('tab', { name: 'Materiais' }).click();
+    await page.getByLabel('Título do material').fill('Guia de hidratacao');
     await page.getByLabel('Tipo do material').selectOption('link');
     await page.getByLabel('Categoria do material').fill('Habitos');
     await page.getByLabel('URL do material').fill('https://example.com/hidratacao');
@@ -2375,7 +2375,7 @@ test.describe('prontuario do paciente', () => {
     await expect.poll(() => prontuario.criouMaterial()).toBe(true);
     await expect(page.getByText('Material salvo na biblioteca.')).toBeVisible();
     await page.getByLabel('Material para enviar').selectOption('material-1');
-    await page.getByLabel('Observacao do envio').fill('Ler antes do retorno.');
+    await page.getByLabel('Observação do envio').fill('Ler antes do retorno.');
     await page.getByRole('button', { name: 'Enviar material' }).click();
 
     await expect.poll(() => prontuario.enviouMaterial()).toBe(true);
@@ -2391,7 +2391,7 @@ test.describe('prontuario do paciente', () => {
     await page.goto('/pacientes/paciente-1');
 
     await page.getByRole('tab', { name: 'Documentos' }).click();
-    await page.getByRole('tablist', { name: 'Subareas de Documentos' }).getByRole('tab', { name: 'Anexos' }).click();
+    await page.getByRole('tablist', { name: 'Subáreas de Documentos' }).getByRole('tab', { name: 'Anexos' }).click();
     await expect(page.getByLabel('Vincular a consulta')).toBeVisible();
     await page.getByLabel('Categoria do novo anexo').selectOption('exame');
     await page.getByLabel('Arquivo').setInputFiles({
@@ -2401,7 +2401,7 @@ test.describe('prontuario do paciente', () => {
     });
     await page.getByRole('button', { name: 'Enviar anexo' }).click();
 
-    await expect(page.getByText('Anexo confirmado e incluido no prontuario.')).toBeVisible();
+    await expect(page.getByText('Anexo confirmado e incluído no prontuário.')).toBeVisible();
     await expect(page.getByText('hemograma.pdf')).toBeVisible();
     await page.getByLabel('Filtrar anexos por categoria').selectOption('foto');
     await expect(page.getByText('Nenhum anexo nesta categoria')).toBeVisible();
@@ -2409,7 +2409,7 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('hemograma.pdf')).toBeVisible();
     await page.getByRole('button', { name: 'Excluir hemograma.pdf' }).click();
     await page.getByRole('button', { name: 'Excluir anexo', exact: true }).click();
-    await expect(page.getByText('Nenhum anexo clinico')).toBeVisible();
+    await expect(page.getByText('Nenhum anexo clínico')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });
@@ -2423,21 +2423,21 @@ test.describe('operacoes LGPD', () => {
     await page.getByRole('tab', { name: 'Incidentes' }).click();
     await expect(page.getByRole('heading', { name: 'Alertas operacionais' })).toBeVisible();
     await expect(page.getByText('Outbox com eventos pendentes atrasados')).toBeVisible();
-    await page.getByRole('tab', { name: 'Comunicacoes' }).click();
-    await expect(page.getByRole('heading', { name: 'Central de comunicacao' })).toBeVisible();
-    await expect(page.getByText('SMTP indisponivel')).toBeVisible();
+    await page.getByRole('tab', { name: 'Comunicações' }).click();
+    await expect(page.getByRole('heading', { name: 'Central de comunicação' })).toBeVisible();
+    await expect(page.getByText('SMTP indisponível')).toBeVisible();
     await page.getByRole('tab', { name: 'LGPD' }).click();
-    await expect(page.getByRole('heading', { name: 'Solicitacoes LGPD' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Retencao e exclusao programada' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Solicitações LGPD' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Retenção e exclusao programada' })).toBeVisible();
     await expect(page.getByText('11 itens vencidos')).toBeVisible();
-    await page.getByRole('button', { name: 'Programar retencao LGPD' }).click();
+    await page.getByRole('button', { name: 'Programar retenção LGPD' }).click();
     await expect.poll(() => operacoes.programouRetencao()).toBe(true);
-    await expect(page.getByText('Retencao LGPD programada: RET-20260723120000.')).toBeVisible();
+    await expect(page.getByText('Retenção LGPD programada: RET-20260723120000.')).toBeVisible();
     await expect(page.getByText('LGPD-123')).toBeVisible();
     await expect(page.getByText('Atualizar telefone cadastrado.')).toBeVisible();
 
     await page.getByRole('button', { name: 'Iniciar tratativa' }).click();
-    await expect(page.getByText('Solicitacao LGPD atualizada: LGPD-123.')).toBeVisible();
+    await expect(page.getByText('Solicitação LGPD atualizada: LGPD-123.')).toBeVisible();
 
     await page.getByRole('button', { name: 'Ver detalhes LGPD-123' }).click();
     await expect(page.getByRole('heading', { name: 'Detalhe do protocolo LGPD-123' })).toBeVisible();
@@ -2447,12 +2447,12 @@ test.describe('operacoes LGPD', () => {
 
     await page.getByRole('button', { name: 'Preparar resposta LGPD-123' }).click();
     await expect(page.getByRole('heading', { name: 'Resposta ao paciente' })).toBeVisible();
-    await expect(page.getByText('Atualizacao da solicitacao LGPD LGPD-123')).toBeVisible();
-    await expect(page.getByText('Seu pedido LGPD LGPD-123 esta em tratamento. Protocolo: LGPD-123.')).toBeVisible();
+    await expect(page.getByText('Atualização da solicitação LGPD LGPD-123')).toBeVisible();
+    await expect(page.getByText('Seu pedido LGPD LGPD-123 está em tratamento. Protocolo: LGPD-123.')).toBeVisible();
     await page.getByRole('button', { name: 'Copiar resposta LGPD-123' }).click();
     await expect(page.getByText('Resposta LGPD copiada para LGPD-123.')).toBeVisible();
     await page.getByRole('tab', { name: 'Auditoria' }).click();
-    await expect(page.getByRole('heading', { name: 'Auditoria sensivel' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Auditoria sensível' })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });
@@ -2464,9 +2464,9 @@ test.describe('operacoes assinatura', () => {
 
     await page.getByRole('tab', { name: 'Filas' }).click();
     await expect(page.getByRole('heading', { name: 'Assinaturas' })).toBeVisible();
-    await expect(page.getByText('Mais usuarios administrativos.')).toBeVisible();
-    await page.getByRole('button', { name: 'Aplicar Clinica' }).click();
-    await expect(page.getByText('Plano Clinica aplicado para clinica-carla.')).toBeVisible();
+    await expect(page.getByText('Mais usuários administrativos.')).toBeVisible();
+    await page.getByRole('button', { name: 'Aplicar Clínica' }).click();
+    await expect(page.getByText(`Plano Clínica aplicado para ${credenciais.tenantSlug}.`)).toBeVisible();
     await expect.poll(() => operacoes.aplicouPlanoAssinatura()).toBe(true);
     await assertSemOverflowHorizontal(page);
   });
@@ -2481,11 +2481,11 @@ test.describe('operacoes rollout seguro', () => {
     await expect(page.getByRole('heading', { name: 'Release abc123def456' })).toBeVisible();
     await expect(page.getByText('promover', { exact: true })).toBeVisible();
     await expect(page.getByText('req-sintetico-1')).toBeVisible();
-    await page.getByLabel('Clinica', { exact: true }).selectOption('00000000-0000-4000-8000-000000000002');
-    await page.getByLabel('IA clinica').check();
+    await page.getByLabel('Clínica', { exact: true }).selectOption('00000000-0000-4000-8000-000000000002');
+    await page.getByLabel('IA clínica').check();
     await page.getByRole('button', { name: 'Aplicar' }).click();
     await expect.poll(() => operacoes.atualizouFlags()).toBe(true);
-    await expect(page.getByText('Funcionalidades atualizadas para a clinica selecionada e registradas na auditoria.')).toBeVisible();
+    await expect(page.getByText('Funcionalidades atualizadas para a clínica selecionada e registradas na auditoria.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });

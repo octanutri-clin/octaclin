@@ -5,7 +5,7 @@ import { EsqueletoPagina } from '@/components/ui/feedback';
 
 export default function PacientesPage() {
   return (
-    <ConsoleShell titulo="Pacientes" subtitulo="Acompanhamento clinico">
+    <ConsoleShell titulo="Pacientes" subtitulo="Acompanhamento clínico">
       <Suspense fallback={<EsqueletoPagina rotulo="Carregando pacientes" />}>
         <ListaPacientes />
       </Suspense>

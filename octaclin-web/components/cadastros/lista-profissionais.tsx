@@ -207,11 +207,11 @@ export function ListaProfissionais() {
       <Cartao>
         <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-base font-semibold">Equipe clinica</h2>
+            <h2 className="text-base font-semibold">Equipe clínica</h2>
             <p className="mt-1 text-sm text-texto-suave">
               {dados ? `${dados.total} registros encontrados` : 'Carregando registros'}
             </p>
-            <p className="mt-1 text-xs text-texto-sutil">Somente quem possui permissao de gerenciar profissionais pode criar, editar ou arquivar acessos.</p>
+            <p className="mt-1 text-xs text-texto-sutil">Somente quem possui permissão de gerenciar profissionais pode criar, editar ou arquivar acessos.</p>
           </div>
           <div className="flex gap-2">
             {editandoId ? (
@@ -248,11 +248,11 @@ export function ListaProfissionais() {
 
       <Abas
         identificador="equipe-clinica"
-        rotulo="Areas da equipe clinica"
+        rotulo="Áreas da equipe clínica"
         abas={[
-          { id: 'diretorio', rotulo: 'Diretorio' },
+          { id: 'diretorio', rotulo: 'Diretório' },
           { id: 'disponibilidade', rotulo: 'Disponibilidade' },
-          { id: 'integracoes', rotulo: 'Integracoes' },
+          { id: 'integracoes', rotulo: 'Integrações' },
           ...(podeGerenciar ? [{ id: 'lixeira', rotulo: 'Lixeira' }] : [])
         ]}
         ativaId={areaAtiva}
@@ -344,7 +344,7 @@ export function ListaProfissionais() {
             <span>Especialidade</span>
             <span>Criado em</span>
             <span>Google Agenda</span>
-            <span>Acoes</span>
+            <span>Ações</span>
           </TabelaCabecalho>
           <TabelaLinhas>
             {dados?.itens.length ? (
@@ -355,7 +355,7 @@ export function ListaProfissionais() {
                       <Stethoscope size={16} className="shrink-0 text-primaria" />
                       <strong className="truncate">{profissional.nome}</strong>
                     </div>
-                    <p className="mt-1 text-xs text-texto-suave">Acesso clinico ativo</p>
+                    <p className="mt-1 text-xs text-texto-suave">Acesso clínico ativo</p>
                   </div>
                   <span>{profissional.registroProfissional ?? '-'}</span>
                   <span>{profissional.especialidade ?? '-'}</span>
@@ -391,14 +391,14 @@ export function ListaProfissionais() {
       </Tabela>
       <nav className="flex flex-wrap items-center justify-between gap-3" aria-label="Paginacao de profissionais">
         <p className="text-sm text-texto-suave">
-          Pagina {pagina} de {totalPaginas} | {dados?.total ?? 0} profissionais
+          Página {pagina} de {totalPaginas} | {dados?.total ?? 0} profissionais
         </p>
         <div className="flex gap-2">
           <Botao type="button" variante="secundario" onClick={() => setPagina((atual) => Math.max(1, atual - 1))} disabled={pagina <= 1 || carregando}>
             Anterior
           </Botao>
           <Botao type="button" variante="secundario" onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))} disabled={pagina >= totalPaginas || carregando}>
-            Proxima
+            Próxima
           </Botao>
         </div>
       </nav>
@@ -414,7 +414,7 @@ export function ListaProfissionais() {
                   <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-primaria" />
                   <div className="min-w-0">
                     <h3 className="truncate text-sm font-semibold">{profissional.nome}</h3>
-                    <p className="mt-1 text-xs text-texto-suave">Agenda interna disponivel mesmo sem integracao externa.</p>
+                    <p className="mt-1 text-xs text-texto-suave">Agenda interna disponível mesmo sem integração externa.</p>
                   </div>
                 </div>
                 <a className="inline-flex min-h-11 items-center justify-center rounded-md border border-linha px-3 text-sm font-semibold text-primaria hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria" href={`/agenda?profissionalId=${profissional.id}`} aria-label={`Abrir agenda de ${profissional.nome}`}>
@@ -453,8 +453,8 @@ export function ListaProfissionais() {
           <div className="flex items-start gap-3 rounded-md border border-linha bg-superficie px-4 py-3 text-sm">
             <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-primaria" />
             <div>
-              <p className="font-semibold">Acesso e permissoes</p>
-              <p className="mt-1 text-texto-suave">Convites e permissoes ficam na area Equipe da conta.</p>
+              <p className="font-semibold">Acesso e permissões</p>
+              <p className="mt-1 text-texto-suave">Convites e permissões ficam na área Equipe da conta.</p>
             </div>
           </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -466,14 +466,14 @@ export function ListaProfissionais() {
                     <h3 className="text-sm font-semibold">{profissional.nome}</h3>
                     <p className="mt-2 text-sm text-texto-suave">
                        {statusGoogleIndisponivel
-                         ? 'Estado da Google Agenda indisponivel'
+                         ? 'Estado da Google Agenda indisponível'
                          : conectado === true
                            ? 'Google Agenda conectada'
                            : conectado === false
                              ? 'Google Agenda desconectada'
-                             : 'Google Agenda nao configurada'}
+                             : 'Google Agenda não configurada'}
                     </p>
-                    <p className="mt-1 text-xs text-texto-sutil">A agenda interna continua funcionando independentemente desta integracao.</p>
+                    <p className="mt-1 text-xs text-texto-sutil">A agenda interna continua funcionando independentemente desta integração.</p>
                   </CartaoConteudo>
                 </Cartao>
               );

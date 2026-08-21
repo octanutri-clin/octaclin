@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     ativacao = JSON.parse(texto) as typeof ativacao;
   } catch {
     return NextResponse.json(
-      { mensagem: 'A API nao retornou uma resposta valida para ativacao do convite.' },
+      { mensagem: 'A API não retornou uma resposta valida para ativação do convite.' },
       { status: 502 }
     );
   }

@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     );
   } catch {
     return NextResponse.json(
-      { mensagem: 'Nao foi possivel conectar ao servico de acesso do OctaClin.' },
+      { mensagem: 'Não foi possível conectar ao servico de acesso do OctaClin.' },
       { status: 502 }
     );
   }
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     tokens = (await resposta.json()) as RespostaToken;
   } catch {
     return NextResponse.json(
-      { mensagem: 'A API informada nao retornou uma resposta de login valida.' },
+      { mensagem: 'A API informada não retornou uma resposta de login valida.' },
       { status: 502 }
     );
   }

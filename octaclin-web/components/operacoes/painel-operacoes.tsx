@@ -20,7 +20,7 @@ const areasOperacoes = [
   { id: 'saude', rotulo: 'Saude' },
   { id: 'rollout', rotulo: 'Rollout' },
   { id: 'incidentes', rotulo: 'Incidentes' },
-  { id: 'comunicacoes', rotulo: 'Comunicacoes' },
+  { id: 'comunicacoes', rotulo: 'Comunicações' },
   { id: 'lgpd', rotulo: 'LGPD' },
   { id: 'auditoria', rotulo: 'Auditoria' },
   { id: 'filas', rotulo: 'Filas' }
@@ -51,7 +51,7 @@ export function PainelOperacoes() {
       <Cartao>
         <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-sm font-semibold">{sessao?.email ?? 'Carregando sessao'}</p>
+            <p className="text-sm font-semibold">{sessao?.email ?? 'Carregando sessão'}</p>
             <p className="mt-1 text-xs text-texto-suave">
               {sessao ? `${sessao.tenantSlug} em ${sessao.apiUrl}` : 'Validando acesso operacional'}
             </p>
@@ -90,7 +90,7 @@ export function PainelOperacoes() {
         abas={areasOperacoes}
         ativaId={areaAtiva}
         aoMudar={(id) => setAreaAtiva(id as AreaOperacoes)}
-        rotulo="Areas de operacoes"
+        rotulo="Áreas de operações"
       />
 
       <AreaSaude controlador={controlador} />

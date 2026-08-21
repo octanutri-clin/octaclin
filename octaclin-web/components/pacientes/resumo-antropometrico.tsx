@@ -55,15 +55,15 @@ export function ResumoAntropometrico({ pacienteId, aoAbrirDetalhes }: ResumoAntr
     <section aria-labelledby="resumo-antropometrico-titulo" className="grid gap-4 rounded-md border border-linha bg-white p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 id="resumo-antropometrico-titulo" className="text-base font-semibold text-tinta">Evolucao antropometrica</h2>
-          <p className="mt-1 text-sm text-texto-suave">Serie registrada no prontuario, sem recalculo dos resultados historicos.</p>
+          <h2 id="resumo-antropometrico-titulo" className="text-base font-semibold text-tinta">Evolução antropométrica</h2>
+          <p className="mt-1 text-sm text-texto-suave">Série registrada no prontuário, sem recalculo dos resultados historicos.</p>
         </div>
         <Botao type="button" variante="secundario" onClick={aoAbrirDetalhes}>Abrir antropometria</Botao>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-          Metrica da serie
+          Metrica da série
           <select
             className="h-10 min-w-48 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
             value={metricaId}
@@ -72,7 +72,7 @@ export function ResumoAntropometrico({ pacienteId, aoAbrirDetalhes }: ResumoAntr
             {METRICAS_ANTROPOMETRICAS.map((item) => <option key={item.id} value={item.id}>{item.rotulo}</option>)}
           </select>
         </label>
-        <BarraCarregamento visivel={carregando} rotulo="Carregando serie antropometrica" />
+        <BarraCarregamento visivel={carregando} rotulo="Carregando série antropométrica" />
       </div>
 
       {erro ? (
@@ -84,7 +84,7 @@ export function ResumoAntropometrico({ pacienteId, aoAbrirDetalhes }: ResumoAntr
 
       {!carregando && !erro && !pontos.length ? (
         <p className="rounded-md border border-linha bg-superficie p-4 text-sm text-texto-suave">
-          Nenhuma medida disponivel para esta metrica.
+          Nenhuma medida disponível para esta metrica.
         </p>
       ) : null}
 
@@ -95,14 +95,14 @@ export function ResumoAntropometrico({ pacienteId, aoAbrirDetalhes }: ResumoAntr
             rotulo={metrica.rotulo}
             unidade={metrica.unidade}
             casas={metrica.casas}
-            descricao="A tabela abaixo apresenta os mesmos valores do grafico."
+            descricao="A tabela abaixo apresenta os mesmos valores do gráfico."
           />
           <div className="overflow-x-auto">
             <table className="w-full min-w-96 border-collapse text-left text-sm">
-              <caption className="sr-only">Historico de {metrica.rotulo.toLocaleLowerCase('pt-BR')}</caption>
+              <caption className="sr-only">Histórico de {metrica.rotulo.toLocaleLowerCase('pt-BR')}</caption>
               <thead>
                 <tr className="border-b border-linha text-xs text-texto-suave">
-                  <th scope="col" className="px-2 py-2 font-semibold">Data da avaliacao</th>
+                  <th scope="col" className="px-2 py-2 font-semibold">Data da avaliação</th>
                   <th scope="col" className="px-2 py-2 font-semibold">{metrica.rotulo}</th>
                 </tr>
               </thead>

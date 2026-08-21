@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, type Dispatch, type ReactNode, type SetStateAction, useContext, useEffect, useState } from 'react';
+import { createContext, type Dispatch, type ReactNode, type SetStateAction, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { obterPortalPaciente, type PortalPacienteApi } from '@/lib/portal-api';
 
 interface ContextoPortalPaciente {
@@ -17,8 +17,9 @@ export function PortalPacienteProvider({ children }: { children: ReactNode }) {
   const [portal, setPortal] = useState<PortalPacienteApi | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
+  const carregamentoInicialIniciado = useRef(false);
 
-  async function carregar() {
+  const carregar = useCallback(async () => {
     setCarregando(true);
     setErroCarregamento(null);
     try {
@@ -28,11 +29,13 @@ export function PortalPacienteProvider({ children }: { children: ReactNode }) {
     } finally {
       setCarregando(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
+    if (carregamentoInicialIniciado.current) return;
+    carregamentoInicialIniciado.current = true;
     void carregar();
-  }, []);
+  }, [carregar]);
 
   return (
     <ContextoPortal.Provider value={{ portal, setPortal, carregando, erroCarregamento, carregar }}>

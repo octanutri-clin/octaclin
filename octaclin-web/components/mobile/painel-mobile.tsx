@@ -240,7 +240,7 @@ export function PainelMobile() {
       <Cartao>
         <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-base font-semibold">Operacoes mobile</h2>
+            <h2 className="text-base font-semibold">Operações mobile</h2>
             <p className="mt-1 text-sm text-texto-suave">
               {opcoesPacientes.length} pacientes, {logsDiario.length} diarios, {arquivosMidia.length} midias, {acompanhantes.length} acompanhantes
             </p>
@@ -295,7 +295,7 @@ export function PainelMobile() {
                 onChange={(evento) => setDiario((atual) => ({ ...atual, tipo: evento.target.value as TipoDiarioRapido }))}
               >
                 <option value="humor">Humor</option>
-                <option value="refeicao">Refeicao</option>
+                <option value="refeicao">Refeição</option>
                 <option value="agua">Agua</option>
                 <option value="atividade">Atividade</option>
               </Selecao>

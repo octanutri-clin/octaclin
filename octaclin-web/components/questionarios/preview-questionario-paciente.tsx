@@ -32,7 +32,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
     <section className="border border-linha bg-white">
       <div className="border-b border-linha px-4 py-3">
         <p className="text-xs font-semibold uppercase text-texto-suave">Preview do paciente</p>
-        <h2 className="mt-1 text-lg font-semibold text-tinta">{titulo || 'Formulario sem titulo'}</h2>
+        <h2 className="mt-1 text-lg font-semibold text-tinta">{titulo || 'Formulário sem título'}</h2>
         {descricao ? <p className="mt-1 text-sm text-texto-suave">{descricao}</p> : null}
       </div>
 
@@ -52,7 +52,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
                     </div>
                     {campo.obrigatoria ? (
                       <span className="shrink-0 rounded-md border border-sucesso-borda bg-sucesso-suave px-2 py-1 text-xs font-medium text-sucesso-forte">
-                        Obrigatoria
+                        Obrigatória
                       </span>
                     ) : null}
                   </div>
@@ -140,7 +140,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
                     <div className="flex min-h-24 items-center justify-center gap-2 rounded-md border border-dashed border-linha bg-white text-sm text-texto-suave">
                       <ImagePlus size={18} />
                       <span>
-                        {String(campo.atributos.accept)} - ate {String(campo.atributos.maxArquivos)} arquivo(s)
+                        {String(campo.atributos.accept)} - até {String(campo.atributos.maxArquivos)} arquivo(s)
                       </span>
                     </div>
                   ) : null}

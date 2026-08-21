@@ -7,15 +7,15 @@ const configuracao = {
 };
 
 const rotasProtegidas = [
-  { caminho: '/operacoes', titulo: 'Confiabilidade OctaClin', subtitulo: 'Operacoes' },
-  { caminho: '/pacientes', titulo: 'Pacientes', subtitulo: 'Acompanhamento clinico' },
-  { caminho: '/profissionais', titulo: 'Profissionais', subtitulo: 'Equipe clinica' },
-  { caminho: '/questionarios', titulo: 'Editor de Questionarios', subtitulo: 'Protocolos e check-ins' },
-  { caminho: '/comunicacoes', titulo: 'Comunicacoes', subtitulo: 'Conversas e relacionamento com pacientes' },
-  { caminho: '/automacoes', titulo: 'Automacoes', subtitulo: 'Quando acontecer, fazer com seguranca' },
-  { caminho: '/ia', titulo: 'Sugestoes assistidas', subtitulo: 'Revisao humana obrigatoria' },
-  { caminho: '/mobile', titulo: 'Confiabilidade OctaClin', subtitulo: 'Operacoes' },
-  { caminho: '/gamificacao', titulo: 'Metas e adesao', subtitulo: 'Recurso opcional por paciente' }
+  { caminho: '/operacoes', titulo: 'Confiabilidade OctaClin', subtitulo: 'Operações' },
+  { caminho: '/pacientes', titulo: 'Pacientes', subtitulo: 'Acompanhamento clínico' },
+  { caminho: '/profissionais', titulo: 'Profissionais', subtitulo: 'Equipe clínica' },
+  { caminho: '/questionarios', titulo: 'Editor de Questionários', subtitulo: 'Protocolos e check-ins' },
+  { caminho: '/comunicacoes', titulo: 'Comunicações', subtitulo: 'Conversas e relacionamento com pacientes' },
+  { caminho: '/automacoes', titulo: 'Automações', subtitulo: 'Quando acontecer, fazer com segurança' },
+  { caminho: '/ia', titulo: 'Sugestões assistidas', subtitulo: 'Revisão humana obrigatória' },
+  { caminho: '/mobile', titulo: 'Confiabilidade OctaClin', subtitulo: 'Operações' },
+  { caminho: '/gamificacao', titulo: 'Metas e adesão', subtitulo: 'Recurso opcional por paciente' }
 ];
 
 const referenciasExternasProibidas = [

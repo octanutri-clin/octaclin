@@ -206,7 +206,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
     setSucesso(null);
 
     if (formulario.protocolo !== 'nenhum' && !formulario.sexo) {
-      setErro('Informe o sexo: os protocolos de composicao corporal usam equacoes diferentes por sexo.');
+      setErro('Informe o sexo: os protocolos de composição corporal usam equações diferentes por sexo.');
       return;
     }
 
@@ -233,7 +233,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
         ...(Object.keys(dobras).length ? { dobras } : {})
       });
       setFormulario((atual) => ({ ...formularioInicial(), protocolo: atual.protocolo, sexo: atual.sexo }));
-      setSucesso('Avaliacao registrada.');
+      setSucesso('Avaliação registrada.');
       await carregar();
     } catch (erroAtual) {
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível registrar a avaliação.'));
@@ -247,7 +247,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
     setSucesso(null);
     try {
       await excluirAvaliacaoAntropometrica(pacienteId, avaliacaoId);
-      setSucesso('Avaliacao removida da serie.');
+      setSucesso('Avaliação removida da série.');
       await carregar();
     } catch (erroAtual) {
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível remover a avaliação.'));
@@ -271,13 +271,13 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
 
       <Cartao>
         <CartaoCabecalho className="flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <CartaoTitulo>Evolucao das medidas</CartaoTitulo>
+          <CartaoTitulo>Evolução das medidas</CartaoTitulo>
           <div className="flex items-center gap-3">
-            <BarraCarregamento visivel={carregando} rotulo="Carregando avaliacoes" />
+            <BarraCarregamento visivel={carregando} rotulo="Carregando avaliações" />
             <label className="flex items-center gap-2">
               <Rotulo className="whitespace-nowrap">Metrica</Rotulo>
               <Selecao
-                aria-label="Metrica do grafico"
+                aria-label="Metrica do gráfico"
                 value={metricaId}
                 onChange={(evento) => setMetricaId(evento.target.value)}
               >
@@ -296,7 +296,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
             rotulo={metrica.rotulo}
             unidade={metrica.unidade}
             casas={metrica.casas}
-            descricao="Uma metrica por vez: peso e percentual tem escalas diferentes e nao dividem eixo."
+            descricao="Uma metrica por vez: peso e percentual tem escalas diferentes e não dividem eixo."
           />
         </CartaoConteudo>
       </Cartao>
@@ -304,7 +304,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
       {serie?.deltaUltimas.length ? (
         <Cartao>
           <CartaoCabecalho>
-            <CartaoTitulo>Variacao desde a avaliacao anterior</CartaoTitulo>
+            <CartaoTitulo>Variacao desde a avaliação anterior</CartaoTitulo>
           </CartaoCabecalho>
           <CartaoConteudo>
             <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -332,7 +332,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
       {podeGerenciar ? (
         <Cartao>
           <CartaoCabecalho>
-            <CartaoTitulo>Nova avaliacao</CartaoTitulo>
+            <CartaoTitulo>Nova avaliação</CartaoTitulo>
           </CartaoCabecalho>
           <CartaoConteudo>
             <form onSubmit={salvar} className="grid gap-3">
@@ -369,7 +369,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
                       setFormulario((atual) => ({ ...atual, sexo: evento.target.value as SexoBiologico | '' }))
                     }
                   >
-                    <option value="">Nao informado</option>
+                    <option value="">Não informado</option>
                     <option value="feminino">Feminino</option>
                     <option value="masculino">Masculino</option>
                   </Selecao>
@@ -394,7 +394,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
                   />
                 </label>
                 <label className="grid gap-1 sm:col-span-2">
-                  <Rotulo>Protocolo de composicao</Rotulo>
+                  <Rotulo>Protocolo de composição</Rotulo>
                   <Selecao
                     value={formulario.protocolo}
                     onChange={(evento) =>
@@ -416,7 +416,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
 
               {formulario.protocolo !== 'nenhum' && !formulario.sexo ? (
                 <p className="text-sm text-texto-suave">
-                  Informe o sexo para ver quais dobras este protocolo exige: as equacoes e os sitios mudam por sexo.
+                  Informe o sexo para ver quais dobras este protocolo exige: as equações e os sitios mudam por sexo.
                 </p>
               ) : null}
 
@@ -445,7 +445,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
 
               <div className="flex justify-end">
                 <Botao type="submit" variante="primario" disabled={salvando}>
-                  {salvando ? 'Registrando' : 'Registrar avaliacao'}
+                  {salvando ? 'Registrando' : 'Registrar avaliação'}
                 </Botao>
               </div>
             </form>
@@ -455,7 +455,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
 
       <Cartao>
         <CartaoCabecalho>
-          <CartaoTitulo>Avaliacoes registradas</CartaoTitulo>
+          <CartaoTitulo>Avaliações registradas</CartaoTitulo>
         </CartaoCabecalho>
         <CartaoConteudo>
           {ultima?.resultado.avisos.length ? (
@@ -533,7 +533,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
 
                   {avaliacao.formulaAplicada ? (
                     <details className="mt-2 text-xs text-texto-suave">
-                      <summary className="cursor-pointer">Equacao usada nesta avaliacao</summary>
+                      <summary className="cursor-pointer">Equacao usada nesta avaliação</summary>
                       <p className="mt-1">{avaliacao.formulaAplicada}</p>
                     </details>
                   ) : null}
@@ -542,7 +542,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
             </div>
           ) : (
             <p className="text-sm text-texto-suave">
-              Nenhuma avaliacao registrada. A primeira ja mostra IMC e classificacao; a segunda passa a mostrar
+              Nenhuma avaliação registrada. A primeira já mostra IMC e classificação; a segunda passa a mostrar
               variacao e curva.
             </p>
           )}

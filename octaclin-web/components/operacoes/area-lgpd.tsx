@@ -49,7 +49,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
       <CartaoCabecalho className="flex-col items-start lg:flex-row lg:items-center">
         <div className="flex items-center gap-2">
           <Scale size={19} className="text-primaria" />
-          <h2 className="text-base font-semibold">Solicitacoes LGPD</h2>
+          <h2 className="text-base font-semibold">Solicitações LGPD</h2>
           <span className="text-sm text-texto-suave">{solicitacoesLgpd?.total ?? 0} protocolos</span>
         </div>
         <form onSubmit={filtrarLgpd} className="grid gap-2 md:grid-cols-3">
@@ -59,12 +59,12 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
             onChange={(evento) =>
               setFiltrosLgpd((atual) => ({ ...atual, status: evento.target.value as FiltrosSolicitacoesLgpd['status'] }))
             }
-            aria-label="Status LGPD"
+            aria-label="Situação LGPD"
           >
             <option value="">Todos os status</option>
             <option value="recebida">Recebida</option>
             <option value="em_tratamento">Em tratamento</option>
-            <option value="concluida">Concluida</option>
+            <option value="concluida">Concluída</option>
             <option value="indeferida">Indeferida</option>
           </select>
           <select
@@ -88,14 +88,14 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
       <div className="border-b border-linha bg-superficie px-4 py-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h3 className="text-base font-semibold">Retencao e exclusao programada</h3>
+            <h3 className="text-base font-semibold">Retenção e exclusao programada</h3>
             <p className="mt-1 text-sm text-texto-suave">
-              {pluralizarItensRetencao(retencaoDados?.resumo.totalVencidos ?? 0)} | Politica {retencaoDados?.versao ?? '-'}
+              {pluralizarItensRetencao(retencaoDados?.resumo.totalVencidos ?? 0)} | Política {retencaoDados?.versao ?? '-'}
             </p>
           </div>
           <Botao type="button" variante="primario" onClick={() => void programarRetencaoLgpd()} disabled={programandoRetencao}>
             <History size={16} />
-            {programandoRetencao ? 'Programando' : 'Programar retencao LGPD'}
+            {programandoRetencao ? 'Programando' : 'Programar retenção LGPD'}
           </Botao>
         </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -111,7 +111,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
                       {rotuloAcaoRetencao(item.acao)}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm text-tinta">{politica?.descricao ?? 'Politica operacional cadastrada.'}</p>
+                  <p className="mt-2 text-sm text-tinta">{politica?.descricao ?? 'Política operacional cadastrada.'}</p>
                   <p className="mt-2 text-xs text-texto-suave">
                     {item.vencidos} vencidos desde {formatarData(item.corteEm)} | {item.diasRetencao} dias
                   </p>
@@ -119,7 +119,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
               );
             })
           ) : (
-            <EstadoVazio titulo="Nenhuma politica de retencao carregada." />
+            <EstadoVazio titulo="Nenhuma política de retenção carregada." />
           )}
         </div>
       </div>
@@ -140,13 +140,13 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
               <div>
                 <p className="text-sm text-tinta">{solicitacao.detalhes ?? 'Sem detalhes informados.'}</p>
                 <p className="mt-1 text-xs text-texto-suave">
-                  Ultima tratativa: {solicitacao.ultimaTratativa ?? 'Sem tratativa registrada.'}
+                  Última tratativa: {solicitacao.ultimaTratativa ?? 'Sem tratativa registrada.'}
                 </p>
               </div>
               <div className="text-xs text-texto-suave">
                 <p>Aberta: {formatarData(solicitacao.abertoEm)}</p>
                 <p className="mt-1">Atualizada: {formatarData(solicitacao.atualizadoEm)}</p>
-                <p className="mt-1 break-all">Responsavel: {solicitacao.responsavelId ?? '-'}</p>
+                <p className="mt-1 break-all">Responsável: {solicitacao.responsavelId ?? '-'}</p>
               </div>
               <div className="flex flex-wrap gap-2 lg:justify-end">
                 <Botao
@@ -190,7 +190,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
             </div>
           ))
         ) : (
-          <EstadoVazio titulo="Nenhuma solicitacao LGPD carregada." />
+          <EstadoVazio titulo="Nenhuma solicitação LGPD carregada." />
         )}
       </div>
       {detalheLgpd ? (
@@ -233,7 +233,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
                   <span className="text-xs text-texto-suave">{formatarData(evento.criadoEm)}</span>
                 </div>
                 <p className="mt-2 text-sm text-tinta">{evento.detalhes ?? 'Sem detalhes.'}</p>
-                <p className="mt-1 break-all text-xs text-texto-suave">Responsavel: {evento.responsavelId ?? '-'}</p>
+                <p className="mt-1 break-all text-xs text-texto-suave">Responsável: {evento.responsavelId ?? '-'}</p>
               </article>
             ))}
           </div>
@@ -271,7 +271,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
       ) : null}
       <div className="flex flex-col gap-2 border-t border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
         <span className="text-sm text-texto-suave">
-          Pagina {solicitacoesLgpd?.pagina ?? 1} de {totalPaginasLgpd} | {solicitacoesLgpd?.total ?? 0} protocolos
+          Página {solicitacoesLgpd?.pagina ?? 1} de {totalPaginasLgpd} | {solicitacoesLgpd?.total ?? 0} protocolos
         </span>
         <div className="flex gap-2">
           <Botao
@@ -286,7 +286,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
             onClick={() => void trocarPaginaLgpd((solicitacoesLgpd?.pagina ?? 1) + 1)}
             disabled={!solicitacoesLgpd || solicitacoesLgpd.pagina >= totalPaginasLgpd || carregandoLgpd}
           >
-            Proxima
+            Próxima
           </Botao>
         </div>
       </div>

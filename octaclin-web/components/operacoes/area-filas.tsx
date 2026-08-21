@@ -42,7 +42,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
           <div className="flex items-center gap-2">
             <CreditCard size={19} className="text-primaria" />
             <h2 className="text-base font-semibold">Assinaturas</h2>
-            <span className="text-sm text-texto-suave">{solicitacoesAssinatura?.total ?? 0} solicitacoes</span>
+            <span className="text-sm text-texto-suave">{solicitacoesAssinatura?.total ?? 0} solicitações</span>
           </div>
           <Botao type="button" onClick={() => void recarregarSolicitacoesAssinatura()} disabled={carregandoAssinatura}>
             <RefreshCcw size={16} />
@@ -78,7 +78,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
                     </p>
                   </div>
                   <div className="text-sm text-tinta">
-                    <p>{solicitacao.observacao ?? 'Sem observacao comercial.'}</p>
+                    <p>{solicitacao.observacao ?? 'Sem observação comercial.'}</p>
                     {solicitacao.resolvidoEm ? (
                       <p className="mt-1 text-xs text-texto-suave">Resolvido em {formatarData(solicitacao.resolvidoEm)}</p>
                     ) : null}
@@ -96,7 +96,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
                       </Botao>
                     ) : (
                       <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
-                        {solicitacao.planoAplicadoId ? `Plano ${rotuloPlano(solicitacao.planoAplicadoId)}` : 'Sem acao pendente'}
+                        {solicitacao.planoAplicadoId ? `Plano ${rotuloPlano(solicitacao.planoAplicadoId)}` : 'Sem ação pendente'}
                       </span>
                     )}
                   </div>
@@ -104,7 +104,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
               );
             })
           ) : (
-            <EstadoVazio titulo="Nenhuma solicitacao de assinatura carregada." />
+            <EstadoVazio titulo="Nenhuma solicitação de assinatura carregada." />
           )}
         </div>
       </Cartao>
@@ -138,7 +138,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
               className="h-9 rounded-md border border-linha px-2 text-sm"
               value={filtrosOutbox.inicio}
               onChange={(evento) => setFiltrosOutbox((atual) => ({ ...atual, inicio: evento.target.value }))}
-              aria-label="Inicio outbox"
+              aria-label="Início outbox"
             />
             <input
               type="datetime-local"
@@ -163,7 +163,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
                         {falha.tentativas} tentativas
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-texto-suave">{falha.erro ?? 'Erro nao informado'}</p>
+                    <p className="mt-1 text-sm text-texto-suave">{falha.erro ?? 'Erro não informado'}</p>
                     <p className="mt-1 break-all text-xs text-texto-suave">{resumirPayload(falha.payload)}</p>
                     <p className="mt-1 text-xs text-texto-suave">{formatarData(falha.criadoEm)}</p>
                   </div>
@@ -179,7 +179,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
           </div>
           <div className="flex flex-col gap-2 border-t border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
             <span className="text-sm text-texto-suave">
-              Pagina {falhasPaginadas?.pagina ?? 1} de {totalPaginasOutbox} | {falhasPaginadas?.total ?? 0} eventos
+              Página {falhasPaginadas?.pagina ?? 1} de {totalPaginasOutbox} | {falhasPaginadas?.total ?? 0} eventos
             </span>
             <div className="flex gap-2">
               <Botao
@@ -194,7 +194,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
                 onClick={() => void trocarPaginaOutbox((falhasPaginadas?.pagina ?? 1) + 1)}
                 disabled={!falhasPaginadas || falhasPaginadas.pagina >= totalPaginasOutbox || carregando}
               >
-                Proxima
+                Próxima
               </Botao>
             </div>
           </div>

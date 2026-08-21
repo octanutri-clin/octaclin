@@ -32,7 +32,7 @@ interface BibliotecaReceitasNutricionaisProps {
 
 const ROTULO_TIPO: Record<TipoReceitaNutricionalApi, string> = {
   receita: 'Receita',
-  refeicao_pronta: 'Refeicao pronta'
+  refeicao_pronta: 'Refeição pronta'
 };
 
 /**
@@ -110,7 +110,7 @@ export function BibliotecaReceitasNutricionais({
       return;
     }
     if (!refeicao?.itens.length) {
-      setErro('Escolha uma refeicao com ao menos um alimento para salvar.');
+      setErro('Escolha uma refeição com ao menos um alimento para salvar.');
       return;
     }
     setOcupado('salvando');
@@ -144,7 +144,7 @@ export function BibliotecaReceitasNutricionais({
       await arquivarReceitaNutricional(selecionada);
       setSelecionada('');
       setConfirmarArquivo(false);
-      setAviso('Item arquivado da biblioteca. Planos publicados nao foram alterados.');
+      setAviso('Item arquivado da biblioteca. Planos publicados não foram alterados.');
       await carregar();
     } catch (falha) {
       setErro(mensagemFalhaInterface(falha, 'Não foi possível arquivar a receita.'));
@@ -159,8 +159,8 @@ export function BibliotecaReceitasNutricionais({
         <div className="flex items-center gap-2">
           <UtensilsCrossed aria-hidden="true" size={17} className="text-primaria" />
           <div>
-            <h3 className="text-sm font-semibold text-tinta">Receitas e refeicoes prontas</h3>
-            <p className="text-sm text-texto-suave">Insira itens no rascunho ou salve uma refeicao para reutilizar.</p>
+            <h3 className="text-sm font-semibold text-tinta">Receitas e refeições prontas</h3>
+            <p className="text-sm text-texto-suave">Insira itens no rascunho ou salve uma refeição para reutilizar.</p>
           </div>
         </div>
         <Botao type="button" tamanho="sm" onClick={() => void carregar()} disabled={desabilitado || ocupado !== null}>
@@ -180,7 +180,7 @@ export function BibliotecaReceitasNutricionais({
           </Selecao>
         </label>
         <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave" htmlFor={`${id}-destino`}>
-          Inserir na refeicao
+          Inserir na refeição
           <Selecao id={`${id}-destino`} value={refeicaoDestinoAtual} onChange={(evento) => setRefeicaoDestino(evento.target.value)} disabled={desabilitado || ocupado !== null}>
             {refeicoesAtuais.map((refeicao, indice) => <option key={refeicao.chave} value={refeicao.chave}>{refeicao.nome.trim() || `Refeicao ${indice + 1}`}</option>)}
           </Selecao>
@@ -196,7 +196,7 @@ export function BibliotecaReceitasNutricionais({
       </div>
 
       <fieldset className="grid gap-3 border-t border-linha pt-3">
-        <legend className="px-1 text-sm font-semibold text-tinta">Salvar refeicao atual</legend>
+        <legend className="px-1 text-sm font-semibold text-tinta">Salvar refeição atual</legend>
         <div className="grid gap-3 md:grid-cols-3">
           <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave" htmlFor={`${id}-nome`}>
             Nome
@@ -206,14 +206,14 @@ export function BibliotecaReceitasNutricionais({
             Tipo
             <Selecao id={`${id}-tipo`} value={tipo} onChange={(evento) => setTipo(evento.target.value as TipoReceitaNutricionalApi)} disabled={desabilitado || ocupado !== null}>
               <option value="receita">Receita</option>
-              <option value="refeicao_pronta">Refeicao pronta</option>
+              <option value="refeicao_pronta">Refeição pronta</option>
             </Selecao>
           </label>
           <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave" htmlFor={`${id}-origem`}>
             Visibilidade
             <Selecao id={`${id}-origem`} value={origem} onChange={(evento) => setOrigem(evento.target.value as OrigemReceitaNutricionalApi)} disabled={desabilitado || ocupado !== null}>
-              <option value="pessoal">So para mim</option>
-              <option value="clinica">Compartilhar com a clinica</option>
+              <option value="pessoal">Só para mim</option>
+              <option value="clinica">Compartilhar com a clínica</option>
             </Selecao>
           </label>
         </div>
@@ -227,7 +227,7 @@ export function BibliotecaReceitasNutricionais({
       <ModalConfirmacao
         aberto={confirmarArquivo}
         titulo="Arquivar item da biblioteca"
-        mensagem="O item deixara de aparecer para novos rascunhos. Planos ja publicados permanecem inalterados."
+        mensagem="O item deixara de aparecer para novos rascunhos. Planos já publicados permanecem inalterados."
         rotuloConfirmar="Arquivar"
         confirmando={ocupado === 'arquivando'}
         aoCancelar={() => setConfirmarArquivo(false)}

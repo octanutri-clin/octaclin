@@ -95,7 +95,7 @@ const eventosTemplate = [
   { valor: '', rotulo: 'Uso manual' },
   { valor: 'agenda.consulta.agendada', rotulo: 'Consulta agendada' },
   { valor: 'agenda.consulta.lembrete', rotulo: 'Lembrete de consulta' },
-  { valor: 'agenda.consulta.confirmacao', rotulo: 'Confirmacao de consulta' },
+  { valor: 'agenda.consulta.confirmacao', rotulo: 'Confirmação de consulta' },
   { valor: 'agenda.consulta.remarcada', rotulo: 'Consulta remarcada' },
   { valor: 'agenda.consulta.cancelada', rotulo: 'Consulta cancelada' }
 ];
@@ -430,7 +430,7 @@ export function PainelComunicacoes() {
       if (silencioso) setErro(null);
     } catch (erroAtual) {
       if (silencioso) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar comunicacoes.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar comunicações.');
     } finally {
       if (!silencioso) setCarregando(false);
     }
@@ -506,7 +506,7 @@ export function PainelComunicacoes() {
       setMensagens((atuais) => [mensagem, ...atuais].slice(0, 200));
       setSucesso(
         mensagem.status === 'falhou'
-          ? 'Nao foi possivel entregar a mensagem. Revise os dados e tente novamente.'
+          ? 'Não foi possível entregar a mensagem. Revise os dados e tente novamente.'
           : `Mensagem ${rotuloStatusMensagem(mensagem.status).toLocaleLowerCase('pt-BR')}.`
       );
     } catch (erroAtual) {
@@ -610,7 +610,7 @@ export function PainelComunicacoes() {
       <Cartao>
       <CartaoConteudo className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-base font-semibold">Comunicacoes</h2>
+          <h2 className="text-base font-semibold">Comunicações</h2>
           <p className="mt-1 text-sm text-texto-suave">
             {canais.length} canais, {templates.length} templates, {mensagens.length} mensagens persistidas
           </p>
@@ -633,11 +633,11 @@ export function PainelComunicacoes() {
 
       <Abas
         identificador="comunicacoes"
-        rotulo="Areas de comunicacao"
+        rotulo="Áreas de comunicação"
         abas={[
           { id: 'conversas', rotulo: 'Conversas' },
           { id: 'nova', rotulo: 'Nova mensagem' },
-          ...(podeConfigurar ? [{ id: 'configuracoes', rotulo: 'Configuracoes' }] : [])
+          ...(podeConfigurar ? [{ id: 'configuracoes', rotulo: 'Configurações' }] : [])
         ]}
         ativaId={areaAtiva}
         aoMudar={(id) => setAreaAtiva(id as typeof areaAtiva)}
@@ -726,7 +726,7 @@ export function PainelComunicacoes() {
               </Selecao>
             </div>
             <div className="space-y-1.5">
-              <Rotulo htmlFor="template-codigo">{formularioTemplate.canal === 'whatsapp' ? 'Nome Meta' : 'Codigo externo'}</Rotulo>
+              <Rotulo htmlFor="template-codigo">{formularioTemplate.canal === 'whatsapp' ? 'Nome Meta' : 'Código externo'}</Rotulo>
               <Campo
                 id="template-codigo"
                 value={formularioTemplate.codigoExterno}
@@ -895,7 +895,7 @@ export function PainelComunicacoes() {
               />
             </div>
             <div className="space-y-1.5 md:col-span-3">
-              <Rotulo htmlFor="mensagem-observacao">Observacao</Rotulo>
+              <Rotulo htmlFor="mensagem-observacao">Observação</Rotulo>
               <AreaTexto
                 id="mensagem-observacao"
                 value={formularioMensagem.observacao}
@@ -1094,11 +1094,11 @@ export function PainelComunicacoes() {
                         id="whatsapp-nota-interna"
                         value={textoNotaWhatsapp}
                         onChange={(evento) => setTextoNotaWhatsapp(evento.target.value)}
-                        placeholder="Registre contexto, combinados ou proximo passo da conversa."
+                        placeholder="Registre contexto, combinados ou próximo passo da conversa."
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Rotulo htmlFor="whatsapp-status-atendimento">Status</Rotulo>
+                      <Rotulo htmlFor="whatsapp-status-atendimento">Situação</Rotulo>
                       <Selecao
                         id="whatsapp-status-atendimento"
                         value={statusAtendimentoNota}
@@ -1149,7 +1149,7 @@ export function PainelComunicacoes() {
                             </div>
                             {mensagem.status === 'falhou' ? (
                               <div className="mt-2 flex flex-wrap items-center gap-2">
-                                <p className="text-xs font-medium text-perigo-forte">Nao foi possivel concluir o envio.</p>
+                                <p className="text-xs font-medium text-perigo-forte">Não foi possível concluir o envio.</p>
                                 <Botao type="button" variante="fantasma" onClick={() => prepararRespostaWhatsapp(conversaSelecionada, mensagem)}>
                                   <RefreshCcw size={14} />
                                   Tentar novamente
@@ -1202,7 +1202,7 @@ export function PainelComunicacoes() {
                     {direcao === 'recebida' || direcao === 'nota' ? (
                       <p className="mt-1 break-words text-xs text-texto-suave">{resumirMensagem(mensagem, templates)}</p>
                     ) : null}
-                    {mensagem.status === 'falhou' ? <p className="mt-1 text-xs font-medium text-perigo-forte">Nao foi possivel concluir o envio.</p> : null}
+                    {mensagem.status === 'falhou' ? <p className="mt-1 text-xs font-medium text-perigo-forte">Não foi possível concluir o envio.</p> : null}
                   </div>
                   <span
                     className={`w-fit rounded-sm border px-2 py-1 text-xs font-semibold ${corStatusMensagem(mensagem.status)}`}
