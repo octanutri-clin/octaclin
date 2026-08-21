@@ -136,7 +136,7 @@ const abasProntuario: Array<{ id: AbaProntuario; rotulo: string; permissao?: str
   { id: 'evolucoes', rotulo: 'Evoluções' },
   { id: 'acompanhamento', rotulo: 'Acompanhamento' },
   { id: 'plano_alimentar', rotulo: 'Plano alimentar', permissao: 'planos_alimentares.ler' },
-  { id: 'condutas_terapeuticas', rotulo: 'Condutas terapeuticas' },
+  { id: 'condutas_terapeuticas', rotulo: 'Condutas terapêuticas' },
   { id: 'antropometria', rotulo: 'Antropometria' },
   { id: 'exames_laboratoriais', rotulo: 'Exames laboratoriais' },
   { id: 'evolucao_fotografica', rotulo: 'Evolução fotográfica' },
@@ -233,18 +233,18 @@ function tipoMidiaDoArquivo(arquivo: File): TipoMidiaMobile {
 function rotuloTipo(tipo: EventoProntuarioPacienteApi['tipo']) {
   const rotulos: Record<EventoProntuarioPacienteApi['tipo'], string> = {
     consulta: 'Consulta',
-    formulario: 'Formulario',
+    formulario: 'Formulário',
     resposta_formulario: 'Resposta',
-    checkin_rapido: 'Check-in rapido',
+    checkin_rapido: 'Check-in rápido',
     mensagem: 'Mensagem',
-    evolucao_clinica: 'Evolucao',
+    evolucao_clinica: 'Evolução',
     tarefa_acompanhamento: 'Tarefa',
     plano_alimentar_publicado: 'Plano alimentar',
     avaliacao_antropometrica: 'Antropometria',
     documento_emitido: 'Documento',
     anexo_confirmado: 'Anexo',
     exame_laboratorial: 'Exame laboratorial',
-    evolucao_fotografica: 'Evolucao fotografica',
+    evolucao_fotografica: 'Evolução fotográfica',
     evento_financeiro: 'Financeiro'
   };
   return rotulos[tipo];
@@ -274,15 +274,21 @@ function iconeEvento(tipo: EventoProntuarioPacienteApi['tipo']) {
 function autoriaEvento(evento: EventoProntuarioPacienteApi, profissionais: ProfissionalResumo[]) {
   const autor = profissionais.find((profissional) => profissional.usuarioId === evento.autorUsuarioId);
   const responsavel = profissionais.find((profissional) => profissional.id === evento.responsavelId);
-  const partes = evento.origem ? [`Origem: ${evento.origem}`] : [];
+  const origens: Record<string, string> = {
+    Formularios: 'Formulários',
+    'Evolucao fotografica': 'Evolução fotográfica',
+    Prontuario: 'Prontuário',
+    Comunicacoes: 'Comunicações'
+  };
+  const partes = evento.origem ? [`Origem: ${origens[evento.origem] ?? evento.origem}`] : [];
   if (autor) partes.push(`Autor: ${autor.nome}`);
   else if (evento.autorUsuarioId) {
     const autoriaDoPaciente = evento.tipo === 'resposta_formulario'
       || evento.tipo === 'checkin_rapido'
       || (evento.tipo === 'mensagem' && evento.status === 'recebido');
-    partes.push(autoriaDoPaciente ? 'Autor: paciente' : 'Autor: equipe clinica');
+    partes.push(autoriaDoPaciente ? 'Autor: paciente' : 'Autor: equipe clínica');
   }
-  if (responsavel && responsavel.id !== autor?.id) partes.push(`Responsavel: ${responsavel.nome}`);
+  if (responsavel && responsavel.id !== autor?.id) partes.push(`Responsável: ${responsavel.nome}`);
   return partes.join(' - ');
 }
 
@@ -562,7 +568,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setArquivoAnexo(null);
       setConsultaVinculadaId('');
       formulario.reset();
-      setSucesso('Anexo confirmado e incluido no prontuário.');
+      setSucesso('Anexo confirmado e incluído no prontuário.');
     } catch (erroAtual) {
       setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível enviar o anexo.'));
     } finally {
@@ -1004,7 +1010,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           abas={abasDaAreaAtiva}
           ativaId={abaAtiva}
           aoMudar={(id) => solicitarTrocaAba(id as AbaProntuario)}
-          rotulo={`Subareas de ${areasProntuario.find((area) => area.id === areaAtiva)?.rotulo ?? 'prontuario'}`}
+          rotulo={`Subáreas de ${areasProntuario.find((area) => area.id === areaAtiva)?.rotulo ?? 'prontuário'}`}
           className="border-none pb-0"
         />
       ) : null}
@@ -1021,10 +1027,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               <div>
                 <p className="text-xs font-semibold uppercase text-primaria">Próxima ação</p>
                 <h2 className="mt-2 text-base font-semibold text-tinta">
-                  {dados.resumo.proximaConduta?.titulo ?? 'Sem pendencia operacional'}
+                  {dados.resumo.proximaConduta?.titulo ?? 'Sem pendência operacional'}
                 </h2>
                 <p className="mt-1 text-sm text-texto-suave">
-                  {dados.resumo.proximaConduta?.descricao ?? 'Nenhuma acao prioritaria foi identificada nos registros atuais.'}
+                  {dados.resumo.proximaConduta?.descricao ?? 'Nenhuma ação prioritaria foi identificada nos registros atuais.'}
                 </p>
                 {dados.resumo.proximaConduta?.dataReferencia ? (
                   <p className="mt-2 text-xs text-texto-suave">Referencia: {formatarDataHora(dados.resumo.proximaConduta.dataReferencia)}</p>
@@ -1037,7 +1043,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <article className="grid gap-2 rounded-md border border-linha bg-white p-4">
               <p className="text-xs font-semibold uppercase text-texto-suave">Próxima consulta</p>
               <h2 className="text-base font-semibold text-tinta">{proximaConsulta?.titulo ?? 'Nenhuma consulta agendada'}</h2>
-              <p className="text-sm text-texto-suave">{proximaConsulta ? formatarDataHora(proximaConsulta.data) : 'Use a agenda para definir o proximo encontro.'}</p>
+              <p className="text-sm text-texto-suave">{proximaConsulta ? formatarDataHora(proximaConsulta.data) : 'Use a agenda para definir o próximo encontro.'}</p>
             </article>
           </section>
           <section aria-labelledby="contexto-operacional-titulo" className="grid gap-4 rounded-md border border-linha bg-white p-4">
@@ -1048,15 +1054,15 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="border-l-2 border-primaria pl-3">
                 <dt className="text-xs font-semibold text-texto-suave">Último atendimento</dt>
-                <dd className="mt-1 text-sm font-medium text-tinta">{dados.resumo.ultimoAtendimento?.titulo ?? 'Nao registrado'}</dd>
+                <dd className="mt-1 text-sm font-medium text-tinta">{dados.resumo.ultimoAtendimento?.titulo ?? 'Não registrado'}</dd>
                 {dados.resumo.ultimoAtendimento ? <dd className="text-xs text-texto-suave">{formatarDataHora(dados.resumo.ultimoAtendimento.concluidaEm)}</dd> : null}
               </div>
               <div className="border-l-2 border-primaria pl-3">
                 <dt className="text-xs font-semibold text-texto-suave">Plano atual publicado</dt>
                 <dd className="mt-1 text-sm font-medium text-tinta">
                   {permissoes.includes('planos_alimentares.ler')
-                    ? dados.resumo.planoAtual ? `Versao ${dados.resumo.planoAtual.numeroVersao}` : 'Nenhum plano publicado'
-                    : 'Acesso nao disponivel'}
+                    ? dados.resumo.planoAtual ? `Versão ${dados.resumo.planoAtual.numeroVersao}` : 'Nenhum plano publicado'
+                    : 'Acesso não disponível'}
                 </dd>
                 {dados.resumo.planoAtual ? <dd className="text-xs text-texto-suave">Publicado em {formatarDataHora(dados.resumo.planoAtual.publicadaEm)}</dd> : null}
               </div>
@@ -1070,7 +1076,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 <dd className="mt-1 text-sm font-medium text-tinta">
                   {permissoes.includes('comunicacoes.mensagens.ler')
                     ? dados.resumo.falhaComunicacao ? 'Falha de entrega pendente' : 'Sem falha identificada'
-                    : 'Acesso nao disponivel'}
+                    : 'Acesso não disponível'}
                 </dd>
                 {dados.resumo.falhaComunicacao ? <dd className="text-xs text-texto-suave">Registrada em {formatarDataHora(dados.resumo.falhaComunicacao.registradaEm)}</dd> : null}
               </div>
@@ -1103,7 +1109,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               <ul className="grid gap-3 md:grid-cols-2">
                 {(dados.resumo.indicadoresRecentes ?? []).map((indicador) => (
                   <li key={`${indicador.tipo}-${indicador.registradoEm}`} className="rounded-md border border-linha bg-superficie p-3">
-                    <p className="text-xs font-semibold uppercase text-texto-suave">{indicador.tipo === 'adesao' ? 'Adesao relatada' : 'Sintomas relatados'}</p>
+                    <p className="text-xs font-semibold uppercase text-texto-suave">{indicador.tipo === 'adesao' ? 'Adesão relatada' : 'Sintomas relatados'}</p>
                     <p className="mt-1 text-sm font-medium text-tinta">{indicador.valor}</p>
                     <p className="mt-2 text-xs text-texto-suave">Fonte: {indicador.fonte} em {formatarDataHora(indicador.registradoEm)}</p>
                   </li>
@@ -1440,7 +1446,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                   </option>
                 ))}
               </select>
-              <span className="font-normal text-texto-suave">Opcional. O anexo continua privado e sera associado somente a esta consulta.</span>
+              <span className="font-normal text-texto-suave">Opcional. O anexo continua privado e será associado somente a esta consulta.</span>
             </label>
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
               Arquivo
@@ -1505,8 +1511,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               </article>
             )) : (
               <EstadoVazio
-                titulo={anexos.length ? 'Nenhum anexo nesta categoria' : 'Nenhum anexo clinico'}
-                descricao={anexos.length ? 'Altere o filtro para consultar os demais arquivos confirmados.' : 'Exames, documentos e fotos confirmados aparecerao aqui.'}
+                titulo={anexos.length ? 'Nenhum anexo nesta categoria' : 'Nenhum anexo clínico'}
+                descricao={anexos.length ? 'Altere o filtro para consultar os demais arquivos confirmados.' : 'Exames, documentos e fotos confirmados aparecerão aqui.'}
               />
             )}
           </div>
@@ -1626,7 +1632,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       <ModalConfirmacao
         aberto={Boolean(anexoParaExcluir)}
         titulo="Excluir anexo clínico"
-        mensagem="O arquivo sera removido do armazenamento e não podera mais ser aberto."
+        mensagem="O arquivo será removido do armazenamento e não poderá mais ser aberto."
         rotuloConfirmar="Excluir anexo"
         confirmando={excluindoAnexo}
         aoConfirmar={() => void confirmarExclusaoAnexo()}

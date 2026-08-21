@@ -2335,10 +2335,11 @@ Fase 251 - Revisao integral de linguagem e microcopy:
 - Commit: registrado no historico Git da fase
 - Data: 2026-08-21
 - Validacoes: gate AST e testes unitarios de linguagem, lint sem erros,
-  typecheck, build, Playwright desktop/mobile, 10 cenarios de acessibilidade,
-  regressoes das Fases 248/249 e Lighthouse 100
+  typecheck, build de 123 rotas, Playwright desktop/mobile, 10 cenarios de
+  acessibilidade, 6 jornadas criticas, 8 testes do BFF publico, regressoes das
+  Fases 248/249 e Lighthouse 100
 - Observacoes: nenhum backend, migration, banco ou contrato interno foi
-  alterado; os 53 avisos preexistentes de hooks permanecem fora do escopo
+  alterado; os 52 avisos preexistentes de hooks permanecem fora do escopo
 - Proxima fase: Fase 252 - Arquitetura de navegacao e descoberta de
   funcionalidades
 - Modelo recomendado: GPT-5.6 Sol, raciocinio `high`

@@ -151,7 +151,7 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
                   <article key={resposta.respostaId} className="rounded-md border border-linha bg-superficie p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-tinta">{paciente?.nome ?? 'Paciente nao identificado'}</p>
+                        <p className="text-sm font-semibold text-tinta">{paciente?.nome ?? 'Paciente não identificado'}</p>
                         <p className="text-xs text-texto-suave">Finalizado em {formatarDataResposta(resposta.finalizadoEm)}</p>
                       </div>
                       <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-texto-suave">

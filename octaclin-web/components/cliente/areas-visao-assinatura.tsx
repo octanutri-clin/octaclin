@@ -28,7 +28,7 @@ export function AreaVisaoGeralCliente({ portal }: Props) {
     >
       <Cartao>
         <CartaoCabecalho>
-          <CartaoTitulo icone={<CheckCircle2 className="h-4 w-4" />}>Ativacao da clínica</CartaoTitulo>
+          <CartaoTitulo icone={<CheckCircle2 className="h-4 w-4" />}>Ativação da clínica</CartaoTitulo>
         </CartaoCabecalho>
         <CartaoConteudo>
           <p className="text-sm text-texto-suave">
@@ -107,7 +107,7 @@ export function AreaAssinaturaUsoCliente({ portal }: Props) {
             {bloqueioAssinatura ? (
               <div className="mt-3 flex items-start gap-2 rounded-md border border-perigo-borda bg-white px-3 py-2 text-sm text-perigo">
                 <Ban size={16} className="mt-0.5 shrink-0" />
-                <span>Novas ações estao bloqueadas, mas os dados existentes continuam disponiveis.</span>
+                <span>Novas ações estao bloqueadas, mas os dados existentes continuam disponíveis.</span>
               </div>
             ) : null}
           </article>
@@ -195,7 +195,7 @@ export function AreaAssinaturaUsoCliente({ portal }: Props) {
                 onClick={() => solicitarAjusteAssinatura('revisao_limite')}
               >
                 <RefreshCcw size={16} />
-                {enviandoAssinatura === 'revisao_limite' ? 'Enviando' : 'Pedir revisao de limite'}
+                {enviandoAssinatura === 'revisao_limite' ? 'Enviando' : 'Pedir revisão de limite'}
               </Botao>
             </div>
           </article>

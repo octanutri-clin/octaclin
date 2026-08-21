@@ -91,7 +91,7 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
         <CartaoConteudo className="grid gap-4">
           <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" onSubmit={aplicar}>
             <label className="grid gap-1">
-              <Rotulo>Inicio</Rotulo>
+              <Rotulo>Início</Rotulo>
               <Campo type="date" value={inicio} onChange={(evento) => setInicio(evento.target.value)} />
             </label>
             <label className="grid gap-1">

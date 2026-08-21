@@ -4,7 +4,7 @@ import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/se
 async function encaminhar(requisicao: Request, params: Promise<{ id: string; condutaId: string; acao: string }>) {
   try {
     const { id, condutaId, acao } = await params;
-    if (!['rascunho', 'publicacao', 'nova-versao', 'arquivamento'].includes(acao)) return NextResponse.json({ mensagem: 'Acao invalida.' }, { status: 404 });
+    if (!['rascunho', 'publicacao', 'nova-versao', 'arquivamento'].includes(acao)) return NextResponse.json({ mensagem: 'Ação inválida.' }, { status: 404 });
     const resposta = await requisitarBackendAutenticado(`/pacientes/${encodeURIComponent(id)}/condutas-terapeuticas/${encodeURIComponent(condutaId)}/${encodeURIComponent(acao)}`, {
       method: requisicao.method,
       ...(requisicao.method === 'PUT' ? { body: await requisicao.text(), headers: { 'Content-Type': 'application/json' } } : {})

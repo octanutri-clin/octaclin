@@ -75,7 +75,7 @@ export function AreaEquipeCliente({ portal }: Props) {
             <p className="text-xs text-texto-suave">Gestor da conta</p>
             <p className="mt-1 break-words text-base font-semibold">Acesso de gestao ativo</p>
             <p className="mt-1 text-sm text-texto-suave">
-              Assinatura, equipe e configuracoes respeitam as permissoes concedidas.
+              Assinatura, equipe e configurações respeitam as permissões concedidas.
             </p>
           </article>
           <article className="rounded-md border border-linha bg-superficie p-3">
@@ -87,7 +87,7 @@ export function AreaEquipeCliente({ portal }: Props) {
                     'paciente',
                     'pacientes'
                   )}`
-                : 'Profissionais e pacientes usam areas isoladas.'}
+                : 'Profissionais e pacientes usam áreas isoladas.'}
             </p>
           </article>
         </CartaoConteudo>
@@ -198,12 +198,12 @@ export function AreaEquipeCliente({ portal }: Props) {
                     className="w-full"
                   >
                     <UserPlus size={16} />
-                    {salvandoUsuario ? 'Convidando' : bloqueioAssinatura ? 'Assinatura bloqueada' : 'Convidar usuario'}
+                    {salvandoUsuario ? 'Convidando' : bloqueioAssinatura ? 'Assinatura bloqueada' : 'Convidar usuário'}
                   </Botao>
                 </div>
                 <p className="text-sm text-texto-suave lg:col-span-3">
                   {formularioUsuario.role === 'Professional'
-                    ? 'O convite tambem cria o perfil clinico e libera a agenda pessoal apos o primeiro acesso.'
+                    ? 'O convite também cria o perfil clínico e libera a agenda pessoal após o primeiro acesso.'
                     : 'Link de primeiro acesso enviado por email.'}
                 </p>
               </form>
@@ -284,7 +284,7 @@ export function AreaEquipeCliente({ portal }: Props) {
                       <p className="mt-1 text-xs text-texto-suave">
                         {historicoConvites
                           ? `${formatarQuantidade(historicoConvites.total, 'evento de convite', 'eventos de convite')}`
-                          : 'Carregando historico operacional'}
+                          : 'Carregando histórico operacional'}
                       </p>
                     </div>
                   </div>
@@ -349,7 +349,7 @@ export function AreaEquipeCliente({ portal }: Props) {
                               <>
                                 <select
                                   className="h-9 rounded-md border border-linha bg-white px-2 text-sm"
-                                  aria-label={`Permissao de ${usuario.email}`}
+                                  aria-label={`Permissão de ${usuario.email}`}
                                   value={papeisUsuarios[usuario.id] ?? usuario.role}
                                   disabled={!podeAjustarUsuarios || ajustandoUsuarioId === usuario.id}
                                   onChange={(evento) =>

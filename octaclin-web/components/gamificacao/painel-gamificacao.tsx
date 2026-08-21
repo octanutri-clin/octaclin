@@ -154,7 +154,7 @@ export function PainelGamificacao() {
       await carregar(atualizada);
       setSucesso('Configuração de gamificacao atualizada.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar configuracao.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar configuração.');
     } finally {
       setSalvando(false);
     }
@@ -283,7 +283,7 @@ export function PainelGamificacao() {
               ? `${desafios.length} metas e ${badges.length} conquistas individuais`
               : 'Recursos desabilitados por padrao'}
           </p>
-          <p className="mt-1 text-xs text-texto-sutil">Cada área exige ativacao explicita da conta.</p>
+          <p className="mt-1 text-xs text-texto-sutil">Cada área exige ativação explicita da conta.</p>
         </div>
         <Botao onClick={() => void carregar()} disabled={carregando}>
           <RefreshCcw size={16} />
@@ -304,7 +304,7 @@ export function PainelGamificacao() {
       <Cartao>
         <form onSubmit={salvarConfiguracao}>
           <CartaoCabecalho>
-            <CartaoTitulo>Ativacao opcional</CartaoTitulo>
+            <CartaoTitulo>Ativação opcional</CartaoTitulo>
           </CartaoCabecalho>
           <CartaoConteudo className="grid gap-3">
             <div className="grid gap-2 md:grid-cols-3">
@@ -327,7 +327,7 @@ export function PainelGamificacao() {
             <div className="flex justify-end">
               <Botao type="submit" variante="primario" disabled={salvando || carregando || !configuracaoEdicao}>
                 <Save size={16} />
-                Salvar ativacao
+                Salvar ativação
               </Botao>
             </div>
           </CartaoConteudo>

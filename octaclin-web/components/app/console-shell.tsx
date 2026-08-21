@@ -52,7 +52,8 @@ function humanizarWorkspace(slug: string) {
     .split(/[-_]+/)
     .filter(Boolean)
     .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase())
-    .join(' ');
+    .join(' ')
+    .replace(/\bClinica\b/g, 'Clínica');
 }
 
 interface ConsoleShellProps {

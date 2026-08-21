@@ -63,7 +63,7 @@ export function PerguntaOrdenavel({ pergunta, selecionada, categoriaNome, catego
           <span>{secao}</span>
           <span>{categoriaNome}</span>
           <span>Peso {pergunta.peso}</span>
-          <span>{pergunta.obrigatoria ? 'Obrigatoria' : 'Opcional'}</span>
+          <span>{pergunta.obrigatoria ? 'Obrigatória' : 'Opcional'}</span>
         </div>
       </button>
       <span className="rounded-md border border-linha bg-fundo px-2 py-1 text-xs text-texto-suave">

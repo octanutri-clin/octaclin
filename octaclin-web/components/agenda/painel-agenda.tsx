@@ -512,7 +512,7 @@ export function PainelAgenda() {
       atualizarConsulta(atualizada);
       setSucesso(
         status === 'cancelada'
-          ? 'Consulta cancelada e horario liberado na agenda interna. Integracoes processadas conforme configuracao.'
+          ? 'Consulta cancelada e horário liberado na agenda interna. Integrações processadas conforme configuração.'
           : `Consulta registrada como ${rotulo}.`
       );
       return true;
@@ -713,9 +713,9 @@ export function PainelAgenda() {
             <div className="grid gap-2 rounded-md border border-linha bg-superficie p-3 text-sm text-texto-suave sm:grid-cols-2">
               <p>Modalidade: {consultaSelecionada.modalidade === 'online' ? 'Online (teleconsulta)' : 'Presencial'}</p>
               {consultaSelecionada.modalidade === 'online' ? (
-                <p>Sala: {consultaSelecionada.linkTeleconsulta ? 'link cadastrado' : 'link nao cadastrado'}</p>
+                <p>Sala: {consultaSelecionada.linkTeleconsulta ? 'link cadastrado' : 'link não cadastrado'}</p>
               ) : (
-                <p>Local: {consultaSelecionada.local || 'Nao informado'}</p>
+                <p>Local: {consultaSelecionada.local || 'Não informado'}</p>
               )}
               <p>Google Agenda: {statusGoogle(consultaSelecionada, statusGoogleAgenda?.conectado)}</p>
               <p>E-mail: {statusNotificacao(consultaSelecionada.notificacoes, 'email')}</p>
@@ -872,10 +872,10 @@ export function PainelAgenda() {
 
             {linkPublico ? (
               <div className="grid gap-1 text-sm text-texto-suave">
-                <p>{linkPublico.duracaoMinutos} minutos por solicitação publica.</p>
+                <p>{linkPublico.duracaoMinutos} minutos por solicitação pública.</p>
                 <p>Atualizado em {formatarDataHora(linkPublico.atualizadoEm)}.</p>
                 {linkPublico.requerRotacaoConfirmada ? (
-                  <p>A URL atual só volta a ficar copiavel após nova rotacao confirmada.</p>
+                  <p>A URL atual só volta a ficar copiavel após nova rotação confirmada.</p>
                 ) : null}
               </div>
             ) : null}
@@ -983,7 +983,7 @@ export function PainelAgenda() {
                       />
                     </label>
                     <p id="ajuda-link-teleconsulta" className="text-xs text-texto-suave">
-                      Cole o link do Meet, Zoom ou Whereby. O link fica visivel para quem sera atendido a partir de 1
+                      Cole o link do Meet, Zoom ou Whereby. O link fica visivel para quem será atendido a partir de 1
                       hora antes e até 30 minutos depois do fim.
                     </p>
                   </div>
@@ -1028,7 +1028,7 @@ export function PainelAgenda() {
                       <option value="">Consulta avulsa</option>
                       {pacotesDisponiveis.map((pacote) => (
                         <option key={pacote.id} value={pacote.id}>
-                          {pacote.titulo} - {pacote.sessoesDisponiveis} de {pacote.sessoesContratadas} disponiveis
+                          {pacote.titulo} - {pacote.sessoesDisponiveis} de {pacote.sessoesContratadas} disponíveis
                         </option>
                       ))}
                     </Selecao>
@@ -1273,11 +1273,11 @@ export function PainelAgenda() {
                                 {consulta.modalidade === 'online'
                                   ? consulta.linkTeleconsulta
                                     ? 'Online - sala cadastrada'
-                                    : 'Online - sala nao cadastrada'
-                                  : consulta.local || 'Local nao informado'}
+                                    : 'Online - sala não cadastrada'
+                                  : consulta.local || 'Local não informado'}
                               </span>
                             </p>
-                            <p className="truncate">Profissional: {consulta.profissionalNome ?? profissional?.nome ?? 'Nao informado'}</p>
+                            <p className="truncate">Profissional: {consulta.profissionalNome ?? profissional?.nome ?? 'Não informado'}</p>
                             <p className="truncate">
                               Google Calendar: {statusGoogle(consulta, statusGoogleAgenda?.conectado)}
                             </p>
@@ -1363,7 +1363,7 @@ export function PainelAgenda() {
       <ModalConfirmacao
         aberto={Boolean(desfechoPendente)}
         titulo={desfechoPendente?.status === 'cancelada' ? 'Cancelar consulta' : desfechoPendente ? `Registrar ${rotuloStatusConsulta(desfechoPendente.status).toLocaleLowerCase('pt-BR')}` : 'Confirmar desfecho'}
-        mensagem={desfechoPendente?.status === 'cancelada' ? 'Cancelar a consulta libera o horario na agenda interna e processa as integracoes configuradas.' : 'Este desfecho nao podera ser alterado.'}
+        mensagem={desfechoPendente?.status === 'cancelada' ? 'Cancelar a consulta libera o horário na agenda interna e processa as integrações configuradas.' : 'Este desfecho não poderá ser alterado.'}
         rotuloConfirmar={desfechoPendente?.status === 'cancelada' ? 'Cancelar consulta' : `Registrar ${desfechoPendente ? rotuloStatusConsulta(desfechoPendente.status).toLocaleLowerCase('pt-BR') : 'desfecho'}`}
         confirmando={Boolean(desfechoPendente && processandoConsultaId === desfechoPendente.consulta.id)}
         aoCancelar={() => setDesfechoPendente(null)}
@@ -1377,8 +1377,8 @@ export function PainelAgenda() {
       <ModalConfirmacao
         aberto={rotacionarLinkPendente}
         titulo="Rotacionar link público"
-        mensagem="Rotacionar o link invalida a URL publica anterior imediatamente. Deseja continuar?"
-        rotuloConfirmar="Confirmar rotacao"
+        mensagem="Rotacionar o link invalida a URL pública anterior imediatamente. Deseja continuar?"
+        rotuloConfirmar="Confirmar rotação"
         confirmando={processandoSolicitacaoId === 'rotacionar-link'}
         aoCancelar={() => setRotacionarLinkPendente(false)}
         aoConfirmar={() => {

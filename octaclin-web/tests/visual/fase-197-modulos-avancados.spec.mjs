@@ -79,14 +79,14 @@ test.describe('Fase 197 - modulos avancados', () => {
     });
 
     await page.goto('/ia');
-    await expect(page.getByText('Revisao pendente')).toBeVisible();
-    await expect(page.getByText('Aguardando revisao')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Abrir prontuario' })).toHaveCount(0);
-    await page.getByPlaceholder('Informe a interpretacao clinica corrigida').fill('Frustracao pontual, sem indicio de risco atual.');
+    await expect(page.getByText('Revisão pendente')).toBeVisible();
+    await expect(page.getByText('Aguardando revisão')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Abrir prontuário' })).toHaveCount(0);
+    await page.getByPlaceholder('Informe a interpretação clínica corrigida').fill('Frustracao pontual, sem indicio de risco atual.');
     await page.getByRole('button', { name: 'Editar e aceitar' }).click();
     await expect(page.getByText('Editada pelo profissional')).toBeVisible();
     await expect(page.getByText(/Resultado revisado:.*Frustracao pontual/)).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Abrir prontuario' })).toHaveAttribute('href', `/pacientes/${pacienteId}`);
+    await expect(page.getByRole('link', { name: 'Abrir prontuário' })).toHaveAttribute('href', `/pacientes/${pacienteId}`);
   });
 
   test('reconhece alimento somente a partir de imagem clinica confirmada', async ({ page }) => {
@@ -141,7 +141,7 @@ test.describe('Fase 197 - modulos avancados', () => {
     await page.goto('/ia');
     await expect(page.getByLabel('Arquivo midia')).toContainText('almoco-sintetico.jpg');
     await expect(page.getByLabel('Imagem URL')).toHaveCount(0);
-    await page.getByLabel('Observacao').fill('Prato sintetico com arroz.');
+    await page.getByLabel('Observação').fill('Prato sintetico com arroz.');
     await page.getByRole('button', { name: 'Reconhecer' }).click();
     await expect(page.getByText('Reconhecimento alimentar criado por heuristica-local.')).toBeVisible();
   });
@@ -175,7 +175,7 @@ test.describe('Fase 197 - modulos avancados', () => {
     await expect(page.getByText('Quando:')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Ativar Retomar check-in atrasado' })).toBeDisabled();
     await page.getByRole('button', { name: 'Simular sem executar' }).click();
-    await expect(page.getByText('Simulacao concluida: a regra seria executada.')).toBeVisible();
+    await expect(page.getByText('Simulação concluída: a regra seria executada.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Ativar Retomar check-in atrasado' })).toBeEnabled();
     await page.getByRole('button', { name: 'Ativar Retomar check-in atrasado' }).click();
     await expect(page.getByText('Regra ativada.')).toBeVisible();
@@ -197,18 +197,18 @@ test.describe('Fase 197 - modulos avancados', () => {
     });
 
     await page.goto('/operacoes');
-    const areas = page.getByRole('tablist', { name: 'Areas de operacoes' });
+    const areas = page.getByRole('tablist', { name: 'Áreas de operações' });
     await expect(areas.getByRole('tab')).toHaveCount(8);
     await areas.getByRole('tab', { name: 'Onboarding' }).click();
-    await expect(page.getByText('Nova clinica', { exact: true })).toBeVisible();
+    await expect(page.getByText('Nova clínica', { exact: true })).toBeVisible();
     await areas.getByRole('tab', { name: 'Incidentes' }).click();
     await expect(page.getByRole('heading', { name: 'Alertas operacionais' })).toBeVisible();
-    await areas.getByRole('tab', { name: 'Comunicacoes' }).click();
-    await expect(page.getByRole('heading', { name: 'Central de comunicacao' })).toBeVisible();
+    await areas.getByRole('tab', { name: 'Comunicações' }).click();
+    await expect(page.getByRole('heading', { name: 'Central de comunicação' })).toBeVisible();
     await areas.getByRole('tab', { name: 'LGPD' }).click();
-    await expect(page.getByRole('heading', { name: 'Solicitacoes LGPD' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Solicitações LGPD' })).toBeVisible();
     await areas.getByRole('tab', { name: 'Auditoria' }).click();
-    await expect(page.getByRole('heading', { name: 'Auditoria sensivel' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Auditoria sensível' })).toBeVisible();
     await areas.getByRole('tab', { name: 'Filas' }).click();
     await expect(page.getByRole('heading', { name: 'Sync mobile' })).toBeVisible();
   });

@@ -22,7 +22,7 @@ async function prepararPaginaPublica(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        clinica: { nome: 'Clinica Bem Estar', corPrimaria: '#0ea5e9' },
+        clinica: { nome: 'Clínica Bem Estar', corPrimaria: '#0ea5e9' },
         profissional: {
           nomeExibicao: 'Dra. Carla',
           especialidade: 'Nutricao clinica'
@@ -174,7 +174,7 @@ async function prepararAgendaInterna(page) {
           urlPublicaDisponivel: false,
           requerRotacaoConfirmada: true,
           mensagemUrlPublica:
-            'URL atual indisponivel nesta sessao. Por seguranca, o token bruto nao e persistido. Rotacione com confirmacao para gerar uma nova URL publica.'
+            'URL atual indisponível nesta sessão. Por segurança, o token bruto não é persistido. Rotacione com confirmação para gerar uma nova URL pública.'
         })
       });
       return;
@@ -287,28 +287,28 @@ test.describe('agendamento publico', () => {
 
     await page.goto('/agendar/token-publico');
 
-    await expect(page.getByText('Clinica Bem Estar', { exact: true })).toBeVisible();
+    await expect(page.getByText('Clínica Bem Estar', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Agendar com Dra. Carla' })).toBeVisible();
-    await expect(page.getByText('1. Escolha um horario')).toBeVisible();
+    await expect(page.getByText('1. Escolha um horário')).toBeVisible();
     await expect(page.getByText('2. Informe seus dados')).toBeVisible();
     await expect(page.getByText('3. Revise e confirme')).toBeVisible();
-    await expect(page.getByText('Horarios em America/Sao Paulo')).toBeVisible();
+    await expect(page.getByText('Horários em America/Sao Paulo')).toBeVisible();
     await page.getByRole('button', { name: '10:00' }).click();
-    await expect(page.getByText('Fuso horario: America/Sao Paulo')).toBeVisible();
+    await expect(page.getByText('Fuso horário: America/Sao Paulo')).toBeVisible();
     await page.getByLabel('Nome completo').fill('Ana Silva');
     await page.getByLabel('Email').fill('ana@exemplo.com');
     await page.getByLabel('WhatsApp').fill('5511999999999');
-    await page.getByLabel('Observacoes').fill('Prefiro atendimento online.');
-    await page.getByRole('button', { name: 'Revisar solicitacao' }).click();
+    await page.getByLabel('Observações').fill('Prefiro atendimento online.');
+    await page.getByRole('button', { name: 'Revisar solicitação' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Revise sua solicitacao' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Revise sua solicitação' })).toBeVisible();
     await expect(page.getByText('Ana Silva', { exact: true })).toBeVisible();
     expect(pagina.solicitacaoEnviada()).toBeNull();
-    await page.getByRole('button', { name: 'Confirmar solicitacao' }).click();
+    await page.getByRole('button', { name: 'Confirmar solicitação' }).click();
 
     await expect.poll(() => pagina.solicitacaoEnviada()).not.toBeNull();
-    await expect(page.getByText('Solicitacao enviada para analise.')).toBeVisible();
-    await expect(page.getByText(/Este pedido ainda nao confirma a consulta/i)).toBeVisible();
+    await expect(page.getByText('Solicitação enviada para análise.')).toBeVisible();
+    await expect(page.getByText(/Este pedido ainda não confirma a consulta/i)).toBeVisible();
     await expect(page.getByText('pacienteId')).toHaveCount(0);
     await assertSemOverflowHorizontal(page);
   });
@@ -319,11 +319,11 @@ test.describe('agendamento publico', () => {
     await page.goto('/agenda');
 
     await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Link publico de agendamento' })).toBeVisible();
-    await expect(page.getByText(/token bruto nao e persistido/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Link público de agendamento' })).toBeVisible();
+    await expect(page.getByText(/token bruto não é persistido/i)).toBeVisible();
     await page.getByRole('button', { name: 'Rotacionar link' }).click();
-    await expect(page.getByText('invalida a URL publica anterior')).toBeVisible();
-    await page.getByRole('button', { name: 'Confirmar rotacao' }).click();
+    await expect(page.getByText('invalida a URL pública anterior')).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmar rotação' }).click();
 
     await expect.poll(() => agenda.rotacionouLink()).toBe(true);
     await expect(page.getByText('https://octaclin.local/agendar/token-rotacionado')).toBeVisible();
@@ -331,19 +331,19 @@ test.describe('agendamento publico', () => {
     const solicitacaoAna = page.locator('article').filter({ hasText: 'Ana Silva' });
     await expect(solicitacaoAna).toBeVisible();
     await expect(solicitacaoAna.getByLabel('Paciente para aprovar')).toHaveValue('');
-    await expect(solicitacaoAna.getByRole('button', { name: 'Aprovar solicitacao' })).toBeDisabled();
+    await expect(solicitacaoAna.getByRole('button', { name: 'Aprovar solicitação' })).toBeDisabled();
     await solicitacaoAna.getByLabel('Paciente para aprovar').selectOption('paciente-1');
-    await expect(solicitacaoAna.getByRole('button', { name: 'Aprovar solicitacao' })).toBeEnabled();
-    await solicitacaoAna.getByRole('button', { name: 'Aprovar solicitacao' }).click();
+    await expect(solicitacaoAna.getByRole('button', { name: 'Aprovar solicitação' })).toBeEnabled();
+    await solicitacaoAna.getByRole('button', { name: 'Aprovar solicitação' }).click();
 
     await expect.poll(() => agenda.aprovouSolicitacao()).toBe(true);
-    await expect(page.getByText('Solicitacao aprovada e convertida em consulta.')).toBeVisible();
+    await expect(page.getByText('Solicitação aprovada e convertida em consulta.')).toBeVisible();
 
     const solicitacaoMarcos = page.locator('article').filter({ hasText: 'Marcos Lima' });
-    await solicitacaoMarcos.getByRole('button', { name: 'Recusar solicitacao' }).click();
+    await solicitacaoMarcos.getByRole('button', { name: 'Recusar solicitação' }).click();
 
     await expect.poll(() => agenda.recusouSolicitacao()).toBe(true);
-    await expect(page.getByText('Solicitacao recusada.')).toBeVisible();
+    await expect(page.getByText('Solicitação recusada.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });

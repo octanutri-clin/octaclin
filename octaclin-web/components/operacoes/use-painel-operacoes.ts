@@ -121,7 +121,7 @@ export function usePainelOperacoes() {
 
   async function carregar() {
     if (!sessao) {
-      setErro('Sessao ausente. Faca login novamente.');
+      setErro('Sessão ausente. Faca login novamente.');
       setDados(null);
       return;
     }
@@ -138,7 +138,7 @@ export function usePainelOperacoes() {
       setRespostaLgpd(null);
     } catch (erroAtual) {
       if (!ehAtual()) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar operacoes.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar operações.');
     } finally {
       if (ehAtual()) setCarregando(false);
     }
@@ -171,10 +171,10 @@ export function usePainelOperacoes() {
       );
       if (falhasComunicacao) {
         setDados((dadosAtuais) => (dadosAtuais ? { ...dadosAtuais, falhasComunicacao } : dadosAtuais));
-        setSucesso('Falha de comunicacao reenfileirada para reprocessamento.');
+        setSucesso('Falha de comunicação reenfileirada para reprocessamento.');
       }
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao reprocessar comunicacao.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao reprocessar comunicação.');
     } finally {
       setReprocessandoComunicacaoId(null);
     }
@@ -301,7 +301,7 @@ export function usePainelOperacoes() {
       }
     } catch (erroAtual) {
       if (!ehAtual()) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao paginar central de comunicacao.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao paginar central de comunicação.');
     } finally {
       if (ehAtual()) setCarregando(false);
     }
@@ -326,7 +326,7 @@ export function usePainelOperacoes() {
       }
     } catch (erroAtual) {
       if (!ehAtual()) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar central de comunicacao.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar central de comunicação.');
     } finally {
       if (ehAtual()) setCarregando(false);
     }
@@ -355,7 +355,7 @@ export function usePainelOperacoes() {
       }
     } catch (erroAtual) {
       if (!ehAtual()) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar solicitacoes de assinatura.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar solicitações de assinatura.');
     } finally {
       if (ehAtual()) setCarregandoAssinatura(false);
     }
@@ -407,7 +407,7 @@ export function usePainelOperacoes() {
       }
     } catch (erroAtual) {
       if (!ehAtual()) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar solicitacoes LGPD.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar solicitações LGPD.');
     } finally {
       if (ehAtual()) setCarregandoLgpd(false);
     }
@@ -431,7 +431,7 @@ export function usePainelOperacoes() {
       }
     } catch (erroAtual) {
       if (!ehAtual()) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao paginar solicitacoes LGPD.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao paginar solicitações LGPD.');
     } finally {
       if (ehAtual()) setCarregandoLgpd(false);
     }
@@ -464,13 +464,13 @@ export function usePainelOperacoes() {
               }
             : dadosAtuais
         );
-        setSucesso(`Solicitacao LGPD atualizada: ${solicitacao.protocolo}.`);
+        setSucesso(`Solicitação LGPD atualizada: ${solicitacao.protocolo}.`);
         if (detalheLgpd?.protocolo === solicitacao.protocolo) {
           await carregarDetalheLgpd(solicitacao.protocolo, { preservarMensagem: true });
         }
       }
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar solicitacao LGPD.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar solicitação LGPD.');
     } finally {
       setAtualizandoLgpdProtocolo(null);
     }
@@ -549,10 +549,10 @@ export function usePainelOperacoes() {
       if (programacao) {
         const retencaoDados = await executarAutenticado(carregarRetencaoDadosOperacional);
         setDados((dadosAtuais) => (dadosAtuais && retencaoDados ? { ...dadosAtuais, retencaoDados } : dadosAtuais));
-        setSucesso(`Retencao LGPD programada: ${programacao.protocolo}.`);
+        setSucesso(`Retenção LGPD programada: ${programacao.protocolo}.`);
       }
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao programar retencao LGPD.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao programar retenção LGPD.');
     } finally {
       setProgramandoRetencao(false);
     }

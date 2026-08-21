@@ -19,7 +19,10 @@ identificadores internos ou regras clinicas.
 - Rota principal apresentada como `Hoje`, com `Painel clinico` no conteudo, e
   substituicao de rotulos tecnicos como `Status` por `Situacao` quando visiveis.
 - Gate AST em `octaclin-web/scripts/linguagem-interface-lib.mjs`, com teste
-  unitario, comando de verificacao e modo de correcao controlada.
+  unitario, comando de verificacao e modo de correcao controlada. O gate cobre
+  JSX, atributos visiveis, alternativas condicionais, setters de feedback,
+  arquivos de dominio da interface e seletores Playwright, sem atravessar
+  comparacoes ou identificadores internos.
 - Comandos `test:linguagem`, `test:linguagem:fix` e `test:fase251`, executados
   tambem no CI.
 - Cenario Playwright sintetico em desktop e celular para hierarquia, copia,
@@ -48,9 +51,11 @@ pnpm --dir octaclin-web test:fase248
 pnpm --dir octaclin-web test:fase249
 ```
 
-Resultados: gate de linguagem aprovado; typecheck e build aprovados; lint sem
-erros e com 53 avisos preexistentes de hooks; Playwright da fase, 10 cenarios
-de acessibilidade e regressao das Fases 248 e 249 aprovados. A inspecao no
+Resultados: gate de linguagem aprovado; typecheck e build de 123 rotas
+aprovados; lint sem erros e com 52 avisos preexistentes de hooks; Playwright da
+fase, 10 cenarios de acessibilidade, 6 jornadas criticas e regressao das Fases
+248 e 249 aprovados. Os 8 testes do BFF de agendamento publico tambem passaram
+pelo wrapper oficial. A inspecao no
 navegador confirmou `lang=pt-BR`, um unico `main`, campos e botoes nomeados,
 foco visivel, ausencia de overflow e nenhum erro no console. Lighthouse:
 acessibilidade 100, boas praticas 100, SEO 100 e Agentic Browsing 100.

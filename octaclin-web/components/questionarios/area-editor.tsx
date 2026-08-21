@@ -164,7 +164,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
             <div className="space-y-3 rounded-md border border-linha bg-superficie p-3">
               <div>
                 <p className="text-sm font-semibold text-tinta">Configuração do tipo</p>
-                <p className="text-xs text-texto-suave">Ajuste como esta pergunta sera respondida pelo paciente.</p>
+                <p className="text-xs text-texto-suave">Ajuste como esta pergunta será respondida pelo paciente.</p>
               </div>
 
               {perguntaSelecionada.tipo === 'likert' ? (

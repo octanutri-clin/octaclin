@@ -218,7 +218,7 @@ export function PainelNutricional({
               <p role="status" className="flex gap-2 rounded-md bg-perigo-suave p-2 text-xs text-perigo">
                 <AlertTriangle aria-hidden="true" size={14} className="mt-0.5 shrink-0" />
                 <span>
-                  A publicação exige justificativa enquanto houver desvio acima de{' '}
+                  A públicação exige justificativa enquanto houver desvio acima de{' '}
                   {percentual(LIMIAR_DIVERGENCIA_NUTRICIONAL)}.
                 </span>
               </p>

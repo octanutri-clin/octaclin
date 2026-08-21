@@ -95,7 +95,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
           </div>
           <Botao type="button" variante="primario" onClick={() => void programarRetencaoLgpd()} disabled={programandoRetencao}>
             <History size={16} />
-            {programandoRetencao ? 'Programando' : 'Programar retencao LGPD'}
+            {programandoRetencao ? 'Programando' : 'Programar retenção LGPD'}
           </Botao>
         </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -111,7 +111,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
                       {rotuloAcaoRetencao(item.acao)}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm text-tinta">{politica?.descricao ?? 'Politica operacional cadastrada.'}</p>
+                  <p className="mt-2 text-sm text-tinta">{politica?.descricao ?? 'Política operacional cadastrada.'}</p>
                   <p className="mt-2 text-xs text-texto-suave">
                     {item.vencidos} vencidos desde {formatarData(item.corteEm)} | {item.diasRetencao} dias
                   </p>

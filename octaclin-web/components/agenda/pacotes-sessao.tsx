@@ -141,7 +141,7 @@ export function PacotesSessao({ pacientes, pacienteIdSugerido, aoMudar }: Pacote
                     <p className="font-semibold">{pacote.titulo}</p>
                     <p className="text-texto-suave">
                       {pacote.sessoesConsumidas} usadas, {pacote.sessoesReservadas} agendadas e{' '}
-                      {pacote.sessoesDisponiveis} disponiveis de {pacote.sessoesContratadas}
+                      {pacote.sessoesDisponiveis} disponíveis de {pacote.sessoesContratadas}
                     </p>
                     <p className="text-texto-suave">
                       {formatarValorBRL(pacote.valorTotalCentavos)} - {ROTULOS_STATUS_PAGAMENTO[pacote.statusPagamento]}

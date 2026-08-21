@@ -42,7 +42,7 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
         </Botao>
         <Botao variante="primario" onClick={salvarQuestionario} disabled={salvando}>
           <Save className="h-4 w-4" />
-          {questionarioAtual ? 'Salvar questionario' : 'Criar questionario'}
+          {questionarioAtual ? 'Salvar questionário' : 'Criar questionário'}
         </Botao>
       </div>
 

@@ -31,7 +31,7 @@ export function AreaRollout({ controlador }: { controlador: PainelOperacoesContr
     if (areaAtiva !== 'rollout') return;
     void listarTenantsOnboarding()
       .then((resultado) => setTenants(resultado.itens.filter((tenant) => tenant.cicloVidaStatus !== 'encerrado')))
-      .catch((erroAtual) => setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar clinicas.'));
+      .catch((erroAtual) => setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar clínicas.'));
   }, [areaAtiva]);
 
   useEffect(() => {

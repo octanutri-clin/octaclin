@@ -19,7 +19,7 @@ import {
 } from '@/lib/onboarding-operacoes-api';
 
 const estados: Record<StatusCicloVidaTenant, StatusEtiquetaConfig> = {
-  ativo_assistido: { rotulo: 'Ativacao assistida', variante: 'primaria' },
+  ativo_assistido: { rotulo: 'Ativação assistida', variante: 'primaria' },
   primeiro_uso_validado: { rotulo: 'Primeiro uso validado', variante: 'primaria' },
   acompanhamento_48h: { rotulo: 'Acompanhamento 48h', variante: 'alerta' },
   ativo: { rotulo: 'Ativo', variante: 'sucesso' },
@@ -85,7 +85,7 @@ export function AreaOnboarding({ ativa }: { ativa: boolean }) {
       const resposta = await listarTenantsOnboarding();
       setTenants(resposta.itens);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar clinicas.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar clínicas.');
     } finally {
       setCarregando(false);
     }
@@ -119,7 +119,7 @@ export function AreaOnboarding({ ativa }: { ativa: boolean }) {
       setFormulario(formularioInicial);
       await carregar();
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao provisionar clinica.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao provisionar clínica.');
     } finally {
       setSalvando(false);
     }
@@ -171,7 +171,7 @@ export function AreaOnboarding({ ativa }: { ativa: boolean }) {
 
       <div className="grid gap-3 sm:grid-cols-3">
         {[
-          { rotulo: 'Em ativacao', valor: totais.ativacao, icone: Clock3 },
+          { rotulo: 'Em ativação', valor: totais.ativacao, icone: Clock3 },
           { rotulo: 'Ativos', valor: totais.ativos, icone: CheckCircle2 },
           { rotulo: 'Suspensos', valor: totais.suspensos, icone: PauseCircle }
         ].map((item) => (
@@ -212,7 +212,7 @@ export function AreaOnboarding({ ativa }: { ativa: boolean }) {
         <div className="divide-y divide-linha">
           {tenants.length ? tenants.map((tenant) => (
             <article key={tenant.id} className="grid gap-3 px-4 py-4 xl:grid-cols-[1.25fr_0.8fr_1fr] xl:items-center">
-              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong className="truncate text-sm">{tenant.nome}</strong><EtiquetaStatus status={tenant.cicloVidaStatus} mapa={estados} /></div><p className="mt-1 text-xs text-texto-suave">{tenant.slug} | {tenant.planoId} | {tenant.assinaturaStatus}</p><p className="mt-1 text-xs text-texto-suave">Proprietario: {tenant.proprietarioEmailMascarado ?? 'nao localizado'} | convite {tenant.conviteStatus ?? 'sem registro'}</p></div>
+              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong className="truncate text-sm">{tenant.nome}</strong><EtiquetaStatus status={tenant.cicloVidaStatus} mapa={estados} /></div><p className="mt-1 text-xs text-texto-suave">{tenant.slug} | {tenant.planoId} | {tenant.assinaturaStatus}</p><p className="mt-1 text-xs text-texto-suave">Proprietario: {tenant.proprietarioEmailMascarado ?? 'não localizado'} | convite {tenant.conviteStatus ?? 'sem registro'}</p></div>
               <div className="text-xs text-texto-suave"><p>Referencia: {tenant.provisionamentoReferencia ?? 'legado'}</p><p className="mt-1">Atualizado: {formatarData(tenant.atualizadoEm)}</p></div>
               <div className="flex flex-wrap gap-2 xl:justify-end">{acoesDisponiveis(tenant.cicloVidaStatus).map((acao) => <Botao key={acao} type="button" tamanho="sm" variante={acao === 'encerrar' || acao === 'iniciar_encerramento' ? 'perigo' : acao === 'suspender' ? 'secundario' : 'primario'} onClick={() => abrirConfirmacao(tenant, acao)}>{acao === 'suspender' ? <PauseCircle size={15} /> : acao === 'reativar' ? <PlayCircle size={15} /> : acao.includes('encerr') ? <Archive size={15} /> : <CheckCircle2 size={15} />}{rotulosAcao[acao]}</Botao>)}</div>
             </article>
@@ -220,7 +220,7 @@ export function AreaOnboarding({ ativa }: { ativa: boolean }) {
         </div>
       </Cartao>
 
-      <Modal aberto={Boolean(confirmacao)} aoFechar={fecharConfirmacao} titulo={confirmacao ? rotulosAcao[confirmacao.acao] : 'Confirmar acao'} descricao={confirmacao ? `Clinica: ${confirmacao.tenant.nome}` : undefined}>
+      <Modal aberto={Boolean(confirmacao)} aoFechar={fecharConfirmacao} titulo={confirmacao ? rotulosAcao[confirmacao.acao] : 'Confirmar ação'} descricao={confirmacao ? `Clinica: ${confirmacao.tenant.nome}` : undefined}>
         <div className="grid gap-4">
           <div><Rotulo htmlFor="onboarding-motivo">Motivo operacional</Rotulo><Campo id="onboarding-motivo" maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Registre o contexto desta decisao" /></div>
           {confirmacao?.acao === 'encerrar' ? <><div><Rotulo htmlFor="onboarding-protocolo-exportacao">Protocolo da exportacao entregue</Rotulo><Campo id="onboarding-protocolo-exportacao" required pattern="[a-zA-Z0-9][a-zA-Z0-9._/-]*" maxLength={120} value={protocoloExportacao} onChange={(e) => setProtocoloExportacao(e.target.value)} placeholder="EXP-2026-001" /></div><label className="flex min-h-11 items-start gap-3 rounded-md border border-perigo-borda bg-perigo-suave p-3 text-sm"><input type="checkbox" className="mt-1 h-4 w-4" checked={exportacaoConfirmada} onChange={(e) => setExportacaoConfirmada(e.target.checked)} /><span>Confirmo que a exportacao foi entregue e que o encerramento revogara todos os acessos deste tenant.</span></label></> : null}

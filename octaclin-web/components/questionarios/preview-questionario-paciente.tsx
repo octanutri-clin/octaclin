@@ -32,7 +32,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
     <section className="border border-linha bg-white">
       <div className="border-b border-linha px-4 py-3">
         <p className="text-xs font-semibold uppercase text-texto-suave">Preview do paciente</p>
-        <h2 className="mt-1 text-lg font-semibold text-tinta">{titulo || 'Formulario sem titulo'}</h2>
+        <h2 className="mt-1 text-lg font-semibold text-tinta">{titulo || 'Formulário sem título'}</h2>
         {descricao ? <p className="mt-1 text-sm text-texto-suave">{descricao}</p> : null}
       </div>
 

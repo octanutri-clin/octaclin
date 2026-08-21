@@ -30,7 +30,7 @@ export function AreaAuditoria({ controlador }: { controlador: PainelOperacoesCon
       <CartaoCabecalho className="flex-col items-start lg:flex-row lg:items-center">
         <div className="flex items-center gap-2">
           <History size={19} className="text-primaria" />
-          <h2 className="text-base font-semibold">Auditoria sensivel</h2>
+          <h2 className="text-base font-semibold">Auditoria sensível</h2>
           <span className="text-sm text-texto-suave">{dados?.auditoria.length ?? 0} eventos</span>
         </div>
         <form onSubmit={filtrarAuditoria} className="grid gap-2 md:grid-cols-3 lg:grid-cols-8">
@@ -69,7 +69,7 @@ export function AreaAuditoria({ controlador }: { controlador: PainelOperacoesCon
             className="h-9 rounded-md border border-linha px-2 text-sm"
             value={filtrosAuditoria.inicio}
             onChange={(evento) => setFiltrosAuditoria((atual) => ({ ...atual, inicio: evento.target.value }))}
-            aria-label="Inicio"
+            aria-label="Início"
           />
           <input
             type="datetime-local"

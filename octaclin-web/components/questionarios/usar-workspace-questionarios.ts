@@ -70,8 +70,8 @@ function configuracaoPadrao(tipo: TipoPergunta): Record<string, unknown> {
 
 function opcoesPadraoMultipla() {
   return [
-    { rotulo: 'Opcao 1', valor: 'opcao_1', ordem: 1 },
-    { rotulo: 'Opcao 2', valor: 'opcao_2', ordem: 2 }
+    { rotulo: 'Opção 1', valor: 'opcao_1', ordem: 1 },
+    { rotulo: 'Opção 2', valor: 'opcao_2', ordem: 2 }
   ];
 }
 
@@ -222,7 +222,7 @@ export function useWorkspaceQuestionarios() {
       setLeituraClinica(leitura);
       setRespostasRecebidas(leitura.respostas);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar respostas do formulario.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar respostas do formulário.');
     } finally {
       setCarregandoRespostas(false);
     }
@@ -304,7 +304,7 @@ export function useWorkspaceQuestionarios() {
         setLeituraClinica(null);
       }
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar questionarios.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar questionários.');
     } finally {
       setCarregando(false);
     }
@@ -329,7 +329,7 @@ export function useWorkspaceQuestionarios() {
       setPaginaQuestionarios(pagina);
       await selecionarQuestionario(resposta.itens[0] ?? null, true);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar questionarios.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar questionários.');
     } finally {
       setCarregando(false);
     }
@@ -338,7 +338,7 @@ export function useWorkspaceQuestionarios() {
   async function criarNovoQuestionario() {
     const profissionalId = profissionais[0]?.id;
     if (!profissionalId) {
-      setErro('Cadastre um profissional antes de criar questionarios.');
+      setErro('Cadastre um profissional antes de criar questionários.');
       setSucesso(null);
       return;
     }
@@ -352,9 +352,9 @@ export function useWorkspaceQuestionarios() {
       setQuestionarios(atualizados);
       setTotalQuestionarios((total) => total + 1);
       await selecionarQuestionario(criado);
-      setSucesso('Questionario criado.');
+      setSucesso('Questionário criado.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar questionario.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar questionário.');
     } finally {
       setSalvando(false);
     }
@@ -373,9 +373,9 @@ export function useWorkspaceQuestionarios() {
       setQuestionarioAtual(atualizado);
       setQuestionarios((atuais) => atuais.map((item) => (item.id === atualizado.id ? atualizado : item)));
       setAlteracoesQuestionarioPendentes(false);
-      setSucesso('Questionario salvo.');
+      setSucesso('Questionário salvo.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar questionario.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar questionário.');
     } finally {
       setSalvando(false);
     }
@@ -392,9 +392,9 @@ export function useWorkspaceQuestionarios() {
       setQuestionarios((atuais) => [duplicado, ...atuais]);
       setTotalQuestionarios((total) => total + 1);
       await selecionarQuestionario(duplicado);
-      setSucesso('Questionario duplicado.');
+      setSucesso('Questionário duplicado.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao duplicar questionario.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao duplicar questionário.');
     } finally {
       setSalvando(false);
     }
@@ -418,7 +418,7 @@ export function useWorkspaceQuestionarios() {
       await selecionarQuestionario(criado);
       setSucesso(`Modelo aplicado: ${modelo.titulo}.`);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar questionario a partir do modelo.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar questionário a partir do modelo.');
     } finally {
       setSalvando(false);
     }
@@ -426,7 +426,7 @@ export function useWorkspaceQuestionarios() {
 
   async function adicionarPergunta() {
     if (!questionarioAtual) {
-      setErro('Crie um questionario antes de adicionar perguntas.');
+      setErro('Crie um questionário antes de adicionar perguntas.');
       setSucesso(null);
       return;
     }
@@ -498,7 +498,7 @@ export function useWorkspaceQuestionarios() {
 
   async function agendar(recorrencia: { regraCron?: string; dataFixa?: string }) {
     if (!questionarioAtual) {
-      setErro('Crie um questionario antes de agendar.');
+      setErro('Crie um questionário antes de agendar.');
       setSucesso(null);
       return;
     }
@@ -544,10 +544,10 @@ export function useWorkspaceQuestionarios() {
       setQuestionarioAtual(atualizado);
       setQuestionarios((atuais) => atuais.map((item) => (item.id === atualizado.id ? atualizado : item)));
       setAlteracoesQuestionarioPendentes(false);
-      setSucesso('Questionario arquivado.');
+      setSucesso('Questionário arquivado.');
       setConfirmandoArquivarQuestionario(false);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao arquivar questionario.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao arquivar questionário.');
     } finally {
       setSalvando(false);
     }
@@ -588,7 +588,7 @@ export function useWorkspaceQuestionarios() {
 
   async function gerarLinkFormulario() {
     if (!questionarioAtual) {
-      setErro('Crie um questionario antes de gerar link.');
+      setErro('Crie um questionário antes de gerar link.');
       setSucesso(null);
       return;
     }
@@ -604,9 +604,9 @@ export function useWorkspaceQuestionarios() {
     try {
       const envio = await criarEnvioQuestionario(questionarioAtual.id, { pacienteId: pacienteEnvioId });
       setLinkFormulario(envio.linkFormulario);
-      setSucesso('Link do formulario gerado.');
+      setSucesso('Link do formulário gerado.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao gerar link do formulario.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao gerar link do formulário.');
     } finally {
       setSalvando(false);
     }

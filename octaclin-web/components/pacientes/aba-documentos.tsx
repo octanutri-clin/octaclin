@@ -173,7 +173,7 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
         await carregar();
         return;
       }
-      setErro(MOTIVO_ENVIO[resultado.motivo ?? ''] ?? 'Envio nao realizado.');
+      setErro(MOTIVO_ENVIO[resultado.motivo ?? ''] ?? 'Envio não realizado.');
     } catch (erroAtual) {
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível enviar o documento.'));
     }
@@ -269,9 +269,9 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
                   {tipo === 'recibo_consulta'
                     ? opcoesConsulta.length === 0
                       ? 'Nenhuma consulta com pagamento registrado nos ultimos 30 dias. Registre o pagamento na agenda antes de emitir o recibo.'
-                      : 'A lista traz apenas consultas com pagamento registrado. Consulta paga por pacote nao gera recibo proprio.'
+                      : 'A lista traz apenas consultas com pagamento registrado. Consulta paga por pacote não gera recibo proprio.'
                     : semConsultaConcluida
-                      ? 'Nenhuma consulta concluida ate agora. A declaracao so sai de consulta ja concluida.'
+                      ? 'Nenhuma consulta concluída até agora. A declaração só sai de consulta já concluída.'
                       : 'A lista traz apenas consultas concluidas.'}
                 </p>
               ) : null}

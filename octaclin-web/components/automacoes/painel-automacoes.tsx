@@ -198,7 +198,7 @@ export function PainelAutomacoes() {
         pacienteId: atual.pacienteId || bootstrap.pacientes.itens[0]?.id || ''
       }));
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar automacoes.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar automações.');
     } finally {
       setCarregando(false);
     }
@@ -266,7 +266,7 @@ export function PainelAutomacoes() {
         }
       });
       setExecucoes((atuais) => [execucao, ...atuais].slice(0, 8));
-      setSucesso(execucao.resultado.executar ? 'Simulacao concluida: a regra seria executada.' : 'Simulacao concluida: as condicoes nao foram atendidas.');
+      setSucesso(execucao.resultado.executar ? 'Simulação concluída: a regra seria executada.' : 'Simulação concluída: as condições não foram atendidas.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao simular regra.');
     } finally {
@@ -284,8 +284,8 @@ export function PainelAutomacoes() {
       const total = Number(execucao.resultado.totalCandidatos ?? 0);
       setSucesso(
         total
-          ? `Simulacao concluida: ${total} paciente(s) seriam contatados. Confira a lista antes de ativar.`
-          : 'Simulacao concluida: nenhum paciente seria contatado agora.'
+          ? `Simulação concluída: ${total} paciente(s) seriam contatados. Confira a lista antes de ativar.`
+          : 'Simulação concluída: nenhum paciente seria contatado agora.'
       );
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao simular recall.');
@@ -484,7 +484,7 @@ export function PainelAutomacoes() {
           </div>
           <p className="mt-3 rounded-md border border-linha bg-fundo px-3 py-2 text-sm text-texto-suave">
             {gatilhoInatividadeSelecionado
-              ? 'O recall so alcanca pacientes deste profissional que aceitam receber mensagens. Simule para ver a lista exata antes de ativar.'
+              ? 'O recall só alcanca pacientes deste profissional que aceitam receber mensagens. Simule para ver a lista exata antes de ativar.'
               : 'Toda regra nova fica em rascunho. Simule o resultado antes de ativar.'}
           </p>
           <div className="mt-3 flex justify-end">
@@ -645,7 +645,7 @@ export function PainelAutomacoes() {
               execucoes.map((execucao) => (
                 <div key={execucao.id} className="grid gap-2 px-4 py-3 text-sm">
                   <div className="flex items-center justify-between gap-3">
-                    <strong className="truncate">{execucao.resultado.simulacao === true ? 'Simulacao' : 'Execucao'}</strong>
+                    <strong className="truncate">{execucao.resultado.simulacao === true ? 'Simulação' : 'Execução'}</strong>
                     <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-texto-suave">
                       {execucao.status}
                     </span>

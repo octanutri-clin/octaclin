@@ -82,7 +82,7 @@ test('paleta respeita permissao, busca paciente e funciona por teclado', async (
   const campo = dialogo.getByRole('combobox');
   await expect(dialogo).toBeVisible();
   await expect(campo).toBeFocused();
-  await expect(dialogo.getByRole('option', { name: /Operacoes/ })).toHaveCount(0);
+  await expect(dialogo.getByRole('option', { name: /Operações/ })).toHaveCount(0);
   await expect(dialogo.getByRole('option', { name: /Novo paciente/ })).toHaveCount(0);
 
   await campo.fill('Ana');

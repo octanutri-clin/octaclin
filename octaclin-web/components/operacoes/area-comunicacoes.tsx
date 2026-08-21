@@ -83,7 +83,7 @@ export function AreaComunicacoes({ controlador }: { controlador: PainelOperacoes
           className="h-9 rounded-md border border-linha px-2 text-sm"
           value={filtrosFalhasComunicacao.inicio}
           onChange={(evento) => setFiltrosFalhasComunicacao((atual) => ({ ...atual, inicio: evento.target.value }))}
-          aria-label="Inicio falhas comunicação"
+          aria-label="Início falhas comunicação"
         />
         <input
           type="datetime-local"
@@ -111,7 +111,7 @@ export function AreaComunicacoes({ controlador }: { controlador: PainelOperacoes
                     {rotuloOrigemFalha(falha.origem)}
                   </span>
                 </div>
-                <p className="mt-1 break-words text-sm text-texto-suave">{falha.erro ?? 'Erro nao informado'}</p>
+                <p className="mt-1 break-words text-sm text-texto-suave">{falha.erro ?? 'Erro não informado'}</p>
                 <p className="mt-1 break-all text-xs text-texto-suave">{falha.resumo ?? falha.referenciaId}</p>
               </div>
               <div className="text-xs text-texto-suave">

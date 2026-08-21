@@ -249,7 +249,7 @@ test.describe('Fase 248 - estados e recuperacao clinica', () => {
 
     await expect(page.getByRole('heading', { name: 'Não foi possível carregar a agenda' })).toBeVisible();
     await expect(page.getByText('Internal server error')).toHaveCount(0);
-    await expect(page.getByText('/interno/nao-expor')).toHaveCount(0);
+    await expect(page.getByText('/interno/não-expor')).toHaveCount(0);
     controle.permitirRecuperacao();
     await page.getByRole('button', { name: 'Tentar novamente' }).click();
 

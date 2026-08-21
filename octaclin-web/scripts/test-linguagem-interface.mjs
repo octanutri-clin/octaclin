@@ -5,14 +5,14 @@ import { auditarCodigoInterface, corrigirCodigoInterface } from './linguagem-int
 
 const raiz = process.cwd();
 const corrigir = process.argv.includes('--fix');
-const pastas = ['app', 'components'];
+const pastas = ['app', 'components', 'tests/visual'];
 
 function listarTsx(diretorio) {
   if (!fs.existsSync(diretorio)) return [];
   return fs.readdirSync(diretorio, { withFileTypes: true }).flatMap((item) => {
     const destino = path.join(diretorio, item.name);
     if (item.isDirectory()) return listarTsx(destino);
-    return item.isFile() && destino.endsWith('.tsx') ? [destino] : [];
+    return item.isFile() && (destino.endsWith('.tsx') || destino.endsWith('.ts') || destino.endsWith('.mjs')) ? [destino] : [];
   });
 }
 

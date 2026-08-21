@@ -617,7 +617,7 @@ export function ListaPacientes() {
                           onClick={() => void convidar(paciente)}
                           disabled={Boolean(paciente.usuarioId) || convidandoId === paciente.id}
                           aria-label="Convidar paciente"
-                          title={paciente.usuarioId ? 'Paciente ja possui acesso' : 'Convidar paciente'}
+                          title={paciente.usuarioId ? 'Paciente já possui acesso' : 'Convidar paciente'}
                         >
                           <KeyRound size={16} />
                         </Botao>

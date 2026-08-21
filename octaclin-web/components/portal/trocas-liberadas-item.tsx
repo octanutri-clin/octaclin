@@ -120,7 +120,7 @@ export function TrocasLiberadasItem({ item, descricaoPorcao }: TrocasLiberadasIt
           className="mt-1 print:hidden"
           onClick={() => definirExpandida(true)}
         >
-          Ver mais {recolhidas} {recolhidas === 1 ? 'opcao' : 'opcoes'}
+          Ver mais {recolhidas} {recolhidas === 1 ? 'opção' : 'opções'}
         </Botao>
       ) : null}
 

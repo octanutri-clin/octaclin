@@ -27,7 +27,7 @@ const conteudoFalha: Record<TipoFalhaToken, { titulo: string; mensagem: string; 
   },
   expirado: {
     titulo: 'Convite expirado',
-    mensagem: 'Solicite um novo acesso para proteger seus dados e concluir a ativacao.',
+    mensagem: 'Solicite um novo acesso para proteger seus dados e concluir a ativação.',
     detalhe: 'Por segurança, links antigos deixam de funcionar automaticamente.'
   },
   nao_encontrado: {

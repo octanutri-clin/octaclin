@@ -330,7 +330,7 @@ function atualizarPortalComCheckin(
 }
 
 const linksPortal = [
-  { href: '/portal', rotulo: 'Inicio' },
+  { href: '/portal', rotulo: 'Início' },
   { href: '/portal/agenda', rotulo: 'Agenda' },
   { href: '/portal/checkins', rotulo: 'Check-ins' },
   { href: '/portal/plano', rotulo: 'Plano' },
@@ -342,7 +342,7 @@ const linksPortal = [
 ];
 
 const linksPortalMobile = [
-  { href: '/portal', rotulo: 'Inicio', icone: HeartPulse },
+  { href: '/portal', rotulo: 'Início', icone: HeartPulse },
   { href: '/portal/agenda', rotulo: 'Agenda', icone: CalendarDays },
   { href: '/portal/plano', rotulo: 'Plano', icone: Target },
   { href: '/portal/checkins', rotulo: 'Check-ins', icone: SmilePlus },
@@ -468,7 +468,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
       setDetalheFormulario(detalhe);
     } catch (erroAtual) {
       if (!ehAtual()) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar formulario respondido.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar formulário respondido.');
     } finally {
       if (ehAtual()) setCarregandoDetalheId(null);
     }
@@ -494,7 +494,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
       setFormularioCheckin(formularioCheckinInicial);
       setSucesso(resultado.estado === 'enviado'
         ? 'Check-in registrado.'
-        : 'Check-in salvo neste dispositivo. Ele sera enviado quando a conexao voltar.');
+        : 'Check-in salvo neste dispositivo. Ele será enviado quando a conexão voltar.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar check-in.');
     } finally {
@@ -575,9 +575,9 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
       });
       setDetalhesSolicitacaoLgpd('');
       await carregar();
-      setSucesso(`Solicitacao LGPD registrada: ${solicitacao.protocolo}.`);
+      setSucesso(`Solicitação LGPD registrada: ${solicitacao.protocolo}.`);
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar solicitacao LGPD.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar solicitação LGPD.');
     } finally {
       setSolicitandoLgpd(false);
     }
@@ -1008,7 +1008,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
             {secao === 'mais' ? (
               <Cartao>
                 <CartaoCabecalho>
-                  <CartaoTitulo icone={<Menu className="h-4 w-4" />}>Mais opcoes</CartaoTitulo>
+                  <CartaoTitulo icone={<Menu className="h-4 w-4" />}>Mais opções</CartaoTitulo>
                 </CartaoCabecalho>
                 <CartaoConteudo className="grid gap-3 sm:grid-cols-2">
                   {linksPortal.slice(4, 8).map((item) => (
@@ -1131,7 +1131,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                         </select>
                       </label>
                       <label className="grid gap-1 text-xs font-medium text-texto-suave">
-                        Inicio
+                        Início
                         <input
                           type="time"
                           className={classeCampo}
@@ -1251,7 +1251,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                           <div key={resposta.perguntaId} className="rounded-md border border-linha bg-superficie p-3">
                             <dt className="flex flex-wrap items-start justify-between gap-2 text-sm font-semibold">
                               <span>{resposta.enunciado}</span>
-                              <Etiqueta>{resposta.obrigatoria ? 'Obrigatoria' : 'Opcional'}</Etiqueta>
+                              <Etiqueta>{resposta.obrigatoria ? 'Obrigatória' : 'Opcional'}</Etiqueta>
                             </dt>
                             <dd className="mt-2 break-words text-sm text-texto-suave">{formatarValor(resposta.valor)}</dd>
                           </div>
@@ -1280,8 +1280,8 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                             <p className="mt-2 text-sm text-texto-suave">
                               Consulta online.{' '}
                               {consulta.linkTeleconsulta
-                                ? 'A sala ja esta aberta.'
-                                : 'O link para entrar aparece aqui 1 hora antes do horario.'}
+                                ? 'A sala já esta aberta.'
+                                : 'O link para entrar aparece aqui 1 hora antes do horário.'}
                             </p>
                           ) : consulta.local ? (
                             <p className="mt-2 text-sm text-texto-suave">{consulta.local}</p>
@@ -1420,7 +1420,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                       />
                     </label>
                     <Botao type="submit" variante="primario" disabled={solicitandoLgpd}>
-                      {solicitandoLgpd ? 'Enviando' : 'Enviar solicitacao LGPD'}
+                      {solicitandoLgpd ? 'Enviando' : 'Enviar solicitação LGPD'}
                     </Botao>
                   </form>
                   <div className="grid gap-2">
@@ -1495,7 +1495,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-base font-semibold">Portal indisponível</h2>
-                  <p className="mt-1 break-words text-sm text-texto-suave">{erroCarregamento ?? 'Nao foi possivel carregar suas informacoes.'}</p>
+                  <p className="mt-1 break-words text-sm text-texto-suave">{erroCarregamento ?? 'Não foi possível carregar suas informações.'}</p>
                 </div>
               </div>
               <div>

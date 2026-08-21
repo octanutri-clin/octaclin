@@ -69,7 +69,7 @@ export function PortalCliente() {
           identificador="conta-cliente"
           rotulo="Áreas da conta"
           abas={[
-            { id: 'ativacao', rotulo: 'Ativacao' },
+            { id: 'ativacao', rotulo: 'Ativação' },
             { id: 'assinatura', rotulo: 'Assinatura' },
             { id: 'consumo', rotulo: 'Consumo' },
             ...(podeLerFinanceiro ? [{ id: 'financeiro', rotulo: 'Financeiro' }] : []),
@@ -93,7 +93,7 @@ export function PortalCliente() {
 
       <ModalConfirmacao
         aberto={confirmacaoUsuario !== null}
-        titulo={confirmacaoUsuario?.tipo === 'revogar' ? 'Revogar convite' : 'Desativar usuario'}
+        titulo={confirmacaoUsuario?.tipo === 'revogar' ? 'Revogar convite' : 'Desativar usuário'}
         mensagem={
           confirmacaoUsuario
             ? confirmacaoUsuario.tipo === 'revogar'

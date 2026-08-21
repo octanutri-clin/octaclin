@@ -530,7 +530,7 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
         <div>
           <p className="text-sm font-semibold text-tinta">{rotulo}</p>
           <p className="text-xs text-texto-suave">
-            {valor.alimentoComposicaoId ? valor.fonteRotulo ?? 'Catalogo nutricional' : 'Composicao informada manualmente'}
+            {valor.alimentoComposicaoId ? valor.fonteRotulo ?? 'Catálogo nutricional' : 'Composição informada manualmente'}
           </p>
         </div>
         {aoRemover ? (
@@ -604,8 +604,8 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
                           valores diferentes entre tabelas, e a escolha e clinica. */}
                       {[alimento.preparacao, alimento.fonte ? `${alimento.fonte.nome} ${alimento.fonte.versao}` : null]
                         .filter(Boolean)
-                        .join(' - ') || 'Catalogo nutricional'}
-                      {!alimento.disponivelParaCalculo ? ' - composicao incompleta' : ''}
+                        .join(' - ') || 'Catálogo nutricional'}
+                      {!alimento.disponivelParaCalculo ? ' - composição incompleta' : ''}
                     </span>
                   </button>
                 </li>
@@ -1095,11 +1095,11 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                 >
                   <span className="block break-words text-sm font-semibold text-tinta">{item.titulo}</span>
                   <span className="mt-1 block text-xs text-texto-suave">
-                    {item.draft ? `Rascunho v${item.draft.numero}` : item.current ? `Publicado v${item.current.numero}` : 'Sem versao publicada'}
+                    {item.draft ? `Rascunho v${item.draft.numero}` : item.current ? `Publicado v${item.current.numero}` : 'Sem versão publicada'}
                   </span>
                 </button>
               ))}
-              {!planos.length ? <EstadoVazio titulo="Nenhum plano alimentar" descricao={podeGerenciar ? 'Crie o primeiro plano para iniciar o cuidado nutricional.' : 'Ainda nao existe plano disponivel para consulta.'} /> : null}
+              {!planos.length ? <EstadoVazio titulo="Nenhum plano alimentar" descricao={podeGerenciar ? 'Crie o primeiro plano para iniciar o cuidado nutricional.' : 'Ainda não existe plano disponível para consulta.'} /> : null}
             </CartaoConteudo>
           </Cartao>
 
@@ -1122,7 +1122,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
             {alterado ? <div role="status" className="rounded-md border border-alerta-borda bg-alerta-suave px-4 py-3 text-sm text-alerta-forte">Existem alterações não salvas neste rascunho.</div> : null}
           </div>
 
-          {!plano ? <EstadoVazio titulo={podeGerenciar ? 'Selecione ou crie um plano' : 'Selecione um plano'} descricao={podeGerenciar ? 'O editor sera exibido depois que um plano alimentar for selecionado.' : 'O conteudo sera exibido somente para consulta.'} /> : null}
+          {!plano ? <EstadoVazio titulo={podeGerenciar ? 'Selecione ou crie um plano' : 'Selecione um plano'} descricao={podeGerenciar ? 'O editor será exibido depois que um plano alimentar for selecionado.' : 'O conteúdo será exibido somente para consulta.'} /> : null}
 
           {plano ? (
             <>
@@ -1205,7 +1205,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       <span>O paciente possui condicao especial que exige justificativa clínica.</span>
                     </label>
                     {formulario.possuiCondicaoEspecial ? <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Justificativa da condicao especial<AreaTexto value={formulario.justificativaCondicaoEspecial} onChange={(evento) => atualizar((atual) => ({ ...atual, justificativaCondicaoEspecial: evento.target.value }))} maxLength={2000} required /></label> : null}
-                    {formulario.possuiCondicaoEspecial ? <AlertaOperacional mensagem="O cálculo automático deste MVP não atende condicoes especiais. Registre a justificativa e use uma conduta individual fora deste fluxo." /> : null}
+                    {formulario.possuiCondicaoEspecial ? <AlertaOperacional mensagem="O cálculo automático deste MVP não atende condições especiais. Registre a justificativa e use uma conduta individual fora deste fluxo." /> : null}
                   </fieldset>
 
                   <fieldset className="grid gap-3 rounded-md border border-linha bg-white p-4">
@@ -1334,7 +1334,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
               )) : (
                 <div className="grid gap-4">
                   <div role="status" className="rounded-md border border-linha bg-superficie px-4 py-3 text-sm text-texto-suave">
-                    Acesso somente para consulta. A edição e a publicação dependem da permissão de gestao de planos alimentares.
+                    Acesso somente para consulta. A edição e a públicação dependem da permissão de gestao de planos alimentares.
                   </div>
                   {plano.current || plano.draft ? (
                     <ResumoVersao plano={plano} versao={plano.current ?? plano.draft!} />

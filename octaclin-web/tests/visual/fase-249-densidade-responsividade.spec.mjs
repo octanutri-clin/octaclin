@@ -115,7 +115,7 @@ async function prepararConsole(page) {
           proximaConsulta: consulta,
           proximaConduta: {
             titulo: 'Revisar plano alimentar',
-            descricao: 'Confirmar adesao e ajustar distribuicao das refeicoes.',
+            descricao: 'Confirmar adesão e ajustar distribuição das refeições.',
             dataReferencia: '2026-08-24T13:00:00.000Z'
           }
         },

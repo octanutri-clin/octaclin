@@ -151,7 +151,7 @@ test('BFF interno expõe estado explicito quando o token atual nao pode ser reco
     assert.equal(corpo.urlPublica, null);
     assert.equal(corpo.urlPublicaDisponivel, false);
     assert.equal(corpo.requerRotacaoConfirmada, true);
-    assert.match(corpo.mensagemUrlPublica ?? '', /token bruto nao e persistido/i);
+    assert.match(corpo.mensagemUrlPublica ?? '', /token bruto não é persistido/i);
   } finally {
     restaurarFetch(fetchOriginal);
     __clearCookies();

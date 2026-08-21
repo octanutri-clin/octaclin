@@ -25,3 +25,42 @@ test('preserva caixa ao aplicar acentos', () => {
   const corrigido = corrigirCodigoInterface(codigo, 'teste.tsx');
   assert.match(corrigido, /NÃO há FORMULÁRIOS; Próximos horários/);
 });
+
+test('corrige textos em expressoes condicionais renderizadas no JSX', () => {
+  const codigo = `export const Tela = ({ salvando }) => <button>{salvando ? 'Enviando solicitacao' : 'Confirmar solicitacao'}</button>`;
+  const corrigido = corrigirCodigoInterface(codigo, 'teste.tsx');
+  assert.match(corrigido, /'Enviando solicitação' : 'Confirmar solicitação'/);
+  assert.equal(auditarCodigoInterface(corrigido, 'teste.tsx').length, 0);
+});
+
+test('corrige seletores Playwright sem alterar papeis ou rotas', () => {
+  const codigo = `
+    await page.getByRole('button', { name: 'Confirmar solicitacao' }).click();
+    await expect(page.getByText('Nao foi possivel carregar')).toBeVisible();
+    await page.goto('/nao-alterar-rota');
+  `;
+  const corrigido = corrigirCodigoInterface(codigo, 'teste.spec.mjs');
+  assert.match(corrigido, /getByRole\('button', \{ name: 'Confirmar solicitação' \}\)/);
+  assert.match(corrigido, /getByText\('Não foi possível carregar'\)/);
+  assert.match(corrigido, /goto\('\/nao-alterar-rota'\)/);
+});
+
+test('corrige alternativas condicionais enviadas para feedback visivel', () => {
+  const codigo = `setSucesso(ok ? 'Simulacao concluida' : 'Nao foi possivel concluir')`;
+  const corrigido = corrigirCodigoInterface(codigo, 'teste.tsx');
+  assert.match(corrigido, /'Simulação concluída' : 'Não foi possível concluir'/);
+});
+
+test('preserva identificadores comparados dentro do JSX', () => {
+  const codigo = `export const Tela = ({ area }) => <>{area === 'integracoes' ? <p>Configuracoes</p> : null}</>`;
+  const corrigido = corrigirCodigoInterface(codigo, 'teste.tsx');
+  assert.match(corrigido, /area === 'integracoes'/);
+  assert.match(corrigido, />Configurações</);
+});
+
+test('corrige alternativas de atributos visiveis sem tocar a condicao', () => {
+  const codigo = `export const Tela = ({ visao }) => <button aria-label={visao === 'semana' ? 'Proxima semana' : 'Proximo periodo'} />`;
+  const corrigido = corrigirCodigoInterface(codigo, 'teste.tsx');
+  assert.match(corrigido, /visao === 'semana'/);
+  assert.match(corrigido, /'Próxima semana' : 'Próximo período'/);
+});

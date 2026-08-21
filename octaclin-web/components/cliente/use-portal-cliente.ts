@@ -143,7 +143,7 @@ export function usePortalCliente() {
       if (ehAtual()) setUsuarios(dados);
     } catch (erroAtual) {
       if (signal.aborted || !ehAtual()) return;
-      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar usuarios da conta.');
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar usuários da conta.');
     } finally {
       if (ehAtual()) setCarregandoUsuarios(false);
     }
@@ -175,7 +175,7 @@ export function usePortalCliente() {
       if (ehAtual()) setHistoricoConvites(dados);
     } catch (erroAtual) {
       if (signal.aborted || !ehAtual()) return;
-      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar historico de convites.');
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar histórico de convites.');
     } finally {
       if (ehAtual()) setCarregandoHistoricoConvites(false);
     }
@@ -199,7 +199,7 @@ export function usePortalCliente() {
       });
     } catch (erroAtual) {
       if (signal.aborted || !ehAtual()) return;
-      setErroConfiguracoes(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar configuracoes da conta.');
+      setErroConfiguracoes(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar configurações da conta.');
     } finally {
       if (ehAtual()) setCarregandoConfiguracoes(false);
     }
@@ -258,7 +258,7 @@ export function usePortalCliente() {
       await carregarHistoricoConvites();
       setSucessoUsuarios('Convite enviado por email.');
     } catch (erroAtual) {
-      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao convidar usuario.');
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao convidar usuário.');
     } finally {
       setSalvandoUsuario(false);
     }
@@ -274,10 +274,10 @@ export function usePortalCliente() {
       await carregarUsuarios();
       await carregarConvites();
       await carregarHistoricoConvites();
-      setSucessoUsuarios('Usuario desativado.');
+      setSucessoUsuarios('Usuário desativado.');
       setConfirmacaoUsuario(null);
     } catch (erroAtual) {
-      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desativar usuario.');
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desativar usuário.');
     } finally {
       setDesativandoUsuarioId(null);
     }
@@ -296,9 +296,9 @@ export function usePortalCliente() {
         ...(role === 'Professional' ? { nomeProfissional: nomesProfissionais[id]?.trim() || undefined } : {})
       });
       await carregarUsuarios();
-      setSucessoUsuarios('Permissoes do usuario atualizadas. O novo acesso vale no proximo login.');
+      setSucessoUsuarios('Permissões do usuário atualizadas. O novo acesso vale no próximo login.');
     } catch (erroAtual) {
-      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar permissoes do usuario.');
+      setErroUsuarios(erroAtual instanceof Error ? erroAtual.message : 'Falha ao atualizar permissões do usuário.');
     } finally {
       setAjustandoUsuarioId(null);
     }
@@ -360,9 +360,9 @@ export function usePortalCliente() {
         ...(planoDesejado ? { planoDesejado } : {}),
         observacao: 'Solicitacao feita pelo portal do cliente.'
       });
-      setSucessoAssinatura(acao === 'upgrade' ? 'Solicitacao de upgrade enviada.' : 'Solicitacao de revisao enviada.');
+      setSucessoAssinatura(acao === 'upgrade' ? 'Solicitação de upgrade enviada.' : 'Solicitação de revisão enviada.');
     } catch (erroAtual) {
-      setErroAssinatura(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar solicitacao de assinatura.');
+      setErroAssinatura(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar solicitação de assinatura.');
     } finally {
       setEnviandoAssinatura(null);
     }
@@ -394,9 +394,9 @@ export function usePortalCliente() {
         canaisPadrao: atualizadas.canaisPadrao,
         marca: atualizadas.marca
       });
-      setSucessoConfiguracoes('Configuracoes salvas.');
+      setSucessoConfiguracoes('Configurações salvas.');
     } catch (erroAtual) {
-      setErroConfiguracoes(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar configuracoes.');
+      setErroConfiguracoes(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar configurações.');
     } finally {
       setSalvandoConfiguracoes(false);
     }
@@ -510,9 +510,9 @@ export function usePortalCliente() {
         detalhe: resumo ? `Status ${resumo.assinatura.status}` : 'Validando assinatura'
       },
       {
-        rotulo: 'Usuarios ativos',
+        rotulo: 'Usuários ativos',
         valor: resumo
-          ? formatarQuantidade(resumo.usuarios.totalAtivos, 'usuario ativo', 'usuarios ativos')
+          ? formatarQuantidade(resumo.usuarios.totalAtivos, 'usuário ativo', 'usuários ativos')
           : 'Carregando usuarios',
         detalhe: resumo
           ? `${formatarQuantidade(resumo.usuarios.clientes, 'cliente', 'clientes')} na conta`
@@ -526,10 +526,10 @@ export function usePortalCliente() {
   const planoRecomendado = resumo ? obterProximoPlano(resumo.assinatura.planoId) : null;
   const bloqueioAssinatura = assinaturaBloqueada(resumo?.assinatura.status);
   const etapasAtivacao = [
-    { rotulo: 'Dados da clinica', concluida: Boolean(resumo?.conta.nome) },
+    { rotulo: 'Dados da clínica', concluida: Boolean(resumo?.conta.nome) },
     { rotulo: 'Equipe com acesso', concluida: Boolean(usuarios?.total) },
     {
-      rotulo: 'Comunicacoes definidas',
+      rotulo: 'Comunicações definidas',
       concluida: Boolean(configuracoes && Object.values(configuracoes.canaisPadrao).some(Boolean))
     },
     { rotulo: 'Dados fiscais', concluida: Boolean(perfilEmpresa?.nomeLegal) }

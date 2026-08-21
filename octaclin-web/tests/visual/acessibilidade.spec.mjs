@@ -321,7 +321,7 @@ async function prepararDashboardMockado(page) {
           tenantId: 'tenant-1',
           pacienteId: 'paciente-1',
           status: 'recebido',
-          payload: { texto: 'Dra., posso trocar o horario?' },
+          payload: { texto: 'Dra., posso trocar o horário?' },
           criadoEm: '2026-07-22T11:30:00.000Z'
         }
       ])
@@ -369,7 +369,7 @@ async function prepararSessaoCliente(page) {
       body: JSON.stringify({
         conta: {
           tenantId: 'tenant-1',
-          nome: 'Clinica Octa Real',
+          nome: 'Clínica Octa Real',
           slug: 'clinica-octa-real',
           status: 'ativo',
           criadoEm: '2026-07-01T10:00:00.000Z',
@@ -439,13 +439,13 @@ async function prepararSessaoCliente(page) {
       contentType: 'application/json',
       body: JSON.stringify({
         tenantId: 'tenant-1',
-        nome: 'Clinica Octa Real',
+        nome: 'Clínica Octa Real',
         slug: 'clinica-octa-real',
         status: 'ativo',
         timezone: 'America/Sao_Paulo',
         idioma: 'pt-BR',
         canaisPadrao: { email: true, whatsapp: true, googleCalendar: true },
-        marca: { nomeExibido: 'Clinica Octa Real', emailRemetente: 'contato@octaclin.com.br', corPrimaria: '#197d8f' },
+        marca: { nomeExibido: 'Clínica Octa Real', emailRemetente: 'contato@octaclin.com.br', corPrimaria: '#197d8f' },
         atualizadoEm: '2026-07-20T10:00:00.000Z'
       })
     });
@@ -632,7 +632,7 @@ const portalPacienteFixture = {
       },
       {
         tipo: 'politica_privacidade',
-        titulo: 'Politica de privacidade',
+        titulo: 'Política de privacidade',
         versao: '2026-07',
         perfil: 'paciente',
         resumo: 'Como seus dados pessoais e de saude sao tratados.',

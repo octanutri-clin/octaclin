@@ -250,7 +250,7 @@ export function ListaProfissionais() {
         identificador="equipe-clinica"
         rotulo="Áreas da equipe clínica"
         abas={[
-          { id: 'diretorio', rotulo: 'Diretorio' },
+          { id: 'diretorio', rotulo: 'Diretório' },
           { id: 'disponibilidade', rotulo: 'Disponibilidade' },
           { id: 'integracoes', rotulo: 'Integrações' },
           ...(podeGerenciar ? [{ id: 'lixeira', rotulo: 'Lixeira' }] : [])
@@ -453,8 +453,8 @@ export function ListaProfissionais() {
           <div className="flex items-start gap-3 rounded-md border border-linha bg-superficie px-4 py-3 text-sm">
             <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-primaria" />
             <div>
-              <p className="font-semibold">Acesso e permissoes</p>
-              <p className="mt-1 text-texto-suave">Convites e permissoes ficam na área Equipe da conta.</p>
+              <p className="font-semibold">Acesso e permissões</p>
+              <p className="mt-1 text-texto-suave">Convites e permissões ficam na área Equipe da conta.</p>
             </div>
           </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -466,12 +466,12 @@ export function ListaProfissionais() {
                     <h3 className="text-sm font-semibold">{profissional.nome}</h3>
                     <p className="mt-2 text-sm text-texto-suave">
                        {statusGoogleIndisponivel
-                         ? 'Estado da Google Agenda indisponivel'
+                         ? 'Estado da Google Agenda indisponível'
                          : conectado === true
                            ? 'Google Agenda conectada'
                            : conectado === false
                              ? 'Google Agenda desconectada'
-                             : 'Google Agenda nao configurada'}
+                             : 'Google Agenda não configurada'}
                     </p>
                     <p className="mt-1 text-xs text-texto-sutil">A agenda interna continua funcionando independentemente desta integração.</p>
                   </CartaoConteudo>

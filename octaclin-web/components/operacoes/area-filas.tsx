@@ -78,7 +78,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
                     </p>
                   </div>
                   <div className="text-sm text-tinta">
-                    <p>{solicitacao.observacao ?? 'Sem observacao comercial.'}</p>
+                    <p>{solicitacao.observacao ?? 'Sem observação comercial.'}</p>
                     {solicitacao.resolvidoEm ? (
                       <p className="mt-1 text-xs text-texto-suave">Resolvido em {formatarData(solicitacao.resolvidoEm)}</p>
                     ) : null}
@@ -96,7 +96,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
                       </Botao>
                     ) : (
                       <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
-                        {solicitacao.planoAplicadoId ? `Plano ${rotuloPlano(solicitacao.planoAplicadoId)}` : 'Sem acao pendente'}
+                        {solicitacao.planoAplicadoId ? `Plano ${rotuloPlano(solicitacao.planoAplicadoId)}` : 'Sem ação pendente'}
                       </span>
                     )}
                   </div>
@@ -138,7 +138,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
               className="h-9 rounded-md border border-linha px-2 text-sm"
               value={filtrosOutbox.inicio}
               onChange={(evento) => setFiltrosOutbox((atual) => ({ ...atual, inicio: evento.target.value }))}
-              aria-label="Inicio outbox"
+              aria-label="Início outbox"
             />
             <input
               type="datetime-local"
@@ -163,7 +163,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
                         {falha.tentativas} tentativas
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-texto-suave">{falha.erro ?? 'Erro nao informado'}</p>
+                    <p className="mt-1 text-sm text-texto-suave">{falha.erro ?? 'Erro não informado'}</p>
                     <p className="mt-1 break-all text-xs text-texto-suave">{resumirPayload(falha.payload)}</p>
                     <p className="mt-1 text-xs text-texto-suave">{formatarData(falha.criadoEm)}</p>
                   </div>

@@ -294,7 +294,7 @@ export function PaletaComandos({ sessao }: { sessao: SessaoPublica }) {
           </div>
 
           <p className="sr-only" aria-live="polite">
-            {buscandoPacientes ? 'Buscando pacientes.' : erroBusca ? 'Nao foi possivel buscar pacientes.' : `${opcoes.length} resultados.`}
+            {buscandoPacientes ? 'Buscando pacientes.' : erroBusca ? 'Não foi possível buscar pacientes.' : `${opcoes.length} resultados.`}
           </p>
         </div>
       </Modal>

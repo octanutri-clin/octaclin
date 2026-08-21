@@ -158,7 +158,7 @@ export function ImportacaoPacientes({ aberto, profissionais, aoFechar, aoConclui
           />
           <span>
             <strong className="block font-semibold text-texto-forte">Criar convite para o portal</strong>
-            Pacientes cujo contato for um e-mail receberao um link de ativacao no relatório.
+            Pacientes cujo contato for um e-mail receberao um link de ativação no relatório.
           </span>
         </label>
 

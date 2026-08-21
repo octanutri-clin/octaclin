@@ -112,7 +112,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
   if (carregando) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-fundo px-4 text-sm text-texto-suave">
-        Carregando horários disponiveis...
+        Carregando horários disponíveis...
       </main>
     );
   }
@@ -121,7 +121,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-fundo px-4">
         <section className="w-full max-w-xl">
-          <AlertaOperacional mensagem={erro ?? 'Link de agendamento indisponivel.'} />
+          <AlertaOperacional mensagem={erro ?? 'Link de agendamento indisponível.'} />
         </section>
       </main>
     );
@@ -134,9 +134,9 @@ export function FormularioAgendamentoPublico({ token }: Props) {
           <Cartao>
             <CartaoConteudo className="grid gap-3 py-8 text-center">
               <CheckCircle2 size={32} className="mx-auto text-sucesso-forte" />
-              <h1 className="text-2xl font-semibold text-tinta">Solicitação enviada para analise.</h1>
+              <h1 className="text-2xl font-semibold text-tinta">Solicitação enviada para análise.</h1>
               <p className="text-sm text-texto-suave">
-                {horarioSelecionado ? formatarDataHora(horarioSelecionado, agenda.timezone) : 'Horario selecionado'} com{' '}
+                {horarioSelecionado ? formatarDataHora(horarioSelecionado, agenda.timezone) : 'Horário selecionado'} com{' '}
                 {agenda.profissional.nomeExibicao}.
               </p>
               <p className="text-sm text-texto-suave">
@@ -186,7 +186,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
           <Cartao className="min-w-0">
             <CartaoCabecalho className="items-start">
               <div>
-                <h2 className="text-base font-semibold">Horários disponiveis</h2>
+                <h2 className="text-base font-semibold">Horários disponíveis</h2>
                 <p className="mt-1 text-sm text-texto-suave">Escolha um único horário para enviar a solicitação.</p>
               </div>
               <CalendarDays size={20} className="text-primaria" />
@@ -197,7 +197,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
                   <section key={dia.data} className="grid gap-3">
                     <div className="flex items-center justify-between gap-2">
                       <h3 className="text-sm font-semibold text-tinta">{dia.rotulo}</h3>
-                      <span className="text-xs text-texto-suave">{dia.horarios.length} opcoes</span>
+                      <span className="text-xs text-texto-suave">{dia.horarios.length} opções</span>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-3">
                       {dia.horarios.map((horario) => (
@@ -219,7 +219,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
               ) : (
                 <EstadoVazio
                   titulo="Nenhum horário livre"
-                  descricao="Não há horários disponiveis na janela publica atual. Tente novamente mais tarde."
+                  descricao="Não há horários disponíveis na janela pública atual. Tente novamente mais tarde."
                 />
               )}
             </CartaoConteudo>
@@ -230,7 +230,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
           <CartaoCabecalho className="items-start">
             <div>
               <h2 className="text-base font-semibold">Enviar solicitação</h2>
-              <p className="mt-1 text-sm text-texto-suave">Preencha apenas os dados necessarios para a analise do horário.</p>
+              <p className="mt-1 text-sm text-texto-suave">Preencha apenas os dados necessários para a análise do horário.</p>
             </div>
             <Send size={20} className="text-primaria" />
           </CartaoCabecalho>
@@ -239,7 +239,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
               <div className="grid gap-2 rounded-lg border border-linha bg-superficie px-4 py-3" aria-live="polite">
                 <span className="text-xs font-semibold uppercase text-texto-suave">Horário escolhido</span>
                 <span className="text-sm font-medium text-tinta">
-                  {horarioSelecionado ? formatarDataHora(horarioSelecionado, agenda.timezone) : 'Selecione um horario'}
+                  {horarioSelecionado ? formatarDataHora(horarioSelecionado, agenda.timezone) : 'Selecione um horário'}
                 </span>
                 <span className="text-xs text-texto-suave">Fuso horário: {agenda.timezone.replace('_', ' ')}</span>
               </div>
@@ -290,11 +290,11 @@ export function FormularioAgendamentoPublico({ token }: Props) {
               <div className="grid gap-2 rounded-lg border border-linha bg-superficie px-4 py-3 text-sm text-texto-suave">
                 <p className="inline-flex items-center gap-2">
                   <Mail size={16} />
-                  O retorno da equipe sera feito pelo contato informado.
+                  O retorno da equipe será feito pelo contato informado.
                 </p>
                 <p className="inline-flex items-center gap-2">
                   <MessageCircle size={16} />
-                  O horário só sera reservado após a confirmação da equipe.
+                  O horário só será reservado após a confirmação da equipe.
                 </p>
               </div>
 
@@ -318,7 +318,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
       aberto={revisando}
       aoFechar={() => setRevisando(false)}
       titulo="Revise sua solicitação"
-      descricao="Confira os dados antes de enviar. O horário ainda dependera da confirmação da equipe."
+      descricao="Confira os dados antes de enviar. O horário ainda dependerá da confirmação da equipe."
     >
       <dl className="grid gap-3 text-sm">
         <div><dt className="text-xs font-semibold text-texto-suave">Clínica</dt><dd>{agenda.clinica.nome}</dd></div>
@@ -330,7 +330,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
       <div className="mt-5 flex flex-wrap justify-end gap-2">
         <Botao type="button" variante="secundario" onClick={() => setRevisando(false)} disabled={salvando}>Voltar e editar</Botao>
         <Botao type="button" variante="primario" onClick={() => void confirmarSolicitacao()} disabled={salvando}>
-          {salvando ? 'Enviando solicitacao' : 'Confirmar solicitacao'}
+          {salvando ? 'Enviando solicitação' : 'Confirmar solicitação'}
         </Botao>
       </div>
     </Modal>

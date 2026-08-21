@@ -318,18 +318,18 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
                     {qualidade ? rotulosStatusPortal[qualidade.acessoPortal.status] : 'Carregando'}
                   </p>
                 </div>
-                <div><p className="text-xs font-semibold text-texto-suave">E-mail de acesso</p><p className="mt-1 break-all text-sm text-tinta">{qualidade?.acessoPortal.email || perfil.contato?.email || 'Nao informado'}</p></div>
+                <div><p className="text-xs font-semibold text-texto-suave">E-mail de acesso</p><p className="mt-1 break-all text-sm text-tinta">{qualidade?.acessoPortal.email || perfil.contato?.email || 'Não informado'}</p></div>
                 <div><p className="text-xs font-semibold text-texto-suave">Último acesso</p><p className="mt-1 text-sm text-tinta">{formatarDataHora(qualidade?.acessoPortal.ultimoAcessoEm)}</p></div>
-                <div><p className="text-xs font-semibold text-texto-suave">Canal preferido</p><p className="mt-1 text-sm capitalize text-tinta">{qualidade?.acessoPortal.canalPreferido || 'Nao definido'}</p></div>
+                <div><p className="text-xs font-semibold text-texto-suave">Canal preferido</p><p className="mt-1 text-sm capitalize text-tinta">{qualidade?.acessoPortal.canalPreferido || 'Não definido'}</p></div>
               </div>
               {qualidade?.acessoPortal.preferencias ? <div className="rounded-md border border-linha px-3 py-2">
                 <p className="text-xs font-semibold text-texto-suave">Preferências definidas no portal</p>
                 <p className="mt-1 text-xs text-tinta">
-                  E-mail: {qualidade.acessoPortal.preferencias.email === undefined ? 'nao informado' : qualidade.acessoPortal.preferencias.email ? 'permitido' : 'desativado'}
-                  {' - '}WhatsApp: {qualidade.acessoPortal.preferencias.whatsapp === undefined ? 'nao informado' : qualidade.acessoPortal.preferencias.whatsapp ? 'permitido' : 'desativado'}
+                  E-mail: {qualidade.acessoPortal.preferencias.email === undefined ? 'não informado' : qualidade.acessoPortal.preferencias.email ? 'permitido' : 'desativado'}
+                  {' - '}WhatsApp: {qualidade.acessoPortal.preferencias.whatsapp === undefined ? 'não informado' : qualidade.acessoPortal.preferencias.whatsapp ? 'permitido' : 'desativado'}
                   {qualidade.acessoPortal.preferencias.canalPreferido ? ` - Preferencia: ${qualidade.acessoPortal.preferencias.canalPreferido}` : ''}
                 </p>
-                {qualidade.acessoPortal.preferencias.horarioPermitido?.inicio && qualidade.acessoPortal.preferencias.horarioPermitido?.fim ? <p className="mt-1 text-xs text-texto-suave">Janela: {qualidade.acessoPortal.preferencias.horarioPermitido.inicio}-{qualidade.acessoPortal.preferencias.horarioPermitido.fim} - {qualidade.acessoPortal.preferencias.horarioPermitido.timezone || 'fuso nao informado'}</p> : null}
+                {qualidade.acessoPortal.preferencias.horarioPermitido?.inicio && qualidade.acessoPortal.preferencias.horarioPermitido?.fim ? <p className="mt-1 text-xs text-texto-suave">Janela: {qualidade.acessoPortal.preferencias.horarioPermitido.inicio}-{qualidade.acessoPortal.preferencias.horarioPermitido.fim} - {qualidade.acessoPortal.preferencias.horarioPermitido.timezone || 'fuso não informado'}</p> : null}
               </div> : null}
               {qualidade?.acessoPortal.status === 'convite_pendente' ? <p className="text-xs text-texto-suave">Convite atual expira em {formatarDataHora(qualidade.acessoPortal.conviteExpiraEm)}.</p> : null}
               {qualidade?.acessoPortal.aceites.length ? <div>
@@ -362,7 +362,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
       <ModalConfirmacao
         aberto={confirmarRevogacao}
         titulo="Revogar convite pendente"
-        mensagem="O link atual deixara de funcionar imediatamente. O acesso ativo de um paciente que já concluiu o primeiro acesso não sera alterado."
+        mensagem="O link atual deixara de funcionar imediatamente. O acesso ativo de um paciente que já concluiu o primeiro acesso não será alterado."
         rotuloConfirmar="Revogar convite"
         confirmando={salvando === 'revogar-portal'}
         aoConfirmar={() => void revogarConvitePortal()}

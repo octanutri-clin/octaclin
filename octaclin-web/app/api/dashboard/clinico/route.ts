@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     const periodoSolicitado = request.nextUrl.searchParams.get('periodo') ?? 'hoje';
     if (!periodosValidos.has(periodoSolicitado)) {
-      return NextResponse.json({ mensagem: 'Periodo clinico invalido.' }, { status: 400 });
+      return NextResponse.json({ mensagem: 'Período clínico invalido.' }, { status: 400 });
     }
 
     const parametros = new URLSearchParams({ periodo: periodoSolicitado });

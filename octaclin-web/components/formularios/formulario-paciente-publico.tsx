@@ -81,7 +81,7 @@ export function FormularioPacientePublico({ token }: Props) {
         setHouveEdicao(false);
         setErro(null);
       })
-      .catch((erroAtual) => setErro(erroAtual instanceof Error ? erroAtual.message : 'Formulario indisponivel.'))
+      .catch((erroAtual) => setErro(erroAtual instanceof Error ? erroAtual.message : 'Formulário indisponível.'))
       .finally(() => setCarregando(false));
   }, [token]);
 
@@ -130,7 +130,7 @@ export function FormularioPacientePublico({ token }: Props) {
             setEstadoRascunho('offline');
           } else {
             setEstadoRascunho('erro');
-            setErro(erroAtual instanceof Error ? erroAtual.message : 'Nao foi possivel salvar o rascunho.');
+            setErro(erroAtual instanceof Error ? erroAtual.message : 'Não foi possível salvar o rascunho.');
           }
         }
       }
@@ -209,7 +209,7 @@ export function FormularioPacientePublico({ token }: Props) {
       else setEnviado(true);
     } catch (erroAtual) {
       suspenderRascunhoRef.current = false;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Nao foi possivel enviar as respostas.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Não foi possível enviar as respostas.');
     } finally {
       setSalvando(false);
     }
@@ -242,7 +242,7 @@ export function FormularioPacientePublico({ token }: Props) {
           <CheckCircle2 className="mx-auto h-8 w-8 text-alerta" />
           <h1 className="text-xl font-semibold text-tinta">Respostas salvas neste dispositivo</h1>
           <p className="text-sm text-texto-suave">
-            Mantenha esta página aberta. O envio sera feito automaticamente quando a conexão voltar.
+            Mantenha esta página aberta. O envio será feito automaticamente quando a conexão voltar.
           </p>
         </section>
       </main>
@@ -254,7 +254,7 @@ export function FormularioPacientePublico({ token }: Props) {
       <main className="flex min-h-screen items-center justify-center bg-fundo px-4">
         <section className="flex w-full max-w-xl items-start gap-3 border border-perigo-borda bg-perigo-suave p-4 text-sm text-perigo">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{erro ?? 'Formulario indisponivel.'}</span>
+          <span>{erro ?? 'Formulário indisponível.'}</span>
         </section>
       </main>
     );
@@ -288,7 +288,7 @@ export function FormularioPacientePublico({ token }: Props) {
                 : estadoRascunho === 'salvo'
                   ? 'Rascunho salvo'
                   : estadoRascunho === 'offline'
-                    ? 'Sem conexao. Suas respostas continuam nesta pagina'
+                    ? 'Sem conexão. Suas respostas continuam nesta página'
                   : 'Falha ao salvar rascunho'}
             </p>
           ) : null}

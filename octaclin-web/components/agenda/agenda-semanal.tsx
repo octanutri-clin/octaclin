@@ -332,11 +332,11 @@ export function AgendaSemanal({
           </div>
 
           <div className="flex items-center gap-1" role="group" aria-label="Navegar entre períodos">
-            <Dica texto={visao === 'semana' ? 'Semana anterior' : 'Periodo anterior'}>
+            <Dica texto={visao === 'semana' ? 'Semana anterior' : 'Período anterior'}>
               <Botao
                 type="button"
                 className="w-11 px-0"
-                aria-label={visao === 'semana' ? 'Semana anterior' : 'Periodo anterior'}
+                aria-label={visao === 'semana' ? 'Semana anterior' : 'Período anterior'}
                 onClick={() => mudarSemana(visao === 'dia' ? -1 : -7)}
               >
                 <ChevronLeft size={18} />
@@ -348,11 +348,11 @@ export function AgendaSemanal({
             }}>
               Hoje
             </Botao>
-            <Dica texto={visao === 'semana' ? 'Proxima semana' : 'Proximo periodo'}>
+            <Dica texto={visao === 'semana' ? 'Próxima semana' : 'Próximo período'}>
               <Botao
                 type="button"
                 className="w-11 px-0"
-                aria-label={visao === 'semana' ? 'Proxima semana' : 'Proximo periodo'}
+                aria-label={visao === 'semana' ? 'Próxima semana' : 'Próximo período'}
                 onClick={() => mudarSemana(visao === 'dia' ? 1 : 7)}
               >
                 <ChevronRight size={18} />
@@ -367,10 +367,10 @@ export function AgendaSemanal({
           <p className="text-sm font-semibold text-tinta">Google Agenda opcional</p>
           <p className="text-xs text-texto-suave">
             {googlePodeGerenciar === false
-              ? 'A conexao e individual e deve ser feita pelo proprio profissional.'
+              ? 'A conexão e individual e deve ser feita pelo proprio profissional.'
               : googleConectado
               ? 'Sincronizacao conectada; a agenda interna continua sendo a fonte principal.'
-              : 'Nao conectado; a agenda interna permanece ativa e bloqueando horarios.'}
+              : 'Não conectado; a agenda interna permanece ativa e bloqueando horários.'}
           </p>
         </div>
         {googlePodeGerenciar !== false ? (
@@ -406,7 +406,7 @@ export function AgendaSemanal({
           </Selecao>
         </label>
         <label className="grid gap-1">
-          <Rotulo>Inicio</Rotulo>
+          <Rotulo>Início</Rotulo>
           <Campo
             type="datetime-local"
             required
@@ -441,7 +441,7 @@ export function AgendaSemanal({
           {formatarPeriodo(visao === 'mes' ? semanaInicio : periodo.inicio, semanaFim)}
         </p>
         <p className="text-xs text-texto-suave">
-          {itensDaSemana.length} {itensDaSemana.length === 1 ? 'horario ocupado' : 'horarios ocupados'}
+          {itensDaSemana.length} {itensDaSemana.length === 1 ? 'horário ocupado' : 'horários ocupados'}
           {carregandoFeed ? ' (atualizando)' : ''}
         </p>
       </div>
@@ -457,7 +457,7 @@ export function AgendaSemanal({
               <div key={item.id} className="flex min-w-0 flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-tinta">{nome}</p>
-                  <p className="text-xs text-texto-suave">{formatarDia(inicio)} · {formatarHora(inicio)} - {formatarHora(fim)} · {consulta ? 'Consulta' : item.tipo === 'bloqueio_manual' ? 'Horario reservado' : 'Indisponivel'}</p>
+                  <p className="text-xs text-texto-suave">{formatarDia(inicio)} · {formatarHora(inicio)} - {formatarHora(fim)} · {consulta ? 'Consulta' : item.tipo === 'bloqueio_manual' ? 'Horário reservado' : 'Indisponível'}</p>
                 </div>
                 {consulta ? <Botao type="button" onClick={() => onAbrirConsulta(item.id)} aria-label={`Abrir detalhes de ${nome}`}>Abrir detalhes</Botao> : null}
               </div>
@@ -611,7 +611,7 @@ export function AgendaSemanal({
         aberto={Boolean(bloqueioParaLiberar)}
         titulo="Liberar horário reservado"
         mensagem="O horário volta a ficar disponível na agenda interna imediatamente."
-        rotuloConfirmar="Liberar horario"
+        rotuloConfirmar="Liberar horário"
         confirmando={liberandoBloqueio}
         aoCancelar={() => setBloqueioParaLiberar(null)}
         aoConfirmar={() => {

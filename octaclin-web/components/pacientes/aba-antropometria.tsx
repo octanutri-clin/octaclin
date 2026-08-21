@@ -445,7 +445,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
 
               <div className="flex justify-end">
                 <Botao type="submit" variante="primario" disabled={salvando}>
-                  {salvando ? 'Registrando' : 'Registrar avaliacao'}
+                  {salvando ? 'Registrando' : 'Registrar avaliação'}
                 </Botao>
               </div>
             </form>

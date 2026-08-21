@@ -430,7 +430,7 @@ export function PainelComunicacoes() {
       if (silencioso) setErro(null);
     } catch (erroAtual) {
       if (silencioso) return;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar comunicacoes.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar comunicações.');
     } finally {
       if (!silencioso) setCarregando(false);
     }
@@ -506,7 +506,7 @@ export function PainelComunicacoes() {
       setMensagens((atuais) => [mensagem, ...atuais].slice(0, 200));
       setSucesso(
         mensagem.status === 'falhou'
-          ? 'Nao foi possivel entregar a mensagem. Revise os dados e tente novamente.'
+          ? 'Não foi possível entregar a mensagem. Revise os dados e tente novamente.'
           : `Mensagem ${rotuloStatusMensagem(mensagem.status).toLocaleLowerCase('pt-BR')}.`
       );
     } catch (erroAtual) {
@@ -637,7 +637,7 @@ export function PainelComunicacoes() {
         abas={[
           { id: 'conversas', rotulo: 'Conversas' },
           { id: 'nova', rotulo: 'Nova mensagem' },
-          ...(podeConfigurar ? [{ id: 'configuracoes', rotulo: 'Configuracoes' }] : [])
+          ...(podeConfigurar ? [{ id: 'configuracoes', rotulo: 'Configurações' }] : [])
         ]}
         ativaId={areaAtiva}
         aoMudar={(id) => setAreaAtiva(id as typeof areaAtiva)}
@@ -726,7 +726,7 @@ export function PainelComunicacoes() {
               </Selecao>
             </div>
             <div className="space-y-1.5">
-              <Rotulo htmlFor="template-codigo">{formularioTemplate.canal === 'whatsapp' ? 'Nome Meta' : 'Codigo externo'}</Rotulo>
+              <Rotulo htmlFor="template-codigo">{formularioTemplate.canal === 'whatsapp' ? 'Nome Meta' : 'Código externo'}</Rotulo>
               <Campo
                 id="template-codigo"
                 value={formularioTemplate.codigoExterno}

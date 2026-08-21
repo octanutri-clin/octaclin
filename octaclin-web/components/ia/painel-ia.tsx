@@ -53,12 +53,12 @@ function resumirJson(valor: unknown) {
 
 function rotuloRevisao(status?: string) {
   const rotulos: Record<string, string> = {
-    pendente: 'Revisao pendente',
+    pendente: 'Revisão pendente',
     aceita: 'Aceita pelo profissional',
     editada: 'Editada pelo profissional',
     rejeitada: 'Rejeitada pelo profissional'
   };
-  return rotulos[status ?? 'pendente'] ?? 'Revisao pendente';
+  return rotulos[status ?? 'pendente'] ?? 'Revisão pendente';
 }
 
 function limitacoesSentimento(explicacao: Record<string, unknown>) {
@@ -68,7 +68,7 @@ function limitacoesSentimento(explicacao: Record<string, unknown>) {
 }
 
 function rotuloSinal(analise: AnaliseSentimentoApi) {
-  if ((analise.revisaoHumana?.status ?? 'pendente') === 'pendente') return 'Aguardando revisao';
+  if ((analise.revisaoHumana?.status ?? 'pendente') === 'pendente') return 'Aguardando revisão';
   return analise.alertaDisparado ? 'Alerta' : 'Monitorar';
 }
 
@@ -158,7 +158,7 @@ export function PainelIa() {
       setAnalises((atuais) => atuais.map((item) => (item.id === id ? atualizada : item)));
       setSucesso('Revisão humana registrada.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar revisao.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar revisão.');
     } finally {
       setRevisandoId(null);
     }
@@ -177,7 +177,7 @@ export function PainelIa() {
       setReconhecimentos((atuais) => atuais.map((item) => (item.id === id ? atualizado : item)));
       setSucesso('Revisão humana registrada.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar revisao.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar revisão.');
     } finally {
       setRevisandoId(null);
     }
@@ -209,7 +209,7 @@ export function PainelIa() {
       .catch((erroAtual) => {
         if (ativo) {
           setImagens([]);
-          setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar imagens clinicas.');
+          setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar imagens clínicas.');
         }
       })
       .finally(() => {
@@ -249,7 +249,7 @@ export function PainelIa() {
         <Cartao>
         <form onSubmit={executarSentimento}>
           <CartaoCabecalho>
-            <CartaoTitulo icone={<Brain size={18} className="text-primaria" />}>Analise de sentimento</CartaoTitulo>
+            <CartaoTitulo icone={<Brain size={18} className="text-primaria" />}>Análise de sentimento</CartaoTitulo>
           </CartaoCabecalho>
           <CartaoConteudo>
           <div className="grid gap-3">
@@ -352,7 +352,7 @@ export function PainelIa() {
               </Selecao>
               {!carregandoImagens && alimento.pacienteId && imagens.length === 0 ? (
                 <p className="text-xs text-texto-suave">
-                  Nenhuma imagem confirmada. Envie uma foto no prontuário do paciente antes de solicitar a analise.
+                  Nenhuma imagem confirmada. Envie uma foto no prontuário do paciente antes de solicitar a análise.
                 </p>
               ) : null}
             </div>
@@ -399,7 +399,7 @@ export function PainelIa() {
                   </div>
                   <p className="break-all text-xs text-texto-suave">Sugestão original: {resumirJson(analise.explicacao)}</p>
                   <p className="text-xs text-texto-suave">Fonte: {analise.modelo}.</p>
-                  <p className="text-xs text-texto-suave">Limitacoes: {limitacoesSentimento(analise.explicacao).join(' ') || 'O resultado exige avaliacao clinica.'}</p>
+                  <p className="text-xs text-texto-suave">Limitacoes: {limitacoesSentimento(analise.explicacao).join(' ') || 'O resultado exige avaliação clínica.'}</p>
                   <strong className="text-xs">{rotuloRevisao(analise.revisaoHumana?.status)}</strong>
                   {analise.revisaoHumana?.status === 'editada' && analise.revisaoHumana.conteudoEditado ? (
                     <p className="break-all rounded-md border border-linha bg-fundo px-3 py-2 text-xs font-medium">
@@ -410,7 +410,7 @@ export function PainelIa() {
                     <div className="grid gap-2">
                       <AreaTexto
                         aria-label={`Observacao da revisao ${analise.id}`}
-                        placeholder="Informe a interpretacao clínica corrigida"
+                        placeholder="Informe a interpretação clínica corrigida"
                         value={observacoes[analise.id] ?? ''}
                         onChange={(evento) => setObservacoes((atuais) => ({ ...atuais, [analise.id]: evento.target.value }))}
                       />
@@ -439,7 +439,7 @@ export function PainelIa() {
                 </div>
               ))
             ) : (
-              <EstadoVazio titulo="Nenhuma analise persistida." />
+              <EstadoVazio titulo="Nenhuma análise persistida." />
             )}
           </div>
         </Cartao>
@@ -459,12 +459,12 @@ export function PainelIa() {
                     </span>
                   </div>
                   <p className="text-xs text-texto-suave">
-                    {item.caloriasEstimadas ? `${formatarScore(item.caloriasEstimadas)} kcal` : 'Calorias nao estimadas'}
+                    {item.caloriasEstimadas ? `${formatarScore(item.caloriasEstimadas)} kcal` : 'Calorias não estimadas'}
                     {item.pesoEstimadoGramas ? ` | ${formatarScore(item.pesoEstimadoGramas)} g` : ''}
                   </p>
                   <p className="break-all text-xs text-texto-suave">Sugestão original: {resumirJson(item.alimentosDetectados)}</p>
                   <p className="text-xs text-texto-suave">Fonte: {item.provedor}.</p>
-                  <p className="text-xs text-texto-suave">Limitacoes: {item.limitacoes?.join(' ') || 'A estimativa exige confirmacao profissional.'}</p>
+                  <p className="text-xs text-texto-suave">Limitacoes: {item.limitacoes?.join(' ') || 'A estimativa exige confirmação profissional.'}</p>
                   <strong className="text-xs">{rotuloRevisao(item.revisaoHumana?.status)}</strong>
                   {item.revisaoHumana?.status === 'editada' && item.revisaoHumana.conteudoEditado ? (
                     <p className="break-all rounded-md border border-linha bg-fundo px-3 py-2 text-xs font-medium">
