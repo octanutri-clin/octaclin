@@ -27,6 +27,21 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 250 - Encerramento da divida Mobile e higiene de PRs
+
+- Responsavel: Codex.
+- Inicio e conclusao: 2026-08-20.
+- Commit: registrado no historico Git desta fase.
+- Push: por PR, conforme ruleset da `main`.
+- Validacoes: advisories e npm revalidados; install congelado, Expo Doctor,
+  typecheck, seis testes do gate, auditoria, alinhamento, bundles Android/iOS/web
+  e 42 testes direcionados Mobile/IA aprovados.
+- Arquivos principais: documentos vivos e
+  `fase-250-encerramento-divida-mobile-higiene-prs.md`.
+- Pendencias: dois advisories altos de `image-size` sem patch; Mobile permanece
+  NO-GO e `mobile.sync=false`.
+- Proxima fase: Fase 251 - revisao integral de linguagem e microcopy.
+
 ### Fase 249 - Densidade e responsividade do console clinico
 
 - Responsavel: Codex.

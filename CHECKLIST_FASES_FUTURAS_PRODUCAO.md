@@ -2154,15 +2154,17 @@ publicado antes de ampliar a superficie de mudancas visuais.
     somente dados sinteticos.
   - Documento: `fase-249-densidade-responsividade-console-clinico.md`.
 
-- [ ] Fase 250 - Encerramento da dívida de segurança Mobile e higiene de PRs. [ESSENCIAL - SEGURANCA]
+- [x] Fase 250 - Encerramento da dívida de segurança Mobile e higiene de PRs. [ESSENCIAL - SEGURANCA]
   - [x] Resultado da Fase 243 reconciliado: alertas corrigiveis zerados, duas
     excecoes sem patch documentadas e gate fail-closed no CI.
   - [x] PRs `#22`, `#24`, `#25`, `#29` e `#30` encerrados apos o merge do
     substituto `#84`.
-  - [ ] Revalidar se surgiu patch para os dois advisories de `image-size` e
-    encerrar o PR `#6`, conflitante e superado pelas implementações atuais de
-    isolamento Mobile/IA.
-  - Gate: Expo Doctor, typecheck, build, audit, CI completo e `mobile.sync=false`.
+  - [x] Revalidado em 2026-08-20: ainda nao existe patch para os dois advisories de `image-size`; `mobile.sync=false` e NO-GO permanecem.
+  - [x] Encerrado o PR `#6`, conflitante e superado pelas implementacoes atuais de
+    isolamento Mobile/IA, apos 42 testes direcionados aprovados.
+  - Gate local: Expo Doctor, typecheck, build, audit e `mobile.sync=false`
+    aprovados. CI completo sera confirmado no PR desta fase.
+  - Documento: `fase-250-encerramento-divida-mobile-higiene-prs.md`.
 
 - [ ] Fase 251 - Revisão integral de linguagem e microcopy. [IMPORTANTE - PRE-PILOTO]
   - Auditar português, termos clínicos, nomes de ações, mensagens de erro,
@@ -2304,6 +2306,23 @@ Fase 249 - Densidade e responsividade do console clinico:
 - Skills/plugins: `ecc:github-ops`, `ecc:living-docs-governance`,
   `codex-security:track-findings`, `codex-security:validation`,
   `codex-engineering-guardrails:code-verification` e GitHub via `gh`
+
+Fase 250 - Encerramento da divida Mobile e higiene de PRs:
+- Status: concluida tecnicamente, com NO-GO para distribuicao Mobile
+- Commit: registrado no historico Git da fase
+- Data: 2026-08-20
+- Validacoes: GitHub Advisory Database e API de alertas, npm registry,
+  `pnpm why`, install congelado, Expo Doctor, typecheck, seis testes do gate,
+  auditoria controlada, alinhamento Expo, bundles Android/iOS/web e 42 testes
+  direcionados de Mobile/IA
+- Observacoes: os dois alertas altos de `image-size` continuam sem patch e
+  bloqueiam a distribuicao; PR `#6` encerrado como superado e nenhum PR aberto
+  restou
+- Proxima fase: Fase 251 - Revisao integral de linguagem e microcopy
+- Modelo recomendado: GPT-5.6 Sol, raciocinio `medium`
+- Skills/plugins: `ecc:brand-voice`, `ecc:frontend-a11y`,
+  `ecc:make-interfaces-feel-better`, `ecc:browser-qa`, Browser e Playwright;
+  Penpot apenas se a copia alterar dimensao ou hierarquia visual
 
 Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service:
 - Status: concluida

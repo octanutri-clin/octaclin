@@ -726,6 +726,12 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   desktop; a tabela de pacientes ficou compacta sem perder acoes. Penpot,
   Playwright desktop/mobile e Lighthouse 100 validaram a entrega. Ver
   `fase-249-densidade-responsividade-console-clinico.md`.
+- Fase 250 - Encerramento da divida Mobile e higiene de PRs: os dois advisories
+  altos de `image-size` foram revalidados no GitHub e npm e continuam sem patch.
+  O gate estrito, os bundles Android/iOS/web e 42 testes direcionados passaram.
+  O PR legado `#6` foi encerrado como superado e nenhum PR aberto restou. A
+  conclusao nao libera o app: `mobile.sync=false` e NO-GO permanecem. Ver
+  `fase-250-encerramento-divida-mobile-higiene-prs.md`.
 - Fase 241 - Hardening da IA clinica: referencias de
   check-in, transcricao e midia agora sao validadas por tenant/paciente; a URL
   privada e criada apenas no backend e seu SHA-256 e conferido ponta a ponta.

@@ -17,10 +17,10 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase mais recente concluida: Fase 249 - densidade e responsividade do console
-  clinico. Agenda, pacientes e prontuario agora usam densidade responsiva,
-  faixas de acoes e abas previsiveis e controles criticos de 44 px, com
-  evidencia no Penpot, Playwright desktop/mobile e Lighthouse.
+- Fase mais recente concluida: Fase 250 - encerramento da divida Mobile e
+  higiene de PRs. Os dois advisories altos de `image-size` continuam sem patch,
+  os gates locais passaram e o PR legado `#6` foi encerrado como superado. Nao
+  restam PRs abertos; `mobile.sync=false` e o NO-GO de distribuicao permanecem.
   Fases 244 e 245 atualizaram as
   dependencias fora do Mobile e a web para Next.js 16 com Turbopack. A Fase
   201 recebeu a trava distribuida por tenant, mas continua pendente de worker
