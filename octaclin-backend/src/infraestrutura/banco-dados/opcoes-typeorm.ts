@@ -98,6 +98,7 @@ import { EvolucaoFotograficaOrm } from '../../modulos/pacientes/infraestrutura/e
 import { EvolucaoFotograficaArquivoOrm } from '../../modulos/pacientes/infraestrutura/evolucao-fotografica-arquivo.orm';
 import { CondutaTerapeuticaOrm } from '../../modulos/pacientes/infraestrutura/conduta-terapeutica.orm';
 import { CondutaTerapeuticaVersaoOrm } from '../../modulos/pacientes/infraestrutura/conduta-terapeutica-versao.orm';
+import { FiltroSalvoPacienteOrm } from '../../modulos/pacientes/infraestrutura/filtro-salvo-paciente.orm';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { AgendamentoQuestionarioOrm } from '../../modulos/questionarios/infraestrutura/agendamento-questionario.orm';
 import { CategoriaPerguntaOrm } from '../../modulos/questionarios/infraestrutura/categoria-pergunta.orm';
@@ -198,6 +199,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       EvolucaoClinicaOrm,
       AvaliacaoAntropometricaOrm,
       DocumentoEmitidoOrm,
+      FiltroSalvoPacienteOrm,
       CategoriaPerguntaOrm,
       QuestionarioOrm,
       PerguntaOrm,
