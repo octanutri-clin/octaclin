@@ -27,9 +27,12 @@ migration junto de refatoracao grande de interface e o erro 10 de `AGENTS.md`.
   criterios por allowlist estrita; teto de 20 filtros ativos por profissional e
   20 de clinica por tenant, aplicado no servico, porque `check` nao conta
   linhas. Filtro arquivado nao conta para o teto.
-- Servico de verificacao de duplicidade, sem DDL: reaproveita o indice GIN
-  `busca_hashes` criado pela migration `1013` e o `gerarHashesConsultaPii` de
-  `criptografia-dados-sensiveis.ts`.
+- Verificacao de duplicidade, sem DDL: **extrai** o
+  `buscarPossiveisDuplicidades` que hoje e metodo privado de
+  `servico-perfil-cadastro-paciente.ts` para um servico proprio, com duas
+  entradas - a partir de um paciente salvo, como hoje, e a partir de texto
+  digitado, para o cadastro novo. O perfil passa a chamar o servico e perde a
+  copia privada.
 - Registro da decisao de dispensar duplicidade na auditoria existente.
 - Sem interface. Sem backfill: a tabela nasce vazia.
 
@@ -123,33 +126,52 @@ Decisoes e o motivo de cada uma:
 ```
 POST /pacientes/verificacao-duplicidade
 body: { nome, contato?, dataNascimento? }
-resposta: { candidatos: [{ id, nome, dataNascimento, profissionalResponsavel, ultimaConsultaEm, sinais }] }
+resposta: { candidatos: [{ pacienteId, nome, motivos }] }
 ```
 
 `POST` e nao `GET` porque nome e contato sao PII e nao podem ir em query
 string, que vaza para log de acesso, historico de navegador e cabecalho
 referer.
 
-`sinais` e a lista dos motivos que puseram aquele candidato ali, entre
-`nascimento`, `contato` e `nome`, para a tela dizer **por que** suspeitou em vez
-de mostrar um alerta sem explicacao.
+**A logica ja existe e nao sera reescrita.** `buscarPossiveisDuplicidades`, hoje
+privado em `servico-perfil-cadastro-paciente.ts`, ja usa
+`ArrayOverlap(buscaHashes)` sobre o indice GIN da migration `1013`, ja limita ao
+`profissionalResponsavelId` e ja corta em 5 candidatos. A fase extrai esse
+metodo para `ServicoDuplicidadePacientes` com duas entradas e faz o perfil
+chamar o servico. Escrever um segundo detector ao lado do primeiro criaria duas
+regras de duplicidade que divergem na primeira manutencao.
 
-Sinais avaliados, em ordem de forca: `dataNascimento` identica, token de
-contato coincidente e tokens de nome coincidentes. Um candidato so aparece com
-pelo menos um token em comum; nascimento sozinho nao lista, senao todo
-aniversariante do dia vira candidato. No maximo 5 candidatos, ordenados por
-quantidade de sinais e depois por tokens de nome em comum.
+`motivos` mantem o vocabulario existente e ganha um terceiro valor:
 
-**Escopo: a carteira do profissional, nao o tenant inteiro.** E a regra que a
-importacao ja aplica. O preco e explicito: um duplicado sob outro profissional
-nao e detectado. Ampliar para o tenant inteiro e decisao de privacidade
-propria, nao acabamento desta fase.
+| Motivo | Quando |
+| --- | --- |
+| `nome_e_nascimento` | Nome normalizado identico **e** mesma data de nascimento |
+| `contato` | E-mail ou celular normalizado identico |
+| `nome` | Nome normalizado identico quando **nao ha** nascimento nos dois lados |
 
-**Teto conhecido:** os tokens sao hasheados, entao a comparacao e exata por
-token. Nome com e sem acento casa, porque `normalizarTermosBusca` aplica NFKD e
-remove diacritico. Erro de digitacao como `Marai` nao casa com `Maria`: nao
-existe distancia de edicao sobre hash. O caminho de upgrade, se doer, e
-comparacao fonetica no servidor sobre dado decifrado.
+O `nome` sozinho e novo e existe por causa do cadastro: durante a digitacao a
+data de nascimento normalmente ainda nao foi preenchida, e exigir os dois
+tornaria a checagem inutil justo onde ela serve. Ele nao muda o comportamento do
+perfil, que sempre tem o paciente salvo com nascimento quando ha um.
+
+**Escopo: a carteira do profissional, nao o tenant inteiro** - herdado do metodo
+existente e igual ao que a importacao aplica. O preco e explicito: um duplicado
+sob outro profissional nao e detectado. Ampliar para o tenant inteiro e decisao
+de privacidade propria, nao acabamento desta fase.
+
+**Tetos conhecidos**, os dois herdados do metodo existente e nenhum resolvido
+nesta fase:
+
+1. **Acento separa.** O `ArrayOverlap` sobre hashes e so o pre-filtro, e ele
+   remove diacritico via `normalizarTermosBusca`. A comparacao final usa
+   `normalizar`, que so faz `trim`, minuscula e colapso de espaco. `Joao Silva`
+   e `Joao Silva` com til passam o pre-filtro e falham na igualdade. Corrigir e
+   uma linha - aplicar NFKD tambem em `normalizar` - mas isso muda o
+   comportamento do perfil, que hoje depende dessa comparacao, entao sai desta
+   fase e vira item proprio.
+2. **Erro de digitacao nao casa.** `Marai` nao encontra `Maria`, nem no
+   pre-filtro nem na igualdade. Nao existe distancia de edicao aqui. O caminho
+   de upgrade, se doer, e comparacao fonetica sobre o dado ja decifrado.
 
 A decisao de dispensar grava apenas UUID:
 
