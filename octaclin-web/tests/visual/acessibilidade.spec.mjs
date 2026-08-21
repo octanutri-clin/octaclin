@@ -48,6 +48,8 @@ async function contarElementosFocalizaveis(page) {
     const seletor =
       'a[href]:not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])';
     return Array.from(document.querySelectorAll(seletor)).filter((elemento) => {
+      const detalhesFechado = elemento.closest('details:not([open])');
+      if (detalhesFechado && elemento !== detalhesFechado.querySelector(':scope > summary')) return false;
       const retangulo = elemento.getBoundingClientRect();
       return retangulo.width > 0 && retangulo.height > 0;
     }).length;

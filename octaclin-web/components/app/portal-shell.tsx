@@ -4,7 +4,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { Fragment, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronDown, LogOut, type LucideIcon } from 'lucide-react';
+import { ChevronDown, LogOut, Menu as MenuIcon, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { Botao } from '@/components/ui/botao';
@@ -109,6 +109,38 @@ export function PortalShell({
   ) : botaoSair;
 
   if (variante === 'sidebar') {
+    const itemAtivo = navegacao.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+    const renderizarItensNavegacao = (modo: 'mobile' | 'desktop') => navegacao.map((item, indice) => {
+      const ativo = pathname === item.href || pathname.startsWith(`${item.href}/`);
+      return (
+        <Fragment key={`${modo}-${item.href}`}>
+          {item.grupo && item.grupo !== navegacao[indice - 1]?.grupo ? (
+            <p className={cn(
+              'px-3 pt-3 text-xs font-semibold uppercase text-neutro-500 first:pt-0',
+              modo === 'desktop' ? 'hidden lg:block' : ''
+            )}>
+              {item.grupo}
+            </p>
+          ) : null}
+          <Link
+            href={item.href as Route}
+            aria-current={ativo ? 'page' : undefined}
+            className={cn(
+              'inline-flex min-h-11 items-center gap-2 rounded-md border-l-[3px] px-3 text-sm font-medium transition-colors',
+              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
+              modo === 'desktop' ? 'shrink-0' : 'w-full',
+              ativo
+                ? 'border-l-primaria bg-white/10 text-white'
+                : 'border-l-transparent text-neutro-400 hover:bg-white/5 hover:text-white'
+            )}
+          >
+            {item.icone ? <item.icone size={17} className="shrink-0" aria-hidden="true" /> : null}
+            <span className="whitespace-nowrap">{item.rotulo}</span>
+          </Link>
+        </Fragment>
+      );
+    });
+
     return (
       <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
         <a
@@ -130,40 +162,30 @@ export function PortalShell({
                 </div>
               </div>
             ) : null}
+            <details className="group border-t border-neutro-800 lg:hidden">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-3 text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primaria [&::-webkit-details-marker]:hidden">
+                <MenuIcon size={18} aria-hidden="true" />
+                <span>Módulos</span>
+                <span className="ml-auto truncate text-xs font-medium text-neutro-400">{itemAtivo?.rotulo ?? 'Escolha uma área'}</span>
+                <ChevronDown size={16} aria-hidden="true" className="shrink-0 transition-transform group-open:rotate-180" />
+              </summary>
+              <nav aria-label={`${navLabel} no celular`} className="grid max-h-[65vh] gap-1 overflow-y-auto px-2 pb-3">
+                {navegacaoCarregando ? (
+                  <div className="grid gap-2 px-1 py-1" aria-hidden="true">
+                    {Array.from({ length: 4 }, (_, indice) => <Esqueleto key={indice} className="h-11 w-full" />)}
+                  </div>
+                ) : renderizarItensNavegacao('mobile')}
+              </nav>
+            </details>
             <nav
               aria-label={navLabel}
-              className="flex min-w-0 max-w-full gap-1 overflow-x-auto border-t border-neutro-800 px-2 py-2 [scrollbar-width:none] lg:grid lg:overflow-visible lg:px-2 lg:py-3 [&::-webkit-scrollbar]:hidden"
+              className="hidden min-w-0 max-w-full gap-1 border-t border-neutro-800 px-2 py-3 lg:grid"
             >
               {navegacaoCarregando ? (
                 <div className="grid min-w-56 gap-2 px-1 py-1 lg:min-w-0" aria-hidden="true">
                   {Array.from({ length: 4 }, (_, indice) => <Esqueleto key={indice} className="h-11 w-full" />)}
                 </div>
-              ) : navegacao.map((item, indice) => {
-                const ativo = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                return (
-                  <Fragment key={item.href}>
-                    {item.grupo && item.grupo !== navegacao[indice - 1]?.grupo ? (
-                      <p className="hidden px-3 pt-3 text-xs font-semibold uppercase text-neutro-500 first:pt-0 lg:block">
-                        {item.grupo}
-                      </p>
-                    ) : null}
-                    <Link
-                      href={item.href as Route}
-                      aria-current={ativo ? 'page' : undefined}
-                      className={cn(
-                        'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border-l-[3px] px-3 text-sm font-medium transition-colors',
-                        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
-                        ativo
-                          ? 'border-l-primaria bg-white/10 text-white'
-                          : 'border-l-transparent text-neutro-400 hover:bg-white/5 hover:text-white'
-                      )}
-                    >
-                      {item.icone ? <item.icone size={17} className="shrink-0" /> : null}
-                      <span className="whitespace-nowrap">{item.rotulo}</span>
-                    </Link>
-                  </Fragment>
-                );
-              })}
+              ) : renderizarItensNavegacao('desktop')}
             </nav>
           </aside>
 

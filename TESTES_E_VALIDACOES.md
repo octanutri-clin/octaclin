@@ -608,3 +608,21 @@ O gate AST deve examinar somente texto visivel e nunca reescrever IDs, enums,
 rotas ou contratos internos. O aceite no Browser exige `lang=pt-BR`, foco
 visivel, nomes acessiveis, contraste AA, ausencia de overflow horizontal e
 console sem erros. Todos os dados do teste Playwright devem ser sinteticos.
+
+### Fase 252 - navegacao e descoberta por papel
+
+```powershell
+pnpm --dir octaclin-web typecheck
+pnpm --dir octaclin-web lint
+pnpm --dir octaclin-web build
+pnpm --dir octaclin-web test:authz
+pnpm --dir octaclin-web test:base-visual
+pnpm --dir octaclin-web test:linguagem
+pnpm --dir octaclin-web test:fase252
+pnpm --dir octaclin-web test:a11y
+```
+
+O catalogo deve cobrir exatamente as rotas operacionais publicadas. Papel e
+permissao precisam concordar; Patient e Client nao recebem comandos do console,
+e Operacoes nunca aparece fora do SuperAdmin. Em 390 px, o disclosure de
+modulos deve abrir por teclado, manter foco visivel e nao causar overflow.

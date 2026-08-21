@@ -19,16 +19,23 @@ test('cliente deve acessar apenas o portal do cliente e voltar ao cliente ao ten
 });
 
 test('perfil operacional deve sair do portal para seu destino operacional', () => {
-  assert.deepEqual(decidirAcessoRota('/portal', 'Professional', '/agenda'), {
+  assert.deepEqual(decidirAcessoRota('/portal', 'Professional', '/agenda', ['agenda.consultas.ler']), {
     permitir: false,
     redirecionarPara: '/agenda'
   });
-  assert.deepEqual(decidirAcessoRota('/agenda', 'Professional', '/agenda'), { permitir: true });
-  assert.deepEqual(decidirAcessoRota('/operacoes', 'SuperAdmin', '/operacoes'), { permitir: true });
+  assert.deepEqual(decidirAcessoRota('/agenda', 'Professional', '/agenda', ['agenda.consultas.ler']), { permitir: true });
+  assert.deepEqual(decidirAcessoRota('/operacoes', 'SuperAdmin', '/operacoes', ['operacoes.auditoria.ler']), { permitir: true });
   assert.deepEqual(decidirAcessoRota('/dashboard', 'Professional', '/dashboard', ['dashboard.ler']), { permitir: true });
-  assert.deepEqual(decidirAcessoRota('/cliente', 'Professional', '/agenda'), {
+  assert.deepEqual(decidirAcessoRota('/cliente', 'Professional', '/agenda', ['agenda.consultas.ler']), {
     permitir: false,
     redirecionarPara: '/agenda'
+  });
+});
+
+test('permissao isolada nao deve contornar restricao de papel', () => {
+  assert.deepEqual(decidirAcessoRota('/operacoes', 'Professional', '/agenda', ['operacoes.auditoria.ler']), {
+    permitir: false,
+    redirecionarPara: '/login'
   });
 });
 

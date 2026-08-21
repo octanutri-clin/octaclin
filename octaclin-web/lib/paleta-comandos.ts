@@ -1,3 +1,5 @@
+import { MODULOS_CONSOLE, modulosConsolePermitidos } from './navegacao-console';
+
 export interface ContextoComandos {
   papel?: string;
   permissoes: readonly string[];
@@ -8,124 +10,33 @@ export interface ComandoPaleta {
   rotulo: string;
   descricao: string;
   href: string;
-  grupo: 'Navegacao' | 'Acoes';
+  grupo: 'Navegação' | 'Ações';
   permissao: string;
   papeisPermitidos?: readonly string[];
   atalho?: string;
   termos?: readonly string[];
 }
 
+const COMANDOS_NAVEGACAO: readonly ComandoPaleta[] = MODULOS_CONSOLE.map((modulo) => ({
+  id: `navegar-${modulo.id}`,
+  rotulo: modulo.rotulo,
+  descricao: modulo.descricao,
+  href: modulo.href,
+  grupo: 'Navegação',
+  permissao: modulo.permissao,
+  papeisPermitidos: modulo.papeisPermitidos,
+  atalho: modulo.atalho,
+  termos: modulo.termos
+}));
+
 export const COMANDOS_PALETA: readonly ComandoPaleta[] = [
-  {
-    id: 'navegar-dashboard',
-    rotulo: 'Hoje',
-    descricao: 'Abrir o painel clinico diario',
-    href: '/dashboard',
-    grupo: 'Navegacao',
-    permissao: 'dashboard.ler',
-    papeisPermitidos: ['SuperAdmin', 'Professional'],
-    atalho: 'G D',
-    termos: ['dashboard', 'painel', 'rotina']
-  },
-  {
-    id: 'navegar-agenda',
-    rotulo: 'Agenda',
-    descricao: 'Consultas, horarios e solicitacoes',
-    href: '/agenda',
-    grupo: 'Navegacao',
-    permissao: 'agenda.consultas.ler',
-    atalho: 'G A',
-    termos: ['consulta', 'calendario', 'agendamento']
-  },
-  {
-    id: 'navegar-pacientes',
-    rotulo: 'Pacientes',
-    descricao: 'Buscar carteira e abrir prontuarios',
-    href: '/pacientes',
-    grupo: 'Navegacao',
-    permissao: 'pacientes.listar',
-    atalho: 'G P',
-    termos: ['carteira', 'prontuario']
-  },
-  {
-    id: 'navegar-questionarios',
-    rotulo: 'Formularios',
-    descricao: 'Questionarios, check-ins e respostas',
-    href: '/questionarios',
-    grupo: 'Navegacao',
-    permissao: 'questionarios.ler',
-    atalho: 'G F',
-    termos: ['formulario', 'questionario', 'checkin']
-  },
-  {
-    id: 'navegar-comunicacoes',
-    rotulo: 'Comunicacoes',
-    descricao: 'Conversas, canais e mensagens',
-    href: '/comunicacoes',
-    grupo: 'Navegacao',
-    permissao: 'comunicacoes.mensagens.ler',
-    atalho: 'G C',
-    termos: ['inbox', 'whatsapp', 'email']
-  },
-  {
-    id: 'navegar-automacoes',
-    rotulo: 'Automacoes',
-    descricao: 'Regras, simulacoes e recall',
-    href: '/automacoes',
-    grupo: 'Navegacao',
-    permissao: 'automacoes.gerenciar',
-    atalho: 'G U',
-    termos: ['regra', 'recall', 'lembrete']
-  },
-  {
-    id: 'navegar-ia',
-    rotulo: 'IA assistida',
-    descricao: 'Revisar sugestoes clinicas assistidas',
-    href: '/ia',
-    grupo: 'Navegacao',
-    permissao: 'ia.executar',
-    papeisPermitidos: ['SuperAdmin', 'Professional'],
-    atalho: 'G I',
-    termos: ['inteligencia', 'sentimento', 'reconhecimento', 'revisao']
-  },
-  {
-    id: 'navegar-gamificacao',
-    rotulo: 'Metas e adesao',
-    descricao: 'Configurar metas, badges e adesao',
-    href: '/gamificacao',
-    grupo: 'Navegacao',
-    permissao: 'gamificacao.gerenciar',
-    papeisPermitidos: ['SuperAdmin', 'Professional'],
-    atalho: 'G M',
-    termos: ['gamificacao', 'meta', 'badge', 'adesao']
-  },
-  {
-    id: 'navegar-profissionais',
-    rotulo: 'Profissionais',
-    descricao: 'Equipe clinica, acessos e agendas',
-    href: '/profissionais',
-    grupo: 'Navegacao',
-    permissao: 'profissionais.ler',
-    atalho: 'G E',
-    termos: ['equipe', 'profissional', 'acesso']
-  },
-  {
-    id: 'navegar-operacoes',
-    rotulo: 'Operacoes',
-    descricao: 'Confiabilidade, auditoria e LGPD',
-    href: '/operacoes',
-    grupo: 'Navegacao',
-    permissao: 'operacoes.auditoria.ler',
-    papeisPermitidos: ['SuperAdmin'],
-    atalho: 'G O',
-    termos: ['auditoria', 'lgpd', 'incidente']
-  },
+  ...COMANDOS_NAVEGACAO,
   {
     id: 'novo-agendamento',
     rotulo: 'Novo agendamento',
     descricao: 'Abrir a agenda pronta para cadastrar uma consulta',
     href: '/agenda#novo-agendamento',
-    grupo: 'Acoes',
+    grupo: 'Ações',
     permissao: 'agenda.consultas.criar',
     atalho: 'N A',
     termos: ['agendar', 'consulta', 'horario']
@@ -135,7 +46,7 @@ export const COMANDOS_PALETA: readonly ComandoPaleta[] = [
     rotulo: 'Novo paciente',
     descricao: 'Abrir o cadastro de paciente',
     href: '/pacientes#novo-paciente',
-    grupo: 'Acoes',
+    grupo: 'Ações',
     permissao: 'pacientes.gerenciar',
     atalho: 'N P',
     termos: ['cadastrar', 'adicionar', 'carteira']
@@ -151,7 +62,9 @@ function normalizar(valor: string) {
 }
 
 export function comandosPermitidos(contexto: ContextoComandos): ComandoPaleta[] {
+  const idsModulos = new Set(modulosConsolePermitidos(contexto).map((modulo) => `navegar-${modulo.id}`));
   return COMANDOS_PALETA.filter((comando) => {
+    if (comando.grupo === 'Navegação') return idsModulos.has(comando.id);
     if (!contexto.permissoes.includes(comando.permissao)) return false;
     return !comando.papeisPermitidos || Boolean(contexto.papel && comando.papeisPermitidos.includes(contexto.papel));
   });
