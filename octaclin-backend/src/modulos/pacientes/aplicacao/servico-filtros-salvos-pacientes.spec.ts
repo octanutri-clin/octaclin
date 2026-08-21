@@ -81,6 +81,19 @@ describe('ServicoFiltrosSalvosPacientes.criar', () => {
       nome: 'Cabe', origem: 'pessoal', criterios: {}
     })).resolves.toBeDefined();
   });
+
+  it('persiste somente criterios validados, nao a entrada bruta', async () => {
+    const { servico, repositorio } = montar();
+    await servico.criar(TENANT_ID, profissional(), {
+      nome: 'Com indefinido',
+      origem: 'pessoal',
+      criterios: { risco: 'alto', busca: undefined } as any
+    });
+
+    const salvo = repositorio.registros[0];
+    expect('busca' in salvo.criterios).toBe(false);
+    expect(salvo.criterios).toEqual({ risco: 'alto' });
+  });
 });
 
 /** Casa a condicao do TypeORM; IsNull() chega como objeto com _type 'isNull'. */
@@ -113,9 +126,7 @@ function criarRepositorio(iniciais: any[] = []) {
     findOne: jest.fn(async (opcoes: any): Promise<Registro | null> =>
       repositorio.registros.find((registro: Registro) => registro.id === opcoes.where.id) ?? null),
     count: jest.fn(async (opcoes: any): Promise<number> => repositorio.registros.filter((registro: Registro) =>
-      registro.origem === opcoes.where.origem
-      && (opcoes.where.profissionalId === undefined || registro.profissionalId === opcoes.where.profissionalId)
-      && !registro.arquivadoEm).length),
+      casa(registro, opcoes.where)).length),
     create: jest.fn((dados: any): Registro => ({ id: `filtro-${repositorio.registros.length}`, atualizadoEm: new Date(), ...dados })),
     save: jest.fn(async (registro: any): Promise<Registro> => {
       const indice = repositorio.registros.findIndex((existente: Registro) => existente.id === registro.id);
