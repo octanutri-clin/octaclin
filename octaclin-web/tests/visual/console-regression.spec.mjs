@@ -599,7 +599,12 @@ test.describe('console operacional', () => {
       await expect(page.getByText('OctaClin').first()).toBeVisible();
       await expect(page.getByText('Console clínico')).toBeVisible();
 
-      const navegacao = page.getByRole('navigation', { name: 'Módulos do console' });
+      const mobile = testInfo.project.name === 'mobile-chromium';
+      if (mobile) await page.locator('summary').filter({ hasText: 'Módulos' }).click();
+      const navegacao = page.getByRole('navigation', {
+        name: mobile ? 'Módulos do console no celular' : 'Módulos do console',
+        exact: true
+      });
       for (const rotulo of rotulosMenu) {
         await expect(navegacao.getByRole('link', { name: rotulo })).toBeVisible();
       }

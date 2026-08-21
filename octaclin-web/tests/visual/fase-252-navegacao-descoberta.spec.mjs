@@ -94,6 +94,7 @@ test.describe('Fase 252 - navegacao e descoberta', () => {
 
   test('Professional ve capacidades clinicas sem expor Operacoes', async ({ page }) => {
     await prepararSessao(page, 'Professional');
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto('/dashboard');
 
     const navegacao = page.getByRole('navigation', { name: 'Módulos do console', exact: true });
@@ -106,6 +107,7 @@ test.describe('Fase 252 - navegacao e descoberta', () => {
 
   test('Collaborator recebe somente rotas delegadas mesmo com dashboard.ler', async ({ page }) => {
     await prepararSessao(page, 'Collaborator');
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/\/agenda$/);
 
