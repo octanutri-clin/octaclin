@@ -40,7 +40,16 @@ export function Abas({ identificador, abas, ativaId, aoMudar, rotulo, className 
   }
 
   return (
-    <nav role="tablist" aria-label={rotulo} className={cn('flex flex-wrap gap-2 border-b border-linha pb-3', className)}>
+    <nav
+      role="tablist"
+      aria-label={rotulo}
+      aria-orientation="horizontal"
+      className={cn(
+        'flex max-w-full flex-nowrap gap-2 overflow-x-auto border-b border-linha pb-3 [scrollbar-width:thin]',
+        'md:flex-wrap md:overflow-visible',
+        className
+      )}
+    >
       {abas.map((aba) => {
         const ativa = ativaId === aba.id;
         return (
@@ -59,7 +68,7 @@ export function Abas({ identificador, abas, ativaId, aoMudar, rotulo, className 
             onClick={() => aoMudar(aba.id)}
             onKeyDown={(evento) => aoTeclar(evento, aba.id)}
             className={cn(
-              'min-h-11 rounded-md px-3 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
+              'min-h-11 shrink-0 rounded-md px-3 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
               ativa ? 'bg-primaria text-white' : 'border border-linha bg-white text-texto-suave hover:bg-superficie-hover'
             )}
           >

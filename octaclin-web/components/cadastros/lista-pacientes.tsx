@@ -5,7 +5,7 @@ import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { ArchiveRestore, CheckCircle2, Download, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Save, Search, Trash2, Upload } from 'lucide-react';
-import { Botao } from '@/components/ui/botao';
+import { Botao, classesBotao } from '@/components/ui/botao';
 import { ImportacaoPacientes } from '@/components/cadastros/importacao-pacientes';
 import { Cartao, CartaoConteudo } from '@/components/ui/cartao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
@@ -13,6 +13,7 @@ import { Etiqueta } from '@/components/ui/etiqueta';
 import { Aviso, AvisoRegiao, EsqueletoPagina, EstadoFalha, EstadoPermissaoNegada } from '@/components/ui/feedback';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { Tabela, TabelaCabecalho, TabelaConteudo, TabelaLinha, TabelaLinhas, TabelaVazia } from '@/components/ui/tabela';
+import { FaixaAcoes } from '@/components/ui/faixa-acoes';
 import { obterSessao } from '@/lib/auth-api';
 import { criarConvitePaciente } from '@/lib/convites-paciente-api';
 import { classificarFalhaInterface, type FalhaInterface } from '@/lib/erros-interface';
@@ -356,7 +357,7 @@ export function ListaPacientes() {
               {dados ? `${dados.total} registros encontrados` : 'Carregando registros'}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <FaixaAcoes rotulo="Ações da lista de pacientes">
             <Botao onClick={carregar} disabled={carregando}>
               <RefreshCcw size={16} />
               {carregando ? 'Atualizando' : 'Atualizar'}
@@ -373,7 +374,7 @@ export function ListaPacientes() {
             </Botao>
             <a
               href={urlExportacao}
-              className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-md border border-linha bg-superficie px-3 text-sm font-medium text-texto-forte hover:bg-white"
+              className={classesBotao()}
             >
               <Download size={16} />
               Exportar CSV
@@ -384,7 +385,7 @@ export function ListaPacientes() {
                 Novo paciente
               </Botao>
             ) : null}
-          </div>
+          </FaixaAcoes>
         </CartaoConteudo>
       </Cartao>
 
@@ -469,20 +470,18 @@ export function ListaPacientes() {
                 <p className="mt-1 text-xs text-texto-suave">Dados basicos para reconhecer o paciente no atendimento.</p>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
-                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                  Nome completo
-                  <input
-                    className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+                <label className="grid gap-1">
+                  <Rotulo>Nome completo</Rotulo>
+                  <Campo
                     autoComplete="name"
                     value={formulario.nome}
                     onChange={(evento) => setFormulario((atual) => ({ ...atual, nome: evento.target.value }))}
                     required
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                  Data de nascimento
-                  <input
-                    className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+                <label className="grid gap-1">
+                  <Rotulo>Data de nascimento</Rotulo>
+                  <Campo
                     type="date"
                     value={formulario.dataNascimento}
                     onChange={(evento) => setFormulario((atual) => ({ ...atual, dataNascimento: evento.target.value }))}
@@ -496,10 +495,9 @@ export function ListaPacientes() {
                 <h3 id="paciente-contato" className="text-sm font-semibold text-tinta">Contato</h3>
                 <p className="mt-1 text-xs text-texto-suave">Informe um e-mail ou telefone usado para comunicacoes e convite do portal.</p>
               </div>
-              <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                E-mail ou telefone
-                <input
-                  className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+              <label className="grid gap-1">
+                <Rotulo>E-mail ou telefone</Rotulo>
+                <Campo
                   placeholder="nome@exemplo.com ou +55 11 99999-9999"
                   value={formulario.contato}
                   onChange={(evento) => setFormulario((atual) => ({ ...atual, contato: evento.target.value }))}
@@ -513,10 +511,9 @@ export function ListaPacientes() {
                 <p className="mt-1 text-xs text-texto-suave">Defina quem acompanha o paciente. Status e risco so aparecem na edicao para evitar classificacao prematura.</p>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
-                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                  Profissional responsavel
-                  <select
-                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                <label className="grid gap-1">
+                  <Rotulo>Profissional responsavel</Rotulo>
+                  <Selecao
                     value={formulario.profissionalResponsavelId}
                     onChange={(evento) => setFormulario((atual) => ({ ...atual, profissionalResponsavelId: evento.target.value }))}
                     required
@@ -525,13 +522,12 @@ export function ListaPacientes() {
                     {profissionais.map((profissional) => (
                       <option key={profissional.id} value={profissional.id}>{profissional.nome}</option>
                     ))}
-                  </select>
+                  </Selecao>
                 </label>
                 {editandoId ? (
-                  <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                    Situacao do acompanhamento
-                    <select
-                      className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                  <label className="grid gap-1">
+                    <Rotulo>Situacao do acompanhamento</Rotulo>
+                    <Selecao
                       value={formulario.statusAdesao}
                       onChange={(evento) => setFormulario((atual) => ({ ...atual, statusAdesao: evento.target.value as StatusPaciente }))}
                     >
@@ -540,14 +536,13 @@ export function ListaPacientes() {
                       <option value="em_acompanhamento">Em acompanhamento</option>
                       <option value="risco">Requer atencao</option>
                       <option value="inativo">Inativo</option>
-                    </select>
+                    </Selecao>
                   </label>
                 ) : null}
                 {editandoId ? (
-                  <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                    Indicador de risco (0 a 100)
-                    <input
-                      className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
+                  <label className="grid gap-1">
+                    <Rotulo>Indicador de risco (0 a 100)</Rotulo>
+                    <Campo
                       type="number"
                       min={0}
                       max={100}
@@ -577,7 +572,7 @@ export function ListaPacientes() {
 
       <Tabela className="hidden lg:block">
         <TabelaConteudo larguraMinima="840px">
-          <TabelaCabecalho className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_172px]">
+          <TabelaCabecalho densidade="compacta" className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_196px]">
             <span>Paciente</span>
             <span>Responsavel</span>
             <span>Status</span>
@@ -589,14 +584,13 @@ export function ListaPacientes() {
           <TabelaLinhas>
             {pacientesFiltrados.length ? (
               pacientesFiltrados.map((paciente) => (
-                <TabelaLinha key={paciente.id} className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_172px] hover:bg-superficie-hover">
+                <TabelaLinha data-testid="linha-paciente" densidade="compacta" key={paciente.id} className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_196px] items-center hover:bg-superficie-hover">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <HeartPulse size={16} className="shrink-0 text-primaria" />
                       <Link href={`/pacientes/${paciente.id}` as Route} className="truncate font-semibold hover:underline">{paciente.nome}</Link>
                     </div>
-                    <p className="mt-1 text-xs text-texto-suave">{paciente.contato ?? paciente.id}</p>
-                    <p className="mt-1 text-xs text-texto-suave">Nascimento: {formatarData(paciente.dataNascimento)}</p>
+                    <p className="mt-1 truncate text-xs text-texto-suave">{paciente.contato ?? paciente.id} · Nasc. {formatarData(paciente.dataNascimento)}</p>
                   </div>
                   <span className="break-all text-xs text-texto-suave">
                     {nomeProfissional(profissionais, paciente.profissionalResponsavelId)}
@@ -605,10 +599,10 @@ export function ListaPacientes() {
                   <Etiqueta variante={nivelRisco(paciente) === 'alto' ? 'perigo' : nivelRisco(paciente) === 'medio' ? 'alerta' : 'sucesso'}>{nivelRisco(paciente)} {Number(paciente.scoreRisco).toFixed(1)}</Etiqueta>
                   <span className="text-xs text-texto-suave">{formatarData(paciente.ultimaConsultaConcluidaEm)}</span>
                   <span className="text-xs font-medium text-tinta">{proximaAcao(paciente)}</span>
-                  <div className="flex justify-end gap-1">
+                  <div data-testid="acoes-paciente" className="flex justify-end gap-1">
                     <Link
                       href={`/pacientes/${paciente.id}` as Route}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md text-tinta transition-colors hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                      className={classesBotao({ variante: 'fantasma', className: 'w-11 px-0' })}
                       aria-label="Abrir prontuario"
                       title="Abrir prontuario"
                     >
@@ -619,6 +613,7 @@ export function ListaPacientes() {
                         <Botao
                           type="button"
                           variante="fantasma"
+                          className="w-11 px-0"
                           onClick={() => void convidar(paciente)}
                           disabled={Boolean(paciente.usuarioId) || convidandoId === paciente.id}
                           aria-label="Convidar paciente"
@@ -626,12 +621,13 @@ export function ListaPacientes() {
                         >
                           <KeyRound size={16} />
                         </Botao>
-                        <Botao type="button" variante="fantasma" onClick={() => editar(paciente)} aria-label="Editar paciente">
+                        <Botao type="button" variante="fantasma" className="w-11 px-0" onClick={() => editar(paciente)} aria-label="Editar paciente">
                           <Edit3 size={16} />
                         </Botao>
                         <Botao
                           type="button"
                           variante="fantasma"
+                          className="w-11 px-0"
                           onClick={() => setPacienteParaArquivar(paciente)}
                           disabled={arquivandoId === paciente.id}
                           aria-label="Arquivar paciente"

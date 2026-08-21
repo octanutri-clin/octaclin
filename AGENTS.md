@@ -17,16 +17,17 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase mais recente concluida: Fase 248 - estados e recuperacao das superficies
-  clinicas. Agenda, pacientes e prontuario agora preservam dados digitados,
-  sanitizam erros tecnicos e distinguem indisponibilidade de falta de permissao.
+- Fase mais recente concluida: Fase 249 - densidade e responsividade do console
+  clinico. Agenda, pacientes e prontuario agora usam densidade responsiva,
+  faixas de acoes e abas previsiveis e controles criticos de 44 px, com
+  evidencia no Penpot, Playwright desktop/mobile e Lighthouse.
   Fases 244 e 245 atualizaram as
   dependencias fora do Mobile e a web para Next.js 16 com Turbopack. A Fase
   201 recebeu a trava distribuida por tenant, mas continua pendente de worker
   dedicado no Render; o backend permanece em `OCTACLIN_PROCESSO=all` e nao
   pode escalar horizontalmente antes desse rollout. O proximo bloqueador de
   negocio e a Fase 233, primeiro piloto assistido. Antes dele, a sequencia de
-  melhoria continua esta registrada nas Fases 249 a 262 e em
+  melhoria continua esta registrada nas Fases 250 a 262 e em
   `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`; a Fase 243 foi antecipada
   como interrupcao de seguranca do Mobile, sem ativar o app. Essa interrupcao
   foi concluida em 2026-08-20: Expo 57 esta validado, mas dois avisos upstream
@@ -378,6 +379,25 @@ tokens do usuario.
    de `process.argv[1]` antes do import dinamico, e a raiz logica do scanner nao
    pode ser perdida ao percorrer arquivos individualmente. Custo: tres comandos
    locais; nenhum secret foi impresso, alterado ou versionado.
+
+### Fase 249 - contrato incorreto no mock global de notificacoes
+
+1. **O erro:** o primeiro RED de `test:fase249` deixou o fallback global de
+   `/api/**` responder `[]` para `/api/notificacoes?limite=20`; o
+   `SinoNotificacoes` esperava `{ naoLidas, itens }` e falhou com `Cannot read
+   properties of undefined (reading 'length')`. **A solucao:** adicionar o
+   contrato explicito `{ naoLidas: 0, itens: [] }` antes do fallback generico.
+   **Como nao repetir:** todo mock global precisa mapear os contratos de shell
+   compartilhado (sessao e notificacoes) antes de responder endpoints da tela.
+   Custo: uma execucao RED parcialmente contaminada; nenhum codigo de produto
+   foi alterado por essa falha.
+2. **O erro:** o teste de teclado guardou um `Locator` da aba selecionada e
+   chamou `textContent()` somente depois de `ArrowRight`; como locators sao
+   reavaliados, comparou a nova aba com ela mesma e esperou ate o timeout.
+   **A solucao:** capturar o texto da aba ativa antes da tecla e comparar o
+   estado posterior com esse valor imutavel. **Como nao repetir:** congelar
+   valores anteriores antes de interacoes quando o locator usa filtros de
+   estado como `{ selected: true }`. Custo: uma execucao local de 20 segundos.
 
 ## Padroes de arquitetura
 

@@ -27,6 +27,20 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 
 ## Entradas
 
+### Fase 249 - Densidade e responsividade do console clinico
+
+- Responsavel: Codex.
+- Inicio e conclusao: 2026-08-20.
+- Commit: registrado no historico Git desta fase.
+- Push: por PR, conforme ruleset da `main`.
+- Validacoes: lint sem erros, typecheck, 3 cenarios Playwright em desktop e
+  mobile, Chrome DevTools e Lighthouse 100 nas quatro categorias.
+- Arquivos principais: `octaclin-web/components/ui/faixa-acoes.tsx`, shell,
+  agenda, pacientes, prontuario, teste Playwright, Penpot e CI.
+- Pendencias: nenhuma da fase; avisos React pre-existentes permanecem fora do
+  escopo.
+- Proxima fase: Fase 250 - encerramento da divida Mobile e higiene de PRs.
+
 ### Fase 248 - Estados e recuperacao das superficies clinicas
 
 - Responsavel: Codex.

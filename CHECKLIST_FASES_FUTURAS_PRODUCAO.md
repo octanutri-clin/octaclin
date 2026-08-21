@@ -1,7 +1,7 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-20 com a conclusao da Fase 248, a auditoria dos PRs
-abertos e o roteiro priorizado das Fases 249 a 262.
+Atualizado em 2026-08-20 com a conclusao da Fase 249 e o roteiro priorizado das
+Fases 250 a 262.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -2143,13 +2143,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     tela de falha com 100 em acessibilidade e 29 auditorias aprovadas.
   - Documento: `fase-248-estados-recuperacao-superficies-clinicas.md`.
 
-- [ ] Fase 249 - Densidade e responsividade do console clínico. [IMPORTANTE - NAO BLOQUEADOR ISOLADO]
-  - Migrar controles locais por fluxo para os componentes compartilhados,
-    preservar selects nativos e revisar desktop e celular sem sobreposição.
-  - Prioridade: agenda, pacientes, prontuário e suas ações rápidas. Mobile aqui
-    significa responsividade da web, nao retomada do app Expo.
-  - Gate: screenshots comparáveis em 1440 px e 390 px, teclado, foco e ausência
-    de overflow ou texto cortado.
+- [x] Fase 249 - Densidade e responsividade do console clínico. [IMPORTANTE - NAO BLOQUEADOR ISOLADO]
+  - Concluidos: `FaixaAcoes`, abas sem quebra, densidade responsiva do shell e
+    cartoes, agenda dia/semana por viewport, tabela compacta de pacientes e
+    prontuario com acoes e abas em faixas unicas no celular.
+  - Gate: 3 cenarios Playwright aprovados em desktop e mobile, screenshots em
+    1440/390, teclado, ausencia de overflow e Lighthouse 100 nas quatro
+    categorias auditadas em desktop e mobile.
+  - Penpot: pagina `09 — Fase 249: Densidade e responsividade`, zero erros e
+    somente dados sinteticos.
+  - Documento: `fase-249-densidade-responsividade-console-clinico.md`.
 
 - [ ] Fase 250 - Encerramento da dívida de segurança Mobile e higiene de PRs. [ESSENCIAL - SEGURANCA]
   - [x] Resultado da Fase 243 reconciliado: alertas corrigiveis zerados, duas
@@ -2286,6 +2289,21 @@ Fase 243 - Modernizacao e hardening do Mobile:
 - Skills/plugins: `ecc:frontend-design-direction`,
   `ecc:make-interfaces-feel-better`, `ecc:design-system`,
   `ecc:frontend-a11y`, `ecc:browser-qa`, Penpot, Chrome DevTools e Playwright
+
+Fase 249 - Densidade e responsividade do console clinico:
+- Status: concluida
+- Commit: registrado no historico Git da fase
+- Data: 2026-08-20
+- Validacoes: lint sem erros, typecheck, build, contrato visual, 3 cenarios
+  dedicados desktop/mobile, 10 regressivos direcionados, 10 cenarios de
+  acessibilidade e Lighthouse 100 desktop/mobile
+- Observacoes: Penpot atualizado com quatro quadros sinteticos e zero erros;
+  nenhuma regra clinica, permissao, tenancy ou contrato backend foi alterado
+- Proxima fase: Fase 250 - Encerramento da divida Mobile e higiene de PRs
+- Modelo recomendado: GPT-5.6 Sol, raciocinio `medium`
+- Skills/plugins: `ecc:github-ops`, `ecc:living-docs-governance`,
+  `codex-security:track-findings`, `codex-security:validation`,
+  `codex-engineering-guardrails:code-verification` e GitHub via `gh`
 
 Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service:
 - Status: concluida
