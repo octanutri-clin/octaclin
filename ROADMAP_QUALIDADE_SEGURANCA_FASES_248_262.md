@@ -37,7 +37,7 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
 | 250 | Fechamento da dívida Mobile e PRs - concluida em 2026-08-20 | Essencial/segurança | Higiene aprovada; Mobile segue bloqueado pelos advisories upstream |
 | 251 | Linguagem e microcopy integral - concluida em 2026-08-21 | Importante | Gate aprovado |
 | 252 | Navegacao e descoberta por papel - concluida em 2026-08-21 | Essencial | Gate aprovado |
-| 253 | Agenda clínica confiável - implementada em 2026-08-21 | Essencial | Migration 1034 aplicada; rollout em andamento |
+| 253 | Agenda clínica confiável - concluida em 2026-08-21 | Essencial | Gate aprovado em producao |
 | 254 | Lista e cadastro de pacientes | Essencial | Pré-piloto |
 | 255 | Prontuário e linha de cuidado | Essencial | Bloqueia piloto |
 | 256 | Formulários/check-ins ponta a ponta | Essencial | Pré-piloto |
@@ -104,8 +104,8 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
 - 87 testes focados, builds, autorizacao, Playwright, acessibilidade, Chrome
   DevTools e preflight SQL em integracao aprovaram a implementacao.
 - A migration `1034` foi aplicada e verificada em producao com 47/47 migrations.
-  A sequencia somente avanca para a Fase 254 depois do merge, deploy e smoke
-  sintetico da Fase 253 em producao.
+  PR `#91`, CI `32507735771`, deploys e monitor `32508654126` aprovaram o
+  rollout. A sequencia esta liberada para a Fase 254.
 
 ## Auditoria dos PRs abertos em 2026-08-20
 

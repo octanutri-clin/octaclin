@@ -2191,7 +2191,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     DevTools e Lighthouse 100.
   - Documento: `fase-252-arquitetura-navegacao-descoberta.md`.
 
-- [ ] Fase 253 - Agenda clínica confiável e operacional. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
+- [x] Fase 253 - Agenda clínica confiável e operacional. [ESSENCIAL - CONCLUIDA EM 2026-08-21]
   - Fechar visualizações dia, semana e lista; criar, bloquear, desbloquear,
     concluir, remarcar, registrar falta e cancelar sem ambiguidade.
   - Tornar conflitos, sincronização Google, notificações e solicitações públicas
@@ -2201,7 +2201,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] Migration aditiva `1720000001034` aplicada em 2026-08-21 com
     `neondb_owner` no banco de producao explicitamente confirmado; 47/47 no
     TypeORM, funcao minima e RLS/FORCE RLS verificados.
-  - [ ] Integrar o PR, acompanhar os deploys e aprovar o smoke de producao.
+  - [x] PR `#91` integrado no merge `ea6ed12`; CI `32507735771`, deploys,
+    health com 47 migrations, BFF protegido, link publico controlado e monitor
+    de producao `32508654126` aprovados.
   - Documento: `fase-253-agenda-clinica-confiavel-operacional.md`.
 
 - [ ] Fase 254 - Lista e cadastro robusto de pacientes. [ESSENCIAL - PRE-PILOTO]
@@ -2378,9 +2380,8 @@ Fase 252 - Arquitetura de navegacao e descoberta de funcionalidades:
   Playwright
 
 Fase 253 - Agenda clinica confiavel e operacional:
-- Status: implementacao e migration `1034` concluidas; rollout pendente de
-  merge, deploy e smoke
-- Commit: registrado no historico Git da fase
+- Status: concluida e aceita em producao
+- Commits: `30fc9df`, `e469996`; merge `ea6ed129228cd10fd845cd01fed245cbce634a4e`
 - Data: 2026-08-21
 - Validacoes: 87 testes focados backend, build backend, build web de 123 rotas,
   autorizacao, 2 jornadas Playwright, gate de acessibilidade, Chrome DevTools,
@@ -2388,7 +2389,8 @@ Fase 253 - Agenda clinica confiavel e operacional:
 - Observacoes: a suite backend completa passou 141/142 suites e 984/985 testes;
   a unica falha e a comparacao canonica TACO por `LF/CRLF` no Windows. A
   migration `1034` foi aplicada com 47/47 migrations e verificacoes de funcao e
-  RLS aprovadas; falta integrar o PR e executar o smoke.
+  RLS aprovadas. CI `32507735771`, deploys e monitor oficial `32508654126`
+  passaram; o smoke nao alterou dado clinico real.
 - Proxima fase: Fase 254 - Lista e cadastro robusto de pacientes
 - Modelo recomendado: GPT-5.6 Sol, raciocinio `high`
 - Skills/plugins: `ecc:healthcare-emr-patterns`, `ecc:frontend-patterns`,

@@ -751,8 +751,8 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   vinculados, sync token preservado em falha, notificacoes recuperaveis,
   solicitacao publica idempotente e bloqueios manuais refletidos em todas as
   visualizacoes. A migration `1034` foi aplicada e verificada em producao com
-  47/47 migrations; o rollout permanece pendente de merge, deploy e smoke, por
-  isso a fase ainda nao esta marcada como concluida no checklist. Ver
+  47/47 migrations; PR `#91`, merge `ea6ed12`, CI, deploys e monitor oficial
+  `32508654126` aprovaram o rollout sem mutar dados clinicos reais. Ver
   `fase-253-agenda-clinica-confiavel-operacional.md`.
 - Fase 241 - Hardening da IA clinica: referencias de
   check-in, transcricao e midia agora sao validadas por tenant/paciente; a URL

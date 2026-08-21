@@ -1,7 +1,6 @@
 # Fase 253 - Agenda clinica confiavel e operacional
 
-Status: implementacao e migration de producao concluidas em 2026-08-21;
-rollout pendente de merge, deploy e smoke.
+Status: concluida e aceita em producao em 2026-08-21.
 
 ## Objetivo
 
@@ -96,11 +95,19 @@ Resultados:
   ambiental ja documentada e sem arquivo TACO alterado nesta fase;
 - varredura do diff nao encontrou padrao de segredo.
 
-## Aceite restante
+## Aceite de producao
 
-1. Integrar o PR com o schema de producao ja expandido.
-2. Confirmar deploy, `/health/detalhado` sem migration pendente e smoke
-   sintetico de agenda interna, link publico e reprocessamento.
+- PR `#91` integrado no merge `ea6ed129228cd10fd845cd01fed245cbce634a4e`;
+- CI `32507735771` aprovado com os sete jobs verdes;
+- backend reiniciado com 47 migrations registradas e `/health/pronto` e
+  `/health/detalhado` saudaveis;
+- web respondeu `200` no login e publicou o novo BFF de reprocessamento, que
+  falhou fechado sem sessao;
+- link publico sintetico invalido retornou `404` controlado no backend e alerta
+  acessivel na web, sem `500`;
+- monitor oficial de producao `32508654126` aprovado no SHA do merge;
+- nenhum dado clinico real ou consulta foi criado, alterado ou removido durante
+  o smoke.
 
 ## Proxima fase
 
