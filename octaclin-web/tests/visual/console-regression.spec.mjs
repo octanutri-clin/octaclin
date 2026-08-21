@@ -339,7 +339,7 @@ async function prepararOperacoesMockadas(page) {
             planoAtualId: 'profissional',
             planoAtual: 'Profissional',
             planoDesejado: 'clinica',
-            observacao: 'Mais usuarios administrativos.',
+            observacao: 'Mais usuários administrativos.',
             solicitadoPorUsuarioId: 'cliente-1',
             solicitadoEm: '2026-07-22T10:00:00.000Z',
             ...(aplicouPlanoAssinatura
@@ -365,7 +365,7 @@ async function prepararOperacoesMockadas(page) {
       body: JSON.stringify({
         tenantId: 'clinica-carla',
         planoId: 'clinica',
-        plano: 'Clinica',
+        plano: 'Clínica',
         status: 'ativa',
         origem: 'operacao_manual',
         atualizadoPorUsuarioId: 'admin-1',
@@ -1935,7 +1935,7 @@ test.describe('agenda de producao', () => {
     await detalhes.getByRole('button', { name: 'Cancelar', exact: true }).click();
     const confirmacao = page.getByRole('dialog', { name: 'Cancelar consulta' });
     await expect(confirmacao).toBeVisible();
-    await expect(confirmacao.getByText(/libera o horario na agenda interna/)).toBeVisible();
+    await expect(confirmacao.getByText(/libera o horário na agenda interna/)).toBeVisible();
     await confirmacao.getByRole('button', { name: 'Cancelar consulta', exact: true }).click();
 
     await expect.poll(() => agenda.cancelouConsulta()).toBe(true);
@@ -2466,7 +2466,7 @@ test.describe('operacoes assinatura', () => {
     await expect(page.getByRole('heading', { name: 'Assinaturas' })).toBeVisible();
     await expect(page.getByText('Mais usuários administrativos.')).toBeVisible();
     await page.getByRole('button', { name: 'Aplicar Clínica' }).click();
-    await expect(page.getByText('Plano Clínica aplicado para clínica-carla.')).toBeVisible();
+    await expect(page.getByText(`Plano Clínica aplicado para ${credenciais.tenantSlug}.`)).toBeVisible();
     await expect.poll(() => operacoes.aplicouPlanoAssinatura()).toBe(true);
     await assertSemOverflowHorizontal(page);
   });

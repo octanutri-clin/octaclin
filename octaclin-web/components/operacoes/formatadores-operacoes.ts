@@ -93,7 +93,7 @@ export function rotuloPlano(plano: SolicitacaoAssinaturaOperacional['planoAtualI
   const mapa: Record<SolicitacaoAssinaturaOperacional['planoAtualId'], string> = {
     gratuito: 'Gratuito',
     profissional: 'Profissional',
-    clinica: 'Clinica',
+    clinica: 'Clínica',
     enterprise: 'Enterprise'
   };
   return mapa[plano];
