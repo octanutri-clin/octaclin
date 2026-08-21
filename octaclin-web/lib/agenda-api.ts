@@ -18,6 +18,8 @@ export interface DetalheNotificacaoAgenda {
 export interface NotificacoesConsultaAgenda {
   email?: DetalheNotificacaoAgenda;
   whatsapp?: DetalheNotificacaoAgenda;
+  cancelamentoEmail?: DetalheNotificacaoAgenda;
+  cancelamentoWhatsapp?: DetalheNotificacaoAgenda;
   googleCalendar?: DetalheNotificacaoAgenda;
   lembrete24h?: DetalheNotificacaoAgenda;
   confirmacaoPaciente?: DetalheNotificacaoAgenda;
@@ -338,6 +340,16 @@ export async function carregarBootstrapAgenda(): Promise<BootstrapAgenda> {
 export interface ConexaoGoogleAgendaStatus {
   conectado: boolean;
   podeGerenciar?: boolean;
+  falhasConsecutivas?: number;
+  atualizadoEm?: string;
+  canalExpiraEm?: string;
+}
+
+export async function reprocessarIntegracoesConsulta(consultaId: string): Promise<ConsultaAgendaApi> {
+  return requisitar<ConsultaAgendaApi>(
+    `/api/agenda/consultas/${encodeURIComponent(consultaId)}/integracoes/reprocessar`,
+    { method: 'POST' }
+  );
 }
 
 export interface ConexaoGoogleProfissionalStatus {

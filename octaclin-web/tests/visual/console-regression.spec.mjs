@@ -634,6 +634,7 @@ test.describe('console operacional', () => {
 async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
   let remarcouConsulta = false;
   let cancelouConsulta = false;
+  let liberouBloqueio = false;
   const consultasAgenda = [
     {
       id: 'consulta-1',
@@ -826,8 +827,29 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
           inicioEm: '2026-07-24T15:00:00.000Z',
           fimEm: '2026-07-24T16:00:00.000Z',
           rotulo: 'Indisponível'
-        }
+        },
+        ...(!liberouBloqueio ? [{
+          id: 'bloqueio-manual-1',
+          tipo: 'bloqueio_manual',
+          profissionalId: 'profissional-1',
+          inicioEm: '2026-07-24T16:00:00.000Z',
+          fimEm: '2026-07-24T17:00:00.000Z',
+          rotulo: 'Reunião clínica'
+        }] : [])
       ])
+    });
+  });
+
+  await page.route('**/api/agenda/bloqueios-manuais/bloqueio-manual-1', async (route) => {
+    if (route.request().method() !== 'DELETE') {
+      await route.fallback();
+      return;
+    }
+    liberouBloqueio = true;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 'bloqueio-manual-1' })
     });
   });
 
@@ -952,7 +974,8 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
 
   return {
     remarcouConsulta: () => remarcouConsulta,
-    cancelouConsulta: () => cancelouConsulta
+    cancelouConsulta: () => cancelouConsulta,
+    liberouBloqueio: () => liberouBloqueio
   };
 }
 
@@ -1883,6 +1906,23 @@ test.describe('painel clinico profissional', () => {
 });
 
 test.describe('agenda de producao', () => {
+  test('Fase 253 libera bloqueio manual também pela visualização em lista', async ({ page }) => {
+    const agenda = await prepararDashboardMockado(page, { googleConectado: false });
+    await page.goto('/agenda');
+
+    const agendaInterna = page.getByRole('region', { name: 'Agenda interna semanal' });
+    await agendaInterna.getByRole('button', { name: 'lista' }).click();
+    await agendaInterna.getByRole('button', { name: 'Liberar Reunião clínica' }).click();
+
+    const confirmacao = page.getByRole('dialog', { name: 'Liberar horário reservado' });
+    await expect(confirmacao).toBeVisible();
+    await confirmacao.getByRole('button', { name: 'Liberar horário' }).click();
+
+    await expect.poll(() => agenda.liberouBloqueio()).toBe(true);
+    await expect(page.getByText('Horário liberado na agenda interna.')).toBeVisible();
+    await expect(agendaInterna.getByText('Reunião clínica')).toHaveCount(0);
+  });
+
   test('mantem agenda interna visual sem Google e sinaliza horarios ocupados', async ({ page }) => {
     await prepararDashboardMockado(page, { googleConectado: false });
     await page.goto('/agenda');

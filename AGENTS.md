@@ -17,11 +17,14 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase mais recente concluida: Fase 252 - arquitetura de navegacao e descoberta
-  de funcionalidades. `lib/navegacao-console.ts` e a fonte canonica para menu,
-  paleta e autorizacao por papel/permissao; o menu mobile, a matriz de acesso,
-  Penpot, Chrome DevTools, Lighthouse e Playwright foram aprovados. A proxima
-  fase e a Fase 253 - agenda clinica confiavel e operacional. A Fase 251
+- Fase 253 esta implementada e validada localmente, mas nao concluida: a
+  migration aditiva `1720000001034` precisa ser aplicada com `neondb_owner` no
+  banco de producao explicitamente confirmado antes do merge/deploy. Nao
+  integrar o PR com essa migration pendente. A agenda interna e a autoridade;
+  Google e notificacoes sao efeitos recuperaveis. A Fase 252 concluiu a
+  arquitetura de navegacao; `lib/navegacao-console.ts` e a fonte canonica para
+  menu, paleta e autorizacao por papel/permissao. Depois do rollout da 253, a
+  proxima fase e a 254 - lista e cadastro robusto de pacientes. A Fase 251
   consolidou linguagem e microcopy. A Fase 250 encerrou a divida Mobile e
   higiene de PRs. Os dois advisories altos de `image-size` continuam sem patch,
   os gates locais passaram e o PR legado `#6` foi encerrado como superado. Nao

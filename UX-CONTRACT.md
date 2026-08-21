@@ -97,6 +97,13 @@
 - Idempotency and duplicate-submit policy: busy actions disable repeat submits; backend remains authority for idempotent external effects.
 - Session expiry/re-authentication: BFF preserves the trusted boundary and returns the login flow without exposing tokens.
 - Stale-request cancellation/invalidation: remote search and refreshes must avoid replacing newer state with older responses.
+- Agenda authority: the internal calendar remains usable and authoritative
+  without Google; external sync and notifications expose status and recovery
+  without rolling back the clinical appointment.
+- Conflict recovery: public booking refreshes availability after conflict,
+  removes only the stale slot and preserves the patient's typed data.
+- Manual availability: every calendar view that displays a manual block must
+  provide an authorized path to release it with confirmation and feedback.
 
 ## Validation
 

@@ -8,6 +8,7 @@ import { PATCH as salvarRascunhoFormularioPublico } from '../app/api/formularios
 import { GET as obterLinkInterno } from '../app/api/agenda/agendamento-publico/route';
 import { POST as rotacionarLinkInterno } from '../app/api/agenda/agendamento-publico/rotacionar/route';
 import { GET as listarSolicitacoesInternas } from '../app/api/agenda/solicitacoes/route';
+import { POST as reprocessarIntegracoesConsulta } from '../app/api/agenda/consultas/[consultaId]/integracoes/reprocessar/route';
 import { obterOrigemPublicaAgenda } from '../lib/server/agendamento-publico-bff';
 
 const { __clearCookies, __getCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
@@ -109,6 +110,49 @@ test('BFF interno rejeita requisicao sem sessao antes de consultar o backend', a
     assert.equal(backendChamado, false);
   } finally {
     restaurarFetch(fetchOriginal);
+  }
+});
+
+test('BFF de reprocessamento exige permissao e encaminha somente o ID codificado', async () => {
+  const fetchOriginal = global.fetch;
+  let backendChamado = false;
+  global.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    backendChamado = true;
+    assert.equal(
+      String(url),
+      'http://backend.octaclin.local/agenda/consultas/consulta%2Fsegura/integracoes/reprocessar'
+    );
+    assert.equal(init?.method, 'POST');
+    assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer access-token-valido');
+    return new Response(JSON.stringify({ id: 'consulta/segura', notificacoes: {} }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }) as typeof global.fetch;
+
+  try {
+    __setCookies(cookiesSessaoValida(['agenda.consultas.ler']));
+    const proibida = await reprocessarIntegracoesConsulta(
+      new Request('http://localhost:3000/api/agenda/consultas/consulta%2Fsegura/integracoes/reprocessar', {
+        method: 'POST'
+      }),
+      { params: Promise.resolve({ consultaId: 'consulta/segura' }) }
+    );
+    assert.equal(proibida.status, 403);
+    assert.equal(backendChamado, false);
+
+    __setCookies(cookiesSessaoValida(['agenda.consultas.criar']));
+    const permitida = await reprocessarIntegracoesConsulta(
+      new Request('http://localhost:3000/api/agenda/consultas/consulta%2Fsegura/integracoes/reprocessar', {
+        method: 'POST'
+      }),
+      { params: Promise.resolve({ consultaId: 'consulta/segura' }) }
+    );
+    assert.equal(permitida.status, 200);
+    assert.equal(backendChamado, true);
+  } finally {
+    restaurarFetch(fetchOriginal);
+    __clearCookies();
   }
 });
 

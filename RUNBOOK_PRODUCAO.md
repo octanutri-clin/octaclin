@@ -248,6 +248,52 @@ A tabela cresce sem expurgo automatico. A consulta quente usa indice parcial
 sobre nao lidas e a listagem usa `limit`, entao o efeito e de disco e nao de
 latencia; acompanhar o tamanho junto com as demais tabelas no Neon.
 
+### Agenda publica segura (Fase 253)
+
+O codigo da Fase 253 depende da migration aditiva
+`ProtegerResolucaoAgendaPublica1720000001034`. Ela cria ou substitui apenas a
+funcao `resolver_agenda_link_publico`, sem alterar dados nem desligar RLS. Como
+`BANCO_EXECUTAR_MIGRACOES=false`, aplicar a migration antes do merge/deploy.
+
+Confirmar explicitamente projeto, branch, banco `Octaclin-db-producao` e role
+`neondb_owner`. Interromper se `migration:show` apontar qualquer pendencia alem
+da `1034`.
+
+```powershell
+$url = '<URL owner de producao confirmada>'
+try {
+  $env:DATABASE_URL = $url
+  pnpm --dir octaclin-backend run typeorm -- migration:show
+  pnpm --dir octaclin-backend migration:run
+  pnpm --dir octaclin-backend run typeorm -- migration:show
+} finally {
+  Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+  $url = $null
+}
+```
+
+Verificar no SQL Editor, sem registrar token real:
+
+```sql
+select p.prosecdef, p.proconfig, pg_get_function_result(p.oid)
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname = 'public'
+   and p.proname = 'resolver_agenda_link_publico';
+
+select relrowsecurity, relforcerowsecurity
+  from pg_class
+ where relname = 'agenda_links_publicos';
+
+select count(*)
+  from resolver_agenda_link_publico(repeat('0', 64)::char(64));
+```
+
+Esperado: `prosecdef=true`, `search_path=public, pg_temp`, retorno limitado a
+tenant/profissional/duracao, RLS e FORCE RLS verdadeiros e zero linha para o
+hash sintetico. Em falha, nao executar `down` ou `migration:revert`; remover a
+`DATABASE_URL` e diagnosticar antes do deploy.
+
 ### API publica e webhooks (Fase 218)
 
 O codigo da Fase 218 depende da migration aditiva

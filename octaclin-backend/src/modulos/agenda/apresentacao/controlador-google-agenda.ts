@@ -56,11 +56,24 @@ export class ControladorGoogleAgenda {
   @Permissoes('agenda.consultas.ler')
   async status(@UsuarioAtual() usuario: UsuarioAutenticado) {
     if (usuario.papel === 'SuperAdmin') {
-      return { conectado: false, podeGerenciar: false };
+      return { conectado: false, podeGerenciar: false, falhasConsecutivas: 0 };
     }
     const profissionalId = await this.resolverProfissionalIdObrigatorio(usuario);
-    const credenciais = await this.servicoConexao.obterConexaoAtiva(usuario.tenantId, profissionalId);
-    return { conectado: Boolean(credenciais), podeGerenciar: true };
+    const [credenciais, conexao] = await Promise.all([
+      this.servicoConexao.obterConexaoAtiva(usuario.tenantId, profissionalId),
+      this.executorTenant.executar(usuario.tenantId, (gerenciador) =>
+        gerenciador.getRepository(ProfissionalGoogleConexaoOrm).findOne({
+          where: { tenantId: usuario.tenantId, profissionalId }
+        })
+      )
+    ]);
+    return {
+      conectado: Boolean(credenciais),
+      podeGerenciar: true,
+      falhasConsecutivas: conexao?.falhasConsecutivasSincronizacao ?? 0,
+      atualizadoEm: conexao?.atualizadoEm,
+      canalExpiraEm: conexao?.canalExpiraEm
+    };
   }
 
   @Get('profissionais/status')

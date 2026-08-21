@@ -132,6 +132,7 @@ function criarServico(dados: Record<string, unknown> = {}) {
     bloqueioManual: criarRepositorioFake('bloqueioManual', dados)
   };
   const gerenciador = {
+    query: jest.fn(async () => []),
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === AgendaConsultaOrm) return repositorios.consulta;
       if (entidade === PacienteOrm) return repositorios.paciente;
@@ -185,6 +186,7 @@ function criarServico(dados: Record<string, unknown> = {}) {
       comunicacoes as never,
       servicoConexao as never
     ),
+    gerenciador,
     repositorios,
     googleCalendar,
     comunicacoes,
@@ -364,14 +366,18 @@ describe('ServicoAgenda', () => {
       fimEm: new Date('2026-08-12T11:00:00.000Z')
     };
     const profissional = { id: 'profissional-1', tenantId: 'tenant-1', arquivadoEm: null };
-    const { servico } = criarServico({ profissional });
+    const { servico, gerenciador } = criarServico({ profissional });
 
     const resultado = await servico.criarBloqueioManual(
       'tenant-1',
       { profissionalId: 'profissional-1', tipo: 'reuniao', inicioEm: '2026-08-12T10:00:00.000Z', fimEm: '2026-08-12T11:00:00.000Z' },
       usuarioColaborador
     );
-    const { servico: servicoComBloqueio, repositorios } = criarServico({ profissional, bloqueiosManuais: [bloqueio] });
+    const {
+      servico: servicoComBloqueio,
+      gerenciador: gerenciadorComBloqueio,
+      repositorios
+    } = criarServico({ profissional, bloqueiosManuais: [bloqueio] });
     await expect(
       (servicoComBloqueio as unknown as { removerBloqueioManual: (tenantId: string, bloqueioId: string, usuario: UsuarioAutenticado) => Promise<{ id: string }> }).removerBloqueioManual(
         'tenant-1',
@@ -381,6 +387,14 @@ describe('ServicoAgenda', () => {
     ).resolves.toEqual({ id: 'bloqueio-manual-1' });
 
     expect(resultado).toEqual(expect.objectContaining({ tipo: 'bloqueio_manual', rotulo: 'Reuniao' }));
+    expect(gerenciador.query).toHaveBeenCalledWith(
+      'select pg_advisory_xact_lock(hashtextextended($1, 0))',
+      ['octaclin:agenda:tenant-1:profissional-1']
+    );
+    expect(gerenciadorComBloqueio.query).toHaveBeenCalledWith(
+      'select pg_advisory_xact_lock(hashtextextended($1, 0))',
+      ['octaclin:agenda:tenant-1:profissional-1']
+    );
     expect(repositorios.bloqueioManual.remove).toHaveBeenCalledWith(bloqueio);
   });
 
@@ -425,6 +439,7 @@ describe('ServicoAgenda', () => {
       fimEm: new Date('2026-07-22T13:00:00.000Z'),
       timezone: 'America/Sao_Paulo',
       status: 'agendada',
+      googleEventId: 'google-event-1',
       notificacoes: {},
       payload: {}
     };
@@ -439,7 +454,8 @@ describe('ServicoAgenda', () => {
           inicioEm: '2026-07-23T12:00:00.000Z',
           duracaoMinutos: 60
         },
-        'profissional-1'
+        'profissional-1',
+        'google-event-1'
       )
     ).rejects.toThrow('Ja existe consulta agendada neste horario para o profissional.');
   });
@@ -554,6 +570,58 @@ describe('ServicoAgenda', () => {
     expect(consulta.googleEventId).toBe('event-1');
     expect(consulta.notificacoes.email).toEqual(expect.objectContaining({ status: 'pendente' }));
     expect(consulta.notificacoes.whatsapp).toEqual(expect.objectContaining({ status: 'pendente' }));
+  });
+
+  it('reprocessa uma notificacao falha reutilizando a mesma mensagem da fila', async () => {
+    const consultaExistente = {
+      id: 'consulta-reprocessar',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      modalidade: 'presencial',
+      notificacoes: {
+        email: { status: 'falhou', mensagemId: 'mensagem-email-existente', erro: 'fila indisponivel' },
+        whatsapp: { status: 'pendente', mensagemId: 'mensagem-whatsapp-existente' }
+      },
+      payload: {
+        pacienteNome: 'Ana Paula',
+        profissionalNome: 'Dra Carla',
+        emailContato: 'ana@example.com',
+        whatsappContato: '5511999999999'
+      },
+      criadoEm: new Date('2026-07-20T12:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-20T12:00:00.000Z')
+    };
+    const { servico, comunicacoes } = criarServico({
+      consulta: consultaExistente,
+      consultas: [consultaExistente]
+    });
+
+    const resposta = await servico.reprocessarIntegracoes(
+      'tenant-1',
+      'consulta-reprocessar',
+      usuarioColaborador
+    );
+
+    expect(comunicacoes.publicarEventoNotificacao).toHaveBeenCalledTimes(1);
+    expect(comunicacoes.publicarEventoNotificacao).toHaveBeenCalledWith(
+      'tenant-1',
+      'mensagem-email-existente'
+    );
+    expect(comunicacoes.dispararMensagem).not.toHaveBeenCalled();
+    expect(resposta.notificacoes.email).toEqual({
+      status: 'pendente',
+      mensagemId: 'mensagem-email-existente'
+    });
+    expect(resposta.notificacoes.whatsapp).toEqual({
+      status: 'pendente',
+      mensagemId: 'mensagem-whatsapp-existente'
+    });
   });
 
   it('deve gravar consulta online com link e levar o link para notificacao e evento Google', async () => {
@@ -1020,11 +1088,17 @@ describe('ServicoAgenda', () => {
         inicioEm: '2026-07-23T14:00:00.000Z',
         duracaoMinutos: 45
       },
-      'prof-1'
+      'prof-1',
+      'event-1'
     );
 
     expect(repositorios.consulta.findOne).toHaveBeenCalledWith({
-      where: { id: 'consulta-1', tenantId: 'tenant-1', profissionalId: 'prof-1' },
+      where: {
+        id: 'consulta-1',
+        tenantId: 'tenant-1',
+        profissionalId: 'prof-1',
+        googleEventId: 'event-1'
+      },
       lock: { mode: 'pessimistic_write' }
     });
     expect(consulta.inicioEm).toEqual(new Date('2026-07-23T14:00:00.000Z'));
@@ -1165,6 +1239,7 @@ describe('ServicoAgenda', () => {
       fimEm: new Date('2026-07-22T13:00:00.000Z'),
       timezone: 'America/Sao_Paulo',
       status: 'agendada',
+      googleEventId: 'google-event-1',
       notificacoes: {},
       payload: {}
     };
@@ -1294,6 +1369,7 @@ describe('ServicoAgenda', () => {
       fimEm: new Date('2026-07-22T13:00:00.000Z'),
       timezone: 'America/Sao_Paulo',
       status: 'agendada',
+      googleEventId: 'google-event-1',
       notificacoes: {},
       payload: {}
     };
@@ -1303,7 +1379,8 @@ describe('ServicoAgenda', () => {
       'tenant-1',
       consultaExistente.id,
       {},
-      'profissional-1'
+      'profissional-1',
+      'google-event-1'
     );
 
     expect(consulta.payload.historico).toEqual(
@@ -1673,12 +1750,18 @@ describe('ServicoAgenda', () => {
           'tenant-atacante',
           'consulta-1',
           { inicioEm: '2026-07-23T14:00:00.000Z', duracaoMinutos: 45 },
-          'profissional-atacante'
+          'profissional-atacante',
+          'google-event-atacante'
         )
       ).rejects.toBeInstanceOf(NotFoundException);
 
       expect(repositorioConsulta.findOne).toHaveBeenCalledWith({
-        where: { id: 'consulta-1', tenantId: 'tenant-atacante', profissionalId: 'profissional-atacante' },
+        where: {
+          id: 'consulta-1',
+          tenantId: 'tenant-atacante',
+          profissionalId: 'profissional-atacante',
+          googleEventId: 'google-event-atacante'
+        },
         lock: { mode: 'pessimistic_write' }
       });
     });

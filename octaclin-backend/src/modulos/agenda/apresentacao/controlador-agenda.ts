@@ -264,6 +264,30 @@ export class ControladorAgenda {
     return consulta;
   }
 
+  @Post('consultas/:consultaId/integracoes/reprocessar')
+  @Permissoes('agenda.consultas.criar')
+  async reprocessarIntegracoes(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('consultaId', ParseUUIDPipe) consultaId: string
+  ) {
+    const consulta = await this.servicoAgenda.reprocessarIntegracoes(usuario.tenantId, consultaId, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'agenda.consulta.integracoes_reprocessar',
+      recursoTipo: 'agenda_consulta',
+      recursoId: consulta.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        googleEventId: consulta.googleEventId,
+        notificacoes: consulta.notificacoes
+      }
+    });
+    return consulta;
+  }
+
   @Post('consultas/:consultaId/desfecho')
   @Permissoes('agenda.consultas.criar')
   async registrarDesfecho(

@@ -36,6 +36,7 @@
     "test:producao:readonly": "playwright test tests/visual/producao-readonly.spec.mjs --project=desktop-chromium --reporter=list",
     "test:a11y": "playwright test tests/visual/acessibilidade.spec.mjs --reporter=list",
     "test:fase252": "playwright test tests/visual/fase-252-navegacao-descoberta.spec.mjs --project=desktop-chromium --reporter=list",
+    "test:fase253": "playwright test tests/visual/agendamento-publico.spec.mjs tests/visual/console-regression.spec.mjs --grep \"Fase 253\" --project=desktop-chromium --reporter=list",
     "test:questionarios-preview": "node scripts/test-questionarios-preview.mjs",
     "test:paleta": "playwright test tests/visual/paleta-comandos.spec.mjs --reporter=list",
     "smoke:visual": "playwright test",

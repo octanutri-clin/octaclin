@@ -16,6 +16,7 @@ const arquivos = [
   'app/api/agenda/agendamento-publico/route.ts',
   'app/api/agenda/agendamento-publico/rotacionar/route.ts',
   'app/api/agenda/solicitacoes/route.ts',
+  'app/api/agenda/consultas/[consultaId]/integracoes/reprocessar/route.ts',
   'lib/server/agendamento-publico-bff.ts',
   'lib/server/permissoes-bff.ts',
   'lib/server/sessao-bff.ts'

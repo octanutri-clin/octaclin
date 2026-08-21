@@ -2196,6 +2196,13 @@ publicado antes de ampliar a superficie de mudancas visuais.
     concluir, remarcar, registrar falta e cancelar sem ambiguidade.
   - Tornar conflitos, sincronização Google, notificações e solicitações públicas
     observáveis, idempotentes e recuperáveis sem perder a agenda interna.
+  - [x] Implementacao, testes focados, builds, autorizacao, Playwright,
+    acessibilidade e preflight SQL no banco isolado concluidos em 2026-08-21.
+  - [x] Migration aditiva `1720000001034` aplicada em 2026-08-21 com
+    `neondb_owner` no banco de producao explicitamente confirmado; 47/47 no
+    TypeORM, funcao minima e RLS/FORCE RLS verificados.
+  - [ ] Integrar o PR, acompanhar os deploys e aprovar o smoke de producao.
+  - Documento: `fase-253-agenda-clinica-confiavel-operacional.md`.
 
 - [ ] Fase 254 - Lista e cadastro robusto de pacientes. [ESSENCIAL - PRE-PILOTO]
   - Consolidar busca, filtros salvos, risco, responsável, última consulta,
@@ -2369,6 +2376,25 @@ Fase 252 - Arquitetura de navegacao e descoberta de funcionalidades:
   `ecc:api-design`, `ecc:error-handling`, `ecc:e2e-testing`,
   `codex-security:attack-path-analysis`, Context7, Browser, Chrome DevTools e
   Playwright
+
+Fase 253 - Agenda clinica confiavel e operacional:
+- Status: implementacao e migration `1034` concluidas; rollout pendente de
+  merge, deploy e smoke
+- Commit: registrado no historico Git da fase
+- Data: 2026-08-21
+- Validacoes: 87 testes focados backend, build backend, build web de 123 rotas,
+  autorizacao, 2 jornadas Playwright, gate de acessibilidade, Chrome DevTools,
+  preflight SQL em integracao e varredura de segredos
+- Observacoes: a suite backend completa passou 141/142 suites e 984/985 testes;
+  a unica falha e a comparacao canonica TACO por `LF/CRLF` no Windows. A
+  migration `1034` foi aplicada com 47/47 migrations e verificacoes de funcao e
+  RLS aprovadas; falta integrar o PR e executar o smoke.
+- Proxima fase: Fase 254 - Lista e cadastro robusto de pacientes
+- Modelo recomendado: GPT-5.6 Sol, raciocinio `high`
+- Skills/plugins: `ecc:healthcare-emr-patterns`, `ecc:frontend-patterns`,
+  `ecc:database-migrations`, `ecc:frontend-a11y`,
+  `codex-security:validation`, Browser, Chrome DevTools e Playwright; Neon
+  somente com banco-alvo explicitamente confirmado
 
 Fase 244 - Quitacao da divida de dependencias do backend, web e ai-service:
 - Status: concluida

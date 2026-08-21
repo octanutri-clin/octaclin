@@ -181,3 +181,22 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
   configuracao do tenant.
 - Operacao: o painel sugere promover, observar ou rollback, mas a decisao e a
   execucao continuam humanas e seguem `RUNBOOK_PRODUCAO.md`.
+
+## ADR-023 - Autoridade e efeitos externos da agenda
+
+- Decisao: a agenda interna e a fonte operacional, inclusive sem Google
+  conectado. Google Calendar, email e WhatsApp sao efeitos externos
+  observaveis e recuperaveis, nunca pre-condicao para persistir a consulta.
+- Concorrencia: toda mutacao que ocupa ou libera horario adquire trava
+  transacional por `tenantId` e `profissionalId`, cobrindo a corrida entre as
+  tabelas de consulta e bloqueio manual.
+- Idempotencia: evento Google usa ID deterministico por consulta; `409` so e
+  recuperado se o evento apontar para a mesma consulta. Mensagem persistida e
+  republicada pelo mesmo ID e solicitacao publica usa referencia deterministica.
+- Entrada Google: remarcacao/cancelamento exige o `googleEventId` persistido e
+  o sync token so avanca quando todos os eventos forem aplicados.
+- Link publico: antes de existir contexto de tenant, uma funcao
+  `SECURITY DEFINER` com `search_path` fixo resolve somente hash de token ativo,
+  tenant, profissional e duracao. RLS e FORCE RLS da tabela permanecem ativos.
+- Consequencia: a migration `1720000001034` precisa ser aplicada fora de banda
+  com role owner antes do deploy do codigo da Fase 253.

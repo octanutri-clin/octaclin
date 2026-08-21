@@ -88,19 +88,15 @@ export class ServicoSincronizacaoGoogleCalendar {
       }
     }
 
-    const LIMITE_FALHAS_CONSECUTIVAS = 5;
     if (proximoSyncToken) {
       if (!houveFalha) {
         if (janelaInicial) await this.removerBloqueiosForaDaJanela(tenantId, profissionalId, janelaInicial);
         await this.armazenarSyncTokenEResetarFalhas(tenantId, profissionalId, proximoSyncToken);
       } else {
         const falhas = await this.incrementarFalhasConsecutivas(tenantId, profissionalId);
-        if (falhas >= LIMITE_FALHAS_CONSECUTIVAS) {
-          this.logger.error(
-            `Profissional ${profissionalId}: ${falhas} falhas consecutivas ao aplicar eventos da Google Agenda; avancando o sync token mesmo assim para evitar bloqueio permanente da sincronizacao.`
-          );
-          await this.armazenarSyncTokenEResetarFalhas(tenantId, profissionalId, proximoSyncToken);
-        }
+        this.logger.error(
+          `Profissional ${profissionalId}: ${falhas} falha(s) consecutiva(s) ao aplicar eventos da Google Agenda; sync token preservado para permitir nova tentativa sem perder alteracoes.`
+        );
       }
     }
   }
@@ -179,7 +175,8 @@ export class ServicoSincronizacaoGoogleCalendar {
         tenantId,
         consultaId,
         { motivo: 'Cancelado direto na Google Agenda.' },
-        profissionalId
+        profissionalId,
+        evento.id
       );
       return;
     }
@@ -188,7 +185,8 @@ export class ServicoSincronizacaoGoogleCalendar {
         tenantId,
         consultaId,
         { inicioEm: evento.inicioEm.toISOString(), fimEm: evento.fimEm.toISOString() },
-        profissionalId
+        profissionalId,
+        evento.id
       );
     }
   }

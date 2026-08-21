@@ -7,6 +7,14 @@ Atualizado em 2026-08-21.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 253 implementada e validada localmente: a agenda interna ganhou trava
+  transacional por tenant/profissional, recuperacao de Google/email/WhatsApp,
+  evento Google deterministico e vinculado, sync token sem avanco parcial,
+  solicitacao publica idempotente e bloqueio manual em disponibilidade/lista.
+  O preflight da funcao publica segura passou no banco de integracao. A
+  migration aditiva `1720000001034` foi aplicada e verificada em producao com
+  47/47 migrations; o rollout agora aguarda merge, deploy e smoke. Depois do
+  rollout, a proxima fase e a 254.
 - Fase 252 concluida: menu, paleta de comandos e autorizacao de rotas agora
   derivam do mesmo catalogo por papel e permissao. O console usa os grupos
   Clinica, Relacionamento e Administracao; menu mobile, matriz de papeis,

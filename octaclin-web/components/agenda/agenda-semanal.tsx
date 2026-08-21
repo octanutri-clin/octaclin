@@ -5,7 +5,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Clock3, List, MapPin, RefreshC
 import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Dica } from '@/components/ui/dica';
-import { EstadoFalha } from '@/components/ui/feedback';
+import { AlertaSucesso, EstadoFalha } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
 import { classificarFalhaInterface, type FalhaInterface } from '@/lib/erros-interface';
@@ -143,6 +143,7 @@ export function AgendaSemanal({
   const [profissionalId, setProfissionalId] = useState('');
   const [itensFeed, setItensFeed] = useState<ItemFeedAgendaApi[] | null>(null);
   const [falhaFeed, setFalhaFeed] = useState<FalhaInterface | null>(null);
+  const [sucessoFeed, setSucessoFeed] = useState<string | null>(null);
   const [carregandoFeed, setCarregandoFeed] = useState(false);
   const [versaoFeed, setVersaoFeed] = useState(0);
   const iniciarRequisicaoFeed = useRequisicaoCancelavel();
@@ -152,6 +153,7 @@ export function AgendaSemanal({
     fimEm: valorDatetimeLocal(new Date(Date.now() + 60 * 60_000))
   }));
   const [bloqueioParaLiberar, setBloqueioParaLiberar] = useState<string | null>(null);
+  const [criandoBloqueio, setCriandoBloqueio] = useState(false);
   const [liberandoBloqueio, setLiberandoBloqueio] = useState(false);
 
   useEffect(() => {
@@ -258,6 +260,7 @@ export function AgendaSemanal({
 
   async function criarBloqueio(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    setCriandoBloqueio(true);
     try {
       const criado = await criarBloqueioManualAgenda({
         profissionalId: profissionalId || undefined,
@@ -268,18 +271,26 @@ export function AgendaSemanal({
       if (criado.tipo !== 'bloqueio_manual') return;
       setItensFeed((atuais) => (atuais ? [...atuais, criado].sort((a, b) => a.inicioEm.localeCompare(b.inicioEm)) : atuais));
       setFalhaFeed(null);
+      setSucessoFeed('Horário bloqueado na agenda interna.');
     } catch (erro) {
+      setSucessoFeed(null);
       setFalhaFeed(classificarFalhaInterface(erro, 'Não foi possível bloquear o horário.'));
+    } finally {
+      setCriandoBloqueio(false);
     }
   }
 
-  async function removerBloqueio(bloqueioId: string) {
+  async function removerBloqueio(bloqueioId: string): Promise<boolean> {
     try {
       await removerBloqueioManualAgenda(bloqueioId);
       setItensFeed((atuais) => atuais?.filter((item) => item.id !== bloqueioId) ?? atuais);
       setFalhaFeed(null);
+      setSucessoFeed('Horário liberado na agenda interna.');
+      return true;
     } catch (erro) {
+      setSucessoFeed(null);
       setFalhaFeed(classificarFalhaInterface(erro, 'Não foi possível liberar o horário.'));
+      return false;
     }
   }
 
@@ -423,8 +434,12 @@ export function AgendaSemanal({
             onChange={(evento) => setBloqueio((atual) => ({ ...atual, fimEm: evento.target.value }))}
           />
         </label>
-        <Botao type="submit">Bloquear horário</Botao>
+        <Botao type="submit" disabled={criandoBloqueio}>
+          {criandoBloqueio ? 'Bloqueando' : 'Bloquear horário'}
+        </Botao>
       </form>
+
+      {sucessoFeed ? <AlertaSucesso mensagem={sucessoFeed} className="mx-4" /> : null}
 
       {falhaFeed ? (
         <EstadoFalha
@@ -459,7 +474,15 @@ export function AgendaSemanal({
                   <p className="text-sm font-semibold text-tinta">{nome}</p>
                   <p className="text-xs text-texto-suave">{formatarDia(inicio)} · {formatarHora(inicio)} - {formatarHora(fim)} · {consulta ? 'Consulta' : item.tipo === 'bloqueio_manual' ? 'Horário reservado' : 'Indisponível'}</p>
                 </div>
-                {consulta ? <Botao type="button" onClick={() => onAbrirConsulta(item.id)} aria-label={`Abrir detalhes de ${nome}`}>Abrir detalhes</Botao> : null}
+                {consulta ? (
+                  <Botao type="button" onClick={() => onAbrirConsulta(item.id)} aria-label={`Abrir detalhes de ${nome}`}>
+                    Abrir detalhes
+                  </Botao>
+                ) : item.tipo === 'bloqueio_manual' ? (
+                  <Botao type="button" onClick={() => setBloqueioParaLiberar(item.id)} aria-label={`Liberar ${nome}`}>
+                    Liberar horário
+                  </Botao>
+                ) : null}
               </div>
             );
           }) : <p className="px-4 py-8 text-sm text-texto-suave">Nenhum horário ocupado neste período.</p>}
@@ -617,9 +640,9 @@ export function AgendaSemanal({
         aoConfirmar={() => {
           if (!bloqueioParaLiberar) return;
           setLiberandoBloqueio(true);
-          void removerBloqueio(bloqueioParaLiberar).then(() => {
+          void removerBloqueio(bloqueioParaLiberar).then((removido) => {
             setLiberandoBloqueio(false);
-            setBloqueioParaLiberar(null);
+            if (removido) setBloqueioParaLiberar(null);
           });
         }}
       />

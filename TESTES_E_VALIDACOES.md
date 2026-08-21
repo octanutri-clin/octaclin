@@ -626,3 +626,20 @@ O catalogo deve cobrir exatamente as rotas operacionais publicadas. Papel e
 permissao precisam concordar; Patient e Client nao recebem comandos do console,
 e Operacoes nunca aparece fora do SuperAdmin. Em 390 px, o disclosure de
 modulos deve abrir por teclado, manter foco visivel e nao causar overflow.
+
+### Fase 253 - agenda clinica confiavel e operacional
+
+```powershell
+pnpm --dir octaclin-backend exec jest --runInBand src/modulos/agenda/aplicacao/servico-agenda.spec.ts src/modulos/agenda/aplicacao/servico-agendamento-publico.spec.ts src/modulos/agenda/aplicacao/servico-google-calendar.spec.ts src/modulos/agenda/aplicacao/servico-sincronizacao-google-calendar.spec.ts src/modulos/agenda/apresentacao/controlador-google-agenda.spec.ts src/infraestrutura/banco-dados/migracoes/1720000001034-ProtegerResolucaoAgendaPublica.spec.ts
+pnpm --dir octaclin-backend build
+pnpm --dir octaclin-web test:authz
+pnpm --dir octaclin-web test:fase253
+pnpm --dir octaclin-web exec playwright test tests/visual/acessibilidade.spec.mjs --grep "agenda interna" --project=desktop-chromium --reporter=list
+pnpm --dir octaclin-web build
+```
+
+O aceite exige concorrencia serializada entre consultas e bloqueios, evento
+Google vinculado a consulta, sync token sem avanco parcial, reprocessamento sem
+duplicar mensagens e disponibilidade publica que respeite bloqueio manual. A
+migration `1034` deve ser a unica pendente antes do rollout e a funcao publica
+deve manter `SECURITY DEFINER`, `search_path` fixo e retorno minimo.

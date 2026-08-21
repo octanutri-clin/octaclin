@@ -746,6 +746,14 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   Operacoes fora do SuperAdmin. Penpot, Chrome DevTools, Lighthouse 100 e
   Playwright desktop/mobile validaram a entrega. Ver
   `fase-252-arquitetura-navegacao-descoberta.md`.
+- Fase 253 - Agenda clinica confiavel e operacional: implementacao validada com
+  trava transacional por agenda profissional, eventos Google deterministas e
+  vinculados, sync token preservado em falha, notificacoes recuperaveis,
+  solicitacao publica idempotente e bloqueios manuais refletidos em todas as
+  visualizacoes. A migration `1034` foi aplicada e verificada em producao com
+  47/47 migrations; o rollout permanece pendente de merge, deploy e smoke, por
+  isso a fase ainda nao esta marcada como concluida no checklist. Ver
+  `fase-253-agenda-clinica-confiavel-operacional.md`.
 - Fase 241 - Hardening da IA clinica: referencias de
   check-in, transcricao e midia agora sao validadas por tenant/paciente; a URL
   privada e criada apenas no backend e seu SHA-256 e conferido ponta a ponta.
