@@ -140,7 +140,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
                     <div className="flex min-h-24 items-center justify-center gap-2 rounded-md border border-dashed border-linha bg-white text-sm text-texto-suave">
                       <ImagePlus size={18} />
                       <span>
-                        {String(campo.atributos.accept)} - ate {String(campo.atributos.maxArquivos)} arquivo(s)
+                        {String(campo.atributos.accept)} - até {String(campo.atributos.maxArquivos)} arquivo(s)
                       </span>
                     </div>
                   ) : null}

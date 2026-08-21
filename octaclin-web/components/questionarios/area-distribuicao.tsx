@@ -19,13 +19,13 @@ export function AreaDistribuicao({ workspace }: { workspace: WorkspaceQuestionar
     <Cartao className="overflow-hidden">
       <div className="flex items-center gap-2 border-b border-linha px-4 py-3">
         <Link2 className="h-4 w-4 text-primaria" />
-        <h2 className="text-sm font-semibold text-tinta">Distribuicao do formulario</h2>
+        <h2 className="text-sm font-semibold text-tinta">Distribuição do formulário</h2>
       </div>
       <div className="grid gap-4 p-4 lg:grid-cols-2">
         <div className="grid gap-3 rounded-md border border-linha bg-superficie p-3">
           <div>
             <p className="text-sm font-semibold text-tinta">Check-in recorrente</p>
-            <p className="text-xs text-texto-suave">Agenda um envio automatico para um paciente especifico.</p>
+            <p className="text-xs text-texto-suave">Agenda um envio automático para um paciente especifico.</p>
           </div>
           <Selecao value={pacienteAgendamentoId} onChange={(event) => setPacienteAgendamentoId(event.target.value)} aria-label="Paciente do check-in recorrente">
             <option value="">Selecione o paciente</option>
@@ -40,14 +40,14 @@ export function AreaDistribuicao({ workspace }: { workspace: WorkspaceQuestionar
         <div className="grid gap-3 rounded-md border border-linha bg-superficie p-3">
           <div>
             <p className="text-sm font-semibold text-tinta">Envio individual</p>
-            <p className="text-xs text-texto-suave">Gera o link publico para uma resposta unica.</p>
+            <p className="text-xs text-texto-suave">Gera o link público para uma resposta única.</p>
           </div>
           <Selecao value={pacienteEnvioId} onChange={(event) => setPacienteEnvioId(event.target.value)} aria-label="Paciente do envio individual">
             <option value="">Selecione o paciente</option>
             {pacientes.map((paciente) => <option key={paciente.id} value={paciente.id}>{paciente.nome}</option>)}
           </Selecao>
           <Botao type="button" onClick={() => void gerarLinkFormulario()} disabled={salvando || !questionarioAtual}><Link2 className="h-4 w-4" /> Gerar link</Botao>
-          {linkFormulario ? <Campo readOnly value={linkFormulario} onFocus={(event) => event.currentTarget.select()} aria-label="Link publico do formulario" /> : null}
+          {linkFormulario ? <Campo readOnly value={linkFormulario} onFocus={(event) => event.currentTarget.select()} aria-label="Link público do formulário" /> : null}
         </div>
       </div>
     </Cartao>

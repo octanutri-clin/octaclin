@@ -27,14 +27,14 @@ import { classesBotao } from '@/components/ui/botao';
 import { Dica } from '@/components/ui/dica';
 
 const itens = [
-  { href: '/dashboard', rotulo: 'Hoje', icone: LayoutDashboard, permissao: 'dashboard.ler', grupo: 'Clinica', papeis: ['SuperAdmin', 'Professional'] },
-  { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays, permissao: 'agenda.consultas.ler', grupo: 'Clinica', papeis: undefined },
-  { href: '/pacientes', rotulo: 'Pacientes', icone: HeartPulse, permissao: 'pacientes.listar', grupo: 'Clinica', papeis: undefined },
+  { href: '/dashboard', rotulo: 'Hoje', icone: LayoutDashboard, permissao: 'dashboard.ler', grupo: 'Clínica', papeis: ['SuperAdmin', 'Professional'] },
+  { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays, permissao: 'agenda.consultas.ler', grupo: 'Clínica', papeis: undefined },
+  { href: '/pacientes', rotulo: 'Pacientes', icone: HeartPulse, permissao: 'pacientes.listar', grupo: 'Clínica', papeis: undefined },
   { href: '/questionarios', rotulo: 'Formulários', icone: ClipboardList, permissao: 'questionarios.ler', grupo: 'Clínica', papeis: undefined },
   { href: '/comunicacoes', rotulo: 'Comunicações', icone: Send, permissao: 'comunicacoes.mensagens.ler', grupo: 'Relacionamento', papeis: undefined },
   { href: '/automacoes', rotulo: 'Automações', icone: Zap, permissao: 'automacoes.gerenciar', grupo: 'Relacionamento', papeis: undefined },
   { href: '/ia', rotulo: 'IA assistida', icone: BrainCircuit, permissao: 'ia.executar', grupo: 'Ferramentas', papeis: ['SuperAdmin', 'Professional'] },
-  { href: '/gamificacao', rotulo: 'Metas e adesao', icone: Trophy, permissao: 'gamificacao.gerenciar', grupo: 'Ferramentas', papeis: ['SuperAdmin', 'Professional'] },
+  { href: '/gamificacao', rotulo: 'Metas e adesão', icone: Trophy, permissao: 'gamificacao.gerenciar', grupo: 'Ferramentas', papeis: ['SuperAdmin', 'Professional'] },
   { href: '/profissionais', rotulo: 'Profissionais', icone: Stethoscope, permissao: 'profissionais.ler', grupo: 'Gestao', papeis: undefined },
   { href: '/operacoes', rotulo: 'Operacoes', icone: Settings, permissao: 'operacoes.auditoria.ler', grupo: 'SuperAdmin', papeis: ['SuperAdmin'] }
 ] as const;
@@ -109,7 +109,7 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
       navegacaoCarregando={sessao === undefined}
       contextoUsuario={sessao ? {
         email: sessao.email,
-        papel: nomesPapel[sessao.papel ?? ''] ?? 'Usuario',
+        papel: nomesPapel[sessao.papel ?? ''] ?? 'Usuário',
         workspace: humanizarWorkspace(sessao.tenantSlug)
       } : undefined}
       navLabel="Módulos do console"

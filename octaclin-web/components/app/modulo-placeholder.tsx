@@ -33,9 +33,9 @@ export function ModuloPlaceholder({ titulo, descricao, icone: Icone, itens }: Mo
       </Cartao>
       <Cartao>
         <CartaoConteudo>
-        <h3 className="text-sm font-semibold">Proximo incremento</h3>
+        <h3 className="text-sm font-semibold">Próximo incremento</h3>
         <p className="mt-2 text-sm text-texto-suave">
-          Este modulo ja esta posicionado na navegacao. A proxima etapa e conectar a tela aos endpoints do backend e
+          Este módulo já esta posicionado na navegacao. A próxima etapa e conectar a tela aos endpoints do backend e
           substituir estes estados por dados reais.
         </p>
         </CartaoConteudo>

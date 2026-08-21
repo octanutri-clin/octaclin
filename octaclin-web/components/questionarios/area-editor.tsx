@@ -24,7 +24,7 @@ const tipos: { valor: TipoPergunta; rotulo: string }[] = [
   { valor: 'metrica', rotulo: 'Metrica' },
   { valor: 'upload_midia', rotulo: 'Upload de midia' },
   { valor: 'texto_longo', rotulo: 'Texto aberto' },
-  { valor: 'sim_nao', rotulo: 'Sim/Nao' }
+  { valor: 'sim_nao', rotulo: 'Sim/Não' }
 ];
 
 export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios }) {
@@ -123,16 +123,16 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
               </Selecao>
             </div>
             <div className="space-y-1.5">
-              <Rotulo htmlFor="chave-clinica">Chave clinica</Rotulo>
+              <Rotulo htmlFor="chave-clinica">Chave clínica</Rotulo>
               <Campo
                 id="chave-clinica"
                 value={perguntaSelecionada.chaveClinica ?? ''}
                 onChange={(event) => atualizarPerguntaLocal('chaveClinica', event.target.value)}
-                placeholder="Ex.: adesao-semanal"
+                placeholder="Ex.: adesão-semanal"
               />
             </div>
             <div className="space-y-1.5">
-              <Rotulo htmlFor="secao">Secao</Rotulo>
+              <Rotulo htmlFor="secao">Seção</Rotulo>
               <Campo
                 id="secao"
                 value={textoConfig(perguntaSelecionada.configuracao, 'secao', 'Sem secao')}
@@ -150,8 +150,8 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
             </label>
             <label className="flex items-center justify-between rounded-md border border-linha bg-fundo px-3 py-2">
               <span>
-                <span className="block text-sm font-medium text-tinta">Disponivel na biblioteca</span>
-                <span className="block text-xs text-texto-suave">Permite reutilizar uma copia desta pergunta em outros formularios.</span>
+                <span className="block text-sm font-medium text-tinta">Disponível na biblioteca</span>
+                <span className="block text-xs text-texto-suave">Permite reutilizar uma cópia desta pergunta em outros formulários.</span>
               </span>
               <input
                 type="checkbox"
@@ -163,7 +163,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
 
             <div className="space-y-3 rounded-md border border-linha bg-superficie p-3">
               <div>
-                <p className="text-sm font-semibold text-tinta">Configuracao do tipo</p>
+                <p className="text-sm font-semibold text-tinta">Configuração do tipo</p>
                 <p className="text-xs text-texto-suave">Ajuste como esta pergunta sera respondida pelo paciente.</p>
               </div>
 
@@ -188,14 +188,14 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
                     </label>
                   </div>
                   <label className="space-y-1.5">
-                    <Rotulo>Rotulo minimo</Rotulo>
+                    <Rotulo>Rótulo minimo</Rotulo>
                     <Campo
                       value={textoConfig(perguntaSelecionada.configuracao, 'rotuloMin', 'Discordo totalmente')}
                       onChange={(event) => atualizarConfiguracao('rotuloMin', event.target.value)}
                     />
                   </label>
                   <label className="space-y-1.5">
-                    <Rotulo>Rotulo maximo</Rotulo>
+                    <Rotulo>Rótulo maximo</Rotulo>
                     <Campo
                       value={textoConfig(perguntaSelecionada.configuracao, 'rotuloMax', 'Concordo totalmente')}
                       onChange={(event) => atualizarConfiguracao('rotuloMax', event.target.value)}
@@ -231,7 +231,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
                         <Botao
                           type="button"
                           variante="fantasma"
-                          aria-label="Remover opcao"
+                          aria-label="Remover opção"
                           onClick={() => removerOpcao(indice)}
                           disabled={perguntaSelecionada.opcoes.length <= 2}
                         >
@@ -242,7 +242,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
                   </div>
                   <Botao type="button" onClick={adicionarOpcao}>
                     <Plus className="h-4 w-4" />
-                    Adicionar opcao
+                    Adicionar opção
                   </Botao>
                 </div>
               ) : null}
@@ -288,14 +288,14 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
                   {perguntaSelecionada.tipo === 'linear' ? (
                     <div className="grid grid-cols-2 gap-2">
                       <label className="space-y-1.5">
-                        <Rotulo>Rotulo minimo</Rotulo>
+                        <Rotulo>Rótulo minimo</Rotulo>
                         <Campo
                           value={textoConfig(perguntaSelecionada.configuracao, 'rotuloMin')}
                           onChange={(event) => atualizarConfiguracao('rotuloMin', event.target.value)}
                         />
                       </label>
                       <label className="space-y-1.5">
-                        <Rotulo>Rotulo maximo</Rotulo>
+                        <Rotulo>Rótulo maximo</Rotulo>
                         <Campo
                           value={textoConfig(perguntaSelecionada.configuracao, 'rotuloMax')}
                           onChange={(event) => atualizarConfiguracao('rotuloMax', event.target.value)}
@@ -361,14 +361,14 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
               {perguntaSelecionada.tipo === 'sim_nao' ? (
                 <div className="grid grid-cols-2 gap-2">
                   <label className="space-y-1.5">
-                    <Rotulo>Rotulo sim</Rotulo>
+                    <Rotulo>Rótulo sim</Rotulo>
                     <Campo
                       value={textoConfig(perguntaSelecionada.configuracao, 'rotuloSim', 'Sim')}
                       onChange={(event) => atualizarConfiguracao('rotuloSim', event.target.value)}
                     />
                   </label>
                   <label className="space-y-1.5">
-                    <Rotulo>Rotulo nao</Rotulo>
+                    <Rotulo>Rótulo não</Rotulo>
                     <Campo
                       value={textoConfig(perguntaSelecionada.configuracao, 'rotuloNao', 'Nao')}
                       onChange={(event) => atualizarConfiguracao('rotuloNao', event.target.value)}
@@ -385,7 +385,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
             <div className="rounded-md border border-linha bg-sucesso-suave p-3 text-sm text-sucesso-forte">
               <div className="flex items-center gap-2 font-semibold">
                 <Check className="h-4 w-4" />
-                Contrato valido
+                Contrato válido
               </div>
               <p className="mt-1 text-xs">Edicoes sao persistidas em `PATCH /questionarios/:id/perguntas/:perguntaId`.</p>
             </div>

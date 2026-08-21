@@ -32,7 +32,7 @@ export function AreaComunicacoes({ controlador }: { controlador: PainelOperacoes
         <div>
           <div className="flex items-center gap-2">
             <AlertTriangle size={19} className="text-perigo" />
-            <h2 className="text-base font-semibold">Central de comunicacao</h2>
+            <h2 className="text-base font-semibold">Central de comunicação</h2>
             <span className="text-sm text-texto-suave">{falhasComunicacao?.total ?? 0} falhas</span>
           </div>
           <p className="mt-1 text-xs text-texto-suave">
@@ -83,14 +83,14 @@ export function AreaComunicacoes({ controlador }: { controlador: PainelOperacoes
           className="h-9 rounded-md border border-linha px-2 text-sm"
           value={filtrosFalhasComunicacao.inicio}
           onChange={(evento) => setFiltrosFalhasComunicacao((atual) => ({ ...atual, inicio: evento.target.value }))}
-          aria-label="Inicio falhas comunicacao"
+          aria-label="Inicio falhas comunicação"
         />
         <input
           type="datetime-local"
           className="h-9 rounded-md border border-linha px-2 text-sm"
           value={filtrosFalhasComunicacao.fim}
           onChange={(evento) => setFiltrosFalhasComunicacao((atual) => ({ ...atual, fim: evento.target.value }))}
-          aria-label="Fim falhas comunicacao"
+          aria-label="Fim falhas comunicação"
         />
         <Botao type="submit" disabled={carregando}>
           <Search size={16} />
@@ -130,12 +130,12 @@ export function AreaComunicacoes({ controlador }: { controlador: PainelOperacoes
             </div>
           ))
         ) : (
-          <EstadoVazio titulo="Nenhuma falha de comunicacao carregada." />
+          <EstadoVazio titulo="Nenhuma falha de comunicação carregada." />
         )}
       </div>
       <div className="flex flex-col gap-2 border-t border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
         <span className="text-sm text-texto-suave">
-          Pagina {falhasComunicacao?.pagina ?? 1} de {totalPaginasFalhasComunicacao} | {falhasComunicacao?.total ?? 0} falhas
+          Página {falhasComunicacao?.pagina ?? 1} de {totalPaginasFalhasComunicacao} | {falhasComunicacao?.total ?? 0} falhas
         </span>
         <div className="flex gap-2">
           <Botao
@@ -150,7 +150,7 @@ export function AreaComunicacoes({ controlador }: { controlador: PainelOperacoes
             onClick={() => void trocarPaginaFalhasComunicacao((falhasComunicacao?.pagina ?? 1) + 1)}
             disabled={!falhasComunicacao || falhasComunicacao.pagina >= totalPaginasFalhasComunicacao || carregando}
           >
-            Proxima
+            Próxima
           </Botao>
         </div>
       </div>

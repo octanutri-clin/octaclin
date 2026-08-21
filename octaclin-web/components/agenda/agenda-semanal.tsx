@@ -296,7 +296,7 @@ export function AgendaSemanal({
             <h2 className="text-base font-semibold text-tinta">Agenda interna</h2>
           </div>
           <p className="mt-1 text-sm text-texto-suave">
-            Consultas ocupam o horario no OctaClin independentemente da integracao com o Google.
+            Consultas ocupam o horário no OctaClin independentemente da integração com o Google.
           </p>
         </div>
 
@@ -314,7 +314,7 @@ export function AgendaSemanal({
             </label>
           ) : null}
 
-          <div className="flex min-h-11 max-w-full items-center overflow-x-auto rounded-md border border-linha bg-white p-0.5" role="group" aria-label="Visualizacao da agenda">
+          <div className="flex min-h-11 max-w-full items-center overflow-x-auto rounded-md border border-linha bg-white p-0.5" role="group" aria-label="Visualização da agenda">
             {(['dia', 'semana', 'mes', 'lista'] as const).map((opcao) => (
               <button
                 key={opcao}
@@ -326,12 +326,12 @@ export function AgendaSemanal({
                   visao === opcao ? 'bg-primaria text-white' : 'text-texto-suave hover:bg-superficie-hover'
                 )}
               >
-                {opcao === 'lista' ? <><List size={14} aria-hidden="true" />Lista</> : opcao}
+                {opcao === 'lista' ? <><List size={14} aria-hidden="true" />Lista</> : opcao === 'mes' ? 'mês' : opcao}
               </button>
             ))}
           </div>
 
-          <div className="flex items-center gap-1" role="group" aria-label="Navegar entre periodos">
+          <div className="flex items-center gap-1" role="group" aria-label="Navegar entre períodos">
             <Dica texto={visao === 'semana' ? 'Semana anterior' : 'Periodo anterior'}>
               <Botao
                 type="button"
@@ -423,7 +423,7 @@ export function AgendaSemanal({
             onChange={(evento) => setBloqueio((atual) => ({ ...atual, fimEm: evento.target.value }))}
           />
         </label>
-        <Botao type="submit">Bloquear horario</Botao>
+        <Botao type="submit">Bloquear horário</Botao>
       </form>
 
       {falhaFeed ? (
@@ -447,7 +447,7 @@ export function AgendaSemanal({
       </div>
 
       {visao === 'lista' ? (
-        <div className="divide-y divide-linha border-t border-linha" aria-label="Lista de horarios do periodo">
+        <div className="divide-y divide-linha border-t border-linha" aria-label="Lista de horários do período">
           {itensDaSemana.length ? itensDaSemana.map((item) => {
             const inicio = new Date(item.inicioEm);
             const fim = new Date(item.fimEm);
@@ -462,7 +462,7 @@ export function AgendaSemanal({
                 {consulta ? <Botao type="button" onClick={() => onAbrirConsulta(item.id)} aria-label={`Abrir detalhes de ${nome}`}>Abrir detalhes</Botao> : null}
               </div>
             );
-          }) : <p className="px-4 py-8 text-sm text-texto-suave">Nenhum horario ocupado neste periodo.</p>}
+          }) : <p className="px-4 py-8 text-sm text-texto-suave">Nenhum horário ocupado neste período.</p>}
         </div>
       ) : visao === 'mes' ? (
         <div className="grid grid-cols-7 border-t border-linha">
@@ -486,7 +486,7 @@ export function AgendaSemanal({
                       </div>
                     );
                   })}
-                  {itensDoDia.length > 3 ? <p className="text-xs text-texto-suave">+{itensDoDia.length - 3} horarios</p> : null}
+                  {itensDoDia.length > 3 ? <p className="text-xs text-texto-suave">+{itensDoDia.length - 3} horários</p> : null}
                 </div>
               </div>
             );
@@ -564,10 +564,10 @@ export function AgendaSemanal({
                       style={{ top: topo, height: altura }}
                     >
                       {bloqueioManual ? (
-                        <Dica texto="Liberar horario">
+                        <Dica texto="Liberar horário">
                           <button
                             type="button"
-                            aria-label="Liberar horario reservado"
+                            aria-label="Liberar horário reservado"
                             className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded text-alerta-forte hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
                             onClick={() => setBloqueioParaLiberar(item.id)}
                           >
@@ -609,8 +609,8 @@ export function AgendaSemanal({
 
       <ModalConfirmacao
         aberto={Boolean(bloqueioParaLiberar)}
-        titulo="Liberar horario reservado"
-        mensagem="O horario volta a ficar disponivel na agenda interna imediatamente."
+        titulo="Liberar horário reservado"
+        mensagem="O horário volta a ficar disponível na agenda interna imediatamente."
         rotuloConfirmar="Liberar horario"
         confirmando={liberandoBloqueio}
         aoCancelar={() => setBloqueioParaLiberar(null)}

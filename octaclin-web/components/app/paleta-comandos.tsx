@@ -77,7 +77,7 @@ function opcaoPaciente(paciente: PacienteResumo): OpcaoPaleta {
   return {
     id: `paciente-${paciente.id}`,
     rotulo: paciente.nome,
-    descricao: 'Abrir prontuario',
+    descricao: 'Abrir prontuário',
     href: `/pacientes/${paciente.id}`,
     grupo: 'Pacientes',
     icone: HeartPulse
@@ -240,7 +240,7 @@ export function PaletaComandos({ sessao }: { sessao: SessaoPublica }) {
               value={busca}
               onChange={(evento) => setBusca(evento.target.value)}
               onKeyDown={aoTeclarBusca}
-              placeholder="Digite uma tela, acao ou paciente"
+              placeholder="Digite uma tela, ação ou paciente"
               className="pl-10"
               role="combobox"
               aria-expanded="true"
@@ -289,7 +289,7 @@ export function PaletaComandos({ sessao }: { sessao: SessaoPublica }) {
               </p>
             ) : null}
             {erroBusca ? (
-              <p className="px-3 py-3 text-center text-sm text-perigo">Nao foi possivel buscar pacientes.</p>
+              <p className="px-3 py-3 text-center text-sm text-perigo">Não foi possível buscar pacientes.</p>
             ) : null}
           </div>
 

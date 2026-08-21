@@ -84,7 +84,7 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
   async function salvar() {
     const refeicoes = refeicoesAtuais();
     if (!nome.trim() || !refeicoes.length) {
-      setErro('Informe um nome e tenha ao menos uma refeicao no rascunho.');
+      setErro('Informe um nome e tenha ao menos uma refeição no rascunho.');
       return;
     }
     setOcupado('salvando');
@@ -147,7 +147,7 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
             <option value="">{modelos.length ? 'Escolha um modelo' : 'Nenhum modelo salvo'}</option>
             {modelos.map((modelo) => (
               <option key={modelo.id} value={modelo.id}>
-                {modelo.nome} - {ROTULO_ORIGEM[modelo.origem]} - {modelo.totalRefeicoes} refeicoes
+                {modelo.nome} - {ROTULO_ORIGEM[modelo.origem]} - {modelo.totalRefeicoes} refeições
               </option>
             ))}
           </Selecao>
@@ -179,7 +179,7 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
           <Etiqueta variante={modeloAtual.origem === 'clinica' ? 'primaria' : 'neutra'}>
             {ROTULO_ORIGEM[modeloAtual.origem]}
           </Etiqueta>{' '}
-          Aplicar substitui todas as refeicoes do rascunho atual.
+          Aplicar substitui todas as refeições do rascunho atual.
         </p>
       ) : null}
 
@@ -203,8 +203,8 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
             onChange={(evento) => setOrigem(evento.target.value as OrigemModeloApi)}
             disabled={desabilitado}
           >
-            <option value="pessoal">So para mim</option>
-            <option value="clinica">Toda a clinica</option>
+            <option value="pessoal">Só para mim</option>
+            <option value="clinica">Toda a clínica</option>
           </Selecao>
         </div>
         <Botao
@@ -222,7 +222,7 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
       <ModalConfirmacao
         aberto={confirmarArquivo}
         titulo="Arquivar modelo"
-        mensagem="O modelo deixa de aparecer na lista. Planos ja criados a partir dele nao mudam."
+        mensagem="O modelo deixa de aparecer na lista. Planos já criados a partir dele não mudam."
         rotuloConfirmar="Arquivar"
         aoConfirmar={() => void arquivar()}
         aoCancelar={() => setConfirmarArquivo(false)}

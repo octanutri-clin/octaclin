@@ -185,7 +185,7 @@ function rotuloStatusConsulta(status: ConsultaAgendaApi['status']) {
   const rotulos: Record<ConsultaAgendaApi['status'], string> = {
     agendada: 'Agendada',
     reagendada: 'Reagendada',
-    concluida: 'Concluida',
+    concluida: 'Concluída',
     falta: 'Falta',
     cancelada: 'Cancelada'
   };
@@ -451,7 +451,7 @@ export function PainelAgenda() {
         local: '',
         observacoes: ''
       }));
-      setSucesso('Consulta agendada e horario bloqueado na agenda interna. Integracoes processadas conforme configuracao.');
+      setSucesso('Consulta agendada e horário bloqueado na agenda interna. Integrações processadas conforme configuração.');
     } catch (erroAtual) {
       setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível agendar a consulta.'));
     } finally {
@@ -494,7 +494,7 @@ export function PainelAgenda() {
         observacoes: consulta.observacoes || undefined
       });
       atualizarConsulta(atualizada);
-      setSucesso('Consulta remarcada e horario atualizado na agenda interna. Integracoes processadas conforme configuracao.');
+      setSucesso('Consulta remarcada e horário atualizado na agenda interna. Integrações processadas conforme configuração.');
     } catch (erroAtual) {
       setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível remarcar a consulta.'));
     } finally {
@@ -559,7 +559,7 @@ export function PainelAgenda() {
     try {
       await navigator.clipboard?.writeText(linkPublico.urlPublica);
       setFalha(null);
-      setSucesso('Link publico copiado.');
+      setSucesso('Link público copiado.');
     } catch {
       setFalha(classificarFalhaInterface('Não foi possível copiar o link público.', 'Não foi possível copiar o link público.'));
     }
@@ -586,7 +586,7 @@ export function PainelAgenda() {
     try {
       const link = await rotacionarLinkPublicoAgenda();
       setLinkPublico(link);
-      setSucesso('Link publico rotacionado. Copie a nova URL antes de encerrar esta sessao.');
+      setSucesso('Link público rotacionado. Copie a nova URL antes de encerrar esta sessão.');
     } catch (erroAtual) {
       setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível gerar um novo link público.'));
     } finally {
@@ -607,7 +607,7 @@ export function PainelAgenda() {
     try {
       const atualizada = await aprovarSolicitacaoPublicaAgenda(solicitacao.id, pacienteId);
       atualizarSolicitacao(atualizada);
-      setSucesso('Solicitacao aprovada e convertida em consulta.');
+      setSucesso('Solicitação aprovada e convertida em consulta.');
     } catch (erroAtual) {
       setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível aprovar a solicitação.'));
     } finally {
@@ -625,7 +625,7 @@ export function PainelAgenda() {
         motivosRecusa[solicitacao.id]?.trim() || undefined
       );
       atualizarSolicitacao(atualizada);
-      setSucesso('Solicitacao recusada.');
+      setSucesso('Solicitação recusada.');
     } catch (erroAtual) {
       setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível recusar a solicitação.'));
     } finally {
@@ -757,7 +757,7 @@ export function PainelAgenda() {
                 </p>
                 {consultaSelecionada.pacoteId ? (
                   <p className="text-xs text-texto-suave">
-                    Consulta de pacote de sessoes. O valor foi cobrado no pacote, nao nesta sessao.
+                    Consulta de pacote de sessoes. O valor foi cobrado no pacote, não nesta sessão.
                   </p>
                 ) : (
                   <>
@@ -788,8 +788,8 @@ export function PainelAgenda() {
                         </Selecao>
                       </label>
                       <label className="grid gap-1">
-                        <Rotulo>Status</Rotulo>
-                        <Selecao aria-label="Status do pagamento" name="statusPagamento" defaultValue={consultaSelecionada.statusPagamento}>
+                        <Rotulo>Situação</Rotulo>
+                        <Selecao aria-label="Situação do pagamento" name="statusPagamento" defaultValue={consultaSelecionada.statusPagamento}>
                           <option value="pendente">Pendente</option>
                           <option value="pago">Pago</option>
                           <option value="isento">Isento</option>
@@ -835,7 +835,7 @@ export function PainelAgenda() {
                 </div>
                 <div className="flex flex-wrap justify-between gap-2">
                   <div className="flex flex-wrap gap-2" role="group" aria-label="Registrar desfecho da consulta">
-                    <Botao type="button" disabled={processandoConsultaId === consultaSelecionada.id} onClick={() => solicitarDesfecho(consultaSelecionada, 'concluida')}><CheckCircle2 size={16} />Concluida</Botao>
+                    <Botao type="button" disabled={processandoConsultaId === consultaSelecionada.id} onClick={() => solicitarDesfecho(consultaSelecionada, 'concluida')}><CheckCircle2 size={16} />Concluída</Botao>
                     <Botao type="button" disabled={processandoConsultaId === consultaSelecionada.id} onClick={() => solicitarDesfecho(consultaSelecionada, 'falta')}><UserX size={16} />Falta</Botao>
                     <Botao type="button" variante="perigo" disabled={processandoConsultaId === consultaSelecionada.id} onClick={() => solicitarDesfecho(consultaSelecionada, 'cancelada')}><XCircle size={16} />Cancelar</Botao>
                   </div>
@@ -857,25 +857,25 @@ export function PainelAgenda() {
         <Cartao className="min-w-0">
           <CartaoCabecalho className="items-start">
             <div>
-              <h2 className="text-base font-semibold">Link publico de agendamento</h2>
+              <h2 className="text-base font-semibold">Link público de agendamento</h2>
               <p className="mt-1 text-sm text-texto-suave">
-                Compartilhe um unico endereco publico para receber solicitacoes antes da aprovacao manual.
+                Compartilhe um único endereço público para receber solicitações antes da aprovação manual.
               </p>
             </div>
             <Link2 size={20} className="text-primaria" />
           </CartaoCabecalho>
           <CartaoConteudo className="grid gap-4">
             <div className="grid gap-2 rounded-lg border border-linha bg-superficie px-4 py-3">
-              <span className="text-xs font-semibold uppercase text-texto-suave">Endereco atual</span>
+              <span className="text-xs font-semibold uppercase text-texto-suave">Endereço atual</span>
               <span className="break-all text-sm font-medium text-tinta">{descricaoLinkPublico(linkPublico)}</span>
             </div>
 
             {linkPublico ? (
               <div className="grid gap-1 text-sm text-texto-suave">
-                <p>{linkPublico.duracaoMinutos} minutos por solicitacao publica.</p>
+                <p>{linkPublico.duracaoMinutos} minutos por solicitação publica.</p>
                 <p>Atualizado em {formatarDataHora(linkPublico.atualizadoEm)}.</p>
                 {linkPublico.requerRotacaoConfirmada ? (
-                  <p>A URL atual so volta a ficar copiavel apos nova rotacao confirmada.</p>
+                  <p>A URL atual só volta a ficar copiavel após nova rotacao confirmada.</p>
                 ) : null}
               </div>
             ) : null}
@@ -902,7 +902,7 @@ export function PainelAgenda() {
           aberto={modalCriarAberto}
           aoFechar={() => setModalCriarAberto(false)}
           titulo="Nova consulta"
-          descricao="Cria a consulta e bloqueia o horario na agenda interna. Google e avisos sao opcionais."
+          descricao="Cria a consulta e bloqueia o horário na agenda interna. Google e avisos sao opcionais."
         >
           <form onSubmit={salvar}>
               <div className="grid gap-3">
@@ -984,7 +984,7 @@ export function PainelAgenda() {
                     </label>
                     <p id="ajuda-link-teleconsulta" className="text-xs text-texto-suave">
                       Cole o link do Meet, Zoom ou Whereby. O link fica visivel para quem sera atendido a partir de 1
-                      hora antes e ate 30 minutos depois do fim.
+                      hora antes e até 30 minutos depois do fim.
                     </p>
                   </div>
                 ) : (
@@ -993,7 +993,7 @@ export function PainelAgenda() {
                     <Campo
                       value={formulario.local}
                       onChange={(evento) => setFormulario((atual) => ({ ...atual, local: evento.target.value }))}
-                      placeholder="Consultorio ou endereco"
+                      placeholder="Consultorio ou endereço"
                     />
                   </label>
                 )}
@@ -1067,11 +1067,11 @@ export function PainelAgenda() {
                 </div>
 
                 <label className="grid gap-1">
-                  <Rotulo>Observacoes</Rotulo>
+                  <Rotulo>Observações</Rotulo>
                   <AreaTexto
                     value={formulario.observacoes}
                     onChange={(evento) => setFormulario((atual) => ({ ...atual, observacoes: evento.target.value }))}
-                    placeholder="Informacoes internas para o evento."
+                    placeholder="Informações internas para o evento."
                   />
                 </label>
 
@@ -1104,10 +1104,10 @@ export function PainelAgenda() {
         <Cartao className="min-w-0">
           <CartaoCabecalho className="flex-col items-start sm:flex-row sm:items-center">
             <div>
-              <h2 className="text-base font-semibold">Solicitacoes pendentes</h2>
+              <h2 className="text-base font-semibold">Solicitações pendentes</h2>
               <p className="mt-1 text-sm text-texto-suave">{solicitacoesPendentes.length} aguardando decisao manual</p>
             </div>
-            <BarraCarregamento visivel={carregando} rotulo="Atualizando solicitacoes" />
+            <BarraCarregamento visivel={carregando} rotulo="Atualizando solicitações" />
           </CartaoCabecalho>
           <CartaoConteudo>
             {solicitacoesPendentes.length ? (
@@ -1190,7 +1190,7 @@ export function PainelAgenda() {
                             onClick={() => void aprovarSolicitacao(solicitacao)}
                           >
                             <CheckCircle2 size={15} />
-                            Aprovar solicitacao
+                            Aprovar solicitação
                           </Botao>
                           <Botao
                             type="button"
@@ -1198,7 +1198,7 @@ export function PainelAgenda() {
                             onClick={() => void recusarSolicitacao(solicitacao)}
                           >
                             <XCircle size={15} />
-                            Recusar solicitacao
+                            Recusar solicitação
                           </Botao>
                         </div>
                       </div>
@@ -1208,8 +1208,8 @@ export function PainelAgenda() {
               </div>
             ) : (
               <EstadoVazio
-                titulo="Nenhuma solicitacao pendente"
-                descricao="Quando alguem usar o link publico, a solicitacao aparecera aqui para aprovacao manual."
+                titulo="Nenhuma solicitação pendente"
+                descricao="Quando alguem usar o link público, a solicitação aparecera aqui para aprovação manual."
               />
             )}
           </CartaoConteudo>
@@ -1219,7 +1219,7 @@ export function PainelAgenda() {
           <CartaoCabecalho className="flex-col items-start sm:flex-row sm:items-center">
             <div>
               <h2 className="text-base font-semibold">Consultas agendadas</h2>
-              <p className="mt-1 text-sm text-texto-suave">{proximasConsultas.length} consultas no periodo carregado</p>
+              <p className="mt-1 text-sm text-texto-suave">{proximasConsultas.length} consultas no período carregado</p>
             </div>
             <FaixaAcoes rotulo="Ações das consultas agendadas">
               <BarraCarregamento visivel={carregando} rotulo="Carregando agenda" />
@@ -1349,7 +1349,7 @@ export function PainelAgenda() {
                 })}
               </div>
             ) : (
-              <EstadoVazio titulo="Nenhuma consulta agendada" descricao="Use o formulario ao lado para criar o primeiro agendamento." />
+              <EstadoVazio titulo="Nenhuma consulta agendada" descricao="Use o formulário ao lado para criar o primeiro agendamento." />
             )}
           </CartaoConteudo>
         </Cartao>
@@ -1376,7 +1376,7 @@ export function PainelAgenda() {
       />
       <ModalConfirmacao
         aberto={rotacionarLinkPendente}
-        titulo="Rotacionar link publico"
+        titulo="Rotacionar link público"
         mensagem="Rotacionar o link invalida a URL publica anterior imediatamente. Deseja continuar?"
         rotuloConfirmar="Confirmar rotacao"
         confirmando={processandoSolicitacaoId === 'rotacionar-link'}

@@ -20,13 +20,13 @@ export function AreaBiblioteca({ workspace }: { workspace: WorkspaceQuestionario
       </div>
       <div className="grid gap-3 p-4">
         <div className="grid gap-2 sm:grid-cols-[1fr_220px]">
-          <Campo type="search" value={buscaBiblioteca} onChange={(event) => setBuscaBiblioteca(event.target.value)} placeholder="Buscar por enunciado ou chave clinica" aria-label="Buscar na biblioteca de perguntas" />
+          <Campo type="search" value={buscaBiblioteca} onChange={(event) => setBuscaBiblioteca(event.target.value)} placeholder="Buscar por enunciado ou chave clínica" aria-label="Buscar na biblioteca de perguntas" />
           <Selecao value={categoriaBibliotecaId} onChange={(event) => setCategoriaBibliotecaId(event.target.value)} aria-label="Filtrar categoria da biblioteca">
             <option value="">Todas as categorias</option>
             {categorias.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>)}
           </Selecao>
         </div>
-        <p className="text-sm text-texto-suave">Selecione um formulario em Editor para incluir uma copia independente da pergunta.</p>
+        <p className="text-sm text-texto-suave">Selecione um formulário em Editor para incluir uma cópia independente da pergunta.</p>
         <ul className="grid gap-2">
           {perguntasBibliotecaVisiveis.length ? perguntasBibliotecaVisiveis.map((pergunta) => (
             <li key={pergunta.id} className="flex items-center justify-between gap-3 rounded-md border border-linha bg-white p-3">

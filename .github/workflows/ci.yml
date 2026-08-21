@@ -235,6 +235,14 @@ jobs:
         working-directory: octaclin-web
         run: pnpm test:fase249
 
+      - name: Linguagem e microcopy
+        working-directory: octaclin-web
+        run: pnpm test:linguagem
+
+      - name: Jornada de linguagem e microcopy
+        working-directory: octaclin-web
+        run: pnpm test:fase251
+
       - name: Upload service logs
         if: always()
         uses: actions/upload-artifact@v7

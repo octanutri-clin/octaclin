@@ -80,7 +80,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
     if (!agenda) return;
 
     if (!horarioSelecionado) {
-      setErro('Selecione um horario antes de enviar a solicitacao.');
+      setErro('Selecione um horário antes de enviar a solicitação.');
       return;
     }
 
@@ -112,7 +112,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
   if (carregando) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-fundo px-4 text-sm text-texto-suave">
-        Carregando horarios disponiveis...
+        Carregando horários disponiveis...
       </main>
     );
   }
@@ -134,13 +134,13 @@ export function FormularioAgendamentoPublico({ token }: Props) {
           <Cartao>
             <CartaoConteudo className="grid gap-3 py-8 text-center">
               <CheckCircle2 size={32} className="mx-auto text-sucesso-forte" />
-              <h1 className="text-2xl font-semibold text-tinta">Solicitacao enviada para analise.</h1>
+              <h1 className="text-2xl font-semibold text-tinta">Solicitação enviada para analise.</h1>
               <p className="text-sm text-texto-suave">
                 {horarioSelecionado ? formatarDataHora(horarioSelecionado, agenda.timezone) : 'Horario selecionado'} com{' '}
                 {agenda.profissional.nomeExibicao}.
               </p>
               <p className="text-sm text-texto-suave">
-                A equipe confirmara a disponibilidade pelo contato informado. Este pedido ainda nao confirma a consulta.
+                A equipe confirmara a disponibilidade pelo contato informado. Este pedido ainda não confirma a consulta.
               </p>
             </CartaoConteudo>
           </Cartao>
@@ -163,14 +163,14 @@ export function FormularioAgendamentoPublico({ token }: Props) {
               <h1 className="text-2xl font-semibold">Agendar com {agenda.profissional.nomeExibicao}</h1>
             </div>
             <ol className="flex flex-wrap gap-2 text-sm text-texto-suave" aria-label="Etapas do agendamento">
-              <li className="rounded-md bg-primaria-suave px-3 py-2 font-medium text-primaria">1. Escolha um horario</li>
+              <li className="rounded-md bg-primaria-suave px-3 py-2 font-medium text-primaria">1. Escolha um horário</li>
               <li className="rounded-md border border-linha bg-superficie px-3 py-2">2. Informe seus dados</li>
               <li className="rounded-md border border-linha bg-superficie px-3 py-2">3. Revise e confirme</li>
             </ol>
             <div className="flex flex-wrap gap-2 text-sm text-texto-suave">
               <span className="inline-flex min-h-9 items-center gap-2 rounded-md border border-linha bg-superficie px-3">
                 <CalendarDays size={16} />
-                {totalHorarios} horarios na janela atual
+                {totalHorarios} horários na janela atual
               </span>
               <span className="inline-flex min-h-9 items-center gap-2 rounded-md border border-linha bg-superficie px-3">
                 <Clock size={16} />
@@ -178,7 +178,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
               </span>
               <span className="inline-flex min-h-9 items-center gap-2 rounded-md border border-linha bg-superficie px-3">
                 <Clock size={16} />
-                Horarios em {agenda.timezone.replace('_', ' ')}
+                Horários em {agenda.timezone.replace('_', ' ')}
               </span>
             </div>
           </section>
@@ -186,8 +186,8 @@ export function FormularioAgendamentoPublico({ token }: Props) {
           <Cartao className="min-w-0">
             <CartaoCabecalho className="items-start">
               <div>
-                <h2 className="text-base font-semibold">Horarios disponiveis</h2>
-                <p className="mt-1 text-sm text-texto-suave">Escolha um unico horario para enviar a solicitacao.</p>
+                <h2 className="text-base font-semibold">Horários disponiveis</h2>
+                <p className="mt-1 text-sm text-texto-suave">Escolha um único horário para enviar a solicitação.</p>
               </div>
               <CalendarDays size={20} className="text-primaria" />
             </CartaoCabecalho>
@@ -218,8 +218,8 @@ export function FormularioAgendamentoPublico({ token }: Props) {
                 ))
               ) : (
                 <EstadoVazio
-                  titulo="Nenhum horario livre"
-                  descricao="Nao ha horarios disponiveis na janela publica atual. Tente novamente mais tarde."
+                  titulo="Nenhum horário livre"
+                  descricao="Não há horários disponiveis na janela publica atual. Tente novamente mais tarde."
                 />
               )}
             </CartaoConteudo>
@@ -229,19 +229,19 @@ export function FormularioAgendamentoPublico({ token }: Props) {
         <Cartao className="min-w-0">
           <CartaoCabecalho className="items-start">
             <div>
-              <h2 className="text-base font-semibold">Enviar solicitacao</h2>
-              <p className="mt-1 text-sm text-texto-suave">Preencha apenas os dados necessarios para a analise do horario.</p>
+              <h2 className="text-base font-semibold">Enviar solicitação</h2>
+              <p className="mt-1 text-sm text-texto-suave">Preencha apenas os dados necessarios para a analise do horário.</p>
             </div>
             <Send size={20} className="text-primaria" />
           </CartaoCabecalho>
           <CartaoConteudo>
             <form onSubmit={revisarSolicitacao} className="grid gap-4">
               <div className="grid gap-2 rounded-lg border border-linha bg-superficie px-4 py-3" aria-live="polite">
-                <span className="text-xs font-semibold uppercase text-texto-suave">Horario escolhido</span>
+                <span className="text-xs font-semibold uppercase text-texto-suave">Horário escolhido</span>
                 <span className="text-sm font-medium text-tinta">
                   {horarioSelecionado ? formatarDataHora(horarioSelecionado, agenda.timezone) : 'Selecione um horario'}
                 </span>
-                <span className="text-xs text-texto-suave">Fuso horario: {agenda.timezone.replace('_', ' ')}</span>
+                <span className="text-xs text-texto-suave">Fuso horário: {agenda.timezone.replace('_', ' ')}</span>
               </div>
 
               <label className="grid gap-1">
@@ -278,9 +278,9 @@ export function FormularioAgendamentoPublico({ token }: Props) {
               </label>
 
               <label className="grid gap-1">
-                <Rotulo>Observacoes</Rotulo>
+                <Rotulo>Observações</Rotulo>
                 <AreaTexto
-                  aria-label="Observacoes"
+                  aria-label="Observações"
                   value={formulario.observacao}
                   maxLength={1000}
                   onChange={(evento) => setFormulario((atual) => ({ ...atual, observacao: evento.target.value }))}
@@ -294,7 +294,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
                 </p>
                 <p className="inline-flex items-center gap-2">
                   <MessageCircle size={16} />
-                  O horario so sera reservado apos a confirmacao da equipe.
+                  O horário só sera reservado após a confirmação da equipe.
                 </p>
               </div>
 
@@ -307,7 +307,7 @@ export function FormularioAgendamentoPublico({ token }: Props) {
                 disabled={salvando || !agenda.dias.length}
               >
                 <Send size={16} />
-                Revisar solicitacao
+                Revisar solicitação
               </Botao>
             </form>
           </CartaoConteudo>
@@ -317,13 +317,13 @@ export function FormularioAgendamentoPublico({ token }: Props) {
     <Modal
       aberto={revisando}
       aoFechar={() => setRevisando(false)}
-      titulo="Revise sua solicitacao"
-      descricao="Confira os dados antes de enviar. O horario ainda dependera da confirmacao da equipe."
+      titulo="Revise sua solicitação"
+      descricao="Confira os dados antes de enviar. O horário ainda dependera da confirmação da equipe."
     >
       <dl className="grid gap-3 text-sm">
-        <div><dt className="text-xs font-semibold text-texto-suave">Clinica</dt><dd>{agenda.clinica.nome}</dd></div>
+        <div><dt className="text-xs font-semibold text-texto-suave">Clínica</dt><dd>{agenda.clinica.nome}</dd></div>
         <div><dt className="text-xs font-semibold text-texto-suave">Profissional</dt><dd>{agenda.profissional.nomeExibicao}</dd></div>
-        <div><dt className="text-xs font-semibold text-texto-suave">Horario</dt><dd>{horarioSelecionado ? formatarDataHora(horarioSelecionado, agenda.timezone) : ''}</dd></div>
+        <div><dt className="text-xs font-semibold text-texto-suave">Horário</dt><dd>{horarioSelecionado ? formatarDataHora(horarioSelecionado, agenda.timezone) : ''}</dd></div>
         <div><dt className="text-xs font-semibold text-texto-suave">Nome</dt><dd>{formulario.nome.trim()}</dd></div>
         <div><dt className="text-xs font-semibold text-texto-suave">Email</dt><dd className="break-all">{formulario.email.trim()}</dd></div>
       </dl>

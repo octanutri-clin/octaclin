@@ -65,7 +65,7 @@ export function AreasConfiguracaoCliente({ portal }: Props) {
             <div className="grid gap-3 md:grid-cols-2">
               {areaAtiva === 'preferencias' ? (
                 <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                  Nome da clinica
+                  Nome da clínica
                   <input
                     className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
                     value={formularioConfiguracoes.nome}

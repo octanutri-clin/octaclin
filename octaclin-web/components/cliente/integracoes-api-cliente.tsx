@@ -34,7 +34,7 @@ const eventos: Array<{ id: EventoWebhook; rotulo: string }> = [
   { id: 'paciente.criado', rotulo: 'Paciente criado' },
   { id: 'consulta.criada', rotulo: 'Consulta criada' },
   { id: 'consulta.cancelada', rotulo: 'Consulta cancelada' },
-  { id: 'formulario.respondido', rotulo: 'Formulario respondido' }
+  { id: 'formulario.respondido', rotulo: 'Formulário respondido' }
 ];
 
 type Confirmacao =
@@ -184,7 +184,7 @@ export function IntegracoesApiCliente() {
       await navigator.clipboard.writeText(segredo.valor);
       setSegredoCopiado(true);
     } catch {
-      setErro('Nao foi possivel copiar automaticamente. Selecione a credencial e armazene-a no cofre da integracao.');
+      setErro('Não foi possível copiar automaticamente. Selecione a credencial e armazene-a no cofre da integração.');
     }
   }
 
@@ -198,7 +198,7 @@ export function IntegracoesApiCliente() {
           <div><h2 className="text-sm font-semibold">Chaves de API</h2><p className="mt-1 text-sm text-texto-suave">Acesso externo limitado aos escopos escolhidos.</p></div>
         </CartaoCabecalho>
         <form onSubmit={criarChave} className="grid gap-3 border-b border-linha p-4">
-          <div className="grid gap-3 md:grid-cols-2"><label className="grid gap-1 text-xs font-semibold text-texto-suave">Nome da chave<input className="h-11 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta" value={nomeChave} onChange={(e) => setNomeChave(e.target.value)} maxLength={120} required /></label><label className="grid gap-1 text-xs font-semibold text-texto-suave">Expiracao opcional<input className="h-11 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta" type="datetime-local" value={expiraChaveEm} onChange={(e) => setExpiraChaveEm(e.target.value)} /></label></div>
+          <div className="grid gap-3 md:grid-cols-2"><label className="grid gap-1 text-xs font-semibold text-texto-suave">Nome da chave<input className="h-11 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta" value={nomeChave} onChange={(e) => setNomeChave(e.target.value)} maxLength={120} required /></label><label className="grid gap-1 text-xs font-semibold text-texto-suave">Expiração opcional<input className="h-11 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta" type="datetime-local" value={expiraChaveEm} onChange={(e) => setExpiraChaveEm(e.target.value)} /></label></div>
           <fieldset><legend className="text-xs font-semibold text-texto-suave">Permissoes</legend><div className="mt-2 grid gap-2 sm:grid-cols-2">{escopos.map((item) => <label key={item.id} className="flex min-h-11 items-center gap-2 rounded-md border border-linha px-3 text-sm"><input type="checkbox" checked={escoposSelecionados.includes(item.id)} onChange={(e) => setEscoposSelecionados((atuais) => e.target.checked ? [...atuais, item.id] : atuais.filter((id) => id !== item.id))} />{item.rotulo}</label>)}</div></fieldset>
           <div className="flex justify-end"><Botao type="submit" variante="primario" disabled={processando === 'criar-chave' || !escoposSelecionados.length}><Plus size={16} />Criar chave</Botao></div>
         </form>
@@ -206,7 +206,7 @@ export function IntegracoesApiCliente() {
       </Cartao>
 
       <Cartao>
-        <CartaoCabecalho><Webhook className="h-4 w-4 text-texto-suave" /><div><h2 className="text-sm font-semibold">Webhooks de saida</h2><p className="mt-1 text-sm text-texto-suave">Eventos assinados, sem nomes, contatos ou respostas clinicas.</p></div></CartaoCabecalho>
+        <CartaoCabecalho><Webhook className="h-4 w-4 text-texto-suave" /><div><h2 className="text-sm font-semibold">Webhooks de saida</h2><p className="mt-1 text-sm text-texto-suave">Eventos assinados, sem nomes, contatos ou respostas clínicas.</p></div></CartaoCabecalho>
         <form onSubmit={criarWebhook} className="grid gap-3 border-b border-linha p-4">
           <div className="grid gap-3 md:grid-cols-2"><label className="grid gap-1 text-xs font-semibold text-texto-suave">Nome<input className="h-11 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta" value={nomeWebhook} onChange={(e) => setNomeWebhook(e.target.value)} maxLength={120} required /></label><label className="grid gap-1 text-xs font-semibold text-texto-suave">URL HTTPS<input className="h-11 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta" type="url" value={urlWebhook} onChange={(e) => setUrlWebhook(e.target.value)} placeholder="https://automacao.exemplo.com/webhook" required /></label></div>
           <fieldset><legend className="text-xs font-semibold text-texto-suave">Eventos</legend><div className="mt-2 grid gap-2 sm:grid-cols-2">{eventos.map((item) => <label key={item.id} className="flex min-h-11 items-center gap-2 rounded-md border border-linha px-3 text-sm"><input type="checkbox" checked={eventosSelecionados.includes(item.id)} onChange={(e) => setEventosSelecionados((atuais) => e.target.checked ? [...atuais, item.id] : atuais.filter((id) => id !== item.id))} />{item.rotulo}</label>)}</div></fieldset>
@@ -220,7 +220,7 @@ export function IntegracoesApiCliente() {
         <div className="divide-y divide-linha">{entregas.length ? entregas.slice(0, 30).map((entrega) => <div key={entrega.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium text-texto-forte">{entrega.evento}</p><p className="mt-1 text-xs text-texto-suave">{entrega.status} · {entrega.tentativas} tentativa(s){entrega.ultimoStatusHttp ? ` · HTTP ${entrega.ultimoStatusHttp}` : ''}</p>{entrega.ultimoErro ? <p className="mt-1 text-xs text-perigo">{entrega.ultimoErro}</p> : null}</div>{entrega.status === 'falhou' ? <Botao type="button" variante="secundario" onClick={() => void reprocessar(entrega)} disabled={processando === entrega.id}><RefreshCw size={16} />Reprocessar</Botao> : null}</div>) : <p className="p-4 text-sm text-texto-suave">Nenhuma entrega registrada.</p>}</div>
       </Cartao>
 
-      <Modal aberto={Boolean(segredo)} aoFechar={() => { setSegredo(null); setSegredoCopiado(false); }} titulo={segredo?.titulo ?? 'Credencial criada'} descricao="Esta credencial sera exibida somente agora. Armazene-a no cofre da integracao.">
+      <Modal aberto={Boolean(segredo)} aoFechar={() => { setSegredo(null); setSegredoCopiado(false); }} titulo={segredo?.titulo ?? 'Credencial criada'} descricao="Esta credencial sera exibida somente agora. Armazene-a no cofre da integração.">
         <div className="grid gap-3"><code className="max-h-40 overflow-auto break-all rounded-md border border-linha bg-superficie p-3 text-xs">{segredo?.valor}</code><div className="flex justify-end"><Botao type="button" variante="primario" onClick={() => void copiarSegredo()}>{segredoCopiado ? <Check size={16} /> : <Copy size={16} />}{segredoCopiado ? 'Copiado' : 'Copiar'}</Botao></div></div>
       </Modal>
       <ModalConfirmacao aberto={Boolean(confirmacao)} titulo={confirmacao?.tipo === 'revogar-chave' ? 'Revogar chave' : 'Desativar webhook'} mensagem={`Esta acao interrompe imediatamente ${confirmacao?.nome ?? 'a integracao'}.`} rotuloConfirmar="Confirmar" confirmando={Boolean(confirmacao && processando === confirmacao.id)} aoConfirmar={() => void confirmar()} aoCancelar={() => setConfirmacao(null)} />

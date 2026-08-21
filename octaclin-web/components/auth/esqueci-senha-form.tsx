@@ -44,7 +44,7 @@ export function EsqueciSenhaForm() {
             onChange={(event) => setEmail(event.target.value)}
             type="email"
             autoComplete="email"
-            placeholder="voce@exemplo.com"
+            placeholder="você@exemplo.com"
             required
           />
         </div>

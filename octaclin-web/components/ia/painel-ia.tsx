@@ -156,7 +156,7 @@ export function PainelIa() {
         decisao === 'editada' ? { interpretacaoProfissional: observacoes[id] } : undefined
       );
       setAnalises((atuais) => atuais.map((item) => (item.id === id ? atualizada : item)));
-      setSucesso('Revisao humana registrada.');
+      setSucesso('Revisão humana registrada.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar revisao.');
     } finally {
@@ -175,7 +175,7 @@ export function PainelIa() {
         decisao === 'editada' ? { alimentosCorrigidos: observacoes[id] } : undefined
       );
       setReconhecimentos((atuais) => atuais.map((item) => (item.id === id ? atualizado : item)));
-      setSucesso('Revisao humana registrada.');
+      setSucesso('Revisão humana registrada.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar revisao.');
     } finally {
@@ -227,7 +227,7 @@ export function PainelIa() {
             <p className="mt-1 text-sm text-texto-suave">
               {analises.length} analises, {reconhecimentos.length} reconhecimentos persistidos
             </p>
-            <p className="mt-1 text-xs text-texto-sutil">Resultados de IA sao sugestoes operacionais e exigem revisao do profissional antes de qualquer conduta.</p>
+            <p className="mt-1 text-xs text-texto-sutil">Resultados de IA sao sugestoes operacionais e exigem revisão do profissional antes de qualquer conduta.</p>
           </div>
           <Botao onClick={carregar} disabled={carregando}>
             <RefreshCcw size={16} />
@@ -352,12 +352,12 @@ export function PainelIa() {
               </Selecao>
               {!carregandoImagens && alimento.pacienteId && imagens.length === 0 ? (
                 <p className="text-xs text-texto-suave">
-                  Nenhuma imagem confirmada. Envie uma foto no prontuario do paciente antes de solicitar a analise.
+                  Nenhuma imagem confirmada. Envie uma foto no prontuário do paciente antes de solicitar a analise.
                 </p>
               ) : null}
             </div>
             <div className="space-y-1.5">
-              <Rotulo htmlFor="ia-alimento-observacao">Observacao</Rotulo>
+              <Rotulo htmlFor="ia-alimento-observacao">Observação</Rotulo>
               <AreaTexto
                 id="ia-alimento-observacao"
                 value={alimento.observacao}
@@ -410,7 +410,7 @@ export function PainelIa() {
                     <div className="grid gap-2">
                       <AreaTexto
                         aria-label={`Observacao da revisao ${analise.id}`}
-                        placeholder="Informe a interpretacao clinica corrigida"
+                        placeholder="Informe a interpretacao clínica corrigida"
                         value={observacoes[analise.id] ?? ''}
                         onChange={(evento) => setObservacoes((atuais) => ({ ...atuais, [analise.id]: evento.target.value }))}
                       />
@@ -429,10 +429,10 @@ export function PainelIa() {
                   ) : analise.revisaoHumana.status !== 'rejeitada' ? (
                     <div className="flex flex-wrap gap-2">
                       <Link className="inline-flex min-h-11 items-center gap-2 rounded-md border border-linha px-3 text-sm font-medium" href={`/pacientes/${analise.pacienteId}`}>
-                        <FileHeart size={16} /> Abrir prontuario
+                        <FileHeart size={16} /> Abrir prontuário
                       </Link>
                       <Link className="inline-flex min-h-11 items-center gap-2 rounded-md border border-linha px-3 text-sm font-medium" href="/comunicacoes">
-                        <MessageSquare size={16} /> Preparar comunicacao
+                        <MessageSquare size={16} /> Preparar comunicação
                       </Link>
                     </div>
                   ) : null}
@@ -493,7 +493,7 @@ export function PainelIa() {
                     </div>
                   ) : item.revisaoHumana.status !== 'rejeitada' ? (
                     <Link className="inline-flex min-h-11 items-center gap-2 rounded-md border border-linha px-3 text-sm font-medium" href={`/pacientes/${item.pacienteId}`}>
-                      <FileHeart size={16} /> Abrir prontuario
+                      <FileHeart size={16} /> Abrir prontuário
                     </Link>
                   ) : null}
                 </div>

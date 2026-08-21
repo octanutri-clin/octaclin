@@ -20,7 +20,7 @@ const areasOperacoes = [
   { id: 'saude', rotulo: 'Saude' },
   { id: 'rollout', rotulo: 'Rollout' },
   { id: 'incidentes', rotulo: 'Incidentes' },
-  { id: 'comunicacoes', rotulo: 'Comunicacoes' },
+  { id: 'comunicacoes', rotulo: 'Comunicações' },
   { id: 'lgpd', rotulo: 'LGPD' },
   { id: 'auditoria', rotulo: 'Auditoria' },
   { id: 'filas', rotulo: 'Filas' }
@@ -90,7 +90,7 @@ export function PainelOperacoes() {
         abas={areasOperacoes}
         ativaId={areaAtiva}
         aoMudar={(id) => setAreaAtiva(id as AreaOperacoes)}
-        rotulo="Areas de operacoes"
+        rotulo="Áreas de operacoes"
       />
 
       <AreaSaude controlador={controlador} />

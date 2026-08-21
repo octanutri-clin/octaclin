@@ -24,7 +24,7 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-linha px-4 py-3">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-texto-suave" />
-            <h2 className="text-sm font-semibold text-tinta">Leitura clinica das respostas</h2>
+            <h2 className="text-sm font-semibold text-tinta">Leitura clínica das respostas</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Botao
@@ -95,7 +95,7 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
                 <p className="text-2xl font-semibold text-tinta">{leituraClinica.resumo.mediaRespostasPorEnvio}</p>
               </div>
               <div className="rounded-md border border-linha bg-superficie p-3">
-                <p className="text-xs text-texto-suave">Ultima resposta</p>
+                <p className="text-xs text-texto-suave">Última resposta</p>
                 <p className="text-base font-semibold text-tinta">{formatarDataResposta(leituraClinica.resumo.ultimaRespostaEm)}</p>
               </div>
             </div>
@@ -122,7 +122,7 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
                         Sim {pergunta.totalSim ?? 0}
                       </span>
                       <span className="rounded-md border border-linha bg-white px-3 py-2 font-semibold text-perigo">
-                        Nao {pergunta.totalNao ?? 0}
+                        Não {pergunta.totalNao ?? 0}
                       </span>
                     </div>
                   ) : null}
@@ -217,7 +217,7 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
               <Campo id="matriz-inicio" type="date" value={inicioFiltroMatriz} onChange={(event) => setInicioFiltroMatriz(event.target.value)} />
             </label>
             <label className="space-y-1.5">
-              <Rotulo htmlFor="matriz-fim">Ate</Rotulo>
+              <Rotulo htmlFor="matriz-fim">Até</Rotulo>
               <Campo id="matriz-fim" type="date" value={fimFiltroMatriz} onChange={(event) => setFimFiltroMatriz(event.target.value)} />
             </label>
           </div>

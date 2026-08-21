@@ -112,7 +112,7 @@ function rotuloStatus(status: string) {
     agendada: 'Agendada',
     pendente: 'Pendente',
     em_andamento: 'Em andamento',
-    concluida: 'Concluida',
+    concluida: 'Concluída',
     cancelada: 'Cancelada',
     enviado: 'Disponivel',
     visualizado: 'Visualizado',
@@ -202,7 +202,7 @@ function rotuloStatusSolicitacaoLgpd(status: string) {
   const mapa: Record<string, string> = {
     recebida: 'Recebida',
     em_tratamento: 'Em tratamento',
-    concluida: 'Concluida',
+    concluida: 'Concluída',
     indeferida: 'Indeferida'
   };
   return mapa[status] ?? status;
@@ -334,7 +334,7 @@ const linksPortal = [
   { href: '/portal/agenda', rotulo: 'Agenda' },
   { href: '/portal/checkins', rotulo: 'Check-ins' },
   { href: '/portal/plano', rotulo: 'Plano' },
-  { href: '/portal/formularios', rotulo: 'Formularios' },
+  { href: '/portal/formularios', rotulo: 'Formulários' },
   { href: '/portal/mensagens', rotulo: 'Mensagens' },
   { href: '/portal/perfil', rotulo: 'Perfil' },
   { href: '/portal/privacidade', rotulo: 'Privacidade' },
@@ -354,7 +354,7 @@ function PortalCarregando() {
     <Cartao className="grid gap-4 p-5" aria-live="polite" aria-busy="true">
       <div>
         <h2 className="text-sm font-semibold">Carregando portal</h2>
-        <p className="mt-1 text-sm text-texto-suave">Atualizando suas informacoes.</p>
+        <p className="mt-1 text-sm text-texto-suave">Atualizando suas informações.</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-4">
         {[0, 1, 2, 3].map((item) => (
@@ -634,19 +634,19 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
               <div className="self-center">
                 <p className="text-sm text-texto-suave">Ola, {portal.paciente.nome}</p>
                 <h2 className="mt-1 text-2xl font-semibold text-tinta">Seu acompanhamento hoje</h2>
-                <p className="mt-2 text-sm text-texto-suave">Status {rotuloStatus(portal.paciente.statusAdesao)}</p>
+                <p className="mt-2 text-sm text-texto-suave">Situação {rotuloStatus(portal.paciente.statusAdesao)}</p>
               </div>
 
               <Cartao className="grid gap-3 p-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-tinta">Proxima acao</h3>
+                  <h3 className="text-sm font-semibold text-tinta">Próxima ação</h3>
                   {portal.formulariosPendentes[0] ? (
                     <>
                       <p className="mt-2 text-sm font-medium text-tinta">{portal.formulariosPendentes[0].titulo}</p>
-                      <p className="mt-1 text-xs text-texto-suave">Responda ate {formatarDataHora(portal.formulariosPendentes[0].expiraEm)}</p>
+                      <p className="mt-1 text-xs text-texto-suave">Responda até {formatarDataHora(portal.formulariosPendentes[0].expiraEm)}</p>
                     </>
                   ) : (
-                    <p className="mt-2 text-sm text-texto-suave">Nenhuma acao pendente agora.</p>
+                    <p className="mt-2 text-sm text-texto-suave">Nenhuma ação pendente agora.</p>
                   )}
                 </div>
                 {portal.formulariosPendentes[0] ? (
@@ -661,7 +661,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
 
               <Cartao className="grid gap-3 p-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-tinta">Proxima consulta</h3>
+                  <h3 className="text-sm font-semibold text-tinta">Próxima consulta</h3>
                   {portal.consultasProximas[0] ? (
                     <>
                       <p className="mt-2 text-sm font-medium text-tinta">{portal.consultasProximas[0].titulo}</p>
@@ -700,7 +700,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
 
             <Cartao id="acoes" className="hidden">
               <CartaoCabecalho>
-                <CartaoTitulo icone={<ClipboardList className="h-4 w-4" />}>Proximas acoes</CartaoTitulo>
+                <CartaoTitulo icone={<ClipboardList className="h-4 w-4" />}>Próximas ações</CartaoTitulo>
               </CartaoCabecalho>
               <CartaoConteudo className="grid gap-3 md:grid-cols-2">
                 {portal.formulariosPendentes.slice(0, 2).map((formulario) => (
@@ -737,7 +737,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                 ))}
 
                 {!portal.formulariosPendentes.length && !portal.consultasProximas.length ? (
-                  <p className="text-sm text-texto-suave">Nenhuma acao pendente para hoje.</p>
+                  <p className="text-sm text-texto-suave">Nenhuma ação pendente para hoje.</p>
                 ) : null}
               </CartaoConteudo>
             </Cartao>
@@ -745,7 +745,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
             {portal.evolucaoPeso?.length ? (
               <Cartao className={secao === 'checkins' ? 'scroll-mt-4' : 'hidden'}>
                 <CartaoCabecalho>
-                  <CartaoTitulo icone={<TrendingUp className="h-4 w-4" />}>Sua evolucao de peso</CartaoTitulo>
+                  <CartaoTitulo icone={<TrendingUp className="h-4 w-4" />}>Sua evolução de peso</CartaoTitulo>
                 </CartaoCabecalho>
                 <CartaoConteudo>
                   <GraficoEvolucao
@@ -785,7 +785,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                       </select>
                     </label>
                     <label className="grid gap-1 text-xs font-medium text-texto-suave">
-                      Adesao ao plano
+                      Adesão ao plano
                       <input
                         type="number"
                         min={0}
@@ -806,7 +806,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                     />
                   </label>
                   <label className="grid gap-1 text-xs font-medium text-texto-suave">
-                    Observacoes do dia
+                    Observações do dia
                     <textarea
                       className="min-h-24 rounded-md border border-linha bg-white px-3 py-2 text-sm outline-none focus:border-primaria focus:ring-2 focus:ring-primaria-suave"
                       value={formularioCheckin.observacoes}
@@ -836,7 +836,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                             <p className="text-sm font-semibold">Humor {rotuloHumor(diario.humor)}</p>
                             <p className="mt-1 text-xs text-texto-suave">{formatarDataHora(diario.registradoEm)}</p>
                           </div>
-                          <Etiqueta>Adesao {diario.adesaoPlano}%</Etiqueta>
+                          <Etiqueta>Adesão {diario.adesaoPlano}%</Etiqueta>
                         </div>
                         {diario.sintomas ? <p className="mt-3 break-words text-sm text-texto-suave">{diario.sintomas}</p> : null}
                         {diario.observacoes ? <p className="mt-2 break-words text-sm text-texto-forte">{diario.observacoes}</p> : null}
@@ -918,7 +918,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                       </article>
                     ))
                   ) : (
-                    <p className="text-sm text-texto-suave">Nenhum material disponivel no plano.</p>
+                    <p className="text-sm text-texto-suave">Nenhum material disponível no plano.</p>
                   )}
                 </CartaoConteudo>
               </Cartao>
@@ -932,7 +932,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                   <h2 className="text-sm font-semibold">Notificacoes do paciente</h2>
                 </div>
                 <span className="rounded-full border border-linha bg-superficie px-2 py-1 text-xs font-semibold text-texto-suave">
-                  {portal.resumo.notificacoesHistorico ?? notificacoesPaciente.length} no historico
+                  {portal.resumo.notificacoesHistorico ?? notificacoesPaciente.length} no histórico
                 </span>
               </CartaoCabecalho>
               <CartaoConteudo className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
@@ -969,7 +969,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
 
                 <div className="grid gap-3">
                   <div>
-                    <p className="text-sm font-semibold">Historico</p>
+                    <p className="text-sm font-semibold">Histórico</p>
                     <p className="mt-1 text-xs text-texto-suave">Ultimas notificacoes registradas para este paciente.</p>
                   </div>
                   {notificacoesPaciente.length ? (
@@ -1150,7 +1150,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                       </label>
                     </div>
                     <label className="grid gap-1 text-xs font-medium text-texto-suave sm:max-w-xs">
-                      Fuso horario
+                      Fuso horário
                       <input
                         className={classeCampo}
                         value={formularioPerfil.timezoneComunicacao}
@@ -1160,7 +1160,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                     </label>
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-linha pt-3">
                       <div className="text-xs text-texto-suave">
-                        Ultimo check-in {formatarDataHora(portal.perfil.ultimoCheckinEm)} - status {rotuloStatus(portal.paciente.statusAdesao)}
+                        Último check-in {formatarDataHora(portal.perfil.ultimoCheckinEm)} - status {rotuloStatus(portal.paciente.statusAdesao)}
                       </div>
                       <Botao type="submit" variante="primario" disabled={salvandoPerfil}>
                         <Save className="h-4 w-4" />
@@ -1172,7 +1172,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
 
                 <Cartao id="formularios" className={secao === 'formularios' ? 'scroll-mt-4' : 'hidden'}>
                   <CartaoCabecalho>
-                    <CartaoTitulo icone={<ClipboardList className="h-4 w-4" />}>Formularios pendentes</CartaoTitulo>
+                    <CartaoTitulo icone={<ClipboardList className="h-4 w-4" />}>Formulários pendentes</CartaoTitulo>
                   </CartaoCabecalho>
                   <CartaoConteudo>
                     {portal.formulariosPendentes.length ? (
@@ -1193,14 +1193,14 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                         </article>
                       ))
                     ) : (
-                      <p className="text-sm text-texto-suave">Nenhum formulario pendente.</p>
+                      <p className="text-sm text-texto-suave">Nenhum formulário pendente.</p>
                     )}
                   </CartaoConteudo>
                 </Cartao>
 
                 <Cartao className={secao === 'formularios' ? undefined : 'hidden'}>
                   <CartaoCabecalho>
-                    <CartaoTitulo icone={<CheckCircle2 className="h-4 w-4" />}>Historico de formularios</CartaoTitulo>
+                    <CartaoTitulo icone={<CheckCircle2 className="h-4 w-4" />}>Histórico de formulários</CartaoTitulo>
                   </CartaoCabecalho>
                   <CartaoConteudo>
                     {portal.formulariosRespondidos.length ? (
@@ -1226,7 +1226,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                         </article>
                       ))
                     ) : (
-                      <p className="text-sm text-texto-suave">Nenhum formulario respondido ainda.</p>
+                      <p className="text-sm text-texto-suave">Nenhum formulário respondido ainda.</p>
                     )}
                   </CartaoConteudo>
                 </Cartao>
@@ -1263,7 +1263,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
 
                 <Cartao className={secao === 'agenda' ? undefined : 'hidden'}>
                   <CartaoCabecalho>
-                    <CartaoTitulo icone={<CalendarDays className="h-4 w-4" />}>Proximas consultas</CartaoTitulo>
+                    <CartaoTitulo icone={<CalendarDays className="h-4 w-4" />}>Próximas consultas</CartaoTitulo>
                   </CartaoCabecalho>
                   <CartaoConteudo>
                     {portal.consultasProximas.length ? (
@@ -1350,14 +1350,14 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                 </CartaoCabecalho>
                 <CartaoConteudo>
                   <div className="rounded-md border border-linha bg-superficie p-3">
-                    <p className="text-xs text-texto-suave">Versao atual</p>
+                    <p className="text-xs text-texto-suave">Versão atual</p>
                     <p className="mt-1 text-sm font-semibold">{portal.lgpd.versaoAtual}</p>
-                    <p className="mt-1 text-xs text-texto-suave">Ultimo aceite {formatarDataHora(portal.lgpd.ultimoAceiteEm)}</p>
+                    <p className="mt-1 text-xs text-texto-suave">Último aceite {formatarDataHora(portal.lgpd.ultimoAceiteEm)}</p>
                   </div>
                   <div className="grid gap-3 rounded-md border border-linha bg-superficie p-3">
                     <div>
                       <p className="text-sm font-semibold">Documentos legais</p>
-                      <p className="mt-1 text-xs text-texto-suave">Versoes obrigatorias aplicaveis ao portal do paciente.</p>
+                      <p className="mt-1 text-xs text-texto-suave">Versões obrigatorias aplicaveis ao portal do paciente.</p>
                     </div>
                     <div className="grid gap-2">
                       {(portal.lgpd.documentosLegais ?? []).map((documento) => (
@@ -1365,7 +1365,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <div className="min-w-0">
                               <p className="break-words text-sm font-semibold">{documento.titulo}</p>
-                              <p className="mt-1 text-xs text-texto-suave">Versao {documento.versao}</p>
+                              <p className="mt-1 text-xs text-texto-suave">Versão {documento.versao}</p>
                             </div>
                             <span className="rounded-full border border-linha bg-superficie px-2 py-1 text-xs font-semibold text-texto-suave">
                               {documento.aceito ? 'Aceito' : 'Pendente'}
@@ -1387,7 +1387,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                   <div className="grid gap-3 rounded-md border border-linha bg-superficie p-3">
                     <div>
                       <p className="text-sm font-semibold">Meus dados</p>
-                      <p className="mt-1 text-xs text-texto-suave">Baixe uma copia do seu perfil, consultas, formularios, mensagens e historico LGPD.</p>
+                      <p className="mt-1 text-xs text-texto-suave">Baixe uma cópia do seu perfil, consultas, formulários, mensagens e histórico LGPD.</p>
                     </div>
                     <Botao type="button" onClick={() => void exportarDadosLgpd()} disabled={exportandoLgpd}>
                       <ShieldCheck className="h-4 w-4" />
@@ -1396,11 +1396,11 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                   </div>
                   <form onSubmit={enviarSolicitacaoLgpd} className="grid gap-3 rounded-md border border-linha bg-superficie p-3">
                     <div>
-                      <p className="text-sm font-semibold">Solicitacoes LGPD</p>
-                      <p className="mt-1 text-xs text-texto-suave">Abra um protocolo para corrigir seus dados ou solicitar exclusao conforme avaliacao legal.</p>
+                      <p className="text-sm font-semibold">Solicitações LGPD</p>
+                      <p className="mt-1 text-xs text-texto-suave">Abra um protocolo para corrigir seus dados ou solicitar exclusao conforme avaliação legal.</p>
                     </div>
                     <label className="grid gap-1 text-xs font-medium text-texto-suave">
-                      Tipo de solicitacao LGPD
+                      Tipo de solicitação LGPD
                       <select
                         value={tipoSolicitacaoLgpd}
                         onChange={(evento) => setTipoSolicitacaoLgpd(evento.target.value as 'retificacao' | 'exclusao')}
@@ -1411,7 +1411,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                       </select>
                     </label>
                     <label className="grid gap-1 text-xs font-medium text-texto-suave">
-                      Detalhes da solicitacao
+                      Detalhes da solicitação
                       <textarea
                         value={detalhesSolicitacaoLgpd}
                         onChange={(evento) => setDetalhesSolicitacaoLgpd(evento.target.value)}
@@ -1426,7 +1426,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                   <div className="grid gap-2">
                     <div>
                       <p className="text-sm font-semibold">Meus protocolos LGPD</p>
-                      <p className="mt-1 text-xs text-texto-suave">Acompanhe as solicitacoes abertas pelo portal e o andamento registrado pela equipe.</p>
+                      <p className="mt-1 text-xs text-texto-suave">Acompanhe as solicitações abertas pelo portal e o andamento registrado pela equipe.</p>
                     </div>
                     {portal.lgpd.solicitacoes.length ? (
                       portal.lgpd.solicitacoes.map((solicitacao) => (
@@ -1451,12 +1451,12 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                           </dl>
                           {solicitacao.ultimaTratativa ? (
                             <p className="mt-3 break-words text-xs text-texto-suave">
-                              Ultima tratativa: <span className="font-medium text-texto-forte">{solicitacao.ultimaTratativa}</span>
+                              Última tratativa: <span className="font-medium text-texto-forte">{solicitacao.ultimaTratativa}</span>
                             </p>
                           ) : null}
                           {solicitacao.ultimaResposta ? (
                             <p className="mt-2 break-words text-xs text-texto-suave">
-                              Ultima resposta: <span className="font-medium text-texto-forte">{solicitacao.ultimaResposta}</span>
+                              Última resposta: <span className="font-medium text-texto-forte">{solicitacao.ultimaResposta}</span>
                             </p>
                           ) : null}
                         </article>
@@ -1494,7 +1494,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                   <AlertTriangle size={18} />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-base font-semibold">Portal indisponivel</h2>
+                  <h2 className="text-base font-semibold">Portal indisponível</h2>
                   <p className="mt-1 break-words text-sm text-texto-suave">{erroCarregamento ?? 'Nao foi possivel carregar suas informacoes.'}</p>
                 </div>
               </div>

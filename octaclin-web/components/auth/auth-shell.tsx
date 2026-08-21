@@ -17,7 +17,7 @@ export function AuthShell({ titulo, subtitulo, children, rodape }: AuthShellProp
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-primaria text-white">
             <ShieldCheck size={24} aria-hidden="true" />
           </div>
-          <p className="mt-5 text-sm font-semibold text-primaria">OctaClin</p>
+          <p className="mt-5 text-sm font-semibold text-primaria-forte">OctaClin</p>
           <h1 className="mt-1 text-3xl font-bold">{titulo}</h1>
           {subtitulo ? <p className="mt-2 text-sm text-texto-suave">{subtitulo}</p> : null}
         </header>

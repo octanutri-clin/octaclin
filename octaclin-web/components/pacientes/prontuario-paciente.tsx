@@ -133,25 +133,25 @@ type AreaProntuario = 'resumo' | 'atendimentos' | 'avaliacoes' | 'plano' | 'docu
 
 const abasProntuario: Array<{ id: AbaProntuario; rotulo: string; permissao?: string }> = [
   { id: 'resumo', rotulo: 'Resumo' },
-  { id: 'evolucoes', rotulo: 'Evolucoes' },
+  { id: 'evolucoes', rotulo: 'Evoluções' },
   { id: 'acompanhamento', rotulo: 'Acompanhamento' },
   { id: 'plano_alimentar', rotulo: 'Plano alimentar', permissao: 'planos_alimentares.ler' },
   { id: 'condutas_terapeuticas', rotulo: 'Condutas terapeuticas' },
   { id: 'antropometria', rotulo: 'Antropometria' },
   { id: 'exames_laboratoriais', rotulo: 'Exames laboratoriais' },
-  { id: 'evolucao_fotografica', rotulo: 'Evolucao fotografica' },
-  { id: 'formularios', rotulo: 'Formularios' },
+  { id: 'evolucao_fotografica', rotulo: 'Evolução fotográfica' },
+  { id: 'formularios', rotulo: 'Formulários' },
   { id: 'documentos', rotulo: 'Documentos' },
   { id: 'mensagens', rotulo: 'Mensagens' },
   { id: 'materiais', rotulo: 'Materiais' },
   { id: 'anexos', rotulo: 'Anexos' },
-  { id: 'historico', rotulo: 'Historico' }
+  { id: 'historico', rotulo: 'Histórico' }
 ];
 
 const areasProntuario: Array<{ id: AreaProntuario; rotulo: string; abaInicial: AbaProntuario; permissao?: string }> = [
   { id: 'resumo', rotulo: 'Resumo', abaInicial: 'resumo' },
   { id: 'atendimentos', rotulo: 'Atendimentos', abaInicial: 'evolucoes' },
-  { id: 'avaliacoes', rotulo: 'Avaliacoes', abaInicial: 'antropometria' },
+  { id: 'avaliacoes', rotulo: 'Avaliações', abaInicial: 'antropometria' },
   { id: 'plano', rotulo: 'Plano', abaInicial: 'acompanhamento' },
   { id: 'documentos', rotulo: 'Documentos', abaInicial: 'documentos' },
   { id: 'financeiro', rotulo: 'Financeiro', abaInicial: 'financeiro', permissao: 'agenda.financeiro.ler' }
@@ -296,7 +296,7 @@ function LinhaDoTempo({
   profissionais?: ProfissionalResumo[];
 }) {
   if (!eventos.length) {
-    return <EstadoVazio titulo="Sem eventos no prontuario" descricao="Agenda, formularios, respostas e mensagens aparecerao aqui." />;
+    return <EstadoVazio titulo="Sem eventos no prontuário" descricao="Agenda, formulários, respostas e mensagens aparecerão aqui." />;
   }
 
   return (
@@ -456,7 +456,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         visibilidade: 'privada'
       });
       setFormularioEvolucao(formularioEvolucaoInicial);
-      setSucesso('Evolucao clinica registrada.');
+      setSucesso('Evolução clínica registrada.');
       await carregar();
     } catch (erroAtual) {
       setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível registrar a evolução clínica.'));
@@ -562,7 +562,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setArquivoAnexo(null);
       setConsultaVinculadaId('');
       formulario.reset();
-      setSucesso('Anexo confirmado e incluido no prontuario.');
+      setSucesso('Anexo confirmado e incluido no prontuário.');
     } catch (erroAtual) {
       setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível enviar o anexo.'));
     } finally {
@@ -595,7 +595,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       await excluirArquivoMidia(anexoParaExcluir.id);
       setAnexoParaExcluir(null);
       setAnexos(await listarArquivosMidia(pacienteId));
-      setSucesso('Anexo excluido do prontuario.');
+      setSucesso('Anexo excluido do prontuário.');
     } catch (erroAtual) {
       setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível excluir o anexo.'));
     } finally {
@@ -836,7 +836,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     );
   }
 
-  if (!dados) return <EstadoVazio titulo="Prontuario indisponivel" descricao="Nao foi possivel carregar os dados do paciente." />;
+  if (!dados) return <EstadoVazio titulo="Prontuário indisponível" descricao="Não foi possível carregar os dados do paciente." />;
 
   return (
     <div className="grid gap-4">
@@ -893,21 +893,21 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <div>
               <p className="font-semibold">Contexto SuperAdmin</p>
               <p className="mt-0.5 text-texto-suave">
-                Voce esta acompanhando o prontuario sob responsabilidade de {nomeContextoProfissional}. As acoes ficam registradas no seu usuario.
+                Você esta acompanhando o prontuário sob responsabilidade de {nomeContextoProfissional}. As ações ficam registradas no seu usuário.
               </p>
             </div>
           </div>
         ) : null}
         <FaixaAcoes
           role="navigation"
-          rotulo="Acoes rapidas do paciente"
+          rotulo="Ações rápidas do paciente"
           envolverEmTelasMaiores={false}
           className="lg:flex-wrap lg:overflow-visible"
         >
           {podeGerenciarPaciente ? (
             <Botao type="button" variante="primario" onClick={() => solicitarTrocaAba('evolucoes')}>
               <Stethoscope size={16} />
-              Nova evolucao
+              Nova evolução
             </Botao>
           ) : null}
           {podeGerenciarPaciente ? (
@@ -945,7 +945,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           {podeLerQuestionarios ? (
             <Botao type="button" variante="secundario" onClick={() => solicitarTrocaAba('formularios')}>
               <ClipboardList size={16} />
-              Formularios
+              Formulários
             </Botao>
           ) : null}
           {podeLerMensagens ? (
@@ -990,7 +990,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         aoMudar={(id) => {
           solicitarTrocaArea(id as AreaProntuario);
         }}
-        rotulo="Areas principais do prontuario"
+        rotulo="Áreas principais do prontuário"
       />
 
       {sucesso ? (
@@ -1019,7 +1019,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)]">
             <article className="grid gap-3 rounded-md border border-primaria/30 bg-primaria-suave p-4">
               <div>
-                <p className="text-xs font-semibold uppercase text-primaria">Proxima acao</p>
+                <p className="text-xs font-semibold uppercase text-primaria">Próxima ação</p>
                 <h2 className="mt-2 text-base font-semibold text-tinta">
                   {dados.resumo.proximaConduta?.titulo ?? 'Sem pendencia operacional'}
                 </h2>
@@ -1031,11 +1031,11 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 ) : null}
               </div>
               {dados.resumo.proximaConduta ? (
-                <div><Botao type="button" variante="primario" onClick={abrirProximaConduta}>Abrir acao</Botao></div>
+                <div><Botao type="button" variante="primario" onClick={abrirProximaConduta}>Abrir ação</Botao></div>
               ) : null}
             </article>
             <article className="grid gap-2 rounded-md border border-linha bg-white p-4">
-              <p className="text-xs font-semibold uppercase text-texto-suave">Proxima consulta</p>
+              <p className="text-xs font-semibold uppercase text-texto-suave">Próxima consulta</p>
               <h2 className="text-base font-semibold text-tinta">{proximaConsulta?.titulo ?? 'Nenhuma consulta agendada'}</h2>
               <p className="text-sm text-texto-suave">{proximaConsulta ? formatarDataHora(proximaConsulta.data) : 'Use a agenda para definir o proximo encontro.'}</p>
             </article>
@@ -1043,11 +1043,11 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <section aria-labelledby="contexto-operacional-titulo" className="grid gap-4 rounded-md border border-linha bg-white p-4">
             <div>
               <h2 id="contexto-operacional-titulo" className="text-base font-semibold text-tinta">Contexto operacional</h2>
-              <p className="mt-1 text-sm text-texto-suave">Dados registrados no prontuario e nos modulos autorizados para este acesso.</p>
+              <p className="mt-1 text-sm text-texto-suave">Dados registrados no prontuário e nos módulos autorizados para este acesso.</p>
             </div>
             <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="border-l-2 border-primaria pl-3">
-                <dt className="text-xs font-semibold text-texto-suave">Ultimo atendimento</dt>
+                <dt className="text-xs font-semibold text-texto-suave">Último atendimento</dt>
                 <dd className="mt-1 text-sm font-medium text-tinta">{dados.resumo.ultimoAtendimento?.titulo ?? 'Nao registrado'}</dd>
                 {dados.resumo.ultimoAtendimento ? <dd className="text-xs text-texto-suave">{formatarDataHora(dados.resumo.ultimoAtendimento.concluidaEm)}</dd> : null}
               </div>
@@ -1066,7 +1066,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 {dados.resumo.tarefaVencida ? <dd className="text-xs text-texto-suave">Venceu em {formatarDataHora(dados.resumo.tarefaVencida.vencimentoEm)}</dd> : null}
               </div>
               <div className="border-l-2 border-primaria pl-3">
-                <dt className="text-xs font-semibold text-texto-suave">Comunicacao</dt>
+                <dt className="text-xs font-semibold text-texto-suave">Comunicação</dt>
                 <dd className="mt-1 text-sm font-medium text-tinta">
                   {permissoes.includes('comunicacoes.mensagens.ler')
                     ? dados.resumo.falhaComunicacao ? 'Falha de entrega pendente' : 'Sem falha identificada'
@@ -1077,7 +1077,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             </dl>
           </section>
           <section aria-labelledby="atividade-prontuario-titulo" className="rounded-md border border-linha bg-white p-4">
-            <h2 id="atividade-prontuario-titulo" className="text-base font-semibold text-tinta">Atividade do prontuario</h2>
+            <h2 id="atividade-prontuario-titulo" className="text-base font-semibold text-tinta">Atividade do prontuário</h2>
             <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-6">
               {[
                 ['Consultas', dados.resumo.consultas],
@@ -1098,7 +1098,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <section aria-labelledby="relatos-recentes-titulo" className="grid gap-3 rounded-md border border-linha bg-white p-4">
               <div>
                 <h2 id="relatos-recentes-titulo" className="text-base font-semibold text-tinta">Relatos recentes</h2>
-                <p className="mt-1 text-sm text-texto-suave">Informacoes declaradas pelo paciente, com origem e data do registro.</p>
+                <p className="mt-1 text-sm text-texto-suave">Informações declaradas pelo paciente, com origem e data do registro.</p>
               </div>
               <ul className="grid gap-3 md:grid-cols-2">
                 {(dados.resumo.indicadoresRecentes ?? []).map((indicador) => (
@@ -1113,7 +1113,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           ) : null}
           <ResumoAntropometrico pacienteId={pacienteId} aoAbrirDetalhes={() => solicitarTrocaAba('antropometria')} />
           <section className="grid gap-3">
-            <div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Linha de cuidado</h2><p className="mt-1 text-sm text-texto-suave">Ultimos eventos que orientam a proxima conduta.</p></div>
+            <div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Linha de cuidado</h2><p className="mt-1 text-sm text-texto-suave">Ultimos eventos que orientam a próxima conduta.</p></div>
             <LinhaDoTempo eventos={eventos.slice(0, 4)} profissionais={profissionais} />
           </section>
         </>
@@ -1122,12 +1122,12 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       {abaAtiva === 'evolucoes' ? <>
       <form onSubmit={registrarEvolucao} className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div>
-          <h2 className="text-base font-semibold text-tinta">Nova evolucao clinica</h2>
-          <p className="mt-1 text-sm text-texto-suave">Registro privado do profissional, salvo no historico do paciente.</p>
+          <h2 className="text-base font-semibold text-tinta">Nova evolução clínica</h2>
+          <p className="mt-1 text-sm text-texto-suave">Registro privado do profissional, salvo no histórico do paciente.</p>
         </div>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
           <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-            Titulo da evolucao
+            Título da evolução
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
               value={formularioEvolucao.titulo}
@@ -1137,13 +1137,13 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             />
           </label>
           <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-            Tipo da evolucao
+            Tipo da evolução
             <select
               className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
               value={formularioEvolucao.tipo}
               onChange={(evento) => setFormularioEvolucao((atual) => ({ ...atual, tipo: evento.target.value as TipoEvolucaoClinicaApi }))}
             >
-              <option value="observacao">Observacao</option>
+              <option value="observacao">Observação</option>
               <option value="consulta">Consulta</option>
               <option value="retorno">Retorno</option>
               <option value="ajuste_plano">Ajuste de plano</option>
@@ -1151,7 +1151,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           </label>
         </div>
         <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-          Conteudo da evolucao
+          Conteúdo da evolução
           <textarea
             className="min-h-[112px] rounded-md border border-linha px-3 py-2 text-sm font-normal text-tinta"
             value={formularioEvolucao.conteudo}
@@ -1164,12 +1164,12 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         <div className="flex justify-end">
           <Botao type="submit" variante="primario" disabled={salvandoEvolucao}>
             <Save size={16} />
-            {salvandoEvolucao ? 'Registrando' : 'Registrar evolucao'}
+            {salvandoEvolucao ? 'Registrando' : 'Registrar evolução'}
           </Botao>
         </div>
       </form>
 
-      <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Evolucoes recentes</h2></div><LinhaDoTempo eventos={evolucoes} profissionais={profissionais} /></section>
+      <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Evoluções recentes</h2></div><LinhaDoTempo eventos={evolucoes} profissionais={profissionais} /></section>
       </> : null}
 
       {abaAtiva === 'acompanhamento' ? <>
@@ -1180,7 +1180,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_210px]">
           <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-            Titulo da tarefa
+            Título da tarefa
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
               value={formularioTarefa.titulo}
@@ -1201,7 +1201,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               <option value="tarefa">Tarefa</option>
               <option value="meta">Meta</option>
               <option value="checkin">Check-in</option>
-              <option value="orientacao">Orientacao</option>
+              <option value="orientacao">Orientação</option>
             </select>
           </label>
           <label className="grid gap-1 text-xs font-semibold text-texto-suave">
@@ -1229,7 +1229,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           </label>
         </div>
         <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-          Descricao da tarefa
+          Descrição da tarefa
           <textarea
             className="min-h-[96px] rounded-md border border-linha px-3 py-2 text-sm font-normal text-tinta"
             value={formularioTarefa.descricao}
@@ -1262,7 +1262,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-tinta">Biblioteca de materiais</h2>
-            <p className="mt-1 text-sm text-texto-suave">Salve links, PDFs por URL e orientacoes reutilizaveis para enviar ao paciente.</p>
+            <p className="mt-1 text-sm text-texto-suave">Salve links, PDFs por URL e orientações reutilizaveis para enviar ao paciente.</p>
           </div>
           <div className="flex items-center gap-2 text-sm text-texto-suave">
             <FileText size={16} className="text-primaria" />
@@ -1273,7 +1273,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         <form onSubmit={registrarMaterial} className="grid gap-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_180px]">
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-              Titulo do material
+              Título do material
               <input
                 className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
                 value={formularioMaterial.titulo}
@@ -1291,7 +1291,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               >
                 <option value="link">Link</option>
                 <option value="pdf_url">PDF por URL</option>
-                <option value="orientacao">Orientacao</option>
+                <option value="orientacao">Orientação</option>
               </select>
             </label>
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
@@ -1350,7 +1350,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               </select>
             </label>
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-              Observacao do envio
+              Observação do envio
               <input
                 className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
                 value={formularioEnvioMaterial.observacao}
@@ -1410,8 +1410,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 <UploadCloud size={18} />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-tinta">Adicionar anexo clinico</h2>
-                <p className="mt-1 text-sm text-texto-suave">PDF ou imagem de ate 25 MB.</p>
+                <h2 className="text-base font-semibold text-tinta">Adicionar anexo clínico</h2>
+                <p className="mt-1 text-sm text-texto-suave">PDF ou imagem de até 25 MB.</p>
               </div>
             </div>
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
@@ -1433,7 +1433,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 value={consultaVinculadaId}
                 onChange={(evento) => setConsultaVinculadaId(evento.target.value)}
               >
-                <option value="">Sem vinculo clinico</option>
+                <option value="">Sem vínculo clínico</option>
                 {dados.linhaDoTempo.filter((evento) => evento.tipo === 'consulta').map((consulta) => (
                   <option key={consulta.id} value={consulta.id}>
                     {consulta.titulo} - {formatarDataHora(consulta.data)}
@@ -1530,15 +1530,15 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </section>
       ) : null}
 
-      {abaAtiva === 'formularios' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Formularios e check-ins</h2><p className="mt-1 text-sm text-texto-suave">Envios, respostas e check-ins vinculados ao paciente.</p></div><LinhaDoTempo eventos={formularios} profissionais={profissionais} /></section> : null}
+      {abaAtiva === 'formularios' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Formulários e check-ins</h2><p className="mt-1 text-sm text-texto-suave">Envios, respostas e check-ins vinculados ao paciente.</p></div><LinhaDoTempo eventos={formularios} profissionais={profissionais} /></section> : null}
 
-      {abaAtiva === 'mensagens' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Mensagens do paciente</h2><p className="mt-1 text-sm text-texto-suave">Historico de comunicacoes registradas.</p></div><LinhaDoTempo eventos={mensagens} profissionais={profissionais} /></section> : null}
+      {abaAtiva === 'mensagens' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Mensagens do paciente</h2><p className="mt-1 text-sm text-texto-suave">Histórico de comunicações registradas.</p></div><LinhaDoTempo eventos={mensagens} profissionais={profissionais} /></section> : null}
 
       {abaAtiva === 'historico' ? <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
         <article className="grid gap-3">
           <div className="rounded-md border border-linha bg-white p-4">
-            <h2 className="text-base font-semibold text-tinta">Linha do tempo clinica</h2>
-            <p className="mt-1 text-sm text-texto-suave">Consultas, formularios, check-ins, respostas e mensagens em ordem cronologica.</p>
+            <h2 className="text-base font-semibold text-tinta">Linha do tempo clínica</h2>
+            <p className="mt-1 text-sm text-texto-suave">Consultas, formulários, check-ins, respostas e mensagens em ordem cronologica.</p>
           </div>
           <form onSubmit={aplicarFiltrosHistorico} className="grid gap-3 rounded-md border border-linha bg-white p-4 sm:grid-cols-2 xl:grid-cols-5">
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
@@ -1546,18 +1546,18 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               <select className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta" value={tipoHistorico} onChange={(evento) => setTipoHistorico(evento.target.value as TipoEventoProntuarioPaciente | 'todos')}>
                 <option value="todos">Todos os eventos</option>
                 <option value="consulta">Consultas</option>
-                <option value="formulario">Formularios enviados</option>
-                <option value="resposta_formulario">Respostas de formularios</option>
+                <option value="formulario">Formulários enviados</option>
+                <option value="resposta_formulario">Respostas de formulários</option>
                 <option value="checkin_rapido">Check-ins rapidos</option>
                 <option value="mensagem">Mensagens</option>
-                <option value="evolucao_clinica">Evolucoes clinicas</option>
+                <option value="evolucao_clinica">Evoluções clínicas</option>
                 <option value="tarefa_acompanhamento">Tarefas de acompanhamento</option>
                 {permissoes.includes('planos_alimentares.ler') ? <option value="plano_alimentar_publicado">Planos alimentares publicados</option> : null}
-                <option value="avaliacao_antropometrica">Avaliacoes antropometricas</option>
+                <option value="avaliacao_antropometrica">Avaliações antropométricas</option>
                 <option value="documento_emitido">Documentos emitidos</option>
                 <option value="anexo_confirmado">Anexos confirmados</option>
                 <option value="exame_laboratorial">Exames laboratoriais</option>
-                <option value="evolucao_fotografica">Evolucoes fotograficas</option>
+                <option value="evolucao_fotografica">Evoluções fotográficas</option>
                 {permissoes.includes('agenda.financeiro.ler') ? <option value="evento_financeiro">Eventos financeiros</option> : null}
               </select>
             </label>
@@ -1566,12 +1566,12 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               <input className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta" type="date" value={inicioHistorico} onChange={(evento) => setInicioHistorico(evento.target.value)} />
             </label>
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-              Ate
+              Até
               <input className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta" type="date" value={fimHistorico} onChange={(evento) => setFimHistorico(evento.target.value)} />
             </label>
             {profissionais.length ? (
               <label className="grid gap-1 text-xs font-semibold text-texto-suave">
-                Responsavel
+                Responsável
                 <select className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta" value={responsavelHistorico} onChange={(evento) => setResponsavelHistorico(evento.target.value)}>
                   <option value="">Todos os responsaveis</option>
                   {profissionais.map((profissional) => <option key={profissional.id} value={profissional.id}>{profissional.nome}</option>)}
@@ -1607,26 +1607,26 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <div className="flex items-start gap-2">
             <Stethoscope size={18} className="mt-0.5 shrink-0 text-primaria" />
             <div>
-              <h2 className="text-base font-semibold text-tinta">Atalhos do prontuario</h2>
-              <p className="mt-1 text-sm text-texto-suave">Abra os modulos conectados para agir sobre o acompanhamento.</p>
+              <h2 className="text-base font-semibold text-tinta">Atalhos do prontuário</h2>
+              <p className="mt-1 text-sm text-texto-suave">Abra os módulos conectados para agir sobre o acompanhamento.</p>
             </div>
           </div>
           <Link className="text-sm font-medium text-primaria hover:underline" href="/agenda">
             Abrir agenda
           </Link>
           <Link className="text-sm font-medium text-primaria hover:underline" href="/questionarios">
-            Abrir formularios
+            Abrir formulários
           </Link>
           <Link className="text-sm font-medium text-primaria hover:underline" href="/comunicacoes">
-            Abrir comunicacoes
+            Abrir comunicações
           </Link>
         </aside>
       </section> : null}
       </div>
       <ModalConfirmacao
         aberto={Boolean(anexoParaExcluir)}
-        titulo="Excluir anexo clinico"
-        mensagem="O arquivo sera removido do armazenamento e nao podera mais ser aberto."
+        titulo="Excluir anexo clínico"
+        mensagem="O arquivo sera removido do armazenamento e não podera mais ser aberto."
         rotuloConfirmar="Excluir anexo"
         confirmando={excluindoAnexo}
         aoConfirmar={() => void confirmarExclusaoAnexo()}
@@ -1635,7 +1635,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       <ModalConfirmacao
         aberto={Boolean(saidaPendente)}
         titulo="Sair sem salvar"
-        mensagem="Voce tem alteracoes clinicas nao salvas. Sair sem salvar?"
+        mensagem="Você tem alterações clínicas não salvas. Sair sem salvar?"
         rotuloConfirmar="Sair sem salvar"
         aoCancelar={() => setSaidaPendente(null)}
         aoConfirmar={() => {

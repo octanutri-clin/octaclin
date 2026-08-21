@@ -1,12 +1,19 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-20.
+Atualizado em 2026-08-21.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 251 concluida: a voz do produto, o glossario e os padroes de mensagem
+  foram consolidados em `GUIA_VOZ_MICROCOPY.md`. Um gate AST impede regressao
+  de termos visiveis sem tocar IDs ou contratos internos; login, Hoje, agenda,
+  pacientes, prontuario, portais, formularios, comunicacoes e operacoes foram
+  revisados. Typecheck, build, testes de linguagem, acessibilidade e regressao
+  passaram; Browser e Lighthouse confirmaram acessibilidade 100, foco, nomes
+  acessiveis, contraste e ausencia de overflow. A proxima fase e a 252.
 - Fase 243 concluida como modernizacao tecnica: Expo 57.0.15, React Native
   0.86.2 e React 19.2.3, com Doctor, typecheck, gate de seguranca e bundles das
   tres plataformas aprovados. Restam dois avisos altos de `image-size` sem

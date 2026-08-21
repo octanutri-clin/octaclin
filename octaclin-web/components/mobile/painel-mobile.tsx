@@ -295,7 +295,7 @@ export function PainelMobile() {
                 onChange={(evento) => setDiario((atual) => ({ ...atual, tipo: evento.target.value as TipoDiarioRapido }))}
               >
                 <option value="humor">Humor</option>
-                <option value="refeicao">Refeicao</option>
+                <option value="refeicao">Refeição</option>
                 <option value="agua">Agua</option>
                 <option value="atividade">Atividade</option>
               </Selecao>

@@ -68,7 +68,7 @@ export function AreaEquipeCliente({ portal }: Props) {
     <>
       <Cartao id="usuarios" className="scroll-mt-4">
         <CartaoCabecalho>
-          <CartaoTitulo icone={<UsersRound className="h-4 w-4" />}>Usuarios</CartaoTitulo>
+          <CartaoTitulo icone={<UsersRound className="h-4 w-4" />}>Usuários</CartaoTitulo>
         </CartaoCabecalho>
         <CartaoConteudo className="grid gap-3">
           <article className="rounded-md border border-linha bg-superficie p-3">
@@ -97,7 +97,7 @@ export function AreaEquipeCliente({ portal }: Props) {
         <Cartao id="gestao-usuarios" className="scroll-mt-4" aria-busy={carregandoUsuarios}>
           <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
             <div>
-              <h2 className="text-sm font-semibold">Gerenciar usuarios</h2>
+              <h2 className="text-sm font-semibold">Gerenciar usuários</h2>
               <p className="mt-1 text-sm text-texto-suave">
                 {usuarios ? `${usuarios.total} acessos administrativos` : 'Carregando acessos administrativos'}
               </p>
@@ -280,7 +280,7 @@ export function AreaEquipeCliente({ portal }: Props) {
                   <div className="flex items-center gap-2">
                     <History size={16} className="text-texto-suave" />
                     <div>
-                      <h3 className="text-sm font-semibold">Historico de convites</h3>
+                      <h3 className="text-sm font-semibold">Histórico de convites</h3>
                       <p className="mt-1 text-xs text-texto-suave">
                         {historicoConvites
                           ? `${formatarQuantidade(historicoConvites.total, 'evento de convite', 'eventos de convite')}`
@@ -318,7 +318,7 @@ export function AreaEquipeCliente({ portal }: Props) {
                       </div>
                     ))
                   ) : (
-                    <div className="px-4 py-6 text-sm text-texto-suave">Nenhum historico de convite registrado.</div>
+                    <div className="px-4 py-6 text-sm text-texto-suave">Nenhum histórico de convite registrado.</div>
                   )}
                 </div>
               </section>
@@ -330,8 +330,8 @@ export function AreaEquipeCliente({ portal }: Props) {
                   <div className="grid grid-cols-[1.4fr_190px_100px_120px_150px] gap-3 border-b border-linha px-4 py-3 text-xs font-semibold uppercase text-texto-suave">
                     <span>Email</span>
                     <span>Papel</span>
-                    <span>Status</span>
-                    <span>Ultimo login</span>
+                    <span>Situação</span>
+                    <span>Último login</span>
                     <span>Acesso</span>
                   </div>
                   <div className="divide-y divide-linha">
@@ -422,7 +422,7 @@ export function AreaEquipeCliente({ portal }: Props) {
                       ))
                     ) : (
                       <div className="px-4 py-8 text-sm text-texto-suave">
-                        Nenhum usuario administrativo carregado.
+                        Nenhum usuário administrativo carregado.
                       </div>
                     )}
                   </div>

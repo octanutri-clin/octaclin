@@ -92,7 +92,7 @@ export function PacotesSessao({ pacientes, pacienteIdSugerido, aoMudar }: Pacote
     setSucesso(null);
     try {
       await cancelarPacoteSessao(pacote.id);
-      setSucesso('Pacote cancelado. As consultas ja agendadas continuam na agenda.');
+      setSucesso('Pacote cancelado. As consultas já agendadas continuam na agenda.');
       await carregar(pacienteId);
       aoMudar?.();
     } catch (erroAtual) {
@@ -163,7 +163,7 @@ export function PacotesSessao({ pacientes, pacienteIdSugerido, aoMudar }: Pacote
 
             <form className="grid gap-3 border-t border-linha pt-3" onSubmit={criar}>
               <label className="grid gap-1">
-                <Rotulo>Titulo</Rotulo>
+                <Rotulo>Título</Rotulo>
                 <Campo name="titulo" required maxLength={180} placeholder="Pacote 10 consultas" />
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -187,7 +187,7 @@ export function PacotesSessao({ pacientes, pacienteIdSugerido, aoMudar }: Pacote
                   </Selecao>
                 </label>
                 <label className="grid gap-1">
-                  <Rotulo>Status</Rotulo>
+                  <Rotulo>Situação</Rotulo>
                   <Selecao name="statusPagamento" defaultValue="pendente">
                     <option value="pendente">Pendente</option>
                     <option value="pago">Pago</option>

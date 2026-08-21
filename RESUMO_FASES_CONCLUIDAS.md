@@ -732,6 +732,13 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   O PR legado `#6` foi encerrado como superado e nenhum PR aberto restou. A
   conclusao nao libera o app: `mobile.sync=false` e NO-GO permanecem. Ver
   `fase-250-encerramento-divida-mobile-higiene-prs.md`.
+- Fase 251 - Revisao integral de linguagem e microcopy: o OctaClin ganhou guia
+  canonico de voz, glossario e padroes de acao, erro, vazio, confirmacao e
+  permissao. Um gate AST no CI protege somente texto visivel e preserva IDs,
+  enums e contratos. As superficies profissionais, publicas e dos portais
+  foram revisadas; Browser, Lighthouse 100 e Playwright desktop/mobile
+  validaram contraste, foco, acessibilidade e ausencia de overflow. Ver
+  `fase-251-revisao-integral-linguagem-microcopy.md`.
 - Fase 241 - Hardening da IA clinica: referencias de
   check-in, transcricao e midia agora sao validadas por tenant/paciente; a URL
   privada e criada apenas no backend e seu SHA-256 e conferido ponta a ponta.

@@ -38,9 +38,9 @@ export function AreaAuditoria({ controlador }: { controlador: PainelOperacoesCon
             className="h-9 rounded-md border border-linha bg-white px-2 text-sm"
             value={filtrosAuditoria.acao}
             onChange={(evento) => setFiltrosAuditoria((atual) => ({ ...atual, acao: evento.target.value }))}
-            aria-label="Acao"
+            aria-label="Ação"
           >
-            <option value="">Todas as acoes</option>
+            <option value="">Todas as ações</option>
             <option value="pacientes.listar_dados_sensiveis">Pacientes - listar</option>
             <option value="pacientes.obter_dados_sensiveis">Pacientes - detalhe</option>
             <option value="profissionais.listar_dados_sensiveis">Profissionais - listar</option>
@@ -54,13 +54,13 @@ export function AreaAuditoria({ controlador }: { controlador: PainelOperacoesCon
           />
           <input
             className="h-9 rounded-md border border-linha px-2 text-sm"
-            placeholder="ID recurso"
+            placeholder="Identificador do recurso"
             value={filtrosAuditoria.recursoId}
             onChange={(evento) => setFiltrosAuditoria((atual) => ({ ...atual, recursoId: evento.target.value }))}
           />
           <input
             className="h-9 rounded-md border border-linha px-2 text-sm"
-            placeholder="ID usuario"
+            placeholder="ID usuário"
             value={filtrosAuditoria.usuarioId}
             onChange={(evento) => setFiltrosAuditoria((atual) => ({ ...atual, usuarioId: evento.target.value }))}
           />
@@ -103,7 +103,7 @@ export function AreaAuditoria({ controlador }: { controlador: PainelOperacoesCon
                 <p className="mt-1 text-xs text-texto-suave">{formatarData(evento.criadoEm)}</p>
               </div>
               <div className="text-xs text-texto-suave">
-                <p className="break-all">Usuario: {evento.usuarioId ?? '-'}</p>
+                <p className="break-all">Usuário: {evento.usuarioId ?? '-'}</p>
                 <p className="mt-1 break-all">IP: {evento.ip ?? '-'}</p>
                 <p className="mt-1 break-all">Agent: {evento.userAgent ?? '-'}</p>
               </div>
@@ -116,7 +116,7 @@ export function AreaAuditoria({ controlador }: { controlador: PainelOperacoesCon
       </div>
       <div className="flex flex-col gap-2 border-t border-linha px-4 py-3 md:flex-row md:items-center md:justify-between">
         <span className="text-sm text-texto-suave">
-          Pagina {auditoriaPaginada?.pagina ?? 1} de {totalPaginasAuditoria} | {auditoriaPaginada?.total ?? 0} eventos
+          Página {auditoriaPaginada?.pagina ?? 1} de {totalPaginasAuditoria} | {auditoriaPaginada?.total ?? 0} eventos
         </span>
         <div className="flex gap-2">
           <Botao
@@ -131,7 +131,7 @@ export function AreaAuditoria({ controlador }: { controlador: PainelOperacoesCon
             onClick={() => void trocarPaginaAuditoria((auditoriaPaginada?.pagina ?? 1) + 1)}
             disabled={!auditoriaPaginada || auditoriaPaginada.pagina >= totalPaginasAuditoria || carregandoAuditoria}
           >
-            Proxima
+            Próxima
           </Botao>
         </div>
       </div>

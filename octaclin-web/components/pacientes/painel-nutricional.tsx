@@ -110,7 +110,7 @@ export function PainelNutricional({
 
   const macros = [
     { rotulo: 'Carboidratos', gramas: totais.carboidratosG, kcalPorGrama: KCAL_POR_GRAMA.carboidratosG },
-    { rotulo: 'Proteinas', gramas: totais.proteinasG, kcalPorGrama: KCAL_POR_GRAMA.proteinasG },
+    { rotulo: 'Proteínas', gramas: totais.proteinasG, kcalPorGrama: KCAL_POR_GRAMA.proteinasG },
     { rotulo: 'Gorduras', gramas: totais.gordurasG, kcalPorGrama: KCAL_POR_GRAMA.gordurasG }
   ];
 
@@ -218,7 +218,7 @@ export function PainelNutricional({
               <p role="status" className="flex gap-2 rounded-md bg-perigo-suave p-2 text-xs text-perigo">
                 <AlertTriangle aria-hidden="true" size={14} className="mt-0.5 shrink-0" />
                 <span>
-                  A publicacao exige justificativa enquanto houver desvio acima de{' '}
+                  A publicação exige justificativa enquanto houver desvio acima de{' '}
                   {percentual(LIMIAR_DIVERGENCIA_NUTRICIONAL)}.
                 </span>
               </p>
@@ -226,7 +226,7 @@ export function PainelNutricional({
             {metasDesatualizadas ? (
               <p className="flex gap-2 text-xs text-texto-suave">
                 <Info aria-hidden="true" size={14} className="mt-0.5 shrink-0" />
-                <span>Metas da ultima versao salva. Salve o rascunho para recalcular com os parametros atuais.</span>
+                <span>Metas da última versão salva. Salve o rascunho para recalcular com os parametros atuais.</span>
               </p>
             ) : null}
           </div>

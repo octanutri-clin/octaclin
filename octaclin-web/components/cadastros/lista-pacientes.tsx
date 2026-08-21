@@ -307,7 +307,7 @@ export function ListaPacientes() {
       setLinkConvite(convite.linkAtivacao);
       try {
         await navigator.clipboard?.writeText(convite.linkAtivacao);
-        setSucesso('Convite criado e link copiado para a area de transferencia.');
+        setSucesso('Convite criado e link copiado para a área de transferencia.');
       } catch {
         setSucesso('Convite criado. Use o link exibido abaixo.');
       }
@@ -405,13 +405,13 @@ export function ListaPacientes() {
             </Selecao>
           </label>
           <label className="grid gap-1">
-            <Rotulo htmlFor="filtro-profissional">Responsavel</Rotulo>
+            <Rotulo htmlFor="filtro-profissional">Responsável</Rotulo>
             <Selecao id="filtro-profissional" value={filtroProfissional} onChange={(evento) => { setFiltroProfissional(evento.target.value); setApenasSemProximaConsulta(false); setPagina(1); }}>
               <option value="todos">Todos</option>{profissionais.map((profissional) => <option key={profissional.id} value={profissional.id}>{profissional.nome}</option>)}
             </Selecao>
           </label>
           <label className="grid gap-1">
-            <Rotulo htmlFor="filtro-status">Situacao</Rotulo>
+            <Rotulo htmlFor="filtro-status">Situação</Rotulo>
             <Selecao id="filtro-status" value={filtroStatus} onChange={(evento) => { setFiltroStatus(evento.target.value); setApenasSemProximaConsulta(false); setPagina(1); }}>
               <option value="todos">Todas</option><option value="novo">Novo</option><option value="aderente">Aderente</option><option value="em_acompanhamento">Em acompanhamento</option><option value="risco">Risco</option>
             </Selecao>
@@ -466,7 +466,7 @@ export function ListaPacientes() {
           <div className="grid gap-5">
             <section aria-labelledby="paciente-identificacao" className="grid gap-3">
               <div>
-                <h3 id="paciente-identificacao" className="text-sm font-semibold text-tinta">Identificacao</h3>
+                <h3 id="paciente-identificacao" className="text-sm font-semibold text-tinta">Identificação</h3>
                 <p className="mt-1 text-xs text-texto-suave">Dados basicos para reconhecer o paciente no atendimento.</p>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
@@ -493,7 +493,7 @@ export function ListaPacientes() {
             <section aria-labelledby="paciente-contato" className="grid gap-3 border-t border-linha pt-5">
               <div>
                 <h3 id="paciente-contato" className="text-sm font-semibold text-tinta">Contato</h3>
-                <p className="mt-1 text-xs text-texto-suave">Informe um e-mail ou telefone usado para comunicacoes e convite do portal.</p>
+                <p className="mt-1 text-xs text-texto-suave">Informe um e-mail ou telefone usado para comunicações e convite do portal.</p>
               </div>
               <label className="grid gap-1">
                 <Rotulo>E-mail ou telefone</Rotulo>
@@ -507,12 +507,12 @@ export function ListaPacientes() {
 
             <section aria-labelledby="paciente-operacao" className="grid gap-3 border-t border-linha pt-5">
               <div>
-                <h3 id="paciente-operacao" className="text-sm font-semibold text-tinta">Responsavel e acompanhamento</h3>
-                <p className="mt-1 text-xs text-texto-suave">Defina quem acompanha o paciente. Status e risco so aparecem na edicao para evitar classificacao prematura.</p>
+                <h3 id="paciente-operacao" className="text-sm font-semibold text-tinta">Responsável e acompanhamento</h3>
+                <p className="mt-1 text-xs text-texto-suave">Defina quem acompanha o paciente. Situação e risco só aparecem na edição para evitar classificação prematura.</p>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="grid gap-1">
-                  <Rotulo>Profissional responsavel</Rotulo>
+                  <Rotulo>Profissional responsável</Rotulo>
                   <Selecao
                     value={formulario.profissionalResponsavelId}
                     onChange={(evento) => setFormulario((atual) => ({ ...atual, profissionalResponsavelId: evento.target.value }))}
@@ -526,7 +526,7 @@ export function ListaPacientes() {
                 </label>
                 {editandoId ? (
                   <label className="grid gap-1">
-                    <Rotulo>Situacao do acompanhamento</Rotulo>
+                    <Rotulo>Situação do acompanhamento</Rotulo>
                     <Selecao
                       value={formulario.statusAdesao}
                       onChange={(evento) => setFormulario((atual) => ({ ...atual, statusAdesao: evento.target.value as StatusPaciente }))}
@@ -534,7 +534,7 @@ export function ListaPacientes() {
                       <option value="novo">Novo</option>
                       <option value="aderente">Aderente</option>
                       <option value="em_acompanhamento">Em acompanhamento</option>
-                      <option value="risco">Requer atencao</option>
+                      <option value="risco">Requer atenção</option>
                       <option value="inativo">Inativo</option>
                     </Selecao>
                   </label>
@@ -557,7 +557,7 @@ export function ListaPacientes() {
 
             {!editandoId ? (
               <section aria-label="Acesso ao portal" className="rounded-md border border-primaria/20 bg-primaria-suave p-3 text-sm text-tinta">
-                Salve o cadastro primeiro. Depois, use a acao de convite na lista para liberar o acesso seguro ao portal do paciente.
+                Salve o cadastro primeiro. Depois, use a ação de convite na lista para liberar o acesso seguro ao portal do paciente.
               </section>
             ) : null}
           </div>
@@ -574,12 +574,12 @@ export function ListaPacientes() {
         <TabelaConteudo larguraMinima="840px">
           <TabelaCabecalho densidade="compacta" className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_196px]">
             <span>Paciente</span>
-            <span>Responsavel</span>
-            <span>Status</span>
+            <span>Responsável</span>
+            <span>Situação</span>
             <span>Risco</span>
-            <span>Ultima consulta</span>
-            <span>Proxima acao</span>
-            <span>Acoes</span>
+            <span>Última consulta</span>
+            <span>Próxima ação</span>
+            <span>Ações</span>
           </TabelaCabecalho>
           <TabelaLinhas>
             {pacientesFiltrados.length ? (
@@ -603,8 +603,8 @@ export function ListaPacientes() {
                     <Link
                       href={`/pacientes/${paciente.id}` as Route}
                       className={classesBotao({ variante: 'fantasma', className: 'w-11 px-0' })}
-                      aria-label="Abrir prontuario"
-                      title="Abrir prontuario"
+                      aria-label="Abrir prontuário"
+                      title="Abrir prontuário"
                     >
                       <FileText size={16} />
                     </Link>
@@ -654,9 +654,9 @@ export function ListaPacientes() {
                 <div className="min-w-0"><Link href={`/pacientes/${paciente.id}` as Route} className="font-semibold text-tinta hover:underline">{paciente.nome}</Link><p className="mt-1 truncate text-xs text-texto-suave">{paciente.contato ?? paciente.id}</p></div>
                 <Etiqueta variante={nivelRisco(paciente) === 'alto' ? 'perigo' : nivelRisco(paciente) === 'medio' ? 'alerta' : 'sucesso'}>{nivelRisco(paciente)} {Number(paciente.scoreRisco).toFixed(1)}</Etiqueta>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs text-texto-suave"><span>Responsavel<br /><strong className="text-tinta">{nomeProfissional(profissionais, paciente.profissionalResponsavelId)}</strong></span><span>Ultima consulta<br /><strong className="text-tinta">{formatarData(paciente.ultimaConsultaConcluidaEm)}</strong></span><span className="col-span-2">Proxima acao<br /><strong className="text-tinta">{proximaAcao(paciente)}</strong></span></div>
+              <div className="grid grid-cols-2 gap-2 text-xs text-texto-suave"><span>Responsável<br /><strong className="text-tinta">{nomeProfissional(profissionais, paciente.profissionalResponsavelId)}</strong></span><span>Última consulta<br /><strong className="text-tinta">{formatarData(paciente.ultimaConsultaConcluidaEm)}</strong></span><span className="col-span-2">Próxima ação<br /><strong className="text-tinta">{proximaAcao(paciente)}</strong></span></div>
               <div className="flex flex-wrap gap-1">
-                <Link href={`/pacientes/${paciente.id}` as Route} className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta hover:bg-superficie-hover">Abrir prontuario</Link>
+                <Link href={`/pacientes/${paciente.id}` as Route} className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta hover:bg-superficie-hover">Abrir prontuário</Link>
                 {podeGerenciar ? (
                   <>
                     <Botao type="button" variante="fantasma" onClick={() => editar(paciente)} aria-label={`Editar ${paciente.nome}`}><Edit3 size={16} /></Botao>
@@ -672,14 +672,14 @@ export function ListaPacientes() {
 
       <nav className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" aria-label="Paginacao de pacientes">
         <p className="text-sm text-texto-suave" aria-live="polite">
-          Pagina {pagina} de {totalPaginas} | {dados?.total ?? 0} pacientes
+          Página {pagina} de {totalPaginas} | {dados?.total ?? 0} pacientes
         </p>
         <div className="flex gap-2">
           <Botao type="button" variante="secundario" onClick={() => setPagina((atual) => Math.max(1, atual - 1))} disabled={pagina <= 1 || carregando}>
             Anterior
           </Botao>
           <Botao type="button" variante="secundario" onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))} disabled={pagina >= totalPaginas || carregando}>
-            Proxima
+            Próxima
           </Botao>
         </div>
       </nav>
@@ -694,7 +694,7 @@ export function ListaPacientes() {
         }}
       />
 
-      <Modal aberto={lixeiraAberta} aoFechar={() => setLixeiraAberta(false)} titulo="Lixeira de pacientes" descricao="Restaure cadastros arquivados sem perder prontuario, agenda ou vinculos.">
+      <Modal aberto={lixeiraAberta} aoFechar={() => setLixeiraAberta(false)} titulo="Lixeira de pacientes" descricao="Restaure cadastros arquivados sem perder prontuário, agenda ou vinculos.">
         {arquivados.length ? (
           <ul className="grid max-h-[60vh] gap-2 overflow-y-auto">
             {arquivados.map((paciente) => (

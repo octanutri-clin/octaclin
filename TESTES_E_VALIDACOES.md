@@ -590,3 +590,21 @@ pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spe
 O snapshot nao pode conter payload, query string, credencial ou dado clinico.
 As rotas BFF de feature flags devem continuar exigindo
 `operacoes.tenants.gerenciar`. Nao ha migration nesta fase.
+
+### Fase 251 - linguagem e microcopy
+
+```powershell
+pnpm --dir octaclin-web test:linguagem
+pnpm --dir octaclin-web typecheck
+pnpm --dir octaclin-web lint
+pnpm --dir octaclin-web build
+pnpm --dir octaclin-web test:fase251
+pnpm --dir octaclin-web test:a11y
+pnpm --dir octaclin-web test:fase248
+pnpm --dir octaclin-web test:fase249
+```
+
+O gate AST deve examinar somente texto visivel e nunca reescrever IDs, enums,
+rotas ou contratos internos. O aceite no Browser exige `lang=pt-BR`, foco
+visivel, nomes acessiveis, contraste AA, ausencia de overflow horizontal e
+console sem erros. Todos os dados do teste Playwright devem ser sinteticos.

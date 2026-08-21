@@ -23,7 +23,7 @@ export function AreaIncidentes({ controlador }: { controlador: PainelOperacoesCo
             <span className="text-sm text-texto-suave">{alertasOperacionais?.resumo.total ?? 0} ativos</span>
           </div>
           <p className="mt-1 text-xs text-texto-suave">
-            Criticos {alertasOperacionais?.resumo.criticos ?? 0} | Atencao {alertasOperacionais?.resumo.atencao ?? 0} | Informativos{' '}
+            Criticos {alertasOperacionais?.resumo.criticos ?? 0} | Atenção {alertasOperacionais?.resumo.atencao ?? 0} | Informativos{' '}
             {alertasOperacionais?.resumo.informativos ?? 0}
           </p>
         </div>
@@ -50,7 +50,7 @@ export function AreaIncidentes({ controlador }: { controlador: PainelOperacoesCo
           ))}
         </div>
       ) : (
-        <EstadoVazio titulo="Nenhum alerta ativo" descricao="Health, filas e integracoes sem alerta operacional no momento." />
+        <EstadoVazio titulo="Nenhum alerta ativo" descricao="Health, filas e integrações sem alerta operacional no momento." />
       )}
     </Cartao>
   );

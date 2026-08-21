@@ -6,7 +6,9 @@
 - Primary jobs: atender, acompanhar pacientes, gerir agenda e comunicacoes sem expor dados fora do escopo.
 - Target market(s): Brasil.
 - Active locales: `pt-BR`.
-- Language/content register and native-review policy: portugues brasileiro direto, com revisao de texto em toda superficie alterada.
+- Language/content register and native-review policy: `GUIA_VOZ_MICROCOPY.md`
+  e a fonte canonica; portugues brasileiro direto, com revisao de texto em toda
+  superficie alterada e gate `pnpm --dir octaclin-web test:linguagem`.
 - Timezone/calendar policy: `America/Sao_Paulo` como fuso operacional padrao; o backend continua autoridade para agenda.
 - Accessibility target: WCAG 2.2 AA.
 

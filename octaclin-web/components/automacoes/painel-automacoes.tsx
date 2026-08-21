@@ -320,7 +320,7 @@ export function PainelAutomacoes() {
           <div>
             <h2 className="text-base font-semibold">Modelos e regras</h2>
             <p className="mt-1 text-sm text-texto-suave">
-              {regras.length} regras, {execucoes.length} simulacoes e execucoes no historico
+              {regras.length} regras, {execucoes.length} simulacoes e execucoes no histórico
             </p>
           </div>
           <Botao onClick={carregar} disabled={carregando}>
@@ -384,7 +384,7 @@ export function PainelAutomacoes() {
                 <option value="checkin.atrasado">Check-in atrasado</option>
                 <option value="questionario.respondido">Questionario respondido</option>
                 <option value="paciente.risco_alto">Paciente em risco alto</option>
-                <option value={GATILHO_INATIVIDADE}>Paciente sem consulta ha muito tempo</option>
+                <option value={GATILHO_INATIVIDADE}>Paciente sem consulta há muito tempo</option>
               </Selecao>
             </div>
             {gatilhoInatividadeSelecionado ? (
@@ -468,7 +468,7 @@ export function PainelAutomacoes() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Rotulo htmlFor="regra-acao">Acao</Rotulo>
+                  <Rotulo htmlFor="regra-acao">Ação</Rotulo>
                   <Selecao
                     id="regra-acao"
                     value={formularioRegra.acaoTipo}
@@ -585,7 +585,7 @@ export function PainelAutomacoes() {
               </Selecao>
             </div>
             <div className="space-y-1.5">
-              <Rotulo htmlFor="avaliacao-status">Status</Rotulo>
+              <Rotulo htmlFor="avaliacao-status">Situação</Rotulo>
               <Selecao
                 id="avaliacao-status"
                 value={formularioAvaliacao.status}
@@ -618,7 +618,7 @@ export function PainelAutomacoes() {
               />
             </div>
             <div className="space-y-1.5 md:col-span-2">
-              <Rotulo htmlFor="avaliacao-observacao">Observacao</Rotulo>
+              <Rotulo htmlFor="avaliacao-observacao">Observação</Rotulo>
               <AreaTexto
                 id="avaliacao-observacao"
                 value={formularioAvaliacao.observacao}
@@ -638,7 +638,7 @@ export function PainelAutomacoes() {
 
         <Cartao>
           <CartaoCabecalho>
-            <CartaoTitulo>Historico recente</CartaoTitulo>
+            <CartaoTitulo>Histórico recente</CartaoTitulo>
           </CartaoCabecalho>
           <div className="max-h-[420px] divide-y divide-linha overflow-auto">
             {execucoes.length ? (
@@ -663,7 +663,7 @@ export function PainelAutomacoes() {
                 </div>
               ))
             ) : (
-              <EstadoVazio titulo="Nenhuma avaliacao persistida." />
+              <EstadoVazio titulo="Nenhuma avaliação persistida." />
             )}
           </div>
         </Cartao>

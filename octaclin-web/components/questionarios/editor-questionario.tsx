@@ -14,7 +14,7 @@ import { useWorkspaceQuestionarios } from './usar-workspace-questionarios';
 type AreaQuestionarios = 'formularios' | 'editor' | 'biblioteca' | 'distribuicao' | 'respostas';
 
 const areasQuestionarios: { id: AreaQuestionarios; rotulo: string }[] = [
-  { id: 'formularios', rotulo: 'Formularios' },
+  { id: 'formularios', rotulo: 'Formulários' },
   { id: 'editor', rotulo: 'Editor' },
   { id: 'biblioteca', rotulo: 'Biblioteca' },
   { id: 'distribuicao', rotulo: 'Distribuicoes' },
@@ -47,13 +47,13 @@ export function EditorQuestionario() {
 
       {alteracoesQuestionarioPendentes || alteracoesPerguntaPendentes ? (
         <p className="text-sm text-alerta-forte" role="status">
-          Alteracoes pendentes: {alteracoesQuestionarioPendentes ? 'formulario' : ''}
+          Alterações pendentes: {alteracoesQuestionarioPendentes ? 'formulario' : ''}
           {alteracoesQuestionarioPendentes && alteracoesPerguntaPendentes ? ' e ' : ''}
-          {alteracoesPerguntaPendentes ? 'pergunta selecionada' : ''}. Confirme antes de trocar de formulario.
+          {alteracoesPerguntaPendentes ? 'pergunta selecionada' : ''}. Confirme antes de trocar de formulário.
         </p>
       ) : null}
 
-      <Abas identificador="questionarios" abas={areasQuestionarios} ativaId={areaAtiva} aoMudar={(id) => setAreaAtiva(id as AreaQuestionarios)} rotulo="Areas de trabalho dos questionarios" />
+      <Abas identificador="questionarios" abas={areasQuestionarios} ativaId={areaAtiva} aoMudar={(id) => setAreaAtiva(id as AreaQuestionarios)} rotulo="Áreas de trabalho dos questionarios" />
 
       <div id={`questionarios-${areaAtiva}-painel`} role="tabpanel" aria-labelledby={`questionarios-${areaAtiva}-aba`}>
         {areaAtiva === 'formularios' ? <AreaFormularios workspace={workspace} /> : null}
@@ -65,8 +65,8 @@ export function EditorQuestionario() {
 
       <ModalConfirmacao
         aberto={Boolean(confirmacaoTrocaPendente)}
-        titulo="Alteracoes nao salvas"
-        mensagem="Voce tem alteracoes nao salvas neste formulario ou pergunta. Trocar mesmo assim?"
+        titulo="Alterações não salvas"
+        mensagem="Você tem alterações não salvas neste formulário ou pergunta. Trocar mesmo assim?"
         rotuloConfirmar="Trocar mesmo assim"
         aoCancelar={() => setConfirmacaoTrocaPendente(null)}
         aoConfirmar={() => {

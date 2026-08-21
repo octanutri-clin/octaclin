@@ -3,7 +3,7 @@ import { PainelIa } from '@/components/ia/painel-ia';
 
 export default function IaPage() {
   return (
-    <ConsoleShell titulo="Sugestoes assistidas" subtitulo="Revisao humana obrigatoria">
+    <ConsoleShell titulo="Sugestoes assistidas" subtitulo="Revisão humana obrigatoria">
       <PainelIa />
     </ConsoleShell>
   );

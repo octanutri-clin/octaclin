@@ -36,7 +36,7 @@ export function PortalCliente() {
 
   const descricaoCabecalho = (
     <>
-      <p>Area administrativa da conta, separada das rotinas assistenciais e dos acessos dos pacientes.</p>
+      <p>Área administrativa da conta, separada das rotinas assistenciais e dos acessos dos pacientes.</p>
       {resumo ? <p className="mt-2 break-words font-medium text-texto-forte">{resumo.conta.nome}</p> : null}
     </>
   );
@@ -59,7 +59,7 @@ export function PortalCliente() {
               <AlertTriangle className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold">Conta indisponivel</h2>
+              <h2 className="text-sm font-semibold">Conta indisponível</h2>
               <p className="mt-1 break-words text-sm text-texto-suave">{erro}</p>
             </div>
           </section>
@@ -67,17 +67,17 @@ export function PortalCliente() {
 
         <Abas
           identificador="conta-cliente"
-          rotulo="Areas da conta"
+          rotulo="Áreas da conta"
           abas={[
             { id: 'ativacao', rotulo: 'Ativacao' },
             { id: 'assinatura', rotulo: 'Assinatura' },
             { id: 'consumo', rotulo: 'Consumo' },
             ...(podeLerFinanceiro ? [{ id: 'financeiro', rotulo: 'Financeiro' }] : []),
             { id: 'equipe', rotulo: 'Equipe' },
-            { id: 'preferencias', rotulo: 'Preferencias' },
+            { id: 'preferencias', rotulo: 'Preferências' },
             { id: 'marca', rotulo: 'Marca' },
             { id: 'documentos', rotulo: 'Documentos' },
-            { id: 'integracoes', rotulo: 'Integracoes' },
+            { id: 'integracoes', rotulo: 'Integrações' },
             { id: 'fiscal', rotulo: 'Dados fiscais' }
           ]}
           ativaId={areaAtiva}

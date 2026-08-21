@@ -17,9 +17,9 @@ interface RecuperarSenhaFormProps {
 
 const conteudoFalha: Record<TipoFalhaToken, { titulo: string; mensagem: string; detalhe: string }> = {
   sem_token: {
-    titulo: 'Link de redefinicao indisponivel',
+    titulo: 'Link de redefinicao indisponível',
     mensagem: 'Abra o link completo enviado por email ou solicite um novo.',
-    detalhe: 'O link precisa conter o codigo seguro de redefinicao.'
+    detalhe: 'O link precisa conter o código seguro de redefinicao.'
   },
   expirado: {
     titulo: 'Link expirado',
@@ -27,14 +27,14 @@ const conteudoFalha: Record<TipoFalhaToken, { titulo: string; mensagem: string; 
     detalhe: 'Por seguranca, links antigos deixam de funcionar automaticamente.'
   },
   nao_encontrado: {
-    titulo: 'Link nao encontrado',
+    titulo: 'Link não encontrado',
     mensagem: 'Confira se o link foi copiado inteiro ou solicite um novo.',
-    detalhe: 'Nao encontramos uma solicitacao de redefinicao ativa com esse codigo.'
+    detalhe: 'Não encontramos uma solicitação de redefinicao ativa com esse código.'
   },
   indisponivel: {
-    titulo: 'Nao foi possivel validar o link',
+    titulo: 'Não foi possível validar o link',
     mensagem: 'Tente novamente em instantes ou solicite um novo link.',
-    detalhe: 'A validacao do link nao retornou uma resposta esperada.'
+    detalhe: 'A validação do link não retornou uma resposta esperada.'
   }
 };
 
@@ -88,7 +88,7 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
     setErro(null);
 
     if (!senhaValida) {
-      setErro('A senha precisa ter ao menos 8 caracteres e bater com a confirmacao.');
+      setErro('A senha precisa ter ao menos 8 caracteres e bater com a confirmação.');
       return;
     }
 
@@ -131,7 +131,7 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
         <form onSubmit={enviar} className="grid gap-4">
           <div className="rounded-md border border-linha bg-superficie px-3 py-3 text-sm">
             <p className="font-medium">{dadosToken.email}</p>
-            <p className="mt-1 text-xs text-texto-suave">Link valido ate {formatarData(dadosToken.expiraEm)}</p>
+            <p className="mt-1 text-xs text-texto-suave">Link válido até {formatarData(dadosToken.expiraEm)}</p>
           </div>
 
           <div className="grid gap-1">

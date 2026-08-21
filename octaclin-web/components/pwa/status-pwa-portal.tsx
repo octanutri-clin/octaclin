@@ -12,7 +12,7 @@ export function StatusPwaPortal() {
     <div className="flex flex-wrap items-center gap-2" aria-live="polite">
       {!online ? (
         <span className="inline-flex min-h-10 items-center gap-2 rounded-md border border-alerta-borda bg-alerta-suave px-3 text-sm font-medium text-alerta-forte">
-          <WifiOff className="h-4 w-4" /> Sem conexao
+          <WifiOff className="h-4 w-4" /> Sem conexão
         </span>
       ) : null}
       {pendentes > 0 ? (

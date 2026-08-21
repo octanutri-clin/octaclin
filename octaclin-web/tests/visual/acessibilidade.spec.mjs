@@ -215,6 +215,23 @@ async function prepararDashboardMockado(page) {
     });
   });
 
+  await page.route('**/api/dashboard/clinico?**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z' },
+        indicadores: {
+          consultasHoje: 0, proximas: 0, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0,
+          semRetorno30: 0, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 0,
+          tarefasVencidas: 0, solicitacoesPendentes: 0, comunicacoesEmAlerta: 0, pacientesRiscoAlto: 0
+        },
+        atendimentos: [], semRetorno: [], tarefasVencidas: [], formulariosPendentes: [],
+        solicitacoesPendentes: [], comunicacoes: [], alertas: [], selecaoObrigatoria: false
+      })
+    });
+  });
+
   await page.route('**/api/agenda/consultas', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(consultasAgenda) });
   });
@@ -699,11 +716,11 @@ test.describe('gate de acessibilidade - rotas criticas', () => {
   test('dashboard', async ({ page }) => {
     await prepararDashboardMockado(page);
     await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hoje' })).toBeVisible();
     // O sino da Fase 210 precisa estar em tela para as checagens abaixo o
     // cobrirem. Sem esta linha, uma permissao faltando no mock faria o gate
     // passar sem nunca olhar para o botao.
-    await expect(page.getByRole('button', { name: 'Notificacoes, 2 nao lidas' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Notificações, 2 não lidas' })).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
   });
 
