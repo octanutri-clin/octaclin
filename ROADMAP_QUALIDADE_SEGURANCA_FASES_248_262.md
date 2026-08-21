@@ -34,7 +34,7 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
 | --- | --- | --- | --- |
 | 248 | Estados e recuperação clínica - concluída em 2026-08-20 | Essencial | Gate aprovado |
 | 249 | Densidade e responsividade web - concluida em 2026-08-20 | Importante | Gate aprovado |
-| 250 | Fechamento da dívida Mobile e PRs | Essencial/segurança | Bloqueia Mobile; prazo pré-piloto |
+| 250 | Fechamento da dívida Mobile e PRs - concluida em 2026-08-20 | Essencial/segurança | Higiene aprovada; Mobile segue bloqueado pelos advisories upstream |
 | 251 | Linguagem e microcopy integral | Importante | Pré-piloto |
 | 252 | Navegação e descoberta por papel | Essencial | Pré-piloto |
 | 253 | Agenda clínica confiável | Essencial | Bloqueia piloto |
@@ -74,14 +74,14 @@ de `image-size` sem patch upstream mantem o NO-GO de distribuicao.
 | `#25` | Expo 52 para 57 sozinho; grande troca de lockfile; branch atras | Era a direcao, nao um PR integravel sozinho | Encerrado; substituido pelo PR `#84` |
 | `#29` | Expo AV major isolada; branch atras | Dependia do SDK alvo | Encerrado; substituido pelo PR `#84` |
 | `#30` | Expo Status Bar major isolada; branch atras | Dependia da matriz Expo alvo | Encerrado; substituido pelo PR `#84` |
-| `#6` | Fase 150A de julho, 10 commits, conflitos com `main` | Conteúdo atual já possui escopo Mobile/IA mais amplo e testes posteriores | Encerrar como superado; não tentar merge/cherry-pick |
+| `#6` | Fase 150A de julho, 10 commits, conflitos com `main` | Conteúdo atual possui escopo Mobile/IA mais amplo e 42 testes direcionados aprovados | Encerrado como superado na Fase 250; sem merge/cherry-pick |
 
 O PR `#84` foi aprovado pelos sete jobs do CI `32430036184` e mergeado em
 `87b2f6a`. Os cinco PRs automaticos receberam a referencia ao substituto e foram
-encerrados. Resta aberto apenas o PR `#6`, a ser reconciliado na Fase 250; ele
-esta conflitante e a implementacao atual ja valida tenant, paciente,
-profissional responsavel, midia, hash, idempotencia e locks em servicos mais
-novos.
+encerrados. O PR `#6` recebeu a evidencia de reconciliacao e foi encerrado na
+Fase 250. Ele estava conflitante, sem revisao e com smoke historico falho; a
+implementacao atual valida tenant, paciente, profissional responsavel, midia,
+hash, idempotencia, locks e timeout em servicos mais novos. Nao restou PR aberto.
 
 ## Triagem dos alertas Dependabot
 
@@ -128,6 +128,18 @@ para builds, estações de desenvolvimento e uma futura distribuição Mobile.
 - O Mobile permanece desativado e nao distribuivel. Audit zerado, autenticacao,
   protecao do SQLite, captura real de midia e builds assinados continuam gates
   obrigatorios de uma futura retomada.
+
+### Revalidacao da Fase 250
+
+- A API do GitHub continua com exatamente dois alertas abertos, ambos altos:
+  `GHSA-w3rx-r6r6-pgpr` e `GHSA-5p2g-fcmc-qvqq`.
+- Ambos afetam `image-size <=2.0.2`, nao possuem primeira versao corrigida e o
+  npm registra `2.0.2` como `latest`; portanto, nao existe bump reparador.
+- A cadeia instalada permanece `metro@0.84.4 > image-size@1.2.1`.
+- Doctor, typecheck, alinhamento, auditoria controlada, bundles das tres
+  plataformas e 42 testes direcionados de Mobile/IA foram aprovados.
+- A higiene de PRs foi concluida, mas `mobile.sync=false` e o NO-GO de
+  distribuicao permanecem ate os advisories e demais gates Mobile serem fechados.
 
 ## Política de dependências após a Fase 250
 

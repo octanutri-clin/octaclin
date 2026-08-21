@@ -31,6 +31,10 @@ Atualizado em 2026-08-20.
   densidade responsiva, faixas de acoes/abas sem empilhamento e controles
   criticos de 44 px. Playwright desktop/mobile e Lighthouse 100 validaram a
   entrega, registrada tambem no Penpot com dados sinteticos.
+- Fase 250 concluida tecnicamente: os dois advisories altos de `image-size`
+  foram revalidados e continuam sem patch; o gate estrito, os bundles e 42
+  testes Mobile/IA passaram. O PR legado `#6` foi encerrado como superado e nao
+  restam PRs abertos. O Mobile continua NO-GO e `mobile.sync=false`.
   O roteiro das Fases 250 a 262 agora trata
   recuperação, navegação, jornadas clínicas, estabilidade, segurança e aceite
   do piloto; detalhes em `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
