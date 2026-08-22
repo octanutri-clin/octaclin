@@ -2206,7 +2206,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     de producao `32508654126` aprovados.
   - Documento: `fase-253-agenda-clinica-confiavel-operacional.md`.
 
-- [ ] Fase 254 - Lista e cadastro robusto de pacientes. [ESSENCIAL - PRE-PILOTO]
+- [x] Fase 254 - Lista e cadastro robusto de pacientes. [ESSENCIAL - PRE-PILOTO]
   - Consolidar busca, filtros salvos, risco, responsável, última consulta,
     próxima ação, duplicidade e cadastro completo já modelado.
   - Separar listagem, criação e edição; preservar contexto e rascunho em falhas.
@@ -2216,10 +2216,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     autorizacao especifica e rascunho em `sessionStorage`; integrado no PR
     `#101`.
   - [x] Incremento 3: filtros salvos e duplicidade na interface, com validacao
-    funcional, responsiva, acessivel e de seguranca; implementado e validado na
-    branch `fase/254-incremento-3`, incluindo recalculo server-side da dispensa,
-    debounce sem janela de envio e arquivamento confirmado; PR `#102` aberto,
-    aguardando checks e merge.
+    funcional, responsiva, acessivel e de seguranca; integrado no PR `#102`,
+    merge `baf40ef`, incluindo recalculo server-side da dispensa, debounce sem
+    janela de envio e arquivamento confirmado. Sem nova migration; CI
+    `32590205628` aprovado, incluindo smoke local completo.
 
 - [ ] Fase 255 - Prontuário clínico orientado à linha de cuidado. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
   - Reorganizar resumo, evoluções, plano, formulários, mensagens, materiais e

@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-20 com as Fases 244 a 248, a correcao de concorrencia da Fase 201 e os Incrementos 7 e 8 da Fase 234.
+Atualizado em 2026-08-22 com a conclusao da Fase 254.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -754,6 +754,16 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   47/47 migrations; PR `#91`, merge `ea6ed12`, CI, deploys e monitor oficial
   `32508654126` aprovaram o rollout sem mutar dados clinicos reais. Ver
   `fase-253-agenda-clinica-confiavel-operacional.md`.
+- Fase 254 - Lista e cadastro robusto de pacientes: os tres incrementos
+  consolidaram fundacao de dados, rotas proprias de criacao/edicao, rascunho
+  limitado a sessao, componentes menores, visoes salvas pessoais/da clinica e
+  verificacao consultiva de duplicidade com decisao humana. O backend recalcula
+  candidatos no escopo autorizado antes de auditar uma dispensa. O PR `#93`
+  levou a migration aditiva `1035`, aplicada e verificada com 48 migrations; os
+  PRs `#101` e `#102` nao exigiram migration. O Incremento 3 foi integrado no
+  merge `baf40ef`, com CI `32590205628`, 147 suites/1.018 testes backend,
+  Playwright desktop/mobile, smoke real e Lighthouse 100 aprovados. Ver
+  `fase-254-lista-cadastro-robusto-pacientes.md`.
 - Fase 241 - Hardening da IA clinica: referencias de
   check-in, transcricao e midia agora sao validadas por tenant/paciente; a URL
   privada e criada apenas no backend e seu SHA-256 e conferido ponta a ponta.

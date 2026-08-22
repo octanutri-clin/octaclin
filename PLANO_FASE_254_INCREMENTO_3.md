@@ -63,3 +63,5 @@ sem ampliar acesso a prontuarios nem persistir PII fora das protecoes atuais.
   UUIDs no escopo autorizado antes de criar; o debounce bloqueia envio
   antecipado, o alerta e anunciado, profissionais fora da primeira pagina sao
   consultados individualmente e o arquivamento exige confirmacao.
+- Integracao: PR `#102` concluido no merge `baf40ef`, sem migration neste
+  incremento; CI `32590205628` aprovado em todos os jobs.

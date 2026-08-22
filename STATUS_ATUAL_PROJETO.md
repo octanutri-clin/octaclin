@@ -7,14 +7,13 @@ Atualizado em 2026-08-22.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Fase 254 em integracao final. O Incremento 1 foi integrado no PR `#93`, com
-  migration `1035` aplicada e health de producao em 48 migrations. O
-  Incremento 2 foi integrado no PR `#101`. O Incremento 3 esta implementado e
-  validado na branch `fase/254-incremento-3`: visoes salvas, duplicidade com
-  decisao humana, auditoria por UUID recalculado no backend, BFF protegido,
-  smoke real, Playwright e Lighthouse 100. As revisoes independentes de
-  seguranca e frontend foram resolvidas. O PR `#102` esta aberto; faltam checks
-  e merge para encerrar a fase.
+- Fase 254 concluida e integrada. O Incremento 1 entrou pelo PR `#93`, com a
+  migration aditiva `1035` aplicada e health de producao em 48 migrations; o
+  Incremento 2 entrou pelo PR `#101`; e o Incremento 3 entrou pelo PR `#102`,
+  merge `baf40ef`, sem nova migration. Visoes salvas, duplicidade com decisao
+  humana, auditoria por UUID recalculado no backend, BFF protegido, smoke real,
+  Playwright e Lighthouse 100 foram aprovados. O CI `32590205628` ficou verde.
+  A proxima fase oficial e a Fase 255.
 - Fase 253 concluida e aceita em producao: a agenda interna ganhou trava
   transacional por tenant/profissional, recuperacao de Google/email/WhatsApp,
   evento Google deterministico e vinculado, sync token sem avanco parcial,
