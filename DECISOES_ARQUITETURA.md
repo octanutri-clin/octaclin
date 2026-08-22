@@ -77,7 +77,7 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
 
 ## ADR-015 - Deploy
 
-- Decisao atual: GitHub privado, Render, Neon e Upstash.
+- Decisao atual: GitHub publico, Render, Neon e um Redis gerenciado definido por `REDIS_URL`. O provedor de Redis foi trocado em 2026-08-22 apos estouro de cota; ver `RUNBOOK_PRODUCAO.md`, secao "Redis e filas".
 - Consequencia: documentacao de producao deve considerar esses provedores ate decisao explicita de troca.
 
 ## ADR-016 - Desenvolvimento por fases
