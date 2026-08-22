@@ -39,6 +39,7 @@ import { ServicoExamesLaboratoriais } from './aplicacao/servico-exames-laborator
 import { ServicoConsentimentosEvolucaoFotografica } from './aplicacao/servico-consentimentos-evolucao-fotografica';
 import { ServicoEvolucoesFotograficas } from './aplicacao/servico-evolucoes-fotograficas';
 import { ServicoCondutasTerapeuticas } from './aplicacao/servico-condutas-terapeuticas';
+import { ServicoFiltrosSalvosPacientes } from './aplicacao/servico-filtros-salvos-pacientes';
 import { ServicoPortalPaciente } from './aplicacao/servico-portal-paciente';
 import { ControladorConvitesPaciente } from './apresentacao/controlador-convites-paciente';
 import { ControladorDocumentosClinicos } from './apresentacao/controlador-documentos-clinicos';
@@ -48,6 +49,7 @@ import { ControladorExamesLaboratoriais } from './apresentacao/controlador-exame
 import { ControladorConsentimentosEvolucaoFotografica } from './apresentacao/controlador-consentimentos-evolucao-fotografica';
 import { ControladorEvolucoesFotograficas } from './apresentacao/controlador-evolucoes-fotograficas';
 import { ControladorCondutasTerapeuticas } from './apresentacao/controlador-condutas-terapeuticas';
+import { ControladorFiltrosSalvosPacientes } from './apresentacao/controlador-filtros-salvos-pacientes';
 import { ControladorPortalPaciente } from './apresentacao/controlador-portal-paciente';
 import { AcompanhamentoTarefaOrm } from './infraestrutura/acompanhamento-tarefa.orm';
 import { ConvitePacienteOrm } from './infraestrutura/convite-paciente.orm';
@@ -61,6 +63,7 @@ import { EvolucaoFotograficaOrm } from './infraestrutura/evolucao-fotografica.or
 import { EvolucaoFotograficaArquivoOrm } from './infraestrutura/evolucao-fotografica-arquivo.orm';
 import { CondutaTerapeuticaOrm } from './infraestrutura/conduta-terapeutica.orm';
 import { CondutaTerapeuticaVersaoOrm } from './infraestrutura/conduta-terapeutica-versao.orm';
+import { FiltroSalvoPacienteOrm } from './infraestrutura/filtro-salvo-paciente.orm';
 
 @Module({
   imports: [
@@ -95,7 +98,8 @@ import { CondutaTerapeuticaVersaoOrm } from './infraestrutura/conduta-terapeutic
       EvolucaoFotograficaArquivoOrm,
       ArquivoMidiaOrm,
       CondutaTerapeuticaOrm,
-      CondutaTerapeuticaVersaoOrm
+      CondutaTerapeuticaVersaoOrm,
+      FiltroSalvoPacienteOrm
     ]),
     ModuloTenancy,
     ModuloAuth,
@@ -111,6 +115,7 @@ import { CondutaTerapeuticaVersaoOrm } from './infraestrutura/conduta-terapeutic
     ControladorConsentimentosEvolucaoFotografica,
     ControladorEvolucoesFotograficas,
     ControladorCondutasTerapeuticas,
+    ControladorFiltrosSalvosPacientes,
     ControladorConvitesPaciente,
     ControladorPortalPaciente,
     ControladorDocumentosClinicos
@@ -119,6 +124,7 @@ import { CondutaTerapeuticaVersaoOrm } from './infraestrutura/conduta-terapeutic
     ServicoPacientes,
     ServicoPerfilCadastroPaciente,
     ServicoDuplicidadePacientes,
+    ServicoFiltrosSalvosPacientes,
     ServicoExamesLaboratoriais,
     ServicoConsentimentosEvolucaoFotografica,
     ServicoEvolucoesFotograficas,

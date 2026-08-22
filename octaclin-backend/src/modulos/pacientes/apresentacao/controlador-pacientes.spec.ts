@@ -3,6 +3,7 @@ import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-audi
 import { CHAVE_PAPEIS, CHAVE_PERMISSOES } from '../../auth/apresentacao/decorators';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AtualizarTarefaAcompanhamentoDto } from '../aplicacao/dtos';
+import { ServicoDuplicidadePacientes } from '../aplicacao/servico-duplicidade-pacientes';
 import { ServicoImportacaoPacientes } from '../aplicacao/servico-importacao-pacientes';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
 import { ControladorPacientes } from './controlador-pacientes';
@@ -39,7 +40,8 @@ describe('ControladorPacientes', () => {
         }),
         ...servicos
       } as unknown as ServicoImportacaoPacientes,
-      { registrar } as unknown as ServicoAuditoria
+      { registrar } as unknown as ServicoAuditoria,
+      { verificar: jest.fn() } as unknown as ServicoDuplicidadePacientes
     );
     const requisicao = {
       header: jest.fn().mockReturnValue('dashboard_clinico'),
