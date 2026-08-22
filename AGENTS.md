@@ -11,7 +11,7 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 5. `VARIAVEIS_AMBIENTE.md` se a tarefa tocar deploy, integracoes, secrets ou ambiente.
 6. `RUNBOOK_PRODUCAO.md` se a tarefa tocar Render, Neon, Redis, Gmail, Meta, Google Calendar ou operacao.
 7. `DECISOES_ARQUITETURA.md` se a tarefa alterar arquitetura, seguranca, tenancy, auth, dados ou integracoes.
-8. `ONBOARDING_DESENVOLVEDOR.md`, `COORDENACAO_DESENVOLVIMENTO_IA.md`, `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`, `DEVELOPMENT_LOG.md`, `RETORNO_APOS_DESENVOLVEDOR.md` e `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` quando um novo desenvolvedor/agente entrar no projeto.
+8. `docs/governance/DECISAO_FINAL_GOVERNANCA_AGENTES_OCTACLIN.md` para a migracao da governanca ou troca de agente; `ONBOARDING_DESENVOLVEDOR.md`, `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`, `DEVELOPMENT_LOG.md`, `RETORNO_APOS_DESENVOLVEDOR.md` e `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` quando um novo desenvolvedor/agente entrar no projeto. `COORDENACAO_DESENVOLVIMENTO_IA.md` e apenas historico.
 
 ## Estado atual
 
@@ -79,7 +79,7 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
   `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 - Quando a fase consolidar uma capacidade do produto, atualize tambem `RESUMO_FASES_CONCLUIDAS.md`.
 - Use commits pequenos e objetivos.
-- Por padrao, faca push para `main` apos validar e commitar, pois o usuario pediu continuidade com GitHub como fonte de verdade.
+- Trabalhe em branch dedicada, abra PR, aguarde os checks e integre por merge; nunca faca push direto para `main`.
 - Se outro desenvolvedor ou agente estiver trabalhando na fase atual, aguarde ou combine escopo antes de alterar a mesma area.
 - Um desenvolvedor/agente pode avancar por varias fases, desde que conclua cada fase com documentacao, validacao, commit e push antes de iniciar a proxima.
 - Nunca reverta mudancas que voce nao fez sem pedido explicito.

@@ -1,7 +1,7 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-20 com a conclusao da Fase 249 e o roteiro priorizado das
-Fases 250 a 262.
+Atualizado em 2026-08-22 com a conclusao da Fase 255 e a Fase 256 como proxima
+fase oficial.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
