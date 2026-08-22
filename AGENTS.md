@@ -9,7 +9,7 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 3. `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md` para as fases desse ciclo.
 4. Os arquivos `fase-*.md` mais recentes relacionados ao trabalho atual.
 5. `VARIAVEIS_AMBIENTE.md` se a tarefa tocar deploy, integracoes, secrets ou ambiente.
-6. `RUNBOOK_PRODUCAO.md` se a tarefa tocar Render, Neon, Upstash, Gmail, Meta, Google Calendar ou operacao.
+6. `RUNBOOK_PRODUCAO.md` se a tarefa tocar Render, Neon, Redis, Gmail, Meta, Google Calendar ou operacao.
 7. `DECISOES_ARQUITETURA.md` se a tarefa alterar arquitetura, seguranca, tenancy, auth, dados ou integracoes.
 8. `ONBOARDING_DESENVOLVEDOR.md`, `COORDENACAO_DESENVOLVIMENTO_IA.md`, `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md`, `DEVELOPMENT_LOG.md`, `RETORNO_APOS_DESENVOLVEDOR.md` e `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` quando um novo desenvolvedor/agente entrar no projeto.
 
@@ -332,12 +332,17 @@ Migration "CriarFiltrosSalvosPacientes1720000001035" failed,
 error: permission denied for schema public
 ```
 
-A causa raiz nao e a migration: e que `BANCO_EXECUTAR_MIGRACOES` **nao esta
-`false`** no servico de producao, entao `migrationsRun` fica ligado e o boot
-tenta o DDL com a role de runtime `octaclin_app_producao`, que nao tem `CREATE`
-no schema `public`. O `RUNBOOK_PRODUCAO.md` descreve todos os rollouts
-assumindo `BANCO_EXECUTAR_MIGRACOES=false`; a realidade do painel nao batia com
-o documento.
+O item 1 desta secao ja registrava o fato: `migrationsRun` no boot nunca
+consegue aplicar DDL em producao. O que faltava era a consequencia operacional e
+a causa configuravel — `BANCO_EXECUTAR_MIGRACOES` **nao esta `false`** no
+servico de producao, entao `migrationsRun` fica ligado e o boot tenta o DDL com
+a role de runtime `octaclin_app_producao`, que nao tem `CREATE` no schema
+`public`.
+
+O `RUNBOOK_PRODUCAO.md` descreve todos os rollouts assumindo
+`BANCO_EXECUTAR_MIGRACOES=false`; a realidade do painel nao batia com o
+documento, e ninguem tinha conferido porque o item 1 fala de nao afirmar sobre
+producao, nao de conferir a variavel antes do merge.
 
 Nao houve impacto para usuario, porque o Render mantem a instancia anterior no
 ar quando o boot novo falha — mas o deploy fica em loop de falha ate alguem
@@ -477,7 +482,7 @@ tokens do usuario.
 ## Integracoes ja existentes
 
 - Neon PostgreSQL.
-- Render.
+- Redis gerenciado, definido por `REDIS_URL`.
 - Upstash Redis.
 - Gmail SMTP/Gmail API.
 - Google Calendar.

@@ -20,7 +20,7 @@ evidencia sanitizada em `OPERACAO_LANCAMENTO_CONTROLE.md`.
 - GitHub: `octanutri-clin/octaclin`
 - Backend/Web: Render
 - Banco: Neon PostgreSQL
-- Redis: Upstash
+- Redis: instancia gerenciada definida por `REDIS_URL`
 - Email: Gmail SMTP ou Gmail API
 - WhatsApp: Meta Cloud API
 - Agenda: Google Calendar
@@ -692,7 +692,7 @@ Campos principais:
   estado de migration por codigo HTTP de rota autenticada — `401` vem do guard,
   antes de qualquer acesso ao banco, e nao prova nada.
 
-- `checks.redis`: valida se Redis/Upstash esta configurado.
+- `checks.redis`: valida se o Redis esta configurado.
 - `checks.email`: valida SMTP ou Gmail API.
 - `checks.whatsapp`: valida token e phone number id Meta.
 - `checks.googleCalendar`: valida `GOOGLE_CALENDAR_CLIENT_ID` e

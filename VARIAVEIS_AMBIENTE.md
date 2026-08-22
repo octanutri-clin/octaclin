@@ -4,7 +4,7 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 
 ## Regras
 
-- Valores reais devem ficar apenas no provedor adequado: Render, Neon, Upstash, Google, Meta ou ambiente local privado.
+- Valores reais devem ficar apenas no provedor adequado: Render, Neon, provedor de Redis, Google, Meta ou ambiente local privado.
 - Se um token aparecer no chat ou em arquivo versionado, rotacione.
 - Use nomes consistentes entre staging e producao.
 - Producao deve ter secrets separados de staging.
