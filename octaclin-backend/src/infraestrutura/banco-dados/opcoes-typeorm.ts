@@ -47,6 +47,7 @@ import { CriarModelosPlanoAlimentar1720000001031 } from './migracoes/17200000010
 import { LiberarSubstituicoesAoPaciente1720000001032 } from './migracoes/1720000001032-LiberarSubstituicoesAoPaciente';
 import { CriarReceitasNutricionais1720000001033 } from './migracoes/1720000001033-CriarReceitasNutricionais';
 import { ProtegerResolucaoAgendaPublica1720000001034 } from './migracoes/1720000001034-ProtegerResolucaoAgendaPublica';
+import { CriarFiltrosSalvosPacientes1720000001035 } from './migracoes/1720000001035-CriarFiltrosSalvosPacientes';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -97,6 +98,7 @@ import { EvolucaoFotograficaOrm } from '../../modulos/pacientes/infraestrutura/e
 import { EvolucaoFotograficaArquivoOrm } from '../../modulos/pacientes/infraestrutura/evolucao-fotografica-arquivo.orm';
 import { CondutaTerapeuticaOrm } from '../../modulos/pacientes/infraestrutura/conduta-terapeutica.orm';
 import { CondutaTerapeuticaVersaoOrm } from '../../modulos/pacientes/infraestrutura/conduta-terapeutica-versao.orm';
+import { FiltroSalvoPacienteOrm } from '../../modulos/pacientes/infraestrutura/filtro-salvo-paciente.orm';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { AgendamentoQuestionarioOrm } from '../../modulos/questionarios/infraestrutura/agendamento-questionario.orm';
 import { CategoriaPerguntaOrm } from '../../modulos/questionarios/infraestrutura/categoria-pergunta.orm';
@@ -197,6 +199,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       EvolucaoClinicaOrm,
       AvaliacaoAntropometricaOrm,
       DocumentoEmitidoOrm,
+      FiltroSalvoPacienteOrm,
       CategoriaPerguntaOrm,
       QuestionarioOrm,
       PerguntaOrm,
@@ -301,7 +304,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarModelosPlanoAlimentar1720000001031,
         LiberarSubstituicoesAoPaciente1720000001032,
         CriarReceitasNutricionais1720000001033,
-        ProtegerResolucaoAgendaPublica1720000001034
+        ProtegerResolucaoAgendaPublica1720000001034,
+        CriarFiltrosSalvosPacientes1720000001035
       ],
     migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
     synchronize: false,

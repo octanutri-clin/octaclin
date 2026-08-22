@@ -266,7 +266,7 @@ export interface QualidadeCadastroSecaoDto {
 export interface PossivelDuplicidadePacienteDto {
   pacienteId: string;
   nome: string;
-  motivos: Array<'nome_e_nascimento' | 'contato'>;
+  motivos: Array<'nome_e_nascimento' | 'contato' | 'nome'>;
 }
 
 export interface EstadoAcessoPortalPacienteDto {
@@ -864,4 +864,20 @@ export interface ResultadoEnvioDocumentoDto {
   status: 'pendente' | 'ignorado';
   motivo?: 'contato_ausente' | 'canal_ausente' | 'template_ausente';
   mensagemId?: string;
+}
+
+export class VerificarDuplicidadePacienteDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(180)
+  nome: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  contato?: string;
+
+  @IsOptional()
+  @IsDateString()
+  dataNascimento?: string;
 }

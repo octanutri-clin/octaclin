@@ -20,7 +20,8 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarLinhaTempoProntuarioDto, ListarPacientesDto } from '../aplicacao/dtos';
+import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarLinhaTempoProntuarioDto, ListarPacientesDto, VerificarDuplicidadePacienteDto } from '../aplicacao/dtos';
+import { ServicoDuplicidadePacientes } from '../aplicacao/servico-duplicidade-pacientes';
 import { ServicoImportacaoPacientes } from '../aplicacao/servico-importacao-pacientes';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
 
@@ -32,8 +33,32 @@ export class ControladorPacientes {
   constructor(
     private readonly servicoPacientes: ServicoPacientes,
     private readonly servicoImportacao: ServicoImportacaoPacientes,
-    private readonly servicoAuditoria: ServicoAuditoria
+    private readonly servicoAuditoria: ServicoAuditoria,
+    private readonly servicoDuplicidade: ServicoDuplicidadePacientes
   ) {}
+
+  @Post('verificacao-duplicidade')
+  @Permissoes('pacientes.gerenciar')
+  async verificarDuplicidade(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: VerificarDuplicidadePacienteDto
+  ) {
+    const resultado = await this.servicoDuplicidade.verificar(usuario.tenantId, usuario, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.verificacao_duplicidade',
+      recursoTipo: 'paciente',
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      // Nomes decifrados dos candidatos e o texto digitado nunca entram na
+      // trilha: so os UUIDs e a contagem, igual ao padrao do endpoint irmao
+      // pacientes.perfil_cadastro.qualidade_acesso.ler.
+      metadados: { candidatos: resultado.candidatos.map((candidato) => candidato.pacienteId), total: resultado.candidatos.length }
+    });
+    return resultado;
+  }
 
   @Post()
   @Permissoes('pacientes.gerenciar')

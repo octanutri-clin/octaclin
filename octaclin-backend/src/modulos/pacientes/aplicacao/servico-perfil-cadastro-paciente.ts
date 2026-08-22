@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { ArrayOverlap, EntityManager, IsNull } from 'typeorm';
+import { EntityManager, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -19,6 +19,7 @@ import {
 import { ConvitePacienteOrm } from '../infraestrutura/convite-paciente.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { PerfilCadastroPacienteOrm } from '../infraestrutura/perfil-cadastro-paciente.orm';
+import { ServicoDuplicidadePacientes } from './servico-duplicidade-pacientes';
 
 type CampoCifrado =
   | 'identificacaoCriptografada'
@@ -30,7 +31,8 @@ type CampoCifrado =
 export class ServicoPerfilCadastroPaciente {
   constructor(
     private readonly executorTenant: ExecutorTenant,
-    private readonly criptografia: CriptografiaDadosSensiveis
+    private readonly criptografia: CriptografiaDadosSensiveis,
+    private readonly duplicidade: ServicoDuplicidadePacientes
   ) {}
 
   async obter(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<PerfilCadastroPacienteRespostaDto> {
@@ -114,7 +116,7 @@ export class ServicoPerfilCadastroPaciente {
       return {
         percentualPreenchido: total ? Math.round((preenchidos / total) * 100) : 100,
         secoes,
-        possiveisDuplicidades: await this.buscarPossiveisDuplicidades(gerenciador, tenantId, paciente, usuario, contato),
+        possiveisDuplicidades: await this.duplicidade.verificarPorPaciente(gerenciador, tenantId, usuario, paciente, contato),
         acessoPortal: await this.obterEstadoAcesso(gerenciador, tenantId, paciente, contato)
       };
     });
@@ -200,40 +202,6 @@ export class ServicoPerfilCadastroPaciente {
     return secoes;
   }
 
-  private async buscarPossiveisDuplicidades(
-    gerenciador: EntityManager,
-    tenantId: string,
-    pacienteAtual: PacienteOrm,
-    usuario: UsuarioAutenticado,
-    contatoPerfil?: AtualizarContatoCadastroPacienteDto
-  ) {
-    const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
-    const candidatos = await gerenciador.getRepository(PacienteOrm).find({
-      where: {
-        tenantId,
-        arquivadoEm: IsNull(),
-        ...(pacienteAtual.buscaHashes?.length ? { buscaHashes: ArrayOverlap(pacienteAtual.buscaHashes) } : {}),
-        ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
-      },
-      select: { id: true, nomeCriptografado: true, contatoCriptografado: true, dataNascimento: true }
-    });
-    const nomeAtual = this.normalizar(this.descriptografarSeguro(pacienteAtual.nomeCriptografado));
-    const contatoAtual = this.normalizar(contatoPerfil?.email ?? contatoPerfil?.celular ?? this.obterContatoComparavel(pacienteAtual));
-
-    return candidatos.flatMap((candidato) => {
-      if (candidato.id === pacienteAtual.id) return [];
-      const motivos: Array<'nome_e_nascimento' | 'contato'> = [];
-      const mesmoNomeNascimento = Boolean(
-        nomeAtual && pacienteAtual.dataNascimento && nomeAtual === this.normalizar(this.descriptografarSeguro(candidato.nomeCriptografado))
-        && pacienteAtual.dataNascimento === candidato.dataNascimento
-      );
-      const mesmoContato = Boolean(contatoAtual && contatoAtual === this.normalizar(this.obterContatoComparavel(candidato)));
-      if (mesmoNomeNascimento) motivos.push('nome_e_nascimento');
-      if (mesmoContato) motivos.push('contato');
-      return motivos.length ? [{ pacienteId: candidato.id, nome: this.descriptografarSeguro(candidato.nomeCriptografado) ?? 'Paciente', motivos }] : [];
-    }).slice(0, 5);
-  }
-
   private async obterEstadoAcesso(
     gerenciador: EntityManager,
     tenantId: string,
@@ -307,27 +275,9 @@ export class ServicoPerfilCadastroPaciente {
     }
   }
 
-  private obterContatoComparavel(paciente: PacienteOrm): string | undefined {
-    const contato = this.descriptografarSeguro(paciente.contatoCriptografado);
-    if (!contato) return undefined;
-    try {
-      const parseado = JSON.parse(contato) as { email?: unknown; whatsapp?: unknown };
-      if (typeof parseado.email === 'string') return parseado.email;
-      if (typeof parseado.whatsapp === 'string') return parseado.whatsapp;
-      return undefined;
-    } catch {
-      return contato;
-    }
-  }
-
   private temValor(valor: unknown): boolean {
     if (Array.isArray(valor)) return valor.length > 0;
     return valor !== undefined && valor !== null && String(valor).trim().length > 0;
-  }
-
-  private normalizar(valor?: string): string | undefined {
-    const normalizado = valor?.trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
-    return normalizado || undefined;
   }
 
   private descriptografarSeguro(valor?: Buffer): string | undefined {
