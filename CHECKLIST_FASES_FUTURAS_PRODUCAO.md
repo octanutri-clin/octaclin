@@ -2467,15 +2467,16 @@ Fase 245 - Migracao do Next.js 15 para 16:
     Neon; web em live com controle de liberacao sempre acessivel.
 
 Fase 255 - Prontuario clinico orientado a linha de cuidado:
-- Status: concluida tecnicamente
-- Commit: a registrar na integracao da fase
+- Status: concluida e integrada
+- Commits: `59a545c`; merge `51a1085` pelo PR `#104`
 - Data: 2026-08-22
 - Validacoes: Playwright 44/44 desktop/mobile, backend 36/36, authz/BFF 66/66,
   acessibilidade 10/10, linguagem 8/8, base visual, typechecks, builds e scanner
   de segredos
 - Observacoes: sem migration; nenhum bypass de tenant/carteira sustentado; as
   dividas confirmadas de payload clinico, auditoria duravel e cifra de campos
-  livres foram incorporadas as Fases 260/261
+  livres foram incorporadas as Fases 260/261. CI `32592780646` aprovado,
+  incluindo `Demo local smoke` em 4m29s
 - Proxima fase: Fase 256 - Formularios e check-ins ponta a ponta
 - Modelo recomendado: GPT-5.6 Sol, raciocinio `high`
 - Skills/plugins: `ecc:contract-first`, `ecc:frontend-patterns`,

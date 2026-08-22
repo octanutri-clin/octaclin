@@ -771,7 +771,8 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   silenciosamente; e os controles de escrita acompanham o backend. O contexto
   SuperAdmin usa busca pontual do responsavel. Foram aprovados 44 cenarios
   Playwright desktop/mobile, 36 testes backend, 66 de autorizacao/BFF, 10 de
-  acessibilidade, builds e scanner de segredos, sem migration. Ver
+  acessibilidade, builds e scanner de segredos, sem migration. PR `#104`, merge
+  `51a1085`, CI `32592780646` e smoke local aprovados. Ver
   `fase-255-prontuario-clinico-linha-cuidado.md`.
 - Fase 241 - Hardening da IA clinica: referencias de
   check-in, transcricao e midia agora sao validadas por tenant/paciente; a URL

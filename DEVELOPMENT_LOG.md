@@ -15,6 +15,8 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Seguranca: nenhum bypass de tenant/carteira sustentado; dividas de payload
   inicial, auditoria duravel e cifra de texto livre foram registradas nas Fases
   260/261, pois exigem contratos/migrations separados.
+- Integracao: PR `#104`, merge `51a1085`; CI `32592780646` integralmente verde,
+  incluindo `Demo local smoke` em 4m29s.
 - Proxima entrega: Fase 256 - formularios e check-ins ponta a ponta.
 
 ## Fase 254 - Incremento 3: visoes salvas e duplicidade
