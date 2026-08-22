@@ -44,7 +44,8 @@ describe('ServicoPerfilCadastroPaciente', () => {
     const executorTenant = { executar: jest.fn(async (_tenantId, executar) => executar(gerenciador)) };
     const criptografia = {
       criptografar: jest.fn((valor: string) => Buffer.from(valor, 'utf8')),
-      descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8'))
+      descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8')),
+      gerarHashesBuscaPii: jest.fn(() => ['hash-fallback'])
     };
     const duplicidade = new ServicoDuplicidadePacientes(
       executorTenant as never,
@@ -164,7 +165,8 @@ describe('ServicoPerfilCadastroPaciente', () => {
     const executorTenant = { executar: jest.fn(async (_tenantId, executar) => executar(gerenciador)) };
     const criptografia = {
       criptografar: jest.fn(),
-      descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8'))
+      descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8')),
+      gerarHashesBuscaPii: jest.fn(() => ['hash-fallback'])
     };
     const duplicidade = new ServicoDuplicidadePacientes(
       executorTenant as never,

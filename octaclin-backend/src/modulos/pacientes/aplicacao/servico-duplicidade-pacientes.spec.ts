@@ -54,7 +54,8 @@ function montarCom(registros: any[]) {
     servico: new ServicoDuplicidadePacientes(executorTenant, criptografia, auditoria as never),
     consultasFeitas,
     gerenciador,
-    auditoria
+    auditoria,
+    pacientes
   };
 }
 
@@ -103,6 +104,13 @@ describe('ServicoDuplicidadePacientes.verificar', () => {
     const { servico } = montarCom(registros);
     const { candidatos } = await servico.verificar(TENANT_ID, profissional(), { nome: 'Maria Silva' });
     expect(candidatos).toHaveLength(5);
+  });
+
+  it('nao consulta o banco quando o nome digitado gera zero hashes (menos de 3 caracteres)', async () => {
+    const { servico, pacientes } = montarCom([]);
+    const { candidatos } = await servico.verificar(TENANT_ID, profissional(), { nome: 'Lu' });
+    expect(candidatos).toHaveLength(0);
+    expect(pacientes.find).not.toHaveBeenCalled();
   });
 
   it('nao devolve o proprio paciente na entrada por paciente salvo', async () => {

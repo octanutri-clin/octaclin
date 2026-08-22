@@ -68,11 +68,16 @@ export class ServicoDuplicidadePacientes {
     pacienteAtual: PacienteOrm,
     contatoPerfil?: { email?: string; celular?: string }
   ): Promise<CandidatoDuplicidade[]> {
-    return this.comparar(gerenciador, tenantId, usuario, pacienteAtual.buscaHashes ?? [], {
-      nome: this.normalizar(this.descriptografarSeguro(pacienteAtual.nomeCriptografado)),
-      contato: this.normalizar(
-        contatoPerfil?.email ?? contatoPerfil?.celular ?? this.obterContatoComparavel(pacienteAtual)
-      ),
+    const nome = this.descriptografarSeguro(pacienteAtual.nomeCriptografado);
+    const contato = contatoPerfil?.email ?? contatoPerfil?.celular ?? this.obterContatoComparavel(pacienteAtual);
+    // buscaHashes ja vem calculado no cadastro do paciente; recalcular so serve de
+    // fallback para paciente sintetico/legado sem o indice preenchido.
+    const hashes = pacienteAtual.buscaHashes?.length
+      ? pacienteAtual.buscaHashes
+      : this.criptografia.gerarHashesBuscaPii(tenantId, [nome, contato]);
+    return this.comparar(gerenciador, tenantId, usuario, hashes, {
+      nome: this.normalizar(nome),
+      contato: this.normalizar(contato),
       nascimento: pacienteAtual.dataNascimento ? String(pacienteAtual.dataNascimento) : undefined,
       ignorarId: pacienteAtual.id
     });
@@ -101,12 +106,17 @@ export class ServicoDuplicidadePacientes {
     hashes: string[],
     alvo: { nome?: string; contato?: string; nascimento?: string; ignorarId?: string }
   ): Promise<CandidatoDuplicidade[]> {
+    // Sem hashes nao ha filtro de indice possivel: nomes com menos de 3
+    // caracteres (primeiras teclas digitadas no cadastro novo) geram hashes
+    // vazios. Sem este guard, cada keystroke faria um find() sem ArrayOverlap,
+    // varrendo e decifrando toda a carteira do profissional.
+    if (!hashes.length) return [];
     const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
     const candidatos = await gerenciador.getRepository(PacienteOrm).find({
       where: {
         tenantId,
         arquivadoEm: IsNull(),
-        ...(hashes.length ? { buscaHashes: ArrayOverlap(hashes) } : {}),
+        buscaHashes: ArrayOverlap(hashes),
         ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
       },
       select: { id: true, nomeCriptografado: true, contatoCriptografado: true, dataNascimento: true }
