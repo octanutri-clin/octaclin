@@ -57,7 +57,7 @@ export interface QualidadeEAcessoPacienteApi {
   possiveisDuplicidades: Array<{
     pacienteId: string;
     nome: string;
-    motivos: Array<'nome_e_nascimento' | 'contato'>;
+    motivos: Array<'nome_e_nascimento' | 'contato' | 'nome'>;
   }>;
   acessoPortal: {
     status: 'nao_convidado' | 'convite_pendente' | 'convite_expirado' | 'convite_revogado' | 'acesso_ativo' | 'acesso_desativado';

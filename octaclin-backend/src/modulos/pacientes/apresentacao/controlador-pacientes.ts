@@ -41,9 +41,23 @@ export class ControladorPacientes {
   @Permissoes('pacientes.gerenciar')
   async verificarDuplicidade(
     @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
     @Body() dados: VerificarDuplicidadePacienteDto
   ) {
-    return this.servicoDuplicidade.verificar(usuario.tenantId, usuario, dados);
+    const resultado = await this.servicoDuplicidade.verificar(usuario.tenantId, usuario, dados);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.verificacao_duplicidade',
+      recursoTipo: 'paciente',
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      // Nomes decifrados dos candidatos e o texto digitado nunca entram na
+      // trilha: so os UUIDs e a contagem, igual ao padrao do endpoint irmao
+      // pacientes.perfil_cadastro.qualidade_acesso.ler.
+      metadados: { candidatos: resultado.candidatos.map((candidato) => candidato.pacienteId), total: resultado.candidatos.length }
+    });
+    return resultado;
   }
 
   @Post()

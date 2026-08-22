@@ -109,13 +109,16 @@ import { FiltroSalvoPacienteOrm } from './infraestrutura/filtro-salvo-paciente.o
     ModuloMobile
   ],
   controllers: [
+    // ControladorFiltrosSalvosPacientes deve vir antes de ControladorPacientes:
+    // ControladorPacientes declara @Get(':id') e o Express casaria
+    // "filtros-salvos" com :id se este controlador viesse depois.
+    ControladorFiltrosSalvosPacientes,
     ControladorPacientes,
     ControladorPerfilCadastroPaciente,
     ControladorExamesLaboratoriais,
     ControladorConsentimentosEvolucaoFotografica,
     ControladorEvolucoesFotograficas,
     ControladorCondutasTerapeuticas,
-    ControladorFiltrosSalvosPacientes,
     ControladorConvitesPaciente,
     ControladorPortalPaciente,
     ControladorDocumentosClinicos

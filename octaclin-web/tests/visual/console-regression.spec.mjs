@@ -1054,7 +1054,10 @@ async function prepararProntuarioMockado(page, {
           { secao: 'contato', titulo: 'Contato e endereço', camposFaltantes: ['CEP', 'Endereco', 'Bairro', 'Cidade', 'Estado', 'Instagram'], preenchidos: 4, total: 10 },
           { secao: 'operacao', titulo: 'Operação', camposFaltantes: ['Origem'], preenchidos: 2, total: 3 }
         ],
-        possiveisDuplicidades: [{ pacienteId: 'paciente-2', nome: 'Ana Souza homonima', motivos: ['nome_e_nascimento'] }],
+        possiveisDuplicidades: [
+          { pacienteId: 'paciente-2', nome: 'Ana Souza homonima', motivos: ['nome_e_nascimento'] },
+          { pacienteId: 'paciente-3', nome: 'Ana Souza sem nascimento', motivos: ['nome'] }
+        ],
         acessoPortal: {
           status: statusPortal,
           email: 'ana@example.com',

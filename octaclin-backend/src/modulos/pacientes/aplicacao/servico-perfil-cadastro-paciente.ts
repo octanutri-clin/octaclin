@@ -280,11 +280,6 @@ export class ServicoPerfilCadastroPaciente {
     return valor !== undefined && valor !== null && String(valor).trim().length > 0;
   }
 
-  private normalizar(valor?: string): string | undefined {
-    const normalizado = valor?.trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
-    return normalizado || undefined;
-  }
-
   private descriptografarSeguro(valor?: Buffer): string | undefined {
     if (!valor) return undefined;
     try { return this.criptografia.descriptografar(valor); } catch { return undefined; }

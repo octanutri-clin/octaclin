@@ -247,7 +247,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
                 <ul className="mt-2 grid gap-1 text-xs">
                   {qualidade.possiveisDuplicidades.map((item) => <li key={item.pacienteId}>
                     <a className="font-semibold underline underline-offset-2" href={`/pacientes/${item.pacienteId}`}>{item.nome}</a>
-                    {' - '}{item.motivos.includes('contato') ? 'mesmo contato' : 'mesmo nome e nascimento'}
+                    {' - '}{item.motivos.includes('contato') ? 'mesmo contato' : item.motivos.includes('nome') ? 'mesmo nome' : 'mesmo nome e nascimento'}
                   </li>)}
                 </ul>
               </div> : null}

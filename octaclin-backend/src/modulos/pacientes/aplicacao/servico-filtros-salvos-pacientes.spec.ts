@@ -2,6 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { ListarFiltrosSalvosDto } from './dtos-filtros-salvos';
 import { ServicoFiltrosSalvosPacientes } from './servico-filtros-salvos-pacientes';
 
 const TENANT_ID = '10000000-0000-4000-8000-000000000001';
@@ -110,6 +111,19 @@ describe('ServicoFiltrosSalvosPacientes.listar', () => {
 
     const { itens } = await servico.listar(TENANT_ID, profissional());
     expect(itens.map((item) => item.nome).sort()).toEqual(['Da clinica', 'Minha']);
+  });
+
+  it('colaborador sem profissional vinculado nao recebe filtros pessoais de outros', async () => {
+    const { servico, repositorio, criptografia } = montar();
+    repositorio.registros = [
+      { id: 'a', tenantId: TENANT_ID, origem: 'pessoal', profissionalId: PROFISSIONAL_ID,
+        nomeCriptografado: criptografia.criptografar('Minha'), criterios: {}, arquivadoEm: null, atualizadoEm: new Date() },
+      { id: 'b', tenantId: TENANT_ID, origem: 'pessoal', profissionalId: 'outro-profissional',
+        nomeCriptografado: criptografia.criptografar('Do outro'), criterios: {}, arquivadoEm: null, atualizadoEm: new Date() }
+    ];
+
+    const { itens } = await servico.listar(TENANT_ID, colaborador(), { origem: 'pessoal' } as ListarFiltrosSalvosDto);
+    expect(itens).toEqual([]);
   });
 
   it('nao devolve filtro arquivado', async () => {

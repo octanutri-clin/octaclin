@@ -66,8 +66,14 @@ export class ServicoFiltrosSalvosPacientes {
         { tenantId, origem: 'clinica' as const, arquivadoEm: IsNull() },
         ...(profissionalId ? [{ tenantId, origem: 'pessoal' as const, profissionalId, arquivadoEm: IsNull() }] : [])
       ];
+      const condicoes = consulta.origem ? visiveis.filter((onde) => onde.origem === consulta.origem) : visiveis;
+      // Um array vazio vira "sem WHERE" no TypeORM, o que devolveria a tabela inteira.
+      // Sem condicao visivel para este usuario, o resultado tem que ser vazio, nao irrestrito.
+      if (condicoes.length === 0) {
+        return { itens: [] };
+      }
       const filtros = await repositorio.find({
-        where: consulta.origem ? visiveis.filter((onde) => onde.origem === consulta.origem) : visiveis,
+        where: condicoes,
         order: { atualizadoEm: 'DESC', id: 'DESC' }
       });
       return {
