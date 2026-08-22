@@ -17,12 +17,14 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
-- Fase 255 concluida tecnicamente, sem migration: o prontuario usa fronteiras
+- Fase 255 concluida e integrada no PR `#104`, merge `51a1085`, sem migration:
+  o prontuario usa fronteiras
   tipadas, cargas independentes para Materiais/Anexos/profissionais, deep links
   autorizados e protecao ampliada de rascunhos. A revisao confirmou o escopo de
   tenant/carteira e registrou nas Fases 260/261 a reducao adicional de PHI no
   payload inicial, auditoria duravel e cifra dos textos livres remanescentes.
-  A proxima fase oficial e a Fase 256.
+  O CI `32592780646`, incluindo smoke local, foi aprovado. A proxima fase
+  oficial e a Fase 256.
 - Fase 253 concluida e aceita em producao. A agenda interna e a autoridade;
   Google e notificacoes sao efeitos recuperaveis. A Fase 254 tambem esta
   concluida: Incremento 1 no PR `#93`, migration aditiva `1035` aplicada e 48

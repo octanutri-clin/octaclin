@@ -1,7 +1,8 @@
 # Fase 255 - Prontuario clinico orientado a linha de cuidado
 
-Concluida tecnicamente em 2026-08-22. Fase essencial e bloqueadora do
-pre-piloto, sem migration.
+Concluida e integrada em 2026-08-22 pelo PR `#104`, merge `51a1085`. Fase
+essencial e bloqueadora do pre-piloto, sem migration. O CI `32592780646`
+passou integralmente, incluindo `Demo local smoke` em 4m29s.
 
 ## Entrega
 

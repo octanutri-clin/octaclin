@@ -99,7 +99,9 @@ Fase 256 - Formularios e check-ins ponta a ponta.
 
 ## Resultado
 
-Concluida tecnicamente em 2026-08-22, sem migration.
+Concluida e integrada em 2026-08-22 pelo PR `#104`, merge `51a1085`, sem
+migration. O CI `32592780646` foi aprovado integralmente, incluindo o
+`Demo local smoke` em 4m29s.
 
 - Configuracao de areas/subareas e timeline foram extraidas do componente
   principal; contratos e rotulos permaneceram tipados.
