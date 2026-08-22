@@ -321,6 +321,54 @@ Custo: um monitor vermelho, uma issue de incidente e um PR extra de correcao.
 Este e o item 1 desta secao repetido de outra forma — nao afirmar sobre
 producao sem ler producao.
 
+### 14. Migration com DDL derruba o deploy antes de qualquer aviso
+
+Em 2026-08-22 o merge do Incremento 1 da Fase 254 levou a migration
+`1720000001035` para a `main`. O Render subiu o deploy, o boot tentou aplicar a
+migration sozinho e quebrou:
+
+```
+Migration "CriarFiltrosSalvosPacientes1720000001035" failed,
+error: permission denied for schema public
+```
+
+A causa raiz nao e a migration: e que `BANCO_EXECUTAR_MIGRACOES` **nao esta
+`false`** no servico de producao, entao `migrationsRun` fica ligado e o boot
+tenta o DDL com a role de runtime `octaclin_app_producao`, que nao tem `CREATE`
+no schema `public`. O `RUNBOOK_PRODUCAO.md` descreve todos os rollouts
+assumindo `BANCO_EXECUTAR_MIGRACOES=false`; a realidade do painel nao batia com
+o documento.
+
+Nao houve impacto para usuario, porque o Render mantem a instancia anterior no
+ar quando o boot novo falha — mas o deploy fica em loop de falha ate alguem
+aplicar a migration a mao, e o sintoma so aparece no painel, nunca no CI.
+
+Regra: antes de mergear PR com DDL, confirmar que `BANCO_EXECUTAR_MIGRACOES`
+esta `false` em producao. Se estiver ligado, ou desligar antes, ou aplicar a
+migration fora de banda **antes** do merge — nao depois.
+
+Custo: um deploy em loop de falha e a janela de rollout inteira consumida em
+diagnostico.
+
+### 15. Ensaiar rollout num banco que nao esta na mesma altura de producao
+
+No mesmo rollout, o `migration:show` da integracao mostrou **duas** pendentes,
+`1034` e `1035`, quando a producao ja tinha a `1034` aplicada desde o dia
+anterior. A integracao estava uma migration atras, e isso so apareceu no meio
+do procedimento, depois do backup e com a janela ja aberta.
+
+A integracao existe para ensaiar o que vai acontecer em producao. Com ela
+atras, o ensaio nao prova o que diz provar: a `1035` foi testada sobre um
+schema que nao era o de producao.
+
+Regra: antes de comecar qualquer rollout, comparar a contagem de migrations dos
+dois bancos e igualar primeiro. Se `migration:show` na integracao listar
+qualquer coisa alem da migration da vez, parar e reconciliar antes de tocar em
+producao.
+
+Custo: parada no meio da janela para diagnostico e uma decisao de risco tomada
+sob pressao.
+
 ## Registro obrigatorio de erros novos
 
 Todo erro cometido daqui em diante entra nesta secao, no mesmo formato, **no

@@ -198,9 +198,32 @@ somente na sessao temporaria do PowerShell e remova todas no `finally`.
 
 Secrets ficam no painel Neon e em `DATABASE_URL` no Render. Nao registrar usuario/senha reais em docs.
 
-## Upstash
+## Redis gerenciado
 
-Secrets ficam no painel Upstash e em `REDIS_URL` no Render. Nao registrar URL real em docs.
+Secrets ficam no painel do provedor de Redis e em `REDIS_URL` no Render. Nao
+registrar URL real em docs.
+
+`REDIS_URL` sozinha basta: `configuracao-redis.ts` extrai host, porta, usuario,
+senha e TLS dela, e liga TLS quando o esquema e `rediss://`. As variaveis
+`REDIS_HOST`, `REDIS_PORTA`, `REDIS_USUARIO`, `REDIS_SENHA` e `REDIS_TLS` sao o
+caminho alternativo para quando nao ha URL unica — se `REDIS_URL` estiver
+definida, elas sao ignoradas. Nao misturar as duas formas.
+
+Requisitos do provedor, impostos pelo BullMQ:
+
+- `maxmemory-policy` **precisa** ser `noeviction`. Qualquer outra politica deixa
+  o Redis descartar chave sozinho, e no BullMQ isso e job sumindo em silencio.
+- Redis 6.2 ou maior (o minimo aceito e 5.0, mas 6.2 e o recomendado para
+  producao). Valkey e Dragonfly sao alternativas compativeis.
+
+Em 2026-08-22 a conta gratuita anterior estourou o teto de 500 mil comandos por
+mes, com consumo observado de 1,2 a 1,5 milhao e **nenhum cliente em producao**.
+A causa nao era uso, era espera: os workers BullMQ usavam os defaults
+`drainDelay: 5` e `stalledInterval: 30000`, e com fila vazia cada worker reemite
+o comando bloqueante a cada 5 segundos. Corrigido em
+`infraestrutura/processamento/opcoes-worker-bullmq.ts`; o calculo esta no
+comentario do arquivo. Ao avaliar provedor, considerar que cobranca por comando
+pune processo ocioso — cobranca por instancia, nao.
 
 ## Checklist de rotacao
 

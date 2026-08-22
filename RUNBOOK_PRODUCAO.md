@@ -94,6 +94,38 @@ role da aplicacao por SQL, conceda apenas `CONNECT`, `USAGE` de schema, acesso
 necessario a tabelas/sequencias e confirme `rolsuper=false` e
 `rolbypassrls=false`. Use `neondb_owner` somente para migrations e administracao.
 
+### BANCO_EXECUTAR_MIGRACOES em producao
+
+`migrationsRun` fica ligado quando `BANCO_EXECUTAR_MIGRACOES` e diferente de
+`'false'` — inclusive quando a variavel nao existe. Ligado, o boot tenta aplicar
+migration pendente usando a role de runtime `octaclin_app_producao`, que **nao
+tem `CREATE` no schema `public`**. Toda migration com DDL que chega na `main`
+sem ter sido aplicada antes derruba o deploy:
+
+```
+Migration "<Nome><timestamp>" failed, error: permission denied for schema public
+ERROR [TypeOrmModule] Unable to connect to the database.
+```
+
+O Render mantem a instancia anterior servindo quando o boot novo falha, entao
+nao ha indisponibilidade — mas o deploy entra em loop de falha e o sintoma so
+aparece no painel, nunca no CI.
+
+**Recomendacao: definir `BANCO_EXECUTAR_MIGRACOES=false` em
+`octaclin-backend-producao`.** Todas as secoes de rollout abaixo ja pressupoem
+isso. Com a variavel em `false`, deploy deixa de depender de estado de banco e
+aplicar migration vira ato deliberado, na ordem certa.
+
+Enquanto ela nao estiver `false`, a regra e obrigatoria: **aplicar a migration
+fora de banda com `neondb_owner` antes do merge**, e nao depois.
+
+### Paridade entre integracao e producao
+
+Antes de comecar qualquer rollout, comparar a contagem de migrations dos dois
+bancos. Se o `migration:show` da integracao listar qualquer coisa alem da
+migration da vez, parar e reconciliar primeiro: ensaiar sobre um schema
+diferente do de producao nao prova o que o ensaio diz provar.
+
 ### Ciclo de vida de tenants (Fase 228)
 
 A migration aditiva `AdicionarCicloVidaTenants1720000001027` cria metadados
@@ -445,7 +477,9 @@ Nunca restaurar diretamente sobre producao sem decisao explicita de incidente e 
 
 ## Redis e filas
 
-Fornecedor atual: Upstash Redis.
+Fornecedor: Redis gerenciado, definido por `REDIS_URL` no Render. A conta foi
+trocada em 2026-08-22 apos estouro de cota; ver "Troca de provedor ou conta"
+abaixo.
 
 Usos:
 
@@ -458,14 +492,58 @@ Sinais de problema:
 - comunicacoes nao processam;
 - outbox cresce;
 - timeouts no backend;
-- erros de conexao Redis nos logs.
+- erros de conexao Redis nos logs;
+- `redis` em `falha` no `/health/detalhado`.
 
 Acao:
 
 1. Verificar `REDIS_URL`.
-2. Verificar status Upstash.
+2. Verificar status e **cota de comandos** no painel do provedor.
 3. Validar logs do backend.
 4. Reprocessar outbox quando disponivel.
+
+### Custo de comando com fila vazia
+
+Em 2026-08-22 a cota gratuita de 500 mil comandos por mes estourou com consumo
+de 1,2 a 1,5 milhao, **sem nenhum cliente em producao**. O consumo nao era uso,
+era espera: os workers BullMQ usavam os defaults `drainDelay: 5` e
+`stalledInterval: 30000`, entao cada worker ocioso reemitia o comando bloqueante
+a cada 5 segundos — cerca de 52 mil comandos por dia com tres workers.
+
+Os valores vivem em
+`octaclin-backend/src/infraestrutura/processamento/opcoes-worker-bullmq.ts`,
+com o calculo no comentario. Nao "limpar" esses numeros sem refazer a conta.
+
+As opcoes precisam ir no segundo argumento de `@Processor`. `BullModule.forRoot`
+recebe `BullRootModuleOptions`, que estende `Bull.QueueOptions` e **nao** aceita
+opcao de worker: configurar la e ignorado em silencio.
+
+Para verificar se um deploy pegou o ajuste, medir comandos por minuto no painel
+do provedor com o sistema parado: cerca de 3 por minuto indica ajuste ativo,
+cerca de 36 indica que ainda esta com os defaults.
+
+### Troca de provedor ou conta
+
+Requisitos do provedor, impostos pelo BullMQ:
+
+- `maxmemory-policy` **precisa** ser `noeviction`. Outra politica faz o Redis
+  descartar chave sozinho, e no BullMQ isso e job sumindo em silencio.
+- Redis 6.2 ou maior. Valkey e Dragonfly sao compativeis.
+
+Passos:
+
+1. Criar a instancia e confirmar os dois requisitos acima.
+2. Preferir janela de baixo movimento: filas em memoria se perdem na troca. As
+   comunicacoes ficam persistidas no Postgres e sao reenfileiradas pelo
+   `processador-outbox-comunicacoes`, entao a perda e recuperavel — confirmar
+   depois que o outbox drenou.
+3. Trocar `REDIS_URL` somente em `octaclin-backend-producao`. Producao roda com
+   `OCTACLIN_PROCESSO=all` e nao ha worker dedicado a atualizar.
+4. Aguardar o restart e conferir `redis` em `ok` no `/health/detalhado`.
+5. Disparar o monitor de producao.
+
+Cobranca por comando pune processo ocioso; cobranca por instancia, nao. Levar
+isso em conta na escolha.
 
 ### Topologia multi-instancia (Fase 201)
 
