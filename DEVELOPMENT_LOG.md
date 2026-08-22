@@ -14,7 +14,8 @@ Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA as
 - Revisao: achados independentes de seguranca/frontend corrigidos antes do PR;
   UUIDs de dispensa sao recalculados no backend e as jornadas provam debounce,
   anuncio acessivel, responsavel paginado e arquivamento confirmado.
-- Integracao: branch `fase/254-incremento-3`, PR `#102` aberto.
+- Integracao: PR `#102` integrado no merge `baf40ef`; CI `32590205628`
+  integralmente aprovado, incluindo `Demo local smoke` em 4m18s.
 - Proxima entrega: Fase 255 - prontuario clinico orientado a linha de cuidado.
 
 ## Fase 254 - Incremento 2: rotas e formulario proprio

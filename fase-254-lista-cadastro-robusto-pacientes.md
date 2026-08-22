@@ -2,10 +2,10 @@
 
 Criado em 2026-08-21. Fase essencial e pre-piloto, sucessora da Fase 253.
 
-Estado em 2026-08-22: Incremento 1 concluido e integrado no PR `#93`;
-migration `1720000001035` aplicada e producao com 48 migrations. Incremento 2
-concluido e integrado no PR `#101`. Incremento 3 implementado e validado na
-branch `fase/254-incremento-3`; PR `#102` aberto e aguardando checks/merge.
+Estado em 2026-08-22: fase concluida. Incremento 1 integrado no PR `#93`, com
+migration `1720000001035` aplicada e producao com 48 migrations; Incremento 2
+integrado no PR `#101`; Incremento 3 integrado no PR `#102`, merge `baf40ef`,
+sem nova migration e com CI `32590205628` integralmente aprovado.
 
 ## Objetivo
 
@@ -321,6 +321,9 @@ Duas regras registradas durante a execucao:
 - Chrome DevTools e Lighthouse 100 aprovaram lista desktop e cadastro mobile;
   Playwright aprovou 10/10 cenarios da fase e 10/10 do gate geral de
   acessibilidade.
+- Integracao final: PR `#102`, merge `baf40ef`; o job `Demo local smoke` passou
+  em 4m18s no CI `32590205628`, junto dos gates Backend, Web, Mobile, IA,
+  operacao de lancamento e rollout seguro.
 
 ## Skills e modelo
 
