@@ -14,7 +14,7 @@ Antes de qualquer nova fase de desenvolvimento, leia:
 - `PREFLIGHT_PRODUCAO.md` - prontidao por area e gates antes/depois de cada fase.
 - `HANDOFF-TECNICO-OCTACLIN.md` - handoff tecnico atualizado.
 - `ONBOARDING_DESENVOLVEDOR.md` - entrada de novo desenvolvedor/agente.
-- `COORDENACAO_DESENVOLVIMENTO_IA.md` - regras para trabalhar com multiplas IAs/desenvolvedores.
+- `COORDENACAO_DESENVOLVIMENTO_IA.md` - processo historico, substituido pela decisao final em `docs/governance/`.
 - `PACOTE_PROXIMAS_FASES_DESENVOLVEDOR.md` - escopo recomendado para avancar por varias fases.
 - `MENSAGEM_HANDOFF_DESENVOLVEDOR.md` - mensagem pronta para repassar o contexto.
 - `FERRAMENTAS_E_PLUGINS_RECOMENDADOS.md` - ferramentas, plugins e acessos recomendados.
