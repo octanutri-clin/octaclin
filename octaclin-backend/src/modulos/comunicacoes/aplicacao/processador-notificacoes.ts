@@ -3,6 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { In } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { OPCOES_WORKER_BULLMQ } from '../../../infraestrutura/processamento/opcoes-worker-bullmq';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
 import { FILA_NOTIFICACOES } from './servico-comunicacoes';
@@ -25,7 +26,7 @@ interface OpcoesProcessamentoNotificacao {
 }
 
 @Injectable()
-@Processor(FILA_NOTIFICACOES)
+@Processor(FILA_NOTIFICACOES, OPCOES_WORKER_BULLMQ)
 export class ProcessadorNotificacoes extends WorkerHost {
   constructor(
     private readonly executorTenant: ExecutorTenant,
