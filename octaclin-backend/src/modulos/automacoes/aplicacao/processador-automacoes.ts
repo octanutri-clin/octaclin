@@ -2,6 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { OPCOES_WORKER_BULLMQ } from '../../../infraestrutura/processamento/opcoes-worker-bullmq';
 import { avaliarCondicoes } from '../dominio/avaliador-regras';
 import { ExecucaoRegraOrm } from '../infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from '../infraestrutura/regra-automacao.orm';
@@ -14,7 +15,7 @@ interface JobAutomacao {
 }
 
 @Injectable()
-@Processor(FILA_AUTOMACOES)
+@Processor(FILA_AUTOMACOES, OPCOES_WORKER_BULLMQ)
 export class ProcessadorAutomacoes extends WorkerHost {
   constructor(private readonly executorTenant: ExecutorTenant) {
     super();

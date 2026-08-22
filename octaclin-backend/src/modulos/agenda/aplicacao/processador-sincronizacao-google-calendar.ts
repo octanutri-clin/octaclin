@@ -1,6 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
+import { OPCOES_WORKER_BULLMQ } from '../../../infraestrutura/processamento/opcoes-worker-bullmq';
 import { FILA_SINCRONIZACAO_GOOGLE, ServicoSincronizacaoGoogleCalendar } from './servico-sincronizacao-google-calendar';
 
 interface JobNotificacaoGoogle {
@@ -9,7 +10,7 @@ interface JobNotificacaoGoogle {
 }
 
 @Injectable()
-@Processor(FILA_SINCRONIZACAO_GOOGLE)
+@Processor(FILA_SINCRONIZACAO_GOOGLE, OPCOES_WORKER_BULLMQ)
 export class ProcessadorSincronizacaoGoogleCalendar extends WorkerHost {
   private readonly logger = new Logger(ProcessadorSincronizacaoGoogleCalendar.name);
 
