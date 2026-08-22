@@ -108,6 +108,9 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
 - Decisao arquitetural: usar storage privado S3-compatible, com credencial e
   bucket separados por ambiente. O provedor operacional e configuracao de cada
   ambiente pertencem ao runbook e as variaveis do ambiente, nao a este ADR.
+- Estado operacional verificado em 2026-08-22: o backend de producao usa
+  Backblaze B2 com `ARMAZENAMENTO_S3_IF_NONE_MATCH=false`. Esse estado deve ser
+  revalidado no Render antes de qualquer afirmacao futura sobre o ambiente.
 - Fluxo: o navegador envia por URL pre-assinada curta; o backend confirma o
   objeto real, MIME, tamanho, metadados e SHA-256 antes de exibir ou contabilizar.
 - Protecao: bucket/chave e credenciais nao fazem parte dos DTOs publicos; acesso
