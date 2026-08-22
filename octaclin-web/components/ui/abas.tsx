@@ -12,7 +12,7 @@ interface AbasProps {
   identificador: string;
   abas: Aba[];
   ativaId: string;
-  aoMudar: (id: string) => void;
+  aoMudar: (id: string) => boolean | void;
   rotulo: string;
   className?: string;
 }
@@ -35,8 +35,8 @@ export function Abas({ identificador, abas, ativaId, aoMudar, rotulo, className 
     if (destino < 0) return;
     evento.preventDefault();
     const proxima = abas[destino];
-    aoMudar(proxima.id);
-    referencias.current.get(proxima.id)?.focus();
+    const aceita = aoMudar(proxima.id);
+    if (aceita !== false) referencias.current.get(proxima.id)?.focus();
   }
 
   return (

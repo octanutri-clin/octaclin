@@ -764,6 +764,15 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   merge `baf40ef`, com CI `32590205628`, 147 suites/1.018 testes backend,
   Playwright desktop/mobile, smoke real e Lighthouse 100 aprovados. Ver
   `fase-254-lista-cadastro-robusto-pacientes.md`.
+- Fase 255 - Prontuario clinico orientado a linha de cuidado: o componente
+  principal ganhou fronteiras tipadas para navegacao e timeline; Materiais,
+  Anexos e profissionais passaram a carregar sob demanda com falhas locais;
+  deep links sao validados por permissao; rascunhos mutaveis nao sao perdidos
+  silenciosamente; e os controles de escrita acompanham o backend. O contexto
+  SuperAdmin usa busca pontual do responsavel. Foram aprovados 44 cenarios
+  Playwright desktop/mobile, 36 testes backend, 66 de autorizacao/BFF, 10 de
+  acessibilidade, builds e scanner de segredos, sem migration. Ver
+  `fase-255-prontuario-clinico-linha-cuidado.md`.
 - Fase 241 - Hardening da IA clinica: referencias de
   check-in, transcricao e midia agora sao validadas por tenant/paciente; a URL
   privada e criada apenas no backend e seu SHA-256 e conferido ponta a ponta.

@@ -17,13 +17,19 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
 
 - Produto: OctaClin.
 - LiveClin foi apenas referencia de modelagem.
+- Fase 255 concluida tecnicamente, sem migration: o prontuario usa fronteiras
+  tipadas, cargas independentes para Materiais/Anexos/profissionais, deep links
+  autorizados e protecao ampliada de rascunhos. A revisao confirmou o escopo de
+  tenant/carteira e registrou nas Fases 260/261 a reducao adicional de PHI no
+  payload inicial, auditoria duravel e cifra dos textos livres remanescentes.
+  A proxima fase oficial e a Fase 256.
 - Fase 253 concluida e aceita em producao. A agenda interna e a autoridade;
   Google e notificacoes sao efeitos recuperaveis. A Fase 254 tambem esta
   concluida: Incremento 1 no PR `#93`, migration aditiva `1035` aplicada e 48
   migrations em producao; Incremento 2 no PR `#101`; Incremento 3 no PR `#102`,
   merge `baf40ef`, sem nova migration e com CI `32590205628` verde. As revisoes
   independentes de seguranca e frontend foram resolvidas antes da integracao.
-  A proxima fase oficial e a Fase 255. `lib/navegacao-console.ts`
+  `lib/navegacao-console.ts`
   continua como fonte canonica para menu,
   paleta e autorizacao por papel/permissao. A Fase 251
   consolidou linguagem e microcopy. A Fase 250 encerrou a divida Mobile e

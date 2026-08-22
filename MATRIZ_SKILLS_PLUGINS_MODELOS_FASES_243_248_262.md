@@ -184,7 +184,8 @@ especificada. Não é o padrão para implementar fases do OctaClin.
 
 ### Fase 255 - Prontuário e linha de cuidado
 
-- Modelo: **GPT-5.6 Sol, `xhigh`**.
+- Modelo: **GPT-5.6 Sol, `high`** para implementacao; revisao de seguranca
+  read-only em `xhigh`.
 - Skills: `ecc:healthcare-emr-patterns`, `ecc:healthcare-phi-compliance`,
   `ecc:frontend-patterns`, `ecc:database-migrations` e
   `codex-security:attack-path-analysis`.
