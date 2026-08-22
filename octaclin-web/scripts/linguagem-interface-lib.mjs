@@ -275,7 +275,8 @@ export function corrigirTextoInterface(texto) {
   let resultado = texto;
   for (const [origem, destino] of substituicoesExatas) resultado = resultado.replaceAll(origem, destino);
   for (const [origem, destino] of termosInterface) {
-    resultado = resultado.replace(new RegExp(`\\b${origem}\\b`, 'giu'), (termo) => preservarCaixa(termo, destino));
+    const palavraIsolada = new RegExp(`(?<![\\p{L}\\p{M}])${origem}(?![\\p{L}\\p{M}])`, 'giu');
+    resultado = resultado.replace(palavraIsolada, (termo) => preservarCaixa(termo, destino));
   }
   return resultado;
 }

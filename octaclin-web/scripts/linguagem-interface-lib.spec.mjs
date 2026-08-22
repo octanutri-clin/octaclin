@@ -26,6 +26,14 @@ test('preserva caixa ao aplicar acentos', () => {
   assert.match(corrigido, /NÃO há FORMULÁRIOS; Próximos horários/);
 });
 
+test('nao corrige parcialmente palavras derivadas com caracteres Unicode', () => {
+  const codigo = `export const Tela = () => <nav aria-label="Paginação de pacientes">Página atual</nav>`;
+  const corrigido = corrigirCodigoInterface(codigo, 'teste.tsx');
+  assert.match(corrigido, /Paginação de pacientes/);
+  assert.doesNotMatch(corrigido, /Páginação/);
+  assert.equal(auditarCodigoInterface(corrigido, 'teste.tsx').length, 0);
+});
+
 test('corrige textos em expressoes condicionais renderizadas no JSX', () => {
   const codigo = `export const Tela = ({ salvando }) => <button>{salvando ? 'Enviando solicitacao' : 'Confirmar solicitacao'}</button>`;
   const corrigido = corrigirCodigoInterface(codigo, 'teste.tsx');
