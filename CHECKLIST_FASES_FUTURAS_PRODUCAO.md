@@ -2218,8 +2218,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] Incremento 3: filtros salvos e duplicidade na interface, com validacao
     funcional, responsiva, acessivel e de seguranca; implementado e validado na
     branch `fase/254-incremento-3`, incluindo recalculo server-side da dispensa,
-    debounce sem janela de envio e arquivamento confirmado; aguardando apenas
-    integracao do PR.
+    debounce sem janela de envio e arquivamento confirmado; PR `#102` aberto,
+    aguardando checks e merge.
 
 - [ ] Fase 255 - Prontuário clínico orientado à linha de cuidado. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
   - Reorganizar resumo, evoluções, plano, formulários, mensagens, materiais e

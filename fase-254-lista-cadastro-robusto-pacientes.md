@@ -5,7 +5,7 @@ Criado em 2026-08-21. Fase essencial e pre-piloto, sucessora da Fase 253.
 Estado em 2026-08-22: Incremento 1 concluido e integrado no PR `#93`;
 migration `1720000001035` aplicada e producao com 48 migrations. Incremento 2
 concluido e integrado no PR `#101`. Incremento 3 implementado e validado na
-branch `fase/254-incremento-3`, aguardando apenas integracao do PR.
+branch `fase/254-incremento-3`; PR `#102` aberto e aguardando checks/merge.
 
 ## Objetivo
 

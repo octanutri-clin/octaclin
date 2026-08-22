@@ -23,7 +23,8 @@ Este arquivo e a primeira leitura obrigatoria para Codex, Claude Code ou qualque
   foi aplicada e producao registra 48 migrations; o Incremento 2 foi integrado
   no PR `#101`; o Incremento 3 esta implementado e validado na branch
   `fase/254-incremento-3`, com revisoes independentes de seguranca e frontend
-  resolvidas antes do PR. `lib/navegacao-console.ts` continua como fonte canonica para menu,
+  resolvidas antes do PR `#102`, agora aberto. `lib/navegacao-console.ts`
+  continua como fonte canonica para menu,
   paleta e autorizacao por papel/permissao. A Fase 251
   consolidou linguagem e microcopy. A Fase 250 encerrou a divida Mobile e
   higiene de PRs. Os dois advisories altos de `image-size` continuam sem patch,

@@ -13,8 +13,8 @@ Atualizado em 2026-08-22.
   validado na branch `fase/254-incremento-3`: visoes salvas, duplicidade com
   decisao humana, auditoria por UUID recalculado no backend, BFF protegido,
   smoke real, Playwright e Lighthouse 100. As revisoes independentes de
-  seguranca e frontend foram resolvidas. Falta apenas integrar seu PR para
-  encerrar a fase.
+  seguranca e frontend foram resolvidas. O PR `#102` esta aberto; faltam checks
+  e merge para encerrar a fase.
 - Fase 253 concluida e aceita em producao: a agenda interna ganhou trava
   transacional por tenant/profissional, recuperacao de Google/email/WhatsApp,
   evento Google deterministico e vinculado, sync token sem avanco parcial,
