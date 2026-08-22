@@ -1,5 +1,10 @@
 # OctaClin - Coordenacao de desenvolvimento com IA
 
+> **Status: HISTORICO / SUBSTITUIDO.** Este documento preserva o processo
+> anterior apenas para auditoria. A governanca vigente durante sua implantacao
+> esta em `docs/governance/DECISAO_FINAL_GOVERNANCA_AGENTES_OCTACLIN.md`.
+> Para o estado corrente do produto, use `STATUS_ATUAL_PROJETO.md`.
+
 Este documento define como Codex, Claude Code, Cursor, desenvolvedores humanos e outros agentes devem cooperar sem perder contexto ou criar conflitos.
 
 ## Regra principal

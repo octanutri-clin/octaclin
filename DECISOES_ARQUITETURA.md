@@ -10,9 +10,13 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
 
 ## ADR-002 - Multi-tenancy
 
-- Decisao: tenant e derivado do JWT autenticado e aplicado no backend.
+- Decisao: tenant e resolvido no servidor a partir de credencial ou capability
+  verificada, como JWT autenticado, token opaco/capability validado ou API key
+  validada.
 - Nao usar: tenant livre em header ou body como fonte de verdade.
-- Consequencia: todo servico sensivel deve receber `tenantId` do usuario autenticado e usar `ExecutorTenant`.
+- Consequencia: servicos autenticados usam o tenant da identidade; fluxos
+  publicos legitimos resolvem o escopo minimo a partir da capability verificada;
+  persistencia sensivel usa `ExecutorTenant`.
 
 ## ADR-003 - Backend
 
@@ -101,15 +105,19 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
 
 ## ADR-018 - Armazenamento de anexos clinicos
 
-- Decisao: usar bucket privado Cloudflare R2 pela API S3, com credencial e
-  bucket separados por ambiente.
+- Decisao arquitetural: usar storage privado S3-compatible, com credencial e
+  bucket separados por ambiente. O provedor operacional e configuracao de cada
+  ambiente pertencem ao runbook e as variaveis do ambiente, nao a este ADR.
 - Fluxo: o navegador envia por URL pre-assinada curta; o backend confirma o
   objeto real, MIME, tamanho, metadados e SHA-256 antes de exibir ou contabilizar.
 - Protecao: bucket/chave e credenciais nao fazem parte dos DTOs publicos; acesso
   de leitura tambem usa URL curta depois de autorizacao por tenant e paciente.
-- Imutabilidade: o PUT assinado exige criacao condicional; depois da inspecao o
-  backend promove `pendentes/` para `confirmados/`, prefixo que nunca e exposto
-  para escrita do navegador.
+- Sobrescrita: por padrao, o PUT assinado exige `If-None-Match: *`. Provedores
+  incompativeis podem desativar essa condicao com
+  `ARMAZENAMENTO_S3_IF_NONE_MATCH=false`; nesse modo nao existe garantia de
+  imutabilidade absoluta no object storage. Depois da inspecao, o backend
+  promove `pendentes/` para `confirmados/`, prefixo que nao e exposto para
+  escrita do navegador.
 - Abuso: a reserva de cota e serializada por tenant, uploads sao limitados e o
   lifecycle do provedor remove temporarios abandonados.
 - Consequencia: o backend le arquivos de ate 25 MB na confirmacao. Streaming e
