@@ -24,6 +24,8 @@ describe('ControladorPacientes', () => {
       status: 'concluida'
     });
     const registrar = jest.fn().mockResolvedValue(undefined);
+    const registrarDispensa = jest.fn().mockResolvedValue(undefined);
+    const verificarDuplicidade = jest.fn().mockResolvedValue({ candidatos: [] });
     const controlador = new ControladorPacientes(
       { atualizarTarefaAcompanhamento, ...servicos } as unknown as ServicoPacientes,
       {
@@ -41,7 +43,7 @@ describe('ControladorPacientes', () => {
         ...servicos
       } as unknown as ServicoImportacaoPacientes,
       { registrar } as unknown as ServicoAuditoria,
-      { verificar: jest.fn() } as unknown as ServicoDuplicidadePacientes
+      { verificar: verificarDuplicidade, registrarDispensa } as unknown as ServicoDuplicidadePacientes
     );
     const requisicao = {
       header: jest.fn().mockReturnValue('dashboard_clinico'),
@@ -49,8 +51,45 @@ describe('ControladorPacientes', () => {
       ip: '127.0.0.1'
     } as unknown as Request;
 
-    return { controlador, registrar, requisicao };
+    return { controlador, registrar, registrarDispensa, verificarDuplicidade, requisicao };
   }
+
+  it('registra somente os UUIDs dispensados depois de criar o paciente', async () => {
+    const criar = jest.fn().mockResolvedValue({ id: 'paciente-novo' });
+    const { controlador, registrarDispensa, verificarDuplicidade, requisicao } = criarCenario({ criar });
+    const candidatos = ['4fd25c2d-556d-4b48-9aaa-d45177cd0d4c'];
+    verificarDuplicidade.mockResolvedValue({
+      candidatos: [{ pacienteId: candidatos[0], nome: 'Outra pessoa', motivos: ['nome'] }]
+    });
+
+    await controlador.criar(usuario, requisicao, {
+      profissionalResponsavelId: '76349fd1-39f5-4c62-995d-6b987600271d',
+      nome: 'Pessoa sintetica',
+      candidatosDuplicidadeDispensados: candidatos
+    });
+
+    expect(registrarDispensa).toHaveBeenCalledWith(
+      usuario.tenantId,
+      usuario,
+      'paciente-novo',
+      candidatos
+    );
+  });
+
+  it('rejeita UUIDs dispensados que nao pertencem ao resultado autorizado', async () => {
+    const criar = jest.fn().mockResolvedValue({ id: 'paciente-novo' });
+    const { controlador, registrarDispensa, verificarDuplicidade, requisicao } = criarCenario({ criar });
+    verificarDuplicidade.mockResolvedValue({ candidatos: [] });
+
+    await expect(controlador.criar(usuario, requisicao, {
+      profissionalResponsavelId: '76349fd1-39f5-4c62-995d-6b987600271d',
+      nome: 'Pessoa sintetica',
+      candidatosDuplicidadeDispensados: ['4fd25c2d-556d-4b48-9aaa-d45177cd0d4c']
+    })).rejects.toThrow('Revise novamente os possíveis cadastros semelhantes');
+
+    expect(criar).not.toHaveBeenCalled();
+    expect(registrarDispensa).not.toHaveBeenCalled();
+  });
 
   it('ignora origem forjada no endpoint generico', async () => {
     const { controlador, registrar, requisicao } = criarCenario();

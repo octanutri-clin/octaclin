@@ -7,12 +7,14 @@ Atualizado em 2026-08-22.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Fase 254 em execucao. O Incremento 1 entregou filtros salvos e verificacao de
-  duplicidade no backend pelo PR `#93`; a migration `1035` foi aplicada e o
-  health de producao confirma 48 migrations. Os PRs `#98` e `#100` reduziram o
-  consumo ocioso do BullMQ e registraram as regras operacionais de Redis e DDL.
-  Incrementos 2 e 3 permanecem pendentes: rotas/formulario proprio e interface
-  de filtros/duplicidade, respectivamente.
+- Fase 254 em integracao final. O Incremento 1 foi integrado no PR `#93`, com
+  migration `1035` aplicada e health de producao em 48 migrations. O
+  Incremento 2 foi integrado no PR `#101`. O Incremento 3 esta implementado e
+  validado na branch `fase/254-incremento-3`: visoes salvas, duplicidade com
+  decisao humana, auditoria por UUID recalculado no backend, BFF protegido,
+  smoke real, Playwright e Lighthouse 100. As revisoes independentes de
+  seguranca e frontend foram resolvidas. Falta apenas integrar seu PR para
+  encerrar a fase.
 - Fase 253 concluida e aceita em producao: a agenda interna ganhou trava
   transacional por tenant/profissional, recuperacao de Google/email/WhatsApp,
   evento Google deterministico e vinculado, sync token sem avanco parcial,

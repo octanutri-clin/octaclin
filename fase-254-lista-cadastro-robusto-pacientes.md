@@ -2,13 +2,10 @@
 
 Criado em 2026-08-21. Fase essencial e pre-piloto, sucessora da Fase 253.
 
-Estado em 2026-08-22: Incremento 1 concluido e integrado no PR `#93`.
-Migration `1720000001035` aplicada; producao registra 48 migrations. Os
-Incrementos 2 e 3 permanecem pendentes e devem sair em PRs separados.
-
-Incremento 2 implementado localmente em 2026-08-22, com rotas proprias,
-autorizacao especifica, componentes separados e rascunho por sessao. Aguarda
-integracao do PR para ser considerado concluido.
+Estado em 2026-08-22: Incremento 1 concluido e integrado no PR `#93`;
+migration `1720000001035` aplicada e producao com 48 migrations. Incremento 2
+concluido e integrado no PR `#101`. Incremento 3 implementado e validado na
+branch `fase/254-incremento-3`, aguardando apenas integracao do PR.
 
 ## Objetivo
 
@@ -302,13 +299,28 @@ Producao vai de 47 para 48 migrations.
 - `test:a11y`, Lighthouse e Chrome DevTools nas rotas novas, em 1440 px e
   390 px.
 
-Duas ressalvas registradas antes da execucao:
+Duas regras registradas durante a execucao:
 
-1. `catalogo-taco.spec.ts` falha sempre no checkout Windows por `LF/CRLF` e
-   passa no CI. Vai aparecer vermelho e nao e regressao desta fase. O JSON nao
-   se normaliza.
+1. `catalogo-taco.spec.ts` foi tornado portatil ao normalizar `CRLF` para `LF`
+   somente na assercao. O JSON e o catalogo nutricional nao foram alterados; a
+   suite completa passou com 1.018 testes no Windows.
 2. Toda afirmacao de "validado" nomeia os comandos efetivamente executados.
    Suite parcial apresentada como completa ja mandou quebra para a `main`.
+
+## Resultado do Incremento 3
+
+- BFFs autenticados para filtros salvos e verificacao consultiva de
+  duplicidade, sem PII em query string.
+- Visoes pessoais e da clinica, arquivamento e recuperacao segura de filtro
+  com profissional removido; busca livre nunca e persistida.
+- Duplicidade com debounce, cancelamento de resposta obsoleta, decisao humana,
+  falha aberta informada e auditoria restrita a UUIDs recalculados no backend.
+- Revisao independente corrigiu envio durante o debounce, anuncio acessivel,
+  profissional valido fora da primeira pagina, confirmacao de arquivamento e
+  testes que antes poderiam passar sem exercitar a nova requisicao.
+- Chrome DevTools e Lighthouse 100 aprovaram lista desktop e cadastro mobile;
+  Playwright aprovou 10/10 cenarios da fase e 10/10 do gate geral de
+  acessibilidade.
 
 ## Skills e modelo
 

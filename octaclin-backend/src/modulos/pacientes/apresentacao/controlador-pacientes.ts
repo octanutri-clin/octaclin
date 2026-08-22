@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -67,6 +68,18 @@ export class ControladorPacientes {
     @Req() requisicao: Request,
     @Body() dados: CriarPacienteDto
   ) {
+    let candidatosDispensados: string[] = [];
+    if (dados.candidatosDuplicidadeDispensados?.length) {
+      const resultado = await this.servicoDuplicidade.verificar(usuario.tenantId, usuario, dados);
+      candidatosDispensados = resultado.candidatos.map((candidato) => candidato.pacienteId).sort();
+      const candidatosInformados = [...new Set(dados.candidatosDuplicidadeDispensados)].sort();
+      if (
+        candidatosDispensados.length !== candidatosInformados.length
+        || candidatosDispensados.some((id, indice) => id !== candidatosInformados[indice])
+      ) {
+        throw new BadRequestException('Revise novamente os possíveis cadastros semelhantes antes de concluir.');
+      }
+    }
     const paciente = await this.servicoPacientes.criar(usuario.tenantId, dados, usuario);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
@@ -78,6 +91,14 @@ export class ControladorPacientes {
       userAgent: this.obterUserAgent(requisicao),
       metadados: { profissionalResponsavelId: dados.profissionalResponsavelId }
     });
+    if (candidatosDispensados.length) {
+      await this.servicoDuplicidade.registrarDispensa(
+        usuario.tenantId,
+        usuario,
+        paciente.id,
+        candidatosDispensados
+      );
+    }
     return paciente;
   }
 

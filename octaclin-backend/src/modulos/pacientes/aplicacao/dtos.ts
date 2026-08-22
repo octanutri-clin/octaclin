@@ -66,6 +66,12 @@ export class CriarPacienteDto {
   @IsString()
   @MaxLength(180)
   referenciaExterna?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsUUID('4', { each: true })
+  candidatosDuplicidadeDispensados?: string[];
 }
 
 export class ListarPacientesDto {
