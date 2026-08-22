@@ -85,7 +85,7 @@ export function PortalShell({
       gatilho={
         <button
           type="button"
-          aria-label="Abrir menu da conta"
+          aria-label={`Abrir menu da conta: ${contextoUsuario.email}, ${contextoUsuario.papel}`}
           className={cn(
             'flex min-h-11 items-center gap-2 rounded-md border border-linha bg-white px-2 text-left text-sm transition-colors',
             'hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria'

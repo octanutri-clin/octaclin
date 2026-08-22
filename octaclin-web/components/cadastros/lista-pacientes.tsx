@@ -19,6 +19,7 @@ import { obterSessao } from '@/lib/auth-api';
 import { criarConvitePaciente } from '@/lib/convites-paciente-api';
 import { classificarFalhaInterface, type FalhaInterface } from '@/lib/erros-interface';
 import {
+  type CriteriosFiltroSalvoPaciente,
   type PacienteResumo,
   type ProfissionalResumo,
   type RespostaPaginada,
@@ -36,9 +37,20 @@ function formatarData(valor?: string) {
 }
 
 function statusClasse(status: string) {
-  if (status === 'risco') return 'bg-perigo-suave text-perigo';
-  if (status === 'em_acompanhamento' || status === 'aderente') return 'bg-sucesso-suave text-sucesso';
+  if (status === 'risco') return 'border-perigo-borda bg-perigo-suave text-perigo';
+  if (status === 'em_acompanhamento' || status === 'aderente') return 'border-sucesso-borda bg-sucesso-suave text-sucesso-forte';
   return 'bg-superficie-hover text-texto-suave';
+}
+
+function statusRotulo(status: string) {
+  const rotulos: Record<string, string> = {
+    novo: 'Novo',
+    aderente: 'Aderente',
+    em_acompanhamento: 'Em acompanhamento',
+    risco: 'Requer atenção',
+    inativo: 'Inativo'
+  };
+  return rotulos[status] ?? status;
 }
 
 function nivelRisco(paciente: PacienteResumo) {
@@ -145,6 +157,15 @@ export function ListaPacientes() {
     setPagina(1);
   }
 
+  function aplicarFiltrosSalvos(criterios: CriteriosFiltroSalvoPaciente) {
+    setBusca('');
+    setFiltroRisco(criterios.risco ?? 'todos');
+    setFiltroProfissional(criterios.profissionalId ?? 'todos');
+    setFiltroStatus(criterios.status ?? 'todos');
+    setApenasSemProximaConsulta(Boolean(criterios.semProximaConsulta));
+    setPagina(1);
+  }
+
   async function confirmarArquivar() {
     if (!pacienteParaArquivar) return;
     const paciente = pacienteParaArquivar;
@@ -237,7 +258,7 @@ export function ListaPacientes() {
         </FaixaAcoes>
       </CartaoConteudo></Cartao>
 
-      <FiltrosPacientes busca={busca} risco={filtroRisco} profissional={filtroProfissional} status={filtroStatus} semProximaConsulta={apenasSemProximaConsulta} profissionais={profissionais} total={dados?.total ?? 0} aoAlterarBusca={(valor) => { setBusca(valor); setPagina(1); }} aoAlterarRisco={(valor) => { setFiltroRisco(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAlterarProfissional={(valor) => { setFiltroProfissional(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAlterarStatus={(valor) => { setFiltroStatus(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAplicarVisao={aplicarVisao} />
+      <FiltrosPacientes busca={busca} risco={filtroRisco} profissional={filtroProfissional} status={filtroStatus} semProximaConsulta={apenasSemProximaConsulta} profissionais={profissionais} total={dados?.total ?? 0} podeGerenciar={podeGerenciar} aoAlterarBusca={(valor) => { setBusca(valor); setPagina(1); }} aoAlterarRisco={(valor) => { setFiltroRisco(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAlterarProfissional={(valor) => { setFiltroProfissional(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAlterarStatus={(valor) => { setFiltroStatus(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAplicarVisao={aplicarVisao} aoAplicarFiltrosSalvos={aplicarFiltrosSalvos} />
 
       {falhaVisivel ? <AvisoRegiao><Aviso variante="erro" mensagem={falhaVisivel.mensagem} aoFechar={() => { setFalhaAcao(null); setFalhaCarregamento(null); }} /></AvisoRegiao> : null}
       {sucesso ? <div className="flex flex-wrap items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte"><CheckCircle2 size={16} /><span className="flex-1">{sucesso}</span>{ultimoArquivado && podeGerenciar ? <Botao type="button" tamanho="sm" variante="fantasma" onClick={() => void restaurar(ultimoArquivado)} carregando={restaurandoId === ultimoArquivado.id}><ArchiveRestore size={14} />Desfazer</Botao> : null}</div> : null}
@@ -248,7 +269,7 @@ export function ListaPacientes() {
           <TabelaLinha data-testid="linha-paciente" densidade="compacta" key={paciente.id} className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_196px] items-center hover:bg-superficie-hover">
             <div className="min-w-0"><div className="flex items-center gap-2"><HeartPulse size={16} className="shrink-0 text-primaria" /><Link href={`/pacientes/${paciente.id}` as Route} className="truncate font-semibold hover:underline">{paciente.nome}</Link></div><p className="mt-1 truncate text-xs text-texto-suave">{paciente.contato ?? paciente.id} · Nasc. {formatarData(paciente.dataNascimento)}</p></div>
             <span className="break-all text-xs text-texto-suave">{nomeProfissional(profissionais, paciente.profissionalResponsavelId)}</span>
-            <Etiqueta className={statusClasse(paciente.statusAdesao)}>{paciente.statusAdesao}</Etiqueta>
+            <Etiqueta className={statusClasse(paciente.statusAdesao)}>{statusRotulo(paciente.statusAdesao)}</Etiqueta>
             <Etiqueta variante={nivelRisco(paciente) === 'alto' ? 'perigo' : nivelRisco(paciente) === 'medio' ? 'alerta' : 'sucesso'}>{nivelRisco(paciente)} {Number(paciente.scoreRisco).toFixed(1)}</Etiqueta>
             <span className="text-xs text-texto-suave">{formatarData(paciente.ultimaConsultaConcluidaEm)}</span><span className="text-xs font-medium text-tinta">{proximaAcao(paciente)}</span>
             <div data-testid="acoes-paciente" className="flex justify-end gap-1">

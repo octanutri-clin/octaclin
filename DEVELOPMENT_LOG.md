@@ -2,6 +2,29 @@
 
 Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA assumir fases.
 
+## Fase 254 - Incremento 3: visoes salvas e duplicidade
+
+- Responsavel: Codex.
+- Conclusao tecnica: 2026-08-22.
+- Entrega: BFF e interface de visoes pessoais/clinica, filtro desatualizado,
+  duplicidade consultiva com decisao humana e auditoria somente por UUID.
+- Validacoes: backend 147 suites/1.018 testes; builds/typechecks; contratos,
+  linguagem, base visual, Playwright 10/10 da fase e 10/10 de acessibilidade;
+  smoke real; Chrome DevTools e Lighthouse 100 desktop/mobile.
+- Revisao: achados independentes de seguranca/frontend corrigidos antes do PR;
+  UUIDs de dispensa sao recalculados no backend e as jornadas provam debounce,
+  anuncio acessivel, responsavel paginado e arquivamento confirmado.
+- Integracao: branch `fase/254-incremento-3`, PR `#102` aberto.
+- Proxima entrega: Fase 255 - prontuario clinico orientado a linha de cuidado.
+
+## Fase 254 - Incremento 2: rotas e formulario proprio
+
+- Responsavel: Codex.
+- Conclusao: 2026-08-22.
+- Entrega: rotas separadas de criacao/edicao, autorizacao especifica,
+  componentes menores e rascunho de PII limitado a `sessionStorage`.
+- Producao: PR `#101` integrado no merge `d0ec8c5`.
+
 ## Fase 254 - Incremento 1: fundacao de pacientes
 
 - Responsavel: Claude Code, com aceite operacional do usuario.

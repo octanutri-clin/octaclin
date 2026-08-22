@@ -38,7 +38,7 @@ describe('catalogo TACO 4a edicao', () => {
     });
     expect(catalogo.metadados.exclusoes).toHaveLength(14);
     expect(catalogo.metadados.exclusoes.every((item) => item.motivo === 'valor_nutricional_em_reavaliacao_ou_invalido')).toBe(true);
-    expect(texto).toBe(serializarCatalogoTaco(catalogo));
+    expect(texto.replace(/\r\n/g, '\n')).toBe(serializarCatalogoTaco(catalogo));
   });
 
   it('mantem alimentos ordenados, unicos e nutrientes validos', () => {

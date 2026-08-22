@@ -38,6 +38,30 @@ export interface SalvarPacienteEntrada {
   dataNascimento?: string;
   statusAdesao?: 'novo' | 'aderente' | 'em_acompanhamento' | 'risco' | 'inativo';
   scoreRisco?: number;
+  candidatosDuplicidadeDispensados?: string[];
+}
+
+export type OrigemFiltroSalvoPaciente = 'pessoal' | 'clinica';
+
+export interface CriteriosFiltroSalvoPaciente {
+  risco?: 'alto' | 'medio' | 'baixo';
+  status?: string;
+  profissionalId?: string;
+  semProximaConsulta?: boolean;
+}
+
+export interface FiltroSalvoPaciente {
+  id: string;
+  nome: string;
+  origem: OrigemFiltroSalvoPaciente;
+  criterios: CriteriosFiltroSalvoPaciente;
+  atualizadoEm: string;
+}
+
+export interface CandidatoDuplicidadePaciente {
+  pacienteId: string;
+  nome: string;
+  motivos: Array<'nome_e_nascimento' | 'contato' | 'nome'>;
 }
 
 export interface SalvarProfissionalEntrada {
@@ -170,6 +194,37 @@ export async function criarPaciente(entrada: SalvarPacienteEntrada): Promise<Pac
   });
 }
 
+export async function listarFiltrosSalvosPacientes(): Promise<{ itens: FiltroSalvoPaciente[] }> {
+  return requisitar<{ itens: FiltroSalvoPaciente[] }>('/api/pacientes/filtros-salvos');
+}
+
+export async function criarFiltroSalvoPaciente(entrada: {
+  nome: string;
+  origem: OrigemFiltroSalvoPaciente;
+  criterios: CriteriosFiltroSalvoPaciente;
+}): Promise<FiltroSalvoPaciente> {
+  return requisitar<FiltroSalvoPaciente>('/api/pacientes/filtros-salvos', {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
+export async function arquivarFiltroSalvoPaciente(id: string): Promise<void> {
+  return requisitarSemConteudo(`/api/pacientes/filtros-salvos/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export async function verificarDuplicidadePaciente(entrada: {
+  nome: string;
+  contato?: string;
+  dataNascimento?: string;
+}, signal?: AbortSignal): Promise<{ candidatos: CandidatoDuplicidadePaciente[] }> {
+  return requisitar<{ candidatos: CandidatoDuplicidadePaciente[] }>('/api/pacientes/verificacao-duplicidade', {
+    method: 'POST',
+    body: JSON.stringify(entrada),
+    signal
+  });
+}
+
 export async function atualizarPaciente(id: string, entrada: SalvarPacienteEntrada): Promise<PacienteResumo> {
   return requisitar<PacienteResumo>(`/api/pacientes/${id}`, {
     method: 'PATCH',
@@ -196,6 +251,15 @@ export async function listarProfissionais(filtros: FiltrosPaginacao = {}): Promi
     limite: String(filtros.limite ?? 25)
   });
   return requisitar<RespostaPaginada<ProfissionalResumo>>(`/api/profissionais?${parametros}`);
+}
+
+export async function obterProfissional(id: string): Promise<ProfissionalResumo | null> {
+  try {
+    return await requisitar<ProfissionalResumo>(`/api/profissionais/${encodeURIComponent(id)}`);
+  } catch (erro) {
+    if (erro instanceof ErroApiCadastros && erro.status === 404) return null;
+    throw erro;
+  }
 }
 
 export async function criarProfissional(entrada: SalvarProfissionalEntrada): Promise<ProfissionalResumo> {

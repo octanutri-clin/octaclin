@@ -45,6 +45,7 @@ const estado = {
       atualizadoEm: new Date().toISOString()
     }
   ],
+  filtrosSalvosPacientes: [],
   canais: [
     {
       id: canalEmailId,
@@ -247,6 +248,7 @@ function criarTokens() {
       'gamificacao.gerenciar',
       'operacoes.auditoria.ler',
       'pacientes.listar',
+      'pacientes.gerenciar',
       'profissionais.ler'
     ],
     escopoDados: 'tenant_completo',
@@ -302,10 +304,53 @@ const servidor = http.createServer(async (requisicao, resposta) => {
       };
       estado.pacientes.unshift(paciente);
       registrarAuditoria('pacientes.criar', 'paciente', paciente.id, { profissionalResponsavelId: body.profissionalResponsavelId });
+      if (body.candidatosDuplicidadeDispensados?.length) {
+        registrarAuditoria('paciente.duplicidade_dispensada', 'paciente', paciente.id, {
+          candidatosDispensados: body.candidatosDuplicidadeDispensados
+        });
+      }
       return json(resposta, 201, paciente);
     }
 
-    if (partes[0] === 'pacientes' && partes[1] && requisicao.method === 'PATCH') {
+    if (requisicao.method === 'POST' && url.pathname === '/pacientes/verificacao-duplicidade') {
+      const body = await lerJson(requisicao);
+      const nome = String(body.nome ?? '').trim().toLocaleLowerCase('pt-BR');
+      const contato = String(body.contato ?? '').trim().toLocaleLowerCase('pt-BR');
+      const candidatos = estado.pacientes.flatMap((item) => {
+        const motivos = [];
+        const mesmoNome = item.nome.trim().toLocaleLowerCase('pt-BR') === nome;
+        if (mesmoNome && body.dataNascimento && item.dataNascimento === body.dataNascimento) motivos.push('nome_e_nascimento');
+        else if (mesmoNome && !body.dataNascimento && !item.dataNascimento) motivos.push('nome');
+        if (contato && String(item.contato ?? '').trim().toLocaleLowerCase('pt-BR') === contato) motivos.push('contato');
+        return motivos.length ? [{ pacienteId: item.id, nome: item.nome, motivos }] : [];
+      }).slice(0, 5);
+      return json(resposta, 200, { candidatos });
+    }
+
+    if (requisicao.method === 'GET' && url.pathname === '/pacientes/filtros-salvos') {
+      return json(resposta, 200, { itens: estado.filtrosSalvosPacientes });
+    }
+
+    if (requisicao.method === 'POST' && url.pathname === '/pacientes/filtros-salvos') {
+      const body = await lerJson(requisicao);
+      const filtro = { id: randomUUID(), nome: body.nome, origem: body.origem, criterios: body.criterios, atualizadoEm: new Date().toISOString() };
+      estado.filtrosSalvosPacientes.unshift(filtro);
+      return json(resposta, 201, filtro);
+    }
+
+    if (partes[0] === 'pacientes' && partes[1] === 'filtros-salvos' && partes[2] && requisicao.method === 'DELETE') {
+      const indice = estado.filtrosSalvosPacientes.findIndex((item) => item.id === partes[2]);
+      if (indice === -1) return json(resposta, 404, { mensagem: 'Visao salva nao encontrada.' });
+      estado.filtrosSalvosPacientes.splice(indice, 1);
+      return json(resposta, 200, { arquivado: true });
+    }
+
+    if (partes[0] === 'pacientes' && partes[1] && partes.length === 2 && requisicao.method === 'GET') {
+      const paciente = estado.pacientes.find((item) => item.id === partes[1]);
+      return paciente ? json(resposta, 200, paciente) : json(resposta, 404, { mensagem: 'Paciente nao encontrado.' });
+    }
+
+    if (partes[0] === 'pacientes' && partes[1] && partes.length === 2 && requisicao.method === 'PATCH') {
       const body = await lerJson(requisicao);
       const paciente = estado.pacientes.find((item) => item.id === partes[1]);
       if (!paciente) return json(resposta, 404, { mensagem: 'Paciente nao encontrado.' });
@@ -319,7 +364,7 @@ const servidor = http.createServer(async (requisicao, resposta) => {
       return json(resposta, 200, paciente);
     }
 
-    if (partes[0] === 'pacientes' && partes[1] && requisicao.method === 'DELETE') {
+    if (partes[0] === 'pacientes' && partes[1] && partes.length === 2 && requisicao.method === 'DELETE') {
       const indice = estado.pacientes.findIndex((item) => item.id === partes[1]);
       if (indice === -1) return json(resposta, 404, { mensagem: 'Paciente nao encontrado.' });
       estado.pacientes.splice(indice, 1);
