@@ -2,6 +2,18 @@
 
 Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA assumir fases.
 
+## Fase 254 - Incremento 1: fundacao de pacientes
+
+- Responsavel: Claude Code, com aceite operacional do usuario.
+- Conclusao: 2026-08-22.
+- Entrega: filtros salvos pessoais/da clinica, verificacao compartilhada de
+  duplicidade, rotas backend, RLS forcada e migration `1035`.
+- Producao: PR `#93` integrado; migration aplicada e health com 48 migrations.
+- Operacao relacionada: PRs `#98` e `#100` reduziram comandos Redis dos workers
+  ociosos e documentaram as regras de Redis e DDL.
+- Proxima entrega: Fase 254, Incremento 2 - rotas proprias e quebra do
+  componente de pacientes.
+
 ## Regra
 
 - Registrar uma entrada por fase concluida.

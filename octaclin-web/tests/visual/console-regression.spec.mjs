@@ -614,7 +614,7 @@ test.describe('console operacional', () => {
 
       if (rota.caminho === '/dashboard') {
         await expect(page.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda#novo-agendamento');
-        await expect(page.getByRole('link', { name: 'Novo paciente' })).toHaveAttribute('href', '/pacientes#novo-paciente');
+        await expect(page.getByRole('link', { name: 'Novo paciente' })).toHaveAttribute('href', '/pacientes/novo');
         await expect(page.getByRole('button', { name: /^Notificações/ })).toBeVisible();
         await page.locator('button[aria-label="Abrir menu da conta"]').click();
         await expect(page.getByText('Clínica Carla')).toBeVisible();

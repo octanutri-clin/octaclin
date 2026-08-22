@@ -278,18 +278,18 @@ test.describe('Fase 248 - estados e recuperacao clinica', () => {
     await page.getByRole('button', { name: 'Tentar novamente' }).click();
     await expect(page.locator('a:visible', { hasText: 'Ana Sintetica' }).first()).toBeVisible();
 
-    await page.getByRole('button', { name: 'Novo paciente' }).click();
-    const modal = page.getByRole('dialog', { name: 'Novo paciente' });
-    await modal.getByLabel('Nome completo').fill('Bruno Sintetico');
-    await modal.getByLabel('E-mail ou telefone').fill('bruno.sintetico@example.com');
-    await modal.getByRole('button', { name: 'Salvar' }).click();
+    await page.getByLabel('Ações da lista de pacientes').getByRole('link', { name: 'Novo paciente' }).click();
+    await page.getByLabel('Nome completo').fill('Bruno Sintetico');
+    await page.getByLabel('E-mail ou telefone').fill('bruno.sintetico@example.com');
+    await page.getByRole('button', { name: 'Cadastrar paciente' }).click();
 
-    await expect(page.getByText('Não foi possível salvar o paciente. Tente novamente.')).toBeVisible();
-    await expect(modal.getByLabel('Nome completo')).toHaveValue('Bruno Sintetico');
-    await expect(modal.getByLabel('E-mail ou telefone')).toHaveValue('bruno.sintetico@example.com');
-    await modal.getByRole('button', { name: 'Salvar' }).click();
-    await expect(page.getByText('Paciente criado.')).toBeVisible();
-    await expect(page.locator('a:visible', { hasText: 'Bruno Sintetico' }).first()).toBeVisible();
+    await expect(page.getByText(/Não foi possível salvar o paciente/)).toBeVisible();
+    await page.reload();
+    await expect(page.getByText('Rascunho desta aba restaurado.')).toBeVisible();
+    await expect(page.getByLabel('Nome completo')).toHaveValue('Bruno Sintetico');
+    await expect(page.getByLabel('E-mail ou telefone')).toHaveValue('bruno.sintetico@example.com');
+    await page.getByRole('button', { name: 'Cadastrar paciente' }).click();
+    await expect(page).toHaveURL(/\/pacientes\/paciente-recuperado$/);
   });
 
   test('prontuario recupera a carga e preserva a evolucao digitada apos falha', async ({ page }) => {

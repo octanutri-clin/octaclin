@@ -39,7 +39,7 @@ assert.match(portalShell, /<details/, 'navegacao mobile deve usar divulgacao nat
 assert.match(portalShell, /Módulos/, 'navegacao mobile deve nomear o menu de modulos');
 assert.match(portalShell, /contextoUsuario/, 'shell deve apresentar o contexto da sessao');
 assert.match(consoleShell, /#novo-agendamento/, 'console deve oferecer atalho real para novo agendamento');
-assert.match(consoleShell, /#novo-paciente/, 'console deve oferecer atalho real para novo paciente');
+assert.match(consoleShell, /\/pacientes\/novo/, 'console deve oferecer atalho real para novo paciente');
 assert.match(botao, /min-h-11/, 'botao deve atingir alvo de toque de 44px');
 assert.match(campo, /min-h-11/, 'campo deve atingir alvo de toque de 44px');
 assert.doesNotMatch(portalPaciente, /scoreRisco/, 'portal do paciente nao deve expor score clinico');

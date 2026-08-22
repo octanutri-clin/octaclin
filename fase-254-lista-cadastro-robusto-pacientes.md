@@ -2,6 +2,14 @@
 
 Criado em 2026-08-21. Fase essencial e pre-piloto, sucessora da Fase 253.
 
+Estado em 2026-08-22: Incremento 1 concluido e integrado no PR `#93`.
+Migration `1720000001035` aplicada; producao registra 48 migrations. Os
+Incrementos 2 e 3 permanecem pendentes e devem sair em PRs separados.
+
+Incremento 2 implementado localmente em 2026-08-22, com rotas proprias,
+autorizacao especifica, componentes separados e rascunho por sessao. Aguarda
+integracao do PR para ser considerado concluido.
+
 ## Objetivo
 
 Separar listagem, criacao e edicao de pacientes, hoje concentradas em um unico

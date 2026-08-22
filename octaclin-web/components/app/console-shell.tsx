@@ -97,7 +97,7 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
         <AtalhoShell href="/agenda#novo-agendamento" rotulo="Agendar" icone={<CalendarPlus size={16} />} />
       ) : null}
       {permissoes.includes('pacientes.gerenciar') ? (
-        <AtalhoShell href="/pacientes#novo-paciente" rotulo="Novo paciente" icone={<UserRoundPlus size={16} />} />
+        <AtalhoShell href="/pacientes/novo" rotulo="Novo paciente" icone={<UserRoundPlus size={16} />} />
       ) : null}
       {permissoes.includes('console.acessar') ? <SinoNotificacoes /> : null}
     </>
