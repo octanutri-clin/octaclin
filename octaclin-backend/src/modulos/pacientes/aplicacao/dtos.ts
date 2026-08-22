@@ -266,7 +266,7 @@ export interface QualidadeCadastroSecaoDto {
 export interface PossivelDuplicidadePacienteDto {
   pacienteId: string;
   nome: string;
-  motivos: Array<'nome_e_nascimento' | 'contato'>;
+  motivos: Array<'nome_e_nascimento' | 'contato' | 'nome'>;
 }
 
 export interface EstadoAcessoPortalPacienteDto {

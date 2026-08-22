@@ -8,6 +8,7 @@ import { ConvitePacienteOrm } from '../infraestrutura/convite-paciente.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { ServicoPerfilCadastroPaciente } from './servico-perfil-cadastro-paciente';
+import { ServicoDuplicidadePacientes } from './servico-duplicidade-pacientes';
 
 const usuario: UsuarioAutenticado = {
   usuarioId: 'usuario-1',
@@ -45,9 +46,14 @@ describe('ServicoPerfilCadastroPaciente', () => {
       criptografar: jest.fn((valor: string) => Buffer.from(valor, 'utf8')),
       descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8'))
     };
+    const duplicidade = new ServicoDuplicidadePacientes(
+      executorTenant as never,
+      criptografia as never,
+      { registrar: jest.fn() } as never
+    );
 
     return {
-      servico: new ServicoPerfilCadastroPaciente(executorTenant as never, criptografia as never),
+      servico: new ServicoPerfilCadastroPaciente(executorTenant as never, criptografia as never, duplicidade),
       perfil,
       paciente,
       criptografia
@@ -160,7 +166,12 @@ describe('ServicoPerfilCadastroPaciente', () => {
       criptografar: jest.fn(),
       descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8'))
     };
-    const servico = new ServicoPerfilCadastroPaciente(executorTenant as never, criptografia as never);
+    const duplicidade = new ServicoDuplicidadePacientes(
+      executorTenant as never,
+      criptografia as never,
+      { registrar: jest.fn() } as never
+    );
+    const servico = new ServicoPerfilCadastroPaciente(executorTenant as never, criptografia as never, duplicidade);
 
     const resposta = await servico.obterQualidadeEAcesso(usuario.tenantId, pacienteAtual.id, usuario);
 

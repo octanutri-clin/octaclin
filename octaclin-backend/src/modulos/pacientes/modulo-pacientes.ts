@@ -34,6 +34,7 @@ import { ServicoDocumentosClinicos } from './aplicacao/servico-documentos-clinic
 import { ServicoImportacaoPacientes } from './aplicacao/servico-importacao-pacientes';
 import { ServicoPacientes } from './aplicacao/servico-pacientes';
 import { ServicoPerfilCadastroPaciente } from './aplicacao/servico-perfil-cadastro-paciente';
+import { ServicoDuplicidadePacientes } from './aplicacao/servico-duplicidade-pacientes';
 import { ServicoExamesLaboratoriais } from './aplicacao/servico-exames-laboratoriais';
 import { ServicoConsentimentosEvolucaoFotografica } from './aplicacao/servico-consentimentos-evolucao-fotografica';
 import { ServicoEvolucoesFotograficas } from './aplicacao/servico-evolucoes-fotograficas';
@@ -117,6 +118,7 @@ import { CondutaTerapeuticaVersaoOrm } from './infraestrutura/conduta-terapeutic
   providers: [
     ServicoPacientes,
     ServicoPerfilCadastroPaciente,
+    ServicoDuplicidadePacientes,
     ServicoExamesLaboratoriais,
     ServicoConsentimentosEvolucaoFotografica,
     ServicoEvolucoesFotograficas,
