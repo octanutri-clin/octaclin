@@ -2,6 +2,21 @@
 
 Use este arquivo como diario curto quando outro desenvolvedor ou agente de IA assumir fases.
 
+## Fase 255 - Prontuario clinico orientado a linha de cuidado
+
+- Responsavel: Codex, com auditorias independentes de frontend e seguranca.
+- Conclusao tecnica: 2026-08-22.
+- Entrega: configuracao e timeline extraidas, recursos laterais sob demanda,
+  falhas isoladas por subarea, deep links autorizados, permissoes de mutacao
+  coerentes e confirmacao de descarte para todos os formularios locais.
+- Validacoes: Playwright 44/44 desktop/mobile; backend 36/36; autorizacao/BFF
+  66/66; acessibilidade 10/10; linguagem 8/8; typechecks, builds, base visual e
+  scanner de segredos aprovados.
+- Seguranca: nenhum bypass de tenant/carteira sustentado; dividas de payload
+  inicial, auditoria duravel e cifra de texto livre foram registradas nas Fases
+  260/261, pois exigem contratos/migrations separados.
+- Proxima entrega: Fase 256 - formularios e check-ins ponta a ponta.
+
 ## Fase 254 - Incremento 3: visoes salvas e duplicidade
 
 - Responsavel: Codex.

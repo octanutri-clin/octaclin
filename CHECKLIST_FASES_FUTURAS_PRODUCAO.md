@@ -2221,11 +2221,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     janela de envio e arquivamento confirmado. Sem nova migration; CI
     `32590205628` aprovado, incluindo smoke local completo.
 
-- [ ] Fase 255 - Prontuário clínico orientado à linha de cuidado. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
+- [x] Fase 255 - Prontuário clínico orientado à linha de cuidado. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
   - Reorganizar resumo, evoluções, plano, formulários, mensagens, materiais e
     histórico com cabeçalho persistente e ações rápidas autorizadas.
   - Reduzir carga inicial e densidade, proteger alterações não salvas e manter
     trilha de auditoria e escopo do paciente em cada aba.
+  - Concluida tecnicamente em 2026-08-22, sem migration. Materiais, Anexos e o
+    diretorio profissional carregam sob demanda; falhas sao locais; deep links
+    passam por allowlist de permissao; rascunhos e controles mutaveis foram
+    alinhados ao contrato backend. Validacoes: Playwright 44/44, backend 36/36,
+    authz/BFF 66/66, acessibilidade 10/10, linguagem 8/8 e builds aprovados.
+  - Documentos: `PLANO_FASE_255.md` e
+    `fase-255-prontuario-clinico-linha-cuidado.md`.
 
 - [ ] Fase 256 - Formulários e check-ins ponta a ponta. [ESSENCIAL - PRE-PILOTO]
   - Validar criação, biblioteca, versão, distribuição, rascunho do paciente,
@@ -2256,6 +2263,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     revisar cache/invalidação e limitar componentes clínicos muito grandes.
   - Correlacionar erro de interface, BFF e backend sem PHI; criar runbooks para
     falhas de banco, Redis, storage, e-mail, WhatsApp e Google Calendar.
+  - Reduzir o contrato inicial do prontuário a agregados e referências: detalhes
+    clínicos descriptografados, mensagens, check-ins, evoluções e tarefas devem
+    ser autorizados e carregados somente quando a área correspondente for aberta.
+  - Tornar a auditoria de mutações clínicas transacional ou baseada em outbox;
+    leituras de PHI devem ter política explícita de persistência, retentativa e
+    alerta, sem continuar silenciosamente quando o registro de auditoria falhar.
 
 - [ ] Fase 261 - Regressão de segurança e privacidade do SaaS público. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
   - Revalidar autenticação, autorização por papel, RLS forçada, isolamento entre
@@ -2263,6 +2276,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Instituir SLA de dependências, SBOM, revisão de workflows e gates de secrets,
     SAST e auditoria de produção; nenhum alerta crítico/alto aceito sem dono,
     prazo e justificativa documentada.
+  - Cifrar o conteúdo clínico livre hoje persistido em claro, incluindo o JSON
+    de check-ins rápidos, títulos de evoluções/tarefas e motivos livres de
+    cancelamento; manter em claro somente campos controlados indispensáveis a
+    filtros e índices, com migration e rollback aprovados separadamente.
 
 - [ ] Fase 262 - Aceite de usabilidade e prontidão para piloto. [BLOQUEADOR FINAL]
   - Executar jornadas reais com dados sintéticos para SuperAdmin, cliente,
@@ -2448,3 +2465,19 @@ Fase 245 - Migracao do Next.js 15 para 16:
     bloqueio interno manual em producao.
   - Observacoes: migrations 1002 a 1004 e 1006 aplicadas e registradas no
     Neon; web em live com controle de liberacao sempre acessivel.
+
+Fase 255 - Prontuario clinico orientado a linha de cuidado:
+- Status: concluida tecnicamente
+- Commit: a registrar na integracao da fase
+- Data: 2026-08-22
+- Validacoes: Playwright 44/44 desktop/mobile, backend 36/36, authz/BFF 66/66,
+  acessibilidade 10/10, linguagem 8/8, base visual, typechecks, builds e scanner
+  de segredos
+- Observacoes: sem migration; nenhum bypass de tenant/carteira sustentado; as
+  dividas confirmadas de payload clinico, auditoria duravel e cifra de campos
+  livres foram incorporadas as Fases 260/261
+- Proxima fase: Fase 256 - Formularios e check-ins ponta a ponta
+- Modelo recomendado: GPT-5.6 Sol, raciocinio `high`
+- Skills/plugins: `ecc:contract-first`, `ecc:frontend-patterns`,
+  `ecc:frontend-a11y`, `ecc:e2e-testing`, `codex-security:validation`,
+  Playwright e Chrome DevTools; Penpot se houver alteracao visual material

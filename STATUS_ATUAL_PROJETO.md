@@ -7,13 +7,22 @@ Atualizado em 2026-08-22.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 255 concluida tecnicamente: o prontuario foi decomposto em configuracao
+  tipada e timeline reutilizavel; Materiais, Anexos e o diretorio de
+  profissionais deixaram de bloquear o Resumo; deep links sao allowlisted por
+  permissao; rascunhos mutaveis exigem confirmacao antes da troca; e controles
+  de escrita acompanham as permissoes backend. A busca pontual do responsavel
+  preserva o contexto SuperAdmin sem carregar ate 2.000 profissionais. Foram
+  aprovados 44 cenarios Playwright desktop/mobile, 36 testes backend, 66 testes
+  de autorizacao/BFF, 10 de acessibilidade, builds e scanner de segredos. Nao
+  houve migration. A proxima fase oficial e a Fase 256.
 - Fase 254 concluida e integrada. O Incremento 1 entrou pelo PR `#93`, com a
   migration aditiva `1035` aplicada e health de producao em 48 migrations; o
   Incremento 2 entrou pelo PR `#101`; e o Incremento 3 entrou pelo PR `#102`,
   merge `baf40ef`, sem nova migration. Visoes salvas, duplicidade com decisao
   humana, auditoria por UUID recalculado no backend, BFF protegido, smoke real,
   Playwright e Lighthouse 100 foram aprovados. O CI `32590205628` ficou verde.
-  A proxima fase oficial e a Fase 255.
+  A fase seguinte foi a Fase 255.
 - Fase 253 concluida e aceita em producao: a agenda interna ganhou trava
   transacional por tenant/profissional, recuperacao de Google/email/WhatsApp,
   evento Google deterministico e vinculado, sync token sem avanco parcial,

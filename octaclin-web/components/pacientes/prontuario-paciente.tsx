@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   BadgeDollarSign,
@@ -11,14 +11,11 @@ import {
   CheckSquare,
   ClipboardList,
   Download,
-  FlaskConical,
   FileText,
-  ImageIcon,
   LinkIcon,
   MessageSquareText,
   Paperclip,
   RefreshCcw,
-  Ruler,
   Save,
   Send,
   ShieldCheck,
@@ -38,12 +35,20 @@ import { AbaCondutasTerapeuticas } from './aba-condutas-terapeuticas';
 import { AbaDocumentos, ConsultaConcluidaOpcao } from './aba-documentos';
 import { PerfilCadastroPaciente } from './perfil-cadastro-paciente';
 import { PlanoAlimentarProfissional } from './plano-alimentar-profissional';
+import { classeStatus, formatarDataHora, LinhaDoTempoProntuario as LinhaDoTempo } from './linha-do-tempo-prontuario';
+import {
+  abasProntuario,
+  areaPorAba,
+  areasProntuario,
+  type AbaProntuario,
+  type AreaProntuario
+} from './estrutura-prontuario';
 import { Aviso, AvisoRegiao, BarraCarregamento, EsqueletoPagina, EstadoFalha, EstadoPermissaoNegada, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { FaixaAcoes } from '@/components/ui/faixa-acoes';
 import { obterSessao } from '@/lib/auth-api';
 import { classificarFalhaInterface, type FalhaInterface } from '@/lib/erros-interface';
-import { listarProfissionais, type ProfissionalResumo } from '@/lib/cadastros-api';
+import { listarProfissionais, obterProfissional, type ProfissionalResumo } from '@/lib/cadastros-api';
 import {
   criarMaterial,
   enviarMaterialPaciente,
@@ -112,69 +117,6 @@ interface FiltrosHistorico {
   responsavelId?: string;
 }
 
-type AbaProntuario =
-  | 'resumo'
-  | 'evolucoes'
-  | 'acompanhamento'
-  | 'plano_alimentar'
-  | 'condutas_terapeuticas'
-  | 'antropometria'
-  | 'exames_laboratoriais'
-  | 'evolucao_fotografica'
-  | 'formularios'
-  | 'documentos'
-  | 'mensagens'
-  | 'materiais'
-  | 'anexos'
-  | 'historico'
-  | 'financeiro';
-
-type AreaProntuario = 'resumo' | 'atendimentos' | 'avaliacoes' | 'plano' | 'documentos' | 'financeiro';
-
-const abasProntuario: Array<{ id: AbaProntuario; rotulo: string; permissao?: string }> = [
-  { id: 'resumo', rotulo: 'Resumo' },
-  { id: 'evolucoes', rotulo: 'Evoluções' },
-  { id: 'acompanhamento', rotulo: 'Acompanhamento' },
-  { id: 'plano_alimentar', rotulo: 'Plano alimentar', permissao: 'planos_alimentares.ler' },
-  { id: 'condutas_terapeuticas', rotulo: 'Condutas terapêuticas' },
-  { id: 'antropometria', rotulo: 'Antropometria' },
-  { id: 'exames_laboratoriais', rotulo: 'Exames laboratoriais' },
-  { id: 'evolucao_fotografica', rotulo: 'Evolução fotográfica' },
-  { id: 'formularios', rotulo: 'Formulários' },
-  { id: 'documentos', rotulo: 'Documentos' },
-  { id: 'mensagens', rotulo: 'Mensagens' },
-  { id: 'materiais', rotulo: 'Materiais' },
-  { id: 'anexos', rotulo: 'Anexos' },
-  { id: 'historico', rotulo: 'Histórico' }
-];
-
-const areasProntuario: Array<{ id: AreaProntuario; rotulo: string; abaInicial: AbaProntuario; permissao?: string }> = [
-  { id: 'resumo', rotulo: 'Resumo', abaInicial: 'resumo' },
-  { id: 'atendimentos', rotulo: 'Atendimentos', abaInicial: 'evolucoes' },
-  { id: 'avaliacoes', rotulo: 'Avaliações', abaInicial: 'antropometria' },
-  { id: 'plano', rotulo: 'Plano', abaInicial: 'acompanhamento' },
-  { id: 'documentos', rotulo: 'Documentos', abaInicial: 'documentos' },
-  { id: 'financeiro', rotulo: 'Financeiro', abaInicial: 'financeiro', permissao: 'agenda.financeiro.ler' }
-];
-
-const areaPorAba: Record<AbaProntuario, AreaProntuario> = {
-  resumo: 'resumo',
-  evolucoes: 'atendimentos',
-  historico: 'atendimentos',
-  mensagens: 'atendimentos',
-  antropometria: 'avaliacoes',
-  exames_laboratoriais: 'avaliacoes',
-  evolucao_fotografica: 'avaliacoes',
-  formularios: 'avaliacoes',
-  acompanhamento: 'plano',
-  plano_alimentar: 'plano',
-  condutas_terapeuticas: 'plano',
-  materiais: 'plano',
-  documentos: 'documentos',
-  anexos: 'documentos',
-  financeiro: 'financeiro'
-};
-
 const formularioEvolucaoInicial: FormularioEvolucao = {
   titulo: '',
   tipo: 'observacao',
@@ -203,13 +145,6 @@ const formularioEnvioMaterialInicial: FormularioEnvioMaterial = {
   observacao: ''
 };
 
-function formatarDataHora(valor?: string) {
-  if (!valor) return '-';
-  const data = new Date(valor);
-  if (Number.isNaN(data.getTime())) return valor;
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(data);
-}
-
 function formatarData(valor?: string) {
   if (!valor) return '-';
   const data = new Date(valor);
@@ -230,126 +165,6 @@ function tipoMidiaDoArquivo(arquivo: File): TipoMidiaMobile {
   throw new Error('Selecione uma imagem JPEG, PNG, WebP ou um PDF.');
 }
 
-function rotuloTipo(tipo: EventoProntuarioPacienteApi['tipo']) {
-  const rotulos: Record<EventoProntuarioPacienteApi['tipo'], string> = {
-    consulta: 'Consulta',
-    formulario: 'Formulário',
-    resposta_formulario: 'Resposta',
-    checkin_rapido: 'Check-in rápido',
-    mensagem: 'Mensagem',
-    evolucao_clinica: 'Evolução',
-    tarefa_acompanhamento: 'Tarefa',
-    plano_alimentar_publicado: 'Plano alimentar',
-    avaliacao_antropometrica: 'Antropometria',
-    documento_emitido: 'Documento',
-    anexo_confirmado: 'Anexo',
-    exame_laboratorial: 'Exame laboratorial',
-    evolucao_fotografica: 'Evolução fotográfica',
-    evento_financeiro: 'Financeiro'
-  };
-  return rotulos[tipo];
-}
-
-function classeStatus(status?: string) {
-  if (status === 'falhou' || status === 'cancelada') return 'bg-perigo-suave text-perigo';
-  if (status === 'respondido' || status === 'finalizado' || status === 'agendada') return 'bg-sucesso-suave text-sucesso';
-  return 'bg-superficie-hover text-texto-suave';
-}
-
-function iconeEvento(tipo: EventoProntuarioPacienteApi['tipo']) {
-  if (tipo === 'consulta') return CalendarDays;
-  if (tipo === 'mensagem') return MessageSquareText;
-  if (tipo === 'evolucao_clinica') return Stethoscope;
-  if (tipo === 'tarefa_acompanhamento') return CheckSquare;
-  if (tipo === 'plano_alimentar_publicado') return Utensils;
-  if (tipo === 'avaliacao_antropometrica') return Ruler;
-  if (tipo === 'documento_emitido') return FileText;
-  if (tipo === 'anexo_confirmado') return Paperclip;
-  if (tipo === 'exame_laboratorial') return FlaskConical;
-  if (tipo === 'evolucao_fotografica') return ImageIcon;
-  if (tipo === 'evento_financeiro') return BadgeDollarSign;
-  return ClipboardList;
-}
-
-function autoriaEvento(evento: EventoProntuarioPacienteApi, profissionais: ProfissionalResumo[]) {
-  const autor = profissionais.find((profissional) => profissional.usuarioId === evento.autorUsuarioId);
-  const responsavel = profissionais.find((profissional) => profissional.id === evento.responsavelId);
-  const origens: Record<string, string> = {
-    Formularios: 'Formulários',
-    'Evolucao fotografica': 'Evolução fotográfica',
-    Prontuario: 'Prontuário',
-    Comunicacoes: 'Comunicações'
-  };
-  const partes = evento.origem ? [`Origem: ${origens[evento.origem] ?? evento.origem}`] : [];
-  if (autor) partes.push(`Autor: ${autor.nome}`);
-  else if (evento.autorUsuarioId) {
-    const autoriaDoPaciente = evento.tipo === 'resposta_formulario'
-      || evento.tipo === 'checkin_rapido'
-      || (evento.tipo === 'mensagem' && evento.status === 'recebido');
-    partes.push(autoriaDoPaciente ? 'Autor: paciente' : 'Autor: equipe clínica');
-  }
-  if (responsavel && responsavel.id !== autor?.id) partes.push(`Responsável: ${responsavel.nome}`);
-  return partes.join(' - ');
-}
-
-function LinhaDoTempo({
-  eventos,
-  aoAbrirEvento,
-  profissionais = []
-}: {
-  eventos: EventoProntuarioPacienteApi[];
-  aoAbrirEvento?: (evento: EventoProntuarioPacienteApi) => void;
-  profissionais?: ProfissionalResumo[];
-}) {
-  if (!eventos.length) {
-    return <EstadoVazio titulo="Sem eventos no prontuário" descricao="Agenda, formulários, respostas e mensagens aparecerão aqui." />;
-  }
-
-  return (
-    <div className="grid gap-3">
-      {eventos.map((evento) => {
-        const Icone = iconeEvento(evento.tipo);
-        const autoria = autoriaEvento(evento, profissionais);
-        return (
-          <article key={`${evento.tipo}-${evento.id}`} className="grid gap-2 rounded-md border border-linha bg-white p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex min-w-0 items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primaria-suave text-primaria">
-                  <Icone size={18} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase text-texto-suave">{rotuloTipo(evento.tipo)}</p>
-                  <h3 className="mt-1 break-words text-sm font-semibold text-tinta">{evento.titulo}</h3>
-                  {evento.descricao ? <p className="mt-1 break-words text-sm text-texto-suave">{evento.descricao}</p> : null}
-                  {autoria ? <p className="mt-1 break-words text-xs text-texto-suave">{autoria}</p> : null}
-                </div>
-              </div>
-              <div className="shrink-0 text-left sm:text-right">
-                <p className="text-xs text-texto-suave">{formatarDataHora(evento.data)}</p>
-                {evento.status ? (
-                  <span className={`mt-2 inline-flex rounded-md px-2 py-1 text-xs font-semibold ${classeStatus(evento.status)}`}>
-                    {evento.status}
-                  </span>
-                ) : null}
-                {aoAbrirEvento ? (
-                  <button
-                    type="button"
-                    onClick={() => aoAbrirEvento(evento)}
-                    className="mt-2 block text-xs font-semibold text-primaria hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
-                    aria-label={`Abrir detalhe de ${evento.titulo}`}
-                  >
-                    Abrir detalhe
-                  </button>
-                ) : null}
-              </div>
-            </div>
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
 export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [dados, setDados] = useState<ProntuarioPacienteApi | null>(null);
   const [paginaHistorico, setPaginaHistorico] = useState<PaginaLinhaDoTempoProntuarioApi | null>(null);
@@ -358,6 +173,14 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [anexos, setAnexos] = useState<ArquivoMidiaApi[]>([]);
   const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [carregandoMateriais, setCarregandoMateriais] = useState(false);
+  const [materiaisSolicitados, setMateriaisSolicitados] = useState(false);
+  const [materiaisCarregados, setMateriaisCarregados] = useState(false);
+  const [carregandoAnexos, setCarregandoAnexos] = useState(false);
+  const [anexosSolicitados, setAnexosSolicitados] = useState(false);
+  const [anexosCarregados, setAnexosCarregados] = useState(false);
+  const [carregandoProfissionais, setCarregandoProfissionais] = useState(false);
+  const [profissionaisCarregados, setProfissionaisCarregados] = useState(false);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
   const [salvandoEvolucao, setSalvandoEvolucao] = useState(false);
   const [salvandoTarefa, setSalvandoTarefa] = useState(false);
@@ -371,6 +194,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [filtroCategoriaAnexo, setFiltroCategoriaAnexo] = useState<CategoriaAnexoClinico | 'todas'>('todas');
   const [anexoParaExcluir, setAnexoParaExcluir] = useState<ArquivoMidiaApi | null>(null);
   const [falhaCarregamento, setFalhaCarregamento] = useState<FalhaInterface | null>(null);
+  const [falhaMateriais, setFalhaMateriais] = useState<FalhaInterface | null>(null);
+  const [falhaAnexos, setFalhaAnexos] = useState<FalhaInterface | null>(null);
   const [falhaHistorico, setFalhaHistorico] = useState<FalhaInterface | null>(null);
   const [falhaAcao, setFalhaAcao] = useState<FalhaInterface | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
@@ -389,35 +214,85 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [planoAlimentarNaoSalvo, setPlanoAlimentarNaoSalvo] = useState(false);
   const [permissoes, setPermissoes] = useState<string[]>([]);
   const [papel, setPapel] = useState<string | null>(null);
+  const [sessaoCarregada, setSessaoCarregada] = useState(false);
+  const [deepLinkAplicado, setDeepLinkAplicado] = useState(false);
   const [saidaPendente, setSaidaPendente] = useState<
     { tipo: 'voltar' } | { tipo: 'agenda'; consultaId?: string; financeiro?: boolean } | { tipo: 'aba'; id: AbaProntuario } | null
   >(null);
+  const requisicaoHistorico = useRef<AbortController | null>(null);
+  const responsavelSolicitadoId = useRef<string | null>(null);
   const router = useRouter();
 
   const carregar = useCallback(async () => {
     setCarregando(true);
     setFalhaCarregamento(null);
     try {
-      const [prontuario, biblioteca, enviados, anexosPaciente] = await Promise.all([
-        obterProntuarioPaciente(pacienteId),
-        listarMateriais(),
-        listarMateriaisPaciente(pacienteId),
-        listarArquivosMidia(pacienteId)
-      ]);
+      const prontuario = await obterProntuarioPaciente(pacienteId);
       setDados(prontuario);
-      setMateriais(biblioteca);
-      setMateriaisPaciente(enviados);
-      setAnexos(anexosPaciente);
-      setFormularioEnvioMaterial((atual) => ({
-        ...atual,
-        materialId: atual.materialId || biblioteca[0]?.id || ''
-      }));
     } catch (erroAtual) {
       setFalhaCarregamento(classificarFalhaInterface(erroAtual, 'Não foi possível carregar o prontuário.'));
     } finally {
       setCarregando(false);
     }
   }, [pacienteId]);
+
+  const carregarMateriais = useCallback(async () => {
+    setCarregandoMateriais(true);
+    setFalhaMateriais(null);
+    try {
+      const [biblioteca, enviados] = await Promise.all([
+        listarMateriais(),
+        listarMateriaisPaciente(pacienteId)
+      ]);
+      setMateriais(biblioteca);
+      setMateriaisPaciente(enviados);
+      setFormularioEnvioMaterial((atual) => ({
+        ...atual,
+        materialId: atual.materialId || biblioteca[0]?.id || ''
+      }));
+      setMateriaisCarregados(true);
+    } catch (erroAtual) {
+      setFalhaMateriais(classificarFalhaInterface(erroAtual, 'Não foi possível carregar os materiais.'));
+    } finally {
+      setCarregandoMateriais(false);
+    }
+  }, [pacienteId]);
+
+  const carregarAnexos = useCallback(async () => {
+    setCarregandoAnexos(true);
+    setFalhaAnexos(null);
+    try {
+      setAnexos(await listarArquivosMidia(pacienteId));
+      setAnexosCarregados(true);
+    } catch (erroAtual) {
+      setFalhaAnexos(classificarFalhaInterface(erroAtual, 'Não foi possível carregar os anexos.'));
+    } finally {
+      setCarregandoAnexos(false);
+    }
+  }, [pacienteId]);
+
+  const carregarProfissionais = useCallback(async () => {
+    if (!permissoes.includes('profissionais.ler')) {
+      setProfissionais([]);
+      setProfissionaisCarregados(true);
+      return;
+    }
+    setCarregandoProfissionais(true);
+    try {
+      const todos: ProfissionalResumo[] = [];
+      for (let pagina = 1; pagina <= 20; pagina += 1) {
+        const resposta = await listarProfissionais({ pagina, limite: 100 });
+        todos.push(...resposta.itens);
+        if (todos.length >= resposta.total || resposta.itens.length === 0) break;
+      }
+      setProfissionais(todos);
+    } catch {
+      setProfissionais([]);
+    } finally {
+      setProfissionaisCarregados(true);
+      setCarregandoProfissionais(false);
+    }
+  }, [permissoes]);
 
   const filtrosHistorico = useMemo<FiltrosHistorico>(
     () => ({
@@ -433,19 +308,31 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     cursor?: string,
     filtros = filtrosHistorico
   ) => {
+    requisicaoHistorico.current?.abort();
+    const controlador = new AbortController();
+    requisicaoHistorico.current = controlador;
     setCarregandoHistorico(true);
     setFalhaHistorico(null);
     try {
-      const pagina = await listarLinhaDoTempoPaginada(pacienteId, { cursor, limite: 20, ...filtros });
+      const pagina = await listarLinhaDoTempoPaginada(pacienteId, {
+        cursor,
+        limite: 20,
+        ...filtros,
+        signal: controlador.signal
+      });
       setPaginaHistorico((anterior) =>
         cursor && anterior
           ? { ...pagina, itens: [...anterior.itens, ...pagina.itens] }
           : pagina
       );
     } catch (erroAtual) {
+      if (erroAtual instanceof DOMException && erroAtual.name === 'AbortError') return;
       setFalhaHistorico(classificarFalhaInterface(erroAtual, 'Não foi possível carregar a linha do tempo.'));
     } finally {
-      setCarregandoHistorico(false);
+      if (requisicaoHistorico.current === controlador) {
+        requisicaoHistorico.current = null;
+        setCarregandoHistorico(false);
+      }
     }
   }, [filtrosHistorico, pacienteId]);
 
@@ -621,7 +508,62 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     setPaginaHistorico(null);
     setFalhaHistorico(null);
     setHistoricoSolicitado(false);
+    setMateriais([]);
+    setMateriaisPaciente([]);
+    setMateriaisSolicitados(false);
+    setMateriaisCarregados(false);
+    setFalhaMateriais(null);
+    setAnexos([]);
+    setAnexosSolicitados(false);
+    setAnexosCarregados(false);
+    setFalhaAnexos(null);
+    setProfissionais([]);
+    setProfissionaisCarregados(false);
+    responsavelSolicitadoId.current = null;
+    setDeepLinkAplicado(false);
   }, [pacienteId]);
+
+  useEffect(() => {
+    if (abaAtiva !== 'materiais' || materiaisSolicitados) return;
+    const temporizador = window.setTimeout(() => {
+      setMateriaisSolicitados(true);
+      void carregarMateriais();
+    }, 0);
+    return () => window.clearTimeout(temporizador);
+  }, [abaAtiva, carregarMateriais, materiaisSolicitados]);
+
+  useEffect(() => {
+    if (abaAtiva !== 'anexos' || anexosSolicitados) return;
+    const temporizador = window.setTimeout(() => {
+      setAnexosSolicitados(true);
+      void carregarAnexos();
+    }, 0);
+    return () => window.clearTimeout(temporizador);
+  }, [abaAtiva, anexosSolicitados, carregarAnexos]);
+
+  useEffect(() => {
+    if (!sessaoCarregada || areaAtiva === 'resumo' || profissionaisCarregados || carregandoProfissionais) return;
+    const temporizador = window.setTimeout(() => void carregarProfissionais(), 0);
+    return () => window.clearTimeout(temporizador);
+  }, [areaAtiva, carregarProfissionais, carregandoProfissionais, profissionaisCarregados, sessaoCarregada]);
+
+  useEffect(() => {
+    const responsavelId = dados?.paciente.profissionalResponsavelId;
+    if (papel !== 'SuperAdmin' || !responsavelId || responsavelSolicitadoId.current === responsavelId) return;
+    responsavelSolicitadoId.current = responsavelId;
+    let ativo = true;
+    void obterProfissional(responsavelId)
+      .then((responsavel) => {
+        if (!ativo || !responsavel) return;
+        setProfissionais((atuais) => atuais.some((item) => item.id === responsavel.id)
+          ? atuais
+          : [responsavel, ...atuais]);
+      })
+      .catch(() => undefined);
+    return () => {
+      ativo = false;
+    };
+  }, [dados?.paciente.profissionalResponsavelId, papel]);
 
   useEffect(() => {
     if (abaAtiva !== 'historico' || historicoSolicitado) return;
@@ -637,27 +579,15 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         const permissoesSessao = sessao?.permissoes ?? [];
         setPermissoes(permissoesSessao);
         setPapel(sessao?.papel ?? null);
-        if (!permissoesSessao.includes('profissionais.ler')) {
-          setProfissionais([]);
-          return;
-        }
-        try {
-          const todos: ProfissionalResumo[] = [];
-          for (let pagina = 1; pagina <= 20; pagina += 1) {
-            const resposta = await listarProfissionais({ pagina, limite: 100 });
-            todos.push(...resposta.itens);
-            if (todos.length >= resposta.total || resposta.itens.length === 0) break;
-          }
-          if (ativo) setProfissionais(todos);
-        } catch {
-          if (ativo) setProfissionais([]);
-        }
       })
       .catch(() => {
         if (ativo) {
           setPermissoes([]);
           setPapel(null);
         }
+      })
+      .finally(() => {
+        if (ativo) setSessaoCarregada(true);
       });
     return () => {
       ativo = false;
@@ -665,7 +595,26 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   }, []);
 
   const evolucaoNaoSalva = Boolean(formularioEvolucao.titulo.trim() || formularioEvolucao.conteudo.trim());
-  const alteracoesNaoSalvas = evolucaoNaoSalva || planoAlimentarNaoSalvo;
+  const tarefaNaoSalva = Boolean(
+    formularioTarefa.titulo.trim()
+    || formularioTarefa.descricao.trim()
+    || formularioTarefa.vencimentoEm
+  );
+  const materialNaoSalvo = Boolean(
+    formularioMaterial.titulo.trim()
+    || formularioMaterial.categoria.trim()
+    || formularioMaterial.url.trim()
+    || formularioMaterial.resumo.trim()
+    || formularioMaterial.conteudo.trim()
+  );
+  const envioMaterialNaoSalvo = Boolean(formularioEnvioMaterial.observacao.trim());
+  const anexoNaoSalvo = Boolean(arquivoAnexo || consultaVinculadaId);
+  const alteracoesNaoSalvas = evolucaoNaoSalva
+    || tarefaNaoSalva
+    || materialNaoSalvo
+    || envioMaterialNaoSalvo
+    || anexoNaoSalvo
+    || planoAlimentarNaoSalvo;
   const abasDisponiveis = useMemo(
     () => abasProntuario.filter((aba) => !aba.permissao || permissoes.includes(aba.permissao)),
     [permissoes]
@@ -679,23 +628,49 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     [abasDisponiveis, areaAtiva]
   );
 
+  useEffect(() => {
+    if (!sessaoCarregada || deepLinkAplicado) return;
+    const temporizador = window.setTimeout(() => {
+      const url = new URL(window.location.href);
+      const abaSolicitada = url.searchParams.get('aba');
+      const abaPermitida = abasDisponiveis.find((aba) => aba.id === abaSolicitada);
+      if (abaPermitida) {
+        setAreaAtiva(areaPorAba[abaPermitida.id]);
+        setAbaAtiva(abaPermitida.id);
+        url.searchParams.set('area', areaPorAba[abaPermitida.id]);
+        window.history.replaceState(window.history.state, '', url);
+      } else if (url.searchParams.has('area') || url.searchParams.has('aba')) {
+        url.searchParams.delete('area');
+        url.searchParams.delete('aba');
+        window.history.replaceState(window.history.state, '', url);
+      }
+      setDeepLinkAplicado(true);
+    }, 0);
+    return () => window.clearTimeout(temporizador);
+  }, [abasDisponiveis, deepLinkAplicado, sessaoCarregada]);
+
   function aplicarAba(id: AbaProntuario) {
     setAreaAtiva(areaPorAba[id]);
     setAbaAtiva(id);
+    const url = new URL(window.location.href);
+    url.searchParams.set('area', areaPorAba[id]);
+    url.searchParams.set('aba', id);
+    window.history.replaceState(window.history.state, '', url);
   }
 
   function solicitarTrocaAba(id: AbaProntuario) {
     if (!alteracoesNaoSalvas) {
       aplicarAba(id);
-      return;
+      return true;
     }
     setSaidaPendente({ tipo: 'aba', id });
+    return false;
   }
 
   function solicitarTrocaArea(id: AreaProntuario) {
     const area = areasDisponiveis.find((item) => item.id === id);
-    if (!area) return;
-    solicitarTrocaAba(area.abaInicial);
+    if (!area) return false;
+    return solicitarTrocaAba(area.abaInicial);
   }
 
   function aplicarFiltrosHistorico(evento: FormEvent<HTMLFormElement>) {
@@ -751,6 +726,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     return () => window.removeEventListener('beforeunload', aoTentarFecharAba);
   }, [alteracoesNaoSalvas]);
 
+  useEffect(() => () => requisicaoHistorico.current?.abort(), []);
+
   const eventos = useMemo(() => dados?.linhaDoTempo ?? [], [dados?.linhaDoTempo]);
   const evolucoes = useMemo(() => eventos.filter((evento) => evento.tipo === 'evolucao_clinica'), [eventos]);
   const tarefas = useMemo(() => eventos.filter((evento) => evento.tipo === 'tarefa_acompanhamento'), [eventos]);
@@ -786,6 +763,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const podeLerPlano = permissoes.includes('planos_alimentares.ler');
   const podeGerenciarPlano = permissoes.includes('planos_alimentares.gerenciar');
   const podeLerFinanceiro = permissoes.includes('agenda.financeiro.ler');
+  const podeCriarMaterial = permissoes.includes('materiais.gerenciar');
+  const podeEnviarMaterial = podeCriarMaterial && podeGerenciarPaciente;
 
   function destinoAgenda(opcoes: { consultaId?: string; financeiro?: boolean } = {}) {
     const parametros = new URLSearchParams({ pacienteId });
@@ -1126,7 +1105,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       ) : null}
 
       {abaAtiva === 'evolucoes' ? <>
-      <form onSubmit={registrarEvolucao} className="grid gap-3 rounded-md border border-linha bg-white p-4">
+      {podeGerenciarPaciente ? <form onSubmit={registrarEvolucao} className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div>
           <h2 className="text-base font-semibold text-tinta">Nova evolução clínica</h2>
           <p className="mt-1 text-sm text-texto-suave">Registro privado do profissional, salvo no histórico do paciente.</p>
@@ -1173,13 +1152,13 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             {salvandoEvolucao ? 'Registrando' : 'Registrar evolução'}
           </Botao>
         </div>
-      </form>
+      </form> : null}
 
       <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Evoluções recentes</h2></div><LinhaDoTempo eventos={evolucoes} profissionais={profissionais} /></section>
       </> : null}
 
       {abaAtiva === 'acompanhamento' ? <>
-      <form onSubmit={registrarTarefa} className="grid gap-3 rounded-md border border-linha bg-white p-4">
+      {podeGerenciarPaciente ? <form onSubmit={registrarTarefa} className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div>
           <h2 className="text-base font-semibold text-tinta">Plano de acompanhamento</h2>
           <p className="mt-1 text-sm text-texto-suave">Prescreva metas, tarefas e check-ins para o paciente cumprir entre consultas.</p>
@@ -1249,7 +1228,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             {salvandoTarefa ? 'Prescrevendo' : 'Prescrever tarefa'}
           </Botao>
         </div>
-      </form>
+      </form> : null}
 
       <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Plano em acompanhamento</h2></div><LinhaDoTempo eventos={tarefas} profissionais={profissionais} /></section>
       </> : null}
@@ -1264,7 +1243,16 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
       {abaAtiva === 'condutas_terapeuticas' ? <AbaCondutasTerapeuticas pacienteId={pacienteId} podeGerenciar={permissoes.includes('pacientes.gerenciar')} /> : null}
 
-      {abaAtiva === 'materiais' ? <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
+      {abaAtiva === 'materiais' ? !materiaisCarregados ? (
+        falhaMateriais ? (
+          <EstadoFalha
+            titulo="Não foi possível carregar os materiais"
+            descricao={falhaMateriais.mensagem}
+            aoTentarNovamente={falhaMateriais.recuperavel ? () => void carregarMateriais() : undefined}
+            tentando={carregandoMateriais}
+          />
+        ) : <EsqueletoPagina rotulo="Carregando materiais do paciente" />
+      ) : <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-tinta">Biblioteca de materiais</h2>
@@ -1276,7 +1264,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           </div>
         </div>
 
-        <form onSubmit={registrarMaterial} className="grid gap-3">
+        {podeCriarMaterial ? <form onSubmit={registrarMaterial} className="grid gap-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_180px]">
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
               Título do material
@@ -1334,9 +1322,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               {salvandoMaterial ? 'Salvando' : 'Salvar material'}
             </Botao>
           </div>
-        </form>
+        </form> : null}
 
-        <form onSubmit={enviarMaterial} className="grid gap-3 border-t border-linha pt-3">
+        {podeEnviarMaterial ? <form onSubmit={enviarMaterial} className="grid gap-3 border-t border-linha pt-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
               Material para enviar
@@ -1371,7 +1359,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               {enviandoMaterial ? 'Enviando' : 'Enviar material'}
             </Botao>
           </div>
-        </form>
+        </form> : null}
 
         <div className="grid gap-2 border-t border-linha pt-3">
           <h3 className="text-sm font-semibold text-tinta">Materiais enviados</h3>
@@ -1405,10 +1393,19 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       {abaAtiva === 'evolucao_fotografica' ? <AbaEvolucaoFotografica pacienteId={pacienteId} podeGerenciar={permissoes.includes('pacientes.gerenciar')} /> : null}
 
       {abaAtiva === 'documentos' ? (
-        <AbaDocumentos pacienteId={pacienteId} podeGerenciar consultasConcluidas={consultasConcluidas} />
+        <AbaDocumentos pacienteId={pacienteId} podeGerenciar={podeGerenciarPaciente} consultasConcluidas={consultasConcluidas} />
       ) : null}
 
-      {abaAtiva === 'anexos' ? (
+      {abaAtiva === 'anexos' ? !anexosCarregados ? (
+        falhaAnexos ? (
+          <EstadoFalha
+            titulo="Não foi possível carregar os anexos"
+            descricao={falhaAnexos.mensagem}
+            aoTentarNovamente={falhaAnexos.recuperavel ? () => void carregarAnexos() : undefined}
+            tentando={carregandoAnexos}
+          />
+        ) : <EsqueletoPagina rotulo="Carregando anexos do paciente" />
+      ) : (
         <section className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
           <form onSubmit={enviarAnexo} className="grid h-fit gap-4 rounded-md border border-linha bg-white p-4">
             <div className="flex items-start gap-3">

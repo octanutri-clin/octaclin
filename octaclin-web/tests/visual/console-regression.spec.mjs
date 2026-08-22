@@ -983,7 +983,8 @@ async function prepararProntuarioMockado(page, {
   permissoesExtras = [],
   permissoesRemovidas = [],
   papel = 'Professional',
-  profissionalResponsavelId = 'profissional-1'
+  profissionalResponsavelId = 'profissional-1',
+  falhaMateriais = false
 } = {}) {
   let criouEvolucao = false;
   let criouTarefa = false;
@@ -995,6 +996,9 @@ async function prepararProntuarioMockado(page, {
   let corpoDocumentoEmitido = null;
   let statusPortal = 'convite_pendente';
   let revogouConvite = false;
+  let leiturasMateriais = 0;
+  let leiturasAnexos = 0;
+  let leiturasProfissionais = 0;
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -1083,20 +1087,21 @@ async function prepararProntuarioMockado(page, {
   });
 
   await page.route('**/api/profissionais**', async (route) => {
+    leiturasProfissionais += 1;
+    const profissional = {
+      id: 'profissional-1',
+      tenantId: 'tenant-1',
+      usuarioId: 'usuario-profissional-1',
+      nome: 'Dra. Carla',
+      especialidade: 'Nutrologia',
+      criadoEm: '2026-07-20T10:00:00.000Z'
+    };
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        itens: [{
-          id: 'profissional-1',
-          tenantId: 'tenant-1',
-          usuarioId: 'usuario-profissional-1',
-          nome: 'Dra. Carla',
-          especialidade: 'Nutrologia',
-          criadoEm: '2026-07-20T10:00:00.000Z'
-        }],
-        total: 1
-      })
+      body: JSON.stringify(new URL(route.request().url()).pathname.endsWith('/profissional-1')
+        ? profissional
+        : { itens: [profissional], total: 1 })
     });
   });
 
@@ -1512,6 +1517,12 @@ async function prepararProntuarioMockado(page, {
       return;
     }
 
+    leiturasMateriais += 1;
+    if (falhaMateriais) {
+      await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'Falha sintetica de materiais.' }) });
+      return;
+    }
+
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -1561,6 +1572,12 @@ async function prepararProntuarioMockado(page, {
           atualizadoEm: '2026-07-22T19:00:00.000Z'
         })
       });
+      return;
+    }
+
+    leiturasMateriais += 1;
+    if (falhaMateriais) {
+      await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'Falha sintetica de materiais enviados.' }) });
       return;
     }
 
@@ -1640,6 +1657,7 @@ async function prepararProntuarioMockado(page, {
       });
       return;
     }
+    leiturasAnexos += 1;
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(anexos) });
   });
 
@@ -1771,7 +1789,10 @@ async function prepararProntuarioMockado(page, {
     criouMaterial: () => criouMaterial,
     enviouMaterial: () => enviouMaterial,
     condutas: () => condutas,
-    revogouConvite: () => revogouConvite
+    revogouConvite: () => revogouConvite,
+    leiturasMateriais: () => leiturasMateriais,
+    leiturasAnexos: () => leiturasAnexos,
+    leiturasProfissionais: () => leiturasProfissionais
   };
 }
 
@@ -2021,6 +2042,94 @@ test.describe('lista de pacientes operacional', () => {
 });
 
 test.describe('prontuario do paciente', () => {
+  test('carrega recursos laterais somente ao abrir a subarea correspondente', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page, {
+      permissoesExtras: ['profissionais.ler']
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    await expect(page.getByRole('heading', { name: 'Linha de cuidado' })).toBeVisible();
+    await expect.poll(() => prontuario.leiturasMateriais()).toBe(0);
+    await expect.poll(() => prontuario.leiturasAnexos()).toBe(0);
+    await expect.poll(() => prontuario.leiturasProfissionais()).toBe(0);
+
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await page.getByRole('tab', { name: 'Materiais', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Biblioteca de materiais' })).toBeVisible();
+    await expect.poll(() => prontuario.leiturasMateriais()).toBe(2);
+    await expect.poll(() => prontuario.leiturasAnexos()).toBe(0);
+    await expect.poll(() => prontuario.leiturasProfissionais()).toBe(1);
+
+    await page.getByRole('tab', { name: 'Documentos', exact: true }).first().click();
+    await page.getByRole('tab', { name: 'Anexos', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Anexos do paciente' })).toBeVisible();
+    await expect.poll(() => prontuario.leiturasAnexos()).toBe(1);
+  });
+
+  test('mantem o resumo disponivel quando materiais falham', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page, { falhaMateriais: true });
+    await page.goto('/pacientes/paciente-1');
+
+    await expect(page.getByRole('heading', { name: 'Linha de cuidado' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await page.getByRole('tab', { name: 'Materiais', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Não foi possível carregar os materiais' })).toBeVisible();
+    await page.waitForTimeout(300);
+    await expect.poll(() => prontuario.leiturasMateriais()).toBe(2);
+
+    await page.getByRole('tab', { name: 'Resumo', exact: true }).first().click();
+    await expect(page.getByRole('heading', { name: 'Linha de cuidado' })).toBeVisible();
+  });
+
+  test('restaura deep link permitido e descarta subarea sem permissao', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1?area=plano&aba=materiais');
+
+    await expect(page.getByRole('heading', { name: 'Biblioteca de materiais' })).toBeVisible();
+    await expect(page).toHaveURL(/area=plano&aba=materiais/);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Biblioteca de materiais' })).toBeVisible();
+
+    await page.goto('/pacientes/paciente-1?area=financeiro&aba=financeiro');
+    await expect(page.getByRole('heading', { name: 'Linha de cuidado' })).toBeVisible();
+    await expect(page).not.toHaveURL(/area=financeiro|aba=financeiro/);
+  });
+
+  test('oculta mutacoes clinicas sem as permissoes exigidas pelo backend', async ({ page }) => {
+    await prepararProntuarioMockado(page, {
+      permissoesRemovidas: ['pacientes.gerenciar', 'materiais.gerenciar']
+    });
+    await page.goto('/pacientes/paciente-1?area=atendimentos&aba=evolucoes');
+
+    await expect(page.getByRole('heading', { name: 'Evoluções recentes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Nova evolução clínica' })).toHaveCount(0);
+
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Prescrever tarefa' })).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Materiais', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Biblioteca de materiais' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Salvar material' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Enviar material' })).toHaveCount(0);
+
+    await page.getByRole('tab', { name: 'Documentos', exact: true }).first().click();
+    await expect(page.getByRole('heading', { name: 'Emitir documento' })).toHaveCount(0);
+  });
+
+  test('preserva foco e tarefa em edicao quando a troca por teclado e cancelada', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1?area=plano&aba=acompanhamento');
+
+    await page.getByLabel('Título da tarefa').fill('Revisar diário alimentar');
+    const abaAcompanhamento = page.getByRole('tab', { name: 'Acompanhamento', exact: true });
+    await abaAcompanhamento.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('dialog', { name: 'Sair sem salvar' })).toBeVisible();
+    await page.getByRole('dialog', { name: 'Sair sem salvar' }).getByRole('button', { name: 'Cancelar' }).click();
+    await expect(abaAcompanhamento).toBeFocused();
+    await expect(page.getByLabel('Título da tarefa')).toHaveValue('Revisar diário alimentar');
+    await expect(abaAcompanhamento).toHaveAttribute('aria-selected', 'true');
+  });
+
   test('revisa qualidade cadastral e revoga convite pendente sem expor token anterior', async ({ page }) => {
     const prontuario = await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');
