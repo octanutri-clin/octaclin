@@ -23,6 +23,10 @@ export interface ModuloConsole {
   grupo: GrupoNavegacaoConsole;
   permissao: string;
   permissaoDetalhe?: string;
+  rotasEspecificas?: readonly {
+    padrao: RegExp;
+    permissao: string;
+  }[];
   papeisPermitidos?: readonly PapelOctaClin[];
   atalho: string;
   termos: readonly string[];
@@ -66,6 +70,10 @@ export const MODULOS_CONSOLE: readonly ModuloConsole[] = [
     grupo: 'Clínica',
     permissao: 'pacientes.listar',
     permissaoDetalhe: 'pacientes.ler',
+    rotasEspecificas: [
+      { padrao: /^\/pacientes\/novo$/, permissao: 'pacientes.gerenciar' },
+      { padrao: /^\/pacientes\/[^/]+\/editar$/, permissao: 'pacientes.gerenciar' }
+    ],
     atalho: 'G P',
     termos: ['carteira', 'prontuário'],
     icone: 'pacientes'
@@ -172,5 +180,7 @@ export function moduloConsoleParaRota(pathname: string) {
 export function permissaoExigidaParaRotaConsole(pathname: string): string | undefined {
   const modulo = moduloConsoleParaRota(pathname);
   if (!modulo) return undefined;
+  const rotaEspecifica = modulo.rotasEspecificas?.find((rota) => rota.padrao.test(pathname));
+  if (rotaEspecifica) return rotaEspecifica.permissao;
   return pathname !== modulo.href && modulo.permissaoDetalhe ? modulo.permissaoDetalhe : modulo.permissao;
 }

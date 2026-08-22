@@ -45,7 +45,7 @@ export const COMANDOS_PALETA: readonly ComandoPaleta[] = [
     id: 'novo-paciente',
     rotulo: 'Novo paciente',
     descricao: 'Abrir o cadastro de paciente',
-    href: '/pacientes#novo-paciente',
+    href: '/pacientes/novo',
     grupo: 'Ações',
     permissao: 'pacientes.gerenciar',
     atalho: 'N P',

@@ -614,7 +614,7 @@ test.describe('console operacional', () => {
 
       if (rota.caminho === '/dashboard') {
         await expect(page.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda#novo-agendamento');
-        await expect(page.getByRole('link', { name: 'Novo paciente' })).toHaveAttribute('href', '/pacientes#novo-paciente');
+        await expect(page.getByRole('link', { name: 'Novo paciente' })).toHaveAttribute('href', '/pacientes/novo');
         await expect(page.getByRole('button', { name: /^Notificações/ })).toBeVisible();
         await page.locator('button[aria-label="Abrir menu da conta"]').click();
         await expect(page.getByText('Clínica Carla')).toBeVisible();
@@ -2010,12 +2010,12 @@ test.describe('lista de pacientes operacional', () => {
     await expect(page.locator('body')).toContainText('Bruno Lima');
     await expect(page.locator('body')).toContainText('Agendar retorno');
 
-    await page.getByRole('button', { name: 'Novo paciente' }).click();
+    await page.getByLabel('Ações da lista de pacientes').getByRole('link', { name: 'Novo paciente' }).click();
     await expect(page.getByRole('heading', { name: 'Identificação' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Contato' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Responsável e acompanhamento' })).toBeVisible();
     await expect(page.getByLabel('E-mail ou telefone')).toBeVisible();
-    await expect(page.getByText('Salve o cadastro primeiro. Depois, use a ação de convite na lista para liberar o acesso seguro ao portal do paciente.')).toBeVisible();
+    await expect(page.getByText('Depois de salvar, use a ação de convite na lista para liberar o acesso seguro ao portal.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 });

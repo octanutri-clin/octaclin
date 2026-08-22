@@ -54,6 +54,8 @@ test('papel e permissao precisam concordar para um modulo ficar visivel', () => 
 test('detalhe do paciente exige leitura e listagem exige apenas listar', () => {
   assert.equal(permissaoExigidaParaRotaConsole('/pacientes'), 'pacientes.listar');
   assert.equal(permissaoExigidaParaRotaConsole('/pacientes/paciente-1'), 'pacientes.ler');
+  assert.equal(permissaoExigidaParaRotaConsole('/pacientes/novo'), 'pacientes.gerenciar');
+  assert.equal(permissaoExigidaParaRotaConsole('/pacientes/paciente-1/editar'), 'pacientes.gerenciar');
   assert.equal(permissaoExigidaParaRotaConsole('/agenda'), 'agenda.consultas.ler');
   assert.equal(permissaoExigidaParaRotaConsole('/portal'), undefined);
 });

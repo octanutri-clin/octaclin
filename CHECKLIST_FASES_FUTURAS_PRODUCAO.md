@@ -2210,6 +2210,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Consolidar busca, filtros salvos, risco, responsável, última consulta,
     próxima ação, duplicidade e cadastro completo já modelado.
   - Separar listagem, criação e edição; preservar contexto e rascunho em falhas.
+  - [x] Incremento 1: fundacao de dados e servicos integrada no PR `#93`;
+    migration `1035` aplicada e producao validada com 48 migrations.
+  - [ ] Incremento 2: rotas proprias de criacao/edicao, componentes separados,
+    autorizacao especifica e rascunho em `sessionStorage`.
+  - [ ] Incremento 3: filtros salvos e duplicidade na interface, com validacao
+    funcional, responsiva, acessivel e de seguranca.
 
 - [ ] Fase 255 - Prontuário clínico orientado à linha de cuidado. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
   - Reorganizar resumo, evoluções, plano, formulários, mensagens, materiais e

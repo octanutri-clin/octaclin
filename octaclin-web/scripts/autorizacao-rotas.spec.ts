@@ -97,3 +97,18 @@ test('fallback operacional ignora destino inicial sem permissao e escolhe rota p
     { permitir: false, redirecionarPara: '/login' }
   );
 });
+
+test('cadastro e edicao de paciente exigem gerenciar antes de renderizar', () => {
+  assert.deepEqual(
+    decidirAcessoRota('/pacientes/novo', 'Collaborator', '/pacientes', ['pacientes.listar', 'pacientes.ler']),
+    { permitir: false, redirecionarPara: '/pacientes' }
+  );
+  assert.deepEqual(
+    decidirAcessoRota('/pacientes/paciente-1/editar', 'Collaborator', '/pacientes', ['pacientes.listar', 'pacientes.ler']),
+    { permitir: false, redirecionarPara: '/pacientes' }
+  );
+  assert.deepEqual(
+    decidirAcessoRota('/pacientes/novo', 'Professional', '/pacientes', ['pacientes.listar', 'pacientes.gerenciar']),
+    { permitir: true }
+  );
+});

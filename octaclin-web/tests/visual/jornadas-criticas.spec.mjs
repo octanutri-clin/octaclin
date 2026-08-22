@@ -865,16 +865,14 @@ test.describe('jornadas criticas de producao', () => {
   test('profissional cria paciente e agenda consulta com email, WhatsApp e Google Calendar', async ({ page }) => {
     const profissionalFluxo = await prepararProfissional(page);
 
-    await page.goto('/pacientes');
-    await page.getByRole('button', { name: 'Novo paciente' }).click();
-    const formularioPaciente = page.getByRole('dialog', { name: 'Novo paciente' });
-    await formularioPaciente.getByLabel('Profissional responsável').selectOption('profissional-1');
-    await formularioPaciente.getByLabel('Nome completo').fill('Ana Jornada');
-    await formularioPaciente.getByLabel('E-mail ou telefone').fill('5511999999999');
-    await formularioPaciente.getByLabel('Data de nascimento').fill('1990-04-15');
-    await formularioPaciente.getByRole('button', { name: 'Salvar' }).click();
+    await page.goto('/pacientes/novo');
+    await page.getByLabel('Profissional responsável').selectOption('profissional-1');
+    await page.getByLabel('Nome completo').fill('Ana Jornada');
+    await page.getByLabel('E-mail ou telefone').fill('5511999999999');
+    await page.getByLabel('Data de nascimento').fill('1990-04-15');
+    await page.getByRole('button', { name: 'Cadastrar paciente' }).click();
 
-    await expect(page.getByText('Paciente criado.')).toBeVisible();
+    await expect(page).toHaveURL(/\/pacientes\/paciente-jornada$/);
     await expect.poll(() => profissionalFluxo.pacienteCriado()?.nome).toBe('Ana Jornada');
 
     await page.goto('/agenda');

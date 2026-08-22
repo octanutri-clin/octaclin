@@ -1,12 +1,18 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-21.
+Atualizado em 2026-08-22.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Fase 254 em execucao. O Incremento 1 entregou filtros salvos e verificacao de
+  duplicidade no backend pelo PR `#93`; a migration `1035` foi aplicada e o
+  health de producao confirma 48 migrations. Os PRs `#98` e `#100` reduziram o
+  consumo ocioso do BullMQ e registraram as regras operacionais de Redis e DDL.
+  Incrementos 2 e 3 permanecem pendentes: rotas/formulario proprio e interface
+  de filtros/duplicidade, respectivamente.
 - Fase 253 concluida e aceita em producao: a agenda interna ganhou trava
   transacional por tenant/profissional, recuperacao de Google/email/WhatsApp,
   evento Google deterministico e vinculado, sync token sem avanco parcial,
