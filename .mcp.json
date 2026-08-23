@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "postgres-staging": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"]
-    }
-  }
-}
