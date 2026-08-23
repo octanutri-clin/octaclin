@@ -55,40 +55,8 @@ try {
     node (Join-Path $raiz 'scripts/scan-secrets.mjs')
   }
 
-  Invoke-Step 'Documentos obrigatorios' {
-    $obrigatorios = @(
-      'AGENTS.md',
-      'RESUMO_FASES_CONCLUIDAS.md',
-      'CHECKLIST_FASES_FUTURAS_PRODUCAO.md',
-      'STATUS_ATUAL_PROJETO.md',
-      'HANDOFF-TECNICO-OCTACLIN.md',
-      'MAPA_ROTAS_PERMISSOES.md',
-      'TESTES_E_VALIDACOES.md',
-      'PREFLIGHT_PRODUCAO.md',
-      'RUNBOOK_PRODUCAO.md',
-      'VARIAVEIS_AMBIENTE.md',
-      'RUNBOOK_ROTACAO_SECRETS.md',
-      'RUNBOOK_BACKUP_RESTORE.md',
-      'RUNBOOK_SUPORTE.md',
-      'RUNBOOK_STAGING_DADOS.md',
-      'RUNBOOK_PILOTO_INTERNO.md',
-      'PILOTO_INTERNO_CONTROLE.md',
-      'RUNBOOK_PRODUCAO_ISOLADA.md',
-      'PRODUCAO_ISOLADA_CONTROLE.md',
-      'CHECKLIST_GO_LIVE.md'
-    )
-
-    foreach ($arquivo in $obrigatorios) {
-      if (-not (Test-Path (Join-Path $raiz $arquivo))) {
-        throw "Documento obrigatorio ausente: $arquivo"
-      }
-    }
-  }
-
-  Invoke-Step 'Marcadores de continuidade' {
-    Select-String -Path 'CHECKLIST_FASES_FUTURAS_PRODUCAO.md' -Pattern 'Fase 94 - Preflight de producao' | Out-Null
-    Select-String -Path 'STATUS_ATUAL_PROJETO.md' -Pattern 'Fase 95' | Out-Null
-    Select-String -Path 'PREFLIGHT_PRODUCAO.md' -Pattern 'Proximo passo recomendado' | Out-Null
+  Invoke-Step 'Documentacao canonica' {
+    & (Join-Path $raiz 'scripts/validar-documentacao.ps1') -RepositoryRoot $raiz
   }
 
   if (-not $DocsOnly) {
