@@ -167,6 +167,13 @@ pnpm validate
 pnpm validate:full
 ```
 
+`validate:docs` exige os arquivos canonicos, a bridge exata do `CLAUDE.md`, o
+status aprovado da decisao de governanca e a mesma fase concluida/proxima no
+status e no checklist. Ele tambem confere se comandos `pnpm` em blocos
+executaveis ou trechos inline dos documentos operacionais apontam para scripts
+existentes no pacote correto. Nomes historicos isolados continuam permitidos;
+o gate valida estrutura e referencias, nao a semantica integral do texto.
+
 ## Validacao de secrets
 
 Use antes de commit, handoff ou deploy quando houver qualquer mudanca em ambiente, docs ou integracoes:
@@ -393,7 +400,7 @@ pnpm --dir octaclin-backend test -- --runInBand
 pnpm --dir octaclin-backend typecheck
 pnpm --dir octaclin-backend build
 pnpm --dir octaclin-web test:authz
-pnpm --dir octaclin-web test:next15
+pnpm --dir octaclin-web test:apis-dinamicas
 pnpm --dir octaclin-web typecheck
 pnpm --dir octaclin-web lint
 pnpm --dir octaclin-web build
@@ -415,7 +422,7 @@ pnpm --dir octaclin-backend typecheck
 pnpm --dir octaclin-backend build
 pnpm --dir octaclin-web test:planos-alimentares:bff
 pnpm --dir octaclin-web test:authz
-pnpm --dir octaclin-web test:next15
+pnpm --dir octaclin-web test:apis-dinamicas
 pnpm --dir octaclin-web typecheck
 pnpm --dir octaclin-web lint
 pnpm --dir octaclin-web build
