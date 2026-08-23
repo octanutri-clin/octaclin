@@ -58,7 +58,9 @@ Variaveis opcionais:
 ## Decisoes
 
 - Multitenancy por PostgreSQL RLS usando `tenant_id`.
-- Migrations executadas automaticamente em ambiente local por `BANCO_EXECUTAR_MIGRACOES=true`.
+- O boot nao executa migrations sem `BANCO_EXECUTAR_MIGRACOES=true` explicito.
+  Para staging e producao, aplique `npm run migration:run` fora de banda com a
+  role owner do banco antes do deploy.
 - Dados sensiveis preparados para criptografia AES-256-GCM.
 - O backend principal permanece modular; IA deve entrar como microservico FastAPI nas fases seguintes.
 

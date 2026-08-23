@@ -33,6 +33,7 @@ describe('criarOpcoesTypeOrm', () => {
     delete process.env.BANCO_POOL_MAX;
     delete process.env.BANCO_POOL_CONNECTION_TIMEOUT_MS;
     delete process.env.BANCO_POOL_IDLE_TIMEOUT_MS;
+    delete process.env.BANCO_EXECUTAR_MIGRACOES;
   });
 
   afterAll(() => {
@@ -99,6 +100,22 @@ describe('criarOpcoesTypeOrm', () => {
     process.env[nome] = valor;
 
     expect(() => criarOpcoesTypeOrm()).toThrow(nome);
+  });
+
+  it.each([
+    [undefined, false],
+    ['true', true],
+    ['false', false]
+  ])('executa migrations no boot somente com BANCO_EXECUTAR_MIGRACOES=%s', (valor, esperado) => {
+    if (valor !== undefined) process.env.BANCO_EXECUTAR_MIGRACOES = valor;
+
+    expect(criarOpcoesTypeOrm().migrationsRun).toBe(esperado);
+  });
+
+  it.each(['TRUE', '1', 'sim', ''])('rejeita BANCO_EXECUTAR_MIGRACOES invalido: %s', (valor) => {
+    process.env.BANCO_EXECUTAR_MIGRACOES = valor;
+
+    expect(() => criarOpcoesTypeOrm()).toThrow('BANCO_EXECUTAR_MIGRACOES deve ser "true" ou "false".');
   });
 
   it('registra toda migration que existe na pasta, sem depender de lembrar da lista', () => {

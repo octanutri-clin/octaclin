@@ -96,11 +96,13 @@ necessario a tabelas/sequencias e confirme `rolsuper=false` e
 
 ### BANCO_EXECUTAR_MIGRACOES em producao
 
-`migrationsRun` fica ligado quando `BANCO_EXECUTAR_MIGRACOES` e diferente de
-`'false'` — inclusive quando a variavel nao existe. Ligado, o boot tenta aplicar
-migration pendente usando a role de runtime `octaclin_app_producao`, que **nao
-tem `CREATE` no schema `public`**. Toda migration com DDL que chega na `main`
-sem ter sido aplicada antes derruba o deploy:
+`migrationsRun` fica ligado somente quando `BANCO_EXECUTAR_MIGRACOES` e
+literalmente `'true'`. Variavel ausente ou `'false'` mantem o boot sem DDL; outro
+valor faz o backend falhar explicitamente na configuracao. Nunca configure `true`
+nos runtimes de staging ou producao: a role de runtime
+`octaclin_app_producao` **nao tem `CREATE` no schema `public`**. Com o comportamento
+antigo, toda migration com DDL que chegava na `main` sem ter sido aplicada antes
+derrubava o deploy:
 
 ```
 Migration "<Nome><timestamp>" failed, error: permission denied for schema public
@@ -112,12 +114,15 @@ nao ha indisponibilidade — mas o deploy entra em loop de falha e o sintoma so
 aparece no painel, nunca no CI.
 
 **Recomendacao: definir `BANCO_EXECUTAR_MIGRACOES=false` em
-`octaclin-backend-producao`.** Todas as secoes de rollout abaixo ja pressupoem
-isso. Com a variavel em `false`, deploy deixa de depender de estado de banco e
-aplicar migration vira ato deliberado, na ordem certa.
+`octaclin-backend-producao` e no runtime de staging.** A ausencia tambem e
+segura, mas o valor explicito torna o inventario operacional auditavel. Todas as
+secoes de rollout abaixo ja pressupõem isso. Com a variavel em `false`, deploy
+deixa de depender de estado de banco e aplicar migration vira ato deliberado, na
+ordem certa.
 
-Enquanto ela nao estiver `false`, a regra e obrigatoria: **aplicar a migration
-fora de banda com `neondb_owner` antes do merge**, e nao depois.
+Se um runtime ainda usar a versao anterior do backend, **aplicar a migration fora
+de banda com `neondb_owner` antes do merge**, e nao depois. Depois desta mudanca,
+o mesmo procedimento continua obrigatorio para toda migration com DDL.
 
 ### Paridade entre integracao e producao
 
