@@ -11,7 +11,7 @@ const arquivos = [
   'SLA_SUPORTE.md',
   'CHECKLIST_ONBOARDING_COMERCIAL.md',
   'MAPA_DADOS_E_RESPONSABILIDADES.md',
-  'fase-133-checklist-juridico-comercial.md'
+  'docs/history/phases/fase-133-checklist-juridico-comercial.md'
 ];
 
 async function exigirArquivo(caminho) {
@@ -64,10 +64,10 @@ await exigirTrechos('REVISAO_JURIDICO_OPERACIONAL_FASE_159.md', [
   'Aceite externo pendente'
 ]);
 await exigirTrechos('SLA_SUPORTE.md', [
+  'P0',
   'P1',
   'P2',
-  'P3',
-  'P4'
+  'P3'
 ]);
 await exigirTrechos('MAPA_DADOS_E_RESPONSABILIDADES.md', [
   'controlador',

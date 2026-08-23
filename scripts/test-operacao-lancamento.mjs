@@ -61,7 +61,7 @@ assert.equal(exercicio.criterios.comunicacaoSemDadosSensiveis, true);
 const arquivos = await Promise.all([
   readFile(new URL('../RUNBOOK_LANCAMENTO.md', import.meta.url), 'utf8'),
   readFile(new URL('../OPERACAO_LANCAMENTO_CONTROLE.md', import.meta.url), 'utf8'),
-  readFile(new URL('../fase-232-operacao-lancamento.md', import.meta.url), 'utf8'),
+  readFile(new URL('../docs/history/phases/fase-232-operacao-lancamento.md', import.meta.url), 'utf8'),
   readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8'),
   readFile(new URL('../package.json', import.meta.url), 'utf8')
 ]);
