@@ -27,7 +27,7 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | `PORT` | Sim | Porta do backend | Render/backend | `/health` responde |
 | `CORS_ORIGINS` | Sim em producao | Origens web autorizadas, separadas por virgula e sem `*` | Render/backend | Login/BFF funciona apenas pela origem oficial |
 | `DATABASE_URL` | Sim | Conexao Neon/Postgres por papel sem `BYPASSRLS` | Render/backend | `/health`, login, migrations e RLS |
-| `BANCO_EXECUTAR_MIGRACOES` | Depende | Executar migrations automaticamente | Render/backend | Deploy sem erro de migration |
+| `BANCO_EXECUTAR_MIGRACOES` | Nao | Executar migrations no boot somente com `true` literal; ausente ou `false` nao executa DDL | Local/Render backend | Runtime sobe sem DDL; `pnpm --dir octaclin-backend migration:run` aplica explicitamente com role owner |
 | `BANCO_POOL_MAX` | Nao | Maximo de conexoes por processo, padrao 10 | Render/backend e worker | `/health/detalhado` mostra limite e uso do pool |
 | `BANCO_POOL_CONNECTION_TIMEOUT_MS` | Nao | Prazo para obter/conectar cliente Postgres, padrao 5000 ms | Render/backend e worker | Saturacao falha em prazo finito |
 | `BANCO_POOL_IDLE_TIMEOUT_MS` | Nao | Tempo ocioso antes de liberar conexao, padrao 30000 ms | Render/backend e worker | Conexoes ociosas retornam ao Neon |

@@ -171,6 +171,15 @@ function criarOpcoesPoolPostgres() {
   };
 }
 
+function executarMigracoesNoBoot(): boolean {
+  const valor = process.env.BANCO_EXECUTAR_MIGRACOES;
+  if (valor === undefined) return false;
+  if (valor === 'true') return true;
+  if (valor === 'false') return false;
+
+  throw new Error('BANCO_EXECUTAR_MIGRACOES deve ser "true" ou "false".');
+}
+
 export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
   const conexao = criarConexaoBanco();
 
@@ -307,7 +316,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         ProtegerResolucaoAgendaPublica1720000001034,
         CriarFiltrosSalvosPacientes1720000001035
       ],
-    migrationsRun: process.env.BANCO_EXECUTAR_MIGRACOES !== 'false',
+    migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,
     logging: process.env.NODE_ENV !== 'production',
     extra: criarOpcoesPoolPostgres()
