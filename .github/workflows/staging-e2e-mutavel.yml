@@ -57,6 +57,9 @@ jobs:
             octaclin-backend/pnpm-lock.yaml
             octaclin-web/pnpm-lock.yaml
 
+      - name: Instalar Neon CLI
+        run: npm install --global neonctl@3.6.0
+
       - name: Validar configuracao do ambiente E2E
         shell: bash
         run: |
@@ -78,9 +81,9 @@ jobs:
         uses: neondatabase/create-branch-action@v6
         with:
           project_id: ${{ vars.NEON_E2E_PROJECT_ID }}
-          parent: ${{ vars.NEON_E2E_PARENT_BRANCH_ID }}
+          parent_branch: ${{ vars.NEON_E2E_PARENT_BRANCH_ID }}
           branch_name: fase-231-${{ github.run_id }}-${{ github.run_attempt }}
-          username: neondb_owner
+          role: neondb_owner
           database: ${{ vars.NEON_E2E_DATABASE }}
           api_key: ${{ secrets.NEON_API_KEY }}
 
