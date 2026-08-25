@@ -697,6 +697,36 @@ const portalPacienteFixture = {
   }
 };
 
+// PR 18 da governanca: mesmo mock ja usado em portal-paciente.spec.mjs para
+// o detalhe de um formulario respondido (dados sinteticos identicos).
+async function prepararDetalheFormularioRespondido(page) {
+  await page.route('**/api/portal/paciente/formularios-respondidos/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        respostaId: '00000000-0000-0000-0000-000000000001',
+        envioId: 'envio-2',
+        questionarioId: 'questionario-2',
+        titulo: 'Recordatorio alimentar',
+        descricao: 'Resumo da resposta',
+        scoreFinal: '87.40',
+        finalizadoEm: '2026-07-19T12:05:00.000Z',
+        respostas: [
+          {
+            perguntaId: 'pergunta-1',
+            enunciado: 'Como foi sua adesao ao plano alimentar?',
+            tipo: 'texto_longo',
+            obrigatoria: true,
+            ordem: 1,
+            valor: 'Mantive boa adesão durante a semana.'
+          }
+        ]
+      })
+    });
+  });
+}
+
 async function prepararSessaoPortalPaciente(page) {
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -1104,5 +1134,58 @@ test.describe('gate de acessibilidade - portal do paciente (areas autenticadas)'
     await page.goto('/portal/privacidade');
     await expect(page.getByRole('heading', { name: 'Privacidade' })).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
+  });
+});
+
+// PR 18 da governanca: conclui a cobertura do portal do paciente autenticado
+// (rotas restantes) e adiciona uma regressao por teclado para a correcao do
+// nested-interactive feita no GraficoEvolucao (PR 17).
+test.describe('gate de acessibilidade - portal do paciente (complemento PR 18)', () => {
+  test('formularios', async ({ page }) => {
+    await prepararSessaoPortalPaciente(page);
+    await page.goto('/portal/formularios');
+    await expect(page.getByRole('heading', { name: 'Formulários pendentes' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('formularios - ver respostas (interacao relevante)', async ({ page }) => {
+    await prepararSessaoPortalPaciente(page);
+    await prepararDetalheFormularioRespondido(page);
+    await page.goto('/portal/formularios');
+    await page.getByRole('button', { name: 'Ver respostas' }).click();
+    await expect(page.getByText('Mantive boa adesão durante a semana.')).toBeVisible();
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('mais', async ({ page }) => {
+    await prepararSessaoPortalPaciente(page);
+    await page.goto('/portal/mais');
+    await expect(page.getByRole('heading', { name: 'Mais opções' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('perfil', async ({ page }) => {
+    await prepararSessaoPortalPaciente(page);
+    await page.goto('/portal/perfil');
+    await expect(page.getByRole('heading', { name: 'Meu perfil' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  // Valida a justificativa usada na correcao do PR 17: os dados por ponto do
+  // grafico deixaram de ser focalizaveis via SVG, mas continuam 100%
+  // acessiveis por teclado atraves do <details>/<summary> nativo abaixo dele.
+  test('checkins - "Ver valores em tabela" abre por teclado', async ({ page }) => {
+    await prepararSessaoPortalPaciente(page);
+    await page.goto('/portal/checkins');
+
+    const resumo = page.getByText('Ver valores em tabela');
+    await resumo.focus();
+    await expect(resumo).toBeFocused();
+    await page.keyboard.press('Enter');
+
+    await expect(page.getByRole('cell', { name: '82,4' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '78,6' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 });
