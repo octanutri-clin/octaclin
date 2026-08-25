@@ -94,7 +94,7 @@ export function PaletaComandos({ sessao }: { sessao: SessaoPublica }) {
   const [indiceAtivo, setIndiceAtivo] = useState(0);
   const campoBuscaRef = useRef<HTMLInputElement>(null);
   const sequenciaRef = useRef<string[]>([]);
-  const temporizadorSequenciaRef = useRef<ReturnType<typeof setTimeout>>();
+  const temporizadorSequenciaRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const comandos = useMemo(
     () => comandosPermitidos({ papel: sessao.papel, permissoes: sessao.permissoes }),
