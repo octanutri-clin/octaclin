@@ -4,7 +4,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 interface MenuProps {
-  gatilho: React.ReactElement;
+  gatilho: React.ReactElement<React.HTMLAttributes<HTMLElement>>;
   children: React.ReactNode;
   className?: string;
   alinhamento?: 'inicio' | 'fim';
@@ -39,7 +39,7 @@ export function Menu({ gatilho, children, className, alinhamento = 'fim' }: Menu
         id: idBotao,
         'aria-haspopup': 'menu',
         'aria-expanded': aberto,
-        onClick: (evento: React.MouseEvent) => {
+        onClick: (evento: React.MouseEvent<HTMLElement>) => {
           gatilho.props.onClick?.(evento);
           setAberto((atual) => !atual);
         }
