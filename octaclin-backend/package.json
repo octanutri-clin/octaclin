@@ -9,6 +9,7 @@
     "build": "nest build && node scripts/verificar-artefato-producao.mjs",
     "typecheck": "tsc --noEmit",
     "test": "jest",
+    "test:rls:testcontainers": "node scripts/test-rls-testcontainers.mjs",
     "typeorm": "typeorm-ts-node-commonjs -d src/infraestrutura/banco-dados/fonte-dados.ts",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:generate": "npm run typeorm -- migration:generate src/infraestrutura/banco-dados/migracoes/MigracaoAutomatica",
@@ -61,6 +62,7 @@
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.23.1",
     "jest": "^30.4.2",
+    "testcontainers": "12.1.0",
     "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
