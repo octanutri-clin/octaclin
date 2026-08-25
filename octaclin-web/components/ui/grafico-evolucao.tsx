@@ -152,19 +152,22 @@ export function GraficoEvolucao({ pontos, rotulo, unidade, casas = 1, descricao 
             {/* Anel na cor da superficie mantem o marcador legivel sobre a linha. */}
             <circle cx={ponto.cx} cy={ponto.cy} r="5" fill="#ffffff" />
             <circle cx={ponto.cx} cy={ponto.cy} r="4" fill={COR_SERIE} />
-            {/* Alvo de toque maior que o marcador. */}
+            {/*
+              Alvo de toque maior que o marcador, so para hover de mouse: um
+              circle focalizavel (tabIndex/role="button") aqui dentro violaria
+              a regra axe-core nested-interactive, porque role="img" no <svg>
+              pai exige que nao haja descendente interativo/focalizavel. Os
+              mesmos dados ja estao 100% acessiveis via teclado/leitor de tela
+              na tabela "Ver valores em tabela" abaixo, entao este alvo de
+              toque nao precisa ser focalizavel para nao perder cobertura.
+            */}
             <circle
               cx={ponto.cx}
               cy={ponto.cy}
               r="16"
               fill="transparent"
-              tabIndex={0}
-              role="button"
-              aria-label={`${formatarData(ponto.data)}: ${formatarValor(ponto.valor, casas)} ${unidade}`}
               onMouseEnter={() => setIndiceFoco(indice)}
               onMouseLeave={() => setIndiceFoco(null)}
-              onFocus={() => setIndiceFoco(indice)}
-              onBlur={() => setIndiceFoco(null)}
             />
             <text x={ponto.cx} y={base + 18} textAnchor="middle" fontSize="11" fill="#596273">
               {coordenadas.length <= 6 || indice === 0 || indice === coordenadas.length - 1

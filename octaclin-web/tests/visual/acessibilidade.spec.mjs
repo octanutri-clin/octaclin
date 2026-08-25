@@ -1061,3 +1061,48 @@ test.describe('gate de acessibilidade - acesso publico', () => {
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 });
+
+// PR 17 da governanca: areas autenticadas do portal do paciente. Reaproveita
+// prepararSessaoPortalPaciente (mesmos mocks sinteticos do PR 14). O
+// componente PortalPaciente renderiza todas as secoes na mesma arvore e
+// oculta as demais via classe "hidden" (display:none), entao cada rota expoe
+// apenas os elementos da sua propria secao ao axe-core e as checagens
+// manuais, incluindo a navegacao por Tab.
+test.describe('gate de acessibilidade - portal do paciente (areas autenticadas)', () => {
+  test('agenda', async ({ page }) => {
+    await prepararSessaoPortalPaciente(page);
+    await page.goto('/portal/agenda');
+    await expect(page.getByRole('heading', { name: 'Próximas consultas' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('checkins', async ({ page }) => {
+    await prepararSessaoPortalPaciente(page);
+    await page.goto('/portal/checkins');
+    await expect(page.getByRole('heading', { name: 'Check-in rapido' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('mensagens', async ({ page }) => {
+    await prepararSessaoPortalPaciente(page);
+    await page.goto('/portal/mensagens');
+    await expect(page.getByRole('heading', { name: 'Mensagens recentes' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  // Fixture nao inclui planoAlimentar: cobre de graca o estado vazio real
+  // (plano ainda nao publicado pelo profissional).
+  test('plano (estado vazio - plano ainda nao publicado)', async ({ page }) => {
+    await prepararSessaoPortalPaciente(page);
+    await page.goto('/portal/plano');
+    await expect(page.getByRole('heading', { name: 'Plano alimentar' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('privacidade', async ({ page }) => {
+    await prepararSessaoPortalPaciente(page);
+    await page.goto('/portal/privacidade');
+    await expect(page.getByRole('heading', { name: 'Privacidade' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+});
