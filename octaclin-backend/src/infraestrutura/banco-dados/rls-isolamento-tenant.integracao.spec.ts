@@ -134,6 +134,7 @@ descrever('isolamento de tenant via RLS real (usuarios)', () => {
   async function prepararTestcontainer(): Promise<ConfiguracaoConexao> {
     snapshotAmbiente = new Map(CHAVES_AMBIENTE_BANCO.map((nome) => [nome, process.env[nome]]));
 
+    // A imagem HA registra readiness no initdb e novamente apos o reinicio definitivo.
     container = await new GenericContainer('timescale/timescaledb-ha:pg15')
       .withEnvironment({
         POSTGRES_USER: 'octaclin',
@@ -141,7 +142,7 @@ descrever('isolamento de tenant via RLS real (usuarios)', () => {
         POSTGRES_DB: 'octaclin'
       })
       .withExposedPorts(5432)
-      .withWaitStrategy(Wait.forLogMessage(/database system is ready to accept connections/i))
+      .withWaitStrategy(Wait.forLogMessage(/database system is ready to accept connections/i, 2))
       .withStartupTimeout(120_000)
       .start();
 
