@@ -110,6 +110,9 @@ jobs:
       - name: Suite completa
         run: pnpm test -- --runInBand
 
+      - name: Provar RLS com Testcontainers descartavel
+        run: pnpm test:rls:testcontainers
+
   web:
     name: Web Next.js
     runs-on: ubuntu-latest

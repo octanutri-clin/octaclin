@@ -279,6 +279,22 @@ Crie a role de benchmark por SQL: roles criadas pelo Console Neon recebem
 privilegios administrativos e nao servem para validar RLS. Nao execute contra
 producao.
 
+## PostgreSQL real, RLS e Testcontainers
+
+O job backend usa o service container `timescale/timescaledb-ha:pg15`, aplica
+todas as migrations e executa a prova RLS com uma role sem `BYPASSRLS`. O PR 12
+mantem esse gate e acrescenta uma execucao independente com Testcontainers:
+
+```powershell
+pnpm --dir octaclin-backend test:rls:testcontainers
+```
+
+Esse comando exige Docker, sobe o mesmo tipo de banco em container descartavel,
+aplica as migrations e repete os cenarios de leitura, busca por ID, atualizacao
+cross-tenant e ausencia de `app.tenant_id`. Ele nao aceita URL externa e nao
+deve ser apontado para staging ou producao. Sem Docker, registre a execucao como
+`SKIPPED`; o CI em Node 22 e a evidencia dinamica obrigatoria desse caminho.
+
 ## Suite E2E de jornadas criticas
 
 Use antes de go-live, ao alterar portal do cliente, pacientes, agenda, comunicacoes ou portal do paciente:
