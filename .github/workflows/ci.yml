@@ -48,6 +48,33 @@ jobs:
     defaults:
       run:
         working-directory: octaclin-backend
+    services:
+      postgres:
+        # Mesma imagem do docker-compose.yml (dev local): migrations usam
+        # extensoes do Timescale (timescaledb, vector), postgres:15 puro nao tem.
+        image: timescale/timescaledb-ha:pg15
+        env:
+          POSTGRES_USER: octaclin
+          POSTGRES_PASSWORD: octaclin_local
+          POSTGRES_DB: octaclin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U octaclin -d octaclin"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      BANCO_HOST: localhost
+      BANCO_PORTA: "5432"
+      BANCO_USUARIO: octaclin
+      BANCO_SENHA: octaclin_local
+      BANCO_NOME: octaclin
+      RLS_PROVA_BANCO_HOST: localhost
+      RLS_PROVA_BANCO_PORTA: "5432"
+      RLS_PROVA_BANCO_USUARIO: octaclin_rls_prova
+      RLS_PROVA_BANCO_SENHA: octaclin_rls_prova_ci
+      RLS_PROVA_BANCO_NOME: octaclin
     steps:
       - uses: actions/checkout@v7
 
@@ -64,6 +91,22 @@ jobs:
       - run: pnpm install --frozen-lockfile=false
       - run: pnpm typecheck
       - run: pnpm build
+
+      - name: Rodar migrations no Postgres real de CI
+        run: pnpm run migration:run
+
+      - name: Provisionar role de prova de RLS (sem BYPASSRLS, sem propriedade das tabelas)
+        env:
+          PGPASSWORD: octaclin_local
+        run: |
+          psql -h localhost -U octaclin -d octaclin -v ON_ERROR_STOP=1 <<'SQL'
+            drop role if exists octaclin_rls_prova;
+            create role octaclin_rls_prova with login password 'octaclin_rls_prova_ci' nosuperuser nocreatedb nocreaterole nobypassrls;
+            grant connect on database octaclin to octaclin_rls_prova;
+            grant usage on schema public to octaclin_rls_prova;
+            grant select, insert, update, delete on all tables in schema public to octaclin_rls_prova;
+          SQL
+
       - name: Suite completa
         run: pnpm test -- --runInBand
 
