@@ -175,7 +175,9 @@ export function FormularioAgendamentoPublico({ token }: Props) {
               <h1 className="text-2xl font-semibold">Agendar com {agenda.profissional.nomeExibicao}</h1>
             </div>
             <ol className="flex flex-wrap gap-2 text-sm text-texto-suave" aria-label="Etapas do agendamento">
-              <li className="rounded-md bg-primaria-suave px-3 py-2 font-medium text-primaria">1. Escolha um horário</li>
+              {/* text-[#206f90] em vez de text-primaria: #247BA0 sobre bg-primaria-suave da 4.22:1,
+                  abaixo do minimo WCAG AA de 4.5:1 para texto normal (axe-core color-contrast). */}
+              <li className="rounded-md bg-primaria-suave px-3 py-2 font-medium text-[#206f90]">1. Escolha um horário</li>
               <li className="rounded-md border border-linha bg-superficie px-3 py-2">2. Informe seus dados</li>
               <li className="rounded-md border border-linha bg-superficie px-3 py-2">3. Revise e confirme</li>
             </ol>

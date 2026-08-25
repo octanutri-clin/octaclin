@@ -276,7 +276,7 @@ export function FormularioPacientePublico({ token }: Props) {
                 <span>Progresso</span>
                 <span>{obrigatoriasRespondidas} de {perguntasObrigatorias.length} obrigatorias respondidas</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-superficie" role="progressbar" aria-valuemin={0} aria-valuemax={perguntasObrigatorias.length} aria-valuenow={obrigatoriasRespondidas}>
+              <div className="h-2 overflow-hidden rounded-full bg-superficie" role="progressbar" aria-label="Progresso do formulário" aria-valuemin={0} aria-valuemax={perguntasObrigatorias.length} aria-valuenow={obrigatoriasRespondidas}>
                 <div className="h-full bg-primaria transition-[width]" style={{ width: `${(obrigatoriasRespondidas / perguntasObrigatorias.length) * 100}%` }} />
               </div>
             </div>
@@ -438,6 +438,7 @@ function CampoPergunta({
 
       {pergunta.tipo === 'texto_longo' ? (
         <textarea
+          aria-label={pergunta.enunciado}
           value={typeof valor === 'string' ? valor : ''}
           maxLength={numero(pergunta.configuracao, 'limiteCaracteres', 1000)}
           placeholder={texto(pergunta.configuracao, 'placeholder')}
@@ -468,7 +469,7 @@ function CampoPergunta({
                 setEnviandoArquivos(false);
               }
             }}
-            className="min-h-11 rounded-md border border-linha bg-white px-3 py-2 text-sm"
+            className="min-h-11 w-full rounded-md border border-linha bg-white px-3 py-2 text-sm"
           />
           <p className="flex items-center gap-2 text-xs text-texto-suave" aria-live="polite">
             <UploadCloud size={14} />

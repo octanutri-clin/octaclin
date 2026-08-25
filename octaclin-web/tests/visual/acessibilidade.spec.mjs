@@ -725,6 +725,53 @@ async function prepararSessaoPortalPaciente(page) {
 }
 
 // ---------------------------------------------------------------------------
+// Mocks das rotas publicas (PR 15 da governanca). Dados sinteticos,
+// reaproveitando os mesmos fixtures ja usados em agendamento-publico.spec.mjs,
+// formulario-publico.spec.mjs e pwa-portal.spec.mjs.
+// ---------------------------------------------------------------------------
+
+async function prepararAgendamentoPublico(page) {
+  await page.route('**/api/agendamentos-publicos/token-publico', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        clinica: { nome: 'Clínica Bem Estar', corPrimaria: '#0ea5e9' },
+        profissional: { nomeExibicao: 'Dra. Carla', especialidade: 'Nutricao clinica' },
+        timezone: 'America/Sao_Paulo',
+        duracaoMinutos: 50,
+        dias: [
+          {
+            data: '2026-08-03',
+            rotulo: '03/08/2026',
+            horarios: [{ inicioEm: '2026-08-03T14:00:00.000Z', rotulo: '11:00' }]
+          }
+        ]
+      })
+    });
+  });
+}
+
+function prepararFormularioPublico(page, { token, titulo, pergunta }) {
+  return page.route(`**/api/formularios/${token}`, async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        envioId: `envio-${token}`,
+        titulo,
+        status: 'enviado',
+        rascunhoVersao: 0,
+        respostasRascunho: [],
+        perguntas: [pergunta]
+      })
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Testes por rota critica.
 // ---------------------------------------------------------------------------
 
@@ -764,6 +811,74 @@ test.describe('gate de acessibilidade - rotas criticas', () => {
     await prepararSessaoCliente(page);
     await page.goto('/cliente', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await expect(page.getByRole('heading', { name: 'Portal do cliente' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+});
+
+// PR 15 da governanca: expansao para rotas publicas criticas (sem sessao
+// autenticada). Ver docs/governance/GAP_ANALYSIS_A11Y_2026-08-25.md secao 2.1.
+test.describe('gate de acessibilidade - rotas publicas', () => {
+  test('agendamento publico', async ({ page }) => {
+    await prepararAgendamentoPublico(page);
+    await page.goto('/agendar/token-publico');
+    await expect(page.getByRole('heading', { name: 'Agendar com Dra. Carla' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('formulario publico', async ({ page }) => {
+    await prepararFormularioPublico(page, {
+      token: 'token-publico',
+      titulo: 'Check-in semanal',
+      pergunta: {
+        id: '11111111-1111-4111-8111-111111111111',
+        tipo: 'sim_nao',
+        enunciado: 'Conseguiu seguir o plano?',
+        obrigatoria: true,
+        configuracao: { rotuloSim: 'Sim', rotuloNao: 'Nao' },
+        opcoes: [],
+        ordem: 1
+      }
+    });
+    await page.goto('/formularios/token-publico');
+    await expect(page.getByRole('heading', { name: 'Check-in semanal' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('formulario pwa (modo offline-first)', async ({ page }) => {
+    await prepararFormularioPublico(page, {
+      token: 'token-pwa',
+      titulo: 'Check-in offline',
+      pergunta: {
+        id: 'pergunta-1',
+        tipo: 'texto_longo',
+        enunciado: 'Como voce esta?',
+        obrigatoria: true,
+        configuracao: { secao: 'Hoje', limiteCaracteres: 500 },
+        opcoes: [],
+        ordem: 1
+      }
+    });
+    await page.goto('/formularios/token-pwa');
+    await expect(page.getByRole('heading', { name: 'Check-in offline' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('formulario com upload de arquivo', async ({ page }) => {
+    await prepararFormularioPublico(page, {
+      token: 'token-upload',
+      titulo: 'Envio de exame',
+      pergunta: {
+        id: '22222222-2222-4222-8222-222222222222',
+        tipo: 'upload_midia',
+        enunciado: 'Anexe o exame',
+        obrigatoria: true,
+        configuracao: { tiposAceitos: ['application/pdf'], maxArquivos: 1 },
+        opcoes: [],
+        ordem: 1
+      }
+    });
+    await page.goto('/formularios/token-upload');
+    await expect(page.getByRole('heading', { name: 'Envio de exame' })).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
   });
 });
