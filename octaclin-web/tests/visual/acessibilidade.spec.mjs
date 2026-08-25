@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 // ---------------------------------------------------------------------------
@@ -107,12 +108,31 @@ async function assertTabPreservaEExibeFoco(page) {
   }
 }
 
+// PR 14 da governanca: cobre o que a checagem manual acima nao cobre
+// (contraste, ARIA invalido, hierarquia de headings, alt text, etc.) via
+// axe-core, nas mesmas 5 rotas ja cobertas — ver GAP_ANALYSIS_A11Y_2026-08-25.md.
+async function assertSemViolacoesAxe(page) {
+  const resultado = await new AxeBuilder({ page })
+    // Toolbar de dev do Next, mesma exclusao ja usada em assertTabPreservaEExibeFoco.
+    .exclude('nextjs-portal')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze();
+
+  const violacoes = resultado.violations.map(
+    (violacao) =>
+      `${violacao.id} (impacto: ${violacao.impact}): ${violacao.help} — ${violacao.nodes.length} elemento(s) — ${violacao.helpUrl}`
+  );
+
+  expect(violacoes, `Violacoes de acessibilidade (axe-core):\n${violacoes.join('\n')}`).toEqual([]);
+}
+
 async function rodarChecagensDeAcessibilidade(page) {
   await assertMainUnicoETituloVisivel(page);
   await assertBotoesComNomeAcessivel(page);
   await assertCamposComLabelAcessivel(page);
   await assertTabPreservaEExibeFoco(page);
   await assertSemOverflowHorizontal(page);
+  await assertSemViolacoesAxe(page);
 }
 
 // ---------------------------------------------------------------------------
