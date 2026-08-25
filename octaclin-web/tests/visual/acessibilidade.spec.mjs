@@ -753,6 +753,53 @@ async function prepararAgendamentoPublico(page) {
   });
 }
 
+// PR 16 da governanca: mocks das rotas de acesso publico (esqueci-senha,
+// recuperar-senha, primeiro-acesso). Textos e formatos de resposta
+// reaproveitados de acesso-ativacao.spec.mjs, console-regression.spec.mjs e
+// primeiro-acesso-paciente.spec.mjs.
+function prepararSolicitacaoRecuperacaoSenha(page, { falhar = false } = {}) {
+  return page.route('**/api/auth/recuperar-senha', async (route) => {
+    if (falhar) {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ mensagem: 'Falha ao solicitar redefinicao.' })
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ mensagem: 'Se o email estiver cadastrado, enviaremos as instrucoes.' })
+    });
+  });
+}
+
+function prepararValidacaoTokenRecuperacao(page, resposta) {
+  return page.route('**/api/auth/recuperar-senha/validar', (route) => route.fulfill(resposta));
+}
+
+function prepararConviteAcessoPaciente(page, token, resposta) {
+  return page.route(`**/api/pacientes/convites-acesso/${encodeURIComponent(token)}`, (route) => route.fulfill(resposta));
+}
+
+// assertTabPreservaEExibeFoco pressupoe foco inicial no <body> (como acontece
+// logo apos um page.goto sem interacao). Os demais estados desta secao
+// (formulario preenchido, sucesso) tem exatamente os mesmos elementos
+// focalizaveis do estado inicial da mesma rota — a navegacao por Tab ja foi
+// coberta la. Preencher campos via .fill() move o "ponto de retomada" do Tab
+// do Chromium headless para o meio da pagina, e um blur() via JS nao o
+// devolve ao topo (artefato conhecido, nao um problema real de foco para um
+// usuario), entao repetir assertTabPreservaEExibeFoco aqui so daria falso
+// negativo sem cobertura adicional.
+async function rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page) {
+  await assertMainUnicoETituloVisivel(page);
+  await assertBotoesComNomeAcessivel(page);
+  await assertCamposComLabelAcessivel(page);
+  await assertSemOverflowHorizontal(page);
+  await assertSemViolacoesAxe(page);
+}
+
 function prepararFormularioPublico(page, { token, titulo, pergunta }) {
   return page.route(`**/api/formularios/${token}`, async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
@@ -880,5 +927,137 @@ test.describe('gate de acessibilidade - rotas publicas', () => {
     await page.goto('/formularios/token-upload');
     await expect(page.getByRole('heading', { name: 'Envio de exame' })).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
+  });
+});
+
+// PR 16 da governanca: acesso publico sem sessao (recuperacao de senha e
+// primeiro acesso do paciente). Ver docs/governance/GAP_ANALYSIS_A11Y_2026-08-25.md.
+test.describe('gate de acessibilidade - acesso publico', () => {
+  test('esqueci a senha - estado inicial', async ({ page }) => {
+    await page.goto('/esqueci-senha');
+    await expect(page.getByRole('heading', { name: 'Recuperar senha' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('esqueci a senha - formulario preenchido', async ({ page }) => {
+    await page.goto('/esqueci-senha');
+    await page.getByLabel('Email').fill('paciente@example.com');
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('esqueci a senha - validacao invalida (falha ao solicitar)', async ({ page }) => {
+    await prepararSolicitacaoRecuperacaoSenha(page, { falhar: true });
+    await page.goto('/esqueci-senha');
+    await page.getByLabel('Email').fill('paciente@example.com');
+    await page.getByRole('button', { name: 'Enviar link' }).click();
+    // getByRole('alert') sozinho colide com o route-announcer do Next
+    // (tambem role="alert"), por isso o texto exato do erro do formulario.
+    await expect(page.getByText('Falha ao solicitar redefinicao.')).toBeVisible();
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('esqueci a senha - sucesso', async ({ page }) => {
+    await prepararSolicitacaoRecuperacaoSenha(page);
+    await page.goto('/esqueci-senha');
+    await page.getByLabel('Email').fill('paciente@example.com');
+    await page.getByRole('button', { name: 'Enviar link' }).click();
+    await expect(page.getByText('Se o email estiver cadastrado, enviaremos as instrucoes.')).toBeVisible();
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('recuperar senha - estado inicial (token valido)', async ({ page }) => {
+    await prepararValidacaoTokenRecuperacao(page, {
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ email: 'paciente@example.com', expiraEm: '2026-08-01T12:00:00.000Z' })
+    });
+    await page.goto('/recuperar-senha?token=token-valido');
+    await expect(page.getByRole('heading', { name: 'Nova senha' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('recuperar senha - formulario preenchido', async ({ page }) => {
+    await prepararValidacaoTokenRecuperacao(page, {
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ email: 'paciente@example.com', expiraEm: '2026-08-01T12:00:00.000Z' })
+    });
+    await page.goto('/recuperar-senha?token=token-valido');
+    await page.locator('#nova-senha').fill('SenhaNova@123');
+    await page.locator('#confirmar-senha').fill('SenhaNova@123');
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('recuperar senha - validacao invalida (link nao encontrado)', async ({ page }) => {
+    await prepararValidacaoTokenRecuperacao(page, {
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({ mensagem: 'Token de redefinicao invalido.' })
+    });
+    await page.goto('/recuperar-senha?token=token-invalido');
+    await expect(page.getByRole('heading', { name: 'Link não encontrado' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('recuperar senha - sucesso', async ({ page }) => {
+    await prepararValidacaoTokenRecuperacao(page, {
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ email: 'paciente@example.com', expiraEm: '2026-08-01T12:00:00.000Z' })
+    });
+    await page.route('**/api/auth/redefinir-senha', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Senha redefinida.' }) })
+    );
+    await page.goto('/recuperar-senha?token=token-valido');
+    await page.locator('#nova-senha').fill('SenhaNova@123');
+    await page.locator('#confirmar-senha').fill('SenhaNova@123');
+    await page.getByRole('button', { name: 'Redefinir senha' }).click();
+    await expect(page.getByText('Senha redefinida. Entre novamente com a nova senha.')).toBeVisible();
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('primeiro acesso - estado inicial (sem token)', async ({ page }) => {
+    await page.goto('/primeiro-acesso');
+    await expect(page.getByRole('heading', { name: 'Link de primeiro acesso indisponível' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('primeiro acesso - validacao invalida (convite nao encontrado)', async ({ page }) => {
+    const token = 'tenant-1.token-invalido-a11y';
+    await prepararConviteAcessoPaciente(page, token, {
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({ mensagem: 'Convite não encontrado.' })
+    });
+    await page.goto(`/primeiro-acesso?token=${encodeURIComponent(token)}`);
+    await expect(page.getByRole('heading', { name: 'Convite não encontrado' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  // Sucesso completo (clicar em "Ativar acesso") redireciona para /portal,
+  // rota autenticada fora do escopo desta PR — parado deliberadamente no
+  // passo de aceite de termos, ultimo estado que ainda pertence a esta rota.
+  test('primeiro acesso - formulario preenchido (senha e termos)', async ({ page }) => {
+    const token = 'tenant-1.token-valido-a11y';
+    await prepararConviteAcessoPaciente(page, token, {
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        pacienteId: 'paciente-1',
+        nomePaciente: 'Ana Paula',
+        email: 'ana@example.com',
+        status: 'pendente',
+        expiraEm: '2026-08-01T12:00:00.000Z'
+      })
+    });
+    await page.goto(`/primeiro-acesso?token=${encodeURIComponent(token)}`);
+    await expect(page.getByRole('heading', { name: 'Primeiro acesso' })).toBeVisible();
+
+    await page.locator('input[type="password"]').nth(0).fill('SenhaPaciente@123');
+    await page.locator('input[type="password"]').nth(1).fill('SenhaPaciente@123');
+    await page.getByRole('button', { name: 'Continuar' }).click();
+    await expect(page.getByLabel('Aceito os Termos de uso do OctaClin')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 });
