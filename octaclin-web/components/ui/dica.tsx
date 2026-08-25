@@ -3,9 +3,11 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
+type PropsElementoInteragivel = React.HTMLAttributes<HTMLElement>;
+
 interface DicaProps {
   texto: string;
-  children: React.ReactElement;
+  children: React.ReactElement<PropsElementoInteragivel>;
   className?: string;
 }
 
@@ -17,23 +19,23 @@ export function Dica({ texto, children, className }: DicaProps) {
     <span className="relative inline-flex">
       {React.cloneElement(children, {
         'aria-describedby': visivel ? id : undefined,
-        onMouseEnter: (evento: React.MouseEvent) => {
+        onMouseEnter: (evento: React.MouseEvent<HTMLElement>) => {
           children.props.onMouseEnter?.(evento);
           setVisivel(true);
         },
-        onMouseLeave: (evento: React.MouseEvent) => {
+        onMouseLeave: (evento: React.MouseEvent<HTMLElement>) => {
           children.props.onMouseLeave?.(evento);
           setVisivel(false);
         },
-        onFocus: (evento: React.FocusEvent) => {
+        onFocus: (evento: React.FocusEvent<HTMLElement>) => {
           children.props.onFocus?.(evento);
           setVisivel(true);
         },
-        onBlur: (evento: React.FocusEvent) => {
+        onBlur: (evento: React.FocusEvent<HTMLElement>) => {
           children.props.onBlur?.(evento);
           setVisivel(false);
         },
-        onKeyDown: (evento: React.KeyboardEvent) => {
+        onKeyDown: (evento: React.KeyboardEvent<HTMLElement>) => {
           children.props.onKeyDown?.(evento);
           if (evento.key === 'Escape') setVisivel(false);
         }
