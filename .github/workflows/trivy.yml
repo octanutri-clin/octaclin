@@ -1,0 +1,57 @@
+name: Trivy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "20 6 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+concurrency:
+  group: octaclin-trivy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analisar:
+    name: Trivy (vuln/misconfig/license, warning)
+    runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Escanear filesystem (não bloqueante)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig,license
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: "0"
+
+      - name: Publicar resultado no Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Gerar SBOM (CycloneDX)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: cyclonedx
+          output: sbom.cyclonedx.json
+
+      - name: Publicar SBOM como artefato
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cyclonedx.json
+          retention-days: 90
