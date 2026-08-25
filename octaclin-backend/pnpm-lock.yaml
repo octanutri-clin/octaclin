@@ -100,6 +100,9 @@ importers:
       '@types/nodemailer':
         specifier: ^8.0.1
         version: 8.0.1
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
       jest:
         specifier: ^30.4.2
         version: 30.4.2(@types/node@26.2.0)(ts-node@10.9.2(@types/node@26.2.0)(typescript@6.0.3))
@@ -952,6 +955,9 @@ packages:
 
   '@types/nodemailer@8.0.1':
     resolution: {integrity: sha512-PxpaInm8V1JQDd4j0ds5HfvWQk8JupS1C0Picb96QJsrrRDjBH+DlK7L4ZdNSqNULhiZRQHc40nLVShaGxXAMw==}
+
+  '@types/pg@8.23.1':
+    resolution: {integrity: sha512-fKVHpikPdg4GKks3JuLEhvwSyvwzF23hnabPy6DD8ljVbC7+6J5dQzdv4arV6jqq57djnMgs1HKBxX4P8aBI3A==}
 
   '@types/qs@6.15.1':
     resolution: {integrity: sha512-GZHUBZR9hckSUhrxmp1nG6NwdpM9fCunJwyThLW1X3AyHgd9IlHb6VANpQQqDr2o/qQp6McZ3y/IA2rVzKzSbw==}
@@ -4276,6 +4282,12 @@ snapshots:
   '@types/nodemailer@8.0.1':
     dependencies:
       '@types/node': 26.2.0
+
+  '@types/pg@8.23.1':
+    dependencies:
+      '@types/node': 26.2.0
+      pg-protocol: 1.16.0
+      pg-types: 2.2.0
 
   '@types/qs@6.15.1': {}
 
