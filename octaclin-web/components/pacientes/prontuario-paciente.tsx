@@ -1004,7 +1004,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)]">
             <article className="grid gap-3 rounded-md border border-primaria/30 bg-primaria-suave p-4">
               <div>
-                <p className="text-xs font-semibold uppercase text-primaria">Próxima ação</p>
+                <p className="text-xs font-semibold uppercase text-primaria-forte">Próxima ação</p>
                 <h2 className="mt-2 text-base font-semibold text-tinta">
                   {dados.resumo.proximaConduta?.titulo ?? 'Sem pendência operacional'}
                 </h2>

@@ -1189,3 +1189,212 @@ test.describe('gate de acessibilidade - portal do paciente (complemento PR 18)',
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Mocks de pacientes (PR 19 da governanca). Fixtures e labels reaproveitados
+// de fase-254-pacientes.spec.mjs (mesmo formulario, mesmos nomes de campo).
+// ---------------------------------------------------------------------------
+
+const permissoesPacientes = ['console.acessar', 'pacientes.listar', 'pacientes.ler', 'pacientes.gerenciar', 'profissionais.ler'];
+
+const profissionalPacientesFixture = {
+  id: 'profissional-1',
+  tenantId: 'tenant-1',
+  nome: 'Dra. Carla',
+  email: 'dra.carla@octaclin.local',
+  especialidade: 'Nutrologia',
+  criadoEm: '2026-07-20T10:00:00.000Z'
+};
+
+const pacienteFixture = {
+  id: 'paciente-1',
+  tenantId: 'tenant-1',
+  profissionalResponsavelId: 'profissional-1',
+  nome: 'Ana Sintética',
+  contato: 'ana@example.com',
+  dataNascimento: '1990-04-15',
+  statusAdesao: 'em_acompanhamento',
+  scoreRisco: '35',
+  criadoEm: '2026-08-22T10:00:00.000Z'
+};
+
+const pacientesListaFixture = [
+  pacienteFixture,
+  {
+    id: 'paciente-2',
+    tenantId: 'tenant-1',
+    profissionalResponsavelId: 'profissional-1',
+    nome: 'Bruno Sintético',
+    contato: '11988880000',
+    dataNascimento: '1985-02-10',
+    statusAdesao: 'risco',
+    scoreRisco: '82',
+    criadoEm: '2026-07-18T10:00:00.000Z'
+  }
+];
+
+async function prepararSessaoPacientes(page) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: 'Professional', domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/pacientes'), domain: 'localhost', path: '/' }
+  ]);
+
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        autenticado: true,
+        apiUrl: 'http://localhost:3001',
+        tenantSlug: 'clinica-carla',
+        email: 'dra.carla@octaclin.local',
+        expiraEm: '2026-07-22T15:00:00.000Z',
+        papel: 'Professional',
+        permissoes: permissoesPacientes,
+        destinoInicial: '/pacientes'
+      })
+    });
+  });
+
+  await page.route((url) => url.pathname === '/api/profissionais', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ itens: [profissionalPacientesFixture], total: 1 })
+    });
+  });
+
+  await page.route((url) => url.pathname === '/api/pacientes/verificacao-duplicidade', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ candidatos: [] }) });
+  });
+}
+
+function prepararListaPacientes(page, { itens = pacientesListaFixture, total = itens.length } = {}) {
+  return page.route((url) => url.pathname === '/api/pacientes', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens, total }) });
+  });
+}
+
+function prepararDetalhePaciente(page, paciente = pacienteFixture) {
+  return page.route((url) => url.pathname === `/api/pacientes/${paciente.id}`, async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(paciente) });
+  });
+}
+
+// Cobre apenas a aba inicial (resumo) do prontuario, deliberadamente - as
+// demais abas (evolucoes, financeiro, documentos, etc.) ficam registradas
+// como risco residual no corpo do PR 19.
+function prepararProntuarioPaciente(page, paciente = pacienteFixture) {
+  return page.route((url) => url.pathname === `/api/pacientes/${paciente.id}/prontuario`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        paciente,
+        resumo: {
+          consultas: 1,
+          formulariosPendentes: 1,
+          respostas: 1,
+          checkinsRapidos: 2,
+          mensagens: 1,
+          evolucoes: 1,
+          tarefasPendentes: 1,
+          indicadoresRecentes: []
+        },
+        linhaDoTempo: []
+      })
+    });
+  });
+}
+
+function prepararAvaliacoesAntropometricas(page, pacienteId = pacienteFixture.id) {
+  return page.route((url) => url.pathname === `/api/pacientes/${pacienteId}/avaliacoes-antropometricas`, async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ avaliacoes: [], deltaUltimas: [] }) });
+  });
+}
+
+// PR 19 da governanca: expande o gate de a11y para o ciclo principal de
+// pacientes no console profissional - lista, cadastro, prontuario (aba
+// inicial) e edicao.
+test.describe('gate de acessibilidade - pacientes (PR 19)', () => {
+  test('lista - carregada com pacientes sinteticos', async ({ page }) => {
+    await prepararSessaoPacientes(page);
+    await prepararListaPacientes(page);
+    await page.goto('/pacientes');
+    await expect(page.getByRole('heading', { name: 'Pacientes' })).toBeVisible();
+    // Nome do paciente aparece duas vezes no DOM (tabela desktop + cartao
+    // mobile); so uma das duas fica visivel por vez conforme o viewport.
+    await expect(page.getByText('Ana Sintética').filter({ visible: true })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('lista - estado vazio', async ({ page }) => {
+    await prepararSessaoPacientes(page);
+    await prepararListaPacientes(page, { itens: [], total: 0 });
+    await page.goto('/pacientes');
+    await expect(page.getByRole('heading', { name: 'Pacientes' })).toBeVisible();
+    await expect(page.getByText('Nenhum paciente encontrado com estes filtros.').filter({ visible: true })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  // Preenchimento move o foco do meio da tabulacao (mesmo artefato ja
+  // documentado acima em rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado).
+  test('lista - busca filtra a lista (interacao relevante)', async ({ page }) => {
+    await prepararSessaoPacientes(page);
+    const consultas = [];
+    await page.route((url) => url.pathname === '/api/pacientes', async (route) => {
+      consultas.push(route.request().url());
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ itens: pacientesListaFixture, total: pacientesListaFixture.length })
+      });
+    });
+    await page.goto('/pacientes');
+    await page.getByLabel('Buscar pacientes').fill('Ana');
+    await expect.poll(() => consultas.some((url) => url.includes('busca=Ana'))).toBe(true);
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('lista - navegacao para o detalhe (interacao relevante)', async ({ page }) => {
+    await prepararSessaoPacientes(page);
+    await prepararListaPacientes(page);
+    await prepararProntuarioPaciente(page);
+    await prepararAvaliacoesAntropometricas(page);
+    await page.goto('/pacientes');
+    // exact: true evita casar com "Editar Ana Sintética"; visible: true
+    // escolhe a unica instancia (tabela ou cartao) exibida no viewport atual.
+    await page.getByRole('link', { name: 'Ana Sintética', exact: true }).filter({ visible: true }).click();
+    await expect(page).toHaveURL(/\/pacientes\/paciente-1$/);
+    await expect(page.getByRole('heading', { name: 'Prontuário do paciente' })).toBeVisible();
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('novo - cadastro inicial', async ({ page }) => {
+    await prepararSessaoPacientes(page);
+    await page.goto('/pacientes/novo');
+    await expect(page.getByRole('heading', { name: 'Novo paciente' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('detalhe - aba inicial (resumo)', async ({ page }) => {
+    await prepararSessaoPacientes(page);
+    await prepararProntuarioPaciente(page);
+    await prepararAvaliacoesAntropometricas(page);
+    await page.goto('/pacientes/paciente-1');
+    await expect(page.getByRole('heading', { name: 'Prontuário do paciente' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Contexto operacional' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('editar - dados preenchidos', async ({ page }) => {
+    await prepararSessaoPacientes(page);
+    await prepararDetalhePaciente(page);
+    await page.goto('/pacientes/paciente-1/editar');
+    await expect(page.getByRole('heading', { name: 'Editar paciente' })).toBeVisible();
+    await expect(page.getByLabel('Nome completo')).toHaveValue('Ana Sintética');
+    await rodarChecagensDeAcessibilidade(page);
+  });
+});
