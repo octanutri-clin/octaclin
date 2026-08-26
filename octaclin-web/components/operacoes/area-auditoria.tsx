@@ -35,7 +35,7 @@ export function AreaAuditoria({ controlador }: { controlador: PainelOperacoesCon
         </div>
         <form onSubmit={filtrarAuditoria} className="grid gap-2 md:grid-cols-3 lg:grid-cols-8">
           <select
-            className="h-9 rounded-md border border-linha bg-white px-2 text-sm"
+            className="h-9 rounded-md border border-linha bg-white px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
             value={filtrosAuditoria.acao}
             onChange={(evento) => setFiltrosAuditoria((atual) => ({ ...atual, acao: evento.target.value }))}
             aria-label="Ação"
@@ -47,33 +47,33 @@ export function AreaAuditoria({ controlador }: { controlador: PainelOperacoesCon
             <option value="profissionais.obter_dados_sensiveis">Profissionais - detalhe</option>
           </select>
           <input
-            className="h-9 rounded-md border border-linha px-2 text-sm"
+            className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
             placeholder="Recurso"
             value={filtrosAuditoria.recursoTipo}
             onChange={(evento) => setFiltrosAuditoria((atual) => ({ ...atual, recursoTipo: evento.target.value }))}
           />
           <input
-            className="h-9 rounded-md border border-linha px-2 text-sm"
+            className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
             placeholder="Identificador do recurso"
             value={filtrosAuditoria.recursoId}
             onChange={(evento) => setFiltrosAuditoria((atual) => ({ ...atual, recursoId: evento.target.value }))}
           />
           <input
-            className="h-9 rounded-md border border-linha px-2 text-sm"
+            className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
             placeholder="ID usuário"
             value={filtrosAuditoria.usuarioId}
             onChange={(evento) => setFiltrosAuditoria((atual) => ({ ...atual, usuarioId: evento.target.value }))}
           />
           <input
             type="datetime-local"
-            className="h-9 rounded-md border border-linha px-2 text-sm"
+            className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
             value={filtrosAuditoria.inicio}
             onChange={(evento) => setFiltrosAuditoria((atual) => ({ ...atual, inicio: evento.target.value }))}
             aria-label="Início"
           />
           <input
             type="datetime-local"
-            className="h-9 rounded-md border border-linha px-2 text-sm"
+            className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
             value={filtrosAuditoria.fim}
             onChange={(evento) => setFiltrosAuditoria((atual) => ({ ...atual, fim: evento.target.value }))}
             aria-label="Fim"
@@ -95,7 +95,7 @@ export function AreaAuditoria({ controlador }: { controlador: PainelOperacoesCon
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <strong className="text-sm">{evento.acao}</strong>
-                  <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
+                  <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria-forte">
                     {evento.recursoTipo ?? 'recurso'}
                   </span>
                 </div>

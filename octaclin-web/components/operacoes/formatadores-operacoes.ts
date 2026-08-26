@@ -67,9 +67,9 @@ export function rotuloStatusLgpd(status: StatusSolicitacaoLgpd) {
 
 export function classeStatusLgpd(status: StatusSolicitacaoLgpd) {
   const mapa: Record<StatusSolicitacaoLgpd, string> = {
-    recebida: 'bg-superficie-hover text-primaria',
+    recebida: 'bg-superficie-hover text-primaria-forte',
     em_tratamento: 'bg-alerta-suave text-alerta-forte',
-    concluida: 'bg-sucesso-suave text-sucesso',
+    concluida: 'bg-sucesso-suave text-sucesso-forte',
     indeferida: 'bg-perigo-suave text-perigo'
   };
   return mapa[status];
@@ -111,7 +111,7 @@ export function rotuloStatusAssinatura(status: SolicitacaoAssinaturaOperacional[
 export function classeStatusAssinatura(status: SolicitacaoAssinaturaOperacional['status']) {
   const mapa: Record<SolicitacaoAssinaturaOperacional['status'], string> = {
     pendente: 'bg-alerta-suave text-alerta-forte',
-    concluida: 'bg-sucesso-suave text-sucesso',
+    concluida: 'bg-sucesso-suave text-sucesso-forte',
     cancelada: 'bg-perigo-suave text-perigo'
   };
   return mapa[status];

@@ -12,8 +12,8 @@ import { PainelOperacoesControlador } from './use-painel-operacoes';
 
 function statusClasse(status: string) {
   if (status === 'critico' || status === 'falha' || status === 'indisponivel') return 'text-perigo';
-  if (status === 'atencao' || status === 'degradado') return 'text-alerta';
-  return 'text-sucesso';
+  if (status === 'atencao' || status === 'degradado') return 'text-alerta-forte';
+  return 'text-sucesso-forte';
 }
 
 export function AreaRollout({ controlador }: { controlador: PainelOperacoesControlador }) {

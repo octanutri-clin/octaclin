@@ -95,7 +95,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
                         {aplicandoAssinaturaId === chave ? 'Aplicando' : `Aplicar ${rotuloPlano(planoDestino)}`}
                       </Botao>
                     ) : (
-                      <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
+                      <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria-forte">
                         {solicitacao.planoAplicadoId ? `Plano ${rotuloPlano(solicitacao.planoAplicadoId)}` : 'Sem ação pendente'}
                       </span>
                     )}
@@ -128,21 +128,21 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
           </CartaoCabecalho>
           <form onSubmit={filtrarOutbox} className="grid gap-2 border-b border-linha px-4 py-3 md:grid-cols-4">
             <input
-              className="h-9 rounded-md border border-linha px-2 text-sm"
+              className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
               placeholder="Tipo"
               value={filtrosOutbox.tipo}
               onChange={(evento) => setFiltrosOutbox((atual) => ({ ...atual, tipo: evento.target.value }))}
             />
             <input
               type="datetime-local"
-              className="h-9 rounded-md border border-linha px-2 text-sm"
+              className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
               value={filtrosOutbox.inicio}
               onChange={(evento) => setFiltrosOutbox((atual) => ({ ...atual, inicio: evento.target.value }))}
               aria-label="Início outbox"
             />
             <input
               type="datetime-local"
-              className="h-9 rounded-md border border-linha px-2 text-sm"
+              className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
               value={filtrosOutbox.fim}
               onChange={(evento) => setFiltrosOutbox((atual) => ({ ...atual, fim: evento.target.value }))}
               aria-label="Fim outbox"
@@ -214,7 +214,7 @@ export function AreaFilas({ controlador }: { controlador: PainelOperacoesControl
                     <span
                       className={
                         item.status === 'sincronizado'
-                          ? 'rounded-sm bg-sucesso-suave px-2 py-1 text-xs font-semibold text-sucesso'
+                          ? 'rounded-sm bg-sucesso-suave px-2 py-1 text-xs font-semibold text-sucesso-forte'
                           : 'rounded-sm bg-perigo-suave px-2 py-1 text-xs font-semibold text-perigo'
                       }
                     >

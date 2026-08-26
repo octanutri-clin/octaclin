@@ -27,7 +27,7 @@ export function AreaIncidentes({ controlador }: { controlador: PainelOperacoesCo
             {alertasOperacionais?.resumo.informativos ?? 0}
           </p>
         </div>
-        <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
+        <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria-forte">
           {rotuloStatusAlertas(alertasOperacionais?.status ?? 'ok')}
         </span>
       </CartaoCabecalho>

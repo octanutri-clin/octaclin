@@ -4,7 +4,7 @@ import { RefreshCcw } from 'lucide-react';
 import { Abas } from '@/components/ui/abas';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoConteudo } from '@/components/ui/cartao';
-import { AlertaOperacional, BarraCarregamento } from '@/components/ui/feedback';
+import { AlertaOperacional, AlertaSucesso, BarraCarregamento } from '@/components/ui/feedback';
 import { AreaAuditoria } from './area-auditoria';
 import { AreaComunicacoes } from './area-comunicacoes';
 import { AreaFilas } from './area-filas';
@@ -67,11 +67,7 @@ export function PainelOperacoes() {
       </Cartao>
 
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
-      {sucesso ? (
-        <div role="status" className="rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso">
-          {sucesso}
-        </div>
-      ) : null}
+      {sucesso ? <AlertaSucesso mensagem={sucesso} /> : null}
       <BarraCarregamento
         visivel={
           carregando ||
