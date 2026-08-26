@@ -23,31 +23,57 @@ export function Modal({ aberto, aoFechar, titulo, descricao, children, className
   const tituloId = React.useId();
   const descricaoId = React.useId();
 
+  // `aoFechar` vive num ref porque quase todo consumidor passa uma funcao nova
+  // a cada render (arrow inline ou funcao declarada no corpo do componente).
+  // Com ela na lista de dependencias, o efeito abaixo era desmontado e
+  // remontado a cada re-render do consumidor - e o cleanup devolvia o foco ao
+  // gatilho de fundo. Na pratica, digitar no primeiro campo do modal jogava o
+  // foco para fora dele.
+  const aoFecharRef = React.useRef(aoFechar);
+  React.useEffect(() => {
+    aoFecharRef.current = aoFechar;
+  });
+
   React.useEffect(() => {
     if (!aberto) return;
 
     gatilhoAnteriorRef.current = document.activeElement as HTMLElement | null;
     const nodo = conteudoRef.current;
-    nodo?.querySelector<HTMLElement>(SELETOR_FOCAVEL)?.focus();
+
+    function focaveisDoModal() {
+      if (!nodo) return [] as HTMLElement[];
+      return Array.from(nodo.querySelectorAll<HTMLElement>(SELETOR_FOCAVEL)).filter(
+        (elemento) => !elemento.hasAttribute('disabled') && elemento.getAttribute('tabindex') !== '-1'
+      );
+    }
+
+    focaveisDoModal()[0]?.focus();
 
     function aoTeclar(evento: KeyboardEvent) {
       if (evento.key === 'Escape') {
-        aoFechar();
+        aoFecharRef.current();
         return;
       }
       if (evento.key !== 'Tab' || !nodo) return;
 
-      const focaveis = Array.from(nodo.querySelectorAll<HTMLElement>(SELETOR_FOCAVEL)).filter(
-        (elemento) => !elemento.hasAttribute('disabled')
-      );
+      const focaveis = focaveisDoModal();
       if (!focaveis.length) return;
 
       const primeiro = focaveis[0];
       const ultimo = focaveis[focaveis.length - 1];
-      if (evento.shiftKey && document.activeElement === primeiro) {
+      const ativo = document.activeElement;
+
+      // Foco perdido (elemento removido, blur programatico) nao pode virar
+      // porta de saida: o Tab seguinte volta para dentro do dialogo.
+      if (!(ativo instanceof HTMLElement) || !nodo.contains(ativo)) {
+        evento.preventDefault();
+        (evento.shiftKey ? ultimo : primeiro).focus();
+        return;
+      }
+      if (evento.shiftKey && ativo === primeiro) {
         evento.preventDefault();
         ultimo.focus();
-      } else if (!evento.shiftKey && document.activeElement === ultimo) {
+      } else if (!evento.shiftKey && ativo === ultimo) {
         evento.preventDefault();
         primeiro.focus();
       }
@@ -62,7 +88,7 @@ export function Modal({ aberto, aoFechar, titulo, descricao, children, className
       document.body.style.overflow = overflowOriginal;
       gatilhoAnteriorRef.current?.focus();
     };
-  }, [aberto, aoFechar]);
+  }, [aberto]);
 
   if (!aberto) return null;
 

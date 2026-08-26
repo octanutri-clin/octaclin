@@ -11,6 +11,9 @@ const config: Config = {
         tinta: '#1F2937',
         'texto-forte': '#343C4B',
         'texto-suave': '#596273',
+        // 3.07:1 sobre branco e 2.74:1 sobre superficie-hover: passa o minimo de
+        // 3:1 de componente grafico (WCAG 1.4.11), mas NAO o de 4.5:1 de texto
+        // (1.4.3). Use apenas em icone/decoracao; para texto use `texto-suave`.
         'texto-sutil': '#8A94A3',
         linha: '#D9DEE8',
         primaria: '#247BA0',

@@ -11,13 +11,19 @@ interface DicaProps {
   className?: string;
 }
 
-export function Dica({ texto, children, className }: DicaProps) {
+export function Dica({ texto, children, className, ...resto }: DicaProps & PropsElementoInteragivel) {
   const [visivel, setVisivel] = React.useState(false);
   const id = React.useId();
 
   return (
     <span className="relative inline-flex">
+      {/* `resto` e repassado ao filho porque a Dica e um envelope transparente:
+          quem a envolve (o Menu, por exemplo) precisa conseguir por `id`,
+          `aria-haspopup`, `aria-expanded` e `onClick` no elemento interagivel de
+          verdade. Sem isso, o sino de notificacoes ficava sem estado ARIA e sem
+          o clique que abre o menu. */}
       {React.cloneElement(children, {
+        ...resto,
         'aria-describedby': visivel ? id : undefined,
         onMouseEnter: (evento: React.MouseEvent<HTMLElement>) => {
           children.props.onMouseEnter?.(evento);

@@ -106,6 +106,7 @@ export function SinoNotificacoes() {
         {naoLidas ? (
           <button
             type="button"
+            role="menuitem"
             onClick={marcarTodas}
             className="rounded text-xs text-primaria hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
           >

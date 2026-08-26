@@ -13,16 +13,61 @@ interface MenuProps {
 export function Menu({ gatilho, children, className, alinhamento = 'fim' }: MenuProps) {
   const [aberto, setAberto] = React.useState(false);
   const raizRef = React.useRef<HTMLDivElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+  const gatilhoRef = React.useRef<HTMLElement | null>(null);
   const idBotao = React.useId();
 
+  const itensDoMenu = React.useCallback(
+    () => Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
+      .filter((item) => !item.hasAttribute('disabled') && item.getAttribute('aria-disabled') !== 'true'),
+    []
+  );
+
+  const focarItem = React.useCallback((indice: number) => {
+    const itens = itensDoMenu();
+    if (!itens.length) return;
+    const alvo = ((indice % itens.length) + itens.length) % itens.length;
+    itens[alvo].focus();
+  }, [itensDoMenu]);
+
+  const fechar = React.useCallback((devolverFoco: boolean) => {
+    setAberto(false);
+    if (devolverFoco) gatilhoRef.current?.focus();
+  }, []);
+
+  // Padrao ARIA de menu: ao abrir, o foco vai para o primeiro item; sem isso o
+  // usuario de teclado abre o menu e continua parado no gatilho.
   React.useEffect(() => {
     if (!aberto) return;
+    gatilhoRef.current = raizRef.current?.querySelector<HTMLElement>(`#${CSS.escape(idBotao)}`) ?? null;
+    focarItem(0);
 
     function aoClicarFora(evento: MouseEvent) {
       if (!raizRef.current?.contains(evento.target as Node)) setAberto(false);
     }
     function aoTeclar(evento: KeyboardEvent) {
-      if (evento.key === 'Escape') setAberto(false);
+      if (evento.key === 'Escape') {
+        fechar(true);
+        return;
+      }
+      const itens = itensDoMenu();
+      if (!itens.length) return;
+      const atual = itens.indexOf(document.activeElement as HTMLElement);
+      if (atual < 0) return;
+
+      if (evento.key === 'ArrowDown') {
+        evento.preventDefault();
+        focarItem(atual + 1);
+      } else if (evento.key === 'ArrowUp') {
+        evento.preventDefault();
+        focarItem(atual - 1);
+      } else if (evento.key === 'Home') {
+        evento.preventDefault();
+        focarItem(0);
+      } else if (evento.key === 'End') {
+        evento.preventDefault();
+        focarItem(itens.length - 1);
+      }
     }
 
     document.addEventListener('mousedown', aoClicarFora);
@@ -31,7 +76,7 @@ export function Menu({ gatilho, children, className, alinhamento = 'fim' }: Menu
       document.removeEventListener('mousedown', aoClicarFora);
       document.removeEventListener('keydown', aoTeclar);
     };
-  }, [aberto]);
+  }, [aberto, fechar, focarItem, idBotao, itensDoMenu]);
 
   return (
     <div ref={raizRef} className="relative inline-block">
@@ -46,6 +91,7 @@ export function Menu({ gatilho, children, className, alinhamento = 'fim' }: Menu
       })}
       {aberto ? (
         <div
+          ref={menuRef}
           role="menu"
           aria-labelledby={idBotao}
           onClick={() => setAberto(false)}

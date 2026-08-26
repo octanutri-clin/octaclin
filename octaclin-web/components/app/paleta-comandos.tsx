@@ -256,7 +256,7 @@ export function PaletaComandos({ sessao }: { sessao: SessaoPublica }) {
               const exibirGrupo = indice === 0 || opcoes[indice - 1].grupo !== opcao.grupo;
               return (
                 <Fragment key={opcao.id}>
-                  {exibirGrupo ? <p className="px-2 pb-1 pt-3 text-xs font-semibold uppercase text-texto-sutil first:pt-0">{opcao.grupo}</p> : null}
+                  {exibirGrupo ? <p className="px-2 pb-1 pt-3 text-xs font-semibold uppercase text-texto-suave first:pt-0">{opcao.grupo}</p> : null}
                   <button
                     id={`opcao-paleta-${indice}`}
                     type="button"

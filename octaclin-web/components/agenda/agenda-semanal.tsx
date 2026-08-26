@@ -498,7 +498,7 @@ export function AgendaSemanal({
             const itensDoDia = itensDaSemana.filter((item) => mesmoDia(new Date(item.inicioEm), dia));
             const foraDoMes = dia.getMonth() !== semanaInicio.getMonth();
             return (
-              <div key={dia.toISOString()} className={cn('min-h-28 border-b border-r border-linha p-2 last:border-r-0', foraDoMes && 'bg-superficie text-texto-sutil')}>
+              <div key={dia.toISOString()} className={cn('min-h-28 border-b border-r border-linha p-2 last:border-r-0', foraDoMes && 'bg-superficie text-texto-suave')}>
                 <p className={cn('mb-2 text-xs font-semibold', mesmoDia(dia, hoje) && 'text-primaria-forte')}>{dia.getDate()}</p>
                 <div className="grid gap-1">
                   {itensDoDia.slice(0, 3).map((item) => {
@@ -538,7 +538,7 @@ export function AgendaSemanal({
             {horas.map((hora, indice) => (
               <span
                 key={hora}
-                className="absolute inset-x-0 -translate-y-1/2 pr-2 text-right text-xs text-texto-sutil"
+                className="absolute inset-x-0 -translate-y-1/2 pr-2 text-right text-xs text-texto-suave"
                 style={{ top: indice * ALTURA_HORA }}
               >
                 {String(hora).padStart(2, '0')}:00

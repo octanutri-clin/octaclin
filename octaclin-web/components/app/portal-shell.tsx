@@ -72,8 +72,12 @@ export function PortalShell({
     router.replace('/login');
   }
 
-  const botaoSair = (
-    <Botao type="button" variante="fantasma" onClick={encerrarSessao}>
+  // `papelNoMenu` existe porque o mesmo botao aparece dentro do menu da conta e,
+  // quando nao ha contexto de usuario, solto no cabecalho. Dentro de um
+  // `role="menu"`, um filho sem `role="menuitem"` viola aria-required-children e
+  // fica fora da navegacao por setas do menu.
+  const criarBotaoSair = (papelNoMenu: boolean) => (
+    <Botao type="button" variante="fantasma" role={papelNoMenu ? 'menuitem' : undefined} onClick={encerrarSessao}>
       <LogOut size={16} />
       Sair
     </Botao>
@@ -100,13 +104,13 @@ export function PortalShell({
         </button>
       }
     >
-      <p className="px-1 text-xs font-semibold uppercase text-texto-sutil">Workspace</p>
+      <p className="px-1 text-xs font-semibold uppercase text-texto-suave">Workspace</p>
       <p className="mt-1 truncate px-1 text-sm font-semibold text-tinta">{contextoUsuario.workspace}</p>
       <p className="mt-3 truncate px-1 text-sm text-texto-suave">{contextoUsuario.email}</p>
-      <p className="px-1 text-xs text-texto-sutil">{contextoUsuario.papel}</p>
-      <div className="mt-3 border-t border-linha pt-2">{botaoSair}</div>
+      <p className="px-1 text-xs text-texto-suave">{contextoUsuario.papel}</p>
+      <div className="mt-3 border-t border-linha pt-2">{criarBotaoSair(true)}</div>
     </Menu>
-  ) : botaoSair;
+  ) : criarBotaoSair(false);
 
   if (variante === 'sidebar') {
     const itemAtivo = navegacao.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
