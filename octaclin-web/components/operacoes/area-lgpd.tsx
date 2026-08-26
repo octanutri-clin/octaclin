@@ -54,7 +54,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
         </div>
         <form onSubmit={filtrarLgpd} className="grid gap-2 md:grid-cols-3">
           <select
-            className="h-9 rounded-md border border-linha bg-white px-2 text-sm"
+            className="h-9 rounded-md border border-linha bg-white px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
             value={filtrosLgpd.status}
             onChange={(evento) =>
               setFiltrosLgpd((atual) => ({ ...atual, status: evento.target.value as FiltrosSolicitacoesLgpd['status'] }))
@@ -68,7 +68,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
             <option value="indeferida">Indeferida</option>
           </select>
           <select
-            className="h-9 rounded-md border border-linha bg-white px-2 text-sm"
+            className="h-9 rounded-md border border-linha bg-white px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
             value={filtrosLgpd.tipo}
             onChange={(evento) =>
               setFiltrosLgpd((atual) => ({ ...atual, tipo: evento.target.value as FiltrosSolicitacoesLgpd['tipo'] }))
@@ -107,7 +107,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
                 <article key={item.politicaId} className="rounded-md border border-linha bg-white p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <strong className="text-sm">{item.rotulo}</strong>
-                    <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
+                    <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria-forte">
                       {rotuloAcaoRetencao(item.acao)}
                     </span>
                   </div>

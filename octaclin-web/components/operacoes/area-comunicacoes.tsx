@@ -40,13 +40,13 @@ export function AreaComunicacoes({ controlador }: { controlador: PainelOperacoes
             {falhasComunicacao?.resumo.googleCalendar ?? 0} | Outbox {falhasComunicacao?.resumo.outbox ?? 0}
           </p>
         </div>
-        <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
+        <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria-forte">
           {falhasComunicacao?.resumo.reprocessaveis ?? 0} reprocessaveis
         </span>
       </CartaoCabecalho>
       <form onSubmit={filtrarFalhasComunicacao} className="grid gap-2 border-b border-linha px-4 py-3 lg:grid-cols-[0.8fr_0.8fr_1fr_1fr_1fr_auto]">
         <select
-          className="h-9 rounded-md border border-linha px-2 text-sm"
+          className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
           value={filtrosFalhasComunicacao.origem}
           onChange={(evento) =>
             setFiltrosFalhasComunicacao((atual) => ({ ...atual, origem: evento.target.value as FiltrosFalhasComunicacao['origem'] }))
@@ -59,7 +59,7 @@ export function AreaComunicacoes({ controlador }: { controlador: PainelOperacoes
           <option value="google_calendar">Google Calendar</option>
         </select>
         <select
-          className="h-9 rounded-md border border-linha px-2 text-sm"
+          className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
           value={filtrosFalhasComunicacao.canal}
           onChange={(evento) =>
             setFiltrosFalhasComunicacao((atual) => ({ ...atual, canal: evento.target.value as FiltrosFalhasComunicacao['canal'] }))
@@ -73,21 +73,21 @@ export function AreaComunicacoes({ controlador }: { controlador: PainelOperacoes
           <option value="outbox">Outbox</option>
         </select>
         <input
-          className="h-9 rounded-md border border-linha px-2 text-sm"
+          className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
           placeholder="Tipo/evento"
           value={filtrosFalhasComunicacao.tipo}
           onChange={(evento) => setFiltrosFalhasComunicacao((atual) => ({ ...atual, tipo: evento.target.value }))}
         />
         <input
           type="datetime-local"
-          className="h-9 rounded-md border border-linha px-2 text-sm"
+          className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
           value={filtrosFalhasComunicacao.inicio}
           onChange={(evento) => setFiltrosFalhasComunicacao((atual) => ({ ...atual, inicio: evento.target.value }))}
           aria-label="Início falhas comunicação"
         />
         <input
           type="datetime-local"
-          className="h-9 rounded-md border border-linha px-2 text-sm"
+          className="h-9 rounded-md border border-linha px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
           value={filtrosFalhasComunicacao.fim}
           onChange={(evento) => setFiltrosFalhasComunicacao((atual) => ({ ...atual, fim: evento.target.value }))}
           aria-label="Fim falhas comunicação"
@@ -107,7 +107,7 @@ export function AreaComunicacoes({ controlador }: { controlador: PainelOperacoes
                   <span className="rounded-sm bg-perigo-suave px-2 py-1 text-xs font-semibold text-perigo">
                     {rotuloCanalFalha(falha.canal)}
                   </span>
-                  <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria">
+                  <span className="rounded-sm bg-superficie-hover px-2 py-1 text-xs font-semibold text-primaria-forte">
                     {rotuloOrigemFalha(falha.origem)}
                   </span>
                 </div>

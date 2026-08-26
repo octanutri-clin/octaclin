@@ -2919,3 +2919,986 @@ test.describe('gate de acessibilidade - ia assistida (PR 25)', () => {
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 });
+
+// ---------------------------------------------------------------------------
+// PR 26 da governanca: expande o gate de a11y para /operacoes, cobrindo as oito
+// areas do painel operacional (Onboarding, Saude, Rollout, Incidentes,
+// Comunicacoes, LGPD, Auditoria e Filas).
+//
+// Todos os dados sao sinteticos e TODAS as chamadas de API sao interceptadas
+// pelo Playwright: `prepararOperacoes` registra primeiro um catch-all
+// `**/api/**` que apenas REGISTRA e bloqueia qualquer rota nao mockada (a
+// precedencia do Playwright e a ordem inversa de registro, entao ele so pega o
+// que nenhum mock especifico casou). Os testes conferem essa lista vazia, o que
+// prova que nada saiu para backend, banco, Render, Neon ou integracao.
+// ---------------------------------------------------------------------------
+
+const permissoesOperacoes = ['console.acessar', 'operacoes.auditoria.ler'];
+
+const abasOperacoesFixture = [
+  { id: 'onboarding', rotulo: 'Onboarding' },
+  { id: 'saude', rotulo: 'Saude' },
+  { id: 'rollout', rotulo: 'Rollout' },
+  { id: 'incidentes', rotulo: 'Incidentes' },
+  { id: 'comunicacoes', rotulo: 'Comunicações' },
+  { id: 'lgpd', rotulo: 'LGPD' },
+  { id: 'auditoria', rotulo: 'Auditoria' },
+  { id: 'filas', rotulo: 'Filas' }
+];
+
+const resumoOperacionalFixture = {
+  outbox: { pendente: 3, processando: 1, processado: 42, falhou: 2 },
+  mobile: { sincronizado: 5, erro: 0 }
+};
+
+const alertasOperacionaisFixture = {
+  status: 'critico',
+  geradoEm: '2026-08-20T13:00:00.000Z',
+  resumo: { total: 2, criticos: 1, atencao: 1, informativos: 0 },
+  itens: [
+    {
+      id: 'fila.outbox.pendente.atrasado',
+      severidade: 'critico',
+      origem: 'fila',
+      titulo: 'Outbox com eventos pendentes atrasados',
+      mensagem: 'Eventos sintéticos acima da janela operacional esperada.',
+      acaoSugerida: 'Verificar fila, processador de outbox e central de falhas.',
+      metrica: 'outbox_pendente_atrasado',
+      valor: 4
+    },
+    {
+      id: 'integracao.comunicacoes.falhas',
+      severidade: 'atencao',
+      origem: 'integracao',
+      titulo: 'Falhas de comunicação aguardam tratamento',
+      mensagem: 'Falhas sintéticas reprocessáveis na central de comunicações.',
+      acaoSugerida: 'Abrir a área Comunicações do painel operacional.',
+      valor: 1
+    }
+  ]
+};
+
+const alertasOperacionaisVaziosFixture = {
+  status: 'ok',
+  geradoEm: '2026-08-20T13:00:00.000Z',
+  resumo: { total: 0, criticos: 0, atencao: 0, informativos: 0 },
+  itens: []
+};
+
+const rolloutOperacionalFixture = {
+  status: 'ok',
+  decisaoSugerida: 'promover',
+  geradoEm: '2026-08-20T18:00:00.000Z',
+  release: { commit: 'sintetico0001', servicoId: 'configurado', ambiente: 'sintetico', papelProcesso: 'all' },
+  health: { status: 'ok', checks: { backend: 'ok', banco: 'ok', migracoes: 'ok', redis: 'ok' } },
+  telemetria: {
+    processo: { iniciadoEm: '2026-08-20T17:00:00.000Z', uptimeSegundos: 3600 },
+    http: {
+      total: 240,
+      sucesso: 238,
+      errosCliente: 2,
+      errosServidor: 0,
+      taxaErro5xx: 0,
+      duracaoMediaMs: 120,
+      duracaoP95Ms: 430,
+      amostrasDuracao: 240,
+      porRota: []
+    },
+    tracesRecentes: [
+      {
+        requestId: 'req-sintetico-1',
+        horario: '2026-08-20T18:00:00.000Z',
+        metodo: 'GET',
+        rota: '/health/pronto',
+        statusCode: 200,
+        duracaoMs: 32,
+        resultado: 'sucesso'
+      }
+    ]
+  },
+  filas: [
+    { nome: 'notificacoes', status: 'ok', esperando: 2, ativas: 1, atrasadas: 0, falharam: 0, pausada: false },
+    { nome: 'google_calendar', status: 'degradado', esperando: 0, ativas: 0, atrasadas: 0, falharam: 0, pausada: false },
+    { nome: 'automacoes', status: 'ok', esperando: 1, ativas: 0, atrasadas: 0, falharam: 0, pausada: false }
+  ],
+  flags: {
+    configuracaoValida: true,
+    flags: [
+      { chave: 'ia.clinica', habilitada: false, origem: 'padrao' },
+      { chave: 'mobile.sync', habilitada: false, origem: 'padrao' }
+    ]
+  }
+};
+
+const featureFlagsOperacoesFixture = {
+  configuracaoValida: true,
+  flags: [
+    { chave: 'ia.clinica', habilitada: false, origem: 'padrao' },
+    { chave: 'mobile.sync', habilitada: false, origem: 'padrao' }
+  ]
+};
+
+const tenantsOperacoesFixture = {
+  itens: [
+    {
+      id: '00000000-0000-4000-8000-000000000101',
+      nome: 'Clínica Sintética Um',
+      slug: 'clinica-sintetica-um',
+      status: 'ativo',
+      cicloVidaStatus: 'ativo_assistido',
+      planoId: 'profissional',
+      assinaturaStatus: 'ativa',
+      provisionamentoReferencia: 'contrato-sintetico-001',
+      proprietarioEmailMascarado: 'p***@octaclin.test',
+      conviteStatus: 'pendente',
+      criadoEm: '2026-08-10T12:00:00.000Z',
+      atualizadoEm: '2026-08-18T12:00:00.000Z'
+    },
+    {
+      id: '00000000-0000-4000-8000-000000000102',
+      nome: 'Clínica Sintética Dois',
+      slug: 'clinica-sintetica-dois',
+      status: 'ativo',
+      cicloVidaStatus: 'encerramento_pendente',
+      planoId: 'clinica',
+      assinaturaStatus: 'ativa',
+      provisionamentoReferencia: 'contrato-sintetico-002',
+      proprietarioEmailMascarado: 'g***@octaclin.test',
+      conviteStatus: 'aceito',
+      criadoEm: '2026-08-11T12:00:00.000Z',
+      atualizadoEm: '2026-08-19T12:00:00.000Z'
+    }
+  ],
+  total: 2
+};
+
+const falhasOutboxFixture = [
+  {
+    id: 'outbox-sintetico-1',
+    tipo: 'agenda.consulta.criada',
+    tentativas: 3,
+    erro: 'Tempo esgotado sintético no consumidor.',
+    payload: { consultaId: 'consulta-sintetica-1' },
+    criadoEm: '2026-08-20T12:00:00.000Z'
+  }
+];
+
+const sincronizacoesMobileFixture = [
+  {
+    id: 'sincronizacao-sintetica-1',
+    tipo: 'checkin',
+    status: 'sincronizado',
+    idLocal: 'local-sintetico-1',
+    recursoId: 'recurso-sintetico-1',
+    criadoEm: '2026-08-20T12:10:00.000Z'
+  }
+];
+
+const auditoriaOperacionalFixture = [
+  {
+    id: 'auditoria-sintetica-1',
+    acao: 'pacientes.listar_dados_sensiveis',
+    recursoTipo: 'paciente',
+    recursoId: 'paciente-sintetico-1',
+    usuarioId: 'usuario-sintetico-1',
+    ip: '203.0.113.10',
+    userAgent: 'Mozilla/5.0 (sintetico)',
+    metadados: { filtro: 'ativos' },
+    criadoEm: '2026-08-20T11:00:00.000Z'
+  }
+];
+
+const falhasComunicacaoFixture = {
+  itens: [
+    {
+      id: 'mensagem:mensagem-sintetica-1',
+      origem: 'mensagem',
+      canal: 'email',
+      tipo: 'agenda.consulta.lembrete',
+      referenciaId: 'mensagem-sintetica-1',
+      erro: 'Servidor de e-mail sintético indisponível.',
+      criadoEm: '2026-08-20T12:00:00.000Z',
+      reprocessavel: true,
+      tentativas: 2,
+      resumo: 'contato-sintetico@octaclin.test'
+    }
+  ],
+  total: 1,
+  pagina: 1,
+  limite: 25,
+  resumo: { total: 1, email: 1, whatsapp: 0, googleCalendar: 0, outbox: 0, outras: 0, reprocessaveis: 1 }
+};
+
+const falhasComunicacaoVaziasFixture = {
+  itens: [],
+  total: 0,
+  pagina: 1,
+  limite: 25,
+  resumo: { total: 0, email: 0, whatsapp: 0, googleCalendar: 0, outbox: 0, outras: 0, reprocessaveis: 0 }
+};
+
+const protocoloLgpdFixture = 'LGPD-SINTETICO-1';
+
+const solicitacoesLgpdFixture = {
+  itens: [
+    {
+      protocolo: protocoloLgpdFixture,
+      pacienteId: 'paciente-sintetico-1',
+      usuarioPacienteId: 'usuario-paciente-sintetico-1',
+      tipo: 'retificacao',
+      status: 'recebida',
+      detalhes: 'Atualizar contato sintético cadastrado.',
+      abertoEm: '2026-08-20T10:00:00.000Z',
+      atualizadoEm: '2026-08-20T10:00:00.000Z'
+    },
+    {
+      protocolo: 'LGPD-SINTETICO-2',
+      pacienteId: 'paciente-sintetico-2',
+      usuarioPacienteId: 'usuario-paciente-sintetico-2',
+      tipo: 'exclusao',
+      status: 'concluida',
+      detalhes: 'Exclusão sintética concluída.',
+      abertoEm: '2026-08-18T10:00:00.000Z',
+      atualizadoEm: '2026-08-19T10:00:00.000Z',
+      responsavelId: 'usuario-sintetico-1',
+      ultimaTratativa: 'Encerrada com evidência sintética.'
+    }
+  ],
+  total: 2,
+  pagina: 1,
+  limite: 25
+};
+
+const detalheLgpdFixture = {
+  protocolo: protocoloLgpdFixture,
+  pacienteId: 'paciente-sintetico-1',
+  usuarioPacienteId: 'usuario-paciente-sintetico-1',
+  tipo: 'retificacao',
+  status: 'em_tratamento',
+  detalhes: 'Atualizar contato sintético cadastrado.',
+  abertoEm: '2026-08-20T10:00:00.000Z',
+  atualizadoEm: '2026-08-20T11:00:00.000Z',
+  responsavelId: 'usuario-sintetico-1',
+  ultimaTratativa: 'Validando cadastro sintético.',
+  historico: [
+    {
+      id: 'consentimento-sintetico-1',
+      tipo: 'solicitacao_lgpd_retificacao',
+      status: 'recebida',
+      detalhes: 'Atualizar contato sintético cadastrado.',
+      criadoEm: '2026-08-20T10:00:00.000Z'
+    },
+    {
+      id: 'tratativa-sintetica-1',
+      tipo: 'tratativa_lgpd',
+      status: 'em_tratamento',
+      detalhes: 'Validando cadastro sintético.',
+      responsavelId: 'usuario-sintetico-1',
+      criadoEm: '2026-08-20T11:00:00.000Z'
+    }
+  ]
+};
+
+const retencaoLgpdFixture = {
+  versao: '2026-10',
+  geradoEm: '2026-08-20T12:00:00.000Z',
+  politicas: [
+    {
+      id: 'auditoria_operacional',
+      rotulo: 'Auditoria operacional',
+      entidade: 'user_action_logs',
+      campoData: 'criadoEm',
+      diasRetencao: 3650,
+      acao: 'arquivar_exportar',
+      baseLegal: 'Obrigação legal e exercício regular de direitos',
+      descricao: 'Registros sensíveis são preservados por 10 anos antes do arquivo controlado.'
+    },
+    {
+      id: 'outbox_processado',
+      rotulo: 'Outbox processado',
+      entidade: 'outbox_eventos',
+      campoData: 'criadoEm',
+      diasRetencao: 180,
+      acao: 'excluir',
+      baseLegal: 'Minimização operacional',
+      descricao: 'Eventos processados ficam elegíveis para limpeza após 180 dias.'
+    }
+  ],
+  resumo: {
+    totalVencidos: 11,
+    itens: [
+      {
+        politicaId: 'auditoria_operacional',
+        rotulo: 'Auditoria operacional',
+        acao: 'arquivar_exportar',
+        diasRetencao: 3650,
+        corteEm: '2016-08-20T12:00:00.000Z',
+        vencidos: 7
+      },
+      {
+        politicaId: 'outbox_processado',
+        rotulo: 'Outbox processado',
+        acao: 'excluir',
+        diasRetencao: 180,
+        corteEm: '2026-02-21T12:00:00.000Z',
+        vencidos: 4
+      }
+    ]
+  }
+};
+
+const retencaoLgpdVaziaFixture = {
+  versao: '2026-10',
+  geradoEm: '2026-08-20T12:00:00.000Z',
+  politicas: [],
+  resumo: { totalVencidos: 0, itens: [] }
+};
+
+const solicitacoesAssinaturaFixture = {
+  itens: [
+    {
+      tenantId: 'tenant-sintetico-1',
+      acao: 'upgrade',
+      status: 'pendente',
+      planoAtualId: 'profissional',
+      planoAtual: 'Profissional',
+      planoDesejado: 'clinica',
+      observacao: 'Mais usuários administrativos sintéticos.',
+      solicitadoPorUsuarioId: 'usuario-sintetico-2',
+      solicitadoEm: '2026-08-20T10:00:00.000Z'
+    },
+    {
+      tenantId: 'tenant-sintetico-2',
+      acao: 'downgrade',
+      status: 'concluida',
+      planoAtualId: 'clinica',
+      planoAtual: 'Clínica',
+      planoDesejado: 'profissional',
+      planoAplicadoId: 'profissional',
+      observacao: 'Ajuste sintético de plano.',
+      solicitadoPorUsuarioId: 'usuario-sintetico-3',
+      solicitadoEm: '2026-08-18T10:00:00.000Z',
+      resolvidoPorUsuarioId: 'usuario-sintetico-1',
+      resolvidoEm: '2026-08-19T10:00:00.000Z'
+    }
+  ],
+  total: 2,
+  pagina: 1,
+  limite: 25
+};
+
+const paginadoVazioFixture = { itens: [], total: 0, pagina: 1, limite: 25 };
+
+function responderJson(route, { status = 200, corpo }) {
+  if (status !== 200) {
+    return route.fulfill({
+      status,
+      contentType: 'text/plain; charset=utf-8',
+      body: typeof corpo === 'string' ? corpo : 'Falha sintética na rota operacional.'
+    });
+  }
+  return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(corpo) });
+}
+
+async function prepararOperacoes(page, opcoes = {}) {
+  const {
+    resumo = {},
+    alertas = {},
+    rollout = {},
+    tenants = {},
+    outbox = {},
+    sincronizacoes = {},
+    auditoria = {},
+    comunicacoes = {},
+    lgpd = {},
+    retencao = {},
+    assinaturas = {}
+  } = opcoes;
+
+  const chamadas = {
+    naoMockadas: [],
+    mutacoes: []
+  };
+
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: 'SuperAdmin', domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/operacoes'), domain: 'localhost', path: '/' }
+  ]);
+
+  // Rede de seguranca: registrada PRIMEIRO, portanto so recebe o que nenhum
+  // mock especifico casou. Nada daqui chega ao BFF, ao backend ou ao banco.
+  await page.route('**/api/**', async (route) => {
+    const url = new URL(route.request().url());
+    chamadas.naoMockadas.push(`${route.request().method()} ${url.pathname}`);
+    await route.fulfill({ status: 599, contentType: 'text/plain; charset=utf-8', body: 'Rota nao mockada no gate de a11y.' });
+  });
+
+  await page.route('**/api/auth/session', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      autenticado: true,
+      papel: 'SuperAdmin',
+      apiUrl: 'http://localhost:3001',
+      tenantSlug: 'clinica-sintetica',
+      email: 'operacoes@octaclin.test',
+      expiraEm: '2026-12-31T18:00:00.000Z',
+      permissoes: permissoesOperacoes,
+      destinoInicial: '/operacoes'
+    })
+  }));
+
+  await page.route('**/api/notificacoes**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ naoLidas: 0, itens: [] }) })
+  );
+
+  await page.route('**/api/operacoes/resumo', (route) =>
+    responderJson(route, { corpo: resumoOperacionalFixture, ...resumo })
+  );
+
+  await page.route('**/api/operacoes/alertas', (route) =>
+    responderJson(route, { corpo: alertasOperacionaisFixture, ...alertas })
+  );
+
+  await page.route('**/api/operacoes/rollout', (route) =>
+    responderJson(route, { corpo: rolloutOperacionalFixture, ...rollout })
+  );
+
+  await page.route('**/api/operacoes/mobile/sincronizacoes**', (route) =>
+    responderJson(route, { corpo: sincronizacoesMobileFixture, ...sincronizacoes })
+  );
+
+  await page.route('**/api/operacoes/outbox/falhas**', (route) => {
+    const paginada = route.request().url().includes('/paginada');
+    const itens = outbox.corpo ?? falhasOutboxFixture;
+    return responderJson(route, {
+      status: outbox.status ?? 200,
+      corpo: paginada ? { itens, total: itens.length, pagina: 1, limite: 25 } : itens
+    });
+  });
+
+  await page.route('**/api/operacoes/auditoria**', (route) => {
+    const paginada = route.request().url().includes('/paginada');
+    const itens = auditoria.corpo ?? auditoriaOperacionalFixture;
+    return responderJson(route, {
+      status: auditoria.status ?? 200,
+      corpo: paginada ? { itens, total: itens.length, pagina: 1, limite: 25 } : itens
+    });
+  });
+
+  await page.route('**/api/operacoes/comunicacoes/falhas**', (route) =>
+    responderJson(route, { corpo: falhasComunicacaoFixture, ...comunicacoes })
+  );
+
+  await page.route('**/api/operacoes/assinaturas/solicitacoes**', (route) =>
+    responderJson(route, { corpo: solicitacoesAssinaturaFixture, ...assinaturas })
+  );
+
+  await page.route('**/api/operacoes/lgpd/retencao', (route) =>
+    responderJson(route, { corpo: retencaoLgpdFixture, ...retencao })
+  );
+
+  await page.route('**/api/operacoes/lgpd/retencao/programar', (route) => {
+    chamadas.mutacoes.push('POST /api/operacoes/lgpd/retencao/programar');
+    return responderJson(route, {
+      corpo: {
+        protocolo: 'RET-SINTETICO-1',
+        status: 'programada',
+        programadoEm: '2026-08-20T12:00:00.000Z',
+        totalItensVencidos: 11,
+        resumo: { totalVencidos: 11, itens: [] }
+      }
+    });
+  });
+
+  await page.route('**/api/operacoes/lgpd/solicitacoes**', (route) => {
+    const caminho = new URL(route.request().url()).pathname;
+    if (caminho.endsWith(`/${protocoloLgpdFixture}/resposta`)) {
+      chamadas.mutacoes.push(`POST ${caminho}`);
+      return responderJson(route, {
+        corpo: {
+          protocolo: protocoloLgpdFixture,
+          pacienteId: 'paciente-sintetico-1',
+          status: 'em_tratamento',
+          assuntoEmail: `Atualização da solicitação LGPD ${protocoloLgpdFixture}`,
+          corpoEmail: 'Olá,\n\nSeu pedido LGPD sintético está em tratamento.\n\nEquipe OctaClin',
+          textoWhatsapp: 'Seu pedido LGPD sintético está em tratamento.',
+          canaisSugeridos: ['email', 'whatsapp'],
+          geradoEm: '2026-08-20T12:00:00.000Z'
+        }
+      });
+    }
+    if (caminho.endsWith(`/${protocoloLgpdFixture}`)) {
+      return responderJson(route, { corpo: detalheLgpdFixture });
+    }
+    return responderJson(route, { corpo: solicitacoesLgpdFixture, ...lgpd });
+  });
+
+  await page.route('**/api/operacoes/tenants', (route) =>
+    responderJson(route, { corpo: tenantsOperacoesFixture, ...tenants })
+  );
+
+  await page.route('**/api/operacoes/tenants/*/ciclo-vida', (route) => {
+    chamadas.mutacoes.push(`POST ${new URL(route.request().url()).pathname}`);
+    return responderJson(route, { corpo: tenantsOperacoesFixture.itens[0] });
+  });
+
+  await page.route('**/api/operacoes/feature-flags', (route) => {
+    if (route.request().method() === 'POST') {
+      chamadas.mutacoes.push('POST /api/operacoes/feature-flags');
+    }
+    return responderJson(route, { corpo: featureFlagsOperacoesFixture });
+  });
+
+  await page.route('**/api/operacoes/feature-flags/**', (route) =>
+    responderJson(route, { corpo: featureFlagsOperacoesFixture })
+  );
+
+  return chamadas;
+}
+
+async function abrirPainelOperacoes(page, chamadas) {
+  await page.goto('/operacoes');
+  await expect(page.getByRole('heading', { name: 'Confiabilidade OctaClin', level: 1 })).toBeVisible();
+  await expect(page.getByRole('tablist', { name: 'Áreas de operações' })).toBeVisible();
+  if (chamadas) expect(chamadas.naoMockadas, 'houve chamada de API nao mockada').toEqual([]);
+}
+
+// Depois de trocar de aba com o mouse, o ponto de retomada do Tab do Chromium
+// headless fica no meio da pagina e a passada global de tabulacao
+// (assertTabPreservaEExibeFoco) acusaria fim de sequencia como se fosse foco
+// perdido - o mesmo artefato ja documentado acima para .fill(). Esta checagem
+// cobre o que importa na area aberta: todo controle focalizavel do tabpanel
+// precisa exibir indicador de foco. O Tab inicial marca a modalidade de teclado
+// do Chromium, para que o foco programatico seguinte case com :focus-visible.
+async function assertFocoVisivelNaArea(page, painel) {
+  await page.keyboard.press('Tab');
+  const controles = painel.locator(
+    'a[href]:visible, button:not([disabled]):visible, input:not([disabled]):not([type="hidden"]):visible, select:not([disabled]):visible, textarea:not([disabled]):visible'
+  );
+  // Areas somente leitura (Incidentes) podem nao ter controle focalizavel
+  // proprio; o laco abaixo simplesmente nao roda nesse caso.
+  const total = await controles.count();
+
+  for (let indice = 0; indice < total; indice += 1) {
+    const controle = controles.nth(indice);
+    await controle.focus();
+    const foco = await controle.evaluate((elemento) => {
+      const estilo = getComputedStyle(elemento);
+      return {
+        rotulo:
+          elemento.getAttribute('aria-label') ??
+          elemento.getAttribute('placeholder') ??
+          elemento.textContent?.trim().slice(0, 40) ??
+          elemento.tagName,
+        outlineStyle: estilo.outlineStyle,
+        outlineWidth: estilo.outlineWidth,
+        boxShadow: estilo.boxShadow
+      };
+    });
+    const temIndicadorDeFoco =
+      (foco.outlineStyle !== 'none' && foco.outlineWidth !== '0px') || foco.boxShadow !== 'none';
+    expect(
+      temIndicadorDeFoco,
+      `controle ${indice + 1}/${total} ("${foco.rotulo}") da area aberta sem indicador de foco visivel`
+    ).toBe(true);
+  }
+}
+
+async function abrirAreaOperacoes(page, rotulo) {
+  const aba = page.getByRole('tab', { name: rotulo, exact: true });
+  await aba.click();
+  await expect(aba).toHaveAttribute('aria-selected', 'true');
+  const painelId = await aba.getAttribute('aria-controls');
+  const painel = page.locator(`#${painelId}`);
+  await expect(painel).toBeVisible();
+  return painel;
+}
+
+test.describe('gate de acessibilidade - operacoes (PR 26)', () => {
+  test('area Saude carregada com as metricas de outbox', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const abaSaude = page.getByRole('tab', { name: 'Saude', exact: true });
+    await expect(abaSaude).toHaveAttribute('aria-selected', 'true');
+    const painel = page.locator('#operacoes-saude-painel');
+    await expect(painel).toBeVisible();
+    await expect(painel).toHaveAttribute('aria-labelledby', 'operacoes-saude-aba');
+    await expect(painel.getByText('Pendentes')).toBeVisible();
+    await expect(painel.getByText('Processando')).toBeVisible();
+    await expect(painel.getByText('Processados')).toBeVisible();
+    await expect(painel.getByText('Falharam')).toBeVisible();
+    await expect(painel.getByText('42')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidade(page);
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('navegacao pelas oito areas somente com teclado', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const tablist = page.getByRole('tablist', { name: 'Áreas de operações' });
+    await expect(tablist.getByRole('tab')).toHaveCount(abasOperacoesFixture.length);
+
+    // A area inicial e Saude (estado padrao do controlador).
+    const abaInicial = page.getByRole('tab', { name: 'Saude', exact: true });
+    await expect(abaInicial).toHaveAttribute('aria-selected', 'true');
+    await abaInicial.focus();
+
+    // ArrowRight percorre as oito abas em ordem e volta a primeira selecionada.
+    const ordemDireita = ['Rollout', 'Incidentes', 'Comunicações', 'LGPD', 'Auditoria', 'Filas', 'Onboarding', 'Saude'];
+    for (const rotulo of ordemDireita) {
+      await page.keyboard.press('ArrowRight');
+      const aba = page.getByRole('tab', { name: rotulo, exact: true });
+      await expect(aba, `ArrowRight nao moveu o foco para a aba ${rotulo}`).toBeFocused();
+      await expect(aba, `aba ${rotulo} focada sem aria-selected=true`).toHaveAttribute('aria-selected', 'true');
+
+      const abaId = await aba.getAttribute('id');
+      const painelId = await aba.getAttribute('aria-controls');
+      expect(painelId, `aba ${rotulo} sem aria-controls`).toBeTruthy();
+      const painel = page.locator(`#${painelId}`);
+      await expect(painel, `tabpanel ${painelId} nao visivel`).toBeVisible();
+      await expect(painel).toHaveAttribute('role', 'tabpanel');
+      await expect(painel, `tabpanel ${painelId} nao aponta de volta para a aba`).toHaveAttribute('aria-labelledby', abaId);
+
+      // As demais abas saem da ordem de tabulacao (padrao roving tabindex).
+      await expect(aba).toHaveAttribute('tabindex', '0');
+
+      const foco = await page.evaluate(() => {
+        const ativo = document.activeElement;
+        const estilo = getComputedStyle(ativo);
+        return {
+          outlineStyle: estilo.outlineStyle,
+          outlineWidth: estilo.outlineWidth,
+          boxShadow: estilo.boxShadow
+        };
+      });
+      const temIndicadorDeFoco =
+        (foco.outlineStyle !== 'none' && foco.outlineWidth !== '0px') || foco.boxShadow !== 'none';
+      expect(temIndicadorDeFoco, `aba ${rotulo} focada por teclado sem indicador de foco visivel`).toBe(true);
+    }
+
+    // ArrowLeft volta na ordem inversa e mantem a associacao aba/painel.
+    for (const rotulo of ['Onboarding', 'Filas', 'Auditoria']) {
+      await page.keyboard.press('ArrowLeft');
+      const aba = page.getByRole('tab', { name: rotulo, exact: true });
+      await expect(aba, `ArrowLeft nao moveu o foco para a aba ${rotulo}`).toBeFocused();
+      await expect(aba).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator(`#${await aba.getAttribute('aria-controls')}`)).toBeVisible();
+    }
+
+    // Somente uma aba selecionada por vez.
+    await expect(tablist.locator('[role="tab"][aria-selected="true"]')).toHaveCount(1);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('area Onboarding com formulario de provisionamento e ciclo de vida', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painel = await abrirAreaOperacoes(page, 'Onboarding');
+    await expect(painel.getByRole('heading', { name: 'Nova clínica' })).toBeVisible();
+    await expect(painel.getByLabel('Nome da clínica')).toBeVisible();
+    await expect(painel.getByLabel('E-mail do proprietario')).toBeVisible();
+    await expect(painel.getByRole('button', { name: 'Provisionar e convidar' })).toBeVisible();
+    await expect(painel.getByText('Clínica Sintética Um')).toBeVisible();
+    await expect(painel.getByText('Clínica Sintética Dois')).toBeVisible();
+    await expect(painel.getByRole('button', { name: 'Encerrar definitivamente' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+    await assertFocoVisivelNaArea(page, painel);
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('area Rollout com telemetria sanitizada e liberacao controlada', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painel = await abrirAreaOperacoes(page, 'Rollout');
+    await expect(painel.getByRole('heading', { name: 'Release sintetico0001' })).toBeVisible();
+    await expect(painel.getByRole('heading', { name: 'Filas e integrações' })).toBeVisible();
+    await expect(painel.getByRole('heading', { name: 'Rastreamentos sanitizados' })).toBeVisible();
+    await expect(painel.getByRole('heading', { name: 'Liberacao controlada' })).toBeVisible();
+    await expect(painel.getByText('degradado')).toBeVisible();
+    await expect(painel.getByLabel('Clínica', { exact: true })).toBeVisible();
+    await expect(painel.getByRole('checkbox', { name: 'IA clínica' })).toBeVisible();
+    await expect(painel.getByRole('button', { name: 'Aplicar' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+    await assertFocoVisivelNaArea(page, painel);
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('area Incidentes com alertas operacionais e severidades', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painel = await abrirAreaOperacoes(page, 'Incidentes');
+    await expect(painel.getByRole('heading', { name: 'Alertas operacionais' })).toBeVisible();
+    await expect(painel.getByRole('heading', { name: 'Outbox com eventos pendentes atrasados' })).toBeVisible();
+    await expect(painel.getByRole('heading', { name: 'Falhas de comunicação aguardam tratamento' })).toBeVisible();
+    await expect(painel.getByText('2 ativos')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+    await assertFocoVisivelNaArea(page, painel);
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('area Comunicacoes com falhas reprocessaveis e paginacao', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painel = await abrirAreaOperacoes(page, 'Comunicações');
+    await expect(painel.getByRole('heading', { name: 'Central de comunicação' })).toBeVisible();
+    await expect(painel.getByText('agenda.consulta.lembrete')).toBeVisible();
+    await expect(painel.getByText('Servidor de e-mail sintético indisponível.')).toBeVisible();
+    await expect(painel.getByLabel('Origem da falha')).toBeVisible();
+    await expect(painel.getByLabel('Canal da falha')).toBeVisible();
+    await expect(painel.getByRole('button', { name: 'Reprocessar' })).toBeEnabled();
+    await expect(painel.getByRole('button', { name: 'Anterior' })).toBeDisabled();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+    await assertFocoVisivelNaArea(page, painel);
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('area LGPD com protocolos, retencao e filtros', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painel = await abrirAreaOperacoes(page, 'LGPD');
+    await expect(painel.getByRole('heading', { name: 'Solicitações LGPD' })).toBeVisible();
+    await expect(painel.getByRole('heading', { name: 'Retenção e exclusao programada' })).toBeVisible();
+    await expect(painel.getByText(protocoloLgpdFixture)).toBeVisible();
+    await expect(painel.getByText('LGPD-SINTETICO-2')).toBeVisible();
+    await expect(painel.getByLabel('Situação LGPD')).toBeVisible();
+    await expect(painel.getByLabel('Tipo LGPD')).toBeVisible();
+    await expect(painel.getByRole('button', { name: `Ver detalhes ${protocoloLgpdFixture}` })).toBeVisible();
+    await expect(painel.getByRole('button', { name: 'Programar retenção LGPD' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+    await assertFocoVisivelNaArea(page, painel);
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('area Auditoria com eventos sensiveis e exportacao disponivel', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painel = await abrirAreaOperacoes(page, 'Auditoria');
+    await expect(painel.getByRole('heading', { name: 'Auditoria sensível' })).toBeVisible();
+    await expect(painel.getByText('pacientes.listar_dados_sensiveis').first()).toBeVisible();
+    await expect(painel.getByLabel('Ação')).toBeVisible();
+    await expect(painel.getByRole('button', { name: 'CSV' })).toBeEnabled();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+    await assertFocoVisivelNaArea(page, painel);
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('area Filas com assinaturas, outbox e sync mobile', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painel = await abrirAreaOperacoes(page, 'Filas');
+    await expect(page.getByRole('heading', { name: 'Assinaturas' })).toBeVisible();
+    await expect(painel.getByRole('heading', { name: 'Outbox com falha' })).toBeVisible();
+    await expect(painel.getByRole('heading', { name: 'Sync mobile' })).toBeVisible();
+    await expect(painel.getByText('agenda.consulta.criada')).toBeVisible();
+    await expect(painel.getByText('Tempo esgotado sintético no consumidor.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Aplicar Clínica' })).toBeVisible();
+    await expect(page.getByText('Plano Profissional')).toBeVisible();
+    await expect(painel.getByLabel('Início outbox')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+    await assertFocoVisivelNaArea(page, painel);
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('estados vazios representativos nas areas com dados', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page, {
+      alertas: { corpo: alertasOperacionaisVaziosFixture },
+      outbox: { corpo: [] },
+      sincronizacoes: { corpo: [] },
+      auditoria: { corpo: [] },
+      comunicacoes: { corpo: falhasComunicacaoVaziasFixture },
+      lgpd: { corpo: paginadoVazioFixture },
+      retencao: { corpo: retencaoLgpdVaziaFixture },
+      assinaturas: { corpo: paginadoVazioFixture },
+      tenants: { corpo: { itens: [], total: 0 } }
+    });
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painelIncidentes = await abrirAreaOperacoes(page, 'Incidentes');
+    await expect(painelIncidentes.getByText('Nenhum alerta ativo')).toBeVisible();
+
+    const painelComunicacoes = await abrirAreaOperacoes(page, 'Comunicações');
+    await expect(painelComunicacoes.getByText('Nenhuma falha de comunicação carregada.')).toBeVisible();
+
+    const painelAuditoria = await abrirAreaOperacoes(page, 'Auditoria');
+    await expect(painelAuditoria.getByText('Nenhum evento de auditoria carregado.')).toBeVisible();
+    await expect(painelAuditoria.getByRole('button', { name: 'CSV' })).toBeDisabled();
+
+    const painelLgpd = await abrirAreaOperacoes(page, 'LGPD');
+    await expect(painelLgpd.getByText('Nenhuma solicitação LGPD carregada.')).toBeVisible();
+    await expect(painelLgpd.getByText('Nenhuma política de retenção carregada.')).toBeVisible();
+
+    const painelFilas = await abrirAreaOperacoes(page, 'Filas');
+    await expect(painelFilas.getByText('Nenhuma falha carregada.')).toBeVisible();
+    await expect(painelFilas.getByText('Nenhuma sincronizacao carregada.')).toBeVisible();
+
+    const painelOnboarding = await abrirAreaOperacoes(page, 'Onboarding');
+    await expect(painelOnboarding.getByText('Nenhuma clínica encontrada.')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+    await assertFocoVisivelNaArea(page, painelOnboarding);
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('falha no carregamento inicial do painel operacional', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page, {
+      resumo: { status: 503, corpo: 'Falha sintética ao carregar o resumo operacional.' }
+    });
+    await page.goto('/operacoes');
+
+    await expect(page.getByRole('alert').filter({ hasText: 'Falha sintética' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidade(page);
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('falha operacional ao carregar clinicas na area Rollout', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page, {
+      tenants: { status: 503, corpo: 'Falha sintética ao carregar clínicas.' }
+    });
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painel = await abrirAreaOperacoes(page, 'Rollout');
+    await expect(painel.getByRole('alert').filter({ hasText: 'Falha sintética' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+    await assertFocoVisivelNaArea(page, painel);
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('filtros e detalhe LGPD sao somente leitura e mantem acessibilidade', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painelAuditoria = await abrirAreaOperacoes(page, 'Auditoria');
+    await painelAuditoria.getByLabel('Ação').selectOption('pacientes.obter_dados_sensiveis');
+    await painelAuditoria.getByRole('button', { name: 'Filtrar' }).click();
+    await expect(painelAuditoria.getByRole('heading', { name: 'Auditoria sensível' })).toBeVisible();
+
+    const painelLgpd = await abrirAreaOperacoes(page, 'LGPD');
+    await painelLgpd.getByLabel('Situação LGPD').selectOption('recebida');
+    await painelLgpd.getByRole('button', { name: 'Filtrar' }).click();
+    await painelLgpd.getByRole('button', { name: `Ver detalhes ${protocoloLgpdFixture}` }).click();
+
+    await expect(painelLgpd.getByRole('heading', { name: `Detalhe do protocolo ${protocoloLgpdFixture}` })).toBeVisible();
+    await expect(painelLgpd.getByRole('button', { name: `Exportar protocolo ${protocoloLgpdFixture}` })).toBeVisible();
+    await expect(painelLgpd.getByRole('button', { name: `Preparar resposta ${protocoloLgpdFixture}` })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+    // Filtro, paginacao e leitura de detalhe nao podem disparar mutacao.
+    expect(chamadas.mutacoes).toEqual([]);
+    expect(chamadas.naoMockadas).toEqual([]);
+  });
+
+  test('acao critica de encerramento expoe nome acessivel e estado compreensivel', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painel = await abrirAreaOperacoes(page, 'Onboarding');
+    await painel.getByRole('button', { name: 'Encerrar definitivamente' }).click();
+
+    const modal = page.getByRole('dialog');
+    await expect(modal).toBeVisible();
+    await expect(modal).toContainText('Clínica Sintética Dois');
+    await expect(modal.getByLabel('Protocolo da exportacao entregue')).toBeVisible();
+    await expect(modal.getByLabel('Motivo operacional')).toBeVisible();
+
+    const confirmar = modal.getByRole('button', { name: 'Confirmar' });
+    await expect(confirmar, 'Confirmar deveria comecar desabilitado sem protocolo e sem confirmacao').toBeDisabled();
+
+    await modal.getByLabel('Protocolo da exportacao entregue').fill('EXP-SINTETICO-001');
+    await modal.getByRole('checkbox').check();
+    await expect(confirmar).toBeEnabled();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    // O fluxo destrutivo nao e executado: sai pelo "Voltar", sem POST.
+    await modal.getByRole('button', { name: 'Voltar' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(chamadas.mutacoes).toEqual([]);
+    expect(chamadas.naoMockadas).toEqual([]);
+  });
+
+  test('mensagem de sucesso apos programar retencao com rota mockada', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painel = await abrirAreaOperacoes(page, 'LGPD');
+    await painel.getByRole('button', { name: 'Programar retenção LGPD' }).click();
+
+    const sucesso = page.getByRole('status').filter({ hasText: 'Retenção LGPD programada' });
+    await expect(sucesso).toBeVisible();
+    await expect(sucesso).toContainText('RET-SINTETICO-1');
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    // A unica chamada mutavel do gate e esta, e ela e servida pelo mock: o
+    // Playwright responde localmente e nada chega ao BFF, ao backend ou ao banco.
+    expect(chamadas.mutacoes).toEqual(['POST /api/operacoes/lgpd/retencao/programar']);
+    expect(chamadas.naoMockadas).toEqual([]);
+  });
+
+  test('lista de abas so recebe tabIndex proprio quando o overflow for real', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const tablist = page.getByRole('tablist', { name: 'Áreas de operações' });
+    const medidas = await tablist.evaluate((elemento) => ({
+      scrollWidth: elemento.scrollWidth,
+      clientWidth: elemento.clientWidth,
+      scrollHeight: elemento.scrollHeight,
+      clientHeight: elemento.clientHeight,
+      tabIndex: elemento.getAttribute('tabindex'),
+      focalizaveisInternos: elemento.querySelectorAll('[role="tab"]').length
+    }));
+
+    const rolavel = medidas.scrollWidth > medidas.clientWidth || medidas.scrollHeight > medidas.clientHeight;
+    if (rolavel) {
+      // Regiao rolavel de verdade: ja e alcancavel por teclado pelas proprias
+      // abas, entao nao precisa (nem deve ganhar) tabIndex proprio - axe so
+      // exige foco quando a regiao NAO contem elemento focalizavel.
+      expect(medidas.focalizaveisInternos, 'regiao rolavel sem elemento focalizavel interno').toBeGreaterThan(0);
+      const abaAtiva = tablist.locator('[role="tab"][aria-selected="true"]');
+      await abaAtiva.focus();
+      await expect(abaAtiva).toBeFocused();
+    } else {
+      // Sem overflow comprovado, nao ha regiao rolavel a corrigir.
+      expect(medidas.tabIndex, 'tabIndex adicionado a regiao que nao rola').toBeNull();
+    }
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+});
