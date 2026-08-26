@@ -1822,10 +1822,10 @@ test.describe('gate de acessibilidade - comunicacoes (PR 21)', () => {
 // confirmado via script Axe ad-hoc antes de qualquer alteracao de produto
 // (scrollHeight 689 x clientHeight 420 nesse cenario, em ambos os viewports).
 const canaisInventarioFixture = [
-  { id: 'canal-cfg-1', tenantId: 'tenant-1', tipo: 'whatsapp', nome: 'WhatsApp Clinica Norte', configuracao: {}, ativo: true },
+  { id: 'canal-cfg-1', tenantId: 'tenant-1', tipo: 'whatsapp', nome: 'WhatsApp Clínica Norte', configuracao: {}, ativo: true },
   { id: 'canal-cfg-2', tenantId: 'tenant-1', tipo: 'email', nome: 'Email Institucional', configuracao: {}, ativo: true },
   { id: 'canal-cfg-3', tenantId: 'tenant-1', tipo: 'push', nome: 'Push App Paciente', configuracao: {}, ativo: false },
-  { id: 'canal-cfg-4', tenantId: 'tenant-1', tipo: 'whatsapp', nome: 'WhatsApp Clinica Sul', configuracao: {}, ativo: true },
+  { id: 'canal-cfg-4', tenantId: 'tenant-1', tipo: 'whatsapp', nome: 'WhatsApp Clínica Sul', configuracao: {}, ativo: true },
   { id: 'canal-cfg-5', tenantId: 'tenant-1', tipo: 'email', nome: 'Email Financeiro', configuracao: {}, ativo: true }
 ];
 const templatesInventarioFixture = canaisInventarioFixture.flatMap((canal) =>
@@ -1892,9 +1892,9 @@ test.describe('gate de acessibilidade - comunicacoes configuracoes (PR 22)', () 
     await expect(page.getByRole('heading', { name: 'Novo canal' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Novo template' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Inventario ativo' })).toBeVisible();
-    await expect(page.getByText('WhatsApp Clinica Norte', { exact: true })).toBeVisible();
+    await expect(page.getByText('WhatsApp Clínica Norte', { exact: true })).toBeVisible();
     await expect(page.getByText('Email Financeiro', { exact: true })).toBeVisible();
-    await expect(page.getByText('Aprovado: Template WhatsApp Clinica Norte 1').first()).toBeVisible();
+    await expect(page.getByText('Aprovado: Template WhatsApp Clínica Norte 1').first()).toBeVisible();
 
     // Regiao rolavel do inventario (item 5): alcancavel e focavel por teclado.
     const inventario = page.getByLabel('Inventario de canais e templates');
