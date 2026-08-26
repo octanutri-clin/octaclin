@@ -2200,3 +2200,442 @@ test.describe('gate de acessibilidade - profissionais (PR 23)', () => {
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Mocks de /automacoes (PR 24 da governanca). Cobre criacao orientada de
+// regras (sem salvar), simulacao obrigatoria antes de ativar/pausar, recall
+// de pacientes inativos e o historico. Dados 100% sinteticos; toda mutacao
+// (POST /regras, POST /simulacoes, POST /recall/simulacoes, PATCH /ativacao)
+// fica interceptada e mockada - nenhuma chamada real a backend, WhatsApp,
+// Gmail, push ou pacientes e disparada, e nenhuma automacao real e executada.
+// O painel nao expoe nenhum botao de envio de mensagem: o unico caminho de
+// "disparo" e a acao da regra em producao, fora do alcance deste teste.
+// ---------------------------------------------------------------------------
+
+const permissoesAutomacoes = ['automacoes.gerenciar'];
+
+const profissionaisAutomacoesFixture = [{ id: 'prof-auto-1', tenantId: 'tenant-1', nome: 'Dra. Camila Duarte' }];
+
+const pacientesAutomacoesFixture = [
+  { id: 'pac-auto-1', nome: 'Fernanda Lima' },
+  { id: 'pac-auto-2', nome: 'Marcos Andrade' },
+  { id: 'pac-auto-3', nome: 'Juliana Prado' },
+  { id: 'pac-auto-4', nome: 'Ricardo Nunes' },
+  { id: 'pac-auto-5', nome: 'Beatriz Ramos' }
+];
+
+const regraConvencionalInativaFixture = {
+  id: 'regra-conv-inativa',
+  tenantId: 'tenant-1',
+  profissionalId: 'prof-auto-1',
+  nome: 'Retomar contato após check-in atrasado',
+  gatilho: { tipo: 'checkin.atrasado' },
+  condicoes: [{ campo: 'checkinsPerdidos', operador: 'maior_ou_igual', valor: 3 }],
+  acoes: [{ tipo: 'notificar_profissional' }],
+  ativa: false,
+  criadoEm: '2026-08-01T10:00:00.000Z'
+};
+
+const regraConvencionalAtivaFixture = {
+  id: 'regra-conv-ativa',
+  tenantId: 'tenant-1',
+  profissionalId: 'prof-auto-1',
+  nome: 'Alertar risco alto',
+  gatilho: { tipo: 'paciente.risco_alto' },
+  condicoes: [{ campo: 'frustracaoScore', operador: 'maior_que', valor: 70 }],
+  acoes: [{ tipo: 'criar_tarefa' }],
+  ativa: true,
+  criadoEm: '2026-08-02T10:00:00.000Z'
+};
+
+const regraRecallFixture = {
+  id: 'regra-recall',
+  tenantId: 'tenant-1',
+  profissionalId: 'prof-auto-1',
+  nome: 'Recall de pacientes inativos',
+  gatilho: { tipo: 'paciente.inativo', diasSemConsulta: 60, intervaloMinimoDias: 30, limitePorExecucao: 25 },
+  condicoes: [],
+  acoes: [{ tipo: 'enviar_template' }],
+  ativa: false,
+  criadoEm: '2026-08-03T10:00:00.000Z'
+};
+
+// Preenchimento sintetico so para produzir overflow real em "Regras
+// cadastradas" (max-h-[520px]) - ver teste de regioes rolaveis abaixo.
+const regrasFillerFixture = [1, 2, 3, 4, 5].map((indice) => ({
+  id: `regra-filler-${indice}`,
+  tenantId: 'tenant-1',
+  profissionalId: 'prof-auto-1',
+  nome: `Regra sintetica de preenchimento ${indice}`,
+  gatilho: { tipo: indice % 2 === 0 ? 'questionario.respondido' : 'checkin.atrasado' },
+  condicoes: [{ campo: 'checkinsPerdidos', operador: 'maior_ou_igual', valor: indice }],
+  acoes: [{ tipo: indice % 2 === 0 ? 'enviar_template' : 'notificar_profissional' }],
+  ativa: indice % 2 === 0,
+  criadoEm: '2026-08-04T10:00:00.000Z'
+}));
+
+const regrasSuficientesParaOverflowFixture = [
+  regraConvencionalInativaFixture,
+  regraConvencionalAtivaFixture,
+  regraRecallFixture,
+  ...regrasFillerFixture
+];
+
+const execucaoSimulacaoComumFixture = {
+  id: 'exec-sim-comum',
+  tenantId: 'tenant-1',
+  regraId: 'regra-conv-ativa',
+  pacienteId: 'pac-auto-1',
+  status: 'executado',
+  resultado: { simulacao: true, executar: true, gatilho: 'paciente.risco_alto' },
+  criadoEm: '2026-08-05T10:00:00.000Z'
+};
+
+const execucaoSimulacaoRecallFixture = {
+  id: 'exec-sim-recall',
+  tenantId: 'tenant-1',
+  regraId: 'regra-recall',
+  status: 'executado',
+  resultado: {
+    simulacao: true,
+    gatilho: 'paciente.inativo',
+    totalCandidatos: 2,
+    candidatos: [
+      { pacienteId: 'pac-auto-2', diasSemConsulta: 75 },
+      { pacienteId: 'pac-auto-3', diasSemConsulta: null }
+    ],
+    excluidos: [
+      { pacienteId: 'pac-auto-4', motivo: 'sem_contato' },
+      { pacienteId: 'pac-auto-5', motivo: 'consulta_recente' }
+    ]
+  },
+  criadoEm: '2026-08-06T10:00:00.000Z'
+};
+
+// Preenchimento sintetico so para produzir overflow real em "Historico
+// recente" (max-h-[420px]) - ver teste de regioes rolaveis abaixo.
+const execucoesFillerFixture = [1, 2, 3, 4].map((indice) => ({
+  id: `exec-filler-${indice}`,
+  tenantId: 'tenant-1',
+  regraId: `regra-filler-${indice}`,
+  pacienteId: 'pac-auto-1',
+  status: indice % 2 === 0 ? 'executado' : 'ignorado',
+  resultado: {
+    simulacao: true,
+    executar: indice % 2 === 0,
+    gatilho: indice % 2 === 0 ? 'questionario.respondido' : 'checkin.atrasado'
+  },
+  criadoEm: '2026-08-07T10:00:00.000Z'
+}));
+
+const execucoesSuficientesParaOverflowFixture = [
+  execucaoSimulacaoComumFixture,
+  execucaoSimulacaoRecallFixture,
+  ...execucoesFillerFixture
+];
+
+async function prepararSessaoAutomacoes(page, { papel = 'SuperAdmin', permissoes = permissoesAutomacoes } = {}) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: papel, domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/automacoes'), domain: 'localhost', path: '/' }
+  ]);
+
+  await page.route('**/api/auth/session', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      autenticado: true,
+      papel,
+      apiUrl: 'http://localhost:3001',
+      tenantSlug: 'clinica-octa',
+      email: 'admin@octaclin.local',
+      expiraEm: '2026-12-31T18:00:00.000Z',
+      permissoes,
+      destinoInicial: '/automacoes'
+    })
+  }));
+}
+
+function prepararListaRegras(page, { itens = [regraConvencionalInativaFixture], status = 200 } = {}) {
+  return page.route('**/api/automacoes/regras', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    if (status !== 200) {
+      await route.fulfill({ status, contentType: 'text/plain', body: 'Falha ao carregar automações.' });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(itens) });
+  });
+}
+
+function prepararHistoricoExecucoes(page, { itens = [] } = {}) {
+  return page.route('**/api/automacoes/avaliacoes', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(itens) })
+  );
+}
+
+function prepararProfissionaisAutomacoes(page, { itens = profissionaisAutomacoesFixture } = {}) {
+  return page.route('**/api/profissionais**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens, total: itens.length }) })
+  );
+}
+
+function prepararPacientesAutomacoes(page, { itens = pacientesAutomacoesFixture } = {}) {
+  return page.route('**/api/pacientes**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens, total: itens.length }) })
+  );
+}
+
+async function prepararAutomacoes(page, { sessao, regras, execucoes, profissionais, pacientes } = {}) {
+  await prepararSessaoAutomacoes(page, sessao);
+  await prepararListaRegras(page, regras);
+  await prepararHistoricoExecucoes(page, execucoes);
+  await prepararProfissionaisAutomacoes(page, profissionais);
+  await prepararPacientesAutomacoes(page, pacientes);
+}
+
+test.describe('gate de acessibilidade - automacoes (PR 24)', () => {
+  test('painel carregado com profissionais, pacientes e historico sinteticos; regioes rolaveis focalizaveis', async ({ page }) => {
+    await prepararAutomacoes(page, {
+      regras: { itens: regrasSuficientesParaOverflowFixture },
+      execucoes: { itens: execucoesSuficientesParaOverflowFixture }
+    });
+    await page.goto('/automacoes');
+
+    await expect(page.getByRole('heading', { name: 'Automações', level: 1 })).toBeVisible();
+    await expect(page.getByText('8 regras, 6 simulacoes e execucoes no histórico')).toBeVisible();
+
+    await expect(page.getByText('Retomar contato após check-in atrasado').first()).toBeVisible();
+    await expect(page.getByText('Alertar risco alto').first()).toBeVisible();
+    await expect(page.getByText('Recall de pacientes inativos').first()).toBeVisible();
+    await expect(page.getByText('Ativa').first()).toBeVisible();
+    await expect(page.getByText('Inativa').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Simular recall de Recall de pacientes inativos' })).toBeVisible();
+
+    await expect(page.getByText('Regra: regra-conv-ativa')).toBeVisible();
+    await expect(page.getByText('Regra: regra-recall')).toBeVisible();
+    await expect(page.getByText('Seriam contatados (2):')).toBeVisible();
+    await expect(page.getByText('Marcos Andrade - 75 dias sem consulta')).toBeVisible();
+    await expect(page.getByText('Juliana Prado - nunca concluiu consulta')).toBeVisible();
+    await expect(page.getByText('Fora (2):')).toBeVisible();
+    await expect(page.getByText(/Ricardo Nunes - sem contato cadastrado/)).toBeVisible();
+    await expect(page.getByText(/Beatriz Ramos - teve consulta recente/)).toBeVisible();
+
+    // Checagens gerais primeiro (incluindo ordem de tabulacao pagina inteira)
+    // - antes de qualquer foco manual abaixo, que deixaria o foco preso no
+    // ultimo elemento focalizavel da pagina e quebraria a contagem de Tabs.
+    await rodarChecagensDeAcessibilidade(page);
+
+    // Regiao rolavel "Regras cadastradas" (max-h-[520px]): fixture com 8
+    // regras produz overflow real, confirmado abaixo por scrollHeight >
+    // clientHeight - nao um numero fixo arbitrario.
+    const regiaoRegras = page.getByLabel('Regras cadastradas');
+    await expect(regiaoRegras).toBeVisible();
+    await regiaoRegras.focus();
+    await expect(regiaoRegras).toBeFocused();
+    const medidasRegras = await regiaoRegras.evaluate((elemento) => ({
+      scrollHeight: elemento.scrollHeight,
+      clientHeight: elemento.clientHeight
+    }));
+    expect(medidasRegras.scrollHeight, 'Fixture de regras nao produziu overflow real (520px)').toBeGreaterThan(
+      medidasRegras.clientHeight
+    );
+
+    // Regiao rolavel "Historico recente" (max-h-[420px]): mesma logica, com
+    // fixture de 6 execucoes/simulacoes.
+    const regiaoHistorico = page.getByLabel('Histórico recente');
+    await expect(regiaoHistorico).toBeVisible();
+    await regiaoHistorico.focus();
+    await expect(regiaoHistorico).toBeFocused();
+    const medidasHistorico = await regiaoHistorico.evaluate((elemento) => ({
+      scrollHeight: elemento.scrollHeight,
+      clientHeight: elemento.clientHeight
+    }));
+    expect(medidasHistorico.scrollHeight, 'Fixture de historico nao produziu overflow real (420px)').toBeGreaterThan(
+      medidasHistorico.clientHeight
+    );
+  });
+
+  test('painel - sem regras e sem historico', async ({ page }) => {
+    await prepararAutomacoes(page, { regras: { itens: [] }, execucoes: { itens: [] } });
+    await page.goto('/automacoes');
+
+    await expect(page.getByRole('heading', { name: 'Automações', level: 1 })).toBeVisible();
+    await expect(page.getByText('Nenhuma regra carregada.')).toBeVisible();
+    await expect(page.getByText('Nenhuma avaliação persistida.')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('painel - falha no carregamento inicial', async ({ page }) => {
+    await prepararAutomacoes(page, { regras: { status: 500 } });
+    await page.goto('/automacoes');
+
+    await expect(page.getByText('Falha ao carregar automações.')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  // Interacao relevante: alterna o gatilho da "Nova regra" entre check-in
+  // atrasado e inatividade e confirma a troca acessivel dos campos
+  // condicionais, sem nunca submeter o formulario (POST /regras
+  // deliberadamente sem mock nesta PR - nenhuma regra e criada de verdade).
+  test('nova regra - alterna gatilho e troca campos condicionais de forma acessivel (interacao relevante)', async ({ page }) => {
+    await prepararAutomacoes(page);
+    await page.goto('/automacoes');
+
+    await expect(page.getByRole('heading', { name: 'Nova regra' })).toBeVisible();
+    await expect(page.getByLabel('Campo')).toBeVisible();
+    await expect(page.getByLabel('Operador')).toBeVisible();
+    await expect(page.getByLabel('Valor')).toBeVisible();
+    await expect(page.getByLabel('Ação', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Dias sem consulta')).toHaveCount(0);
+
+    await page.getByLabel('Gatilho').selectOption({ label: 'Paciente sem consulta há muito tempo' });
+
+    await expect(page.getByLabel('Campo')).toHaveCount(0);
+    await expect(page.getByLabel('Operador')).toHaveCount(0);
+    await expect(page.getByLabel('Valor')).toHaveCount(0);
+    await expect(page.getByLabel('Ação', { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel('Dias sem consulta')).toHaveValue('60');
+    await expect(page.getByLabel('Intervalo minimo entre recalls (dias)')).toHaveValue('30');
+    await expect(page.getByLabel('Limite de pacientes por rodada')).toHaveValue('25');
+
+    await page.getByLabel('Gatilho').selectOption({ label: 'Check-in atrasado' });
+
+    await expect(page.getByLabel('Dias sem consulta')).toHaveCount(0);
+    await expect(page.getByLabel('Campo')).toBeVisible();
+    await expect(page.getByLabel('Operador')).toBeVisible();
+    await expect(page.getByLabel('Valor')).toBeVisible();
+    await expect(page.getByLabel('Ação', { exact: true })).toBeVisible();
+
+    await expect(page.getByRole('button', { name: 'Salvar regra' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  // Interacao relevante: uma regra inativa nao pode ser ativada antes da
+  // simulacao. Simula (POST /simulacoes mockado) e so entao ativa (PATCH
+  // /ativacao mockado) - mesmo comportamento ja validado em
+  // tests/visual/fase-197-modulos-avancados.spec.mjs, agora com axe-core.
+  test('simulacao e ativacao - regra inativa exige simulacao antes de ativar (interacao relevante)', async ({ page }) => {
+    await prepararAutomacoes(page, { regras: { itens: [regraConvencionalInativaFixture] } });
+    await page.goto('/automacoes');
+
+    const botaoAtivar = page.getByRole('button', { name: 'Ativar Retomar contato após check-in atrasado' });
+    await expect(botaoAtivar).toBeDisabled();
+
+    await page.route('**/api/automacoes/simulacoes', (route) => route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'exec-simulacao-teste',
+        tenantId: 'tenant-1',
+        regraId: regraConvencionalInativaFixture.id,
+        pacienteId: 'pac-auto-1',
+        status: 'executado',
+        resultado: { simulacao: true, executar: true, gatilho: 'checkin.atrasado' },
+        criadoEm: '2026-08-08T10:00:00.000Z'
+      })
+    }));
+    await page.getByRole('button', { name: 'Simular sem executar' }).click();
+    await expect(page.getByText('Simulação concluída: a regra seria executada.')).toBeVisible();
+    await expect(botaoAtivar).toBeEnabled();
+
+    await page.route(`**/api/automacoes/regras/${regraConvencionalInativaFixture.id}/ativacao`, (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ...regraConvencionalInativaFixture, ativa: true })
+    }));
+    await botaoAtivar.click();
+    await expect(page.getByText('Regra ativada.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Pausar Retomar contato após check-in atrasado' })).toBeVisible();
+    await expect(page.getByText('Ativa', { exact: true })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('simulacao - condicoes nao atendidas', async ({ page }) => {
+    await prepararAutomacoes(page, { regras: { itens: [regraConvencionalInativaFixture] } });
+    await page.goto('/automacoes');
+
+    await page.route('**/api/automacoes/simulacoes', (route) => route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'exec-simulacao-sem-condicao',
+        tenantId: 'tenant-1',
+        regraId: regraConvencionalInativaFixture.id,
+        pacienteId: 'pac-auto-1',
+        status: 'ignorado',
+        resultado: { simulacao: true, executar: false, gatilho: 'checkin.atrasado' },
+        criadoEm: '2026-08-09T10:00:00.000Z'
+      })
+    }));
+    await page.getByRole('button', { name: 'Simular sem executar' }).click();
+    await expect(page.getByText('Simulação concluída: as condições não foram atendidas.')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('simulacao - falha ao simular', async ({ page }) => {
+    await prepararAutomacoes(page, { regras: { itens: [regraConvencionalInativaFixture] } });
+    await page.goto('/automacoes');
+
+    await page.route('**/api/automacoes/simulacoes', (route) => route.fulfill({
+      status: 500,
+      contentType: 'text/plain',
+      body: 'Falha ao simular regra.'
+    }));
+    await page.getByRole('button', { name: 'Simular sem executar' }).click();
+    await expect(page.getByText('Falha ao simular regra.')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  // Interacao relevante: recall de pacientes inativos, com candidatos e
+  // exclusoes sinteticos. Nenhuma mensagem e enviada - o painel nao tem
+  // nenhum botao de disparo para esta regra, so simulacao.
+  test('recall - simula e mostra candidatos e exclusoes de forma acessivel (interacao relevante)', async ({ page }) => {
+    await prepararAutomacoes(page, { regras: { itens: [regraRecallFixture] } });
+    await page.goto('/automacoes');
+
+    await page.route('**/api/automacoes/recall/simulacoes', (route) => route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'exec-recall-teste',
+        tenantId: 'tenant-1',
+        regraId: regraRecallFixture.id,
+        status: 'executado',
+        resultado: {
+          simulacao: true,
+          gatilho: 'paciente.inativo',
+          totalCandidatos: 2,
+          candidatos: [
+            { pacienteId: 'pac-auto-2', diasSemConsulta: 75 },
+            { pacienteId: 'pac-auto-3', diasSemConsulta: null }
+          ],
+          excluidos: [
+            { pacienteId: 'pac-auto-4', motivo: 'sem_contato' },
+            { pacienteId: 'pac-auto-5', motivo: 'consulta_recente' }
+          ]
+        },
+        criadoEm: '2026-08-10T10:00:00.000Z'
+      })
+    }));
+
+    await page.getByRole('button', { name: `Simular recall de ${regraRecallFixture.nome}` }).click();
+    await expect(page.getByText('Simulação concluída: 2 paciente(s) seriam contatados. Confira a lista antes de ativar.')).toBeVisible();
+
+    await expect(page.getByText('Seriam contatados (2):')).toBeVisible();
+    await expect(page.getByText('Marcos Andrade - 75 dias sem consulta')).toBeVisible();
+    await expect(page.getByText('Juliana Prado - nunca concluiu consulta')).toBeVisible();
+    await expect(page.getByText('Fora (2):')).toBeVisible();
+    await expect(page.getByText(/Ricardo Nunes - sem contato cadastrado/)).toBeVisible();
+    await expect(page.getByText(/Beatriz Ramos - teve consulta recente/)).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+});
