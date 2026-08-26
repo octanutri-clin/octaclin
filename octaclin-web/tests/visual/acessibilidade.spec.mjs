@@ -1928,3 +1928,275 @@ test.describe('gate de acessibilidade - comunicacoes configuracoes (PR 22)', () 
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Mocks da equipe clinica / profissionais (PR 23 da governanca). Fixtures
+// adaptadas de fase-196-comunicacoes-equipe.spec.mjs. Matchers por pathname
+// exato para nao deixar um matcher amplo capturar tanto /api/profissionais
+// quanto /api/profissionais/arquivados.
+// ---------------------------------------------------------------------------
+
+const permissoesProfissionaisCompletas = ['profissionais.ler', 'profissionais.gerenciar'];
+const permissoesProfissionaisSomenteLeitura = ['profissionais.ler'];
+
+const profissionaisFixture = [
+  { id: 'prof-eq-1', tenantId: 'tenant-1', usuarioId: 'usuario-eq-1', nome: 'Dra. Marina Alves', registroProfissional: 'CRN-11111', especialidade: 'Nutrologia', criadoEm: '2026-07-01T10:00:00.000Z' },
+  { id: 'prof-eq-2', tenantId: 'tenant-1', usuarioId: 'usuario-eq-2', nome: 'Dr. Bruno Tavares', registroProfissional: 'CRM-22222', especialidade: 'Endocrinologia', criadoEm: '2026-07-05T10:00:00.000Z' },
+  { id: 'prof-eq-3', tenantId: 'tenant-1', usuarioId: 'usuario-eq-3', nome: 'Dra. Renata Souza', registroProfissional: 'CRN-33333', especialidade: 'Nutrição Esportiva', criadoEm: '2026-07-10T10:00:00.000Z' }
+];
+
+// prof-eq-1 conectado, prof-eq-2 desconectado, prof-eq-3 ausente de proposito
+// (cobre "nao configurada").
+const statusGoogleFixture = [
+  { profissionalId: 'prof-eq-1', conectado: true },
+  { profissionalId: 'prof-eq-2', conectado: false }
+];
+
+const profissionalArquivadoFixture = {
+  id: 'prof-eq-arquivado-1', tenantId: 'tenant-1', usuarioId: 'usuario-eq-arquivado-1',
+  nome: 'Dr. Eduardo Lima', registroProfissional: 'CRM-44444', especialidade: 'Psiquiatria',
+  arquivadoEm: '2026-07-20T10:00:00.000Z', criadoEm: '2026-06-01T10:00:00.000Z'
+};
+
+async function prepararSessaoProfissionais(page, { papel = 'SuperAdmin', permissoes = permissoesProfissionaisCompletas } = {}) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: papel, domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/profissionais'), domain: 'localhost', path: '/' }
+  ]);
+
+  await page.route('**/api/auth/session', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      autenticado: true,
+      papel,
+      apiUrl: 'http://localhost:3001',
+      tenantSlug: 'clinica-octa',
+      email: 'admin@octaclin.local',
+      expiraEm: '2026-12-31T18:00:00.000Z',
+      permissoes,
+      destinoInicial: '/profissionais'
+    })
+  }));
+}
+
+// Matcher exato: NAO usa wildcard para nao capturar /api/profissionais/arquivados
+// nem /api/profissionais/:id (edicao/arquivamento/restauracao), que ficam
+// deliberadamente sem mock nesta PR - nenhuma mutacao real e disparada.
+function prepararListaProfissionais(page, { itens = profissionaisFixture, total = itens.length, status = 200 } = {}) {
+  return page.route((url) => url.pathname === '/api/profissionais', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    if (status !== 200) {
+      await route.fulfill({ status, contentType: 'text/plain', body: 'Falha ao carregar profissionais.' });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens, total }) });
+  });
+}
+
+function prepararProfissionaisArquivados(page, { itens = [] } = {}) {
+  return page.route((url) => url.pathname === '/api/profissionais/arquivados', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens, total: itens.length }) })
+  );
+}
+
+function prepararStatusGoogleProfissionais(page, { itens = statusGoogleFixture, status = 200 } = {}) {
+  return page.route('**/api/agenda/google/profissionais/status', async (route) => {
+    if (status !== 200) {
+      await route.fulfill({ status, contentType: 'text/plain', body: 'Falha ao consultar status da Google Agenda.' });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(itens) });
+  });
+}
+
+async function prepararProfissionais(page, { sessao, lista, arquivados, google } = {}) {
+  await prepararSessaoProfissionais(page, sessao);
+  await prepararListaProfissionais(page, lista);
+  await prepararProfissionaisArquivados(page, arquivados);
+  await prepararStatusGoogleProfissionais(page, google);
+}
+
+// PR 23 da governanca: expande o gate de a11y para /profissionais (equipe
+// clinica), respeitando a autorizacao existente (somente SuperAdmin com
+// profissionais.gerenciar cria/edita/arquiva/restaura). Dados 100%
+// sinteticos; nenhuma chamada real de criacao, edicao, arquivamento ou
+// restauracao e disparada - PATCH/POST/DELETE de /api/profissionais/:id
+// ficam deliberadamente sem mock.
+test.describe('gate de acessibilidade - profissionais (PR 23)', () => {
+  test('diretorio - superadmin com profissionais sinteticos, formulario e paginacao', async ({ page }) => {
+    await prepararProfissionais(page, { lista: { total: 60 } });
+    await page.goto('/profissionais');
+
+    await expect(page.getByRole('heading', { name: 'Profissionais', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Novo profissional' })).toBeVisible();
+
+    await expect(page.getByText('Dra. Marina Alves')).toBeVisible();
+    await expect(page.getByText('Dr. Bruno Tavares')).toBeVisible();
+    await expect(page.getByText('Conectada', { exact: true })).toBeVisible();
+    await expect(page.getByText('Desconectada', { exact: true })).toBeVisible();
+
+    await expect(page.getByText('Página 1 de 3 | 60 profissionais')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Anterior' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Próxima' })).toBeEnabled();
+
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('diretorio - lista vazia', async ({ page }) => {
+    await prepararProfissionais(page, { lista: { itens: [], total: 0 } });
+    await page.goto('/profissionais');
+    await expect(page.getByText('Nenhum profissional carregado.')).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('diretorio - falha ao carregar profissionais', async ({ page }) => {
+    await prepararProfissionais(page, { lista: { status: 500 } });
+    await page.goto('/profissionais');
+    await expect(page.getByText('Falha ao carregar profissionais.')).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('permissoes - usuario somente leitura nao ve criacao, edicao, arquivamento ou lixeira', async ({ page }) => {
+    await prepararProfissionais(page, { sessao: { papel: 'Professional', permissoes: permissoesProfissionaisSomenteLeitura } });
+    await page.goto('/profissionais');
+
+    await expect(page.getByRole('heading', { name: 'Profissionais', level: 1 })).toBeVisible();
+    await expect(page.getByText('Dra. Marina Alves')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Novo profissional' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Editar profissional' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Arquivar profissional' })).toHaveCount(0);
+
+    const areas = page.getByRole('tablist', { name: 'Áreas da equipe clínica' });
+    await expect(areas.getByRole('tab', { name: 'Lixeira' })).toHaveCount(0);
+
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  // Interacao relevante: alternar entre as 4 areas usando teclado, validando
+  // foco e aria-selected, e o link de agenda em Disponibilidade.
+  test('areas - navega por teclado entre diretorio, disponibilidade, integracoes e lixeira (interacao relevante)', async ({ page }) => {
+    await prepararProfissionais(page);
+    await page.goto('/profissionais');
+
+    const areas = page.getByRole('tablist', { name: 'Áreas da equipe clínica' });
+    const abaDiretorio = areas.getByRole('tab', { name: 'Diretório' });
+    const abaDisponibilidade = areas.getByRole('tab', { name: 'Disponibilidade' });
+    const abaIntegracoes = areas.getByRole('tab', { name: 'Integrações' });
+    const abaLixeira = areas.getByRole('tab', { name: 'Lixeira' });
+
+    await expect(abaDiretorio).toHaveAttribute('aria-selected', 'true');
+    await abaDiretorio.focus();
+
+    await page.keyboard.press('ArrowRight');
+    await expect(abaDisponibilidade).toBeFocused();
+    await expect(abaDisponibilidade).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('link', { name: 'Abrir agenda de Dra. Marina Alves' })).toHaveAttribute(
+      'href',
+      '/agenda?profissionalId=prof-eq-1'
+    );
+
+    await page.keyboard.press('ArrowRight');
+    await expect(abaIntegracoes).toBeFocused();
+    await expect(abaIntegracoes).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByText('Convites e permissões ficam na área Equipe da conta.')).toBeVisible();
+
+    await page.keyboard.press('ArrowRight');
+    await expect(abaLixeira).toBeFocused();
+    await expect(abaLixeira).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tabpanel')).toBeVisible();
+
+    await page.keyboard.press('ArrowRight');
+    await expect(abaDiretorio).toBeFocused();
+    await expect(abaDiretorio).toHaveAttribute('aria-selected', 'true');
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('integracoes - google agenda conectada, desconectada e nao configurada', async ({ page }) => {
+    await prepararProfissionais(page);
+    await page.goto('/profissionais');
+    await page.getByRole('tab', { name: 'Integrações' }).click();
+
+    // Cada texto de status e unico na pagina (um card por profissional), entao
+    // nao ha necessidade de escopar por card - o texto ja amarra profissional a status.
+    await expect(page.getByText('Google Agenda conectada')).toBeVisible();
+    await expect(page.getByText('Google Agenda desconectada')).toBeVisible();
+    await expect(page.getByText('Google Agenda não configurada')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('integracoes - status da google agenda indisponivel', async ({ page }) => {
+    await prepararProfissionais(page, { google: { status: 500 } });
+    await page.goto('/profissionais');
+    await page.getByRole('tab', { name: 'Integrações' }).click();
+
+    await expect(page.getByText('Estado da Google Agenda indisponível').first()).toBeVisible();
+    await expect(page.getByText('Google Agenda conectada')).toHaveCount(0);
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('lixeira - profissional arquivado carregado', async ({ page }) => {
+    await prepararProfissionais(page, { arquivados: { itens: [profissionalArquivadoFixture] } });
+    await page.goto('/profissionais');
+    await page.getByRole('tab', { name: 'Lixeira' }).click();
+
+    await expect(page.getByText('Dr. Eduardo Lima')).toBeVisible();
+    await expect(page.getByText(/Arquivado em/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Restaurar acesso' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('lixeira - estado vazio', async ({ page }) => {
+    await prepararProfissionais(page);
+    await page.goto('/profissionais');
+    await page.getByRole('tab', { name: 'Lixeira' }).click();
+
+    await expect(page.getByText('Nenhum profissional carregado.')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  // Interacao relevante: abrir a edicao de um profissional e cancelar sem
+  // salvar - nenhum PATCH e disparado (rota nao mockada nesta PR).
+  test('diretorio - abre edicao de profissional e cancela sem salvar (interacao relevante)', async ({ page }) => {
+    await prepararProfissionais(page);
+    await page.goto('/profissionais');
+
+    await page.getByRole('button', { name: 'Editar profissional' }).first().click();
+    await expect(page.getByRole('heading', { name: 'Editar profissional' })).toBeVisible();
+    await expect(page.getByLabel('Nome')).toHaveValue('Dra. Marina Alves');
+    await expect(page.getByLabel('Email')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(page.getByRole('heading', { name: 'Novo profissional' })).toBeVisible();
+    await expect(page.getByLabel('Nome')).toHaveValue('');
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  // Interacao relevante: abrir o modal de arquivamento, validar o foco
+  // inicial dentro do dialog e cancelar - nenhum DELETE e disparado (rota
+  // nao mockada nesta PR, e o botao de confirmar nunca e clicado).
+  test('diretorio - abre modal de arquivar profissional, valida foco e cancela sem confirmar (interacao relevante)', async ({ page }) => {
+    await prepararProfissionais(page);
+    await page.goto('/profissionais');
+
+    await page.getByRole('button', { name: 'Arquivar profissional' }).first().click();
+
+    const dialog = page.getByRole('dialog', { name: 'Arquivar profissional' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('Arquivar o profissional Dra. Marina Alves?')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Fechar' })).toBeFocused();
+
+    await dialog.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(dialog).toBeHidden();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+});
