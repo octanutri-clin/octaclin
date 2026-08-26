@@ -211,7 +211,7 @@ export function ListaProfissionais() {
             <p className="mt-1 text-sm text-texto-suave">
               {dados ? `${dados.total} registros encontrados` : 'Carregando registros'}
             </p>
-            <p className="mt-1 text-xs text-texto-sutil">Somente quem possui permissão de gerenciar profissionais pode criar, editar ou arquivar acessos.</p>
+            <p className="mt-1 text-xs text-texto-suave">Somente quem possui permissão de gerenciar profissionais pode criar, editar ou arquivar acessos.</p>
           </div>
           <div className="flex gap-2">
             {editandoId ? (
@@ -336,7 +336,7 @@ export function ListaProfissionais() {
       </Cartao>
       ) : null}
 
-      <Tabela>
+      <Tabela tabIndex={0} aria-label="Lista de profissionais">
         <TabelaConteudo larguraMinima="820px">
           <TabelaCabecalho className="grid-cols-[1.2fr_0.9fr_1fr_0.7fr_0.8fr_96px]">
             <span>Profissional</span>
@@ -378,7 +378,7 @@ export function ListaProfissionais() {
                         </Botao>
                       </>
                     ) : (
-                      <span className="text-xs text-texto-sutil">-</span>
+                      <span className="text-xs text-texto-suave">-</span>
                     )}
                   </div>
                 </TabelaLinha>
@@ -473,7 +473,7 @@ export function ListaProfissionais() {
                              ? 'Google Agenda desconectada'
                              : 'Google Agenda não configurada'}
                     </p>
-                    <p className="mt-1 text-xs text-texto-sutil">A agenda interna continua funcionando independentemente desta integração.</p>
+                    <p className="mt-1 text-xs text-texto-suave">A agenda interna continua funcionando independentemente desta integração.</p>
                   </CartaoConteudo>
                 </Cartao>
               );
