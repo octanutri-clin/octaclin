@@ -1,11 +1,11 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { Award, CheckCircle2, MessageSquare, RefreshCcw, Save, Trophy, UsersRound } from 'lucide-react';
+import { Award, MessageSquare, RefreshCcw, Save, Trophy, UsersRound } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
-import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
+import { AlertaOperacional, AlertaSucesso, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import {
   BadgeApi,
   CirculoPacientesApi,
@@ -283,7 +283,9 @@ export function PainelGamificacao() {
               ? `${desafios.length} metas e ${badges.length} conquistas individuais`
               : 'Recursos desabilitados por padrao'}
           </p>
-          <p className="mt-1 text-xs text-texto-sutil">Cada área exige ativação explicita da conta.</p>
+          {/* text-texto-sutil (#8A94A3) rende 3.06:1 sobre branco; o gate de a11y
+              exige 4.5:1, e text-texto-suave (#596273) entrega 6.14:1. */}
+          <p className="mt-1 text-xs text-texto-suave">Cada área exige ativação explicita da conta.</p>
         </div>
         <Botao onClick={() => void carregar()} disabled={carregando}>
           <RefreshCcw size={16} />
@@ -294,12 +296,7 @@ export function PainelGamificacao() {
 
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       <BarraCarregamento visivel={carregando} />
-      {sucesso ? (
-        <div className="flex items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
-          <CheckCircle2 size={16} />
-          {sucesso}
-        </div>
-      ) : null}
+      {sucesso ? <AlertaSucesso mensagem={sucesso} /> : null}
 
       <Cartao>
         <form onSubmit={salvarConfiguracao}>
@@ -631,7 +628,11 @@ export function PainelGamificacao() {
           <CartaoCabecalho>
             <CartaoTitulo>Ranking</CartaoTitulo>
           </CartaoCabecalho>
-          <div className="max-h-[340px] divide-y divide-linha overflow-auto">
+          {/* Regiao com overflow real comprovado no gate de a11y (10 participacoes
+              sinteticas: scrollHeight > clientHeight) e sem elemento focalizavel
+              interno, entao precisa ser alcancavel por teclado - mesmo padrao ja
+              usado em painel-ia.tsx. */}
+          <div tabIndex={0} aria-label="Ranking do desafio" className="max-h-[340px] divide-y divide-linha overflow-auto">
             {ranking.length ? (
               ranking.map((item) => (
                 <div key={item.id} className="grid gap-1 px-4 py-3 text-sm">

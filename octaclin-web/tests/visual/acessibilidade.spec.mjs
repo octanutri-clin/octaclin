@@ -118,10 +118,15 @@ async function assertSemViolacoesAxe(page) {
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();
 
-  const violacoes = resultado.violations.map(
-    (violacao) =>
-      `${violacao.id} (impacto: ${violacao.impact}): ${violacao.help} — ${violacao.nodes.length} elemento(s) — ${violacao.helpUrl}`
-  );
+  const violacoes = resultado.violations.map((violacao) => {
+    // Os alvos e o resumo de cada no entram na mensagem porque, sem eles, o
+    // relatorio diz apenas "1 elemento(s)" e nao ha como corrigir a violacao
+    // certa sem reabrir o trace.
+    const nos = violacao.nodes
+      .map((no) => `    - ${no.target.join(' ')} :: ${(no.failureSummary ?? '').replace(/\s+/g, ' ').trim()}`)
+      .join('\n');
+    return `${violacao.id} (impacto: ${violacao.impact}): ${violacao.help} — ${violacao.nodes.length} elemento(s) — ${violacao.helpUrl}\n${nos}`;
+  });
 
   expect(violacoes, `Violacoes de acessibilidade (axe-core):\n${violacoes.join('\n')}`).toEqual([]);
 }
@@ -3900,5 +3905,581 @@ test.describe('gate de acessibilidade - operacoes (PR 26)', () => {
 
     expect(chamadas.naoMockadas).toEqual([]);
     expect(chamadas.mutacoes).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR 27 da governanca: expande o gate de a11y para /gamificacao (metas, adesao,
+// comunidade, desafios, badges e ranking).
+//
+// Todos os dados sao sinteticos e TODAS as chamadas de API sao interceptadas
+// pelo Playwright, no mesmo padrao do PR 26: `prepararGamificacao` registra
+// primeiro um catch-all `**/api/**` que apenas REGISTRA e bloqueia qualquer
+// rota nao mockada (a precedencia do Playwright e a ordem inversa de registro,
+// entao ele so recebe o que nenhum mock especifico casou). Os testes conferem
+// essa lista vazia, o que prova que nenhuma chamada saiu para backend, banco ou
+// integracao, e a lista `mutacoes` prova que nenhuma persistencia real ocorreu.
+// ---------------------------------------------------------------------------
+
+const permissoesGamificacao = ['console.acessar', 'gamificacao.gerenciar'];
+
+const configuracaoGamificacaoAtivaFixture = {
+  metasBadgesHabilitados: true,
+  comunidadeHabilitada: true,
+  rankingHabilitado: true
+};
+
+const configuracaoGamificacaoDesativadaFixture = {
+  metasBadgesHabilitados: false,
+  comunidadeHabilitada: false,
+  rankingHabilitado: false
+};
+
+const profissionaisGamificacaoFixture = [
+  {
+    id: 'profissional-gamificacao-1',
+    tenantId: 'tenant-sintetico',
+    usuarioId: 'usuario-sintetico-1',
+    nome: 'Equipe Sintética Um',
+    especialidade: 'Acompanhamento sintético',
+    criadoEm: '2026-08-01T12:00:00.000Z'
+  }
+];
+
+const pacientesGamificacaoFixture = Array.from({ length: 10 }, (_, indice) => ({
+  id: `paciente-gamificacao-${indice + 1}`,
+  tenantId: 'tenant-sintetico',
+  profissionalResponsavelId: 'profissional-gamificacao-1',
+  nome: `Participante Sintético ${indice + 1}`,
+  statusAdesao: 'ativo',
+  scoreRisco: '0.10',
+  criadoEm: '2026-08-01T12:00:00.000Z'
+}));
+
+const circulosGamificacaoFixture = [
+  {
+    id: 'circulo-gamificacao-1',
+    tenantId: 'tenant-sintetico',
+    profissionalId: 'profissional-gamificacao-1',
+    nome: 'Grupo sintético de adesão',
+    objetivo: 'Acompanhar a rotina sintética de check-ins do grupo.',
+    privado: true,
+    criadoEm: '2026-08-02T12:00:00.000Z'
+  }
+];
+
+const desafiosGamificacaoFixture = [
+  {
+    id: 'desafio-gamificacao-1',
+    tenantId: 'tenant-sintetico',
+    profissionalId: 'profissional-gamificacao-1',
+    titulo: 'Sete dias de check-in sintético',
+    descricao: 'Pontuação sintética por check-ins consecutivos.',
+    regraPontuacao: { evento: 'checkin', pontosPorEvento: 10 },
+    iniciaEm: '2026-08-02T12:00:00.000Z',
+    terminaEm: '2026-08-09T12:00:00.000Z',
+    criadoEm: '2026-08-02T12:00:00.000Z'
+  }
+];
+
+const badgesGamificacaoFixture = [
+  {
+    id: 'badge-gamificacao-1',
+    tenantId: 'tenant-sintetico',
+    nome: 'Consistência sintética',
+    descricao: 'Conquista sintética de adesão inicial.',
+    iconeSvg: 'award',
+    regraConquista: { tipo: 'manual' }
+  }
+];
+
+// Dez participacoes com progresso verboso: e o volume necessario para que a
+// regiao `max-h-[340px] ... overflow-auto` do ranking realmente role. O teste
+// que usa esta fixture confere `scrollHeight > clientHeight` antes de afirmar
+// qualquer coisa sobre overflow.
+const rankingGamificacaoFixture = Array.from({ length: 10 }, (_, indice) => ({
+  id: `participacao-gamificacao-${indice + 1}`,
+  tenantId: 'tenant-sintetico',
+  desafioId: 'desafio-gamificacao-1',
+  pacienteId: `paciente-gamificacao-${indice + 1}`,
+  pontos: String((10 - indice) * 10),
+  progresso: {
+    checkins: 10 - indice,
+    observacao: `Progresso sintético detalhado registrado para o participante ${indice + 1}.`
+  }
+}));
+
+const circuloCriadoGamificacaoFixture = {
+  id: 'circulo-gamificacao-novo',
+  tenantId: 'tenant-sintetico',
+  profissionalId: 'profissional-gamificacao-1',
+  nome: 'Grupo sintético criado no teste',
+  objetivo: 'Objetivo sintético do grupo criado no teste.',
+  privado: true,
+  criadoEm: '2026-08-04T12:00:00.000Z'
+};
+
+const desafioCriadoGamificacaoFixture = {
+  ...desafiosGamificacaoFixture[0],
+  id: 'desafio-gamificacao-novo',
+  titulo: 'Desafio sintético criado no teste'
+};
+
+const badgeCriadoGamificacaoFixture = {
+  ...badgesGamificacaoFixture[0],
+  id: 'badge-gamificacao-novo',
+  nome: 'Conquista sintética criada no teste'
+};
+
+// Tabula pela pagina conferindo que cada elemento focado vem DEPOIS do
+// anterior na ordem do documento. Complementa `assertTabPreservaEExibeFoco`
+// (que ja cobre foco perdido e indicador visivel) com a parte que falta da
+// cobertura minima do PR 27: "ordem de Tab coerente".
+async function assertOrdemDeTabSegueDom(page, voltas) {
+  await page.locator('nextjs-portal').evaluateAll((elementos) => elementos.forEach((elemento) => elemento.remove()));
+  await page.evaluate(() => {
+    window.__anteriorTabA11y = null;
+  });
+
+  const foraDeOrdem = [];
+  for (let volta = 1; volta <= voltas; volta += 1) {
+    await page.keyboard.press('Tab');
+    const passo = await page.evaluate(() => {
+      const ativo = document.activeElement;
+      if (!ativo || ativo === document.body) return null;
+      const anterior = window.__anteriorTabA11y;
+      const posicao = anterior ? anterior.compareDocumentPosition(ativo) : Node.DOCUMENT_POSITION_FOLLOWING;
+      window.__anteriorTabA11y = ativo;
+      return {
+        descricao: `${ativo.tagName}#${ativo.id || '(sem id)'}`,
+        segueDom: Boolean(posicao & Node.DOCUMENT_POSITION_FOLLOWING)
+      };
+    });
+    if (!passo) break;
+    if (!passo.segueDom) foraDeOrdem.push(`Tab ${volta}: ${passo.descricao}`);
+  }
+
+  expect(foraDeOrdem, `Tab saltou para tras na ordem do DOM:\n${foraDeOrdem.join('\n')}`).toEqual([]);
+}
+
+function regiaoRankingGamificacao(page) {
+  return page.locator('[class*="max-h-[340px]"]');
+}
+
+async function medirRolagem(localizador) {
+  return localizador.evaluate((elemento) => ({
+    scrollHeight: elemento.scrollHeight,
+    clientHeight: elemento.clientHeight,
+    tabIndex: elemento.getAttribute('tabindex')
+  }));
+}
+
+async function prepararGamificacao(page, opcoes = {}) {
+  const {
+    configuracao = {},
+    profissionais = {},
+    pacientes = {},
+    circulos = {},
+    desafios = {},
+    badges = {},
+    ranking = {}
+  } = opcoes;
+
+  const configuracaoBase = configuracao.corpo ?? configuracaoGamificacaoAtivaFixture;
+  const chamadas = { naoMockadas: [], mutacoes: [] };
+
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: 'SuperAdmin', domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/gamificacao'), domain: 'localhost', path: '/' }
+  ]);
+
+  // Rede de seguranca: registrada PRIMEIRO, portanto so recebe o que nenhum
+  // mock especifico casou. Nada daqui chega ao BFF, ao backend ou ao banco.
+  await page.route('**/api/**', async (route) => {
+    const url = new URL(route.request().url());
+    chamadas.naoMockadas.push(`${route.request().method()} ${url.pathname}`);
+    await route.fulfill({ status: 599, contentType: 'text/plain; charset=utf-8', body: 'Rota nao mockada no gate de a11y.' });
+  });
+
+  await page.route('**/api/auth/session', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      autenticado: true,
+      papel: 'SuperAdmin',
+      apiUrl: 'http://localhost:3001',
+      tenantSlug: 'clinica-sintetica',
+      email: 'gamificacao@octaclin.test',
+      expiraEm: '2026-12-31T18:00:00.000Z',
+      permissoes: permissoesGamificacao,
+      destinoInicial: '/gamificacao'
+    })
+  }));
+
+  await page.route('**/api/notificacoes**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ naoLidas: 0, itens: [] }) })
+  );
+
+  await page.route('**/api/profissionais**', (route) => {
+    const itens = profissionais.corpo ?? profissionaisGamificacaoFixture;
+    return responderJson(route, { status: profissionais.status ?? 200, corpo: { itens, total: itens.length } });
+  });
+
+  await page.route('**/api/pacientes**', (route) => {
+    const itens = pacientes.corpo ?? pacientesGamificacaoFixture;
+    return responderJson(route, { status: pacientes.status ?? 200, corpo: { itens, total: itens.length } });
+  });
+
+  await page.route((url) => url.pathname === '/api/gamificacao/configuracao', async (route) => {
+    if (route.request().method() === 'PATCH') {
+      chamadas.mutacoes.push('PATCH /api/gamificacao/configuracao');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...configuracaoBase, ...route.request().postDataJSON() })
+      });
+      return;
+    }
+    await responderJson(route, { corpo: configuracaoGamificacaoAtivaFixture, ...configuracao });
+  });
+
+  await page.route((url) => url.pathname === '/api/gamificacao/circulos', async (route) => {
+    if (route.request().method() === 'POST') {
+      chamadas.mutacoes.push('POST /api/gamificacao/circulos');
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...circuloCriadoGamificacaoFixture, ...route.request().postDataJSON() })
+      });
+      return;
+    }
+    await responderJson(route, { corpo: circulosGamificacaoFixture, ...circulos });
+  });
+
+  await page.route((url) => /^\/api\/gamificacao\/circulos\/[^/]+\/membros$/.test(url.pathname), async (route) => {
+    chamadas.mutacoes.push('POST /api/gamificacao/circulos/:id/membros');
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'membro-gamificacao-novo',
+        tenantId: 'tenant-sintetico',
+        circuloId: circuloCriadoGamificacaoFixture.id,
+        pacienteId: pacientesGamificacaoFixture[0].id,
+        entrouEm: '2026-08-04T12:05:00.000Z'
+      })
+    });
+  });
+
+  await page.route((url) => url.pathname === '/api/gamificacao/posts', async (route) => {
+    chamadas.mutacoes.push('POST /api/gamificacao/posts');
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'post-gamificacao-novo',
+        tenantId: 'tenant-sintetico',
+        circuloId: circulosGamificacaoFixture[0].id,
+        pacienteId: pacientesGamificacaoFixture[0].id,
+        conteudo: 'Conteúdo sintético publicado no teste.',
+        status: 'pendente_moderacao',
+        criadoEm: '2026-08-04T12:10:00.000Z'
+      })
+    });
+  });
+
+  await page.route((url) => url.pathname === '/api/gamificacao/desafios', async (route) => {
+    if (route.request().method() === 'POST') {
+      chamadas.mutacoes.push('POST /api/gamificacao/desafios');
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify(desafioCriadoGamificacaoFixture)
+      });
+      return;
+    }
+    await responderJson(route, { corpo: desafiosGamificacaoFixture, ...desafios });
+  });
+
+  await page.route((url) => url.pathname === '/api/gamificacao/desafios/progresso', async (route) => {
+    chamadas.mutacoes.push('POST /api/gamificacao/desafios/progresso');
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify(rankingGamificacaoFixture[0])
+    });
+  });
+
+  await page.route((url) => /^\/api\/gamificacao\/desafios\/[^/]+\/ranking$/.test(url.pathname), (route) =>
+    responderJson(route, { corpo: [], ...ranking })
+  );
+
+  await page.route((url) => url.pathname === '/api/gamificacao/badges', async (route) => {
+    if (route.request().method() === 'POST') {
+      chamadas.mutacoes.push('POST /api/gamificacao/badges');
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify(badgeCriadoGamificacaoFixture)
+      });
+      return;
+    }
+    await responderJson(route, { corpo: badgesGamificacaoFixture, ...badges });
+  });
+
+  await page.route((url) => url.pathname === '/api/gamificacao/badges/concessoes', async (route) => {
+    chamadas.mutacoes.push('POST /api/gamificacao/badges/concessoes');
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'concessao-gamificacao-nova',
+        tenantId: 'tenant-sintetico',
+        pacienteId: pacientesGamificacaoFixture[0].id,
+        badgeId: badgeCriadoGamificacaoFixture.id,
+        conquistadoEm: '2026-08-04T12:15:00.000Z'
+      })
+    });
+  });
+
+  return chamadas;
+}
+
+async function abrirPainelGamificacao(page) {
+  await page.goto('/gamificacao');
+  await expect(page.getByRole('heading', { name: 'Metas e adesão', level: 1 })).toBeVisible();
+}
+
+test.describe('gate de acessibilidade - gamificacao (PR 27)', () => {
+  test('estado principal carregado com configuracao, participantes, circulos, desafios e badges', async ({ page }) => {
+    const chamadas = await prepararGamificacao(page);
+    await abrirPainelGamificacao(page);
+
+    await expect(page.getByRole('heading', { name: 'Ativação opcional' })).toBeVisible();
+    await expect(page.getByText('1 metas e 1 conquistas individuais')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Post de comunidade' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Desafio', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Badge', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ranking' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Registros persistidos' })).toBeVisible();
+    await expect(page.getByText('Grupo sintético de adesão')).toHaveCount(2);
+    await expect(page.getByText('Sete dias de check-in sintético')).toBeVisible();
+    await expect(page.getByText('Consistência sintética')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidade(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('estado vazio sem circulos, desafios, badges e ranking', async ({ page }) => {
+    const chamadas = await prepararGamificacao(page, {
+      circulos: { corpo: [] },
+      desafios: { corpo: [] },
+      badges: { corpo: [] },
+      ranking: { corpo: [] }
+    });
+    await abrirPainelGamificacao(page);
+
+    await expect(page.getByText('0 metas e 0 conquistas individuais')).toBeVisible();
+    await expect(page.getByText('Nenhum ranking carregado.')).toBeVisible();
+    await expect(page.getByText('Nenhum circulo criado.')).toBeVisible();
+    await expect(page.getByText('Nenhum desafio criado.')).toBeVisible();
+    await expect(page.getByText('Nenhum badge criado.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Atualizar ranking' })).toHaveCount(0);
+
+    const medidas = await medirRolagem(regiaoRankingGamificacao(page));
+    expect(medidas.scrollHeight, 'ranking vazio nao deveria ter overflow').toBeLessThanOrEqual(medidas.clientHeight);
+
+    await rodarChecagensDeAcessibilidade(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('falha no carregamento inicial expoe mensagem de erro acessivel', async ({ page }) => {
+    const chamadas = await prepararGamificacao(page, {
+      configuracao: { status: 500, corpo: 'Falha sintética ao carregar a gamificação.' }
+    });
+    await abrirPainelGamificacao(page);
+
+    // O Next injeta seu proprio `[role="alert"]` vazio (route announcer), que
+    // nao pertence ao produto e nao pode ser confundido com o alerta da falha.
+    const alerta = page.locator('[role="alert"]:not(#__next-route-announcer__)');
+    await expect(alerta).toBeVisible();
+    await expect(alerta).toContainText('Falha sintética ao carregar a gamificação.');
+    await expect(page.getByRole('heading', { name: 'Ranking' })).toHaveCount(0);
+
+    await rodarChecagensDeAcessibilidade(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('configuracao desativada esconde comunidade, metas e ranking', async ({ page }) => {
+    const chamadas = await prepararGamificacao(page, { configuracao: { corpo: configuracaoGamificacaoDesativadaFixture } });
+    await abrirPainelGamificacao(page);
+
+    await expect(page.getByRole('heading', { name: 'Ativação opcional' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ranking' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Post de comunidade' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Registros persistidos' })).toHaveCount(0);
+
+    for (const rotulo of ['Metas e badges', 'Comunidade', 'Ranking']) {
+      await expect(page.getByLabel(rotulo, { exact: true })).not.toBeChecked();
+    }
+
+    await rodarChecagensDeAcessibilidade(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('configuracao ativada marca as tres opcoes e revela as areas dependentes', async ({ page }) => {
+    const chamadas = await prepararGamificacao(page);
+    await abrirPainelGamificacao(page);
+
+    for (const rotulo of ['Metas e badges', 'Comunidade', 'Ranking']) {
+      await expect(page.getByLabel(rotulo, { exact: true })).toBeChecked();
+    }
+    await expect(page.getByRole('heading', { name: 'Post de comunidade' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ranking' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidade(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('navegacao integral por teclado mantem foco visivel e ordem coerente', async ({ page }) => {
+    const chamadas = await prepararGamificacao(page);
+    await abrirPainelGamificacao(page);
+
+    await assertCamposComLabelAcessivel(page);
+    await assertBotoesComNomeAcessivel(page);
+    await assertTabPreservaEExibeFoco(page);
+    await assertOrdemDeTabSegueDom(page, 20);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('formularios de ativacao, circulo, post, desafio e badge tem rotulos acessiveis', async ({ page }) => {
+    const chamadas = await prepararGamificacao(page);
+    await abrirPainelGamificacao(page);
+
+    // Ativacao opcional: tres checkboxes identificados pelo proprio rotulo.
+    for (const rotulo of ['Metas e badges', 'Comunidade', 'Ranking']) {
+      await expect(page.getByLabel(rotulo, { exact: true })).toHaveAttribute('type', 'checkbox');
+    }
+    await expect(page.getByLabel('Privado')).toHaveAttribute('type', 'checkbox');
+
+    // Selects identificados: cada um resolve para um unico controle.
+    const seletores = [
+      '#gamificacao-circulo-profissional',
+      '#gamificacao-circulo-paciente',
+      '#gamificacao-post-circulo',
+      '#gamificacao-post-paciente',
+      '#gamificacao-desafio-profissional',
+      '#gamificacao-desafio-paciente',
+      '#gamificacao-badge-paciente'
+    ];
+    for (const seletor of seletores) {
+      const campo = page.locator(seletor);
+      await expect(campo).toHaveJSProperty('tagName', 'SELECT');
+      await expect(campo, `${seletor} sem nome acessivel`).not.toHaveAccessibleName('');
+    }
+
+    const camposTexto = [
+      '#gamificacao-circulo-nome',
+      '#gamificacao-circulo-objetivo',
+      '#gamificacao-post-conteudo',
+      '#gamificacao-desafio-titulo',
+      '#gamificacao-desafio-descricao',
+      '#gamificacao-desafio-pontos',
+      '#gamificacao-badge-nome',
+      '#gamificacao-badge-icone',
+      '#gamificacao-badge-descricao'
+    ];
+    for (const seletor of camposTexto) {
+      await expect(page.locator(seletor), `${seletor} sem nome acessivel`).not.toHaveAccessibleName('');
+    }
+
+    // Botoes de submissao de cada formulario, com nome acessivel proprio.
+    await expect(page.getByRole('button', { name: 'Salvar ativação' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Criar circulo' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Publicar' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Criar desafio' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Conceder' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidade(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('ranking carregado com overflow comprovado e regiao rolavel focalizavel', async ({ page }) => {
+    const chamadas = await prepararGamificacao(page, { ranking: { corpo: rankingGamificacaoFixture } });
+    await abrirPainelGamificacao(page);
+
+    await page.getByRole('button', { name: 'Atualizar ranking' }).click();
+    await expect(page.getByText('Ranking atualizado.')).toBeVisible();
+
+    const regiao = regiaoRankingGamificacao(page);
+    await expect(regiao.getByText('Participante Sintético 1', { exact: true })).toBeVisible();
+    await expect(regiao.getByText('100.0 pts')).toBeVisible();
+    const medidas = await medirRolagem(regiao);
+    // Primeiro provar o overflow; so entao exigir que a regiao seja alcancavel.
+    expect(
+      medidas.scrollHeight,
+      `ranking sem overflow real (scrollHeight ${medidas.scrollHeight} <= clientHeight ${medidas.clientHeight}); aumente a fixture antes de concluir qualquer coisa`
+    ).toBeGreaterThan(medidas.clientHeight);
+
+    await regiao.focus();
+    await expect(regiao).toBeFocused();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('salvar configuracao usa PATCH mockado e anuncia sucesso de forma acessivel', async ({ page }) => {
+    const chamadas = await prepararGamificacao(page);
+    await abrirPainelGamificacao(page);
+
+    await page.getByLabel('Ranking', { exact: true }).uncheck();
+    await page.getByRole('button', { name: 'Salvar ativação' }).click();
+
+    const sucesso = page.getByRole('status').filter({ hasText: 'atualizada' });
+    await expect(sucesso).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ranking' })).toHaveCount(0);
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual(['PATCH /api/gamificacao/configuracao']);
+  });
+
+  test('criacao representativa de badge usa POST mockado sem persistencia real', async ({ page }) => {
+    const chamadas = await prepararGamificacao(page);
+    await abrirPainelGamificacao(page);
+
+    await page.locator('#gamificacao-badge-nome').fill('Conquista sintética do teste');
+    await page.getByRole('button', { name: 'Conceder' }).click();
+
+    const sucesso = page.getByRole('status').filter({ hasText: 'Badge' });
+    await expect(sucesso).toBeVisible();
+    await expect(page.getByText('Conquista sintética criada no teste')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([
+      'POST /api/gamificacao/badges',
+      'POST /api/gamificacao/badges/concessoes'
+    ]);
   });
 });
