@@ -1398,3 +1398,222 @@ test.describe('gate de acessibilidade - pacientes (PR 19)', () => {
     await rodarChecagensDeAcessibilidade(page);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Mocks do workspace de questionarios (PR 20 da governanca). Fixtures
+// reaproveitadas de questionarios-editor.spec.mjs (mesmos ids e rotulos).
+// ---------------------------------------------------------------------------
+
+const permissoesQuestionarios = ['dashboard.ler', 'questionarios.ler', 'questionarios.gerenciar'];
+
+const questionariosFixture = [
+  { id: 'q-1', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Check-in semanal', descricao: 'Adesão', status: 'rascunho', versao: 1, criadoEm: '2026-07-01T10:00:00.000Z', atualizadoEm: '2026-07-01T10:00:00.000Z' },
+  { id: 'q-2', tenantId: 'tenant-1', profissionalId: 'profissional-1', titulo: 'Avaliação mensal', descricao: 'Metricas', status: 'publicado', versao: 2, criadoEm: '2026-07-02T10:00:00.000Z', atualizadoEm: '2026-07-02T10:00:00.000Z' }
+];
+
+const perguntaQuestionarioFixture = {
+  id: 'p-1', tenantId: 'tenant-1', questionarioId: 'q-1', categoriaId: 'cat-1', tipo: 'likert',
+  enunciado: 'Como foi sua semana?', peso: '1', obrigatoria: true, configuracao: {}, opcoes: [], ordem: 1, visivelBiblioteca: false
+};
+
+// Pertence a outro questionario (q-9) para aparecer como resultado reutilizavel
+// na Biblioteca independente de qual formulario esteja selecionado.
+const perguntaBibliotecaFixture = {
+  id: 'p-biblioteca-1', tenantId: 'tenant-1', questionarioId: 'q-9', categoriaId: 'cat-1', tipo: 'texto_longo',
+  enunciado: 'Pergunta reaproveitável de outro formulário', peso: '1', obrigatoria: false, configuracao: {}, opcoes: [], ordem: 1, chaveClinica: 'adesao-generica', visivelBiblioteca: true
+};
+
+async function prepararSessaoQuestionarios(page) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: 'Professional', domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/questionarios'), domain: 'localhost', path: '/' }
+  ]);
+
+  await page.route('**/api/auth/session', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        autenticado: true,
+        apiUrl: 'http://localhost:3001',
+        tenantSlug: 'clinica-carla',
+        email: 'dra.carla@octaclin.local',
+        expiraEm: '2026-12-31T15:00:00.000Z',
+        papel: 'Professional',
+        permissoes: permissoesQuestionarios,
+        destinoInicial: '/questionarios'
+      })
+    })
+  );
+}
+
+async function prepararBootstrapQuestionarios(page) {
+  await page.route('**/api/categorias-pergunta', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 'cat-1', tenantId: 'tenant-1', nome: 'Nutricao', iconeSvg: 'utensils', corHex: '#247BA0', ordem: 1 }]) })
+  );
+  await page.route('**/api/profissionais*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'profissional-1', tenantId: 'tenant-1', nome: 'Dra. Carla' }], total: 1 }) })
+  );
+  await page.route('**/api/pacientes*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'paciente-1', tenantId: 'tenant-1', nome: 'Joana' }], total: 1 }) })
+  );
+  await page.route('**/api/questionarios/modelos', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+  );
+  await page.route('**/api/biblioteca-perguntas*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([perguntaBibliotecaFixture]) })
+  );
+  await page.route('**/api/questionarios?*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: questionariosFixture, total: questionariosFixture.length }) })
+  );
+}
+
+function prepararPerguntasQuestionario(page) {
+  return Promise.all([
+    page.route('**/api/questionarios/q-1/perguntas', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([perguntaQuestionarioFixture]) })
+    ),
+    page.route('**/api/questionarios/q-2/perguntas', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+    )
+  ]);
+}
+
+// Mock de leitura clinica vazio (mesmo formato ja usado em
+// questionarios-editor.spec.mjs) — cobre o estado vazio da area Respostas.
+function prepararLeituraClinicaQuestionario(page) {
+  return page.route('**/api/questionarios/*/respostas/leitura-clinica*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ questionarioId: 'q-1', resumo: { totalRespostas: 0, totalPacientes: 0, totalPerguntas: 0, mediaRespostasPorEnvio: 0 }, pacientes: [], perguntas: [], respostas: [] })
+    })
+  );
+}
+
+async function prepararQuestionarios(page) {
+  await prepararSessaoQuestionarios(page);
+  await prepararBootstrapQuestionarios(page);
+  await prepararPerguntasQuestionario(page);
+  await prepararLeituraClinicaQuestionario(page);
+}
+
+// PR 20 da governanca: expande o gate de a11y para o workspace de
+// questionarios (console profissional) - as 5 areas de trabalho (Formularios,
+// Editor, Biblioteca, Distribuicoes, Respostas), incluindo navegacao por
+// teclado entre elas via o padrao ARIA tabs ja usado em components/ui/abas.tsx.
+test.describe('gate de acessibilidade - questionarios (PR 20)', () => {
+  test('formularios - estado principal carregado', async ({ page }) => {
+    await prepararQuestionarios(page);
+    await page.goto('/questionarios');
+    await expect(page.getByRole('heading', { name: 'Editor de Questionários' })).toBeVisible();
+    await expect(page.getByLabel('Título')).toHaveValue('Check-in semanal');
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  // As areas abaixo (Editor, Biblioteca, Distribuicoes, Respostas) só ficam
+  // visiveis apos clicar na aba correspondente - diferente das demais rotas
+  // deste arquivo, aqui as 5 areas dividem uma unica rota via troca de aba no
+  // cliente, nao rotas separadas. Isso quebra a premissa de foco inicial no
+  // <body> de assertTabPreservaEExibeFoco (mesmo motivo documentado acima
+  // para .fill()), entao usam a variante sem navegacao por teclado; a
+  // cobertura real de teclado entre as areas fica no teste dedicado abaixo.
+  test('editor - questionario e pergunta sinteticos com preview do paciente', async ({ page }) => {
+    await prepararQuestionarios(page);
+    await page.goto('/questionarios');
+    await page.getByRole('tab', { name: 'Editor' }).click();
+    await expect(page.getByText('Preview do paciente')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Como foi sua semana?' })).toBeVisible();
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('biblioteca - resultado sintetico reutilizavel', async ({ page }) => {
+    await prepararQuestionarios(page);
+    await page.goto('/questionarios');
+    await page.getByRole('tab', { name: 'Biblioteca' }).click();
+    await expect(page.getByRole('heading', { name: 'Biblioteca de perguntas' })).toBeVisible();
+    await expect(page.getByText('Pergunta reaproveitável de outro formulário')).toBeVisible();
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('distribuicao - paciente sintetico disponivel para envio', async ({ page }) => {
+    await prepararQuestionarios(page);
+    await page.goto('/questionarios');
+    await page.getByRole('tab', { name: 'Distribuicoes' }).click();
+    await expect(page.getByRole('heading', { name: 'Distribuição do formulário' })).toBeVisible();
+    await expect(page.getByLabel('Paciente do check-in recorrente')).toBeVisible();
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('respostas - estado vazio da leitura clinica', async ({ page }) => {
+    await prepararQuestionarios(page);
+    await page.goto('/questionarios');
+    await page.getByRole('tab', { name: 'Respostas' }).click();
+    await expect(page.getByRole('heading', { name: 'Leitura clínica das respostas' })).toBeVisible();
+    await expect(page.getByText('Nenhuma resposta encontrada para os filtros atuais.')).toBeVisible();
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  // Interacao relevante: alternar entre as 5 areas usando apenas o teclado,
+  // seguindo o padrao ARIA tabs (seta direita move o foco e ativa a proxima aba).
+  test('alterna entre as areas usando teclado (interacao relevante)', async ({ page }) => {
+    await prepararQuestionarios(page);
+    await page.goto('/questionarios');
+
+    const abaFormularios = page.getByRole('tab', { name: 'Formulários' });
+    await expect(abaFormularios).toHaveAttribute('aria-selected', 'true');
+    await abaFormularios.focus();
+
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('tab', { name: 'Editor' })).toBeFocused();
+    await expect(page.getByText('Preview do paciente')).toBeVisible();
+
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('tab', { name: 'Biblioteca' })).toBeFocused();
+    await expect(page.getByRole('heading', { name: 'Biblioteca de perguntas' })).toBeVisible();
+
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('tab', { name: 'Distribuicoes' })).toBeFocused();
+    await expect(page.getByRole('heading', { name: 'Distribuição do formulário' })).toBeVisible();
+
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('tab', { name: 'Respostas' })).toBeFocused();
+    await expect(page.getByRole('heading', { name: 'Leitura clínica das respostas' })).toBeVisible();
+
+    await page.keyboard.press('ArrowRight');
+    await expect(abaFormularios).toBeFocused();
+    await expect(abaFormularios).toHaveAttribute('aria-selected', 'true');
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  // Interacao relevante: trocar o formulario selecionado atualiza o Titulo.
+  test('formularios - selecionar outro formulario (interacao relevante)', async ({ page }) => {
+    await prepararQuestionarios(page);
+    await page.goto('/questionarios');
+
+    await expect(page.getByLabel('Título')).toHaveValue('Check-in semanal');
+    await page.getByLabel('Selecionar').selectOption('q-2');
+    await expect(page.getByLabel('Título')).toHaveValue('Avaliação mensal');
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  // Interacao relevante: acessar uma pergunta no editor e validar que os
+  // controles de edicao atualizam o preview do paciente em tempo real.
+  test('editor - acessa pergunta e valida controles de edicao com preview (interacao relevante)', async ({ page }) => {
+    await prepararQuestionarios(page);
+    await page.goto('/questionarios');
+    await page.getByRole('tab', { name: 'Editor' }).click();
+
+    await page.getByRole('button', { name: 'Como foi sua semana?' }).click();
+    const enunciado = page.getByLabel('Enunciado');
+    await expect(enunciado).toHaveValue('Como foi sua semana?');
+    await enunciado.fill('Como foi sua semana de adesão?');
+    await expect(page.getByRole('heading', { name: 'Como foi sua semana de adesão?' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+});
