@@ -4928,3 +4928,348 @@ test.describe('gate de acessibilidade - pwa e offline (PR 28)', () => {
     expect(chamadas.mutacoes).toEqual(['POST /api/formularios/token-pwa/respostas']);
   });
 });
+
+// ---------------------------------------------------------------------------
+// PR 29 da governanca: profundidade nos COMPONENTES COMPARTILHADOS
+// (components/ui/*), exercitados por consumidores reais em rotas que ja tem
+// mock nesta suite. Nenhuma rota de produto foi criada para testar componente,
+// e nenhum design system novo foi inventado.
+//
+// Consumidores usados:
+//   - Modal / ModalConfirmacao -> components/operacoes/area-onboarding.tsx (/operacoes)
+//   - Abas                     -> painel-operacoes (/operacoes) e lista-profissionais (/profissionais)
+//   - Menu / ItemMenu          -> components/app/sino-notificacoes.tsx (/dashboard)
+// ---------------------------------------------------------------------------
+
+// Audita o padrao ARIA tabs olhando o DOM real: cada `[role="tab"]` precisa
+// apontar, por `aria-controls`, para um elemento existente e com
+// `role="tabpanel"`; e cada tablist precisa ter exatamente uma aba tabulavel e
+// uma selecionada (roving tabindex). axe-core classifica `aria-controls` orfao
+// como "incomplete", nao como violacao, entao esta checagem cobre o que o gate
+// atual deixa passar.
+async function auditarPadraoAbas(page) {
+  return page.evaluate(() => {
+    const problemas = [];
+
+    for (const aba of Array.from(document.querySelectorAll('[role="tab"]'))) {
+      const rotulo = aba.textContent?.trim().slice(0, 40) || '(sem rotulo)';
+      const alvoId = aba.getAttribute('aria-controls');
+      if (!alvoId) {
+        // Painel renderizado sob demanda: a aba inativa pode nao ter painel no
+        // DOM, e nesse caso omitir a relacao e correto. A aba SELECIONADA, ao
+        // contrario, sempre tem painel e precisa declara-lo.
+        if (aba.getAttribute('aria-selected') === 'true') {
+          problemas.push(`aba selecionada "${rotulo}": sem aria-controls`);
+        }
+        continue;
+      }
+      const alvo = document.getElementById(alvoId);
+      if (!alvo) {
+        problemas.push(`aba "${rotulo}": aria-controls "${alvoId}" nao existe no DOM`);
+        continue;
+      }
+      if (alvo.getAttribute('role') !== 'tabpanel') {
+        problemas.push(`aba "${rotulo}": "${alvoId}" existe mas nao tem role="tabpanel"`);
+      }
+    }
+
+    for (const lista of Array.from(document.querySelectorAll('[role="tablist"]'))) {
+      const nome = lista.getAttribute('aria-label') ?? '(tablist sem nome)';
+      const abas = Array.from(lista.querySelectorAll('[role="tab"]'));
+      if (!abas.length) continue;
+      const tabulaveis = abas.filter((aba) => aba.getAttribute('tabindex') !== '-1');
+      if (tabulaveis.length !== 1) {
+        problemas.push(`tablist "${nome}": ${tabulaveis.length} abas alcancaveis por Tab (esperado 1)`);
+      }
+      const selecionadas = abas.filter((aba) => aba.getAttribute('aria-selected') === 'true');
+      if (selecionadas.length !== 1) {
+        problemas.push(`tablist "${nome}": ${selecionadas.length} abas com aria-selected="true" (esperado 1)`);
+      }
+    }
+
+    return problemas;
+  });
+}
+
+function descreverFoco(page) {
+  return page.evaluate(() => {
+    const ativo = document.activeElement;
+    if (!ativo || ativo === document.body) return { descricao: 'body', dentroDoDialogo: false, dentroDoMenu: false };
+    return {
+      descricao: `${ativo.tagName}${ativo.id ? `#${ativo.id}` : ''} "${(ativo.getAttribute('aria-label') ?? ativo.textContent ?? '').trim().slice(0, 40)}"`,
+      dentroDoDialogo: Boolean(ativo.closest('[role="dialog"]')),
+      dentroDoMenu: Boolean(ativo.closest('[role="menu"]')),
+      papel: ativo.getAttribute('role')
+    };
+  });
+}
+
+async function abrirModalCriticoOnboarding(page) {
+  const painel = await abrirAreaOperacoes(page, 'Onboarding');
+  await painel.getByRole('button', { name: 'Encerrar definitivamente' }).click();
+  const modal = page.getByRole('dialog');
+  await expect(modal).toBeVisible();
+  return modal;
+}
+
+test.describe('gate de acessibilidade - componentes compartilhados (PR 29)', () => {
+  // -------------------------------------------------------------------------
+  // Modal (components/ui/modal.tsx)
+  // -------------------------------------------------------------------------
+
+  test('modal - nome, descricao, foco inicial e retorno do foco ao gatilho', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const painel = await abrirAreaOperacoes(page, 'Onboarding');
+    const gatilho = painel.getByRole('button', { name: 'Encerrar definitivamente' });
+    await gatilho.click();
+
+    const modal = page.getByRole('dialog');
+    await expect(modal).toHaveAttribute('aria-modal', 'true');
+    await expect(modal).not.toHaveAccessibleName('');
+    await expect(modal).not.toHaveAccessibleDescription('');
+
+    const focoInicial = await descreverFoco(page);
+    expect(focoInicial.dentroDoDialogo, `foco inicial fora do dialogo: ${focoInicial.descricao}`).toBe(true);
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(gatilho).toBeFocused();
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('modal - digitar em campo controlado nao rouba o foco do usuario', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+    const modal = await abrirModalCriticoOnboarding(page);
+
+    const motivo = modal.getByLabel('Motivo operacional');
+    await motivo.focus();
+    await expect(motivo).toBeFocused();
+
+    // Digitacao real, tecla a tecla: cada tecla muda estado controlado do
+    // consumidor e re-renderiza o Modal. O foco tem de continuar no campo.
+    await page.keyboard.type('Encerramento sintético');
+
+    const foco = await descreverFoco(page);
+    expect(foco.descricao, 'o foco saiu do campo enquanto o usuario digitava').toContain('onboarding-motivo');
+    await expect(motivo).toHaveValue('Encerramento sintético');
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('modal - Tab e Shift+Tab nao escapam para o conteudo de fundo', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+    const modal = await abrirModalCriticoOnboarding(page);
+    await expect(modal).toBeVisible();
+
+    // Percorre o dialogo inteiro nos dois sentidos; a cada passo o foco tem de
+    // continuar dentro dele.
+    for (const tecla of ['Tab', 'Tab', 'Tab', 'Tab', 'Tab', 'Tab', 'Tab', 'Tab']) {
+      await page.keyboard.press(tecla);
+      const foco = await descreverFoco(page);
+      expect(foco.dentroDoDialogo, `Tab levou o foco para fora do dialogo: ${foco.descricao}`).toBe(true);
+    }
+    for (let volta = 0; volta < 8; volta += 1) {
+      await page.keyboard.press('Shift+Tab');
+      const foco = await descreverFoco(page);
+      expect(foco.dentroDoDialogo, `Shift+Tab levou o foco para fora do dialogo: ${foco.descricao}`).toBe(true);
+    }
+
+    // Foco perdido (elemento ativo removido ou blur) nao pode virar porta de
+    // saida: o proximo Tab tem de voltar para dentro do dialogo.
+    await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+    await page.keyboard.press('Tab');
+    const focoAposPerda = await descreverFoco(page);
+    expect(
+      focoAposPerda.dentroDoDialogo,
+      `apos perder o foco, o Tab escapou do dialogo: ${focoAposPerda.descricao}`
+    ).toBe(true);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('modal - confirmacao destrutiva, estado de processamento e fechamento pelo overlay', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+    const modal = await abrirModalCriticoOnboarding(page);
+
+    const confirmar = modal.getByRole('button', { name: 'Confirmar' });
+    await expect(confirmar, 'acao destrutiva deveria comecar bloqueada').toBeDisabled();
+    await expect(modal.getByRole('button', { name: 'Fechar' })).not.toHaveAccessibleName('');
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    // Fecha pelo overlay, sem executar o fluxo destrutivo.
+    await page.mouse.click(5, 5);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  // -------------------------------------------------------------------------
+  // Abas (components/ui/abas.tsx)
+  // -------------------------------------------------------------------------
+
+  test('abas - padrao ARIA integro em /operacoes', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    expect(await auditarPadraoAbas(page)).toEqual([]);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+  });
+
+  test('abas - padrao ARIA integro em /profissionais', async ({ page }) => {
+    await prepararProfissionais(page);
+    await page.goto('/profissionais');
+    await expect(page.getByRole('tablist', { name: 'Áreas da equipe clínica' })).toBeVisible();
+
+    expect(await auditarPadraoAbas(page)).toEqual([]);
+  });
+
+  test('abas - setas, Home e End movem foco e selecao juntos', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    await abrirPainelOperacoes(page, chamadas);
+
+    const tablist = page.getByRole('tablist', { name: 'Áreas de operações' });
+    const abas = tablist.getByRole('tab');
+    const total = await abas.count();
+    expect(total).toBeGreaterThan(2);
+
+    // Parte da primeira aba selecionando-a com o teclado (Home), sem depender de
+    // qual area o painel abre por padrao.
+    await tablist.locator('[role="tab"][aria-selected="true"]').focus();
+    await page.keyboard.press('Home');
+
+    const primeira = abas.first();
+    await expect(primeira).toBeFocused();
+    await expect(primeira).toHaveAttribute('aria-selected', 'true');
+
+    await page.keyboard.press('ArrowRight');
+    await expect(abas.nth(1)).toBeFocused();
+    await expect(abas.nth(1)).toHaveAttribute('aria-selected', 'true');
+    await expect(primeira).toHaveAttribute('aria-selected', 'false');
+
+    await page.keyboard.press('ArrowLeft');
+    await expect(primeira).toBeFocused();
+
+    await page.keyboard.press('End');
+    await expect(abas.nth(total - 1)).toBeFocused();
+    await expect(abas.nth(total - 1)).toHaveAttribute('aria-selected', 'true');
+
+    await page.keyboard.press('Home');
+    await expect(primeira).toBeFocused();
+    await expect(primeira).toHaveAttribute('aria-selected', 'true');
+
+    // ArrowDown/ArrowUp seguem a mesma sequencia em tablist horizontal.
+    await page.keyboard.press('ArrowDown');
+    await expect(abas.nth(1)).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(primeira).toBeFocused();
+
+    expect(await auditarPadraoAbas(page)).toEqual([]);
+    expect(chamadas.naoMockadas).toEqual([]);
+  });
+
+  // -------------------------------------------------------------------------
+  // Menu (components/ui/menu.tsx) via o sino de notificacoes
+  // -------------------------------------------------------------------------
+
+  test('menu - gatilho declara aria-haspopup e aria-expanded', async ({ page }) => {
+    await prepararDashboardMockado(page);
+    await page.goto('/dashboard');
+
+    const gatilho = page.getByRole('button', { name: 'Notificações, 2 não lidas' });
+    await expect(gatilho).toBeVisible();
+    await expect(gatilho).toHaveAttribute('aria-haspopup', 'menu');
+    await expect(gatilho).toHaveAttribute('aria-expanded', 'false');
+
+    await gatilho.click();
+    await expect(page.getByRole('menu')).toBeVisible();
+    await expect(gatilho).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  test('menu - aberto move o foco para o primeiro item e navega com setas, Home e End', async ({ page }) => {
+    await prepararDashboardMockado(page);
+    await page.goto('/dashboard');
+
+    const gatilho = page.getByRole('button', { name: 'Notificações, 2 não lidas' });
+    await gatilho.focus();
+    await page.keyboard.press('Enter');
+
+    const menu = page.getByRole('menu');
+    await expect(menu).toBeVisible();
+
+    const focoInicial = await descreverFoco(page);
+    expect(focoInicial.dentroDoMenu, `menu aberto sem mover o foco para dentro: ${focoInicial.descricao}`).toBe(true);
+
+    const itens = menu.getByRole('menuitem');
+    const total = await itens.count();
+    expect(total, 'menu sem itens sinteticos para navegar').toBeGreaterThan(0);
+    await expect(itens.first()).toBeFocused();
+
+    await page.keyboard.press('End');
+    await expect(itens.nth(total - 1)).toBeFocused();
+
+    await page.keyboard.press('Home');
+    await expect(itens.first()).toBeFocused();
+
+    await page.keyboard.press('ArrowDown');
+    await expect(itens.nth(Math.min(1, total - 1))).toBeFocused();
+
+    await page.keyboard.press('ArrowUp');
+    await expect(itens.first()).toBeFocused();
+  });
+
+  test('menu - Escape fecha e devolve o foco ao gatilho', async ({ page }) => {
+    await prepararDashboardMockado(page);
+    await page.goto('/dashboard');
+
+    const gatilho = page.getByRole('button', { name: 'Notificações, 2 não lidas' });
+    await gatilho.click();
+    await expect(page.getByRole('menu')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    await expect(gatilho).toBeFocused();
+  });
+
+  test('menu - notificacoes aberto nao introduz violacao de ARIA', async ({ page }) => {
+    await prepararDashboardMockado(page);
+    await page.goto('/dashboard');
+
+    await page.getByRole('button', { name: 'Notificações, 2 não lidas' }).click();
+    await expect(page.getByRole('menu')).toBeVisible();
+
+    await assertBotoesComNomeAcessivel(page);
+    await assertSemViolacoesAxe(page);
+  });
+
+  test('menu - conta aberto nao introduz violacao de ARIA e navega por teclado', async ({ page }) => {
+    await prepararDashboardMockado(page);
+    await page.goto('/dashboard');
+
+    const gatilho = page.getByRole('button', { name: /Abrir menu da conta/ });
+    await gatilho.click();
+    const menu = page.getByRole('menu');
+    await expect(menu).toBeVisible();
+
+    const itens = menu.getByRole('menuitem');
+    expect(await itens.count(), 'menu da conta sem nenhum item de menu').toBeGreaterThan(0);
+    await expect(itens.first()).toBeFocused();
+
+    await assertSemViolacoesAxe(page);
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    await expect(gatilho).toBeFocused();
+  });
+});

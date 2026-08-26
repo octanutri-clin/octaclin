@@ -63,7 +63,12 @@ export function Abas({ identificador, abas, ativaId, aoMudar, rotulo, className 
             type="button"
             role="tab"
             aria-selected={ativa}
-            aria-controls={`${identificador}-${aba.id}-painel`}
+            // Todos os consumidores renderizam apenas o painel da aba ativa, entao
+            // as demais abas apontavam para ids inexistentes. `aria-controls`
+            // orfao e pior que ausente: o leitor de tela anuncia uma relacao que
+            // nao existe, e axe-core so o classifica como "incomplete". Declara-se
+            // a relacao apenas quando o painel esta de fato no DOM.
+            aria-controls={ativa ? `${identificador}-${aba.id}-painel` : undefined}
             tabIndex={ativa ? 0 : -1}
             onClick={() => aoMudar(aba.id)}
             onKeyDown={(evento) => aoTeclar(evento, aba.id)}

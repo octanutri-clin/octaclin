@@ -283,8 +283,8 @@ export function PainelGamificacao() {
               ? `${desafios.length} metas e ${badges.length} conquistas individuais`
               : 'Recursos desabilitados por padrao'}
           </p>
-          {/* text-texto-sutil (#8A94A3) rende 3.06:1 sobre branco; o gate de a11y
-              exige 4.5:1, e text-texto-suave (#596273) entrega 6.14:1. */}
+          {/* texto-suave (#596273, 6.14:1 sobre branco) e o token de texto secundario
+              que passa WCAG 1.4.3; ver a nota de `texto-sutil` em tailwind.config.ts. */}
           <p className="mt-1 text-xs text-texto-suave">Cada área exige ativação explicita da conta.</p>
         </div>
         <Botao onClick={() => void carregar()} disabled={carregando}>
