@@ -501,7 +501,7 @@ export function PainelAutomacoes() {
           <CartaoCabecalho>
             <CartaoTitulo icone={<SlidersHorizontal size={16} />}>Regras cadastradas</CartaoTitulo>
           </CartaoCabecalho>
-          <div className="max-h-[520px] divide-y divide-linha overflow-auto">
+          <div tabIndex={0} aria-label="Regras cadastradas" className="max-h-[520px] divide-y divide-linha overflow-auto">
             {regras.length ? (
               regras.map((regra) => (
                 <div key={regra.id} className="grid gap-2 px-4 py-3 text-sm">
@@ -640,7 +640,7 @@ export function PainelAutomacoes() {
           <CartaoCabecalho>
             <CartaoTitulo>Histórico recente</CartaoTitulo>
           </CartaoCabecalho>
-          <div className="max-h-[420px] divide-y divide-linha overflow-auto">
+          <div tabIndex={0} aria-label="Histórico recente" className="max-h-[420px] divide-y divide-linha overflow-auto">
             {execucoes.length ? (
               execucoes.map((execucao) => (
                 <div key={execucao.id} className="grid gap-2 px-4 py-3 text-sm">
