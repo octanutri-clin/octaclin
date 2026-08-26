@@ -1176,7 +1176,7 @@ export function PainelComunicacoes() {
         <CartaoCabecalho>
           <CartaoTitulo>Mensagens recentes</CartaoTitulo>
         </CartaoCabecalho>
-        <div className="max-h-[420px] divide-y divide-linha overflow-auto">
+        <div tabIndex={0} aria-label="Lista de mensagens recentes" className="max-h-[420px] divide-y divide-linha overflow-auto">
           {mensagens.length ? (
             mensagens.map((mensagem) => {
               const canalMensagem = obterCanal(canais, mensagem);
