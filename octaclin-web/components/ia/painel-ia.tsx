@@ -227,7 +227,7 @@ export function PainelIa() {
             <p className="mt-1 text-sm text-texto-suave">
               {analises.length} analises, {reconhecimentos.length} reconhecimentos persistidos
             </p>
-            <p className="mt-1 text-xs text-texto-sutil">Resultados de IA sao sugestões operacionais e exigem revisão do profissional antes de qualquer conduta.</p>
+            <p className="mt-1 text-xs text-texto-suave">Resultados de IA sao sugestões operacionais e exigem revisão do profissional antes de qualquer conduta.</p>
           </div>
           <Botao onClick={carregar} disabled={carregando}>
             <RefreshCcw size={16} />
@@ -381,7 +381,7 @@ export function PainelIa() {
           <CartaoCabecalho>
             <CartaoTitulo>Sentimentos recentes</CartaoTitulo>
           </CartaoCabecalho>
-          <div className="max-h-[420px] divide-y divide-linha overflow-auto">
+          <div tabIndex={0} aria-label="Sentimentos recentes" className="max-h-[420px] divide-y divide-linha overflow-auto">
             {analises.length ? (
               analises.map((analise) => (
                 <div key={analise.id} className="grid gap-2 px-4 py-3 text-sm">
@@ -448,7 +448,7 @@ export function PainelIa() {
           <CartaoCabecalho>
             <CartaoTitulo>Reconhecimentos recentes</CartaoTitulo>
           </CartaoCabecalho>
-          <div className="max-h-[420px] divide-y divide-linha overflow-auto">
+          <div tabIndex={0} aria-label="Reconhecimentos recentes" className="max-h-[420px] divide-y divide-linha overflow-auto">
             {reconhecimentos.length ? (
               reconhecimentos.map((item) => (
                 <div key={item.id} className="grid gap-2 px-4 py-3 text-sm">

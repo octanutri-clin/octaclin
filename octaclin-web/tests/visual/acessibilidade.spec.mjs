@@ -2639,3 +2639,283 @@ test.describe('gate de acessibilidade - automacoes (PR 24)', () => {
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 });
+
+// IA assistida (/ia) - dados integralmente sinteticos. As mutacoes exercitadas
+// abaixo sao interceptadas no navegador; nenhum provedor, backend ou prontuario
+// real participa deste gate.
+const permissoesIa = ['console.acessar', 'ia.executar', 'pacientes.listar', 'pacientes.ler'];
+const pacienteIaFixture = { id: 'pac-ia-1', nome: 'Paciente Sintetico' };
+const imagemIaFixture = {
+  id: 'midia-ia-1',
+  pacienteId: pacienteIaFixture.id,
+  tipo: 'imagem',
+  categoria: 'diario',
+  nomeArquivo: 'refeição-sintetica.jpg',
+  mimeType: 'image/jpeg',
+  tamanhoBytes: '1024',
+  hashConteudo: 'a'.repeat(64),
+  status: 'confirmado',
+  criadoEm: '2026-08-01T12:00:00.000Z',
+  confirmadoEm: '2026-08-01T12:05:00.000Z'
+};
+
+const analiseIaPendenteFixture = {
+  id: 'analise-ia-pendente',
+  tenantId: 'tenant-1',
+  pacienteId: pacienteIaFixture.id,
+  modelo: 'heuristica-sintetica',
+  ansiedadeScore: '20',
+  frustracaoScore: '75',
+  motivacaoScore: '40',
+  confusaoScore: '10',
+  explicacao: {
+    provedor: 'heuristica-sintetica',
+    limitacoes: ['Analise lexical sintetica sem prontuario completo.']
+  },
+  alertaDisparado: false,
+  revisaoHumana: { status: 'pendente' },
+  criadoEm: '2026-08-01T13:00:00.000Z'
+};
+
+const reconhecimentoIaPendenteFixture = {
+  id: 'reconhecimento-ia-pendente',
+  tenantId: 'tenant-1',
+  pacienteId: pacienteIaFixture.id,
+  arquivoMidiaId: imagemIaFixture.id,
+  provedor: 'heuristica-sintetica',
+  imagemHash: 'a'.repeat(64),
+  alimentosDetectados: [{ nome: 'arroz sintetico' }],
+  pesoEstimadoGramas: '180',
+  caloriasEstimadas: '230',
+  confiancaMedia: '72',
+  limitacoes: ['Estimativa sintetica que exige confirmacao profissional.'],
+  revisaoHumana: { status: 'pendente' },
+  criadoEm: '2026-08-01T13:10:00.000Z'
+};
+
+const analisesIaSomenteLeituraFixture = Array.from({ length: 8 }, (_, indice) => ({
+  ...analiseIaPendenteFixture,
+  id: `analise-ia-rejeitada-${indice + 1}`,
+  modelo: `heuristica-sintetica-${indice + 1}`,
+  explicacao: {
+    provedor: 'heuristica-sintetica',
+    limitacoes: [`Limitacao sintetica detalhada para o item ${indice + 1}.`]
+  },
+  revisaoHumana: { status: 'rejeitada' },
+  criadoEm: `2026-08-${String(indice + 2).padStart(2, '0')}T13:00:00.000Z`
+}));
+
+const reconhecimentosIaSomenteLeituraFixture = Array.from({ length: 8 }, (_, indice) => ({
+  ...reconhecimentoIaPendenteFixture,
+  id: `reconhecimento-ia-rejeitado-${indice + 1}`,
+  provedor: `heuristica-sintetica-${indice + 1}`,
+  alimentosDetectados: [{ nome: `alimento sintetico ${indice + 1}` }],
+  limitacoes: [`Limitacao sintetica detalhada para o reconhecimento ${indice + 1}.`],
+  revisaoHumana: { status: 'rejeitada' },
+  criadoEm: `2026-08-${String(indice + 2).padStart(2, '0')}T13:10:00.000Z`
+}));
+
+async function prepararSessaoIa(page) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: 'Professional', domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/ia'), domain: 'localhost', path: '/' }
+  ]);
+
+  await page.route('**/api/auth/session', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      autenticado: true,
+      papel: 'Professional',
+      apiUrl: 'http://localhost:3001',
+      tenantSlug: 'clinica-octa',
+      email: 'profissional@octaclin.local',
+      expiraEm: '2026-12-31T18:00:00.000Z',
+      permissoes: permissoesIa,
+      destinoInicial: '/ia'
+    })
+  }));
+}
+
+function prepararPacientesIa(page, { itens = [pacienteIaFixture] } = {}) {
+  return page.route('**/api/pacientes**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ itens, total: itens.length })
+  }));
+}
+
+function prepararAnalisesIa(page, { itens = [analiseIaPendenteFixture], status = 200 } = {}) {
+  return page.route((url) => url.pathname === '/api/ia/sentimento', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    if (status !== 200) {
+      await route.fulfill({ status, contentType: 'text/plain', body: 'Falha ao carregar sugestões assistidas.' });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(itens) });
+  });
+}
+
+function prepararReconhecimentosIa(page, { itens = [reconhecimentoIaPendenteFixture] } = {}) {
+  return page.route((url) => url.pathname === '/api/ia/reconhecimento-alimentar', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(itens) });
+  });
+}
+
+function prepararImagensIa(page, { itens = [imagemIaFixture], status = 200 } = {}) {
+  return page.route('**/api/mobile/midias/uploads**', async (route) => {
+    if (status !== 200) {
+      await route.fulfill({ status, contentType: 'text/plain', body: 'Falha ao carregar imagens clínicas.' });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(itens) });
+  });
+}
+
+async function prepararIa(page, { pacientes, analises, reconhecimentos, imagens } = {}) {
+  await prepararSessaoIa(page);
+  await prepararPacientesIa(page, pacientes);
+  await prepararAnalisesIa(page, analises);
+  await prepararReconhecimentosIa(page, reconhecimentos);
+  await prepararImagensIa(page, imagens);
+}
+
+test.describe('gate de acessibilidade - ia assistida (PR 25)', () => {
+  test('painel carregado com sugestoes pendentes e revisao humana obrigatoria', async ({ page }) => {
+    await prepararIa(page);
+    await page.goto('/ia');
+
+    await expect(page.getByRole('heading', { name: 'Sugestões assistidas', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Análise de sentimento' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Reconhecimento alimentar' })).toBeVisible();
+    await expect(page.getByText('Revisão pendente')).toHaveCount(2);
+    await expect(page.getByText('Aguardando revisão')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Abrir prontuário' })).toHaveCount(0);
+    await expect(page.getByLabel('Arquivo midia')).toContainText('refeição-sintetica.jpg');
+
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('painel sem historico e sem imagem confirmada', async ({ page }) => {
+    await prepararIa(page, {
+      analises: { itens: [] },
+      reconhecimentos: { itens: [] },
+      imagens: { itens: [] }
+    });
+    await page.goto('/ia');
+
+    await expect(page.getByText('Nenhuma análise persistida.')).toBeVisible();
+    await expect(page.getByText('Nenhum reconhecimento persistido.')).toBeVisible();
+    await expect(page.getByText('Nenhuma imagem confirmada. Envie uma foto no prontuário do paciente antes de solicitar a análise.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Reconhecer' })).toBeDisabled();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('painel mostra falha no carregamento inicial', async ({ page }) => {
+    await prepararIa(page, { analises: { status: 500 } });
+    await page.goto('/ia');
+
+    await expect(page.getByText('Falha ao carregar sugestões assistidas.')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('painel mostra falha ao carregar imagens clinicas', async ({ page }) => {
+    await prepararIa(page, { imagens: { status: 500 } });
+    await page.goto('/ia');
+
+    await expect(page.getByText('Falha ao carregar imagens clínicas.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Reconhecer' })).toBeDisabled();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('historicos somente leitura com overflow real sao focalizaveis', async ({ page }) => {
+    await prepararIa(page, {
+      analises: { itens: analisesIaSomenteLeituraFixture },
+      reconhecimentos: { itens: reconhecimentosIaSomenteLeituraFixture }
+    });
+    await page.goto('/ia');
+
+    await expect(page.getByText('8 analises, 8 reconhecimentos persistidos')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidade(page);
+
+    const regiaoSentimentos = page.getByLabel('Sentimentos recentes');
+    await regiaoSentimentos.focus();
+    await expect(regiaoSentimentos).toBeFocused();
+    const medidasSentimentos = await regiaoSentimentos.evaluate((elemento) => ({
+      scrollHeight: elemento.scrollHeight,
+      clientHeight: elemento.clientHeight
+    }));
+    expect(medidasSentimentos.scrollHeight).toBeGreaterThan(medidasSentimentos.clientHeight);
+
+    const regiaoReconhecimentos = page.getByLabel('Reconhecimentos recentes');
+    await regiaoReconhecimentos.focus();
+    await expect(regiaoReconhecimentos).toBeFocused();
+    const medidasReconhecimentos = await regiaoReconhecimentos.evaluate((elemento) => ({
+      scrollHeight: elemento.scrollHeight,
+      clientHeight: elemento.clientHeight
+    }));
+    expect(medidasReconhecimentos.scrollHeight).toBeGreaterThan(medidasReconhecimentos.clientHeight);
+  });
+
+  test('revisao humana editada libera prontuario somente apos PATCH mockado', async ({ page }) => {
+    await prepararIa(page, { reconhecimentos: { itens: [] } });
+    await page.route(`**/api/ia/sentimento/${analiseIaPendenteFixture.id}/revisao`, async (route) => {
+      const corpo = route.request().postDataJSON();
+      expect(corpo).toEqual({
+        decisao: 'editada',
+        conteudoEditado: { interpretacaoProfissional: 'Frustracao pontual sintetica, sem indicio de risco atual.' }
+      });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...analiseIaPendenteFixture,
+          revisaoHumana: { status: 'editada', conteudoEditado: corpo.conteudoEditado }
+        })
+      });
+    });
+    await page.goto('/ia');
+
+    await page.getByPlaceholder('Informe a interpretação clínica corrigida').fill('Frustracao pontual sintetica, sem indicio de risco atual.');
+    await page.getByRole('button', { name: 'Editar e aceitar' }).click();
+
+    await expect(page.getByText('Revisão humana registrada.')).toBeVisible();
+    await expect(page.getByText('Editada pelo profissional')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Abrir prontuário' })).toHaveAttribute('href', `/pacientes/${pacienteIaFixture.id}`);
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('reconhecimento usa apenas imagem confirmada e POST mockado', async ({ page }) => {
+    await prepararIa(page, { analises: { itens: [] }, reconhecimentos: { itens: [] } });
+    await page.route((url) => url.pathname === '/api/ia/reconhecimento-alimentar', async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      expect(route.request().postDataJSON()).toEqual({
+        pacienteId: pacienteIaFixture.id,
+        arquivoMidiaId: imagemIaFixture.id,
+        contexto: { observacao: 'Prato sintetico com arroz.' }
+      });
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify(reconhecimentoIaPendenteFixture)
+      });
+    });
+    await page.goto('/ia');
+
+    await page.getByLabel('Observação').fill('Prato sintetico com arroz.');
+    await page.getByRole('button', { name: 'Reconhecer' }).click();
+
+    await expect(page.getByText('Reconhecimento alimentar criado por heuristica-sintetica.')).toBeVisible();
+    await expect(page.getByText('Revisão pendente')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+});
