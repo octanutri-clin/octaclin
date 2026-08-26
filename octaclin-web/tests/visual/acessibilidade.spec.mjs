@@ -1809,3 +1809,122 @@ test.describe('gate de acessibilidade - comunicacoes (PR 21)', () => {
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Mocks da aba Configuracoes de comunicacoes (PR 22 da governanca). Reutiliza
+// prepararSessaoComunicacoes/prepararMensagensComunicacoes do PR 21 e
+// sobrescreve apenas canais/templates para os cenarios desta aba.
+// ---------------------------------------------------------------------------
+
+// 5 canais (whatsapp/email/push, ativos e inativo) com 3 templates cada -
+// conteudo sintetico suficiente para o container "Inventario ativo"
+// (max-h-[420px]) realmente ultrapassar a altura visivel e se tornar rolavel,
+// confirmado via script Axe ad-hoc antes de qualquer alteracao de produto
+// (scrollHeight 689 x clientHeight 420 nesse cenario, em ambos os viewports).
+const canaisInventarioFixture = [
+  { id: 'canal-cfg-1', tenantId: 'tenant-1', tipo: 'whatsapp', nome: 'WhatsApp Clinica Norte', configuracao: {}, ativo: true },
+  { id: 'canal-cfg-2', tenantId: 'tenant-1', tipo: 'email', nome: 'Email Institucional', configuracao: {}, ativo: true },
+  { id: 'canal-cfg-3', tenantId: 'tenant-1', tipo: 'push', nome: 'Push App Paciente', configuracao: {}, ativo: false },
+  { id: 'canal-cfg-4', tenantId: 'tenant-1', tipo: 'whatsapp', nome: 'WhatsApp Clinica Sul', configuracao: {}, ativo: true },
+  { id: 'canal-cfg-5', tenantId: 'tenant-1', tipo: 'email', nome: 'Email Financeiro', configuracao: {}, ativo: true }
+];
+const templatesInventarioFixture = canaisInventarioFixture.flatMap((canal) =>
+  [1, 2, 3].map((indice) => ({
+    id: `template-${canal.id}-${indice}`,
+    tenantId: 'tenant-1',
+    canal: canal.tipo,
+    codigoExterno: `codigo_${indice}`,
+    nome: `Template ${canal.nome} ${indice}`,
+    conteudo: { corpo: 'Ola, {{nome}}.' },
+    aprovado: true
+  }))
+);
+
+function prepararCanaisComunicacoes(page, { itens = canaisInventarioFixture, status = 200 } = {}) {
+  return page.route('**/api/comunicacoes/canais', async (route) => {
+    if (status !== 200) {
+      await route.fulfill({ status, contentType: 'text/plain', body: 'Falha ao carregar canais.' });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(itens) });
+  });
+}
+
+function prepararTemplatesComunicacoes(page, { itens = templatesInventarioFixture } = {}) {
+  return page.route('**/api/comunicacoes/templates', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(itens) })
+  );
+}
+
+async function prepararConfiguracoesComunicacoes(page, opcoes = {}) {
+  await prepararSessaoComunicacoes(page);
+  await prepararMensagensComunicacoes(page, { itens: [] });
+  await prepararCanaisComunicacoes(page, { itens: opcoes.canais, status: opcoes.statusCanais });
+  await prepararTemplatesComunicacoes(page, { itens: opcoes.templates });
+}
+
+// PR 22 da governanca: completa o gate de a11y de /comunicacoes cobrindo a
+// aba "Configuracoes" (canais e templates), incluindo a navegacao por
+// teclado ate a aba e a regiao rolavel do inventario. Dados 100% sinteticos;
+// nenhuma chamada a Meta/Gmail/WhatsApp e nenhum envio real de mensagem.
+test.describe('gate de acessibilidade - comunicacoes configuracoes (PR 22)', () => {
+  test('configuracoes - navega por teclado, mostra inventario carregado e a regiao rolavel e focavel', async ({ page }) => {
+    await prepararConfiguracoesComunicacoes(page, { canais: canaisInventarioFixture, templates: templatesInventarioFixture });
+    await page.goto('/comunicacoes');
+
+    const areas = page.getByRole('tablist', { name: 'Áreas de comunicação' });
+    const abaConversas = areas.getByRole('tab', { name: 'Conversas' });
+    const abaNovaMensagem = areas.getByRole('tab', { name: 'Nova mensagem' });
+    const abaConfiguracoes = areas.getByRole('tab', { name: 'Configurações' });
+
+    await expect(abaConversas).toHaveAttribute('aria-selected', 'true');
+    await abaConversas.focus();
+
+    await page.keyboard.press('ArrowRight');
+    await expect(abaNovaMensagem).toBeFocused();
+    await expect(abaNovaMensagem).toHaveAttribute('aria-selected', 'true');
+
+    await page.keyboard.press('ArrowRight');
+    await expect(abaConfiguracoes).toBeFocused();
+    await expect(abaConfiguracoes).toHaveAttribute('aria-selected', 'true');
+
+    // Inventario de canais carregado (item 1) e templates carregados (item 2).
+    await expect(page.getByRole('heading', { name: 'Novo canal' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Novo template' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Inventario ativo' })).toBeVisible();
+    await expect(page.getByText('WhatsApp Clinica Norte', { exact: true })).toBeVisible();
+    await expect(page.getByText('Email Financeiro', { exact: true })).toBeVisible();
+    await expect(page.getByText('Aprovado: Template WhatsApp Clinica Norte 1').first()).toBeVisible();
+
+    // Regiao rolavel do inventario (item 5): alcancavel e focavel por teclado.
+    const inventario = page.getByLabel('Inventario de canais e templates');
+    await expect(inventario).toBeVisible();
+    await inventario.focus();
+    await expect(inventario).toBeFocused();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('configuracoes - estado vazio (nenhum canal ou template carregado)', async ({ page }) => {
+    await prepararConfiguracoesComunicacoes(page, { canais: [], templates: [] });
+    await page.goto('/comunicacoes');
+    await page.getByRole('tab', { name: 'Configurações' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Novo canal' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Novo template' })).toBeVisible();
+    await expect(page.getByText('Nenhum canal carregado.')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('configuracoes - falha de carregamento', async ({ page }) => {
+    await prepararConfiguracoesComunicacoes(page, { statusCanais: 500 });
+    await page.goto('/comunicacoes');
+    await page.getByRole('tab', { name: 'Configurações' }).click();
+
+    await expect(page.getByText('Falha ao carregar canais.')).toBeVisible();
+    await expect(page.getByText('Nenhum canal carregado.')).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+});

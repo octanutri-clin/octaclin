@@ -921,7 +921,7 @@ export function PainelComunicacoes() {
           <CartaoCabecalho>
             <CartaoTitulo>Inventario ativo</CartaoTitulo>
           </CartaoCabecalho>
-          <div className="max-h-[420px] divide-y divide-linha overflow-auto">
+          <div tabIndex={0} aria-label="Inventario de canais e templates" className="max-h-[420px] divide-y divide-linha overflow-auto">
             {canais.length ? (
               canais.map((canal) => {
                 const Icone = iconeCanal(canal.tipo);
