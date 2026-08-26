@@ -4483,3 +4483,448 @@ test.describe('gate de acessibilidade - gamificacao (PR 27)', () => {
     ]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// PR 28 da governanca: expande o gate de a11y para os estados de PWA e
+// funcionamento offline do portal web (pagina /offline, indicador de conexao,
+// fila de operacoes pendentes, sincronizacao, instalacao, check-in offline do
+// paciente e formulario publico offline-first).
+//
+// Escopo restrito ao portal web. A rota `/mobile` nao existe mais e NAO e
+// reativada aqui; `components/mobile/painel-mobile.tsx` continua orfao e nao e
+// tocado nem testado por este PR (ver "Riscos residuais" na PR).
+//
+// Nada de rede real: `prepararPwaPortal`/`prepararFormularioPwa` registram
+// primeiro um catch-all `**/api/**` que apenas REGISTRA e bloqueia qualquer
+// rota nao mockada, e cada teste confere essa lista vazia. O estado de conexao
+// e o evento de instalacao sao 100% sinteticos (getter de `navigator.onLine`
+// instalado por `addInitScript` e evento `beforeinstallprompt` fabricado), de
+// modo que nenhum service worker de producao, upload ou instalacao real e
+// exercitado.
+// ---------------------------------------------------------------------------
+
+// Substitui `navigator.onLine` por um getter controlado pelo teste e expoe
+// `window.__definirConexaoPwa`, que tambem dispara o evento correspondente.
+// Preferido a `context.setOffline`, que mexeria na camada de rede e poderia
+// derrubar os proprios mocks; aqui nada alem do estado observado pela pagina
+// muda.
+async function instalarControleDeConexaoPwa(page) {
+  await page.addInitScript(() => {
+    let online = true;
+    Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => online });
+    window.__definirConexaoPwa = (novoEstado) => {
+      online = novoEstado;
+      window.dispatchEvent(new Event(novoEstado ? 'online' : 'offline'));
+    };
+  });
+}
+
+function definirConexaoPwa(page, online) {
+  return page.evaluate((estado) => window.__definirConexaoPwa(estado), online);
+}
+
+// Le a fila privada direto do IndexedDB. Duplica de proposito o helper de
+// pwa-portal.spec.mjs: os dois specs sao independentes e extrair um modulo
+// comum seria refatoracao fora do escopo deste PR.
+function lerFilaPwa(page) {
+  return page.evaluate(async () => {
+    const banco = await new Promise((resolve, reject) => {
+      const requisicao = indexedDB.open('octaclin-pwa-private-v1', 1);
+      requisicao.onsuccess = () => resolve(requisicao.result);
+      requisicao.onerror = () => reject(requisicao.error);
+    });
+    try {
+      return await new Promise((resolve, reject) => {
+        const requisicao = banco.transaction('operacoes').objectStore('operacoes').getAll();
+        requisicao.onsuccess = () => resolve(requisicao.result.map((registro) => ({
+          id: registro.id,
+          tipo: registro.tipo,
+          temCifra: registro.cifra instanceof ArrayBuffer && registro.cifra.byteLength > 0,
+          // Bytes da cifra como texto: e sobre ISTO que o teste afirma que nao ha
+          // payload clinico legivel, e nao sobre uma inspecao visual do codigo.
+          cifraComoTexto: new TextDecoder().decode(new Uint8Array(registro.cifra)),
+          chaves: Object.keys(registro).sort()
+        })));
+        requisicao.onerror = () => reject(requisicao.error);
+      });
+    } finally {
+      banco.close();
+    }
+  });
+}
+
+const OBSERVACAO_CLINICA_SINTETICA = 'Observação sintética que não pode aparecer em claro no dispositivo.';
+
+async function prepararPwaPortal(page) {
+  const chamadas = { naoMockadas: [], mutacoes: [] };
+  let resolverEspera = null;
+  const controle = {
+    checkinOnline: false,
+    espera: null,
+    segurarSincronizacao() {
+      controle.espera = new Promise((resolve) => {
+        resolverEspera = resolve;
+      });
+    },
+    liberarSincronizacao() {
+      resolverEspera?.();
+      resolverEspera = null;
+      controle.espera = null;
+    }
+  };
+
+  await instalarControleDeConexaoPwa(page);
+
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: 'Patient', domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/portal'), domain: 'localhost', path: '/' }
+  ]);
+
+  // Rede de seguranca: registrada PRIMEIRO, portanto so recebe o que nenhum
+  // mock especifico casou.
+  await page.route('**/api/**', async (route) => {
+    const url = new URL(route.request().url());
+    chamadas.naoMockadas.push(`${route.request().method()} ${url.pathname}`);
+    await route.fulfill({ status: 599, contentType: 'text/plain; charset=utf-8', body: 'Rota nao mockada no gate de a11y.' });
+  });
+
+  await page.route((url) => url.pathname === '/api/portal/paciente', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(portalPacienteFixture) })
+  );
+
+  await page.route((url) => url.pathname === '/api/portal/paciente/lgpd/solicitacoes', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        protocolo: 'LGPD-123',
+        pacienteId: 'paciente-1',
+        tipo: 'retificacao',
+        status: 'recebida',
+        criadoEm: '2026-07-22T12:10:00.000Z'
+      })
+    })
+  );
+
+  await page.route((url) => url.pathname === '/api/portal/paciente/checkins', async (route) => {
+    if (!controle.checkinOnline) {
+      // Falha de rede sintetica: o produto deve enfileirar em vez de perder o
+      // check-in. Nada sai da maquina.
+      await route.abort('internetdisconnected');
+      return;
+    }
+    if (controle.espera) await controle.espera;
+    const entrada = route.request().postDataJSON();
+    chamadas.mutacoes.push('POST /api/portal/paciente/checkins');
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: `checkin-sincronizado-${chamadas.mutacoes.length}`,
+        pacienteId: 'paciente-1',
+        tipo: 'humor',
+        humor: entrada.humor,
+        adesaoPlano: entrada.adesaoPlano,
+        registradoEm: '2026-08-26T12:00:00.000Z'
+      })
+    });
+  });
+
+  await page.route((url) => url.pathname === '/api/auth/sair', async (route) => {
+    chamadas.mutacoes.push('POST /api/auth/sair');
+    await page.context().clearCookies();
+    await route.fulfill({ status: 204, body: '' });
+  });
+
+  return { chamadas, controle };
+}
+
+async function abrirCheckinsPwa(page) {
+  await page.goto('/portal/checkins');
+  await expect(page.getByRole('heading', { name: 'Check-in rapido' })).toBeVisible();
+}
+
+async function registrarCheckinPwa(page, observacao) {
+  await page.getByLabel('Humor de hoje').selectOption('bem');
+  await page.getByLabel('Adesão ao plano').fill('85');
+  await page.getByLabel('Observações do dia').fill(observacao);
+  await page.getByRole('button', { name: 'Registrar check-in' }).click();
+}
+
+function indicadorPwa(page) {
+  return page.locator('[aria-live="polite"]').filter({ hasText: /Sem conexão|pendente|Sincronizando/ });
+}
+
+async function prepararFormularioPwa(page) {
+  const chamadas = { naoMockadas: [], mutacoes: [] };
+  const controle = { envioOnline: false };
+
+  await instalarControleDeConexaoPwa(page);
+
+  await page.route('**/api/**', async (route) => {
+    const url = new URL(route.request().url());
+    chamadas.naoMockadas.push(`${route.request().method()} ${url.pathname}`);
+    await route.fulfill({ status: 599, contentType: 'text/plain; charset=utf-8', body: 'Rota nao mockada no gate de a11y.' });
+  });
+
+  await prepararFormularioPublico(page, {
+    token: 'token-pwa',
+    titulo: 'Check-in offline',
+    pergunta: {
+      id: 'pergunta-1',
+      tipo: 'texto_longo',
+      enunciado: 'Como voce esta?',
+      obrigatoria: true,
+      configuracao: { secao: 'Hoje', limiteCaracteres: 500 },
+      opcoes: [],
+      ordem: 1
+    }
+  });
+
+  await page.route((url) => url.pathname === '/api/formularios/token-pwa/rascunho', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ rascunhoVersao: 1, rascunhoAtualizadoEm: '2026-08-26T12:00:00.000Z' })
+    })
+  );
+
+  await page.route((url) => url.pathname === '/api/formularios/token-pwa/respostas', async (route) => {
+    if (!controle.envioOnline) {
+      await route.abort('internetdisconnected');
+      return;
+    }
+    chamadas.mutacoes.push('POST /api/formularios/token-pwa/respostas');
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({ envioId: 'envio-token-pwa', status: 'respondido', respondidoEm: '2026-08-26T12:05:00.000Z' })
+    });
+  });
+
+  return { chamadas, controle };
+}
+
+test.describe('gate de acessibilidade - pwa e offline (PR 28)', () => {
+  test('pagina /offline expoe titulo, mensagem e link de retomada acessiveis', async ({ page }) => {
+    await page.goto('/offline');
+
+    await expect(page.getByRole('heading', { name: 'Sem conexão', level: 1 })).toBeVisible();
+    await expect(
+      page.getByText('Reconecte-se para carregar suas informações. Operações salvas nesta sessão serão enviadas automaticamente.')
+    ).toBeVisible();
+
+    const retomar = page.getByRole('link', { name: 'Tentar novamente' });
+    await expect(retomar).toHaveAttribute('href', '/portal');
+
+    // A tabulacao vem ANTES do foco manual: a pagina tem um unico elemento
+    // focalizavel, e focar antes moveria o ponto de retomada do Tab para o fim
+    // da sequencia, derrubando o foco no body por fim de lista (artefato do
+    // Chromium headless, nao perda de foco real).
+    await rodarChecagensDeAcessibilidade(page);
+
+    await retomar.focus();
+    await expect(retomar).toBeFocused();
+  });
+
+  test('portal online e sem pendencias nao exibe indicador de PWA', async ({ page }) => {
+    const { chamadas } = await prepararPwaPortal(page);
+    await abrirCheckinsPwa(page);
+
+    await expect(page.getByText('Sem conexão')).toHaveCount(0);
+    await expect(page.getByText(/\d+ pendente/)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Instalar' })).toHaveCount(0);
+    expect(await lerFilaPwa(page)).toEqual([]);
+
+    await rodarChecagensDeAcessibilidade(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('portal offline anuncia "Sem conexão" por texto, nao apenas por cor ou icone', async ({ page }) => {
+    const { chamadas } = await prepararPwaPortal(page);
+    await abrirCheckinsPwa(page);
+    await definirConexaoPwa(page, false);
+
+    const indicador = indicadorPwa(page);
+    await expect(indicador).toBeVisible();
+    // O estado precisa estar no texto acessivel, nao so no icone ou na cor da
+    // borda: um leitor de tela e um usuario com daltonismo tem de receber o
+    // mesmo conteudo.
+    await expect(indicador).toContainText('Sem conexão');
+    await expect(indicador).toHaveAttribute('aria-live', 'polite');
+    const textoDoEstado = await page.getByText('Sem conexão').first().innerText();
+    expect(textoDoEstado.trim(), 'estado de conexao sem texto proprio').toBe('Sem conexão');
+
+    await rodarChecagensDeAcessibilidade(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('fila pendente usa singular com uma operacao e plural com varias', async ({ page }) => {
+    const { chamadas } = await prepararPwaPortal(page);
+    await abrirCheckinsPwa(page);
+    await definirConexaoPwa(page, false);
+
+    await registrarCheckinPwa(page, OBSERVACAO_CLINICA_SINTETICA);
+    await expect(indicadorPwa(page)).toContainText('1 pendente');
+    await expect(page.getByText('2 pendentes')).toHaveCount(0);
+
+    await registrarCheckinPwa(page, 'Segunda observação sintética do mesmo dia.');
+    await expect(indicadorPwa(page)).toContainText('2 pendentes');
+
+    expect(await lerFilaPwa(page)).toHaveLength(2);
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('sincronizacao mostra "Sincronizando", esvazia a fila e anuncia o sucesso', async ({ page }) => {
+    const { chamadas, controle } = await prepararPwaPortal(page);
+    await abrirCheckinsPwa(page);
+    await definirConexaoPwa(page, false);
+
+    await registrarCheckinPwa(page, OBSERVACAO_CLINICA_SINTETICA);
+    await expect(indicadorPwa(page)).toContainText('1 pendente');
+
+    controle.checkinOnline = true;
+    controle.segurarSincronizacao();
+    await definirConexaoPwa(page, true);
+
+    await expect(indicadorPwa(page)).toContainText('Sincronizando');
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    controle.liberarSincronizacao();
+
+    await expect(page.getByRole('status').filter({ hasText: 'Check-in offline sincronizado.' })).toBeVisible();
+    await expect.poll(async () => (await lerFilaPwa(page)).length).toBe(0);
+    await expect(indicadorPwa(page)).toHaveCount(0);
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual(['POST /api/portal/paciente/checkins']);
+  });
+
+  test('instalacao usa evento sintetico e o botao Instalar responde ao teclado', async ({ page }) => {
+    const { chamadas } = await prepararPwaPortal(page);
+    await abrirCheckinsPwa(page);
+
+    // Evento 100% fabricado: nenhuma instalacao real e oferecida ou executada.
+    await page.evaluate(() => {
+      window.__promptPwaChamado = 0;
+      const evento = new Event('beforeinstallprompt');
+      evento.prompt = async () => {
+        window.__promptPwaChamado += 1;
+      };
+      evento.userChoice = Promise.resolve({ outcome: 'accepted' });
+      window.dispatchEvent(evento);
+    });
+
+    const instalar = page.getByRole('button', { name: 'Instalar' });
+    await expect(instalar).toBeVisible();
+    await expect(instalar).not.toHaveAccessibleName('');
+
+    await rodarChecagensDeAcessibilidade(page);
+
+    await instalar.focus();
+    await expect(instalar).toBeFocused();
+    await page.keyboard.press('Enter');
+
+    await expect.poll(() => page.evaluate(() => window.__promptPwaChamado)).toBe(1);
+    await expect(instalar).toHaveCount(0);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('check-in offline guarda operacao cifrada e confirma de forma acessivel', async ({ page }) => {
+    const { chamadas, controle } = await prepararPwaPortal(page);
+    await abrirCheckinsPwa(page);
+    await definirConexaoPwa(page, false);
+
+    await registrarCheckinPwa(page, OBSERVACAO_CLINICA_SINTETICA);
+
+    const confirmacao = page.getByRole('status').filter({ hasText: 'salvo neste dispositivo' });
+    await expect(confirmacao).toBeVisible();
+    await expect(confirmacao).toContainText('Check-in salvo neste dispositivo. Ele será enviado quando a conexão voltar.');
+
+    const fila = await lerFilaPwa(page);
+    expect(fila).toHaveLength(1);
+    expect(fila[0].tipo).toBe('checkin');
+    expect(fila[0].temCifra, 'registro da fila sem ArrayBuffer de cifra').toBe(true);
+    expect(fila[0].chaves).toEqual(['cifra', 'criadoEm', 'id', 'iv', 'tipo']);
+    expect(fila[0].cifraComoTexto, 'payload clinico legivel dentro da cifra').not.toContain('Observação sintética');
+    expect(fila[0].cifraComoTexto).not.toContain('adesaoPlano');
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    controle.checkinOnline = true;
+    await definirConexaoPwa(page, true);
+    await expect.poll(async () => (await lerFilaPwa(page)).length).toBe(0);
+    await expect(page.getByRole('status').filter({ hasText: 'Check-in offline sincronizado.' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual(['POST /api/portal/paciente/checkins']);
+  });
+
+  test('fila privada e purgada no logout', async ({ page }) => {
+    const { chamadas } = await prepararPwaPortal(page);
+    await abrirCheckinsPwa(page);
+    await definirConexaoPwa(page, false);
+
+    await registrarCheckinPwa(page, OBSERVACAO_CLINICA_SINTETICA);
+    await expect.poll(async () => (await lerFilaPwa(page)).length).toBe(1);
+
+    await definirConexaoPwa(page, true);
+    await page.getByRole('button', { name: 'Sair' }).click();
+    await expect(page).toHaveURL(/\/login/);
+
+    // O runtime da pagina de login pode recriar o container vazio; o gate de
+    // privacidade e nao restar nenhum payload da sessao encerrada.
+    await expect.poll(async () => (await lerFilaPwa(page)).length).toBe(0);
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual(['POST /api/auth/sair']);
+  });
+
+  test('formulario publico offline salva no dispositivo e envia ao reconectar', async ({ page }) => {
+    const { chamadas, controle } = await prepararFormularioPwa(page);
+    await page.goto('/formularios/token-pwa');
+    await expect(page.getByRole('heading', { name: 'Check-in offline' })).toBeVisible();
+
+    await definirConexaoPwa(page, false);
+    await page.getByRole('textbox').fill('Resposta sintética mantida apenas nesta sessão.');
+    await page.getByRole('button', { name: 'Enviar respostas' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Respostas salvas neste dispositivo' })).toBeVisible();
+    const fila = await lerFilaPwa(page);
+    expect(fila).toHaveLength(1);
+    expect(fila[0].tipo).toBe('formulario');
+    expect(fila[0].temCifra).toBe(true);
+    expect(fila[0].cifraComoTexto, 'resposta legivel dentro da cifra').not.toContain('Resposta sintética');
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    controle.envioOnline = true;
+    await definirConexaoPwa(page, true);
+
+    await expect(page.getByRole('heading', { name: 'Respostas enviadas' })).toBeVisible();
+    await expect.poll(async () => (await lerFilaPwa(page)).length).toBe(0);
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual(['POST /api/formularios/token-pwa/respostas']);
+  });
+});
