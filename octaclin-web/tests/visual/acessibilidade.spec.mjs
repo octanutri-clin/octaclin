@@ -1617,3 +1617,195 @@ test.describe('gate de acessibilidade - questionarios (PR 20)', () => {
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Mocks da central de comunicacoes (PR 21 da governanca). Fixtures
+// reaproveitadas de fase-196-comunicacoes-equipe.spec.mjs (mesmos ids,
+// contatos e formato de payload).
+// ---------------------------------------------------------------------------
+
+const permissoesComunicacoes = [
+  'comunicacoes.mensagens.ler',
+  'comunicacoes.mensagens.enviar',
+  'comunicacoes.canais.gerenciar',
+  'comunicacoes.templates.gerenciar'
+];
+
+const canalWhatsappFixture = { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', nome: 'WhatsApp principal', configuracao: {}, ativo: true };
+const templateWhatsappFixture = { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', codigoExterno: 'hello_world', nome: 'Resposta padrao', conteudo: { corpo: 'Ola, {{nome}}.' }, aprovado: true };
+
+// Duas conversas sinteticas (Ana Souza e Bruno Lima) para cobrir a navegacao
+// entre itens da lista - com só uma conversa a interacao de "abrir outra
+// conversa" nao teria o que exercitar.
+const mensagensComunicacoesFixture = [
+  { id: 'mensagem-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', canalId: 'canal-1', status: 'recebido', payload: { direcao: 'recebida', contato: '5511999999999', texto: 'Posso trocar o horário?' }, criadoEm: '2026-08-01T13:00:00.000Z' },
+  { id: 'mensagem-2', tenantId: 'tenant-1', pacienteId: 'paciente-1', canalId: 'canal-1', templateId: 'template-1', status: 'falhou', erro: 'Falha de entrega', payload: { destino: '5511999999999' }, criadoEm: '2026-08-01T13:05:00.000Z' },
+  { id: 'mensagem-3', tenantId: 'tenant-1', pacienteId: 'paciente-2', canalId: 'canal-1', status: 'recebido', payload: { direcao: 'recebida', contato: '5511988887777', texto: 'Preciso remarcar.' }, criadoEm: '2026-08-01T12:00:00.000Z' }
+];
+
+async function prepararSessaoComunicacoes(page) {
+  await page.context().addCookies([
+    { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
+    { name: 'octaclin_papel', value: 'SuperAdmin', domain: 'localhost', path: '/' },
+    { name: 'octaclin_destino_inicial', value: encodeURIComponent('/comunicacoes'), domain: 'localhost', path: '/' }
+  ]);
+
+  await page.route('**/api/auth/session', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      autenticado: true,
+      papel: 'SuperAdmin',
+      apiUrl: 'http://localhost:3001',
+      tenantSlug: 'clinica-octa',
+      email: 'admin@octaclin.local',
+      expiraEm: '2026-12-31T18:00:00.000Z',
+      permissoes: permissoesComunicacoes,
+      destinoInicial: '/comunicacoes'
+    })
+  }));
+
+  await page.route('**/api/pacientes**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      itens: [
+        { id: 'paciente-1', nome: 'Ana Souza', contato: '5511999999999' },
+        { id: 'paciente-2', nome: 'Bruno Lima', contato: '5511988887777' }
+      ],
+      total: 2
+    })
+  }));
+  await page.route('**/api/comunicacoes/canais', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([canalWhatsappFixture]) }));
+  await page.route('**/api/comunicacoes/templates', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([templateWhatsappFixture]) }));
+}
+
+function prepararMensagensComunicacoes(page, { itens = mensagensComunicacoesFixture, status = 200 } = {}) {
+  return page.route('**/api/comunicacoes/mensagens', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 'mensagem-4', tenantId: 'tenant-1', pacienteId: 'paciente-1', canalId: 'canal-1', templateId: 'template-1', status: 'pendente', payload: route.request().postDataJSON().payload, criadoEm: '2026-08-01T15:00:00.000Z' }) });
+      return;
+    }
+    if (status !== 200) {
+      await route.fulfill({ status, contentType: 'text/plain', body: 'Falha ao carregar mensagens.' });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(itens) });
+  });
+}
+
+async function prepararComunicacoes(page, opcoes) {
+  await prepararSessaoComunicacoes(page);
+  await prepararMensagensComunicacoes(page, opcoes);
+}
+
+// PR 21 da governanca: expande o gate de a11y para a central profissional de
+// comunicacoes (/comunicacoes) - inbox de conversas WhatsApp, conversa ativa,
+// estado vazio e falha de carregamento, mais as interacoes de navegar pela
+// lista por teclado, abrir uma conversa, percorrer filtros e preparar uma
+// resposta/template sem enviar de verdade. Nao chama Meta/Gmail/WhatsApp,
+// nao envia mensagem real e nao cobre /profissionais (fora de escopo).
+test.describe('gate de acessibilidade - comunicacoes (PR 21)', () => {
+  test('conversas - inbox carregada com conversas e mensagens sinteticas', async ({ page }) => {
+    await prepararComunicacoes(page);
+    await page.goto('/comunicacoes');
+    await expect(page.getByRole('heading', { name: 'Comunicações', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Inbox WhatsApp' })).toBeVisible();
+    await expect(page.getByText('Ana Souza').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Responder' })).toBeVisible();
+    await expect(page.getByText('Não foi possível concluir o envio.').first()).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  // Interacao relevante: navegar pela lista de conversas usando teclado e
+  // abrir uma conversa diferente da que já vem selecionada por padrão.
+  test('conversas - navega por teclado e abre outra conversa (interacao relevante)', async ({ page }) => {
+    await prepararComunicacoes(page);
+    await page.goto('/comunicacoes');
+
+    const conversaAna = page.getByRole('button', { name: /Ana Souza/ });
+    const conversaBruno = page.getByRole('button', { name: /Bruno Lima/ });
+    await expect(conversaAna).toBeVisible();
+    await expect(conversaBruno).toBeVisible();
+
+    await conversaAna.focus();
+    await page.keyboard.press('Tab');
+    await expect(conversaBruno).toBeFocused();
+    await page.keyboard.press('Enter');
+
+    await expect(page.locator('strong', { hasText: 'Bruno Lima' }).first()).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('conversas - estado vazio (nenhuma mensagem)', async ({ page }) => {
+    await prepararComunicacoes(page, { itens: [] });
+    await page.goto('/comunicacoes');
+    await expect(page.getByRole('heading', { name: 'Inbox WhatsApp' })).toBeVisible();
+    await expect(page.getByText('Nenhuma conversa WhatsApp carregada.')).toBeVisible();
+    await expect(page.getByText('Nenhuma mensagem persistida.')).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('conversas - falha de carregamento', async ({ page }) => {
+    await prepararComunicacoes(page, { status: 500 });
+    await page.goto('/comunicacoes');
+    await expect(page.getByRole('heading', { name: 'Comunicações', level: 1 })).toBeVisible();
+    // getByRole('alert') sozinho colide com o route-announcer do Next (tambem
+    // role="alert"), por isso o texto exato do erro (mesmo padrao usado nos
+    // testes de esqueci-senha acima).
+    await expect(page.getByText('Falha ao carregar mensagens.')).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
+  // Interacao relevante: percorrer os filtros da inbox (equivalente a "canais"
+  // nesta area, ja que so ha um canal WhatsApp sintetico configurado).
+  test('conversas - percorre filtros da inbox (interacao relevante)', async ({ page }) => {
+    await prepararComunicacoes(page);
+    await page.goto('/comunicacoes');
+
+    await page.getByRole('button', { name: 'Com entrada' }).click();
+    await expect(page.getByText('Ana Souza').first()).toBeVisible();
+    await expect(page.getByText('Bruno Lima').first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Com falha' }).click();
+    await expect(page.getByText('Ana Souza').first()).toBeVisible();
+    await expect(page.getByText('Bruno Lima')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Acompanhar' }).click();
+    await expect(page.getByText('Nenhuma conversa WhatsApp carregada.')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Todas' }).click();
+    await expect(page.getByText('Ana Souza').first()).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  // Interacao relevante: abrir a resposta rapida (template pre-preenchido) a
+  // partir da mensagem com falha e preencher a observacao sem disparar o
+  // envio - a rota de POST /api/comunicacoes/mensagens nunca e chamada
+  // neste teste. Usa "Tentar novamente" (nao o "Responder" generico do
+  // cabecalho) porque so essa acao carrega o destino a partir do payload da
+  // propria mensagem falha; o "Responder" generico usa o contato guardado na
+  // conversa, que so e populado a partir da primeira mensagem do grupo.
+  test('conversas - abre resposta rapida e preenche observacao sem enviar (interacao relevante)', async ({ page }) => {
+    await prepararComunicacoes(page);
+    await page.goto('/comunicacoes');
+
+    await page.getByRole('button', { name: 'Tentar novamente' }).click();
+
+    const areas = page.getByRole('tablist', { name: 'Áreas de comunicação' });
+    await expect(areas.getByRole('tab', { name: 'Nova mensagem' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByText('Disparo manual')).toBeVisible();
+    await expect(page.getByLabel('WhatsApp de destino')).toHaveValue('5511999999999');
+    await expect(page.getByLabel('Template')).toHaveValue('template-1');
+
+    const observacao = page.getByLabel('Observação');
+    await observacao.fill('Confirmar novo horário com a paciente antes de responder.');
+    await expect(observacao).toHaveValue('Confirmar novo horário com a paciente antes de responder.');
+    await expect(page.getByRole('button', { name: 'Disparar' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+});
