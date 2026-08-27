@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { IconeDecorativo } from '@/components/icone';
 
 export default function LayoutTabs() {
   return (
@@ -16,21 +16,21 @@ export default function LayoutTabs() {
         name="index"
         options={{
           title: 'Diario',
-          tabBarIcon: ({ color, size }) => <Ionicons name="flash" color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <IconeDecorativo name="flash" color={color} size={size} />
         }}
       />
       <Tabs.Screen
         name="captura"
         options={{
           title: 'Captura',
-          tabBarIcon: ({ color, size }) => <Ionicons name="camera" color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <IconeDecorativo name="camera" color={color} size={size} />
         }}
       />
       <Tabs.Screen
         name="acompanhante"
         options={{
           title: 'Acompanhante',
-          tabBarIcon: ({ color, size }) => <Ionicons name="people" color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <IconeDecorativo name="people" color={color} size={size} />
         }}
       />
     </Tabs>

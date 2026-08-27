@@ -10,7 +10,7 @@ interface Props {
 
 export function CartaoResumo({ titulo, valor, icone }: Props) {
   return (
-    <View style={styles.container}>
+    <View accessible accessibilityLabel={`${titulo}: ${valor}`} style={styles.container}>
       <View style={styles.linha}>
         <Text style={styles.titulo}>{titulo}</Text>
         {icone}

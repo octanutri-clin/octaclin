@@ -12,7 +12,13 @@ interface Props {
 
 export function BotaoAcao({ titulo, detalhe, icone, cor = cores.primaria, onPress }: Props) {
   return (
-    <Pressable style={({ pressed }) => [styles.container, pressed && styles.pressionado]} onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={titulo}
+      accessibilityHint={detalhe}
+      style={({ pressed }) => [styles.container, pressed && styles.pressionado]}
+      onPress={onPress}
+    >
       <View style={[styles.icone, { backgroundColor: `${cor}22` }]}>{icone}</View>
       <View style={styles.textos}>
         <Text style={styles.titulo}>{titulo}</Text>
@@ -29,7 +35,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderWidth: 1,
-    borderColor: cores.linha,
+    borderColor: cores.contorno,
     borderRadius: 8,
     backgroundColor: cores.branco,
     padding: 12
