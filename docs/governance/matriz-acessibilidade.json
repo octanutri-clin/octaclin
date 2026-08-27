@@ -1,0 +1,761 @@
+{
+  "descricao": "Matriz definitiva de acessibilidade do OctaClin. Fonte unica de verdade da cobertura, das excecoes e dos riscos residuais. Validada por scripts/test-matriz-acessibilidade.mjs, que confronta cada linha com o codigo, a configuracao do Playwright e o workflow de CI.",
+  "pr": "PR 34 da governanca de acessibilidade",
+  "atualizadoEm": "2026-08-27",
+  "configuracaoPlaywright": "octaclin-web/playwright.config.mjs",
+  "politicaDeFlakes": {
+    "retriesMaximoCi": 1,
+    "timeoutTesteMaximoMs": 30000,
+    "timeoutExpectMaximoMs": 10000,
+    "traceEsperado": "retain-on-failure",
+    "screenshotEsperado": "only-on-failure",
+    "regras": [
+      "Falha intermitente nao e PASS: enquanto a causa nao for comprovada, a linha correspondente vira FAIL ou SKIPPED com responsavel.",
+      "Retry nao corrige teste instavel. O unico retry autorizado no CI e o primeiro, e existe para preservar trace, nao para transformar vermelho em verde.",
+      "Toda falha preserva rota, projeto Playwright, etapa e artefato (trace, screenshot e relatorio HTML sao publicados pelo job).",
+      "Teste comprovadamente flake recebe correcao localizada no seletor ou na espera, nunca aumento global de timeout.",
+      "Quarentena so existe com responsavel, justificativa, prazo e a linha classificada como SKIPPED. A lista abaixo esta vazia: nenhum teste de acessibilidade esta em quarentena."
+    ]
+  },
+  "quarentena": [],
+  "gates": [
+    {
+      "id": "web-suite-visual",
+      "comando": "smoke:visual",
+      "diretorio": "octaclin-web",
+      "descricao": "Suite Playwright completa (testDir tests/visual, sem testMatch/testIgnore) nos projects desktop-chromium e mobile-chromium.",
+      "bloqueante": true,
+      "ci": {
+        "workflow": ".github/workflows/ci.yml",
+        "job": "demo-smoke",
+        "run": "pnpm smoke:visual"
+      }
+    },
+    {
+      "id": "web-a11y",
+      "comando": "test:a11y",
+      "diretorio": "octaclin-web",
+      "descricao": "Gate Playwright + axe-core (wcag2a, wcag2aa, wcag21a, wcag21aa) das rotas, estados e jornadas por teclado.",
+      "especificacao": "octaclin-web/tests/visual/acessibilidade.spec.mjs",
+      "bloqueante": true,
+      "cobertoPor": "web-suite-visual",
+      "motivoDaCobertura": "smoke:visual executa playwright test sem filtro, entao acessibilidade.spec.mjs ja roda no CI nos dois projects. Rodar test:a11y de novo no mesmo job duplicaria 264 testes sem cobertura nova."
+    },
+    {
+      "id": "web-reflow",
+      "comando": "test:reflow",
+      "diretorio": "octaclin-web",
+      "descricao": "Gate de reflow (WCAG 1.4.10), espacamento de texto e prefers-reduced-motion.",
+      "especificacao": "octaclin-web/tests/visual/reflow-visual.spec.mjs",
+      "bloqueante": true,
+      "cobertoPor": "web-suite-visual",
+      "motivoDaCobertura": "Mesmo motivo do gate web-a11y: reflow-visual.spec.mjs esta dentro do testDir varrido por smoke:visual."
+    },
+    {
+      "id": "mobile-a11y",
+      "comando": "test:a11y",
+      "diretorio": "octaclin-mobile",
+      "descricao": "Auditoria estatica de acessibilidade do aplicativo Expo, incluindo o caso que avalia o projeto real.",
+      "especificacao": "octaclin-mobile/scripts/auditoria-acessibilidade.spec.mjs",
+      "bloqueante": true,
+      "ci": {
+        "workflow": ".github/workflows/ci.yml",
+        "job": "mobile",
+        "run": "pnpm test:a11y"
+      }
+    },
+    {
+      "id": "mobile-audit-a11y",
+      "comando": "audit:a11y",
+      "diretorio": "octaclin-mobile",
+      "descricao": "Executavel de linha de comando da mesma auditoria estatica, usado em diagnostico local.",
+      "bloqueante": false,
+      "duplicaDe": "mobile-a11y",
+      "motivoDaCobertura": "auditoria-acessibilidade.spec.mjs ja chama carregarProjeto e avaliarProjeto sobre o projeto real. Ligar audit:a11y ao CI executaria a mesma auditoria duas vezes no mesmo job."
+    },
+    {
+      "id": "mobile-test-security",
+      "comando": "test:security",
+      "diretorio": "octaclin-mobile",
+      "descricao": "Testes da auditoria de seguranca do aplicativo Expo.",
+      "bloqueante": true,
+      "ci": {
+        "workflow": ".github/workflows/ci.yml",
+        "job": "mobile",
+        "run": "pnpm test:security"
+      }
+    },
+    {
+      "id": "mobile-audit-security",
+      "comando": "audit:security",
+      "diretorio": "octaclin-mobile",
+      "descricao": "Auditoria de dependencias e configuracao do aplicativo Expo.",
+      "bloqueante": true,
+      "ci": {
+        "workflow": ".github/workflows/ci.yml",
+        "job": "mobile",
+        "run": "pnpm audit:security"
+      }
+    },
+    {
+      "id": "mobile-build-validate",
+      "comando": "build:validate",
+      "diretorio": "octaclin-mobile",
+      "descricao": "Export Expo para todas as plataformas, prova que a arvore corrigida ainda compila.",
+      "bloqueante": true,
+      "ci": {
+        "workflow": ".github/workflows/ci.yml",
+        "job": "mobile",
+        "run": "pnpm build:validate"
+      }
+    },
+    {
+      "id": "matriz-a11y",
+      "comando": "test:a11y:matriz",
+      "diretorio": ".",
+      "descricao": "Inventario executavel: confronta esta matriz com specs, scripts, projects do Playwright e workflow de CI.",
+      "bloqueante": true,
+      "ci": {
+        "workflow": ".github/workflows/ci.yml",
+        "job": "governanca",
+        "run": "pnpm test:a11y:matriz"
+      }
+    },
+    {
+      "id": "matriz-confiabilidade",
+      "comando": "test:confiabilidade",
+      "diretorio": ".",
+      "descricao": "Valida MATRIZ_CONFIABILIDADE_TESTES.md contra os testes criticos referenciados.",
+      "bloqueante": true,
+      "ci": {
+        "workflow": ".github/workflows/ci.yml",
+        "job": "governanca",
+        "run": "pnpm test:confiabilidade"
+      }
+    },
+    {
+      "id": "secrets",
+      "comando": "security:secrets",
+      "diretorio": ".",
+      "descricao": "Varredura de secrets no repositorio.",
+      "bloqueante": true,
+      "ci": {
+        "workflow": ".github/workflows/ci.yml",
+        "job": "governanca",
+        "run": "pnpm security:secrets"
+      }
+    }
+  ],
+  "linhas": [
+    {
+      "superficie": "web publica",
+      "rota": "/login",
+      "rotas": [
+        "/login"
+      ],
+      "estado": "estado inicial e credenciais sinteticas invalidas",
+      "interacao": "tabulacao completa com foco visivel e submissao do formulario",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - rotas criticas"
+        ]
+      },
+      "risco": "Nenhum conhecido. O anuncio real do leitor de tela nesta rota foi verificado manualmente na linha NVDA correspondente."
+    },
+    {
+      "superficie": "web publica",
+      "rota": "/esqueci-senha, /recuperar-senha, /primeiro-acesso",
+      "rotas": [
+        "/esqueci-senha",
+        "/recuperar-senha?token=token-valido",
+        "/recuperar-senha?token=token-invalido",
+        "/primeiro-acesso"
+      ],
+      "estado": "inicial, preenchido, invalido (token ou convite inexistente) e sucesso",
+      "interacao": "preenchimento, submissao e leitura do alerta de erro",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - acesso publico"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "web publica",
+      "rota": "/agendar/token-publico e /formularios/*",
+      "rotas": [
+        "/agendar/token-publico",
+        "/formularios/token-publico",
+        "/formularios/token-pwa",
+        "/formularios/token-upload"
+      ],
+      "estado": "carregado com fixture sintetica, incluindo modo offline-first e upload de arquivo",
+      "interacao": "preenchimento do questionario e anexo de arquivo",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - rotas publicas"
+        ]
+      },
+      "risco": "Uso real por paciente externo em dispositivo assistivo nao foi observado; so o gate automatizado e o roteiro NVDA cobrem esta superficie."
+    },
+    {
+      "superficie": "web publica",
+      "rota": "/offline e indicadores de PWA",
+      "rotas": [
+        "/offline"
+      ],
+      "estado": "offline, fila pendente no singular e no plural, sincronizando, sucesso e purga apos logout",
+      "interacao": "instalacao por teclado, check-in offline e envio ao reconectar",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - pwa e offline (PR 28)"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "web autenticada do paciente",
+      "rota": "/portal e areas autenticadas",
+      "rotas": [
+        "/portal",
+        "/portal",
+        "/portal/agenda",
+        "/portal/checkins",
+        "/portal/mensagens",
+        "/portal/plano",
+        "/portal/privacidade"
+      ],
+      "estado": "carregado com fixture sintetica e estado vazio (plano ainda nao publicado)",
+      "interacao": "navegacao entre areas do portal por teclado",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - rotas criticas",
+          "gate de acessibilidade - portal do paciente (areas autenticadas)"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "web autenticada do paciente",
+      "rota": "/portal/formularios, /portal/mais, /portal/perfil, /portal/checkins",
+      "rotas": [
+        "/portal/formularios",
+        "/portal/mais",
+        "/portal/perfil"
+      ],
+      "estado": "formulario respondido e serie de check-ins carregada",
+      "interacao": "abrir respostas e abrir \"Ver valores em tabela\" pelo teclado",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - portal do paciente (complemento PR 18)"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "console profissional e administrativo",
+      "rota": "/dashboard, /agenda, /cliente",
+      "rotas": [
+        "/dashboard",
+        "/agenda",
+        "/cliente"
+      ],
+      "estado": "carregado com dados sinteticos do console e do portal do cliente",
+      "interacao": "tabulacao completa com foco visivel",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - rotas criticas"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "console profissional e administrativo",
+      "rota": "/pacientes e subrotas",
+      "rotas": [
+        "/pacientes",
+        "/pacientes/novo",
+        "/pacientes/paciente-1",
+        "/pacientes/paciente-1/editar"
+      ],
+      "estado": "lista carregada, lista vazia, detalhe, cadastro e edicao preenchida",
+      "interacao": "busca que filtra a lista e navegacao ate o detalhe",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - pacientes (PR 19)"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "console profissional e administrativo",
+      "rota": "/questionarios",
+      "rotas": [
+        "/questionarios"
+      ],
+      "estado": "formularios, editor com preview do paciente, biblioteca, distribuicao e respostas vazias",
+      "interacao": "alternancia entre areas por teclado e edicao de pergunta",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - questionarios (PR 20)"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "console profissional e administrativo",
+      "rota": "/comunicacoes (inbox)",
+      "rotas": [
+        "/comunicacoes"
+      ],
+      "estado": "inbox carregada, estado vazio e falha de carregamento",
+      "interacao": "navegacao por teclado entre conversas, percurso dos filtros e resposta rapida preenchida sem enviar",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - comunicacoes (PR 21)"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "console profissional e administrativo",
+      "rota": "/comunicacoes (configuracoes)",
+      "rotas": [
+        "/comunicacoes"
+      ],
+      "estado": "inventario carregado, estado vazio e falha de carregamento",
+      "interacao": "navegacao por teclado e foco em regiao rolavel",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - comunicacoes configuracoes (PR 22)"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "console profissional e administrativo",
+      "rota": "/profissionais",
+      "rotas": [
+        "/profissionais"
+      ],
+      "estado": "diretorio, lista vazia, falha, somente leitura, integracoes conectada/desconectada/indisponivel e lixeira",
+      "interacao": "navegacao por teclado entre areas, edicao cancelada e modal de arquivamento com retorno de foco",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - profissionais (PR 23)"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "console profissional e administrativo",
+      "rota": "/automacoes",
+      "rotas": [
+        "/automacoes"
+      ],
+      "estado": "painel carregado, sem regras e falha no carregamento inicial",
+      "interacao": "troca de gatilho com campos condicionais e regioes rolaveis focalizaveis",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - automacoes (PR 24)"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "console profissional e administrativo",
+      "rota": "/ia",
+      "rotas": [
+        "/ia"
+      ],
+      "estado": "painel com e sem historico, revisao humana pendente",
+      "interacao": "solicitacao e revisao assistida por teclado",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - ia assistida (PR 25)"
+        ]
+      },
+      "risco": "O estado sem historico ja foi um flake conhecido, estabilizado no commit 55063d0. Regressao de estabilidade aqui deve ser tratada como FAIL, nunca reexecutada ate passar."
+    },
+    {
+      "superficie": "console profissional e administrativo",
+      "rota": "/operacoes",
+      "rotas": [
+        "/operacoes"
+      ],
+      "estado": "areas operacionais carregadas, vazias e com falha",
+      "interacao": "navegacao por abas e acoes operacionais por teclado",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - operacoes (PR 26)"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "console profissional e administrativo",
+      "rota": "/gamificacao",
+      "rotas": [
+        "/gamificacao"
+      ],
+      "estado": "opt-in ligado e desligado, progresso carregado e vazio",
+      "interacao": "adesao e leitura do progresso por teclado",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - gamificacao (PR 27)"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "componentes compartilhados",
+      "rota": "modal, abas e menu em /profissionais e /dashboard",
+      "rotas": [
+        "/profissionais",
+        "/dashboard"
+      ],
+      "estado": "modal aberto, confirmacao destrutiva em processamento, abas ARIA e menus de notificacoes e conta",
+      "interacao": "foco inicial e retorno ao gatilho, Tab e Shift+Tab presos ao modal, setas/Home/End nas abas e no menu, Escape fechando o menu",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "gate de acessibilidade - componentes compartilhados (PR 29)"
+        ]
+      },
+      "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "jornadas por teclado",
+      "rota": "/pacientes/novo, /agenda, /questionarios, /portal/checkins, /comunicacoes",
+      "rotas": [
+        "/pacientes/novo",
+        "/agenda",
+        "/questionarios",
+        "/portal/checkins",
+        "/comunicacoes"
+      ],
+      "estado": "jornada completa de ponta a ponta com fixtures sinteticas",
+      "interacao": "cadastro com erro e recuperacao de foco, criacao/fechamento/remarcacao de consulta, criacao e distribuicao de check-in recorrente, resposta do check-in no portal e preparo de resposta sem envio",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-a11y",
+        "blocos": [
+          "jornadas completas por teclado (PR 30)"
+        ]
+      },
+      "risco": "As jornadas cobrem cinco fluxos representativos, nao todos os fluxos do produto."
+    },
+    {
+      "superficie": "reflow e zoom",
+      "rota": "9 rotas de console, portal e publico",
+      "rotas": [
+        "/login",
+        "/dashboard",
+        "/agenda",
+        "/pacientes",
+        "/questionarios",
+        "/comunicacoes",
+        "/portal",
+        "/agendar/token-publico",
+        "/formularios/token-publico"
+      ],
+      "estado": "zoom 200%, zoom 400% retrato e zoom 400% paisagem, com espacamento de texto da WCAG 1.4.12",
+      "interacao": "conteudo operavel e focalizavel, sem rolagem em dois eixos",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-reflow",
+        "blocos": [
+          "PR 31 - reflow e acessibilidade visual"
+        ]
+      },
+      "risco": "A emulacao por viewport reduzido aproxima o zoom do navegador; nao substitui zoom real do sistema operacional."
+    },
+    {
+      "superficie": "reflow e zoom",
+      "rota": "console e portal publico",
+      "rotas": [
+        "/dashboard",
+        "/formularios/token-publico"
+      ],
+      "estado": "prefers-reduced-motion ativo",
+      "interacao": "animacoes e transicoes neutralizadas; conteudo operacional utilizavel a 320 CSS px",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-reflow",
+        "blocos": [
+          "PR 31 - reflow e acessibilidade visual"
+        ]
+      },
+      "risco": "Cobre a media query do navegador, nao a reducao de movimento do sistema operacional em aplicativo nativo."
+    },
+    {
+      "superficie": "NVDA",
+      "rota": "/login, /pacientes, /pacientes/novo, /portal/checkins",
+      "estado": "estado inicial, credenciais invalidas, lista carregada, cadastro e tabela de check-ins",
+      "interacao": "leitura completa por teclado com Visualizador da Fala em Chrome e Edge",
+      "plataforma": [
+        "Chrome 151",
+        "Edge 151",
+        "NVDA 2026.1.1"
+      ],
+      "mecanismo": "manual",
+      "resultado": "PASS",
+      "evidencia": {
+        "relatorio": "docs/governance/RELATORIO_NVDA_PR32_2026-08-27.md"
+      },
+      "risco": "Evidencia de uma sessao unica; nao garante pronuncia identica em combinacoes futuras de navegador e NVDA. Nao foi reexecutada no PR 34."
+    },
+    {
+      "superficie": "NVDA",
+      "rota": "demais rotas do console e do portal",
+      "estado": "todos",
+      "interacao": "leitura por leitor de tela",
+      "plataforma": [
+        "NVDA"
+      ],
+      "mecanismo": "manual",
+      "resultado": "SKIPPED",
+      "evidencia": {
+        "relatorio": "docs/governance/RELATORIO_NVDA_PR32_2026-08-27.md"
+      },
+      "justificativa": "A matriz manual do PR 32 foi deliberadamente representativa, guiada pelo gap analysis. Validar manualmente 33 rotas com leitor de tela nao cabe em um PR e nao foi autorizado.",
+      "condicaoDeFechamento": "Rodada NVDA dedicada por superficie, com Visualizador da Fala e evidencia textual, tratada como PR de governanca proprio.",
+      "risco": "Defeito que o axe-core nao detecta, como o titulo generico corrigido no PR 32, pode existir em rota nao visitada manualmente."
+    },
+    {
+      "superficie": "aplicativo Expo",
+      "rota": "6 telas e componentes com JSX do octaclin-mobile",
+      "estado": "papel, nome, estado, cabecalho por tela, alvo de toque de 44 pt, icone decorativo fora da arvore nas tres plataformas e contraste da paleta",
+      "interacao": "auditoria estatica do codigo-fonte, incluindo o caso que avalia o projeto real",
+      "plataforma": [
+        "auditoria estatica"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "mobile-a11y"
+      },
+      "risco": "Le codigo-fonte. Impede regressao das correcoes do PR 33, mas nao prova o que TalkBack ou VoiceOver anunciam nem a compreensibilidade do anuncio."
+    },
+    {
+      "superficie": "aplicativo Expo",
+      "rota": "autenticacao ou ativacao",
+      "estado": "inexistente",
+      "interacao": "nenhuma",
+      "plataforma": [
+        "Android",
+        "iOS"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "NA",
+      "evidencia": {
+        "relatorio": "docs/governance/RELATORIO_ACESSIBILIDADE_EXPO_PR33_2026-08-27.md"
+      },
+      "justificativa": "O aplicativo nao tem tela de login nem fluxo de ativacao; lib/api.ts usa um token literal de desenvolvimento. Nao ha superficie para auditar.",
+      "risco": "A ausencia de autenticacao no aplicativo e um bloqueio de distribuicao ja registrado, nao um defeito de acessibilidade."
+    },
+    {
+      "superficie": "TalkBack",
+      "rota": "todas as telas do octaclin-mobile",
+      "estado": "todos",
+      "interacao": "navegacao por gestos, cabecalhos e anuncio de regiao ativa",
+      "plataforma": [
+        "Android"
+      ],
+      "mecanismo": "manual",
+      "resultado": "SKIPPED",
+      "evidencia": {
+        "relatorio": "docs/governance/RELATORIO_ACESSIBILIDADE_EXPO_PR33_2026-08-27.md"
+      },
+      "justificativa": "Nao existe Android SDK, emulador, JDK nem dispositivo fisico neste ambiente. A arvore renderizada por react-native-web nao substitui o TalkBack: o mapeamento de props e diferente.",
+      "condicaoDeFechamento": "Executar o roteiro da secao 10 do relatorio do PR 33 em Android 13+ real ou emulador, com registro de fala, e anexar a evidencia.",
+      "risco": "Nome, papel, estado e ordem de leitura reais no Android permanecem nao verificados. Distribuicao mobile segue NO-GO."
+    },
+    {
+      "superficie": "VoiceOver",
+      "rota": "todas as telas do octaclin-mobile",
+      "estado": "todos",
+      "interacao": "navegacao por Rotor e anuncio de estado",
+      "plataforma": [
+        "iOS"
+      ],
+      "mecanismo": "manual",
+      "resultado": "SKIPPED",
+      "evidencia": {
+        "relatorio": "docs/governance/RELATORIO_ACESSIBILIDADE_EXPO_PR33_2026-08-27.md"
+      },
+      "justificativa": "iOS e VoiceOver exigem macOS, indisponivel neste ambiente.",
+      "condicaoDeFechamento": "Executar o roteiro da secao 11 do relatorio do PR 33 em iPhone real ou simulador com macOS e anexar a evidencia.",
+      "risco": "Nome, papel, estado e ordem de leitura reais no iOS permanecem nao verificados. Distribuicao mobile segue NO-GO."
+    },
+    {
+      "superficie": "aplicativo Expo",
+      "rota": "todas as telas do octaclin-mobile",
+      "estado": "fonte ampliada do sistema operacional",
+      "interacao": "leitura e operacao com escala de texto maxima",
+      "plataforma": [
+        "Android",
+        "iOS"
+      ],
+      "mecanismo": "manual",
+      "resultado": "SKIPPED",
+      "evidencia": {
+        "relatorio": "docs/governance/RELATORIO_ACESSIBILIDADE_EXPO_PR33_2026-08-27.md"
+      },
+      "justificativa": "Exige dispositivo ou emulador. A troca de height fixo por minHeight foi verificada apenas no codigo, pela auditoria estatica.",
+      "condicaoDeFechamento": "Rodar as telas com a maior escala de fonte do sistema em dispositivo real e registrar corte ou sobreposicao de conteudo.",
+      "risco": "Corte de texto ou perda de alvo de toque com fonte ampliada continua possivel."
+    },
+    {
+      "superficie": "aplicativo Expo",
+      "rota": "todas as telas do octaclin-mobile",
+      "estado": "reducao de movimento do sistema operacional",
+      "interacao": "transicoes de navegacao e animacoes de estado",
+      "plataforma": [
+        "Android",
+        "iOS"
+      ],
+      "mecanismo": "manual",
+      "resultado": "SKIPPED",
+      "evidencia": {
+        "relatorio": "docs/governance/RELATORIO_ACESSIBILIDADE_EXPO_PR33_2026-08-27.md"
+      },
+      "justificativa": "Exige dispositivo ou emulador com a preferencia do sistema ativada. O equivalente web (prefers-reduced-motion) e coberto pelo gate de reflow, mas nao vale para o aplicativo nativo.",
+      "condicaoDeFechamento": "Ativar a reducao de movimento no sistema e confirmar que nenhuma transicao essencial depende de animacao.",
+      "risco": "Usuario sensivel a movimento pode encontrar transicao nao reduzida no aplicativo."
+    }
+  ]
+}

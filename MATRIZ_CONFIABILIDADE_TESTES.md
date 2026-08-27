@@ -1,6 +1,9 @@
 # OctaClin - Matriz de confiabilidade e regressao
 
-Atualizada na Fase 253 em 2026-08-21. Esta matriz conecta os riscos de maior
+Atualizada no PR 34 da governanca de acessibilidade em 2026-08-27. A cobertura,
+as excecoes e os riscos residuais de acessibilidade tem matriz propria em
+`docs/governance/matriz-acessibilidade.json`, validada por `pnpm test:a11y:matriz`.
+Esta matriz conecta os riscos de maior
 impacto aos testes automatizados existentes. Ela nao substitui o preflight,
 smoke real de integracoes ou validacao manual de go-live.
 
@@ -26,6 +29,9 @@ smoke real de integracoes ou validacao manual de go-live.
 | Escopo de exportacao e importacao em massa | Exportacao sai da listagem que ja aplica o escopo (nunca de consulta paralela), o CSV da agenda nao carrega bloqueio do Google e Professional importa so para a propria carteira — o `profissionalResponsavelId` do corpo e ignorado. Testes: `servico-pacientes.spec.ts`, `servico-agenda.spec.ts`, `servico-importacao-pacientes.spec.ts`, `controlador-pacientes.spec.ts`. | `pnpm --dir octaclin-backend test --runInBand` | Bloqueia deploy |
 | Registro de migrations | A configuracao TypeORM referencia explicitamente as migrations clinicas e operacionais mais recentes. Teste: `octaclin-backend/src/infraestrutura/banco-dados/opcoes-typeorm.spec.ts`. | Backend Jest | Bloqueia deploy |
 | Schema de producao atras do codigo | `/health/detalhado` marca `checks.migracoes` como falha quando ha migration pendente. Cobre o vao que o registro acima nao alcanca: aquele garante que a migration existe no codigo, este que ela foi aplicada no banco. Teste: `octaclin-backend/src/modulos/saude/servico-saude.spec.ts`. | Backend Jest e `curl /health/detalhado` apos cada deploy com migration | Bloqueia go-live da fase |
+| Acessibilidade da web (rotas, estados e jornadas por teclado) | 33 rotas de console, portal e superficies publicas passam por axe-core (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`), nome acessivel, foco visivel na tabulacao, padroes ARIA de modal/abas/menu e cinco jornadas completas somente por teclado. Teste: `octaclin-web/tests/visual/acessibilidade.spec.mjs`. | `pnpm --dir octaclin-web test:a11y`; no CI roda dentro de `pnpm --dir octaclin-web smoke:visual` | Bloqueia o job Demo local smoke |
+| Reflow, zoom e reducao de movimento na web | Nove rotas continuam operaveis a 200% e 400% de zoom, em retrato e paisagem, com o espacamento de texto da WCAG 1.4.12 e sem rolagem em dois eixos; `prefers-reduced-motion` neutraliza animacoes. Teste: `octaclin-web/tests/visual/reflow-visual.spec.mjs`. | `pnpm --dir octaclin-web test:reflow`; no CI roda dentro de `pnpm --dir octaclin-web smoke:visual` | Bloqueia o job Demo local smoke |
+| Matriz de acessibilidade afirmar cobertura inexistente | A matriz documental e confrontada com o codigo: script ausente do `package.json`, spec removido, bloco de teste renomeado, rota nao visitada, project do Playwright inexistente, gate desconectado do CI, resultado manual travestido de automatizado e leitor de tela nativo declarado PASS reprovam. Testes: `scripts/test-matriz-acessibilidade.spec.mjs` sobre `docs/governance/matriz-acessibilidade.json`. | `pnpm test:a11y:matriz` | Bloqueia o job Governanca de repositorio |
 | Acessibilidade do aplicativo Expo | Controles do mobile mantem papel, nome, estado e alvo de toque de 44 pt; icone de fonte fica fora da arvore de acessibilidade nas tres plataformas; toda tela expoe cabecalho; a paleta preserva o contraste de texto e de limite de controle. Le codigo-fonte: impede regressao das correcoes do PR 33, **nao** valida o que TalkBack e VoiceOver falam. Teste: `octaclin-mobile/scripts/auditoria-acessibilidade.spec.mjs`. | `pnpm --dir octaclin-mobile test:a11y` | Bloqueia o job Mobile Expo do CI; distribuicao mobile segue NO-GO |
 | PWA e dado clinico offline | Service worker limita cache a assets publicos; fila de check-in/formulario usa AES-GCM com chave apenas em memoria, idempotencia server-side e purge no logout/401. Testes: `octaclin-web/scripts/test-pwa-seguranca.mjs`, `octaclin-web/tests/visual/pwa-portal.spec.mjs`, specs de portal e questionarios. | `pnpm --dir octaclin-web test:pwa` e Jest focado do backend | Bloqueia deploy da PWA |
 
@@ -33,6 +39,7 @@ smoke real de integracoes ou validacao manual de go-live.
 
 ```powershell
 pnpm test:confiabilidade
+pnpm test:a11y:matriz
 pnpm --dir octaclin-backend test --runInBand
 pnpm --dir octaclin-web lint
 pnpm --dir octaclin-web typecheck

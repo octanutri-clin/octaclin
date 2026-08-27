@@ -42,6 +42,27 @@ jobs:
 
       - run: node scripts/test-operacao-lancamento.mjs
 
+  governanca:
+    name: Governanca de repositorio
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Gates de raiz, sem dependencia instalada: rodam em segundos e falham
+      # cedo. Ate o PR 34 eles existiam apenas como comando local, entao uma
+      # matriz desatualizada ou um secret novo chegavam ao main sem sinal.
+      - run: pnpm test:a11y:matriz
+      - run: pnpm test:confiabilidade
+      - run: pnpm security:secrets
+
   backend:
     name: Backend NestJS
     runs-on: ubuntu-latest
