@@ -1,7 +1,10 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { ConsoleShell } from '@/components/app/console-shell';
 import { PainelDashboard } from '@/components/dashboard/painel-dashboard';
 import { EsqueletoPagina } from '@/components/ui/feedback';
+
+export const metadata: Metadata = { title: 'Hoje | OctaClin' };
 
 export default function DashboardPage() {
   return (

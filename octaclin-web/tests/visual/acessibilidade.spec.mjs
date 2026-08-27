@@ -861,6 +861,7 @@ test.describe('gate de acessibilidade - rotas criticas', () => {
   test('login', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Acesso OctaClin' })).toBeVisible();
+    await expect(page).toHaveTitle('Acesso OctaClin | OctaClin');
     await rodarChecagensDeAcessibilidade(page);
   });
 
@@ -868,6 +869,7 @@ test.describe('gate de acessibilidade - rotas criticas', () => {
     await prepararDashboardMockado(page);
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Hoje' })).toBeVisible();
+    await expect(page).toHaveTitle('Hoje | OctaClin');
     // O sino da Fase 210 precisa estar em tela para as checagens abaixo o
     // cobrirem. Sem esta linha, uma permissao faltando no mock faria o gate
     // passar sem nunca olhar para o botao.
@@ -879,6 +881,7 @@ test.describe('gate de acessibilidade - rotas criticas', () => {
     await prepararDashboardMockado(page);
     await page.goto('/agenda');
     await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
+    await expect(page).toHaveTitle('Agenda | OctaClin');
     await rodarChecagensDeAcessibilidade(page);
   });
 
@@ -886,6 +889,7 @@ test.describe('gate de acessibilidade - rotas criticas', () => {
     await prepararSessaoPortalPaciente(page);
     await page.goto('/portal');
     await expect(page.locator('h1').first()).toBeVisible();
+    await expect(page).toHaveTitle('Portal do paciente | OctaClin');
     await rodarChecagensDeAcessibilidade(page);
   });
 
@@ -893,6 +897,7 @@ test.describe('gate de acessibilidade - rotas criticas', () => {
     await prepararSessaoCliente(page);
     await page.goto('/cliente', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await expect(page.getByRole('heading', { name: 'Portal do cliente' })).toBeVisible();
+    await expect(page).toHaveTitle('Portal do cliente | OctaClin');
     await rodarChecagensDeAcessibilidade(page);
   });
 });
@@ -971,6 +976,7 @@ test.describe('gate de acessibilidade - acesso publico', () => {
   test('esqueci a senha - estado inicial', async ({ page }) => {
     await page.goto('/esqueci-senha');
     await expect(page.getByRole('heading', { name: 'Recuperar senha' })).toBeVisible();
+    await expect(page).toHaveTitle('Recuperar senha | OctaClin');
     await rodarChecagensDeAcessibilidade(page);
   });
 
@@ -1008,6 +1014,7 @@ test.describe('gate de acessibilidade - acesso publico', () => {
     });
     await page.goto('/recuperar-senha?token=token-valido');
     await expect(page.getByRole('heading', { name: 'Nova senha' })).toBeVisible();
+    await expect(page).toHaveTitle('Nova senha | OctaClin');
     await rodarChecagensDeAcessibilidade(page);
   });
 
@@ -1054,6 +1061,7 @@ test.describe('gate de acessibilidade - acesso publico', () => {
   test('primeiro acesso - estado inicial (sem token)', async ({ page }) => {
     await page.goto('/primeiro-acesso');
     await expect(page.getByRole('heading', { name: 'Link de primeiro acesso indisponível' })).toBeVisible();
+    await expect(page).toHaveTitle('Primeiro acesso | OctaClin');
     await rodarChecagensDeAcessibilidade(page);
   });
 
@@ -1190,6 +1198,7 @@ test.describe('gate de acessibilidade - portal do paciente (complemento PR 18)',
 
     await expect(page.getByRole('cell', { name: '82,4' })).toBeVisible();
     await expect(page.getByRole('cell', { name: '78,6' })).toBeVisible();
+    await expect(page).toHaveTitle('Portal do paciente | OctaClin');
 
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
