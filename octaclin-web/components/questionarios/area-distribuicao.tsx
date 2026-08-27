@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CalendarClock, Link2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao } from '@/components/ui/cartao';
@@ -14,6 +14,19 @@ export function AreaDistribuicao({ workspace }: { workspace: WorkspaceQuestionar
     pacienteEnvioId, setPacienteEnvioId, gerarLinkFormulario, linkFormulario
   } = workspace;
   const [recorrencia, setRecorrencia] = useState<RecorrenciaEscolhida>({ regraCron: '0 8 * * 1' });
+  const botaoAgendarRef = useRef<HTMLButtonElement>(null);
+  const restaurarFocoAgendamentoRef = useRef(false);
+
+  function criarCheckinRecorrente() {
+    restaurarFocoAgendamentoRef.current = document.activeElement === botaoAgendarRef.current;
+    void agendar(recorrencia);
+  }
+
+  useEffect(() => {
+    if (salvando || !restaurarFocoAgendamentoRef.current) return;
+    restaurarFocoAgendamentoRef.current = false;
+    botaoAgendarRef.current?.focus();
+  }, [salvando]);
 
   return (
     <Cartao className="overflow-hidden">
@@ -32,7 +45,7 @@ export function AreaDistribuicao({ workspace }: { workspace: WorkspaceQuestionar
             {pacientes.map((paciente) => <option key={paciente.id} value={paciente.id}>{paciente.nome}</option>)}
           </Selecao>
           <SeletorRecorrencia onAlterar={setRecorrencia} />
-          <Botao type="button" onClick={() => void agendar(recorrencia)} disabled={salvando || !questionarioAtual}>
+          <Botao ref={botaoAgendarRef} type="button" onClick={criarCheckinRecorrente} disabled={salvando || !questionarioAtual}>
             <CalendarClock className="h-4 w-4" />
             Criar check-in recorrente
           </Botao>

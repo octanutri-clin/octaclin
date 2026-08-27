@@ -4,7 +4,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { Save } from 'lucide-react';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Botao, classesBotao } from '@/components/ui/botao';
 import { Cartao, CartaoConteudo } from '@/components/ui/cartao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
@@ -81,6 +81,8 @@ export function FormularioPaciente({ pacienteId }: FormularioPacienteProps) {
   const [chaveRascunho, setChaveRascunho] = useState<string | null>(null);
   const [pronto, setPronto] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const botaoSalvarRef = useRef<HTMLButtonElement>(null);
+  const restaurarFocoSalvarRef = useRef(false);
   const [rascunhoRestaurado, setRascunhoRestaurado] = useState(false);
   const [falha, setFalha] = useState<FalhaInterface | null>(null);
   const [estadoDuplicidade, setEstadoDuplicidade] = useState<EstadoVerificacaoDuplicidade>('ocioso');
@@ -182,6 +184,7 @@ export function FormularioPaciente({ pacienteId }: FormularioPacienteProps) {
   async function salvar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!formularioValido) return;
+    restaurarFocoSalvarRef.current = document.activeElement === (evento.nativeEvent as SubmitEvent).submitter;
     setSalvando(true);
     setFalha(null);
     try {
@@ -199,6 +202,12 @@ export function FormularioPaciente({ pacienteId }: FormularioPacienteProps) {
       setSalvando(false);
     }
   }
+
+  useEffect(() => {
+    if (salvando || !restaurarFocoSalvarRef.current) return;
+    restaurarFocoSalvarRef.current = false;
+    botaoSalvarRef.current?.focus();
+  }, [salvando]);
 
   if (!pronto && !falha) return <EsqueletoPagina rotulo={`Carregando ${titulo.toLocaleLowerCase('pt-BR')}`} />;
   if (!pronto && falha?.tipo === 'permissao') return <EstadoPermissaoNegada />;
@@ -283,7 +292,7 @@ export function FormularioPaciente({ pacienteId }: FormularioPacienteProps) {
             {!editando ? <p className="rounded-md border border-primaria/20 bg-primaria-suave p-3 text-sm text-tinta">Depois de salvar, use a ação de convite na lista para liberar o acesso seguro ao portal.</p> : null}
             <div className="flex flex-col-reverse gap-2 border-t border-linha pt-5 sm:flex-row sm:justify-end">
               <Link href={voltarPara} className={classesBotao({ variante: 'secundario' })}>Cancelar</Link>
-              <Botao type="submit" variante="primario" disabled={salvando || !formularioValido || decisaoDuplicidadePendente || verificandoDuplicidade || (!editando && formulario.nome.trim().length >= 3 && estadoDuplicidade === 'ocioso')} carregando={salvando}>
+              <Botao ref={botaoSalvarRef} type="submit" variante="primario" disabled={salvando || !formularioValido || decisaoDuplicidadePendente || verificandoDuplicidade || (!editando && formulario.nome.trim().length >= 3 && estadoDuplicidade === 'ocioso')} carregando={salvando}>
                 <Save size={16} /> {editando ? 'Salvar alterações' : 'Cadastrar paciente'}
               </Botao>
             </div>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
 import {
   AlertTriangle,
@@ -379,6 +379,8 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   const [carregandoDetalheId, setCarregandoDetalheId] = useState<string | null>(null);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [salvandoCheckin, setSalvandoCheckin] = useState(false);
+  const botaoCheckinRef = useRef<HTMLButtonElement>(null);
+  const restaurarFocoCheckinRef = useRef(false);
   const [salvandoConsentimento, setSalvandoConsentimento] = useState(false);
   const [exportandoLgpd, setExportandoLgpd] = useState(false);
   const [solicitandoLgpd, setSolicitandoLgpd] = useState(false);
@@ -476,6 +478,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
 
   async function enviarCheckinRapido(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    restaurarFocoCheckinRef.current = document.activeElement === (evento.nativeEvent as SubmitEvent).submitter;
     setSalvandoCheckin(true);
     setErro(null);
     setSucesso(null);
@@ -501,6 +504,12 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
       setSalvandoCheckin(false);
     }
   }
+
+  useEffect(() => {
+    if (salvandoCheckin || !restaurarFocoCheckinRef.current) return;
+    restaurarFocoCheckinRef.current = false;
+    botaoCheckinRef.current?.focus();
+  }, [salvandoCheckin]);
 
   async function registrarAceiteLgpd() {
     if (!portal) return;
@@ -815,7 +824,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                     />
                   </label>
                   <div className="flex justify-end border-t border-linha pt-3">
-                    <Botao type="submit" variante="primario" disabled={salvandoCheckin}>
+                    <Botao ref={botaoCheckinRef} type="submit" variante="primario" disabled={salvandoCheckin}>
                       <Save className="h-4 w-4" />
                       {salvandoCheckin ? 'Registrando' : 'Registrar check-in'}
                     </Botao>

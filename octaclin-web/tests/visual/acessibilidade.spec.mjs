@@ -5273,3 +5273,329 @@ test.describe('gate de acessibilidade - componentes compartilhados (PR 29)', () 
     await expect(gatilho).toBeFocused();
   });
 });
+
+// ---------------------------------------------------------------------------
+// PR 30 da governanca: jornadas completas operadas somente por teclado.
+// Cada mutacao fica interceptada no BFF com dados sinteticos. Os testes
+// confirmam o payload e o destino da jornada, sem acionar servicos reais.
+// ---------------------------------------------------------------------------
+
+async function alcancarComTab(page, alvo, rotulo, maximo = 160) {
+  await expect(alvo, `${rotulo} nao ficou visivel`).toBeVisible();
+  await page.locator('nextjs-portal').evaluateAll((elementos) => elementos.forEach((elemento) => elemento.remove()));
+
+  for (let passo = 0; passo <= maximo; passo += 1) {
+    if (await alvo.evaluate((elemento) => document.activeElement === elemento)) return;
+    await page.keyboard.press('Tab');
+  }
+
+  const focoAtual = await page.evaluate(() => {
+    const ativo = document.activeElement;
+    return ativo ? `${ativo.tagName} ${ativo.getAttribute('aria-label') ?? ativo.textContent?.trim().slice(0, 80) ?? ''}` : 'nenhum';
+  });
+  throw new Error(`Nao foi possivel alcancar ${rotulo} com Tab. Foco atual: ${focoAtual}`);
+}
+
+async function substituirTextoPeloTeclado(page, valor) {
+  await page.keyboard.press('Control+A');
+  await page.keyboard.insertText(valor);
+}
+
+test.describe('jornadas completas por teclado (PR 30)', () => {
+  test('cadastra paciente, preserva foco no erro e conclui a navegacao', async ({ page }) => {
+    const pacienteCriado = {
+      ...pacienteFixture,
+      id: 'paciente-teclado',
+      nome: 'Paciente Teclado',
+      contato: 'paciente.teclado@example.com',
+      dataNascimento: '1992-05-18',
+      statusAdesao: 'novo',
+      scoreRisco: '0'
+    };
+    const mutacoes = [];
+    let primeiraTentativa = true;
+
+    await prepararSessaoPacientes(page);
+    await prepararProntuarioPaciente(page, pacienteCriado);
+    await prepararAvaliacoesAntropometricas(page, pacienteCriado.id);
+    await page.route((url) => url.pathname === '/api/pacientes', async (route) => {
+      expect(route.request().method()).toBe('POST');
+      mutacoes.push(route.request().postDataJSON());
+      if (primeiraTentativa) {
+        primeiraTentativa = false;
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'Falha sintetica controlada no cadastro.' })
+        });
+        return;
+      }
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(pacienteCriado) });
+    });
+
+    await page.goto('/pacientes/novo');
+    const nome = page.getByLabel('Nome completo');
+    await alcancarComTab(page, nome, 'Nome completo');
+    await page.keyboard.insertText(pacienteCriado.nome);
+
+    const nascimento = page.getByLabel('Data de nascimento');
+    await alcancarComTab(page, nascimento, 'Data de nascimento');
+    await page.keyboard.insertText(pacienteCriado.dataNascimento);
+
+    const contato = page.getByLabel('E-mail ou telefone');
+    await alcancarComTab(page, contato, 'E-mail ou telefone');
+    await page.keyboard.insertText(pacienteCriado.contato);
+
+    const salvar = page.getByRole('button', { name: 'Cadastrar paciente' });
+    await expect(salvar).toBeEnabled();
+    await alcancarComTab(page, salvar, 'Cadastrar paciente');
+    await page.keyboard.press('Enter');
+
+    await expect(page.getByText('Não foi possível salvar o paciente. O rascunho foi preservado nesta aba. Tente novamente.')).toBeVisible();
+    await expect(salvar).toBeFocused();
+    await expect(salvar).toBeEnabled();
+
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/pacientes\/paciente-teclado$/);
+    await expect(page.getByRole('heading', { name: 'Prontuário do paciente' })).toBeVisible();
+    expect(mutacoes).toHaveLength(2);
+    expect(mutacoes[1]).toMatchObject({
+      profissionalResponsavelId: 'profissional-1',
+      nome: pacienteCriado.nome,
+      contato: pacienteCriado.contato
+    });
+  });
+
+  test('cria, fecha e remarca consulta mantendo o contexto de foco', async ({ page }) => {
+    const mutacoes = { criar: [], remarcar: [] };
+    const consultas = [];
+
+    await prepararDashboardMockado(page);
+    await page.route((url) => url.pathname === '/api/agenda/consultas', async (route) => {
+      if (route.request().method() === 'POST') {
+        const corpo = route.request().postDataJSON();
+        mutacoes.criar.push(corpo);
+        const criada = {
+          id: 'consulta-teclado', tenantId: 'tenant-1', pacienteId: corpo.pacienteId,
+          pacienteNome: 'Ana Souza', profissionalId: corpo.profissionalId,
+          profissionalNome: 'Dra. Carla', titulo: 'Consulta por teclado', inicioEm: corpo.inicioEm,
+          fimEm: new Date(new Date(corpo.inicioEm).getTime() + corpo.duracaoMinutos * 60_000).toISOString(),
+          timezone: 'America/Sao_Paulo', status: 'agendada', modalidade: corpo.modalidade,
+          local: corpo.local, notificacoes: {}, payload: {}, criadoEm: '2026-08-26T12:00:00.000Z',
+          atualizadoEm: '2026-08-26T12:00:00.000Z'
+        };
+        consultas.unshift(criada);
+        await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(criada) });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(consultas) });
+    });
+    await page.route((url) => url.pathname === '/api/agenda/consultas/consulta-teclado', async (route) => {
+      const corpo = route.request().postDataJSON();
+      mutacoes.remarcar.push(corpo);
+      consultas[0] = { ...consultas[0], ...corpo, atualizadoEm: '2026-08-26T12:05:00.000Z' };
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(consultas[0]) });
+    });
+    await page.route((url) => url.pathname === '/api/agenda/feed', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }));
+    await page.route((url) => url.pathname === '/api/agenda/agendamento-publico', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
+    await page.route((url) => url.pathname === '/api/agenda/solicitacoes', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [], total: 0 }) }));
+    await page.route((url) => url.pathname === '/api/agenda/google/status', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ conectado: false }) }));
+    await page.route((url) => url.pathname === '/api/agenda/google/profissionais/status', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }));
+    await page.route((url) => url.pathname === '/api/agenda/pacotes', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }));
+
+    await page.goto('/agenda');
+    const abrir = page.getByRole('button', { name: 'Nova consulta' });
+    await alcancarComTab(page, abrir, 'Nova consulta');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Nova consulta' })).toBeVisible();
+
+    const local = page.getByRole('textbox', { name: 'Local', exact: true });
+    await alcancarComTab(page, local, 'Local da consulta');
+    await page.keyboard.insertText('Sala teclado');
+    const agendar = page.getByRole('button', { name: 'Agendar' });
+    await alcancarComTab(page, agendar, 'Agendar');
+    await page.keyboard.press('Enter');
+    await expect(page.getByText(/Consulta agendada e horário bloqueado/)).toBeVisible();
+    await expect(agendar).toBeFocused();
+    expect(mutacoes.criar).toHaveLength(1);
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Nova consulta' })).toHaveCount(0);
+    await expect(abrir).toBeFocused();
+
+    const artigo = page.locator('#consulta-consulta-teclado');
+    const gerenciar = artigo.getByRole('button', { name: 'Gerenciar consulta' });
+    await alcancarComTab(page, gerenciar, 'Gerenciar consulta criada');
+    await page.keyboard.press('Enter');
+
+    const novoLocal = page.getByLabel('Novo local');
+    await alcancarComTab(page, novoLocal, 'Novo local');
+    await substituirTextoPeloTeclado(page, 'Sala teclado 2');
+    const remarcar = page.getByRole('button', { name: 'Remarcar' });
+    await alcancarComTab(page, remarcar, 'Remarcar');
+    await page.keyboard.press('Enter');
+    await expect(page.getByText(/Consulta remarcada e horário atualizado/)).toBeVisible();
+    await expect(remarcar).toBeFocused();
+    expect(mutacoes.remarcar).toHaveLength(1);
+    expect(mutacoes.remarcar[0]).toMatchObject({ local: 'Sala teclado 2' });
+  });
+
+  test('cria formulario e distribui check-in recorrente por teclado', async ({ page }) => {
+    const mutacoes = { questionario: [], agendamento: [] };
+    const criado = {
+      id: 'q-teclado', tenantId: 'tenant-1', profissionalId: 'profissional-1',
+      titulo: 'Check-in criado por teclado', descricao: 'Fluxo sintetico completo', status: 'rascunho', versao: 1,
+      criadoEm: '2026-08-26T12:00:00.000Z', atualizadoEm: '2026-08-26T12:00:00.000Z'
+    };
+
+    await prepararQuestionarios(page);
+    await page.route((url) => url.pathname === '/api/questionarios', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ itens: questionariosFixture, total: questionariosFixture.length })
+        });
+        return;
+      }
+      const corpo = route.request().postDataJSON();
+      mutacoes.questionario.push(corpo);
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ ...criado, ...corpo }) });
+    });
+    await page.route((url) => url.pathname === '/api/questionarios/q-teclado/perguntas', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }));
+    await page.route((url) => url.pathname === '/api/agendamentos-questionario', async (route) => {
+      const corpo = route.request().postDataJSON();
+      mutacoes.agendamento.push(corpo);
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 'agendamento-teclado', ...corpo }) });
+    });
+
+    await page.goto('/questionarios');
+    const selecionar = page.getByLabel('Selecionar');
+    await alcancarComTab(page, selecionar, 'Selecionar formulario');
+    await page.keyboard.press('Home');
+    await expect(page.getByRole('button', { name: 'Criar questionário' })).toBeVisible();
+
+    const titulo = page.getByLabel('Título');
+    await alcancarComTab(page, titulo, 'Titulo do formulario');
+    await page.keyboard.insertText(criado.titulo);
+    const descricao = page.getByLabel('Descrição');
+    await alcancarComTab(page, descricao, 'Descricao do formulario');
+    await page.keyboard.insertText(criado.descricao);
+
+    const criar = page.getByRole('button', { name: 'Criar questionário' });
+    await alcancarComTab(page, criar, 'Criar questionario');
+    await page.keyboard.press('Enter');
+    await expect(page.getByText('Questionário criado.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Salvar questionário' })).toBeVisible();
+    expect(mutacoes.questionario).toEqual([{ profissionalId: 'profissional-1', titulo: criado.titulo, descricao: criado.descricao }]);
+
+    const abaFormularios = page.getByRole('tab', { name: 'Formulários' });
+    await alcancarComTab(page, abaFormularios, 'Aba Formularios');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('tab', { name: 'Distribuicoes' })).toBeFocused();
+
+    const paciente = page.getByLabel('Paciente do check-in recorrente');
+    await alcancarComTab(page, paciente, 'Paciente do check-in recorrente');
+    await page.keyboard.press('ArrowDown');
+    const distribuir = page.getByRole('button', { name: 'Criar check-in recorrente' });
+    await alcancarComTab(page, distribuir, 'Criar check-in recorrente');
+    await page.keyboard.press('Enter');
+    await expect(page.getByText('Check-in recorrente criado para o paciente selecionado.')).toBeVisible();
+    await expect(distribuir).toBeFocused();
+    expect(mutacoes.agendamento).toEqual([{
+      questionarioId: 'q-teclado', pacienteId: 'paciente-1', regraCron: '0 8 * * 1', timezone: 'America/Sao_Paulo'
+    }]);
+  });
+
+  test('responde check-in do portal integralmente por teclado', async ({ page }) => {
+    const mutacoes = [];
+    await prepararSessaoPortalPaciente(page);
+    await page.route((url) => url.pathname === '/api/portal/paciente/checkins', async (route) => {
+      const corpo = route.request().postDataJSON();
+      mutacoes.push(corpo);
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'checkin-teclado', pacienteId: 'paciente-1', tipo: 'humor', humor: corpo.humor,
+          adesaoPlano: corpo.adesaoPlano, sintomas: corpo.sintomas, observacoes: corpo.observacoes,
+          registradoEm: '2026-08-26T12:00:00.000Z'
+        })
+      });
+    });
+
+    await page.goto('/portal/checkins');
+    const humor = page.getByLabel('Humor de hoje');
+    await alcancarComTab(page, humor, 'Humor de hoje');
+    await page.keyboard.press('End');
+    const adesao = page.getByLabel('Adesão ao plano');
+    await alcancarComTab(page, adesao, 'Adesao ao plano');
+    await substituirTextoPeloTeclado(page, '90');
+    const sintomas = page.getByLabel('Sintomas ou sinais');
+    await alcancarComTab(page, sintomas, 'Sintomas ou sinais');
+    await page.keyboard.insertText('Sem sintomas relevantes.');
+    const observacoes = page.getByLabel('Observações do dia');
+    await alcancarComTab(page, observacoes, 'Observacoes do dia');
+    await page.keyboard.insertText('Mantive o plano no cafe da manha.');
+    const registrar = page.getByRole('button', { name: 'Registrar check-in' });
+    await alcancarComTab(page, registrar, 'Registrar check-in');
+    await page.keyboard.press('Enter');
+
+    await expect(page.getByText('Check-in registrado.')).toBeVisible();
+    await expect(registrar).toBeFocused();
+    expect(mutacoes).toHaveLength(1);
+    expect(mutacoes[0]).toMatchObject({
+      pacienteIdEsperado: 'paciente-1', humor: 'muito_mal', adesaoPlano: 90,
+      sintomas: 'Sem sintomas relevantes.', observacoes: 'Mantive o plano no cafe da manha.'
+    });
+  });
+
+  test('abre conversa e prepara resposta sem disparar mensagem', async ({ page }) => {
+    let envios = 0;
+    await prepararComunicacoes(page);
+    await page.route('**/api/comunicacoes/mensagens', async (route) => {
+      if (route.request().method() === 'POST') {
+        envios += 1;
+        await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'Envio real bloqueado no teste.' }) });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mensagensComunicacoesFixture.map((mensagem) => ({
+          ...mensagem,
+          payload: mensagem.payload.direcao === 'recebida'
+            ? { ...mensagem.payload, remetente: mensagem.payload.contato }
+            : mensagem.payload
+        })))
+      });
+    });
+
+    await page.goto('/comunicacoes');
+    const conversaBruno = page.getByRole('button', { name: /Bruno Lima/ });
+    await alcancarComTab(page, conversaBruno, 'Conversa de Bruno Lima');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('strong', { hasText: 'Bruno Lima' }).first()).toBeVisible();
+
+    const responder = page.getByRole('button', { name: 'Responder' });
+    await alcancarComTab(page, responder, 'Responder conversa');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('tab', { name: 'Nova mensagem' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByLabel('WhatsApp de destino')).toHaveValue('5511988887777');
+
+    const observacao = page.getByLabel('Observação');
+    await alcancarComTab(page, observacao, 'Observacao da resposta');
+    await substituirTextoPeloTeclado(page, 'Resposta sintetica preparada por teclado.');
+    await expect(observacao).toHaveValue('Resposta sintetica preparada por teclado.');
+    expect(envios).toBe(0);
+  });
+});
