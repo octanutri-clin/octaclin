@@ -8,7 +8,7 @@ import {
   useAudioRecorderState
 } from 'expo-audio';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Ionicons } from '@expo/vector-icons';
+import { IconeDecorativo } from '@/components/icone';
 import { enfileirarSincronizacao } from '@/lib/banco-local';
 import { cores } from '@/lib/tema';
 
@@ -93,37 +93,70 @@ export default function CapturaMultimodal() {
     <ScrollView style={styles.tela} contentContainerStyle={styles.conteudo}>
       <View>
         <Text style={styles.subtitulo}>Check-in multimodal</Text>
-        <Text style={styles.titulo}>Captura</Text>
+        <Text accessibilityRole="header" style={styles.titulo}>
+          Captura
+        </Text>
       </View>
 
       <View style={styles.preview}>
         {cameraPermissao?.granted ? (
-          <CameraView style={styles.camera} facing="back" mode={modoVideo ? 'video' : 'picture'} />
+          <CameraView
+            accessibilityLabel={
+              modoVideo
+                ? 'Pre-visualizacao da camera traseira em modo video'
+                : 'Pre-visualizacao da camera traseira em modo foto'
+            }
+            style={styles.camera}
+            facing="back"
+            mode={modoVideo ? 'video' : 'picture'}
+          />
         ) : (
-          <View style={styles.semPermissao}>
-            <Ionicons name="camera" size={38} color={cores.textoSecundario} />
+          <View accessible accessibilityLabel="Camera indisponivel. Permita a camera para registrar refeicoes e videos curtos." style={styles.semPermissao}>
+            <IconeDecorativo name="camera" size={38} color={cores.textoSecundario} />
             <Text style={styles.textoPermissao}>Permita a camera para registrar refeicoes e videos curtos.</Text>
           </View>
         )}
       </View>
 
       <View style={styles.grade}>
-        <Pressable style={styles.botao} onPress={() => registrarCaptura('imagem')}>
-          <Ionicons name="image" size={24} color={cores.primaria} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Foto refeicao"
+          accessibilityHint="Prepara uma foto da refeicao para envio"
+          style={styles.botao}
+          onPress={() => registrarCaptura('imagem')}
+        >
+          <IconeDecorativo name="image" size={24} color={cores.primaria} />
           <Text style={styles.botaoTexto}>Foto refeicao</Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Video 30s"
+          accessibilityHint="Prepara um video limitado a 30 segundos"
           style={styles.botao}
           onPress={() => {
             setModoVideo(true);
             void registrarCaptura('video');
           }}
         >
-          <Ionicons name="videocam" size={24} color={cores.alerta} />
+          <IconeDecorativo name="videocam" size={24} color={cores.alerta} />
           <Text style={styles.botaoTexto}>Video 30s</Text>
         </Pressable>
-        <Pressable style={[styles.botao, gravandoAudio && styles.botaoAtivo]} onPress={gravarAudio}>
-          <Ionicons name={gravandoAudio ? 'stop-circle' : 'mic'} size={24} color={gravandoAudio ? cores.perigo : cores.sucesso} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={gravandoAudio ? 'Parar audio' : 'Audio 2min'}
+          accessibilityHint={
+            gravandoAudio ? 'Encerra e salva a gravacao' : 'Inicia uma gravacao de ate 2 minutos'
+          }
+          accessibilityState={{ selected: gravandoAudio }}
+          style={[styles.botao, gravandoAudio && styles.botaoAtivo]}
+          onPress={gravarAudio}
+        >
+          <IconeDecorativo
+            name={gravandoAudio ? 'stop-circle' : 'mic'}
+            size={24}
+            color={gravandoAudio ? cores.perigo : cores.sucesso}
+          />
           <Text style={styles.botaoTexto}>{gravandoAudio ? 'Parar audio' : 'Audio 2min'}</Text>
         </Pressable>
       </View>
@@ -141,7 +174,7 @@ const styles = StyleSheet.create({
   semPermissao: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   textoPermissao: { marginTop: 12, textAlign: 'center', color: cores.textoSecundario, fontSize: 14 },
   grade: { gap: 10 },
-  botao: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: cores.branco, borderRadius: 8, borderWidth: 1, borderColor: cores.linha },
+  botao: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: cores.branco, borderRadius: 8, borderWidth: 1, borderColor: cores.contorno },
   botaoAtivo: { borderColor: cores.perigo, backgroundColor: '#fff4f2' },
   botaoTexto: { color: cores.tinta, fontSize: 16, fontWeight: '700' }
 });
