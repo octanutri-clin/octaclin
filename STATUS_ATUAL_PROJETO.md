@@ -1,12 +1,20 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-22.
+Atualizado em 2026-08-27.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Governanca de acessibilidade concluida ate o PR 34 e integrada pelo PR GitHub
+  `#150`. O PR 35 esta tecnicamente concluido na branch
+  `security/governanca-pr35-actions-sha`: todas as actions remotas dos workflows
+  foram fixadas por SHA completo, o job de governanca passou a bloquear
+  referencias mutaveis e o Dependabot ganhou cooldown sem atrasar security
+  updates. Os PRs Dependabot `#116` e `#149` foram fechados porque misturavam
+  migracoes maiores incompatíveis com o estado atual. Shell injection em
+  deploy e achados de runtime permanecem separados nos PRs 36 a 42.
 - Fase 255 concluida e integrada pelo PR `#104`, merge `51a1085`: o prontuario
   foi decomposto em configuracao
   tipada e timeline reutilizavel; Materiais, Anexos e o diretorio de
