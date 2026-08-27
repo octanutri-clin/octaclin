@@ -2812,10 +2812,20 @@ test.describe('gate de acessibilidade - ia assistida (PR 25)', () => {
     });
     await page.goto('/ia');
 
-    await expect(page.getByText('Nenhuma análise persistida.')).toBeVisible();
-    await expect(page.getByText('Nenhum reconhecimento persistido.')).toBeVisible();
-    await expect(page.getByText('Nenhuma imagem confirmada. Envie uma foto no prontuário do paciente antes de solicitar a análise.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Reconhecer' })).toBeDisabled();
+    // Escopado a <main>: flake reproduzido e investigado (~25-30% das
+    // execucoes, ver PR de estabilizacao). `getByText` sem escopo resolvia 2
+    // elementos identicos - um dentro de <main> (o conteudo real da pagina) e
+    // outro fora, no overlay de dev do Next (`<nextjs-portal>`, ja excluido em
+    // outros pontos desta suite - ver `.exclude('nextjs-portal')` no axe e a
+    // remocao do elemento antes da checagem de teclado). Nao e duplicacao do
+    // produto nem duas areas legitimas: e ferramenta de dev vazando para o
+    // locator. Escopar a <main> restringe a assercao ao conteudo real, sem
+    // esconder ambiguidade com indice nem mascarar com retry/timeout.
+    const conteudo = page.getByRole('main');
+    await expect(conteudo.getByText('Nenhuma análise persistida.')).toBeVisible();
+    await expect(conteudo.getByText('Nenhum reconhecimento persistido.')).toBeVisible();
+    await expect(conteudo.getByText('Nenhuma imagem confirmada. Envie uma foto no prontuário do paciente antes de solicitar a análise.')).toBeVisible();
+    await expect(conteudo.getByRole('button', { name: 'Reconhecer' })).toBeDisabled();
 
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
