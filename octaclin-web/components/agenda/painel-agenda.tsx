@@ -251,6 +251,9 @@ export function PainelAgenda() {
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [processandoConsultaId, setProcessandoConsultaId] = useState<string | null>(null);
+  const botaoAgendarRef = useRef<HTMLButtonElement>(null);
+  const botaoRemarcarRef = useRef<HTMLButtonElement>(null);
+  const restaurarFocoAgendaRef = useRef<'agendar' | 'remarcar' | null>(null);
   const [processandoSolicitacaoId, setProcessandoSolicitacaoId] = useState<string | null>(null);
   const [motivosRecusa, setMotivosRecusa] = useState<Record<string, string>>({});
   const [pacientesPorSolicitacao, setPacientesPorSolicitacao] = useState<Record<string, string>>({});
@@ -431,6 +434,7 @@ export function PainelAgenda() {
 
   async function salvar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    restaurarFocoAgendaRef.current = document.activeElement === (evento.nativeEvent as SubmitEvent).submitter ? 'agendar' : null;
     setFalha(null);
     setSucesso(null);
 
@@ -490,6 +494,7 @@ export function PainelAgenda() {
 
   async function remarcar(evento: FormEvent<HTMLFormElement>, consulta: ConsultaAgendaApi) {
     evento.preventDefault();
+    restaurarFocoAgendaRef.current = document.activeElement === (evento.nativeEvent as SubmitEvent).submitter ? 'remarcar' : null;
     const dados = new FormData(evento.currentTarget);
     const inicioLocal = String(dados.get('inicioEm') ?? '');
     const duracaoMinutos = Number(dados.get('duracaoMinutos') ?? duracaoConsultaMinutos(consulta));
@@ -522,6 +527,13 @@ export function PainelAgenda() {
       setProcessandoConsultaId(null);
     }
   }
+
+  useEffect(() => {
+    if (salvando || processandoConsultaId || !restaurarFocoAgendaRef.current) return;
+    const destino = restaurarFocoAgendaRef.current;
+    restaurarFocoAgendaRef.current = null;
+    (destino === 'agendar' ? botaoAgendarRef.current : botaoRemarcarRef.current)?.focus();
+  }, [processandoConsultaId, salvando]);
 
   async function registrarDesfecho(consulta: ConsultaAgendaApi, status: DesfechoConsultaAgenda) {
     const rotulo = rotuloStatusConsulta(status).toLocaleLowerCase('pt-BR');
@@ -909,7 +921,7 @@ export function PainelAgenda() {
                     <Botao type="button" disabled={processandoConsultaId === consultaSelecionada.id} onClick={() => solicitarDesfecho(consultaSelecionada, 'falta')}><UserX size={16} />Falta</Botao>
                     <Botao type="button" variante="perigo" disabled={processandoConsultaId === consultaSelecionada.id} onClick={() => solicitarDesfecho(consultaSelecionada, 'cancelada')}><XCircle size={16} />Cancelar</Botao>
                   </div>
-                  <Botao type="submit" variante="primario" disabled={processandoConsultaId === consultaSelecionada.id}><RefreshCcw size={16} />Remarcar</Botao>
+                  <Botao ref={botaoRemarcarRef} type="submit" variante="primario" disabled={processandoConsultaId === consultaSelecionada.id}><RefreshCcw size={16} />Remarcar</Botao>
                 </div>
               </form>
             ) : null}
@@ -1160,7 +1172,7 @@ export function PainelAgenda() {
                     <RefreshCcw size={16} />
                     Atualizar
                   </Botao>
-                  <Botao type="submit" variante="primario" disabled={salvando || !pacientesLista.length}>
+                  <Botao ref={botaoAgendarRef} type="submit" variante="primario" disabled={salvando || !pacientesLista.length}>
                     <Save size={16} />
                     Agendar
                   </Botao>

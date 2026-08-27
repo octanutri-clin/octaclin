@@ -351,7 +351,7 @@ export function useWorkspaceQuestionarios() {
       const atualizados = [criado, ...questionarios];
       setQuestionarios(atualizados);
       setTotalQuestionarios((total) => total + 1);
-      await selecionarQuestionario(criado);
+      await selecionarQuestionario(criado, true);
       setSucesso('Questionário criado.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar questionário.');
