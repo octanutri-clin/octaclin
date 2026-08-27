@@ -22,7 +22,7 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
 
   return (
     <div className="grid gap-4">
-      <div className="flex justify-end gap-2">
+      <div className="flex min-w-0 flex-wrap justify-end gap-2">
         <Botao onClick={carregar} disabled={carregando}>
           <RefreshCcw className="h-4 w-4" />
           {carregando ? 'Atualizando' : 'Atualizar'}
