@@ -21,7 +21,10 @@ function reprova(nome, mutacao, trechoEsperado) {
     mutacao(matriz);
     const caminho = join(diretorioTemporario, `${nome.replace(/[^a-z0-9]+/gi, '-')}.json`);
     writeFileSync(caminho, JSON.stringify(matriz));
-    assert.throws(() => validarMatriz(caminho), new RegExp(trechoEsperado));
+    assert.throws(
+      () => validarMatriz(caminho),
+      (erro) => erro instanceof Error && erro.message.includes(trechoEsperado)
+    );
   });
 }
 
