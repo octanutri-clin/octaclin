@@ -45,7 +45,8 @@
     "smoke:e2e:bff": "node scripts/smoke-e2e-bff.mjs",
     "e2e:staging:mutavel": "node scripts/e2e-staging-mutavel.mjs",
     "e2e:fase228:onboarding": "node scripts/e2e-fase-228-onboarding.mjs",
-    "smoke:demo": "node scripts/smoke-e2e-bff.mjs"
+    "smoke:demo": "node scripts/smoke-e2e-bff.mjs",
+    "test:reflow": "playwright test tests/visual/reflow-visual.spec.mjs --reporter=list"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

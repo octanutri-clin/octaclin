@@ -1332,7 +1332,7 @@ export function PainelAgenda() {
                     <article
                       id={`consulta-${consulta.id}`}
                       key={consulta.id}
-                      className="scroll-mt-4 rounded-lg border border-linha bg-superficie p-3"
+                      className="min-w-0 scroll-mt-4 rounded-lg border border-linha bg-superficie p-3"
                     >
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div className="min-w-0">

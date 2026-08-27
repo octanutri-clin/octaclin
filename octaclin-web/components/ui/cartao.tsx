@@ -3,7 +3,12 @@ import { cn } from '@/lib/utils';
 
 export const Cartao = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('rounded-lg bg-white shadow-cartao', className)} {...props} />
+    // `min-w-0` porque o Cartao quase sempre e item de grid/flex, e um item de
+    // grid herda `min-width: auto` - ou seja, recusa encolher abaixo da largura
+    // intrinseca do conteudo. Medido a 320 CSS px em /pacientes: o pai tinha
+    // 296px e o Cartao esticava para 581px, empurrando busca, filtros e o link
+    // do paciente para fora da viewport (WCAG 1.4.10).
+    <div ref={ref} className={cn('min-w-0 rounded-lg bg-white shadow-cartao', className)} {...props} />
   )
 );
 Cartao.displayName = 'Cartao';

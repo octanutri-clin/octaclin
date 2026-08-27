@@ -969,9 +969,9 @@ export function PainelComunicacoes() {
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2">
             <Campo value={buscaConversas} onChange={(evento) => setBuscaConversas(evento.target.value)} placeholder="Buscar conversa" aria-label="Buscar conversa por paciente, contato ou mensagem" className="w-full sm:w-56" />
-            <div className="flex rounded-md border border-linha bg-fundo p-1 text-xs font-semibold text-texto-suave">
+            <div className="flex max-w-full shrink-0 overflow-x-auto rounded-md border border-linha bg-fundo p-1 text-xs font-semibold text-texto-suave [&>*]:shrink-0">
             {(['todas', 'recebidas', 'acompanhamento', 'falhas'] as const).map((filtro) => (
               <button
                 key={filtro}
