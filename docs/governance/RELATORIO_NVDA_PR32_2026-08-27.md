@@ -83,9 +83,11 @@ A correcao foi dividida conforme o tipo de rota:
 
 - metadados estaticos nas rotas de acesso, recuperacao, primeiro acesso e portal do cliente;
 - metadado no layout do portal do paciente, cobrindo tambem suas subrotas;
-- componente compartilhado no `PortalShell` para os consoles cujo titulo depende da configuracao da tela em tempo de execucao.
+- metadados estaticos nas rotas de dashboard e agenda, validadas no console profissional.
 
 Depois da correcao, o NVDA anunciou `Acesso OctaClin | OctaClin` no Chrome e no Edge. Testes Playwright verificam tambem os titulos de dashboard, agenda, portal do paciente, portal do cliente e rotas de recuperacao de acesso.
+
+A primeira implementacao para dashboard e agenda atualizava o titulo em um `useEffect` do `PortalShell`. Ela passou em `next dev`, mas o smoke do GitHub Actions comprovou que o titulo permanecia `OctaClin` em `next start`, nos dois viewports. A abordagem foi removida. Dashboard e agenda passaram a usar metadados estaticos, e os quatro casos que falharam passaram em reproducao local com `next build` + `next start`.
 
 Nenhum outro defeito foi comprovado na matriz manual executada.
 
@@ -96,6 +98,7 @@ Nenhum outro defeito foi comprovado na matriz manual executada.
 - Regressao GREEN: login, dashboard, agenda, portal do paciente e portal do cliente PASS, 5/5.
 - Rotas publicas de acesso apos a correcao: PASS, 11/11.
 - Check-ins, abertura da tabela por teclado e titulo da subrota: PASS, 1/1.
+- Regressao em modo de producao apos a correcao final: dashboard e agenda PASS, 4/4 em desktop e mobile com `next build` + `next start`.
 - Gate completo Playwright + axe-core: `test:a11y` PASS, 264/264 em desktop e mobile.
 - Gate de reflow e acessibilidade visual: `test:reflow` PASS, 60/60 em desktop e mobile.
 - `typecheck`: PASS.
@@ -114,7 +117,7 @@ Nenhum outro defeito foi comprovado na matriz manual executada.
 
 ## Riscos residuais
 
-- Titulos dos consoles renderizados pelo `PortalShell` dependem de hidratacao no cliente. As rotas criticas dashboard e agenda possuem regressao automatizada, mas novas telas que usem outro shell devem definir titulo explicitamente.
+- As demais rotas do console profissional nao fizeram parte da matriz manual deste PR e devem definir metadados estaticos quando forem incorporadas ao gate de titulo. Nao foi mantida uma solucao por hidratacao no `PortalShell`, pois o smoke de CI comprovou comportamento diferente entre `next dev` e `next start`.
 - Testes automatizados confirmam o valor de `document.title`, mas somente uma nova rodada manual confirma a pronunciacao exata em combinacoes futuras de navegador e NVDA.
 - O Visualizador da Fala registra o que foi anunciado na sessao, mas nao constitui gravacao de audio nem teste exaustivo de compreensao por usuario.
 

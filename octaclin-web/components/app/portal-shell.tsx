@@ -10,7 +10,6 @@ import { Avatar } from '@/components/ui/avatar';
 import { Botao } from '@/components/ui/botao';
 import { Esqueleto } from '@/components/ui/feedback';
 import { Menu } from '@/components/ui/menu';
-import { TituloDocumento } from '@/components/app/titulo-documento';
 import { sair } from '@/lib/auth-api';
 
 export interface ItemNavegacaoShell {
@@ -148,7 +147,6 @@ export function PortalShell({
 
     return (
       <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
-        <TituloDocumento titulo={titulo} />
         <a
           href="#conteudo-principal"
           className="fixed left-3 top-3 z-[60] -translate-y-20 rounded-md bg-tinta px-3 py-2 text-sm font-semibold text-white focus:translate-y-0"
@@ -222,7 +220,6 @@ export function PortalShell({
 
   return (
     <main className={cn('min-h-screen overflow-x-hidden bg-fundo text-tinta', navegacaoMobile.length ? 'pb-20 md:pb-0' : '')}>
-      <TituloDocumento titulo={titulo} />
       <header className="border-b border-linha bg-white">
         <div
           className="mx-auto flex w-full flex-col gap-4 px-4 py-5 md:flex-row md:items-center md:justify-between lg:px-6"
