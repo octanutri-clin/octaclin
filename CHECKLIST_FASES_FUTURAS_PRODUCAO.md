@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-22 com a conclusao da Fase 255 e a Fase 256 como proxima
+Atualizado em 2026-08-27 com a conclusao tecnica do PR 35 de governanca e a Fase 256 como proxima
 fase oficial.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
@@ -2482,3 +2482,24 @@ Fase 255 - Prontuario clinico orientado a linha de cuidado:
 - Skills/plugins: `ecc:contract-first`, `ecc:frontend-patterns`,
   `ecc:frontend-a11y`, `ecc:e2e-testing`, `codex-security:validation`,
   Playwright e Chrome DevTools; Penpot se houver alteracao visual material
+
+## Sequencia de PRs de governanca apos acessibilidade
+
+Esta numeracao identifica a sequencia de governanca, nao fases de produto nem
+numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
+
+- [x] PR 34 - Consolidar matriz e gates de acessibilidade.
+  - Integrado no `main` pelo PR GitHub `#150` em 2026-08-27.
+- [x] PR 35 - Fixar GitHub Actions por SHA e controlar ruido do Dependabot.
+  - Concluido tecnicamente em `security/governanca-pr35-actions-sha`.
+  - Gate: `pnpm test:actions-imutaveis` no job `Governanca de repositorio`.
+- [ ] PR 36 - Remover injecao de expressoes GitHub em scripts shell de deploy.
+  - Escopo: somente `deploy-aws.yml`, `deploy-azure.yml` e testes negativos.
+- [ ] PR 37 - Triar e corrigir achados de seguranca no runtime do backend.
+- [ ] PR 38 - Triar e corrigir achados de seguranca no runtime da web.
+- [ ] PR 39 - Triar e corrigir achados de seguranca no runtime mobile/IA.
+- [ ] PR 40 - Endurecer containers com usuario nao-root e healthchecks.
+- [ ] PR 41 - Isolar ou corrigir achados em tooling de agentes (`.agents` e `.claude`).
+- [ ] PR 42 - Consolidar politica de dependencias, pnpm trust e atualizacoes maiores.
+
+Proximo PR autorizado apos merge humano do PR 35: PR 36.

@@ -43,13 +43,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -78,7 +78,7 @@ jobs:
 
       - name: Criar branch Neon descartavel
         id: neon
-        uses: neondatabase/create-branch-action@v6
+        uses: neondatabase/create-branch-action@fb620d43d4c565abaf088b848a4e28e5c4ea4d9c # v6
         with:
           project_id: ${{ vars.NEON_E2E_PROJECT_ID }}
           parent_branch: ${{ vars.NEON_E2E_PARENT_BRANCH_ID }}
@@ -207,7 +207,7 @@ jobs:
 
       - name: Publicar evidencias sem credenciais
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: fase-231-e2e-logs
           path: |
@@ -218,7 +218,7 @@ jobs:
 
       - name: Excluir branch Neon descartavel
         if: always() && steps.neon.outputs.branch_id != ''
-        uses: neondatabase/delete-branch-action@v3
+        uses: neondatabase/delete-branch-action@4468d825d5a88ef4012f1705a82f02ec3072f776 # v3
         with:
           project_id: ${{ vars.NEON_E2E_PROJECT_ID }}
           branch: ${{ steps.neon.outputs.branch_id }}

@@ -1,6 +1,6 @@
 # OctaClin - Matriz de confiabilidade e regressao
 
-Atualizada no PR 34 da governanca de acessibilidade em 2026-08-27. A cobertura,
+Atualizada no PR 35 da governanca de seguranca em 2026-08-27. A cobertura,
 as excecoes e os riscos residuais de acessibilidade tem matriz propria em
 `docs/governance/matriz-acessibilidade.json`, validada por `pnpm test:a11y:matriz`.
 Esta matriz conecta os riscos de maior
@@ -34,12 +34,14 @@ smoke real de integracoes ou validacao manual de go-live.
 | Matriz de acessibilidade afirmar cobertura inexistente | A matriz documental e confrontada com o codigo: script ausente do `package.json`, spec removido, bloco de teste renomeado, rota nao visitada, project do Playwright inexistente, gate desconectado do CI, resultado manual travestido de automatizado e leitor de tela nativo declarado PASS reprovam. Testes: `scripts/test-matriz-acessibilidade.spec.mjs` sobre `docs/governance/matriz-acessibilidade.json`. | `pnpm test:a11y:matriz` | Bloqueia o job Governanca de repositorio |
 | Acessibilidade do aplicativo Expo | Controles do mobile mantem papel, nome, estado e alvo de toque de 44 pt; icone de fonte fica fora da arvore de acessibilidade nas tres plataformas; toda tela expoe cabecalho; a paleta preserva o contraste de texto e de limite de controle. Le codigo-fonte: impede regressao das correcoes do PR 33, **nao** valida o que TalkBack e VoiceOver falam. Teste: `octaclin-mobile/scripts/auditoria-acessibilidade.spec.mjs`. | `pnpm --dir octaclin-mobile test:a11y` | Bloqueia o job Mobile Expo do CI; distribuicao mobile segue NO-GO |
 | PWA e dado clinico offline | Service worker limita cache a assets publicos; fila de check-in/formulario usa AES-GCM com chave apenas em memoria, idempotencia server-side e purge no logout/401. Testes: `octaclin-web/scripts/test-pwa-seguranca.mjs`, `octaclin-web/tests/visual/pwa-portal.spec.mjs`, specs de portal e questionarios. | `pnpm --dir octaclin-web test:pwa` e Jest focado do backend | Bloqueia deploy da PWA |
+| Supply chain dos workflows | Actions remotas usam somente SHA completo de 40 caracteres e preservam a versao em comentario para atualizacao pelo Dependabot; tags, branches, SHA abreviado e pin sem versao documentada reprovam. Teste: `scripts/validar-actions-imutaveis.spec.mjs`. | `pnpm test:actions-imutaveis` | Bloqueia o job Governanca de repositorio |
 
 ## Execucao minima
 
 ```powershell
 pnpm test:confiabilidade
 pnpm test:a11y:matriz
+pnpm test:actions-imutaveis
 pnpm --dir octaclin-backend test --runInBand
 pnpm --dir octaclin-web lint
 pnpm --dir octaclin-web typecheck
