@@ -9,6 +9,7 @@ import {
   extrairPaleta,
   extrairTags,
   razaoContraste,
+  temAtributo,
 } from './auditoria-acessibilidade-lib.mjs';
 import { carregarProjeto } from './auditoria-acessibilidade.mjs';
 
@@ -17,6 +18,33 @@ test('extrai tag mesmo com arrow function no atributo', () => {
   assert.equal(tags.length, 1);
   assert.equal(tags[0].nome, 'Pressable');
   assert.match(tags[0].atributos, /accessibilityRole="button"/);
+});
+
+test('temAtributo aceita atributo sem valor, com valor e entre espacos ou quebras de linha', () => {
+  assert.equal(temAtributo('accessibilityElementsHidden', 'accessibilityElementsHidden'), true);
+  assert.equal(temAtributo('{...props} aria-hidden />', 'aria-hidden'), true);
+  assert.equal(temAtributo('accessibilityRole="button"', 'accessibilityRole'), true);
+  assert.equal(temAtributo('\n  importantForAccessibility="no-hide-descendants"\n', 'importantForAccessibility'), true);
+  assert.equal(temAtributo('value={v}\n  accessibilityLabel = "Nome"', 'accessibilityLabel'), true);
+  assert.equal(temAtributo('disabled={incompleto}', 'disabled'), true);
+  assert.equal(temAtributo('value={v}', 'accessibilityLabel'), false);
+});
+
+test('temAtributo nao confunde nome que e prefixo ou sufixo de outro', () => {
+  assert.equal(temAtributo('accessibilityLabelledBy="x"', 'accessibilityLabel'), false);
+  assert.equal(temAtributo('dataAccessibilityRole="button"', 'accessibilityRole'), false);
+  assert.equal(temAtributo('aria-hiddenish', 'aria-hidden'), false);
+  assert.equal(temAtributo('accessibilityStateful={x}', 'accessibilityState'), false);
+});
+
+test('temAtributo rejeita nome de atributo nao cadastrado', () => {
+  // Fail-closed: um atributo novo sem padrao literal derruba a auditoria em vez
+  // de ser tratado como ausente ou presente por acidente.
+  assert.throws(
+    () => temAtributo('accessibilityValue={{ now: 1 }}', 'accessibilityValue'),
+    /Atributo nao suportado pela auditoria: accessibilityValue/,
+  );
+  assert.throws(() => temAtributo('qualquer', ''), /Atributo nao suportado/);
 });
 
 test('cobra papel e nome acessivel em Pressable', () => {

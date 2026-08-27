@@ -108,8 +108,26 @@ export function extrairTags(fonte) {
   return tags;
 }
 
-function temAtributo(atributos, nome) {
-  return new RegExp(`(^|\\s)${nome}\\s*(=|/?$|\\s)`).test(atributos);
+// Um literal por atributo auditado, em vez de montar a expressao com o nome.
+// Cada padrao exige inicio ou espaco antes do nome e `=`, espaco, `/` final ou
+// fim depois dele, para que um prefixo comum (`accessibilityLabel` dentro de
+// `accessibilityLabelledBy`) nao conte como presenca.
+const PADROES_ATRIBUTOS = new Map([
+  ['accessibilityRole', /(^|\s)accessibilityRole\s*(=|\/?$|\s)/],
+  ['accessibilityLabel', /(^|\s)accessibilityLabel\s*(=|\/?$|\s)/],
+  ['accessibilityState', /(^|\s)accessibilityState\s*(=|\/?$|\s)/],
+  ['accessibilityElementsHidden', /(^|\s)accessibilityElementsHidden\s*(=|\/?$|\s)/],
+  ['importantForAccessibility', /(^|\s)importantForAccessibility\s*(=|\/?$|\s)/],
+  ['aria-hidden', /(^|\s)aria-hidden\s*(=|\/?$|\s)/],
+  ['disabled', /(^|\s)disabled\s*(=|\/?$|\s)/],
+]);
+
+// Fail-closed: um atributo novo em REGRAS_TAG sem padrao aqui derruba a
+// auditoria em vez de passar como se a prop estivesse presente.
+export function temAtributo(atributos, nome) {
+  const padrao = PADROES_ATRIBUTOS.get(nome);
+  if (!padrao) throw new Error(`Atributo nao suportado pela auditoria: ${nome}`);
+  return padrao.test(atributos);
 }
 
 export function extrairEstilos(fonte) {
