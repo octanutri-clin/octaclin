@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-27 com a conclusao da Fase 255 e a Fase 256 como proxima
+Atualizado em 2026-08-28 com a conclusao da Fase 255 e a Fase 256 como proxima
 fase oficial. O programa de hardening PR 36-56 tambem foi reconciliado nesta data.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
@@ -2493,10 +2493,12 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 - [x] PR 35 - Fixar GitHub Actions por SHA e controlar ruido do Dependabot.
   - Concluido tecnicamente em `security/governanca-pr35-actions-sha`.
   - Gate: `pnpm test:actions-imutaveis` no job `Governanca de repositorio`.
-- [ ] PR 36 - Remover injecao de expressoes GitHub em scripts shell de deploy.
+- [x] PR 36 - Remover injecao de expressoes GitHub em scripts shell de deploy.
   - Escopo: somente `deploy-aws.yml`, `deploy-azure.yml` e testes negativos.
-  - Implementacao preparada em `security/governanca-pr36-workflow-injection`; aguarda review, checks e merge humano.
+  - Integrado no `main` pelo PR GitHub `#158` em 2026-08-28.
 - [ ] PR 37 - Consolidar modelo de ameacas, ASVS e triagem factual dos scanners.
+  - Implementacao preparada em `security/governanca-pr37-modelo-ameacas`; aguarda review, checks e merge humano.
+  - Snapshot: 49 alertas de code scanning, 2 Dependabot e 0 secret scanning; ledger validado por `pnpm test:triagem-seguranca`.
 - [ ] PR 38 - Endurecer webhooks e endpoints publicos.
 - [ ] PR 39 - Verificar transporte, TLS e criptografia de dados.
 - [ ] PR 40 - Endurecer sessoes, JWT e refresh tokens.
@@ -2520,4 +2522,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo PR autorizado apos merge humano do PR 35: PR 36.
+Proximo PR autorizado: PR 37. O PR 38 depende do merge e aceite humano deste item.

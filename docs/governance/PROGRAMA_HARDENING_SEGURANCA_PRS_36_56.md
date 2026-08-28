@@ -4,8 +4,10 @@
 >
 > Atualizado em: 2026-08-28
 >
-> Proximo item autorizado: PR 36
-> Estado do PR 36: implementacao preparada em branch dedicada; aguarda review, checks e merge humano.
+> Proximo item autorizado: PR 37
+> Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
+> Estado do PR 37: implementacao preparada em branch dedicada; aguarda review,
+> checks e merge humano.
 
 ## 1. Funcao deste documento
 
@@ -461,4 +463,5 @@ venda web, desde que nao seja distribuido nem prometido comercialmente.
   fato novo que altere escopo, ordem, gate ou status.
 - Atualizar `MATRIZ_CONFIABILIDADE_TESTES.md` somente quando um gate permanente
   for efetivamente implementado.
-- O proximo PR autorizado continua sendo o PR 36.
+- O proximo PR autorizado continua sendo o PR 37. O PR 38 somente pode iniciar
+  depois do merge e do aceite humano do resultado deste PR.

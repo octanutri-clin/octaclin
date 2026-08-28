@@ -63,6 +63,7 @@ jobs:
       - run: pnpm test:confiabilidade
       - run: pnpm test:actions-imutaveis
       - run: pnpm test:workflows-seguros
+      - run: pnpm test:triagem-seguranca
       - run: pnpm security:secrets
 
   backend:
