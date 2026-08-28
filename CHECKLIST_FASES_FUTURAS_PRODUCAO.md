@@ -1,7 +1,7 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-27 com a conclusao tecnica do PR 35 de governanca e a Fase 256 como proxima
-fase oficial.
+Atualizado em 2026-08-27 com a conclusao da Fase 255 e a Fase 256 como proxima
+fase oficial. O programa de hardening PR 36-56 tambem foi reconciliado nesta data.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -2495,11 +2495,28 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - Gate: `pnpm test:actions-imutaveis` no job `Governanca de repositorio`.
 - [ ] PR 36 - Remover injecao de expressoes GitHub em scripts shell de deploy.
   - Escopo: somente `deploy-aws.yml`, `deploy-azure.yml` e testes negativos.
-- [ ] PR 37 - Triar e corrigir achados de seguranca no runtime do backend.
-- [ ] PR 38 - Triar e corrigir achados de seguranca no runtime da web.
-- [ ] PR 39 - Triar e corrigir achados de seguranca no runtime mobile/IA.
-- [ ] PR 40 - Endurecer containers com usuario nao-root e healthchecks.
-- [ ] PR 41 - Isolar ou corrigir achados em tooling de agentes (`.agents` e `.claude`).
-- [ ] PR 42 - Consolidar politica de dependencias, pnpm trust e atualizacoes maiores.
+- [ ] PR 37 - Consolidar modelo de ameacas, ASVS e triagem factual dos scanners.
+- [ ] PR 38 - Endurecer webhooks e endpoints publicos.
+- [ ] PR 39 - Verificar transporte, TLS e criptografia de dados.
+- [ ] PR 40 - Endurecer sessoes, JWT e refresh tokens.
+- [ ] PR 41 - Implementar MFA e reautenticacao privilegiada.
+- [ ] PR 42 - Provar autorizacao de objeto e funcao contra BOLA/BFLA/IDOR.
+- [ ] PR 43 - Provar RLS e isolamento multi-tenant integral.
+- [ ] PR 44 - Endurecer uploads e storage clinico.
+- [ ] PR 45 - Endurecer browser, BFF, CSP, CSRF, CORS e cache.
+- [ ] PR 46 - Endurecer OAuth e integracoes externas.
+- [ ] PR 47 - Endurecer fluxos de IA e revisao humana.
+- [ ] PR 48 - Auditar e isolar tooling de agentes (`.agents` e `.claude`).
+- [ ] PR 49 - Consolidar supply chain, SBOM e politica de dependencias.
+- [ ] PR 50 - Endurecer containers e runtime.
+- [ ] PR 51 - Aplicar menor privilegio em Render, Neon, Redis e Backblaze.
+- [ ] PR 52 - Consolidar observabilidade, auditoria e resposta a incidentes.
+- [ ] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.
+- [ ] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
+- [ ] PR 55 - Concluir pentest independente, reteste e GO/NO-GO.
+- [ ] PR 56 - Aplicar MASVS/MASTG antes de distribuir o mobile.
+
+Fonte canonica de escopo, gates e skills do Claude Code:
+`docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
 Proximo PR autorizado apos merge humano do PR 35: PR 36.
