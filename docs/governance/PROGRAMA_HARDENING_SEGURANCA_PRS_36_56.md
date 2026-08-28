@@ -2,9 +2,10 @@
 
 > Status: aprovado para planejamento e execucao sequencial
 >
-> Atualizado em: 2026-08-27
+> Atualizado em: 2026-08-28
 >
 > Proximo item autorizado: PR 36
+> Estado do PR 36: implementacao preparada em branch dedicada; aguarda review, checks e merge humano.
 
 ## 1. Funcao deste documento
 
