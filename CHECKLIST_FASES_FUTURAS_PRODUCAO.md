@@ -2495,6 +2495,7 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - Gate: `pnpm test:actions-imutaveis` no job `Governanca de repositorio`.
 - [ ] PR 36 - Remover injecao de expressoes GitHub em scripts shell de deploy.
   - Escopo: somente `deploy-aws.yml`, `deploy-azure.yml` e testes negativos.
+  - Implementacao preparada em `security/governanca-pr36-workflow-injection`; aguarda review, checks e merge humano.
 - [ ] PR 37 - Consolidar modelo de ameacas, ASVS e triagem factual dos scanners.
 - [ ] PR 38 - Endurecer webhooks e endpoints publicos.
 - [ ] PR 39 - Verificar transporte, TLS e criptografia de dados.

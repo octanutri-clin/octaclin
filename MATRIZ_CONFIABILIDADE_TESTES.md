@@ -35,6 +35,7 @@ smoke real de integracoes ou validacao manual de go-live.
 | Acessibilidade do aplicativo Expo | Controles do mobile mantem papel, nome, estado e alvo de toque de 44 pt; icone de fonte fica fora da arvore de acessibilidade nas tres plataformas; toda tela expoe cabecalho; a paleta preserva o contraste de texto e de limite de controle. Le codigo-fonte: impede regressao das correcoes do PR 33, **nao** valida o que TalkBack e VoiceOver falam. Teste: `octaclin-mobile/scripts/auditoria-acessibilidade.spec.mjs`. | `pnpm --dir octaclin-mobile test:a11y` | Bloqueia o job Mobile Expo do CI; distribuicao mobile segue NO-GO |
 | PWA e dado clinico offline | Service worker limita cache a assets publicos; fila de check-in/formulario usa AES-GCM com chave apenas em memoria, idempotencia server-side e purge no logout/401. Testes: `octaclin-web/scripts/test-pwa-seguranca.mjs`, `octaclin-web/tests/visual/pwa-portal.spec.mjs`, specs de portal e questionarios. | `pnpm --dir octaclin-web test:pwa` e Jest focado do backend | Bloqueia deploy da PWA |
 | Supply chain dos workflows | Actions remotas usam somente SHA completo de 40 caracteres e preservam a versao em comentario para atualizacao pelo Dependabot; tags, branches, SHA abreviado e pin sem versao documentada reprovam. Teste: `scripts/validar-actions-imutaveis.spec.mjs`. | `pnpm test:actions-imutaveis` | Bloqueia o job Governanca de repositorio |
+| Injecao em scripts de deploy | Expressoes do GitHub Actions nao podem ser interpoladas diretamente em blocos `run`; inputs, matriz e secrets entram por `env` e sao usados como variaveis entre aspas. Payloads sinteticos com quebra de aspas, substituicao de comando e crases reprovam. Teste: `scripts/validar-workflows-sem-injecao.spec.mjs`. | `pnpm test:workflows-seguros` | Bloqueia o job Governanca de repositorio |
 
 ## Execucao minima
 
@@ -42,6 +43,7 @@ smoke real de integracoes ou validacao manual de go-live.
 pnpm test:confiabilidade
 pnpm test:a11y:matriz
 pnpm test:actions-imutaveis
+pnpm test:workflows-seguros
 pnpm --dir octaclin-backend test --runInBand
 pnpm --dir octaclin-web lint
 pnpm --dir octaclin-web typecheck

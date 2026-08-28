@@ -62,6 +62,7 @@ jobs:
       - run: pnpm test:a11y:matriz
       - run: pnpm test:confiabilidade
       - run: pnpm test:actions-imutaveis
+      - run: pnpm test:workflows-seguros
       - run: pnpm security:secrets
 
   backend:
