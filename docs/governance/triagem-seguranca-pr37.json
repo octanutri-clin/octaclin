@@ -1,0 +1,498 @@
+{
+  "schemaVersion": 1,
+  "repositorio": "octanutri-clin/octaclin",
+  "commitBase": "e786007ae4683d36b28e9e978244595317757f5f",
+  "capturadoEm": "2026-08-28T22:29:13Z",
+  "snapshot": {
+    "codeScanning": {
+      "total": 49,
+      "alertas": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95],
+      "porFerramenta": {
+        "CodeQL": 13,
+        "Semgrep OSS": 28,
+        "Trivy": 8
+      }
+    },
+    "dependabot": {
+      "total": 2,
+      "alertas": [35, 36]
+    },
+    "secretScanning": {
+      "total": 0
+    }
+  },
+  "casos": [
+    {
+      "id": "SEC-PR37-001",
+      "titulo": "Reflexao de challenge do webhook WhatsApp como string HTTP",
+      "disposicao": "confirmado",
+      "severidade": "medium",
+      "alertas": [
+        { "ref": "code-scanning:13", "papel": "primario" }
+      ],
+      "evidencia": {
+        "fontes": [
+          "octaclin-backend/src/modulos/comunicacoes/apresentacao/controlador-webhook-whatsapp.ts:52-64"
+        ],
+        "sink": "O valor de query hub.challenge controlado pelo solicitante e devolvido diretamente pelo controller NestJS."
+      },
+      "preCondicoes": [
+        "O atacante precisa conhecer o token de verificacao ou induzir uma vitima a abrir URL que contenha o token valido.",
+        "O adaptador HTTP precisa serializar a string com tipo de conteudo interpretavel pelo navegador."
+      ],
+      "mitigacoes": [
+        "O endpoint falha fechado quando o token de verificacao nao existe.",
+        "A igualdade do token e verificada antes da reflexao.",
+        "A superficie e o host do backend, separado da interface web."
+      ],
+      "impacto": "Execucao de conteudo refletido no contexto da origem do backend e uso do endpoint publico como vetor de phishing ou script se o segredo de verificacao for conhecido.",
+      "conclusao": "A cadeia fonte-sink existe; os controles reduzem alcance, mas nao tornam segura a reflexao sem tipo de conteudo explicito e validacao estrita do challenge.",
+      "prRemediacao": "PR 38"
+    },
+    {
+      "id": "SEC-PR37-002",
+      "titulo": "AES-GCM aceita tag extraida sem exigir comprimento exato",
+      "disposicao": "confirmado",
+      "severidade": "high",
+      "alertas": [
+        { "ref": "code-scanning:79", "papel": "primario" }
+      ],
+      "evidencia": {
+        "fontes": [
+          "octaclin-backend/src/infraestrutura/seguranca/criptografia-dados-sensiveis.ts:13-21"
+        ],
+        "sink": "createDecipheriv usa GCM sem authTagLength e setAuthTag recebe subarray potencialmente menor que 16 bytes para buffers truncados."
+      },
+      "preCondicoes": [
+        "O atacante precisa conseguir fornecer ou adulterar o buffer cifrado persistido.",
+        "O caminho de descriptografia precisa processar o buffer malformado."
+      ],
+      "mitigacoes": [
+        "A criptografia gera IV de 12 bytes e tag de 16 bytes nos dados novos.",
+        "A chave e obrigatoria no bootstrap de producao.",
+        "A origem normal do ciphertext e armazenamento controlado pelo backend."
+      ],
+      "impacto": "Reducao da garantia de integridade/autenticidade de dados clinicos cifrados diante de ciphertext truncado ou adulterado.",
+      "conclusao": "O formato de escrita e correto, mas a leitura nao valida tamanho total nem tag de 16 bytes antes de autenticar.",
+      "prRemediacao": "PR 39"
+    },
+    {
+      "id": "SEC-PR37-003",
+      "titulo": "Cliente PostgreSQL desabilita validacao da cadeia TLS",
+      "disposicao": "confirmado",
+      "severidade": "high",
+      "alertas": [
+        { "ref": "code-scanning:77", "papel": "primario" },
+        { "ref": "code-scanning:78", "papel": "associado" },
+        { "ref": "code-scanning:75", "papel": "duplicado", "duplicadoDe": "code-scanning:77" }
+      ],
+      "evidencia": {
+        "fontes": [
+          "octaclin-backend/src/infraestrutura/banco-dados/opcoes-typeorm.ts:126-153",
+          "octaclin-backend/src/infraestrutura/banco-dados/opcoes-typeorm.spec.ts:46-58"
+        ],
+        "sink": "As duas configuracoes SSL do TypeORM usam rejectUnauthorized: false; o teste fixa esse comportamento."
+      },
+      "preCondicoes": [
+        "A conexao usa BANCO_SSL=true ou DATABASE_URL com sslmode=require.",
+        "O atacante controla ou intercepta DNS, rota ou endpoint de rede entre a aplicacao e o banco."
+      ],
+      "mitigacoes": [
+        "O transporte permanece cifrado contra observacao passiva.",
+        "Credenciais e ambientes sao separados e o banco gerenciado usa TLS."
+      ],
+      "impacto": "Um intermediario ativo pode apresentar certificado nao confiavel e tentar observar ou alterar trafego do banco, inclusive dados clinicos e contexto de tenant.",
+      "conclusao": "sslmode=require sem verificacao de certificado oferece criptografia sem autenticacao do servidor.",
+      "prRemediacao": "PR 39"
+    },
+    {
+      "id": "SEC-PR37-004",
+      "titulo": "Imagens de runtime executam como root",
+      "disposicao": "confirmado",
+      "severidade": "high",
+      "alertas": [
+        { "ref": "code-scanning:70", "papel": "primario" },
+        { "ref": "code-scanning:90", "papel": "duplicado", "duplicadoDe": "code-scanning:70" },
+        { "ref": "code-scanning:71", "papel": "primario" },
+        { "ref": "code-scanning:92", "papel": "duplicado", "duplicadoDe": "code-scanning:71" },
+        { "ref": "code-scanning:84", "papel": "primario" },
+        { "ref": "code-scanning:94", "papel": "duplicado", "duplicadoDe": "code-scanning:84" }
+      ],
+      "evidencia": {
+        "fontes": [
+          "octaclin-ai-service/Dockerfile:1-9",
+          "octaclin-backend/Dockerfile:1-22",
+          "octaclin-web/Dockerfile:1-24"
+        ],
+        "sink": "Nenhum dos tres estagios finais define USER nao privilegiado; o processo inicia com o usuario padrao root da imagem."
+      },
+      "preCondicoes": [
+        "Um desses Dockerfiles e usado para executar o servico.",
+        "Uma falha anterior permite execucao de codigo no processo ou em dependencia carregada."
+      ],
+      "mitigacoes": [
+        "Os estagios finais nao incluem o codigo-fonte completo dos builds Node.",
+        "Os provedores atuais adicionam isolamento externo ao container."
+      ],
+      "impacto": "A execucao de codigo ganha privilegio desnecessario dentro do container, ampliando alteracao de filesystem e impacto de escape ou configuracao insegura.",
+      "conclusao": "O artefato de deploy e objetivamente privilegiado, independentemente de o Render atual usar ou nao esse caminho.",
+      "prRemediacao": "PR 50"
+    },
+    {
+      "id": "SEC-PR37-005",
+      "titulo": "Imagens Docker nao declaram healthcheck",
+      "disposicao": "confirmado",
+      "severidade": "low",
+      "alertas": [
+        { "ref": "code-scanning:91", "papel": "primario" },
+        { "ref": "code-scanning:93", "papel": "primario" },
+        { "ref": "code-scanning:95", "papel": "primario" }
+      ],
+      "evidencia": {
+        "fontes": [
+          "octaclin-ai-service/Dockerfile:1-9",
+          "octaclin-backend/Dockerfile:1-22",
+          "octaclin-web/Dockerfile:1-24"
+        ],
+        "sink": "Os artefatos nao possuem instrucao HEALTHCHECK."
+      },
+      "preCondicoes": [
+        "O orquestrador depende do healthcheck da imagem e nao injeta uma verificacao equivalente."
+      ],
+      "mitigacoes": [
+        "Render e composicoes locais podem declarar probes fora da imagem.",
+        "O backend expoe /health e /health/detalhado."
+      ],
+      "impacto": "Processo travado ou degradado pode continuar marcado como ativo, atrasando failover e deteccao operacional.",
+      "conclusao": "A lacuna existe no artefato; seu impacto depende do mecanismo de probe do ambiente de execucao.",
+      "prRemediacao": "PR 50"
+    },
+    {
+      "id": "SEC-PR37-006",
+      "titulo": "Callback OAuth do gmail-skill reserva porta em todas as interfaces",
+      "disposicao": "confirmado",
+      "severidade": "low",
+      "alertas": [
+        { "ref": "code-scanning:1", "papel": "primario" },
+        { "ref": "code-scanning:2", "papel": "duplicado", "duplicadoDe": "code-scanning:1" }
+      ],
+      "evidencia": {
+        "fontes": [
+          ".agents/skills/gmail-skill/gmail_skill.py:165-185",
+          ".claude/skills/gmail-skill/gmail_skill.py:165-185"
+        ],
+        "sink": "socket.bind(('', 0)) reserva uma porta em todas as interfaces antes do callback OAuth local."
+      },
+      "preCondicoes": [
+        "Um operador executa a skill durante autenticacao Gmail.",
+        "Um atacante possui alcance de rede ate a maquina durante a janela do callback."
+      ],
+      "mitigacoes": [
+        "O redirect usa localhost e o fluxo gera state aleatorio de 32 bytes.",
+        "O programa de hardening proibe carregar esta skill nos PRs 36 a 47.",
+        "Os dois arquivos alertados sao copias byte a byte."
+      ],
+      "impacto": "Exposicao desnecessaria do listener OAuth local a interfaces de rede e aumento da superficie para corrida ou abuso do callback.",
+      "conclusao": "A vinculacao ampla e real no tooling local, embora state e curta duracao reduzam explorabilidade.",
+      "prRemediacao": "PR 48"
+    },
+    {
+      "id": "SEC-PR37-007",
+      "titulo": "gmail-skill imprime email autenticado em stdout",
+      "disposicao": "refutado",
+      "severidade": "informational",
+      "alertas": [
+        { "ref": "code-scanning:4", "papel": "primario" },
+        { "ref": "code-scanning:3", "papel": "duplicado", "duplicadoDe": "code-scanning:4" }
+      ],
+      "evidencia": {
+        "fontes": [
+          ".agents/skills/gmail-skill/gmail_skill.py:421-437",
+          ".claude/skills/gmail-skill/gmail_skill.py:421-437"
+        ],
+        "sink": "A linha alertada imprime somente token_data['email']; access_token, refresh_token e client_secret sao usados depois, mas nao interpolados no print."
+      },
+      "preCondicoes": [
+        "A skill e executada e conclui autenticacao."
+      ],
+      "mitigacoes": [
+        "Nenhuma credencial e impressa nessa linha.",
+        "A skill nao deve ser usada durante este programa antes do PR 48."
+      ],
+      "impacto": "O email e PII e ainda deve ser minimizado, mas o sink apontado nao registra senha nem token como alegado pelo CodeQL.",
+      "conclusao": "O alerta de clear-text password e falso para a expressao concreta; a questao separada de PII do tooling esta em SEC-PR37-008.",
+      "proximaRevisao": "PR 48 - auditar redacao de stdout do tooling de agentes."
+    },
+    {
+      "id": "SEC-PR37-008",
+      "titulo": "gmail-skill imprime contatos e seus atributos em stdout",
+      "disposicao": "confirmado",
+      "severidade": "medium",
+      "alertas": [
+        { "ref": "code-scanning:9", "papel": "primario" },
+        { "ref": "code-scanning:5", "papel": "duplicado", "duplicadoDe": "code-scanning:9" },
+        { "ref": "code-scanning:10", "papel": "primario" },
+        { "ref": "code-scanning:6", "papel": "duplicado", "duplicadoDe": "code-scanning:10" },
+        { "ref": "code-scanning:11", "papel": "primario" },
+        { "ref": "code-scanning:7", "papel": "duplicado", "duplicadoDe": "code-scanning:11" },
+        { "ref": "code-scanning:12", "papel": "primario" },
+        { "ref": "code-scanning:8", "papel": "duplicado", "duplicadoDe": "code-scanning:12" }
+      ],
+      "evidencia": {
+        "fontes": [
+          ".agents/skills/gmail-skill/gmail_skill.py:1175-1337",
+          ".claude/skills/gmail-skill/gmail_skill.py:1175-1337"
+        ],
+        "sink": "Resultados da Google People API, incluindo emails, telefones, enderecos, aniversarios e biografias, sao serializados integralmente em stdout."
+      },
+      "preCondicoes": [
+        "O operador invoca comandos de contatos com uma conta real.",
+        "A saida do terminal e capturada em prompt, log, transcript ou suporte."
+      ],
+      "mitigacoes": [
+        "A execucao e local e explicitamente iniciada pelo operador.",
+        "DATA_CLASSIFICATION.md proibe PII real em prompts, logs e GitHub.",
+        "O programa proibe carregar gmail-skill nos PRs 36 a 47."
+      ],
+      "impacto": "PII de contatos pode ser persistida em transcript de agente ou log operacional sem finalidade, minimizacao ou autorizacao.",
+      "conclusao": "O comportamento e intencional para a ferramenta, mas viola a fronteira de dados se sua saida for encaminhada a agentes ou logs sem sanitizacao.",
+      "prRemediacao": "PR 48"
+    },
+    {
+      "id": "SEC-PR37-009",
+      "titulo": "Path traversal apontado no servidor brainstorming",
+      "disposicao": "refutado",
+      "severidade": "low",
+      "alertas": [
+        { "ref": "code-scanning:15", "papel": "primario" },
+        { "ref": "code-scanning:20", "papel": "duplicado", "duplicadoDe": "code-scanning:15" },
+        { "ref": "code-scanning:16", "papel": "primario" },
+        { "ref": "code-scanning:21", "papel": "duplicado", "duplicadoDe": "code-scanning:16" },
+        { "ref": "code-scanning:18", "papel": "primario" },
+        { "ref": "code-scanning:23", "papel": "duplicado", "duplicadoDe": "code-scanning:18" }
+      ],
+      "evidencia": {
+        "fontes": [
+          ".agents/skills/brainstorming/scripts/server.cjs:267-277",
+          ".agents/skills/brainstorming/scripts/server.cjs:420-432",
+          ".agents/skills/brainstorming/scripts/server.cjs:580-604"
+        ],
+        "sink": "A leitura HTTP aplica path.basename e valida arquivo regular, sem symlink e com realpath dentro de CONTENT_DIR; os outros joins recebem nomes de readdir/fs.watch, nao path da requisicao."
+      },
+      "preCondicoes": [
+        "O servidor auxiliar e iniciado localmente."
+      ],
+      "mitigacoes": [
+        "path.basename remove segmentos de diretorio da rota /files.",
+        "isRegularFileInsideContentDir confere tipo, hardlink, symlink e prefixo real.",
+        "As duas copias alertadas sao byte a byte identicas."
+      ],
+      "impacto": "Nao foi encontrada leitura de arquivo arbitrario alcancavel pela entrada HTTP nos sinks alertados.",
+      "conclusao": "O padrao sintatico path.join existe, mas a fonte e os controles refutam a cadeia de traversal reportada.",
+      "proximaRevisao": "PR 48 - manter testes negativos de traversal quando o tooling for formalmente auditado."
+    },
+    {
+      "id": "SEC-PR37-010",
+      "titulo": "HTTP e WebSocket sem TLS no servidor brainstorming",
+      "disposicao": "mitigado",
+      "severidade": "low",
+      "alertas": [
+        { "ref": "code-scanning:14", "papel": "primario" },
+        { "ref": "code-scanning:19", "papel": "duplicado", "duplicadoDe": "code-scanning:14" },
+        { "ref": "code-scanning:17", "papel": "primario" },
+        { "ref": "code-scanning:22", "papel": "duplicado", "duplicadoDe": "code-scanning:17" }
+      ],
+      "evidencia": {
+        "fontes": [
+          ".agents/skills/brainstorming/scripts/server.cjs:83-100",
+          ".agents/skills/brainstorming/scripts/server.cjs:300-390",
+          ".agents/skills/brainstorming/scripts/server.cjs:587-688",
+          ".agents/skills/brainstorming/scripts/helper.js:34"
+        ],
+        "sink": "O auxiliar usa http/ws, mas o host padrao e 127.0.0.1 e cada requisicao/upgrade exige token aleatorio e origem same-origin."
+      },
+      "preCondicoes": [
+        "O operador inicia a skill.",
+        "O risco de rede exige alterar BRAINSTORM_HOST ou comprometer a maquina local."
+      ],
+      "mitigacoes": [
+        "Bind padrao exclusivo em loopback.",
+        "Token por sessao comparado em tempo constante, cookie HttpOnly SameSite=Strict e Origin validado no upgrade.",
+        "Idle timeout e vinculacao ao processo proprietario."
+      ],
+      "impacto": "Sem os controles, conteudo local poderia trafegar em claro; na configuracao padrao o trafego nao sai da maquina.",
+      "conclusao": "O protocolo inseguro esta mitigado no uso padrao, mas configuracoes de bind externo precisam ser proibidas ou protegidas no PR de tooling.",
+      "proximaRevisao": "PR 48 - tornar bind externo fail-closed e preservar os controles existentes."
+    },
+    {
+      "id": "SEC-PR37-011",
+      "titulo": "Chave HMAC literal em teste unitario",
+      "disposicao": "refutado",
+      "severidade": "informational",
+      "alertas": [
+        { "ref": "code-scanning:83", "papel": "primario" }
+      ],
+      "evidencia": {
+        "fontes": [
+          "octaclin-backend/src/modulos/integracoes/aplicacao/processador-webhooks.spec.ts:76-91"
+        ],
+        "sink": "A string segredo-hmac e fixture sintetica injetada em mock e usada apenas para calcular a assercao local."
+      },
+      "preCondicoes": [
+        "A suite Jest e executada."
+      ],
+      "mitigacoes": [
+        "O arquivo e spec e nao entra no build de producao.",
+        "A string nao corresponde a credencial de ambiente ou provider."
+      ],
+      "impacto": "Nenhum material secreto real ou reutilizavel foi encontrado.",
+      "conclusao": "Literal de teste nao e segredo hardcoded de runtime.",
+      "proximaRevisao": "PR 49 - manter scanner de secrets e convencao de fixtures sinteticas."
+    },
+    {
+      "id": "SEC-PR37-012",
+      "titulo": "Path traversal apontado no inventario de migrations do teste",
+      "disposicao": "refutado",
+      "severidade": "informational",
+      "alertas": [
+        { "ref": "code-scanning:76", "papel": "primario" }
+      ],
+      "evidencia": {
+        "fontes": [
+          "octaclin-backend/src/infraestrutura/banco-dados/opcoes-typeorm.spec.ts:122-143"
+        ],
+        "sink": "join recebe __dirname e nomes obtidos por readdirSync da propria pasta de migrations durante Jest."
+      },
+      "preCondicoes": [
+        "A suite local e executada sobre o checkout ja controlado pelo executor."
+      ],
+      "mitigacoes": [
+        "Nao ha entrada HTTP, parametro externo ou leitura fora da pasta enumerada.",
+        "Somente arquivos .ts nao-spec sao lidos."
+      ],
+      "impacto": "Nao existe caminho remoto ou elevacao de acesso no codigo alertado.",
+      "conclusao": "O nome de arquivo vem do filesystem enumerado, nao de usuario nao confiavel.",
+      "proximaRevisao": "PR 49 - nenhuma remediacao; reavaliar somente se o teste passar a receber caminho externo."
+    },
+    {
+      "id": "SEC-PR37-013",
+      "titulo": "Prototype pollution em leitura de payload de comunicacao",
+      "disposicao": "refutado",
+      "severidade": "informational",
+      "alertas": [
+        { "ref": "code-scanning:82", "papel": "primario" }
+      ],
+      "evidencia": {
+        "fontes": [
+          "octaclin-backend/src/modulos/comunicacoes/aplicacao/servico-comunicacoes.ts:258-279"
+        ],
+        "sink": "obterValorAninhado apenas le propriedades e seu unico chamador passa a lista literal ['ultimoStatusMeta', 'recipientId']."
+      },
+      "preCondicoes": [
+        "Uma mensagem possui payload de comunicacao."
+      ],
+      "mitigacoes": [
+        "Nao ha atribuicao ao objeto ou ao prototype.",
+        "O caminho nao vem do cliente e a funcao rejeita arrays e nao objetos."
+      ],
+      "impacto": "Nao foi encontrado efeito de escrita ou alteracao de prototype.",
+      "conclusao": "A regra encontrou acesso dinamico em loop, mas nao existe sink de prototype pollution.",
+      "proximaRevisao": "PR 42 - nenhuma remediacao; preservar caminho server-side fixo."
+    },
+    {
+      "id": "SEC-PR37-014",
+      "titulo": "Controles pnpm 10 ausentes em workspaces pnpm 9",
+      "disposicao": "refutado",
+      "severidade": "informational",
+      "alertas": [
+        { "ref": "code-scanning:72", "papel": "primario" },
+        { "ref": "code-scanning:73", "papel": "associado" },
+        { "ref": "code-scanning:74", "papel": "associado" },
+        { "ref": "code-scanning:85", "papel": "associado" },
+        { "ref": "code-scanning:86", "papel": "associado" },
+        { "ref": "code-scanning:87", "papel": "associado" }
+      ],
+      "evidencia": {
+        "fontes": [
+          "octaclin-backend/package.json:5",
+          "octaclin-web/package.json:5",
+          ".github/workflows/ci.yml:15-16",
+          "octaclin-backend/pnpm-workspace.yaml:1-6",
+          "octaclin-web/pnpm-workspace.yaml:1-22"
+        ],
+        "sink": "As regras exigem minimumReleaseAge, trustPolicy e blockExoticSubdeps, recursos adicionados no pnpm 10.16/10.21/10.26, enquanto projeto e CI fixam pnpm 9.15.9/9."
+      },
+      "preCondicoes": [
+        "Uma instalacao de dependencia e executada."
+      ],
+      "mitigacoes": [
+        "packageManager e CI fixam a major 9.",
+        "Lockfiles, allowBuilds, Actions por SHA, Dependabot e scanners permanecem ativos."
+      ],
+      "impacto": "Os tres controles especificos nao podem ser aplicados de forma eficaz na versao atual; isso nao elimina o risco geral de supply chain.",
+      "conclusao": "O alerta prescreve chaves de uma major nao usada. A atualizacao coordenada e a politica equivalente pertencem ao PR 49.",
+      "proximaRevisao": "PR 49 - decidir upgrade do pnpm, compatibilidade e controles de supply chain com teste de instalacao congelada."
+    },
+    {
+      "id": "SEC-PR37-015",
+      "titulo": "Open redirect nos endpoints Google Agenda",
+      "disposicao": "refutado",
+      "severidade": "low",
+      "alertas": [
+        { "ref": "code-scanning:80", "papel": "primario" },
+        { "ref": "code-scanning:81", "papel": "associado" }
+      ],
+      "evidencia": {
+        "fontes": [
+          "octaclin-backend/src/modulos/agenda/apresentacao/controlador-google-agenda.ts:30-51",
+          "octaclin-backend/src/modulos/agenda/apresentacao/urls-google-agenda.ts:1-12"
+        ],
+        "sink": "conectar devolve JSON com URL gerada pelo servico Google; callback redireciona para OCTACLIN_WEB_URL server-side mais caminho fixo /agenda?google=conectado."
+      },
+      "preCondicoes": [
+        "O profissional autenticado inicia OAuth ou o provider chama o callback com state valido."
+      ],
+      "mitigacoes": [
+        "Nenhuma URL de redirect vem de query, body ou header do solicitante.",
+        "O primeiro metodo nao usa @Redirect; apenas retorna JSON.",
+        "A URL final vem de configuracao de ambiente controlada pelo operador."
+      ],
+      "impacto": "Nao foi encontrado redirect controlavel remotamente nos dois sinks alertados.",
+      "conclusao": "A regra do Semgrep nao distinguiu URL server-side/JSON de entrada nao confiavel.",
+      "proximaRevisao": "PR 46 - ainda validar allowlist de origens e binding do OAuth, sem tratar estes alertas como prova de open redirect."
+    },
+    {
+      "id": "SEC-PR37-016",
+      "titulo": "image-size vulneravel no Metro do aplicativo mobile",
+      "disposicao": "mitigado",
+      "severidade": "high",
+      "alertas": [
+        { "ref": "dependabot:35", "papel": "primario" },
+        { "ref": "code-scanning:88", "papel": "duplicado", "duplicadoDe": "dependabot:35" },
+        { "ref": "dependabot:36", "papel": "primario" },
+        { "ref": "code-scanning:89", "papel": "duplicado", "duplicadoDe": "dependabot:36" }
+      ],
+      "evidencia": {
+        "fontes": [
+          "octaclin-mobile/pnpm-lock.yaml:1850-1853",
+          "octaclin-mobile/pnpm-lock.yaml:5250-5272",
+          "octaclin-mobile/package.json:18-46"
+        ],
+        "sink": "Metro 0.84.4 carrega image-size 1.2.1, afetado por loops infinitos nos parsers ICNS, JXL e HEIF; nao existe versao corrigida publicada no advisory."
+      },
+      "preCondicoes": [
+        "Um arquivo de imagem malicioso em formato afetado entra como input do Metro durante build/desenvolvimento.",
+        "O processo mobile e executado sobre esse input."
+      ],
+      "mitigacoes": [
+        "A dependencia esta no toolchain Metro, nao no backend/web que processam uploads clinicos.",
+        "O aplicativo mobile permanece NO-GO e nao e distribuido.",
+        "Os assets de build sao controlados pelo repositorio; nenhum upload de paciente e encaminhado ao Metro.",
+        "Nao ha versao corrigida para atualizar neste snapshot."
+      ],
+      "impacto": "Negacao de servico do processo de build/desenvolvimento mobile diante de asset malicioso; nao foi encontrada exposicao remota no SaaS web em producao.",
+      "conclusao": "A vulnerabilidade da dependencia e real, mas sua explorabilidade atual esta contida pelo escopo de build e pelo NO-GO mobile.",
+      "proximaRevisao": "PR 49 - acompanhar advisory/Expo/Metro e substituir ou atualizar assim que houver versao corrigida; PR 56 antes de distribuir mobile."
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # OctaClin - Matriz de confiabilidade e regressao
 
-Atualizada no PR 35 da governanca de seguranca em 2026-08-27. A cobertura,
+Atualizada no PR 37 da governanca de seguranca em 2026-08-28. A cobertura,
 as excecoes e os riscos residuais de acessibilidade tem matriz propria em
 `docs/governance/matriz-acessibilidade.json`, validada por `pnpm test:a11y:matriz`.
 Esta matriz conecta os riscos de maior
@@ -36,6 +36,7 @@ smoke real de integracoes ou validacao manual de go-live.
 | PWA e dado clinico offline | Service worker limita cache a assets publicos; fila de check-in/formulario usa AES-GCM com chave apenas em memoria, idempotencia server-side e purge no logout/401. Testes: `octaclin-web/scripts/test-pwa-seguranca.mjs`, `octaclin-web/tests/visual/pwa-portal.spec.mjs`, specs de portal e questionarios. | `pnpm --dir octaclin-web test:pwa` e Jest focado do backend | Bloqueia deploy da PWA |
 | Supply chain dos workflows | Actions remotas usam somente SHA completo de 40 caracteres e preservam a versao em comentario para atualizacao pelo Dependabot; tags, branches, SHA abreviado e pin sem versao documentada reprovam. Teste: `scripts/validar-actions-imutaveis.spec.mjs`. | `pnpm test:actions-imutaveis` | Bloqueia o job Governanca de repositorio |
 | Injecao em scripts de deploy | Expressoes do GitHub Actions nao podem ser interpoladas diretamente em blocos `run`; inputs, matriz e secrets entram por `env` e sao usados como variaveis entre aspas. Payloads sinteticos com quebra de aspas, substituicao de comando e crases reprovam. Teste: `scripts/validar-workflows-sem-injecao.spec.mjs`. | `pnpm test:workflows-seguros` | Bloqueia o job Governanca de repositorio |
+| Triagem factual de seguranca | O snapshot canonico cobre cada alerta CodeQL, Semgrep, Trivy e Dependabot exatamente uma vez; duplicatas apontam para um alerta primario e achados confirmados exigem fonte, sink, pre-condicoes, mitigacoes, impacto, severidade e PR de remediacao. Teste: `scripts/validar-triagem-seguranca.spec.mjs` sobre `docs/governance/triagem-seguranca-pr37.json`. | `pnpm test:triagem-seguranca` | Bloqueia o job Governanca de repositorio |
 
 ## Execucao minima
 
@@ -44,6 +45,7 @@ pnpm test:confiabilidade
 pnpm test:a11y:matriz
 pnpm test:actions-imutaveis
 pnpm test:workflows-seguros
+pnpm test:triagem-seguranca
 pnpm --dir octaclin-backend test --runInBand
 pnpm --dir octaclin-web lint
 pnpm --dir octaclin-web typecheck
