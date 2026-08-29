@@ -1,4 +1,4 @@
-import { createHmac } from 'crypto';
+import { createHmac, randomBytes } from 'crypto';
 import type { AddressInfo } from 'net';
 import { Test } from '@nestjs/testing';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -8,7 +8,7 @@ import { ControladorWebhookWhatsApp } from './controlador-webhook-whatsapp';
 
 describe('ControladorWebhookWhatsApp - contrato HTTP', () => {
   const ambienteOriginal = process.env;
-  const appSecret = 'app-secret-http-sintetico-32-bytes';
+  const appSecret = randomBytes(32).toString('hex');
   let aplicacao: NestExpressApplication;
   let baseUrl: string;
 
