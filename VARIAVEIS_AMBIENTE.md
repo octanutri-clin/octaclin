@@ -31,11 +31,10 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | `PORT` | Sim | Porta do backend | Render/backend | `/health` responde |
 | `CORS_ORIGINS` | Sim em producao | Origens web autorizadas, separadas por virgula e sem `*` | Render/backend | Login/BFF funciona apenas pela origem oficial |
 | `DATABASE_URL` | Sim | Conexao Neon/Postgres por papel sem `BYPASSRLS` | Render/backend | `/health`, login, migrations e RLS |
-| `BANCO_SSL` | Nao | `true` liga TLS na conexao Postgres; qualquer valor fora de `true`/`false` derruba o boot | Render/backend e worker | Com TLS ligado a cadeia e o hostname sao verificados; nao existe mais modo permissivo |
+| `BANCO_SSL` | Nao | `true` liga TLS na conexao Postgres; qualquer valor fora de `true`/`false` derruba o boot | Render/backend e worker | Com TLS ligado a cadeia e o hostname sao sempre verificados; nao existe variavel que desligue a verificacao em nenhum ambiente |
 | `BANCO_SSL_CA` | Nao | Certificado PEM da CA confiavel, quando o banco nao usa CA publica. Exclusiva com `BANCO_SSL_CA_ARQUIVO` | Render/backend e worker | Conexao estabelece; PEM invalido derruba o boot |
 | `BANCO_SSL_CA_ARQUIVO` | Nao | Caminho para o PEM da CA confiavel | Render/backend e worker | Arquivo ilegivel ou sem certificado derruba o boot |
 | `BANCO_SSL_SERVERNAME` | Nao | Nome esperado no certificado quando o host da conexao difere dele (pooler/proxy). O driver `pg` reescreve o SNI com o host, entao o nome declarado e aplicado na verificacao de identidade | Render/backend e worker | Certificado com outro nome passa a ser recusado |
-| `BANCO_SSL_PERMITIR_INSEGURO` | Nao | Opt-in literal para aceitar certificado nao verificado. Proibido em staging e producao | Somente local | Presenca em staging/producao derruba o boot |
 | `BANCO_EXECUTAR_MIGRACOES` | Nao | Executar migrations no boot somente com `true` literal; ausente ou `false` nao executa DDL | Local/Render backend | Runtime sobe sem DDL; `pnpm --dir octaclin-backend migration:run` aplica explicitamente com role owner |
 | `BANCO_POOL_MAX` | Nao | Maximo de conexoes por processo, padrao 10 | Render/backend e worker | `/health/detalhado` mostra limite e uso do pool |
 | `BANCO_POOL_CONNECTION_TIMEOUT_MS` | Nao | Prazo para obter/conectar cliente Postgres, padrao 5000 ms | Render/backend e worker | Saturacao falha em prazo finito |

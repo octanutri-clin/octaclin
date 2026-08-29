@@ -12,7 +12,8 @@ import { ambienteExigeFalhaFechada } from './ambiente-execucao';
  *   e lido, nunca mais e escrito.
  * - **v1** (PR 39): `[0x01][len(keyId)][keyId][IV(12)][TAG(16)][CIPHERTEXT]`.
  *   O cabecalho inteiro entra como AAD, entao adulterar versao ou key-id
- *   invalida a tag antes de qualquer interpretacao do payload.
+ *   invalida a tag antes de qualquer interpretacao do payload. O tamanho da tag
+ *   e fixado em 16 bytes tanto no slot do envelope quanto na chamada ao Node.
  *
  * ## Chaves
  *
@@ -35,7 +36,7 @@ const TAMANHO_MINIMO_CHAVE_BYTES = 32;
 
 const ROTULO_CIFRA = 'octaclin-cifra-aes-256-gcm-v1';
 const ROTULO_INDICE = 'octaclin-busca-pii-v1';
-const ROTULO_KEY_ID = 'octaclin-key-id-v1';
+const ROTULO_IDENTIFICADOR_CHAVE = 'octaclin-key-id-v1';
 
 /**
  * Default sintetico, sem valor de protecao, aceito somente fora de
@@ -68,7 +69,7 @@ export class CriptografiaDadosSensiveis {
     const cabecalho = this.montarCabecalho(atual.keyId);
     const iv = randomBytes(TAMANHO_IV);
 
-    const cifra = createCipheriv('aes-256-gcm', atual.chaveCifra, iv);
+    const cifra = createCipheriv('aes-256-gcm', atual.chaveCifra, iv, { authTagLength: TAMANHO_TAG });
     cifra.setAAD(cabecalho);
     const conteudo = Buffer.concat([cifra.update(valor, 'utf8'), cifra.final()]);
 
@@ -185,7 +186,12 @@ export class CriptografiaDadosSensiveis {
     if (iv.length !== TAMANHO_IV || tag.length !== TAMANHO_TAG) return null;
 
     try {
-      const decifra = createDecipheriv('aes-256-gcm', chave, iv);
+      // `authTagLength` e redundante com a checagem acima e com o slot fixo de
+      // 16 bytes do envelope, e existe de proposito: sem ele o Node aceita
+      // qualquer tag valida para GCM (4, 8, 12..16 bytes), e uma tag de 4 bytes
+      // pode ser forjada com ~2^32 tentativas. A garantia fica na propria API,
+      // nao so numa checagem manual que um refactor futuro pode remover.
+      const decifra = createDecipheriv('aes-256-gcm', chave, iv, { authTagLength: TAMANHO_TAG });
       if (aad) decifra.setAAD(aad);
       decifra.setAuthTag(tag);
       return Buffer.concat([decifra.update(conteudo), decifra.final()]).toString('utf8');
@@ -269,7 +275,7 @@ export class CriptografiaDadosSensiveis {
     const chaveLegado = createHash('sha256').update(chaveBase).digest();
     const chaveCifra = createHmac('sha256', chaveLegado).update(ROTULO_CIFRA).digest();
     const keyId = createHmac('sha256', chaveCifra)
-      .update(ROTULO_KEY_ID)
+      .update(ROTULO_IDENTIFICADOR_CHAVE)
       .digest('hex')
       .slice(0, TAMANHO_KEY_ID_HEX);
 

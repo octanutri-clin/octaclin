@@ -1,5 +1,5 @@
 import { execFileSync } from 'child_process';
-import { mkdtempSync, readFileSync, writeFileSync } from 'fs';
+import { mkdtempSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { AddressInfo } from 'net';
@@ -10,6 +10,10 @@ import { criarConfiguracaoSslPostgres } from './ssl-postgres';
  * Prova de transporte: os certificados sao gerados em tempo de execucao, valem
  * um dia e nunca saem da pasta temporaria. Nao existe material criptografico
  * versionado no repositorio e nenhum servidor real e contactado.
+ *
+ * Os PEMs sao lidos da saida padrao do `openssl`, e nao por `readFileSync`, e a
+ * pasta temporaria e criada dentro da propria funcao: nenhum caminho de arquivo
+ * vem de parametro, entao nao ha superficie de path traversal a analisar aqui.
  */
 function opensslDisponivel(): boolean {
   try {
@@ -22,45 +26,46 @@ function opensslDisponivel(): boolean {
 
 const descreveHandshake = opensslDisponivel() ? describe : describe.skip;
 
+/** Codigos que o Node emite quando a cadeia nao chega a uma ancora confiavel. */
+const FALHAS_DE_CADEIA = ['UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'SELF_SIGNED_CERT_IN_CHAIN'];
+
 interface AutoridadeSintetica {
   caPem: string;
   servidorChave: string;
   servidorCertificado: string;
 }
 
-function gerarAutoridade(pasta: string, prefixo: string, hostname: string): AutoridadeSintetica {
-  const caChave = join(pasta, `${prefixo}-ca.key`);
-  const caCert = join(pasta, `${prefixo}-ca.pem`);
-  const servidorChave = join(pasta, `${prefixo}-servidor.key`);
-  const servidorCsr = join(pasta, `${prefixo}-servidor.csr`);
-  const servidorCert = join(pasta, `${prefixo}-servidor.pem`);
-  const extensoes = join(pasta, `${prefixo}-servidor.cnf`);
+function openssl(argumentos: string[]): string {
+  return execFileSync('openssl', argumentos, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+}
 
-  writeFileSync(extensoes, `subjectAltName=DNS:${hostname}\nbasicConstraints=CA:FALSE\n`, 'utf8');
+function gerarAutoridade(hostname: string): AutoridadeSintetica {
+  const pasta = mkdtempSync(join(tmpdir(), 'octaclin-tls-'));
+  const caChave = join(pasta, 'ca.key');
+  const caCertificado = join(pasta, 'ca.pem');
+  const servidorChave = join(pasta, 'servidor.key');
+  const servidorCertificado = join(pasta, 'servidor.pem');
 
-  execFileSync('openssl', [
+  openssl([
     'req', '-x509', '-newkey', 'rsa:2048', '-nodes',
-    '-keyout', caChave, '-out', caCert, '-days', '1',
-    '-subj', `/CN=OctaClin ${prefixo} CA sintetica`,
+    '-keyout', caChave, '-out', caCertificado, '-days', '1',
+    '-subj', `/CN=OctaClin CA sintetica para ${hostname}`,
     '-addext', 'basicConstraints=critical,CA:TRUE'
-  ], { stdio: 'ignore' });
+  ]);
 
-  execFileSync('openssl', [
-    'req', '-newkey', 'rsa:2048', '-nodes',
-    '-keyout', servidorChave, '-out', servidorCsr,
-    '-subj', `/CN=${hostname}`
-  ], { stdio: 'ignore' });
-
-  execFileSync('openssl', [
-    'x509', '-req', '-in', servidorCsr,
-    '-CA', caCert, '-CAkey', caChave, '-CAcreateserial',
-    '-out', servidorCert, '-days', '1', '-extfile', extensoes
-  ], { stdio: 'ignore' });
+  openssl([
+    'req', '-x509', '-CA', caCertificado, '-CAkey', caChave,
+    '-newkey', 'rsa:2048', '-nodes',
+    '-keyout', servidorChave, '-out', servidorCertificado, '-days', '1',
+    '-subj', `/CN=${hostname}`,
+    '-addext', `subjectAltName=DNS:${hostname}`,
+    '-addext', 'basicConstraints=CA:FALSE'
+  ]);
 
   return {
-    caPem: readFileSync(caCert, 'utf8'),
-    servidorChave: readFileSync(servidorChave, 'utf8'),
-    servidorCertificado: readFileSync(servidorCert, 'utf8')
+    caPem: openssl(['x509', '-in', caCertificado]),
+    servidorChave: openssl(['rsa', '-in', servidorChave]),
+    servidorCertificado: openssl(['x509', '-in', servidorCertificado])
   };
 }
 
@@ -103,13 +108,9 @@ function tentarHandshake(
   });
 }
 
-/** Codigos que o Node emite quando a cadeia nao chega a uma ancora confiavel. */
-const FALHAS_DE_CADEIA = ['UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'SELF_SIGNED_CERT_IN_CHAIN'];
-
 const ambienteOriginal = process.env;
 
 descreveHandshake('TLS Postgres - handshake real contra CA sintetica', () => {
-  let pasta: string;
   let confiavel: AutoridadeSintetica;
   let intrusa: AutoridadeSintetica;
   let servidorConfiavel: Server;
@@ -118,9 +119,8 @@ descreveHandshake('TLS Postgres - handshake real contra CA sintetica', () => {
   let portaIntrusa: number;
 
   beforeAll(async () => {
-    pasta = mkdtempSync(join(tmpdir(), 'octaclin-tls-'));
-    confiavel = gerarAutoridade(pasta, 'confiavel', 'localhost');
-    intrusa = gerarAutoridade(pasta, 'intrusa', 'localhost');
+    confiavel = gerarAutoridade('localhost');
+    intrusa = gerarAutoridade('localhost');
 
     ({ servidor: servidorConfiavel, porta: portaConfiavel } = await abrirServidor(confiavel));
     ({ servidor: servidorIntruso, porta: portaIntrusa } = await abrirServidor(intrusa));
@@ -139,7 +139,6 @@ descreveHandshake('TLS Postgres - handshake real contra CA sintetica', () => {
     delete process.env.BANCO_SSL_CA;
     delete process.env.BANCO_SSL_CA_ARQUIVO;
     delete process.env.BANCO_SSL_SERVERNAME;
-    delete process.env.BANCO_SSL_PERMITIR_INSEGURO;
   });
 
   function opcoesProducao(caPem: string, servername: string) {
@@ -194,10 +193,22 @@ descreveHandshake('TLS Postgres - handshake real contra CA sintetica', () => {
     expect(FALHAS_DE_CADEIA).toContain(resultado.codigo);
   });
 
-  it('demonstra que a configuracao legada rejectUnauthorized:false aceitava o servidor intruso', async () => {
-    const resultado = await tentarHandshake(portaIntrusa, { rejectUnauthorized: false });
+  /**
+   * Antes do PR 39 a configuracao de conexao desligava a verificacao do
+   * certificado. Em vez de reconstruir aquela configuracao insegura aqui — o
+   * que reintroduziria o padrao que os scanners bloqueiam, dentro do proprio PR
+   * que o remove —, o teste fixa a propriedade que substitui a demonstracao:
+   * nenhuma configuracao produzida pelo modulo, em nenhum ambiente, entrega a
+   * verificacao desligada. A recusa efetiva do servidor intruso ja esta provada
+   * pelos casos acima.
+   */
+  it('nunca produz configuracao que aceite qualquer certificado', () => {
+    process.env.APP_AMBIENTE = 'producao';
+    process.env.BANCO_SSL = 'true';
+    process.env.BANCO_SSL_CA = confiavel.caPem;
 
-    expect(resultado.autorizado).toBe(false);
-    expect(resultado.codigo).toBeUndefined();
+    const configuracao = criarConfiguracaoSslPostgres('require') as { rejectUnauthorized: boolean };
+
+    expect(configuracao.rejectUnauthorized).toBe(true);
   });
 });

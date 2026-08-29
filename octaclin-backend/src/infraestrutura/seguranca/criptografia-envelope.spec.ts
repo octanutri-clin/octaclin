@@ -17,7 +17,7 @@ function chaveLegado(material: string): Buffer {
 /** Reproduz o formato legado `[IV][TAG][CIPHERTEXT]` gravado antes do PR 39. */
 function cifrarNoFormatoLegado(material: string, texto: string): Buffer {
   const iv = randomBytes(TAMANHO_IV);
-  const cifra = createCipheriv('aes-256-gcm', chaveLegado(material), iv);
+  const cifra = createCipheriv('aes-256-gcm', chaveLegado(material), iv, { authTagLength: TAMANHO_TAG });
   const conteudo = Buffer.concat([cifra.update(texto, 'utf8'), cifra.final()]);
   return Buffer.concat([iv, cifra.getAuthTag(), conteudo]);
 }
@@ -143,6 +143,20 @@ describe('CriptografiaDadosSensiveis - envelope versionado', () => {
       expect(() => criptografia.descriptografar(Buffer.alloc(tamanho))).toThrow();
     });
 
+    // O Node aceita tag GCM de 4, 8 e de 12 a 16 bytes quando `authTagLength`
+    // nao e informado, e uma tag de 4 bytes e forjavel com ~2^32 tentativas.
+    // Estes tamanhos deixariam exatamente uma tag curta no layout legado.
+    it.each([
+      [16, 4],
+      [20, 8],
+      [24, 12],
+      [26, 14]
+    ])('rejeita buffer de %s bytes, que deixaria tag GCM de %s bytes', (tamanho) => {
+      const criptografia = new CriptografiaDadosSensiveis();
+
+      expect(() => criptografia.descriptografar(Buffer.alloc(tamanho))).toThrow();
+    });
+
     it('rejeita envelope truncado depois do cabecalho valido', () => {
       const criptografia = new CriptografiaDadosSensiveis();
       const cifrado = criptografia.criptografar('conteudo sintetico longo o bastante');
@@ -174,7 +188,9 @@ describe('CriptografiaDadosSensiveis - envelope versionado', () => {
       const criptografia = new CriptografiaDadosSensiveis();
       const envelope = lerEnvelope(criptografia.criptografar('conteudo sintetico'));
 
-      const decifra = createDecipheriv('aes-256-gcm', chaveLegado(CHAVE_A), envelope.iv);
+      const decifra = createDecipheriv('aes-256-gcm', chaveLegado(CHAVE_A), envelope.iv, {
+        authTagLength: TAMANHO_TAG
+      });
       decifra.setAAD(envelope.cabecalho);
       decifra.setAuthTag(envelope.tag);
 
@@ -188,7 +204,9 @@ describe('CriptografiaDadosSensiveis - envelope versionado', () => {
       const chaveCifra = createHmac('sha256', chaveLegado(CHAVE_A))
         .update('octaclin-cifra-aes-256-gcm-v1')
         .digest();
-      const decifra = createDecipheriv('aes-256-gcm', chaveCifra, envelope.iv);
+      const decifra = createDecipheriv('aes-256-gcm', chaveCifra, envelope.iv, {
+        authTagLength: TAMANHO_TAG
+      });
       decifra.setAAD(envelope.cabecalho);
       decifra.setAuthTag(envelope.tag);
 

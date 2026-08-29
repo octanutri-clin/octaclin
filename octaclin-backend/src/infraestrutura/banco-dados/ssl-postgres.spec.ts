@@ -126,22 +126,6 @@ describe('criarConfiguracaoSslPostgres', () => {
       }
     );
 
-    it('torna impossivel desligar a verificacao do certificado em producao', () => {
-      process.env.APP_AMBIENTE = 'producao';
-      process.env.BANCO_SSL = 'true';
-      process.env.BANCO_SSL_PERMITIR_INSEGURO = 'true';
-
-      expect(() => criarConfiguracaoSslPostgres()).toThrow('BANCO_SSL_PERMITIR_INSEGURO');
-    });
-
-    it('torna impossivel desligar a verificacao do certificado em staging', () => {
-      process.env.APP_AMBIENTE = 'staging';
-      process.env.BANCO_SSL = 'true';
-      process.env.BANCO_SSL_PERMITIR_INSEGURO = 'true';
-
-      expect(() => criarConfiguracaoSslPostgres()).toThrow('BANCO_SSL_PERMITIR_INSEGURO');
-    });
-
     it('aceita TLS estrito com sslmode=verify-full', () => {
       process.env.APP_AMBIENTE = 'producao';
 
@@ -149,21 +133,32 @@ describe('criarConfiguracaoSslPostgres', () => {
     });
   });
 
-  describe('escape hatch local', () => {
-    it('so afrouxa a verificacao com opt-in literal fora de staging/producao', () => {
-      process.env.APP_AMBIENTE = 'local';
-      process.env.BANCO_SSL = 'true';
-      process.env.BANCO_SSL_PERMITIR_INSEGURO = 'true';
+  describe('invariante: a verificacao nunca pode ser desligada', () => {
+    // O PR 39 nasceu com um opt-in local (`BANCO_SSL_PERMITIR_INSEGURO`) que
+    // devolvia verificacao desligada fora de staging/producao. Ele foi removido:
+    // um banco com certificado proprio se resolve declarando a CA em
+    // `BANCO_SSL_CA`. Este teste impede que o atalho volte por descuido.
+    const combinacoes: Array<[string, Record<string, string>, string | undefined]> = [
+      ['local com TLS', { APP_AMBIENTE: 'local', BANCO_SSL: 'true' }, undefined],
+      ['test com TLS', { APP_AMBIENTE: 'test', BANCO_SSL: 'true' }, undefined],
+      ['local com sslmode require', { APP_AMBIENTE: 'local' }, 'require'],
+      ['staging com sslmode verify-ca', { APP_AMBIENTE: 'staging' }, 'verify-ca'],
+      ['producao com CA declarada', { APP_AMBIENTE: 'producao', BANCO_SSL: 'true', BANCO_SSL_CA: PEM_SINTETICO }, undefined],
+      [
+        'producao com nome de servidor declarado',
+        { APP_AMBIENTE: 'producao', BANCO_SSL: 'true', BANCO_SSL_SERVERNAME: 'banco.interno.exemplo' },
+        'require'
+      ],
+      ['legado tentando reativar o atalho', { APP_AMBIENTE: 'local', BANCO_SSL: 'true', BANCO_SSL_PERMITIR_INSEGURO: 'true' }, undefined]
+    ];
 
-      expect(criarConfiguracaoSslPostgres()).toEqual({ rejectUnauthorized: false });
-    });
+    it.each(combinacoes)('mantem a verificacao ligada em %s', (_nome, ambiente, sslMode) => {
+      Object.assign(process.env, ambiente);
 
-    it.each(['TRUE', '1', 'sim'])('rejeita BANCO_SSL_PERMITIR_INSEGURO invalido: %s', (valor) => {
-      process.env.APP_AMBIENTE = 'local';
-      process.env.BANCO_SSL = 'true';
-      process.env.BANCO_SSL_PERMITIR_INSEGURO = valor;
+      const configuracao = criarConfiguracaoSslPostgres(sslMode);
 
-      expect(() => criarConfiguracaoSslPostgres()).toThrow('BANCO_SSL_PERMITIR_INSEGURO');
+      expect(configuracao).not.toBe(false);
+      expect((configuracao as { rejectUnauthorized: boolean }).rejectUnauthorized).toBe(true);
     });
   });
 });

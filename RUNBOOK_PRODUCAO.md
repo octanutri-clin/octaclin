@@ -107,7 +107,6 @@ Regras em staging e producao (`APP_AMBIENTE=staging` ou `producao`, ou
 
 - TLS e obrigatorio. Sem `BANCO_SSL=true` e sem `sslmode` estrito, o boot falha.
 - `sslmode=disable`, `allow` e `prefer` sao recusados.
-- `BANCO_SSL_PERMITIR_INSEGURO` e recusado em qualquer valor `true`.
 - `sslmode` desconhecido derruba o boot em vez de virar "sem TLS".
 
 Antes de qualquer deploy que carregue este codigo, confira no provider:
@@ -115,7 +114,8 @@ Antes de qualquer deploy que carregue este codigo, confira no provider:
 1. a `DATABASE_URL` de producao contem `sslmode=require` (ou mais estrito), ou
    `BANCO_SSL=true` esta definido;
 2. `CRIPTOGRAFIA_CHAVE_AES_256` tem pelo menos 32 bytes;
-3. `BANCO_SSL_PERMITIR_INSEGURO` nao existe no ambiente.
+3. nao existe nenhuma tentativa de contornar a verificacao: o modulo nao le
+   nenhuma variavel capaz de desligar a validacao do certificado.
 
 O Neon apresenta certificado emitido por CA publica, entao a cadeia fecha pelo
 armazenamento padrao do Node e `BANCO_SSL_CA` nao deve ser necessario. Preencha
@@ -125,9 +125,10 @@ do nome do certificado, declare o nome esperado em `BANCO_SSL_SERVERNAME`.
 
 Sintoma esperado de falha: o processo nao sobe e registra o motivo
 (`TLS e obrigatorio...`, `sslmode ... e permissivo...`, `BANCO_SSL_CA ...`). E
-falha fechada, nao incidente de banco. Nunca "resolva" ligando
-`BANCO_SSL_PERMITIR_INSEGURO`: em staging e producao ele e recusado justamente
-para nao existir esse atalho.
+falha fechada, nao incidente de banco. Nao existe atalho para "resolver"
+aceitando qualquer certificado: essa opcao foi deliberadamente deixada de fora.
+Se o certificado do banco nao fecha pela CA publica, declare a CA correta em
+`BANCO_SSL_CA` ou `BANCO_SSL_CA_ARQUIVO`.
 
 ### Rotacao da chave de criptografia
 

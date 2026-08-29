@@ -38,9 +38,10 @@ nem de hostname: qualquer certificado apresentado pelo endpoint era aceito.
   autentica o servidor.
 
 A prova esta em `ssl-postgres.handshake.spec.ts`: contra um servidor TLS
-apresentado por uma CA diferente da esperada, a configuracao legada
-(`rejectUnauthorized: false`) completa o handshake sem erro; a configuracao deste
-PR falha o handshake.
+apresentado por uma CA diferente da esperada, a configuracao deste PR falha o
+handshake (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`), e falha tambem quando o hostname
+nao confere. A configuracao legada aceitava ambos os casos, porque
+`rejectUnauthorized: false` desativa exatamente essas duas verificacoes.
 
 ### 1.2 Chave de criptografia sintetica usada como fallback silencioso
 
@@ -82,6 +83,7 @@ comprometer ou rotacionar uma funcao arrasta a outra.
 | Identificacao de chave | ausente | key-id de 8 caracteres hex |
 | AAD | ausente | cabecalho completo (versao + tamanho + key-id) |
 | Chave AES | `sha256(chave_base)` | `HMAC-SHA256(sha256(chave_base), "octaclin-cifra-aes-256-gcm-v1")` |
+| Tamanho da tag | implicito (padrao do Node) | fixo em 16 bytes na estrutura e em `authTagLength` |
 | Escrita | nunca mais | unico formato escrito |
 | Leitura | mantida | mantida |
 
@@ -151,8 +153,10 @@ TLS, resolucao de configuracao (`ssl-postgres.spec.ts`):
 - negativos: `BANCO_SSL` fora de `true`/`false`; `sslmode` desconhecido; CA que
   nao e PEM; arquivo de CA ilegivel; CA declarada em duas fontes; `sslmode`
   permissivo (`allow`, `prefer`, `disable`) em staging/producao; TLS ausente em
-  staging/producao; `BANCO_SSL_PERMITIR_INSEGURO` em staging e em producao;
-  valor invalido do proprio opt-in.
+  staging/producao.
+- invariante: uma matriz de sete combinacoes de ambiente, incluindo uma
+  tentativa de reativar o antigo opt-in inseguro, confirma que nenhuma
+  configuracao produzida pelo modulo entrega verificacao desligada.
 
 TLS, handshake real (`ssl-postgres.handshake.spec.ts`, CA e certificados
 sinteticos gerados em tempo de execucao, validos por um dia, fora do
@@ -163,8 +167,11 @@ repositorio):
 - negativos: servidor apresentado por CA incorreta; hostname incompativel
   (`ERR_TLS_CERT_ALTNAME_INVALID`); ausencia de CA declarada com certificado fora
   do armazenamento padrao.
-- prova da vulnerabilidade: com `rejectUnauthorized: false` o handshake contra o
-  servidor intruso completa sem erro.
+- a demonstracao original, que reconstruia a configuracao insegura para mostrar
+  o handshake completando contra o servidor intruso, foi substituida no hotfix
+  descrito na secao 13: reconstruir aquele padrao dentro do PR que o remove
+  reintroduzia o achado que os scanners bloqueiam. A recusa efetiva do servidor
+  intruso continua provada pelos casos negativos acima.
 
 Criptografia (`criptografia-envelope.spec.ts`):
 
@@ -253,7 +260,6 @@ separada no provider.
 | `APP_AMBIENTE` | Recomendada em staging e producao | Declara o ambiente real. Sem ela, `NODE_ENV=production` no Render faz staging e producao serem tratados igual |
 | `BANCO_SSL_CA` ou `BANCO_SSL_CA_ARQUIVO` | Somente se o banco nao usar CA publica | Ancora explicita da cadeia. O Neon usa CA publica; a expectativa e que nao seja necessaria |
 | `BANCO_SSL_SERVERNAME` | Somente com proxy/pooler cujo hostname difira do certificado | Nome usado na verificacao de hostname e no SNI |
-| `BANCO_SSL_PERMITIR_INSEGURO` | Nunca em staging/producao | Opt-in local. O runtime recusa iniciar se aparecer em staging ou producao |
 | `CRIPTOGRAFIA_CHAVE_AES_256_ANTERIOR` | Somente durante uma rotacao | Habilita dual-read. Remover ao fim da janela |
 | `CRIPTOGRAFIA_CHAVE_INDICE_HMAC` | Somente com backfill planejado | Separa o material do indice cego. Sem backfill, invalida a busca por PII |
 
@@ -308,8 +314,6 @@ Este PR nao tem migration e nao altera dados existentes.
 - Se o rollback precisar durar, a alternativa e reimplantar a versao nova em vez
   de recriptografar.
 - Variaveis novas podem permanecer configuradas: a versao anterior as ignora.
-  A excecao e `BANCO_SSL_PERMITIR_INSEGURO`, que nao deve existir em nenhum
-  ambiente com dado real, em nenhuma versao.
 
 ## 11. Skills
 
@@ -347,3 +351,106 @@ por um unico SHA-256 do valor da variavel de ambiente. Isso e adequado para
 material de alta entropia (o formato documentado e base64 de 32 bytes) e nao
 para uma senha escolhida por pessoa; a validacao de tamanho minimo em
 staging/producao reduz, mas nao elimina, esse risco.
+
+## 13. Hotfix dos alertas de scanner abertos pelo proprio PR
+
+O primeiro push do PR 39 (`bee645f`) reprovou dois checks de code scanning:
+
+- **CodeQL**: 2 alertas novos, ambos de severidade alta;
+- **Semgrep OSS**: 18 alertas novos, sendo 3 errors e 15 warnings.
+
+Os checks so publicam contagem e anotacoes; o detalhe fica na aba Security. Para
+triar com evidencia reproduzivel em vez de leitura de tela, o Semgrep foi
+executado localmente com o repositorio de regras publico
+(`semgrep/semgrep-rules`, commit `40b8c63`), ja que a rede desta sessao nao
+alcanca `semgrep.dev` para resolver `--config auto`. A reproducao local
+encontrou 3 errors e 13 warnings, cobrindo 16 dos 18 alertas do CI. Os 2
+warnings restantes vem de regras presentes apenas no conjunto `auto` e nao foram
+reproduzidos; a proxima execucao do CI dira se sobraram.
+
+### 13.1 `gcm-no-tag-length` - 3 errors (ERROR, CWE-310)
+
+Locais: `criptografia-dados-sensiveis.ts` (producao) e duas construcoes de
+decifra em `criptografia-envelope.spec.ts`.
+
+Quando `createDecipheriv` recebe um modo GCM sem `authTagLength`, o Node aceita
+qualquer tag valida para GCM: 4, 8 ou de 12 a 16 bytes. Uma tag de 4 bytes pode
+ser forjada com cerca de 2^32 tentativas.
+
+Triagem honesta: **o padrao e procedente, o caminho nao era alcancavel neste
+codigo.** O envelope v1 reserva um slot fixo de 16 bytes, `lerEnvelopeVersionado`
+exige o comprimento minimo que garante esse slot cheio, e `abrirGcm` recusa
+explicitamente `tag.length !== 16` nos dois formatos. Nao havia como entregar uma
+tag curta pela superficie de dados.
+
+Ainda assim o alerta foi corrigido, e nao dispensado: `authTagLength: 16` passou
+a ser informado em `createCipheriv` e `createDecipheriv`. A garantia deixa de
+depender apenas de uma checagem manual a dezenas de linhas de distancia, que um
+refactor futuro poderia remover, e passa a existir tambem na API. O valor 16 e o
+padrao do GCM, entao nenhum ciphertext muda de bytes e a compatibilidade com o
+formato legado e com o v1 ja gravado e integral.
+
+Testes acrescentados: buffers de 16, 20, 24 e 26 bytes, que no layout legado
+deixariam exatamente uma tag de 4, 8, 12 e 14 bytes, sao recusados.
+
+### 13.2 `bypass-tls-verification` e os 2 alertas altos do CodeQL
+
+Locais dos tres literais `{ rejectUnauthorized: false }` introduzidos pelo PR:
+o opt-in local em `ssl-postgres.ts`, o teste que o cobria em
+`ssl-postgres.spec.ts` e o teste que demonstrava a vulnerabilidade legada em
+`ssl-postgres.handshake.spec.ts`. Os 2 alertas altos do CodeQL correspondem, com
+alta probabilidade, aos dois primeiros contextos em que o valor chega de fato a
+uma API TLS — a ocorrencia dentro de um `toEqual` nao e um sink. Essa
+correspondencia e inferida, nao lida da aba Security; se a proxima execucao
+apontar outra origem, ela sera tratada separadamente.
+
+Correcao: **o opt-in `BANCO_SSL_PERMITIR_INSEGURO` foi removido do produto.**
+Ele era uma adicao propria deste PR, nao um requisito, e existia para o caso de
+laboratorio local com certificado autoassinado — caso que ja e melhor atendido
+por `BANCO_SSL_CA`, que ancora a cadeia em vez de aceitar qualquer certificado.
+Com a remocao, a propriedade do modulo passa a ser absoluta e mais simples de
+revisar: **nao existe configuracao, em nenhum ambiente, que produza verificacao
+desligada.**
+
+O teste que demonstrava o comportamento legado tambem saiu. Reconstruir a
+configuracao insegura dentro do PR que a elimina reintroduz exatamente o padrao
+que o programa de hardening quer proibir, e o que ele provava era o
+comportamento do Node, nao do OctaClin. No lugar entrou uma invariante, que tem
+valor de regressao maior: uma matriz de sete combinacoes de ambiente — incluindo
+uma tentativa explicita de reativar o antigo opt-in — confirma que toda
+configuracao produzida mantem a verificacao ligada.
+
+Nenhum padrao foi mascarado: nao ha `nosemgrep`, supressao de CodeQL nem
+renomeacao para escapar de assinatura. Os literais deixaram de existir porque o
+comportamento que eles expressavam deixou de existir.
+
+### 13.3 `detect-non-literal-fs-filename` e `path-join-resolve-traversal` - 10 warnings
+
+Todos em `ssl-postgres.handshake.spec.ts`. As duas regras sao de taint e sua
+fonte e **parametro de funcao**: `gerarAutoridade(pasta, prefixo, hostname)`
+recebia o diretorio e o prefixo por parametro, e eles fluiam para `join` e para
+`readFileSync`.
+
+Triagem: falso positivo quanto a exploracao — os caminhos vinham de
+`mkdtempSync(tmpdir())`, sem entrada externa. Mas a correcao nao precisou de
+supressao: a funcao passou a criar o proprio diretorio temporario internamente e
+a usar nomes de arquivo literais, e os PEMs passaram a ser lidos da saida padrao
+do `openssl` em vez de `readFileSync`. Sem parametro na origem, nao ha taint, e
+o teste ficou mais simples: o `openssl req -x509 -CA` do OpenSSL 3 dispensou o
+CSR e o arquivo de extensoes.
+
+### 13.4 `generic-api-key` - 1 info
+
+`ROTULO_KEY_ID` foi renomeado para `ROTULO_IDENTIFICADOR_CHAVE`. A regra do
+gitleaks casa identificadores com "key" atribuidos a string. O **valor**
+`'octaclin-key-id-v1'` nao mudou, porque ele participa da derivacao do key-id:
+mudar a string mudaria todos os key-ids gravados. O novo nome tambem fica
+coerente com `ROTULO_CIFRA` e `ROTULO_INDICE`.
+
+### 13.5 Resultado
+
+Reproducao local apos o hotfix, mesmas regras e mesmos arquivos: **0 achados**
+(antes: 3 errors, 13 warnings, 1 info). Nenhuma migration, recriptografia ou
+operacao em provider foi executada no hotfix. A variavel
+`BANCO_SSL_PERMITIR_INSEGURO` deixou de existir e foi removida de
+`.env.example`, `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md`.

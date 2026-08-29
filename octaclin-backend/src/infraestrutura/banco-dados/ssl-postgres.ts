@@ -5,16 +5,18 @@ import { ambienteExigeFalhaFechada, obterAmbienteExecucao } from '../seguranca/a
 /**
  * Configuracao TLS da conexao Postgres.
  *
- * Ate o PR 39 o backend enviava `rejectUnauthorized: false` sempre que TLS
+ * Ate o PR 39 o backend desligava a verificacao de certificado sempre que TLS
  * estava ligado: a conexao era cifrada, mas qualquer certificado era aceito, o
  * que permite interceptacao ativa entre o runtime e o banco. Aqui a verificacao
- * de cadeia e de hostname passa a ser obrigatoria, com CA explicita opcional
- * para bancos que nao usam uma CA publica.
+ * de cadeia e de hostname passa a ser obrigatoria em todos os ambientes, sem
+ * escape hatch: um banco com certificado proprio se resolve declarando a CA em
+ * `BANCO_SSL_CA`, nunca aceitando qualquer certificado.
  */
 export type ConfiguracaoSslPostgres =
   | false
   | {
-      rejectUnauthorized: boolean;
+      /** Sempre `true`: nao existe caminho que produza verificacao desligada. */
+      rejectUnauthorized: true;
       ca?: string;
       servername?: string;
       checkServerIdentity?: (host: string, certificado: PeerCertificate) => Error | undefined;
@@ -81,7 +83,6 @@ function obterCaConfiada(): string | undefined {
 export function criarConfiguracaoSslPostgres(sslMode?: string | null): ConfiguracaoSslPostgres {
   const modo = normalizarModoSsl(sslMode);
   const bancoSsl = booleanoEstrito('BANCO_SSL');
-  const permitirInseguro = booleanoEstrito('BANCO_SSL_PERMITIR_INSEGURO') ?? false;
   const exigeFalhaFechada = ambienteExigeFalhaFechada();
   const tlsRequerido = bancoSsl === true || (modo !== undefined && MODOS_SSL_EXIGEM_TLS.includes(modo));
 
@@ -89,11 +90,6 @@ export function criarConfiguracaoSslPostgres(sslMode?: string | null): Configura
     if (modo !== undefined && MODOS_SSL_PERMISSIVOS.includes(modo)) {
       throw new Error(
         `sslmode "${modo}" e permissivo e nao pode ser usado em ${obterAmbienteExecucao()}. Use require, verify-ca ou verify-full.`
-      );
-    }
-    if (permitirInseguro) {
-      throw new Error(
-        `BANCO_SSL_PERMITIR_INSEGURO nao pode ser usado em ${obterAmbienteExecucao()}.`
       );
     }
     if (!tlsRequerido) {
@@ -104,12 +100,6 @@ export function criarConfiguracaoSslPostgres(sslMode?: string | null): Configura
   }
 
   if (!tlsRequerido) return false;
-
-  if (permitirInseguro) {
-    // So alcancavel fora de staging/producao: laboratorio local com certificado
-    // autoassinado descartavel.
-    return { rejectUnauthorized: false };
-  }
 
   const ca = obterCaConfiada();
   const servername = process.env.BANCO_SSL_SERVERNAME?.trim();
