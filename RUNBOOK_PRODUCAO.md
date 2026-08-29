@@ -156,6 +156,67 @@ humano e ambiente identificado. Sem o backfill a busca por PII fica
 inconsistente. Enquanto a variavel nao existir, o indice continua derivado da
 chave-base, exatamente como antes do PR 39.
 
+### Sessoes e rotacao de refresh token (PR 40 da governanca)
+
+O PR 40 troca o modelo de sessao. Antes de implantar, leia esta secao inteira:
+a mudanca e intencionalmente incompativel com os tokens ja em circulacao.
+
+**Ordem operacional obrigatoria**
+
+1. Conferir e, se preciso, definir `JWT_SEGREDO` e `JWT_REFRESH_SEGREDO` no
+   provider **antes** do deploy. A partir deste PR os dois sao exigidos tambem em
+   staging, precisam de pelo menos 32 bytes e precisam ser diferentes entre si.
+   Gerar os valores fora do repositorio e fora de qualquer chat; nao reaproveitar
+   o mesmo valor nos dois. Se hoje so `JWT_SEGREDO` estiver configurado, o boot
+   passa a falhar: nao existe mais heranca para o refresh.
+2. Aplicar a migration `1720000001036-CriarSessoesUsuario` fora de banda, com a
+   role owner, pelo procedimento da secao `BANCO_EXECUTAR_MIGRACOES em producao`.
+   Ela e aditiva: cria `sessoes_usuario` com RLS forcada, adiciona `sessao_id` e
+   `consumido_em` em `refresh_tokens` e nao altera nenhuma linha existente.
+3. So entao implantar o codigo. A ordem inversa derruba o boot ou faz toda
+   renovacao falhar.
+
+**Consequencia esperada e aceita: todo mundo precisa entrar de novo.** Os tokens
+antigos nao tem `tipo`, `sid`, `iss` nem `aud`; a verificacao nova os recusa, e o
+refresh antigo tambem nao renova. Isso e falha fechada, nao incidente. Combinar a
+janela e avisar a equipe. Nao existe modo de compatibilidade: aceitar o formato
+antigo reabriria exatamente o que este PR fecha.
+
+**O que passa a valer**
+
+- Cada login abre uma sessao (familia de refresh tokens) com linha propria em
+  `sessoes_usuario`.
+- Cada refresh token e de uso unico. A rotacao e uma escrita condicional na mesma
+  transacao; duas renovacoes concorrentes do mesmo token nao produzem dois
+  descendentes validos.
+- Reuso de token ja consumido ou revogado revoga a familia inteira, invalida os
+  descendentes e registra `auth.sessao.reuso_detectado` na auditoria, sem token,
+  hash ou material derivado. Uma corrida real de renovacao cai nesta mesma regra
+  e encerra a sessao: o usuario entra de novo.
+- `POST /auth/sair` passa a encerrar a sessao inteira, nao apenas o refresh
+  apresentado.
+- O guarda de access token consulta `sessoes_usuario` a cada requisicao
+  autenticada. E o que faz uma revogacao feita por uma instancia derrubar, na
+  outra, um access token que ainda nao expirou. Custo: uma leitura indexada por
+  chave primaria por requisicao.
+
+**Diagnostico rapido**
+
+| Sintoma | Causa provavel |
+| --- | --- |
+| Boot falha com `JWT_REFRESH_SEGREDO e obrigatorio` | Variavel ausente no provider; antes era herdada de `JWT_SEGREDO` |
+| Boot falha com `deve ser diferente de JWT_SEGREDO` | Os dois segredos tem o mesmo valor |
+| Toda renovacao devolve 401 logo apos o deploy | Migration nao aplicada, ou tokens do formato antigo |
+| Usuarios caem sozinhos em massa | `JWT_EMISSOR`/`JWT_AUDIENCIA` divergentes entre instancias |
+
+**Rollback**
+
+Reimplantar o commit anterior. A migration pode permanecer aplicada: as colunas
+novas sao anulaveis e a versao antiga as ignora. Os tokens emitidos pela versao
+nova deixam de ser aceitos pela antiga (falha fechada, sem perda de dado) e todos
+entram de novo. Reverter a migration (`down`) so e necessario para desfazer o
+schema, e derruba as sessoes gravadas; nao ha dado clinico envolvido.
+
 ### BANCO_EXECUTAR_MIGRACOES em producao
 
 `migrationsRun` fica ligado somente quando `BANCO_EXECUTAR_MIGRACOES` e

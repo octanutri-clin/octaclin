@@ -21,7 +21,11 @@ const referenciasObrigatorias = [
   'octaclin-backend/src/modulos/mobile/aplicacao/servico-mobile.spec.ts',
   'octaclin-backend/src/modulos/gamificacao/aplicacao/servico-gamificacao.spec.ts',
   'octaclin-web/tests/visual/fase-197-modulos-avancados.spec.mjs',
-  'octaclin-backend/src/infraestrutura/banco-dados/opcoes-typeorm.spec.ts'
+  'octaclin-backend/src/infraestrutura/banco-dados/opcoes-typeorm.spec.ts',
+  'octaclin-backend/src/modulos/auth/apresentacao/guarda-jwt.spec.ts',
+  'octaclin-backend/src/modulos/auth/aplicacao/servico-sessoes.spec.ts',
+  'octaclin-backend/src/modulos/auth/aplicacao/sessoes-rotacao.integracao.spec.ts',
+  'octaclin-web/scripts/sessoes-bff.spec.ts'
 ];
 
 for (const referencia of referenciasObrigatorias) {
@@ -33,7 +37,7 @@ for (const referencia of referenciasObrigatorias) {
   }
 }
 
-for (const risco of ['Isolamento multi-tenant', 'Autenticacao e autorizacao', 'Integracoes externas', 'BFF e sessao']) {
+for (const risco of ['Isolamento multi-tenant', 'Autenticacao e autorizacao', 'Integracoes externas', 'BFF e sessao', 'Sessoes e rotacao de refresh token']) {
   if (!conteudo.includes(risco)) throw new Error(`Risco critico ausente da matriz: ${risco}`);
 }
 

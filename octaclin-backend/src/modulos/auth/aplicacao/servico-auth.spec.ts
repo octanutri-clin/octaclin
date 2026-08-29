@@ -1,42 +1,71 @@
 import { HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { TIPO_TOKEN_ACESSO, TIPO_TOKEN_RENOVACAO } from '../dominio/claims-token';
 import { RefreshTokenOrm } from '../infraestrutura/refresh-token.orm';
+import { SessaoUsuarioOrm } from '../infraestrutura/sessao-usuario.orm';
 import { ServicoAuth } from './servico-auth';
 
-function criarRepositorioFake(nome: string, dados: Record<string, any>) {
-  const itens: Record<string, any>[] = dados[`${nome}s`] ?? [];
-  return {
-    create: jest.fn((entrada: Record<string, unknown>) => entrada),
-    save: jest.fn(async (entrada: Record<string, any>) => {
-      itens.push(entrada);
-      return entrada;
-    }),
-    findOne: jest.fn(async () => {
-      if (nome === 'tenant') return dados.tenant ?? null;
-      if (nome === 'usuario') return dados.usuario ?? null;
-      return null;
-    })
-  };
+const TENANT = 'tenant-1';
+const USUARIO = 'usuario-1';
+const SESSAO = 'sessao-1';
+
+interface DadosCenario {
+  tenant?: Record<string, unknown>;
+  usuario?: Record<string, unknown>;
+  senhaValida?: boolean;
+  protecaoAbuso?: Record<string, unknown>;
+  sessao?: Partial<SessaoUsuarioOrm> | null;
+  tokenPersistido?: Partial<RefreshTokenOrm> | null;
+  consumoAfetado?: number;
+  claimsRenovacao?: Record<string, unknown>;
+  verifyLanca?: boolean;
 }
 
-function criarServico(dados: Record<string, any> = {}) {
-  const repositorios = {
-    tenant: criarRepositorioFake('tenant', dados),
-    usuario: criarRepositorioFake('usuario', dados),
-    refreshToken: criarRepositorioFake('refreshToken', dados)
+function criarServico(dados: DadosCenario = {}) {
+  const tokensSalvos: Record<string, unknown>[] = [];
+  const sessoesCriadas: Record<string, unknown>[] = [];
+
+  const repositorioTenant = {
+    findOne: jest.fn(async () => dados.tenant ?? null)
+  };
+  const repositorioUsuario = {
+    findOne: jest.fn(async () => dados.usuario ?? null)
+  };
+  const executaConsumo = jest.fn(async () => ({ affected: dados.consumoAfetado ?? 1 }));
+  const construtorConsulta: Record<string, jest.Mock> = {
+    update: jest.fn(() => construtorConsulta),
+    set: jest.fn(() => construtorConsulta),
+    where: jest.fn((_condicao: string, _parametros?: unknown) => construtorConsulta),
+    andWhere: jest.fn((_condicao: string, _parametros?: unknown) => construtorConsulta),
+    execute: executaConsumo
+  };
+  const repositorioTokens = {
+    createQueryBuilder: jest.fn(() => construtorConsulta),
+    findOne: jest.fn(async () => dados.tokenPersistido ?? null),
+    create: jest.fn((entrada: Record<string, unknown>) => entrada),
+    save: jest.fn(async (entrada: Record<string, unknown>) => {
+      tokensSalvos.push(entrada);
+      return entrada;
+    })
+  };
+  const repositorioSessoes = {
+    findOne: jest.fn(async () => dados.sessao ?? null),
+    save: jest.fn(async (entrada: unknown) => entrada)
+  };
+
+  const gerenciador = {
+    getRepository: jest.fn((entidade: { name: string }) => {
+      if (entidade === UsuarioOrm) return repositorioUsuario;
+      if (entidade === RefreshTokenOrm) return repositorioTokens;
+      if (entidade === SessaoUsuarioOrm) return repositorioSessoes;
+      throw new Error(`Repositorio tenant nao mapeado: ${entidade.name}`);
+    })
   };
   const fonteDados = {
     getRepository: jest.fn((entidade: { name: string }) => {
-      if (entidade === TenantOrm) return repositorios.tenant;
+      if (entidade === TenantOrm) return repositorioTenant;
       throw new Error(`Repositorio global nao mapeado: ${entidade.name}`);
-    })
-  };
-  const gerenciador = {
-    getRepository: jest.fn((entidade: { name: string }) => {
-      if (entidade === UsuarioOrm) return repositorios.usuario;
-      if (entidade === RefreshTokenOrm) return repositorios.refreshToken;
-      throw new Error(`Repositorio tenant nao mapeado: ${entidade.name}`);
     })
   };
   const executorTenant = {
@@ -45,12 +74,23 @@ function criarServico(dados: Record<string, any> = {}) {
     )
   };
   const jwt = {
-    signAsync: jest.fn(async () => 'jwt-token'),
-    verifyAsync: jest.fn()
+    signAsync: jest.fn(async (payload: Record<string, unknown>, _opcoes: Record<string, unknown>) => `jwt:${String(payload.tipo)}`),
+    verifyAsync: jest.fn(async () => {
+      if (dados.verifyLanca) throw new Error('assinatura invalida');
+      return (
+        dados.claimsRenovacao ?? {
+          sub: USUARIO,
+          tenantId: TENANT,
+          sid: SESSAO,
+          jti: 'jti-1',
+          tipo: TIPO_TOKEN_RENOVACAO,
+          iat: 1,
+          exp: 2
+        }
+      );
+    })
   };
-  const senhas = {
-    verificar: jest.fn(() => dados.senhaValida ?? false)
-  };
+  const senhas = { verificar: jest.fn(() => dados.senhaValida ?? false) };
   const criptografia = {
     gerarHashBusca: jest.fn((valor: string) => `hash:${valor.trim().toLowerCase()}`)
   };
@@ -58,6 +98,18 @@ function criarServico(dados: Record<string, any> = {}) {
     verificarDisponibilidade: jest.fn(),
     registrarFalha: jest.fn(),
     registrarSucesso: jest.fn()
+  };
+  const sessoes = {
+    criar: jest.fn(async (_gerenciador: unknown, entrada: Record<string, unknown>) => {
+      const criada = { id: SESSAO, ...entrada };
+      sessoesCriadas.push(criada);
+      return criada;
+    }),
+    revogar: jest.fn(async () => true),
+    revogarPorReuso: jest.fn(async () => undefined),
+    listar: jest.fn(async () => []),
+    encerrarPorReferencia: jest.fn(async () => undefined),
+    encerrarOutras: jest.fn(async () => 2)
   };
 
   return {
@@ -67,132 +119,349 @@ function criarServico(dados: Record<string, any> = {}) {
       jwt as never,
       senhas as never,
       criptografia as never,
-      protecaoAbuso as never
+      protecaoAbuso as never,
+      sessoes as never
     ),
-    repositorios,
     jwt,
-    senhas,
-    protecaoAbuso
+    sessoes,
+    protecaoAbuso,
+    repositorioTenant,
+    repositorioTokens,
+    repositorioSessoes,
+    construtorConsulta,
+    tokensSalvos,
+    sessoesCriadas
   };
 }
 
+const USUARIO_ATIVO = {
+  id: USUARIO,
+  tenantId: TENANT,
+  emailHash: 'hash:ana@example.com',
+  senhaHash: 'hash-senha',
+  ativo: true,
+  role: 'Professional'
+};
+
+const CREDENCIAIS = { tenantSlug: 'clinica-carla', email: 'ana@example.com', senha: 'SenhaValida123' };
+
+function sessaoAtiva(extra: Partial<SessaoUsuarioOrm> = {}): Partial<SessaoUsuarioOrm> {
+  return {
+    id: SESSAO,
+    tenantId: TENANT,
+    usuarioId: USUARIO,
+    criadoEm: new Date('2026-08-01T10:00:00.000Z'),
+    ultimaAtividadeEm: new Date('2026-08-01T10:00:00.000Z'),
+    expiraEm: new Date('2126-08-01T10:00:00.000Z'),
+    revogadoEm: null,
+    ...extra
+  };
+}
+
+function cenarioLoginValido(extra: DadosCenario = {}) {
+  return criarServico({
+    tenant: { id: TENANT, slug: 'clinica-carla', status: 'ativo' },
+    usuario: USUARIO_ATIVO,
+    senhaValida: true,
+    ...extra
+  });
+}
+
+const CHAVES_AMBIENTE = ['JWT_EXPIRA_EM', 'JWT_REFRESH_EXPIRA_EM'] as const;
+
 describe('ServicoAuth', () => {
-  it('deve bloquear login abusivo antes de consultar tenant e credenciais', async () => {
-    const protecaoAbuso = {
-      verificarDisponibilidade: jest.fn(() => {
-        throw new HttpException('Muitas tentativas de login. Tente novamente em alguns minutos.', HttpStatus.TOO_MANY_REQUESTS);
-      }),
-      registrarFalha: jest.fn(),
-      registrarSucesso: jest.fn()
-    };
-    const { servico, repositorios } = criarServico({ protecaoAbuso });
+  let snapshot: Map<string, string | undefined>;
 
-    await expect(
-      servico.login({
-        tenantSlug: 'clinica-carla',
-        email: 'ana@example.com',
-        senha: 'SenhaInvalida123'
-      })
-    ).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
-
-    expect(protecaoAbuso.verificarDisponibilidade).toHaveBeenCalledWith(
-      'login:clinica-carla:ana@example.com',
-      expect.objectContaining({ maxTentativas: 5 })
-    );
-    expect(repositorios.tenant.findOne).not.toHaveBeenCalled();
+  beforeEach(() => {
+    snapshot = new Map(CHAVES_AMBIENTE.map((nome) => [nome, process.env[nome]]));
+    for (const nome of CHAVES_AMBIENTE) delete process.env[nome];
   });
 
-  it('deve registrar falha quando senha for invalida', async () => {
-    const { servico, protecaoAbuso } = criarServico({
-      tenant: { id: 'tenant-1', slug: 'clinica-carla', status: 'ativo' },
-      usuario: { id: 'usuario-1', tenantId: 'tenant-1', emailHash: 'hash:ana@example.com', senhaHash: 'hash-senha', ativo: true }
-    });
-
-    await expect(
-      servico.login({
-        tenantSlug: 'clinica-carla',
-        email: 'ana@example.com',
-        senha: 'SenhaInvalida123'
-      })
-    ).rejects.toBeInstanceOf(UnauthorizedException);
-
-    expect(protecaoAbuso.registrarFalha).toHaveBeenCalledWith(
-      'login:clinica-carla:ana@example.com',
-      expect.objectContaining({ maxTentativas: 5 })
-    );
-    expect(protecaoAbuso.registrarSucesso).not.toHaveBeenCalled();
+  afterEach(() => {
+    for (const [nome, valor] of snapshot) {
+      if (valor === undefined) delete process.env[nome];
+      else process.env[nome] = valor;
+    }
   });
 
-  it('deve assinar os tokens com as expiracoes padrao validas', async () => {
-    const { servico, jwt } = criarServico({
-      tenant: { id: 'tenant-1', slug: 'clinica-carla', status: 'ativo' },
-      usuario: {
-        id: 'usuario-1',
-        tenantId: 'tenant-1',
-        emailHash: 'hash:ana@example.com',
-        senhaHash: 'hash-senha',
-        ativo: true,
-        role: 'Professional'
-      },
-      senhaValida: true
-    });
-    const senhaAnterior = process.env.JWT_EXPIRA_EM;
-    const refreshAnterior = process.env.JWT_REFRESH_EXPIRA_EM;
-    delete process.env.JWT_EXPIRA_EM;
-    delete process.env.JWT_REFRESH_EXPIRA_EM;
+  describe('login', () => {
+    it('bloqueia login abusivo antes de consultar tenant e credenciais', async () => {
+      const protecaoAbuso = {
+        verificarDisponibilidade: jest.fn(() => {
+          throw new HttpException('Muitas tentativas de login.', HttpStatus.TOO_MANY_REQUESTS);
+        }),
+        registrarFalha: jest.fn(),
+        registrarSucesso: jest.fn()
+      };
+      const { servico, repositorioTenant } = criarServico({ protecaoAbuso });
 
-    try {
-      await servico.login({
-        tenantSlug: 'clinica-carla',
-        email: 'ana@example.com',
-        senha: 'SenhaValida123'
+      await expect(servico.login(CREDENCIAIS)).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
+      expect(repositorioTenant.findOne).not.toHaveBeenCalled();
+    });
+
+    it('registra falha quando a senha e invalida', async () => {
+      const { servico, protecaoAbuso } = criarServico({
+        tenant: { id: TENANT, slug: 'clinica-carla', status: 'ativo' },
+        usuario: USUARIO_ATIVO
       });
-    } finally {
-      if (senhaAnterior === undefined) delete process.env.JWT_EXPIRA_EM;
-      else process.env.JWT_EXPIRA_EM = senhaAnterior;
-      if (refreshAnterior === undefined) delete process.env.JWT_REFRESH_EXPIRA_EM;
-      else process.env.JWT_REFRESH_EXPIRA_EM = refreshAnterior;
-    }
 
-    expect(jwt.signAsync).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ sub: 'usuario-1' }),
-      expect.objectContaining({ expiresIn: '15m' })
-    );
-    expect(jwt.signAsync).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ sub: 'usuario-1' }),
-      expect.objectContaining({ expiresIn: '30d' })
-    );
+      await expect(servico.login(CREDENCIAIS)).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(protecaoAbuso.registrarFalha).toHaveBeenCalled();
+      expect(protecaoAbuso.registrarSucesso).not.toHaveBeenCalled();
+    });
+
+    it('cria uma sessao independente a cada login', async () => {
+      const { servico, sessoes } = cenarioLoginValido();
+
+      await servico.login(CREDENCIAIS);
+      await servico.login(CREDENCIAIS);
+
+      expect(sessoes.criar).toHaveBeenCalledTimes(2);
+      expect(sessoes.criar).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({ tenantId: TENANT, usuarioId: USUARIO })
+      );
+    });
+
+    it('assina access e refresh com tipo, sessao, emissor e audiencia distintos', async () => {
+      const { servico, jwt } = cenarioLoginValido();
+
+      await servico.login(CREDENCIAIS);
+
+      const [payloadAcesso, opcoesAcesso] = jwt.signAsync.mock.calls[0] as [Record<string, unknown>, Record<string, unknown>];
+      const [payloadRenovacao, opcoesRenovacao] = jwt.signAsync.mock.calls[1] as [Record<string, unknown>, Record<string, unknown>];
+
+      expect(payloadAcesso).toMatchObject({ tipo: TIPO_TOKEN_ACESSO, sid: SESSAO, sub: USUARIO, tenantId: TENANT });
+      expect(payloadRenovacao).toMatchObject({ tipo: TIPO_TOKEN_RENOVACAO, sid: SESSAO });
+      expect(opcoesAcesso).toMatchObject({ algorithm: 'HS256', issuer: 'octaclin', audience: 'octaclin-api' });
+      expect(opcoesRenovacao).toMatchObject({ algorithm: 'HS256' });
+      expect(opcoesAcesso.secret).not.toBe(opcoesRenovacao.secret);
+      expect(opcoesAcesso.jwtid).not.toBe(opcoesRenovacao.jwtid);
+    });
+
+    it('nao coloca papel, permissoes nem emailHash dentro do refresh token', async () => {
+      const { servico, jwt } = cenarioLoginValido();
+
+      await servico.login(CREDENCIAIS);
+
+      const payloadRenovacao = jwt.signAsync.mock.calls[1][0] as Record<string, unknown>;
+      expect(payloadRenovacao).not.toHaveProperty('papel');
+      expect(payloadRenovacao).not.toHaveProperty('permissoes');
+      expect(payloadRenovacao).not.toHaveProperty('emailHash');
+    });
+
+    it('persiste apenas o hash do refresh token, vinculado a sessao', async () => {
+      const { servico, tokensSalvos } = cenarioLoginValido();
+
+      const resposta = await servico.login(CREDENCIAIS);
+
+      expect(tokensSalvos).toHaveLength(1);
+      expect(tokensSalvos[0]).toMatchObject({ sessaoId: SESSAO, familiaToken: SESSAO, usuarioId: USUARIO });
+      expect(tokensSalvos[0].tokenHash).toMatch(/^[0-9a-f]{64}$/);
+      expect(tokensSalvos[0].tokenHash).not.toBe(resposta.refreshToken);
+      expect(JSON.stringify(tokensSalvos[0])).not.toContain(resposta.refreshToken);
+    });
+
+    it('devolve as duracoes reais de access e renovacao em vez de valores fixos', async () => {
+      process.env.JWT_EXPIRA_EM = '7m';
+      process.env.JWT_REFRESH_EXPIRA_EM = '3d';
+      const { servico } = cenarioLoginValido();
+
+      await expect(servico.login(CREDENCIAIS)).resolves.toMatchObject({
+        expiraEmSegundos: 420,
+        renovacaoExpiraEmSegundos: 259200
+      });
+    });
+
+    it('rejeita duracao JWT invalida vinda do ambiente', async () => {
+      process.env.JWT_EXPIRA_EM = 'duracao-invalida';
+      const { servico } = cenarioLoginValido();
+
+      await expect(servico.login(CREDENCIAIS)).rejects.toThrow('duracao de expiracao JWT');
+    });
   });
 
-  it('deve rejeitar duracao JWT invalida vinda do ambiente', async () => {
-    const { servico } = criarServico({
-      tenant: { id: 'tenant-1', slug: 'clinica-carla', status: 'ativo' },
-      usuario: {
-        id: 'usuario-1',
-        tenantId: 'tenant-1',
-        emailHash: 'hash:ana@example.com',
-        senhaHash: 'hash-senha',
-        ativo: true,
-        role: 'Professional'
-      },
-      senhaValida: true
-    });
-    const expiracaoAnterior = process.env.JWT_EXPIRA_EM;
-    process.env.JWT_EXPIRA_EM = 'duracao-invalida';
+  describe('renovacao', () => {
+    it('verifica o refresh token com o tipo e a lista de algoritmos corretos', async () => {
+      const { servico, jwt } = criarServico({
+        sessao: sessaoAtiva(),
+        usuario: USUARIO_ATIVO
+      });
 
-    try {
-      await expect(
-        servico.login({
-          tenantSlug: 'clinica-carla',
-          email: 'ana@example.com',
-          senha: 'SenhaValida123'
-        })
-      ).rejects.toThrow('duracao de expiracao JWT');
-    } finally {
-      if (expiracaoAnterior === undefined) delete process.env.JWT_EXPIRA_EM;
-      else process.env.JWT_EXPIRA_EM = expiracaoAnterior;
-    }
+      await servico.renovar({ refreshToken: 'refresh' });
+
+      expect(jwt.verifyAsync).toHaveBeenCalledWith(
+        'refresh',
+        expect.objectContaining({ algorithms: ['HS256'], issuer: 'octaclin', audience: 'octaclin-api' })
+      );
+    });
+
+    it('recusa access token apresentado como refresh', async () => {
+      const { servico, sessoes } = criarServico({
+        claimsRenovacao: {
+          sub: USUARIO,
+          tenantId: TENANT,
+          sid: SESSAO,
+          jti: 'jti-1',
+          tipo: TIPO_TOKEN_ACESSO,
+          iat: 1,
+          exp: 2,
+          papel: 'Professional',
+          emailHash: 'hash'
+        }
+      });
+
+      await expect(servico.renovar({ refreshToken: 'access' })).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(sessoes.revogarPorReuso).not.toHaveBeenCalled();
+    });
+
+    it('recusa token com assinatura, emissor ou audiencia invalidos', async () => {
+      const { servico } = criarServico({ verifyLanca: true });
+
+      await expect(servico.renovar({ refreshToken: 'adulterado' })).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('consome o token de forma condicional e atomica antes de emitir o descendente', async () => {
+      const { servico, construtorConsulta } = criarServico({ sessao: sessaoAtiva(), usuario: USUARIO_ATIVO });
+
+      await servico.renovar({ refreshToken: 'refresh' });
+
+      const condicoes = construtorConsulta.andWhere.mock.calls.map((chamada: unknown[]) => String(chamada[0]));
+      expect(condicoes).toEqual(expect.arrayContaining(['consumido_em is null', 'revogado_em is null']));
+      expect(construtorConsulta.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('emite um unico descendente por rotacao', async () => {
+      const { servico, tokensSalvos } = criarServico({ sessao: sessaoAtiva(), usuario: USUARIO_ATIVO });
+
+      await servico.renovar({ refreshToken: 'refresh' });
+
+      expect(tokensSalvos).toHaveLength(1);
+    });
+
+    it('revoga a familia inteira quando o token ja havia sido consumido', async () => {
+      const { servico, sessoes } = criarServico({
+        consumoAfetado: 0,
+        tokenPersistido: { consumidoEm: new Date('2026-08-01T10:00:00.000Z') }
+      });
+
+      await expect(servico.renovar({ refreshToken: 'refresh' })).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(sessoes.revogarPorReuso).toHaveBeenCalledWith(TENANT, USUARIO, SESSAO);
+    });
+
+    it('revoga a familia inteira quando o token ja havia sido revogado', async () => {
+      const { servico, sessoes } = criarServico({
+        consumoAfetado: 0,
+        tokenPersistido: { revogadoEm: new Date('2026-08-01T10:00:00.000Z') }
+      });
+
+      await expect(servico.renovar({ refreshToken: 'refresh' })).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(sessoes.revogarPorReuso).toHaveBeenCalled();
+    });
+
+    it('nao revoga a familia quando o token apenas expirou sem ter sido usado', async () => {
+      const { servico, sessoes } = criarServico({
+        consumoAfetado: 0,
+        tokenPersistido: { consumidoEm: null, revogadoEm: null } as Partial<RefreshTokenOrm>
+      });
+
+      await expect(servico.renovar({ refreshToken: 'refresh' })).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(sessoes.revogarPorReuso).not.toHaveBeenCalled();
+    });
+
+    it('nao revoga a familia quando o token nunca existiu no banco', async () => {
+      const { servico, sessoes } = criarServico({ consumoAfetado: 0, tokenPersistido: null });
+
+      await expect(servico.renovar({ refreshToken: 'refresh' })).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(sessoes.revogarPorReuso).not.toHaveBeenCalled();
+    });
+
+    it('recusa rotacao quando a sessao esta revogada', async () => {
+      const { servico, tokensSalvos } = criarServico({
+        sessao: sessaoAtiva({ revogadoEm: new Date('2026-08-01T10:00:00.000Z') }),
+        usuario: USUARIO_ATIVO
+      });
+
+      await expect(servico.renovar({ refreshToken: 'refresh' })).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(tokensSalvos).toHaveLength(0);
+    });
+
+    it('recusa rotacao quando o usuario foi desativado', async () => {
+      const { servico } = criarServico({ sessao: sessaoAtiva(), usuario: undefined });
+
+      await expect(servico.renovar({ refreshToken: 'refresh' })).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('escopa a busca do token ao tenant e ao usuario das claims', async () => {
+      const { servico, repositorioTokens } = criarServico({ consumoAfetado: 0, tokenPersistido: null });
+
+      await expect(servico.renovar({ refreshToken: 'refresh' })).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(repositorioTokens.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ tenantId: TENANT, usuarioId: USUARIO }) })
+      );
+    });
+  });
+
+  describe('logout e sessoes', () => {
+    it('logout encerra a sessao inteira, nao apenas o refresh apresentado', async () => {
+      const { servico, sessoes } = criarServico();
+
+      await servico.revogar('refresh');
+
+      expect(sessoes.revogar).toHaveBeenCalledWith(TENANT, USUARIO, SESSAO, 'logout');
+    });
+
+    it('logout recusa token que nao seja de renovacao', async () => {
+      const { servico, sessoes } = criarServico({
+        claimsRenovacao: {
+          sub: USUARIO,
+          tenantId: TENANT,
+          sid: SESSAO,
+          jti: 'jti',
+          tipo: TIPO_TOKEN_ACESSO,
+          iat: 1,
+          exp: 2,
+          papel: 'Professional',
+          emailHash: 'hash'
+        }
+      });
+
+      await expect(servico.revogar('access')).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(sessoes.revogar).not.toHaveBeenCalled();
+    });
+
+    it('lista e encerra sempre no escopo do usuario autenticado', async () => {
+      const { servico, sessoes } = criarServico();
+      const usuario = {
+        usuarioId: USUARIO,
+        tenantId: TENANT,
+        papel: 'Professional' as const,
+        emailHash: 'hash',
+        permissoes: [],
+        sessaoId: SESSAO
+      };
+
+      await servico.listarSessoes(usuario);
+      await servico.encerrarSessao(usuario, 'a'.repeat(32));
+      await servico.encerrarOutrasSessoes(usuario);
+
+      expect(sessoes.listar).toHaveBeenCalledWith(TENANT, USUARIO, SESSAO);
+      expect(sessoes.encerrarPorReferencia).toHaveBeenCalledWith(TENANT, USUARIO, 'a'.repeat(32));
+      expect(sessoes.encerrarOutras).toHaveBeenCalledWith(TENANT, USUARIO, SESSAO);
+    });
+
+    it('recusa operacao de sessao quando o contexto nao identifica a sessao atual', async () => {
+      const { servico } = criarServico();
+      const usuario = {
+        usuarioId: USUARIO,
+        tenantId: TENANT,
+        papel: 'Professional' as const,
+        emailHash: 'hash',
+        permissoes: []
+      };
+
+      expect(() => servico.listarSessoes(usuario)).toThrow(UnauthorizedException);
+      await expect(servico.encerrarOutrasSessoes(usuario)).rejects.toBeInstanceOf(UnauthorizedException);
+    });
   });
 });

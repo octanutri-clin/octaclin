@@ -13,6 +13,7 @@ import {
   POLITICA_RECUPERACAO_SENHA,
   ServicoProtecaoAbuso
 } from './servico-protecao-abuso';
+import { ServicoSessoes } from './servico-sessoes';
 import { TokenRedefinicaoSenhaOrm } from '../infraestrutura/token-redefinicao-senha.orm';
 
 interface ContextoEnvioEmailRecuperacao {
@@ -49,7 +50,8 @@ export class ServicoRecuperacaoSenha {
     private readonly criptografia: CriptografiaDadosSensiveis,
     private readonly senhas: ServicoSenhas,
     private readonly email: AdaptadorEmailSmtp,
-    private readonly protecaoAbuso: ServicoProtecaoAbuso
+    private readonly protecaoAbuso: ServicoProtecaoAbuso,
+    private readonly sessoes: ServicoSessoes
   ) {}
 
   static hashToken(token: string) {
@@ -146,7 +148,7 @@ export class ServicoRecuperacaoSenha {
   async redefinirSenha(dados: RedefinirSenhaDto): Promise<{ mensagem: string }> {
     const tenantId = extrairTenantToken(dados.token);
 
-    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+    const usuarioId = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorioTokens = gerenciador.getRepository(TokenRedefinicaoSenhaOrm);
       const registro = await repositorioTokens.findOne({
         where: { tenantId, tokenHash: ServicoRecuperacaoSenha.hashToken(dados.token) }
@@ -164,7 +166,13 @@ export class ServicoRecuperacaoSenha {
       registro!.status = 'usado';
       registro!.usadoEm = new Date();
       await repositorioTokens.save(registro!);
+
+      return usuario.id;
     });
+
+    // Trocar a senha precisa derrubar as sessoes abertas com a senha antiga.
+    // Sem isto, quem roubou uma sessao sobrevive a redefinicao da vitima.
+    await this.sessoes.revogarTodas(tenantId, usuarioId, 'senha_redefinida');
 
     return { mensagem: 'Senha redefinida com sucesso.' };
   }

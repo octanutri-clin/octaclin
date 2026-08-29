@@ -17,8 +17,15 @@ export class RefreshTokenOrm {
   @Column({ name: 'familia_token', type: 'varchar', length: 80 })
   familiaToken: string;
 
+  @Column({ name: 'sessao_id', type: 'uuid', nullable: true })
+  sessaoId?: string | null;
+
+  /** Marca de uso unico: preenchida no momento em que o token e rotacionado. */
+  @Column({ name: 'consumido_em', type: 'timestamptz', nullable: true })
+  consumidoEm?: Date | null;
+
   @Column({ name: 'revogado_em', type: 'timestamptz', nullable: true })
-  revogadoEm?: Date;
+  revogadoEm?: Date | null;
 
   @Column({ name: 'expira_em', type: 'timestamptz' })
   expiraEm: Date;

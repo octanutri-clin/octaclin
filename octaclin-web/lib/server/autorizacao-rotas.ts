@@ -12,6 +12,8 @@ export interface DecisaoAcessoRota {
 
 const ROTAS_PORTAL = ['/portal'];
 const ROTAS_CLIENTE = ['/cliente'];
+/** Superficie de conta do proprio usuario: acessivel a qualquer papel autenticado. */
+const ROTAS_CONTA = ['/conta'];
 function pertenceARota(pathname: string, rotas: readonly string[]) {
   return rotas.some((rota) => pathname === rota || pathname.startsWith(`${rota}/`));
 }
@@ -43,6 +45,8 @@ export function resolverDestinoPermitido(papel: string, destinoInicial?: string,
 
 export function decidirAcessoRota(pathname: string, papel?: string, destinoInicial?: string, permissoes?: string[]): DecisaoAcessoRota {
   if (!papel) return { permitir: true };
+
+  if (pertenceARota(pathname, ROTAS_CONTA)) return { permitir: true };
 
   if (papel === 'Patient') {
     return pertenceARota(pathname, ROTAS_PORTAL) ? { permitir: true } : { permitir: false, redirecionarPara: '/portal' };

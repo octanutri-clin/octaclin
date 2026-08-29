@@ -1,5 +1,5 @@
-import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
-import { LoginDto, RedefinirSenhaDto, RenovarTokenDto, SolicitarRecuperacaoSenhaDto, ValidarTokenRedefinicaoSenhaDto } from '../aplicacao/dtos';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import { EncerrarSessaoDto, LoginDto, RedefinirSenhaDto, RenovarTokenDto, SolicitarRecuperacaoSenhaDto, ValidarTokenRedefinicaoSenhaDto } from '../aplicacao/dtos';
 import { ServicoRecuperacaoSenha } from '../aplicacao/servico-recuperacao-senha';
 import { ServicoAuth } from '../aplicacao/servico-auth';
 import { UsuarioAutenticado } from '../dominio/usuario-autenticado';
@@ -55,5 +55,25 @@ export class ControladorAuth {
   @HttpCode(204)
   async sair(@Body() dados: RenovarTokenDto) {
     await this.servicoAuth.revogar(dados.refreshToken);
+  }
+
+  @Get('sessoes')
+  @UseGuards(GuardaJwt)
+  listarSessoes(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoAuth.listarSessoes(usuario);
+  }
+
+  @Delete('sessoes/:referencia')
+  @HttpCode(204)
+  @UseGuards(GuardaJwt)
+  async encerrarSessao(@UsuarioAtual() usuario: UsuarioAutenticado, @Param() parametros: EncerrarSessaoDto) {
+    await this.servicoAuth.encerrarSessao(usuario, parametros.referencia);
+  }
+
+  @Post('sessoes/encerrar-outras')
+  @HttpCode(200)
+  @UseGuards(GuardaJwt)
+  encerrarOutrasSessoes(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoAuth.encerrarOutrasSessoes(usuario);
   }
 }

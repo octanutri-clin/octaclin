@@ -112,3 +112,20 @@ test('cadastro e edicao de paciente exigem gerenciar antes de renderizar', () =>
     { permitir: true }
   );
 });
+
+test('sessoes da propria conta ficam acessiveis a qualquer papel autenticado', () => {
+  for (const papel of ['SuperAdmin', 'Professional', 'Collaborator', 'Patient', 'Client']) {
+    assert.deepEqual(decidirAcessoRota('/conta/sessoes', papel, '/dashboard', []), { permitir: true });
+  }
+});
+
+test('rota de conta nao abre outras areas para paciente e cliente', () => {
+  assert.deepEqual(decidirAcessoRota('/contabilidade', 'Patient', '/portal'), {
+    permitir: false,
+    redirecionarPara: '/portal'
+  });
+  assert.deepEqual(decidirAcessoRota('/agenda', 'Patient', '/portal'), {
+    permitir: false,
+    redirecionarPara: '/portal'
+  });
+});

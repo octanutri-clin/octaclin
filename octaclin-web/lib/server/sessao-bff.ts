@@ -31,6 +31,7 @@ export interface RespostaToken {
   refreshToken: string;
   tipoToken: 'Bearer';
   expiraEmSegundos: number;
+  renovacaoExpiraEmSegundos?: number;
   papel?: string;
   permissoes?: string[];
   escopoDados?: string;
@@ -131,7 +132,9 @@ export async function salvarSessaoBff(
   resposta: RespostaToken
 ) {
   const jar = await cookies();
-  const maxAge = 60 * 60 * 24 * 30;
+  // A validade do cookie acompanha a do refresh token emitido pelo backend: um
+  // cookie mais longo que o token deixaria o navegador com sessao morta.
+  const maxAge = resposta.renovacaoExpiraEmSegundos ?? 60 * 60 * 24 * 30;
   const apiUrlNormalizada = normalizarApiUrlBff(entrada.apiUrl);
   const cookieBase = obterCookieBase();
   jar.set(nomes.accessToken, resposta.accessToken, { ...cookieBase, maxAge: resposta.expiraEmSegundos });

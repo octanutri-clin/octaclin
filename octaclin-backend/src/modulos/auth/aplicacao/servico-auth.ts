@@ -1,8 +1,7 @@
 import { createHash, randomUUID } from 'crypto';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import type { JwtSignOptions } from '@nestjs/jwt';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
@@ -10,37 +9,40 @@ import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { LoginDto, RenovarTokenDto } from './dtos';
 import { montarChaveProtecaoAbuso, POLITICA_LOGIN, ServicoProtecaoAbuso } from './servico-protecao-abuso';
+import { ServicoSessoes } from './servico-sessoes';
 import { contextoAcessoPorPapel } from '../dominio/permissoes';
-import type { PermissaoOctaClin } from '../dominio/permissoes';
-import type { PapelUsuario, UsuarioAutenticado } from '../dominio/usuario-autenticado';
+import {
+  TIPO_TOKEN_ACESSO,
+  TIPO_TOKEN_RENOVACAO,
+  validarClaimsToken,
+  type ClaimsToken,
+  type TipoToken
+} from '../dominio/claims-token';
+import type { UsuarioAutenticado } from '../dominio/usuario-autenticado';
+import {
+  duracaoEmSegundos,
+  expiracaoConfigurada,
+  opcoesAssinatura,
+  opcoesVerificacao
+} from '../infraestrutura/configuracao-jwt';
 import { RefreshTokenOrm } from '../infraestrutura/refresh-token.orm';
+import { SessaoUsuarioOrm } from '../infraestrutura/sessao-usuario.orm';
 
-interface PayloadToken {
-  sub: string;
-  tenantId: string;
-  papel: PapelUsuario;
-  emailHash: string;
-  permissoes?: PermissaoOctaClin[];
-  familiaToken?: string;
+export interface ParTokens {
+  accessToken: string;
+  refreshToken: string;
+  tipoToken: string;
+  expiraEmSegundos: number;
+  renovacaoExpiraEmSegundos: number;
+  papel: UsuarioOrm['role'];
+  permissoes: ReturnType<typeof contextoAcessoPorPapel>['permissoes'];
+  escopoDados: ReturnType<typeof contextoAcessoPorPapel>['escopoDados'];
+  destinoInicial: ReturnType<typeof contextoAcessoPorPapel>['destinoInicial'];
 }
 
-const DURACAO_JWT_VALIDA = /^\d+\s*(milliseconds?|seconds?|minutes?|hours?|days?|weeks?|years?|ms|s|m|h|d|w|y)$/i;
-
-function obterExpiracaoJwt(
-  valorAmbiente: string | undefined,
-  padrao: NonNullable<JwtSignOptions['expiresIn']>
-): NonNullable<JwtSignOptions['expiresIn']> {
-  const valor = valorAmbiente?.trim() || padrao;
-
-  if (typeof valor === 'number') {
-    return valor;
-  }
-
-  if (DURACAO_JWT_VALIDA.test(valor)) {
-    return valor as NonNullable<JwtSignOptions['expiresIn']>;
-  }
-
-  throw new Error('A duracao de expiracao JWT deve usar numero e unidade, por exemplo 15m ou 30d.');
+interface DesfechoRotacao {
+  reuso: boolean;
+  tokens?: ParTokens;
 }
 
 @Injectable()
@@ -51,7 +53,8 @@ export class ServicoAuth {
     private readonly jwt: JwtService,
     private readonly senhas: ServicoSenhas,
     private readonly criptografia: CriptografiaDadosSensiveis,
-    private readonly protecaoAbuso: ServicoProtecaoAbuso
+    private readonly protecaoAbuso: ServicoProtecaoAbuso,
+    private readonly sessoes: ServicoSessoes
   ) {}
 
   async login(dados: LoginDto) {
@@ -80,107 +83,184 @@ export class ServicoAuth {
     }
 
     await this.protecaoAbuso.registrarSucesso(chaveProtecao);
-    return this.emitirParTokens(usuario, randomUUID());
+    return this.emitirSessaoUsuario(usuario);
   }
 
-  async renovar(dados: RenovarTokenDto) {
-    const payload = await this.verificarRefreshToken(dados.refreshToken);
-    const tokenHash = this.hashToken(dados.refreshToken);
-
-    const usuario = await this.executorTenant.executar(payload.tenantId, async (gerenciador) => {
-      const repositorioTokens = gerenciador.getRepository(RefreshTokenOrm);
-      const tokenAtual = await repositorioTokens.findOne({
-        where: {
-          tenantId: payload.tenantId,
-          usuarioId: payload.sub,
-          tokenHash,
-          familiaToken: payload.familiaToken
-        }
+  /**
+   * Cada login abre uma sessao propria. Sessoes anteriores continuam validas:
+   * encerra-las e decisao do usuario, pelos endpoints de sessao.
+   */
+  async emitirSessaoUsuario(usuario: UsuarioOrm): Promise<ParTokens> {
+    return this.executorTenant.executar(usuario.tenantId, async (gerenciador) => {
+      const sessao = await this.sessoes.criar(gerenciador, {
+        tenantId: usuario.tenantId,
+        usuarioId: usuario.id,
+        expiraEm: this.expiracaoSessao()
       });
 
-      if (!tokenAtual || tokenAtual.revogadoEm || tokenAtual.expiraEm <= new Date()) {
-        throw new UnauthorizedException('Refresh token invalido ou expirado.');
+      return this.emitirParTokens(gerenciador, usuario, sessao);
+    });
+  }
+
+  async renovar(dados: RenovarTokenDto): Promise<ParTokens> {
+    const claims = await this.verificarToken(dados.refreshToken, TIPO_TOKEN_RENOVACAO);
+    const tokenHash = this.hashToken(dados.refreshToken);
+    const agora = new Date();
+
+    const desfecho = await this.executorTenant.executar<DesfechoRotacao>(claims.tenantId, async (gerenciador) => {
+      const repositorioTokens = gerenciador.getRepository(RefreshTokenOrm);
+
+      // Consumo de uso unico em uma unica escrita condicional. Duas renovacoes
+      // concorrentes do mesmo token disputam a mesma linha: a segunda so volta a
+      // avaliar a condicao depois do commit da primeira, e ja nao encontra o
+      // token nao consumido. Somente uma rotacao produz descendente valido.
+      const consumo = await repositorioTokens
+        .createQueryBuilder()
+        .update(RefreshTokenOrm)
+        .set({ consumidoEm: agora })
+        .where('tenant_id = :tenantId', { tenantId: claims.tenantId })
+        .andWhere('usuario_id = :usuarioId', { usuarioId: claims.sub })
+        .andWhere('sessao_id = :sessaoId', { sessaoId: claims.sid })
+        .andWhere('token_hash = :tokenHash', { tokenHash })
+        .andWhere('consumido_em is null')
+        .andWhere('revogado_em is null')
+        .andWhere('expira_em > :agora', { agora })
+        .execute();
+
+      if ((consumo.affected ?? 0) !== 1) {
+        const linha = await repositorioTokens.findOne({
+          where: { tenantId: claims.tenantId, usuarioId: claims.sub, tokenHash }
+        });
+
+        // Token apenas expirado nao e evidencia de roubo; consumido ou revogado e.
+        return { reuso: Boolean(linha && (linha.consumidoEm || linha.revogadoEm)) };
       }
 
-      tokenAtual.revogadoEm = new Date();
-      await repositorioTokens.save(tokenAtual);
+      const repositorioSessoes = gerenciador.getRepository(SessaoUsuarioOrm);
+      const sessao = await repositorioSessoes.findOne({
+        where: { tenantId: claims.tenantId, usuarioId: claims.sub, id: claims.sid }
+      });
+
+      if (!sessao || sessao.revogadoEm || sessao.expiraEm.getTime() <= agora.getTime()) {
+        return { reuso: false };
+      }
 
       const usuarioAtual = await gerenciador.getRepository(UsuarioOrm).findOne({
-        where: { id: payload.sub, tenantId: payload.tenantId, ativo: true }
+        where: { id: claims.sub, tenantId: claims.tenantId, ativo: true }
       });
 
-      if (!usuarioAtual) {
-        throw new UnauthorizedException('Usuario inativo ou inexistente.');
-      }
+      if (!usuarioAtual) return { reuso: false };
 
-      return usuarioAtual;
+      sessao.ultimaAtividadeEm = agora;
+      sessao.expiraEm = this.expiracaoSessao(agora);
+      await repositorioSessoes.save(sessao);
+
+      return { reuso: false, tokens: await this.emitirParTokens(gerenciador, usuarioAtual, sessao) };
     });
 
-    return this.emitirParTokens(usuario, payload.familiaToken ?? randomUUID());
+    if (desfecho.reuso) {
+      await this.sessoes.revogarPorReuso(claims.tenantId, claims.sub, claims.sid);
+      throw new UnauthorizedException('Refresh token invalido ou expirado.');
+    }
+
+    if (!desfecho.tokens) {
+      throw new UnauthorizedException('Refresh token invalido ou expirado.');
+    }
+
+    return desfecho.tokens;
   }
 
-  async emitirSessaoUsuario(usuario: UsuarioOrm) {
-    return this.emitirParTokens(usuario, randomUUID());
-  }
-
+  /** Logout: encerra a sessao inteira, nao apenas o refresh token apresentado. */
   async revogar(refreshToken: string): Promise<void> {
-    const payload = await this.verificarRefreshToken(refreshToken);
-    const tokenHash = this.hashToken(refreshToken);
+    const claims = await this.verificarToken(refreshToken, TIPO_TOKEN_RENOVACAO);
+    await this.sessoes.revogar(claims.tenantId, claims.sub, claims.sid, 'logout');
+  }
 
-    await this.executorTenant.executar(payload.tenantId, async (gerenciador) => {
-      await gerenciador.getRepository(RefreshTokenOrm).update(
-        {
-          tenantId: payload.tenantId,
-          usuarioId: payload.sub,
-          tokenHash
-        },
-        { revogadoEm: new Date() }
-      );
-    });
+  listarSessoes(usuario: UsuarioAutenticado) {
+    return this.sessoes.listar(usuario.tenantId, usuario.usuarioId, this.exigirSessao(usuario));
+  }
+
+  async encerrarSessao(usuario: UsuarioAutenticado, referencia: string): Promise<void> {
+    this.exigirSessao(usuario);
+    await this.sessoes.encerrarPorReferencia(usuario.tenantId, usuario.usuarioId, referencia);
+  }
+
+  async encerrarOutrasSessoes(usuario: UsuarioAutenticado): Promise<{ encerradas: number }> {
+    const encerradas = await this.sessoes.encerrarOutras(
+      usuario.tenantId,
+      usuario.usuarioId,
+      this.exigirSessao(usuario)
+    );
+
+    return { encerradas };
   }
 
   obterContextoAcesso(usuario: UsuarioAutenticado) {
     return contextoAcessoPorPapel(usuario.papel);
   }
 
-  private async emitirParTokens(usuario: UsuarioOrm, familiaToken: string) {
+  private exigirSessao(usuario: UsuarioAutenticado): string {
+    if (!usuario.sessaoId) throw new UnauthorizedException('Sessao nao identificada no token.');
+    return usuario.sessaoId;
+  }
+
+  private expiracaoSessao(referencia = new Date()): Date {
+    return new Date(
+      referencia.getTime() + duracaoEmSegundos(expiracaoConfigurada(TIPO_TOKEN_RENOVACAO)) * 1000
+    );
+  }
+
+  private async emitirParTokens(
+    gerenciador: EntityManager,
+    usuario: UsuarioOrm,
+    sessao: SessaoUsuarioOrm
+  ): Promise<ParTokens> {
     const contextoAcesso = contextoAcessoPorPapel(usuario.role);
-    const payload: PayloadToken = {
-      sub: usuario.id,
-      tenantId: usuario.tenantId,
-      papel: usuario.role,
-      emailHash: usuario.emailHash,
-      permissoes: contextoAcesso.permissoes,
-      familiaToken
-    };
 
-    const accessToken = await this.jwt.signAsync(payload, {
-      secret: process.env.JWT_SEGREDO ?? 'dev-access-secret',
-      expiresIn: obterExpiracaoJwt(process.env.JWT_EXPIRA_EM, '15m')
-    });
+    // O refresh token nao carrega papel, permissoes nem emailHash: ele so precisa
+    // apontar para a sessao. Papel e permissoes sao relidos do banco a cada
+    // rotacao, entao uma mudanca de papel nao fica congelada dentro do token.
+    const accessToken = await this.jwt.signAsync(
+      {
+        sub: usuario.id,
+        tenantId: usuario.tenantId,
+        sid: sessao.id,
+        tipo: TIPO_TOKEN_ACESSO,
+        papel: usuario.role,
+        emailHash: usuario.emailHash,
+        permissoes: contextoAcesso.permissoes
+      },
+      opcoesAssinatura(TIPO_TOKEN_ACESSO, randomUUID())
+    );
 
-    const refreshToken = await this.jwt.signAsync(payload, {
-      secret: process.env.JWT_REFRESH_SEGREDO ?? process.env.JWT_SEGREDO ?? 'dev-refresh-secret',
-      expiresIn: obterExpiracaoJwt(process.env.JWT_REFRESH_EXPIRA_EM, '30d')
-    });
+    const refreshToken = await this.jwt.signAsync(
+      {
+        sub: usuario.id,
+        tenantId: usuario.tenantId,
+        sid: sessao.id,
+        tipo: TIPO_TOKEN_RENOVACAO
+      },
+      opcoesAssinatura(TIPO_TOKEN_RENOVACAO, randomUUID())
+    );
 
-    await this.executorTenant.executar(usuario.tenantId, async (gerenciador) => {
-      await gerenciador.getRepository(RefreshTokenOrm).save(
-        gerenciador.getRepository(RefreshTokenOrm).create({
-          tenantId: usuario.tenantId,
-          usuarioId: usuario.id,
-          tokenHash: this.hashToken(refreshToken),
-          familiaToken,
-          expiraEm: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        })
-      );
-    });
+    const repositorioTokens = gerenciador.getRepository(RefreshTokenOrm);
+    await repositorioTokens.save(
+      repositorioTokens.create({
+        tenantId: usuario.tenantId,
+        usuarioId: usuario.id,
+        tokenHash: this.hashToken(refreshToken),
+        familiaToken: sessao.id,
+        sessaoId: sessao.id,
+        expiraEm: sessao.expiraEm
+      })
+    );
 
     return {
       accessToken,
       refreshToken,
       tipoToken: 'Bearer',
-      expiraEmSegundos: 15 * 60,
+      expiraEmSegundos: duracaoEmSegundos(expiracaoConfigurada(TIPO_TOKEN_ACESSO)),
+      renovacaoExpiraEmSegundos: duracaoEmSegundos(expiracaoConfigurada(TIPO_TOKEN_RENOVACAO)),
       papel: usuario.role,
       permissoes: contextoAcesso.permissoes,
       escopoDados: contextoAcesso.escopoDados,
@@ -188,11 +268,10 @@ export class ServicoAuth {
     };
   }
 
-  private async verificarRefreshToken(token: string): Promise<PayloadToken> {
+  private async verificarToken(token: string, tipo: TipoToken): Promise<ClaimsToken> {
     try {
-      return await this.jwt.verifyAsync<PayloadToken>(token, {
-        secret: process.env.JWT_REFRESH_SEGREDO ?? process.env.JWT_SEGREDO ?? 'dev-refresh-secret'
-      });
+      const payload = await this.jwt.verifyAsync(token, opcoesVerificacao(tipo));
+      return validarClaimsToken(payload, tipo);
     } catch {
       throw new UnauthorizedException('Refresh token invalido ou expirado.');
     }

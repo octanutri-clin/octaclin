@@ -65,6 +65,7 @@ function criarServico(dados: Record<string, any> = {}) {
   const protecaoAbuso = dados.protecaoAbuso ?? {
     consumirTentativa: jest.fn()
   };
+  const sessoes = dados.sessoes ?? { revogarTodas: jest.fn(async () => 2) };
 
   return {
     servico: new ServicoRecuperacaoSenha(
@@ -73,12 +74,14 @@ function criarServico(dados: Record<string, any> = {}) {
       criptografia as never,
       senhas,
       email as never,
-      protecaoAbuso as never
+      protecaoAbuso as never,
+      sessoes as never
     ),
     repositorios,
     dados,
     email,
-    protecaoAbuso
+    protecaoAbuso,
+    sessoes
   };
 }
 
@@ -209,6 +212,51 @@ describe('ServicoRecuperacaoSenha', () => {
     expect(repositorios.usuario.save).toHaveBeenCalledWith(expect.objectContaining({ senhaHash: 'senha:NovaSenha@123' }));
     expect(dados.tokens[0].status).toBe('usado');
     expect(dados.tokens[0].usadoEm).toBeInstanceOf(Date);
+  });
+
+  it('deve encerrar todas as sessoes do usuario ao redefinir a senha', async () => {
+    const dados: Record<string, any> = {
+      tokens: [
+        {
+          id: 'token-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-1',
+          emailHash: 'hash:ana@example.com',
+          tokenHash: 'hash-token',
+          status: 'pendente',
+          expiraEm: new Date(Date.now() + 60_000)
+        }
+      ],
+      usuario: { id: 'usuario-1', tenantId: 'tenant-1', senhaHash: 'senha-antiga', ativo: true }
+    };
+    const { servico, sessoes } = criarServico(dados);
+    jest.spyOn(ServicoRecuperacaoSenha, 'hashToken').mockReturnValueOnce('hash-token');
+
+    await servico.redefinirSenha({ token: 'tenant-1.qualquer', senha: 'NovaSenha@123' });
+
+    expect(sessoes.revogarTodas).toHaveBeenCalledWith('tenant-1', 'usuario-1', 'senha_redefinida');
+  });
+
+  it('nao deve encerrar sessoes quando a redefinicao falha', async () => {
+    const { servico, sessoes } = criarServico({
+      tokens: [
+        {
+          id: 'token-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-1',
+          tokenHash: 'hash-token',
+          status: 'usado',
+          usadoEm: new Date(),
+          expiraEm: new Date(Date.now() + 60_000)
+        }
+      ]
+    });
+    jest.spyOn(ServicoRecuperacaoSenha, 'hashToken').mockReturnValueOnce('hash-token');
+
+    await expect(
+      servico.redefinirSenha({ token: 'tenant-1.qualquer', senha: 'NovaSenha@123' })
+    ).rejects.toBeInstanceOf(GoneException);
+    expect(sessoes.revogarTodas).not.toHaveBeenCalled();
   });
 
   it('deve rejeitar token expirado ou ja utilizado', async () => {

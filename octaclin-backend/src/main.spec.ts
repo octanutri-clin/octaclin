@@ -43,6 +43,9 @@ describe('inicializacao da aplicacao', () => {
     process.env = { ...ambienteOriginal, NODE_ENV: 'production' };
     process.env.OCTACLIN_PROCESSO = 'web';
     process.env.FORMULARIO_PUBLICO_SEGREDO = 'segredo-formulario-publico-32-bytes';
+    process.env.JWT_SEGREDO = 'segredo-access-sintetico-com-mais-de-32-bytes';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh-sintetico-com-mais-de-32-bytes';
+    process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'chave-aes-sintetica-de-teste-com-32-bytes';
     delete process.env.META_WHATSAPP_TOKEN;
     delete process.env.META_WHATSAPP_PHONE_NUMBER_ID;
     delete process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN;
@@ -56,6 +59,37 @@ describe('inicializacao da aplicacao', () => {
 
   afterAll(() => {
     process.env = ambienteOriginal;
+  });
+
+  it('recusa iniciar em producao com segredo JWT curto', async () => {
+    process.env.CORS_ORIGINS = 'https://app.octaclin.test';
+    process.env.JWT_SEGREDO = 'curto';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh-sintetico-com-mais-de-32-bytes';
+
+    await expect(carregarMain()).rejects.toThrow('32 bytes');
+
+    expect(mockCriarAplicacao).not.toHaveBeenCalled();
+  });
+
+  it('recusa iniciar em producao com access e refresh compartilhando o segredo', async () => {
+    process.env.CORS_ORIGINS = 'https://app.octaclin.test';
+    process.env.JWT_SEGREDO = 'segredo-compartilhado-sintetico-32-bytes';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-compartilhado-sintetico-32-bytes';
+
+    await expect(carregarMain()).rejects.toThrow('diferente');
+
+    expect(mockCriarAplicacao).not.toHaveBeenCalled();
+  });
+
+  it('recusa iniciar em staging sem segredo JWT, mesmo fora de NODE_ENV=production', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.APP_AMBIENTE = 'staging';
+    process.env.CORS_ORIGINS = 'https://staging.octaclin.test';
+    delete process.env.JWT_SEGREDO;
+
+    await expect(carregarMain()).rejects.toThrow('JWT_SEGREDO');
+
+    expect(mockCriarAplicacao).not.toHaveBeenCalled();
   });
 
   it('recusa iniciar em producao sem CORS_ORIGINS', async () => {
@@ -83,7 +117,7 @@ describe('inicializacao da aplicacao', () => {
 
   it('recusa iniciar em producao sem segredo de refresh JWT', async () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
-    process.env.JWT_SEGREDO = 'segredo-access';
+    process.env.JWT_SEGREDO = 'segredo-access-sintetico-com-mais-de-32-bytes';
     delete process.env.JWT_REFRESH_SEGREDO;
 
     await expect(carregarMain()).rejects.toThrow('JWT_REFRESH_SEGREDO');
@@ -93,8 +127,8 @@ describe('inicializacao da aplicacao', () => {
 
   it('recusa iniciar em producao sem chave de criptografia', async () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
-    process.env.JWT_SEGREDO = 'segredo-access';
-    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.JWT_SEGREDO = 'segredo-access-sintetico-com-mais-de-32-bytes';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh-sintetico-com-mais-de-32-bytes';
     delete process.env.CRIPTOGRAFIA_CHAVE_AES_256;
 
     await expect(carregarMain()).rejects.toThrow('CRIPTOGRAFIA_CHAVE_AES_256');
@@ -104,8 +138,8 @@ describe('inicializacao da aplicacao', () => {
 
   it('recusa chave de criptografia com material insuficiente em producao', async () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
-    process.env.JWT_SEGREDO = 'segredo-access';
-    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.JWT_SEGREDO = 'segredo-access-sintetico-com-mais-de-32-bytes';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh-sintetico-com-mais-de-32-bytes';
     process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'curta-demais';
 
     await expect(carregarMain()).rejects.toThrow('CRIPTOGRAFIA_CHAVE_AES_256 precisa ter pelo menos 32 bytes');
@@ -115,8 +149,8 @@ describe('inicializacao da aplicacao', () => {
 
   it('recusa chave anterior de rotacao igual a chave atual em producao', async () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
-    process.env.JWT_SEGREDO = 'segredo-access';
-    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.JWT_SEGREDO = 'segredo-access-sintetico-com-mais-de-32-bytes';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh-sintetico-com-mais-de-32-bytes';
     process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'chave-criptografia-sintetica-com-32-bytes-ou-mais';
     process.env.CRIPTOGRAFIA_CHAVE_AES_256_ANTERIOR = 'chave-criptografia-sintetica-com-32-bytes-ou-mais';
 
@@ -127,8 +161,8 @@ describe('inicializacao da aplicacao', () => {
 
   it('recusa iniciar em producao sem segredo dedicado de formulario publico', async () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
-    process.env.JWT_SEGREDO = 'segredo-access';
-    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.JWT_SEGREDO = 'segredo-access-sintetico-com-mais-de-32-bytes';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh-sintetico-com-mais-de-32-bytes';
     process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'chave-criptografia-sintetica-com-32-bytes-ou-mais';
     delete process.env.FORMULARIO_PUBLICO_SEGREDO;
 
@@ -139,8 +173,8 @@ describe('inicializacao da aplicacao', () => {
 
   it('recusa OAuth Google parcialmente configurado sem segredo dedicado de state', async () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
-    process.env.JWT_SEGREDO = 'segredo-access';
-    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.JWT_SEGREDO = 'segredo-access-sintetico-com-mais-de-32-bytes';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh-sintetico-com-mais-de-32-bytes';
     process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'chave-criptografia-sintetica-com-32-bytes-ou-mais';
     process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
     process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
@@ -153,8 +187,8 @@ describe('inicializacao da aplicacao', () => {
 
   it('recusa integracao Meta em producao sem app secret do webhook', async () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
-    process.env.JWT_SEGREDO = 'segredo-access';
-    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.JWT_SEGREDO = 'segredo-access-sintetico-com-mais-de-32-bytes';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh-sintetico-com-mais-de-32-bytes';
     process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'chave-criptografia-sintetica-com-32-bytes-ou-mais';
     process.env.META_WHATSAPP_TOKEN = 'token-sintetico';
     process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN = 'verify-sintetico';
@@ -165,8 +199,8 @@ describe('inicializacao da aplicacao', () => {
 
   it('recusa app secret Meta curto em producao', async () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
-    process.env.JWT_SEGREDO = 'segredo-access';
-    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.JWT_SEGREDO = 'segredo-access-sintetico-com-mais-de-32-bytes';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh-sintetico-com-mais-de-32-bytes';
     process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'chave-criptografia-sintetica-com-32-bytes-ou-mais';
     process.env.META_WHATSAPP_TOKEN = 'token-sintetico';
     process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN = 'verify-sintetico';
@@ -178,8 +212,8 @@ describe('inicializacao da aplicacao', () => {
 
   it('confia em exatamente um proxy para resolver req.ip atras do proxy do Render', async () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
-    process.env.JWT_SEGREDO = 'segredo-access';
-    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.JWT_SEGREDO = 'segredo-access-sintetico-com-mais-de-32-bytes';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh-sintetico-com-mais-de-32-bytes';
     process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'chave-criptografia-sintetica-com-32-bytes-ou-mais';
 
     await carregarMain();
