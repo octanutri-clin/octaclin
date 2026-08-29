@@ -6,6 +6,7 @@ import { InterceptorLogRequisicao } from './infraestrutura/observabilidade/inter
 import { middlewareCorrelacao } from './infraestrutura/observabilidade/middleware-correlacao';
 import { ModuloAplicacao } from './modulo-aplicacao';
 import { obterSegredoFormularioPublico } from './infraestrutura/seguranca/segredo-formulario-publico';
+import { validarSegredosJwt } from './modulos/auth/infraestrutura/configuracao-jwt';
 import { obterPapelProcesso } from './infraestrutura/processamento/papel-processo';
 import { redisConfigurado } from './modulos/comunicacoes/aplicacao/configuracao-redis';
 import { ServicoTelemetriaOperacional } from './infraestrutura/observabilidade/servico-telemetria-operacional';
@@ -37,14 +38,6 @@ function validarCorsProducao() {
 
   if (!origens.length || origens.includes('*')) {
     throw new Error('CORS_ORIGINS deve definir origens explicitas em producao.');
-  }
-
-  if (!process.env.JWT_SEGREDO?.trim()) {
-    throw new Error('JWT_SEGREDO e obrigatorio em producao.');
-  }
-
-  if (!process.env.JWT_REFRESH_SEGREDO?.trim()) {
-    throw new Error('JWT_REFRESH_SEGREDO e obrigatorio em producao.');
   }
 
   const chaveCriptografia = process.env.CRIPTOGRAFIA_CHAVE_AES_256?.trim();
@@ -130,5 +123,9 @@ async function iniciarAplicacao() {
   await aplicacao.listen(obterPortaHttp());
 }
 
+// Fora do bloco de producao de proposito: a regra vale tambem em staging, onde
+// `NODE_ENV` sozinho nao distingue o ambiente. Em local e teste, a funcao
+// resolve segredos efemeros e nao derruba o processo.
 validarCorsProducao();
+validarSegredosJwt();
 void iniciarAplicacao();

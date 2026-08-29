@@ -4,7 +4,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { Fragment, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronDown, LogOut, Menu as MenuIcon, type LucideIcon } from 'lucide-react';
+import { ChevronDown, LogOut, Menu as MenuIcon, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { Botao } from '@/components/ui/botao';
@@ -108,7 +108,17 @@ export function PortalShell({
       <p className="mt-1 truncate px-1 text-sm font-semibold text-tinta">{contextoUsuario.workspace}</p>
       <p className="mt-3 truncate px-1 text-sm text-texto-suave">{contextoUsuario.email}</p>
       <p className="px-1 text-xs text-texto-suave">{contextoUsuario.papel}</p>
-      <div className="mt-3 border-t border-linha pt-2">{criarBotaoSair(true)}</div>
+      <div className="mt-3 space-y-1 border-t border-linha pt-2">
+        <Link
+          href={'/conta/sessoes' as Route}
+          role="menuitem"
+          className="flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-tinta hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+        >
+          <ShieldCheck size={16} />
+          Sessões e segurança
+        </Link>
+        {criarBotaoSair(true)}
+      </div>
     </Menu>
   ) : criarBotaoSair(false);
 

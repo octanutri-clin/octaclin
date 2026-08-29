@@ -26,6 +26,15 @@ export interface RespostaLoginPublica {
   destinoInicial?: string;
 }
 
+export interface SessaoAtivaPublica {
+  referencia: string;
+  criadaEm: string;
+  ultimaAtividadeEm: string;
+  expiraEm: string;
+  estado: 'ativa' | 'revogada' | 'expirada';
+  atual: boolean;
+}
+
 export interface ContextoAcessoPublico {
   papel: string;
   permissoes: string[];
@@ -91,4 +100,17 @@ export async function sair(): Promise<void> {
     const { purgarDadosPrivadosPwa } = await import('./pwa-private-queue');
     await purgarDadosPrivadosPwa();
   }
+}
+
+export async function listarSessoes(): Promise<SessaoAtivaPublica[]> {
+  return requisitar<SessaoAtivaPublica[]>('/api/auth/sessoes');
+}
+
+export async function encerrarSessao(referencia: string): Promise<void> {
+  const resposta = await fetch(`/api/auth/sessoes/${encodeURIComponent(referencia)}`, { method: 'DELETE' });
+  if (!resposta.ok) throw new Error('Nao foi possivel encerrar a sessao.');
+}
+
+export async function encerrarOutrasSessoes(): Promise<{ encerradas: number }> {
+  return requisitar<{ encerradas: number }>('/api/auth/sessoes/encerrar-outras', { method: 'POST' });
 }

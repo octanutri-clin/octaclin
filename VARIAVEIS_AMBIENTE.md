@@ -14,6 +14,11 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
   de seguranca, `CRIPTOGRAFIA_CHAVE_AES_256` tambem precisa ter pelo menos 32
   bytes em producao, e o TLS do Postgres passa a exigir cadeia e hostname
   validos em staging e producao.
+- Desde o PR 40, `JWT_SEGREDO` e `JWT_REFRESH_SEGREDO` sao obrigatorios em
+  staging **e** producao, precisam ter pelo menos 32 bytes e precisam ser
+  diferentes entre si. Nao ha mais heranca de `JWT_SEGREDO` para o refresh nem
+  fallback publico versionado; fora de staging/producao a ausencia gera um
+  segredo aleatorio por processo.
   Quando Google Calendar estiver configurado, tambem exige
   `GOOGLE_CALENDAR_OAUTH_STATE_SECRET` com pelo menos 32 bytes;
   `CORS_ORIGINS` nao pode conter `*`.
@@ -41,8 +46,12 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | `BANCO_POOL_IDLE_TIMEOUT_MS` | Nao | Tempo ocioso antes de liberar conexao, padrao 30000 ms | Render/backend e worker | Conexoes ociosas retornam ao Neon |
 | `BANCO_HEALTH_TIMEOUT_MS` | Nao | Prazo dos checks de banco e migrations, padrao 1500 ms | Render/backend | `/health/pronto` nao fica pendurado |
 | `REDIS_URL` | Sim para worker em producao | Filas/outbox/cache | Render/backend e worker | Comunicacoes processam |
-| `JWT_SEGREDO` | Sim | Assinatura access token | Render/backend | Login funciona |
-| `JWT_REFRESH_SEGREDO` | Sim | Assinatura refresh token | Render/backend | Renovacao de sessao funciona |
+| `JWT_SEGREDO` | Sim | Assinatura do access token; minimo 32 bytes em staging/producao | Render/backend | Login funciona; ausencia, material curto ou valor igual ao refresh derruba o boot |
+| `JWT_REFRESH_SEGREDO` | Sim | Assinatura do refresh token; minimo 32 bytes e obrigatoriamente diferente de `JWT_SEGREDO` | Render/backend | Renovacao de sessao funciona; nao ha mais heranca de `JWT_SEGREDO` |
+| `JWT_EXPIRA_EM` | Nao | Validade do access token, padrao `15m`. E o valor devolvido ao cliente em `expiraEmSegundos` | Render/backend | Janela em que um access token sobrevive a uma revogacao de sessao |
+| `JWT_REFRESH_EXPIRA_EM` | Nao | Validade do refresh token e da sessao, padrao `30d`. Define tambem o `maxAge` do cookie de renovacao no BFF | Render/backend | Tempo maximo de sessao inativa |
+| `JWT_EMISSOR` | Nao | `iss` assinado e exigido na verificacao, padrao `octaclin` | Render/backend | Token de outro emissor e recusado; mudar invalida os tokens em circulacao |
+| `JWT_AUDIENCIA` | Nao | `aud` assinado e exigido na verificacao, padrao `octaclin-api` | Render/backend | Token de outra audiencia e recusado; mudar invalida os tokens em circulacao |
 | `CRIPTOGRAFIA_CHAVE_AES_256` | Sim | Chave-base da criptografia de PII e conteudo clinico; minimo 32 bytes em staging/producao | Render/backend e worker | Dados sensiveis salvam/leem; ausencia ou material curto derruba o boot |
 | `CRIPTOGRAFIA_CHAVE_AES_256_ANTERIOR` | Nao | Chave anterior durante uma rotacao (dual-read). A escrita usa somente a chave atual | Render/backend e worker | Registros da chave antiga continuam legiveis; remover ao fim da janela |
 | `CRIPTOGRAFIA_CHAVE_INDICE_HMAC` | Nao | Material dedicado do indice cego de busca por PII, separado da chave de cifra | Render/backend e worker | Trocar invalida os hashes gravados: exige `pnpm --dir octaclin-backend backfill:indices-busca` na mesma janela |

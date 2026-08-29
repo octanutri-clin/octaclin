@@ -49,6 +49,7 @@ import { LiberarSubstituicoesAoPaciente1720000001032 } from './migracoes/1720000
 import { CriarReceitasNutricionais1720000001033 } from './migracoes/1720000001033-CriarReceitasNutricionais';
 import { ProtegerResolucaoAgendaPublica1720000001034 } from './migracoes/1720000001034-ProtegerResolucaoAgendaPublica';
 import { CriarFiltrosSalvosPacientes1720000001035 } from './migracoes/1720000001035-CriarFiltrosSalvosPacientes';
+import { CriarSessoesUsuario1720000001036 } from './migracoes/1720000001036-CriarSessoesUsuario';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -60,6 +61,7 @@ import { AgendaLinkPublicoOrm } from '../../modulos/agenda/infraestrutura/agenda
 import { AgendaSolicitacaoOrm } from '../../modulos/agenda/infraestrutura/agenda-solicitacao.orm';
 import { GoogleCanalWatchOrm } from '../../modulos/agenda/infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from '../../modulos/agenda/infraestrutura/profissional-google-conexao.orm';
+import { SessaoUsuarioOrm } from '../../modulos/auth/infraestrutura/sessao-usuario.orm';
 import { RefreshTokenOrm } from '../../modulos/auth/infraestrutura/refresh-token.orm';
 import { TokenRedefinicaoSenhaOrm } from '../../modulos/auth/infraestrutura/token-redefinicao-senha.orm';
 import { CanalNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/canal-notificacao.orm';
@@ -192,6 +194,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       TenantConfiguracaoOrm,
       UsuarioOrm,
       RefreshTokenOrm,
+      SessaoUsuarioOrm,
       TokenRedefinicaoSenhaOrm,
       ConsentimentoLgpdOrm,
       ProfissionalOrm,
@@ -315,7 +318,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         LiberarSubstituicoesAoPaciente1720000001032,
         CriarReceitasNutricionais1720000001033,
         ProtegerResolucaoAgendaPublica1720000001034,
-        CriarFiltrosSalvosPacientes1720000001035
+        CriarFiltrosSalvosPacientes1720000001035,
+        CriarSessoesUsuario1720000001036
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

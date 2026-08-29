@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test:apis-dinamicas": "node scripts/test-async-dynamic-apis.mjs",
     "test:base-visual": "node scripts/test-base-visual-navegacao.mjs",
-    "test:authz": "node scripts/test-autorizacao-rotas.mjs && node scripts/test-pacientes-fase254-bff.mjs && node scripts/test-agendamento-publico-bff.mjs && node scripts/test-questionarios-revisao-bff.mjs && node scripts/test-dashboard-clinico-bff.mjs && node scripts/test-prontuario-timeline-bff.mjs && node scripts/test-planos-alimentares-bff.mjs && node scripts/test-nutricao-plano.mjs",
+    "test:authz": "node scripts/test-autorizacao-rotas.mjs && node scripts/test-sessoes-bff.mjs && node scripts/test-pacientes-fase254-bff.mjs && node scripts/test-agendamento-publico-bff.mjs && node scripts/test-questionarios-revisao-bff.mjs && node scripts/test-dashboard-clinico-bff.mjs && node scripts/test-prontuario-timeline-bff.mjs && node scripts/test-planos-alimentares-bff.mjs && node scripts/test-nutricao-plano.mjs",
     "test:seguranca-operacional": "node scripts/test-seguranca-operacional.mjs",
     "test:seguranca-runtime": "node scripts/validar-seguranca-runtime.mjs",
     "test:agendamento-publico:bff": "node scripts/test-agendamento-publico-bff.mjs",
@@ -46,7 +46,9 @@
     "e2e:staging:mutavel": "node scripts/e2e-staging-mutavel.mjs",
     "e2e:fase228:onboarding": "node scripts/e2e-fase-228-onboarding.mjs",
     "smoke:demo": "node scripts/smoke-e2e-bff.mjs",
-    "test:reflow": "playwright test tests/visual/reflow-visual.spec.mjs --reporter=list"
+    "test:reflow": "playwright test tests/visual/reflow-visual.spec.mjs --reporter=list",
+    "test:sessoes:bff": "node scripts/test-sessoes-bff.mjs",
+    "test:sessoes": "playwright test tests/visual/sessoes-conta.spec.mjs --project=desktop-chromium --reporter=list"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
