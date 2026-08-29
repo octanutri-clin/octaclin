@@ -2505,12 +2505,16 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - Integrado no `main` pelo PR GitHub `#161` em 2026-08-29 (`94235ee`).
   - Removeu `rejectUnauthorized: false` do Postgres e introduziu envelope AES-GCM versionado com key-id, dual-read do formato legado e rotacao documentada.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR39_2026-08-29.md`.
-- [ ] PR 40 - Endurecer sessoes, JWT e refresh tokens.
-  - Implementacao em `security/governanca-pr40-sessoes-tokens`; aguarda validacao, review, checks e merge humano.
+- [x] PR 40 - Endurecer sessoes, JWT e refresh tokens.
+  - Integrado no `main` pelo PR GitHub `#162` em 2026-08-29 (`7d9c5f7`).
   - Valida algoritmo, emissor, audiencia, tipo, tenant, sessao e claims obrigatorias; separa os segredos de access e refresh com falha fechada em staging/producao.
   - Cria `sessoes_usuario` (migration aditiva `1720000001036`, RLS forcada), torna o refresh de uso unico com deteccao de reuso e revogacao de familia, e expoe listagem/encerramento de sessoes proprias.
   - Consequencia operacional: todos os tokens em circulacao deixam de ser aceitos; a reentrada de todos os usuarios faz parte do rollout. Ver `RUNBOOK_PRODUCAO.md`.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR40_2026-08-29.md`.
+- [ ] Correcao pos-PR 40 - sessoes e historico de acessos.
+  - Corrige o falso erro posterior ao `204`, pagina o historico em cinco acessos e inclui encerramento total e limpeza segura de registros inativos.
+  - Preserva sessoes ativas e a trilha imutavel de auditoria.
+  - Relatorio: `docs/governance/RELATORIO_CORRECAO_POS_PR40_SESSOES_2026-08-29.md`.
 - [ ] PR 41 - Implementar MFA e reautenticacao privilegiada.
 - [ ] PR 42 - Provar autorizacao de objeto e funcao contra BOLA/BFLA/IDOR.
 - [ ] PR 43 - Provar RLS e isolamento multi-tenant integral.
@@ -2531,4 +2535,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo PR autorizado: PR 40. O PR 41 depende do merge e aceite humano deste item.
+Proximo item autorizado: correcao pos-PR 40. O PR 41 depende do merge e aceite humano deste item.

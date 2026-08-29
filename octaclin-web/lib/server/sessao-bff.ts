@@ -53,7 +53,7 @@ export interface SessaoBff {
 
 export class ErroSessaoAusente extends Error {
   constructor() {
-    super('Sessao ausente ou expirada.');
+    super('Sessão ausente ou expirada.');
     this.name = 'ErroSessaoAusente';
   }
 }
@@ -79,7 +79,7 @@ function expiraEm(resposta: RespostaToken) {
 
 export class ErroPermissaoAusente extends Error {
   constructor() {
-    super('Usuario sem permissao para esta acao.');
+    super('Usuário sem permissão para esta ação.');
     this.name = 'ErroPermissaoAusente';
   }
 }
@@ -294,7 +294,7 @@ export async function requisitarBackendAutenticado(caminho: string, init?: Reque
   try {
     resposta = await comEsperaDeColdStart(executar, podeRepetir);
   } catch {
-    return respostaJsonBff(502, 'Nao foi possivel conectar ao backend configurado para esta sessao.');
+    return respostaJsonBff(502, 'Não foi possível conectar ao backend configurado para esta sessão.');
   }
 
   if (resposta.status === 401) {
@@ -304,7 +304,7 @@ export async function requisitarBackendAutenticado(caminho: string, init?: Reque
     try {
       resposta = await comEsperaDeColdStart(executar, podeRepetir);
     } catch {
-      return respostaJsonBff(502, 'Nao foi possivel conectar ao backend configurado para esta sessao.');
+      return respostaJsonBff(502, 'Não foi possível conectar ao backend configurado para esta sessão.');
     }
   }
 

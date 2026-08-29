@@ -21,6 +21,16 @@ export interface SessaoPublica {
   atual: boolean;
 }
 
+export interface PaginaSessoesPublicas {
+  itens: SessaoPublica[];
+  pagina: number;
+  limite: number;
+  total: number;
+  totalPaginas: number;
+}
+
+const LIMITE_SESSOES_POR_PAGINA = 5;
+
 function estadoDaSessao(sessao: SessaoUsuarioOrm, agora: Date): EstadoSessao {
   if (sessao.revogadoEm) return 'revogada';
   if (sessao.expiraEm.getTime() <= agora.getTime()) return 'expirada';
@@ -80,24 +90,63 @@ export class ServicoSessoes {
     });
   }
 
-  async listar(tenantId: string, usuarioId: string, sessaoAtualId: string): Promise<SessaoPublica[]> {
-    const sessoes = await this.executorTenant.executar(tenantId, (gerenciador) =>
-      gerenciador.getRepository(SessaoUsuarioOrm).find({
+  async listar(
+    tenantId: string,
+    usuarioId: string,
+    sessaoAtualId: string,
+    pagina = 1
+  ): Promise<PaginaSessoesPublicas> {
+    const [sessoes, total] = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      gerenciador.getRepository(SessaoUsuarioOrm).findAndCount({
         where: { tenantId, usuarioId },
         order: { ultimaAtividadeEm: 'DESC' },
-        take: 50
+        skip: (pagina - 1) * LIMITE_SESSOES_POR_PAGINA,
+        take: LIMITE_SESSOES_POR_PAGINA
       })
     );
 
     const agora = new Date();
-    return sessoes.map((sessao) => ({
-      referencia: this.referenciaPublica(sessao.id),
-      criadaEm: sessao.criadoEm.toISOString(),
-      ultimaAtividadeEm: sessao.ultimaAtividadeEm.toISOString(),
-      expiraEm: sessao.expiraEm.toISOString(),
-      estado: estadoDaSessao(sessao, agora),
-      atual: sessao.id === sessaoAtualId
-    }));
+    return {
+      itens: sessoes.map((sessao) => ({
+        referencia: this.referenciaPublica(sessao.id),
+        criadaEm: sessao.criadoEm.toISOString(),
+        ultimaAtividadeEm: sessao.ultimaAtividadeEm.toISOString(),
+        expiraEm: sessao.expiraEm.toISOString(),
+        estado: estadoDaSessao(sessao, agora),
+        atual: sessao.id === sessaoAtualId
+      })),
+      pagina,
+      limite: LIMITE_SESSOES_POR_PAGINA,
+      total,
+      totalPaginas: Math.max(1, Math.ceil(total / LIMITE_SESSOES_POR_PAGINA))
+    };
+  }
+
+  async limparHistorico(tenantId: string, usuarioId: string): Promise<number> {
+    const agora = new Date();
+    const removidos = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const resultado = await gerenciador
+        .getRepository(SessaoUsuarioOrm)
+        .createQueryBuilder()
+        .delete()
+        .from(SessaoUsuarioOrm)
+        .where('tenant_id = :tenantId', { tenantId })
+        .andWhere('usuario_id = :usuarioId', { usuarioId })
+        .andWhere('(revogado_em is not null OR expira_em <= :agora)', { agora })
+        .execute();
+
+      return resultado.affected ?? 0;
+    });
+
+    await this.auditoria.registrar({
+      tenantId,
+      usuarioId,
+      acao: 'auth.sessao.historico_limpo',
+      recursoTipo: 'sessao_usuario',
+      metadados: { removidos }
+    });
+
+    return removidos;
   }
 
   async encerrarPorReferencia(tenantId: string, usuarioId: string, referencia: string): Promise<void> {
@@ -106,7 +155,7 @@ export class ServicoSessoes {
     );
 
     const alvo = sessoes.find((sessao) => this.referenciaPublica(sessao.id) === referencia);
-    if (!alvo) throw new NotFoundException('Sessao nao encontrada.');
+    if (!alvo) throw new NotFoundException('Sessão não encontrada.');
 
     await this.revogar(tenantId, usuarioId, alvo.id, 'encerrada_pelo_usuario');
   }

@@ -35,6 +35,14 @@ export interface SessaoAtivaPublica {
   atual: boolean;
 }
 
+export interface SessoesPaginadasPublicas {
+  itens: SessaoAtivaPublica[];
+  pagina: number;
+  limite: number;
+  total: number;
+  totalPaginas: number;
+}
+
 export interface ContextoAcessoPublico {
   papel: string;
   permissoes: string[];
@@ -66,7 +74,7 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
     }
 
     if (detalhe.trim().startsWith('<!DOCTYPE html>') || detalhe.trim().startsWith('<html')) {
-      throw new Error('Falha no servidor web ao autenticar. Recarregue a aplicacao e tente novamente.');
+      throw new Error('Falha no servidor web ao autenticar. Recarregue a aplicação e tente novamente.');
     }
 
     throw new Error(detalhe || `Falha HTTP ${resposta.status}`);
@@ -102,15 +110,26 @@ export async function sair(): Promise<void> {
   }
 }
 
-export async function listarSessoes(): Promise<SessaoAtivaPublica[]> {
-  return requisitar<SessaoAtivaPublica[]>('/api/auth/sessoes');
+export async function listarSessoes(pagina = 1): Promise<SessoesPaginadasPublicas> {
+  return requisitar<SessoesPaginadasPublicas>(`/api/auth/sessoes?pagina=${pagina}`);
 }
 
 export async function encerrarSessao(referencia: string): Promise<void> {
   const resposta = await fetch(`/api/auth/sessoes/${encodeURIComponent(referencia)}`, { method: 'DELETE' });
-  if (!resposta.ok) throw new Error('Nao foi possivel encerrar a sessao.');
+  if (!resposta.ok) throw new Error('Não foi possível encerrar a sessão.');
 }
 
 export async function encerrarOutrasSessoes(): Promise<{ encerradas: number }> {
   return requisitar<{ encerradas: number }>('/api/auth/sessoes/encerrar-outras', { method: 'POST' });
+}
+
+export async function encerrarTodasSessoes(): Promise<{ encerradas: number }> {
+  const resposta = await requisitar<{ encerradas: number }>('/api/auth/sessoes/encerrar-todas', { method: 'POST' });
+  const { purgarDadosPrivadosPwa } = await import('./pwa-private-queue');
+  await purgarDadosPrivadosPwa();
+  return resposta;
+}
+
+export async function limparHistoricoSessoes(): Promise<{ removidos: number }> {
+  return requisitar<{ removidos: number }>('/api/auth/sessoes/historico', { method: 'DELETE' });
 }

@@ -1,5 +1,13 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
-import { EncerrarSessaoDto, LoginDto, RedefinirSenhaDto, RenovarTokenDto, SolicitarRecuperacaoSenhaDto, ValidarTokenRedefinicaoSenhaDto } from '../aplicacao/dtos';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  EncerrarSessaoDto,
+  ListarSessoesDto,
+  LoginDto,
+  RedefinirSenhaDto,
+  RenovarTokenDto,
+  SolicitarRecuperacaoSenhaDto,
+  ValidarTokenRedefinicaoSenhaDto
+} from '../aplicacao/dtos';
 import { ServicoRecuperacaoSenha } from '../aplicacao/servico-recuperacao-senha';
 import { ServicoAuth } from '../aplicacao/servico-auth';
 import { UsuarioAutenticado } from '../dominio/usuario-autenticado';
@@ -59,8 +67,15 @@ export class ControladorAuth {
 
   @Get('sessoes')
   @UseGuards(GuardaJwt)
-  listarSessoes(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoAuth.listarSessoes(usuario);
+  listarSessoes(@UsuarioAtual() usuario: UsuarioAutenticado, @Query() consulta: ListarSessoesDto) {
+    return this.servicoAuth.listarSessoes(usuario, consulta.pagina);
+  }
+
+  @Delete('sessoes/historico')
+  @HttpCode(200)
+  @UseGuards(GuardaJwt)
+  limparHistoricoSessoes(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoAuth.limparHistoricoSessoes(usuario);
   }
 
   @Delete('sessoes/:referencia')
@@ -75,5 +90,12 @@ export class ControladorAuth {
   @UseGuards(GuardaJwt)
   encerrarOutrasSessoes(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoAuth.encerrarOutrasSessoes(usuario);
+  }
+
+  @Post('sessoes/encerrar-todas')
+  @HttpCode(200)
+  @UseGuards(GuardaJwt)
+  encerrarTodasSessoes(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoAuth.encerrarTodasSessoes(usuario);
   }
 }

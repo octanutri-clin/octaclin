@@ -106,7 +106,7 @@ test('BFF interno rejeita requisicao sem sessao antes de consultar o backend', a
     const corpo = (await resposta.json()) as { mensagem: string };
 
     assert.equal(resposta.status, 401);
-    assert.equal(corpo.mensagem, 'Sessao ausente ou expirada.');
+    assert.equal(corpo.mensagem, 'Sessão ausente ou expirada.');
     assert.equal(backendChamado, false);
   } finally {
     restaurarFetch(fetchOriginal);

@@ -1,11 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
 
-export async function GET(request: NextRequest) {
+export async function DELETE() {
   try {
-    const paginaInformada = Number(request.nextUrl.searchParams.get('pagina') ?? '1');
-    const pagina = Number.isInteger(paginaInformada) && paginaInformada > 0 ? paginaInformada : 1;
-    const resposta = await requisitarBackendAutenticado(`/auth/sessoes?pagina=${pagina}`);
+    const resposta = await requisitarBackendAutenticado('/auth/sessoes/historico', { method: 'DELETE' });
     return new NextResponse(await resposta.text(), {
       status: resposta.status,
       headers: {
