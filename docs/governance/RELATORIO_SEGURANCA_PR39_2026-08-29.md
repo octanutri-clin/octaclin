@@ -359,14 +359,36 @@ O primeiro push do PR 39 (`bee645f`) reprovou dois checks de code scanning:
 - **CodeQL**: 2 alertas novos, ambos de severidade alta;
 - **Semgrep OSS**: 18 alertas novos, sendo 3 errors e 15 warnings.
 
-Os checks so publicam contagem e anotacoes; o detalhe fica na aba Security. Para
-triar com evidencia reproduzivel em vez de leitura de tela, o Semgrep foi
-executado localmente com o repositorio de regras publico
-(`semgrep/semgrep-rules`, commit `40b8c63`), ja que a rede desta sessao nao
-alcanca `semgrep.dev` para resolver `--config auto`. A reproducao local
-encontrou 3 errors e 13 warnings, cobrindo 16 dos 18 alertas do CI. Os 2
-warnings restantes vem de regras presentes apenas no conjunto `auto` e nao foram
-reproduzidos; a proxima execucao do CI dira se sobraram.
+Os checks so publicam contagem e anotacoes. Para triar com evidencia
+reproduzivel em vez de leitura de tela, o Semgrep foi executado localmente com o
+repositorio de regras publico (`semgrep/semgrep-rules`, commit `40b8c63`), ja
+que a rede desta sessao nao alcanca `semgrep.dev` para resolver `--config auto`.
+
+Depois do hotfix, os threads de review do `github-advanced-security` foram
+resolvidos automaticamente e passaram a expor a lista completa, que confirma a
+triagem e corrige duas atribuicoes feitas antes por inferencia. Distribuicao
+real dos 20 alertas:
+
+| Ferramenta | Regra | Qtd | Arquivo |
+| --- | --- | --- | --- |
+| CodeQL | Disabling certificate validation | 1 | `ssl-postgres.ts` |
+| CodeQL | Disabling certificate validation | 1 | `ssl-postgres.handshake.spec.ts` |
+| Semgrep | `gcm-no-tag-length` (ERROR) | 1 | `criptografia-dados-sensiveis.ts` |
+| Semgrep | `gcm-no-tag-length` (ERROR) | 2 | `criptografia-envelope.spec.ts` |
+| Semgrep | `bypass-tls-verification` (WARNING) | 3 | `ssl-postgres.ts`, `ssl-postgres.spec.ts`, `ssl-postgres.handshake.spec.ts` |
+| Semgrep | `path-join-resolve-traversal` (WARNING) | 12 | `ssl-postgres.handshake.spec.ts` |
+
+Duas correcoes em relacao ao que este relatorio afirmava antes de a lista estar
+disponivel:
+
+1. `detect-non-literal-fs-filename` **nao** estava no conjunto `auto` do CI. Ela
+   apareceu somente na reproducao local, onde as regras de `javascript/` foram
+   carregadas por inteiro. Os 15 warnings do CI eram 3 de
+   `bypass-tls-verification` e 12 de `path-join-resolve-traversal`.
+2. Os 2 warnings que a reproducao local nao havia coberto eram mais ocorrencias
+   de `path-join-resolve-traversal` no mesmo arquivo, nao regras diferentes. A
+   reproducao local cobriu todas as classes de achado, com contagem menor dentro
+   de uma delas.
 
 ### 13.1 `gcm-no-tag-length` - 3 errors (ERROR, CWE-310)
 
@@ -398,11 +420,13 @@ deixariam exatamente uma tag de 4, 8, 12 e 14 bytes, sao recusados.
 Locais dos tres literais `{ rejectUnauthorized: false }` introduzidos pelo PR:
 o opt-in local em `ssl-postgres.ts`, o teste que o cobria em
 `ssl-postgres.spec.ts` e o teste que demonstrava a vulnerabilidade legada em
-`ssl-postgres.handshake.spec.ts`. Os 2 alertas altos do CodeQL correspondem, com
-alta probabilidade, aos dois primeiros contextos em que o valor chega de fato a
-uma API TLS — a ocorrencia dentro de um `toEqual` nao e um sink. Essa
-correspondencia e inferida, nao lida da aba Security; se a proxima execucao
-apontar outra origem, ela sera tratada separadamente.
+`ssl-postgres.handshake.spec.ts`.
+
+Os 2 alertas altos do CodeQL (`Disabling certificate validation`) apontavam
+`ssl-postgres.ts` e `ssl-postgres.handshake.spec.ts` — os dois contextos em que
+o valor chega de fato a uma API TLS. A terceira ocorrencia, dentro de um
+`toEqual`, nao e sink e nao gerou alerta do CodeQL, apenas o warning do Semgrep.
+Isso foi confirmado na lista de threads resolvidos; antes era hipotese.
 
 Correcao: **o opt-in `BANCO_SSL_PERMITIR_INSEGURO` foi removido do produto.**
 Ele era uma adicao propria deste PR, nao um requisito, e existia para o caso de
@@ -424,12 +448,14 @@ Nenhum padrao foi mascarado: nao ha `nosemgrep`, supressao de CodeQL nem
 renomeacao para escapar de assinatura. Os literais deixaram de existir porque o
 comportamento que eles expressavam deixou de existir.
 
-### 13.3 `detect-non-literal-fs-filename` e `path-join-resolve-traversal` - 10 warnings
+### 13.3 `path-join-resolve-traversal` - 12 warnings
 
-Todos em `ssl-postgres.handshake.spec.ts`. As duas regras sao de taint e sua
-fonte e **parametro de funcao**: `gerarAutoridade(pasta, prefixo, hostname)`
-recebia o diretorio e o prefixo por parametro, e eles fluiam para `join` e para
-`readFileSync`.
+Todos em `ssl-postgres.handshake.spec.ts`. A regra e de taint e sua fonte e
+**parametro de funcao**: `gerarAutoridade(pasta, prefixo, hostname)` recebia o
+diretorio e o prefixo por parametro, e eles fluiam para `join` e para
+`readFileSync`. A reproducao local, que carregou tambem
+`detect-non-literal-fs-filename` (ausente do conjunto `auto`), mostrou o mesmo
+fluxo pela outra ponta.
 
 Triagem: falso positivo quanto a exploracao — os caminhos vinham de
 `mkdtempSync(tmpdir())`, sem entrada externa. Mas a correcao nao precisou de
@@ -450,7 +476,12 @@ coerente com `ROTULO_CIFRA` e `ROTULO_INDICE`.
 ### 13.5 Resultado
 
 Reproducao local apos o hotfix, mesmas regras e mesmos arquivos: **0 achados**
-(antes: 3 errors, 13 warnings, 1 info). Nenhuma migration, recriptografia ou
-operacao em provider foi executada no hotfix. A variavel
+(antes: 3 errors, 13 warnings, 1 info).
+
+Confirmado no CI sobre o head `0f228d0`: **CodeQL e Semgrep OSS passaram com 0
+alertas novos**, os 20 threads do `github-advanced-security` foram resolvidos
+automaticamente, e os 15 checks do PR ficaram verdes com `mergeable_state`
+`clean`. Nenhuma migration, recriptografia ou operacao em provider foi executada
+no hotfix. A variavel
 `BANCO_SSL_PERMITIR_INSEGURO` deixou de existir e foi removida de
 `.env.example`, `VARIAVEIS_AMBIENTE.md` e `RUNBOOK_PRODUCAO.md`.
