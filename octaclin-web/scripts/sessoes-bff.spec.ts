@@ -5,7 +5,9 @@ import { NextRequest } from 'next/server';
 import { GET as listarSessoes } from '../app/api/auth/sessoes/route';
 import { DELETE as encerrarSessao } from '../app/api/auth/sessoes/[referencia]/route';
 import { POST as encerrarOutras } from '../app/api/auth/sessoes/encerrar-outras/route';
-import { salvarSessaoBff } from '../lib/server/sessao-bff';
+import { POST as encerrarTodas } from '../app/api/auth/sessoes/encerrar-todas/route';
+import { DELETE as limparHistorico } from '../app/api/auth/sessoes/historico/route';
+import { obterSessaoBff, salvarSessaoBff } from '../lib/server/sessao-bff';
 
 const { __clearCookies, __setCookies, __opcoesCookie } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -43,7 +45,7 @@ test('rotas de sessao recusam sessao ausente antes de tocar o backend', async ()
 
   try {
     __clearCookies();
-    assert.equal((await listarSessoes()).status, 401);
+    assert.equal((await listarSessoes(new NextRequest('http://localhost/api/auth/sessoes'))).status, 401);
     assert.equal(
       (
         await encerrarSessao(new NextRequest('http://localhost/api/auth/sessoes/x'), {
@@ -53,6 +55,8 @@ test('rotas de sessao recusam sessao ausente antes de tocar o backend', async ()
       401
     );
     assert.equal((await encerrarOutras()).status, 401);
+    assert.equal((await encerrarTodas()).status, 401);
+    assert.equal((await limparHistorico()).status, 401);
     assert.equal(chamadas, 0);
   } finally {
     restaurarFetch(original);
@@ -73,18 +77,20 @@ test('rotas de sessao encaminham metodo, caminho e credencial corretos', async (
 
   try {
     __setCookies(cookiesSessao());
-    await listarSessoes();
+    await listarSessoes(new NextRequest('http://localhost/api/auth/sessoes?pagina=2'));
     await encerrarSessao(new NextRequest('http://localhost/api/auth/sessoes/x'), {
       params: Promise.resolve({ referencia: `${REFERENCIA}/../outra` })
     });
     await encerrarOutras();
+    await limparHistorico();
 
     assert.deepEqual(
       chamadas.map((chamada) => `${chamada.metodo} ${chamada.url}`),
       [
-        'GET http://backend.octaclin.local/auth/sessoes',
+        'GET http://backend.octaclin.local/auth/sessoes?pagina=2',
         `DELETE http://backend.octaclin.local/auth/sessoes/${encodeURIComponent(`${REFERENCIA}/../outra`)}`,
-        'POST http://backend.octaclin.local/auth/sessoes/encerrar-outras'
+        'POST http://backend.octaclin.local/auth/sessoes/encerrar-outras',
+        'DELETE http://backend.octaclin.local/auth/sessoes/historico'
       ]
     );
     for (const chamada of chamadas) {
@@ -114,13 +120,68 @@ test('listagem de sessoes nunca devolve token ao navegador e nao entra em cache'
 
   try {
     __setCookies(cookiesSessao());
-    const resposta = await listarSessoes();
+    const resposta = await listarSessoes(new NextRequest('http://localhost/api/auth/sessoes'));
     const corpo = await resposta.text();
 
     assert.equal(resposta.headers.get('Cache-Control'), 'no-store');
     assert.ok(!corpo.includes('access-token-sintetico'));
     assert.ok(!corpo.includes('refresh-token-sintetico'));
     assert.ok(!/tokenHash|familiaToken|sessaoId/.test(corpo));
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('encerramento individual preserva a resposta 204 sem construir corpo', async () => {
+  const original = global.fetch;
+  global.fetch = (async () => new Response(null, { status: 204 })) as typeof global.fetch;
+
+  try {
+    __setCookies(cookiesSessao());
+    const resposta = await encerrarSessao(new NextRequest('http://localhost/api/auth/sessoes/x'), {
+      params: Promise.resolve({ referencia: REFERENCIA })
+    });
+
+    assert.equal(resposta.status, 204);
+    assert.equal(await resposta.text(), '');
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('encerrar todas limpa cookies somente depois de sucesso do backend', async () => {
+  const original = global.fetch;
+  global.fetch = (async () =>
+    new Response(JSON.stringify({ encerradas: 3 }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })) as typeof global.fetch;
+
+  try {
+    __setCookies(cookiesSessao());
+    const resposta = await encerrarTodas();
+
+    assert.equal(resposta.status, 200);
+    assert.equal(await obterSessaoBff(), null);
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('encerrar todas preserva a sessao local quando o backend falha', async () => {
+  const original = global.fetch;
+  global.fetch = (async () =>
+    new Response(JSON.stringify({ mensagem: 'Falha sintética.' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })) as typeof global.fetch;
+
+  try {
+    __setCookies(cookiesSessao());
+    const resposta = await encerrarTodas();
+
+    assert.equal(resposta.status, 500);
+    assert.notEqual(await obterSessaoBff(), null);
   } finally {
     restaurarFetch(original);
   }

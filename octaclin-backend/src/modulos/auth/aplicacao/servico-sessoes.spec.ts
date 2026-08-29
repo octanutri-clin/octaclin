@@ -8,14 +8,30 @@ const USUARIO = '11111111-1111-4111-8111-111111111111';
 
 function criarAmbiente(sessoes: Partial<SessaoUsuarioOrm>[] = []) {
   const linhas = sessoes.map((sessao) => ({ ...sessao })) as SessaoUsuarioOrm[];
+  const executarExclusao = jest.fn(async () => ({ affected: 2 }));
+  const construtorExclusao = {
+    delete: jest.fn(),
+    from: jest.fn(),
+    where: jest.fn(),
+    andWhere: jest.fn(),
+    execute: executarExclusao
+  };
+  for (const metodo of ['delete', 'from', 'where', 'andWhere'] as const) {
+    construtorExclusao[metodo].mockReturnValue(construtorExclusao);
+  }
   const repositorioSessoes = {
     find: jest.fn(async () => linhas),
+    findAndCount: jest.fn(async ({ skip = 0, take = 5 }: { skip?: number; take?: number }) => [
+      linhas.slice(skip, skip + take),
+      linhas.length
+    ]),
     findOne: jest.fn(async ({ where }: { where: { id?: string } }) =>
       linhas.find((linha) => linha.id === where.id) ?? null
     ),
     update: jest.fn(async () => ({ affected: 1 })),
     save: jest.fn(async (entrada: unknown) => entrada),
-    create: jest.fn((entrada: unknown) => entrada)
+    create: jest.fn((entrada: unknown) => entrada),
+    createQueryBuilder: jest.fn(() => construtorExclusao)
   };
   const repositorioTokens = { update: jest.fn(async () => ({ affected: 2 })) };
   const gerenciador = {
@@ -32,6 +48,7 @@ function criarAmbiente(sessoes: Partial<SessaoUsuarioOrm>[] = []) {
     servico: new ServicoSessoes(executorTenant as never, auditoria as never),
     repositorioSessoes,
     repositorioTokens,
+    construtorExclusao,
     auditoria
   };
 }
@@ -76,13 +93,14 @@ describe('ServicoSessoes', () => {
     it('devolve somente metadados minimos e marca a sessao atual', async () => {
       const { servico } = criarAmbiente([sessao(ID_A), sessao(ID_B)]);
 
-      const lista = await servico.listar(TENANT, USUARIO, ID_B);
+      const lista = await servico.listar(TENANT, USUARIO, ID_B, 1);
 
-      expect(lista).toHaveLength(2);
-      expect(Object.keys(lista[0]).sort()).toEqual(
+      expect(lista.itens).toHaveLength(2);
+      expect(Object.keys(lista.itens[0]).sort()).toEqual(
         ['atual', 'criadaEm', 'estado', 'expiraEm', 'referencia', 'ultimaAtividadeEm'].sort()
       );
-      expect(lista.find((item) => item.atual)?.referencia).toBe(servico.referenciaPublica(ID_B));
+      expect(lista.itens.find((item) => item.atual)?.referencia).toBe(servico.referenciaPublica(ID_B));
+      expect(lista).toMatchObject({ pagina: 1, limite: 5, total: 2, totalPaginas: 1 });
     });
 
     it('nao expoe token, hash, family id, usuario nem tenant', async () => {
@@ -102,9 +120,9 @@ describe('ServicoSessoes', () => {
         sessao(ID_B, { expiraEm: new Date('2020-01-01T00:00:00.000Z') })
       ]);
 
-      const lista = await servico.listar(TENANT, USUARIO, 'outra');
+      const lista = await servico.listar(TENANT, USUARIO, 'outra', 1);
 
-      expect(lista.map((item) => item.estado).sort()).toEqual(['expirada', 'revogada']);
+      expect(lista.itens.map((item) => item.estado).sort()).toEqual(['expirada', 'revogada']);
     });
 
     it('restringe a consulta ao tenant e ao usuario da credencial', async () => {
@@ -112,9 +130,23 @@ describe('ServicoSessoes', () => {
 
       await servico.listar(TENANT, USUARIO, ID_A);
 
-      expect(repositorioSessoes.find).toHaveBeenCalledWith(
+      expect(repositorioSessoes.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({ where: expect.objectContaining({ tenantId: TENANT, usuarioId: USUARIO }) })
       );
+    });
+
+    it('pagina no banco em blocos fixos de cinco acessos', async () => {
+      const { servico, repositorioSessoes } = criarAmbiente(Array.from({ length: 8 }, (_, indice) =>
+        sessao(`${String(indice).padStart(8, '0')}-aaaa-4aaa-8aaa-aaaaaaaaaaaa`)
+      ));
+
+      const pagina = await servico.listar(TENANT, USUARIO, ID_A, 2);
+
+      expect(repositorioSessoes.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 5, take: 5 })
+      );
+      expect(pagina).toMatchObject({ pagina: 2, limite: 5, total: 8, totalPaginas: 2 });
+      expect(pagina.itens).toHaveLength(3);
     });
   });
 
@@ -150,6 +182,30 @@ describe('ServicoSessoes', () => {
       expect(repositorioSessoes.update).toHaveBeenCalledWith(
         expect.objectContaining({ id: ID_B }),
         expect.objectContaining({ motivoRevogacao: 'encerrada_outras' })
+      );
+    });
+  });
+
+  describe('limpeza do historico visivel', () => {
+    it('remove somente sessoes revogadas ou expiradas do proprio tenant e registra auditoria', async () => {
+      const { servico, construtorExclusao, auditoria } = criarAmbiente();
+
+      const removidos = await servico.limparHistorico(TENANT, USUARIO);
+
+      expect(removidos).toBe(2);
+      expect(construtorExclusao.where).toHaveBeenCalledWith('tenant_id = :tenantId', { tenantId: TENANT });
+      expect(construtorExclusao.andWhere).toHaveBeenCalledWith('usuario_id = :usuarioId', { usuarioId: USUARIO });
+      expect(construtorExclusao.andWhere).toHaveBeenCalledWith(
+        '(revogado_em is not null OR expira_em <= :agora)',
+        expect.objectContaining({ agora: expect.any(Date) })
+      );
+      expect(auditoria.registrar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: TENANT,
+          usuarioId: USUARIO,
+          acao: 'auth.sessao.historico_limpo',
+          metadados: { removidos: 2 }
+        })
       );
     });
   });

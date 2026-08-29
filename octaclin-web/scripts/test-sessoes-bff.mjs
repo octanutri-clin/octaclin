@@ -34,6 +34,8 @@ writeFileSync(
         'app/api/auth/sessoes/route.ts',
         'app/api/auth/sessoes/[referencia]/route.ts',
         'app/api/auth/sessoes/encerrar-outras/route.ts',
+        'app/api/auth/sessoes/encerrar-todas/route.ts',
+        'app/api/auth/sessoes/historico/route.ts',
         'lib/server/sessao-bff.ts'
       ].map((arquivo) => join(raiz, arquivo))
     },

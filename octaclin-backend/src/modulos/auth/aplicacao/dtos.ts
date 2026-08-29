@@ -1,4 +1,16 @@
-import { IsEmail, IsJWT, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsEmail,
+  IsInt,
+  IsJWT,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength
+} from 'class-validator';
 
 export class LoginDto {
   @IsString()
@@ -49,4 +61,13 @@ export class EncerrarSessaoDto {
   @IsString()
   @Matches(/^[0-9a-f]{32}$/)
   referencia: string;
+}
+
+export class ListarSessoesDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  pagina = 1;
 }

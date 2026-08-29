@@ -27,7 +27,15 @@ const sessoes = [
     expiraEm: '2026-07-31T08:00:00.000Z',
     estado: 'revogada',
     atual: false
-  }
+  },
+  ...Array.from({ length: 4 }, (_, indice) => ({
+    referencia: `${indice + 3}`.padStart(32, 'a'),
+    criadaEm: `2026-06-0${indice + 1}T08:00:00.000Z`,
+    ultimaAtividadeEm: `2026-06-0${indice + 1}T09:00:00.000Z`,
+    expiraEm: `2026-06-2${indice + 1}T08:00:00.000Z`,
+    estado: 'expirada',
+    atual: false
+  }))
 ];
 
 async function preparar(page, { aoListar } = {}) {
@@ -54,10 +62,21 @@ async function preparar(page, { aoListar } = {}) {
       })
     })
   );
-  await page.route('**/api/auth/sessoes', (route) => {
+  await page.route('**/api/auth/sessoes*', (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
     aoListar?.();
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessoes) });
+    const pagina = Number(new URL(route.request().url()).searchParams.get('pagina') ?? '1');
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: sessoes.slice((pagina - 1) * 5, pagina * 5),
+        pagina,
+        limite: 5,
+        total: sessoes.length,
+        totalPaginas: 2
+      })
+    });
   });
 }
 
@@ -67,8 +86,9 @@ test.describe('Sessoes da conta', () => {
     await page.goto('/conta/sessoes');
 
     await expect(page.getByRole('heading', { name: 'Segurança da conta' })).toBeVisible();
-    await expect(page.getByText(/^Esta sessão/)).toBeVisible();
-    await expect(page.getByText(/^Outro acesso/)).toHaveCount(2);
+    await expect(page.getByRole('table', { name: 'Histórico de acessos da conta' })).toBeVisible();
+    await expect(page.getByRole('row')).toHaveCount(6);
+    await expect(page.getByText('Página 1 de 2')).toBeVisible();
 
     const corpo = await page.locator('body').innerText();
     for (const sessao of sessoes) {
@@ -78,6 +98,16 @@ test.describe('Sessoes da conta', () => {
     // renderizada como texto, nem hash, nem material de token.
     expect(corpo).not.toMatch(/[0-9a-f]{32}/);
     expect(corpo).not.toMatch(/tokenHash|familiaToken|sessaoId|eyJ[A-Za-z0-9_-]/);
+  });
+
+  test('pagina o historico em blocos de cinco acessos', async ({ page }) => {
+    await preparar(page);
+    await page.goto('/conta/sessoes');
+
+    await page.getByRole('button', { name: 'Próxima página' }).click();
+
+    await expect(page.getByText('Página 2 de 2')).toBeVisible();
+    await expect(page.getByRole('row')).toHaveCount(3);
   });
 
   test('encerra uma sessao especifica e recarrega a lista', async ({ page }) => {
@@ -97,27 +127,76 @@ test.describe('Sessoes da conta', () => {
     await expect.poll(() => encerrada).toBe('f0e9d8c7b6a5948372615043f2e1d0c9');
     await expect.poll(() => listagens).toBeGreaterThan(1);
     await expect(page.getByText('Sessão encerrada.')).toBeVisible();
+    await expect(page.getByText('Não foi possível encerrar a sessão.')).toHaveCount(0);
   });
 
-  test('encerra as demais sessoes preservando a atual', async ({ page }) => {
+  test('mostra erro somente quando o encerramento individual falha', async ({ page }) => {
     await preparar(page);
-    let chamou = false;
-    await page.route('**/api/auth/sessoes/encerrar-outras', async (route) => {
-      chamou = true;
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ encerradas: 1 }) });
+    await page.route('**/api/auth/sessoes/*', async (route) => {
+      if (route.request().method() !== 'DELETE') return route.fallback();
+      await route.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
     });
 
     await page.goto('/conta/sessoes');
-    await page.getByRole('button', { name: 'Encerrar outras sessões', exact: true }).click();
+    await page.getByRole('button', { name: 'Encerrar', exact: true }).first().click();
+
+    await expect(page.getByText('Não foi possível encerrar a sessão.')).toBeVisible();
+    await expect(page.getByText('Sessão encerrada.')).toHaveCount(0);
+  });
+
+  test('sair desta sessao usa o logout local e retorna ao login', async ({ page }) => {
+    await preparar(page);
+    let chamou = false;
+    await page.route('**/api/auth/sair', async (route) => {
+      chamou = true;
+      await page.context().clearCookies();
+      await route.fulfill({ status: 204, body: '' });
+    });
+
+    await page.goto('/conta/sessoes');
+    await page.getByRole('button', { name: 'Sair desta sessão' }).click();
 
     await expect.poll(() => chamou).toBe(true);
-    await expect(page.getByText('1 sessão(ões) encerrada(s).')).toBeVisible();
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test('encerra todas as sessoes ativas incluindo a atual', async ({ page }) => {
+    await preparar(page);
+    let chamou = false;
+    await page.route('**/api/auth/sessoes/encerrar-todas', async (route) => {
+      chamou = true;
+      await page.context().clearCookies();
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ encerradas: 2 }) });
+    });
+
+    await page.goto('/conta/sessoes');
+    await page.getByRole('button', { name: 'Encerrar todas as sessões ativas', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Encerrar todas' }).click();
+
+    await expect.poll(() => chamou).toBe(true);
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test('limpa somente o historico inativo depois de confirmacao', async ({ page }) => {
+    await preparar(page);
+    let chamou = false;
+    await page.route('**/api/auth/sessoes/historico', async (route) => {
+      chamou = true;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ removidos: 5 }) });
+    });
+
+    await page.goto('/conta/sessoes');
+    await page.getByRole('button', { name: 'Limpar histórico de acessos' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Limpar histórico' }).click();
+
+    await expect.poll(() => chamou).toBe(true);
+    await expect(page.getByText('5 acessos removidos do histórico.')).toBeVisible();
   });
 
   test('mostra falha sem expor detalhe interno quando o BFF recusa', async ({ page }) => {
     await preparar(page);
-    await page.unroute('**/api/auth/sessoes');
-    await page.route('**/api/auth/sessoes', (route) =>
+    await page.unroute('**/api/auth/sessoes*');
+    await page.route('**/api/auth/sessoes*', (route) =>
       route.fulfill({
         status: 401,
         contentType: 'application/json',

@@ -107,9 +107,11 @@ function criarServico(dados: DadosCenario = {}) {
     }),
     revogar: jest.fn(async () => true),
     revogarPorReuso: jest.fn(async () => undefined),
-    listar: jest.fn(async () => []),
+    listar: jest.fn(async () => ({ itens: [], pagina: 1, limite: 5, total: 0, totalPaginas: 1 })),
     encerrarPorReferencia: jest.fn(async () => undefined),
-    encerrarOutras: jest.fn(async () => 2)
+    encerrarOutras: jest.fn(async () => 2),
+    revogarTodas: jest.fn(async () => 3),
+    limparHistorico: jest.fn(async () => 4)
   };
 
   return {
@@ -441,13 +443,17 @@ describe('ServicoAuth', () => {
         sessaoId: SESSAO
       };
 
-      await servico.listarSessoes(usuario);
+      await servico.listarSessoes(usuario, 2);
       await servico.encerrarSessao(usuario, 'a'.repeat(32));
       await servico.encerrarOutrasSessoes(usuario);
+      await servico.encerrarTodasSessoes(usuario);
+      await servico.limparHistoricoSessoes(usuario);
 
-      expect(sessoes.listar).toHaveBeenCalledWith(TENANT, USUARIO, SESSAO);
+      expect(sessoes.listar).toHaveBeenCalledWith(TENANT, USUARIO, SESSAO, 2);
       expect(sessoes.encerrarPorReferencia).toHaveBeenCalledWith(TENANT, USUARIO, 'a'.repeat(32));
       expect(sessoes.encerrarOutras).toHaveBeenCalledWith(TENANT, USUARIO, SESSAO);
+      expect(sessoes.revogarTodas).toHaveBeenCalledWith(TENANT, USUARIO, 'encerrada_pelo_usuario');
+      expect(sessoes.limparHistorico).toHaveBeenCalledWith(TENANT, USUARIO);
     });
 
     it('recusa operacao de sessao quando o contexto nao identifica a sessao atual', async () => {
@@ -462,6 +468,8 @@ describe('ServicoAuth', () => {
 
       expect(() => servico.listarSessoes(usuario)).toThrow(UnauthorizedException);
       await expect(servico.encerrarOutrasSessoes(usuario)).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(servico.encerrarTodasSessoes(usuario)).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(servico.limparHistoricoSessoes(usuario)).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
 });

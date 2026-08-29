@@ -176,8 +176,8 @@ export class ServicoAuth {
     await this.sessoes.revogar(claims.tenantId, claims.sub, claims.sid, 'logout');
   }
 
-  listarSessoes(usuario: UsuarioAutenticado) {
-    return this.sessoes.listar(usuario.tenantId, usuario.usuarioId, this.exigirSessao(usuario));
+  listarSessoes(usuario: UsuarioAutenticado, pagina = 1) {
+    return this.sessoes.listar(usuario.tenantId, usuario.usuarioId, this.exigirSessao(usuario), pagina);
   }
 
   async encerrarSessao(usuario: UsuarioAutenticado, referencia: string): Promise<void> {
@@ -195,12 +195,28 @@ export class ServicoAuth {
     return { encerradas };
   }
 
+  async encerrarTodasSessoes(usuario: UsuarioAutenticado): Promise<{ encerradas: number }> {
+    this.exigirSessao(usuario);
+    const encerradas = await this.sessoes.revogarTodas(
+      usuario.tenantId,
+      usuario.usuarioId,
+      'encerrada_pelo_usuario'
+    );
+    return { encerradas };
+  }
+
+  async limparHistoricoSessoes(usuario: UsuarioAutenticado): Promise<{ removidos: number }> {
+    this.exigirSessao(usuario);
+    const removidos = await this.sessoes.limparHistorico(usuario.tenantId, usuario.usuarioId);
+    return { removidos };
+  }
+
   obterContextoAcesso(usuario: UsuarioAutenticado) {
     return contextoAcessoPorPapel(usuario.papel);
   }
 
   private exigirSessao(usuario: UsuarioAutenticado): string {
-    if (!usuario.sessaoId) throw new UnauthorizedException('Sessao nao identificada no token.');
+    if (!usuario.sessaoId) throw new UnauthorizedException('Sessão não identificada no token.');
     return usuario.sessaoId;
   }
 

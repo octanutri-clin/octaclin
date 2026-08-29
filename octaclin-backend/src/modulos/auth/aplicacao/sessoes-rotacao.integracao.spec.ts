@@ -390,7 +390,7 @@ descrever('sessoes e rotacao de refresh token em Postgres real', () => {
       await sessaoDoToken(propria.refreshToken)
     );
     const referenciaAlheia = instanciaA!.servicoSessoes.referenciaPublica(sessaoAlheia);
-    expect(lista.map((item) => item.referencia)).not.toContain(referenciaAlheia);
+    expect(lista.itens.map((item) => item.referencia)).not.toContain(referenciaAlheia);
 
     await expect(
       instanciaA!.servicoSessoes.encerrarPorReferencia(tenantA, usuarioSegundoA.id, referenciaAlheia)

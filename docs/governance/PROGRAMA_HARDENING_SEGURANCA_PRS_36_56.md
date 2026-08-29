@@ -4,14 +4,16 @@
 >
 > Atualizado em: 2026-08-29
 >
-> Proximo item autorizado: PR 40
+> Proximo item autorizado: correcao pos-PR 40; PR 41 permanece bloqueado ate o merge humano desta correcao.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
 > Estado do PR 39: integrado no `main` pelo PR GitHub #161 em 2026-08-29 (`94235ee`).
-> Estado do PR 40: implementacao em `security/governanca-pr40-sessoes-tokens`;
-> aguarda validacao, review, checks e merge humano. Relatorio em
-> `docs/governance/RELATORIO_SEGURANCA_PR40_2026-08-29.md`.
+> Estado do PR 40: integrado no `main` pelo PR GitHub #162 em 2026-08-29 (`7d9c5f7`).
+> Correcao de UX e contratos de sessoes em `fix/pr40-sessoes-auditoria`; aguarda
+> review, checks e merge humano. Relatorios em
+> `docs/governance/RELATORIO_SEGURANCA_PR40_2026-08-29.md` e
+> `docs/governance/RELATORIO_CORRECAO_POS_PR40_SESSOES_2026-08-29.md`.
 
 ## 1. Funcao deste documento
 
@@ -220,7 +222,7 @@ Skills Claude: `security-review`, `test-driven-development`,
 Gate minimo: reuso revoga familia; tokens expirados, adulterados ou de outro
 tenant falham; logout e revogacao funcionam entre instancias.
 
-Entregue na branch dedicada, ainda sem merge: verificacao explicita de algoritmo,
+Integrado no `main` pelo PR GitHub #162: verificacao explicita de algoritmo,
 emissor, audiencia, tipo, subject, tenant, sessao, jti e papel; segredos de access
 e refresh separados, sem heranca e sem literal versionado, com falha fechada em
 staging e producao; tabela `sessoes_usuario` com RLS forcada e policy por tenant
@@ -232,6 +234,11 @@ interface minima de listagem e encerramento de sessoes proprias, sem expor id de
 sessao, familia, token ou hash. Nenhuma migration foi aplicada em Neon, staging ou
 producao. Consequencia aceita: os tokens ja emitidos deixam de ser validos e todos
 os usuarios precisam entrar de novo.
+
+Correcao posterior em branch dedicada: resposta 204 sem corpo no BFF, tabela
+paginada em cinco acessos, encerramento total incluindo a sessao atual e limpeza
+segura apenas de sessoes revogadas/expiradas. A trilha imutavel de auditoria e
+as sessoes ativas sao preservadas. O PR 41 nao foi iniciado.
 
 ### PR 41 - MFA e reautenticacao privilegiada
 

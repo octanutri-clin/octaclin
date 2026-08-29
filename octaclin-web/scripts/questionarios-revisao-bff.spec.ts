@@ -43,7 +43,7 @@ test('BFF de revisao retorna 401 sem sessao e nao consulta o backend', async () 
     });
 
     assert.equal(resposta.status, 401);
-    assert.deepEqual(await resposta.json(), { mensagem: 'Sessao ausente ou expirada.' });
+    assert.deepEqual(await resposta.json(), { mensagem: 'Sessão ausente ou expirada.' });
     assert.equal(backendChamado, false);
   } finally {
     restaurarFetch(fetchOriginal);
@@ -65,7 +65,7 @@ test('BFF de revisao retorna 403 sem permissao e nao consulta o backend', async 
     });
 
     assert.equal(resposta.status, 403);
-    assert.deepEqual(await resposta.json(), { mensagem: 'Usuario sem permissao para esta acao.' });
+    assert.deepEqual(await resposta.json(), { mensagem: 'Usuário sem permissão para esta ação.' });
     assert.equal(backendChamado, false);
   } finally {
     restaurarFetch(fetchOriginal);

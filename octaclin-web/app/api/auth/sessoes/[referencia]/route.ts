@@ -8,7 +8,8 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
       `/auth/sessoes/${encodeURIComponent(referencia)}`,
       { method: 'DELETE' }
     );
-    return new NextResponse(await resposta.text(), {
+    const corpo = resposta.status === 204 ? null : await resposta.text();
+    return new NextResponse(corpo, {
       status: resposta.status,
       headers: {
         'Content-Type': resposta.headers.get('Content-Type') ?? 'application/json',
