@@ -121,7 +121,7 @@ test.describe('Sessoes da conta', () => {
       route.fulfill({
         status: 401,
         contentType: 'application/json',
-        body: JSON.stringify({ mensagem: 'Sessao ausente ou expirada.' })
+        body: JSON.stringify({ mensagem: 'Sessão ausente ou expirada.' })
       })
     );
 
