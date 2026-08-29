@@ -94,6 +94,67 @@ role da aplicacao por SQL, conceda apenas `CONNECT`, `USAGE` de schema, acesso
 necessario a tabelas/sequencias e confirme `rolsuper=false` e
 `rolbypassrls=false`. Use `neondb_owner` somente para migrations e administracao.
 
+### TLS da conexao com o Postgres
+
+Ate o PR 39 da governanca de seguranca o backend conectava com
+`rejectUnauthorized: false`: o canal era cifrado, mas nenhum certificado era
+verificado. A partir do PR 39, com TLS ligado (`BANCO_SSL=true` ou
+`sslmode=require`/`verify-ca`/`verify-full` na `DATABASE_URL`), a cadeia e o
+hostname sao verificados sempre.
+
+Regras em staging e producao (`APP_AMBIENTE=staging` ou `producao`, ou
+`NODE_ENV=production` sem `APP_AMBIENTE`):
+
+- TLS e obrigatorio. Sem `BANCO_SSL=true` e sem `sslmode` estrito, o boot falha.
+- `sslmode=disable`, `allow` e `prefer` sao recusados.
+- `BANCO_SSL_PERMITIR_INSEGURO` e recusado em qualquer valor `true`.
+- `sslmode` desconhecido derruba o boot em vez de virar "sem TLS".
+
+Antes de qualquer deploy que carregue este codigo, confira no provider:
+
+1. a `DATABASE_URL` de producao contem `sslmode=require` (ou mais estrito), ou
+   `BANCO_SSL=true` esta definido;
+2. `CRIPTOGRAFIA_CHAVE_AES_256` tem pelo menos 32 bytes;
+3. `BANCO_SSL_PERMITIR_INSEGURO` nao existe no ambiente.
+
+O Neon apresenta certificado emitido por CA publica, entao a cadeia fecha pelo
+armazenamento padrao do Node e `BANCO_SSL_CA` nao deve ser necessario. Preencha
+`BANCO_SSL_CA` (PEM inline) ou `BANCO_SSL_CA_ARQUIVO` — nunca as duas — apenas se
+o banco usar CA propria. Se um pooler ou proxy atender por um hostname diferente
+do nome do certificado, declare o nome esperado em `BANCO_SSL_SERVERNAME`.
+
+Sintoma esperado de falha: o processo nao sobe e registra o motivo
+(`TLS e obrigatorio...`, `sslmode ... e permissivo...`, `BANCO_SSL_CA ...`). E
+falha fechada, nao incidente de banco. Nunca "resolva" ligando
+`BANCO_SSL_PERMITIR_INSEGURO`: em staging e producao ele e recusado justamente
+para nao existir esse atalho.
+
+### Rotacao da chave de criptografia
+
+O formato de cifra e versionado desde o PR 39: registros novos carregam versao e
+key-id, registros antigos continuam legiveis no formato legado. A rotacao e
+dual-read / new-write e nao exige operacao no banco.
+
+1. Gerar a nova chave fora do repositorio, do chat e de qualquer log.
+2. Definir `CRIPTOGRAFIA_CHAVE_AES_256_ANTERIOR` com o valor **atual**.
+3. Substituir `CRIPTOGRAFIA_CHAVE_AES_256` pelo valor novo.
+4. Reiniciar os processos `web` e `worker`. A leitura tenta a chave atual e
+   depois a anterior; a escrita usa somente a atual.
+5. Recriptografar os registros antigos por procedimento deliberado e autorizado.
+   Nao existe job automatico para isso.
+6. So depois do passo 5, remover `CRIPTOGRAFIA_CHAVE_AES_256_ANTERIOR`.
+
+O boot recusa `CRIPTOGRAFIA_CHAVE_AES_256_ANTERIOR` igual a chave atual ou com
+menos de 32 bytes. Nunca descarte a chave anterior antes do passo 5: sem ela os
+registros ainda nao reescritos ficam ilegiveis.
+
+Para separar o material do indice cego de busca por PII, defina
+`CRIPTOGRAFIA_CHAVE_INDICE_HMAC` e execute
+`pnpm --dir octaclin-backend backfill:indices-busca` na mesma janela, com aceite
+humano e ambiente identificado. Sem o backfill a busca por PII fica
+inconsistente. Enquanto a variavel nao existir, o indice continua derivado da
+chave-base, exatamente como antes do PR 39.
+
 ### BANCO_EXECUTAR_MIGRACOES em producao
 
 `migrationsRun` fica ligado somente quando `BANCO_EXECUTAR_MIGRACOES` e

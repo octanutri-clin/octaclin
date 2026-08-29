@@ -1,5 +1,6 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { DataSourceOptions } from 'typeorm';
+import { criarConfiguracaoSslPostgres } from './ssl-postgres';
 import { CriarFundacaoOctaClin1720000000000 } from './migracoes/1720000000000-CriarFundacaoOctaClin';
 import { CriarAgendaConsultas1720000000100 } from './migracoes/1720000000100-CriarAgendaConsultas';
 import { CriarConvitesPacienteAcesso1720000000200 } from './migracoes/1720000000200-CriarConvitesPacienteAcesso';
@@ -138,7 +139,7 @@ function criarConexaoBanco() {
       username: decodeURIComponent(url.username),
       password: decodeURIComponent(url.password),
       database: decodeURIComponent(url.pathname.replace(/^\//, '')),
-      ssl: process.env.BANCO_SSL === 'true' || sslMode === 'require' ? { rejectUnauthorized: false } : false
+      ssl: criarConfiguracaoSslPostgres(sslMode)
     };
   }
 
@@ -148,7 +149,7 @@ function criarConexaoBanco() {
     username: process.env.BANCO_USUARIO ?? 'octaclin',
     password: process.env.BANCO_SENHA ?? 'octaclin_local',
     database: process.env.BANCO_NOME ?? 'octaclin',
-    ssl: process.env.BANCO_SSL === 'true' ? { rejectUnauthorized: false } : false
+    ssl: criarConfiguracaoSslPostgres()
   };
 }
 

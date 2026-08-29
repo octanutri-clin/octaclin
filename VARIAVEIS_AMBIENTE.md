@@ -10,7 +10,10 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 - Producao deve ter secrets separados de staging.
 - O backend recusa iniciar em producao se `CORS_ORIGINS`, `JWT_SEGREDO`,
   `JWT_REFRESH_SEGREDO`, `CRIPTOGRAFIA_CHAVE_AES_256` ou
-  `FORMULARIO_PUBLICO_SEGREDO` estiverem ausentes.
+  `FORMULARIO_PUBLICO_SEGREDO` estiverem ausentes. Desde o PR 39 da governanca
+  de seguranca, `CRIPTOGRAFIA_CHAVE_AES_256` tambem precisa ter pelo menos 32
+  bytes em producao, e o TLS do Postgres passa a exigir cadeia e hostname
+  validos em staging e producao.
   Quando Google Calendar estiver configurado, tambem exige
   `GOOGLE_CALENDAR_OAUTH_STATE_SECRET` com pelo menos 32 bytes;
   `CORS_ORIGINS` nao pode conter `*`.
@@ -23,10 +26,16 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | Variavel | Obrigatoria | Uso | Onde configurar | Como validar |
 | --- | --- | --- | --- | --- |
 | `NODE_ENV` | Sim | Ambiente (`development`, `production`) | Render/backend | Logs e comportamento de producao |
+| `APP_AMBIENTE` | Recomendada em staging e producao | Ambiente real: `local`, `test`, `staging` ou `producao`. Sem ela o backend deduz por `NODE_ENV`, que nao separa staging de producao no Render | Render/backend e worker | Valor invalido derruba o boot; `staging` passa a exigir as mesmas regras de falha fechada de producao |
 | `OCTACLIN_PROCESSO` | Sim no rollout multi-instancia | `web`, `worker` ou `all` (somente compatibilidade/local) | Render/backend e worker | HTTP nao consome jobs; worker nao abre porta HTTP |
 | `PORT` | Sim | Porta do backend | Render/backend | `/health` responde |
 | `CORS_ORIGINS` | Sim em producao | Origens web autorizadas, separadas por virgula e sem `*` | Render/backend | Login/BFF funciona apenas pela origem oficial |
 | `DATABASE_URL` | Sim | Conexao Neon/Postgres por papel sem `BYPASSRLS` | Render/backend | `/health`, login, migrations e RLS |
+| `BANCO_SSL` | Nao | `true` liga TLS na conexao Postgres; qualquer valor fora de `true`/`false` derruba o boot | Render/backend e worker | Com TLS ligado a cadeia e o hostname sao verificados; nao existe mais modo permissivo |
+| `BANCO_SSL_CA` | Nao | Certificado PEM da CA confiavel, quando o banco nao usa CA publica. Exclusiva com `BANCO_SSL_CA_ARQUIVO` | Render/backend e worker | Conexao estabelece; PEM invalido derruba o boot |
+| `BANCO_SSL_CA_ARQUIVO` | Nao | Caminho para o PEM da CA confiavel | Render/backend e worker | Arquivo ilegivel ou sem certificado derruba o boot |
+| `BANCO_SSL_SERVERNAME` | Nao | Nome esperado no certificado quando o host da conexao difere dele (pooler/proxy). O driver `pg` reescreve o SNI com o host, entao o nome declarado e aplicado na verificacao de identidade | Render/backend e worker | Certificado com outro nome passa a ser recusado |
+| `BANCO_SSL_PERMITIR_INSEGURO` | Nao | Opt-in literal para aceitar certificado nao verificado. Proibido em staging e producao | Somente local | Presenca em staging/producao derruba o boot |
 | `BANCO_EXECUTAR_MIGRACOES` | Nao | Executar migrations no boot somente com `true` literal; ausente ou `false` nao executa DDL | Local/Render backend | Runtime sobe sem DDL; `pnpm --dir octaclin-backend migration:run` aplica explicitamente com role owner |
 | `BANCO_POOL_MAX` | Nao | Maximo de conexoes por processo, padrao 10 | Render/backend e worker | `/health/detalhado` mostra limite e uso do pool |
 | `BANCO_POOL_CONNECTION_TIMEOUT_MS` | Nao | Prazo para obter/conectar cliente Postgres, padrao 5000 ms | Render/backend e worker | Saturacao falha em prazo finito |
@@ -35,7 +44,9 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | `REDIS_URL` | Sim para worker em producao | Filas/outbox/cache | Render/backend e worker | Comunicacoes processam |
 | `JWT_SEGREDO` | Sim | Assinatura access token | Render/backend | Login funciona |
 | `JWT_REFRESH_SEGREDO` | Sim | Assinatura refresh token | Render/backend | Renovacao de sessao funciona |
-| `CRIPTOGRAFIA_CHAVE_AES_256` | Sim | Criptografia de PII | Render/backend | Dados sensiveis salvam/leem |
+| `CRIPTOGRAFIA_CHAVE_AES_256` | Sim | Chave-base da criptografia de PII e conteudo clinico; minimo 32 bytes em staging/producao | Render/backend e worker | Dados sensiveis salvam/leem; ausencia ou material curto derruba o boot |
+| `CRIPTOGRAFIA_CHAVE_AES_256_ANTERIOR` | Nao | Chave anterior durante uma rotacao (dual-read). A escrita usa somente a chave atual | Render/backend e worker | Registros da chave antiga continuam legiveis; remover ao fim da janela |
+| `CRIPTOGRAFIA_CHAVE_INDICE_HMAC` | Nao | Material dedicado do indice cego de busca por PII, separado da chave de cifra | Render/backend e worker | Trocar invalida os hashes gravados: exige `pnpm --dir octaclin-backend backfill:indices-busca` na mesma janela |
 | `FORMULARIO_PUBLICO_SEGREDO` | Sim em producao | Assinatura dedicada dos links publicos de formularios, minimo 32 bytes | Render/backend | Link de formulario abre e aceita rascunho/resposta |
 | `OCTACLIN_WEB_URL` | Sim | Links de convite/recuperacao | Render/backend | Link de email aponta para web correta |
 | `WEB_URL` | Opcional | Fallback para links | Render/backend | Links gerados |

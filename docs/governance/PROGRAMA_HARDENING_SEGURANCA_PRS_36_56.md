@@ -2,12 +2,15 @@
 
 > Status: aprovado para planejamento e execucao sequencial
 >
-> Atualizado em: 2026-08-28
+> Atualizado em: 2026-08-29
 >
-> Proximo item autorizado: PR 38
+> Proximo item autorizado: PR 39
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
-> Estado do PR 38: implementacao em branch dedicada; aguarda validacao e PR.
+> Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
+> Estado do PR 39: implementacao em `security/governanca-pr39-transporte-criptografia`;
+> aguarda validacao, review, checks e merge humano. Relatorio em
+> `docs/governance/RELATORIO_SEGURANCA_PR39_2026-08-29.md`.
 
 ## 1. Funcao deste documento
 
@@ -193,6 +196,14 @@ Skills Claude: `security-review`, `test-driven-development`, `typeorm`,
 Gate minimo: testes positivos e negativos de TLS/cifra, compatibilidade com
 dados existentes, rollback documentado e aceite humano para qualquer operacao
 em banco ou provider.
+
+Entregue na branch dedicada, ainda sem merge: `rejectUnauthorized: false`
+removido dos dois caminhos de conexao, com handshake real contra CA sintetica
+gerada em tempo de execucao; envelope AES-256-GCM v1 com versao, key-id e AAD,
+mantendo leitura do formato legado; chave de cifra derivada por finalidade e
+separada da chave do indice HMAC, cujo formato permanece identico ao ja gravado;
+falha fechada em staging/producao por `APP_AMBIENTE`. Nenhuma migration,
+recriptografia, rotacao ou operacao em provider foi executada.
 
 ### PR 40 - Sessoes e tokens
 
