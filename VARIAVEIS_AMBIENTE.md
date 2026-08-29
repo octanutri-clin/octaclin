@@ -68,8 +68,9 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | --- | --- | --- | --- | --- |
 | `META_WHATSAPP_TOKEN` | Sim | Envio Meta Cloud API | Render/backend | Envio real controlado |
 | `META_WHATSAPP_PHONE_NUMBER_ID` | Sim | Numero remetente | Render/backend | Envio para numero de teste |
-| `META_WHATSAPP_VERIFY_TOKEN` | Sim | Verificacao webhook | Render/backend e Meta | Webhook valida |
-| `META_WHATSAPP_APP_SECRET` | Recomendado | Validacao de assinatura webhook | Render/backend | Webhook seguro |
+| `META_WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Sim com Meta | Verificacao webhook | Render/backend e Meta | Challenge numerico valida como `text/plain` |
+| `META_WHATSAPP_APP_SECRET` | Sim com Meta | HMAC SHA-256 do webhook, minimo 32 bytes | Render/backend | Assinatura sobre raw body valida |
+| `META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN` | Opcional legado | Defesa adicional da URL antiga | Render/backend e callback antigo | Nao substitui a assinatura Meta |
 | `META_WHATSAPP_API_VERSION` | Opcional | Versao Graph API | Render/backend | Logs/URL Meta corretos |
 
 ## Google Calendar

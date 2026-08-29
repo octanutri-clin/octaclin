@@ -2496,10 +2496,11 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 - [x] PR 36 - Remover injecao de expressoes GitHub em scripts shell de deploy.
   - Escopo: somente `deploy-aws.yml`, `deploy-azure.yml` e testes negativos.
   - Integrado no `main` pelo PR GitHub `#158` em 2026-08-28.
-- [ ] PR 37 - Consolidar modelo de ameacas, ASVS e triagem factual dos scanners.
-  - Implementacao preparada em `security/governanca-pr37-modelo-ameacas`; aguarda review, checks e merge humano.
+- [x] PR 37 - Consolidar modelo de ameacas, ASVS e triagem factual dos scanners.
+  - Integrado no `main` pelo PR GitHub `#159` em 2026-08-28.
   - Snapshot: 49 alertas de code scanning, 2 Dependabot e 0 secret scanning; ledger validado por `pnpm test:triagem-seguranca`.
 - [ ] PR 38 - Endurecer webhooks e endpoints publicos.
+  - Implementacao em `security/governanca-pr38-webhook-reflexao`; aguarda validacao, review, checks e merge humano.
 - [ ] PR 39 - Verificar transporte, TLS e criptografia de dados.
 - [ ] PR 40 - Endurecer sessoes, JWT e refresh tokens.
 - [ ] PR 41 - Implementar MFA e reautenticacao privilegiada.
@@ -2522,4 +2523,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo PR autorizado: PR 37. O PR 38 depende do merge e aceite humano deste item.
+Proximo PR autorizado: PR 38. O PR 39 depende do merge e aceite humano deste item.

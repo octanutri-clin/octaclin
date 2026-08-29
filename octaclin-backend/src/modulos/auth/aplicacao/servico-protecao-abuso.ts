@@ -76,7 +76,7 @@ return { registro.quantidade, registro.bloqueadoAte or 0 }
 
 export interface ClienteRedisProtecaoAbuso {
   get(chave: string): Promise<string | null>;
-  set(chave: string, valor: string, modo: 'PX', duracaoMs: number): Promise<unknown>;
+  set(chave: string, valor: string, modo: 'PX', duracaoMs: number, condicao?: 'NX'): Promise<unknown>;
   del(chave: string): Promise<unknown>;
   eval(script: string, quantidadeChaves: number, ...argumentos: string[]): Promise<unknown>;
 }
@@ -109,9 +109,9 @@ export class ServicoProtecaoAbuso {
     }
   }
 
-  async registrarFalha(chave: string, politica: PoliticaProtecaoAbuso, agora = Date.now()): Promise<void> {
+  private async incrementar(chave: string, politica: PoliticaProtecaoAbuso, agora: number): Promise<number> {
     await this.verificarDisponibilidade(chave, politica, agora);
-    await this.redis.eval(
+    const resultado = await this.redis.eval(
       SCRIPT_REGISTRAR_FALHA,
       1,
       chave,
@@ -120,13 +120,42 @@ export class ServicoProtecaoAbuso {
       String(politica.maxTentativas),
       String(politica.bloqueioMs)
     );
+    if (!Array.isArray(resultado) || typeof resultado[0] !== 'number') {
+      throw new Error('Resposta invalida do Redis ao aplicar protecao contra abuso.');
+    }
+    return resultado[0];
+  }
+
+  async registrarFalha(chave: string, politica: PoliticaProtecaoAbuso, agora = Date.now()): Promise<void> {
+    await this.incrementar(chave, politica, agora);
   }
 
   async consumirTentativa(chave: string, politica: PoliticaProtecaoAbuso, agora = Date.now()): Promise<void> {
-    await this.registrarFalha(chave, politica, agora);
+    const quantidade = await this.incrementar(chave, politica, agora);
+    if (quantidade > politica.maxTentativas) {
+      throw new HttpException(politica.mensagemBloqueio, HttpStatus.TOO_MANY_REQUESTS);
+    }
   }
 
   async registrarSucesso(chave: string): Promise<void> {
+    await this.redis.del(chave);
+  }
+
+  async reservarIdempotencia(chave: string, duracaoMs: number): Promise<boolean> {
+    const resultado = await this.redis.set(chave, 'processando', 'PX', duracaoMs, 'NX');
+    return resultado === 'OK';
+  }
+
+  async obterEstadoIdempotencia(chave: string): Promise<'processando' | 'concluido' | null> {
+    const estado = await this.redis.get(chave);
+    return estado === 'processando' || estado === 'concluido' ? estado : null;
+  }
+
+  async concluirIdempotencia(chave: string, duracaoMs: number): Promise<void> {
+    await this.redis.set(chave, 'concluido', 'PX', duracaoMs);
+  }
+
+  async liberarIdempotencia(chave: string): Promise<void> {
     await this.redis.del(chave);
   }
 }

@@ -73,6 +73,15 @@ jobs:
       run:
         working-directory: octaclin-backend
     services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
       postgres:
         # Mesma imagem do docker-compose.yml (dev local): migrations usam
         # extensoes do Timescale (timescaledb, vector), postgres:15 puro nao tem.
@@ -133,6 +142,11 @@ jobs:
 
       - name: Suite completa
         run: pnpm test -- --runInBand
+
+      - name: Provar rate limit e idempotencia com Redis real
+        env:
+          REDIS_PROVA_REAL: "true"
+        run: pnpm test:abuso:redis-real
 
       - name: Provar RLS com Testcontainers descartavel
         run: pnpm test:rls:testcontainers

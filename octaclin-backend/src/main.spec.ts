@@ -12,6 +12,7 @@ const mockAplicacao = {
   enableShutdownHooks: jest.fn(),
   enableCors: jest.fn(),
   useGlobalPipes: jest.fn(),
+  useBodyParser: jest.fn(),
   listen: jest.fn().mockResolvedValue(undefined)
 };
 
@@ -42,6 +43,10 @@ describe('inicializacao da aplicacao', () => {
     process.env = { ...ambienteOriginal, NODE_ENV: 'production' };
     process.env.OCTACLIN_PROCESSO = 'web';
     process.env.FORMULARIO_PUBLICO_SEGREDO = 'segredo-formulario-publico-32-bytes';
+    delete process.env.META_WHATSAPP_TOKEN;
+    delete process.env.META_WHATSAPP_PHONE_NUMBER_ID;
+    delete process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN;
+    delete process.env.META_WHATSAPP_APP_SECRET;
     delete process.env.CORS_ORIGINS;
     mockCriarAplicacao.mockResolvedValue(mockAplicacao);
   });
@@ -120,6 +125,31 @@ describe('inicializacao da aplicacao', () => {
     expect(mockCriarAplicacao).not.toHaveBeenCalled();
   });
 
+  it('recusa integracao Meta em producao sem app secret do webhook', async () => {
+    process.env.CORS_ORIGINS = 'https://app.octaclin.test';
+    process.env.JWT_SEGREDO = 'segredo-access';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'chave-criptografia-32-bytes';
+    process.env.META_WHATSAPP_TOKEN = 'token-sintetico';
+    process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN = 'verify-sintetico';
+
+    await expect(carregarMain()).rejects.toThrow('META_WHATSAPP_APP_SECRET');
+    expect(mockCriarAplicacao).not.toHaveBeenCalled();
+  });
+
+  it('recusa app secret Meta curto em producao', async () => {
+    process.env.CORS_ORIGINS = 'https://app.octaclin.test';
+    process.env.JWT_SEGREDO = 'segredo-access';
+    process.env.JWT_REFRESH_SEGREDO = 'segredo-refresh';
+    process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'chave-criptografia-32-bytes';
+    process.env.META_WHATSAPP_TOKEN = 'token-sintetico';
+    process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN = 'verify-sintetico';
+    process.env.META_WHATSAPP_APP_SECRET = 'curto';
+
+    await expect(carregarMain()).rejects.toThrow('pelo menos 32 bytes');
+    expect(mockCriarAplicacao).not.toHaveBeenCalled();
+  });
+
   it('confia em exatamente um proxy para resolver req.ip atras do proxy do Render', async () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
     process.env.JWT_SEGREDO = 'segredo-access';
@@ -128,7 +158,8 @@ describe('inicializacao da aplicacao', () => {
 
     await carregarMain();
 
-    expect(mockCriarAplicacao).toHaveBeenCalled();
+    expect(mockCriarAplicacao).toHaveBeenCalledWith(expect.any(Function), { rawBody: true });
+    expect(mockAplicacao.useBodyParser).toHaveBeenCalledWith('json', { limit: '100kb' });
     expect(mockServidorHttp.set).toHaveBeenCalledWith('trust proxy', 1);
     expect(mockAplicacao.enableShutdownHooks).toHaveBeenCalledTimes(1);
   });

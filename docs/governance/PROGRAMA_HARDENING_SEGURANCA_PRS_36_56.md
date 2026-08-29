@@ -4,10 +4,10 @@
 >
 > Atualizado em: 2026-08-28
 >
-> Proximo item autorizado: PR 37
+> Proximo item autorizado: PR 38
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
-> Estado do PR 37: implementacao preparada em branch dedicada; aguarda review,
-> checks e merge humano.
+> Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
+> Estado do PR 38: implementacao em branch dedicada; aguarda validacao e PR.
 
 ## 1. Funcao deste documento
 
