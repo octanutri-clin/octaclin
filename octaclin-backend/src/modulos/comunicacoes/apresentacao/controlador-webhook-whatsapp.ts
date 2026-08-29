@@ -1,4 +1,23 @@
-import { Body, Controller, ForbiddenException, Get, Logger, Post, Query, ServiceUnavailableException } from '@nestjs/common';
+import { createHash, createHmac, timingSafeEqual } from 'crypto';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Header,
+  Headers,
+  HttpCode,
+  Logger,
+  Post,
+  Query,
+  RawBodyRequest,
+  Req,
+  ServiceUnavailableException,
+  UnsupportedMediaTypeException
+} from '@nestjs/common';
+import { Request } from 'express';
+import { ServicoProtecaoAbuso } from '../../auth/aplicacao/servico-protecao-abuso';
 import {
   MensagemRecebidaWebhookWhatsapp,
   ServicoWebhookWhatsapp,
@@ -42,13 +61,27 @@ interface MetaWebhookPayload {
   entry?: MetaWebhookEntrada[];
 }
 
+const DURACAO_REPLAY_MS = 24 * 60 * 60 * 1000;
+const ATRASO_MAXIMO_SEGUNDOS = 24 * 60 * 60;
+const ADIANTAMENTO_MAXIMO_SEGUNDOS = 5 * 60;
+const POLITICA_WEBHOOK_WHATSAPP = {
+  maxTentativas: 600,
+  janelaMs: 60 * 1000,
+  bloqueioMs: 5 * 60 * 1000,
+  mensagemBloqueio: 'Muitas notificacoes do webhook WhatsApp. Tente novamente em alguns minutos.'
+};
+
 @Controller('comunicacoes/webhooks/whatsapp')
 export class ControladorWebhookWhatsApp {
   private readonly logger = new Logger(ControladorWebhookWhatsApp.name);
 
-  constructor(private readonly servicoWebhookWhatsapp: ServicoWebhookWhatsapp) {}
+  constructor(
+    private readonly servicoWebhookWhatsapp: ServicoWebhookWhatsapp,
+    private readonly protecaoAbuso: ServicoProtecaoAbuso
+  ) {}
 
   @Get()
+  @Header('Content-Type', 'text/plain; charset=utf-8')
   verificar(
     @Query('hub.mode') modo?: string,
     @Query('hub.verify_token') token?: string,
@@ -59,21 +92,58 @@ export class ControladorWebhookWhatsApp {
       throw new ServiceUnavailableException('Webhook WhatsApp nao configurado.');
     }
 
-    if (modo === 'subscribe' && token === tokenEsperado && desafio) {
-      return desafio;
+    if (modo !== 'subscribe' || !token || !this.segredosIguais(token, tokenEsperado)) {
+      throw new ForbiddenException('Token de verificacao invalido.');
     }
 
-    throw new ForbiddenException('Token de verificacao invalido.');
+    if (!desafio || !/^\d{1,64}$/.test(desafio)) {
+      throw new BadRequestException('Challenge de verificacao invalido.');
+    }
+
+    return desafio;
   }
 
   @Post()
-  async receber(@Body() payload: MetaWebhookPayload, @Query('token') tokenRecebimento?: string) {
+  @HttpCode(200)
+  async receber(
+    @Body() payload: MetaWebhookPayload,
+    @Req() requisicao: RawBodyRequest<Request>,
+    @Headers('x-hub-signature-256') assinatura?: string,
+    @Headers('content-type') contentType?: string,
+    @Query('token') tokenRecebimento?: string
+  ) {
+    if (contentType?.split(';', 1)[0]?.trim().toLowerCase() !== 'application/json') {
+      throw new UnsupportedMediaTypeException('Webhook WhatsApp aceita apenas application/json.');
+    }
+
+    const appSecret = process.env.META_WHATSAPP_APP_SECRET?.trim();
+    if (!appSecret) {
+      throw new ServiceUnavailableException('Assinatura do webhook WhatsApp nao configurada.');
+    }
+    this.validarAssinatura(requisicao.rawBody, assinatura, appSecret);
+
     const tokenEsperado = process.env.META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN;
-    if (tokenEsperado && tokenRecebimento !== tokenEsperado) {
+    if (tokenEsperado && (!tokenRecebimento || !this.segredosIguais(tokenRecebimento, tokenEsperado))) {
       throw new ForbiddenException('Token de recebimento invalido.');
     }
 
     const eventos = this.extrairEventos(payload);
+    this.validarFrescor(eventos);
+    const phoneNumberId = this.normalizarComponenteChave(eventos.phoneNumberIds[0] ?? 'sem-phone');
+    await this.protecaoAbuso.consumirTentativa(
+      `webhook_whatsapp:${requisicao.ip || 'ip-desconhecido'}:${phoneNumberId}`,
+      POLITICA_WEBHOOK_WHATSAPP
+    );
+
+    const rawBody = requisicao.rawBody!;
+    const chaveReplay = `webhook_whatsapp:replay:${createHash('sha256').update(rawBody).digest('hex')}`;
+    const reservado = await this.protecaoAbuso.reservarIdempotencia(chaveReplay, DURACAO_REPLAY_MS);
+    if (!reservado) {
+      const estado = await this.protecaoAbuso.obterEstadoIdempotencia(chaveReplay);
+      if (estado === 'concluido') return { recebido: true, duplicado: true };
+      throw new ServiceUnavailableException('Webhook WhatsApp ja esta em processamento.');
+    }
+
     let persistencia = {
       statusesAtualizados: 0,
       statusesIgnorados: eventos.statuses,
@@ -86,8 +156,8 @@ export class ControladorWebhookWhatsApp {
       );
     }
 
-    if (eventos.statusesDetalhados.length) {
-      try {
+    try {
+      if (eventos.statusesDetalhados.length) {
         const resultado = await this.servicoWebhookWhatsapp.registrarStatus(eventos.statusesDetalhados);
         persistencia = {
           statusesAtualizados: resultado.atualizados,
@@ -95,29 +165,67 @@ export class ControladorWebhookWhatsApp {
           mensagensCriadas: persistencia.mensagensCriadas,
           mensagensIgnoradas: persistencia.mensagensIgnoradas
         };
-      } catch (erro) {
-        this.logger.warn(
-          `Falha ao persistir status de webhook WhatsApp: ${erro instanceof Error ? erro.message : 'erro desconhecido'}`
-        );
       }
-    }
 
-    if (eventos.mensagensDetalhadas.length) {
-      try {
+      if (eventos.mensagensDetalhadas.length) {
         const resultado = await this.servicoWebhookWhatsapp.registrarMensagensRecebidas(eventos.mensagensDetalhadas);
         persistencia = {
           ...persistencia,
           mensagensCriadas: resultado.criadas,
           mensagensIgnoradas: resultado.ignoradas
         };
-      } catch (erro) {
-        this.logger.warn(
-          `Falha ao persistir mensagens recebidas do WhatsApp: ${erro instanceof Error ? erro.message : 'erro desconhecido'}`
-        );
       }
+      await this.protecaoAbuso.concluirIdempotencia(chaveReplay, DURACAO_REPLAY_MS);
+    } catch (erro) {
+      await this.protecaoAbuso.liberarIdempotencia(chaveReplay);
+      this.logger.error(
+        `Falha ao persistir webhook WhatsApp: ${erro instanceof Error ? erro.message : 'erro desconhecido'}`
+      );
+      throw new ServiceUnavailableException('Falha temporaria ao processar webhook WhatsApp.');
     }
 
     return { recebido: true, eventos: this.omitirDetalhes(eventos), persistencia };
+  }
+
+  private validarAssinatura(rawBody: Buffer | undefined, assinatura: string | undefined, appSecret: string): void {
+    if (!rawBody) throw new BadRequestException('Corpo bruto do webhook indisponivel.');
+    const correspondencia = /^sha256=([a-f0-9]{64})$/i.exec(assinatura ?? '');
+    if (!correspondencia) throw new ForbiddenException('Assinatura do webhook WhatsApp invalida.');
+
+    const esperada = createHmac('sha256', appSecret).update(rawBody).digest();
+    const recebida = Buffer.from(correspondencia[1], 'hex');
+    if (recebida.length !== esperada.length || !timingSafeEqual(recebida, esperada)) {
+      throw new ForbiddenException('Assinatura do webhook WhatsApp invalida.');
+    }
+  }
+
+  private validarFrescor(eventos: ReturnType<ControladorWebhookWhatsApp['extrairEventos']>): void {
+    const timestamps = [
+      ...eventos.statusesDetalhados.map((status) => status.timestamp),
+      ...eventos.mensagensDetalhadas.map(({ mensagem }) => mensagem.timestamp)
+    ];
+    if (!timestamps.length) return;
+
+    const agora = Math.floor(Date.now() / 1000);
+    for (const timestamp of timestamps) {
+      if (!timestamp || !/^\d{1,16}$/.test(timestamp)) {
+        throw new ForbiddenException('Timestamp do webhook WhatsApp invalido.');
+      }
+      const valor = Number(timestamp);
+      if (valor < agora - ATRASO_MAXIMO_SEGUNDOS || valor > agora + ADIANTAMENTO_MAXIMO_SEGUNDOS) {
+        throw new ForbiddenException('Evento do webhook WhatsApp fora da janela de validade.');
+      }
+    }
+  }
+
+  private segredosIguais(recebido: string, esperado: string): boolean {
+    const bufferRecebido = Buffer.from(recebido);
+    const bufferEsperado = Buffer.from(esperado);
+    return bufferRecebido.length === bufferEsperado.length && timingSafeEqual(bufferRecebido, bufferEsperado);
+  }
+
+  private normalizarComponenteChave(valor: string): string {
+    return valor.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 80) || 'desconhecido';
   }
 
   private extrairEventos(payload: MetaWebhookPayload) {

@@ -7,6 +7,28 @@ import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-audi
 import { ControladorFormulariosPublicos } from './controlador-formularios-publicos';
 
 describe('ControladorFormulariosPublicos', () => {
+  it('limita consulta publica globalmente e pelo hash do token', async () => {
+    const token = 'tenant.envio.assinatura-secreta';
+    const servico = {
+      obterFormularioPaciente: jest.fn(async () => ({ id: 'formulario-sintetico' }))
+    } as unknown as ServicoQuestionarios;
+    const protecaoAbuso = { consumirTentativa: jest.fn(async () => undefined) } as unknown as ServicoProtecaoAbuso;
+    const controlador = new ControladorFormulariosPublicos(servico, protecaoAbuso, {} as ServicoMobile, {} as ServicoAuditoria);
+
+    await controlador.obterFormulario(token, { ip: '203.0.113.10' } as Request);
+
+    expect(protecaoAbuso.consumirTentativa).toHaveBeenNthCalledWith(
+      1,
+      'formulario_publico:consulta:203.0.113.10',
+      expect.objectContaining({ maxTentativas: expect.any(Number) })
+    );
+    expect(protecaoAbuso.consumirTentativa).toHaveBeenNthCalledWith(
+      2,
+      `formulario_publico:consulta:203.0.113.10:${createHash('sha256').update(token).digest('hex')}`,
+      expect.any(Object)
+    );
+  });
+
   it.each(['rascunho', 'respostas'] as const)('limita a escrita publica de %s sem expor o token', async (acao) => {
     const token = 'tenant.envio.assinatura-secreta';
     const servico = {
@@ -22,7 +44,13 @@ describe('ControladorFormulariosPublicos', () => {
     if (acao === 'rascunho') await controlador.salvarRascunho(token, { versaoBase: 0, respostas: [] }, requisicao);
     else await controlador.finalizarFormulario(token, { respostas: [] }, requisicao);
 
-    expect(protecaoAbuso.consumirTentativa).toHaveBeenCalledWith(
+    expect(protecaoAbuso.consumirTentativa).toHaveBeenNthCalledWith(
+      1,
+      'formulario_publico:escrita:203.0.113.10',
+      expect.objectContaining({ maxTentativas: 120 })
+    );
+    expect(protecaoAbuso.consumirTentativa).toHaveBeenNthCalledWith(
+      2,
       `formulario_publico:escrita:203.0.113.10:${createHash('sha256').update(token).digest('hex')}`,
       expect.objectContaining({ maxTentativas: 120 })
     );

@@ -618,10 +618,18 @@ Validacao de envio:
 
 Validacao de recebimento:
 
-1. Enviar mensagem para o numero Meta.
-2. Conferir webhook no backend.
-3. Confirmar conversa na inbox.
-4. Associar contato a paciente quando necessario.
+1. Antes do deploy, confirmar no backend do Render
+   `META_WHATSAPP_WEBHOOK_VERIFY_TOKEN` e `META_WHATSAPP_APP_SECRET` com no
+   minimo 32 bytes. Nao registrar os valores.
+2. Enviar mensagem para o numero Meta.
+3. Conferir webhook no backend.
+4. Confirmar conversa na inbox.
+5. Associar contato a paciente quando necessario.
+
+O bootstrap de producao falha fechado quando a integracao Meta esta
+parcialmente configurada. O POST exige `application/json`, assinatura
+`X-Hub-Signature-256` sobre o corpo bruto e timestamp dentro da janela de
+validade. Reentrega identica e reconhecida sem repetir efeitos.
 
 Nunca registre token Meta em commits, docs, issues ou logs.
 

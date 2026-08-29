@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { InterceptorLogRequisicao } from './infraestrutura/observabilidade/interceptor-log-requisicao';
 import { middlewareCorrelacao } from './infraestrutura/observabilidade/middleware-correlacao';
 import { ModuloAplicacao } from './modulo-aplicacao';
@@ -63,6 +64,21 @@ function validarCorsProducao() {
   if (configuracaoGoogle[2] && Buffer.byteLength(configuracaoGoogle[2], 'utf8') < 32) {
     throw new Error('GOOGLE_CALENDAR_OAUTH_STATE_SECRET precisa ter pelo menos 32 bytes em producao.');
   }
+
+  const configuracaoMeta = [
+    process.env.META_WHATSAPP_TOKEN?.trim(),
+    process.env.META_WHATSAPP_PHONE_NUMBER_ID?.trim(),
+    process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN?.trim(),
+    process.env.META_WHATSAPP_APP_SECRET?.trim()
+  ];
+  if (configuracaoMeta.some(Boolean) && (!configuracaoMeta[2] || !configuracaoMeta[3])) {
+    throw new Error(
+      'META_WHATSAPP_WEBHOOK_VERIFY_TOKEN e META_WHATSAPP_APP_SECRET sao obrigatorios quando a integracao Meta esta configurada em producao.'
+    );
+  }
+  if (configuracaoMeta[3] && Buffer.byteLength(configuracaoMeta[3], 'utf8') < 32) {
+    throw new Error('META_WHATSAPP_APP_SECRET precisa ter pelo menos 32 bytes em producao.');
+  }
 }
 
 async function iniciarAplicacao() {
@@ -75,8 +91,9 @@ async function iniciarAplicacao() {
     aplicacao.enableShutdownHooks();
     return;
   }
-  const aplicacao = await NestFactory.create(ModuloAplicacao);
+  const aplicacao = await NestFactory.create<NestExpressApplication>(ModuloAplicacao, { rawBody: true });
   aplicacao.enableShutdownHooks();
+  aplicacao.useBodyParser('json', { limit: '100kb' });
   const servidorHttp = aplicacao.getHttpAdapter().getInstance();
   servidorHttp.set('trust proxy', 1);
   aplicacao.use(middlewareCorrelacao);

@@ -18,7 +18,8 @@ export class ControladorFormulariosPublicos {
   ) {}
 
   @Get(':token')
-  obterFormulario(@Param('token') token: string) {
+  async obterFormulario(@Param('token') token: string, @Req() requisicao: Request) {
+    await this.limitarPublico('consulta', token, requisicao.ip ?? '', 60);
     return this.servicoQuestionarios.obterFormularioPaciente(token);
   }
 
@@ -108,23 +109,44 @@ export class ControladorFormulariosPublicos {
   }
 
   private limitarEscrita(token: string, ip: string) {
+    return this.limitarPublico('escrita', token, ip, 120);
+  }
+
+  private async limitarPublico(acao: 'consulta' | 'escrita', token: string, ip: string, maxTentativas: number) {
+    const ipNormalizado = ip || 'ip-desconhecido';
     const tokenHash = createHash('sha256').update(token).digest('hex');
-    return this.protecaoAbuso.consumirTentativa(`formulario_publico:escrita:${ip || 'ip-desconhecido'}:${tokenHash}`, {
-      maxTentativas: 120,
+    const politica = {
+      maxTentativas,
       janelaMs: 15 * 60 * 1000,
       bloqueioMs: 15 * 60 * 1000,
-      mensagemBloqueio: 'Muitas atualizacoes deste formulario. Tente novamente em alguns minutos.'
-    });
+      mensagemBloqueio:
+        acao === 'consulta'
+          ? 'Muitas consultas de formularios. Tente novamente em alguns minutos.'
+          : 'Muitas atualizacoes deste formulario. Tente novamente em alguns minutos.'
+    };
+    await this.protecaoAbuso.consumirTentativa(`formulario_publico:${acao}:${ipNormalizado}`, politica);
+    await this.protecaoAbuso.consumirTentativa(
+      `formulario_publico:${acao}:${ipNormalizado}:${tokenHash}`,
+      politica
+    );
   }
 
   private limitarUpload(token: string, ip: string) {
+    const ipNormalizado = ip || 'ip-desconhecido';
     const tokenHash = createHash('sha256').update(token).digest('hex');
-    return this.protecaoAbuso.consumirTentativa(`formulario_publico:upload:${ip || 'ip-desconhecido'}:${tokenHash}`, {
+    const politica = {
       maxTentativas: 10,
       janelaMs: 15 * 60 * 1000,
       bloqueioMs: 15 * 60 * 1000,
       mensagemBloqueio: 'Muitos anexos enviados. Tente novamente em alguns minutos.'
-    });
+    };
+    return Promise.all([
+      this.protecaoAbuso.consumirTentativa(`formulario_publico:upload:${ipNormalizado}`, politica),
+      this.protecaoAbuso.consumirTentativa(
+        `formulario_publico:upload:${ipNormalizado}:${tokenHash}`,
+        politica
+      )
+    ]).then(() => undefined);
   }
 
   private mimePermitido(mimeType: string, configuracao: unknown): boolean {
