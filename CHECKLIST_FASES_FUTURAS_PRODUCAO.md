@@ -2499,9 +2499,12 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 - [x] PR 37 - Consolidar modelo de ameacas, ASVS e triagem factual dos scanners.
   - Integrado no `main` pelo PR GitHub `#159` em 2026-08-28.
   - Snapshot: 49 alertas de code scanning, 2 Dependabot e 0 secret scanning; ledger validado por `pnpm test:triagem-seguranca`.
-- [ ] PR 38 - Endurecer webhooks e endpoints publicos.
-  - Implementacao em `security/governanca-pr38-webhook-reflexao`; aguarda validacao, review, checks e merge humano.
+- [x] PR 38 - Endurecer webhooks e endpoints publicos.
+  - Integrado no `main` pelo PR GitHub `#160` em 2026-08-28.
 - [ ] PR 39 - Verificar transporte, TLS e criptografia de dados.
+  - Implementacao em `security/governanca-pr39-transporte-criptografia`; aguarda validacao, review, checks e merge humano.
+  - Remove `rejectUnauthorized: false` do Postgres e introduz envelope AES-GCM versionado com key-id, dual-read do formato legado e rotacao documentada.
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR39_2026-08-29.md`.
 - [ ] PR 40 - Endurecer sessoes, JWT e refresh tokens.
 - [ ] PR 41 - Implementar MFA e reautenticacao privilegiada.
 - [ ] PR 42 - Provar autorizacao de objeto e funcao contra BOLA/BFLA/IDOR.
@@ -2523,4 +2526,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo PR autorizado: PR 38. O PR 39 depende do merge e aceite humano deste item.
+Proximo PR autorizado: PR 39. O PR 40 depende do merge e aceite humano deste item.

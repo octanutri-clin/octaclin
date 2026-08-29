@@ -30,6 +30,11 @@ describe('criarOpcoesTypeOrm', () => {
     process.env = { ...ambienteOriginal };
     delete process.env.DATABASE_URL;
     delete process.env.BANCO_SSL;
+    delete process.env.APP_AMBIENTE;
+    delete process.env.BANCO_SSL_CA;
+    delete process.env.BANCO_SSL_CA_ARQUIVO;
+    delete process.env.BANCO_SSL_SERVERNAME;
+    delete process.env.BANCO_SSL_PERMITIR_INSEGURO;
     delete process.env.BANCO_POOL_MAX;
     delete process.env.BANCO_POOL_CONNECTION_TIMEOUT_MS;
     delete process.env.BANCO_POOL_IDLE_TIMEOUT_MS;
@@ -50,7 +55,7 @@ describe('criarOpcoesTypeOrm', () => {
     expect(opcoes.username).toBe('usuario@app');
     expect(opcoes.password).toBe('senha');
     expect(opcoes.database).toBe('octaclin');
-    expect(opcoes.ssl).toEqual({ rejectUnauthorized: false });
+    expect(opcoes.ssl).toEqual({ rejectUnauthorized: true });
   });
 
   it('mantem fallback por BANCO_* quando DATABASE_URL nao existe', () => {
@@ -69,6 +74,13 @@ describe('criarOpcoesTypeOrm', () => {
     expect(opcoes.password).toBe('local');
     expect(opcoes.database).toBe('octaclin_local');
     expect(opcoes.ssl).toBe(false);
+  });
+
+  it('recusa subir em producao com TLS permissivo na DATABASE_URL', () => {
+    process.env.APP_AMBIENTE = 'producao';
+    process.env.DATABASE_URL = 'postgresql://usuario%40app:senha@ep-demo.exemplo.invalid/octaclin?sslmode=prefer';
+
+    expect(() => criarOpcoesTypeOrm()).toThrow('sslmode');
   });
 
   it('configura o pool Postgres com defaults finitos e permite ajuste por ambiente', () => {

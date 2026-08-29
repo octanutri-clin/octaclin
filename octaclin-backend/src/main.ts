@@ -47,8 +47,25 @@ function validarCorsProducao() {
     throw new Error('JWT_REFRESH_SEGREDO e obrigatorio em producao.');
   }
 
-  if (!process.env.CRIPTOGRAFIA_CHAVE_AES_256?.trim()) {
+  const chaveCriptografia = process.env.CRIPTOGRAFIA_CHAVE_AES_256?.trim();
+  if (!chaveCriptografia) {
     throw new Error('CRIPTOGRAFIA_CHAVE_AES_256 e obrigatoria em producao.');
+  }
+  if (Buffer.byteLength(chaveCriptografia, 'utf8') < 32) {
+    throw new Error('CRIPTOGRAFIA_CHAVE_AES_256 precisa ter pelo menos 32 bytes em producao.');
+  }
+
+  const chaveCriptografiaAnterior = process.env.CRIPTOGRAFIA_CHAVE_AES_256_ANTERIOR?.trim();
+  if (chaveCriptografiaAnterior && Buffer.byteLength(chaveCriptografiaAnterior, 'utf8') < 32) {
+    throw new Error('CRIPTOGRAFIA_CHAVE_AES_256_ANTERIOR precisa ter pelo menos 32 bytes em producao.');
+  }
+  if (chaveCriptografiaAnterior === chaveCriptografia) {
+    throw new Error('CRIPTOGRAFIA_CHAVE_AES_256_ANTERIOR deve ser diferente da chave atual.');
+  }
+
+  const chaveIndice = process.env.CRIPTOGRAFIA_CHAVE_INDICE_HMAC?.trim();
+  if (chaveIndice && Buffer.byteLength(chaveIndice, 'utf8') < 32) {
+    throw new Error('CRIPTOGRAFIA_CHAVE_INDICE_HMAC precisa ter pelo menos 32 bytes em producao.');
   }
 
   obterSegredoFormularioPublico();
