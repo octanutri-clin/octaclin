@@ -15,6 +15,7 @@ import {
   obterConfiguracaoMfaLogin,
   type ConfiguracaoMfaPublica
 } from '@/lib/auth-api';
+import { sanitizarDestinoInterno } from '@/lib/destino-interno';
 
 export function LoginForm() {
   const router = useRouter();
@@ -30,11 +31,8 @@ export function LoginForm() {
 
   function redirecionar(destinoInicial?: string) {
     const redirect = new URLSearchParams(window.location.search).get('redirect');
-    const destino = (
-      redirect?.startsWith('/') && !redirect.startsWith('//') && !redirect.startsWith('/api')
-        ? redirect
-        : destinoInicial ?? '/operacoes'
-    ) as Route;
+    const destinoPadrao = sanitizarDestinoInterno(destinoInicial, '/operacoes');
+    const destino = sanitizarDestinoInterno(redirect ?? undefined, destinoPadrao) as Route;
     router.replace(destino);
   }
 

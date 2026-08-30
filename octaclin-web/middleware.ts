@@ -5,6 +5,7 @@ import {
   sanitizarDestinoInicial
 } from './lib/server/autorizacao-rotas';
 import { origemMutacaoPermitida } from './lib/server/seguranca-bff';
+import { criarNonceCsp, criarPoliticaConteudo } from './lib/server/csp';
 
 const COOKIE_ACCESS_TOKEN = 'octaclin_access_token';
 const COOKIE_REFRESH_TOKEN = 'octaclin_refresh_token';
@@ -64,16 +65,30 @@ function permissoesSessao(request: NextRequest) {
   }
 }
 
+function protegerResposta(resposta: NextResponse, politicaConteudo: string) {
+  resposta.headers.set('Content-Security-Policy', politicaConteudo);
+  resposta.headers.set('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+  resposta.headers.set('Pragma', 'no-cache');
+  return resposta;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const autenticado = possuiSessao(request);
   const requestHeaders = new Headers(request.headers);
+  const nonce = criarNonceCsp();
+  const politicaConteudo = criarPoliticaConteudo(nonce);
   requestHeaders.delete('x-middleware-subrequest');
+  requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', politicaConteudo);
 
   if ((pathname === '/api' || pathname.startsWith('/api/')) && !origemMutacaoPermitida(request)) {
-    return NextResponse.json(
-      { mensagem: 'Origem da requisicao nao autorizada.' },
-      { status: 403, headers: { 'Cache-Control': 'no-store' } }
+    return protegerResposta(
+      NextResponse.json(
+        { mensagem: 'Origem da requisicao nao autorizada.' },
+        { status: 403, headers: { 'Cache-Control': 'no-store' } }
+      ),
+      politicaConteudo
     );
   }
 
@@ -82,13 +97,13 @@ export function middleware(request: NextRequest) {
   if (rotaProtegida && !autenticado) {
     const destino = new URL('/login', request.url);
     destino.searchParams.set('redirect', `${pathname}${search}`);
-    return NextResponse.redirect(destino);
+    return protegerResposta(NextResponse.redirect(destino), politicaConteudo);
   }
 
   if (rotaProtegida && autenticado) {
     const decisao = decidirAcessoRota(pathname, papelSessao(request), destinoInicial(request), permissoesSessao(request));
     if (!decisao.permitir && decisao.redirecionarPara) {
-      return NextResponse.redirect(new URL(decisao.redirecionarPara, request.url));
+      return protegerResposta(NextResponse.redirect(new URL(decisao.redirecionarPara, request.url)), politicaConteudo);
     }
   }
 
@@ -97,28 +112,14 @@ export function middleware(request: NextRequest) {
     const destino = papel
       ? resolverDestinoPermitido(papel, destinoInicial(request), permissoesSessao(request))
       : destinoInicial(request);
-    if (destino !== '/login') return NextResponse.redirect(new URL(destino, request.url));
+    if (destino !== '/login') {
+      return protegerResposta(NextResponse.redirect(new URL(destino, request.url)), politicaConteudo);
+    }
   }
 
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  return protegerResposta(NextResponse.next({ request: { headers: requestHeaders } }), politicaConteudo);
 }
 
 export const config = {
-  matcher: [
-    '/api/:path*',
-    '/login',
-    '/dashboard/:path*',
-    '/agenda/:path*',
-    '/operacoes/:path*',
-    '/questionarios/:path*',
-    '/comunicacoes/:path*',
-    '/automacoes/:path*',
-    '/ia/:path*',
-    '/mobile/:path*',
-    '/gamificacao/:path*',
-    '/pacientes/:path*',
-    '/profissionais/:path*',
-    '/portal/:path*',
-    '/cliente/:path*'
-  ]
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/|sw.js).*)']
 };

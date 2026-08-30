@@ -1,6 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decidirAcessoRota } from '../lib/server/autorizacao-rotas';
+import { decidirAcessoRota, sanitizarDestinoInicial } from '../lib/server/autorizacao-rotas';
+
+test('destino interno recusa esquemas, barras invertidas, APIs e caracteres de controle', () => {
+  for (const destinoHostil of [
+    'https://ataque.example/roubo',
+    '//ataque.example/roubo',
+    '/\\\\ataque.example/roubo',
+    '/api/auth/sair',
+    '/agenda\r\nLocation: https://ataque.example'
+  ]) {
+    assert.equal(sanitizarDestinoInicial(destinoHostil), '/dashboard');
+  }
+
+  assert.equal(sanitizarDestinoInicial('/agenda?pacienteId=sintetico#novo-agendamento'), '/agenda?pacienteId=sintetico#novo-agendamento');
+});
 
 test('paciente deve acessar apenas o portal e voltar ao portal ao tentar console', () => {
   assert.deepEqual(decidirAcessoRota('/portal', 'Patient', '/portal'), { permitir: true });

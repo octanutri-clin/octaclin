@@ -4,6 +4,7 @@ import {
   moduloConsolePermitePapel,
   permissaoExigidaParaRotaConsole
 } from '../navegacao-console';
+import { sanitizarDestinoInterno } from '../destino-interno';
 
 export interface DecisaoAcessoRota {
   permitir: boolean;
@@ -19,8 +20,7 @@ function pertenceARota(pathname: string, rotas: readonly string[]) {
 }
 
 export function sanitizarDestinoInicial(valor?: string) {
-  if (!valor) return '/dashboard';
-  return valor.startsWith('/') && !valor.startsWith('//') ? valor : '/dashboard';
+  return sanitizarDestinoInterno(valor, '/dashboard');
 }
 
 function papelPermiteRotaOperacional(pathname: string, papel: string) {

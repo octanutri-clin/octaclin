@@ -106,6 +106,29 @@ describe('inicializacao da aplicacao', () => {
     expect(mockCriarAplicacao).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['origem opaca', 'null'],
+    ['origem com caminho', 'https://app.octaclin.test/rota'],
+    ['origem HTTP publica', 'http://app.octaclin.test'],
+    ['origem com credencial', 'https://usuario:senha@app.octaclin.test']
+  ])('recusa CORS_ORIGINS insegura em producao: %s', async (_caso, origem) => {
+    process.env.CORS_ORIGINS = origem;
+
+    await expect(carregarMain()).rejects.toThrow('CORS_ORIGINS');
+    expect(mockCriarAplicacao).not.toHaveBeenCalled();
+  });
+
+  it('normaliza e deduplica origens CORS explicitas antes de habilitar credenciais', async () => {
+    process.env.CORS_ORIGINS = 'https://app.octaclin.test, https://app.octaclin.test,https://admin.octaclin.test';
+
+    await carregarMain();
+
+    expect(mockAplicacao.enableCors).toHaveBeenCalledWith({
+      origin: ['https://app.octaclin.test', 'https://admin.octaclin.test'],
+      credentials: true
+    });
+  });
+
   it('recusa iniciar em producao sem segredo JWT', async () => {
     process.env.CORS_ORIGINS = 'https://app.octaclin.test';
     delete process.env.JWT_SEGREDO;

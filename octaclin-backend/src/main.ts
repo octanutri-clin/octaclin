@@ -11,17 +11,44 @@ import { redisConfigurado } from './modulos/comunicacoes/aplicacao/configuracao-
 import { ServicoTelemetriaOperacional } from './infraestrutura/observabilidade/servico-telemetria-operacional';
 import { criarPipeValidacaoHttp } from './infraestrutura/http/pipe-validacao-http';
 
-function obterOrigensCors(): boolean | string[] {
+function normalizarOrigemCors(origem: string, producao: boolean): string {
+  let url: URL;
+  try {
+    url = new URL(origem);
+  } catch {
+    throw new Error('CORS_ORIGINS deve conter apenas origens HTTP(S) validas.');
+  }
+
+  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if (
+    !['http:', 'https:'].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.pathname !== '/' ||
+    url.search ||
+    url.hash ||
+    origem.replace(/\/$/, '') !== url.origin
+  ) {
+    throw new Error('CORS_ORIGINS deve conter apenas origens HTTP(S), sem caminho, credencial, query ou hash.');
+  }
+  if (producao && url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) {
+    throw new Error('CORS_ORIGINS deve usar HTTPS em producao.');
+  }
+  return url.origin;
+}
+
+function obterOrigensCors(): true | string[] {
   const valor = process.env.CORS_ORIGINS;
   if (!valor) return true;
 
   const origens = valor
     .split(',')
     .map((origem) => origem.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((origem) => normalizarOrigemCors(origem, process.env.NODE_ENV === 'production'));
 
-  if (!origens.length || origens.includes('*')) return true;
-  return origens;
+  if (!origens.length) return true;
+  return [...new Set(origens)];
 }
 
 function obterPortaHttp(): number {
@@ -31,12 +58,8 @@ function obterPortaHttp(): number {
 function validarCorsProducao() {
   if (process.env.NODE_ENV !== 'production') return;
 
-  const origens = (process.env.CORS_ORIGINS ?? '')
-    .split(',')
-    .map((origem) => origem.trim())
-    .filter(Boolean);
-
-  if (!origens.length || origens.includes('*')) {
+  const origens = obterOrigensCors();
+  if (!Array.isArray(origens) || !origens.length) {
     throw new Error('CORS_ORIGINS deve definir origens explicitas em producao.');
   }
 

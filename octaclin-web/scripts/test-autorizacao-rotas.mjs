@@ -46,6 +46,7 @@ executar(process.execPath, [
   'scripts/cold-start-bff.spec.ts',
   'scripts/paleta-comandos.spec.ts',
   'lib/server/autorizacao-rotas.ts',
+  'lib/destino-interno.ts',
   'lib/navegacao-console.ts',
   'lib/server/permissoes-bff.ts',
   'lib/server/cold-start-bff.ts',

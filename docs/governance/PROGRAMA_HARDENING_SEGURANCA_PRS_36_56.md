@@ -4,7 +4,7 @@
 >
 > Atualizado em: 2026-08-30
 >
-> Proximo item autorizado: review/checks/merge humano do PR 44.
+> Proximo item autorizado: review/checks/merge humano do PR 45.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
@@ -23,10 +23,13 @@
 > (`40570f280831a404447468bff3d14976ba77f863`) — provou isolamento RLS
 > integral em Postgres real/testcontainers, sem alteracao de codigo de
 > producao.
-> Estado do PR 44: implementacao concluida em
-> `security/governanca-pr44-uploads-storage-clinico`, aguardando review
-> humano, checks e merge. Relatorio:
+> Estado do PR 44: integrado no `main` pelo PR GitHub #167
+> (`c11fee336b85e59f8c52d9ea912d3c70f7d7278c`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR44_2026-08-30.md`.
+> Estado do PR 45: implementacao e validacao local concluidas em
+> `security/governanca-pr45-browser-bff`, aguardando checks e review/merge
+> humano. Relatorio:
+> `docs/governance/RELATORIO_SEGURANCA_PR45_2026-08-30.md`.
 
 ## 1. Funcao deste documento
 
@@ -330,9 +333,9 @@ Skills Claude: `security-review`, `test-driven-development`,
 Gate minimo: arquivos adulterados, enormes, polyglot e cross-tenant rejeitados;
 exclusao verificavel no storage; sem upload real fora de ambiente isolado.
 
-Implementacao concluida em
-`security/governanca-pr44-uploads-storage-clinico`, aguardando review humano,
-checks e merge. Corrigido o TOCTOU entre a inspecao do objeto e a promocao
+Integrado no `main` pelo PR GitHub #167
+(`c11fee336b85e59f8c52d9ea912d3c70f7d7278c`). Corrigido o TOCTOU entre a
+inspecao do objeto e a promocao
 pendente→confirmado (a inspecao passou a ler a copia ja promovida e imutavel
 para o cliente, nao o objeto pendente ainda reescrevivel — o provider real,
 Backblaze B2, roda com escrita condicional desligada). Adicionados: validacao
@@ -357,6 +360,15 @@ Skills Claude: `security-review`, `test-driven-development`,
 
 Gate minimo: testes no browser para XSS/CSRF/CORS/cache/redirect; CSP em modo
 bloqueante sem quebrar fluxos autorizados.
+
+Implementacao e validacao local concluidas em
+`security/governanca-pr45-browser-bff`, aguardando checks e review/merge
+humano. A CSP usa nonce por resposta, remove `unsafe-inline` de
+scripts, torna o HTML dinamico e impede cache compartilhado. Browser e runtime
+de producao provaram XSS, CSRF, CORS, cache e redirect hostil. A allowlist CORS
+do backend agora recusa origem opaca, caminho, credencial e HTTP publico em
+producao. Sem migration, deploy ou operacao externa. Relatorio:
+`docs/governance/RELATORIO_SEGURANCA_PR45_2026-08-30.md`.
 
 ### PR 46 - OAuth e integracoes externas
 

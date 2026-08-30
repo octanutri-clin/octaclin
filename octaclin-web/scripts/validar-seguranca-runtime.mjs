@@ -68,6 +68,9 @@ try {
     'strict-transport-security',
     'x-content-type-options',
     'x-frame-options',
+    'cross-origin-opener-policy',
+    'cross-origin-resource-policy',
+    'x-permitted-cross-domain-policies',
     'referrer-policy',
     'permissions-policy'
   ]) {
@@ -77,6 +80,27 @@ try {
     login.headers.get('content-security-policy'),
     /unsafe-eval/,
     'Build de producao nao pode permitir unsafe-eval.'
+  );
+  const politica = login.headers.get('content-security-policy') ?? '';
+  const scriptSrc = politica.split(';').find((diretiva) => diretiva.trim().startsWith('script-src')) ?? '';
+  const nonce = scriptSrc.match(/'nonce-([^']+)'/)?.[1];
+  assert.ok(nonce, 'CSP de producao precisa declarar nonce por requisicao.');
+  assert.doesNotMatch(scriptSrc, /unsafe-inline/, 'script-src de producao nao pode permitir unsafe-inline.');
+  assert.match(scriptSrc, /'self'/, 'script-src deve restringir arquivos externos ao proprio host.');
+
+  const htmlLogin = await login.text();
+  const scriptsInline = [...htmlLogin.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>/gi)];
+  assert.ok(scriptsInline.length > 0, 'Login deve conter bootstrap inline do Next para provar o nonce.');
+  for (const script of scriptsInline) {
+    assert.match(script[1], new RegExp(`\\bnonce=["']${nonce}["']`), 'Todo script inline deve carregar o nonce da resposta.');
+  }
+
+  const paginaProtegida = await fetch(`${origem}/dashboard`, { redirect: 'manual' });
+  assert.ok([307, 308].includes(paginaProtegida.status), 'Visitante deve ser redirecionado antes de acessar dashboard.');
+  assert.match(
+    paginaProtegida.headers.get('cache-control') ?? '',
+    /no-store/,
+    'Resposta de tela autenticada nao pode entrar em cache.'
   );
 
   const mutacaoMesmaOrigem = await fetch(`${origem}/api/auth/login`, {
@@ -108,7 +132,12 @@ try {
   });
   assert.equal(mutacaoSemOrigem.status, 403);
 
-  console.log('Runtime web: headers globais e protecao de origem aprovados.');
+  const sessaoAnonima = await fetch(`${origem}/api/auth/session`);
+  assert.equal(sessaoAnonima.status, 401);
+  assert.match(sessaoAnonima.headers.get('cache-control') ?? '', /no-store/);
+  assert.equal(sessaoAnonima.headers.get('access-control-allow-origin'), null);
+
+  console.log('Runtime web: CSP nonce, cache, CORS e protecao de origem aprovados.');
 } catch (falha) {
   console.error(saida);
   console.error(erro);
