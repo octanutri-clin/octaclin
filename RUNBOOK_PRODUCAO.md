@@ -406,6 +406,87 @@ removido e nos logs que nao houve URL assinada, token ou nome clinico exposto.
 Rollback de aplicacao: reverter o deploy. Nao executar o `down` da migration se
 ja houver anexos reais; as colunas sao aditivas e podem permanecer sem uso.
 
+### Uploads e storage clinico (PR 44 da governanca)
+
+Endurece o fluxo acima sem mudar bucket, credenciais nem a regra de lifecycle
+ja configurada na Fase 200. Nenhuma migration; nenhuma variavel nova.
+
+**Estados do arquivo** (`arquivos_midia.status`, inalterado):
+`pendente` (aguardando confirmacao) → `confirmado` (validado e disponivel
+para download) → `excluido` (removido, terminal). Um motivo de rejeicao
+(`validacao_conteudo`, `imagem_invalida` ou `antimalware`) fica registrado em
+`metadados.motivoRejeicao` quando a transicao para `excluido` acontece por
+falha na confirmacao, para diferenciar de uma exclusao pedida pelo usuario.
+
+**Quarentena e criterio de promocao:** o objeto so passa a existir na chave
+`confirmados/...` depois que o backend copia o objeto pendente para ela — o
+cliente nunca recebeu URL assinada para escrever nessa chave, entao a copia e
+imutavel a partir desse momento. A inspecao (magic bytes, hash, tamanho e,
+para imagem, dimensao/pixels e remocao de metadado) roda sobre essa copia
+imutavel, nunca sobre o objeto pendente. So depois de toda a cadeia passar o
+banco marca `confirmado`; um arquivo `pendente` nunca gera URL de download
+utilizavel.
+
+**Scanner antimalware:** `ServicoAntimalware` e um mecanismo de referencia,
+nao um antivirus real — ele so reconhece a assinatura de teste padrao EICAR.
+Timeout (5s) ou erro do mecanismo sempre rejeitam a confirmacao; nunca liberam
+por omissao. Ligar um scanner real (ClamAV local ou equivalente) exige decisao
+operacional e infraestrutura fora do escopo deste PR — quando isso acontecer,
+substituir a implementacao de `MecanismoAntimalware` sem mudar quem a chama.
+
+**Limites de imagem:** largura e altura ate 12000 px cada, e ate
+100.000.000 de pixels totais (dimensao real, lida da propria estrutura do
+arquivo — JPEG/PNG/WEBP — nunca do valor declarado pelo cliente). Acima disso,
+ou se a estrutura do arquivo nao puder ser lida, a confirmacao e rejeitada.
+
+**Formatos permitidos:** inalterados desde a Fase 200 —
+`image/jpeg`, `image/png`, `image/webp` (imagem); `audio/mpeg`, `audio/mp4`,
+`audio/ogg`, `audio/wav` (audio); `video/mp4`, `video/webm` (video);
+`application/pdf` (documento). Nenhum formato novo foi habilitado.
+
+**Metadado removido:** para imagem, GPS/EXIF, comentarios e texto embutido
+(APPn/COM no JPEG; `tEXt`/`zTXt`/`iTXt`/`eXIf`/`tIME` no PNG; `EXIF`/`XMP ` no
+WEBP). Os pixels nao sao decodificados nem recodificados — so os blocos de
+metadado sao removidos. Quando ha remocao, o objeto confirmado e reescrito
+com o conteudo sanitizado e o hash persistido passa a ser o do conteudo
+sanitizado, nunca o original.
+
+**Hash:** SHA-256, sempre calculado pelo backend sobre o conteudo final
+(apos eventual sanitizacao de imagem), nunca sobre o valor declarado pelo
+cliente.
+
+**Object key:** inalterado — `pendentes/{tenantId}/{pacienteId}/{tipo}/{uuid}`
+e depois `confirmados/{tenantId}/{pacienteId}/{tipo}/{arquivoId}`. Sempre
+gerado no backend; o cliente nunca escolhe bucket nem key.
+
+**Download:** exige `status === 'confirmado'` e a mesma cadeia de
+autorizacao por tenant/carteira/paciente da Fase 200, inalterada.
+
+**Exclusao:** os dois fluxos de exclusao direta e permanente de arquivo
+(`ServicoMobile.excluirArquivoMidia` e `ServicoEvolucoesFotograficas.excluir`)
+so marcam o registro como `excluido` depois que um HEAD subsequente ao
+DELETE confirma que o objeto deixou de existir no storage — nao basta o
+DELETE retornar sucesso. Se o Backblaze B2 real nomear o erro de "objeto nao
+encontrado" de forma diferente do modelado pelo SDK AWS (`NotFound`/
+`NoSuchKey`/404 HTTP), a exclusao passa a ser recusada mesmo quando funcionou
+de fato — validar esse comportamento em staging antes de depender dele em
+producao; a falha e sempre no sentido seguro (nunca marca como excluido por
+engano).
+
+**Lifecycle:** a regra de 1 dia sobre `pendentes/` da Fase 200 continua
+correta sem alteracao — este PR nao muda em qual prefixo os objetos pendentes
+ficam, so a ordem entre promocao e inspecao.
+
+**Rollback:** reverter o deploy. Sem migration, sem dado a reverter; a versao
+anterior continua lendo qualquer arquivo ja confirmado normalmente.
+
+Depois do deploy, validar com arquivo sintetico: solicitar URL, enviar,
+confirmar (observar o log de auditoria `mobile.midia.upload_confirmar`),
+abrir, excluir (observar `mobile.midia.excluir`) e confirmar no provedor que
+o objeto foi removido. Para provar a rejeicao sem usar malware real, um
+arquivo cujo conteudo seja a assinatura de teste EICAR deve ser recusado na
+confirmacao com o log de auditoria `mobile.midia.upload_rejeitado`.
+
 ### Fase 216 - plano alimentar e catalogo TACO
 
 Com `BANCO_EXECUTAR_MIGRACOES=false`, aplicar a migration

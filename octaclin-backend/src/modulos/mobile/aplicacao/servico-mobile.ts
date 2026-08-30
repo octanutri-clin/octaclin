@@ -1,7 +1,9 @@
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
 import { ServicoArmazenamentoObjetos, validarUploadSolicitado } from '../../../infraestrutura/armazenamento/servico-armazenamento-objetos';
+import { ServicoAntimalware } from '../../../infraestrutura/armazenamento/servico-antimalware';
+import { removerMetadadosImagem, validarDimensoesImagem } from '../../../infraestrutura/armazenamento/sanitizacao-imagem';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -66,7 +68,8 @@ export class ServicoMobile {
     private readonly criptografia: CriptografiaDadosSensiveis,
     private readonly senhas: ServicoSenhas,
     private readonly armazenamento: ServicoArmazenamentoObjetos,
-    private readonly portalCliente: ServicoPortalCliente
+    private readonly portalCliente: ServicoPortalCliente,
+    private readonly antimalware: ServicoAntimalware
   ) {}
 
   async listarDiarioRapido(tenantId: string, usuario: UsuarioAutenticado): Promise<LogDiarioRapidoOrm[]> {
@@ -248,6 +251,32 @@ export class ServicoMobile {
     );
   }
 
+  /**
+   * Ordem deliberada: promove (copia pendente -> confirmado) **antes** de
+   * inspecionar, e a inspecao le a copia, nao o original. O cliente so
+   * recebeu URL assinada para escrever em `pendentes/...`; a chave
+   * `confirmados/...` so passa a existir depois da copia, e ele nunca tem
+   * como escrever nela. Por isso a copia e imutavel assim que criada, e
+   * validar sobre ela fecha a janela de TOCTOU que existiria se
+   * validassemos o objeto pendente e so depois promovessemos: um segundo PUT
+   * do cliente para a chave pendente, entre a inspecao e a promocao,
+   * trocaria o conteudo que acaba sendo servido sem que a inspecao o tivesse
+   * visto. Isso importa mesmo com escrita condicional (`If-None-Match`) na
+   * URL de upload, porque o provedor real (Backblaze B2) roda com
+   * `ARMAZENAMENTO_S3_IF_NONE_MATCH=false` — a escrita condicional fica
+   * desligada exatamente onde a troca seria possivel.
+   *
+   * Sem trava de concorrencia deliberada: `ExecutorTenant.executar` abre uma
+   * transacao por chamada (`DataSource.transaction`), entao um advisory lock
+   * pego no primeiro fetch seria liberado antes do pipeline de storage
+   * comecar — nao protegeria a parte que importa, so daria a falsa
+   * impressao de que protege. Duas confirmacoes concorrentes continuam
+   * seguras porque a chave `confirmados/...` e deterministica
+   * (`arquivo.id`): cada chamada promove e inspeciona o mesmo destino, e a
+   * ultima escrita bem-sucedida no banco e a que vale — nunca duas versoes
+   * "ativas" do mesmo anexo. O custo e trabalho redundante de S3 num duplo
+   * clique, nao um risco de seguranca.
+   */
   private async confirmarUploadMidiaInterno(
     tenantId: string,
     arquivoId: string,
@@ -263,37 +292,70 @@ export class ServicoMobile {
       throw new NotFoundException('Anexo nao encontrado.');
     }
 
-    let inspecao: { tamanhoBytes: number; mimeType: string; hashConteudo: string };
+    // Capturados antes de qualquer escrita: `atual`, adiante, pode ser a
+    // mesma instancia de entidade que `arquivo` dependendo do ORM/mock, e o
+    // bloco final reatribui `chaveObjeto`. Ler direto de `arquivo` depois
+    // disso arriscaria pegar o valor ja sobrescrito.
+    const bucket = arquivo.bucket;
+    const chavePendente = arquivo.chaveObjeto;
     const chaveConfirmada = `confirmados/${tenantId}/${arquivo.pacienteId}/${arquivo.tipo}/${arquivo.id}`;
+    const metadadosEsperados = {
+      tenantid: tenantId,
+      pacienteid: arquivo.pacienteId,
+      arquivoid: arquivo.id,
+      ...vinculo,
+      ...this.metadadosVinculoClinico(this.extrairVinculoClinico(arquivo.metadados?.vinculoClinico))
+    };
+
+    let inspecao: { tamanhoBytes: number; mimeType: string; hashConteudo: string; conteudo: Buffer };
+    let motivoRejeicao = 'validacao_conteudo';
     try {
-      inspecao = await this.armazenamento.inspecionarObjeto(arquivo.bucket, arquivo.chaveObjeto, arquivo.tipo, {
-        tenantid: tenantId,
-        pacienteid: arquivo.pacienteId,
-        arquivoid: arquivo.id,
-        ...vinculo,
-        ...this.metadadosVinculoClinico(this.extrairVinculoClinico(arquivo.metadados?.vinculoClinico))
-      });
-      await this.armazenamento.promoverObjeto(arquivo.bucket, arquivo.chaveObjeto, chaveConfirmada);
+      await this.armazenamento.promoverObjeto(bucket, chavePendente, chaveConfirmada);
+      inspecao = await this.armazenamento.inspecionarObjeto(bucket, chaveConfirmada, arquivo.tipo, metadadosEsperados);
+
+      if (arquivo.tipo === 'imagem') {
+        motivoRejeicao = 'imagem_invalida';
+        validarDimensoesImagem(inspecao.conteudo, inspecao.mimeType);
+        const sanitizado = removerMetadadosImagem(inspecao.conteudo, inspecao.mimeType);
+        if (!sanitizado.equals(inspecao.conteudo)) {
+          await this.armazenamento.substituirObjeto(bucket, chaveConfirmada, sanitizado, inspecao.mimeType, metadadosEsperados);
+          inspecao = {
+            conteudo: sanitizado,
+            mimeType: inspecao.mimeType,
+            tamanhoBytes: sanitizado.length,
+            hashConteudo: createHash('sha256').update(sanitizado).digest('hex')
+          };
+        }
+      }
+
+      motivoRejeicao = 'antimalware';
+      await this.antimalware.garantirConteudoLimpo(inspecao.conteudo);
     } catch (erro) {
       await Promise.allSettled([
-        this.armazenamento.excluirObjeto(arquivo.bucket, arquivo.chaveObjeto),
+        this.armazenamento.excluirObjeto(bucket, chaveConfirmada),
+        this.armazenamento.excluirObjeto(bucket, chavePendente),
         this.executorTenant.executar(tenantId, async (gerenciador) => {
           const atual = await obterArquivo(gerenciador);
+          if (atual.status !== 'pendente') return;
           atual.status = 'excluido';
           atual.excluidoEm = new Date();
+          atual.metadados = { ...atual.metadados, motivoRejeicao };
           await gerenciador.getRepository(ArquivoMidiaOrm).save(atual);
         })
       ]);
       throw erro;
     }
+
     try {
       const confirmado = await this.executorTenant.executar(tenantId, async (gerenciador) => {
         const atual = await obterArquivo(gerenciador);
         if (atual.status === 'confirmado') return this.resumirArquivo(atual);
         if (atual.status !== 'pendente') throw new BadRequestException('Anexo nao pode ser confirmado.');
-        Object.assign(atual, inspecao, {
-          chaveObjeto: chaveConfirmada,
+        Object.assign(atual, {
           tamanhoBytes: String(inspecao.tamanhoBytes),
+          mimeType: inspecao.mimeType,
+          hashConteudo: inspecao.hashConteudo,
+          chaveObjeto: chaveConfirmada,
           status: 'confirmado',
           confirmadoEm: new Date()
         });
@@ -301,10 +363,10 @@ export class ServicoMobile {
         await this.confirmarVinculoEvolucaoFotografica(gerenciador, tenantId, salvo, usuario);
         return this.resumirArquivo(salvo);
       });
-      await Promise.allSettled([this.armazenamento.excluirObjeto(arquivo.bucket, arquivo.chaveObjeto)]);
+      await Promise.allSettled([this.armazenamento.excluirObjeto(bucket, chavePendente)]);
       return confirmado;
     } catch (erro) {
-      await Promise.allSettled([this.armazenamento.excluirObjeto(arquivo.bucket, chaveConfirmada)]);
+      await Promise.allSettled([this.armazenamento.excluirObjeto(bucket, chaveConfirmada)]);
       throw erro;
     }
   }
@@ -323,7 +385,7 @@ export class ServicoMobile {
       this.obterArquivoPermitido(gerenciador, tenantId, arquivoId, usuario)
     );
     if (arquivo.status === 'excluido') return;
-    await this.armazenamento.excluirObjeto(arquivo.bucket, arquivo.chaveObjeto);
+    await this.armazenamento.excluirObjetoVerificado(arquivo.bucket, arquivo.chaveObjeto);
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const atual = await this.obterArquivoPermitido(gerenciador, tenantId, arquivoId, usuario);
       atual.status = 'excluido';

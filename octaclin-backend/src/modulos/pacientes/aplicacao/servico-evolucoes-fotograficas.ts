@@ -134,7 +134,7 @@ export class ServicoEvolucoesFotograficas {
       return arquivosMidia.map((arquivo) => ({ id: arquivo.id, bucket: arquivo.bucket, chaveObjeto: arquivo.chaveObjeto }));
     });
 
-    await Promise.all(arquivos.map((arquivo) => this.armazenamento.excluirObjeto(arquivo.bucket, arquivo.chaveObjeto)));
+    await Promise.all(arquivos.map((arquivo) => this.armazenamento.excluirObjetoVerificado(arquivo.bucket, arquivo.chaveObjeto)));
 
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);

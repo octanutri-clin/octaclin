@@ -80,7 +80,15 @@ export class ControladorMobile {
     @Req() requisicao: Request,
     @Param('arquivoId', ParseUUIDPipe) arquivoId: string
   ) {
-    const arquivo = await this.servicoMobile.confirmarUploadMidia(usuario.tenantId, arquivoId, usuario);
+    let arquivo;
+    try {
+      arquivo = await this.servicoMobile.confirmarUploadMidia(usuario.tenantId, arquivoId, usuario);
+    } catch (erro) {
+      // Reason code apenas: nunca o conteudo, o resultado do scanner ou o
+      // texto interno do erro, que pode conter caminho/estrutura do arquivo.
+      await this.registrarAuditoria(usuario, requisicao, 'mobile.midia.upload_rejeitado', 'arquivo_midia', arquivoId);
+      throw erro;
+    }
     await this.registrarAuditoria(usuario, requisicao, 'mobile.midia.upload_confirmar', 'arquivo_midia', arquivoId, {
       pacienteId: arquivo.pacienteId,
       mimeType: arquivo.mimeType,
