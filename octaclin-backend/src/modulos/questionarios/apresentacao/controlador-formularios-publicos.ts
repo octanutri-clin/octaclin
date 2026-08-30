@@ -90,12 +90,25 @@ export class ControladorFormulariosPublicos {
   ) {
     await this.limitarEscrita(token, requisicao.ip ?? '');
     const contexto = await this.servicoQuestionarios.obterContextoFormularioPaciente(token);
-    const arquivo = await this.servicoMobile.confirmarUploadMidiaFormularioPublico(
-      contexto.tenantId,
-      arquivoId,
-      contexto.pacienteId,
-      { envioid: contexto.envioId, perguntaid: perguntaId }
-    );
+    let arquivo;
+    try {
+      arquivo = await this.servicoMobile.confirmarUploadMidiaFormularioPublico(
+        contexto.tenantId,
+        arquivoId,
+        contexto.pacienteId,
+        { envioid: contexto.envioId, perguntaid: perguntaId }
+      );
+    } catch (erro) {
+      await this.auditoria.registrar({
+        tenantId: contexto.tenantId,
+        acao: 'formulario_publico.anexo.rejeitado',
+        recursoTipo: 'arquivo_midia',
+        recursoId: arquivoId,
+        ip: requisicao.ip,
+        userAgent: this.obterUserAgent(requisicao)
+      });
+      throw erro;
+    }
     await this.auditoria.registrar({
       tenantId: contexto.tenantId,
       acao: 'formulario_publico.anexo.confirmar',

@@ -82,7 +82,7 @@ export class ServicoArmazenamentoObjetos {
     chaveObjeto: string,
     tipo: TipoMidiaMobile,
     metadadosEsperados: Record<string, string>
-  ): Promise<{ tamanhoBytes: number; mimeType: string; hashConteudo: string }> {
+  ): Promise<{ tamanhoBytes: number; mimeType: string; hashConteudo: string; conteudo: Buffer }> {
     const { cliente } = this.obterConfiguracao();
     const cabecalho = await cliente.send(new HeadObjectCommand({ Bucket: bucket, Key: chaveObjeto }));
     const tamanhoBytes = cabecalho.ContentLength ?? 0;
@@ -97,7 +97,19 @@ export class ServicoArmazenamentoObjetos {
     if (conteudo.length !== tamanhoBytes) throw new BadRequestException('Objeto enviado esta incompleto.');
     const mimeType = detectarMimeType(conteudo);
     if (!MIME_POR_TIPO[tipo].has(mimeType)) throw new BadRequestException('Conteudo nao corresponde ao tipo de anexo.');
-    return { tamanhoBytes, mimeType, hashConteudo: createHash('sha256').update(conteudo).digest('hex') };
+    return { tamanhoBytes, mimeType, hashConteudo: createHash('sha256').update(conteudo).digest('hex'), conteudo };
+  }
+
+  /**
+   * Sobrescreve o conteudo de uma chave que o cliente nunca recebeu URL
+   * assinada para escrever (a chave `confirmados/...` so existe apos
+   * `promoverObjeto`). Usada para persistir a versao sanitizada de uma
+   * imagem (metadado EXIF/GPS removido) no lugar exato que ja foi validado,
+   * sem reabrir uma janela de substituicao pelo cliente.
+   */
+  async substituirObjeto(bucket: string, chaveObjeto: string, conteudo: Buffer, mimeType: string, metadados: Record<string, string>): Promise<void> {
+    const { cliente } = this.obterConfiguracao();
+    await cliente.send(new PutObjectCommand({ Bucket: bucket, Key: chaveObjeto, Body: conteudo, ContentType: mimeType, Metadata: metadados }));
   }
 
   async criarDownloadAssinado(bucket: string, chaveObjeto: string): Promise<string> {
@@ -114,6 +126,33 @@ export class ServicoArmazenamentoObjetos {
   async excluirObjeto(bucket: string, chaveObjeto: string): Promise<void> {
     const { cliente } = this.obterConfiguracao();
     await cliente.send(new DeleteObjectCommand({ Bucket: bucket, Key: chaveObjeto }));
+  }
+
+  /**
+   * Exclusao com prova: so retorna com sucesso quando um HEAD subsequente
+   * confirma que o objeto deixou de existir. `DeleteObjectCommand` sozinho
+   * nao e evidencia de exclusao fisica — o S3 responde sucesso mesmo que o
+   * objeto nunca tenha existido, e um provedor com falha silenciosa poderia
+   * aceitar o DELETE sem remover o dado. Erro de rede/permissao no HEAD de
+   * verificacao propaga em vez de ser interpretado como "objeto ausente".
+   */
+  async excluirObjetoVerificado(bucket: string, chaveObjeto: string): Promise<void> {
+    const { cliente } = this.obterConfiguracao();
+    await cliente.send(new DeleteObjectCommand({ Bucket: bucket, Key: chaveObjeto }));
+    if (!(await this.objetoAusente(cliente, bucket, chaveObjeto))) {
+      throw new Error('Exclusao fisica do objeto nao pode ser confirmada.');
+    }
+  }
+
+  private async objetoAusente(cliente: S3Client, bucket: string, chaveObjeto: string): Promise<boolean> {
+    try {
+      await cliente.send(new HeadObjectCommand({ Bucket: bucket, Key: chaveObjeto }));
+      return false;
+    } catch (erro) {
+      const detalhe = erro as { name?: string; $metadata?: { httpStatusCode?: number } };
+      if (detalhe?.$metadata?.httpStatusCode === 404 || detalhe?.name === 'NotFound' || detalhe?.name === 'NoSuchKey') return true;
+      throw erro;
+    }
   }
 
   private obterConfiguracao(): { cliente: S3Client; bucket: string } {

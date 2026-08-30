@@ -43,6 +43,15 @@ const usuarioColaborador: UsuarioAutenticado = {
   permissoes: []
 };
 
+/** JPEG minimo e estruturalmente valido (SOI + SOF0 4x4 + SOS + EOI), usado onde o pipeline de imagem precisa de bytes reais. */
+const JPEG_SINTETICO_VALIDO = Buffer.from([
+  0xff, 0xd8,
+  0xff, 0xc0, 0x00, 0x08, 0x08, 0x00, 0x04, 0x00, 0x04, 0x01,
+  0xff, 0xda, 0x00, 0x02,
+  0x00, 0x00,
+  0xff, 0xd9
+]);
+
 interface DadosFake {
   pacientes?: Record<string, unknown>[];
   profissionais?: Record<string, unknown>[];
@@ -119,14 +128,20 @@ function criarServico(dados: DadosFake = {}, usarIfNoneMatch = true) {
     inspecionarObjeto: jest.fn(async () => ({
       tamanhoBytes: 321,
       mimeType: 'application/pdf',
-      hashConteudo: 'sha256-real'
+      hashConteudo: 'sha256-real',
+      conteudo: Buffer.from('%PDF-1.7 conteudo sintetico de teste')
     })),
     criarDownloadAssinado: jest.fn(async () => 'https://download.example/assinado'),
     promoverObjeto: jest.fn(async () => undefined),
-    excluirObjeto: jest.fn(async () => undefined)
+    substituirObjeto: jest.fn(async (..._args: [string, string, Buffer, string, Record<string, string>]) => undefined),
+    excluirObjeto: jest.fn(async () => undefined),
+    excluirObjetoVerificado: jest.fn(async () => undefined)
   };
   const portalCliente = {
     checarLimite: jest.fn(async () => ({ permitido: true, restante: null }))
+  };
+  const antimalware = {
+    garantirConteudoLimpo: jest.fn(async () => undefined)
   };
 
   return {
@@ -135,13 +150,15 @@ function criarServico(dados: DadosFake = {}, usarIfNoneMatch = true) {
       criptografia as never,
       senhas as never,
       armazenamento as never,
-      portalCliente as never
+      portalCliente as never,
+      antimalware as never
     ),
     repositorios,
     criptografia,
     senhas,
     armazenamento,
-    portalCliente
+    portalCliente,
+    antimalware
   };
 }
 
@@ -373,20 +390,24 @@ describe('ServicoMobile', () => {
     };
     const { servico, repositorios, armazenamento } = criarServico({ pacientes, arquivos: [arquivo] });
     const chavePendente = arquivo.chaveObjeto;
+    const chaveConfirmada = 'confirmados/tenant-1/paciente-1/documento/arquivo-1';
 
     const confirmado = await servico.confirmarUploadMidia('tenant-1', 'arquivo-1', usuarioPaciente);
 
+    // A inspecao le a copia ja promovida, nao o objeto pendente: assim o
+    // conteudo validado e sempre o mesmo que fica servido, sem janela para o
+    // cliente trocar o objeto pendente entre a promocao e a validacao.
     expect(armazenamento.inspecionarObjeto).toHaveBeenCalledWith(
       'bucket',
-      chavePendente,
+      chaveConfirmada,
       'documento',
       { arquivoid: 'arquivo-1', pacienteid: 'paciente-1', tenantid: 'tenant-1' }
     );
-    expect(armazenamento.promoverObjeto).toHaveBeenCalledWith(
-      'bucket',
-      chavePendente,
-      'confirmados/tenant-1/paciente-1/documento/arquivo-1'
+    expect(armazenamento.promoverObjeto).toHaveBeenCalledWith('bucket', chavePendente, chaveConfirmada);
+    expect(armazenamento.promoverObjeto.mock.invocationCallOrder[0]).toBeLessThan(
+      armazenamento.inspecionarObjeto.mock.invocationCallOrder[0]
     );
+    expect(armazenamento.excluirObjeto).toHaveBeenCalledWith('bucket', chavePendente);
     expect(repositorios.arquivo.save).toHaveBeenCalledWith(
       expect.objectContaining({
         chaveObjeto: 'confirmados/tenant-1/paciente-1/documento/arquivo-1',
@@ -411,7 +432,7 @@ describe('ServicoMobile', () => {
       evolucoesFotograficas: [{ id: 'evolucao-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', consentimentoId: 'consentimento-1' }],
       consentimentosFotograficos: [{ id: 'consentimento-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', retencaoAte: '2030-01-01' }]
     });
-    armazenamento.inspecionarObjeto.mockResolvedValueOnce({ tamanhoBytes: 321, mimeType: 'image/jpeg', hashConteudo: 'sha256-foto' });
+    armazenamento.inspecionarObjeto.mockResolvedValueOnce({ tamanhoBytes: JPEG_SINTETICO_VALIDO.length, mimeType: 'image/jpeg', hashConteudo: 'sha256-foto', conteudo: JPEG_SINTETICO_VALIDO });
 
     await servico.confirmarUploadMidia('tenant-1', 'arquivo-foto-1', usuarioSuperAdmin);
 
@@ -432,7 +453,7 @@ describe('ServicoMobile', () => {
       evolucoesFotograficas: [{ id: 'evolucao-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', consentimentoId: 'consentimento-1' }],
       consentimentosFotograficos: [{ id: 'consentimento-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', retencaoAte: '2030-01-01' }]
     });
-    armazenamento.inspecionarObjeto.mockResolvedValueOnce({ tamanhoBytes: 321, mimeType: 'image/jpeg', hashConteudo: 'sha256-foto' });
+    armazenamento.inspecionarObjeto.mockResolvedValueOnce({ tamanhoBytes: JPEG_SINTETICO_VALIDO.length, mimeType: 'image/jpeg', hashConteudo: 'sha256-foto', conteudo: JPEG_SINTETICO_VALIDO });
 
     await expect(servico.confirmarUploadMidia('tenant-1', 'arquivo-foto-1', usuarioPaciente)).rejects.toThrow('Paciente nao pode confirmar imagem');
     expect(repositorios.vinculoFotografico.save).not.toHaveBeenCalled();
@@ -473,8 +494,29 @@ describe('ServicoMobile', () => {
 
     await servico.excluirArquivoMidia('tenant-1', 'arquivo-1', usuarioSuperAdmin);
 
-    expect(armazenamento.excluirObjeto).toHaveBeenCalledWith('bucket', arquivo.chaveObjeto);
+    // A exclusao usa a variante que verifica com HEAD que o objeto deixou de
+    // existir: nao basta o storage aceitar o DELETE, e preciso comprovar.
+    expect(armazenamento.excluirObjetoVerificado).toHaveBeenCalledWith('bucket', arquivo.chaveObjeto);
     expect(repositorios.arquivo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'excluido' }));
+  });
+
+  it('nao marca o anexo como excluido quando a exclusao fisica nao pode ser confirmada', async () => {
+    const arquivo = {
+      id: 'arquivo-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      tipo: 'documento',
+      bucket: 'bucket',
+      chaveObjeto: 'tenant-1/paciente-1/documento/arquivo-1',
+      status: 'confirmado'
+    };
+    const { servico, repositorios, armazenamento } = criarServico({ pacientes, arquivos: [arquivo] });
+    armazenamento.excluirObjetoVerificado.mockRejectedValueOnce(new Error('Exclusao fisica do objeto nao pode ser confirmada.'));
+
+    await expect(servico.excluirArquivoMidia('tenant-1', 'arquivo-1', usuarioSuperAdmin)).rejects.toThrow(
+      'Exclusao fisica do objeto nao pode ser confirmada.'
+    );
+    expect(repositorios.arquivo.save).not.toHaveBeenCalled();
   });
 
   it('impede Patient de excluir anexos incorporados ao prontuario', async () => {
@@ -515,11 +557,93 @@ describe('ServicoMobile', () => {
     };
     const { servico, repositorios, armazenamento } = criarServico({ pacientes, arquivos: [arquivo] });
     armazenamento.inspecionarObjeto.mockRejectedValueOnce(new Error('conteudo invalido'));
+    const chaveConfirmada = 'confirmados/tenant-1/paciente-1/documento/arquivo-1';
 
     await expect(servico.confirmarUploadMidia('tenant-1', 'arquivo-1', usuarioPaciente)).rejects.toThrow('conteudo invalido');
 
+    // A rejeicao limpa os dois lados: o objeto pendente e a copia que ja
+    // tinha sido promovida antes da inspecao reprovar.
     expect(armazenamento.excluirObjeto).toHaveBeenCalledWith('bucket', arquivo.chaveObjeto);
-    expect(repositorios.arquivo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'excluido' }));
+    expect(armazenamento.excluirObjeto).toHaveBeenCalledWith('bucket', chaveConfirmada);
+    expect(repositorios.arquivo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'excluido', metadados: expect.objectContaining({ motivoRejeicao: 'validacao_conteudo' }) })
+    );
+  });
+
+  it('rejeita e limpa quando a imagem excede as dimensoes maximas permitidas', async () => {
+    const bombaDimensao = Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x08, 0x08, 0xff, 0xff, 0xff, 0xff, 0x01, 0xff, 0xd9]);
+    const arquivo = {
+      id: 'arquivo-foto-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', tipo: 'imagem', categoria: 'foto',
+      bucket: 'bucket', chaveObjeto: 'pendentes/foto', status: 'pendente', metadados: {}
+    };
+    const { servico, repositorios, armazenamento } = criarServico({ pacientes, arquivos: [arquivo] });
+    armazenamento.inspecionarObjeto.mockResolvedValueOnce({
+      tamanhoBytes: bombaDimensao.length,
+      mimeType: 'image/jpeg',
+      hashConteudo: 'sha256-bomba',
+      conteudo: bombaDimensao
+    });
+
+    await expect(servico.confirmarUploadMidia('tenant-1', 'arquivo-foto-1', usuarioSuperAdmin)).rejects.toThrow();
+
+    expect(armazenamento.substituirObjeto).not.toHaveBeenCalled();
+    expect(repositorios.arquivo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'excluido', metadados: expect.objectContaining({ motivoRejeicao: 'imagem_invalida' }) })
+    );
+  });
+
+  it('rejeita e limpa quando o conteudo reprova na inspecao antimalware', async () => {
+    const arquivo = {
+      id: 'arquivo-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', tipo: 'documento',
+      bucket: 'bucket', chaveObjeto: 'tenant-1/paciente-1/documento/arquivo-1', status: 'pendente', metadados: {}
+    };
+    const { servico, repositorios, armazenamento, antimalware } = criarServico({ pacientes, arquivos: [arquivo] });
+    antimalware.garantirConteudoLimpo.mockRejectedValueOnce(new Error('Conteudo rejeitado pela inspecao antimalware.'));
+
+    await expect(servico.confirmarUploadMidia('tenant-1', 'arquivo-1', usuarioPaciente)).rejects.toThrow(
+      'Conteudo rejeitado pela inspecao antimalware.'
+    );
+
+    expect(armazenamento.excluirObjeto).toHaveBeenCalledWith('bucket', 'confirmados/tenant-1/paciente-1/documento/arquivo-1');
+    expect(armazenamento.excluirObjeto).toHaveBeenCalledWith('bucket', arquivo.chaveObjeto);
+    expect(repositorios.arquivo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'excluido', metadados: expect.objectContaining({ motivoRejeicao: 'antimalware' }) })
+    );
+  });
+
+  it('sanitiza metadado de imagem antes de confirmar e persiste o hash do conteudo ja sanitizado', async () => {
+    const comExif = Buffer.concat([
+      Buffer.from([0xff, 0xd8]),
+      Buffer.from([0xff, 0xe1, 0x00, 0x10]),
+      Buffer.from('Exif\0\0GPS FALSO', 'ascii').subarray(0, 14),
+      JPEG_SINTETICO_VALIDO.subarray(2)
+    ]);
+    const arquivo = {
+      id: 'arquivo-foto-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', tipo: 'imagem', categoria: 'foto',
+      bucket: 'bucket', chaveObjeto: 'pendentes/foto', status: 'pendente', metadados: {}
+    };
+    const { servico, repositorios, armazenamento } = criarServico({ pacientes, arquivos: [arquivo] });
+    armazenamento.inspecionarObjeto.mockResolvedValueOnce({
+      tamanhoBytes: comExif.length,
+      mimeType: 'image/jpeg',
+      hashConteudo: 'sha256-com-exif',
+      conteudo: comExif
+    });
+
+    await servico.confirmarUploadMidia('tenant-1', 'arquivo-foto-1', usuarioSuperAdmin);
+
+    expect(armazenamento.substituirObjeto).toHaveBeenCalledWith(
+      'bucket',
+      'confirmados/tenant-1/paciente-1/imagem/arquivo-foto-1',
+      expect.any(Buffer),
+      'image/jpeg',
+      expect.any(Object)
+    );
+    const bytesSanitizados = armazenamento.substituirObjeto.mock.calls[0][2] as unknown as Buffer;
+    expect(bytesSanitizados.length).toBeLessThan(comExif.length);
+    expect(repositorios.arquivo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'confirmado', hashConteudo: expect.not.stringMatching(/^sha256-com-exif$/) })
+    );
   });
 
   it('deve impedir Professional de gravar para paciente de outro responsavel', async () => {

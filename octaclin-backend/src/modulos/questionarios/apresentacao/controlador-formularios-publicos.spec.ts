@@ -91,4 +91,37 @@ describe('ControladorFormulariosPublicos', () => {
     expect(resposta).toEqual(expect.objectContaining({ arquivo: { id: 'arquivo-1' } }));
     expect(auditoria.registrar).toHaveBeenCalledWith(expect.objectContaining({ acao: 'formulario_publico.anexo.solicitar' }));
   });
+
+  it('registra rejeicao e propaga o erro quando a confirmacao publica falha na validacao de conteudo', async () => {
+    const servico = {
+      obterContextoFormularioPaciente: jest.fn(async () => ({
+        tenantId: 'tenant-1',
+        envioId: 'envio-1',
+        pacienteId: 'paciente-1',
+        perguntas: []
+      }))
+    } as unknown as ServicoQuestionarios;
+    const protecaoAbuso = { consumirTentativa: jest.fn(async () => undefined) } as unknown as ServicoProtecaoAbuso;
+    const erroRejeicao = new Error('Imagem excede a quantidade maxima de pixels permitida.');
+    const mobile = {
+      confirmarUploadMidiaFormularioPublico: jest.fn(async () => {
+        throw erroRejeicao;
+      })
+    } as unknown as ServicoMobile;
+    const auditoria = { registrar: jest.fn(async () => undefined) } as unknown as ServicoAuditoria;
+    const controlador = new ControladorFormulariosPublicos(servico, protecaoAbuso, mobile, auditoria);
+
+    await expect(
+      controlador.confirmarUpload('token-seguro', 'arquivo-1', 'pergunta-1', { ip: '203.0.113.10', headers: {} } as Request)
+    ).rejects.toThrow(erroRejeicao);
+
+    expect(auditoria.registrar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        acao: 'formulario_publico.anexo.rejeitado',
+        recursoTipo: 'arquivo_midia',
+        recursoId: 'arquivo-1'
+      })
+    );
+  });
 });

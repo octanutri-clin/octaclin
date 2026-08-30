@@ -36,7 +36,7 @@ describe('ServicoEvolucoesFotograficas', () => {
       })
     };
     const servicoMobile = { solicitarUploadMidia: jest.fn(async () => ({ arquivo: { id: 'arquivo-1' }, uploadUrl: 'https://upload.example' })) };
-    const armazenamento = { excluirObjeto: jest.fn(async () => undefined) };
+    const armazenamento = { excluirObjetoVerificado: jest.fn(async () => undefined) };
     const servico = new ServicoEvolucoesFotograficas(
       { executar: async (_: string, fn: (gerenciador: unknown) => unknown) => fn(gerenciador) } as never,
       { criptografar: jest.fn((valor: string) => Buffer.from(`cifrado:${valor}`)) } as never,
@@ -72,9 +72,23 @@ describe('ServicoEvolucoesFotograficas', () => {
 
     await expect(servico.excluir('tenant-1', 'paciente-1', 'evolucao-1', usuario)).resolves.toEqual({ arquivosRemovidos: 1 });
 
-    expect(armazenamento.excluirObjeto).toHaveBeenCalledWith('privado', 'tenant-1/foto.jpg');
+    expect(armazenamento.excluirObjetoVerificado).toHaveBeenCalledWith('privado', 'tenant-1/foto.jpg');
     expect(repositorioVinculos.delete).toHaveBeenCalledWith({ tenantId: 'tenant-1', evolucaoFotograficaId: 'evolucao-1' });
     expect(repositorioArquivos.delete).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', pacienteId: 'paciente-1' }));
     expect(repositorioEvolucoes.delete).toHaveBeenCalledWith({ id: 'evolucao-1', tenantId: 'tenant-1', pacienteId: 'paciente-1' });
+  });
+
+  it('nao apaga os registros da serie quando a exclusao fisica do objeto nao pode ser confirmada', async () => {
+    const { servico, armazenamento, repositorioEvolucoes, repositorioVinculos, repositorioArquivos } = criarServico();
+    (repositorioEvolucoes.findOne as jest.Mock).mockResolvedValue({ id: 'evolucao-1' });
+    (armazenamento.excluirObjetoVerificado as jest.Mock).mockRejectedValue(new Error('Exclusao fisica do objeto nao pode ser confirmada.'));
+
+    await expect(servico.excluir('tenant-1', 'paciente-1', 'evolucao-1', usuario)).rejects.toThrow(
+      'Exclusao fisica do objeto nao pode ser confirmada.'
+    );
+
+    expect(repositorioVinculos.delete).not.toHaveBeenCalled();
+    expect(repositorioArquivos.delete).not.toHaveBeenCalled();
+    expect(repositorioEvolucoes.delete).not.toHaveBeenCalled();
   });
 });

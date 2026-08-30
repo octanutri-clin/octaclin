@@ -2523,15 +2523,25 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Review, checks e merge humanos pelo PR GitHub `#164` (`f2e6044`).
   - [x] Migration aditiva `1720000001037` aplicada em staging e producao; deploy Render Live, conforme confirmacao operacional do proprietario.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR41_2026-08-30.md`.
-- [ ] PR 42 - Provar autorizacao de objeto e funcao contra BOLA/BFLA/IDOR.
+- [x] PR 42 - Provar autorizacao de objeto e funcao contra BOLA/BFLA/IDOR.
   - [x] Implementacao e validacao local concluidas em `security/governanca-pr42-bola-bfla`.
   - [x] Mutacoes humanas de comunicacoes limitadas a carteira do Professional.
   - [x] Troca de papel, desativacao e revogacao de convite revogam refresh tokens e sessoes ativas.
   - [x] Matriz role x capability x recurso e rejeicao de mass assignment cobertas por testes.
-  - [ ] Review, checks e merge humanos.
+  - [x] Review, checks e merge humanos: integrado no `main` pelo PR GitHub `#165`.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR42_2026-08-30.md`.
-- [ ] PR 43 - Provar RLS e isolamento multi-tenant integral.
+- [x] PR 43 - Provar RLS e isolamento multi-tenant integral.
+  - [x] Isolamento multi-tenant provado em Postgres real/testcontainers, sem alteracao de codigo de producao.
+  - [x] Integrado no `main` pelo PR GitHub `#166` (`40570f280831a404447468bff3d14976ba77f863`).
 - [ ] PR 44 - Endurecer uploads e storage clinico.
+  - [x] Implementacao e validacao local concluidas em `security/governanca-pr44-uploads-storage-clinico`.
+  - [x] Corrigido TOCTOU entre inspecao e promocao pendente->confirmado (inspecao passa a ler a copia imutavel, nao o objeto pendente ainda reescrevivel pelo cliente).
+  - [x] Validacao real de dimensao/pixels (JPEG/PNG/WEBP) contra decompression bomb, sem adicionar o pacote `image-size` (vulneravel, ja documentado como bloqueio do mobile).
+  - [x] Remocao de metadado EXIF/GPS por formato, sem decodificar pixels.
+  - [x] Abstracao de inspecao antimalware com mecanismo de referencia (assinatura EICAR) e falha fechada em timeout/erro.
+  - [x] Exclusao verificada por HEAD apos DELETE nos dois fluxos de exclusao direta de arquivo.
+  - [ ] Review, checks e merge humanos.
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR44_2026-08-30.md`.
 - [ ] PR 45 - Endurecer browser, BFF, CSP, CSRF, CORS e cache.
 - [ ] PR 46 - Endurecer OAuth e integracoes externas.
 - [ ] PR 47 - Endurecer fluxos de IA e revisao humana.
@@ -2548,4 +2558,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: review/checks/merge humano do PR 42. O PR 43 depende do aceite humano do resultado do PR 42.
+Proximo item autorizado: review/checks/merge humano do PR 44. O PR 45 depende do aceite humano do resultado do PR 44.

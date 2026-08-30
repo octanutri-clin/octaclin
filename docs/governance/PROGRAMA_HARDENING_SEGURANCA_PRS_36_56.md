@@ -4,7 +4,7 @@
 >
 > Atualizado em: 2026-08-30
 >
-> Proximo item autorizado: review/checks/merge humano do PR 42.
+> Proximo item autorizado: review/checks/merge humano do PR 44.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
@@ -17,6 +17,16 @@
 > em 2026-08-30 (`31b8d36`). Relatorios em
 > `docs/governance/RELATORIO_SEGURANCA_PR40_2026-08-29.md` e
 > `docs/governance/RELATORIO_CORRECAO_POS_PR40_SESSOES_2026-08-29.md`.
+> Estado do PR 42: integrado no `main` pelo PR GitHub #165. Relatorio:
+> `docs/governance/RELATORIO_SEGURANCA_PR42_2026-08-30.md`.
+> Estado do PR 43: integrado no `main` pelo PR GitHub #166
+> (`40570f280831a404447468bff3d14976ba77f863`) — provou isolamento RLS
+> integral em Postgres real/testcontainers, sem alteracao de codigo de
+> producao.
+> Estado do PR 44: implementacao concluida em
+> `security/governanca-pr44-uploads-storage-clinico`, aguardando review
+> humano, checks e merge. Relatorio:
+> `docs/governance/RELATORIO_SEGURANCA_PR44_2026-08-30.md`.
 
 ## 1. Funcao deste documento
 
@@ -319,6 +329,19 @@ Skills Claude: `security-review`, `test-driven-development`,
 
 Gate minimo: arquivos adulterados, enormes, polyglot e cross-tenant rejeitados;
 exclusao verificavel no storage; sem upload real fora de ambiente isolado.
+
+Implementacao concluida em
+`security/governanca-pr44-uploads-storage-clinico`, aguardando review humano,
+checks e merge. Corrigido o TOCTOU entre a inspecao do objeto e a promocao
+pendente→confirmado (a inspecao passou a ler a copia ja promovida e imutavel
+para o cliente, nao o objeto pendente ainda reescrevivel — o provider real,
+Backblaze B2, roda com escrita condicional desligada). Adicionados: validacao
+real de dimensao/pixels para JPEG/PNG/WEBP (decompression bomb), remocao de
+metadado EXIF/GPS por formato sem decodificar pixels, abstracao de inspecao
+antimalware com mecanismo de referencia (assinatura EICAR, nao antivirus
+real) e exclusao verificada por HEAD apos DELETE. Sem migration, sem operacao
+externa. Relatorio:
+`docs/governance/RELATORIO_SEGURANCA_PR44_2026-08-30.md`.
 
 ### PR 45 - Browser, BFF e cabecalhos
 
