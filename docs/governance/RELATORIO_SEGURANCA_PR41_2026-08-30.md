@@ -125,6 +125,24 @@ alterar o contrato de seguranca.
   possui Docker/Testcontainers disponivel e nenhuma URL externa foi usada sem
   autorizacao operacional especifica.
 
+### Correcao dos gates do PR GitHub #164
+
+A primeira execucao remota encontrou dois defeitos antes do merge:
+
+- FAIL - CodeQL marcou como alta severidade o uso de modulo sobre bytes
+  criptograficos na geracao dos codigos de recuperacao. O gerador passou a usar
+  `crypto.randomInt`, que amostra diretamente o intervalo do alfabeto sem vies
+  de modulo. O teste focado verifica quantidade, unicidade, formato e alfabeto.
+- FAIL - `Web Next.js` encontrou quatro falhas no gate `test:authz`: o teste
+  BFF anterior nao instalava a nova prova de reautenticacao. O contrato foi
+  atualizado e agora prova separadamente `401` sem sessao, `403` com sessao sem
+  prova, ausencia de chamada ao backend nessa negativa e encaminhamento do
+  cabecalho apenas na rota reautenticada.
+- PASS local apos a correcao - teste focado de MFA 5/5, testes BFF de sessoes
+  9/9, `test:authz`, typechecks, lint web sem erros e builds backend/web.
+- GATE remoto - a nova execucao do CodeQL e do CI depois do push deste hotfix
+  precisa passar antes do merge. Resultado local nao substitui esses gates.
+
 O Node local e `24.18.0`, enquanto o pacote web declara `>=22 <23`. Os gates
 passaram, mas o CI deve continuar usando a versao suportada pelo repositorio; o
 resultado local em Node 24 nao substitui o CI.

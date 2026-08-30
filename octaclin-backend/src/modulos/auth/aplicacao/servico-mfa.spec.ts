@@ -158,6 +158,10 @@ describe('ServicoMfa', () => {
 
     expect(resposta.usuario).toBe(CONTA);
     expect(resposta.codigosRecuperacao).toHaveLength(10);
+    expect(new Set(resposta.codigosRecuperacao).size).toBe(10);
+    expect(resposta.codigosRecuperacao.every((codigo) =>
+      /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}(?:-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}){2}$/.test(codigo)
+    )).toBe(true);
     expect(repositorioFator.update).toHaveBeenCalled();
     expect(repositorioDesafio.update).toHaveBeenCalled();
     expect(codigosSalvos).toHaveLength(10);

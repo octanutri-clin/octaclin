@@ -320,6 +320,9 @@ export async function requisitarBackendAutenticado(caminho: string, init?: Reque
 }
 
 export async function requisitarBackendReautenticado(caminho: string, init?: RequestInit): Promise<Response> {
+  // Preserve a fronteira de autenticacao: cliente anonimo recebe 401 antes de
+  // qualquer avaliacao da prova adicional, e uma sessao valida sem prova recebe 403.
+  await obterSessaoValidaBff();
   const prova = await obterProvaReautenticacao();
   if (!prova) {
     return respostaJsonBff(403, 'Confirme sua senha novamente para continuar.');

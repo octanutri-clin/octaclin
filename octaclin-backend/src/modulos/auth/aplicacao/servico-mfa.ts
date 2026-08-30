@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomBytes, randomUUID } from 'crypto';
+import { createHash, createHmac, randomInt, randomUUID } from 'crypto';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { IsNull, LessThan, MoreThan } from 'typeorm';
@@ -418,7 +418,10 @@ export class ServicoMfa {
 
   private gerarCodigoRecuperacao(): string {
     const alfabeto = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-    const bruto = [...randomBytes(12)].map((valor) => alfabeto[valor % alfabeto.length]).join('');
+    const bruto = Array.from(
+      { length: 12 },
+      () => alfabeto[randomInt(0, alfabeto.length)]
+    ).join('');
     return `${bruto.slice(0, 4)}-${bruto.slice(4, 8)}-${bruto.slice(8, 12)}`;
   }
 
