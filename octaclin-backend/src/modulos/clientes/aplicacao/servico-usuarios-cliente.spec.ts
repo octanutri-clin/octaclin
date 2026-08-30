@@ -2,6 +2,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { TokenRedefinicaoSenhaOrm } from '../../auth/infraestrutura/token-redefinicao-senha.orm';
 import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
+import { SessaoUsuarioOrm } from '../../auth/infraestrutura/sessao-usuario.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
@@ -60,6 +61,7 @@ function criarServico(
   const repositorioTokens = criarRepositorioFake(tokens);
   const repositorioProfissionais = criarRepositorioFake(profissionais);
   const repositorioRefreshTokens = criarRepositorioFake([]);
+  const repositorioSessoes = criarRepositorioFake([]);
   const executorTenant = {
     executar: jest.fn((_tenantId: string, callback: any) =>
       callback({
@@ -68,6 +70,7 @@ function criarServico(
           if (entidade === TokenRedefinicaoSenhaOrm) return repositorioTokens;
           if (entidade === ProfissionalOrm) return repositorioProfissionais;
           if (entidade === RefreshTokenOrm) return repositorioRefreshTokens;
+          if (entidade === SessaoUsuarioOrm) return repositorioSessoes;
           throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
         }
       })
@@ -94,6 +97,7 @@ function criarServico(
     repositorioTokens,
     repositorioProfissionais,
     repositorioRefreshTokens,
+    repositorioSessoes,
     executorTenant,
     criptografia,
     senhas,
@@ -104,7 +108,7 @@ function criarServico(
 
 describe('ServicoUsuariosCliente', () => {
   it('deve promover colaborador, provisionar perfil profissional e revogar sessoes anteriores', async () => {
-    const { servico, repositorioUsuarios, repositorioProfissionais, repositorioRefreshTokens } = criarServico([
+    const { servico, repositorioUsuarios, repositorioProfissionais, repositorioRefreshTokens, repositorioSessoes } = criarServico([
       {
         id: 'colaborador-1',
         tenantId: 'tenant-1',
@@ -132,6 +136,33 @@ describe('ServicoUsuariosCliente', () => {
     expect(repositorioRefreshTokens.update).toHaveBeenCalledWith(
       { tenantId: 'tenant-1', usuarioId: 'colaborador-1' },
       { revogadoEm: expect.any(Date) }
+    );
+    expect(repositorioSessoes.update).toHaveBeenCalledWith(
+      { tenantId: 'tenant-1', usuarioId: 'colaborador-1', revogadoEm: expect.anything() },
+      { revogadoEm: expect.any(Date), motivoRevogacao: 'acesso_alterado' }
+    );
+  });
+
+  it('deve revogar refresh tokens e sessoes ativas ao desativar usuario', async () => {
+    const { servico, repositorioRefreshTokens, repositorioSessoes } = criarServico([
+      {
+        id: 'colaborador-1',
+        tenantId: 'tenant-1',
+        emailCriptografado: Buffer.from('email:agenda@octaclin.local'),
+        role: 'Collaborator',
+        ativo: true
+      }
+    ]);
+
+    await servico.desativar('tenant-1', 'cliente-1', 'colaborador-1');
+
+    expect(repositorioRefreshTokens.update).toHaveBeenCalledWith(
+      { tenantId: 'tenant-1', usuarioId: 'colaborador-1' },
+      { revogadoEm: expect.any(Date) }
+    );
+    expect(repositorioSessoes.update).toHaveBeenCalledWith(
+      { tenantId: 'tenant-1', usuarioId: 'colaborador-1', revogadoEm: expect.anything() },
+      { revogadoEm: expect.any(Date), motivoRevogacao: 'acesso_alterado' }
     );
   });
 
@@ -710,7 +741,13 @@ describe('ServicoUsuariosCliente', () => {
       payload: { origem: 'convite_usuario_cliente', role: 'Collaborator' },
       criadoEm: new Date('2026-07-22T10:00:00.000Z')
     };
-    const { servico, repositorioUsuarios, repositorioTokens } = criarServico(
+    const {
+      servico,
+      repositorioUsuarios,
+      repositorioTokens,
+      repositorioRefreshTokens,
+      repositorioSessoes
+    } = criarServico(
       [
         {
           id: 'colaborador-1',
@@ -738,5 +775,13 @@ describe('ServicoUsuariosCliente', () => {
     );
     expect(repositorioTokens.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'token-1', status: 'revogado' }));
     expect(repositorioUsuarios.update).toHaveBeenCalledWith({ id: 'colaborador-1', tenantId: 'tenant-1' }, { ativo: false });
+    expect(repositorioRefreshTokens.update).toHaveBeenCalledWith(
+      { tenantId: 'tenant-1', usuarioId: 'colaborador-1' },
+      { revogadoEm: expect.any(Date) }
+    );
+    expect(repositorioSessoes.update).toHaveBeenCalledWith(
+      { tenantId: 'tenant-1', usuarioId: 'colaborador-1', revogadoEm: expect.anything() },
+      { revogadoEm: expect.any(Date), motivoRevogacao: 'acesso_alterado' }
+    );
   });
 });

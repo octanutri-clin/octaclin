@@ -1,7 +1,7 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bullmq';
-import { In } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -110,11 +110,19 @@ export class ServicoComunicacoes {
     });
   }
 
-  async associarContatoWhatsapp(tenantId: string, dados: AssociarContatoWhatsappDto) {
+  async associarContatoWhatsapp(
+    tenantId: string,
+    dados: AssociarContatoWhatsappDto,
+    usuario: UsuarioAutenticado
+  ) {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorioPacientes = gerenciador.getRepository(PacienteOrm);
-      const paciente = await repositorioPacientes.findOne({ where: { id: dados.pacienteId, tenantId } });
-      if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+      const { paciente, profissionalId } = await this.obterPacienteNoEscopo(
+        gerenciador,
+        tenantId,
+        dados.pacienteId,
+        usuario
+      );
 
       const contatoNormalizado = this.normalizarTelefone(dados.contato);
       if (!contatoNormalizado) throw new BadRequestException('Contato WhatsApp invalido.');
@@ -125,7 +133,11 @@ export class ServicoComunicacoes {
         order: { criadoEm: 'DESC' },
         take: 200
       });
-      const mensagensAssociadas = mensagens.filter((mensagem) => this.mensagemPertenceAoContatoWhatsapp(mensagem, contatoNormalizado));
+      const mensagensAssociadas = mensagens.filter(
+        (mensagem) =>
+          this.mensagemPertenceAoContatoWhatsapp(mensagem, contatoNormalizado) &&
+          (!profissionalId || !mensagem.pacienteId || mensagem.pacienteId === paciente.id)
+      );
 
       for (const mensagem of mensagensAssociadas) {
         mensagem.pacienteId = paciente.id;
@@ -157,16 +169,17 @@ export class ServicoComunicacoes {
     });
   }
 
-  async registrarNotaWhatsapp(tenantId: string, dados: RegistrarNotaWhatsappDto): Promise<MensagemNotificacaoOrm> {
+  async registrarNotaWhatsapp(
+    tenantId: string,
+    dados: RegistrarNotaWhatsappDto,
+    usuario: UsuarioAutenticado
+  ): Promise<MensagemNotificacaoOrm> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const texto = dados.texto.trim();
       if (!texto) throw new BadRequestException('Nota interna nao pode ficar vazia.');
 
       if (dados.pacienteId) {
-        const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-          where: { id: dados.pacienteId, tenantId }
-        });
-        if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+        await this.obterPacienteNoEscopo(gerenciador, tenantId, dados.pacienteId, usuario);
       }
 
       const repositorioMensagens = gerenciador.getRepository(MensagemNotificacaoOrm);
@@ -193,7 +206,28 @@ export class ServicoComunicacoes {
     });
   }
 
-  async dispararMensagem(tenantId: string, dados: DispararMensagemDto): Promise<MensagemNotificacaoOrm> {
+  async dispararMensagem(
+    tenantId: string,
+    dados: DispararMensagemDto,
+    usuario: UsuarioAutenticado
+  ): Promise<MensagemNotificacaoOrm> {
+    return this.dispararMensagemNoEscopo(tenantId, dados, usuario);
+  }
+
+  /**
+   * Uso exclusivo de fluxos internos que ja validaram o recurso de origem
+   * (agenda, documentos e automacoes). Endpoints HTTP nunca devem chamar este
+   * metodo, porque ele opera no escopo integral do tenant.
+   */
+  async dispararMensagemSistema(tenantId: string, dados: DispararMensagemDto): Promise<MensagemNotificacaoOrm> {
+    return this.dispararMensagemNoEscopo(tenantId, dados);
+  }
+
+  private async dispararMensagemNoEscopo(
+    tenantId: string,
+    dados: DispararMensagemDto,
+    usuario?: UsuarioAutenticado
+  ): Promise<MensagemNotificacaoOrm> {
     const mensagem = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const canal = await gerenciador.getRepository(CanalNotificacaoOrm).findOne({
         where: { id: dados.canalId, tenantId, ativo: true }
@@ -209,10 +243,12 @@ export class ServicoComunicacoes {
         throw new BadRequestException('Templates WhatsApp devem estar aprovados antes do disparo.');
       }
 
-      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-        where: { id: dados.pacienteId, tenantId }
-      });
-      if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+      const { paciente } = await this.obterPacienteNoEscopo(
+        gerenciador,
+        tenantId,
+        dados.pacienteId,
+        usuario
+      );
 
       const novaMensagem = gerenciador.getRepository(MensagemNotificacaoOrm).create({
         tenantId,
@@ -237,6 +273,26 @@ export class ServicoComunicacoes {
     });
 
     return mensagem;
+  }
+
+  private async obterPacienteNoEscopo(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string,
+    usuario?: UsuarioAutenticado
+  ): Promise<{ paciente: PacienteOrm; profissionalId?: string }> {
+    const profissionalId = usuario
+      ? await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)
+      : undefined;
+    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+      where: {
+        id: pacienteId,
+        tenantId,
+        ...(profissionalId ? { profissionalResponsavelId: profissionalId } : {})
+      }
+    });
+    if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+    return { paciente, profissionalId };
   }
 
   async publicarEventoNotificacao(tenantId: string, mensagemId: string): Promise<void> {

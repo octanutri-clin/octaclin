@@ -86,7 +86,7 @@ export class ControladorComunicacoes {
     @Req() requisicao: Request,
     @Body() dados: DispararMensagemDto
   ) {
-    const mensagem = await this.servicoComunicacoes.dispararMensagem(usuario.tenantId, dados);
+    const mensagem = await this.servicoComunicacoes.dispararMensagem(usuario.tenantId, dados, usuario);
     await this.servicoComunicacoes.publicarEventoNotificacao(usuario.tenantId, mensagem.id);
     const mensagemAtualizada = await this.servicoComunicacoes.obterMensagem(usuario.tenantId, mensagem.id);
     await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.mensagem.disparar', 'mensagem_notificacao', mensagem.id, {
@@ -105,7 +105,7 @@ export class ControladorComunicacoes {
     @Req() requisicao: Request,
     @Body() dados: AssociarContatoWhatsappDto
   ) {
-    const resultado = await this.servicoComunicacoes.associarContatoWhatsapp(usuario.tenantId, dados);
+    const resultado = await this.servicoComunicacoes.associarContatoWhatsapp(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.whatsapp.associar_contato', 'paciente', dados.pacienteId, {
       contato: dados.contato,
       mensagensAtualizadas: resultado.mensagensAtualizadas
@@ -120,7 +120,7 @@ export class ControladorComunicacoes {
     @Req() requisicao: Request,
     @Body() dados: RegistrarNotaWhatsappDto
   ) {
-    const nota = await this.servicoComunicacoes.registrarNotaWhatsapp(usuario.tenantId, dados);
+    const nota = await this.servicoComunicacoes.registrarNotaWhatsapp(usuario.tenantId, dados, usuario);
     await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.whatsapp.nota_registrar', 'mensagem_notificacao', nota.id, {
       pacienteId: dados.pacienteId,
       contato: dados.contato,

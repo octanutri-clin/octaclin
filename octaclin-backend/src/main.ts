@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { InterceptorLogRequisicao } from './infraestrutura/observabilidade/interceptor-log-requisicao';
@@ -10,6 +9,7 @@ import { validarSegredosJwt } from './modulos/auth/infraestrutura/configuracao-j
 import { obterPapelProcesso } from './infraestrutura/processamento/papel-processo';
 import { redisConfigurado } from './modulos/comunicacoes/aplicacao/configuracao-redis';
 import { ServicoTelemetriaOperacional } from './infraestrutura/observabilidade/servico-telemetria-operacional';
+import { criarPipeValidacaoHttp } from './infraestrutura/http/pipe-validacao-http';
 
 function obterOrigensCors(): boolean | string[] {
   const valor = process.env.CORS_ORIGINS;
@@ -112,13 +112,7 @@ async function iniciarAplicacao() {
     origin: obterOrigensCors(),
     credentials: true
   });
-  aplicacao.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true
-    })
-  );
+  aplicacao.useGlobalPipes(criarPipeValidacaoHttp());
 
   await aplicacao.listen(obterPortaHttp());
 }

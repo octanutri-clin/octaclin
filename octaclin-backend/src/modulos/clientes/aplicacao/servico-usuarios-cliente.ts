@@ -12,6 +12,7 @@ import {
 } from '../../auth/aplicacao/servico-protecao-abuso';
 import { TokenRedefinicaoSenhaOrm } from '../../auth/infraestrutura/token-redefinicao-senha.orm';
 import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
+import { SessaoUsuarioOrm } from '../../auth/infraestrutura/sessao-usuario.orm';
 import { AdaptadorEmailSmtp } from '../../comunicacoes/infraestrutura/adaptadores/adaptador-email-smtp';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
@@ -253,6 +254,7 @@ export class ServicoUsuariosCliente {
       await this.obterUsuarioConvidavel(gerenciador, tenantId, usuarioId);
       await this.revogarTokensPendentes(gerenciador, tenantId, usuarioId, usuarioExecutorId, 'revogado');
       await gerenciador.getRepository(UsuarioOrm).update({ id: usuarioId, tenantId }, { ativo: false });
+      await this.revogarAcessosAtivos(gerenciador, tenantId, usuarioId);
     });
   }
 
@@ -269,6 +271,7 @@ export class ServicoUsuariosCliente {
       }
 
       await repositorio.update({ id: usuarioId, tenantId }, { ativo: false });
+      await this.revogarAcessosAtivos(gerenciador, tenantId, usuarioId);
     });
   }
 
@@ -332,16 +335,29 @@ export class ServicoUsuariosCliente {
 
       usuario.role = dados.role;
       const atualizado = await repositorioUsuarios.save(usuario);
-      await gerenciador.getRepository(RefreshTokenOrm).update(
-        { tenantId, usuarioId },
-        { revogadoEm: new Date() }
-      );
+      await this.revogarAcessosAtivos(gerenciador, tenantId, usuarioId);
       return this.mapearResposta(atualizado);
     });
   }
 
   private ehPapelAdministrativo(role: string): role is PapelUsuarioClienteAdministrativo {
     return papeisAdministrativos.includes(role as PapelUsuarioClienteAdministrativo);
+  }
+
+  private async revogarAcessosAtivos(
+    gerenciador: EntityManager,
+    tenantId: string,
+    usuarioId: string
+  ): Promise<void> {
+    const agora = new Date();
+    await gerenciador.getRepository(RefreshTokenOrm).update(
+      { tenantId, usuarioId },
+      { revogadoEm: agora }
+    );
+    await gerenciador.getRepository(SessaoUsuarioOrm).update(
+      { tenantId, usuarioId, revogadoEm: IsNull() },
+      { revogadoEm: agora, motivoRevogacao: 'acesso_alterado' }
+    );
   }
 
   private async garantirLimitePermitido(tenantId: string, recurso: 'usuariosAdministrativos') {

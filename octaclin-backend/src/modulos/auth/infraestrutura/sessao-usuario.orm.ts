@@ -6,7 +6,8 @@ export type MotivoRevogacaoSessao =
   | 'encerrada_outras'
   | 'reuso_detectado'
   | 'senha_redefinida'
-  | 'mfa_obrigatorio';
+  | 'mfa_obrigatorio'
+  | 'acesso_alterado';
 
 /**
  * Uma sessao equivale a familia de refresh tokens criada por um login.

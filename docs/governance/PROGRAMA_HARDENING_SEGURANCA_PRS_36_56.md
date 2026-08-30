@@ -4,12 +4,15 @@
 >
 > Atualizado em: 2026-08-30
 >
-> Proximo item autorizado: review humano do PR 41; PR 42 permanece bloqueado.
+> Proximo item autorizado: review/checks/merge humano do PR 42.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
 > Estado do PR 39: integrado no `main` pelo PR GitHub #161 em 2026-08-29 (`94235ee`).
 > Estado do PR 40: integrado no `main` pelo PR GitHub #162 em 2026-08-29 (`7d9c5f7`).
+> Estado do PR 41: integrado no `main` pelo PR GitHub #164 em 2026-08-30
+> (`f2e6044`); migration aplicada em staging e producao e deploy Render Live,
+> conforme confirmacao operacional do proprietario.
 > Correcao de UX e contratos de sessoes integrada no `main` pelo PR GitHub #163
 > em 2026-08-30 (`31b8d36`). Relatorios em
 > `docs/governance/RELATORIO_SEGURANCA_PR40_2026-08-29.md` e
@@ -254,15 +257,15 @@ Skills Claude: `security-review`, `test-driven-development`,
 Gate minimo: bypasses negativos por rota e capability; recuperacao auditada;
 nenhum fator ou codigo sensivel em log.
 
-Implementacao concluida em `security/governanca-pr41-mfa-reauth`, aguardando
-review humano, checks e merge. A politica deriva obrigatoriedade das capabilities
+Integrado no `main` pelo PR GitHub #164 em 2026-08-30 (`f2e6044`). A politica
+deriva obrigatoriedade das capabilities
 privilegiadas; usa TOTP com anti-replay, codigos de recuperacao de uso unico,
 desafio de login curto e consumivel, reautenticacao vinculada a tenant/usuario/
 sessao, rate limit atomico e auditoria sem material sensivel. Segredos TOTP sao
 cifrados pelo envelope AES-GCM existente e desafios/provas permanecem em cookies
 `HttpOnly` no BFF. A migration aditiva `1720000001037` cria tres tabelas com RLS
-forcada e adiciona `mfa_verificado_em` as sessoes; nao foi aplicada em Neon,
-staging ou producao. Relatorio:
+forcada e adiciona `mfa_verificado_em` as sessoes. O proprietario confirmou a
+aplicacao em staging e producao e o deploy Render Live. Relatorio:
 `docs/governance/RELATORIO_SEGURANCA_PR41_2026-08-30.md`.
 
 ### PR 42 - Autorizacao de objeto e funcao
@@ -278,6 +281,14 @@ Skills Claude: `security-review`, `test-driven-development`,
 
 Gate minimo: matriz role x capability x recurso; testes cruzados de usuario,
 profissional e tenant; payload com campos nao autorizados rejeitado.
+
+Implementacao concluida em `security/governanca-pr42-bola-bfla`, aguardando
+review humano, checks e merge. Foram corrigidos o acesso por objeto nas
+mutacoes de comunicacoes para Professional e a permanencia de sessoes depois
+de desativacao, revogacao de convite ou troca de papel. A configuracao global
+de validacao HTTP ganhou gate explicito contra mass assignment. Sem migration
+ou operacao externa. Relatorio:
+`docs/governance/RELATORIO_SEGURANCA_PR42_2026-08-30.md`.
 
 ### PR 43 - RLS e isolamento multi-tenant integral
 
@@ -506,6 +517,5 @@ venda web, desde que nao seja distribuido nem prometido comercialmente.
   fato novo que altere escopo, ordem, gate ou status.
 - Atualizar `MATRIZ_CONFIABILIDADE_TESTES.md` somente quando um gate permanente
   for efetivamente implementado.
-- O proximo passo autorizado e review/checks/merge humano do PR 41 e, em janela
-  separada, a aplicacao controlada da migration `1720000001037` com smoke.
-- O PR 42 somente pode iniciar depois do aceite humano do resultado do PR 41.
+- O proximo passo autorizado e review/checks/merge humano do PR 42.
+- O PR 43 somente pode iniciar depois do aceite humano do resultado do PR 42.

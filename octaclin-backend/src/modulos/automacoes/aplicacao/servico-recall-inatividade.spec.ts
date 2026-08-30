@@ -117,7 +117,7 @@ function criarServico(dados: DadosCenario = {}) {
         }
       ]
     ),
-    dispararMensagem: jest.fn(async () => {
+    dispararMensagemSistema: jest.fn(async () => {
       if (dados.falharEnvio) throw new Error('Meta recusou o envio.');
       return { id: 'mensagem-1' };
     }),
@@ -152,7 +152,7 @@ describe('ServicoRecallInatividade.simular', () => {
     expect(resultado.candidatos).toEqual([
       { pacienteId: 'paciente-1', diasSemConsulta: 120, ultimaConsultaConcluidaEm: diasAtras(120) }
     ]);
-    expect(comunicacoes.dispararMensagem).not.toHaveBeenCalled();
+    expect(comunicacoes.dispararMensagemSistema).not.toHaveBeenCalled();
     expect(execucoesSalvas[0]).toMatchObject({ status: 'executado', resultado: { simulacao: true, totalCandidatos: 1 } });
   });
 
@@ -217,7 +217,7 @@ describe('ServicoRecallInatividade.processarRecalls', () => {
       regrasComErro: 0,
       contatosIlegiveis: 0
     });
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledWith(
       'tenant-1',
       expect.objectContaining({ pacienteId: 'paciente-1', canalId: 'canal-whatsapp' })
     );
@@ -245,7 +245,7 @@ describe('ServicoRecallInatividade.processarRecalls', () => {
 
     const resultado = await servico.processarRecalls('tenant-1', AGORA);
 
-    expect(comunicacoes.dispararMensagem).not.toHaveBeenCalled();
+    expect(comunicacoes.dispararMensagemSistema).not.toHaveBeenCalled();
     expect(resultado).toMatchObject({ recallsEnviados: 0, pacientesIgnorados: 1 });
     expect(execucoesSalvas[0]).toMatchObject({ status: 'ignorado', resultado: { envio: { motivo: 'template_ausente' } } });
   });
@@ -267,7 +267,7 @@ describe('ServicoRecallInatividade.processarRecalls', () => {
 
     const resultado = await servico.processarRecalls('tenant-1', AGORA);
 
-    expect(comunicacoes.dispararMensagem).not.toHaveBeenCalled();
+    expect(comunicacoes.dispararMensagemSistema).not.toHaveBeenCalled();
     expect(resultado).toMatchObject({ recallsEnviados: 0, pacientesIgnorados: 1 });
   });
 
@@ -288,7 +288,7 @@ describe('ServicoRecallInatividade.processarRecalls', () => {
 
     const resultado = await servico.processarRecalls('tenant-1', AGORA);
 
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledTimes(1);
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledTimes(1);
     expect(resultado).toMatchObject({ recallsEnviados: 1 });
   });
 
@@ -340,6 +340,6 @@ describe('ServicoRecallInatividade.processarRecalls', () => {
     const resultado = await servico.processarRecalls('tenant-1', AGORA);
 
     expect(resultado.regrasAvaliadas).toBe(0);
-    expect(comunicacoes.dispararMensagem).not.toHaveBeenCalled();
+    expect(comunicacoes.dispararMensagemSistema).not.toHaveBeenCalled();
   });
 });
