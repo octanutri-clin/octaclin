@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { comEsperaDeColdStart, ehStatusColdStart, metodoIdempotente } from './cold-start-bff';
 import { sessaoPossuiPermissao } from './permissoes-bff';
 import { validarConfiguracaoSegurancaBff } from './seguranca-bff';
+import { limparDesafioMfa, limparProvaReautenticacao, obterProvaReautenticacao } from './mfa-bff';
 
 const nomes = {
   accessToken: 'octaclin_access_token',
@@ -181,6 +182,7 @@ export async function obterSessaoBff(): Promise<SessaoBff | null> {
 export async function limparSessaoBff() {
   const jar = await cookies();
   Object.values(nomes).forEach((nome) => jar.delete(nome));
+  await limparProvaReautenticacao();
 }
 
 function sessaoExpiraEmBreve(sessao: SessaoBff, margemMs = 60_000) {
@@ -317,6 +319,20 @@ export async function requisitarBackendAutenticado(caminho: string, init?: Reque
   return normalizarRespostaBackend(resposta, `Proxy BFF ${caminho}`);
 }
 
+export async function requisitarBackendReautenticado(caminho: string, init?: RequestInit): Promise<Response> {
+  // Preserve a fronteira de autenticacao: cliente anonimo recebe 401 antes de
+  // qualquer avaliacao da prova adicional, e uma sessao valida sem prova recebe 403.
+  await obterSessaoValidaBff();
+  const prova = await obterProvaReautenticacao();
+  if (!prova) {
+    return respostaJsonBff(403, 'Confirme sua senha novamente para continuar.');
+  }
+  return requisitarBackendAutenticado(caminho, {
+    ...init,
+    headers: { 'x-octaclin-reauth': prova, ...init?.headers }
+  });
+}
+
 export async function revogarSessaoAtual() {
   const sessao = await obterSessaoBff();
   if (sessao) {
@@ -333,4 +349,5 @@ export async function revogarSessaoAtual() {
   }
 
   await limparSessaoBff();
+  await limparDesafioMfa();
 }

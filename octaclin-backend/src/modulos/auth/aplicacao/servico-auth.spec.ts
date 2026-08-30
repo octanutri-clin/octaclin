@@ -20,6 +20,7 @@ interface DadosCenario {
   consumoAfetado?: number;
   claimsRenovacao?: Record<string, unknown>;
   verifyLanca?: boolean;
+  mfaDesafio?: Record<string, unknown> | null;
 }
 
 function criarServico(dados: DadosCenario = {}) {
@@ -113,6 +114,14 @@ function criarServico(dados: DadosCenario = {}) {
     revogarTodas: jest.fn(async () => 3),
     limparHistorico: jest.fn(async () => 4)
   };
+  const mfa = {
+    iniciarLogin: jest.fn(async () => dados.mfaDesafio ?? null),
+    concluirLogin: jest.fn(async () => ({
+      usuario: USUARIO_ATIVO as UsuarioOrm,
+      codigosRecuperacao: ['AAAA-BBBB-CCCC'],
+      mfaVerificadoEm: new Date('2026-08-29T12:00:00.000Z')
+    }))
+  };
 
   return {
     servico: new ServicoAuth(
@@ -122,7 +131,8 @@ function criarServico(dados: DadosCenario = {}) {
       senhas as never,
       criptografia as never,
       protecaoAbuso as never,
-      sessoes as never
+      sessoes as never,
+      mfa as never
     ),
     jwt,
     sessoes,
@@ -132,7 +142,8 @@ function criarServico(dados: DadosCenario = {}) {
     repositorioSessoes,
     construtorConsulta,
     tokensSalvos,
-    sessoesCriadas
+    sessoesCriadas,
+    mfa
   };
 }
 
@@ -145,6 +156,8 @@ const USUARIO_ATIVO = {
   role: 'Professional'
 };
 
+const USUARIO_NAO_PRIVILEGIADO = { ...USUARIO_ATIVO, role: 'Patient' };
+
 const CREDENCIAIS = { tenantSlug: 'clinica-carla', email: 'ana@example.com', senha: 'SenhaValida123' };
 
 function sessaoAtiva(extra: Partial<SessaoUsuarioOrm> = {}): Partial<SessaoUsuarioOrm> {
@@ -156,6 +169,7 @@ function sessaoAtiva(extra: Partial<SessaoUsuarioOrm> = {}): Partial<SessaoUsuar
     ultimaAtividadeEm: new Date('2026-08-01T10:00:00.000Z'),
     expiraEm: new Date('2126-08-01T10:00:00.000Z'),
     revogadoEm: null,
+    mfaVerificadoEm: new Date('2026-08-01T10:00:00.000Z'),
     ...extra
   };
 }
@@ -163,7 +177,7 @@ function sessaoAtiva(extra: Partial<SessaoUsuarioOrm> = {}): Partial<SessaoUsuar
 function cenarioLoginValido(extra: DadosCenario = {}) {
   return criarServico({
     tenant: { id: TENANT, slug: 'clinica-carla', status: 'ativo' },
-    usuario: USUARIO_ATIVO,
+    usuario: USUARIO_NAO_PRIVILEGIADO,
     senhaValida: true,
     ...extra
   });
@@ -187,6 +201,35 @@ describe('ServicoAuth', () => {
   });
 
   describe('login', () => {
+    it('nao emite sessao para acesso privilegiado enquanto o MFA estiver pendente', async () => {
+      const desafio = { mfaObrigatorio: true, modo: 'verificar', desafioMfa: 'desafio' };
+      const { servico, sessoes, mfa } = cenarioLoginValido({ usuario: USUARIO_ATIVO, mfaDesafio: desafio });
+
+      await expect(servico.login(CREDENCIAIS)).resolves.toEqual(desafio);
+      expect(mfa.iniciarLogin).toHaveBeenCalledWith(USUARIO_ATIVO);
+      expect(sessoes.criar).not.toHaveBeenCalled();
+    });
+
+    it('recusa emissao interna de sessao privilegiada sem comprovacao MFA', async () => {
+      const { servico, sessoes } = criarServico();
+
+      await expect(servico.emitirSessaoUsuario(USUARIO_ATIVO as UsuarioOrm)).rejects.toBeInstanceOf(
+        UnauthorizedException
+      );
+      expect(sessoes.criar).not.toHaveBeenCalled();
+    });
+
+    it('emite sessao com comprovacao MFA somente depois de concluir o desafio', async () => {
+      const { servico, sessoes } = cenarioLoginValido();
+
+      const resposta = await servico.concluirLoginMfa({ desafioMfa: 'desafio', codigo: '123456' });
+
+      expect(resposta.codigosRecuperacao).toEqual(['AAAA-BBBB-CCCC']);
+      expect(sessoes.criar).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ mfaVerificadoEm: new Date('2026-08-29T12:00:00.000Z') })
+      );
+    });
     it('bloqueia login abusivo antes de consultar tenant e credenciais', async () => {
       const protecaoAbuso = {
         verificarDisponibilidade: jest.fn(() => {
@@ -241,6 +284,18 @@ describe('ServicoAuth', () => {
       expect(opcoesAcesso.jwtid).not.toBe(opcoesRenovacao.jwtid);
     });
 
+    it('propaga no access token a garantia MFA persistida na sessao', async () => {
+      const { servico, jwt } = criarServico({
+        sessao: sessaoAtiva({ mfaVerificadoEm: new Date('2026-08-29T12:00:00.000Z') }),
+        usuario: USUARIO_ATIVO
+      });
+
+      await servico.renovar({ refreshToken: 'refresh' });
+
+      expect(jwt.signAsync.mock.calls[0][0]).toMatchObject({ mfa: true });
+      expect(jwt.signAsync.mock.calls[1][0]).not.toHaveProperty('mfa');
+    });
+
     it('nao coloca papel, permissoes nem emailHash dentro do refresh token', async () => {
       const { servico, jwt } = cenarioLoginValido();
 
@@ -256,6 +311,7 @@ describe('ServicoAuth', () => {
       const { servico, tokensSalvos } = cenarioLoginValido();
 
       const resposta = await servico.login(CREDENCIAIS);
+      if (!('refreshToken' in resposta)) throw new Error('Cenario deveria emitir tokens.');
 
       expect(tokensSalvos).toHaveLength(1);
       expect(tokensSalvos[0]).toMatchObject({ sessaoId: SESSAO, familiaToken: SESSAO, usuarioId: USUARIO });
@@ -284,6 +340,25 @@ describe('ServicoAuth', () => {
   });
 
   describe('renovacao', () => {
+    it('recusa e revoga sessao privilegiada criada sem MFA', async () => {
+      const { servico, sessoes, tokensSalvos } = criarServico({
+        sessao: sessaoAtiva({ mfaVerificadoEm: null }),
+        usuario: USUARIO_ATIVO
+      });
+
+      await expect(servico.renovar({ refreshToken: 'refresh' })).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(sessoes.revogar).toHaveBeenCalledWith(TENANT, USUARIO, SESSAO, 'mfa_obrigatorio');
+      expect(tokensSalvos).toHaveLength(0);
+    });
+
+    it('permite renovar sessao sem MFA para perfil nao privilegiado', async () => {
+      const { servico } = criarServico({
+        sessao: sessaoAtiva({ mfaVerificadoEm: null }),
+        usuario: { ...USUARIO_ATIVO, role: 'Patient' }
+      });
+
+      await expect(servico.renovar({ refreshToken: 'refresh' })).resolves.toHaveProperty('accessToken');
+    });
     it('verifica o refresh token com o tipo e a lista de algoritmos corretos', async () => {
       const { servico, jwt } = criarServico({
         sessao: sessaoAtiva(),

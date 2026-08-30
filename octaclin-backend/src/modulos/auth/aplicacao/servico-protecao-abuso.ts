@@ -34,6 +34,20 @@ export const POLITICA_CONVITES_ADMIN: PoliticaProtecaoAbuso = {
   mensagemBloqueio: 'Muitas acoes de convite. Tente novamente em alguns minutos.'
 };
 
+export const POLITICA_MFA: PoliticaProtecaoAbuso = {
+  maxTentativas: 5,
+  janelaMs: 5 * 60 * 1000,
+  bloqueioMs: 15 * 60 * 1000,
+  mensagemBloqueio: 'Muitas tentativas de verificação. Tente novamente em alguns minutos.'
+};
+
+export const POLITICA_REAUTENTICACAO: PoliticaProtecaoAbuso = {
+  maxTentativas: 5,
+  janelaMs: 15 * 60 * 1000,
+  bloqueioMs: 15 * 60 * 1000,
+  mensagemBloqueio: 'Muitas tentativas de confirmação. Tente novamente em alguns minutos.'
+};
+
 export function montarChaveProtecaoAbuso(escopo: string, tenantSlug?: string, email?: string) {
   return [
     escopo.trim().toLowerCase(),

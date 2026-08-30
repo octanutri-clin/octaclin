@@ -26,7 +26,8 @@ function cookiesSessao() {
     octaclin_email: encodeURIComponent('profissional@octaclin.local'),
     octaclin_access_expira_em: '2030-08-22T12:00:00.000Z',
     octaclin_papel: 'Professional',
-    octaclin_permissoes: encodeURIComponent(JSON.stringify([]))
+    octaclin_permissoes: encodeURIComponent(JSON.stringify([])),
+    octaclin_reauth_prova: 'prova-reauth-sintetica'
   };
 }
 
@@ -65,12 +66,14 @@ test('rotas de sessao recusam sessao ausente antes de tocar o backend', async ()
 
 test('rotas de sessao encaminham metodo, caminho e credencial corretos', async () => {
   const original = global.fetch;
-  const chamadas: Array<{ url: string; metodo?: string; autorizacao?: string }> = [];
+  const chamadas: Array<{ url: string; metodo?: string; autorizacao?: string; reautenticacao?: string }> = [];
   global.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    const headers = new Headers(init?.headers);
     chamadas.push({
       url: String(url),
       metodo: init?.method ?? 'GET',
-      autorizacao: new Headers(init?.headers).get('Authorization') ?? undefined
+      autorizacao: headers.get('Authorization') ?? undefined,
+      reautenticacao: headers.get('x-octaclin-reauth') ?? undefined
     });
     return new Response(JSON.stringify({ encerradas: 1 }), { headers: { 'Content-Type': 'application/json' } });
   }) as typeof global.fetch;
@@ -96,6 +99,32 @@ test('rotas de sessao encaminham metodo, caminho e credencial corretos', async (
     for (const chamada of chamadas) {
       assert.equal(chamada.autorizacao, 'Bearer access-token-sintetico');
     }
+    assert.equal(chamadas[0]?.reautenticacao, undefined);
+    assert.equal(chamadas[1]?.reautenticacao, undefined);
+    assert.equal(chamadas[2]?.reautenticacao, undefined);
+    assert.equal(chamadas[3]?.reautenticacao, 'prova-reauth-sintetica');
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('rota privilegiada exige reautenticacao sem chamar o backend', async () => {
+  const original = global.fetch;
+  let chamadas = 0;
+  global.fetch = (async () => {
+    chamadas += 1;
+    throw new Error('nao deve chamar o backend sem prova de reautenticacao');
+  }) as typeof global.fetch;
+
+  try {
+    const sessaoSemProva: Record<string, string> = cookiesSessao();
+    delete sessaoSemProva.octaclin_reauth_prova;
+    __setCookies(sessaoSemProva);
+
+    const resposta = await limparHistorico();
+
+    assert.equal(resposta.status, 403);
+    assert.equal(chamadas, 0);
   } finally {
     restaurarFetch(original);
   }

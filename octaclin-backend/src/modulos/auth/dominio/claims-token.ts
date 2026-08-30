@@ -29,6 +29,7 @@ export interface ClaimsToken {
   papel?: PapelUsuario;
   emailHash?: string;
   permissoes?: string[];
+  mfa?: boolean;
 }
 
 export class ErroClaimsInvalidas extends Error {
@@ -82,6 +83,7 @@ export function validarClaimsToken(payload: unknown, tipoEsperado: TipoToken): C
   }
   claims.papel = papel as PapelUsuario;
   claims.emailHash = exigirTexto(dados, 'emailHash');
+  claims.mfa = dados.mfa === true;
 
   const permissoes = dados.permissoes;
   if (permissoes !== undefined) {

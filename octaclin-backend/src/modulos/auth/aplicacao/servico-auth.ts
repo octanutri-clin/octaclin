@@ -7,9 +7,10 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
-import { LoginDto, RenovarTokenDto } from './dtos';
+import { ConcluirLoginMfaDto, LoginDto, RenovarTokenDto } from './dtos';
 import { montarChaveProtecaoAbuso, POLITICA_LOGIN, ServicoProtecaoAbuso } from './servico-protecao-abuso';
 import { ServicoSessoes } from './servico-sessoes';
+import { ServicoMfa, type DesafioLoginMfa } from './servico-mfa';
 import { contextoAcessoPorPapel } from '../dominio/permissoes';
 import {
   TIPO_TOKEN_ACESSO,
@@ -19,6 +20,7 @@ import {
   type TipoToken
 } from '../dominio/claims-token';
 import type { UsuarioAutenticado } from '../dominio/usuario-autenticado';
+import { exigeMfaPorPapel } from '../dominio/politica-mfa';
 import {
   duracaoEmSegundos,
   expiracaoConfigurada,
@@ -43,6 +45,7 @@ export interface ParTokens {
 interface DesfechoRotacao {
   reuso: boolean;
   tokens?: ParTokens;
+  mfaObrigatorio?: boolean;
 }
 
 @Injectable()
@@ -54,7 +57,8 @@ export class ServicoAuth {
     private readonly senhas: ServicoSenhas,
     private readonly criptografia: CriptografiaDadosSensiveis,
     private readonly protecaoAbuso: ServicoProtecaoAbuso,
-    private readonly sessoes: ServicoSessoes
+    private readonly sessoes: ServicoSessoes,
+    private readonly mfa: ServicoMfa
   ) {}
 
   async login(dados: LoginDto) {
@@ -83,19 +87,31 @@ export class ServicoAuth {
     }
 
     await this.protecaoAbuso.registrarSucesso(chaveProtecao);
+    const desafio = await this.mfa.iniciarLogin(usuario);
+    if (desafio) return desafio;
     return this.emitirSessaoUsuario(usuario);
+  }
+
+  async concluirLoginMfa(dados: ConcluirLoginMfaDto): Promise<ParTokens & { codigosRecuperacao: string[] }> {
+    const resultado = await this.mfa.concluirLogin(dados.desafioMfa, dados.codigo.trim().toUpperCase());
+    const tokens = await this.emitirSessaoUsuario(resultado.usuario, resultado.mfaVerificadoEm);
+    return { ...tokens, codigosRecuperacao: resultado.codigosRecuperacao };
   }
 
   /**
    * Cada login abre uma sessao propria. Sessoes anteriores continuam validas:
    * encerra-las e decisao do usuario, pelos endpoints de sessao.
    */
-  async emitirSessaoUsuario(usuario: UsuarioOrm): Promise<ParTokens> {
+  async emitirSessaoUsuario(usuario: UsuarioOrm, mfaVerificadoEm?: Date | null): Promise<ParTokens> {
+    if (exigeMfaPorPapel(usuario.role) && !mfaVerificadoEm) {
+      throw new UnauthorizedException('Autenticação multifator obrigatória.');
+    }
     return this.executorTenant.executar(usuario.tenantId, async (gerenciador) => {
       const sessao = await this.sessoes.criar(gerenciador, {
         tenantId: usuario.tenantId,
         usuarioId: usuario.id,
-        expiraEm: this.expiracaoSessao()
+        expiraEm: this.expiracaoSessao(),
+        mfaVerificadoEm: mfaVerificadoEm ?? null
       });
 
       return this.emitirParTokens(gerenciador, usuario, sessao);
@@ -151,6 +167,10 @@ export class ServicoAuth {
 
       if (!usuarioAtual) return { reuso: false };
 
+      if (exigeMfaPorPapel(usuarioAtual.role) && !sessao.mfaVerificadoEm) {
+        return { reuso: false, mfaObrigatorio: true };
+      }
+
       sessao.ultimaAtividadeEm = agora;
       sessao.expiraEm = this.expiracaoSessao(agora);
       await repositorioSessoes.save(sessao);
@@ -161,6 +181,11 @@ export class ServicoAuth {
     if (desfecho.reuso) {
       await this.sessoes.revogarPorReuso(claims.tenantId, claims.sub, claims.sid);
       throw new UnauthorizedException('Refresh token invalido ou expirado.');
+    }
+
+    if (desfecho.mfaObrigatorio) {
+      await this.sessoes.revogar(claims.tenantId, claims.sub, claims.sid, 'mfa_obrigatorio');
+      throw new UnauthorizedException('Autenticação multifator obrigatória.');
     }
 
     if (!desfecho.tokens) {
@@ -244,7 +269,8 @@ export class ServicoAuth {
         tipo: TIPO_TOKEN_ACESSO,
         papel: usuario.role,
         emailHash: usuario.emailHash,
-        permissoes: contextoAcesso.permissoes
+        permissoes: contextoAcesso.permissoes,
+        mfa: Boolean(sessao.mfaVerificadoEm)
       },
       opcoesAssinatura(TIPO_TOKEN_ACESSO, randomUUID())
     );

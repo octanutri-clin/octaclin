@@ -6,6 +6,7 @@ import { contextoAcessoPorPapel } from '../dominio/permissoes';
 import type { PermissaoOctaClin } from '../dominio/permissoes';
 import { opcoesVerificacao } from '../infraestrutura/configuracao-jwt';
 import { UsuarioAutenticado } from '../dominio/usuario-autenticado';
+import { exigeMfaPorPapel } from '../dominio/politica-mfa';
 
 @Injectable()
 export class GuardaJwt implements CanActivate {
@@ -44,6 +45,9 @@ export class GuardaJwt implements CanActivate {
     }
 
     const contextoAcesso = contextoAcessoPorPapel(claims.papel!);
+    if (exigeMfaPorPapel(claims.papel!) && claims.mfa !== true) {
+      throw new UnauthorizedException('Autenticação multifator obrigatória.');
+    }
 
     requisicao.usuarioAutenticado = {
       usuarioId: claims.sub,
@@ -51,7 +55,8 @@ export class GuardaJwt implements CanActivate {
       papel: claims.papel!,
       emailHash: claims.emailHash!,
       permissoes: (claims.permissoes as PermissaoOctaClin[] | undefined) ?? contextoAcesso.permissoes,
-      sessaoId: claims.sid
+      sessaoId: claims.sid,
+      mfaVerificado: claims.mfa === true
     };
 
     return true;

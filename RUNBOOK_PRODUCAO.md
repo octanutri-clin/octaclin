@@ -217,6 +217,71 @@ nova deixam de ser aceitos pela antiga (falha fechada, sem perda de dado) e todo
 entram de novo. Reverter a migration (`down`) so e necessario para desfazer o
 schema, e derruba as sessoes gravadas; nao ha dado clinico envolvido.
 
+### MFA e reautenticacao privilegiada (PR 41 da governanca)
+
+O PR 41 depende da migration aditiva
+`1720000001037-CriarMfaEReautenticacao`. Ela cria as tabelas
+`mfa_fatores_usuario`, `mfa_codigos_recuperacao` e `mfa_desafios`, adiciona
+`sessoes_usuario.mfa_verificado_em` e inclui o motivo de revogacao
+`mfa_obrigatorio`.
+
+**Ordem operacional obrigatoria**
+
+1. Criar uma branch de backup no Neon do ambiente alvo.
+2. Confirmar explicitamente projeto, branch, banco e role `neondb_owner`. Nao
+   usar a role runtime para aplicar a migration.
+3. Manter `BANCO_EXECUTAR_MIGRACOES=false` no servico.
+4. Definir `DATABASE_URL` somente na sessao local e executar:
+
+   ```powershell
+   pnpm --dir octaclin-backend migration:run
+   pnpm --dir octaclin-backend run typeorm -- migration:show
+   Remove-Item Env:DATABASE_URL
+   ```
+
+   Se `migration:run` tentar aplicar qualquer migration anterior a 1037, parar
+   e conferir o banco. O `Remove-Item` e obrigatorio.
+5. Verificar a migration antes do deploy:
+
+   ```sql
+   select relname, relrowsecurity, relforcerowsecurity
+   from pg_class
+   where relname in ('mfa_fatores_usuario', 'mfa_codigos_recuperacao', 'mfa_desafios')
+   order by relname;
+
+   select tablename, policyname
+   from pg_policies
+   where tablename in ('mfa_fatores_usuario', 'mfa_codigos_recuperacao', 'mfa_desafios')
+   order by tablename, policyname;
+
+   select indexname
+   from pg_indexes
+   where tablename in ('mfa_fatores_usuario', 'mfa_codigos_recuperacao', 'mfa_desafios')
+   order by indexname;
+
+   select column_name
+   from information_schema.columns
+   where table_name = 'sessoes_usuario' and column_name = 'mfa_verificado_em';
+   ```
+
+   As tres linhas de `pg_class` precisam retornar `t | t`. As policies esperadas
+   sao `isolamento_tenant_mfa_fatores_usuario`,
+   `isolamento_tenant_mfa_codigos_recuperacao` e
+   `isolamento_tenant_mfa_desafios`. Os indices parciais esperados sao
+   `idx_mfa_desafios_validos` e `idx_mfa_codigos_disponiveis`, alem dos indices
+   criados por PK/unique constraints.
+6. Implantar backend e depois web.
+7. Fazer smoke somente com conta sintetica privilegiada: enrolment, novo login
+   TOTP, um recovery code, reautenticacao e revogacao de sessoes. Confirmar que
+   a auditoria nao contem segredo, URI `otpauth`, codigo ou token.
+
+**Rollback**
+
+Reimplantar o commit anterior mantendo a migration aditiva. Nao executar
+`migration:revert` nem o `down` automaticamente: depois do enrolment, o down
+apaga fatores e codigos de recuperacao. Reverter o schema exige aceite humano,
+backup confirmado e plano explicito para recuperar o acesso privilegiado.
+
 ### BANCO_EXECUTAR_MIGRACOES em producao
 
 `migrationsRun` fica ligado somente quando `BANCO_EXECUTAR_MIGRACOES` e
