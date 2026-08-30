@@ -1146,7 +1146,7 @@ export class ServicoAgenda {
     const payload = this.montarPayloadNotificacao(tipo, template, contexto, destino, evento);
 
     try {
-      const mensagem = await this.comunicacoes.dispararMensagem(tenantId, {
+      const mensagem = await this.comunicacoes.dispararMensagemSistema(tenantId, {
         pacienteId: contexto.consulta.pacienteId,
         canalId: canal.id,
         templateId: template.id,

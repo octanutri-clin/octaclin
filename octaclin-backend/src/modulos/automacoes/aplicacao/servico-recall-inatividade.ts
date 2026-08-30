@@ -318,7 +318,7 @@ export class ServicoRecallInatividade {
 
     let mensagemId: string;
     try {
-      const mensagem = await this.comunicacoes.dispararMensagem(tenantId, {
+      const mensagem = await this.comunicacoes.dispararMensagemSistema(tenantId, {
         pacienteId: candidato.pacienteId,
         canalId: canal.id,
         templateId: template.id,

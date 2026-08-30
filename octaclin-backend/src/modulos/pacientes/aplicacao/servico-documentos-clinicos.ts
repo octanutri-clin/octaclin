@@ -248,7 +248,7 @@ export class ServicoDocumentosClinicos {
         texto: corpo,
         documentoId: contexto.documento.id
       }
-    });
+    }, usuario);
     await this.comunicacoes.publicarEventoNotificacao(tenantId, mensagem.id);
 
     await this.executorTenant.executar(tenantId, async (gerenciador) => {

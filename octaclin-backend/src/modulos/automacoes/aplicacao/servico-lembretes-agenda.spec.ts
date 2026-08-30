@@ -62,7 +62,7 @@ function criarServico(dados: Record<string, unknown> = {}) {
         }
       ]
     ),
-    dispararMensagem: jest.fn(async (_tenantId: string, entrada: { canalId: string }) => ({
+    dispararMensagemSistema: jest.fn(async (_tenantId: string, entrada: { canalId: string }) => ({
       id: entrada.canalId === 'canal-email' ? 'mensagem-email' : 'mensagem-whatsapp'
     })),
     publicarEventoNotificacao: jest.fn(async () => undefined)
@@ -103,7 +103,7 @@ describe('ServicoLembretesAgenda', () => {
     const resultado = await servico.processarLembretesConsulta('tenant-1', new Date('2026-07-22T12:00:00.000Z'));
 
     expect(resultado).toEqual({ consultasAvaliadas: 1, lembretesProcessados: 1, lembretesIgnorados: 0 });
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledWith(
       'tenant-1',
       expect.objectContaining({
         canalId: 'canal-email',
@@ -115,7 +115,7 @@ describe('ServicoLembretesAgenda', () => {
         })
       })
     );
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledWith(
       'tenant-1',
       expect.objectContaining({
         canalId: 'canal-whatsapp',
@@ -171,7 +171,7 @@ describe('ServicoLembretesAgenda', () => {
 
     await servico.processarLembretesConsulta('tenant-1', new Date('2026-07-22T12:00:00.000Z'));
 
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledWith(
       'tenant-1',
       expect.objectContaining({
         canalId: 'canal-email',
@@ -203,7 +203,7 @@ describe('ServicoLembretesAgenda', () => {
 
     await servico.processarLembretesConsulta('tenant-1', new Date('2026-07-22T12:00:00.000Z'));
 
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledWith(
       'tenant-1',
       expect.objectContaining({
         canalId: 'canal-email',
@@ -236,7 +236,7 @@ describe('ServicoLembretesAgenda', () => {
     const resultado = await servico.processarLembretesConsulta('tenant-1', new Date('2026-07-22T12:00:00.000Z'));
 
     expect(resultado).toEqual({ consultasAvaliadas: 1, lembretesProcessados: 0, lembretesIgnorados: 1 });
-    expect(comunicacoes.dispararMensagem).not.toHaveBeenCalled();
+    expect(comunicacoes.dispararMensagemSistema).not.toHaveBeenCalled();
     expect(repositorioConsultas.save).not.toHaveBeenCalled();
   });
 
@@ -272,8 +272,8 @@ describe('ServicoLembretesAgenda', () => {
 
     await servico.processarLembretesConsulta('tenant-1', new Date('2026-07-22T12:00:00.000Z'));
 
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledTimes(1);
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledTimes(1);
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledWith(
       'tenant-1',
       expect.objectContaining({
         canalId: 'canal-whatsapp',
@@ -325,7 +325,7 @@ describe('ServicoLembretesAgenda', () => {
     const resultado = await servico.processarLembretesConsulta('tenant-1', new Date('2026-07-22T12:00:00.000Z'));
 
     expect(resultado).toEqual({ consultasAvaliadas: 1, lembretesProcessados: 1, lembretesIgnorados: 0 });
-    expect(comunicacoes.dispararMensagem).not.toHaveBeenCalled();
+    expect(comunicacoes.dispararMensagemSistema).not.toHaveBeenCalled();
     expect(repositorioConsultas.save).toHaveBeenCalledWith(
       expect.objectContaining({
         notificacoes: expect.objectContaining({

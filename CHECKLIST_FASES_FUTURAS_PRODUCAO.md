@@ -2516,14 +2516,20 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - Preserva sessoes ativas e a trilha imutavel de auditoria.
   - Integrada no `main` pelo PR GitHub `#163` em 2026-08-30 (`31b8d36`).
   - Relatorio: `docs/governance/RELATORIO_CORRECAO_POS_PR40_SESSOES_2026-08-29.md`.
-- [ ] PR 41 - Implementar MFA e reautenticacao privilegiada.
+- [x] PR 41 - Implementar MFA e reautenticacao privilegiada.
   - [x] Implementacao e validacao local concluidas em `security/governanca-pr41-mfa-reauth`.
   - [x] TOTP com anti-replay, recovery codes de uso unico, rate limit atomico, reautenticacao curta e auditoria sanitizada.
   - [x] Bypasses por capability/rota cobertos; fluxo BFF/UI validado em desktop e mobile com axe-core.
-  - [ ] Review, checks e merge humanos.
-  - [ ] Aplicar e verificar a migration aditiva `1720000001037` com `neondb_owner`, depois deploy e smoke sintetico.
+  - [x] Review, checks e merge humanos pelo PR GitHub `#164` (`f2e6044`).
+  - [x] Migration aditiva `1720000001037` aplicada em staging e producao; deploy Render Live, conforme confirmacao operacional do proprietario.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR41_2026-08-30.md`.
 - [ ] PR 42 - Provar autorizacao de objeto e funcao contra BOLA/BFLA/IDOR.
+  - [x] Implementacao e validacao local concluidas em `security/governanca-pr42-bola-bfla`.
+  - [x] Mutacoes humanas de comunicacoes limitadas a carteira do Professional.
+  - [x] Troca de papel, desativacao e revogacao de convite revogam refresh tokens e sessoes ativas.
+  - [x] Matriz role x capability x recurso e rejeicao de mass assignment cobertas por testes.
+  - [ ] Review, checks e merge humanos.
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR42_2026-08-30.md`.
 - [ ] PR 43 - Provar RLS e isolamento multi-tenant integral.
 - [ ] PR 44 - Endurecer uploads e storage clinico.
 - [ ] PR 45 - Endurecer browser, BFF, CSP, CSRF, CORS e cache.
@@ -2542,4 +2548,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: review/checks/merge humano do PR 41. O PR 42 depende do aceite humano e do fechamento operacional da migration `1720000001037`.
+Proximo item autorizado: review/checks/merge humano do PR 42. O PR 43 depende do aceite humano do resultado do PR 42.

@@ -169,7 +169,7 @@ function criarServico(dados: Record<string, unknown> = {}) {
         { id: 'template-whatsapp', canal: 'whatsapp', aprovado: true, nome: 'Agendamento WhatsApp', conteudo: {} }
       ])
     ]),
-    dispararMensagem: jest.fn(async (_tenantId: string, entrada: { canalId: string }) => ({
+    dispararMensagemSistema: jest.fn(async (_tenantId: string, entrada: { canalId: string }) => ({
       id: entrada.canalId === 'canal-email' ? 'mensagem-email' : 'mensagem-whatsapp'
     })),
     publicarEventoNotificacao: jest.fn(async () => undefined)
@@ -246,7 +246,7 @@ describe('ServicoAgenda', () => {
 
     expect(resposta.id).toBe('consulta-existente');
     expect(googleCalendar.criarEvento).not.toHaveBeenCalled();
-    expect(comunicacoes.dispararMensagem).not.toHaveBeenCalled();
+    expect(comunicacoes.dispararMensagemSistema).not.toHaveBeenCalled();
   });
 
   it('exporta em CSV so as consultas do periodo, sem bloqueio nem detalhe do Google', async () => {
@@ -541,7 +541,7 @@ describe('ServicoAgenda', () => {
         emailConvidado: 'ana@example.com'
       })
     );
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledWith(
       'tenant-1',
       expect.objectContaining({
         pacienteId: 'paciente-1',
@@ -554,7 +554,7 @@ describe('ServicoAgenda', () => {
         })
       })
     );
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledWith(
       'tenant-1',
       expect.objectContaining({
         canalId: 'canal-whatsapp',
@@ -613,7 +613,7 @@ describe('ServicoAgenda', () => {
       'tenant-1',
       'mensagem-email-existente'
     );
-    expect(comunicacoes.dispararMensagem).not.toHaveBeenCalled();
+    expect(comunicacoes.dispararMensagemSistema).not.toHaveBeenCalled();
     expect(resposta.notificacoes.email).toEqual({
       status: 'pendente',
       mensagemId: 'mensagem-email-existente'
@@ -667,7 +667,7 @@ describe('ServicoAgenda', () => {
         descricao: expect.stringContaining('Sala online: https://meet.google.com/abc-defg-hij')
       })
     );
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledWith(
       'tenant-1',
       expect.objectContaining({
         payload: expect.objectContaining({
@@ -880,7 +880,7 @@ describe('ServicoAgenda', () => {
       usuarioColaborador
     );
 
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledWith(
       'tenant-1',
       expect.objectContaining({
         canalId: 'canal-whatsapp',
@@ -1607,8 +1607,8 @@ describe('ServicoAgenda', () => {
       usuarioColaborador
     );
 
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledTimes(1);
-    expect(comunicacoes.dispararMensagem).toHaveBeenCalledWith(
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledTimes(1);
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledWith(
       'tenant-1',
       expect.objectContaining({
         canalId: 'canal-email',

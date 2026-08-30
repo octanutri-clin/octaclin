@@ -33,14 +33,20 @@ describe('ControladorComunicacoes', () => {
     };
     const auditoria = { registrar: jest.fn(async () => undefined) };
     const controlador = new ControladorComunicacoes(servico as never, auditoria as never);
+    const usuario = { tenantId: 'tenant-1', usuarioId: 'usuario-1' } as never;
 
     const resposta = await controlador.dispararMensagem(
-      { tenantId: 'tenant-1', usuarioId: 'usuario-1' } as never,
+      usuario,
       { ip: '127.0.0.1', headers: {} } as never,
       { pacienteId: 'paciente-1', canalId: 'canal-1', templateId: 'template-1', payload: {} }
     );
 
     expect(resposta).toBe(mensagemAtualizada);
+    expect(servico.dispararMensagem).toHaveBeenCalledWith(
+      'tenant-1',
+      expect.objectContaining({ pacienteId: 'paciente-1' }),
+      usuario
+    );
     expect(servico.publicarEventoNotificacao).toHaveBeenCalledWith('tenant-1', 'mensagem-1');
     expect(auditoria.registrar).toHaveBeenCalledWith(
       expect.objectContaining({ metadados: expect.objectContaining({ status: 'falhou' }) })

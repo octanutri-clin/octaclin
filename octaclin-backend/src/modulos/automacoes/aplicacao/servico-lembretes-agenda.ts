@@ -139,7 +139,7 @@ export class ServicoLembretesAgenda {
     if (!template) return { status: 'ignorado', motivo: 'template_ausente' };
 
     try {
-      const mensagem = await this.comunicacoes.dispararMensagem(tenantId, {
+      const mensagem = await this.comunicacoes.dispararMensagemSistema(tenantId, {
         pacienteId: consulta.pacienteId,
         canalId: canal.id,
         templateId: template.id,

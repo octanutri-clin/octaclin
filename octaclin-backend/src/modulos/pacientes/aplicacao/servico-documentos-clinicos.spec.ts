@@ -356,7 +356,8 @@ describe('ServicoDocumentosClinicos - envio por email', () => {
         canalId: 'canal-1',
         templateId: 'template-1',
         payload: expect.objectContaining({ destino: 'ana@example.com' })
-      })
+      }),
+      usuario
     );
     expect(documentos.update).toHaveBeenCalledWith(
       { id: 'documento-1', tenantId: 'tenant-1' },

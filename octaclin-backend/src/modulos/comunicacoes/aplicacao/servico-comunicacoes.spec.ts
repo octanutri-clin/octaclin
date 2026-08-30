@@ -36,7 +36,13 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
     findOne: jest.fn(async (consulta: { where: Record<string, unknown> }) => {
       if (nome === 'canal') return dados.canal ?? null;
       if (nome === 'template') return dados.template ?? null;
-      if (nome === 'paciente') return dados.paciente ?? null;
+      if (nome === 'paciente') {
+        const paciente = dados.paciente as Record<string, unknown> | undefined;
+        if (!paciente) return null;
+        return Object.entries(consulta.where).every(([chave, valor]) => paciente[chave] === valor)
+          ? paciente
+          : null;
+      }
       if (nome === 'profissional') return dados.profissional ?? null;
       return consulta.where.id ? dados.mensagem ?? null : null;
     })
@@ -109,7 +115,7 @@ describe('ServicoComunicacoes', () => {
       canalId: 'canal-1',
       templateId: 'template-1',
       payload: { destino: 'paciente@example.com' }
-    });
+    }, usuarioColaborador);
 
     expect(repositorios.mensagem.save).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -190,6 +196,53 @@ describe('ServicoComunicacoes', () => {
     expect(repositorios.mensagem.find).not.toHaveBeenCalled();
   });
 
+  it('deve negar disparo para paciente de outro profissional do mesmo tenant', async () => {
+    const { servico, repositorios } = criarServico({
+      profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' },
+      canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+      paciente: { id: 'paciente-2', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-2' }
+    });
+
+    await expect(
+      servico.dispararMensagem('tenant-1', {
+        pacienteId: 'paciente-2',
+        canalId: 'canal-1',
+        templateId: 'template-1',
+        payload: { destino: 'paciente@example.com' }
+      }, usuarioProfissional)
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+    expect(repositorios.outbox.save).not.toHaveBeenCalled();
+  });
+
+  it('deve permitir disparo para paciente da carteira do Professional', async () => {
+    const { servico, repositorios } = criarServico({
+      profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' },
+      canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1' }
+    });
+
+    await expect(
+      servico.dispararMensagem('tenant-1', {
+        pacienteId: 'paciente-1',
+        canalId: 'canal-1',
+        templateId: 'template-1',
+        payload: { destino: 'paciente@example.com' }
+      }, usuarioProfissional)
+    ).resolves.toEqual(expect.objectContaining({ pacienteId: 'paciente-1', status: 'pendente' }));
+
+    expect(repositorios.paciente.findOne).toHaveBeenCalledWith({
+      where: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1'
+      }
+    });
+  });
+
   it('deve associar mensagens WhatsApp de um contato a um paciente', async () => {
     const mensagemRecebida = {
       id: 'mensagem-1',
@@ -211,7 +264,7 @@ describe('ServicoComunicacoes', () => {
       contato: '5511992362080',
       pacienteId: 'paciente-1',
       atualizarContatoPaciente: true
-    });
+    }, usuarioColaborador);
 
     expect(resultado).toEqual({
       pacienteId: 'paciente-1',
@@ -228,6 +281,59 @@ describe('ServicoComunicacoes', () => {
     );
   });
 
+  it('deve negar associacao WhatsApp a paciente de outro profissional do mesmo tenant', async () => {
+    const { servico, repositorios } = criarServico({
+      profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' },
+      paciente: { id: 'paciente-2', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-2' },
+      mensagens: [{ id: 'mensagem-1', tenantId: 'tenant-1', payload: { origem: 'whatsapp', remetente: '5511992362080' } }]
+    });
+
+    await expect(
+      servico.associarContatoWhatsapp('tenant-1', {
+        contato: '5511992362080',
+        pacienteId: 'paciente-2'
+      }, usuarioProfissional)
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+    expect(repositorios.paciente.save).not.toHaveBeenCalled();
+  });
+
+  it('nao reatribui ao Professional mensagem ja vinculada a outro paciente', async () => {
+    const mensagemSemPaciente = {
+      id: 'mensagem-livre',
+      tenantId: 'tenant-1',
+      payload: { origem: 'whatsapp', remetente: '5511992362080' }
+    };
+    const mensagemDeOutroPaciente = {
+      id: 'mensagem-alheia',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-2',
+      payload: { origem: 'whatsapp', remetente: '5511992362080' }
+    };
+    const { servico, repositorios } = criarServico({
+      profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' },
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana')
+      },
+      mensagens: [mensagemSemPaciente, mensagemDeOutroPaciente]
+    });
+
+    const resultado = await servico.associarContatoWhatsapp('tenant-1', {
+      contato: '5511992362080',
+      pacienteId: 'paciente-1'
+    }, usuarioProfissional);
+
+    expect(resultado.mensagensAtualizadas).toBe(1);
+    expect(repositorios.mensagem.save).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 'mensagem-livre', pacienteId: 'paciente-1' })
+    ]);
+    expect(mensagemDeOutroPaciente.pacienteId).toBe('paciente-2');
+  });
+
   it('deve registrar nota interna WhatsApp sem criar evento de envio', async () => {
     const { servico, repositorios } = criarServico({
       paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
@@ -238,7 +344,7 @@ describe('ServicoComunicacoes', () => {
       pacienteId: 'paciente-1',
       texto: 'Paciente pediu retorno amanha.',
       statusAtendimento: 'acompanhamento'
-    });
+    }, usuarioColaborador);
 
     expect(nota).toEqual(
       expect.objectContaining({
@@ -259,6 +365,24 @@ describe('ServicoComunicacoes', () => {
     expect(repositorios.outbox.save).not.toHaveBeenCalled();
   });
 
+  it('deve negar nota interna em paciente de outro profissional do mesmo tenant', async () => {
+    const { servico, repositorios } = criarServico({
+      profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' },
+      paciente: { id: 'paciente-2', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-2' }
+    });
+
+    await expect(
+      servico.registrarNotaWhatsapp('tenant-1', {
+        contato: '5511992362080',
+        pacienteId: 'paciente-2',
+        texto: 'Contato clinico restrito.',
+        statusAtendimento: 'acompanhamento'
+      }, usuarioProfissional)
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+  });
+
   it('deve impedir disparo de mensagem para paciente de outro tenant', async () => {
     const { servico, repositorios } = criarServico({
       canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
@@ -272,7 +396,7 @@ describe('ServicoComunicacoes', () => {
         canalId: 'canal-1',
         templateId: 'template-1',
         payload: { destino: 'paciente@example.com' }
-      })
+      }, usuarioColaborador)
     ).rejects.toBeInstanceOf(NotFoundException);
 
     expect(repositorios.paciente.findOne).toHaveBeenCalledWith({
@@ -295,7 +419,7 @@ describe('ServicoComunicacoes', () => {
         canalId: 'canal-1',
         templateId: 'template-1',
         payload: { destino: '+5511999999999' }
-      })
+      }, usuarioColaborador)
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -312,7 +436,7 @@ describe('ServicoComunicacoes', () => {
         canalId: 'canal-1',
         templateId: 'template-1',
         payload: { destino: 'paciente@example.com' }
-      })
+      }, usuarioColaborador)
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
@@ -342,7 +466,7 @@ describe('ServicoComunicacoes - conteudo fora do payload em claro', () => {
         nomePaciente: 'Ana Souza',
         consultaId: 'consulta-1'
       }
-    });
+    }, usuarioColaborador);
 
     const [[gravada]] = repositorios.mensagem.save.mock.calls;
 

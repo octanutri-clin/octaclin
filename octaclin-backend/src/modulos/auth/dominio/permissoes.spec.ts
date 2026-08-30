@@ -2,10 +2,64 @@ import {
   destinoInicialPorPapel,
   escopoDadosPorPapel,
   obterPermissoesPorPapel,
-  possuiPermissao
+  possuiPermissao,
+  type EscopoDados,
+  type PermissaoOctaClin
 } from './permissoes';
+import type { PapelUsuario } from './usuario-autenticado';
+
+type LinhaMatrizAcesso = {
+  papel: PapelUsuario;
+  escopo: EscopoDados;
+  permitidas: PermissaoOctaClin[];
+  negadas: PermissaoOctaClin[];
+};
 
 describe('Matriz de permissoes OctaClin', () => {
+  it.each<LinhaMatrizAcesso>([
+    {
+      papel: 'SuperAdmin' as const,
+      escopo: 'tenant_total',
+      permitidas: ['profissionais.gerenciar', 'operacoes.auditoria.ler'],
+      negadas: ['portal.acessar', 'cliente.acessar']
+    },
+    {
+      papel: 'Professional' as const,
+      escopo: 'pacientes_responsaveis',
+      permitidas: ['pacientes.gerenciar', 'comunicacoes.mensagens.enviar'],
+      negadas: ['profissionais.gerenciar', 'operacoes.auditoria.ler']
+    },
+    {
+      papel: 'Collaborator' as const,
+      escopo: 'operacional_delegado',
+      permitidas: ['pacientes.ler', 'comunicacoes.mensagens.enviar'],
+      negadas: ['pacientes.gerenciar', 'profissionais.gerenciar']
+    },
+    {
+      papel: 'Patient' as const,
+      escopo: 'proprio_paciente',
+      permitidas: ['portal.acessar', 'portal.questionarios.responder'],
+      negadas: ['console.acessar', 'pacientes.ler']
+    },
+    {
+      papel: 'Client' as const,
+      escopo: 'conta_cliente',
+      permitidas: ['cliente.acessar', 'cliente.usuarios.gerenciar'],
+      negadas: ['console.acessar', 'pacientes.ler']
+    }
+  ])(
+    'aplica capacidades e escopo de recurso para $papel',
+    ({ papel, escopo, permitidas, negadas }) => {
+      expect(escopoDadosPorPapel(papel)).toBe(escopo);
+      for (const permissao of permitidas) {
+        expect(possuiPermissao(papel, permissao)).toBe(true);
+      }
+      for (const permissao of negadas) {
+        expect(possuiPermissao(papel, permissao)).toBe(false);
+      }
+    }
+  );
+
   it('deve manter paciente restrito ao portal e aos proprios dados', () => {
     const permissoes = obterPermissoesPorPapel('Patient');
 
