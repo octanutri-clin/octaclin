@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
+import { ErroSessaoAusente, requisitarBackendReautenticado } from '@/lib/server/sessao-bff';
 
 export async function DELETE() {
   try {
-    const resposta = await requisitarBackendAutenticado('/auth/sessoes/historico', { method: 'DELETE' });
+    const resposta = await requisitarBackendReautenticado('/auth/sessoes/historico', { method: 'DELETE' });
     return new NextResponse(await resposta.text(), {
       status: resposta.status,
       headers: {

@@ -78,6 +78,16 @@ async function preparar(page, { aoListar } = {}) {
       })
     });
   });
+  await page.route('**/api/auth/mfa', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ obrigatorio: true, habilitado: true, codigosRecuperacaoDisponiveis: 8 })
+  }));
+  await page.route('**/api/auth/reautenticar', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ confirmado: true, expiraEmSegundos: 300 })
+  }));
 }
 
 test.describe('Sessoes da conta', () => {
@@ -171,6 +181,7 @@ test.describe('Sessoes da conta', () => {
 
     await page.goto('/conta/sessoes');
     await page.getByRole('button', { name: 'Encerrar todas as sessões ativas', exact: true }).click();
+    await page.getByLabel('Confirme sua senha').fill('SenhaSintetica123');
     await page.getByRole('dialog').getByRole('button', { name: 'Encerrar todas' }).click();
 
     await expect.poll(() => chamou).toBe(true);
@@ -187,6 +198,7 @@ test.describe('Sessoes da conta', () => {
 
     await page.goto('/conta/sessoes');
     await page.getByRole('button', { name: 'Limpar histórico de acessos' }).click();
+    await page.getByLabel('Confirme sua senha').fill('SenhaSintetica123');
     await page.getByRole('dialog').getByRole('button', { name: 'Limpar histórico' }).click();
 
     await expect.poll(() => chamou).toBe(true);

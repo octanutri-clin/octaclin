@@ -58,7 +58,7 @@ export class ServicoSessoes {
 
   async criar(
     gerenciador: EntityManager,
-    entrada: { tenantId: string; usuarioId: string; expiraEm: Date }
+    entrada: { tenantId: string; usuarioId: string; expiraEm: Date; mfaVerificadoEm?: Date | null }
   ): Promise<SessaoUsuarioOrm> {
     const repositorio = gerenciador.getRepository(SessaoUsuarioOrm);
     const agora = new Date();
@@ -70,7 +70,8 @@ export class ServicoSessoes {
         ultimaAtividadeEm: agora,
         expiraEm: entrada.expiraEm,
         revogadoEm: null,
-        motivoRevogacao: null
+        motivoRevogacao: null,
+        mfaVerificadoEm: entrada.mfaVerificadoEm ?? null
       })
     );
   }

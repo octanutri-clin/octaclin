@@ -2511,11 +2511,18 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - Cria `sessoes_usuario` (migration aditiva `1720000001036`, RLS forcada), torna o refresh de uso unico com deteccao de reuso e revogacao de familia, e expoe listagem/encerramento de sessoes proprias.
   - Consequencia operacional: todos os tokens em circulacao deixam de ser aceitos; a reentrada de todos os usuarios faz parte do rollout. Ver `RUNBOOK_PRODUCAO.md`.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR40_2026-08-29.md`.
-- [ ] Correcao pos-PR 40 - sessoes e historico de acessos.
+- [x] Correcao pos-PR 40 - sessoes e historico de acessos.
   - Corrige o falso erro posterior ao `204`, pagina o historico em cinco acessos e inclui encerramento total e limpeza segura de registros inativos.
   - Preserva sessoes ativas e a trilha imutavel de auditoria.
+  - Integrada no `main` pelo PR GitHub `#163` em 2026-08-30 (`31b8d36`).
   - Relatorio: `docs/governance/RELATORIO_CORRECAO_POS_PR40_SESSOES_2026-08-29.md`.
 - [ ] PR 41 - Implementar MFA e reautenticacao privilegiada.
+  - [x] Implementacao e validacao local concluidas em `security/governanca-pr41-mfa-reauth`.
+  - [x] TOTP com anti-replay, recovery codes de uso unico, rate limit atomico, reautenticacao curta e auditoria sanitizada.
+  - [x] Bypasses por capability/rota cobertos; fluxo BFF/UI validado em desktop e mobile com axe-core.
+  - [ ] Review, checks e merge humanos.
+  - [ ] Aplicar e verificar a migration aditiva `1720000001037` com `neondb_owner`, depois deploy e smoke sintetico.
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR41_2026-08-30.md`.
 - [ ] PR 42 - Provar autorizacao de objeto e funcao contra BOLA/BFLA/IDOR.
 - [ ] PR 43 - Provar RLS e isolamento multi-tenant integral.
 - [ ] PR 44 - Endurecer uploads e storage clinico.
@@ -2535,4 +2542,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: correcao pos-PR 40. O PR 41 depende do merge e aceite humano deste item.
+Proximo item autorizado: review/checks/merge humano do PR 41. O PR 42 depende do aceite humano e do fechamento operacional da migration `1720000001037`.

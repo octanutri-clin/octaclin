@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { comEsperaDeColdStart } from '@/lib/server/cold-start-bff';
 import { obterConfiguracaoAcessoBff } from '@/lib/server/configuracao-acesso-bff';
 import { ErroApiUrlInvalida, RespostaToken, salvarSessaoBff } from '@/lib/server/sessao-bff';
+import { salvarDesafioMfa } from '@/lib/server/mfa-bff';
 
 interface LoginBody {
   email: string;
@@ -83,15 +84,33 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ mensagem: await extrairMensagemErro(resposta) }, { status: resposta.status });
   }
 
-  let tokens: RespostaToken;
+  let resultado: RespostaToken | { mfaObrigatorio: true; modo: 'configurar' | 'verificar'; desafioMfa: string };
   try {
-    tokens = (await resposta.json()) as RespostaToken;
+    resultado = (await resposta.json()) as typeof resultado;
   } catch {
     return NextResponse.json(
       { mensagem: 'A API informada não retornou uma resposta de login valida.' },
       { status: 502 }
     );
   }
+  if ('mfaObrigatorio' in resultado) {
+    if (
+      resultado.mfaObrigatorio !== true ||
+      !['configurar', 'verificar'].includes(resultado.modo) ||
+      typeof resultado.desafioMfa !== 'string' ||
+      !resultado.desafioMfa
+    ) {
+      return NextResponse.json({ mensagem: 'O serviço de acesso retornou um desafio MFA inválido.' }, { status: 502 });
+    }
+    await salvarDesafioMfa({
+      desafioMfa: resultado.desafioMfa,
+      email: body.email.trim(),
+      modo: resultado.modo
+    });
+    return NextResponse.json({ mfaObrigatorio: true, modo: resultado.modo });
+  }
+
+  const tokens = resultado;
   await salvarSessaoBff(
     { apiUrl, tenantSlug, email: body.email.trim() },
     tokens

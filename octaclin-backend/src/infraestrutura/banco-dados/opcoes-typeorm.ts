@@ -50,6 +50,7 @@ import { CriarReceitasNutricionais1720000001033 } from './migracoes/172000000103
 import { ProtegerResolucaoAgendaPublica1720000001034 } from './migracoes/1720000001034-ProtegerResolucaoAgendaPublica';
 import { CriarFiltrosSalvosPacientes1720000001035 } from './migracoes/1720000001035-CriarFiltrosSalvosPacientes';
 import { CriarSessoesUsuario1720000001036 } from './migracoes/1720000001036-CriarSessoesUsuario';
+import { CriarMfaEReautenticacao1720000001037 } from './migracoes/1720000001037-CriarMfaEReautenticacao';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -64,6 +65,9 @@ import { ProfissionalGoogleConexaoOrm } from '../../modulos/agenda/infraestrutur
 import { SessaoUsuarioOrm } from '../../modulos/auth/infraestrutura/sessao-usuario.orm';
 import { RefreshTokenOrm } from '../../modulos/auth/infraestrutura/refresh-token.orm';
 import { TokenRedefinicaoSenhaOrm } from '../../modulos/auth/infraestrutura/token-redefinicao-senha.orm';
+import { MfaFatorUsuarioOrm } from '../../modulos/auth/infraestrutura/mfa-fator-usuario.orm';
+import { MfaCodigoRecuperacaoOrm } from '../../modulos/auth/infraestrutura/mfa-codigo-recuperacao.orm';
+import { MfaDesafioOrm } from '../../modulos/auth/infraestrutura/mfa-desafio.orm';
 import { CanalNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { NotificacaoOrm } from '../../modulos/notificacoes/infraestrutura/notificacao.orm';
@@ -196,6 +200,9 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       RefreshTokenOrm,
       SessaoUsuarioOrm,
       TokenRedefinicaoSenhaOrm,
+      MfaFatorUsuarioOrm,
+      MfaCodigoRecuperacaoOrm,
+      MfaDesafioOrm,
       ConsentimentoLgpdOrm,
       ProfissionalOrm,
       PacienteOrm,
@@ -319,7 +326,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarReceitasNutricionais1720000001033,
         ProtegerResolucaoAgendaPublica1720000001034,
         CriarFiltrosSalvosPacientes1720000001035,
-        CriarSessoesUsuario1720000001036
+        CriarSessoesUsuario1720000001036,
+        CriarMfaEReautenticacao1720000001037
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

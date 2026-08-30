@@ -97,7 +97,8 @@ descrever('sessoes e rotacao de refresh token em Postgres real', () => {
         registrarFalha: async () => undefined,
         registrarSucesso: async () => undefined
       } as never,
-      servicoSessoes
+      servicoSessoes,
+      { iniciarLogin: async () => null } as never
     );
 
     return { fonteDados, executorTenant, servicoAuth, servicoSessoes, guarda: new GuardaJwt(jwt, servicoSessoes) };
@@ -232,7 +233,7 @@ descrever('sessoes e rotacao de refresh token em Postgres real', () => {
   }, 60_000);
 
   async function abrirSessao(usuario = usuarioA) {
-    return instanciaA!.servicoAuth.emitirSessaoUsuario(usuario);
+    return instanciaA!.servicoAuth.emitirSessaoUsuario(usuario, new Date());
   }
 
   async function estadoDaSessao(sessaoId: string) {

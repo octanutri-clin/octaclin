@@ -5,7 +5,8 @@ export type MotivoRevogacaoSessao =
   | 'encerrada_pelo_usuario'
   | 'encerrada_outras'
   | 'reuso_detectado'
-  | 'senha_redefinida';
+  | 'senha_redefinida'
+  | 'mfa_obrigatorio';
 
 /**
  * Uma sessao equivale a familia de refresh tokens criada por um login.
@@ -36,4 +37,7 @@ export class SessaoUsuarioOrm {
 
   @Column({ name: 'motivo_revogacao', type: 'varchar', length: 40, nullable: true })
   motivoRevogacao?: MotivoRevogacaoSessao | null;
+
+  @Column({ name: 'mfa_verificado_em', type: 'timestamptz', nullable: true })
+  mfaVerificadoEm?: Date | null;
 }

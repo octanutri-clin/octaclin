@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { ErroSessaoAusente, limparSessaoBff, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
+import { ErroSessaoAusente, limparSessaoBff, requisitarBackendReautenticado } from '@/lib/server/sessao-bff';
 
 export async function POST() {
   try {
-    const resposta = await requisitarBackendAutenticado('/auth/sessoes/encerrar-todas', { method: 'POST' });
+    const resposta = await requisitarBackendReautenticado('/auth/sessoes/encerrar-todas', { method: 'POST' });
     const corpo = await resposta.text();
     if (resposta.ok) await limparSessaoBff();
     return new NextResponse(corpo, {

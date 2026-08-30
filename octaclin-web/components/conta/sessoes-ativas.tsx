@@ -16,7 +16,7 @@ import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoSubtitulo, CartaoTitulo } from '@/components/ui/cartao';
 import { Etiqueta } from '@/components/ui/etiqueta';
 import { AlertaOperacional, AlertaSucesso, EsqueletoPagina, EstadoFalha } from '@/components/ui/feedback';
-import { ModalConfirmacao } from '@/components/ui/modal';
+import { ModalReautenticacao } from '@/components/auth/modal-reautenticacao';
 
 const ROTULO_ESTADO: Record<SessaoAtivaPublica['estado'], string> = {
   ativa: 'Ativa',
@@ -252,26 +252,24 @@ export function SessoesAtivas() {
         </CartaoConteudo>
       </Cartao>
 
-      <ModalConfirmacao
+      <ModalReautenticacao
         aberto={confirmacao === 'todas'}
         titulo="Encerrar todas as sessões ativas"
-        mensagem="Todos os acessos, incluindo esta sessão, serão encerrados. Você precisará entrar novamente."
+        descricao="Todos os acessos, incluindo esta sessão, serão encerrados. Você precisará entrar novamente."
         rotuloConfirmar="Encerrar todas"
-        confirmando={processando}
         aoCancelar={() => setConfirmacao(null)}
-        aoConfirmar={() => void confirmarEncerramentoTotal()}
+        aoConfirmar={confirmarEncerramentoTotal}
       />
-      <ModalConfirmacao
+      <ModalReautenticacao
         aberto={confirmacao === 'historico'}
         titulo="Limpar histórico de acessos"
-        mensagem="Acessos encerrados ou expirados serão removidos da lista. Sessões ativas e a trilha de segurança serão preservadas."
+        descricao="Acessos encerrados ou expirados serão removidos da lista. Sessões ativas e a trilha de segurança serão preservadas."
         rotuloConfirmar="Limpar histórico"
-        confirmando={processando}
         aoCancelar={() => setConfirmacao(null)}
-        aoConfirmar={() => {
+        aoConfirmar={async () => {
           setConfirmacao(null);
           setPagina(1);
-          void executar(async () => {
+          await executar(async () => {
             const { removidos } = await limparHistoricoSessoes();
             return mensagemRemocao(removidos);
           }, 1);

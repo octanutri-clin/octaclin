@@ -23,7 +23,8 @@ const CLAIMS_ACESSO = {
   tipo: TIPO_TOKEN_ACESSO,
   papel: 'Professional',
   emailHash: 'hash-sintetico',
-  permissoes: ['pacientes.listar']
+  permissoes: ['pacientes.listar'],
+  mfa: true
 };
 
 function contexto(token?: string) {
@@ -79,6 +80,20 @@ describe('GuardaJwt', () => {
       sessaoId: SESSAO
     });
     expect(sessoes.estaAtiva).toHaveBeenCalledWith(TENANT, USUARIO, SESSAO);
+  });
+
+  it('recusa perfil privilegiado quando o access token nao comprova MFA', async () => {
+    const { guarda } = criarGuarda();
+    const token = await assinarAcesso({ mfa: undefined });
+
+    await expect(guarda.canActivate(contexto(token).execucao)).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('permite perfil nao privilegiado sem MFA obrigatorio', async () => {
+    const { guarda } = criarGuarda();
+    const token = await assinarAcesso({ papel: 'Patient', permissoes: [], mfa: undefined });
+
+    await expect(guarda.canActivate(contexto(token).execucao)).resolves.toBe(true);
   });
 
   it('recusa requisicao sem cabecalho Bearer', async () => {

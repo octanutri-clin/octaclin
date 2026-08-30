@@ -14,4 +14,5 @@ export interface UsuarioAutenticado {
    * `GuardaJwt` sempre preenche, e endpoints de sessao exigem o valor.
    */
   sessaoId?: string;
+  mfaVerificado?: boolean;
 }

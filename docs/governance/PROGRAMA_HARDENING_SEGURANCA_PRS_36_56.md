@@ -2,16 +2,16 @@
 
 > Status: aprovado para planejamento e execucao sequencial
 >
-> Atualizado em: 2026-08-29
+> Atualizado em: 2026-08-30
 >
-> Proximo item autorizado: correcao pos-PR 40; PR 41 permanece bloqueado ate o merge humano desta correcao.
+> Proximo item autorizado: review humano do PR 41; PR 42 permanece bloqueado.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
 > Estado do PR 39: integrado no `main` pelo PR GitHub #161 em 2026-08-29 (`94235ee`).
 > Estado do PR 40: integrado no `main` pelo PR GitHub #162 em 2026-08-29 (`7d9c5f7`).
-> Correcao de UX e contratos de sessoes em `fix/pr40-sessoes-auditoria`; aguarda
-> review, checks e merge humano. Relatorios em
+> Correcao de UX e contratos de sessoes integrada no `main` pelo PR GitHub #163
+> em 2026-08-30 (`31b8d36`). Relatorios em
 > `docs/governance/RELATORIO_SEGURANCA_PR40_2026-08-29.md` e
 > `docs/governance/RELATORIO_CORRECAO_POS_PR40_SESSOES_2026-08-29.md`.
 
@@ -235,10 +235,10 @@ sessao, familia, token ou hash. Nenhuma migration foi aplicada em Neon, staging 
 producao. Consequencia aceita: os tokens ja emitidos deixam de ser validos e todos
 os usuarios precisam entrar de novo.
 
-Correcao posterior em branch dedicada: resposta 204 sem corpo no BFF, tabela
+Correcao posterior integrada pelo PR GitHub #163: resposta 204 sem corpo no BFF, tabela
 paginada em cinco acessos, encerramento total incluindo a sessao atual e limpeza
 segura apenas de sessoes revogadas/expiradas. A trilha imutavel de auditoria e
-as sessoes ativas sao preservadas. O PR 41 nao foi iniciado.
+as sessoes ativas sao preservadas.
 
 ### PR 41 - MFA e reautenticacao privilegiada
 
@@ -253,6 +253,17 @@ Skills Claude: `security-review`, `test-driven-development`,
 
 Gate minimo: bypasses negativos por rota e capability; recuperacao auditada;
 nenhum fator ou codigo sensivel em log.
+
+Implementacao concluida em `security/governanca-pr41-mfa-reauth`, aguardando
+review humano, checks e merge. A politica deriva obrigatoriedade das capabilities
+privilegiadas; usa TOTP com anti-replay, codigos de recuperacao de uso unico,
+desafio de login curto e consumivel, reautenticacao vinculada a tenant/usuario/
+sessao, rate limit atomico e auditoria sem material sensivel. Segredos TOTP sao
+cifrados pelo envelope AES-GCM existente e desafios/provas permanecem em cookies
+`HttpOnly` no BFF. A migration aditiva `1720000001037` cria tres tabelas com RLS
+forcada e adiciona `mfa_verificado_em` as sessoes; nao foi aplicada em Neon,
+staging ou producao. Relatorio:
+`docs/governance/RELATORIO_SEGURANCA_PR41_2026-08-30.md`.
 
 ### PR 42 - Autorizacao de objeto e funcao
 
@@ -495,5 +506,6 @@ venda web, desde que nao seja distribuido nem prometido comercialmente.
   fato novo que altere escopo, ordem, gate ou status.
 - Atualizar `MATRIZ_CONFIABILIDADE_TESTES.md` somente quando um gate permanente
   for efetivamente implementado.
-- O proximo PR autorizado continua sendo o PR 37. O PR 38 somente pode iniciar
-  depois do merge e do aceite humano do resultado deste PR.
+- O proximo passo autorizado e review/checks/merge humano do PR 41 e, em janela
+  separada, a aplicacao controlada da migration `1720000001037` com smoke.
+- O PR 42 somente pode iniciar depois do aceite humano do resultado do PR 41.

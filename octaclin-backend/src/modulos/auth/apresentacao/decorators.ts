@@ -8,6 +8,9 @@ export const Papeis = (...papeis: PapelUsuario[]) => SetMetadata(CHAVE_PAPEIS, p
 export const CHAVE_PERMISSOES = 'permissoesExigidas';
 export const Permissoes = (...permissoes: PermissaoOctaClin[]) => SetMetadata(CHAVE_PERMISSOES, permissoes);
 
+export const CHAVE_REAUTENTICACAO = 'reautenticacaoObrigatoria';
+export const ReautenticacaoObrigatoria = () => SetMetadata(CHAVE_REAUTENTICACAO, true);
+
 export const UsuarioAtual = createParamDecorator((_: unknown, contexto: ExecutionContext): UsuarioAutenticado => {
   const requisicao = contexto.switchToHttp().getRequest<{ usuarioAutenticado: UsuarioAutenticado }>();
   return requisicao.usuarioAutenticado;

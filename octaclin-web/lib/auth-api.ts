@@ -26,6 +26,17 @@ export interface RespostaLoginPublica {
   destinoInicial?: string;
 }
 
+export interface DesafioMfaPublico {
+  mfaObrigatorio: true;
+  modo: 'configurar' | 'verificar';
+}
+
+export interface ConfiguracaoMfaPublica {
+  segredo: string;
+  uri: string;
+  expiraEm: string;
+}
+
 export interface SessaoAtivaPublica {
   referencia: string;
   criadaEm: string;
@@ -83,11 +94,49 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
   return resposta.json() as Promise<T>;
 }
 
-export async function autenticar(dados: LoginEntrada): Promise<RespostaLoginPublica> {
-  return requisitar<RespostaLoginPublica>('/api/auth/login', {
+export async function autenticar(dados: LoginEntrada): Promise<RespostaLoginPublica | DesafioMfaPublico> {
+  return requisitar<RespostaLoginPublica | DesafioMfaPublico>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify(dados)
   });
+}
+
+export function obterConfiguracaoMfaLogin(): Promise<ConfiguracaoMfaPublica> {
+  return requisitar<ConfiguracaoMfaPublica>('/api/auth/mfa/configuracao-login', { method: 'POST' });
+}
+
+export function concluirLoginMfa(codigo: string): Promise<{ destinoInicial?: string; codigosRecuperacao: string[] }> {
+  return requisitar('/api/auth/mfa/concluir-login', { method: 'POST', body: JSON.stringify({ codigo }) });
+}
+
+export function reautenticar(senha: string): Promise<{ confirmado: true; expiraEmSegundos: number }> {
+  return requisitar('/api/auth/reautenticar', { method: 'POST', body: JSON.stringify({ senha }) });
+}
+
+export function obterStatusMfa(): Promise<{
+  obrigatorio: boolean;
+  habilitado: boolean;
+  habilitadoEm?: string;
+  codigosRecuperacaoDisponiveis: number;
+}> {
+  return requisitar('/api/auth/mfa');
+}
+
+export function iniciarConfiguracaoMfa(): Promise<ConfiguracaoMfaPublica> {
+  return requisitar('/api/auth/mfa/configuracao', { method: 'POST' });
+}
+
+export function confirmarConfiguracaoMfa(codigo: string): Promise<{ codigosRecuperacao: string[] }> {
+  return requisitar('/api/auth/mfa/configuracao/confirmar', { method: 'POST', body: JSON.stringify({ codigo }) });
+}
+
+export function regenerarCodigosMfa(): Promise<{ codigosRecuperacao: string[] }> {
+  return requisitar('/api/auth/mfa/codigos-recuperacao', { method: 'POST' });
+}
+
+export async function removerMfa(): Promise<void> {
+  const resposta = await fetch('/api/auth/mfa', { method: 'DELETE' });
+  if (!resposta.ok) throw new Error('Não foi possível remover a autenticação multifator.');
 }
 
 export async function obterSessao(): Promise<SessaoPublica | null> {
