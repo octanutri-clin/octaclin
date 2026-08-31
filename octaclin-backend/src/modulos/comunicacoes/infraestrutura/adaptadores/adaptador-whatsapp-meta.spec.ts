@@ -81,4 +81,43 @@ describe('AdaptadorWhatsAppMeta', () => {
       Authorization: 'Bearer token-canal'
     });
   });
+
+  it('rejeita versao ou phone number id malformados antes de construir a URL externa', async () => {
+    const fetchMock = jest.fn();
+    global.fetch = fetchMock as never;
+
+    await expect(
+      new AdaptadorWhatsAppMeta().enviar({
+        canal: {
+          configuracao: {
+            token: 'token-canal',
+            phoneNumberId: '../me',
+            apiVersion: 'v25.0/../../oauth/access_token'
+          }
+        } as never,
+        template: { nome: 'Aviso', conteudo: {} } as never,
+        payload: { destino: '5511999999999' }
+      })
+    ).rejects.toThrow('Configuracao WhatsApp invalida');
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('impede redirect automatico e limita a duracao da chamada Meta', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: jest.fn(async () => ({ messages: [{ id: 'wamid-seguro' }] }))
+    })) as never;
+
+    await new AdaptadorWhatsAppMeta().enviar({
+      canal: { configuracao: { token: 'token', phoneNumberId: '1166704896532308', apiVersion: 'v25.0' } } as never,
+      template: { nome: 'Aviso', conteudo: {} } as never,
+      payload: { destino: '5511999999999' }
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://graph.facebook.com/v25.0/1166704896532308/messages',
+      expect.objectContaining({ redirect: 'error', signal: expect.any(AbortSignal) })
+    );
+  });
 });

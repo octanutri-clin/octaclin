@@ -1,6 +1,10 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ResultadoEnvioNotificacao } from '../../dominio/canal-notificacao';
 import { AdaptadorNotificacao, ContextoEnvioNotificacao } from './adaptador-notificacao';
+import {
+  opcoesSegurasFetchExterno,
+  validarSegmentosMeta
+} from '../../../../infraestrutura/seguranca/seguranca-integracoes-externas';
 
 @Injectable()
 export class AdaptadorWhatsAppMeta implements AdaptadorNotificacao {
@@ -17,8 +21,10 @@ export class AdaptadorWhatsAppMeta implements AdaptadorNotificacao {
     if (!token || !phoneNumberId || !destino) {
       throw new InternalServerErrorException('Configuracao WhatsApp incompleta.');
     }
+    validarSegmentosMeta(versao, phoneNumberId);
 
     const resposta = await fetch(`https://graph.facebook.com/${versao}/${phoneNumberId}/messages`, {
+      ...opcoesSegurasFetchExterno(),
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -38,7 +44,7 @@ export class AdaptadorWhatsAppMeta implements AdaptadorNotificacao {
 
     const corpo = (await resposta.json().catch(() => ({}))) as { messages?: Array<{ id?: string }>; error?: unknown };
     if (!resposta.ok) {
-      throw new InternalServerErrorException(`Falha Meta Cloud API: ${JSON.stringify(corpo.error ?? corpo)}`);
+      throw new InternalServerErrorException(`Falha Meta Cloud API: HTTP ${resposta.status}.`);
     }
 
     return {

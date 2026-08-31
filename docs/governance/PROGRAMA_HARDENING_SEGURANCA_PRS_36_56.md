@@ -2,9 +2,9 @@
 
 > Status: aprovado para planejamento e execucao sequencial
 >
-> Atualizado em: 2026-08-30
+> Atualizado em: 2026-08-31
 >
-> Proximo item autorizado: review/checks/merge humano do PR 45.
+> Proximo item autorizado: review/checks/merge humano do PR 46.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
@@ -26,10 +26,13 @@
 > Estado do PR 44: integrado no `main` pelo PR GitHub #167
 > (`c11fee336b85e59f8c52d9ea912d3c70f7d7278c`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR44_2026-08-30.md`.
-> Estado do PR 45: implementacao e validacao local concluidas em
-> `security/governanca-pr45-browser-bff`, aguardando checks e review/merge
-> humano. Relatorio:
+> Estado do PR 45: integrado no `main` pelos PRs GitHub #168/#169
+> (`8a55e8be7e96128786a79515eefa6dbfbaa1eead`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR45_2026-08-30.md`.
+> Estado do PR 46: implementacao e validacao local concluidas em
+> `security/governanca-pr46-oauth-integracoes`, PR GitHub #173, aguardando checks e
+> review/merge humano. Relatorio:
+> `docs/governance/RELATORIO_SEGURANCA_PR46_2026-08-31.md`.
 
 ## 1. Funcao deste documento
 
@@ -361,9 +364,9 @@ Skills Claude: `security-review`, `test-driven-development`,
 Gate minimo: testes no browser para XSS/CSRF/CORS/cache/redirect; CSP em modo
 bloqueante sem quebrar fluxos autorizados.
 
-Implementacao e validacao local concluidas em
-`security/governanca-pr45-browser-bff`, aguardando checks e review/merge
-humano. A CSP usa nonce por resposta, remove `unsafe-inline` de
+Integrado no `main` pelos PRs GitHub #168/#169
+(`8a55e8be7e96128786a79515eefa6dbfbaa1eead`). A CSP usa nonce por resposta,
+remove `unsafe-inline` de
 scripts, torna o HTML dinamico e impede cache compartilhado. Browser e runtime
 de producao provaram XSS, CSRF, CORS, cache e redirect hostil. A allowlist CORS
 do backend agora recusa origem opaca, caminho, credencial e HTTP publico em
@@ -384,6 +387,15 @@ Skills Claude: `security-review`, `test-driven-development`,
 
 Gate minimo: replay, state de outra sessao, redirect externo e event ID de
 outro recurso rejeitados; mocks sinteticos para providers.
+
+Implementacao e validacao local concluidas em
+`security/governanca-pr46-oauth-integracoes`, PR GitHub #173, aguardando checks
+e review/merge humano. O fluxo Google Calendar agora usa ticket inicial e nonce atomicos,
+binding host-only do navegador, HMAC, expiracao e PKCE S256. Callback,
+redirect, token endpoints e fetches externos falham fechados; watch Google
+valida recurso/canal/profissional/expiracao; Meta e SMTP rejeitam configuracao
+insegura. Nenhuma operacao externa ou migration foi executada. Relatorio:
+`docs/governance/RELATORIO_SEGURANCA_PR46_2026-08-31.md`.
 
 ### PR 47 - Seguranca dos fluxos de IA
 

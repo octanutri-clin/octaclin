@@ -1,7 +1,8 @@
 import { randomBytes, timingSafeEqual } from 'crypto';
-import { Controller, Get, Headers, HttpCode, Logger, Post, Query, Redirect, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Headers, HttpCode, Logger, Post, Query, Redirect, Req, Res, UseGuards } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { Request, Response } from 'express';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
@@ -14,7 +15,28 @@ import { ServicoConexaoGoogleCalendar } from '../aplicacao/servico-conexao-googl
 import { ServicoGoogleCalendar } from '../aplicacao/servico-google-calendar';
 import { FILA_SINCRONIZACAO_GOOGLE, ServicoSincronizacaoGoogleCalendar } from '../aplicacao/servico-sincronizacao-google-calendar';
 import { extrairTenantIdDoCanalWatchGoogle, gerarIdentificadorCanalWatchGoogle } from '../aplicacao/identificador-canal-watch-google';
-import { urlCallbackGoogleAgenda, urlWebhookGoogleAgenda } from './urls-google-agenda';
+import {
+  urlAutorizacaoGoogleSegura,
+  validarCodigoOAuth
+} from '../../../infraestrutura/seguranca/seguranca-integracoes-externas';
+import { urlCallbackGoogleAgenda, urlInicioGoogleAgenda, urlRetornoWebGoogleAgenda, urlWebhookGoogleAgenda } from './urls-google-agenda';
+
+const COOKIE_VINCULO_OAUTH_GOOGLE = 'octaclin_google_oauth_binding';
+const DURACAO_COOKIE_OAUTH_MS = 10 * 60 * 1000;
+
+function extrairCookie(cabecalho: string | undefined, nome: string): string | undefined {
+  if (!cabecalho) return undefined;
+  for (const parte of cabecalho.split(';')) {
+    const indice = parte.indexOf('=');
+    if (indice < 1 || parte.slice(0, indice).trim() !== nome) continue;
+    try {
+      return decodeURIComponent(parte.slice(indice + 1).trim());
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
 
 @Controller('agenda/google')
 export class ControladorGoogleAgenda {
@@ -34,20 +56,73 @@ export class ControladorGoogleAgenda {
   @Permissoes('agenda.consultas.ler')
   async conectar(@UsuarioAtual() usuario: UsuarioAutenticado): Promise<{ url: string }> {
     const profissionalId = await this.resolverProfissionalIdObrigatorio(usuario);
-    const url = this.servicoConexao.gerarUrlAutorizacao(usuario.tenantId, profissionalId, urlCallbackGoogleAgenda());
-    return { url };
+    const ticket = this.servicoConexao.gerarTicketInicioOAuth(usuario.tenantId, profissionalId);
+    // A URL usa origem backend validada e retorna JSON; este endpoint nao executa redirect.
+    // nosemgrep: typescript.nestjs.security.audit.nestjs-open-redirect.nestjs-open-redirect
+    return { url: urlInicioGoogleAgenda(ticket) };
+  }
+
+  @Get('iniciar')
+  @Redirect()
+  async iniciar(
+    @Query('ticket') ticket: string,
+    @Res({ passthrough: true }) resposta: Response
+  ): Promise<{ url: string; statusCode: number }> {
+    const inicio = await this.servicoConexao.iniciarAutorizacao(ticket, urlCallbackGoogleAgenda());
+    const urlAutorizacao = urlAutorizacaoGoogleSegura(inicio.url);
+    resposta.cookie(COOKIE_VINCULO_OAUTH_GOOGLE, inicio.vinculoBrowser, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/agenda/google/callback',
+      maxAge: DURACAO_COOKIE_OAUTH_MS
+    });
+    // O sanitizer acima restringe o redirect a https://accounts.google.com/o/oauth2/v2/auth.
+    // nosemgrep: typescript.nestjs.security.audit.nestjs-open-redirect.nestjs-open-redirect
+    return { url: urlAutorizacao, statusCode: 302 };
   }
 
   @Get('callback')
   @Redirect()
-  async callback(@Query('code') code: string, @Query('state') state: string) {
-    const { tenantId, profissionalId } = await this.servicoConexao.validarEDecodificarState(state);
-    await this.servicoConexao.trocarCodigoPorConexao(tenantId, profissionalId, code, urlCallbackGoogleAgenda());
-    await this.criarCanalParaProfissional(tenantId, profissionalId);
-    await this.servicoSincronizacao.reconciliar(tenantId, profissionalId);
+  async callback(
+    @Query('code') code: string | undefined,
+    @Query('state') state: string | undefined,
+    @Query('error') erroProvider: string | undefined,
+    @Req() requisicao: Request,
+    @Res({ passthrough: true }) resposta: Response
+  ) {
+    try {
+      if (erroProvider) throw new BadRequestException('Autorizacao Google nao concluida.');
+      if (!code || !state) throw new BadRequestException('Callback OAuth incompleto.');
+      const codigoValidado = validarCodigoOAuth(code);
+      const urlCallback = urlCallbackGoogleAgenda();
+      const urlRetorno = urlRetornoWebGoogleAgenda();
+      const vinculoBrowser = extrairCookie(requisicao.headers.cookie, COOKIE_VINCULO_OAUTH_GOOGLE);
+      const { tenantId, profissionalId, codeVerifier } = await this.servicoConexao.validarEDecodificarState(
+        state,
+        vinculoBrowser
+      );
+      await this.servicoConexao.trocarCodigoPorConexao(
+        tenantId,
+        profissionalId,
+        codigoValidado,
+        urlCallback,
+        codeVerifier
+      );
+      await this.criarCanalParaProfissional(tenantId, profissionalId);
+      await this.servicoSincronizacao.reconciliar(tenantId, profissionalId);
 
-    const urlWeb = process.env.OCTACLIN_WEB_URL?.trim() ?? '/';
-    return { url: `${urlWeb.replace(/\/$/, '')}/agenda?google=conectado`, statusCode: 302 };
+      // urlRetorno deriva de origem HTTPS validada, sem path, credencial, query ou fragmento configuravel.
+      // nosemgrep: typescript.nestjs.security.audit.nestjs-open-redirect.nestjs-open-redirect
+      return { url: urlRetorno, statusCode: 302 };
+    } finally {
+      resposta.clearCookie(COOKIE_VINCULO_OAUTH_GOOGLE, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/agenda/google/callback'
+      });
+    }
   }
 
   @Get('status')
@@ -114,19 +189,27 @@ export class ControladorGoogleAgenda {
   async receberNotificacao(
     @Headers('x-goog-channel-id') canalWatchId?: string,
     @Headers('x-goog-channel-token') tokenRecebido?: string,
-    @Headers('x-goog-message-number') numeroMensagem?: string
+    @Headers('x-goog-message-number') numeroMensagem?: string,
+    @Headers('x-goog-resource-id') recursoId?: string,
+    @Headers('x-goog-resource-state') estadoRecurso?: string
   ): Promise<void> {
-    if (!canalWatchId) return;
+    if (!canalWatchId || !recursoId || !numeroMensagem || !/^[0-9]{1,40}$/.test(numeroMensagem)) return;
+    if (!estadoRecurso || !['sync', 'exists', 'not_exists'].includes(estadoRecurso)) return;
     const tenantId = extrairTenantIdDoCanalWatchGoogle(canalWatchId);
     if (!tenantId) {
       this.logger.warn('Notificacao rejeitada para canal Google legado ou malformado.');
       return;
     }
 
-    const canal = await this.executorTenant.executar(tenantId, (gerenciador) =>
-      gerenciador.getRepository(GoogleCanalWatchOrm).findOne({ where: { canalWatchId, tenantId } })
-    );
+    const { canal, conexao } = await this.executorTenant.executar(tenantId, async (gerenciador) => ({
+      canal: await gerenciador.getRepository(GoogleCanalWatchOrm).findOne({ where: { canalWatchId, tenantId } }),
+      conexao: await gerenciador.getRepository(ProfissionalGoogleConexaoOrm).findOne({
+        where: { tenantId, canalWatchId }
+      })
+    }));
     if (!canal) return;
+    if (!conexao || conexao.canalRecursoId !== recursoId || conexao.profissionalId !== canal.profissionalId) return;
+    if (canal.expiraEm.getTime() <= Date.now() || !conexao.canalExpiraEm || conexao.canalExpiraEm.getTime() <= Date.now()) return;
     if (!canal.token || !tokenRecebido) {
       this.logger.warn(`Notificacao rejeitada para canal ${canalWatchId}: token de canal ausente ou nao verificavel.`);
       return;
@@ -143,7 +226,7 @@ export class ControladorGoogleAgenda {
       {
         attempts: 3,
         backoff: { type: 'exponential', delay: 5000 },
-        jobId: numeroMensagem ? `${canalWatchId}-${numeroMensagem}` : undefined,
+        jobId: `${canalWatchId}-${numeroMensagem}`,
         removeOnComplete: 500,
         removeOnFail: 500
       }

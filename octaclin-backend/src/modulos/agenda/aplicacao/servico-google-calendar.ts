@@ -1,5 +1,9 @@
 import { createHash } from 'crypto';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  endpointTokenGoogleSeguro,
+  opcoesSegurasFetchExterno
+} from '../../../infraestrutura/seguranca/seguranca-integracoes-externas';
 
 export interface CredenciaisGoogleCalendar {
   clientId: string;
@@ -118,6 +122,7 @@ export class ServicoGoogleCalendar {
       const resposta = await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(configuracao.calendarId)}/events?sendUpdates=all`,
         {
+          ...opcoesSegurasFetchExterno(),
           method: 'POST',
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -148,6 +153,7 @@ export class ServicoGoogleCalendar {
       const resposta = await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(entrada.calendarId)}/events/${encodeURIComponent(entrada.eventId)}?sendUpdates=all`,
         {
+          ...opcoesSegurasFetchExterno(),
           method: 'PATCH',
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -175,14 +181,13 @@ export class ServicoGoogleCalendar {
       const resposta = await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(entrada.calendarId)}/events/${encodeURIComponent(entrada.eventId)}?sendUpdates=all`,
         {
+          ...opcoesSegurasFetchExterno(),
           method: 'DELETE',
           headers: { Authorization: `Bearer ${accessToken}` }
         }
       );
       if (!resposta.ok && resposta.status !== 410) {
-        const corpo = (await resposta.json().catch(() => ({}))) as RespostaEventoGoogle;
-        const mensagem = corpo.error?.message ?? `HTTP ${resposta.status}`;
-        throw new InternalServerErrorException(`Falha ao cancelar evento Google Calendar: ${mensagem}`);
+        throw new InternalServerErrorException(`Falha ao cancelar evento Google Calendar: HTTP ${resposta.status}.`);
       }
       return { sincronizado: true, calendarId: entrada.calendarId, eventId: entrada.eventId };
     } catch (erro) {
@@ -226,13 +231,13 @@ export class ServicoGoogleCalendar {
 
       const resposta = await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(credenciais.calendarId)}/events?${parametros.toString()}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { ...opcoesSegurasFetchExterno(), headers: { Authorization: `Bearer ${accessToken}` } }
       );
       const corpo = (await resposta.json()) as RespostaListaEventosGoogle;
 
       if (!resposta.ok) {
         if (resposta.status === 410) throw new SyncTokenExpiradoError();
-        throw new InternalServerErrorException(`Falha ao listar eventos alterados: ${corpo.error?.message ?? `HTTP ${resposta.status}`}`);
+        throw new InternalServerErrorException(`Falha ao listar eventos alterados: HTTP ${resposta.status}.`);
       }
 
       for (const evento of corpo.items ?? []) {
@@ -262,6 +267,7 @@ export class ServicoGoogleCalendar {
     const resposta = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(credenciais.calendarId)}/events/watch`,
       {
+        ...opcoesSegurasFetchExterno(),
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: canalId, type: 'web_hook', address: urlWebhook, token })
@@ -269,7 +275,7 @@ export class ServicoGoogleCalendar {
     );
     const corpo = (await resposta.json()) as { resourceId?: string; expiration?: string; error?: { message?: string } };
     if (!resposta.ok || !corpo.resourceId) {
-      throw new InternalServerErrorException(`Falha ao criar canal de watch: ${corpo.error?.message ?? `HTTP ${resposta.status}`}`);
+      throw new InternalServerErrorException(`Falha ao criar canal de watch: HTTP ${resposta.status}.`);
     }
     return { recursoId: corpo.resourceId, expiraEm: new Date(Number(corpo.expiration ?? Date.now())) };
   }
@@ -277,6 +283,7 @@ export class ServicoGoogleCalendar {
   async pararCanalWatch(credenciais: CredenciaisGoogleCalendar, canalId: string, recursoId: string): Promise<void> {
     const accessToken = await this.obterAccessToken(credenciais.clientId, credenciais.clientSecret, credenciais.refreshToken);
     await fetch('https://www.googleapis.com/calendar/v3/channels/stop', {
+      ...opcoesSegurasFetchExterno(),
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: canalId, resourceId: recursoId })
@@ -324,12 +331,17 @@ export class ServicoGoogleCalendar {
   ): Promise<ResultadoGoogleCalendar> {
     const resposta = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+      { ...opcoesSegurasFetchExterno(), headers: { Authorization: `Bearer ${accessToken}` } }
     );
     const evento = (await resposta.json()) as EventoGoogleBruto & { error?: { message?: string } };
-    if (!resposta.ok || evento.extendedProperties?.private?.octaclinConsultaId !== consultaId) {
+    if (!resposta.ok) {
       throw new InternalServerErrorException(
-        `Falha ao recuperar evento Google Calendar idempotente: ${evento.error?.message ?? 'evento existente nao pertence a consulta'}`
+        `Falha ao recuperar evento Google Calendar idempotente: HTTP ${resposta.status}.`
+      );
+    }
+    if (evento.extendedProperties?.private?.octaclinConsultaId !== consultaId) {
+      throw new InternalServerErrorException(
+        'Falha ao recuperar evento Google Calendar idempotente: evento existente nao pertence a consulta.'
       );
     }
     return {
@@ -344,8 +356,7 @@ export class ServicoGoogleCalendar {
     const corpo = (await resposta.json()) as RespostaEventoGoogle;
 
     if (!resposta.ok || !corpo.id) {
-      const mensagem = corpo.error?.message ?? `HTTP ${resposta.status}`;
-      throw new InternalServerErrorException(`Falha ao ${acao} Google Calendar: ${mensagem}`);
+      throw new InternalServerErrorException(`Falha ao ${acao} Google Calendar: HTTP ${resposta.status}.`);
     }
 
     return {
@@ -357,8 +368,9 @@ export class ServicoGoogleCalendar {
   }
 
   private async obterAccessToken(clientId: string, clientSecret: string, refreshToken: string): Promise<string> {
-    const tokenUri = textoEnv(process.env.GOOGLE_CALENDAR_TOKEN_URI) ?? 'https://oauth2.googleapis.com/token';
+    const tokenUri = endpointTokenGoogleSeguro(textoEnv(process.env.GOOGLE_CALENDAR_TOKEN_URI));
     const resposta = await fetch(tokenUri, {
+      ...opcoesSegurasFetchExterno(),
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -372,8 +384,7 @@ export class ServicoGoogleCalendar {
 
     if (!resposta.ok || !corpo.access_token) {
       if (corpo.error === 'invalid_grant') throw new TokenRevogadoError();
-      const detalhe = corpo.error_description ?? corpo.error ?? `HTTP ${resposta.status}`;
-      throw new InternalServerErrorException(`Falha ao renovar token Google Calendar: ${detalhe}`);
+      throw new InternalServerErrorException(`Falha ao renovar token Google Calendar: HTTP ${resposta.status}.`);
     }
 
     return corpo.access_token;
