@@ -44,10 +44,11 @@ e quatro comentarios CodeQL que agregavam cinco anotacoes. A triagem encontrou:
   literalmente no setter e no clear, sem spread ou ramo inseguro;
 - o digest do binding passou de SHA-256 simples para HMAC-SHA256;
 - as anotacoes `js/insufficient-password-hash` eram falsos positivos: HMAC
-  autentica state/binding aleatorio e nao deriva senha. Foram suprimidas apenas
-  nas tres operacoes criptograficas, com `lgtm[query-id]` e justificativa no
-  codigo; a sintaxe `codeql[query-id]` da primeira tentativa nao foi honrada
-  pelo pipeline JavaScript deste repositorio.
+  autentica state/binding aleatorio e nao deriva senha. As sintaxes
+  `codeql[query-id]` e `lgtm[query-id]` nao foram honradas pelo pipeline
+  JavaScript deste repositorio. Os alertas 132, 133 e 139 devem ser encerrados
+  no GitHub como falso positivo, com esta evidencia, sem alterar o algoritmo
+  correto para satisfazer uma heuristica de senha inaplicavel.
 
 Teste negativo adicional prova que uma URL fora de `accounts.google.com` e
 rejeitada antes de emitir o cookie.
