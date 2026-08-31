@@ -122,6 +122,20 @@ describe('ControladorGoogleAgenda', () => {
     });
   });
 
+  it('rejeita URL de autorizacao fora do host Google antes de emitir cookie', async () => {
+    const deps = construirControlador();
+    deps.servicoConexao.iniciarAutorizacao.mockResolvedValueOnce({
+      url: 'https://site-malicioso.example/oauth?state=state-sintetico',
+      vinculoBrowser: 'vinculo-sintetico'
+    });
+    const resposta = { cookie: jest.fn() };
+
+    await expect(deps.controlador.iniciar('ticket-sintetico', resposta as never)).rejects.toThrow(
+      'URL de autorizacao Google nao autorizada'
+    );
+    expect(resposta.cookie).not.toHaveBeenCalled();
+  });
+
   it('rejeita callback em outro navegador e nao troca token nem persiste conexao', async () => {
     const deps = construirControlador();
     const resposta = { clearCookie: jest.fn() };

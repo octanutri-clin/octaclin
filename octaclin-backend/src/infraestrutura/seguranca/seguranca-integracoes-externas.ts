@@ -38,6 +38,29 @@ export function endpointTokenGoogleSeguro(valor: string | undefined): string {
   throw new InternalServerErrorException('Configuracao de endpoint OAuth Google nao autorizada.');
 }
 
+export function urlAutorizacaoGoogleSegura(valor: string): string {
+  let url: URL;
+  try {
+    url = new URL(valor);
+  } catch {
+    throw new InternalServerErrorException('URL de autorizacao Google invalida.');
+  }
+
+  if (
+    url.protocol !== 'https:' ||
+    url.hostname !== 'accounts.google.com' ||
+    url.port ||
+    url.username ||
+    url.password ||
+    url.pathname !== '/o/oauth2/v2/auth' ||
+    url.hash
+  ) {
+    throw new InternalServerErrorException('URL de autorizacao Google nao autorizada.');
+  }
+
+  return url.toString();
+}
+
 export function origemPublicaConfigurada(valor: string | undefined, nome: string, fallbackLocal?: string): string {
   const configurado = valor?.trim() || fallbackLocal;
   if (!configurado) throw new InternalServerErrorException(`${nome} nao configurada.`);

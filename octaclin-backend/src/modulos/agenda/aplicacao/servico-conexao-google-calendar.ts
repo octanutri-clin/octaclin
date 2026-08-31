@@ -83,7 +83,7 @@ export class ServicoConexaoGoogleCalendar {
       tenantId: inicio.tenantId,
       profissionalId: inicio.profissionalId,
       nonce,
-      vinculoHash: this.hashVinculo(vinculoBrowser),
+      vinculoHash: this.macVinculo(vinculoBrowser),
       exp: Date.now() + DURACAO_MAXIMA_STATE_MS
     });
     const pkceArmazenado = await this.redis.set(
@@ -114,7 +114,7 @@ export class ServicoConexaoGoogleCalendar {
     vinculoBrowser: string | undefined
   ): Promise<{ tenantId: string; profissionalId: string; codeVerifier: string }> {
     const payload = this.validarPayloadAssinado(state, 'state');
-    if (!vinculoBrowser || !this.compararSeguro(this.hashVinculo(vinculoBrowser), payload.vinculoHash ?? '')) {
+    if (!vinculoBrowser || !this.compararSeguro(this.macVinculo(vinculoBrowser), payload.vinculoHash ?? '')) {
       throw new BadRequestException('State OAuth nao pertence a este navegador.');
     }
 
@@ -245,6 +245,7 @@ export class ServicoConexaoGoogleCalendar {
 
   private assinarPayload(payload: Record<string, unknown>): string {
     const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    // codeql[js/insufficient-password-hash] -- HMAC autentica um payload OAuth; nao deriva nem armazena senha.
     const assinatura = createHmac('sha256', chaveAssinaturaState()).update(payloadBase64).digest('base64url');
     return Buffer.from(`${payloadBase64}.${assinatura}`).toString('base64url');
   }
@@ -260,6 +261,7 @@ export class ServicoConexaoGoogleCalendar {
       const partes = Buffer.from(valor, 'base64url').toString('utf8').split('.');
       if (partes.length !== 2) throw new Error('formato');
       const [payloadBase64, assinatura] = partes;
+      // codeql[js/insufficient-password-hash] -- HMAC verifica autenticidade do state OAuth; nao processa senha.
       const assinaturaEsperada = createHmac('sha256', chaveAssinaturaState()).update(payloadBase64).digest('base64url');
       if (!this.compararSeguro(assinatura, assinaturaEsperada)) throw new Error('assinatura');
 
@@ -288,8 +290,9 @@ export class ServicoConexaoGoogleCalendar {
     }
   }
 
-  private hashVinculo(vinculoBrowser: string): string {
-    return createHash('sha256').update(vinculoBrowser).digest('hex');
+  private macVinculo(vinculoBrowser: string): string {
+    // codeql[js/insufficient-password-hash] -- binding aleatorio de 256 bits recebe MAC; nao e credencial humana.
+    return createHmac('sha256', chaveAssinaturaState()).update(vinculoBrowser).digest('hex');
   }
 
   private compararSeguro(recebido: string, esperado: string): boolean {

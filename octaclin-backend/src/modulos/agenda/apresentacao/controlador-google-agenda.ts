@@ -15,8 +15,10 @@ import { ServicoConexaoGoogleCalendar } from '../aplicacao/servico-conexao-googl
 import { ServicoGoogleCalendar } from '../aplicacao/servico-google-calendar';
 import { FILA_SINCRONIZACAO_GOOGLE, ServicoSincronizacaoGoogleCalendar } from '../aplicacao/servico-sincronizacao-google-calendar';
 import { extrairTenantIdDoCanalWatchGoogle, gerarIdentificadorCanalWatchGoogle } from '../aplicacao/identificador-canal-watch-google';
-import { ambienteExigeFalhaFechada } from '../../../infraestrutura/seguranca/ambiente-execucao';
-import { validarCodigoOAuth } from '../../../infraestrutura/seguranca/seguranca-integracoes-externas';
+import {
+  urlAutorizacaoGoogleSegura,
+  validarCodigoOAuth
+} from '../../../infraestrutura/seguranca/seguranca-integracoes-externas';
 import { urlCallbackGoogleAgenda, urlInicioGoogleAgenda, urlRetornoWebGoogleAgenda, urlWebhookGoogleAgenda } from './urls-google-agenda';
 
 const COOKIE_VINCULO_OAUTH_GOOGLE = 'octaclin_google_oauth_binding';
@@ -34,15 +36,6 @@ function extrairCookie(cabecalho: string | undefined, nome: string): string | un
     }
   }
   return undefined;
-}
-
-function opcoesCookieVinculo(): { httpOnly: true; secure: boolean; sameSite: 'lax'; path: string } {
-  return {
-    httpOnly: true,
-    secure: ambienteExigeFalhaFechada(),
-    sameSite: 'lax',
-    path: '/agenda/google/callback'
-  };
 }
 
 @Controller('agenda/google')
@@ -64,6 +57,8 @@ export class ControladorGoogleAgenda {
   async conectar(@UsuarioAtual() usuario: UsuarioAutenticado): Promise<{ url: string }> {
     const profissionalId = await this.resolverProfissionalIdObrigatorio(usuario);
     const ticket = this.servicoConexao.gerarTicketInicioOAuth(usuario.tenantId, profissionalId);
+    // A URL usa origem backend validada e retorna JSON; este endpoint nao executa redirect.
+    // nosemgrep: typescript.nestjs.security.audit.nestjs-open-redirect.nestjs-open-redirect
     return { url: urlInicioGoogleAgenda(ticket) };
   }
 
@@ -74,11 +69,17 @@ export class ControladorGoogleAgenda {
     @Res({ passthrough: true }) resposta: Response
   ): Promise<{ url: string; statusCode: number }> {
     const inicio = await this.servicoConexao.iniciarAutorizacao(ticket, urlCallbackGoogleAgenda());
+    const urlAutorizacao = urlAutorizacaoGoogleSegura(inicio.url);
     resposta.cookie(COOKIE_VINCULO_OAUTH_GOOGLE, inicio.vinculoBrowser, {
-      ...opcoesCookieVinculo(),
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/agenda/google/callback',
       maxAge: DURACAO_COOKIE_OAUTH_MS
     });
-    return { url: inicio.url, statusCode: 302 };
+    // O sanitizer acima restringe o redirect a https://accounts.google.com/o/oauth2/v2/auth.
+    // nosemgrep: typescript.nestjs.security.audit.nestjs-open-redirect.nestjs-open-redirect
+    return { url: urlAutorizacao, statusCode: 302 };
   }
 
   @Get('callback')
@@ -111,9 +112,16 @@ export class ControladorGoogleAgenda {
       await this.criarCanalParaProfissional(tenantId, profissionalId);
       await this.servicoSincronizacao.reconciliar(tenantId, profissionalId);
 
+      // urlRetorno deriva de origem HTTPS validada, sem path, credencial, query ou fragmento configuravel.
+      // nosemgrep: typescript.nestjs.security.audit.nestjs-open-redirect.nestjs-open-redirect
       return { url: urlRetorno, statusCode: 302 };
     } finally {
-      resposta.clearCookie(COOKIE_VINCULO_OAUTH_GOOGLE, opcoesCookieVinculo());
+      resposta.clearCookie(COOKIE_VINCULO_OAUTH_GOOGLE, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/agenda/google/callback'
+      });
     }
   }
 

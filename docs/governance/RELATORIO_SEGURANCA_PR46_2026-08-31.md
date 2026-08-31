@@ -31,6 +31,25 @@ producao nos testes. Todas as respostas de providers sao sinteticas.
 | Erro de provider retornado ao dominio | vazamento de body, token ou detalhe externo | mensagem sanitizada contendo apenas status HTTP | teste prova ausencia do body sintetico |
 | SMTP apontado para rede interna | SSRF por canal SMTP | `allowInternalNetworkInterfaces=false` em staging/producao, independentemente da variavel | configuracao permissiva e neutralizada em ambiente fechado |
 
+### Correcao apos analise estatica do PR #173
+
+O primeiro ciclo remoto abriu sete comentarios: tres Semgrep para open redirect
+e quatro comentarios CodeQL que agregavam cinco anotacoes. A triagem encontrou:
+
+- os tres redirects ja tinham origem fixa/validada, mas o fluxo de consentimento
+  ganhou um sanitizer final que aceita somente
+  `https://accounts.google.com/o/oauth2/v2/auth`; as tres excecoes Semgrep sao
+  locais, especificas para a regra e documentadas no sink;
+- o cookie temporario passou a declarar `httpOnly: true` e `secure: true`
+  literalmente no setter e no clear, sem spread ou ramo inseguro;
+- o digest do binding passou de SHA-256 simples para HMAC-SHA256;
+- as anotacoes `js/insufficient-password-hash` eram falsos positivos: HMAC
+  autentica state/binding aleatorio e nao deriva senha. Foram suprimidas apenas
+  nas tres operacoes criptograficas, com query ID e justificativa no codigo.
+
+Teste negativo adicional prova que uma URL fora de `accounts.google.com` e
+rejeitada antes de emitir o cookie.
+
 ## 3. Implementacao
 
 - O endpoint autenticado `/agenda/google/conectar` nao cria mais o state final.
@@ -57,7 +76,8 @@ watch, restricao de endpoint/redirect e bloqueio de rede interna SMTP.
 
 ### GREEN
 
-- PASS - 6 suites direcionadas de agenda e comunicacoes: 60/60.
+- PASS - 6 suites direcionadas de agenda e comunicacoes: 61/61 apos a
+  correcao dos alertas estaticos.
 - PASS - suites direcionadas finais de controller e URLs: 19/19.
 - PASS - backend Jest completo: 167 suites e 1333 testes executados com sucesso.
 - PASS - `pnpm typecheck` no backend.
@@ -88,6 +108,8 @@ Os gates serao repetidos no diff final antes do push.
   endpoint canonico Google fora de testes.
 - O redirect URI registrado no Google permanece
   `/agenda/google/callback`; nao ha alteracao no Google Cloud Console.
+- O cookie de binding sempre usa `Secure`; desenvolvimento OAuth tambem precisa
+  executar em contexto seguro aceito pelo navegador.
 - Conexoes Google ja persistidas permanecem validas.
 - Um consentimento iniciado antes do deploy nao possui o novo binding/PKCE e
   deve ser reiniciado depois do deploy.
