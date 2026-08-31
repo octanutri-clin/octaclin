@@ -2563,7 +2563,7 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Entradas, saidas e edicao humana com schemas fechados e limites explicitos.
   - [x] Prompt/tool injection sinteticos, exfiltracao, paciente fora do escopo e configuracao parcial rejeitados.
   - [x] URL assinada removida da fronteira, limite agregado por tenant e revisao humana obrigatoria.
-  - [ ] PR GitHub, checks e review/merge humanos.
+  - [ ] Checks e review/merge humanos no PR GitHub `#174`.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR47_2026-08-31.md`.
 - [ ] PR 48 - Auditar e isolar tooling de agentes (`.agents` e `.claude`).
 - [ ] PR 49 - Consolidar supply chain, SBOM e politica de dependencias.

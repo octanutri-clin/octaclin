@@ -4,7 +4,7 @@ Data: 2026-08-31
 
 Branch: `security/governanca-pr47-ia`
 
-Pull request GitHub: pendente de abertura
+Pull request GitHub: `#174`
 
 ## 1. Objetivo e limite
 
@@ -113,6 +113,5 @@ versao entre os dois servicos.
 ## 8. Resultado
 
 O escopo do PR 47 foi implementado e validado localmente na branch
-`security/governanca-pr47-ia`. O incremento aguarda abertura do PR GitHub,
-checks remotos, review e merge humanos. O PR 48 nao esta autorizado ate esse
-aceite.
+`security/governanca-pr47-ia`, PR GitHub `#174`. O incremento aguarda checks
+remotos, review e merge humanos. O PR 48 nao esta autorizado ate esse aceite.

@@ -33,7 +33,7 @@
 > (`bfdbf76acf717afd13de52ef02ef2ce990c3557c`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR46_2026-08-31.md`.
 > Estado do PR 47: implementacao e validacao local concluidas em
-> `security/governanca-pr47-ia`, aguardando abertura do PR, checks e
+> `security/governanca-pr47-ia`, PR GitHub #174, aguardando checks e
 > review/merge humano. Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR47_2026-08-31.md`.
 
@@ -414,7 +414,7 @@ Gate minimo: conjunto adversarial sintetico, recusas e isolamento; nenhuma PHI
 real enviada a provider; decisao clinica permanece humana.
 
 Implementacao e validacao local concluidas em
-`security/governanca-pr47-ia`, aguardando abertura do PR, checks e
+`security/governanca-pr47-ia`, PR GitHub #174, aguardando checks e
 review/merge humano. Entradas e saidas passaram a ter schemas fechados, URL
 assinada deixou de atravessar a fronteira, configuracao parcial falha fechada,
 ha limite agregado por tenant e nenhuma resposta pode executar acao clinica.
