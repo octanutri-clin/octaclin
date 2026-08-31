@@ -2556,7 +2556,7 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] PKCE S256, endpoints canonicos, redirects bloqueados e timeouts para providers.
   - [x] Webhook Google vinculado a canal, recurso, profissional e expiracao.
   - [x] Meta e SMTP falham fechados para configuracao insegura.
-  - [ ] Checks e review/merge humanos.
+  - [ ] Checks e review/merge humanos no PR GitHub `#173`.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR46_2026-08-31.md`.
 - [ ] PR 47 - Endurecer fluxos de IA e revisao humana.
 - [ ] PR 48 - Auditar e isolar tooling de agentes (`.agents` e `.claude`).

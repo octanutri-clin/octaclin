@@ -30,7 +30,7 @@
 > (`8a55e8be7e96128786a79515eefa6dbfbaa1eead`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR45_2026-08-30.md`.
 > Estado do PR 46: implementacao e validacao local concluidas em
-> `security/governanca-pr46-oauth-integracoes`, aguardando checks e
+> `security/governanca-pr46-oauth-integracoes`, PR GitHub #173, aguardando checks e
 > review/merge humano. Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR46_2026-08-31.md`.
 
@@ -389,8 +389,8 @@ Gate minimo: replay, state de outra sessao, redirect externo e event ID de
 outro recurso rejeitados; mocks sinteticos para providers.
 
 Implementacao e validacao local concluidas em
-`security/governanca-pr46-oauth-integracoes`, aguardando checks e review/merge
-humano. O fluxo Google Calendar agora usa ticket inicial e nonce atomicos,
+`security/governanca-pr46-oauth-integracoes`, PR GitHub #173, aguardando checks
+e review/merge humano. O fluxo Google Calendar agora usa ticket inicial e nonce atomicos,
 binding host-only do navegador, HMAC, expiracao e PKCE S256. Callback,
 redirect, token endpoints e fetches externos falham fechados; watch Google
 valida recurso/canal/profissional/expiracao; Meta e SMTP rejeitam configuracao

@@ -4,6 +4,8 @@ Data: 2026-08-31
 
 Branch: `security/governanca-pr46-oauth-integracoes`
 
+Pull request GitHub: `#173`
+
 ## 1. Objetivo e limite
 
 Este PR endurece os fluxos Google Calendar, Gmail API, SMTP e WhatsApp Meta
@@ -116,5 +118,6 @@ andamento devem ser reiniciados tanto no rollout quanto no rollback.
 ## 8. Resultado
 
 O escopo do PR 46 foi implementado e validado localmente com providers
-sinteticos. O incremento permanece aguardando checks e review/merge humanos.
+sinteticos no PR GitHub `#173`. O incremento permanece aguardando checks e
+review/merge humanos.
 PR 47 nao esta autorizado ate esse aceite.
