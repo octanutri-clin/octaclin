@@ -245,7 +245,8 @@ export class ServicoConexaoGoogleCalendar {
 
   private assinarPayload(payload: Record<string, unknown>): string {
     const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
-    // codeql[js/insufficient-password-hash] -- HMAC autentica um payload OAuth; nao deriva nem armazena senha.
+    // HMAC autentica um payload OAuth; nao deriva nem armazena senha.
+    // lgtm[js/insufficient-password-hash]
     const assinatura = createHmac('sha256', chaveAssinaturaState()).update(payloadBase64).digest('base64url');
     return Buffer.from(`${payloadBase64}.${assinatura}`).toString('base64url');
   }
@@ -261,7 +262,8 @@ export class ServicoConexaoGoogleCalendar {
       const partes = Buffer.from(valor, 'base64url').toString('utf8').split('.');
       if (partes.length !== 2) throw new Error('formato');
       const [payloadBase64, assinatura] = partes;
-      // codeql[js/insufficient-password-hash] -- HMAC verifica autenticidade do state OAuth; nao processa senha.
+      // HMAC verifica autenticidade do state OAuth; nao processa senha.
+      // lgtm[js/insufficient-password-hash]
       const assinaturaEsperada = createHmac('sha256', chaveAssinaturaState()).update(payloadBase64).digest('base64url');
       if (!this.compararSeguro(assinatura, assinaturaEsperada)) throw new Error('assinatura');
 
@@ -291,7 +293,8 @@ export class ServicoConexaoGoogleCalendar {
   }
 
   private macVinculo(vinculoBrowser: string): string {
-    // codeql[js/insufficient-password-hash] -- binding aleatorio de 256 bits recebe MAC; nao e credencial humana.
+    // O binding aleatorio de 256 bits recebe MAC; nao e credencial humana.
+    // lgtm[js/insufficient-password-hash]
     return createHmac('sha256', chaveAssinaturaState()).update(vinculoBrowser).digest('hex');
   }
 

@@ -45,7 +45,9 @@ e quatro comentarios CodeQL que agregavam cinco anotacoes. A triagem encontrou:
 - o digest do binding passou de SHA-256 simples para HMAC-SHA256;
 - as anotacoes `js/insufficient-password-hash` eram falsos positivos: HMAC
   autentica state/binding aleatorio e nao deriva senha. Foram suprimidas apenas
-  nas tres operacoes criptograficas, com query ID e justificativa no codigo.
+  nas tres operacoes criptograficas, com `lgtm[query-id]` e justificativa no
+  codigo; a sintaxe `codeql[query-id]` da primeira tentativa nao foi honrada
+  pelo pipeline JavaScript deste repositorio.
 
 Teste negativo adicional prova que uma URL fora de `accounts.google.com` e
 rejeitada antes de emitir o cookie.
