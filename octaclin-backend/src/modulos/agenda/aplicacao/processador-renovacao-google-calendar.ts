@@ -12,10 +12,15 @@ import { ServicoGoogleCalendar } from './servico-google-calendar';
 import { ServicoSincronizacaoGoogleCalendar } from './servico-sincronizacao-google-calendar';
 import { gerarIdentificadorCanalWatchGoogle } from './identificador-canal-watch-google';
 import { executarPorTenantAtivo } from '../../../infraestrutura/processamento/rodada-por-tenant';
+import { origemPublicaConfigurada } from '../../../infraestrutura/seguranca/seguranca-integracoes-externas';
 
 function urlWebhook(): string {
-  const base = process.env.OCTACLIN_BACKEND_URL?.trim() ?? 'http://localhost:3000';
-  return `${base.replace(/\/$/, '')}/agenda/google/notificacoes`;
+  const base = origemPublicaConfigurada(
+    process.env.OCTACLIN_BACKEND_URL?.trim() || process.env.RENDER_EXTERNAL_URL?.trim(),
+    'URL publica do backend',
+    'http://localhost:3000'
+  );
+  return `${base}/agenda/google/notificacoes`;
 }
 
 const JANELA_RENOVACAO_MS = 1000 * 60 * 60 * 48;

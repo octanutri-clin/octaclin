@@ -75,11 +75,12 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | `EMAIL_SMTP_CONNECTION_TIMEOUT_MS` | Opcional | Timeout conexao SMTP | Render/backend | Logs sem timeout |
 | `EMAIL_SMTP_GREETING_TIMEOUT_MS` | Opcional | Timeout greeting SMTP | Render/backend | Logs sem timeout |
 | `EMAIL_SMTP_SOCKET_TIMEOUT_MS` | Opcional | Timeout socket SMTP | Render/backend | Logs sem timeout |
+| `EMAIL_SMTP_ALLOW_INTERNAL_NETWORK_INTERFACES` | Somente local/teste | Permitir relay em rede interna; sempre ignorada como `false` em staging/producao | Local/teste | Configuracao permissiva nao alcanca rede interna em ambiente fechado |
 | `GMAIL_USUARIO` | Para Gmail API | Usuario Gmail | Render/backend | Gmail API envia |
 | `GMAIL_CLIENT_ID` | Para Gmail API | OAuth client id | Render/backend | Token renova |
 | `GMAIL_CLIENT_SECRET` | Para Gmail API | OAuth client secret | Render/backend | Token renova |
 | `GMAIL_REFRESH_TOKEN` | Para Gmail API | Refresh token | Render/backend | Envio Gmail API funciona |
-| `GMAIL_TOKEN_URI` | Opcional | Endpoint OAuth | Render/backend | Token renova |
+| `GMAIL_TOKEN_URI` | Opcional | Endpoint OAuth canonico Google; override aceito apenas para mock HTTPS `.test` em `NODE_ENV=test` | Render/backend | Configuracao externa/loopback e rejeitada antes do fetch |
 
 ## WhatsApp Meta
 
@@ -103,12 +104,16 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | `OCTACLIN_WEB_URL` | Sim em producao | Retorno apos o consentimento | Render/backend | Retorna para `/agenda?google=conectado` |
 | `GOOGLE_CALENDAR_REFRESH_TOKEN` | Opcional | Compatibilidade com agenda compartilhada antiga | Render/backend | Health indica modo compativel |
 | `GOOGLE_CALENDAR_ID` | Opcional | Calendario da agenda compartilhada antiga | Render/backend | Evento aparece no calendario |
-| `GOOGLE_CALENDAR_TOKEN_URI` | Opcional | Endpoint OAuth alternativo | Render/backend | Apenas testes/desenvolvimento |
+| `GOOGLE_CALENDAR_TOKEN_URI` | Opcional | Endpoint OAuth canonico Google; override aceito apenas para mock HTTPS `.test` em `NODE_ENV=test` | Render/backend | Configuracao externa/loopback e rejeitada antes do fetch |
 
 Na conexao individual da Fase 136, os refresh tokens sao obtidos no callback
 OAuth e armazenados criptografados por profissional. No Google Cloud Console,
 registre exatamente `https://octaclin-backend-producao.onrender.com/agenda/google/callback`
 como redirect URI autorizado do cliente OAuth de producao.
+
+Desde o PR 46, o inicio passa por um ticket curto e de uso unico no backend,
+mas o redirect URI do Google permanece o mesmo. Consentimentos iniciados antes
+do deploy devem ser reiniciados para receber binding de navegador e PKCE.
 
 ## Frontend/BFF
 

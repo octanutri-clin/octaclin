@@ -29,6 +29,9 @@ describe('AdaptadorEmailSmtp', () => {
     delete process.env.GMAIL_CLIENT_SECRET;
     delete process.env.GMAIL_REFRESH_TOKEN;
     delete process.env.GMAIL_USUARIO;
+    delete process.env.GMAIL_TOKEN_URI;
+    delete process.env.APP_AMBIENTE;
+    delete process.env.EMAIL_SMTP_ALLOW_INTERNAL_NETWORK_INTERFACES;
     global.fetch = fetchOriginal;
   });
 
@@ -57,7 +60,7 @@ describe('AdaptadorEmailSmtp', () => {
       connectionTimeout: 15000,
       greetingTimeout: 10000,
       socketTimeout: 20000,
-      allowInternalNetworkInterfaces: true,
+      allowInternalNetworkInterfaces: false,
       family: 4,
       auth: { user: 'octaclinsys@gmail.com', pass: 'senha-app' }
     });
@@ -75,11 +78,29 @@ describe('AdaptadorEmailSmtp', () => {
         port: 587,
         secure: false,
         family: 4,
-        allowInternalNetworkInterfaces: true,
+        allowInternalNetworkInterfaces: false,
         acceptedCount: 1,
         rejectedCount: 0
       }
     });
+  });
+
+  it('rejeita token endpoint Gmail privado em producao sem fazer chamada externa', async () => {
+    process.env.EMAIL_PROVEDOR = 'gmail_api';
+    process.env.GMAIL_CLIENT_ID = 'client-id';
+    process.env.GMAIL_CLIENT_SECRET = 'client-secret';
+    process.env.GMAIL_REFRESH_TOKEN = 'refresh-token';
+    process.env.GMAIL_TOKEN_URI = 'http://169.254.169.254/latest/meta-data';
+    process.env.APP_AMBIENTE = 'producao';
+
+    await expect(
+      new AdaptadorEmailSmtp().enviar({
+        canal: { configuracao: {} },
+        template: { nome: 'Aviso', conteudo: { corpo: 'Mensagem sintetica' } },
+        payload: { destino: 'paciente@example.com' }
+      } as never)
+    ).rejects.toThrow('endpoint OAuth Google');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('deve enviar email via Gmail API quando configurado', async () => {
@@ -137,6 +158,30 @@ describe('AdaptadorEmailSmtp', () => {
         usuario: 'octaclinsys@gmail.com'
       }
     });
+  });
+
+  it('nao propaga detalhes externos quando a renovacao Gmail falha', async () => {
+    process.env.EMAIL_PROVEDOR = 'gmail_api';
+    process.env.GMAIL_CLIENT_ID = 'client-id';
+    process.env.GMAIL_CLIENT_SECRET = 'client-secret';
+    process.env.GMAIL_REFRESH_TOKEN = 'refresh-token';
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: jest.fn(async () => ({
+        error: 'invalid_grant',
+        error_description: 'segredo-sintetico-do-provider'
+      }))
+    });
+
+    const operacao = new AdaptadorEmailSmtp().enviar({
+      canal: { configuracao: {} },
+      template: { nome: 'Aviso', conteudo: { corpo: 'Mensagem sintetica' } },
+      payload: { destino: 'paciente@example.com' }
+    } as never);
+
+    await expect(operacao).rejects.toThrow('HTTP 401');
+    await expect(operacao).rejects.not.toThrow('segredo-sintetico-do-provider');
   });
 
   /*

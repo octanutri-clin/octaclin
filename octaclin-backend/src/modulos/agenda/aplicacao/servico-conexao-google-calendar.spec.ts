@@ -9,12 +9,16 @@ describe('ServicoConexaoGoogleCalendar', () => {
 
   beforeEach(() => {
     process.env.GOOGLE_CALENDAR_OAUTH_STATE_SECRET = segredoState;
+    process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
   });
 
   afterEach(() => {
     delete (global as any).fetch;
     delete process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
+    delete process.env.GOOGLE_CALENDAR_CLIENT_ID;
+    delete process.env.GOOGLE_CALENDAR_TOKEN_URI;
     delete process.env.GOOGLE_CALENDAR_OAUTH_STATE_SECRET;
+    delete process.env.APP_AMBIENTE;
   });
 
   function construirServico() {
@@ -29,13 +33,16 @@ describe('ServicoConexaoGoogleCalendar', () => {
   }
 
   function criarRedisFalso() {
-    const chavesConsumidas = new Set<string>();
+    const valores = new Map<string, string>();
     return {
-      set: jest.fn(async (chave: string) => {
-        if (chavesConsumidas.has(chave)) return null;
-        chavesConsumidas.add(chave);
+      set: jest.fn(async (chave: string, valor: string) => {
+        if (valores.has(chave)) return null;
+        valores.set(chave, valor);
         return 'OK' as const;
-      })
+      }),
+      get: jest.fn(async (chave: string) => valores.get(chave) ?? null),
+      del: jest.fn(async (chave: string) => (valores.delete(chave) ? 1 : 0)),
+      valores
     };
   }
 
@@ -59,17 +66,27 @@ describe('ServicoConexaoGoogleCalendar', () => {
     };
   }
 
-  it('gera uma URL de autorizacao com state assinado contendo tenantId e profissionalId', async () => {
-    process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+  it('gera ticket de inicio consumivel e vincula state + PKCE ao navegador que iniciou o OAuth', async () => {
     const { servico } = construirServico();
 
-    const url = servico.gerarUrlAutorizacao('tenant-1', 'profissional-1', 'https://backend/agenda/google/callback');
+    const ticket = servico.gerarTicketInicioOAuth('tenant-1', 'profissional-1');
+    const inicio = await servico.iniciarAutorizacao(ticket, 'https://backend/agenda/google/callback');
 
-    expect(url).toContain('https://accounts.google.com/o/oauth2/v2/auth');
-    expect(url).toContain('client_id=client-id');
-    const parametros = new URL(url).searchParams;
-    const decodificado = await servico.validarEDecodificarState(parametros.get('state') ?? '');
-    expect(decodificado).toEqual({ tenantId: 'tenant-1', profissionalId: 'profissional-1' });
+    const parametros = new URL(inicio.url).searchParams;
+    expect(inicio.url).toContain('https://accounts.google.com/o/oauth2/v2/auth');
+    expect(parametros.get('client_id')).toBe('client-id');
+    expect(parametros.get('code_challenge_method')).toBe('S256');
+    expect(parametros.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+    await expect(
+      servico.validarEDecodificarState(parametros.get('state') ?? '', 'vinculo-de-outro-navegador')
+    ).rejects.toThrow('navegador');
+
+    await expect(servico.validarEDecodificarState(parametros.get('state') ?? '', inicio.vinculoBrowser)).resolves.toEqual({
+      tenantId: 'tenant-1',
+      profissionalId: 'profissional-1',
+      codeVerifier: expect.stringMatching(/^[A-Za-z0-9_-]{43,128}$/)
+    });
   });
 
   it('recusa iniciar OAuth sem segredo dedicado para o state', () => {
@@ -77,22 +94,23 @@ describe('ServicoConexaoGoogleCalendar', () => {
     delete process.env.GOOGLE_CALENDAR_OAUTH_STATE_SECRET;
     const { servico } = construirServico();
 
-    expect(() => servico.gerarUrlAutorizacao('tenant-1', 'profissional-1', 'https://backend/agenda/google/callback')).toThrow(
+    expect(() => servico.gerarTicketInicioOAuth('tenant-1', 'profissional-1')).toThrow(
       'GOOGLE_CALENDAR_OAUTH_STATE_SECRET'
     );
   });
 
   it('rejeita um state adulterado', async () => {
     const { servico } = construirServico();
-    await expect(servico.validarEDecodificarState('valor-invalido')).rejects.toThrow();
+    await expect(servico.validarEDecodificarState('valor-invalido', undefined)).rejects.toThrow();
   });
 
   it('rejeita um state bem formado mas com assinatura adulterada', async () => {
     process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
     const { servico } = construirServico();
 
-    const url = servico.gerarUrlAutorizacao('tenant-1', 'profissional-1', 'https://backend/agenda/google/callback');
-    const stateOriginal = new URL(url).searchParams.get('state') ?? '';
+    const ticket = servico.gerarTicketInicioOAuth('tenant-1', 'profissional-1');
+    const inicio = await servico.iniciarAutorizacao(ticket, 'https://backend/agenda/google/callback');
+    const stateOriginal = new URL(inicio.url).searchParams.get('state') ?? '';
 
     const decodificado = Buffer.from(stateOriginal, 'base64url').toString('utf8');
     const [payloadBase64, assinaturaBase64] = decodificado.split('.');
@@ -107,7 +125,7 @@ describe('ServicoConexaoGoogleCalendar', () => {
 
     const stateAdulterado = Buffer.from(`${payloadBase64}.${assinaturaAdulterada}`).toString('base64url');
 
-    await expect(servico.validarEDecodificarState(stateAdulterado)).rejects.toThrow('State OAuth invalido.');
+    await expect(servico.validarEDecodificarState(stateAdulterado, inicio.vinculoBrowser)).rejects.toThrow('State OAuth invalido.');
   });
 
   it('rejeita um state expirado', async () => {
@@ -115,25 +133,43 @@ describe('ServicoConexaoGoogleCalendar', () => {
     const { servico } = construirServico();
 
     const payloadBase64 = Buffer.from(
-      JSON.stringify({ tenantId: 'tenant-1', profissionalId: 'profissional-1', nonce: 'nonce-expirado', exp: Date.now() - 1000 })
+      JSON.stringify({
+        tipo: 'state',
+        tenantId: 'tenant-1',
+        profissionalId: 'profissional-1',
+        nonce: 'a'.repeat(32),
+        vinculoHash: 'a'.repeat(64),
+        exp: Date.now() - 1000
+      })
     ).toString('base64url');
     const chaveAssinatura = segredoState;
     const { createHmac } = await import('crypto');
     const assinatura = createHmac('sha256', chaveAssinatura).update(payloadBase64).digest('base64url');
     const stateExpirado = Buffer.from(`${payloadBase64}.${assinatura}`).toString('base64url');
 
-    await expect(servico.validarEDecodificarState(stateExpirado)).rejects.toThrow('State OAuth expirado.');
+    await expect(servico.validarEDecodificarState(stateExpirado, 'vinculo-sintetico')).rejects.toThrow('State OAuth expirado.');
   });
 
   it('rejeita um state reutilizado (replay) mesmo dentro do prazo de validade', async () => {
     process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
     const { servico } = construirServico();
 
-    const url = servico.gerarUrlAutorizacao('tenant-1', 'profissional-1', 'https://backend/agenda/google/callback');
-    const state = new URL(url).searchParams.get('state') ?? '';
+    const ticket = servico.gerarTicketInicioOAuth('tenant-1', 'profissional-1');
+    const inicio = await servico.iniciarAutorizacao(ticket, 'https://backend/agenda/google/callback');
+    const state = new URL(inicio.url).searchParams.get('state') ?? '';
 
-    await expect(servico.validarEDecodificarState(state)).resolves.toEqual({ tenantId: 'tenant-1', profissionalId: 'profissional-1' });
-    await expect(servico.validarEDecodificarState(state)).rejects.toThrow('State OAuth ja utilizado.');
+    await expect(servico.validarEDecodificarState(state, inicio.vinculoBrowser)).resolves.toEqual(
+      expect.objectContaining({ tenantId: 'tenant-1', profissionalId: 'profissional-1' })
+    );
+    await expect(servico.validarEDecodificarState(state, inicio.vinculoBrowser)).rejects.toThrow('State OAuth ja utilizado.');
+  });
+
+  it('rejeita reutilizar o ticket de inicio em outro navegador antes de emitir novo state', async () => {
+    const { servico } = construirServico();
+    const ticket = servico.gerarTicketInicioOAuth('tenant-1', 'profissional-1');
+
+    await expect(servico.iniciarAutorizacao(ticket, 'https://backend/agenda/google/callback')).resolves.toBeDefined();
+    await expect(servico.iniciarAutorizacao(ticket, 'https://backend/agenda/google/callback')).rejects.toThrow('ja utilizado');
   });
 
   describe('trocarCodigoPorConexao', () => {
@@ -144,15 +180,27 @@ describe('ServicoConexaoGoogleCalendar', () => {
       const repositorio = gerenciadorFalso.getRepository();
 
       const refreshTokenOriginal = 'refresh-token-de-teste';
-      const fetchMock = jest.fn(async () => ({
+      const fetchMock = jest.fn(async (_url: string, _init: RequestInit) => ({
         ok: true,
         json: async () => ({ refresh_token: refreshTokenOriginal, scope: 'https://www.googleapis.com/auth/calendar' })
       }));
       (global as any).fetch = fetchMock;
 
-      await servico.trocarCodigoPorConexao('tenant-1', 'profissional-1', 'codigo-autorizacao', 'https://backend/agenda/google/callback');
+      await servico.trocarCodigoPorConexao(
+        'tenant-1',
+        'profissional-1',
+        'codigo-autorizacao',
+        'https://backend/agenda/google/callback',
+        'verificador-pkce-sintetico-com-comprimento-suficiente-123456'
+      );
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://oauth2.googleapis.com/token',
+        expect.objectContaining({ redirect: 'error', signal: expect.any(AbortSignal) })
+      );
+      const primeiraChamada = fetchMock.mock.calls[0];
+      expect((primeiraChamada?.[1]?.body as URLSearchParams).get('code_verifier')).toContain('verificador-pkce');
       const chamadasSave = (repositorio.save as jest.Mock).mock.calls;
       const dadosSalvos = chamadasSave[chamadasSave.length - 1][0];
       expect(dadosSalvos.refreshTokenCriptografado).toBeInstanceOf(Buffer);
@@ -178,11 +226,59 @@ describe('ServicoConexaoGoogleCalendar', () => {
         json: async () => ({ refresh_token: 'token-novo', scope: 'https://www.googleapis.com/auth/calendar' })
       }));
 
-      await servico.trocarCodigoPorConexao('tenant-1', 'profissional-1', 'codigo-novo', 'https://backend/agenda/google/callback');
+      await servico.trocarCodigoPorConexao(
+        'tenant-1',
+        'profissional-1',
+        'codigo-novo',
+        'https://backend/agenda/google/callback',
+        'verificador-pkce-sintetico-com-comprimento-suficiente-123456'
+      );
 
       const credenciais = await servico.obterConexaoAtiva('tenant-1', 'profissional-1');
       expect(credenciais?.refreshToken).toBe('token-novo');
       expect(gerenciadorFalso.registros.get('tenant-1:profissional-1').desconectadoEm).toBeNull();
+    });
+
+    it('rejeita endpoint OAuth externo configuravel em producao antes de qualquer chamada de rede', async () => {
+      process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
+      process.env.GOOGLE_CALENDAR_TOKEN_URI = 'http://127.0.0.1:8080/token';
+      process.env.APP_AMBIENTE = 'producao';
+      const { servico } = construirServico();
+      const fetchMock = jest.fn();
+      (global as any).fetch = fetchMock;
+
+      await expect(
+        servico.trocarCodigoPorConexao(
+          'tenant-1',
+          'profissional-1',
+          'codigo',
+          'https://backend/agenda/google/callback',
+          'verificador-pkce-sintetico-com-comprimento-suficiente-123456'
+        )
+      ).rejects.toThrow('endpoint OAuth Google');
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('nao propaga detalhes externos quando a troca do codigo falha', async () => {
+      process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+      process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
+      const { servico } = construirServico();
+      (global as any).fetch = jest.fn(async () => ({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: 'invalid_request', error_description: 'segredo-sintetico-do-provider' })
+      }));
+
+      const operacao = servico.trocarCodigoPorConexao(
+        'tenant-1',
+        'profissional-1',
+        'codigo',
+        'https://backend/agenda/google/callback',
+        'verificador-pkce-sintetico-com-comprimento-suficiente-123456'
+      );
+
+      await expect(operacao).rejects.toThrow('HTTP 400');
+      await expect(operacao).rejects.not.toThrow('segredo-sintetico-do-provider');
     });
   });
 

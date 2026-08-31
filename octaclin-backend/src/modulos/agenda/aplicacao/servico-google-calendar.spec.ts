@@ -134,7 +134,11 @@ describe('ServicoGoogleCalendar', () => {
     expect(fetch).toHaveBeenNthCalledWith(
       3,
       `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
-      { headers: { Authorization: 'Bearer access-token' } }
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer access-token' },
+        redirect: 'error',
+        signal: expect.any(AbortSignal)
+      })
     );
     expect(resultado).toEqual({
       sincronizado: true,
@@ -469,5 +473,29 @@ describe('ServicoGoogleCalendar', () => {
     });
 
     expect(resultado).toEqual({ sincronizado: false, motivo: 'falha_google_calendar', erro: expect.stringContaining('revogado') });
+  });
+
+  it('nao propaga detalhes externos quando a renovacao Google falha', async () => {
+    process.env.GOOGLE_CALENDAR_CLIENT_ID = 'client-id';
+    process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
+    process.env.GOOGLE_CALENDAR_REFRESH_TOKEN = 'refresh-token';
+
+    global.fetch = jest.fn(async () =>
+      new Response(JSON.stringify({ error: 'temporarily_unavailable', error_description: 'segredo-sintetico-do-provider' }), {
+        status: 503
+      })
+    ) as unknown as typeof fetch;
+
+    const resultado = await new ServicoGoogleCalendar().criarEvento({
+      resumo: 'Consulta',
+      descricao: 'desc',
+      inicioEm: new Date('2026-08-01T10:00:00Z'),
+      fimEm: new Date('2026-08-01T10:50:00Z'),
+      timezone: 'America/Sao_Paulo',
+      consultaId: 'consulta-1'
+    });
+
+    expect(resultado).toEqual({ sincronizado: false, motivo: 'falha_google_calendar', erro: expect.stringContaining('HTTP 503') });
+    expect('erro' in resultado ? resultado.erro : '').not.toContain('segredo-sintetico-do-provider');
   });
 });

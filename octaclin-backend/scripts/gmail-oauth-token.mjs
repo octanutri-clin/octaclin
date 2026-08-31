@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { URL } from 'node:url';
@@ -10,6 +10,9 @@ const port = Number(process.env.GMAIL_OAUTH_PORT || 8765);
 const redirectUri = `http://127.0.0.1:${port}/oauth2callback`;
 const escopo = 'https://www.googleapis.com/auth/gmail.send';
 const estadoEsperado = randomBytes(32).toString('hex');
+const codeVerifier = randomBytes(48).toString('base64url');
+const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
+let callbackConsumido = false;
 const arquivoSaida = process.env.GMAIL_REFRESH_TOKEN_OUTPUT
   ? resolve(process.env.GMAIL_REFRESH_TOKEN_OUTPUT)
   : undefined;
@@ -36,14 +39,17 @@ const servidor = http.createServer(async (req, res) => {
         estadoRecebido.length === estadoEsperado.length &&
         timingSafeEqual(Buffer.from(estadoRecebido), Buffer.from(estadoEsperado))
     );
-    if (erro || !codigo || !estadoValido) {
+    if (erro || !codigo || !estadoValido || callbackConsumido) {
       res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end(`Falha no OAuth: ${erro ?? (!estadoValido ? 'state invalido' : 'codigo ausente')}`);
       servidor.close();
       return;
     }
+    callbackConsumido = true;
 
     const resposta = await fetch('https://oauth2.googleapis.com/token', {
+      redirect: 'error',
+      signal: AbortSignal.timeout(15_000),
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -51,7 +57,8 @@ const servidor = http.createServer(async (req, res) => {
         client_secret: clientSecret,
         code: codigo,
         grant_type: 'authorization_code',
-        redirect_uri: redirectUri
+        redirect_uri: redirectUri,
+        code_verifier: codeVerifier
       })
     });
     const corpo = await resposta.json();
@@ -59,7 +66,7 @@ const servidor = http.createServer(async (req, res) => {
     if (!resposta.ok || !corpo.refresh_token) {
       res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end('Falha ao trocar codigo por refresh_token. Veja o terminal.');
-      console.error(JSON.stringify(corpo, null, 2));
+      console.error(`Falha OAuth Gmail: HTTP ${resposta.status}.`);
       servidor.close();
       return;
     }
@@ -86,6 +93,8 @@ servidor.listen(port, '127.0.0.1', () => {
   authUrl.searchParams.set('access_type', 'offline');
   authUrl.searchParams.set('prompt', 'consent');
   authUrl.searchParams.set('state', estadoEsperado);
+  authUrl.searchParams.set('code_challenge', codeChallenge);
+  authUrl.searchParams.set('code_challenge_method', 'S256');
 
   console.log(`Abra esta URL no navegador e autorize a conta Gmail:\n${authUrl.toString()}`);
   console.log(`Redirect URI usado: ${redirectUri}`);

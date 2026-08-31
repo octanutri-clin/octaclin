@@ -3,6 +3,11 @@ import { createTransport } from 'nodemailer';
 import SMTPTransport = require('nodemailer/lib/smtp-transport');
 import { ResultadoEnvioNotificacao } from '../../dominio/canal-notificacao';
 import { AdaptadorNotificacao, ContextoEnvioNotificacao } from './adaptador-notificacao';
+import {
+  endpointTokenGoogleSeguro,
+  opcoesSegurasFetchExterno,
+  permitirRedeInternaSmtp
+} from '../../../../infraestrutura/seguranca/seguranca-integracoes-externas';
 
 type OpcoesSmtpOctaClin = SMTPTransport.Options & {
   allowInternalNetworkInterfaces?: boolean;
@@ -207,9 +212,8 @@ export class AdaptadorEmailSmtp implements AdaptadorNotificacao {
     const greetingTimeout = numeroConfiguracao(process.env.EMAIL_SMTP_GREETING_TIMEOUT_MS, 10000);
     const socketTimeout = numeroConfiguracao(process.env.EMAIL_SMTP_SOCKET_TIMEOUT_MS, 20000);
     const family = familiaIpConfiguracao(process.env.EMAIL_SMTP_FAMILY);
-    const allowInternalNetworkInterfaces = booleanoConfiguracao(
-      process.env.EMAIL_SMTP_ALLOW_INTERNAL_NETWORK_INTERFACES,
-      true
+    const allowInternalNetworkInterfaces = permitirRedeInternaSmtp(
+      process.env.EMAIL_SMTP_ALLOW_INTERNAL_NETWORK_INTERFACES
     );
     const user =
       textoConfiguracao(contexto.canal.configuracao.smtpUsuario) ?? textoConfiguracao(process.env.EMAIL_SMTP_USUARIO);
@@ -257,13 +261,14 @@ export class AdaptadorEmailSmtp implements AdaptadorNotificacao {
     const clientId = textoConfiguracao(process.env.GMAIL_CLIENT_ID);
     const clientSecret = textoConfiguracao(process.env.GMAIL_CLIENT_SECRET);
     const refreshToken = textoConfiguracao(process.env.GMAIL_REFRESH_TOKEN);
-    const tokenUri = textoConfiguracao(process.env.GMAIL_TOKEN_URI) ?? 'https://oauth2.googleapis.com/token';
+    const tokenUri = endpointTokenGoogleSeguro(textoConfiguracao(process.env.GMAIL_TOKEN_URI));
 
     if (!clientId || !clientSecret || !refreshToken) {
       throw new InternalServerErrorException('Configuracao Gmail API incompleta.');
     }
 
     const resposta = await fetch(tokenUri, {
+      ...opcoesSegurasFetchExterno(),
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -276,8 +281,7 @@ export class AdaptadorEmailSmtp implements AdaptadorNotificacao {
     const corpo = (await resposta.json()) as RespostaTokenGoogle;
 
     if (!resposta.ok || !corpo.access_token) {
-      const erro = corpo.error_description ?? corpo.error ?? `HTTP ${resposta.status}`;
-      throw new InternalServerErrorException(`Falha ao renovar token Gmail API: ${erro}`);
+      throw new InternalServerErrorException(`Falha ao renovar token Gmail API: HTTP ${resposta.status}.`);
     }
 
     return corpo.access_token;
@@ -289,6 +293,7 @@ export class AdaptadorEmailSmtp implements AdaptadorNotificacao {
     const resposta = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/${encodeURIComponent(usuario)}/messages/send`,
       {
+        ...opcoesSegurasFetchExterno(),
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,
