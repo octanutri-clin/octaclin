@@ -53,7 +53,8 @@ async function listarArquivos(raiz, atual = raiz, violacoes = []) {
 }
 
 async function sha256(caminho) {
-  return createHash('sha256').update(await readFile(caminho)).digest('hex');
+  const conteudoCanonico = (await readFile(caminho, 'utf8')).replace(/\r\n?/g, '\n');
+  return createHash('sha256').update(conteudoCanonico, 'utf8').digest('hex');
 }
 
 async function carregarJson(caminho, violacoes, codigo) {

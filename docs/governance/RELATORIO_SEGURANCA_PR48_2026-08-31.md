@@ -129,7 +129,11 @@ existiam; depois de incluir o tooling no scanner, seis fixtures de documentacao
 foram expostas e tratadas sem allowlist ampla. Na revisao adversarial final,
 um teste negativo adicional provou que duplicidade de skill, root arbitrario e
 metadado extra de hook ainda eram aceitos; o validador foi endurecido antes do
-commit.
+commit. No primeiro ciclo remoto, o checkout Linux provou que hashes sobre bytes
+CRLF/LF nao eram portaveis; o hash passou a canonizar finais de linha. O Semgrep
+tambem identificou dois `shell: true` no teste do launcher; a execucao de string
+lida do repositorio foi eliminada em favor de comparacao exata e processo Node
+com argumentos hardcoded.
 
 GREEN: executavel novo, hash adulterado, skill surpresa e path proibido sao
 recusados; payload malformado produz `ask`; `.env`, traversal e download remoto
@@ -140,7 +144,7 @@ recusados.
 
 ## 5. Validacoes locais
 
-- PASS - `pnpm test:tooling-agentes` - 11/11.
+- PASS - `pnpm test:tooling-agentes` - 12/12.
 - PASS - `pnpm test:security`.
 - PASS - `pnpm security:secrets` - zero achado real.
 - PASS - inventario dos workflows - zero Action de IA.

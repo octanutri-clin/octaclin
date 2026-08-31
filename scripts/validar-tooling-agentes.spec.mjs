@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -9,8 +10,9 @@ import { auditarToolingAgentes } from './validar-tooling-agentes.mjs';
 
 const raiz = resolve(import.meta.dirname, '..');
 const hook = resolve(raiz, 'scripts/claude-hook-guard.mjs');
-const comandoHook = (modo) =>
-  `node -e "const{spawnSync}=require('node:child_process');const{join}=require('node:path');const root=process.env.CLAUDE_PROJECT_DIR;if(!root)process.exit(2);const r=spawnSync(process.execPath,[join(root,'scripts','claude-hook-guard.mjs'),'${modo}'],{stdio:'inherit'});process.exit(r.status??2)"`;
+const codigoLauncher = (modo) =>
+  `const{spawnSync}=require('node:child_process');const{join}=require('node:path');const root=process.env.CLAUDE_PROJECT_DIR;if(!root)process.exit(2);const r=spawnSync(process.execPath,[join(root,'scripts','claude-hook-guard.mjs'),'${modo}'],{stdio:'inherit'});process.exit(r.status??2)`;
+const comandoHook = (modo) => `node -e "${codigoLauncher(modo)}"`;
 
 function executarHook(modo, payload) {
   const stdout = execFileSync(process.execPath, [hook, modo], {
@@ -102,6 +104,31 @@ test('alteracao silenciosa de executavel listado falha por hash', async () => {
   }
 });
 
+test('hash de executavel e canonico entre CRLF e LF', async () => {
+  const temporario = await criarRepositorioTemporario();
+  try {
+    const arquivo = join(temporario, '.agents/skills/skill-segura/executar.py');
+    const conteudoLf = 'print("linha 1")\nprint("linha 2")\n';
+    await writeFile(arquivo, conteudoLf.replace(/\n/g, '\r\n'));
+
+    const allowlistPath = join(temporario, 'config/agent-tooling-allowlist.json');
+    const allowlist = JSON.parse(await readFile(allowlistPath, 'utf8'));
+    allowlist.trustedSkills[0].mode = 'local-workspace-tool';
+    allowlist.executableFiles.push({
+      path: '.agents/skills/skill-segura/executar.py',
+      sha256: createHash('sha256').update(conteudoLf, 'utf8').digest('hex'),
+      capability: 'test-only'
+    });
+    await writeFile(allowlistPath, JSON.stringify(allowlist));
+
+    assert(!((await auditarToolingAgentes(temporario)).violacoes.some((item) => item.codigo === 'HASH_DIVERGENTE')));
+    await writeFile(arquivo, conteudoLf);
+    assert(!((await auditarToolingAgentes(temporario)).violacoes.some((item) => item.codigo === 'HASH_DIVERGENTE')));
+  } finally {
+    await rm(temporario, { recursive: true, force: true });
+  }
+});
+
 test('skill nao inventariada e path de governanca proibido falham', async () => {
   const temporario = await criarRepositorioTemporario();
   try {
@@ -185,21 +212,22 @@ test('hook de comando falha fechado e barra injecao, env e tooling operacional',
   assert.equal(decisao(executarHook('protect-command', payload('pnpm test:tooling-agentes'))), 'allow');
 });
 
-test('comandos configurados resolvem CLAUDE_PROJECT_DIR no shell real', async () => {
+test('comandos configurados resolvem CLAUDE_PROJECT_DIR em processo real', async () => {
   const settings = JSON.parse(await readFile(resolve(raiz, '.claude/settings.json'), 'utf8'));
   const comandos = settings.hooks.PreToolUse.flatMap((grupo) => grupo.hooks).map((item) => item.command);
+  const modos = ['protect-write', 'protect-command'];
+  assert.deepEqual(comandos, modos.map(comandoHook), 'settings deve conter somente os launchers hardcoded');
   const payloads = [
     JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '.env' } }),
     '{'
   ];
 
-  for (const [indice, comando] of comandos.entries()) {
-    const execucao = spawnSync(comando, {
+  for (const [indice, modo] of modos.entries()) {
+    const execucao = spawnSync(process.execPath, ['-e', codigoLauncher(modo)], {
       cwd: tmpdir(),
       encoding: 'utf8',
       env: { ...process.env, CLAUDE_PROJECT_DIR: raiz },
-      input: payloads[indice],
-      shell: true
+      input: payloads[indice]
     });
     assert.equal(execucao.status, 0, execucao.stderr);
     assert.match(decisao(JSON.parse(execucao.stdout)), /^(deny|ask)$/);
@@ -207,12 +235,11 @@ test('comandos configurados resolvem CLAUDE_PROJECT_DIR no shell real', async ()
 
   const envSemProjeto = { ...process.env };
   delete envSemProjeto.CLAUDE_PROJECT_DIR;
-  const semProjeto = spawnSync(comandos[0], {
+  const semProjeto = spawnSync(process.execPath, ['-e', codigoLauncher('protect-write')], {
     cwd: tmpdir(),
     encoding: 'utf8',
     env: envSemProjeto,
-    input: payloads[0],
-    shell: true
+    input: payloads[0]
   });
   assert.equal(semProjeto.status, 2, 'launcher deve bloquear quando o path confiavel do projeto esta ausente');
 });
