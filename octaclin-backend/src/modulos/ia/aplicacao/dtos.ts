@@ -1,5 +1,20 @@
-import { IsIn, IsObject, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsIn, IsObject, IsOptional, IsString, IsUUID, MaxLength, MinLength, ValidateNested } from 'class-validator';
 import { DecisaoRevisaoIa } from '../dominio/revisao-humana';
+
+export class ContextoSentimentoIaDto {
+  @IsOptional()
+  @IsIn(['checkin_manual', 'transcricao_audio', 'mensagem_paciente'])
+  origem?: string;
+}
+
+export class ContextoReconhecimentoAlimentarIaDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  observacao?: string;
+}
 
 export class AnalisarSentimentoDto {
   @IsUUID()
@@ -20,7 +35,9 @@ export class AnalisarSentimentoDto {
 
   @IsOptional()
   @IsObject()
-  contexto?: Record<string, unknown>;
+  @ValidateNested()
+  @Type(() => ContextoSentimentoIaDto)
+  contexto?: ContextoSentimentoIaDto;
 }
 
 export class ReconhecerAlimentoDto {
@@ -32,7 +49,9 @@ export class ReconhecerAlimentoDto {
 
   @IsOptional()
   @IsObject()
-  contexto?: Record<string, unknown>;
+  @ValidateNested()
+  @Type(() => ContextoReconhecimentoAlimentarIaDto)
+  contexto?: ContextoReconhecimentoAlimentarIaDto;
 }
 
 export class RevisarSugestaoIaDto {

@@ -4,7 +4,7 @@
 >
 > Atualizado em: 2026-08-31
 >
-> Proximo item autorizado: review/checks/merge humano do PR 46.
+> Proximo item autorizado: abrir, revisar e executar os checks do PR 47.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
@@ -29,10 +29,13 @@
 > Estado do PR 45: integrado no `main` pelos PRs GitHub #168/#169
 > (`8a55e8be7e96128786a79515eefa6dbfbaa1eead`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR45_2026-08-30.md`.
-> Estado do PR 46: implementacao e validacao local concluidas em
-> `security/governanca-pr46-oauth-integracoes`, PR GitHub #173, aguardando checks e
-> review/merge humano. Relatorio:
+> Estado do PR 46: integrado no `main` pelo PR GitHub #173 em 2026-08-31
+> (`bfdbf76acf717afd13de52ef02ef2ce990c3557c`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR46_2026-08-31.md`.
+> Estado do PR 47: implementacao e validacao local concluidas em
+> `security/governanca-pr47-ia`, PR GitHub #174, aguardando checks e
+> review/merge humano. Relatorio:
+> `docs/governance/RELATORIO_SEGURANCA_PR47_2026-08-31.md`.
 
 ## 1. Funcao deste documento
 
@@ -388,9 +391,8 @@ Skills Claude: `security-review`, `test-driven-development`,
 Gate minimo: replay, state de outra sessao, redirect externo e event ID de
 outro recurso rejeitados; mocks sinteticos para providers.
 
-Implementacao e validacao local concluidas em
-`security/governanca-pr46-oauth-integracoes`, PR GitHub #173, aguardando checks
-e review/merge humano. O fluxo Google Calendar agora usa ticket inicial e nonce atomicos,
+Integrado no `main` pelo PR GitHub #173
+(`bfdbf76acf717afd13de52ef02ef2ce990c3557c`). O fluxo Google Calendar agora usa ticket inicial e nonce atomicos,
 binding host-only do navegador, HMAC, expiracao e PKCE S256. Callback,
 redirect, token endpoints e fetches externos falham fechados; watch Google
 valida recurso/canal/profissional/expiracao; Meta e SMTP rejeitam configuracao
@@ -410,6 +412,14 @@ Skills Claude: `security-review`, `test-driven-development`,
 
 Gate minimo: conjunto adversarial sintetico, recusas e isolamento; nenhuma PHI
 real enviada a provider; decisao clinica permanece humana.
+
+Implementacao e validacao local concluidas em
+`security/governanca-pr47-ia`, PR GitHub #174, aguardando checks e
+review/merge humano. Entradas e saidas passaram a ter schemas fechados, URL
+assinada deixou de atravessar a fronteira, configuracao parcial falha fechada,
+ha limite agregado por tenant e nenhuma resposta pode executar acao clinica.
+O FastAPI atual permanece local, sem provider ou ferramentas. Relatorio:
+`docs/governance/RELATORIO_SEGURANCA_PR47_2026-08-31.md`.
 
 ### PR 48 - Tooling de agentes
 

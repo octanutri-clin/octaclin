@@ -104,8 +104,8 @@ duplicar todos os detalhes de evidencia.
 | Roubo/reuso de sessao e recuperacao privilegiada | identidade | TB-01/TB-02 | controles parciais, matriz ainda nao concluida | PR 40-41 |
 | IDOR/BOLA/BFLA e mass assignment | isolamento | TB-02/TB-04 | controles existentes, cobertura integral pendente | PR 42-43 |
 | Upload malicioso ou acesso cross-tenant no storage | PHI binaria | TB-06 | hash/URL assinada existentes; quarentena pendente | PR 44 |
-| XSS, CSRF, redirect ou cache sensivel | sessao/PHI | TB-01/TB-03 | CSP, BFF, CORS e cache provados no PR 45; callbacks, redirects e endpoints OAuth falham fechados no PR 46, ainda pendente de merge/smoke real | PR 45-46 |
-| Prompt/tool injection e exfiltracao por IA/agente | PHI/secrets | TB-07/TB-09 | IA com revisao e tooling restrito; adversarial pendente | PR 47-48 |
+| XSS, CSRF, redirect ou cache sensivel | sessao/PHI | TB-01/TB-03 | CSP, BFF, CORS e cache provados no PR 45; callbacks, redirects e endpoints OAuth falham fechados no PR 46 integrado; smoke real ainda pendente | PR 45-46 |
+| Prompt/tool injection e exfiltracao por IA/agente | PHI/secrets | TB-07/TB-09 | PR 47 fecha schemas, minimiza a fronteira, exige revisao humana e prova ataques sinteticos no motor local sem ferramentas; tooling de agentes segue pendente | PR 47-48 |
 | Dependencia, Action ou container comprometido | release | TB-08 | SHA/scanners existentes; supply chain/runtime incompletos | PR 49-50 |
 | Credencial cloud excessiva ou ambiente cruzado | todos | TB-10 | runbooks existentes; evidencia atual de providers pendente | PR 51 |
 | Incidente sem alerta, evidencia ou restore | auditoria/disponibilidade | TB-04/TB-06/TB-10 | controles operacionais parciais | PR 52-53 |
@@ -129,7 +129,7 @@ define aplicabilidade e ownership; **status parcial nao equivale a PASS**.
 | V7 Session Management | cookies, JWT, refresh, logout e revogacao | L2 + L3 privilegiado | Parcial | 40, 41 |
 | V8 Authorization | papel, capability, objeto, carteira e tenant | L2 + L3 clinico/admin | Parcial | 42, 43 |
 | V9 Self-contained Tokens | JWT e tokens publicos | L2 + L3 para tokens de acesso | Parcial | 38, 40 |
-| V10 OAuth and OIDC | Google Calendar e Gmail | L2 + L3 para vinculacao de conta | Controles prioritarios implementados e provados com providers sinteticos no PR 46; smoke real e matriz requisito a requisito pendentes | 46, 54-55 |
+| V10 OAuth and OIDC | Google Calendar e Gmail | L2 + L3 para vinculacao de conta | Controles prioritarios integrados e provados com providers sinteticos no PR 46; smoke real e matriz requisito a requisito pendentes | 46, 54-55 |
 | V11 Cryptography | AES-GCM, HMAC, hashing e chaves | L2 + L3 para PHI/secrets | Achado confirmado | 39 |
 | V12 Secure Communication | web, DB, Redis, storage e providers | L2 + L3 para PHI/admin | Achado confirmado em DB TLS | 39, 46, 51 |
 | V13 Configuration | ambientes, secrets, containers e cloud | L2 + L3 para producao | Parcial | 49, 50, 51 |

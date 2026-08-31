@@ -2550,15 +2550,21 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] BFF conserva cookies HttpOnly/Secure/SameSite e respostas sensiveis `no-store`.
   - [x] Checks e review/merge humanos pelos PRs GitHub `#168`/`#169` (`8a55e8be7e96128786a79515eefa6dbfbaa1eead`).
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR45_2026-08-30.md`.
-- [ ] PR 46 - Endurecer OAuth e integracoes externas.
+- [x] PR 46 - Endurecer OAuth e integracoes externas.
   - [x] Implementacao e validacao local concluidas em `security/governanca-pr46-oauth-integracoes`.
   - [x] State OAuth vinculado ao navegador, assinado, expiravel, atomico e de uso unico.
   - [x] PKCE S256, endpoints canonicos, redirects bloqueados e timeouts para providers.
   - [x] Webhook Google vinculado a canal, recurso, profissional e expiracao.
   - [x] Meta e SMTP falham fechados para configuracao insegura.
-  - [ ] Checks e review/merge humanos no PR GitHub `#173`.
+  - [x] Checks e review/merge humanos no PR GitHub `#173` (`bfdbf76acf717afd13de52ef02ef2ce990c3557c`).
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR46_2026-08-31.md`.
 - [ ] PR 47 - Endurecer fluxos de IA e revisao humana.
+  - [x] Implementacao e validacao local concluidas em `security/governanca-pr47-ia`.
+  - [x] Entradas, saidas e edicao humana com schemas fechados e limites explicitos.
+  - [x] Prompt/tool injection sinteticos, exfiltracao, paciente fora do escopo e configuracao parcial rejeitados.
+  - [x] URL assinada removida da fronteira, limite agregado por tenant e revisao humana obrigatoria.
+  - [ ] Checks e review/merge humanos no PR GitHub `#174`.
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR47_2026-08-31.md`.
 - [ ] PR 48 - Auditar e isolar tooling de agentes (`.agents` e `.claude`).
 - [ ] PR 49 - Consolidar supply chain, SBOM e politica de dependencias.
 - [ ] PR 50 - Endurecer containers e runtime.
@@ -2572,4 +2578,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: checks e review/merge humano do PR 46. O PR 47 depende do aceite humano do resultado do PR 46.
+Proximo item autorizado: abrir e revisar o PR 47. O PR 48 depende do aceite humano do resultado do PR 47.

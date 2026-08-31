@@ -206,6 +206,12 @@ configure o mesmo valor nos dois servicos e mantenha `ia.clinica=false` ate o
 aceite. O segredo, URLs assinadas, texto clinico e corpos de resposta nao podem
 aparecer em logs, tickets ou documentos versionados.
 
+Desde o PR 47, URL e token devem existir juntos e nao ha fallback automatico
+para `localhost`. O FastAPI atual e exclusivamente local, sem provider ou
+ferramentas; no reconhecimento ele recebe apenas hash e observacao limitada,
+nunca URL assinada ou bytes da imagem. Provider externo e NO-GO ate haver nova
+decisao de seguranca e privacidade.
+
 ## Smoke local de producao somente leitura
 
 Estas variaveis nunca pertencem ao Render, GitHub ou a arquivos `.env`. Use

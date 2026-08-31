@@ -30,10 +30,33 @@ describe('ControladorIa', () => {
     );
 
     expect(protecaoAbuso.consumirTentativa).toHaveBeenCalledWith(
+      'ia:sentimento:tenant:tenant-1',
+      expect.objectContaining({ maxTentativas: 120, janelaMs: 15 * 60 * 1000 })
+    );
+    expect(protecaoAbuso.consumirTentativa).toHaveBeenCalledWith(
       'ia:sentimento:tenant-1:usuario-1',
       expect.objectContaining({ maxTentativas: 30, janelaMs: 15 * 60 * 1000 })
     );
+    expect(protecaoAbuso.consumirTentativa).toHaveBeenCalledTimes(2);
     expect(protecaoAbuso.consumirTentativa.mock.invocationCallOrder[0])
       .toBeLessThan(servicoIa.analisarSentimento.mock.invocationCallOrder[0]);
+  });
+
+  it('nao executa IA quando o limite agregado do tenant e recusado', async () => {
+    const protecaoAbuso = {
+      consumirTentativa: jest.fn(async (chave: string) => {
+        if (chave === 'ia:sentimento:tenant:tenant-1') throw new Error('limite do tenant');
+      })
+    };
+    const servicoIa = { analisarSentimento: jest.fn() };
+    const controlador = new ControladorIa(servicoIa as never, { registrar: jest.fn() } as never, protecaoAbuso as never);
+
+    await expect(controlador.analisarSentimento(
+      usuario,
+      { ip: '127.0.0.1', headers: {} } as never,
+      { pacienteId: '11111111-1111-4111-8111-111111111111', texto: 'Relato sintetico.' }
+    )).rejects.toThrow('limite do tenant');
+
+    expect(servicoIa.analisarSentimento).not.toHaveBeenCalled();
   });
 });
