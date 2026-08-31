@@ -2558,14 +2558,21 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Meta e SMTP falham fechados para configuracao insegura.
   - [x] Checks e review/merge humanos no PR GitHub `#173` (`bfdbf76acf717afd13de52ef02ef2ce990c3557c`).
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR46_2026-08-31.md`.
-- [ ] PR 47 - Endurecer fluxos de IA e revisao humana.
+- [x] PR 47 - Endurecer fluxos de IA e revisao humana.
   - [x] Implementacao e validacao local concluidas em `security/governanca-pr47-ia`.
   - [x] Entradas, saidas e edicao humana com schemas fechados e limites explicitos.
   - [x] Prompt/tool injection sinteticos, exfiltracao, paciente fora do escopo e configuracao parcial rejeitados.
   - [x] URL assinada removida da fronteira, limite agregado por tenant e revisao humana obrigatoria.
-  - [ ] Checks e review/merge humanos no PR GitHub `#174`.
+  - [x] Checks e review/merge humanos no PR GitHub `#174` (`bc94ae74e8ab65d35c8ec1107a64e71c05a282fb`).
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR47_2026-08-31.md`.
 - [ ] PR 48 - Auditar e isolar tooling de agentes (`.agents` e `.claude`).
+  - [x] Inventario de skills, hooks, scripts, servidores auxiliares e Actions de IA concluido.
+  - [x] Skills Google/Gmail/brainstorming e helpers placeholder removidos das duas arvores.
+  - [x] Allowlist de skills e executaveis com capacidade minima e SHA-256 criada.
+  - [x] Hooks Node portaveis e testes negativos de payload/path/comando implementados.
+  - [x] Scanner de secrets passou a incluir `.agents`/`.claude`; gate ligado ao CI.
+  - [ ] Checks e review/merge humanos do PR GitHub.
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md`.
 - [ ] PR 49 - Consolidar supply chain, SBOM e politica de dependencias.
 - [ ] PR 50 - Endurecer containers e runtime.
 - [ ] PR 51 - Aplicar menor privilegio em Render, Neon, Redis e Backblaze.
@@ -2578,4 +2585,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: abrir e revisar o PR 47. O PR 48 depende do aceite humano do resultado do PR 47.
+Proximo item autorizado: abrir e revisar o PR 48. O PR 49 depende do aceite humano e merge do PR 48.

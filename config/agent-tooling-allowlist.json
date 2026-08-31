@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "externalContentIsUntrusted": true,
+    "realSecretsAllowed": false,
+    "realPiiPhiAllowed": false,
+    "operationalAccessFromSkillsAllowed": false,
+    "updateRequiresPullRequestAndHashReview": true
+  },
+  "trustedSkills": [
+    { "name": "api-rate-limiting", "mode": "instruction-only" },
+    { "name": "bullmq-specialist", "mode": "instruction-only" },
+    { "name": "database-migration", "mode": "instruction-only" },
+    { "name": "frontend-design", "mode": "instruction-only" },
+    { "name": "gdpr-compliance", "mode": "instruction-only" },
+    { "name": "jwt-authentication", "mode": "instruction-only" },
+    { "name": "nestjs-best-practices", "mode": "instruction-only" },
+    { "name": "playwright-best-practices", "mode": "instruction-only" },
+    { "name": "postgresql-table-design", "mode": "instruction-only" },
+    { "name": "receiving-code-review", "mode": "instruction-only" },
+    { "name": "redesign-existing-projects", "mode": "instruction-only" },
+    { "name": "requesting-code-review", "mode": "instruction-only" },
+    { "name": "security-review", "mode": "instruction-only" },
+    { "name": "test-driven-development", "mode": "instruction-only" },
+    { "name": "typeorm", "mode": "instruction-only" },
+    { "name": "ui-ux-pro-max", "mode": "local-workspace-tool" },
+    { "name": "vercel-react-best-practices", "mode": "instruction-only" },
+    { "name": "web-design-guidelines", "mode": "instruction-only" },
+    { "name": "whatsapp-cloud-api", "mode": "instruction-only" },
+    { "name": "fechar-fase", "mode": "instruction-only", "roots": [".claude"] }
+  ],
+  "executableFiles": [
+    {
+      "path": ".agents/skills/ui-ux-pro-max/scripts/core.py",
+      "sha256": "f2312caafcae700940644f8cf24439953bdec6a26fe7b9242613062759428b92",
+      "capability": "local-read"
+    },
+    {
+      "path": ".agents/skills/ui-ux-pro-max/scripts/design_system.py",
+      "sha256": "ba22643868e715b34c8c2b967aeee194178ec9360897339e06ab57cfadcb91ba",
+      "capability": "workspace-write-synthetic"
+    },
+    {
+      "path": ".agents/skills/ui-ux-pro-max/scripts/search.py",
+      "sha256": "3577f4e6b5f96ff2da83ad386c3c41c3d7a0948d7374e15344356990ed83fffb",
+      "capability": "local-read"
+    },
+    {
+      "path": ".agents/skills/ui-ux-pro-max/scripts/tests/test_core.py",
+      "sha256": "cdaed39ba0066bc1750977f3e2d50ed4f8bb177f43c66758d66f830dfe28f98f",
+      "capability": "test-only"
+    },
+    {
+      "path": ".agents/skills/ui-ux-pro-max/scripts/validate_data.py",
+      "sha256": "403bf38439b862313356dbf993632d5ad1a87e6d99fea94e467e17a375c43071",
+      "capability": "local-read"
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/core.py",
+      "sha256": "f2312caafcae700940644f8cf24439953bdec6a26fe7b9242613062759428b92",
+      "capability": "local-read"
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/design_system.py",
+      "sha256": "ba22643868e715b34c8c2b967aeee194178ec9360897339e06ab57cfadcb91ba",
+      "capability": "workspace-write-synthetic"
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/search.py",
+      "sha256": "3577f4e6b5f96ff2da83ad386c3c41c3d7a0948d7374e15344356990ed83fffb",
+      "capability": "local-read"
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/tests/test_core.py",
+      "sha256": "cdaed39ba0066bc1750977f3e2d50ed4f8bb177f43c66758d66f830dfe28f98f",
+      "capability": "test-only"
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/validate_data.py",
+      "sha256": "403bf38439b862313356dbf993632d5ad1a87e6d99fea94e467e17a375c43071",
+      "capability": "local-read"
+    }
+  ],
+  "claudeHookCommands": [
+    "node -e \"const{spawnSync}=require('node:child_process');const{join}=require('node:path');const root=process.env.CLAUDE_PROJECT_DIR;if(!root)process.exit(2);const r=spawnSync(process.execPath,[join(root,'scripts','claude-hook-guard.mjs'),'protect-write'],{stdio:'inherit'});process.exit(r.status??2)\"",
+    "node -e \"const{spawnSync}=require('node:child_process');const{join}=require('node:path');const root=process.env.CLAUDE_PROJECT_DIR;if(!root)process.exit(2);const r=spawnSync(process.execPath,[join(root,'scripts','claude-hook-guard.mjs'),'protect-command'],{stdio:'inherit'});process.exit(r.status??2)\""
+  ]
+}

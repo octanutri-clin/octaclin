@@ -105,7 +105,7 @@ duplicar todos os detalhes de evidencia.
 | IDOR/BOLA/BFLA e mass assignment | isolamento | TB-02/TB-04 | controles existentes, cobertura integral pendente | PR 42-43 |
 | Upload malicioso ou acesso cross-tenant no storage | PHI binaria | TB-06 | hash/URL assinada existentes; quarentena pendente | PR 44 |
 | XSS, CSRF, redirect ou cache sensivel | sessao/PHI | TB-01/TB-03 | CSP, BFF, CORS e cache provados no PR 45; callbacks, redirects e endpoints OAuth falham fechados no PR 46 integrado; smoke real ainda pendente | PR 45-46 |
-| Prompt/tool injection e exfiltracao por IA/agente | PHI/secrets | TB-07/TB-09 | PR 47 fecha schemas, minimiza a fronteira, exige revisao humana e prova ataques sinteticos no motor local sem ferramentas; tooling de agentes segue pendente | PR 47-48 |
+| Prompt/tool injection e exfiltracao por IA/agente | PHI/secrets | TB-07/TB-09 | PR 47 fecha schemas e revisao humana; PR 48 remove tooling operacional vendorizado, fixa allowlist/hash e torna payload ambiguo conservador; plugins globais seguem fora da prova | PR 47-48 |
 | Dependencia, Action ou container comprometido | release | TB-08 | SHA/scanners existentes; supply chain/runtime incompletos | PR 49-50 |
 | Credencial cloud excessiva ou ambiente cruzado | todos | TB-10 | runbooks existentes; evidencia atual de providers pendente | PR 51 |
 | Incidente sem alerta, evidencia ou restore | auditoria/disponibilidade | TB-04/TB-06/TB-10 | controles operacionais parciais | PR 52-53 |
@@ -172,8 +172,8 @@ Os 51 alertas foram consolidados em 16 casos:
 | SEC-PR37-003 | high | PostgreSQL com `rejectUnauthorized: false` | 39 |
 | SEC-PR37-004 | high | tres imagens de runtime executam como root | 50 |
 | SEC-PR37-005 | low | tres imagens sem healthcheck proprio | 50 |
-| SEC-PR37-006 | low | listener OAuth local em todas as interfaces | 48 |
-| SEC-PR37-008 | medium | contatos reais podem ser impressos pelo tooling | 48 |
+| SEC-PR37-006 | low | listener OAuth local em todas as interfaces; removido com a skill no PR 48 | 48 |
+| SEC-PR37-008 | medium | contatos reais podiam ser impressos pelo tooling; skill removida no PR 48 | 48 |
 
 O scanner nao abriu alerta para a ausencia de assinatura criptografica da Meta
 sobre raw body. A inspecao do controller mostrou apenas token opcional de query
@@ -215,8 +215,9 @@ Procedimento para atualizar:
   NO-GO e o risco retorna ao PR 49/56.
 - Dockerfiles sao artefatos validos mesmo quando um provider atual usa outro
   caminho de build; por isso non-root e healthcheck nao foram descartados.
-- Tooling de agentes e uma fronteira separada do runtime. Os achados reais nele
-  vao ao PR 48 e nao devem ser confundidos com exposicao direta do SaaS.
+- Tooling de agentes e uma fronteira separada do runtime. O PR 48 removeu os
+  caminhos confirmados no repositorio e adicionou allowlist/CI; ferramentas
+  globais continuam sem autorizacao implicita e fora desta prova.
 - A indisponibilidade local da skill `gdpr-compliance` foi suprida somente por
   `docs/agents/DATA_CLASSIFICATION.md`; nenhum plugin externo foi instalado.
 

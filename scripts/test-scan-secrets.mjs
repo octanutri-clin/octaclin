@@ -25,13 +25,24 @@ try {
   );
   await mkdir(join(tempDir, 'node_modules'), { recursive: true });
   await writeFile(join(tempDir, 'node_modules', 'pacote.txt'), 'OPENAI_API_KEY=sk-proj-' + 'C'.repeat(48));
+  await mkdir(join(tempDir, '.agents', 'skills', 'fixture'), { recursive: true });
+  await writeFile(
+    join(tempDir, '.agents', 'skills', 'fixture', 'tooling.txt'),
+    'GOOGLE_REFRESH_TOKEN=1//' + 'D'.repeat(48)
+  );
 
   const findings = await scanPathForSecrets(tempDir);
   const ids = findings.map((finding) => finding.ruleId).sort();
 
-  assert.deepEqual(ids, ['database-url-with-password', 'meta-whatsapp-token', 'openai-api-key']);
+  assert.deepEqual(ids, [
+    'database-url-with-password',
+    'google-oauth-refresh-token',
+    'meta-whatsapp-token',
+    'openai-api-key'
+  ]);
   assert(findings.every((finding) => !finding.file.includes('node_modules')));
   assert(findings.every((finding) => !finding.file.endsWith('.env.example')));
+  assert(findings.some((finding) => finding.file.includes('.agents/skills/fixture/tooling.txt')));
 } finally {
   await rm(tempDir, { recursive: true, force: true });
 }

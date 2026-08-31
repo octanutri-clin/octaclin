@@ -178,8 +178,7 @@
       ],
       "evidencia": {
         "fontes": [
-          ".agents/skills/gmail-skill/gmail_skill.py:165-185",
-          ".claude/skills/gmail-skill/gmail_skill.py:165-185"
+          "docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md:28-31"
         ],
         "sink": "socket.bind(('', 0)) reserva uma porta em todas as interfaces antes do callback OAuth local."
       },
@@ -207,8 +206,7 @@
       ],
       "evidencia": {
         "fontes": [
-          ".agents/skills/gmail-skill/gmail_skill.py:421-437",
-          ".claude/skills/gmail-skill/gmail_skill.py:421-437"
+          "docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md:48-51"
         ],
         "sink": "A linha alertada imprime somente token_data['email']; access_token, refresh_token e client_secret sao usados depois, mas nao interpolados no print."
       },
@@ -240,8 +238,7 @@
       ],
       "evidencia": {
         "fontes": [
-          ".agents/skills/gmail-skill/gmail_skill.py:1175-1337",
-          ".claude/skills/gmail-skill/gmail_skill.py:1175-1337"
+          "docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md:28-31"
         ],
         "sink": "Resultados da Google People API, incluindo emails, telefones, enderecos, aniversarios e biografias, sao serializados integralmente em stdout."
       },
@@ -273,9 +270,7 @@
       ],
       "evidencia": {
         "fontes": [
-          ".agents/skills/brainstorming/scripts/server.cjs:267-277",
-          ".agents/skills/brainstorming/scripts/server.cjs:420-432",
-          ".agents/skills/brainstorming/scripts/server.cjs:580-604"
+          "docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md:53-58"
         ],
         "sink": "A leitura HTTP aplica path.basename e valida arquivo regular, sem symlink e com realpath dentro de CONTENT_DIR; os outros joins recebem nomes de readdir/fs.watch, nao path da requisicao."
       },
@@ -304,10 +299,7 @@
       ],
       "evidencia": {
         "fontes": [
-          ".agents/skills/brainstorming/scripts/server.cjs:83-100",
-          ".agents/skills/brainstorming/scripts/server.cjs:300-390",
-          ".agents/skills/brainstorming/scripts/server.cjs:587-688",
-          ".agents/skills/brainstorming/scripts/helper.js:34"
+          "docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md:53-58"
         ],
         "sink": "O auxiliar usa http/ws, mas o host padrao e 127.0.0.1 e cada requisicao/upgrade exige token aleatorio e origem same-origin."
       },

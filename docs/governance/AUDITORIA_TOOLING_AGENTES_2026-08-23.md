@@ -1,5 +1,9 @@
 # Auditoria de tooling de agentes — 2026-08-23
 
+> Estado posterior: os riscos residuais de hooks, scanner e skills operacionais
+> foram reavaliados e reduzidos no PR 48. Fonte atual:
+> `docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md`.
+
 > Escopo: PR 3 da `DECISAO_FINAL_GOVERNANCA_AGENTES_OCTACLIN.md` (secoes 30, 31 e 43).
 > Natureza: registro de auditoria com evidencia. Nao e norma; norma fica em `AGENTS.md`
 > e nos documentos indicados por ele.
