@@ -120,12 +120,22 @@ export class ControladorIa {
   }
 
   private consumirLimite(usuario: UsuarioAutenticado, operacao: string, maxTentativas: number) {
-    return this.protecaoAbuso.consumirTentativa(`ia:${operacao}:${usuario.tenantId}:${usuario.usuarioId}`, {
-      maxTentativas,
-      janelaMs: 15 * 60 * 1000,
-      bloqueioMs: 15 * 60 * 1000,
-      mensagemBloqueio: 'Muitas solicitacoes de IA em pouco tempo. Tente novamente em alguns minutos.'
-    });
+    const janelaMs = 15 * 60 * 1000;
+    const limiteTenant = operacao === 'reconhecimento' ? 60 : 120;
+    return Promise.all([
+      this.protecaoAbuso.consumirTentativa(`ia:${operacao}:tenant:${usuario.tenantId}`, {
+        maxTentativas: limiteTenant,
+        janelaMs,
+        bloqueioMs: janelaMs,
+        mensagemBloqueio: 'O limite temporario de IA da clinica foi atingido. Tente novamente em alguns minutos.'
+      }),
+      this.protecaoAbuso.consumirTentativa(`ia:${operacao}:${usuario.tenantId}:${usuario.usuarioId}`, {
+        maxTentativas,
+        janelaMs,
+        bloqueioMs: janelaMs,
+        mensagemBloqueio: 'Muitas solicitacoes de IA em pouco tempo. Tente novamente em alguns minutos.'
+      })
+    ]).then(() => undefined);
   }
 
   private obterUserAgent(requisicao: Request): string | undefined {

@@ -22,7 +22,15 @@ permanece publico.
 - `POST /analisar-sentimento`
 - `POST /reconhecer-alimento`
 
-Por padrao, usa heuristicas locais para desenvolvimento. Em producao, provedores
-reais devem preservar o contrato, a revisao humana e o hash de integridade
-recebido do backend. O navegador nunca envia URL privada ou hash diretamente ao
-microservico.
+O servico atual usa somente heuristicas locais: nao chama provider externo, nao
+possui ferramentas e nao executa acao clinica. Entradas e saidas usam schemas
+fechados e toda sugestao declara `revisao_humana_obrigatoria=true`.
+
+O backend envia somente o texto necessario para sentimento ou, no
+reconhecimento alimentar, o hash validado e uma observacao opcional. URL
+assinada e bytes da imagem nao atravessam esta fronteira. O reconhecimento
+atual, portanto, e uma heuristica baseada na observacao, nao visao computacional.
+
+Adicionar provider real, ferramentas ou processamento de imagem exige novo
+threat model, base legal, minimizacao, testes adversariais e autorizacao
+explicita. Ate la, essa integracao permanece proibida.

@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, Header, HTTPException, status
-from pydantic import AnyHttpUrl, BaseModel, Field
-from typing import Any
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
 import hmac
 import os
 import re
@@ -8,33 +8,65 @@ import re
 app = FastAPI(title="OctaClin AI Service", version="0.1.0")
 
 
-class RequisicaoSentimento(BaseModel):
+class ModeloEstrito(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class ContextoSentimento(ModeloEstrito):
+    origem: Literal["checkin_manual", "transcricao_audio", "mensagem_paciente"] | None = None
+
+
+class ContextoReconhecimentoAlimentar(ModeloEstrito):
+    observacao: str | None = Field(default=None, min_length=1, max_length=500)
+
+
+class RequisicaoSentimento(ModeloEstrito):
     texto: str = Field(min_length=1, max_length=5000)
-    contexto: dict[str, Any] = Field(default_factory=dict)
+    contexto: ContextoSentimento = Field(default_factory=ContextoSentimento)
 
 
-class RespostaSentimento(BaseModel):
+class SinaisSentimento(ModeloEstrito):
+    ansiedade: list[str] = Field(max_length=50)
+    frustracao: list[str] = Field(max_length=50)
+    motivacao: list[str] = Field(max_length=50)
+    confusao: list[str] = Field(max_length=50)
+
+
+class ExplicacaoSentimento(ModeloEstrito):
+    provedor: str = Field(min_length=1, max_length=80)
+    limitacoes: list[str] = Field(max_length=20)
+    sinais: SinaisSentimento
+
+
+class RespostaSentimento(ModeloEstrito):
     ansiedade_score: float
     frustracao_score: float
     motivacao_score: float
     confusao_score: float
-    explicacao: dict[str, Any]
+    explicacao: ExplicacaoSentimento
+    revisao_humana_obrigatoria: Literal[True] = True
 
 
-class RequisicaoReconhecimentoAlimentar(BaseModel):
-    imagem_url: AnyHttpUrl
+class RequisicaoReconhecimentoAlimentar(ModeloEstrito):
     imagem_hash: str = Field(pattern=r"^[a-fA-F0-9]{64}$")
-    contexto: dict[str, Any] = Field(default_factory=dict)
+    contexto: ContextoReconhecimentoAlimentar = Field(default_factory=ContextoReconhecimentoAlimentar)
 
 
-class RespostaReconhecimentoAlimentar(BaseModel):
+class AlimentoDetectado(ModeloEstrito):
+    nome: str = Field(min_length=1, max_length=160)
+    confianca: float = Field(ge=0, le=1)
+    calorias_estimadas: float | None = Field(default=None, ge=0, le=1_000_000)
+
+
+class RespostaReconhecimentoAlimentar(ModeloEstrito):
     provedor: str
     imagem_hash: str
-    alimentos_detectados: list[dict[str, Any]]
-    peso_estimado_gramas: float | None = None
-    calorias_estimadas: float | None = None
-    confianca_media: float | None = None
-    limitacoes: list[str]
+    alimentos_detectados: list[AlimentoDetectado] = Field(max_length=100)
+    peso_estimado_gramas: float | None = Field(default=None, ge=0, le=1_000_000)
+    calorias_estimadas: float | None = Field(default=None, ge=0, le=1_000_000)
+    confianca_media: float | None = Field(default=None, ge=0, le=100)
+    limitacoes: list[str] = Field(max_length=20)
+    revisao_humana_obrigatoria: Literal[True] = True
 
 
 PALAVRAS_ANSIEDADE = {"ansioso", "ansiosa", "preocupado", "preocupada", "medo", "nervoso", "nervosa"}
@@ -88,19 +120,19 @@ def analisar_sentimento(
         frustracao_score=frustracao,
         motivacao_score=motivacao,
         confusao_score=confusao,
-        explicacao={
-            "provedor": "heuristica-local",
-            "limitacoes": [
+        explicacao=ExplicacaoSentimento(
+            provedor="heuristica-local",
+            limitacoes=[
                 "Analise lexical sem compreensao clinica do prontuario completo.",
                 "Negacoes, ironia e contexto cultural podem alterar a interpretacao.",
             ],
-            "sinais": {
-                "ansiedade": sorted(PALAVRAS_ANSIEDADE.intersection(texto.lower().split())),
-                "frustracao": sorted(PALAVRAS_FRUSTRACAO.intersection(texto.lower().split())),
-                "motivacao": sorted(PALAVRAS_MOTIVACAO.intersection(texto.lower().split())),
-                "confusao": sorted(PALAVRAS_CONFUSAO.intersection(texto.lower().split())),
-            },
-        },
+            sinais=SinaisSentimento(
+                ansiedade=sorted(PALAVRAS_ANSIEDADE.intersection(texto.lower().split())),
+                frustracao=sorted(PALAVRAS_FRUSTRACAO.intersection(texto.lower().split())),
+                motivacao=sorted(PALAVRAS_MOTIVACAO.intersection(texto.lower().split())),
+                confusao=sorted(PALAVRAS_CONFUSAO.intersection(texto.lower().split())),
+            ),
+        ),
     )
 
 
@@ -109,25 +141,21 @@ def reconhecer_alimento(
     requisicao: RequisicaoReconhecimentoAlimentar,
     _: None = Depends(autenticar_servico),
 ) -> RespostaReconhecimentoAlimentar:
-    descricao = str(
-        requisicao.contexto.get("descricao")
-        or requisicao.contexto.get("observacao")
-        or ""
-    ).lower()
+    descricao = (requisicao.contexto.observacao or "").lower()
 
-    alimentos: list[dict[str, Any]]
+    alimentos: list[AlimentoDetectado]
     if "salada" in descricao:
-        alimentos = [{"nome": "salada", "confianca": 0.76, "calorias_estimadas": 120}]
+        alimentos = [AlimentoDetectado(nome="salada", confianca=0.76, calorias_estimadas=120)]
     elif "arroz" in descricao:
         alimentos = [
-            {"nome": "arroz", "confianca": 0.72, "calorias_estimadas": 190},
-            {"nome": "feijao", "confianca": 0.61, "calorias_estimadas": 130},
+            AlimentoDetectado(nome="arroz", confianca=0.72, calorias_estimadas=190),
+            AlimentoDetectado(nome="feijao", confianca=0.61, calorias_estimadas=130),
         ]
     else:
-        alimentos = [{"nome": "refeicao nao classificada", "confianca": 0.35, "calorias_estimadas": 350}]
+        alimentos = [AlimentoDetectado(nome="refeicao nao classificada", confianca=0.35, calorias_estimadas=350)]
 
-    calorias = sum(float(item["calorias_estimadas"]) for item in alimentos)
-    confianca = sum(float(item["confianca"]) for item in alimentos) / len(alimentos)
+    calorias = sum(float(item.calorias_estimadas or 0) for item in alimentos)
+    confianca = sum(item.confianca for item in alimentos) / len(alimentos)
 
     return RespostaReconhecimentoAlimentar(
         provedor="heuristica-local",

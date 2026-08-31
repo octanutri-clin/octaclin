@@ -142,7 +142,7 @@ andamento devem ser reiniciados tanto no rollout quanto no rollback.
 
 ## 8. Resultado
 
-O escopo do PR 46 foi implementado e validado localmente com providers
-sinteticos no PR GitHub `#173`. O incremento permanece aguardando checks e
-review/merge humanos.
-PR 47 nao esta autorizado ate esse aceite.
+O escopo do PR 46 foi implementado, validado e integrado no `main` pelo PR
+GitHub `#173` em 2026-08-31
+(`bfdbf76acf717afd13de52ef02ef2ce990c3557c`). O PR 47 foi autorizado apos
+esse aceite humano.

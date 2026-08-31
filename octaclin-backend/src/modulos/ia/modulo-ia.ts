@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditoria';
-import { ServicoArmazenamentoObjetos } from '../../infraestrutura/armazenamento/servico-armazenamento-objetos';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
 import { ModuloAuth } from '../auth/modulo-auth';
 import { ArquivoMidiaOrm } from '../mobile/infraestrutura/arquivo-midia.orm';
@@ -27,7 +26,7 @@ import { TranscricaoMidiaOrm } from './infraestrutura/transcricao-midia.orm';
     ModuloTenancy
   ],
   controllers: [ControladorIa],
-  providers: [ServicoIa, ServicoAuditoria, ServicoArmazenamentoObjetos],
+  providers: [ServicoIa, ServicoAuditoria],
   exports: [ServicoIa]
 })
 export class ModuloIa {}
