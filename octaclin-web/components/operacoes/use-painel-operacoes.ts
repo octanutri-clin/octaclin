@@ -100,9 +100,13 @@ export function usePainelOperacoes() {
     limite: 25
   });
 
-  function redirecionarParaLogin() {
+  async function redirecionarParaLogin() {
     setSessao(null);
     setDados(null);
+    // Sem sessao valida, encerra os cookies antes de ir ao login. Como as paginas
+    // sao renderizadas por requisicao (nonce da CSP), um redirect com cookies
+    // ainda presentes faria o middleware devolver para /operacoes em loop.
+    await sair();
     router.replace('/login?redirect=/operacoes');
   }
 
@@ -111,7 +115,12 @@ export function usePainelOperacoes() {
       return await operacao();
     } catch (erroAtual) {
       if (erroAtual instanceof ErroApiOperacoes && erroAtual.status === 401) {
-        redirecionarParaLogin();
+        // Sessao expirou durante o uso do console: exibe o mesmo estado
+        // recuperavel do restante da interface, em vez de um redirect que,
+        // com paginas dinamicas, entraria em loop /operacoes <-> /login.
+        setSessao(null);
+        setDados(null);
+        setErro('Sua sessão expirou. Entre novamente para continuar.');
         return null;
       }
 
@@ -574,7 +583,7 @@ export function usePainelOperacoes() {
   useEffect(() => {
     void obterSessao().then((sessaoAtual) => {
       if (!sessaoAtual) {
-        redirecionarParaLogin();
+        void redirecionarParaLogin();
         return;
       }
 
