@@ -4,6 +4,7 @@ import {
   origemMutacaoPermitida,
   validarConfiguracaoSegurancaBff
 } from '../lib/server/seguranca-bff';
+import { criarNonceCsp, criarPoliticaConteudo } from '../lib/server/csp';
 
 const ambienteOriginal = { ...process.env };
 
@@ -112,4 +113,31 @@ test('origem publica preservada pelo proxy e aceita por host e protocolo encamin
   });
 
   assert.equal(origemMutacaoPermitida(viaProxy), true);
+});
+
+test('CSP de producao usa nonce imprevisivel e remove unsafe-inline de scripts', () => {
+  const nonceA = criarNonceCsp();
+  const nonceB = criarNonceCsp();
+  const politica = criarPoliticaConteudo(nonceA, 'production');
+  const scriptSrc = politica.split(';').find((diretiva) => diretiva.trim().startsWith('script-src')) ?? '';
+
+  assert.match(nonceA, /^[A-Za-z0-9+/_=-]{32,}$/);
+  assert.notEqual(nonceA, nonceB);
+  assert.match(scriptSrc, new RegExp(`'nonce-${nonceA}'`));
+  assert.match(scriptSrc, /'self'/);
+  assert.doesNotMatch(scriptSrc, /'unsafe-inline'/);
+  assert.doesNotMatch(scriptSrc, /'unsafe-eval'/);
+  assert.match(politica, /style-src 'self' 'nonce-[^']+'/);
+  assert.match(politica, /style-src-attr 'unsafe-inline'/);
+  assert.match(politica, /object-src 'none'/);
+  assert.match(politica, /frame-ancestors 'none'/);
+});
+
+test('CSP de desenvolvimento limita unsafe-eval ao script e ainda exige nonce', () => {
+  const politica = criarPoliticaConteudo('nonce-sintetico-com-32-caracteres', 'development');
+  const scriptSrc = politica.split(';').find((diretiva) => diretiva.trim().startsWith('script-src')) ?? '';
+
+  assert.match(scriptSrc, /'unsafe-eval'/);
+  assert.doesNotMatch(scriptSrc, /'unsafe-inline'/);
+  assert.match(scriptSrc, /'nonce-nonce-sintetico-com-32-caracteres'/);
 });

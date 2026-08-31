@@ -17,6 +17,7 @@
     "test:authz": "node scripts/test-autorizacao-rotas.mjs && node scripts/test-sessoes-bff.mjs && node scripts/test-pacientes-fase254-bff.mjs && node scripts/test-agendamento-publico-bff.mjs && node scripts/test-questionarios-revisao-bff.mjs && node scripts/test-dashboard-clinico-bff.mjs && node scripts/test-prontuario-timeline-bff.mjs && node scripts/test-planos-alimentares-bff.mjs && node scripts/test-nutricao-plano.mjs",
     "test:seguranca-operacional": "node scripts/test-seguranca-operacional.mjs",
     "test:seguranca-runtime": "node scripts/validar-seguranca-runtime.mjs",
+    "test:seguranca-browser": "playwright test tests/visual/seguranca-browser.spec.mjs --reporter=list",
     "test:agendamento-publico:bff": "node scripts/test-agendamento-publico-bff.mjs",
     "test:questionarios-revisao:bff": "node scripts/test-questionarios-revisao-bff.mjs",
     "test:importacao-pacientes": "node scripts/test-importacao-pacientes.mjs",

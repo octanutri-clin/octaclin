@@ -2533,16 +2533,23 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 - [x] PR 43 - Provar RLS e isolamento multi-tenant integral.
   - [x] Isolamento multi-tenant provado em Postgres real/testcontainers, sem alteracao de codigo de producao.
   - [x] Integrado no `main` pelo PR GitHub `#166` (`40570f280831a404447468bff3d14976ba77f863`).
-- [ ] PR 44 - Endurecer uploads e storage clinico.
+- [x] PR 44 - Endurecer uploads e storage clinico.
   - [x] Implementacao e validacao local concluidas em `security/governanca-pr44-uploads-storage-clinico`.
   - [x] Corrigido TOCTOU entre inspecao e promocao pendente->confirmado (inspecao passa a ler a copia imutavel, nao o objeto pendente ainda reescrevivel pelo cliente).
   - [x] Validacao real de dimensao/pixels (JPEG/PNG/WEBP) contra decompression bomb, sem adicionar o pacote `image-size` (vulneravel, ja documentado como bloqueio do mobile).
   - [x] Remocao de metadado EXIF/GPS por formato, sem decodificar pixels.
   - [x] Abstracao de inspecao antimalware com mecanismo de referencia (assinatura EICAR) e falha fechada em timeout/erro.
   - [x] Exclusao verificada por HEAD apos DELETE nos dois fluxos de exclusao direta de arquivo.
-  - [ ] Review, checks e merge humanos.
+  - [x] Review, checks e merge humanos pelo PR GitHub `#167` (`c11fee336b85e59f8c52d9ea912d3c70f7d7278c`).
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR44_2026-08-30.md`.
 - [ ] PR 45 - Endurecer browser, BFF, CSP, CSRF, CORS e cache.
+  - [x] Implementacao e validacao local concluidas em `security/governanca-pr45-browser-bff`.
+  - [x] CSP bloqueante usa nonce por resposta e remove `unsafe-inline` de scripts sem quebrar o Next em producao.
+  - [x] Browser prova XSS, CSRF, CORS, cache e redirect hostil em desktop e mobile.
+  - [x] CORS do backend recusa origem opaca, caminho, credencial e HTTP publico em producao.
+  - [x] BFF conserva cookies HttpOnly/Secure/SameSite e respostas sensiveis `no-store`.
+  - [ ] Checks e review/merge humanos.
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR45_2026-08-30.md`.
 - [ ] PR 46 - Endurecer OAuth e integracoes externas.
 - [ ] PR 47 - Endurecer fluxos de IA e revisao humana.
 - [ ] PR 48 - Auditar e isolar tooling de agentes (`.agents` e `.claude`).
@@ -2558,4 +2565,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: review/checks/merge humano do PR 44. O PR 45 depende do aceite humano do resultado do PR 44.
+Proximo item autorizado: checks e review/merge humano do PR 45. O PR 46 depende do aceite humano do resultado do PR 45.

@@ -174,8 +174,23 @@ async function detectarFocoSemIndicador(locator) {
 // `!important` no criterio, mas o teste precisa vencer os utilitarios do
 // Tailwind para simular a folha de estilo do usuario.
 async function aplicarEspacamentoDeTextoWcag(page) {
-  await page.addStyleTag({
-    content: `
+  // A CSP endurecida (PR 45) removeu `unsafe-inline` de `style-src` em producao,
+  // entao um bloco <style> injetado precisa carregar o nonce da resposta. O
+  // navegador oculta o atributo `nonce` do DOM, mas mantem a propriedade IDL
+  // `.nonce` nos elementos que o Next ja marcou; lemos dali e reaplicamos. Um
+  // `page.addStyleTag` sem nonce seria bloqueado pela politica.
+  await page.evaluate(() => {
+    const portador = Array.from(document.querySelectorAll('script, style, link')).find(
+      (elemento) => elemento.nonce
+    );
+    if (!portador) {
+      throw new Error(
+        'Nonce CSP nao encontrado para injetar o espacamento de texto (WCAG 1.4.12).'
+      );
+    }
+    const estilo = document.createElement('style');
+    estilo.setAttribute('nonce', portador.nonce);
+    estilo.textContent = `
       * {
         line-height: 1.5 !important;
         letter-spacing: 0.12em !important;
@@ -184,7 +199,8 @@ async function aplicarEspacamentoDeTextoWcag(page) {
       p, li {
         margin-bottom: 2em !important;
       }
-    `
+    `;
+    document.head.appendChild(estilo);
   });
 }
 

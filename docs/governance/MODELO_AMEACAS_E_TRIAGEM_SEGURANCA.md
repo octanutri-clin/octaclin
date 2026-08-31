@@ -104,7 +104,7 @@ duplicar todos os detalhes de evidencia.
 | Roubo/reuso de sessao e recuperacao privilegiada | identidade | TB-01/TB-02 | controles parciais, matriz ainda nao concluida | PR 40-41 |
 | IDOR/BOLA/BFLA e mass assignment | isolamento | TB-02/TB-04 | controles existentes, cobertura integral pendente | PR 42-43 |
 | Upload malicioso ou acesso cross-tenant no storage | PHI binaria | TB-06 | hash/URL assinada existentes; quarentena pendente | PR 44 |
-| XSS, CSRF, redirect ou cache sensivel | sessao/PHI | TB-01/TB-03 | headers e BFF existentes; prova ampla pendente | PR 45-46 |
+| XSS, CSRF, redirect ou cache sensivel | sessao/PHI | TB-01/TB-03 | CSP com nonce, BFF, CORS, cache e redirects provados no PR 45; callbacks e URLs de integracao pendentes | PR 46 |
 | Prompt/tool injection e exfiltracao por IA/agente | PHI/secrets | TB-07/TB-09 | IA com revisao e tooling restrito; adversarial pendente | PR 47-48 |
 | Dependencia, Action ou container comprometido | release | TB-08 | SHA/scanners existentes; supply chain/runtime incompletos | PR 49-50 |
 | Credencial cloud excessiva ou ambiente cruzado | todos | TB-10 | runbooks existentes; evidencia atual de providers pendente | PR 51 |
@@ -122,7 +122,7 @@ define aplicabilidade e ownership; **status parcial nao equivale a PASS**.
 | --- | --- | --- | --- | --- |
 | V1 Encoding and Sanitization | HTML, CSV, logs, prompts e webhooks | L2 + L3 onde houver PHI/admin | Parcial, sem matriz requisito a requisito | 38, 45, 47, 52 |
 | V2 Validation and Business Logic | agenda, formularios, financeiro e fluxos clinicos | L2 + L3 clinico | Parcial | 38, 42, 44, 47, 54 |
-| V3 Web Frontend Security | Next.js, BFF, CSP, DOM e cache | L2 + L3 para sessao/PHI | Parcial | 45 |
+| V3 Web Frontend Security | Next.js, BFF, CSP, DOM e cache | L2 + L3 para sessao/PHI | Controles prioritarios do PR 45 provados; matriz requisito a requisito ainda nao equivale a ASVS completo | 54-55 |
 | V4 API and Web Service | REST, webhooks e APIs publicas | L2 + L3 para mutacoes clinicas | Parcial | 38, 42, 54 |
 | V5 File Handling | imagens, anexos e documentos | L2 + L3 clinico | Parcial | 44 |
 | V6 Authentication | todos os papeis, recovery e primeiro acesso | L2 + L3 privilegiado | Parcial; MFA pendente | 40, 41 |

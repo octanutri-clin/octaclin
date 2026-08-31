@@ -35,6 +35,7 @@ executar(process.execPath, [
   '--outDir',
   pastaTemporaria,
   'scripts/seguranca-operacional.spec.ts',
+  'lib/server/csp.ts',
   'lib/server/seguranca-bff.ts'
 ]);
 
@@ -66,9 +67,15 @@ for (const cabecalho of [
   assert.match(nextConfig, new RegExp(cabecalho), `Header global ausente: ${cabecalho}`);
 }
 assert.match(nextConfig, /source:\s*['"]\/:path\*['"]/, 'Headers devem cobrir toda a aplicacao.');
-assert.match(nextConfig, /NODE_ENV\s*===\s*['"]development['"]/, 'unsafe-eval deve ficar restrito ao desenvolvimento.');
+assert.doesNotMatch(
+  nextConfig,
+  /script-src[^`\n]*unsafe-inline/,
+  'script-src nao pode depender de unsafe-inline.'
+);
+assert.match(middleware, /criarPoliticaConteudo/, 'Middleware deve gerar CSP bloqueante por requisicao.');
+assert.match(middleware, /x-nonce/, 'Middleware deve encaminhar nonce ao renderizador Next.');
 assert.match(middleware, /origemMutacaoPermitida\(request\)/, 'Middleware deve validar a origem das mutacoes.');
-assert.match(middleware, /['"]\/api\/:path\*['"]/, 'Middleware deve cobrir todas as rotas BFF.');
+assert.match(middleware, /_next\/static/, 'Matcher deve cobrir paginas e BFF, excluindo apenas ativos estaticos.');
 for (const smoke of smokesNode) {
   assert.match(smoke, /Sec-Fetch-Site['"]?:\s*['"]same-origin['"]/, 'Smoke Node deve representar mutacao do navegador.');
   assert.match(smoke, /Origin:/, 'Smoke Node deve informar a origem oficial nas mutacoes.');
