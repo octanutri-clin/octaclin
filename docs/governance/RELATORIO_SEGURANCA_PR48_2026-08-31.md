@@ -145,7 +145,7 @@ recusados.
 - PASS - `pnpm security:secrets` - zero achado real.
 - PASS - inventario dos workflows - zero Action de IA.
 - PASS - inventario dos executaveis restantes - dez helpers hash-pinned de UI.
-- PENDENTE - checks remotos do PR GitHub.
+- PENDENTE - checks remotos e review humano do PR GitHub `#175`.
 - NA - testes/builds do produto, migration, deploy e smoke: runtime do produto
   nao foi alterado.
 
@@ -174,5 +174,5 @@ recusados.
 
 ## 8. Estado
 
-Implementacao e validacao local concluidas. O PR 48 deve parar em review
-humano; o PR 49 nao esta autorizado antes do merge confirmado.
+Implementacao e validacao local concluidas no PR GitHub `#175`. O PR 48 deve
+parar em review humano; o PR 49 nao esta autorizado antes do merge confirmado.

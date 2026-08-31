@@ -2571,7 +2571,7 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Allowlist de skills e executaveis com capacidade minima e SHA-256 criada.
   - [x] Hooks Node portaveis e testes negativos de payload/path/comando implementados.
   - [x] Scanner de secrets passou a incluir `.agents`/`.claude`; gate ligado ao CI.
-  - [ ] Checks e review/merge humanos do PR GitHub.
+  - [ ] Checks e review/merge humanos do PR GitHub `#175`.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md`.
 - [ ] PR 49 - Consolidar supply chain, SBOM e politica de dependencias.
 - [ ] PR 50 - Endurecer containers e runtime.
@@ -2585,4 +2585,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: abrir e revisar o PR 48. O PR 49 depende do aceite humano e merge do PR 48.
+Proximo item autorizado: revisar o PR GitHub `#175` (PR 48). O PR 49 depende do aceite humano e merge do PR 48.
