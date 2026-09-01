@@ -1,0 +1,43 @@
+# PR 50 — .dockerignore do contexto do ai-service.
+# O .dockerignore da raiz NAO se aplica a este contexto. Nao ignore
+# requirements.txt/requirements.lock.txt/app — a imagem depende deles.
+
+# Artefatos e ambientes Python reconstruidos/instalados no build
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+tests
+
+# Secrets e credenciais — nunca no contexto de build
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets
+credentials
+id_rsa*
+
+# Canarios de teste de contexto (prova negativa do PR 50)
+*.canary
+secret-canary.txt
+
+# Metadados e ruido de dev
+.git
+.gitignore
+.dockerignore
+Dockerfile
+*.log
+logs
+tmp
+.cache
+.idea
+.vscode
+.DS_Store

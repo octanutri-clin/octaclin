@@ -86,43 +86,109 @@ jobs:
     if: github.actor != 'dependabot[bot]'
     permissions:
       contents: read
+      security-events: write
     strategy:
       fail-fast: false
       matrix:
+        # PR 50: cada servico traz seus proprios limites e modo de prova. Nao ha
+        # valores identicos forcados — runtimes diferem (§67/§71).
         include:
           - nome: backend
             contexto: octaclin-backend
+            uid_esperado: "1000"
+            pids: "256"
+            memoria: "512m"
+            cpus: "1.0"
+            tmpfs_extra: ""
+            env_args: ""
+            # Boot do app depende de segredos JWT/cripto e Postgres/Redis
+            # (config/provider): fronteira do PR 51. Provamos o hardening da
+            # imagem; health do app fica FACTUAL e documentado.
+            modo_health: factual
           - nome: web
             contexto: octaclin-web
+            uid_esperado: "1000"
+            pids: "256"
+            memoria: "768m"
+            cpus: "1.0"
+            tmpfs_extra: "/app/.next/cache"
+            env_args: "-e PORT=3000"
+            modo_health: real
           - nome: ia-service
             contexto: octaclin-ai-service
+            uid_esperado: "10001"
+            pids: "128"
+            memoria: "256m"
+            cpus: "0.5"
+            tmpfs_extra: ""
+            env_args: ""
+            modo_health: real
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Construir imagem
+      # Build + provas de runtime real: usuario efetivo non-root, rootfs
+      # read-only com escrita negada, cap-drop=ALL, no-new-privileges, limites
+      # de pids/memoria/cpu, canario de contexto ausente e history sem secret.
+      - name: Harness de runtime hardened
         env:
-          NOME: ${{ matrix.nome }}
+          REQUIRE_DOCKER: "1"
+          SERVICO: ${{ matrix.nome }}
           CONTEXTO: ${{ matrix.contexto }}
-        run: docker build --tag "octaclin-${NOME}:validacao" "$CONTEXTO"
+          PORTA: "3000"
+          HEALTH_PATH: /health
+          UID_ESPERADO: ${{ matrix.uid_esperado }}
+          PIDS_LIMIT: ${{ matrix.pids }}
+          MEMORIA: ${{ matrix.memoria }}
+          CPUS: ${{ matrix.cpus }}
+          TMPFS_EXTRA: ${{ matrix.tmpfs_extra }}
+          ENV_ARGS: ${{ matrix.env_args }}
+          MODO_HEALTH: ${{ matrix.modo_health }}
+        run: bash scripts/harness-runtime-containers.sh
 
-      - name: Provar usuario nao-root e healthcheck no artefato
-        env:
-          NOME: ${{ matrix.nome }}
+      # Scan da IMAGEM construida (nao do filesystem do repo): vulnerabilidades,
+      # secrets e misconfig. Nao bloqueante (warning), coerente com a cadeia
+      # Trivy existente; findings sao triados pelo ledger do PR 49.
+      - name: Trivy sobre a imagem final
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: octaclin-${{ matrix.nome }}:pr50
+          scanners: vuln,secret,misconfig
+          format: sarif
+          output: trivy-imagem-${{ matrix.nome }}.sarif
+          exit-code: "0"
+
+      - name: Publicar scan da imagem no Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+        with:
+          sarif_file: trivy-imagem-${{ matrix.nome }}.sarif
+          category: trivy-imagem-${{ matrix.nome }}
+
+      # SBOM da imagem final (CycloneDX), associado ao artefato realmente
+      # executado — complementa o SBOM de filesystem do PR 49, nao o substitui.
+      - name: SBOM CycloneDX da imagem final
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: octaclin-${{ matrix.nome }}:pr50
+          format: cyclonedx
+          output: sbom-imagem-${{ matrix.nome }}.cyclonedx.json
+
+      - name: Registrar identidade da imagem escaneada
         run: |
-          imagem="octaclin-${NOME}:validacao"
-          usuario="$(docker image inspect --format '{{.Config.User}}' "$imagem")"
-          healthcheck="$(docker image inspect --format '{{json .Config.Healthcheck}}' "$imagem")"
+          docker image inspect --format 'ID={{.Id}} DIGESTS={{.RepoDigests}}' \
+            "octaclin-${{ matrix.nome }}:pr50" | tee identidade-${{ matrix.nome }}.txt
 
-          if [[ -z "$usuario" || "$usuario" == "root" || "$usuario" == "0" ]]; then
-            echo "Imagem $imagem executaria como root: '${usuario:-vazio}'." >&2
-            exit 1
-          fi
-          if [[ -z "$healthcheck" || "$healthcheck" == "null" || "$healthcheck" == "<nil>" ]]; then
-            echo "Imagem $imagem nao contem HEALTHCHECK." >&2
-            exit 1
-          fi
-
-          echo "Imagem $imagem: USER=$usuario; HEALTHCHECK configurado."
+      - name: Publicar SBOM e identidade da imagem
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: sbom-imagem-${{ matrix.nome }}
+          path: |
+            sbom-imagem-${{ matrix.nome }}.cyclonedx.json
+            identidade-${{ matrix.nome }}.txt
+          retention-days: 90
 
   # Provenance verificavel do SBOM. Roda em job separado justamente para que
   # `id-token: write` e `attestations: write` nao alcancem o job de scan.

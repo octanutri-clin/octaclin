@@ -1,31 +1,44 @@
-# Instalacao deterministica (PR 49). O hardening amplo de runtime
-# (capabilities, digest da imagem base e filesystem read-only) pertence ao PR 50.
+# PR 50 — Containers e runtime.
+#
+# Base fixada por digest imutavel (indice OCI multi-arch linux/amd64+arm64),
+# resolvido em 2026-09-01 no Docker Hub oficial (library/node:22-alpine). A tag
+# humana permanece para legibilidade; o digest e a ancora real. Atualizacao do
+# digest segue o processo em docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md
+# (Dependabot/humano -> scan -> build -> harness -> SBOM -> review -> merge).
 #
 # pnpm fixado em versao exata: `corepack enable` sozinho resolveria a versao a
 # partir do ambiente, e build sensivel nao deve baixar package manager implicito.
 # A versao precisa continuar igual a de package.json e do CI; o gate
 # `pnpm test:versao-pnpm` falha se divergirem.
-FROM node:22-alpine AS deps
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS deps
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 # Sem glob: o lockfile e obrigatorio. `pnpm-lock.yaml*` deixava o build seguir
-# sem lockfile quando o arquivo faltava.
+# sem lockfile quando o arquivo faltava. pnpm-workspace.yaml carrega overrides de
+# seguranca, allowBuilds e demais politicas de supply chain do PR 49.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
-FROM node:22-alpine AS build
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS build
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm build
 
-FROM node:22-alpine AS runtime
+# Dependencias de producao resolvidas aqui, ainda no modo congelado. O estagio
+# final so recebe artefatos: sem corepack, sem pnpm, sem instalacao no runtime.
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS deps-prod
 WORKDIR /app
-ENV NODE_ENV=production
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --prod --frozen-lockfile
+
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --chown=node:node package.json ./
+COPY --chown=node:node --from=deps-prod /app/node_modules ./node_modules
 COPY --chown=node:node --from=build /app/dist ./dist
 EXPOSE 3000
 USER node

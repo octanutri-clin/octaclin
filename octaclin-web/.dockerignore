@@ -1,0 +1,43 @@
+# PR 50 — .dockerignore do contexto do web.
+# O .dockerignore da raiz NAO se aplica a este contexto. Nao ignore
+# package.json/pnpm-lock.yaml/pnpm-workspace.yaml/next.config.mjs/tsconfig* —
+# o build do Next depende deles.
+
+# Artefatos e dependencias reconstruidos no build
+node_modules
+.next
+out
+coverage
+playwright-report
+test-results
+*.tsbuildinfo
+
+# Secrets e credenciais — nunca no contexto de build
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets
+credentials
+id_rsa*
+
+# Canarios de teste de contexto (prova negativa do PR 50)
+*.canary
+secret-canary.txt
+
+# Metadados e ruido de dev
+.git
+.gitignore
+.dockerignore
+Dockerfile
+*.log
+logs
+tmp
+.cache
+.turbo
+.idea
+.vscode
+.DS_Store
