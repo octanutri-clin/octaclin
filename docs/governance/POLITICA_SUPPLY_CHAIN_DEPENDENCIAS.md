@@ -224,11 +224,17 @@ rotina.
 | Risco novo do PR | `actions/dependency-review-action` | bloqueia `critical/high` novo e licenca proibida |
 | Grafo instalado (JS) | `pnpm audit` | triagem por runtime/build/install/CI |
 | Grafo instalado (Python) | `pip-audit` | auditoria do ambiente resolvido |
-| Repositorio inteiro | Trivy | scanner amplo, nao bloqueante, com SARIF no Security tab |
+| Repositorio inteiro | Trivy | scanner amplo, com SARIF no Security tab e excecoes materializadas do ledger |
 
 A separacao e deliberada: o Dependency Review bloqueia o que o PR **introduz**;
 o Trivy amplo continua nao bloqueante para nao transformar divida historica ja
 triada em bloqueio cego.
+
+O SARIF nao usa uma lista paralela de supressoes. Antes do scan, o workflow
+materializa `.trivyignore.yaml` a partir das entradas `vulnerability` do ledger
+que declaram `scannerIds` e `scannerPaths`. Cada regra herda owner, motivo e
+`expiresAt`; caminho vazio ou id invalido reprova o gate. Assim, uma excecao
+aprovada e realmente consumida pelo scanner e vence junto com a fonte canonica.
 
 `devDependency` nao e sinonimo de risco zero. Cada finding e avaliado em tres
 eixos: alcance em runtime, execucao em build/CI e privilegio disponivel no job.
@@ -273,6 +279,10 @@ util, sem prazo, vencida, com prazo maior que 180 dias, com curinga amplo em
 `version` ou com id duplicado. O gate tambem amarra ledger e configuracao: toda
 entrada de `trustPolicyExclude` precisa de excecao correspondente, e uma excecao
 que nao corresponde a nenhuma configuracao e apontada como ociosa.
+
+Excecoes `vulnerability` consumidas pelo Trivy tambem precisam declarar
+`scannerIds` e `scannerPaths`. O workflow gera o ignore file efemero a partir
+desses campos; nao existe `.trivyignore` versionado e independente do ledger.
 
 Excecao vencida quebra o gate. Esse e o comportamento desejado: a excecao volta
 para a mesa em vez de virar divida permanente.

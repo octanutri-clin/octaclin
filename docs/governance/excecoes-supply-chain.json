@@ -95,6 +95,13 @@
       "componente": "octaclin-mobile",
       "package": "image-size",
       "version": "1.2.1",
+      "scannerIds": [
+        "CVE-2025-71329",
+        "CVE-2025-71330"
+      ],
+      "scannerPaths": [
+        "octaclin-mobile/pnpm-lock.yaml"
+      ],
       "motivo": "GHSA-w3rx-r6r6-pgpr e GHSA-5p2g-fcmc-qvqq nao possuem versao corrigida publicada pelo upstream (patched_versions ausente). O pacote e fixado pelo metro dentro do react-native e nao ha correcao segura disponivel.",
       "severidade": "alta",
       "reachability": "bundler metro em tempo de build do mobile; o aplicativo permanece NO-GO para distribuicao, entao nao ha exposicao de usuario final.",

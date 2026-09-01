@@ -25,6 +25,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - name: Materializar excecoes aprovadas para o Trivy
+        run: node scripts/validar-excecoes-supply-chain.mjs --trivyignore .trivyignore.yaml
+
       - name: Escanear filesystem (não bloqueante)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -34,6 +37,7 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           exit-code: "0"
+          trivyignores: .trivyignore.yaml
 
       - name: Publicar resultado no Security tab
         uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
@@ -75,6 +79,50 @@ jobs:
             sbom.cyclonedx.json
             sbom.cyclonedx.repeticao.json
           retention-days: 90
+
+  validar-imagens:
+    name: Imagem ${{ matrix.nome }} (build e identidade)
+    runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - nome: backend
+            contexto: octaclin-backend
+          - nome: web
+            contexto: octaclin-web
+          - nome: ia-service
+            contexto: octaclin-ai-service
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Construir imagem
+        env:
+          NOME: ${{ matrix.nome }}
+          CONTEXTO: ${{ matrix.contexto }}
+        run: docker build --tag "octaclin-${NOME}:validacao" "$CONTEXTO"
+
+      - name: Provar usuario nao-root e healthcheck no artefato
+        env:
+          NOME: ${{ matrix.nome }}
+        run: |
+          imagem="octaclin-${NOME}:validacao"
+          usuario="$(docker image inspect --format '{{.Config.User}}' "$imagem")"
+          healthcheck="$(docker image inspect --format '{{json .Config.Healthcheck}}' "$imagem")"
+
+          if [[ -z "$usuario" || "$usuario" == "root" || "$usuario" == "0" ]]; then
+            echo "Imagem $imagem executaria como root: '${usuario:-vazio}'." >&2
+            exit 1
+          fi
+          if [[ -z "$healthcheck" || "$healthcheck" == "null" || "$healthcheck" == "<nil>" ]]; then
+            echo "Imagem $imagem nao contem HEALTHCHECK." >&2
+            exit 1
+          fi
+
+          echo "Imagem $imagem: USER=$usuario; HEALTHCHECK configurado."
 
   # Provenance verificavel do SBOM. Roda em job separado justamente para que
   # `id-token: write` e `attestations: write` nao alcancem o job de scan.

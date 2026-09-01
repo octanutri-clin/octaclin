@@ -2583,10 +2583,12 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Lock Python com grafo transitivo resolvido e hashes; prova negativa de hash adulterado no CI.
   - [x] Ledger de excecoes com owner e prazo, politica de licencas com semantica SPDX e Dependency Review bloqueando critical/high novo.
   - [x] SBOM com prova de reproducao semantica, cobertura por ecossistema e atestado de proveniencia.
+  - [x] Alertas Trivy reavaliados: tres imagens corrigidas para usuario non-root e healthcheck; dois CVEs sem patch amarrados ao ledger datado, sem supressao paralela.
+  - [x] Gate de Dockerfiles e build/inspecao das tres imagens adicionados ao CI do PR.
   - [ ] Checks e review/merge humanos do Pull Request contra `main`.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md`.
   - Norma duravel: `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`.
-- [ ] PR 50 - Endurecer containers e runtime.
+- [ ] PR 50 - Concluir hardening de containers e runtime (digest, capabilities, filesystem gravavel minimo, limites e smoke dos probes sem privilegios extras).
 - [ ] PR 51 - Aplicar menor privilegio em Render, Neon, Redis e Backblaze.
 - [ ] PR 52 - Consolidar observabilidade, auditoria e resposta a incidentes.
 - [ ] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.

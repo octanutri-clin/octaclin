@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   TIPOS_VALIDOS,
+  gerarTrivyIgnore,
   validarArquivoDeExcecoes,
   validarLedger,
 } from './validar-excecoes-supply-chain.mjs';
@@ -126,4 +127,42 @@ test('rejeita estrutura invalida', () => {
 test('o ledger real do repositorio e valido e nenhuma excecao esta vencida', () => {
   const resultado = validarArquivoDeExcecoes();
   assert.match(resultado, /Excecoes de supply chain validas/);
+});
+
+test('gera excecoes Trivy somente para vulnerabilidades com ids e caminhos explicitos', () => {
+  const documento = gerarTrivyIgnore(
+    ledger([
+      excecao({
+        tipo: 'vulnerability',
+        package: 'image-size',
+        version: '1.2.1',
+        scannerIds: ['CVE-2025-71329', 'CVE-2025-71330'],
+        scannerPaths: ['octaclin-mobile/pnpm-lock.yaml'],
+      }),
+      excecao({ id: 'SC-2026-998' }),
+    ])
+  );
+
+  assert.match(documento, /^vulnerabilities:\n/);
+  assert.match(documento, /id: CVE-2025-71329/);
+  assert.match(documento, /id: CVE-2025-71330/);
+  assert.match(documento, /octaclin-mobile\/pnpm-lock\.yaml/);
+  assert.match(documento, /expired_at: 2026-12-01/);
+  assert.doesNotMatch(documento, /pacote-exemplo/);
+});
+
+test('rejeita excecao de scanner sem caminho restrito', () => {
+  assert.throws(
+    () =>
+      gerarTrivyIgnore(
+        ledger([
+          excecao({
+            tipo: 'vulnerability',
+            scannerIds: ['CVE-2025-71329'],
+            scannerPaths: [],
+          }),
+        ])
+      ),
+    (erro) => erro.message.includes('scannerPaths')
+  );
 });

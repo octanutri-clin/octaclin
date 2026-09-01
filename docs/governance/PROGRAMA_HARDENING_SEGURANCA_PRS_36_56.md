@@ -40,8 +40,10 @@
 > (`7b42d411b76ce8f4bfb268d495a0330d842fa3b8`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md`.
 > Estado do PR 49: implementacao concluida em branch dedicada
-> (`security/governanca-pr49-supply-chain-dependencias`). Aguardando review
-> humano, required checks e merge. Relatorio:
+> (`security/governanca-pr49-supply-chain-dependencias`). Correcao pos-review
+> eliminou DS-0002/DS-0026 dos tres Dockerfiles e ligou as duas excecoes sem
+> patch ao Trivy por ledger datado. Aguardando required checks e review humano.
+> Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md`. Norma duravel:
 > `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`.
 
@@ -480,15 +482,16 @@ em `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`.
 
 **Risco:** R3. **Bloqueador:** sim.
 
-- Fixar imagens por digest, executar sem root, reduzir capabilities e filesystem
-  gravavel, adicionar healthcheck e limites.
+- Fixar imagens por digest, reduzir capabilities e filesystem gravavel, adicionar
+  limites e provar em runtime os usuarios non-root e healthchecks introduzidos
+  corretivamente no PR 49.
 - Remover ferramentas e secrets das imagens finais.
 
 Skills Claude: `security-review`, `test-driven-development`,
 `requesting-code-review`.
 
-Gate minimo: scan de imagem; identidade non-root comprovada; imagem sobe e
-healthcheck passa sem privilegios extras.
+Gate minimo: scan de imagem; digest fixo; imagem sobe e healthcheck passa sem
+privilegios extras; filesystem e capabilities minimos comprovados.
 
 ### PR 51 - Providers e menor privilegio
 

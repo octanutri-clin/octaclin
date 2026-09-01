@@ -254,7 +254,7 @@ reprova. Tres testes unitarios novos cobrem o caso.
 Este achado e a razao de o gate existir: o SBOM anterior era publicado sem
 nenhuma verificacao de que duas execucoes descreviam o mesmo inventario.
 
-### A11 - Alertas Trivy de container sao preexistentes, nao introduzidos
+### A11 - Alertas Trivy preexistentes bloquearam o PR e exigiram correcao
 
 **Severidade:** informativa. **Fonte:** check `Trivy` do PR 49, que reportou
 "8 new alerts including 5 high severity".
@@ -265,25 +265,38 @@ existiam nesses arquivos. Comparacao reproduzivel entre `origin/main` e o HEAD d
 PR, ambos exportados limpos com `git archive` e escaneados com
 `trivy fs --scanners vuln,misconfig,license`:
 
-| | Baseline `origin/main` | HEAD do PR 49 |
-| --- | --- | --- |
-| Total de findings | 9 | 8 |
-| `DS-0002` (sem USER non-root) | 3 (HIGH) | 3 (HIGH) |
-| `DS-0026` (sem HEALTHCHECK) | 3 (LOW) | 3 (LOW) |
-| `CVE-2025-71329` / `CVE-2025-71330` (`image-size@1.2.1`) | 2 (HIGH) | 2 (HIGH) |
-| `CVE-2026-45822` (`decode-uri-component@0.2.2`) | 1 (MEDIUM) | **0 - removido** |
+| | Baseline `origin/main` | HEAD antes da correcao | HEAD corrigido |
+| --- | --- | --- | --- |
+| Total de findings | 9 | 8 | 2 brutos / 0 apos ledger |
+| `DS-0002` (sem USER non-root) | 3 (HIGH) | 3 (HIGH) | **0** |
+| `DS-0026` (sem HEALTHCHECK) | 3 (LOW) | 3 (LOW) | **0** |
+| `CVE-2025-71329` / `CVE-2025-71330` (`image-size@1.2.1`) | 2 (HIGH) | 2 (HIGH) | 2 brutos / **0 apos SC-2026-005** |
+| `CVE-2026-45822` (`decode-uri-component@0.2.2`) | 1 (MEDIUM) | **0 - removido** | **0** |
 
-**Findings novos introduzidos pelo PR: nenhum. Findings removidos: um.** Os cinco
-HIGH sao os tres `DS-0002` mais os dois CVEs de `image-size`, ja triados como
-`SC-2026-005` no ledger.
+**Findings novos introduzidos pelo PR: nenhum.** A conclusao inicial de apenas
+adiar os seis findings de Docker para o PR 50 foi revista porque o proprio PR 49
+alterou os tres Dockerfiles e passou a receber um check bloqueante. Alem disso,
+o backend de producao no Render usa de fato `octaclin-backend/Dockerfile`; deixar
+`DS-0002` aberto manteria o processo de producao como root.
 
-`DS-0002` e `DS-0026` sao exatamente non-root e healthcheck, itens que o programa
-de hardening atribui explicitamente ao **PR 50 - Containers e runtime**. Corrigi-los
-aqui ampliaria o escopo do PR 49 e, no ambiente desta execucao, seria uma mudanca
-nao testada: o daemon do Docker nao esta disponivel, entao nao ha como provar que
-as imagens continuam subindo com `USER` non-root (o `next start` da web escreve em
-`.next/cache`) nem que ha binario para o `HEALTHCHECK` nas imagens `alpine` e
-`slim`. Fica registrado como divida conhecida, com dono definido no PR 50.
+Correcao estreita aplicada no mesmo PR:
+
+- os tres estagios finais declaram `USER` non-root;
+- os tres artefatos declaram `HEALTHCHECK` usando Node/Python ja presentes, sem
+  instalar `curl` apenas para o probe;
+- a web concede escrita somente a `.next`, onde o Next pode manter cache;
+- teste estatico reprova regressao e o workflow constroi as tres imagens antes
+  de inspecionar `Config.User` e `Config.Healthcheck`.
+
+Os dois CVEs de `image-size` continuam sem versao corrigida. O erro adicional
+era de governanca: `SC-2026-005` existia no ledger, mas o Trivy nao o consumia.
+O workflow agora gera um `.trivyignore.yaml` efemero diretamente do ledger, com
+ids, caminho e expiracao. Nao existe supressao paralela ou sem prazo.
+
+**Prova com Trivy 0.74.0:** sem o ignore gerado restam exatamente
+`CVE-2025-71329` e `CVE-2025-71330`; com a excecao aprovada restam zero findings.
+Digest, capabilities, filesystem read-only e smoke completo dos probes continuam
+no PR 50.
 
 ### A12 - `minimumReleaseAge` e reaplicado ao lockfile, o que limita o valor
 
@@ -523,7 +536,8 @@ ociosa.
 | --- | --- | --- |
 | `pnpm test:versao-pnpm` | PASS | 9 testes; 11 declaracoes consistentes em 11.25.0 |
 | `pnpm test:instalacao-congelada` | PASS | 2 testes; pnpm real contra registry local efemero |
-| `pnpm test:excecoes-supply-chain` | PASS | 13 testes; 5 excecoes, 8 amarracoes com `trustPolicyExclude` |
+| `pnpm test:excecoes-supply-chain` | PASS | 15 testes; 5 excecoes, 4 entradas unicas amarradas com `trustPolicyExclude` e 2 CVEs materializados para o Trivy |
+| `pnpm test:dockerfiles-runtime` | PASS | 3 testes; tres estagios finais non-root e com healthcheck sem ferramenta adicional; web inicia sem depender do cache Corepack do root |
 | `pnpm test:licencas` | PASS | 11 testes de semantica SPDX e coerencia da politica |
 | `pnpm test:lock-python` | PASS | 7 testes sobre o lock real |
 | `pnpm test:sbom` | PASS | 12 testes de normalizacao, reproducao e cobertura |
@@ -563,7 +577,8 @@ ociosa.
 | `pip-audit` | SKIPPED localmente | passa a rodar no job `AI FastAPI` do CI, com `--strict`, sobre o ambiente instalado |
 | CodeQL | SKIPPED localmente | executa no CI do PR |
 | Semgrep | SKIPPED localmente | executa no CI do PR |
-| Trivy | SKIPPED localmente | executa no CI do PR |
+| Trivy 0.74.0 sem ignore | PASS de diagnostico | exatamente 2 findings HIGH, ambos `image-size` sem patch; nenhum DS-0002/DS-0026 |
+| Trivy 0.74.0 com ignore gerado do ledger | PASS | zero findings; excecao restrita ao lockfile mobile e com vencimento em 2026-12-01 |
 | Dependency Review | SKIPPED localmente | introduzido neste PR; executa em `pull_request` |
 | Scanner de secrets | PASS | `pnpm security:secrets` e `pnpm test:security` |
 
@@ -607,8 +622,11 @@ Nenhuma migration executada.
    ate que o lock seja regenerado no proprio PR.
 6. **O SBOM do Trivy e do filesystem.** Ele inventaria os lockfiles do
    repositorio, nao a imagem final publicada. SBOM de imagem pertence ao PR 50.
-7. **Hardening de container permanece aberto.** Non-root, capabilities, digest da
-   imagem base, filesystem somente leitura e healthcheck sao escopo do PR 50.
+7. **Hardening amplo de container permanece aberto.** Non-root e declaracao de
+   healthcheck foram corrigidos neste PR; digest da imagem base, capabilities,
+   filesystem somente leitura, limites e smoke completo dos probes permanecem
+   no PR 50. O daemon Docker nao existe no host local desta correcao; por isso o
+   build e a inspecao dos tres artefatos sao executados no workflow do PR.
 
 ---
 

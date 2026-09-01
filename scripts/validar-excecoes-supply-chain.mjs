@@ -9,7 +9,7 @@
 // e vice-versa, para que nao seja possivel afrouxar a politica do pnpm sem
 // registrar owner e prazo.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -220,6 +220,43 @@ export function validarAmarracaoComWorkspaces(ledger, { raiz = RAIZ } = {}) {
   return declaradas.size;
 }
 
+export function gerarTrivyIgnore(ledger) {
+  const vulnerabilidades = ledger.excecoes.filter(
+    (excecao) => excecao.tipo === 'vulnerability' && excecao.scannerIds !== undefined
+  );
+  const linhas = ['vulnerabilities:'];
+
+  for (const excecao of vulnerabilidades) {
+    if (!Array.isArray(excecao.scannerIds) || excecao.scannerIds.length === 0) {
+      falhar(`excecao ${excecao.id} precisa de "scannerIds" com ao menos um finding.`);
+    }
+    if (!Array.isArray(excecao.scannerPaths) || excecao.scannerPaths.length === 0) {
+      falhar(`excecao ${excecao.id} precisa de "scannerPaths" para restringir o alcance da supressao.`);
+    }
+
+    for (const id of excecao.scannerIds) {
+      if (typeof id !== 'string' || !/^(?:CVE-\d{4}-\d{4,}|GHSA-[a-z0-9-]+)$/.test(id)) {
+        falhar(`excecao ${excecao.id} tem scannerId invalido: ${JSON.stringify(id)}.`);
+      }
+
+      linhas.push(`  - id: ${id}`, '    paths:');
+      for (const caminho of excecao.scannerPaths) {
+        if (typeof caminho !== 'string' || caminho.trim() === '' || caminho.includes('..')) {
+          falhar(`excecao ${excecao.id} tem scannerPath invalido: ${JSON.stringify(caminho)}.`);
+        }
+        linhas.push(`      - ${JSON.stringify(caminho)}`);
+      }
+      linhas.push(
+        `    statement: ${JSON.stringify(`${excecao.id}: ${excecao.motivo}`)}`,
+        `    expired_at: ${excecao.expiresAt}`
+      );
+    }
+  }
+
+  if (linhas.length === 1) linhas.push('  []');
+  return `${linhas.join('\n')}\n`;
+}
+
 export function validarArquivoDeExcecoes({ caminho = CAMINHO_LEDGER, hoje = new Date() } = {}) {
   let ledger;
   try {
@@ -235,5 +272,13 @@ export function validarArquivoDeExcecoes({ caminho = CAMINHO_LEDGER, hoje = new 
 }
 
 if (process.argv[1] && process.argv[1].endsWith('validar-excecoes-supply-chain.mjs')) {
-  console.log(validarArquivoDeExcecoes());
+  const resultado = validarArquivoDeExcecoes();
+  const indiceSaidaTrivy = process.argv.indexOf('--trivyignore');
+  if (indiceSaidaTrivy >= 0) {
+    const caminhoSaida = process.argv[indiceSaidaTrivy + 1];
+    if (!caminhoSaida) falhar('informe o caminho de saida depois de --trivyignore.');
+    const ledger = JSON.parse(readFileSync(CAMINHO_LEDGER, 'utf8'));
+    writeFileSync(resolve(caminhoSaida), gerarTrivyIgnore(ledger), 'utf8');
+  }
+  console.log(resultado);
 }
