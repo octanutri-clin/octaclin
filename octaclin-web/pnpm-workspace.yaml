@@ -37,8 +37,10 @@ allowBuilds:
 # esta medida acima: 10080 reprova a instalacao congelada. Suprimida aqui, e
 # nao dispensada no Security tab, para que a decisao viva versionada e passe
 # por review junto de qualquer mudanca futura deste valor.
-# nosemgrep: package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age
-minimumReleaseAge: 1440
+# A supressao e por `nosemgrep` sem rule id: a forma qualificada pelo id
+# completo nao casou sob `semgrep scan --config auto`. Esta linha so e
+# alcancada por esta regra, entao o escopo mais largo nao esconde nada.
+minimumReleaseAge: 1440 # nosemgrep
 minimumReleaseAgeStrict: true
 
 trustPolicy: no-downgrade
