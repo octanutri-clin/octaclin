@@ -285,6 +285,54 @@ as imagens continuam subindo com `USER` non-root (o `next start` da web escreve 
 `.next/cache`) nem que ha binario para o `HEALTHCHECK` nas imagens `alpine` e
 `slim`. Fica registrado como divida conhecida, com dono definido no PR 50.
 
+### A12 - `minimumReleaseAge` e reaplicado ao lockfile, o que limita o valor
+
+**Severidade:** informativa. **Fonte:** regra `pnpm-minimum-release-age` do
+Semgrep no PR 49, que recomenda `minimumReleaseAge: 10080` (7 dias).
+
+A regra foi verificada em vez de acatada ou ignorada. Medicao de 2026-09-01, com
+store novo para forcar verificacao completa:
+
+| Valor | Backend | Web | Mobile |
+| --- | --- | --- | --- |
+| `1440` (24h) | passa | passa | passa |
+| `10080` (7 dias) | **reprova, 8 entradas** | **reprova, 43 entradas** | passa |
+
+As entradas reprovadas sao pacotes publicados entre 2026-08-25 e 2026-08-29
+(`@nestjs/*@11.2.3`, `bullmq@6.2.2`, `nodemailer@9.0.6`, `qs@6.16.0`,
+`tar-stream@3.2.1`, a familia `@img/sharp-*`), vindos de bumps recentes do
+Dependabot ja integrados ao `main`.
+
+Fato tecnico apurado: com `minimumReleaseAgeStrict`, o pnpm reaplica a janela ao
+**lockfile** a cada instalacao, nao apenas na resolucao. Desligar o strict nao
+altera o comportamento -- testado, a instalacao continua reprovando pelas mesmas
+8 entradas. O teto pratico do valor e, portanto, a idade do pacote mais novo ja
+travado.
+
+**Decisao:** manter `1440`. Elevar para 7 dias deixaria este PR vermelho sobre um
+lockfile legitimamente atual. A recomendacao generica da regra nao considera esse
+acoplamento, e o `cooldown` de 3 a 30 dias do Dependabot ja faz o caminho
+rotineiro esperar mais que 24 horas; o que `minimumReleaseAge` fecha e a
+instalacao manual de pacote publicado ha minutos. O raciocinio e o procedimento
+de revisao ficaram registrados na politica e em comentario nos quatro
+`pnpm-workspace.yaml`.
+
+### A13 - RegExp construida em tempo de execucao no gate de auditoria do mobile
+
+**Severidade:** baixa. **Fonte:** regra `detect-non-literal-regexp` do Semgrep
+sobre `octaclin-mobile/scripts/audit-seguranca-lib.mjs`, codigo introduzido pelo
+proprio PR 49 ao adaptar o gate ao formato do pnpm 11.
+
+O achado procede como padrao, ainda que o insumo (`excecao.modulo`) venha de uma
+constante do proprio arquivo e nao de entrada externa. A correcao elimina a
+construcao dinamica em vez de justifica-la: a comparacao passou a ser por
+segmento de string.
+
+Ganho colateral de precisao: a nova checagem exige que o modulo seja o **ultimo
+segmento** do caminho, entao `...>metro>image-size-extra` deixa de ser aceito --
+coberto por teste negativo novo. Dois testes adicionais garantem que os formatos
+do pnpm 9 e do pnpm 11 continuam reconhecidos.
+
 ---
 
 ## 3. Package manager

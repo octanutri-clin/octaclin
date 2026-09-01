@@ -116,6 +116,20 @@ diferenca entre "analisado e recusado" e "ninguem olhou".
 os componentes. Uma versao publicada ha poucos minutos nao entra
 automaticamente, o que reduz a janela de um pacote comprometido recem-publicado.
 
+**O valor nao e livre.** Com `minimumReleaseAgeStrict`, o pnpm reaplica a janela
+ao lockfile a cada instalacao, e nao apenas na resolucao -- desligar o strict nao
+muda isso. O teto pratico e, portanto, a idade do pacote mais novo ja travado.
+Medicao de 2026-09-01: `minimumReleaseAge: 10080` (7 dias) reprovava a instalacao
+congelada em 8 entradas do backend e 43 da web, todas vindas de bumps recentes do
+Dependabot. Uma recomendacao generica de 7 dias, como a da regra
+`pnpm-minimum-release-age` do Semgrep, ignora esse acoplamento.
+
+Como o Dependabot ja aplica `cooldown` de 3 a 30 dias por tipo de semver, o
+caminho rotineiro de atualizacao ja espera mais que 24 horas. A janela que
+`minimumReleaseAge` fecha e a outra: alguem instalando manualmente um pacote
+publicado ha minutos. Antes de elevar o valor, verifique a idade do pacote mais
+novo dos quatro lockfiles.
+
 Excecao para patch de seguranca urgente: usar `minimumReleaseAgeExclude` com
 `pacote@versao` exatos -- nunca curinga global -- e registrar excecao do tipo
 `minimumReleaseAge` no ledger, com owner e prazo. Remover a entrada assim que a

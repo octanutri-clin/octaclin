@@ -120,3 +120,21 @@ test('reprova excecao cujo caminho nao termina no modulo esperado', () => {
   relatorio.advisories[1138809].findings[0].paths = ['.>react-native>metro>outro-modulo'];
   assert.equal(avaliarAuditoria(relatorio).aprovado, false);
 });
+
+test('reconhece o modulo como ultimo segmento e tambem anotado com versao', () => {
+  for (const caminho of [
+    '.>react-native>metro>image-size',
+    '. > metro@0.84.4 > image-size@1.2.1',
+    '.>a>metro>b>image-size',
+  ]) {
+    const relatorio = relatorioPermitidoPnpm11();
+    for (const id of [1138808, 1138809]) relatorio.advisories[id].findings[0].paths = [caminho];
+    assert.equal(avaliarAuditoria(relatorio).aprovado, true, `deveria aceitar ${caminho}`);
+  }
+});
+
+test('nao confunde modulo com pacote de nome mais longo', () => {
+  const relatorio = relatorioPermitidoPnpm11();
+  relatorio.advisories[1138808].findings[0].paths = ['.>react-native>metro>image-size-extra'];
+  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
+});

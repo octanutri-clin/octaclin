@@ -19,6 +19,16 @@ const EXCECOES_SEM_CORRECAO = new Map([
   ],
 ]);
 
+// Sem RegExp construida em tempo de execucao: o ultimo segmento do caminho e
+// comparado como string. Alem de evitar ReDoS por construcao, isso e mais
+// preciso do que `includes`, que aceitaria "image-size-extra".
+function terminaNoModulo(caminho, modulo) {
+  const segmentos = caminho.split('>').map((parte) => parte.trim());
+  const ultimo = segmentos[segmentos.length - 1] ?? '';
+  const semVersao = ultimo.includes('@', 1) ? ultimo.slice(0, ultimo.lastIndexOf('@')) : ultimo;
+  return semVersao === modulo;
+}
+
 function validarExcecao(advisory) {
   const excecao = EXCECOES_SEM_CORRECAO.get(advisory.github_advisory_id);
   if (!excecao) return false;
@@ -47,11 +57,7 @@ function validarExcecao(advisory) {
     // O pnpm 9 anotava a versao no caminho ('... > image-size@1.2.1') e o pnpm
     // 11 nao. A versao ja e verificada acima, em `versoes`; aqui o caminho so
     // precisa provar a origem: o modulo chega pelo metro.
-    caminhos.every(
-      (caminho) =>
-        caminho.includes('metro') &&
-        new RegExp(`(^|[>\\s/])${excecao.modulo}(@|$|[>\\s])`).test(caminho)
-    )
+    caminhos.every((caminho) => caminho.includes('metro') && terminaNoModulo(caminho, excecao.modulo))
   );
 }
 

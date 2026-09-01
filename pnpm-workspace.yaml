@@ -12,7 +12,13 @@ packages:
 strictDepBuilds: true
 allowBuilds: {}
 
-# Maturacao minima de 24h antes de instalar uma versao recem-publicada.
+# 1440 minutos (24h). O valor nao e livre: com `minimumReleaseAgeStrict` o pnpm
+# reaplica a janela ao lockfile a cada instalacao, entao o teto pratico e a idade
+# do pacote mais novo ja travado. Medido em 2026-09-01, 10080 (7 dias) reprovava
+# a instalacao congelada em 8 entradas do backend e 43 da web, vindas de bumps
+# recentes do Dependabot. Como o proprio Dependabot ja espera 3 a 30 dias por
+# cooldown, 1440 cobre a janela que resta: instalacao manual de pacote
+# recem-publicado.
 minimumReleaseAge: 1440
 minimumReleaseAgeStrict: true
 
