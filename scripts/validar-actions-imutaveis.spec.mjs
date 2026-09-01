@@ -40,6 +40,26 @@ test('rejeita sintaxe inline que poderia escapar da validacao da referencia', ()
   );
 });
 
+// PR 49 introduziu tres referencias novas. O gate precisa reconhece-las pelo
+// SHA completo, e recusa-las se alguem trocar por tag mutavel.
+for (const [nome, referencia] of [
+  ['dependency-review', 'actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0'],
+  ['attest-build-provenance', 'actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2'],
+  ['download-artifact', 'actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7'],
+]) {
+  test(`aceita a action nova do PR 49 fixada por SHA: ${nome}`, () => {
+    assert.equal(validarConteudoWorkflow(`steps:\n  - uses: ${referencia}`), 1);
+  });
+
+  test(`rejeita a mesma action nova por tag mutavel: ${nome}`, () => {
+    const porTag = `${referencia.split('@')[0]}@v5`;
+    assert.throws(
+      () => validarConteudoWorkflow(`steps:\n  - uses: ${porTag}`, 'mutavel.yml'),
+      (erro) => erro instanceof Error && erro.message.includes('SHA completo de 40 caracteres')
+    );
+  });
+}
+
 test('todos os workflows reais obedecem a politica', () => {
   assert.match(validarWorkflows(), /Actions imutaveis validas/);
 });

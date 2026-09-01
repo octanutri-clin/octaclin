@@ -1,0 +1,33 @@
+# Politica de supply chain da raiz (PR 49). A raiz nao declara dependencias:
+# os gates de governanca rodam com `node` puro. As chaves abaixo existem para
+# que qualquer dependencia futura ja nasca sob a mesma politica dos apps.
+#
+# Fonte de verdade da versao do pnpm: campo `packageManager` de cada
+# package.json. Ver docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md.
+packages:
+  - "."
+
+# Lifecycle script de dependencia e execucao de codigo: negado por padrao,
+# permitido apenas por decisao explicita registrada em `allowBuilds`.
+strictDepBuilds: true
+allowBuilds: {}
+
+# 1440 minutos (24h). O valor nao e livre: com `minimumReleaseAgeStrict` o pnpm
+# reaplica a janela ao lockfile a cada instalacao, entao o teto pratico e a idade
+# do pacote mais novo ja travado. Medido em 2026-09-01, 10080 (7 dias) reprovava
+# a instalacao congelada em 8 entradas do backend e 43 da web, vindas de bumps
+# recentes do Dependabot. Como o proprio Dependabot ja espera 3 a 30 dias por
+# cooldown, 1440 cobre a janela que resta: instalacao manual de pacote
+# recem-publicado.
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+
+# Recusa versao publicada com autenticacao mais fraca que versoes anteriores.
+trustPolicy: no-downgrade
+
+# Dependencia transitiva nao escolhe origem arbitraria (git, URL, tarball).
+blockExoticSubdeps: true
+
+# Integridade do store permanece verificada.
+verifyStoreIntegrity: true
+strictStorePkgContentCheck: true

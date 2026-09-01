@@ -15,7 +15,7 @@ concurrency:
 
 env:
   NODE_VERSION: "22"
-  PNPM_VERSION: "9"
+  PNPM_VERSION: "11.25.0"
 
 jobs:
   rollout-seguro:
@@ -65,6 +65,18 @@ jobs:
       - run: pnpm test:workflows-seguros
       - run: pnpm test:triagem-seguranca
       - run: pnpm test:tooling-agentes
+      # Gates de supply chain do PR 49: versao unica do package manager,
+      # ledger de excecoes com owner/prazo e politica de licencas.
+      - run: pnpm test:versao-pnpm
+      - run: pnpm test:excecoes-supply-chain
+      - run: pnpm test:dockerfiles-runtime
+      - run: pnpm test:licencas
+      - run: pnpm test:lock-python
+      - run: pnpm test:sbom
+      # Executa o pnpm real contra fixtures sinteticas locais: prova que
+      # lifecycle nao aprovado falha e que manifest divergente reprova o modo
+      # congelado. Configuracao presente nao e controle ativo.
+      - run: pnpm test:instalacao-congelada
       - run: pnpm security:secrets
 
   backend:
@@ -122,7 +134,9 @@ jobs:
           cache: pnpm
           cache-dependency-path: octaclin-backend/pnpm-lock.yaml
 
-      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm install --frozen-lockfile
+      - name: Auditar licencas das dependencias instaladas
+        run: node ../scripts/validar-licencas.mjs node_modules
       - run: pnpm typecheck
       - run: pnpm build
 
@@ -142,7 +156,7 @@ jobs:
           SQL
 
       - name: Suite completa
-        run: pnpm test -- --runInBand
+        run: pnpm test --runInBand
 
       - name: Provar rate limit e idempotencia com Redis real
         env:
@@ -171,7 +185,9 @@ jobs:
           cache: pnpm
           cache-dependency-path: octaclin-web/pnpm-lock.yaml
 
-      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm install --frozen-lockfile
+      - name: Auditar licencas das dependencias instaladas
+        run: node ../scripts/validar-licencas.mjs node_modules
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test:seguranca-operacional
@@ -202,6 +218,8 @@ jobs:
           cache-dependency-path: octaclin-mobile/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
+      - name: Auditar licencas das dependencias instaladas
+        run: node ../scripts/validar-licencas.mjs node_modules
       - run: pnpm typecheck
       - run: pnpm doctor
       - run: pnpm test:security
@@ -223,8 +241,49 @@ jobs:
           python-version: "3.12"
 
       - run: python -m pip install --upgrade pip
-      - run: pip install -r requirements.txt
+
+      # Instalacao reproduzivel: versoes exatas de todo o grafo, verificadas por
+      # hash. `requirements.txt` continua sendo a lista de dependencias diretas.
+      - name: Instalar a partir do lock verificado por hash
+        run: pip install --require-hashes -r requirements.lock.txt
+
+      # Prova negativa: hash adulterado precisa reprovar a instalacao. Sem isto,
+      # `--require-hashes` seria apenas uma flag que ninguem verificou.
+      - name: Provar que hash adulterado reprova a instalacao
+        run: |
+          python - <<'PY'
+          import re
+          linhas = open('requirements.lock.txt').read().splitlines()
+          saida, alvo, trocados = [], False, 0
+          for linha in linhas:
+              if linha.startswith('fastapi=='):
+                  alvo = True
+              elif linha and not linha[0].isspace() and not linha.startswith('#'):
+                  alvo = False
+              if alvo and '--hash=sha256:' in linha:
+                  linha = re.sub(r'sha256:[0-9a-f]{64}', 'sha256:' + '0' * 64, linha)
+                  trocados += 1
+              saida.append(linha)
+          assert trocados > 0, 'nenhum hash de fastapi foi encontrado para adulterar'
+          open('/tmp/requirements.adulterado.txt', 'w').write('\n'.join(saida) + '\n')
+          PY
+          if pip install --force-reinstall --no-deps --no-cache-dir --require-hashes -r /tmp/requirements.adulterado.txt; then
+            echo "FALHA: instalacao com hash adulterado deveria ser recusada"
+            exit 1
+          fi
+          echo "OK: hash adulterado reprovou a instalacao"
+          pip install --force-reinstall --no-deps --no-cache-dir --require-hashes -r requirements.lock.txt
+
       - run: python -m py_compile app/main.py
+
+      # Auditoria contra o grafo resolvido, nao contra a lista de diretas.
+      # O pip-audit vive num venv separado para nao entrar no ambiente do
+      # servico e alterar o que esta sendo auditado.
+      - name: pip-audit sobre o grafo resolvido
+        run: |
+          python -m venv /tmp/venv-audit
+          /tmp/venv-audit/bin/pip install --quiet pip-audit
+          /tmp/venv-audit/bin/pip-audit --strict --no-deps -r requirements.lock.txt
 
   demo-smoke:
     name: Demo local smoke
@@ -262,11 +321,11 @@ jobs:
 
       - name: Install backend dependencies
         working-directory: octaclin-backend
-        run: pnpm install --frozen-lockfile=false
+        run: pnpm install --frozen-lockfile
 
       - name: Install web dependencies
         working-directory: octaclin-web
-        run: pnpm install --frozen-lockfile=false
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium
         working-directory: octaclin-web

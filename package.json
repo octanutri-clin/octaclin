@@ -2,6 +2,7 @@
   "name": "octaclin",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.25.0+sha512.5cde925b4f075f725eb71fbae18a42ffe784524789f19b61c731cb8721ec28aaee160e01a8d5af4fedb2a42cdbf300efe23db356b0d4a17b4d63e11f8ab7c956",
   "scripts": {
     "security:secrets": "node scripts/scan-secrets.mjs",
     "test:security": "node scripts/test-scan-secrets.mjs",
@@ -27,6 +28,15 @@
     "test:workflows-seguros": "node --test scripts/validar-workflows-sem-injecao.spec.mjs",
     "test:triagem-seguranca": "node --test scripts/validar-triagem-seguranca.spec.mjs",
     "test:tooling-agentes": "node --test scripts/validar-tooling-agentes.spec.mjs",
+    "test:versao-pnpm": "node --test scripts/validar-versao-pnpm.spec.mjs",
+    "test:excecoes-supply-chain": "node --test scripts/validar-excecoes-supply-chain.spec.mjs",
+    "test:dockerfiles-runtime": "node --test scripts/validar-dockerfiles-runtime.spec.mjs",
+    "test:licencas": "node --test scripts/validar-licencas.spec.mjs",
+    "test:lock-python": "node --test scripts/validar-lock-python.spec.mjs",
+    "test:sbom": "node --test scripts/validar-sbom.spec.mjs",
+    "test:instalacao-congelada": "node --test scripts/validar-instalacao-congelada.spec.mjs",
+    "audit:licencas": "node scripts/validar-licencas.mjs",
+    "validar:sbom": "node scripts/validar-sbom.mjs",
     "validate": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1",
     "validate:docs": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -DocsOnly",
     "validate:full": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -Full"

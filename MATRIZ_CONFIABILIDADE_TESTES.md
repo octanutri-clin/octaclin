@@ -1,6 +1,6 @@
 # OctaClin - Matriz de confiabilidade e regressao
 
-Atualizada no PR 48 da governanca de seguranca em 2026-08-31. A cobertura,
+Atualizada no PR 49 da governanca de seguranca em 2026-09-01. A cobertura,
 as excecoes e os riscos residuais de acessibilidade tem matriz propria em
 `docs/governance/matriz-acessibilidade.json`, validada por `pnpm test:a11y:matriz`.
 Esta matriz conecta os riscos de maior
@@ -44,6 +44,14 @@ smoke real de integracoes ou validacao manual de go-live.
 | Supply chain dos workflows | Actions remotas usam somente SHA completo de 40 caracteres e preservam a versao em comentario para atualizacao pelo Dependabot; tags, branches, SHA abreviado e pin sem versao documentada reprovam. Teste: `scripts/validar-actions-imutaveis.spec.mjs`. | `pnpm test:actions-imutaveis` | Bloqueia o job Governanca de repositorio |
 | Injecao em scripts de deploy | Expressoes do GitHub Actions nao podem ser interpoladas diretamente em blocos `run`; inputs, matriz e secrets entram por `env` e sao usados como variaveis entre aspas. Payloads sinteticos com quebra de aspas, substituicao de comando e crases reprovam. Teste: `scripts/validar-workflows-sem-injecao.spec.mjs`. | `pnpm test:workflows-seguros` | Bloqueia o job Governanca de repositorio |
 | Triagem factual de seguranca | O snapshot canonico cobre cada alerta CodeQL, Semgrep, Trivy e Dependabot exatamente uma vez; duplicatas apontam para um alerta primario e achados confirmados exigem fonte, sink, pre-condicoes, mitigacoes, impacto, severidade e PR de remediacao. Teste: `scripts/validar-triagem-seguranca.spec.mjs` sobre `docs/governance/triagem-seguranca-pr37.json`. | `pnpm test:triagem-seguranca` | Bloqueia o job Governanca de repositorio |
+| Versao do package manager | Uma unica versao exata de pnpm em `package.json` dos quatro componentes, `PNPM_VERSION` do CI e `corepack prepare` dos Dockerfiles; major solto, divergencia entre fontes e `corepack enable` sem versao fixada reprovam. Teste: `scripts/validar-versao-pnpm.spec.mjs`. | `pnpm test:versao-pnpm` | Bloqueia o job Governanca de repositorio |
+| Lifecycle script de dependencia e instalacao congelada | Executa o pnpm real contra fixtures sinteticas servidas por registry local efemero: dependencia com lifecycle nao aprovada reprova a instalacao e nao executa o script, dependencia aprovada instala e executa, manifest divergente do lockfile reprova o modo congelado. Tambem verifica que nenhum `pnpm-workspace.yaml` liga `dangerouslyAllowAllBuilds` ou `trustLockfile`, nem desliga integridade do store. Testes: `scripts/validar-instalacao-congelada.spec.mjs`, `scripts/registry-fixture-local.mjs`. | `pnpm test:instalacao-congelada` | Bloqueia o job Governanca de repositorio |
+| Excecoes de supply chain | Toda excecao exige owner, justificativa util, alcance, controle compensatorio e prazo de no maximo 180 dias; excecao vencida, com curinga amplo em versao ou com id duplicado reprova. Cada `trustPolicyExclude` precisa de excecao correspondente. Vulnerabilidades aprovadas geram o `.trivyignore.yaml` efemero com ids, caminhos e vencimento vindos do mesmo ledger; supressao ampla ou paralela nao e aceita. Teste: `scripts/validar-excecoes-supply-chain.spec.mjs` sobre `docs/governance/excecoes-supply-chain.json`. | `pnpm test:excecoes-supply-chain` | Bloqueia o job Governanca de repositorio e alimenta o workflow Trivy |
+| Runtime minimo dos containers | O estagio final dos tres Dockerfiles precisa declarar `USER` diferente de root e `HEALTHCHECK` usando apenas o runtime ja presente. O workflow constroi cada imagem e inspeciona `Config.User` e `Config.Healthcheck`, evitando aprovar apenas texto estatico. | `pnpm test:dockerfiles-runtime` e job `Imagem ... (build e identidade)` | Bloqueia o job Governanca de repositorio e o workflow Trivy |
+| Licencas de dependencias | Classificacao SPDX por token com semantica de `OR`/`AND` (nunca substring, que confunde GPL com LGPL e AGPL); licenca bloqueada reprova, licenca de revisao obrigatoria exige revisao registrada para aquele pacote e licenca desconhecida exige excecao datada. O inventario real instalado de backend, web e mobile e auditado no CI. Testes: `scripts/validar-licencas.spec.mjs` sobre `docs/governance/politica-licencas.json`. | `pnpm test:licencas` e `node scripts/validar-licencas.mjs node_modules` em cada app | Bloqueia o job Governanca de repositorio e os jobs de app |
+| Reprodutibilidade do lock Python | O lock do AI service traz todo o grafo transitivo em versao exata com hash, coerente com as dependencias diretas e com cabecalho de origem; requisito sem hash, versao frouxa, direta ausente ou versao divergente reprovam. No CI, hash adulterado precisa reprovar `pip install --require-hashes`. Teste: `scripts/validar-lock-python.spec.mjs` sobre `octaclin-ai-service/requirements.lock.txt`. | `pnpm test:lock-python` | Bloqueia o job Governanca de repositorio e o job AI FastAPI |
+| Reproducao e cobertura do SBOM | Duas execucoes do Trivy sobre o mesmo commit precisam gerar inventario semantico identico apos normalizar `serialNumber` e timestamp; diferenca de pacote, versao, PURL, relacao ou licenca reprova. A cobertura exige um componente conhecido de backend, web, mobile e AI service, para detectar o sumico de um ecossistema inteiro. Teste: `scripts/validar-sbom.spec.mjs`. | `pnpm test:sbom` e `node scripts/validar-sbom.mjs sbom.cyclonedx.json sbom.cyclonedx.repeticao.json` no workflow Trivy | Bloqueia o job Governanca de repositorio e o job Trivy |
+| Risco novo de dependencia no PR | `actions/dependency-review-action` compara base e head e reprova `critical/high` novo ou licenca da lista bloqueada introduzida pelo PR, sem transformar divida historica ja triada em bloqueio cego. | Workflow `Dependency Review` em `pull_request` | Bloqueia o PR |
 
 ## Execucao minima
 
@@ -53,6 +61,12 @@ pnpm test:a11y:matriz
 pnpm test:actions-imutaveis
 pnpm test:workflows-seguros
 pnpm test:triagem-seguranca
+pnpm test:versao-pnpm
+pnpm test:excecoes-supply-chain
+pnpm test:licencas
+pnpm test:lock-python
+pnpm test:sbom
+pnpm test:instalacao-congelada
 pnpm --dir octaclin-backend test --runInBand
 pnpm --dir octaclin-web lint
 pnpm --dir octaclin-web typecheck

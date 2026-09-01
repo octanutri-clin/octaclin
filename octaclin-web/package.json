@@ -2,7 +2,7 @@
   "name": "octaclin-web",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@9.15.9",
+  "packageManager": "pnpm@11.25.0+sha512.5cde925b4f075f725eb71fbae18a42ffe784524789f19b61c731cb8721ec28aaee160e01a8d5af4fedb2a42cdbf300efe23db356b0d4a17b4d63e11f8ab7c956",
   "engines": {
     "node": ">=22.0.0 <23.0.0"
   },
@@ -75,17 +75,5 @@
     "postcss": "^8.5.26",
     "tailwindcss": "^3.4.17",
     "typescript": "^6.0.3"
-  },
-  "pnpm": {
-    "overrides": {
-      "brace-expansion@1": "1.1.18",
-      "brace-expansion@5": "5.0.9",
-      "fast-uri@3": "3.1.5",
-      "js-yaml@3": "3.15.1",
-      "js-yaml@4": "4.3.1",
-      "nanoid@<3.3.18": "3.3.18",
-      "postcss@<=8.5.17": "8.5.23",
-      "sharp@<0.35.0": "0.35.3"
-    }
   }
 }

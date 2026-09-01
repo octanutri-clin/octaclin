@@ -1,0 +1,41 @@
+name: Dependency Review
+
+# Bloqueia risco NOVO introduzido pelo PR, sem transformar divida historica ja
+# triada em bloqueio cego: a action compara a base com o head e so reporta as
+# dependencias que o PR adiciona ou atualiza.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: octaclin-dependency-review-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  revisar:
+    name: Dependency Review (critical/high e licencas)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Revisar dependencias novas ou atualizadas
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          # Politica de vulnerabilidade: critical/high novo nao entra.
+          fail-on-severity: high
+          # Espelha docs/governance/politica-licencas.json (lista "bloqueadas").
+          # Alteracoes aqui e la precisam andar juntas.
+          deny-licenses: >-
+            AGPL-3.0-only,
+            AGPL-3.0-or-later,
+            BUSL-1.1,
+            GPL-2.0-only,
+            GPL-2.0-or-later,
+            GPL-3.0-only,
+            GPL-3.0-or-later,
+            SSPL-1.0
+          # Sem comentario no PR: manteria a necessidade de pull-requests: write.
+          comment-summary-in-pr: never
+          warn-only: false

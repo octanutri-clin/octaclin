@@ -1,0 +1,121 @@
+{
+  "$schema": "./excecoes-supply-chain.schema.md",
+  "versao": 1,
+  "descricao": "Fonte canonica de excecoes de supply chain do OctaClin. Toda excecao precisa de motivo, owner e expiracao. Excecao vencida quebra o gate pnpm test:excecoes-supply-chain.",
+  "revisadoEm": "2026-09-01",
+  "excecoes": [
+    {
+      "id": "SC-2026-001",
+      "tipo": "trustPolicy",
+      "componente": "octaclin-backend",
+      "package": "chokidar",
+      "version": "4.0.3",
+      "motivo": "Versao publicada em 2024-12-18, antes de o mantenedor adotar provenance; chokidar@5.0.0 (2025-11-25) ja publica atestado SLSA. O trustPolicy no-downgrade sinaliza a ausencia de atestado como downgrade. Nao ha indicio de takeover: mesmo mantenedor (paulmillr) e mesma linha de publicacao.",
+      "severidade": "media",
+      "reachability": "build-time apenas; cadeia devDependency @nestjs/cli > @angular-devkit/schematics > @angular-devkit/core. Nao entra no artefato de producao e nao executa lifecycle script (negado por strictDepBuilds).",
+      "controlesCompensatorios": [
+        "strictDepBuilds: true nega lifecycle script do pacote",
+        "verifyStoreIntegrity e strictStorePkgContentCheck ativos",
+        "lockfile congelado em CI impede troca silenciosa de versao",
+        "workflows com permissions contents: read"
+      ],
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "createdAt": "2026-09-01",
+      "expiresAt": "2026-12-01",
+      "approvedBy": "PR 49 da governanca de seguranca",
+      "source": "docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md",
+      "condicaoDeRemocao": "Remover quando @nestjs/cli resolver chokidar em versao com atestado de provenance."
+    },
+    {
+      "id": "SC-2026-002",
+      "tipo": "trustPolicy",
+      "componente": "octaclin-backend, octaclin-web, octaclin-mobile",
+      "package": "semver",
+      "version": "6.3.1",
+      "motivo": "Versao publicada em 2023-07-10, anterior a adocao de provenance no npm; semver@7.8.5 ja publica atestado SLSA. A linha 6.x esta congelada e nao recebera republicacao com atestado.",
+      "severidade": "media",
+      "reachability": "build-time apenas; cadeia transitiva de @babel/core e eslint-plugin-import. Nao executa lifecycle script.",
+      "controlesCompensatorios": [
+        "strictDepBuilds: true nega lifecycle script do pacote",
+        "verifyStoreIntegrity e strictStorePkgContentCheck ativos",
+        "lockfile congelado em CI impede troca silenciosa de versao"
+      ],
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "createdAt": "2026-09-01",
+      "expiresAt": "2026-12-01",
+      "approvedBy": "PR 49 da governanca de seguranca",
+      "source": "docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md",
+      "condicaoDeRemocao": "Remover quando as cadeias de @babel/core e eslint-plugin-import deixarem de exigir semver 6.x."
+    },
+    {
+      "id": "SC-2026-003",
+      "tipo": "trustPolicy",
+      "componente": "octaclin-web",
+      "package": "eslint-import-resolver-typescript",
+      "version": "3.10.1",
+      "motivo": "Versao publicada em 2025-04-21 sem atestado; a linha 4.x (4.4.5, 2026-06-01) ja publica provenance. A versao 3.x e fixada pela cadeia do eslint-config-next e nao esta sob controle direto do repositorio.",
+      "severidade": "media",
+      "reachability": "lint apenas; cadeia devDependency eslint-config-next > eslint-plugin-import > eslint-module-utils. Nao entra no bundle da web.",
+      "controlesCompensatorios": [
+        "strictDepBuilds: true nega lifecycle script do pacote",
+        "verifyStoreIntegrity e strictStorePkgContentCheck ativos",
+        "lockfile congelado em CI impede troca silenciosa de versao"
+      ],
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "createdAt": "2026-09-01",
+      "expiresAt": "2026-12-01",
+      "approvedBy": "PR 49 da governanca de seguranca",
+      "source": "docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md",
+      "condicaoDeRemocao": "Remover quando eslint-config-next resolver o resolver TypeScript na linha 4.x."
+    },
+    {
+      "id": "SC-2026-004",
+      "tipo": "trustPolicy",
+      "componente": "octaclin-mobile",
+      "package": "ua-parser-js",
+      "version": "1.0.41",
+      "motivo": "Versao publicada em 2025-08-19 sem atestado; ua-parser-js@2.0.10 (2026-05-21) ja publica provenance. A linha 1.x e fixada por fbjs dentro de react-native-web.",
+      "severidade": "media",
+      "reachability": "cadeia react-native-web > fbjs no aplicativo mobile, que permanece NO-GO para distribuicao. Nao executa lifecycle script.",
+      "controlesCompensatorios": [
+        "strictDepBuilds: true nega lifecycle script do pacote",
+        "mobile permanece bloqueado para distribuicao",
+        "lockfile congelado em CI impede troca silenciosa de versao"
+      ],
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "createdAt": "2026-09-01",
+      "expiresAt": "2026-12-01",
+      "approvedBy": "PR 49 da governanca de seguranca",
+      "source": "docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md",
+      "condicaoDeRemocao": "Remover quando react-native-web/fbjs resolver ua-parser-js na linha 2.x."
+    },
+    {
+      "id": "SC-2026-005",
+      "tipo": "vulnerability",
+      "componente": "octaclin-mobile",
+      "package": "image-size",
+      "version": "1.2.1",
+      "scannerIds": [
+        "CVE-2025-71329",
+        "CVE-2025-71330"
+      ],
+      "scannerPaths": [
+        "octaclin-mobile/pnpm-lock.yaml"
+      ],
+      "motivo": "GHSA-w3rx-r6r6-pgpr e GHSA-5p2g-fcmc-qvqq nao possuem versao corrigida publicada pelo upstream (patched_versions ausente). O pacote e fixado pelo metro dentro do react-native e nao ha correcao segura disponivel.",
+      "severidade": "alta",
+      "reachability": "bundler metro em tempo de build do mobile; o aplicativo permanece NO-GO para distribuicao, entao nao ha exposicao de usuario final.",
+      "controlesCompensatorios": [
+        "gate pnpm audit:security do mobile falha se surgir qualquer advisory alem destas duas",
+        "distribuicao mobile bloqueada por decisao de governanca",
+        "strictDepBuilds: true nega lifecycle script"
+      ],
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "createdAt": "2026-09-01",
+      "expiresAt": "2026-12-01",
+      "approvedBy": "PR 49 da governanca de seguranca",
+      "source": "docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md",
+      "condicaoDeRemocao": "Remover quando o upstream publicar versao corrigida de image-size alcancavel pelo metro."
+    }
+  ]
+}

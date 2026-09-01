@@ -1,0 +1,69 @@
+{
+  "versao": 1,
+  "descricao": "Politica de licencas de dependencias do OctaClin (PR 49). O objetivo e tecnico: impedir que licenca incompativel entre em silencio. Nao substitui parecer juridico.",
+  "revisadoEm": "2026-09-01",
+  "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+  "permitidas": [
+    "0BSD",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BlueOak-1.0.0",
+    "CC-BY-4.0",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "Python-2.0",
+    "Unlicense",
+    "WTFPL",
+    "Zlib"
+  ],
+  "revisaoObrigatoria": [
+    "CDDL-1.0",
+    "EPL-2.0",
+    "LGPL-2.1-only",
+    "LGPL-2.1-or-later",
+    "LGPL-3.0-only",
+    "LGPL-3.0-or-later",
+    "MPL-2.0"
+  ],
+  "bloqueadas": [
+    "AGPL-3.0-only",
+    "AGPL-3.0-or-later",
+    "BUSL-1.1",
+    "Commons-Clause",
+    "GPL-2.0-only",
+    "GPL-2.0-or-later",
+    "GPL-3.0-only",
+    "GPL-3.0-or-later",
+    "SSPL-1.0"
+  ],
+  "desconhecidas": ["NOASSERTION", "UNKNOWN", "UNLICENSED", "SEE LICENSE IN"],
+  "revisoesConcluidas": [
+    {
+      "licenca": "MPL-2.0",
+      "pacotes": [
+        "axe-core",
+        "@axe-core/playwright",
+        "@vercel/og",
+        "lightningcss",
+        "lightningcss-linux-x64-gnu"
+      ],
+      "decisao": "permitida-sem-modificacao",
+      "justificativa": "MPL-2.0 e copyleft por arquivo. As dependencias sao consumidas sem modificacao do codigo-fonte licenciado, sem redistribuicao de arquivo alterado, entao a obrigacao de disponibilizar fonte modificada nao e acionada. axe-core e @axe-core/playwright sao ferramentas de teste; @vercel/og e lightningcss entram no build da web/mobile.",
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "revisadoEm": "2026-09-01",
+      "condicaoDeReabertura": "Reabrir se algum destes pacotes for forkado, corrigido localmente via patch ou redistribuido com alteracao."
+    },
+    {
+      "licenca": "LGPL-3.0-or-later",
+      "pacotes": ["@img/sharp-libvips-linux-x64", "@img/sharp-libvips-linuxmusl-x64"],
+      "decisao": "permitida-sem-modificacao",
+      "justificativa": "Binarios do libvips consumidos pelo sharp por vinculo dinamico, sem modificacao e sem distribuicao estatica do produto. O OctaClin nao distribui binario proprio derivado do libvips.",
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "revisadoEm": "2026-09-01",
+      "condicaoDeReabertura": "Reabrir se o sharp passar a ser empacotado estaticamente ou se o libvips for modificado localmente."
+    }
+  ]
+}

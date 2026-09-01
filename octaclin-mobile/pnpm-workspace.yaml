@@ -1,28 +1,21 @@
-# Politica de supply chain da web (PR 49).
+# Politica de supply chain do mobile (PR 49). O aplicativo permanece NO-GO
+# para distribuicao; este arquivo governa apenas a supply chain versionada.
 # Ver docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md e o ledger
-# docs/governance/excecoes-supply-chain.json para cada excecao datada.
+# docs/governance/excecoes-supply-chain.json.
 packages:
   - "."
 
 # Migrado de `pnpm.overrides` do package.json: o pnpm 11 nao le mais aquele
-# bloco. O conjunto anterior deste arquivo cobria apenas postcss e sharp,
-# enquanto o lockfile era governado pelo conjunto completo do package.json.
+# bloco. `decode-uri-component` foi adicionado no PR 49 para remediar
+# GHSA-vcc3-ghjq-m6fr sem excecao.
 overrides:
-  brace-expansion@1: 1.1.18
-  brace-expansion@5: 5.0.9
-  fast-uri@3: 3.1.5
-  js-yaml@3: 3.15.1
-  js-yaml@4: 4.3.1
-  nanoid@<3.3.18: 3.3.18
-  postcss@<=8.5.17: 8.5.23
-  sharp@<0.35.0: 0.35.3
+  uuid@<11.1.1: 11.1.1
+  js-yaml@>=4.0.0 <4.3.1: 4.3.1
+  decode-uri-component@<0.5.0: 0.5.0
 
+# Nenhuma dependencia do mobile precisa executar lifecycle script.
 strictDepBuilds: true
-allowBuilds:
-  # sharp: binario nativo de otimizacao de imagem usado pelo Next no build.
-  sharp: true
-  # unrs-resolver: resolucao nativa usada pelo eslint-config-next no lint.
-  unrs-resolver: true
+allowBuilds: {}
 
 # 1440 minutos (24h). O valor nao e livre: com `minimumReleaseAgeStrict` o pnpm
 # reaplica a janela ao lockfile a cada instalacao, entao o teto pratico e a idade
@@ -37,8 +30,8 @@ minimumReleaseAgeStrict: true
 trustPolicy: no-downgrade
 # Excecoes datadas e com owner no ledger de supply chain.
 trustPolicyExclude:
-  - eslint-import-resolver-typescript@3.10.1
   - semver@6.3.1
+  - ua-parser-js@1.0.41
 
 blockExoticSubdeps: true
 

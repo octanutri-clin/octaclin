@@ -2,9 +2,10 @@
 
 > Status: aprovado para planejamento e execucao sequencial
 >
-> Atualizado em: 2026-08-31
+> Atualizado em: 2026-09-01
 >
-> Proximo item autorizado: revisar e executar os checks do PR GitHub #175 (PR 48).
+> Proximo item autorizado: revisar e executar os checks do PR 49. O PR 50 so e
+> autorizado apos o merge humano do PR 49.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
@@ -35,10 +36,16 @@
 > Estado do PR 47: integrado no `main` pelo PR GitHub #174 em 2026-08-31
 > (`bc94ae74e8ab65d35c8ec1107a64e71c05a282fb`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR47_2026-08-31.md`.
-> Estado do PR 48: aberto como PR GitHub #175 a partir de
-> `security/governanca-pr48-tooling-agentes`, aguardando checks e review/merge
-> humano. Relatorio:
+> Estado do PR 48: integrado no `main` pelo PR GitHub #175
+> (`7b42d411b76ce8f4bfb268d495a0330d842fa3b8`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md`.
+> Estado do PR 49: implementacao concluida em branch dedicada
+> (`security/governanca-pr49-supply-chain-dependencias`). Correcao pos-review
+> eliminou DS-0002/DS-0026 dos tres Dockerfiles e ligou as duas excecoes sem
+> patch ao Trivy por ledger datado. Aguardando required checks e review humano.
+> Relatorio:
+> `docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md`. Norma duravel:
+> `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`.
 
 ## 1. Funcao deste documento
 
@@ -460,19 +467,31 @@ Skills Claude: `security-review`, `test-driven-development`,
 Gate minimo: instalacao congelada, SBOM reproduzivel, scanners com politica de
 excecao datada e ownership definido.
 
+Implementacao concluida em branch dedicada. Aguardando review humano, required
+checks e merge. O package manager passou de `pnpm@9.15.9` para `pnpm@11.25.0`
+exato com hash de integridade, depois de provar que o pnpm 9 ignorava
+`allowBuilds`, `strictDepBuilds`, `minimumReleaseAge`, `trustPolicy` e
+`blockExoticSubdeps` que ja estavam escritos no repositorio. CI e imagens
+passaram a instalar congelado, o grafo Python ganhou lock com hashes e o SBOM
+ganhou prova de reproducao semantica e de cobertura por ecossistema. Excecoes
+passaram a viver em ledger canonico com owner e prazo. Detalhes e evidencia em
+`docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md`; a norma duravel esta
+em `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`.
+
 ### PR 50 - Containers e runtime
 
 **Risco:** R3. **Bloqueador:** sim.
 
-- Fixar imagens por digest, executar sem root, reduzir capabilities e filesystem
-  gravavel, adicionar healthcheck e limites.
+- Fixar imagens por digest, reduzir capabilities e filesystem gravavel, adicionar
+  limites e provar em runtime os usuarios non-root e healthchecks introduzidos
+  corretivamente no PR 49.
 - Remover ferramentas e secrets das imagens finais.
 
 Skills Claude: `security-review`, `test-driven-development`,
 `requesting-code-review`.
 
-Gate minimo: scan de imagem; identidade non-root comprovada; imagem sobe e
-healthcheck passa sem privilegios extras.
+Gate minimo: scan de imagem; digest fixo; imagem sobe e healthcheck passa sem
+privilegios extras; filesystem e capabilities minimos comprovados.
 
 ### PR 51 - Providers e menor privilegio
 

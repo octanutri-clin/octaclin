@@ -2,7 +2,7 @@
   "name": "octaclin-backend",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@9.15.9",
+  "packageManager": "pnpm@11.25.0+sha512.5cde925b4f075f725eb71fbae18a42ffe784524789f19b61c731cb8721ec28aaee160e01a8d5af4fedb2a42cdbf300efe23db356b0d4a17b4d63e11f8ab7c956",
   "scripts": {
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -68,15 +68,6 @@
     "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
-  },
-  "pnpm": {
-    "overrides": {
-      "brace-expansion@1": "1.1.18",
-      "brace-expansion@5": "5.0.9",
-      "fast-uri@3": "3.1.5",
-      "js-yaml@3": "3.15.1",
-      "js-yaml@4": "4.3.1"
-    }
   },
   "jest": {
     "moduleFileExtensions": [
