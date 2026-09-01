@@ -270,11 +270,25 @@ para a mesa em vez de virar divida permanente.
 Formato CycloneDX, gerado pelo Trivy no workflow `Trivy`. Nao existe segunda
 cadeia de SBOM.
 
-"Reproduzivel" nao significa byte identico: `serialNumber` e `metadata.timestamp`
-mudam a cada execucao. O criterio e **inventario semantico identico** entre duas
-execucoes limpas sobre o mesmo commit: mesmos pacotes, versoes, PURLs, relacoes
-de dependencia e licencas conhecidas. `scripts/validar-sbom.mjs` normaliza os
-campos nao deterministicos e compara; diferenca semantica reprova.
+"Reproduzivel" nao significa byte identico. Tres campos mudam a cada execucao do
+Trivy sem que nada da supply chain tenha mudado:
+
+- `serialNumber` e `metadata.timestamp`, que identificam a execucao;
+- o `bom-ref` de cada componente, que e um UUID sorteado por execucao;
+- a ordem de emissao dos componentes e das relacoes.
+
+O `bom-ref` e o caso que menos se espera: `dependencies` referencia esses UUIDs,
+entao comparar o ref cru acusaria irreprodutibilidade em todo SBOM. Cada ref e
+resolvido para a identidade estavel do componente que ele aponta (PURL, ou
+`nome@versao` na falta dela) antes da comparacao. Isso normaliza o identificador
+de execucao sem esconder a relacao, que continua sendo comparada.
+
+O criterio e **inventario semantico identico** entre duas execucoes limpas sobre
+o mesmo commit: mesmos pacotes, versoes, PURLs, relacoes de dependencia e
+licencas conhecidas. `scripts/validar-sbom.mjs` normaliza os campos nao
+deterministicos e compara; diferenca semantica reprova. Um ref que nao resolva a
+componente algum e preservado marcado como nao resolvido, para que a comparacao
+falhe e exija analise em vez de descartar a relacao em silencio.
 
 O mesmo gate verifica cobertura: um componente conhecido de cada ecossistema
 (backend, web, mobile e AI service) precisa aparecer, para detectar o

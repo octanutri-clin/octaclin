@@ -63,11 +63,17 @@ jobs:
       - name: Provar cobertura e reproducao semantica do SBOM
         run: node scripts/validar-sbom.mjs sbom.cyclonedx.json sbom.cyclonedx.repeticao.json
 
+      # `if: always()` para que uma falha da prova de reproducao continue
+      # publicando as duas execucoes: sem elas a divergencia so seria
+      # diagnosticavel reproduzindo o job.
       - name: Publicar SBOM como artefato
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sbom-cyclonedx
-          path: sbom.cyclonedx.json
+          path: |
+            sbom.cyclonedx.json
+            sbom.cyclonedx.repeticao.json
           retention-days: 90
 
   # Provenance verificavel do SBOM. Roda em job separado justamente para que

@@ -1,10 +1,14 @@
 // Reproducao e cobertura do SBOM CycloneDX (PR 49).
 //
-// "SBOM reproduzivel" nao significa byte identico: o Trivy grava serialNumber
-// e timestamp novos a cada execucao. O criterio correto e inventario semantico
-// identico -- mesmos pacotes, versoes, PURLs, relacoes e licencas conhecidas.
-// Normalizar esses campos antes de comparar evita tanto o falso vermelho quanto
-// o falso verde de esconder diferenca real removendo campo relevante.
+// "SBOM reproduzivel" nao significa byte identico: o Trivy grava serialNumber e
+// timestamp novos a cada execucao e, o que menos se espera, atribui um `bom-ref`
+// UUID novo a cada componente. As relacoes de `dependencies` referenciam esses
+// UUIDs, entao comparar o ref cru acusaria irreprodutibilidade em todo SBOM.
+//
+// O criterio correto e inventario semantico identico -- mesmos pacotes, versoes,
+// PURLs, relacoes e licencas conhecidas. Cada ref e resolvido para a identidade
+// estavel do componente que ele aponta antes da comparacao: isso normaliza o
+// identificador de execucao sem esconder a relacao, que continua comparada.
 
 import { readFileSync } from 'node:fs';
 
@@ -26,6 +30,35 @@ function licencasDe(componente) {
     .sort();
 }
 
+function identidadeDe(componente) {
+  return componente.purl || `${componente.name ?? ''}@${componente.version ?? ''}`;
+}
+
+// Mapa `bom-ref` -> identidade estavel. O componente raiz vive em
+// `metadata.component` e tambem participa das relacoes.
+function mapaDeReferencias(sbom) {
+  const mapa = new Map();
+  for (const componente of sbom.components ?? []) {
+    if (componente['bom-ref']) mapa.set(componente['bom-ref'], identidadeDe(componente));
+  }
+  const raiz = sbom.metadata?.component;
+  if (raiz?.['bom-ref']) mapa.set(raiz['bom-ref'], `raiz:${identidadeDe(raiz)}`);
+  return mapa;
+}
+
+// Um ref que nao resolve e mantido, marcado: preferimos uma comparacao que
+// falhe e exija analise a uma que descarte a relacao em silencio.
+function resolver(sbom, ref) {
+  if (!ref) return '';
+  if (!sbom.__mapaDeReferencias) {
+    Object.defineProperty(sbom, '__mapaDeReferencias', {
+      value: mapaDeReferencias(sbom),
+      enumerable: false,
+    });
+  }
+  return sbom.__mapaDeReferencias.get(ref) ?? `nao-resolvido:${ref}`;
+}
+
 export function normalizarSbom(sbom) {
   const componentes = (sbom.components ?? []).map((componente) => ({
     name: componente.name ?? '',
@@ -43,10 +76,16 @@ export function normalizarSbom(sbom) {
 
   const dependencias = (sbom.dependencies ?? [])
     .map((relacao) => ({
-      ref: relacao.ref ?? '',
-      dependsOn: [...(relacao.dependsOn ?? [])].sort(),
+      ref: resolver(sbom, relacao.ref),
+      dependsOn: (relacao.dependsOn ?? []).map((alvo) => resolver(sbom, alvo)).sort(),
     }))
-    .sort((a, b) => a.ref.localeCompare(b.ref));
+    // Ordena pela entrada inteira, nao so pelo ref: refs distintos podem
+    // resolver para a mesma identidade (o mesmo pacote aparece por mais de um
+    // caminho), e ordenar so por ref deixaria a ordem dessas entradas
+    // dependente da ordem de emissao do scanner, que varia entre execucoes.
+    .map((relacao) => ({ ...relacao, chave: `${relacao.ref}|${relacao.dependsOn.join(',')}` }))
+    .sort((a, b) => a.chave.localeCompare(b.chave))
+    .map(({ chave, ...relacao }) => relacao);
 
   return {
     componentes: [...unicos.values()].sort((a, b) =>

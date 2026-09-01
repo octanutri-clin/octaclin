@@ -222,6 +222,69 @@ posicao real de dependencia instalada.
 revisoes concluidas documentadas para MPL-2.0 e LGPL, e gate com semantica SPDX
 real. **GREEN:** os tres apps aprovam (751, 395 e 553 pacotes).
 
+### A10 - SBOM do Trivy nao e reproduzivel campo a campo (achado do proprio gate)
+
+**Severidade:** baixa (qualidade de gate). **Fonte:** primeira execucao do gate
+de reproducao no CI do PR 49.
+
+O gate reprovou a si mesmo com `SBOM nao reproduzivel. as relacoes de dependencia
+divergem.` A investigacao local, com duas execucoes do Trivy 0.74.0 sobre o mesmo
+checkout, mostrou a causa: alem de `serialNumber` e `metadata.timestamp`, o Trivy
+**sorteia um `bom-ref` UUID novo para cada componente a cada execucao**, e
+`dependencies` referencia esses UUIDs. Medicao: 940 componentes e 941 relacoes
+nas duas execucoes, com 2962 referencias, todas resolviveis, e nenhum componente
+em comum entre os `bom-ref` das duas.
+
+Havia ainda um segundo efeito: refs distintos podem resolver para a mesma
+identidade quando o mesmo pacote aparece por mais de um caminho, e ordenar as
+relacoes apenas por `ref` deixava a ordem dessas entradas dependente da ordem de
+emissao do scanner.
+
+**Correcao:** resolver cada ref para a identidade estavel do componente (PURL, ou
+`nome@versao`) antes de comparar, e ordenar pela entrada inteira. Um ref que nao
+resolva e preservado marcado, para falhar e exigir analise em vez de sumir.
+
+**RED:** duas execucoes reais do Trivy sobre o mesmo commit reprovavam.
+**GREEN:** as mesmas duas execucoes passam com
+`SBOM reproduzivel: 859 componentes com inventario semantico identico`, e as
+provas negativas continuam reprovando sobre os mesmos dados reais: relacao
+removida reprova, versao de pacote alterada reprova, ecossistema inteiro ausente
+reprova. Tres testes unitarios novos cobrem o caso.
+
+Este achado e a razao de o gate existir: o SBOM anterior era publicado sem
+nenhuma verificacao de que duas execucoes descreviam o mesmo inventario.
+
+### A11 - Alertas Trivy de container sao preexistentes, nao introduzidos
+
+**Severidade:** informativa. **Fonte:** check `Trivy` do PR 49, que reportou
+"8 new alerts including 5 high severity".
+
+O PR altera os tres Dockerfiles (pnpm fixado, instalacao congelada, lockfile
+obrigatorio), e por isso o Trivy reatribuiu ao PR misconfiguracoes que ja
+existiam nesses arquivos. Comparacao reproduzivel entre `origin/main` e o HEAD do
+PR, ambos exportados limpos com `git archive` e escaneados com
+`trivy fs --scanners vuln,misconfig,license`:
+
+| | Baseline `origin/main` | HEAD do PR 49 |
+| --- | --- | --- |
+| Total de findings | 9 | 8 |
+| `DS-0002` (sem USER non-root) | 3 (HIGH) | 3 (HIGH) |
+| `DS-0026` (sem HEALTHCHECK) | 3 (LOW) | 3 (LOW) |
+| `CVE-2025-71329` / `CVE-2025-71330` (`image-size@1.2.1`) | 2 (HIGH) | 2 (HIGH) |
+| `CVE-2026-45822` (`decode-uri-component@0.2.2`) | 1 (MEDIUM) | **0 - removido** |
+
+**Findings novos introduzidos pelo PR: nenhum. Findings removidos: um.** Os cinco
+HIGH sao os tres `DS-0002` mais os dois CVEs de `image-size`, ja triados como
+`SC-2026-005` no ledger.
+
+`DS-0002` e `DS-0026` sao exatamente non-root e healthcheck, itens que o programa
+de hardening atribui explicitamente ao **PR 50 - Containers e runtime**. Corrigi-los
+aqui ampliaria o escopo do PR 49 e, no ambiente desta execucao, seria uma mudanca
+nao testada: o daemon do Docker nao esta disponivel, entao nao ha como provar que
+as imagens continuam subindo com `USER` non-root (o `next start` da web escreve em
+`.next/cache`) nem que ha binario para o `HEALTHCHECK` nas imagens `alpine` e
+`slim`. Fica registrado como divida conhecida, com dono definido no PR 50.
+
 ---
 
 ## 3. Package manager
@@ -415,7 +478,8 @@ ociosa.
 | `pnpm test:excecoes-supply-chain` | PASS | 13 testes; 5 excecoes, 8 amarracoes com `trustPolicyExclude` |
 | `pnpm test:licencas` | PASS | 11 testes de semantica SPDX e coerencia da politica |
 | `pnpm test:lock-python` | PASS | 7 testes sobre o lock real |
-| `pnpm test:sbom` | PASS | 9 testes de normalizacao, reproducao e cobertura |
+| `pnpm test:sbom` | PASS | 12 testes de normalizacao, reproducao e cobertura |
+| Reproducao do SBOM com Trivy real | PASS | duas execucoes do Trivy 0.74.0 sobre o mesmo checkout, 940 componentes, inventario identico |
 | `pnpm test:actions-imutaveis` | PASS | 15 testes, incluindo as tres Actions novas |
 | `pnpm test:workflows-seguros` | PASS | 6 testes |
 | `pnpm test:triagem-seguranca` | PASS | snapshot do PR 37 intacto |
