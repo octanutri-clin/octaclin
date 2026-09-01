@@ -1,0 +1,27 @@
+# Politica de supply chain da raiz (PR 49). A raiz nao declara dependencias:
+# os gates de governanca rodam com `node` puro. As chaves abaixo existem para
+# que qualquer dependencia futura ja nasca sob a mesma politica dos apps.
+#
+# Fonte de verdade da versao do pnpm: campo `packageManager` de cada
+# package.json. Ver docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md.
+packages:
+  - "."
+
+# Lifecycle script de dependencia e execucao de codigo: negado por padrao,
+# permitido apenas por decisao explicita registrada em `allowBuilds`.
+strictDepBuilds: true
+allowBuilds: {}
+
+# Maturacao minima de 24h antes de instalar uma versao recem-publicada.
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+
+# Recusa versao publicada com autenticacao mais fraca que versoes anteriores.
+trustPolicy: no-downgrade
+
+# Dependencia transitiva nao escolhe origem arbitraria (git, URL, tarball).
+blockExoticSubdeps: true
+
+# Integridade do store permanece verificada.
+verifyStoreIntegrity: true
+strictStorePkgContentCheck: true

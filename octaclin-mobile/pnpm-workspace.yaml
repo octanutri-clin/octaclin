@@ -1,0 +1,32 @@
+# Politica de supply chain do mobile (PR 49). O aplicativo permanece NO-GO
+# para distribuicao; este arquivo governa apenas a supply chain versionada.
+# Ver docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md e o ledger
+# docs/governance/excecoes-supply-chain.json.
+packages:
+  - "."
+
+# Migrado de `pnpm.overrides` do package.json: o pnpm 11 nao le mais aquele
+# bloco. `decode-uri-component` foi adicionado no PR 49 para remediar
+# GHSA-vcc3-ghjq-m6fr sem excecao.
+overrides:
+  uuid@<11.1.1: 11.1.1
+  js-yaml@>=4.0.0 <4.3.1: 4.3.1
+  decode-uri-component@<0.5.0: 0.5.0
+
+# Nenhuma dependencia do mobile precisa executar lifecycle script.
+strictDepBuilds: true
+allowBuilds: {}
+
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+
+trustPolicy: no-downgrade
+# Excecoes datadas e com owner no ledger de supply chain.
+trustPolicyExclude:
+  - semver@6.3.1
+  - ua-parser-js@1.0.41
+
+blockExoticSubdeps: true
+
+verifyStoreIntegrity: true
+strictStorePkgContentCheck: true

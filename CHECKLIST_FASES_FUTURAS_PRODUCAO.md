@@ -2565,15 +2565,27 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] URL assinada removida da fronteira, limite agregado por tenant e revisao humana obrigatoria.
   - [x] Checks e review/merge humanos no PR GitHub `#174` (`bc94ae74e8ab65d35c8ec1107a64e71c05a282fb`).
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR47_2026-08-31.md`.
-- [ ] PR 48 - Auditar e isolar tooling de agentes (`.agents` e `.claude`).
+- [x] PR 48 - Auditar e isolar tooling de agentes (`.agents` e `.claude`).
   - [x] Inventario de skills, hooks, scripts, servidores auxiliares e Actions de IA concluido.
   - [x] Skills Google/Gmail/brainstorming e helpers placeholder removidos das duas arvores.
   - [x] Allowlist de skills e executaveis com capacidade minima e SHA-256 criada.
   - [x] Hooks Node portaveis e testes negativos de payload/path/comando implementados.
   - [x] Scanner de secrets passou a incluir `.agents`/`.claude`; gate ligado ao CI.
-  - [ ] Checks e review/merge humanos do PR GitHub `#175`.
+  - [x] Checks e review/merge humanos no PR GitHub `#175` (`7b42d411b76ce8f4bfb268d495a0330d842fa3b8`).
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md`.
 - [ ] PR 49 - Consolidar supply chain, SBOM e politica de dependencias.
+  - [x] Implementacao e validacao local concluidas em `security/governanca-pr49-supply-chain-dependencias`.
+  - [x] Provado que o pnpm 9.15.9 ignorava `allowBuilds`, `strictDepBuilds`, `minimumReleaseAge`, `trustPolicy` e `blockExoticSubdeps` ja declarados.
+  - [x] Package manager unico e exato (`pnpm@11.25.0` com hash) em manifests, CI e Dockerfiles, com gate de divergencia.
+  - [x] Instalacao congelada obrigatoria em CI e imagens; lockfile deixou de ser opcional no Docker.
+  - [x] Lifecycle script negado por padrao, com decisao explicita por pacote e prova com o pnpm real.
+  - [x] Overrides de seguranca migrados para `pnpm-workspace.yaml`, que o pnpm 11 le.
+  - [x] Lock Python com grafo transitivo resolvido e hashes; prova negativa de hash adulterado no CI.
+  - [x] Ledger de excecoes com owner e prazo, politica de licencas com semantica SPDX e Dependency Review bloqueando critical/high novo.
+  - [x] SBOM com prova de reproducao semantica, cobertura por ecossistema e atestado de proveniencia.
+  - [ ] Checks e review/merge humanos do Pull Request contra `main`.
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md`.
+  - Norma duravel: `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`.
 - [ ] PR 50 - Endurecer containers e runtime.
 - [ ] PR 51 - Aplicar menor privilegio em Render, Neon, Redis e Backblaze.
 - [ ] PR 52 - Consolidar observabilidade, auditoria e resposta a incidentes.
@@ -2585,4 +2597,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: revisar o PR GitHub `#175` (PR 48). O PR 49 depende do aceite humano e merge do PR 48.
+Proximo item autorizado: revisar o Pull Request do PR 49. O PR 50 depende do aceite humano e merge do PR 49.

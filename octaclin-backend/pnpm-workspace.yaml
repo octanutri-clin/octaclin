@@ -1,6 +1,46 @@
+# Politica de supply chain do backend (PR 49).
+# Ver docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md e o ledger
+# docs/governance/excecoes-supply-chain.json para cada excecao datada.
 packages:
   - "."
 
+# Migrado de `pnpm.overrides` do package.json: o pnpm 11 nao le mais aquele
+# bloco. Manter aqui preserva as remediacoes ja aplicadas.
+overrides:
+  brace-expansion@1: 1.1.18
+  brace-expansion@5: 5.0.9
+  fast-uri@3: 3.1.5
+  js-yaml@3: 3.15.1
+  js-yaml@4: 4.3.1
+
+# Lifecycle script de dependencia negado por padrao. Cada pacote com script
+# recebe decisao explicita; `false` e negacao auditada, nao ausencia de analise.
+strictDepBuilds: true
 allowBuilds:
-  '@nestjs/core': true
-  msgpackr-extract: true
+  # ssh2 -> cpu-features: acelerador nativo opcional; ssh2 opera em JS puro.
+  # Cadeia dev: testcontainers > dockerode > docker-modem > ssh2.
+  cpu-features: false
+  ssh2: false
+  # protobufjs: postinstall so regenera artefatos empacotados. Cadeia dev:
+  # testcontainers > dockerode > @grpc/proto-loader.
+  protobufjs: false
+  # unrs-resolver: binarios pre-compilados chegam como optionalDependencies.
+  # Cadeia dev: jest > jest-resolve.
+  unrs-resolver: false
+  # msgpackr-extract: acelerador nativo opcional de msgpackr (bullmq).
+  # msgpackr degrada para JS puro; suite backend valida o caminho de filas.
+  msgpackr-extract: false
+
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+
+trustPolicy: no-downgrade
+# Excecoes datadas e com owner no ledger de supply chain.
+trustPolicyExclude:
+  - chokidar@4.0.3
+  - semver@6.3.1
+
+blockExoticSubdeps: true
+
+verifyStoreIntegrity: true
+strictStorePkgContentCheck: true

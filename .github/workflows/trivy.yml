@@ -49,9 +49,45 @@ jobs:
           format: cyclonedx
           output: sbom.cyclonedx.json
 
+      # Segunda execucao sobre o mesmo checkout limpo. O SBOM nao e byte a byte
+      # identico -- serialNumber e timestamp mudam a cada execucao -- entao a
+      # comparacao e do inventario semantico normalizado.
+      - name: Gerar SBOM novamente para prova de reproducao
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: cyclonedx
+          output: sbom.cyclonedx.repeticao.json
+
+      - name: Provar cobertura e reproducao semantica do SBOM
+        run: node scripts/validar-sbom.mjs sbom.cyclonedx.json sbom.cyclonedx.repeticao.json
+
       - name: Publicar SBOM como artefato
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sbom-cyclonedx
           path: sbom.cyclonedx.json
           retention-days: 90
+
+  # Provenance verificavel do SBOM. Roda em job separado justamente para que
+  # `id-token: write` e `attestations: write` nao alcancem o job de scan.
+  # Nao roda em pull_request: PR de fork nao recebe token com essas permissoes.
+  atestar-sbom:
+    name: Provenance do SBOM
+    needs: analisar
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: sbom-cyclonedx
+
+      - name: Gerar atestado de proveniencia do SBOM
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: sbom.cyclonedx.json

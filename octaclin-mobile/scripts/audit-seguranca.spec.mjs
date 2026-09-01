@@ -63,3 +63,60 @@ test('reprova avisos silenciados', () => {
   relatorio.muted = [{ id: 123 }];
   assert.equal(avaliarAuditoria(relatorio).aprovado, false);
 });
+
+// PR 49: o pnpm 11 mudou a forma do relatorio `pnpm audit --json`. Advisory sem
+// correcao publicada passou a trazer `patched_versions: null` e a omitir
+// `recommendation`, no lugar de '<0.0.0' e 'None' do pnpm 9. O validador precisa
+// aceitar as duas formas sem afrouxar nenhuma outra condicao da excecao.
+function advisoryPnpm11({ id, ghsa, versao = '1.2.1', modulo = 'image-size' }) {
+  return {
+    id,
+    github_advisory_id: ghsa,
+    module_name: modulo,
+    severity: 'high',
+    patched_versions: null,
+    // O pnpm 11 tambem parou de anotar a versao no caminho do grafo.
+    findings: [{ version: versao, paths: [`.>react-native>metro>${modulo}`] }],
+  };
+}
+
+function relatorioPermitidoPnpm11() {
+  return {
+    advisories: {
+      1138808: advisoryPnpm11({ id: 1138808, ghsa: 'GHSA-w3rx-r6r6-pgpr' }),
+      1138809: advisoryPnpm11({ id: 1138809, ghsa: 'GHSA-5p2g-fcmc-qvqq' }),
+    },
+    muted: [],
+    metadata: { vulnerabilities: { info: 0, low: 0, moderate: 0, high: 2, critical: 0 } },
+  };
+}
+
+test('aprova as mesmas duas excecoes no formato de relatorio do pnpm 11', () => {
+  const resultado = avaliarAuditoria(relatorioPermitidoPnpm11());
+  assert.equal(resultado.aprovado, true);
+  assert.deepEqual(resultado.excecoes.sort(), ['GHSA-5p2g-fcmc-qvqq', 'GHSA-w3rx-r6r6-pgpr']);
+});
+
+test('reprova advisory com correcao publicada disfarcado de excecao no formato pnpm 11', () => {
+  const relatorio = relatorioPermitidoPnpm11();
+  relatorio.advisories[1138808].patched_versions = '>=1.2.2';
+  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
+});
+
+test('reprova recommendation de upgrade mesmo sem patched_versions no formato pnpm 11', () => {
+  const relatorio = relatorioPermitidoPnpm11();
+  relatorio.advisories[1138809].recommendation = 'Upgrade to version 1.2.2 or later';
+  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
+});
+
+test('reprova excecao cujo caminho nao passa pelo metro no formato pnpm 11', () => {
+  const relatorio = relatorioPermitidoPnpm11();
+  relatorio.advisories[1138808].findings[0].paths = ['.>outro-pacote>image-size'];
+  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
+});
+
+test('reprova excecao cujo caminho nao termina no modulo esperado', () => {
+  const relatorio = relatorioPermitidoPnpm11();
+  relatorio.advisories[1138809].findings[0].paths = ['.>react-native>metro>outro-modulo'];
+  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
+});
