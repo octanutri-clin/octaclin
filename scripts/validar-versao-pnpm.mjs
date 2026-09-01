@@ -27,6 +27,7 @@ export const FONTES_OBRIGATORIAS = [
 ];
 
 const VERSAO_EXATA = /^\d+\.\d+\.\d+$/;
+const PACKAGE_MANAGER_PNPM = /^pnpm@(\d+\.\d+\.\d+)\+sha512\.([a-f0-9]{128})$/;
 
 function falhar(mensagem) {
   throw new Error(`Versao do pnpm inconsistente: ${mensagem}`);
@@ -44,8 +45,13 @@ export function extrairVersoesDeConteudo(origem, conteudo) {
     }
     const declarado = manifesto.packageManager;
     if (typeof declarado === 'string' && declarado.startsWith('pnpm@')) {
-      // `pnpm@X.Y.Z+sha512-...`: o hash e opcional na sintaxe, a versao nao.
-      const versao = declarado.slice('pnpm@'.length).split('+')[0];
+      const referencia = declarado.match(PACKAGE_MANAGER_PNPM);
+      if (!referencia) {
+        falhar(
+          `${origem} declara packageManager "${declarado}"; use pnpm@X.Y.Z+sha512.<128 caracteres hexadecimais>, no formato gerado pelo Corepack.`
+        );
+      }
+      const versao = referencia[1];
       encontradas.push({ origem, chave: 'packageManager', versao });
     }
     return encontradas;

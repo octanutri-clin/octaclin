@@ -124,6 +124,15 @@ Dockerfiles.
 **GREEN:** `pnpm test:versao-pnpm` reprova major solto, divergencia entre fontes
 e `corepack enable` sem versao fixada. Sao 11 declaracoes verificadas.
 
+**Fato novo encontrado pelo build de imagem no CI:** a primeira referencia com
+hash havia sido gravada como `+sha512-<base64>`, formato que o Corepack 0.35
+rejeita como especificacao semver invalida. Os builds de backend e web paravam
+antes da instalacao. A referencia foi regenerada pelo proprio
+`corepack use pnpm@11.25.0` no formato canonico `+sha512.<128 hex>`, aplicada
+nos quatro manifests e coberta por teste negativo contra o formato anterior.
+Nao foi usado `COREPACK_ENABLE_PROJECT_SPEC=0`: o build continua obrigado a
+respeitar e verificar o `packageManager` do projeto.
+
 ### A5 - Trust downgrade em quatro pacotes transitivos
 
 **Severidade:** media. **Fonte:** `trustPolicy: no-downgrade` do pnpm 11.
@@ -353,7 +362,7 @@ do pnpm 9 e do pnpm 11 continuam reconhecidos.
 | Item | Valor |
 | --- | --- |
 | Versao anterior | `pnpm@9.15.9` em backend e web; nada na raiz e no mobile; `9` (major) no CI; implicita nos Dockerfiles |
-| Versao final | `pnpm@11.25.0`, exata, com `+sha512-...` de integridade |
+| Versao final | `pnpm@11.25.0`, exata, com `+sha512.<hex>` de integridade no formato canônico do Corepack |
 | Onde esta fixada | `packageManager` dos quatro `package.json`, `PNPM_VERSION` do CI, `corepack prepare` dos dois Dockerfiles Node |
 
 **Por que 11 e nao 10.** A menor atualizacao seria o pnpm 10, mas ele **nao le**
@@ -534,10 +543,10 @@ ociosa.
 
 | Gate | Resultado | Evidencia |
 | --- | --- | --- |
-| `pnpm test:versao-pnpm` | PASS | 9 testes; 11 declaracoes consistentes em 11.25.0 |
+| `pnpm test:versao-pnpm` | PASS | 10 testes; 11 declaracoes consistentes em 11.25.0 e formato do hash validado |
 | `pnpm test:instalacao-congelada` | PASS | 2 testes; pnpm real contra registry local efemero |
 | `pnpm test:excecoes-supply-chain` | PASS | 15 testes; 5 excecoes, 4 entradas unicas amarradas com `trustPolicyExclude` e 2 CVEs materializados para o Trivy |
-| `pnpm test:dockerfiles-runtime` | PASS | 3 testes; tres estagios finais non-root e com healthcheck sem ferramenta adicional; web inicia sem depender do cache Corepack do root |
+| `pnpm test:dockerfiles-runtime` | PASS | 4 testes; tres estagios finais non-root e com healthcheck sem ferramenta adicional; web inicia sem depender do cache Corepack do root; nenhum build ignora o packageManager verificado |
 | `pnpm test:licencas` | PASS | 11 testes de semantica SPDX e coerencia da politica |
 | `pnpm test:lock-python` | PASS | 7 testes sobre o lock real |
 | `pnpm test:sbom` | PASS | 12 testes de normalizacao, reproducao e cobertura |

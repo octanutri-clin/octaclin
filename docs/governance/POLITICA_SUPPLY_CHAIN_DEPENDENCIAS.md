@@ -21,7 +21,8 @@ declarada precisa de prova de que o package manager em uso realmente a aplica.
 | Onde mais ela aparece | `PNPM_VERSION` em `.github/workflows/ci.yml` e `corepack prepare` nos Dockerfiles |
 | O que garante que nao divergem | `pnpm test:versao-pnpm` |
 
-O `packageManager` traz o hash de integridade (`+sha512-...`). O pnpm e o
+O `packageManager` traz o hash de integridade (`+sha512.<hex>`), no formato
+canônico gerado por `corepack use pnpm@<versao>`. O pnpm e o
 Corepack trocam automaticamente para a versao declarada e verificam o hash, o
 que impede que um binario adulterado ou uma versao arbitraria do package manager
 entre num build sensivel. `corepack enable` sozinho nao e suficiente: os
@@ -31,7 +32,7 @@ Dockerfiles usam `corepack prepare pnpm@<versao> --activate`.
 
 1. Escolher a versao exata e justificar (menor atualizacao segura que cumpra o objetivo).
 2. Atualizar `VERSAO_PNPM_ESPERADA` em `scripts/validar-versao-pnpm.mjs`.
-3. Atualizar `packageManager` nos quatro `package.json`, com o hash publicado no registry.
+3. Atualizar `packageManager` nos quatro `package.json`, usando a referência com hash gerada pelo Corepack.
 4. Atualizar `PNPM_VERSION` no CI e `corepack prepare` nos Dockerfiles.
 5. Rodar `pnpm test:versao-pnpm` e `pnpm test:instalacao-congelada`.
 6. Conferir, com o pnpm novo, se cada chave de `pnpm-workspace.yaml` continua reconhecida:

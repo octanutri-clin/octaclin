@@ -48,3 +48,14 @@ test('o runtime web nao depende do cache Corepack preparado como root', () => {
   assert.doesNotMatch(web, /^CMD \["pnpm"/m);
   assert.match(web, /^CMD \["node", "node_modules\/next\/dist\/bin\/next", "start"\]/m);
 });
+
+test('builds Node nao desativam a referencia de package manager verificada', () => {
+  for (const caminho of ['octaclin-backend/Dockerfile', 'octaclin-web/Dockerfile']) {
+    const conteudo = readFileSync(caminho, 'utf8');
+    assert.doesNotMatch(
+      conteudo,
+      /COREPACK_ENABLE_PROJECT_SPEC\s*=\s*0/,
+      `${caminho}: nao deve ignorar o packageManager verificado do projeto.`,
+    );
+  }
+});

@@ -12,12 +12,23 @@ test('a versao esperada e exata, nao apenas major', () => {
   assert.match(VERSAO_PNPM_ESPERADA, /^\d+\.\d+\.\d+$/);
 });
 
-test('aceita packageManager exato com hash de integridade', () => {
+test('aceita packageManager exato com hash de integridade no formato do Corepack', () => {
   const versoes = extrairVersoesDeConteudo(
     'package.json',
-    JSON.stringify({ packageManager: `pnpm@${VERSAO_PNPM_ESPERADA}+sha512-abc==` })
+    JSON.stringify({ packageManager: `pnpm@${VERSAO_PNPM_ESPERADA}+sha512.${'a'.repeat(128)}` })
   );
   assert.deepEqual(versoes, [{ origem: 'package.json', chave: 'packageManager', versao: VERSAO_PNPM_ESPERADA }]);
+});
+
+test('rejeita hash base64 com separador invalido no packageManager', () => {
+  assert.throws(
+    () =>
+      extrairVersoesDeConteudo(
+        'package.json',
+        JSON.stringify({ packageManager: `pnpm@${VERSAO_PNPM_ESPERADA}+sha512-abc==` })
+      ),
+    (erro) => erro.message.includes('formato gerado pelo Corepack')
+  );
 });
 
 test('rejeita packageManager apenas com major', () => {
