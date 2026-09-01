@@ -31,6 +31,13 @@ allowBuilds:
 # recentes do Dependabot. Como o proprio Dependabot ja espera 3 a 30 dias por
 # cooldown, 1440 cobre a janela que resta: instalacao manual de pacote
 # recem-publicado.
+#
+# A regra pnpm-minimum-release-age do Semgrep exige 10080 (7 dias) fixo e
+# reprova qualquer valor menor, inclusive este. A divergencia e deliberada e
+# esta medida acima: 10080 reprova a instalacao congelada. Suprimida aqui, e
+# nao dispensada no Security tab, para que a decisao viva versionada e passe
+# por review junto de qualquer mudanca futura deste valor.
+# nosemgrep: package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age
 minimumReleaseAge: 1440
 minimumReleaseAgeStrict: true
 
