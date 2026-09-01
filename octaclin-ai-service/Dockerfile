@@ -1,18 +1,30 @@
-# Instalacao reproduzivel (PR 49). O hardening amplo de runtime
-# (capabilities, digest da imagem base e filesystem read-only) pertence ao PR 50.
-FROM python:3.12-slim AS runtime
+# PR 50 — Containers e runtime.
+#
+# Base fixada por digest imutavel (indice OCI multi-arch linux/amd64+arm64),
+# resolvido em 2026-09-01 no Docker Hub oficial (library/python:3.12-slim). A tag
+# humana permanece para legibilidade; o digest e a ancora real. Atualizacao do
+# digest segue o processo em docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md.
+#
+# requirements.txt continua sendo a lista de dependencias diretas; o lock traz o
+# grafo transitivo resolvido em versoes exatas e verificado por hash. Regenerar:
+#   uv pip compile requirements.txt --generate-hashes --universal \
+#     --python-version 3.12 --output-file requirements.lock.txt
+FROM python:3.12-slim@sha256:e5c9fa26ffb76e11e0f054f30dc2523a2f9693f0c36c0cf1e39b27e152d899fc AS build
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+COPY requirements.txt requirements.lock.txt ./
+# Instala o grafo travado num prefixo isolado que o estagio final recebe pronto.
+# Assim o runtime nao executa pip: sem gerenciador de pacotes no estagio final.
+RUN pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.lock.txt
+
+FROM python:3.12-slim@sha256:e5c9fa26ffb76e11e0f054f30dc2523a2f9693f0c36c0cf1e39b27e152d899fc AS runtime
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 RUN groupadd --system --gid 10001 octaclin \
     && useradd --system --uid 10001 --gid octaclin --home-dir /app --shell /usr/sbin/nologin octaclin
-# requirements.txt continua sendo a lista de dependencias diretas; o lock traz o
-# grafo transitivo resolvido em versoes exatas e verificado por hash, para que a
-# imagem instale exatamente o mesmo grafo que o CI. Regenerar com:
-#   uv pip compile requirements.txt --generate-hashes --universal \
-#     --python-version 3.12 --output-file requirements.lock.txt
-COPY requirements.txt requirements.lock.txt ./
-RUN pip install --no-cache-dir --require-hashes -r requirements.lock.txt
+COPY --from=build /install /usr/local
 COPY --chown=octaclin:octaclin app ./app
 EXPOSE 8001
 USER octaclin

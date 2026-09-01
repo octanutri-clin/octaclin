@@ -1,0 +1,41 @@
+# PR 50 — .dockerignore do contexto do backend.
+# O .dockerignore da raiz NAO se aplica a este contexto (docker build usa
+# octaclin-backend como contexto). Menor superficie: so o necessario ao build
+# determinístico chega ao daemon. Nao ignore package.json/pnpm-lock.yaml/
+# pnpm-workspace.yaml/tsconfig*/nest-cli.json — o build depende deles.
+
+# Artefatos e dependencias reconstruidos no build
+node_modules
+dist
+coverage
+*.tsbuildinfo
+
+# Secrets e credenciais — nunca no contexto de build
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets
+credentials
+id_rsa*
+
+# Canarios de teste de contexto (prova negativa do PR 50)
+*.canary
+secret-canary.txt
+
+# Metadados e ruido de dev
+.git
+.gitignore
+.dockerignore
+Dockerfile
+*.log
+logs
+tmp
+.cache
+.turbo
+.idea
+.vscode
+.DS_Store

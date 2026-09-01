@@ -68,3 +68,33 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+
+  # PR 50: atualizacao rastreavel do digest das imagens base. Dependabot abre PR
+  # com o novo digest; o merge segue o mesmo fluxo humano (scan -> build ->
+  # harness -> SBOM -> review). Sem auto-merge.
+  - package-ecosystem: docker
+    directory: /octaclin-backend
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: docker
+    directory: /octaclin-web
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: docker
+    directory: /octaclin-ai-service
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5

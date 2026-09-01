@@ -493,6 +493,20 @@ Skills Claude: `security-review`, `test-driven-development`,
 Gate minimo: scan de imagem; digest fixo; imagem sobe e healthcheck passa sem
 privilegios extras; filesystem e capabilities minimos comprovados.
 
+Implementacao concluida em branch dedicada sobre o merge do PR 49 (`#176`,
+merge commit `74c47a3`). As tres bases foram fixadas por digest imutavel
+(indice OCI multi-arch), o gate estatico `pnpm test:dockerfiles-runtime` passou
+a rejeitar base sem digest, `latest`, secret obvio e gerenciador de pacotes no
+estagio final, e o runtime Node deixou de instalar pacotes (o estagio final so
+recebe artefatos). O harness `scripts/harness-runtime-containers.sh` sobe cada
+imagem no CI com `--read-only --cap-drop=ALL --security-opt=no-new-privileges`
+e limites de pids/memoria/cpu, provando usuario efetivo non-root, escrita
+negada fora do tmpfs, canario de contexto ausente e history sem secret; web e
+ai-service chegam a `healthy`, enquanto o boot completo do backend depende de
+config/provider e fica documentado como fronteira do PR 51. Scan e SBOM passam
+a cobrir a imagem final, nao apenas o filesystem. Detalhes e evidencia em
+`docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md`.
+
 ### PR 51 - Providers e menor privilegio
 
 **Risco:** R5. **Bloqueador:** sim.
