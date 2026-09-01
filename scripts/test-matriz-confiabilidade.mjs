@@ -25,7 +25,8 @@ const referenciasObrigatorias = [
   'octaclin-backend/src/modulos/auth/apresentacao/guarda-jwt.spec.ts',
   'octaclin-backend/src/modulos/auth/aplicacao/servico-sessoes.spec.ts',
   'octaclin-backend/src/modulos/auth/aplicacao/sessoes-rotacao.integracao.spec.ts',
-  'octaclin-web/scripts/sessoes-bff.spec.ts'
+  'octaclin-web/scripts/sessoes-bff.spec.ts',
+  'scripts/validar-tooling-agentes.spec.mjs'
 ];
 
 for (const referencia of referenciasObrigatorias) {

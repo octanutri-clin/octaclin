@@ -26,6 +26,7 @@
     "test:actions-imutaveis": "node --test scripts/validar-actions-imutaveis.spec.mjs",
     "test:workflows-seguros": "node --test scripts/validar-workflows-sem-injecao.spec.mjs",
     "test:triagem-seguranca": "node --test scripts/validar-triagem-seguranca.spec.mjs",
+    "test:tooling-agentes": "node --test scripts/validar-tooling-agentes.spec.mjs",
     "validate": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1",
     "validate:docs": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -DocsOnly",
     "validate:full": "powershell -ExecutionPolicy Bypass -File ./validar-preflight.ps1 -Full"

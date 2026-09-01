@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/block-env-edit.ps1",
+            "command": "node -e \"const{spawnSync}=require('node:child_process');const{join}=require('node:path');const root=process.env.CLAUDE_PROJECT_DIR;if(!root)process.exit(2);const r=spawnSync(process.execPath,[join(root,'scripts','claude-hook-guard.mjs'),'protect-write'],{stdio:'inherit'});process.exit(r.status??2)\"",
             "timeout": 15,
             "statusMessage": "Verificando protecao de .env..."
           }
@@ -17,28 +17,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/guard-google-actions.ps1",
+            "command": "node -e \"const{spawnSync}=require('node:child_process');const{join}=require('node:path');const root=process.env.CLAUDE_PROJECT_DIR;if(!root)process.exit(2);const r=spawnSync(process.execPath,[join(root,'scripts','claude-hook-guard.mjs'),'protect-command'],{stdio:'inherit'});process.exit(r.status??2)\"",
             "timeout": 15,
-            "statusMessage": "Verificando acao no Google Workspace/Gmail..."
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/typecheck-on-edit.ps1",
-            "timeout": 120,
-            "statusMessage": "Rodando typecheck..."
+            "statusMessage": "Verificando comando e acesso operacional..."
           }
         ]
       }
     ]
-  },
-  "enabledPlugins": {
-    "ui-ux-pro-max@ui-ux-pro-max-skill": true
   }
 }

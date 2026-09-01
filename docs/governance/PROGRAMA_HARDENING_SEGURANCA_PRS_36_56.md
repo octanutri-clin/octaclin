@@ -4,7 +4,7 @@
 >
 > Atualizado em: 2026-08-31
 >
-> Proximo item autorizado: abrir, revisar e executar os checks do PR 47.
+> Proximo item autorizado: revisar e executar os checks do PR GitHub #175 (PR 48).
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
@@ -32,10 +32,13 @@
 > Estado do PR 46: integrado no `main` pelo PR GitHub #173 em 2026-08-31
 > (`bfdbf76acf717afd13de52ef02ef2ce990c3557c`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR46_2026-08-31.md`.
-> Estado do PR 47: implementacao e validacao local concluidas em
-> `security/governanca-pr47-ia`, PR GitHub #174, aguardando checks e
-> review/merge humano. Relatorio:
+> Estado do PR 47: integrado no `main` pelo PR GitHub #174 em 2026-08-31
+> (`bc94ae74e8ab65d35c8ec1107a64e71c05a282fb`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR47_2026-08-31.md`.
+> Estado do PR 48: aberto como PR GitHub #175 a partir de
+> `security/governanca-pr48-tooling-agentes`, aguardando checks e review/merge
+> humano. Relatorio:
+> `docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md`.
 
 ## 1. Funcao deste documento
 
@@ -435,6 +438,12 @@ Skills Claude: `security-review`, `test-driven-development`,
 
 Gate minimo: testes negativos de path/command injection; hooks falham fechado;
 skills nao auditadas nao recebem secrets nem acesso operacional.
+
+Estado local: skills Google/Gmail/brainstorming e helpers placeholder foram
+removidos; executaveis restantes exigem caminho e SHA-256 na allowlist; hooks
+Node respondem conservadoramente; scanner de secrets inclui o tooling; gate
+`test:tooling-agentes` foi ligado ao CI. PR GitHub `#175`. Relatorio:
+`docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md`.
 
 ### PR 49 - Supply chain e dependencias
 
