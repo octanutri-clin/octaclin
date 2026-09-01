@@ -7,11 +7,15 @@ packages:
 
 # Migrado de `pnpm.overrides` do package.json: o pnpm 11 nao le mais aquele
 # bloco. `decode-uri-component` foi adicionado no PR 49 para remediar
-# GHSA-vcc3-ghjq-m6fr sem excecao.
+# GHSA-vcc3-ghjq-m6fr sem excecao. `browserslist` remedia
+# GHSA-c83g-rgw3-j3cx e GHSA-73wf-gq98-2v4g (ambos high, corrigidos em
+# 4.28.7); chega transitivo por @babel/* e core-js-compat, entao a
+# remediacao e por override e nao por bump direto.
 overrides:
   uuid@<11.1.1: 11.1.1
   js-yaml@>=4.0.0 <4.3.1: 4.3.1
   decode-uri-component@<0.5.0: 0.5.0
+  browserslist@<4.28.7: 4.28.7
 
 # Nenhuma dependencia do mobile precisa executar lifecycle script.
 strictDepBuilds: true
