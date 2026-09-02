@@ -48,12 +48,13 @@
 > Estado do PR 50: integrado no `main` pelo PR GitHub #178 em 2026-09-01
 > (`0e41bf22321f4427579e39f8ecca5632d7596988`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md`.
-> Estado do PR 51: implementacao concluida em branch dedicada
-> (`security/governanca-pr51-providers-menor-privilegio`). O processo passou a
-> medir o menor privilegio dos providers no bootstrap e em
-> `GET /operacoes/providers`; a conversao para falha fechada depende da
-> evidencia de producao descrita na secao 6 da norma. Aguardando required
-> checks, coleta de evidencia pelo proprietario e review humano. Relatorio:
+> Estado do PR 51: medicao integrada no `main` pelo PR GitHub #189 em
+> 2026-09-02 (`43e7ee0`). Os dois processos de producao foram medidos no mesmo
+> dia -- `web` 12:24:22 e `worker` 12:05:18, ambos `conforme` -- e a falha
+> fechada foi habilitada em branch dedicada
+> (`security/governanca-pr51-fail-closed`), aguardando checks e review humano.
+> Falta a evidencia dos paineis de Neon, Redis, Backblaze e Render (secoes 6.2 a
+> 6.6 da norma). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR51_2026-09-02.md`. Norma duravel:
 > `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`.
 
@@ -548,11 +549,15 @@ role privilegiada (alcancavel por `SET ROLE`, e por isso consultada com
 do endpoint de armazenamento. `nao-verificado` nunca conta como aprovacao e
 nenhum motivo carrega host, credencial ou nome de role.
 
-A verificacao **relata e nao derruba o boot**, por decisao do proprietario e
-pela licao de 2026-08-22 em `docs/agents/LESSONS_LEARNED.md`: um check novo
-avaliado contra configuracao presumida, e nao contra o ambiente real, ja
-degradou a saude de producao uma vez. A conversao para falha fechada entra em PR
-proprio depois da evidencia de producao. O relatorio fica fora de
+A verificacao entrou **relatando, sem derrubar o boot**, pela licao de
+2026-08-22 em `docs/agents/LESSONS_LEARNED.md`: um check novo avaliado contra
+configuracao presumida, e nao contra o ambiente real, ja degradou a saude de
+producao uma vez. Medidos os dois processos de producao em 2026-09-02 (`web`
+12:24:22 e `worker` 12:05:18, ambos `conforme`), a **falha fechada foi
+habilitada** em staging e producao: bloqueia qualquer provider `violado` e
+bloqueia `postgres` diferente de `conforme`, mas nao bloqueia `redis` ou
+`armazenamento` `nao-verificado`, porque provider ausente do processo e estado
+legitimo -- o `worker` nao serve anexo. O relatorio fica fora de
 `/health/detalhado` porque aquele endpoint e publico e nao autenticado.
 
 Evidencia de provider ainda depende de operacao humana: nenhuma credencial de

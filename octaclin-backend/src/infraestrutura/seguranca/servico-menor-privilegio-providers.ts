@@ -1,23 +1,26 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { ambienteExigeFalhaFechada } from './ambiente-execucao';
 import {
   CONSULTA_PRIVILEGIO_POSTGRES,
   PrivilegioRolePostgres,
   RelatorioMenorPrivilegio,
   ResultadoVerificacao,
   avaliarPrivilegioRolePostgres,
-  montarRelatorio
+  montarRelatorio,
+  motivoDeBloqueio
 } from './menor-privilegio-providers';
 
 /**
  * Mede o menor privilegio dos providers no processo real e guarda o resultado.
  *
- * Roda uma vez no bootstrap para que a evidencia exista no log do deploy, e
- * fica disponivel sob demanda em `GET /operacoes/providers`, que exige
- * SuperAdmin. O relatorio nao entra em `/health/detalhado` por dois motivos:
- * aquele endpoint e publico e nao autenticado, e a licao de 2026-08-22 diz que
- * check novo nao deve mexer na saude global antes de ser medido no ambiente
- * real.
+ * Roda uma vez no bootstrap e, em staging e producao, derruba o processo quando
+ * `motivoDeBloqueio` aponta um motivo. Fica tambem disponivel sob demanda em
+ * `GET /operacoes/providers`, que exige SuperAdmin.
+ *
+ * O relatorio nao entra em `/health/detalhado`: aquele endpoint e publico e nao
+ * autenticado, e dizer a um anonimo qual provider esta fora de conformidade
+ * seria entregar o mapa.
  */
 @Injectable()
 export class ServicoMenorPrivilegioProviders implements OnApplicationBootstrap {
@@ -36,15 +39,21 @@ export class ServicoMenorPrivilegioProviders implements OnApplicationBootstrap {
       armazenamento: relatorio.armazenamento.veredicto
     };
 
-    if (relatorio.veredicto === 'violado') {
+    const bloqueio = motivoDeBloqueio(relatorio);
+    if (bloqueio) {
       // Nivel `error` de proposito: e o sinal que o monitor externo e a revisao
       // de deploy precisam ver. A mensagem carrega motivo, nunca host, role ou
       // credencial.
       this.logger.error(
-        `Menor privilegio de providers violado: ${this.motivos(relatorio).join(' ')}`,
+        `Menor privilegio de providers: ${bloqueio} ${this.motivos(relatorio).join(' ')}`.trim(),
         undefined,
         JSON.stringify(resumo)
       );
+
+      // Fora de staging e producao a medicao continua sendo so observacao: um
+      // MinIO local em `http://` ou um Postgres de desenvolvimento com role
+      // ampla nao sao motivo para impedir alguem de rodar o projeto.
+      if (ambienteExigeFalhaFechada()) throw new Error(bloqueio);
       return;
     }
 

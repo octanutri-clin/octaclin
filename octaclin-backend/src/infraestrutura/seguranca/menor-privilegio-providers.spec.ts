@@ -1,10 +1,13 @@
 import {
   CONSULTA_PRIVILEGIO_POSTGRES,
+  RelatorioMenorPrivilegio,
+  ResultadoVerificacao,
   avaliarEndpointArmazenamento,
   avaliarPrivilegioRolePostgres,
   avaliarTlsRedis,
   consolidarVeredicto,
-  montarRelatorio
+  montarRelatorio,
+  motivoDeBloqueio
 } from './menor-privilegio-providers';
 
 const ambienteOriginal = { ...process.env };
@@ -186,6 +189,53 @@ describe('consolidarVeredicto', () => {
         { veredicto: 'nao-verificado', motivos: [] }
       ])
     ).toBe('conforme');
+  });
+});
+
+describe('motivoDeBloqueio', () => {
+  const conforme: ResultadoVerificacao = { veredicto: 'conforme', motivos: [] };
+  const naoVerificado: ResultadoVerificacao = { veredicto: 'nao-verificado', motivos: [] };
+  const violado: ResultadoVerificacao = { veredicto: 'violado', motivos: ['x'] };
+
+  function relatorio(partes: Partial<RelatorioMenorPrivilegio>): RelatorioMenorPrivilegio {
+    return {
+      ambiente: 'producao',
+      veredicto: 'conforme',
+      verificadoEm: new Date().toISOString(),
+      postgres: conforme,
+      redis: conforme,
+      armazenamento: conforme,
+      ...partes
+    };
+  }
+
+  it('nao bloqueia quando os tres providers estao conformes', () => {
+    expect(motivoDeBloqueio(relatorio({}))).toBeUndefined();
+  });
+
+  it('bloqueia qualquer provider violado e nomeia quais', () => {
+    const motivo = motivoDeBloqueio(relatorio({ redis: violado, armazenamento: violado }));
+
+    expect(motivo).toContain('redis');
+    expect(motivo).toContain('armazenamento');
+    expect(motivo).not.toContain('postgres');
+  });
+
+  it('bloqueia postgres nao-verificado, porque dele depende o isolamento entre tenants', () => {
+    expect(motivoDeBloqueio(relatorio({ postgres: naoVerificado }))).toContain('isolamento entre tenants');
+  });
+
+  /**
+   * O `worker` de producao nao configura `ARMAZENAMENTO_S3_ENDPOINT` porque nao
+   * serve anexo. Foi assim que ele reportou em 2026-09-02, e bloquear por isso
+   * mataria o processo por nao usar um provider que ele nao usa mesmo.
+   */
+  it('nao bloqueia redis e armazenamento nao-verificados, que e o caso real do worker', () => {
+    expect(motivoDeBloqueio(relatorio({ redis: naoVerificado, armazenamento: naoVerificado }))).toBeUndefined();
+  });
+
+  it('prioriza a violacao sobre a ausencia de verificacao na mensagem', () => {
+    expect(motivoDeBloqueio(relatorio({ postgres: violado }))).toContain('violado');
   });
 });
 

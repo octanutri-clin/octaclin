@@ -70,8 +70,8 @@ separacao sem que nada reclame -- por isso ela tambem e verificada.
 | Provider | Regra em staging e producao | Onde e imposta |
 | --- | --- | --- |
 | Neon | TLS obrigatorio, cadeia e hostname sempre verificados; `sslmode` permissivo derruba o boot | `ssl-postgres.ts`, falha fechada desde o PR 39 |
-| Redis | TLS obrigatorio (`rediss://` ou `REDIS_TLS=true`) | verificado e relatado desde o PR 51; falha fechada pendente de evidencia |
-| Backblaze B2 | endpoint HTTPS | verificado e relatado desde o PR 51; falha fechada pendente de evidencia |
+| Redis | TLS obrigatorio (`rediss://` ou `REDIS_TLS=true`) | falha fechada desde o PR 51 |
+| Backblaze B2 | endpoint HTTPS | falha fechada desde o PR 51 |
 | Render -> navegador | HTTPS, cookie `Secure`, CORS sem `*` | `main.ts` e BFF, falha fechada desde a Fase 229 |
 
 O Redis merece nota porque o payload de fila carrega identificador de tenant e
@@ -123,14 +123,45 @@ Tres regras de leitura importam:
    nao autenticado; dizer a um anonimo que a role do runtime tem `BYPASSRLS`
    seria entregar o mapa.
 
-### Por que ainda nao derruba o boot
+### Quando o processo nao sobe
 
-Por decisao registrada no PR 51 e pela licao de 2026-08-22 em
+Em staging e producao, o bootstrap derruba o processo -- com log `error` antes,
+para que a evidencia exista mesmo quando o processo nao sobe -- em dois casos:
+
+1. **qualquer provider `violado`**; ou
+2. **`postgres` diferente de `conforme`**, inclusive `nao-verificado`.
+
+A assimetria da segunda regra e deliberada. O privilegio da role e a unica
+propriedade aqui de que depende o isolamento entre tenants, e ela e verificavel
+em todo processo que abre o `DataSource`. Subir sem saber justamente o que este
+controle existe para saber seria o mesmo ponto cego que o PR 51 fechou.
+
+**Redis e armazenamento podem ficar `nao-verificado` sem bloquear.** Provider
+ausente do processo e estado legitimo: o `worker` de producao nao configura
+`ARMAZENAMENTO_S3_ENDPOINT` porque nao serve anexo, e bloquear por isso mataria
+o processo por nao usar um provider que ele nao usa mesmo.
+
+Fora de staging e producao nada e derrubado: um MinIO local em `http://` ou um
+Postgres de desenvolvimento com role ampla nao sao motivo para impedir alguem de
+rodar o projeto.
+
+### Como a falha fechada foi habilitada
+
+O controle entrou medindo e relatando, sem bloquear, pela licao de 2026-08-22 em
 `docs/agents/LESSONS_LEARNED.md`: um check novo avaliado contra configuracao
 presumida, e nao contra o ambiente real, ja degradou a saude de producao uma
-vez. A conversao para falha fechada acontece **depois** da evidencia da secao 6,
-em PR proprio e curto. Ate la, uma violacao aparece como `error` no log do
-deploy e como `violado` no endpoint de operacoes.
+vez.
+
+A medicao real de 2026-09-02 fechou a lacuna:
+
+| Processo | Horario | Veredicto |
+| --- | --- | --- |
+| `web` de producao | 12:24:22 | `postgres`, `redis` e `armazenamento` `conforme` |
+| `worker` de producao | 12:05:18 | `postgres` e `redis` `conforme`; `armazenamento` `nao-verificado` (nao configurado, esperado) |
+
+Com os dois processos medidos, o bloqueio foi habilitado. Antes de mudar
+qualquer credencial de provider, releia esta secao: uma alteracao que viole as
+regras passa a impedir o deploy, e esse e o comportamento pretendido.
 
 ---
 

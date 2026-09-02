@@ -28,10 +28,14 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 - Desde o PR 51, o processo mede o menor privilegio dos providers no bootstrap
   e em `GET /operacoes/providers` (SuperAdmin): role do Postgres sem
   `SUPERUSER`/`BYPASSRLS`, sem pertinencia a role privilegiada e sem `CREATE`
-  no schema `public`; Redis com TLS; endpoint de armazenamento em HTTPS. Uma
-  violacao aparece como `error` no log do deploy e **nao** derruba o boot: a
-  falha fechada entra depois da evidencia de producao, conforme
-  `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`.
+  no schema `public`; Redis com TLS; endpoint de armazenamento em HTTPS. Em
+  staging e producao o processo **nao sobe** quando algum provider fica
+  `violado`, nem quando o privilegio do Postgres nao pode ser verificado; o log
+  `error` sai antes do bloqueio. `redis` e `armazenamento` `nao-verificado` nao
+  bloqueiam, porque provider ausente do processo e estado legitimo -- o worker
+  nao serve anexo. Antes de alterar credencial de provider, leia a secao 5 de
+  `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`: uma mudanca que
+  viole as regras passa a impedir o deploy.
 
 ## Backend
 

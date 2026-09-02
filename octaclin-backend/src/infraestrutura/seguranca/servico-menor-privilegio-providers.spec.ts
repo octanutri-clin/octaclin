@@ -73,7 +73,7 @@ describe('ServicoMenorPrivilegioProviders', () => {
     expect(servico.obterUltimoRelatorio()?.postgres.veredicto).toBe('conforme');
   });
 
-  it('nao derruba o processo no bootstrap quando o menor privilegio esta violado', async () => {
+  it('derruba o processo em producao quando o menor privilegio esta violado', async () => {
     process.env.APP_AMBIENTE = 'producao';
     const servico = criarServico({
       isInitialized: true,
@@ -83,8 +83,67 @@ describe('ServicoMenorPrivilegioProviders', () => {
     });
     const erro = jest.spyOn(servico['logger'], 'error').mockImplementation(() => undefined);
 
-    await expect(servico.onApplicationBootstrap()).resolves.toBeUndefined();
+    await expect(servico.onApplicationBootstrap()).rejects.toThrow('menor privilegio violado');
     expect(erro).toHaveBeenCalledTimes(1);
+  });
+
+  it('derruba o processo em staging, e nao apenas em producao', async () => {
+    process.env.APP_AMBIENTE = 'staging';
+    const servico = criarServico({
+      isInitialized: true,
+      query: jest.fn(async () => [
+        { usuario: 'octaclin_app', super: false, bypassrls: true, herdaPrivilegio: false, podeCriarNoSchema: false }
+      ])
+    });
+    jest.spyOn(servico['logger'], 'error').mockImplementation(() => undefined);
+
+    await expect(servico.onApplicationBootstrap()).rejects.toThrow();
+  });
+
+  it('derruba o processo quando o privilegio do Postgres nao pode ser verificado em producao', async () => {
+    process.env.APP_AMBIENTE = 'producao';
+    const servico = criarServico({
+      isInitialized: true,
+      query: jest.fn(async () => {
+        throw new Error('permission denied for table pg_roles');
+      })
+    });
+    jest.spyOn(servico['logger'], 'error').mockImplementation(() => undefined);
+
+    await expect(servico.onApplicationBootstrap()).rejects.toThrow('isolamento entre tenants');
+  });
+
+  /**
+   * Estado real do `worker` de producao em 2026-09-02: ele nao configura
+   * `ARMAZENAMENTO_S3_ENDPOINT` porque nao serve anexo.
+   */
+  it('deixa o worker subir sem armazenamento configurado', async () => {
+    process.env.APP_AMBIENTE = 'producao';
+    process.env.REDIS_URL = 'rediss://host:6379';
+    delete process.env.ARMAZENAMENTO_S3_ENDPOINT;
+    const servico = criarServico({
+      isInitialized: true,
+      query: jest.fn(async () => [
+        { usuario: 'octaclin_app_producao', super: false, bypassrls: false, herdaPrivilegio: false, podeCriarNoSchema: false }
+      ])
+    });
+    const log = jest.spyOn(servico['logger'], 'log').mockImplementation(() => undefined);
+
+    await expect(servico.onApplicationBootstrap()).resolves.toBeUndefined();
+    expect(log).toHaveBeenCalledTimes(1);
+  });
+
+  it('nao derruba o processo fora de staging e producao', async () => {
+    process.env.APP_AMBIENTE = 'local';
+    const servico = criarServico({
+      isInitialized: true,
+      query: jest.fn(async () => [
+        { usuario: 'postgres', super: true, bypassrls: true, herdaPrivilegio: false, podeCriarNoSchema: true }
+      ])
+    });
+    jest.spyOn(servico['logger'], 'error').mockImplementation(() => undefined);
+
+    await expect(servico.onApplicationBootstrap()).resolves.toBeUndefined();
   });
 
   it('nao registra host, credencial nem nome de role no log de violacao', async () => {
@@ -102,7 +161,9 @@ describe('ServicoMenorPrivilegioProviders', () => {
     });
     const erro = jest.spyOn(servico['logger'], 'error').mockImplementation(() => undefined);
 
-    await servico.onApplicationBootstrap();
+    // O bloqueio acontece depois do log: a evidencia precisa existir mesmo
+    // quando o processo nao sobe.
+    await expect(servico.onApplicationBootstrap()).rejects.toThrow();
 
     const registrado = JSON.stringify(erro.mock.calls);
     expect(registrado).not.toContain('senha-secreta');

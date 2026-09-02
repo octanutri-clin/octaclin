@@ -2608,10 +2608,13 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] `nao-verificado` nao conta como aprovacao; nenhum motivo carrega host, credencial ou nome de role, com teste negativo.
   - [x] Relatorio exposto em `GET /operacoes/providers` (SuperAdmin), fora de `/health/detalhado`, que e publico.
   - [x] Norma duravel em `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`, com o procedimento de coleta de evidencia.
-  - [ ] Evidencia redigida de Render, Neon, Redis e Backblaze coletada pelo proprietario (secao 6 da norma).
-  - [ ] Conversao das verificacoes para falha fechada, em PR proprio, depois da evidencia.
-  - [ ] Checks e review/merge humanos do Pull Request contra `main`.
-  - Decisao registrada: a verificacao relata e nao derruba o boot neste ciclo, pela licao de 2026-08-22 em `docs/agents/LESSONS_LEARNED.md`.
+  - [x] Medicao real dos dois processos de producao em 2026-09-02: `web` (12:24:22) e `worker` (12:05:18), ambos `conforme`; role de runtime sem `SUPERUSER`, sem `BYPASSRLS`, sem pertinencia privilegiada e sem `CREATE` no schema.
+  - [x] Falha fechada habilitada em staging e producao apos a medicao: bloqueia qualquer provider `violado` e bloqueia `postgres` diferente de `conforme`.
+  - [x] `redis` e `armazenamento` `nao-verificado` nao bloqueiam: provider ausente do processo e estado legitimo, como no `worker` de producao.
+  - [x] Merge do PR GitHub `#189` (`43e7ee0`) com a medicao; falha fechada em PR proprio.
+  - [ ] Evidencia redigida dos paineis de Neon, Redis, Backblaze e Render coletada pelo proprietario (secoes 6.2 a 6.6 da norma).
+  - [ ] Checks e review/merge humanos do Pull Request da falha fechada contra `main`.
+  - Decisao registrada: o controle entrou medindo, pela licao de 2026-08-22 em `docs/agents/LESSONS_LEARNED.md`, e so bloqueou depois da evidencia real.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR51_2026-09-02.md`.
 - [ ] PR 52 - Consolidar observabilidade, auditoria e resposta a incidentes.
 - [ ] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.
