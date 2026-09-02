@@ -131,6 +131,18 @@ caminho rotineiro de atualizacao ja espera mais que 24 horas. A janela que
 publicado ha minutos. Antes de elevar o valor, verifique a idade do pacote mais
 novo dos quatro lockfiles.
 
+**Divergencia da regra do Semgrep.** A regra
+`package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age`
+exige 10080 fixo e reprova qualquer valor menor, inclusive 1440 -- eram quatro
+alertas, um por `pnpm-workspace.yaml`. A regra fica excluida em
+`.github/workflows/semgrep.yml` por `--exclude-rule`, e nao dispensada no
+Security tab, para que a decisao viva versionada e passe por review junto de
+qualquer mudanca futura do valor. `# nosemgrep` na linha do valor nao suprime a
+regra: as duas formas, com e sem rule id, foram testadas na CI do PR 187 e os
+quatro alertas continuaram abertos. Com a regra fora, o piso do valor passa a
+ser provado por `scripts/validar-instalacao-congelada.spec.mjs`, que reprova
+qualquer `minimumReleaseAge` abaixo de 1440 nos quatro arquivos.
+
 Excecao para patch de seguranca urgente: usar `minimumReleaseAgeExclude` com
 `pacote@versao` exatos -- nunca curinga global -- e registrar excecao do tipo
 `minimumReleaseAge` no ledger, com owner e prazo. Remover a entrada assim que a
