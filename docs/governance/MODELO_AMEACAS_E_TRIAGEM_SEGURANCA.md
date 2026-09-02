@@ -106,7 +106,7 @@ duplicar todos os detalhes de evidencia.
 | Upload malicioso ou acesso cross-tenant no storage | PHI binaria | TB-06 | hash/URL assinada existentes; quarentena pendente | PR 44 |
 | XSS, CSRF, redirect ou cache sensivel | sessao/PHI | TB-01/TB-03 | CSP, BFF, CORS e cache provados no PR 45; callbacks, redirects e endpoints OAuth falham fechados no PR 46 integrado; smoke real ainda pendente | PR 45-46 |
 | Prompt/tool injection e exfiltracao por IA/agente | PHI/secrets | TB-07/TB-09 | PR 47 fecha schemas e revisao humana; PR 48 remove tooling operacional vendorizado, fixa allowlist/hash e torna payload ambiguo conservador; plugins globais seguem fora da prova | PR 47-48 |
-| Dependencia, Action ou container comprometido | release | TB-08 | SHA/scanners existentes; supply chain/runtime incompletos | PR 49-50 |
+| Dependencia, Action ou container comprometido | release | TB-08 | PR 49 integrado fecha package manager exato, instalacao congelada, lifecycle negado por padrao, ledger de excecoes e SBOM; PR 50 integrado fixa bases por digest e prova runtime non-root, read-only e sem capabilities extras. Boot completo do backend depende de config/provider e segue como fronteira | PR 49-50 (integrados); resto no PR 51 |
 | Credencial cloud excessiva ou ambiente cruzado | todos | TB-10 | runbooks existentes; evidencia atual de providers pendente | PR 51 |
 | Incidente sem alerta, evidencia ou restore | auditoria/disponibilidade | TB-04/TB-06/TB-10 | controles operacionais parciais | PR 52-53 |
 | Falha exploravel nao detectada pelos testes estaticos | todos | todas | proibido testar producao; staging isolado ainda sera usado | PR 54-55 |

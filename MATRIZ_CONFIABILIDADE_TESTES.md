@@ -1,6 +1,7 @@
 # OctaClin - Matriz de confiabilidade e regressao
 
-Atualizada no PR 49 da governanca de seguranca em 2026-09-01. A cobertura,
+Atualizada nos PRs 49 e 50 da governanca de seguranca em 2026-09-01, ambos
+integrados no `main` (`#176` e `#178`). A cobertura,
 as excecoes e os riscos residuais de acessibilidade tem matriz propria em
 `docs/governance/matriz-acessibilidade.json`, validada por `pnpm test:a11y:matriz`.
 Esta matriz conecta os riscos de maior

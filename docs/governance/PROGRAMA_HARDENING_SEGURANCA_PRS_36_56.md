@@ -4,8 +4,8 @@
 >
 > Atualizado em: 2026-09-01
 >
-> Proximo item autorizado: revisar e executar os checks do PR 49. O PR 50 so e
-> autorizado apos o merge humano do PR 49.
+> Proximo item autorizado: PR 51 - Providers e menor privilegio. Os PRs 49 e 50
+> estao integrados no `main`.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
@@ -39,13 +39,15 @@
 > Estado do PR 48: integrado no `main` pelo PR GitHub #175
 > (`7b42d411b76ce8f4bfb268d495a0330d842fa3b8`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md`.
-> Estado do PR 49: implementacao concluida em branch dedicada
-> (`security/governanca-pr49-supply-chain-dependencias`). Correcao pos-review
-> eliminou DS-0002/DS-0026 dos tres Dockerfiles e ligou as duas excecoes sem
-> patch ao Trivy por ledger datado. Aguardando required checks e review humano.
-> Relatorio:
+> Estado do PR 49: integrado no `main` pelo PR GitHub #176 em 2026-09-01
+> (`74c47a3aaa07dc31ad480ac79fca5256c4233d2b`). Correcao pos-review eliminou
+> DS-0002/DS-0026 dos tres Dockerfiles e ligou as duas excecoes sem patch ao
+> Trivy por ledger datado. Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md`. Norma duravel:
 > `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`.
+> Estado do PR 50: integrado no `main` pelo PR GitHub #178 em 2026-09-01
+> (`0e41bf22321f4427579e39f8ecca5632d7596988`). Relatorio:
+> `docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md`.
 
 ## 1. Funcao deste documento
 
@@ -423,9 +425,8 @@ Skills Claude: `security-review`, `test-driven-development`,
 Gate minimo: conjunto adversarial sintetico, recusas e isolamento; nenhuma PHI
 real enviada a provider; decisao clinica permanece humana.
 
-Implementacao e validacao local concluidas em
-`security/governanca-pr47-ia`, PR GitHub #174, aguardando checks e
-review/merge humano. Entradas e saidas passaram a ter schemas fechados, URL
+Integrado no `main` pelo PR GitHub #174 (`bc94ae7`) em 2026-08-31, a partir de
+`security/governanca-pr47-ia`. Entradas e saidas passaram a ter schemas fechados, URL
 assinada deixou de atravessar a fronteira, configuracao parcial falha fechada,
 ha limite agregado por tenant e nenhuma resposta pode executar acao clinica.
 O FastAPI atual permanece local, sem provider ou ferramentas. Relatorio:
@@ -467,8 +468,9 @@ Skills Claude: `security-review`, `test-driven-development`,
 Gate minimo: instalacao congelada, SBOM reproduzivel, scanners com politica de
 excecao datada e ownership definido.
 
-Implementacao concluida em branch dedicada. Aguardando review humano, required
-checks e merge. O package manager passou de `pnpm@9.15.9` para `pnpm@11.25.0`
+Integrado no `main` pelo PR GitHub #176 (`74c47a3`) em 2026-09-01, com required
+checks verdes e review/merge humanos. O package manager passou de `pnpm@9.15.9`
+para `pnpm@11.25.0`
 exato com hash de integridade, depois de provar que o pnpm 9 ignorava
 `allowBuilds`, `strictDepBuilds`, `minimumReleaseAge`, `trustPolicy` e
 `blockExoticSubdeps` que ja estavam escritos no repositorio. CI e imagens
@@ -493,8 +495,9 @@ Skills Claude: `security-review`, `test-driven-development`,
 Gate minimo: scan de imagem; digest fixo; imagem sobe e healthcheck passa sem
 privilegios extras; filesystem e capabilities minimos comprovados.
 
-Implementacao concluida em branch dedicada sobre o merge do PR 49 (`#176`,
-merge commit `74c47a3`). As tres bases foram fixadas por digest imutavel
+Integrado no `main` pelo PR GitHub #178 (`0e41bf2`) em 2026-09-01, sobre o merge
+do PR 49 (`#176`, merge commit `74c47a3`), com required checks verdes e
+review/merge humanos. As tres bases foram fixadas por digest imutavel
 (indice OCI multi-arch), o gate estatico `pnpm test:dockerfiles-runtime` passou
 a rejeitar base sem digest, `latest`, secret obvio e gerenciador de pacotes no
 estagio final, e o runtime Node deixou de instalar pacotes (o estagio final so

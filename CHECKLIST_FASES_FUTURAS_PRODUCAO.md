@@ -2573,7 +2573,7 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Scanner de secrets passou a incluir `.agents`/`.claude`; gate ligado ao CI.
   - [x] Checks e review/merge humanos no PR GitHub `#175` (`7b42d411b76ce8f4bfb268d495a0330d842fa3b8`).
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md`.
-- [ ] PR 49 - Consolidar supply chain, SBOM e politica de dependencias.
+- [x] PR 49 - Consolidar supply chain, SBOM e politica de dependencias.
   - [x] Implementacao e validacao local concluidas em `security/governanca-pr49-supply-chain-dependencias`.
   - [x] Provado que o pnpm 9.15.9 ignorava `allowBuilds`, `strictDepBuilds`, `minimumReleaseAge`, `trustPolicy` e `blockExoticSubdeps` ja declarados.
   - [x] Package manager unico e exato (`pnpm@11.25.0` com hash) em manifests, CI e Dockerfiles, com gate de divergencia.
@@ -2585,10 +2585,20 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] SBOM com prova de reproducao semantica, cobertura por ecossistema e atestado de proveniencia.
   - [x] Alertas Trivy reavaliados: tres imagens corrigidas para usuario non-root e healthcheck; dois CVEs sem patch amarrados ao ledger datado, sem supressao paralela.
   - [x] Gate de Dockerfiles e build/inspecao das tres imagens adicionados ao CI do PR.
-  - [ ] Checks e review/merge humanos do Pull Request contra `main`.
+  - [x] Checks e review/merge humanos no PR GitHub `#176` (`74c47a3aaa07dc31ad480ac79fca5256c4233d2b`).
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md`.
   - Norma duravel: `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`.
-- [ ] PR 50 - Concluir hardening de containers e runtime (digest, capabilities, filesystem gravavel minimo, limites e smoke dos probes sem privilegios extras).
+- [x] PR 50 - Concluir hardening de containers e runtime (digest, capabilities, filesystem gravavel minimo, limites e smoke dos probes sem privilegios extras).
+  - [x] Implementacao e validacao concluidas em `security/governanca-pr50-containers-runtime`, sobre o merge do PR 49.
+  - [x] As tres bases fixadas por digest imutavel (indice OCI multi-arch), sem `latest` nem tag mutavel.
+  - [x] Gate estatico `pnpm test:dockerfiles-runtime` passou a rejeitar base sem digest, `latest`, secret obvio e gerenciador de pacotes no estagio final.
+  - [x] Estagio final do runtime Node deixou de instalar pacotes: recebe apenas artefatos.
+  - [x] Harness de runtime real no CI (`scripts/harness-runtime-containers.sh`) sobe cada imagem com `--read-only --cap-drop=ALL --security-opt=no-new-privileges` e limites de pids/memoria/cpu.
+  - [x] Provados uid efetivo non-root, escrita negada fora do tmpfs, canario de contexto ausente e history sem secret; web e ai-service chegam a `healthy`.
+  - [x] Scan e SBOM passaram a cobrir a imagem final, nao apenas o filesystem.
+  - [x] Checks e review/merge humanos no PR GitHub `#178` (`0e41bf22321f4427579e39f8ecca5632d7596988`).
+  - Fronteira declarada: o boot completo do backend depende de config/provider e fica para o PR 51.
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md`.
 - [ ] PR 51 - Aplicar menor privilegio em Render, Neon, Redis e Backblaze.
 - [ ] PR 52 - Consolidar observabilidade, auditoria e resposta a incidentes.
 - [ ] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.
@@ -2599,4 +2609,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: revisar o Pull Request do PR 49. O PR 50 depende do aceite humano e merge do PR 49.
+Proximo item autorizado: PR 51 - menor privilegio em Render, Neon, Redis e Backblaze. Os PRs 49 (`#176`) e 50 (`#178`) estao integrados no `main`.
