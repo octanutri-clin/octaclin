@@ -4,8 +4,8 @@
 >
 > Atualizado em: 2026-09-01
 >
-> Proximo item autorizado: PR 51 - Providers e menor privilegio. Os PRs 49 e 50
-> estao integrados no `main`.
+> Proximo item autorizado: concluir o PR 51 - Providers e menor privilegio. O
+> PR 52 so e autorizado apos o merge humano do PR 51.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
@@ -48,6 +48,14 @@
 > Estado do PR 50: integrado no `main` pelo PR GitHub #178 em 2026-09-01
 > (`0e41bf22321f4427579e39f8ecca5632d7596988`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md`.
+> Estado do PR 51: implementacao concluida em branch dedicada
+> (`security/governanca-pr51-providers-menor-privilegio`). O processo passou a
+> medir o menor privilegio dos providers no bootstrap e em
+> `GET /operacoes/providers`; a conversao para falha fechada depende da
+> evidencia de producao descrita na secao 6 da norma. Aguardando required
+> checks, coleta de evidencia pelo proprietario e review humano. Relatorio:
+> `docs/governance/RELATORIO_SEGURANCA_PR51_2026-09-02.md`. Norma duravel:
+> `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`.
 
 ## 1. Funcao deste documento
 
@@ -523,6 +531,36 @@ Skills Claude: `security-review`, `postgresql-table-design`,
 
 Gate minimo: evidencia redigida do estado real; runtime sem owner; secrets
 separados por ambiente; nenhuma mudanca externa sem aceite humano.
+
+Implementacao concluida em branch dedicada sobre o merge do PR 50 (`#178`,
+`0e41bf2`). O achado central e que o repositorio apenas *declarava* o menor
+privilegio: `VARIAVEIS_AMBIENTE.md` dizia "papel sem `BYPASSRLS`", mas as unicas
+verificacoes de papel viviam em scripts de E2E que nao rodam em producao. Como a
+policy de RLS nao e avaliada para uma role com `BYPASSRLS`, colar a URL da role
+owner no painel do Render nao produz erro nenhum -- a aplicacao sobe, o
+`/health` responde `200` e o isolamento entre tenants provado no PR 43 deixa de
+existir em silencio.
+
+O processo real passou a medir, no bootstrap e sob demanda em
+`GET /operacoes/providers` (SuperAdmin): `SUPERUSER`, `BYPASSRLS`, pertinencia a
+role privilegiada (alcancavel por `SET ROLE`, e por isso consultada com
+`pg_has_role(..., 'MEMBER')`), `CREATE` no schema `public`, TLS do Redis e HTTPS
+do endpoint de armazenamento. `nao-verificado` nunca conta como aprovacao e
+nenhum motivo carrega host, credencial ou nome de role.
+
+A verificacao **relata e nao derruba o boot**, por decisao do proprietario e
+pela licao de 2026-08-22 em `docs/agents/LESSONS_LEARNED.md`: um check novo
+avaliado contra configuracao presumida, e nao contra o ambiente real, ja
+degradou a saude de producao uma vez. A conversao para falha fechada entra em PR
+proprio depois da evidencia de producao. O relatorio fica fora de
+`/health/detalhado` porque aquele endpoint e publico e nao autenticado.
+
+Evidencia de provider ainda depende de operacao humana: nenhuma credencial de
+Render, Neon, Redis ou Backblaze existe neste ambiente, e o gate exige "nenhuma
+mudanca externa sem aceite humano". O procedimento de coleta, todo de leitura e
+com registro redigido, esta na secao 6 de
+`docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`. Detalhes e evidencia
+em `docs/governance/RELATORIO_SEGURANCA_PR51_2026-09-02.md`.
 
 ### PR 52 - Observabilidade, auditoria e resposta
 

@@ -6,7 +6,7 @@ describe('ControladorOperacoes', () => {
     const servicoOperacoes = {
       listarAlertasOperacionais: jest.fn(async () => ({ status: 'atencao', itens: [] }))
     };
-    const controlador = new ControladorOperacoes(servicoOperacoes as never, {} as never, {} as never, {} as never, {} as never);
+    const controlador = new ControladorOperacoes(servicoOperacoes as never, {} as never, {} as never, {} as never, {} as never, {} as never);
 
     await expect(
       controlador.listarAlertasOperacionais({
@@ -43,7 +43,7 @@ describe('ControladorOperacoes', () => {
       atualizar: jest.fn(async () => ({ configuracaoValida: true, flags: [] }))
     };
     const auditoria = { registrar: jest.fn(async () => undefined) };
-    const controlador = new ControladorOperacoes({} as never, {} as never, auditoria as never, rollout as never, flags as never);
+    const controlador = new ControladorOperacoes({} as never, {} as never, auditoria as never, rollout as never, flags as never, {} as never);
     const usuario = {
       tenantId: '00000000-0000-4000-8000-000000000001',
       usuarioId: 'admin-1',
@@ -71,5 +71,24 @@ describe('ControladorOperacoes', () => {
         acao: 'operacoes.feature_flags.atualizar'
       })
     );
+  });
+
+  it('deve reavaliar o menor privilegio dos providers a cada chamada, e nao devolver cache do boot', async () => {
+    const menorPrivilegio = {
+      avaliar: jest.fn(async () => ({ veredicto: 'conforme' })),
+      obterUltimoRelatorio: jest.fn(() => ({ veredicto: 'violado' }))
+    };
+    const controlador = new ControladorOperacoes(
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      menorPrivilegio as never
+    );
+
+    await expect(controlador.obterMenorPrivilegioProviders()).resolves.toEqual({ veredicto: 'conforme' });
+    expect(menorPrivilegio.avaliar).toHaveBeenCalledTimes(1);
+    expect(menorPrivilegio.obterUltimoRelatorio).not.toHaveBeenCalled();
   });
 });
