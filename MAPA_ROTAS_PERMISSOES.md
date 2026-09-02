@@ -136,7 +136,7 @@ navegacao principal.
 | IA | `/ia` | `SuperAdmin`, `Professional` + `ia.executar` |
 | Mobile | `/mobile` | Redireciona para Operacoes; backend permite `SuperAdmin`, `Professional` e `Patient` com escopo proprio |
 | Gamificacao | `/gamificacao` | `SuperAdmin`, `Professional` + `gamificacao.gerenciar` |
-| Operacoes | `/operacoes` | `SuperAdmin` |
+| Operacoes | `/operacoes` | `SuperAdmin`. Inclui `GET /operacoes/providers` (PR 51), que relata o menor privilegio dos providers medido no processo real. Nao tem rota BFF: e consumido pelo proprietario na coleta de evidencia, e fica fora de `/health/detalhado` porque aquele endpoint e publico |
 
 ## Rotas BFF sensiveis recentes
 

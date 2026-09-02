@@ -2599,7 +2599,20 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Checks e review/merge humanos no PR GitHub `#178` (`0e41bf22321f4427579e39f8ecca5632d7596988`).
   - Fronteira declarada: o boot completo do backend depende de config/provider e fica para o PR 51.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md`.
-- [ ] PR 51 - Aplicar menor privilegio em Render, Neon, Redis e Backblaze.
+- [~] PR 51 - Aplicar menor privilegio em Render, Neon, Redis e Backblaze.
+  - [x] Implementacao e validacao locais concluidas em `security/governanca-pr51-providers-menor-privilegio`.
+  - [x] Achado central: o repositorio declarava "papel sem `BYPASSRLS`" em `VARIAVEIS_AMBIENTE.md`, mas as unicas verificacoes de papel viviam em scripts de E2E que nao rodam em producao.
+  - [x] Processo real passou a medir `SUPERUSER`, `BYPASSRLS`, pertinencia a role privilegiada e `CREATE` no schema `public` da role de runtime.
+  - [x] Pertinencia consultada por `pg_has_role(..., 'MEMBER')`, e nao `'USAGE'`: `BYPASSRLS` nao e herdado, mas fica acessivel por `SET ROLE`.
+  - [x] TLS do Redis e HTTPS do endpoint de armazenamento medidos com a mesma regra que a conexao real usa.
+  - [x] `nao-verificado` nao conta como aprovacao; nenhum motivo carrega host, credencial ou nome de role, com teste negativo.
+  - [x] Relatorio exposto em `GET /operacoes/providers` (SuperAdmin), fora de `/health/detalhado`, que e publico.
+  - [x] Norma duravel em `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`, com o procedimento de coleta de evidencia.
+  - [ ] Evidencia redigida de Render, Neon, Redis e Backblaze coletada pelo proprietario (secao 6 da norma).
+  - [ ] Conversao das verificacoes para falha fechada, em PR proprio, depois da evidencia.
+  - [ ] Checks e review/merge humanos do Pull Request contra `main`.
+  - Decisao registrada: a verificacao relata e nao derruba o boot neste ciclo, pela licao de 2026-08-22 em `docs/agents/LESSONS_LEARNED.md`.
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR51_2026-09-02.md`.
 - [ ] PR 52 - Consolidar observabilidade, auditoria e resposta a incidentes.
 - [ ] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.
 - [ ] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
@@ -2609,4 +2622,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: PR 51 - menor privilegio em Render, Neon, Redis e Backblaze. Os PRs 49 (`#176`) e 50 (`#178`) estao integrados no `main`.
+Proximo item autorizado: concluir o PR 51 - a implementacao esta em branch dedicada e depende da evidencia redigida dos providers, coletada pelo proprietario. O PR 52 depende do aceite humano e merge do PR 51.

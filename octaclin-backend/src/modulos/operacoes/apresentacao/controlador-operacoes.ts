@@ -12,6 +12,7 @@ import { AtualizarCicloVidaTenantDto, ProvisionarTenantDto } from '../aplicacao/
 import { ServicoCicloVidaTenant } from '../aplicacao/servico-ciclo-vida-tenant';
 import { ServicoRolloutOperacional } from '../aplicacao/servico-rollout-operacional';
 import { ServicoFeatureFlags } from '../../../infraestrutura/feature-flags/servico-feature-flags';
+import { ServicoMenorPrivilegioProviders } from '../../../infraestrutura/seguranca/servico-menor-privilegio-providers';
 
 class AtualizarSolicitacaoLgpdOperacionalDto {
   @IsIn(['em_tratamento', 'concluida', 'indeferida'])
@@ -65,12 +66,26 @@ export class ControladorOperacoes {
     private readonly cicloVidaTenant: ServicoCicloVidaTenant,
     private readonly auditoria: ServicoAuditoria,
     private readonly rollout: ServicoRolloutOperacional,
-    private readonly featureFlags: ServicoFeatureFlags
+    private readonly featureFlags: ServicoFeatureFlags,
+    private readonly menorPrivilegio: ServicoMenorPrivilegioProviders
   ) {}
 
   @Get('resumo')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoOperacoes.obterResumo(usuario.tenantId);
+  }
+
+  /**
+   * Estado de menor privilegio dos providers (PR 51), medido no processo real.
+   *
+   * Fica aqui, atras de SuperAdmin, e nao em `/health/detalhado`, porque aquele
+   * endpoint e publico: dizer a um anonimo que a role do runtime tem BYPASSRLS
+   * seria entregar o mapa. A avaliacao e refeita a cada chamada para que a
+   * evidencia acompanhe a configuracao corrente, nao a do ultimo boot.
+   */
+  @Get('providers')
+  obterMenorPrivilegioProviders() {
+    return this.menorPrivilegio.avaliar();
   }
 
   @Get('alertas')
