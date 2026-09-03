@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, FindOptionsWhere, In, IsNull } from 'typeorm';
-import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
+import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -53,10 +53,12 @@ export class ServicoReceitasNutricionais {
         criadoPorUsuarioId: usuario.usuarioId
       });
       await repositorio.save(receita);
-      await this.registrarAuditoria(gerenciador, tenantId, usuario, 'planos_alimentares.receita_criar', receita.id, {
-        origem: receita.origem,
-        tipo: receita.tipo,
-        totalItens
+      await this.registrarAuditoria(gerenciador, {
+        tenantId,
+        usuario,
+        acao: 'planos_alimentares.receita_criar',
+        receitaId: receita.id,
+        metadados: { origem: receita.origem, tipo: receita.tipo, totalItens }
       });
       return this.resumo(receita, dados.nome.trim());
     });
@@ -121,10 +123,12 @@ export class ServicoReceitasNutricionais {
       receita.conteudoCriptografado = this.criptografia.criptografar(JSON.stringify(conteudo));
       receita.totalItens = totalItens;
       await gerenciador.getRepository(ReceitaNutricionalOrm).save(receita);
-      await this.registrarAuditoria(gerenciador, tenantId, usuario, 'planos_alimentares.receita_atualizar', receita.id, {
-        origem: receita.origem,
-        tipo: receita.tipo,
-        totalItens
+      await this.registrarAuditoria(gerenciador, {
+        tenantId,
+        usuario,
+        acao: 'planos_alimentares.receita_atualizar',
+        receitaId: receita.id,
+        metadados: { origem: receita.origem, tipo: receita.tipo, totalItens }
       });
       return this.resumo(receita, dados.nome.trim());
     });
@@ -136,9 +140,12 @@ export class ServicoReceitasNutricionais {
       const receita = await this.obterNoEscopo(gerenciador, tenantId, receitaId, usuario);
       receita.arquivadoEm = new Date();
       await gerenciador.getRepository(ReceitaNutricionalOrm).save(receita);
-      await this.registrarAuditoria(gerenciador, tenantId, usuario, 'planos_alimentares.receita_arquivar', receita.id, {
-        origem: receita.origem,
-        tipo: receita.tipo
+      await this.registrarAuditoria(gerenciador, {
+        tenantId,
+        usuario,
+        acao: 'planos_alimentares.receita_arquivar',
+        receitaId: receita.id,
+        metadados: { origem: receita.origem, tipo: receita.tipo }
       });
       return { id: receita.id, arquivadoEm: receita.arquivadoEm };
     });
@@ -231,22 +238,23 @@ export class ServicoReceitasNutricionais {
     if (!usuario.permissoes.includes(permissao)) throw new ForbiddenException('Permissao insuficiente para operar planos alimentares.');
   }
 
+  /**
+   * Escrita direta, e nao `ServicoAuditoria.registrar`: o chamador ja esta
+   * dentro do `executorTenant.executar` da operacao de negocio. Ver
+   * `registrarAuditoriaNaTransacao`, que e onde a redacao e aplicada, e a nota
+   * gemea em `servico-modelos-plano-alimentar.ts` sobre a entrada nomeada.
+   */
   private async registrarAuditoria(
     gerenciador: EntityManager,
-    tenantId: string,
-    usuario: UsuarioAutenticado,
-    acao: string,
-    receitaId: string,
-    metadados: Record<string, unknown>
+    entrada: { tenantId: string; usuario: UsuarioAutenticado; acao: string; receitaId: string; metadados: Record<string, unknown> }
   ) {
-    const repositorio = gerenciador.getRepository(UserActionLogOrm);
-    await repositorio.save(repositorio.create({
-      tenantId,
-      usuarioId: usuario.usuarioId,
-      acao,
+    await registrarAuditoriaNaTransacao(gerenciador, {
+      tenantId: entrada.tenantId,
+      usuarioId: entrada.usuario.usuarioId,
+      acao: entrada.acao,
       recursoTipo: 'receita_nutricional',
-      recursoId: receitaId,
-      metadados
-    }));
+      recursoId: entrada.receitaId,
+      metadados: entrada.metadados
+    });
   }
 }

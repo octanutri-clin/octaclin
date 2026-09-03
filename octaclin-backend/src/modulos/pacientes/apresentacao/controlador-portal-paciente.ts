@@ -45,10 +45,21 @@ export class ControladorPortalPaciente {
       recursoId: checkin.id,
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
+      // `humor` e `adesaoPlano` nao entram, apesar de serem estruturados: os
+      // dois sao o estado clinico autorrelatado do paciente, da mesma familia
+      // de `sintomas` e `observacoes`, que este mesmo objeto ja reduzia a
+      // booleano. Serem enum e escala em vez de texto livre muda o formato, nao
+      // a natureza -- "como a paciente passou hoje" e conteudo de prontuario, e
+      // a trilha e lida por perfis de operacao que tem direito de saber que
+      // houve check-in sem ter direito de ler o check-in.
+      //
+      // Nem viram booleano de presenca: os dois campos sao obrigatorios no DTO,
+      // entao a flag seria a constante `true` e nao carregaria informacao
+      // alguma. Nem viram faixa: faixa sobre um enum de cinco valores continua
+      // sendo o valor. Quem precisa do conteudo le o proprio check-in, que
+      // `recursoId` ja identifica.
       metadados: {
         pacienteId: checkin.pacienteId,
-        humor: checkin.humor,
-        adesaoPlano: checkin.adesaoPlano,
         possuiSintomas: Boolean(dados.sintomas?.trim()),
         possuiObservacoes: Boolean(dados.observacoes?.trim())
       }

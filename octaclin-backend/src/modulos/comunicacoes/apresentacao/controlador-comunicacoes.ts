@@ -106,8 +106,12 @@ export class ControladorComunicacoes {
     @Body() dados: AssociarContatoWhatsappDto
   ) {
     const resultado = await this.servicoComunicacoes.associarContatoWhatsapp(usuario.tenantId, dados, usuario);
+    // `dados.contato` e o telefone WhatsApp do paciente. O proprio servico o
+    // guarda cifrado (`paciente.contatoCriptografado`), entao grava-lo aqui em
+    // claro entregaria na trilha -- imutavel, lida por operacao e suporte,
+    // sobrevivente ao expurgo -- exatamente o valor que a cifra protege no
+    // banco. O `pacienteId` ao lado ja diz de quem e a associacao.
     await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.whatsapp.associar_contato', 'paciente', dados.pacienteId, {
-      contato: dados.contato,
       mensagensAtualizadas: resultado.mensagensAtualizadas
     });
     return resultado;
@@ -121,9 +125,11 @@ export class ControladorComunicacoes {
     @Body() dados: RegistrarNotaWhatsappDto
   ) {
     const nota = await this.servicoComunicacoes.registrarNotaWhatsapp(usuario.tenantId, dados, usuario);
+    // Mesma razao de `associar_contato`: o telefone fica fora. A nota gravada
+    // (`nota.id`, que e o recursoId) e quem carrega o contato, sob controle de
+    // acesso proprio.
     await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.whatsapp.nota_registrar', 'mensagem_notificacao', nota.id, {
       pacienteId: dados.pacienteId,
-      contato: dados.contato,
       statusAtendimento: dados.statusAtendimento
     });
     return nota;

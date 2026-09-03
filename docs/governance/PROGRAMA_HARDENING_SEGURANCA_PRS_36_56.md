@@ -2,10 +2,11 @@
 
 > Status: aprovado para planejamento e execucao sequencial
 >
-> Atualizado em: 2026-09-01
+> Atualizado em: 2026-09-02
 >
-> Proximo item autorizado: concluir o PR 51 - Providers e menor privilegio. O
-> PR 52 so e autorizado apos o merge humano do PR 51.
+> Proximo item autorizado: concluir a fase 1 do PR 52 - Observabilidade,
+> auditoria e resposta. O PR 51 foi integrado no `main` pelos PRs GitHub #189 e
+> #190; o PR 53 so e autorizado apos o merge humano das tres fases do PR 52.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
@@ -57,6 +58,16 @@
 > 6.6 da norma). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR51_2026-09-02.md`. Norma duravel:
 > `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`.
+> A falha fechada foi integrada no `main` pelo PR GitHub #190 em 2026-09-02
+> (`894567748aa83bed7cdcba6b1e17df3316fe95a5`), que passa a ser a base do PR 52.
+> Estado do PR 52: **fase 1 de tres, em andamento** na branch
+> `security/governanca-pr52-auditoria-cobertura`, sobre `8945677`. Ainda sem
+> numero de PR no GitHub e sem hash de merge. A fase 1 fecha duas das tres
+> metades do gate minimo -- eventos criticos detectados e secrets/PHI ausentes
+> dos logs --, com cobertura verificavel por gate em vez de afirmada. Alertas,
+> runbook de resposta a incidentes e tabletop sintetico ficam para a fase 3.
+> Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`. Norma
+> duravel: `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`.
 
 ## 1. Funcao deste documento
 
@@ -580,6 +591,20 @@ Skills Claude: `security-review`, `test-driven-development`,
 
 Gate minimo: eventos criticos detectados; secrets/PHI ausentes dos logs; teste
 de alerta e tabletop sintetico documentados.
+
+O escopo foi fatiado em tres fases, pelo mesmo motivo que o PR 51 entrou medindo
+antes de bloquear: deteccao declarada sem evidencia executavel e justamente o
+defeito que este PR encontrou.
+
+| Fase | Metade do gate | Conteudo |
+| --- | --- | --- |
+| 1 | eventos criticos detectados; secrets/PHI ausentes dos logs | redator de `metadados`, gate de cobertura que le os call sites reais, 15 acoes novas de auth/autorizacao/operacao/exportacao, contador de falha de gravacao e correcao dos vazamentos em claro |
+| 2 | imutabilidade e correlacao | `REVOKE UPDATE/DELETE`/trigger/hash-chain ou WORM na trilha, teto de escrita para `auth.login.sucesso`, `x-request-id` atravessando a fronteira web-backend e `/health/detalhado` sem mensagem crua do driver |
+| 3 | teste de alerta e tabletop sintetico documentados | alertas sobre o contador de falhas e sobre volume de negativa de autorizacao, runbook de resposta a incidentes, escalonamento, preservacao de evidencia e tabletop |
+
+A fase 1 nao fecha o gate minimo do PR 52 e nao deve ser lida como tal. Ela
+fecha as duas primeiras metades e declara as demais como pendentes, com owner e
+prazo na secao 10 de `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`.
 
 ### PR 53 - Backup, restore e resiliencia a ransomware
 

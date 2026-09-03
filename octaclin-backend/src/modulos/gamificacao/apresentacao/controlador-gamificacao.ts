@@ -54,7 +54,14 @@ export class ControladorGamificacao {
       'gamificacao.configuracao.atualizar',
       'tenant_configuracao',
       usuario.tenantId,
-      { ...dados }
+      // As flags sao listadas uma a uma, e nao `...dados`: espalhar o DTO grava
+      // o que ele carregar amanha, sem passar por revisao nenhuma. Sao tres
+      // booleanos de habilitacao do modulo, nada do titular.
+      {
+        metasBadgesHabilitados: dados.metasBadgesHabilitados,
+        comunidadeHabilitada: dados.comunidadeHabilitada,
+        rankingHabilitado: dados.rankingHabilitado
+      }
     );
     return configuracao;
   }
@@ -160,8 +167,12 @@ export class ControladorGamificacao {
     @Body() dados: CriarBadgeDto
   ) {
     const badge = await this.servicoGamificacao.criarBadge(usuario.tenantId, dados);
+    // `iconeSvg` e markup livre e sem `@MaxLength` no DTO: copiado para a
+    // trilha, transformaria `user_action_logs` em deposito de payload enviado
+    // pelo cliente. So o tamanho entra, no mesmo formato que
+    // `tamanhoTextoCaracteres` usa no modulo de IA.
     await this.registrarAuditoria(usuario, requisicao, 'gamificacao.badge.criar', 'badge', badge.id, {
-      iconeSvg: dados.iconeSvg
+      tamanhoIconeCaracteres: dados.iconeSvg.length
     });
     return badge;
   }

@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, FindOptionsWhere, In, IsNull } from 'typeorm';
-import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
+import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -59,10 +59,12 @@ export class ServicoModelosPlanoAlimentar {
         criadoPorUsuarioId: usuario.usuarioId
       });
       await repositorio.save(modelo);
-      await this.registrarAuditoria(gerenciador, tenantId, usuario, 'planos_alimentares.modelo_criar', modelo.id, {
-        origem: dados.origem,
-        totalRefeicoes,
-        totalItens
+      await this.registrarAuditoria(gerenciador, {
+        tenantId,
+        usuario,
+        acao: 'planos_alimentares.modelo_criar',
+        modeloId: modelo.id,
+        metadados: { origem: dados.origem, totalRefeicoes, totalItens }
       });
       return { id: modelo.id, nome: dados.nome.trim(), origem: dados.origem, totalRefeicoes, totalItens };
     });
@@ -137,14 +139,13 @@ export class ServicoModelosPlanoAlimentar {
       const modelo = await this.obterNoEscopo(gerenciador, tenantId, modeloId, usuario);
       modelo.arquivadoEm = new Date();
       await gerenciador.getRepository(ModeloPlanoAlimentarOrm).save(modelo);
-      await this.registrarAuditoria(
-        gerenciador,
+      await this.registrarAuditoria(gerenciador, {
         tenantId,
         usuario,
-        'planos_alimentares.modelo_arquivar',
-        modelo.id,
-        { origem: modelo.origem }
-      );
+        acao: 'planos_alimentares.modelo_arquivar',
+        modeloId: modelo.id,
+        metadados: { origem: modelo.origem }
+      });
       return { id: modelo.id, arquivadoEm: modelo.arquivadoEm };
     });
   }
@@ -220,25 +221,29 @@ export class ServicoModelosPlanoAlimentar {
     return resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
   }
 
+  /**
+   * Escrita direta, e nao `ServicoAuditoria.registrar`: o chamador ja esta
+   * dentro do `executorTenant.executar` da operacao de negocio, e `registrar`
+   * abriria uma segunda transacao. Ver `registrarAuditoriaNaTransacao`, que e
+   * onde a redacao e aplicada.
+   *
+   * A entrada e um objeto nomeado -- e nao seis posicionais -- para que o call
+   * site escreva literalmente `metadados: { ... }`. E o que o gate
+   * `pnpm test:redacao-auditoria` procura; um argumento posicional deixaria
+   * estes call sites invisiveis para ele.
+   */
   private async registrarAuditoria(
     gerenciador: EntityManager,
-    tenantId: string,
-    usuario: UsuarioAutenticado,
-    acao: string,
-    modeloId: string,
-    metadados: Record<string, unknown>
+    entrada: { tenantId: string; usuario: UsuarioAutenticado; acao: string; modeloId: string; metadados: Record<string, unknown> }
   ): Promise<void> {
-    const repositorio = gerenciador.getRepository(UserActionLogOrm);
-    await repositorio.save(
-      repositorio.create({
-        tenantId,
-        usuarioId: usuario.usuarioId,
-        acao,
-        recursoTipo: 'modelo_plano_alimentar',
-        recursoId: modeloId,
-        metadados
-      })
-    );
+    await registrarAuditoriaNaTransacao(gerenciador, {
+      tenantId: entrada.tenantId,
+      usuarioId: entrada.usuario.usuarioId,
+      acao: entrada.acao,
+      recursoTipo: 'modelo_plano_alimentar',
+      recursoId: entrada.modeloId,
+      metadados: entrada.metadados
+    });
   }
 
   private garantirPapelProfissional(usuario: UsuarioAutenticado): void {

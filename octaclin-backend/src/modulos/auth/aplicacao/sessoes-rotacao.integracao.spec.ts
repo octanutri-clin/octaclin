@@ -98,7 +98,8 @@ descrever('sessoes e rotacao de refresh token em Postgres real', () => {
         registrarSucesso: async () => undefined
       } as never,
       servicoSessoes,
-      { iniciarLogin: async () => null } as never
+      { iniciarLogin: async () => null } as never,
+      new ServicoAuditoria(executorTenant)
     );
 
     return { fonteDados, executorTenant, servicoAuth, servicoSessoes, guarda: new GuardaJwt(jwt, servicoSessoes) };
