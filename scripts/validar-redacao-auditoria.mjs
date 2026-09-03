@@ -513,6 +513,19 @@ const CAMINHOS_DE_ESCRITA = [
 ];
 
 /**
+ * Ancora unica dos call sites de envoltorio, com o nome do metodo capturado.
+ *
+ * O nome sai do padrao e vira captura de proposito: montar uma `new RegExp`
+ * por envoltorio interpolava o nome dentro do padrao -- construcao dinamica que
+ * o Semgrep sinaliza (detect-non-literal-regexp, CWE-1333) e que ainda custava
+ * um percurso inteiro da fonte por envoltorio declarado no arquivo. Estatica, a
+ * ancora casa qualquer `this.<nome>(` numa passada so, e o nome capturado e
+ * resolvido contra as declaracoes do arquivo -- mesma decisao, sem regex montada
+ * em tempo de execucao a partir de dado de configuracao.
+ */
+const ANCORA_ENVOLTORIO = /(?:^|[^A-Za-z0-9_$])this\s*\.\s*([A-Za-z0-9_$]+)\s*\(/g;
+
+/**
  * Envoltorios privados que apenas repassam o payload livre para uma das duas
  * ancoras acima.
  *
@@ -910,14 +923,10 @@ export function extrairChavesDeMetadados(
   // mesma decisao (literal, ausente ou opaco). Duas maquinarias diferentes foi
   // exatamente o que deixou passar a assinatura de `registrarAuditoriaNaTransacao`
   // contada como call site.
+  const declaracaoPorNome = new Map(envoltorios.map((declaracao) => [declaracao.envoltorio, declaracao]));
   const percursos = [
     ...CAMINHOS_DE_ESCRITA.map((caminhoDeEscrita) => ({ ...caminhoDeEscrita, global: true })),
-    ...envoltorios.map((declaracao) => ({
-      ancora: new RegExp(`(?:^|[^A-Za-z0-9_$])this\\s*\\.\\s*${declaracao.envoltorio}\\s*\\(`, 'g'),
-      argumento: declaracao.argumento,
-      entradaDaTrilha: Boolean(declaracao.entradaDaTrilha),
-      global: false
-    }))
+    ...(declaracaoPorNome.size > 0 ? [{ ancora: ANCORA_ENVOLTORIO, declaracaoPorNome, global: false }] : [])
   ];
 
   for (const percurso of percursos) {
@@ -925,6 +934,16 @@ export function extrairChavesDeMetadados(
     let achado;
 
     while ((achado = percurso.ancora.exec(fonte)) !== null) {
+      let { argumento, entradaDaTrilha } = percurso;
+      if (percurso.declaracaoPorNome !== undefined) {
+        const declaracao = percurso.declaracaoPorNome.get(achado[1]);
+        // A ancora estatica casa qualquer `this.qualquerCoisa(`; so os nomes
+        // declarados para este arquivo sao caminho de escrita da trilha.
+        if (declaracao === undefined) continue;
+        argumento = declaracao.argumento;
+        entradaDaTrilha = Boolean(declaracao.entradaDaTrilha);
+      }
+
       const abertura = achado.index + achado[0].length - 1;
       const linha = linhaDe(achado.index);
       // A ancora consome um caractere separador antes do nome, salvo no inicio
@@ -939,9 +958,9 @@ export function extrairChavesDeMetadados(
       }
       // Chamada mais curta que o parametro do payload: a escrita audita sem
       // payload livre, o que e legitimo (`mobile.midia.visualizar`).
-      if (argumentos.length <= percurso.argumento) continue;
+      if (argumentos.length <= argumento) continue;
 
-      const texto = semComentarioInicial(argumentos[percurso.argumento]);
+      const texto = semComentarioInicial(argumentos[argumento]);
       if (texto[0] !== '{') {
         const expressao = /^[A-Za-z0-9_$.]+/.exec(texto);
         registrar(linha, { tipo: 'opaco', identificador: expressao ? expressao[0] : null });
@@ -954,7 +973,7 @@ export function extrairChavesDeMetadados(
         continue;
       }
 
-      registrar(linha, localizarMetadados(literal, percurso.entradaDaTrilha));
+      registrar(linha, localizarMetadados(literal, entradaDaTrilha));
     }
   }
 
