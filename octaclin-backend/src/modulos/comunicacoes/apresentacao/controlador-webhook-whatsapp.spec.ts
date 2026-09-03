@@ -231,4 +231,169 @@ describe('ControladorWebhookWhatsApp', () => {
       expect.stringMatching(/^webhook_whatsapp:replay:[a-f0-9]{64}$/)
     );
   });
+
+  describe('rastro do webhook publico', () => {
+    /**
+     * Captura o que sai pelo `Logger`. E o unico canal disponivel aqui: o
+     * endpoint e publico e sem tenant, e `user_action_logs` exige tenant sob
+     * RLS -- ver a nota em `registrarAssinaturaInvalida`.
+     */
+    const espionarLogger = (controlador: ControladorWebhookWhatsApp) => {
+      const registros = {
+        warn: jest.fn((_carga: Record<string, unknown>) => undefined),
+        log: jest.fn((_carga: Record<string, unknown>) => undefined),
+        error: jest.fn((_carga: Record<string, unknown>) => undefined)
+      };
+      Object.assign((controlador as unknown as { logger: object }).logger, registros);
+      return registros;
+    };
+
+    it.each([
+      ['ausente', undefined, 'assinatura_ausente'],
+      ['malformada', 'sha256=curta', 'formato_invalido'],
+      ['adulterada', `sha256=${'0'.repeat(64)}`, 'hmac_divergente']
+    ])('registra a tentativa de forjar webhook com assinatura %s', async (_caso, assinatura, motivo) => {
+      const payload = criarPayload();
+      const { requisicao } = prepararRequisicao(payload);
+      const { controlador } = criarControlador();
+      const logger = espionarLogger(controlador);
+
+      await expect(
+        controlador.receber(payload, requisicao, assinatura, 'application/json', 'recebe-staging')
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          evento: 'integracoes.webhook_whatsapp.assinatura_invalida',
+          motivo,
+          ip: '203.0.113.10'
+        })
+      );
+    });
+
+    it('nao publica corpo, phoneNumberId nem a assinatura recebida ao registrar a tentativa', async () => {
+      const payload = criarPayload();
+      const { requisicao } = prepararRequisicao(payload);
+      const { controlador } = criarControlador();
+      const logger = espionarLogger(controlador);
+      const assinaturaForjada = `sha256=${'a'.repeat(64)}`;
+
+      await expect(
+        controlador.receber(payload, requisicao, assinaturaForjada, 'application/json', 'recebe-staging')
+      ).rejects.toThrow(ForbiddenException);
+
+      const serializada = JSON.stringify(logger.warn.mock.calls);
+      expect(serializada).not.toContain('phone-sintetico');
+      expect(serializada).not.toContain('Mensagem sintetica');
+      expect(serializada).not.toContain('5511000000000');
+      expect(serializada).not.toContain('wamid-entrada-sintetico');
+      expect(serializada).not.toContain(assinaturaForjada);
+      expect(serializada).not.toContain('a'.repeat(64));
+    });
+
+    it('limita a amplificacao da rajada e contabiliza o excedente em vez de perde-lo', async () => {
+      const payload = criarPayload();
+      const { requisicao } = prepararRequisicao(payload);
+      const { controlador } = criarControlador();
+      const logger = espionarLogger(controlador);
+      const forjar = () =>
+        expect(
+          controlador.receber(payload, requisicao, `sha256=${'0'.repeat(64)}`, 'application/json', 'recebe-staging')
+        ).rejects.toThrow(ForbiddenException);
+
+      // 20 tentativas dentro da mesma janela de um minuto: o teto e 5.
+      for (let tentativa = 0; tentativa < 20; tentativa += 1) await forjar();
+      expect(logger.warn).toHaveBeenCalledTimes(5);
+
+      // A janela vira; a primeira linha da nova janela declara o que foi
+      // suprimido, para que o volume real do ataque nao se perca.
+      jest.spyOn(Date, 'now').mockReturnValue(agoraSegundos * 1000 + 61_000);
+      await forjar();
+
+      expect(logger.warn).toHaveBeenCalledTimes(6);
+      expect(logger.warn.mock.calls[5][0]).toMatchObject({ suprimidosDesdeUltimaLinha: 15 });
+    });
+
+    // Sem isto o total morreria no processo quando a rajada acaba dentro da
+    // propria janela -- o formato de um ataque curto, que e justamente o caso
+    // que a contagem existe para nao perder.
+    it('emite no encerramento o excedente que a janela ainda nao publicou', async () => {
+      const payload = criarPayload();
+      const { requisicao } = prepararRequisicao(payload);
+      const { controlador } = criarControlador();
+      const logger = espionarLogger(controlador);
+
+      for (let tentativa = 0; tentativa < 20; tentativa += 1) {
+        await expect(
+          controlador.receber(payload, requisicao, `sha256=${'0'.repeat(64)}`, 'application/json', 'recebe-staging')
+        ).rejects.toThrow(ForbiddenException);
+      }
+      expect(logger.warn).toHaveBeenCalledTimes(5);
+
+      controlador.onModuleDestroy();
+
+      expect(logger.warn).toHaveBeenCalledTimes(6);
+      expect(logger.warn.mock.calls[5][0]).toMatchObject({
+        evento: 'integracoes.webhook_whatsapp.assinatura_invalida',
+        motivo: 'residual_no_encerramento',
+        suprimidosDesdeUltimaLinha: 15
+      });
+    });
+
+    it('nao emite linha residual quando nada foi suprimido', () => {
+      const { controlador } = criarControlador();
+      const logger = espionarLogger(controlador);
+
+      controlador.onModuleDestroy();
+
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('resume o webhook aceito por contagem, sem publicar o phoneNumberId no log', async () => {
+      const payload = criarPayload();
+      const { requisicao, assinatura } = prepararRequisicao(payload);
+      const { controlador } = criarControlador();
+      const logger = espionarLogger(controlador);
+
+      await controlador.receber(payload, requisicao, assinatura, 'application/json', 'recebe-staging');
+
+      expect(logger.log).toHaveBeenCalledWith({
+        evento: 'integracoes.webhook_whatsapp.recebido',
+        statuses: 1,
+        messages: 1,
+        totalPhoneNumberIds: 1
+      });
+      expect(JSON.stringify(logger.log.mock.calls)).not.toContain('phone-sintetico');
+    });
+
+    it('loga so o nome da classe do erro de persistencia, nunca a mensagem do provedor', async () => {
+      const payload = criarPayload();
+      const { requisicao, assinatura } = prepararRequisicao(payload);
+      const { controlador, servico } = criarControlador();
+      const logger = espionarLogger(controlador);
+      class ErroProvedorSintetico extends Error {
+        // `name` explicito: subclasse de `Error` herda `name === 'Error'`, e o
+        // log so identifica a classe se ela se nomear.
+        name = 'ErroProvedorSintetico';
+      }
+      servico.registrarStatus.mockRejectedValue(
+        new ErroProvedorSintetico('Meta API 401: token=segredo-sintetico para 5511000000000')
+      );
+
+      await expect(
+        controlador.receber(payload, requisicao, assinatura, 'application/json', 'recebe-staging')
+      ).rejects.toThrow(ServiceUnavailableException);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          evento: 'integracoes.webhook_whatsapp.persistencia_falhou',
+          erroNome: 'ErroProvedorSintetico'
+        })
+      );
+      const serializada = JSON.stringify(logger.error.mock.calls);
+      expect(serializada).not.toContain('segredo-sintetico');
+      expect(serializada).not.toContain('5511000000000');
+      expect(serializada).not.toContain('Meta API');
+    });
+  });
 });

@@ -67,6 +67,14 @@ import { MfaDesafioOrm } from './infraestrutura/mfa-desafio.orm';
   ],
   exports: [
     JwtModule,
+    // `GuardaPapeis` e `GuardaPermissoes` passaram a depender de
+    // `ServicoAuditoria` (PR 52, fase 1b). Nest registra a guarda referenciada
+    // por `@UseGuards` como injetavel do modulo que declara o *controlador*, e
+    // resolve as dependencias dela no injetor daquele modulo -- nao neste. Os
+    // ~25 modulos que usam as guardas importam `ModuloAuth`, mas nem todos
+    // declaram `ServicoAuditoria` (`ModuloNotificacoes`, por exemplo, nao
+    // declara). Sem esta exportacao o bootstrap desses modulos quebraria.
+    ServicoAuditoria,
     GuardaJwt,
     GuardaPapeis,
     GuardaPermissoes,

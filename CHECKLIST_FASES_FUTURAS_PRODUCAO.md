@@ -2612,11 +2612,33 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Falha fechada habilitada em staging e producao apos a medicao: bloqueia qualquer provider `violado` e bloqueia `postgres` diferente de `conforme`.
   - [x] `redis` e `armazenamento` `nao-verificado` nao bloqueiam: provider ausente do processo e estado legitimo, como no `worker` de producao.
   - [x] Merge do PR GitHub `#189` (`43e7ee0`) com a medicao; falha fechada em PR proprio.
+  - [x] Merge do PR GitHub `#190` (`894567748aa83bed7cdcba6b1e17df3316fe95a5`) com a falha fechada, em 2026-09-02.
   - [ ] Evidencia redigida dos paineis de Neon, Redis, Backblaze e Render coletada pelo proprietario (secoes 6.2 a 6.6 da norma).
-  - [ ] Checks e review/merge humanos do Pull Request da falha fechada contra `main`.
   - Decisao registrada: o controle entrou medindo, pela licao de 2026-08-22 em `docs/agents/LESSONS_LEARNED.md`, e so bloqueou depois da evidencia real.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR51_2026-09-02.md`.
-- [ ] PR 52 - Consolidar observabilidade, auditoria e resposta a incidentes.
+- [~] PR 52 - Consolidar observabilidade, auditoria e resposta a incidentes.
+  - Escopo fatiado em tres fases; a fase 1 fecha duas das tres metades do gate minimo. Ver a tabela de fases em `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
+  - **Fase 1 - cobertura e redacao da trilha** (branch `security/governanca-pr52-auditoria-cobertura`, sobre `8945677`):
+    - [x] Achado central: o repositorio declarava trilha de auditoria e nao media a propria cobertura; `metadados` chegava a coluna imutavel sem redacao nenhuma.
+    - [x] Quatro vazamentos em claro corrigidos **no call site**: termo de busca de paciente (por `...filtros`), `humor`/`adesaoPlano` do check-in, `motivo` de cancelamento e `hashConteudo` de plano alimentar.
+    - [x] Ponto cego do proprio gate fechado no mesmo ciclo (SEC-PR52-013): escrita sem literal a vista era pulada em silencio, e a familia de envoltorios privados de auditoria mantinha as chaves de 14 arquivos fora do inventario. Envoltorios passaram a ser declarados (arquivo, nome, indice do argumento, identificador repassado e justificativa); envoltorio nao declarado reprova o CI.
+    - [x] Quatro vazamentos novos, achados quando os call sites dos envoltorios ficaram visiveis: `contato` (telefone WhatsApp do paciente, gravado em claro enquanto o mesmo servico o guarda cifrado -- SEC-PR52-014), `alertaDisparado` (classificacao de risco derivada de `frustracaoScore >= 70` -- SEC-PR52-015), `iconeSvg` (markup livre sem `@MaxLength` -- SEC-PR52-016) e `...dados` espalhado (SEC-PR52-017). Todos corrigidos no call site.
+    - [x] Redator de `metadados` como rede de ultima instancia, dominio puro, com excecoes de evidencia nomeadas (`hashIntegridade`, `documentoLegal`) e preservacao de booleano de presenca e de identificador em forma de UUID.
+    - [x] Gate de cobertura `pnpm test:redacao-auditoria` importando a funcao real do redator, sem copia paralela do vocabulario; reprova chave descoberta, espalhamento de origem opaca, escrita opaca sem envoltorio declarado, terceiro caminho de escrita e piso de sanidade do extrator.
+    - [x] Inventario auditavel por `pnpm audit:redacao-auditoria`: 181 chaves distintas em 148 call sites.
+    - [x] 15 acoes novas: ciclo de vida da credencial, negativa de autorizacao, operacao/LGPD e exportacao -- incluindo a exportacao da propria trilha, que antes nao era auditada.
+    - [x] Falha de login sem tenant ou usuario resolvido fica fora da trilha, para nao dar a um anonimo escrita ilimitada em tabela imutavel sob RLS.
+    - [x] Negativa de autorizacao deduplica por 60 s com o alvo concreto na identidade; `recurso_id` so com UUID canonico, `alvoOpaco` no resto, e nenhum efeito sobre o desfecho HTTP.
+    - [x] Falha de gravacao da trilha deixou de ser invisivel: contador monotonico por processo, e so o nome da classe do erro no log.
+    - [x] Webhook publico do WhatsApp: falha de assinatura HMAC passou a ser log estruturado com teto por janela; `phone_number_id` e mensagem crua do provedor removidos do log.
+    - [x] Gate registrado no job `governanca` do CI e na matriz de confiabilidade (28 referencias criticas).
+    - [x] Validacoes locais: backend 174 suites/1537 testes PASS (3 suites e 26 testes SKIPPED por testcontainers, sem Docker local), `typecheck`, `test:redacao-auditoria`, `test:confiabilidade`, `security:secrets`.
+    - [ ] Checks e review/merge humanos do Pull Request da fase 1 contra `main`.
+  - [ ] **Fase 2 - imutabilidade e correlacao**: `REVOKE UPDATE/DELETE`/trigger/hash-chain ou WORM, teto para `auth.login.sucesso`, `x-request-id` do BFF ao backend e `/health/detalhado` sem mensagem crua do driver Postgres.
+  - [ ] **Fase 3 - resposta**: alertas sobre o contador de falhas e sobre volume de negativa de autorizacao, runbook de resposta a incidentes, escalonamento, preservacao de evidencia e tabletop sintetico documentado.
+  - Lacunas declaradas com owner e prazo na secao 10 de `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md` (EXC-AUD-002 a EXC-AUD-005; a EXC-AUD-001 foi fechada no proprio ciclo pelo mecanismo de envoltorio declarado).
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`.
+  - Norma duravel: `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`.
 - [ ] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.
 - [ ] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
 - [ ] PR 55 - Concluir pentest independente, reteste e GO/NO-GO.
@@ -2625,4 +2647,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: concluir o PR 51 - a implementacao esta em branch dedicada e depende da evidencia redigida dos providers, coletada pelo proprietario. O PR 52 depende do aceite humano e merge do PR 51.
+Proximo item autorizado: concluir a fase 1 do PR 52 - a implementacao esta em branch dedicada e aguarda checks e review humano. As fases 2 e 3 do PR 52 dependem do merge da fase 1; o PR 53 depende do aceite humano das tres fases. Do PR 51 resta apenas a evidencia redigida dos paineis de provider, coletada pelo proprietario.

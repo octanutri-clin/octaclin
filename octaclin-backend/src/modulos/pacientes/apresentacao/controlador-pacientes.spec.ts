@@ -172,6 +172,57 @@ describe('ControladorPacientes', () => {
       );
     });
 
+    /**
+     * Teste negativo do vazamento que este PR fechou: o call site gravava
+     * `filtros: { ...filtros }`, e `ListarPacientesDto.busca` e o texto de ate
+     * 180 caracteres que a recepcao digitou -- nome de paciente, pedaco de CPF,
+     * telefone. `servico-pacientes.ts` passa esse mesmo campo por
+     * `gerarHashesConsultaPii` justamente para nunca armazena-lo, e a trilha
+     * desfazia isso ao lado.
+     *
+     * A afirmacao e sobre o payload serializado inteiro, e nao sobre a chave
+     * `busca`: o ponto e que o termo nao existe em lugar nenhum da trilha, nem
+     * aninhado, nem sob outro nome.
+     */
+    it('nao deve deixar o termo de busca digitado chegar a trilha de auditoria', async () => {
+      const { controlador, registrar, requisicao } = criarCenario({
+        exportarCsv: jest.fn().mockResolvedValue('id,nome\n1,Maria\n')
+      });
+
+      await controlador.exportarCsv(usuario, requisicao, {
+        pagina: 1,
+        limite: 25,
+        status: 'novo',
+        busca: 'Maria Silva 123.456.789-09'
+      } as never);
+
+      const entrada = registrar.mock.calls[0][0] as { metadados: Record<string, unknown> };
+
+      expect(JSON.stringify(entrada.metadados)).not.toContain('Maria Silva');
+      expect(JSON.stringify(entrada.metadados)).not.toContain('123.456.789-09');
+      expect(entrada.metadados).toEqual({
+        linhas: 1,
+        possuiBusca: true,
+        pagina: 1,
+        limite: 25,
+        status: 'novo',
+        risco: undefined,
+        profissionalId: undefined
+      });
+    });
+
+    it('deve declarar ausencia de busca em vez de omitir o campo', async () => {
+      const { controlador, registrar, requisicao } = criarCenario({
+        exportarCsv: jest.fn().mockResolvedValue('id,nome\n1,Maria\n')
+      });
+
+      await controlador.exportarCsv(usuario, requisicao, { pagina: 1, limite: 25 } as never);
+
+      expect(registrar).toHaveBeenCalledWith(
+        expect.objectContaining({ metadados: expect.objectContaining({ possuiBusca: false }) })
+      );
+    });
+
     it('registra na auditoria o resultado da importacao', async () => {
       const { controlador, registrar, requisicao } = criarCenario();
 

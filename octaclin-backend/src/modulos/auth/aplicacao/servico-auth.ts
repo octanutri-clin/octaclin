@@ -1,7 +1,11 @@
 import { createHash, randomUUID } from 'crypto';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { DataSource, EntityManager } from 'typeorm';
+import {
+  ServicoAuditoria,
+  type RegistrarAuditoriaEntrada
+} from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
@@ -48,8 +52,25 @@ interface DesfechoRotacao {
   mfaObrigatorio?: boolean;
 }
 
+/**
+ * Trilha de autenticacao (PR 52, fase 1b).
+ *
+ * Antes desta fase o ciclo de vida da credencial era o unico ponto do sistema
+ * sem rastro: login, falha de login, logout e rotacao de refresh nao deixavam
+ * nada em `user_action_logs`. Isso e o inverso do que a trilha existe para
+ * fazer -- ela e a evidencia de *quem* entrou, e sem ela um acesso indevido so
+ * aparece depois, pelo dado que a sessao tocou, ja tarde.
+ *
+ * A restricao que molda o desenho: `user_action_logs` grava sob RLS, via
+ * `ExecutorTenant`, e `tenant_id` e NOT NULL. Nao existe linha de trilha sem
+ * tenant. Numa falha de login o tenant pode simplesmente nao ser resolvivel --
+ * e ai a escolha e entre inventar um tenant (destruiria o isolamento que a RLS
+ * garante) e nao gravar. A decisao esta em `registrarFalhaForaDaTrilha`.
+ */
 @Injectable()
 export class ServicoAuth {
+  private readonly logger = new Logger(ServicoAuth.name);
+
   constructor(
     private readonly fonteDados: DataSource,
     private readonly executorTenant: ExecutorTenant,
@@ -58,7 +79,8 @@ export class ServicoAuth {
     private readonly criptografia: CriptografiaDadosSensiveis,
     private readonly protecaoAbuso: ServicoProtecaoAbuso,
     private readonly sessoes: ServicoSessoes,
-    private readonly mfa: ServicoMfa
+    private readonly mfa: ServicoMfa,
+    private readonly auditoria: ServicoAuditoria
   ) {}
 
   async login(dados: LoginDto) {
@@ -71,6 +93,7 @@ export class ServicoAuth {
 
     if (!tenant) {
       await this.protecaoAbuso.registrarFalha(chaveProtecao, POLITICA_LOGIN);
+      this.registrarFalhaForaDaTrilha('tenant_inexistente');
       throw new UnauthorizedException('Credenciais invalidas.');
     }
 
@@ -82,7 +105,29 @@ export class ServicoAuth {
     );
 
     if (!usuario || !this.senhas.verificar(dados.senha, usuario.senhaHash)) {
+      // A contencao de rajada e a mesma do fluxo de credencial: `registrarFalha`
+      // vem antes, e a partir da 5a falha da mesma chave `POLITICA_LOGIN` bloqueia
+      // a chave por 15 minutos. A 6a tentativa morre em
+      // `verificarDisponibilidade`, no topo deste metodo, antes de qualquer
+      // consulta e antes de qualquer escrita de auditoria. O teto por
+      // (tenantSlug, email) e portanto o proprio `maxTentativas`, e nao ha
+      // contador novo aqui -- duplicar contencao criaria duas fontes de verdade
+      // sobre o mesmo limite.
       await this.protecaoAbuso.registrarFalha(chaveProtecao, POLITICA_LOGIN);
+
+      if (usuario) {
+        await this.registrarTrilha({
+          tenantId: tenant.id,
+          usuarioId: usuario.id,
+          acao: 'auth.login.falha',
+          recursoTipo: 'usuario',
+          recursoId: usuario.id,
+          metadados: { motivoTecnico: 'credencial_invalida' }
+        });
+      } else {
+        this.registrarFalhaForaDaTrilha('usuario_inexistente', tenant.id);
+      }
+
       throw new UnauthorizedException('Credenciais invalidas.');
     }
 
@@ -106,7 +151,10 @@ export class ServicoAuth {
     if (exigeMfaPorPapel(usuario.role) && !mfaVerificadoEm) {
       throw new UnauthorizedException('Autenticação multifator obrigatória.');
     }
-    return this.executorTenant.executar(usuario.tenantId, async (gerenciador) => {
+    // A auditoria fica fora do `executar` de proposito: `ServicoAuditoria` abre
+    // o proprio escopo de tenant, e chamar de dentro daqui aninharia dois
+    // escopos RLS sobre a mesma conexao.
+    const emissao = await this.executorTenant.executar(usuario.tenantId, async (gerenciador) => {
       const sessao = await this.sessoes.criar(gerenciador, {
         tenantId: usuario.tenantId,
         usuarioId: usuario.id,
@@ -114,8 +162,19 @@ export class ServicoAuth {
         mfaVerificadoEm: mfaVerificadoEm ?? null
       });
 
-      return this.emitirParTokens(gerenciador, usuario, sessao);
+      return { tokens: await this.emitirParTokens(gerenciador, usuario, sessao), sessaoId: sessao.id };
     });
+
+    await this.registrarTrilha({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.id,
+      acao: 'auth.login.sucesso',
+      recursoTipo: 'sessao_usuario',
+      recursoId: emissao.sessaoId,
+      metadados: { mfaVerificado: Boolean(mfaVerificadoEm) }
+    });
+
+    return emissao.tokens;
   }
 
   async renovar(dados: RenovarTokenDto): Promise<ParTokens> {
@@ -192,6 +251,15 @@ export class ServicoAuth {
       throw new UnauthorizedException('Refresh token invalido ou expirado.');
     }
 
+    await this.registrarTrilha({
+      tenantId: claims.tenantId,
+      usuarioId: claims.sub,
+      acao: 'auth.token.renovado',
+      recursoTipo: 'sessao_usuario',
+      recursoId: claims.sid,
+      metadados: { rotacao: 'refresh_token' }
+    });
+
     return desfecho.tokens;
   }
 
@@ -199,6 +267,13 @@ export class ServicoAuth {
   async revogar(refreshToken: string): Promise<void> {
     const claims = await this.verificarToken(refreshToken, TIPO_TOKEN_RENOVACAO);
     await this.sessoes.revogar(claims.tenantId, claims.sub, claims.sid, 'logout');
+    await this.registrarTrilha({
+      tenantId: claims.tenantId,
+      usuarioId: claims.sub,
+      acao: 'auth.sessao.encerrada',
+      recursoTipo: 'sessao_usuario',
+      recursoId: claims.sid
+    });
   }
 
   listarSessoes(usuario: UsuarioAutenticado, pagina = 1) {
@@ -238,6 +313,60 @@ export class ServicoAuth {
 
   obterContextoAcesso(usuario: UsuarioAutenticado) {
     return contextoAcessoPorPapel(usuario.papel);
+  }
+
+  /**
+   * Escreve na trilha sem deixar a trilha decidir o desfecho da autenticacao.
+   *
+   * `ServicoAuditoria.registrar` ja engole a propria falha -- o `catch` dele
+   * incrementa o contador e volta normalmente. Este `try` e a segunda barreira,
+   * e existe por uma razao especifica deste modulo: aqui a auditoria e chamada
+   * a um `throw` de distancia de um 401. Se um dia `registrar` passar a
+   * rejeitar (um `Logger` custom que lanca, uma injecao trocada, um duble de
+   * teste), a rejeicao subiria no lugar do `UnauthorizedException` e um login
+   * recusado viraria 500 -- transformando um controle de seguranca em canal de
+   * negacao de servico contra o proprio login legitimo.
+   */
+  private async registrarTrilha(entrada: RegistrarAuditoriaEntrada): Promise<void> {
+    try {
+      await this.auditoria.registrar(entrada);
+    } catch {
+      // Silencio deliberado: ver o bloco acima. A contabilidade da falha e do
+      // `ServicoAuditoria`, que ja mantem `obterTotalFalhas` para o alarme.
+    }
+  }
+
+  /**
+   * Falha de login cujo autor a trilha nao consegue representar.
+   *
+   * `user_action_logs.tenant_id` e NOT NULL e a escrita passa por
+   * `ExecutorTenant`, isto e, por RLS. Duas situacoes nao tem tenant utilizavel:
+   * o slug nao corresponde a nenhum tenant ativo, e o e-mail nao corresponde a
+   * nenhum usuario daquele tenant. Inventar um tenant sintetico ("desconhecido",
+   * "sistema") para caber na coluna criaria um balde de linhas fora de qualquer
+   * escopo real, legivel por quem tivesse acesso a esse balde -- exatamente o
+   * isolamento que o `AGENTS.md` proibe relaxar. Escrever fora do `ExecutorTenant`
+   * seria pior: uma escrita sem RLS no caminho anonimo do login.
+   *
+   * A segunda razao e amplificacao. Estes dois caminhos sao os unicos em que o
+   * atacante escolhe livremente o valor que decide a chave: ele varia o e-mail e
+   * cada tentativa vira uma chave nova de protecao de abuso, entao o teto de 5
+   * falhas nao limita o *total* de escritas, so o total por chave. Manter esses
+   * dois casos fora da trilha remove o unico vetor de escrita ilimitada em
+   * `user_action_logs` a partir de requisicao nao autenticada.
+   *
+   * O que sobra e log estruturado: fica no coletor, tem retencao curta, nao e
+   * multi-tenant e nao e a evidencia legal. `motivo` e um literal fechado, e o
+   * tenant so aparece como UUID opaco quando ja foi resolvido pelo servidor.
+   * Nao entra e-mail, senha, slug enviado pelo cliente, token nem hash de
+   * nenhum deles -- o par (e-mail, resultado) e por si so um oraculo de
+   * enumeracao de contas.
+   */
+  private registrarFalhaForaDaTrilha(
+    motivo: 'tenant_inexistente' | 'usuario_inexistente',
+    tenantId?: string
+  ): void {
+    this.logger.warn({ evento: 'auth.login.falha', motivo, tenantId });
   }
 
   private exigirSessao(usuario: UsuarioAutenticado): string {

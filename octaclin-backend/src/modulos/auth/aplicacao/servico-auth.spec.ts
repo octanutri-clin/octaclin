@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common';
+import { HttpException, HttpStatus, Logger, UnauthorizedException } from '@nestjs/common';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { TIPO_TOKEN_ACESSO, TIPO_TOKEN_RENOVACAO } from '../dominio/claims-token';
@@ -21,6 +21,7 @@ interface DadosCenario {
   claimsRenovacao?: Record<string, unknown>;
   verifyLanca?: boolean;
   mfaDesafio?: Record<string, unknown> | null;
+  auditoriaLanca?: boolean;
 }
 
 function criarServico(dados: DadosCenario = {}) {
@@ -123,6 +124,12 @@ function criarServico(dados: DadosCenario = {}) {
     }))
   };
 
+  const auditoria = {
+    registrar: jest.fn(async () => {
+      if (dados.auditoriaLanca) throw new Error('trilha indisponivel');
+    })
+  };
+
   return {
     servico: new ServicoAuth(
       fonteDados as never,
@@ -132,8 +139,10 @@ function criarServico(dados: DadosCenario = {}) {
       criptografia as never,
       protecaoAbuso as never,
       sessoes as never,
-      mfa as never
+      mfa as never,
+      auditoria as never
     ),
+    auditoria,
     jwt,
     sessoes,
     protecaoAbuso,
@@ -545,6 +554,156 @@ describe('ServicoAuth', () => {
       await expect(servico.encerrarOutrasSessoes(usuario)).rejects.toBeInstanceOf(UnauthorizedException);
       await expect(servico.encerrarTodasSessoes(usuario)).rejects.toBeInstanceOf(UnauthorizedException);
       await expect(servico.limparHistoricoSessoes(usuario)).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+  });
+
+  describe('trilha de auditoria', () => {
+    let avisos: jest.SpyInstance;
+
+    beforeEach(() => {
+      avisos = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      avisos.mockRestore();
+    });
+
+    it('registra auth.login.sucesso com o tenant, o usuario e a sessao emitida', async () => {
+      const { servico, auditoria } = cenarioLoginValido();
+
+      await servico.login(CREDENCIAIS);
+
+      expect(auditoria.registrar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          acao: 'auth.login.sucesso',
+          tenantId: TENANT,
+          usuarioId: USUARIO,
+          recursoTipo: 'sessao_usuario',
+          recursoId: SESSAO
+        })
+      );
+    });
+
+    it('registra auth.login.falha na trilha quando o usuario existe e a senha nao confere', async () => {
+      const { servico, auditoria } = criarServico({
+        tenant: { id: TENANT, slug: 'clinica-carla', status: 'ativo' },
+        usuario: USUARIO_ATIVO
+      });
+
+      await expect(servico.login(CREDENCIAIS)).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(auditoria.registrar).toHaveBeenCalledWith(
+        expect.objectContaining({ acao: 'auth.login.falha', tenantId: TENANT, usuarioId: USUARIO })
+      );
+    });
+
+    it('registra auth.sessao.encerrada com a sessao encerrada', async () => {
+      const { servico, auditoria } = criarServico();
+
+      await servico.revogar('refresh');
+
+      expect(auditoria.registrar).toHaveBeenCalledWith(
+        expect.objectContaining({ acao: 'auth.sessao.encerrada', tenantId: TENANT, usuarioId: USUARIO, recursoId: SESSAO })
+      );
+    });
+
+    it('registra auth.token.renovado a cada rotacao bem sucedida', async () => {
+      const { servico, auditoria } = criarServico({ sessao: sessaoAtiva(), usuario: USUARIO_ATIVO });
+
+      await servico.renovar({ refreshToken: 'refresh' });
+
+      expect(auditoria.registrar).toHaveBeenCalledWith(
+        expect.objectContaining({ acao: 'auth.token.renovado', tenantId: TENANT, usuarioId: USUARIO, recursoId: SESSAO })
+      );
+    });
+
+    it('nao escreve na trilha quando o tenant do login nao existe', async () => {
+      const { servico, auditoria } = criarServico();
+
+      await expect(servico.login(CREDENCIAIS)).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(auditoria.registrar).not.toHaveBeenCalled();
+      expect(avisos).toHaveBeenCalledWith(
+        expect.objectContaining({ evento: 'auth.login.falha', motivo: 'tenant_inexistente' })
+      );
+    });
+
+    it('nao escreve na trilha quando o e-mail nao corresponde a nenhum usuario do tenant', async () => {
+      const { servico, auditoria } = criarServico({
+        tenant: { id: TENANT, slug: 'clinica-carla', status: 'ativo' },
+        usuario: undefined
+      });
+
+      await expect(servico.login(CREDENCIAIS)).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(auditoria.registrar).not.toHaveBeenCalled();
+      expect(avisos).toHaveBeenCalledWith(
+        expect.objectContaining({ evento: 'auth.login.falha', motivo: 'usuario_inexistente', tenantId: TENANT })
+      );
+    });
+
+    it('nao deixa senha, e-mail nem slug do tenant vazarem na falha de login com usuario conhecido', async () => {
+      const { servico, auditoria } = criarServico({
+        tenant: { id: TENANT, slug: 'clinica-carla', status: 'ativo' },
+        usuario: USUARIO_ATIVO
+      });
+
+      await expect(servico.login(CREDENCIAIS)).rejects.toBeInstanceOf(UnauthorizedException);
+
+      const trilha = JSON.stringify(auditoria.registrar.mock.calls);
+      expect(trilha).not.toContain(CREDENCIAIS.senha);
+      expect(trilha).not.toContain(CREDENCIAIS.email);
+      expect(trilha).not.toContain(USUARIO_ATIVO.senhaHash);
+      expect(trilha).not.toContain(USUARIO_ATIVO.emailHash);
+    });
+
+    it('nao deixa senha, e-mail nem slug do tenant vazarem no log da falha anonima', async () => {
+      const { servico } = criarServico({
+        tenant: { id: TENANT, slug: 'clinica-carla', status: 'ativo' },
+        usuario: undefined
+      });
+
+      await expect(servico.login(CREDENCIAIS)).rejects.toBeInstanceOf(UnauthorizedException);
+
+      const registrado = JSON.stringify(avisos.mock.calls);
+      expect(registrado).not.toContain(CREDENCIAIS.senha);
+      expect(registrado).not.toContain(CREDENCIAIS.email);
+      expect(registrado).not.toContain(CREDENCIAIS.tenantSlug);
+    });
+
+    it('nao deixa o refresh token entrar na trilha de rotacao nem de logout', async () => {
+      const { servico, auditoria } = criarServico({ sessao: sessaoAtiva(), usuario: USUARIO_ATIVO });
+
+      await servico.renovar({ refreshToken: 'refresh-secreto-do-teste' });
+      await servico.revogar('refresh-secreto-do-teste');
+
+      expect(JSON.stringify(auditoria.registrar.mock.calls)).not.toContain('refresh-secreto-do-teste');
+    });
+
+    it('mantem o 401 da falha de login quando a trilha esta indisponivel', async () => {
+      const { servico, auditoria } = criarServico({
+        tenant: { id: TENANT, slug: 'clinica-carla', status: 'ativo' },
+        usuario: USUARIO_ATIVO,
+        auditoriaLanca: true
+      });
+
+      await expect(servico.login(CREDENCIAIS)).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(auditoria.registrar).toHaveBeenCalled();
+    });
+
+    it('conclui o login legitimo mesmo quando a trilha esta indisponivel', async () => {
+      const { servico, auditoria } = cenarioLoginValido({ auditoriaLanca: true });
+
+      await expect(servico.login(CREDENCIAIS)).resolves.toHaveProperty('accessToken');
+      expect(auditoria.registrar).toHaveBeenCalled();
+    });
+
+    it('conclui logout e rotacao mesmo quando a trilha esta indisponivel', async () => {
+      const { servico } = criarServico({
+        sessao: sessaoAtiva(),
+        usuario: USUARIO_ATIVO,
+        auditoriaLanca: true
+      });
+
+      await expect(servico.renovar({ refreshToken: 'refresh' })).resolves.toHaveProperty('accessToken');
+      await expect(servico.revogar('refresh')).resolves.toBeUndefined();
     });
   });
 });
