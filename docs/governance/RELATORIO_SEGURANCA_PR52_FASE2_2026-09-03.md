@@ -173,6 +173,14 @@ procedimento do `RUNBOOK_PRODUCAO.md`:
 | `migration:run` com `neondb_owner` | aplicada |
 | `pg_trigger` (catalogo) | os dois gatilhos presentes, `tgenabled = 'A'` |
 | `update` dentro de `begin`/`rollback` | `ERROR ... append-only: UPDATE rejeitado`, `SQLSTATE 42501` |
+| login real apos o deploy | `auth.login.sucesso` gravado |
+| segundo login dentro da janela | `loginsSuprimidos` presente na linha seguinte da mesma chave |
+
+As duas ultimas linhas provam coisas diferentes e as duas importavam. O login
+gravado prova que **`INSERT` continua livre com os gatilhos ativos** -- o risco
+real desta migration nunca foi barrar de menos, e sim barrar a propria escrita
+legitima da trilha, que so apareceria em runtime. E `loginsSuprimidos` prova o
+teto da EXC-AUD-002 com a contagem do volume colapsado, e nao apenas a supressao.
 
 Isso e mais forte que o job de testcontainers, porque exercita o Postgres do
 provedor e nao um container descartavel. **EXC-AUD-003 esta provada em
@@ -277,6 +285,24 @@ Procedimento obrigatorio, detalhado em `RUNBOOK_PRODUCAO.md` na secao
 projeto/branch/banco/role, `BANCO_EXECUTAR_MIGRACOES=false` no servico,
 `migration:run` com `DATABASE_URL` de `neondb_owner` somente na sessao local, e
 verificacao de `pg_trigger.tgenabled = 'A'` depois.
+
+**Achado operacional do ciclo, alheio a esta fase mas descoberto por ela.** O
+servico web de staging nao tinha `OCTACLIN_BACKEND_URL` nem
+`OCTACLIN_TENANT_SLUG`, ambas marcadas `Sim` no `VARIAVEIS_AMBIENTE.md`. O login
+falhava com "O servico de acesso do OctaClin esta configurado incorretamente",
+enquanto as rotas publicas continuavam funcionando -- elas caem em
+`OCTACLIN_BACKEND_URL ?? NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'`, e a
+variavel publica legada mascarava a ausencia da correta em nove rotas.
+`configuracao-acesso-bff.ts`, usado pelo login, nao tem esse fallback e por isso
+foi o unico a falhar.
+
+Nao e regressao desta fase, e sim desvio de configuracao anterior que a
+validacao pos-deploy revelou. Duas consequencias: **conferir as mesmas duas
+variaveis no web de producao antes do deploy de la**, e registrar que uma
+variavel `NEXT_PUBLIC_*` -- publica, embarcada no bundle do navegador -- decide
+origem de backend em rota server-side. Funciona, e e a fonte errada para essa
+decisao; o fallback silencioso e da mesma familia que este PR vem eliminando.
+Candidato a fase 3.
 
 **Lacuna registrada:** nada no CI detecta que um PR carrega migration com DDL e
 portanto exige aplicacao fora de banda. E a segunda vez que esta classe de falha

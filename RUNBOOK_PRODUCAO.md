@@ -864,6 +864,15 @@ Em producao, **nao** inserir linha sintetica na trilha para testar. A consulta d
 `update` da etapa 2 continua segura porque e rejeitada e esta dentro de
 `begin`/`rollback`.
 
+**Antes do deploy do web de producao**, conferir que o servico tem
+`OCTACLIN_BACKEND_URL` e `OCTACLIN_TENANT_SLUG` definidas, e que
+`OCTACLIN_API_ORIGENS_PERMITIDAS` contem exatamente a origem da primeira (sem
+caminho e sem barra final). Em staging as duas estavam ausentes e o login
+respondia "O servico de acesso do OctaClin esta configurado incorretamente",
+enquanto as rotas publicas seguiam funcionando pelo fallback legado
+`NEXT_PUBLIC_API_URL` -- entao a ausencia nao aparece em teste de rota publica
+nem no `/health`.
+
 #### Rollback
 
 O `down()` derruba os dois gatilhos e a funcao e devolve `update, delete` as
