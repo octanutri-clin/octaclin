@@ -1,7 +1,9 @@
 # Politica da trilha de auditoria e da redacao de metadados do OctaClin
 
 > Norma duravel. Estado observado fica em `STATUS_ATUAL_PROJETO.md` e a
-> evidencia do ciclo em `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`.
+> evidencia dos ciclos em `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`
+> (fase 1), `docs/governance/RELATORIO_SEGURANCA_PR52_FASE2_2026-09-03.md` e
+> `docs/governance/RELATORIO_SEGURANCA_PR52_FASE3_2026-09-04.md`.
 
 Esta politica cobre `user_action_logs` -- a trilha de auditoria do OctaClin --
 e o payload livre que os call sites gravam nela. Ela define o que a trilha
@@ -362,8 +364,33 @@ O contador de falhas e **por processo**, em variavel de modulo, e nao campo de
 instancia. `ServicoAuditoria` esta em `providers` de 15 modulos Nest e o
 container cria uma instancia por modulo: um campo de instancia daria 15
 contadores independentes, e o alarme leria a fatia de um deles. O contador e
-monotonico por contrato -- reseta so no restart, nunca decrementa -- para que o
-alarme trabalhe com delta por janela.
+monotonico por contrato -- reseta so no restart, nunca decrementa.
+
+**Contador nao lido nao e alarme.** Da fase 1 ate a fase 3 o numero existiu e
+nada em producao o consultava, o que deixava a lacuna desta secao aberta com a
+aparencia de fechada. O alerta vive no pipeline de `/operacoes`, atras de
+`SuperAdmin`, e **nunca** em `/health/detalhado`: aquele endpoint e publico e nao
+autenticado, e dizer a um anonimo que a trilha parou de gravar entrega a janela
+de oportunidade. E o mesmo precedente de `GET /operacoes/providers`.
+
+O limiar e o **total desde o boot**, e nao um delta entre leituras. A razao e do
+mecanismo, e nao de preferencia: o painel e aberto sob demanda por uma pessoa,
+entao nao existe janela de leitura confiavel, e um delta seria corrompido pelo
+segundo leitor -- dois operadores roubariam o delta um do outro e o segundo veria
+zero. O custo aceito e o alerta ficar aceso ate o restart depois de uma falha
+isolada, e ele e aceito de proposito: evidencia perdida nao volta a existir
+depois de uma janela de calmaria.
+
+Duas propriedades que qualquer alerta sobre estes contadores precisa herdar:
+
+- **O payload nao carrega identificador.** Nem tenant, nem usuario, nem rota, nem
+  alvo -- so contagem, taxa, uptime e limiar, pela regua da secao 4.2. A trilha ja
+  guarda quem e onde, atras dos mesmos controles; repetir isso num painel de
+  operacao transformaria o alerta em indice de sondagem.
+- **A leitura vale por uma replica.** O contador e do processo que respondeu, e
+  nao do servico. Com N replicas o numero e piso, e o erro possivel e sempre para
+  menos: o alerta pode calar quando deveria tocar, nunca o contrario. Mesma
+  disciplina de `loginsSuprimidos` na secao 6.4.
 
 **So o nome da classe do erro entra no log de falha.** A mensagem de um erro de
 banco carrega SQL, valor de parametro e as vezes host ou credencial: seria
@@ -401,9 +428,11 @@ gate.
 | Imutabilidade da trilha | `pnpm --dir octaclin-backend test:rls:testcontainers` | `UPDATE`, `DELETE` ou `TRUNCATE` que **passem**; trigger ausente ou fora de `enable always` em `pg_trigger` |
 | Correlacao web-backend | `pnpm --dir octaclin-web test:correlacao:bff` | rota de `app/api` que nao propague o id; valor do cliente aceito cru; **matcher do middleware que deixe de cobrir `app/api`** |
 | Contrato do formato do id | `pnpm --dir octaclin-backend test -- observabilidade` | aperto do alfabeto ou do tamanho que faca o backend transformar o UUID emitido pelo BFF |
+| Alerta sobre os contadores | `pnpm --dir octaclin-backend test --runInBand` | limiar, severidade, contador que deixe de ter escopo de processo, e identificador que apareca no payload do alerta |
+| Procedimento de resposta e tabletop | `pnpm test:resposta-auditoria` | remocao de uma das proibicoes que sao o controle no runbook; perda da condicao de encerramento sobre o intervalo sem trilha; referencia a comando ou documento que deixou de existir; tabletop degradado em exercicio sem achado |
 
-Os tres primeiros rodam no job `governanca` do CI, ao lado de `pnpm
-test:confiabilidade`. O de imutabilidade roda no job do backend, no passo
+Os tres primeiros e o de procedimento rodam no job `governanca` do CI, ao lado de
+`pnpm test:confiabilidade`. O de imutabilidade roda no job do backend, no passo
 `Provar RLS com Testcontainers descartavel` -- e **so la**: sem Docker a suite
 marca esses casos como `SKIPPED`, e `SKIPPED` nao e aprovado. O de correlacao e o
 de contrato do formato do id sao os dois lados do mesmo acordo, e existem
@@ -492,16 +521,34 @@ um detalhe.
 
 Excecao fechada na fase 1, ja registrada acima: EXC-AUD-001.
 
+**Revisao da fase 3, em 2026-09-04.** Quatro excecoes tinham `fase 3 do PR 52`
+como prazo -- EXC-AUD-006, 007, 009 e 010 -- e **nenhuma das quatro foi fechada
+por ela**. Nao e atraso: e que o prazo foi escrito sem ser conferido contra o
+escopo que a propria fase 3 ja tinha definido na tabela de fases do
+`docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md` -- alerta, runbook de
+resposta, escalonamento, preservacao de evidencia e tabletop. Nada ali toca teto
+de escrita, origem de requisicao ou salto de correlacao. E a mesma forma de
+defeito que este PR vem encontrando desde a fase 1: uma frase verdadeira quando
+escrita, que ninguem conferiu contra o mecanismo.
+
+A correcao adotada e datar excecao pelo **trabalho que a fecha**, e nao pela
+proxima fase disponivel. As quatro passam a apontar para o PR que carrega esse
+trabalho, e o motivo de cada uma esta na coluna de prazo.
+
 Excecoes vigentes:
 
 | Id | Divergencia | Owner | Prazo | Compensacao |
 | --- | --- | --- | --- | --- |
 | EXC-AUD-005 | `motivo` nao entra no vocabulario do redator | proprietario | permanente; revisar se o uso do campo mudar | ver abaixo |
-| EXC-AUD-006 | `loginsSuprimidos` e piso, nao total: a contagem some sem marcador em pressao de teto e em restart do processo | proprietario | fase 3 do PR 52 | a assimetria forte continua valendo -- evento **distinto** nunca deixa de ser gravado; e o residual e otimizacao de volume, nao controle |
-| EXC-AUD-007 | `auth.token.renovado` continua sem teto, e a identidade do teto de login nao inclui a origem da requisicao | proprietario | fase 3 do PR 52 | renovacao exige refresh token valido; `sessoes_usuario` grava linha por login, provando a contagem ainda que nao a origem |
+| EXC-AUD-006 | `loginsSuprimidos` e piso, nao total: a contagem some sem marcador em pressao de teto e em restart do processo | proprietario | PR 53 ou posterior; fechar exige persistir o residual fora do processo, que e o oposto do que um teto de escrita existe para fazer -- a fase 3 nao tinha esse trabalho no escopo | a assimetria forte continua valendo -- evento **distinto** nunca deixa de ser gravado; e o residual e otimizacao de volume, nao controle |
+| EXC-AUD-007 | `auth.token.renovado` continua sem teto, e a identidade do teto de login nao inclui a origem da requisicao | proprietario | PR 53 ou posterior; a origem exige levar IP e user agent ate a camada de servico, que e mudanca de contrato interno e nao cabia no escopo da fase 3 | renovacao exige refresh token valido; `sessoes_usuario` grava linha por login, provando a contagem ainda que nao a origem |
 | EXC-AUD-008 | A trilha nao e imutavel contra o administrador do banco, nao tem hash-chain e nao e WORM | proprietario | PR 53 ou posterior; exige decisao de infraestrutura | trigger `enable always` barra toda role de aplicacao; verificacao por `pg_trigger.tgenabled = 'A'` documentada no runbook |
-| EXC-AUD-009 | A correlacao nao atravessa o mobile, jobs, cron e webhooks: esses caem no `randomUUID()` do proprio backend | proprietario | fase 3 do PR 52 | dentro do backend a correlacao existe e e integra; o que falta e o salto de origem |
-| EXC-AUD-010 | A propagacao foi provada com `fetch` espionado em teste, e nao contra backend real com leitura da linha gravada | proprietario | fase 3 do PR 52 | os dois lados do contrato tem teste que reprova drift de formato (secao 9) |
+| EXC-AUD-009 | A correlacao nao atravessa o mobile, jobs, cron e webhooks: esses caem no `randomUUID()` do proprio backend | proprietario | PR 53 ou posterior; o salto de origem e trabalho de cliente e de agendador, fora do escopo de alerta e resposta da fase 3 | dentro do backend a correlacao existe e e integra; o que falta e o salto de origem |
+| EXC-AUD-010 | A propagacao foi provada com `fetch` espionado em teste, e nao contra backend real com leitura da linha gravada | proprietario | PR 53 ou posterior; exige backend e banco reais no mesmo teste, que e infraestrutura de prova e nao entrega da fase 3 | os dois lados do contrato tem teste que reprova drift de formato (secao 9) |
+| EXC-AUD-011 | O alerta conta negativa observada, mas a trilha sub-reporta o martelo persistente em alvo unico: a janela de 60 s colapsa as repeticoes em cerca de uma linha por minuto, entao a evidencia nao dimensiona o volume que disparou o alerta | proprietario | PR 53 ou posterior; exige decidir se a linha da negativa carrega o volume colapsado, como `loginsSuprimidos` ja faz para o login | o alerta **detecta** o caso, porque o contador incrementa antes da dedup; a divergencia entre contador e numero de linhas esta escrita no `RUNBOOK_PRODUCAO.md` para nao ser lida como defeito de um dos dois |
+| EXC-AUD-012 | Nao ha contencao operacional de sessao comprometida: nenhuma rota permite a um SuperAdmin revogar a sessao de terceiro, e arquivar um profissional revoga refresh tokens sem encerrar a sessao corrente | proprietario | PR 53 ou posterior; exige rota nova com auditoria propria | o guarda de JWT consulta `sessoes_usuario` a cada requisicao, entao qualquer revogacao que chegue aquela tabela tem efeito imediato; a janela residual e a validade do access token e esta declarada no runbook em vez de presumida como zero |
+| EXC-AUD-013 | A remocao de linha da trilha exige dois responsaveis e o projeto tem um: o procedimento fora de banda da secao 5.1 nao e executavel hoje | proprietario | permanente enquanto houver um unico responsavel; revisar quando houver segundo | a redacao de `metadados` mantem dado pessoal fora da trilha na escrita, que e a camada 1 da secao 3; o runbook declara a nao executabilidade em vez de convidar a execucao solitaria |
+| EXC-AUD-014 | Os contadores que os alertas leem sao por processo e `/operacoes` responde por uma instancia: com N replicas, ausencia de alerta prova a instancia que respondeu, e nao o servico | proprietario | PR 53 ou posterior; exige agregacao externa | o erro possivel e sempre para menos, nunca falso silencio invertido; o log `auditoria.falha` continua chegando de todas as instancias ao coletor do provedor |
 
 Sobre a EXC-AUD-005: redigir `motivo` destruiria dado operacional para fingir
 cobertura, e ha teste que **afirma** que `motivo` e `relato` sobrevivem a

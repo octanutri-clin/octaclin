@@ -2,7 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Between, EntityManager, FindOptionsWhere, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { montarCsv } from '../../../infraestrutura/exportacao/csv';
+import { obterTotalFalhasAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
+import { obterTotalNegativasAutorizacao } from '../../auth/apresentacao/auditoria-autorizacao';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -21,6 +23,83 @@ const CHAVE_PLANO_SAAS = 'plano_saas';
 const CHAVE_INTERESSE_ASSINATURA = 'assinatura_interesse';
 const VERSAO_RETENCAO_DADOS = '2026-10';
 const MINUTOS_OUTBOX_ATRASADO = 15;
+
+/**
+ * Limiares dos dois alertas de observabilidade da trilha (PR 52, fase 3).
+ *
+ * **Por que os limiares tem esta forma.** Os dois contadores lidos aqui sao
+ * monotonicos desde o boot do processo e o endpoint e chamado sob demanda por
+ * uma pessoa. Nao existe janela de leitura confiavel, e um esquema de "delta
+ * desde a ultima leitura" seria corrompido pelo segundo leitor -- dois
+ * operadores abrindo o painel se roubariam o delta um do outro. Entao a
+ * severidade sai de grandezas que independem de quem le e de quando: o total
+ * absoluto desde o boot e a taxa por hora de uptime do processo. As duas, mais
+ * os proprios limiares, vao no payload do alerta para que quem opera possa
+ * refazer a conta.
+ *
+ * **Limitacao que vale para os dois alertas.** Os contadores sao por processo e
+ * a leitura atinge uma replica so. Com N replicas o alerta ve a fatia de uma
+ * delas, entao todo numero aqui e piso, nunca total exato -- a mesma disciplina
+ * que a politica aplica a `loginsSuprimidos`. O erro possivel e sempre para
+ * menos: o alerta pode calar quando deveria tocar, nunca o contrario. Um
+ * reinicio de processo zera as duas contagens pelo mesmo motivo.
+ */
+const SEGUNDOS_POR_HORA = 3_600;
+
+/**
+ * Uptime minimo para a taxa valer como limiar.
+ *
+ * Sem este piso, 13 eventos nos 10 primeiros segundos de vida do processo
+ * dariam 4.680/h e todo boot viraria alarme. Quinze minutos e o mesmo horizonte
+ * que {@link MINUTOS_OUTBOX_ATRASADO} ja usa neste arquivo para decidir que algo
+ * esta atrasado, e nao uma constante nova inventada aqui. Abaixo dele, so o
+ * total absoluto decide -- a taxa continua no payload, como informacao de
+ * triagem.
+ */
+const UPTIME_MINIMO_PARA_TAXA_SEGUNDOS = MINUTOS_OUTBOX_ATRASADO * 60;
+
+/**
+ * Falha de gravacao da trilha: uma so ja e critico.
+ *
+ * Nao ha limiar a derivar aqui, e inventar um seria pior que nao ter. A secao 1
+ * da politica da trilha diz que a ausencia de registro e indistinguivel da
+ * ausencia de acesso: uma unica falha significa que existiu acesso sem registro,
+ * e nao existe volume de perda de evidencia que seja aceitavel. Por isso o
+ * limiar e 1 e a severidade nao tem degrau abaixo de `critico`.
+ *
+ * O custo assumido esta escrito para nao ser descoberto em producao: o contador
+ * e monotonico, entao uma falha isolada mantem este alerta aceso ate o proximo
+ * restart. E deliberado -- a evidencia perdida nao volta a existir depois de uma
+ * janela de calmaria --, e a compensacao e o payload: total, uptime e taxa
+ * permitem separar "um blip no boot" de "a trilha parou de gravar" sem que a
+ * deteccao dependa dessa distincao.
+ */
+const FALHAS_TRILHA_LIMIAR_CRITICO = 1;
+
+/**
+ * Volume de negativa de autorizacao: aqui, ao contrario da falha de gravacao,
+ * um valor diferente de zero e normal -- um usuario clicando num menu que o
+ * papel dele nao abre produz 403 legitimo. O limiar precisa separar esse fundo
+ * do sinal.
+ *
+ * 500 nao foi escolhido aqui: e a magnitude que a propria secao 6.2 da politica
+ * usa para descrever enumeracao ("sondar 500 pacientes distintos"). 50 e uma
+ * ordem de grandeza abaixo -- o ponto em que "alguem esbarrou numa rota
+ * proibida" deixa de explicar o volume.
+ *
+ * **O que nao existe hoje:** linha de base medida em producao. O 50 e uma
+ * escolha, e nao uma medida, e esta escrito assim de proposito. Diante disso a
+ * calibragem foi conservadora nos dois sentidos que importam: o piso e `atencao`
+ * (e nao `informativo`, que convida a ignorar) e nada e emitido abaixo dele,
+ * para que o painel continue sendo lido. Quando houver base medida, este e o
+ * numero a rever primeiro.
+ *
+ * Os mesmos dois numeros valem para as duas grandezas: total absoluto desde o
+ * boot e taxa por hora de uptime. O total pega o acumulo lento; a taxa pega a
+ * rajada antes que o total a alcance.
+ */
+const NEGATIVAS_LIMIAR_ATENCAO = 50;
+const NEGATIVAS_LIMIAR_CRITICO = 500;
 
 export interface ResumoOperacional {
   outbox: {
@@ -366,7 +445,13 @@ export class ServicoOperacoes {
   async listarAlertasOperacionais(tenantId: string): Promise<ResultadoAlertasOperacionais> {
     const geradoEm = new Date();
     const health = await this.servicoSaude.verificarDetalhado();
-    const alertas: AlertaOperacional[] = [...this.montarAlertasHealth(health), ...this.montarAlertasDeploy()];
+    const uptimeSegundos = this.obterUptimeSegundos();
+    const alertas: AlertaOperacional[] = [
+      ...this.montarAlertasHealth(health),
+      ...this.montarAlertasDeploy(),
+      ...this.montarAlertaFalhaTrilha(uptimeSegundos),
+      ...this.montarAlertaVolumeNegativas(uptimeSegundos)
+    ];
 
     const alertasTenant = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const corteOutbox = new Date(geradoEm.getTime() - MINUTOS_OUTBOX_ATRASADO * 60 * 1000);
@@ -868,6 +953,119 @@ export class ServicoOperacoes {
         acaoSugerida: 'Configurar metadados do provedor de deploy ou registrar commit ativo no ambiente.',
         metrica: 'deploy_metadados',
         valor: 0
+      }
+    ];
+  }
+
+  /**
+   * Uptime do processo, em segundos inteiros.
+   *
+   * Isolado em metodo para que o teste possa fixar o valor: a taxa de um dos
+   * alertas depende dele, e um limiar que so pode ser exercitado esperando o
+   * relogio nao seria exercitado.
+   */
+  private obterUptimeSegundos(): number {
+    return Math.max(1, Math.floor(process.uptime()));
+  }
+
+  /** Eventos por hora de uptime, com uma casa decimal. Ver os limiares no topo do arquivo. */
+  private calcularPorHora(total: number, uptimeSegundos: number): number {
+    return Number(((total * SEGUNDOS_POR_HORA) / Math.max(1, uptimeSegundos)).toFixed(1));
+  }
+
+  /**
+   * A conta exposta ao operador, no formato de `referencia` que os alertas deste
+   * arquivo ja usam. Sao apenas numeros e nomes de limiar -- nenhum
+   * identificador, nenhuma rota, nenhum alvo, conforme a secao 4.2 da politica
+   * de redacao.
+   */
+  private descreverContagem(
+    total: number,
+    uptimeSegundos: number,
+    porHora: number,
+    limiares: Record<string, number>
+  ): string {
+    const partes = [`total:${total}`, `uptimeSegundos:${uptimeSegundos}`, `porHora:${porHora}`];
+    for (const [nome, valor] of Object.entries(limiares)) partes.push(`${nome}:${valor}`);
+    return partes.join(';');
+  }
+
+  /**
+   * Falha de gravacao da trilha de auditoria (fecha a lacuna da secao 7 da
+   * politica: ate aqui o contador existia e ninguem o lia em producao).
+   *
+   * Fica neste pipeline, atras de `SuperAdmin`, e **nao** em `/health/detalhado`
+   * -- aquele endpoint e publico e nao autenticado, e dizer a um anonimo que a
+   * trilha parou de gravar entrega a janela de oportunidade. E o mesmo
+   * precedente ja escrito no `@Get('providers')` do controlador.
+   *
+   * O numero e do processo, como os alertas de health e de deploy desta mesma
+   * lista, e nao do tenant que chamou: quem le nao deve atribui-lo ao proprio
+   * tenant. Ele nao carrega identificador nenhum justamente por isso.
+   */
+  private montarAlertaFalhaTrilha(uptimeSegundos: number): AlertaOperacional[] {
+    const total = obterTotalFalhasAuditoria();
+    if (total < FALHAS_TRILHA_LIMIAR_CRITICO) return [];
+
+    const porHora = this.calcularPorHora(total, uptimeSegundos);
+
+    return [
+      {
+        id: 'servico.auditoria.falha_gravacao',
+        severidade: 'critico',
+        origem: 'servico',
+        titulo: 'Trilha de auditoria falhou ao gravar',
+        mensagem:
+          'Houve acesso sem registro correspondente na trilha. A contagem e do processo desta replica, acumulada desde o boot.',
+        acaoSugerida:
+          'Seguir o runbook de resposta da trilha: conferir banco e conexao, estimar a janela sem registro e preservar a evidencia antes de reiniciar o processo.',
+        metrica: 'auditoria_falha_gravacao_total',
+        valor: total,
+        referencia: this.descreverContagem(total, uptimeSegundos, porHora, {
+          limiarCritico: FALHAS_TRILHA_LIMIAR_CRITICO
+        })
+      }
+    ];
+  }
+
+  /**
+   * Volume de negativa de autorizacao.
+   *
+   * O sinal e volume, nao alvo: a trilha ja guarda a linha de cada negativa
+   * distinta, com tenant, usuario e recurso, atras dos mesmos controles. Este
+   * alerta existe para dizer que o volume saiu do normal, e por isso carrega so
+   * contagem, taxa e limiar -- repetir aqui quem foi negado e onde
+   * transformaria um painel de operacao num indice de sondagem.
+   *
+   * A contagem vem de {@link obterTotalNegativasAutorizacao}, que conta evento
+   * observado e nao linha gravada; ver a justificativa da escolha no proprio
+   * modulo que a incrementa.
+   */
+  private montarAlertaVolumeNegativas(uptimeSegundos: number): AlertaOperacional[] {
+    const total = obterTotalNegativasAutorizacao();
+    const porHora = this.calcularPorHora(total, uptimeSegundos);
+    const taxaVale = uptimeSegundos >= UPTIME_MINIMO_PARA_TAXA_SEGUNDOS;
+    const critico = total >= NEGATIVAS_LIMIAR_CRITICO || (taxaVale && porHora >= NEGATIVAS_LIMIAR_CRITICO);
+    const atencao = total >= NEGATIVAS_LIMIAR_ATENCAO || (taxaVale && porHora >= NEGATIVAS_LIMIAR_ATENCAO);
+
+    if (!atencao && !critico) return [];
+
+    return [
+      {
+        id: 'servico.autorizacao.negativas_volume',
+        severidade: critico ? 'critico' : 'atencao',
+        origem: 'servico',
+        titulo: 'Volume de negativa de autorizacao acima do esperado',
+        mensagem:
+          'O numero de negativas de autorizacao observadas passou do limiar. A contagem e do processo desta replica, acumulada desde o boot.',
+        acaoSugerida:
+          'Abrir a trilha em /operacoes/auditoria, filtrar por auth.autorizacao.negada e separar erro de papel concedido de sondagem de recurso.',
+        metrica: 'autorizacao_negada_total',
+        valor: total,
+        referencia: this.descreverContagem(total, uptimeSegundos, porHora, {
+          limiarAtencao: NEGATIVAS_LIMIAR_ATENCAO,
+          limiarCritico: NEGATIVAS_LIMIAR_CRITICO
+        })
       }
     ];
   }

@@ -2633,11 +2633,18 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
     - [x] Webhook publico do WhatsApp: falha de assinatura HMAC passou a ser log estruturado com teto por janela; `phone_number_id` e mensagem crua do provedor removidos do log.
     - [x] Gate registrado no job `governanca` do CI e na matriz de confiabilidade (28 referencias criticas).
     - [x] Validacoes locais: backend 174 suites/1537 testes PASS (3 suites e 26 testes SKIPPED por testcontainers, sem Docker local), `typecheck`, `test:redacao-auditoria`, `test:confiabilidade`, `security:secrets`.
-    - [ ] Checks e review/merge humanos do Pull Request da fase 1 contra `main`.
-  - [ ] **Fase 2 - imutabilidade e correlacao**: `REVOKE UPDATE/DELETE`/trigger/hash-chain ou WORM, teto para `auth.login.sucesso`, `x-request-id` do BFF ao backend e `/health/detalhado` sem mensagem crua do driver Postgres.
-  - [ ] **Fase 3 - resposta**: alertas sobre o contador de falhas e sobre volume de negativa de autorizacao, runbook de resposta a incidentes, escalonamento, preservacao de evidencia e tabletop sintetico documentado.
-  - Lacunas declaradas com owner e prazo na secao 10 de `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md` (EXC-AUD-002 a EXC-AUD-005; a EXC-AUD-001 foi fechada no proprio ciclo pelo mecanismo de envoltorio declarado).
-  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`.
+    - [x] Checks e review/merge humanos do Pull Request da fase 1 contra `main`: PR GitHub `#191` (`6d389f6`) em 2026-09-03.
+  - [x] **Fase 2 - imutabilidade e correlacao**: trigger append-only `enable always` para `UPDATE`/`DELETE`/`TRUNCATE` (migration `1720000001038`; hash-chain e WORM ficaram fora de alcance como EXC-AUD-008), teto para `auth.login.sucesso` com volume colapsado devolvido em `loginsSuprimidos`, `x-request-id` do BFF ao backend e `/health/detalhado` sem mensagem crua do driver Postgres. Integrada no `main` pelo PR GitHub `#194` (`a9c6d59`) em 2026-09-04, com a migration aplicada fora de banda com `neondb_owner`.
+  - [~] **Fase 3 - resposta**: alertas sobre o contador de falhas e sobre volume de negativa de autorizacao, runbook de resposta a incidentes, escalonamento, preservacao de evidencia e tabletop sintetico documentado. Entregue em 2026-09-04 na branch `security/governanca-pr52-fase3-alerta-e-resposta`; aguarda checks e review/merge humano.
+    - [x] Achado central: o contador de falhas existia desde a fase 1 e **nada em producao o lia** -- contador nao lido nao e alarme, e a secao 7 da politica descrevia a lacuna e a documentava como resolvida ao mesmo tempo.
+    - [x] Os dois alertas ficam atras de `SuperAdmin` no painel `/operacoes`, e nunca em `/health/detalhado`, que e publico; nenhum deles carrega identificador, rota ou alvo, com teste negativo sobre as chaves do payload.
+    - [x] Limiar por total desde o boot e por taxa por hora de uptime, e nao por delta entre leituras, que o segundo leitor corromperia.
+    - [x] Tabletop sintetico com nove achados, cinco deles corrigidos no proprio runbook dentro da fase; gate `pnpm test:resposta-auditoria` reprova a remocao das proibicoes que sao o controle e o tabletop degradado em exercicio sem achado.
+    - [x] Prova por mutacao dos dois lados: seis mutacoes no codigo dos alertas e tres no gate do procedimento, todas reprovadas por algum teste.
+    - [ ] Executar o procedimento de teste de alerta em banco descartavel e registrar o resultado sanitizado. Nao bloqueia o merge; ate la o provado e a logica, e nao o caminho operacional.
+    - [ ] Checks e review/merge humanos do Pull Request da fase 3 contra `main`.
+  - Lacunas declaradas com owner e prazo na secao 10 de `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md` (EXC-AUD-005 a EXC-AUD-014; EXC-AUD-001 fechada na fase 1 e EXC-AUD-002 a 004 na fase 2). As quatro que a fase 2 datou para a fase 3 -- EXC-AUD-006, 007, 009 e 010 -- **nao** foram fechadas por ela: o prazo tinha sido escrito sem conferencia contra o escopo da fase, e as quatro foram redatadas pelo trabalho que as fecha.
+  - Relatorios: `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`, `docs/governance/RELATORIO_SEGURANCA_PR52_FASE2_2026-09-03.md` e `docs/governance/RELATORIO_SEGURANCA_PR52_FASE3_2026-09-04.md`. Exercicio: `docs/governance/TABLETOP_AUDITORIA_PR52_FASE3_2026-09-04.md`.
   - Norma duravel: `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`.
 - [ ] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.
 - [ ] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
@@ -2647,4 +2654,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: concluir a fase 1 do PR 52 - a implementacao esta em branch dedicada e aguarda checks e review humano. As fases 2 e 3 do PR 52 dependem do merge da fase 1; o PR 53 depende do aceite humano das tres fases. Do PR 51 resta apenas a evidencia redigida dos paineis de provider, coletada pelo proprietario.
+Proximo item autorizado: review, checks e merge humano da fase 3 do PR 52 - a implementacao esta em branch dedicada. As fases 1 e 2 ja estao no `main` (PRs GitHub `#191` e `#194`); o PR 53 depende do aceite humano das tres fases. Do PR 51 resta apenas a evidencia redigida dos paineis de provider, coletada pelo proprietario.

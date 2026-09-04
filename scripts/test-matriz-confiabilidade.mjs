@@ -33,7 +33,9 @@ const referenciasObrigatorias = [
   'octaclin-backend/src/infraestrutura/auditoria/servico-auditoria.spec.ts',
   'octaclin-backend/src/modulos/auth/apresentacao/auditoria-autorizacao.spec.ts',
   'octaclin-backend/src/modulos/auth/apresentacao/guarda-papeis.spec.ts',
-  'scripts/validar-redacao-auditoria.spec.mjs'
+  'scripts/validar-redacao-auditoria.spec.mjs',
+  'octaclin-backend/src/modulos/operacoes/aplicacao/servico-operacoes.spec.ts',
+  'scripts/test-runbook-resposta-auditoria.mjs'
 ];
 
 for (const referencia of referenciasObrigatorias) {
@@ -45,7 +47,7 @@ for (const referencia of referenciasObrigatorias) {
   }
 }
 
-for (const risco of ['Isolamento multi-tenant', 'Autenticacao e autorizacao', 'Integracoes externas', 'BFF e sessao', 'Sessoes e rotacao de refresh token', 'Trilha de auditoria e redacao de metadados']) {
+for (const risco of ['Isolamento multi-tenant', 'Autenticacao e autorizacao', 'Integracoes externas', 'BFF e sessao', 'Sessoes e rotacao de refresh token', 'Trilha de auditoria e redacao de metadados', 'Alerta e resposta a incidente de auditoria']) {
   if (!conteudo.includes(risco)) throw new Error(`Risco critico ausente da matriz: ${risco}`);
 }
 
