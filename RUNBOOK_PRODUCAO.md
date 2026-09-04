@@ -312,6 +312,45 @@ Se um runtime ainda usar a versao anterior do backend, **aplicar a migration for
 de banda com `neondb_owner` antes do merge**, e nao depois. Depois desta mudanca,
 o mesmo procedimento continua obrigatorio para toda migration com DDL.
 
+#### Declaracao obrigatoria em cada migration
+
+Ate 2026-09-04 nada no CI dizia que uma PR carregava migration com DDL, e o
+sintoma da omissao nunca aparece no CI -- ele aparece no painel do Render, como o
+loop de falha acima. Foi assim duas vezes: a licao de 2026-08-22 em
+`docs/agents/LESSONS_LEARNED.md` e a secao 9 do
+`docs/governance/RELATORIO_SEGURANCA_PR52_FASE2_2026-09-03.md`.
+
+Toda migration declara, no comentario da classe, como e aplicada:
+
+```ts
+/** @aplicacao fora-de-banda */
+export class CriarAlgumaCoisa1720000001039 implements MigrationInterface {
+```
+
+| Valor | Quando usar | O que ele obriga |
+| --- | --- | --- |
+| `fora-de-banda` | a migration executa DDL: `create`/`alter`/`drop` de tabela, funcao, gatilho, indice, tipo, view, sequence, policy ou extensao | aplicar com a role owner antes do merge, pelo procedimento desta secao |
+| `somente-dados` | a migration so le e escreve linhas (`select`, `insert`, `update`, `delete`) | nada alem do fluxo normal; a role de runtime daria conta |
+
+`pnpm test:migracoes-fora-de-banda` reprova a migration sem declaracao, a
+declaracao com valor desconhecido, duas declaracoes no mesmo arquivo e -- o caso
+que importa -- a migration que declara `somente-dados` e executa DDL. A
+classificacao **nao** e aceita como afirmacao: o gate a deriva do SQL do proprio
+arquivo e compara com o que ele declara.
+
+`pnpm audit:migracoes-fora-de-banda` lista o inventario sem reprovar nada.
+
+Dois limites que precisam ser lidos junto:
+
+- **O gate nao prova que a migration foi aplicada.** Isso e estado operacional,
+  vive fora do Git e nao pode ser inferido do repositorio. Ele prova que houve
+  classificacao e que ela nao contradiz o SQL. A prova de aplicacao continua
+  sendo `migration:show` contra o banco alvo, na sessao em que voce confirmou o
+  alvo.
+- **O criterio e privilegio, e nao risco.** `create index` nao ameaca dado
+  nenhum e mesmo assim exige owner. Uma lista escrita por risco perderia
+  exatamente esse caso.
+
 ### Paridade entre integracao e producao
 
 Antes de comecar qualquer rollout, comparar a contagem de migrations dos dois

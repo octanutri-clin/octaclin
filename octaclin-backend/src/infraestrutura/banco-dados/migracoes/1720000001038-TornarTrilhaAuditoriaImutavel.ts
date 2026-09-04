@@ -68,6 +68,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *    desabilite o trigger com role administrativa. O que mantem dado pessoal
  *    fora da trilha em primeiro lugar continua sendo a redacao de metadados da
  *    fase 1, e nao a possibilidade de apagar depois.
+ *
+ * @aplicacao fora-de-banda
  */
 export class TornarTrilhaAuditoriaImutavel1720000001038 implements MigrationInterface {
   name = 'TornarTrilhaAuditoriaImutavel1720000001038';

@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class CorrigeConstraintRoleUsuarios1720000000700 implements MigrationInterface {
   name = 'CorrigeConstraintRoleUsuarios1720000000700';
 

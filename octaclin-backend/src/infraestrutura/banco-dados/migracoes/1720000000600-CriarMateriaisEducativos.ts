@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class CriarMateriaisEducativos1720000000600 implements MigrationInterface {
   name = 'CriarMateriaisEducativos1720000000600';
 

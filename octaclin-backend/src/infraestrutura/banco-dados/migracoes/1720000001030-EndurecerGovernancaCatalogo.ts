@@ -53,6 +53,7 @@ export function calcularHashRegistroTaco(linha: AlimentoCanonico): string {
     .digest('hex');
 }
 
+/** @aplicacao fora-de-banda */
 export class EndurecerGovernancaCatalogo1720000001030 implements MigrationInterface {
   name = 'EndurecerGovernancaCatalogo1720000001030';
 

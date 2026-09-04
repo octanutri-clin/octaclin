@@ -4,11 +4,14 @@
 >
 > Atualizado em: 2026-09-04
 >
-> Proximo item autorizado: review, checks e merge humano da fase 3 do PR 52 -
-> Observabilidade, auditoria e resposta. O PR 51 foi integrado no `main` pelos
-> PRs GitHub #189 e #190; a fase 1 do PR 52, pelo PR GitHub #191; a fase 2 e a
-> evidencia de producao dela, pelo PR GitHub #194. O PR 53 so e autorizado apos o
-> merge humano das tres fases do PR 52.
+> Proximo item autorizado, por decisao do proprietario em 2026-09-04: fechar as
+> duas dividas nomeadas pela fase 2 do PR 52 antes de abrir o PR 53 -- primeiro o
+> gate de CI para migration sem declaracao de aplicacao fora de banda, depois o
+> fallback `NEXT_PUBLIC_API_URL` em rota server-side do BFF; e entao a triagem
+> das vulnerabilidades high abertas pelo Dependabot. As tres fases do PR 52 estao
+> no `main` (PRs GitHub #191, #194 e #195), e o PR 53 fica autorizado ao fim
+> dessa fila.
+> O PR 51 foi integrado no `main` pelos PRs GitHub #189 e #190.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
@@ -62,15 +65,15 @@
 > `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`.
 > A falha fechada foi integrada no `main` pelo PR GitHub #190 em 2026-09-02
 > (`894567748aa83bed7cdcba6b1e17df3316fe95a5`), que passa a ser a base do PR 52.
-> Estado do PR 52: **fase 3 de tres, em revisao** na branch
-> `security/governanca-pr52-fase3-alerta-e-resposta`, sobre `a9c6d59`. A fase 1
+> Estado do PR 52: **concluido**, tres fases no `main`. A fase 3 foi integrada
+> pelo PR GitHub #195 em 2026-09-04 (`d21eceb`). A fase 1
 > foi integrada no `main` pelo PR GitHub #191 em 2026-09-03 (`6d389f6`); a fase
 > 2 e a evidencia de producao dela, pelo PR GitHub #194 em 2026-09-04
-> (`a9c6d59`). A fase 3 ainda sem numero de PR no GitHub e sem hash de merge.
-> Com ela as tres metades do gate minimo passam a estar cobertas: eventos
+> (`a9c6d59`).
+> Com a fase 3 as tres metades do gate minimo passam a estar cobertas: eventos
 > criticos detectados e secrets/PHI ausentes dos logs (fase 1), imutabilidade e
 > correlacao (fase 2), teste de alerta e tabletop sintetico documentados (fase
-> 3). O gate so se fecha de fato no merge humano das tres.
+> 3), e as tres tiveram merge humano.
 > A fase 3 nao fecha nenhuma das quatro excecoes que a fase 2 datou para ela
 > (EXC-AUD-006, 007, 009 e 010): o prazo tinha sido escrito sem conferencia
 > contra o escopo desta fase, e as quatro foram redatadas pelo trabalho que as
@@ -615,7 +618,7 @@ defeito que este PR encontrou.
 
 As fases 1 e 2 nao fecham o gate minimo do PR 52 e nao devem ser lidas como tal.
 A metade que restava -- teste de alerta e tabletop sintetico documentados -- e a
-fase 3 inteira, entregue em 2026-09-04 e ainda sem merge humano. Os dois alertas
+fase 3 inteira, integrada no `main` em 2026-09-04 pelo PR GitHub #195. Os dois alertas
 vivem no painel `/operacoes`, atras de `SuperAdmin`, e sao **pull**: nenhum deles
 abre issue, envia e-mail ou entra no monitor externo, porque aquele monitor chama
 somente endpoints publicos sem token. Essa lacuna esta declarada na secao 6 do
@@ -707,5 +710,11 @@ venda web, desde que nao seja distribuido nem prometido comercialmente.
   fato novo que altere escopo, ordem, gate ou status.
 - Atualizar `MATRIZ_CONFIABILIDADE_TESTES.md` somente quando um gate permanente
   for efetivamente implementado.
-- O proximo passo autorizado e review/checks/merge humano do PR 42.
-- O PR 43 somente pode iniciar depois do aceite humano do resultado do PR 42.
+- O proximo passo autorizado esta no cabecalho deste documento, e nao aqui: ele
+  muda a cada ciclo, e duplicar estado em duas linhas fez estas duas ficarem
+  paradas no PR 42 por dez PRs.
+- Divida nomeada por um ciclo e trabalho, e nao lembrete: quando um relatorio
+  registrar "cabe na fase seguinte", isso entra na fila do cabecalho com dono, ou
+  vira excecao datada. As duas dividas da fase 2 do PR 52 ficaram sem dono
+  porque nao eram escopo da fase 3, e so voltaram a existir por decisao do
+  proprietario.

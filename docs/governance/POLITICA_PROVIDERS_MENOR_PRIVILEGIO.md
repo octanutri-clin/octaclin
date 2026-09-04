@@ -63,6 +63,19 @@ opt-in (`BANCO_EXECUTAR_MIGRACOES`) e executa-las fora de banda com a role
 owner. Devolver `CREATE` no schema `public` a role de runtime desfaz aquela
 separacao sem que nada reclame -- por isso ela tambem e verificada.
 
+**A regra passou a ter gate.** Ate 2026-09-04 nada no CI detectava que uma PR
+carregava migration com DDL e portanto exigia o passo humano acima -- e o sintoma
+da omissao nao aparece no CI: o boot novo falha com `permission denied for schema
+public`, o Render mantem a instancia anterior servindo, e o deploy entra em laco
+de falha visivel so no painel. A licao de 2026-08-22 foi a primeira ocorrencia; a
+segunda esta na secao 9 do
+`docs/governance/RELATORIO_SEGURANCA_PR52_FASE2_2026-09-03.md`. Desde entao cada
+migration declara `@aplicacao fora-de-banda` ou `@aplicacao somente-dados` no
+comentario da classe, e `pnpm test:migracoes-fora-de-banda` reprova a migration
+sem declaracao e a que declara `somente-dados` executando DDL. O gate **nao**
+prova aplicacao -- isso e estado operacional e vive fora do Git; ele prova que
+houve classificacao e que ela nao contradiz o SQL.
+
 ---
 
 ## 3. TLS por provider

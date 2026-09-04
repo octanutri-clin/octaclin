@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-/** Registro versionado de condutas documentadas pelo profissional, sem motor de prescricao. */
+/** Registro versionado de condutas documentadas pelo profissional, sem motor de prescricao. *
+ * @aplicacao fora-de-banda
+ */
 export class CriarCondutasTerapeuticas1720000001026 implements MigrationInterface {
   name = 'CriarCondutasTerapeuticas1720000001026';
 

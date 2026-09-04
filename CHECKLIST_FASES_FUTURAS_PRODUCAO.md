@@ -2616,7 +2616,7 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [ ] Evidencia redigida dos paineis de Neon, Redis, Backblaze e Render coletada pelo proprietario (secoes 6.2 a 6.6 da norma).
   - Decisao registrada: o controle entrou medindo, pela licao de 2026-08-22 em `docs/agents/LESSONS_LEARNED.md`, e so bloqueou depois da evidencia real.
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR51_2026-09-02.md`.
-- [~] PR 52 - Consolidar observabilidade, auditoria e resposta a incidentes.
+- [x] PR 52 - Consolidar observabilidade, auditoria e resposta a incidentes. Tres fases no `main` (PRs GitHub `#191`, `#194` e `#195`).
   - Escopo fatiado em tres fases; a fase 1 fecha duas das tres metades do gate minimo. Ver a tabela de fases em `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
   - **Fase 1 - cobertura e redacao da trilha** (branch `security/governanca-pr52-auditoria-cobertura`, sobre `8945677`):
     - [x] Achado central: o repositorio declarava trilha de auditoria e nao media a propria cobertura; `metadados` chegava a coluna imutavel sem redacao nenhuma.
@@ -2635,17 +2635,21 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
     - [x] Validacoes locais: backend 174 suites/1537 testes PASS (3 suites e 26 testes SKIPPED por testcontainers, sem Docker local), `typecheck`, `test:redacao-auditoria`, `test:confiabilidade`, `security:secrets`.
     - [x] Checks e review/merge humanos do Pull Request da fase 1 contra `main`: PR GitHub `#191` (`6d389f6`) em 2026-09-03.
   - [x] **Fase 2 - imutabilidade e correlacao**: trigger append-only `enable always` para `UPDATE`/`DELETE`/`TRUNCATE` (migration `1720000001038`; hash-chain e WORM ficaram fora de alcance como EXC-AUD-008), teto para `auth.login.sucesso` com volume colapsado devolvido em `loginsSuprimidos`, `x-request-id` do BFF ao backend e `/health/detalhado` sem mensagem crua do driver Postgres. Integrada no `main` pelo PR GitHub `#194` (`a9c6d59`) em 2026-09-04, com a migration aplicada fora de banda com `neondb_owner`.
-  - [~] **Fase 3 - resposta**: alertas sobre o contador de falhas e sobre volume de negativa de autorizacao, runbook de resposta a incidentes, escalonamento, preservacao de evidencia e tabletop sintetico documentado. Entregue em 2026-09-04 na branch `security/governanca-pr52-fase3-alerta-e-resposta`; aguarda checks e review/merge humano.
+  - [x] **Fase 3 - resposta**: alertas sobre o contador de falhas e sobre volume de negativa de autorizacao, runbook de resposta a incidentes, escalonamento, preservacao de evidencia e tabletop sintetico documentado. Integrada no `main` pelo PR GitHub `#195` (`d21eceb`) em 2026-09-04.
     - [x] Achado central: o contador de falhas existia desde a fase 1 e **nada em producao o lia** -- contador nao lido nao e alarme, e a secao 7 da politica descrevia a lacuna e a documentava como resolvida ao mesmo tempo.
     - [x] Os dois alertas ficam atras de `SuperAdmin` no painel `/operacoes`, e nunca em `/health/detalhado`, que e publico; nenhum deles carrega identificador, rota ou alvo, com teste negativo sobre as chaves do payload.
     - [x] Limiar por total desde o boot e por taxa por hora de uptime, e nao por delta entre leituras, que o segundo leitor corromperia.
     - [x] Tabletop sintetico com nove achados, cinco deles corrigidos no proprio runbook dentro da fase; gate `pnpm test:resposta-auditoria` reprova a remocao das proibicoes que sao o controle e o tabletop degradado em exercicio sem achado.
     - [x] Prova por mutacao dos dois lados: seis mutacoes no codigo dos alertas e tres no gate do procedimento, todas reprovadas por algum teste.
     - [ ] Executar o procedimento de teste de alerta em banco descartavel e registrar o resultado sanitizado. Nao bloqueia o merge; ate la o provado e a logica, e nao o caminho operacional.
-    - [ ] Checks e review/merge humanos do Pull Request da fase 3 contra `main`.
+    - [x] Checks e review/merge humanos do Pull Request da fase 3 contra `main`: PR GitHub `#195` (`d21eceb`).
   - Lacunas declaradas com owner e prazo na secao 10 de `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md` (EXC-AUD-005 a EXC-AUD-014; EXC-AUD-001 fechada na fase 1 e EXC-AUD-002 a 004 na fase 2). As quatro que a fase 2 datou para a fase 3 -- EXC-AUD-006, 007, 009 e 010 -- **nao** foram fechadas por ela: o prazo tinha sido escrito sem conferencia contra o escopo da fase, e as quatro foram redatadas pelo trabalho que as fecha.
   - Relatorios: `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`, `docs/governance/RELATORIO_SEGURANCA_PR52_FASE2_2026-09-03.md` e `docs/governance/RELATORIO_SEGURANCA_PR52_FASE3_2026-09-04.md`. Exercicio: `docs/governance/TABLETOP_AUDITORIA_PR52_FASE3_2026-09-04.md`.
   - Norma duravel: `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`.
+- [~] Dividas nomeadas pela fase 2 do PR 52, priorizadas pelo proprietario em 2026-09-04 antes do PR 53.
+  - [~] Gate de CI para migration sem declaracao de aplicacao fora de banda. A role de runtime nao tem `CREATE` no schema `public` e o sintoma da omissao so aparece no painel do Render, nunca no CI -- ja aconteceu duas vezes. Entregue em 2026-09-04 na branch `chore/governanca-gate-migracoes-fora-de-banda`; aguarda checks e review/merge humano.
+  - [ ] Fallback `NEXT_PUBLIC_API_URL` decidindo origem de backend em rota server-side do BFF, em mais de dez rotas de `app/api`. Variavel publica, embarcada no bundle do navegador, mascarando a ausencia de `OCTACLIN_BACKEND_URL`; foi o que deixou o login de staging quebrado enquanto as rotas publicas seguiam respondendo.
+  - [ ] Triagem das vulnerabilidades high abertas pelo Dependabot no `main` e dos PRs de bump parados.
 - [ ] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.
 - [ ] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
 - [ ] PR 55 - Concluir pentest independente, reteste e GO/NO-GO.
@@ -2654,4 +2658,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: review, checks e merge humano da fase 3 do PR 52 - a implementacao esta em branch dedicada. As fases 1 e 2 ja estao no `main` (PRs GitHub `#191` e `#194`); o PR 53 depende do aceite humano das tres fases. Do PR 51 resta apenas a evidencia redigida dos paineis de provider, coletada pelo proprietario.
+Proximo item autorizado, por decisao do proprietario em 2026-09-04: fechar as duas dividas nomeadas pela fase 2 do PR 52 antes de abrir o PR 53 - primeiro o gate de migration fora de banda, depois o fallback `NEXT_PUBLIC_API_URL`; e entao a triagem das vulnerabilidades high do Dependabot. O PR 52 esta concluido, com as tres fases no `main` (PRs GitHub `#191`, `#194` e `#195`). Do PR 51 resta apenas a evidencia redigida dos paineis de provider, coletada pelo proprietario.

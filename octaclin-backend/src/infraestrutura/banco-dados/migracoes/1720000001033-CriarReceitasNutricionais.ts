@@ -6,6 +6,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * O conteudo e cifrado e aplicado por copia no rascunho de plano; nao ha FK
  * para itens de catalogo porque o UUID e local a cada banco. A aplicacao
  * revalida o catalogo ativo antes do rascunho ser salvo.
+ *
+ * @aplicacao fora-de-banda
  */
 export class CriarReceitasNutricionais1720000001033 implements MigrationInterface {
   name = 'CriarReceitasNutricionais1720000001033';
