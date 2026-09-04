@@ -155,15 +155,73 @@ consumidores mapeados le o campo `mensagem`, entao o contrato ficou intacto.
 | `node --test scripts/validar-triagem-seguranca.spec.mjs` | 5 PASS |
 | `git diff --check` | limpo |
 
-### 5.1 O que **nao** foi executado, e portanto nao esta provado
+### 5.1 Prova de comportamento: onde ela existe e onde nao existe
 
-**A rejeicao real de `UPDATE`, `DELETE` e `TRUNCATE` contra Postgres nao rodou
-nesta maquina.** Nao ha Docker no ambiente de desenvolvimento; os 5 casos escritos
-em `rls-isolamento-tenant.integracao.spec.ts` entram entre os 31 `SKIPPED`. Eles
+**A rejeicao real de `UPDATE`, `DELETE` e `TRUNCATE` nao rodou na maquina de
+desenvolvimento.** Nao ha Docker nela; os 5 casos escritos em
+`rls-isolamento-tenant.integracao.spec.ts` entram entre os 31 `SKIPPED`. Eles
 executam no CI, no passo `Provar RLS com Testcontainers descartavel`
-(`.github/workflows/ci.yml`), e **so quando esse job abrir verde** a EXC-AUD-003
-esta provada em comportamento. Ate la, o que esta provado e o DDL emitido, pelo
-`.spec.ts` que roda sempre.
+(`.github/workflows/ci.yml`). O que a maquina de desenvolvimento prova sozinha e
+o DDL emitido, pelo `.spec.ts` que roda sempre.
+
+**Verificado em staging, no Neon, em 2026-09-03, pelo proprietario**, seguindo o
+procedimento do `RUNBOOK_PRODUCAO.md`:
+
+| Verificacao | Resultado |
+| --- | --- |
+| `migration:show` antes | `[ ] TornarTrilhaAuditoriaImutavel1720000001038`, unica pendente |
+| `migration:run` com `neondb_owner` | aplicada |
+| `pg_trigger` (catalogo) | os dois gatilhos presentes, `tgenabled = 'A'` |
+| `update` dentro de `begin`/`rollback` | `ERROR ... append-only: UPDATE rejeitado`, `SQLSTATE 42501` |
+| login real apos o deploy | `auth.login.sucesso` gravado |
+| segundo login dentro da janela | `loginsSuprimidos` presente na linha seguinte da mesma chave |
+
+As duas ultimas linhas provam coisas diferentes e as duas importavam. O login
+gravado prova que **`INSERT` continua livre com os gatilhos ativos** -- o risco
+real desta migration nunca foi barrar de menos, e sim barrar a propria escrita
+legitima da trilha, que so apareceria em runtime. E `loginsSuprimidos` prova o
+teto da EXC-AUD-002 com a contagem do volume colapsado, e nao apenas a supressao.
+
+Isso e mais forte que o job de testcontainers, porque exercita o Postgres do
+provedor e nao um container descartavel.
+
+**Verificado tambem no CI**, no merge commit `4f09d0f`: o passo
+`Provar RLS com Testcontainers descartavel` do job `Backend NestJS` fechou
+`success`, junto de `Rodar migrations no Postgres real de CI`,
+`Suite completa` e `Provar rate limit e idempotencia com Redis real`. Os 5 casos
+de imutabilidade deixaram de ser `SKIPPED` e passaram a executar.
+
+**Verificado em producao, no Neon, em 2026-09-03, pelo proprietario:**
+
+| Verificacao | Resultado |
+| --- | --- |
+| `pg_trigger` (catalogo) | os dois gatilhos presentes, `tgenabled = 'A'` |
+| `update` dentro de `begin`/`rollback` | `ERROR ... append-only: UPDATE rejeitado`, `SQLSTATE 42501` |
+
+**EXC-AUD-003 esta provada em comportamento em tres ambientes independentes:
+CI (testcontainers), staging e producao.**
+
+Um episodio do ciclo merece registro porque muda o que uma verificacao vale. A
+consulta de catalogo foi feita mais de uma vez no banco errado, devolvendo
+`relation "user_action_logs" does not exist`; o SQL Editor do Neon nao mantem o
+banco selecionado entre sessoes, e as URLs de staging e producao diferem por
+poucos caracteres. **Os dois gatilhos apareceram integros em toda leitura feita
+no banco certo** -- nao houve aplicacao parcial em momento algum.
+
+A licao operacional tem duas partes. A primeira: **`migration:show` marcando
+`[X]` nao prova que o controle existe**, e a consulta de catalogo so vale com o
+alvo confirmado na mesma sessao -- `select current_database()` antes, sempre. A
+segunda e sobre o proprio caminho de aplicacao: `fonte-dados.ts` nao recusa alvo
+indefinido, ele cai em `localhost`/`octaclin` em silencio (ver secao 7), entao um
+`migration:run` sem `DATABASE_URL` reporta sucesso contra um banco que nao e o
+pretendido.
+
+Duas coisas que o teste de `update` sozinho **nao** prova, e por isso a
+verificacao de catalogo nao e redundante: a sessao do SQL Editor nao esta em
+`session_replication_role = 'replica'`, entao um gatilho comum passaria no mesmo
+teste -- so `tgenabled = 'A'` distingue `ENABLE ALWAYS` de `ENABLE`. E o
+`TRUNCATE` nao foi exercitado manualmente; ele depende do gatilho de statement,
+cuja existencia foi confirmada pelo catalogo.
 
 `SKIPPED` nao e aprovado -- e a mesma regra que o `AGENTS.md` impoe.
 
@@ -224,6 +282,59 @@ Nenhum item desta fase altera contrato HTTP existente, conexao, RLS ou
 
 ## 9. Operacoes externas
 
-Nenhuma. Esta fase nao aplicou DDL, nao executou migracao contra banco algum, nao
-tocou configuracao de provedor e nao acessou ambiente real. A migracao entra em
-producao pelo fluxo normal de deploy, governado por `BANCO_EXECUTAR_MIGRACOES`.
+Esta fase **nao** aplicou DDL, nao executou migracao contra banco algum, nao tocou
+configuracao de provedor e nao acessou ambiente real.
+
+Mas ela **exige uma operacao externa antes do merge**, e a primeira versao deste
+relatorio errou ao dizer o contrario. O texto anterior afirmava que "a migracao
+entra em producao pelo fluxo normal de deploy, governado por
+`BANCO_EXECUTAR_MIGRACOES`". Isso esta errado, e o erro tem a mesma forma do
+achado central desta fase: uma frase confortavel que ninguem tinha checado contra
+o mecanismo.
+
+O que o `RUNBOOK_PRODUCAO.md` ja dizia, e que continua valendo: a role de runtime
+`octaclin_app_producao` **nao tem `CREATE` no schema `public`** -- por decisao do
+PR 51, e devolver esse privilegio desfaz aquela separacao. A migracao
+`1720000001038` cria uma funcao de trigger, entao ela e DDL que a role de runtime
+nao pode executar. Toda migration com DDL precisa ser aplicada **fora de banda,
+com `neondb_owner`, antes do merge**.
+
+Se `BANCO_EXECUTAR_MIGRACOES` estiver `true` no runtime, o boot novo falha com:
+
+```
+Migration "TornarTrilhaAuditoriaImutavel1720000001038" failed, error: permission denied for schema public
+```
+
+Isso **e o controle do PR 51 funcionando**, e nao um defeito da migracao. O Render
+mantem a instancia anterior servindo, entao nao ha indisponibilidade -- o deploy
+entra em loop de falha e o sintoma so aparece no painel, nunca no CI.
+
+Procedimento obrigatorio, detalhado em `RUNBOOK_PRODUCAO.md` na secao
+"Trilha de auditoria append-only": branch de backup no Neon, confirmacao de
+projeto/branch/banco/role, `BANCO_EXECUTAR_MIGRACOES=false` no servico,
+`migration:run` com `DATABASE_URL` de `neondb_owner` somente na sessao local, e
+verificacao de `pg_trigger.tgenabled = 'A'` depois.
+
+**Achado operacional do ciclo, alheio a esta fase mas descoberto por ela.** O
+servico web de staging nao tinha `OCTACLIN_BACKEND_URL` nem
+`OCTACLIN_TENANT_SLUG`, ambas marcadas `Sim` no `VARIAVEIS_AMBIENTE.md`. O login
+falhava com "O servico de acesso do OctaClin esta configurado incorretamente",
+enquanto as rotas publicas continuavam funcionando -- elas caem em
+`OCTACLIN_BACKEND_URL ?? NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'`, e a
+variavel publica legada mascarava a ausencia da correta em nove rotas.
+`configuracao-acesso-bff.ts`, usado pelo login, nao tem esse fallback e por isso
+foi o unico a falhar.
+
+Nao e regressao desta fase, e sim desvio de configuracao anterior que a
+validacao pos-deploy revelou. Duas consequencias: **conferir as mesmas duas
+variaveis no web de producao antes do deploy de la**, e registrar que uma
+variavel `NEXT_PUBLIC_*` -- publica, embarcada no bundle do navegador -- decide
+origem de backend em rota server-side. Funciona, e e a fonte errada para essa
+decisao; o fallback silencioso e da mesma familia que este PR vem eliminando.
+Candidato a fase 3.
+
+**Lacuna registrada:** nada no CI detecta que um PR carrega migration com DDL e
+portanto exige aplicacao fora de banda. E a segunda vez que esta classe de falha
+aparece -- a primeira esta registrada na secao 3 da
+`POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`. Um gate que reprove PR com migration
+nova sem checklist de aplicacao fora de banda cabe na fase 3.
