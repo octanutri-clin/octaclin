@@ -202,14 +202,19 @@ de imutabilidade deixaram de ser `SKIPPED` e passaram a executar.
 CI (testcontainers), staging e producao.**
 
 Um episodio do ciclo merece registro porque muda o que uma verificacao vale. A
-primeira consulta de catalogo em producao foi feita no banco errado -- devolveu
-`relation "user_action_logs" does not exist` e, na tentativa seguinte, um estado
-que parecia aplicacao parcial (gatilho de `update`/`delete` presente, gatilho de
-`TRUNCATE` ausente). Nao havia aplicacao parcial: era outro banco. A licao
-operacional e que **`migration:show` marcando `[X]` nao prova que o controle
-existe**, e que a consulta de catalogo so vale se o alvo estiver confirmado na
-mesma sessao -- as URLs de staging e producao no Neon diferem por poucos
-caracteres, e o `fonte-dados.ts` nao recusa alvo indefinido (ver secao 7).
+consulta de catalogo foi feita mais de uma vez no banco errado, devolvendo
+`relation "user_action_logs" does not exist`; o SQL Editor do Neon nao mantem o
+banco selecionado entre sessoes, e as URLs de staging e producao diferem por
+poucos caracteres. **Os dois gatilhos apareceram integros em toda leitura feita
+no banco certo** -- nao houve aplicacao parcial em momento algum.
+
+A licao operacional tem duas partes. A primeira: **`migration:show` marcando
+`[X]` nao prova que o controle existe**, e a consulta de catalogo so vale com o
+alvo confirmado na mesma sessao -- `select current_database()` antes, sempre. A
+segunda e sobre o proprio caminho de aplicacao: `fonte-dados.ts` nao recusa alvo
+indefinido, ele cai em `localhost`/`octaclin` em silencio (ver secao 7), entao um
+`migration:run` sem `DATABASE_URL` reporta sucesso contra um banco que nao e o
+pretendido.
 
 Duas coisas que o teste de `update` sozinho **nao** prova, e por isso a
 verificacao de catalogo nao e redundante: a sessao do SQL Editor nao esta em
