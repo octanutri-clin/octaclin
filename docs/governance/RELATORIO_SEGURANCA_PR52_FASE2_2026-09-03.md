@@ -224,6 +224,41 @@ Nenhum item desta fase altera contrato HTTP existente, conexao, RLS ou
 
 ## 9. Operacoes externas
 
-Nenhuma. Esta fase nao aplicou DDL, nao executou migracao contra banco algum, nao
-tocou configuracao de provedor e nao acessou ambiente real. A migracao entra em
-producao pelo fluxo normal de deploy, governado por `BANCO_EXECUTAR_MIGRACOES`.
+Esta fase **nao** aplicou DDL, nao executou migracao contra banco algum, nao tocou
+configuracao de provedor e nao acessou ambiente real.
+
+Mas ela **exige uma operacao externa antes do merge**, e a primeira versao deste
+relatorio errou ao dizer o contrario. O texto anterior afirmava que "a migracao
+entra em producao pelo fluxo normal de deploy, governado por
+`BANCO_EXECUTAR_MIGRACOES`". Isso esta errado, e o erro tem a mesma forma do
+achado central desta fase: uma frase confortavel que ninguem tinha checado contra
+o mecanismo.
+
+O que o `RUNBOOK_PRODUCAO.md` ja dizia, e que continua valendo: a role de runtime
+`octaclin_app_producao` **nao tem `CREATE` no schema `public`** -- por decisao do
+PR 51, e devolver esse privilegio desfaz aquela separacao. A migracao
+`1720000001038` cria uma funcao de trigger, entao ela e DDL que a role de runtime
+nao pode executar. Toda migration com DDL precisa ser aplicada **fora de banda,
+com `neondb_owner`, antes do merge**.
+
+Se `BANCO_EXECUTAR_MIGRACOES` estiver `true` no runtime, o boot novo falha com:
+
+```
+Migration "TornarTrilhaAuditoriaImutavel1720000001038" failed, error: permission denied for schema public
+```
+
+Isso **e o controle do PR 51 funcionando**, e nao um defeito da migracao. O Render
+mantem a instancia anterior servindo, entao nao ha indisponibilidade -- o deploy
+entra em loop de falha e o sintoma so aparece no painel, nunca no CI.
+
+Procedimento obrigatorio, detalhado em `RUNBOOK_PRODUCAO.md` na secao
+"Trilha de auditoria append-only": branch de backup no Neon, confirmacao de
+projeto/branch/banco/role, `BANCO_EXECUTAR_MIGRACOES=false` no servico,
+`migration:run` com `DATABASE_URL` de `neondb_owner` somente na sessao local, e
+verificacao de `pg_trigger.tgenabled = 'A'` depois.
+
+**Lacuna registrada:** nada no CI detecta que um PR carrega migration com DDL e
+portanto exige aplicacao fora de banda. E a segunda vez que esta classe de falha
+aparece -- a primeira esta registrada na secao 3 da
+`POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`. Um gate que reprove PR com migration
+nova sem checklist de aplicacao fora de banda cabe na fase 3.

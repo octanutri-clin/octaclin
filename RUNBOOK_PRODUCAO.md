@@ -749,6 +749,56 @@ Antes de go-live e antes de migrations sensiveis:
 
 Nunca restaurar diretamente sobre producao sem decisao explicita de incidente e plano de reversao.
 
+### Aplicar a migration 1720000001038 (PR 52 da governanca, fase 2)
+
+**Esta migration e DDL e nao sobe pelo deploy.** Ela cria a funcao de trigger
+`rejeitar_mutacao_trilha_auditoria()` no schema `public`, e a role de runtime
+`octaclin_app_producao` nao tem `CREATE` ali -- de proposito, pelo PR 51. Se o
+runtime tentar aplica-la, o boot falha com exatamente esta linha:
+
+```
+Migration "TornarTrilhaAuditoriaImutavel1720000001038" failed, error: permission denied for schema public
+```
+
+Isso **e o controle funcionando**, e nao defeito da migration. O Render mantem a
+instancia anterior servindo, entao nao ha indisponibilidade -- o deploy entra em
+loop de falha e o sintoma so aparece no painel. Nao "resolva" concedendo
+`CREATE` a role de runtime: isso desfaz a separacao owner/runtime que o PR 51
+estabeleceu, e a politica trata como violacao.
+
+**Ordem operacional obrigatoria**
+
+1. Criar uma branch de backup no Neon do ambiente alvo.
+2. Confirmar explicitamente projeto, branch, banco e role `neondb_owner`. Nao
+   usar a role de runtime.
+3. Confirmar `BANCO_EXECUTAR_MIGRACOES=false` no servico **antes** de aplicar.
+4. Definir `DATABASE_URL` somente na sessao local e executar:
+
+   ```powershell
+   pnpm --dir octaclin-backend run typeorm -- migration:show
+   pnpm --dir octaclin-backend migration:run
+   pnpm --dir octaclin-backend run typeorm -- migration:show
+   Remove-Item Env:DATABASE_URL
+   ```
+
+   Se `migration:show` listar qualquer pendencia alem da `1038`, parar e
+   reconciliar antes. O `Remove-Item` e obrigatorio.
+5. Verificar o controle antes do deploy:
+
+   ```sql
+   select tgname, tgenabled
+   from pg_trigger
+   where tgrelid = 'user_action_logs'::regclass and not tgisinternal
+   order by tgname;
+   ```
+
+   Esperado: `trg_trilha_auditoria_append_only` e
+   `trg_trilha_auditoria_sem_truncate`, os dois com `tgenabled = 'A'`.
+6. So entao liberar o deploy do `main` com a fase 2.
+
+Rollback: o `down()` da migration derruba os dois gatilhos e a funcao e devolve
+`update, delete` as roles nomeadas. Ele tambem exige `neondb_owner`.
+
 ### Trilha de auditoria append-only (PR 52 da governanca, fase 2)
 
 A migracao `1720000001038-TornarTrilhaAuditoriaImutavel` faz o banco **rejeitar**
