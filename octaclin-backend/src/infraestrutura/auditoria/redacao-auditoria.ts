@@ -166,7 +166,7 @@ const TERMOS_PESSOAIS = [
  * `TERMOS_POR_SEGMENTO`.
  *
  * Cada termo foi confrontado com as chaves que os call sites reais gravam hoje
- * -- 181 delas, em 148 call sites (`pnpm audit:redacao-auditoria` lista todas).
+ * -- 182 delas, em 148 call sites (`pnpm audit:redacao-auditoria` lista todas).
  * O que a evidencia mostrou:
  *
  * - `peso`, `altura`, `dieta`, `caloria`, `queixa`, `anotacao`, `humor` e

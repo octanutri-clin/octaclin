@@ -140,6 +140,10 @@ const CHAVES_SEGURAS = new Map([
   ['diassemconsulta', 'janela em dias da regra de recall; e parametro da regra, nao o historico de um paciente'],
   ['duracaoms', 'duracao da chamada ao provedor de IA'],
   ['limitesolicitado', 'teto de linhas pedido na exportacao'],
+  [
+    'loginssuprimidos',
+    'contagem de eventos auth.login.sucesso colapsados pela janela de deduplicacao desde a ultima linha gravada (PR 52, fase 2, EXC-AUD-002). E volume, e nao conteudo: sem ela o teto de escrita compraria custo de backup com sub-reporte silencioso do numero real de logins'
+  ],
   ['mensagensatualizadas', 'contagem de mensagens religadas ao paciente'],
   ['mimetype', 'tipo MIME declarado no upload'],
   ['ordem', 'posicao da categoria na lista, inteiro'],

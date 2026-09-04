@@ -4,7 +4,7 @@ import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { TIPO_TOKEN_ACESSO, TIPO_TOKEN_RENOVACAO } from '../dominio/claims-token';
 import { RefreshTokenOrm } from '../infraestrutura/refresh-token.orm';
 import { SessaoUsuarioOrm } from '../infraestrutura/sessao-usuario.orm';
-import { ServicoAuth } from './servico-auth';
+import { ServicoAuth, reiniciarJanelaLoginSucesso } from './servico-auth';
 
 const TENANT = 'tenant-1';
 const USUARIO = 'usuario-1';
@@ -22,6 +22,24 @@ interface DadosCenario {
   verifyLanca?: boolean;
   mfaDesafio?: Record<string, unknown> | null;
   auditoriaLanca?: boolean;
+  /**
+   * Reproduz o comportamento real de `ServicoAuditoria.registrar`: a falha e
+   * engolida, `registrar` volta normalmente e so o contador monotonico de
+   * falhas muda. E o caminho que `auditoriaLanca` nao cobre, e e justamente o
+   * que a janela de `auth.login.sucesso` precisa enxergar para nao confirmar
+   * supressao em cima de uma linha que nunca existiu.
+   */
+  auditoriaFalhaSilenciosa?: boolean;
+  /**
+   * Faz `obterTotalFalhas` lancar na leitura **posterior** a escrita.
+   *
+   * A contabilidade do teto le o contador duas vezes por login: antes, para
+   * marcar o ponto de partida, e depois, para decidir se a linha existiu.
+   * Lancar so na segunda leitura poe a excecao no instante de custo maximo --
+   * a chave ja esta reservada e a linha ja foi gravada --, que e o caso que a
+   * segunda barreira de `emitirSessaoUsuario` precisa absorver.
+   */
+  contadorFalhasLancaAposEscrita?: boolean;
 }
 
 function criarServico(dados: DadosCenario = {}) {
@@ -124,9 +142,24 @@ function criarServico(dados: DadosCenario = {}) {
     }))
   };
 
+  let totalFalhasAuditoria = 0;
+  let leiturasDoContador = 0;
   const auditoria = {
     registrar: jest.fn(async () => {
+      if (dados.auditoriaFalhaSilenciosa) {
+        totalFalhasAuditoria += 1;
+        return;
+      }
       if (dados.auditoriaLanca) throw new Error('trilha indisponivel');
+    }),
+    obterTotalFalhas: jest.fn(() => {
+      leiturasDoContador += 1;
+      // Par ordenado por login: impar e a leitura anterior a escrita, par e a
+      // posterior. Ver `contadorFalhasLancaAposEscrita`.
+      if (dados.contadorFalhasLancaAposEscrita && leiturasDoContador % 2 === 0) {
+        throw new Error('contador de falhas indisponivel');
+      }
+      return totalFalhasAuditoria;
     })
   };
 
@@ -192,6 +225,25 @@ function cenarioLoginValido(extra: DadosCenario = {}) {
   });
 }
 
+interface EntradaTrilhaObservada {
+  acao?: string;
+  metadados?: Record<string, unknown>;
+}
+
+/**
+ * As entradas de `auth.login.sucesso` que chegaram a trilha.
+ *
+ * O duble e `jest.fn(async () => ...)` sem parametros declarados, entao
+ * `mock.calls` tem tipo de tupla vazia e nao aceita indexacao direta -- o cast
+ * e sobre a forma que o call site de fato passa, e nao um atalho para `any`.
+ */
+function escritasDeLoginSucesso(auditoria: { registrar: jest.Mock }): EntradaTrilhaObservada[] {
+  const chamadas = auditoria.registrar.mock.calls as unknown as EntradaTrilhaObservada[][];
+  return chamadas
+    .map((argumentos) => argumentos[0] ?? {})
+    .filter((entrada) => entrada.acao === 'auth.login.sucesso');
+}
+
 const CHAVES_AMBIENTE = ['JWT_EXPIRA_EM', 'JWT_REFRESH_EXPIRA_EM'] as const;
 
 describe('ServicoAuth', () => {
@@ -200,6 +252,10 @@ describe('ServicoAuth', () => {
   beforeEach(() => {
     snapshot = new Map(CHAVES_AMBIENTE.map((nome) => [nome, process.env[nome]]));
     for (const nome of CHAVES_AMBIENTE) delete process.env[nome];
+    // A janela de `auth.login.sucesso` e estado de modulo, e nao de instancia
+    // (ver o bloco em `servico-auth.ts`): sem este reinicio o primeiro teste que
+    // faz login suprimiria o login de todos os seguintes.
+    reiniciarJanelaLoginSucesso();
   });
 
   afterEach(() => {
@@ -704,6 +760,194 @@ describe('ServicoAuth', () => {
 
       await expect(servico.renovar({ refreshToken: 'refresh' })).resolves.toHaveProperty('accessToken');
       await expect(servico.revogar('refresh')).resolves.toBeUndefined();
+    });
+
+    /**
+     * EXC-AUD-002: antes da fase 2, `auth.login.sucesso` era o unico evento de
+     * auth sem teto. O `ProtecaoAbuso` contem o atacante, nao o cliente
+     * legitimo em laco -- e cada linha em `user_action_logs` e custo
+     * permanente, porque a tabela e append-only e entra em backup.
+     *
+     * Os testes abaixo cercam a assimetria que o teto nao pode quebrar: pode
+     * gravar de novo, nunca pode deixar de gravar um login distinto.
+     */
+    describe('teto de escrita de auth.login.sucesso', () => {
+      const INSTANTE = Date.parse('2026-09-03T10:00:00.000Z');
+      const JANELA_MS = 60_000;
+      let relogio: jest.SpyInstance<number, []>;
+
+      beforeEach(() => {
+        // `emitirSessaoUsuario` le o relogio por dentro; congelar `Date.now` e o
+        // que permite provar expiracao de janela sem esperar um minuto real.
+        relogio = jest.spyOn(Date, 'now').mockReturnValue(INSTANTE);
+      });
+
+      afterEach(() => {
+        relogio.mockRestore();
+      });
+
+      it('colapsa o laco de login do mesmo usuario em uma unica escrita por janela', async () => {
+        const { servico, auditoria } = cenarioLoginValido();
+
+        await servico.login(CREDENCIAIS);
+        await servico.login(CREDENCIAIS);
+        await servico.login(CREDENCIAIS);
+
+        expect(escritasDeLoginSucesso(auditoria)).toHaveLength(1);
+      });
+
+      it('continua abrindo sessao propria no login que a trilha suprimiu', async () => {
+        const { servico, sessoes, auditoria } = cenarioLoginValido();
+
+        await servico.login(CREDENCIAIS);
+        await servico.login(CREDENCIAIS);
+
+        // A supressao e da linha de trilha, e nao do fato: cada login continua
+        // com linha propria em `sessoes_usuario`. Isso e compensacao parcial e
+        // nao evidencia equivalente -- `sessoes_usuario` aceita UPDATE, nao
+        // recebeu o gatilho de imutabilidade da migration `1720000001038` e nao
+        // guarda IP nem user agent (ver o bloco em `servico-auth.ts`).
+        expect(sessoes.criar).toHaveBeenCalledTimes(2);
+        expect(escritasDeLoginSucesso(auditoria)).toHaveLength(1);
+      });
+
+      /**
+       * A prova de que a janela e estado de **modulo**, e nao de instancia.
+       *
+       * Os demais testes deste bloco passariam iguais se `janelaLoginSucesso`
+       * virasse campo de `ServicoAuth`: o de colapso usa uma instancia so, e os
+       * de nao-supressao afirmam que a segunda instancia grava -- o que uma
+       * janela por instancia tambem faria. Aqui as duas instancias veem o mesmo
+       * tenant, o mesmo usuario e o mesmo estado de MFA, entao a segunda so
+       * pode ficar em silencio se o estado for compartilhado. Com janela por
+       * instancia o teto passaria a valer por instancia, que e o mesmo defeito
+       * que a fase 1 encontrou no contador de falhas lido por instancia.
+       */
+      it('mantem a janela por modulo: outra instancia nao regrava o mesmo login', async () => {
+        const primeira = cenarioLoginValido();
+        await primeira.servico.login(CREDENCIAIS);
+
+        const segunda = cenarioLoginValido();
+        await segunda.servico.login(CREDENCIAIS);
+
+        expect(escritasDeLoginSucesso(segunda.auditoria)).toHaveLength(0);
+        // A instancia nova continua abrindo a sessao: o que a janela cala e a
+        // linha de trilha, e nunca o login.
+        expect(segunda.sessoes.criar).toHaveBeenCalledTimes(1);
+      });
+
+      it('nao suprime o login de outro usuario dentro da mesma janela', async () => {
+        const primeiro = cenarioLoginValido();
+        await primeiro.servico.login(CREDENCIAIS);
+
+        const segundo = cenarioLoginValido({
+          usuario: { ...USUARIO_NAO_PRIVILEGIADO, id: 'usuario-2' }
+        });
+        await segundo.servico.login(CREDENCIAIS);
+
+        expect(escritasDeLoginSucesso(segundo.auditoria)).toHaveLength(1);
+      });
+
+      it('nao suprime o login do mesmo usuario em outro tenant dentro da mesma janela', async () => {
+        const primeiro = cenarioLoginValido();
+        await primeiro.servico.login(CREDENCIAIS);
+
+        const segundo = cenarioLoginValido({
+          usuario: { ...USUARIO_NAO_PRIVILEGIADO, tenantId: 'tenant-2' }
+        });
+        await segundo.servico.login(CREDENCIAIS);
+
+        expect(escritasDeLoginSucesso(segundo.auditoria)).toHaveLength(1);
+      });
+
+      it('nao suprime o primeiro login com MFA verificado logo depois de um login sem MFA', async () => {
+        const { servico, auditoria } = cenarioLoginValido();
+
+        await servico.login(CREDENCIAIS);
+        await servico.emitirSessaoUsuario(
+          USUARIO_NAO_PRIVILEGIADO as UsuarioOrm,
+          new Date('2026-09-03T10:00:00.000Z')
+        );
+
+        const escritas = escritasDeLoginSucesso(auditoria);
+        expect(escritas).toHaveLength(2);
+        expect(escritas[1].metadados).toMatchObject({ mfaVerificado: true });
+      });
+
+      it('volta a gravar quando a janela expira e reporta o residual suprimido', async () => {
+        const { servico, auditoria } = cenarioLoginValido();
+
+        await servico.login(CREDENCIAIS);
+        await servico.login(CREDENCIAIS);
+        await servico.login(CREDENCIAIS);
+
+        relogio.mockReturnValue(INSTANTE + JANELA_MS);
+        await servico.login(CREDENCIAIS);
+
+        const escritas = escritasDeLoginSucesso(auditoria);
+        expect(escritas).toHaveLength(2);
+        expect(escritas[1].metadados).toEqual({ mfaVerificado: false, loginsSuprimidos: 2 });
+      });
+
+      it('nao grava loginsSuprimidos quando nada foi suprimido', async () => {
+        const { servico, auditoria } = cenarioLoginValido();
+
+        await servico.login(CREDENCIAIS);
+
+        // Campo constante nao carrega informacao: o formato normal do evento
+        // continua sendo o de antes do teto.
+        expect(escritasDeLoginSucesso(auditoria)[0].metadados).toEqual({ mfaVerificado: false });
+      });
+
+      it('volta a gravar quando a trilha engoliu a falha da escrita anterior', async () => {
+        const { servico, auditoria } = cenarioLoginValido({ auditoriaFalhaSilenciosa: true });
+
+        await servico.login(CREDENCIAIS);
+        await servico.login(CREDENCIAIS);
+
+        // Nenhuma das duas chegou ao banco. Confirmar a janela em cima de uma
+        // linha que nao existe transformaria o teto em perda de evidencia.
+        expect(escritasDeLoginSucesso(auditoria)).toHaveLength(2);
+      });
+
+      it('volta a gravar quando a escrita anterior rejeitou', async () => {
+        const { servico, auditoria } = cenarioLoginValido({ auditoriaLanca: true });
+
+        await servico.login(CREDENCIAIS);
+        await servico.login(CREDENCIAIS);
+
+        expect(escritasDeLoginSucesso(auditoria)).toHaveLength(2);
+      });
+
+      it('nao deixa o teto alterar o desfecho do login', async () => {
+        const { servico } = cenarioLoginValido();
+
+        await servico.login(CREDENCIAIS);
+
+        await expect(servico.login(CREDENCIAIS)).resolves.toHaveProperty('accessToken');
+      });
+
+      it('nao transforma excecao da contabilidade do teto em falha do login', async () => {
+        const { servico } = cenarioLoginValido({ contadorFalhasLancaAposEscrita: true });
+
+        // A sessao ja foi criada e os tokens ja foram assinados quando a
+        // contabilidade roda. Deixar a excecao subir daqui recusaria acesso
+        // legitimo por causa de contagem de volume da trilha -- o mesmo
+        // desfecho que a barreira do caminho de 403 ja impede.
+        await expect(servico.login(CREDENCIAIS)).resolves.toHaveProperty('accessToken');
+      });
+
+      it('devolve a chave a janela quando a contabilidade do teto lanca', async () => {
+        const { servico, auditoria } = cenarioLoginValido({ contadorFalhasLancaAposEscrita: true });
+
+        await servico.login(CREDENCIAIS);
+        await servico.login(CREDENCIAIS);
+
+        // Sem a liberacao no `catch` a reserva do primeiro login sobreviveria e
+        // calaria o segundo pelos 60 s da janela: absorver a excecao nao pode
+        // custar evidencia.
+        expect(escritasDeLoginSucesso(auditoria)).toHaveLength(2);
+      });
     });
   });
 });

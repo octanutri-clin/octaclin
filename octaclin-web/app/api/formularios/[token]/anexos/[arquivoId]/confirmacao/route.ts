@@ -7,7 +7,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   const apiUrl = normalizarApiUrlBff(process.env.OCTACLIN_BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001');
   const resposta = await fetch(`${apiUrl}/formularios/${encodeURIComponent(token)}/anexos/${encodeURIComponent(arquivoId)}/confirmacao`, {
     method: 'POST',
-    headers: criarHeadersProxyPublico(request),
+    headers: await criarHeadersProxyPublico(request),
     body: await request.text(),
     cache: 'no-store'
   });

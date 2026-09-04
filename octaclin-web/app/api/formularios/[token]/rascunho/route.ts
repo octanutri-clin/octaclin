@@ -10,7 +10,7 @@ export async function PATCH(request: Request, props: { params: Promise<{ token: 
   const params = await props.params;
   const resposta = await fetch(`${obterApiUrlPublica()}/formularios/${encodeURIComponent(params.token)}/rascunho`, {
     method: 'PATCH',
-    headers: criarHeadersProxyPublico(request),
+    headers: await criarHeadersProxyPublico(request),
     body: await request.text(),
     cache: 'no-store'
   });

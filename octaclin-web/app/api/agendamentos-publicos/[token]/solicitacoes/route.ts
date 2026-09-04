@@ -12,7 +12,7 @@ export async function POST(request: Request, props: { params: Promise<{ token: s
     `${obterApiUrlPublica()}/agendamentos-publicos/${encodeURIComponent(params.token)}/solicitacoes`,
     {
       method: 'POST',
-      headers: criarHeadersProxyPublico(request),
+      headers: await criarHeadersProxyPublico(request),
       body: await request.text(),
       cache: 'no-store'
     }

@@ -51,6 +51,7 @@ import { ProtegerResolucaoAgendaPublica1720000001034 } from './migracoes/1720000
 import { CriarFiltrosSalvosPacientes1720000001035 } from './migracoes/1720000001035-CriarFiltrosSalvosPacientes';
 import { CriarSessoesUsuario1720000001036 } from './migracoes/1720000001036-CriarSessoesUsuario';
 import { CriarMfaEReautenticacao1720000001037 } from './migracoes/1720000001037-CriarMfaEReautenticacao';
+import { TornarTrilhaAuditoriaImutavel1720000001038 } from './migracoes/1720000001038-TornarTrilhaAuditoriaImutavel';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -327,7 +328,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         ProtegerResolucaoAgendaPublica1720000001034,
         CriarFiltrosSalvosPacientes1720000001035,
         CriarSessoesUsuario1720000001036,
-        CriarMfaEReautenticacao1720000001037
+        CriarMfaEReautenticacao1720000001037,
+        TornarTrilhaAuditoriaImutavel1720000001038
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

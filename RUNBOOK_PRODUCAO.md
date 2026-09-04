@@ -749,6 +749,45 @@ Antes de go-live e antes de migrations sensiveis:
 
 Nunca restaurar diretamente sobre producao sem decisao explicita de incidente e plano de reversao.
 
+### Trilha de auditoria append-only (PR 52 da governanca, fase 2)
+
+A migracao `1720000001038-TornarTrilhaAuditoriaImutavel` faz o banco **rejeitar**
+`UPDATE`, `DELETE` e `TRUNCATE` em `user_action_logs`. Isso e controle de
+integridade da evidencia, e nao preferencia de estilo: ver
+`docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md` secao 5.1.
+
+**Como verificar que o controle esta ativo** (leitura, seguro em producao):
+
+```sql
+select tgname, tgenabled
+from pg_trigger
+where tgrelid = 'user_action_logs'::regclass and not tgisinternal;
+```
+
+Esperado: dois gatilhos, os dois com `tgenabled = 'A'` (`ENABLE ALWAYS`). `'O'`,
+`'D'` ou ausencia significa que o controle caiu -- trate como incidente de
+integridade, nao como divergencia de schema.
+
+**O que muda no dia a dia:**
+
+- Erro `42501` ao tentar alterar a trilha **e o comportamento correto**. Nao
+  contorne desabilitando o gatilho.
+- Correcao de linha errada na trilha nao existe. A trilha registra o que
+  aconteceu, inclusive o que aconteceu errado; a correcao e um evento novo.
+- **Pedido de eliminacao LGPD nao se resolve por `DELETE` na trilha.** O que
+  mantem dado pessoal fora dela e a redacao de `metadados` aplicada na escrita.
+  Se, ainda assim, uma linha precisar ser removida, isso exige decisao
+  registrada de incidente ou juridica, role administrativa e desabilitacao
+  temporaria do gatilho -- procedimento fora de banda, com dois responsaveis,
+  registro da janela fora do Git e reativacao verificada pela consulta acima.
+- Restore nao e afetado: `pg_restore` faz `INSERT`/`COPY`, e os gatilhos sao
+  `ENABLE ALWAYS` justamente para nao dependerem de `session_replication_role`.
+
+**Limites conhecidos**, registrados como EXC-AUD-008 na norma: o controle nao
+protege contra o administrador do banco (`drop trigger` e possivel), nao ha
+hash-chain -- ele impede a mutacao por SQL, nao prova ausencia de adulteracao --
+e nao ha retencao WORM no armazenamento de backup.
+
 ## Redis e filas
 
 Fornecedor: Redis gerenciado, definido por `REDIS_URL` no Render. A conta foi

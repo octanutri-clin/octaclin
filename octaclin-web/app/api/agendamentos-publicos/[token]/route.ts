@@ -65,7 +65,7 @@ function agruparHorarios(horariosLivres: string[], timeZone: string) {
 export async function GET(_: Request, props: { params: Promise<{ token: string }> }) {
   const params = await props.params;
   const resposta = await fetch(`${obterApiUrlPublica()}/agendamentos-publicos/${encodeURIComponent(params.token)}`, {
-    headers: criarHeadersProxyPublico(),
+    headers: await criarHeadersProxyPublico(),
     cache: 'no-store'
   });
 
