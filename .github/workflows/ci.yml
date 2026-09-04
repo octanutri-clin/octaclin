@@ -66,6 +66,7 @@ jobs:
       # redator ou declaradas como seguras com justificativa. Sem ele, um
       # call site novo vaza PHI para a trilha com a suite toda verde.
       - run: pnpm test:redacao-auditoria
+      - run: pnpm test:resposta-auditoria
       - run: pnpm test:actions-imutaveis
       - run: pnpm test:workflows-seguros
       - run: pnpm test:triagem-seguranca

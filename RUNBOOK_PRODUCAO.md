@@ -910,6 +910,12 @@ integridade, nao como divergencia de schema.
   registrada de incidente ou juridica, role administrativa e desabilitacao
   temporaria do gatilho -- procedimento fora de banda, com dois responsaveis,
   registro da janela fora do Git e reativacao verificada pela consulta acima.
+  A janela e registrada **antes** de o gatilho cair, e nao depois: desabilita-lo
+  derruba `tgenabled` de `'A'`, que e o proprio sinal de incidente de
+  integridade da secao "Incidente de auditoria e seguranca" -- sem o registro
+  previo, a operacao legitima fica indistinguivel do ataque para quem ler o
+  catalogo. **Com um unico responsavel, este procedimento nao e executavel**;
+  ver "Escalonamento" naquela secao.
 - Restore nao e afetado: `pg_restore` faz `INSERT`/`COPY`, e os gatilhos sao
   `ENABLE ALWAYS` justamente para nao dependerem de `session_replication_role`.
 
@@ -1184,7 +1190,15 @@ Fontes atuais:
 - health detalhado: banco/backend como servico critico; Redis, email, WhatsApp e Google Calendar como integracoes;
 - outbox atrasado: eventos pendentes ou processando acima da janela operacional;
 - falhas de comunicacao: itens reprocessaveis ou pendentes na central de comunicacoes;
-- deploy: metadados de release ausentes em producao.
+- deploy: metadados de release ausentes em producao;
+- falha de gravacao da trilha de auditoria: contador do processo, `critico` a
+  partir da primeira falha (PR 52 da governanca, fase 3);
+- volume de negativa de autorizacao: contador do processo, `atencao` a partir de
+  50 e `critico` a partir de 500 (PR 52 da governanca, fase 3).
+
+As duas ultimas fontes sao do **processo que respondeu**, e nao do tenant que
+abriu o painel -- como as de health e de deploy. Nao atribua o numero ao proprio
+tenant.
 
 Fluxo de resposta:
 
@@ -1192,7 +1206,179 @@ Fluxo de resposta:
 2. Se houver alerta de health, validar `/health/detalhado`.
 3. Se houver alerta de outbox, conferir Redis, worker/processador e central de falhas.
 4. Se houver alerta de integracao, seguir o runbook especifico do provedor.
-5. Usar `requestId` dos logs da Fase 124 quando houver erro em uma requisicao especifica.
+5. Se houver alerta de trilha ou de negativa de autorizacao, **parar aqui** e
+   seguir `## Incidentes` -> "Incidente de auditoria e seguranca": o primeiro
+   passo la e nao reiniciar o processo, e um deploy no meio apaga a medida.
+6. Usar `requestId` dos logs da Fase 124 quando houver erro em uma requisicao especifica.
+
+### Teste de alerta da trilha de auditoria (PR 52 da governanca, fase 3)
+
+Dois alertas desta fase tornam visivel o que antes so existia em log: a **falha
+de gravacao da trilha de auditoria** e o **volume de negativa de autorizacao**.
+Este procedimento prova que eles disparam.
+
+A dificuldade e propria deste par: **provar que o alerta dispara exige produzir
+justamente o evento que ele existe para denunciar**. Falha de gravacao significa
+trilha parada; volume de negativa significa linha nova numa tabela que e
+append-only desde a migracao `1720000001038`. Nenhum dos dois pode ser fabricado
+em producao sem estragar a evidencia que o alerta protege. Por isso o
+procedimento e partido, e a divisao nao e conveniencia:
+
+| Ambiente | O que se prova ali | Como |
+| --- | --- | --- |
+| Banco descartavel (container local ou branch efemera) | que o alerta aparece, com a severidade e o conteudo esperados | provocando a condicao |
+| Staging | somente o alerta de negativa de autorizacao, com tenant e usuario sinteticos | provocando a condicao, e aceitando que as linhas ficam |
+| Producao | que o alerta esta ausente **agora** e que o painel foi gerado agora | somente leitura |
+
+A regra ja escrita na etapa 4 de "Aplicar a migration 1720000001038" continua
+valendo sem excecao: **em producao, nao inserir linha sintetica na trilha para
+testar.** Ela e append-only e entra em backup -- uma linha sintetica inserida em
+producao e permanente.
+
+#### Alerta de falha de gravacao da trilha
+
+**Comportamento.** A fonte e o contador de falhas de gravacao de
+`ServicoAuditoria`: por processo, em variavel de modulo, monotonico, e zera
+somente no restart -- ver `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`
+secao 7. O alerta aparece em `/operacoes`, na secao `Alertas operacionais`, a
+partir da **primeira** falha, com severidade `critico` e sem degrau abaixo dela:
+uma falha ja significa que existiu acesso sem registro, e nao ha volume de perda
+de evidencia que seja aceitavel.
+
+O limiar e o **total acumulado desde o boot**, e nao um delta por janela. A razao
+e do mecanismo: o painel e aberto sob demanda por uma pessoa, entao nao existe
+janela de leitura confiavel, e um "delta desde a ultima leitura" seria corrompido
+pelo segundo leitor -- dois operadores abrindo `/operacoes` roubariam o delta um
+do outro e o segundo veria zero. Em troca, o alerta fica **aceso ate o proximo
+restart** depois de uma falha isolada. E deliberado: a evidencia perdida nao
+volta a existir depois de uma janela de calmaria. A compensacao esta no payload,
+que traz `total`, `uptimeSegundos`, `porHora` e o proprio limiar em `referencia`,
+para que a conta possa ser refeita e um blip no boot possa ser separado de uma
+trilha parada -- sem que a **deteccao** dependa dessa distincao.
+
+O que ele **nao** carrega, de proposito: mensagem crua do erro, `metadados` do
+call site e identificador de paciente. A mensagem de um erro de banco carrega
+SQL, valor de parametro e as vezes host ou credencial; publicar isso no painel
+seria vazar pelo alerta exatamente o que a redacao acabou de tirar da trilha.
+Somente o nome da classe do erro chega ao log `auditoria.falha`.
+
+**Prova em banco descartavel** -- nunca em staging, nunca em producao:
+
+1. Subir o backend contra um banco descartavel e confirmar o alvo na mesma
+   sessao com `select current_database();`.
+2. Provocar a falha por um caminho que **nao** altere a trilha:
+
+```sql
+alter table user_action_logs rename to user_action_logs_teste_alerta;
+```
+
+   Renomear e preferivel a `REVOKE`: `REVOKE` contra o dono da tabela nao tem
+   efeito nenhum, e o mesmo raciocinio que fez o `REVOKE` da `1038` ficar como
+   reforco vale aqui. Derrubar o banco inteiro tambem nao serve -- levaria junto
+   o `/operacoes`, que precisa do banco para exibir o alerta.
+3. Executar **uma** acao auditada (um login). Uma so basta: o limiar e 1. A
+   aplicacao continua respondendo, porque `ServicoAuditoria.registrar` engole o
+   erro de gravacao por contrato -- e e exatamente esse silencio que o alerta
+   existe para quebrar.
+4. Abrir `/operacoes` e conferir o alerta: severidade, `metrica`, `valor` e que a
+   mensagem usa vocabulario fechado, sem texto de driver.
+5. Desfazer o rename, reiniciar o processo e confirmar que o alerta some. O
+   contador zera no restart -- e por isso que o passo 5 nao prova recuperacao,
+   so prova que o alerta acompanha o contador.
+6. Descartar o banco.
+
+**Em producao, somente leitura:**
+
+1. Abrir `/operacoes` e registrar `geradoEm` junto com a ausencia do alerta.
+   "Nao vi alerta" sem o horario de geracao nao e leitura, e sim lembranca.
+2. Procurar `auditoria.falha` nos logs do backend no Render, na janela de
+   interesse.
+3. **Limite que precisa ser lido junto:** o contador e por processo, e
+   `/operacoes` responde por uma instancia. Com mais de uma replica, "alerta
+   ausente" prova a instancia que respondeu, e nao o servico. E a mesma limitacao
+   por processo que a norma registra para a janela de deduplicacao e para o teto
+   de login.
+4. Nao provocar a falha. Renomear, revogar ou derrubar a tabela em producao
+   pararia a trilha de verdade: o dano e o proprio evento.
+
+#### Alerta de volume de negativa de autorizacao
+
+**Comportamento.** A fonte **nao** e a trilha: e um contador por processo, em
+variavel de modulo, monotonico desde o boot, incrementado na primeira instrucao
+de `registrarAutorizacaoNegada`. O alerta aparece em `/operacoes` como `atencao`
+a partir de **50** e como `critico` a partir de **500**, e cada um desses dois
+limiares e avaliado contra duas grandezas: o **total** acumulado desde o boot e a
+**taxa por hora** de uptime do processo. A taxa so vale depois de **15 minutos**
+de uptime -- abaixo disso ela e instavel (13 eventos nos primeiros 10 s dariam
+4.680/h e todo boot viraria alarme) e so o total decide. O payload traz
+`total`, `uptimeSegundos`, `porHora` e os dois limiares em `referencia`.
+
+O 500 nao foi escolhido no codigo do alerta: e a magnitude que a propria secao
+6.2 da politica usa para descrever enumeracao ("sondar 500 pacientes
+distintos"). O 50 e uma ordem de grandeza abaixo, o ponto em que "alguem esbarrou
+numa rota proibida" deixa de explicar o volume. **Nao existe linha de base medida
+em producao**: os dois numeros sao escolha, e nao medida, e este e o primeiro
+item a rever quando houver base.
+
+**O que ele conta, e por que isso diverge da trilha.** O contador mede **negativa
+observada**, e nao linha gravada: o incremento acontece **antes** da janela de
+deduplicacao da secao 6.2 e antes da checagem de tenant. A consequencia pratica
+importa na triagem, porque as duas fontes vao discordar de proposito:
+
+- Quem varre muitos alvos distintos aparece nos dois lugares: no contador e como
+  uma linha por alvo na trilha.
+- Quem martela **um** alvo aparece inteiro no contador e como cerca de **uma
+  linha por minuto** na trilha, porque a janela colapsa as repeticoes. O alerta
+  detecta esse caso; a trilha, sozinha, nao o dimensiona.
+- Uma negativa sem tenant resolvido conta no alerta e **nao** existe na trilha.
+
+Portanto: **contador maior que o numero de linhas nao e defeito de nenhum dos
+dois**. A trilha guarda o que aconteceu com quem e onde; o contador guarda quanto
+aconteceu. Ler um como conferencia do outro leva a conclusao errada nas duas
+direcoes.
+
+Alvo que nao e UUID canonico nunca entra na trilha: a linha recebe `alvoOpaco` e
+o valor fica so na chave de deduplicacao (politica, secao 6.2). Numa
+investigacao, **ausencia do alvo nao e ausencia de enumeracao**.
+
+**Prova em banco descartavel ou em staging:**
+
+1. Criar usuario sintetico de papel restrito, em tenant sintetico.
+2. Chamar rota proibida **50 vezes** para chegar a `atencao`, ou 500 para chegar
+   a `critico`. Use alvos UUID **distintos**: para o contador tanto faz -- ele
+   conta antes da dedup --, mas alvos distintos produzem linha por alvo na
+   trilha, e e o que permite conferir os dois lados no passo seguinte. Com alvo
+   repetido o alerta sobe e a trilha guarda uma linha, e o exercicio deixa de
+   mostrar a divergencia que a triagem precisa conhecer.
+3. Abrir `/operacoes` e conferir o alerta: severidade, `valor` e a conta em
+   `referencia`. Conferir a trilha em seguida e registrar a diferenca entre o
+   contador e o numero de linhas.
+4. Em staging, registrar que **as linhas ficam**: a trilha de staging tambem e
+   append-only desde a `1038`, e nao ha limpeza posterior. Por isso tenant,
+   usuario e alvos precisam ser sinteticos desde o primeiro passo.
+
+**Em producao, somente leitura.** O console nao tem tela da trilha; a rota do
+BFF e o caminho executavel, com sessao SuperAdmin autenticada no navegador:
+
+```
+GET /api/operacoes/auditoria/paginada?acao=auth.autorizacao.negada&inicio=<ISO>&fim=<ISO>&limite=50
+```
+
+Ela nao gera evento de auditoria. A exportacao CSV gera, e por isso ela e para
+extrair artefato de evidencia, e nao para conferir volume -- ver "Preservacao de
+evidencia" em `## Incidentes`.
+
+#### Registro e limites do proprio teste
+
+Registrar data, ambiente, alerta exercitado, quem executou e resultado. Host,
+tenant e identificador ficam **fora do Git**; no repositorio entra apenas o
+resultado sanitizado, no relatorio do ciclo em `docs/governance/`.
+
+Este procedimento prova o **caminho operacional**: que a condicao produz alerta
+visivel no painel, com o conteudo certo e sem o conteudo errado. Ele nao prova a
+logica do alerta, que e coberta pelos testes automatizados do proprio codigo. Um
+procedimento manual verde nao substitui gate, e nao deve ser citado como se
+substituisse.
 
 ### Monitor externo da Fase 220
 
@@ -1290,7 +1476,234 @@ assinada. Nunca inserir URL assinada, hash de arquivo ou texto clinico em logs.
 
 ## Incidentes
 
-Para atendimento operacional detalhado de login, convites, recuperacao de senha, WhatsApp, email e agenda, use `RUNBOOK_SUPORTE.md`. As secoes abaixo sao apenas o resumo de resposta rapida.
+Para atendimento operacional detalhado de login, convites, recuperacao de senha, WhatsApp, email e agenda, use `RUNBOOK_SUPORTE.md`. As secoes de falha de produto abaixo sao apenas o resumo de resposta rapida.
+
+Incidente de auditoria e seguranca tem procedimento proprio, na primeira subsecao: ele nao e resumo, e nao cabe no fluxo de suporte.
+
+### Incidente de auditoria e seguranca (PR 52 da governanca, fase 3)
+
+Aqui o que esta em risco e a **evidencia**, e nao a disponibilidade. Um
+incidente de auditoria acontece com o sistema inteiro respondendo `200`, e e por
+isso que ele precisa de deteccao propria -- ninguem liga para o suporte dizendo
+que a trilha parou de gravar.
+
+A norma esta em `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`. Esta
+secao e o procedimento, e nao repete a norma.
+
+#### Deteccao
+
+| Sinal | Onde aparece | Piso de risco | Primeira acao |
+| --- | --- | --- | --- |
+| Alerta de falha de gravacao da trilha | `/operacoes`, `Alertas operacionais` | R4 | **nao reiniciar nem publicar deploy**; ler e registrar o contador antes de qualquer coisa |
+| Alerta de volume de negativa de autorizacao | `/operacoes`, `Alertas operacionais` | R4 | identificar tenant, usuario e rota antes de mexer em papel ou permissao |
+| `auditoria.falha` recorrente no log do backend | Render | R4 | mesmo caminho da primeira linha |
+| `42501` fora do procedimento previsto | log do backend, saida de sessao SQL | R5 | alguem tentou mutar a trilha; preservar horario, origem e sessao |
+| `pg_trigger.tgenabled` diferente de `'A'`, ou gatilho ausente | consulta de catalogo | R5 | o controle de imutabilidade caiu; tratar como integridade, e nao como divergencia de schema |
+| Issue `[Alerta producao] Saude externa indisponivel` | GitHub, monitor externo | R3 | health primeiro; so vira incidente de auditoria se a trilha for a causa |
+| Credencial ou dado sensivel em resposta de `/health/detalhado` | validacao pos-deploy | R5 | seguir `RUNBOOK_ROTACAO_SECRETS.md` |
+
+Sobre `42501`: ele e **esperado** em dois lugares, e so nesses dois. No teste de
+`update` dentro de `begin`/`rollback` do procedimento da migration `1038`, e nos
+casos de imutabilidade da suite de Testcontainers. Em qualquer outro lugar ele
+significa que um caminho tentou alterar a trilha, e e isso o incidente -- nao a
+mensagem de erro em si.
+
+#### Triagem e classificacao
+
+Use `R0-R5` como o `AGENTS.md` define; nao ha escala nova aqui. O piso e o que
+ja esta escrito la: trilha de auditoria, autorizacao, tenancy, PHI/PII e
+producao sao **no minimo R4**.
+
+A severidade do alerta (`critico`, `atencao`, `informativo`, como definidas em
+`## Alertas operacionais`) e o **gatilho**; o risco `R` e a **classificacao**, e
+ela nao desce abaixo de R4 quando o eixo for a trilha ou a autorizacao, ainda
+que o alerta tenha chegado como `atencao`. O contrario tambem vale: um alerta
+`critico` de integracao opcional nao vira R4 pela cor.
+
+Tres perguntas resolvem a classificacao, nesta ordem:
+
+1. **A trilha parou de gravar?** Se sim, existe um intervalo sem evidencia, e
+   ele **nao e recuperavel**. R4, e o intervalo passa a ser item obrigatorio do
+   encerramento.
+2. **Alguem tentou alterar a trilha, ou o controle que a protege?** R5. Inclui
+   `42501` inesperado, `tgenabled` fora de `'A'` e gatilho ausente.
+3. **Ha suspeita de credencial valida em uso indevido?** R5, e o eixo do
+   incidente passa a ser contencao antes de investigacao.
+
+Para prazo de primeira resposta e criterio `P0-P3`, use `SLA_SUPORTE.md` e a
+secao `## Escalonamento` do `RUNBOOK_SUPORTE.md`; suspeita de vazamento ou perda
+de dados ja e `P0` la. Nao ha segundo criterio de prazo neste runbook.
+
+#### Escalonamento
+
+Hoje o OctaClin tem **um** responsavel: o proprietario. Este runbook nao
+descreve plantao, rodizio nem segunda linha, porque nenhum dos tres existe -- e
+um procedimento que aciona um time inexistente falha exatamente na hora em que
+seria usado.
+
+O que existe, e o que isso muda:
+
+1. Quem detecta e quem responde e a mesma pessoa. Nao ha handoff a esperar; ha
+   ordem a seguir, e a ordem e a unica defesa contra a pressa.
+2. Nao ha revisor independente dentro da janela. A compensacao e o registro
+   escrito: **toda acao irreversivel e escrita antes de ser executada**, com o
+   alvo confirmado na mesma sessao (`select current_database();` antes de
+   qualquer consulta de catalogo, pelo mesmo motivo da etapa 4 de "Aplicar a
+   migration 1720000001038").
+3. A exigencia de **dois responsaveis** que a secao "Trilha de auditoria
+   append-only" impoe para remover linha da trilha nao e satisfeita por uma
+   pessoa. Enquanto nao houver segundo responsavel, essa operacao **nao e
+   executavel**, e nao ha atalho -- ver "Preservacao de evidencia" abaixo.
+4. Quando o incidente envolver terceiro (provedor, titular de dados ou
+   pesquisador externo), o canal e o do `SECURITY.md`, e nao issue publica.
+
+#### Contencao de credencial suspeita
+
+Antes de investigar, saber o que e possivel fazer. Este e o estado real hoje, e
+ele limita o procedimento:
+
+- **Nao existe endpoint operacional para revogar a sessao de outro usuario.** As
+  rotas de `/auth/sessoes` agem sempre sobre as sessoes de quem chamou. Nao ha
+  caminho de SuperAdmin para derrubar a sessao de terceiro.
+- **Redefinicao de senha revoga todas as sessoes do usuario**, mas depende de o
+  proprio usuario concluir o fluxo: nao e contencao imediata.
+- **Arquivar um profissional** (`DELETE /profissionais/:id`) marca o usuario como
+  inativo e revoga os refresh tokens, entao nenhum access token novo e emitido.
+  Ele **nao** encerra a sessao corrente: o guarda de JWT consulta
+  `sessoes_usuario`, que o arquivamento nao toca, e o access token ja emitido
+  continua valido ate expirar (`JWT_EXPIRA_EM`, padrao `15m`, ver
+  `VARIAVEIS_AMBIENTE.md`). Ha portanto uma janela residual, e ela entra no
+  registro do incidente em vez de ser presumida como zero.
+- Para papel que nao seja `Professional` nao existe nem esse caminho.
+
+Consequencia: **a contencao imediata de uma sessao comprometida nao e executavel
+hoje**. Trate isso como limite conhecido do procedimento, e nao improvise
+`UPDATE` direto em `sessoes_usuario` durante o incidente -- alteracao manual em
+banco durante investigacao destroi a leitura posterior do proprio caso.
+
+#### Preservacao de evidencia
+
+**O que nao se faz**, e por que:
+
+1. **Nao "limpar" a trilha.** `UPDATE`, `DELETE` e `TRUNCATE` sao rejeitados com
+   `42501` desde a `1038`. A rejeicao e o controle funcionando, e nao um
+   obstaculo a contornar.
+2. **Nao desabilitar o gatilho para consertar uma linha.**
+   `alter table ... disable trigger` derruba `tgenabled` de `'A'`, que e o
+   proprio sinal de deteccao da tabela acima: a partir dai a operacao legitima
+   fica indistinguivel do ataque para quem ler o catalogo depois.
+3. **Nao rodar `migration:revert` nem o `down()` da `1038`** para destravar uma
+   escrita. Reverter remove o controle no meio do incidente e nao reverte a
+   trilha. A proibicao geral ja escrita em "Rollout interno e feature flags"
+   vale aqui inteira.
+4. **Nao restaurar backup sobre producao** para "voltar" a trilha. Restore
+   substitui evidencia por copia; e decisao registrada de incidente com plano de
+   reversao, pelo `RUNBOOK_BACKUP_RESTORE.md`, e nunca reflexo.
+5. **Nao reiniciar o backend, nem publicar deploy, antes de ler o contador de
+   falhas.** Ele e por processo e monotonico, e **zera no restart** -- reiniciar
+   apaga a unica medida do volume de falhas daquele processo. Deploy durante o
+   incidente e um restart.
+6. **Nao colar em issue, PR, commit ou chamado**: corpo de requisicao,
+   `metadados`, e-mail, telefone, id de paciente, URL assinada, connection
+   string, token ou trecho do CSV exportado. O repositorio e publico; ver
+   `SECURITY.md` e `docs/agents/DATA_CLASSIFICATION.md`.
+7. **Nao inserir linha sintetica na trilha** para "marcar" o incidente. A trilha
+   registra o que aconteceu; anotacao de incidente vai para o registro fora do
+   Git.
+
+**O que se preserva, e nesta ordem:**
+
+1. **Contador e alertas, antes de qualquer restart.** Abrir `/operacoes` e
+   registrar `metrica`, `valor` e `geradoEm`.
+2. **Correlacao.** `x-request-id` da requisicao afetada, horario com fuso,
+   `tenantId` e `usuarioId`. Ver `## Logs estruturados e correlacao`.
+3. **Estado do controle de imutabilidade**, com o alvo confirmado na mesma
+   sessao:
+
+```sql
+select current_database();
+select tgname, tgenabled
+from pg_trigger
+where tgrelid = 'user_action_logs'::regclass and not tgisinternal
+order by tgname;
+```
+
+4. **Congelar o estado do banco sem tocar em producao**: criar branch de backup
+   no Neon, como nas etapas 2 e 4 de "Aplicar a migration 1720000001038". A
+   branch serve a leitura posterior e nao altera a trilha.
+5. **A propria trilha: a preservacao e nao mexer.** Ela ja e append-only. Nao ha
+   nada a "salvar", e toda acao sobre ela so pode piorar o estado.
+
+**Por qual caminho a evidencia sai.** Sao dois, e eles nao sao equivalentes:
+
+- **Leitura para triagem, sem gerar evento** -- com sessao SuperAdmin
+  autenticada no navegador. O console nao tem tela da trilha hoje, entao a rota
+  do BFF e o caminho executavel:
+
+```
+GET /api/operacoes/auditoria/paginada?acao=<acao>&inicio=<ISO>&fim=<ISO>&limite=50
+```
+
+- **Extracao de artefato de evidencia** -- exportacao CSV da trilha, que grava
+  `operacoes.auditoria.exportar_csv`. **E de proposito que ela seja auditada:**
+  quem leva o acervo precisa aparecer dentro dele (politica, secao 2). Use
+  sempre filtro de acao, periodo ou alvo; exportacao sem filtro nenhum e
+  registrada como varredura, que e o formato de quem esta levando o acervo e nao
+  investigando um caso.
+
+As duas rotas sao escopo do tenant do operador: nao ha leitura cruzada entre
+tenants por elas. O CSV exportado carrega identificadores e nao entra no Git, em
+issue, em PR nem em ferramenta externa.
+
+**Custo operacional que a fase 2 criou, e que muda a resposta ao titular:**
+
+- **Pedido de eliminacao LGPD nao se resolve mais por `DELETE` na trilha.** O
+  que mantem dado pessoal fora dela e a redacao de `metadados` aplicada na
+  escrita, e nao remocao posterior. Ver a politica, secao 5.1.
+- Se ainda assim uma linha precisar sair, o procedimento fora de banda esta em
+  "Trilha de auditoria append-only" e exige dois responsaveis. Como o projeto
+  tem um, ele **nao e executavel hoje**: a resposta ao titular precisa descrever
+  o que o sistema faz, e nao prometer o que ele nao faz.
+
+#### Comunicacao e registro
+
+- Canal de seguranca: `SECURITY.md` -- reporte privado do GitHub ou o e-mail
+  indicado la. **Nao abra issue publica** para exposicao de segredo, falha de
+  autorizacao, isolamento entre tenants ou acesso a dado clinico.
+- A issue automatica do monitor externo e **publica** e deduplicada pelo proprio
+  workflow. Se o incidente de auditoria for descoberto por ela, **nao enriqueca
+  aquela issue com detalhe do incidente**: ela sinaliza indisponibilidade, o
+  workflow a fecha sozinho na recuperacao, e o detalhe pertence ao canal
+  privado.
+- Registro operacional -- horario, alvo confirmado, acoes na ordem em que foram
+  feitas, resultado -- fica **fora do Git**, sanitizado.
+- No repositorio entram apenas a licao em `docs/agents/LESSONS_LEARNED.md`,
+  quando houver defeito sistemico, e o relatorio do ciclo em `docs/governance/`,
+  quando o incidente virar trabalho de governanca.
+
+#### Encerramento
+
+Cinco condicoes. Todas verdadeiras, ou o incidente continua aberto:
+
+1. **Causa identificada e escrita.** "Parou de aparecer" nao e causa.
+2. **Controle de imutabilidade verificado ativo depois da correcao**: dois
+   gatilhos, os dois com `tgenabled = 'A'`, com `select current_database();` na
+   mesma sessao.
+3. **Contador de falhas estavel**: duas leituras de `/operacoes`, separadas por
+   pelo menos **30 minutos**, com o mesmo `valor` e **sem restart no meio**. Sao
+   30, e nao 5 como no rollout, porque o dobro do horizonte de 15 minutos que o
+   proprio alerta usa como piso de uptime cobre uma falha que volta em rajada.
+   O criterio e "nao subiu", e nao "sumiu": o contador e monotonico e o alerta
+   fica aceso ate o restart. Restart zera o contador e produziria verde por ter
+   parado de olhar -- por isso ele invalida a leitura em vez de encerra-la.
+4. **O intervalo sem trilha esta declarado.** Se a gravacao parou, os eventos
+   daquele intervalo nao existem e nao serao reconstruidos. O encerramento
+   **nomeia** o intervalo; ele nao o cobre. Ausencia de registro e
+   indistinguivel de ausencia de acesso, e fechar sem declarar o intervalo
+   transforma a lacuna numa afirmacao falsa de cobertura.
+5. **Licao registrada** em `docs/agents/LESSONS_LEARNED.md` quando o incidente
+   revelou defeito sistemico, no formato daquele arquivo: problema, causa,
+   correcao, como nao repetir, controle e status do controle.
 
 ### Login indisponivel
 

@@ -2,11 +2,12 @@
 
 > Status: aprovado para planejamento e execucao sequencial
 >
-> Atualizado em: 2026-09-03
+> Atualizado em: 2026-09-04
 >
-> Proximo item autorizado: concluir a fase 3 do PR 52 - Observabilidade,
-> auditoria e resposta. O PR 51 foi integrado no `main` pelos PRs GitHub #189 e
-> #190; a fase 1 do PR 52, pelo PR GitHub #191. O PR 53 so e autorizado apos o
+> Proximo item autorizado: review, checks e merge humano da fase 3 do PR 52 -
+> Observabilidade, auditoria e resposta. O PR 51 foi integrado no `main` pelos
+> PRs GitHub #189 e #190; a fase 1 do PR 52, pelo PR GitHub #191; a fase 2 e a
+> evidencia de producao dela, pelo PR GitHub #194. O PR 53 so e autorizado apos o
 > merge humano das tres fases do PR 52.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
@@ -61,16 +62,22 @@
 > `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`.
 > A falha fechada foi integrada no `main` pelo PR GitHub #190 em 2026-09-02
 > (`894567748aa83bed7cdcba6b1e17df3316fe95a5`), que passa a ser a base do PR 52.
-> Estado do PR 52: **fase 2 de tres, em andamento** na branch
-> `security/governanca-pr52-fase2-imutabilidade`, sobre `6d389f6`. A fase 1 foi
-> integrada no `main` pelo PR GitHub #191 em 2026-09-03 (`6d389f6`). A fase 2
-> ainda sem numero de PR no GitHub e sem hash de merge; ela fecha imutabilidade
-> e correlacao, e **nao** fecha o gate minimo, que so se completa na fase 3 com
-> alerta, runbook de incidente e tabletop. A fase 1 fecha duas das tres
-> metades do gate minimo -- eventos criticos detectados e secrets/PHI ausentes
-> dos logs --, com cobertura verificavel por gate em vez de afirmada. Alertas,
-> runbook de resposta a incidentes e tabletop sintetico ficam para a fase 3.
-> Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`. Norma
+> Estado do PR 52: **fase 3 de tres, em revisao** na branch
+> `security/governanca-pr52-fase3-alerta-e-resposta`, sobre `a9c6d59`. A fase 1
+> foi integrada no `main` pelo PR GitHub #191 em 2026-09-03 (`6d389f6`); a fase
+> 2 e a evidencia de producao dela, pelo PR GitHub #194 em 2026-09-04
+> (`a9c6d59`). A fase 3 ainda sem numero de PR no GitHub e sem hash de merge.
+> Com ela as tres metades do gate minimo passam a estar cobertas: eventos
+> criticos detectados e secrets/PHI ausentes dos logs (fase 1), imutabilidade e
+> correlacao (fase 2), teste de alerta e tabletop sintetico documentados (fase
+> 3). O gate so se fecha de fato no merge humano das tres.
+> A fase 3 nao fecha nenhuma das quatro excecoes que a fase 2 datou para ela
+> (EXC-AUD-006, 007, 009 e 010): o prazo tinha sido escrito sem conferencia
+> contra o escopo desta fase, e as quatro foram redatadas pelo trabalho que as
+> fecha. Relatorios: `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`,
+> `docs/governance/RELATORIO_SEGURANCA_PR52_FASE2_2026-09-03.md` e
+> `docs/governance/RELATORIO_SEGURANCA_PR52_FASE3_2026-09-04.md`. Exercicio:
+> `docs/governance/TABLETOP_AUDITORIA_PR52_FASE3_2026-09-04.md`. Norma
 > duravel: `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`.
 
 ## 1. Funcao deste documento
@@ -607,8 +614,12 @@ defeito que este PR encontrou.
 | 3 | teste de alerta e tabletop sintetico documentados | alertas sobre o contador de falhas e sobre volume de negativa de autorizacao, runbook de resposta a incidentes, escalonamento, preservacao de evidencia e tabletop |
 
 As fases 1 e 2 nao fecham o gate minimo do PR 52 e nao devem ser lidas como tal.
-A metade que resta -- teste de alerta e tabletop sintetico documentados -- e a
-fase 3 inteira. O que cada fase entregou, e o que deliberadamente nao entregou,
+A metade que restava -- teste de alerta e tabletop sintetico documentados -- e a
+fase 3 inteira, entregue em 2026-09-04 e ainda sem merge humano. Os dois alertas
+vivem no painel `/operacoes`, atras de `SuperAdmin`, e sao **pull**: nenhum deles
+abre issue, envia e-mail ou entra no monitor externo, porque aquele monitor chama
+somente endpoints publicos sem token. Essa lacuna esta declarada na secao 6 do
+relatorio da fase 3, e nao suprimida. O que cada fase entregou, e o que deliberadamente nao entregou,
 esta com owner e prazo na secao 10 de
 `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`: a fase 2 fechou
 EXC-AUD-002, EXC-AUD-003 e EXC-AUD-004 e abriu EXC-AUD-006 a EXC-AUD-010 no

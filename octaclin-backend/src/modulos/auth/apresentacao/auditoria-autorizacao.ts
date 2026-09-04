@@ -23,6 +23,66 @@ import { obterRotaSegura, type RequisicaoComContexto } from '../../../infraestru
 export const ACAO_AUTORIZACAO_NEGADA = 'auth.autorizacao.negada';
 
 /**
+ * Negativas de autorizacao observadas desde o boot deste processo (PR 52, fase 3).
+ *
+ * Vive no modulo, e nao numa instancia, pela mesma razao ja escrita em
+ * `servico-auditoria.ts` para `totalFalhasProcesso`: as duas guardas que emitem
+ * a negativa (`GuardaPapeis` e `GuardaPermissoes`) e o `ServicoAuditoria` que
+ * elas recebem sao providers, e o container Nest cria uma instancia por modulo
+ * que os declara. Um campo de instancia daria tantos contadores independentes
+ * quantos forem os modulos, e o alerta que le este numero observaria a fatia de
+ * um deles -- uma varredura de enumeracao apareceria dividida por essa fatia,
+ * isto e, abaixo de qualquer limiar util. O contador precisa ter o mesmo escopo
+ * do processo que o alerta monitora.
+ *
+ * **O que este numero conta, e onde ele e incrementado.** Conta *evento
+ * observado*, nao linha gravada: o incremento acontece na primeira instrucao de
+ * {@link registrarAutorizacaoNegada}, portanto **antes** da janela de
+ * deduplicacao e antes da checagem de tenant. A decisao e deliberada e a
+ * alternativa foi descartada por um motivo concreto:
+ *
+ * - A janela de dedup e otimizacao de volume de escrita numa tabela append-only
+ *   que entra em backup -- nao e uma medida de quantas negativas houve. Contar
+ *   *depois* dela faria uma sessao martelando a mesma rota em laco aparecer como
+ *   uma negativa por minuto, apagando exatamente o volume que este alerta existe
+ *   para detectar. O custo que a janela evita e permanente (linha em backup); o
+ *   custo deste contador e um inteiro em memoria, entao nao ha razao para
+ *   suprimi-lo junto.
+ * - Contar antes da checagem de tenant mantem o numero invariante em relacao a
+ *   ramificacoes internas do registro: nenhum `return` antecipado, nenhuma falha
+ *   da trilha e nenhuma supressao muda o que ele significa. "Uma negativa emitida
+ *   por uma guarda" e a unica definicao que da a mesma leitura em todo ponto de
+ *   leitura, que e o requisito de um numero usado como limiar.
+ *
+ * Monotonico por contrato: reseta so no restart e nunca decrementa.
+ *
+ * **Limitacao que nao deve ser escondida:** o contador e por processo, e a
+ * leitura pelo endpoint de alertas atinge uma replica so. Com N replicas o
+ * alerta ve a fatia de uma delas, entao o numero e piso do volume real, nunca
+ * total exato -- a mesma disciplina que a politica aplica a `loginsSuprimidos`.
+ * O erro possivel e sempre para menos: o alerta pode calar quando deveria tocar,
+ * e nao o contrario.
+ */
+let totalNegativasProcesso = 0;
+
+/** Total monotonico de negativas de autorizacao observadas neste processo. Ver {@link totalNegativasProcesso}. */
+export function obterTotalNegativasAutorizacao(): number {
+  return totalNegativasProcesso;
+}
+
+/**
+ * Zera o contador. Existe para o teste, nao para producao: o valor e monotonico
+ * por contrato e nenhum caminho de aplicacao deve chama-la. Sem ela, casos que
+ * compartilham o mesmo processo Jest passariam a depender da ordem de execucao
+ * uns dos outros -- exatamente o acoplamento que um contador de processo
+ * introduz e que precisa ficar visivel, em vez de escondido atras de uma
+ * instancia nova.
+ */
+export function zerarTotalNegativasAutorizacaoParaTeste(): void {
+  totalNegativasProcesso = 0;
+}
+
+/**
  * Contencao de amplificacao.
  *
  * Diferente do login, aqui nao existe `ServicoProtecaoAbuso` no caminho: uma
@@ -221,6 +281,13 @@ export function registrarAutorizacaoNegada(
   exigencia: ExigenciaNegada,
   agora: number = Date.now()
 ): void {
+  // Primeira instrucao, fora do `try` e antes da janela: o contador mede
+  // *negativa observada*, e nao linha gravada. Ver {@link totalNegativasProcesso}
+  // para por que a contagem nao acompanha a supressao da dedup nem a checagem de
+  // tenant. Incrementar aqui tambem garante que nenhum `throw` do bloco abaixo
+  // pode perder o evento.
+  totalNegativasProcesso += 1;
+
   // Fora do `try` para que o `catch` possa devolver a chave a janela quando a
   // trilha lanca de forma sincrona: sem isso uma unica excecao sincrona
   // silenciaria aquela negativa pelos 60 s seguintes.

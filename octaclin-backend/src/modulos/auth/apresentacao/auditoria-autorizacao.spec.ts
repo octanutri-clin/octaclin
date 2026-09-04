@@ -1,7 +1,11 @@
+import { ForbiddenException } from '@nestjs/common';
+import { GuardaPapeis } from './guarda-papeis';
 import {
   ACAO_AUTORIZACAO_NEGADA,
+  obterTotalNegativasAutorizacao,
   registrarAutorizacaoNegada,
-  reiniciarJanelaAutorizacaoNegada
+  reiniciarJanelaAutorizacaoNegada,
+  zerarTotalNegativasAutorizacaoParaTeste
 } from './auditoria-autorizacao';
 
 /**
@@ -101,6 +105,7 @@ const drenar = () => Promise.resolve().then(() => undefined);
 describe('registrarAutorizacaoNegada', () => {
   beforeEach(() => {
     reiniciarJanelaAutorizacaoNegada();
+    zerarTotalNegativasAutorizacaoParaTeste();
   });
 
   describe('identidade do evento', () => {
@@ -396,6 +401,120 @@ describe('registrarAutorizacaoNegada', () => {
       await drenar();
       // Foi evictada: grava de novo.
       expect(auditoria.registrar).toHaveBeenCalledTimes(MAXIMO_CHAVES_MONITORADAS + 2);
+    });
+  });
+
+  /**
+   * O contador que o alerta de volume da fase 3 le. O que precisa ficar provado
+   * aqui nao e "o numero sobe", e sim *o que ele significa*: evento observado,
+   * contado antes da supressao da janela, com escopo de processo.
+   */
+  describe('contador de negativas observadas', () => {
+    it('comeca zerado e sobe uma unidade por negativa distinta', async () => {
+      const auditoria = criarAuditoria();
+      expect(obterTotalNegativasAutorizacao()).toBe(0);
+
+      registrarAutorizacaoNegada(
+        auditoria as never,
+        criarContexto({ params: { id: uuidDoIndice(1) } }),
+        PAPEL_EXIGIDO,
+        AGORA
+      );
+      registrarAutorizacaoNegada(
+        auditoria as never,
+        criarContexto({ params: { id: uuidDoIndice(2) } }),
+        PAPEL_EXIGIDO,
+        AGORA
+      );
+      await drenar();
+
+      expect(obterTotalNegativasAutorizacao()).toBe(2);
+    });
+
+    // A decisao documentada no modulo: a dedup e otimizacao de volume de
+    // escrita, nao medida de quantas negativas houve. Se a contagem viesse
+    // depois dela, uma sessao martelando a mesma rota em laco apareceria como
+    // uma negativa por minuto -- e o volume e justamente o que o alerta procura.
+    it('conta o evento suprimido pela janela, e nao a linha gravada', async () => {
+      const auditoria = criarAuditoria();
+
+      for (let tentativa = 0; tentativa < 50; tentativa += 1) {
+        registrarAutorizacaoNegada(
+          auditoria as never,
+          criarContexto({ params: { id: uuidDoIndice(1) } }),
+          PAPEL_EXIGIDO,
+          AGORA
+        );
+        await drenar();
+      }
+
+      expect(auditoria.registrar).toHaveBeenCalledTimes(1);
+      expect(obterTotalNegativasAutorizacao()).toBe(50);
+    });
+
+    it('conta a negativa que a trilha recusou gravar', async () => {
+      const auditoria = criarAuditoria('rejeita');
+
+      registrarAutorizacaoNegada(
+        auditoria as never,
+        criarContexto({ params: { id: uuidDoIndice(1) } }),
+        PAPEL_EXIGIDO,
+        AGORA
+      );
+      await drenar();
+
+      expect(obterTotalNegativasAutorizacao()).toBe(1);
+    });
+
+    // Sem tenant nao existe linha possivel em `user_action_logs`, mas a negativa
+    // aconteceu. O contador mede negativa, nao linha.
+    it('conta a negativa que nao pode virar linha por falta de tenant', async () => {
+      const auditoria = criarAuditoria();
+
+      registrarAutorizacaoNegada(auditoria as never, criarContexto({ semUsuario: true }), PAPEL_EXIGIDO, AGORA);
+      await drenar();
+
+      expect(auditoria.registrar).not.toHaveBeenCalled();
+      expect(obterTotalNegativasAutorizacao()).toBe(1);
+    });
+
+    it('nao decrementa quando a escrita falha e a chave volta para a janela', async () => {
+      const auditoria = criarAuditoria('lanca');
+
+      registrarAutorizacaoNegada(
+        auditoria as never,
+        criarContexto({ params: { id: uuidDoIndice(1) } }),
+        PAPEL_EXIGIDO,
+        AGORA
+      );
+      await drenar();
+
+      expect(obterTotalNegativasAutorizacao()).toBe(1);
+    });
+
+    /**
+     * O teste que impede a regressao de "virou campo de instancia".
+     *
+     * Duas guardas distintas, cada uma com o seu `ServicoAuditoria` -- que e o
+     * que o container Nest produz quando o mesmo provider e declarado em varios
+     * modulos. Se o contador fosse campo de instancia de qualquer um dos dois,
+     * cada emissor teria o seu proprio 1 e a leitura veria a fatia de um deles,
+     * nao o total de 2 do processo.
+     */
+    it('acumula no processo, e nao por instancia de guarda ou de servico', () => {
+      const auditoriaA = criarAuditoria();
+      const auditoriaB = criarAuditoria();
+      const reflector = { getAllAndOverride: () => ['SuperAdmin'] };
+      const guardaA = new GuardaPapeis(reflector as never, auditoriaA as never);
+      const guardaB = new GuardaPapeis(reflector as never, auditoriaB as never);
+
+      // A mesma negativa nas duas guardas: a segunda e suprimida pela janela e
+      // ainda assim precisa ser contada.
+      const contexto = criarContexto({ params: { id: uuidDoIndice(1) } });
+      expect(() => guardaA.canActivate(contexto)).toThrow(ForbiddenException);
+      expect(() => guardaB.canActivate(contexto)).toThrow(ForbiddenException);
+
+      expect(obterTotalNegativasAutorizacao()).toBe(2);
     });
   });
 });

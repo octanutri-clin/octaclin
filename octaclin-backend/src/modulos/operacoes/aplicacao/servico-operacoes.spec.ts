@@ -1,5 +1,11 @@
-import { NotFoundException } from '@nestjs/common';
+import { Logger, NotFoundException } from '@nestjs/common';
+import { ServicoAuditoria, zerarTotalFalhasAuditoriaParaTeste } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
+import {
+  registrarAutorizacaoNegada,
+  reiniciarJanelaAutorizacaoNegada,
+  zerarTotalNegativasAutorizacaoParaTeste
+} from '../../auth/apresentacao/auditoria-autorizacao';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
@@ -7,7 +13,7 @@ import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-not
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
-import { ServicoOperacoes } from './servico-operacoes';
+import { AlertaOperacional, ResultadoAlertasOperacionais, ServicoOperacoes } from './servico-operacoes';
 
 function criarServico(
   opcoes: {
@@ -295,7 +301,92 @@ function criarServico(
   };
 }
 
+const TENANT_DA_NEGATIVA = '11111111-1111-4111-8111-111111111111';
+const USUARIO_DA_NEGATIVA = '22222222-2222-4222-8222-222222222222';
+const ROTA_DA_NEGATIVA = '/pacientes/:id/prontuario';
+const AGORA_NEGATIVA = Date.parse('2026-09-04T10:00:00.000Z');
+
+/** UUID deterministico e distinto por indice, para gerar negativas que a janela nao colapsa. */
+function uuidDoIndice(indice: number): string {
+  return `00000000-0000-4000-8000-${String(indice).padStart(12, '0')}`;
+}
+
+function criarContextoDeNegativa(indice: number) {
+  class ControladorProntuario {}
+  function abrir() {}
+
+  const requisicao = {
+    method: 'GET',
+    baseUrl: '',
+    headers: {},
+    route: { path: ROTA_DA_NEGATIVA },
+    params: { id: uuidDoIndice(indice) },
+    requestId: 'req-1',
+    usuarioAutenticado: {
+      tenantId: TENANT_DA_NEGATIVA,
+      usuarioId: USUARIO_DA_NEGATIVA,
+      papel: 'Collaborator',
+      emailHash: 'hash',
+      permissoes: []
+    }
+  };
+
+  return {
+    getHandler: () => abrir,
+    getClass: () => ControladorProntuario,
+    switchToHttp: () => ({ getRequest: () => requisicao })
+  } as never;
+}
+
+/** Sobe o contador de negativas pelo caminho real das guardas, com alvos distintos. */
+function observarNegativas(quantidade: number): void {
+  const auditoria = { registrar: jest.fn(async () => undefined) };
+  for (let indice = 0; indice < quantidade; indice += 1) {
+    registrarAutorizacaoNegada(
+      auditoria as never,
+      criarContextoDeNegativa(indice),
+      { tipo: 'papel', exigido: ['SuperAdmin'] },
+      AGORA_NEGATIVA
+    );
+  }
+}
+
+/** Sobe o contador de falhas pelo caminho real: `registrar` engole o erro e conta. */
+async function falharGravacaoDaTrilha(quantidade: number, servicoAuditoria?: ServicoAuditoria): Promise<void> {
+  const auditoria =
+    servicoAuditoria ??
+    new ServicoAuditoria({
+      executar: async () => {
+        throw new Error('banco indisponivel');
+      }
+    } as never);
+
+  for (let indice = 0; indice < quantidade; indice += 1) {
+    await auditoria.registrar({ tenantId: 'tenant-1', acao: 'teste.falha.gravacao' });
+  }
+}
+
+/** Fixa o uptime do processo para que os limiares de taxa sejam deterministicos. */
+function fixarUptime(servico: unknown, segundos: number): void {
+  jest.spyOn(servico as { obterUptimeSegundos(): number }, 'obterUptimeSegundos').mockReturnValue(segundos);
+}
+
+const ID_ALERTA_FALHA_TRILHA = 'servico.auditoria.falha_gravacao';
+const ID_ALERTA_NEGATIVAS = 'servico.autorizacao.negativas_volume';
+
+function alertaPorId(resultado: ResultadoAlertasOperacionais, id: string): AlertaOperacional | undefined {
+  return resultado.itens.find((item) => item.id === id);
+}
+
 describe('ServicoOperacoes', () => {
+  beforeEach(() => {
+    // Contadores de processo: sem o reset, um caso passaria a depender da ordem
+    // de execucao do anterior. Ver `servico-auditoria.ts` e `auditoria-autorizacao.ts`.
+    zerarTotalFalhasAuditoriaParaTeste();
+    zerarTotalNegativasAutorizacaoParaTeste();
+    reiniciarJanelaAutorizacaoNegada();
+  });
+
   it('deve consolidar alertas operacionais por severidade sem expor payload sensivel', async () => {
     const { servico, servicoSaude } = criarServico({
       health: {
@@ -833,5 +924,231 @@ describe('ServicoOperacoes', () => {
         })
       })
     );
+  });
+
+  /**
+   * Alertas de observabilidade da trilha (PR 52, fase 3).
+   *
+   * Os dois contadores lidos aqui sao de processo e monotonicos desde o boot, e
+   * a leitura atinge uma replica so -- ver os comentarios em
+   * `servico-auditoria.ts` e `auditoria-autorizacao.ts`. Os casos abaixo provam
+   * o limiar, a severidade, o escopo do contador e a ausencia de identificador
+   * no payload.
+   */
+  describe('alertas de observabilidade da trilha', () => {
+    // `registrar` engole o erro e emite `warn`; aqui a falha e provocada de
+    // proposito, entao o log so poluiria a saida da suite.
+    let logDeFalha: jest.SpyInstance;
+
+    beforeAll(() => {
+      logDeFalha = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    });
+
+    afterAll(() => {
+      logDeFalha.mockRestore();
+    });
+
+    const healthSaudavel = {
+      status: 'ok',
+      checks: {
+        backend: { status: 'ok' },
+        banco: { status: 'ok' },
+        redis: { status: 'ok' },
+        email: { status: 'ok' },
+        whatsapp: { status: 'ok' },
+        googleCalendar: { status: 'ok' }
+      }
+    };
+
+    function criarServicoIsolado() {
+      const contexto = criarServico({ health: healthSaudavel });
+      contexto.repositorios.outbox.count.mockResolvedValue(0);
+      contexto.repositorios.mensagens.find.mockResolvedValue([]);
+      contexto.repositorios.outbox.find.mockResolvedValue([]);
+      contexto.repositorios.consultas.find.mockResolvedValue([]);
+      fixarUptime(contexto.servico, 3_600);
+      return contexto;
+    }
+
+    it('nao emite alerta algum com os dois contadores zerados', async () => {
+      const { servico } = criarServicoIsolado();
+
+      const resultado = await servico.listarAlertasOperacionais('tenant-1');
+
+      expect(resultado.itens).toEqual([]);
+      expect(resultado.status).toBe('ok');
+    });
+
+    it('emite alerta critico na primeira falha de gravacao da trilha', async () => {
+      const { servico } = criarServicoIsolado();
+      await falharGravacaoDaTrilha(1);
+
+      const resultado = await servico.listarAlertasOperacionais('tenant-1');
+
+      expect(alertaPorId(resultado, ID_ALERTA_FALHA_TRILHA)).toEqual(
+        expect.objectContaining({
+          severidade: 'critico',
+          origem: 'servico',
+          metrica: 'auditoria_falha_gravacao_total',
+          valor: 1,
+          referencia: expect.stringContaining('total:1')
+        })
+      );
+      expect(resultado.status).toBe('critico');
+    });
+
+    it('expoe uptime e taxa no payload para a conta poder ser conferida', async () => {
+      const { servico } = criarServicoIsolado();
+      await falharGravacaoDaTrilha(2);
+
+      const resultado = await servico.listarAlertasOperacionais('tenant-1');
+
+      expect(alertaPorId(resultado, ID_ALERTA_FALHA_TRILHA)?.referencia).toBe(
+        'total:2;uptimeSegundos:3600;porHora:2;limiarCritico:1'
+      );
+    });
+
+    /**
+     * O caso que impede a regressao de "virou campo de instancia": dois
+     * `ServicoAuditoria` distintos, como o container Nest cria ao declarar o
+     * provider em varios modulos. Se o contador fosse de instancia, o alerta
+     * veria 1 -- a fatia de um deles -- e nao os 2 do processo.
+     */
+    it('conta falhas de instancias distintas do servico de auditoria', async () => {
+      const { servico } = criarServicoIsolado();
+      const executorQueFalha = {
+        executar: async () => {
+          throw new Error('banco indisponivel');
+        }
+      };
+      await falharGravacaoDaTrilha(1, new ServicoAuditoria(executorQueFalha as never));
+      await falharGravacaoDaTrilha(1, new ServicoAuditoria(executorQueFalha as never));
+
+      const resultado = await servico.listarAlertasOperacionais('tenant-1');
+
+      expect(alertaPorId(resultado, ID_ALERTA_FALHA_TRILHA)?.valor).toBe(2);
+    });
+
+    it('duas instancias do servico de operacoes leem o mesmo contador de processo', async () => {
+      const primeiro = criarServicoIsolado();
+      const segundo = criarServicoIsolado();
+      await falharGravacaoDaTrilha(3);
+
+      const resultadoA = await primeiro.servico.listarAlertasOperacionais('tenant-1');
+      const resultadoB = await segundo.servico.listarAlertasOperacionais('tenant-1');
+
+      expect(alertaPorId(resultadoA, ID_ALERTA_FALHA_TRILHA)?.valor).toBe(3);
+      expect(alertaPorId(resultadoB, ID_ALERTA_FALHA_TRILHA)?.valor).toBe(3);
+    });
+
+    it('nao emite alerta de negativa no volume de fundo esperado', async () => {
+      const { servico } = criarServicoIsolado();
+      observarNegativas(10);
+
+      const resultado = await servico.listarAlertasOperacionais('tenant-1');
+
+      expect(alertaPorId(resultado, ID_ALERTA_NEGATIVAS)).toBeUndefined();
+      expect(resultado.status).toBe('ok');
+    });
+
+    it('emite atencao quando o total de negativas alcanca o limiar', async () => {
+      const { servico } = criarServicoIsolado();
+      observarNegativas(50);
+
+      const resultado = await servico.listarAlertasOperacionais('tenant-1');
+
+      expect(alertaPorId(resultado, ID_ALERTA_NEGATIVAS)).toEqual(
+        expect.objectContaining({
+          severidade: 'atencao',
+          origem: 'servico',
+          metrica: 'autorizacao_negada_total',
+          valor: 50
+        })
+      );
+    });
+
+    it('nao emite alerta de negativa uma unidade abaixo do limiar', async () => {
+      const { servico } = criarServicoIsolado();
+      observarNegativas(49);
+
+      const resultado = await servico.listarAlertasOperacionais('tenant-1');
+
+      expect(alertaPorId(resultado, ID_ALERTA_NEGATIVAS)).toBeUndefined();
+    });
+
+    it('escala para critico na magnitude de enumeracao da politica', async () => {
+      const { servico } = criarServicoIsolado();
+      observarNegativas(500);
+
+      const resultado = await servico.listarAlertasOperacionais('tenant-1');
+
+      expect(alertaPorId(resultado, ID_ALERTA_NEGATIVAS)).toEqual(
+        expect.objectContaining({ severidade: 'critico', valor: 500 })
+      );
+    });
+
+    // A taxa existe para pegar a rajada antes que o total absoluto a alcance.
+    it('emite atencao pela taxa por hora antes do total absoluto', async () => {
+      const { servico } = criarServicoIsolado();
+      fixarUptime(servico, 900);
+      observarNegativas(13);
+
+      const resultado = await servico.listarAlertasOperacionais('tenant-1');
+
+      // 13 negativas em 900 s equivalem a 52/h, acima do limiar de 50/h.
+      expect(alertaPorId(resultado, ID_ALERTA_NEGATIVAS)).toEqual(
+        expect.objectContaining({ severidade: 'atencao', valor: 13 })
+      );
+    });
+
+    // Processo recem-iniciado tem taxa instavel: 13 eventos em 10 s dariam
+    // 4.680/h e transformariam o boot em alarme.
+    it('ignora a taxa antes do uptime minimo', async () => {
+      const { servico } = criarServicoIsolado();
+      fixarUptime(servico, 10);
+      observarNegativas(13);
+
+      const resultado = await servico.listarAlertasOperacionais('tenant-1');
+
+      expect(alertaPorId(resultado, ID_ALERTA_NEGATIVAS)).toBeUndefined();
+    });
+
+    /**
+     * Teste negativo sobre o payload. A secao 4.2 da politica de redacao e a
+     * regua: so volume, contagem, taxa e vocabulario fechado. O endpoint e por
+     * tenant, mas estes dois numeros sao do processo -- gravar qualquer
+     * identificador aqui seria atribuir a um tenant o que pode ter vindo de
+     * outro, alem de expor reconhecimento de infraestrutura.
+     */
+    it('nao carrega identificador algum nos alertas novos', async () => {
+      const { servico } = criarServicoIsolado();
+      await falharGravacaoDaTrilha(1);
+      observarNegativas(500);
+
+      const resultado = await servico.listarAlertasOperacionais('tenant-1');
+      const novos = resultado.itens.filter(
+        (item) => item.id === ID_ALERTA_FALHA_TRILHA || item.id === ID_ALERTA_NEGATIVAS
+      );
+      const serializado = JSON.stringify(novos);
+
+      expect(novos).toHaveLength(2);
+      for (const identificador of [
+        'tenant-1',
+        TENANT_DA_NEGATIVA,
+        USUARIO_DA_NEGATIVA,
+        ROTA_DA_NEGATIVA,
+        'ControladorProntuario',
+        'SuperAdmin',
+        uuidDoIndice(1)
+      ]) {
+        expect(serializado).not.toContain(identificador);
+      }
+
+      for (const alerta of novos) {
+        expect(Object.keys(alerta).sort()).toEqual(
+          ['acaoSugerida', 'id', 'mensagem', 'metrica', 'origem', 'referencia', 'severidade', 'titulo', 'valor'].sort()
+        );
+      }
+    });
   });
 });
