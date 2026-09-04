@@ -183,9 +183,33 @@ legitima da trilha, que so apareceria em runtime. E `loginsSuprimidos` prova o
 teto da EXC-AUD-002 com a contagem do volume colapsado, e nao apenas a supressao.
 
 Isso e mais forte que o job de testcontainers, porque exercita o Postgres do
-provedor e nao um container descartavel. **EXC-AUD-003 esta provada em
-comportamento em staging.** Continua **nao** provada em producao: producao exige
-evidencia de producao, e a aplicacao la e uma janela deliberada e separada.
+provedor e nao um container descartavel.
+
+**Verificado tambem no CI**, no merge commit `4f09d0f`: o passo
+`Provar RLS com Testcontainers descartavel` do job `Backend NestJS` fechou
+`success`, junto de `Rodar migrations no Postgres real de CI`,
+`Suite completa` e `Provar rate limit e idempotencia com Redis real`. Os 5 casos
+de imutabilidade deixaram de ser `SKIPPED` e passaram a executar.
+
+**Verificado em producao, no Neon, em 2026-09-03, pelo proprietario:**
+
+| Verificacao | Resultado |
+| --- | --- |
+| `pg_trigger` (catalogo) | os dois gatilhos presentes, `tgenabled = 'A'` |
+| `update` dentro de `begin`/`rollback` | `ERROR ... append-only: UPDATE rejeitado`, `SQLSTATE 42501` |
+
+**EXC-AUD-003 esta provada em comportamento em tres ambientes independentes:
+CI (testcontainers), staging e producao.**
+
+Um episodio do ciclo merece registro porque muda o que uma verificacao vale. A
+primeira consulta de catalogo em producao foi feita no banco errado -- devolveu
+`relation "user_action_logs" does not exist` e, na tentativa seguinte, um estado
+que parecia aplicacao parcial (gatilho de `update`/`delete` presente, gatilho de
+`TRUNCATE` ausente). Nao havia aplicacao parcial: era outro banco. A licao
+operacional e que **`migration:show` marcando `[X]` nao prova que o controle
+existe**, e que a consulta de catalogo so vale se o alvo estiver confirmado na
+mesma sessao -- as URLs de staging e producao no Neon diferem por poucos
+caracteres, e o `fonte-dados.ts` nao recusa alvo indefinido (ver secao 7).
 
 Duas coisas que o teste de `update` sozinho **nao** prova, e por isso a
 verificacao de catalogo nao e redundante: a sessao do SQL Editor nao esta em
