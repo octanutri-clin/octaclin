@@ -5,6 +5,7 @@ import {
   sanitizarDestinoInicial
 } from './lib/server/autorizacao-rotas';
 import { origemMutacaoPermitida } from './lib/server/seguranca-bff';
+import { criarRequestIdBff, NOME_CABECALHO_CORRELACAO } from './lib/server/correlacao-bff';
 import { criarNonceCsp, criarPoliticaConteudo } from './lib/server/csp';
 
 const COOKIE_ACCESS_TOKEN = 'octaclin_access_token';
@@ -65,10 +66,13 @@ function permissoesSessao(request: NextRequest) {
   }
 }
 
-function protegerResposta(resposta: NextResponse, politicaConteudo: string) {
+function protegerResposta(resposta: NextResponse, politicaConteudo: string, requestId: string) {
   resposta.headers.set('Content-Security-Policy', politicaConteudo);
   resposta.headers.set('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
   resposta.headers.set('Pragma', 'no-cache');
+  // Devolver o id tambem na resposta e o que permite partir de um relato de
+  // usuario ou de um erro na tela e chegar na linha correspondente da trilha.
+  resposta.headers.set(NOME_CABECALHO_CORRELACAO, requestId);
   return resposta;
 }
 
@@ -76,10 +80,25 @@ export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const autenticado = possuiSessao(request);
   const requestHeaders = new Headers(request.headers);
+  // Um id proprio por requisicao que entra no web, fixado antes de qualquer
+  // decisao de rota para que redirecionamento e recusa tambem fiquem
+  // correlacionados. O `set` sobrescreve deliberadamente o que o cliente tenha
+  // enviado: ver a decisao registrada em `lib/server/correlacao-bff.ts`.
+  // O nonce CSP NAO e reaproveitado aqui de proposito - ele e um valor de
+  // seguranca da politica de conteudo e nao deve vazar para log nem para a
+  // trilha de auditoria.
+  const requestId = criarRequestIdBff();
   const nonce = criarNonceCsp();
   const politicaConteudo = criarPoliticaConteudo(nonce);
   requestHeaders.delete('x-middleware-subrequest');
+  // O backend cai para `x-correlation-id` quando `x-request-id` esta ausente
+  // (`contexto-requisicao.ts`). Nenhum caminho do BFF encaminha cabecalho cru do
+  // cliente hoje, entao esse nome e inalcancavel - mas deixa-lo passar faria a
+  // garantia depender de "ninguem nunca vai encaminhar", e nao do middleware.
+  // Apagar aqui devolve a garantia para o unico ponto que a sustenta.
+  requestHeaders.delete('x-correlation-id');
   requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set(NOME_CABECALHO_CORRELACAO, requestId);
   requestHeaders.set('Content-Security-Policy', politicaConteudo);
 
   if ((pathname === '/api' || pathname.startsWith('/api/')) && !origemMutacaoPermitida(request)) {
@@ -88,7 +107,8 @@ export function middleware(request: NextRequest) {
         { mensagem: 'Origem da requisicao nao autorizada.' },
         { status: 403, headers: { 'Cache-Control': 'no-store' } }
       ),
-      politicaConteudo
+      politicaConteudo,
+      requestId
     );
   }
 
@@ -97,13 +117,13 @@ export function middleware(request: NextRequest) {
   if (rotaProtegida && !autenticado) {
     const destino = new URL('/login', request.url);
     destino.searchParams.set('redirect', `${pathname}${search}`);
-    return protegerResposta(NextResponse.redirect(destino), politicaConteudo);
+    return protegerResposta(NextResponse.redirect(destino), politicaConteudo, requestId);
   }
 
   if (rotaProtegida && autenticado) {
     const decisao = decidirAcessoRota(pathname, papelSessao(request), destinoInicial(request), permissoesSessao(request));
     if (!decisao.permitir && decisao.redirecionarPara) {
-      return protegerResposta(NextResponse.redirect(new URL(decisao.redirecionarPara, request.url)), politicaConteudo);
+      return protegerResposta(NextResponse.redirect(new URL(decisao.redirecionarPara, request.url)), politicaConteudo, requestId);
     }
   }
 
@@ -113,11 +133,11 @@ export function middleware(request: NextRequest) {
       ? resolverDestinoPermitido(papel, destinoInicial(request), permissoesSessao(request))
       : destinoInicial(request);
     if (destino !== '/login') {
-      return protegerResposta(NextResponse.redirect(new URL(destino, request.url)), politicaConteudo);
+      return protegerResposta(NextResponse.redirect(new URL(destino, request.url)), politicaConteudo, requestId);
     }
   }
 
-  return protegerResposta(NextResponse.next({ request: { headers: requestHeaders } }), politicaConteudo);
+  return protegerResposta(NextResponse.next({ request: { headers: requestHeaders } }), politicaConteudo, requestId);
 }
 
 export const config = {

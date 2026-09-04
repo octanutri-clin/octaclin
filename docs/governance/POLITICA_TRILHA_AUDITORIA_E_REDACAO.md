@@ -27,7 +27,7 @@ e as tres explicam todas as regras deste documento:
 | Propriedade | Consequencia |
 | --- | --- |
 | E lida por muita gente | operacao, suporte e auditoria externa leem a trilha; elas tem direito de saber que um prontuario foi aberto, e nao de ler o prontuario |
-| E imutavel e sobrevive ao expurgo | dado sensivel que caia aqui continua vazado depois que o titular pediu exclusao; nao ha `UPDATE` corretivo previsto |
+| E append-only e sobrevive ao expurgo | dado sensivel que caia aqui continua vazado depois que o titular pediu exclusao; `UPDATE`, `DELETE` e `TRUNCATE` sao rejeitados pelo banco (secao 5.1), e nao apenas desaconselhados |
 | Sai do sistema | entra em backup, em dump de suporte e em exportacao operacional |
 
 Por isso a assimetria que atravessa a norma: **perder o valor de um campo de
@@ -200,6 +200,48 @@ Um envoltorio privado de modulo (`this.auditar`, `this.registrarAuditoria`) nao
 e um terceiro caminho: ele desemboca em um destes dois. O que ele exige e
 declaracao no gate, pela secao 9.1.
 
+### 5.1 A trilha e append-only no banco, e nao por convencao
+
+Ate a fase 1 deste PR, "a trilha e imutavel" era uma **frase**: nenhum caminho de
+codigo fazia `UPDATE` ou `DELETE` em `user_action_logs`, e era so isso. Quem
+tivesse conexao com o banco podia reescrever a evidencia, e nada reprovava.
+
+A migracao `1720000001038-TornarTrilhaAuditoriaImutavel` fecha isso no banco:
+
+| Mecanismo | O que barra |
+| --- | --- |
+| Trigger `before update or delete ... for each row`, `enable always` | `UPDATE` e `DELETE`, linha a linha, com `errcode = '42501'` |
+| Trigger `before truncate ... for each statement`, `enable always` | `TRUNCATE`, que um trigger de linha nao enxerga |
+| `REVOKE update, delete` condicionado a `pg_roles` | reforco nas roles de aplicacao conhecidas |
+
+Tres escolhas que nao sao cosmeticas:
+
+- **O trigger e o mecanismo, e o `REVOKE` e so reforco** -- e nao o contrario.
+  O repositorio conhece dois nomes de role, mas nada obriga um ambiente a usar
+  um deles, e `REVOKE` contra o dono da tabela nao tem efeito algum. Um
+  `REVOKE` sozinho rodaria verde sem proteger nada, que e exatamente a forma de
+  falha que esta norma existe para impedir.
+- **`enable always`**, porque trigger comum e ignorado sob
+  `session_replication_role = 'replica'`. Restore nao e afetado: ele faz
+  `INSERT`/`COPY`.
+- **`INSERT` fica intocado.** Os dois caminhos da secao 5 continuam gravando.
+
+**O que este mecanismo nao cobre, e precisa continuar escrito:**
+
+1. Nao protege contra o administrador do banco no nivel de catalogo:
+   `alter table ... disable trigger` e `drop trigger` continuam possiveis, e uma
+   migracao futura pode remover o controle. Verificar exige olhar
+   `pg_trigger.tgenabled = 'A'` de fora do banco.
+2. Nao ha hash-chain. O controle **impede** a mutacao pelo caminho SQL; nao
+   **prova** ausencia de adulteracao. Escrita direta no arquivo de dados ou
+   restore de dump adulterado nao deixam marca na propria tabela.
+3. Nao e WORM. Retencao imutavel de backup e infraestrutura, e nao schema.
+
+**Consequencia operacional, que muda procedimento:** apagar linha da trilha --
+inclusive por pedido de eliminacao LGPD -- passa a exigir procedimento fora de
+banda com role administrativa. O que mantem dado pessoal fora da trilha continua
+sendo a redacao (secao 3), e nao o `DELETE` corretivo. Ver `RUNBOOK_PRODUCAO.md`.
+
 ---
 
 ## 6. Teto de escrita e amplificacao
@@ -278,6 +320,36 @@ transformando a trilha na segunda copia do vazamento que ela deveria denunciar.
 A contagem respeita citacao de CSV: contar quebra de linha crua infla o numero
 quando ha celula multilinha, e evidencia errada de volume nao e evidencia.
 
+### 6.4 Login bem-sucedido tem teto, e o volume colapsado e contado
+
+Negativa de autorizacao e falha de login exigem credencial hostil ou ausente, e a
+secao 6.1 e o `ProtecaoAbuso` ja as contem. `auth.login.sucesso` era o caso que
+sobrava: quem tem credencial **valida** e entra em laco de login gravava sem
+limite numa tabela que agora e append-only no banco -- cada linha, custo
+permanente.
+
+A janela colapsa repeticoes da **mesma** identidade -- mesmo tenant, mesmo
+usuario, mesmo estado de MFA -- por 60 s, e o total suprimido volta como
+`loginsSuprimidos` na proxima linha gravada daquela chave. Sem essa contagem o
+teto compraria volume com sub-reporte silencioso, que e o oposto do que uma
+trilha serve para fazer.
+
+Tres limites que precisam ser lidos junto:
+
+- **`loginsSuprimidos` e piso, nao total exato.** A contagem se perde, sem
+  marcador, quando a entrada e removida por pressao de teto e quando o processo
+  reinicia. A assimetria que vale sem ressalva e outra: o pior caso e gravar de
+  novo, nunca deixar de gravar um **evento distinto**.
+- **O teto e por processo.** Com N replicas o teto real e N escritas por janela,
+  como toda janela em memoria desta norma.
+- **A origem da requisicao nao entra na identidade**, porque IP e user agent nao
+  chegam a camada de servico. Dois logins simultaneos do mesmo usuario em
+  dispositivos diferentes colapsam numa linha. A compensacao e parcial: cada
+  login continua abrindo linha propria em `sessoes_usuario`, que prova que houve
+  outro login -- mas essa tabela aceita `UPDATE`, ficou de fora do gatilho da
+  migracao `1720000001038` e nao guarda dispositivo. Prova a contagem, nao a
+  origem.
+
 ---
 
 ## 7. Falha de gravacao nao pode ser invisivel
@@ -326,8 +398,18 @@ gate.
 | Cobertura de redacao | `pnpm test:redacao-auditoria` | chave sem regra, sem excecao e sem entrada em `CHAVES_SEGURAS`; espalhamento de origem opaca; escrita opaca sem envoltorio declarado; terceiro caminho de escrita; piso de sanidade do proprio extrator |
 | Inventario | `pnpm audit:redacao-auditoria` | nada; lista chave a chave, com origem e classificacao |
 | Redator | `pnpm --dir octaclin-backend test --runInBand` | regressao do vocabulario, dos limites e dos casos negativos |
+| Imutabilidade da trilha | `pnpm --dir octaclin-backend test:rls:testcontainers` | `UPDATE`, `DELETE` ou `TRUNCATE` que **passem**; trigger ausente ou fora de `enable always` em `pg_trigger` |
+| Correlacao web-backend | `pnpm --dir octaclin-web test:correlacao:bff` | rota de `app/api` que nao propague o id; valor do cliente aceito cru; **matcher do middleware que deixe de cobrir `app/api`** |
+| Contrato do formato do id | `pnpm --dir octaclin-backend test -- observabilidade` | aperto do alfabeto ou do tamanho que faca o backend transformar o UUID emitido pelo BFF |
 
-O gate roda no job `governanca` do CI, ao lado de `pnpm test:confiabilidade`.
+Os tres primeiros rodam no job `governanca` do CI, ao lado de `pnpm
+test:confiabilidade`. O de imutabilidade roda no job do backend, no passo
+`Provar RLS com Testcontainers descartavel` -- e **so la**: sem Docker a suite
+marca esses casos como `SKIPPED`, e `SKIPPED` nao e aprovado. O de correlacao e o
+de contrato do formato do id sao os dois lados do mesmo acordo, e existem
+separados de proposito: o spec do lado web **replica** a regra de sanitizacao do
+backend em vez de importa-la, entao so a assercao do lado do backend reprova um
+aperto do alfabeto ou do tamanho.
 
 O piso de sanidade existe para o gate nao ficar verde por ter parado de olhar:
 se o extrator quebrar e passar a achar quase nada, o teste reprova em vez de
@@ -388,14 +470,38 @@ nao declarado reprova o CI. As tres chaves estao no inventario, e `motivo` foi
 renomeada para `motivoTecnico` para que o nome carregue a garantia que o valor
 tem.
 
-Excecoes vigentes, abertas em 2026-09-02:
+Excecoes **fechadas na fase 2**, em 2026-09-03, mantidas aqui como registro do
+que passou a valer -- e, em cada caso, do que **nao** passou:
+
+| Id | O que dizia | O que fechou | O que continua aberto |
+| --- | --- | --- | --- |
+| EXC-AUD-002 | `auth.login.sucesso` sem teto de escrita | teto por (tenant, usuario, estado de MFA) a cada 60 s, com `loginsSuprimidos` devolvendo o volume colapsado (secao 6.4) | EXC-AUD-006 e EXC-AUD-007 |
+| EXC-AUD-003 | trilha nao e tecnicamente imutavel | `UPDATE`, `DELETE` e `TRUNCATE` rejeitados pelo banco, por trigger `enable always` agnostico de role (secao 5.1) | EXC-AUD-008 |
+| EXC-AUD-004 | o BFF nao propaga `x-request-id` | o middleware emite id proprio e o sobrescreve em toda rota de `app/api`; os 3 caminhos server-side e as 15 rotas publicas propagam | EXC-AUD-009 e EXC-AUD-010 |
+
+Sobre a EXC-AUD-004, a formulacao exata importa, porque a versao curta seria
+falsa. **Pode-se afirmar:** o id gravado em `user_action_logs` nao e escolhivel
+pelo cliente em nenhuma rota de `app/api`, porque o middleware o sobrescreve
+incondicionalmente e o matcher que o faz rodar esta sob teste que avalia o valor
+real, e nao o texto do arquivo. **Nao se pode afirmar:** que a recusa de valor
+externo dentro do BFF seja uma segunda barreira independente. Ela e apenas um
+limite de formato -- um UUID v4 vindo do cliente passaria verbatim se algum
+caminho futuro alcancasse o BFF sem o middleware. A garantia tem **um** ponto de
+sustentacao, e nao dois; e por isso que o teste do matcher e o controle, e nao
+um detalhe.
+
+Excecao fechada na fase 1, ja registrada acima: EXC-AUD-001.
+
+Excecoes vigentes:
 
 | Id | Divergencia | Owner | Prazo | Compensacao |
 | --- | --- | --- | --- | --- |
-| EXC-AUD-002 | `auth.login.sucesso` nao tem teto de escrita: laco de login legitimo grava sem limite na tabela imutavel | proprietario | fase 2 do PR 52 | o evento exige credencial valida; o volume e observavel pelo proprio inventario da trilha |
-| EXC-AUD-003 | A trilha ainda nao e tecnicamente imutavel: nao ha `REVOKE UPDATE/DELETE`, trigger, hash-chain nem WORM | proprietario | fase 2 do PR 52 | role de runtime sem `SUPERUSER`/`BYPASSRLS`, provada em producao pelo PR 51 |
-| EXC-AUD-004 | Correlacao quebra na fronteira web-backend: o BFF nao propaga `x-request-id` | proprietario | fase 2 do PR 52 | `requestId` existe e correlaciona dentro do backend |
 | EXC-AUD-005 | `motivo` nao entra no vocabulario do redator | proprietario | permanente; revisar se o uso do campo mudar | ver abaixo |
+| EXC-AUD-006 | `loginsSuprimidos` e piso, nao total: a contagem some sem marcador em pressao de teto e em restart do processo | proprietario | fase 3 do PR 52 | a assimetria forte continua valendo -- evento **distinto** nunca deixa de ser gravado; e o residual e otimizacao de volume, nao controle |
+| EXC-AUD-007 | `auth.token.renovado` continua sem teto, e a identidade do teto de login nao inclui a origem da requisicao | proprietario | fase 3 do PR 52 | renovacao exige refresh token valido; `sessoes_usuario` grava linha por login, provando a contagem ainda que nao a origem |
+| EXC-AUD-008 | A trilha nao e imutavel contra o administrador do banco, nao tem hash-chain e nao e WORM | proprietario | PR 53 ou posterior; exige decisao de infraestrutura | trigger `enable always` barra toda role de aplicacao; verificacao por `pg_trigger.tgenabled = 'A'` documentada no runbook |
+| EXC-AUD-009 | A correlacao nao atravessa o mobile, jobs, cron e webhooks: esses caem no `randomUUID()` do proprio backend | proprietario | fase 3 do PR 52 | dentro do backend a correlacao existe e e integra; o que falta e o salto de origem |
+| EXC-AUD-010 | A propagacao foi provada com `fetch` espionado em teste, e nao contra backend real com leitura da linha gravada | proprietario | fase 3 do PR 52 | os dois lados do contrato tem teste que reprova drift de formato (secao 9) |
 
 Sobre a EXC-AUD-005: redigir `motivo` destruiria dado operacional para fingir
 cobertura, e ha teste que **afirma** que `motivo` e `relato` sobrevivem a

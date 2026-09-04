@@ -3,6 +3,7 @@ import { comEsperaDeColdStart } from '@/lib/server/cold-start-bff';
 import { obterConfiguracaoAcessoBff } from '@/lib/server/configuracao-acesso-bff';
 import { ErroApiUrlInvalida, RespostaToken, salvarSessaoBff } from '@/lib/server/sessao-bff';
 import { salvarDesafioMfa } from '@/lib/server/mfa-bff';
+import { cabecalhosCorrelacaoBff } from '@/lib/server/correlacao-requisicao-bff';
 
 interface LoginBody {
   email: string;
@@ -58,12 +59,17 @@ export async function POST(request: NextRequest) {
   // um backend apenas hibernando apareca como "servico de acesso indisponivel".
   // Credencial errada volta 401, que nao e status de cold start e nao repete —
   // entao isto nao multiplica tentativa falha contra o bloqueio por senha.
+  // O id de correlacao e resolvido antes da closure: `comEsperaDeColdStart` pode
+  // repetir a chamada, e todas as tentativas do mesmo login precisam chegar ao
+  // backend com o MESMO id, senao uma espera vira varias correlacoes distintas.
+  const correlacao = await cabecalhosCorrelacaoBff();
+
   try {
     resposta = await comEsperaDeColdStart(
       () =>
         fetch(`${apiUrl}/auth/login`, {
           method: 'POST',
-          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...correlacao },
           body: JSON.stringify({
             tenantSlug,
             email: body.email.trim(),

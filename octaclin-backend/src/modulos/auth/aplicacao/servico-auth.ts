@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'crypto';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { DataSource, EntityManager } from 'typeorm';
+import { criarJanelaDeduplicacaoTrilha } from '../../../infraestrutura/auditoria/janela-deduplicacao-trilha';
 import {
   ServicoAuditoria,
   type RegistrarAuditoriaEntrada
@@ -50,6 +51,76 @@ interface DesfechoRotacao {
   reuso: boolean;
   tokens?: ParTokens;
   mfaObrigatorio?: boolean;
+}
+
+/**
+ * Teto de escrita de `auth.login.sucesso` (PR 52, fase 2 -- fecha EXC-AUD-002).
+ *
+ * `ProtecaoAbuso` contem o caso hostil: cinco falhas por (tenantSlug, e-mail)
+ * em 15 minutos e a chave morre antes de qualquer consulta. Ele nao contem o
+ * caso legitimo. Quem tem credencial **valida** e entra em laco de login --
+ * cliente com retry mal configurado, integracao que refaz login a cada
+ * requisicao, worker sem cache de token -- passa por `registrarSucesso` a cada
+ * volta e grava uma linha por volta em `user_action_logs`, que e append-only e
+ * entra em backup. Cada linha e custo permanente, e nenhum contador existente
+ * cobria esse caminho.
+ *
+ * A janela colapsa repeticoes do **mesmo** login -- mesmo tenant, mesmo
+ * usuario, mesmo estado de MFA -- para uma escrita por minuto. Login de outro
+ * usuario, de outro tenant, ou o primeiro login com MFA verificado de quem
+ * vinha sem, nunca e engolido: cada um tem chave propria.
+ *
+ * O que o servico **nao** consegue colocar na identidade e a origem da
+ * requisicao. `emitirSessaoUsuario` recebe `UsuarioOrm`, e nem o controlador
+ * nem `SessaoUsuarioOrm` carregam IP ou user agent -- nao ha `AsyncLocalStorage`
+ * de requisicao neste backend. Entao "origem nova" aqui e o que o servidor
+ * consegue observar: tenant, usuario e MFA. Logins simultaneos do mesmo usuario
+ * a partir de dois dispositivos dentro da mesma janela colapsam em uma linha, e
+ * isso esta declarado de proposito em vez de ser inferido do codigo. O que
+ * sobra do login colapsado e a linha propria em `sessoes_usuario`, e ela e
+ * compensacao parcial, nao evidencia equivalente: `sessoes_usuario` aceita
+ * UPDATE (`revogadoEm`, `motivoRevogacao`), ficou de fora do gatilho de
+ * imutabilidade da migration `1720000001038` -- que cobre so `user_action_logs`
+ * -- e nao guarda IP nem user agent. Ela prova que houve outro login; nao prova
+ * de qual dispositivo, que e justamente a distincao descartada aqui. O residual
+ * suprimido volta como contagem no proximo evento gravado, para que o teto nao
+ * compre volume com cegueira.
+ *
+ * O estado e por processo e em memoria, como no 403: entre replicas cada uma
+ * tem a sua, e o teto real e "uma escrita por janela por replica". E otimizacao
+ * de volume, nao controle de seguranca -- no pior caso grava de novo, nunca
+ * deixa de gravar um login distinto.
+ */
+const JANELA_LOGIN_SUCESSO_MS = 60_000;
+
+/**
+ * Teto de chaves vivas. Diferente do 403, a identidade aqui e inteiramente
+ * resolvida pelo servidor (dois UUID e um booleano, ~90 caracteres), entao o
+ * cliente nao consegue inflar nem o numero de chaves nem o tamanho delas -- o
+ * limite real e a quantidade de usuarios ativos do processo. O teto continua
+ * existindo porque um mapa sem teto e um vazamento esperando uma clinica
+ * grande, e 2.000 entradas custam menos de 1 MB.
+ */
+const MAXIMO_CHAVES_LOGIN_MONITORADAS = 2_000;
+
+/** Mesma razao amortizada do 403: liberar 10% de uma vez em vez de uma por insercao. */
+const ALVO_APOS_PODA_LOGIN = 1_800;
+
+const janelaLoginSucesso = criarJanelaDeduplicacaoTrilha({
+  janelaMs: JANELA_LOGIN_SUCESSO_MS,
+  maximoChaves: MAXIMO_CHAVES_LOGIN_MONITORADAS,
+  alvoAposPoda: ALVO_APOS_PODA_LOGIN
+});
+
+/**
+ * Ponto de reinicio do estado de janela, para que um teste nao contamine o
+ * seguinte. A janela e de modulo, e nao de instancia, porque `ServicoAuth` e
+ * instanciado por modulo Nest -- campo de instancia daria uma janela por
+ * instancia e o teto valeria por instancia, que e o mesmo defeito que o
+ * contador de falhas de `ServicoAuditoria` ja evita.
+ */
+export function reiniciarJanelaLoginSucesso(): void {
+  janelaLoginSucesso.reiniciar();
 }
 
 /**
@@ -165,14 +236,65 @@ export class ServicoAuth {
       return { tokens: await this.emitirParTokens(gerenciador, usuario, sessao), sessaoId: sessao.id };
     });
 
-    await this.registrarTrilha({
-      tenantId: usuario.tenantId,
-      usuarioId: usuario.id,
-      acao: 'auth.login.sucesso',
-      recursoTipo: 'sessao_usuario',
-      recursoId: emissao.sessaoId,
-      metadados: { mfaVerificado: Boolean(mfaVerificadoEm) }
-    });
+    const mfaVerificado = Boolean(mfaVerificadoEm);
+    const agora = Date.now();
+
+    // Declarada fora do `try` pela mesma razao de `registrarAutorizacaoNegada`:
+    // se algo entre a reserva e o desfecho lancar, o `catch` precisa devolver a
+    // chave -- sem isso uma unica excecao silenciaria o login daquele usuario
+    // pelos 60 s seguintes e a barreira viraria perda de evidencia.
+    let chaveReservada: string | undefined;
+
+    // `registrarTrilha` ja engole a falha da escrita; este `try` e a segunda
+    // barreira, e cobre o que ele nao cobre: a contabilidade do teto em volta
+    // dela. Hoje nada aqui lanca -- sao operacoes de `Map` com chave string e
+    // um getter --, e por isso a barreira nao muda comportamento nenhum. Ela
+    // existe porque o dia em que uma dessas pecas passar a lancar (um duble
+    // trocado, um `ServicoAuditoria` com contador instrumentado) o efeito seria
+    // um login **bem-sucedido** virando 500 por causa da contabilidade da
+    // trilha -- exatamente o desfecho que o caminho do 403 ja se recusa a
+    // permitir. A trilha nunca decide o desfecho da autenticacao.
+    try {
+      const chaveJanela = [usuario.tenantId, usuario.id, mfaVerificado ? 'mfa' : 'sem-mfa'].join('|');
+      const reserva = janelaLoginSucesso.reservar(chaveJanela, agora);
+
+      if (!reserva.suprimir) {
+        chaveReservada = chaveJanela;
+        // A janela so pode ser dada por boa quando a escrita de fato aconteceu:
+        // confirmar por causa de uma linha que nunca existiu silenciaria o login
+        // daquele usuario pelos 60 s seguintes, e o teto viraria perda de
+        // evidencia. Como `ServicoAuditoria.registrar` engole a propria falha e
+        // volta normalmente, o retorno do envoltorio nao basta -- o delta do
+        // contador monotonico de falhas e o unico sinal disponivel. Ele e por
+        // processo, entao uma falha concorrente de outro call site pode ser lida
+        // como falha desta: o erro cai para o lado seguro, que e gravar de novo.
+        const falhasAntes = this.auditoria.obterTotalFalhas();
+        const chamadaSemExcecao = await this.registrarTrilha({
+          tenantId: usuario.tenantId,
+          usuarioId: usuario.id,
+          acao: 'auth.login.sucesso',
+          recursoTipo: 'sessao_usuario',
+          recursoId: emissao.sessaoId,
+          metadados: {
+            mfaVerificado,
+            // Residual da janela anterior. Sai do payload quando e zero, porque
+            // campo constante nao carrega informacao (politica de redacao, 4.2) e
+            // o formato normal do evento continua sendo o de antes desta fase.
+            ...(reserva.suprimidos > 0 ? { loginsSuprimidos: reserva.suprimidos } : {})
+          }
+        });
+
+        const gravou = chamadaSemExcecao && this.auditoria.obterTotalFalhas() === falhasAntes;
+        if (gravou) janelaLoginSucesso.confirmar(chaveJanela, agora);
+        else janelaLoginSucesso.liberar(chaveJanela, agora);
+        chaveReservada = undefined;
+      }
+    } catch {
+      // Silencio deliberado: ver o bloco acima. O login ja aconteceu -- sessao
+      // criada e tokens assinados --, entao propagar aqui negaria acesso
+      // legitimo por causa de contabilidade de volume.
+      if (chaveReservada !== undefined) janelaLoginSucesso.liberar(chaveReservada, agora);
+    }
 
     return emissao.tokens;
   }
@@ -326,13 +448,21 @@ export class ServicoAuth {
    * teste), a rejeicao subiria no lugar do `UnauthorizedException` e um login
    * recusado viraria 500 -- transformando um controle de seguranca em canal de
    * negacao de servico contra o proprio login legitimo.
+   *
+   * Devolve se a escrita aconteceu. O booleano existe para a janela de
+   * `auth.login.sucesso`: engolir o erro continua sendo o comportamento certo
+   * para o desfecho HTTP, mas quem mantem teto de escrita precisa saber a
+   * diferenca entre "gravei" e "engoli", senao passa a suprimir com base numa
+   * linha que nao existe. Os demais chamadores ignoram o retorno.
    */
-  private async registrarTrilha(entrada: RegistrarAuditoriaEntrada): Promise<void> {
+  private async registrarTrilha(entrada: RegistrarAuditoriaEntrada): Promise<boolean> {
     try {
       await this.auditoria.registrar(entrada);
+      return true;
     } catch {
       // Silencio deliberado: ver o bloco acima. A contabilidade da falha e do
       // `ServicoAuditoria`, que ja mantem `obterTotalFalhas` para o alarme.
+      return false;
     }
   }
 

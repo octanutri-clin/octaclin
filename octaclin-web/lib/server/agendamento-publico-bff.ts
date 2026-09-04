@@ -1,3 +1,5 @@
+import { cabecalhosCorrelacaoBff } from './correlacao-requisicao-bff';
+
 export interface LinkAgendaPublicaBackend {
   id: string;
   profissionalId: string;
@@ -24,13 +26,33 @@ export function obterOrigemPublicaAgenda(originDaRequisicao: string): string {
   return (origemConfigurada || originDaRequisicao).replace(/\/$/, '');
 }
 
-export function criarHeadersProxyPublico(requisicao?: Request): Headers {
+/**
+ * Assincrona porque o id de correlacao so pode ser lido de `headers()`, que no
+ * Next 16 e assincrono. Manter uma variante sincrona ao lado foi descartado:
+ * seriam dois helpers para o mesmo proxy, e o que esquecesse de propagar o id
+ * voltaria a produzir chamada sem correlacao - exatamente a lacuna que a
+ * EXC-AUD-004 registra. Um helper so, sempre correlacionado, e o unico desenho
+ * em que a propagacao nao depende de o proximo autor lembrar dela.
+ *
+ * O cabecalho e montado com `Headers`, cujo `set` e case-insensitive: o unico
+ * nome que o cliente controla aqui e o `Content-Type` copiado da requisicao, e
+ * ele nao pode colidir com o de correlacao em nenhuma grafia. A ordem das
+ * chamadas abaixo NAO faz parte dessa protecao - sao nomes diferentes, e
+ * inverte-las nao muda o resultado. Quem depende de ordem e
+ * `requisitarBackendAutenticado` em `sessao-bff.ts`, onde o chamador entrega
+ * `init?.headers` inteiro e pode repetir o proprio nome do cabecalho.
+ */
+export async function criarHeadersProxyPublico(requisicao?: Request): Promise<Headers> {
   const headers = new Headers();
   headers.set('Accept', 'application/json');
 
   const contentType = requisicao?.headers.get('Content-Type');
   if (contentType) {
     headers.set('Content-Type', contentType);
+  }
+
+  for (const [nome, valor] of Object.entries(await cabecalhosCorrelacaoBff())) {
+    headers.set(nome, valor);
   }
 
   return headers;

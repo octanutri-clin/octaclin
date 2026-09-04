@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { obterContextoCorrelacao, obterRequestId, obterRotaSegura } from './contexto-requisicao';
 
 describe('contexto-requisicao', () => {
@@ -9,6 +10,30 @@ describe('contexto-requisicao', () => {
     const requestId = obterRequestId({});
 
     expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  /**
+   * Contrato com o BFF, e nao mais um detalhe interno da sanitizacao.
+   *
+   * `octaclin-web/lib/server/correlacao-bff.ts` emite `crypto.randomUUID()` e
+   * SOBRESCREVE `x-request-id` a cada requisicao; a correlacao entre o log do
+   * BFF e a linha de `user_action_logs` so fecha porque o backend devolve
+   * exatamente a mesma string. Apertar o alfabeto de `sanitizarRequestId`
+   * (hoje `[a-zA-Z0-9._:/-]`, que aceita hexadecimal e hifen) ou baixar o teto
+   * de 128 caracteres abaixo dos 36 do UUID truncaria o id **em silencio**:
+   * nada quebra, os dois lados passam a registrar strings diferentes e a
+   * correlacao morre so em producao.
+   *
+   * O teste vive aqui de proposito. O spec do lado web redigita a regex a mao
+   * em vez de importar esta funcao, entao ele continuaria verde depois do
+   * aperto -- e este seria o unico lugar em que o drift reprova. O UUID e
+   * gerado de verdade, e nao um literal, para a assercao valer para o formato
+   * inteiro e nao para um sorteio especifico.
+   */
+  it('deve devolver intacto o uuid que o BFF emite em x-request-id', () => {
+    const emitidoPeloBff = randomUUID();
+
+    expect(obterRequestId({ 'x-request-id': emitidoPeloBff })).toBe(emitidoPeloBff);
   });
 
   it('deve montar contexto sem query string nem dados pessoais do usuario', () => {

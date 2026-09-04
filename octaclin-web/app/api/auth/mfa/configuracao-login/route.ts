@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { obterConfiguracaoAcessoBff } from '@/lib/server/configuracao-acesso-bff';
 import { obterDesafioMfa } from '@/lib/server/mfa-bff';
+import { cabecalhosCorrelacaoBff } from '@/lib/server/correlacao-requisicao-bff';
 
 export async function POST() {
   const desafio = await obterDesafioMfa();
@@ -10,7 +11,7 @@ export async function POST() {
   const { apiUrl } = obterConfiguracaoAcessoBff();
   const resposta = await fetch(`${apiUrl}/auth/mfa/login/configuracao`, {
     method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(await cabecalhosCorrelacaoBff()) },
     body: JSON.stringify({ desafioMfa: desafio.desafioMfa }),
     cache: 'no-store'
   });

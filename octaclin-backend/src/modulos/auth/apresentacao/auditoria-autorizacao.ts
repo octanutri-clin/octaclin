@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import type { ExecutionContext } from '@nestjs/common';
+import { criarJanelaDeduplicacaoTrilha } from '../../../infraestrutura/auditoria/janela-deduplicacao-trilha';
 import type { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { obterRotaSegura, type RequisicaoComContexto } from '../../../infraestrutura/observabilidade/contexto-requisicao';
 
@@ -84,84 +85,28 @@ const TAMANHO_IMPRESSAO_DIGITAL = 16;
  */
 const PADRAO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-interface EntradaJanela {
-  /** Instante da reserva. A expiracao conta a partir daqui, confirmada ou nao. */
-  instante: number;
-  /**
-   * `false` enquanto a escrita esta em voo. So a confirmacao torna a supressao
-   * legitima; ver {@link liberarJanela}.
-   */
-  confirmada: boolean;
-}
-
-const ultimaEscritaPorChave = new Map<string, EntradaJanela>();
+/**
+ * A mecanica da janela vive em `janela-deduplicacao-trilha.ts` desde a fase 2,
+ * quando `auth.login.sucesso` (EXC-AUD-002) passou a precisar exatamente dela.
+ * Copiar teria produzido duas implementacoes do mesmo invariante -- e a copia
+ * que divergisse seria a que ninguem lembraria de testar. O que sobra aqui e o
+ * que e especifico do 403: a identidade do evento e os numeros calculados
+ * acima para o formato de chave deste modulo.
+ *
+ * O residual (`suprimidos`) que a janela devolve nao entra nos metadados desta
+ * acao: a fase 1 fixou o formato de `auth.autorizacao.negada` e a contagem de
+ * linhas distintas por minuto ja e o sinal que este call site existe para
+ * produzir. Mudar o payload aqui seria refactor oportunista, nao a pendencia.
+ */
+const janela = criarJanelaDeduplicacaoTrilha({
+  janelaMs: JANELA_DEDUPLICACAO_MS,
+  maximoChaves: MAXIMO_CHAVES_MONITORADAS,
+  alvoAposPoda: ALVO_APOS_PODA
+});
 
 /** Ponto de reinicio do estado de janela, para que um teste nao contamine o seguinte. */
 export function reiniciarJanelaAutorizacaoNegada(): void {
-  ultimaEscritaPorChave.clear();
-}
-
-function podarChavesExpiradas(agora: number): void {
-  for (const [chave, entrada] of ultimaEscritaPorChave) {
-    if (agora - entrada.instante >= JANELA_DEDUPLICACAO_MS) ultimaEscritaPorChave.delete(chave);
-  }
-
-  // `Map` preserva ordem de insercao e este modulo reinsere a chave a cada uso
-  // (ver `dentroDaJanela`), entao a ordem e de uso e nao de criacao: o que sai
-  // primeiro e a chave ha mais tempo sem 403, e nao a chave mais persistente --
-  // que e exatamente a que a dedup precisa manter viva.
-  //
-  // Perder uma entrada de janela nao perde auditoria: a proxima negativa
-  // daquela chave volta a ser gravada.
-  while (ultimaEscritaPorChave.size > ALVO_APOS_PODA) {
-    const maisAntiga = ultimaEscritaPorChave.keys().next();
-    if (maisAntiga.done) break;
-    ultimaEscritaPorChave.delete(maisAntiga.value);
-  }
-}
-
-/**
- * `true` quando a negativa deve ser suprimida.
- *
- * No caminho de gravacao a chave e apenas *reservada* (`confirmada: false`).
- * Reserva provisoria existe so para conter rajada concorrente: enquanto a
- * escrita esta em voo, as repeticoes da mesma negativa nao disparam N escritas
- * simultaneas. Se a escrita falhar, `liberarJanela` desfaz a reserva -- do
- * contrario uma unica falha silenciaria aquela chave por 60 s inteiros,
- * quebrando a promessa deste modulo de nunca deixar de gravar uma negativa
- * distinta.
- */
-function dentroDaJanela(chave: string, agora: number): boolean {
-  const anterior = ultimaEscritaPorChave.get(chave);
-  if (anterior !== undefined && agora - anterior.instante < JANELA_DEDUPLICACAO_MS) {
-    // `Map.set` em chave existente nao reordena; o `delete` antes e o que
-    // transforma a eviction do teto em LRU de verdade.
-    ultimaEscritaPorChave.delete(chave);
-    ultimaEscritaPorChave.set(chave, anterior);
-    return true;
-  }
-
-  if (ultimaEscritaPorChave.size >= MAXIMO_CHAVES_MONITORADAS) podarChavesExpiradas(agora);
-  ultimaEscritaPorChave.delete(chave);
-  ultimaEscritaPorChave.set(chave, { instante: agora, confirmada: false });
-  return false;
-}
-
-/** Promove a reserva a escrita efetiva: dai em diante a supressao e legitima. */
-function confirmarJanela(chave: string, agora: number): void {
-  const entrada = ultimaEscritaPorChave.get(chave);
-  if (entrada?.instante === agora) entrada.confirmada = true;
-}
-
-/**
- * Desfaz a reserva de uma escrita que nao aconteceu.
- *
- * O `instante` identifica a reserva: se outra ja tomou o lugar desta, a
- * comparacao falha e nada e removido.
- */
-function liberarJanela(chave: string, agora: number): void {
-  const entrada = ultimaEscritaPorChave.get(chave);
-  if (entrada && !entrada.confirmada && entrada.instante === agora) ultimaEscritaPorChave.delete(chave);
+  janela.reiniciar();
 }
 
 function nomeDe(valor: unknown): string | undefined {
@@ -311,7 +256,7 @@ export function registrarAutorizacaoNegada(
       alvoConcreto.identidade
     ].join('|');
 
-    if (dentroDaJanela(chave, agora)) return;
+    if (janela.reservar(chave, agora).suprimir) return;
     chaveReservada = chave;
 
     Promise.resolve(
@@ -336,12 +281,12 @@ export function registrarAutorizacaoNegada(
         }
       })
     ).then(
-      () => confirmarJanela(chave, agora),
-      () => liberarJanela(chave, agora)
+      () => janela.confirmar(chave, agora),
+      () => janela.liberar(chave, agora)
     );
   } catch {
     // Silencio deliberado: ver o bloco acima. A negativa de autorizacao vale
     // mais que o seu registro, e o `throw` da guarda vem logo em seguida.
-    if (chaveReservada !== undefined) liberarJanela(chaveReservada, agora);
+    if (chaveReservada !== undefined) janela.liberar(chaveReservada, agora);
   }
 }
