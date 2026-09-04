@@ -119,18 +119,32 @@ try {
   // exclusoes do matcher, ou estreita-lo, todos eles continuam verdes e o buraco
   // reabre em silencio.
   //
-  // O valor e LIDO do modulo compilado, nao procurado com regex no texto, e e
-  // convertido em expressao regular pelo proprio conversor do Next
-  // (`getMiddlewareMatchers`) - o mesmo que decide em producao quais caminhos
-  // passam pelo middleware. Assim uma reescrita do matcher em outra sintaxe
-  // (`/api/:caminho*`, lista de objetos) continua sendo avaliada corretamente.
+  // O valor e LIDO do modulo compilado, nao procurado com regex no texto, e quem
+  // decide se um caminho casa e o proprio Next: `getMiddlewareMatchers` converte
+  // a declaracao e `getMiddlewareRouteMatcher` a aplica -- os dois mesmos passos
+  // que decidem em producao quais caminhos passam pelo middleware. Assim uma
+  // reescrita do matcher em outra sintaxe (`/api/:caminho*`, lista de objetos,
+  // condicoes `has`/`missing`) continua sendo avaliada corretamente.
+  //
+  // Montar `new RegExp(regexp)` a partir do `regexp` devolvido, como esta funcao
+  // fazia antes, era pior por duas razoes: reimplementava a semantica de
+  // casamento do Next (perdendo `has`/`missing`) e construia expressao regular
+  // em tempo de execucao, que o Semgrep sinaliza como ReDoS
+  // (detect-non-literal-regexp, CWE-1333). Aqui nao havia entrada de atacante --
+  // e um script de teste lendo o proprio middleware do repositorio --, mas a
+  // construcao dinamica tambem nao entregava nada que o matcher oficial nao
+  // entregue melhor.
   // ---------------------------------------------------------------------------
   const { config } = require(join(pasta, 'middleware.js'));
   const { getMiddlewareMatchers } = require('next/dist/build/analysis/get-page-static-info.js');
+  const {
+    getMiddlewareRouteMatcher
+  } = require('next/dist/shared/lib/router/utils/middleware-route-matcher.js');
 
   assert.ok(config?.matcher, 'middleware.ts deve exportar `config.matcher`.');
-  const regexesMatcher = getMiddlewareMatchers(config.matcher, {}).map(({ regexp }) => new RegExp(regexp));
-  const passaPeloMiddleware = (caminho) => regexesMatcher.some((regex) => regex.test(caminho));
+  const casaComOMiddleware = getMiddlewareRouteMatcher(getMiddlewareMatchers(config.matcher, {}));
+  const passaPeloMiddleware = (caminho) =>
+    casaComOMiddleware(caminho, { headers: {}, nextUrl: { pathname: caminho } }, {});
 
   // Uma rota por familia coberta pelo spec: sessao, MFA, formulario por token,
   // agendamento publico e convite de acesso. Se o matcher deixar de cobrir
