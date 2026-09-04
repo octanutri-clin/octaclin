@@ -23,6 +23,8 @@
     "test:producao-isolada": "node scripts/test-producao-isolada.mjs",
     "test:juridico-comercial": "node scripts/test-pacote-juridico-comercial.mjs",
     "test:confiabilidade": "node scripts/test-matriz-confiabilidade.mjs",
+    "test:migracoes-fora-de-banda": "node --test scripts/validar-migracoes-fora-de-banda.spec.mjs",
+    "audit:migracoes-fora-de-banda": "node scripts/validar-migracoes-fora-de-banda.mjs",
     "test:resposta-auditoria": "node scripts/test-runbook-resposta-auditoria.mjs",
     "test:redacao-auditoria": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test scripts/validar-redacao-auditoria.spec.mjs",
     "audit:redacao-auditoria": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/validar-redacao-auditoria.mjs --inventario",

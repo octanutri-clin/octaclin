@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class ProtegerArquivosMidia1720000001014 implements MigrationInterface {
   name = 'ProtegerArquivosMidia1720000001014';
 

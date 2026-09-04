@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class AdicionarSnapshotEstruturaEnviosQuestionario1720000001007 implements MigrationInterface {
   name = 'AdicionarSnapshotEstruturaEnviosQuestionario1720000001007';
 

@@ -67,6 +67,7 @@ jobs:
       # call site novo vaza PHI para a trilha com a suite toda verde.
       - run: pnpm test:redacao-auditoria
       - run: pnpm test:resposta-auditoria
+      - run: pnpm test:migracoes-fora-de-banda
       - run: pnpm test:actions-imutaveis
       - run: pnpm test:workflows-seguros
       - run: pnpm test:triagem-seguranca

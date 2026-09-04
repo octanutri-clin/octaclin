@@ -15,6 +15,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * escolha vigente e a ultima linha, e nao a unica.
  *
  * Migration aditiva: cria colunas, tabela e indices, sem reescrever estrutura.
+ *
+ * @aplicacao fora-de-banda
  */
 export class LiberarSubstituicoesAoPaciente1720000001032 implements MigrationInterface {
   name = 'LiberarSubstituicoesAoPaciente1720000001032';
