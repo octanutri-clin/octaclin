@@ -753,8 +753,8 @@ Nunca restaurar diretamente sobre producao sem decisao explicita de incidente e 
 
 **Esta migration e DDL e nao sobe pelo deploy.** Ela cria a funcao de trigger
 `rejeitar_mutacao_trilha_auditoria()` no schema `public`, e a role de runtime
-`octaclin_app_producao` nao tem `CREATE` ali -- de proposito, pelo PR 51. Se o
-runtime tentar aplica-la, o boot falha com exatamente esta linha:
+nao tem `CREATE` ali -- de proposito, pelo PR 51. Se o runtime tentar aplica-la,
+o boot falha com exatamente esta linha:
 
 ```
 Migration "TornarTrilhaAuditoriaImutavel1720000001038" failed, error: permission denied for schema public
@@ -763,41 +763,112 @@ Migration "TornarTrilhaAuditoriaImutavel1720000001038" failed, error: permission
 Isso **e o controle funcionando**, e nao defeito da migration. O Render mantem a
 instancia anterior servindo, entao nao ha indisponibilidade -- o deploy entra em
 loop de falha e o sintoma so aparece no painel. Nao "resolva" concedendo
-`CREATE` a role de runtime: isso desfaz a separacao owner/runtime que o PR 51
-estabeleceu, e a politica trata como violacao.
+`CREATE` a role de runtime: isso desfaz a separacao owner/runtime do PR 51, e
+`ServicoMenorPrivilegioProviders` passa a reportar `violado`.
 
-**Ordem operacional obrigatoria**
+A ordem e **staging primeiro, producao depois**, e dentro de cada ambiente a
+migration vem **antes** do deploy do codigo.
 
-1. Criar uma branch de backup no Neon do ambiente alvo.
-2. Confirmar explicitamente projeto, branch, banco e role `neondb_owner`. Nao
-   usar a role de runtime.
-3. Confirmar `BANCO_EXECUTAR_MIGRACOES=false` no servico **antes** de aplicar.
-4. Definir `DATABASE_URL` somente na sessao local e executar:
+#### Etapa 1 -- confirmar que o runtime nao vai tentar aplicar
 
-   ```powershell
-   pnpm --dir octaclin-backend run typeorm -- migration:show
-   pnpm --dir octaclin-backend migration:run
-   pnpm --dir octaclin-backend run typeorm -- migration:show
-   Remove-Item Env:DATABASE_URL
-   ```
+Em **cada** servico (staging e producao), confirmar
+`BANCO_EXECUTAR_MIGRACOES=false` ou ausente. Se algum estiver `true`, corrigir
+antes de qualquer outra coisa: enquanto estiver `true`, todo deploy novo entra
+em loop de falha.
 
-   Se `migration:show` listar qualquer pendencia alem da `1038`, parar e
-   reconciliar antes. O `Remove-Item` e obrigatorio.
-5. Verificar o controle antes do deploy:
+#### Etapa 2 -- staging: backup, migration, verificacao
 
-   ```sql
-   select tgname, tgenabled
-   from pg_trigger
-   where tgrelid = 'user_action_logs'::regclass and not tgisinternal
-   order by tgname;
-   ```
+1. Criar branch de backup no Neon de staging.
+2. Confirmar projeto, branch, banco e role `neondb_owner` **de staging**.
 
-   Esperado: `trg_trilha_auditoria_append_only` e
-   `trg_trilha_auditoria_sem_truncate`, os dois com `tgenabled = 'A'`.
-6. So entao liberar o deploy do `main` com a fase 2.
+```powershell
+$url = '<URL owner do banco de STAGING confirmada>'
+try {
+  $env:DATABASE_URL = $url
+  pnpm --dir octaclin-backend run typeorm -- migration:show
+  # Parar se alguma migration alem da 1038 estiver pendente.
+  pnpm --dir octaclin-backend migration:run
+  pnpm --dir octaclin-backend run typeorm -- migration:show
+} finally {
+  Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+  $url = $null
+}
+```
 
-Rollback: o `down()` da migration derruba os dois gatilhos e a funcao e devolve
-`update, delete` as roles nomeadas. Ele tambem exige `neondb_owner`.
+3. Verificar o catalogo no SQL Editor do banco de staging:
+
+```sql
+select tgname, tgenabled
+from pg_trigger
+where tgrelid = 'user_action_logs'::regclass and not tgisinternal
+order by tgname;
+```
+
+Esperado: `trg_trilha_auditoria_append_only` e
+`trg_trilha_auditoria_sem_truncate`, os dois com `tgenabled = 'A'`. Qualquer
+outro valor -- `'O'`, `'D'` ou ausencia -- significa que o controle nao esta
+ativo.
+
+4. Provar o comportamento, e nao so a existencia do gatilho:
+
+```sql
+begin;
+update user_action_logs set acao = acao where id = (select id from user_action_logs limit 1);
+rollback;
+```
+
+Esperado: `ERROR: user_action_logs e append-only: UPDATE rejeitado pela trilha
+de auditoria.` com `SQLSTATE 42501`.
+
+**O `begin`/`rollback` nao e zelo excessivo, e a razao inteira do teste.** Se o
+gatilho estiver ausente, o `update` **funciona** e altera uma linha real de uma
+tabela que nao admite correcao. A transacao existe para conter exatamente o caso
+em que o controle falhou. Nao rode esta consulta sem ela.
+
+Esta e a primeira prova em banco real da EXC-AUD-003 -- vale mais que o job de
+testcontainers, porque exercita o Postgres do provedor.
+
+#### Etapa 3 -- staging: deploy e validacao funcional
+
+Deploy do codigo em staging e, depois:
+
+```powershell
+curl https://<backend-staging>/health/pronto
+curl https://<backend-staging>/health/detalhado
+```
+
+`/health/pronto` deve responder `200`; `503` indica migration pendente ou banco
+indisponivel. Em `/health/detalhado`, conferir que `checks.banco.mensagem` traz
+vocabulario fechado, e nao mensagem de driver.
+
+Depois, um login real no tenant de staging: ele grava `auth.login.sucesso`, o que
+prova que **`INSERT` continua livre** com os gatilhos ativos -- o risco real
+desta migration nao e ela barrar demais no papel, e sim barrar a propria escrita
+legitima da trilha. Repetir o login dentro de 60 s para exercitar o teto: a
+segunda vez nao deve gerar linha nova, e a terceira linha da mesma chave deve
+trazer `loginsSuprimidos`.
+
+#### Etapa 4 -- producao: mesma sequencia, janela deliberada
+
+Repetir as etapas 2 e 3 contra o banco e o servico de producao, com
+`neondb_owner` de producao e branch de backup propria. Confirmar o alvo de novo:
+a URL de staging e a de producao diferem por poucos caracteres, e o erro nao e
+reversivel do lado da trilha.
+
+Antes de comecar, comparar `migration:show` dos dois bancos. Se staging listar
+qualquer coisa que producao nao liste (ou o contrario), parar e reconciliar:
+ensaiar sobre um schema diferente do de producao nao prova o que o ensaio diz
+provar.
+
+Em producao, **nao** inserir linha sintetica na trilha para testar. A consulta de
+`update` da etapa 2 continua segura porque e rejeitada e esta dentro de
+`begin`/`rollback`.
+
+#### Rollback
+
+O `down()` derruba os dois gatilhos e a funcao e devolve `update, delete` as
+roles nomeadas. Ele tambem exige `neondb_owner` e nao remove dado nenhum:
+reverter o controle nao reverte a trilha.
 
 ### Trilha de auditoria append-only (PR 52 da governanca, fase 2)
 
