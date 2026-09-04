@@ -155,15 +155,36 @@ consumidores mapeados le o campo `mensagem`, entao o contrato ficou intacto.
 | `node --test scripts/validar-triagem-seguranca.spec.mjs` | 5 PASS |
 | `git diff --check` | limpo |
 
-### 5.1 O que **nao** foi executado, e portanto nao esta provado
+### 5.1 Prova de comportamento: onde ela existe e onde nao existe
 
-**A rejeicao real de `UPDATE`, `DELETE` e `TRUNCATE` contra Postgres nao rodou
-nesta maquina.** Nao ha Docker no ambiente de desenvolvimento; os 5 casos escritos
-em `rls-isolamento-tenant.integracao.spec.ts` entram entre os 31 `SKIPPED`. Eles
+**A rejeicao real de `UPDATE`, `DELETE` e `TRUNCATE` nao rodou na maquina de
+desenvolvimento.** Nao ha Docker nela; os 5 casos escritos em
+`rls-isolamento-tenant.integracao.spec.ts` entram entre os 31 `SKIPPED`. Eles
 executam no CI, no passo `Provar RLS com Testcontainers descartavel`
-(`.github/workflows/ci.yml`), e **so quando esse job abrir verde** a EXC-AUD-003
-esta provada em comportamento. Ate la, o que esta provado e o DDL emitido, pelo
-`.spec.ts` que roda sempre.
+(`.github/workflows/ci.yml`). O que a maquina de desenvolvimento prova sozinha e
+o DDL emitido, pelo `.spec.ts` que roda sempre.
+
+**Verificado em staging, no Neon, em 2026-09-03, pelo proprietario**, seguindo o
+procedimento do `RUNBOOK_PRODUCAO.md`:
+
+| Verificacao | Resultado |
+| --- | --- |
+| `migration:show` antes | `[ ] TornarTrilhaAuditoriaImutavel1720000001038`, unica pendente |
+| `migration:run` com `neondb_owner` | aplicada |
+| `pg_trigger` (catalogo) | os dois gatilhos presentes, `tgenabled = 'A'` |
+| `update` dentro de `begin`/`rollback` | `ERROR ... append-only: UPDATE rejeitado`, `SQLSTATE 42501` |
+
+Isso e mais forte que o job de testcontainers, porque exercita o Postgres do
+provedor e nao um container descartavel. **EXC-AUD-003 esta provada em
+comportamento em staging.** Continua **nao** provada em producao: producao exige
+evidencia de producao, e a aplicacao la e uma janela deliberada e separada.
+
+Duas coisas que o teste de `update` sozinho **nao** prova, e por isso a
+verificacao de catalogo nao e redundante: a sessao do SQL Editor nao esta em
+`session_replication_role = 'replica'`, entao um gatilho comum passaria no mesmo
+teste -- so `tgenabled = 'A'` distingue `ENABLE ALWAYS` de `ENABLE`. E o
+`TRUNCATE` nao foi exercitado manualmente; ele depende do gatilho de statement,
+cuja existencia foi confirmada pelo catalogo.
 
 `SKIPPED` nao e aprovado -- e a mesma regra que o `AGENTS.md` impoe.
 
