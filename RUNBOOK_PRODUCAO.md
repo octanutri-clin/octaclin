@@ -909,8 +909,16 @@ Em producao, **nao** inserir linha sintetica na trilha para testar. A consulta d
 caminho e sem barra final). Em staging as duas estavam ausentes e o login
 respondia "O servico de acesso do OctaClin esta configurado incorretamente",
 enquanto as rotas publicas seguiam funcionando pelo fallback legado
-`NEXT_PUBLIC_API_URL` -- entao a ausencia nao aparece em teste de rota publica
+`NEXT_PUBLIC_API_URL` -- entao a ausencia nao aparecia em teste de rota publica
 nem no `/health`.
+
+**Isso mudou em 2026-09-05, e a conferencia passou a ser pre-requisito de
+deploy.** O fallback foi removido: `OCTACLIN_BACKEND_URL` e a unica fonte da
+origem do backend, e a ausencia dela **derruba tambem as rotas publicas** em vez
+de degradar em silencio. E o comportamento desejado -- configuracao ausente deve
+falhar, e nao virar outra coisa --, e e por isso que a variavel precisa estar no
+servico **antes** de publicar. Um web publicado sem ela nao serve nem o login nem
+o formulario por token.
 
 #### Rollback
 
