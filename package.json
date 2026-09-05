@@ -34,6 +34,7 @@
     "test:triagem-seguranca": "node --test scripts/validar-triagem-seguranca.spec.mjs",
     "test:tooling-agentes": "node --test scripts/validar-tooling-agentes.spec.mjs",
     "test:versao-pnpm": "node --test scripts/validar-versao-pnpm.spec.mjs",
+    "test:grupos-dependabot": "node --test scripts/validar-grupos-dependabot.spec.mjs",
     "test:excecoes-supply-chain": "node --test scripts/validar-excecoes-supply-chain.spec.mjs",
     "test:dockerfiles-runtime": "node --test scripts/validar-dockerfiles-runtime.spec.mjs",
     "test:licencas": "node --test scripts/validar-licencas.spec.mjs",

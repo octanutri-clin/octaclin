@@ -21,10 +21,30 @@ updates:
       semver-patch-days: 3
     open-pull-requests-limit: 5
     groups:
+      # Pacote `0.x` nao entra em grupo de rotina.
+      #
+      # O Dependabot classifica por semver, e para `0.x` o semver mente: pela
+      # propria especificacao, projeto abaixo de `1.0.0` pode quebrar em qualquer
+      # minor, e frameworks usam isso -- cada `0.x` do React Native e um release
+      # major dele. Sem esta exclusao, o grupo "minor e patch" entrega major de
+      # framework como rotina.
+      #
+      # Nao e hipotese: o PR #177 subiu `react-native` de 0.86.2 para 0.87.0
+      # dentro do grupo `mobile-minor-patch` e reprovou o typecheck do mobile com
+      # dezenas de erros de tipagem.
+      #
+      # A lista e por nome porque o Dependabot nao sabe filtrar por faixa de
+      # versao aqui. Lista por nome envelhece, entao ela nao e mantida na mao:
+      # `pnpm test:grupos-dependabot` le os `package.json`, calcula quais
+      # dependencias estao em `0.x` e reprova quando uma delas pode ser agrupada.
       backend-minor-patch:
         update-types:
           - minor
           - patch
+        exclude-patterns:
+          - "class-transformer"
+          - "class-validator"
+          - "reflect-metadata"
 
   - package-ecosystem: npm
     directory: /octaclin-web
@@ -38,10 +58,28 @@ updates:
       semver-patch-days: 3
     open-pull-requests-limit: 5
     groups:
+      # Pacote `0.x` nao entra em grupo de rotina.
+      #
+      # O Dependabot classifica por semver, e para `0.x` o semver mente: pela
+      # propria especificacao, projeto abaixo de `1.0.0` pode quebrar em qualquer
+      # minor, e frameworks usam isso -- cada `0.x` do React Native e um release
+      # major dele. Sem esta exclusao, o grupo "minor e patch" entrega major de
+      # framework como rotina.
+      #
+      # Nao e hipotese: o PR #177 subiu `react-native` de 0.86.2 para 0.87.0
+      # dentro do grupo `mobile-minor-patch` e reprovou o typecheck do mobile com
+      # dezenas de erros de tipagem.
+      #
+      # A lista e por nome porque o Dependabot nao sabe filtrar por faixa de
+      # versao aqui. Lista por nome envelhece, entao ela nao e mantida na mao:
+      # `pnpm test:grupos-dependabot` le os `package.json`, calcula quais
+      # dependencias estao em `0.x` e reprova quando uma delas pode ser agrupada.
       web-minor-patch:
         update-types:
           - minor
           - patch
+        exclude-patterns:
+          - "class-variance-authority"
 
   - package-ecosystem: npm
     directory: /octaclin-mobile
@@ -55,10 +93,31 @@ updates:
       semver-patch-days: 3
     open-pull-requests-limit: 5
     groups:
+      # Pacote `0.x` nao entra em grupo de rotina.
+      #
+      # O Dependabot classifica por semver, e para `0.x` o semver mente: pela
+      # propria especificacao, projeto abaixo de `1.0.0` pode quebrar em qualquer
+      # minor, e frameworks usam isso -- cada `0.x` do React Native e um release
+      # major dele. Sem esta exclusao, o grupo "minor e patch" entrega major de
+      # framework como rotina.
+      #
+      # Nao e hipotese: o PR #177 subiu `react-native` de 0.86.2 para 0.87.0
+      # dentro do grupo `mobile-minor-patch` e reprovou o typecheck do mobile com
+      # dezenas de erros de tipagem.
+      #
+      # A lista e por nome porque o Dependabot nao sabe filtrar por faixa de
+      # versao aqui. Lista por nome envelhece, entao ela nao e mantida na mao:
+      # `pnpm test:grupos-dependabot` le os `package.json`, calcula quais
+      # dependencias estao em `0.x` e reprova quando uma delas pode ser agrupada.
       mobile-minor-patch:
         update-types:
           - minor
           - patch
+        exclude-patterns:
+          - "@react-native/metro-config"
+          - "react-native"
+          - "react-native-web"
+          - "react-native-worklets"
 
   - package-ecosystem: pip
     directory: /octaclin-ai-service

@@ -396,6 +396,22 @@ PR dedicado quando o impacto for relevante, guia de migracao, testes
 direcionados e rollback explicito. Majors de framework, ORM, auth, build tool,
 package manager ou runtime nao sao agrupadas por conveniencia.
 
+**`0.x` conta como major, e o Dependabot nao sabe disso.** Pela especificacao do
+semver, projeto abaixo de `1.0.0` pode quebrar em qualquer minor -- e frameworks
+usam essa liberdade: cada `0.x` do React Native e um release major dele. O
+agrupamento do Dependabot classifica por semver, entao sem exclusao explicita um
+grupo "minor e patch" entrega major de framework como rotina. Foi o que aconteceu
+com o PR #177, que subiu `react-native` de 0.86.2 para 0.87.0 dentro do grupo e
+reprovou o typecheck do mobile.
+
+Cada grupo npm do `.github/dependabot.yml` declara as dependencias `0.x` do seu
+componente em `exclude-patterns`, e elas passam a chegar em PR proprio. A lista e
+por nome porque o Dependabot nao filtra por faixa de versao ali; como lista por
+nome envelhece em silencio, ela nao e mantida na mao:
+`pnpm test:grupos-dependabot` le os `package.json`, calcula quais dependencias
+estao em `0.x` e reprova nas duas direcoes -- a que entrou sem exclusao e a
+exclusao que sobrou de um pacote que ja chegou a `1.0`.
+
 Nunca aceitar alteracao de lockfile sem entender a origem. Nunca rodar
 ferramenta de atualizacao automatica sem revisar o diff.
 
