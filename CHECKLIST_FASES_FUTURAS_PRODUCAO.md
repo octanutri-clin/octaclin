@@ -2660,7 +2660,11 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
     - [x] `image-size` ja estava triado e aceito: excecao `SC-2026-005` no ledger, sem versao corrigida publicada pelo upstream e com o mobile NO-GO para distribuicao. Ledger relido e `revisadoEm` atualizado.
     - [x] `fast-uri` estava preso pelo **proprio override** `fast-uri@3: 3.1.5`, criado como remediacao no PR 49. Override fixa a versao para todo o grafo, entao o Dependabot nao consegue subir o pacote e o alerta fica aberto sem PR para revisar. Atualizado para `3.1.6` em backend e web.
     - [x] Licao registrada na secao 9 da `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`: toda triagem de vulnerabilidade comeca lendo os `overrides` dos `pnpm-workspace.yaml`.
-    - [ ] Decidir os 7 PRs de bump abertos do Dependabot (`#177` a `#185`), incluindo os dois majors de imagem base `node 22 -> 26` (`#180` e `#181`), que conflitam com `NODE_VERSION: "22"` do CI. Nenhum deles cobre os alertas acima.
+    - [x] Sete PRs de bump resolvidos em 2026-09-05: `#183`, `#184`, `#185`, `#200`, `#201`, `#202` e `#204` mergeados; `#177` e `#182` fechados com evidencia de que o bump nao era aplicavel; `#180` e `#181` fechados com data de reabertura.
+    - [ ] **Agendado para 2026-10-28 -- data de LTS do Node 26:** reabrir a migracao de runtime fechada nos PRs `#180` e `#181`. Ate la o Node 26 e Current, e o Node 22 tem seguranca ate 2027-04-30. Nao passar pelo Node 24: ele sai do LTS ativo em 2026-10-20, oito dias antes.
+      - O PR de migracao move junto, no mesmo commit: `NODE_VERSION` do CI, `FROM node:<major>` dos dois Dockerfiles, `engines.node` dos quatro manifests e `@types/node`. `pnpm test:versao-node` reprova se algum ficar para tras.
+      - Fecha tambem a divergencia declarada de `@types/node` (tipado contra 26, rodando em 22). Baixar os tipos para 22 nao e executavel: `@types/node@22.x` puxa `undici-types@6.21.0`, recusado pelo `trustPolicy: no-downgrade`. A divergencia vence em 2026-10-28 e o gate passa a reprovar.
+      - Verificar antes de subir: dependencias nativas (`sharp`, `msgpackr-extract`, `cpu-features`, `unrs-resolver`), compatibilidade do `pnpm@11.25.0`, suites verdes na versao nova e digest de rollback declarado.
 - [ ] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.
 - [ ] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
 - [ ] PR 55 - Concluir pentest independente, reteste e GO/NO-GO.
