@@ -76,6 +76,7 @@ jobs:
       # ledger de excecoes com owner/prazo e politica de licencas.
       - run: pnpm test:versao-pnpm
       - run: pnpm test:excecoes-supply-chain
+      - run: pnpm test:grupos-dependabot
       - run: pnpm test:dockerfiles-runtime
       - run: pnpm test:licencas
       - run: pnpm test:lock-python
