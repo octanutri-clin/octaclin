@@ -12,6 +12,8 @@ import { AtualizarCicloVidaTenantDto, ProvisionarTenantDto } from '../aplicacao/
 import { ServicoCicloVidaTenant } from '../aplicacao/servico-ciclo-vida-tenant';
 import { ServicoRolloutOperacional } from '../aplicacao/servico-rollout-operacional';
 import { ServicoFeatureFlags } from '../../../infraestrutura/feature-flags/servico-feature-flags';
+import { ServicoMenorPrivilegioProviders } from '../../../infraestrutura/seguranca/servico-menor-privilegio-providers';
+import { contarLinhasCsv } from '../../../infraestrutura/exportacao/csv';
 
 class AtualizarSolicitacaoLgpdOperacionalDto {
   @IsIn(['em_tratamento', 'concluida', 'indeferida'])
@@ -65,12 +67,26 @@ export class ControladorOperacoes {
     private readonly cicloVidaTenant: ServicoCicloVidaTenant,
     private readonly auditoria: ServicoAuditoria,
     private readonly rollout: ServicoRolloutOperacional,
-    private readonly featureFlags: ServicoFeatureFlags
+    private readonly featureFlags: ServicoFeatureFlags,
+    private readonly menorPrivilegio: ServicoMenorPrivilegioProviders
   ) {}
 
   @Get('resumo')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoOperacoes.obterResumo(usuario.tenantId);
+  }
+
+  /**
+   * Estado de menor privilegio dos providers (PR 51), medido no processo real.
+   *
+   * Fica aqui, atras de SuperAdmin, e nao em `/health/detalhado`, porque aquele
+   * endpoint e publico: dizer a um anonimo que a role do runtime tem BYPASSRLS
+   * seria entregar o mapa. A avaliacao e refeita a cada chamada para que a
+   * evidencia acompanhe a configuracao corrente, nao a do ultimo boot.
+   */
+  @Get('providers')
+  obterMenorPrivilegioProviders() {
+    return this.menorPrivilegio.avaliar();
   }
 
   @Get('alertas')
@@ -145,25 +161,43 @@ export class ControladorOperacoes {
   @Get('outbox/falhas/exportar.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="octaclin-outbox-falhas.csv"')
-  exportarFalhasOutboxCsv(
+  async exportarFalhasOutboxCsv(
     @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
     @Query('tipo') tipo?: string,
     @Query('inicio') inicio?: string,
     @Query('fim') fim?: string,
     @Query('limite') limite?: string
   ) {
-    return this.servicoOperacoes.exportarFalhasOutboxCsv(usuario.tenantId, {
+    const csv = await this.servicoOperacoes.exportarFalhasOutboxCsv(usuario.tenantId, {
       tipo,
       inicio,
       fim,
       limite: Number(limite ?? 500)
     });
+    await this.registrarExportacao(requisicao, usuario, 'operacoes.outbox_falhas.exportar_csv', 'outbox_evento', csv, {
+      filtroTipo: tipo ?? null,
+      periodoInicio: inicio ?? null,
+      periodoFim: fim ?? null,
+      limiteSolicitado: Number(limite ?? 500)
+    });
+    return csv;
   }
 
   @Post('outbox/:id/reprocessar')
   @Permissoes('operacoes.outbox.reprocessar')
-  reprocessarOutbox(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id') id: string) {
-    return this.servicoOperacoes.reprocessarOutbox(usuario.tenantId, id);
+  async reprocessarOutbox(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id') id: string
+  ) {
+    const evento = await this.servicoOperacoes.reprocessarOutbox(usuario.tenantId, id);
+    await this.registrarAuditoria(requisicao, usuario, 'operacoes.outbox.reprocessar', 'outbox_evento', id, {
+      tipo: evento.tipo,
+      status: evento.status,
+      tentativas: evento.tentativas
+    });
+    return evento;
   }
 
   @Get('comunicacoes/falhas')
@@ -190,8 +224,28 @@ export class ControladorOperacoes {
 
   @Post('comunicacoes/falhas/:id/reprocessar')
   @Permissoes('operacoes.outbox.reprocessar')
-  reprocessarFalhaComunicacao(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id') id: string) {
-    return this.servicoOperacoes.reprocessarFalhaComunicacao(usuario.tenantId, id);
+  async reprocessarFalhaComunicacao(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id') id: string
+  ) {
+    const falha = await this.servicoOperacoes.reprocessarFalhaComunicacao(usuario.tenantId, id);
+    await this.registrarAuditoria(
+      requisicao,
+      usuario,
+      'operacoes.comunicacoes_falha.reprocessar',
+      'falha_comunicacao',
+      id,
+      {
+        origem: falha.origem,
+        canal: falha.canal,
+        tipo: falha.tipo,
+        referenciaId: falha.referenciaId,
+        pacienteId: falha.pacienteId,
+        tentativas: falha.tentativas
+      }
+    );
+    return falha;
   }
 
   @Get('mobile/sincronizacoes')
@@ -212,11 +266,21 @@ export class ControladorOperacoes {
   }
 
   @Post('assinaturas/plano')
-  aplicarPlanoAssinatura(
+  async aplicarPlanoAssinatura(
     @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
     @Body() dados: AplicarPlanoAssinaturaOperacionalDto
   ) {
-    return this.servicoOperacoes.aplicarPlanoAssinatura(usuario.tenantId, usuario.usuarioId, dados);
+    const assinatura = await this.servicoOperacoes.aplicarPlanoAssinatura(usuario.tenantId, usuario.usuarioId, dados);
+    await this.registrarAuditoria(requisicao, usuario, 'operacoes.assinatura.aplicar_plano', 'tenant', usuario.tenantId, {
+      planoId: assinatura.planoId,
+      status: assinatura.status,
+      origem: assinatura.origem,
+      renovacaoEm: assinatura.renovacaoEm,
+      // So o fato de haver observacao; o texto e livre e escrito por operador.
+      houveTextoLivre: Boolean(dados.observacao?.trim())
+    });
+    return assinatura;
   }
 
   @Get('tenants')
@@ -301,17 +365,53 @@ export class ControladorOperacoes {
   }
 
   @Post('lgpd/retencao/programar')
-  programarRetencaoDados(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoOperacoes.programarRetencaoDados(usuario.tenantId, usuario.usuarioId);
+  async programarRetencaoDados(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request) {
+    const programacao = await this.servicoOperacoes.programarRetencaoDados(usuario.tenantId, usuario.usuarioId);
+    await this.registrarAuditoria(
+      requisicao,
+      usuario,
+      'operacoes.lgpd_retencao.programar',
+      'retencao_dados',
+      programacao.protocolo,
+      {
+        protocolo: programacao.protocolo,
+        status: programacao.status,
+        totalItensVencidos: programacao.totalItensVencidos
+      }
+    );
+    return programacao;
   }
 
   @Post('lgpd/solicitacoes/:protocolo/status')
-  atualizarSolicitacaoLgpd(
+  async atualizarSolicitacaoLgpd(
     @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
     @Param('protocolo') protocolo: string,
     @Body() dados: AtualizarSolicitacaoLgpdOperacionalDto
   ) {
-    return this.servicoOperacoes.atualizarSolicitacaoLgpd(usuario.tenantId, usuario.usuarioId, protocolo, dados);
+    const solicitacao = await this.servicoOperacoes.atualizarSolicitacaoLgpd(
+      usuario.tenantId,
+      usuario.usuarioId,
+      protocolo,
+      dados
+    );
+    await this.registrarAuditoria(
+      requisicao,
+      usuario,
+      'operacoes.lgpd_solicitacao.atualizar_status',
+      'solicitacao_lgpd',
+      protocolo,
+      {
+        protocolo,
+        pacienteId: solicitacao.pacienteId,
+        tipo: solicitacao.tipo,
+        status: solicitacao.status,
+        // O texto da tratativa fica na solicitacao, nao na trilha: e redacao
+        // livre do operador sobre o caso clinico de um titular identificado.
+        detalhesInformados: Boolean(dados.detalhes?.trim())
+      }
+    );
+    return solicitacao;
   }
 
   @Get('lgpd/solicitacoes/:protocolo')
@@ -321,15 +421,62 @@ export class ControladorOperacoes {
 
   @Get('lgpd/solicitacoes/:protocolo/exportar.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
-  exportarSolicitacaoLgpdCsv(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('protocolo') protocolo: string) {
-    return this.servicoOperacoes.exportarSolicitacaoLgpdCsv(usuario.tenantId, protocolo);
+  async exportarSolicitacaoLgpdCsv(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('protocolo') protocolo: string
+  ) {
+    const csv = await this.servicoOperacoes.exportarSolicitacaoLgpdCsv(usuario.tenantId, protocolo);
+    await this.registrarExportacao(
+      requisicao,
+      usuario,
+      'operacoes.lgpd_solicitacao.exportar_csv',
+      'solicitacao_lgpd',
+      csv,
+      { protocolo }
+    );
+    return csv;
   }
 
   @Post('lgpd/solicitacoes/:protocolo/resposta')
-  prepararRespostaSolicitacaoLgpd(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('protocolo') protocolo: string) {
-    return this.servicoOperacoes.prepararRespostaSolicitacaoLgpd(usuario.tenantId, usuario.usuarioId, protocolo);
+  async prepararRespostaSolicitacaoLgpd(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('protocolo') protocolo: string
+  ) {
+    const resposta = await this.servicoOperacoes.prepararRespostaSolicitacaoLgpd(
+      usuario.tenantId,
+      usuario.usuarioId,
+      protocolo
+    );
+    await this.registrarAuditoria(
+      requisicao,
+      usuario,
+      'operacoes.lgpd_solicitacao.preparar_resposta',
+      'solicitacao_lgpd',
+      protocolo,
+      {
+        protocolo,
+        pacienteId: resposta.pacienteId,
+        status: resposta.status,
+        canaisSugeridos: resposta.canaisSugeridos
+        // `assuntoEmail`, `corpoEmail` e `textoWhatsapp` ficam de fora: sao a
+        // comunicacao pronta para o titular, com o caso dele por extenso.
+      }
+    );
+    return resposta;
   }
 
+  /**
+   * Decisao de escopo (PR 52, fase 1c): a leitura paginada da trilha nao e
+   * auditada; a exportacao e.
+   *
+   * Auditar toda abertura de tela de console produziria uma linha por refresh
+   * de painel, e o volume dessas linhas afogaria o evento que importa. O sinal
+   * de exfiltracao nao esta em olhar a tela: esta em levar o arquivo. Por isso
+   * `GET auditoria` e `GET auditoria/paginada` seguem sem registro, e
+   * `exportar.csv` -- abaixo -- registra volume e filtros.
+   */
   @Get('auditoria')
   listarAuditoria(
     @UsuarioAtual() usuario: UsuarioAutenticado,
@@ -376,11 +523,21 @@ export class ControladorOperacoes {
     });
   }
 
+  /**
+   * Exportacao da propria trilha -- e o unico endpoint do sistema em que deixar
+   * de auditar apaga o rastro de quem levou o rastro de todo mundo.
+   *
+   * Sem este registro, um SuperAdmin baixa `user_action_logs` inteiro e a
+   * unica coisa que a trilha guarda sobre o episodio e o silencio. O evento
+   * gravado aqui e recursivo de proposito: ele entra na mesma tabela que
+   * acabou de ser exportada, e portanto aparece na *proxima* exportacao.
+   */
   @Get('auditoria/exportar.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="octaclin-auditoria.csv"')
-  exportarAuditoriaCsv(
+  async exportarAuditoriaCsv(
     @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
     @Query('acao') acao?: string,
     @Query('recursoTipo') recursoTipo?: string,
     @Query('recursoId') recursoId?: string,
@@ -389,7 +546,7 @@ export class ControladorOperacoes {
     @Query('fim') fim?: string,
     @Query('limite') limite?: string
   ) {
-    return this.servicoOperacoes.exportarAuditoriaCsv(usuario.tenantId, {
+    const csv = await this.servicoOperacoes.exportarAuditoriaCsv(usuario.tenantId, {
       acao,
       recursoTipo,
       recursoId,
@@ -397,6 +554,83 @@ export class ControladorOperacoes {
       inicio,
       fim,
       limite: Number(limite ?? 500)
+    });
+    await this.registrarExportacao(
+      requisicao,
+      usuario,
+      'operacoes.auditoria.exportar_csv',
+      'user_action_log',
+      csv,
+      {
+        filtroAcao: acao ?? null,
+        filtroRecursoTipo: recursoTipo ?? null,
+        recursoAlvoId: recursoId ?? null,
+        usuarioAlvoId: usuarioId ?? null,
+        periodoInicio: inicio ?? null,
+        periodoFim: fim ?? null,
+        limiteSolicitado: Number(limite ?? 500),
+        // Varredura = sem periodo e sem alvo. E o formato de quem esta levando
+        // o acervo, e nao consultando um caso; sem esta marca, a diferenca so
+        // apareceria para quem recompusesse os filtros a mao.
+        semFiltro: !acao && !recursoTipo && !recursoId && !usuarioId && !inicio && !fim
+      }
+    );
+    return csv;
+  }
+
+  /**
+   * Auditoria das exportacoes de console.
+   *
+   * Grava volume e filtros, nunca o conteudo. O CSV exportado leva a trilha (ou
+   * a fila de falhas, ou o dossie LGPD de um titular) linha a linha; copiar
+   * isso para `metadados` faria o registro do acesso conter o dado acessado, e
+   * a trilha viraria a segunda copia do vazamento que ela deveria denunciar.
+   *
+   * Volume e filtro sao justamente o que separa a consulta pontual da
+   * varredura: `totalLinhas` alto com periodo aberto e o formato da
+   * exfiltracao, e e a unica forma de a trilha registrar a diferenca sem
+   * guardar uma linha do que foi levado.
+   */
+  private registrarExportacao(
+    requisicao: Request,
+    usuario: UsuarioAutenticado,
+    acao: string,
+    recursoTipo: string,
+    csv: string,
+    filtros: Record<string, unknown>
+  ) {
+    return this.registrarAuditoria(requisicao, usuario, acao, recursoTipo, undefined, {
+      ...filtros,
+      totalLinhas: contarLinhasCsv(csv),
+      tamanhoBytes: Buffer.byteLength(csv, 'utf8')
+    });
+  }
+
+  /**
+   * Ponto unico de auditoria do console operacional.
+   *
+   * Nao ha `try`/`catch` aqui de proposito: `ServicoAuditoria.registrar` ja
+   * engole a propria falha e apenas contabiliza, entao uma trilha indisponivel
+   * nunca derruba a acao de operacao. Repetir a protecao aqui so esconderia um
+   * erro de programacao neste arquivo.
+   */
+  private registrarAuditoria(
+    requisicao: Request,
+    usuario: UsuarioAutenticado,
+    acao: string,
+    recursoTipo: string,
+    recursoId?: string,
+    metadados?: Record<string, unknown>
+  ) {
+    return this.auditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao,
+      recursoTipo,
+      recursoId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados
     });
   }
 

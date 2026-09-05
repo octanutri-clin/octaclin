@@ -151,3 +151,77 @@ export function analisarCsv(conteudo: string): CsvAnalisado {
     linhas: registros
   };
 }
+
+/**
+ * Conta os registros de dado de um CSV ja montado, sem olhar o conteudo das
+ * celulas.
+ *
+ * Existe para a auditoria das exportacoes (PR 52, fase 1c). O que permite
+ * detectar exfiltracao e o *volume* levado, e volume e tambem a unica coisa
+ * segura de gravar: copiar as linhas para dentro de `user_action_logs.metadados`
+ * faria o registro do acesso conter o proprio dado acessado, transformando a
+ * trilha na segunda copia do vazamento que ela deveria denunciar.
+ *
+ * Contar `\n` cru daria numero errado: `campoCsv` cita a celula que contem
+ * quebra de linha, entao uma observacao multilinha inflaria a contagem e a
+ * evidencia de volume deixaria de valer. O laco alterna o estado de citacao
+ * para so contar quebra que de fato encerra registro.
+ *
+ * A funcao nao pressupoe a quebra final que `montarCsv` sempre escreve. Hoje os
+ * call sites so alimentam saida de `montarCsv`, mas o repositorio ja usa
+ * `csv.trim().split('\n')` em outros pontos, e um CSV trimado -- ou vindo de
+ * qualquer outro produtor -- perderia o ultimo registro se a contagem dependesse
+ * dessa quebra. Subcontar aqui e pior do que parece: `totalLinhas` e a evidencia
+ * de volume de uma exportacao, e evidencia baixa demais deixa uma exfiltracao
+ * parecer menor do que foi.
+ */
+export function contarLinhasCsv(csv: string): number {
+  if (!csv) return 0;
+
+  let registros = 0;
+  let dentroDeAspas = false;
+  // `true` quando ha conteudo depois da ultima quebra de registro, isto e,
+  // quando o arquivo termina sem `\n` e o ultimo registro ainda precisa contar.
+  let registroAberto = false;
+
+  for (let indice = 0; indice < csv.length; indice += 1) {
+    const caractere = csv[indice];
+
+    if (caractere === '"') {
+      // `""` e aspas escapada dentro do campo, e nao fim da citacao.
+      if (dentroDeAspas && csv[indice + 1] === '"') indice += 1;
+      else dentroDeAspas = !dentroDeAspas;
+      registroAberto = true;
+      continue;
+    }
+
+    if (caractere === '\n' && !dentroDeAspas) {
+      registros += 1;
+      registroAberto = false;
+      continue;
+    }
+
+    registroAberto = true;
+  }
+
+  if (registroAberto) registros += 1;
+
+  // Aspas que nunca fecha e bug do produtor: dai em diante o laco leu o resto do
+  // arquivo como uma unica celula multilinha e devolveria um numero
+  // absurdamente baixo -- zero, no caso comum de a aspas abrir na primeira
+  // linha. Nao lancamos: o unico chamador e a auditoria de uma exportacao que ja
+  // foi produzida e ja vai ser entregue, e a regra do repositorio e que
+  // registrar o acesso nunca pode derrubar o acesso. Cair para a contagem de
+  // linhas fisicas devolve o numero que o operador esperaria ver e nao esconde
+  // volume, que e o que a trilha precisa provar.
+  if (dentroDeAspas) registros = contarLinhasFisicas(csv);
+
+  // A primeira linha e o cabecalho: um CSV so de cabecalho tem zero registros.
+  return Math.max(registros - 1, 0);
+}
+
+function contarLinhasFisicas(csv: string): number {
+  let linhas = 0;
+  for (const caractere of csv) if (caractere === '\n') linhas += 1;
+  return csv.endsWith('\n') ? linhas : linhas + 1;
+}

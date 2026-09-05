@@ -44,7 +44,14 @@ function sanitizarRequestId(valor: string | undefined): string | undefined {
   return sanitizado || undefined;
 }
 
-function obterRotaSegura(requisicao: RequisicaoComContexto): string | undefined {
+/**
+ * Rota sem querystring e com tamanho limitado.
+ *
+ * Exportada para quem precisa so de rota e nao de correlacao inteira:
+ * `obterContextoCorrelacao` varre cabecalhos e chega a gerar `randomUUID()`, o
+ * que e caro num caminho de rejeicao em rajada (ver `auditoria-autorizacao.ts`).
+ */
+export function obterRotaSegura(requisicao: RequisicaoComContexto): string | undefined {
   const caminhoRota = requisicao.route?.path;
   if (typeof caminhoRota === 'string' && caminhoRota) {
     return `${requisicao.baseUrl ?? ''}${caminhoRota}`.slice(0, TAMANHO_MAXIMO_ROTA);

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { redisConfigurado } from '../comunicacoes/aplicacao/configuracao-redis';
 
@@ -37,8 +37,51 @@ function valorDefinido(nome: string): boolean {
   return Boolean(process.env[nome]?.trim());
 }
 
-function mensagemErro(erro: unknown): string {
-  return erro instanceof Error ? erro.message : 'Falha desconhecida.';
+/**
+ * Vocabulario fechado do payload publico (PR 52, fase 2).
+ *
+ * Ate esta fase o `catch` dos checks de banco devolvia `erro.message` direto
+ * para `GET /health/detalhado`, que **nao tem guarda nenhuma**: uma falha de
+ * conexao entregava a qualquer um na internet a mensagem crua do driver
+ * Postgres -- host, porta, nome do banco, usuario, versao e, num erro de
+ * autenticacao, o proprio texto que o servidor devolveu. Isso e reconhecimento
+ * de infraestrutura de graca, e estava listado como pendencia na secao 6 do
+ * relatorio de seguranca do PR 52.
+ *
+ * A correcao nao e "sanitizar a mensagem": mensagem de driver e texto de
+ * terceiro, e filtrar texto de terceiro por lista negra e a aposta que sempre
+ * perde. O payload publico passa a sair de um vocabulario fechado escrito
+ * aqui, e o unico caminho de um erro para dentro dele e o `instanceof` abaixo.
+ *
+ * A politica de trilha (secao 7) ja tinha decidido a mesma coisa para o log de
+ * falha de auditoria pelo mesmo motivo: "a mensagem de um erro de banco carrega
+ * SQL, valor de parametro e as vezes host ou credencial". Por isso nem o log
+ * estruturado abaixo recebe `erro.message` -- so o nome da classe.
+ */
+const MENSAGEM_BANCO_INDISPONIVEL = 'Banco indisponivel.';
+const MENSAGEM_MIGRACOES_INDISPONIVEL = 'Nao foi possivel verificar as migrations.';
+const MENSAGEM_TEMPO_ESGOTADO = 'Tempo esgotado.';
+const MENSAGEM_REDIS_INDISPONIVEL = 'Redis indisponivel.';
+
+/**
+ * Erro proprio do timeout, para que o payload publico consiga distinguir "o
+ * pool nao devolveu conexao no prazo" de "o banco recusou a consulta" sem
+ * precisar olhar `erro.message`.
+ *
+ * A distincao vale para quem opera -- as duas falhas tem causa e acao
+ * diferentes -- e nao vaza nada: o texto e escrito neste arquivo, e nao pelo
+ * driver.
+ */
+class ErroTempoEsgotado extends Error {
+  constructor() {
+    super(MENSAGEM_TEMPO_ESGOTADO);
+    this.name = 'ErroTempoEsgotado';
+  }
+}
+
+/** Nome da classe do erro. E o unico detalhe do erro que sai deste modulo, e sai so para o log. */
+function nomeDoErro(erro: unknown): string {
+  return erro instanceof Error ? erro.name : 'ErroDesconhecido';
 }
 
 function timeoutHealthBancoMs(): number {
@@ -48,6 +91,29 @@ function timeoutHealthBancoMs(): number {
 
 @Injectable()
 export class ServicoSaude {
+  /**
+   * O detalhe da falha continua existindo -- muda de destino.
+   *
+   * A alternativa considerada foi expor o detalhe num endpoint autenticado
+   * (`GuardaJwt` + `@Papeis('SuperAdmin')`), como o repositorio ja fez em
+   * `GET /operacoes/providers` justamente por `/health/detalhado` ser publico.
+   * Ela foi recusada aqui por um motivo operacional concreto: quem consome
+   * `/health/detalhado` e `/health/pronto` e sonda **nao autenticada** --
+   * `scripts/monitor-producao.mjs` e o workflow de E2E de staging chamam sem
+   * token --, e o momento em que o detalhe importa e exatamente o momento em
+   * que o banco esta fora, isto e, em que emitir um JWT provavelmente tambem
+   * falha. Um detalhe que so aparece quando o sistema esta saudavel nao serve
+   * para diagnosticar indisponibilidade.
+   *
+   * O log estruturado ja tem a audiencia certa (o coletor do provedor, que so
+   * a operacao le), ja e o canal que o runbook manda consultar junto do health,
+   * e nao depende do banco para funcionar. O que ele carrega e o nome da classe
+   * do erro, e nao a mensagem -- mesma regra da secao 7 da politica de trilha.
+   * A mensagem crua do driver continua disponivel onde ela ja estava e onde e
+   * legitima: nos logs que o proprio TypeORM/pg emitem.
+   */
+  private readonly logger = new Logger(ServicoSaude.name);
+
   constructor(
     private readonly fonteDados: DataSource,
     @Optional() @Inject(REDIS_SAUDE) private readonly redis?: ClienteRedisSaude
@@ -105,11 +171,31 @@ export class ServicoSaude {
         }
       };
     } catch (erro) {
-      return {
-        status: 'falha',
-        mensagem: mensagemErro(erro)
-      };
+      return this.reportarFalha('banco', erro, MENSAGEM_BANCO_INDISPONIVEL);
     }
+  }
+
+  /**
+   * Ponto unico de saida de **erro capturado** deste modulo: registra o que a
+   * operacao precisa e devolve o que o publico pode ver. Todo `catch` daqui
+   * termina nesta funcao, e ter um so evita que o proximo check novo volte a
+   * montar `mensagem` a partir do erro por descuido.
+   *
+   * O qualificador nao e enfeite. Este modulo tambem devolve `falha` em
+   * condicoes que ele proprio detecta -- fonte de dados nao inicializada, PING
+   * que nao responde PONG, cliente Redis ausente. Essas nao passam por aqui
+   * porque nao ha erro a registrar: o texto que vai ao publico ja e a
+   * informacao inteira, e nao existe detalhe sendo suprimido. O que nao pode
+   * voltar a acontecer e um `catch` devolver constante e descartar o erro em
+   * silencio, como o de Redis fazia ate esta correcao: o bloco da classe promete
+   * que o detalhe da falha muda de destino, e destino nenhum nao e um destino.
+   */
+  private reportarFalha(check: string, erro: unknown, mensagem: string): CheckHealth {
+    this.logger.warn({ evento: 'saude.check.falha', check, erroNome: nomeDoErro(erro) });
+    return {
+      status: 'falha',
+      mensagem: erro instanceof ErroTempoEsgotado ? MENSAGEM_TEMPO_ESGOTADO : mensagem
+    };
   }
 
   private obterMetricasPoolPostgres(): Record<string, number> {
@@ -154,7 +240,7 @@ export class ServicoSaude {
         detalhes: { registradas }
       };
     } catch (erro) {
-      return { status: 'falha', mensagem: mensagemErro(erro) };
+      return this.reportarFalha('migracoes', erro, MENSAGEM_MIGRACOES_INDISPONIVEL);
     }
   }
 
@@ -166,11 +252,11 @@ export class ServicoSaude {
       };
     }
 
-    if (!this.redis) return { status: 'falha', mensagem: 'Redis indisponivel.' };
+    if (!this.redis) return { status: 'falha', mensagem: MENSAGEM_REDIS_INDISPONIVEL };
 
     try {
       const resposta = await this.executarComTimeout(this.redis.ping(), 1_500);
-      if (resposta !== 'PONG') return { status: 'falha', mensagem: 'Redis indisponivel.' };
+      if (resposta !== 'PONG') return { status: 'falha', mensagem: MENSAGEM_REDIS_INDISPONIVEL };
 
       return {
         status: 'ok',
@@ -179,8 +265,14 @@ export class ServicoSaude {
           tls: process.env.REDIS_URL?.startsWith('rediss://') || process.env.REDIS_TLS === 'true'
         }
       };
-    } catch {
-      return { status: 'falha', mensagem: 'Redis indisponivel.' };
+    } catch (erro) {
+      // Passou a sair por `reportarFalha` nesta correcao. Antes o erro do
+      // cliente Redis era descartado sem log nenhum: o operador via `falha` no
+      // payload publico e nao tinha onde olhar para saber se foi recusa de
+      // conexao, TLS ou timeout. Como nos demais checks, so o nome da classe do
+      // erro vai ao log, e o timeout passa a se distinguir no payload -- mesma
+      // regra do check de banco, e nao um vocabulario proprio do Redis.
+      return this.reportarFalha('redis', erro, MENSAGEM_REDIS_INDISPONIVEL);
     }
   }
 
@@ -190,7 +282,7 @@ export class ServicoSaude {
       return await Promise.race([
         operacao,
         new Promise<T>((_, rejeitar) => {
-          timer = setTimeout(() => rejeitar(new Error('Tempo esgotado.')), timeoutMs);
+          timer = setTimeout(() => rejeitar(new ErroTempoEsgotado()), timeoutMs);
         })
       ]);
     } finally {

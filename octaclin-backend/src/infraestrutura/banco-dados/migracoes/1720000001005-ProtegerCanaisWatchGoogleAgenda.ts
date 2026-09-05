@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class ProtegerCanaisWatchGoogleAgenda1720000001005 implements MigrationInterface {
   name = 'ProtegerCanaisWatchGoogleAgenda1720000001005';
 

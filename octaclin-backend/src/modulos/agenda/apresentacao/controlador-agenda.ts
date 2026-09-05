@@ -358,8 +358,14 @@ export class ControladorAgenda {
       recursoId: consulta.id,
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
+      // `motivo` e texto livre de ate 500 caracteres e, num cancelamento de
+      // consulta, rotineiramente clinico ("internada", "quimio na quinta"). O
+      // call site irmao de `agenda.solicitacao.recusar` ja gravava
+      // `possuiMotivo: Boolean(...)`: e o mesmo campo do mesmo fluxo, e nao
+      // havia razao para divergirem. O texto continua no registro do
+      // cancelamento, que e onde ele tem controle de acesso clinico.
       metadados: {
-        motivo: dados?.motivo,
+        possuiMotivo: Boolean(dados?.motivo?.trim()),
         googleEventId: consulta.googleEventId
       }
     });

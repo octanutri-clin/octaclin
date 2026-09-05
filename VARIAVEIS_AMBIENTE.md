@@ -25,6 +25,17 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 - Na Fase 201, processos que executam filas em producao tambem exigem Redis e
   devem receber papel explicito antes de escalar: `web` para HTTP e `worker`
   para consumidores/cron.
+- Desde o PR 51, o processo mede o menor privilegio dos providers no bootstrap
+  e em `GET /operacoes/providers` (SuperAdmin): role do Postgres sem
+  `SUPERUSER`/`BYPASSRLS`, sem pertinencia a role privilegiada e sem `CREATE`
+  no schema `public`; Redis com TLS; endpoint de armazenamento em HTTPS. Em
+  staging e producao o processo **nao sobe** quando algum provider fica
+  `violado`, nem quando o privilegio do Postgres nao pode ser verificado; o log
+  `error` sai antes do bloqueio. `redis` e `armazenamento` `nao-verificado` nao
+  bloqueiam, porque provider ausente do processo e estado legitimo -- o worker
+  nao serve anexo. Antes de alterar credencial de provider, leia a secao 5 de
+  `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`: uma mudanca que
+  viole as regras passa a impedir o deploy.
 
 ## Backend
 
@@ -35,7 +46,7 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | `OCTACLIN_PROCESSO` | Sim no rollout multi-instancia | `web`, `worker` ou `all` (somente compatibilidade/local) | Render/backend e worker | HTTP nao consome jobs; worker nao abre porta HTTP |
 | `PORT` | Sim | Porta do backend | Render/backend | `/health` responde |
 | `CORS_ORIGINS` | Sim em producao | Origens web autorizadas, separadas por virgula e sem `*` | Render/backend | Login/BFF funciona apenas pela origem oficial |
-| `DATABASE_URL` | Sim | Conexao Neon/Postgres por papel sem `BYPASSRLS` | Render/backend | `/health`, login, migrations e RLS |
+| `DATABASE_URL` | Sim | Conexao Neon/Postgres por papel sem `BYPASSRLS`, sem `SUPERUSER`, sem pertinencia a role privilegiada e sem `CREATE` no schema `public`. Colar a URL da role owner aqui nao gera erro: a aplicacao sobe e o isolamento entre tenants deixa de existir em silencio | Render/backend | `/health`, login, migrations e RLS; `GET /operacoes/providers` reporta `postgres: conforme` |
 | `BANCO_SSL` | Nao | `true` liga TLS na conexao Postgres; qualquer valor fora de `true`/`false` derruba o boot | Render/backend e worker | Com TLS ligado a cadeia e o hostname sao sempre verificados; nao existe variavel que desligue a verificacao em nenhum ambiente |
 | `BANCO_SSL_CA` | Nao | Certificado PEM da CA confiavel, quando o banco nao usa CA publica. Exclusiva com `BANCO_SSL_CA_ARQUIVO` | Render/backend e worker | Conexao estabelece; PEM invalido derruba o boot |
 | `BANCO_SSL_CA_ARQUIVO` | Nao | Caminho para o PEM da CA confiavel | Render/backend e worker | Arquivo ilegivel ou sem certificado derruba o boot |
@@ -45,7 +56,7 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | `BANCO_POOL_CONNECTION_TIMEOUT_MS` | Nao | Prazo para obter/conectar cliente Postgres, padrao 5000 ms | Render/backend e worker | Saturacao falha em prazo finito |
 | `BANCO_POOL_IDLE_TIMEOUT_MS` | Nao | Tempo ocioso antes de liberar conexao, padrao 30000 ms | Render/backend e worker | Conexoes ociosas retornam ao Neon |
 | `BANCO_HEALTH_TIMEOUT_MS` | Nao | Prazo dos checks de banco e migrations, padrao 1500 ms | Render/backend | `/health/pronto` nao fica pendurado |
-| `REDIS_URL` | Sim para worker em producao | Filas/outbox/cache | Render/backend e worker | Comunicacoes processam |
+| `REDIS_URL` | Sim para worker em producao | Filas/outbox/cache. Use `rediss://` em staging e producao: a URL carrega usuario e senha, e o payload de fila carrega tenant e conteudo de comunicacao | Render/backend e worker | Comunicacoes processam; `GET /operacoes/providers` reporta `redis: conforme` |
 | `JWT_SEGREDO` | Sim | Assinatura do access token; minimo 32 bytes em staging/producao | Render/backend | Login funciona; ausencia, material curto ou valor igual ao refresh derruba o boot |
 | `JWT_REFRESH_SEGREDO` | Sim | Assinatura do refresh token; minimo 32 bytes e obrigatoriamente diferente de `JWT_SEGREDO` | Render/backend | Renovacao de sessao funciona; nao ha mais heranca de `JWT_SEGREDO` |
 | `JWT_EXPIRA_EM` | Nao | Validade do access token, padrao `15m`. E o valor devolvido ao cliente em `expiraEmSegundos` | Render/backend | Janela em que um access token sobrevive a uma revogacao de sessao |
@@ -120,11 +131,24 @@ do deploy devem ser reiniciados para receber binding de navegador e PKCE.
 | Variavel | Obrigatoria | Uso | Onde configurar | Como validar |
 | --- | --- | --- | --- | --- |
 | `OCTACLIN_COOKIE_SECURE` | Sim em producao | Cookies apenas HTTPS | Render/web | Login persiste em HTTPS |
-| `OCTACLIN_BACKEND_URL` | Sim | Backend usado pelo BFF antes e depois do login | Render/web | Login e recuperacao respondem |
+| `OCTACLIN_BACKEND_URL` | Sim | Backend usado pelo BFF antes e depois do login; **sem fallback** desde 2026-09-05 | Render/web | Login e recuperacao respondem; a ausencia falha fechada em producao, em vez de cair em outra origem |
 | `OCTACLIN_TENANT_SLUG` | Sim em producao | Organizacao atendida pelo frontend | Render/web | Login resolve o tenant sem campo tecnico |
 | `OCTACLIN_API_ORIGENS_PERMITIDAS` | Sim em producao | Allowlist da origem do backend | Render/web | BFF aceita apenas backend correto |
 | `OCTACLIN_WEB_ORIGENS_PERMITIDAS` | Recomendada com proxy/dominio | Origens HTTPS oficiais aceitas nas mutacoes BFF, separadas por virgula | Render/web | Origem oficial passa; origem externa recebe `403` |
-| `NEXT_PUBLIC_*` | Evitar secrets | Variaveis publicas do Next | Render/web | Inspecionar bundle se necessario |
+| `NEXT_PUBLIC_*` | Evitar secrets | Variaveis publicas do Next, embarcadas no bundle do navegador; **nao decidem nada no servidor** | Render/web | `pnpm --dir octaclin-web test:origem-backend:bff` reprova modulo de servidor que leia uma delas fora de excecao declarada |
+| `NEXT_PUBLIC_API_URL` | Removida | Decidia a origem do backend em onze rotas server-side do BFF ate 2026-09-05 | -- | Nao configurar; o codigo nao a le mais |
+
+**`OCTACLIN_BACKEND_URL` deixou de ter rede de seguranca.** Ate 2026-09-05, onze
+rotas publicas de `app/api` caiam em `NEXT_PUBLIC_API_URL` e depois em
+`http://localhost:3001` quando ela faltava -- uma variavel publica decidindo
+trafego de servidor, e um destino que em producao so adia a falha. Em 2026-09-03
+o web de **staging** estava sem ela: o login caiu e as rotas publicas seguiram
+respondendo, porque tinham a rede que o login nao tinha.
+
+Consequencia operacional: **conferir `OCTACLIN_BACKEND_URL` no servico web antes
+de publicar**, em staging e em producao. Com o fallback removido, a ausencia
+deixa de degradar em silencio e passa a falhar fechada -- que e o objetivo, e
+tambem o risco desta mudanca se a variavel nao estiver la.
 
 Na Fase 229, o BFF passou a falhar fechado em producao sem cookie `Secure` e
 allowlist da API. Mutacoes tambem exigem `Origin`; navegadores modernos devem
@@ -136,7 +160,7 @@ ou dominio customizado puderem divergir da origem publica.
 
 | Variavel | Obrigatoria | Uso | Onde configurar | Como validar |
 | --- | --- | --- | --- | --- |
-| `ARMAZENAMENTO_S3_ENDPOINT` | Sim | Endpoint do bucket privado S3-compativel | Render/backend | Assinatura e `HEAD` funcionam |
+| `ARMAZENAMENTO_S3_ENDPOINT` | Sim | Endpoint do bucket privado S3-compativel. Precisa ser HTTPS em staging e producao: o valor e usado literalmente, inclusive na assinatura das URLs entregues ao navegador | Render/backend | Assinatura e `HEAD` funcionam; `GET /operacoes/providers` reporta `armazenamento: conforme` |
 | `ARMAZENAMENTO_S3_REGION` | Sim | Regiao informada pelo provedor | Render/backend | Cliente S3 inicializa |
 | `ARMAZENAMENTO_S3_ACCESS_KEY_ID` | Sim | Chave restrita ao bucket | Render/backend | Upload real funciona |
 | `ARMAZENAMENTO_S3_SECRET_ACCESS_KEY` | Sim | Segredo da chave restrita | Render/backend | Nunca aparece na web/logs |
@@ -229,6 +253,18 @@ somente na sessao temporaria do PowerShell e remova todas no `finally`.
 
 Secrets ficam no painel Neon e em `DATABASE_URL` no Render. Nao registrar usuario/senha reais em docs.
 
+Tres roles distintas, com escopos que nao se sobrepoem:
+
+| Papel | Onde a credencial vive | Pode |
+| --- | --- | --- |
+| runtime (`web`, `worker`) | `DATABASE_URL` no Render | DML sob RLS |
+| owner | sessao do proprietario, fora de banda | DDL das migrations |
+| backup | `OCTACLIN_BACKUP_DATABASE_URL` no GitHub Environment `production-backup` | dump logico |
+
+A separacao e a norma do PR 51:
+`docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`, secao 2. O
+procedimento de coleta de evidencia esta na secao 6 do mesmo documento.
+
 ## Redis gerenciado
 
 Secrets ficam no painel do provedor de Redis e em `REDIS_URL` no Render. Nao
@@ -239,6 +275,11 @@ senha e TLS dela, e liga TLS quando o esquema e `rediss://`. As variaveis
 `REDIS_HOST`, `REDIS_PORTA`, `REDIS_USUARIO`, `REDIS_SENHA` e `REDIS_TLS` sao o
 caminho alternativo para quando nao ha URL unica — se `REDIS_URL` estiver
 definida, elas sao ignoradas. Nao misturar as duas formas.
+
+Em staging e producao o esquema precisa ser `rediss://` (ou `REDIS_TLS=true`).
+Sem TLS, usuario, senha e payload de fila -- que carrega tenant e conteudo de
+comunicacao -- trafegam em claro entre o Render e o provedor. O Postgres ja
+exige TLS desde o PR 39; o PR 51 passou a medir a mesma propriedade no Redis.
 
 Requisitos do provedor, impostos pelo BullMQ:
 
