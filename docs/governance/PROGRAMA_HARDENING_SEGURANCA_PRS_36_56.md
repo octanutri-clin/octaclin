@@ -5,9 +5,10 @@
 > Atualizado em: 2026-09-04
 >
 > Proximo item autorizado, por decisao do proprietario em 2026-09-04: fechar as
-> duas dividas nomeadas pela fase 2 do PR 52 antes de abrir o PR 53 -- primeiro o
-> gate de CI para migration sem declaracao de aplicacao fora de banda, depois o
-> fallback `NEXT_PUBLIC_API_URL` em rota server-side do BFF; e entao a triagem
+> duas dividas nomeadas pela fase 2 do PR 52 antes de abrir o PR 53. O gate de
+> migration fora de banda foi integrado pelo PR GitHub #196 (`7faf3b1`); o
+> fallback `NEXT_PUBLIC_API_URL` em rota server-side do BFF esta em revisao na
+> branch `fix/bff-origem-backend-sem-fallback-publico`. Depois vem a triagem
 > das vulnerabilidades high abertas pelo Dependabot. As tres fases do PR 52 estao
 > no `main` (PRs GitHub #191, #194 e #195), e o PR 53 fica autorizado ao fim
 > dessa fila.
