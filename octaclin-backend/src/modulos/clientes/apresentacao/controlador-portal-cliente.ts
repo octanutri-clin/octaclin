@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
+import { contarLinhasCsv } from '../../../infraestrutura/exportacao/csv';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
@@ -146,12 +147,34 @@ export class ControladorPortalCliente {
     return this.servicoUsuariosCliente.listarHistoricoConvites(usuario.tenantId);
   }
 
+  /**
+   * O CSV do historico de convites e uma lista de e-mails corporativos com
+   * papel e status -- o insumo direto de um phishing dirigido a clinica.
+   *
+   * A exportacao e auditada e a leitura paginada acima nao e, pela mesma razao
+   * adotada no console de operacoes: o sinal de exfiltracao esta em levar o
+   * arquivo, nao em abrir a tela. `metadados` guarda so o volume; um unico
+   * e-mail do arquivo dentro da trilha ja anularia o proposito do registro.
+   */
   @Get('usuarios/convites/historico/exportar.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="historico-convites-octaclin.csv"')
   @Permissoes('cliente.convites.gerenciar')
-  exportarHistoricoConvites(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servicoUsuariosCliente.exportarHistoricoConvitesCsv(usuario.tenantId);
+  async exportarHistoricoConvites(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request) {
+    const csv = await this.servicoUsuariosCliente.exportarHistoricoConvitesCsv(usuario.tenantId);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'cliente.convites_historico.exportar_csv',
+      recursoTipo: 'convite_usuario',
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        totalLinhas: contarLinhasCsv(csv),
+        tamanhoBytes: Buffer.byteLength(csv, 'utf8')
+      }
+    });
+    return csv;
   }
 
   @Post('usuarios')

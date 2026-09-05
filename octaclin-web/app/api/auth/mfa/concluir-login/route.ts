@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { obterConfiguracaoAcessoBff } from '@/lib/server/configuracao-acesso-bff';
 import { limparDesafioMfa, obterDesafioMfa } from '@/lib/server/mfa-bff';
 import { RespostaToken, salvarSessaoBff } from '@/lib/server/sessao-bff';
+import { cabecalhosCorrelacaoBff } from '@/lib/server/correlacao-requisicao-bff';
 
 export async function POST(request: NextRequest) {
   const desafio = await obterDesafioMfa();
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
   const { apiUrl, tenantSlug } = obterConfiguracaoAcessoBff();
   const resposta = await fetch(`${apiUrl}/auth/mfa/login`, {
     method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(await cabecalhosCorrelacaoBff()) },
     body: JSON.stringify({ desafioMfa: desafio.desafioMfa, codigo: corpo.codigo }),
     cache: 'no-store'
   });

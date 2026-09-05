@@ -15,6 +15,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * o profissional sobre o que saiu do catalogo, em vez de apagar em silencio.
  *
  * Migration aditiva: apenas cria tabela e indices, sem reescrever nada.
+ *
+ * @aplicacao fora-de-banda
  */
 export class CriarModelosPlanoAlimentar1720000001031 implements MigrationInterface {
   name = 'CriarModelosPlanoAlimentar1720000001031';

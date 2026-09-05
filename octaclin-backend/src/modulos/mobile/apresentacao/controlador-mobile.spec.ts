@@ -15,7 +15,12 @@ function contexto(papel: PapelUsuario): ExecutionContext {
 }
 
 describe('ControladorMobile', () => {
-  const guarda = new GuardaPapeis(new Reflector());
+  // `GuardaPapeis` passou a registrar a negativa de autorizacao na trilha
+  // (PR 52, fase 1b). Este teste so avalia a decisao da guarda, entao o duble e
+  // inerte: o contexto acima nem tem tenant, e a guarda ignora a escrita nesse
+  // caso.
+  const auditoriaInerte = { registrar: jest.fn(async () => undefined) };
+  const guarda = new GuardaPapeis(new Reflector(), auditoriaInerte as never);
 
   it('deve bloquear Collaborator', () => {
     expect(() => guarda.canActivate(contexto('Collaborator'))).toThrow(ForbiddenException);

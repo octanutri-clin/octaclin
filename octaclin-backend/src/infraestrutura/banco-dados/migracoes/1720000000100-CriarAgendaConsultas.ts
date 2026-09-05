@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class CriarAgendaConsultas1720000000100 implements MigrationInterface {
   name = 'CriarAgendaConsultas1720000000100';
 

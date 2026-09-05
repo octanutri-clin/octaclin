@@ -2573,7 +2573,7 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Scanner de secrets passou a incluir `.agents`/`.claude`; gate ligado ao CI.
   - [x] Checks e review/merge humanos no PR GitHub `#175` (`7b42d411b76ce8f4bfb268d495a0330d842fa3b8`).
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR48_2026-08-31.md`.
-- [ ] PR 49 - Consolidar supply chain, SBOM e politica de dependencias.
+- [x] PR 49 - Consolidar supply chain, SBOM e politica de dependencias.
   - [x] Implementacao e validacao local concluidas em `security/governanca-pr49-supply-chain-dependencias`.
   - [x] Provado que o pnpm 9.15.9 ignorava `allowBuilds`, `strictDepBuilds`, `minimumReleaseAge`, `trustPolicy` e `blockExoticSubdeps` ja declarados.
   - [x] Package manager unico e exato (`pnpm@11.25.0` com hash) em manifests, CI e Dockerfiles, com gate de divergencia.
@@ -2585,12 +2585,82 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] SBOM com prova de reproducao semantica, cobertura por ecossistema e atestado de proveniencia.
   - [x] Alertas Trivy reavaliados: tres imagens corrigidas para usuario non-root e healthcheck; dois CVEs sem patch amarrados ao ledger datado, sem supressao paralela.
   - [x] Gate de Dockerfiles e build/inspecao das tres imagens adicionados ao CI do PR.
-  - [ ] Checks e review/merge humanos do Pull Request contra `main`.
+  - [x] Checks e review/merge humanos no PR GitHub `#176` (`74c47a3aaa07dc31ad480ac79fca5256c4233d2b`).
   - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md`.
   - Norma duravel: `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`.
-- [ ] PR 50 - Concluir hardening de containers e runtime (digest, capabilities, filesystem gravavel minimo, limites e smoke dos probes sem privilegios extras).
-- [ ] PR 51 - Aplicar menor privilegio em Render, Neon, Redis e Backblaze.
-- [ ] PR 52 - Consolidar observabilidade, auditoria e resposta a incidentes.
+- [x] PR 50 - Concluir hardening de containers e runtime (digest, capabilities, filesystem gravavel minimo, limites e smoke dos probes sem privilegios extras).
+  - [x] Implementacao e validacao concluidas em `security/governanca-pr50-containers-runtime`, sobre o merge do PR 49.
+  - [x] As tres bases fixadas por digest imutavel (indice OCI multi-arch), sem `latest` nem tag mutavel.
+  - [x] Gate estatico `pnpm test:dockerfiles-runtime` passou a rejeitar base sem digest, `latest`, secret obvio e gerenciador de pacotes no estagio final.
+  - [x] Estagio final do runtime Node deixou de instalar pacotes: recebe apenas artefatos.
+  - [x] Harness de runtime real no CI (`scripts/harness-runtime-containers.sh`) sobe cada imagem com `--read-only --cap-drop=ALL --security-opt=no-new-privileges` e limites de pids/memoria/cpu.
+  - [x] Provados uid efetivo non-root, escrita negada fora do tmpfs, canario de contexto ausente e history sem secret; web e ai-service chegam a `healthy`.
+  - [x] Scan e SBOM passaram a cobrir a imagem final, nao apenas o filesystem.
+  - [x] Checks e review/merge humanos no PR GitHub `#178` (`0e41bf22321f4427579e39f8ecca5632d7596988`).
+  - Fronteira declarada: o boot completo do backend depende de config/provider e fica para o PR 51.
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md`.
+- [~] PR 51 - Aplicar menor privilegio em Render, Neon, Redis e Backblaze.
+  - [x] Implementacao e validacao locais concluidas em `security/governanca-pr51-providers-menor-privilegio`.
+  - [x] Achado central: o repositorio declarava "papel sem `BYPASSRLS`" em `VARIAVEIS_AMBIENTE.md`, mas as unicas verificacoes de papel viviam em scripts de E2E que nao rodam em producao.
+  - [x] Processo real passou a medir `SUPERUSER`, `BYPASSRLS`, pertinencia a role privilegiada e `CREATE` no schema `public` da role de runtime.
+  - [x] Pertinencia consultada por `pg_has_role(..., 'MEMBER')`, e nao `'USAGE'`: `BYPASSRLS` nao e herdado, mas fica acessivel por `SET ROLE`.
+  - [x] TLS do Redis e HTTPS do endpoint de armazenamento medidos com a mesma regra que a conexao real usa.
+  - [x] `nao-verificado` nao conta como aprovacao; nenhum motivo carrega host, credencial ou nome de role, com teste negativo.
+  - [x] Relatorio exposto em `GET /operacoes/providers` (SuperAdmin), fora de `/health/detalhado`, que e publico.
+  - [x] Norma duravel em `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`, com o procedimento de coleta de evidencia.
+  - [x] Medicao real dos dois processos de producao em 2026-09-02: `web` (12:24:22) e `worker` (12:05:18), ambos `conforme`; role de runtime sem `SUPERUSER`, sem `BYPASSRLS`, sem pertinencia privilegiada e sem `CREATE` no schema.
+  - [x] Falha fechada habilitada em staging e producao apos a medicao: bloqueia qualquer provider `violado` e bloqueia `postgres` diferente de `conforme`.
+  - [x] `redis` e `armazenamento` `nao-verificado` nao bloqueiam: provider ausente do processo e estado legitimo, como no `worker` de producao.
+  - [x] Merge do PR GitHub `#189` (`43e7ee0`) com a medicao; falha fechada em PR proprio.
+  - [x] Merge do PR GitHub `#190` (`894567748aa83bed7cdcba6b1e17df3316fe95a5`) com a falha fechada, em 2026-09-02.
+  - [ ] Evidencia redigida dos paineis de Neon, Redis, Backblaze e Render coletada pelo proprietario (secoes 6.2 a 6.6 da norma).
+  - Decisao registrada: o controle entrou medindo, pela licao de 2026-08-22 em `docs/agents/LESSONS_LEARNED.md`, e so bloqueou depois da evidencia real.
+  - Relatorio: `docs/governance/RELATORIO_SEGURANCA_PR51_2026-09-02.md`.
+- [x] PR 52 - Consolidar observabilidade, auditoria e resposta a incidentes. Tres fases no `main` (PRs GitHub `#191`, `#194` e `#195`).
+  - Escopo fatiado em tres fases; a fase 1 fecha duas das tres metades do gate minimo. Ver a tabela de fases em `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
+  - **Fase 1 - cobertura e redacao da trilha** (branch `security/governanca-pr52-auditoria-cobertura`, sobre `8945677`):
+    - [x] Achado central: o repositorio declarava trilha de auditoria e nao media a propria cobertura; `metadados` chegava a coluna imutavel sem redacao nenhuma.
+    - [x] Quatro vazamentos em claro corrigidos **no call site**: termo de busca de paciente (por `...filtros`), `humor`/`adesaoPlano` do check-in, `motivo` de cancelamento e `hashConteudo` de plano alimentar.
+    - [x] Ponto cego do proprio gate fechado no mesmo ciclo (SEC-PR52-013): escrita sem literal a vista era pulada em silencio, e a familia de envoltorios privados de auditoria mantinha as chaves de 14 arquivos fora do inventario. Envoltorios passaram a ser declarados (arquivo, nome, indice do argumento, identificador repassado e justificativa); envoltorio nao declarado reprova o CI.
+    - [x] Quatro vazamentos novos, achados quando os call sites dos envoltorios ficaram visiveis: `contato` (telefone WhatsApp do paciente, gravado em claro enquanto o mesmo servico o guarda cifrado -- SEC-PR52-014), `alertaDisparado` (classificacao de risco derivada de `frustracaoScore >= 70` -- SEC-PR52-015), `iconeSvg` (markup livre sem `@MaxLength` -- SEC-PR52-016) e `...dados` espalhado (SEC-PR52-017). Todos corrigidos no call site.
+    - [x] Redator de `metadados` como rede de ultima instancia, dominio puro, com excecoes de evidencia nomeadas (`hashIntegridade`, `documentoLegal`) e preservacao de booleano de presenca e de identificador em forma de UUID.
+    - [x] Gate de cobertura `pnpm test:redacao-auditoria` importando a funcao real do redator, sem copia paralela do vocabulario; reprova chave descoberta, espalhamento de origem opaca, escrita opaca sem envoltorio declarado, terceiro caminho de escrita e piso de sanidade do extrator.
+    - [x] Inventario auditavel por `pnpm audit:redacao-auditoria`: 181 chaves distintas em 148 call sites.
+    - [x] 15 acoes novas: ciclo de vida da credencial, negativa de autorizacao, operacao/LGPD e exportacao -- incluindo a exportacao da propria trilha, que antes nao era auditada.
+    - [x] Falha de login sem tenant ou usuario resolvido fica fora da trilha, para nao dar a um anonimo escrita ilimitada em tabela imutavel sob RLS.
+    - [x] Negativa de autorizacao deduplica por 60 s com o alvo concreto na identidade; `recurso_id` so com UUID canonico, `alvoOpaco` no resto, e nenhum efeito sobre o desfecho HTTP.
+    - [x] Falha de gravacao da trilha deixou de ser invisivel: contador monotonico por processo, e so o nome da classe do erro no log.
+    - [x] Webhook publico do WhatsApp: falha de assinatura HMAC passou a ser log estruturado com teto por janela; `phone_number_id` e mensagem crua do provedor removidos do log.
+    - [x] Gate registrado no job `governanca` do CI e na matriz de confiabilidade (28 referencias criticas).
+    - [x] Validacoes locais: backend 174 suites/1537 testes PASS (3 suites e 26 testes SKIPPED por testcontainers, sem Docker local), `typecheck`, `test:redacao-auditoria`, `test:confiabilidade`, `security:secrets`.
+    - [x] Checks e review/merge humanos do Pull Request da fase 1 contra `main`: PR GitHub `#191` (`6d389f6`) em 2026-09-03.
+  - [x] **Fase 2 - imutabilidade e correlacao**: trigger append-only `enable always` para `UPDATE`/`DELETE`/`TRUNCATE` (migration `1720000001038`; hash-chain e WORM ficaram fora de alcance como EXC-AUD-008), teto para `auth.login.sucesso` com volume colapsado devolvido em `loginsSuprimidos`, `x-request-id` do BFF ao backend e `/health/detalhado` sem mensagem crua do driver Postgres. Integrada no `main` pelo PR GitHub `#194` (`a9c6d59`) em 2026-09-04, com a migration aplicada fora de banda com `neondb_owner`.
+  - [x] **Fase 3 - resposta**: alertas sobre o contador de falhas e sobre volume de negativa de autorizacao, runbook de resposta a incidentes, escalonamento, preservacao de evidencia e tabletop sintetico documentado. Integrada no `main` pelo PR GitHub `#195` (`d21eceb`) em 2026-09-04.
+    - [x] Achado central: o contador de falhas existia desde a fase 1 e **nada em producao o lia** -- contador nao lido nao e alarme, e a secao 7 da politica descrevia a lacuna e a documentava como resolvida ao mesmo tempo.
+    - [x] Os dois alertas ficam atras de `SuperAdmin` no painel `/operacoes`, e nunca em `/health/detalhado`, que e publico; nenhum deles carrega identificador, rota ou alvo, com teste negativo sobre as chaves do payload.
+    - [x] Limiar por total desde o boot e por taxa por hora de uptime, e nao por delta entre leituras, que o segundo leitor corromperia.
+    - [x] Tabletop sintetico com nove achados, cinco deles corrigidos no proprio runbook dentro da fase; gate `pnpm test:resposta-auditoria` reprova a remocao das proibicoes que sao o controle e o tabletop degradado em exercicio sem achado.
+    - [x] Prova por mutacao dos dois lados: seis mutacoes no codigo dos alertas e tres no gate do procedimento, todas reprovadas por algum teste.
+    - [ ] Executar o procedimento de teste de alerta em banco descartavel e registrar o resultado sanitizado. Nao bloqueia o merge; ate la o provado e a logica, e nao o caminho operacional.
+    - [x] Checks e review/merge humanos do Pull Request da fase 3 contra `main`: PR GitHub `#195` (`d21eceb`).
+  - Lacunas declaradas com owner e prazo na secao 10 de `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md` (EXC-AUD-005 a EXC-AUD-014; EXC-AUD-001 fechada na fase 1 e EXC-AUD-002 a 004 na fase 2). As quatro que a fase 2 datou para a fase 3 -- EXC-AUD-006, 007, 009 e 010 -- **nao** foram fechadas por ela: o prazo tinha sido escrito sem conferencia contra o escopo da fase, e as quatro foram redatadas pelo trabalho que as fecha.
+  - Relatorios: `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`, `docs/governance/RELATORIO_SEGURANCA_PR52_FASE2_2026-09-03.md` e `docs/governance/RELATORIO_SEGURANCA_PR52_FASE3_2026-09-04.md`. Exercicio: `docs/governance/TABLETOP_AUDITORIA_PR52_FASE3_2026-09-04.md`.
+  - Norma duravel: `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`.
+- [~] Dividas nomeadas pela fase 2 do PR 52, priorizadas pelo proprietario em 2026-09-04 antes do PR 53.
+  - [x] Gate de CI para migration sem declaracao de aplicacao fora de banda. A role de runtime nao tem `CREATE` no schema `public` e o sintoma da omissao so aparece no painel do Render, nunca no CI -- ja aconteceu duas vezes. Integrado no `main` pelo PR GitHub `#196` (`7faf3b1`) em 2026-09-04.
+  - [x] Fallback `NEXT_PUBLIC_API_URL` decidindo origem de backend em rota server-side do BFF, em onze rotas de `app/api`. Variavel publica, embarcada no bundle do navegador, mascarando a ausencia de `OCTACLIN_BACKEND_URL`; foi o que deixou o login de staging quebrado enquanto as rotas publicas seguiam respondendo. Integrado no `main` pelo PR GitHub `#197` (`51fa2ec`) em 2026-09-05.
+    - [x] Decisao unica em `obterApiUrlBff`, com falha fechada em producao; localhost so fora de producao. `OCTACLIN_BACKEND_URL` passa a ser lida num ponto so do repositorio.
+    - [x] `NEXT_PUBLIC_API_URL` removida do codigo: nao estava em `VARIAVEIS_AMBIENTE.md`, em `.env.example`, em compose nem em workflow -- era configuracao invisivel decidindo trafego de servidor.
+    - [x] Gate em duas metades: estrutura (nenhuma rota de `app/api` le `process.env`; `NEXT_PUBLIC_*` no servidor so por excecao declarada por nome com justificativa) e comportamento contra o modulo real compilado.
+    - [x] Achado do proprio gate na primeira execucao: `obterOrigemPublicaAgenda` encadeava `?.trim()` com `??`, entao `OCTACLIN_WEB_URL` vazia pulava as outras duas variaveis e caia na origem da requisicao -- link de paciente apontando para localhost, que e o que a funcao existe para impedir. Corrigido para `||`.
+    - [ ] **Pre-requisito de deploy:** confirmar `OCTACLIN_BACKEND_URL` no servico web de staging e de producao antes de publicar. Sem o fallback, a ausencia derruba tambem as rotas publicas.
+    - [x] Checks e review/merge humanos do Pull Request contra `main`: PR GitHub `#197` (`51fa2ec`).
+  - [~] Triagem das vulnerabilidades high abertas pelo Dependabot no `main` e dos PRs de bump parados. Entregue em 2026-09-05 na branch `chore/supply-chain-fast-uri-3-1-6`; aguarda checks e review/merge humano.
+    - [x] Seis alertas `high`, dois pacotes: `fast-uri` (4 CVEs, backend) e `image-size` (2 CVEs, mobile).
+    - [x] `image-size` ja estava triado e aceito: excecao `SC-2026-005` no ledger, sem versao corrigida publicada pelo upstream e com o mobile NO-GO para distribuicao. Ledger relido e `revisadoEm` atualizado.
+    - [x] `fast-uri` estava preso pelo **proprio override** `fast-uri@3: 3.1.5`, criado como remediacao no PR 49. Override fixa a versao para todo o grafo, entao o Dependabot nao consegue subir o pacote e o alerta fica aberto sem PR para revisar. Atualizado para `3.1.6` em backend e web.
+    - [x] Licao registrada na secao 9 da `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`: toda triagem de vulnerabilidade comeca lendo os `overrides` dos `pnpm-workspace.yaml`.
+    - [ ] Decidir os 7 PRs de bump abertos do Dependabot (`#177` a `#185`), incluindo os dois majors de imagem base `node 22 -> 26` (`#180` e `#181`), que conflitam com `NODE_VERSION: "22"` do CI. Nenhum deles cobre os alertas acima.
 - [ ] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.
 - [ ] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
 - [ ] PR 55 - Concluir pentest independente, reteste e GO/NO-GO.
@@ -2599,4 +2669,4 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: revisar o Pull Request do PR 49. O PR 50 depende do aceite humano e merge do PR 49.
+Proximo item autorizado, por decisao do proprietario em 2026-09-04: fechar as duas dividas nomeadas pela fase 2 do PR 52 antes de abrir o PR 53 - primeiro o gate de migration fora de banda, depois o fallback `NEXT_PUBLIC_API_URL`; e entao a triagem das vulnerabilidades high do Dependabot. O PR 52 esta concluido, com as tres fases no `main` (PRs GitHub `#191`, `#194` e `#195`). Do PR 51 resta apenas a evidencia redigida dos paineis de provider, coletada pelo proprietario.

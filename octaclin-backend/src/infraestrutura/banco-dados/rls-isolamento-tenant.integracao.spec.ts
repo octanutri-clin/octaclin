@@ -560,4 +560,93 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       await Promise.all(queryRunners.map((queryRunner) => queryRunner.release()));
     }
   });
+
+  /*
+   * Prova de imutabilidade da trilha (EXC-AUD-003 do PR 52).
+   *
+   * Mora neste arquivo, e nao num harness proprio, por um motivo que vale mais
+   * que a arrumacao: a role `octaclin_rls_prova` daqui recebe
+   * `select, insert, update, delete` em todas as tabelas, ou seja, ela **tem**
+   * privilegio de `UPDATE` sobre `user_action_logs`. E exatamente a condicao que
+   * um `REVOKE` hardcoded nao cobriria e que o trigger precisa cobrir. Rodar a
+   * prova aqui demonstra que quem barra a mutacao e o trigger, e nao o grant.
+   */
+  it('rejeita UPDATE na trilha mesmo para role que tem privilegio de UPDATE', async () => {
+    await comoTenant(tenantA);
+    if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
+
+    await expect(
+      cliente.query(`update user_action_logs set acao = 'prova.adulterada' where id = $1`, [
+        idsTenantA.user_action_logs
+      ])
+    ).rejects.toMatchObject({ code: '42501' });
+
+    const conferencia = await cliente.query<{ acao: string }>(
+      'select acao from user_action_logs where id = $1',
+      [idsTenantA.user_action_logs]
+    );
+    expect(conferencia.rows).toEqual([{ acao: 'prova.rls' }]);
+  });
+
+  it('rejeita DELETE na trilha e preserva a linha', async () => {
+    await comoTenant(tenantA);
+    if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
+
+    await expect(
+      cliente.query('delete from user_action_logs where id = $1', [idsTenantA.user_action_logs])
+    ).rejects.toMatchObject({ code: '42501' });
+
+    const conferencia = await cliente.query<{ total: number }>(
+      'select count(*)::int as total from user_action_logs where id = $1',
+      [idsTenantA.user_action_logs]
+    );
+    expect(conferencia.rows[0]?.total).toBe(1);
+  });
+
+  it('rejeita TRUNCATE da trilha inteira', async () => {
+    await comoTenant(tenantA);
+    if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
+
+    // Honestidade sobre o que esta linha prova: a role de prova tambem nao tem
+    // privilegio de `TRUNCATE`, entao o `42501` poderia vir do privilegio em vez
+    // do trigger. Quem prova a existencia do trigger de statement e a asercao de
+    // catalogo do caso seguinte; esta aqui fecha o comportamento observavel.
+    await expect(cliente.query('truncate table user_action_logs')).rejects.toMatchObject({ code: '42501' });
+  });
+
+  it('mantem os dois triggers da trilha em ENABLE ALWAYS, ativos ate em sessao de replicacao', async () => {
+    if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
+
+    const resultado = await cliente.query<{ nome: string; habilitado: string }>(`
+      select t.tgname as nome, t.tgenabled as habilitado
+        from pg_trigger t
+        join pg_class c on c.oid = t.tgrelid
+       where c.relname = 'user_action_logs'
+         and not t.tgisinternal
+       order by t.tgname
+    `);
+
+    expect(resultado.rows.map((linha) => ({ nome: linha.nome, habilitado: linha.habilitado }))).toEqual([
+      { nome: 'trg_trilha_auditoria_append_only', habilitado: 'A' },
+      { nome: 'trg_trilha_auditoria_sem_truncate', habilitado: 'A' }
+    ]);
+  });
+
+  it('continua aceitando INSERT, que e o unico caminho de escrita legitimo da trilha', async () => {
+    await comoTenant(tenantA);
+    if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
+
+    const inserido = await cliente.query<{ id: string }>(
+      `insert into user_action_logs (tenant_id, acao, metadados)
+       values ($1, 'prova.append', '{"origem":"sintetica"}'::jsonb) returning id`,
+      [tenantA]
+    );
+    expect(inserido.rows).toHaveLength(1);
+
+    const conferencia = await cliente.query<{ acao: string }>(
+      'select acao from user_action_logs where id = $1',
+      [inserido.rows[0].id]
+    );
+    expect(conferencia.rows).toEqual([{ acao: 'prova.append' }]);
+  });
 });

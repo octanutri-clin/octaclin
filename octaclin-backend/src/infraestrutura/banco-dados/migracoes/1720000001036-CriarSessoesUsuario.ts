@@ -17,6 +17,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *
  * Nenhum material sensivel entra na tabela: sem token, sem hash, sem IP e sem
  * user-agent bruto.
+ *
+ * @aplicacao fora-de-banda
  */
 export class CriarSessoesUsuario1720000001036 implements MigrationInterface {
   name = 'CriarSessoesUsuario1720000001036';
