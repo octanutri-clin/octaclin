@@ -9,7 +9,7 @@
 # grafo transitivo resolvido em versoes exatas e verificado por hash. Regenerar:
 #   uv pip compile requirements.txt --generate-hashes --universal \
 #     --python-version 3.12 --output-file requirements.lock.txt
-FROM python:3.14-slim@sha256:656d12e70054d5fda18a045e2494c96701e9792dd1445f95b3d038df954f57e9 AS build
+FROM python:3.14-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6 AS build
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -18,7 +18,7 @@ COPY requirements.txt requirements.lock.txt ./
 # Assim o runtime nao executa pip: sem gerenciador de pacotes no estagio final.
 RUN pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.lock.txt
 
-FROM python:3.14-slim@sha256:656d12e70054d5fda18a045e2494c96701e9792dd1445f95b3d038df954f57e9 AS runtime
+FROM python:3.14-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6 AS runtime
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
