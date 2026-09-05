@@ -77,6 +77,7 @@ jobs:
       - run: pnpm test:versao-pnpm
       - run: pnpm test:excecoes-supply-chain
       - run: pnpm test:grupos-dependabot
+      - run: pnpm test:versao-node
       - run: pnpm test:dockerfiles-runtime
       - run: pnpm test:licencas
       - run: pnpm test:lock-python

@@ -9,8 +9,11 @@
 > migration fora de banda foi integrado pelo PR GitHub #196 (`7faf3b1`); o
 > fallback `NEXT_PUBLIC_API_URL`, pelo PR GitHub #197 (`51fa2ec`). A triagem das
 > vulnerabilidades high esta em revisao na branch
-> `chore/supply-chain-fast-uri-3-1-6`; ao fim dela ficam os 7 PRs de bump do
-> Dependabot, que dependem de decisao do proprietario. As tres fases do PR 52 estao
+> `chore/supply-chain-fast-uri-3-1-6`. Os 7 PRs de bump do Dependabot foram
+> resolvidos em 2026-09-05: sete mergeados, dois fechados por bump inaplicavel e
+> dois -- a subida do runtime para o Node 26 -- fechados com reabertura
+> **agendada para 2026-10-28**, data de LTS do Node 26. Com a fila encerrada, o
+> PR 53 fica autorizado. As tres fases do PR 52 estao
 > no `main` (PRs GitHub #191, #194 e #195), e o PR 53 fica autorizado ao fim
 > dessa fila.
 > O PR 51 foi integrado no `main` pelos PRs GitHub #189 e #190.

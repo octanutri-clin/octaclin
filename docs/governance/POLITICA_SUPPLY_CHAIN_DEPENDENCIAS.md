@@ -396,6 +396,18 @@ PR dedicado quando o impacto for relevante, guia de migracao, testes
 direcionados e rollback explicito. Majors de framework, ORM, auth, build tool,
 package manager ou runtime nao sao agrupadas por conveniencia.
 
+**Major de runtime move quatro declaracoes ao mesmo tempo.** A versao do Node
+esta escrita em quatro lugares, e eles divergem em silencio: `NODE_VERSION` no
+CI (onde os testes rodam), `FROM node:<major>` nos Dockerfiles (onde o codigo
+roda), `engines.node` em cada `package.json` (o que o repositorio afirma exigir)
+e `@types/node` (contra o que o codigo e tipado). Subir so um deles nao e meia
+migracao: e um estado incoerente que nenhum check mostrava.
+
+Foi o que os PRs #180 e #181 propunham -- imagem base para `node:26-alpine` com
+o CI em 22 --, e por isso foram fechados. `pnpm test:versao-node` passa a
+comparar os quatro; a partir dele, uma migracao de runtime move tudo junto ou nao
+passa.
+
 **`0.x` conta como major, e o Dependabot nao sabe disso.** Pela especificacao do
 semver, projeto abaixo de `1.0.0` pode quebrar em qualquer minor -- e frameworks
 usam essa liberdade: cada `0.x` do React Native e um release major dele. O
