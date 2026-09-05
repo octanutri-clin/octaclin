@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class CriarNotificacoesUsuario1720000001020 implements MigrationInterface {
   name = 'CriarNotificacoesUsuario1720000001020';
 

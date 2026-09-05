@@ -16,11 +16,12 @@ import { AmbienteExecucao, ambienteExigeFalhaFechada, obterAmbienteExecucao } fr
  * owner no painel do Render nao produz nenhum erro -- a aplicacao sobe, os
  * testes de fumaca passam e o isolamento deixa de existir em silencio.
  *
- * Este modulo so mede e relata. Nao derruba o boot, por decisao registrada no
- * PR 51 e pela licao de 2026-08-22 em `docs/agents/LESSONS_LEARNED.md`: um
- * check novo avaliado contra configuracao presumida, e nao contra o ambiente
- * real, ja degradou a saude de producao uma vez. A conversao para falha
- * fechada acontece depois da evidencia de producao, no PR seguinte, conforme
+ * O modulo entrou medindo e relatando, sem derrubar o boot, pela licao de
+ * 2026-08-22 em `docs/agents/LESSONS_LEARNED.md`: um check novo avaliado contra
+ * configuracao presumida, e nao contra o ambiente real, ja degradou a saude de
+ * producao uma vez. Com a medicao real de 2026-09-02 -- `web` e `worker` de
+ * producao ambos `conforme` --, `motivoDeBloqueio` passou a derrubar o processo
+ * em staging e producao. Ver
  * `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`.
  */
 
@@ -182,6 +183,49 @@ export function consolidarVeredicto(partes: ResultadoVerificacao[]): VeredictoMe
   if (partes.some((parte) => parte.veredicto === 'violado')) return 'violado';
   if (partes.some((parte) => parte.veredicto === 'conforme')) return 'conforme';
   return 'nao-verificado';
+}
+
+/**
+ * Decide se o relatorio impede o processo de subir. Devolve o motivo, ou
+ * `undefined` quando nada bloqueia.
+ *
+ * Duas regras, e a assimetria entre elas e deliberada.
+ *
+ * **Qualquer `violado` bloqueia.** E o caso em que a medicao respondeu e a
+ * resposta foi ruim.
+ *
+ * **`postgres` precisa estar `conforme`; `nao-verificado` nao basta.** O
+ * privilegio da role e a unica propriedade aqui de que depende o isolamento
+ * entre tenants, e ela e verificavel em todo processo que abre o `DataSource`
+ * -- os dois processos de producao (`web` 12:24 e `worker` 12:05, 2026-09-02)
+ * responderam `conforme`. Deixar passar um `nao-verificado` seria aceitar subir
+ * sem saber justamente o que este modulo existe para saber.
+ *
+ * **Redis e armazenamento podem ficar `nao-verificado`.** Provider ausente do
+ * processo e estado legitimo, nao falha: o `worker` de producao nao configura
+ * `ARMAZENAMENTO_S3_ENDPOINT` porque nao serve anexo, e bloquear por isso
+ * mataria o worker por nao usar um provider que ele nao usa mesmo.
+ */
+export function motivoDeBloqueio(relatorio: RelatorioMenorPrivilegio): string | undefined {
+  const violados = (
+    [
+      ['postgres', relatorio.postgres],
+      ['redis', relatorio.redis],
+      ['armazenamento', relatorio.armazenamento]
+    ] as const
+  )
+    .filter(([, resultado]) => resultado.veredicto === 'violado')
+    .map(([nome]) => nome);
+
+  if (violados.length) {
+    return `menor privilegio violado em ${violados.join(', ')}.`;
+  }
+
+  if (relatorio.postgres.veredicto !== 'conforme') {
+    return 'o privilegio da role do Postgres nao pode ser verificado, e dele depende o isolamento entre tenants.';
+  }
+
+  return undefined;
 }
 
 export function montarRelatorio(

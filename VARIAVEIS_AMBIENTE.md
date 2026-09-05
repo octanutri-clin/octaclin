@@ -28,10 +28,14 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 - Desde o PR 51, o processo mede o menor privilegio dos providers no bootstrap
   e em `GET /operacoes/providers` (SuperAdmin): role do Postgres sem
   `SUPERUSER`/`BYPASSRLS`, sem pertinencia a role privilegiada e sem `CREATE`
-  no schema `public`; Redis com TLS; endpoint de armazenamento em HTTPS. Uma
-  violacao aparece como `error` no log do deploy e **nao** derruba o boot: a
-  falha fechada entra depois da evidencia de producao, conforme
-  `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`.
+  no schema `public`; Redis com TLS; endpoint de armazenamento em HTTPS. Em
+  staging e producao o processo **nao sobe** quando algum provider fica
+  `violado`, nem quando o privilegio do Postgres nao pode ser verificado; o log
+  `error` sai antes do bloqueio. `redis` e `armazenamento` `nao-verificado` nao
+  bloqueiam, porque provider ausente do processo e estado legitimo -- o worker
+  nao serve anexo. Antes de alterar credencial de provider, leia a secao 5 de
+  `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`: uma mudanca que
+  viole as regras passa a impedir o deploy.
 
 ## Backend
 
@@ -127,11 +131,24 @@ do deploy devem ser reiniciados para receber binding de navegador e PKCE.
 | Variavel | Obrigatoria | Uso | Onde configurar | Como validar |
 | --- | --- | --- | --- | --- |
 | `OCTACLIN_COOKIE_SECURE` | Sim em producao | Cookies apenas HTTPS | Render/web | Login persiste em HTTPS |
-| `OCTACLIN_BACKEND_URL` | Sim | Backend usado pelo BFF antes e depois do login | Render/web | Login e recuperacao respondem |
+| `OCTACLIN_BACKEND_URL` | Sim | Backend usado pelo BFF antes e depois do login; **sem fallback** desde 2026-09-05 | Render/web | Login e recuperacao respondem; a ausencia falha fechada em producao, em vez de cair em outra origem |
 | `OCTACLIN_TENANT_SLUG` | Sim em producao | Organizacao atendida pelo frontend | Render/web | Login resolve o tenant sem campo tecnico |
 | `OCTACLIN_API_ORIGENS_PERMITIDAS` | Sim em producao | Allowlist da origem do backend | Render/web | BFF aceita apenas backend correto |
 | `OCTACLIN_WEB_ORIGENS_PERMITIDAS` | Recomendada com proxy/dominio | Origens HTTPS oficiais aceitas nas mutacoes BFF, separadas por virgula | Render/web | Origem oficial passa; origem externa recebe `403` |
-| `NEXT_PUBLIC_*` | Evitar secrets | Variaveis publicas do Next | Render/web | Inspecionar bundle se necessario |
+| `NEXT_PUBLIC_*` | Evitar secrets | Variaveis publicas do Next, embarcadas no bundle do navegador; **nao decidem nada no servidor** | Render/web | `pnpm --dir octaclin-web test:origem-backend:bff` reprova modulo de servidor que leia uma delas fora de excecao declarada |
+| `NEXT_PUBLIC_API_URL` | Removida | Decidia a origem do backend em onze rotas server-side do BFF ate 2026-09-05 | -- | Nao configurar; o codigo nao a le mais |
+
+**`OCTACLIN_BACKEND_URL` deixou de ter rede de seguranca.** Ate 2026-09-05, onze
+rotas publicas de `app/api` caiam em `NEXT_PUBLIC_API_URL` e depois em
+`http://localhost:3001` quando ela faltava -- uma variavel publica decidindo
+trafego de servidor, e um destino que em producao so adia a falha. Em 2026-09-03
+o web de **staging** estava sem ela: o login caiu e as rotas publicas seguiram
+respondendo, porque tinham a rede que o login nao tinha.
+
+Consequencia operacional: **conferir `OCTACLIN_BACKEND_URL` no servico web antes
+de publicar**, em staging e em producao. Com o fallback removido, a ausencia
+deixa de degradar em silencio e passa a falhar fechada -- que e o objetivo, e
+tambem o risco desta mudanca se a variavel nao estiver la.
 
 Na Fase 229, o BFF passou a falhar fechado em producao sem cookie `Secure` e
 allowlist da API. Mutacoes tambem exigem `Origin`; navegadores modernos devem

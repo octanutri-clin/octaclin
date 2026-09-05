@@ -110,7 +110,7 @@ export class ControladorDocumentosClinicos {
     await this.registrar(usuario, requisicao, 'pacientes.documentos.enviar', pacienteId, {
       documentoId,
       status: resultado.status,
-      motivo: resultado.motivo
+      motivoTecnico: resultado.motivo
     });
     return resultado;
   }

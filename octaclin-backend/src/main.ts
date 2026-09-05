@@ -145,4 +145,12 @@ async function iniciarAplicacao() {
 // resolve segredos efemeros e nao derruba o processo.
 validarCorsProducao();
 validarSegredosJwt();
-void iniciarAplicacao();
+// A verificacao de menor privilegio dos providers (PR 51) precisa do
+// `DataSource`, entao ela roda no bootstrap do Nest e nao aqui. Quando ela
+// bloqueia, a rejeicao chega ate este ponto: tratar explicitamente garante saida
+// deliberada com codigo 1 e mensagem legivel, em vez de depender do
+// comportamento padrao do Node para rejeicao nao tratada.
+iniciarAplicacao().catch((erro: unknown) => {
+  console.error(erro instanceof Error ? erro.message : erro);
+  process.exit(1);
+});

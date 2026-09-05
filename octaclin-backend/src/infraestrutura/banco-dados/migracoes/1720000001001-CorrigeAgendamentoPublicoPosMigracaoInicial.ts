@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class CorrigeAgendamentoPublicoPosMigracaoInicial1720000001001 implements MigrationInterface {
   name = 'CorrigeAgendamentoPublicoPosMigracaoInicial1720000001001';
 

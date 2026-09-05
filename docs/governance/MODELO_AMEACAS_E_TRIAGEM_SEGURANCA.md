@@ -135,12 +135,33 @@ define aplicabilidade e ownership; **status parcial nao equivale a PASS**.
 | V13 Configuration | ambientes, secrets, containers e cloud | L2 + L3 para producao | Parcial | 49, 50, 51 |
 | V14 Data Protection | PII, PHI, financeiro, logs e backup | L2 + L3 clinico | Parcial | 44, 47, 51-53 |
 | V15 Secure Coding and Architecture | multitenancy, jobs, dependencias e fail-closed | L2 + L3 selecionado | Parcial | 38-50 |
-| V16 Security Logging and Error Handling | auditoria, redacao, alerta e incidente | L2 + L3 clinico/admin | Parcial | 52 |
+| V16 Security Logging and Error Handling | auditoria, redacao, alerta e incidente | L2 + L3 clinico/admin | Parcial; as fases 1 e 2 do PR 52 fecharam cobertura de evento critico, redacao verificavel por gate, integridade append-only da trilha e correlacao ponta a ponta -- e nao alerta, runbook de incidente nem tabletop | 52 |
 | V17 WebRTC | Nenhum fluxo WebRTC observado | N/A | Nao aplicavel neste commit | Reavaliar se teleconsulta incorporar WebRTC |
 
 Fonte oficial: `https://github.com/OWASP/ASVS/releases/tag/v5.0.0_release`.
 O baseline por requisito sera preenchido nos PRs de dominio com evidencia
 executavel, evitando marcar centenas de controles como atendidos por inferencia.
+
+### 7.1 Detalhe do V16 apos as fases 1 e 2 do PR 52
+
+O capitulo continua **Parcial**, e a distincao importa: as fases 1 e 2 mediram,
+verificaram e passaram a impor no banco o que antes so era declarado, mas nao
+entregaram resposta a incidente. Metade do gate minimo do PR 52 -- alerta,
+runbook e tabletop -- e a fase 3, e ate la o capitulo nao fecha.
+
+| Area do V16 | Estado | Evidencia ou pendencia |
+| --- | --- | --- |
+| Cobertura de evento de seguranca (auth, autorizacao, admin, exportacao, dado clinico, integracao) | fechado nesta fase | 15 acoes novas, incluindo o ciclo de vida da credencial e a negativa de autorizacao, que antes nao deixavam rastro nenhum; a exportacao da propria trilha passou a ser auditada |
+| Ausencia de secret e PHI no log e na trilha | fechado nesta fase | redator de `metadados` com cobertura **verificavel por gate** (`pnpm test:redacao-auditoria`), nao afirmada em comentario; oito vazamentos em claro corrigidos no call site -- quatro na primeira passagem e quatro depois de o gate passar a enxergar os envoltorios privados, entre eles o telefone WhatsApp do paciente gravado em claro na trilha imutavel; log de falha limitado ao nome da classe do erro |
+| Amplificacao de escrita na trilha por requisicao nao autenticada | fechado nesta fase | falha de login sem tenant resolvido fica fora da trilha; negativa de autorizacao deduplicada com alvo concreto na identidade |
+| Deteccao de falha do proprio subsistema de auditoria | parcial | contador monotonico por processo existe; o alarme que o le e da fase 3 |
+| Integridade e imutabilidade da trilha | parcial, fechado no que depende da aplicacao | `UPDATE`, `DELETE` e `TRUNCATE` rejeitados pelo banco por trigger `enable always` agnostico de role (migracao `1720000001038`), provado contra Postgres real no job de testcontainers do CI. **Nao** protege contra o administrador do banco, nao tem hash-chain e nao e WORM -- EXC-AUD-008 |
+| Correlacao ponta a ponta | fechado nesta fase para a web | o middleware emite id proprio e sobrescreve `x-request-id` em toda rota de `app/api`, com o matcher sob teste que avalia o valor real; os dois lados do formato tem teste que reprova drift. Mobile, jobs, cron e webhooks continuam sem salto de origem -- EXC-AUD-009 |
+| Tratamento de erro sem vazamento em superficie publica | fechado para a mensagem do driver | `GET /health/detalhado` deixou de propagar mensagem crua: vocabulario fechado no payload e so o nome da classe do erro no log estruturado. Continuam publicos, e sao **item da fase 3**, saturacao do pool, contagem de migrations pendentes, `NODE_ENV` e versao da API do WhatsApp |
+| Alerta, triagem, escalonamento e preservacao de evidencia | **em aberto** | fase 3 |
+
+Norma duravel: `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`.
+Evidencia do ciclo: `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`.
 
 ## 8. Resultado da triagem
 

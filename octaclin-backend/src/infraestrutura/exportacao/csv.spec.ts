@@ -1,4 +1,4 @@
-import { analisarCsv, campoCsv, montarCsv } from './csv';
+import { analisarCsv, campoCsv, contarLinhasCsv, montarCsv } from './csv';
 
 describe('campoCsv', () => {
   it('deixa passar valor simples sem aspas', () => {
@@ -141,5 +141,56 @@ describe('analisarCsv', () => {
 
     expect(resultado.linhas[0].campos).toEqual(['Maria']);
     expect(resultado.linhas[1].campos).toEqual(['Joao', 'x', 'y']);
+  });
+});
+
+describe('contarLinhasCsv', () => {
+  it('conta registros de dado e ignora o cabecalho', () => {
+    expect(contarLinhasCsv(montarCsv(['a', 'b'], [[1, 2], [3, 4], [5, 6]]))).toBe(3);
+  });
+
+  it('devolve zero para exportacao vazia ou so com cabecalho', () => {
+    expect(contarLinhasCsv('')).toBe(0);
+    expect(contarLinhasCsv(montarCsv(['a', 'b'], []))).toBe(0);
+  });
+
+  it('nao infla a contagem com quebra de linha dentro de celula citada', () => {
+    const csv = montarCsv(['observacao'], [['linha um\nlinha dois\nlinha tres'], ['simples']]);
+
+    expect(contarLinhasCsv(csv)).toBe(2);
+  });
+
+  it('trata aspas escapada dentro do campo sem desalinhar a contagem', () => {
+    const csv = montarCsv(['observacao'], [['ele disse "sim"\ne saiu'], ['outra']]);
+
+    expect(contarLinhasCsv(csv)).toBe(2);
+  });
+
+  // Os call sites atuais so passam saida de `montarCsv`, que sempre fecha com
+  // `\n`. A invariante nao e checada na fronteira, e o repositorio ja usa
+  // `csv.trim().split('\n')` em outros pontos -- entao a contagem nao pode
+  // depender daquela quebra final.
+  it('conta o ultimo registro de um CSV que termina sem quebra de linha', () => {
+    expect(contarLinhasCsv('nome,idade\nMaria,30')).toBe(1);
+  });
+
+  it('conta certo um CSV trimado, que perde a quebra final', () => {
+    const csv = montarCsv(['nome', 'idade'], [['Maria', 30], ['Joao', 41]]);
+
+    expect(contarLinhasCsv(csv.trim())).toBe(2);
+  });
+
+  it('nao conta o cabecalho sozinho como registro, com ou sem quebra final', () => {
+    expect(contarLinhasCsv('nome,idade')).toBe(0);
+    expect(contarLinhasCsv('nome,idade\n')).toBe(0);
+  });
+
+  // Aspas desbalanceada e bug do produtor. A escolha e contar o melhor possivel
+  // em vez de lancar: quem chama e a auditoria de uma exportacao ja produzida, e
+  // derrubar a exportacao para registra-la inverteria a prioridade. O que nao
+  // pode acontecer e devolver zero e fazer um volume real parecer nulo.
+  it('cai para a contagem de linhas fisicas quando a aspas nunca fecha', () => {
+    expect(contarLinhasCsv('"observacao\nMaria\nJoao\nAna\n')).toBe(3);
+    expect(contarLinhasCsv('observacao\nMaria\nJoao"')).toBe(2);
   });
 });

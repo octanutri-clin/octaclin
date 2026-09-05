@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class CriarSincronizacaoGoogleAgenda1720000000800 implements MigrationInterface {
   name = 'CriarSincronizacaoGoogleAgenda1720000000800';
 

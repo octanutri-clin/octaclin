@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao somente-dados */
 export class ForcaRenovacaoCanaisWatchSemToken1720000000902 implements MigrationInterface {
   name = 'ForcaRenovacaoCanaisWatchSemToken1720000000902';
 

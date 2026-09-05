@@ -2,10 +2,18 @@
 
 > Status: aprovado para planejamento e execucao sequencial
 >
-> Atualizado em: 2026-09-01
+> Atualizado em: 2026-09-04
 >
-> Proximo item autorizado: concluir o PR 51 - Providers e menor privilegio. O
-> PR 52 so e autorizado apos o merge humano do PR 51.
+> Proximo item autorizado, por decisao do proprietario em 2026-09-04: fechar as
+> duas dividas nomeadas pela fase 2 do PR 52 antes de abrir o PR 53. O gate de
+> migration fora de banda foi integrado pelo PR GitHub #196 (`7faf3b1`); o
+> fallback `NEXT_PUBLIC_API_URL`, pelo PR GitHub #197 (`51fa2ec`). A triagem das
+> vulnerabilidades high esta em revisao na branch
+> `chore/supply-chain-fast-uri-3-1-6`; ao fim dela ficam os 7 PRs de bump do
+> Dependabot, que dependem de decisao do proprietario. As tres fases do PR 52 estao
+> no `main` (PRs GitHub #191, #194 e #195), e o PR 53 fica autorizado ao fim
+> dessa fila.
+> O PR 51 foi integrado no `main` pelos PRs GitHub #189 e #190.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
 > Estado do PR 38: integrado no `main` pelo PR GitHub #160 em 2026-08-28.
@@ -48,14 +56,34 @@
 > Estado do PR 50: integrado no `main` pelo PR GitHub #178 em 2026-09-01
 > (`0e41bf22321f4427579e39f8ecca5632d7596988`). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md`.
-> Estado do PR 51: implementacao concluida em branch dedicada
-> (`security/governanca-pr51-providers-menor-privilegio`). O processo passou a
-> medir o menor privilegio dos providers no bootstrap e em
-> `GET /operacoes/providers`; a conversao para falha fechada depende da
-> evidencia de producao descrita na secao 6 da norma. Aguardando required
-> checks, coleta de evidencia pelo proprietario e review humano. Relatorio:
+> Estado do PR 51: medicao integrada no `main` pelo PR GitHub #189 em
+> 2026-09-02 (`43e7ee0`). Os dois processos de producao foram medidos no mesmo
+> dia -- `web` 12:24:22 e `worker` 12:05:18, ambos `conforme` -- e a falha
+> fechada foi habilitada em branch dedicada
+> (`security/governanca-pr51-fail-closed`), aguardando checks e review humano.
+> Falta a evidencia dos paineis de Neon, Redis, Backblaze e Render (secoes 6.2 a
+> 6.6 da norma). Relatorio:
 > `docs/governance/RELATORIO_SEGURANCA_PR51_2026-09-02.md`. Norma duravel:
 > `docs/governance/POLITICA_PROVIDERS_MENOR_PRIVILEGIO.md`.
+> A falha fechada foi integrada no `main` pelo PR GitHub #190 em 2026-09-02
+> (`894567748aa83bed7cdcba6b1e17df3316fe95a5`), que passa a ser a base do PR 52.
+> Estado do PR 52: **concluido**, tres fases no `main`. A fase 3 foi integrada
+> pelo PR GitHub #195 em 2026-09-04 (`d21eceb`). A fase 1
+> foi integrada no `main` pelo PR GitHub #191 em 2026-09-03 (`6d389f6`); a fase
+> 2 e a evidencia de producao dela, pelo PR GitHub #194 em 2026-09-04
+> (`a9c6d59`).
+> Com a fase 3 as tres metades do gate minimo passam a estar cobertas: eventos
+> criticos detectados e secrets/PHI ausentes dos logs (fase 1), imutabilidade e
+> correlacao (fase 2), teste de alerta e tabletop sintetico documentados (fase
+> 3), e as tres tiveram merge humano.
+> A fase 3 nao fecha nenhuma das quatro excecoes que a fase 2 datou para ela
+> (EXC-AUD-006, 007, 009 e 010): o prazo tinha sido escrito sem conferencia
+> contra o escopo desta fase, e as quatro foram redatadas pelo trabalho que as
+> fecha. Relatorios: `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`,
+> `docs/governance/RELATORIO_SEGURANCA_PR52_FASE2_2026-09-03.md` e
+> `docs/governance/RELATORIO_SEGURANCA_PR52_FASE3_2026-09-04.md`. Exercicio:
+> `docs/governance/TABLETOP_AUDITORIA_PR52_FASE3_2026-09-04.md`. Norma
+> duravel: `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`.
 
 ## 1. Funcao deste documento
 
@@ -548,11 +576,15 @@ role privilegiada (alcancavel por `SET ROLE`, e por isso consultada com
 do endpoint de armazenamento. `nao-verificado` nunca conta como aprovacao e
 nenhum motivo carrega host, credencial ou nome de role.
 
-A verificacao **relata e nao derruba o boot**, por decisao do proprietario e
-pela licao de 2026-08-22 em `docs/agents/LESSONS_LEARNED.md`: um check novo
-avaliado contra configuracao presumida, e nao contra o ambiente real, ja
-degradou a saude de producao uma vez. A conversao para falha fechada entra em PR
-proprio depois da evidencia de producao. O relatorio fica fora de
+A verificacao entrou **relatando, sem derrubar o boot**, pela licao de
+2026-08-22 em `docs/agents/LESSONS_LEARNED.md`: um check novo avaliado contra
+configuracao presumida, e nao contra o ambiente real, ja degradou a saude de
+producao uma vez. Medidos os dois processos de producao em 2026-09-02 (`web`
+12:24:22 e `worker` 12:05:18, ambos `conforme`), a **falha fechada foi
+habilitada** em staging e producao: bloqueia qualquer provider `violado` e
+bloqueia `postgres` diferente de `conforme`, mas nao bloqueia `redis` ou
+`armazenamento` `nao-verificado`, porque provider ausente do processo e estado
+legitimo -- o `worker` nao serve anexo. O relatorio fica fora de
 `/health/detalhado` porque aquele endpoint e publico e nao autenticado.
 
 Evidencia de provider ainda depende de operacao humana: nenhuma credencial de
@@ -575,6 +607,29 @@ Skills Claude: `security-review`, `test-driven-development`,
 
 Gate minimo: eventos criticos detectados; secrets/PHI ausentes dos logs; teste
 de alerta e tabletop sintetico documentados.
+
+O escopo foi fatiado em tres fases, pelo mesmo motivo que o PR 51 entrou medindo
+antes de bloquear: deteccao declarada sem evidencia executavel e justamente o
+defeito que este PR encontrou.
+
+| Fase | Metade do gate | Conteudo |
+| --- | --- | --- |
+| 1 | eventos criticos detectados; secrets/PHI ausentes dos logs | redator de `metadados`, gate de cobertura que le os call sites reais, 15 acoes novas de auth/autorizacao/operacao/exportacao, contador de falha de gravacao e correcao dos vazamentos em claro |
+| 2 | imutabilidade e correlacao | trigger append-only `enable always` cobrindo `UPDATE`/`DELETE`/`TRUNCATE` na trilha (o `REVOKE` ficou como reforco, e nao como mecanismo; hash-chain e WORM foram declarados fora de alcance e viraram EXC-AUD-008), teto de escrita para `auth.login.sucesso` com contagem do volume colapsado, `x-request-id` atravessando a fronteira web-backend e `/health/detalhado` sem mensagem crua do driver |
+| 3 | teste de alerta e tabletop sintetico documentados | alertas sobre o contador de falhas e sobre volume de negativa de autorizacao, runbook de resposta a incidentes, escalonamento, preservacao de evidencia e tabletop |
+
+As fases 1 e 2 nao fecham o gate minimo do PR 52 e nao devem ser lidas como tal.
+A metade que restava -- teste de alerta e tabletop sintetico documentados -- e a
+fase 3 inteira, integrada no `main` em 2026-09-04 pelo PR GitHub #195. Os dois alertas
+vivem no painel `/operacoes`, atras de `SuperAdmin`, e sao **pull**: nenhum deles
+abre issue, envia e-mail ou entra no monitor externo, porque aquele monitor chama
+somente endpoints publicos sem token. Essa lacuna esta declarada na secao 6 do
+relatorio da fase 3, e nao suprimida. O que cada fase entregou, e o que deliberadamente nao entregou,
+esta com owner e prazo na secao 10 de
+`docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`: a fase 2 fechou
+EXC-AUD-002, EXC-AUD-003 e EXC-AUD-004 e abriu EXC-AUD-006 a EXC-AUD-010 no
+lugar, porque fechar uma excecao sem registrar o que sobrou dela e como o
+defeito central deste PR comecou.
 
 ### PR 53 - Backup, restore e resiliencia a ransomware
 
@@ -657,5 +712,11 @@ venda web, desde que nao seja distribuido nem prometido comercialmente.
   fato novo que altere escopo, ordem, gate ou status.
 - Atualizar `MATRIZ_CONFIABILIDADE_TESTES.md` somente quando um gate permanente
   for efetivamente implementado.
-- O proximo passo autorizado e review/checks/merge humano do PR 42.
-- O PR 43 somente pode iniciar depois do aceite humano do resultado do PR 42.
+- O proximo passo autorizado esta no cabecalho deste documento, e nao aqui: ele
+  muda a cada ciclo, e duplicar estado em duas linhas fez estas duas ficarem
+  paradas no PR 42 por dez PRs.
+- Divida nomeada por um ciclo e trabalho, e nao lembrete: quando um relatorio
+  registrar "cabe na fase seguinte", isso entra na fila do cabecalho com dono, ou
+  vira excecao datada. As duas dividas da fase 2 do PR 52 ficaram sem dono
+  porque nao eram escopo da fase 3, e so voltaram a existir por decisao do
+  proprietario.

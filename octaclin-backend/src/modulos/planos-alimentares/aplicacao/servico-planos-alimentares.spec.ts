@@ -564,7 +564,21 @@ describe('ServicoPlanosAlimentares', () => {
         recursoId: PLANO_ID
       })
     ]);
+    // A escrita da trilha reusa a transacao ja aberta -- por isso o contador
+    // fica em 3 e nao em 4. Abrir a quarta pediria uma segunda conexao do pool
+    // enquanto a primeira segura `pessimistic_write` sobre plano e versao, e
+    // faria a linha de auditoria comitar independentemente do negocio.
     expect(executor.executar).toHaveBeenCalledTimes(3);
+    // O digest do conteudo clinico nao entra na trilha: `versaoId` ao lado ja
+    // identifica o artefato, entao o hash so acrescentaria um oraculo de
+    // confirmacao sobre a dieta. Fica o booleano de presenca.
+    expect(auditorias[0].metadados).toEqual({
+      pacienteId: PACIENTE_ID,
+      versaoId: VERSAO_ID,
+      numeroVersao: expect.any(Number),
+      possuiHashConteudo: true
+    });
+    expect(JSON.stringify(auditorias[0].metadados)).not.toContain(versao.hashConteudo);
   });
 
   it('usa snapshot do catalogo e preserva fibra e sodio ausentes', async () => {

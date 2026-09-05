@@ -28,7 +28,17 @@ const referenciasObrigatorias = [
   'octaclin-web/scripts/sessoes-bff.spec.ts',
   'scripts/validar-tooling-agentes.spec.mjs',
   'octaclin-backend/src/infraestrutura/seguranca/menor-privilegio-providers.spec.ts',
-  'octaclin-backend/src/infraestrutura/seguranca/servico-menor-privilegio-providers.spec.ts'
+  'octaclin-backend/src/infraestrutura/seguranca/servico-menor-privilegio-providers.spec.ts',
+  'octaclin-backend/src/infraestrutura/auditoria/redacao-auditoria.spec.ts',
+  'octaclin-backend/src/infraestrutura/auditoria/servico-auditoria.spec.ts',
+  'octaclin-backend/src/modulos/auth/apresentacao/auditoria-autorizacao.spec.ts',
+  'octaclin-backend/src/modulos/auth/apresentacao/guarda-papeis.spec.ts',
+  'scripts/validar-redacao-auditoria.spec.mjs',
+  'octaclin-backend/src/modulos/operacoes/aplicacao/servico-operacoes.spec.ts',
+  'scripts/test-runbook-resposta-auditoria.mjs',
+  'scripts/validar-migracoes-fora-de-banda.spec.mjs',
+  'octaclin-web/scripts/origem-backend-bff.spec.ts',
+  'octaclin-web/scripts/test-origem-backend-bff.mjs'
 ];
 
 for (const referencia of referenciasObrigatorias) {
@@ -40,7 +50,7 @@ for (const referencia of referenciasObrigatorias) {
   }
 }
 
-for (const risco of ['Isolamento multi-tenant', 'Autenticacao e autorizacao', 'Integracoes externas', 'BFF e sessao', 'Sessoes e rotacao de refresh token']) {
+for (const risco of ['Isolamento multi-tenant', 'Autenticacao e autorizacao', 'Integracoes externas', 'BFF e sessao', 'Sessoes e rotacao de refresh token', 'Trilha de auditoria e redacao de metadados', 'Alerta e resposta a incidente de auditoria', 'Aplicacao de migration fora de banda', 'Origem do backend no BFF']) {
   if (!conteudo.includes(risco)) throw new Error(`Risco critico ausente da matriz: ${risco}`);
 }
 

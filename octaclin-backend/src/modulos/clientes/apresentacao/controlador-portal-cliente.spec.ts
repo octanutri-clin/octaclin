@@ -180,4 +180,35 @@ describe('ControladorPortalCliente', () => {
       }
     });
   });
+
+  it('deve auditar a exportacao do historico de convites com volume, e nunca com os e-mails exportados', async () => {
+    const csv = [
+      'email,role,status,criado_em,expira_em,usado_em,revogado_em,criado_por,reenviado_por,revogado_por,motivo_revogacao,email_erro',
+      'sintetica.um@exemplo-invalido.test,Professional,usado,2026-01-01T00:00:00.000Z,,,,cliente-1,,,,',
+      'sintetica.dois@exemplo-invalido.test,Client,revogado,2026-01-02T00:00:00.000Z,,,,cliente-1,,,,'
+    ].join('\n') + '\n';
+    const servicoUsuariosCliente = { exportarHistoricoConvitesCsv: jest.fn(async () => csv) };
+    const servicoAuditoria = { registrar: jest.fn(async () => undefined) };
+    const controlador = new ControladorPortalCliente({} as never, servicoUsuariosCliente as never, servicoAuditoria as never);
+
+    await expect(
+      controlador.exportarHistoricoConvites(
+        { tenantId: 'tenant-1', usuarioId: 'cliente-1' } as never,
+        { ip: '127.0.0.1', headers: { 'user-agent': 'jest' } } as never
+      )
+    ).resolves.toBe(csv);
+
+    expect(servicoAuditoria.registrar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'cliente-1',
+        acao: 'cliente.convites_historico.exportar_csv',
+        recursoTipo: 'convite_usuario',
+        metadados: expect.objectContaining({ totalLinhas: 2 })
+      })
+    );
+    const serializada = JSON.stringify(servicoAuditoria.registrar.mock.calls);
+    expect(serializada).not.toContain('sintetica.um@exemplo-invalido.test');
+    expect(serializada).not.toContain('sintetica.dois@exemplo-invalido.test');
+  });
 });

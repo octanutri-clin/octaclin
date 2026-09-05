@@ -2,7 +2,7 @@
   "$schema": "./excecoes-supply-chain.schema.md",
   "versao": 1,
   "descricao": "Fonte canonica de excecoes de supply chain do OctaClin. Toda excecao precisa de motivo, owner e expiracao. Excecao vencida quebra o gate pnpm test:excecoes-supply-chain.",
-  "revisadoEm": "2026-09-01",
+  "revisadoEm": "2026-09-05",
   "excecoes": [
     {
       "id": "SC-2026-001",

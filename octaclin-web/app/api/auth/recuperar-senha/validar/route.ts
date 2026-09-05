@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { normalizarApiUrlBff } from '@/lib/server/sessao-bff';
-
-function obterApiUrlPublica() {
-  return normalizarApiUrlBff(process.env.OCTACLIN_BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001');
-}
+import { obterApiUrlBff } from '@/lib/server/configuracao-acesso-bff';
+import { cabecalhosCorrelacaoBff } from '@/lib/server/correlacao-requisicao-bff';
 
 export async function POST(request: NextRequest) {
-  const resposta = await fetch(`${obterApiUrlPublica()}/auth/recuperar-senha/validar`, {
+  const resposta = await fetch(`${obterApiUrlBff()}/auth/recuperar-senha/validar`, {
     method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(await cabecalhosCorrelacaoBff()) },
     body: await request.text(),
     cache: 'no-store'
   });
