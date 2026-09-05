@@ -48,6 +48,7 @@ export function calcularHashLegadoTaco(linhas: AlimentoLegado[]): string {
   return createHash('sha256').update(JSON.stringify(alimentos)).digest('hex');
 }
 
+/** @aplicacao somente-dados */
 export class AtivarLegadoTacoGovernado1720000001029 implements MigrationInterface {
   name = 'AtivarLegadoTacoGovernado1720000001029';
 

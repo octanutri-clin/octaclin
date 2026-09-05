@@ -7,6 +7,7 @@ import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditor
 import { ConsentimentoLgpdOrm } from '../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
 import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { ServicoMenorPrivilegioProviders } from '../../infraestrutura/seguranca/servico-menor-privilegio-providers';
 import { REDIS_OAUTH_STATE_GOOGLE, ServicoConexaoGoogleCalendar } from '../agenda/aplicacao/servico-conexao-google-calendar';
 import { ServicoGoogleCalendar } from '../agenda/aplicacao/servico-google-calendar';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
@@ -68,7 +69,8 @@ import { FILA_AUTOMACOES } from '../automacoes/aplicacao/servico-automacoes';
     ServicoGoogleCalendar,
     ServicoConexaoGoogleCalendar,
     { provide: REDIS_OAUTH_STATE_GOOGLE, useFactory: () => new Redis(criarConexaoRedis()) },
-    CriptografiaDadosSensiveis
+    CriptografiaDadosSensiveis,
+    ServicoMenorPrivilegioProviders
   ],
   exports: [ServicoOperacoes]
 })

@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class IsolarIdempotenciaMobilePorPaciente1720000001012 implements MigrationInterface {
   name = 'IsolarIdempotenciaMobilePorPaciente1720000001012';
 

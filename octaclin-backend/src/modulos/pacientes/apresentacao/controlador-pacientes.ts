@@ -168,7 +168,24 @@ export class ControladorPacientes {
       userAgent: this.obterUserAgent(requisicao),
       // Exportacao em massa de PHI: a trilha registra o volume levado, nao so
       // que alguem clicou em exportar.
-      metadados: { linhas: Math.max(csv.trim().split('\n').length - 1, 0), filtros: { ...filtros } }
+      //
+      // Os filtros entram um a um, e nunca por espalhamento do DTO. O
+      // espalhamento gravava `busca`, que e texto livre de ate 180 caracteres
+      // com o que a recepcao digitou -- nome do paciente, pedaco de CPF,
+      // telefone. `servico-pacientes.ts` passa esse mesmo campo por
+      // `gerarHashesConsultaPii` exatamente para que o termo nunca seja
+      // armazenado, e a trilha de auditoria estava desfazendo isso ao lado.
+      // Alem do vazamento, espalhar um DTO e promessa em aberto: campo novo no
+      // DTO passa a ser gravado amanha sem revisao nenhuma.
+      metadados: {
+        linhas: Math.max(csv.trim().split('\n').length - 1, 0),
+        possuiBusca: Boolean(filtros.busca?.trim()),
+        pagina: filtros.pagina,
+        limite: filtros.limite,
+        status: filtros.status,
+        risco: filtros.risco,
+        profissionalId: filtros.profissionalId
+      }
     });
     return csv;
   }

@@ -106,8 +106,8 @@ duplicar todos os detalhes de evidencia.
 | Upload malicioso ou acesso cross-tenant no storage | PHI binaria | TB-06 | hash/URL assinada existentes; quarentena pendente | PR 44 |
 | XSS, CSRF, redirect ou cache sensivel | sessao/PHI | TB-01/TB-03 | CSP, BFF, CORS e cache provados no PR 45; callbacks, redirects e endpoints OAuth falham fechados no PR 46 integrado; smoke real ainda pendente | PR 45-46 |
 | Prompt/tool injection e exfiltracao por IA/agente | PHI/secrets | TB-07/TB-09 | PR 47 fecha schemas e revisao humana; PR 48 remove tooling operacional vendorizado, fixa allowlist/hash e torna payload ambiguo conservador; plugins globais seguem fora da prova | PR 47-48 |
-| Dependencia, Action ou container comprometido | release | TB-08 | SHA/scanners existentes; supply chain/runtime incompletos | PR 49-50 |
-| Credencial cloud excessiva ou ambiente cruzado | todos | TB-10 | runbooks existentes; evidencia atual de providers pendente | PR 51 |
+| Dependencia, Action ou container comprometido | release | TB-08 | PR 49 integrado fecha package manager exato, instalacao congelada, lifecycle negado por padrao, ledger de excecoes e SBOM; PR 50 integrado fixa bases por digest e prova runtime non-root, read-only e sem capabilities extras. Boot completo do backend depende de config/provider e segue como fronteira | PR 49-50 (integrados); resto no PR 51 |
+| Credencial cloud excessiva ou ambiente cruzado | todos | TB-10 | O PR 51 passou a medir no processo real o privilegio da role de runtime (`SUPERUSER`, `BYPASSRLS`, pertinencia a role privilegiada, `CREATE` no schema), o TLS do Redis e o HTTPS do endpoint de armazenamento; antes disso o menor privilegio era apenas declarado. A verificacao relata e ainda nao derruba o boot, e a evidencia dos paineis de Render, Neon, Redis e B2 segue pendente de coleta humana | PR 51 |
 | Incidente sem alerta, evidencia ou restore | auditoria/disponibilidade | TB-04/TB-06/TB-10 | controles operacionais parciais | PR 52-53 |
 | Falha exploravel nao detectada pelos testes estaticos | todos | todas | proibido testar producao; staging isolado ainda sera usado | PR 54-55 |
 | App mobile expor sessao/dados locais | sessao/PHI | TB-01/TB-09 | distribuicao NO-GO | PR 56 |
@@ -135,12 +135,33 @@ define aplicabilidade e ownership; **status parcial nao equivale a PASS**.
 | V13 Configuration | ambientes, secrets, containers e cloud | L2 + L3 para producao | Parcial | 49, 50, 51 |
 | V14 Data Protection | PII, PHI, financeiro, logs e backup | L2 + L3 clinico | Parcial | 44, 47, 51-53 |
 | V15 Secure Coding and Architecture | multitenancy, jobs, dependencias e fail-closed | L2 + L3 selecionado | Parcial | 38-50 |
-| V16 Security Logging and Error Handling | auditoria, redacao, alerta e incidente | L2 + L3 clinico/admin | Parcial | 52 |
+| V16 Security Logging and Error Handling | auditoria, redacao, alerta e incidente | L2 + L3 clinico/admin | Parcial; as fases 1 e 2 do PR 52 fecharam cobertura de evento critico, redacao verificavel por gate, integridade append-only da trilha e correlacao ponta a ponta -- e nao alerta, runbook de incidente nem tabletop | 52 |
 | V17 WebRTC | Nenhum fluxo WebRTC observado | N/A | Nao aplicavel neste commit | Reavaliar se teleconsulta incorporar WebRTC |
 
 Fonte oficial: `https://github.com/OWASP/ASVS/releases/tag/v5.0.0_release`.
 O baseline por requisito sera preenchido nos PRs de dominio com evidencia
 executavel, evitando marcar centenas de controles como atendidos por inferencia.
+
+### 7.1 Detalhe do V16 apos as fases 1 e 2 do PR 52
+
+O capitulo continua **Parcial**, e a distincao importa: as fases 1 e 2 mediram,
+verificaram e passaram a impor no banco o que antes so era declarado, mas nao
+entregaram resposta a incidente. Metade do gate minimo do PR 52 -- alerta,
+runbook e tabletop -- e a fase 3, e ate la o capitulo nao fecha.
+
+| Area do V16 | Estado | Evidencia ou pendencia |
+| --- | --- | --- |
+| Cobertura de evento de seguranca (auth, autorizacao, admin, exportacao, dado clinico, integracao) | fechado nesta fase | 15 acoes novas, incluindo o ciclo de vida da credencial e a negativa de autorizacao, que antes nao deixavam rastro nenhum; a exportacao da propria trilha passou a ser auditada |
+| Ausencia de secret e PHI no log e na trilha | fechado nesta fase | redator de `metadados` com cobertura **verificavel por gate** (`pnpm test:redacao-auditoria`), nao afirmada em comentario; oito vazamentos em claro corrigidos no call site -- quatro na primeira passagem e quatro depois de o gate passar a enxergar os envoltorios privados, entre eles o telefone WhatsApp do paciente gravado em claro na trilha imutavel; log de falha limitado ao nome da classe do erro |
+| Amplificacao de escrita na trilha por requisicao nao autenticada | fechado nesta fase | falha de login sem tenant resolvido fica fora da trilha; negativa de autorizacao deduplicada com alvo concreto na identidade |
+| Deteccao de falha do proprio subsistema de auditoria | parcial | contador monotonico por processo existe; o alarme que o le e da fase 3 |
+| Integridade e imutabilidade da trilha | parcial, fechado no que depende da aplicacao | `UPDATE`, `DELETE` e `TRUNCATE` rejeitados pelo banco por trigger `enable always` agnostico de role (migracao `1720000001038`), provado contra Postgres real no job de testcontainers do CI. **Nao** protege contra o administrador do banco, nao tem hash-chain e nao e WORM -- EXC-AUD-008 |
+| Correlacao ponta a ponta | fechado nesta fase para a web | o middleware emite id proprio e sobrescreve `x-request-id` em toda rota de `app/api`, com o matcher sob teste que avalia o valor real; os dois lados do formato tem teste que reprova drift. Mobile, jobs, cron e webhooks continuam sem salto de origem -- EXC-AUD-009 |
+| Tratamento de erro sem vazamento em superficie publica | fechado para a mensagem do driver | `GET /health/detalhado` deixou de propagar mensagem crua: vocabulario fechado no payload e so o nome da classe do erro no log estruturado. Continuam publicos, e sao **item da fase 3**, saturacao do pool, contagem de migrations pendentes, `NODE_ENV` e versao da API do WhatsApp |
+| Alerta, triagem, escalonamento e preservacao de evidencia | **em aberto** | fase 3 |
+
+Norma duravel: `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`.
+Evidencia do ciclo: `docs/governance/RELATORIO_SEGURANCA_PR52_2026-09-02.md`.
 
 ## 8. Resultado da triagem
 

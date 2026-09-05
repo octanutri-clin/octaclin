@@ -6,6 +6,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * Guarda apenas criterio estruturado. O texto da busca livre fica de fora de
  * proposito: ele aceita nome e CPF, e um filtro de clinica carregando esse
  * texto vazaria PII para toda a equipe.
+ *
+ * @aplicacao fora-de-banda
  */
 export class CriarFiltrosSalvosPacientes1720000001035 implements MigrationInterface {
   name = 'CriarFiltrosSalvosPacientes1720000001035';

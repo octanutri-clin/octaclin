@@ -8,6 +8,7 @@ interface SobreposicaoAgendaAtiva {
   total_conflitos: number | string;
 }
 
+/** @aplicacao fora-de-banda */
 export class AdicionarDesfechosConsultaAgenda1720000001002 implements MigrationInterface {
   name = 'AdicionarDesfechosConsultaAgenda1720000001002';
 

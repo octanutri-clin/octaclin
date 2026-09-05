@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-/** Estruturas aditivas do MFA; nenhum segredo e persistido sem cifra autenticada. */
+/** Estruturas aditivas do MFA; nenhum segredo e persistido sem cifra autenticada. *
+ * @aplicacao fora-de-banda
+ */
 export class CriarMfaEReautenticacao1720000001037 implements MigrationInterface {
   name = 'CriarMfaEReautenticacao1720000001037';
 

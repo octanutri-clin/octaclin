@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class CriarAlertasOcultosDashboardClinico1720000001004 implements MigrationInterface {
   name = 'CriarAlertasOcultosDashboardClinico1720000001004';
 

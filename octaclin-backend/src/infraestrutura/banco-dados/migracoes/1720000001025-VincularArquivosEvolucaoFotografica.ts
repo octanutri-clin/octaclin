@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-/** Vinculo aditivo entre serie fotografica e objeto privado confirmado. */
+/** Vinculo aditivo entre serie fotografica e objeto privado confirmado. *
+ * @aplicacao fora-de-banda
+ */
 export class VincularArquivosEvolucaoFotografica1720000001025 implements MigrationInterface {
   name = 'VincularArquivosEvolucaoFotografica1720000001025';
 

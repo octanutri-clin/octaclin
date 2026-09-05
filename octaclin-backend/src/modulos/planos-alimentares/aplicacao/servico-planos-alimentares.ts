@@ -7,7 +7,7 @@ import {
   NotFoundException
 } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
-import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
+import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -471,22 +471,28 @@ export class ServicoPlanosAlimentares {
       plano.versaoPublicadaAtualId = rascunho.id;
       await repositorioPlano.save(plano);
 
-      const repositorioAuditoria = gerenciador.getRepository(UserActionLogOrm);
-      await repositorioAuditoria.save(
-        repositorioAuditoria.create({
-          tenantId,
-          usuarioId: usuario.usuarioId,
-          acao: 'planos_alimentares.publicar',
-          recursoTipo: 'plano_alimentar',
-          recursoId: plano.id,
-          metadados: {
-            pacienteId,
-            versaoId: rascunho.id,
-            numeroVersao: rascunho.numero,
-            hashConteudo: rascunho.hashConteudo
-          }
-        })
-      );
+      // Escrita direta, e nao `ServicoAuditoria.registrar`: estamos dentro do
+      // `executorTenant.executar` que segura `pessimistic_write` sobre o plano
+      // e sobre a versao. Ver `registrarAuditoriaNaTransacao`.
+      await registrarAuditoriaNaTransacao(gerenciador, {
+        tenantId,
+        usuarioId: usuario.usuarioId,
+        acao: 'planos_alimentares.publicar',
+        recursoTipo: 'plano_alimentar',
+        recursoId: plano.id,
+        metadados: {
+          pacienteId,
+          versaoId: rascunho.id,
+          numeroVersao: rascunho.numero,
+          // `hashConteudo` e sha256 do conteudo clinico da versao. Ele nao
+          // acrescenta evidencia -- `versaoId` ao lado ja identifica o
+          // artefato --, e acrescenta um oraculo de confirmacao: quem le a
+          // trilha e suspeita de uma dieta especifica pode testar a hipotese
+          // sem ter acesso ao plano. Fica de fora; o redator o cobriria de
+          // qualquer forma, e gravar para ser redigido e so ruido.
+          possuiHashConteudo: Boolean(rascunho.hashConteudo)
+        }
+      });
       return this.montarPlano(gerenciador, plano);
     });
   }
@@ -547,17 +553,15 @@ export class ServicoPlanosAlimentares {
       }
       plano.arquivadoEm = instante;
       await gerenciador.getRepository(PlanoAlimentarOrm).save(plano);
-      const repositorioAuditoria = gerenciador.getRepository(UserActionLogOrm);
-      await repositorioAuditoria.save(
-        repositorioAuditoria.create({
-          tenantId,
-          usuarioId: usuario.usuarioId,
-          acao: 'planos_alimentares.arquivar',
-          recursoTipo: 'plano_alimentar',
-          recursoId: plano.id,
-          metadados: { pacienteId }
-        })
-      );
+      // Mesma transacao em curso do arquivamento; ver `registrarAuditoriaNaTransacao`.
+      await registrarAuditoriaNaTransacao(gerenciador, {
+        tenantId,
+        usuarioId: usuario.usuarioId,
+        acao: 'planos_alimentares.arquivar',
+        recursoTipo: 'plano_alimentar',
+        recursoId: plano.id,
+        metadados: { pacienteId }
+      });
       return { id: plano.id, arquivadoEm: instante };
     });
   }

@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class GovernancaCatalogoMultifonte1720000001028 implements MigrationInterface {
   name = 'GovernancaCatalogoMultifonte1720000001028';
 

@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class CriptografarConteudoNotificacoes1720000001018 implements MigrationInterface {
   name = 'CriptografarConteudoNotificacoes1720000001018';
 
