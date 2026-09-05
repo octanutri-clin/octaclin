@@ -2648,14 +2648,19 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - Norma duravel: `docs/governance/POLITICA_TRILHA_AUDITORIA_E_REDACAO.md`.
 - [~] Dividas nomeadas pela fase 2 do PR 52, priorizadas pelo proprietario em 2026-09-04 antes do PR 53.
   - [x] Gate de CI para migration sem declaracao de aplicacao fora de banda. A role de runtime nao tem `CREATE` no schema `public` e o sintoma da omissao so aparece no painel do Render, nunca no CI -- ja aconteceu duas vezes. Integrado no `main` pelo PR GitHub `#196` (`7faf3b1`) em 2026-09-04.
-  - [~] Fallback `NEXT_PUBLIC_API_URL` decidindo origem de backend em rota server-side do BFF, em onze rotas de `app/api`. Variavel publica, embarcada no bundle do navegador, mascarando a ausencia de `OCTACLIN_BACKEND_URL`; foi o que deixou o login de staging quebrado enquanto as rotas publicas seguiam respondendo. Entregue em 2026-09-05 na branch `fix/bff-origem-backend-sem-fallback-publico`; aguarda checks e review/merge humano.
+  - [x] Fallback `NEXT_PUBLIC_API_URL` decidindo origem de backend em rota server-side do BFF, em onze rotas de `app/api`. Variavel publica, embarcada no bundle do navegador, mascarando a ausencia de `OCTACLIN_BACKEND_URL`; foi o que deixou o login de staging quebrado enquanto as rotas publicas seguiam respondendo. Integrado no `main` pelo PR GitHub `#197` (`51fa2ec`) em 2026-09-05.
     - [x] Decisao unica em `obterApiUrlBff`, com falha fechada em producao; localhost so fora de producao. `OCTACLIN_BACKEND_URL` passa a ser lida num ponto so do repositorio.
     - [x] `NEXT_PUBLIC_API_URL` removida do codigo: nao estava em `VARIAVEIS_AMBIENTE.md`, em `.env.example`, em compose nem em workflow -- era configuracao invisivel decidindo trafego de servidor.
     - [x] Gate em duas metades: estrutura (nenhuma rota de `app/api` le `process.env`; `NEXT_PUBLIC_*` no servidor so por excecao declarada por nome com justificativa) e comportamento contra o modulo real compilado.
     - [x] Achado do proprio gate na primeira execucao: `obterOrigemPublicaAgenda` encadeava `?.trim()` com `??`, entao `OCTACLIN_WEB_URL` vazia pulava as outras duas variaveis e caia na origem da requisicao -- link de paciente apontando para localhost, que e o que a funcao existe para impedir. Corrigido para `||`.
     - [ ] **Pre-requisito de deploy:** confirmar `OCTACLIN_BACKEND_URL` no servico web de staging e de producao antes de publicar. Sem o fallback, a ausencia derruba tambem as rotas publicas.
-    - [ ] Checks e review/merge humanos do Pull Request contra `main`.
-  - [ ] Triagem das vulnerabilidades high abertas pelo Dependabot no `main` e dos PRs de bump parados.
+    - [x] Checks e review/merge humanos do Pull Request contra `main`: PR GitHub `#197` (`51fa2ec`).
+  - [~] Triagem das vulnerabilidades high abertas pelo Dependabot no `main` e dos PRs de bump parados. Entregue em 2026-09-05 na branch `chore/supply-chain-fast-uri-3-1-6`; aguarda checks e review/merge humano.
+    - [x] Seis alertas `high`, dois pacotes: `fast-uri` (4 CVEs, backend) e `image-size` (2 CVEs, mobile).
+    - [x] `image-size` ja estava triado e aceito: excecao `SC-2026-005` no ledger, sem versao corrigida publicada pelo upstream e com o mobile NO-GO para distribuicao. Ledger relido e `revisadoEm` atualizado.
+    - [x] `fast-uri` estava preso pelo **proprio override** `fast-uri@3: 3.1.5`, criado como remediacao no PR 49. Override fixa a versao para todo o grafo, entao o Dependabot nao consegue subir o pacote e o alerta fica aberto sem PR para revisar. Atualizado para `3.1.6` em backend e web.
+    - [x] Licao registrada na secao 9 da `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`: toda triagem de vulnerabilidade comeca lendo os `overrides` dos `pnpm-workspace.yaml`.
+    - [ ] Decidir os 7 PRs de bump abertos do Dependabot (`#177` a `#185`), incluindo os dois majors de imagem base `node 22 -> 26` (`#180` e `#181`), que conflitam com `NODE_VERSION: "22"` do CI. Nenhum deles cobre os alertas acima.
 - [ ] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.
 - [ ] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
 - [ ] PR 55 - Concluir pentest independente, reteste e GO/NO-GO.

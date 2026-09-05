@@ -228,6 +228,21 @@ com `cooldown` por tipo de semver e limite de 5 PRs por ecossistema. Auto-merge
 permanece desabilitado. Atualizacao de seguranca nao e reclassificada como
 rotina.
 
+**Override de remediacao nao e permanente, e o Dependabot nao a atravessa.**
+Um `override` em `pnpm-workspace.yaml` fixa a versao para todo o grafo -- e por
+isso ele conserta um transitivo vulneravel. O efeito colateral aparece depois: a
+partir dali o Dependabot deixa de conseguir subir aquele pacote, porque o
+repositorio esta mandando ele ficar onde esta. A remediacao de ontem vira o pino
+que segura a vulnerabilidade de hoje, e sem barulho nenhum: nao ha PR parado
+para revisar, ha um alerta aberto que nada move.
+
+Foi o que aconteceu com `fast-uri@3: 3.1.5`, override criado como remediacao no
+PR 49 e responsavel, em 2026-09-05, por quatro alertas `high` presos em backend
+e web. Regra que vale a partir daqui: **toda triagem de vulnerabilidade comeca
+lendo os `overrides` dos `pnpm-workspace.yaml`**. Alerta cujo pacote aparece ali
+e alerta que so sai com a linha do override atualizada -- `pnpm update` nao
+resolve, e o Dependabot tambem nao.
+
 ---
 
 ## 10. Politica de vulnerabilidades
