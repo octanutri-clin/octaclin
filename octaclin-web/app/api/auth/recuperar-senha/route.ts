@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { obterConfiguracaoAcessoBff } from '@/lib/server/configuracao-acesso-bff';
+import { cabecalhosCorrelacaoBff } from '@/lib/server/correlacao-requisicao-bff';
 
 interface SolicitarRecuperacaoBody {
   email: string;
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
   try {
     resposta = await fetch(`${apiUrl}/auth/recuperar-senha`, {
       method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(await cabecalhosCorrelacaoBff()) },
       body: JSON.stringify({ tenantSlug, email: body.email.trim() }),
       cache: 'no-store'
     });

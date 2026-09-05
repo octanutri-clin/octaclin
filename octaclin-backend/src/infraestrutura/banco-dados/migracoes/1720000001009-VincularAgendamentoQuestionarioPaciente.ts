@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class VincularAgendamentoQuestionarioPaciente1720000001009 implements MigrationInterface {
   name = 'VincularAgendamentoQuestionarioPaciente1720000001009';
 

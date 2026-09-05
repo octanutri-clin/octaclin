@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-/** Metadados globais minimos para provisionamento idempotente e encerramento auditavel. */
+/** Metadados globais minimos para provisionamento idempotente e encerramento auditavel. *
+ * @aplicacao fora-de-banda
+ */
 export class AdicionarCicloVidaTenants1720000001027 implements MigrationInterface {
   name = 'AdicionarCicloVidaTenants1720000001027';
 

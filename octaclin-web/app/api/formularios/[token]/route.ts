@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
-import { normalizarApiUrlBff } from '@/lib/server/sessao-bff';
-
-function obterApiUrlPublica() {
-  return normalizarApiUrlBff(process.env.OCTACLIN_BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001');
-}
+import { obterApiUrlBff } from '@/lib/server/configuracao-acesso-bff';
+import { cabecalhosCorrelacaoBff } from '@/lib/server/correlacao-requisicao-bff';
 
 export async function GET(_: Request, props: { params: Promise<{ token: string }> }) {
   const params = await props.params;
-  const resposta = await fetch(`${obterApiUrlPublica()}/formularios/${encodeURIComponent(params.token)}`, {
-    headers: { Accept: 'application/json' },
+  const resposta = await fetch(`${obterApiUrlBff()}/formularios/${encodeURIComponent(params.token)}`, {
+    headers: { Accept: 'application/json', ...(await cabecalhosCorrelacaoBff()) },
     cache: 'no-store'
   });
 

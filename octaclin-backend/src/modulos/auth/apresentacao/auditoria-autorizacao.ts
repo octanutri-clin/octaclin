@@ -1,0 +1,359 @@
+import { createHash } from 'crypto';
+import type { ExecutionContext } from '@nestjs/common';
+import { criarJanelaDeduplicacaoTrilha } from '../../../infraestrutura/auditoria/janela-deduplicacao-trilha';
+import type { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
+import { obterRotaSegura, type RequisicaoComContexto } from '../../../infraestrutura/observabilidade/contexto-requisicao';
+
+/**
+ * Registro da negativa de autorizacao (PR 52, fase 1b).
+ *
+ * `GuardaPapeis` e `GuardaPermissoes` lancavam `ForbiddenException` mudas. Do
+ * ponto de vista da trilha, um 403 era indistinguivel de uma requisicao que
+ * nunca aconteceu -- e negativa de autorizacao e justamente o sinal que separa
+ * "ninguem tentou" de "alguem tentou e foi barrado", que e o primeiro indicio
+ * de credencial comprometida ou de papel concedido errado.
+ *
+ * Fica em modulo proprio porque as duas guardas precisam exatamente do mesmo
+ * comportamento: mesma acao, mesma forma de metadados e, sobretudo, a mesma
+ * janela de deduplicacao. Duas copias divergiriam, e a copia que divergisse
+ * seria a que ninguem lembraria de testar.
+ */
+
+/** Acao unica das duas guardas: a triagem separa papel de permissao por `metadados.tipo`. */
+export const ACAO_AUTORIZACAO_NEGADA = 'auth.autorizacao.negada';
+
+/**
+ * Negativas de autorizacao observadas desde o boot deste processo (PR 52, fase 3).
+ *
+ * Vive no modulo, e nao numa instancia, pela mesma razao ja escrita em
+ * `servico-auditoria.ts` para `totalFalhasProcesso`: as duas guardas que emitem
+ * a negativa (`GuardaPapeis` e `GuardaPermissoes`) e o `ServicoAuditoria` que
+ * elas recebem sao providers, e o container Nest cria uma instancia por modulo
+ * que os declara. Um campo de instancia daria tantos contadores independentes
+ * quantos forem os modulos, e o alerta que le este numero observaria a fatia de
+ * um deles -- uma varredura de enumeracao apareceria dividida por essa fatia,
+ * isto e, abaixo de qualquer limiar util. O contador precisa ter o mesmo escopo
+ * do processo que o alerta monitora.
+ *
+ * **O que este numero conta, e onde ele e incrementado.** Conta *evento
+ * observado*, nao linha gravada: o incremento acontece na primeira instrucao de
+ * {@link registrarAutorizacaoNegada}, portanto **antes** da janela de
+ * deduplicacao e antes da checagem de tenant. A decisao e deliberada e a
+ * alternativa foi descartada por um motivo concreto:
+ *
+ * - A janela de dedup e otimizacao de volume de escrita numa tabela append-only
+ *   que entra em backup -- nao e uma medida de quantas negativas houve. Contar
+ *   *depois* dela faria uma sessao martelando a mesma rota em laco aparecer como
+ *   uma negativa por minuto, apagando exatamente o volume que este alerta existe
+ *   para detectar. O custo que a janela evita e permanente (linha em backup); o
+ *   custo deste contador e um inteiro em memoria, entao nao ha razao para
+ *   suprimi-lo junto.
+ * - Contar antes da checagem de tenant mantem o numero invariante em relacao a
+ *   ramificacoes internas do registro: nenhum `return` antecipado, nenhuma falha
+ *   da trilha e nenhuma supressao muda o que ele significa. "Uma negativa emitida
+ *   por uma guarda" e a unica definicao que da a mesma leitura em todo ponto de
+ *   leitura, que e o requisito de um numero usado como limiar.
+ *
+ * Monotonico por contrato: reseta so no restart e nunca decrementa.
+ *
+ * **Limitacao que nao deve ser escondida:** o contador e por processo, e a
+ * leitura pelo endpoint de alertas atinge uma replica so. Com N replicas o
+ * alerta ve a fatia de uma delas, entao o numero e piso do volume real, nunca
+ * total exato -- a mesma disciplina que a politica aplica a `loginsSuprimidos`.
+ * O erro possivel e sempre para menos: o alerta pode calar quando deveria tocar,
+ * e nao o contrario.
+ */
+let totalNegativasProcesso = 0;
+
+/** Total monotonico de negativas de autorizacao observadas neste processo. Ver {@link totalNegativasProcesso}. */
+export function obterTotalNegativasAutorizacao(): number {
+  return totalNegativasProcesso;
+}
+
+/**
+ * Zera o contador. Existe para o teste, nao para producao: o valor e monotonico
+ * por contrato e nenhum caminho de aplicacao deve chama-la. Sem ela, casos que
+ * compartilham o mesmo processo Jest passariam a depender da ordem de execucao
+ * uns dos outros -- exatamente o acoplamento que um contador de processo
+ * introduz e que precisa ficar visivel, em vez de escondido atras de uma
+ * instancia nova.
+ */
+export function zerarTotalNegativasAutorizacaoParaTeste(): void {
+  totalNegativasProcesso = 0;
+}
+
+/**
+ * Contencao de amplificacao.
+ *
+ * Diferente do login, aqui nao existe `ServicoProtecaoAbuso` no caminho: uma
+ * sessao valida pode martelar uma rota proibida em laco e cada 403 viraria uma
+ * escrita em `user_action_logs`. A trilha e append-only e entra em backup, ou
+ * seja, o custo nao e so de banco -- e permanente.
+ *
+ * A janela colapsa repeticoes da *mesma* negativa -- mesmo tenant, mesmo
+ * usuario, mesma exigencia, mesma rota e **mesmo alvo concreto** -- para uma
+ * escrita por minuto. Isso preserva o que a auditoria precisa provar (que
+ * aquele usuario foi barrado naquele recurso, e quando) e descarta so a
+ * redundancia. Uma negativa nova -- outro usuario, outra rota, outra permissao,
+ * outro paciente -- nunca e engolida pela janela.
+ *
+ * O estado e por processo e em memoria de proposito: e uma otimizacao de
+ * volume, nao um controle de seguranca. Se o processo reinicia, o pior caso e
+ * gravar de novo -- nunca deixar de gravar uma negativa distinta.
+ */
+const JANELA_DEDUPLICACAO_MS = 60_000;
+
+/**
+ * Teto de chaves vivas. A propria chave carrega rota e alvo, que o cliente
+ * influencia, entao sem teto a defesa contra amplificacao na trilha viraria
+ * amplificacao de memoria no processo.
+ *
+ * Custo por chave depois que o alvo concreto entrou na identidade: as partes
+ * de tamanho livre sao a rota (limitada a 200 caracteres por
+ * `obterRotaSegura`) e ate {@link MAXIMO_PARAMETROS_NA_CHAVE} parametros, cada
+ * um limitado a 36 caracteres (UUID) ou a 19 (impressao digital) -- as demais
+ * partes vem de tenant, usuario e do decorator do handler. O pior caso fica em
+ * torno de 700 caracteres, ou ~1,5 KB por entrada em UTF-16 com o overhead do
+ * `Map`; 2.000 entradas custam ~3 MB no pior caso e menos de 1 MB no formato
+ * tipico (tenant, usuario, uma permissao, rota curta, um UUID). Um teto maior
+ * daria mais dedup e mais memoria; este e o ponto em que a memoria continua
+ * irrelevante para o processo.
+ */
+const MAXIMO_CHAVES_MONITORADAS = 2_000;
+
+/**
+ * Alvo de tamanho apos uma poda.
+ *
+ * A poda so vale a pena se for amortizada. Reduzir para `MAXIMO - 1` faria a
+ * insercao seguinte reencostar no teto, e toda requisicao subsequente pagaria
+ * uma varredura O(n) -- justamente sob a rajada que a janela existe para
+ * conter. Liberando 10% de uma vez, a varredura acontece a cada ~200
+ * insercoes, o que da O(n/200) amortizado por requisicao.
+ */
+const ALVO_APOS_PODA = 1_800;
+
+/** Teto de parametros de rota considerados. Nenhuma rota do produto usa mais que isso. */
+const MAXIMO_PARAMETROS_NA_CHAVE = 4;
+
+/** Prefixo hexadecimal da impressao digital de um parametro que nao e UUID. */
+const TAMANHO_IMPRESSAO_DIGITAL = 16;
+
+/**
+ * UUID canonico. As guardas rodam **antes** dos pipes do Nest, entao
+ * `ParseUUIDPipe` ainda nao validou nada quando chegamos aqui: o formato tem de
+ * ser conferido neste modulo.
+ */
+const PADRAO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * A mecanica da janela vive em `janela-deduplicacao-trilha.ts` desde a fase 2,
+ * quando `auth.login.sucesso` (EXC-AUD-002) passou a precisar exatamente dela.
+ * Copiar teria produzido duas implementacoes do mesmo invariante -- e a copia
+ * que divergisse seria a que ninguem lembraria de testar. O que sobra aqui e o
+ * que e especifico do 403: a identidade do evento e os numeros calculados
+ * acima para o formato de chave deste modulo.
+ *
+ * O residual (`suprimidos`) que a janela devolve nao entra nos metadados desta
+ * acao: a fase 1 fixou o formato de `auth.autorizacao.negada` e a contagem de
+ * linhas distintas por minuto ja e o sinal que este call site existe para
+ * produzir. Mudar o payload aqui seria refactor oportunista, nao a pendencia.
+ */
+const janela = criarJanelaDeduplicacaoTrilha({
+  janelaMs: JANELA_DEDUPLICACAO_MS,
+  maximoChaves: MAXIMO_CHAVES_MONITORADAS,
+  alvoAposPoda: ALVO_APOS_PODA
+});
+
+/** Ponto de reinicio do estado de janela, para que um teste nao contamine o seguinte. */
+export function reiniciarJanelaAutorizacaoNegada(): void {
+  janela.reiniciar();
+}
+
+function nomeDe(valor: unknown): string | undefined {
+  return typeof valor === 'function' ? valor.name || undefined : undefined;
+}
+
+/**
+ * `Controlador.metodo` do alvo. E o que permite achar o handler no codigo sem
+ * depender da rota, que pode ser reescrita por prefixo global ou proxy.
+ */
+function descreverAlvo(contexto: ExecutionContext): string | undefined {
+  const partes = [nomeDe(contexto.getClass?.()), nomeDe(contexto.getHandler?.())].filter(Boolean);
+  return partes.length ? partes.join('.') : undefined;
+}
+
+interface RequisicaoDeGuarda extends RequisicaoComContexto {
+  /** Parametros ja extraidos pelo roteador do Express, antes de qualquer pipe. */
+  params?: Record<string, unknown>;
+}
+
+interface AlvoConcreto {
+  /** Componente de identidade do alvo dentro da chave de deduplicacao. */
+  identidade: string;
+  /** Preenchido so quando ha parametro em formato UUID; ver o bloco abaixo. */
+  recursoId?: string;
+  /** `true` quando algum parametro existia mas nao pode ser gravado. */
+  opaco: boolean;
+}
+
+/**
+ * Identifica o recurso concreto que o 403 protegeu.
+ *
+ * Sem isto a dedup usaria so o *template* da rota (`obterRotaSegura` prefere
+ * `route.path`), e um profissional sondando `GET /pacientes/:id/prontuario`
+ * contra 500 pacientes produziria uma unica linha por minuto. Nao sao a mesma
+ * negativa: sao 500 recursos distintos, e colapsa-los apaga exatamente o sinal
+ * de enumeracao que auditar o 403 existe para detectar.
+ *
+ * O parametro de rota e entrada do atacante, entao ele entra sob duas regras
+ * diferentes:
+ *
+ * 1. **Vai para `recurso_id` so se for UUID.** A coluna e `uuid` no Postgres --
+ *    um slug arbitrario faria o `INSERT` falhar e a trilha perderia a linha
+ *    inteira, que e pior que perder o identificador. Alem disso um UUID e
+ *    inofensivo por construcao: alfabeto fixo, 36 caracteres, nenhum texto
+ *    livre. E e o formato real da maioria das rotas guardadas -- dez
+ *    controladores usam `ParseUUIDPipe`.
+ * 2. **O que nao e UUID vira impressao digital.** `protocolo`, `alertaId` e os
+ *    poucos `@Param('id')` sem pipe aceitam texto livre; grava-lo seria deixar
+ *    o atacante escolher o conteudo da trilha. O `sha256` truncado nao e
+ *    reversivel, tem tamanho fixo (o que e o que torna o teto de memoria
+ *    calculavel) e ainda assim distingue alvos -- a contagem de linhas
+ *    distintas por minuto continua denunciando a enumeracao.
+ */
+function identificarAlvoConcreto(requisicao: RequisicaoDeGuarda): AlvoConcreto {
+  const parametros = Object.values(requisicao?.params ?? {})
+    .filter((valor): valor is string => typeof valor === 'string' && valor !== '')
+    .slice(0, MAXIMO_PARAMETROS_NA_CHAVE);
+
+  if (!parametros.length) return { identidade: '', opaco: false };
+
+  let recursoId: string | undefined;
+  let opaco = false;
+
+  const partes = parametros.map((valor) => {
+    if (PADRAO_UUID.test(valor)) {
+      // O ultimo UUID da rota e o recurso mais especifico: em
+      // `/pacientes/:pacienteId/materiais/:id` o alvo do 403 e o material.
+      recursoId = valor;
+      return valor;
+    }
+
+    opaco = true;
+    return `op:${createHash('sha256').update(valor).digest('hex').slice(0, TAMANHO_IMPRESSAO_DIGITAL)}`;
+  });
+
+  return { identidade: partes.join('/'), recursoId, opaco };
+}
+
+export interface ExigenciaNegada {
+  tipo: 'papel' | 'permissao';
+  /**
+   * Somente o que a rota exigia (ou, no caso de permissao, o subconjunto que
+   * faltou). A lista completa de permissoes do portador nunca entra: ela e o
+   * mapa do que aquela credencial abre, e a trilha e lida por perfis de
+   * operacao que nao precisam desse mapa para triar um 403.
+   */
+  exigido: readonly string[];
+}
+
+/**
+ * Registra a negativa sem poder alterar o desfecho HTTP.
+ *
+ * Duas protecoes, porque `canActivate` e sincrono e o 403 tem de sair de
+ * qualquer jeito:
+ *
+ * 1. `try` externo -- cobre falha sincrona (contexto malformado, injecao
+ *    trocada, duble de teste que lanca na hora).
+ * 2. `Promise.resolve(...).catch` -- a escrita nao e aguardada. Aguardar
+ *    tornaria a guarda assincrona e colocaria a latencia do banco no caminho de
+ *    toda requisicao autorizada; alem disso uma rejeicao tardia viraria
+ *    `unhandledRejection`. O `catch` neutraliza a rejeicao sem converte-la em
+ *    nada visivel para o cliente -- e aproveita para devolver a chave a janela.
+ *
+ * O efeito combinado: falha de auditoria nunca transforma 403 em 500, e
+ * tampouco em 200 -- o `throw` da guarda acontece depois desta chamada,
+ * incondicionalmente.
+ */
+export function registrarAutorizacaoNegada(
+  auditoria: ServicoAuditoria,
+  contexto: ExecutionContext,
+  exigencia: ExigenciaNegada,
+  agora: number = Date.now()
+): void {
+  // Primeira instrucao, fora do `try` e antes da janela: o contador mede
+  // *negativa observada*, e nao linha gravada. Ver {@link totalNegativasProcesso}
+  // para por que a contagem nao acompanha a supressao da dedup nem a checagem de
+  // tenant. Incrementar aqui tambem garante que nenhum `throw` do bloco abaixo
+  // pode perder o evento.
+  totalNegativasProcesso += 1;
+
+  // Fora do `try` para que o `catch` possa devolver a chave a janela quando a
+  // trilha lanca de forma sincrona: sem isso uma unica excecao sincrona
+  // silenciaria aquela negativa pelos 60 s seguintes.
+  let chaveReservada: string | undefined;
+
+  try {
+    const requisicao = contexto.switchToHttp().getRequest<RequisicaoDeGuarda>();
+    const usuario = requisicao?.usuarioAutenticado;
+
+    // As duas guardas rodam depois de `GuardaJwt`, que preenche
+    // `usuarioAutenticado` com `tenantId` e `usuarioId` vindos das claims
+    // validadas -- por isso ha autor e escopo para gravar. A guarda deste `if`
+    // cobre o caso em que a composicao muda: sem tenant nao existe linha
+    // possivel em `user_action_logs`, e forjar um destruiria o isolamento.
+    if (!usuario?.tenantId) return;
+
+    // Nada aqui varre cabecalho nem gera UUID: `obterContextoCorrelacao` faria
+    // as duas coisas, e o `requestId` que ela produz e deliberadamente
+    // descartado logo abaixo. Sob a rajada que a janela existe para conter,
+    // esse custo seria pago por todo 403 inclusive pelos suprimidos.
+    const metodo = requisicao.method;
+    const rota = obterRotaSegura(requisicao);
+    const alvo = descreverAlvo(contexto);
+    const alvoConcreto = identificarAlvoConcreto(requisicao);
+    const exigido = [...exigencia.exigido].sort().join(',');
+    const chave = [
+      usuario.tenantId,
+      usuario.usuarioId,
+      exigencia.tipo,
+      exigido,
+      metodo ?? '',
+      rota ?? alvo ?? '',
+      alvoConcreto.identidade
+    ].join('|');
+
+    if (janela.reservar(chave, agora).suprimir) return;
+    chaveReservada = chave;
+
+    Promise.resolve(
+      auditoria.registrar({
+        tenantId: usuario.tenantId,
+        usuarioId: usuario.usuarioId,
+        acao: ACAO_AUTORIZACAO_NEGADA,
+        recursoTipo: 'autorizacao',
+        recursoId: alvoConcreto.recursoId,
+        // Vem do middleware de correlacao. Nunca e gerado aqui: um id inventado
+        // no momento do 403 nao correlaciona com nada e so ocuparia a coluna.
+        requestId: requisicao.requestId ?? requisicao.correlacao?.requestId,
+        metadados: {
+          tipo: exigencia.tipo,
+          exigido,
+          metodo,
+          rota,
+          alvo,
+          // Declara que havia alvo concreto e que ele nao pode ser gravado, para
+          // o leitor da trilha nao concluir que a rota era sem parametro.
+          ...(alvoConcreto.opaco ? { alvoOpaco: true } : {})
+        }
+      })
+    ).then(
+      () => janela.confirmar(chave, agora),
+      () => janela.liberar(chave, agora)
+    );
+  } catch {
+    // Silencio deliberado: ver o bloco acima. A negativa de autorizacao vale
+    // mais que o seu registro, e o `throw` da guarda vem logo em seguida.
+    if (chaveReservada !== undefined) janela.liberar(chaveReservada, agora);
+  }
+}

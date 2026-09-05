@@ -27,8 +27,19 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      # `--exclude-rule pnpm-minimum-release-age`: a regra exige
+      # `minimumReleaseAge: 10080` fixo e reprova o valor 1440 adotado nos
+      # quatro pnpm-workspace.yaml. A divergência é deliberada e está medida em
+      # docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md: 10080 reprova a
+      # instalação congelada. A exclusão fica aqui, versionada e sujeita a
+      # review, em vez de dispensa no Security tab. `# nosemgrep` na linha do
+      # valor não suprime a regra (verificado na CI do PR 187). O piso do valor
+      # continua provado por scripts/validar-instalacao-congelada.spec.mjs.
       - name: Rodar Semgrep (não bloqueante)
-        run: semgrep scan --config auto --sarif --output semgrep.sarif
+        run: |
+          semgrep scan --config auto \
+            --exclude-rule package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age \
+            --sarif --output semgrep.sarif
 
       - name: Publicar resultado no Security tab
         uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4

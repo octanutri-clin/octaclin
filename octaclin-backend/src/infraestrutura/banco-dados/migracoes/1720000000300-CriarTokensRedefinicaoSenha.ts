@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class CriarTokensRedefinicaoSenha1720000000300 implements MigrationInterface {
   name = 'CriarTokensRedefinicaoSenha1720000000300';
 

@@ -7,11 +7,23 @@ packages:
 
 # Migrado de `pnpm.overrides` do package.json: o pnpm 11 nao le mais aquele
 # bloco. `decode-uri-component` foi adicionado no PR 49 para remediar
-# GHSA-vcc3-ghjq-m6fr sem excecao.
+# GHSA-vcc3-ghjq-m6fr sem excecao. `browserslist` remedia
+# GHSA-c83g-rgw3-j3cx e GHSA-73wf-gq98-2v4g (ambos high, corrigidos em
+# 4.28.7); chega transitivo por @babel/* e core-js-compat, entao a
+# remediacao e por override e nao por bump direto.
 overrides:
   uuid@<11.1.1: 11.1.1
   js-yaml@>=4.0.0 <4.3.1: 4.3.1
   decode-uri-component@<0.5.0: 0.5.0
+  browserslist@<4.28.7: 4.28.7
+  # GHSA-6gmq-8vp8-gcm6 (moderate): injecao de fragmento XML via
+  # EntityReference.nodeName invalido na serializacao com requireWellFormed.
+  # Chega por `expo > @expo/cli > @expo/config-plugins > ... > @xmldom/xmldom`,
+  # em duas faixas simultaneas na arvore, cada uma com sua propria correcao --
+  # por isso sao duas linhas e nao um override unico: unificar em 0.9.x
+  # quebraria o consumidor que declara 0.8.x.
+  '@xmldom/xmldom@>=0.7.0 <0.8.15': 0.8.15
+  '@xmldom/xmldom@>=0.9.0 <0.9.12': 0.9.12
 
 # Nenhuma dependencia do mobile precisa executar lifecycle script.
 strictDepBuilds: true
@@ -24,6 +36,20 @@ allowBuilds: {}
 # recentes do Dependabot. Como o proprio Dependabot ja espera 3 a 30 dias por
 # cooldown, 1440 cobre a janela que resta: instalacao manual de pacote
 # recem-publicado.
+#
+# A regra pnpm-minimum-release-age do Semgrep exige 10080 (7 dias) fixo e
+# reprova qualquer valor menor, inclusive este. A divergencia e deliberada e
+# esta medida acima: 10080 reprova a instalacao congelada.
+#
+# A regra fica excluida no proprio workflow (`--exclude-rule` em
+# .github/workflows/semgrep.yml), e nao dispensada no Security tab, para que a
+# decisao viva versionada e passe por review junto de qualquer mudanca futura
+# deste valor. `# nosemgrep` nesta linha nao suprime a regra: as duas formas,
+# com e sem rule id, foram testadas na CI do PR 187 e os quatro alertas
+# continuaram abertos.
+#
+# Com a regra do Semgrep fora, o piso do valor passa a ser provado por
+# scripts/validar-instalacao-congelada.spec.mjs.
 minimumReleaseAge: 1440
 minimumReleaseAgeStrict: true
 

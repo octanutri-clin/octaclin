@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { ServicoSaude } from './servico-saude';
 
 describe('ServicoSaude', () => {
@@ -140,9 +141,53 @@ describe('ServicoSaude', () => {
     expect(resposta.checks.banco).toEqual(
       expect.objectContaining({
         status: 'falha',
-        mensagem: 'database unavailable'
+        mensagem: 'Banco indisponivel.'
       })
     );
+  });
+
+  /**
+   * `GET /health/detalhado` nao tem guarda: o payload inteiro e publico. Ate a
+   * fase 2 do PR 52 o `catch` do check de banco devolvia `erro.message`, e a
+   * mensagem crua do driver Postgres carrega host, porta, banco, usuario e
+   * versao. O teste afirma a propriedade pelo texto que um driver real emite,
+   * e nao pela forma da mensagem nova -- e o vazamento que precisa continuar
+   * impossivel, e nao o texto de substituicao.
+   */
+  it('nao deve devolver a mensagem crua do driver Postgres no payload publico', async () => {
+    const mensagemDoDriver =
+      'connect ECONNREFUSED 10.0.0.7:5432 (database "octaclin_producao", user "octaclin_runtime")';
+    const avisos = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const servico = new ServicoSaude({
+      isInitialized: true,
+      query: jest.fn(async () => {
+        throw new Error(mensagemDoDriver);
+      }),
+      migrations: [{ name: 'Migracao1' }],
+      showMigrations: jest.fn(async () => {
+        throw new Error(mensagemDoDriver);
+      })
+    } as never);
+
+    const resposta = await servico.verificarDetalhado();
+
+    const publicado = JSON.stringify(resposta);
+    expect(publicado).not.toContain('ECONNREFUSED');
+    expect(publicado).not.toContain('10.0.0.7');
+    expect(publicado).not.toContain('5432');
+    expect(publicado).not.toContain('octaclin_producao');
+    expect(publicado).not.toContain('octaclin_runtime');
+    expect(resposta.checks.banco.status).toBe('falha');
+    expect(resposta.checks.migracoes.status).toBe('falha');
+
+    // O detalhe nao some: vai para o log estruturado, e mesmo la e so a classe
+    // do erro -- a mensagem do driver nao entra em log nosso.
+    expect(avisos).toHaveBeenCalledWith(
+      expect.objectContaining({ evento: 'saude.check.falha', check: 'banco', erroNome: 'Error' })
+    );
+    expect(JSON.stringify(avisos.mock.calls)).not.toContain('ECONNREFUSED');
+
+    avisos.mockRestore();
   });
 
   it('deve encerrar o check quando o pool nao entregar conexao dentro do prazo', async () => {
@@ -204,7 +249,12 @@ describe('ServicoSaude', () => {
   });
 
   it('deve marcar Redis configurado como falha quando PING rejeitar', async () => {
-    const redis = { ping: jest.fn(async () => Promise.reject(new Error('redis connection refused'))) };
+    // A mensagem do cliente Redis carrega host e porta, como a do driver
+    // Postgres: ela nao pode chegar ao payload publico nem ao log nosso.
+    const redis = {
+      ping: jest.fn(async () => Promise.reject(new Error('connect ECONNREFUSED 10.0.0.9:6379')))
+    };
+    const avisos = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     const servico = new ServicoSaude(
       {
         isInitialized: true,
@@ -219,6 +269,18 @@ describe('ServicoSaude', () => {
 
     expect(resposta.status).toBe('falha');
     expect(resposta.checks.redis).toEqual({ status: 'falha', mensagem: 'Redis indisponivel.' });
+
+    // Ate esta correcao o `catch` de Redis devolvia a constante e descartava o
+    // erro sem log nenhum, contra o que o bloco da classe promete: o detalhe da
+    // falha muda de destino, e nao desaparece. O destino e o log estruturado, e
+    // mesmo la e so o nome da classe.
+    expect(avisos).toHaveBeenCalledWith(
+      expect.objectContaining({ evento: 'saude.check.falha', check: 'redis', erroNome: 'Error' })
+    );
+    expect(JSON.stringify(avisos.mock.calls)).not.toContain('ECONNREFUSED');
+    expect(JSON.stringify(avisos.mock.calls)).not.toContain('10.0.0.9');
+
+    avisos.mockRestore();
   });
 
   it('deve sinalizar integracoes opcionais ausentes como degradadas', async () => {
@@ -311,7 +373,9 @@ describe('ServicoSaude', () => {
     const resposta = await servico.verificarDetalhado();
 
     expect(resposta.checks.migracoes.status).toBe('falha');
-    expect(resposta.checks.migracoes.mensagem).toBe('permission denied for table migrations');
+    // `permission denied for table migrations` nomeia tabela e role do banco:
+    // sai do payload publico e fica so o vocabulario fechado deste modulo.
+    expect(resposta.checks.migracoes.mensagem).toBe('Nao foi possivel verificar as migrations.');
     // Os demais checks continuam sendo avaliados e reportados.
     expect(resposta.checks.banco.status).toBe('ok');
     expect(resposta.checks.redis.status).toBe('ok');

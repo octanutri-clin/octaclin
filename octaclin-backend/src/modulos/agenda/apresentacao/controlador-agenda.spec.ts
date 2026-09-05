@@ -22,9 +22,10 @@ describe('ControladorAgenda', () => {
       id: 'consulta-1',
       status: 'concluida'
     });
+    const cancelarConsulta = jest.fn().mockResolvedValue({ id: 'consulta-1', googleEventId: 'evt-1' });
     const registrar = jest.fn().mockResolvedValue(undefined);
     const controlador = new ControladorAgenda(
-      { registrarDesfecho } as unknown as ServicoAgenda,
+      { registrarDesfecho, cancelarConsulta } as unknown as ServicoAgenda,
       {} as ServicoAgendamentoPublico,
       { registrar } as unknown as ServicoAuditoria
     );
@@ -83,5 +84,34 @@ describe('ControladorAgenda', () => {
     expect(Reflect.getMetadata(CHAVE_PERMISSOES, registrarDashboard)).toEqual([
       'agenda.consultas.criar'
     ]);
+  });
+
+  /**
+   * Teste negativo do vazamento que este PR fechou. `motivo` e texto livre de
+   * ate 500 caracteres e, num cancelamento de consulta, rotineiramente clinico.
+   * O call site irmao de `agenda.solicitacao.recusar` ja gravava
+   * `possuiMotivo`; era o mesmo campo do mesmo fluxo gravado de duas formas.
+   */
+  it('nao deve deixar o motivo do cancelamento chegar a trilha de auditoria', async () => {
+    const { controlador, registrar, requisicao } = criarCenario();
+
+    await controlador.cancelarConsulta(usuario, requisicao, 'consulta-1', {
+      motivo: 'internada apos crise, remarcar depois da alta'
+    });
+
+    const entrada = registrar.mock.calls[0][0] as { metadados: Record<string, unknown> };
+
+    expect(JSON.stringify(entrada.metadados)).not.toContain('internada');
+    expect(entrada.metadados).toEqual({ possuiMotivo: true, googleEventId: 'evt-1' });
+  });
+
+  it('deve declarar ausencia de motivo em vez de omitir o campo', async () => {
+    const { controlador, registrar, requisicao } = criarCenario();
+
+    await controlador.cancelarConsulta(usuario, requisicao, 'consulta-1', {});
+
+    expect(registrar).toHaveBeenCalledWith(
+      expect.objectContaining({ metadados: { possuiMotivo: false, googleEventId: 'evt-1' } })
+    );
   });
 });

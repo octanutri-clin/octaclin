@@ -3,6 +3,8 @@ import { comEsperaDeColdStart, ehStatusColdStart, metodoIdempotente } from './co
 import { sessaoPossuiPermissao } from './permissoes-bff';
 import { validarConfiguracaoSegurancaBff } from './seguranca-bff';
 import { limparDesafioMfa, limparProvaReautenticacao, obterProvaReautenticacao } from './mfa-bff';
+import { cabecalhosCorrelacaoBff, obterRequestIdBff } from './correlacao-requisicao-bff';
+import { NOME_CABECALHO_CORRELACAO } from './correlacao-bff';
 
 const nomes = {
   accessToken: 'octaclin_access_token',
@@ -212,11 +214,12 @@ async function normalizarRespostaBackend(resposta: Response, contexto: string): 
 
 async function renovarSessao(sessao: SessaoBff): Promise<SessaoBff | null> {
   let resposta: Response;
+  const correlacao = await cabecalhosCorrelacaoBff();
 
   try {
     resposta = await fetch(`${normalizarApiUrlBff(sessao.apiUrl)}/auth/renovar`, {
       method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...correlacao },
       body: JSON.stringify({ refreshToken: sessao.refreshToken }),
       cache: 'no-store'
     });
@@ -277,17 +280,35 @@ export async function requisitarBackendAutenticado(caminho: string, init?: Reque
     throw new ErroSessaoAusente();
   }
 
-  const executar = () =>
-    fetch(`${apiUrl}${caminho}`, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${sessao.accessToken}`,
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        ...init?.headers
-      },
-      cache: 'no-store'
+  // Ponto unico de saida das chamadas autenticadas ao backend: e aqui que o id
+  // de correlacao atravessa a fronteira e passa a poder ser ligado a linha
+  // gravada em `user_action_logs`. Lido uma vez so: a repeticao apos renovacao
+  // de sessao precisa sair com o MESMO id da tentativa original.
+  const requestId = await obterRequestIdBff();
+
+  // Montado com `Headers`, e nao com objeto literal, por causa da caixa do
+  // nome. Em objeto literal `X-Request-Id` e `x-request-id` sao duas chaves
+  // distintas: o spread do chamador nao seria sobrescrito pelo nosso, e o
+  // `fetch` juntaria as duas com virgula. O backend sanitiza removendo a
+  // virgula e gravaria na trilha IMUTAVEL uma string comecando com texto
+  // escolhido por quem chamou. `Headers.set` e case-insensitive e substitui
+  // qualquer grafia, entao a ordem abaixo realmente decide o valor final.
+  // Os cabecalhos sao remontados a cada tentativa porque `sessao.accessToken`
+  // muda quando a renovacao acontece entre a primeira e a segunda chamada.
+  const executar = () => {
+    const cabecalhos = new Headers({
+      Authorization: `Bearer ${sessao.accessToken}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
     });
+    // `new Headers(init?.headers)` aceita as tres formas de `HeadersInit`; o
+    // spread de objeto silenciaria os cabecalhos de um chamador que passasse
+    // uma instancia de `Headers`, que nao tem propriedade enumeravel propria.
+    for (const [nome, valor] of new Headers(init?.headers)) cabecalhos.set(nome, valor);
+    cabecalhos.set(NOME_CABECALHO_CORRELACAO, requestId);
+
+    return fetch(`${apiUrl}${caminho}`, { ...init, headers: cabecalhos, cache: 'no-store' });
+  };
 
   // Backend hibernado leva ~30s para subir; sem isto a espera vira 500 na tela.
   const podeRepetir = metodoIdempotente(init);
@@ -327,10 +348,16 @@ export async function requisitarBackendReautenticado(caminho: string, init?: Req
   if (!prova) {
     return respostaJsonBff(403, 'Confirme sua senha novamente para continuar.');
   }
-  return requisitarBackendAutenticado(caminho, {
-    ...init,
-    headers: { 'x-octaclin-reauth': prova, ...init?.headers }
-  });
+  // `Headers` em vez de literal pela mesma razao do C3 acima: spread de objeto e
+  // sensivel a caixa e descarta em silencio os cabecalhos de um chamador que
+  // entregue uma instancia de `Headers`. Aqui nao ha risco de correlacao -- o
+  // resultado passa por `requisitarBackendAutenticado`, que normaliza --, mas
+  // deixar as duas formas convivendo no mesmo arquivo e o convite para a proxima
+  // prova de reautenticacao ser perdida no caminho.
+  const cabecalhos = new Headers(init?.headers);
+  cabecalhos.set('x-octaclin-reauth', prova);
+
+  return requisitarBackendAutenticado(caminho, { ...init, headers: cabecalhos });
 }
 
 export async function revogarSessaoAtual() {
@@ -339,7 +366,7 @@ export async function revogarSessaoAtual() {
     try {
       await fetch(`${normalizarApiUrlBff(sessao.apiUrl)}/auth/sair`, {
         method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(await cabecalhosCorrelacaoBff()) },
         body: JSON.stringify({ refreshToken: sessao.refreshToken }),
         cache: 'no-store'
       });
