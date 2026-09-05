@@ -30,6 +30,13 @@ allowBuilds:
   # msgpackr-extract: acelerador nativo opcional de msgpackr (bullmq).
   # msgpackr degrada para JS puro; suite backend valida o caminho de filas.
   msgpackr-extract: false
+  # @parcel/watcher: acelerador nativo de observacao de arquivo, opcional.
+  # Cadeia dev: jest > jest-haste-map > @parcel/watcher. O jest degrada para
+  # fb-watchman e para o watch do proprio Node, e a suite do backend nao usa
+  # modo watch no CI. Chegou com o bump do jest para 30.5.0, e reprovou a
+  # instalacao congelada ate receber esta decisao -- que e o controle do PR 49
+  # funcionando: pacote novo com lifecycle script nao roda sem decisao escrita.
+  "@parcel/watcher": false
 
 # 1440 minutos (24h). O valor nao e livre: com `minimumReleaseAgeStrict` o pnpm
 # reaplica a janela ao lockfile a cada instalacao, entao o teto pratico e a idade
