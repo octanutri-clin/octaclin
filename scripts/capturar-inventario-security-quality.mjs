@@ -21,7 +21,7 @@ function textoOuNulo(valor) {
 
 function valorTrivy(mensagem, campo) {
   if (typeof mensagem !== 'string') return null;
-  const encontrado = mensagem.match(new RegExp(`^${campo}:\\s*(.*)$`, 'm'));
+  const encontrado = mensagem.match(new RegExp(`^${campo}:[ \\t]*([^\\r\\n]*)$`, 'm'));
   return textoOuNulo(encontrado?.[1]);
 }
 

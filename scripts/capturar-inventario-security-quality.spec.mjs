@@ -37,6 +37,21 @@ test('normaliza Code Scanning sem copiar mensagem ou help inseguro', () => {
   assert.equal('help' in alerta, false);
 });
 
+test('nao interpreta a linha seguinte como versao corrigida do Trivy', () => {
+  const [alerta] = normalizarCodeScanning([{
+    number: 397,
+    tool: { name: 'Trivy' },
+    rule: { id: 'CVE-2026-78411', security_severity_level: 'high', severity: 'error' },
+    most_recent_instance: {
+      category: 'trivy-imagem-ia-service',
+      location: { path: 'library/octaclin-ia-service' },
+      message: { text: 'Package: util-linux\nInstalled Version: 2.41.5\nFixed Version: \nSeverity: HIGH' },
+    },
+  }]);
+
+  assert.equal(alerta.versaoCorrigida, null);
+});
+
 test('normaliza Dependabot com a primeira versao corrigida, sem campos extras', () => {
   const [alerta] = normalizarDependabot([{
     number: 42,
