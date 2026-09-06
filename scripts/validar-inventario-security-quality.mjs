@@ -26,6 +26,12 @@ function exigirTexto(valor, campo) {
   if (typeof valor !== 'string' || valor.trim() === '') falhar(`${campo} precisa ser texto nao vazio.`);
 }
 
+function exigirTextoOuNulo(valor, campo) {
+  if (valor !== null && (typeof valor !== 'string' || valor.trim() === '')) {
+    falhar(`${campo} precisa ser texto nao vazio ou null.`);
+  }
+}
+
 function exigirListaDeTextos(valor, campo) {
   if (!Array.isArray(valor) || valor.length === 0) falhar(`${campo} precisa ser uma lista nao vazia.`);
   for (const item of valor) exigirTexto(item, campo);
@@ -79,10 +85,36 @@ function validarAlertas(alertas, fonte) {
   }
 }
 
+function validarAlertaCodeScanning(alerta) {
+  const campo = `alerta snapshot.codeScanning:${alerta.numero}`;
+  exigirTexto(alerta.ferramenta, `${campo}.ferramenta`);
+  exigirTexto(alerta.regra, `${campo}.regra`);
+  exigirTexto(alerta.categoria, `${campo}.categoria`);
+  exigirTexto(alerta.caminho, `${campo}.caminho`);
+  exigirTextoOuNulo(alerta.pacote, `${campo}.pacote`);
+  exigirTextoOuNulo(alerta.versaoInstalada, `${campo}.versaoInstalada`);
+  exigirTextoOuNulo(alerta.versaoCorrigida, `${campo}.versaoCorrigida`);
+}
+
+function validarAlertaDependabot(alerta) {
+  const campo = `alerta snapshot.dependabot:${alerta.numero}`;
+  exigirTexto(alerta.advisory, `${campo}.advisory`);
+  exigirTexto(alerta.ecossistema, `${campo}.ecossistema`);
+  exigirTexto(alerta.pacote, `${campo}.pacote`);
+  exigirTexto(alerta.manifesto, `${campo}.manifesto`);
+  exigirTextoOuNulo(alerta.versaoCorrigida, `${campo}.versaoCorrigida`);
+}
+
 function validarFonte(snapshot, nome, exigePorFerramenta = false) {
   const fonte = snapshot[nome];
   exigirObjeto(fonte, `snapshot.${nome}`);
   validarAlertas(fonte.alertas, `snapshot.${nome}`);
+  if (nome === 'codeScanning') {
+    for (const alerta of fonte.alertas) validarAlertaCodeScanning(alerta);
+  }
+  if (nome === 'dependabot') {
+    for (const alerta of fonte.alertas) validarAlertaDependabot(alerta);
+  }
   if (!Number.isInteger(fonte.total) || fonte.total !== fonte.alertas.length) {
     falhar(`snapshot.${nome}.total precisa ser igual ao comprimento de alertas.`);
   }
@@ -90,7 +122,6 @@ function validarFonte(snapshot, nome, exigePorFerramenta = false) {
   exigirObjeto(fonte.porFerramenta, `snapshot.${nome}.porFerramenta`);
   const calculado = {};
   for (const alerta of fonte.alertas) {
-    exigirTexto(alerta.ferramenta, `alerta snapshot.${nome}:${alerta.numero}.ferramenta`);
     calculado[alerta.ferramenta] = (calculado[alerta.ferramenta] ?? 0) + 1;
   }
   const declaradas = fonte.porFerramenta;

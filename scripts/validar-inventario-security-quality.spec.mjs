@@ -66,3 +66,27 @@ test('secret scanning ativo exige incidente e nao entra no inventario', () => {
   inventario.snapshot.secretScanning.total = 1;
   assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /resposta a incidente/);
 });
+
+test('rejeita campos incompletos ou com tipo errado em Code Scanning', () => {
+  for (const campo of ['numero', 'ferramenta', 'regra', 'categoria', 'caminho', 'severidade']) {
+    const inventario = inventarioValido();
+    inventario.snapshot.codeScanning.alertas[0][campo] = null;
+    assert.throws(() => validarInventario(inventario, { hoje: HOJE }), new RegExp(campo));
+  }
+  for (const campo of ['pacote', 'versaoInstalada', 'versaoCorrigida']) {
+    const inventario = inventarioValido();
+    inventario.snapshot.codeScanning.alertas[0][campo] = 123;
+    assert.throws(() => validarInventario(inventario, { hoje: HOJE }), new RegExp(campo));
+  }
+});
+
+test('rejeita campos incompletos ou com tipo errado em Dependabot', () => {
+  for (const campo of ['numero', 'advisory', 'severidade', 'ecossistema', 'pacote', 'manifesto']) {
+    const inventario = inventarioValido();
+    inventario.snapshot.dependabot.alertas[0][campo] = null;
+    assert.throws(() => validarInventario(inventario, { hoje: HOJE }), new RegExp(campo));
+  }
+  const inventario = inventarioValido();
+  inventario.snapshot.dependabot.alertas[0].versaoCorrigida = 123;
+  assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /versaoCorrigida/);
+});
