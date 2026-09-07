@@ -14,14 +14,17 @@ const ENDPOINT_BRANCH_MAIN = '/repos/octanutri-clin/octaclin/branches/main';
 const ENDPOINT_CODE_SCANNING = '/repos/octanutri-clin/octaclin/code-scanning/alerts?state=open&per_page=100';
 const ENDPOINT_DEPENDABOT = '/repos/octanutri-clin/octaclin/dependabot/alerts?state=open&per_page=100';
 const ENDPOINT_SECRET_SCANNING = '/repos/octanutri-clin/octaclin/secret-scanning/alerts?state=open&per_page=100';
+const CAMPO_PACOTE_TRIVY = /^Package:[ \t]*([^\r\n]*)\r?$/m;
+const CAMPO_VERSAO_INSTALADA_TRIVY = /^Installed Version:[ \t]*([^\r\n]*)\r?$/m;
+const CAMPO_VERSAO_CORRIGIDA_TRIVY = /^Fixed Version:[ \t]*([^\r\n]*)\r?$/m;
 
 function textoOuNulo(valor) {
   return typeof valor === 'string' && valor.trim() !== '' ? valor : null;
 }
 
-function valorTrivy(mensagem, campo) {
+function valorTrivy(mensagem, padrao) {
   if (typeof mensagem !== 'string') return null;
-  const encontrado = mensagem.match(new RegExp(`^${campo}:[ \\t]*([^\\r\\n]*)$`, 'm'));
+  const encontrado = mensagem.match(padrao);
   return textoOuNulo(encontrado?.[1]);
 }
 
@@ -32,9 +35,9 @@ function detalhesTrivy(alerta) {
 
   const mensagem = alerta?.most_recent_instance?.message?.text;
   return {
-    pacote: valorTrivy(mensagem, 'Package'),
-    versaoInstalada: valorTrivy(mensagem, 'Installed Version'),
-    versaoCorrigida: valorTrivy(mensagem, 'Fixed Version'),
+    pacote: valorTrivy(mensagem, CAMPO_PACOTE_TRIVY),
+    versaoInstalada: valorTrivy(mensagem, CAMPO_VERSAO_INSTALADA_TRIVY),
+    versaoCorrigida: valorTrivy(mensagem, CAMPO_VERSAO_CORRIGIDA_TRIVY),
   };
 }
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -8,6 +9,15 @@ import {
   normalizarCodeScanning,
   normalizarDependabot,
 } from './capturar-inventario-security-quality.mjs';
+
+test('parser Trivy usa apenas expressoes regulares literais', () => {
+  const codigo = readFileSync(
+    new URL('./capturar-inventario-security-quality.mjs', import.meta.url),
+    'utf8',
+  );
+
+  assert.doesNotMatch(codigo, /\bnew\s+RegExp\s*\(/);
+});
 
 test('normaliza Code Scanning sem copiar mensagem ou help inseguro', () => {
   const [alerta] = normalizarCodeScanning([{
