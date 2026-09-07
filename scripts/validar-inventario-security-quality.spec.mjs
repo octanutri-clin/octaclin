@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
-import { validarInventario } from './validar-inventario-security-quality.mjs';
+import { carregarEValidarInventario, validarInventario } from './validar-inventario-security-quality.mjs';
 
 const HOJE = new Date('2026-09-06T00:00:00.000Z');
 
@@ -90,3 +94,42 @@ test('rejeita campos incompletos ou com tipo errado em Dependabot', () => {
   inventario.snapshot.dependabot.alertas[0].versaoCorrigida = 123;
   assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /versaoCorrigida/);
 });
+
+const INVENTARIO_REAL = new URL('../docs/governance/inventario-security-quality.json', import.meta.url);
+
+test('valida o inventario ativo real', () => {
+  assert.match(carregarEValidarInventario(undefined, { hoje: HOJE }), /240 alertas cobertos/);
+});
+
+for (const [mutacao, mensagem] of [
+  ['omissao', /cobertura de alertas precisa ser exata/],
+  ['duplicacao', /alerta em mais de uma causa/],
+]) {
+  test(`arquivo real com ${mutacao} falha em processo separado`, () => {
+    const original = readFileSync(INVENTARIO_REAL, 'utf8');
+    const inventario = JSON.parse(original);
+    if (mutacao === 'omissao') inventario.causas[0].alertas.pop();
+    else inventario.causas[1].alertas.push(inventario.causas[0].alertas[0]);
+
+    const diretorio = mkdtempSync(join(tmpdir(), 'octaclin-sq0-mutacao-'));
+    const caminho = join(diretorio, 'inventario.json');
+    try {
+      writeFileSync(caminho, JSON.stringify(inventario), 'utf8');
+      const modulo = new URL('./validar-inventario-security-quality.mjs', import.meta.url).href;
+      const resultado = spawnSync(process.execPath, [
+        '--input-type=module', '-e',
+        `import { carregarEValidarInventario } from ${JSON.stringify(modulo)};
+         carregarEValidarInventario(process.argv[1], { hoje: new Date('2026-09-06T00:00:00.000Z') });`,
+        caminho,
+      ], { encoding: 'utf8' });
+      assert.ifError(resultado.error);
+      assert.equal(resultado.signal, null);
+      assert.equal(resultado.status, 1, resultado.stderr);
+      assert.match(resultado.stderr, mensagem);
+    } finally {
+      unlinkSync(caminho);
+      rmdirSync(diretorio);
+    }
+    assert.equal(readFileSync(INVENTARIO_REAL, 'utf8'), original, 'inventario canonico preservado');
+  });
+}
