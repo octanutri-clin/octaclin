@@ -71,6 +71,7 @@ jobs:
       - run: pnpm test:actions-imutaveis
       - run: pnpm test:workflows-seguros
       - run: pnpm test:triagem-seguranca
+      - run: pnpm test:inventario-security-quality
       - run: pnpm test:tooling-agentes
       # Gates de supply chain do PR 49: versao unica do package manager,
       # ledger de excecoes com owner/prazo e politica de licencas.

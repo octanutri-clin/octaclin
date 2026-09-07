@@ -1,12 +1,32 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-08-27.
+Atualizado em 2026-09-07.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- SQ-0 e a frente ativa antes da retomada da Fase 256. O inventario ativo foi
+  capturado em 2026-09-07 sobre o commit `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`:
+  238 alertas de Code Scanning (235 Trivy e 3 Semgrep), 2 Dependabot e 0 Secret
+  Scanning. Os 240 alertas abertos estao cobertos exatamente uma vez em
+  `docs/governance/inventario-security-quality.json`, com owner, revisao e onda
+  de destino. SQ-0 corrigiu **zero alertas**; apenas tornou o backlog atual
+  explicito e bloqueavel. O snapshot do PR 37 permanece historico.
+- Nesta branch, o gate local `pnpm test:inventario-security-quality` valida o
+  inventario e sua captura, e o job `Governanca de repositorio` foi configurado
+  para executa-lo sem rede, `gh`, token ou permissao adicional. A captura
+  continua deliberada e externa por
+  `pnpm security:capturar-inventario`. O CI oficial permanece em Node 22.
+- Incidente do monitor: a execucao agendada 577, run `34045002742`, falhou por
+  tres timeouts no primeiro readiness e abriu automaticamente a issue `#206`.
+  Uma verificacao read-only posterior retornou readiness 200 em 0,84 s,
+  detalhado 200 em 0,31 s e web 200 em 43,33 s. A causa externa exata nao foi
+  provada, porque o log nao identifica o check e a tentativa de cada timeout.
+  O GitHub registrou comentario de recuperacao em `2026-09-06T16:55:33Z`, a
+  issue `#206` foi fechada e as execucoes agendadas 578 a 584 passaram; a mais
+  recente e a 584, run `34122881342`, criada em `2026-09-07T12:37:29Z`.
 - Governanca de acessibilidade concluida ate o PR 34 e integrada pelo PR GitHub
   `#150`. O PR 35 esta tecnicamente concluido na branch
   `security/governanca-pr35-actions-sha`: todas as actions remotas dos workflows
