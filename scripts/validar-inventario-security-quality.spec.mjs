@@ -71,6 +71,63 @@ test('secret scanning ativo exige incidente e nao entra no inventario', () => {
   assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /resposta a incidente/);
 });
 
+for (const fonte of ['codeScanning', 'dependabot']) {
+  test(`rejeita total divergente em ${fonte}`, () => {
+    const inventario = inventarioValido();
+    inventario.snapshot[fonte].total += 1;
+    assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /total precisa ser igual/);
+  });
+}
+
+for (const porFerramenta of [
+  { Trivy: 2, 'Semgrep OSS': 1 },
+  { Trivy: 1 },
+  { Trivy: 1, 'Semgrep OSS': 1, Desconhecida: 0 },
+  { Trivy: 1, Desconhecida: 1 },
+]) {
+  test(`rejeita porFerramenta divergente: ${JSON.stringify(porFerramenta)}`, () => {
+    const inventario = inventarioValido();
+    inventario.snapshot.codeScanning.porFerramenta = porFerramenta;
+    assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /porFerramenta nao corresponde/);
+  });
+}
+
+test('rejeita IDs de causas duplicados mesmo com alertas distintos', () => {
+  const inventario = inventarioValido();
+  inventario.causas[1].id = inventario.causas[0].id;
+  assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /id duplicado/);
+});
+
+for (const data of ['2027-02-29', '2026-09-31', '2026-13-01']) {
+  test(`rejeita data de revisao impossivel: ${data}`, () => {
+    const inventario = inventarioValido();
+    inventario.causas[0].revisarEm = data;
+    assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /revisarEm contem data invalida/);
+  });
+}
+
+test('aguardando_upstream rejeita alerta que ja possui versao corrigida', () => {
+  const inventario = inventarioValido();
+  inventario.snapshot.dependabot.alertas[0].versaoCorrigida = '2.0.0';
+  assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /aguardando_upstream exige versaoCorrigida: null/);
+});
+
+for (const justificativa of [undefined, null, '', '   ', 123]) {
+  test(`corrigir sem patch rejeita correcaoSemBump invalida: ${JSON.stringify(justificativa)}`, () => {
+    const inventario = inventarioValido();
+    inventario.snapshot.codeScanning.alertas[0].versaoCorrigida = null;
+    inventario.causas[0].correcaoSemBump = justificativa;
+    assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /corrigir exige versao corrigida ou justificativa correcaoSemBump/);
+  });
+}
+
+test('corrigir sem patch aceita justificativa de remocao da superficie', () => {
+  const inventario = inventarioValido();
+  inventario.snapshot.codeScanning.alertas[0].versaoCorrigida = null;
+  inventario.causas[0].correcaoSemBump = 'Remover o componente vulneravel da imagem final.';
+  assert.match(validarInventario(inventario, { hoje: HOJE }), /3 alertas cobertos/);
+});
+
 test('rejeita campos incompletos ou com tipo errado em Code Scanning', () => {
   for (const campo of ['numero', 'ferramenta', 'regra', 'categoria', 'caminho', 'severidade']) {
     const inventario = inventarioValido();
@@ -97,9 +154,32 @@ test('rejeita campos incompletos ou com tipo errado em Dependabot', () => {
 
 const INVENTARIO_REAL = new URL('../docs/governance/inventario-security-quality.json', import.meta.url);
 
-test('valida o inventario ativo real', () => {
+test('valida estrutura e cobertura do inventario real na data da captura', () => {
   assert.match(carregarEValidarInventario(undefined, { hoje: HOJE }), /240 alertas cobertos/);
 });
+
+for (const [data, status, mensagem] of [
+  ['2026-09-13T23:59:59.999Z', 0, /240 alertas cobertos/],
+  ['2026-09-14T00:00:00.000Z', 1, /SQ-2026-139 esta com revisao vencida/],
+]) {
+  test(`CLI do gate de CI aplica o relogio corrente em ${data}`, () => {
+    const pacote = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+    const comando = 'node scripts/validar-inventario-security-quality.mjs';
+    assert.ok(pacote.scripts['test:inventario-security-quality'].split(' && ').includes(comando),
+      'o comando consumido pelo CI precisa executar a CLI com o relogio corrente');
+    const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+    assert.match(workflow, /run: pnpm test:inventario-security-quality\s/);
+    const relogio = `import { mock } from 'node:test'; mock.timers.enable({ apis: ['Date'], now: new Date('${data}') });`;
+    const resultado = spawnSync(process.execPath, [
+      '--import', `data:text/javascript,${encodeURIComponent(relogio)}`,
+      comando.slice('node '.length),
+    ], { cwd: new URL('../', import.meta.url), encoding: 'utf8' });
+    assert.ifError(resultado.error);
+    assert.equal(resultado.signal, null);
+    assert.equal(resultado.status, status, resultado.stderr);
+    assert.match(status === 0 ? resultado.stdout : resultado.stderr, mensagem);
+  });
+}
 
 for (const [mutacao, mensagem] of [
   ['omissao', /cobertura de alertas precisa ser exata/],

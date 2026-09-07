@@ -4,6 +4,15 @@ Registre aqui somente incidente de producao, falso verde, seguranca, recorrencia
 falha sistemica, investigacao cara ou erro com alta chance de repetir. Cada nova
 licao deve declarar problema, causa, correcao, como evitar, controle e status.
 
+## 2026-09-07 - Prazo de revisao invisivel ao gate do inventario
+
+Problema: a suite validava o inventario com data fixa e ficava verde apos o
+vencimento de uma revisao. Causa: o comando de CI executava somente specs.
+Correcao: executar tambem a CLI do validador com o relogio corrente. Como evitar:
+manter fixtures deterministicas e validar prazos ativos com a data real no gate.
+Controle: regressao da CLI vinculada ao comando de CI, cobrindo o ultimo dia
+vigente e o primeiro dia vencido em UTC. Status do controle: automated.
+
 ## 2026-08-22 - Migration com DDL no boot do runtime
 
 Problema: deploy tentou DDL com a role runtime e entrou em falha por falta de

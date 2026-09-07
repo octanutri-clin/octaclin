@@ -6370,7 +6370,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-140",
@@ -6395,7 +6395,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-141",
@@ -6420,7 +6420,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-142",
@@ -6445,7 +6445,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-143",
@@ -6470,7 +6470,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-144",
@@ -6495,7 +6495,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-145",
@@ -6520,7 +6520,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-146",
@@ -6545,7 +6545,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-147",
@@ -6570,7 +6570,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-148",
@@ -6595,7 +6595,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-149",
@@ -6620,7 +6620,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-150",
@@ -6645,7 +6645,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-151",
@@ -6670,7 +6670,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-152",
@@ -6695,7 +6695,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-153",
@@ -6720,7 +6720,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-154",
@@ -6745,7 +6745,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-155",
@@ -6770,7 +6770,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-156",
@@ -6795,7 +6795,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-157",
@@ -6820,7 +6820,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-158",
@@ -6845,7 +6845,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-159",
@@ -6870,7 +6870,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-160",
@@ -6895,7 +6895,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-161",
@@ -6920,7 +6920,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-162",
@@ -6945,7 +6945,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-163",
@@ -6970,7 +6970,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-164",
@@ -6995,7 +6995,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-165",
@@ -7020,7 +7020,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-166",
@@ -7045,7 +7045,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-167",
@@ -7070,7 +7070,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-168",
@@ -7095,7 +7095,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-169",
@@ -7120,7 +7120,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-170",
@@ -7145,7 +7145,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-171",
@@ -7170,7 +7170,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-172",
@@ -7195,7 +7195,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-173",
@@ -7220,7 +7220,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-174",
@@ -7245,7 +7245,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-175",
@@ -7270,7 +7270,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-176",
@@ -7295,7 +7295,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-177",
@@ -7320,7 +7320,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-178",
@@ -7345,7 +7345,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-179",
@@ -7370,7 +7370,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-180",
@@ -7395,7 +7395,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-181",
@@ -7420,7 +7420,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-182",
@@ -7445,7 +7445,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-183",
@@ -7470,7 +7470,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-184",
@@ -7495,7 +7495,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-185",
@@ -7520,7 +7520,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-186",
@@ -7545,7 +7545,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-187",
@@ -7570,7 +7570,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-188",
@@ -7595,7 +7595,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-189",
@@ -7620,7 +7620,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-190",
@@ -7645,7 +7645,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-191",
@@ -7670,7 +7670,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-192",
@@ -7695,7 +7695,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-193",
@@ -7720,7 +7720,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-194",
@@ -7745,7 +7745,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-195",
@@ -7770,7 +7770,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-196",
@@ -7795,7 +7795,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Biblioteca OpenSSL sinalizada no artefato de runtime; alcance e explorabilidade ainda nao demonstrados nesta onda.",
-      "condicaoSaida": "SQ-1A: atualizar a base ou os pacotes, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1A: atualizar o digest imutavel da base oficial Node 22 para uma imagem com as versoes corrigidas, reconstruir backend/web, validar compatibilidade e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-197",
@@ -7895,7 +7895,7 @@
         "Nenhuma mitigacao especifica foi demonstrada nesta triagem; o alerta permanece aberto ate a evidencia exigida na onda de destino."
       ],
       "impacto": "Dependencia do npm global presente na imagem web; a presenca no artefato nao demonstra execucao nem explorabilidade em runtime.",
-      "condicaoSaida": "SQ-1B: remover o npm global do artefato final ou aplicar versao compativel corrigida, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
+      "condicaoSaida": "SQ-1B: garantir a ausencia de npm, npx, pnpm e corepack na imagem final, reconstruir o artefato, validar o runtime web e comprovar em novo scan da main o fechamento dos alertas referenciados."
     },
     {
       "id": "SQ-2026-201",
