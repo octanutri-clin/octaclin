@@ -40,7 +40,8 @@ const referenciasObrigatorias = [
   'octaclin-web/scripts/origem-backend-bff.spec.ts',
   'octaclin-web/scripts/test-origem-backend-bff.mjs',
   'scripts/validar-grupos-dependabot.spec.mjs',
-  'scripts/validar-versao-node.spec.mjs'
+  'scripts/validar-versao-node.spec.mjs',
+  'docs/governance/inventario-security-quality.json'
 ];
 
 for (const referencia of referenciasObrigatorias) {
@@ -49,6 +50,16 @@ for (const referencia of referenciasObrigatorias) {
   }
   if (!existsSync(resolve(raiz, referencia))) {
     throw new Error(`O teste referenciado nao existe: ${referencia}`);
+  }
+}
+
+const comandosObrigatorios = [
+  'pnpm test:inventario-security-quality',
+];
+
+for (const comando of comandosObrigatorios) {
+  if (!conteudo.includes(`\`${comando}\``)) {
+    throw new Error(`A matriz nao referencia o comando critico: ${comando}`);
   }
 }
 

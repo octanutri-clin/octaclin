@@ -1,7 +1,8 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-08-28 com a conclusao da Fase 255 e a Fase 256 como proxima
-fase oficial. O programa de hardening PR 36-56 tambem foi reconciliado nesta data.
+Atualizado em 2026-09-07 com a conclusao da Fase 255 e a Fase 256 como proxima
+fase oficial. SQ-0 e a frente ativa antes dessa retomada; o programa de
+hardening PR 36-56 permanece como trilha separada.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -2233,6 +2234,46 @@ publicado antes de ampliar a superficie de mudancas visuais.
     authz/BFF 66/66, acessibilidade 10/10, linguagem 8/8 e builds aprovados.
   - Documentos: `PLANO_FASE_255.md` e
     `fase-255-prontuario-clinico-linha-cuidado.md`.
+
+### Programa Security & Quality antes da Fase 256
+
+- [~] SQ-0 - Verdade do backlog. [ATIVA]
+  - [x] Snapshot ativo capturado em 2026-09-07 sobre o commit
+    `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning
+    (235 Trivy e 3 Semgrep), 2 Dependabot e 0 Secret Scanning.
+  - [x] Os 240 alertas abertos foram materializados exatamente uma vez em
+    `docs/governance/inventario-security-quality.json`, com owner, revisao e
+    onda de destino. SQ-0 corrigiu zero alertas; o snapshot do PR 37 permanece
+    historico e imutavel.
+  - [x] Gate `pnpm test:inventario-security-quality` integrado ao job
+    `Governanca de repositorio`; o CI valida apenas o snapshot versionado, sem
+    rede, `gh`, token ou permissao adicional. Captura deliberada local por
+    `pnpm security:capturar-inventario`.
+  - [ ] Checks do Pull Request, revisao humana e merge na `main`.
+- [ ] SQ-1 - Corrigir alertas com versao corrigida, em PRs independentes.
+  - [ ] SQ-1A: atualizar o digest oficial da base Node 22 e eliminar os 40
+    alertas corrigiveis de `libssl3`/`libcrypto3`, preservando o harness de
+    runtime e registrando o digest anterior para rollback.
+  - [ ] SQ-1B: remover npm, npx, pnpm e corepack da imagem final do web sem
+    quebrar Node, Next, healthcheck ou smoke; eliminar os 19 alertas associados.
+  - [ ] SQ-1C: provar no SBOM a procedencia dos 3 achados Python, corrigir na
+    origem real e preservar lock por hash e testes do servico.
+- [ ] SQ-2 - Comparar bases suportadas e minimizar a superficie da imagem de IA
+  para os 173 alertas sem fixed version, sem trocar seguranca por perda de
+  compatibilidade, suporte ou operabilidade.
+- [ ] SQ-3 - Triar manualmente os 3 alertas Semgrep e reavaliar os 2 advisories
+  `image-size`. Enquanto nao houver patch upstream, `SC-2026-005` e o Mobile
+  NO-GO permanecem; nenhum alerta deve ser ocultado.
+- [ ] SQ-4 - Reexecutar CodeQL, Semgrep, Trivy, Dependabot e Secret Scanning
+  sobre a `main` corrente e encerrar somente com criticos/altos corrigiveis em
+  zero, alertas residuais integralmente inventariados, owners/revisoes presentes
+  e CI, SBOM, runtime e scanner de secrets verdes.
+- [x] Recuperacao observada do monitor paralelo: a execucao agendada 577, run
+  `34045002742`, falhou por tres timeouts no primeiro readiness e abriu a issue
+  `#206`; a verificacao read-only posterior obteve readiness/detalhado/web 200.
+  O comentario de recuperacao foi registrado em `2026-09-06T16:55:33Z`, a issue
+  foi fechada e as execucoes 578 a 584 passaram, ate o run `34122881342` criado
+  em `2026-09-07T12:37:29Z`. A causa externa exata continua nao comprovada.
 
 - [ ] Fase 256 - Formulários e check-ins ponta a ponta. [ESSENCIAL - PRE-PILOTO]
   - Validar criação, biblioteca, versão, distribuição, rascunho do paciente,
