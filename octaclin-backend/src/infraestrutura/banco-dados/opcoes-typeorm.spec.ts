@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'fs';
+import { readdirSync } from 'fs';
 import { join } from 'path';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
 import { AdicionarDesfechosConsultaAgenda1720000001002 } from './migracoes/1720000001002-AdicionarDesfechosConsultaAgenda';
@@ -139,10 +139,9 @@ describe('criarOpcoesTypeOrm', () => {
     const nomesNaPasta = readdirSync(pasta)
       .filter((arquivo) => arquivo.endsWith('.ts') && !arquivo.endsWith('.spec.ts'))
       .map((arquivo) => {
-        const conteudo = readFileSync(join(pasta, arquivo), 'utf8');
-        const encontrado = /export class (\w+)/.exec(conteudo);
-        if (!encontrado) throw new Error(`Migration sem classe exportada: ${arquivo}`);
-        return encontrado[1];
+        const encontrado = /^(\d+)-([A-Za-z][A-Za-z0-9]*)\.ts$/.exec(arquivo);
+        if (!encontrado) throw new Error(`Nome de migration fora do contrato: ${arquivo}`);
+        return `${encontrado[2]}${encontrado[1]}`;
       })
       .sort();
     const nomesRegistrados = (criarOpcoesTypeOrm().migrations as Function[]).map((classe) => classe.name).sort();

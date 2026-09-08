@@ -318,19 +318,19 @@ export class ServicoComunicacoes {
       mensagem.payload.remetente,
       mensagem.payload.contato,
       mensagem.payload.destino,
-      this.obterValorAninhado(mensagem.payload, ['ultimoStatusMeta', 'recipientId'])
+      this.obterRecipientIdUltimoStatusMeta(mensagem.payload)
     ];
 
     return candidatos.some((valor) => typeof valor === 'string' && this.normalizarTelefone(valor) === contatoNormalizado);
   }
 
-  private obterValorAninhado(payload: Record<string, unknown>, caminho: string[]) {
-    let atual: unknown = payload;
-    for (const chave of caminho) {
-      if (!atual || typeof atual !== 'object' || Array.isArray(atual)) return undefined;
-      atual = (atual as Record<string, unknown>)[chave];
+  private obterRecipientIdUltimoStatusMeta(payload: Record<string, unknown>) {
+    const ultimoStatusMeta = payload.ultimoStatusMeta;
+    if (!ultimoStatusMeta || typeof ultimoStatusMeta !== 'object' || Array.isArray(ultimoStatusMeta)) {
+      return undefined;
     }
-    return atual;
+    if (!Object.prototype.hasOwnProperty.call(ultimoStatusMeta, 'recipientId')) return undefined;
+    return (ultimoStatusMeta as Record<string, unknown>).recipientId;
   }
 
   private normalizarTelefone(valor: string) {

@@ -281,6 +281,26 @@ describe('ServicoComunicacoes', () => {
     );
   });
 
+  it('nao associa mensagem usando recipientId herdado do prototipo', async () => {
+    const ultimoStatusMeta = Object.create({ recipientId: '5511992362080' }) as Record<string, unknown>;
+    const { servico, repositorios } = criarServico({
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1', nomeCriptografado: Buffer.from('cripto:Ana') },
+      mensagens: [{
+        id: 'mensagem-herdada',
+        tenantId: 'tenant-1',
+        payload: { origem: 'whatsapp', ultimoStatusMeta }
+      }]
+    });
+
+    const resultado = await servico.associarContatoWhatsapp('tenant-1', {
+      contato: '5511992362080',
+      pacienteId: 'paciente-1'
+    }, usuarioColaborador);
+
+    expect(resultado.mensagensAtualizadas).toBe(0);
+    expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+  });
+
   it('deve negar associacao WhatsApp a paciente de outro profissional do mesmo tenant', async () => {
     const { servico, repositorios } = criarServico({
       profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' },
