@@ -7,14 +7,13 @@ Atualizado em 2026-09-08.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. O
-  inventario versionado foi capturado em 2026-09-07 sobre
+- SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
+  fotografia historica foi capturada em 2026-09-07 sobre
   `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning
   (235 Trivy e 3 Semgrep), 2 Dependabot e 0 Secret Scanning. Os 240 alertas
-  abertos estao cobertos exatamente uma vez em
-  `docs/governance/inventario-security-quality.json`, com owner, revisao e onda
-  de destino. SQ-0 corrigiu **zero alertas**; apenas tornou o backlog explicito
-  e bloqueavel. O snapshot do PR 37 permanece historico.
+  daquele momento permanecem auditaveis no PR `#210` e no historico Git. SQ-0
+  corrigiu **zero alertas**; apenas tornou o backlog explicito e bloqueavel. O
+  snapshot do PR 37 tambem permanece historico.
 - SQ-1B foi integrada pelos PRs `#211` (web) e `#212` (backend), culminando no
   merge `38ab752`. O harness do CI provou que ambos preservam Node, artefatos e
   o modo de health declarado sem `npm`, `npx`, `pnpm`, `corepack` ou seus
@@ -29,13 +28,18 @@ Atualizado em 2026-09-08.
   Scanning (213 Trivy e 3 Semgrep), 2 Dependabot e 0 Secret Scanning, total 218:
   20 web, 20 backend e 173 IA, alem dos 3 Semgrep. CI, health real, SBOM,
   CodeQL, Semgrep, Trivy e Dependency Review passaram sobre o merge.
-- SQ-3 esta ativa em `feat/sq3-semgrep-triagem`. Os alertas Semgrep `#76`,
-  `#82` e `#83` foram confrontados com fonte, sink e entrada controlavel; as
-  tres descricoes de explorabilidade foram refutadas. A branch remove as
-  construcoes alertadas sem supressao e adiciona regressao negativa para
-  impedir que `recipientId` herdado do prototipo associe mensagem WhatsApp a
-  paciente. Os advisories Dependabot `#35` e `#36` de `image-size` continuam
-  abertos, sem versao corrigida, sob `SC-2026-005` e Mobile NO-GO.
+- SQ-3 foi integrada pelo PR `#214`, merge `98b6e5f`. Os alertas Semgrep `#76`,
+  `#82` e `#83` sairam do conjunto aberto sem supressao: as construcoes foram
+  removidas e uma regressao negativa impede que `recipientId` herdado do
+  prototipo associe mensagem WhatsApp a paciente. Semgrep, CodeQL, Trivy e CI
+  passaram sobre a `main` resultante.
+- SQ-4 esta ativa em `feat/sq4-fechamento`. A recaptura sanitizada sobre
+  `98b6e5f17e7f4eae07b3fb537a91aea1d9e37394` registrou 213 Code Scanning,
+  todos Trivy, 2 Dependabot e 0 Secret Scanning: total 215. O inventario ativo
+  cobre cada referencia uma vez em tres causas raiz, todas
+  `aguardando_upstream`, com owner, revisao, controles e condicao de saida. O
+  gate recusa investigacao pendente, critical/high ainda corrigivel e patch
+  fora do artefato suportado sem `bloqueioUpstream` explicito.
 - SQ-1A permanece aguardando uma nova imagem oficial Node 22 Alpine. O Docker
   Hub ainda resolve `node:22-alpine` para o digest
   `sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32`,
@@ -60,8 +64,10 @@ Atualizado em 2026-09-08.
   detalhado 200 em 0,31 s e web 200 em 43,33 s. A causa externa exata nao foi
   provada, porque o log nao identifica o check e a tentativa de cada timeout.
   O GitHub registrou comentario de recuperacao em `2026-09-06T16:55:33Z`, a
-  issue `#206` foi fechada e as execucoes agendadas 578 a 584 passaram; a mais
-  recente e a 584, run `34122881342`, criada em `2026-09-07T12:37:29Z`.
+  issue `#206` foi fechada e as execucoes posteriores observadas passaram. A
+  mais recente e o run `34244302631`, criado em `2026-09-08T15:22:13Z` sobre
+  `ee9cfed`. Ainda nao houve nova agenda do monitor sobre o merge `98b6e5f`;
+  esse monitor anterior nao e contado como prova pos-merge do SQ-4.
 - Governanca de acessibilidade concluida ate o PR 34 e integrada pelo PR GitHub
   `#150`. O PR 35 esta tecnicamente concluido na branch
   `security/governanca-pr35-actions-sha`: todas as actions remotas dos workflows
@@ -80,7 +86,8 @@ Atualizado em 2026-09-08.
   aprovados 44 cenarios Playwright desktop/mobile, 36 testes backend, 66 testes
   de autorizacao/BFF, 10 de acessibilidade, builds e scanner de segredos. Nao
   houve migration. O CI `32592780646` passou integralmente, incluindo smoke
-  local em 4m29s. A proxima fase oficial e a Fase 256.
+  local em 4m29s. A proxima fase oficial e a Fase 256. Ela permanece bloqueada
+  pelos gates SQ-4, PR 53 e PR 54.
 - Fase 254 concluida e integrada. O Incremento 1 entrou pelo PR `#93`, com a
   migration aditiva `1035` aplicada e health de producao em 48 migrations; o
   Incremento 2 entrou pelo PR `#101`; e o Incremento 3 entrou pelo PR `#102`,

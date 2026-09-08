@@ -70,4 +70,3 @@ Risco R2: uma classificacao de upstream ficar obsoleta. O prazo de revisao e o
 gate diario de alertas tornam a mudanca detectavel. Rollback: reverter a
 atualizacao documental e do validador; nenhum schema, dado, deploy ou ambiente
 de producao e alterado.
-
