@@ -2304,8 +2304,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] Gates locais: 39 testes focados; suite backend com 175 suites e 1.589
     testes PASS e 4 suites/37 testes de integracao SKIPPED; typecheck, build,
     matriz de confiabilidade, triagem, inventario, docs, secrets e diff verdes.
-  - [ ] PR, SARIF Semgrep, demais checks, revisao humana, merge e recaptura na
-    `main`.
+  - [x] Primeiro SARIF do PR `#214`: run Semgrep `34253548993`, 500 regras,
+    2.086 arquivos e 0 achados; upload processado pelo GitHub.
+  - [ ] Checks finais do head, revisao humana, merge e recaptura na `main`.
 - [ ] SQ-4 - Reexecutar CodeQL, Semgrep, Trivy, Dependabot e Secret Scanning
   sobre a `main` corrente e encerrar somente com criticos/altos corrigiveis em
   zero, alertas residuais integralmente inventariados, owners/revisoes presentes

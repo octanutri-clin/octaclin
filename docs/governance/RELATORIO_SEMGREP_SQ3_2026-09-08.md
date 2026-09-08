@@ -89,7 +89,9 @@ controles. Nao houve supressao ou tentativa de forcar encerramento.
 - Validacao documental, scanner local de secrets e `git diff --check`
   passaram.
 - Semgrep local: `SKIPPED`, pois Semgrep e Docker nao estao instalados nesta
-  maquina. O workflow do PR e o gate autoritativo.
+  maquina.
+- Semgrep autoritativo do PR `#214`: run `34253548993` concluiu com 500 regras
+  sobre 2.086 arquivos, 0 achados e upload SARIF processado pelo GitHub.
 
 ## Criterio de fechamento
 
