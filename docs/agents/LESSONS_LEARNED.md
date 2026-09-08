@@ -25,6 +25,17 @@ deve ser confrontada com o comando real do CI. Controle: o teste do lock tambem
 exige `python -m unittest discover -s tests -v` dentro do job AI.
 Status do controle: automated.
 
+## 2026-09-08 - Patch de pacote nao garante artefato suportado corrigido
+
+Problema: o scanner informa uma versao corrigida do pacote, mas a imagem-base
+oficial fixada ainda nao a incorporou. Causa: disponibilidade foi avaliada no
+nivel do pacote, sem distinguir a camada e o artefato realmente consumido.
+Correcao: manter o alerta aberto em `aguardando_upstream` somente com
+`bloqueioUpstream` explicito, digest observado e condicao de saida. Como evitar:
+reconciliar pacote, camada, imagem oficial e arquiteturas antes de chamar um
+achado de corrigivel. Controle: gate do inventario SQ-4. Status do controle:
+automated.
+
 ## 2026-09-07 - Prazo de revisao invisivel ao gate do inventario
 
 Problema: a suite validava o inventario com data fixa e ficava verde apos o

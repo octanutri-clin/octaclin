@@ -2292,9 +2292,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] A imagem suportada foi reconciliada por componente e camada; os 173
     resultados atuais nao informam versao corrigida alcancavel.
   - [ ] Reavaliar quando a imagem oficial publicar base materialmente melhor.
-- [~] SQ-3 - Triar manualmente os 3 alertas Semgrep e reavaliar os 2 advisories
+- [x] SQ-3 - Triar manualmente os 3 alertas Semgrep e reavaliar os 2 advisories
   `image-size`. Enquanto nao houver patch upstream, `SC-2026-005` e o Mobile
-  NO-GO permanecem; nenhum alerta deve ser ocultado. [ATIVA]
+  NO-GO permanecem; nenhum alerta deve ser ocultado. [CONCLUIDA NO PR #214]
   - [x] Alertas Semgrep `#76`, `#82` e `#83` classificados por fonte, sink e
     entrada controlavel em `RELATORIO_SEMGREP_SQ3_2026-09-08.md`.
   - [x] Construcao de cada alerta removida sem `nosemgrep`, exclusao de regra ou
@@ -2306,17 +2306,31 @@ publicado antes de ampliar a superficie de mudancas visuais.
     matriz de confiabilidade, triagem, inventario, docs, secrets e diff verdes.
   - [x] Primeiro SARIF do PR `#214`: run Semgrep `34253548993`, 500 regras,
     2.086 arquivos e 0 achados; upload processado pelo GitHub.
-  - [ ] Checks finais do head, revisao humana, merge e recaptura na `main`.
-- [ ] SQ-4 - Reexecutar CodeQL, Semgrep, Trivy, Dependabot e Secret Scanning
+  - [x] Checks finais do head, revisao humana e merge `98b6e5f`.
+  - [x] Pos-merge: Semgrep `34256077482`, Trivy `34256077527`, CodeQL
+    `34256077546` e CI `34256077528` verdes na `main`.
+- [~] SQ-4 - Reexecutar CodeQL, Semgrep, Trivy, Dependabot e Secret Scanning
   sobre a `main` corrente e encerrar somente com criticos/altos corrigiveis em
   zero, alertas residuais integralmente inventariados, owners/revisoes presentes
-  e CI, SBOM, runtime e scanner de secrets verdes.
+  e CI, SBOM, runtime e scanner de secrets verdes. [ATIVA]
+  - [x] Recaptura sobre `98b6e5f`: 213 Trivy, 2 Dependabot, 0 Secret Scanning,
+    total 215; Security tab e fotografia sanitizada concordam.
+  - [x] Inventario ativo reconciliado em tres causas raiz: 173 IA sem patch, 40
+    OpenSSL aguardando nova imagem oficial Node 22 Alpine e 2 `image-size` sem
+    patch. Todos permanecem abertos, com owner e revisao.
+  - [x] Gate TDD recusa investigacao pendente, critical/high corrigivel e
+    `aguardando_upstream` com patch sem bloqueio do artefato suportado.
+  - [x] Testes do inventario/captura: 43 PASS; CLI: 215 alertas cobertos.
+  - [ ] Checks da PR, revisao humana, merge e confirmacao de que o Security tab
+    nao mudou durante a revisao.
 - [x] Recuperacao observada do monitor paralelo: a execucao agendada 577, run
   `34045002742`, falhou por tres timeouts no primeiro readiness e abriu a issue
   `#206`; a verificacao read-only posterior obteve readiness/detalhado/web 200.
   O comentario de recuperacao foi registrado em `2026-09-06T16:55:33Z`, a issue
-  foi fechada e as execucoes 578 a 584 passaram, ate o run `34122881342` criado
-  em `2026-09-07T12:37:29Z`. A causa externa exata continua nao comprovada.
+  foi fechada e as execucoes posteriores observadas passaram, ate o run
+  `34244302631` criado em `2026-09-08T15:22:13Z`. Ele ainda usa `ee9cfed`; nao
+  houve agenda posterior sobre `98b6e5f`. A causa externa exata continua nao
+  comprovada.
 
 - [ ] Fase 256 - Formulários e check-ins ponta a ponta. [ESSENCIAL - PRE-PILOTO]
   - Validar criação, biblioteca, versão, distribuição, rascunho do paciente,
@@ -2757,4 +2771,8 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado, por decisao do proprietario em 2026-09-04: fechar as duas dividas nomeadas pela fase 2 do PR 52 antes de abrir o PR 53 - primeiro o gate de migration fora de banda, depois o fallback `NEXT_PUBLIC_API_URL`; e entao a triagem das vulnerabilidades high do Dependabot. O PR 52 esta concluido, com as tres fases no `main` (PRs GitHub `#191`, `#194` e `#195`). Do PR 51 resta apenas a evidencia redigida dos paineis de provider, coletada pelo proprietario.
+Proximo item autorizado: concluir o SQ-4 com checks e merge humanos. Depois,
+executar PR 53 (backup/restore/RPO/RTO) e PR 54 (DAST/fuzzing/pentest interno em
+staging isolado). A retomada funcional comeca na Fase 256; alertas sem solucao
+permanecem abertos e revisaveis, enquanto novo critical/high corrigivel volta a
+bloquear a fila.

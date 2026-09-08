@@ -152,18 +152,43 @@ function validarCausa(causa, alertasPorReferencia, hoje) {
   if (revisarEm.getTime() < hoje.getTime()) falhar(`causa ${causa.id} esta com revisao vencida.`);
 
   const alertas = causa.alertas.map((referencia) => alertasPorReferencia.get(referencia));
-  if (causa.disposicao === 'aguardando_upstream' && alertas.some((alerta) => alerta.versaoCorrigida !== null)) {
-    falhar(`causa ${causa.id} aguardando_upstream exige versaoCorrigida: null.`);
-  }
   const temVersaoCorrigida = alertas.some(
     (alerta) => typeof alerta.versaoCorrigida === 'string' && alerta.versaoCorrigida.trim() !== ''
   );
+  if (causa.disposicao === 'aguardando_upstream' && temVersaoCorrigida) {
+    exigirTexto(causa.bloqueioUpstream, `causa ${causa.id}.bloqueioUpstream`);
+  }
   if (
     causa.disposicao === 'corrigir' &&
     !temVersaoCorrigida &&
     (typeof causa.correcaoSemBump !== 'string' || causa.correcaoSemBump.trim() === '')
   ) {
     falhar(`causa ${causa.id} corrigir exige versao corrigida ou justificativa correcaoSemBump.`);
+  }
+}
+
+function validarGateEncerramentoSq4(inventario) {
+  if (inventario.gateEncerramentoSq4 === undefined) return;
+  if (inventario.gateEncerramentoSq4 !== true) {
+    falhar('gateEncerramentoSq4, quando declarado, precisa ser true.');
+  }
+
+  const investigacoes = inventario.causas.filter(({ disposicao }) => disposicao === 'investigar');
+  if (investigacoes.length > 0) {
+    falhar(`gate SQ-4 tem investigacao pendente: ${investigacoes.map(({ id }) => id).join(', ')}.`);
+  }
+
+  const severidadesPorReferencia = new Map([
+    ...inventario.snapshot.codeScanning.alertas.map((alerta) => [`code-scanning:${alerta.numero}`, alerta.severidade]),
+    ...inventario.snapshot.dependabot.alertas.map((alerta) => [`dependabot:${alerta.numero}`, alerta.severidade]),
+  ]);
+  const corrigiveisBloqueadores = inventario.causas.filter((causa) =>
+    causa.disposicao === 'corrigir' && causa.alertas.some((referencia) =>
+      ['critical', 'high'].includes(severidadesPorReferencia.get(referencia))
+    )
+  );
+  if (corrigiveisBloqueadores.length > 0) {
+    falhar(`gate SQ-4 tem critico ou alto corrigivel: ${corrigiveisBloqueadores.map(({ id }) => id).join(', ')}.`);
   }
 }
 
@@ -198,6 +223,7 @@ export function validarInventario(inventario, { hoje = new Date() } = {}) {
     validarCausa(causa, alertasPorReferencia, hojeNoInicio);
     ids.add(causa.id);
   }
+  validarGateEncerramentoSq4(inventario);
   return `Inventario Security & Quality valido: ${esperadas.length} alertas cobertos.`;
 }
 
