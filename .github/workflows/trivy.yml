@@ -101,8 +101,8 @@ jobs:
             cpus: "1.0"
             tmpfs_extra: ""
             env_args: ""
-            comandos_ausentes: ""
-            caminhos_ausentes: ""
+            comandos_ausentes: "npm npx pnpm corepack"
+            caminhos_ausentes: "/usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack"
             # Boot do app depende de segredos JWT/cripto e Postgres/Redis
             # (config/provider): fronteira do PR 51. Provamos o hardening da
             # imagem; health do app fica FACTUAL e documentado.

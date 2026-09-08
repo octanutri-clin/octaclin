@@ -1,29 +1,36 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-07.
+Atualizado em 2026-09-08.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
-  frente ativa antes da retomada da Fase 256 e SQ-1B; SQ-1A permanece aguardando
-  uma nova imagem oficial Node 22 Alpine. O inventario ativo foi
-  capturado em 2026-09-07 sobre o commit `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`:
-  238 alertas de Code Scanning (235 Trivy e 3 Semgrep), 2 Dependabot e 0 Secret
-  Scanning. Os 240 alertas abertos estao cobertos exatamente uma vez em
+- SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. O
+  inventario versionado foi capturado em 2026-09-07 sobre
+  `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning
+  (235 Trivy e 3 Semgrep), 2 Dependabot e 0 Secret Scanning. Os 240 alertas
+  abertos estao cobertos exatamente uma vez em
   `docs/governance/inventario-security-quality.json`, com owner, revisao e onda
-  de destino. SQ-0 corrigiu **zero alertas**; apenas tornou o backlog atual
-  explicito e bloqueavel. O snapshot do PR 37 permanece historico.
-- A recaptura sanitizada posterior ao merge de SQ-0, feita sobre `316165d`,
-  manteve 238 alertas de Code Scanning, 2 Dependabot e 0 Secret Scanning. O
-  Docker Hub oficial ainda resolve `node:22-alpine` para o digest
+  de destino. SQ-0 corrigiu **zero alertas**; apenas tornou o backlog explicito
+  e bloqueavel. O snapshot do PR 37 permanece historico.
+- A primeira entrega de SQ-1B foi integrada pelo PR `#211`, merge `05e81c4`.
+  O harness do CI provou que o web preserva Node, Next e health real sem
+  `npm`, `npx`, `pnpm`, `corepack` ou seus diretorios globais. A analise Trivy
+  `1740151860` da `main` reduziu `trivy-imagem-web` de 39 para 20 resultados.
+  A recaptura sanitizada de 2026-09-08 sobre `05e81c4`, entretanto, manteve o
+  total em 238 Code Scanning, 2 Dependabot e 0 Secret Scanning: a distribuicao
+  passou a 20 web, 39 backend e 176 IA, alem dos 3 Semgrep. Os 19 resultados
+  do npm global nao permanecem no web, mas continuam presentes no runtime do
+  backend, que tambem inicia diretamente por Node. SQ-1B segue ativa no
+  complemento `feat/sq1b-backend-runtime-minimo`; SQ-1C vem depois dele.
+- SQ-1A permanece aguardando uma nova imagem oficial Node 22 Alpine. O Docker
+  Hub ainda resolve `node:22-alpine` para o digest
   `sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32`,
-  publicado antes do OpenSSL Alpine corrigido; por isso SQ-1A nao alterou o
-  digest nem declarou seus 40 alertas resolvidos. SQ-1B remove do runtime web o
-  npm/Corepack global, com prova estatica local e prova de container reservada
-  ao CI.
+  publicado antes do OpenSSL Alpine corrigido; nenhum workaround de instalacao
+  mutavel foi adotado e os 20 resultados atuais de `libssl3`/`libcrypto3` por
+  imagem continuam abertos.
 - Nesta branch, o gate local `pnpm test:inventario-security-quality` valida o
   inventario e sua captura, e o job `Governanca de repositorio` foi configurado
   para executa-lo sem rede, `gh`, token ou permissao adicional. A captura
