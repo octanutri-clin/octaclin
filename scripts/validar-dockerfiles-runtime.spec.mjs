@@ -179,7 +179,27 @@ test('o runtime backend remove o npm global e as interfaces de package manager',
   }
 });
 
-test('o CI prova nos containers Node que comandos e diretorios globais estao ausentes', () => {
+test('o runtime IA remove o pip global e os componentes vendorizados da imagem base', () => {
+  const ia = estagioFinal(readFileSync('octaclin-ai-service/Dockerfile', 'utf8'));
+  const inicioLimpeza = ia.indexOf('RUN rm -rf \\\n');
+  assert.notEqual(inicioLimpeza, -1, 'octaclin-ai-service/Dockerfile: runtime precisa declarar a limpeza do pip da base.');
+
+  const proximaCopia = ia.indexOf('\nCOPY ', inicioLimpeza);
+  assert.notEqual(proximaCopia, -1, 'octaclin-ai-service/Dockerfile: limpeza deve ocorrer antes da copia das dependencias.');
+  const limpeza = ia.slice(inicioLimpeza, proximaCopia);
+
+  for (const caminho of [
+    '/usr/local/bin/pip',
+    '/usr/local/bin/pip3',
+    '/usr/local/bin/pip3.14',
+    '/usr/local/lib/python3.14/site-packages/pip',
+    '/usr/local/lib/python3.14/site-packages/pip-*.dist-info',
+  ]) {
+    assert.ok(limpeza.includes(caminho), `octaclin-ai-service/Dockerfile: runtime ainda nao remove ${caminho}.`);
+  }
+});
+
+test('o CI prova nos containers que comandos e diretorios globais estao ausentes', () => {
   const harness = readFileSync('scripts/harness-runtime-containers.sh', 'utf8');
   const workflow = readFileSync('.github/workflows/trivy.yml', 'utf8');
 
@@ -197,11 +217,14 @@ test('o CI prova nos containers Node que comandos e diretorios globais estao aus
   const inicioBackend = workflow.indexOf('- nome: backend');
   const inicioWeb = workflow.indexOf('- nome: web', inicioBackend);
   const inicioIa = workflow.indexOf('- nome: ia-service', inicioWeb);
+  const fimMatriz = workflow.indexOf('\n    steps:', inicioIa);
   assert.notEqual(inicioBackend, -1, 'matriz backend nao encontrada no workflow Trivy.');
   assert.notEqual(inicioWeb, -1, 'matriz web nao encontrada no workflow Trivy.');
   assert.notEqual(inicioIa, -1, 'limite da matriz web nao encontrado no workflow Trivy.');
+  assert.notEqual(fimMatriz, -1, 'limite da matriz IA nao encontrado no workflow Trivy.');
   const backend = workflow.slice(inicioBackend, inicioWeb);
   const web = workflow.slice(inicioWeb, inicioIa);
+  const ia = workflow.slice(inicioIa, fimMatriz);
   for (const [nome, matriz] of [['backend', backend], ['web', web]]) {
     assert.ok(matriz.includes('comandos_ausentes: "npm npx pnpm corepack"'), `${nome}: comandos proibidos nao configurados.`);
     assert.ok(
@@ -209,6 +232,11 @@ test('o CI prova nos containers Node que comandos e diretorios globais estao aus
       `${nome}: caminhos proibidos nao configurados.`,
     );
   }
+  assert.ok(ia.includes('comandos_ausentes: "pip pip3"'), 'ia-service: comandos pip proibidos nao configurados.');
+  assert.ok(
+    ia.includes('caminhos_ausentes: "/usr/local/lib/python3.14/site-packages/pip"'),
+    'ia-service: pacote global do pip nao configurado como caminho proibido.',
+  );
   assert.ok(workflow.includes('COMANDOS_AUSENTES: ${{ matrix.comandos_ausentes }}'));
   assert.ok(workflow.includes('CAMINHOS_AUSENTES: ${{ matrix.caminhos_ausentes }}'));
 });

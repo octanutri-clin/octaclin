@@ -34,7 +34,7 @@
     "audit:redacao-auditoria": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/validar-redacao-auditoria.mjs --inventario",
     "test:a11y:matriz": "node --test scripts/test-matriz-acessibilidade.spec.mjs",
     "test:actions-imutaveis": "node --test scripts/validar-actions-imutaveis.spec.mjs",
-    "test:workflows-seguros": "node --test scripts/validar-workflows-sem-injecao.spec.mjs",
+    "test:workflows-seguros": "node --test scripts/validar-workflows-sem-injecao.spec.mjs scripts/validar-preflight-fail-closed.spec.mjs",
     "test:triagem-seguranca": "node --test scripts/validar-triagem-seguranca.spec.mjs",
     "test:inventario-security-quality": "node --test scripts/validar-inventario-security-quality.spec.mjs scripts/capturar-inventario-security-quality.spec.mjs && node scripts/validar-inventario-security-quality.mjs",
     "test:tooling-agentes": "node --test scripts/validar-tooling-agentes.spec.mjs",

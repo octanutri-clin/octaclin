@@ -31,6 +31,19 @@ function Invoke-Step {
   Write-Host "OK: $Name ($duracao s)"
 }
 
+function Invoke-Native {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Command,
+    [string[]]$Arguments = @()
+  )
+
+  & $Command @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "Comando nativo '$Command' falhou com exit code $LASTEXITCODE."
+  }
+}
+
 function Invoke-Pnpm {
   param(
     [string]$WorkingDirectory,
@@ -39,7 +52,7 @@ function Invoke-Pnpm {
 
   Push-Location $WorkingDirectory
   try {
-    & pnpm @Arguments
+    Invoke-Native -Command 'pnpm' -Arguments $Arguments
   } finally {
     Pop-Location
   }
@@ -48,11 +61,11 @@ function Invoke-Pnpm {
 Push-Location $raiz
 try {
   Invoke-Step 'Git diff check' {
-    git diff --check
+    Invoke-Native -Command 'git' -Arguments @('diff', '--check')
   }
 
   Invoke-Step 'Scanner local de secrets' {
-    node (Join-Path $raiz 'scripts/scan-secrets.mjs')
+    Invoke-Native -Command 'node' -Arguments @((Join-Path $raiz 'scripts/scan-secrets.mjs'))
   }
 
   Invoke-Step 'Documentacao canonica' {
@@ -103,7 +116,7 @@ try {
   }
 
   Invoke-Step 'Git status' {
-    git status --short
+    Invoke-Native -Command 'git' -Arguments @('status', '--short')
   }
 
   Write-Host ""

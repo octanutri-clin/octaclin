@@ -286,6 +286,9 @@ jobs:
 
       - run: python -m py_compile app/main.py
 
+      - name: Testar o servico FastAPI
+        run: python -m unittest discover -s tests -v
+
       # Auditoria contra o grafo resolvido, nao contra a lista de diretas.
       # O pip-audit vive num venv separado para nao entrar no ambiente do
       # servico e alterar o que esta sendo auditado.

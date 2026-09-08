@@ -24,6 +24,15 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 RUN groupadd --system --gid 10001 octaclin \
     && useradd --system --uid 10001 --gid octaclin --home-dir /app --shell /usr/sbin/nologin octaclin
+# SQ-1C: o servico executa uvicorn diretamente e recebe as dependencias prontas
+# do estagio de build. O pip da imagem oficial, inclusive seus componentes
+# vendorizados, nao pertence ao grafo da aplicacao nem e necessario no runtime.
+RUN rm -rf \
+    /usr/local/bin/pip \
+    /usr/local/bin/pip3 \
+    /usr/local/bin/pip3.14 \
+    /usr/local/lib/python3.14/site-packages/pip \
+    /usr/local/lib/python3.14/site-packages/pip-*.dist-info
 COPY --from=build /install /usr/local
 COPY --chown=octaclin:octaclin app ./app
 EXPOSE 8001
