@@ -2257,8 +2257,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Em 2026-09-07, a API oficial do Docker Hub ainda devolveu o mesmo digest
     `c610fcdf...a3aa32`, atualizado em 2026-07-29 e anterior ao pacote Alpine
     corrigido; nenhum workaround de instalacao mutavel foi adotado.
-  - [~] SQ-1B: remover npm, npx, pnpm e corepack das imagens finais Node sem
-    quebrar o boot, os artefatos, o healthcheck ou o smoke. [ATIVA]
+  - [x] SQ-1B: remover npm, npx, pnpm e corepack das imagens finais Node sem
+    quebrar o boot, os artefatos, o healthcheck ou o smoke.
     - [x] Web integrado pelo PR `#211`, merge `05e81c4`: contrato, build,
       health, smoke, scan, revisao e harness verdes; `trivy-imagem-web` caiu de
       39 para 20 resultados na analise `1740151860` da `main`.
@@ -2270,12 +2270,22 @@ publicado antes de ampliar a superficie de mudancas visuais.
       `node_modules` da aplicacao, `dist` ou `CMD`.
     - [x] Matriz Trivy configurada para provar as ausencias tambem no container
       backend, com argumentos posicionais seguros e health ainda `factual`.
-    - [ ] Build, hardening, scan da imagem, revisao e merge do complemento no
-      GitHub.
-    - [ ] Recaptura final na `main` comprovando o fechamento dos 19 resultados
-      do backend antes de iniciar SQ-1C.
-  - [ ] SQ-1C: provar no SBOM a procedencia dos 3 achados Python, corrigir na
-    origem real e preservar lock por hash e testes do servico.
+    - [x] Build, hardening, scan da imagem, revisao e merge do complemento pelo
+      PR `#212`, merge `38ab752`.
+    - [x] Recaptura final na `main`: 219 Code Scanning, sendo 20 web, 20
+      backend, 176 IA e 3 Semgrep; mais 2 Dependabot e 0 Secret Scanning.
+  - [~] SQ-1C: provar no SBOM a procedencia dos 3 achados Python, corrigir na
+    origem real e preservar lock por hash e testes do servico. [ATIVA]
+    - [x] CycloneDX correlacionado por camada: `msgpack@1.1.2`,
+      `setuptools@70.3.0`, pip e demais componentes vendorizados pertencem a
+      camada da base; as 22 dependencias da aplicacao pertencem a outra camada.
+    - [x] Contrato RED -> GREEN exige remover o pip global no estagio final e
+      configura o harness IA para recusar `pip`, `pip3` e o pacote global.
+    - [x] Falso verde do preflight corrigido com propagacao de exit code de
+      comandos nativos e regressao sintetica no gate de workflows seguros.
+    - [ ] Gates locais completos, PR, build/health real, SBOM e scan revisados.
+    - [ ] Revisao humana, merge e recaptura na `main` comprovando IA de 176
+      para 173 sem alterar web, backend, Semgrep, Dependabot ou secrets.
 - [ ] SQ-2 - Comparar bases suportadas e minimizar a superficie da imagem de IA
   para os 173 alertas sem fixed version, sem trocar seguranca por perda de
   compatibilidade, suporte ou operabilidade.

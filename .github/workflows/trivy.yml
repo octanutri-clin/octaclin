@@ -126,8 +126,8 @@ jobs:
             cpus: "0.5"
             tmpfs_extra: ""
             env_args: ""
-            comandos_ausentes: ""
-            caminhos_ausentes: ""
+            comandos_ausentes: "pip pip3"
+            caminhos_ausentes: "/usr/local/lib/python3.14/site-packages/pip"
             modo_health: real
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

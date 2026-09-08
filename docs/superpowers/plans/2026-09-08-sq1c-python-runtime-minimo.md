@@ -88,3 +88,12 @@ limpeza; nenhum dado, schema, provider ou ambiente de producao e alterado.
 - Trocar a imagem-base Python ou executar `apt upgrade` mutavel.
 - Fechar ou dispensar os 173 achados restantes da IA.
 - Alterar provider, logica clinica, tenancy, dados ou deploy.
+
+## Fato novo durante a execucao
+
+O primeiro `validate:docs` revelou um falso verde: Git recusou o worktree por
+`safe.directory`, mas o PowerShell continuou e imprimiu sucesso. Como esse gate
+faz parte da evidencia da SQ-1C, a branch inclui o controle proporcional:
+wrapper fail-closed para processos nativos e regressao com Git sintetico
+retornando `42`. A execucao real permanece com `safe.directory` somente na
+configuracao do processo, sem alterar configuracao global da maquina.

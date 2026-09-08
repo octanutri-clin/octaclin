@@ -4,6 +4,17 @@ Registre aqui somente incidente de producao, falso verde, seguranca, recorrencia
 falha sistemica, investigacao cara ou erro com alta chance de repetir. Cada nova
 licao deve declarar problema, causa, correcao, como evitar, controle e status.
 
+## 2026-09-08 - Exit code nativo oculto no preflight PowerShell
+
+Problema: `git diff --check` e `git status` falharam por `safe.directory`, mas o
+preflight imprimiu `OK` e terminou com exit code zero. Causa: `Stop` trata erros
+do PowerShell, mas nao transforma automaticamente o exit code de processo nativo
+em excecao. Correcao: todos os comandos nativos do preflight passam por um
+wrapper que verifica `$LASTEXITCODE` e falha fechado. Como evitar: toda nova
+chamada nativa nesse orquestrador deve usar o wrapper. Controle: regressao cria
+um Git sintetico que retorna `42` e exige falha sem a mensagem final de sucesso.
+Status do controle: automated.
+
 ## 2026-09-07 - Prazo de revisao invisivel ao gate do inventario
 
 Problema: a suite validava o inventario com data fixa e ficava verde apos o
