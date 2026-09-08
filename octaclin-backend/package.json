@@ -50,7 +50,7 @@
     "cron-parser": "^5.10.0",
     "dotenv": "^17.4.2",
     "ioredis": "^5.4.2",
-    "nodemailer": "^9.0.6",
+    "nodemailer": "^9.1.1",
     "otpauth": "^9.4.1",
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
