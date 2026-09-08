@@ -134,6 +134,54 @@ test('o runtime web nao depende do cache Corepack preparado como root', () => {
   assert.match(web, /^CMD \["node", "node_modules\/next\/dist\/bin\/next", "start"\]/m);
 });
 
+test('o runtime web remove o npm global e as interfaces de package manager', () => {
+  const web = estagioFinal(readFileSync('octaclin-web/Dockerfile', 'utf8'));
+  const inicioLimpeza = web.indexOf('RUN rm -rf \\\n');
+  assert.notEqual(inicioLimpeza, -1, 'octaclin-web/Dockerfile: runtime precisa declarar a limpeza da base oficial.');
+
+  const proximaCopia = web.indexOf('\nCOPY ', inicioLimpeza);
+  assert.notEqual(proximaCopia, -1, 'octaclin-web/Dockerfile: limpeza deve ocorrer antes da copia dos artefatos.');
+  const limpeza = web.slice(inicioLimpeza, proximaCopia);
+
+  for (const caminho of [
+    '/usr/local/lib/node_modules/npm',
+    '/usr/local/lib/node_modules/corepack',
+    '/usr/local/bin/npm',
+    '/usr/local/bin/npx',
+    '/usr/local/bin/pnpm',
+    '/usr/local/bin/pnpx',
+    '/usr/local/bin/corepack',
+  ]) {
+    assert.ok(limpeza.includes(caminho), `octaclin-web/Dockerfile: runtime ainda nao remove ${caminho}.`);
+  }
+});
+
+test('o CI prova no container web que comandos e diretorios globais estao ausentes', () => {
+  const harness = readFileSync('scripts/harness-runtime-containers.sh', 'utf8');
+  const workflow = readFileSync('.github/workflows/trivy.yml', 'utf8');
+
+  assert.ok(harness.includes('COMANDOS_AUSENTES'), 'harness precisa consumir a lista de comandos ausentes.');
+  assert.ok(harness.includes('CAMINHOS_AUSENTES'), 'harness precisa consumir a lista de caminhos ausentes.');
+  assert.ok(
+    harness.includes(`sh -c 'command -v "$1" >/dev/null 2>&1' sh "$comando"`),
+    'harness deve passar o comando como argumento posicional, sem interpolar codigo de shell.',
+  );
+  assert.ok(
+    harness.includes(`sh -c 'test ! -e "$1"' sh "$caminho"`),
+    'harness deve passar o caminho como argumento posicional, sem interpolar codigo de shell.',
+  );
+
+  const inicioWeb = workflow.indexOf('- nome: web');
+  const inicioIa = workflow.indexOf('- nome: ia-service', inicioWeb);
+  assert.notEqual(inicioWeb, -1, 'matriz web nao encontrada no workflow Trivy.');
+  assert.notEqual(inicioIa, -1, 'limite da matriz web nao encontrado no workflow Trivy.');
+  const web = workflow.slice(inicioWeb, inicioIa);
+  assert.ok(web.includes('comandos_ausentes: "npm npx pnpm corepack"'));
+  assert.ok(web.includes('caminhos_ausentes: "/usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack"'));
+  assert.ok(workflow.includes('COMANDOS_AUSENTES: ${{ matrix.comandos_ausentes }}'));
+  assert.ok(workflow.includes('CAMINHOS_AUSENTES: ${{ matrix.caminhos_ausentes }}'));
+});
+
 test('builds Node nao desativam a referencia de package manager verificada', () => {
   for (const caminho of ['octaclin-backend/Dockerfile', 'octaclin-web/Dockerfile']) {
     const conteudo = readFileSync(caminho, 'utf8');

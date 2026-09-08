@@ -2237,7 +2237,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
 
 ### Programa Security & Quality antes da Fase 256
 
-- [~] SQ-0 - Verdade do backlog. [ATIVA]
+- [x] SQ-0 - Verdade do backlog. [CONCLUIDA NO PR #210]
   - [x] Snapshot ativo capturado em 2026-09-07 sobre o commit
     `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning
     (235 Trivy e 3 Semgrep), 2 Dependabot e 0 Secret Scanning.
@@ -2249,13 +2249,23 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `Governanca de repositorio`; o CI valida apenas o snapshot versionado, sem
     rede, `gh`, token ou permissao adicional. Captura deliberada local por
     `pnpm security:capturar-inventario`.
-  - [ ] Checks do Pull Request, revisao humana e merge na `main`.
-- [ ] SQ-1 - Corrigir alertas com versao corrigida, em PRs independentes.
-  - [ ] SQ-1A: atualizar o digest oficial da base Node 22 e eliminar os 40
+  - [x] Checks do Pull Request, revisao humana e merge `316165d` na `main`.
+- [~] SQ-1 - Corrigir alertas com versao corrigida, em PRs independentes. [ATIVA]
+  - [~] SQ-1A: atualizar o digest oficial da base Node 22 e eliminar os 40
     alertas corrigiveis de `libssl3`/`libcrypto3`, preservando o harness de
-    runtime e registrando o digest anterior para rollback.
-  - [ ] SQ-1B: remover npm, npx, pnpm e corepack da imagem final do web sem
+    runtime e registrando o digest anterior para rollback. [AGUARDANDO UPSTREAM]
+    Em 2026-09-07, a API oficial do Docker Hub ainda devolveu o mesmo digest
+    `c610fcdf...a3aa32`, atualizado em 2026-07-29 e anterior ao pacote Alpine
+    corrigido; nenhum workaround de instalacao mutavel foi adotado.
+  - [~] SQ-1B: remover npm, npx, pnpm e corepack da imagem final do web sem
     quebrar Node, Next, healthcheck ou smoke; eliminar os 19 alertas associados.
+    [ATIVA]
+    - [x] Contrato estatico RED -> GREEN exige a remocao dos comandos e dos
+      diretorios globais de npm/Corepack no estagio final.
+    - [x] Harness e matriz Trivy configurados para provar a ausencia no
+      container web com argumentos posicionais seguros.
+    - [ ] Build, healthcheck, smoke, scan da imagem, revisao e merge no GitHub.
+    - [ ] Recaptura na `main` comprovando o fechamento dos 19 alertas.
   - [ ] SQ-1C: provar no SBOM a procedencia dos 3 achados Python, corrigir na
     origem real e preservar lock por hash e testes do servico.
 - [ ] SQ-2 - Comparar bases suportadas e minimizar a superficie da imagem de IA

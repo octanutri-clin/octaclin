@@ -13,6 +13,8 @@
 # Contrato (variaveis por servico, definidas pelo workflow):
 #   SERVICO CONTEXTO PORTA HEALTH_PATH PIDS_LIMIT MEMORIA CPUS
 #   TMPFS_EXTRA (lista separada por espaco de caminhos gravaveis)
+#   COMANDOS_AUSENTES (lista separada por espaco de comandos proibidos)
+#   CAMINHOS_AUSENTES (lista separada por espaco de caminhos proibidos)
 #   REDE (host|bridge) ENV_ARGS (flags -e sinteticas, sem secret real)
 #   MODO_HEALTH=real   -> executa o CMD real e exige Health.Status=healthy.
 #   MODO_HEALTH=factual-> imagem cujo app depende de config/provider (fronteira
@@ -110,6 +112,19 @@ UID_EFETIVO="$(docker exec "$CONTAINER" id -u 2>/dev/null || docker exec "$CONTA
 [[ -n "$UID_EFETIVO" && "$UID_EFETIVO" != "0" ]] || falhar "[$SERVICO] processo executa como root (uid=$UID_EFETIVO)"
 info "uid efetivo=$UID_EFETIVO (non-root): OK"
 [[ -z "${UID_ESPERADO:-}" || "$UID_EFETIVO" == "$UID_ESPERADO" ]] || falhar "[$SERVICO] uid $UID_EFETIVO != esperado $UID_ESPERADO"
+
+echo "== [$SERVICO] superficie de runtime proibida ausente =="
+for comando in ${COMANDOS_AUSENTES:-}; do
+  if docker exec "$CONTAINER" sh -c 'command -v "$1" >/dev/null 2>&1' sh "$comando"; then
+    falhar "[$SERVICO] comando proibido presente no runtime: $comando"
+  fi
+  info "comando ausente: $comando"
+done
+for caminho in ${CAMINHOS_AUSENTES:-}; do
+  docker exec "$CONTAINER" sh -c 'test ! -e "$1"' sh "$caminho" \
+    || falhar "[$SERVICO] caminho proibido presente no runtime: $caminho"
+  info "caminho ausente: $caminho"
+done
 
 echo "== [$SERVICO] rootfs read-only: escrita proibida falha, tmpfs permitido passa =="
 if docker exec "$CONTAINER" sh -c 'echo x > /app/persistencia-nao-autorizada' 2>/dev/null; then

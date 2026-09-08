@@ -7,13 +7,23 @@ Atualizado em 2026-09-07.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- SQ-0 e a frente ativa antes da retomada da Fase 256. O inventario ativo foi
+- SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
+  frente ativa antes da retomada da Fase 256 e SQ-1B; SQ-1A permanece aguardando
+  uma nova imagem oficial Node 22 Alpine. O inventario ativo foi
   capturado em 2026-09-07 sobre o commit `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`:
   238 alertas de Code Scanning (235 Trivy e 3 Semgrep), 2 Dependabot e 0 Secret
   Scanning. Os 240 alertas abertos estao cobertos exatamente uma vez em
   `docs/governance/inventario-security-quality.json`, com owner, revisao e onda
   de destino. SQ-0 corrigiu **zero alertas**; apenas tornou o backlog atual
   explicito e bloqueavel. O snapshot do PR 37 permanece historico.
+- A recaptura sanitizada posterior ao merge de SQ-0, feita sobre `316165d`,
+  manteve 238 alertas de Code Scanning, 2 Dependabot e 0 Secret Scanning. O
+  Docker Hub oficial ainda resolve `node:22-alpine` para o digest
+  `sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32`,
+  publicado antes do OpenSSL Alpine corrigido; por isso SQ-1A nao alterou o
+  digest nem declarou seus 40 alertas resolvidos. SQ-1B remove do runtime web o
+  npm/Corepack global, com prova estatica local e prova de container reservada
+  ao CI.
 - Nesta branch, o gate local `pnpm test:inventario-security-quality` valida o
   inventario e sua captura, e o job `Governanca de repositorio` foi configurado
   para executa-lo sem rede, `gh`, token ou permissao adicional. A captura

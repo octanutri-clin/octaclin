@@ -33,6 +33,17 @@ RUN pnpm install --prod --frozen-lockfile
 FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+# SQ-1B: o servidor inicia diretamente por Node e nao instala pacotes. Remover
+# o npm/Corepack herdado da base elimina ferramentas e dependencias globais sem
+# tocar nos modulos de producao da aplicacao copiados para /app abaixo.
+RUN rm -rf \
+  /usr/local/lib/node_modules/npm \
+  /usr/local/lib/node_modules/corepack \
+  /usr/local/bin/npm \
+  /usr/local/bin/npx \
+  /usr/local/bin/pnpm \
+  /usr/local/bin/pnpx \
+  /usr/local/bin/corepack
 COPY --chown=node:node package.json ./
 COPY --chown=node:node --from=deps-prod /app/node_modules ./node_modules
 COPY --chown=node:node --from=build /app/.next ./.next
