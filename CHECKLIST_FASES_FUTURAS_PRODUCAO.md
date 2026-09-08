@@ -2767,7 +2767,7 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] RPO de 24 horas e RTO do restore do banco de 30 minutos definidos e testados como contrato.
   - [x] Manifesto dinamico compara migrations, tabelas publicas e todas as tabelas `tenant_id` com RLS/`FORCE`/policy completa.
   - [x] Separacao de banco/role, checksum, cifragem, retencao e procedimento de falha documentados em `RUNBOOK_RECUPERACAO_RANSOMWARE.md`.
-  - [ ] Gate externo: executar o workflow desta branch com `restore_test=true` no banco dedicado confirmado e registrar tempos redigidos.
+  - [x] Gate externo: execucao `34286684698` PASS no banco dedicado confirmado, com restore mais validacao em 124 segundos e idade do snapshot de aproximadamente 152 segundos.
   - [ ] Object Lock COMPLIANCE no bucket: nao comprovado; permanece excecao aberta ate decisao irreversivel de infraestrutura e custo.
   - [ ] Checks do PR e review/merge humanos.
 - [ ] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.

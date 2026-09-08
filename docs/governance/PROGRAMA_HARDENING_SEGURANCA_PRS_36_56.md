@@ -5,9 +5,9 @@
 > Atualizado em: 2026-09-08
 >
 > Estado do SQ-4: integrado no `main` pelo PR GitHub #215 em 2026-09-08
-> (`dc8334f`). Estado do PR 53: **em elaboracao** na branch
-> `feat/pr53-backup-restore`; o gate externo continua pendente ate um restore
-> real, isolado e medido executar o workflow desta branch. Object Lock
+> (`dc8334f`). Estado do PR 53: **gate externo PASS; checks e review humano
+> pendentes** na PR GitHub #216. O restore real, isolado e medido da execucao
+> `34286684698` aprovou RPO/RTO e manifestos no banco dedicado. Object Lock
 > COMPLIANCE permanece excecao aberta e nao comprovada; sua ativacao no bucket
 > e irreversivel e exige decisao operacional separada.
 >
