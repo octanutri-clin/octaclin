@@ -2257,15 +2257,23 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Em 2026-09-07, a API oficial do Docker Hub ainda devolveu o mesmo digest
     `c610fcdf...a3aa32`, atualizado em 2026-07-29 e anterior ao pacote Alpine
     corrigido; nenhum workaround de instalacao mutavel foi adotado.
-  - [~] SQ-1B: remover npm, npx, pnpm e corepack da imagem final do web sem
-    quebrar Node, Next, healthcheck ou smoke; eliminar os 19 alertas associados.
-    [ATIVA]
-    - [x] Contrato estatico RED -> GREEN exige a remocao dos comandos e dos
-      diretorios globais de npm/Corepack no estagio final.
-    - [x] Harness e matriz Trivy configurados para provar a ausencia no
-      container web com argumentos posicionais seguros.
-    - [ ] Build, healthcheck, smoke, scan da imagem, revisao e merge no GitHub.
-    - [ ] Recaptura na `main` comprovando o fechamento dos 19 alertas.
+  - [~] SQ-1B: remover npm, npx, pnpm e corepack das imagens finais Node sem
+    quebrar o boot, os artefatos, o healthcheck ou o smoke. [ATIVA]
+    - [x] Web integrado pelo PR `#211`, merge `05e81c4`: contrato, build,
+      health, smoke, scan, revisao e harness verdes; `trivy-imagem-web` caiu de
+      39 para 20 resultados na analise `1740151860` da `main`.
+    - [x] A recaptura sobre `05e81c4` confirmou que os 19 resultados do npm nao
+      permanecem no web, mas mostrou o mesmo conjunto no backend: a distribuicao
+      atual e 20 web, 39 backend e 176 IA, mantendo 238 Code Scanning.
+    - [x] Complemento backend com contrato RED -> GREEN: o estagio final remove
+      os comandos e diretorios globais de npm/Corepack sem tocar em Node,
+      `node_modules` da aplicacao, `dist` ou `CMD`.
+    - [x] Matriz Trivy configurada para provar as ausencias tambem no container
+      backend, com argumentos posicionais seguros e health ainda `factual`.
+    - [ ] Build, hardening, scan da imagem, revisao e merge do complemento no
+      GitHub.
+    - [ ] Recaptura final na `main` comprovando o fechamento dos 19 resultados
+      do backend antes de iniciar SQ-1C.
   - [ ] SQ-1C: provar no SBOM a procedencia dos 3 achados Python, corrigir na
     origem real e preservar lock por hash e testes do servico.
 - [ ] SQ-2 - Comparar bases suportadas e minimizar a superficie da imagem de IA

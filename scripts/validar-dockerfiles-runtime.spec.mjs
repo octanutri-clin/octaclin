@@ -9,8 +9,9 @@ const dockerfiles = [
 ];
 
 function estagioFinal(conteudo) {
-  const indice = conteudo.lastIndexOf('\nFROM ');
-  return indice >= 0 ? conteudo.slice(indice + 1) : conteudo;
+  const normalizado = conteudo.replace(/\r\n/g, '\n');
+  const indice = normalizado.lastIndexOf('\nFROM ');
+  return indice >= 0 ? normalizado.slice(indice + 1) : normalizado;
 }
 
 // Um `FROM` referencia uma imagem remota (que precisa de digest) OU um estagio
@@ -156,7 +157,29 @@ test('o runtime web remove o npm global e as interfaces de package manager', () 
   }
 });
 
-test('o CI prova no container web que comandos e diretorios globais estao ausentes', () => {
+test('o runtime backend remove o npm global e as interfaces de package manager', () => {
+  const backend = estagioFinal(readFileSync('octaclin-backend/Dockerfile', 'utf8'));
+  const inicioLimpeza = backend.indexOf('RUN rm -rf \\\n');
+  assert.notEqual(inicioLimpeza, -1, 'octaclin-backend/Dockerfile: runtime precisa declarar a limpeza da base oficial.');
+
+  const proximaCopia = backend.indexOf('\nCOPY ', inicioLimpeza);
+  assert.notEqual(proximaCopia, -1, 'octaclin-backend/Dockerfile: limpeza deve ocorrer antes da copia dos artefatos.');
+  const limpeza = backend.slice(inicioLimpeza, proximaCopia);
+
+  for (const caminho of [
+    '/usr/local/lib/node_modules/npm',
+    '/usr/local/lib/node_modules/corepack',
+    '/usr/local/bin/npm',
+    '/usr/local/bin/npx',
+    '/usr/local/bin/pnpm',
+    '/usr/local/bin/pnpx',
+    '/usr/local/bin/corepack',
+  ]) {
+    assert.ok(limpeza.includes(caminho), `octaclin-backend/Dockerfile: runtime ainda nao remove ${caminho}.`);
+  }
+});
+
+test('o CI prova nos containers Node que comandos e diretorios globais estao ausentes', () => {
   const harness = readFileSync('scripts/harness-runtime-containers.sh', 'utf8');
   const workflow = readFileSync('.github/workflows/trivy.yml', 'utf8');
 
@@ -171,13 +194,21 @@ test('o CI prova no container web que comandos e diretorios globais estao ausent
     'harness deve passar o caminho como argumento posicional, sem interpolar codigo de shell.',
   );
 
-  const inicioWeb = workflow.indexOf('- nome: web');
+  const inicioBackend = workflow.indexOf('- nome: backend');
+  const inicioWeb = workflow.indexOf('- nome: web', inicioBackend);
   const inicioIa = workflow.indexOf('- nome: ia-service', inicioWeb);
+  assert.notEqual(inicioBackend, -1, 'matriz backend nao encontrada no workflow Trivy.');
   assert.notEqual(inicioWeb, -1, 'matriz web nao encontrada no workflow Trivy.');
   assert.notEqual(inicioIa, -1, 'limite da matriz web nao encontrado no workflow Trivy.');
+  const backend = workflow.slice(inicioBackend, inicioWeb);
   const web = workflow.slice(inicioWeb, inicioIa);
-  assert.ok(web.includes('comandos_ausentes: "npm npx pnpm corepack"'));
-  assert.ok(web.includes('caminhos_ausentes: "/usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack"'));
+  for (const [nome, matriz] of [['backend', backend], ['web', web]]) {
+    assert.ok(matriz.includes('comandos_ausentes: "npm npx pnpm corepack"'), `${nome}: comandos proibidos nao configurados.`);
+    assert.ok(
+      matriz.includes('caminhos_ausentes: "/usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack"'),
+      `${nome}: caminhos proibidos nao configurados.`,
+    );
+  }
   assert.ok(workflow.includes('COMANDOS_AUSENTES: ${{ matrix.comandos_ausentes }}'));
   assert.ok(workflow.includes('CAMINHOS_AUSENTES: ${{ matrix.caminhos_ausentes }}'));
 });
