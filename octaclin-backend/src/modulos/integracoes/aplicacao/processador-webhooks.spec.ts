@@ -1,4 +1,4 @@
-import { createHmac } from 'crypto';
+import { createHmac, randomBytes } from 'crypto';
 import { WebhookAssinaturaOrm } from '../infraestrutura/webhook-assinatura.orm';
 import { WebhookEntregaOrm } from '../infraestrutura/webhook-entrega.orm';
 import { ProcessadorWebhooks } from './processador-webhooks';
@@ -73,8 +73,9 @@ describe('ProcessadorWebhooks', () => {
         })
       )
     };
+    const segredoHmac = randomBytes(32).toString('hex');
     const servico = new ProcessadorWebhooks({} as never, executor as never, {
-      descriptografar: jest.fn(() => 'segredo-hmac')
+      descriptografar: jest.fn(() => segredoHmac)
     } as never);
     const enviar = jest.spyOn(servico as never, 'enviar' as never).mockResolvedValue(204 as never);
 
@@ -83,7 +84,7 @@ describe('ProcessadorWebhooks', () => {
     const [url, corpo, cabecalhos] = enviar.mock.calls[0] as unknown as [string, string, Record<string, string>];
     expect(url).toBe('https://example.com/webhook');
     expect(cabecalhos['X-OctaClin-Delivery']).toBe('entrega-1');
-    const esperada = createHmac('sha256', 'segredo-hmac')
+    const esperada = createHmac('sha256', segredoHmac)
       .update(`${cabecalhos['X-OctaClin-Timestamp']}.${corpo}`)
       .digest('hex');
     expect(cabecalhos['X-OctaClin-Signature']).toBe(`v1=${esperada}`);
