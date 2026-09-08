@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { avaliarLock, validarLockDoRepositorio } from './validar-lock-python.mjs';
@@ -50,4 +51,19 @@ test('reprova lock sem cabecalho que registre como foi gerado', () => {
 
 test('o lock real do repositorio e reproduzivel e completo', () => {
   assert.match(validarLockDoRepositorio(), /Lock Python valido/);
+});
+
+test('o job AI executa a suite do servico depois de instalar o lock', () => {
+  const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+  const inicio = workflow.indexOf('  ai-service:');
+  const fim = workflow.indexOf('\n  demo-smoke:', inicio);
+  assert.notEqual(inicio, -1, 'job ai-service ausente do CI');
+  assert.notEqual(fim, -1, 'limite do job ai-service ausente do CI');
+  const job = workflow.slice(inicio, fim);
+
+  assert.ok(job.includes('pip install --require-hashes -r requirements.lock.txt'));
+  assert.ok(
+    job.includes('python -m unittest discover -s tests -v'),
+    'job AI precisa executar a suite do servico depois de instalar o lock',
+  );
 });

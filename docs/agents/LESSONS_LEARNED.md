@@ -15,6 +15,16 @@ chamada nativa nesse orquestrador deve usar o wrapper. Controle: regressao cria
 um Git sintetico que retorna `42` e exige falha sem a mensagem final de sucesso.
 Status do controle: automated.
 
+## 2026-09-08 - Job AI auditava dependencias sem executar a suite
+
+Problema: o job `AI FastAPI` instalava o lock, compilava e auditava o grafo,
+mas nao executava `tests/test_main.py`, embora a matriz declarasse essa prova.
+Causa: o comando de testes nao estava ligado ao workflow. Correcao: executar a
+suite depois da instalacao verificada por hash. Como evitar: declaracao de gate
+deve ser confrontada com o comando real do CI. Controle: o teste do lock tambem
+exige `python -m unittest discover -s tests -v` dentro do job AI.
+Status do controle: automated.
+
 ## 2026-09-07 - Prazo de revisao invisivel ao gate do inventario
 
 Problema: a suite validava o inventario com data fixa e ficava verde apos o

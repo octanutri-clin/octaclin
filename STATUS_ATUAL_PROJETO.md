@@ -43,6 +43,9 @@ Atualizado em 2026-09-08.
   retornou exit code nao zero, mas o PowerShell imprimiu `OK`. O preflight agora
   encapsula comandos nativos, falha fechado e tem regressao sintetica com Git
   retornando `42`; a validacao local usa apenas configuracao Git por processo.
+- A mesma revisao identificou que o job `AI FastAPI` instalava e auditava o lock,
+  mas nao executava a suite declarada na matriz. A SQ-1C conecta o `unittest` ao
+  job depois da instalacao por hash e adiciona contrato estatico contra regressao.
 - Incidente do monitor: a execucao agendada 577, run `34045002742`, falhou por
   tres timeouts no primeiro readiness e abriu automaticamente a issue `#206`.
   Uma verificacao read-only posterior retornou readiness 200 em 0,84 s,

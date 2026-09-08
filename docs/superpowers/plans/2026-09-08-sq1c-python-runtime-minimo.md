@@ -97,3 +97,8 @@ faz parte da evidencia da SQ-1C, a branch inclui o controle proporcional:
 wrapper fail-closed para processos nativos e regressao com Git sintetico
 retornando `42`. A execucao real permanece com `safe.directory` somente na
 configuracao do processo, sem alterar configuracao global da maquina.
+
+A revisao do job `AI FastAPI` tambem mostrou que a suite declarada na matriz
+nao era executada: havia instalacao, `py_compile` e auditoria, mas nenhum
+`unittest`. A branch liga `python -m unittest discover -s tests -v` ao CI e
+adiciona um contrato estatico para impedir a desconexao futura desse gate.
