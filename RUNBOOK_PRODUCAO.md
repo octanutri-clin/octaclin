@@ -778,6 +778,11 @@ coleta, listar a serie e confirmar auditoria sem valor clinico no log.
 
 ### Backup e restore
 
+Para RPO/RTO, manifesto dinamico do restore, estado de Object Lock e resposta a
+ransomware, usar tambem `RUNBOOK_RECUPERACAO_RANSOMWARE.md`. Retencao
+versionada nao deve ser descrita como WORM enquanto o gate de Object Lock
+COMPLIANCE permanecer `nao_comprovada`.
+
 Antes de go-live e antes de migrations sensiveis:
 
 1. Gerar backup com `powershell -ExecutionPolicy Bypass -File .\validar-backup-restore.ps1`.
