@@ -106,10 +106,38 @@ for (const data of ['2027-02-29', '2026-09-31', '2026-13-01']) {
   });
 }
 
-test('aguardando_upstream rejeita alerta que ja possui versao corrigida', () => {
+test('aguardando_upstream rejeita alerta corrigido sem bloqueio do artefato suportado', () => {
   const inventario = inventarioValido();
   inventario.snapshot.dependabot.alertas[0].versaoCorrigida = '2.0.0';
-  assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /aguardando_upstream exige versaoCorrigida: null/);
+  assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /bloqueioUpstream/);
+});
+
+test('aguardando_upstream aceita patch fora do artefato suportado com bloqueio explicito', () => {
+  const inventario = inventarioValido();
+  inventario.snapshot.dependabot.alertas[0].versaoCorrigida = '2.0.0';
+  inventario.causas[2].bloqueioUpstream = 'A cadeia suportada ainda nao publicou artefato que incorpore a versao corrigida.';
+  assert.match(validarInventario(inventario, { hoje: HOJE }), /3 alertas cobertos/);
+});
+
+test('gate SQ-4 rejeita investigacao pendente e critico ou alto ainda marcado para corrigir', () => {
+  const investigacao = inventarioValido();
+  investigacao.gateEncerramentoSq4 = true;
+  assert.throws(() => validarInventario(investigacao, { hoje: HOJE }), /investigacao pendente/);
+
+  const corrigivel = inventarioValido();
+  corrigivel.gateEncerramentoSq4 = true;
+  corrigivel.causas[1].disposicao = 'mitigado';
+  corrigivel.causas[0].severidadeContextual = 'low';
+  assert.throws(() => validarInventario(corrigivel, { hoje: HOJE }), /critico ou alto corrigivel/);
+});
+
+test('gate SQ-4 aceita residuos classificados sem critico ou alto corrigivel', () => {
+  const inventario = inventarioValido();
+  inventario.gateEncerramentoSq4 = true;
+  inventario.causas[0].disposicao = 'aguardando_upstream';
+  inventario.causas[0].bloqueioUpstream = 'A imagem suportada ainda nao incorporou o pacote corrigido.';
+  inventario.causas[1].disposicao = 'mitigado';
+  assert.match(validarInventario(inventario, { hoje: HOJE }), /3 alertas cobertos/);
 });
 
 for (const justificativa of [undefined, null, '', '   ', 123]) {
@@ -155,12 +183,16 @@ test('rejeita campos incompletos ou com tipo errado em Dependabot', () => {
 const INVENTARIO_REAL = new URL('../docs/governance/inventario-security-quality.json', import.meta.url);
 
 test('valida estrutura e cobertura do inventario real na data da captura', () => {
-  assert.match(carregarEValidarInventario(undefined, { hoje: HOJE }), /240 alertas cobertos/);
+  const inventario = JSON.parse(readFileSync(INVENTARIO_REAL, 'utf8'));
+  assert.equal(inventario.gateEncerramentoSq4, true);
+  assert.deepEqual(inventario.causas.map(({ alertas }) => alertas.length), [173, 40, 2]);
+  assert.ok(inventario.causas.every(({ disposicao }) => disposicao === 'aguardando_upstream'));
+  assert.match(carregarEValidarInventario(undefined, { hoje: HOJE }), /215 alertas cobertos/);
 });
 
 for (const [data, status, mensagem] of [
-  ['2026-09-13T23:59:59.999Z', 0, /240 alertas cobertos/],
-  ['2026-09-14T00:00:00.000Z', 1, /SQ-2026-139 esta com revisao vencida/],
+  ['2026-09-14T23:59:59.999Z', 0, /215 alertas cobertos/],
+  ['2026-09-15T00:00:00.000Z', 1, /SQ-2026-139 esta com revisao vencida/],
 ]) {
   test(`CLI do gate de CI aplica o relogio corrente em ${data}`, () => {
     const pacote = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
