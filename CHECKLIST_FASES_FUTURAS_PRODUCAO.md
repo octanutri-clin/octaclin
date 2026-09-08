@@ -2274,8 +2274,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
       PR `#212`, merge `38ab752`.
     - [x] Recaptura final na `main`: 219 Code Scanning, sendo 20 web, 20
       backend, 176 IA e 3 Semgrep; mais 2 Dependabot e 0 Secret Scanning.
-  - [~] SQ-1C: provar no SBOM a procedencia dos 3 achados Python, corrigir na
-    origem real e preservar lock por hash e testes do servico. [ATIVA]
+  - [x] SQ-1C: provar no SBOM a procedencia dos 3 achados Python, corrigir na
+    origem real e preservar lock por hash e testes do servico. [CONCLUIDA NO PR #213]
     - [x] CycloneDX correlacionado por camada: `msgpack@1.1.2`,
       `setuptools@70.3.0`, pip e demais componentes vendorizados pertencem a
       camada da base; as 22 dependencias da aplicacao pertencem a outra camada.
@@ -2283,15 +2283,29 @@ publicado antes de ampliar a superficie de mudancas visuais.
       configura o harness IA para recusar `pip`, `pip3` e o pacote global.
     - [x] Falso verde do preflight corrigido com propagacao de exit code de
       comandos nativos e regressao sintetica no gate de workflows seguros.
-    - [ ] Gates locais completos, PR, build/health real, SBOM e scan revisados.
-    - [ ] Revisao humana, merge e recaptura na `main` comprovando IA de 176
+    - [x] Gates locais completos, PR, build/health real, SBOM e scan revisados.
+    - [x] Revisao humana, merge `ee9cfed` e recaptura na `main` comprovaram IA de 176
       para 173 sem alterar web, backend, Semgrep, Dependabot ou secrets.
-- [ ] SQ-2 - Comparar bases suportadas e minimizar a superficie da imagem de IA
+- [~] SQ-2 - Comparar bases suportadas e minimizar a superficie da imagem de IA
   para os 173 alertas sem fixed version, sem trocar seguranca por perda de
-  compatibilidade, suporte ou operabilidade.
-- [ ] SQ-3 - Triar manualmente os 3 alertas Semgrep e reavaliar os 2 advisories
+  compatibilidade, suporte ou operabilidade. [AGUARDANDO UPSTREAM]
+  - [x] A imagem suportada foi reconciliada por componente e camada; os 173
+    resultados atuais nao informam versao corrigida alcancavel.
+  - [ ] Reavaliar quando a imagem oficial publicar base materialmente melhor.
+- [~] SQ-3 - Triar manualmente os 3 alertas Semgrep e reavaliar os 2 advisories
   `image-size`. Enquanto nao houver patch upstream, `SC-2026-005` e o Mobile
-  NO-GO permanecem; nenhum alerta deve ser ocultado.
+  NO-GO permanecem; nenhum alerta deve ser ocultado. [ATIVA]
+  - [x] Alertas Semgrep `#76`, `#82` e `#83` classificados por fonte, sink e
+    entrada controlavel em `RELATORIO_SEMGREP_SQ3_2026-09-08.md`.
+  - [x] Construcao de cada alerta removida sem `nosemgrep`, exclusao de regra ou
+    dispensa; regressao RED -> GREEN cobre `recipientId` herdado do prototipo.
+  - [x] Dependabot `#35` e `#36` continuam abertos sem patch, sob
+    `SC-2026-005` e Mobile NO-GO.
+  - [x] Gates locais: 39 testes focados; suite backend com 175 suites e 1.589
+    testes PASS e 4 suites/37 testes de integracao SKIPPED; typecheck, build,
+    matriz de confiabilidade, triagem, inventario, docs, secrets e diff verdes.
+  - [ ] PR, SARIF Semgrep, demais checks, revisao humana, merge e recaptura na
+    `main`.
 - [ ] SQ-4 - Reexecutar CodeQL, Semgrep, Trivy, Dependabot e Secret Scanning
   sobre a `main` corrente e encerrar somente com criticos/altos corrigiveis em
   zero, alertas residuais integralmente inventariados, owners/revisoes presentes

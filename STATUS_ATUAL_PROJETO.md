@@ -22,30 +22,38 @@ Atualizado em 2026-09-08.
   registrou 219 Code Scanning (216 Trivy e 3 Semgrep), 2 Dependabot e 0 Secret
   Scanning, total 221: 20 web, 20 backend e 176 IA, alem dos 3 Semgrep. Os 38
   resultados do npm global foram removidos das duas imagens Node.
-- SQ-1C esta ativa em `feat/sq1c-python-sbom`. O CycloneDX da imagem IA do run
-  `34214246668` provou que `msgpack@1.1.2` e `setuptools@70.3.0`, origem dos
-  tres achados Python corrigiveis, pertencem a camada do pip herdada da base;
-  as 22 dependencias travadas da aplicacao estao em outra camada. O escopo
-  remove somente o pip global do runtime final, preserva lock e aplicacao, e
-  exige no CI ausencia real do tooling, health real e SBOM sem esses componentes.
+- SQ-1C foi integrada pelo PR `#213`, merge `ee9cfed`. O CycloneDX do head
+  confirmou que `msgpack`, `setuptools` e o pip global nao existem na imagem IA
+  final, enquanto FastAPI, Uvicorn, Pydantic e as dependencias travadas da
+  aplicacao permanecem. A recaptura sanitizada pos-merge registrou 216 Code
+  Scanning (213 Trivy e 3 Semgrep), 2 Dependabot e 0 Secret Scanning, total 218:
+  20 web, 20 backend e 173 IA, alem dos 3 Semgrep. CI, health real, SBOM,
+  CodeQL, Semgrep, Trivy e Dependency Review passaram sobre o merge.
+- SQ-3 esta ativa em `feat/sq3-semgrep-triagem`. Os alertas Semgrep `#76`,
+  `#82` e `#83` foram confrontados com fonte, sink e entrada controlavel; as
+  tres descricoes de explorabilidade foram refutadas. A branch remove as
+  construcoes alertadas sem supressao e adiciona regressao negativa para
+  impedir que `recipientId` herdado do prototipo associe mensagem WhatsApp a
+  paciente. Os advisories Dependabot `#35` e `#36` de `image-size` continuam
+  abertos, sem versao corrigida, sob `SC-2026-005` e Mobile NO-GO.
 - SQ-1A permanece aguardando uma nova imagem oficial Node 22 Alpine. O Docker
   Hub ainda resolve `node:22-alpine` para o digest
   `sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32`,
   publicado antes do OpenSSL Alpine corrigido; nenhum workaround de instalacao
   mutavel foi adotado e os 20 resultados atuais de `libssl3`/`libcrypto3` por
   imagem continuam abertos.
-- Nesta branch, o gate local `pnpm test:inventario-security-quality` valida o
+- O gate local `pnpm test:inventario-security-quality` valida o
   inventario e sua captura, e o job `Governanca de repositorio` foi configurado
   para executa-lo sem rede, `gh`, token ou permissao adicional. A captura
   continua deliberada e externa por
   `pnpm security:capturar-inventario`. O CI oficial permanece em Node 22.
-- Durante o preflight desta branch, um comando Git recusado por `safe.directory`
+- Durante o preflight da SQ-1C, um comando Git recusado por `safe.directory`
   retornou exit code nao zero, mas o PowerShell imprimiu `OK`. O preflight agora
   encapsula comandos nativos, falha fechado e tem regressao sintetica com Git
   retornando `42`; a validacao local usa apenas configuracao Git por processo.
 - A mesma revisao identificou que o job `AI FastAPI` instalava e auditava o lock,
-  mas nao executava a suite declarada na matriz. A SQ-1C conecta o `unittest` ao
-  job depois da instalacao por hash e adiciona contrato estatico contra regressao.
+  mas nao executava a suite declarada na matriz. A SQ-1C conectou o `unittest` ao
+  job depois da instalacao por hash e adicionou contrato estatico contra regressao.
 - Incidente do monitor: a execucao agendada 577, run `34045002742`, falhou por
   tres timeouts no primeiro readiness e abriu automaticamente a issue `#206`.
   Uma verificacao read-only posterior retornou readiness 200 em 0,84 s,
