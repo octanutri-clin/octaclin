@@ -1,7 +1,86 @@
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const HOST_NEON = /\.neon\.tech$/i;
 const HOST_B2 = /(^|\.)backblazeb2\.com$/i;
+
+export const OBJETIVOS_RECUPERACAO = Object.freeze({
+  rpoHoras: 24,
+  toleranciaAlertaRpoHoras: 2,
+  rtoRestoreMinutos: 30
+});
+
+function dataValida(valor, rotulo) {
+  const data = new Date(valor);
+  if (!valor || Number.isNaN(data.getTime())) throw new Error(`${rotulo} deve ser uma data ISO valida.`);
+  return data;
+}
+
+export function avaliarMedicaoRecuperacao({ snapshotEm, restoreIniciadoEm, restoreConcluidoEm }) {
+  const snapshot = dataValida(snapshotEm, 'snapshotEm');
+  const inicio = dataValida(restoreIniciadoEm, 'restoreIniciadoEm');
+  const fim = dataValida(restoreConcluidoEm, 'restoreConcluidoEm');
+  if (inicio < snapshot) throw new Error('O restore nao pode iniciar antes do snapshot.');
+  if (fim < inicio) throw new Error('O restore nao pode terminar antes de iniciar.');
+
+  const idadeSnapshotSegundos = Math.floor((fim.getTime() - snapshot.getTime()) / 1000);
+  const restoreSegundos = Math.floor((fim.getTime() - inicio.getTime()) / 1000);
+  return {
+    idadeSnapshotSegundos,
+    restoreSegundos,
+    rpoDentroObjetivo: idadeSnapshotSegundos <= OBJETIVOS_RECUPERACAO.rpoHoras * 60 * 60,
+    rtoDentroObjetivo: restoreSegundos <= OBJETIVOS_RECUPERACAO.rtoRestoreMinutos * 60
+  };
+}
+
+function iguais(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+export function validarManifestosRestore({
+  origem,
+  destino,
+  bancoOrigemEsperado,
+  bancoDestinoEsperado,
+  roleOrigemEsperada,
+  roleDestinoEsperada
+}) {
+  const erros = [];
+  if (!origem || typeof origem !== 'object') erros.push('Manifesto de origem invalido.');
+  if (!destino || typeof destino !== 'object') erros.push('Manifesto de destino invalido.');
+  if (erros.length) return { ok: false, erros };
+
+  if (origem.banco !== bancoOrigemEsperado) erros.push('O manifesto de origem nao corresponde ao banco esperado.');
+  if (destino.banco !== bancoDestinoEsperado) erros.push('O manifesto de destino nao corresponde ao banco dedicado esperado.');
+  if (origem.banco === destino.banco) erros.push('Origem e destino do restore devem ser bancos diferentes.');
+  if (origem.role !== roleOrigemEsperada) erros.push('A consulta da origem nao executou com a role dedicada de backup.');
+  if (destino.role !== roleDestinoEsperada) erros.push('A consulta do destino nao executou com a role proprietaria de restore.');
+
+  if (!Array.isArray(origem.migrations) || origem.migrations.length === 0) erros.push('A origem nao possui inventario de migrations.');
+  if (!Array.isArray(origem.tabelasPublicas) || origem.tabelasPublicas.length === 0) erros.push('A origem nao possui inventario de tabelas publicas.');
+  if (!Array.isArray(origem.tabelasTenant) || origem.tabelasTenant.length === 0) erros.push('A origem nao possui tabelas tenant-scoped inventariadas.');
+  if (!origem.contagensCriticas || typeof origem.contagensCriticas !== 'object') erros.push('A origem nao possui contagens criticas.');
+  if (!destino.contagensCriticas || typeof destino.contagensCriticas !== 'object') erros.push('O destino nao possui contagens criticas.');
+
+  for (const item of [...(origem.tabelasTenant ?? []), ...(destino.tabelasTenant ?? [])]) {
+    if (!item?.rls || !item?.rlsForcada || !item?.policyCompleta) {
+      erros.push(`A tabela tenant-scoped ${item?.tabela ?? 'desconhecida'} nao preservou o contrato RLS completo.`);
+    }
+  }
+
+  for (const campo of ['migrations', 'tabelasPublicas', 'tabelasTenant']) {
+    if (!iguais(origem[campo], destino[campo])) erros.push(`O restore divergiu da origem em ${campo}.`);
+  }
+  if (!iguais(Object.keys(origem.contagensCriticas ?? {}).sort(), Object.keys(destino.contagensCriticas ?? {}).sort())) {
+    erros.push('O restore divergiu da origem no inventario de tabelas criticas.');
+  }
+  const tenants = Number(destino.contagensCriticas?.tenants);
+  const usuarios = Number(destino.contagensCriticas?.usuarios);
+  if (!Number.isFinite(tenants) || tenants <= 0) erros.push('O restore nao comprova tenants presentes.');
+  if (!Number.isFinite(usuarios) || usuarios <= 0) erros.push('O restore nao comprova usuarios presentes.');
+
+  return { ok: erros.length === 0, erros };
+}
 
 function partesData(data, timezone) {
   const partes = new Intl.DateTimeFormat('en-US', {
@@ -104,7 +183,8 @@ export function calcularDestinosBackup(nomeArquivo, agora = new Date(), timezone
 }
 
 function executarCli() {
-  const [, , comando, argumento] = process.argv;
+  const [, , comando, ...argumentos] = process.argv;
+  const [argumento] = argumentos;
   if (comando === 'validar') {
     const resultado = validarConfiguracaoBackup();
     if (!resultado.ok) throw new Error(resultado.erros.join(' '));
@@ -121,7 +201,33 @@ function executarCli() {
     console.log(JSON.stringify(calcularDestinosBackup(argumento, new Date())));
     return;
   }
-  throw new Error('Comando esperado: validar, validar-restore ou destinos.');
+  if (comando === 'validar-manifestos') {
+    const [arquivoOrigem, arquivoDestino] = argumentos;
+    const resultado = validarManifestosRestore({
+      origem: JSON.parse(readFileSync(arquivoOrigem, 'utf8')),
+      destino: JSON.parse(readFileSync(arquivoDestino, 'utf8')),
+      bancoOrigemEsperado: process.env.OCTACLIN_BACKUP_DATABASE_EXPECTED,
+      bancoDestinoEsperado: process.env.OCTACLIN_RESTORE_DATABASE_EXPECTED,
+      roleOrigemEsperada: process.env.OCTACLIN_BACKUP_ROLE_EXPECTED,
+      roleDestinoEsperada: process.env.OCTACLIN_RESTORE_ROLE_EXPECTED
+    });
+    if (!resultado.ok) throw new Error(resultado.erros.join(' '));
+    console.log(JSON.stringify({ restore: 'manifestos equivalentes e tenancy integra' }));
+    return;
+  }
+  if (comando === 'medir-recuperacao') {
+    const resultado = avaliarMedicaoRecuperacao({
+      snapshotEm: argumentos[0],
+      restoreIniciadoEm: argumentos[1],
+      restoreConcluidoEm: argumentos[2]
+    });
+    if (!resultado.rpoDentroObjetivo || !resultado.rtoDentroObjetivo) {
+      throw new Error(`Objetivo de recuperacao violado: ${JSON.stringify(resultado)}`);
+    }
+    console.log(JSON.stringify(resultado));
+    return;
+  }
+  throw new Error('Comando esperado: validar, validar-restore, destinos, validar-manifestos ou medir-recuperacao.');
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

@@ -37,6 +37,7 @@ jobs:
       OCTACLIN_RESTORE_DATABASE_URL: ${{ secrets.OCTACLIN_RESTORE_DATABASE_URL }}
       OCTACLIN_RESTORE_DATABASE_EXPECTED: ${{ vars.OCTACLIN_RESTORE_DATABASE_EXPECTED }}
       OCTACLIN_RESTORE_ROLE_EXPECTED: neondb_owner
+      OCTACLIN_BACKUP_IMUTABILIDADE_OBRIGATORIA: ${{ vars.OCTACLIN_BACKUP_IMUTABILIDADE_OBRIGATORIA || 'false' }}
       B2_BACKUP_ENDPOINT: ${{ vars.B2_BACKUP_ENDPOINT }}
       B2_BACKUP_REGION: ${{ vars.B2_BACKUP_REGION }}
       B2_BACKUP_BUCKET: ${{ vars.B2_BACKUP_BUCKET }}
@@ -61,7 +62,8 @@ jobs:
             --endpoint-url "$B2_BACKUP_ENDPOINT" \
             --lifecycle-configuration file://.github/backblaze-backup-lifecycle.json
 
-      - name: Validar bucket privado e politica de retencao
+      - name: Validar bucket privado, retencao e imutabilidade
+        id: armazenamento
         run: |
           set -euo pipefail
           ACL="$(aws s3api get-bucket-acl --bucket "$B2_BACKUP_BUCKET" --endpoint-url "$B2_BACKUP_ENDPOINT" --output json)"
@@ -74,6 +76,21 @@ jobs:
             regra("octaclin-weekly"; "weekly/"; 29) and
             regra("octaclin-monthly"; "monthly/"; 93)
           ' >/dev/null
+          IMUTABILIDADE="nao_comprovada"
+          if OBJECT_LOCK="$(aws s3api get-object-lock-configuration --bucket "$B2_BACKUP_BUCKET" --endpoint-url "$B2_BACKUP_ENDPOINT" --output json 2>/dev/null)"; then
+            if printf '%s' "$OBJECT_LOCK" | jq -e '
+              .ObjectLockEnabled == "Enabled" and
+              .Rule.DefaultRetention.Mode == "COMPLIANCE" and
+              (((.Rule.DefaultRetention.Days // 0) > 0) or ((.Rule.DefaultRetention.Years // 0) > 0))
+            ' >/dev/null; then
+              IMUTABILIDADE="object_lock_compliance"
+            fi
+          fi
+          if [ "$OCTACLIN_BACKUP_IMUTABILIDADE_OBRIGATORIA" = "true" ] && [ "$IMUTABILIDADE" != "object_lock_compliance" ]; then
+            echo "Object Lock COMPLIANCE com retencao padrao nao foi comprovado para o bucket." >&2
+            exit 1
+          fi
+          echo "imutabilidade=$IMUTABILIDADE" >> "$GITHUB_OUTPUT"
 
       - name: Preparar diretorio efemero
         id: plano
@@ -86,6 +103,27 @@ jobs:
           BACKUP_FILE="octaclin-postgres-$(date -u +%Y%m%dT%H%M%SZ).dump"
           echo "backup_dir=$BACKUP_DIR" >> "$GITHUB_OUTPUT"
           echo "backup_file=$BACKUP_FILE" >> "$GITHUB_OUTPUT"
+          echo "snapshot_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Inventariar origem com role dedicada
+        env:
+          BACKUP_DIR: ${{ steps.plano.outputs.backup_dir }}
+          DATABASE_URL: ${{ secrets.OCTACLIN_BACKUP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          docker run --rm -e DATABASE_URL \
+            -v "$GITHUB_WORKSPACE/scripts:/scripts:ro" postgres:18 \
+            sh -euc 'psql "$DATABASE_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align --file /scripts/manifesto-restore-producao.sql' \
+            > "$BACKUP_DIR/manifesto-origem.json"
+          jq -e \
+            --arg banco "$OCTACLIN_BACKUP_DATABASE_EXPECTED" \
+            --arg role "$OCTACLIN_BACKUP_ROLE_EXPECTED" \
+            '.banco == $banco and .role == $role and (.migrations | length > 0) and
+             (.tabelasPublicas | length > 0) and (.tabelasTenant | length > 0) and
+             ([.tabelasTenant[] | .rls and .rlsForcada and .policyCompleta] | all) and
+             ((.contagensCriticas.tenants | tonumber) > 0) and
+             ((.contagensCriticas.usuarios | tonumber) > 0)' \
+            "$BACKUP_DIR/manifesto-origem.json" >/dev/null
 
       - name: Gerar dump PostgreSQL 18
         env:
@@ -120,6 +158,7 @@ jobs:
           BACKUP_DIR: ${{ steps.plano.outputs.backup_dir }}
           BACKUP_FILE: ${{ steps.plano.outputs.backup_file }}
           SHA256: ${{ steps.integridade.outputs.sha256 }}
+          SNAPSHOT_AT: ${{ steps.plano.outputs.snapshot_at }}
         run: |
           set -euo pipefail
           command -v aws >/dev/null
@@ -129,7 +168,7 @@ jobs:
           while IFS= read -r CHAVE; do
             aws s3 cp "$BACKUP_DIR/$BACKUP_FILE" "s3://$B2_BACKUP_BUCKET/$CHAVE" \
               --endpoint-url "$B2_BACKUP_ENDPOINT" --sse AES256 \
-              --metadata "sha256=$SHA256" --no-progress --only-show-errors
+              --metadata "sha256=$SHA256,capturadoem=$SNAPSHOT_AT" --no-progress --only-show-errors
             aws s3 cp "$BACKUP_DIR/$BACKUP_FILE.sha256" "s3://$B2_BACKUP_BUCKET/$CHAVE.sha256" \
               --endpoint-url "$B2_BACKUP_ENDPOINT" --sse AES256 \
               --content-type text/plain --no-progress --only-show-errors
@@ -141,6 +180,7 @@ jobs:
           BACKUP_FILE: ${{ steps.plano.outputs.backup_file }}
           DAILY_KEY: ${{ steps.upload.outputs.daily_key }}
           SHA256: ${{ steps.integridade.outputs.sha256 }}
+          IMUTABILIDADE: ${{ steps.armazenamento.outputs.imutabilidade }}
         run: |
           set -euo pipefail
           REMOTE_SIZE="$(aws s3api head-object --bucket "$B2_BACKUP_BUCKET" --key "$DAILY_KEY" --endpoint-url "$B2_BACKUP_ENDPOINT" --query ContentLength --output text)"
@@ -150,6 +190,12 @@ jobs:
           test "$REMOTE_SIZE" = "$LOCAL_SIZE"
           test "$REMOTE_HASH" = "$SHA256"
           test "$REMOTE_SSE" = "AES256"
+          if [ "$IMUTABILIDADE" = "object_lock_compliance" ]; then
+            REMOTE_LOCK_MODE="$(aws s3api head-object --bucket "$B2_BACKUP_BUCKET" --key "$DAILY_KEY" --endpoint-url "$B2_BACKUP_ENDPOINT" --query ObjectLockMode --output text)"
+            REMOTE_LOCK_UNTIL="$(aws s3api head-object --bucket "$B2_BACKUP_BUCKET" --key "$DAILY_KEY" --endpoint-url "$B2_BACKUP_ENDPOINT" --query ObjectLockRetainUntilDate --output text)"
+            test "$REMOTE_LOCK_MODE" = "COMPLIANCE"
+            test "$(date -d "$REMOTE_LOCK_UNTIL" +%s)" -gt "$(date -u +%s)"
+          fi
 
       - name: Decidir restore recorrente
         id: restore
@@ -166,6 +212,7 @@ jobs:
         run: node scripts/backup-producao.mjs validar-restore
 
       - name: Baixar, conferir e restaurar objeto armazenado
+        id: restauracao
         if: steps.restore.outputs.executar == 'true'
         env:
           BACKUP_DIR: ${{ steps.plano.outputs.backup_dir }}
@@ -174,6 +221,7 @@ jobs:
           RESTORE_DATABASE_URL: ${{ secrets.OCTACLIN_RESTORE_DATABASE_URL }}
         run: |
           set -euo pipefail
+          echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
           RESTORE_FILE="$BACKUP_DIR/restore-validacao.dump"
           aws s3 cp "s3://$B2_BACKUP_BUCKET/$DAILY_KEY" "$RESTORE_FILE" \
             --endpoint-url "$B2_BACKUP_ENDPOINT" --no-progress --only-show-errors
@@ -183,29 +231,47 @@ jobs:
             sh -euc 'pg_restore --clean --if-exists --no-owner --no-acl --dbname "$RESTORE_DATABASE_URL" /backup/restore-validacao.dump'
 
       - name: Validar restore dedicado
+        id: validacao_restore
         if: steps.restore.outputs.executar == 'true'
         env:
+          BACKUP_DIR: ${{ steps.plano.outputs.backup_dir }}
           RESTORE_DATABASE_URL: ${{ secrets.OCTACLIN_RESTORE_DATABASE_URL }}
+          SNAPSHOT_AT: ${{ steps.plano.outputs.snapshot_at }}
+          RESTORE_STARTED_AT: ${{ steps.restauracao.outputs.started_at }}
         run: |
           set -euo pipefail
-          RESULTADO="$(docker run --rm -e RESTORE_DATABASE_URL postgres:18 \
-            psql "$RESTORE_DATABASE_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align --command \
-            "select json_build_object('banco', current_database() = 'octaclin_restore_fase219', 'migration', exists (select 1 from public.migrations where name='CriarCondutasTerapeuticas1720000001026'), 'tenants', (select count(*) from public.tenants) > 0, 'usuarios', (select count(*) from public.usuarios) > 0, 'rls', (select count(*) from pg_catalog.pg_class where relname in ('api_chaves','webhook_assinaturas','webhook_entregas','pacientes_perfis','coletas_exames_laboratoriais','marcadores_exames_laboratoriais','consentimentos_evolucao_fotografica','evolucoes_fotograficas','evolucoes_fotograficas_arquivos','condutas_terapeuticas','condutas_terapeuticas_versoes') and relrowsecurity and relforcerowsecurity) = 11)")"
-          printf '%s\n' "$RESULTADO"
-          printf '%s' "$RESULTADO" | jq -e '.banco and .migration and .tenants and .usuarios and .rls' >/dev/null
+          docker run --rm -e RESTORE_DATABASE_URL \
+            -v "$GITHUB_WORKSPACE/scripts:/scripts:ro" postgres:18 \
+            sh -euc 'psql "$RESTORE_DATABASE_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align --file /scripts/manifesto-restore-producao.sql' \
+            > "$BACKUP_DIR/manifesto-destino.json"
+          node scripts/backup-producao.mjs validar-manifestos \
+            "$BACKUP_DIR/manifesto-origem.json" "$BACKUP_DIR/manifesto-destino.json"
+          RESTORE_COMPLETED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          METRICAS="$(node scripts/backup-producao.mjs medir-recuperacao \
+            "$SNAPSHOT_AT" "$RESTORE_STARTED_AT" "$RESTORE_COMPLETED_AT")"
+          echo "restore_seconds=$(printf '%s' "$METRICAS" | jq -r '.restoreSegundos')" >> "$GITHUB_OUTPUT"
+          echo "snapshot_age_seconds=$(printf '%s' "$METRICAS" | jq -r '.idadeSnapshotSegundos')" >> "$GITHUB_OUTPUT"
 
       - name: Resumo operacional
         if: success()
         env:
           BACKUP_FILE: ${{ steps.plano.outputs.backup_file }}
           EXECUTOU_RESTORE: ${{ steps.restore.outputs.executar }}
+          IMUTABILIDADE: ${{ steps.armazenamento.outputs.imutabilidade }}
+          RESTORE_SECONDS: ${{ steps.validacao_restore.outputs.restore_seconds }}
+          SNAPSHOT_AGE_SECONDS: ${{ steps.validacao_restore.outputs.snapshot_age_seconds }}
         run: |
           {
             echo "## Backup de producao"
             echo "- Arquivo: \`$BACKUP_FILE\`"
             echo "- Dump e objeto remoto: validados"
             echo "- Cifragem B2: AES256"
+            echo "- Imutabilidade comprovada: $IMUTABILIDADE"
             echo "- Restore dedicado executado: $EXECUTOU_RESTORE"
+            if [ "$EXECUTOU_RESTORE" = "true" ]; then
+              echo "- Idade do snapshot restaurado: ${SNAPSHOT_AGE_SECONDS}s (RPO objetivo: 24h)"
+              echo "- Download + restore + validacao: ${RESTORE_SECONDS}s (RTO objetivo: 30min)"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Limpar dados do runner

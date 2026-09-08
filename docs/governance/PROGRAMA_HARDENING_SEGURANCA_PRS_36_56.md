@@ -2,7 +2,14 @@
 
 > Status: aprovado para planejamento e execucao sequencial
 >
-> Atualizado em: 2026-09-04
+> Atualizado em: 2026-09-08
+>
+> Estado do SQ-4: integrado no `main` pelo PR GitHub #215 em 2026-09-08
+> (`dc8334f`). Estado do PR 53: **em elaboracao** na branch
+> `feat/pr53-backup-restore`; o gate externo continua pendente ate um restore
+> real, isolado e medido executar o workflow desta branch. Object Lock
+> COMPLIANCE permanece excecao aberta e nao comprovada; sua ativacao no bucket
+> e irreversivel e exige decisao operacional separada.
 >
 > Proximo item autorizado, por decisao do proprietario em 2026-09-04: fechar as
 > duas dividas nomeadas pela fase 2 do PR 52 antes de abrir o PR 53. O gate de
@@ -646,6 +653,13 @@ Skills Claude: `security-review`, `database-migration`,
 
 Gate minimo: restore real isolado com dados sinteticos ou backup autorizado,
 tempos medidos, evidencias redigidas e procedimento de falha.
+
+Implementacao em elaboracao em 2026-09-08: RPO inicial de 24 horas, RTO do
+restore do banco de 30 minutos, manifesto dinamico comparando migrations,
+tabelas e tenancy entre origem e destino, verificacao da role realmente
+conectada e runbook de resposta a ransomware. O workflow nao promete WORM:
+somente reconhece imutabilidade quando bucket e objeto provam Object Lock em
+modo COMPLIANCE. Relatorio: `RELATORIO_SEGURANCA_PR53_2026-09-08.md`.
 
 ### PR 54 - DAST, fuzzing e pentest interno
 

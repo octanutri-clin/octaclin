@@ -2763,7 +2763,13 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
       - O PR de migracao move junto, no mesmo commit: `NODE_VERSION` do CI, `FROM node:<major>` dos dois Dockerfiles, `engines.node` dos quatro manifests e `@types/node`. `pnpm test:versao-node` reprova se algum ficar para tras.
       - Fecha tambem a divergencia declarada de `@types/node` (tipado contra 26, rodando em 22). Baixar os tipos para 22 nao e executavel: `@types/node@22.x` puxa `undici-types@6.21.0`, recusado pelo `trustPolicy: no-downgrade`. A divergencia vence em 2026-10-28 e o gate passa a reprovar.
       - Verificar antes de subir: dependencias nativas (`sharp`, `msgpackr-extract`, `cpu-features`, `unrs-resolver`), compatibilidade do `pnpm@11.25.0`, suites verdes na versao nova e digest de rollback declarado.
-- [ ] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.
+- [~] PR 53 - Provar backup, restore, RPO/RTO e resiliencia a ransomware.
+  - [x] RPO de 24 horas e RTO do restore do banco de 30 minutos definidos e testados como contrato.
+  - [x] Manifesto dinamico compara migrations, tabelas publicas e todas as tabelas `tenant_id` com RLS/`FORCE`/policy completa.
+  - [x] Separacao de banco/role, checksum, cifragem, retencao e procedimento de falha documentados em `RUNBOOK_RECUPERACAO_RANSOMWARE.md`.
+  - [ ] Gate externo: executar o workflow desta branch com `restore_test=true` no banco dedicado confirmado e registrar tempos redigidos.
+  - [ ] Object Lock COMPLIANCE no bucket: nao comprovado; permanece excecao aberta ate decisao irreversivel de infraestrutura e custo.
+  - [ ] Checks do PR e review/merge humanos.
 - [ ] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
 - [ ] PR 55 - Concluir pentest independente, reteste e GO/NO-GO.
 - [ ] PR 56 - Aplicar MASVS/MASTG antes de distribuir o mobile.
@@ -2771,8 +2777,8 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: concluir o SQ-4 com checks e merge humanos. Depois,
-executar PR 53 (backup/restore/RPO/RTO) e PR 54 (DAST/fuzzing/pentest interno em
-staging isolado). A retomada funcional comeca na Fase 256; alertas sem solucao
+Proximo item autorizado: concluir o PR 53 com restore isolado, checks e merge
+humanos. Depois, executar o PR 54 (DAST/fuzzing/pentest interno em staging
+isolado). A retomada funcional comeca na Fase 256; alertas sem solucao
 permanecem abertos e revisaveis, enquanto novo critical/high corrigivel volta a
 bloquear a fila.
