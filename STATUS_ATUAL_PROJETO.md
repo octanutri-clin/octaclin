@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-08.
+Atualizado em 2026-09-09.
 
 ## Snapshot
 
@@ -33,13 +33,17 @@ Atualizado em 2026-09-08.
   removidas e uma regressao negativa impede que `recipientId` herdado do
   prototipo associe mensagem WhatsApp a paciente. Semgrep, CodeQL, Trivy e CI
   passaram sobre a `main` resultante.
-- SQ-4 esta ativa em `feat/sq4-fechamento`. A recaptura sanitizada sobre
-  `98b6e5f17e7f4eae07b3fb537a91aea1d9e37394` registrou 213 Code Scanning,
-  todos Trivy, 2 Dependabot e 0 Secret Scanning: total 215. O inventario ativo
-  cobre cada referencia uma vez em tres causas raiz, todas
-  `aguardando_upstream`, com owner, revisao, controles e condicao de saida. O
-  gate recusa investigacao pendente, critical/high ainda corrigivel e patch
-  fora do artefato suportado sem `bloqueioUpstream` explicito.
+- SQ-4 foi integrada pelo PR `#215`, merge `dc8334f`. A recaptura sanitizada
+  registrou 213 Code Scanning, todos Trivy, 2 Dependabot e 0 Secret Scanning:
+  total 215. O inventario ativo cobre cada referencia uma vez em tres causas
+  raiz, todas `aguardando_upstream`, com owner, revisao, controles e condicao
+  de saida. O gate recusa investigacao pendente, critical/high ainda corrigivel
+  e patch fora do artefato suportado sem `bloqueioUpstream` explicito.
+- O PR 53 foi integrado pelo PR GitHub `#216`, merge `6fe17ae`. O restore real
+  isolado mediu 124 segundos e o CI/CodeQL pos-merge passou. Object Lock
+  COMPLIANCE permanece aberto como decisao de infraestrutura nao comprovada.
+  A PR 54 esta ativa em `security/pr54-dast-fuzzing-ready`, com automacao local em
+  elaboracao e execucao no staging descartavel ainda pendente de autorizacao.
 - SQ-1A permanece aguardando uma nova imagem oficial Node 22 Alpine. O Docker
   Hub ainda resolve `node:22-alpine` para o digest
   `sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32`,
@@ -87,7 +91,7 @@ Atualizado em 2026-09-08.
   de autorizacao/BFF, 10 de acessibilidade, builds e scanner de segredos. Nao
   houve migration. O CI `32592780646` passou integralmente, incluindo smoke
   local em 4m29s. A proxima fase oficial e a Fase 256. Ela permanece bloqueada
-  pelos gates SQ-4, PR 53 e PR 54.
+  pelo gate PR 54; SQ-4 e PR 53 ja foram integrados.
 - Fase 254 concluida e integrada. O Incremento 1 entrou pelo PR `#93`, com a
   migration aditiva `1035` aplicada e health de producao em 48 migrations; o
   Incremento 2 entrou pelo PR `#101`; e o Incremento 3 entrou pelo PR `#102`,
