@@ -48,7 +48,19 @@ A correcao alinha o workflow em `11.25.0` e inclui
 `.github/workflows/staging-e2e-mutavel.yml` nas fontes obrigatorias de
 `pnpm test:versao-pnpm`. O contrato legado do staging tambem passou a validar
 as actions Neon atuais por SHA completo e a entrada `role: neondb_owner`.
-Uma nova execucao exige nova autorizacao especifica para o run.
+
+O segundo run autorizado `34359110425`, no commit `4463a2a`, passou por setup,
+preflight, branch Neon, migrations, fixtures e validacao de role/RLS para os
+dois tenants. O backend encerrou no bootstrap antes dos probes porque o
+workflow mantinha `NODE_ENV=production` sem declarar `APP_AMBIENTE`; com isso,
+os Redis e MinIO efemeros em loopback foram corretamente tratados como uma
+violacao de TLS de producao. O cleanup da branch Neon passou.
+
+A correcao preserva `NODE_ENV=production` para o build e declara
+`APP_AMBIENTE=test` para os processos descartaveis do runner. O contrato do
+workflow reprova a remocao dessa classificacao. Staging e producao continuam
+exigindo TLS e falha fechada. Uma nova execucao exige nova autorizacao
+especifica para o run.
 
 ## Gate externo pendente
 

@@ -29,6 +29,7 @@ assert.match(workflow, /role: neondb_owner/);
 assert.match(workflow, /NEON_E2E_RUNTIME_ROLE/);
 assert.match(workflow, /ARMAZENAMENTO_S3_FORCE_PATH_STYLE: "true"/);
 assert.match(workflow, /OCTACLIN_PROCESSO: web/);
+assert.match(workflow, /APP_AMBIENTE: test/);
 assert.doesNotMatch(workflow, /octaclin-backend-producao|Octaclin-db-producao|octaclin_app_producao/i);
 
 for (const termo of ['paciente', 'consulta', 'convite', 'questionario', 'anexos', 'comunicacoes']) {
