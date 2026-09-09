@@ -345,7 +345,14 @@ jobs:
 
       - name: Install Playwright Chromium
         working-directory: octaclin-web
-        run: pnpm exec playwright install --with-deps chromium
+        run: |
+          # O runner traz uma fonte APT do Google Chrome que nao participa deste
+          # smoke. Se o CDN dela estiver em propagacao, o apt falha por hash
+          # divergente antes de instalar as dependencias reais do Playwright.
+          if [ -f /etc/apt/sources.list.d/google-chrome.list ]; then
+            sudo mv /etc/apt/sources.list.d/google-chrome.list /tmp/google-chrome.list.disabled
+          fi
+          pnpm exec playwright install --with-deps chromium
 
       - name: Build web
         working-directory: octaclin-web
