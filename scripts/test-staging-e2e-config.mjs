@@ -30,6 +30,9 @@ assert.match(workflow, /NEON_E2E_RUNTIME_ROLE/);
 assert.match(workflow, /ARMAZENAMENTO_S3_FORCE_PATH_STYLE: "true"/);
 assert.match(workflow, /OCTACLIN_PROCESSO: web/);
 assert.match(workflow, /APP_AMBIENTE: test/);
+assert.match(workflow, /Gerar segredo MFA sintetico efemero/);
+assert.match(workflow, /::add-mask::\$E2E_MFA_TOTP_SECRET/);
+assert.match(workflow, /E2E_MFA_TOTP_SECRET=\$E2E_MFA_TOTP_SECRET/);
 assert.doesNotMatch(workflow, /octaclin-backend-producao|Octaclin-db-producao|octaclin_app_producao/i);
 
 for (const termo of ['paciente', 'consulta', 'convite', 'questionario', 'anexos', 'comunicacoes']) {
@@ -39,5 +42,7 @@ assert.match(runner, /tokenBeta/);
 assert.match(runner, /status: 404/);
 assert.match(preparador, /rolbypassrls/);
 assert.match(preparador, /grant select, insert, update, delete on all tables/);
+assert.match(preparador, /MfaFatorUsuarioOrm/);
+assert.match(preparador, /E2E_MFA_TOTP_SECRET/);
 assert.match(preflight, /tabelasVisiveisSemTenant: 0/);
 assert.match(preflight, /relforcerowsecurity/);

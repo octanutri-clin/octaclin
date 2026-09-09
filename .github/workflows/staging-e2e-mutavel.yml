@@ -106,7 +106,7 @@ jobs:
           database: ${{ vars.NEON_E2E_DATABASE }}
           api_key: ${{ secrets.NEON_API_KEY }}
 
-      - name: Preparar URLs e segredos sinteticos
+      - name: Gerar segredo MFA sintetico efemero e preparar URLs e segredos
         shell: bash
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
@@ -129,14 +129,17 @@ jobs:
           JWT_REFRESH_SEGREDO=$(openssl rand -hex 32)
           CRIPTOGRAFIA_CHAVE_AES_256=$(openssl rand -hex 32)
           FORMULARIO_PUBLICO_SEGREDO=$(openssl rand -hex 32)
+          E2E_MFA_TOTP_SECRET=$(cd octaclin-backend && pnpm exec node -e "const OTPAuth=require('otpauth'); process.stdout.write(new OTPAuth.Secret({size:20}).base32)")
           echo "::add-mask::$JWT_SEGREDO"
           echo "::add-mask::$JWT_REFRESH_SEGREDO"
           echo "::add-mask::$CRIPTOGRAFIA_CHAVE_AES_256"
           echo "::add-mask::$FORMULARIO_PUBLICO_SEGREDO"
+          echo "::add-mask::$E2E_MFA_TOTP_SECRET"
           echo "JWT_SEGREDO=$JWT_SEGREDO" >> "$GITHUB_ENV"
           echo "JWT_REFRESH_SEGREDO=$JWT_REFRESH_SEGREDO" >> "$GITHUB_ENV"
           echo "CRIPTOGRAFIA_CHAVE_AES_256=$CRIPTOGRAFIA_CHAVE_AES_256" >> "$GITHUB_ENV"
           echo "FORMULARIO_PUBLICO_SEGREDO=$FORMULARIO_PUBLICO_SEGREDO" >> "$GITHUB_ENV"
+          echo "E2E_MFA_TOTP_SECRET=$E2E_MFA_TOTP_SECRET" >> "$GITHUB_ENV"
           if [ "$SEGURANCA_DINAMICA_HABILITADA" = "true" ]; then
             META_WHATSAPP_WEBHOOK_VERIFY_TOKEN=$(openssl rand -hex 32)
             META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN=$(openssl rand -hex 32)

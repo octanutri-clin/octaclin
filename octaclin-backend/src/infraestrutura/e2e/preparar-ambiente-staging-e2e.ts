@@ -7,6 +7,8 @@ import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/prof
 import { TenantConfiguracaoOrm } from '../../modulos/tenancy/infraestrutura/tenant-configuracao.orm';
 import { TenantOrm } from '../../modulos/tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../modulos/usuarios/infraestrutura/usuario.orm';
+import { exigeMfaPorPapel } from '../../modulos/auth/dominio/politica-mfa';
+import { MfaFatorUsuarioOrm } from '../../modulos/auth/infraestrutura/mfa-fator-usuario.orm';
 import { CriptografiaDadosSensiveis } from '../seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../seguranca/servico-senhas';
 import { validarAlvoStagingE2E, validarNomeRoleRuntime } from './alvo-staging-e2e';
@@ -44,6 +46,10 @@ async function executar() {
     process.env.E2E_CONFIRMAR_REMOTO === 'SIM'
   );
   const runtimeRole = validarNomeRoleRuntime(process.env.E2E_RUNTIME_ROLE);
+  const segredoMfaTotp = process.env.E2E_MFA_TOTP_SECRET?.trim();
+  if (!segredoMfaTotp || !/^[A-Z2-7]{32}$/.test(segredoMfaTotp)) {
+    throw new Error('E2E_MFA_TOTP_SECRET sintetico deve conter 32 caracteres Base32.');
+  }
 
   process.env.DATABASE_URL = ownerUrl;
   process.env.BANCO_EXECUTAR_MIGRACOES = 'false';
@@ -104,6 +110,20 @@ async function executar() {
               ativo: true
             })
           )
+        );
+        await gerenciador.getRepository(MfaFatorUsuarioOrm).upsert(
+          tenant.usuarios
+            .filter((usuario) => exigeMfaPorPapel(usuario.role))
+            .map((usuario) => ({
+              tenantId: tenant.id,
+              usuarioId: usuario.id,
+              segredoCriptografado: criptografia.criptografar(segredoMfaTotp),
+              segredoPendenteCriptografado: null,
+              pendenteExpiraEm: null,
+              habilitadoEm: new Date(),
+              ultimoContadorTotp: null
+            })),
+          { conflictPaths: ['tenantId', 'usuarioId'] }
         );
         await gerenciador.getRepository(ProfissionalOrm).save(
           gerenciador.getRepository(ProfissionalOrm).create({

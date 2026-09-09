@@ -1,3 +1,5 @@
+import { exigirSegredoTotpSintetico, gerarCodigoTotp } from './e2e-mfa.mjs';
+
 const config = {
   webUrl: process.env.E2E_WEB_URL ?? 'http://127.0.0.1:3000',
   apiUrl: process.env.E2E_API_URL ?? 'http://127.0.0.1:3001',
@@ -90,13 +92,45 @@ async function api(caminho, { token, status = 200, ...init } = {}) {
 }
 
 async function loginDireto(tenantSlug, email, senha = config.senha) {
-  const sessao = await api('/auth/login', {
+  let sessao = await api('/auth/login', {
     method: 'POST',
     status: 200,
     body: JSON.stringify({ tenantSlug, email, senha })
   });
+  if (sessao?.mfaObrigatorio === true) {
+    let segredo = exigirSegredoTotpSintetico();
+    if (sessao.modo === 'configurar') {
+      const configuracao = await api('/auth/mfa/login/configuracao', {
+        method: 'POST',
+        body: JSON.stringify({ desafioMfa: sessao.desafioMfa })
+      });
+      segredo = configuracao?.segredo;
+    }
+    sessao = await api('/auth/mfa/login', {
+      method: 'POST',
+      body: JSON.stringify({ desafioMfa: sessao.desafioMfa, codigo: gerarCodigoTotp(segredo) })
+    });
+  }
   assert(typeof sessao?.accessToken === 'string', `Login direto de ${tenantSlug} nao retornou accessToken.`);
   return sessao.accessToken;
+}
+
+async function loginBff(email, senha = config.senha) {
+  const desafio = await bff('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, senha })
+  });
+  if (desafio?.mfaObrigatorio !== true) return desafio;
+
+  let segredo = exigirSegredoTotpSintetico();
+  if (desafio.modo === 'configurar') {
+    const configuracao = await bff('/api/auth/mfa/configuracao-login', { method: 'POST' });
+    segredo = configuracao?.segredo;
+  }
+  return bff('/api/auth/mfa/concluir-login', {
+    method: 'POST',
+    body: JSON.stringify({ codigo: gerarCodigoTotp(segredo) })
+  });
 }
 
 async function executar() {
@@ -108,15 +142,11 @@ async function executar() {
   const pronto = await api('/health/pronto');
   assert(pronto?.status === 'ok' || pronto?.pronto === true, 'Backend nao ficou pronto para a jornada mutavel.');
 
-  await bff('/api/auth/login', {
-    method: 'POST',
-    status: 200,
-    body: JSON.stringify({ email: config.emailAlfa, senha: config.senha })
-  });
+  await loginBff(config.emailAlfa);
   const sessaoBff = await bff('/api/auth/session');
   assert(sessaoBff?.autenticado === true, 'Sessao BFF do tenant Alfa nao foi estabelecida.');
 
-  const tokenAlfa = await loginDireto(config.tenantAlfa, config.emailAlfa);
+  const tokenAlfa = await loginDireto(config.tenantAlfa, 'profissional.alfa@octaclin.test');
   const tokenBeta = await loginDireto(config.tenantBeta, config.emailBeta);
 
   const paciente = await bff('/api/pacientes', {
