@@ -352,6 +352,9 @@ jobs:
           if [ -f /etc/apt/sources.list.d/google-chrome.list ]; then
             sudo mv /etc/apt/sources.list.d/google-chrome.list /tmp/google-chrome.list.disabled
           fi
+          if [ -f /etc/apt/sources.list.d/google-chrome.sources ]; then
+            sudo mv /etc/apt/sources.list.d/google-chrome.sources /tmp/google-chrome.sources.disabled
+          fi
           pnpm exec playwright install --with-deps chromium
 
       - name: Build web
