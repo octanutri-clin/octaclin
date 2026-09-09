@@ -1,6 +1,6 @@
 # Relatorio de seguranca - PR 54: DAST e probes ativos em staging
 
-Status em 2026-09-09: **automacao local PASS; quinta execucao no staging
+Status em 2026-09-09: **automacao local PASS; sexta execucao no staging
 descartavel e review humano pendentes**. Nenhum resultado dinamico foi inferido
 a partir dos testes unitarios nem das execucoes interrompidas antes dos probes.
 
@@ -93,6 +93,21 @@ depois atualiza somente quando `ultimo_contador_totp < contador_atual`; em SQL,
 retorna o erro generico de MFA. A correcao inicializa o piso sintetico em `0`,
 sem alterar a validacao ou a protecao antirreplay de producao. Uma quinta
 execucao exige nova autorizacao especifica para o run.
+
+O quinto run autorizado `34386998848`, no commit `8a955d4`, confirmou a
+correcao do MFA ao avancar pela jornada autenticada ate a confirmacao do anexo
+do formulario publico. O endpoint recusou o objeto com `400` e a mensagem
+`Estrutura da imagem invalida ou nao reconhecida.`; probes, ZAP e onboarding
+ficaram `SKIPPED`. As evidencias sanitizadas foram publicadas e o cleanup da
+branch Neon passou, sem ambiente descartavel residual.
+
+O hardening de imagem funcionou como projetado. O runner enviava somente 12
+bytes do cabecalho JFIF, suficientes para deteccao superficial de MIME, mas sem
+marcador estrutural de dimensoes. A correcao troca esse fragmento pelo PNG real
+e versionado `octaclin-192.png`, lido em runtime pelo fixture, e adiciona um
+contrato para assinatura PNG, `IHDR` e dimensoes positivas. Nenhum parser,
+limite ou validacao de producao foi relaxado. Uma sexta execucao exige nova
+autorizacao especifica para o run.
 
 ## Gate externo pendente
 
