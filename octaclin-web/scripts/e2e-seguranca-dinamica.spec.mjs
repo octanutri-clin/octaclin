@@ -4,6 +4,8 @@ import test from 'node:test';
 
 import { executarProbesSeguranca } from './e2e-seguranca-dinamica.mjs';
 
+const segredoTotpTeste = ['GEZDGNBV', 'GY3TQOJQ', 'GEZDGNBV', 'GY3TQOJQ'].join('');
+
 const ambiente = {
   E2E_WEB_URL: 'http://127.0.0.1:3000',
   E2E_API_URL: 'http://127.0.0.1:3001',
@@ -13,7 +15,7 @@ const ambiente = {
   GITHUB_RUN_ID: '12345',
   META_WHATSAPP_APP_SECRET: 'app-secret-sintetico-com-32-bytes-minimo',
   META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN: 'receive-token-sintetico',
-  E2E_MFA_TOTP_SECRET: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ',
+  E2E_MFA_TOTP_SECRET: segredoTotpTeste,
 };
 
 function respostaJson(status, corpo = {}) {

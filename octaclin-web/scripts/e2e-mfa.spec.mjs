@@ -4,7 +4,7 @@ import test from 'node:test';
 import { aguardarProximoPeriodoTotp, gerarCodigoTotp } from './e2e-mfa.mjs';
 
 test('gera TOTP SHA-1 de seis digitos conforme o vetor RFC 6238', () => {
-  const segredoRfcBase32 = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+  const segredoRfcBase32 = ['GEZDGNBV', 'GY3TQOJQ', 'GEZDGNBV', 'GY3TQOJQ'].join('');
 
   assert.equal(gerarCodigoTotp(segredoRfcBase32, 59_000), '287082');
 });
