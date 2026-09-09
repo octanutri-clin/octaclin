@@ -23,7 +23,7 @@ concurrency:
 
 env:
   NODE_VERSION: "22"
-  PNPM_VERSION: "9"
+  PNPM_VERSION: "11.25.0"
   NODE_ENV: production
   E2E_WEB_URL: http://127.0.0.1:3000
   E2E_API_URL: http://127.0.0.1:3001

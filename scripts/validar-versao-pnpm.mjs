@@ -22,6 +22,7 @@ export const FONTES_OBRIGATORIAS = [
   join('octaclin-web', 'package.json'),
   join('octaclin-mobile', 'package.json'),
   join('.github', 'workflows', 'ci.yml'),
+  join('.github', 'workflows', 'staging-e2e-mutavel.yml'),
   join('octaclin-backend', 'Dockerfile'),
   join('octaclin-web', 'Dockerfile'),
 ];

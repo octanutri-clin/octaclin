@@ -36,6 +36,20 @@ O host local usa Node 24, fora do contrato `>=22 <23`; o CI oficial em Node 22
 precisa repetir os gates. Os testes com `fetch` controlado provam serializacao,
 orcamento, cobertura e redacao, mas nao substituem a execucao real.
 
+## Tentativa externa sem resultado dinamico
+
+O run autorizado `34358063540`, no commit `28dae9c`, falhou em
+`pnpm/action-setup` antes do preflight e antes de provisionar a branch Neon. O
+workflow mutavel ainda declarava `PNPM_VERSION: "9"`, divergente do
+`packageManager` `11.25.0` da raiz. Probes e ZAP ficaram `SKIPPED`; portanto o
+run nao constitui evidencia de seguranca dinamica.
+
+A correcao alinha o workflow em `11.25.0` e inclui
+`.github/workflows/staging-e2e-mutavel.yml` nas fontes obrigatorias de
+`pnpm test:versao-pnpm`. O contrato legado do staging tambem passou a validar
+as actions Neon atuais por SHA completo e a entrada `role: neondb_owner`.
+Uma nova execucao exige nova autorizacao especifica para o run.
+
 ## Gate externo pendente
 
 Executar `OctaClin staging E2E mutavel` no head deste PR com:
