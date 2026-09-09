@@ -654,12 +654,11 @@ Skills Claude: `security-review`, `database-migration`,
 Gate minimo: restore real isolado com dados sinteticos ou backup autorizado,
 tempos medidos, evidencias redigidas e procedimento de falha.
 
-Implementacao em elaboracao em 2026-09-08: RPO inicial de 24 horas, RTO do
-restore do banco de 30 minutos, manifesto dinamico comparando migrations,
-tabelas e tenancy entre origem e destino, verificacao da role realmente
-conectada e runbook de resposta a ransomware. O workflow nao promete WORM:
+Integrado no `main` pelo PR GitHub `#216` (`6fe17ae`) em 2026-09-08, depois do
+restore real isolado e dos checks pos-merge verdes. O workflow nao promete WORM:
 somente reconhece imutabilidade quando bucket e objeto provam Object Lock em
-modo COMPLIANCE. Relatorio: `RELATORIO_SEGURANCA_PR53_2026-09-08.md`.
+modo COMPLIANCE. Essa comprovacao permanece aberta, sem bloquear o historico
+PASS do restore. Relatorio: `RELATORIO_SEGURANCA_PR53_2026-09-08.md`.
 
 ### PR 54 - DAST, fuzzing e pentest interno
 
@@ -674,6 +673,14 @@ Skills Claude: `security-review`, `test-driven-development`,
 
 Gate minimo: ambiente e escopo confirmados; nenhum teste destrutivo; zero
 critical/high confirmado em aberto ao final.
+
+Implementacao em elaboracao em 2026-09-08 na branch
+`security/pr54-dast-fuzzing-ready`: preflight manual com confirmacao exata, ZAP
+Baseline passivo fixado por digest, 26 probes serializados sob teto de 30 e
+evidencia sanitizada. Plano:
+`PLANO_TESTE_SEGURANCA_DINAMICA_PR54.md`. Relatorio:
+`RELATORIO_SEGURANCA_PR54_2026-09-08.md`. A execucao externa continua pendente
+de autorizacao e nao pode ser inferida pelos testes locais.
 
 ### PR 55 - Pentest independente e GO/NO-GO
 

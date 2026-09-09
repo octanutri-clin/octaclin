@@ -16,13 +16,20 @@ const preflight = readFileSync(
 
 assert.match(workflow, /^on:\s*\n\s+workflow_dispatch:/m, 'workflow mutavel deve ser somente manual');
 assert.doesNotMatch(workflow, /^\s+(push|pull_request):/m, 'jornada mutavel nao pode rodar automaticamente em push/PR');
-assert.match(workflow, /neondatabase\/create-branch-action@v5/);
-assert.match(workflow, /neondatabase\/delete-branch-action@v3/);
+assert.match(
+  workflow,
+  /neondatabase\/create-branch-action@72ed4f69a12b6be9c16aebfad893f6a21e9aba8b # v6\.4\.0/
+);
+assert.match(
+  workflow,
+  /neondatabase\/delete-branch-action@4468d825d5a88ef4012f1705a82f02ec3072f776 # v3/
+);
 assert.match(workflow, /if: always\(\).*steps\.neon\.outputs\.branch_id/);
-assert.match(workflow, /username: neondb_owner/);
+assert.match(workflow, /role: neondb_owner/);
 assert.match(workflow, /NEON_E2E_RUNTIME_ROLE/);
 assert.match(workflow, /ARMAZENAMENTO_S3_FORCE_PATH_STYLE: "true"/);
 assert.match(workflow, /OCTACLIN_PROCESSO: web/);
+assert.match(workflow, /APP_AMBIENTE: test/);
 assert.doesNotMatch(workflow, /octaclin-backend-producao|Octaclin-db-producao|octaclin_app_producao/i);
 
 for (const termo of ['paciente', 'consulta', 'convite', 'questionario', 'anexos', 'comunicacoes']) {

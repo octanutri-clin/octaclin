@@ -2,6 +2,17 @@ name: OctaClin staging E2E mutavel
 
 on:
   workflow_dispatch:
+    inputs:
+      executar_seguranca_dinamica:
+        description: Executar os probes limitados e o ZAP Baseline da PR54
+        required: false
+        default: false
+        type: boolean
+      confirmacao_seguranca_dinamica:
+        description: Para executar, informe DAST-FUZZ-STAGING-DESCARTAVEL
+        required: false
+        default: NAO
+        type: string
 
 permissions:
   contents: read
@@ -12,11 +23,15 @@ concurrency:
 
 env:
   NODE_VERSION: "22"
-  PNPM_VERSION: "9"
+  PNPM_VERSION: "11.25.0"
   NODE_ENV: production
+  APP_AMBIENTE: test
   E2E_WEB_URL: http://127.0.0.1:3000
   E2E_API_URL: http://127.0.0.1:3001
   E2E_CONFIRMAR_REMOTO: SIM
+  DAST_FUZZ_CONFIRMAR_EXECUCAO: ${{ inputs.confirmacao_seguranca_dinamica }}
+  SEGURANCA_DINAMICA_HABILITADA: ${{ inputs.executar_seguranca_dinamica }}
+  DAST_ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:2.17.0@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef
   OCTACLIN_PROCESSO: web
   BANCO_EXECUTAR_MIGRACOES: "false"
   CORS_ORIGINS: http://127.0.0.1:3000
@@ -56,6 +71,10 @@ jobs:
           cache-dependency-path: |
             octaclin-backend/pnpm-lock.yaml
             octaclin-web/pnpm-lock.yaml
+
+      - name: Validar autorizacao da seguranca dinamica antes de provisionar
+        if: inputs.executar_seguranca_dinamica == true
+        run: node scripts/seguranca-dinamica-cli.mjs preflight
 
       - name: Instalar Neon CLI
         run: npm install --global neonctl@3.6.0
@@ -118,6 +137,17 @@ jobs:
           echo "JWT_REFRESH_SEGREDO=$JWT_REFRESH_SEGREDO" >> "$GITHUB_ENV"
           echo "CRIPTOGRAFIA_CHAVE_AES_256=$CRIPTOGRAFIA_CHAVE_AES_256" >> "$GITHUB_ENV"
           echo "FORMULARIO_PUBLICO_SEGREDO=$FORMULARIO_PUBLICO_SEGREDO" >> "$GITHUB_ENV"
+          if [ "$SEGURANCA_DINAMICA_HABILITADA" = "true" ]; then
+            META_WHATSAPP_WEBHOOK_VERIFY_TOKEN=$(openssl rand -hex 32)
+            META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN=$(openssl rand -hex 32)
+            META_WHATSAPP_APP_SECRET=$(openssl rand -hex 32)
+            echo "::add-mask::$META_WHATSAPP_WEBHOOK_VERIFY_TOKEN"
+            echo "::add-mask::$META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN"
+            echo "::add-mask::$META_WHATSAPP_APP_SECRET"
+            echo "META_WHATSAPP_WEBHOOK_VERIFY_TOKEN=$META_WHATSAPP_WEBHOOK_VERIFY_TOKEN" >> "$GITHUB_ENV"
+            echo "META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN=$META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN" >> "$GITHUB_ENV"
+            echo "META_WHATSAPP_APP_SECRET=$META_WHATSAPP_APP_SECRET" >> "$GITHUB_ENV"
+          fi
 
       - name: Aplicar migrations no branch descartavel com owner
         working-directory: octaclin-backend
@@ -192,6 +222,32 @@ jobs:
         working-directory: octaclin-web
         run: pnpm e2e:staging:mutavel
 
+      - name: Executar probes de seguranca com orcamento fechado
+        if: inputs.executar_seguranca_dinamica == true
+        working-directory: octaclin-web
+        run: pnpm e2e:staging:seguranca
+
+      - name: Executar OWASP ZAP Baseline passivo
+        if: inputs.executar_seguranca_dinamica == true
+        shell: bash
+        run: |
+          set +e
+          docker run --rm --network host \
+            -v "$PWD:/zap/wrk/:rw" \
+            "$DAST_ZAP_IMAGE" \
+            zap-baseline.py -t "$E2E_WEB_URL" -m 1 -T 5 -I \
+            -J .pr54-zap-report.json
+          ZAP_EXIT_CODE=$?
+          set -e
+          if [ "$ZAP_EXIT_CODE" -gt 2 ]; then
+            echo "ZAP encerrou com erro operacional; relatorio nao e evidencia PASS."
+            exit 1
+          fi
+          node scripts/seguranca-dinamica-cli.mjs avaliar-zap \
+            .pr54-zap-report.json \
+            security/dast-fuzz-falsos-positivos.json \
+            artifacts/security/pr54-zap-resumo.json
+
       - name: Executar onboarding e ciclo de vida da Fase 228
         working-directory: octaclin-web
         run: pnpm e2e:fase228:onboarding
@@ -215,6 +271,15 @@ jobs:
             e2e-web.log
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Publicar evidencias sanitizadas da seguranca dinamica
+        if: always() && inputs.executar_seguranca_dinamica == true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: pr54-seguranca-dinamica-sanitizada
+          path: artifacts/security
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Excluir branch Neon descartavel
         if: always() && steps.neon.outputs.branch_id != ''

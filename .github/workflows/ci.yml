@@ -70,6 +70,9 @@ jobs:
       - run: pnpm test:migracoes-fora-de-banda
       - run: pnpm test:actions-imutaveis
       - run: pnpm test:workflows-seguros
+      # Gate do PR 54: execucao dinamica so pode mirar os processos locais do
+      # staging descartavel, com teto de requisicoes e evidencia sanitizada.
+      - run: pnpm test:seguranca-dinamica
       - run: pnpm test:triagem-seguranca
       - run: pnpm test:inventario-security-quality
       - run: pnpm test:tooling-agentes

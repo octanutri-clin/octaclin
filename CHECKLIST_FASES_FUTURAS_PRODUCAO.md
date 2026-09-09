@@ -2769,16 +2769,21 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Separacao de banco/role, checksum, cifragem, retencao e procedimento de falha documentados em `RUNBOOK_RECUPERACAO_RANSOMWARE.md`.
   - [x] Gate externo: execucao `34286684698` PASS no banco dedicado confirmado, com restore mais validacao em 124 segundos e idade do snapshot de aproximadamente 152 segundos.
   - [ ] Object Lock COMPLIANCE no bucket: nao comprovado; permanece excecao aberta ate decisao irreversivel de infraestrutura e custo.
-  - [ ] Checks do PR e review/merge humanos.
-- [ ] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
+  - [x] Checks, review e merge humanos: PR GitHub `#216`, merge `6fe17ae`, com CI e CodeQL pos-merge verdes.
+- [~] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
+  - [x] Regras de engajamento restringem o teste ao runner e aos recursos descartaveis.
+  - [x] ZAP Baseline passivo `2.17.0` fixado por digest e sem publicacao do relatorio bruto.
+  - [x] Probes cobrem auth, BFLA, BOLA, mass assignment, parser, limites, upload, webhook e rate limit em 26/30 requisicoes seriais.
+  - [x] Ledger de falso positivo exige cobertura de todos os caminhos, evidencia, owner e prazo.
+  - [ ] Executar o workflow autorizado no head do PR e registrar a evidencia sanitizada.
+  - [ ] Zerar ou decidir cada `critical/high` confirmado e concluir checks/review/merge humanos.
 - [ ] PR 55 - Concluir pentest independente, reteste e GO/NO-GO.
 - [ ] PR 56 - Aplicar MASVS/MASTG antes de distribuir o mobile.
 
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: concluir o PR 53 com restore isolado, checks e merge
-humanos. Depois, executar o PR 54 (DAST/fuzzing/pentest interno em staging
-isolado). A retomada funcional comeca na Fase 256; alertas sem solucao
+Proximo item autorizado: concluir a PR 54 com DAST/probes internos no staging
+isolado, checks e merge humanos. A retomada funcional comeca na Fase 256; alertas sem solucao
 permanecem abertos e revisaveis, enquanto novo critical/high corrigivel volta a
 bloquear a fila.
