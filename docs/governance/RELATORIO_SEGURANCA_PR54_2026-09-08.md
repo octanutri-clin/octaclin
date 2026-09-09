@@ -1,6 +1,6 @@
 # Relatorio de seguranca - PR 54: DAST e probes ativos em staging
 
-Status em 2026-09-09: **automacao local PASS; sexta execucao no staging
+Status em 2026-09-09: **automacao local PASS; setima execucao no staging
 descartavel e review humano pendentes**. Nenhum resultado dinamico foi inferido
 a partir dos testes unitarios nem das execucoes interrompidas antes dos probes.
 
@@ -107,6 +107,21 @@ marcador estrutural de dimensoes. A correcao troca esse fragmento pelo PNG real
 e versionado `octaclin-192.png`, lido em runtime pelo fixture, e adiciona um
 contrato para assinatura PNG, `IHDR` e dimensoes positivas. Nenhum parser,
 limite ou validacao de producao foi relaxado. Uma sexta execucao exige nova
+autorizacao especifica para o run.
+
+O sexto run autorizado `34390129868`, no commit `12db8f5`, aprovou migrations,
+fixtures, role/RLS, dois tenants, MFA, upload do PNG, jornadas mutaveis e os 29
+probes ativos dentro do teto de 30 requisicoes. O ZAP percorreu 31 URLs e
+reportou `0 FAIL`, `6 WARN` e `61 PASS`, mas o processo nao conseguiu gravar o
+JSON bruto em `/zap/wrk` por diferenca de permissao entre o runner e o usuario
+do container. Sem JSON avaliavel, o gate falhou fechado; onboarding ficou
+`SKIPPED`. As evidencias disponiveis foram publicadas e o cleanup Neon passou,
+sem ambiente descartavel residual. O run nao constitui o PASS externo final.
+
+A correcao cria um diretorio exclusivo sob `$RUNNER_TEMP`, gravavel pelo usuario
+nao privilegiado do ZAP, e monta somente esse diretorio em `/zap/wrk`, em vez de
+expor todo o checkout ao container. O avaliador continua exigindo o JSON e
+publicando apenas o resumo sanitizado. Uma setima execucao exige nova
 autorizacao especifica para o run.
 
 ## Gate externo pendente

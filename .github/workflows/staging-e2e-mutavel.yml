@@ -234,9 +234,11 @@ jobs:
         if: inputs.executar_seguranca_dinamica == true
         shell: bash
         run: |
+          ZAP_WORK_DIR="$RUNNER_TEMP/pr54-zap-$GITHUB_RUN_ID"
+          install -d -m 0777 "$ZAP_WORK_DIR"
           set +e
           docker run --rm --network host \
-            -v "$PWD:/zap/wrk/:rw" \
+            -v "$ZAP_WORK_DIR:/zap/wrk/:rw" \
             "$DAST_ZAP_IMAGE" \
             zap-baseline.py -t "$E2E_WEB_URL" -m 1 -T 5 -I \
             -J .pr54-zap-report.json
@@ -247,7 +249,7 @@ jobs:
             exit 1
           fi
           node scripts/seguranca-dinamica-cli.mjs avaliar-zap \
-            .pr54-zap-report.json \
+            "$ZAP_WORK_DIR/.pr54-zap-report.json" \
             security/dast-fuzz-falsos-positivos.json \
             artifacts/security/pr54-zap-resumo.json
 

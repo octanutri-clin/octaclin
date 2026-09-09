@@ -190,6 +190,11 @@ test('workflow mantem ZAP passivo, versionado por digest e publica apenas resumo
   );
   assert.match(workflow, /zap-baseline\.py[^\n]*-t "\$E2E_WEB_URL" -m 1 -T 5 -I/);
   assert.doesNotMatch(workflow, /zap-full-scan|zap-api-scan/);
+  assert.match(workflow, /ZAP_WORK_DIR="\$RUNNER_TEMP\/pr54-zap-\$GITHUB_RUN_ID"/);
+  assert.match(workflow, /install -d -m 0777 "\$ZAP_WORK_DIR"/);
+  assert.match(workflow, /-v "\$ZAP_WORK_DIR:\/zap\/wrk\/:rw"/);
+  assert.doesNotMatch(workflow, /-v "\$PWD:\/zap\/wrk/);
+  assert.match(workflow, /"\$ZAP_WORK_DIR\/\.pr54-zap-report\.json"/);
   assert.match(workflow, /path: artifacts\/security/);
   assert.doesNotMatch(workflow, /path:[^\n]*\.pr54-zap-report\.json/);
 });
