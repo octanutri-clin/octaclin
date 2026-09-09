@@ -1,8 +1,8 @@
 # Relatorio de seguranca - PR 54: DAST e probes ativos em staging
 
-Status em 2026-09-09: **automacao local PASS; quarta execucao no staging
-descartavel, checks do PR e review humano pendentes**. Nenhum resultado dinamico foi inferido
-a partir dos testes unitarios.
+Status em 2026-09-09: **automacao local PASS; quinta execucao no staging
+descartavel e review humano pendentes**. Nenhum resultado dinamico foi inferido
+a partir dos testes unitarios nem das execucoes interrompidas antes dos probes.
 
 ## Escopo entregue
 
@@ -79,6 +79,20 @@ API concluem o MFA real; usuarios privilegiados criados durante o onboarding
 percorrem tambem a configuracao inicial. As suites que reutilizam contas
 aguardam a proxima janela TOTP para preservar a protecao contra replay. Uma
 quarta execucao exige nova autorizacao especifica para o run.
+
+O quarto run autorizado `34382517812`, no commit `80f2e8f`, confirmou o segredo
+MFA efemero, as migrations, os fixtures, a role runtime, o RLS, os dois tenants,
+os builds e o readiness. A jornada chegou a `POST /api/auth/mfa/concluir-login`,
+mas recebeu `401`; probes, ZAP e onboarding ficaram `SKIPPED`. O cleanup da
+branch Neon passou, portanto nao houve ambiente descartavel residual.
+
+O codigo TOTP estava correto. O fator sintetico era persistido como habilitado,
+mas com `ultimo_contador_totp = NULL`. A protecao antirreplay valida o token e
+depois atualiza somente quando `ultimo_contador_totp < contador_atual`; em SQL,
+`NULL < valor` nao e verdadeiro, a atualizacao afeta zero linhas e o servico
+retorna o erro generico de MFA. A correcao inicializa o piso sintetico em `0`,
+sem alterar a validacao ou a protecao antirreplay de producao. Uma quinta
+execucao exige nova autorizacao especifica para o run.
 
 ## Gate externo pendente
 

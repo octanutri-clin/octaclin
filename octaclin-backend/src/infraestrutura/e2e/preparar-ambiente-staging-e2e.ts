@@ -121,7 +121,10 @@ async function executar() {
               segredoPendenteCriptografado: null,
               pendenteExpiraEm: null,
               habilitadoEm: new Date(),
-              ultimoContadorTotp: null
+              // O fixture nasce com o fator ja habilitado e, portanto, precisa
+              // reproduzir tambem o estado inicial da protecao antirreplay.
+              // NULL nunca satisfaz `ultimo_contador_totp < contador_atual`.
+              ultimoContadorTotp: '0'
             })),
           { conflictPaths: ['tenantId', 'usuarioId'] }
         );

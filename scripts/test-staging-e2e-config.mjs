@@ -44,5 +44,6 @@ assert.match(preparador, /rolbypassrls/);
 assert.match(preparador, /grant select, insert, update, delete on all tables/);
 assert.match(preparador, /MfaFatorUsuarioOrm/);
 assert.match(preparador, /E2E_MFA_TOTP_SECRET/);
+assert.match(preparador, /ultimoContadorTotp: '0'/);
 assert.match(preflight, /tabelasVisiveisSemTenant: 0/);
 assert.match(preflight, /relforcerowsecurity/);
