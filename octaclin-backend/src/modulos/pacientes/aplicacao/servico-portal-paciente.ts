@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomUUID } from 'crypto';
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
@@ -37,8 +37,17 @@ import {
   RegistrarSolicitacaoLgpdPortalDto
 } from './dtos';
 import { listarDocumentosLegaisPaciente } from './documentos-legais-paciente';
-import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
+import { AcompanhamentoTarefaOrm, CategoriaTarefaAcompanhamento } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
+import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
+
+/**
+ * Fase 257, Incremento 3: decisao de produto confirmada com o dono do
+ * produto em 2026-09-10. Apenas `meta` e `tarefa` sao acoes discretas que o
+ * paciente pode marcar como feitas; `checkin` ja tem fluxo proprio de
+ * registro e `orientacao` e apenas informativa, nao uma acao.
+ */
+const CATEGORIAS_TAREFA_CONCLUIVEIS_PELO_PACIENTE: readonly CategoriaTarefaAcompanhamento[] = ['meta', 'tarefa'];
 
 type CanalPreferidoComunicacao = 'email' | 'whatsapp' | 'qualquer';
 
@@ -210,18 +219,7 @@ export interface ResumoPortalPaciente {
     enviadoEm?: Date;
   }[];
   notificacoesPaciente: NotificacaoPortalPaciente[];
-  tarefasAcompanhamento: {
-    id: string;
-    titulo: string;
-    descricao?: string;
-    categoria: string;
-    prioridade: string;
-    status: string;
-    vencimentoEm?: Date;
-    concluidoEm?: Date;
-    criadoEm: Date;
-    atualizadoEm: Date;
-  }[];
+  tarefasAcompanhamento: TarefaAcompanhamentoPaciente[];
   materiaisDisponiveis: {
     id: string;
     materialId: string;
@@ -265,6 +263,19 @@ export interface NotificacaoPortalPaciente {
   criadoEm: Date;
   enviadoEm?: Date;
   agendadoPara?: Date;
+}
+
+export interface TarefaAcompanhamentoPaciente {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  categoria: string;
+  prioridade: string;
+  status: string;
+  vencimentoEm?: Date;
+  concluidoEm?: Date;
+  criadoEm: Date;
+  atualizadoEm: Date;
 }
 
 export interface PerfilPortalPaciente {
@@ -515,18 +526,7 @@ export class ServicoPortalPaciente {
         enviadoEm: mensagem.enviadoEm
       })).slice(0, 5);
       const notificacoesPaciente = mensagens.map((mensagem) => this.mapearNotificacaoPaciente(mensagem));
-      const tarefasAcompanhamento = tarefas.map((tarefa) => ({
-        id: tarefa.id,
-        titulo: tarefa.titulo,
-        descricao: tarefa.descricaoCriptografada ? this.criptografia.descriptografar(tarefa.descricaoCriptografada) : undefined,
-        categoria: tarefa.categoria,
-        prioridade: tarefa.prioridade,
-        status: tarefa.status,
-        vencimentoEm: tarefa.vencimentoEm,
-        concluidoEm: tarefa.concluidoEm,
-        criadoEm: tarefa.criadoEm,
-        atualizadoEm: tarefa.atualizadoEm
-      }));
+      const tarefasAcompanhamento = tarefas.map((tarefa) => this.mapearTarefaAcompanhamento(tarefa));
       const materiaisDisponiveis = enviosMateriais
         .map((envio) => {
           const material = materiaisPorId.get(envio.materialId);
@@ -1154,6 +1154,52 @@ export class ServicoPortalPaciente {
     });
   }
 
+  /**
+   * Fase 257, Incremento 3. So `meta`/`tarefa` sao conclusiveis pelo portal
+   * (decisao de produto, 2026-09-10); `checkin` tem fluxo proprio e
+   * `orientacao` e informativa. A conclusao e definitiva pelo lado do
+   * paciente -- reabrir exige o profissional pelo prontuario -- e notifica o
+   * profissional responsavel pela tarefa via o centro de notificacoes.
+   */
+  async concluirTarefa(tenantId: string, usuarioId: string, tarefaId: string): Promise<TarefaAcompanhamentoPaciente> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: { tenantId, usuarioId, arquivadoEm: IsNull() }
+      });
+      if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
+
+      const repositorio = gerenciador.getRepository(AcompanhamentoTarefaOrm);
+      const tarefa = await repositorio.findOne({
+        where: { id: tarefaId, tenantId, pacienteId: paciente.id }
+      });
+      if (!tarefa) throw new ForbiddenException('Tarefa indisponivel para este paciente.');
+
+      if (!CATEGORIAS_TAREFA_CONCLUIVEIS_PELO_PACIENTE.includes(tarefa.categoria)) {
+        throw new BadRequestException('Este item do plano nao pode ser concluido pelo portal.');
+      }
+      if (tarefa.status === 'concluida') {
+        throw new ConflictException('Esta tarefa ja foi concluida.');
+      }
+      if (tarefa.status === 'cancelada') {
+        throw new BadRequestException('Tarefa cancelada nao pode ser concluida.');
+      }
+
+      tarefa.status = 'concluida';
+      tarefa.concluidoEm = new Date();
+      await repositorio.save(tarefa);
+
+      await registrarNotificacao(gerenciador, tenantId, {
+        tipo: 'tarefa_concluida',
+        recursoTipo: 'acompanhamento_tarefa',
+        recursoId: tarefa.id,
+        pacienteId: paciente.id,
+        profissionalId: tarefa.profissionalId
+      });
+
+      return this.mapearTarefaAcompanhamento(tarefa);
+    });
+  }
+
   async obterFormularioRespondido(
     tenantId: string,
     usuarioId: string,
@@ -1246,6 +1292,21 @@ export class ServicoPortalPaciente {
   private textoOpcional(valor?: string): string | undefined {
     const texto = valor?.trim();
     return texto || undefined;
+  }
+
+  private mapearTarefaAcompanhamento(tarefa: AcompanhamentoTarefaOrm): TarefaAcompanhamentoPaciente {
+    return {
+      id: tarefa.id,
+      titulo: tarefa.titulo,
+      descricao: tarefa.descricaoCriptografada ? this.criptografia.descriptografar(tarefa.descricaoCriptografada) : undefined,
+      categoria: tarefa.categoria,
+      prioridade: tarefa.prioridade,
+      status: tarefa.status,
+      vencimentoEm: tarefa.vencimentoEm,
+      concluidoEm: tarefa.concluidoEm,
+      criadoEm: tarefa.criadoEm,
+      atualizadoEm: tarefa.atualizadoEm
+    };
   }
 
   private mapearCheckinRapido(diario: LogDiarioRapidoOrm): CheckinRapidoPortalPaciente {

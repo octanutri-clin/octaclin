@@ -1,6 +1,18 @@
 # Fase 257 - Portal do paciente orientado por tarefas
 
-Status: em andamento, iniciada em 2026-09-10.
+Status: concluida em 2026-09-10.
+
+## Conclusao
+
+Os quatro incrementos planejados na auditoria inicial foram entregues no
+mesmo dia, todos na mesma branch/PR: (1) confirmacao explicita ao
+desmarcar consulta, (2) ranking cruzado de "proxima acao" entre
+formularios e tarefas, (3) conclusao de tarefas/metas pelo paciente com
+notificacao ao profissional, (4) remocao de codigo morto. Unica migration
+da fase: `1720000001039` (amplia CHECK de tipos de notificacao, aditiva).
+Nenhuma mudanca de contrato de leitura do portal. Evidencias completas de
+cada incremento abaixo. Proxima fase oficial do roadmap: Fase 258 (Central
+de comunicacoes confiavel).
 
 ## Objetivo (roadmap)
 
@@ -155,26 +167,77 @@ pendente para o Incremento 3).
 
 ## Incremento 3 - conclusao de tarefas/metas pelo paciente
 
-Bloqueado aguardando decisao de produto (ver secao "Decisao pendente"
-abaixo). Nao implementado nesta rodada.
+Concluido em 2026-09-10.
 
-### Decisao pendente
+### Decisao de produto (confirmada com o dono do produto)
 
-Marcar uma tarefa/meta prescrita como concluida pelo paciente exige uma
-nova rota mutavel no backend (hoje `controlador-portal-paciente.ts` so
-tem leitura de `AcompanhamentoTarefaOrm`) escrevendo em uma tabela que
-guarda dado clinico-adjacente (`descricaoCriptografada`), prescrita por um
-profissional. Antes de implementar, e necessario decidir:
+1. Categorias completaveis pelo paciente: **so `meta` e `tarefa`**.
+   `checkin` ja tem fluxo proprio de registro; `orientacao` e informativa,
+   nao uma acao discreta.
+2. Conclusao **notifica o profissional responsavel** pela tarefa.
+3. A conclusao e **definitiva pelo lado do paciente** — reabrir exige o
+   profissional pelo prontuario.
 
-1. Quais categorias de tarefa (`meta`, `tarefa`, `checkin`, `orientacao`)
-   o paciente pode marcar como concluida — todas, ou `orientacao` fica de
-   fora por ser apenas informativa (nao uma acao discreta)?
-2. Completar uma tarefa deve notificar o profissional (mensagem/evento) ou
-   basta ficar visivel no prontuario na proxima consulta/revisao?
-3. A acao e reversivel pelo paciente (desfazer conclusao) ou definitiva
-   (so o profissional pode reabrir, pelo prontuario)?
+### Implementacao
 
-Essas sao decisoes de produto, nao apenas tecnicas — impactam o contrato
-da nova rota e o fluxo assistencial. Ate resposta do dono do produto, o
-Incremento 3 fica pendente; os Incrementos 1, 2 e 4 nao dependem dele e ja
-estao concluidos.
+- **Migration** `1720000001039-AdicionarTarefaConcluidaNotificacoes`:
+  amplia o CHECK `notificacoes_tipo_check` para aceitar o novo tipo
+  `tarefa_concluida`, registrada em `opcoes-typeorm.ts`. Aditiva, com
+  `down` que restaura o conjunto anterior. `@aplicacao fora-de-banda`
+  como as demais migrations do projeto.
+- **Backend**: `TipoNotificacao` ganhou `'tarefa_concluida'` (fora da
+  lista `TIPOS_OPERACIONAIS_COLABORADOR`, mesmo tratamento de
+  `formulario_respondido` — so SuperAdmin e o profissional dono do
+  evento recebem, nunca Collaborator ou o proprio paciente).
+  `ServicoPortalPaciente.concluirTarefa(tenantId, usuarioId, tarefaId)`
+  (novo metodo): resolve o paciente pelo `usuarioId`, carrega a tarefa
+  escopada a tenant+paciente (`ForbiddenException` se pertencer a outro
+  paciente), rejeita categoria fora de `['meta','tarefa']` e status
+  `concluida`/`cancelada` (`BadRequestException`/`ConflictException`),
+  marca `status='concluida'` + `concluidoEm`, e chama
+  `registrarNotificacao` com `profissionalId` explicito da propria
+  tarefa (mais preciso que o `profissionalResponsavelId` generico do
+  paciente). Nova rota `PATCH /portal/paciente/tarefas/:id/concluir` em
+  `controlador-portal-paciente.ts`, com auditoria que guarda so a
+  categoria (enum fechado) — nunca titulo/descricao da tarefa, que sao
+  conteudo de prontuario escrito pelo profissional.
+- **Frontend**: BFF `PATCH /api/portal/paciente/tarefas/[tarefaId]/concluir`
+  (proxy fino); `concluirTarefaPaciente` em `lib/portal-api.ts`. Na secao
+  "Plano" do portal, tarefas com categoria `meta`/`tarefa` ganham o botao
+  "Marcar como concluída", que abre `ModalConfirmacao` ("Depois de
+  concluída, só o profissional pode reabrir esta tarefa pelo
+  prontuário...") antes de chamar a API; ao confirmar, a tarefa e
+  removida da lista local (sem refetch completo) e uma mensagem de
+  sucesso e exibida. Categorias `checkin`/`orientacao` nunca mostram o
+  botao.
+- Nenhuma mudanca de contrato para leitura (`GET /portal/paciente`
+  continua retornando o mesmo formato de tarefa).
+
+### Validacoes
+
+- TDD: RED confirmado tanto no backend (guard de categoria comentado,
+  teste falhou; restaurado) quanto no frontend (restricao de categoria
+  ampliada para incluir `orientacao`, teste Playwright falhou por
+  contagem de botao; restaurada). Um teste de vazamento de PHI na
+  trilha (`nao deve deixar titulo da tarefa chegar a trilha`) tambem foi
+  confirmado capaz de pegar a regressao antes de ser corrigido.
+- Backend: `servico-portal-paciente.spec.ts` (+9 testes: sucesso meta,
+  sucesso tarefa em_andamento, rejeita checkin/orientacao, rejeita
+  concluida, rejeita cancelada, rejeita tarefa de outro paciente, rejeita
+  usuario sem paciente), `controlador-portal-paciente.spec.ts` (+2,
+  incluindo o teste negativo de vazamento de titulo na trilha),
+  `destinatarios-notificacao.spec.ts` (+1), migration spec (+2, up/down).
+  405/405 testes dos modulos `pacientes`+`notificacoes`+migrations
+  PASS (1 suite de integracao com banco real SKIPPED, mesma limitacao
+  de ambiente das fases anteriores).
+  `pnpm --dir octaclin-backend typecheck` e `build` — PASS.
+- Frontend: 34/34 Playwright (desktop+mobile) em `portal-paciente.spec.mjs`,
+  `pwa-portal.spec.mjs` e `jornadas-criticas.spec.mjs` — PASS.
+  `pnpm --dir octaclin-web typecheck`, `lint` (0 erros) e `build` — PASS.
+  `pnpm test:authz` — PASS (executado apos criar a rota BFF).
+- Gate de linguagem, `pnpm security:secrets`, `git diff --check` — PASS.
+- `powershell ... -DocsOnly` — SKIPPED (PowerShell indisponivel neste
+  ambiente Linux, mesma limitacao das PRs anteriores).
+- Migration nao aplicada em nenhum banco de producao/staging por esta
+  sessao. Segue o runbook padrao: aplicacao fora de banda por role
+  owner, fora do boot do runtime (`@aplicacao fora-de-banda`).

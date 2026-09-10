@@ -375,6 +375,64 @@ test.describe('portal do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('paciente conclui uma tarefa do plano apos confirmar, e orientacao nao pode ser concluida', async ({ page }) => {
+    let chamouConcluir = false;
+    const payload = {
+      ...portalPaciente,
+      tarefasAcompanhamento: [
+        { ...portalPaciente.tarefasAcompanhamento[0] },
+        {
+          id: 'tarefa-2',
+          titulo: 'Ler material sobre hidratacao',
+          categoria: 'orientacao',
+          prioridade: 'media',
+          status: 'pendente',
+          criadoEm: '2026-07-22T12:00:00.000Z',
+          atualizadoEm: '2026-07-22T12:00:00.000Z'
+        }
+      ]
+    };
+    await prepararSessaoPaciente(page);
+    await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) });
+    });
+    await page.route((url) => url.pathname === '/api/portal/paciente/tarefas/tarefa-1/concluir', async (route) => {
+      chamouConcluir = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...payload.tarefasAcompanhamento[0], status: 'concluida', concluidoEm: '2026-08-01T12:00:00.000Z' })
+      });
+    });
+
+    await page.goto('/portal/plano');
+
+    const cartaoTarefaMeta = page.locator('article', { hasText: 'Registrar agua diariamente' });
+    const cartaoTarefaOrientacao = page.locator('article', { hasText: 'Ler material sobre hidratacao' });
+    const botaoConcluirMeta = cartaoTarefaMeta.getByRole('button', { name: 'Marcar como concluída' });
+    // Espera o conteudo real carregar antes de checar ausencia: um `toHaveCount(0)`
+    // checado cedo demais passa de forma vazia com a pagina ainda em carregamento.
+    await expect(botaoConcluirMeta).toBeVisible();
+    await expect(cartaoTarefaOrientacao.getByRole('button', { name: 'Marcar como concluída' })).toHaveCount(0);
+
+    await botaoConcluirMeta.click();
+    const dialogo = page.getByRole('dialog', { name: 'Concluir tarefa' });
+    await expect(dialogo).toBeVisible();
+    expect(chamouConcluir).toBe(false);
+
+    await dialogo.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(dialogo).toHaveCount(0);
+    expect(chamouConcluir).toBe(false);
+
+    await cartaoTarefaMeta.getByRole('button', { name: 'Marcar como concluída' }).click();
+    await page.getByRole('dialog', { name: 'Concluir tarefa' }).getByRole('button', { name: 'Concluir tarefa' }).click();
+
+    await expect.poll(() => chamouConcluir).toBe(true);
+    await expect(page.getByText('Tarefa concluída.')).toBeVisible();
+    await expect(cartaoTarefaMeta).toHaveCount(0);
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('mostra a curva de peso sem numero clinico derivado junto', async ({ page }) => {
     await prepararPortal(page);
     await page.goto('/portal/checkins');

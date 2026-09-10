@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
@@ -20,7 +20,11 @@ import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
+import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
 import { ServicoPortalPaciente } from './servico-portal-paciente';
+
+jest.mock('../../notificacoes/aplicacao/registrar-notificacao');
+const registrarNotificacaoMock = registrarNotificacao as jest.Mock;
 
 function criarRepositorioFake(nome: string, dados: Record<string, any>) {
   const chaveColecao = nome === 'mensagem' ? 'mensagens' : nome === 'material' ? 'materiais' : `${nome}s`;
@@ -1642,6 +1646,181 @@ describe('ServicoPortalPaciente', () => {
         })
       })
     );
+  });
+
+  describe('concluirTarefa', () => {
+    beforeEach(() => {
+      registrarNotificacaoMock.mockClear();
+    });
+
+    function cenarioTarefas(tarefas: Record<string, any>[]) {
+      return criarServico({
+        pacientes: [
+          {
+            id: 'paciente-1',
+            tenantId: 'tenant-1',
+            usuarioId: 'usuario-paciente-1',
+            nomeCriptografado: Buffer.from('cripto:Ana Paula')
+          }
+        ],
+        consultas: [],
+        envios: [],
+        questionarios: [],
+        mensagens: [],
+        tarefas
+      });
+    }
+
+    it('marca meta pendente como concluida e notifica o profissional responsavel', async () => {
+      const { servico, repositorios } = cenarioTarefas([
+        {
+          id: 'tarefa-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          titulo: 'Registrar agua diariamente',
+          categoria: 'meta',
+          prioridade: 'alta',
+          status: 'pendente',
+          criadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-22T12:00:00.000Z')
+        }
+      ]);
+
+      const tarefa = await servico.concluirTarefa('tenant-1', 'usuario-paciente-1', 'tarefa-1');
+
+      expect(tarefa).toEqual(
+        expect.objectContaining({ id: 'tarefa-1', status: 'concluida', concluidoEm: expect.any(Date) })
+      );
+      expect(repositorios.tarefa.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'tarefa-1', status: 'concluida', concluidoEm: expect.any(Date) })
+      );
+      expect(registrarNotificacaoMock).toHaveBeenCalledWith(
+        expect.anything(),
+        'tenant-1',
+        expect.objectContaining({
+          tipo: 'tarefa_concluida',
+          recursoTipo: 'acompanhamento_tarefa',
+          recursoId: 'tarefa-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1'
+        })
+      );
+    });
+
+    it('marca tarefa (categoria "tarefa") em andamento como concluida', async () => {
+      const { servico } = cenarioTarefas([
+        {
+          id: 'tarefa-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          titulo: 'Levar exames na proxima consulta',
+          categoria: 'tarefa',
+          prioridade: 'media',
+          status: 'em_andamento',
+          criadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-22T12:00:00.000Z')
+        }
+      ]);
+
+      const tarefa = await servico.concluirTarefa('tenant-1', 'usuario-paciente-1', 'tarefa-1');
+
+      expect(tarefa.status).toBe('concluida');
+    });
+
+    it.each(['checkin', 'orientacao'])(
+      'rejeita categoria "%s": nao e acao discreta conclusivel pelo portal',
+      async (categoria) => {
+        const { servico } = cenarioTarefas([
+          {
+            id: 'tarefa-1',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-1',
+            profissionalId: 'profissional-1',
+            titulo: 'Item nao conclusivel',
+            categoria,
+            prioridade: 'media',
+            status: 'pendente',
+            criadoEm: new Date('2026-07-22T12:00:00.000Z'),
+            atualizadoEm: new Date('2026-07-22T12:00:00.000Z')
+          }
+        ]);
+
+        await expect(servico.concluirTarefa('tenant-1', 'usuario-paciente-1', 'tarefa-1')).rejects.toThrow(BadRequestException);
+        expect(registrarNotificacaoMock).not.toHaveBeenCalled();
+      }
+    );
+
+    it('rejeita tarefa ja concluida', async () => {
+      const { servico } = cenarioTarefas([
+        {
+          id: 'tarefa-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          titulo: 'Ja feita',
+          categoria: 'meta',
+          prioridade: 'alta',
+          status: 'concluida',
+          concluidoEm: new Date('2026-07-25T12:00:00.000Z'),
+          criadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-25T12:00:00.000Z')
+        }
+      ]);
+
+      await expect(servico.concluirTarefa('tenant-1', 'usuario-paciente-1', 'tarefa-1')).rejects.toThrow(ConflictException);
+    });
+
+    it('rejeita tarefa cancelada', async () => {
+      const { servico } = cenarioTarefas([
+        {
+          id: 'tarefa-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          titulo: 'Cancelada pelo profissional',
+          categoria: 'meta',
+          prioridade: 'alta',
+          status: 'cancelada',
+          criadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-25T12:00:00.000Z')
+        }
+      ]);
+
+      await expect(servico.concluirTarefa('tenant-1', 'usuario-paciente-1', 'tarefa-1')).rejects.toThrow(BadRequestException);
+    });
+
+    /**
+     * Teste negativo de isolamento: a tarefa existe no tenant/paciente
+     * correto, mas pertence a outro paciente. O paciente autenticado nao
+     * pode concluir tarefa de terceiros.
+     */
+    it('nao permite concluir tarefa de outro paciente', async () => {
+      const { servico } = cenarioTarefas([
+        {
+          id: 'tarefa-de-outro',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          profissionalId: 'profissional-1',
+          titulo: 'Tarefa de outro paciente',
+          categoria: 'meta',
+          prioridade: 'alta',
+          status: 'pendente',
+          criadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-22T12:00:00.000Z')
+        }
+      ]);
+
+      await expect(servico.concluirTarefa('tenant-1', 'usuario-paciente-1', 'tarefa-de-outro')).rejects.toThrow(ForbiddenException);
+      expect(registrarNotificacaoMock).not.toHaveBeenCalled();
+    });
+
+    it('rejeita usuario sem paciente vinculado', async () => {
+      const { servico } = criarServico({ pacientes: [], tarefas: [] });
+
+      await expect(servico.concluirTarefa('tenant-1', 'usuario-sem-paciente', 'tarefa-1')).rejects.toThrow(ForbiddenException);
+    });
   });
 
   describe('trocas liberadas ao paciente', () => {

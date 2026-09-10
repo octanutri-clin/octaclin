@@ -34,6 +34,7 @@ import { PortalShell } from '@/components/app/portal-shell';
 import {
   atualizarPerfilPaciente,
   CheckinRapidoPacienteApi,
+  concluirTarefaPaciente,
   DetalheFormularioRespondidoApi,
   desmarcarConsultaPaciente,
   exportarDadosLgpdPaciente,
@@ -149,6 +150,14 @@ function rotuloPrioridade(prioridade: string) {
   };
   return mapa[prioridade] ?? prioridade;
 }
+
+/**
+ * Fase 257, Incremento 3: decisao de produto (2026-09-10). Apenas `meta` e
+ * `tarefa` sao acoes discretas conclusiveis pelo paciente; `checkin` tem
+ * fluxo proprio de registro e `orientacao` e informativa. Espelha
+ * CATEGORIAS_TAREFA_CONCLUIVEIS_PELO_PACIENTE no backend.
+ */
+const CATEGORIAS_TAREFA_CONCLUIVEIS_PELO_PACIENTE = ['meta', 'tarefa'];
 
 function rotuloCategoriaTarefa(categoria: string) {
   const mapa: Record<string, string> = {
@@ -421,6 +430,8 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   const [detalhesSolicitacaoLgpd, setDetalhesSolicitacaoLgpd] = useState('');
   const [desmarcandoConsultaId, setDesmarcandoConsultaId] = useState<string | null>(null);
   const [consultaParaDesmarcar, setConsultaParaDesmarcar] = useState<string | null>(null);
+  const [concluindoTarefaId, setConcluindoTarefaId] = useState<string | null>(null);
+  const [tarefaParaConcluir, setTarefaParaConcluir] = useState<string | null>(null);
 
   useEffect(() => {
     if (portal) setFormularioPerfil(montarFormularioPerfil(portal));
@@ -445,6 +456,26 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
     } finally {
       setDesmarcandoConsultaId(null);
       setConsultaParaDesmarcar(null);
+    }
+  }
+
+  async function concluirTarefa(tarefaId: string) {
+    setConcluindoTarefaId(tarefaId);
+    setErro(null);
+    setSucesso(null);
+    try {
+      await concluirTarefaPaciente(tarefaId);
+      setPortal((atual) =>
+        atual
+          ? { ...atual, tarefasAcompanhamento: (atual.tarefasAcompanhamento ?? []).filter((tarefa) => tarefa.id !== tarefaId) }
+          : atual
+      );
+      setSucesso('Tarefa concluída.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao concluir tarefa.');
+    } finally {
+      setConcluindoTarefaId(null);
+      setTarefaParaConcluir(null);
     }
   }
 
@@ -884,6 +915,19 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                           </div>
                         </div>
                         {tarefa.descricao ? <p className="mt-3 break-words text-sm text-texto-suave">{tarefa.descricao}</p> : null}
+                        {CATEGORIAS_TAREFA_CONCLUIVEIS_PELO_PACIENTE.includes(tarefa.categoria) ? (
+                          <div className="mt-3">
+                            <Botao
+                              type="button"
+                              tamanho="sm"
+                              disabled={concluindoTarefaId === tarefa.id}
+                              onClick={() => setTarefaParaConcluir(tarefa.id)}
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              {concluindoTarefaId === tarefa.id ? 'Concluindo' : 'Marcar como concluída'}
+                            </Botao>
+                          </div>
+                        ) : null}
                       </article>
                     ))
                   ) : (
@@ -1528,6 +1572,19 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
           aoConfirmar={() => {
             if (!consultaParaDesmarcar) return;
             void desmarcarConsulta(consultaParaDesmarcar);
+          }}
+        />
+        <ModalConfirmacao
+          aberto={Boolean(tarefaParaConcluir)}
+          titulo="Concluir tarefa"
+          mensagem="Depois de concluída, só o profissional pode reabrir esta tarefa pelo prontuário. Deseja continuar?"
+          rotuloConfirmar="Concluir tarefa"
+          rotuloCancelar="Cancelar"
+          confirmando={Boolean(tarefaParaConcluir && concluindoTarefaId === tarefaParaConcluir)}
+          aoCancelar={() => setTarefaParaConcluir(null)}
+          aoConfirmar={() => {
+            if (!tarefaParaConcluir) return;
+            void concluirTarefa(tarefaParaConcluir);
           }}
         />
     </PortalShell>

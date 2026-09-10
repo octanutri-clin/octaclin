@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-08-22 com a conclusao da Fase 255.
+Atualizado em 2026-09-10 com a conclusao da Fase 257.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -780,6 +780,22 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   nenhum incremento. PRs GitHub `#223`, `#224` e `#225`, merges `d5e511b`,
   `c7b2700` e `7e9ec76`. Ver
   `docs/history/phases/fase-256-formularios-checkins-ponta-a-ponta.md`.
+- Fase 257 - Portal do paciente orientado por tarefas: auditoria confirmou
+  que a priorizacao proxima-acao/proxima-consulta/plano e a navegacao por
+  tarefas ja existiam desde as Fases 162/181; o trabalho real foi fechar
+  quatro lacunas pontuais. Passou a exigir confirmacao explicita antes de
+  desmarcar consulta pelo portal (`ModalConfirmacao`); o cartao "Proxima
+  acao" da home passou a ranquear formularios pendentes e tarefas de
+  acompanhamento nao concluidas pelo prazo mais proximo, em vez de sempre
+  mostrar so o primeiro formulario; o paciente passou a poder marcar uma
+  tarefa/meta prescrita (nao check-in/orientacao) como concluida, acao
+  definitiva pelo lado do paciente (so o profissional reabre pelo
+  prontuario) que notifica o profissional responsavel pelo centro de
+  notificacoes; e removeu um bloco de codigo morto sobrando da Fase 162.
+  Unica migration da fase: `1720000001039`, aditiva, ampliando o CHECK de
+  tipos do centro de notificacoes para aceitar `tarefa_concluida`. Nenhuma
+  mudanca de contrato de leitura do portal. Ver
+  `docs/history/phases/fase-257-portal-paciente-orientado-tarefas.md`.
 - Fase 255 - Prontuario clinico orientado a linha de cuidado: o componente
   principal ganhou fronteiras tipadas para navegacao e timeline; Materiais,
   Anexos e profissionais passaram a carregar sob demanda com falhas locais;

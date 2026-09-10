@@ -2406,34 +2406,32 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `servico-pacientes`), scanner de secrets e `git diff --check`. Nenhuma
     migration em nenhum incremento. Proxima fase: 257.
 
-- [ ] Fase 257 - Portal do paciente orientado por tarefas. [ESSENCIAL - PRE-PILOTO]
-  [EM ANDAMENTO EM 2026-09-10]
+- [x] Fase 257 - Portal do paciente orientado por tarefas. [ESSENCIAL - PRE-PILOTO]
+  [CONCLUIDA EM 2026-09-10]
   - Priorizar próxima consulta e próxima ação; organizar plano, check-ins,
     tarefas, materiais, formulários, mensagens, perfil e privacidade.
   - Usar linguagem simples, confirmações explícitas e nunca expor risco clínico
     ou detalhes internos ao paciente.
   - Auditoria inicial: a priorizacao (proxima acao/consulta/plano) e a
     navegacao por tarefas ja existiam desde as Fases 162/181. Plano de
-    incrementos e evidencias em
+    incrementos e evidencias completas em
     `docs/history/phases/fase-257-portal-paciente-orientado-tarefas.md`.
-  - Incremento 1 concluido: confirmacao explicita (`ModalConfirmacao`) antes
-    de desmarcar consulta pelo portal. Sem migration, sem mudanca de
-    contrato de API. Validado por 18/18 testes Playwright (desktop+mobile),
-    typecheck, lint e gate de linguagem.
-  - Incremento 2 concluido: cartao "Proxima acao" da home agora ranqueia
-    formularios pendentes e tarefas de acompanhamento nao concluidas pelo
-    prazo mais proximo (`expiraEm`/`vencimentoEm`), em vez de sempre
-    mostrar so o primeiro formulario. Sem migration, sem mudanca de
-    contrato de API. Validado por 32/32 testes Playwright (desktop+mobile),
-    typecheck, lint, build e gate de linguagem.
-  - Incremento 4 concluido (adiantado): removido bloco de codigo morto
-    `id="acoes"` (sobra da Fase 162, nunca renderizado). Sem regressao nos
-    32/32 testes Playwright.
-  - Incremento 3 (paciente concluir tarefa/meta prescrita) **bloqueado
-    aguardando decisao de produto**: quais categorias de tarefa sao
-    completaveis pelo paciente, se a conclusao notifica o profissional e
-    se e reversivel. Detalhes em
-    `docs/history/phases/fase-257-portal-paciente-orientado-tarefas.md`.
+  - Incremento 1: confirmacao explicita (`ModalConfirmacao`) antes de
+    desmarcar consulta pelo portal.
+  - Incremento 2: cartao "Proxima acao" da home ranqueia formularios
+    pendentes e tarefas nao concluidas pelo prazo mais proximo, em vez de
+    sempre mostrar so o primeiro formulario.
+  - Incremento 3: paciente pode marcar tarefa/meta (nao checkin/orientacao)
+    como concluida pelo portal, com confirmacao explicita e definitiva
+    (so o profissional reabre pelo prontuario); notifica o profissional
+    responsavel. Unica migration da fase: amplia o CHECK de tipos do
+    centro de notificacoes (`1720000001039`), aditiva.
+  - Incremento 4: removido bloco de codigo morto `id="acoes"` (sobra da
+    Fase 162, nunca renderizado).
+  - Nenhuma mudanca de contrato de leitura do portal em nenhum incremento.
+    Validacoes completas (backend, frontend, Playwright desktop+mobile,
+    typecheck, lint, build, test:authz, gate de linguagem, secrets,
+    diff --check) por incremento no documento da fase.
 
 - [ ] Fase 258 - Central de comunicações confiável. [ESSENCIAL - PRE-PILOTO]
   - Unificar conversas por paciente, canal, responsável e pendência; exibir

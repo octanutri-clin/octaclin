@@ -14,6 +14,19 @@ export interface PreferenciasContatoPacienteApi {
   };
 }
 
+export interface TarefaAcompanhamentoPortalApi {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  categoria: string;
+  prioridade: string;
+  status: string;
+  vencimentoEm?: string;
+  concluidoEm?: string;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
 export interface PortalPacienteApi {
   paciente: {
     id: string;
@@ -94,18 +107,7 @@ export interface PortalPacienteApi {
     enviadoEm?: string;
     agendadoPara?: string;
   }[];
-  tarefasAcompanhamento?: {
-    id: string;
-    titulo: string;
-    descricao?: string;
-    categoria: string;
-    prioridade: string;
-    status: string;
-    vencimentoEm?: string;
-    concluidoEm?: string;
-    criadoEm: string;
-    atualizadoEm: string;
-  }[];
+  tarefasAcompanhamento?: TarefaAcompanhamentoPortalApi[];
   materiaisDisponiveis?: {
     id: string;
     materialId: string;
@@ -380,6 +382,14 @@ export async function desmarcarConsultaPaciente(consultaId: string): Promise<voi
   if (!resposta.ok) {
     throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
   }
+}
+
+export async function concluirTarefaPaciente(tarefaId: string): Promise<TarefaAcompanhamentoPortalApi> {
+  const resposta = await fetch(`/api/portal/paciente/tarefas/${tarefaId}/concluir`, { method: 'PATCH' });
+  if (!resposta.ok) {
+    throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
+  }
+  return resposta.json() as Promise<TarefaAcompanhamentoPortalApi>;
 }
 
 export async function obterFormularioRespondidoPaciente(
