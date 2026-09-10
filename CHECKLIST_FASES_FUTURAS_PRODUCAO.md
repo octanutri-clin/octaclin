@@ -2348,8 +2348,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
   houve agenda posterior sobre `98b6e5f`. A causa externa exata continua nao
   comprovada.
 
-- [ ] Fase 256 - Formulários e check-ins ponta a ponta. [DESBLOQUEADA EM
-  2026-09-10 - EM ANDAMENTO]
+- [x] Fase 256 - Formulários e check-ins ponta a ponta. [CONCLUIDA EM
+  2026-09-10]
   - Desbloqueio: PR 54 (governanca) integrado pelo PR GitHub `#222`, merge
     `804e0bb`, checks verdes; SQ-4 concluida no PR GitHub `#215`. Nenhuma PR
     aberta no repositorio no momento do desbloqueio.
@@ -2398,6 +2398,13 @@ publicado antes de ampliar a superficie de mudancas visuais.
     prescrita pelo profissional) e usos genericos em automacoes/comunicacoes/
     gamificacao/IA foram deliberadamente preservados, fora do escopo da
     decisao. Detalhes: `docs/history/phases/fase-256-formularios-checkins-ponta-a-ponta.md`.
+  - Fase concluida em 2026-09-10. Merges: PR GitHub `#223` (Incremento 1),
+    `#224` (Incremento 2), `#225` (Incremento 3 + rename). Validacoes finais
+    reconfirmadas na main pos-merge (`7e9ec76`): typecheck backend e web,
+    78/78 testes backend focados do modulo (`servico-questionarios`,
+    `controlador-questionarios`, `controlador-formularios-publicos`,
+    `servico-pacientes`), scanner de secrets e `git diff --check`. Nenhuma
+    migration em nenhum incremento. Proxima fase: 257.
 
 - [ ] Fase 257 - Portal do paciente orientado por tarefas. [ESSENCIAL - PRE-PILOTO]
   - Priorizar próxima consulta e próxima ação; organizar plano, check-ins,
