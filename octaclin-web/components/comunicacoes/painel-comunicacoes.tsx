@@ -23,7 +23,7 @@ import {
   dispararMensagem,
   registrarNotaWhatsapp
 } from '@/lib/comunicacoes-api';
-import { PacienteResumo, RespostaPaginada } from '@/lib/cadastros-api';
+import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
 
 interface UltimoStatusMeta {
   status?: string;
@@ -59,17 +59,19 @@ interface FormularioMensagem {
   observacao: string;
 }
 
-interface ConversaWhatsapp {
+interface Conversa {
   id: string;
   titulo: string;
   contato: string;
   pacienteId?: string;
+  profissionalResponsavelId?: string;
   ultimaMensagem: string;
   ultimaData?: string;
   total: number;
   recebidas: number;
   enviadas: number;
   pendentes: number;
+  canaisUsados: TipoCanalNotificacao[];
   statusAtendimento?: 'acompanhamento' | 'resolvido';
   mensagens: MensagemNotificacaoApi[];
 }
@@ -283,18 +285,36 @@ function nomePaciente(pacientes: PacienteResumo[], pacienteId?: string) {
   return pacientes.find((paciente) => paciente.id === pacienteId)?.nome;
 }
 
-function montarConversasWhatsapp(
+function nomeProfissional(profissionais: ProfissionalResumo[], profissionalId?: string) {
+  if (!profissionalId) return undefined;
+  return profissionais.find((profissional) => profissional.id === profissionalId)?.nome;
+}
+
+function obterCanalDaMensagem(mensagem: MensagemNotificacaoApi, canais: CanalNotificacaoApi[]): TipoCanalNotificacao | undefined {
+  const canal = obterCanal(canais, mensagem);
+  if (canal) return canal.tipo;
+  if (mensagem.payload.origem === 'whatsapp') return 'whatsapp';
+  return undefined;
+}
+
+/**
+ * Agrupa mensagens de todos os canais (WhatsApp, email, push) numa unica
+ * conversa por paciente ou contato — antes o agrupamento existia so para
+ * WhatsApp e o email ficava numa lista plana separada, sem cruzar canal.
+ */
+function montarConversas(
   mensagens: MensagemNotificacaoApi[],
   canais: CanalNotificacaoApi[],
   templates: TemplateMensagemApi[],
   pacientes: PacienteResumo[]
-): ConversaWhatsapp[] {
-  const grupos = new Map<string, ConversaWhatsapp & { ultimaOrdenacao: number; statusAtendimentoOrdenacao: number }>();
+): Conversa[] {
+  const grupos = new Map<
+    string,
+    Conversa & { ultimaOrdenacao: number; statusAtendimentoOrdenacao: number; canaisUsadosSet: Set<TipoCanalNotificacao> }
+  >();
 
   for (const mensagem of mensagens) {
-    const canal = obterCanal(canais, mensagem);
-    if (canal?.tipo !== 'whatsapp' && mensagem.payload.origem !== 'whatsapp') continue;
-
+    const canalMensagem = obterCanalDaMensagem(mensagem, canais);
     const ultimoStatusMeta = obterUltimoStatusMeta(mensagem.payload);
     const contato = obterContatoMensagem(mensagem, ultimoStatusMeta);
     const chave = mensagem.pacienteId ?? contato;
@@ -302,8 +322,9 @@ function montarConversasWhatsapp(
     const conversa = grupos.get(chave);
     const recebida = obterDirecaoMensagem(mensagem) === 'recebida';
     const nota = obterDirecaoMensagem(mensagem) === 'nota';
-    const titulo = nomePaciente(pacientes, mensagem.pacienteId) ?? (recebida ? 'Contato WhatsApp' : 'Paciente sem vinculo');
+    const titulo = nomePaciente(pacientes, mensagem.pacienteId) ?? (recebida ? 'Contato sem vinculo' : 'Paciente sem vinculo');
     const statusAtendimento = nota ? obterTextoPayload(mensagem.payload, 'statusAtendimento') : undefined;
+    const profissionalResponsavelId = pacientes.find((paciente) => paciente.id === mensagem.pacienteId)?.profissionalResponsavelId;
 
     if (!conversa) {
       grupos.set(chave, {
@@ -311,12 +332,15 @@ function montarConversasWhatsapp(
         titulo,
         contato,
         pacienteId: mensagem.pacienteId,
+        profissionalResponsavelId,
         ultimaMensagem: resumirMensagem(mensagem, templates),
         ultimaData: formatarDataIso(mensagem.criadoEm),
         total: 1,
         recebidas: recebida ? 1 : 0,
         enviadas: recebida || nota ? 0 : 1,
         pendentes: mensagem.status === 'falhou' ? 1 : 0,
+        canaisUsados: [],
+        canaisUsadosSet: new Set(canalMensagem ? [canalMensagem] : []),
         statusAtendimento:
           statusAtendimento === 'acompanhamento' || statusAtendimento === 'resolvido' ? statusAtendimento : undefined,
         statusAtendimentoOrdenacao: statusAtendimento ? dataOrdenacao : 0,
@@ -331,7 +355,11 @@ function montarConversasWhatsapp(
     conversa.enviadas += recebida || nota ? 0 : 1;
     conversa.pendentes += mensagem.status === 'falhou' ? 1 : 0;
     conversa.mensagens.push(mensagem);
+    if (canalMensagem) conversa.canaisUsadosSet.add(canalMensagem);
     if (!conversa.pacienteId && mensagem.pacienteId) conversa.pacienteId = mensagem.pacienteId;
+    if (!conversa.profissionalResponsavelId && profissionalResponsavelId) {
+      conversa.profissionalResponsavelId = profissionalResponsavelId;
+    }
     if (
       (statusAtendimento === 'acompanhamento' || statusAtendimento === 'resolvido') &&
       dataOrdenacao > conversa.statusAtendimentoOrdenacao
@@ -353,12 +381,14 @@ function montarConversasWhatsapp(
       titulo: conversa.titulo,
       contato: conversa.contato,
       pacienteId: conversa.pacienteId,
+      profissionalResponsavelId: conversa.profissionalResponsavelId,
       ultimaMensagem: conversa.ultimaMensagem,
       ultimaData: conversa.ultimaData,
       total: conversa.total,
       recebidas: conversa.recebidas,
       enviadas: conversa.enviadas,
       pendentes: conversa.pendentes,
+      canaisUsados: [...conversa.canaisUsadosSet],
       statusAtendimento: conversa.statusAtendimento,
       mensagens: conversa.mensagens.sort((a, b) => obterTimestamp(a.criadoEm) - obterTimestamp(b.criadoEm))
     }));
@@ -370,6 +400,7 @@ export function PainelComunicacoes() {
   const [templates, setTemplates] = useState<TemplateMensagemApi[]>([]);
   const [mensagens, setMensagens] = useState<MensagemNotificacaoApi[]>([]);
   const [pacientes, setPacientes] = useState<RespostaPaginada<PacienteResumo> | null>(null);
+  const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
   const [formularioCanal, setFormularioCanal] = useState<FormularioCanal>(canalInicial);
   const [formularioTemplate, setFormularioTemplate] = useState<FormularioTemplate>(templateInicial);
   const [formularioMensagem, setFormularioMensagem] = useState<FormularioMensagem>(mensagemInicial);
@@ -380,6 +411,7 @@ export function PainelComunicacoes() {
   const [salvando, setSalvando] = useState(false);
   const [conversaSelecionadaId, setConversaSelecionadaId] = useState<string | null>(null);
   const [filtroConversas, setFiltroConversas] = useState<'todas' | 'recebidas' | 'falhas' | 'acompanhamento'>('todas');
+  const [filtroResponsavelId, setFiltroResponsavelId] = useState('todos');
   const [buscaConversas, setBuscaConversas] = useState('');
   const [pacienteAssociacaoId, setPacienteAssociacaoId] = useState('');
   const [atualizarContatoPaciente, setAtualizarContatoPaciente] = useState(true);
@@ -399,22 +431,23 @@ export function PainelComunicacoes() {
     () => templates.find((template) => template.id === formularioMensagem.templateId),
     [formularioMensagem.templateId, templates]
   );
-  const conversasWhatsapp = useMemo(
-    () => montarConversasWhatsapp(mensagens, canais, templates, pacientes?.itens ?? []),
+  const conversas = useMemo(
+    () => montarConversas(mensagens, canais, templates, pacientes?.itens ?? []),
     [canais, mensagens, pacientes?.itens, templates]
   );
   const conversasFiltradas = useMemo(() => {
     const termo = buscaConversas.trim().toLocaleLowerCase('pt-BR');
-    return conversasWhatsapp.filter((conversa) => {
+    return conversas.filter((conversa) => {
       if (filtroConversas === 'recebidas' && conversa.recebidas === 0) return false;
       if (filtroConversas === 'falhas' && conversa.pendentes === 0) return false;
       if (filtroConversas === 'acompanhamento' && conversa.statusAtendimento !== 'acompanhamento') return false;
+      if (filtroResponsavelId !== 'todos' && conversa.profissionalResponsavelId !== filtroResponsavelId) return false;
       return !termo || [conversa.titulo, conversa.contato, conversa.ultimaMensagem].some((texto) => texto.toLocaleLowerCase('pt-BR').includes(termo));
     });
-  }, [buscaConversas, conversasWhatsapp, filtroConversas]);
+  }, [buscaConversas, conversas, filtroConversas, filtroResponsavelId]);
   const conversaSelecionada = useMemo(
-    () => conversasWhatsapp.find((conversa) => conversa.id === conversaSelecionadaId) ?? conversasFiltradas[0],
-    [conversaSelecionadaId, conversasFiltradas, conversasWhatsapp]
+    () => conversas.find((conversa) => conversa.id === conversaSelecionadaId) ?? conversasFiltradas[0],
+    [conversaSelecionadaId, conversasFiltradas, conversas]
   );
   const pacienteAssociacaoIdEfetivo = pacienteAssociacaoId || pacientes?.itens[0]?.id || '';
 
@@ -433,6 +466,7 @@ export function PainelComunicacoes() {
       setTemplates(bootstrap.templates);
       setMensagens(bootstrap.mensagens);
       setPacientes(bootstrap.pacientes);
+      setProfissionais(bootstrap.profissionais);
       setFormularioMensagem((atual) => ({
         ...atual,
         pacienteId: atual.pacienteId || bootstrap.pacientes.itens[0]?.id || '',
@@ -538,7 +572,7 @@ export function PainelComunicacoes() {
     }
   }
 
-  function prepararRespostaWhatsapp(conversa: ConversaWhatsapp, mensagemFalha?: MensagemNotificacaoApi) {
+  function prepararRespostaWhatsapp(conversa: Conversa, mensagemFalha?: MensagemNotificacaoApi) {
     const canalWhatsapp = canais.find((canal) => canal.id === mensagemFalha?.canalId) ?? canais.find((canal) => canal.tipo === 'whatsapp' && canal.ativo);
     const templateWhatsapp = templates.find((template) => template.id === mensagemFalha?.templateId) ??
       templates.find((template) => template.canal === 'whatsapp' && template.aprovado && template.codigoExterno === 'hello_world') ??
@@ -560,7 +594,7 @@ export function PainelComunicacoes() {
     setSucesso(mensagemFalha ? 'Mensagem preparada para uma nova tentativa.' : 'Conversa preparada para resposta.');
   }
 
-  async function associarConversaWhatsapp(conversa: ConversaWhatsapp) {
+  async function associarConversaWhatsapp(conversa: Conversa) {
     if (!pacienteAssociacaoIdEfetivo) {
       setErro('Selecione um paciente para associar.');
       return;
@@ -585,7 +619,7 @@ export function PainelComunicacoes() {
     }
   }
 
-  async function registrarNotaConversaWhatsapp(conversa: ConversaWhatsapp) {
+  async function registrarNotaConversaWhatsapp(conversa: Conversa) {
     if (!textoNotaWhatsapp.trim()) {
       setErro('Informe a nota interna.');
       return;
@@ -985,14 +1019,29 @@ export function PainelComunicacoes() {
           <div className="flex items-center gap-2">
             <Inbox size={18} className="text-primaria" />
             <div>
-              <h3 className="text-sm font-semibold">Inbox WhatsApp</h3>
+              <h3 className="text-sm font-semibold">Conversas</h3>
               <p className="text-xs text-texto-suave">
-                {conversasWhatsapp.length} conversas, {mensagens.filter((mensagem) => obterDirecaoMensagem(mensagem) === 'recebida').length} entradas
+                {conversas.length} conversas, {canais.length} canais, {mensagens.filter((mensagem) => obterDirecaoMensagem(mensagem) === 'recebida').length} entradas
               </p>
             </div>
           </div>
           <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2">
             <Campo value={buscaConversas} onChange={(evento) => setBuscaConversas(evento.target.value)} placeholder="Buscar conversa" aria-label="Buscar conversa por paciente, contato ou mensagem" className="w-full sm:w-56" />
+            {profissionais.length > 1 ? (
+              <Selecao
+                value={filtroResponsavelId}
+                onChange={(evento) => setFiltroResponsavelId(evento.target.value)}
+                aria-label="Filtrar conversas por profissional responsável"
+                className="w-full sm:w-48"
+              >
+                <option value="todos">Todos os responsáveis</option>
+                {profissionais.map((profissional) => (
+                  <option key={profissional.id} value={profissional.id}>
+                    {profissional.nome}
+                  </option>
+                ))}
+              </Selecao>
+            ) : null}
             <div className="flex max-w-full shrink-0 overflow-x-auto rounded-md border border-linha bg-fundo p-1 text-xs font-semibold text-texto-suave [&>*]:shrink-0">
             {(['todas', 'recebidas', 'acompanhamento', 'falhas'] as const).map((filtro) => (
               <button
@@ -1045,6 +1094,19 @@ export function PainelComunicacoes() {
                         </span>
                       ) : null}
                     </div>
+                    {conversa.canaisUsados.length ? (
+                      <div className="flex flex-wrap items-center gap-1.5 text-texto-suave">
+                        {conversa.canaisUsados.map((tipoCanal) => {
+                          const IconeCanal = iconeCanal(tipoCanal);
+                          return (
+                            <span key={tipoCanal} className="flex items-center gap-1 rounded-sm border border-linha bg-fundo px-1.5 py-0.5 text-[11px] font-semibold">
+                              <IconeCanal size={12} />
+                              {tipoCanal}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                   </button>
                 );
               })}
@@ -1063,10 +1125,12 @@ export function PainelComunicacoes() {
                           : ''}
                       </p>
                     </div>
-                    <Botao type="button" onClick={() => prepararRespostaWhatsapp(conversaSelecionada)}>
-                      <Reply size={16} />
-                      Responder
-                    </Botao>
+                    {conversaSelecionada.canaisUsados.includes('whatsapp') ? (
+                      <Botao type="button" onClick={() => prepararRespostaWhatsapp(conversaSelecionada)}>
+                        <Reply size={16} />
+                        Responder
+                      </Botao>
+                    ) : null}
                   </div>
                   {!conversaSelecionada.pacienteId ? (
                     <div className="grid gap-3 border-b border-linha bg-alerta-suave px-4 py-3 text-sm lg:grid-cols-[1fr_auto] lg:items-end">
@@ -1109,6 +1173,7 @@ export function PainelComunicacoes() {
                       </Botao>
                     </div>
                   ) : null}
+                  {conversaSelecionada.canaisUsados.includes('whatsapp') ? (
                   <div className="grid gap-3 border-b border-linha bg-white px-4 py-3 text-sm lg:grid-cols-[1fr_190px_auto] lg:items-end">
                     <div className="space-y-1.5">
                       <Rotulo htmlFor="whatsapp-nota-interna">Nota interna</Rotulo>
@@ -1142,12 +1207,14 @@ export function PainelComunicacoes() {
                       Registrar
                     </Botao>
                   </div>
+                  ) : null}
                   <div className="max-h-[520px] space-y-3 overflow-auto bg-fundo p-4">
                     {conversaSelecionada.mensagens.map((mensagem) => {
                       const recebida = obterDirecaoMensagem(mensagem) === 'recebida';
                       const nota = obterDirecaoMensagem(mensagem) === 'nota';
                       const ultimoStatusMeta = obterUltimoStatusMeta(mensagem.payload);
                       const statusEntregaWhatsapp = obterStatusEntregaWhatsapp(mensagem, ultimoStatusMeta);
+                      const canalDaMensagem = !nota ? obterCanalDaMensagem(mensagem, canais) : undefined;
                       return (
                         <div key={mensagem.id} className={`flex ${nota ? 'justify-center' : recebida ? 'justify-start' : 'justify-end'}`}>
                           <div
@@ -1158,6 +1225,9 @@ export function PainelComunicacoes() {
                             <p className="break-words">{resumirMensagem(mensagem, templates)}</p>
                             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium text-texto-suave">
                               <span>{nota ? 'Nota interna' : recebida ? 'Recebida' : 'Enviada'} {formatarDataIso(mensagem.criadoEm) ?? 'sem data'}</span>
+                              {conversaSelecionada.canaisUsados.length > 1 && canalDaMensagem ? (
+                                <span className="rounded-sm border border-linha bg-white px-1.5 py-0.5">{canalDaMensagem}</span>
+                              ) : null}
                               <span className={`rounded-sm border px-1.5 py-0.5 ${corStatusMensagem(mensagem.status)}`}>{rotuloStatusMensagem(mensagem.status)}</span>
                               {nota ? (
                                 <span className="rounded-sm border border-alerta-borda bg-white px-1.5 py-0.5 text-alerta-forte">
@@ -1186,12 +1256,12 @@ export function PainelComunicacoes() {
                   </div>
                 </>
               ) : (
-                <EstadoVazio titulo="Selecione uma conversa WhatsApp." />
+                <EstadoVazio titulo="Selecione uma conversa." />
               )}
             </div>
           </div>
         ) : (
-          <EstadoVazio titulo="Nenhuma conversa WhatsApp carregada." />
+          <EstadoVazio titulo="Nenhuma conversa carregada." />
         )}
       </Cartao>
 

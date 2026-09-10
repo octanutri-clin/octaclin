@@ -103,6 +103,17 @@ async function prepararConsoleComunicacoes(page, { pacienteOptOutWhatsapp = fals
     });
   });
 
+  await page.route('**/api/profissionais**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [{ id: 'profissional-1', tenantId: 'tenant-1', nome: 'Dra. Carla', criadoEm: '2026-07-01T10:00:00.000Z' }],
+        total: 1
+      })
+    });
+  });
+
   return {
     chamouDisparo: () => chamouDisparo,
     ultimoCorpoDisparo: () => ultimoCorpoDisparo

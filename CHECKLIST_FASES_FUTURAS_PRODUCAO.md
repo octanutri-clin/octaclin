@@ -2433,8 +2433,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     typecheck, lint, build, test:authz, gate de linguagem, secrets,
     diff --check) por incremento no documento da fase.
 
-- [ ] Fase 258 - Central de comunicações confiável. [ESSENCIAL - PRE-PILOTO]
-  [EM ANDAMENTO EM 2026-09-10]
+- [x] Fase 258 - Central de comunicações confiável. [ESSENCIAL - PRE-PILOTO]
+  [CONCLUIDA EM 2026-09-10]
   - Unificar conversas por paciente, canal, responsável e pendência; exibir
     envio, entrega, leitura, falha, retentativa e origem da mensagem.
   - Validar Gmail e WhatsApp com templates, idempotência, consentimento,
@@ -2467,6 +2467,19 @@ publicado antes de ampliar a superficie de mudancas visuais.
     grava as duas em toda atualizacao de status; frontend le a coluna
     nova nos badges de entrega, com fallback ao JSON legado so para
     mensagens gravadas antes da migration.
+  - Incremento 4 concluido (ultimo da fase): visao unificada cruzando
+    canal e responsavel. Conversas passam a agrupar mensagens de
+    qualquer canal do mesmo paciente (antes so WhatsApp; email ficava
+    numa lista plana separada), com selo de canal por conversa/mensagem;
+    filtro por profissional responsavel na inbox, visivel quando o
+    tenant tem mais de um profissional. Acoes exclusivas de WhatsApp
+    (Responder, Nota interna) passam a exigir que a conversa tenha pelo
+    menos uma mensagem de WhatsApp, evitando gravar dado incorreto
+    (ex.: nota rotulada `origem: whatsapp` numa conversa so de email).
+    Sem migration. Taxonomia de origem da mensagem e gate de aprovacao
+    de template para email (gaps identificados na auditoria inicial mas
+    fora do plano de 4 incrementos) ficam como candidatos de fase
+    futura.
 
 - [ ] Fase 259 - Acesso, convite e ativação sem suporte manual. [ESSENCIAL - PRE-PILOTO]
   - Revisar login, primeiro acesso, recuperação, convite, troca de senha,

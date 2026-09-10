@@ -1,6 +1,7 @@
 # Fase 258 - Central de comunicações confiável
 
-Status: em andamento, iniciada em 2026-09-10.
+Status: concluida em 2026-09-10 (os 4 incrementos planejados foram
+entregues).
 
 ## Objetivo (roadmap)
 
@@ -71,8 +72,8 @@ Modulo `comunicacoes` ja tem bastante infraestrutura solida:
    produto).
 3. **Status de entrega WhatsApp como coluna de primeira classe** —
    concluido, ver secao abaixo.
-4. **Visao unificada cruzando canal + responsavel** — candidato, maior
-   escopo (redesenho de `painel-comunicacoes.tsx`), ainda nao iniciado.
+4. **Visao unificada cruzando canal + responsavel** — concluido, ver
+   secao abaixo.
 
 Este documento e atualizado a cada incremento com o que foi entregue,
 arquivos tocados e validacoes.
@@ -258,3 +259,86 @@ Concluido em 2026-09-10.
 - Gate de linguagem, `pnpm test:redacao-auditoria` (nenhuma chave nova
   de auditoria nesta rodada), `pnpm security:secrets`, `git diff --check`
   — PASS
+
+## Incremento 4 - visao unificada cruzando canal e responsavel
+
+Concluido em 2026-09-10. Ultimo incremento planejado da fase.
+
+### Implementacao
+
+- **Cruzando canal**: `montarConversasWhatsapp` (so agrupava mensagens
+  de WhatsApp; email ficava so na lista plana "Mensagens recentes", sem
+  cruzar com o WhatsApp do mesmo paciente) virou `montarConversas`,
+  removendo o filtro que descartava tudo que nao fosse WhatsApp. Uma
+  conversa agora agrega mensagens de qualquer canal do mesmo paciente
+  (ou do mesmo contato, para mensagens ainda sem paciente vinculado —
+  caso hoje exclusivo do WhatsApp, unica origem de mensagem recebida sem
+  paciente identificado). Cada conversa expõe `canaisUsados` (os tipos
+  de canal distintos entre suas mensagens); a lista de conversas mostra
+  um selo por canal usado, e a thread mostra o canal de cada mensagem
+  quando a conversa mistura mais de um.
+- **Cruzando responsavel**: `BootstrapComunicacoes` ganhou
+  `profissionais` (reaproveitando `listarProfissionais`, ja usado em
+  `lista-pacientes.tsx` sem gate de permissao adicional). Cada conversa
+  resolve `profissionalResponsavelId` a partir do
+  `profissionalResponsavelId` do paciente vinculado
+  (`PacienteResumo`, ja carregado no bootstrap — nenhum novo dado
+  sensivel exposto). A inbox ganha um filtro "Filtrar conversas por
+  profissional responsável", visivel só quando há mais de um
+  profissional no tenant (para uma clinica com um profissional so, o
+  filtro seria sempre um unico item e so ocuparia espaco de tela).
+- **Acoes exclusivas de WhatsApp preservadas com guarda de canal**:
+  "Responder" (resposta rapida, sempre presumia WhatsApp) e "Nota
+  interna" (`registrarNotaWhatsapp`, grava `origem: 'whatsapp'` fixo no
+  backend) so aparecem quando a conversa selecionada inclui pelo menos
+  uma mensagem de WhatsApp. Sem essa guarda, abrir uma conversa so de
+  email e clicar em "Responder" prepararia um envio com o contato
+  (endereco de email) no lugar de um destino de WhatsApp, e "Nota
+  interna" gravaria uma nota rotulada `origem: whatsapp` para uma
+  conversa que nunca teve WhatsApp — os dois seriam dado incorreto na
+  trilha, nao so UX confusa.
+- **Copy**: "Inbox WhatsApp" virou "Conversas"; "Nenhuma/Selecione uma
+  conversa WhatsApp..." perderam o "WhatsApp" (idioma channel-neutro,
+  ja que a secao deixou de ser exclusiva de um canal).
+- **Decisao deliberada de escopo — o que NAO foi feito nesta rodada**:
+  nenhuma rota nova nem migration; "Associar contato a paciente"
+  continua guardado so por `!pacienteId` (sem checar canal
+  explicitamente) porque, na pratica, so o WhatsApp gera mensagem
+  recebida sem paciente vinculado hoje — o invariante ja segura o caso
+  sem precisar de uma segunda condicao. Taxonomia formal de "origem da
+  mensagem" (manual vs. automatico vs. iniciado pelo paciente, gap 5 da
+  auditoria inicial) e gate de aprovacao de template para email (gap 6)
+  seguem fora do escopo desta fase — nunca entraram no plano de 4
+  incrementos, ficam como candidatos para uma fase futura.
+
+### Validacoes
+
+- TDD: novo `tests/visual/comunicacoes-visao-unificada.spec.mjs` (3
+  testes: conversa unifica WhatsApp+email do mesmo paciente com canal
+  identificado por mensagem; conversa so de email esconde
+  Responder/Nota interna; filtro por responsavel restringe a lista).
+  Rodar a suite pela primeira vez achou 2 problemas reais antes de
+  qualquer correcao de teste: (1) `setProfissionais(bootstrap.profissionais)`
+  nunca tinha sido chamado em `carregar()` — o estado ficava sempre
+  vazio e o filtro nunca aparecia, apesar do bootstrap buscar os dados
+  corretamente; (2) duas asserções da própria suite eram ambíguas
+  (`getByText('email')` casava tambem com "Lembrete Email"). Corrigido
+  o bug de producao (chamada faltante) e as asserções antes de
+  confirmar GREEN.
+  Suites existentes que dependem do bootstrap de comunicacoes
+  (`comunicacoes-disparo-manual.spec.mjs`,
+  `fase-196-comunicacoes-equipe.spec.mjs`,
+  `acessibilidade.spec.mjs` PR 21/22/26/30) precisaram de um mock novo
+  de `/api/profissionais` (a chamada nova no bootstrap) e, na
+  fase-196, de atualizar a asserção do heading renomeado
+  ("Inbox WhatsApp" → "Conversas"). Adicionado tambem 1 teste novo ao
+  gate de acessibilidade cobrindo o filtro de responsavel com 2
+  profissionais (as fixtures existentes usam 1 so, cenario em que o
+  filtro fica oculto por design).
+- `pnpm --dir octaclin-web typecheck`, `lint` (0 erros) e `build` — PASS
+- 16/16 Playwright dos specs de comunicacoes existentes +
+  6/6 do spec novo (desktop+mobile) — PASS
+- 24/24 Playwright do gate de acessibilidade de comunicacoes (PR 21,
+  22, 26, 30), incluindo o teste novo do filtro de responsavel — PASS
+- Gate de linguagem, `pnpm security:secrets`, `git diff --check` — PASS
+- Sem mudanca de schema; nenhuma migration nesta rodada.

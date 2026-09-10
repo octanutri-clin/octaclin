@@ -1693,6 +1693,11 @@ async function prepararSessaoComunicacoes(page) {
   }));
   await page.route('**/api/comunicacoes/canais', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([canalWhatsappFixture]) }));
   await page.route('**/api/comunicacoes/templates', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([templateWhatsappFixture]) }));
+  await page.route('**/api/profissionais**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ itens: [{ id: 'profissional-1', tenantId: 'tenant-1', nome: 'Dra. Carla', criadoEm: '2026-07-20T10:00:00.000Z' }], total: 1 })
+  }));
 }
 
 function prepararMensagensComunicacoes(page, { itens = mensagensComunicacoesFixture, status = 200 } = {}) {
@@ -1725,7 +1730,7 @@ test.describe('gate de acessibilidade - comunicacoes (PR 21)', () => {
     await prepararComunicacoes(page);
     await page.goto('/comunicacoes');
     await expect(page.getByRole('heading', { name: 'Comunicações', level: 1 })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Inbox WhatsApp' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Conversas' })).toBeVisible();
     await expect(page.getByText('Ana Souza').first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Responder' })).toBeVisible();
     await expect(page.getByText('Não foi possível concluir o envio.').first()).toBeVisible();
@@ -1756,8 +1761,8 @@ test.describe('gate de acessibilidade - comunicacoes (PR 21)', () => {
   test('conversas - estado vazio (nenhuma mensagem)', async ({ page }) => {
     await prepararComunicacoes(page, { itens: [] });
     await page.goto('/comunicacoes');
-    await expect(page.getByRole('heading', { name: 'Inbox WhatsApp' })).toBeVisible();
-    await expect(page.getByText('Nenhuma conversa WhatsApp carregada.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Conversas' })).toBeVisible();
+    await expect(page.getByText('Nenhuma conversa carregada.')).toBeVisible();
     await expect(page.getByText('Nenhuma mensagem persistida.')).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
   });
@@ -1788,7 +1793,7 @@ test.describe('gate de acessibilidade - comunicacoes (PR 21)', () => {
     await expect(page.getByText('Bruno Lima')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Acompanhar' }).click();
-    await expect(page.getByText('Nenhuma conversa WhatsApp carregada.')).toBeVisible();
+    await expect(page.getByText('Nenhuma conversa carregada.')).toBeVisible();
 
     await page.getByRole('button', { name: 'Todas' }).click();
     await expect(page.getByText('Ana Souza').first()).toBeVisible();
@@ -1819,6 +1824,35 @@ test.describe('gate de acessibilidade - comunicacoes (PR 21)', () => {
     await observacao.fill('Confirmar novo horário com a paciente antes de responder.');
     await expect(observacao).toHaveValue('Confirmar novo horário com a paciente antes de responder.');
     await expect(page.getByRole('button', { name: 'Disparar' })).toBeVisible();
+
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  // Fase 258, Incremento 4: com mais de um profissional no tenant, a inbox
+  // ganha um filtro por responsavel (select rotulado). Fixture propria com
+  // 2 profissionais porque as demais deste describe usam so 1 -- o filtro
+  // fica oculto abaixo desse limiar, entao reusar prepararComunicacoes()
+  // aqui nao exercitaria o elemento novo.
+  test('conversas - filtro por profissional responsavel e acessivel quando ha mais de um profissional', async ({ page }) => {
+    await prepararSessaoComunicacoes(page);
+    await page.route('**/api/profissionais**', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          { id: 'profissional-1', tenantId: 'tenant-1', nome: 'Dra. Carla', criadoEm: '2026-07-20T10:00:00.000Z' },
+          { id: 'profissional-2', tenantId: 'tenant-1', nome: 'Dr. Paulo', criadoEm: '2026-07-20T10:00:00.000Z' }
+        ],
+        total: 2
+      })
+    }));
+    await prepararMensagensComunicacoes(page);
+    await page.goto('/comunicacoes');
+
+    const filtro = page.getByLabel('Filtrar conversas por profissional responsável');
+    await expect(filtro).toBeVisible();
+    await expect(page.getByText('Ana Souza').first()).toBeVisible();
+    await expect(page.getByText('Bruno Lima').first()).toBeVisible();
 
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });

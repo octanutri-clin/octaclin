@@ -1,4 +1,4 @@
-import { PacienteResumo, RespostaPaginada, listarPacientes } from './cadastros-api';
+import { PacienteResumo, ProfissionalResumo, RespostaPaginada, listarPacientes, listarProfissionais } from './cadastros-api';
 
 export type TipoCanalNotificacao = 'whatsapp' | 'email' | 'push';
 
@@ -84,6 +84,7 @@ export interface BootstrapComunicacoes {
   templates: TemplateMensagemApi[];
   mensagens: MensagemNotificacaoApi[];
   pacientes: RespostaPaginada<PacienteResumo>;
+  profissionais: ProfissionalResumo[];
 }
 
 export class ErroApiComunicacoes extends Error {
@@ -174,11 +175,12 @@ export async function registrarNotaWhatsapp(entrada: RegistrarNotaWhatsappEntrad
 }
 
 export async function carregarBootstrapComunicacoes(): Promise<BootstrapComunicacoes> {
-  const [canais, templates, mensagens, pacientes] = await Promise.all([
+  const [canais, templates, mensagens, pacientes, profissionais] = await Promise.all([
     listarCanais(),
     listarTemplates(),
     listarMensagens(),
-    listarPacientes()
+    listarPacientes(),
+    listarProfissionais({ limite: 100 })
   ]);
-  return { canais, templates, mensagens, pacientes };
+  return { canais, templates, mensagens, pacientes, profissionais: profissionais.itens };
 }

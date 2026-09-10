@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-09-10 com a conclusao da Fase 257.
+Atualizado em 2026-09-10 com a conclusao da Fase 258.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -792,6 +792,23 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   definitiva pelo lado do paciente (so o profissional reabre pelo
   prontuario) que notifica o profissional responsavel pelo centro de
   notificacoes; e removeu um bloco de codigo morto sobrando da Fase 162.
+- Fase 258 - Central de comunicações confiável: o modulo `comunicacoes`
+  ja tinha boa infraestrutura (webhook WhatsApp endurecido, retry
+  automatico via fila/outbox, conteudo cifrado); quatro incrementos
+  fecharam as lacunas reais. Disparo de mensagem ganhou chave de
+  idempotencia opcional (retry/duplo clique retorna a mensagem ja
+  criada em vez de duplicar envio). Opt-out do paciente passou a ser
+  respeitado tambem no disparo manual (antes so as automacoes
+  checavam), com aviso e override explicito do profissional em vez de
+  bloqueio incondicional. Status de entrega do WhatsApp (sent/
+  delivered/read/failed) saiu de dentro de um JSON aninhado e virou
+  coluna de primeira classe, habilitando filtro/relatorio por SQL. A
+  inbox deixou de agrupar so conversas de WhatsApp (email ficava numa
+  lista plana separada) e passou a unificar qualquer canal do mesmo
+  paciente numa so conversa, com filtro por profissional responsavel
+  para tenants com mais de um profissional. Duas migrations aditivas
+  no total. Ver
+  `docs/history/phases/fase-258-central-comunicacoes-confiavel.md`.
   Unica migration da fase: `1720000001039`, aditiva, ampliando o CHECK de
   tipos do centro de notificacoes para aceitar `tarefa_concluida`. Nenhuma
   mudanca de contrato de leitura do portal. Ver
