@@ -29,6 +29,7 @@ import { GraficoEvolucao } from '@/components/ui/grafico-evolucao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { Etiqueta } from '@/components/ui/etiqueta';
 import { Aviso, AvisoRegiao } from '@/components/ui/feedback';
+import { ModalConfirmacao } from '@/components/ui/modal';
 import { PortalShell } from '@/components/app/portal-shell';
 import {
   atualizarPerfilPaciente,
@@ -387,6 +388,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   const [tipoSolicitacaoLgpd, setTipoSolicitacaoLgpd] = useState<'retificacao' | 'exclusao'>('retificacao');
   const [detalhesSolicitacaoLgpd, setDetalhesSolicitacaoLgpd] = useState('');
   const [desmarcandoConsultaId, setDesmarcandoConsultaId] = useState<string | null>(null);
+  const [consultaParaDesmarcar, setConsultaParaDesmarcar] = useState<string | null>(null);
 
   useEffect(() => {
     if (portal) setFormularioPerfil(montarFormularioPerfil(portal));
@@ -410,6 +412,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desmarcar consulta.');
     } finally {
       setDesmarcandoConsultaId(null);
+      setConsultaParaDesmarcar(null);
     }
   }
 
@@ -1316,7 +1319,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                                 type="button"
                                 variante="perigo"
                                 disabled={desmarcandoConsultaId === consulta.id}
-                                onClick={() => void desmarcarConsulta(consulta.id)}
+                                onClick={() => setConsultaParaDesmarcar(consulta.id)}
                               >
                                 {desmarcandoConsultaId === consulta.id ? 'Desmarcando' : 'Desmarcar'}
                               </Botao>
@@ -1516,6 +1519,19 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
             </Cartao>
           )
         )}
+        <ModalConfirmacao
+          aberto={Boolean(consultaParaDesmarcar)}
+          titulo="Desmarcar consulta"
+          mensagem="Essa consulta será cancelada e o horário ficará disponível novamente. Deseja continuar?"
+          rotuloConfirmar="Desmarcar consulta"
+          rotuloCancelar="Cancelar"
+          confirmando={Boolean(consultaParaDesmarcar && desmarcandoConsultaId === consultaParaDesmarcar)}
+          aoCancelar={() => setConsultaParaDesmarcar(null)}
+          aoConfirmar={() => {
+            if (!consultaParaDesmarcar) return;
+            void desmarcarConsulta(consultaParaDesmarcar);
+          }}
+        />
     </PortalShell>
   );
 }

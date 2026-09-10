@@ -2407,10 +2407,19 @@ publicado antes de ampliar a superficie de mudancas visuais.
     migration em nenhum incremento. Proxima fase: 257.
 
 - [ ] Fase 257 - Portal do paciente orientado por tarefas. [ESSENCIAL - PRE-PILOTO]
+  [EM ANDAMENTO EM 2026-09-10]
   - Priorizar próxima consulta e próxima ação; organizar plano, check-ins,
     tarefas, materiais, formulários, mensagens, perfil e privacidade.
   - Usar linguagem simples, confirmações explícitas e nunca expor risco clínico
     ou detalhes internos ao paciente.
+  - Auditoria inicial: a priorizacao (proxima acao/consulta/plano) e a
+    navegacao por tarefas ja existiam desde as Fases 162/181. Plano de
+    incrementos e evidencias em
+    `docs/history/phases/fase-257-portal-paciente-orientado-tarefas.md`.
+  - Incremento 1 concluido: confirmacao explicita (`ModalConfirmacao`) antes
+    de desmarcar consulta pelo portal. Sem migration, sem mudanca de
+    contrato de API. Validado por 18/18 testes Playwright (desktop+mobile),
+    typecheck, lint e gate de linguagem.
 
 - [ ] Fase 258 - Central de comunicações confiável. [ESSENCIAL - PRE-PILOTO]
   - Unificar conversas por paciente, canal, responsável e pendência; exibir

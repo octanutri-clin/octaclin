@@ -430,6 +430,34 @@ test.describe('portal do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('exige confirmacao explicita antes de desmarcar uma consulta', async ({ page }) => {
+    let chamouDesmarcar = false;
+    const portal = await prepararPortal(page);
+    await page.route((url) => url.pathname === '/api/portal/paciente/consultas/consulta-1/desmarcar', async (route) => {
+      chamouDesmarcar = true;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+    });
+
+    await page.goto('/portal/agenda');
+    await page.getByRole('button', { name: 'Desmarcar', exact: true }).click();
+
+    const dialogo = page.getByRole('dialog', { name: 'Desmarcar consulta' });
+    await expect(dialogo).toBeVisible();
+    expect(chamouDesmarcar).toBe(false);
+
+    await dialogo.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(dialogo).toHaveCount(0);
+    expect(chamouDesmarcar).toBe(false);
+
+    await page.getByRole('button', { name: 'Desmarcar', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Desmarcar consulta' }).getByRole('button', { name: 'Desmarcar consulta' }).click();
+
+    await expect.poll(() => chamouDesmarcar).toBe(true);
+    await expect(page.getByText('Consulta desmarcada.')).toBeVisible();
+    expect(portal.carregamentos()).toBe(2);
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('exibe estado de erro acionavel quando o portal nao carrega', async ({ page }) => {
     await prepararSessaoPaciente(page);
     await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {

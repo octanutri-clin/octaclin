@@ -1,0 +1,92 @@
+# Fase 257 - Portal do paciente orientado por tarefas
+
+Status: em andamento, iniciada em 2026-09-10.
+
+## Objetivo (roadmap)
+
+`CHECKLIST_FASES_FUTURAS_PRODUCAO.md`: priorizar proxima consulta e proxima
+acao; organizar plano, check-ins, tarefas, materiais, formularios, mensagens,
+perfil e privacidade; usar linguagem simples, confirmacoes explicitas e nunca
+expor risco clinico ou detalhes internos ao paciente.
+
+## Auditoria do estado atual (antes de qualquer mudanca)
+
+- Um unico componente (`components/portal/portal-paciente.tsx`, ~1520 linhas)
+  atende todas as rotas `/portal/*` via a prop `secao`; todas as secoes ficam
+  montadas e alternam com `hidden`. O contexto `PortalPacienteProvider`
+  (`components/portal/portal-contexto.tsx`) e o unico dono do
+  `GET /api/portal/paciente`.
+- A priorizacao "proxima acao / proxima consulta / plano em andamento" ja
+  existe desde a Fase 162 (tres cartoes na secao `inicio`,
+  `portal-paciente.tsx:642-708`). A navegacao por tarefas (Inicio, Agenda,
+  Registro de habitos, Plano, Formularios, Mensagens, Perfil, Privacidade) e
+  da Fase 181.
+- Bloco morto: `<Cartao id="acoes" className="hidden">` (linhas 710-752) —
+  nunca renderizado, sobra da reestruturacao da Fase 162.
+- Nao existe hoje um ranking cruzado de "proxima acao": o cartao considera
+  apenas `formulariosPendentes[0]`, ignorando tarefas vencidas ou mensagens
+  pendentes.
+- `AcompanhamentoTarefaOrm` (backend, modulo `pacientes`) e prescrito pelo
+  profissional e listado no portal, mas o paciente so le — nao ha rota para
+  marcar tarefa/meta como concluida nem no backend
+  (`controlador-portal-paciente.ts`) nem no BFF (`lib/portal-api.ts`).
+- Acoes imediatas e sem confirmacao: "Desmarcar" consulta
+  (`portal-paciente.tsx:1314-1323`, dispara `desmarcarConsultaPaciente` direto
+  no clique) e a abertura de solicitacao LGPD de exclusao (dispara
+  `enviarSolicitacaoLgpd` no submit do formulario, sem etapa intermediaria).
+  Isso conflita com a exigencia de "confirmacoes explicitas".
+- Testes que ja protegem o portal hoje:
+  `tests/visual/portal-paciente.spec.mjs` (5 testes: prioridades da home sem
+  score clinico, curva de peso sem IMC/classificacao, jornada de navegacao
+  com carregamento unico, privacidade/LGPD, estado de erro recuperavel) e
+  `tests/visual/pwa-portal.spec.mjs` (offline check-in e formulario). Qualquer
+  incremento desta fase precisa manter esses testes verdes.
+
+## Plano de incrementos verticais
+
+1. **Confirmacao explicita para desmarcar consulta.** Reusar o componente
+   compartilhado `ModalConfirmacao` (`components/ui/modal.tsx`, ja usado em
+   19 outros componentes, ex. `agenda/painel-agenda.tsx:1457-1470`) para
+   exigir confirmacao antes de cancelar uma consulta agendada pelo paciente.
+   Sem mudanca de backend/BFF.
+2. **Ranking cruzado de "proxima acao".** Expandir a logica do cartao inicial
+   para considerar tambem tarefas vencidas/proximas do vencimento, nao so o
+   primeiro formulario pendente.
+3. **Conclusao de tarefas/metas pelo paciente.** Nova rota backend
+   (`PATCH /portal/paciente/tarefas/:id`) + BFF + UI para o paciente marcar
+   uma tarefa prescrita como concluida — maior escopo, decisao de contrato
+   a confirmar antes de implementar.
+4. **Limpeza.** Remover o bloco morto `id="acoes"`.
+
+Este documento e atualizado a cada incremento com o que foi entregue,
+arquivos tocados e validacoes.
+
+## Incremento 1 - confirmacao explicita para desmarcar consulta
+
+Concluido em 2026-09-10.
+
+- TDD: teste Playwright adicionado primeiro
+  (`tests/visual/portal-paciente.spec.mjs`, "exige confirmacao explicita
+  antes de desmarcar uma consulta") e confirmado RED (dialogo inexistente)
+  antes da implementacao.
+- Implementacao: `components/portal/portal-paciente.tsx` passou a abrir
+  `ModalConfirmacao` (componente compartilhado, ja usado em 19 outros
+  lugares do app, ex. `agenda/painel-agenda.tsx`) ao clicar em "Desmarcar";
+  a chamada real a `desmarcarConsultaPaciente` so acontece apos confirmar no
+  dialogo. Nenhuma mudanca de backend, BFF ou contrato de API.
+- Validacoes:
+  - `pnpm --dir octaclin-web typecheck` — PASS
+  - `pnpm --dir octaclin-web lint` — PASS (0 erros; warnings pre-existentes
+    nao relacionados nesta mudanca)
+  - `pnpm --dir octaclin-web exec playwright test tests/visual/portal-paciente.spec.mjs tests/visual/pwa-portal.spec.mjs --project=desktop-chromium --project=mobile-chromium` —
+    18/18 PASS
+  - Gate de linguagem e microcopy (`pnpm test:linguagem:fix` + revisao
+    manual do acento em "ficará") — PASS
+  - `tests/visual/acessibilidade.spec.mjs` (suite completa) —
+    **SKIPPED intencionalmente**: o contrato de acessibilidade de
+    `ModalConfirmacao` (foco, `role="dialog"`, `aria-modal`, Escape, trap de
+    Tab) ja e coberto na origem pelo gate compartilhado de componentes
+    (`acessibilidade.spec.mjs`, secao "Modal / ModalConfirmacao ->
+    area-onboarding.tsx"); este incremento reutiliza o componente sem
+    alterá-lo, sem introduzir padrao ARIA novo.
+  - `pnpm security:secrets` e `git diff --check` — PASS
