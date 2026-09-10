@@ -42,6 +42,16 @@ interface UploadFormularioPublico {
   uploadHeaders: Record<string, string>;
 }
 
+// Carrega o status HTTP junto da mensagem para que quem trata o erro possa
+// decidir se a mensagem e uma resposta de negocio segura do backend (4xx, ja
+// em portugues e pensada para o paciente, como "Formulario expirado.") ou uma
+// falha opaca (5xx) cujo corpo nao deve ser repassado como esta.
+export class ErroFormularioPublico extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+  }
+}
+
 async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
   const resposta = await fetch(caminho, {
     ...init,
@@ -53,16 +63,26 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
 
   if (!resposta.ok) {
     const detalhe = await resposta.text();
+    let mensagem = detalhe || `Falha HTTP ${resposta.status}`;
     try {
       const corpo = JSON.parse(detalhe) as { message?: string; mensagem?: string };
-      throw new Error(corpo.mensagem ?? corpo.message ?? detalhe);
+      mensagem = corpo.mensagem ?? corpo.message ?? mensagem;
     } catch (erro) {
-      if (erro instanceof SyntaxError) throw new Error(detalhe || `Falha HTTP ${resposta.status}`);
-      throw erro;
+      if (!(erro instanceof SyntaxError)) throw erro;
     }
+    throw new ErroFormularioPublico(mensagem, resposta.status);
   }
 
   return resposta.json() as Promise<T>;
+}
+
+// Uma mensagem de erro so e segura para mostrar ao paciente sem sessao quando
+// vem de uma resposta de negocio (4xx) do proprio backend do formulario; uma
+// falha 5xx ou uma excecao sem status HTTP (rede, parsing) usa sempre o texto
+// generico do chamador.
+export function mensagemSeguraOuGenerica(erro: unknown, mensagemGenerica: string): string {
+  if (erro instanceof ErroFormularioPublico && erro.status < 500) return erro.message;
+  return mensagemGenerica;
 }
 
 export function carregarFormularioPublico(token: string) {
@@ -87,7 +107,7 @@ export async function enviarOuEnfileirarFormularioPublico(
   } catch (erro) {
     if (!ehFalhaDeRede(erro)) throw erro;
     if (!permitirFilaOffline) {
-      throw new Error('Reconecte-se antes de enviar um formulario com anexos.');
+      throw new ErroFormularioPublico('Reconecte-se antes de enviar um formulario com anexos.', 400);
     }
     const id = criarIdOperacaoPwa('formulario');
     await enfileirarOperacaoPwa({
