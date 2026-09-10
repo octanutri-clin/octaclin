@@ -199,6 +199,10 @@ const CHAVES_SEGURAS = new Map([
   ['comunidadehabilitada', 'booleano: a comunidade de pacientes esta habilitada no tenant'],
   ['rankinghabilitado', 'booleano: o ranking de desafios esta habilitado no tenant'],
   ['retornouaoprincipal', 'booleano: o paciente voltou ao item principal do plano'],
+  [
+    'ignorouoptout',
+    'booleano: o profissional confirmou o disparo manual mesmo com o paciente tendo optado por nao receber naquele canal (override explicito do aviso de opt-out); nao carrega a preferencia em si, so o desfecho da decisao humana'
+  ],
 
   // --- Filtros estruturados, ja sem o termo de busca ---
   ['filtroacao', 'acao usada como filtro na exportacao da trilha, vocabulario fechado do backend'],

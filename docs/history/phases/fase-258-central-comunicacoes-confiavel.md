@@ -192,3 +192,15 @@ override) nem ausencia de checagem (comportamento anterior).
   `console-regression.spec.mjs`/`fase-196-comunicacoes-equipe.spec.mjs`
   sem quebra
 - Gate de linguagem, `pnpm security:secrets`, `git diff --check` — PASS
+
+### CI vermelho apos o push do Incremento 2, ja corrigido
+
+O job "Governanca de repositorio" reprovou em `pnpm test:redacao-auditoria`:
+a chave nova `ignorouOptOut` (gravada na auditoria de
+`ControladorComunicacoes.dispararMensagem`) nao estava coberta pelo redator
+nem declarada em `CHAVES_SEGURAS`. Corrigido adicionando a chave a
+`CHAVES_SEGURAS` em `scripts/validar-redacao-auditoria.mjs`, com
+justificativa escrita: e um booleano de desfecho de decisao humana (o
+profissional confirmou o override do aviso de opt-out), nao carrega a
+preferencia do paciente. `pnpm test:redacao-auditoria` local — 24/24 PASS
+apos a correcao.
