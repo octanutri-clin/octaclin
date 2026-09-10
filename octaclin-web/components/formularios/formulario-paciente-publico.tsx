@@ -8,6 +8,7 @@ import {
   salvarRascunhoFormularioPublico,
   solicitarUploadFormularioPublico,
   confirmarUploadFormularioPublico,
+  mensagemSeguraOuGenerica,
   FormularioPublico,
   PerguntaFormularioPublico
 } from '@/lib/formularios-publicos-api';
@@ -59,7 +60,7 @@ export function FormularioPacientePublico({ token }: Props) {
   const [formulario, setFormulario] = useState<FormularioPublico | null>(null);
   const [respostas, setRespostas] = useState<Record<string, ValorResposta>>({});
   const [erro, setErro] = useState<string | null>(null);
-  const [erroCarregamento, setErroCarregamento] = useState(false);
+  const [mensagemErroCarregamento, setMensagemErroCarregamento] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
   const [envioPendente, setEnvioPendente] = useState(false);
   const [carregando, setCarregando] = useState(true);
@@ -73,7 +74,7 @@ export function FormularioPacientePublico({ token }: Props) {
 
   const carregarFormulario = useCallback(() => {
     setCarregando(true);
-    setErroCarregamento(false);
+    setMensagemErroCarregamento(null);
     return carregarFormularioPublico(token)
       .then((resposta) => {
         setFormulario(resposta);
@@ -83,13 +84,14 @@ export function FormularioPacientePublico({ token }: Props) {
         setHouveEdicao(false);
         setErro(null);
       })
-      .catch(() => {
-        // Nunca repassa a mensagem crua do backend/proxy aqui: e a unica tela
-        // que um paciente sem sessao ve antes de qualquer dado carregar, e o
-        // corpo de um erro 500/502 pode nao estar em portugues nem ser
-        // seguro de exibir. As demais telas (validacao, envio) continuam
-        // usando a mensagem especifica, que e de negocio e ja em PT-BR.
-        setErroCarregamento(true);
+      .catch((erroAtual) => {
+        // Uma resposta de negocio (4xx, ex.: "Formulario expirado.") e segura
+        // e especifica; uma falha de servidor (5xx) usa sempre a mensagem
+        // generica abaixo, pois seu corpo pode nao estar em portugues nem
+        // ser seguro de mostrar a um paciente sem sessao.
+        setMensagemErroCarregamento(
+          mensagemSeguraOuGenerica(erroAtual, 'Não foi possível carregar o formulário agora. Verifique sua conexão e tente novamente.')
+        );
       })
       .finally(() => setCarregando(false));
   }, [token]);
@@ -143,7 +145,7 @@ export function FormularioPacientePublico({ token }: Props) {
             setEstadoRascunho('offline');
           } else {
             setEstadoRascunho('erro');
-            setErro(erroAtual instanceof Error ? erroAtual.message : 'Não foi possível salvar o rascunho.');
+            setErro(mensagemSeguraOuGenerica(erroAtual, 'Não foi possível salvar o rascunho agora. Tente novamente em instantes.'));
           }
         }
       }
@@ -222,7 +224,7 @@ export function FormularioPacientePublico({ token }: Props) {
       else setEnviado(true);
     } catch (erroAtual) {
       suspenderRascunhoRef.current = false;
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Não foi possível enviar as respostas.');
+      setErro(mensagemSeguraOuGenerica(erroAtual, 'Não foi possível enviar as respostas agora. Tente novamente em instantes.'));
     } finally {
       setSalvando(false);
     }
@@ -268,11 +270,7 @@ export function FormularioPacientePublico({ token }: Props) {
         <section className="grid w-full max-w-xl gap-3 border border-perigo-borda bg-perigo-suave p-4 text-sm text-perigo" role="alert">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              {erroCarregamento
-                ? 'Não foi possível carregar o formulário agora. Verifique sua conexão e tente novamente.'
-                : 'Formulário indisponível.'}
-            </span>
+            <span>{mensagemErroCarregamento ?? 'Formulário indisponível.'}</span>
           </div>
           <Botao type="button" variante="secundario" className="h-11 justify-self-start" onClick={() => void carregarFormulario()}>
             Tentar novamente
@@ -486,7 +484,7 @@ function CampoPergunta({
                 aoAlterar(await aoEnviarArquivos(arquivos));
               } catch (erroAtual) {
                 event.target.value = '';
-                aoErro(erroAtual instanceof Error ? erroAtual.message : 'Nao foi possivel enviar o arquivo.');
+                aoErro(mensagemSeguraOuGenerica(erroAtual, 'Não foi possível enviar o arquivo agora. Tente novamente.'));
               } finally {
                 setEnviandoArquivos(false);
               }

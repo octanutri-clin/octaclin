@@ -72,12 +72,13 @@ de teste correspondente):
 
 ## Plano de incrementos verticais
 
-- **Incremento 1 (este commit)**: validar ponta a ponta com evidencia real
-  (dependencias instaladas, suites executadas) e fechar a lacuna de
+- **Incremento 1**: validar ponta a ponta com evidencia real (dependencias
+  instaladas, suites executadas) e fechar a lacuna de
   indisponibilidade/recuperacao no carregamento do formulario publico.
-- **Incremento 2 (pendente)**: cobertura explicita de "indisponibilidade" no
-  envio final de respostas (falha nao-rede do backend ao finalizar, distinta
-  da fila offline PWA que ja existe) e no salvamento de rascunho.
+- **Incremento 2 (este commit)**: cobertura explicita de "indisponibilidade"
+  no envio final de respostas e no salvamento de rascunho (distinta da fila
+  offline PWA, que ja existe), preservando as mensagens de negocio seguras
+  que o backend ja devolve.
 - **Incremento 3 (pendente, escopo maior)**: historico de versoes navegavel do
   questionario (listar versoes anteriores por envio/snapshot, sem alterar o
   contrato de integridade historica existente). Requer decisao de produto
@@ -105,6 +106,35 @@ de teste correspondente):
   montagem; uma contagem fixa correria contra essa segunda chamada automatica
   e nao contra o clique real do usuario.
 
+## Incremento 2 - Indisponibilidade no envio de respostas e no rascunho
+
+Ao revisar o Incremento 1 mais a fundo, ficou claro que a mesma logica
+precisava distinguir dois tipos de falha, e que uma implementacao ingenua
+"sempre generico" quebraria mensagens de negocio legitimas que o backend ja
+devolve em portugues (ex.: `GoneException('Formulario expirado.')`,
+`ConflictException('Rascunho atualizado em outro dispositivo.')`). A correcao:
+
+- `lib/formularios-publicos-api.ts`: `requisitar` agora lanca
+  `ErroFormularioPublico`, que carrega o status HTTP junto da mensagem. A
+  nova funcao `mensagemSeguraOuGenerica(erro, mensagemGenerica)` devolve a
+  mensagem do backend quando o status e 4xx (resposta de negocio, segura e
+  ja em portugues) e a mensagem generica do chamador quando e 5xx (falha
+  opaca de servidor) ou quando o erro nao carrega status (rede/parsing).
+- `components/formularios/formulario-paciente-publico.tsx`: os tres pontos
+  que repassavam `erro.message` cru (envio final de respostas, salvamento de
+  rascunho e envio de anexo) passam a usar `mensagemSeguraOuGenerica` com uma
+  mensagem generica especifica do contexto. O carregamento inicial (que no
+  Incremento 1 tinha ficado generico demais, escondendo respostas legitimas
+  como "Formulario expirado.") tambem foi corrigido para usar a mesma regra.
+- O caso de rede sem fila offline (`Reconecte-se antes de enviar um
+  formulario com anexos.`) passou a ser lancado como `ErroFormularioPublico`
+  com status 400 para continuar aparecendo como esta.
+
+TDD: quatro cenarios Playwright escritos primeiro e confirmados RED (formulario
+expirado no carregamento; erro de servidor ao enviar preservando as respostas
+ja preenchidas; conflito de rascunho preservado; erro de servidor ao salvar
+rascunho), depois GREEN apos a implementacao.
+
 ## Validacao
 
 Ambiente desta sessao nao tinha `node_modules` em nenhum workspace; as
@@ -129,14 +159,15 @@ execucao abaixo.
   **PASS** (cadeia completa, ultimo script com 13/13).
 - Scripts BFF/preview dedicados: `test-questionarios-revisao-bff.mjs` 3/3 PASS,
   `test-questionarios-preview.mjs` 3/3 PASS.
-- Playwright `tests/visual/formulario-publico.spec.mjs`: **6/6 PASS** (3
-  cenarios x desktop-chromium e mobile-chromium), incluindo o novo cenario de
-  indisponibilidade/recuperacao.
+- Playwright `tests/visual/formulario-publico.spec.mjs`: **12/12 PASS** (6
+  cenarios x desktop-chromium e mobile-chromium), incluindo os cenarios de
+  indisponibilidade/recuperacao dos Incrementos 1 e 2.
 - Playwright `tests/visual/questionarios-editor.spec.mjs`: **8/8 PASS**
   (desktop e mobile).
 - Playwright `tests/visual/acessibilidade.spec.mjs` (subconjunto formularios/
   questionarios/checkins: publico padrao, PWA offline-first, upload, editor
-  x2, checkins x2): **12/12 PASS**, sem regressao apos a mudanca.
+  x2, checkins x2): **16/16 PASS** (desktop+mobile), sem regressao apos as
+  mudancas dos dois incrementos.
 - `pnpm security:secrets`: PASS, nenhum segredo real identificado.
 - `git diff --check`: PASS, sem problema de espaco em branco.
 - `pnpm validate:docs` / `validar-preflight.ps1 -DocsOnly`: **SKIPPED**. O
@@ -157,14 +188,16 @@ execucao abaixo.
 ## Revisao de seguranca
 
 Nao foi alterado nenhum contrato de autorizacao, tenant, RLS ou auditoria.
-A mudanca do Incremento 1 e estritamente de apresentacao (mensagem exibida e
-um botao) no componente publico por token; nenhum dado adicional passou a
-ser exposto e a mensagem generica reduz, em vez de aumentar, a superficie de
-informacao repassada a um visitante sem sessao. Nenhum dado sintetico usado
-nos testes contem PHI/PII real.
+As mudancas dos dois incrementos sao estritamente de apresentacao/tratamento
+de erro no componente publico por token; nenhum dado adicional passou a ser
+exposto e a distincao 4xx/5xx reduz, em vez de aumentar, a superficie de
+informacao de servidor repassada a um visitante sem sessao — preservando ao
+mesmo tempo as mensagens de negocio seguras que o backend ja devolvia.
+Nenhum dado sintetico usado nos testes contem PHI/PII real.
 
 ## Rollback
 
-Sem migration e sem mudanca de contrato de API. Rollback e reverter o commit
-do Incremento 1 (`formulario-paciente-publico.tsx` e o spec Playwright
-correspondente); nenhuma outra parte do sistema depende dessa mudanca.
+Sem migration e sem mudanca de contrato de API. Rollback e reverter os
+commits dos Incrementos 1 e 2 (`lib/formularios-publicos-api.ts`,
+`components/formularios/formulario-paciente-publico.tsx` e o spec Playwright
+correspondente); nenhuma outra parte do sistema depende dessas mudancas.

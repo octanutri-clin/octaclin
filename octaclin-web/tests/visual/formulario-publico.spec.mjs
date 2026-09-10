@@ -174,4 +174,134 @@ test.describe('formulario publico - indisponibilidade e recuperacao', () => {
 
     await expect(page.getByRole('heading', { name: 'Check-in semanal' })).toBeVisible();
   });
+
+  test('mostra a mensagem especifica do backend ao carregar um formulario expirado', async ({ page }) => {
+    // Diferente do teste anterior (erro 500, generico): um 410 e uma resposta
+    // de negocio segura e especifica do backend, ja em portugues, que deve
+    // chegar ao paciente como esta — a regra de "nunca repassar mensagem
+    // crua" vale para falhas de servidor (5xx), nao para respostas de
+    // negocio (4xx) como esta.
+    await page.route('**/api/formularios/token-expirado', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({
+        status: 410,
+        contentType: 'application/json',
+        body: JSON.stringify({ statusCode: 410, message: 'Formulário expirado.' })
+      });
+    });
+
+    await page.goto('/formularios/token-expirado');
+
+    await expect(page.getByText('Formulário expirado.')).toBeVisible();
+    await expect(page.getByText('Não foi possível carregar o formulário agora.')).toHaveCount(0);
+  });
+
+  test('mostra mensagem generica ao falhar o envio com erro de servidor e preserva as respostas', async ({ page }) => {
+    let permitirSucesso = false;
+    await page.route('**/api/formularios/token-envio-instavel', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          envioId: 'envio-1',
+          titulo: 'Check-in semanal',
+          status: 'enviado',
+          rascunhoVersao: 0,
+          respostasRascunho: [],
+          perguntas: [{
+            id: perguntaId,
+            tipo: 'sim_nao',
+            enunciado: 'Conseguiu seguir o plano?',
+            obrigatoria: true,
+            configuracao: { rotuloSim: 'Sim', rotuloNao: 'Nao' },
+            opcoes: [],
+            ordem: 1
+          }]
+        })
+      });
+    });
+    await page.route('**/api/formularios/token-envio-instavel/rascunho', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ rascunhoVersao: 1, rascunhoAtualizadoEm: new Date().toISOString() })
+      });
+    });
+    await page.route('**/api/formularios/token-envio-instavel/respostas', async (route) => {
+      if (!permitirSucesso) {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ statusCode: 500, message: 'Internal server error' })
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ envioId: 'envio-1', status: 'respondido', respondidoEm: new Date().toISOString() })
+      });
+    });
+
+    await page.goto('/formularios/token-envio-instavel');
+    await page.getByRole('button', { name: 'Sim' }).click();
+    await expect(page.getByText('Rascunho salvo')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Enviar respostas' }).click();
+    await expect(page.getByText('Não foi possível enviar as respostas agora.')).toBeVisible();
+    await expect(page.getByText('Internal server error')).toHaveCount(0);
+    // A resposta ja preenchida nao pode se perder por causa da falha do servidor.
+    await expect(page.getByRole('button', { name: 'Sim' })).toHaveAttribute('aria-pressed', 'true');
+
+    permitirSucesso = true;
+    await page.getByRole('button', { name: 'Enviar respostas' }).click();
+    await expect(page.getByRole('heading', { name: 'Respostas enviadas' })).toBeVisible();
+  });
+
+  test('preserva a mensagem especifica de conflito de rascunho e mostra mensagem generica em erro de servidor', async ({ page }) => {
+    let respostaRascunho = { status: 409, mensagem: 'Rascunho atualizado em outro dispositivo.' };
+    await page.route('**/api/formularios/token-rascunho-instavel', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          envioId: 'envio-1',
+          titulo: 'Check-in semanal',
+          status: 'enviado',
+          rascunhoVersao: 0,
+          respostasRascunho: [],
+          perguntas: [{
+            id: perguntaId,
+            tipo: 'sim_nao',
+            enunciado: 'Conseguiu seguir o plano?',
+            obrigatoria: true,
+            configuracao: { rotuloSim: 'Sim', rotuloNao: 'Não' },
+            opcoes: [],
+            ordem: 1
+          }]
+        })
+      });
+    });
+    await page.route('**/api/formularios/token-rascunho-instavel/rascunho', async (route) => {
+      await route.fulfill({
+        status: respostaRascunho.status,
+        contentType: 'application/json',
+        body: JSON.stringify({ statusCode: respostaRascunho.status, message: respostaRascunho.mensagem })
+      });
+    });
+
+    await page.goto('/formularios/token-rascunho-instavel');
+    await page.getByRole('button', { name: 'Sim' }).click();
+
+    // 409: mensagem de negocio segura e especifica do backend, deve aparecer como esta.
+    await expect(page.getByText('Rascunho atualizado em outro dispositivo.')).toBeVisible();
+
+    // 500: nao pode repassar o corpo cru do backend.
+    respostaRascunho = { status: 500, mensagem: 'Internal server error' };
+    await page.getByRole('button', { name: 'Não' }).click();
+    await expect(page.getByText('Não foi possível salvar o rascunho agora.')).toBeVisible();
+    await expect(page.getByText('Internal server error')).toHaveCount(0);
+  });
 });

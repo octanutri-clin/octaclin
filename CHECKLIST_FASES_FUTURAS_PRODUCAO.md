@@ -2376,8 +2376,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     aprovados. `validate:docs`/`validar-preflight.ps1` SKIPPED (PowerShell
     indisponivel neste ambiente Linux). Detalhes completos:
     `docs/history/phases/fase-256-formularios-checkins-ponta-a-ponta.md`.
-  - [ ] Incremento 2 (pendente): cobertura de indisponibilidade no envio final
-    de respostas e no salvamento de rascunho.
+  - [x] Incremento 2: cobertura de indisponibilidade no envio final de
+    respostas, no salvamento de rascunho e no envio de anexo, distinguindo
+    resposta de negocio (4xx, mostrada como esta) de falha opaca de servidor
+    (5xx, sempre mensagem generica). Corrigiu tambem um efeito colateral do
+    Incremento 1 (o carregamento havia ficado generico demais, escondendo
+    mensagens legitimas como "Formulario expirado."). TDD: 4 cenarios
+    Playwright RED antes da implementacao, GREEN depois; suite completa do
+    modulo (`formulario-publico.spec.mjs` 12/12, `acessibilidade.spec.mjs`
+    subconjunto 16/16) sem regressao, desktop+mobile. Detalhes:
+    `docs/history/phases/fase-256-formularios-checkins-ponta-a-ponta.md`.
   - [ ] Incremento 3 (pendente, escopo maior): historico de versoes navegavel.
   - [ ] Decisao de produto pendente: nomenclatura "check-in rapido" vs.
     "check-in via questionario".
