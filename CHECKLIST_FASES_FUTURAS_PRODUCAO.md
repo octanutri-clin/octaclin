@@ -2309,10 +2309,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] Checks finais do head, revisao humana e merge `98b6e5f`.
   - [x] Pos-merge: Semgrep `34256077482`, Trivy `34256077527`, CodeQL
     `34256077546` e CI `34256077528` verdes na `main`.
-- [~] SQ-4 - Reexecutar CodeQL, Semgrep, Trivy, Dependabot e Secret Scanning
+- [x] SQ-4 - Reexecutar CodeQL, Semgrep, Trivy, Dependabot e Secret Scanning
   sobre a `main` corrente e encerrar somente com criticos/altos corrigiveis em
   zero, alertas residuais integralmente inventariados, owners/revisoes presentes
-  e CI, SBOM, runtime e scanner de secrets verdes. [ATIVA]
+  e CI, SBOM, runtime e scanner de secrets verdes. [CONCLUIDA NO PR #215]
   - [x] Recaptura sobre `98b6e5f`: 213 Trivy, 2 Dependabot, 0 Secret Scanning,
     total 215; Security tab e fotografia sanitizada concordam.
   - [x] Inventario ativo reconciliado em tres causas raiz: 173 IA sem patch, 40
@@ -2321,8 +2321,24 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] Gate TDD recusa investigacao pendente, critical/high corrigivel e
     `aguardando_upstream` com patch sem bloqueio do artefato suportado.
   - [x] Testes do inventario/captura: 43 PASS; CLI: 215 alertas cobertos.
-  - [ ] Checks da PR, revisao humana, merge e confirmacao de que o Security tab
-    nao mudou durante a revisao.
+  - [x] Checks da PR (`Semgrep 34256077482`, `Trivy 34256077527`, `CodeQL
+    34256077546`, `OctaClin CI 34256077528`) verdes, revisao humana e merge
+    `98b6e5f` confirmado pela API do GitHub (PR GitHub `#215`, mergeado em
+    2026-09-08T19:35:56Z). O inventario materializado (213/2/0) e uma
+    fotografia daquele merge, nao uma contagem atual; nenhuma nova captura foi
+    executada nesta reconciliacao de 2026-09-10 porque as ferramentas
+    disponiveis nesta sessao nao expoem `code-scanning`/`dependabot`/
+    `secret-scanning alerts` da API do GitHub (apenas Actions, PRs e conteudo
+    de arquivos). Uma recaptura real com `pnpm security:capturar-inventario`
+    (exige `gh` autenticado) permanece pendente antes de qualquer decisao que
+    dependa da contagem atual de alertas.
+- [x] PR 54 (governanca) - integrado no `main` pelo PR GitHub `#222` em
+  2026-09-10, merge `804e0bb7c714d7fc835db812229c6ffcb90c626a`, base `f6f90ef`.
+  Os checks da PR (`CodeQL`, `Semgrep`, `Trivy`, `Dependency Review`,
+  `OctaClin CI`) ficaram verdes sobre o head `d8beba8` antes do merge humano.
+  Consulta `list_pull_requests state=open` em 2026-09-10 nao retornou nenhuma
+  PR aberta imediatamente apos o merge. A quarta execucao DAST externa contra
+  staging descartavel permanece pendente de autorizacao especifica.
 - [x] Recuperacao observada do monitor paralelo: a execucao agendada 577, run
   `34045002742`, falhou por tres timeouts no primeiro readiness e abriu a issue
   `#206`; a verificacao read-only posterior obteve readiness/detalhado/web 200.
@@ -2332,7 +2348,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
   houve agenda posterior sobre `98b6e5f`. A causa externa exata continua nao
   comprovada.
 
-- [ ] Fase 256 - Formulários e check-ins ponta a ponta. [ESSENCIAL - PRE-PILOTO]
+- [ ] Fase 256 - Formulários e check-ins ponta a ponta. [DESBLOQUEADA EM
+  2026-09-10 - EM ANDAMENTO]
+  - Desbloqueio: PR 54 (governanca) integrado pelo PR GitHub `#222`, merge
+    `804e0bb`, checks verdes; SQ-4 concluida no PR GitHub `#215`. Nenhuma PR
+    aberta no repositorio no momento do desbloqueio.
   - Validar criação, biblioteca, versão, distribuição, rascunho do paciente,
     resposta, leitura clínica, matriz longitudinal e registro no prontuário.
   - Cobrir carregamento, indisponibilidade, erro, retomada e acessibilidade em

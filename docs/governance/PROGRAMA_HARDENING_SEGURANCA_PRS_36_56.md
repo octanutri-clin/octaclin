@@ -2,7 +2,7 @@
 
 > Status: aprovado para planejamento e execucao sequencial
 >
-> Atualizado em: 2026-09-08
+> Atualizado em: 2026-09-10
 >
 > Estado do SQ-4: integrado no `main` pelo PR GitHub #215 em 2026-09-08
 > (`dc8334f`). Estado do PR 53: **gate externo PASS; checks e review humano
@@ -10,6 +10,18 @@
 > `34286684698` aprovou RPO/RTO e manifestos no banco dedicado. Object Lock
 > COMPLIANCE permanece excecao aberta e nao comprovada; sua ativacao no bucket
 > e irreversivel e exige decisao operacional separada.
+>
+> Estado do PR 54: integrado no `main` pelo PR GitHub #222 em 2026-09-10
+> (merge `804e0bb7c714d7fc835db812229c6ffcb90c626a`, base `f6f90ef`). Os checks
+> da PR (`CodeQL`, `Semgrep`, `Trivy`, `Dependency Review`, `OctaClin CI`)
+> ficaram verdes sobre o head `d8beba8` antes do merge humano, confirmado via
+> API do GitHub em 2026-09-10. A quarta execucao DAST externa contra staging
+> descartavel continua pendente de autorizacao especifica e nao e inferida por
+> este merge. Nao havia pull request aberta no repositorio imediatamente apos
+> o merge (consulta `list_pull_requests state=open` em 2026-09-10, resultado
+> vazio). Isso libera a sequencia PR 53 -> PR 54 -> Fase 256: a Fase 256
+> (Formularios/check-ins ponta a ponta) fica desbloqueada para iniciar auditoria
+> e implementacao incremental, sem que isso implique aceite do PR 55.
 >
 > Proximo item autorizado, por decisao do proprietario em 2026-09-04: fechar as
 > duas dividas nomeadas pela fase 2 do PR 52 antes de abrir o PR 53. O gate de
