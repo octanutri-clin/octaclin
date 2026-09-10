@@ -1,10 +1,36 @@
 # Fase 256 - Formularios e check-ins ponta a ponta
 
 Desbloqueada em 2026-09-10 pelo merge do PR GitHub `#222` (PR 54 de
-governanca) e pela reconciliacao factual do SQ-4 (PR GitHub `#215`). Fase
-essencial, pre-piloto, sem migration ate o momento. Em andamento: este
-documento cobre a auditoria inicial e o Incremento 1; os demais incrementos
-identificados no plano abaixo permanecem pendentes.
+governanca) e pela reconciliacao factual do SQ-4 (PR GitHub `#215`).
+**Concluida em 2026-09-10**, sem migration em nenhum incremento. Fase
+essencial, pre-piloto.
+
+## Conclusao
+
+Tres incrementos verticais e uma decisao de produto, cada um integrado em PR
+separada com checks verdes e merge humano:
+
+- Incremento 1 (PR GitHub `#223`): recuperacao no carregamento do formulario
+  publico.
+- Incremento 2 (PR GitHub `#224`): indisponibilidade no envio de respostas e
+  no salvamento de rascunho, incluindo a correcao do gate "Linguagem e
+  microcopy" no mesmo PR.
+- Incremento 3 + rename de nomenclatura (PR GitHub `#225`): historico de
+  versoes navegavel do questionario e a resolucao da ambiguidade
+  "check-in rapido" vs. "check-in via questionario" (decisao do dono do
+  produto).
+
+Nao ha pendencia tecnica conhecida para esta fase. O fluxo completo pedido —
+criacao, biblioteca, versionamento (contador + snapshot + agora historico
+navegavel), distribuicao, rascunho do paciente, retomada, envio, leitura
+clinica, matriz longitudinal e registro no prontuario — esta implementado,
+testado e coberto pelos gates de linguagem, acessibilidade e autorizacao do
+projeto. Pendencias remanescentes sao explicitamente de produto, nao
+tecnicas (ver "Decisao de produto" abaixo) ou fora do escopo desta fase
+(PR 55 - pentest independente; PR 56/mobile - NO-GO).
+
+Auditoria original e Incremento 1 abaixo; os incrementos seguintes tem secao
+propria mais adiante neste documento.
 
 ## Auditoria inicial
 

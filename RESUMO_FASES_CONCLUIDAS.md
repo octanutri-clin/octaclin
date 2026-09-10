@@ -764,6 +764,22 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   merge `baf40ef`, com CI `32590205628`, 147 suites/1.018 testes backend,
   Playwright desktop/mobile, smoke real e Lighthouse 100 aprovados. Ver
   `fase-254-lista-cadastro-robusto-pacientes.md`.
+- Fase 256 - Formularios e check-ins ponta a ponta: auditoria confirmou que o
+  fluxo pedido (criacao, biblioteca, versionamento, distribuicao, rascunho,
+  retomada, envio, leitura clinica, matriz longitudinal e registro no
+  prontuario) ja existia quase por completo no modulo `questionarios`; o
+  trabalho real foi validacao e fechamento de lacunas pontuais. Fechou a
+  indisponibilidade sem recuperacao no carregamento, envio e rascunho do
+  formulario publico (mensagem segura em PT-BR, nunca o corpo cru do
+  backend, preservando mensagens de negocio legitimas como "Formulario
+  expirado."), adicionou historico de versoes navegavel do questionario
+  reaproveitando o snapshot ja congelado por envio (sem nova tabela), e
+  aplicou a decisao do dono do produto de renomear "check-in rapido" para
+  "Registro de habitos" e "check-in via questionario" para "Retorno de
+  avaliacao" em todo o texto visivel dos dois conceitos. Sem migration em
+  nenhum incremento. PRs GitHub `#223`, `#224` e `#225`, merges `d5e511b`,
+  `c7b2700` e `7e9ec76`. Ver
+  `docs/history/phases/fase-256-formularios-checkins-ponta-a-ponta.md`.
 - Fase 255 - Prontuario clinico orientado a linha de cuidado: o componente
   principal ganhou fronteiras tipadas para navegacao e timeline; Materiais,
   Anexos e profissionais passaram a carregar sob demanda com falhas locais;
