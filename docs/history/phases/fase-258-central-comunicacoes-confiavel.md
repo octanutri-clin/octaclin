@@ -70,7 +70,7 @@ Modulo `comunicacoes` ja tem bastante infraestrutura solida:
    produto sobre a politica exata (ver pergunta feita ao dono do
    produto).
 3. **Status de entrega WhatsApp como coluna de primeira classe** —
-   candidato, ainda nao iniciado.
+   concluido, ver secao abaixo.
 4. **Visao unificada cruzando canal + responsavel** — candidato, maior
    escopo (redesenho de `painel-comunicacoes.tsx`), ainda nao iniciado.
 
@@ -204,3 +204,57 @@ justificativa escrita: e um booleano de desfecho de decisao humana (o
 profissional confirmou o override do aviso de opt-out), nao carrega a
 preferencia do paciente. `pnpm test:redacao-auditoria` local — 24/24 PASS
 apos a correcao.
+
+## Incremento 3 - status de entrega do WhatsApp como coluna de primeira classe
+
+Concluido em 2026-09-10.
+
+### Implementacao
+
+- **Migration** `1720000001041-AdicionarStatusEntregaWhatsapp`: aditiva,
+  adiciona `status_entrega_whatsapp varchar(20)` e
+  `status_entrega_atualizado_em timestamptz` a `mensagens_notificacao`,
+  ambas nulaveis. `down` remove as duas. `@aplicacao fora-de-banda` como
+  as demais.
+- **Backend**: `MensagemNotificacaoOrm` ganha os dois campos.
+  `ServicoWebhookWhatsapp.registrarStatusNoTenant` passa a gravar
+  `statusEntregaWhatsapp` (sent/delivered/read/failed, vocabulario da
+  Meta) e `statusEntregaAtualizadoEm` (do `timestamp` do webhook, ou o
+  instante do processamento quando a Meta nao informa) direto nas
+  colunas, alem de continuar gravando `payload.ultimoStatusMeta` (que
+  guarda tambem `recipientId` e `errors`, uteis como detalhe mas nao
+  como filtro). O JSON deixa de ser a unica fonte da consulta mais comum
+  (qual o status de entrega desta mensagem), que agora e uma coluna SQL
+  comum — habilita filtro/relatorio futuro sem parse de JSON.
+- **Frontend**: `MensagemNotificacaoApi` ganha `statusEntregaWhatsapp` e
+  `statusEntregaAtualizadoEm`. `painel-comunicacoes.tsx` le a coluna
+  nova como fonte primaria dos dois badges de status Meta ("Entrega:" na
+  conversa, "Meta:" na lista de mensagens recentes), com fallback para o
+  JSON legado (`payload.ultimoStatusMeta.status`) so em mensagens
+  gravadas antes desta migration — nao ha backfill, e mensagens antigas
+  continuam exibindo o status correto pelo caminho antigo.
+- Sem mudanca de contrato de leitura para chamadores existentes: os
+  dois campos novos sao opcionais: consumidor antigo que ignora o campo
+  continua funcionando; mensagem antiga sem o campo cai no fallback.
+
+### Validacoes
+
+- TDD: migration (`1720000001041...spec.ts`, RED confirmado por ausencia
+  do arquivo de implementacao, depois GREEN); backend — 2 testes novos
+  em `servico-webhook-whatsapp.spec.ts` (grava as colunas a partir do
+  timestamp da Meta; usa o instante do processamento quando a Meta nao
+  informa timestamp), RED confirmado antes da implementacao (assercoes
+  novas falhando com o valor `undefined` esperado, sem alterar o
+  servico).
+- `pnpm --dir octaclin-backend typecheck` e `build` — PASS
+- `pnpm --dir octaclin-web typecheck`, `lint` (0 erros, mesmos avisos
+  preexistentes de outros arquivos) e `build` — PASS
+- 253 testes de `comunicacoes` + migrations (241 passaram, 12 skipped —
+  mesma suite de integracao com banco real das fases anteriores) — PASS
+- 10/10 Playwright (`comunicacoes-disparo-manual.spec.mjs` +
+  `fase-196-comunicacoes-equipe.spec.mjs`, desktop+mobile) sem
+  regressao — os badges de status continuam corretos com o novo caminho
+  de leitura
+- Gate de linguagem, `pnpm test:redacao-auditoria` (nenhuma chave nova
+  de auditoria nesta rodada), `pnpm security:secrets`, `git diff --check`
+  — PASS

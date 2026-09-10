@@ -31,6 +31,8 @@ export interface MensagemNotificacaoApi {
   payload: Record<string, unknown>;
   erro?: string;
   enviadoEm?: string;
+  statusEntregaWhatsapp?: string;
+  statusEntregaAtualizadoEm?: string;
   criadoEm: string;
 }
 

@@ -170,6 +170,15 @@ function obterUltimoStatusMeta(payload: Record<string, unknown>): UltimoStatusMe
   return status as UltimoStatusMeta;
 }
 
+/**
+ * Status de entrega do WhatsApp: le a coluna de primeira classe
+ * `statusEntregaWhatsapp`; cai para o JSON legado (`payload.ultimoStatusMeta`)
+ * so em mensagens gravadas antes da coluna existir.
+ */
+function obterStatusEntregaWhatsapp(mensagem: MensagemNotificacaoApi, ultimoStatusMeta?: UltimoStatusMeta) {
+  return mensagem.statusEntregaWhatsapp ?? ultimoStatusMeta?.status;
+}
+
 function obterDirecaoMensagem(mensagem: MensagemNotificacaoApi) {
   return obterTextoPayload(mensagem.payload, 'direcao') ?? (mensagem.status === 'recebido' ? 'recebida' : 'enviada');
 }
@@ -1138,6 +1147,7 @@ export function PainelComunicacoes() {
                       const recebida = obterDirecaoMensagem(mensagem) === 'recebida';
                       const nota = obterDirecaoMensagem(mensagem) === 'nota';
                       const ultimoStatusMeta = obterUltimoStatusMeta(mensagem.payload);
+                      const statusEntregaWhatsapp = obterStatusEntregaWhatsapp(mensagem, ultimoStatusMeta);
                       return (
                         <div key={mensagem.id} className={`flex ${nota ? 'justify-center' : recebida ? 'justify-start' : 'justify-end'}`}>
                           <div
@@ -1154,9 +1164,9 @@ export function PainelComunicacoes() {
                                   {obterTextoPayload(mensagem.payload, 'statusAtendimento') === 'resolvido' ? 'resolvido' : 'acompanhamento'}
                                 </span>
                               ) : null}
-                              {!recebida && ultimoStatusMeta?.status ? (
-                                <span className={`rounded-sm border px-1.5 py-0.5 ${corStatusMeta(ultimoStatusMeta.status)}`}>
-                                  Entrega: {formatarStatusMeta(ultimoStatusMeta.status)}
+                              {!recebida && statusEntregaWhatsapp ? (
+                                <span className={`rounded-sm border px-1.5 py-0.5 ${corStatusMeta(statusEntregaWhatsapp)}`}>
+                                  Entrega: {formatarStatusMeta(statusEntregaWhatsapp)}
                                 </span>
                               ) : null}
                             </div>
@@ -1194,6 +1204,7 @@ export function PainelComunicacoes() {
             mensagens.map((mensagem) => {
               const canalMensagem = obterCanal(canais, mensagem);
               const ultimoStatusMeta = obterUltimoStatusMeta(mensagem.payload);
+              const statusEntregaWhatsapp = obterStatusEntregaWhatsapp(mensagem, ultimoStatusMeta);
               const direcao = obterDirecaoMensagem(mensagem);
               const destino = obterContatoMensagem(mensagem, ultimoStatusMeta);
               const criadoEm = formatarDataIso(mensagem.criadoEm);
@@ -1224,9 +1235,9 @@ export function PainelComunicacoes() {
                   </span>
                   {canalMensagem?.tipo === 'whatsapp' && direcao !== 'recebida' ? (
                     <span
-                      className={`w-fit rounded-sm border px-2 py-1 text-xs font-semibold ${corStatusMeta(ultimoStatusMeta?.status)}`}
+                      className={`w-fit rounded-sm border px-2 py-1 text-xs font-semibold ${corStatusMeta(statusEntregaWhatsapp)}`}
                     >
-                      Meta: {formatarStatusMeta(ultimoStatusMeta?.status)}
+                      Meta: {formatarStatusMeta(statusEntregaWhatsapp)}
                     </span>
                   ) : direcao === 'recebida' ? (
                     <span className="w-fit rounded-sm border border-sucesso-borda bg-sucesso-suave px-2 py-1 text-xs font-semibold text-sucesso-forte">

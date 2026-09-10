@@ -54,6 +54,7 @@ import { CriarMfaEReautenticacao1720000001037 } from './migracoes/1720000001037-
 import { TornarTrilhaAuditoriaImutavel1720000001038 } from './migracoes/1720000001038-TornarTrilhaAuditoriaImutavel';
 import { AdicionarTarefaConcluidaNotificacoes1720000001039 } from './migracoes/1720000001039-AdicionarTarefaConcluidaNotificacoes';
 import { AdicionarIdempotenciaMensagensNotificacao1720000001040 } from './migracoes/1720000001040-AdicionarIdempotenciaMensagensNotificacao';
+import { AdicionarStatusEntregaWhatsapp1720000001041 } from './migracoes/1720000001041-AdicionarStatusEntregaWhatsapp';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -333,7 +334,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarMfaEReautenticacao1720000001037,
         TornarTrilhaAuditoriaImutavel1720000001038,
         AdicionarTarefaConcluidaNotificacoes1720000001039,
-        AdicionarIdempotenciaMensagensNotificacao1720000001040
+        AdicionarIdempotenciaMensagensNotificacao1720000001040,
+        AdicionarStatusEntregaWhatsapp1720000001041
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

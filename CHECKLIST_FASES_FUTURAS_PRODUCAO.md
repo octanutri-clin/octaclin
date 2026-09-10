@@ -2459,6 +2459,14 @@ publicado antes de ampliar a superficie de mudancas visuais.
     (`ModalConfirmacao`) e pode enviar mesmo assim; sem override,
     disparo para canal que o paciente desativou e recusado (409).
     Automacoes de sistema nao mudam. Sem migration.
+  - Incremento 3 concluido: status de entrega do WhatsApp (sent/
+    delivered/read/failed) promovido de campo dentro de
+    `payload.ultimoStatusMeta` para colunas de primeira classe
+    (`status_entrega_whatsapp`, `status_entrega_atualizado_em`,
+    migration `1720000001041`, aditiva). `ServicoWebhookWhatsapp`
+    grava as duas em toda atualizacao de status; frontend le a coluna
+    nova nos badges de entrega, com fallback ao JSON legado so para
+    mensagens gravadas antes da migration.
 
 - [ ] Fase 259 - Acesso, convite e ativação sem suporte manual. [ESSENCIAL - PRE-PILOTO]
   - Revisar login, primeiro acesso, recuperação, convite, troca de senha,
