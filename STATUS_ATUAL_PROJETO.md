@@ -57,6 +57,20 @@ Atualizado em 2026-09-10.
   257 (Portal do paciente orientado por tarefas). Detalhes e evidencias
   completas em `docs/history/phases/fase-256-formularios-checkins-ponta-a-ponta.md`
   e em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
+- Fase 257 - Portal do paciente orientado por tarefas, **concluida em
+  2026-09-10**. Auditoria inicial confirmou que a priorizacao proxima-
+  acao/proxima-consulta/plano e a navegacao por tarefas ja existiam desde
+  as Fases 162/181; quatro incrementos fecharam as lacunas reais:
+  confirmacao explicita ao desmarcar consulta, ranking cruzado de "proxima
+  acao" (formularios + tarefas pelo prazo mais proximo), conclusao de
+  tarefa/meta pelo paciente com notificacao ao profissional responsavel
+  (decisao definitiva, so o profissional reabre pelo prontuario), e
+  remocao de codigo morto. Unica migration da fase: `1720000001039`,
+  aditiva (amplia o CHECK de tipos do centro de notificacoes para aceitar
+  `tarefa_concluida`). Nenhuma mudanca de contrato de leitura do portal. A
+  proxima fase oficial e a Fase 258 (Central de comunicacoes confiavel).
+  Detalhes e evidencias completas em
+  `docs/history/phases/fase-257-portal-paciente-orientado-tarefas.md`.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
   fotografia historica foi capturada em 2026-09-07 sobre
   `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning

@@ -29,6 +29,12 @@ describe('ControladorPortalPaciente', () => {
       adesaoPlano: 20
     });
     const registrarConsentimentoLgpd = jest.fn().mockResolvedValue({ paciente: { id: 'paciente-1' } });
+    const concluirTarefa = jest.fn().mockResolvedValue({
+      id: 'tarefa-1',
+      titulo: 'Registrar agua diariamente',
+      categoria: 'meta',
+      status: 'concluida'
+    });
     const exportarDadosLgpd = jest.fn().mockResolvedValue({
       formato: 'json',
       titular: { pacienteId: 'paciente-1' },
@@ -42,6 +48,7 @@ describe('ControladorPortalPaciente', () => {
         registrarCheckinRapido,
         registrarConsentimentoLgpd,
         exportarDadosLgpd,
+        concluirTarefa,
         ...servicos
       } as unknown as ServicoPortalPaciente,
       {} as ServicoAgenda,
@@ -98,6 +105,38 @@ describe('ControladorPortalPaciente', () => {
       expect(registrar).toHaveBeenCalledWith(
         expect.objectContaining({
           metadados: { pacienteId: 'paciente-1', possuiSintomas: false, possuiObservacoes: false }
+        })
+      );
+    });
+  });
+
+  describe('conclusao de tarefa pelo paciente', () => {
+    /**
+     * Titulo/descricao da tarefa sao escritos pelo profissional e podem
+     * conter conteudo de prontuario (ex.: "Reduzir dose de X"). A trilha so
+     * pode guardar a categoria, que e um enum fechado, nunca o texto.
+     */
+    it('nao deve deixar titulo da tarefa chegar a trilha, so a categoria', async () => {
+      const { controlador, registrar, requisicao } = criarCenario();
+
+      await controlador.concluirTarefa(usuario, requisicao, 'tarefa-1');
+
+      const entrada = registrar.mock.calls[0][0] as { metadados: Record<string, unknown> };
+      expect(JSON.stringify(entrada.metadados)).not.toContain('Registrar agua diariamente');
+      expect(entrada.metadados).toEqual({ categoria: 'meta' });
+    });
+
+    it('deve chamar o servico com o id da tarefa e registrar a acao correta', async () => {
+      const { controlador, registrar, requisicao } = criarCenario();
+
+      const tarefa = await controlador.concluirTarefa(usuario, requisicao, 'tarefa-1');
+
+      expect(tarefa).toEqual(expect.objectContaining({ id: 'tarefa-1', status: 'concluida' }));
+      expect(registrar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          acao: 'portal.paciente.tarefa.concluir',
+          recursoTipo: 'acompanhamento_tarefa',
+          recursoId: 'tarefa-1'
         })
       );
     });

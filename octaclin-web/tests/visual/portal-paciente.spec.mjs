@@ -351,6 +351,88 @@ test.describe('portal do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('prioriza tarefa com vencimento mais proximo do que o formulario pendente', async ({ page }) => {
+    await prepararSessaoPaciente(page);
+    const payload = {
+      ...portalPaciente,
+      formulariosPendentes: [
+        { ...portalPaciente.formulariosPendentes[0], expiraEm: '2026-12-01T12:00:00.000Z' }
+      ],
+      tarefasAcompanhamento: [
+        { ...portalPaciente.tarefasAcompanhamento[0], titulo: 'Enviar exames de sangue', vencimentoEm: '2026-09-15T12:00:00.000Z', status: 'pendente' }
+      ]
+    };
+    await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) });
+    });
+
+    await page.goto('/portal');
+
+    const cartaoProximaAcao = page.getByRole('heading', { name: 'Próxima ação' }).locator('..').locator('..');
+    await expect(cartaoProximaAcao.getByText('Enviar exames de sangue')).toBeVisible();
+    await expect(cartaoProximaAcao.getByRole('link', { name: 'Ver no plano' })).toBeVisible();
+    await expect(cartaoProximaAcao.getByText('Check-in semanal')).toHaveCount(0);
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('paciente conclui uma tarefa do plano apos confirmar, e orientacao nao pode ser concluida', async ({ page }) => {
+    let chamouConcluir = false;
+    const payload = {
+      ...portalPaciente,
+      tarefasAcompanhamento: [
+        { ...portalPaciente.tarefasAcompanhamento[0] },
+        {
+          id: 'tarefa-2',
+          titulo: 'Ler material sobre hidratacao',
+          categoria: 'orientacao',
+          prioridade: 'media',
+          status: 'pendente',
+          criadoEm: '2026-07-22T12:00:00.000Z',
+          atualizadoEm: '2026-07-22T12:00:00.000Z'
+        }
+      ]
+    };
+    await prepararSessaoPaciente(page);
+    await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) });
+    });
+    await page.route((url) => url.pathname === '/api/portal/paciente/tarefas/tarefa-1/concluir', async (route) => {
+      chamouConcluir = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...payload.tarefasAcompanhamento[0], status: 'concluida', concluidoEm: '2026-08-01T12:00:00.000Z' })
+      });
+    });
+
+    await page.goto('/portal/plano');
+
+    const cartaoTarefaMeta = page.locator('article', { hasText: 'Registrar agua diariamente' });
+    const cartaoTarefaOrientacao = page.locator('article', { hasText: 'Ler material sobre hidratacao' });
+    const botaoConcluirMeta = cartaoTarefaMeta.getByRole('button', { name: 'Marcar como concluída' });
+    // Espera o conteudo real carregar antes de checar ausencia: um `toHaveCount(0)`
+    // checado cedo demais passa de forma vazia com a pagina ainda em carregamento.
+    await expect(botaoConcluirMeta).toBeVisible();
+    await expect(cartaoTarefaOrientacao.getByRole('button', { name: 'Marcar como concluída' })).toHaveCount(0);
+
+    await botaoConcluirMeta.click();
+    const dialogo = page.getByRole('dialog', { name: 'Concluir tarefa' });
+    await expect(dialogo).toBeVisible();
+    expect(chamouConcluir).toBe(false);
+
+    await dialogo.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(dialogo).toHaveCount(0);
+    expect(chamouConcluir).toBe(false);
+
+    await cartaoTarefaMeta.getByRole('button', { name: 'Marcar como concluída' }).click();
+    await page.getByRole('dialog', { name: 'Concluir tarefa' }).getByRole('button', { name: 'Concluir tarefa' }).click();
+
+    await expect.poll(() => chamouConcluir).toBe(true);
+    await expect(page.getByText('Tarefa concluída.')).toBeVisible();
+    await expect(cartaoTarefaMeta).toHaveCount(0);
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('mostra a curva de peso sem numero clinico derivado junto', async ({ page }) => {
     await prepararPortal(page);
     await page.goto('/portal/checkins');
@@ -427,6 +509,34 @@ test.describe('portal do paciente', () => {
     await page.getByRole('button', { name: 'Enviar solicitação LGPD' }).click();
     await expect(page.getByText('Solicitação LGPD registrada: LGPD-123.')).toBeVisible();
 
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('exige confirmacao explicita antes de desmarcar uma consulta', async ({ page }) => {
+    let chamouDesmarcar = false;
+    const portal = await prepararPortal(page);
+    await page.route((url) => url.pathname === '/api/portal/paciente/consultas/consulta-1/desmarcar', async (route) => {
+      chamouDesmarcar = true;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+    });
+
+    await page.goto('/portal/agenda');
+    await page.getByRole('button', { name: 'Desmarcar', exact: true }).click();
+
+    const dialogo = page.getByRole('dialog', { name: 'Desmarcar consulta' });
+    await expect(dialogo).toBeVisible();
+    expect(chamouDesmarcar).toBe(false);
+
+    await dialogo.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(dialogo).toHaveCount(0);
+    expect(chamouDesmarcar).toBe(false);
+
+    await page.getByRole('button', { name: 'Desmarcar', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Desmarcar consulta' }).getByRole('button', { name: 'Desmarcar consulta' }).click();
+
+    await expect.poll(() => chamouDesmarcar).toBe(true);
+    await expect(page.getByText('Consulta desmarcada.')).toBeVisible();
+    expect(portal.carregamentos()).toBe(2);
     await assertSemOverflowHorizontal(page);
   });
 

@@ -29,10 +29,12 @@ import { GraficoEvolucao } from '@/components/ui/grafico-evolucao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { Etiqueta } from '@/components/ui/etiqueta';
 import { Aviso, AvisoRegiao } from '@/components/ui/feedback';
+import { ModalConfirmacao } from '@/components/ui/modal';
 import { PortalShell } from '@/components/app/portal-shell';
 import {
   atualizarPerfilPaciente,
   CheckinRapidoPacienteApi,
+  concluirTarefaPaciente,
   DetalheFormularioRespondidoApi,
   desmarcarConsultaPaciente,
   exportarDadosLgpdPaciente,
@@ -148,6 +150,14 @@ function rotuloPrioridade(prioridade: string) {
   };
   return mapa[prioridade] ?? prioridade;
 }
+
+/**
+ * Fase 257, Incremento 3: decisao de produto (2026-09-10). Apenas `meta` e
+ * `tarefa` sao acoes discretas conclusiveis pelo paciente; `checkin` tem
+ * fluxo proprio de registro e `orientacao` e informativa. Espelha
+ * CATEGORIAS_TAREFA_CONCLUIVEIS_PELO_PACIENTE no backend.
+ */
+const CATEGORIAS_TAREFA_CONCLUIVEIS_PELO_PACIENTE = ['meta', 'tarefa'];
 
 function rotuloCategoriaTarefa(categoria: string) {
   const mapa: Record<string, string> = {
@@ -349,6 +359,38 @@ const linksPortalMobile = [
   { href: '/portal/mais', rotulo: 'Mais', icone: Menu }
 ];
 
+type ProximaAcao =
+  | { tipo: 'formulario'; formulario: PortalPacienteApi['formulariosPendentes'][number] }
+  | { tipo: 'tarefa'; tarefa: NonNullable<PortalPacienteApi['tarefasAcompanhamento']>[number] };
+
+function selecionarProximaAcao(portal: PortalPacienteApi): ProximaAcao | null {
+  const tarefasPendentes = (portal.tarefasAcompanhamento ?? []).filter((tarefa) => tarefa.status !== 'concluida');
+
+  const candidatos: { prazo: number | null; ordem: number; acao: ProximaAcao }[] = [
+    ...portal.formulariosPendentes.map((formulario, indice) => ({
+      prazo: formulario.expiraEm ? new Date(formulario.expiraEm).getTime() : null,
+      ordem: indice,
+      acao: { tipo: 'formulario' as const, formulario }
+    })),
+    ...tarefasPendentes.map((tarefa, indice) => ({
+      prazo: tarefa.vencimentoEm ? new Date(tarefa.vencimentoEm).getTime() : null,
+      ordem: 1000 + indice,
+      acao: { tipo: 'tarefa' as const, tarefa }
+    }))
+  ];
+
+  if (!candidatos.length) return null;
+
+  const comPrazo = candidatos.filter((candidato) => candidato.prazo !== null);
+  if (comPrazo.length) {
+    comPrazo.sort((a, b) => (a.prazo as number) - (b.prazo as number));
+    return comPrazo[0].acao;
+  }
+
+  candidatos.sort((a, b) => a.ordem - b.ordem);
+  return candidatos[0].acao;
+}
+
 function PortalCarregando() {
   return (
     <Cartao className="grid gap-4 p-5" aria-live="polite" aria-busy="true">
@@ -387,6 +429,9 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   const [tipoSolicitacaoLgpd, setTipoSolicitacaoLgpd] = useState<'retificacao' | 'exclusao'>('retificacao');
   const [detalhesSolicitacaoLgpd, setDetalhesSolicitacaoLgpd] = useState('');
   const [desmarcandoConsultaId, setDesmarcandoConsultaId] = useState<string | null>(null);
+  const [consultaParaDesmarcar, setConsultaParaDesmarcar] = useState<string | null>(null);
+  const [concluindoTarefaId, setConcluindoTarefaId] = useState<string | null>(null);
+  const [tarefaParaConcluir, setTarefaParaConcluir] = useState<string | null>(null);
 
   useEffect(() => {
     if (portal) setFormularioPerfil(montarFormularioPerfil(portal));
@@ -410,6 +455,27 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao desmarcar consulta.');
     } finally {
       setDesmarcandoConsultaId(null);
+      setConsultaParaDesmarcar(null);
+    }
+  }
+
+  async function concluirTarefa(tarefaId: string) {
+    setConcluindoTarefaId(tarefaId);
+    setErro(null);
+    setSucesso(null);
+    try {
+      await concluirTarefaPaciente(tarefaId);
+      setPortal((atual) =>
+        atual
+          ? { ...atual, tarefasAcompanhamento: (atual.tarefasAcompanhamento ?? []).filter((tarefa) => tarefa.id !== tarefaId) }
+          : atual
+      );
+      setSucesso('Tarefa concluída.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao concluir tarefa.');
+    } finally {
+      setConcluindoTarefaId(null);
+      setTarefaParaConcluir(null);
     }
   }
 
@@ -593,6 +659,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   }
 
   const linhaTempo = portal ? montarLinhaTempoPortal(portal) : [];
+  const proximaAcao = portal ? selecionarProximaAcao(portal) : null;
   const tarefasAcompanhamento = portal?.tarefasAcompanhamento ?? [];
   const materiaisDisponiveis = portal?.materiaisDisponiveis ?? [];
   const diariosRecentes = portal?.diariosRecentes ?? [];
@@ -649,22 +716,31 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
               <Cartao className="grid gap-3 p-4">
                 <div>
                   <h3 className="text-sm font-semibold text-tinta">Próxima ação</h3>
-                  {portal.formulariosPendentes[0] ? (
+                  {proximaAcao?.tipo === 'formulario' ? (
                     <>
-                      <p className="mt-2 text-sm font-medium text-tinta">{portal.formulariosPendentes[0].titulo}</p>
-                      <p className="mt-1 text-xs text-texto-suave">Responda até {formatarDataHora(portal.formulariosPendentes[0].expiraEm)}</p>
+                      <p className="mt-2 text-sm font-medium text-tinta">{proximaAcao.formulario.titulo}</p>
+                      <p className="mt-1 text-xs text-texto-suave">Responda até {formatarDataHora(proximaAcao.formulario.expiraEm)}</p>
+                    </>
+                  ) : proximaAcao?.tipo === 'tarefa' ? (
+                    <>
+                      <p className="mt-2 text-sm font-medium text-tinta">{proximaAcao.tarefa.titulo}</p>
+                      <p className="mt-1 text-xs text-texto-suave">Vencimento {formatarDataHora(proximaAcao.tarefa.vencimentoEm)}</p>
                     </>
                   ) : (
                     <p className="mt-2 text-sm text-texto-suave">Nenhuma ação pendente agora.</p>
                   )}
                 </div>
-                {portal.formulariosPendentes[0] ? (
+                {proximaAcao?.tipo === 'formulario' ? (
                   <a
-                    href={portal.formulariosPendentes[0].linkFormulario}
+                    href={proximaAcao.formulario.linkFormulario}
                     className={classesBotao({ variante: 'primario' })}
                   >
                     Responder agora
                   </a>
+                ) : proximaAcao?.tipo === 'tarefa' ? (
+                  <Link href="/portal/plano" className={classesBotao({ variante: 'primario' })}>
+                    Ver no plano
+                  </Link>
                 ) : null}
               </Cartao>
 
@@ -706,50 +782,6 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                 </Link>
               </Cartao>
             </section>
-
-            <Cartao id="acoes" className="hidden">
-              <CartaoCabecalho>
-                <CartaoTitulo icone={<ClipboardList className="h-4 w-4" />}>Próximas ações</CartaoTitulo>
-              </CartaoCabecalho>
-              <CartaoConteudo className="grid gap-3 md:grid-cols-2">
-                {portal.formulariosPendentes.slice(0, 2).map((formulario) => (
-                  <article key={formulario.envioId} className="flex min-w-0 flex-col gap-3 rounded-md border border-linha bg-superficie p-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{formulario.titulo}</p>
-                      <p className="mt-1 text-xs text-texto-suave">Expira em {formatarDataHora(formulario.expiraEm)}</p>
-                    </div>
-                    <a
-                      href={formulario.linkFormulario}
-                      className={classesBotao({ variante: 'primario', tamanho: 'sm', className: 'w-full min-w-0 max-w-full sm:w-auto sm:max-w-[260px]' })}
-                    >
-                      <span className="truncate">Responder {formulario.titulo}</span>
-                    </a>
-                  </article>
-                ))}
-
-                {portal.consultasProximas.slice(0, 1).map((consulta) => (
-                  <article key={consulta.id} className="flex min-w-0 flex-col gap-3 rounded-md border border-linha bg-superficie p-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{consulta.titulo}</p>
-                      <p className="mt-1 text-xs text-texto-suave">{formatarDataHora(consulta.inicioEm)}</p>
-                    </div>
-                    {consulta.googleEventHtmlLink ? (
-                      <a className={classesBotao({ tamanho: 'sm', className: 'w-full shrink-0 sm:w-auto' })} href={consulta.googleEventHtmlLink}>
-                        Abrir agenda
-                      </a>
-                    ) : (
-                      <span className="inline-flex h-9 shrink-0 items-center justify-center rounded-md border border-linha bg-white px-3 text-sm font-medium text-texto-suave">
-                        {rotuloStatus(consulta.status)}
-                      </span>
-                    )}
-                  </article>
-                ))}
-
-                {!portal.formulariosPendentes.length && !portal.consultasProximas.length ? (
-                  <p className="text-sm text-texto-suave">Nenhuma ação pendente para hoje.</p>
-                ) : null}
-              </CartaoConteudo>
-            </Cartao>
 
             {portal.evolucaoPeso?.length ? (
               <Cartao className={secao === 'checkins' ? 'scroll-mt-4' : 'hidden'}>
@@ -883,6 +915,19 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                           </div>
                         </div>
                         {tarefa.descricao ? <p className="mt-3 break-words text-sm text-texto-suave">{tarefa.descricao}</p> : null}
+                        {CATEGORIAS_TAREFA_CONCLUIVEIS_PELO_PACIENTE.includes(tarefa.categoria) ? (
+                          <div className="mt-3">
+                            <Botao
+                              type="button"
+                              tamanho="sm"
+                              disabled={concluindoTarefaId === tarefa.id}
+                              onClick={() => setTarefaParaConcluir(tarefa.id)}
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              {concluindoTarefaId === tarefa.id ? 'Concluindo' : 'Marcar como concluída'}
+                            </Botao>
+                          </div>
+                        ) : null}
                       </article>
                     ))
                   ) : (
@@ -1316,7 +1361,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                                 type="button"
                                 variante="perigo"
                                 disabled={desmarcandoConsultaId === consulta.id}
-                                onClick={() => void desmarcarConsulta(consulta.id)}
+                                onClick={() => setConsultaParaDesmarcar(consulta.id)}
                               >
                                 {desmarcandoConsultaId === consulta.id ? 'Desmarcando' : 'Desmarcar'}
                               </Botao>
@@ -1516,6 +1561,32 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
             </Cartao>
           )
         )}
+        <ModalConfirmacao
+          aberto={Boolean(consultaParaDesmarcar)}
+          titulo="Desmarcar consulta"
+          mensagem="Essa consulta será cancelada e o horário ficará disponível novamente. Deseja continuar?"
+          rotuloConfirmar="Desmarcar consulta"
+          rotuloCancelar="Cancelar"
+          confirmando={Boolean(consultaParaDesmarcar && desmarcandoConsultaId === consultaParaDesmarcar)}
+          aoCancelar={() => setConsultaParaDesmarcar(null)}
+          aoConfirmar={() => {
+            if (!consultaParaDesmarcar) return;
+            void desmarcarConsulta(consultaParaDesmarcar);
+          }}
+        />
+        <ModalConfirmacao
+          aberto={Boolean(tarefaParaConcluir)}
+          titulo="Concluir tarefa"
+          mensagem="Depois de concluída, só o profissional pode reabrir esta tarefa pelo prontuário. Deseja continuar?"
+          rotuloConfirmar="Concluir tarefa"
+          rotuloCancelar="Cancelar"
+          confirmando={Boolean(tarefaParaConcluir && concluindoTarefaId === tarefaParaConcluir)}
+          aoCancelar={() => setTarefaParaConcluir(null)}
+          aoConfirmar={() => {
+            if (!tarefaParaConcluir) return;
+            void concluirTarefa(tarefaParaConcluir);
+          }}
+        />
     </PortalShell>
   );
 }

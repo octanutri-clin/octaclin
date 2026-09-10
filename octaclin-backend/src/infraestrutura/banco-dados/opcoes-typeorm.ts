@@ -52,6 +52,7 @@ import { CriarFiltrosSalvosPacientes1720000001035 } from './migracoes/1720000001
 import { CriarSessoesUsuario1720000001036 } from './migracoes/1720000001036-CriarSessoesUsuario';
 import { CriarMfaEReautenticacao1720000001037 } from './migracoes/1720000001037-CriarMfaEReautenticacao';
 import { TornarTrilhaAuditoriaImutavel1720000001038 } from './migracoes/1720000001038-TornarTrilhaAuditoriaImutavel';
+import { AdicionarTarefaConcluidaNotificacoes1720000001039 } from './migracoes/1720000001039-AdicionarTarefaConcluidaNotificacoes';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -329,7 +330,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarFiltrosSalvosPacientes1720000001035,
         CriarSessoesUsuario1720000001036,
         CriarMfaEReautenticacao1720000001037,
-        TornarTrilhaAuditoriaImutavel1720000001038
+        TornarTrilhaAuditoriaImutavel1720000001038,
+        AdicionarTarefaConcluidaNotificacoes1720000001039
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

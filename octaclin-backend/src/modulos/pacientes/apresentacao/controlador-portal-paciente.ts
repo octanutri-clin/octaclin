@@ -201,6 +201,31 @@ export class ControladorPortalPaciente {
     return this.servicoPortal.obterFormularioRespondido(usuario.tenantId, usuario.usuarioId, respostaId);
   }
 
+  @Patch('paciente/tarefas/:tarefaId/concluir')
+  async concluirTarefa(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('tarefaId', ParseUUIDPipe) tarefaId: string
+  ) {
+    const tarefa = await this.servicoPortal.concluirTarefa(usuario.tenantId, usuario.usuarioId, tarefaId);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'portal.paciente.tarefa.concluir',
+      recursoTipo: 'acompanhamento_tarefa',
+      recursoId: tarefa.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      // Titulo/descricao da tarefa sao conteudo de prontuario escrito pelo
+      // profissional; a trilha guarda so a categoria (enum fixo, nao texto
+      // livre) e que houve conclusao, nao o que foi concluido.
+      metadados: {
+        categoria: tarefa.categoria
+      }
+    });
+    return tarefa;
+  }
+
   @Post('paciente/consultas/:consultaId/desmarcar')
   async desmarcarConsulta(
     @UsuarioAtual() usuario: UsuarioAutenticado,

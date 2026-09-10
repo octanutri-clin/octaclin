@@ -56,6 +56,15 @@ describe('destinatariosDaNotificacao', () => {
     expect(destinatarios).not.toContain('prof-bruno');
   });
 
+  it('conclusao de tarefa pelo paciente nao vai a colaborador operacional', () => {
+    const destinatarios = destinatariosDaNotificacao(usuarios, 'prof-ana', 'tarefa_concluida');
+
+    expect(destinatarios).toContain('admin');
+    expect(destinatarios).toContain('prof-ana');
+    expect(destinatarios).not.toContain('colab');
+    expect(destinatarios).not.toContain('paciente');
+  });
+
   it('nao repete o destinatario quando o responsavel tambem e SuperAdmin', () => {
     const destinatarios = destinatariosDaNotificacao(
       [{ id: 'admin-e-prof', role: 'SuperAdmin' }],
