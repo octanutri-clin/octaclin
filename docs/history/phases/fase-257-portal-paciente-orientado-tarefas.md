@@ -90,3 +90,10 @@ Concluido em 2026-09-10.
     area-onboarding.tsx"); este incremento reutiliza o componente sem
     alterá-lo, sem introduzir padrao ARIA novo.
   - `pnpm security:secrets` e `git diff --check` — PASS
+- CI (Demo Local Smoke) do PR `#227` pegou uma regressao real que a suite
+  local nao cobria: `tests/visual/jornadas-criticas.spec.mjs` ja tinha uma
+  jornada critica que desmarcava a consulta com um unico clique, sem passar
+  pelo novo dialogo. Corrigido no mesmo PR clicando em "Desmarcar consulta"
+  no `ModalConfirmacao` antes de aguardar o efeito; revalidado localmente
+  (30/30 Playwright desktop+mobile em `jornadas-criticas.spec.mjs`,
+  `portal-paciente.spec.mjs` e `pwa-portal.spec.mjs`) e reenviado.

@@ -1024,6 +1024,7 @@ test.describe('jornadas criticas de producao', () => {
     await expect(proximasConsultas.getByText('Consulta inicial')).toBeVisible();
 
     await page.getByRole('button', { name: 'Desmarcar' }).first().click();
+    await page.getByRole('dialog', { name: 'Desmarcar consulta' }).getByRole('button', { name: 'Desmarcar consulta' }).click();
 
     await expect.poll(() => paciente.desmarcou()).toBe(true);
     await expect(page.getByText('Consulta desmarcada.')).toBeVisible();
