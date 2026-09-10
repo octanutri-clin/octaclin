@@ -186,13 +186,13 @@ test.describe('formulario publico - indisponibilidade e recuperacao', () => {
       await route.fulfill({
         status: 410,
         contentType: 'application/json',
-        body: JSON.stringify({ statusCode: 410, message: 'Formulario expirado.' })
+        body: JSON.stringify({ statusCode: 410, message: 'Formulário expirado.' })
       });
     });
 
     await page.goto('/formularios/token-expirado');
 
-    await expect(page.getByText('Formulario expirado.')).toBeVisible();
+    await expect(page.getByText('Formulário expirado.')).toBeVisible();
     await expect(page.getByText('Não foi possível carregar o formulário agora.')).toHaveCount(0);
   });
 
@@ -277,7 +277,7 @@ test.describe('formulario publico - indisponibilidade e recuperacao', () => {
             tipo: 'sim_nao',
             enunciado: 'Conseguiu seguir o plano?',
             obrigatoria: true,
-            configuracao: { rotuloSim: 'Sim', rotuloNao: 'Nao' },
+            configuracao: { rotuloSim: 'Sim', rotuloNao: 'Não' },
             opcoes: [],
             ordem: 1
           }]
@@ -300,7 +300,7 @@ test.describe('formulario publico - indisponibilidade e recuperacao', () => {
 
     // 500: nao pode repassar o corpo cru do backend.
     respostaRascunho = { status: 500, mensagem: 'Internal server error' };
-    await page.getByRole('button', { name: 'Nao' }).click();
+    await page.getByRole('button', { name: 'Não' }).click();
     await expect(page.getByText('Não foi possível salvar o rascunho agora.')).toBeVisible();
     await expect(page.getByText('Internal server error')).toHaveCount(0);
   });
