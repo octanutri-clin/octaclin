@@ -2453,6 +2453,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     retorna a mensagem ja criada em vez de duplicar o envio. Escopo
     backend apenas nesta rodada (ver documento da fase para o motivo de
     nao ter sido ligado ainda ao console manual nem as automacoes).
+  - Incremento 2 concluido: opt-out passa a ser respeitado tambem no
+    disparo manual (antes so as automacoes checavam). Decisao de produto:
+    avisar e permitir override — profissional ve confirmacao explicita
+    (`ModalConfirmacao`) e pode enviar mesmo assim; sem override,
+    disparo para canal que o paciente desativou e recusado (409).
+    Automacoes de sistema nao mudam. Sem migration.
 
 - [ ] Fase 259 - Acesso, convite e ativação sem suporte manual. [ESSENCIAL - PRE-PILOTO]
   - Revisar login, primeiro acesso, recuperação, convite, troca de senha,

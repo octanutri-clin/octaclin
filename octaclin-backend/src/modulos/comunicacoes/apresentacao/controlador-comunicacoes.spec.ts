@@ -49,7 +49,29 @@ describe('ControladorComunicacoes', () => {
     );
     expect(servico.publicarEventoNotificacao).toHaveBeenCalledWith('tenant-1', 'mensagem-1');
     expect(auditoria.registrar).toHaveBeenCalledWith(
-      expect.objectContaining({ metadados: expect.objectContaining({ status: 'falhou' }) })
+      expect.objectContaining({ metadados: expect.objectContaining({ status: 'falhou', ignorouOptOut: false }) })
+    );
+  });
+
+  it('deve registrar na auditoria quando o disparo confirmou explicitamente o override de opt-out', async () => {
+    const mensagemCriada = { id: 'mensagem-1', status: 'pendente' };
+    const servico = {
+      dispararMensagem: jest.fn(async () => mensagemCriada),
+      publicarEventoNotificacao: jest.fn(async () => undefined),
+      obterMensagem: jest.fn(async () => mensagemCriada)
+    };
+    const auditoria = { registrar: jest.fn(async () => undefined) };
+    const controlador = new ControladorComunicacoes(servico as never, auditoria as never);
+    const usuario = { tenantId: 'tenant-1', usuarioId: 'usuario-1' } as never;
+
+    await controlador.dispararMensagem(
+      usuario,
+      { ip: '127.0.0.1', headers: {} } as never,
+      { pacienteId: 'paciente-1', canalId: 'canal-1', templateId: 'template-1', payload: {}, ignorarOptOut: true }
+    );
+
+    expect(auditoria.registrar).toHaveBeenCalledWith(
+      expect.objectContaining({ metadados: expect.objectContaining({ ignorouOptOut: true }) })
     );
   });
 });

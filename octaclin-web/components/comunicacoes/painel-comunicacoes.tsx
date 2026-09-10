@@ -7,10 +7,12 @@ import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/compone
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { Abas } from '@/components/ui/abas';
+import { ModalConfirmacao } from '@/components/ui/modal';
 import { obterSessao } from '@/lib/auth-api';
 import { INTERVALO_ATUALIZACAO_PAINEL_MS, useAtualizacaoPeriodica } from '@/lib/hooks';
 import {
   CanalNotificacaoApi,
+  ErroApiComunicacoes,
   MensagemNotificacaoApi,
   TemplateMensagemApi,
   TipoCanalNotificacao,
@@ -362,6 +364,7 @@ export function PainelComunicacoes() {
   const [formularioCanal, setFormularioCanal] = useState<FormularioCanal>(canalInicial);
   const [formularioTemplate, setFormularioTemplate] = useState<FormularioTemplate>(templateInicial);
   const [formularioMensagem, setFormularioMensagem] = useState<FormularioMensagem>(mensagemInicial);
+  const [confirmacaoOptOut, setConfirmacaoOptOut] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -485,6 +488,10 @@ export function PainelComunicacoes() {
 
   async function enviarMensagem(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    await dispararMensagemFormulario(false);
+  }
+
+  async function dispararMensagemFormulario(ignorarOptOut: boolean) {
     setSalvando(true);
     setErro(null);
     setSucesso(null);
@@ -501,8 +508,10 @@ export function PainelComunicacoes() {
             : {}),
           nome: paciente?.nome ?? 'Paciente',
           observacao: formularioMensagem.observacao
-        }
+        },
+        ignorarOptOut
       });
+      setConfirmacaoOptOut(null);
       setMensagens((atuais) => [mensagem, ...atuais].slice(0, 200));
       setSucesso(
         mensagem.status === 'falhou'
@@ -510,7 +519,11 @@ export function PainelComunicacoes() {
           : `Mensagem ${rotuloStatusMensagem(mensagem.status).toLocaleLowerCase('pt-BR')}.`
       );
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao disparar mensagem.');
+      if (erroAtual instanceof ErroApiComunicacoes && erroAtual.status === 409) {
+        setConfirmacaoOptOut(erroAtual.message);
+      } else {
+        setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao disparar mensagem.');
+      }
     } finally {
       setSalvando(false);
     }
@@ -1238,6 +1251,16 @@ export function PainelComunicacoes() {
       </Cartao>
       </div>
       ) : null}
+      <ModalConfirmacao
+        aberto={Boolean(confirmacaoOptOut)}
+        titulo="Paciente optou por não receber neste canal"
+        mensagem={confirmacaoOptOut ?? ''}
+        rotuloConfirmar="Enviar mesmo assim"
+        rotuloCancelar="Cancelar"
+        confirmando={salvando}
+        aoCancelar={() => setConfirmacaoOptOut(null)}
+        aoConfirmar={() => void dispararMensagemFormulario(true)}
+      />
     </section>
   );
 }

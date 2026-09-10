@@ -130,3 +130,65 @@ Concluido em 2026-09-10 (escopo backend).
     suite de integracao com banco real SKIPPED, mesma limitacao de
     ambiente das fases anteriores)
   - `pnpm security:secrets` e `git diff --check` — PASS
+
+## Incremento 2 - opt-out no disparo manual, com confirmacao explicita
+
+Concluido em 2026-09-10.
+
+### Decisao de produto (confirmada com o dono do produto)
+
+Quando um profissional tenta enviar mensagem manual para um paciente que
+optou por nao receber naquele canal: **avisar e permitir override** — o
+profissional ve um aviso explicito e pode confirmar o envio mesmo assim
+(ex.: retorno pontual a uma duvida do paciente). Nao e bloqueio
+incondicional (automacoes continuam bloqueando silenciosamente, sem
+override) nem ausencia de checagem (comportamento anterior).
+
+### Implementacao
+
+- **Backend**: `ServicoComunicacoes.criarMensagemNoEscopo` passa a checar
+  `canalAutorizado(preferencias, canal.tipo)` (funcao ja existente em
+  `dominio/preferencias-comunicacao.ts`, ate entao so usada pelas
+  automacoes) quando `usuario` esta presente (disparo manual,
+  `dispararMensagem`) e o canal e `email`/`whatsapp`. Se o paciente optou
+  por nao receber, lanca `ConflictException` (409) com mensagem segura,
+  a menos que `DispararMensagemDto.ignorarOptOut` seja `true`. Chamadas
+  de sistema (`dispararMensagemSistema`, usadas por
+  `servico-lembretes-agenda`/`servico-recall-inatividade`) tem
+  `usuario` ausente e continuam com sua propria logica de "ignorado" —
+  a checagem nova nao duplica nem conflita com ela. Auditoria
+  (`controlador-comunicacoes.ts`) registra `ignorouOptOut: boolean`.
+- **Frontend**: `ErroApiComunicacoes` passou a ser exportada e a extrair
+  a mensagem do corpo JSON do erro (mesmo padrao ja usado em
+  `portal-api.ts`, em vez de mostrar o texto cru da resposta). Em
+  `painel-comunicacoes.tsx`, um 409 no disparo abre `ModalConfirmacao`
+  ("Paciente optou por não receber neste canal") com a mensagem do
+  backend; confirmar reenvia com `ignorarOptOut: true`; cancelar so
+  fecha o dialogo, sem chamar a API de novo.
+- Nova rota nenhuma; campo novo em DTO existente; nenhuma migration
+  (a tabela de preferencias/consentimento ja existe desde a Fase 111).
+
+### Validacoes
+
+- TDD: backend — 4 testes novos em `servico-comunicacoes.spec.ts`
+  (recusa quando opt-out; permite com `ignorarOptOut`; permite quando o
+  canal foi autorizado; disparo de sistema ignora a checagem) confirmados
+  RED (neutralizando so o `throw` interno, preservando o contexto de
+  narrowing do TypeScript — a primeira tentativa de RED com `if (false)`
+  direto quebrou o narrowing do compilador e gerou erros de tipo
+  espurios, corrigido usando `&& false` dentro da condicao interna em vez
+  de substituir o `if` externo). Controller — 1 teste novo garantindo
+  `ignorouOptOut: true` na auditoria quando confirmado.
+  Frontend — 3 testes Playwright novos
+  (`tests/visual/comunicacoes-disparo-manual.spec.mjs`): exige
+  confirmacao e permite confirmar; cancelar nao envia; paciente que
+  autorizou o canal nunca aciona o dialogo. Confirmado RED (desabilitando
+  o tratamento do 409 no componente) antes de restaurar GREEN.
+- `pnpm --dir octaclin-backend typecheck` e `build` — PASS
+- `pnpm --dir octaclin-web typecheck`, `lint` (0 erros) e `build` — PASS
+- 297 testes backend (`comunicacoes`+`automacoes`+migrations) — PASS
+  (1 suite de integracao SKIPPED, mesma limitacao de ambiente)
+- 6/6 Playwright novos (desktop+mobile) + regressao de
+  `console-regression.spec.mjs`/`fase-196-comunicacoes-equipe.spec.mjs`
+  sem quebra
+- Gate de linguagem, `pnpm security:secrets`, `git diff --check` — PASS

@@ -54,6 +54,7 @@ export interface DispararMensagemEntrada {
   canalId: string;
   templateId: string;
   payload: Record<string, unknown>;
+  ignorarOptOut?: boolean;
 }
 
 export interface AssociarContatoWhatsappEntrada {
@@ -83,13 +84,25 @@ export interface BootstrapComunicacoes {
   pacientes: RespostaPaginada<PacienteResumo>;
 }
 
-class ErroApiComunicacoes extends Error {
+export class ErroApiComunicacoes extends Error {
   constructor(
     public readonly status: number,
     mensagem: string
   ) {
     super(mensagem);
     this.name = 'ErroApiComunicacoes';
+  }
+}
+
+async function extrairMensagemErro(resposta: Response): Promise<string> {
+  const detalhe = await resposta.text();
+  if (!detalhe) return `Falha HTTP ${resposta.status}`;
+
+  try {
+    const corpo = JSON.parse(detalhe) as { mensagem?: string; message?: string };
+    return corpo.mensagem ?? corpo.message ?? detalhe;
+  } catch {
+    return detalhe;
   }
 }
 
@@ -103,8 +116,7 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
   });
 
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiComunicacoes(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    throw new ErroApiComunicacoes(resposta.status, await extrairMensagemErro(resposta));
   }
 
   return resposta.json() as Promise<T>;

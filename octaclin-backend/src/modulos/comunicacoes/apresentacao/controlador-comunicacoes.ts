@@ -93,7 +93,8 @@ export class ControladorComunicacoes {
       pacienteId: dados.pacienteId,
       canalId: dados.canalId,
       templateId: dados.templateId,
-      status: mensagemAtualizada.status
+      status: mensagemAtualizada.status,
+      ignorouOptOut: Boolean(dados.ignorarOptOut)
     });
     return mensagemAtualizada;
   }

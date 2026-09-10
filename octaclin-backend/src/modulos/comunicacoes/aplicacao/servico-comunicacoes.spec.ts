@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import { ServicoComunicacoes } from './servico-comunicacoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
@@ -241,6 +241,94 @@ describe('ServicoComunicacoes', () => {
         tenantId: 'tenant-1',
         profissionalResponsavelId: 'profissional-1'
       }
+    });
+  });
+
+  describe('opt-out no disparo manual', () => {
+    function pacienteComPreferencia(preferencias: Record<string, unknown>) {
+      return {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        contatoCriptografado: Buffer.from(`cripto:${JSON.stringify({ preferencias })}`)
+      };
+    }
+
+    it('deve recusar disparo manual quando o paciente optou por nao receber no canal', async () => {
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: true },
+        paciente: pacienteComPreferencia({ whatsapp: false })
+      });
+
+      await expect(
+        servico.dispararMensagem('tenant-1', {
+          pacienteId: 'paciente-1',
+          canalId: 'canal-1',
+          templateId: 'template-1',
+          payload: { destino: '5511999999999' }
+        }, usuarioColaborador)
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+      expect(repositorios.outbox.save).not.toHaveBeenCalled();
+    });
+
+    it('deve permitir o disparo quando o chamador confirma explicitamente com ignorarOptOut', async () => {
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: true },
+        paciente: pacienteComPreferencia({ whatsapp: false })
+      });
+
+      await expect(
+        servico.dispararMensagem('tenant-1', {
+          pacienteId: 'paciente-1',
+          canalId: 'canal-1',
+          templateId: 'template-1',
+          payload: { destino: '5511999999999' },
+          ignorarOptOut: true
+        }, usuarioColaborador)
+      ).resolves.toEqual(expect.objectContaining({ status: 'pendente' }));
+
+      expect(repositorios.mensagem.save).toHaveBeenCalled();
+    });
+
+    it('deve permitir o disparo quando o paciente autorizou o canal', async () => {
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: true },
+        paciente: pacienteComPreferencia({ whatsapp: true })
+      });
+
+      await expect(
+        servico.dispararMensagem('tenant-1', {
+          pacienteId: 'paciente-1',
+          canalId: 'canal-1',
+          templateId: 'template-1',
+          payload: { destino: '5511999999999' }
+        }, usuarioColaborador)
+      ).resolves.toEqual(expect.objectContaining({ status: 'pendente' }));
+
+      expect(repositorios.mensagem.save).toHaveBeenCalled();
+    });
+
+    it('nao deve checar opt-out em disparo de sistema (automacoes ja tem sua propria checagem)', async () => {
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: true },
+        paciente: pacienteComPreferencia({ whatsapp: false })
+      });
+
+      await expect(
+        servico.dispararMensagemSistema('tenant-1', {
+          pacienteId: 'paciente-1',
+          canalId: 'canal-1',
+          templateId: 'template-1',
+          payload: { destino: '5511999999999' }
+        })
+      ).resolves.toEqual(expect.objectContaining({ status: 'pendente' }));
+
+      expect(repositorios.mensagem.save).toHaveBeenCalled();
     });
   });
 

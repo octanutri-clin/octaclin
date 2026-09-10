@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { EntityManager, In, QueryFailedError } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -16,6 +16,7 @@ import {
   RegistrarNotaWhatsappDto
 } from './dtos';
 import { redisConfigurado } from './configuracao-redis';
+import { canalAutorizado, interpretarPreferenciasComunicacao, preferenciasComunicacaoPadrao } from '../dominio/preferencias-comunicacao';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { aplicarConteudoMensagem, comPayloadCompleto } from './cripto-conteudo-mensagem';
@@ -292,6 +293,22 @@ export class ServicoComunicacoes {
         dados.pacienteId,
         usuario
       );
+
+      // Opt-out so e checado no disparo manual (`usuario` presente): chamadas de
+      // sistema (`dispararMensagemSistema`, lembretes/recall) ja consultam a
+      // preferencia do paciente antes de chegar aqui, com sua propria logica de
+      // "ignorado" -- checar de novo aqui duplicaria a regra com semantica
+      // diferente (uma decide nao enviar, a outra bloquearia com erro).
+      if (usuario && !dados.ignorarOptOut && (canal.tipo === 'email' || canal.tipo === 'whatsapp')) {
+        const preferencias = paciente.contatoCriptografado
+          ? interpretarPreferenciasComunicacao(this.criptografia.descriptografar(paciente.contatoCriptografado))
+          : preferenciasComunicacaoPadrao();
+        if (!canalAutorizado(preferencias, canal.tipo)) {
+          throw new ConflictException(
+            'O paciente optou por nao receber mensagens neste canal. Confirme para enviar mesmo assim.'
+          );
+        }
+      }
 
       const novaMensagem = gerenciador.getRepository(MensagemNotificacaoOrm).create({
         tenantId,

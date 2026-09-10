@@ -59,6 +59,15 @@ export class DispararMensagemDto {
   @IsString()
   @MaxLength(200)
   chaveIdempotencia?: string;
+
+  /**
+   * Opcional, default false. Disparo manual para paciente que optou por nao
+   * receber naquele canal e recusado (409) a menos que o chamador confirme
+   * explicitamente com esta flag apos ver o aviso.
+   */
+  @IsOptional()
+  @IsBoolean()
+  ignorarOptOut?: boolean;
 }
 
 export class AssociarContatoWhatsappDto {
