@@ -23,9 +23,11 @@ import {
   listarBibliotecaPerguntas,
   listarPerguntas,
   listarQuestionarios,
+  listarVersoesQuestionario,
   obterLeituraClinicaQuestionario,
   obterMatrizLongitudinalRespostas,
-  reordenarPerguntas
+  reordenarPerguntas,
+  VersaoQuestionarioApi
 } from '@/lib/questionarios-api';
 import { PacienteResumo, ProfissionalResumo } from '@/lib/cadastros-api';
 import { PerguntaEditor } from './tipos';
@@ -146,6 +148,10 @@ export function useWorkspaceQuestionarios() {
   const [alteracoesPerguntaPendentes, setAlteracoesPerguntaPendentes] = useState(false);
   const [respostasRecebidas, setRespostasRecebidas] = useState<RespostaQuestionarioRecebidaApi[]>([]);
   const [leituraClinica, setLeituraClinica] = useState<LeituraClinicaQuestionarioApi | null>(null);
+  const [versoes, setVersoes] = useState<VersaoQuestionarioApi[]>([]);
+  const [carregandoVersoes, setCarregandoVersoes] = useState(false);
+  const [erroVersoes, setErroVersoes] = useState<string | null>(null);
+  const [historicoVersoesAberto, setHistoricoVersoesAberto] = useState(false);
   const [carregandoRespostas, setCarregandoRespostas] = useState(false);
   const [pacienteFiltroRespostas, setPacienteFiltroRespostas] = useState('');
   const [buscaRespostas, setBuscaRespostas] = useState('');
@@ -228,6 +234,30 @@ export function useWorkspaceQuestionarios() {
     }
   }
 
+  async function carregarVersoes(questionarioId = questionarioAtual?.id) {
+    if (!questionarioId) {
+      setVersoes([]);
+      return;
+    }
+
+    setCarregandoVersoes(true);
+    setErroVersoes(null);
+    try {
+      const lista = await listarVersoesQuestionario(questionarioId);
+      setVersoes(lista);
+    } catch (erroAtual) {
+      setErroVersoes(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar histórico de versões.');
+    } finally {
+      setCarregandoVersoes(false);
+    }
+  }
+
+  function alternarHistoricoVersoes() {
+    const proximoAberto = !historicoVersoesAberto;
+    setHistoricoVersoesAberto(proximoAberto);
+    if (proximoAberto) void carregarVersoes();
+  }
+
   async function carregarMatrizLongitudinal() {
     setCarregandoMatriz(true);
     setErro(null);
@@ -262,6 +292,8 @@ export function useWorkspaceQuestionarios() {
       setLinkFormulario('');
       setRespostasRecebidas([]);
       setLeituraClinica(null);
+      setVersoes([]);
+      setHistoricoVersoesAberto(false);
       setAlteracoesQuestionarioPendentes(false);
       setAlteracoesPerguntaPendentes(false);
       return;
@@ -271,6 +303,8 @@ export function useWorkspaceQuestionarios() {
     setDescricao(questionario.descricao ?? '');
     setStatus(questionario.status);
     setLinkFormulario('');
+    setVersoes([]);
+    setHistoricoVersoesAberto(false);
     setAlteracoesQuestionarioPendentes(false);
     setAlteracoesPerguntaPendentes(false);
     await Promise.all([carregarPerguntas(questionario.id), carregarRespostas(questionario.id)]);
@@ -764,6 +798,11 @@ export function useWorkspaceQuestionarios() {
     respostasRecebidas,
     leituraClinica,
     carregandoRespostas,
+    versoes,
+    carregandoVersoes,
+    erroVersoes,
+    historicoVersoesAberto,
+    alternarHistoricoVersoes,
     pacienteFiltroRespostas,
     setPacienteFiltroRespostas,
     buscaRespostas,

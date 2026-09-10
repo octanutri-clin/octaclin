@@ -77,6 +77,12 @@ export interface RespostaQuestionarioRecebida {
   }[];
 }
 
+export interface VersaoQuestionario extends SnapshotEstruturaQuestionario {
+  atual: boolean;
+  capturadoEm?: Date;
+  totalEnvios: number;
+}
+
 export interface FiltrosLeituraClinicaQuestionario {
   pacienteId?: string;
 }
@@ -722,6 +728,54 @@ export class ServicoQuestionarios {
       envio.revisadoEm = new Date();
       envio.revisadoPorUsuarioId = usuario.usuarioId;
       return repositorioEnvios.save(envio);
+    });
+  }
+
+  async listarVersoesQuestionario(
+    tenantId: string,
+    questionarioId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<VersaoQuestionario[]> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+
+      const envios = await gerenciador.getRepository(EnvioQuestionarioOrm).find({ where: { tenantId, questionarioId } });
+      const enviosOrdenados = [...envios].sort(
+        (a, b) => new Date(a.enviadoEm ?? 0).getTime() - new Date(b.enviadoEm ?? 0).getTime()
+      );
+
+      const porVersao = new Map<number, { snapshot: SnapshotEstruturaQuestionario; capturadoEm?: Date; totalEnvios: number }>();
+      for (const envio of enviosOrdenados) {
+        if (!envio.snapshotEstrutura) continue;
+        const versao = envio.snapshotEstrutura.versaoQuestionario;
+        const existente = porVersao.get(versao);
+        if (existente) {
+          existente.totalEnvios += 1;
+        } else {
+          porVersao.set(versao, { snapshot: envio.snapshotEstrutura, capturadoEm: envio.enviadoEm, totalEnvios: 1 });
+        }
+      }
+
+      const versaoAtualDados = porVersao.get(questionario.versao);
+      const snapshotAtual = await this.capturarSnapshotEstruturaQuestionario(gerenciador, tenantId, questionario);
+      porVersao.delete(questionario.versao);
+
+      const versoes: VersaoQuestionario[] = [
+        {
+          ...snapshotAtual,
+          atual: true,
+          capturadoEm: versaoAtualDados?.capturadoEm,
+          totalEnvios: versaoAtualDados?.totalEnvios ?? 0
+        },
+        ...[...porVersao.values()].map(({ snapshot, capturadoEm, totalEnvios }) => ({
+          ...snapshot,
+          atual: false,
+          capturadoEm,
+          totalEnvios
+        }))
+      ];
+
+      return versoes.sort((a, b) => b.versaoQuestionario - a.versaoQuestionario);
     });
   }
 

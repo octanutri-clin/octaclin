@@ -105,4 +105,44 @@ test.describe('Editor de questionarios', () => {
     await expect(page.getByText('Preview do paciente')).toBeVisible();
     await expect(page.getByRole('button', { name: /Preview paciente/ })).toHaveCount(0);
   });
+
+  test('abre o historico de versoes e expande uma versao anterior', async ({ page }) => {
+    await criarSessao(page);
+    await mockarBff(page);
+    await page.route('**/api/questionarios/q-1/versoes', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          versaoQuestionario: 2,
+          titulo: 'Check-in semanal',
+          descricao: 'Adesão',
+          perguntas: [{ id: 'p-1', categoriaId: 'cat-1', tipo: 'likert', enunciado: 'Como foi sua semana?', peso: '1', obrigatoria: true, configuracao: {}, ordem: 1, opcoes: [] }],
+          atual: true,
+          totalEnvios: 0
+        },
+        {
+          versaoQuestionario: 1,
+          titulo: 'Check-in semanal (original)',
+          perguntas: [{ id: 'p-0', categoriaId: 'cat-1', tipo: 'likert', enunciado: 'Pergunta original', peso: '1', obrigatoria: true, configuracao: {}, ordem: 1, opcoes: [] }],
+          atual: false,
+          capturadoEm: '2026-07-05T10:00:00.000Z',
+          totalEnvios: 3
+        }
+      ])
+    }));
+    await page.goto('/questionarios');
+
+    await page.getByRole('tab', { name: 'Formulários' }).click();
+    await expect(page.getByText('Pergunta original')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Histórico de versões' }).click();
+    await expect(page.getByRole('button', { name: /Versão 2/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Versão 1/ })).toBeVisible();
+    await expect(page.getByText('atual', { exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: /Versão 1/ }).click();
+    await expect(page.getByText('Pergunta original')).toBeVisible();
+    await expect(page.getByText('3 envio(s)')).toBeVisible();
+  });
 });
