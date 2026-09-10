@@ -74,8 +74,8 @@ test.describe('Editor de questionarios', () => {
     await page.getByRole('tab', { name: 'Distribuicoes' }).click();
     await expect(page.getByText('Cron', { exact: true })).toHaveCount(0);
 
-    await page.getByLabel('Paciente do check-in recorrente').selectOption('paciente-1');
-    await page.getByRole('button', { name: 'Criar check-in recorrente' }).click();
+    await page.getByLabel('Paciente do retorno de avaliação recorrente').selectOption('paciente-1');
+    await page.getByRole('button', { name: 'Criar retorno de avaliação recorrente' }).click();
 
     await expect.poll(() => corpoAgendamento).toEqual(
       expect.objectContaining({ regraCron: '0 8 * * 1', pacienteId: 'paciente-1' })

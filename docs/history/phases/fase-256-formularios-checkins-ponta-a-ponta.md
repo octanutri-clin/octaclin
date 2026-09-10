@@ -128,10 +128,30 @@ gamificacao; origem de analise de IA).
 
 Apenas os Grupos A e B foram renomeados (texto visivel apenas: headings,
 botoes, mensagens, rotulos de menu, aria-labels legiveis, descricao do
-manifest PWA e da paleta de comandos). Nenhum ID, enum, nome de tabela/coluna,
-tipo TypeScript, rota ou contrato de API foi alterado. O Grupo C foi
-deliberadamente preservado: nao faz parte da decisao de nomenclatura tomada e
-misturar essa mudanca teria ultrapassado o escopo aprovado.
+manifest PWA e da paleta de comandos, alem de dois literais de string do
+backend que alimentam esse mesmo texto: `fonte`/`titulo` de indicadores e
+eventos da timeline em `servico-pacientes.ts`/`dtos.ts`, ja que sao a origem
+real do rotulo "Check-in rapido" mostrado no prontuario). Nenhum ID, enum de
+tipo de evento, nome de tabela/coluna, rota ou contrato de API foi alterado —
+so o texto humano que trafega nesses campos. O Grupo C foi deliberadamente
+preservado (categoria de tarefa "Check-in" prescrita pelo profissional,
+gatilhos de automacao, templates de comunicacao, gamificacao, origem de
+analise de IA): nao faz parte da decisao de nomenclatura tomada e misturar
+essa mudanca teria ultrapassado o escopo aprovado. Titulos arbitrarios de
+questionario usados como dado sintetico em fixtures de teste (ex.:
+`titulo: 'Check-in semanal'`) tambem foram preservados: sao conteudo que um
+profissional poderia digitar livremente, nao copy do produto.
+
+Validacao: `pnpm test:linguagem` aprovado; typecheck, lint e build de backend
+e web aprovados; `pnpm test:authz` aprovado; suites backend afetadas
+(`servico-pacientes.spec.ts` 36/36, `servico-questionarios.spec.ts` e
+`controlador-questionarios.spec.ts`) sem regressao; Playwright das superficies
+tocadas (portal do paciente, editor de questionarios, PWA offline, prontuario/
+console-regression, subconjuntos relevantes de acessibilidade) sem regressao,
+desktop e mobile. `tests/visual/producao-readonly.spec.mjs` foi atualizado
+para o novo rotulo do menu, mas nao pode ser executado nesta sessao — exige
+autenticacao real de producao, fora do alcance deste ambiente; a mudanca e o
+mesmo padrao de texto ja validado nos demais testes.
 
 ## Incremento 1 - Recuperacao no carregamento do formulario publico
 

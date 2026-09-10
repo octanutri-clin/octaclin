@@ -37,17 +37,17 @@ export function AreaDistribuicao({ workspace }: { workspace: WorkspaceQuestionar
       <div className="grid gap-4 p-4 lg:grid-cols-2">
         <div className="grid gap-3 rounded-md border border-linha bg-superficie p-3">
           <div>
-            <p className="text-sm font-semibold text-tinta">Check-in recorrente</p>
+            <p className="text-sm font-semibold text-tinta">Retorno de avaliação recorrente</p>
             <p className="text-xs text-texto-suave">Agenda um envio automático para um paciente especifico.</p>
           </div>
-          <Selecao value={pacienteAgendamentoId} onChange={(event) => setPacienteAgendamentoId(event.target.value)} aria-label="Paciente do check-in recorrente">
+          <Selecao value={pacienteAgendamentoId} onChange={(event) => setPacienteAgendamentoId(event.target.value)} aria-label="Paciente do retorno de avaliação recorrente">
             <option value="">Selecione o paciente</option>
             {pacientes.map((paciente) => <option key={paciente.id} value={paciente.id}>{paciente.nome}</option>)}
           </Selecao>
           <SeletorRecorrencia onAlterar={setRecorrencia} />
           <Botao ref={botaoAgendarRef} type="button" onClick={criarCheckinRecorrente} disabled={salvando || !questionarioAtual}>
             <CalendarClock className="h-4 w-4" />
-            Criar check-in recorrente
+            Criar retorno de avaliação recorrente
           </Botao>
         </div>
         <div className="grid gap-3 rounded-md border border-linha bg-superficie p-3">

@@ -82,11 +82,11 @@ export const MODULOS_CONSOLE: readonly ModuloConsole[] = [
     id: 'questionarios',
     href: '/questionarios',
     rotulo: 'Formulários',
-    descricao: 'Questionários, check-ins e respostas',
+    descricao: 'Questionários, retornos de avaliação e respostas',
     grupo: 'Clínica',
     permissao: 'questionarios.ler',
     atalho: 'G F',
-    termos: ['formulário', 'questionário', 'check-in'],
+    termos: ['formulário', 'questionário', 'retorno de avaliação', 'check-in'],
     icone: 'formularios'
   },
   {

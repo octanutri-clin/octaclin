@@ -10,7 +10,7 @@ const rotasProtegidas = [
   { caminho: '/operacoes', titulo: 'Confiabilidade OctaClin', subtitulo: 'Operações' },
   { caminho: '/pacientes', titulo: 'Pacientes', subtitulo: 'Acompanhamento clínico' },
   { caminho: '/profissionais', titulo: 'Profissionais', subtitulo: 'Equipe clínica' },
-  { caminho: '/questionarios', titulo: 'Editor de Questionários', subtitulo: 'Protocolos e check-ins' },
+  { caminho: '/questionarios', titulo: 'Editor de Questionários', subtitulo: 'Protocolos e retornos de avaliação' },
   { caminho: '/comunicacoes', titulo: 'Comunicações', subtitulo: 'Conversas e relacionamento com pacientes' },
   { caminho: '/automacoes', titulo: 'Automações', subtitulo: 'Quando acontecer, fazer com segurança' },
   { caminho: '/ia', titulo: 'Sugestões assistidas', subtitulo: 'Revisão humana obrigatória' },

@@ -1068,7 +1068,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 ['Consultas', dados.resumo.consultas],
                 ['Formularios pendentes', dados.resumo.formulariosPendentes],
                 ['Respostas', dados.resumo.respostas],
-                ['Check-ins rapidos', dados.resumo.checkinsRapidos ?? 0],
+                ['Registros de hábitos', dados.resumo.checkinsRapidos ?? 0],
                 ['Evolucoes', dados.resumo.evolucoes ?? 0],
                 ['Tarefas pendentes', dados.resumo.tarefasPendentes ?? 0]
               ].map(([rotulo, valor]) => (
@@ -1533,7 +1533,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </section>
       ) : null}
 
-      {abaAtiva === 'formularios' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Formulários e check-ins</h2><p className="mt-1 text-sm text-texto-suave">Envios, respostas e check-ins vinculados ao paciente.</p></div><LinhaDoTempo eventos={formularios} profissionais={profissionais} /></section> : null}
+      {abaAtiva === 'formularios' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Formulários e registros de hábitos</h2><p className="mt-1 text-sm text-texto-suave">Envios, respostas e registros de hábitos vinculados ao paciente.</p></div><LinhaDoTempo eventos={formularios} profissionais={profissionais} /></section> : null}
 
       {abaAtiva === 'mensagens' ? <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Mensagens do paciente</h2><p className="mt-1 text-sm text-texto-suave">Histórico de comunicações registradas.</p></div><LinhaDoTempo eventos={mensagens} profissionais={profissionais} /></section> : null}
 
@@ -1541,7 +1541,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         <article className="grid gap-3">
           <div className="rounded-md border border-linha bg-white p-4">
             <h2 className="text-base font-semibold text-tinta">Linha do tempo clínica</h2>
-            <p className="mt-1 text-sm text-texto-suave">Consultas, formulários, check-ins, respostas e mensagens em ordem cronologica.</p>
+            <p className="mt-1 text-sm text-texto-suave">Consultas, formulários, registros de hábitos, respostas e mensagens em ordem cronologica.</p>
           </div>
           <form onSubmit={aplicarFiltrosHistorico} className="grid gap-3 rounded-md border border-linha bg-white p-4 sm:grid-cols-2 xl:grid-cols-5">
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
@@ -1551,7 +1551,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 <option value="consulta">Consultas</option>
                 <option value="formulario">Formulários enviados</option>
                 <option value="resposta_formulario">Respostas de formulários</option>
-                <option value="checkin_rapido">Check-ins rapidos</option>
+                <option value="checkin_rapido">Registros de hábitos</option>
                 <option value="mensagem">Mensagens</option>
                 <option value="evolucao_clinica">Evoluções clínicas</option>
                 <option value="tarefa_acompanhamento">Tarefas de acompanhamento</option>

@@ -291,7 +291,7 @@ function montarLinhaTempoPortal(portal: PortalPacienteApi): ItemLinhaTempoPortal
     })),
     ...diarios.map((diario) => ({
       id: `diario-${diario.id}`,
-      tipo: 'Check-in',
+      tipo: 'Registro de hábitos',
       titulo: `Humor ${rotuloHumor(diario.humor)}`,
       descricao: `Adesao ${diario.adesaoPlano}%${diario.sintomas ? ` - ${diario.sintomas}` : ''}`,
       data: diario.registradoEm
@@ -332,7 +332,7 @@ function atualizarPortalComCheckin(
 const linksPortal = [
   { href: '/portal', rotulo: 'Início' },
   { href: '/portal/agenda', rotulo: 'Agenda' },
-  { href: '/portal/checkins', rotulo: 'Check-ins' },
+  { href: '/portal/checkins', rotulo: 'Registro de hábitos' },
   { href: '/portal/plano', rotulo: 'Plano' },
   { href: '/portal/formularios', rotulo: 'Formulários' },
   { href: '/portal/mensagens', rotulo: 'Mensagens' },
@@ -345,7 +345,7 @@ const linksPortalMobile = [
   { href: '/portal', rotulo: 'Início', icone: HeartPulse },
   { href: '/portal/agenda', rotulo: 'Agenda', icone: CalendarDays },
   { href: '/portal/plano', rotulo: 'Plano', icone: Target },
-  { href: '/portal/checkins', rotulo: 'Check-ins', icone: SmilePlus },
+  { href: '/portal/checkins', rotulo: 'Registro de hábitos', icone: SmilePlus },
   { href: '/portal/mais', rotulo: 'Mais', icone: Menu }
 ];
 
@@ -395,7 +395,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   useEffect(() => assinarOperacoesSincronizadas((tipo) => {
     if (tipo !== 'checkin') return;
     void carregar();
-    setSucesso('Check-in offline sincronizado.');
+    setSucesso('Registro de hábitos offline sincronizado.');
   }), [carregar]);
 
   async function desmarcarConsulta(consultaId: string) {
@@ -496,10 +496,10 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
       }
       setFormularioCheckin(formularioCheckinInicial);
       setSucesso(resultado.estado === 'enviado'
-        ? 'Check-in registrado.'
-        : 'Check-in salvo neste dispositivo. Ele será enviado quando a conexão voltar.');
+        ? 'Registro de hábitos salvo.'
+        : 'Registro de hábitos salvo neste dispositivo. Ele será enviado quando a conexão voltar.');
     } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao registrar check-in.');
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar o registro de hábitos.');
     } finally {
       setSalvandoCheckin(false);
     }
@@ -770,7 +770,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
             <section id="checkin-rapido" className={secao === 'checkins' ? 'scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]' : 'hidden'}>
               <Cartao>
                 <CartaoCabecalho>
-                  <CartaoTitulo icone={<SmilePlus className="h-4 w-4" />}>Check-in rapido</CartaoTitulo>
+                  <CartaoTitulo icone={<SmilePlus className="h-4 w-4" />}>Registro de hábitos</CartaoTitulo>
                 </CartaoCabecalho>
                 <form onSubmit={enviarCheckinRapido} className="grid gap-3 p-4">
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -826,7 +826,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                   <div className="flex justify-end border-t border-linha pt-3">
                     <Botao ref={botaoCheckinRef} type="submit" variante="primario" disabled={salvandoCheckin}>
                       <Save className="h-4 w-4" />
-                      {salvandoCheckin ? 'Registrando' : 'Registrar check-in'}
+                      {salvandoCheckin ? 'Registrando' : 'Registrar hábitos'}
                     </Botao>
                   </div>
                 </form>
@@ -852,7 +852,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                       </article>
                     ))
                   ) : (
-                    <p className="text-sm text-texto-suave">Nenhum check-in registrado ainda.</p>
+                    <p className="text-sm text-texto-suave">Nenhum registro de hábitos ainda.</p>
                   )}
                 </CartaoConteudo>
               </Cartao>
@@ -1169,7 +1169,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                     </label>
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-linha pt-3">
                       <div className="text-xs text-texto-suave">
-                        Último check-in {formatarDataHora(portal.perfil.ultimoCheckinEm)} - status {rotuloStatus(portal.paciente.statusAdesao)}
+                        Último registro de hábitos {formatarDataHora(portal.perfil.ultimoCheckinEm)} - status {rotuloStatus(portal.paciente.statusAdesao)}
                       </div>
                       <Botao type="submit" variante="primario" disabled={salvandoPerfil}>
                         <Save className="h-4 w-4" />

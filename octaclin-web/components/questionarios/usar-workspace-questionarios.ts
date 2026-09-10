@@ -127,7 +127,7 @@ export function useWorkspaceQuestionarios() {
   const [buscaBiblioteca, setBuscaBiblioteca] = useState('');
   const [categoriaBibliotecaId, setCategoriaBibliotecaId] = useState('');
   const [selecionadaId, setSelecionadaId] = useState<string | null>(null);
-  const [titulo, setTitulo] = useState('Check-in semanal de adesao');
+  const [titulo, setTitulo] = useState('Retorno de avaliação semanal de adesão');
   const [descricao, setDescricao] = useState('Protocolo operacional de acompanhamento clinico.');
   const [status, setStatus] = useState<'rascunho' | 'publicado' | 'arquivado'>('rascunho');
   const [pacienteAgendamentoId, setPacienteAgendamentoId] = useState('');
@@ -537,12 +537,12 @@ export function useWorkspaceQuestionarios() {
       return;
     }
     if (!pacienteAgendamentoId) {
-      setErro('Selecione um paciente para o check-in recorrente.');
+      setErro('Selecione um paciente para o retorno de avaliação recorrente.');
       setSucesso(null);
       return;
     }
     if (!recorrencia.regraCron && !recorrencia.dataFixa) {
-      setErro('Escolha uma frequencia para o check-in recorrente.');
+      setErro('Escolha uma frequência para o retorno de avaliação recorrente.');
       setSucesso(null);
       return;
     }
@@ -558,7 +558,7 @@ export function useWorkspaceQuestionarios() {
         dataFixa: recorrencia.dataFixa,
         timezone: 'America/Sao_Paulo'
       });
-      setSucesso('Check-in recorrente criado para o paciente selecionado.');
+      setSucesso('Retorno de avaliação recorrente criado para o paciente selecionado.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar agendamento.');
     } finally {

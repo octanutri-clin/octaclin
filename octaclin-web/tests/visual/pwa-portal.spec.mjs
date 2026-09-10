@@ -61,7 +61,7 @@ async function preencherCheckin(page, observacao) {
   await page.getByLabel('Humor de hoje').selectOption('bem');
   await page.getByLabel('Adesão ao plano').fill('85');
   await page.getByLabel('Observações do dia').fill(observacao);
-  await page.getByRole('button', { name: 'Registrar check-in' }).click();
+  await page.getByRole('button', { name: 'Registrar hábitos' }).click();
 }
 
 async function lerFila(page) {
@@ -95,7 +95,7 @@ test('manifest e service worker publicos estao disponiveis', async ({ request })
 test('check-in offline fica cifrado, sincroniza uma vez e e purgado no logout', async ({ page }) => {
   const controle = await prepararPortal(page);
   await page.goto('/portal/checkins');
-  await expect(page.getByRole('heading', { name: 'Check-in rapido' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Registro de hábitos' })).toBeVisible();
 
   await preencherCheckin(page, 'Dado clinico que nao pode aparecer em claro.');
   await expect(page.getByText(/salvo neste dispositivo/i)).toBeVisible();

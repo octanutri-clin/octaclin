@@ -3,7 +3,7 @@ import { EditorQuestionario } from '@/components/questionarios/editor-questionar
 
 export default function QuestionariosPage() {
   return (
-    <ConsoleShell titulo="Editor de Questionários" subtitulo="Protocolos e check-ins">
+    <ConsoleShell titulo="Editor de Questionários" subtitulo="Protocolos e retornos de avaliação">
       <EditorQuestionario />
     </ConsoleShell>
   );

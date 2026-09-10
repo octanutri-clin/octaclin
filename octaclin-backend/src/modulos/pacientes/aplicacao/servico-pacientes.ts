@@ -767,7 +767,7 @@ export class ServicoPacientes {
           indicadores.push({
             tipo: 'adesao',
             valor: `${adesao}%`,
-            fonte: 'Check-in rapido',
+            fonte: 'Registro de habitos',
             registradoEm: diario.registradoEm
           });
           encontrouAdesao = true;
@@ -780,7 +780,7 @@ export class ServicoPacientes {
           indicadores.push({
             tipo: 'sintomas',
             valor: sintomas.trim().slice(0, 200),
-            fonte: 'Check-in rapido',
+            fonte: 'Registro de habitos',
             registradoEm: diario.registradoEm
           });
           encontrouSintomas = true;
@@ -852,7 +852,7 @@ export class ServicoPacientes {
           CROSS JOIN contexto
           WHERE resposta.tenant_id = $1 AND resposta.paciente_id = $2
           UNION ALL
-          SELECT diario.id::text, 'checkin_rapido'::text, 'Check-in rapido', diario.registrado_em,
+          SELECT diario.id::text, 'checkin_rapido'::text, 'Registro de habitos', diario.registrado_em,
             'registrado', diario.id, 'Portal do paciente', contexto.profissional_responsavel_id,
             contexto.usuario_id, jsonb_build_object('tipoDiario', diario.tipo)
           FROM logs_diario_rapido diario CROSS JOIN contexto
@@ -1328,7 +1328,7 @@ export class ServicoPacientes {
   private mapearEventoCheckinRapido(diario: LogDiarioRapidoOrm): EventoProntuarioPacienteDto {
     const titulos: Record<LogDiarioRapidoOrm['tipo'], string> = {
       refeicao: 'Registro de refeicao',
-      humor: 'Check-in rapido',
+      humor: 'Registro de humor',
       agua: 'Registro de agua',
       atividade: 'Registro de atividade'
     };

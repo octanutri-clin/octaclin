@@ -388,7 +388,7 @@ export interface ProntuarioPacienteRespostaDto {
     indicadoresRecentes: Array<{
       tipo: 'adesao' | 'sintomas';
       valor: string;
-      fonte: 'Check-in rapido';
+      fonte: 'Registro de habitos';
       registradoEm: Date;
     }>;
     proximaConduta?: {
