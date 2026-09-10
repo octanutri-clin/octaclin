@@ -35,6 +35,15 @@ export class MensagemNotificacaoOrm {
   @Column({ type: 'text', nullable: true })
   erro?: string;
 
+  /**
+   * Opcional, informada pelo chamador. Indice unico parcial
+   * `uq_mensagens_notificacao_tenant_chave_idempotencia` (tenant_id,
+   * chave_idempotencia) WHERE chave_idempotencia IS NOT NULL garante que um
+   * retry/duplo clique com a mesma chave nunca duplica o envio.
+   */
+  @Column({ name: 'chave_idempotencia', type: 'varchar', length: 200, nullable: true })
+  chaveIdempotencia?: string;
+
   @Column({ name: 'enviado_em', type: 'timestamptz', nullable: true })
   enviadoEm?: Date;
 

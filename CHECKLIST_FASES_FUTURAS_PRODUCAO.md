@@ -2434,10 +2434,25 @@ publicado antes de ampliar a superficie de mudancas visuais.
     diff --check) por incremento no documento da fase.
 
 - [ ] Fase 258 - Central de comunicações confiável. [ESSENCIAL - PRE-PILOTO]
+  [EM ANDAMENTO EM 2026-09-10]
   - Unificar conversas por paciente, canal, responsável e pendência; exibir
     envio, entrega, leitura, falha, retentativa e origem da mensagem.
   - Validar Gmail e WhatsApp com templates, idempotência, consentimento,
     opt-out e degradação segura quando a integração estiver indisponível.
+  - Auditoria inicial: modulo `comunicacoes` ja tem infraestrutura solida
+    (webhook WhatsApp endurecido, retry automatico via fila/outbox,
+    conteudo cifrado). Gaps concretos identificados: sem chave de
+    idempotencia no disparo; opt-out so respeitado pelas automacoes, nao
+    pelo disparo manual; sem visao unificada cruzando canal+responsavel;
+    status de entrega do WhatsApp preso em JSON aninhado; sem taxonomia
+    de origem da mensagem. Plano completo em
+    `docs/history/phases/fase-258-central-comunicacoes-confiavel.md`.
+  - Incremento 1 concluido: chave de idempotencia opcional no disparo de
+    mensagens (`chaveIdempotencia`), com indice unico parcial no banco
+    (migration `1720000001040`, aditiva). Retry/replay com a mesma chave
+    retorna a mensagem ja criada em vez de duplicar o envio. Escopo
+    backend apenas nesta rodada (ver documento da fase para o motivo de
+    nao ter sido ligado ainda ao console manual nem as automacoes).
 
 - [ ] Fase 259 - Acesso, convite e ativação sem suporte manual. [ESSENCIAL - PRE-PILOTO]
   - Revisar login, primeiro acesso, recuperação, convite, troca de senha,

@@ -50,6 +50,15 @@ export class DispararMensagemDto {
 
   @IsObject()
   payload: Record<string, unknown>;
+
+  /**
+   * Opcional. Quando informada, um retry/duplo clique com a mesma chave
+   * retorna a mensagem ja criada em vez de disparar um segundo envio.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  chaveIdempotencia?: string;
 }
 
 export class AssociarContatoWhatsappDto {
