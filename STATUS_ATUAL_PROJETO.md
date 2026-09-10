@@ -1,12 +1,52 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-09.
+Atualizado em 2026-09-10.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Reconciliacao de 2026-09-10: o PR GitHub `#222` (PR 54 de governanca,
+  `fix(ci): concluir MFA nos ensaios DAST descartaveis`) foi integrado no
+  `main` com merge `804e0bb7c714d7fc835db812229c6ffcb90c626a`, base `f6f90ef`.
+  Os checks da PR (`CodeQL`, `Semgrep`, `Trivy`, `Dependency Review`,
+  `OctaClin CI`) ficaram verdes sobre o head `d8beba8` antes do merge humano,
+  confirmado via API do GitHub. `git fetch --prune origin` e
+  `list_pull_requests state=open` nao retornaram nenhuma pull request aberta
+  imediatamente apos o merge. SQ-4 (fechamento factual do inventario de
+  seguranca) foi integrada anteriormente pelo PR GitHub `#215`
+  (`98b6e5f` -> `dc8334f`), com checks verdes e merge humano confirmado nesta
+  sessao; o `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` estava desatualizado
+  marcando SQ-4 como ativa e foi corrigido. Isso desbloqueia a Fase 256
+  (Formularios/check-ins ponta a ponta), que passa a ser a fase funcional
+  ativa. A PR 55 (pentest independente e decisao humana de GO/NO-GO) e a PR 56
+  (Mobile MASVS/MASTG) permanecem como pendencias externas: a PR 55 exige
+  execucao profissional independente fora desta sessao e a PR 56/app Expo
+  nativo continuam em NO-GO, sem alteracao de escopo, gate de distribuicao ou
+  `mobile.sync`.
+- Limitacao registrada nesta reconciliacao: as ferramentas de GitHub
+  disponiveis nesta sessao (MCP `github`) nao expoem os endpoints
+  `code-scanning/alerts`, `dependabot/alerts` ou `secret-scanning/alerts`; so
+  cobrem Actions, pull requests, arquivos e commits. Portanto, a contagem de
+  215 alertas (213 Code Scanning, 2 Dependabot, 0 Secret Scanning) registrada
+  no PR `#215` e uma fotografia historica daquele merge, nao uma recaptura
+  atual. Nao foi executada nova captura (`pnpm security:capturar-inventario`,
+  que exige `gh` autenticado, indisponivel neste ambiente) nesta sessao; ela
+  permanece pendente antes de qualquer decisao que dependa da contagem
+  corrente de alertas Dependabot/Code Scanning, incluindo a revalidacao
+  solicitada do `image-size`. Evidencia parcial obtida nesta sessao: o
+  `git push` desta branch reportou 2 alertas Dependabot high no `main` atual
+  (consistente com os dois alertas conhecidos de `image-size`), e o registro
+  npm confirma `image-size` ainda em `2.0.2` (`latest`), sem versao corrigida.
+- Fase 256 (Formularios e check-ins ponta a ponta) iniciada em 2026-09-10.
+  Auditoria confirmou que o fluxo pedido ja existe quase por completo no
+  modulo `questionarios`; o Incremento 1 (recuperacao no carregamento do
+  formulario publico, com TDD e suites reais executadas apos instalar
+  dependencias ausentes no ambiente) foi implementado e validado. Detalhes,
+  plano de incrementos restantes e evidencias completas em
+  `docs/history/phases/fase-256-formularios-checkins-ponta-a-ponta.md` e em
+  `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
   fotografia historica foi capturada em 2026-09-07 sobre
   `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning

@@ -112,3 +112,66 @@ test.describe('formulario publico com rascunho', () => {
     await expect.poll(() => respostaFinal).toEqual({ respostas: [{ perguntaId: perguntaUploadId, valor: ['33333333-3333-4333-8333-333333333333'] }] });
   });
 });
+
+test.describe('formulario publico - indisponibilidade e recuperacao', () => {
+  test('mostra mensagem segura ao falhar o carregamento e recupera com Tentar novamente', async ({ page }) => {
+    // `permitirSucesso` (nao uma contagem de tentativas) decide a resposta:
+    // o React 19/Next dev dispara o efeito de carregamento duas vezes por
+    // montagem (comportamento conhecido do modo de desenvolvimento, nao do
+    // clique do usuario), e uma contagem fixa de tentativas correria contra
+    // essa segunda chamada automatica. Com uma flag, as duas chamadas do
+    // carregamento inicial falham igualmente; so a chamada apos o clique
+    // explicito em "Tentar novamente" (que so ocorre depois que o teste
+    // libera a flag) tem sucesso.
+    let permitirSucesso = false;
+    let totalChamadas = 0;
+    await page.route('**/api/formularios/token-instavel', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      totalChamadas += 1;
+      if (!permitirSucesso) {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ statusCode: 500, message: 'Internal server error' })
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          envioId: 'envio-1',
+          titulo: 'Check-in semanal',
+          status: 'enviado',
+          rascunhoVersao: 0,
+          respostasRascunho: [],
+          perguntas: [{
+            id: perguntaId,
+            tipo: 'sim_nao',
+            enunciado: 'Conseguiu seguir o plano?',
+            obrigatoria: true,
+            configuracao: { rotuloSim: 'Sim', rotuloNao: 'Nao' },
+            opcoes: [],
+            ordem: 1
+          }]
+        })
+      });
+    });
+
+    await page.goto('/formularios/token-instavel');
+
+    // A mensagem exibida ao paciente nunca deve repetir o corpo/mensagem cru
+    // devolvido pelo backend (ex.: "Internal server error"): isso vazaria
+    // detalhe interno e quebraria a voz em portugues do produto.
+    await expect(page.getByText('Não foi possível carregar o formulário agora.')).toBeVisible();
+    await expect(page.getByText('Internal server error')).toHaveCount(0);
+    expect(totalChamadas).toBeGreaterThan(0);
+
+    const botaoTentarNovamente = page.getByRole('button', { name: 'Tentar novamente' });
+    await expect(botaoTentarNovamente).toBeVisible();
+    permitirSucesso = true;
+    await botaoTentarNovamente.click();
+
+    await expect(page.getByRole('heading', { name: 'Check-in semanal' })).toBeVisible();
+  });
+});

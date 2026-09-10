@@ -59,6 +59,7 @@ export function FormularioPacientePublico({ token }: Props) {
   const [formulario, setFormulario] = useState<FormularioPublico | null>(null);
   const [respostas, setRespostas] = useState<Record<string, ValorResposta>>({});
   const [erro, setErro] = useState<string | null>(null);
+  const [erroCarregamento, setErroCarregamento] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [envioPendente, setEnvioPendente] = useState(false);
   const [carregando, setCarregando] = useState(true);
@@ -70,9 +71,10 @@ export function FormularioPacientePublico({ token }: Props) {
   const salvamentoRascunhoRef = useRef<Promise<void> | null>(null);
   const suspenderRascunhoRef = useRef(false);
 
-  useEffect(() => {
+  const carregarFormulario = useCallback(() => {
     setCarregando(true);
-    carregarFormularioPublico(token)
+    setErroCarregamento(false);
+    return carregarFormularioPublico(token)
       .then((resposta) => {
         setFormulario(resposta);
         setRespostas(Object.fromEntries((resposta.respostasRascunho ?? []).map((item) => [item.perguntaId, item.valor as ValorResposta])));
@@ -81,9 +83,20 @@ export function FormularioPacientePublico({ token }: Props) {
         setHouveEdicao(false);
         setErro(null);
       })
-      .catch((erroAtual) => setErro(erroAtual instanceof Error ? erroAtual.message : 'Formulário indisponível.'))
+      .catch(() => {
+        // Nunca repassa a mensagem crua do backend/proxy aqui: e a unica tela
+        // que um paciente sem sessao ve antes de qualquer dado carregar, e o
+        // corpo de um erro 500/502 pode nao estar em portugues nem ser
+        // seguro de exibir. As demais telas (validacao, envio) continuam
+        // usando a mensagem especifica, que e de negocio e ja em PT-BR.
+        setErroCarregamento(true);
+      })
       .finally(() => setCarregando(false));
   }, [token]);
+
+  useEffect(() => {
+    void carregarFormulario();
+  }, [carregarFormulario]);
 
   useEffect(() => assinarOperacoesSincronizadas((tipo) => {
     if (tipo !== 'formulario' || !envioPendente) return;
@@ -252,9 +265,18 @@ export function FormularioPacientePublico({ token }: Props) {
   if (!formulario) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-fundo px-4">
-        <section className="flex w-full max-w-xl items-start gap-3 border border-perigo-borda bg-perigo-suave p-4 text-sm text-perigo">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{erro ?? 'Formulário indisponível.'}</span>
+        <section className="grid w-full max-w-xl gap-3 border border-perigo-borda bg-perigo-suave p-4 text-sm text-perigo" role="alert">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              {erroCarregamento
+                ? 'Não foi possível carregar o formulário agora. Verifique sua conexão e tente novamente.'
+                : 'Formulário indisponível.'}
+            </span>
+          </div>
+          <Botao type="button" variante="secundario" className="h-11 justify-self-start" onClick={() => void carregarFormulario()}>
+            Tentar novamente
+          </Botao>
         </section>
       </main>
     );
