@@ -2420,6 +2420,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     de desmarcar consulta pelo portal. Sem migration, sem mudanca de
     contrato de API. Validado por 18/18 testes Playwright (desktop+mobile),
     typecheck, lint e gate de linguagem.
+  - Incremento 2 concluido: cartao "Proxima acao" da home agora ranqueia
+    formularios pendentes e tarefas de acompanhamento nao concluidas pelo
+    prazo mais proximo (`expiraEm`/`vencimentoEm`), em vez de sempre
+    mostrar so o primeiro formulario. Sem migration, sem mudanca de
+    contrato de API. Validado por 32/32 testes Playwright (desktop+mobile),
+    typecheck, lint, build e gate de linguagem.
 
 - [ ] Fase 258 - Central de comunicações confiável. [ESSENCIAL - PRE-PILOTO]
   - Unificar conversas por paciente, canal, responsável e pendência; exibir

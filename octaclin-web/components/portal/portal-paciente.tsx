@@ -350,6 +350,38 @@ const linksPortalMobile = [
   { href: '/portal/mais', rotulo: 'Mais', icone: Menu }
 ];
 
+type ProximaAcao =
+  | { tipo: 'formulario'; formulario: PortalPacienteApi['formulariosPendentes'][number] }
+  | { tipo: 'tarefa'; tarefa: NonNullable<PortalPacienteApi['tarefasAcompanhamento']>[number] };
+
+function selecionarProximaAcao(portal: PortalPacienteApi): ProximaAcao | null {
+  const tarefasPendentes = (portal.tarefasAcompanhamento ?? []).filter((tarefa) => tarefa.status !== 'concluida');
+
+  const candidatos: { prazo: number | null; ordem: number; acao: ProximaAcao }[] = [
+    ...portal.formulariosPendentes.map((formulario, indice) => ({
+      prazo: formulario.expiraEm ? new Date(formulario.expiraEm).getTime() : null,
+      ordem: indice,
+      acao: { tipo: 'formulario' as const, formulario }
+    })),
+    ...tarefasPendentes.map((tarefa, indice) => ({
+      prazo: tarefa.vencimentoEm ? new Date(tarefa.vencimentoEm).getTime() : null,
+      ordem: 1000 + indice,
+      acao: { tipo: 'tarefa' as const, tarefa }
+    }))
+  ];
+
+  if (!candidatos.length) return null;
+
+  const comPrazo = candidatos.filter((candidato) => candidato.prazo !== null);
+  if (comPrazo.length) {
+    comPrazo.sort((a, b) => (a.prazo as number) - (b.prazo as number));
+    return comPrazo[0].acao;
+  }
+
+  candidatos.sort((a, b) => a.ordem - b.ordem);
+  return candidatos[0].acao;
+}
+
 function PortalCarregando() {
   return (
     <Cartao className="grid gap-4 p-5" aria-live="polite" aria-busy="true">
@@ -596,6 +628,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   }
 
   const linhaTempo = portal ? montarLinhaTempoPortal(portal) : [];
+  const proximaAcao = portal ? selecionarProximaAcao(portal) : null;
   const tarefasAcompanhamento = portal?.tarefasAcompanhamento ?? [];
   const materiaisDisponiveis = portal?.materiaisDisponiveis ?? [];
   const diariosRecentes = portal?.diariosRecentes ?? [];
@@ -652,22 +685,31 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
               <Cartao className="grid gap-3 p-4">
                 <div>
                   <h3 className="text-sm font-semibold text-tinta">Próxima ação</h3>
-                  {portal.formulariosPendentes[0] ? (
+                  {proximaAcao?.tipo === 'formulario' ? (
                     <>
-                      <p className="mt-2 text-sm font-medium text-tinta">{portal.formulariosPendentes[0].titulo}</p>
-                      <p className="mt-1 text-xs text-texto-suave">Responda até {formatarDataHora(portal.formulariosPendentes[0].expiraEm)}</p>
+                      <p className="mt-2 text-sm font-medium text-tinta">{proximaAcao.formulario.titulo}</p>
+                      <p className="mt-1 text-xs text-texto-suave">Responda até {formatarDataHora(proximaAcao.formulario.expiraEm)}</p>
+                    </>
+                  ) : proximaAcao?.tipo === 'tarefa' ? (
+                    <>
+                      <p className="mt-2 text-sm font-medium text-tinta">{proximaAcao.tarefa.titulo}</p>
+                      <p className="mt-1 text-xs text-texto-suave">Vencimento {formatarDataHora(proximaAcao.tarefa.vencimentoEm)}</p>
                     </>
                   ) : (
                     <p className="mt-2 text-sm text-texto-suave">Nenhuma ação pendente agora.</p>
                   )}
                 </div>
-                {portal.formulariosPendentes[0] ? (
+                {proximaAcao?.tipo === 'formulario' ? (
                   <a
-                    href={portal.formulariosPendentes[0].linkFormulario}
+                    href={proximaAcao.formulario.linkFormulario}
                     className={classesBotao({ variante: 'primario' })}
                   >
                     Responder agora
                   </a>
+                ) : proximaAcao?.tipo === 'tarefa' ? (
+                  <Link href="/portal/plano" className={classesBotao({ variante: 'primario' })}>
+                    Ver no plano
+                  </Link>
                 ) : null}
               </Cartao>
 

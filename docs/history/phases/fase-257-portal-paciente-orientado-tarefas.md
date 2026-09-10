@@ -97,3 +97,36 @@ Concluido em 2026-09-10.
   no `ModalConfirmacao` antes de aguardar o efeito; revalidado localmente
   (30/30 Playwright desktop+mobile em `jornadas-criticas.spec.mjs`,
   `portal-paciente.spec.mjs` e `pwa-portal.spec.mjs`) e reenviado.
+
+## Incremento 2 - ranking cruzado de "proxima acao"
+
+Concluido em 2026-09-10.
+
+- TDD: teste Playwright adicionado primeiro
+  (`tests/visual/portal-paciente.spec.mjs`, "prioriza tarefa com vencimento
+  mais proximo do que o formulario pendente") e confirmado RED (o cartao
+  continuava mostrando o formulario) antes da implementacao.
+- Implementacao: nova funcao pura `selecionarProximaAcao(portal)` em
+  `components/portal/portal-paciente.tsx` que reune os formularios
+  pendentes e as tarefas de acompanhamento ainda nao concluidas
+  (`status !== 'concluida'`) como candidatos, ordena os que tem prazo
+  (`expiraEm`/`vencimentoEm`) pelo mais proximo primeiro e so cai para a
+  ordem original (formulario antes de tarefa) quando nenhum candidato tem
+  prazo definido. O cartao "Proxima acao" da home passou a renderizar o
+  vencedor (formulario ou tarefa) e o botao correspondente
+  ("Responder agora" ou "Ver no plano"). Nenhuma mudanca de backend, BFF ou
+  contrato de API — usa dados que o portal ja recebia.
+- Decisao deliberada: a selecao usa apenas a data de prazo, sem comparar
+  contra o relogio do sistema (`Date.now()`), para manter o ranking
+  deterministico e testavel; nao ha rotulo "atrasada" nesta fase, apenas a
+  data de vencimento/expiracao. Marcar tarefas como concluidas pelo
+  paciente e visualizar atraso continuam no Incremento 3.
+- Validacoes:
+  - `pnpm --dir octaclin-web typecheck` — PASS
+  - `pnpm --dir octaclin-web lint` — PASS (0 erros; mesmos 52 warnings
+    pre-existentes e nao relacionados)
+  - `pnpm --dir octaclin-web build` — PASS
+  - `pnpm --dir octaclin-web exec playwright test tests/visual/portal-paciente.spec.mjs tests/visual/pwa-portal.spec.mjs tests/visual/jornadas-criticas.spec.mjs --project=desktop-chromium --project=mobile-chromium` —
+    32/32 PASS
+  - Gate de linguagem e microcopy — PASS
+  - `pnpm security:secrets` e `git diff --check` — PASS

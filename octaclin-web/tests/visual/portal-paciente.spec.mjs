@@ -351,6 +351,30 @@ test.describe('portal do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('prioriza tarefa com vencimento mais proximo do que o formulario pendente', async ({ page }) => {
+    await prepararSessaoPaciente(page);
+    const payload = {
+      ...portalPaciente,
+      formulariosPendentes: [
+        { ...portalPaciente.formulariosPendentes[0], expiraEm: '2026-12-01T12:00:00.000Z' }
+      ],
+      tarefasAcompanhamento: [
+        { ...portalPaciente.tarefasAcompanhamento[0], titulo: 'Enviar exames de sangue', vencimentoEm: '2026-09-15T12:00:00.000Z', status: 'pendente' }
+      ]
+    };
+    await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) });
+    });
+
+    await page.goto('/portal');
+
+    const cartaoProximaAcao = page.getByRole('heading', { name: 'Próxima ação' }).locator('..').locator('..');
+    await expect(cartaoProximaAcao.getByText('Enviar exames de sangue')).toBeVisible();
+    await expect(cartaoProximaAcao.getByRole('link', { name: 'Ver no plano' })).toBeVisible();
+    await expect(cartaoProximaAcao.getByText('Check-in semanal')).toHaveCount(0);
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('mostra a curva de peso sem numero clinico derivado junto', async ({ page }) => {
     await prepararPortal(page);
     await page.goto('/portal/checkins');
