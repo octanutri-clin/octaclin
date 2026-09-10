@@ -676,7 +676,7 @@ critical/high confirmado em aberto ao final.
 
 Implementacao em elaboracao em 2026-09-08 na branch
 `security/pr54-dast-fuzzing-ready`: preflight manual com confirmacao exata, ZAP
-Baseline passivo fixado por digest, 26 probes serializados sob teto de 30 e
+Baseline passivo fixado por digest, 29 probes serializados sob teto de 30 e
 evidencia sanitizada. Plano:
 `PLANO_TESTE_SEGURANCA_DINAMICA_PR54.md`. Relatorio:
 `RELATORIO_SEGURANCA_PR54_2026-09-08.md`. A execucao externa continua pendente

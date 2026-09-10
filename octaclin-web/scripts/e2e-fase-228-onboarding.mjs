@@ -1,3 +1,5 @@
+import { aguardarProximoPeriodoTotp, exigirSegredoTotpSintetico, gerarCodigoTotp } from './e2e-mfa.mjs';
+
 const config = {
   webUrl: process.env.E2E_WEB_URL ?? 'http://127.0.0.1:3000',
   apiUrl: process.env.E2E_API_URL ?? 'http://127.0.0.1:3001',
@@ -70,12 +72,44 @@ async function bff(caminho, { status = 200, ...init } = {}) {
 }
 
 async function login(tenantSlug, email, senha) {
-  const resposta = await api('/auth/login', {
+  let resposta = await api('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ tenantSlug, email, senha })
   });
+  if (resposta?.mfaObrigatorio === true) {
+    let segredo = exigirSegredoTotpSintetico();
+    if (resposta.modo === 'configurar') {
+      const configuracao = await api('/auth/mfa/login/configuracao', {
+        method: 'POST',
+        body: JSON.stringify({ desafioMfa: resposta.desafioMfa })
+      });
+      segredo = configuracao?.segredo;
+    }
+    resposta = await api('/auth/mfa/login', {
+      method: 'POST',
+      body: JSON.stringify({ desafioMfa: resposta.desafioMfa, codigo: gerarCodigoTotp(segredo) })
+    });
+  }
   assert(typeof resposta?.accessToken === 'string', `Login de ${tenantSlug}/${email} nao retornou token.`);
   return resposta.accessToken;
+}
+
+async function loginBff(email, senha) {
+  const desafio = await bff('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, senha })
+  });
+  if (desafio?.mfaObrigatorio !== true) return desafio;
+
+  let segredo = exigirSegredoTotpSintetico();
+  if (desafio.modo === 'configurar') {
+    const configuracao = await bff('/api/auth/mfa/configuracao-login', { method: 'POST' });
+    segredo = configuracao?.segredo;
+  }
+  return bff('/api/auth/mfa/concluir-login', {
+    method: 'POST',
+    body: JSON.stringify({ codigo: gerarCodigoTotp(segredo) })
+  });
 }
 
 function tokenDoLink(link, contexto) {
@@ -96,11 +130,8 @@ async function executar() {
   const senhaProfissional = 'ProfE2E@228';
   const senhaPaciente = 'PacienteE2E@228';
 
-  await bff('/api/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email: config.emailAdmin, senha: config.senhaAdmin })
-  });
-  const tokenAdmin = await login(config.tenantAdmin, config.emailAdmin, config.senhaAdmin);
+  await aguardarProximoPeriodoTotp();
+  await loginBff(config.emailAdmin, config.senhaAdmin);
 
   const dadosProvisionamento = {
     referencia,
@@ -125,8 +156,7 @@ async function executar() {
   const contextoOwner = await api('/auth/permissoes', { token: tokenOwner });
   assert(contextoOwner?.papel === 'Client', 'Proprietario nao recebeu papel Client.');
 
-  await api(`/operacoes/tenants/${tenant.id}/ciclo-vida`, {
-    token: tokenAdmin,
+  await bff(`/api/operacoes/tenants/${tenant.id}/ciclo-vida`, {
     method: 'POST',
     status: 201,
     body: JSON.stringify({ acao: 'marcar_primeiro_uso', motivo: 'Login sintetico do proprietario validado.' })
@@ -168,7 +198,7 @@ async function executar() {
     })
   });
   assert(paciente?.id, 'Paciente sintetico nao foi criado.');
-  await api(`/pacientes/${paciente.id}`, { token: tokenAdmin, status: 404 });
+  await bff(`/api/pacientes/${paciente.id}`, { status: 404 });
 
   const convitePaciente = await api(`/pacientes/${paciente.id}/convites-acesso`, {
     token: tokenProfissional,
@@ -240,25 +270,23 @@ async function executar() {
     body: JSON.stringify({ respostas: [{ perguntaId: pergunta.id, valor: 'Primeiro acesso sintetico concluido.' }] })
   });
 
-  await api(`/operacoes/tenants/${tenant.id}/ciclo-vida`, { token: tokenAdmin, method: 'POST', status: 201, body: JSON.stringify({ acao: 'iniciar_acompanhamento' }) });
-  await api(`/operacoes/tenants/${tenant.id}/ciclo-vida`, { token: tokenAdmin, method: 'POST', status: 201, body: JSON.stringify({ acao: 'concluir_acompanhamento' }) });
-  await api(`/operacoes/tenants/${tenant.id}/ciclo-vida`, { token: tokenAdmin, method: 'POST', status: 201, body: JSON.stringify({ acao: 'suspender', motivo: 'Teste sintetico de inadimplencia.' }) });
+  await bff(`/api/operacoes/tenants/${tenant.id}/ciclo-vida`, { method: 'POST', status: 201, body: JSON.stringify({ acao: 'iniciar_acompanhamento' }) });
+  await bff(`/api/operacoes/tenants/${tenant.id}/ciclo-vida`, { method: 'POST', status: 201, body: JSON.stringify({ acao: 'concluir_acompanhamento' }) });
+  await bff(`/api/operacoes/tenants/${tenant.id}/ciclo-vida`, { method: 'POST', status: 201, body: JSON.stringify({ acao: 'suspender', motivo: 'Teste sintetico de inadimplencia.' }) });
   await api('/cliente/usuarios', {
     token: tokenOwner,
     method: 'POST',
     status: 403,
     body: JSON.stringify({ email: `bloqueado.${sufixo}@octaclin.test`, role: 'Collaborator' })
   });
-  await api(`/operacoes/tenants/${tenant.id}/ciclo-vida`, { token: tokenAdmin, method: 'POST', status: 201, body: JSON.stringify({ acao: 'reativar' }) });
-  await api(`/operacoes/tenants/${tenant.id}/ciclo-vida`, { token: tokenAdmin, method: 'POST', status: 201, body: JSON.stringify({ acao: 'iniciar_encerramento', motivo: 'Encerramento sintetico.' }) });
-  await api(`/operacoes/tenants/${tenant.id}/ciclo-vida`, {
-    token: tokenAdmin,
+  await bff(`/api/operacoes/tenants/${tenant.id}/ciclo-vida`, { method: 'POST', status: 201, body: JSON.stringify({ acao: 'reativar' }) });
+  await bff(`/api/operacoes/tenants/${tenant.id}/ciclo-vida`, { method: 'POST', status: 201, body: JSON.stringify({ acao: 'iniciar_encerramento', motivo: 'Encerramento sintetico.' }) });
+  await bff(`/api/operacoes/tenants/${tenant.id}/ciclo-vida`, {
     method: 'POST',
     status: 400,
     body: JSON.stringify({ acao: 'encerrar', exportacaoConfirmada: true })
   });
-  await api(`/operacoes/tenants/${tenant.id}/ciclo-vida`, {
-    token: tokenAdmin,
+  await bff(`/api/operacoes/tenants/${tenant.id}/ciclo-vida`, {
     method: 'POST',
     status: 201,
     body: JSON.stringify({ acao: 'encerrar', exportacaoConfirmada: true, protocoloExportacao: `EXP-${sufixo}` })

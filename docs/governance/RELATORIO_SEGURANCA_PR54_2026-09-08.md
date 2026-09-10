@@ -1,13 +1,15 @@
 # Relatorio de seguranca - PR 54: DAST e probes ativos em staging
 
-Status em 2026-09-08: **automacao local PASS; execucao no staging descartavel,
-checks do PR e review humano pendentes**. Nenhum resultado dinamico foi inferido
-a partir dos testes unitarios.
+Status em 2026-09-09: **automacao local e oitava execucao no staging
+descartavel PASS; review humano pendente**. Nenhum resultado dinamico foi
+inferido a partir dos testes unitarios nem das execucoes interrompidas antes dos
+probes.
 
 ## Escopo entregue
 
 - preflight fail-closed para execucao manual e alvos loopback exatos;
-- 26 probes ativos serializados sob teto imutavel de 30 requisicoes;
+- 29 probes ativos serializados sob teto imutavel de 30 requisicoes, incluindo
+  a conclusao MFA real das tres identidades privilegiadas sinteticas;
 - auth, BFLA, BOLA, mass assignment, parser, limites, upload, webhook e rate limit;
 - OWASP ZAP Baseline passivo, versao `2.17.0` e manifesto
   `sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef`;
@@ -21,6 +23,7 @@ ativo irrestrito, pentest independente da PR 55 e mobile da PR 56.
 | Prova | Resultado |
 | --- | --- |
 | `pnpm test:seguranca-dinamica` | PASS (19/19) |
+| `node --test octaclin-web/scripts/e2e-mfa.spec.mjs` | PASS (3/3) |
 | `pnpm test:workflows-seguros` | PASS (7/7) |
 | `pnpm test:actions-imutaveis` | PASS (15/15) |
 | `pnpm --dir octaclin-web lint` | PASS, 52 warnings historicos fora do diff |
@@ -59,24 +62,116 @@ violacao de TLS de producao. O cleanup da branch Neon passou.
 A correcao preserva `NODE_ENV=production` para o build e declara
 `APP_AMBIENTE=test` para os processos descartaveis do runner. O contrato do
 workflow reprova a remocao dessa classificacao. Staging e producao continuam
-exigindo TLS e falha fechada. Uma nova execucao exige nova autorizacao
+exigindo TLS e falha fechada.
+
+O terceiro run autorizado `34376987488`, no commit `e631e22`, comprovou a
+correcao de classificacao: backend e web iniciaram, e o readiness passou. A
+jornada mutavel existente parou antes dos probes em `GET /api/auth/session`,
+com `401`. A causa foi a defasagem do fixture: `SuperAdmin` e `Professional`
+passaram a exigir MFA no PR 41, mas o runner ainda interpretava o `200` com
+desafio MFA como se tokens e cookies de sessao tivessem sido emitidos. Probes
+e ZAP ficaram `SKIPPED`; o cleanup da branch Neon passou e o run nao constitui
+evidencia DAST.
+
+A correcao nao cria bypass. Cada run passa a gerar um segredo TOTP Base32
+aleatorio, mascara-lo antes de exportar e persisti-lo cifrado apenas nos
+fatores das identidades privilegiadas do banco descartavel. Os runners BFF e
+API concluem o MFA real; usuarios privilegiados criados durante o onboarding
+percorrem tambem a configuracao inicial. As suites que reutilizam contas
+aguardam a proxima janela TOTP para preservar a protecao contra replay. Uma
+quarta execucao exige nova autorizacao especifica para o run.
+
+O quarto run autorizado `34382517812`, no commit `80f2e8f`, confirmou o segredo
+MFA efemero, as migrations, os fixtures, a role runtime, o RLS, os dois tenants,
+os builds e o readiness. A jornada chegou a `POST /api/auth/mfa/concluir-login`,
+mas recebeu `401`; probes, ZAP e onboarding ficaram `SKIPPED`. O cleanup da
+branch Neon passou, portanto nao houve ambiente descartavel residual.
+
+O codigo TOTP estava correto. O fator sintetico era persistido como habilitado,
+mas com `ultimo_contador_totp = NULL`. A protecao antirreplay valida o token e
+depois atualiza somente quando `ultimo_contador_totp < contador_atual`; em SQL,
+`NULL < valor` nao e verdadeiro, a atualizacao afeta zero linhas e o servico
+retorna o erro generico de MFA. A correcao inicializa o piso sintetico em `0`,
+sem alterar a validacao ou a protecao antirreplay de producao. Uma quinta
+execucao exige nova autorizacao especifica para o run.
+
+O quinto run autorizado `34386998848`, no commit `8a955d4`, confirmou a
+correcao do MFA ao avancar pela jornada autenticada ate a confirmacao do anexo
+do formulario publico. O endpoint recusou o objeto com `400` e a mensagem
+`Estrutura da imagem invalida ou nao reconhecida.`; probes, ZAP e onboarding
+ficaram `SKIPPED`. As evidencias sanitizadas foram publicadas e o cleanup da
+branch Neon passou, sem ambiente descartavel residual.
+
+O hardening de imagem funcionou como projetado. O runner enviava somente 12
+bytes do cabecalho JFIF, suficientes para deteccao superficial de MIME, mas sem
+marcador estrutural de dimensoes. A correcao troca esse fragmento pelo PNG real
+e versionado `octaclin-192.png`, lido em runtime pelo fixture, e adiciona um
+contrato para assinatura PNG, `IHDR` e dimensoes positivas. Nenhum parser,
+limite ou validacao de producao foi relaxado. Uma sexta execucao exige nova
+autorizacao especifica para o run.
+
+O sexto run autorizado `34390129868`, no commit `12db8f5`, aprovou migrations,
+fixtures, role/RLS, dois tenants, MFA, upload do PNG, jornadas mutaveis e os 29
+probes ativos dentro do teto de 30 requisicoes. O ZAP percorreu 31 URLs e
+reportou `0 FAIL`, `6 WARN` e `61 PASS`, mas o processo nao conseguiu gravar o
+JSON bruto em `/zap/wrk` por diferenca de permissao entre o runner e o usuario
+do container. Sem JSON avaliavel, o gate falhou fechado; onboarding ficou
+`SKIPPED`. As evidencias disponiveis foram publicadas e o cleanup Neon passou,
+sem ambiente descartavel residual. O run nao constitui o PASS externo final.
+
+A correcao cria um diretorio exclusivo sob `$RUNNER_TEMP`, gravavel pelo usuario
+nao privilegiado do ZAP, e monta somente esse diretorio em `/zap/wrk`, em vez de
+expor todo o checkout ao container. O avaliador continua exigindo o JSON e
+publicando apenas o resumo sanitizado. Uma setima execucao exige nova
+autorizacao especifica para o run.
+
+O setimo run autorizado `34420893157`, no commit `49b822a`, confirmou o
+workspace isolado e gravavel do ZAP. As jornadas mutaveis e os 29 probes sob o
+teto de 30 requisicoes passaram. O resumo sanitizado do ZAP foi gerado e
+aprovado sem bloqueios: `5` alertas informativos, `2` baixos, `1` medio e `0`
+altos. O alerta medio `CSP: Wildcard Directive`, os alertas baixos de
+`X-Powered-By` e `Cross-Origin-Embedder-Policy` e os informativos permanecem em
+triagem; nenhum foi classificado como falso positivo.
+
+O run nao constitui o PASS externo final porque o onboarding da Fase 228
+falhou depois do DAST. Duas requisicoes simultaneas com a mesma referencia e o
+mesmo slug deveriam reutilizar o tenant vencedor, mas uma recebeu `409` com
+`Ja existe tenant com este slug.`. O interleaving observado leu a referencia
+antes do commit concorrente e o slug depois dele. Evidencias sanitizadas foram
+publicadas e o cleanup Neon passou, sem ambiente descartavel residual.
+
+A correcao reutiliza o tenant encontrado pela segunda leitura somente quando o
+slug e a referencia pertencem ao mesmo provisionamento. O mesmo slug associado
+a outra referencia continua retornando conflito. A regressao cobre os dois
+casos e falhou antes da correcao. Uma oitava execucao exige nova autorizacao
 especifica para o run.
 
-## Gate externo pendente
+O oitavo run autorizado `34423447633`, no commit `00b50a0`, passou integralmente.
+Foram aprovados o provisionamento Neon, migrations, fixtures, role runtime, RLS,
+isolamento entre dois tenants, MFA, jornadas mutaveis, 29 probes sob o teto de
+30 requisicoes, ZAP Baseline, onboarding concorrente da Fase 228, publicacao de
+evidencias sanitizadas e cleanup. A branch Neon descartavel foi excluida.
 
-Executar `OctaClin staging E2E mutavel` no head deste PR com:
+O artefato sanitizado reconfirmou `0` alertas altos, `1` medio, `2` baixos e `5`
+informativos, sem bloqueios. Todos permanecem em triagem e nenhum foi registrado
+como falso positivo. A politica do gate foi satisfeita porque nao ha achado
+`critical/high` confirmado aberto.
+
+## Gate externo concluido
+
+`OctaClin staging E2E mutavel` foi executado no head `00b50a0` com:
 
 - `executar_seguranca_dinamica`: `true`;
 - `confirmacao_seguranca_dinamica`: `DAST-FUZZ-STAGING-DESCARTAVEL`.
 
-Registrar aqui o run, commit, totais sanitizados do ZAP, 26/30 probes e qualquer
-falso positivo ou achado confirmado. O gate so vira `PASS` com cleanup verde,
-zero `critical/high` confirmado aberto e revisao humana concluida.
+Resultado: `PASS` tecnico com cleanup verde, 29/30 probes, ZAP aprovado e zero
+`critical/high` confirmado aberto. Resta a revisao humana antes do merge.
 
 ## Falsos positivos
 
-Nenhum registrado nesta versao. O ledger inicia vazio. Nao converter achado em
-falso positivo sem evidencia reproduzivel, owner e prazo.
+Nenhum registrado nesta versao. O ledger permanece vazio. Os oito alertas
+unicos reconfirmados no oitavo run estao em `triagem_pendente`; nao converter
+achado em falso positivo sem evidencia reproduzivel, owner e prazo.
 
 ## Rollback
 

@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 const raiz = resolve(import.meta.dirname, '..');
 const workflow = readFileSync(resolve(raiz, '.github', 'workflows', 'staging-e2e-mutavel.yml'), 'utf8');
 const runner = readFileSync(resolve(raiz, 'octaclin-web', 'scripts', 'e2e-staging-mutavel.mjs'), 'utf8');
+const fixtureImagem = readFileSync(resolve(raiz, 'octaclin-web', 'public', 'icons', 'octaclin-192.png'));
 const preparador = readFileSync(
   resolve(raiz, 'octaclin-backend', 'src', 'infraestrutura', 'e2e', 'preparar-ambiente-staging-e2e.ts'),
   'utf8'
@@ -30,6 +31,9 @@ assert.match(workflow, /NEON_E2E_RUNTIME_ROLE/);
 assert.match(workflow, /ARMAZENAMENTO_S3_FORCE_PATH_STYLE: "true"/);
 assert.match(workflow, /OCTACLIN_PROCESSO: web/);
 assert.match(workflow, /APP_AMBIENTE: test/);
+assert.match(workflow, /Gerar segredo MFA sintetico efemero/);
+assert.match(workflow, /::add-mask::\$E2E_MFA_TOTP_SECRET/);
+assert.match(workflow, /E2E_MFA_TOTP_SECRET=\$E2E_MFA_TOTP_SECRET/);
 assert.doesNotMatch(workflow, /octaclin-backend-producao|Octaclin-db-producao|octaclin_app_producao/i);
 
 for (const termo of ['paciente', 'consulta', 'convite', 'questionario', 'anexos', 'comunicacoes']) {
@@ -37,7 +41,20 @@ for (const termo of ['paciente', 'consulta', 'convite', 'questionario', 'anexos'
 }
 assert.match(runner, /tokenBeta/);
 assert.match(runner, /status: 404/);
+assert.match(runner, /readFile\(new URL\('\.\.\/public\/icons\/octaclin-192\.png', import\.meta\.url\)\)/);
+assert.match(runner, /tiposAceitos: \['image\/png'\]/);
+assert.match(runner, /mimeType: 'image\/png'/);
+assert.deepEqual(
+  fixtureImagem.subarray(0, 8),
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  'fixture de upload deve ter assinatura PNG valida'
+);
+assert.equal(fixtureImagem.toString('ascii', 12, 16), 'IHDR', 'fixture de upload deve conter IHDR');
+assert.ok(fixtureImagem.readUInt32BE(16) > 0 && fixtureImagem.readUInt32BE(20) > 0, 'fixture deve ter dimensoes positivas');
 assert.match(preparador, /rolbypassrls/);
 assert.match(preparador, /grant select, insert, update, delete on all tables/);
+assert.match(preparador, /MfaFatorUsuarioOrm/);
+assert.match(preparador, /E2E_MFA_TOTP_SECRET/);
+assert.match(preparador, /ultimoContadorTotp: '0'/);
 assert.match(preflight, /tabelasVisiveisSemTenant: 0/);
 assert.match(preflight, /relforcerowsecurity/);

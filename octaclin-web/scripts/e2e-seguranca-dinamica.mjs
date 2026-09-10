@@ -7,6 +7,7 @@ import {
   criarOrcamentoRequisicoes,
   validarAutorizacaoStaging,
 } from '../../scripts/seguranca-dinamica-staging.mjs';
+import { aguardarProximoPeriodoTotp, exigirSegredoTotpSintetico, gerarCodigoTotp } from './e2e-mfa.mjs';
 
 const SENHA_FIXTURE = 'OctaClinE2E@231';
 const PACIENTE_ID = '23130000-0000-4000-8000-000000000001';
@@ -39,7 +40,11 @@ function exigirCampoOpaco(objeto, campo, rotulo) {
   return valor;
 }
 
-export async function executarProbesSeguranca({ ambiente = process.env, fetchImpl = fetch } = {}) {
+export async function executarProbesSeguranca({
+  ambiente = process.env,
+  fetchImpl = fetch,
+  aguardarJanelaTotp = aguardarProximoPeriodoTotp,
+} = {}) {
   const { apiOrigin } = validarAutorizacaoStaging({
     webUrl: ambiente.E2E_WEB_URL,
     apiUrl: ambiente.E2E_API_URL,
@@ -86,12 +91,29 @@ export async function executarProbesSeguranca({ ambiente = process.env, fetchImp
       status: 200,
       body: JSON.stringify({ tenantSlug, email, senha: SENHA_FIXTURE }),
     });
-    return exigirCampoOpaco(await lerJsonSemExpor(resposta, rotulo), 'accessToken', rotulo);
+    let resultado = await lerJsonSemExpor(resposta, rotulo);
+    if (resultado?.mfaObrigatorio === true) {
+      if (resultado.modo !== 'verificar') {
+        throw new Error(`${rotulo}: fixture MFA sintetico nao foi preparado; conteudo omitido.`);
+      }
+      const desafioMfa = exigirCampoOpaco(resultado, 'desafioMfa', rotulo);
+      const verificacao = await solicitar(`${rotulo} MFA`, 'auth', '/auth/mfa/login', {
+        method: 'POST',
+        status: 200,
+        body: JSON.stringify({
+          desafioMfa,
+          codigo: gerarCodigoTotp(exigirSegredoTotpSintetico(ambiente)),
+        }),
+      });
+      resultado = await lerJsonSemExpor(verificacao, `${rotulo} MFA`);
+    }
+    return exigirCampoOpaco(resultado, 'accessToken', rotulo);
   }
 
   await solicitar('readiness do alvo descartavel', 'limites', '/health/pronto', { status: 200 });
   await solicitar('rota protegida sem credencial', 'auth', '/pacientes', { status: 401 });
   await solicitar('JWT malformado', 'auth', '/pacientes', { status: 401, token: 'token-invalido' });
+  await aguardarJanelaTotp();
 
   const tokenAlfa = await login('login tenant Alfa', 'octaclin-e2e-alfa', 'admin.alfa@octaclin.test');
   const tokenBeta = await login('login tenant Beta', 'octaclin-e2e-beta', 'admin.beta@octaclin.test');

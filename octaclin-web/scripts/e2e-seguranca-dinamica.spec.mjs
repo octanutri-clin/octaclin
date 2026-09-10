@@ -4,6 +4,8 @@ import test from 'node:test';
 
 import { executarProbesSeguranca } from './e2e-seguranca-dinamica.mjs';
 
+const segredoTotpTeste = ['GEZDGNBV', 'GY3TQOJQ', 'GEZDGNBV', 'GY3TQOJQ'].join('');
+
 const ambiente = {
   E2E_WEB_URL: 'http://127.0.0.1:3000',
   E2E_API_URL: 'http://127.0.0.1:3001',
@@ -13,6 +15,7 @@ const ambiente = {
   GITHUB_RUN_ID: '12345',
   META_WHATSAPP_APP_SECRET: 'app-secret-sintetico-com-32-bytes-minimo',
   META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN: 'receive-token-sintetico',
+  E2E_MFA_TOTP_SECRET: segredoTotpTeste,
 };
 
 function respostaJson(status, corpo = {}) {
@@ -55,9 +58,25 @@ function criarFetchControlado() {
           tentativasRateLimit += 1;
           return respostaJson(tentativasRateLimit === 6 ? 429 : 401);
         }
-        if (dados.email === 'admin.alfa@octaclin.test') return respostaJson(200, { accessToken: 'token-alfa-secreto' });
-        if (dados.email === 'admin.beta@octaclin.test') return respostaJson(200, { accessToken: 'token-beta-secreto' });
-        if (dados.email === 'profissional.alfa@octaclin.test') return respostaJson(200, { accessToken: 'token-profissional-secreto' });
+        if (dados.email === 'admin.alfa@octaclin.test') {
+          return respostaJson(200, { mfaObrigatorio: true, modo: 'verificar', desafioMfa: 'desafio-alfa' });
+        }
+        if (dados.email === 'admin.beta@octaclin.test') {
+          return respostaJson(200, { mfaObrigatorio: true, modo: 'verificar', desafioMfa: 'desafio-beta' });
+        }
+        if (dados.email === 'profissional.alfa@octaclin.test') {
+          return respostaJson(200, { mfaObrigatorio: true, modo: 'verificar', desafioMfa: 'desafio-profissional' });
+        }
+      }
+      if (url.pathname === '/auth/mfa/login') {
+        const dados = JSON.parse(corpo);
+        assert.match(dados.codigo, /^\d{6}$/);
+        const tokens = {
+          'desafio-alfa': 'token-alfa-secreto',
+          'desafio-beta': 'token-beta-secreto',
+          'desafio-profissional': 'token-profissional-secreto',
+        };
+        return respostaJson(200, { accessToken: tokens[dados.desafioMfa] });
       }
       if (url.pathname === '/operacoes/resumo') return respostaJson(403);
       if (url.pathname === '/pacientes' && metodo === 'POST') {
@@ -92,11 +111,12 @@ test('executa plano serial, limitado e produz somente evidencia sanitizada', asy
   const resumo = await executarProbesSeguranca({
     ambiente,
     fetchImpl: controlado.fetchImpl,
+    aguardarJanelaTotp: async () => {},
   });
 
   assert.equal(resumo.aprovado, true);
-  assert.equal(resumo.requisicoes, 26);
-  assert.equal(controlado.chamadas.length, 26);
+  assert.equal(resumo.requisicoes, 29);
+  assert.equal(controlado.chamadas.length, 29);
   assert.equal(controlado.maxAtivas, 1);
   assert(controlado.chamadas.every(({ url }) => new URL(url).origin === ambiente.E2E_API_URL));
   assert.deepEqual(new Set(resumo.cobertura), new Set([
@@ -118,6 +138,7 @@ test('executa plano serial, limitado e produz somente evidencia sanitizada', asy
     'token-profissional-secreto',
     ambiente.META_WHATSAPP_APP_SECRET,
     ambiente.META_WHATSAPP_WEBHOOK_RECEIVE_TOKEN,
+    ambiente.E2E_MFA_TOTP_SECRET,
   ]) {
     assert.equal(evidencia.includes(segredo), false);
   }

@@ -1,3 +1,6 @@
+import { readFile } from 'node:fs/promises';
+import { exigirSegredoTotpSintetico, gerarCodigoTotp } from './e2e-mfa.mjs';
+
 const config = {
   webUrl: process.env.E2E_WEB_URL ?? 'http://127.0.0.1:3000',
   apiUrl: process.env.E2E_API_URL ?? 'http://127.0.0.1:3001',
@@ -90,13 +93,45 @@ async function api(caminho, { token, status = 200, ...init } = {}) {
 }
 
 async function loginDireto(tenantSlug, email, senha = config.senha) {
-  const sessao = await api('/auth/login', {
+  let sessao = await api('/auth/login', {
     method: 'POST',
     status: 200,
     body: JSON.stringify({ tenantSlug, email, senha })
   });
+  if (sessao?.mfaObrigatorio === true) {
+    let segredo = exigirSegredoTotpSintetico();
+    if (sessao.modo === 'configurar') {
+      const configuracao = await api('/auth/mfa/login/configuracao', {
+        method: 'POST',
+        body: JSON.stringify({ desafioMfa: sessao.desafioMfa })
+      });
+      segredo = configuracao?.segredo;
+    }
+    sessao = await api('/auth/mfa/login', {
+      method: 'POST',
+      body: JSON.stringify({ desafioMfa: sessao.desafioMfa, codigo: gerarCodigoTotp(segredo) })
+    });
+  }
   assert(typeof sessao?.accessToken === 'string', `Login direto de ${tenantSlug} nao retornou accessToken.`);
   return sessao.accessToken;
+}
+
+async function loginBff(email, senha = config.senha) {
+  const desafio = await bff('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, senha })
+  });
+  if (desafio?.mfaObrigatorio !== true) return desafio;
+
+  let segredo = exigirSegredoTotpSintetico();
+  if (desafio.modo === 'configurar') {
+    const configuracao = await bff('/api/auth/mfa/configuracao-login', { method: 'POST' });
+    segredo = configuracao?.segredo;
+  }
+  return bff('/api/auth/mfa/concluir-login', {
+    method: 'POST',
+    body: JSON.stringify({ codigo: gerarCodigoTotp(segredo) })
+  });
 }
 
 async function executar() {
@@ -108,15 +143,11 @@ async function executar() {
   const pronto = await api('/health/pronto');
   assert(pronto?.status === 'ok' || pronto?.pronto === true, 'Backend nao ficou pronto para a jornada mutavel.');
 
-  await bff('/api/auth/login', {
-    method: 'POST',
-    status: 200,
-    body: JSON.stringify({ email: config.emailAlfa, senha: config.senha })
-  });
+  await loginBff(config.emailAlfa);
   const sessaoBff = await bff('/api/auth/session');
   assert(sessaoBff?.autenticado === true, 'Sessao BFF do tenant Alfa nao foi estabelecida.');
 
-  const tokenAlfa = await loginDireto(config.tenantAlfa, config.emailAlfa);
+  const tokenAlfa = await loginDireto(config.tenantAlfa, 'profissional.alfa@octaclin.test');
   const tokenBeta = await loginDireto(config.tenantBeta, config.emailBeta);
 
   const paciente = await bff('/api/pacientes', {
@@ -238,7 +269,7 @@ async function executar() {
       enunciado: 'Envie uma imagem sintetica.',
       peso: 0,
       obrigatoria: true,
-      configuracao: { tiposAceitos: ['image/jpeg'], maxArquivos: 1 }
+      configuracao: { tiposAceitos: ['image/png'], maxArquivos: 1 }
     })
   });
   await bff(`/api/questionarios/${questionario.id}`, {
@@ -255,22 +286,22 @@ async function executar() {
   const formulario = await bff(`/api/formularios/${tokenFormulario}`);
   assert(formulario?.perguntas?.length === 2, 'Formulario publico nao retornou o snapshot esperado.');
 
-  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01]);
+  const imagemSintetica = await readFile(new URL('../public/icons/octaclin-192.png', import.meta.url));
   const upload = await bff(`/api/formularios/${tokenFormulario}/anexos`, {
     method: 'POST',
     status: 201,
     body: JSON.stringify({
       perguntaId: perguntaUpload.id,
-      nomeArquivo: 'fase-231.jpg',
-      mimeType: 'image/jpeg',
-      tamanhoBytes: jpeg.length
+      nomeArquivo: 'fase-231.png',
+      mimeType: 'image/png',
+      tamanhoBytes: imagemSintetica.length
     })
   });
   assert(upload?.arquivo?.id && upload?.uploadUrl, 'Solicitacao de upload nao retornou URL assinada.');
   const envioObjeto = await fetch(upload.uploadUrl, {
     method: 'PUT',
     headers: upload.uploadHeaders,
-    body: jpeg,
+    body: imagemSintetica,
     signal: AbortSignal.timeout(30_000)
   });
   assert(envioObjeto.ok, `Upload no S3 efemero falhou com HTTP ${envioObjeto.status}.`);
