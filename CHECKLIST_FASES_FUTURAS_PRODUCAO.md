@@ -2426,6 +2426,14 @@ publicado antes de ampliar a superficie de mudancas visuais.
     mostrar so o primeiro formulario. Sem migration, sem mudanca de
     contrato de API. Validado por 32/32 testes Playwright (desktop+mobile),
     typecheck, lint, build e gate de linguagem.
+  - Incremento 4 concluido (adiantado): removido bloco de codigo morto
+    `id="acoes"` (sobra da Fase 162, nunca renderizado). Sem regressao nos
+    32/32 testes Playwright.
+  - Incremento 3 (paciente concluir tarefa/meta prescrita) **bloqueado
+    aguardando decisao de produto**: quais categorias de tarefa sao
+    completaveis pelo paciente, se a conclusao notifica o profissional e
+    se e reversivel. Detalhes em
+    `docs/history/phases/fase-257-portal-paciente-orientado-tarefas.md`.
 
 - [ ] Fase 258 - Central de comunicações confiável. [ESSENCIAL - PRE-PILOTO]
   - Unificar conversas por paciente, canal, responsável e pendência; exibir

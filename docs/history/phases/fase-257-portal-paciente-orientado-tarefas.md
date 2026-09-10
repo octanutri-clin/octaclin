@@ -130,3 +130,51 @@ Concluido em 2026-09-10.
     32/32 PASS
   - Gate de linguagem e microcopy — PASS
   - `pnpm security:secrets` e `git diff --check` — PASS
+
+## Incremento 4 - remocao do bloco morto `id="acoes"`
+
+Concluido em 2026-09-10 (adiantado; e independente da decisao de contrato
+pendente para o Incremento 3).
+
+- `components/portal/portal-paciente.tsx`: removido o
+  `<Cartao id="acoes" className="hidden">` (43 linhas) identificado na
+  auditoria inicial desta fase — sobra da reestruturacao da Fase 162,
+  nunca renderizado (`className` fixo em `"hidden"`, nao ligado a `secao`
+  como os demais cartoes). Confirmado por busca que nenhum teste
+  referenciava seu conteudo ("Próximas ações", distinto do cartao "Proxima
+  ação" da home) antes de remover.
+- Sem TDD dedicado: remocao pura de codigo morto, sem comportamento novo;
+  validado revalidando a suite Playwright existente sem alteracao.
+- Validacoes:
+  - `pnpm --dir octaclin-web typecheck` — PASS
+  - `pnpm --dir octaclin-web lint` — PASS (0 erros)
+  - `pnpm --dir octaclin-web build` — PASS
+  - 32/32 Playwright (desktop+mobile) em `portal-paciente.spec.mjs`,
+    `pwa-portal.spec.mjs` e `jornadas-criticas.spec.mjs` — sem regressao
+  - Gate de linguagem, `pnpm security:secrets`, `git diff --check` — PASS
+
+## Incremento 3 - conclusao de tarefas/metas pelo paciente
+
+Bloqueado aguardando decisao de produto (ver secao "Decisao pendente"
+abaixo). Nao implementado nesta rodada.
+
+### Decisao pendente
+
+Marcar uma tarefa/meta prescrita como concluida pelo paciente exige uma
+nova rota mutavel no backend (hoje `controlador-portal-paciente.ts` so
+tem leitura de `AcompanhamentoTarefaOrm`) escrevendo em uma tabela que
+guarda dado clinico-adjacente (`descricaoCriptografada`), prescrita por um
+profissional. Antes de implementar, e necessario decidir:
+
+1. Quais categorias de tarefa (`meta`, `tarefa`, `checkin`, `orientacao`)
+   o paciente pode marcar como concluida — todas, ou `orientacao` fica de
+   fora por ser apenas informativa (nao uma acao discreta)?
+2. Completar uma tarefa deve notificar o profissional (mensagem/evento) ou
+   basta ficar visivel no prontuario na proxima consulta/revisao?
+3. A acao e reversivel pelo paciente (desfazer conclusao) ou definitiva
+   (so o profissional pode reabrir, pelo prontuario)?
+
+Essas sao decisoes de produto, nao apenas tecnicas — impactam o contrato
+da nova rota e o fluxo assistencial. Ate resposta do dono do produto, o
+Incremento 3 fica pendente; os Incrementos 1, 2 e 4 nao dependem dele e ja
+estao concluidos.
