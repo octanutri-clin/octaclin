@@ -35,7 +35,18 @@ Atualizado em 2026-09-10.
   que exige `gh` autenticado, indisponivel neste ambiente) nesta sessao; ela
   permanece pendente antes de qualquer decisao que dependa da contagem
   corrente de alertas Dependabot/Code Scanning, incluindo a revalidacao
-  solicitada do `image-size`.
+  solicitada do `image-size`. Evidencia parcial obtida nesta sessao: o
+  `git push` desta branch reportou 2 alertas Dependabot high no `main` atual
+  (consistente com os dois alertas conhecidos de `image-size`), e o registro
+  npm confirma `image-size` ainda em `2.0.2` (`latest`), sem versao corrigida.
+- Fase 256 (Formularios e check-ins ponta a ponta) iniciada em 2026-09-10.
+  Auditoria confirmou que o fluxo pedido ja existe quase por completo no
+  modulo `questionarios`; o Incremento 1 (recuperacao no carregamento do
+  formulario publico, com TDD e suites reais executadas apos instalar
+  dependencias ausentes no ambiente) foi implementado e validado. Detalhes,
+  plano de incrementos restantes e evidencias completas em
+  `docs/history/phases/fase-256-formularios-checkins-ponta-a-ponta.md` e em
+  `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
   fotografia historica foi capturada em 2026-09-07 sobre
   `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning

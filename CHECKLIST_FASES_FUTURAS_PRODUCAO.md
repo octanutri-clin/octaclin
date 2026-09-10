@@ -2357,6 +2357,30 @@ publicado antes de ampliar a superficie de mudancas visuais.
     resposta, leitura clínica, matriz longitudinal e registro no prontuário.
   - Cobrir carregamento, indisponibilidade, erro, retomada e acessibilidade em
     desktop e celular com dados sintéticos.
+  - [x] Auditoria: o fluxo pedido ja existe quase por completo no modulo
+    `questionarios` (backend e web); o trabalho real e validacao/fechamento
+    de lacunas pontuais, nao implementacao do zero. Lacunas confirmadas:
+    ausencia de evidencia atual de teste (resolvida nesta fase), mensagem de
+    indisponibilidade do formulario publico repassando corpo cru do backend
+    sem recuperacao sem reload (corrigida no Incremento 1), historico de
+    versoes navegavel (pendente, escopo maior) e ambiguidade de nomenclatura
+    entre "check-in rapido" e "check-in via questionario" (decisao de produto
+    pendente, nao alterada).
+  - [x] Incremento 1: recuperacao no carregamento do formulario publico
+    (mensagem segura em PT-BR + botao "Tentar novamente"), com TDD (teste
+    Playwright RED antes da implementacao). Suites reais executadas apos
+    instalar dependencias (ausentes no ambiente): backend 83/83, Playwright
+    do modulo 14/14 (formulario-publico 6/6, questionarios-editor 8/8),
+    acessibilidade do modulo 12/12 sem regressao, typecheck/build/lint
+    backend e web aprovados, `test:authz` aprovado, secrets e diff --check
+    aprovados. `validate:docs`/`validar-preflight.ps1` SKIPPED (PowerShell
+    indisponivel neste ambiente Linux). Detalhes completos:
+    `docs/history/phases/fase-256-formularios-checkins-ponta-a-ponta.md`.
+  - [ ] Incremento 2 (pendente): cobertura de indisponibilidade no envio final
+    de respostas e no salvamento de rascunho.
+  - [ ] Incremento 3 (pendente, escopo maior): historico de versoes navegavel.
+  - [ ] Decisao de produto pendente: nomenclatura "check-in rapido" vs.
+    "check-in via questionario".
 
 - [ ] Fase 257 - Portal do paciente orientado por tarefas. [ESSENCIAL - PRE-PILOTO]
   - Priorizar próxima consulta e próxima ação; organizar plano, check-ins,
