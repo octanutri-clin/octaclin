@@ -1,8 +1,9 @@
 # Relatorio de seguranca - PR 54: DAST e probes ativos em staging
 
-Status em 2026-09-09: **automacao local PASS; oitava execucao no staging
-descartavel e review humano pendentes**. Nenhum resultado dinamico foi inferido
-a partir dos testes unitarios nem das execucoes interrompidas antes dos probes.
+Status em 2026-09-09: **automacao local e oitava execucao no staging
+descartavel PASS; review humano pendente**. Nenhum resultado dinamico foi
+inferido a partir dos testes unitarios nem das execucoes interrompidas antes dos
+probes.
 
 ## Escopo entregue
 
@@ -145,23 +146,32 @@ a outra referencia continua retornando conflito. A regressao cobre os dois
 casos e falhou antes da correcao. Uma oitava execucao exige nova autorizacao
 especifica para o run.
 
-## Gate externo pendente
+O oitavo run autorizado `34423447633`, no commit `00b50a0`, passou integralmente.
+Foram aprovados o provisionamento Neon, migrations, fixtures, role runtime, RLS,
+isolamento entre dois tenants, MFA, jornadas mutaveis, 29 probes sob o teto de
+30 requisicoes, ZAP Baseline, onboarding concorrente da Fase 228, publicacao de
+evidencias sanitizadas e cleanup. A branch Neon descartavel foi excluida.
 
-Executar `OctaClin staging E2E mutavel` no head deste PR com:
+O artefato sanitizado reconfirmou `0` alertas altos, `1` medio, `2` baixos e `5`
+informativos, sem bloqueios. Todos permanecem em triagem e nenhum foi registrado
+como falso positivo. A politica do gate foi satisfeita porque nao ha achado
+`critical/high` confirmado aberto.
+
+## Gate externo concluido
+
+`OctaClin staging E2E mutavel` foi executado no head `00b50a0` com:
 
 - `executar_seguranca_dinamica`: `true`;
 - `confirmacao_seguranca_dinamica`: `DAST-FUZZ-STAGING-DESCARTAVEL`.
 
-Reconfirmar no proximo run o provisionamento concorrente, os totais sanitizados
-do ZAP, 29/30 probes e qualquer falso positivo ou achado confirmado. O gate so
-vira `PASS` com cleanup verde, zero `critical/high` confirmado aberto e revisao
-humana concluida.
+Resultado: `PASS` tecnico com cleanup verde, 29/30 probes, ZAP aprovado e zero
+`critical/high` confirmado aberto. Resta a revisao humana antes do merge.
 
 ## Falsos positivos
 
 Nenhum registrado nesta versao. O ledger permanece vazio. Os oito alertas
-unicos do setimo run estao em `triagem_pendente`; nao converter achado em falso
-positivo sem evidencia reproduzivel, owner e prazo.
+unicos reconfirmados no oitavo run estao em `triagem_pendente`; nao converter
+achado em falso positivo sem evidencia reproduzivel, owner e prazo.
 
 ## Rollback
 
