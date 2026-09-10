@@ -137,8 +137,12 @@ export class ServicoCicloVidaTenant {
           return this.carregarContextoExistente(gerenciador, existente, normalizados.email);
         }
 
-        if (await repositorioTenants.findOne({ where: { slug: normalizados.slug } })) {
-          throw new ConflictException('Ja existe tenant com este slug.');
+        const existentePorSlug = await repositorioTenants.findOne({ where: { slug: normalizados.slug } });
+        if (existentePorSlug) {
+          if (existentePorSlug.provisionamentoReferencia !== normalizados.referencia) {
+            throw new ConflictException('Ja existe tenant com este slug.');
+          }
+          return this.carregarContextoExistente(gerenciador, existentePorSlug, normalizados.email);
         }
 
         const tenant = await repositorioTenants.save(

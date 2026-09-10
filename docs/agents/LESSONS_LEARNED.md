@@ -4,6 +4,18 @@ Registre aqui somente incidente de producao, falso verde, seguranca, recorrencia
 falha sistemica, investigacao cara ou erro com alta chance de repetir. Cada nova
 licao deve declarar problema, causa, correcao, como evitar, controle e status.
 
+## 2026-09-09 - Precheck de idempotencia perdeu o commit concorrente
+
+Problema: duas requisicoes simultaneas do mesmo provisionamento receberam `201`
+e `409`, em vez de ambas convergirem no tenant vencedor. Causa: a consulta por
+referencia ocorreu antes do commit concorrente e a consulta seguinte por slug
+ocorreu depois; o precheck tratou o slug visivel como colisao sem comparar sua
+referencia. Correcao: reutilizar o tenant encontrado por slug somente quando a
+referencia tambem coincide. Como evitar: testes de idempotencia devem cobrir o
+interleaving entre leituras, alem da violacao de unicidade no `INSERT`. Controle:
+regressoes positiva e negativa de `ServicoCicloVidaTenant.provisionar`, mais a
+jornada concorrente do staging descartavel. Status do controle: automated.
+
 ## 2026-09-08 - Exit code nativo oculto no preflight PowerShell
 
 Problema: `git diff --check` e `git status` falharam por `safe.directory`, mas o

@@ -1,6 +1,6 @@
 # Relatorio de seguranca - PR 54: DAST e probes ativos em staging
 
-Status em 2026-09-09: **automacao local PASS; setima execucao no staging
+Status em 2026-09-09: **automacao local PASS; oitava execucao no staging
 descartavel e review humano pendentes**. Nenhum resultado dinamico foi inferido
 a partir dos testes unitarios nem das execucoes interrompidas antes dos probes.
 
@@ -124,6 +124,27 @@ expor todo o checkout ao container. O avaliador continua exigindo o JSON e
 publicando apenas o resumo sanitizado. Uma setima execucao exige nova
 autorizacao especifica para o run.
 
+O setimo run autorizado `34420893157`, no commit `49b822a`, confirmou o
+workspace isolado e gravavel do ZAP. As jornadas mutaveis e os 29 probes sob o
+teto de 30 requisicoes passaram. O resumo sanitizado do ZAP foi gerado e
+aprovado sem bloqueios: `5` alertas informativos, `2` baixos, `1` medio e `0`
+altos. O alerta medio `CSP: Wildcard Directive`, os alertas baixos de
+`X-Powered-By` e `Cross-Origin-Embedder-Policy` e os informativos permanecem em
+triagem; nenhum foi classificado como falso positivo.
+
+O run nao constitui o PASS externo final porque o onboarding da Fase 228
+falhou depois do DAST. Duas requisicoes simultaneas com a mesma referencia e o
+mesmo slug deveriam reutilizar o tenant vencedor, mas uma recebeu `409` com
+`Ja existe tenant com este slug.`. O interleaving observado leu a referencia
+antes do commit concorrente e o slug depois dele. Evidencias sanitizadas foram
+publicadas e o cleanup Neon passou, sem ambiente descartavel residual.
+
+A correcao reutiliza o tenant encontrado pela segunda leitura somente quando o
+slug e a referencia pertencem ao mesmo provisionamento. O mesmo slug associado
+a outra referencia continua retornando conflito. A regressao cobre os dois
+casos e falhou antes da correcao. Uma oitava execucao exige nova autorizacao
+especifica para o run.
+
 ## Gate externo pendente
 
 Executar `OctaClin staging E2E mutavel` no head deste PR com:
@@ -131,14 +152,16 @@ Executar `OctaClin staging E2E mutavel` no head deste PR com:
 - `executar_seguranca_dinamica`: `true`;
 - `confirmacao_seguranca_dinamica`: `DAST-FUZZ-STAGING-DESCARTAVEL`.
 
-Registrar aqui o run, commit, totais sanitizados do ZAP, 29/30 probes e qualquer
-falso positivo ou achado confirmado. O gate so vira `PASS` com cleanup verde,
-zero `critical/high` confirmado aberto e revisao humana concluida.
+Reconfirmar no proximo run o provisionamento concorrente, os totais sanitizados
+do ZAP, 29/30 probes e qualquer falso positivo ou achado confirmado. O gate so
+vira `PASS` com cleanup verde, zero `critical/high` confirmado aberto e revisao
+humana concluida.
 
 ## Falsos positivos
 
-Nenhum registrado nesta versao. O ledger inicia vazio. Nao converter achado em
-falso positivo sem evidencia reproduzivel, owner e prazo.
+Nenhum registrado nesta versao. O ledger permanece vazio. Os oito alertas
+unicos do setimo run estao em `triagem_pendente`; nao converter achado em falso
+positivo sem evidencia reproduzivel, owner e prazo.
 
 ## Rollback
 
