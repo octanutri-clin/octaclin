@@ -79,13 +79,79 @@ de teste correspondente):
   no envio final de respostas e no salvamento de rascunho (distinta da fila
   offline PWA, que ja existe), preservando as mensagens de negocio seguras
   que o backend ja devolve.
-- **Incremento 3 (pendente, escopo maior)**: historico de versoes navegavel do
-  questionario (listar versoes anteriores por envio/snapshot, sem alterar o
-  contrato de integridade historica existente). Requer decisao de produto
-  sobre a UI (aba nova no editor vs. painel lateral) antes de iniciar.
-- **Decisao de produto pendente (nao tecnica)**: esclarecer/consolidar a
-  nomenclatura "check-in rapido" vs. "check-in via questionario" no produto.
-  Ver item 4 da auditoria.
+- **Incremento 3 (este commit)**: historico de versoes navegavel do
+  questionario, sem alterar o contrato de integridade historica existente
+  (snapshot congelado por envio) nem exigir migration.
+- **Decisao de produto (resolvida pelo dono do produto em 2026-09-10)**:
+  "check-in rapido" (registro livre de humor/refeicao/agua/atividade) passa a
+  se chamar **"Registro de habitos"**; "check-in via questionario" (resposta
+  estruturada/distribuicao recorrente) passa a se chamar **"Retorno de
+  avaliacao"**. Aplicado em commit separado apos o Incremento 3 — ver secao
+  propria abaixo.
+
+## Incremento 3 - Historico de versoes navegavel
+
+Reaproveita a infraestrutura existente sem nova tabela nem migration: cada
+`envio_questionario` ja congela `snapshotEstrutura` (versao, titulo,
+descricao, perguntas) no momento do envio. O novo endpoint deduplica esses
+snapshots por `versaoQuestionario`, soma quantos envios usaram cada versao e
+inclui a versao atual (ao vivo, mesmo que nunca enviada) marcada `atual`.
+
+- Backend: `ServicoQuestionarios.listarVersoesQuestionario` +
+  `GET /questionarios/:id/versoes` (permissao `questionarios.ler`, mesma
+  guarda de propriedade profissional/tenant que os demais endpoints de
+  leitura). TDD: 4 testes escritos cobrindo versao atual sem envio, dedup de
+  multiplos envios da mesma versao, envio legado sem snapshot (ignorado sem
+  quebrar) e isolamento de tenant.
+- Web: `lib/questionarios-api.ts` (`listarVersoesQuestionario`), BFF
+  `app/api/questionarios/[id]/versoes/route.ts` (proxy autenticado, mesmo
+  padrao de `respostas/route.ts`), estado e carregamento sob demanda em
+  `usar-workspace-questionarios.ts`, e painel expansivel em
+  `area-formularios.tsx` (botao "Histórico de versões" ao lado da etiqueta de
+  versao atual; cada versao expande para mostrar titulo, descricao e lista de
+  perguntas daquele momento). TDD: cenario Playwright cobrindo abrir o
+  historico, ver a versao atual e uma anterior, e expandir para ver as
+  perguntas congeladas daquela versao.
+
+## Rename "check-in" -> "Registro de habitos" / "Retorno de avaliacao"
+
+Decisao de produto explicita: dois conceitos distintos compartilhavam o
+rotulo "Check-in" na interface, o que a propria auditoria desta fase
+identificou como ambiguidade. Uma auditoria dedicada (Explore agent) mapeou
+todo texto visivel com "check-in" em tres grupos: (A) o registro livre do
+paciente (humor/refeicao/agua/atividade, tabela `logs_diario_rapido`), (B) a
+distribuicao/resposta de questionario estruturado (tabela `respostas_checkin`/
+`envios_questionario`), e (C) usos genericos/ambiguos ou de um terceiro
+conceito nao coberto pela decisao (categoria de tarefa "Check-in" prescrita
+pelo profissional; gatilhos de automacao; templates de comunicacao;
+gamificacao; origem de analise de IA).
+
+Apenas os Grupos A e B foram renomeados (texto visivel apenas: headings,
+botoes, mensagens, rotulos de menu, aria-labels legiveis, descricao do
+manifest PWA e da paleta de comandos, alem de dois literais de string do
+backend que alimentam esse mesmo texto: `fonte`/`titulo` de indicadores e
+eventos da timeline em `servico-pacientes.ts`/`dtos.ts`, ja que sao a origem
+real do rotulo "Check-in rapido" mostrado no prontuario). Nenhum ID, enum de
+tipo de evento, nome de tabela/coluna, rota ou contrato de API foi alterado —
+so o texto humano que trafega nesses campos. O Grupo C foi deliberadamente
+preservado (categoria de tarefa "Check-in" prescrita pelo profissional,
+gatilhos de automacao, templates de comunicacao, gamificacao, origem de
+analise de IA): nao faz parte da decisao de nomenclatura tomada e misturar
+essa mudanca teria ultrapassado o escopo aprovado. Titulos arbitrarios de
+questionario usados como dado sintetico em fixtures de teste (ex.:
+`titulo: 'Check-in semanal'`) tambem foram preservados: sao conteudo que um
+profissional poderia digitar livremente, nao copy do produto.
+
+Validacao: `pnpm test:linguagem` aprovado; typecheck, lint e build de backend
+e web aprovados; `pnpm test:authz` aprovado; suites backend afetadas
+(`servico-pacientes.spec.ts` 36/36, `servico-questionarios.spec.ts` e
+`controlador-questionarios.spec.ts`) sem regressao; Playwright das superficies
+tocadas (portal do paciente, editor de questionarios, PWA offline, prontuario/
+console-regression, subconjuntos relevantes de acessibilidade) sem regressao,
+desktop e mobile. `tests/visual/producao-readonly.spec.mjs` foi atualizado
+para o novo rotulo do menu, mas nao pode ser executado nesta sessao — exige
+autenticacao real de producao, fora do alcance deste ambiente; a mudanca e o
+mesmo padrao de texto ja validado nos demais testes.
 
 ## Incremento 1 - Recuperacao no carregamento do formulario publico
 

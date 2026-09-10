@@ -772,13 +772,13 @@ describe('ServicoPacientes', () => {
         {
           tipo: 'adesao',
           valor: '85%',
-          fonte: 'Check-in rapido',
+          fonte: 'Registro de habitos',
           registradoEm: new Date('2026-07-21T18:00:00.000Z')
         },
         {
           tipo: 'sintomas',
           valor: 'Sono leve',
-          fonte: 'Check-in rapido',
+          fonte: 'Registro de habitos',
           registradoEm: new Date('2026-07-21T18:00:00.000Z')
         }
       ],
@@ -807,7 +807,7 @@ describe('ServicoPacientes', () => {
     expect(prontuario.linhaDoTempo[2]).toEqual(
       expect.objectContaining({
         tipo: 'checkin_rapido',
-        titulo: 'Check-in rapido',
+        titulo: 'Registro de humor',
         descricao: 'Humor: bem - Adesao ao plano: 85% - Sintomas: Sono leve'
       })
     );

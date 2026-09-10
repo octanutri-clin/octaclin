@@ -1122,7 +1122,7 @@ test.describe('gate de acessibilidade - portal do paciente (areas autenticadas)'
   test('checkins', async ({ page }) => {
     await prepararSessaoPortalPaciente(page);
     await page.goto('/portal/checkins');
-    await expect(page.getByRole('heading', { name: 'Check-in rapido' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Registro de hábitos' })).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
   });
 
@@ -1557,7 +1557,7 @@ test.describe('gate de acessibilidade - questionarios (PR 20)', () => {
     await page.goto('/questionarios');
     await page.getByRole('tab', { name: 'Distribuicoes' }).click();
     await expect(page.getByRole('heading', { name: 'Distribuição do formulário' })).toBeVisible();
-    await expect(page.getByLabel('Paciente do check-in recorrente')).toBeVisible();
+    await expect(page.getByLabel('Paciente do retorno de avaliação recorrente')).toBeVisible();
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 
@@ -4662,14 +4662,14 @@ async function prepararPwaPortal(page) {
 
 async function abrirCheckinsPwa(page) {
   await page.goto('/portal/checkins');
-  await expect(page.getByRole('heading', { name: 'Check-in rapido' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Registro de hábitos' })).toBeVisible();
 }
 
 async function registrarCheckinPwa(page, observacao) {
   await page.getByLabel('Humor de hoje').selectOption('bem');
   await page.getByLabel('Adesão ao plano').fill('85');
   await page.getByLabel('Observações do dia').fill(observacao);
-  await page.getByRole('button', { name: 'Registrar check-in' }).click();
+  await page.getByRole('button', { name: 'Registrar hábitos' }).click();
 }
 
 function indicadorPwa(page) {
@@ -4821,7 +4821,7 @@ test.describe('gate de acessibilidade - pwa e offline (PR 28)', () => {
 
     controle.liberarSincronizacao();
 
-    await expect(page.getByRole('status').filter({ hasText: 'Check-in offline sincronizado.' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Registro de hábitos offline sincronizado.' })).toBeVisible();
     await expect.poll(async () => (await lerFilaPwa(page)).length).toBe(0);
     await expect(indicadorPwa(page)).toHaveCount(0);
 
@@ -4872,7 +4872,7 @@ test.describe('gate de acessibilidade - pwa e offline (PR 28)', () => {
 
     const confirmacao = page.getByRole('status').filter({ hasText: 'salvo neste dispositivo' });
     await expect(confirmacao).toBeVisible();
-    await expect(confirmacao).toContainText('Check-in salvo neste dispositivo. Ele será enviado quando a conexão voltar.');
+    await expect(confirmacao).toContainText('Registro de hábitos salvo neste dispositivo. Ele será enviado quando a conexão voltar.');
 
     const fila = await lerFilaPwa(page);
     expect(fila).toHaveLength(1);
@@ -4887,7 +4887,7 @@ test.describe('gate de acessibilidade - pwa e offline (PR 28)', () => {
     controle.checkinOnline = true;
     await definirConexaoPwa(page, true);
     await expect.poll(async () => (await lerFilaPwa(page)).length).toBe(0);
-    await expect(page.getByRole('status').filter({ hasText: 'Check-in offline sincronizado.' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Registro de hábitos offline sincronizado.' })).toBeVisible();
 
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
 
@@ -5522,13 +5522,13 @@ test.describe('jornadas completas por teclado (PR 30)', () => {
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('tab', { name: 'Distribuicoes' })).toBeFocused();
 
-    const paciente = page.getByLabel('Paciente do check-in recorrente');
-    await alcancarComTab(page, paciente, 'Paciente do check-in recorrente');
+    const paciente = page.getByLabel('Paciente do retorno de avaliação recorrente');
+    await alcancarComTab(page, paciente, 'Paciente do retorno de avaliação recorrente');
     await page.keyboard.press('ArrowDown');
-    const distribuir = page.getByRole('button', { name: 'Criar check-in recorrente' });
-    await alcancarComTab(page, distribuir, 'Criar check-in recorrente');
+    const distribuir = page.getByRole('button', { name: 'Criar retorno de avaliação recorrente' });
+    await alcancarComTab(page, distribuir, 'Criar retorno de avaliação recorrente');
     await page.keyboard.press('Enter');
-    await expect(page.getByText('Check-in recorrente criado para o paciente selecionado.')).toBeVisible();
+    await expect(page.getByText('Retorno de avaliação recorrente criado para o paciente selecionado.')).toBeVisible();
     await expect(distribuir).toBeFocused();
     expect(mutacoes.agendamento).toEqual([{
       questionarioId: 'q-teclado', pacienteId: 'paciente-1', regraCron: '0 8 * * 1', timezone: 'America/Sao_Paulo'
@@ -5565,11 +5565,11 @@ test.describe('jornadas completas por teclado (PR 30)', () => {
     const observacoes = page.getByLabel('Observações do dia');
     await alcancarComTab(page, observacoes, 'Observacoes do dia');
     await page.keyboard.insertText('Mantive o plano no cafe da manha.');
-    const registrar = page.getByRole('button', { name: 'Registrar check-in' });
-    await alcancarComTab(page, registrar, 'Registrar check-in');
+    const registrar = page.getByRole('button', { name: 'Registrar hábitos' });
+    await alcancarComTab(page, registrar, 'Registrar hábitos');
     await page.keyboard.press('Enter');
 
-    await expect(page.getByText('Check-in registrado.')).toBeVisible();
+    await expect(page.getByText('Registro de hábitos salvo.')).toBeVisible();
     await expect(registrar).toBeFocused();
     expect(mutacoes).toHaveLength(1);
     expect(mutacoes[0]).toMatchObject({

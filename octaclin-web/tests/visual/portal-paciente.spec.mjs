@@ -344,7 +344,7 @@ test.describe('portal do paciente', () => {
     await expect(page.getByRole('heading', { name: 'Plano em andamento' })).toBeVisible();
     await expect(page.getByText('1 tarefas e 1 materiais')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Ver plano' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Check-in rapido' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Registro de hábitos' })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Meu perfil' })).toHaveCount(0);
     await expect(page.getByText(/score\s+87[,.]40/i)).toHaveCount(0);
     expect(portal.carregamentos()).toBe(1);
@@ -391,15 +391,15 @@ test.describe('portal do paciente', () => {
     const navegacao = page.getByRole('navigation', {
       name: testInfo.project.name === 'mobile-chromium' ? 'Navegacao mobile do portal' : 'Navegacao do portal'
     });
-    await navegacao.getByRole('link', { name: 'Check-ins', exact: true }).click();
+    await navegacao.getByRole('link', { name: 'Registro de hábitos', exact: true }).click();
     await expect(page).toHaveURL(/\/portal\/checkins$/);
-    await expect(page.getByRole('heading', { name: 'Check-in rapido' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Registro de hábitos' })).toBeVisible();
 
     await page.getByLabel('Humor de hoje').selectOption('muito_bem');
     await page.getByLabel('Adesão ao plano').fill('90');
     await page.getByLabel('Sintomas ou sinais').fill('Sem sintomas relevantes.');
     await page.getByLabel('Observações do dia').fill('Mantive o plano no cafe da manha.');
-    await page.getByRole('button', { name: 'Registrar check-in' }).click();
+    await page.getByRole('button', { name: 'Registrar hábitos' }).click();
     await expect.poll(() => portal.registrouCheckin()).toBe(true);
 
     await navegacao.getByRole('link', { name: 'Mais', exact: true }).click();

@@ -52,7 +52,7 @@ export interface ProntuarioPacienteApi {
     indicadoresRecentes: Array<{
       tipo: 'adesao' | 'sintomas';
       valor: string;
-      fonte: 'Check-in rapido';
+      fonte: 'Registro de habitos';
       registradoEm: string;
     }>;
     proximaConduta?: {

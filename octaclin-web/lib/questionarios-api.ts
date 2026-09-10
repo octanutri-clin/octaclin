@@ -403,6 +403,32 @@ export async function obterLeituraClinicaQuestionario(
   );
 }
 
+export interface PerguntaVersaoQuestionarioApi {
+  id: string;
+  categoriaId: string;
+  tipo: TipoPergunta;
+  enunciado: string;
+  peso: string;
+  obrigatoria: boolean;
+  configuracao: Record<string, unknown>;
+  ordem: number;
+  opcoes: { id: string; rotulo: string; valor: string; imagemUrl?: string; ordem: number }[];
+}
+
+export interface VersaoQuestionarioApi {
+  versaoQuestionario: number;
+  titulo: string;
+  descricao?: string;
+  perguntas: PerguntaVersaoQuestionarioApi[];
+  atual: boolean;
+  capturadoEm?: string;
+  totalEnvios: number;
+}
+
+export async function listarVersoesQuestionario(questionarioId: string): Promise<VersaoQuestionarioApi[]> {
+  return requisitar<VersaoQuestionarioApi[]>(`/api/questionarios/${questionarioId}/versoes`);
+}
+
 export async function obterMatrizLongitudinalRespostas(filtros: MatrizLongitudinalRespostasApi['filtros']) {
   const parametros = new URLSearchParams();
   Object.entries(filtros).forEach(([chave, valor]) => {

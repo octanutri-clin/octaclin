@@ -69,7 +69,7 @@ const perfis = {
       {
         caminho: "/portal/checkins",
         titulo: "Portal do paciente",
-        rotulo: "Check-ins",
+        rotulo: "Registro de hábitos",
       },
       {
         caminho: "/portal/plano",

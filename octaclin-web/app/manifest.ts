@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'OctaClin - Portal do paciente',
     short_name: 'OctaClin',
-    description: 'Acompanhe consultas, plano e check-ins no portal OctaClin.',
+    description: 'Acompanhe consultas, plano e registros de hábitos no portal OctaClin.',
     start_url: '/portal',
     scope: '/',
     display: 'standalone',

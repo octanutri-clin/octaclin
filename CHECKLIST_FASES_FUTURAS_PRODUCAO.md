@@ -2386,9 +2386,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     modulo (`formulario-publico.spec.mjs` 12/12, `acessibilidade.spec.mjs`
     subconjunto 16/16) sem regressao, desktop+mobile. Detalhes:
     `docs/history/phases/fase-256-formularios-checkins-ponta-a-ponta.md`.
-  - [ ] Incremento 3 (pendente, escopo maior): historico de versoes navegavel.
-  - [ ] Decisao de produto pendente: nomenclatura "check-in rapido" vs.
-    "check-in via questionario".
+  - [x] Incremento 3: historico de versoes navegavel do questionario, sem
+    nova tabela/migration (reaproveita o snapshot congelado por envio ja
+    existente). Novo endpoint `GET /questionarios/:id/versoes`, painel
+    expansivel no editor web. TDD: 4 testes backend + 1 cenario Playwright,
+    todos GREEN; suites completas do modulo sem regressao.
+  - [x] Decisao de produto (dono do produto, 2026-09-10): "check-in rapido"
+    -> "Registro de habitos"; "check-in via questionario" -> "Retorno de
+    avaliacao". Aplicado apenas ao texto visivel dos dois conceitos
+    confirmados; um terceiro conceito ambiguo (categoria de tarefa "Check-in"
+    prescrita pelo profissional) e usos genericos em automacoes/comunicacoes/
+    gamificacao/IA foram deliberadamente preservados, fora do escopo da
+    decisao. Detalhes: `docs/history/phases/fase-256-formularios-checkins-ponta-a-ponta.md`.
 
 - [ ] Fase 257 - Portal do paciente orientado por tarefas. [ESSENCIAL - PRE-PILOTO]
   - Priorizar próxima consulta e próxima ação; organizar plano, check-ins,

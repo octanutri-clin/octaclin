@@ -246,6 +246,11 @@ export class ControladorQuestionarios {
     };
   }
 
+  @Get('questionarios/:id/versoes')
+  listarVersoesQuestionario(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
+    return this.servicoQuestionarios.listarVersoesQuestionario(usuario.tenantId, id, usuario);
+  }
+
   @Get('questionarios/:id/respostas')
   listarRespostasQuestionario(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
     return this.servicoQuestionarios.listarRespostasQuestionario(usuario.tenantId, id, usuario);

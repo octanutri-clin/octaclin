@@ -1,6 +1,7 @@
 'use client';
 
-import { Archive, BookOpen, Copy, RefreshCcw, Save, Search, Wand2 } from 'lucide-react';
+import { useState } from 'react';
+import { Archive, BookOpen, ChevronDown, ChevronRight, Copy, History, RefreshCcw, Save, Search, Wand2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Etiqueta } from '@/components/ui/etiqueta';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
@@ -16,9 +17,18 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
     buscaQuestionarios, setBuscaQuestionarios, paginaQuestionarios, totalQuestionarios, carregarPaginaQuestionarios,
     titulo, setTitulo, setAlteracoesQuestionarioPendentes,
     descricao, setDescricao, setStatus, perguntas, scoreTotal,
-    confirmandoArquivarQuestionario, arquivarQuestionario
+    confirmandoArquivarQuestionario, arquivarQuestionario,
+    versoes, carregandoVersoes, erroVersoes, historicoVersoesAberto, alternarHistoricoVersoes
   } = workspace;
   const totalPaginas = Math.max(1, Math.ceil(totalQuestionarios / 25));
+  const [versaoExpandidaIndice, setVersaoExpandidaIndice] = useState<number | null>(null);
+
+  function formatarDataVersao(valor?: string) {
+    if (!valor) return null;
+    const data = new Date(valor);
+    if (Number.isNaN(data.getTime())) return null;
+    return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(data);
+  }
 
   return (
     <div className="grid gap-4">
@@ -52,8 +62,72 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
           <div className="flex items-center gap-2">
             <span className="text-xs text-texto-suave">Versão {questionarioAtual?.versao ?? 1}</span>
             <Etiqueta variante={status === 'publicado' ? 'sucesso' : status === 'arquivado' ? 'neutra' : 'alerta'}>{status}</Etiqueta>
+            <Botao
+              type="button"
+              variante="fantasma"
+              className="h-8 px-2 text-xs"
+              onClick={alternarHistoricoVersoes}
+              disabled={!questionarioAtual}
+              aria-expanded={historicoVersoesAberto}
+            >
+              <History className="h-3.5 w-3.5" />
+              Histórico de versões
+            </Botao>
           </div>
         </CartaoCabecalho>
+        {historicoVersoesAberto ? (
+          <CartaoConteudo className="border-b border-linha pb-4">
+            {carregandoVersoes ? (
+              <p className="text-sm text-texto-suave">Carregando histórico de versões...</p>
+            ) : erroVersoes ? (
+              <div className="flex items-center gap-2 border border-perigo-borda bg-perigo-suave px-3 py-2 text-sm text-perigo" role="alert">
+                <span>{erroVersoes}</span>
+                <Botao type="button" variante="secundario" className="h-8 px-2 text-xs" onClick={() => void alternarHistoricoVersoes()}>Tentar novamente</Botao>
+              </div>
+            ) : versoes.length === 0 ? (
+              <p className="text-sm text-texto-suave">Nenhuma versão anterior registrada ainda.</p>
+            ) : (
+              <ul className="grid gap-2">
+                {versoes.map((versao, indice) => {
+                  const expandida = versaoExpandidaIndice === indice;
+                  const dataFormatada = formatarDataVersao(versao.capturadoEm);
+                  return (
+                    <li key={versao.versaoQuestionario} className="rounded-md border border-linha bg-superficie">
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between gap-2 p-3 text-left"
+                        onClick={() => setVersaoExpandidaIndice(expandida ? null : indice)}
+                        aria-expanded={expandida}
+                      >
+                        <span className="flex items-center gap-2">
+                          {expandida ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                          <span className="text-sm font-semibold text-tinta">Versão {versao.versaoQuestionario}</span>
+                          {versao.atual ? <Etiqueta variante="sucesso">atual</Etiqueta> : null}
+                        </span>
+                        <span className="text-xs text-texto-suave">
+                          {dataFormatada ? `Distribuída em ${dataFormatada}` : 'Nunca distribuída'} · {versao.totalEnvios} envio(s)
+                        </span>
+                      </button>
+                      {expandida ? (
+                        <div className="grid gap-2 border-t border-linha p-3">
+                          <p className="text-sm font-medium text-tinta">{versao.titulo}</p>
+                          {versao.descricao ? <p className="text-xs text-texto-suave">{versao.descricao}</p> : null}
+                          <ul className="grid gap-1">
+                            {versao.perguntas.map((pergunta) => (
+                              <li key={pergunta.id} className="text-xs text-texto-suave">
+                                {pergunta.ordem}. {pergunta.enunciado}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CartaoConteudo>
+        ) : null}
         <CartaoConteudo className="space-y-4">
           <div className="space-y-1.5">
             <Rotulo htmlFor="busca-questionario">Buscar formulário</Rotulo>

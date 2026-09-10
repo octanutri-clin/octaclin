@@ -1147,6 +1147,125 @@ describe('ServicoQuestionarios', () => {
     ]);
   });
 
+  describe('listarVersoesQuestionario', () => {
+    it('lista a versao atual mesmo sem nenhum envio, marcada como atual', async () => {
+      const { servico } = criarServico({
+        categorias: [],
+        questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in semanal', descricao: 'Descricao atual', versao: 1 }],
+        perguntas: [
+          { id: 'p1', tenantId: 'tenant-1', questionarioId: 'q1', categoriaId: 'c1', tipo: 'sim_nao', enunciado: 'Pergunta 1', peso: '1', obrigatoria: true, configuracao: {}, ordem: 1 }
+        ],
+        opcaos: [],
+        envios: [],
+        respostaCheckins: [],
+        respostaValors: [],
+        pacientes: []
+      });
+
+      const versoes = await servico.listarVersoesQuestionario('tenant-1', 'q1', usuarioColaborador);
+
+      expect(versoes).toEqual([
+        expect.objectContaining({
+          versaoQuestionario: 1,
+          titulo: 'Check-in semanal',
+          atual: true,
+          totalEnvios: 0,
+          capturadoEm: undefined
+        })
+      ]);
+    });
+
+    it('lista versoes anteriores distintas a partir dos envios, sem duplicar quando ha mais de um envio da mesma versao', async () => {
+      const primeiroEnvioV1 = new Date('2026-07-01T10:00:00.000Z');
+      const segundoEnvioV1 = new Date('2026-07-08T10:00:00.000Z');
+      const envioV2 = new Date('2026-07-15T10:00:00.000Z');
+      const { servico } = criarServico({
+        categorias: [],
+        questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in semanal v2', versao: 2 }],
+        perguntas: [],
+        opcaos: [],
+        envios: [
+          {
+            id: 'envio-1',
+            tenantId: 'tenant-1',
+            questionarioId: 'q1',
+            pacienteId: 'paciente-1',
+            enviadoEm: primeiroEnvioV1,
+            snapshotEstrutura: { versaoQuestionario: 1, titulo: 'Check-in semanal v1', perguntas: [] }
+          },
+          {
+            id: 'envio-2',
+            tenantId: 'tenant-1',
+            questionarioId: 'q1',
+            pacienteId: 'paciente-2',
+            enviadoEm: segundoEnvioV1,
+            snapshotEstrutura: { versaoQuestionario: 1, titulo: 'Check-in semanal v1', perguntas: [] }
+          },
+          {
+            id: 'envio-3',
+            tenantId: 'tenant-1',
+            questionarioId: 'q1',
+            pacienteId: 'paciente-1',
+            enviadoEm: envioV2,
+            snapshotEstrutura: { versaoQuestionario: 2, titulo: 'Check-in semanal v2', perguntas: [] }
+          }
+        ],
+        respostaCheckins: [],
+        respostaValors: [],
+        pacientes: []
+      });
+
+      const versoes = await servico.listarVersoesQuestionario('tenant-1', 'q1', usuarioColaborador);
+
+      expect(versoes).toEqual([
+        expect.objectContaining({ versaoQuestionario: 2, atual: true, totalEnvios: 1, capturadoEm: envioV2 }),
+        expect.objectContaining({
+          versaoQuestionario: 1,
+          titulo: 'Check-in semanal v1',
+          atual: false,
+          totalEnvios: 2,
+          capturadoEm: primeiroEnvioV1
+        })
+      ]);
+    });
+
+    it('ignora envios sem snapshotEstrutura (dados legados anteriores a esta captura)', async () => {
+      const { servico } = criarServico({
+        categorias: [],
+        questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in semanal', versao: 1 }],
+        perguntas: [],
+        opcaos: [],
+        envios: [
+          { id: 'envio-legado', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', enviadoEm: new Date('2026-01-01T10:00:00.000Z') }
+        ],
+        respostaCheckins: [],
+        respostaValors: [],
+        pacientes: []
+      });
+
+      const versoes = await servico.listarVersoesQuestionario('tenant-1', 'q1', usuarioColaborador);
+
+      expect(versoes).toEqual([expect.objectContaining({ versaoQuestionario: 1, atual: true, totalEnvios: 0 })]);
+    });
+
+    it('lanca NotFoundException para questionario de outro tenant', async () => {
+      const { servico } = criarServico({
+        categorias: [],
+        questionarios: [{ id: 'q1', tenantId: 'tenant-2', titulo: 'De outro tenant', versao: 1 }],
+        perguntas: [],
+        opcaos: [],
+        envios: [],
+        respostaCheckins: [],
+        respostaValors: [],
+        pacientes: []
+      });
+
+      await expect(servico.listarVersoesQuestionario('tenant-1', 'q1', usuarioColaborador)).rejects.toThrow(
+        'Questionario nao encontrado.'
+      );
+    });
+  });
+
   it('deve montar matriz longitudinal apenas para indicadores numericos comparaveis', async () => {
     const anterior = new Date('2026-07-12T12:00:00.000Z');
     const atual = new Date('2026-07-19T12:00:00.000Z');

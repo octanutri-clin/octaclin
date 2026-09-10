@@ -28,7 +28,7 @@ function rotuloTipo(tipo: EventoProntuarioPacienteApi['tipo']) {
     consulta: 'Consulta',
     formulario: 'Formulário',
     resposta_formulario: 'Resposta',
-    checkin_rapido: 'Check-in rápido',
+    checkin_rapido: 'Registro de hábitos',
     mensagem: 'Mensagem',
     evolucao_clinica: 'Evolução',
     tarefa_acompanhamento: 'Tarefa',

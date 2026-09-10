@@ -1396,8 +1396,8 @@ async function prepararProntuarioMockado(page, {
             registradaEm: '2026-07-22T16:00:00.000Z'
           },
           indicadoresRecentes: [
-            { tipo: 'adesao', valor: '85%', fonte: 'Check-in rapido', registradoEm: '2026-07-21T18:00:00.000Z' },
-            { tipo: 'sintomas', valor: 'Sono leve', fonte: 'Check-in rapido', registradoEm: '2026-07-21T18:00:00.000Z' }
+            { tipo: 'adesao', valor: '85%', fonte: 'Registro de habitos', registradoEm: '2026-07-21T18:00:00.000Z' },
+            { tipo: 'sintomas', valor: 'Sono leve', fonte: 'Registro de habitos', registradoEm: '2026-07-21T18:00:00.000Z' }
           ],
           proximaConduta: {
             tipo: 'falha_comunicacao',
@@ -2218,7 +2218,7 @@ test.describe('prontuario do paciente', () => {
     const acoes = page.getByRole('navigation', { name: 'Ações rápidas do paciente' });
     await expect(acoes.getByRole('link', { name: 'Agendar' })).toHaveAttribute('href', '/agenda?pacienteId=paciente-1');
     await acoes.getByRole('button', { name: 'Formulários', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Formulários e check-ins' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Formulários e registros de hábitos' })).toBeVisible();
     await acoes.getByRole('button', { name: 'Anexar', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Anexos do paciente' })).toBeVisible();
 
@@ -2330,7 +2330,7 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Versão 2')).toBeVisible();
     await expect(page.getByText('Revisar exames pendentes')).toBeVisible();
     await expect(page.getByText('85%')).toBeVisible();
-    await expect(page.getByText(/Fonte: Check-in rapido em/).first()).toBeVisible();
+    await expect(page.getByText(/Fonte: Registro de habitos em/).first()).toBeVisible();
 
     const serie = page.getByRole('region', { name: 'Evolução antropométrica' });
     await expect(serie.getByRole('table')).toBeVisible();
