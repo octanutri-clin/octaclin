@@ -1,0 +1,59 @@
+name: Verificacao seguranca producao
+
+# Separado de forma deliberada do "Monitor producao" (saude/uptime): este
+# workflow so faz sondagem passiva e nao-destrutiva de TLS, headers, cookies
+# e CORS contra a origem publica de producao. Nao substitui um DAST completo
+# nem teste ofensivo autenticado -- esses ficam para uma fase futura,
+# preferencialmente primeiro contra staging.
+
+on:
+  schedule:
+    - cron: "40 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: octaclin-verificacao-seguranca-${{ github.event_name }}
+  cancel-in-progress: false
+
+env:
+  OCTACLIN_MONITOR_BACKEND_URL: ${{ vars.OCTACLIN_MONITOR_BACKEND_URL }}
+  OCTACLIN_MONITOR_WEB_URL: ${{ vars.OCTACLIN_MONITOR_WEB_URL }}
+
+jobs:
+  verificar:
+    name: TLS, headers, cookies e CORS (passivo)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && vars.OCTACLIN_VERIFICACAO_SEGURANCA_AUTOMATICA_HABILITADA == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Verificar TLS, headers, cookies e CORS
+        run: node scripts/verificar-seguranca-producao.mjs
+
+      - name: Abrir incidente deduplicado
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITULO: "[Alerta seguranca] Verificacao passiva de producao falhou"
+        run: |
+          EXISTENTE="$(gh issue list --state open --limit 100 --json number,title --jq '.[] | select(.title == env.TITULO) | .number' | head -n1)"
+          if [ -z "$EXISTENTE" ]; then
+            gh issue create --title "$TITULO" --body "A verificacao passiva de seguranca (TLS/headers/cookies/CORS) falhou. Diagnosticar sem publicar payloads ou credenciais. Execucao: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi
+
+      - name: Fechar incidente recuperado
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITULO: "[Alerta seguranca] Verificacao passiva de producao falhou"
+        run: |
+          gh issue list --state open --limit 100 --json number,title --jq '.[] | select(.title == env.TITULO) | .number' | while read -r NUMERO; do
+            gh issue close "$NUMERO" --comment "Verificacao recuperada na execucao $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          done
