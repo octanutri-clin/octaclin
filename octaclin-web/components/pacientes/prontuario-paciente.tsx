@@ -911,6 +911,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       <EstadoFalha
         titulo="Não foi possível carregar o prontuário"
         descricao={falhaCarregamento.mensagem}
+        codigoReferencia={falhaCarregamento.requestId}
         aoTentarNovamente={falhaCarregamento.recuperavel ? () => void carregar() : undefined}
         tentando={carregando}
       />
@@ -1205,6 +1206,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <EstadoFalha
             titulo="Não foi possível carregar as evoluções clínicas"
             descricao={falhaEvolucoes.mensagem}
+            codigoReferencia={falhaEvolucoes.requestId}
             aoTentarNovamente={falhaEvolucoes.recuperavel ? () => void carregarEvolucoes() : undefined}
             tentando={carregandoEvolucoes}
           />
@@ -1267,6 +1269,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <EstadoFalha
             titulo="Não foi possível carregar as tarefas de acompanhamento"
             descricao={falhaTarefas.mensagem}
+            codigoReferencia={falhaTarefas.requestId}
             aoTentarNovamente={falhaTarefas.recuperavel ? () => void carregarTarefas() : undefined}
             tentando={carregandoTarefas}
           />
@@ -1362,6 +1365,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <EstadoFalha
             titulo="Não foi possível carregar os materiais"
             descricao={falhaMateriais.mensagem}
+            codigoReferencia={falhaMateriais.requestId}
             aoTentarNovamente={falhaMateriais.recuperavel ? () => void carregarMateriais() : undefined}
             tentando={carregandoMateriais}
           />
@@ -1515,6 +1519,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           <EstadoFalha
             titulo="Não foi possível carregar os anexos"
             descricao={falhaAnexos.mensagem}
+            codigoReferencia={falhaAnexos.requestId}
             aoTentarNovamente={falhaAnexos.recuperavel ? () => void carregarAnexos() : undefined}
             tentando={carregandoAnexos}
           />
@@ -1704,6 +1709,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <EstadoFalha
               titulo="Não foi possível carregar a linha do tempo"
               descricao={falhaHistorico.mensagem}
+              codigoReferencia={falhaHistorico.requestId}
               aoTentarNovamente={falhaHistorico.recuperavel ? () => void carregarHistorico() : undefined}
               tentando={carregandoHistorico}
             />

@@ -11,7 +11,9 @@ Antes de investigar um caso, colete somente o minimo necessario:
 - horario aproximado do erro;
 - tela ou acao executada;
 - mensagem de erro visivel;
-- `requestId`, se aparecer em resposta tecnica ou logs;
+- `requestId`: peca ao usuario o "Código para suporte" exibido na tela de erro
+  (prontuário e agenda ja mostram; outras telas ainda so expoem em resposta
+  tecnica ou logs);
 - canal afetado: login, convite, senha, WhatsApp, email ou agenda.
 
 Regras de seguranca:
@@ -192,7 +194,8 @@ Evidencia minima:
 - tipo de email;
 - destinatario mascarado;
 - status interno;
-- mensagem tecnica sanitizada.
+- mensagem tecnica sanitizada;
+- `requestId` ou log sanitizado.
 
 Escalonar para desenvolvimento quando:
 

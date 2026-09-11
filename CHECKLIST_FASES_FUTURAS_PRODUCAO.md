@@ -2530,8 +2530,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
 - [ ] Fase 260 - Desempenho, resiliência e diagnóstico operacional. [ESSENCIAL - ESTABILIDADE] [EM ANDAMENTO EM 2026-09-11]
   - Definir orçamentos de carregamento e chamadas, eliminar cascatas de requests,
     revisar cache/invalidação e limitar componentes clínicos muito grandes.
-  - Correlacionar erro de interface, BFF e backend sem PHI; criar runbooks para
+  - [x] Correlacionar erro de interface, BFF e backend sem PHI; criar runbooks para
     falhas de banco, Redis, storage, e-mail, WhatsApp e Google Calendar.
+    Incremento 2 entregue em 2026-09-11: `requestId` (ja gerado e propagado
+    ate a trilha) passou a ser exibido ao usuario em falhas do prontuario e
+    da agenda ("Codigo para suporte"), fechando a lacuna que fazia
+    `RUNBOOK_SUPORTE.md` pedir esse dado sem a UI nunca o entregar. Os
+    runbooks de banco/Redis/storage/e-mail/WhatsApp/Calendar ja existiam com
+    profundidade adequada (a auditoria inicial comparou secoes com niveis de
+    risco diferentes; corrigido e documentado na fase). Ver
+    `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
   - [x] Reduzir o contrato inicial do prontuário a agregados e referências: detalhes
     clínicos descriptografados, mensagens, check-ins, evoluções e tarefas devem
     ser autorizados e carregados somente quando a área correspondente for aberta.

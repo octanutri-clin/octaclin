@@ -120,9 +120,19 @@ Atualizado em 2026-09-11.
   permissao correta nos dois endpoints do prontuario (eager e paginado).
   Decisao de escopo para a sub-meta de auditoria transacional: piloto nos
   pontos de leitura de PHI, nao extensao completa dos ~101 pontos de
-  chamada de `ServicoAuditoria.registrar()` nesta fase. Nenhuma migration.
-  Incrementos 2-4 (correlacao de erro visivel ao usuario e runbooks,
-  piloto do outbox de auditoria, orcamento de performance em CI) seguem
+  chamada de `ServicoAuditoria.registrar()` nesta fase. Incremento 2
+  entregue: `requestId` (ja propagado ate a trilha de auditoria) passou a
+  ser exibido ao usuario como "Codigo para suporte" nas falhas do
+  prontuario e da agenda, fechando uma lacuna que o proprio
+  `RUNBOOK_SUPORTE.md` ja pressupunha. Fato novo verificado nesta rodada:
+  a auditoria inicial apontara os runbooks de e-mail/WhatsApp/Calendar
+  como rasos frente ao incidente de auditoria, mas a comparacao era entre
+  documentos de risco diferente — `RUNBOOK_SUPORTE.md` ja cobre os tres
+  canais com profundidade equivalente entre si (sintomas, checklist,
+  evidencia, escalonamento, severidade); corrigido apenas um detalhe real
+  (e-mail nao listava `requestId` como evidencia, os outros dois ja
+  listavam). Nenhuma migration em nenhum incremento. Incrementos 3-4
+  (piloto do outbox de auditoria, orcamento de performance em CI) seguem
   pendentes. Detalhes e evidencias completas em
   `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A

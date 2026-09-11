@@ -984,7 +984,8 @@ async function prepararProntuarioMockado(page, {
   permissoesRemovidas = [],
   papel = 'Professional',
   profissionalResponsavelId = 'profissional-1',
-  falhaMateriais = false
+  falhaMateriais = false,
+  falhaEvolucoes = false
 } = {}) {
   let criouEvolucao = false;
   let criouTarefa = false;
@@ -1467,6 +1468,16 @@ async function prepararProntuarioMockado(page, {
     }
 
     leiturasEvolucoes += 1;
+    if (falhaEvolucoes) {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        headers: { 'x-request-id': 'req-teste-evolucoes-0001' },
+        body: JSON.stringify({ mensagem: 'Falha sintetica de evolucoes.' })
+      });
+      return;
+    }
+
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -2064,6 +2075,26 @@ test.describe('agenda de producao', () => {
     await expect(consultaAna.getByText('Cancelada')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
+
+  test('exibe codigo de correlacao para suporte quando a agenda falha ao carregar', async ({ page }) => {
+    await prepararDashboardMockado(page, { googleConectado: false });
+    await page.route('**/api/agenda/consultas', async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        headers: { 'x-request-id': 'req-teste-agenda-0002' },
+        body: JSON.stringify({ mensagem: 'Falha sintetica de agenda.' })
+      });
+    });
+    await page.goto('/agenda');
+
+    await expect(page.getByRole('heading', { name: 'Não foi possível carregar a agenda' })).toBeVisible();
+    await expect(page.getByText('Código para suporte: req-teste-agenda-0002')).toBeVisible();
+  });
 });
 
 test.describe('lista de pacientes operacional', () => {
@@ -2139,6 +2170,15 @@ test.describe('prontuario do paciente', () => {
 
     await page.getByRole('tab', { name: 'Resumo', exact: true }).first().click();
     await expect(page.getByRole('heading', { name: 'Linha de cuidado' })).toBeVisible();
+  });
+
+  test('exibe codigo de correlacao para suporte quando evolucoes falham ao carregar', async ({ page }) => {
+    await prepararProntuarioMockado(page, { falhaEvolucoes: true });
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tab', { name: 'Atendimentos', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Não foi possível carregar as evoluções clínicas' })).toBeVisible();
+    await expect(page.getByText('Código para suporte: req-teste-evolucoes-0001')).toBeVisible();
   });
 
   test('restaura deep link permitido e descarta subarea sem permissao', async ({ page }) => {

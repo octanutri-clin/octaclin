@@ -1,6 +1,6 @@
 # Fase 260 - Desempenho, resiliência e diagnóstico operacional
 
-Status: em andamento desde 2026-09-11 (Incremento 1 entregue).
+Status: em andamento desde 2026-09-11 (Incrementos 1 e 2 entregues).
 
 ## Objetivo (roadmap)
 
@@ -139,10 +139,85 @@ candidato para uma rodada futura da sub-meta 3.
   regressão desta fase; fica registrado aqui como observação para uma
   eventual decisão de produto sobre visibilidade granular de evoluções.
 
+## Incremento 2 - Correlação de erro visível ao usuário
+
+**Correção de rota em relação à auditoria inicial**: ao investigar a
+"profundidade menor" apontada para e-mail/WhatsApp/Calendar em
+`RUNBOOK_PRODUCAO.md`, a comparação original media a seção errada. A ceremônia
+completa (detecção → contenção → preservação de evidência → encerramento) que
+existe para o incidente de auditoria é proporcional a um risco R4/R5 (trilha
+de auditoria); não é o padrão esperado para uma falha de integração
+operacional. `RUNBOOK_PRODUCAO.md` já declara explicitamente, na abertura de
+`## Incidentes`, que as seções de e-mail/WhatsApp/Calendar ali são "resumo de
+resposta rápida" e apontam para `RUNBOOK_SUPORTE.md` para o procedimento
+completo — que já tem, para os três canais, sintomas, checklist, evidência
+mínima, gatilho de escalonamento e severidade (`SLA_SUPORTE.md`, P0-P3) com
+estrutura equivalente entre si. **Não havia, portanto, o gap de runbook
+descrito na auditoria inicial**; era uma comparação entre documentos com
+propósitos e níveis de risco diferentes. Isso é registrado aqui em vez de
+escondido, por transparência sobre o replanejamento.
+
+O que sobrou como gap real e verificado: `requestId` já percorria
+UI → BFF → backend → log estruturado → `user_action_logs.metadados.requestId`,
+mas nunca chegava a ser mostrado ao usuário final numa falha — e
+`RUNBOOK_SUPORTE.md` já pedia esse valor como evidência para WhatsApp e Agenda
+("`requestId`, se aparecer em resposta técnica ou logs"), pressupondo uma
+fonte que a UI nunca entregava. Este incremento fecha esse loop:
+
+1. **`octaclin-web/lib/erro-api.ts`** (novo): `ErroApi`/`lancarErroApi`
+   compartilhados — capturam `status`, mensagem e o `requestId` do cabeçalho
+   `x-request-id` da resposta do BFF, substituindo a classe de erro duplicada
+   em `prontuario-api.ts` (13 pontos) e `agenda-api.ts` (1 ponto). Não migrado
+   ainda: `comunicacoes-api.ts`, que tem uma classe de erro pública
+   (`ErroApiComunicacoes`, checada por `instanceof` em
+   `painel-comunicacoes.tsx`) e nenhum `<EstadoFalha>`/`<Aviso>` óbvio para
+   plugar o código — candidato a uma rodada futura, e não um gap escondido.
+2. **`FalhaInterface`** (`lib/erros-interface.ts`) ganhou `requestId?: string`,
+   extraído do erro por duck typing (mesmo padrão de `status`), preservado em
+   qualquer classificação de falha.
+3. **`EstadoFalha`/`Aviso`** (`components/ui/feedback.tsx`) ganharam a prop
+   opcional `codigoReferencia`, renderizada como "Código para suporte: <id>" —
+   nunca PHI, é o UUID opaco do middleware.
+4. Prontuário (6 pontos de `EstadoFalha`) e Agenda (`EstadoFalha` de carga
+   inicial + `Aviso` de erro de ação, que é onde a falha de sincronização com
+   o Google Calendar realmente aparece) passaram a exibir o código.
+5. `RUNBOOK_SUPORTE.md`: evidência mínima de e-mail ganhou `requestId` (só
+   WhatsApp e Agenda listavam antes — inconsistência real, agora corrigida) e
+   a "Triagem inicial" passou a dizer que prontuário/agenda já mostram o
+   código na tela, em vez de exigir busca em log técnico.
+
+### Arquivos principais
+
+- `octaclin-web/lib/erro-api.ts` (novo).
+- `octaclin-web/lib/erros-interface.ts`, `lib/prontuario-api.ts`,
+  `lib/agenda-api.ts`.
+- `octaclin-web/components/ui/feedback.tsx`,
+  `components/pacientes/prontuario-paciente.tsx`,
+  `components/agenda/painel-agenda.tsx`.
+- `octaclin-web/tests/visual/console-regression.spec.mjs`: dois testes novos
+  (`falhaEvolucoes` no prontuário, falha de carga na agenda), ambos com mock
+  de `x-request-id` na resposta e asserção do código na tela.
+- `RUNBOOK_SUPORTE.md`.
+
+### Validações executadas
+
+- `pnpm --dir octaclin-web typecheck` — PASS.
+- `pnpm --dir octaclin-web exec eslint .` — 0 erros (warnings pré-existentes).
+- `pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs` (desktop + mobile) — PASS (92 testes).
+- `pnpm --dir octaclin-web exec playwright test tests/visual/acessibilidade.spec.mjs -g "prontuario|paciente|agenda"` — PASS (27 testes).
+- `pnpm security:secrets` — nenhum secret identificado.
+
+### Pendências desta sub-meta
+
+- `comunicacoes-api.ts` (WhatsApp/e-mail via central de comunicações) ainda
+  não expõe `requestId` na UI — sem endpoint/estado de falha óbvio para
+  plugar hoje.
+- Demais bibliotecas de API (materiais, mobile/anexos, questionários etc.)
+  seguem com a classe de erro antiga, sem `requestId`. `lib/erro-api.ts` está
+  pronto para qualquer uma delas adotar com uma mudança de poucas linhas.
+
 ## Incrementos restantes
 
-- Incremento 2: correlação de erro visível ao usuário (`requestId` na UI) e
-  aprofundamento dos runbooks de e-mail/WhatsApp/Calendar.
 - Incremento 3: piloto do outbox transacional de auditoria para os pontos de
   leitura de PHI (prontuário, documentos clínicos, evoluções).
 - Incremento 4: orçamento de performance no frontend (gate de contagem de
