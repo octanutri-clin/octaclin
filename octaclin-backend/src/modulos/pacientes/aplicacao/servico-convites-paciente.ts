@@ -10,7 +10,7 @@ import { contextoAcessoPorPapel } from '../../auth/dominio/permissoes';
 import { ServicoAuth } from '../../auth/aplicacao/servico-auth';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
-import { listarDocumentosLegaisPaciente } from './documentos-legais-paciente';
+import { listarDocumentosLegaisPaciente } from '../../../infraestrutura/lgpd/documentos-legais';
 import { AtivarConvitePacienteDto, CriarConvitePacienteDto } from './dtos';
 import { ConvitePacienteOrm } from '../infraestrutura/convite-paciente.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';

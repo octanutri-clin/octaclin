@@ -43,6 +43,8 @@ const acoesFalha = [
   { label: 'Ir para login', href: '/login' }
 ];
 
+const versaoLegalStaff = '2026-07';
+
 function formatarData(valor?: string) {
   if (!valor) return '';
   const data = new Date(valor);
@@ -55,6 +57,8 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
   const [dadosToken, setDadosToken] = useState<TokenRecuperacaoSenhaApi | null>(null);
   const [senha, setSenha] = useState('');
   const [confirmacao, setConfirmacao] = useState('');
+  const [aceiteTermosUso, setAceiteTermosUso] = useState(false);
+  const [aceitePoliticaPrivacidade, setAceitePoliticaPrivacidade] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -62,6 +66,7 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
   const [sucesso, setSucesso] = useState(false);
 
   const senhaValida = useMemo(() => senha.length >= 8 && senha === confirmacao, [senha, confirmacao]);
+  const ehPrimeiroAcessoStaff = dadosToken?.origem === 'convite_usuario_cliente';
 
   useEffect(() => {
     if (!token) {
@@ -92,9 +97,18 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
       return;
     }
 
+    if (ehPrimeiroAcessoStaff && (!aceiteTermosUso || !aceitePoliticaPrivacidade)) {
+      setErro('Aceite os termos de uso e a política de privacidade para ativar sua conta.');
+      return;
+    }
+
     setSalvando(true);
     try {
-      await redefinirSenha(token, senha);
+      await redefinirSenha(
+        token,
+        senha,
+        ehPrimeiroAcessoStaff ? { aceiteTermosUso, aceitePoliticaPrivacidade } : undefined
+      );
       setSucesso(true);
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao redefinir senha.');
@@ -104,7 +118,7 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
   }
 
   return (
-    <AuthShell titulo="Nova senha">
+    <AuthShell titulo={ehPrimeiroAcessoStaff ? 'Ative sua conta' : 'Nova senha'}>
       {carregando ? (
         <div className="flex items-center gap-2 text-sm text-texto-suave">
           <Loader2 size={16} className="animate-spin text-primaria" />
@@ -116,7 +130,7 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
         <div className="grid gap-4">
           <div className="flex items-start gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte">
             <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
-            <span>Senha redefinida. Entre novamente com a nova senha.</span>
+            <span>{ehPrimeiroAcessoStaff ? 'Conta ativada. Entre com sua senha.' : 'Senha redefinida. Entre novamente com a nova senha.'}</span>
           </div>
           <Link
             href="/login"
@@ -135,7 +149,7 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
           </div>
 
           <div className="grid gap-1">
-            <Rotulo htmlFor="nova-senha">Nova senha</Rotulo>
+            <Rotulo htmlFor="nova-senha">{ehPrimeiroAcessoStaff ? 'Defina sua senha' : 'Nova senha'}</Rotulo>
             <CampoSenha
               id="nova-senha"
               value={senha}
@@ -156,6 +170,30 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
             />
           </div>
 
+          {ehPrimeiroAcessoStaff ? (
+            <>
+              <label className="flex items-start gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm text-texto-suave">
+                <input
+                  type="checkbox"
+                  checked={aceiteTermosUso}
+                  onChange={(evento) => setAceiteTermosUso(evento.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                Aceito os Termos de uso do OctaClin, versão {versaoLegalStaff}.
+              </label>
+
+              <label className="flex items-start gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm text-texto-suave">
+                <input
+                  type="checkbox"
+                  checked={aceitePoliticaPrivacidade}
+                  onChange={(evento) => setAceitePoliticaPrivacidade(evento.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                Aceito a Política de privacidade, versão {versaoLegalStaff}.
+              </label>
+            </>
+          ) : null}
+
           {erro ? (
             <div role="alert" className="rounded-md border border-perigo-borda bg-perigo-suave px-3 py-2 text-sm text-perigo">
               {erro}
@@ -164,7 +202,7 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
 
           <Botao type="submit" variante="primario" disabled={salvando}>
             <KeyRound size={16} />
-            {salvando ? 'Salvando' : 'Redefinir senha'}
+            {salvando ? 'Salvando' : ehPrimeiroAcessoStaff ? 'Ativar conta' : 'Redefinir senha'}
           </Botao>
         </form>
       ) : null}

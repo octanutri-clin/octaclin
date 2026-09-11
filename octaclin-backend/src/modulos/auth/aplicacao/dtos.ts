@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsEmail,
   IsInt,
   IsJWT,
@@ -72,6 +73,19 @@ export class RedefinirSenhaDto {
   @MinLength(8)
   @MaxLength(120)
   senha: string;
+
+  /**
+   * Obrigatorios somente quando o token e de primeiro acesso de staff
+   * (convite administrativo); irrelevantes para recuperacao de senha comum.
+   * A checagem e feita no servico, que conhece a origem do token.
+   */
+  @IsOptional()
+  @IsBoolean()
+  aceiteTermosUso?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  aceitePoliticaPrivacidade?: boolean;
 }
 
 export class ValidarTokenRedefinicaoSenhaDto {

@@ -2,6 +2,7 @@ import { GoneException, HttpException, HttpStatus, NotFoundException } from '@ne
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { TokenRedefinicaoSenhaOrm } from '../infraestrutura/token-redefinicao-senha.orm';
 import { ServicoRecuperacaoSenha } from './servico-recuperacao-senha';
 
@@ -33,7 +34,8 @@ function criarServico(dados: Record<string, any> = {}) {
   const repositorios = {
     tenant: criarRepositorioFake('tenant', dados),
     usuario: criarRepositorioFake('usuario', dados),
-    token: criarRepositorioFake('token', dados)
+    token: criarRepositorioFake('token', dados),
+    consentimento: criarRepositorioFake('consentimento', dados)
   };
   const fonteDados = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -45,6 +47,7 @@ function criarServico(dados: Record<string, any> = {}) {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === UsuarioOrm) return repositorios.usuario;
       if (entidade === TokenRedefinicaoSenhaOrm) return repositorios.token;
+      if (entidade === ConsentimentoLgpdOrm) return repositorios.consentimento;
       throw new Error(`Repositorio tenant nao mapeado: ${entidade.name}`);
     })
   };
@@ -282,5 +285,134 @@ describe('ServicoRecuperacaoSenha', () => {
     const { servico } = criarServico();
 
     await expect(servico.validarToken('semtenant')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('deve expor a origem do token quando presente no payload (ex.: convite administrativo)', async () => {
+    const { servico } = criarServico({
+      tokens: [
+        {
+          id: 'token-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-1',
+          tokenHash: 'hash-token',
+          status: 'pendente',
+          expiraEm: new Date(Date.now() + 60_000),
+          payload: { origem: 'convite_usuario_cliente' }
+        }
+      ],
+      usuario: { id: 'usuario-1', tenantId: 'tenant-1', emailCriptografado: Buffer.from('cripto:ana@example.com') }
+    });
+    jest.spyOn(ServicoRecuperacaoSenha, 'hashToken').mockReturnValueOnce('hash-token');
+
+    await expect(servico.validarToken('tenant-1.qualquer')).resolves.toEqual({
+      email: 'ana@example.com',
+      expiraEm: expect.any(Date),
+      origem: 'convite_usuario_cliente'
+    });
+  });
+
+  it('nao deve expor origem quando o token e de recuperacao comum', async () => {
+    const { servico } = criarServico({
+      tokens: [
+        {
+          id: 'token-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-1',
+          tokenHash: 'hash-token',
+          status: 'pendente',
+          expiraEm: new Date(Date.now() + 60_000)
+        }
+      ],
+      usuario: { id: 'usuario-1', tenantId: 'tenant-1', emailCriptografado: Buffer.from('cripto:ana@example.com') }
+    });
+    jest.spyOn(ServicoRecuperacaoSenha, 'hashToken').mockReturnValueOnce('hash-token');
+
+    const resposta = await servico.validarToken('tenant-1.qualquer');
+    expect(resposta.origem).toBeUndefined();
+  });
+
+  describe('aceite legal no primeiro acesso de staff (convite administrativo)', () => {
+    function dadosConviteAdministrativo(): Record<string, any> {
+      return {
+        consentimentos: [],
+        tokens: [
+          {
+            id: 'token-1',
+            tenantId: 'tenant-1',
+            usuarioId: 'usuario-1',
+            tokenHash: 'hash-token',
+            status: 'pendente',
+            expiraEm: new Date(Date.now() + 60_000),
+            payload: { origem: 'convite_usuario_cliente' }
+          }
+        ],
+        usuario: { id: 'usuario-1', tenantId: 'tenant-1', senhaHash: 'senha-antiga', ativo: true }
+      };
+    }
+
+    it('recusa redefinir sem aceite de termos de uso e politica de privacidade', async () => {
+      const { servico } = criarServico(dadosConviteAdministrativo());
+      jest.spyOn(ServicoRecuperacaoSenha, 'hashToken').mockReturnValue('hash-token');
+
+      await expect(
+        servico.redefinirSenha({ token: 'tenant-1.qualquer', senha: 'NovaSenha@123' })
+      ).rejects.toThrow('Aceite dos termos de uso e da politica de privacidade e obrigatorio para ativar o acesso.');
+    });
+
+    it('recusa quando so um dos dois aceites e informado', async () => {
+      const { servico } = criarServico(dadosConviteAdministrativo());
+      jest.spyOn(ServicoRecuperacaoSenha, 'hashToken').mockReturnValue('hash-token');
+
+      await expect(
+        servico.redefinirSenha({
+          token: 'tenant-1.qualquer',
+          senha: 'NovaSenha@123',
+          aceiteTermosUso: true
+        })
+      ).rejects.toThrow('Aceite dos termos de uso e da politica de privacidade e obrigatorio para ativar o acesso.');
+    });
+
+    it('grava os dois consentimentos e conclui a ativacao quando ambos os aceites sao informados', async () => {
+      const dados = dadosConviteAdministrativo();
+      const { servico, repositorios } = criarServico(dados);
+      jest.spyOn(ServicoRecuperacaoSenha, 'hashToken').mockReturnValue('hash-token');
+
+      await servico.redefinirSenha({
+        token: 'tenant-1.qualquer',
+        senha: 'NovaSenha@123',
+        aceiteTermosUso: true,
+        aceitePoliticaPrivacidade: true
+      });
+
+      expect(dados.tokens[0].status).toBe('usado');
+      const tipos = dados.consentimentos.map((consentimento: any) => consentimento.tipo).sort();
+      expect(tipos).toEqual(['politica_privacidade', 'termos_uso']);
+      expect(dados.consentimentos.every((consentimento: any) => consentimento.usuarioId === 'usuario-1')).toBe(true);
+      expect(dados.consentimentos.every((consentimento: any) => consentimento.tenantId === 'tenant-1')).toBe(true);
+      expect(repositorios.consentimento.save).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('nao exige nem grava aceite legal quando o token e de recuperacao comum', async () => {
+    const dados: Record<string, any> = {
+      tokens: [
+        {
+          id: 'token-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-1',
+          tokenHash: 'hash-token',
+          status: 'pendente',
+          expiraEm: new Date(Date.now() + 60_000)
+        }
+      ],
+      usuario: { id: 'usuario-1', tenantId: 'tenant-1', senhaHash: 'senha-antiga', ativo: true }
+    };
+    const { servico, repositorios } = criarServico(dados);
+    jest.spyOn(ServicoRecuperacaoSenha, 'hashToken').mockReturnValueOnce('hash-token');
+
+    await servico.redefinirSenha({ token: 'tenant-1.qualquer', senha: 'NovaSenha@123' });
+
+    expect(dados.tokens[0].status).toBe('usado');
+    expect(repositorios.consentimento.save).not.toHaveBeenCalled();
   });
 });

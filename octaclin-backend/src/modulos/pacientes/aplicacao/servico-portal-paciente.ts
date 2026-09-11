@@ -36,7 +36,7 @@ import {
   RegistrarEscolhaSubstituicaoPortalDto,
   RegistrarSolicitacaoLgpdPortalDto
 } from './dtos';
-import { listarDocumentosLegaisPaciente } from './documentos-legais-paciente';
+import { listarDocumentosLegaisPaciente } from '../../../infraestrutura/lgpd/documentos-legais';
 import { AcompanhamentoTarefaOrm, CategoriaTarefaAcompanhamento } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';

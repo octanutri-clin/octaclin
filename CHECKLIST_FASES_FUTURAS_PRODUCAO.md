@@ -2482,10 +2482,34 @@ publicado antes de ampliar a superficie de mudancas visuais.
     futura.
 
 - [ ] Fase 259 - Acesso, convite e ativação sem suporte manual. [ESSENCIAL - PRE-PILOTO]
+  [EM ANDAMENTO EM 2026-09-11]
   - Revisar login, primeiro acesso, recuperação, convite, troca de senha,
     expiração, aceites legais e mensagens de conta bloqueada ou sem permissão.
   - Manter API e tenant fora do fluxo comercial cotidiano e validar os quatro
     papéis com isolamento e redirecionamento corretos.
+  - Auditoria inicial: modulo `auth` ja maduro (login, MFA por capability,
+    recuperacao de senha, sessoes com rotacao/deteccao de reuso, convite de
+    paciente com aceite LGPD). Gaps concretos: primeiro acesso de staff
+    indistinguivel de recuperacao de senha (mesma tela "Redefinir senha");
+    convite de staff nao exige aceite legal (so o de paciente exige); dois
+    mecanismos de convite distintos (paciente com entidade propria, staff
+    reaproveitando a tabela de reset de senha); sem mensagem distinta de
+    conta bloqueada (decisao deliberada anti-enumeracao); sem pagina
+    dedicada de "sem permissao" (403). Decisoes de produto confirmadas:
+    exigir aceite legal (termos+privacidade, sem LGPD) no convite de staff;
+    manter mensagem generica de conta bloqueada (sem mudanca). Plano
+    completo em `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
+  - Incremento 1 concluido: primeiro acesso de staff deixa de ser
+    indistinguivel de recuperacao de senha. Backend expoe a origem do
+    token (`payload.origem`, ja gravada no convite administrativo);
+    frontend troca titulo/rotulo/CTA quando e primeiro acesso. Sem
+    migration, sem mudanca para recuperacao de senha comum.
+  - Incremento 2 concluido: convite de staff (Client/Professional/
+    Collaborator) passa a exigir aceite de Termos de uso e Politica de
+    privacidade na ativacao, gravado em `ConsentimentoLgpdOrm` (mesma
+    tabela do paciente). `documentos-legais-paciente.ts` movido para
+    `infraestrutura/lgpd/documentos-legais.ts` (deixou de ser conceito
+    exclusivo de paciente). Sem migration.
 
 - [ ] Fase 260 - Desempenho, resiliência e diagnóstico operacional. [ESSENCIAL - ESTABILIDADE]
   - Definir orçamentos de carregamento e chamadas, eliminar cascatas de requests,

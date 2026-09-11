@@ -10,6 +10,12 @@ export interface SolicitarRecuperacaoSenhaResposta {
 export interface TokenRecuperacaoSenhaApi {
   email: string;
   expiraEm: string;
+  origem?: string;
+}
+
+export interface AceitesLegaisPrimeiroAcessoStaff {
+  aceiteTermosUso: boolean;
+  aceitePoliticaPrivacidade: boolean;
 }
 
 class ErroApiRecuperacaoSenha extends Error {
@@ -62,9 +68,13 @@ export async function validarTokenRecuperacaoSenha(token: string): Promise<Token
   });
 }
 
-export async function redefinirSenha(token: string, senha: string): Promise<{ mensagem: string }> {
+export async function redefinirSenha(
+  token: string,
+  senha: string,
+  aceites?: AceitesLegaisPrimeiroAcessoStaff
+): Promise<{ mensagem: string }> {
   return requisitar<{ mensagem: string }>('/api/auth/redefinir-senha', {
     method: 'POST',
-    body: JSON.stringify({ token, senha })
+    body: JSON.stringify({ token, senha, ...aceites })
   });
 }
