@@ -55,6 +55,7 @@ import { TornarTrilhaAuditoriaImutavel1720000001038 } from './migracoes/17200000
 import { AdicionarTarefaConcluidaNotificacoes1720000001039 } from './migracoes/1720000001039-AdicionarTarefaConcluidaNotificacoes';
 import { AdicionarIdempotenciaMensagensNotificacao1720000001040 } from './migracoes/1720000001040-AdicionarIdempotenciaMensagensNotificacao';
 import { AdicionarStatusEntregaWhatsapp1720000001041 } from './migracoes/1720000001041-AdicionarStatusEntregaWhatsapp';
+import { CriptografarCamposResiduaisFase2611720000001042 } from './migracoes/1720000001042-CriptografarCamposResiduaisFase261';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
@@ -335,7 +336,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         TornarTrilhaAuditoriaImutavel1720000001038,
         AdicionarTarefaConcluidaNotificacoes1720000001039,
         AdicionarIdempotenciaMensagensNotificacao1720000001040,
-        AdicionarStatusEntregaWhatsapp1720000001041
+        AdicionarStatusEntregaWhatsapp1720000001041,
+        CriptografarCamposResiduaisFase2611720000001042
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

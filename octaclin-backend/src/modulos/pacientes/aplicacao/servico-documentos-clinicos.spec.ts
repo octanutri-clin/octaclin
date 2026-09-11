@@ -412,6 +412,79 @@ describe('ServicoDocumentosClinicos - cancelamento', () => {
       servico.cancelar('tenant-1', 'paciente-1', 'documento-1', usuario, {})
     ).rejects.toBeInstanceOf(ConflictException);
   });
+
+  it('cancelamento novo grava so o motivo cifrado, nunca o campo em claro', async () => {
+    const documento = {
+      id: 'documento-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      tipo: 'declaracao_comparecimento' as const,
+      titulo: 'Declaracao de comparecimento',
+      corpoCriptografado: Buffer.from('corpo', 'utf8'),
+      cabecalhoCriptografado: Buffer.from('{}', 'utf8'),
+      emitidoEm: new Date('2026-08-05T12:00:00.000Z')
+    } as DocumentoEmitidoOrm;
+    const { servico, repositorioDocumentos } = montarServico({
+      documentos: {
+        findOne: jest.fn(async () => documento),
+        save: jest.fn(async (dados: DocumentoEmitidoOrm) => dados)
+      }
+    });
+
+    await servico.cancelar('tenant-1', 'paciente-1', 'documento-1', usuario, {
+      motivo: 'Horario errado'
+    });
+
+    const salvo = await (repositorioDocumentos.save as jest.Mock).mock.results[0].value;
+    expect(salvo.motivoCancelamentoCriptografado).toEqual(Buffer.from('Horario errado', 'utf8'));
+    expect(salvo.motivoCancelamento).toBeUndefined();
+  });
+
+  it('le motivo de cancelamento historico (so em claro, sem coluna cifrada)', async () => {
+    const documento = {
+      id: 'documento-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      tipo: 'declaracao_comparecimento' as const,
+      titulo: 'Declaracao de comparecimento',
+      corpoCriptografado: Buffer.from('corpo', 'utf8'),
+      cabecalhoCriptografado: Buffer.from('{}', 'utf8'),
+      emitidoEm: new Date('2026-08-05T12:00:00.000Z'),
+      canceladoEm: new Date('2026-08-06T12:00:00.000Z'),
+      motivoCancelamento: 'Motivo registrado antes da Fase B'
+    } as DocumentoEmitidoOrm;
+    const { servico } = montarServico({
+      documentos: { findOne: jest.fn(async () => documento) }
+    });
+
+    const resposta = await servico.obter('tenant-1', 'paciente-1', 'documento-1', usuario);
+    expect(resposta.motivoCancelamento).toBe('Motivo registrado antes da Fase B');
+  });
+
+  it('marca motivo de cancelamento como ilegivel sem derrubar o documento', async () => {
+    criptografia.descriptografar.mockImplementation((valor: Buffer) => {
+      if (valor.toString('utf8') === 'ruido') throw new Error('chave rotacionada');
+      return valor.toString('utf8');
+    });
+    const documento = {
+      id: 'documento-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      tipo: 'declaracao_comparecimento' as const,
+      titulo: 'Declaracao de comparecimento',
+      corpoCriptografado: Buffer.from('corpo', 'utf8'),
+      cabecalhoCriptografado: Buffer.from('{}', 'utf8'),
+      emitidoEm: new Date('2026-08-05T12:00:00.000Z'),
+      canceladoEm: new Date('2026-08-06T12:00:00.000Z'),
+      motivoCancelamentoCriptografado: Buffer.from('ruido', 'utf8')
+    } as DocumentoEmitidoOrm;
+    const { servico } = montarServico({
+      documentos: { findOne: jest.fn(async () => documento) }
+    });
+
+    const resposta = await servico.obter('tenant-1', 'paciente-1', 'documento-1', usuario);
+    expect(resposta.motivoCancelamento).toBe('Motivo de cancelamento ilegivel.');
+  });
 });
 
 describe('ServicoDocumentosClinicos - registro ilegivel', () => {

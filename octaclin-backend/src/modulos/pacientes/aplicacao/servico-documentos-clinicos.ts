@@ -194,8 +194,9 @@ export class ServicoDocumentosClinicos {
       const documento = await this.buscarDocumento(gerenciador, tenantId, pacienteId, documentoId);
       if (documento.canceladoEm) throw new ConflictException('Documento ja cancelado.');
 
+      const motivo = dados.motivo?.trim() || undefined;
       documento.canceladoEm = new Date();
-      documento.motivoCancelamento = dados.motivo?.trim() || undefined;
+      documento.motivoCancelamentoCriptografado = motivo ? this.criptografia.criptografar(motivo) : undefined;
       return this.mapear(await repositorio.save(documento));
     });
   }
@@ -503,7 +504,7 @@ export class ServicoDocumentosClinicos {
       consultaId: documento.consultaId,
       emitidoEm: documento.emitidoEm.toISOString(),
       canceladoEm: documento.canceladoEm?.toISOString(),
-      motivoCancelamento: documento.motivoCancelamento,
+      motivoCancelamento: this.lerMotivoCancelamento(documento),
       enviadoEm: documento.enviadoEm?.toISOString(),
       podeEnviarPorEmail: TIPOS_ENVIAVEIS_POR_EMAIL.includes(documento.tipo),
       variaveisVazias
@@ -545,6 +546,22 @@ export class ServicoDocumentosClinicos {
     } catch {
       return undefined;
     }
+  }
+
+  /**
+   * Cancelamento novo grava so a coluna cifrada; linha cancelada antes da
+   * Fase B so tem o `motivoCancelamento` em claro. Ilegivel nao apaga o
+   * cancelamento em si, so o motivo mostrado.
+   */
+  private lerMotivoCancelamento(documento: DocumentoEmitidoOrm): string | undefined {
+    if (documento.motivoCancelamentoCriptografado) {
+      try {
+        return this.criptografia.descriptografar(documento.motivoCancelamentoCriptografado);
+      } catch {
+        return 'Motivo de cancelamento ilegivel.';
+      }
+    }
+    return documento.motivoCancelamento;
   }
 
   private dataCurta(instante: Date, timezone: string): string {
