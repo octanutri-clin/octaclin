@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-10.
+Atualizado em 2026-09-11.
 
 ## Snapshot
 
@@ -107,6 +107,51 @@ Atualizado em 2026-09-10.
   (Desempenho, resiliencia e diagnostico operacional). Detalhes e
   evidencias completas em
   `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
+- Fase 260 - Desempenho, resiliencia e diagnostico operacional, **concluida
+  em 2026-09-11**. Auditoria inicial confirmou lazy-load
+  parcial ja existente (materiais/anexos/profissionais) e endpoints
+  dedicados de evolucoes/tarefas ja prontos mas nao usados pelo frontend;
+  identificou tambem uma lacuna real de autorizacao (nao so performance):
+  mensagens entravam decifradas na linha do tempo do prontuario
+  independentemente da permissao `comunicacoes.mensagens.ler`, ao contrario
+  do resto do sistema. Incremento 1 entregue: evolucoes e tarefas saíram da
+  `linhaDoTempo` decifradas (agora sob demanda, ao abrir a aba, via os
+  endpoints dedicados que ja existiam) e mensagens passaram a respeitar a
+  permissao correta nos dois endpoints do prontuario (eager e paginado).
+  Decisao de escopo para a sub-meta de auditoria transacional: piloto nos
+  pontos de leitura de PHI, nao extensao completa dos ~101 pontos de
+  chamada de `ServicoAuditoria.registrar()` nesta fase. Incremento 2
+  entregue: `requestId` (ja propagado ate a trilha de auditoria) passou a
+  ser exibido ao usuario como "Codigo para suporte" nas falhas do
+  prontuario e da agenda, fechando uma lacuna que o proprio
+  `RUNBOOK_SUPORTE.md` ja pressupunha. Fato novo verificado nesta rodada:
+  a auditoria inicial apontara os runbooks de e-mail/WhatsApp/Calendar
+  como rasos frente ao incidente de auditoria, mas a comparacao era entre
+  documentos de risco diferente — `RUNBOOK_SUPORTE.md` ja cobre os tres
+  canais com profundidade equivalente entre si (sintomas, checklist,
+  evidencia, escalonamento, severidade); corrigido apenas um detalhe real
+  (e-mail nao listava `requestId` como evidencia, os outros dois ja
+  listavam). Incremento 3 entregue: piloto do outbox transacional de
+  auditoria restrito aos pontos de leitura de PHI (prontuario, documentos
+  clinicos, evolucoes) — falha na escrita direta agora enfileira o evento
+  num outbox duravel (`outbox_eventos`, reaproveitado de comunicacoes) em
+  vez de so contar a falha e descartar; um cron por minuto
+  (`ProcessadorOutboxAuditoria`) drena com ate 5 retentativas e so conta
+  como perda definitiva, alimentando o alerta ja existente em
+  `/operacoes`, ao esgota-las. Os ~97 call sites restantes de
+  `ServicoAuditoria.registrar` nao mudam de comportamento. Incremento 4
+  entregue: gate de CI para orcamento de requests (ate 4 endpoints
+  distintos na aba Resumo do prontuario, ja rodando via `pnpm
+  smoke:visual`) e fim da cascata sequencial de paginacao de profissionais
+  (ate 19 idas e vindas sequenciais viraram uma rodada paralela). Revisao
+  de cache/invalidacao e divisao de componentes clinicos grandes
+  (`portal-paciente.tsx`, `painel-agenda.tsx` e outros >1300 linhas) ficam
+  fora da fase por decisao de escopo — decisao de arquitetura sem defeito
+  concreto associado, candidata a fase futura dedicada, e nao lacuna
+  escondida. Nenhuma migration em nenhum incremento. A proxima fase
+  oficial e a Fase 261 (Regressao de seguranca e privacidade do SaaS
+  publico). Detalhes e evidencias completas em
+  `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
   fotografia historica foi capturada em 2026-09-07 sobre
   `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning

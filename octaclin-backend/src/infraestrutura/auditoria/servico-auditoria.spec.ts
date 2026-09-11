@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
 import { MARCADOR_REDIGIDO } from './redacao-auditoria';
 import {
   obterTotalFalhasAuditoria,
@@ -33,6 +34,36 @@ function montarDubles() {
 
 function metadadosPersistidos(repositorio: { create: jest.Mock }): Record<string, unknown> {
   return (repositorio.create.mock.calls[0][0] as { metadados: Record<string, unknown> }).metadados;
+}
+
+/**
+ * Dubles com dois repositorios distintos, roteados por entidade -- os testes
+ * de outbox precisam inspecionar `UserActionLogOrm` e `OutboxEventoOrm` em
+ * separado, ao contrario de `montarDubles`, que sempre devolve o mesmo.
+ */
+function montarDublesComOutbox() {
+  const repositorioTrilha = {
+    create: jest.fn((dados: Record<string, unknown>) => ({ persistido: true, ...dados })),
+    save: jest.fn(async () => undefined)
+  };
+  const repositorioOutbox = {
+    create: jest.fn((dados: Record<string, unknown>) => ({ id: 'outbox-1', tentativas: 0, ...dados })),
+    save: jest.fn(async () => undefined),
+    find: jest.fn(async (): Promise<Record<string, unknown>[]> => []),
+    update: jest.fn(async () => ({ affected: 1 }))
+  };
+  const gerenciador = {
+    getRepository: jest.fn((entidade: unknown) =>
+      entidade === OutboxEventoOrm ? repositorioOutbox : repositorioTrilha
+    )
+  };
+  const executorTenant = {
+    executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+      operacao(gerenciador)
+    )
+  };
+
+  return { repositorioTrilha, repositorioOutbox, gerenciador, executorTenant };
 }
 
 describe('ServicoAuditoria', () => {
@@ -257,5 +288,219 @@ describe('registrarAuditoriaNaTransacao', () => {
     await expect(
       registrarAuditoriaNaTransacao(gerenciador as never, { tenantId: 'tenant-1', acao: 'planos_alimentares.publicar' })
     ).rejects.toThrow('banco indisponivel');
+  });
+});
+
+/**
+ * Piloto da Fase 260: retentativa via outbox para os pontos de leitura de PHI
+ * (prontuario, documentos clinicos, evolucoes), restrita a quem passa
+ * `garantirRetentativa: true`. Os 97 demais call sites de `registrar` nao
+ * mudam de comportamento -- os testes acima ja provam isso, sem o campo.
+ */
+describe('registrar com garantirRetentativa', () => {
+  beforeEach(() => {
+    zerarTotalFalhasAuditoriaParaTeste();
+  });
+
+  it('nao tenta o outbox quando garantirRetentativa nao foi pedido', async () => {
+    const loggerWarn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const executorTenant = {
+      executar: jest.fn(async () => {
+        throw new Error('banco indisponivel');
+      })
+    };
+    const servico = new ServicoAuditoria(executorTenant as never);
+
+    await servico.registrar({ tenantId: 'tenant-1', acao: 'pacientes.prontuario.ler' });
+
+    expect(executorTenant.executar).toHaveBeenCalledTimes(1);
+    expect(servico.obterTotalFalhas()).toBe(1);
+    expect(servico.obterTotalEnfileiradosOutbox()).toBe(0);
+    loggerWarn.mockRestore();
+  });
+
+  it('enfileira no outbox quando a escrita direta falha e nao conta como falha definitiva', async () => {
+    const loggerWarn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const { repositorioOutbox, executorTenant } = montarDublesComOutbox();
+    let chamadas = 0;
+    executorTenant.executar.mockImplementation((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => {
+      chamadas += 1;
+      if (chamadas === 1) throw new Error('banco indisponivel');
+      return operacao({ getRepository: jest.fn(() => repositorioOutbox) });
+    });
+    const servico = new ServicoAuditoria(executorTenant as never);
+
+    await servico.registrar({
+      tenantId: 'tenant-1',
+      usuarioId: 'usuario-1',
+      acao: 'pacientes.prontuario.ler',
+      recursoTipo: 'paciente',
+      recursoId: 'paciente-1',
+      requestId: 'req-123',
+      garantirRetentativa: true,
+      metadados: { senha: SENHA_SINTETICA, eventos: 5 }
+    });
+
+    expect(executorTenant.executar).toHaveBeenCalledTimes(2);
+    expect(repositorioOutbox.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        tipo: 'auditoria.pendente',
+        payload: expect.objectContaining({
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-1',
+          acao: 'pacientes.prontuario.ler',
+          recursoTipo: 'paciente',
+          recursoId: 'paciente-1',
+          metadados: { senha: MARCADOR_REDIGIDO, eventos: 5, requestId: 'req-123' }
+        })
+      })
+    );
+    expect(JSON.stringify(repositorioOutbox.create.mock.calls[0][0])).not.toContain(SENHA_SINTETICA);
+    expect(servico.obterTotalFalhas()).toBe(0);
+    expect(servico.obterTotalEnfileiradosOutbox()).toBe(1);
+    expect(loggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ evento: 'auditoria.enfileirada_outbox', totalEnfileirados: 1 })
+    );
+    loggerWarn.mockRestore();
+  });
+
+  it('conta como falha definitiva quando a escrita direta e o outbox falham', async () => {
+    const loggerWarn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const executorTenant = {
+      executar: jest.fn(async () => {
+        throw new Error('banco indisponivel');
+      })
+    };
+    const servico = new ServicoAuditoria(executorTenant as never);
+
+    await servico.registrar({
+      tenantId: 'tenant-1',
+      acao: 'pacientes.prontuario.ler',
+      garantirRetentativa: true
+    });
+
+    expect(executorTenant.executar).toHaveBeenCalledTimes(2);
+    expect(servico.obterTotalFalhas()).toBe(1);
+    expect(servico.obterTotalEnfileiradosOutbox()).toBe(0);
+    expect(loggerWarn).toHaveBeenLastCalledWith(expect.objectContaining({ evento: 'auditoria.falha' }));
+    loggerWarn.mockRestore();
+  });
+});
+
+describe('processarOutboxPendente', () => {
+  beforeEach(() => {
+    zerarTotalFalhasAuditoriaParaTeste();
+  });
+
+  it('grava a linha da trilha e marca o evento como processado', async () => {
+    const { repositorioTrilha, repositorioOutbox, executorTenant } = montarDublesComOutbox();
+    const evento = {
+      id: 'outbox-1',
+      tenantId: 'tenant-1',
+      tipo: 'auditoria.pendente',
+      status: 'pendente',
+      tentativas: 0,
+      payload: {
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-1',
+        acao: 'pacientes.prontuario.ler',
+        recursoTipo: 'paciente',
+        recursoId: 'paciente-1',
+        metadados: { eventos: 5, requestId: 'req-123' }
+      }
+    };
+    repositorioOutbox.find.mockResolvedValueOnce([evento]);
+    const servico = new ServicoAuditoria(executorTenant as never);
+
+    await servico.processarOutboxPendente('tenant-1');
+
+    expect(repositorioOutbox.update).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'outbox-1', tenantId: 'tenant-1', status: 'pendente' }),
+      { status: 'processando', tentativas: 1 }
+    );
+    expect(repositorioTrilha.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        usuarioId: 'usuario-1',
+        acao: 'pacientes.prontuario.ler',
+        recursoTipo: 'paciente',
+        recursoId: 'paciente-1',
+        metadados: { eventos: 5, requestId: 'req-123' }
+      })
+    );
+    expect(repositorioOutbox.update).toHaveBeenLastCalledWith(
+      { id: 'outbox-1' },
+      expect.objectContaining({ status: 'processado' })
+    );
+    expect(servico.obterTotalFalhas()).toBe(0);
+  });
+
+  it('nao processa de novo um evento ja reivindicado por outra rodada', async () => {
+    const { repositorioTrilha, repositorioOutbox, executorTenant } = montarDublesComOutbox();
+    repositorioOutbox.update.mockResolvedValueOnce({ affected: 0 });
+    repositorioOutbox.find.mockResolvedValueOnce([
+      { id: 'outbox-1', tenantId: 'tenant-1', tentativas: 0, payload: { acao: 'pacientes.prontuario.ler' } }
+    ]);
+    const servico = new ServicoAuditoria(executorTenant as never);
+
+    await servico.processarOutboxPendente('tenant-1');
+
+    expect(repositorioTrilha.create).not.toHaveBeenCalled();
+  });
+
+  it('mantem pendente e incrementa tentativas quando a gravacao falha antes do limite', async () => {
+    const { repositorioOutbox, executorTenant } = montarDublesComOutbox();
+    repositorioOutbox.find.mockResolvedValueOnce([
+      { id: 'outbox-1', tenantId: 'tenant-1', tentativas: 1, payload: { acao: 'pacientes.prontuario.ler' } }
+    ]);
+    const repositorioTrilhaFalho = {
+      create: jest.fn((dados: Record<string, unknown>) => dados),
+      save: jest.fn(async () => {
+        throw new Error('banco indisponivel');
+      })
+    };
+    executorTenant.executar.mockImplementation((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+      operacao({ getRepository: jest.fn((entidade: unknown) => (entidade === OutboxEventoOrm ? repositorioOutbox : repositorioTrilhaFalho)) })
+    );
+    const servico = new ServicoAuditoria(executorTenant as never);
+
+    await servico.processarOutboxPendente('tenant-1');
+
+    expect(repositorioOutbox.update).toHaveBeenLastCalledWith(
+      { id: 'outbox-1' },
+      expect.objectContaining({ status: 'pendente', erro: 'Error' })
+    );
+    expect(servico.obterTotalFalhas()).toBe(0);
+  });
+
+  it('marca falhou definitivamente e conta como falha ao esgotar as tentativas', async () => {
+    const loggerWarn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const { repositorioOutbox, executorTenant } = montarDublesComOutbox();
+    repositorioOutbox.find.mockResolvedValueOnce([
+      { id: 'outbox-1', tenantId: 'tenant-1', tentativas: 4, payload: { acao: 'pacientes.prontuario.ler' } }
+    ]);
+    const repositorioTrilhaFalho = {
+      create: jest.fn((dados: Record<string, unknown>) => dados),
+      save: jest.fn(async () => {
+        throw new Error('banco indisponivel');
+      })
+    };
+    executorTenant.executar.mockImplementation((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+      operacao({ getRepository: jest.fn((entidade: unknown) => (entidade === OutboxEventoOrm ? repositorioOutbox : repositorioTrilhaFalho)) })
+    );
+    const servico = new ServicoAuditoria(executorTenant as never);
+
+    await servico.processarOutboxPendente('tenant-1');
+
+    expect(repositorioOutbox.update).toHaveBeenLastCalledWith(
+      { id: 'outbox-1' },
+      expect.objectContaining({ status: 'falhou' })
+    );
+    expect(servico.obterTotalFalhas()).toBe(1);
+    expect(loggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ evento: 'auditoria.outbox.falhou_definitivamente', tentativas: 5 })
+    );
+    loggerWarn.mockRestore();
   });
 });

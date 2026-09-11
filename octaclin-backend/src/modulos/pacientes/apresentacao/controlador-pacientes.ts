@@ -263,7 +263,8 @@ export class ControladorPacientes {
       recursoId: id,
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
-      metadados: { eventos: pagina.itens.length, paginada: true }
+      metadados: { eventos: pagina.itens.length, paginada: true },
+      garantirRetentativa: true
     });
     return pagina;
   }
@@ -283,7 +284,8 @@ export class ControladorPacientes {
       recursoId: id,
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
-      metadados: { eventos: prontuario.linhaDoTempo.length }
+      metadados: { eventos: prontuario.linhaDoTempo.length },
+      garantirRetentativa: true
     });
     return prontuario;
   }
@@ -303,7 +305,8 @@ export class ControladorPacientes {
       recursoId: id,
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
-      metadados: { total: evolucoes.length }
+      metadados: { total: evolucoes.length },
+      garantirRetentativa: true
     });
     return evolucoes;
   }
