@@ -2637,7 +2637,7 @@ test.describe('prontuario do paciente', () => {
     await expect.poll(() => prontuario.criouEvolucao()).toBe(true);
     await expect(page.getByText('Evolução clínica registrada.')).toBeVisible();
     await expect(page.getByText('Conduta ajustada')).toBeVisible();
-    await expect(page.getByText('Aumentar ingestao de agua no período da tarde.')).toBeVisible();
+    await expect(page.getByText('Aumentar ingestão de água no período da tarde.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 
