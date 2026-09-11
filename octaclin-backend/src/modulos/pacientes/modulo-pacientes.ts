@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ProcessadorOutboxAuditoria } from '../../infraestrutura/auditoria/processador-outbox-auditoria';
 import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditoria';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../../infraestrutura/lgpd/consentimento-lgpd.orm';
@@ -139,7 +140,8 @@ import { FiltroSalvoPacienteOrm } from './infraestrutura/filtro-salvo-paciente.o
     ServicoDocumentosClinicos,
     CriptografiaDadosSensiveis,
     ServicoSenhas,
-    ServicoAuditoria
+    ServicoAuditoria,
+    ProcessadorOutboxAuditoria
   ],
   exports: [ServicoPacientes, ServicoConvitesPaciente, ServicoPortalPaciente, ServicoDocumentosClinicos]
 })

@@ -1,6 +1,6 @@
 # Fase 260 - Desempenho, resiliência e diagnóstico operacional
 
-Status: em andamento desde 2026-09-11 (Incrementos 1 e 2 entregues).
+Status: em andamento desde 2026-09-11 (Incrementos 1, 2 e 3 entregues).
 
 ## Objetivo (roadmap)
 
@@ -216,10 +216,89 @@ fonte que a UI nunca entregava. Este incremento fecha esse loop:
   seguem com a classe de erro antiga, sem `requestId`. `lib/erro-api.ts` está
   pronto para qualquer uma delas adotar com uma mudança de poucas linhas.
 
+## Incremento 3 - Piloto do outbox transacional de auditoria
+
+Escopo decidido antecipadamente pelo dono do produto: piloto restrito aos
+pontos de leitura de PHI de maior risco (prontuário, documentos clínicos,
+evoluções), não extensão dos ~101 call sites de `ServicoAuditoria.registrar`.
+
+**Desenho.** `registrar()` ganhou um campo opcional na entrada,
+`garantirRetentativa?: boolean` — deliberadamente um campo, e não um método
+novo: todo call site continua casando literalmente com
+`[Aa]uditoria\.registrar\(`, a âncora que
+`scripts/validar-redacao-auditoria.mjs` usa para achar call sites e cobrir as
+chaves de `metadados`. Um método novo (`registrarResiliente`, por exemplo)
+escaparia dessa âncora e do gate de cobertura em silêncio.
+
+Quando a escrita direta em `user_action_logs` falha **e** `garantirRetentativa`
+foi pedido: em vez de só contar a falha e descartar, o serviço grava o evento
+(com `metadados` já redigido — a mesma redação, não uma segunda passada) numa
+transação própria em `outbox_eventos` (tipo `auditoria.pendente`, tabela e RLS
+que já existiam, reaproveitada de `ProcessadorOutboxComunicacoes`). Se esse
+segundo write também falhar, cai no caminho de sempre — a trilha não fica
+pior do que estava antes deste incremento. Um novo processador,
+`ProcessadorOutboxAuditoria` (cron a cada minuto — mais espaçado que os 30s
+dos outbox de comunicação, porque este só recebe evento quando a escrita
+direta já falhou), drena a fila por tenant ativo com o mesmo mecanismo de
+trava distribuída de `executarPorTenantAtivo`; reivindica cada evento por
+`update` condicional (evita processamento duplo entre réplicas), tenta até 5
+vezes, e só ao esgotar as tentativas marca `falhou` **e conta como perda
+definitiva** em `totalFalhasProcesso` — reaproveitando o alerta já existente
+em `/operacoes` em vez de criar um segundo canal de alarme.
+
+Efeito prático: para os call sites pilotados, uma falha transitória de escrita
+(pool esgotado, timeout pontual) agora tem uma segunda chance antes de virar
+perda definitiva; o alerta existente continua sendo o sinal de "perdido de
+verdade", só que pode chegar minutos depois em vez de no mesmo instante — a
+troca está documentada em `RUNBOOK_PRODUCAO.md`.
+
+### Arquivos principais
+
+- `octaclin-backend/.../infraestrutura/auditoria/servico-auditoria.ts`: campo
+  `garantirRetentativa`, `salvarLinhaTrilha`/`enfileirarOutbox`/
+  `processarOutboxPendente`/`processarEventoOutbox`, contador
+  `totalEnfileiradosOutboxProcesso`.
+- `octaclin-backend/.../infraestrutura/auditoria/processador-outbox-auditoria.ts`
+  (novo): cron por tenant ativo.
+- `octaclin-backend/.../pacientes/apresentacao/controlador-pacientes.ts`:
+  `garantirRetentativa: true` em `obterProntuario`,
+  `listarLinhaDoTempoPaginada` e `listarEvolucoes`.
+- `octaclin-backend/.../pacientes/apresentacao/controlador-documentos-clinicos.ts`:
+  `garantirRetentativa: true` nas duas ações de leitura (`listar`, `obter`) —
+  as três mutações (`emitir`, `cancelar`, `enviar`) ficam de fora do piloto de
+  proposito.
+- `octaclin-backend/.../pacientes/modulo-pacientes.ts`: registra
+  `ProcessadorOutboxAuditoria`.
+- Specs novos/atualizados: `servico-auditoria.spec.ts` (outbox e
+  `processarOutboxPendente`), `processador-outbox-auditoria.spec.ts` (novo).
+- `RUNBOOK_PRODUCAO.md`: nota na seção do alerta de falha de gravação sobre o
+  atraso de detecção nos call sites pilotados e como checar backlog do outbox.
+
+Nenhuma migration: `outbox_eventos` já existia com o formato e a RLS
+necessários, criada na fundação do projeto para uso por comunicações.
+
+### Validações executadas
+
+- `pnpm --dir octaclin-backend typecheck` — PASS.
+- `pnpm --dir octaclin-backend exec jest` (suíte completa) — PASS (1644 testes, 3 suítes puladas — integração com Testcontainers, pré-existente).
+- `pnpm test:redacao-auditoria` — PASS (24 testes do gate).
+- `node scripts/validar-redacao-auditoria.mjs` (execução real contra o repositório) — PASS, "Cobertura da redação de auditoria verificada", sem terceiro caminho de escrita detectado.
+- `pnpm security:secrets` — nenhum secret identificado.
+
+### Pendências desta sub-meta
+
+- Extensão aos ~101 call sites restantes de `registrar` fica fora desta fase,
+  por decisão de escopo — candidato a uma fase futura dedicada, se a
+  experiência do piloto (volume real de eventos no outbox em produção)
+  justificar.
+- O contador `totalEnfileiradosOutboxProcesso` é exposto
+  (`obterTotalEnfileiradosOutbox()`) mas ainda não tem card próprio em
+  `/operacoes` — hoje só é visível em log (`auditoria.enfileirada_outbox`) e
+  por consulta direta à tabela. Candidato a incremento futuro de
+  observabilidade, não bloqueador do piloto.
+
 ## Incrementos restantes
 
-- Incremento 3: piloto do outbox transacional de auditoria para os pontos de
-  leitura de PHI (prontuário, documentos clínicos, evoluções).
 - Incremento 4: orçamento de performance no frontend (gate de contagem de
   requests em CI, a partir do teste de lazy-load já existente).
 

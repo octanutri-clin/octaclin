@@ -33,7 +33,7 @@ export class ControladorDocumentosClinicos {
     const documentos = await this.servicoDocumentos.listar(usuario.tenantId, pacienteId, usuario);
     await this.registrar(usuario, requisicao, 'pacientes.documentos.listar', pacienteId, {
       total: documentos.length
-    });
+    }, true);
     return documentos;
   }
 
@@ -48,7 +48,7 @@ export class ControladorDocumentosClinicos {
     await this.registrar(usuario, requisicao, 'pacientes.documentos.abrir', pacienteId, {
       documentoId,
       tipo: documento.tipo
-    });
+    }, true);
     return documento;
   }
 
@@ -120,7 +120,8 @@ export class ControladorDocumentosClinicos {
     requisicao: Request,
     acao: string,
     pacienteId: string,
-    metadados: Record<string, unknown>
+    metadados: Record<string, unknown>,
+    garantirRetentativa = false
   ) {
     return this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
@@ -130,7 +131,8 @@ export class ControladorDocumentosClinicos {
       recursoId: pacienteId,
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
-      metadados
+      metadados,
+      garantirRetentativa
     });
   }
 

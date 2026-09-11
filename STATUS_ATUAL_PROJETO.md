@@ -131,9 +131,17 @@ Atualizado em 2026-09-11.
   canais com profundidade equivalente entre si (sintomas, checklist,
   evidencia, escalonamento, severidade); corrigido apenas um detalhe real
   (e-mail nao listava `requestId` como evidencia, os outros dois ja
-  listavam). Nenhuma migration em nenhum incremento. Incrementos 3-4
-  (piloto do outbox de auditoria, orcamento de performance em CI) seguem
-  pendentes. Detalhes e evidencias completas em
+  listavam). Incremento 3 entregue: piloto do outbox transacional de
+  auditoria restrito aos pontos de leitura de PHI (prontuario, documentos
+  clinicos, evolucoes) — falha na escrita direta agora enfileira o evento
+  num outbox duravel (`outbox_eventos`, reaproveitado de comunicacoes) em
+  vez de so contar a falha e descartar; um cron por minuto
+  (`ProcessadorOutboxAuditoria`) drena com ate 5 retentativas e so conta
+  como perda definitiva, alimentando o alerta ja existente em
+  `/operacoes`, ao esgota-las. Os ~97 call sites restantes de
+  `ServicoAuditoria.registrar` nao mudam de comportamento. Nenhuma
+  migration em nenhum incremento. Incremento 4 (orcamento de performance
+  em CI) segue pendente. Detalhes e evidencias completas em
   `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
   fotografia historica foi capturada em 2026-09-07 sobre

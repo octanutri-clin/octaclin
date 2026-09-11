@@ -2548,11 +2548,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     existiam) e mensagens passaram a respeitar `comunicacoes.mensagens.ler`
     (correção de autorização, não só de performance) tanto no endpoint eager
     quanto no paginado. Ver `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
-  - Tornar a auditoria de mutações clínicas transacional ou baseada em outbox;
+  - [x] Tornar a auditoria de mutações clínicas transacional ou baseada em outbox;
     leituras de PHI devem ter política explícita de persistência, retentativa e
     alerta, sem continuar silenciosamente quando o registro de auditoria falhar.
-    Decisão de escopo: piloto nos pontos de leitura de PHI, não extensão
-    completa dos ~101 call sites nesta fase (pendente de implementação).
+    Decisão de escopo: piloto nos pontos de leitura de PHI (prontuário,
+    documentos clínicos, evoluções), não extensão completa dos ~101 call
+    sites de `ServicoAuditoria.registrar`. Incremento 3 entregue em
+    2026-09-11: campo `garantirRetentativa` enfileira a falha num outbox
+    durável (`outbox_eventos`, reaproveitado de comunicações) em vez de
+    descartar; `ProcessadorOutboxAuditoria` drena com até 5 retentativas e só
+    conta como perda definitiva (alimentando o alerta já existente em
+    `/operacoes`) ao esgotá-las. Nenhuma migration. Ver
+    `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
 
 - [ ] Fase 261 - Regressão de segurança e privacidade do SaaS público. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
   - Revalidar autenticação, autorização por papel, RLS forçada, isolamento entre
