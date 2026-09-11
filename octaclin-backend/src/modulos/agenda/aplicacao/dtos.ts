@@ -311,6 +311,7 @@ export interface ConsultaAgendaRespostaDto {
   pacoteId?: string;
   notificacoes: NotificacoesConsultaAgenda;
   payload: Record<string, unknown>;
+  motivoCancelamento?: string;
   criadoEm: Date;
   atualizadoEm: Date;
 }
