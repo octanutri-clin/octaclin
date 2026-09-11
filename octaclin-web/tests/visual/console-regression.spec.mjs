@@ -1490,7 +1490,7 @@ async function prepararProntuarioMockado(page, {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
-        headers: { 'x-request-id': 'req-teste-evolucoes-0001' },
+        headers: { 'x-request-id': 'req-teste-evoluções-0001' },
         body: JSON.stringify({ mensagem: 'Falha sintetica de evoluções.' })
       });
       return;
