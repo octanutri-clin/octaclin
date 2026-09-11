@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
@@ -14,6 +14,10 @@ import { WebhookAssinaturaOrm } from '../../integracoes/infraestrutura/webhook-a
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
+import { TombstoneExclusaoLgpdOrm } from '../../../infraestrutura/lgpd/tombstone-exclusao-lgpd.orm';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
+import { SessaoUsuarioOrm } from '../../auth/infraestrutura/sessao-usuario.orm';
 import { LIMITE_LINHAS_EXPORTACAO, ServicoPacientes } from './servico-pacientes';
 
 function criarGerenciadorFake(repositorio: Record<string, unknown>) {
@@ -1865,5 +1869,189 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
 
     expect(pagina.itens[0].titulo).toBe('Ajuste de conduta');
     expect(pagina.itens[1].titulo).toBe('Titulo ilegivel.');
+  });
+});
+
+describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
+  function montarServicoLgpd(opcoes: {
+    paciente: Record<string, unknown> | null;
+    ultimoRegistroClinico?: string;
+  }) {
+    const paciente = opcoes.paciente ? { ...opcoes.paciente } : null;
+    const repositorioPaciente = {
+      findOne: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        if (!paciente) return null;
+        if (
+          where.profissionalResponsavelId !== undefined &&
+          where.profissionalResponsavelId !== paciente.profissionalResponsavelId
+        ) {
+          return null;
+        }
+        return paciente;
+      }),
+      save: jest.fn(async (dados: Record<string, unknown>) => dados)
+    };
+    const repositorioTombstone = {
+      create: jest.fn((dados: Record<string, unknown>) => dados),
+      save: jest.fn(async (dados: Record<string, unknown>) => dados)
+    };
+    const repositorioUsuario = { update: jest.fn(async () => undefined) };
+    const repositorioRefreshToken = { update: jest.fn(async () => undefined) };
+    const repositorioSessao = { update: jest.fn(async () => undefined) };
+    const query = jest.fn(async () => [{ ultimo: opcoes.ultimoRegistroClinico ?? 'epoch' }]);
+
+    const gerenciador = {
+      query,
+      getRepository: jest.fn((entidade: unknown) => {
+        if (entidade === PacienteOrm) return repositorioPaciente;
+        if (entidade === TombstoneExclusaoLgpdOrm) return repositorioTombstone;
+        if (entidade === UsuarioOrm) return repositorioUsuario;
+        if (entidade === RefreshTokenOrm) return repositorioRefreshToken;
+        if (entidade === SessaoUsuarioOrm) return repositorioSessao;
+        return { findOne: jest.fn(async () => null) };
+      })
+    };
+    const executorTenant = {
+      executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+        operacao(gerenciador)
+      )
+    };
+    const criptografia = {
+      criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`)),
+      descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', ''))
+    };
+    const servico = new ServicoPacientes(executorTenant as never, criptografia as never, limitesPermitidos as never);
+
+    return {
+      servico,
+      repositorioPaciente,
+      repositorioTombstone,
+      repositorioUsuario,
+      repositorioRefreshToken,
+      repositorioSessao,
+      criptografia
+    };
+  }
+
+  it('fica RETENTION_HELD quando ha registro assistencial dentro dos 20 anos', async () => {
+    const recente = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { servico, repositorioPaciente } = montarServicoLgpd({
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1', statusCicloVida: 'ACTIVE' },
+      ultimoRegistroClinico: recente
+    });
+
+    const resultado = await servico.solicitarEliminacaoDadosLgpd('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(resultado.status).toBe('RETENTION_HELD');
+    expect(resultado.retentionReason).toBe('prontuario_clinico_20_anos');
+    expect(resultado.retentionUntil).toBeInstanceOf(Date);
+    const salvo = await repositorioPaciente.save.mock.results[0].value;
+    expect(salvo.statusCicloVida).toBe('RETENTION_HELD');
+    expect(salvo.nomeCriptografado).toBeUndefined();
+  });
+
+  it('elimina de verdade quando nao ha registro assistencial nenhum', async () => {
+    const { servico, repositorioPaciente, repositorioTombstone, criptografia } = montarServicoLgpd({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        statusCicloVida: 'ACTIVE',
+        nomeCriptografado: Buffer.from('cripto:Ana Souza'),
+        contatoCriptografado: Buffer.from('cripto:contato'),
+        buscaHashes: ['hash-1'],
+        dataNascimento: '1990-01-01',
+        referenciaExterna: 'erp-123'
+      }
+    });
+
+    const resultado = await servico.solicitarEliminacaoDadosLgpd('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(resultado.status).toBe('DELETED');
+    expect(resultado.deletedAt).toBeInstanceOf(Date);
+    const salvo = await repositorioPaciente.save.mock.results[0].value;
+    expect(salvo.statusCicloVida).toBe('DELETED');
+    expect(salvo.nomeCriptografado).toEqual(Buffer.from('cripto:[dados eliminados por solicitacao LGPD]'));
+    expect(salvo.contatoCriptografado).toBeUndefined();
+    expect(salvo.buscaHashes).toEqual([]);
+    expect(salvo.dataNascimento).toBeUndefined();
+    expect(salvo.referenciaExterna).toBeUndefined();
+    expect(criptografia.criptografar).toHaveBeenCalledWith('[dados eliminados por solicitacao LGPD]');
+    expect(repositorioTombstone.save).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: 'tenant-1', tabela: 'pacientes', registroId: 'paciente-1' })
+    );
+  });
+
+  it('recusa solicitar eliminacao de paciente ja eliminado', async () => {
+    const { servico } = montarServicoLgpd({
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1', statusCicloVida: 'DELETED' }
+    });
+
+    await expect(
+      servico.solicitarEliminacaoDadosLgpd('tenant-1', 'paciente-1', usuarioColaborador)
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('recusa solicitar eliminacao de paciente inexistente', async () => {
+    const { servico } = montarServicoLgpd({ paciente: null });
+
+    await expect(
+      servico.solicitarEliminacaoDadosLgpd('tenant-1', 'paciente-1', usuarioColaborador)
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('Professional nao solicita eliminacao de paciente fora do proprio escopo', async () => {
+    const { servico } = montarServicoLgpd({
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-dono', statusCicloVida: 'ACTIVE' }
+    });
+
+    await expect(
+      servico.solicitarEliminacaoDadosLgpd('tenant-1', 'paciente-1', usuarioProfissional)
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('Professional nao desativa conta de paciente fora do proprio escopo', async () => {
+    const { servico } = montarServicoLgpd({
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-dono', usuarioId: 'usuario-paciente-1' }
+    });
+
+    await expect(
+      servico.desativarContaAcesso('tenant-1', 'paciente-1', usuarioProfissional)
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('desativa a conta de acesso sem tocar o prontuario', async () => {
+    const { servico, repositorioUsuario, repositorioRefreshToken, repositorioSessao, repositorioPaciente } =
+      montarServicoLgpd({
+        paciente: { id: 'paciente-1', tenantId: 'tenant-1', usuarioId: 'usuario-paciente-1' }
+      });
+
+    await servico.desativarContaAcesso('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(repositorioUsuario.update).toHaveBeenCalledWith(
+      { id: 'usuario-paciente-1', tenantId: 'tenant-1' },
+      { ativo: false }
+    );
+    expect(repositorioRefreshToken.update).toHaveBeenCalledWith(
+      { tenantId: 'tenant-1', usuarioId: 'usuario-paciente-1' },
+      expect.objectContaining({ revogadoEm: expect.any(Date) })
+    );
+    expect(repositorioSessao.update).toHaveBeenCalled();
+    expect(repositorioPaciente.save).not.toHaveBeenCalled();
+  });
+
+  it('recusa desativar conta de paciente sem usuario vinculado', async () => {
+    const { servico } = montarServicoLgpd({ paciente: { id: 'paciente-1', tenantId: 'tenant-1' } });
+
+    await expect(
+      servico.desativarContaAcesso('tenant-1', 'paciente-1', usuarioColaborador)
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('recusa desativar conta de paciente inexistente', async () => {
+    const { servico } = montarServicoLgpd({ paciente: null });
+
+    await expect(
+      servico.desativarContaAcesso('tenant-1', 'paciente-1', usuarioColaborador)
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

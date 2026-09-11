@@ -56,8 +56,10 @@ import { AdicionarTarefaConcluidaNotificacoes1720000001039 } from './migracoes/1
 import { AdicionarIdempotenciaMensagensNotificacao1720000001040 } from './migracoes/1720000001040-AdicionarIdempotenciaMensagensNotificacao';
 import { AdicionarStatusEntregaWhatsapp1720000001041 } from './migracoes/1720000001041-AdicionarStatusEntregaWhatsapp';
 import { CriptografarCamposResiduaisFase2611720000001042 } from './migracoes/1720000001042-CriptografarCamposResiduaisFase261';
+import { AdicionarModeloRetencaoLgpdPacientes1720000001043 } from './migracoes/1720000001043-AdicionarModeloRetencaoLgpdPacientes';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
+import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
 import { AgendaConsultaOrm } from '../../modulos/agenda/infraestrutura/agenda-consulta.orm';
 import { PacoteSessaoOrm } from '../../modulos/agenda/infraestrutura/pacote-sessao.orm';
@@ -209,6 +211,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       MfaCodigoRecuperacaoOrm,
       MfaDesafioOrm,
       ConsentimentoLgpdOrm,
+      TombstoneExclusaoLgpdOrm,
       ProfissionalOrm,
       PacienteOrm,
       PerfilCadastroPacienteOrm,
@@ -337,7 +340,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         AdicionarTarefaConcluidaNotificacoes1720000001039,
         AdicionarIdempotenciaMensagensNotificacao1720000001040,
         AdicionarStatusEntregaWhatsapp1720000001041,
-        CriptografarCamposResiduaisFase2611720000001042
+        CriptografarCamposResiduaisFase2611720000001042,
+        AdicionarModeloRetencaoLgpdPacientes1720000001043
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

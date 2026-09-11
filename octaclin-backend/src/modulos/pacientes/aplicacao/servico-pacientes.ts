@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { And, ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThanOrEqual, Not, QueryFailedError, Raw } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { montarCsv } from '../../../infraestrutura/exportacao/csv';
@@ -40,12 +40,17 @@ import {
   PaginaLinhaTempoProntuarioDto,
   ProntuarioPacienteRespostaDto,
   TarefaAcompanhamentoRespostaDto,
-  ListarPacientesDto
+  ListarPacientesDto,
+  ResultadoSolicitacaoEliminacaoLgpdDto
 } from './dtos';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
+import { TombstoneExclusaoLgpdOrm } from '../../../infraestrutura/lgpd/tombstone-exclusao-lgpd.orm';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
+import { SessaoUsuarioOrm } from '../../auth/infraestrutura/sessao-usuario.orm';
 
 /**
  * Teto de linhas por exportacao. Exportacao em massa de PHI e vetor de
@@ -56,6 +61,13 @@ const PAGINA_EXPORTACAO = 100;
 const LIMITE_PADRAO_TIMELINE = 20;
 const LIMITE_MAXIMO_TIMELINE = 50;
 const CONSTRAINT_REFERENCIA_EXTERNA_PACIENTE = 'ux_pacientes_referencia_externa';
+/**
+ * Prazo de guarda do prontuario (Fase 261, decisao de produto LGPD): 20 anos
+ * a partir do ultimo registro assistencial. Aproximado em milissegundos por
+ * ano de 365.25 dias -- suficiente para uma decisao de reter/eliminar, nao
+ * para calculo de calendario civil.
+ */
+const PRAZO_RETENCAO_PRONTUARIO_MS = 20 * 365.25 * 24 * 60 * 60 * 1000;
 
 interface CursorTimeline {
   data: string;
@@ -360,6 +372,138 @@ export class ServicoPacientes {
       );
       if (!resultado.affected) throw new NotFoundException('Paciente arquivado nao encontrado.');
     });
+  }
+
+  /**
+   * Solicitacao de eliminacao de dados (LGPD), distinta de `arquivar`:
+   * arquivar encerra o acompanhamento sem tocar retencao; isto decide se o
+   * dado pode ser eliminado agora ou precisa ficar retido pelo prazo do
+   * prontuario. Nunca e a mesma operacao que "excluir conta de acesso"
+   * (`desativarContaAcesso`) -- uma nao implica a outra.
+   *
+   * Com registro assistencial dentro dos 20 anos: fica `RETENTION_HELD`,
+   * preservado, nada e apagado ou reescrito. Sem registro assistencial
+   * (ou fora do prazo de guarda): elimina de verdade agora -- sobrescreve o
+   * identificador criptografado por um marcador de eliminacao (a coluna
+   * continua NOT NULL por desenho, o conteudo original nunca mais existe),
+   * limpa contato e hashes de busca, e grava um tombstone para o restore de
+   * backup nao trazer o dado de volta.
+   */
+  async solicitarEliminacaoDadosLgpd(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<ResultadoSolicitacaoEliminacaoLgpdDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const repositorio = gerenciador.getRepository(PacienteOrm);
+      const paciente = await repositorio.findOne({
+        where: { id: pacienteId, tenantId, ...(profissionalResponsavelId ? { profissionalResponsavelId } : {}) }
+      });
+      if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+      if (paciente.statusCicloVida === 'DELETED') {
+        throw new ConflictException('Os dados deste paciente ja foram eliminados.');
+      }
+
+      const agora = new Date();
+      const ultimoRegistroClinico = await this.obterDataUltimoRegistroClinico(gerenciador, tenantId, pacienteId);
+      const retentionUntil = ultimoRegistroClinico
+        ? new Date(ultimoRegistroClinico.getTime() + PRAZO_RETENCAO_PRONTUARIO_MS)
+        : undefined;
+
+      paciente.deletionRequestedAt = agora;
+
+      if (retentionUntil && retentionUntil.getTime() > agora.getTime()) {
+        paciente.statusCicloVida = 'RETENTION_HELD';
+        paciente.retentionReason = 'prontuario_clinico_20_anos';
+        paciente.retentionUntil = retentionUntil;
+        paciente.legalBasis = 'cfm_guarda_prontuario';
+        await repositorio.save(paciente);
+        return { status: 'RETENTION_HELD', retentionUntil, retentionReason: paciente.retentionReason };
+      }
+
+      paciente.statusCicloVida = 'DELETED';
+      paciente.deletedAt = agora;
+      paciente.retentionReason = undefined;
+      paciente.retentionUntil = undefined;
+      paciente.legalBasis = 'lgpd_art_18_v_eliminacao';
+      paciente.nomeCriptografado = this.criptografia.criptografar('[dados eliminados por solicitacao LGPD]');
+      paciente.contatoCriptografado = undefined;
+      paciente.buscaHashes = [];
+      paciente.dataNascimento = undefined;
+      paciente.referenciaExterna = undefined;
+      await repositorio.save(paciente);
+
+      const repositorioTombstone = gerenciador.getRepository(TombstoneExclusaoLgpdOrm);
+      await repositorioTombstone.save(
+        repositorioTombstone.create({
+          tenantId,
+          tabela: 'pacientes',
+          registroId: paciente.id,
+          motivo: 'lgpd_solicitacao_eliminacao'
+        })
+      );
+
+      return { status: 'DELETED', deletedAt: agora };
+    });
+  }
+
+  /**
+   * Desativa so a conta de autenticacao do paciente -- nunca o prontuario.
+   * Operacao distinta de `solicitarEliminacaoDadosLgpd` e de `arquivar`: um
+   * paciente pode ficar sem acesso ao portal sem que isso vire pedido de
+   * eliminacao, e uma eliminacao real nao depende de o paciente ter conta.
+   */
+  async desativarContaAcesso(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<void> {
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: { id: pacienteId, tenantId, ...(profissionalResponsavelId ? { profissionalResponsavelId } : {}) }
+      });
+      if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+      if (!paciente.usuarioId) throw new BadRequestException('Paciente nao possui conta de acesso.');
+
+      const agora = new Date();
+      await gerenciador.getRepository(UsuarioOrm).update(
+        { id: paciente.usuarioId, tenantId },
+        { ativo: false }
+      );
+      await gerenciador.getRepository(RefreshTokenOrm).update(
+        { tenantId, usuarioId: paciente.usuarioId },
+        { revogadoEm: agora }
+      );
+      await gerenciador.getRepository(SessaoUsuarioOrm).update(
+        { tenantId, usuarioId: paciente.usuarioId, revogadoEm: IsNull() },
+        { revogadoEm: agora, motivoRevogacao: 'acesso_alterado' }
+      );
+    });
+  }
+
+  /**
+   * Maior data entre os registros assistenciais do paciente. `null` quando
+   * nao existe nenhum -- caso em que a retencao de 20 anos do prontuario
+   * simplesmente nao se aplica.
+   */
+  private async obterDataUltimoRegistroClinico(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string
+  ): Promise<Date | null> {
+    const linhas = await gerenciador.query<Array<{ ultimo: string | null }>>(
+      `
+        select greatest(
+          coalesce((select max(criado_em) from evolucoes_clinicas where tenant_id = $1 and paciente_id = $2), 'epoch'),
+          coalesce((select max(avaliada_em) from avaliacoes_antropometricas where tenant_id = $1 and paciente_id = $2), 'epoch'),
+          coalesce((select max(emitido_em) from documentos_emitidos where tenant_id = $1 and paciente_id = $2), 'epoch'),
+          coalesce((select max(inicio_em) from agenda_consultas where tenant_id = $1 and paciente_id = $2 and status = 'concluida'), 'epoch'),
+          coalesce((select max(coletada_em) from coletas_exames_laboratoriais where tenant_id = $1 and paciente_id = $2), 'epoch'),
+          coalesce((select max(capturada_em) from evolucoes_fotograficas where tenant_id = $1 and paciente_id = $2), 'epoch')
+        ) as ultimo
+      `,
+      [tenantId, pacienteId]
+    );
+    const ultimo = linhas[0]?.ultimo ? new Date(linhas[0].ultimo) : null;
+    return ultimo && ultimo.getTime() > 0 ? ultimo : null;
   }
 
   private mapearResposta(

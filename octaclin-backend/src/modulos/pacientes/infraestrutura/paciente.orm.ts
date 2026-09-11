@@ -1,5 +1,7 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
+export type StatusCicloVidaPaciente = 'ACTIVE' | 'ARCHIVED' | 'RETENTION_HELD' | 'DELETION_PENDING' | 'DELETED';
+
 @Entity('pacientes')
 export class PacienteOrm {
   @PrimaryGeneratedColumn('uuid')
@@ -40,6 +42,30 @@ export class PacienteOrm {
 
   @Column({ name: 'arquivado_em', type: 'timestamptz', nullable: true })
   arquivadoEm?: Date | null;
+
+  /**
+   * Modelo de ciclo de vida LGPD (Fase 261). `ARCHIVED` e o estado
+   * operacional de `arquivadoEm` (encerrar acompanhamento); os outros tres
+   * pertencem so ao fluxo de solicitacao de eliminacao de dados, nunca ao
+   * "arquivar paciente" da tela de cadastro. Ver DESENHO_RETENCAO_LGPD_FASE261.
+   */
+  @Column({ name: 'status_ciclo_vida', type: 'varchar', length: 30, default: 'ACTIVE' })
+  statusCicloVida?: StatusCicloVidaPaciente;
+
+  @Column({ name: 'deletion_requested_at', type: 'timestamptz', nullable: true })
+  deletionRequestedAt?: Date;
+
+  @Column({ name: 'retention_reason', type: 'varchar', length: 60, nullable: true })
+  retentionReason?: string;
+
+  @Column({ name: 'retention_until', type: 'timestamptz', nullable: true })
+  retentionUntil?: Date;
+
+  @Column({ name: 'legal_basis', type: 'varchar', length: 60, nullable: true })
+  legalBasis?: string;
+
+  @Column({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt?: Date;
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;

@@ -275,4 +275,44 @@ describe('ControladorPacientes', () => {
       expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPacientes.prototype.restaurar)).toEqual(['pacientes.gerenciar']);
     });
   });
+
+  describe('LGPD: eliminacao de dados e desativacao de conta (Fase 261)', () => {
+    it('audita a solicitacao de eliminacao LGPD com o status resultante', async () => {
+      const solicitarEliminacaoDadosLgpd = jest.fn().mockResolvedValue({ status: 'RETENTION_HELD' });
+      const { controlador, registrar, requisicao } = criarCenario({ solicitarEliminacaoDadosLgpd });
+
+      const resultado = await controlador.solicitarEliminacaoLgpd(usuario, requisicao, 'paciente-1');
+
+      expect(solicitarEliminacaoDadosLgpd).toHaveBeenCalledWith('tenant-1', 'paciente-1', usuario);
+      expect(resultado).toEqual({ status: 'RETENTION_HELD' });
+      expect(registrar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          acao: 'pacientes.lgpd.solicitacao_eliminacao',
+          recursoId: 'paciente-1',
+          metadados: { status: 'RETENTION_HELD' }
+        })
+      );
+    });
+
+    it('audita a desativacao da conta de acesso sem tocar o prontuario', async () => {
+      const desativarContaAcesso = jest.fn().mockResolvedValue(undefined);
+      const { controlador, registrar, requisicao } = criarCenario({ desativarContaAcesso });
+
+      await controlador.desativarContaAcesso(usuario, requisicao, 'paciente-1');
+
+      expect(desativarContaAcesso).toHaveBeenCalledWith('tenant-1', 'paciente-1', usuario);
+      expect(registrar).toHaveBeenCalledWith(
+        expect.objectContaining({ acao: 'pacientes.conta_acesso.desativar', recursoId: 'paciente-1' })
+      );
+    });
+
+    it('protege as duas rotas com pacientes.gerenciar, nunca uma permissao generica de exclusao', () => {
+      expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPacientes.prototype.solicitarEliminacaoLgpd)).toEqual([
+        'pacientes.gerenciar'
+      ]);
+      expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPacientes.prototype.desativarContaAcesso)).toEqual([
+        'pacientes.gerenciar'
+      ]);
+    });
+  });
 });
