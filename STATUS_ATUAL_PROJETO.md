@@ -108,12 +108,19 @@ Atualizado em 2026-09-11.
   evidencias completas em
   `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
-  identificados no audit da fase) **em andamento** na branch
-  `claude/fase-261-regressao-seguranca-privacidade`, sem PR aberto ainda.
-  Escopo decidido pelo dono do produto via duas perguntas explicitas: (1)
+  identificados no audit da fase) **em andamento, incremento 1 mergeado**.
+  PR GitHub `#232`, merge `85f5c4a` em `main`, base `1ef9ce7`, 2026-09-11.
+  CI verde (20/20 checks) e `mergeable_state: clean` confirmados antes do
+  merge humano. A fase continua aberta: o escopo aprovado no checklist
+  (`CHECKLIST_FASES_FUTURAS_PRODUCAO.md`) e bem mais amplo que este
+  incremento -- revalidacao completa de autenticacao, autorizacao por
+  papel, RLS forcada, isolamento entre tenants, OAuth, webhooks, rate
+  limit, auditoria e LGPD; SBOM, revisao de workflows, gates de secrets,
+  SAST e auditoria de producao; e a execucao real da migration desenhada
+  abaixo -- nada disso foi coberto nesta rodada. Escopo deste incremento
+  decidido pelo dono do produto via duas perguntas explicitas: (1)
   integrar ClamAV real, nao so documentar o risco aceito; (2) desenhar sem
-  executar a migration de criptografia dos alvos identificados. Progresso
-  nesta sessao, commit `a253aa3`:
+  executar a migration de criptografia dos alvos identificados. Entregas:
   - **Concluido:** `ServicoAntimalware` agora seleciona `MecanismoClamAv`
     (cliente nativo do protocolo INSTREAM/PING do clamd, `net.Socket` puro,
     sem dependencia nova) quando `CLAMAV_HOST` esta definido; sem a
