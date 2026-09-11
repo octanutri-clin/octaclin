@@ -1490,7 +1490,7 @@ async function prepararProntuarioMockado(page, {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
-        headers: { 'x-request-id': 'req-teste-evolucoes-0001' },
+        headers: { 'x-request-id': 'req-teste-8f2c4e-0001' },
         body: JSON.stringify({ mensagem: 'Falha sintetica de evoluções.' })
       });
       return;
@@ -2264,7 +2264,7 @@ test.describe('prontuario do paciente', () => {
 
     await page.getByRole('tab', { name: 'Atendimentos', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Não foi possível carregar as evoluções clínicas' })).toBeVisible();
-    await expect(page.getByText('Código para suporte: req-teste-evolucoes-0001')).toBeVisible();
+    await expect(page.getByText('Código para suporte: req-teste-8f2c4e-0001')).toBeVisible();
   });
 
   test('restaura deep link permitido e descarta subarea sem permissao', async ({ page }) => {
