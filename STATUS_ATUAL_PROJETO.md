@@ -134,11 +134,19 @@ Atualizado em 2026-09-11.
     `causa.excecao`. O inventario real (3 causas, 215 alertas) passa sem
     ajuste. Documentado em
     `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`, secao 10.
-  - **Pendente:** desenho (sem execucao) da migration/rollback de
-    criptografia para os quatro alvos PHI identificados no audit
+  - **Concluido (desenho, sem execucao):** plano de migration/rollback para
+    os cinco alvos PHI identificados no audit
     (`logs_diario_rapido.valor`, `evolucoes_clinicas.titulo`,
     `acompanhamento_tarefas.titulo`, `documentos_emitidos.motivo_cancelamento`
-    e o motivo de cancelamento em `agenda_consultas.payload`).
+    e o motivo de cancelamento em `agenda_consultas.payload`), em tres
+    fases (aditiva -> troca de escrita/leitura -> backfill e remocao da
+    coluna antiga), incluindo a solucao para o unico ponto realmente
+    complicado (as duas colunas `titulo` que sao selecionadas direto na
+    query `UNION ALL` da timeline do prontuario: substituir por literal na
+    query e hidratar o titulo real por pos-processamento apos a paginacao).
+    Nenhum DDL foi aplicado; nenhuma fase foi executada. Documento completo
+    em `docs/governance/DESENHO_CRIPTOGRAFIA_TITULOS_PHI_FASE261.md`,
+    aguardando decisao do dono do produto sobre quando/se executar.
   - Limitacao ainda vigente: a recaptura de Dependabot/Code Scanning
     continua bloqueada pela mesma ausencia de `gh` autenticado ja registrada
     na reconciliacao de 2026-09-10 acima. Evidencia adicional obtida nesta
