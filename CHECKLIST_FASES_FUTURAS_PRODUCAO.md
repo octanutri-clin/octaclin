@@ -2607,6 +2607,41 @@ publicado antes de ampliar a superficie de mudancas visuais.
     decisão do dono do produto antes de qualquer trabalho de engenharia
     (o que exatamente "excluir" significa por tipo de dado, prazo legal de
     retenção por categoria).
+    Incremento 3 entregue em 2026-09-11, a partir de decisão de produto do
+    dono (prontuário retido 20 anos do último registro; mensagem/arquivo
+    clínico herda os 20 anos, administrativo é 12 meses/90 dias; conta de
+    acesso do paciente é ação separada da eliminação de dados; logs de
+    acesso 12 meses, nunca menos que 6; sem soft-delete disfarçado de LGPD
+    — sem motivo de retenção válido, o dado é eliminado de verdade):
+    schema aditivo em `pacientes` com o modelo de status exigido (`ACTIVE`,
+    `ARCHIVED`, `RETENTION_HELD`, `DELETION_PENDING`, `DELETED`) e os
+    campos `deletion_requested_at`/`retention_reason`/`retention_until`/
+    `legal_basis`/`deleted_at`; tabela `tombstones_exclusao_lgpd` para o
+    restore de backup não ressuscitar dado já eliminado.
+    `ServicoPacientes.solicitarEliminacaoDadosLgpd` agora decide de
+    verdade: com registro assistencial dentro dos 20 anos, fica
+    `RETENTION_HELD` (preservado, nada é apagado); sem registro (ou fora do
+    prazo), elimina de verdade agora — sobrescreve o identificador cifrado
+    por um marcador de eliminação, limpa contato/hashes/data de
+    nascimento/referência externa, grava o tombstone.
+    `ServicoPacientes.desativarContaAcesso` é a segunda ação, distinta e
+    independente (desativa só a conta de autenticação, nunca o
+    prontuário). Duas rotas novas no controlador, cada uma com nome e
+    auditoria próprios — nunca um "excluir paciente" genérico; "arquivar
+    paciente" (`arquivar()`) continua sendo uma terceira operação
+    separada, já existente. Escopo por profissional aplicado nos dois
+    métodos novos, com teste negativo provando a rejeição.
+    **Pendente e documentado, não escondido**: categorização
+    clínico/administrativo em mensagens e arquivos (a base de retenção
+    diferenciada 20 anos/12 meses/90 dias exige o campo antes de ter onde
+    se apoiar); execução real do restore reaplicando tombstones
+    (`RUNBOOK_BACKUP_RESTORE.md` ainda não consome a tabela nova);
+    "acesso restrito" ao prontuário em `RETENTION_HELD` além do controle
+    de autorização que já existe hoje; e as três ações na interface web
+    (usar `lista-pacientes.tsx`/arquivar como modelo estrutural). Nenhum
+    desses é um risco novo de confidencialidade, integridade, isolamento
+    de tenant, autenticação/autorização ou disponibilidade — são extensão
+    de um desenho que já está correto na base, não correção de uma falha.
   - Instituir SLA de dependências, SBOM, revisão de workflows e gates de secrets,
     SAST e auditoria de produção; nenhum alerta crítico/alto aceito sem dono,
     prazo e justificativa documentada.
@@ -2635,6 +2670,35 @@ publicado antes de ampliar a superficie de mudancas visuais.
     da contagem corrente de alertas Dependabot/Code Scanning continua
     bloqueada pela ausência de `gh` autenticado nesta sessão (mesma
     limitação da reconciliação de 2026-09-10 em `STATUS_ATUAL_PROJETO.md`).
+    Incremento 3 entregue em 2026-09-11, a partir de decisão de produto do
+    dono sobre os dois gaps acima: SAST vira ratchet — ficam bloqueantes
+    `CRITICAL`/`HIGH` de alta confiança novos, segredo/credencial,
+    injeção, falha grave de auth/authz, IDOR/isolamento de tenant e
+    vulnerabilidade crítica/alta corrigível em dependência nova; achado
+    histórico (baseline) e `MEDIUM`/`LOW` continuam informativos.
+    Semgrep sai na frente por ser o único com diff nativo (`--baseline-ref`
+    contra o commit base do PR): passo novo, só em `pull_request`, com
+    `--severity ERROR --error` reprova o job quando o PR introduz achado
+    ERROR novo. CodeQL e Trivy ficam documentados em shadow (nenhum tem
+    diff base-vs-head nativo; construir um sem conseguir provar o
+    comportamento fim a fim nesta sessão teria risco real de bloquear PR
+    legítimo ou deixar passar achado grave calado) — política completa e
+    plano de expansão concreto em
+    `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`.
+    "Auditoria de produção" ganha um script novo e deliberadamente
+    separado do monitor de saúde: `scripts/verificar-seguranca-producao.mjs`
+    sonda TLS (protocolo/validade de certificado), redirecionamento
+    HTTP→HTTPS, HSTS, CSP, headers de segurança, exposição de
+    implementação, flags de cookie e CORS — tudo passivo e não-destrutivo,
+    exatamente o escopo autorizado nesta fase para produção (fuzzing,
+    SQLi/XSS ativos, brute force e DAST autenticado ficam para fase
+    futura, de preferência primeiro contra staging). Cron próprio, gated
+    por variável independente da do monitor de saúde.
+    **Verificação pendente e honesta**: o passo bloqueante do Semgrep
+    exige `git` na imagem do container e o commit base presente
+    localmente; este ambiente não tem como rodar `semgrep/semgrep` nem
+    abrir PR real para provar o passo fim a fim — a primeira execução
+    real do workflow no PR é a evidência que falta.
   - Cifrar o conteúdo clínico livre hoje persistido em claro, incluindo o JSON
     de check-ins rápidos, títulos de evoluções/tarefas e motivos livres de
     cancelamento; manter em claro somente campos controlados indispensáveis a
@@ -2647,6 +2711,34 @@ publicado antes de ampliar a superficie de mudancas visuais.
     remoção da coluna antiga). Ver
     `docs/governance/DESENHO_CRIPTOGRAFIA_TITULOS_PHI_FASE261.md`. **Nenhum
     DDL foi aplicado**; a execução real aguarda decisão do dono do produto.
+    Incremento 2 entregue em 2026-09-11, a partir da autorização do dono do
+    produto para executar (condicionada ao preflight: backup confirmado,
+    teste de restauração real, validação em staging, processo idempotente,
+    execução em lote/canário, telemetria, verificação de integridade
+    antes/depois, tratamento seguro de chave, rollback documentado):
+    Fase A (migration aditiva `1720000001042`, as cinco colunas
+    `*_criptografado`) e Fase B (troca completa de escrita/leitura) para os
+    cinco alvos do desenho — `documentos_emitidos.motivo_cancelamento`,
+    `agenda_consultas` (motivo de cancelamento, incluindo a correção do
+    `payload.historico` que gravava o motivo em claro dentro do jsonb),
+    `logs_diario_rapido.valor` (incluindo a correção de um retorno de
+    entidade ORM crua no `ControladorMobile`), `evolucoes_clinicas.titulo`
+    e `acompanhamento_tarefas.titulo` — estão implementadas e testadas,
+    incluindo a correção da query `UNION ALL` da timeline (agora seleciona
+    `titulo_criptografado` e decifra no pós-processamento, com fallback
+    para o título legado e mensagem segura em caso de falha de
+    descriptografia). 1708 testes do backend passam, incluindo cobertura
+    negativa de decifra ilegível e de fallback histórico para cada um dos
+    cinco alvos.
+    **Execução real (Fase C: backfill e remoção da coluna antiga, e a
+    aplicação de qualquer DDL em banco real) permanece impossível a partir
+    desta sessão**: o ambiente não tem `DATABASE_URL`/credencial de banco
+    nem Docker funcional, então nenhum item do preflight exigido (backup,
+    restore real, validação em staging, execução em lote) pode ser
+    cumprido aqui. O código está pronto para uma sessão com credenciais
+    reais de Neon/Render executar o preflight completo antes de aplicar
+    qualquer coisa em produção — isto não é evitação de escopo, é a mesma
+    regra de nunca declarar validação sem evidência obtida no mesmo ciclo.
 
 - [ ] Fase 262 - Aceite de usabilidade e prontidão para piloto. [BLOQUEADOR FINAL]
   - Executar jornadas reais com dados sintéticos para SuperAdmin, cliente,
