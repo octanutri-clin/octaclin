@@ -1475,7 +1475,7 @@ async function prepararProntuarioMockado(page, {
           pacienteId: 'paciente-1',
           autorUsuarioId: 'usuario-profissional-1',
           titulo: 'Conduta ajustada',
-          conteudo: 'Aumentar ingestao de agua no periodo da tarde.',
+          conteudo: 'Aumentar ingestão de água no período da tarde.',
           tipo: 'ajuste_plano',
           visibilidade: 'privada',
           criadoEm: '2026-07-22T18:00:00.000Z',
@@ -1491,7 +1491,7 @@ async function prepararProntuarioMockado(page, {
         status: 500,
         contentType: 'application/json',
         headers: { 'x-request-id': 'req-teste-evolucoes-0001' },
-        body: JSON.stringify({ mensagem: 'Falha sintetica de evolucoes.' })
+        body: JSON.stringify({ mensagem: 'Falha sintetica de evoluções.' })
       });
       return;
     }
@@ -1508,7 +1508,7 @@ async function prepararProntuarioMockado(page, {
                 pacienteId: 'paciente-1',
                 autorUsuarioId: 'usuario-profissional-1',
                 titulo: 'Conduta ajustada',
-                conteudo: 'Aumentar ingestao de agua no período da tarde.',
+                conteudo: 'Aumentar ingestão de água no período da tarde.',
                 tipo: 'ajuste_plano',
                 visibilidade: 'privada',
                 criadoEm: '2026-07-22T18:00:00.000Z',
@@ -2264,7 +2264,7 @@ test.describe('prontuario do paciente', () => {
 
     await page.getByRole('tab', { name: 'Atendimentos', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Não foi possível carregar as evoluções clínicas' })).toBeVisible();
-    await expect(page.getByText('Código para suporte: req-teste-evolucoes-0001')).toBeVisible();
+    await expect(page.getByText('Código para suporte: req-teste-evoluções-0001')).toBeVisible();
   });
 
   test('restaura deep link permitido e descarta subarea sem permissao', async ({ page }) => {
