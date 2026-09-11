@@ -25,7 +25,11 @@ jobs:
       image: semgrep/semgrep
     if: github.actor != 'dependabot[bot]'
     steps:
+      # fetch-depth 0: o passo de bloqueio (abaixo) precisa do commit base do
+      # PR presente localmente para o --baseline-ref calcular o diff.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       # `--exclude-rule pnpm-minimum-release-age`: a regra exige
       # `minimumReleaseAge: 10080` fixo e reprova o valor 1440 adotado nos
@@ -35,7 +39,7 @@ jobs:
       # review, em vez de dispensa no Security tab. `# nosemgrep` na linha do
       # valor não suprime a regra (verificado na CI do PR 187). O piso do valor
       # continua provado por scripts/validar-instalacao-congelada.spec.mjs.
-      - name: Rodar Semgrep (não bloqueante)
+      - name: Rodar Semgrep (não bloqueante, inventário completo)
         run: |
           semgrep scan --config auto \
             --exclude-rule package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age \
@@ -46,3 +50,20 @@ jobs:
         if: always()
         with:
           sarif_file: semgrep.sarif
+
+      # Gate bloqueante (Fase 261, ratchet SAST): so roda em PR e so olha o que
+      # o PR introduz -- --baseline-ref faz o diff contra o commit base, entao
+      # achado ja existente antes do PR nunca entra aqui. --severity ERROR
+      # restringe ao nivel mais grave do Semgrep (severidade/confianca mais alta
+      # do ruleset auto); WARNING/INFO continuam so informativos no Security
+      # tab, ganhados pelo scan completo acima. Ver
+      # docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md secao "SAST
+      # bloqueante" para o desenho completo e o plano de expansao.
+      - name: Bloquear achado ERROR novo introduzido pelo PR
+        if: github.event_name == 'pull_request'
+        run: |
+          semgrep scan --config auto \
+            --exclude-rule package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age \
+            --baseline-ref "${{ github.event.pull_request.base.sha }}" \
+            --severity ERROR \
+            --error

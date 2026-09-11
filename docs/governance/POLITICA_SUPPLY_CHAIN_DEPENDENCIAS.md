@@ -299,6 +299,74 @@ escolher uma data distante em silencio. O gate nao segue a referencia ate o
 ledger para confirmar validade ou vencimento; isso permanece uma extensao
 futura possivel, nao coberta por esta fase.
 
+### SAST bloqueante: ratchet por ferramenta (Fase 261)
+
+Decisao de produto: CodeQL, Semgrep e Trivy ficam progressivamente
+bloqueantes, mas o repositorio nao pode travar por divida historica ja
+existente antes desta fase. O desenho e um ratchet -- achado ja presente
+antes do PR fica no baseline (nao bloqueia); achado grave **novo**, que o PR
+introduz, bloqueia. A politica de bloqueio, igual para as tres ferramentas
+quando implementada:
+
+- Bloqueia: `CRITICAL` novo; `HIGH` novo de alta confianca; segredo/credencial
+  adicionado ao repositorio; injecao de SQL/comando/codigo; falha grave de
+  autenticacao/autorizacao; falha de isolamento de tenant/IDOR; vulnerabilidade
+  critica/alta corrigivel introduzida em dependencia ou imagem.
+- Fica informativo (Security tab, nao bloqueia): `MEDIUM`, `LOW`, achado
+  historico (baseline), e sinal com taxa alta de falso positivo conhecida.
+
+| Ferramenta | Estado atual | Mecanismo |
+| --- | --- | --- |
+| Semgrep | **Bloqueante** (`.github/workflows/semgrep.yml`) | `--baseline-ref` do Semgrep faz o diff nativo contra o commit base do PR (so relata o que o PR introduz); passo separado roda so em `pull_request`, filtra `--severity ERROR` e usa `--error` para reprovar o job quando sobra achado ERROR novo. O scan completo (todas as severidades, sem baseline) continua publicando no Security tab, inalterado. |
+| CodeQL | Shadow (nao bloqueia ainda) | `.github/workflows/codeql.yml` roda normalmente e alimenta o Security tab; nao ha diff base-vs-head aplicado. Ver "Plano de expansao" abaixo. |
+| Trivy | Shadow (nao bloqueia ainda) | `.github/workflows/trivy.yml` mantem `exit-code: "0"` em todo invocacao; nao ha diff base-vs-head aplicado. Ver "Plano de expansao" abaixo. |
+
+Por que Semgrep primeiro: e a unica das tres com diff-aware nativo na propria
+CLI (`--baseline-ref`), sem precisar reimplementar comparacao de achado por
+fora. CodeQL e Trivy nao tem equivalente nativo — bloquear por eles hoje
+exigiria construir e validar uma comparacao base-vs-head por fora da
+ferramenta (via API de alertas do GitHub ou diff de SARIF), o que este
+incremento decidiu nao arriscar sem conseguir provar o comportamento antes de
+tornar bloqueante: um gate de seguranca errado pode tanto bloquear PR legitimo
+quanto, pior, deixar passar achado grave calado. Por isso ficam em modo
+shadow, documentados, em vez de bloqueantes sem essa prova.
+
+Verificacao pendente e honesta: o `--baseline-ref` do Semgrep exige `git` no
+container da imagem e o commit base presente localmente (`fetch-depth: 0` ja
+adicionado ao checkout). Este ambiente de execucao nao tem como rodar a
+imagem `semgrep/semgrep` nem abrir um PR real para provar o passo bloqueante
+fim a fim; a primeira execucao real do workflow em um PR e a evidencia que
+falta, e cai sob a mesma responsabilidade de acompanhar CI ate verde que vale
+para qualquer mudanca de workflow.
+
+**Plano de expansao (CodeQL e Trivy):**
+
+1. CodeQL: os alertas de Code Scanning sao associados a `ref` (o SARIF
+   enviado por `upload-sarif` carrega o `ref` do commit analisado). Um gate
+   futuro pode consultar `GET /repos/.../code-scanning/alerts` filtrando por
+   `ref` (PR head) e por `ref=refs/heads/main` (base), calcular quais numeros
+   de alerta existem so no head, e falhar se algum novo tiver
+   `rule.security_severity_level` `critical` ou `high`. O padrao de chamada a
+   API (allowlist de endpoint, `gh api --paginate`) ja existe em
+   `scripts/capturar-inventario-security-quality.mjs` e pode ser estendido com
+   um parametro `ref` validado por regex em vez da lista atual de endpoints
+   exatos.
+2. Trivy: sem `--baseline-ref` nativo. A extensao equivalente exigiria rodar
+   Trivy duas vezes (head e merge-base do PR) e comparar os SARIF por
+   `ruleId`/pacote, bloqueando so o que aparece no head e nao na base, com
+   corrigivel (`Fixed Version` presente) como criterio adicional -- assim uma
+   CVE nova publicada numa dependencia que o PR nem tocou, mas que ja existia
+   na base, nunca bloqueia um PR nao relacionado.
+3. Qualquer uma das duas extensoes acima precisa nascer com teste automatizado
+   da funcao pura de comparacao (achados sinteticos, sem depender de scan
+   real) antes de virar bloqueante, seguindo o padrao de
+   `scripts/validar-*.spec.mjs` deste repositorio.
+
+Conforme o baseline de divida historica encolhe (achados existentes triados e
+fechados via `docs/governance/inventario-security-quality.json`), o proximo
+passo natural e apertar Semgrep para `--severity WARNING` tambem, e depois
+promover CodeQL/Trivy de shadow para bloqueante seguindo o plano acima.
+
 ---
 
 ## 11. Politica de licencas
