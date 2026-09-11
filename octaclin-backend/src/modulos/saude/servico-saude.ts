@@ -1,11 +1,17 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { redisConfigurado } from '../comunicacoes/aplicacao/configuracao-redis';
+import { clamavConfigurado, obterConfiguracaoClamav } from '../../infraestrutura/armazenamento/configuracao-clamav';
 
 export const REDIS_SAUDE = 'REDIS_SAUDE';
+export const ANTIMALWARE_SAUDE = 'ANTIMALWARE_SAUDE';
 
 export interface ClienteRedisSaude {
   ping(): Promise<string>;
+}
+
+export interface ClienteAntimalwareSaude {
+  ping(): Promise<boolean>;
 }
 
 export type StatusHealth = 'ok' | 'degradado' | 'falha';
@@ -26,6 +32,7 @@ export interface HealthDetalhado {
     banco: CheckHealth;
     migracoes: CheckHealth;
     redis: CheckHealth;
+    antimalware: CheckHealth;
     email: CheckHealth;
     whatsapp: CheckHealth;
     googleCalendar: CheckHealth;
@@ -62,6 +69,7 @@ const MENSAGEM_BANCO_INDISPONIVEL = 'Banco indisponivel.';
 const MENSAGEM_MIGRACOES_INDISPONIVEL = 'Nao foi possivel verificar as migrations.';
 const MENSAGEM_TEMPO_ESGOTADO = 'Tempo esgotado.';
 const MENSAGEM_REDIS_INDISPONIVEL = 'Redis indisponivel.';
+const MENSAGEM_ANTIMALWARE_INDISPONIVEL = 'Scanner antimalware indisponivel; uploads sao rejeitados enquanto durar.';
 
 /**
  * Erro proprio do timeout, para que o payload publico consiga distinguir "o
@@ -116,20 +124,23 @@ export class ServicoSaude {
 
   constructor(
     private readonly fonteDados: DataSource,
-    @Optional() @Inject(REDIS_SAUDE) private readonly redis?: ClienteRedisSaude
+    @Optional() @Inject(REDIS_SAUDE) private readonly redis?: ClienteRedisSaude,
+    @Optional() @Inject(ANTIMALWARE_SAUDE) private readonly antimalware?: ClienteAntimalwareSaude
   ) {}
 
   async verificarDetalhado(): Promise<HealthDetalhado> {
-    const [banco, migracoes, redis] = await Promise.all([
+    const [banco, migracoes, redis, antimalware] = await Promise.all([
       this.verificarBanco(),
       this.verificarMigracoes(),
-      this.verificarRedis()
+      this.verificarRedis(),
+      this.verificarAntimalware()
     ]);
     const checks = {
       backend: this.verificarBackend(),
       banco,
       migracoes,
       redis,
+      antimalware,
       email: this.verificarEmail(),
       whatsapp: this.verificarWhatsapp(),
       googleCalendar: this.verificarGoogleCalendar(),
@@ -273,6 +284,39 @@ export class ServicoSaude {
       // erro vai ao log, e o timeout passa a se distinguir no payload -- mesma
       // regra do check de banco, e nao um vocabulario proprio do Redis.
       return this.reportarFalha('redis', erro, MENSAGEM_REDIS_INDISPONIVEL);
+    }
+  }
+
+  /**
+   * ClamAV fora do ar nao e degradacao: `ServicoAntimalware.garantirConteudoLimpo`
+   * rejeita todo upload quando o daemon nao responde (contrato fail-closed, ver
+   * `infraestrutura/armazenamento/servico-antimalware.ts`). Por isso, ao contrario
+   * do check de email/WhatsApp/Google Calendar (integracoes opcionais que so
+   * "degradam" uma funcionalidade paralela), a ausencia de resposta do ClamAV
+   * configurado e `falha`: uploads clinicos estao todos bloqueados enquanto durar.
+   *
+   * Sem `CLAMAV_HOST` o servico continua de pe com a referencia EICAR (unico
+   * fallback ate a Fase 261), o que e um risco aceito e ja registrado -- por
+   * isso aqui e `degradado`, nao `falha`, e nao um ping.
+   */
+  private async verificarAntimalware(): Promise<CheckHealth> {
+    if (!clamavConfigurado()) {
+      return {
+        status: 'degradado',
+        mensagem: 'ClamAV nao configurado; uploads usam apenas a referencia EICAR, sem deteccao real de malware.'
+      };
+    }
+
+    if (!this.antimalware) return { status: 'falha', mensagem: MENSAGEM_ANTIMALWARE_INDISPONIVEL };
+
+    try {
+      const { timeoutMs } = obterConfiguracaoClamav();
+      const respondeu = await this.executarComTimeout(this.antimalware.ping(), Math.min(timeoutMs, 1_500));
+      if (!respondeu) return { status: 'falha', mensagem: MENSAGEM_ANTIMALWARE_INDISPONIVEL };
+
+      return { status: 'ok', detalhes: { configurado: true } };
+    } catch (erro) {
+      return this.reportarFalha('antimalware', erro, MENSAGEM_ANTIMALWARE_INDISPONIVEL);
     }
   }
 

@@ -297,6 +297,40 @@ o comando bloqueante a cada 5 segundos. Corrigido em
 comentario do arquivo. Ao avaliar provedor, considerar que cobranca por comando
 pune processo ocioso — cobranca por instancia, nao.
 
+## ClamAV (antimalware de uploads)
+
+Nao ha secret aqui -- `CLAMAV_HOST` aponta para um daemon `clamd` na rede
+interna do backend, nunca um SaaS de terceiro. Conteudo clinico enviado para
+escaneamento nao sai da rede do proprio backend (ver
+`octaclin-backend/src/infraestrutura/armazenamento/mecanismo-clamav.ts`).
+
+| Nome | Uso | Padrao |
+| --- | --- | --- |
+| `CLAMAV_HOST` | Host do daemon clamd. Ausente = feature desligada | (nenhum) |
+| `CLAMAV_PORTA` | Porta TCP do clamd | `3310` |
+| `CLAMAV_TIMEOUT_MS` | Timeout de conexao e de resposta do INSTREAM/PING | `5000` |
+
+`CLAMAV_HOST` e a chave que decide o mecanismo em
+`ServicoAntimalware` (`configuracao-clamav.ts`): presente, todo upload passa
+pelo ClamAV real; ausente, o servico continua na referencia EICAR (reconhece
+so o arquivo de teste padrao da industria, nenhum malware real). Isso vale
+para dev local, CI e qualquer ambiente sem o daemon provisionado -- e um risco
+aceito e registrado, nao um bug.
+
+O contrato e fail-closed dos dois lados: falha de conexao com o daemon vira
+excecao, e excecao em `garantirConteudoLimpo` sempre rejeita o upload, nunca
+libera por omissao. Por isso ClamAV configurado e fora do ar e mais grave que
+ClamAV nao configurado -- `/health/detalhado` reflete essa diferenca marcando
+o primeiro caso como `falha` e o segundo como `degradado`
+(`checks.antimalware`).
+
+Dev local: `docker-compose.yml` sobe um `clamav/clamav:stable` na porta 3310
+(primeira subida demora mais por causa do download das definicoes de virus via
+`freshclam` -- o healthcheck do compose so fica saudavel depois disso).
+Producao (Render) precisa do mesmo daemon provisionado como servico separado,
+fora deste compose de referencia; ate essa provisao acontecer, producao roda
+com o risco aceito acima.
+
 ## Checklist de rotacao
 
 Runbook detalhado: `RUNBOOK_ROTACAO_SECRETS.md`.

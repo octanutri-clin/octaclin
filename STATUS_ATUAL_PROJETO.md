@@ -107,6 +107,52 @@ Atualizado em 2026-09-11.
   (Desempenho, resiliencia e diagnostico operacional). Detalhes e
   evidencias completas em
   `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
+- Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
+  identificados no audit da fase) **em andamento** na branch
+  `claude/fase-261-regressao-seguranca-privacidade`, sem PR aberto ainda.
+  Escopo decidido pelo dono do produto via duas perguntas explicitas: (1)
+  integrar ClamAV real, nao so documentar o risco aceito; (2) desenhar sem
+  executar a migration de criptografia dos alvos identificados. Progresso
+  nesta sessao, commit `a253aa3`:
+  - **Concluido:** `ServicoAntimalware` agora seleciona `MecanismoClamAv`
+    (cliente nativo do protocolo INSTREAM/PING do clamd, `net.Socket` puro,
+    sem dependencia nova) quando `CLAMAV_HOST` esta definido; sem a
+    variavel, mantem a referencia EICAR como fallback (dev local/CI). Novo
+    check `checks.antimalware` em `/health/detalhado` (`degradado` sem
+    ClamAV configurado, `falha` quando configurado mas o daemon nao
+    responde -- contrato fail-closed existente se estende a essa falha).
+    `docker-compose.yml`/`.prod.yml`, `VARIAVEIS_AMBIENTE.md`,
+    `RUNBOOK_PRODUCAO.md` e `RUNBOOK_SUPORTE.md` atualizados. Producao
+    ainda precisa do daemon provisionado separadamente (fora do escopo
+    desta sessao) -- ver "Ambientes" em `RUNBOOK_PRODUCAO.md`.
+  - **Concluido:** SLA de revisao por severidade para
+    `docs/governance/inventario-security-quality.json` (causas raiz do
+    inventario de seguranca). Ate esta fase `revisarEm` era uma data futura
+    qualquer sem teto por severidade. `scripts/validar-inventario-security-quality.mjs`
+    agora reprova `revisarEm` alem do teto (critical 14d, high 30d, medium
+    90d, low/informational/none 180d) na ausencia de excecao rastreavel em
+    `causa.excecao`. O inventario real (3 causas, 215 alertas) passa sem
+    ajuste. Documentado em
+    `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`, secao 10.
+  - **Concluido (desenho, sem execucao):** plano de migration/rollback para
+    os cinco alvos PHI identificados no audit
+    (`logs_diario_rapido.valor`, `evolucoes_clinicas.titulo`,
+    `acompanhamento_tarefas.titulo`, `documentos_emitidos.motivo_cancelamento`
+    e o motivo de cancelamento em `agenda_consultas.payload`), em tres
+    fases (aditiva -> troca de escrita/leitura -> backfill e remocao da
+    coluna antiga), incluindo a solucao para o unico ponto realmente
+    complicado (as duas colunas `titulo` que sao selecionadas direto na
+    query `UNION ALL` da timeline do prontuario: substituir por literal na
+    query e hidratar o titulo real por pos-processamento apos a paginacao).
+    Nenhum DDL foi aplicado; nenhuma fase foi executada. Documento completo
+    em `docs/governance/DESENHO_CRIPTOGRAFIA_TITULOS_PHI_FASE261.md`,
+    aguardando decisao do dono do produto sobre quando/se executar.
+  - Limitacao ainda vigente: a recaptura de Dependabot/Code Scanning
+    continua bloqueada pela mesma ausencia de `gh` autenticado ja registrada
+    na reconciliacao de 2026-09-10 acima. Evidencia adicional obtida nesta
+    sessao: o `git push` desta branch tambem reportou 2 alertas Dependabot
+    high no `main` atual -- mesma contagem ja conhecida, sem mudanca liquida
+    detectavel por esta via.
 - Fase 260 - Desempenho, resiliencia e diagnostico operacional, **concluida
   em 2026-09-11**. Auditoria inicial confirmou lazy-load
   parcial ja existente (materiais/anexos/profissionais) e endpoints
@@ -152,6 +198,18 @@ Atualizado em 2026-09-11.
   oficial e a Fase 261 (Regressao de seguranca e privacidade do SaaS
   publico). Detalhes e evidencias completas em
   `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
+  PR GitHub `#231`, **mergeado em `main` (`1ef9ce7`) em 2026-09-11**, base
+  `0256d52`. Durante a revisao a PR passou por duas correcoes de CI nesta
+  sessao, ambas pelo mesmo mecanismo — mojibake em header HTTP quando um
+  identificador sintetico (`x-request-id`) recebe acentuacao: primeiro por
+  commits de terceiros que "corrigiram ortografia" no id (commit `660c78b`,
+  revertendo so as duas ocorrencias do id em header/assercao), depois pelo
+  proprio `pnpm test:linguagem` reincidindo no mesmo id por ele conter uma
+  raiz de palavra portuguesa reconhecida pelo dicionario do linter (commit
+  `7fca431`, resolvido renomeando o id para um token sem raiz de palavra —
+  `req-teste-8f2c4e-0001` — em vez de tocar a logica do linter). CI verde
+  (20/20 checks) e `mergeable_state: clean` confirmados antes do merge
+  humano.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
   fotografia historica foi capturada em 2026-09-07 sobre
   `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning

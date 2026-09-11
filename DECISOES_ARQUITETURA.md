@@ -123,8 +123,14 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
   escrita do navegador.
 - Abuso: a reserva de cota e serializada por tenant, uploads sao limitados e o
   lifecycle do provedor remove temporarios abandonados.
-- Consequencia: o backend le arquivos de ate 25 MB na confirmacao. Streaming e
-  antivirus dedicado so entram quando volume ou risco medido exigirem.
+- Consequencia: o backend le arquivos de ate 25 MB na confirmacao. Streaming
+  so entra quando volume medido exigir.
+- Antivirus (Fase 261): a confirmacao passa por `ServicoAntimalware`, que usa
+  ClamAV real via `MecanismoClamAv` quando `CLAMAV_HOST` esta definido, com
+  referencia EICAR como fallback documentado (nao antivirus real) quando o
+  daemon nao esta provisionado. Contrato fail-closed: erro ou timeout do
+  mecanismo sempre rejeita, nunca libera por omissao. Ver
+  `VARIAVEIS_AMBIENTE.md` e `infraestrutura/armazenamento/servico-antimalware.ts`.
 
 ## ADR-019 - Processadores distribuidos
 

@@ -21,6 +21,8 @@ evidencia sanitizada em `OPERACAO_LANCAMENTO_CONTROLE.md`.
 - Backend/Web: Render
 - Banco: Neon PostgreSQL
 - Redis: instancia gerenciada definida por `REDIS_URL`
+- ClamAV: nao provisionado ainda (Fase 261); `CLAMAV_HOST` indefinido, uploads
+  usam a referencia EICAR. Ver `VARIAVEIS_AMBIENTE.md`.
 - Email: Gmail SMTP ou Gmail API
 - WhatsApp: Meta Cloud API
 - Agenda: Google Calendar
@@ -32,6 +34,8 @@ Producao deve ser separada de staging:
 - projeto Render separado ou servicos separados;
 - banco Neon separado;
 - Redis separado;
+- daemon ClamAV provisionado (sidecar ou servico proprio na mesma rede
+  interna do backend — decisao e execucao fora do escopo deste runbook);
 - variaveis separadas;
 - dominio oficial;
 - secrets rotacionados;
@@ -46,7 +50,7 @@ Producao deve ser separada de staging:
 3. Render inicia auto-deploy, se configurado.
 4. Aguardar deploy terminar.
 5. Validar `/health`.
-6. Validar `/health/detalhado` quando a mudanca tocar banco, Redis, email, WhatsApp, Google Calendar ou variaveis.
+6. Validar `/health/detalhado` quando a mudanca tocar banco, Redis, ClamAV, email, WhatsApp, Google Calendar ou variaveis.
 7. Validar login.
 8. Validar uma jornada critica afetada pela mudanca.
 
@@ -466,12 +470,17 @@ imutavel, nunca sobre o objeto pendente. So depois de toda a cadeia passar o
 banco marca `confirmado`; um arquivo `pendente` nunca gera URL de download
 utilizavel.
 
-**Scanner antimalware:** `ServicoAntimalware` e um mecanismo de referencia,
-nao um antivirus real — ele so reconhece a assinatura de teste padrao EICAR.
-Timeout (5s) ou erro do mecanismo sempre rejeitam a confirmacao; nunca liberam
-por omissao. Ligar um scanner real (ClamAV local ou equivalente) exige decisao
-operacional e infraestrutura fora do escopo deste PR — quando isso acontecer,
-substituir a implementacao de `MecanismoAntimalware` sem mudar quem a chama.
+**Scanner antimalware:** `ServicoAntimalware` era, ate a Fase 261, so um
+mecanismo de referencia — reconhecia apenas a assinatura de teste padrao
+EICAR, nenhum malware real. Timeout (5s) ou erro do mecanismo sempre
+rejeitavam a confirmacao; nunca liberavam por omissao — essa parte do
+contrato nao mudou. A partir da Fase 261, com `CLAMAV_HOST` definido
+(`VARIAVEIS_AMBIENTE.md`), o servico troca automaticamente para um scanner
+ClamAV real, e o `MecanismoAntimalware` de referencia EICAR passa a ser so o
+fallback para ambientes sem o daemon provisionado (dev local, CI). Ver
+`checks.antimalware` em `/health/detalhado` para o estado corrente do
+mecanismo, e a secao "Uploads e antimalware" de `RUNBOOK_SUPORTE.md` para
+troubleshooting.
 
 **Limites de imagem:** largura e altura ate 12000 px cada, e ate
 100.000.000 de pixels totais (dimensao real, lida da propria estrutura do
@@ -1184,10 +1193,16 @@ Campos principais:
 
 - `status: ok`: backend, banco e configuracoes criticas estao prontos.
 - `status: degradado`: backend e banco respondem, mas alguma integracao opcional esta ausente/incompleta.
-- `status: falha`: dependencia critica falhou — banco fora do ar ou schema atras
-  do codigo.
+- `status: falha`: dependencia critica falhou — banco fora do ar, schema atras
+  do codigo, ou ClamAV configurado sem responder (uploads todos rejeitados).
 - `checks.banco`: executa `SELECT 1`. Atencao: isso prova conexao viva, **nao**
   schema correto. Use `checks.migracoes` para isso.
+- `checks.antimalware`: `degradado` quando `CLAMAV_HOST` nao esta definido
+  (uploads usam so a referencia EICAR, risco aceito da Fase 261); `falha`
+  quando `CLAMAV_HOST` esta definido mas o daemon nao respondeu ao PING — isso
+  significa que **todo upload esta sendo rejeitado** pelo contrato
+  fail-closed, nao so o do usuario que reportou. Ver a secao "Uploads e
+  antimalware" de `RUNBOOK_SUPORTE.md`.
 - `checks.migracoes`: acusa migrations pendentes. `falha` aqui significa que o
   banco esta atras do codigo implantado: as entidades apontam para colunas que
   nao existem e as features da fase correspondente nao funcionam, ainda que o

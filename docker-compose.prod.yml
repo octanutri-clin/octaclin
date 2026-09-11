@@ -12,6 +12,8 @@ services:
       BANCO_NOME: octaclin
       REDIS_HOST: redis
       REDIS_PORTA: 6379
+      CLAMAV_HOST: clamav
+      CLAMAV_PORTA: 3310
       IA_SERVICE_URL: http://ia-service:8001
       IA_SERVICE_TOKEN: ${IA_SERVICE_TOKEN}
       IA_SERVICE_TIMEOUT_MS: 15000
@@ -23,6 +25,7 @@ services:
     depends_on:
       - postgres
       - redis
+      - clamav
       - ia-service
 
   web:
@@ -63,6 +66,15 @@ services:
     volumes:
       - redis_dados_prod:/data
 
+  # Compose local de referencia. Producao real (Render) precisa do daemon
+  # clamd provisionado como servico separado -- ver VARIAVEIS_AMBIENTE.md e o
+  # runbook aplicavel; este arquivo nao e o que roda em producao.
+  clamav:
+    image: clamav/clamav:stable
+    volumes:
+      - clamav_dados_prod:/var/lib/clamav
+
 volumes:
   postgres_dados_prod:
   redis_dados_prod:
+  clamav_dados_prod:

@@ -269,6 +269,36 @@ eixos: alcance em runtime, execucao em build/CI e privilegio disponivel no job.
 
 Nunca usar `npm audit fix --force` nem `pnpm audit --fix --force`.
 
+### SLA de revisao por severidade (Fase 261)
+
+Fonte: `docs/governance/inventario-security-quality.json`, campo `causas`.
+Cada causa raiz agrupa um ou mais alertas de Code Scanning/Dependabot e carrega
+`revisarEm`, a proxima data em que alguem precisa reavaliar se ja existe patch,
+imagem oficial ou artefato suportado que feche o achado.
+
+Ate esta fase `revisarEm` era uma data futura qualquer, escolhida caso a caso
+sem teto: nada impedia uma causa `critical` receber revisao daqui a um ano.
+`scripts/validar-inventario-security-quality.mjs` agora aplica um teto por
+severidade, contado a partir de `capturadoEm`:
+
+| `severidadeContextual` | Teto ate `revisarEm` |
+| --- | --- |
+| `critical` | 14 dias |
+| `high` | 30 dias |
+| `medium` | 90 dias |
+| `low` | 180 dias |
+| `informational` / `none` | 180 dias |
+
+Os numeros espelham o teto de 180 dias ja em vigor para o ledger de excecoes
+(secao 12): nenhuma causa credencia revisao mais distante do que uma excecao
+formal ja permitiria para a pior severidade.
+
+Uma causa so pode ultrapassar o teto da propria severidade citando uma
+excecao rastreavel em `causa.excecao` (o mesmo ledger da secao 12) — nunca por
+escolher uma data distante em silencio. O gate nao segue a referencia ate o
+ledger para confirmar validade ou vencimento; isso permanece uma extensao
+futura possivel, nao coberta por esta fase.
+
 ---
 
 ## 11. Politica de licencas
@@ -462,6 +492,7 @@ Nenhuma dessas etapas executa deploy.
 | `pnpm test:versao-pnpm` | versao unica e exata do package manager em todas as fontes |
 | `pnpm test:instalacao-congelada` | com o pnpm real: lifecycle nao aprovado falha, aprovado passa, manifest divergente reprova o modo congelado |
 | `pnpm test:excecoes-supply-chain` | ledger com owner, justificativa e prazo; excecao vencida reprova |
+| `pnpm test:inventario-security-quality` | cobertura exata de alertas por causa raiz; `revisarEm` vencida ou alem do SLA por severidade reprova |
 | `pnpm test:licencas` | semantica SPDX e coerencia da politica de licencas |
 | `pnpm test:lock-python` | lock Python exato, com hashes e coerente com as diretas |
 | `pnpm test:sbom` | normalizacao, reproducao semantica e cobertura por ecossistema |
