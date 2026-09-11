@@ -999,6 +999,8 @@ async function prepararProntuarioMockado(page, {
   let leiturasMateriais = 0;
   let leiturasAnexos = 0;
   let leiturasProfissionais = 0;
+  let leiturasEvolucoes = 0;
+  let leiturasTarefas = 0;
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -1464,7 +1466,29 @@ async function prepararProntuarioMockado(page, {
       return;
     }
 
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    leiturasEvolucoes += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        criouEvolucao
+          ? [
+              {
+                id: 'evolucao-1',
+                tenantId: 'tenant-1',
+                pacienteId: 'paciente-1',
+                autorUsuarioId: 'usuario-profissional-1',
+                titulo: 'Conduta ajustada',
+                conteudo: 'Aumentar ingestao de agua no período da tarde.',
+                tipo: 'ajuste_plano',
+                visibilidade: 'privada',
+                criadoEm: '2026-07-22T18:00:00.000Z',
+                atualizadoEm: '2026-07-22T18:00:00.000Z'
+              }
+            ]
+          : []
+      )
+    });
   });
 
   await page.route('**/api/pacientes/paciente-1/tarefas-acompanhamento', async (route) => {
@@ -1491,7 +1515,31 @@ async function prepararProntuarioMockado(page, {
       return;
     }
 
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    leiturasTarefas += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        criouTarefa
+          ? [
+              {
+                id: 'tarefa-1',
+                tenantId: 'tenant-1',
+                pacienteId: 'paciente-1',
+                profissionalId: 'usuario-profissional-1',
+                titulo: 'Beber agua no período da tarde',
+                descricao: 'Meta diária de 1 litro entre 13h e 18h.',
+                categoria: 'meta',
+                prioridade: 'media',
+                status: 'pendente',
+                vencimentoEm: '2026-07-29T18:00:00.000Z',
+                criadoEm: '2026-07-22T18:00:00.000Z',
+                atualizadoEm: '2026-07-22T18:00:00.000Z'
+              }
+            ]
+          : []
+      )
+    });
   });
 
   await page.route('**/api/materiais', async (route) => {
@@ -1792,7 +1840,9 @@ async function prepararProntuarioMockado(page, {
     revogouConvite: () => revogouConvite,
     leiturasMateriais: () => leiturasMateriais,
     leiturasAnexos: () => leiturasAnexos,
-    leiturasProfissionais: () => leiturasProfissionais
+    leiturasProfissionais: () => leiturasProfissionais,
+    leiturasEvolucoes: () => leiturasEvolucoes,
+    leiturasTarefas: () => leiturasTarefas
   };
 }
 
@@ -2052,8 +2102,18 @@ test.describe('prontuario do paciente', () => {
     await expect.poll(() => prontuario.leiturasMateriais()).toBe(0);
     await expect.poll(() => prontuario.leiturasAnexos()).toBe(0);
     await expect.poll(() => prontuario.leiturasProfissionais()).toBe(0);
+    await expect.poll(() => prontuario.leiturasEvolucoes()).toBe(0);
+    await expect.poll(() => prontuario.leiturasTarefas()).toBe(0);
+
+    await page.getByRole('tab', { name: 'Atendimentos', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Evoluções recentes' })).toBeVisible();
+    await expect.poll(() => prontuario.leiturasEvolucoes()).toBe(1);
+    await expect.poll(() => prontuario.leiturasTarefas()).toBe(0);
 
     await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Plano em acompanhamento' })).toBeVisible();
+    await expect.poll(() => prontuario.leiturasTarefas()).toBe(1);
+
     await page.getByRole('tab', { name: 'Materiais', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Biblioteca de materiais' })).toBeVisible();
     await expect.poll(() => prontuario.leiturasMateriais()).toBe(2);

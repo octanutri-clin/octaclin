@@ -2527,17 +2527,24 @@ publicado antes de ampliar a superficie de mudancas visuais.
     ciclos, so por ganho arquitetural. Confirmado com o dono do produto:
     fica como esta, documentado como decisao e nao divida pendente.
 
-- [ ] Fase 260 - Desempenho, resiliência e diagnóstico operacional. [ESSENCIAL - ESTABILIDADE]
+- [ ] Fase 260 - Desempenho, resiliência e diagnóstico operacional. [ESSENCIAL - ESTABILIDADE] [EM ANDAMENTO EM 2026-09-11]
   - Definir orçamentos de carregamento e chamadas, eliminar cascatas de requests,
     revisar cache/invalidação e limitar componentes clínicos muito grandes.
   - Correlacionar erro de interface, BFF e backend sem PHI; criar runbooks para
     falhas de banco, Redis, storage, e-mail, WhatsApp e Google Calendar.
-  - Reduzir o contrato inicial do prontuário a agregados e referências: detalhes
+  - [x] Reduzir o contrato inicial do prontuário a agregados e referências: detalhes
     clínicos descriptografados, mensagens, check-ins, evoluções e tarefas devem
     ser autorizados e carregados somente quando a área correspondente for aberta.
+    Incremento 1 entregue em 2026-09-11: evoluções e tarefas saíram da
+    `linhaDoTempo` decifradas (agora lazy via os endpoints dedicados que já
+    existiam) e mensagens passaram a respeitar `comunicacoes.mensagens.ler`
+    (correção de autorização, não só de performance) tanto no endpoint eager
+    quanto no paginado. Ver `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
   - Tornar a auditoria de mutações clínicas transacional ou baseada em outbox;
     leituras de PHI devem ter política explícita de persistência, retentativa e
     alerta, sem continuar silenciosamente quando o registro de auditoria falhar.
+    Decisão de escopo: piloto nos pontos de leitura de PHI, não extensão
+    completa dos ~101 call sites nesta fase (pendente de implementação).
 
 - [ ] Fase 261 - Regressão de segurança e privacidade do SaaS público. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
   - Revalidar autenticação, autorização por papel, RLS forçada, isolamento entre

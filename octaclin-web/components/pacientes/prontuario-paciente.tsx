@@ -71,13 +71,17 @@ import {
 import {
   criarEvolucaoClinica,
   criarTarefaAcompanhamento,
+  listarEvolucoesClinicas,
   listarLinhaDoTempoPaginada,
+  listarTarefasAcompanhamento,
   obterProntuarioPaciente,
   type CategoriaTarefaAcompanhamentoApi,
   type EventoProntuarioPacienteApi,
+  type EvolucaoClinicaApi,
   type PaginaLinhaDoTempoProntuarioApi,
   type PrioridadeTarefaAcompanhamentoApi,
   type ProntuarioPacienteApi,
+  type TarefaAcompanhamentoApi,
   type TipoEventoProntuarioPaciente,
   type TipoEvolucaoClinicaApi
 } from '@/lib/prontuario-api';
@@ -152,6 +156,34 @@ function formatarData(valor?: string) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeZone: 'UTC' }).format(data);
 }
 
+function mapearEvolucaoParaEvento(evolucao: EvolucaoClinicaApi): EventoProntuarioPacienteApi {
+  return {
+    id: evolucao.id,
+    tipo: 'evolucao_clinica',
+    titulo: evolucao.titulo,
+    descricao: evolucao.conteudo,
+    data: evolucao.criadoEm,
+    status: evolucao.tipo,
+    origemId: evolucao.id,
+    autorUsuarioId: evolucao.autorUsuarioId,
+    metadados: { visibilidade: evolucao.visibilidade }
+  };
+}
+
+function mapearTarefaParaEvento(tarefa: TarefaAcompanhamentoApi): EventoProntuarioPacienteApi {
+  return {
+    id: tarefa.id,
+    tipo: 'tarefa_acompanhamento',
+    titulo: tarefa.titulo,
+    descricao: tarefa.descricao,
+    data: tarefa.vencimentoEm ?? tarefa.criadoEm,
+    status: tarefa.status,
+    origemId: tarefa.id,
+    responsavelId: tarefa.profissionalId,
+    metadados: { categoria: tarefa.categoria, prioridade: tarefa.prioridade, concluidoEm: tarefa.concluidoEm }
+  };
+}
+
 function formatarTamanho(bytes: string) {
   const valor = Number(bytes);
   if (!Number.isFinite(valor)) return '-';
@@ -171,6 +203,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [materiais, setMateriais] = useState<MaterialEducativoApi[]>([]);
   const [materiaisPaciente, setMateriaisPaciente] = useState<EnvioMaterialPacienteApi[]>([]);
   const [anexos, setAnexos] = useState<ArquivoMidiaApi[]>([]);
+  const [evolucoesClinicas, setEvolucoesClinicas] = useState<EvolucaoClinicaApi[]>([]);
+  const [tarefasAcompanhamento, setTarefasAcompanhamento] = useState<TarefaAcompanhamentoApi[]>([]);
   const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [carregandoMateriais, setCarregandoMateriais] = useState(false);
@@ -179,6 +213,12 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [carregandoAnexos, setCarregandoAnexos] = useState(false);
   const [anexosSolicitados, setAnexosSolicitados] = useState(false);
   const [anexosCarregados, setAnexosCarregados] = useState(false);
+  const [carregandoEvolucoes, setCarregandoEvolucoes] = useState(false);
+  const [evolucoesSolicitadas, setEvolucoesSolicitadas] = useState(false);
+  const [evolucoesCarregadas, setEvolucoesCarregadas] = useState(false);
+  const [carregandoTarefas, setCarregandoTarefas] = useState(false);
+  const [tarefasSolicitadas, setTarefasSolicitadas] = useState(false);
+  const [tarefasCarregadas, setTarefasCarregadas] = useState(false);
   const [carregandoProfissionais, setCarregandoProfissionais] = useState(false);
   const [profissionaisCarregados, setProfissionaisCarregados] = useState(false);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
@@ -196,6 +236,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [falhaCarregamento, setFalhaCarregamento] = useState<FalhaInterface | null>(null);
   const [falhaMateriais, setFalhaMateriais] = useState<FalhaInterface | null>(null);
   const [falhaAnexos, setFalhaAnexos] = useState<FalhaInterface | null>(null);
+  const [falhaEvolucoes, setFalhaEvolucoes] = useState<FalhaInterface | null>(null);
+  const [falhaTarefas, setFalhaTarefas] = useState<FalhaInterface | null>(null);
   const [falhaHistorico, setFalhaHistorico] = useState<FalhaInterface | null>(null);
   const [falhaAcao, setFalhaAcao] = useState<FalhaInterface | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
@@ -268,6 +310,32 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setFalhaAnexos(classificarFalhaInterface(erroAtual, 'Não foi possível carregar os anexos.'));
     } finally {
       setCarregandoAnexos(false);
+    }
+  }, [pacienteId]);
+
+  const carregarEvolucoes = useCallback(async () => {
+    setCarregandoEvolucoes(true);
+    setFalhaEvolucoes(null);
+    try {
+      setEvolucoesClinicas(await listarEvolucoesClinicas(pacienteId));
+      setEvolucoesCarregadas(true);
+    } catch (erroAtual) {
+      setFalhaEvolucoes(classificarFalhaInterface(erroAtual, 'Não foi possível carregar as evoluções clínicas.'));
+    } finally {
+      setCarregandoEvolucoes(false);
+    }
+  }, [pacienteId]);
+
+  const carregarTarefas = useCallback(async () => {
+    setCarregandoTarefas(true);
+    setFalhaTarefas(null);
+    try {
+      setTarefasAcompanhamento(await listarTarefasAcompanhamento(pacienteId));
+      setTarefasCarregadas(true);
+    } catch (erroAtual) {
+      setFalhaTarefas(classificarFalhaInterface(erroAtual, 'Não foi possível carregar as tarefas de acompanhamento.'));
+    } finally {
+      setCarregandoTarefas(false);
     }
   }, [pacienteId]);
 
@@ -350,7 +418,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       });
       setFormularioEvolucao(formularioEvolucaoInicial);
       setSucesso('Evolução clínica registrada.');
-      await carregar();
+      const [evolucoesAtualizadas] = await Promise.all([listarEvolucoesClinicas(pacienteId), carregar()]);
+      setEvolucoesClinicas(evolucoesAtualizadas);
+      setEvolucoesCarregadas(true);
     } catch (erroAtual) {
       setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível registrar a evolução clínica.'));
     } finally {
@@ -373,7 +443,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       });
       setFormularioTarefa(formularioTarefaInicial);
       setSucesso('Tarefa de acompanhamento prescrita.');
-      await carregar();
+      const [tarefasAtualizadas] = await Promise.all([listarTarefasAcompanhamento(pacienteId), carregar()]);
+      setTarefasAcompanhamento(tarefasAtualizadas);
+      setTarefasCarregadas(true);
     } catch (erroAtual) {
       setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível prescrever a tarefa de acompanhamento.'));
     } finally {
@@ -540,6 +612,24 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     }, 0);
     return () => window.clearTimeout(temporizador);
   }, [abaAtiva, anexosSolicitados, carregarAnexos]);
+
+  useEffect(() => {
+    if (abaAtiva !== 'evolucoes' || evolucoesSolicitadas) return;
+    const temporizador = window.setTimeout(() => {
+      setEvolucoesSolicitadas(true);
+      void carregarEvolucoes();
+    }, 0);
+    return () => window.clearTimeout(temporizador);
+  }, [abaAtiva, carregarEvolucoes, evolucoesSolicitadas]);
+
+  useEffect(() => {
+    if (abaAtiva !== 'acompanhamento' || tarefasSolicitadas) return;
+    const temporizador = window.setTimeout(() => {
+      setTarefasSolicitadas(true);
+      void carregarTarefas();
+    }, 0);
+    return () => window.clearTimeout(temporizador);
+  }, [abaAtiva, carregarTarefas, tarefasSolicitadas]);
 
   useEffect(() => {
     if (!sessaoCarregada || areaAtiva === 'resumo' || profissionaisCarregados || carregandoProfissionais) return;
@@ -729,8 +819,14 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   useEffect(() => () => requisicaoHistorico.current?.abort(), []);
 
   const eventos = useMemo(() => dados?.linhaDoTempo ?? [], [dados?.linhaDoTempo]);
-  const evolucoes = useMemo(() => eventos.filter((evento) => evento.tipo === 'evolucao_clinica'), [eventos]);
-  const tarefas = useMemo(() => eventos.filter((evento) => evento.tipo === 'tarefa_acompanhamento'), [eventos]);
+  const evolucoes = useMemo(
+    () => evolucoesClinicas.map(mapearEvolucaoParaEvento),
+    [evolucoesClinicas]
+  );
+  const tarefas = useMemo(
+    () => tarefasAcompanhamento.map(mapearTarefaParaEvento),
+    [tarefasAcompanhamento]
+  );
   const formularios = useMemo(
     () => eventos.filter((evento) => evento.tipo === 'formulario' || evento.tipo === 'resposta_formulario' || evento.tipo === 'checkin_rapido'),
     [eventos]
@@ -1104,7 +1200,16 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </>
       ) : null}
 
-      {abaAtiva === 'evolucoes' ? <>
+      {abaAtiva === 'evolucoes' ? !evolucoesCarregadas ? (
+        falhaEvolucoes ? (
+          <EstadoFalha
+            titulo="Não foi possível carregar as evoluções clínicas"
+            descricao={falhaEvolucoes.mensagem}
+            aoTentarNovamente={falhaEvolucoes.recuperavel ? () => void carregarEvolucoes() : undefined}
+            tentando={carregandoEvolucoes}
+          />
+        ) : <EsqueletoPagina rotulo="Carregando evoluções clínicas" />
+      ) : <>
       {podeGerenciarPaciente ? <form onSubmit={registrarEvolucao} className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div>
           <h2 className="text-base font-semibold text-tinta">Nova evolução clínica</h2>
@@ -1157,7 +1262,16 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Evoluções recentes</h2></div><LinhaDoTempo eventos={evolucoes} profissionais={profissionais} /></section>
       </> : null}
 
-      {abaAtiva === 'acompanhamento' ? <>
+      {abaAtiva === 'acompanhamento' ? !tarefasCarregadas ? (
+        falhaTarefas ? (
+          <EstadoFalha
+            titulo="Não foi possível carregar as tarefas de acompanhamento"
+            descricao={falhaTarefas.mensagem}
+            aoTentarNovamente={falhaTarefas.recuperavel ? () => void carregarTarefas() : undefined}
+            tentando={carregandoTarefas}
+          />
+        ) : <EsqueletoPagina rotulo="Carregando tarefas de acompanhamento" />
+      ) : <>
       {podeGerenciarPaciente ? <form onSubmit={registrarTarefa} className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div>
           <h2 className="text-base font-semibold text-tinta">Plano de acompanhamento</h2>

@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-10.
+Atualizado em 2026-09-11.
 
 ## Snapshot
 
@@ -107,6 +107,24 @@ Atualizado em 2026-09-10.
   (Desempenho, resiliencia e diagnostico operacional). Detalhes e
   evidencias completas em
   `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
+- Fase 260 - Desempenho, resiliencia e diagnostico operacional, **em
+  andamento desde 2026-09-11**. Auditoria inicial confirmou lazy-load
+  parcial ja existente (materiais/anexos/profissionais) e endpoints
+  dedicados de evolucoes/tarefas ja prontos mas nao usados pelo frontend;
+  identificou tambem uma lacuna real de autorizacao (nao so performance):
+  mensagens entravam decifradas na linha do tempo do prontuario
+  independentemente da permissao `comunicacoes.mensagens.ler`, ao contrario
+  do resto do sistema. Incremento 1 entregue: evolucoes e tarefas saíram da
+  `linhaDoTempo` decifradas (agora sob demanda, ao abrir a aba, via os
+  endpoints dedicados que ja existiam) e mensagens passaram a respeitar a
+  permissao correta nos dois endpoints do prontuario (eager e paginado).
+  Decisao de escopo para a sub-meta de auditoria transacional: piloto nos
+  pontos de leitura de PHI, nao extensao completa dos ~101 pontos de
+  chamada de `ServicoAuditoria.registrar()` nesta fase. Nenhuma migration.
+  Incrementos 2-4 (correlacao de erro visivel ao usuario e runbooks,
+  piloto do outbox de auditoria, orcamento de performance em CI) seguem
+  pendentes. Detalhes e evidencias completas em
+  `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
   fotografia historica foi capturada em 2026-09-07 sobre
   `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning

@@ -752,7 +752,10 @@ describe('ServicoPacientes', () => {
       limitesPermitidos as never
     );
 
-    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', usuarioColaborador);
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', {
+      ...usuarioColaborador,
+      permissoes: ['comunicacoes.mensagens.ler']
+    });
 
     expect(prontuario.paciente).toEqual(expect.objectContaining({ id: 'paciente-1', nome: 'Maria', contato: 'maria@example.com' }));
     expect(prontuario.resumo).toEqual({
@@ -817,6 +820,65 @@ describe('ServicoPacientes', () => {
         descricao: 'Score final 74.5'
       })
     );
+  });
+
+  it('nao deve incluir mensagens na linha do tempo do prontuario sem a permissao comunicacoes.mensagens.ler', async () => {
+    const paciente = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('cripto:Maria'),
+      statusAdesao: 'novo',
+      scoreRisco: '0',
+      criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-01T10:00:00.000Z')
+    };
+    const repositorios = new Map<unknown, Record<string, unknown>>([
+      [PacienteOrm, { findOne: jest.fn(async () => paciente) }],
+      [AgendaConsultaOrm, { find: jest.fn(async () => []) }],
+      [EnvioQuestionarioOrm, { find: jest.fn(async () => []) }],
+      [RespostaCheckinOrm, { find: jest.fn(async () => []) }],
+      [LogDiarioRapidoOrm, { find: jest.fn(async () => []) }],
+      [QuestionarioOrm, { find: jest.fn(async () => []) }],
+      [EvolucaoClinicaOrm, { find: jest.fn(async () => []) }],
+      [AcompanhamentoTarefaOrm, { find: jest.fn(async () => []) }],
+      [
+        MensagemNotificacaoOrm,
+        {
+          find: jest.fn(async () => [
+            {
+              id: 'mensagem-1',
+              tenantId: 'tenant-1',
+              pacienteId: 'paciente-1',
+              status: 'recebido',
+              payload: { texto: 'Conteudo sensivel da mensagem.' },
+              criadoEm: new Date('2026-07-22T16:00:00.000Z')
+            }
+          ])
+        }
+      ]
+    ]);
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao({ getRepository: jest.fn((entidade) => repositorios.get(entidade)) })
+        )
+      } as never,
+      {
+        criptografar: jest.fn(),
+        descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', ''))
+      } as never,
+      limitesPermitidos as never
+    );
+
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', {
+      ...usuarioColaborador,
+      permissoes: []
+    });
+
+    expect(prontuario.linhaDoTempo).toHaveLength(0);
+    expect(prontuario.resumo.mensagens).toBe(1);
+    expect(prontuario.resumo.falhaComunicacao).toBeUndefined();
   });
 
   it('prioriza falha de comunicacao e projeta contexto operacional conforme permissoes', async () => {
@@ -1026,10 +1088,10 @@ describe('ServicoPacientes', () => {
     expect(prontuario.linhaDoTempo[0]).toEqual(
       expect.objectContaining({
         tipo: 'evolucao_clinica',
-        titulo: 'Consulta inicial',
-        descricao: 'Paciente relatou melhora de adesao.'
+        titulo: 'Consulta inicial'
       })
     );
+    expect(prontuario.linhaDoTempo[0]).not.toHaveProperty('descricao');
   });
 
   it('deve criar tarefa de acompanhamento e exibir pendencia no prontuario', async () => {
@@ -1121,10 +1183,10 @@ describe('ServicoPacientes', () => {
       expect.objectContaining({
         tipo: 'tarefa_acompanhamento',
         titulo: 'Beber agua no periodo da tarde',
-        descricao: 'Meta diaria de 1 litro entre 13h e 18h.',
         status: 'pendente'
       })
     );
+    expect(prontuario.linhaDoTempo[0]).not.toHaveProperty('descricao');
   });
 
   describe('escopo pacientes_responsaveis para Professional', () => {
@@ -1574,6 +1636,7 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
     expect(sql).toContain('pacotes_sessao');
     expect(sql).toContain('AND $9::boolean');
     expect(sql).toContain('AND $10::boolean');
+    expect(sql).toContain('AND $11::boolean');
     expect(sql).not.toContain('_criptografad');
     expect(query.mock.calls[0][1]).toEqual([
       'tenant-1',
@@ -1586,6 +1649,7 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
       null,
       false,
       false,
+      false,
       2
     ]);
     const responsavelId = '00000000-0000-4000-8000-000000000099';
@@ -1594,7 +1658,7 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
       'paciente-1',
       {
         ...usuarioProfissional,
-        permissoes: ['planos_alimentares.ler', 'agenda.financeiro.ler']
+        permissoes: ['planos_alimentares.ler', 'agenda.financeiro.ler', 'comunicacoes.mensagens.ler']
       },
       { responsavelId }
     );
@@ -1607,6 +1671,7 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
       null,
       null,
       responsavelId,
+      true,
       true,
       true,
       21

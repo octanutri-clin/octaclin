@@ -181,6 +181,16 @@ export async function criarEvolucaoClinica(
   return resposta.json() as Promise<EvolucaoClinicaApi>;
 }
 
+export async function listarEvolucoesClinicas(pacienteId: string): Promise<EvolucaoClinicaApi[]> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/evolucoes`, { cache: 'no-store' });
+  if (!resposta.ok) {
+    const detalhe = await resposta.text();
+    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+  }
+
+  return resposta.json() as Promise<EvolucaoClinicaApi[]>;
+}
+
 export async function criarTarefaAcompanhamento(
   pacienteId: string,
   entrada: CriarTarefaAcompanhamentoEntrada
@@ -196,6 +206,16 @@ export async function criarTarefaAcompanhamento(
   }
 
   return resposta.json() as Promise<TarefaAcompanhamentoApi>;
+}
+
+export async function listarTarefasAcompanhamento(pacienteId: string): Promise<TarefaAcompanhamentoApi[]> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/tarefas-acompanhamento`, { cache: 'no-store' });
+  if (!resposta.ok) {
+    const detalhe = await resposta.text();
+    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+  }
+
+  return resposta.json() as Promise<TarefaAcompanhamentoApi[]>;
 }
 
 export type ProtocoloComposicao = 'nenhum' | 'pollock_3' | 'pollock_7' | 'faulkner' | 'guedes';

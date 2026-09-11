@@ -649,7 +649,7 @@ export class ServicoPacientes {
           )
         ),
         ...diarios.map((diario) => this.mapearEventoCheckinRapido(diario)),
-        ...mensagens.map((mensagem) => this.mapearEventoMensagem(mensagem)),
+        ...(podeLerComunicacoes ? mensagens.map((mensagem) => this.mapearEventoMensagem(mensagem)) : []),
         ...evolucoes.map((evolucao) => this.mapearEventoEvolucao(evolucao)),
         ...tarefas.map((tarefa) => this.mapearEventoTarefa(tarefa))
       ]
@@ -865,7 +865,7 @@ export class ServicoPacientes {
             CASE WHEN mensagem.status = 'recebido' THEN contexto.usuario_id ELSE NULL::uuid END,
             '{}'::jsonb
           FROM mensagens_notificacao mensagem CROSS JOIN contexto
-          WHERE mensagem.tenant_id = $1 AND mensagem.paciente_id = $2
+          WHERE mensagem.tenant_id = $1 AND mensagem.paciente_id = $2 AND $11::boolean
           UNION ALL
           SELECT evolucao.id::text, 'evolucao_clinica'::text, evolucao.titulo,
             evolucao.criado_em, evolucao.tipo, evolucao.id, 'Prontuario',
@@ -991,7 +991,7 @@ export class ServicoPacientes {
           AND ($7::timestamptz IS NULL OR data <= $7::timestamptz)
           AND ($8::uuid IS NULL OR "responsavelId" = $8::uuid)
         ORDER BY data DESC, id DESC
-        LIMIT $11
+        LIMIT $12
       `, [
         tenantId,
         pacienteId,
@@ -1003,6 +1003,7 @@ export class ServicoPacientes {
         filtros.responsavelId ?? null,
         usuario.permissoes.includes('planos_alimentares.ler'),
         usuario.permissoes.includes('agenda.financeiro.ler'),
+        usuario.permissoes.includes('comunicacoes.mensagens.ler'),
         limite + 1
       ]);
 
@@ -1368,12 +1369,16 @@ export class ServicoPacientes {
     };
   }
 
+  /**
+   * Sem `descricao`: o resumo do prontuario e uma referencia, nao o conteudo
+   * clinico. O detalhe decifrado so e carregado quando a area de evolucoes e aberta
+   * (GET /pacientes/:id/evolucoes, que usa mapearEvolucao).
+   */
   private mapearEventoEvolucao(evolucao: EvolucaoClinicaOrm): EventoProntuarioPacienteDto {
     return {
       id: evolucao.id,
       tipo: 'evolucao_clinica',
       titulo: evolucao.titulo,
-      descricao: this.criptografia.descriptografar(evolucao.conteudoCriptografado),
       data: evolucao.criadoEm,
       status: evolucao.tipo,
       origemId: evolucao.id,
@@ -1384,12 +1389,16 @@ export class ServicoPacientes {
     };
   }
 
+  /**
+   * Sem `descricao`: mesmo racional de mapearEventoEvolucao. O detalhe decifrado
+   * so e carregado quando a area de acompanhamento e aberta (GET
+   * /pacientes/:id/tarefas-acompanhamento, que usa mapearTarefa).
+   */
   private mapearEventoTarefa(tarefa: AcompanhamentoTarefaOrm): EventoProntuarioPacienteDto {
     return {
       id: tarefa.id,
       tipo: 'tarefa_acompanhamento',
       titulo: tarefa.titulo,
-      descricao: tarefa.descricaoCriptografada ? this.criptografia.descriptografar(tarefa.descricaoCriptografada) : undefined,
       data: tarefa.vencimentoEm ?? tarefa.criadoEm,
       status: tarefa.status,
       origemId: tarefa.id,
