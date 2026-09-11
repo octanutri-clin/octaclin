@@ -108,12 +108,19 @@ Atualizado em 2026-09-11.
   evidencias completas em
   `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
-  identificados no audit da fase) **em andamento** na branch
-  `claude/fase-261-regressao-seguranca-privacidade`, sem PR aberto ainda.
-  Escopo decidido pelo dono do produto via duas perguntas explicitas: (1)
+  identificados no audit da fase) **em andamento, incremento 1 mergeado**.
+  PR GitHub `#232`, merge `85f5c4a` em `main`, base `1ef9ce7`, 2026-09-11.
+  CI verde (20/20 checks) e `mergeable_state: clean` confirmados antes do
+  merge humano. A fase continua aberta: o escopo aprovado no checklist
+  (`CHECKLIST_FASES_FUTURAS_PRODUCAO.md`) e bem mais amplo que este
+  incremento -- revalidacao completa de autenticacao, autorizacao por
+  papel, RLS forcada, isolamento entre tenants, OAuth, webhooks, rate
+  limit, auditoria e LGPD; SBOM, revisao de workflows, gates de secrets,
+  SAST e auditoria de producao; e a execucao real da migration desenhada
+  abaixo -- nada disso foi coberto nesta rodada. Escopo deste incremento
+  decidido pelo dono do produto via duas perguntas explicitas: (1)
   integrar ClamAV real, nao so documentar o risco aceito; (2) desenhar sem
-  executar a migration de criptografia dos alvos identificados. Progresso
-  nesta sessao, commit `a253aa3`:
+  executar a migration de criptografia dos alvos identificados. Entregas:
   - **Concluido:** `ServicoAntimalware` agora seleciona `MecanismoClamAv`
     (cliente nativo do protocolo INSTREAM/PING do clamd, `net.Socket` puro,
     sem dependencia nova) quando `CLAMAV_HOST` esta definido; sem a
@@ -147,6 +154,62 @@ Atualizado em 2026-09-11.
     Nenhum DDL foi aplicado; nenhuma fase foi executada. Documento completo
     em `docs/governance/DESENHO_CRIPTOGRAFIA_TITULOS_PHI_FASE261.md`,
     aguardando decisao do dono do produto sobre quando/se executar.
+  - **Incremento 2 (2026-09-11):** duas auditorias completas cobrindo o
+    restante do escopo da fase (agentes de exploracao dedicados, com
+    citacao exata de arquivo/linha), mais dois fechamentos concretos:
+    - Autenticacao, RLS forcada, isolamento entre tenants, webhooks e rate
+      limit: **auditados e confirmados solidos**, com teste negativo
+      existente para cada propriedade (reuso de refresh token revoga
+      familia inteira; as 41 tabelas com tenant tem RLS forcada; escopo por
+      profissional usa sentinela vazio em vez de "sem filtro" quando o
+      profissional nao tem vinculo; HMAC do webhook WhatsApp e canal do
+      Google Calendar rejeitam adulteracao; protecao Redis-backed cobre
+      login/recuperacao/MFA/booking publico).
+    - Autorizacao por papel: correta hoje, mas sem `APP_GUARD` global a
+      protecao de cada controlador e opt-in por decorator; nada no CI
+      provava que um controlador novo nasceria protegido. Fechado por um
+      gate novo, `scripts/validar-guardas-controladores.mjs` (varre todo
+      `@Controller` do backend, exige `@UseGuards` ou uma entrada
+      justificada em `CONTROLADORES_PUBLICOS`), rodando no job de
+      governanca do CI.
+    - OAuth Google: PKCE/state/binding de navegador ja eram solidos, mas
+      `ServicoConexaoGoogleCalendar.desconectar()` nunca revogava o token
+      no Google -- so apagava o vinculo local, deixando o refresh token
+      valido indefinidamente do lado do Google. Corrigido: `desconectar()`
+      agora chama `https://oauth2.googleapis.com/revoke`, tolerante a
+      falha (mesmo padrao do encerramento do canal de watch): o Google
+      estar fora do ar nao pode bloquear a desconexao local pedida pelo
+      usuario.
+    - Auditoria: cobertura ampla (~102 call sites de `ServicoAuditoria.registrar`)
+      mas so por convencao, sem gate; o piloto de retry via outbox da Fase
+      260 cobre 5 desses 102, decisao ja documentada naquela fase.
+    - **LGPD e o achado mais serio das duas auditorias**: consentimento e
+      exportacao de dados sao reais e testados
+      (`ServicoPortalPaciente`, hash de integridade), mas a solicitacao de
+      exclusao/anonimizacao em `ServicoOperacoes.atualizarSolicitacaoLgpd`
+      so registra mudanca de status, e a politica de retencao so
+      **conta** registros vencidos para um painel -- nenhuma das duas rotas
+      exclui ou anonimiza dado nenhum. Isso e uma decisao de produto antes
+      de ser uma tarefa de engenharia (o que "excluir" significa por tipo
+      de dado, prazo de retencao legal por categoria) e fica registrado
+      aqui como o proximo item que precisa de decisao do dono do produto,
+      nao de mais auditoria.
+    - SBOM, revisao de workflows (SHA-pinning), gates de secrets e o
+      criterio "dono/prazo/justificativa" de todo alerta critico/alto:
+      **auditados e confirmados solidos e ja bloqueantes no CI hoje**.
+    - **Dois gaps reais nesta frente, por decisao documentada e nao por
+      descuido**: SAST (CodeQL/Semgrep/Trivy) e deliberadamente
+      nao-bloqueante (`POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md` ja
+      documentava a troca: nao transformar divida historica ja triada em
+      bloqueio cego); e "auditoria de producao" hoje e so o monitor de
+      saude/uptime (`scripts/monitor-producao.mjs`, cron a cada 30 min),
+      sem nenhuma checagem de seguranca contra o ambiente ao vivo (TLS,
+      headers, auth probing). Fechar os dois honestamente exige decisao de
+      escopo do dono do produto.
+    - Validacoes desta rodada: `pnpm --dir octaclin-backend typecheck` e
+      suite completa (1676 testes, 3 suites puladas pre-existente),
+      `pnpm test:guardas-controladores` (11 testes, incluindo varredura
+      real dos 33 controladores) e `pnpm security:secrets`.
   - Limitacao ainda vigente: a recaptura de Dependabot/Code Scanning
     continua bloqueada pela mesma ausencia de `gh` autenticado ja registrada
     na reconciliacao de 2026-09-10 acima. Evidencia adicional obtida nesta

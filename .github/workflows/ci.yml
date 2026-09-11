@@ -69,6 +69,11 @@ jobs:
       - run: pnpm test:resposta-auditoria
       - run: pnpm test:migracoes-fora-de-banda
       - run: pnpm test:actions-imutaveis
+      # Gate da Fase 261: todo @Controller precisa de @UseGuards ou de uma
+      # entrada justificada em CONTROLADORES_PUBLICOS. Autorizacao por
+      # controlador e opt-in (nao ha APP_GUARD global); sem isto, um
+      # controlador novo sem guarda passava pelo CI em silencio.
+      - run: pnpm test:guardas-controladores
       - run: pnpm test:workflows-seguros
       # Gate do PR 54: execucao dinamica so pode mirar os processos locais do
       # staging descartavel, com teto de requisicoes e evidencia sanitizada.

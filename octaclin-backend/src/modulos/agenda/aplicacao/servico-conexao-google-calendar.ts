@@ -7,6 +7,7 @@ import { GoogleCanalWatchOrm } from '../infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from '../infraestrutura/profissional-google-conexao.orm';
 import { CredenciaisGoogleCalendar, ServicoGoogleCalendar } from './servico-google-calendar';
 import {
+  endpointRevogacaoGoogleSeguro,
   endpointTokenGoogleSeguro,
   opcoesSegurasFetchExterno,
   validarCodigoOAuth
@@ -206,6 +207,7 @@ export class ServicoConexaoGoogleCalendar {
     if (conexao.canalWatchId && conexao.canalRecursoId) {
       await this.pararCanalWatchComTolerancia(conexao);
     }
+    await this.revogarTokenComTolerancia(conexao);
 
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(ProfissionalGoogleConexaoOrm);
@@ -237,6 +239,43 @@ export class ServicoConexaoGoogleCalendar {
     } catch (erro) {
       this.logger.warn(
         `Falha ao parar canal de watch do Google Calendar (profissional ${conexao.profissionalId}): ${
+          erro instanceof Error ? erro.message : 'erro desconhecido'
+        }`
+      );
+    }
+  }
+
+  /**
+   * Sem isto, "desconectar" no OctaClin so apagava o vinculo local -- o
+   * refresh token continuava valido do lado do Google indefinidamente. Se o
+   * valor cifrado ou a flag `desconectadoEm` fossem revertidos por engano
+   * (restore de backup, bug), o token ainda funcionaria. Revogar no Google
+   * torna a desconexao irreversivel do lado certo: para usar a agenda de
+   * novo, o profissional precisa refazer o OAuth.
+   *
+   * Tolerante a falha como `pararCanalWatchComTolerancia`: o Google estar
+   * fora do ar nao pode bloquear a desconexao local que o usuario pediu.
+   */
+  private async revogarTokenComTolerancia(conexao: ProfissionalGoogleConexaoOrm): Promise<void> {
+    if (!conexao.refreshTokenCriptografado) return;
+
+    try {
+      const refreshToken = this.criptografia.descriptografar(conexao.refreshTokenCriptografado);
+      const revogacaoUri = endpointRevogacaoGoogleSeguro(textoEnv(process.env.GOOGLE_CALENDAR_REVOKE_URI));
+      const resposta = await fetch(revogacaoUri, {
+        ...opcoesSegurasFetchExterno(),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ token: refreshToken })
+      });
+      if (!resposta.ok) {
+        this.logger.warn(
+          `Falha ao revogar token do Google Calendar (profissional ${conexao.profissionalId}): HTTP ${resposta.status}.`
+        );
+      }
+    } catch (erro) {
+      this.logger.warn(
+        `Falha ao revogar token do Google Calendar (profissional ${conexao.profissionalId}): ${
           erro instanceof Error ? erro.message : 'erro desconhecido'
         }`
       );
