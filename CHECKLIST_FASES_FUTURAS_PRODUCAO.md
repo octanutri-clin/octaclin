@@ -2573,13 +2573,42 @@ publicado antes de ampliar a superficie de mudancas visuais.
 - [ ] Fase 261 - Regressão de segurança e privacidade do SaaS público. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
   - Revalidar autenticação, autorização por papel, RLS forçada, isolamento entre
     tenants, uploads, OAuth, webhooks, rate limit, auditoria e LGPD.
+    Incremento 1 entregue em 2026-09-11: scanner antimalware real (ClamAV)
+    integrado a `ServicoAntimalware` via `MecanismoClamAv` (protocolo
+    INSTREAM/PING nativo, sem dependência nova), fechando a lacuna de
+    "uploads sem antivírus real" registrada em ADR-018
+    (`DECISOES_ARQUITETURA.md`); referência EICAR permanece como fallback
+    documentado quando `CLAMAV_HOST` não está definido. Novo check
+    `checks.antimalware` em `/health/detalhado`. Produção ainda precisa do
+    daemon provisionado separadamente. Auth, authz, RLS, tenancy, OAuth,
+    webhooks, rate limit, auditoria e LGPD **não foram revalidados** nesta
+    rodada e continuam pendentes.
   - Instituir SLA de dependências, SBOM, revisão de workflows e gates de secrets,
     SAST e auditoria de produção; nenhum alerta crítico/alto aceito sem dono,
     prazo e justificativa documentada.
+    Incremento 1 entregue em 2026-09-11: SLA de revisão por severidade
+    (`revisarEm` com teto de 14/30/90/180 dias por severidade, salvo
+    exceção rastreável) aplicado ao inventário de segurança
+    (`scripts/validar-inventario-security-quality.mjs`,
+    `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md` secão 10). SBOM,
+    revisão de workflows, gates de secrets, SAST e auditoria de produção
+    **permanecem pendentes** — nenhum desses itens foi revisado nesta
+    rodada. Recaptura da contagem corrente de alertas Dependabot/Code
+    Scanning continua bloqueada pela ausência de `gh` autenticado nesta
+    sessão (mesma limitação da reconciliação de 2026-09-10 em
+    `STATUS_ATUAL_PROJETO.md`).
   - Cifrar o conteúdo clínico livre hoje persistido em claro, incluindo o JSON
     de check-ins rápidos, títulos de evoluções/tarefas e motivos livres de
     cancelamento; manter em claro somente campos controlados indispensáveis a
     filtros e índices, com migration e rollback aprovados separadamente.
+    Incremento 1 entregue em 2026-09-11: desenho completo do
+    migration/rollback para os cinco campos (incluindo a solução para a
+    query `UNION ALL` compartilhada da timeline, que seleciona
+    `evolucoes_clinicas.titulo`/`acompanhamento_tarefas.titulo` direto),
+    em três fases (aditiva -> troca de escrita/leitura -> backfill e
+    remoção da coluna antiga). Ver
+    `docs/governance/DESENHO_CRIPTOGRAFIA_TITULOS_PHI_FASE261.md`. **Nenhum
+    DDL foi aplicado**; a execução real aguarda decisão do dono do produto.
 
 - [ ] Fase 262 - Aceite de usabilidade e prontidão para piloto. [BLOQUEADOR FINAL]
   - Executar jornadas reais com dados sintéticos para SuperAdmin, cliente,
