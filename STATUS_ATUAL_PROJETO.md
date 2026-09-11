@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-10.
+Atualizado em 2026-09-11.
 
 ## Snapshot
 
@@ -107,6 +107,54 @@ Atualizado em 2026-09-10.
   (Desempenho, resiliencia e diagnostico operacional). Detalhes e
   evidencias completas em
   `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
+- Fase 260 (Desempenho, resiliencia e diagnostico operacional): PR GitHub
+  `#231` aberto na branch `claude/fase-260-desempenho-resiliencia`, ainda
+  **nao mergeado** — decisao humana pendente. Nesta sessao, o commit
+  `660c78b` corrigiu uma falha de CI causada por commits de terceiros que
+  acrescentaram acentuacao a um identificador sintetico usado como valor de
+  header HTTP (`x-request-id`); caracteres nao-ASCII em header sofrem
+  mojibake no transporte, entao a string exata esperada pela assercao nunca
+  chegava a UI. Corrigidas so as duas ocorrencias do identificador em
+  header/assercao, preservando as demais correcoes de acentuacao legitimas
+  (texto de prosa) dos mesmos commits.
+- Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
+  identificados no audit da fase) **em andamento** na branch
+  `claude/fase-261-regressao-seguranca-privacidade`, sem PR aberto ainda.
+  Escopo decidido pelo dono do produto via duas perguntas explicitas: (1)
+  integrar ClamAV real, nao so documentar o risco aceito; (2) desenhar sem
+  executar a migration de criptografia dos alvos identificados. Progresso
+  nesta sessao, commit `a253aa3`:
+  - **Concluido:** `ServicoAntimalware` agora seleciona `MecanismoClamAv`
+    (cliente nativo do protocolo INSTREAM/PING do clamd, `net.Socket` puro,
+    sem dependencia nova) quando `CLAMAV_HOST` esta definido; sem a
+    variavel, mantem a referencia EICAR como fallback (dev local/CI). Novo
+    check `checks.antimalware` em `/health/detalhado` (`degradado` sem
+    ClamAV configurado, `falha` quando configurado mas o daemon nao
+    responde -- contrato fail-closed existente se estende a essa falha).
+    `docker-compose.yml`/`.prod.yml`, `VARIAVEIS_AMBIENTE.md`,
+    `RUNBOOK_PRODUCAO.md` e `RUNBOOK_SUPORTE.md` atualizados. Producao
+    ainda precisa do daemon provisionado separadamente (fora do escopo
+    desta sessao) -- ver "Ambientes" em `RUNBOOK_PRODUCAO.md`.
+  - **Concluido:** SLA de revisao por severidade para
+    `docs/governance/inventario-security-quality.json` (causas raiz do
+    inventario de seguranca). Ate esta fase `revisarEm` era uma data futura
+    qualquer sem teto por severidade. `scripts/validar-inventario-security-quality.mjs`
+    agora reprova `revisarEm` alem do teto (critical 14d, high 30d, medium
+    90d, low/informational/none 180d) na ausencia de excecao rastreavel em
+    `causa.excecao`. O inventario real (3 causas, 215 alertas) passa sem
+    ajuste. Documentado em
+    `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`, secao 10.
+  - **Pendente:** desenho (sem execucao) da migration/rollback de
+    criptografia para os quatro alvos PHI identificados no audit
+    (`logs_diario_rapido.valor`, `evolucoes_clinicas.titulo`,
+    `acompanhamento_tarefas.titulo`, `documentos_emitidos.motivo_cancelamento`
+    e o motivo de cancelamento em `agenda_consultas.payload`).
+  - Limitacao ainda vigente: a recaptura de Dependabot/Code Scanning
+    continua bloqueada pela mesma ausencia de `gh` autenticado ja registrada
+    na reconciliacao de 2026-09-10 acima. Evidencia adicional obtida nesta
+    sessao: o `git push` desta branch tambem reportou 2 alertas Dependabot
+    high no `main` atual -- mesma contagem ja conhecida, sem mudanca liquida
+    detectavel por esta via.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
   fotografia historica foi capturada em 2026-09-07 sobre
   `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning

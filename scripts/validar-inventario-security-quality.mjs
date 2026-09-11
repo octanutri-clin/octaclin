@@ -5,6 +5,26 @@ import { fileURLToPath } from 'node:url';
 const DISPOSICOES = new Set(['corrigir', 'investigar', 'falso_positivo', 'mitigado', 'aguardando_upstream']);
 const SEVERIDADES = new Set(['critical', 'high', 'medium', 'low', 'informational', 'none']);
 const ONDAS = new Set(['SQ-1A', 'SQ-1B', 'SQ-1C', 'SQ-2', 'SQ-3']);
+
+/**
+ * SLA de recadencia por severidade (Fase 261): teto de dias entre a captura
+ * do snapshot e `revisarEm`, na ausencia de excecao formal. Ate esta fase
+ * `revisarEm` era so uma data futura qualquer, escolhida caso a caso -- nada
+ * impedia uma causa `critical` receber revisao daqui a um ano. Os numeros
+ * espelham o teto de 180 dias ja em vigor para o ledger de excecoes
+ * (`docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`, secao 12): uma
+ * causa so pode exceder o teto da propria severidade citando uma excecao
+ * (`causa.excecao`), que carrega seu proprio prazo e justificativa la.
+ */
+const SLA_DIAS_POR_SEVERIDADE = {
+  critical: 14,
+  high: 30,
+  medium: 90,
+  low: 180,
+  informational: 180,
+  none: 180
+};
+const MS_POR_DIA = 24 * 60 * 60 * 1000;
 const REF_ALERTA = /^(?:code-scanning|dependabot):\d+$/;
 const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 const ID_CAUSA = /^SQ-\d{4}-\d{3}$/;
@@ -131,7 +151,18 @@ function validarFonte(snapshot, nome, exigePorFerramenta = false) {
   }
 }
 
-function validarCausa(causa, alertasPorReferencia, hoje) {
+function validarSlaRevisao(causa, capturadoEm, revisarEm) {
+  const dias = SLA_DIAS_POR_SEVERIDADE[causa.severidadeContextual];
+  const limite = new Date(capturadoEm.getTime() + dias * MS_POR_DIA);
+  if (revisarEm.getTime() <= limite.getTime()) return;
+  if (causa.excecao !== undefined) return;
+  falhar(
+    `causa ${causa.id} tem revisarEm alem do SLA de ${dias} dia(s) para severidade ${causa.severidadeContextual}; ` +
+      'antecipe revisarEm ou registre uma excecao rastreavel em causa.excecao.'
+  );
+}
+
+function validarCausa(causa, alertasPorReferencia, hoje, capturadoEm) {
   exigirObjeto(causa, 'causa');
   if (typeof causa.id !== 'string' || !ID_CAUSA.test(causa.id)) falhar(`id invalido: ${causa.id}`);
   exigirTexto(causa.titulo, `causa ${causa.id}.titulo`);
@@ -150,6 +181,7 @@ function validarCausa(causa, alertasPorReferencia, hoje) {
   }
   const revisarEm = lerData(causa.revisarEm, `causa ${causa.id}.revisarEm`);
   if (revisarEm.getTime() < hoje.getTime()) falhar(`causa ${causa.id} esta com revisao vencida.`);
+  validarSlaRevisao(causa, capturadoEm, revisarEm);
 
   const alertas = causa.alertas.map((referencia) => alertasPorReferencia.get(referencia));
   const temVersaoCorrigida = alertas.some(
@@ -197,7 +229,7 @@ export function validarInventario(inventario, { hoje = new Date() } = {}) {
   if (inventario.schemaVersion !== 1) falhar('schemaVersion precisa ser 1.');
   if (inventario.repositorio !== 'octanutri-clin/octaclin') falhar('repositorio precisa ser octanutri-clin/octaclin.');
   if (typeof inventario.commitBase !== 'string' || !SHA_COMPLETO.test(inventario.commitBase)) falhar('commitBase precisa ser SHA completo de 40 caracteres hexadecimais.');
-  lerTimestamp(inventario.capturadoEm, 'capturadoEm');
+  const capturadoEm = lerTimestamp(inventario.capturadoEm, 'capturadoEm');
   if (!(hoje instanceof Date) || Number.isNaN(hoje.getTime())) falhar('hoje precisa ser uma data valida.');
   const hojeNoInicio = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate()));
 
@@ -220,7 +252,7 @@ export function validarInventario(inventario, { hoje = new Date() } = {}) {
   const ids = new Set();
   for (const causa of inventario.causas) {
     if (ids.has(causa?.id)) falhar(`id duplicado: ${causa?.id}.`);
-    validarCausa(causa, alertasPorReferencia, hojeNoInicio);
+    validarCausa(causa, alertasPorReferencia, hojeNoInicio, capturadoEm);
     ids.add(causa.id);
   }
   validarGateEncerramentoSq4(inventario);

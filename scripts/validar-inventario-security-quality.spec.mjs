@@ -149,6 +149,50 @@ for (const justificativa of [undefined, null, '', '   ', 123]) {
   });
 }
 
+test('rejeita revisarEm alem do SLA da severidade sem excecao registrada', () => {
+  const inventario = inventarioValido();
+  // capturadoEm e 2026-09-06; teto critical e 14 dias (2026-09-20).
+  inventario.causas[0].severidadeContextual = 'critical';
+  inventario.causas[0].revisarEm = '2026-09-21';
+  assert.throws(() => validarInventario(inventario, { hoje: HOJE }), /SLA de 14 dia\(s\) para severidade critical/);
+});
+
+test('aceita revisarEm dentro do SLA da severidade', () => {
+  const inventario = inventarioValido();
+  inventario.causas[0].severidadeContextual = 'critical';
+  inventario.causas[0].revisarEm = '2026-09-20';
+  assert.match(validarInventario(inventario, { hoje: HOJE }), /3 alertas cobertos/);
+});
+
+test('aceita revisarEm alem do SLA da severidade quando ha excecao registrada', () => {
+  const inventario = inventarioValido();
+  inventario.causas[0].severidadeContextual = 'critical';
+  inventario.causas[0].revisarEm = '2026-12-01';
+  inventario.causas[0].excecao = 'SC-2026-005';
+  assert.match(validarInventario(inventario, { hoje: HOJE }), /3 alertas cobertos/);
+});
+
+for (const [severidade, dias] of [
+  ['high', 30],
+  ['medium', 90],
+  ['low', 180],
+  ['informational', 180],
+  ['none', 180],
+]) {
+  test(`rejeita severidade ${severidade} alem do proprio SLA de ${dias} dia(s)`, () => {
+    const inventario = inventarioValido();
+    inventario.causas[0].severidadeContextual = severidade;
+    // Folga de 10 dias alem do teto para nao depender do horario exato de
+    // capturadoEm (2026-09-06T12:00:00.000Z) na fronteira do dia.
+    const alemDoLimite = new Date(Date.UTC(2026, 8, 6) + (dias + 10) * 86400000);
+    inventario.causas[0].revisarEm = alemDoLimite.toISOString().slice(0, 10);
+    assert.throws(
+      () => validarInventario(inventario, { hoje: HOJE }),
+      new RegExp(`SLA de ${dias} dia\\(s\\) para severidade ${severidade}`)
+    );
+  });
+}
+
 test('corrigir sem patch aceita justificativa de remocao da superficie', () => {
   const inventario = inventarioValido();
   inventario.snapshot.codeScanning.alertas[0].versaoCorrigida = null;
