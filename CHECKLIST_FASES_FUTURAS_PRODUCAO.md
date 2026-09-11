@@ -2580,9 +2580,33 @@ publicado antes de ampliar a superficie de mudancas visuais.
     (`DECISOES_ARQUITETURA.md`); referência EICAR permanece como fallback
     documentado quando `CLAMAV_HOST` não está definido. Novo check
     `checks.antimalware` em `/health/detalhado`. Produção ainda precisa do
-    daemon provisionado separadamente. Auth, authz, RLS, tenancy, OAuth,
-    webhooks, rate limit, auditoria e LGPD **não foram revalidados** nesta
-    rodada e continuam pendentes.
+    daemon provisionado separadamente.
+    Incremento 2 (auditoria + dois fechamentos concretos), entregue em
+    2026-09-11: autenticação (rotação/reuso de refresh token), RLS forçada
+    (todas as 41 tabelas com tenant), isolamento entre tenants (escopo por
+    profissional com sentinela vazio, sem fallback para "sem filtro"),
+    webhooks (HMAC WhatsApp e canal Google) e rate limit (proteção
+    Redis-backed em login/recuperação/MFA/booking público) foram
+    revalidados com evidência de código e teste negativo, e estão sólidos —
+    ver auditoria completa referenciada em `STATUS_ATUAL_PROJETO.md`.
+    Autorização por papel também está correta hoje, mas tinha um ponto
+    cego estrutural: sem `APP_GUARD` global, nada no CI provava que um
+    controlador novo nasceria com guarda; fechado por
+    `scripts/validar-guardas-controladores.mjs` (novo gate de CI, ver
+    `MATRIZ_CONFIABILIDADE_TESTES.md`). OAuth Google tinha uma lacuna
+    concreta — `desconectar()` nunca revogava o token no Google, só
+    localmente — corrigida em `ServicoConexaoGoogleCalendar.desconectar`
+    (revogação tolerante a falha, mesmo padrão do encerramento do canal de
+    watch). **Auditoria** tem cobertura ampla por convenção (~102 call
+    sites) mas sem gate que prove isso; o piloto de retry via outbox da
+    Fase 260 cobre só 5 desses 102 (documentado, não escondido). **LGPD e o
+    gap real que sobrou**: consentimento e exportação de dados são reais e
+    testados, mas o fluxo de exclusão/anonimização de solicitação LGPD e a
+    política de retenção só contam e ticketam registros vencidos — **não
+    excluem nem anonimizam nada**. Isso é o item que mais precisa de uma
+    decisão do dono do produto antes de qualquer trabalho de engenharia
+    (o que exatamente "excluir" significa por tipo de dado, prazo legal de
+    retenção por categoria).
   - Instituir SLA de dependências, SBOM, revisão de workflows e gates de secrets,
     SAST e auditoria de produção; nenhum alerta crítico/alto aceito sem dono,
     prazo e justificativa documentada.
@@ -2590,13 +2614,27 @@ publicado antes de ampliar a superficie de mudancas visuais.
     (`revisarEm` com teto de 14/30/90/180 dias por severidade, salvo
     exceção rastreável) aplicado ao inventário de segurança
     (`scripts/validar-inventario-security-quality.mjs`,
-    `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md` secão 10). SBOM,
-    revisão de workflows, gates de secrets, SAST e auditoria de produção
-    **permanecem pendentes** — nenhum desses itens foi revisado nesta
-    rodada. Recaptura da contagem corrente de alertas Dependabot/Code
-    Scanning continua bloqueada pela ausência de `gh` autenticado nesta
-    sessão (mesma limitação da reconciliação de 2026-09-10 em
-    `STATUS_ATUAL_PROJETO.md`).
+    `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md` secão 10).
+    Incremento 2 (auditoria), 2026-09-11: SHA-pinning de workflows e o
+    critério "dono/prazo/justificativa" em todo alerta crítico/alto estão
+    sólidos e já bloqueiam o CI hoje — nada a fazer. Gate de secrets
+    (`scripts/scan-secrets.mjs`) bloqueia o CI de fato, com cobertura de
+    padrão estreita (sem detecção de entropia genérica) como lacuna menor.
+    SBOM tem pipeline real (CycloneDX via Trivy, reprodutibilidade
+    verificada), mas seu status de bloqueio sobre o artefato real (e não só
+    sobre a lógica do validador) não está totalmente comprovado — checagem
+    leve pendente. **Dois gaps reais, por decisão documentada e não por
+    descuido**: SAST (CodeQL/Semgrep/Trivy) é deliberadamente não-bloqueante
+    ("não transformar dívida histórica já triada em bloqueio cego" —
+    `POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`), só o Dependency Review
+    bloqueia PR por vulnerabilidade nova; e "auditoria de produção" hoje é
+    só o monitor de saúde/uptime (`scripts/monitor-producao.mjs`, cron a
+    cada 30 min), sem nenhuma checagem de segurança contra o ambiente
+    ao vivo (TLS, headers, auth probing). Fechar esses dois honestamente
+    exige decisão de escopo do dono do produto, não só código. Recaptura
+    da contagem corrente de alertas Dependabot/Code Scanning continua
+    bloqueada pela ausência de `gh` autenticado nesta sessão (mesma
+    limitação da reconciliação de 2026-09-10 em `STATUS_ATUAL_PROJETO.md`).
   - Cifrar o conteúdo clínico livre hoje persistido em claro, incluindo o JSON
     de check-ins rápidos, títulos de evoluções/tarefas e motivos livres de
     cancelamento; manter em claro somente campos controlados indispensáveis a

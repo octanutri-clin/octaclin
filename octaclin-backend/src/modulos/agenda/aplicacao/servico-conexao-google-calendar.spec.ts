@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -17,6 +18,8 @@ describe('ServicoConexaoGoogleCalendar', () => {
     delete process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
     delete process.env.GOOGLE_CALENDAR_CLIENT_ID;
     delete process.env.GOOGLE_CALENDAR_TOKEN_URI;
+    delete process.env.GOOGLE_CALENDAR_REVOKE_URI;
+    delete process.env.CRIPTOGRAFIA_CHAVE_AES_256;
     delete process.env.GOOGLE_CALENDAR_OAUTH_STATE_SECRET;
     delete process.env.APP_AMBIENTE;
   });
@@ -419,6 +422,114 @@ describe('ServicoConexaoGoogleCalendar', () => {
       const chamadasSave = (repositorio.save as jest.Mock).mock.calls;
       const ultimaChamada = chamadasSave[chamadasSave.length - 1][0];
       expect(ultimaChamada.desconectadoEm).toBeInstanceOf(Date);
+    });
+
+    it('revoga o refresh token no Google ao desconectar', async () => {
+      const { servico, gerenciadorFalso } = construirServico();
+      const repositorio = gerenciadorFalso.getRepository();
+      const refreshTokenOriginal = 'refresh-token-a-revogar';
+      await repositorio.save({
+        tenantId: 'tenant-1',
+        profissionalId: 'profissional-1',
+        refreshTokenCriptografado: criptografia.criptografar(refreshTokenOriginal),
+        calendarId: 'primary',
+        conectadoEm: new Date()
+      });
+      const fetchMock = jest.fn(async (_url: string, _init: RequestInit) => ({ ok: true, json: async () => ({}) }));
+      (global as any).fetch = fetchMock;
+
+      await servico.desconectar('tenant-1', 'profissional-1');
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://oauth2.googleapis.com/revoke',
+        expect.objectContaining({ method: 'POST', redirect: 'error' })
+      );
+      const corpoRevogacao = fetchMock.mock.calls[0]?.[1]?.body as URLSearchParams;
+      expect(corpoRevogacao.get('token')).toBe(refreshTokenOriginal);
+    });
+
+    it('conclui a desconexao local mesmo quando o Google recusa a revogacao', async () => {
+      const { servico, gerenciadorFalso } = construirServico();
+      const repositorio = gerenciadorFalso.getRepository();
+      await repositorio.save({
+        tenantId: 'tenant-1',
+        profissionalId: 'profissional-1',
+        refreshTokenCriptografado: criptografia.criptografar('refresh-token-x'),
+        calendarId: 'primary',
+        conectadoEm: new Date()
+      });
+      (global as any).fetch = jest.fn(async () => ({ ok: false, status: 400, json: async () => ({}) }));
+
+      await expect(servico.desconectar('tenant-1', 'profissional-1')).resolves.toBeUndefined();
+
+      const chamadasSave = (repositorio.save as jest.Mock).mock.calls;
+      expect(chamadasSave[chamadasSave.length - 1][0].desconectadoEm).toBeInstanceOf(Date);
+    });
+
+    it('conclui a desconexao local mesmo quando a chamada de revogacao lanca erro de rede', async () => {
+      const { servico, gerenciadorFalso } = construirServico();
+      const repositorio = gerenciadorFalso.getRepository();
+      await repositorio.save({
+        tenantId: 'tenant-1',
+        profissionalId: 'profissional-1',
+        refreshTokenCriptografado: criptografia.criptografar('refresh-token-x'),
+        calendarId: 'primary',
+        conectadoEm: new Date()
+      });
+      (global as any).fetch = jest.fn(async () => {
+        throw new Error('rede indisponivel');
+      });
+
+      await expect(servico.desconectar('tenant-1', 'profissional-1')).resolves.toBeUndefined();
+
+      const chamadasSave = (repositorio.save as jest.Mock).mock.calls;
+      expect(chamadasSave[chamadasSave.length - 1][0].desconectadoEm).toBeInstanceOf(Date);
+    });
+
+    it('rejeita endpoint de revogacao externo configuravel em producao antes de qualquer chamada de rede', async () => {
+      process.env.APP_AMBIENTE = 'producao';
+      process.env.CRIPTOGRAFIA_CHAVE_AES_256 = 'a'.repeat(32);
+      const { servico, gerenciadorFalso } = construirServico();
+      const repositorio = gerenciadorFalso.getRepository();
+      await repositorio.save({
+        tenantId: 'tenant-1',
+        profissionalId: 'profissional-1',
+        refreshTokenCriptografado: criptografia.criptografar('refresh-token-x'),
+        calendarId: 'primary',
+        conectadoEm: new Date()
+      });
+      process.env.GOOGLE_CALENDAR_REVOKE_URI = 'http://127.0.0.1:8080/revoke';
+      const fetchMock = jest.fn();
+      (global as any).fetch = fetchMock;
+      const avisos = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+      await expect(servico.desconectar('tenant-1', 'profissional-1')).resolves.toBeUndefined();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(avisos).toHaveBeenCalledWith(expect.stringContaining('endpoint OAuth Google'));
+      const chamadasSave = (repositorio.save as jest.Mock).mock.calls;
+      expect(chamadasSave[chamadasSave.length - 1][0].desconectadoEm).toBeInstanceOf(Date);
+
+      avisos.mockRestore();
+    });
+
+    it('nao tenta revogar quando a conexao nao tem refresh token armazenado', async () => {
+      const { servico, gerenciadorFalso } = construirServico();
+      const repositorio = gerenciadorFalso.getRepository();
+      await repositorio.save({
+        tenantId: 'tenant-1',
+        profissionalId: 'profissional-1',
+        refreshTokenCriptografado: undefined,
+        calendarId: 'primary',
+        conectadoEm: new Date()
+      });
+      const fetchMock = jest.fn();
+      (global as any).fetch = fetchMock;
+
+      await servico.desconectar('tenant-1', 'profissional-1');
+
+      expect(fetchMock).not.toHaveBeenCalled();
     });
   });
 });

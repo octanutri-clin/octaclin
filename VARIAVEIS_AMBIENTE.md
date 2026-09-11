@@ -116,6 +116,7 @@ Este arquivo documenta variaveis sem expor valores. Nunca commite `.env` real ou
 | `GOOGLE_CALENDAR_REFRESH_TOKEN` | Opcional | Compatibilidade com agenda compartilhada antiga | Render/backend | Health indica modo compativel |
 | `GOOGLE_CALENDAR_ID` | Opcional | Calendario da agenda compartilhada antiga | Render/backend | Evento aparece no calendario |
 | `GOOGLE_CALENDAR_TOKEN_URI` | Opcional | Endpoint OAuth canonico Google; override aceito apenas para mock HTTPS `.test` em `NODE_ENV=test` | Render/backend | Configuracao externa/loopback e rejeitada antes do fetch |
+| `GOOGLE_CALENDAR_REVOKE_URI` | Opcional | Endpoint de revogacao OAuth canonico Google; mesma regra de override do `GOOGLE_CALENDAR_TOKEN_URI` | Render/backend | Configuracao externa/loopback e rejeitada antes do fetch |
 
 Na conexao individual da Fase 136, os refresh tokens sao obtidos no callback
 OAuth e armazenados criptografados por profissional. No Google Cloud Console,

@@ -2,6 +2,7 @@ import { BadRequestException, InternalServerErrorException } from '@nestjs/commo
 import { ambienteExigeFalhaFechada, obterAmbienteExecucao } from './ambiente-execucao';
 
 const ENDPOINT_TOKEN_GOOGLE = 'https://oauth2.googleapis.com/token';
+const ENDPOINT_REVOGACAO_GOOGLE = 'https://oauth2.googleapis.com/revoke';
 const TIMEOUT_INTEGRACAO_MS = 15_000;
 
 function urlSemComponentesInesperados(url: URL): boolean {
@@ -15,8 +16,8 @@ export function opcoesSegurasFetchExterno(): Pick<RequestInit, 'redirect' | 'sig
   };
 }
 
-export function endpointTokenGoogleSeguro(valor: string | undefined): string {
-  const configurado = valor?.trim() || ENDPOINT_TOKEN_GOOGLE;
+function endpointOAuthGoogleSeguro(valor: string | undefined, endpointPadrao: string, pathnameSintetico: string): string {
+  const configurado = valor?.trim() || endpointPadrao;
   let url: URL;
   try {
     url = new URL(configurado);
@@ -24,18 +25,26 @@ export function endpointTokenGoogleSeguro(valor: string | undefined): string {
     throw new InternalServerErrorException('Configuracao de endpoint OAuth Google invalida.');
   }
 
-  if (url.toString() === ENDPOINT_TOKEN_GOOGLE) return ENDPOINT_TOKEN_GOOGLE;
+  if (url.toString() === endpointPadrao) return endpointPadrao;
 
   const ambiente = obterAmbienteExecucao();
   const mockSintetico =
     ambiente === 'test' &&
     url.protocol === 'https:' &&
     url.hostname.endsWith('.test') &&
-    url.pathname === '/token' &&
+    url.pathname === pathnameSintetico &&
     urlSemComponentesInesperados(url);
   if (mockSintetico) return url.toString();
 
   throw new InternalServerErrorException('Configuracao de endpoint OAuth Google nao autorizada.');
+}
+
+export function endpointTokenGoogleSeguro(valor: string | undefined): string {
+  return endpointOAuthGoogleSeguro(valor, ENDPOINT_TOKEN_GOOGLE, '/token');
+}
+
+export function endpointRevogacaoGoogleSeguro(valor: string | undefined): string {
+  return endpointOAuthGoogleSeguro(valor, ENDPOINT_REVOGACAO_GOOGLE, '/revoke');
 }
 
 export function urlAutorizacaoGoogleSegura(valor: string): string {
