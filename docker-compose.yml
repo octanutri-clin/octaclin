@@ -48,7 +48,28 @@ services:
       timeout: 5s
       retries: 5
 
+  # Fase 261: scanner real de antimalware para uploads clinicos. Sem
+  # CLAMAV_HOST definido no backend, ServicoAntimalware continua na
+  # referencia EICAR (nenhum malware real detectado) -- ver
+  # octaclin-backend/src/infraestrutura/armazenamento/servico-antimalware.ts.
+  # Producao precisa de um daemon clamd provisionado separadamente (nao e
+  # coberto por este compose de desenvolvimento local); ver VARIAVEIS_AMBIENTE.md.
+  clamav:
+    image: clamav/clamav:stable
+    container_name: octaclin-clamav
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav_dados:/var/lib/clamav
+    healthcheck:
+      test: ["CMD-SHELL", "echo PING | timeout 5 nc -w 5 localhost 3310 | grep -q PONG"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
 volumes:
   postgres_dados:
   redis_dados:
   minio_dados:
+  clamav_dados:

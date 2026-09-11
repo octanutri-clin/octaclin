@@ -235,6 +235,49 @@ Escalonar para desenvolvimento quando:
 - cancelamento/remarcacao local nao atualiza payload/historico;
 - timezone persiste incorreto apos ajuste de tenant.
 
+## Uploads e antimalware
+
+Sintomas comuns:
+
+- upload de anexo/material recusado sem explicacao clara;
+- toda tentativa de upload falha para qualquer arquivo, ate os inofensivos;
+- upload funcionava e passou a falhar sem mudanca no arquivo enviado.
+
+Checklist:
+
+1. Validar `/health/detalhado`, especialmente `checks.antimalware`.
+2. `status: "degradado"` com mensagem de ClamAV nao configurado e o risco
+   aceito e ja registrado (Fase 261): uploads passam so pela referencia EICAR,
+   nao ha malware real bloqueando nada, e recusa pontual de um arquivo
+   especifico **nao vem daqui** -- investigar o proprio arquivo enviado.
+3. `status: "falha"` em `checks.antimalware` significa que o daemon ClamAV
+   esta configurado (`CLAMAV_HOST` definido) mas nao respondeu ao PING: pelo
+   contrato fail-closed (`ServicoAntimalware.garantirConteudoLimpo`),
+   **todo upload esta sendo rejeitado**, nao so o do usuario que abriu o
+   chamado. Isso e P1/P2 conforme volume afetado, nao um caso individual.
+4. Para `falha`, verificar se o daemon `clamav` (container ou servico
+   provisionado) esta de pe e acessivel pela rede interna do backend antes de
+   qualquer outra hipotese -- a causa mais comum e o daemon reiniciando ou
+   ainda baixando definicoes de virus (`freshclam`) apos subir.
+5. Nao reiniciar o backend como primeira acao: reiniciar o daemon ClamAV (ou
+   aguardar o `freshclam` inicial terminar) resolve sem o custo de derrubar
+   conexoes ativas do backend.
+
+Evidencia minima:
+
+- horario;
+- `checks.antimalware` completo de `/health/detalhado` (status e mensagem, sem
+  editar);
+- se o problema for de um arquivo especifico: tipo e tamanho do arquivo (nunca
+  o conteudo nem o nome do paciente).
+
+Escalonar para desenvolvimento quando:
+
+- `checks.antimalware` fica em `falha` por mais que o tempo de start do
+  ClamAV (ver `docker-compose.yml`/provisionamento de producao);
+- upload recusado mesmo com `checks.antimalware` em `ok` e o arquivo
+  claramente nao contem a assinatura de teste EICAR.
+
 ## Escalonamento
 
 O canal, horario, responsavel por funcao e tempos de primeira resposta estao em

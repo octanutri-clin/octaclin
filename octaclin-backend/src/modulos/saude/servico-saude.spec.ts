@@ -14,6 +14,7 @@ describe('ServicoSaude', () => {
     process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'client-secret';
     process.env.GOOGLE_CALENDAR_REFRESH_TOKEN = 'refresh-token';
     process.env.REDIS_URL = 'rediss://default:senha@redis.example.com:6379';
+    process.env.CLAMAV_HOST = 'clamav.interno';
     delete process.env.BANCO_HEALTH_TIMEOUT_MS;
   });
 
@@ -32,7 +33,11 @@ describe('ServicoSaude', () => {
       migrations: [{ name: "Migracao1" }],
       showMigrations: jest.fn(async () => false)
     };
-    const servico = new ServicoSaude(fonteDados as never, { ping: jest.fn(async () => 'PONG') } as never);
+    const servico = new ServicoSaude(
+      fonteDados as never,
+      { ping: jest.fn(async () => 'PONG') } as never,
+      { ping: jest.fn(async () => true) } as never
+    );
 
     const resposta = await servico.verificarDetalhado();
 
@@ -46,6 +51,7 @@ describe('ServicoSaude', () => {
       poolAguardando: 1
     });
     expect(resposta.checks.redis.status).toBe('ok');
+    expect(resposta.checks.antimalware.status).toBe('ok');
     expect(resposta.checks.email.status).toBe('ok');
     expect(resposta.checks.whatsapp.status).toBe('ok');
     expect(resposta.checks.googleCalendar.status).toBe('ok');
@@ -67,7 +73,8 @@ describe('ServicoSaude', () => {
         migrations: [{ name: 'Migracao1' }],
         showMigrations: jest.fn(async () => false)
       } as never,
-      { ping: jest.fn(async () => 'PONG') } as never
+      { ping: jest.fn(async () => 'PONG') } as never,
+      { ping: jest.fn(async () => true) } as never
     );
 
     const resposta = await servico.verificarDetalhado();
@@ -110,7 +117,8 @@ describe('ServicoSaude', () => {
         migrations: [{ name: 'Migracao1' }],
         showMigrations: jest.fn(async () => false)
       } as never,
-      { ping: jest.fn(async () => 'PONG') } as never
+      { ping: jest.fn(async () => 'PONG') } as never,
+      { ping: jest.fn(async () => true) } as never
     );
 
     const resposta = await servico.verificarDetalhado();
@@ -283,6 +291,125 @@ describe('ServicoSaude', () => {
     avisos.mockRestore();
   });
 
+  /**
+   * Ao contrario das demais integracoes opcionais deste modulo, ClamAV
+   * indisponivel nao e degradacao: `ServicoAntimalware.garantirConteudoLimpo`
+   * rejeita todo upload quando o daemon nao responde (contrato fail-closed).
+   * Estes testes existem para que essa diferenca de severidade nao se perca
+   * num futuro refactor que trate o check como mais um `verificarX` generico.
+   */
+  it('marca antimalware como degradado quando CLAMAV_HOST nao esta configurado', async () => {
+    delete process.env.CLAMAV_HOST;
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }]),
+        migrations: [{ name: 'Migracao1' }],
+        showMigrations: jest.fn(async () => false)
+      } as never,
+      { ping: jest.fn(async () => 'PONG') } as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.checks.antimalware.status).toBe('degradado');
+    expect(resposta.status).toBe('degradado');
+  });
+
+  it('marca antimalware como ok quando o daemon configurado responde ao ping', async () => {
+    const antimalware = { ping: jest.fn(async () => true) };
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }]),
+        migrations: [{ name: 'Migracao1' }],
+        showMigrations: jest.fn(async () => false)
+      } as never,
+      { ping: jest.fn(async () => 'PONG') } as never,
+      antimalware as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(antimalware.ping).toHaveBeenCalledTimes(1);
+    expect(resposta.checks.antimalware).toEqual({ status: 'ok', detalhes: { configurado: true } });
+    expect(resposta.status).toBe('ok');
+  });
+
+  it('marca antimalware como falha quando CLAMAV_HOST esta configurado mas o cliente nao foi provisionado', async () => {
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }]),
+        migrations: [{ name: 'Migracao1' }],
+        showMigrations: jest.fn(async () => false)
+      } as never,
+      { ping: jest.fn(async () => 'PONG') } as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.checks.antimalware).toEqual({
+      status: 'falha',
+      mensagem: 'Scanner antimalware indisponivel; uploads sao rejeitados enquanto durar.'
+    });
+    expect(resposta.status).toBe('falha');
+  });
+
+  it('marca antimalware como falha quando o ping responde negativo', async () => {
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }]),
+        migrations: [{ name: 'Migracao1' }],
+        showMigrations: jest.fn(async () => false)
+      } as never,
+      { ping: jest.fn(async () => 'PONG') } as never,
+      { ping: jest.fn(async () => false) } as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.checks.antimalware).toEqual({
+      status: 'falha',
+      mensagem: 'Scanner antimalware indisponivel; uploads sao rejeitados enquanto durar.'
+    });
+  });
+
+  it('marca antimalware como falha e nao vaza detalhe de conexao quando o ping lanca erro', async () => {
+    // A mensagem de erro de socket carrega host e porta do daemon, como as dos
+    // clientes Postgres e Redis: mesma regra de nao vazamento se aplica aqui.
+    const antimalware = {
+      ping: jest.fn(async () => Promise.reject(new Error('connect ECONNREFUSED 10.0.0.11:3310')))
+    };
+    const avisos = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const servico = new ServicoSaude(
+      {
+        isInitialized: true,
+        query: jest.fn(async () => [{ ok: 1 }]),
+        migrations: [{ name: 'Migracao1' }],
+        showMigrations: jest.fn(async () => false)
+      } as never,
+      { ping: jest.fn(async () => 'PONG') } as never,
+      antimalware as never
+    );
+
+    const resposta = await servico.verificarDetalhado();
+
+    expect(resposta.checks.antimalware).toEqual({
+      status: 'falha',
+      mensagem: 'Scanner antimalware indisponivel; uploads sao rejeitados enquanto durar.'
+    });
+    expect(avisos).toHaveBeenCalledWith(
+      expect.objectContaining({ evento: 'saude.check.falha', check: 'antimalware', erroNome: 'Error' })
+    );
+    expect(JSON.stringify(avisos.mock.calls)).not.toContain('ECONNREFUSED');
+    expect(JSON.stringify(avisos.mock.calls)).not.toContain('10.0.0.11');
+    expect(JSON.stringify(resposta)).not.toContain('ECONNREFUSED');
+
+    avisos.mockRestore();
+  });
+
   it('deve sinalizar integracoes opcionais ausentes como degradadas', async () => {
     delete process.env.EMAIL_SMTP_USUARIO;
     delete process.env.EMAIL_SMTP_SENHA;
@@ -297,6 +424,7 @@ describe('ServicoSaude', () => {
     delete process.env.REDIS_URL;
     delete process.env.REDIS_HOST;
     delete process.env.REDIS_PORTA;
+    delete process.env.CLAMAV_HOST;
 
     const servico = new ServicoSaude({
       isInitialized: true,
@@ -309,6 +437,7 @@ describe('ServicoSaude', () => {
 
     expect(resposta.status).toBe('degradado');
     expect(resposta.checks.redis.status).toBe('degradado');
+    expect(resposta.checks.antimalware.status).toBe('degradado');
     expect(resposta.checks.email.status).toBe('degradado');
     expect(resposta.checks.whatsapp.status).toBe('degradado');
     expect(resposta.checks.googleCalendar.status).toBe('degradado');
@@ -345,7 +474,8 @@ describe('ServicoSaude', () => {
         migrations: [{ name: 'Migracao1' }, { name: 'Migracao2' }],
         showMigrations: jest.fn(async () => false)
       } as never,
-      { ping: jest.fn(async () => 'PONG') } as never
+      { ping: jest.fn(async () => 'PONG') } as never,
+      { ping: jest.fn(async () => true) } as never
     );
 
     const resposta = await servico.verificarDetalhado();
