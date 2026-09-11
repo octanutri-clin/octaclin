@@ -89,6 +89,24 @@ Atualizado em 2026-09-10.
   fase). A proxima fase oficial e a Fase 259 (Acesso, convite e
   ativacao sem suporte manual). Detalhes e evidencias completas em
   `docs/history/phases/fase-258-central-comunicacoes-confiavel.md`.
+- Fase 259 - Acesso, convite e ativação sem suporte manual, **concluida
+  em 2026-09-11**. Auditoria inicial confirmou modulo `auth` maduro
+  (login, MFA por capability, recuperacao de senha, sessoes com
+  rotacao/deteccao de reuso, convite de paciente com aceite LGPD); tres
+  incrementos fecharam as lacunas reais: primeiro acesso de staff deixou
+  de ser indistinguivel de recuperacao de senha comum; convite de staff
+  passou a exigir aceite de Termos de uso e Politica de privacidade na
+  ativacao (antes so o convite de paciente exigia aceite legal); e
+  acessar rota fora do proprio papel passou a mostrar um aviso
+  explicando o redirecionamento, em vez de uma pagina dedicada de "sem
+  permissao" (403) que trocaria o redirect direto por um clique extra
+  sem ganho real. Decisao final: nao unificar os dois mecanismos de
+  convite (paciente vs. staff), que codificam ciclos de vida diferentes
+  — fundir exigiria migration real por ganho so arquitetural. Nenhuma
+  migration em nenhum incremento. A proxima fase oficial e a Fase 260
+  (Desempenho, resiliencia e diagnostico operacional). Detalhes e
+  evidencias completas em
+  `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
   fotografia historica foi capturada em 2026-09-07 sobre
   `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning

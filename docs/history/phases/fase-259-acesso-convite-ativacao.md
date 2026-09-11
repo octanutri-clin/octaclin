@@ -1,6 +1,7 @@
 # Fase 259 - Acesso, convite e ativação sem suporte manual
 
-Status: em andamento, iniciada em 2026-09-11.
+Status: concluída em 2026-09-11 (os 3 incrementos planejados foram
+entregues).
 
 ## Objetivo (roadmap)
 
@@ -84,11 +85,19 @@ O módulo `auth` é maduro e bem coberto por testes:
    silencioso atual, já seguro, por uma tela sem saída extra —, um aviso
    contextual explica o redirecionamento no próprio destino. Decisão de
    produto confirmada: preferir o aviso ao invés da página dedicada.
-4. Candidato ainda não iniciado: unificação do mecanismo de convite
-   (paciente vs. staff).
-
-Este documento é atualizado a cada incremento com o que foi entregue,
-arquivos tocados e validações.
+4. **Duplicidade do mecanismo de convite (paciente vs. staff) — decisão
+   final: não unificar.** Avaliado ao fechar a fase: `ConvitePacienteOrm`
+   e `TokenRedefinicaoSenhaOrm` não são duas fazendas do mesmo conceito —
+   codificam dois ciclos de vida diferentes (paciente: o `UsuarioOrm` não
+   existe até a ativação, que também cria o vínculo com `PacienteOrm` e
+   grava consentimento LGPD; staff: o `UsuarioOrm` já existe desde o
+   convite, e a ativação só define a primeira senha). Fundir as duas
+   tabelas exigiria uma migration real e uma entidade genérica tentando
+   servir os dois ciclos — relocaria complexidade em vez de removê-la,
+   por um ganho puramente arquitetural, sem gap funcional ou de segurança
+   por trás. Confirmado com o dono do produto: permanece como está, e a
+   duplicidade passa a ser uma decisão documentada, não dívida técnica
+   pendente.
 
 Este documento é atualizado a cada incremento com o que foi entregue,
 arquivos tocados e validações.
