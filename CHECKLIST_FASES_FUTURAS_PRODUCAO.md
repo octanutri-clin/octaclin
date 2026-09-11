@@ -2527,9 +2527,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     ciclos, so por ganho arquitetural. Confirmado com o dono do produto:
     fica como esta, documentado como decisao e nao divida pendente.
 
-- [ ] Fase 260 - Desempenho, resiliência e diagnóstico operacional. [ESSENCIAL - ESTABILIDADE] [EM ANDAMENTO EM 2026-09-11]
-  - Definir orçamentos de carregamento e chamadas, eliminar cascatas de requests,
+- [x] Fase 260 - Desempenho, resiliência e diagnóstico operacional. [ESSENCIAL - ESTABILIDADE] [CONCLUIDA EM 2026-09-11]
+  - [x] Definir orçamentos de carregamento e chamadas, eliminar cascatas de requests,
     revisar cache/invalidação e limitar componentes clínicos muito grandes.
+    Incremento 4 entregue em 2026-09-11: gate de CI (orçamento de até 4
+    endpoints distintos na aba Resumo do prontuário, já rodando via
+    `pnpm smoke:visual`) e fim da cascata sequencial de paginação de
+    profissionais (até 19 idas e vindas viravam uma rodada paralela).
+    Revisão de cache/invalidação e divisão de componentes grandes
+    (`portal-paciente.tsx`, `painel-agenda.tsx` e outros >1300 linhas) ficam
+    fora desta fase por decisão de escopo: são decisões de arquitetura sem
+    defeito concreto associado, candidatas a uma fase futura dedicada. Ver
+    `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
   - [x] Correlacionar erro de interface, BFF e backend sem PHI; criar runbooks para
     falhas de banco, Redis, storage, e-mail, WhatsApp e Google Calendar.
     Incremento 2 entregue em 2026-09-11: `requestId` (ja gerado e propagado

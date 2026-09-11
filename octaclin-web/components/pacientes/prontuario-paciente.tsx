@@ -347,11 +347,18 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     }
     setCarregandoProfissionais(true);
     try {
-      const todos: ProfissionalResumo[] = [];
-      for (let pagina = 1; pagina <= 20; pagina += 1) {
-        const resposta = await listarProfissionais({ pagina, limite: 100 });
-        todos.push(...resposta.itens);
-        if (todos.length >= resposta.total || resposta.itens.length === 0) break;
+      const primeira = await listarProfissionais({ pagina: 1, limite: 100 });
+      const todos: ProfissionalResumo[] = [...primeira.itens];
+      if (primeira.itens.length > 0 && todos.length < primeira.total) {
+        // As paginas 2+ nao dependem umas das outras -- so a primeira
+        // informa quantas existem (`total`). Buscar em paralelo, e nao numa
+        // cascata sequencial de ate 19 idas e vindas, e o unico motivo pelo
+        // qual esta funcao muda de um `for` com `await` por iteracao.
+        const totalPaginas = Math.min(20, Math.ceil(primeira.total / 100));
+        const restantes = await Promise.all(
+          Array.from({ length: totalPaginas - 1 }, (_, indice) => listarProfissionais({ pagina: indice + 2, limite: 100 }))
+        );
+        for (const resposta of restantes) todos.push(...resposta.itens);
       }
       setProfissionais(todos);
     } catch {

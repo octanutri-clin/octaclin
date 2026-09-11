@@ -1,6 +1,6 @@
 # Fase 260 - Desempenho, resiliência e diagnóstico operacional
 
-Status: em andamento desde 2026-09-11 (Incrementos 1, 2 e 3 entregues).
+Status: em andamento desde 2026-09-11 (Incrementos 1, 2, 3 e 4 entregues).
 
 ## Objetivo (roadmap)
 
@@ -297,9 +297,82 @@ necessários, criada na fundação do projeto para uso por comunicações.
   por consulta direta à tabela. Candidato a incremento futuro de
   observabilidade, não bloqueador do piloto.
 
-## Incrementos restantes
+## Incremento 4 - Orçamento de performance e eliminação de cascata no frontend
 
-- Incremento 4: orçamento de performance no frontend (gate de contagem de
-  requests em CI, a partir do teste de lazy-load já existente).
+Duas peças, ambas dentro de `tests/visual/console-regression.spec.mjs` — que já
+roda em CI via `pnpm smoke:visual` e via `pnpm test:prontuario:validacao`, sem
+precisar de novo workflow ou script:
+
+1. **Gate de orçamento de requests**: novo teste mede quantos endpoints de
+   API *distintos* (não requests brutos — `next dev` com React StrictMode
+   dispara efeito em dobro de propósito, contar bruto mediria o dev server e
+   não a arquitetura da página) a aba "Resumo" do prontuário atinge ao
+   carregar. Hoje são 3: `/api/auth/session`,
+   `/api/pacientes/:id/prontuario` e `/api/pacientes/:id/avaliacoes-antropometricas`.
+   O teto é 4 (uma folga deliberada), e o teste também confirma que
+   evoluções, tarefas, materiais e anexos — já lazy — não aparecem nessa
+   lista. Subir o teto exige editar o teste, e não acontece em silêncio.
+2. **Fim da cascata sequencial de profissionais**: `carregarProfissionais`
+   buscava até 20 páginas de 100 profissionais, uma de cada vez, num `for`
+   com `await` por iteração — encontrado na auditoria inicial da fase. Só a
+   primeira página depende de ser buscada sozinha (é dela que vem `total`,
+   necessário para saber quantas páginas faltam); as demais não dependem
+   umas das outras. Agora a primeira página é buscada isolada e as
+   restantes em paralelo (`Promise.all`). Para a maioria das clínicas (menos
+   de 100 profissionais) não muda nada — uma página já bastava. O ganho é
+   para quem tem mais: de até 19 idas e vindas sequenciais para uma rodada
+   paralela.
+
+### Arquivos principais
+
+- `octaclin-web/components/pacientes/prontuario-paciente.tsx`:
+  `carregarProfissionais` reescrita.
+- `octaclin-web/tests/visual/console-regression.spec.mjs`: teste de
+  orçamento de requests; teste de paralelismo da paginação de profissionais
+  (usa atraso artificial na resposta mockada para provar que as páginas 2 e
+  3 começam quase juntas, e não separadas pelo atraso de uma rodada
+  sequencial — RED confirmado revertendo a implementação antes de fechar o
+  incremento).
+
+### Validações executadas
+
+- `pnpm --dir octaclin-web typecheck` — PASS.
+- `pnpm --dir octaclin-web exec eslint .` — 0 erros (warnings pré-existentes, não relacionados).
+- `pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs` (desktop + mobile) — PASS (96 testes).
+- `pnpm --dir octaclin-web exec playwright test tests/visual/acessibilidade.spec.mjs -g "prontuario|paciente|agenda"` — PASS (27 testes).
+- `pnpm security:secrets` — nenhum secret identificado.
+
+### Pendências desta sub-meta (decisão de escopo, não gap escondido)
+
+Duas partes do objetivo original ficam deliberadamente fora desta fase,
+porque nenhuma das duas tem um defeito concreto puxando a mudança — seriam
+refatoração por preferência arquitetural, o tipo de escopo que `AGENTS.md`
+pede para não misturar sem decisão explícita:
+
+- **Revisar cache/invalidação**: hoje todo BFF usa
+  `fetch(..., { cache: 'no-store' })` uniformemente — sem camada de cache no
+  cliente (sem SWR/React Query). Introduzir uma mudaria o padrão de
+  requisição em dezenas de arquivos; é uma decisão de arquitetura, não uma
+  correção pontual.
+- **Componentes clínicos muito grandes**: `portal-paciente.tsx` (1592
+  linhas), `painel-agenda.tsx` (1485), `plano-alimentar-profissional.tsx`
+  (1408) e `painel-comunicacoes.tsx` (1347) são candidatos a divisão em
+  subcomponentes, mas nenhum tem bug ou regressão de performance associado
+  — dividir por tamanho isolado é risco de regressão visual/comportamental
+  sem benefício funcional imediato.
+
+Ambos ficam registrados aqui como candidatos concretos para uma fase futura
+dedicada a arquitetura de frontend, e não como lacuna escondida do objetivo
+original.
+
+## Fechamento da fase
+
+Os quatro incrementos entregues cobrem, em algum grau proporcional ao risco
+encontrado na auditoria, as quatro sub-metas do roadmap: contrato do
+prontuário (3), correlação de erro e runbooks (2), resiliência da auditoria
+(4) e desempenho/cascata no frontend (1). As duas pendências de sub-meta 1
+acima (cache e componentes grandes) são decisões de arquitetura sem defeito
+associado, não lacunas de escopo — mesmo padrão de fechamento usado na Fase
+259 para a não-unificação dos mecanismos de convite.
 
 Este documento é atualizado a cada incremento entregue.

@@ -107,8 +107,8 @@ Atualizado em 2026-09-11.
   (Desempenho, resiliencia e diagnostico operacional). Detalhes e
   evidencias completas em
   `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
-- Fase 260 - Desempenho, resiliencia e diagnostico operacional, **em
-  andamento desde 2026-09-11**. Auditoria inicial confirmou lazy-load
+- Fase 260 - Desempenho, resiliencia e diagnostico operacional, **concluida
+  em 2026-09-11**. Auditoria inicial confirmou lazy-load
   parcial ja existente (materiais/anexos/profissionais) e endpoints
   dedicados de evolucoes/tarefas ja prontos mas nao usados pelo frontend;
   identificou tambem uma lacuna real de autorizacao (nao so performance):
@@ -139,9 +139,18 @@ Atualizado em 2026-09-11.
   (`ProcessadorOutboxAuditoria`) drena com ate 5 retentativas e so conta
   como perda definitiva, alimentando o alerta ja existente em
   `/operacoes`, ao esgota-las. Os ~97 call sites restantes de
-  `ServicoAuditoria.registrar` nao mudam de comportamento. Nenhuma
-  migration em nenhum incremento. Incremento 4 (orcamento de performance
-  em CI) segue pendente. Detalhes e evidencias completas em
+  `ServicoAuditoria.registrar` nao mudam de comportamento. Incremento 4
+  entregue: gate de CI para orcamento de requests (ate 4 endpoints
+  distintos na aba Resumo do prontuario, ja rodando via `pnpm
+  smoke:visual`) e fim da cascata sequencial de paginacao de profissionais
+  (ate 19 idas e vindas sequenciais viraram uma rodada paralela). Revisao
+  de cache/invalidacao e divisao de componentes clinicos grandes
+  (`portal-paciente.tsx`, `painel-agenda.tsx` e outros >1300 linhas) ficam
+  fora da fase por decisao de escopo — decisao de arquitetura sem defeito
+  concreto associado, candidata a fase futura dedicada, e nao lacuna
+  escondida. Nenhuma migration em nenhum incremento. A proxima fase
+  oficial e a Fase 261 (Regressao de seguranca e privacidade do SaaS
+  publico). Detalhes e evidencias completas em
   `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
   fotografia historica foi capturada em 2026-09-07 sobre

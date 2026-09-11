@@ -168,6 +168,24 @@ async function assertSemOverflowHorizontal(page) {
   expect(medidas.larguraDocumento).toBeLessThanOrEqual(medidas.larguraViewport + 1);
 }
 
+/**
+ * Rastreia os caminhos de API distintos (sem origem nem query string)
+ * atingidos por `page` a partir da chamada. Conta endpoints unicos, e nao
+ * requests brutos: em `next dev` o React StrictMode disparo efeitos em
+ * dobro de proposito, o que inflaria uma contagem bruta sem refletir nada
+ * sobre a arquitetura da pagina. O orcamento de performance da Fase 260
+ * (sub-meta 1) e sobre quantos endpoints distintos uma tela precisa, nao
+ * sobre quantas vezes o dev server decide chamar cada um.
+ */
+function rastrearCaminhosApi(page) {
+  const caminhos = new Set();
+  page.on('request', (requisicao) => {
+    const url = new URL(requisicao.url());
+    if (url.pathname.startsWith('/api/')) caminhos.add(url.pathname);
+  });
+  return caminhos;
+}
+
 async function prepararOperacoesMockadas(page) {
   let requisitouCsvLgpd = false;
   let aplicouPlanoAssinatura = false;
@@ -2123,6 +2141,74 @@ test.describe('lista de pacientes operacional', () => {
 });
 
 test.describe('prontuario do paciente', () => {
+  test('orcamento de performance: resumo inicial nao excede o teto de endpoints distintos', async ({ page }) => {
+    await prepararProntuarioMockado(page, { permissoesExtras: ['profissionais.ler'] });
+    const caminhos = rastrearCaminhosApi(page);
+
+    await page.goto('/pacientes/paciente-1');
+    await expect(page.getByRole('heading', { name: 'Linha de cuidado' })).toBeVisible();
+    await expect.poll(() => caminhos.has('/api/pacientes/paciente-1/prontuario')).toBe(true);
+
+    // Teto documentado, nao arbitrario: hoje a aba "Resumo" atinge
+    // /api/auth/session, /api/pacientes/paciente-1/prontuario e
+    // /api/pacientes/paciente-1/avaliacoes-antropometricas (3 endpoints).
+    // Materiais, anexos, profissionais, evolucoes e tarefas ja sao lazy
+    // (ver o teste seguinte) e nao devem aparecer aqui. Subir esse numero
+    // exige decisao deliberada, e nao regressao silenciosa de uma cascata
+    // nova na tela mais visitada do prontuario.
+    expect(caminhos.size).toBeLessThanOrEqual(4);
+    expect(caminhos.has('/api/pacientes/paciente-1/evolucoes')).toBe(false);
+    expect(caminhos.has('/api/pacientes/paciente-1/tarefas-acompanhamento')).toBe(false);
+    expect([...caminhos].some((caminho) => caminho.includes('/materiais'))).toBe(false);
+    expect([...caminhos].some((caminho) => caminho.includes('/mobile/midias'))).toBe(false);
+  });
+
+  test('busca profissionais em paralelo, e nao em cascata sequencial, quando ha mais de uma pagina', async ({ page }) => {
+    await prepararProntuarioMockado(page, { permissoesExtras: ['profissionais.ler'] });
+    const totalProfissionais = 250;
+    // Atraso proposital em toda pagina: se as paginas 2 e 3 forem buscadas
+    // em cascata sequencial (uma so depois que a outra terminou, como antes
+    // deste incremento), o instante em que cada uma comeca fica separado por
+    // ~esse atraso. Em paralelo, comecam quase juntas.
+    const ATRASO_MS = 120;
+    const inicioPorPagina = {};
+    await page.route('**/api/profissionais**', async (route) => {
+      const url = new URL(route.request().url());
+      if (url.pathname.endsWith('/profissional-1')) {
+        await route.fallback();
+        return;
+      }
+      const pagina = Number(url.searchParams.get('pagina') ?? '1');
+      inicioPorPagina[pagina] = Date.now();
+      await new Promise((resolve) => setTimeout(resolve, ATRASO_MS));
+      const inicio = (pagina - 1) * 100;
+      const itens = Array.from({ length: Math.min(100, totalProfissionais - inicio) }, (_, indice) => ({
+        id: `profissional-${inicio + indice + 1}`,
+        tenantId: 'tenant-1',
+        usuarioId: `usuario-${inicio + indice + 1}`,
+        nome: `Prof ${String(inicio + indice + 1).padStart(3, '0')}`,
+        criadoEm: '2026-07-20T10:00:00.000Z'
+      }));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ itens, total: totalProfissionais })
+      });
+    });
+    await page.goto('/pacientes/paciente-1?area=atendimentos&aba=historico');
+
+    const selecaoResponsavel = page.getByLabel('Responsável');
+    await expect(selecaoResponsavel.locator('option')).toHaveCount(totalProfissionais + 1);
+    await expect(selecaoResponsavel.locator('option', { hasText: 'Prof 001' })).toHaveCount(1);
+    await expect(selecaoResponsavel.locator('option', { hasText: 'Prof 250' })).toHaveCount(1);
+
+    // 3 paginas para 250 itens (limite 100), e as paginas 2 e 3 comecam
+    // quase juntas: se estivessem em cascata sequencial, a pagina 3 so
+    // comecaria ~ATRASO_MS depois da 2.
+    expect(Object.keys(inicioPorPagina).map(Number).sort((a, b) => a - b)).toEqual([1, 2, 3]);
+    expect(Math.abs(inicioPorPagina[3] - inicioPorPagina[2])).toBeLessThan(ATRASO_MS / 2);
+  });
+
   test('carrega recursos laterais somente ao abrir a subarea correspondente', async ({ page }) => {
     const prontuario = await prepararProntuarioMockado(page, {
       permissoesExtras: ['profissionais.ler']
