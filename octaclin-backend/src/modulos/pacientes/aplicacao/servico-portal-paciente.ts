@@ -895,7 +895,7 @@ export class ServicoPortalPaciente {
           tenantId,
           pacienteId: paciente.id,
           tipo: 'humor',
-          valor,
+          valorCriptografado: this.criptografia.criptografar(JSON.stringify(valor)),
           registradoEm
         })
       );
@@ -1310,16 +1310,31 @@ export class ServicoPortalPaciente {
   }
 
   private mapearCheckinRapido(diario: LogDiarioRapidoOrm): CheckinRapidoPortalPaciente {
+    const valor = this.lerValorDiario(diario);
     return {
       id: diario.id,
       pacienteId: diario.pacienteId,
       tipo: 'humor',
-      humor: this.valorTextoDiario(diario.valor, 'humor', 'neutro') as CheckinRapidoPortalPaciente['humor'],
-      adesaoPlano: this.valorNumeroDiario(diario.valor, 'adesaoPlano', 0),
-      sintomas: this.valorTextoDiario(diario.valor, 'sintomas'),
-      observacoes: this.valorTextoDiario(diario.valor, 'observacoes'),
+      humor: this.valorTextoDiario(valor, 'humor', 'neutro') as CheckinRapidoPortalPaciente['humor'],
+      adesaoPlano: this.valorNumeroDiario(valor, 'adesaoPlano', 0),
+      sintomas: this.valorTextoDiario(valor, 'sintomas'),
+      observacoes: this.valorTextoDiario(valor, 'observacoes'),
       registradoEm: diario.registradoEm
     };
+  }
+
+  /**
+   * Registro novo so tem `valorCriptografado`; registro anterior a Fase B da
+   * criptografia residual (Fase 261) so tem `valor` em claro. Ilegivel nao
+   * derruba o checkin, so esvazia o registro.
+   */
+  private lerValorDiario(diario: LogDiarioRapidoOrm): Record<string, unknown> {
+    if (!diario.valorCriptografado) return diario.valor ?? {};
+    try {
+      return JSON.parse(this.criptografia.descriptografar(diario.valorCriptografado)) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
   }
 
   private valorTextoDiario(valor: Record<string, unknown>, chave: string, padrao?: string): string | undefined {

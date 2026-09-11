@@ -761,8 +761,9 @@ export class ServicoPacientes {
     let encontrouSintomas = false;
 
     for (const diario of diarios) {
+      const valor = this.lerValorDiario(diario);
       if (!encontrouAdesao) {
-        const adesao = diario.valor.adesaoPlano;
+        const adesao = valor.adesaoPlano;
         if (typeof adesao === 'number' && Number.isFinite(adesao) && adesao >= 0 && adesao <= 100) {
           indicadores.push({
             tipo: 'adesao',
@@ -775,7 +776,7 @@ export class ServicoPacientes {
       }
 
       if (!encontrouSintomas) {
-        const sintomas = diario.valor.sintomas;
+        const sintomas = valor.sintomas;
         if (typeof sintomas === 'string' && sintomas.trim()) {
           indicadores.push({
             tipo: 'sintomas',
@@ -1333,11 +1334,12 @@ export class ServicoPacientes {
       agua: 'Registro de agua',
       atividade: 'Registro de atividade'
     };
+    const valor = this.lerValorDiario(diario);
     const detalhes = [
-      typeof diario.valor.humor === 'string' ? `Humor: ${diario.valor.humor}` : undefined,
-      typeof diario.valor.adesaoPlano === 'number' ? `Adesao ao plano: ${diario.valor.adesaoPlano}%` : undefined,
-      typeof diario.valor.sintomas === 'string' && diario.valor.sintomas.trim() ? `Sintomas: ${diario.valor.sintomas.trim()}` : undefined,
-      typeof diario.valor.observacoes === 'string' && diario.valor.observacoes.trim() ? diario.valor.observacoes.trim() : undefined
+      typeof valor.humor === 'string' ? `Humor: ${valor.humor}` : undefined,
+      typeof valor.adesaoPlano === 'number' ? `Adesao ao plano: ${valor.adesaoPlano}%` : undefined,
+      typeof valor.sintomas === 'string' && valor.sintomas.trim() ? `Sintomas: ${valor.sintomas.trim()}` : undefined,
+      typeof valor.observacoes === 'string' && valor.observacoes.trim() ? valor.observacoes.trim() : undefined
     ].filter((detalhe): detalhe is string => Boolean(detalhe));
 
     return {
@@ -1350,6 +1352,20 @@ export class ServicoPacientes {
       origemId: diario.id,
       metadados: { tipoDiario: diario.tipo }
     };
+  }
+
+  /**
+   * Registro novo so tem `valorCriptografado`; registro anterior a Fase B da
+   * criptografia residual (Fase 261) so tem `valor` em claro. Ilegivel nao
+   * derruba o prontuario, so esvazia o registro.
+   */
+  private lerValorDiario(diario: LogDiarioRapidoOrm): Record<string, unknown> {
+    if (!diario.valorCriptografado) return diario.valor ?? {};
+    try {
+      return JSON.parse(this.criptografia.descriptografar(diario.valorCriptografado)) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
   }
 
   private mapearEventoMensagem(mensagem: MensagemNotificacaoOrm): EventoProntuarioPacienteDto {

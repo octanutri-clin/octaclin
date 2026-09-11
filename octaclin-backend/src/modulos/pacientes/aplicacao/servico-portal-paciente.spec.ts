@@ -891,13 +891,15 @@ describe('ServicoPortalPaciente', () => {
         tenantId: 'tenant-1',
         pacienteId: 'paciente-1',
         tipo: 'humor',
-        valor: {
-          humor: 'bem',
-          adesaoPlano: 80,
-          sintomas: 'Sono leve',
-          observacoes: 'Consegui seguir o plano no almoco.',
-          origem: 'portal_paciente'
-        },
+        valorCriptografado: Buffer.from(
+          `cripto:${JSON.stringify({
+            humor: 'bem',
+            adesaoPlano: 80,
+            sintomas: 'Sono leve',
+            observacoes: 'Consegui seguir o plano no almoco.',
+            origem: 'portal_paciente'
+          })}`
+        ),
         registradoEm: expect.any(Date)
       })
     );

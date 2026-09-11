@@ -25,6 +25,7 @@ import { SincronizacaoMobileOrm } from '../infraestrutura/sincronizacao-mobile.o
 import {
   CriarAcompanhanteDto,
   ItemSincronizacaoMobileDto,
+  LogDiarioRapidoRespostaDto,
   RegistrarDiarioRapidoDto,
   SincronizarLoteMobileDto,
   SolicitarUploadMidiaDto,
@@ -72,14 +73,15 @@ export class ServicoMobile {
     private readonly antimalware: ServicoAntimalware
   ) {}
 
-  async listarDiarioRapido(tenantId: string, usuario: UsuarioAutenticado): Promise<LogDiarioRapidoOrm[]> {
+  async listarDiarioRapido(tenantId: string, usuario: UsuarioAutenticado): Promise<LogDiarioRapidoRespostaDto[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const pacienteIds = await this.listarPacienteIdsPermitidos(gerenciador, tenantId, usuario);
-      return gerenciador.getRepository(LogDiarioRapidoOrm).find({
+      const diarios = await gerenciador.getRepository(LogDiarioRapidoOrm).find({
         where: { tenantId, ...(pacienteIds ? { pacienteId: In(pacienteIds) } : {}) },
         order: { registradoEm: 'DESC' },
         take: 50
       });
+      return diarios.map((diario) => this.mapearDiario(diario));
     });
   }
 
@@ -87,11 +89,36 @@ export class ServicoMobile {
     tenantId: string,
     dados: RegistrarDiarioRapidoDto,
     usuario: UsuarioAutenticado
-  ): Promise<LogDiarioRapidoOrm> {
+  ): Promise<LogDiarioRapidoRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacientePermitido(gerenciador, tenantId, dados.pacienteId, usuario);
-      return this.criarLogDiario(gerenciador, tenantId, dados);
+      const diario = await this.criarLogDiario(gerenciador, tenantId, dados);
+      return this.mapearDiario(diario);
     });
+  }
+
+  /**
+   * Registro novo so tem `valorCriptografado`; registro anterior a Fase B da
+   * criptografia residual (Fase 261) so tem `valor` em claro. Ilegivel nao
+   * derruba a lista, so esvazia o registro.
+   */
+  private mapearDiario(diario: LogDiarioRapidoOrm): LogDiarioRapidoRespostaDto {
+    let valor: Record<string, unknown> = diario.valor ?? {};
+    if (diario.valorCriptografado) {
+      try {
+        valor = JSON.parse(this.criptografia.descriptografar(diario.valorCriptografado)) as Record<string, unknown>;
+      } catch {
+        valor = {};
+      }
+    }
+    return {
+      id: diario.id,
+      tenantId: diario.tenantId,
+      pacienteId: diario.pacienteId,
+      tipo: diario.tipo,
+      valor,
+      registradoEm: diario.registradoEm
+    };
   }
 
   async listarArquivosMidia(
@@ -500,7 +527,7 @@ export class ServicoMobile {
         tenantId,
         pacienteId: dados.pacienteId,
         tipo: dados.tipo,
-        valor: dados.valor,
+        valorCriptografado: this.criptografia.criptografar(JSON.stringify(dados.valor)),
         registradoEm: new Date()
       })
     );
