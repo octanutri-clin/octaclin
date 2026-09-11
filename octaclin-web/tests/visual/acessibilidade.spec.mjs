@@ -1058,6 +1058,21 @@ test.describe('gate de acessibilidade - acesso publico', () => {
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 
+  test('recuperar senha - primeiro acesso de staff (convite administrativo)', async ({ page }) => {
+    await prepararValidacaoTokenRecuperacao(page, {
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        email: 'staff@example.com',
+        expiraEm: '2026-08-01T12:00:00.000Z',
+        origem: 'convite_usuario_cliente'
+      })
+    });
+    await page.goto('/recuperar-senha?token=token-convite-staff');
+    await expect(page.getByRole('heading', { name: 'Ative sua conta' })).toBeVisible();
+    await rodarChecagensDeAcessibilidade(page);
+  });
+
   test('primeiro acesso - estado inicial (sem token)', async ({ page }) => {
     await page.goto('/primeiro-acesso');
     await expect(page.getByRole('heading', { name: 'Link de primeiro acesso indisponível' })).toBeVisible();

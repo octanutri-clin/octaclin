@@ -1,7 +1,9 @@
 import { createHash, randomBytes } from 'crypto';
-import { GoneException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
+import { listarDocumentosLegaisStaff } from '../../../infraestrutura/lgpd/documentos-legais';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoSenhas } from '../../../infraestrutura/seguranca/servico-senhas';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
@@ -125,7 +127,7 @@ export class ServicoRecuperacaoSenha {
     };
   }
 
-  async validarToken(token: string): Promise<{ email: string; expiraEm: Date }> {
+  async validarToken(token: string): Promise<{ email: string; expiraEm: Date; origem?: string }> {
     const tenantId = extrairTenantToken(token);
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const registro = await gerenciador.getRepository(TokenRedefinicaoSenhaOrm).findOne({
@@ -140,7 +142,8 @@ export class ServicoRecuperacaoSenha {
 
       return {
         email: this.criptografia.descriptografar(usuario.emailCriptografado),
-        expiraEm: registro!.expiraEm
+        expiraEm: registro!.expiraEm,
+        origem: this.origemDoToken(registro!)
       };
     });
   }
@@ -155,6 +158,13 @@ export class ServicoRecuperacaoSenha {
       });
       this.validarRegistro(registro);
 
+      const ehPrimeiroAcessoStaff = this.origemDoToken(registro!) === 'convite_usuario_cliente';
+      if (ehPrimeiroAcessoStaff && (!dados.aceiteTermosUso || !dados.aceitePoliticaPrivacidade)) {
+        throw new BadRequestException(
+          'Aceite dos termos de uso e da politica de privacidade e obrigatorio para ativar o acesso.'
+        );
+      }
+
       const usuario = await gerenciador.getRepository(UsuarioOrm).findOne({
         where: { id: registro!.usuarioId, tenantId, ativo: true }
       });
@@ -162,6 +172,27 @@ export class ServicoRecuperacaoSenha {
 
       usuario.senhaHash = this.senhas.gerarHash(dados.senha);
       await gerenciador.getRepository(UsuarioOrm).save(usuario);
+
+      if (ehPrimeiroAcessoStaff) {
+        const repositorioConsentimentos = gerenciador.getRepository(ConsentimentoLgpdOrm);
+        const aceitoEm = new Date();
+        for (const documento of listarDocumentosLegaisStaff()) {
+          await repositorioConsentimentos.save(
+            repositorioConsentimentos.create({
+              tenantId,
+              usuarioId: usuario.id,
+              tipo: documento.tipo,
+              versao: documento.versao,
+              aceitoEm,
+              metadados: {
+                origem: 'primeiro_acesso_staff',
+                perfil: documento.perfil,
+                documentoLegal: documento.tipo
+              }
+            })
+          );
+        }
+      }
 
       registro!.status = 'usado';
       registro!.usadoEm = new Date();
@@ -175,6 +206,18 @@ export class ServicoRecuperacaoSenha {
     await this.sessoes.revogarTodas(tenantId, usuarioId, 'senha_redefinida');
 
     return { mensagem: 'Senha redefinida com sucesso.' };
+  }
+
+  /**
+   * Convite administrativo (Client/Professional/Collaborator) reusa esta
+   * mesma tabela de token, marcado por `payload.origem` em
+   * `ServicoUsuariosCliente`. Expor a origem deixa o frontend distinguir
+   * "primeiro acesso" de "recuperacao de senha" sem duplicar o mecanismo
+   * de token.
+   */
+  private origemDoToken(registro: TokenRedefinicaoSenhaOrm): string | undefined {
+    const origem = registro.payload?.origem;
+    return typeof origem === 'string' ? origem : undefined;
   }
 
   private validarRegistro(registro?: TokenRedefinicaoSenhaOrm | null): asserts registro is TokenRedefinicaoSenhaOrm {

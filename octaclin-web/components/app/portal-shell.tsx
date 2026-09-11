@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { ChevronDown, LogOut, Menu as MenuIcon, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { Botao } from '@/components/ui/botao';
-import { Esqueleto } from '@/components/ui/feedback';
+import { Aviso, AvisoRegiao, Esqueleto } from '@/components/ui/feedback';
 import { Menu } from '@/components/ui/menu';
 import { sair } from '@/lib/auth-api';
 
@@ -66,6 +66,21 @@ export function PortalShell({
 }: PortalShellProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [avisoAcessoNegado, setAvisoAcessoNegado] = useState(false);
+
+  // Le a query string direto (em vez de useSearchParams) para nao exigir um
+  // Suspense boundary em toda pagina que usa este shell - mesmo padrao ja
+  // usado em login-form.tsx para o parametro `redirect`.
+  useEffect(() => {
+    const parametros = new URLSearchParams(window.location.search);
+    if (parametros.get('aviso') !== 'sem-permissao') return;
+
+    setAvisoAcessoNegado(true);
+    parametros.delete('aviso');
+    const query = parametros.toString();
+    router.replace((pathname + (query ? `?${query}` : '')) as Route);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deve rodar so na montagem, lendo a query string daquele instante
+  }, []);
 
   async function encerrarSessao() {
     await sair();
@@ -122,6 +137,16 @@ export function PortalShell({
     </Menu>
   ) : criarBotaoSair(false);
 
+  const avisoAcessoNegadoRegiao = avisoAcessoNegado ? (
+    <AvisoRegiao>
+      <Aviso
+        variante="alerta"
+        mensagem="Você não tem permissão para acessar aquela página. Você foi trazido para esta área."
+        aoFechar={() => setAvisoAcessoNegado(false)}
+      />
+    </AvisoRegiao>
+  ) : null;
+
   if (variante === 'sidebar') {
     const itemAtivo = navegacao.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
     const renderizarItensNavegacao = (modo: 'mobile' | 'desktop') => navegacao.map((item, indice) => {
@@ -157,6 +182,7 @@ export function PortalShell({
 
     return (
       <main className="min-h-screen overflow-x-hidden bg-fundo text-tinta">
+        {avisoAcessoNegadoRegiao}
         <a
           href="#conteudo-principal"
           className="fixed left-3 top-3 z-[60] -translate-y-20 rounded-md bg-tinta px-3 py-2 text-sm font-semibold text-white focus:translate-y-0"
@@ -230,6 +256,7 @@ export function PortalShell({
 
   return (
     <main className={cn('min-h-screen overflow-x-hidden bg-fundo text-tinta', navegacaoMobile.length ? 'pb-20 md:pb-0' : '')}>
+      {avisoAcessoNegadoRegiao}
       <header className="border-b border-linha bg-white">
         <div
           className="mx-auto flex w-full flex-col gap-4 px-4 py-5 md:flex-row md:items-center md:justify-between lg:px-6"

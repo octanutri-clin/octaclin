@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-09-10 com a conclusao da Fase 258.
+Atualizado em 2026-09-11 com a conclusao da Fase 259.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -792,6 +792,10 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   definitiva pelo lado do paciente (so o profissional reabre pelo
   prontuario) que notifica o profissional responsavel pelo centro de
   notificacoes; e removeu um bloco de codigo morto sobrando da Fase 162.
+  Unica migration da fase: `1720000001039`, aditiva, ampliando o CHECK de
+  tipos do centro de notificacoes para aceitar `tarefa_concluida`. Nenhuma
+  mudanca de contrato de leitura do portal. Ver
+  `docs/history/phases/fase-257-portal-paciente-orientado-tarefas.md`.
 - Fase 258 - Central de comunicações confiável: o modulo `comunicacoes`
   ja tinha boa infraestrutura (webhook WhatsApp endurecido, retry
   automatico via fila/outbox, conteudo cifrado); quatro incrementos
@@ -809,10 +813,24 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   para tenants com mais de um profissional. Duas migrations aditivas
   no total. Ver
   `docs/history/phases/fase-258-central-comunicacoes-confiavel.md`.
-  Unica migration da fase: `1720000001039`, aditiva, ampliando o CHECK de
-  tipos do centro de notificacoes para aceitar `tarefa_concluida`. Nenhuma
-  mudanca de contrato de leitura do portal. Ver
-  `docs/history/phases/fase-257-portal-paciente-orientado-tarefas.md`.
+- Fase 259 - Acesso, convite e ativação sem suporte manual: o modulo
+  `auth` ja era maduro (login, MFA por capability, recuperacao de senha,
+  sessoes com rotacao/deteccao de reuso, convite de paciente com aceite
+  LGPD); tres incrementos fecharam as lacunas reais. Primeiro acesso de
+  staff (convite administrativo) deixou de ser indistinguivel de
+  recuperacao de senha comum, com titulo/rotulo/CTA proprios. Convite de
+  staff passou a exigir aceite de Termos de uso e Politica de
+  privacidade na ativacao (antes so o convite de paciente exigia aceite
+  legal), gravado na mesma tabela de consentimento do paciente. Acessar
+  uma rota fora do proprio papel, que ja redirecionava em silencio para
+  um destino valido, passou a mostrar um aviso explicando o
+  redirecionamento — decisao de produto preferiu isso a uma pagina
+  dedicada de "sem permissao" (403), que trocaria o redirect direto por
+  um clique extra sem ganho real. Decisao final ao fechar a fase: nao
+  unificar os dois mecanismos de convite (paciente vs. staff), que
+  codificam ciclos de vida genuinamente diferentes. Nenhuma migration em
+  nenhum incremento. Ver
+  `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
 - Fase 255 - Prontuario clinico orientado a linha de cuidado: o componente
   principal ganhou fronteiras tipadas para navegacao e timeline; Materiais,
   Anexos e profissionais passaram a carregar sob demanda com falhas locais;

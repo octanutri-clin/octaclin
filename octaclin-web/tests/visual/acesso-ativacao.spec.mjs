@@ -90,4 +90,49 @@ test.describe('acesso e ativacao - Fase 191', () => {
     await expect(novaSenha).toHaveAttribute('type', 'text');
     await expect(confirmar).toHaveAttribute('type', 'password');
   });
+
+  test('recuperar-senha: primeiro acesso de staff exige aceite de termos e politica antes de ativar', async ({ page }) => {
+    let corpoEnviado = null;
+    await page.route('**/api/auth/recuperar-senha/validar', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          email: 'staff@example.com',
+          expiraEm: '2026-08-01T12:00:00.000Z',
+          origem: 'convite_usuario_cliente'
+        })
+      });
+    });
+    await page.route('**/api/auth/redefinir-senha', async (route) => {
+      corpoEnviado = route.request().postDataJSON();
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ mensagem: 'ok' }) });
+    });
+
+    await page.goto('/recuperar-senha?token=token-convite-staff');
+    await expect(page.getByRole('heading', { name: 'Ative sua conta' })).toBeVisible();
+    await expect(page.getByLabel('Defina sua senha')).toBeVisible();
+
+    await page.locator('#nova-senha').fill('SenhaForte@123');
+    await page.locator('#confirmar-senha').fill('SenhaForte@123');
+
+    const ativar = page.getByRole('button', { name: 'Ativar conta' });
+    await ativar.click();
+    await expect(page.getByText('Aceite os termos de uso e a política de privacidade para ativar sua conta.')).toBeVisible();
+    expect(corpoEnviado).toBeNull();
+
+    await page.getByText(/Aceito os Termos de uso/).click();
+    await ativar.click();
+    expect(corpoEnviado).toBeNull();
+
+    await page.getByText(/Aceito a Política de privacidade/).click();
+    await ativar.click();
+
+    await expect(page.getByText('Conta ativada. Entre com sua senha.')).toBeVisible();
+    expect(corpoEnviado).toMatchObject({
+      senha: 'SenhaForte@123',
+      aceiteTermosUso: true,
+      aceitePoliticaPrivacidade: true
+    });
+  });
 });
