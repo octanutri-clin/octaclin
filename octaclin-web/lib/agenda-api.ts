@@ -8,6 +8,7 @@ import {
   SolicitacaoAgendaPublicaApi
 } from './agendamento-publico-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada, listarPacientes, listarProfissionais } from './cadastros-api';
+import { lancarErroApi } from './erro-api';
 
 export interface DetalheNotificacaoAgenda {
   status?: string;
@@ -240,16 +241,6 @@ export interface BootstrapAgenda {
   solicitacoes: RespostaPaginada<SolicitacaoAgendaPublicaApi>;
 }
 
-class ErroApiAgenda extends Error {
-  constructor(
-    public readonly status: number,
-    mensagem: string
-  ) {
-    super(mensagem);
-    this.name = 'ErroApiAgenda';
-  }
-}
-
 async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
   const resposta = await fetch(caminho, {
     ...init,
@@ -260,8 +251,7 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
   });
 
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiAgenda(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    await lancarErroApi(resposta);
   }
 
   return resposta.json() as Promise<T>;

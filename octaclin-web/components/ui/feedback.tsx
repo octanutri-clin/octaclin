@@ -24,9 +24,14 @@ interface AvisoProps {
   mensagem: string;
   aoFechar?: () => void;
   className?: string;
+  /**
+   * Identificador de correlacao (`x-request-id`) para o usuario informar ao
+   * suporte. Nunca contem PHI: e um UUID opaco gerado pelo middleware.
+   */
+  codigoReferencia?: string;
 }
 
-export function Aviso({ variante = 'info', mensagem, aoFechar, className }: AvisoProps) {
+export function Aviso({ variante = 'info', mensagem, aoFechar, className, codigoReferencia }: AvisoProps) {
   const Icone = iconePorVarianteAviso[variante];
   return (
     <div
@@ -39,7 +44,12 @@ export function Aviso({ variante = 'info', mensagem, aoFechar, className }: Avis
       )}
     >
       <Icone size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
-      <span className="min-w-0 flex-1 break-words">{mensagem}</span>
+      <span className="min-w-0 flex-1 break-words">
+        {mensagem}
+        {codigoReferencia ? (
+          <span className="mt-0.5 block text-xs opacity-80">Código para suporte: {codigoReferencia}</span>
+        ) : null}
+      </span>
       {aoFechar ? (
         <button
           type="button"
@@ -167,9 +177,14 @@ interface EstadoFalhaProps {
   aoTentarNovamente?: () => void;
   tentando?: boolean;
   className?: string;
+  /**
+   * Identificador de correlacao (`x-request-id`) para o usuario informar ao
+   * suporte. Nunca contem PHI: e um UUID opaco gerado pelo middleware.
+   */
+  codigoReferencia?: string;
 }
 
-export function EstadoFalha({ titulo, descricao, aoTentarNovamente, tentando = false, className }: EstadoFalhaProps) {
+export function EstadoFalha({ titulo, descricao, aoTentarNovamente, tentando = false, className, codigoReferencia }: EstadoFalhaProps) {
   return (
     <div
       role="alert"
@@ -180,6 +195,9 @@ export function EstadoFalha({ titulo, descricao, aoTentarNovamente, tentando = f
       <div className="grid gap-1">
         <h2 className="text-base font-semibold text-tinta">{titulo}</h2>
         <p className="max-w-md text-sm text-texto-suave">{descricao}</p>
+        {codigoReferencia ? (
+          <p className="text-xs text-texto-suave">Código para suporte: {codigoReferencia}</p>
+        ) : null}
       </div>
       {aoTentarNovamente ? (
         <Botao type="button" variante="secundario" onClick={aoTentarNovamente} carregando={tentando}>

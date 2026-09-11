@@ -1312,6 +1312,22 @@ partir da **primeira** falha, com severidade `critico` e sem degrau abaixo dela:
 uma falha ja significa que existiu acesso sem registro, e nao ha volume de perda
 de evidencia que seja aceitavel.
 
+**Excecao pilotada pela Fase 260, restrita a leituras de PHI de maior risco**
+(prontuario, documentos clinicos, evolucoes -- os call sites que passam
+`garantirRetentativa: true`): a falha da escrita direta nao incrementa o
+contador de imediato. Ela primeiro enfileira o evento num outbox duravel
+(`outbox_eventos`, tipo `auditoria.pendente`) e loga `auditoria.enfileirada_outbox`
+em vez de `auditoria.falha`. `ProcessadorOutboxAuditoria` (cron a cada minuto)
+tenta regravar por ate 5 rodadas; so ao esgotar as tentativas o evento vira
+`falhou` e **so entao** conta em `totalFalhasProcesso` e dispara este alerta --
+com o log `auditoria.outbox.falhou_definitivamente`. Na pratica: para esses
+call sites, o alerta continua confiavel como sinal de perda definitiva, mas
+pode chegar minutos depois da falha original, e nao no mesmo instante. Um
+outbox que so acumula (sem drenar) sem o alerta acender ainda e um sintoma
+real -- verificar se `ProcessadorOutboxAuditoria` esta rodando antes de supor
+que "sem alerta" significa "sem problema": `select count(*) from outbox_eventos
+where tipo = 'auditoria.pendente' and status = 'pendente'` no tenant afetado.
+
 O limiar e o **total acumulado desde o boot**, e nao um delta por janela. A razao
 e do mecanismo: o painel e aberto sob demanda por uma pessoa, entao nao existe
 janela de leitura confiavel, e um "delta desde a ultima leitura" seria corrompido

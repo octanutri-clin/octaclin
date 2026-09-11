@@ -1,4 +1,5 @@
 import type { PacienteResumo } from './cadastros-api';
+import { lancarErroApi } from './erro-api';
 
 export type TipoEventoProntuarioPaciente =
   | 'consulta'
@@ -112,21 +113,10 @@ export interface TarefaAcompanhamentoApi extends CriarTarefaAcompanhamentoEntrad
   atualizadoEm: string;
 }
 
-class ErroApiProntuario extends Error {
-  constructor(
-    public readonly status: number,
-    mensagem: string
-  ) {
-    super(mensagem);
-    this.name = 'ErroApiProntuario';
-  }
-}
-
 export async function obterProntuarioPaciente(pacienteId: string): Promise<ProntuarioPacienteApi> {
   const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/prontuario`, { cache: 'no-store' });
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    await lancarErroApi(resposta);
   }
 
   return resposta.json() as Promise<ProntuarioPacienteApi>;
@@ -157,8 +147,7 @@ export async function listarLinhaDoTempoPaginada(
     signal: opcoes.signal
   });
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    await lancarErroApi(resposta);
   }
 
   return resposta.json() as Promise<PaginaLinhaDoTempoProntuarioApi>;
@@ -174,11 +163,19 @@ export async function criarEvolucaoClinica(
     body: JSON.stringify(entrada)
   });
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    await lancarErroApi(resposta);
   }
 
   return resposta.json() as Promise<EvolucaoClinicaApi>;
+}
+
+export async function listarEvolucoesClinicas(pacienteId: string): Promise<EvolucaoClinicaApi[]> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/evolucoes`, { cache: 'no-store' });
+  if (!resposta.ok) {
+    await lancarErroApi(resposta);
+  }
+
+  return resposta.json() as Promise<EvolucaoClinicaApi[]>;
 }
 
 export async function criarTarefaAcompanhamento(
@@ -191,11 +188,19 @@ export async function criarTarefaAcompanhamento(
     body: JSON.stringify(entrada)
   });
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    await lancarErroApi(resposta);
   }
 
   return resposta.json() as Promise<TarefaAcompanhamentoApi>;
+}
+
+export async function listarTarefasAcompanhamento(pacienteId: string): Promise<TarefaAcompanhamentoApi[]> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/tarefas-acompanhamento`, { cache: 'no-store' });
+  if (!resposta.ok) {
+    await lancarErroApi(resposta);
+  }
+
+  return resposta.json() as Promise<TarefaAcompanhamentoApi[]>;
 }
 
 export type ProtocoloComposicao = 'nenhum' | 'pollock_3' | 'pollock_7' | 'faulkner' | 'guedes';
@@ -269,8 +274,7 @@ export async function listarAvaliacoesAntropometricas(
     { cache: 'no-store', signal: opcoes.signal }
   );
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    await lancarErroApi(resposta);
   }
 
   return resposta.json() as Promise<SerieAntropometricaApi>;
@@ -286,8 +290,7 @@ export async function registrarAvaliacaoAntropometrica(
     body: JSON.stringify(entrada)
   });
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    await lancarErroApi(resposta);
   }
 
   return resposta.json() as Promise<AvaliacaoAntropometricaApi>;
@@ -302,8 +305,7 @@ export async function excluirAvaliacaoAntropometrica(
     { method: 'DELETE' }
   );
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    await lancarErroApi(resposta);
   }
 
   return resposta.json() as Promise<{ id: string }>;
@@ -356,8 +358,7 @@ export async function listarDocumentosClinicos(
     signal: opcoes.signal
   });
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    await lancarErroApi(resposta);
   }
 
   return resposta.json() as Promise<DocumentoClinicoApi[]>;
@@ -373,8 +374,7 @@ export async function emitirDocumentoClinico(
     body: JSON.stringify(entrada)
   });
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    await lancarErroApi(resposta);
   }
 
   return resposta.json() as Promise<DocumentoClinicoApi>;
@@ -394,8 +394,7 @@ export async function cancelarDocumentoClinico(
     }
   );
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    await lancarErroApi(resposta);
   }
 
   return resposta.json() as Promise<DocumentoClinicoApi>;
@@ -410,8 +409,7 @@ export async function enviarDocumentoClinicoPorEmail(
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }
   );
   if (!resposta.ok) {
-    const detalhe = await resposta.text();
-    throw new ErroApiProntuario(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
+    await lancarErroApi(resposta);
   }
 
   return resposta.json() as Promise<ResultadoEnvioDocumentoApi>;

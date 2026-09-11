@@ -107,16 +107,6 @@ Atualizado em 2026-09-11.
   (Desempenho, resiliencia e diagnostico operacional). Detalhes e
   evidencias completas em
   `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
-- Fase 260 (Desempenho, resiliencia e diagnostico operacional): PR GitHub
-  `#231` aberto na branch `claude/fase-260-desempenho-resiliencia`, ainda
-  **nao mergeado** — decisao humana pendente. Nesta sessao, o commit
-  `660c78b` corrigiu uma falha de CI causada por commits de terceiros que
-  acrescentaram acentuacao a um identificador sintetico usado como valor de
-  header HTTP (`x-request-id`); caracteres nao-ASCII em header sofrem
-  mojibake no transporte, entao a string exata esperada pela assercao nunca
-  chegava a UI. Corrigidas so as duas ocorrencias do identificador em
-  header/assercao, preservando as demais correcoes de acentuacao legitimas
-  (texto de prosa) dos mesmos commits.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **em andamento** na branch
   `claude/fase-261-regressao-seguranca-privacidade`, sem PR aberto ainda.
@@ -155,6 +145,63 @@ Atualizado em 2026-09-11.
     sessao: o `git push` desta branch tambem reportou 2 alertas Dependabot
     high no `main` atual -- mesma contagem ja conhecida, sem mudanca liquida
     detectavel por esta via.
+- Fase 260 - Desempenho, resiliencia e diagnostico operacional, **concluida
+  em 2026-09-11**. Auditoria inicial confirmou lazy-load
+  parcial ja existente (materiais/anexos/profissionais) e endpoints
+  dedicados de evolucoes/tarefas ja prontos mas nao usados pelo frontend;
+  identificou tambem uma lacuna real de autorizacao (nao so performance):
+  mensagens entravam decifradas na linha do tempo do prontuario
+  independentemente da permissao `comunicacoes.mensagens.ler`, ao contrario
+  do resto do sistema. Incremento 1 entregue: evolucoes e tarefas saíram da
+  `linhaDoTempo` decifradas (agora sob demanda, ao abrir a aba, via os
+  endpoints dedicados que ja existiam) e mensagens passaram a respeitar a
+  permissao correta nos dois endpoints do prontuario (eager e paginado).
+  Decisao de escopo para a sub-meta de auditoria transacional: piloto nos
+  pontos de leitura de PHI, nao extensao completa dos ~101 pontos de
+  chamada de `ServicoAuditoria.registrar()` nesta fase. Incremento 2
+  entregue: `requestId` (ja propagado ate a trilha de auditoria) passou a
+  ser exibido ao usuario como "Codigo para suporte" nas falhas do
+  prontuario e da agenda, fechando uma lacuna que o proprio
+  `RUNBOOK_SUPORTE.md` ja pressupunha. Fato novo verificado nesta rodada:
+  a auditoria inicial apontara os runbooks de e-mail/WhatsApp/Calendar
+  como rasos frente ao incidente de auditoria, mas a comparacao era entre
+  documentos de risco diferente — `RUNBOOK_SUPORTE.md` ja cobre os tres
+  canais com profundidade equivalente entre si (sintomas, checklist,
+  evidencia, escalonamento, severidade); corrigido apenas um detalhe real
+  (e-mail nao listava `requestId` como evidencia, os outros dois ja
+  listavam). Incremento 3 entregue: piloto do outbox transacional de
+  auditoria restrito aos pontos de leitura de PHI (prontuario, documentos
+  clinicos, evolucoes) — falha na escrita direta agora enfileira o evento
+  num outbox duravel (`outbox_eventos`, reaproveitado de comunicacoes) em
+  vez de so contar a falha e descartar; um cron por minuto
+  (`ProcessadorOutboxAuditoria`) drena com ate 5 retentativas e so conta
+  como perda definitiva, alimentando o alerta ja existente em
+  `/operacoes`, ao esgota-las. Os ~97 call sites restantes de
+  `ServicoAuditoria.registrar` nao mudam de comportamento. Incremento 4
+  entregue: gate de CI para orcamento de requests (ate 4 endpoints
+  distintos na aba Resumo do prontuario, ja rodando via `pnpm
+  smoke:visual`) e fim da cascata sequencial de paginacao de profissionais
+  (ate 19 idas e vindas sequenciais viraram uma rodada paralela). Revisao
+  de cache/invalidacao e divisao de componentes clinicos grandes
+  (`portal-paciente.tsx`, `painel-agenda.tsx` e outros >1300 linhas) ficam
+  fora da fase por decisao de escopo — decisao de arquitetura sem defeito
+  concreto associado, candidata a fase futura dedicada, e nao lacuna
+  escondida. Nenhuma migration em nenhum incremento. A proxima fase
+  oficial e a Fase 261 (Regressao de seguranca e privacidade do SaaS
+  publico). Detalhes e evidencias completas em
+  `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
+  PR GitHub `#231`, **mergeado em `main` (`1ef9ce7`) em 2026-09-11**, base
+  `0256d52`. Durante a revisao a PR passou por duas correcoes de CI nesta
+  sessao, ambas pelo mesmo mecanismo — mojibake em header HTTP quando um
+  identificador sintetico (`x-request-id`) recebe acentuacao: primeiro por
+  commits de terceiros que "corrigiram ortografia" no id (commit `660c78b`,
+  revertendo so as duas ocorrencias do id em header/assercao), depois pelo
+  proprio `pnpm test:linguagem` reincidindo no mesmo id por ele conter uma
+  raiz de palavra portuguesa reconhecida pelo dicionario do linter (commit
+  `7fca431`, resolvido renomeando o id para um token sem raiz de palavra —
+  `req-teste-8f2c4e-0001` — em vez de tocar a logica do linter). CI verde
+  (20/20 checks) e `mergeable_state: clean` confirmados antes do merge
+  humano.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
   fotografia historica foi capturada em 2026-09-07 sobre
   `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning

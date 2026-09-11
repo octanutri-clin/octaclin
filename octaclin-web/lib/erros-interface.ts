@@ -11,11 +11,18 @@ export interface FalhaInterface {
   mensagem: string;
   recuperavel: boolean;
   status?: number;
+  /**
+   * Identificador de correlacao (`x-request-id`) para o usuario reportar ao
+   * suporte. Nao contem PHI: e um UUID gerado pelo middleware, sem relacao
+   * com sessao, tenant ou conteudo clinico.
+   */
+  requestId?: string;
 }
 
 interface ErroComStatus {
   status?: unknown;
   statusCode?: unknown;
+  requestId?: unknown;
 }
 
 const PADRAO_TECNICO = /(?:internal server error|falha http|http\s*\d{3}|cannot\s+(?:get|post|put|patch|delete)|failed to fetch|networkerror|syntaxerror|typeerror|statuscode|stack trace|\/interno\/|<!doctype|<html)/i;
@@ -25,6 +32,12 @@ function statusDoErro(erro: unknown): number | undefined {
   const candidato = erro as ErroComStatus;
   const status = candidato.status ?? candidato.statusCode;
   return typeof status === 'number' && Number.isInteger(status) ? status : undefined;
+}
+
+function requestIdDoErro(erro: unknown): string | undefined {
+  if (!erro || typeof erro !== 'object') return undefined;
+  const candidato = (erro as ErroComStatus).requestId;
+  return typeof candidato === 'string' && candidato.trim() ? candidato.trim() : undefined;
 }
 
 function mensagemDeObjeto(valor: unknown): string | undefined {
@@ -63,6 +76,12 @@ function comTentativa(mensagemPadrao: string) {
 }
 
 export function classificarFalhaInterface(erro: unknown, mensagemPadrao: string): FalhaInterface {
+  const requestId = requestIdDoErro(erro);
+  const resultado = classificarSemRequestId(erro, mensagemPadrao);
+  return requestId ? { ...resultado, requestId } : resultado;
+}
+
+function classificarSemRequestId(erro: unknown, mensagemPadrao: string): FalhaInterface {
   const status = statusDoErro(erro);
   const mensagemRecebida = mensagemDoErro(erro);
   const mensagemSegura = mensagemEhSegura(mensagemRecebida) ? mensagemRecebida : undefined;

@@ -720,6 +720,7 @@ export function PainelAgenda() {
       <EstadoFalha
         titulo="Não foi possível carregar a agenda"
         descricao={falhaInicial.mensagem}
+        codigoReferencia={falhaInicial.requestId}
         aoTentarNovamente={falhaInicial.recuperavel ? () => void carregar() : undefined}
         tentando={carregando}
       />
@@ -742,7 +743,7 @@ export function PainelAgenda() {
 
       {falha ? (
         <AvisoRegiao>
-          <Aviso variante="erro" mensagem={falha.mensagem} aoFechar={() => setFalha(null)} />
+          <Aviso variante="erro" mensagem={falha.mensagem} codigoReferencia={falha.requestId} aoFechar={() => setFalha(null)} />
         </AvisoRegiao>
       ) : null}
       {sucesso ? (

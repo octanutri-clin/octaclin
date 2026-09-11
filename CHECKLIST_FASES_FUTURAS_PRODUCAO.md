@@ -2527,17 +2527,48 @@ publicado antes de ampliar a superficie de mudancas visuais.
     ciclos, so por ganho arquitetural. Confirmado com o dono do produto:
     fica como esta, documentado como decisao e nao divida pendente.
 
-- [ ] Fase 260 - Desempenho, resiliência e diagnóstico operacional. [ESSENCIAL - ESTABILIDADE]
-  - Definir orçamentos de carregamento e chamadas, eliminar cascatas de requests,
+- [x] Fase 260 - Desempenho, resiliência e diagnóstico operacional. [ESSENCIAL - ESTABILIDADE] [CONCLUIDA EM 2026-09-11]
+  - [x] Definir orçamentos de carregamento e chamadas, eliminar cascatas de requests,
     revisar cache/invalidação e limitar componentes clínicos muito grandes.
-  - Correlacionar erro de interface, BFF e backend sem PHI; criar runbooks para
+    Incremento 4 entregue em 2026-09-11: gate de CI (orçamento de até 4
+    endpoints distintos na aba Resumo do prontuário, já rodando via
+    `pnpm smoke:visual`) e fim da cascata sequencial de paginação de
+    profissionais (até 19 idas e vindas viravam uma rodada paralela).
+    Revisão de cache/invalidação e divisão de componentes grandes
+    (`portal-paciente.tsx`, `painel-agenda.tsx` e outros >1300 linhas) ficam
+    fora desta fase por decisão de escopo: são decisões de arquitetura sem
+    defeito concreto associado, candidatas a uma fase futura dedicada. Ver
+    `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
+  - [x] Correlacionar erro de interface, BFF e backend sem PHI; criar runbooks para
     falhas de banco, Redis, storage, e-mail, WhatsApp e Google Calendar.
-  - Reduzir o contrato inicial do prontuário a agregados e referências: detalhes
+    Incremento 2 entregue em 2026-09-11: `requestId` (ja gerado e propagado
+    ate a trilha) passou a ser exibido ao usuario em falhas do prontuario e
+    da agenda ("Codigo para suporte"), fechando a lacuna que fazia
+    `RUNBOOK_SUPORTE.md` pedir esse dado sem a UI nunca o entregar. Os
+    runbooks de banco/Redis/storage/e-mail/WhatsApp/Calendar ja existiam com
+    profundidade adequada (a auditoria inicial comparou secoes com niveis de
+    risco diferentes; corrigido e documentado na fase). Ver
+    `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
+  - [x] Reduzir o contrato inicial do prontuário a agregados e referências: detalhes
     clínicos descriptografados, mensagens, check-ins, evoluções e tarefas devem
     ser autorizados e carregados somente quando a área correspondente for aberta.
-  - Tornar a auditoria de mutações clínicas transacional ou baseada em outbox;
+    Incremento 1 entregue em 2026-09-11: evoluções e tarefas saíram da
+    `linhaDoTempo` decifradas (agora lazy via os endpoints dedicados que já
+    existiam) e mensagens passaram a respeitar `comunicacoes.mensagens.ler`
+    (correção de autorização, não só de performance) tanto no endpoint eager
+    quanto no paginado. Ver `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
+  - [x] Tornar a auditoria de mutações clínicas transacional ou baseada em outbox;
     leituras de PHI devem ter política explícita de persistência, retentativa e
     alerta, sem continuar silenciosamente quando o registro de auditoria falhar.
+    Decisão de escopo: piloto nos pontos de leitura de PHI (prontuário,
+    documentos clínicos, evoluções), não extensão completa dos ~101 call
+    sites de `ServicoAuditoria.registrar`. Incremento 3 entregue em
+    2026-09-11: campo `garantirRetentativa` enfileira a falha num outbox
+    durável (`outbox_eventos`, reaproveitado de comunicações) em vez de
+    descartar; `ProcessadorOutboxAuditoria` drena com até 5 retentativas e só
+    conta como perda definitiva (alimentando o alerta já existente em
+    `/operacoes`) ao esgotá-las. Nenhuma migration. Ver
+    `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
 
 - [ ] Fase 261 - Regressão de segurança e privacidade do SaaS público. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
   - Revalidar autenticação, autorização por papel, RLS forçada, isolamento entre
