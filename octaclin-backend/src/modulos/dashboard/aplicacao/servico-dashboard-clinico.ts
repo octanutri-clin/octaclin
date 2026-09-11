@@ -429,7 +429,7 @@ export class ServicoDashboardClinico {
         pacienteId: tarefa.pacienteId,
         profissionalId: contexto.id,
         pacienteNome: this.nomePaciente(pacientes, tarefa.pacienteId),
-        titulo: tarefa.titulo,
+        titulo: this.lerTituloTarefa(tarefa),
         prioridade: tarefa.prioridade,
         vencimentoEm: tarefa.vencimentoEm!
       }))
@@ -970,6 +970,22 @@ export class ServicoDashboardClinico {
 
   private nomePaciente(pacientes: Map<string, PacienteOrm>, pacienteId: string): string {
     return this.criptografia.descriptografar(pacientes.get(pacienteId)!.nomeCriptografado);
+  }
+
+  /**
+   * Registro novo so tem `tituloCriptografado`; registro anterior a Fase B da
+   * criptografia residual (Fase 261) so tem `titulo` em claro. Ilegivel nao
+   * derruba o painel, so troca o titulo por um aviso.
+   */
+  private lerTituloTarefa(tarefa: AcompanhamentoTarefaOrm): string {
+    if (tarefa.tituloCriptografado) {
+      try {
+        return this.criptografia.descriptografar(tarefa.tituloCriptografado);
+      } catch {
+        return 'Titulo ilegivel.';
+      }
+    }
+    return tarefa.titulo ?? '';
   }
 
   private garantirPapelPermitido(usuario: UsuarioAutenticado): void {

@@ -1297,7 +1297,7 @@ export class ServicoPortalPaciente {
   private mapearTarefaAcompanhamento(tarefa: AcompanhamentoTarefaOrm): TarefaAcompanhamentoPaciente {
     return {
       id: tarefa.id,
-      titulo: tarefa.titulo,
+      titulo: this.lerTituloTarefa(tarefa),
       descricao: tarefa.descricaoCriptografada ? this.criptografia.descriptografar(tarefa.descricaoCriptografada) : undefined,
       categoria: tarefa.categoria,
       prioridade: tarefa.prioridade,
@@ -1321,6 +1321,22 @@ export class ServicoPortalPaciente {
       observacoes: this.valorTextoDiario(valor, 'observacoes'),
       registradoEm: diario.registradoEm
     };
+  }
+
+  /**
+   * Registro novo so tem `tituloCriptografado`; registro anterior a Fase B da
+   * criptografia residual (Fase 261) so tem `titulo` em claro. Ilegivel nao
+   * derruba a tarefa, so troca o titulo por um aviso.
+   */
+  private lerTituloTarefa(tarefa: AcompanhamentoTarefaOrm): string {
+    if (tarefa.tituloCriptografado) {
+      try {
+        return this.criptografia.descriptografar(tarefa.tituloCriptografado);
+      } catch {
+        return 'Titulo ilegivel.';
+      }
+    }
+    return tarefa.titulo ?? '';
   }
 
   /**

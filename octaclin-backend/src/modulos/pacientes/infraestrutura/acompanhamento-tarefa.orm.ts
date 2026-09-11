@@ -18,8 +18,16 @@ export class AcompanhamentoTarefaOrm {
   @Column({ name: 'profissional_id', type: 'uuid' })
   profissionalId: string;
 
-  @Column({ type: 'varchar', length: 180 })
-  titulo: string;
+  /**
+   * Coluna historica: so continua preenchida em linha anterior a Fase B da
+   * criptografia residual (Fase 261). Tarefa nova grava so
+   * `tituloCriptografado`.
+   */
+  @Column({ type: 'varchar', length: 180, nullable: true })
+  titulo?: string;
+
+  @Column({ name: 'titulo_criptografado', type: 'bytea', nullable: true })
+  tituloCriptografado?: Buffer;
 
   @Column({ name: 'descricao_criptografada', type: 'bytea', nullable: true })
   descricaoCriptografada?: Buffer;

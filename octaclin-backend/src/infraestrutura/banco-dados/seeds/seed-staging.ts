@@ -253,7 +253,7 @@ async function executarSeed() {
           tenantId: fixture.tenant.id,
           pacienteId: tarefa.pacienteId,
           profissionalId: tarefa.profissionalId,
-          titulo: tarefa.titulo,
+          tituloCriptografado: criptografia.criptografar(tarefa.titulo),
           descricaoCriptografada: tarefa.descricao ? criptografia.criptografar(tarefa.descricao) : undefined,
           categoria: tarefa.categoria,
           prioridade: tarefa.prioridade,

@@ -65,7 +65,7 @@ interface CursorTimeline {
 interface LinhaTimelinePaginada {
   id: string;
   tipo: TipoEventoProntuarioPaciente;
-  titulo: string;
+  titulo: string | null;
   data: Date | string;
   status?: string | null;
   origemId?: string | null;
@@ -73,6 +73,7 @@ interface LinhaTimelinePaginada {
   responsavelId?: string | null;
   autorUsuarioId?: string | null;
   metadados?: Record<string, unknown> | null;
+  tituloCriptografado?: Buffer | null;
 }
 
 @Injectable()
@@ -465,7 +466,7 @@ export class ServicoPacientes {
         tenantId,
         pacienteId,
         autorUsuarioId,
-        titulo: dados.titulo.trim(),
+        tituloCriptografado: this.criptografia.criptografar(dados.titulo.trim()),
         conteudoCriptografado: this.criptografia.criptografar(dados.conteudo.trim()),
         tipo: dados.tipo ?? 'observacao',
         visibilidade: dados.visibilidade ?? 'privada'
@@ -507,7 +508,7 @@ export class ServicoPacientes {
         tenantId,
         pacienteId,
         profissionalId,
-        titulo: dados.titulo.trim(),
+        tituloCriptografado: this.criptografia.criptografar(dados.titulo.trim()),
         descricaoCriptografada: dados.descricao?.trim() ? this.criptografia.criptografar(dados.descricao.trim()) : undefined,
         categoria: dados.categoria ?? 'tarefa',
         prioridade: dados.prioridade ?? 'media',
@@ -684,7 +685,7 @@ export class ServicoPacientes {
           ? {
               tipo: 'tarefa_vencida',
               titulo: 'Tratar tarefa vencida',
-              descricao: tarefaVencida.titulo,
+              descricao: this.lerTituloTarefa(tarefaVencida),
               destino: 'acompanhamento',
               referenciaId: tarefaVencida.id,
               dataReferencia: tarefaVencida.vencimentoEm
@@ -738,7 +739,7 @@ export class ServicoPacientes {
           tarefaVencida: tarefaVencida?.vencimentoEm
             ? {
                 tarefaId: tarefaVencida.id,
-                titulo: tarefaVencida.titulo,
+                titulo: this.lerTituloTarefa(tarefaVencida),
                 vencimentoEm: tarefaVencida.vencimentoEm
               }
             : undefined,
@@ -824,7 +825,8 @@ export class ServicoPacientes {
             'Agenda'::text AS origem,
             COALESCE(consulta.profissional_id, contexto.profissional_responsavel_id) AS "responsavelId",
             NULL::uuid AS "autorUsuarioId",
-            jsonb_build_object('fimEm', consulta.fim_em) AS metadados
+            jsonb_build_object('fimEm', consulta.fim_em) AS metadados,
+            NULL::bytea AS "tituloCriptografado"
           FROM agenda_consultas consulta CROSS JOIN contexto
           WHERE consulta.tenant_id = $1 AND consulta.paciente_id = $2
           UNION ALL
@@ -832,7 +834,8 @@ export class ServicoPacientes {
             COALESCE(envio.enviado_em, envio.expira_em, 'epoch'::timestamptz), envio.status,
             envio.questionario_id, 'Formularios',
             COALESCE(questionario.profissional_id, contexto.profissional_responsavel_id), NULL::uuid,
-            jsonb_build_object('envioQuestionarioId', envio.id, 'expiraEm', envio.expira_em)
+            jsonb_build_object('envioQuestionarioId', envio.id, 'expiraEm', envio.expira_em),
+            NULL::bytea
           FROM envios_questionario envio
           LEFT JOIN questionarios questionario
             ON questionario.tenant_id = envio.tenant_id AND questionario.id = envio.questionario_id
@@ -844,7 +847,8 @@ export class ServicoPacientes {
             CASE WHEN resposta.finalizado_em IS NULL THEN 'em_andamento' ELSE 'finalizado' END,
             resposta.envio_questionario_id, 'Formularios',
             COALESCE(questionario.profissional_id, contexto.profissional_responsavel_id), contexto.usuario_id,
-            jsonb_build_object('envioQuestionarioId', resposta.envio_questionario_id)
+            jsonb_build_object('envioQuestionarioId', resposta.envio_questionario_id),
+            NULL::bytea
           FROM respostas_checkin resposta
           LEFT JOIN envios_questionario envio
             ON envio.tenant_id = resposta.tenant_id AND envio.id = resposta.envio_questionario_id
@@ -855,7 +859,8 @@ export class ServicoPacientes {
           UNION ALL
           SELECT diario.id::text, 'checkin_rapido'::text, 'Registro de habitos', diario.registrado_em,
             'registrado', diario.id, 'Portal do paciente', contexto.profissional_responsavel_id,
-            contexto.usuario_id, jsonb_build_object('tipoDiario', diario.tipo)
+            contexto.usuario_id, jsonb_build_object('tipoDiario', diario.tipo),
+            NULL::bytea
           FROM logs_diario_rapido diario CROSS JOIN contexto
           WHERE diario.tenant_id = $1 AND diario.paciente_id = $2
           UNION ALL
@@ -864,14 +869,16 @@ export class ServicoPacientes {
             COALESCE(mensagem.enviado_em, mensagem.criado_em), mensagem.status, mensagem.id,
             'Comunicacoes', contexto.profissional_responsavel_id,
             CASE WHEN mensagem.status = 'recebido' THEN contexto.usuario_id ELSE NULL::uuid END,
-            '{}'::jsonb
+            '{}'::jsonb,
+            NULL::bytea
           FROM mensagens_notificacao mensagem CROSS JOIN contexto
           WHERE mensagem.tenant_id = $1 AND mensagem.paciente_id = $2 AND $11::boolean
           UNION ALL
           SELECT evolucao.id::text, 'evolucao_clinica'::text, evolucao.titulo,
             evolucao.criado_em, evolucao.tipo, evolucao.id, 'Prontuario',
             COALESCE(profissional.id, contexto.profissional_responsavel_id), evolucao.autor_usuario_id,
-            jsonb_build_object('visibilidade', evolucao.visibilidade)
+            jsonb_build_object('visibilidade', evolucao.visibilidade),
+            evolucao.titulo_criptografado
           FROM evolucoes_clinicas evolucao
           LEFT JOIN profissionais profissional
             ON profissional.tenant_id = evolucao.tenant_id
@@ -884,7 +891,8 @@ export class ServicoPacientes {
             COALESCE(tarefa.vencimento_em, tarefa.criado_em), tarefa.status, tarefa.id,
             'Acompanhamento', COALESCE(tarefa.profissional_id, contexto.profissional_responsavel_id),
             NULL::uuid,
-            jsonb_build_object('categoria', tarefa.categoria, 'prioridade', tarefa.prioridade, 'concluidoEm', tarefa.concluido_em)
+            jsonb_build_object('categoria', tarefa.categoria, 'prioridade', tarefa.prioridade, 'concluidoEm', tarefa.concluido_em),
+            tarefa.titulo_criptografado
           FROM acompanhamento_tarefas tarefa CROSS JOIN contexto
           WHERE tarefa.tenant_id = $1 AND tarefa.paciente_id = $2
           UNION ALL
@@ -892,7 +900,8 @@ export class ServicoPacientes {
             'Plano alimentar publicado', versao.publicada_em, 'publicado', plano.id,
             'Plano alimentar', COALESCE(plano.profissional_id, contexto.profissional_responsavel_id),
             COALESCE(versao.revisada_por_usuario_id, versao.criado_por_usuario_id),
-            jsonb_build_object('planoId', plano.id, 'versaoId', versao.id, 'numeroVersao', versao.numero)
+            jsonb_build_object('planoId', plano.id, 'versaoId', versao.id, 'numeroVersao', versao.numero),
+            NULL::bytea
           FROM plano_alimentar_versoes versao
           INNER JOIN planos_alimentares plano
             ON plano.tenant_id = versao.tenant_id AND plano.id = versao.plano_id
@@ -905,7 +914,8 @@ export class ServicoPacientes {
             CASE WHEN avaliacao.excluida_em IS NULL THEN 'registrada' ELSE 'excluida' END,
             avaliacao.id, 'Antropometria',
             COALESCE(profissional.id, contexto.profissional_responsavel_id), avaliacao.autor_usuario_id,
-            jsonb_build_object('protocolo', avaliacao.protocolo)
+            jsonb_build_object('protocolo', avaliacao.protocolo),
+            NULL::bytea
           FROM avaliacoes_antropometricas avaliacao
           LEFT JOIN profissionais profissional
             ON profissional.tenant_id = avaliacao.tenant_id
@@ -920,7 +930,8 @@ export class ServicoPacientes {
             documento.id, 'Documentos',
             COALESCE(documento.profissional_id, profissional.id, contexto.profissional_responsavel_id),
             documento.autor_usuario_id,
-            jsonb_build_object('tipoDocumento', documento.tipo, 'consultaId', documento.consulta_id, 'enviadoEm', documento.enviado_em)
+            jsonb_build_object('tipoDocumento', documento.tipo, 'consultaId', documento.consulta_id, 'enviadoEm', documento.enviado_em),
+            NULL::bytea
           FROM documentos_emitidos documento
           LEFT JOIN profissionais profissional
             ON profissional.tenant_id = documento.tenant_id
@@ -932,7 +943,8 @@ export class ServicoPacientes {
           SELECT arquivo.id::text, 'anexo_confirmado'::text, 'Anexo clinico confirmado',
             arquivo.confirmado_em, 'confirmado', arquivo.id, 'Anexos',
             contexto.profissional_responsavel_id, NULL::uuid,
-            jsonb_build_object('categoria', arquivo.categoria, 'tipoMidia', arquivo.tipo, 'mimeType', arquivo.mime_type)
+            jsonb_build_object('categoria', arquivo.categoria, 'tipoMidia', arquivo.tipo, 'mimeType', arquivo.mime_type),
+            NULL::bytea
           FROM arquivos_midia arquivo CROSS JOIN contexto
           WHERE arquivo.tenant_id = $1 AND arquivo.paciente_id = $2
             AND arquivo.status = 'confirmado' AND arquivo.confirmado_em IS NOT NULL
@@ -942,7 +954,8 @@ export class ServicoPacientes {
             CASE WHEN coleta.excluida_em IS NULL THEN 'registrada' ELSE 'excluida' END,
             coleta.id, 'Exames laboratoriais',
             COALESCE(profissional.id, contexto.profissional_responsavel_id), coleta.autor_usuario_id,
-            jsonb_build_object('recebidaEm', coleta.recebida_em)
+            jsonb_build_object('recebidaEm', coleta.recebida_em),
+            NULL::bytea
           FROM coletas_exames_laboratoriais coleta
           LEFT JOIN profissionais profissional
             ON profissional.tenant_id = coleta.tenant_id
@@ -956,7 +969,8 @@ export class ServicoPacientes {
             CASE WHEN fotografia.excluida_em IS NULL THEN 'registrada' ELSE 'excluida' END,
             fotografia.id, 'Evolucao fotografica',
             COALESCE(profissional.id, contexto.profissional_responsavel_id), fotografia.autor_usuario_id,
-            '{}'::jsonb
+            '{}'::jsonb,
+            NULL::bytea
           FROM evolucoes_fotograficas fotografia
           LEFT JOIN profissionais profissional
             ON profissional.tenant_id = fotografia.tenant_id
@@ -969,7 +983,8 @@ export class ServicoPacientes {
             'Pagamento de consulta', consulta.pago_em, consulta.status_pagamento, consulta.id,
             'Financeiro', COALESCE(consulta.profissional_id, contexto.profissional_responsavel_id),
             NULL::uuid,
-            jsonb_build_object('natureza', 'consulta', 'valorCentavos', consulta.valor_centavos, 'formaPagamento', consulta.forma_pagamento)
+            jsonb_build_object('natureza', 'consulta', 'valorCentavos', consulta.valor_centavos, 'formaPagamento', consulta.forma_pagamento),
+            NULL::bytea
           FROM agenda_consultas consulta CROSS JOIN contexto
           WHERE consulta.tenant_id = $1 AND consulta.paciente_id = $2
             AND consulta.pago_em IS NOT NULL AND $10::boolean
@@ -978,7 +993,8 @@ export class ServicoPacientes {
             'Pagamento de pacote', pacote.pago_em, pacote.status_pagamento, pacote.id,
             'Financeiro', COALESCE(pacote.profissional_id, contexto.profissional_responsavel_id),
             NULL::uuid,
-            jsonb_build_object('natureza', 'pacote', 'valorCentavos', pacote.valor_total_centavos, 'formaPagamento', pacote.forma_pagamento, 'canceladoEm', pacote.cancelado_em)
+            jsonb_build_object('natureza', 'pacote', 'valorCentavos', pacote.valor_total_centavos, 'formaPagamento', pacote.forma_pagamento, 'canceladoEm', pacote.cancelado_em),
+            NULL::bytea
           FROM pacotes_sessao pacote CROSS JOIN contexto
           WHERE pacote.tenant_id = $1 AND pacote.paciente_id = $2
             AND pacote.pago_em IS NOT NULL AND $10::boolean
@@ -1011,7 +1027,7 @@ export class ServicoPacientes {
       const itens = linhas.slice(0, limite).map((linha) => ({
         id: linha.id,
         tipo: linha.tipo,
-        titulo: linha.titulo,
+        titulo: this.lerTituloTimeline(linha),
         data: new Date(linha.data),
         status: linha.status ?? undefined,
         origemId: linha.origemId ?? undefined,
@@ -1217,7 +1233,7 @@ export class ServicoPacientes {
       tenantId: evolucao.tenantId,
       pacienteId: evolucao.pacienteId,
       autorUsuarioId: evolucao.autorUsuarioId,
-      titulo: evolucao.titulo,
+      titulo: this.lerTituloEvolucao(evolucao),
       conteudo: this.criptografia.descriptografar(evolucao.conteudoCriptografado),
       tipo: evolucao.tipo,
       visibilidade: evolucao.visibilidade,
@@ -1232,7 +1248,7 @@ export class ServicoPacientes {
       tenantId: tarefa.tenantId,
       pacienteId: tarefa.pacienteId,
       profissionalId: tarefa.profissionalId,
-      titulo: tarefa.titulo,
+      titulo: this.lerTituloTarefa(tarefa),
       descricao: tarefa.descricaoCriptografada ? this.criptografia.descriptografar(tarefa.descricaoCriptografada) : undefined,
       categoria: tarefa.categoria,
       prioridade: tarefa.prioridade,
@@ -1242,6 +1258,34 @@ export class ServicoPacientes {
       criadoEm: tarefa.criadoEm,
       atualizadoEm: tarefa.atualizadoEm
     };
+  }
+
+  /**
+   * Registro novo so tem `tituloCriptografado`; registro anterior a Fase B da
+   * criptografia residual (Fase 261) so tem `titulo` em claro. Ilegivel nao
+   * derruba a evolucao, so troca o titulo por um aviso.
+   */
+  private lerTituloEvolucao(evolucao: EvolucaoClinicaOrm): string {
+    if (evolucao.tituloCriptografado) {
+      try {
+        return this.criptografia.descriptografar(evolucao.tituloCriptografado);
+      } catch {
+        return 'Titulo ilegivel.';
+      }
+    }
+    return evolucao.titulo ?? '';
+  }
+
+  /** Mesmo criterio de `lerTituloEvolucao`, para `acompanhamento_tarefas`. */
+  private lerTituloTarefa(tarefa: AcompanhamentoTarefaOrm): string {
+    if (tarefa.tituloCriptografado) {
+      try {
+        return this.criptografia.descriptografar(tarefa.tituloCriptografado);
+      } catch {
+        return 'Titulo ilegivel.';
+      }
+    }
+    return tarefa.titulo ?? '';
   }
 
   private mapearContato(paciente: PacienteOrm): string | undefined {
@@ -1355,6 +1399,23 @@ export class ServicoPacientes {
   }
 
   /**
+   * So `evolucao_clinica` e `tarefa_acompanhamento` tem `tituloCriptografado`
+   * na timeline (Fase B da criptografia residual, Fase 261); os demais tipos
+   * de evento sempre trazem `titulo` em claro. Registro anterior a Fase B so
+   * tem `titulo` em claro; ilegivel nao derruba a timeline inteira.
+   */
+  private lerTituloTimeline(linha: LinhaTimelinePaginada): string {
+    if (linha.tituloCriptografado) {
+      try {
+        return this.criptografia.descriptografar(linha.tituloCriptografado);
+      } catch {
+        return 'Titulo ilegivel.';
+      }
+    }
+    return linha.titulo ?? '';
+  }
+
+  /**
    * Registro novo so tem `valorCriptografado`; registro anterior a Fase B da
    * criptografia residual (Fase 261) so tem `valor` em claro. Ilegivel nao
    * derruba o prontuario, so esvazia o registro.
@@ -1394,7 +1455,7 @@ export class ServicoPacientes {
     return {
       id: evolucao.id,
       tipo: 'evolucao_clinica',
-      titulo: evolucao.titulo,
+      titulo: this.lerTituloEvolucao(evolucao),
       data: evolucao.criadoEm,
       status: evolucao.tipo,
       origemId: evolucao.id,
@@ -1414,7 +1475,7 @@ export class ServicoPacientes {
     return {
       id: tarefa.id,
       tipo: 'tarefa_acompanhamento',
-      titulo: tarefa.titulo,
+      titulo: this.lerTituloTarefa(tarefa),
       data: tarefa.vencimentoEm ?? tarefa.criadoEm,
       status: tarefa.status,
       origemId: tarefa.id,

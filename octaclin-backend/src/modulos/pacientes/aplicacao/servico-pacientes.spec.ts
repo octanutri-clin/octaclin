@@ -1189,6 +1189,116 @@ describe('ServicoPacientes', () => {
     expect(prontuario.linhaDoTempo[0]).not.toHaveProperty('descricao');
   });
 
+  it('le titulo de evolucao historica (so em claro) e marca ilegivel a decifrada com falha', async () => {
+    const paciente = { id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1' };
+    const evolucoes = [
+      {
+        id: 'evolucao-legado',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        autorUsuarioId: 'usuario-1',
+        titulo: 'Consulta registrada antes da Fase B',
+        conteudoCriptografado: Buffer.from('cripto:conteudo'),
+        tipo: 'consulta',
+        visibilidade: 'privada',
+        criadoEm: new Date(),
+        atualizadoEm: new Date()
+      },
+      {
+        id: 'evolucao-ilegivel',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        autorUsuarioId: 'usuario-1',
+        tituloCriptografado: Buffer.from('ruido'),
+        conteudoCriptografado: Buffer.from('cripto:conteudo'),
+        tipo: 'consulta',
+        visibilidade: 'privada',
+        criadoEm: new Date(),
+        atualizadoEm: new Date()
+      }
+    ];
+    const descriptografar = jest.fn((valor: Buffer) => {
+      const texto = valor.toString();
+      if (texto === 'ruido') throw new Error('chave rotacionada');
+      return texto.replace('cripto:', '');
+    });
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao({
+            getRepository: jest.fn((entidade: unknown) => {
+              if (entidade === PacienteOrm) return { findOne: jest.fn(async () => paciente) };
+              if (entidade === EvolucaoClinicaOrm) return { find: jest.fn(async () => evolucoes) };
+              return { find: jest.fn(async () => []) };
+            })
+          })
+        )
+      } as never,
+      { criptografar: jest.fn(), descriptografar } as never,
+      limitesPermitidos as never
+    );
+
+    const resultado = await servico.listarEvolucoesClinicas('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(resultado[0].titulo).toBe('Consulta registrada antes da Fase B');
+    expect(resultado[1].titulo).toBe('Titulo ilegivel.');
+  });
+
+  it('le titulo de tarefa historica (so em claro) e marca ilegivel a decifrada com falha', async () => {
+    const paciente = { id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1' };
+    const tarefas = [
+      {
+        id: 'tarefa-legado',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        profissionalId: 'profissional-1',
+        titulo: 'Meta registrada antes da Fase B',
+        categoria: 'meta',
+        prioridade: 'media',
+        status: 'pendente',
+        criadoEm: new Date(),
+        atualizadoEm: new Date()
+      },
+      {
+        id: 'tarefa-ilegivel',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        profissionalId: 'profissional-1',
+        tituloCriptografado: Buffer.from('ruido'),
+        categoria: 'meta',
+        prioridade: 'media',
+        status: 'pendente',
+        criadoEm: new Date(),
+        atualizadoEm: new Date()
+      }
+    ];
+    const descriptografar = jest.fn((valor: Buffer) => {
+      const texto = valor.toString();
+      if (texto === 'ruido') throw new Error('chave rotacionada');
+      return texto.replace('cripto:', '');
+    });
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao({
+            getRepository: jest.fn((entidade: unknown) => {
+              if (entidade === PacienteOrm) return { findOne: jest.fn(async () => paciente) };
+              if (entidade === AcompanhamentoTarefaOrm) return { find: jest.fn(async () => tarefas) };
+              return { find: jest.fn(async () => []) };
+            })
+          })
+        )
+      } as never,
+      { criptografar: jest.fn(), descriptografar } as never,
+      limitesPermitidos as never
+    );
+
+    const resultado = await servico.listarTarefasAcompanhamento('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(resultado[0].titulo).toBe('Meta registrada antes da Fase B');
+    expect(resultado[1].titulo).toBe('Titulo ilegivel.');
+  });
+
   describe('escopo pacientes_responsaveis para Professional', () => {
     it('deve listar apenas pacientes do proprio profissional quando o usuario for Professional', async () => {
       const repositorioProfissionais = {
@@ -1637,7 +1747,14 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
     expect(sql).toContain('AND $9::boolean');
     expect(sql).toContain('AND $10::boolean');
     expect(sql).toContain('AND $11::boolean');
-    expect(sql).not.toContain('_criptografad');
+    // A timeline so busca titulo cifrado (Fase B da criptografia residual, Fase
+    // 261); conteudo/descricao continuam fora, carregados so quando a area
+    // especifica e aberta.
+    expect(sql).toContain('titulo_criptografado');
+    expect(sql).not.toContain('conteudo_criptografado');
+    expect(sql).not.toContain('descricao_criptografada');
+    expect(sql).not.toContain('corpo_criptografado');
+    expect(sql).not.toContain('cabecalho_criptografado');
     expect(query.mock.calls[0][1]).toEqual([
       'tenant-1',
       'paciente-1',
@@ -1695,5 +1812,58 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
       inicio: '2026-09-01T00:00:00.000Z',
       fim: '2026-08-01T00:00:00.000Z'
     })).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('decifra titulo de evolucao e tarefa na timeline e marca ilegivel a decifra com falha', async () => {
+    const query = jest.fn(async (_sql: string, _params: unknown[]) => [
+      {
+        id: 'evolucao-nova',
+        tipo: 'evolucao_clinica',
+        titulo: null,
+        tituloCriptografado: Buffer.from('criptografado:Ajuste de conduta'),
+        data: '2026-08-11T10:00:00.000Z',
+        status: 'ajuste_plano',
+        origemId: 'evolucao-nova',
+        origem: 'Prontuario',
+        responsavelId: 'profissional-1',
+        autorUsuarioId: 'usuario-colaborador-1',
+        metadados: { visibilidade: 'privada' }
+      },
+      {
+        id: 'tarefa-ilegivel',
+        tipo: 'tarefa_acompanhamento',
+        titulo: null,
+        tituloCriptografado: Buffer.from('ruido'),
+        data: '2026-08-10T10:00:00.000Z',
+        status: 'pendente',
+        origemId: 'tarefa-ilegivel',
+        origem: 'Acompanhamento',
+        metadados: {}
+      }
+    ]);
+    const paciente = {
+      id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('criptografado:Maria'), statusAdesao: 'novo', scoreRisco: '0',
+      criadoEm: new Date(), atualizadoEm: new Date()
+    };
+    const criptografia = criptografiaFake();
+    (criptografia.descriptografar as jest.Mock).mockImplementation((valor: Buffer) => {
+      const texto = valor.toString();
+      if (texto === 'ruido') throw new Error('chave rotacionada');
+      return texto.replace('criptografado:', '');
+    });
+    const servico = new ServicoPacientes(
+      { executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => operacao({
+        query,
+        getRepository: jest.fn(() => ({ findOne: jest.fn(async () => paciente) }))
+      })) } as never,
+      criptografia as never,
+      limitesPermitidos as never
+    );
+
+    const pagina = await servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(pagina.itens[0].titulo).toBe('Ajuste de conduta');
+    expect(pagina.itens[1].titulo).toBe('Titulo ilegivel.');
   });
 });
