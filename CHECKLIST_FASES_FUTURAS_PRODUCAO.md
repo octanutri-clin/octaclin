@@ -2510,6 +2510,15 @@ publicado antes de ampliar a superficie de mudancas visuais.
     tabela do paciente). `documentos-legais-paciente.ts` movido para
     `infraestrutura/lgpd/documentos-legais.ts` (deixou de ser conceito
     exclusivo de paciente). Sem migration.
+  - Incremento 3 concluido: acessar rota fora do proprio papel ja
+    redirecionava em silencio para um destino valido (nunca tela sem
+    saida); passou a mostrar um aviso explicando o redirecionamento, em
+    vez de uma pagina dedicada de "sem permissao" (403) que trocaria o
+    redirect direto por um clique extra sem ganho real (decisao de
+    produto confirmada). Middleware acrescenta `?aviso=sem-permissao` ao
+    redirect; `PortalShell` (compartilhado por console, portal do
+    paciente e portal do cliente) mostra o aviso e limpa o parametro da
+    URL. Sem rota nova, sem migration.
 
 - [ ] Fase 260 - Desempenho, resiliência e diagnóstico operacional. [ESSENCIAL - ESTABILIDADE]
   - Definir orçamentos de carregamento e chamadas, eliminar cascatas de requests,

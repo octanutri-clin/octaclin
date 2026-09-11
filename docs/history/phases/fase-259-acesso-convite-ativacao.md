@@ -79,8 +79,16 @@ O módulo `auth` é maduro e bem coberto por testes:
    de uso + Política de privacidade, gravados em `ConsentimentoLgpdOrm`
    (mesma tabela do paciente, mesmo `tipo`/`versao`). Decisão de produto
    confirmada acima.
-3. Candidatos ainda não iniciados: página dedicada de "sem permissão"
-   (403); unificação do mecanismo de convite (paciente vs. staff).
+3. **Aviso ao ser redirecionado por falta de permissão.** Em vez de uma
+   página dedicada de "sem permissão" (403) — que trocaria o redirect
+   silencioso atual, já seguro, por uma tela sem saída extra —, um aviso
+   contextual explica o redirecionamento no próprio destino. Decisão de
+   produto confirmada: preferir o aviso ao invés da página dedicada.
+4. Candidato ainda não iniciado: unificação do mecanismo de convite
+   (paciente vs. staff).
+
+Este documento é atualizado a cada incremento com o que foi entregue,
+arquivos tocados e validações.
 
 Este documento é atualizado a cada incremento com o que foi entregue,
 arquivos tocados e validações.
@@ -187,3 +195,55 @@ do titular, não se aplica a quem acessa a clínica como equipe).
   não passa por `user_action_logs`, mas rodado por precaução),
   `pnpm --dir octaclin-web test:linguagem`, `pnpm security:secrets`,
   `git diff --check` — PASS
+
+## Incremento 3 - aviso ao ser redirecionado por falta de permissão
+
+Concluído em 2026-09-11.
+
+### Decisão de produto (confirmada com o dono do produto)
+
+Hoje, tentar acessar uma rota fora do próprio papel já redireciona em
+silêncio para um destino válido do usuário (nunca uma tela sem saída) —
+mas sem explicar por quê. Uma página dedicada de "sem permissão" (403)
+trocaria esse redirect direto por um clique extra, sem ganho real. A
+decisão foi manter o redirect direto e só adicionar um aviso contextual
+no destino, explicando o que aconteceu.
+
+### Implementação
+
+- **Middleware**: quando `decidirAcessoRota()` recusa o acesso e devolve
+  um `redirecionarPara`, o `middleware.ts` acrescenta
+  `?aviso=sem-permissao` à URL de destino antes do redirect.
+  `decidirAcessoRota()` em si não mudou — continua devolvendo só o
+  caminho, sem conhecimento de UI.
+- **`PortalShell`** (chrome compartilhado por `ConsoleShell`, o portal do
+  paciente e o portal do cliente — os três destinos possíveis de um
+  redirect por papel): lê a query string uma única vez, no mount, do
+  mesmo jeito que `login-form.tsx` já lê o parâmetro `redirect` (evita
+  exigir um Suspense boundary para `useSearchParams()` em toda página que
+  usa o shell). Ao achar `aviso=sem-permissao`, mostra um `Aviso`
+  dispensável (`variante="alerta"`) em `AvisoRegiao` e limpa o parâmetro
+  da URL via `router.replace`, para que um refresh ou voltar no
+  histórico não repita o aviso.
+- Nenhuma rota nova, nenhum novo endpoint, nenhuma migration — o aviso é
+  inteiramente client-side, alimentado por um parâmetro que o próprio
+  middleware já controla.
+
+### Validações
+
+- TDD: novo `tests/visual/aviso-acesso-negado.spec.mjs` (3 testes: aviso
+  aparece após redirecionamento por falta de permissão e some ao
+  recarregar a página; rota permitida não mostra aviso; fechar o aviso
+  remove da tela). RED confirmado — os 2 testes que dependiam do aviso
+  falharam pela ausência do elemento antes da implementação; o teste
+  negativo (rota permitida) já passava, como esperado.
+- `pnpm --dir octaclin-web typecheck`, `lint` (0 erros) e `build` — PASS
+- 6/6 Playwright do spec novo (desktop+mobile) — PASS
+- Regressão: `primeiro-acesso-paciente.spec.mjs` (8/8),
+  `portal-cliente.spec.mjs` (4/4), `sessoes-conta.spec.mjs` (9/9) — PASS,
+  confirmando que a mudança em `PortalShell` (usado pelos três) não quebrou
+  nenhum consumidor existente.
+- 134/134 Playwright do gate completo de acessibilidade
+  (`acessibilidade.spec.mjs`, desktop) — PASS, incluindo todas as
+  páginas que renderizam `PortalShell`.
+- Gate de linguagem, `pnpm security:secrets`, `git diff --check` — PASS

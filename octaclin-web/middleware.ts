@@ -123,7 +123,12 @@ export function middleware(request: NextRequest) {
   if (rotaProtegida && autenticado) {
     const decisao = decidirAcessoRota(pathname, papelSessao(request), destinoInicial(request), permissoesSessao(request));
     if (!decisao.permitir && decisao.redirecionarPara) {
-      return protegerResposta(NextResponse.redirect(new URL(decisao.redirecionarPara, request.url)), politicaConteudo, requestId);
+      const destino = new URL(decisao.redirecionarPara, request.url);
+      // Sinaliza para o shell mostrar um aviso explicando o redirecionamento -
+      // sem isto, cair na propria area valida sem nenhuma mensagem e
+      // indistinguivel de ter navegado ali por escolha propria.
+      destino.searchParams.set('aviso', 'sem-permissao');
+      return protegerResposta(NextResponse.redirect(destino), politicaConteudo, requestId);
     }
   }
 
