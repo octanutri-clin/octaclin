@@ -73,7 +73,7 @@ test.describe('Fase 196 - comunicacoes e equipe', () => {
 
     const areas = page.getByRole('tablist', { name: 'Áreas de comunicação' });
     await expect(areas.getByRole('tab', { name: 'Conversas' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('heading', { name: 'Inbox WhatsApp' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Conversas' })).toBeVisible();
     await expect(page.getByText('Novo canal')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Responder' })).toBeVisible();
     await expect(page.getByText('Falha de entrega')).toHaveCount(0);

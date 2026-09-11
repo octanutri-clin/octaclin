@@ -16,7 +16,15 @@ describe('ServicoWebhookWhatsapp', () => {
       consulta?: Record<string, unknown>;
     }
   ) {
-    const entidadeMensagem: { status: string; payload: Record<string, unknown>; erro?: string } | null = mensagem
+    const entidadeMensagem:
+      | {
+          status: string;
+          payload: Record<string, unknown>;
+          erro?: string;
+          statusEntregaWhatsapp?: string;
+          statusEntregaAtualizadoEm?: Date;
+        }
+      | null = mensagem
       ? {
           status: 'enviado',
           payload: mensagem
@@ -140,7 +148,21 @@ describe('ServicoWebhookWhatsapp', () => {
         recipientId: '5511999999999'
       }
     });
+    expect(entidadeMensagem).toMatchObject({
+      statusEntregaWhatsapp: 'delivered',
+      statusEntregaAtualizadoEm: new Date(1780000000 * 1000)
+    });
     expect(repositorioMensagens.save).toHaveBeenCalledWith(entidadeMensagem);
+  });
+
+  it('usa o instante do processamento como statusEntregaAtualizadoEm quando a Meta nao informa timestamp', async () => {
+    const { servico, entidadeMensagem } = criarServico({ resultadoEnvio: { idExterno: 'wamid-1' } });
+    const antesDoRegistro = Date.now();
+
+    await servico.registrarStatus([{ id: 'wamid-1', status: 'sent' }]);
+
+    expect(entidadeMensagem?.statusEntregaWhatsapp).toBe('sent');
+    expect(entidadeMensagem?.statusEntregaAtualizadoEm?.getTime()).toBeGreaterThanOrEqual(antesDoRegistro);
   });
 
   it('deve marcar mensagem como falhou quando a Meta reportar failed', async () => {

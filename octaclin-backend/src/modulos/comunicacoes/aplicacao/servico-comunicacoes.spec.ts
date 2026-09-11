@@ -1,4 +1,5 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { QueryFailedError } from 'typeorm';
 import { ServicoComunicacoes } from './servico-comunicacoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
@@ -44,7 +45,7 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
           : null;
       }
       if (nome === 'profissional') return dados.profissional ?? null;
-      return consulta.where.id ? dados.mensagem ?? null : null;
+      return consulta.where.id || consulta.where.chaveIdempotencia ? dados.mensagem ?? null : null;
     })
   };
 }
@@ -240,6 +241,232 @@ describe('ServicoComunicacoes', () => {
         tenantId: 'tenant-1',
         profissionalResponsavelId: 'profissional-1'
       }
+    });
+  });
+
+  describe('opt-out no disparo manual', () => {
+    function pacienteComPreferencia(preferencias: Record<string, unknown>) {
+      return {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        contatoCriptografado: Buffer.from(`cripto:${JSON.stringify({ preferencias })}`)
+      };
+    }
+
+    it('deve recusar disparo manual quando o paciente optou por nao receber no canal', async () => {
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: true },
+        paciente: pacienteComPreferencia({ whatsapp: false })
+      });
+
+      await expect(
+        servico.dispararMensagem('tenant-1', {
+          pacienteId: 'paciente-1',
+          canalId: 'canal-1',
+          templateId: 'template-1',
+          payload: { destino: '5511999999999' }
+        }, usuarioColaborador)
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+      expect(repositorios.outbox.save).not.toHaveBeenCalled();
+    });
+
+    it('deve permitir o disparo quando o chamador confirma explicitamente com ignorarOptOut', async () => {
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: true },
+        paciente: pacienteComPreferencia({ whatsapp: false })
+      });
+
+      await expect(
+        servico.dispararMensagem('tenant-1', {
+          pacienteId: 'paciente-1',
+          canalId: 'canal-1',
+          templateId: 'template-1',
+          payload: { destino: '5511999999999' },
+          ignorarOptOut: true
+        }, usuarioColaborador)
+      ).resolves.toEqual(expect.objectContaining({ status: 'pendente' }));
+
+      expect(repositorios.mensagem.save).toHaveBeenCalled();
+    });
+
+    it('deve permitir o disparo quando o paciente autorizou o canal', async () => {
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: true },
+        paciente: pacienteComPreferencia({ whatsapp: true })
+      });
+
+      await expect(
+        servico.dispararMensagem('tenant-1', {
+          pacienteId: 'paciente-1',
+          canalId: 'canal-1',
+          templateId: 'template-1',
+          payload: { destino: '5511999999999' }
+        }, usuarioColaborador)
+      ).resolves.toEqual(expect.objectContaining({ status: 'pendente' }));
+
+      expect(repositorios.mensagem.save).toHaveBeenCalled();
+    });
+
+    it('nao deve checar opt-out em disparo de sistema (automacoes ja tem sua propria checagem)', async () => {
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: true },
+        paciente: pacienteComPreferencia({ whatsapp: false })
+      });
+
+      await expect(
+        servico.dispararMensagemSistema('tenant-1', {
+          pacienteId: 'paciente-1',
+          canalId: 'canal-1',
+          templateId: 'template-1',
+          payload: { destino: '5511999999999' }
+        })
+      ).resolves.toEqual(expect.objectContaining({ status: 'pendente' }));
+
+      expect(repositorios.mensagem.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('idempotencia do disparo', () => {
+    it('deve gravar a chave de idempotencia na mensagem criada', async () => {
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+        paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
+      });
+
+      await servico.dispararMensagem('tenant-1', {
+        pacienteId: 'paciente-1',
+        canalId: 'canal-1',
+        templateId: 'template-1',
+        payload: { destino: 'paciente@example.com' },
+        chaveIdempotencia: 'lembrete-consulta-42'
+      }, usuarioColaborador);
+
+      expect(repositorios.mensagem.save).toHaveBeenCalledWith(
+        expect.objectContaining({ chaveIdempotencia: 'lembrete-consulta-42' })
+      );
+    });
+
+    it('deve retornar a mensagem existente sem criar nova quando a chave ja foi usada', async () => {
+      const mensagemExistente = {
+        id: 'mensagem-existente-1',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        status: 'pendente',
+        chaveIdempotencia: 'lembrete-consulta-42'
+      };
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+        paciente: { id: 'paciente-1', tenantId: 'tenant-1' },
+        mensagem: mensagemExistente
+      });
+
+      const resultado = await servico.dispararMensagem('tenant-1', {
+        pacienteId: 'paciente-1',
+        canalId: 'canal-1',
+        templateId: 'template-1',
+        payload: { destino: 'paciente@example.com' },
+        chaveIdempotencia: 'lembrete-consulta-42'
+      }, usuarioColaborador);
+
+      expect(resultado).toBe(mensagemExistente);
+      expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+      expect(repositorios.outbox.save).not.toHaveBeenCalled();
+    });
+
+    it('deve criar mensagens distintas para chamadas sem chave de idempotencia', async () => {
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+        paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
+      });
+
+      await servico.dispararMensagem('tenant-1', {
+        pacienteId: 'paciente-1',
+        canalId: 'canal-1',
+        templateId: 'template-1',
+        payload: { destino: 'paciente@example.com' }
+      }, usuarioColaborador);
+      await servico.dispararMensagem('tenant-1', {
+        pacienteId: 'paciente-1',
+        canalId: 'canal-1',
+        templateId: 'template-1',
+        payload: { destino: 'paciente@example.com' }
+      }, usuarioColaborador);
+
+      expect(repositorios.mensagem.save).toHaveBeenCalledTimes(2);
+      expect(repositorios.outbox.save).toHaveBeenCalledTimes(2);
+    });
+
+    /**
+     * Simula a corrida real: duas requisicoes concorrentes passam pela
+     * checagem previa (nenhuma encontra a mensagem ainda) e so o banco, via o
+     * indice unico parcial, rejeita a segunda gravacao. O servico deve
+     * absorver o erro 23505 e devolver a mensagem que venceu a corrida, em
+     * vez de propagar um 500 para o chamador.
+     */
+    it('deve absorver conflito de indice unico sob concorrencia e devolver a mensagem vencedora', async () => {
+      const mensagemVencedora = {
+        id: 'mensagem-vencedora-1',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        status: 'pendente',
+        chaveIdempotencia: 'lembrete-consulta-42'
+      };
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+        paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
+      });
+      const erroPostgres = Object.assign(new Error('duplicate key'), {
+        code: '23505',
+        constraint: 'uq_mensagens_notificacao_tenant_chave_idempotencia'
+      });
+      repositorios.mensagem.findOne
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(mensagemVencedora);
+      repositorios.mensagem.save.mockImplementationOnce(async () => {
+        throw new QueryFailedError('insert into mensagens_notificacao', [], erroPostgres);
+      });
+
+      const resultado = await servico.dispararMensagem('tenant-1', {
+        pacienteId: 'paciente-1',
+        canalId: 'canal-1',
+        templateId: 'template-1',
+        payload: { destino: 'paciente@example.com' },
+        chaveIdempotencia: 'lembrete-consulta-42'
+      }, usuarioColaborador);
+
+      expect(resultado).toBe(mensagemVencedora);
+      expect(repositorios.outbox.save).not.toHaveBeenCalled();
+    });
+
+    it('deve propagar outros erros de gravacao sem tratar como conflito de idempotencia', async () => {
+      const { servico, repositorios } = criarServico({
+        canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+        template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+        paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
+      });
+      repositorios.mensagem.save.mockImplementationOnce(async () => {
+        throw new Error('falha de conexao com o banco');
+      });
+
+      await expect(
+        servico.dispararMensagem('tenant-1', {
+          pacienteId: 'paciente-1',
+          canalId: 'canal-1',
+          templateId: 'template-1',
+          payload: { destino: 'paciente@example.com' },
+          chaveIdempotencia: 'lembrete-consulta-42'
+        }, usuarioColaborador)
+      ).rejects.toThrow('falha de conexao com o banco');
     });
   });
 

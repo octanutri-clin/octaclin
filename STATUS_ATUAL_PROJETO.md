@@ -71,6 +71,24 @@ Atualizado em 2026-09-10.
   proxima fase oficial e a Fase 258 (Central de comunicacoes confiavel).
   Detalhes e evidencias completas em
   `docs/history/phases/fase-257-portal-paciente-orientado-tarefas.md`.
+- Fase 258 - Central de comunicações confiável, **concluida em
+  2026-09-10**. Auditoria inicial confirmou infraestrutura solida no
+  modulo `comunicacoes` (webhook WhatsApp endurecido, retry automatico
+  via fila/outbox, conteudo cifrado); quatro incrementos fecharam as
+  lacunas reais: chave de idempotencia opcional no disparo (retry/duplo
+  clique retorna a mensagem ja criada); opt-out do paciente respeitado
+  tambem no disparo manual, com aviso e override explicito (antes so as
+  automacoes checavam); status de entrega do WhatsApp promovido de JSON
+  aninhado para colunas de primeira classe; e visao unificada cruzando
+  canal (WhatsApp+email, antes so WhatsApp) e responsavel (filtro por
+  profissional na inbox). Duas migrations aditivas: `1720000001040`
+  (chave de idempotencia) e `1720000001041` (colunas de status de
+  entrega). Taxonomia de origem da mensagem e gate de aprovacao de
+  template para email seguem como candidatos de fase futura (gaps
+  identificados na auditoria, fora do plano de 4 incrementos desta
+  fase). A proxima fase oficial e a Fase 259 (Acesso, convite e
+  ativacao sem suporte manual). Detalhes e evidencias completas em
+  `docs/history/phases/fase-258-central-comunicacoes-confiavel.md`.
 - SQ-0 foi integrado pelo PR `#210`, merge `316165d`, sem corrigir alertas. A
   fotografia historica foi capturada em 2026-09-07 sobre
   `56afc7c2f3dbe3fc2d60120782b70c2062d66bde`: 238 alertas de Code Scanning

@@ -50,6 +50,24 @@ export class DispararMensagemDto {
 
   @IsObject()
   payload: Record<string, unknown>;
+
+  /**
+   * Opcional. Quando informada, um retry/duplo clique com a mesma chave
+   * retorna a mensagem ja criada em vez de disparar um segundo envio.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  chaveIdempotencia?: string;
+
+  /**
+   * Opcional, default false. Disparo manual para paciente que optou por nao
+   * receber naquele canal e recusado (409) a menos que o chamador confirme
+   * explicitamente com esta flag apos ver o aviso.
+   */
+  @IsOptional()
+  @IsBoolean()
+  ignorarOptOut?: boolean;
 }
 
 export class AssociarContatoWhatsappDto {

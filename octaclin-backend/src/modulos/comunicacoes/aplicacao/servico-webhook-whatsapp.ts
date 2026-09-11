@@ -130,6 +130,8 @@ export class ServicoWebhookWhatsapp {
         errors: status.errors
       })
     };
+    mensagem.statusEntregaWhatsapp = status.status;
+    mensagem.statusEntregaAtualizadoEm = this.converterTimestampMeta(status.timestamp) ?? new Date();
 
     if (status.status === 'failed') {
       mensagem.status = 'falhou';

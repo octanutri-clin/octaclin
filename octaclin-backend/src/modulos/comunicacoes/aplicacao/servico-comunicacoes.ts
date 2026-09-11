@@ -1,7 +1,7 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bullmq';
-import { EntityManager, In } from 'typeorm';
+import { EntityManager, In, QueryFailedError } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -16,12 +16,15 @@ import {
   RegistrarNotaWhatsappDto
 } from './dtos';
 import { redisConfigurado } from './configuracao-redis';
+import { canalAutorizado, interpretarPreferenciasComunicacao, preferenciasComunicacaoPadrao } from '../dominio/preferencias-comunicacao';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { aplicarConteudoMensagem, comPayloadCompleto } from './cripto-conteudo-mensagem';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
 
 export const FILA_NOTIFICACOES = 'notificacoes';
+
+const CONSTRAINT_IDEMPOTENCIA_MENSAGEM = 'uq_mensagens_notificacao_tenant_chave_idempotencia';
 
 @Injectable()
 export class ServicoComunicacoes {
@@ -223,12 +226,53 @@ export class ServicoComunicacoes {
     return this.dispararMensagemNoEscopo(tenantId, dados);
   }
 
+  /**
+   * `chaveIdempotencia` e opcional: chamadores que nao a informam mantem o
+   * comportamento antigo (sempre cria). Quando informada, um retry de HTTP ou
+   * duplo clique na mesma chave retorna a mensagem ja criada em vez de
+   * disparar um segundo envio. O indice unico parcial
+   * `uq_mensagens_notificacao_tenant_chave_idempotencia` e quem garante isso
+   * sob concorrencia -- a checagem previa aqui e so o caminho feliz sem round
+   * trip extra ao banco.
+   */
   private async dispararMensagemNoEscopo(
     tenantId: string,
     dados: DispararMensagemDto,
     usuario?: UsuarioAutenticado
   ): Promise<MensagemNotificacaoOrm> {
-    const mensagem = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+    const chaveIdempotencia = dados.chaveIdempotencia?.trim() || undefined;
+
+    if (chaveIdempotencia) {
+      const existente = await this.buscarMensagemPorChaveIdempotencia(tenantId, chaveIdempotencia);
+      if (existente) return existente;
+    }
+
+    try {
+      return await this.criarMensagemNoEscopo(tenantId, dados, chaveIdempotencia, usuario);
+    } catch (erro) {
+      if (!chaveIdempotencia || !this.ehConflitoIdempotenciaMensagem(erro)) throw erro;
+      const existente = await this.buscarMensagemPorChaveIdempotencia(tenantId, chaveIdempotencia);
+      if (!existente) throw erro;
+      return existente;
+    }
+  }
+
+  private async buscarMensagemPorChaveIdempotencia(
+    tenantId: string,
+    chaveIdempotencia: string
+  ): Promise<MensagemNotificacaoOrm | null> {
+    return this.executorTenant.executar(tenantId, (gerenciador) =>
+      gerenciador.getRepository(MensagemNotificacaoOrm).findOne({ where: { tenantId, chaveIdempotencia } })
+    );
+  }
+
+  private async criarMensagemNoEscopo(
+    tenantId: string,
+    dados: DispararMensagemDto,
+    chaveIdempotencia: string | undefined,
+    usuario?: UsuarioAutenticado
+  ): Promise<MensagemNotificacaoOrm> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const canal = await gerenciador.getRepository(CanalNotificacaoOrm).findOne({
         where: { id: dados.canalId, tenantId, ativo: true }
       });
@@ -250,12 +294,29 @@ export class ServicoComunicacoes {
         usuario
       );
 
+      // Opt-out so e checado no disparo manual (`usuario` presente): chamadas de
+      // sistema (`dispararMensagemSistema`, lembretes/recall) ja consultam a
+      // preferencia do paciente antes de chegar aqui, com sua propria logica de
+      // "ignorado" -- checar de novo aqui duplicaria a regra com semantica
+      // diferente (uma decide nao enviar, a outra bloquearia com erro).
+      if (usuario && !dados.ignorarOptOut && (canal.tipo === 'email' || canal.tipo === 'whatsapp')) {
+        const preferencias = paciente.contatoCriptografado
+          ? interpretarPreferenciasComunicacao(this.criptografia.descriptografar(paciente.contatoCriptografado))
+          : preferenciasComunicacaoPadrao();
+        if (!canalAutorizado(preferencias, canal.tipo)) {
+          throw new ConflictException(
+            'O paciente optou por nao receber mensagens neste canal. Confirme para enviar mesmo assim.'
+          );
+        }
+      }
+
       const novaMensagem = gerenciador.getRepository(MensagemNotificacaoOrm).create({
         tenantId,
         pacienteId: dados.pacienteId,
         canalId: canal.id,
         templateId: template.id,
-        status: 'pendente'
+        status: 'pendente',
+        chaveIdempotencia
       });
       aplicarConteudoMensagem(novaMensagem, dados.payload, this.criptografia);
       const mensagemCriada = await gerenciador.getRepository(MensagemNotificacaoOrm).save(novaMensagem);
@@ -271,8 +332,12 @@ export class ServicoComunicacoes {
 
       return mensagemCriada;
     });
+  }
 
-    return mensagem;
+  private ehConflitoIdempotenciaMensagem(erro: unknown): boolean {
+    if (!(erro instanceof QueryFailedError)) return false;
+    const postgres = erro.driverError as { code?: string; constraint?: string } | undefined;
+    return postgres?.code === '23505' && postgres.constraint === CONSTRAINT_IDEMPOTENCIA_MENSAGEM;
   }
 
   private async obterPacienteNoEscopo(
