@@ -2652,13 +2652,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `app/api/pacientes/[id]/lgpd/solicitacao-eliminacao` e
     `app/api/pacientes/[id]/conta-acesso/desativacao`, mesmo padrão de
     `exigirPermissaoBff('pacientes.gerenciar')` da rota de restaurar.
-    **Pendente e documentado, não escondido**: execução real do restore
-    reaplicando tombstones (`RUNBOOK_BACKUP_RESTORE.md` ainda não consome
-    a tabela nova); "acesso restrito" ao prontuário em `RETENTION_HELD`
-    além do controle de autorização que já existe hoje. Nenhum dos dois é
-    um risco novo de confidencialidade, integridade, isolamento de
-    tenant, autenticação/autorização ou disponibilidade — são extensão de
-    um desenho que já está correto na base, não correção de uma falha.
+    `RUNBOOK_BACKUP_RESTORE.md` ganhou o procedimento manual de
+    reconciliação (identificar tombstone posterior ao ponto no tempo do
+    backup, reaplicar a eliminação pela aplicação, nunca por `UPDATE`
+    manual) e a tabela nova na lista de conferência crítica.
+    **Pendente e documentado, não escondido**: automação desse
+    procedimento (script dedicado, sem restore real para validar contra
+    dado de verdade nesta sessão); "acesso restrito" ao prontuário em
+    `RETENTION_HELD` além do controle de autorização que já existe hoje.
+    Nenhum dos dois é um risco novo de confidencialidade, integridade,
+    isolamento de tenant, autenticação/autorização ou disponibilidade —
+    são extensão de um desenho que já está correto na base, não correção
+    de uma falha.
   - Instituir SLA de dependências, SBOM, revisão de workflows e gates de secrets,
     SAST e auditoria de produção; nenhum alerta crítico/alto aceito sem dono,
     prazo e justificativa documentada.

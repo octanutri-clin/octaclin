@@ -152,7 +152,48 @@ Depois do restore:
 2. Apontar backend temporariamente para o banco de restore, se necessario.
 3. Validar `/health/detalhado`.
 4. Validar login e uma leitura por dominio critico.
-5. Descartar o banco de restore depois da verificacao.
+5. **Reaplicar exclusoes LGPD tombstoned** (ver secao abaixo) antes de
+   promover o restore como fonte de producao.
+6. Descartar o banco de restore depois da verificacao.
+
+### Reaplicar exclusoes LGPD apos restore (Fase 261)
+
+Um backup e uma fotografia de um instante no passado: uma solicitacao de
+eliminacao LGPD (`ServicoPacientes.solicitarEliminacaoDadosLgpd`) atendida
+**depois** do ponto no tempo do backup nao esta refletida nele. Restaurar
+esse backup sem tratamento traria de volta um dado que ja foi legitimamente
+eliminado -- exatamente o que a tabela `tombstones_exclusao_lgpd` existe
+para impedir.
+
+Antes de promover qualquer banco restaurado como fonte de producao:
+
+1. Identificar o ponto no tempo do backup restaurado (`pg_backup_start_time`
+   do dump, ou o timestamp registrado no plano de backup).
+2. No banco de origem (producao, ainda intacto) ou em uma copia do ledger de
+   tombstones preservada fora do backup, listar todo tombstone posterior a
+   esse ponto:
+   ```sql
+   select tenant_id, tabela, registro_id, motivo, excluido_em
+   from tombstones_exclusao_lgpd
+   where excluido_em > '<ponto-no-tempo-do-backup>'
+   order by excluido_em;
+   ```
+3. Para cada linha retornada, confirmar no banco restaurado que o registro
+   (`tabela`/`registro_id`) ainda esta no estado anterior a eliminacao (ex.:
+   `pacientes.status_ciclo_vida <> 'DELETED'`).
+4. Reaplicar a eliminacao **pela aplicacao**, nunca por `UPDATE` manual: uma
+   sessao de backend apontada para o banco restaurado chama de novo
+   `ServicoPacientes.solicitarEliminacaoDadosLgpd` para cada
+   `registro_id` listado. Isso garante que a mesma lógica de negocio (cifra
+   do marcador de eliminacao, limpeza de campos, novo tombstone) seja usada
+   -- nunca reescreva a coluna cifrada a mao.
+5. So depois de zero tombstone pendente de reaplicacao e que o banco
+   restaurado pode ser promovido como fonte de producao.
+
+Isto ainda nao tem automacao dedicada (script ou etapa do
+`executar-restore-dedicado.ps1`); e um procedimento manual documentado,
+registrado aqui como pendente explicito enquanto a Fase 261 nao tiver uma
+restauracao real para validar a automacao contra dado de verdade.
 
 ## Tabelas criticas para conferencias manuais
 
@@ -169,6 +210,7 @@ Depois do restore:
 - `outbox_eventos`
 - `user_action_logs`
 - `consentimentos_lgpd`
+- `tombstones_exclusao_lgpd`
 - `tenant_configuracoes`
 
 ## Incidente de perda de dados
