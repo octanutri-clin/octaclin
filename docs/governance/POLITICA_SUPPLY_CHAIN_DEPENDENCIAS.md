@@ -331,13 +331,21 @@ tornar bloqueante: um gate de seguranca errado pode tanto bloquear PR legitimo
 quanto, pior, deixar passar achado grave calado. Por isso ficam em modo
 shadow, documentados, em vez de bloqueantes sem essa prova.
 
-Verificacao pendente e honesta: o `--baseline-ref` do Semgrep exige `git` no
-container da imagem e o commit base presente localmente (`fetch-depth: 0` ja
-adicionado ao checkout). Este ambiente de execucao nao tem como rodar a
-imagem `semgrep/semgrep` nem abrir um PR real para provar o passo bloqueante
-fim a fim; a primeira execucao real do workflow em um PR e a evidencia que
-falta, e cai sob a mesma responsabilidade de acompanhar CI ate verde que vale
-para qualquer mudanca de workflow.
+Verificacao feita nesta fase: o `--baseline-ref` do Semgrep exige `git` no
+container da imagem. Confirmado no Dockerfile oficial
+(`github.com/semgrep/semgrep/blob/develop/Dockerfile`, estagio final
+`semgrep-oss`) que a imagem publicada `semgrep/semgrep` instala `git`,
+`git-lfs` e `openssh` como dependencia de runtime -- nao e uma suposicao.
+
+Verificacao pendente e honesta: `git` presente nao prova que o passo
+bloqueante funciona fim a fim -- falta confirmar que o commit base fica de
+fato acessivel localmente com `fetch-depth: 0` (ja adicionado ao checkout)
+dentro do container, e que a sintaxe `--severity ERROR --error` reprova o
+job como esperado. Este ambiente de execucao nao tem como rodar a imagem
+`semgrep/semgrep` nem abrir um PR real para provar isso; a primeira
+execucao real do workflow em um PR e a evidencia que falta, e cai sob a
+mesma responsabilidade de acompanhar CI ate verde que vale para qualquer
+mudanca de workflow.
 
 **Plano de expansao (CodeQL e Trivy):**
 

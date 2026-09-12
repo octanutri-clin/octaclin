@@ -2716,11 +2716,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     SQLi/XSS ativos, brute force e DAST autenticado ficam para fase
     futura, de preferência primeiro contra staging). Cron próprio, gated
     por variável independente da do monitor de saúde.
-    **Verificação pendente e honesta**: o passo bloqueante do Semgrep
-    exige `git` na imagem do container e o commit base presente
-    localmente; este ambiente não tem como rodar `semgrep/semgrep` nem
-    abrir PR real para provar o passo fim a fim — a primeira execução
-    real do workflow no PR é a evidência que falta.
+    **Verificação feita nesta fase**: confirmado no Dockerfile oficial do
+    Semgrep que a imagem publicada `semgrep/semgrep` instala `git`,
+    `git-lfs` e `openssh` no estágio final — a dependência que o passo
+    bloqueante exige está presente, não é suposição.
+    **Verificação pendente e honesta**: `git` presente não prova o passo
+    fim a fim — falta confirmar que o commit base fica acessível dentro
+    do container com `fetch-depth: 0` e que `--severity ERROR --error`
+    reprova o job como esperado; este ambiente não tem como rodar
+    `semgrep/semgrep` nem abrir PR real para provar isso — a primeira
+    execução real do workflow no PR é a evidência que falta.
   - Cifrar o conteúdo clínico livre hoje persistido em claro, incluindo o JSON
     de check-ins rápidos, títulos de evoluções/tarefas e motivos livres de
     cancelamento; manter em claro somente campos controlados indispensáveis a
