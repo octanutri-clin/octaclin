@@ -67,6 +67,13 @@ export class AdicionarModeloRetencaoLgpdPacientes1720000001043 implements Migrat
 
       create index if not exists idx_tombstones_exclusao_lgpd_tenant_tabela
         on tombstones_exclusao_lgpd (tenant_id, tabela);
+
+      alter table tombstones_exclusao_lgpd enable row level security;
+      alter table tombstones_exclusao_lgpd force row level security;
+      drop policy if exists isolamento_tenant_tombstones_exclusao_lgpd on tombstones_exclusao_lgpd;
+      create policy isolamento_tenant_tombstones_exclusao_lgpd on tombstones_exclusao_lgpd
+        using (tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid)
+        with check (tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid);
     `);
   }
 

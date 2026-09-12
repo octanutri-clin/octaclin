@@ -42,6 +42,20 @@ describe('AdicionarModeloRetencaoLgpdPacientes1720000001043', () => {
     expect(sqlUp).toContain('create index if not exists idx_tombstones_exclusao_lgpd_tenant_tabela');
   });
 
+  it('habilita e forca RLS em tombstones_exclusao_lgpd com policy completa de isolamento por tenant', async () => {
+    const { sqlUp } = await executar();
+
+    expect(sqlUp).toContain('alter table tombstones_exclusao_lgpd enable row level security');
+    expect(sqlUp).toContain('alter table tombstones_exclusao_lgpd force row level security');
+    expect(sqlUp).toContain(
+      'drop policy if exists isolamento_tenant_tombstones_exclusao_lgpd on tombstones_exclusao_lgpd'
+    );
+    expect(sqlUp).toContain('create policy isolamento_tenant_tombstones_exclusao_lgpd on tombstones_exclusao_lgpd');
+    expect(sqlUp).toMatch(
+      /create policy isolamento_tenant_tombstones_exclusao_lgpd on tombstones_exclusao_lgpd\s+using \(tenant_id = nullif\(current_setting\('app\.tenant_id', true\), ''\)::uuid\)\s+with check \(tenant_id = nullif\(current_setting\('app\.tenant_id', true\), ''\)::uuid\)/
+    );
+  });
+
   it('e reversivel: down remove a tabela nova e as colunas novas de pacientes', async () => {
     const { sqlDown } = await executar();
 

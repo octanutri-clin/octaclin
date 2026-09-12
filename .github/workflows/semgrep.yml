@@ -26,7 +26,7 @@ jobs:
     if: github.actor != 'dependabot[bot]'
     steps:
       # fetch-depth 0: o passo de bloqueio (abaixo) precisa do commit base do
-      # PR presente localmente para o --baseline-ref calcular o diff.
+      # PR presente localmente para o --baseline-commit calcular o diff.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
@@ -52,18 +52,26 @@ jobs:
           sarif_file: semgrep.sarif
 
       # Gate bloqueante (Fase 261, ratchet SAST): so roda em PR e so olha o que
-      # o PR introduz -- --baseline-ref faz o diff contra o commit base, entao
-      # achado ja existente antes do PR nunca entra aqui. --severity ERROR
-      # restringe ao nivel mais grave do Semgrep (severidade/confianca mais alta
-      # do ruleset auto); WARNING/INFO continuam so informativos no Security
-      # tab, ganhados pelo scan completo acima. Ver
+      # o PR introduz -- --baseline-commit faz o diff contra o commit base,
+      # entao achado ja existente antes do PR nunca entra aqui. --severity
+      # ERROR restringe ao nivel mais grave do Semgrep (severidade/confianca
+      # mais alta do ruleset auto); WARNING/INFO continuam so informativos no
+      # Security tab, ganhados pelo scan completo acima. Ver
       # docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md secao "SAST
       # bloqueante" para o desenho completo e o plano de expansao.
+      #
+      # `--baseline-ref` (nome usado na primeira versao deste passo) nao e uma
+      # opcao valida de `semgrep scan` -- so existe em `semgrep ci`. A opcao
+      # certa para `semgrep scan` e `--baseline-commit`, confirmada no codigo
+      # fonte oficial (cli/src/semgrep/commands/scan.py,
+      # github.com/semgrep/semgrep, tag v1.176.0, a mesma versao que roda
+      # nesta imagem). Corrigido depois da primeira execucao real deste
+      # workflow (PR #235) falhar com "unknown option '--baseline-ref'".
       - name: Bloquear achado ERROR novo introduzido pelo PR
         if: github.event_name == 'pull_request'
         run: |
           semgrep scan --config auto \
             --exclude-rule package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age \
-            --baseline-ref "${{ github.event.pull_request.base.sha }}" \
+            --baseline-commit "${{ github.event.pull_request.base.sha }}" \
             --severity ERROR \
             --error
