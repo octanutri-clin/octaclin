@@ -57,6 +57,8 @@ import { AdicionarIdempotenciaMensagensNotificacao1720000001040 } from './migrac
 import { AdicionarStatusEntregaWhatsapp1720000001041 } from './migracoes/1720000001041-AdicionarStatusEntregaWhatsapp';
 import { CriptografarCamposResiduaisFase2611720000001042 } from './migracoes/1720000001042-CriptografarCamposResiduaisFase261';
 import { AdicionarModeloRetencaoLgpdPacientes1720000001043 } from './migracoes/1720000001043-AdicionarModeloRetencaoLgpdPacientes';
+import { AdicionarCategoriaMensagemNotificacao1720000001044 } from './migracoes/1720000001044-AdicionarCategoriaMensagemNotificacao';
+import { ExpandirCategoriaArquivosMidia1720000001045 } from './migracoes/1720000001045-ExpandirCategoriaArquivosMidia';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -341,7 +343,9 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         AdicionarIdempotenciaMensagensNotificacao1720000001040,
         AdicionarStatusEntregaWhatsapp1720000001041,
         CriptografarCamposResiduaisFase2611720000001042,
-        AdicionarModeloRetencaoLgpdPacientes1720000001043
+        AdicionarModeloRetencaoLgpdPacientes1720000001043,
+        AdicionarCategoriaMensagemNotificacao1720000001044,
+        ExpandirCategoriaArquivosMidia1720000001045
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

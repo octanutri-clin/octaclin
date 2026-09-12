@@ -1,5 +1,6 @@
 import { IsBoolean, IsIn, IsObject, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { TipoCanalNotificacao } from '../dominio/canal-notificacao';
+import { CategoriaMensagemNotificacao } from '../infraestrutura/mensagem-notificacao.orm';
 
 export class CriarCanalNotificacaoDto {
   @IsIn(['whatsapp', 'email', 'push'])
@@ -68,6 +69,16 @@ export class DispararMensagemDto {
   @IsOptional()
   @IsBoolean()
   ignorarOptOut?: boolean;
+
+  /**
+   * Opcional, default `administrativo` (Fase 261). So marque `clinico`
+   * quando o conteudo da mensagem for narrativa clinica ou relevante para a
+   * assistencia -- essa categoria herda a retencao de 20 anos do
+   * prontuario em vez dos 12 meses padrao.
+   */
+  @IsOptional()
+  @IsIn(['clinico', 'administrativo'])
+  categoria?: CategoriaMensagemNotificacao;
 }
 
 export class AssociarContatoWhatsappDto {

@@ -1,6 +1,8 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { StatusMensagemNotificacao } from '../dominio/canal-notificacao';
 
+export type CategoriaMensagemNotificacao = 'clinico' | 'administrativo';
+
 @Entity('mensagens_notificacao')
 export class MensagemNotificacaoOrm {
   @PrimaryGeneratedColumn('uuid')
@@ -20,6 +22,16 @@ export class MensagemNotificacaoOrm {
 
   @Column({ type: 'varchar', length: 40, default: 'pendente' })
   status: StatusMensagemNotificacao;
+
+  /**
+   * `clinico` herda a retencao de 20 anos do prontuario; `administrativo`
+   * segue retencao padrao de 12 meses apos o fim da finalidade (Fase 261).
+   * Todo remetente atual manda so conteudo transacional -- narrativa
+   * clinica nunca passa por aqui, fica cifrada em
+   * `evolucoes_clinicas`/`documentos_emitidos`.
+   */
+  @Column({ type: 'varchar', length: 20, default: 'administrativo' })
+  categoria?: CategoriaMensagemNotificacao;
 
   /**
    * Somente o que a infra roteia, casa e consulta em SQL. O conteudo da mensagem

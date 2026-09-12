@@ -12,6 +12,7 @@ import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.o
 import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
+import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { AlertaOperacional, ResultadoAlertasOperacionais, ServicoOperacoes } from './servico-operacoes';
 
@@ -163,6 +164,17 @@ function criarServico(
       }),
       find: jest.fn(async () => [{ idLocal: 'local-1', status: 'sincronizado' }])
     },
+    arquivos: {
+      count: jest.fn(async ({ where }: { where: { categoria: unknown; criadoEm?: unknown } }) => {
+        if (!where.criadoEm) return 0;
+        if (typeof where.categoria === 'string' && where.categoria === 'administrativo') return 5;
+        if (where.categoria && typeof where.categoria === 'object' && '_value' in (where.categoria as object)) {
+          const valores = (where.categoria as { _value: string[] })._value;
+          return valores.includes('temporario') ? 6 : 9;
+        }
+        return 0;
+      })
+    },
     auditoria: {
       count: jest.fn(async () => 7),
       find: jest.fn(async () => [{ id: 'log-1', acao: 'pacientes.listar_dados_sensiveis', metadados: {} }]),
@@ -239,6 +251,7 @@ function criarServico(
       if (entidade === UserActionLogOrm) return repositorios.auditoria;
       if (entidade === ConsentimentoLgpdOrm) return repositorios.consentimentos;
       if (entidade === TenantConfiguracaoOrm) return repositorios.configuracoes;
+      if (entidade === ArquivoMidiaOrm) return repositorios.arquivos;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -802,16 +815,45 @@ describe('ServicoOperacoes', () => {
             id: 'consentimentos_lgpd',
             diasRetencao: 3650,
             acao: 'preservar'
+          }),
+          expect.objectContaining({
+            id: 'mensagens_notificacao_administrativas',
+            diasRetencao: 365,
+            acao: 'anonimizar'
+          }),
+          expect.objectContaining({
+            id: 'mensagens_notificacao_clinicas',
+            diasRetencao: 7300,
+            acao: 'preservar'
+          }),
+          expect.objectContaining({
+            id: 'arquivos_midia_clinicos',
+            diasRetencao: 7300,
+            acao: 'preservar'
+          }),
+          expect.objectContaining({
+            id: 'arquivos_midia_temporarios',
+            diasRetencao: 7,
+            acao: 'excluir'
+          }),
+          expect.objectContaining({
+            id: 'arquivos_midia_administrativos',
+            diasRetencao: 90,
+            acao: 'excluir'
           })
         ]),
         resumo: expect.objectContaining({
-          totalVencidos: 17,
+          totalVencidos: 39,
           itens: expect.arrayContaining([
             expect.objectContaining({ politicaId: 'auditoria_operacional', vencidos: 7 }),
             expect.objectContaining({ politicaId: 'outbox_processado', vencidos: 4 }),
             expect.objectContaining({ politicaId: 'sincronizacao_mobile', vencidos: 3 }),
-            expect.objectContaining({ politicaId: 'mensagens_notificacao', vencidos: 2 }),
-            expect.objectContaining({ politicaId: 'consentimentos_lgpd', vencidos: 1 })
+            expect.objectContaining({ politicaId: 'mensagens_notificacao_administrativas', vencidos: 2 }),
+            expect.objectContaining({ politicaId: 'mensagens_notificacao_clinicas', vencidos: 2 }),
+            expect.objectContaining({ politicaId: 'consentimentos_lgpd', vencidos: 1 }),
+            expect.objectContaining({ politicaId: 'arquivos_midia_clinicos', vencidos: 9 }),
+            expect.objectContaining({ politicaId: 'arquivos_midia_temporarios', vencidos: 6 }),
+            expect.objectContaining({ politicaId: 'arquivos_midia_administrativos', vencidos: 5 })
           ])
         })
       })
@@ -827,7 +869,7 @@ describe('ServicoOperacoes', () => {
       expect.objectContaining({
         protocolo: expect.stringMatching(/^RET-/),
         status: 'programada',
-        totalItensVencidos: 17
+        totalItensVencidos: 39
       })
     );
     expect(repositorios.consentimentos.save).toHaveBeenCalledWith(
@@ -839,7 +881,7 @@ describe('ServicoOperacoes', () => {
         metadados: expect.objectContaining({
           origem: 'operacoes',
           acao: 'planejamento_retencao',
-          totalItensVencidos: 17,
+          totalItensVencidos: 39,
           politicas: expect.arrayContaining(['auditoria_operacional', 'outbox_processado'])
         })
       })

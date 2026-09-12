@@ -16,6 +16,7 @@ import { ServicoComunicacoes } from '../../comunicacoes/aplicacao/servico-comuni
 import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { SincronizacaoMobileOrm } from '../../mobile/infraestrutura/sincronizacao-mobile.orm';
+import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
 import { CheckHealth, HealthDetalhado, ServicoSaude } from '../../saude/servico-saude';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 
@@ -1312,14 +1313,26 @@ export class ServicoOperacoes {
         descricao: 'Registros tecnicos de sincronizacao podem manter metricas sem dados identificaveis.'
       },
       {
-        id: 'mensagens_notificacao',
-        rotulo: 'Mensagens de notificacao',
+        id: 'mensagens_notificacao_administrativas',
+        rotulo: 'Mensagens administrativas',
         entidade: 'mensagens_notificacao',
         campoData: 'criadoEm',
-        diasRetencao: 730,
+        diasRetencao: 365,
         acao: 'anonimizar',
         baseLegal: 'Execucao do servico e minimizacao',
-        descricao: 'Historico de comunicacao antigo deve ser mantido apenas com dados minimos de auditoria.'
+        descricao:
+          'Mensagem sem conteudo clinico (categoria administrativo): retencao padrao de 12 meses apos o fim da finalidade (Fase 261).'
+      },
+      {
+        id: 'mensagens_notificacao_clinicas',
+        rotulo: 'Mensagens com conteudo clinico',
+        entidade: 'mensagens_notificacao',
+        campoData: 'criadoEm',
+        diasRetencao: 7300,
+        acao: 'preservar',
+        baseLegal: 'Guarda de prontuario (CFM) e obrigacao legal',
+        descricao:
+          'Mensagem marcada categoria clinico herda os 20 anos de guarda do prontuario (Fase 261); nenhum remetente atual usa essa categoria.'
       },
       {
         id: 'consentimentos_lgpd',
@@ -1330,6 +1343,37 @@ export class ServicoOperacoes {
         acao: 'preservar',
         baseLegal: 'Comprovacao de consentimento e obrigacao legal',
         descricao: 'Registros de consentimento sao preservados para prova historica de conformidade.'
+      },
+      {
+        id: 'arquivos_midia_clinicos',
+        rotulo: 'Arquivos clinicos',
+        entidade: 'arquivos_midia',
+        campoData: 'criadoEm',
+        diasRetencao: 7300,
+        acao: 'preservar',
+        baseLegal: 'Guarda de prontuario (CFM) e obrigacao legal',
+        descricao:
+          'Exame, laudo, foto clinica, documento de avaliacao e outro anexo vinculado a assistencia herdam os 20 anos de guarda do prontuario (Fase 261).'
+      },
+      {
+        id: 'arquivos_midia_temporarios',
+        rotulo: 'Arquivos temporarios e exportacoes',
+        entidade: 'arquivos_midia',
+        campoData: 'criadoEm',
+        diasRetencao: 7,
+        acao: 'excluir',
+        baseLegal: 'Minimizacao operacional',
+        descricao: 'Artefato temporario ou de exportacao/download tem no maximo 7 dias de retencao (Fase 261).'
+      },
+      {
+        id: 'arquivos_midia_administrativos',
+        rotulo: 'Arquivos administrativos',
+        entidade: 'arquivos_midia',
+        campoData: 'criadoEm',
+        diasRetencao: 90,
+        acao: 'excluir',
+        baseLegal: 'Minimizacao operacional',
+        descricao: 'Anexo puramente administrativo/de suporte tem 90 dias apos o encerramento, salvo necessidade legal especifica (Fase 261).'
       }
     ];
   }
@@ -1385,11 +1429,45 @@ export class ServicoOperacoes {
         .count({ where: { tenantId, status: 'sincronizado', criadoEm: LessThanOrEqual(corteEm) } });
     }
 
-    if (politicaId === 'mensagens_notificacao') {
+    if (politicaId === 'mensagens_notificacao_administrativas' || politicaId === 'mensagens_notificacao_clinicas') {
       return gerenciador.getRepository(MensagemNotificacaoOrm).count({
         where: {
           tenantId,
+          categoria: politicaId === 'mensagens_notificacao_clinicas' ? 'clinico' : 'administrativo',
           status: In(['enviado', 'falhou', 'recebido', 'nota']),
+          criadoEm: LessThanOrEqual(corteEm)
+        }
+      });
+    }
+
+    if (politicaId === 'arquivos_midia_clinicos') {
+      return gerenciador.getRepository(ArquivoMidiaOrm).count({
+        where: {
+          tenantId,
+          categoria: In(['exame', 'documento', 'foto', 'diario']),
+          status: 'confirmado',
+          criadoEm: LessThanOrEqual(corteEm)
+        }
+      });
+    }
+
+    if (politicaId === 'arquivos_midia_temporarios') {
+      return gerenciador.getRepository(ArquivoMidiaOrm).count({
+        where: {
+          tenantId,
+          categoria: In(['temporario', 'exportacao']),
+          status: 'confirmado',
+          criadoEm: LessThanOrEqual(corteEm)
+        }
+      });
+    }
+
+    if (politicaId === 'arquivos_midia_administrativos') {
+      return gerenciador.getRepository(ArquivoMidiaOrm).count({
+        where: {
+          tenantId,
+          categoria: 'administrativo',
+          status: 'confirmado',
           criadoEm: LessThanOrEqual(corteEm)
         }
       });

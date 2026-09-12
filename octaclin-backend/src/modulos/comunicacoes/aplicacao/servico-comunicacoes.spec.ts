@@ -723,6 +723,40 @@ describe('ServicoComunicacoes - conteudo fora do payload em claro', () => {
     expect(Buffer.isBuffer(gravada.conteudoCriptografado)).toBe(true);
   });
 
+  it('grava categoria administrativo por padrao quando o chamador nao informa', async () => {
+    const { servico, repositorios } = criarServico({
+      canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
+    });
+
+    await servico.dispararMensagem(
+      'tenant-1',
+      { pacienteId: 'paciente-1', canalId: 'canal-1', templateId: 'template-1', payload: {} },
+      usuarioColaborador
+    );
+
+    const [[gravada]] = repositorios.mensagem.save.mock.calls;
+    expect(gravada.categoria).toBe('administrativo');
+  });
+
+  it('grava categoria clinico quando o chamador informa explicitamente (Fase 261)', async () => {
+    const { servico, repositorios } = criarServico({
+      canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
+    });
+
+    await servico.dispararMensagem(
+      'tenant-1',
+      { pacienteId: 'paciente-1', canalId: 'canal-1', templateId: 'template-1', payload: {}, categoria: 'clinico' },
+      usuarioColaborador
+    );
+
+    const [[gravada]] = repositorios.mensagem.save.mock.calls;
+    expect(gravada.categoria).toBe('clinico');
+  });
+
   it('devolve o payload remontado na leitura, para a tela nao ficar sem texto', async () => {
     const { servico } = criarServico({
       mensagem: {

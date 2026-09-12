@@ -316,6 +316,7 @@ export class ServicoComunicacoes {
         canalId: canal.id,
         templateId: template.id,
         status: 'pendente',
+        categoria: dados.categoria ?? 'administrativo',
         chaveIdempotencia
       });
       aplicarConteudoMensagem(novaMensagem, dados.payload, this.criptografia);
