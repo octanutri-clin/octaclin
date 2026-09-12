@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, BadgeDollarSign, CheckCircle2, ContactRound, KeyRound, Link2, Save, ShieldCheck, UserRoundX } from 'lucide-react';
+import { AlertTriangle, BadgeDollarSign, CheckCircle2, ContactRound, KeyRound, Link2, Save, ShieldAlert, ShieldCheck, UserRoundX } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AlertaOperacional, BarraCarregamento } from '@/components/ui/feedback';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { obterSessao } from '@/lib/auth-api';
 import { criarConvitePaciente, revogarConvitePaciente } from '@/lib/convites-paciente-api';
+import { desativarContaAcessoPaciente, solicitarEliminacaoLgpdPaciente, type ResultadoSolicitacaoEliminacaoLgpd } from '@/lib/cadastros-api';
 import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import {
   FiscalCadastroPacienteApi,
@@ -89,6 +90,9 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [linkConvite, setLinkConvite] = useState<string | null>(null);
   const [confirmarRevogacao, setConfirmarRevogacao] = useState(false);
+  const [confirmarDesativacaoConta, setConfirmarDesativacaoConta] = useState(false);
+  const [confirmarEliminacaoLgpd, setConfirmarEliminacaoLgpd] = useState(false);
+  const [resultadoEliminacaoLgpd, setResultadoEliminacaoLgpd] = useState<ResultadoSolicitacaoEliminacaoLgpd | null>(null);
 
   useEffect(() => {
     void obterSessao().then((sessao) => {
@@ -166,6 +170,42 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
       setConfirmarRevogacao(false);
       setQualidade(await obterQualidadeEAcessoPaciente(pacienteId));
       setSucesso('Convite pendente revogado. O link anterior não pode mais ser utilizado.');
+    } catch (erroAtual) {
+      setErro(mensagemErro(erroAtual));
+    } finally {
+      setSalvando(null);
+    }
+  }
+
+  async function desativarConta() {
+    setSalvando('desativar-conta');
+    setErro(null);
+    setSucesso(null);
+    try {
+      await desativarContaAcessoPaciente(pacienteId);
+      setConfirmarDesativacaoConta(false);
+      setQualidade(await obterQualidadeEAcessoPaciente(pacienteId));
+      setSucesso('Conta de acesso desativada. O prontuário do paciente não foi alterado.');
+    } catch (erroAtual) {
+      setErro(mensagemErro(erroAtual));
+    } finally {
+      setSalvando(null);
+    }
+  }
+
+  async function solicitarEliminacaoLgpd() {
+    setSalvando('eliminacao-lgpd');
+    setErro(null);
+    setSucesso(null);
+    try {
+      const resultado = await solicitarEliminacaoLgpdPaciente(pacienteId);
+      setResultadoEliminacaoLgpd(resultado);
+      setConfirmarEliminacaoLgpd(false);
+      if (resultado.status === 'DELETED') {
+        setSucesso('Dados do paciente eliminados: não havia registro assistencial dentro do prazo legal de guarda.');
+      } else {
+        setSucesso('Solicitação registrada. O prontuário permanece retido pelo prazo legal de guarda; nada foi apagado.');
+      }
     } catch (erroAtual) {
       setErro(mensagemErro(erroAtual));
     } finally {
@@ -348,6 +388,29 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
               {linkConvite ? <p className="break-all rounded-md border border-linha bg-superficie-hover px-3 py-2 text-xs text-texto-suave">{linkConvite}</p> : null}
             </Secao>
 
+            <Secao titulo="Privacidade e LGPD" descricao="Três ações juridicamente distintas: desativar a conta não apaga nada; a eliminação de dados só apaga o que não tiver retenção legal pendente. Nenhuma delas 'exclui o paciente'.">
+              <div className="flex flex-wrap justify-end gap-2">
+                <Botao
+                  type="button"
+                  variante="perigo"
+                  onClick={() => setConfirmarDesativacaoConta(true)}
+                  disabled={Boolean(salvando) || qualidade?.acessoPortal.status !== 'acesso_ativo'}
+                >
+                  <UserRoundX size={16} /> Desativar conta de acesso
+                </Botao>
+                <Botao type="button" variante="perigo" onClick={() => setConfirmarEliminacaoLgpd(true)} disabled={Boolean(salvando)}>
+                  <ShieldAlert size={16} /> Solicitar eliminação de dados (LGPD)
+                </Botao>
+              </div>
+              {resultadoEliminacaoLgpd ? <div className="rounded-md border border-linha bg-superficie-hover px-3 py-2 text-xs text-tinta">
+                {resultadoEliminacaoLgpd.status === 'DELETED' ? (
+                  <p>Dados eliminados em {formatarDataHora(resultadoEliminacaoLgpd.deletedAt)}.</p>
+                ) : (
+                  <p>Retido até {formatarDataHora(resultadoEliminacaoLgpd.retentionUntil)} ({resultadoEliminacaoLgpd.retentionReason}). Nada foi apagado.</p>
+                )}
+              </div> : null}
+            </Secao>
+
             {podeVerFiscal ? <Secao titulo="Dados fiscais opcionais" descricao="Visivel apenas para quem tem permissão financeira.">
               <div className="grid gap-3 md:grid-cols-2">
                 <Campo rotulo="Nome do pagador"><input className="campo" value={fiscal.nomePagador ?? ''} onChange={(evento) => setFiscal((atual) => ({ ...atual, nomePagador: evento.target.value }))} /></Campo>
@@ -367,6 +430,24 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
         confirmando={salvando === 'revogar-portal'}
         aoConfirmar={() => void revogarConvitePortal()}
         aoCancelar={() => setConfirmarRevogacao(false)}
+      />
+      <ModalConfirmacao
+        aberto={confirmarDesativacaoConta}
+        titulo="Desativar conta de acesso"
+        mensagem="O paciente deixa de conseguir entrar no portal e as sessões ativas são encerradas. O prontuário, os documentos e o histórico do paciente não são alterados nem apagados. Esta ação é diferente de arquivar o paciente ou de solicitar eliminação de dados."
+        rotuloConfirmar="Desativar conta"
+        confirmando={salvando === 'desativar-conta'}
+        aoConfirmar={() => void desativarConta()}
+        aoCancelar={() => setConfirmarDesativacaoConta(false)}
+      />
+      <ModalConfirmacao
+        aberto={confirmarEliminacaoLgpd}
+        titulo="Solicitar eliminação de dados (LGPD)"
+        mensagem="Se o prontuário ainda estiver dentro do prazo legal de guarda, o dado é retido e nada é apagado agora. Só quando não houver retenção legal pendente os dados de identificação são eliminados de verdade. Esta ação é diferente de arquivar o paciente ou de desativar a conta de acesso."
+        rotuloConfirmar="Solicitar eliminação"
+        confirmando={salvando === 'eliminacao-lgpd'}
+        aoConfirmar={() => void solicitarEliminacaoLgpd()}
+        aoCancelar={() => setConfirmarEliminacaoLgpd(false)}
       />
     </>
   );

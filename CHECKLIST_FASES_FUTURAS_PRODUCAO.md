@@ -2631,17 +2631,34 @@ publicado antes de ampliar a superficie de mudancas visuais.
     paciente" (`arquivar()`) continua sendo uma terceira operação
     separada, já existente. Escopo por profissional aplicado nos dois
     métodos novos, com teste negativo provando a rejeição.
-    **Pendente e documentado, não escondido**: categorização
-    clínico/administrativo em mensagens e arquivos (a base de retenção
-    diferenciada 20 anos/12 meses/90 dias exige o campo antes de ter onde
-    se apoiar); execução real do restore reaplicando tombstones
-    (`RUNBOOK_BACKUP_RESTORE.md` ainda não consome a tabela nova);
-    "acesso restrito" ao prontuário em `RETENTION_HELD` além do controle
-    de autorização que já existe hoje; e as três ações na interface web
-    (usar `lista-pacientes.tsx`/arquivar como modelo estrutural). Nenhum
-    desses é um risco novo de confidencialidade, integridade, isolamento
-    de tenant, autenticação/autorização ou disponibilidade — são extensão
-    de um desenho que já está correto na base, não correção de uma falha.
+    Incremento 4 (2026-09-12): dois dos quatro gaps documentados no
+    Incremento 3 foram fechados. Categorização clínico/administrativo:
+    `mensagens_notificacao.categoria` (nova, default `administrativo`;
+    `DispararMensagemDto` ganha campo opcional, nenhum remetente atual
+    marca `clinico`) e `arquivos_midia.categoria` (três valores novos —
+    `temporario`, `exportacao`, `administrativo` — além dos quatro
+    assistenciais existentes, que continuam herdando os 20 anos sem
+    mudança). `politicasRetencaoDados()` ganha cinco políticas novas
+    substituindo a única genérica de mensagens: administrativas (365
+    dias), clínicas (7300 dias/preservar) para mensagens, e clínicos (7300
+    dias/preservar), temporários (7 dias) e administrativos (90 dias) para
+    arquivos. Interface web: nova seção "Privacidade e LGPD" em
+    `PerfilCadastroPaciente` (modal de cadastro do paciente), com dois
+    botões distintos — "Desativar conta de acesso" e "Solicitar
+    eliminação de dados (LGPD)" — cada um com sua própria confirmação
+    explicando a diferença em relação a arquivar e entre si, e exibindo o
+    resultado (retido até quando, ou eliminado). Nenhuma tela usa
+    "excluir paciente" genérico. BFF novo em
+    `app/api/pacientes/[id]/lgpd/solicitacao-eliminacao` e
+    `app/api/pacientes/[id]/conta-acesso/desativacao`, mesmo padrão de
+    `exigirPermissaoBff('pacientes.gerenciar')` da rota de restaurar.
+    **Pendente e documentado, não escondido**: execução real do restore
+    reaplicando tombstones (`RUNBOOK_BACKUP_RESTORE.md` ainda não consome
+    a tabela nova); "acesso restrito" ao prontuário em `RETENTION_HELD`
+    além do controle de autorização que já existe hoje. Nenhum dos dois é
+    um risco novo de confidencialidade, integridade, isolamento de
+    tenant, autenticação/autorização ou disponibilidade — são extensão de
+    um desenho que já está correto na base, não correção de uma falha.
   - Instituir SLA de dependências, SBOM, revisão de workflows e gates de secrets,
     SAST e auditoria de produção; nenhum alerta crítico/alto aceito sem dono,
     prazo e justificativa documentada.

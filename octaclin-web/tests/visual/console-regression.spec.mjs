@@ -1003,7 +1003,8 @@ async function prepararProntuarioMockado(page, {
   papel = 'Professional',
   profissionalResponsavelId = 'profissional-1',
   falhaMateriais = false,
-  falhaEvolucoes = false
+  falhaEvolucoes = false,
+  statusPortalInicial = 'convite_pendente'
 } = {}) {
   let criouEvolucao = false;
   let criouTarefa = false;
@@ -1013,8 +1014,10 @@ async function prepararProntuarioMockado(page, {
   let anexos = [];
   let documentos = [];
   let corpoDocumentoEmitido = null;
-  let statusPortal = 'convite_pendente';
+  let statusPortal = statusPortalInicial;
   let revogouConvite = false;
+  let desativouContaAcesso = false;
+  let solicitacoesEliminacaoLgpd = 0;
   let leiturasMateriais = 0;
   let leiturasAnexos = 0;
   let leiturasProfissionais = 0;
@@ -1105,6 +1108,21 @@ async function prepararProntuarioMockado(page, {
       return;
     }
     await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ message: 'Metodo inesperado.' }) });
+  });
+
+  await page.route('**/api/pacientes/paciente-1/conta-acesso/desativacao', async (route) => {
+    desativouContaAcesso = true;
+    statusPortal = 'acesso_desativado';
+    await route.fulfill({ status: 204 });
+  });
+
+  await page.route('**/api/pacientes/paciente-1/lgpd/solicitacao-eliminacao', async (route) => {
+    solicitacoesEliminacaoLgpd += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'RETENTION_HELD', retentionUntil: '2046-08-10T10:00:00.000Z', retentionReason: 'prontuario_clinico_20_anos' })
+    });
   });
 
   await page.route('**/api/profissionais**', async (route) => {
@@ -1867,6 +1885,8 @@ async function prepararProntuarioMockado(page, {
     enviouMaterial: () => enviouMaterial,
     condutas: () => condutas,
     revogouConvite: () => revogouConvite,
+    desativouContaAcesso: () => desativouContaAcesso,
+    solicitacoesEliminacaoLgpd: () => solicitacoesEliminacaoLgpd,
     leiturasMateriais: () => leiturasMateriais,
     leiturasAnexos: () => leiturasAnexos,
     leiturasProfissionais: () => leiturasProfissionais,
@@ -2337,6 +2357,33 @@ test.describe('prontuario do paciente', () => {
     await expect.poll(() => prontuario.revogouConvite()).toBe(true);
     await expect(cadastro.getByText('Convite revogado', { exact: true })).toBeVisible();
     await expect(cadastro.getByText('Convite pendente revogado. O link anterior não pode mais ser utilizado.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('distingue desativar conta de acesso e solicitar eliminacao de dados LGPD, sem excluir paciente generico', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page, { statusPortalInicial: 'acesso_ativo' });
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente' });
+    await expect(cadastro.getByRole('heading', { name: 'Privacidade e LGPD' })).toBeVisible();
+    await expect(cadastro.getByText('Acesso ativo', { exact: true })).toBeVisible();
+
+    await cadastro.getByRole('button', { name: 'Desativar conta de acesso' }).click();
+    const confirmacaoConta = page.getByRole('dialog', { name: 'Desativar conta de acesso' });
+    await expect(confirmacaoConta.getByText(/prontuário.*não são alterados nem apagados/)).toBeVisible();
+    await confirmacaoConta.getByRole('button', { name: 'Desativar conta' }).click();
+    await expect.poll(() => prontuario.desativouContaAcesso()).toBe(true);
+    await expect(cadastro.getByText('Acesso desativado', { exact: true })).toBeVisible();
+    await expect(cadastro.getByText('Conta de acesso desativada. O prontuário do paciente não foi alterado.')).toBeVisible();
+
+    await cadastro.getByRole('button', { name: 'Solicitar eliminação de dados (LGPD)' }).click();
+    const confirmacaoLgpd = page.getByRole('dialog', { name: 'Solicitar eliminação de dados (LGPD)' });
+    await expect(confirmacaoLgpd.getByText(/prazo legal de guarda/)).toBeVisible();
+    await confirmacaoLgpd.getByRole('button', { name: 'Solicitar eliminação' }).click();
+    await expect.poll(() => prontuario.solicitacoesEliminacaoLgpd()).toBe(1);
+    await expect(cadastro.getByText(/Solicitação registrada\. O prontuário permanece retido/)).toBeVisible();
+    await expect(cadastro.getByText(/Retido até.*prontuario_clinico_20_anos.*Nada foi apagado/)).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 

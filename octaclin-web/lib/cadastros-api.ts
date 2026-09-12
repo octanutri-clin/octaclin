@@ -245,6 +245,33 @@ export async function restaurarPaciente(id: string): Promise<void> {
   return requisitarSemConteudo(`/api/pacientes/${encodeURIComponent(id)}/restaurar`, { method: 'PATCH' });
 }
 
+export interface ResultadoSolicitacaoEliminacaoLgpd {
+  status: 'RETENTION_HELD' | 'DELETED';
+  retentionUntil?: string;
+  retentionReason?: string;
+  deletedAt?: string;
+}
+
+/**
+ * Solicitacao de eliminacao de dados LGPD -- nao e "excluir paciente".
+ * Distinta de `arquivarPaciente` (encerrar acompanhamento) e de
+ * `desativarContaAcessoPaciente` (so a conta de login).
+ */
+export async function solicitarEliminacaoLgpdPaciente(id: string): Promise<ResultadoSolicitacaoEliminacaoLgpd> {
+  return requisitar<ResultadoSolicitacaoEliminacaoLgpd>(`/api/pacientes/${encodeURIComponent(id)}/lgpd/solicitacao-eliminacao`, {
+    method: 'PATCH'
+  });
+}
+
+/**
+ * Desativa so a conta de acesso do paciente ao portal -- nunca o
+ * prontuario. Distinta de `arquivarPaciente` e de
+ * `solicitarEliminacaoLgpdPaciente`.
+ */
+export async function desativarContaAcessoPaciente(id: string): Promise<void> {
+  return requisitarSemConteudo(`/api/pacientes/${encodeURIComponent(id)}/conta-acesso/desativacao`, { method: 'PATCH' });
+}
+
 export async function listarProfissionais(filtros: FiltrosPaginacao = {}): Promise<RespostaPaginada<ProfissionalResumo>> {
   const parametros = new URLSearchParams({
     pagina: String(filtros.pagina ?? 1),
