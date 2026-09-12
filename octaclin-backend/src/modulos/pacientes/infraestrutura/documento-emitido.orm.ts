@@ -52,8 +52,16 @@ export class DocumentoEmitidoOrm {
   @Column({ name: 'cancelado_em', type: 'timestamptz', nullable: true })
   canceladoEm?: Date;
 
+  /**
+   * Coluna historica: so continua preenchida em linha cancelada antes da
+   * Fase B da criptografia residual (Fase 261). Cancelamento novo grava so
+   * `motivoCancelamentoCriptografado`.
+   */
   @Column({ name: 'motivo_cancelamento', type: 'varchar', length: 300, nullable: true })
   motivoCancelamento?: string;
+
+  @Column({ name: 'motivo_cancelamento_criptografado', type: 'bytea', nullable: true })
+  motivoCancelamentoCriptografado?: Buffer;
 
   @Column({ name: 'enviado_em', type: 'timestamptz', nullable: true })
   enviadoEm?: Date;

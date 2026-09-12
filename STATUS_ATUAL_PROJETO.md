@@ -216,6 +216,54 @@ Atualizado em 2026-09-11.
     sessao: o `git push` desta branch tambem reportou 2 alertas Dependabot
     high no `main` atual -- mesma contagem ja conhecida, sem mudanca liquida
     detectavel por esta via.
+  - **Incremento 3 (2026-09-11):** o dono do produto tomou as quatro
+    decisoes que faltavam (LGPD/retencao, SAST bloqueante, escopo da
+    auditoria de producao, execucao da migration de criptografia) e pediu
+    para avancar a fase ate onde pudesse fechar de verdade. Entregas:
+    - **LGPD** (o achado mais serio do Incremento 2): schema aditivo em
+      `pacientes` com o modelo de status exigido (`ACTIVE`/`ARCHIVED`/
+      `RETENTION_HELD`/`DELETION_PENDING`/`DELETED`) e os campos de
+      rastreio da solicitacao; tabela `tombstones_exclusao_lgpd` nova.
+      `ServicoPacientes.solicitarEliminacaoDadosLgpd` decide de verdade:
+      com registro assistencial dentro dos 20 anos fica `RETENTION_HELD`
+      (nada e apagado); sem registro (ou fora do prazo) elimina de
+      verdade agora. `desativarContaAcesso` e a segunda acao, distinta e
+      independente. Duas rotas novas, nunca um "excluir paciente"
+      generico. Pendente e documentado: categorizacao clinico/
+      administrativo em mensagens/arquivos, consumo real do tombstone no
+      restore de backup, "acesso restrito" alem do que ja existe, e as
+      tres acoes na interface web. Detalhe completo em
+      `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
+    - **SAST**: Semgrep vira ratchet bloqueante (`--baseline-ref` do PR +
+      `--severity ERROR --error`, so em `pull_request`); CodeQL/Trivy
+      ficam em shadow, documentados, com plano de expansao concreto —
+      nenhum dos dois tem diff base-vs-head nativo, e nao daria para
+      provar o comportamento fim a fim nesta sessao. Politica completa em
+      `docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md`.
+    - **Auditoria de producao**: script novo
+      `scripts/verificar-seguranca-producao.mjs`, deliberadamente separado
+      do monitor de saude, so passivo/nao-destrutivo (TLS, redirecionamento
+      HTTPS, HSTS, CSP, headers, cookies, CORS). Cron proprio com toggle
+      independente.
+    - **Migration de criptografia**: Fase A + Fase B completas e testadas
+      para os cinco alvos (`documentos_emitidos.motivo_cancelamento`,
+      `agenda_consultas` motivo de cancelamento, `logs_diario_rapido.valor`,
+      `evolucoes_clinicas.titulo`, `acompanhamento_tarefas.titulo`),
+      incluindo a correcao da query `UNION ALL` da timeline. Fase C
+      (backfill/drop) e qualquer execucao real em banco continuam
+      impossiveis a partir desta sessao (sem `DATABASE_URL`, sem Docker) —
+      aguardam sessao com credenciais reais de Neon/Render para cumprir o
+      preflight exigido (backup, restore real, staging, lote, telemetria,
+      integridade, rollback).
+    - Validacoes desta rodada: `pnpm --dir octaclin-backend typecheck` e
+      suite completa (1708 testes, 3 suites puladas pre-existente),
+      `pnpm test:guardas-controladores`, `pnpm test:redacao-auditoria`,
+      `pnpm test:actions-imutaveis`, `pnpm test:confiabilidade`,
+      `pnpm test:verificar-seguranca-producao` e `pnpm security:secrets`.
+    - Nenhum dos gaps pendentes listados acima e um risco novo de
+      confidencialidade, integridade, isolamento de tenant,
+      autenticacao/autorizacao ou disponibilidade de producao — sao
+      extensao de um desenho ja correto na base, nao correcao de falha.
 - Fase 260 - Desempenho, resiliencia e diagnostico operacional, **concluida
   em 2026-09-11**. Auditoria inicial confirmou lazy-load
   parcial ja existente (materiais/anexos/profissionais) e endpoints

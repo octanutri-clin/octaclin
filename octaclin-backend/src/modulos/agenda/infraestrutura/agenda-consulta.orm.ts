@@ -80,6 +80,14 @@ export class AgendaConsultaOrm {
   @Column({ type: 'jsonb', default: {} })
   payload: Record<string, unknown>;
 
+  /**
+   * Motivo de cancelamento cifrado. A partir da Fase B da criptografia
+   * residual (Fase 261), `payload.historico` para de gravar o motivo em
+   * claro -- so um booleano de presenca (`motivoRegistrado`).
+   */
+  @Column({ name: 'motivo_cancelamento_criptografado', type: 'bytea', nullable: true })
+  motivoCancelamentoCriptografado?: Buffer;
+
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 

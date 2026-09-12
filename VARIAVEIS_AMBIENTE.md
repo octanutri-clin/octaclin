@@ -200,6 +200,7 @@ devem conter credenciais, query string ou caminhos.
 | `OCTACLIN_MONITOR_BACKEND_URL` | Variable | URL base HTTPS oficial do backend de producao |
 | `OCTACLIN_MONITOR_WEB_URL` | Variable | URL base HTTPS oficial da web de producao |
 | `OCTACLIN_MONITOR_AUTOMATICO_HABILITADO` | Variable | `true` somente depois da execucao manual aprovada |
+| `OCTACLIN_VERIFICACAO_SEGURANCA_AUTOMATICA_HABILITADA` | Variable | `true` somente depois da execucao manual aprovada. Liga o cron de `scripts/verificar-seguranca-producao.mjs` (TLS/headers/cookies/CORS, passivo), separado do monitor de saude acima. Reusa `OCTACLIN_MONITOR_BACKEND_URL`/`OCTACLIN_MONITOR_WEB_URL`. |
 
 ## Feature flags de rollout
 

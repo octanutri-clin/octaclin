@@ -149,7 +149,8 @@ function criarServico(dados: Record<string, unknown> = {}) {
     )
   };
   const criptografia = {
-    descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8').replace('cripto:', ''))
+    descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8').replace('cripto:', '')),
+    criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`, 'utf8'))
   } as unknown as CriptografiaDadosSensiveis;
   const googleCalendar = {
     criarEvento: jest.fn(async () => ({ sincronizado: true, calendarId: 'primary', eventId: 'event-1', htmlLink: 'https://calendar.google/event' })),
@@ -190,7 +191,8 @@ function criarServico(dados: Record<string, unknown> = {}) {
     repositorios,
     googleCalendar,
     comunicacoes,
-    servicoConexao
+    servicoConexao,
+    criptografia
   };
 }
 
@@ -1218,13 +1220,80 @@ describe('ServicoAgenda', () => {
       lock: { mode: 'pessimistic_write' }
     });
     expect(consulta.status).toBe('cancelada');
+    // A partir da Fase B da criptografia residual (Fase 261), o historico so
+    // registra que um motivo foi informado -- o texto vai para a coluna cifrada.
     expect(consulta.payload.historico).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           acao: 'cancelada',
-          motivo: 'Paciente solicitou remarcacao futura.'
+          motivoRegistrado: true
         })
       ])
+    );
+    expect((consulta.payload.historico as Array<Record<string, unknown>>).some((evento) => 'motivo' in evento)).toBe(
+      false
+    );
+    expect(consulta.motivoCancelamento).toBe('Paciente solicitou remarcacao futura.');
+  });
+
+  it('marca motivo de cancelamento como ilegivel sem derrubar a consulta', async () => {
+    const consultaExistente = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      googleCalendarId: 'primary',
+      googleEventId: 'event-1',
+      notificacoes: {},
+      payload: { pacienteNome: 'Ana Paula' },
+      criadoEm: new Date('2026-07-20T12:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-20T12:00:00.000Z')
+    };
+    const { servico, criptografia } = criarServico({ consulta: consultaExistente, consultas: [consultaExistente] });
+    (criptografia.descriptografar as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('chave rotacionada');
+    });
+
+    const consulta = await servico.cancelarConsulta(
+      'tenant-1',
+      'consulta-1',
+      { motivo: 'Paciente solicitou remarcacao futura.' },
+      usuarioColaborador
+    );
+
+    expect(consulta.motivoCancelamento).toBe('Motivo de cancelamento ilegivel.');
+  });
+
+  it('nao grava motivo cifrado quando o cancelamento nao informa motivo', async () => {
+    const consultaExistente = {
+      id: 'consulta-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      titulo: 'Consulta - Ana Paula',
+      inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+      fimEm: new Date('2026-07-22T13:00:00.000Z'),
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      googleCalendarId: 'primary',
+      googleEventId: 'event-1',
+      notificacoes: {},
+      payload: { pacienteNome: 'Ana Paula' },
+      criadoEm: new Date('2026-07-20T12:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-20T12:00:00.000Z')
+    };
+    const { servico } = criarServico({ consulta: consultaExistente, consultas: [consultaExistente] });
+
+    const consulta = await servico.cancelarConsulta('tenant-1', 'consulta-1', {}, usuarioColaborador);
+
+    expect(consulta.motivoCancelamento).toBeUndefined();
+    expect(consulta.payload.historico).toEqual(
+      expect.arrayContaining([expect.objectContaining({ acao: 'cancelada', motivoRegistrado: false })])
     );
   });
 

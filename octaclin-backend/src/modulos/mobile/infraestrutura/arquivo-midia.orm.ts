@@ -38,8 +38,14 @@ export class ArquivoMidiaOrm {
   @Column({ type: 'varchar', length: 20, default: 'pendente' })
   status: 'pendente' | 'confirmado' | 'excluido';
 
+  /**
+   * `exame`/`documento`/`foto`/`diario` sao todas assistenciais e herdam a
+   * retencao de 20 anos do prontuario. `temporario`/`exportacao` tem no
+   * maximo 7 dias; `administrativo` tem 90 dias apos encerramento (Fase
+   * 261). Nenhum fluxo de upload hoje usa as tres novas.
+   */
   @Column({ type: 'varchar', length: 20, default: 'documento' })
-  categoria: 'exame' | 'documento' | 'foto' | 'diario';
+  categoria: 'exame' | 'documento' | 'foto' | 'diario' | 'temporario' | 'exportacao' | 'administrativo';
 
   @Column({ name: 'nome_original_criptografado', type: 'bytea', nullable: true })
   nomeOriginalCriptografado?: Buffer;

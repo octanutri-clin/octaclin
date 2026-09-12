@@ -895,7 +895,7 @@ export class ServicoPortalPaciente {
           tenantId,
           pacienteId: paciente.id,
           tipo: 'humor',
-          valor,
+          valorCriptografado: this.criptografia.criptografar(JSON.stringify(valor)),
           registradoEm
         })
       );
@@ -1297,7 +1297,7 @@ export class ServicoPortalPaciente {
   private mapearTarefaAcompanhamento(tarefa: AcompanhamentoTarefaOrm): TarefaAcompanhamentoPaciente {
     return {
       id: tarefa.id,
-      titulo: tarefa.titulo,
+      titulo: this.lerTituloTarefa(tarefa),
       descricao: tarefa.descricaoCriptografada ? this.criptografia.descriptografar(tarefa.descricaoCriptografada) : undefined,
       categoria: tarefa.categoria,
       prioridade: tarefa.prioridade,
@@ -1310,16 +1310,47 @@ export class ServicoPortalPaciente {
   }
 
   private mapearCheckinRapido(diario: LogDiarioRapidoOrm): CheckinRapidoPortalPaciente {
+    const valor = this.lerValorDiario(diario);
     return {
       id: diario.id,
       pacienteId: diario.pacienteId,
       tipo: 'humor',
-      humor: this.valorTextoDiario(diario.valor, 'humor', 'neutro') as CheckinRapidoPortalPaciente['humor'],
-      adesaoPlano: this.valorNumeroDiario(diario.valor, 'adesaoPlano', 0),
-      sintomas: this.valorTextoDiario(diario.valor, 'sintomas'),
-      observacoes: this.valorTextoDiario(diario.valor, 'observacoes'),
+      humor: this.valorTextoDiario(valor, 'humor', 'neutro') as CheckinRapidoPortalPaciente['humor'],
+      adesaoPlano: this.valorNumeroDiario(valor, 'adesaoPlano', 0),
+      sintomas: this.valorTextoDiario(valor, 'sintomas'),
+      observacoes: this.valorTextoDiario(valor, 'observacoes'),
       registradoEm: diario.registradoEm
     };
+  }
+
+  /**
+   * Registro novo so tem `tituloCriptografado`; registro anterior a Fase B da
+   * criptografia residual (Fase 261) so tem `titulo` em claro. Ilegivel nao
+   * derruba a tarefa, so troca o titulo por um aviso.
+   */
+  private lerTituloTarefa(tarefa: AcompanhamentoTarefaOrm): string {
+    if (tarefa.tituloCriptografado) {
+      try {
+        return this.criptografia.descriptografar(tarefa.tituloCriptografado);
+      } catch {
+        return 'Titulo ilegivel.';
+      }
+    }
+    return tarefa.titulo ?? '';
+  }
+
+  /**
+   * Registro novo so tem `valorCriptografado`; registro anterior a Fase B da
+   * criptografia residual (Fase 261) so tem `valor` em claro. Ilegivel nao
+   * derruba o checkin, so esvazia o registro.
+   */
+  private lerValorDiario(diario: LogDiarioRapidoOrm): Record<string, unknown> {
+    if (!diario.valorCriptografado) return diario.valor ?? {};
+    try {
+      return JSON.parse(this.criptografia.descriptografar(diario.valorCriptografado)) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
   }
 
   private valorTextoDiario(valor: Record<string, unknown>, chave: string, padrao?: string): string | undefined {

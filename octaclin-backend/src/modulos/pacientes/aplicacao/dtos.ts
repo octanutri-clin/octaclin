@@ -324,6 +324,18 @@ export interface PacienteRespostaDto {
   atualizadoEm: Date;
 }
 
+/**
+ * Resultado de uma solicitacao de eliminacao de dados LGPD (Fase 261).
+ * `RETENTION_HELD` significa preservado, nao eliminado: o prontuario ainda
+ * esta dentro do prazo legal de guarda.
+ */
+export interface ResultadoSolicitacaoEliminacaoLgpdDto {
+  status: 'RETENTION_HELD' | 'DELETED';
+  retentionUntil?: Date;
+  retentionReason?: string;
+  deletedAt?: Date;
+}
+
 export type TipoEventoProntuarioPaciente =
   | 'consulta'
   | 'formulario'

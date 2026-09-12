@@ -14,8 +14,16 @@ export class LogDiarioRapidoOrm {
   @Column({ type: 'varchar', length: 40 })
   tipo: 'refeicao' | 'humor' | 'agua' | 'atividade';
 
-  @Column({ type: 'jsonb' })
-  valor: Record<string, unknown>;
+  /**
+   * Coluna historica: so continua preenchida em linha anterior a Fase B da
+   * criptografia residual (Fase 261). Registro novo grava so
+   * `valorCriptografado`.
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  valor?: Record<string, unknown>;
+
+  @Column({ name: 'valor_criptografado', type: 'bytea', nullable: true })
+  valorCriptografado?: Buffer;
 
   @Column({ name: 'registrado_em', type: 'timestamptz' })
   registradoEm: Date;

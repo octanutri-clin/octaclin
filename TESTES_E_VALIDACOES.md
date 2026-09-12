@@ -392,6 +392,27 @@ healthchecks, identidade da web, retentativas, permissao minima do workflow e
 controle explicito antes de ativar o cron. O aceite real exige uma execucao
 manual com as URLs oficiais de producao configuradas no repositorio.
 
+### Fase 261 - verificacao passiva de seguranca de producao
+
+```powershell
+pnpm test:verificar-seguranca-producao
+pnpm security:secrets
+powershell -ExecutionPolicy Bypass -File .\validar-preflight.ps1 -DocsOnly
+```
+
+Separado de proposito do monitor de saude da Fase 220: aqui o alvo e TLS
+(protocolo e validade do certificado), redirecionamento HTTP->HTTPS, HSTS,
+CSP sem `unsafe-eval`/`unsafe-inline`, headers de seguranca, ausencia de
+header que exponha implementacao, flags de cookie (`Secure`/`HttpOnly`/
+`SameSite`), CORS sem refletir origem arbitraria e cache-control ausente em
+rota protegida. Tudo passivo e nao-destrutivo: nenhuma requisicao cria,
+altera ou apaga dado; nada tenta explorar uma falha. Fuzzing agressivo,
+SQLi/XSS ativos, brute force, mass assignment destrutivo e DAST autenticado
+continuam fora desta fase, propositalmente, e ficam para uma fase futura,
+preferencialmente primeiro contra staging. O aceite real exige uma execucao
+manual com as URLs oficiais de producao configuradas no repositorio,
+igual ao monitor da Fase 220.
+
 ### Fase 219 - backup automatizado
 
 ```powershell

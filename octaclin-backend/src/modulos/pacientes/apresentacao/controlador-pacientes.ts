@@ -581,6 +581,57 @@ export class ControladorPacientes {
     });
   }
 
+  /**
+   * Solicitacao de eliminacao de dados LGPD -- nao e "excluir paciente".
+   * Nunca apaga o prontuario dentro do prazo legal de guarda; so registra a
+   * solicitacao e, quando nao ha registro assistencial retendo o dado,
+   * elimina de verdade. Ver ServicoPacientes.solicitarEliminacaoDadosLgpd.
+   */
+  @Patch(':id/lgpd/solicitacao-eliminacao')
+  @Permissoes('pacientes.gerenciar')
+  async solicitarEliminacaoLgpd(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    const resultado = await this.servicoPacientes.solicitarEliminacaoDadosLgpd(usuario.tenantId, id, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.lgpd.solicitacao_eliminacao',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { status: resultado.status }
+    });
+    return resultado;
+  }
+
+  /**
+   * Desativa so a conta de acesso do paciente ao portal -- nao e "excluir
+   * paciente" nem solicitacao LGPD. O prontuario continua intacto e
+   * inalterado; so o login para de funcionar.
+   */
+  @Patch(':id/conta-acesso/desativacao')
+  @Permissoes('pacientes.gerenciar')
+  async desativarContaAcesso(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    await this.servicoPacientes.desativarContaAcesso(usuario.tenantId, id, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.conta_acesso.desativar',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao)
+    });
+  }
+
   private obterUserAgent(requisicao: Request): string | undefined {
     const userAgent = requisicao.headers['user-agent'];
     return Array.isArray(userAgent) ? userAgent.join(', ') : userAgent;

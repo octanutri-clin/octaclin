@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { And, ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThanOrEqual, Not, QueryFailedError, Raw } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { montarCsv } from '../../../infraestrutura/exportacao/csv';
@@ -40,12 +40,17 @@ import {
   PaginaLinhaTempoProntuarioDto,
   ProntuarioPacienteRespostaDto,
   TarefaAcompanhamentoRespostaDto,
-  ListarPacientesDto
+  ListarPacientesDto,
+  ResultadoSolicitacaoEliminacaoLgpdDto
 } from './dtos';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
+import { TombstoneExclusaoLgpdOrm } from '../../../infraestrutura/lgpd/tombstone-exclusao-lgpd.orm';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
+import { SessaoUsuarioOrm } from '../../auth/infraestrutura/sessao-usuario.orm';
 
 /**
  * Teto de linhas por exportacao. Exportacao em massa de PHI e vetor de
@@ -56,6 +61,13 @@ const PAGINA_EXPORTACAO = 100;
 const LIMITE_PADRAO_TIMELINE = 20;
 const LIMITE_MAXIMO_TIMELINE = 50;
 const CONSTRAINT_REFERENCIA_EXTERNA_PACIENTE = 'ux_pacientes_referencia_externa';
+/**
+ * Prazo de guarda do prontuario (Fase 261, decisao de produto LGPD): 20 anos
+ * a partir do ultimo registro assistencial. Aproximado em milissegundos por
+ * ano de 365.25 dias -- suficiente para uma decisao de reter/eliminar, nao
+ * para calculo de calendario civil.
+ */
+const PRAZO_RETENCAO_PRONTUARIO_MS = 20 * 365.25 * 24 * 60 * 60 * 1000;
 
 interface CursorTimeline {
   data: string;
@@ -65,7 +77,7 @@ interface CursorTimeline {
 interface LinhaTimelinePaginada {
   id: string;
   tipo: TipoEventoProntuarioPaciente;
-  titulo: string;
+  titulo: string | null;
   data: Date | string;
   status?: string | null;
   origemId?: string | null;
@@ -73,6 +85,7 @@ interface LinhaTimelinePaginada {
   responsavelId?: string | null;
   autorUsuarioId?: string | null;
   metadados?: Record<string, unknown> | null;
+  tituloCriptografado?: Buffer | null;
 }
 
 @Injectable()
@@ -361,6 +374,138 @@ export class ServicoPacientes {
     });
   }
 
+  /**
+   * Solicitacao de eliminacao de dados (LGPD), distinta de `arquivar`:
+   * arquivar encerra o acompanhamento sem tocar retencao; isto decide se o
+   * dado pode ser eliminado agora ou precisa ficar retido pelo prazo do
+   * prontuario. Nunca e a mesma operacao que "excluir conta de acesso"
+   * (`desativarContaAcesso`) -- uma nao implica a outra.
+   *
+   * Com registro assistencial dentro dos 20 anos: fica `RETENTION_HELD`,
+   * preservado, nada e apagado ou reescrito. Sem registro assistencial
+   * (ou fora do prazo de guarda): elimina de verdade agora -- sobrescreve o
+   * identificador criptografado por um marcador de eliminacao (a coluna
+   * continua NOT NULL por desenho, o conteudo original nunca mais existe),
+   * limpa contato e hashes de busca, e grava um tombstone para o restore de
+   * backup nao trazer o dado de volta.
+   */
+  async solicitarEliminacaoDadosLgpd(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<ResultadoSolicitacaoEliminacaoLgpdDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const repositorio = gerenciador.getRepository(PacienteOrm);
+      const paciente = await repositorio.findOne({
+        where: { id: pacienteId, tenantId, ...(profissionalResponsavelId ? { profissionalResponsavelId } : {}) }
+      });
+      if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+      if (paciente.statusCicloVida === 'DELETED') {
+        throw new ConflictException('Os dados deste paciente ja foram eliminados.');
+      }
+
+      const agora = new Date();
+      const ultimoRegistroClinico = await this.obterDataUltimoRegistroClinico(gerenciador, tenantId, pacienteId);
+      const retentionUntil = ultimoRegistroClinico
+        ? new Date(ultimoRegistroClinico.getTime() + PRAZO_RETENCAO_PRONTUARIO_MS)
+        : undefined;
+
+      paciente.deletionRequestedAt = agora;
+
+      if (retentionUntil && retentionUntil.getTime() > agora.getTime()) {
+        paciente.statusCicloVida = 'RETENTION_HELD';
+        paciente.retentionReason = 'prontuario_clinico_20_anos';
+        paciente.retentionUntil = retentionUntil;
+        paciente.legalBasis = 'cfm_guarda_prontuario';
+        await repositorio.save(paciente);
+        return { status: 'RETENTION_HELD', retentionUntil, retentionReason: paciente.retentionReason };
+      }
+
+      paciente.statusCicloVida = 'DELETED';
+      paciente.deletedAt = agora;
+      paciente.retentionReason = undefined;
+      paciente.retentionUntil = undefined;
+      paciente.legalBasis = 'lgpd_art_18_v_eliminacao';
+      paciente.nomeCriptografado = this.criptografia.criptografar('[dados eliminados por solicitacao LGPD]');
+      paciente.contatoCriptografado = undefined;
+      paciente.buscaHashes = [];
+      paciente.dataNascimento = undefined;
+      paciente.referenciaExterna = undefined;
+      await repositorio.save(paciente);
+
+      const repositorioTombstone = gerenciador.getRepository(TombstoneExclusaoLgpdOrm);
+      await repositorioTombstone.save(
+        repositorioTombstone.create({
+          tenantId,
+          tabela: 'pacientes',
+          registroId: paciente.id,
+          motivo: 'lgpd_solicitacao_eliminacao'
+        })
+      );
+
+      return { status: 'DELETED', deletedAt: agora };
+    });
+  }
+
+  /**
+   * Desativa so a conta de autenticacao do paciente -- nunca o prontuario.
+   * Operacao distinta de `solicitarEliminacaoDadosLgpd` e de `arquivar`: um
+   * paciente pode ficar sem acesso ao portal sem que isso vire pedido de
+   * eliminacao, e uma eliminacao real nao depende de o paciente ter conta.
+   */
+  async desativarContaAcesso(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<void> {
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: { id: pacienteId, tenantId, ...(profissionalResponsavelId ? { profissionalResponsavelId } : {}) }
+      });
+      if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+      if (!paciente.usuarioId) throw new BadRequestException('Paciente nao possui conta de acesso.');
+
+      const agora = new Date();
+      await gerenciador.getRepository(UsuarioOrm).update(
+        { id: paciente.usuarioId, tenantId },
+        { ativo: false }
+      );
+      await gerenciador.getRepository(RefreshTokenOrm).update(
+        { tenantId, usuarioId: paciente.usuarioId },
+        { revogadoEm: agora }
+      );
+      await gerenciador.getRepository(SessaoUsuarioOrm).update(
+        { tenantId, usuarioId: paciente.usuarioId, revogadoEm: IsNull() },
+        { revogadoEm: agora, motivoRevogacao: 'acesso_alterado' }
+      );
+    });
+  }
+
+  /**
+   * Maior data entre os registros assistenciais do paciente. `null` quando
+   * nao existe nenhum -- caso em que a retencao de 20 anos do prontuario
+   * simplesmente nao se aplica.
+   */
+  private async obterDataUltimoRegistroClinico(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string
+  ): Promise<Date | null> {
+    const linhas = await gerenciador.query<Array<{ ultimo: string | null }>>(
+      `
+        select greatest(
+          coalesce((select max(criado_em) from evolucoes_clinicas where tenant_id = $1 and paciente_id = $2), 'epoch'),
+          coalesce((select max(avaliada_em) from avaliacoes_antropometricas where tenant_id = $1 and paciente_id = $2), 'epoch'),
+          coalesce((select max(emitido_em) from documentos_emitidos where tenant_id = $1 and paciente_id = $2), 'epoch'),
+          coalesce((select max(inicio_em) from agenda_consultas where tenant_id = $1 and paciente_id = $2 and status = 'concluida'), 'epoch'),
+          coalesce((select max(coletada_em) from coletas_exames_laboratoriais where tenant_id = $1 and paciente_id = $2), 'epoch'),
+          coalesce((select max(capturada_em) from evolucoes_fotograficas where tenant_id = $1 and paciente_id = $2), 'epoch')
+        ) as ultimo
+      `,
+      [tenantId, pacienteId]
+    );
+    const ultimo = linhas[0]?.ultimo ? new Date(linhas[0].ultimo) : null;
+    return ultimo && ultimo.getTime() > 0 ? ultimo : null;
+  }
+
   private mapearResposta(
     paciente: PacienteOrm,
     resumoConsultas?: { ultimaConsultaConcluidaEm?: Date; proximaConsultaEm?: Date }
@@ -465,7 +610,7 @@ export class ServicoPacientes {
         tenantId,
         pacienteId,
         autorUsuarioId,
-        titulo: dados.titulo.trim(),
+        tituloCriptografado: this.criptografia.criptografar(dados.titulo.trim()),
         conteudoCriptografado: this.criptografia.criptografar(dados.conteudo.trim()),
         tipo: dados.tipo ?? 'observacao',
         visibilidade: dados.visibilidade ?? 'privada'
@@ -507,7 +652,7 @@ export class ServicoPacientes {
         tenantId,
         pacienteId,
         profissionalId,
-        titulo: dados.titulo.trim(),
+        tituloCriptografado: this.criptografia.criptografar(dados.titulo.trim()),
         descricaoCriptografada: dados.descricao?.trim() ? this.criptografia.criptografar(dados.descricao.trim()) : undefined,
         categoria: dados.categoria ?? 'tarefa',
         prioridade: dados.prioridade ?? 'media',
@@ -684,7 +829,7 @@ export class ServicoPacientes {
           ? {
               tipo: 'tarefa_vencida',
               titulo: 'Tratar tarefa vencida',
-              descricao: tarefaVencida.titulo,
+              descricao: this.lerTituloTarefa(tarefaVencida),
               destino: 'acompanhamento',
               referenciaId: tarefaVencida.id,
               dataReferencia: tarefaVencida.vencimentoEm
@@ -738,7 +883,7 @@ export class ServicoPacientes {
           tarefaVencida: tarefaVencida?.vencimentoEm
             ? {
                 tarefaId: tarefaVencida.id,
-                titulo: tarefaVencida.titulo,
+                titulo: this.lerTituloTarefa(tarefaVencida),
                 vencimentoEm: tarefaVencida.vencimentoEm
               }
             : undefined,
@@ -761,8 +906,9 @@ export class ServicoPacientes {
     let encontrouSintomas = false;
 
     for (const diario of diarios) {
+      const valor = this.lerValorDiario(diario);
       if (!encontrouAdesao) {
-        const adesao = diario.valor.adesaoPlano;
+        const adesao = valor.adesaoPlano;
         if (typeof adesao === 'number' && Number.isFinite(adesao) && adesao >= 0 && adesao <= 100) {
           indicadores.push({
             tipo: 'adesao',
@@ -775,7 +921,7 @@ export class ServicoPacientes {
       }
 
       if (!encontrouSintomas) {
-        const sintomas = diario.valor.sintomas;
+        const sintomas = valor.sintomas;
         if (typeof sintomas === 'string' && sintomas.trim()) {
           indicadores.push({
             tipo: 'sintomas',
@@ -823,7 +969,8 @@ export class ServicoPacientes {
             'Agenda'::text AS origem,
             COALESCE(consulta.profissional_id, contexto.profissional_responsavel_id) AS "responsavelId",
             NULL::uuid AS "autorUsuarioId",
-            jsonb_build_object('fimEm', consulta.fim_em) AS metadados
+            jsonb_build_object('fimEm', consulta.fim_em) AS metadados,
+            NULL::bytea AS "tituloCriptografado"
           FROM agenda_consultas consulta CROSS JOIN contexto
           WHERE consulta.tenant_id = $1 AND consulta.paciente_id = $2
           UNION ALL
@@ -831,7 +978,8 @@ export class ServicoPacientes {
             COALESCE(envio.enviado_em, envio.expira_em, 'epoch'::timestamptz), envio.status,
             envio.questionario_id, 'Formularios',
             COALESCE(questionario.profissional_id, contexto.profissional_responsavel_id), NULL::uuid,
-            jsonb_build_object('envioQuestionarioId', envio.id, 'expiraEm', envio.expira_em)
+            jsonb_build_object('envioQuestionarioId', envio.id, 'expiraEm', envio.expira_em),
+            NULL::bytea
           FROM envios_questionario envio
           LEFT JOIN questionarios questionario
             ON questionario.tenant_id = envio.tenant_id AND questionario.id = envio.questionario_id
@@ -843,7 +991,8 @@ export class ServicoPacientes {
             CASE WHEN resposta.finalizado_em IS NULL THEN 'em_andamento' ELSE 'finalizado' END,
             resposta.envio_questionario_id, 'Formularios',
             COALESCE(questionario.profissional_id, contexto.profissional_responsavel_id), contexto.usuario_id,
-            jsonb_build_object('envioQuestionarioId', resposta.envio_questionario_id)
+            jsonb_build_object('envioQuestionarioId', resposta.envio_questionario_id),
+            NULL::bytea
           FROM respostas_checkin resposta
           LEFT JOIN envios_questionario envio
             ON envio.tenant_id = resposta.tenant_id AND envio.id = resposta.envio_questionario_id
@@ -854,7 +1003,8 @@ export class ServicoPacientes {
           UNION ALL
           SELECT diario.id::text, 'checkin_rapido'::text, 'Registro de habitos', diario.registrado_em,
             'registrado', diario.id, 'Portal do paciente', contexto.profissional_responsavel_id,
-            contexto.usuario_id, jsonb_build_object('tipoDiario', diario.tipo)
+            contexto.usuario_id, jsonb_build_object('tipoDiario', diario.tipo),
+            NULL::bytea
           FROM logs_diario_rapido diario CROSS JOIN contexto
           WHERE diario.tenant_id = $1 AND diario.paciente_id = $2
           UNION ALL
@@ -863,14 +1013,16 @@ export class ServicoPacientes {
             COALESCE(mensagem.enviado_em, mensagem.criado_em), mensagem.status, mensagem.id,
             'Comunicacoes', contexto.profissional_responsavel_id,
             CASE WHEN mensagem.status = 'recebido' THEN contexto.usuario_id ELSE NULL::uuid END,
-            '{}'::jsonb
+            '{}'::jsonb,
+            NULL::bytea
           FROM mensagens_notificacao mensagem CROSS JOIN contexto
           WHERE mensagem.tenant_id = $1 AND mensagem.paciente_id = $2 AND $11::boolean
           UNION ALL
           SELECT evolucao.id::text, 'evolucao_clinica'::text, evolucao.titulo,
             evolucao.criado_em, evolucao.tipo, evolucao.id, 'Prontuario',
             COALESCE(profissional.id, contexto.profissional_responsavel_id), evolucao.autor_usuario_id,
-            jsonb_build_object('visibilidade', evolucao.visibilidade)
+            jsonb_build_object('visibilidade', evolucao.visibilidade),
+            evolucao.titulo_criptografado
           FROM evolucoes_clinicas evolucao
           LEFT JOIN profissionais profissional
             ON profissional.tenant_id = evolucao.tenant_id
@@ -883,7 +1035,8 @@ export class ServicoPacientes {
             COALESCE(tarefa.vencimento_em, tarefa.criado_em), tarefa.status, tarefa.id,
             'Acompanhamento', COALESCE(tarefa.profissional_id, contexto.profissional_responsavel_id),
             NULL::uuid,
-            jsonb_build_object('categoria', tarefa.categoria, 'prioridade', tarefa.prioridade, 'concluidoEm', tarefa.concluido_em)
+            jsonb_build_object('categoria', tarefa.categoria, 'prioridade', tarefa.prioridade, 'concluidoEm', tarefa.concluido_em),
+            tarefa.titulo_criptografado
           FROM acompanhamento_tarefas tarefa CROSS JOIN contexto
           WHERE tarefa.tenant_id = $1 AND tarefa.paciente_id = $2
           UNION ALL
@@ -891,7 +1044,8 @@ export class ServicoPacientes {
             'Plano alimentar publicado', versao.publicada_em, 'publicado', plano.id,
             'Plano alimentar', COALESCE(plano.profissional_id, contexto.profissional_responsavel_id),
             COALESCE(versao.revisada_por_usuario_id, versao.criado_por_usuario_id),
-            jsonb_build_object('planoId', plano.id, 'versaoId', versao.id, 'numeroVersao', versao.numero)
+            jsonb_build_object('planoId', plano.id, 'versaoId', versao.id, 'numeroVersao', versao.numero),
+            NULL::bytea
           FROM plano_alimentar_versoes versao
           INNER JOIN planos_alimentares plano
             ON plano.tenant_id = versao.tenant_id AND plano.id = versao.plano_id
@@ -904,7 +1058,8 @@ export class ServicoPacientes {
             CASE WHEN avaliacao.excluida_em IS NULL THEN 'registrada' ELSE 'excluida' END,
             avaliacao.id, 'Antropometria',
             COALESCE(profissional.id, contexto.profissional_responsavel_id), avaliacao.autor_usuario_id,
-            jsonb_build_object('protocolo', avaliacao.protocolo)
+            jsonb_build_object('protocolo', avaliacao.protocolo),
+            NULL::bytea
           FROM avaliacoes_antropometricas avaliacao
           LEFT JOIN profissionais profissional
             ON profissional.tenant_id = avaliacao.tenant_id
@@ -919,7 +1074,8 @@ export class ServicoPacientes {
             documento.id, 'Documentos',
             COALESCE(documento.profissional_id, profissional.id, contexto.profissional_responsavel_id),
             documento.autor_usuario_id,
-            jsonb_build_object('tipoDocumento', documento.tipo, 'consultaId', documento.consulta_id, 'enviadoEm', documento.enviado_em)
+            jsonb_build_object('tipoDocumento', documento.tipo, 'consultaId', documento.consulta_id, 'enviadoEm', documento.enviado_em),
+            NULL::bytea
           FROM documentos_emitidos documento
           LEFT JOIN profissionais profissional
             ON profissional.tenant_id = documento.tenant_id
@@ -931,7 +1087,8 @@ export class ServicoPacientes {
           SELECT arquivo.id::text, 'anexo_confirmado'::text, 'Anexo clinico confirmado',
             arquivo.confirmado_em, 'confirmado', arquivo.id, 'Anexos',
             contexto.profissional_responsavel_id, NULL::uuid,
-            jsonb_build_object('categoria', arquivo.categoria, 'tipoMidia', arquivo.tipo, 'mimeType', arquivo.mime_type)
+            jsonb_build_object('categoria', arquivo.categoria, 'tipoMidia', arquivo.tipo, 'mimeType', arquivo.mime_type),
+            NULL::bytea
           FROM arquivos_midia arquivo CROSS JOIN contexto
           WHERE arquivo.tenant_id = $1 AND arquivo.paciente_id = $2
             AND arquivo.status = 'confirmado' AND arquivo.confirmado_em IS NOT NULL
@@ -941,7 +1098,8 @@ export class ServicoPacientes {
             CASE WHEN coleta.excluida_em IS NULL THEN 'registrada' ELSE 'excluida' END,
             coleta.id, 'Exames laboratoriais',
             COALESCE(profissional.id, contexto.profissional_responsavel_id), coleta.autor_usuario_id,
-            jsonb_build_object('recebidaEm', coleta.recebida_em)
+            jsonb_build_object('recebidaEm', coleta.recebida_em),
+            NULL::bytea
           FROM coletas_exames_laboratoriais coleta
           LEFT JOIN profissionais profissional
             ON profissional.tenant_id = coleta.tenant_id
@@ -955,7 +1113,8 @@ export class ServicoPacientes {
             CASE WHEN fotografia.excluida_em IS NULL THEN 'registrada' ELSE 'excluida' END,
             fotografia.id, 'Evolucao fotografica',
             COALESCE(profissional.id, contexto.profissional_responsavel_id), fotografia.autor_usuario_id,
-            '{}'::jsonb
+            '{}'::jsonb,
+            NULL::bytea
           FROM evolucoes_fotograficas fotografia
           LEFT JOIN profissionais profissional
             ON profissional.tenant_id = fotografia.tenant_id
@@ -968,7 +1127,8 @@ export class ServicoPacientes {
             'Pagamento de consulta', consulta.pago_em, consulta.status_pagamento, consulta.id,
             'Financeiro', COALESCE(consulta.profissional_id, contexto.profissional_responsavel_id),
             NULL::uuid,
-            jsonb_build_object('natureza', 'consulta', 'valorCentavos', consulta.valor_centavos, 'formaPagamento', consulta.forma_pagamento)
+            jsonb_build_object('natureza', 'consulta', 'valorCentavos', consulta.valor_centavos, 'formaPagamento', consulta.forma_pagamento),
+            NULL::bytea
           FROM agenda_consultas consulta CROSS JOIN contexto
           WHERE consulta.tenant_id = $1 AND consulta.paciente_id = $2
             AND consulta.pago_em IS NOT NULL AND $10::boolean
@@ -977,7 +1137,8 @@ export class ServicoPacientes {
             'Pagamento de pacote', pacote.pago_em, pacote.status_pagamento, pacote.id,
             'Financeiro', COALESCE(pacote.profissional_id, contexto.profissional_responsavel_id),
             NULL::uuid,
-            jsonb_build_object('natureza', 'pacote', 'valorCentavos', pacote.valor_total_centavos, 'formaPagamento', pacote.forma_pagamento, 'canceladoEm', pacote.cancelado_em)
+            jsonb_build_object('natureza', 'pacote', 'valorCentavos', pacote.valor_total_centavos, 'formaPagamento', pacote.forma_pagamento, 'canceladoEm', pacote.cancelado_em),
+            NULL::bytea
           FROM pacotes_sessao pacote CROSS JOIN contexto
           WHERE pacote.tenant_id = $1 AND pacote.paciente_id = $2
             AND pacote.pago_em IS NOT NULL AND $10::boolean
@@ -1010,7 +1171,7 @@ export class ServicoPacientes {
       const itens = linhas.slice(0, limite).map((linha) => ({
         id: linha.id,
         tipo: linha.tipo,
-        titulo: linha.titulo,
+        titulo: this.lerTituloTimeline(linha),
         data: new Date(linha.data),
         status: linha.status ?? undefined,
         origemId: linha.origemId ?? undefined,
@@ -1216,7 +1377,7 @@ export class ServicoPacientes {
       tenantId: evolucao.tenantId,
       pacienteId: evolucao.pacienteId,
       autorUsuarioId: evolucao.autorUsuarioId,
-      titulo: evolucao.titulo,
+      titulo: this.lerTituloEvolucao(evolucao),
       conteudo: this.criptografia.descriptografar(evolucao.conteudoCriptografado),
       tipo: evolucao.tipo,
       visibilidade: evolucao.visibilidade,
@@ -1231,7 +1392,7 @@ export class ServicoPacientes {
       tenantId: tarefa.tenantId,
       pacienteId: tarefa.pacienteId,
       profissionalId: tarefa.profissionalId,
-      titulo: tarefa.titulo,
+      titulo: this.lerTituloTarefa(tarefa),
       descricao: tarefa.descricaoCriptografada ? this.criptografia.descriptografar(tarefa.descricaoCriptografada) : undefined,
       categoria: tarefa.categoria,
       prioridade: tarefa.prioridade,
@@ -1241,6 +1402,34 @@ export class ServicoPacientes {
       criadoEm: tarefa.criadoEm,
       atualizadoEm: tarefa.atualizadoEm
     };
+  }
+
+  /**
+   * Registro novo so tem `tituloCriptografado`; registro anterior a Fase B da
+   * criptografia residual (Fase 261) so tem `titulo` em claro. Ilegivel nao
+   * derruba a evolucao, so troca o titulo por um aviso.
+   */
+  private lerTituloEvolucao(evolucao: EvolucaoClinicaOrm): string {
+    if (evolucao.tituloCriptografado) {
+      try {
+        return this.criptografia.descriptografar(evolucao.tituloCriptografado);
+      } catch {
+        return 'Titulo ilegivel.';
+      }
+    }
+    return evolucao.titulo ?? '';
+  }
+
+  /** Mesmo criterio de `lerTituloEvolucao`, para `acompanhamento_tarefas`. */
+  private lerTituloTarefa(tarefa: AcompanhamentoTarefaOrm): string {
+    if (tarefa.tituloCriptografado) {
+      try {
+        return this.criptografia.descriptografar(tarefa.tituloCriptografado);
+      } catch {
+        return 'Titulo ilegivel.';
+      }
+    }
+    return tarefa.titulo ?? '';
   }
 
   private mapearContato(paciente: PacienteOrm): string | undefined {
@@ -1333,11 +1522,12 @@ export class ServicoPacientes {
       agua: 'Registro de agua',
       atividade: 'Registro de atividade'
     };
+    const valor = this.lerValorDiario(diario);
     const detalhes = [
-      typeof diario.valor.humor === 'string' ? `Humor: ${diario.valor.humor}` : undefined,
-      typeof diario.valor.adesaoPlano === 'number' ? `Adesao ao plano: ${diario.valor.adesaoPlano}%` : undefined,
-      typeof diario.valor.sintomas === 'string' && diario.valor.sintomas.trim() ? `Sintomas: ${diario.valor.sintomas.trim()}` : undefined,
-      typeof diario.valor.observacoes === 'string' && diario.valor.observacoes.trim() ? diario.valor.observacoes.trim() : undefined
+      typeof valor.humor === 'string' ? `Humor: ${valor.humor}` : undefined,
+      typeof valor.adesaoPlano === 'number' ? `Adesao ao plano: ${valor.adesaoPlano}%` : undefined,
+      typeof valor.sintomas === 'string' && valor.sintomas.trim() ? `Sintomas: ${valor.sintomas.trim()}` : undefined,
+      typeof valor.observacoes === 'string' && valor.observacoes.trim() ? valor.observacoes.trim() : undefined
     ].filter((detalhe): detalhe is string => Boolean(detalhe));
 
     return {
@@ -1350,6 +1540,37 @@ export class ServicoPacientes {
       origemId: diario.id,
       metadados: { tipoDiario: diario.tipo }
     };
+  }
+
+  /**
+   * So `evolucao_clinica` e `tarefa_acompanhamento` tem `tituloCriptografado`
+   * na timeline (Fase B da criptografia residual, Fase 261); os demais tipos
+   * de evento sempre trazem `titulo` em claro. Registro anterior a Fase B so
+   * tem `titulo` em claro; ilegivel nao derruba a timeline inteira.
+   */
+  private lerTituloTimeline(linha: LinhaTimelinePaginada): string {
+    if (linha.tituloCriptografado) {
+      try {
+        return this.criptografia.descriptografar(linha.tituloCriptografado);
+      } catch {
+        return 'Titulo ilegivel.';
+      }
+    }
+    return linha.titulo ?? '';
+  }
+
+  /**
+   * Registro novo so tem `valorCriptografado`; registro anterior a Fase B da
+   * criptografia residual (Fase 261) so tem `valor` em claro. Ilegivel nao
+   * derruba o prontuario, so esvazia o registro.
+   */
+  private lerValorDiario(diario: LogDiarioRapidoOrm): Record<string, unknown> {
+    if (!diario.valorCriptografado) return diario.valor ?? {};
+    try {
+      return JSON.parse(this.criptografia.descriptografar(diario.valorCriptografado)) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
   }
 
   private mapearEventoMensagem(mensagem: MensagemNotificacaoOrm): EventoProntuarioPacienteDto {
@@ -1378,7 +1599,7 @@ export class ServicoPacientes {
     return {
       id: evolucao.id,
       tipo: 'evolucao_clinica',
-      titulo: evolucao.titulo,
+      titulo: this.lerTituloEvolucao(evolucao),
       data: evolucao.criadoEm,
       status: evolucao.tipo,
       origemId: evolucao.id,
@@ -1398,7 +1619,7 @@ export class ServicoPacientes {
     return {
       id: tarefa.id,
       tipo: 'tarefa_acompanhamento',
-      titulo: tarefa.titulo,
+      titulo: this.lerTituloTarefa(tarefa),
       data: tarefa.vencimentoEm ?? tarefa.criadoEm,
       status: tarefa.status,
       origemId: tarefa.id,

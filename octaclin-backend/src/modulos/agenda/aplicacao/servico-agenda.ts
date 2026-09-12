@@ -657,13 +657,15 @@ export class ServicoAgenda {
         );
       }
 
+      const motivo = textoOpcional(dados.motivo);
       atual.status = 'cancelada';
       atual.payload = this.adicionarHistorico(atual.payload, {
         acao: 'cancelada',
         origem,
-        motivo: textoOpcional(dados.motivo),
+        motivoRegistrado: Boolean(motivo),
         canceladaEm: new Date().toISOString()
       });
+      atual.motivoCancelamentoCriptografado = motivo ? this.criptografia.criptografar(motivo) : undefined;
       const cancelada = await repositorio.save(atual);
       await registrarEventoWebhook(gerenciador, tenantId, {
         evento: 'consulta.cancelada',
@@ -1426,8 +1428,24 @@ export class ServicoAgenda {
       pacoteId: consulta.pacoteId,
       notificacoes: (consulta.notificacoes ?? {}) as NotificacoesConsultaAgenda,
       payload,
+      motivoCancelamento: this.lerMotivoCancelamento(consulta),
       criadoEm: consulta.criadoEm,
       atualizadoEm: consulta.atualizadoEm
     };
+  }
+
+  /**
+   * So a partir da coluna cifrada: cancelamento anterior a Fase B do
+   * desenho de criptografia residual (Fase 261) so tem o motivo dentro de
+   * `payload.historico[].motivo`, em claro -- debito aceito no desenho,
+   * nao reescrito aqui. Ilegivel nao derruba a consulta.
+   */
+  private lerMotivoCancelamento(consulta: AgendaConsultaOrm): string | undefined {
+    if (!consulta.motivoCancelamentoCriptografado) return undefined;
+    try {
+      return this.criptografia.descriptografar(consulta.motivoCancelamentoCriptografado);
+    } catch {
+      return 'Motivo de cancelamento ilegivel.';
+    }
   }
 }

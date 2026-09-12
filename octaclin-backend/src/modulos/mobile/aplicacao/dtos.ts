@@ -34,6 +34,15 @@ export class RegistrarDiarioRapidoDto {
   valor: Record<string, unknown>;
 }
 
+export interface LogDiarioRapidoRespostaDto {
+  id: string;
+  tenantId: string;
+  pacienteId: string;
+  tipo: 'refeicao' | 'humor' | 'agua' | 'atividade';
+  valor: Record<string, unknown>;
+  registradoEm: Date;
+}
+
 export class SolicitarUploadMidiaDto {
   @IsUUID()
   pacienteId: string;

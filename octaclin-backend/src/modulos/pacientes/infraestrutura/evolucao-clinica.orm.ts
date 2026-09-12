@@ -17,8 +17,16 @@ export class EvolucaoClinicaOrm {
   @Column({ name: 'autor_usuario_id', type: 'uuid' })
   autorUsuarioId: string;
 
-  @Column({ type: 'varchar', length: 180 })
-  titulo: string;
+  /**
+   * Coluna historica: so continua preenchida em linha anterior a Fase B da
+   * criptografia residual (Fase 261). Evolucao nova grava so
+   * `tituloCriptografado`.
+   */
+  @Column({ type: 'varchar', length: 180, nullable: true })
+  titulo?: string;
+
+  @Column({ name: 'titulo_criptografado', type: 'bytea', nullable: true })
+  tituloCriptografado?: Buffer;
 
   @Column({ name: 'conteudo_criptografado', type: 'bytea' })
   conteudoCriptografado: Buffer;

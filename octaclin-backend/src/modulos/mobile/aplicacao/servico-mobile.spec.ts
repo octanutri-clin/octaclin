@@ -119,7 +119,10 @@ function criarServico(dados: DadosFake = {}, usarIfNoneMatch = true) {
   const executorTenant = {
     executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => operacao(gerenciador))
   };
-  const criptografia = { criptografar: jest.fn((valor: string) => `enc:${valor}`) };
+  const criptografia = {
+    criptografar: jest.fn((valor: string) => Buffer.from(`enc:${valor}`, 'utf8')),
+    descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8').replace('enc:', ''))
+  };
   const senhas = { gerarHash: jest.fn((valor: string) => `hash:${valor}`) };
   const armazenamento = {
     bucket: 'octaclin-midias-teste',
@@ -190,6 +193,51 @@ describe('ServicoMobile', () => {
     const diarios = await servico.listarDiarioRapido('tenant-1', usuarioPaciente);
 
     expect(diarios).toEqual([expect.objectContaining({ id: 'diario-1', pacienteId: 'paciente-1' })]);
+  });
+
+  it('grava so o valor cifrado e devolve o conteudo decifrado ao registrar', async () => {
+    const { servico, repositorios } = criarServico({ pacientes });
+
+    const registrado = await servico.registrarDiarioRapido(
+      'tenant-1',
+      { pacienteId: 'paciente-1', tipo: 'humor', valor: { escala: 4 } },
+      usuarioPaciente
+    );
+
+    expect(repositorios.diario.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        valorCriptografado: Buffer.from(`enc:${JSON.stringify({ escala: 4 })}`, 'utf8')
+      })
+    );
+    expect(repositorios.diario.save.mock.calls[0][0]).not.toHaveProperty('valor');
+    expect(registrado.valor).toEqual({ escala: 4 });
+  });
+
+  it('le registro historico so com valor em claro, sem coluna cifrada', async () => {
+    const { servico } = criarServico({
+      pacientes,
+      diarios: [{ id: 'diario-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', valor: { escala: 2 } }]
+    });
+
+    const [diario] = await servico.listarDiarioRapido('tenant-1', usuarioPaciente);
+
+    expect(diario.valor).toEqual({ escala: 2 });
+  });
+
+  it('esvazia o valor do registro ilegivel sem derrubar a lista', async () => {
+    const { servico, criptografia } = criarServico({
+      pacientes,
+      diarios: [
+        { id: 'diario-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', valorCriptografado: Buffer.from('ruido') }
+      ]
+    });
+    criptografia.descriptografar.mockImplementationOnce(() => {
+      throw new Error('chave rotacionada');
+    });
+
+    const [diario] = await servico.listarDiarioRapido('tenant-1', usuarioPaciente);
+
+    expect(diario.valor).toEqual({});
   });
 
   it('deve impedir Patient de gravar para outro paciente', async () => {
