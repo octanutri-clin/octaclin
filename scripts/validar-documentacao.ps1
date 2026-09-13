@@ -258,39 +258,9 @@ if ((Get-NormalizedUtf8Sha256 $claudePath) -cne $expectedClaudeBridgeHash) {
 
 $statusPath = Join-Path $RepositoryRoot 'STATUS_ATUAL_PROJETO.md'
 $checklistPath = Join-Path $RepositoryRoot 'CHECKLIST_FASES_FUTURAS_PRODUCAO.md'
-$statusContent = Get-Content -LiteralPath $statusPath -Raw
-$checklistContent = Get-Content -LiteralPath $checklistPath -Raw
-
-$statusMatch = [regex]::Match(
-  $statusContent,
-  '(?ms)^- Fase (?<completed>\d+) concluida.*?A proxima fase oficial e a Fase (?<next>\d+)\.'
-)
-if (-not $statusMatch.Success) {
-  throw 'STATUS_ATUAL_PROJETO.md nao informa fase concluida e proxima fase oficial no Snapshot.'
-}
-
-$checklistMatch = [regex]::Match(
-  $checklistContent,
-  '(?ms)^Atualizado em .*?conclusao da Fase (?<completed>\d+) e a Fase (?<next>\d+) como proxima\s+fase oficial\.'
-)
-if (-not $checklistMatch.Success) {
-  throw 'CHECKLIST_FASES_FUTURAS_PRODUCAO.md nao informa fase concluida e proxima fase oficial no cabecalho.'
-}
-
-$statusCompleted = [int]$statusMatch.Groups['completed'].Value
-$statusNext = [int]$statusMatch.Groups['next'].Value
-$checklistCompleted = [int]$checklistMatch.Groups['completed'].Value
-$checklistNext = [int]$checklistMatch.Groups['next'].Value
-
-if ($statusCompleted -ne $checklistCompleted -or $statusNext -ne $checklistNext) {
-  throw "Status e checklist divergem: status=$statusCompleted->$statusNext; checklist=$checklistCompleted->$checklistNext."
-}
-
-if ($statusNext -ne ($statusCompleted + 1)) {
-  throw "Sequencia de fases invalida no status: $statusCompleted->$statusNext."
-}
-
-Assert-RequiredPattern $checklistPath "(?m)^- \[ \] Fase $statusNext - " "proxima fase $statusNext pendente"
+& (Join-Path $PSScriptRoot 'validar-fase-atual.ps1') `
+  -StatusPath $statusPath `
+  -ChecklistPath $checklistPath
 
 $activeCommandDocuments = @(
   'README.md',

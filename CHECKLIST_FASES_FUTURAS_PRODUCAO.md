@@ -1,8 +1,8 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-07 com a conclusao da Fase 255 e a Fase 256 como proxima
-fase oficial. SQ-0 e a frente ativa antes dessa retomada; o programa de
-hardening PR 36-56 permanece como trilha separada.
+Atualizado em 2026-09-13. Fases 256 a 260 concluidas; Fase 261 em andamento
+e Fase 262 pendente.
+O programa de hardening PR 36-56 permanece como trilha separada.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -2674,8 +2674,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `1720000001043` (commit `0244c8a`) seguindo o padrão já usado em
     `sessoes_usuario` (`1720000001036`): enable + force + policy `ALL` com
     `using`/`with check` por `app.tenant_id`; spec da migration atualizado.
-    CI final: 20/20 checks verdes, `mergeable_state: clean`, sem review
-    pendente.
+    CI final: 19 checks `SUCCESS` e 1 `SKIPPED` (`Provenance do SBOM`, nao
+    aplicavel a PR), `mergeable_state: clean`, sem review pendente.
   - Instituir SLA de dependências, SBOM, revisão de workflows e gates de secrets,
     SAST e auditoria de produção; nenhum alerta crítico/alto aceito sem dono,
     prazo e justificativa documentada.
@@ -2710,7 +2710,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     injeção, falha grave de auth/authz, IDOR/isolamento de tenant e
     vulnerabilidade crítica/alta corrigível em dependência nova; achado
     histórico (baseline) e `MEDIUM`/`LOW` continuam informativos.
-    Semgrep sai na frente por ser o único com diff nativo (`--baseline-ref`
+    Semgrep sai na frente por ser o único com diff nativo (`--baseline-commit`
     contra o commit base do PR): passo novo, só em `pull_request`, com
     `--severity ERROR --error` reprova o job quando o PR introduz achado
     ERROR novo. CodeQL e Trivy ficam documentados em shadow (nenhum tem
@@ -2740,8 +2740,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
     (`cli/src/semgrep/commands/scan.py`, tag `v1.176.0`, a mesma versão da
     imagem `semgrep/semgrep` usada no workflow). Depois da correção, o
     commit base ficou acessível dentro do container com `fetch-depth: 0` e
-    o job passou de ponta a ponta — a prova fim a fim que faltava está
-    feita, não é mais suposição.
+    o job executou e passou em CI real num PR sem achado ERROR novo. Ainda
+    falta um teste negativo dedicado para provar que um achado ERROR novo
+    reprova o job; essa propriedade não foi exercitada por este PR.
   - Cifrar o conteúdo clínico livre hoje persistido em claro, incluindo o JSON
     de check-ins rápidos, títulos de evoluções/tarefas e motivos livres de
     cancelamento; manter em claro somente campos controlados indispensáveis a
