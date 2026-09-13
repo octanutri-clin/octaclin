@@ -264,6 +264,33 @@ Atualizado em 2026-09-11.
       confidencialidade, integridade, isolamento de tenant,
       autenticacao/autorizacao ou disponibilidade de producao — sao
       extensao de um desenho ja correto na base, nao correcao de falha.
+  - **PR GitHub `#235` mergeado em `main` (`c14c51f`) em 2026-09-12**, base
+    `1fe2119`. O merge fechou o Incremento 3 (LGPD/SAST/auditoria de
+    producao/migration de criptografia) e o Incremento 4 (categorizacao
+    clinico/administrativo, interface web das tres acoes distintas e o
+    procedimento de reconciliacao de tombstones no `RUNBOOK_BACKUP_RESTORE.md`).
+    A primeira execucao real do passo bloqueante do Semgrep neste PR expos
+    dois defeitos reais, os dois corrigidos e confirmados por evidencia de
+    CI antes do merge (commit `0244c8a`):
+    - `--baseline-ref` nao e opcao valida de `semgrep scan` (so existe em
+      `semgrep ci`); a opcao certa e `--baseline-commit`, confirmada no
+      codigo fonte oficial do Semgrep (`cli/src/semgrep/commands/scan.py`,
+      tag `v1.176.0`, a mesma versao da imagem `semgrep/semgrep` usada no
+      workflow). **Isso fecha a "verificacao pendente e honesta" registrada
+      no incremento anterior** — o passo bloqueante roda de ponta a ponta
+      confirmado em CI real, nao so por inspecao do Dockerfile.
+    - A tabela nova `tombstones_exclusao_lgpd` (Incremento 3) tinha
+      `tenant_id` mas nunca recebeu `ENABLE`/`FORCE ROW LEVEL SECURITY` nem
+      policy — a prova real de isolamento por tenant contra Postgres
+      (`rls-isolamento-tenant.integracao.spec.ts`, so roda em CI, nunca
+      neste sandbox local) pegou a lacuna na primeira execucao. Corrigido na
+      propria migration `1720000001043` seguindo o padrao ja usado em
+      `sessoes_usuario` (`1720000001036`): enable + force + policy `ALL`
+      com `using`/`with check` por `app.tenant_id`. Evidencia concreta de
+      que o gate de isolamento multi-tenant deste projeto funciona: pegou
+      uma lacuna real antes do merge, nao so em teoria.
+    CI final antes do merge: 20/20 checks verdes, `mergeable_state: clean`,
+    zero review pendente.
 - Fase 260 - Desempenho, resiliencia e diagnostico operacional, **concluida
   em 2026-09-11**. Auditoria inicial confirmou lazy-load
   parcial ja existente (materiais/anexos/profissionais) e endpoints

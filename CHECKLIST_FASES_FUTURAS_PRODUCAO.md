@@ -2664,6 +2664,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     isolamento de tenant, autenticação/autorização ou disponibilidade —
     são extensão de um desenho que já está correto na base, não correção
     de uma falha.
+    **PR GitHub `#235` mergeado em `main` (`c14c51f`) em 2026-09-12**, base
+    `1fe2119`, reunindo os Incrementos 3 e 4. A primeira execução real do
+    CI neste PR pegou uma lacuna real: a tabela `tombstones_exclusao_lgpd`
+    (Incremento 3) tinha `tenant_id` mas nunca recebeu `ENABLE`/`FORCE ROW
+    LEVEL SECURITY` nem policy de isolamento — a prova de isolamento por
+    tenant contra Postgres real (`rls-isolamento-tenant.integracao.spec.ts`,
+    só roda em CI) reprovou o job. Corrigido na própria migration
+    `1720000001043` (commit `0244c8a`) seguindo o padrão já usado em
+    `sessoes_usuario` (`1720000001036`): enable + force + policy `ALL` com
+    `using`/`with check` por `app.tenant_id`; spec da migration atualizado.
+    CI final: 20/20 checks verdes, `mergeable_state: clean`, sem review
+    pendente.
   - Instituir SLA de dependências, SBOM, revisão de workflows e gates de secrets,
     SAST e auditoria de produção; nenhum alerta crítico/alto aceito sem dono,
     prazo e justificativa documentada.
@@ -2720,12 +2732,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Semgrep que a imagem publicada `semgrep/semgrep` instala `git`,
     `git-lfs` e `openssh` no estágio final — a dependência que o passo
     bloqueante exige está presente, não é suposição.
-    **Verificação pendente e honesta**: `git` presente não prova o passo
-    fim a fim — falta confirmar que o commit base fica acessível dentro
-    do container com `fetch-depth: 0` e que `--severity ERROR --error`
-    reprova o job como esperado; este ambiente não tem como rodar
-    `semgrep/semgrep` nem abrir PR real para provar isso — a primeira
-    execução real do workflow no PR é a evidência que falta.
+    **Verificação concluída (PR #235, 2026-09-12)**: a primeira execução
+    real do workflow expôs que `--baseline-ref` não é opção válida de
+    `semgrep scan` (só existe em `semgrep ci`) — o job falhou com
+    `unknown option '--baseline-ref'`. Corrigido para `--baseline-commit`,
+    a opção correta confirmada no código-fonte oficial do Semgrep
+    (`cli/src/semgrep/commands/scan.py`, tag `v1.176.0`, a mesma versão da
+    imagem `semgrep/semgrep` usada no workflow). Depois da correção, o
+    commit base ficou acessível dentro do container com `fetch-depth: 0` e
+    o job passou de ponta a ponta — a prova fim a fim que faltava está
+    feita, não é mais suposição.
   - Cifrar o conteúdo clínico livre hoje persistido em claro, incluindo o JSON
     de check-ins rápidos, títulos de evoluções/tarefas e motivos livres de
     cancelamento; manter em claro somente campos controlados indispensáveis a
