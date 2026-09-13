@@ -1,12 +1,25 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-11.
+Atualizado em 2026-09-13.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Incidente operacional em 2026-09-13: a issue GitHub `#234` permanece aberta.
+  `GET /health/pronto` do backend de producao respondeu HTTP 503: banco `ok`,
+  migrations `falha`. Consulta somente-leitura ao Neon (branch `production`,
+  banco `Octaclin-db-producao`) mostrou 51 migrations aplicadas, ate `1038`.
+  O backend ativo anuncia 54 migrations configuradas, quantidade equivalente
+  a lista versionada ate `1041`; confirmar o SHA implantado no Render antes
+  de agir. O `main` atual registra 58 migrations, ate `1045`, portanto
+  `1039` a `1045` estao ausentes do banco. A web `/login` respondeu 200.
+  `/health/detalhado` mostrou `antimalware=degradado` por ClamAV nao
+  configurado; os demais checks, exceto migrations, estavam `ok`. O backup
+  agendado `34747454997` passou, inclusive restore em banco dedicado, mas
+  nao substitui snapshot, ensaio, janela e autorizacao para DDL. Nenhuma
+  migration ou alteracao de producao foi executada nesta verificacao.
 - Reconciliacao de 2026-09-10: o PR GitHub `#222` (PR 54 de governanca,
   `fix(ci): concluir MFA nos ensaios DAST descartaveis`) foi integrado no
   `main` com merge `804e0bb7c714d7fc835db812229c6ffcb90c626a`, base `f6f90ef`.
@@ -108,7 +121,7 @@ Atualizado em 2026-09-11.
   evidencias completas em
   `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
-  identificados no audit da fase) **em andamento, incremento 1 mergeado**.
+  identificados no audit da fase) **em andamento; incrementos 1 a 4 integrados**.
   PR GitHub `#232`, merge `85f5c4a` em `main`, base `1ef9ce7`, 2026-09-11.
   CI verde (20/20 checks) e `mergeable_state: clean` confirmados antes do
   merge humano. A fase continua aberta: o escopo aprovado no checklist
@@ -234,7 +247,7 @@ Atualizado em 2026-09-11.
       restore de backup, "acesso restrito" alem do que ja existe, e as
       tres acoes na interface web. Detalhe completo em
       `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
-    - **SAST**: Semgrep vira ratchet bloqueante (`--baseline-ref` do PR +
+    - **SAST**: Semgrep vira ratchet bloqueante (`--baseline-commit` do PR +
       `--severity ERROR --error`, so em `pull_request`); CodeQL/Trivy
       ficam em shadow, documentados, com plano de expansao concreto —
       nenhum dos dois tem diff base-vs-head nativo, e nao daria para
@@ -264,6 +277,34 @@ Atualizado em 2026-09-11.
       confidencialidade, integridade, isolamento de tenant,
       autenticacao/autorizacao ou disponibilidade de producao — sao
       extensao de um desenho ja correto na base, nao correcao de falha.
+  - **PR GitHub `#235` mergeado em `main` (`c14c51f`) em 2026-09-12**, base
+    `1fe2119`. O merge fechou o Incremento 3 (LGPD/SAST/auditoria de
+    producao/migration de criptografia) e o Incremento 4 (categorizacao
+    clinico/administrativo, interface web das tres acoes distintas e o
+    procedimento de reconciliacao de tombstones no `RUNBOOK_BACKUP_RESTORE.md`).
+    A primeira execucao real do CI deste PR expos
+    dois defeitos reais, os dois corrigidos e confirmados por evidencia de
+    CI antes do merge (commit `0244c8a`):
+    - `--baseline-ref` nao e opcao valida de `semgrep scan` (so existe em
+      `semgrep ci`); a opcao certa e `--baseline-commit`, confirmada no
+      codigo fonte oficial do Semgrep (`cli/src/semgrep/commands/scan.py`,
+      tag `v1.176.0`, a mesma versao da imagem `semgrep/semgrep` usada no
+      workflow). O passo bloqueante executou e passou em CI real num PR sem
+      achado ERROR novo. Uma prova negativa de que ele reprova um achado
+      ERROR introduzido ainda requer teste dedicado.
+    - A tabela nova `tombstones_exclusao_lgpd` (Incremento 3) tinha
+      `tenant_id` mas nunca recebeu `ENABLE`/`FORCE ROW LEVEL SECURITY` nem
+      policy — a prova real de isolamento por tenant contra Postgres
+      (`rls-isolamento-tenant.integracao.spec.ts`, so roda em CI, nunca
+      neste sandbox local) pegou a lacuna na primeira execucao. Corrigido na
+      propria migration `1720000001043` seguindo o padrao ja usado em
+      `sessoes_usuario` (`1720000001036`): enable + force + policy `ALL`
+      com `using`/`with check` por `app.tenant_id`. Evidencia concreta de
+      que o gate de isolamento multi-tenant deste projeto funciona: pegou
+      uma lacuna real antes do merge, nao so em teoria.
+    CI final antes do merge: 19 checks `SUCCESS` e 1 `SKIPPED`
+    (`Provenance do SBOM`, nao aplicavel a PR), `mergeable_state: clean`,
+    zero review pendente.
 - Fase 260 - Desempenho, resiliencia e diagnostico operacional, **concluida
   em 2026-09-11**. Auditoria inicial confirmou lazy-load
   parcial ja existente (materiais/anexos/profissionais) e endpoints
