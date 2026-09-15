@@ -230,13 +230,17 @@ test('valida estrutura e cobertura do inventario real na data da captura', () =>
   const inventario = JSON.parse(readFileSync(INVENTARIO_REAL, 'utf8'));
   assert.equal(inventario.gateEncerramentoSq4, true);
   assert.deepEqual(inventario.causas.map(({ alertas }) => alertas.length), [173, 40, 2]);
-  assert.ok(inventario.causas.every(({ disposicao }) => disposicao === 'aguardando_upstream'));
+  assert.deepEqual(inventario.causas.map(({ disposicao }) => disposicao), [
+    'aguardando_upstream',
+    'aguardando_upstream',
+    'mitigado',
+  ]);
   assert.match(carregarEValidarInventario(undefined, { hoje: HOJE }), /215 alertas cobertos/);
 });
 
 for (const [data, status, mensagem] of [
-  ['2026-09-14T23:59:59.999Z', 0, /215 alertas cobertos/],
-  ['2026-09-15T00:00:00.000Z', 1, /SQ-2026-139 esta com revisao vencida/],
+  ['2026-09-20T23:59:59.999Z', 0, /215 alertas cobertos/],
+  ['2026-09-21T00:00:00.000Z', 1, /SQ-2026-004 esta com revisao vencida/],
 ]) {
   test(`CLI do gate de CI aplica o relogio corrente em ${data}`, () => {
     const pacote = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));

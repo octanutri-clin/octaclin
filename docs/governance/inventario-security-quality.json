@@ -2845,12 +2845,13 @@
       "disposicao": "aguardando_upstream",
       "severidadeContextual": "high",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-09-14",
+      "revisarEm": "2026-10-08",
       "ondaDestino": "SQ-1A",
       "bloqueioUpstream": "O pacote Alpine 3.5.8-r0 existe, mas o artefato oficial e suportado node:22-alpine ainda resolve para o digest que contem 3.5.7-r0; o projeto nao aceita apk upgrade mutavel como substituto de uma nova imagem oficial.",
       "evidencia": [
         "Recaptura da main 98b6e5f em 2026-09-08: 20 alertas Trivy no backend e 20 no web, todos em libcrypto3/libssl3 3.5.7-r0 com versao corrigida 3.5.8-r0.",
         "Consulta autenticada ao registry-1.docker.io em 2026-09-08T17:41:35Z confirmou node:22-alpine no digest sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32, o mesmo fixado nos dois Dockerfiles.",
+        "Nova consulta ao Docker Hub oficial em 2026-09-15 confirmou que node:22-alpine continua no mesmo digest sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32, publicado em 2026-07-29; ainda nao existe artefato oficial novo para adotar.",
         "Os 40 alertas permanecem abertos no Security tab; nao houve dismiss, supressao ou upgrade mutavel."
       ],
       "preCondicoes": [
@@ -2871,24 +2872,24 @@
         "dependabot:35",
         "dependabot:36"
       ],
-      "disposicao": "aguardando_upstream",
+      "disposicao": "mitigado",
       "severidadeContextual": "high",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-12-01",
+      "revisarEm": "2026-10-08",
       "ondaDestino": "SQ-3",
-      "excecao": "SC-2026-005",
       "evidencia": [
         "Recaptura da main 98b6e5f em 2026-09-08: Dependabot #35 e #36, ambos high, pacote image-size no octaclin-mobile/pnpm-lock.yaml e versaoCorrigida null.",
-        "docs/governance/excecoes-supply-chain.json: SC-2026-005 registra a dependencia transitiva do Metro, a ausencia de patch alcancavel e a data de revisao; a excecao nao fecha os alertas."
+        "Em 2026-09-15, Metro 0.84.6 foi resolvido dentro da faixa suportada e removeu image-size da arvore transitiva; pnpm audit:security passou sem vulnerabilidades.",
+        "A excecao SC-2026-005 foi removida do ledger e o gate mobile voltou a reprovar qualquer advisory ou supressao."
       ],
       "preCondicoes": [
         "A exploracao exige asset malicioso processado pelo bundler Metro durante o build Mobile."
       ],
       "mitigacoes": [
-        "Mobile permanece NO-GO para distribuicao e novos advisories continuam bloqueados pelo audit; esses controles nao equivalem a patch."
+        "O lockfile congelado fixa Metro 0.84.6 e o gate mobile reprova qualquer advisory ou supressao."
       ],
-      "impacto": "Risco de negacao de servico do toolchain Mobile; os dois advisories permanecem abertos e rastreados.",
-      "condicaoSaida": "Quando houver versao corrigida alcancavel pela cadeia Metro, atualizar o lockfile, executar testes e audit, rescancear a main e remover a excecao apenas depois do fechamento real."
+      "impacto": "A dependencia vulneravel foi removida do toolchain versionado; os alertas historicos permanecem rastreados ate o rescan da main apos o merge.",
+      "condicaoSaida": "Apos o merge, exigir novo scan da main e confirmar o fechamento dos alertas Dependabot #35 e #36."
     }
   ]
 }
