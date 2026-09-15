@@ -3,35 +3,20 @@ import test from 'node:test';
 
 import { avaliarAuditoria } from './audit-seguranca-lib.mjs';
 
-function advisory({ id, ghsa, versao = '1.2.1', modulo = 'image-size' }) {
-  return {
-    id,
-    github_advisory_id: ghsa,
-    module_name: modulo,
-    severity: 'high',
-    patched_versions: '<0.0.0',
-    recommendation: 'None',
-    findings: [{ version: versao, paths: [`. > metro@0.84.4 > ${modulo}@${versao}`] }],
-  };
-}
+const totaisZerados = { info: 0, low: 0, moderate: 0, high: 0, critical: 0 };
 
-function relatorioPermitido() {
-  return {
-    advisories: {
-      1138808: advisory({ id: 1138808, ghsa: 'GHSA-w3rx-r6r6-pgpr' }),
-      1138809: advisory({ id: 1138809, ghsa: 'GHSA-5p2g-fcmc-qvqq' }),
-    },
-    muted: [],
-    metadata: { vulnerabilities: { info: 0, low: 0, moderate: 0, high: 2, critical: 0 } },
-  };
-}
-
-test('aprova auditoria sem vulnerabilidades', () => {
-  const relatorio = {
+test('aprova auditoria sem vulnerabilidades nem supressoes', () => {
+  const resultado = avaliarAuditoria({
     advisories: {},
-    metadata: { vulnerabilities: { info: 0, low: 0, moderate: 0, high: 0, critical: 0 } },
-  };
-  assert.equal(avaliarAuditoria(relatorio).aprovado, true);
+    muted: [],
+    metadata: { vulnerabilities: totaisZerados },
+  });
+
+  assert.deepEqual(resultado, {
+    aprovado: true,
+    excecoes: [],
+    mensagem: 'Auditoria sem vulnerabilidades.',
+  });
 });
 
 test('reprova relatorio malformado ou erro de rede', () => {
@@ -39,102 +24,43 @@ test('reprova relatorio malformado ou erro de rede', () => {
   assert.equal(avaliarAuditoria({ error: { message: 'indisponivel' } }).aprovado, false);
 });
 
-test('aprova somente as duas excecoes upstream exatas', () => {
-  const resultado = avaliarAuditoria(relatorioPermitido());
-  assert.equal(resultado.aprovado, true);
-  assert.deepEqual(resultado.excecoes.sort(), ['GHSA-5p2g-fcmc-qvqq', 'GHSA-w3rx-r6r6-pgpr']);
-});
-
-test('reprova vulnerabilidade nova', () => {
-  const relatorio = relatorioPermitido();
-  relatorio.advisories.nova = advisory({ id: 999999, ghsa: 'GHSA-nova-vulnerabilidade' });
-  relatorio.metadata.vulnerabilities.high = 3;
-  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
-});
-
-test('reprova mudanca de versao ou caminho da excecao', () => {
-  const relatorio = relatorioPermitido();
-  relatorio.advisories[1138808].findings[0].version = '1.2.2';
-  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
-});
-
-test('reprova avisos silenciados', () => {
-  const relatorio = relatorioPermitido();
-  relatorio.muted = [{ id: 123 }];
-  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
-});
-
-// PR 49: o pnpm 11 mudou a forma do relatorio `pnpm audit --json`. Advisory sem
-// correcao publicada passou a trazer `patched_versions: null` e a omitir
-// `recommendation`, no lugar de '<0.0.0' e 'None' do pnpm 9. O validador precisa
-// aceitar as duas formas sem afrouxar nenhuma outra condicao da excecao.
-function advisoryPnpm11({ id, ghsa, versao = '1.2.1', modulo = 'image-size' }) {
-  return {
-    id,
-    github_advisory_id: ghsa,
-    module_name: modulo,
-    severity: 'high',
-    patched_versions: null,
-    // O pnpm 11 tambem parou de anotar a versao no caminho do grafo.
-    findings: [{ version: versao, paths: [`.>react-native>metro>${modulo}`] }],
-  };
-}
-
-function relatorioPermitidoPnpm11() {
-  return {
+test('reprova qualquer advisory e informa seu identificador', () => {
+  const resultado = avaliarAuditoria({
     advisories: {
-      1138808: advisoryPnpm11({ id: 1138808, ghsa: 'GHSA-w3rx-r6r6-pgpr' }),
-      1138809: advisoryPnpm11({ id: 1138809, ghsa: 'GHSA-5p2g-fcmc-qvqq' }),
+      1138808: {
+        id: 1138808,
+        github_advisory_id: 'GHSA-w3rx-r6r6-pgpr',
+        module_name: 'image-size',
+        severity: 'high',
+      },
     },
     muted: [],
-    metadata: { vulnerabilities: { info: 0, low: 0, moderate: 0, high: 2, critical: 0 } },
-  };
-}
+    metadata: { vulnerabilities: { ...totaisZerados, high: 1 } },
+  });
 
-test('aprova as mesmas duas excecoes no formato de relatorio do pnpm 11', () => {
-  const resultado = avaliarAuditoria(relatorioPermitidoPnpm11());
-  assert.equal(resultado.aprovado, true);
-  assert.deepEqual(resultado.excecoes.sort(), ['GHSA-5p2g-fcmc-qvqq', 'GHSA-w3rx-r6r6-pgpr']);
+  assert.equal(resultado.aprovado, false);
+  assert.deepEqual(resultado.excecoes, []);
+  assert.match(resultado.mensagem, /GHSA-w3rx-r6r6-pgpr/);
 });
 
-test('reprova advisory com correcao publicada disfarcado de excecao no formato pnpm 11', () => {
-  const relatorio = relatorioPermitidoPnpm11();
-  relatorio.advisories[1138808].patched_versions = '>=1.2.2';
-  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
+test('reprova contadores divergentes mesmo sem advisory correspondente', () => {
+  const resultado = avaliarAuditoria({
+    advisories: {},
+    muted: [],
+    metadata: { vulnerabilities: { ...totaisZerados, high: 1 } },
+  });
+
+  assert.equal(resultado.aprovado, false);
+  assert.match(resultado.mensagem, /metadados divergentes/);
 });
 
-test('reprova recommendation de upgrade mesmo sem patched_versions no formato pnpm 11', () => {
-  const relatorio = relatorioPermitidoPnpm11();
-  relatorio.advisories[1138809].recommendation = 'Upgrade to version 1.2.2 or later';
-  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
-});
+test('reprova avisos silenciados mesmo com contadores zerados', () => {
+  const resultado = avaliarAuditoria({
+    advisories: {},
+    muted: [{ id: 123 }],
+    metadata: { vulnerabilities: totaisZerados },
+  });
 
-test('reprova excecao cujo caminho nao passa pelo metro no formato pnpm 11', () => {
-  const relatorio = relatorioPermitidoPnpm11();
-  relatorio.advisories[1138808].findings[0].paths = ['.>outro-pacote>image-size'];
-  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
-});
-
-test('reprova excecao cujo caminho nao termina no modulo esperado', () => {
-  const relatorio = relatorioPermitidoPnpm11();
-  relatorio.advisories[1138809].findings[0].paths = ['.>react-native>metro>outro-modulo'];
-  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
-});
-
-test('reconhece o modulo como ultimo segmento e tambem anotado com versao', () => {
-  for (const caminho of [
-    '.>react-native>metro>image-size',
-    '. > metro@0.84.4 > image-size@1.2.1',
-    '.>a>metro>b>image-size',
-  ]) {
-    const relatorio = relatorioPermitidoPnpm11();
-    for (const id of [1138808, 1138809]) relatorio.advisories[id].findings[0].paths = [caminho];
-    assert.equal(avaliarAuditoria(relatorio).aprovado, true, `deveria aceitar ${caminho}`);
-  }
-});
-
-test('nao confunde modulo com pacote de nome mais longo', () => {
-  const relatorio = relatorioPermitidoPnpm11();
-  relatorio.advisories[1138808].findings[0].paths = ['.>react-native>metro>image-size-extra'];
-  assert.equal(avaliarAuditoria(relatorio).aprovado, false);
+  assert.equal(resultado.aprovado, false);
+  assert.match(resultado.mensagem, /avisos silenciados/);
 });
