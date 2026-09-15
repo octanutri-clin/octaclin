@@ -239,7 +239,15 @@ jobs:
       - name: Auditar licencas das dependencias instaladas
         run: node ../scripts/validar-licencas.mjs node_modules
       - run: pnpm typecheck
-      - run: pnpm doctor
+      # `doctor` tambem e um comando interno do pnpm 11. Use `run` para
+      # garantir que o gate execute o script Expo definido no package.json.
+      # Offline torna o contrato deterministico contra o SDK instalado e evita
+      # que um patch publicado durante a quarentena quebre o CI antes de poder
+      # ser admitido pela politica de minimumReleaseAge.
+      - name: Validar compatibilidade do Expo SDK instalado
+        env:
+          EXPO_OFFLINE: "1"
+        run: pnpm run doctor
       - run: pnpm test:security
       - run: pnpm test:a11y
       - run: pnpm audit:security
