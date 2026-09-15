@@ -2,7 +2,7 @@
   "$schema": "./excecoes-supply-chain.schema.md",
   "versao": 1,
   "descricao": "Fonte canonica de excecoes de supply chain do OctaClin. Toda excecao precisa de motivo, owner e expiracao. Excecao vencida quebra o gate pnpm test:excecoes-supply-chain.",
-  "revisadoEm": "2026-09-05",
+  "revisadoEm": "2026-09-15",
   "excecoes": [
     {
       "id": "SC-2026-001",
@@ -88,34 +88,6 @@
       "approvedBy": "PR 49 da governanca de seguranca",
       "source": "docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md",
       "condicaoDeRemocao": "Remover quando react-native-web/fbjs resolver ua-parser-js na linha 2.x."
-    },
-    {
-      "id": "SC-2026-005",
-      "tipo": "vulnerability",
-      "componente": "octaclin-mobile",
-      "package": "image-size",
-      "version": "1.2.1",
-      "scannerIds": [
-        "CVE-2025-71329",
-        "CVE-2025-71330"
-      ],
-      "scannerPaths": [
-        "octaclin-mobile/pnpm-lock.yaml"
-      ],
-      "motivo": "GHSA-w3rx-r6r6-pgpr e GHSA-5p2g-fcmc-qvqq nao possuem versao corrigida publicada pelo upstream (patched_versions ausente). O pacote e fixado pelo metro dentro do react-native e nao ha correcao segura disponivel.",
-      "severidade": "alta",
-      "reachability": "bundler metro em tempo de build do mobile; o aplicativo permanece NO-GO para distribuicao, entao nao ha exposicao de usuario final.",
-      "controlesCompensatorios": [
-        "gate pnpm audit:security do mobile falha se surgir qualquer advisory alem destas duas",
-        "distribuicao mobile bloqueada por decisao de governanca",
-        "strictDepBuilds: true nega lifecycle script"
-      ],
-      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "createdAt": "2026-09-01",
-      "expiresAt": "2026-12-01",
-      "approvedBy": "PR 49 da governanca de seguranca",
-      "source": "docs/governance/RELATORIO_SEGURANCA_PR49_2026-09-01.md",
-      "condicaoDeRemocao": "Remover quando o upstream publicar versao corrigida de image-size alcancavel pelo metro."
     }
   ]
 }
