@@ -3597,7 +3597,11 @@ test.describe('gate de acessibilidade - operacoes (PR 26)', () => {
 
     const abaSaude = page.getByRole('tab', { name: 'Saude', exact: true });
     await expect(abaSaude).toHaveAttribute('aria-selected', 'true');
-    const painel = page.locator('#operacoes-saude-painel');
+    // O App Router pode manter a resposta inicial de streaming em uma arvore
+    // `hidden` por alguns instantes enquanto hidrata a superficie interativa.
+    // Selecione o tabpanel exposto na arvore de acessibilidade para que o gate
+    // valide a experiencia do usuario sem confundir o fallback oculto do Next.
+    const painel = page.getByRole('tabpanel', { name: 'Saude' });
     await expect(painel).toBeVisible();
     await expect(painel).toHaveAttribute('aria-labelledby', 'operacoes-saude-aba');
     await expect(painel.getByText('Pendentes')).toBeVisible();
