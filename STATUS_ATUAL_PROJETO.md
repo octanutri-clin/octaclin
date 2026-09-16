@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-15.
+Atualizado em 2026-09-16.
 
 ## Snapshot
 
@@ -140,8 +140,17 @@ Atualizado em 2026-09-15.
   funcionais passavam mesmo com excecao e erros React no navegador, causados
   por um mock amplo de pacientes. O gate agora reprova `pageerror` e
   `console.error`; apos restringir o mock ao contrato correto, 16/16 cenarios
-  passaram. Proximo incremento: executar o candidato no staging mutavel com
-  dados sinteticos e consolidar qualquer P0/P1 antes do aceite humano.
+  passaram. O Incremento 2 executou o candidato no staging mutavel com branch
+  Neon descartavel, dados sinteticos e DAST/fuzz autorizado. A primeira prova
+  (`35102212700`) encontrou um desvio real no onboarding: o runner nao enviava
+  os aceites legais obrigatorios no primeiro acesso de staff. O PR `#246`
+  corrigiu o contrato sintetico sem relaxar a API; apos o merge `64da9be`, o CI
+  pos-merge `35105349112` e a repeticao completa `35108404379` passaram,
+  incluindo migrations, dois tenants/RLS, jornadas mutaveis, ZAP,
+  proprietario/profissional/paciente, evidencias sanitizadas e teardown Neon.
+  Nao restou P0/P1 no candidato exercitado. A fase continua aberta para
+  reconciliacao final e decisao humana; ClamAV/issue `#234`, juridico,
+  dominio/identidade e selecao do piloto nao foram convertidos em verde.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-15. Fases 256 a 261 concluidas; Fase 262 em andamento.
+Atualizado em 2026-09-16. Fases 256 a 261 concluidas; Fase 262 em andamento.
 O programa de hardening PR 36-56 permanece como trilha separada.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
@@ -2816,6 +2816,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Resultado após a correção: 12/12 jornadas críticas e 4/4 cenários
     SuperAdmin aprovados nos dois viewports. Detalhes em
     `docs/history/phases/fase-262-aceite-usabilidade-prontidao-piloto.md`.
+  - Incremento 2 concluido tecnicamente em 2026-09-16: o staging mutavel foi
+    executado com branch Neon descartavel, dados sinteticos e DAST/fuzz. A
+    primeira execucao (`35102212700`) encontrou o runner de onboarding sem os
+    aceites legais obrigatorios de staff; o PR `#246` corrigiu o contrato e
+    adicionou regressao. No merge `64da9be`, o CI pos-merge `35105349112` e a
+    repeticao remota `35108404379` passaram com migrations, isolamento de dois
+    tenants/RLS, jornadas, ZAP, onboarding e teardown Neon. Nenhum P0/P1 ficou
+    aberto no candidato exercitado. A fase e o GO permanecem bloqueados pelos
+    gates externos ainda nao aceitos: ClamAV/`#234`, juridico,
+    dominio/identidade e selecao do piloto.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
