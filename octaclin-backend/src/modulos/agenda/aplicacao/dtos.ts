@@ -343,6 +343,7 @@ export interface LinhaRecebimentoProfissionalDto {
   recebidoCentavos: number;
   pendenteCentavos: number;
   isentas: number;
+  performance: IndicadoresPerformanceDto;
 }
 
 export interface IndicadoresPerformanceDto {

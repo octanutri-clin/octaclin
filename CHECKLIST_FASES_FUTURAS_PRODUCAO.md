@@ -2852,8 +2852,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     a tela compara receita recebida, concluidas, comparecimento e ticket medio
     por diferenca absoluta ou pontos percentuais. O limite final do dia passou
     a incluir `23:59:59.999` e a renderizacao tolera a ordem do rollout.
-  - Proximos incrementos candidatos: exportacao auditada e quebra de
-    performance por profissional. Detalhes em
+  - Incremento 3 implementado em 2026-09-16: a quebra por profissional
+    (`porProfissional`, ja existente) ganhou `performance` com as mesmas
+    formulas do consolidado (comparecimento, falta, cancelamento, ticket
+    medio), calculadas isoladamente por profissional. A tabela "Por
+    profissional" na tela de recebimentos (contexto gestor) ganhou as colunas
+    de comparecimento e ticket medio. Sem migration; RLS, permissao
+    `agenda.financeiro.ler` e escopo por profissional/paciente reaproveitados.
+    TDD com dois profissionais de desfecho diferente confirma isolamento da
+    formula por profissional. Cobertura Playwright dedicada a essa tabela
+    continua pendente (nenhum cenario existente navega ate ela).
+  - Proximo incremento candidato: exportacao auditada dos indicadores,
+    respeitando filtros e autorizacao. Detalhes em
     `docs/history/phases/fase-263-relatorios-financeiros-performance.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.

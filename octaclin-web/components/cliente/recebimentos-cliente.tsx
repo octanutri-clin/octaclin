@@ -276,6 +276,8 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
                     <th scope="col" className="py-2 text-right">Atendimentos</th>
                     <th scope="col" className="py-2 text-right">Recebido</th>
                     <th scope="col" className="py-2 text-right">A receber</th>
+                    <th scope="col" className="py-2 text-right">Comparecimento</th>
+                    <th scope="col" className="py-2 text-right">Ticket médio</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -285,6 +287,12 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
                       <td className="py-2 text-right">{linha.consultas}</td>
                       <td className="py-2 text-right">{formatarValorBRL(linha.recebidoCentavos)}</td>
                       <td className="py-2 text-right">{formatarValorBRL(linha.pendenteCentavos)}</td>
+                      <td className="py-2 text-right">
+                        {formatarPercentual(linha.performance.taxaComparecimentoPercentual)}
+                      </td>
+                      <td className="py-2 text-right">
+                        {formatarValorBRL(linha.performance.ticketMedioRecebidoCentavos)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

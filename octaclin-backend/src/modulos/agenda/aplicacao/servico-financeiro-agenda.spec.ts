@@ -271,9 +271,68 @@ describe('ServicoFinanceiroAgenda', () => {
           consultas: 2,
           recebidoCentavos: 18000,
           pendenteCentavos: 15000,
-          isentas: 0
+          isentas: 0,
+          performance: resumo.performance
         }
       ]);
+    });
+
+    it('deve calcular a performance de cada profissional separadamente, com as mesmas formulas do consolidado', async () => {
+      const { servico } = montarServico({
+        consultas: [
+          // profissional-1: duas concluidas e uma falta -> comparecimento 66.7%.
+          consulta({ profissionalId: 'profissional-1', status: 'concluida', statusPagamento: 'pago', valorCentavos: 20000 }),
+          consulta({
+            id: 'consulta-2',
+            profissionalId: 'profissional-1',
+            status: 'concluida',
+            statusPagamento: 'pago',
+            valorCentavos: 10000
+          }),
+          consulta({ id: 'consulta-3', profissionalId: 'profissional-1', status: 'falta', valorCentavos: 0 }),
+          // profissional-2: uma concluida paga e uma cancelada -> comparecimento 100%, cancelamento 50%.
+          consulta({
+            id: 'consulta-4',
+            profissionalId: 'profissional-2',
+            status: 'concluida',
+            statusPagamento: 'pago',
+            valorCentavos: 30000
+          }),
+          consulta({ id: 'consulta-5', profissionalId: 'profissional-2', status: 'cancelada', valorCentavos: 99900 })
+        ]
+      });
+
+      const resumo = await servico.resumoRecebimentos(
+        'tenant-1',
+        { inicioEm: '2026-08-01T00:00:00.000Z', fimEm: '2026-08-31T23:59:59.000Z' },
+        colaborador
+      );
+
+      const performancePorId = new Map(resumo.porProfissional.map((linha) => [linha.profissionalId, linha]));
+
+      expect(performancePorId.get('profissional-1')?.performance).toEqual({
+        totalConsultas: 3,
+        concluidas: 2,
+        faltas: 1,
+        canceladas: 0,
+        taxaComparecimentoPercentual: 66.7,
+        taxaFaltaPercentual: 33.3,
+        taxaCancelamentoPercentual: 0,
+        ticketMedioRecebidoCentavos: 15000
+      });
+      expect(performancePorId.get('profissional-2')?.performance).toEqual({
+        totalConsultas: 2,
+        concluidas: 1,
+        faltas: 0,
+        canceladas: 1,
+        taxaComparecimentoPercentual: 100,
+        taxaFaltaPercentual: 0,
+        taxaCancelamentoPercentual: 50,
+        ticketMedioRecebidoCentavos: 30000
+      });
+      // O consolidado nao e a soma ingenua dos dois: continua vindo do mesmo
+      // calculo sobre todas as consultas do periodo, independente da quebra.
+      expect(resumo.performance.totalConsultas).toBe(5);
     });
 
     it('deve ignorar o filtro de profissional pedido e usar o escopo do usuario Professional', async () => {
