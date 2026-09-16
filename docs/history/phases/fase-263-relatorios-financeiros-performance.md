@@ -1,6 +1,6 @@
 # Fase 263 - Relatorios financeiros e de performance por cliente
 
-Status: em andamento. Incrementos 1 e 2 implementados em 2026-09-16.
+Status: em andamento. Incrementos 1, 2 e 3 implementados em 2026-09-16.
 
 ## Objetivo
 
@@ -68,10 +68,42 @@ mantem o resumo atual e apenas omite a comparacao.
   e a regressao visual confirmou valores atuais, anteriores e diferenca em
   pontos percentuais.
 
+## Incremento 3 - performance por profissional
+
+`quebrarPorProfissional` ja existia (recebido/pendente/isentas por
+profissional); passou a incluir tambem `performance`, calculado com a mesma
+`calcularIndicadoresPerformance` do consolidado, aplicada as consultas de cada
+profissional isoladamente. Nao ha migration nem novo endpoint: o campo entra
+no mesmo contrato de `porProfissional` ja usado pela tela de recebimentos.
+
+O gestor agora ve, por profissional, taxa de comparecimento e ticket medio
+recebido na mesma tabela onde ja via atendimentos/recebido/a receber. O
+consolidado (`resumo.performance`) continua vindo do calculo sobre todas as
+consultas do periodo — nao e a soma das linhas por profissional.
+
+Nenhuma migration; RLS, permissao `agenda.financeiro.ler` e escopo por
+profissional/paciente reaproveitados sem alteracao.
+
+### Evidencia TDD e validacoes
+
+- RED: teste novo esperando `performance` em cada linha de
+  `resumo.porProfissional` falhou (campo ainda nao existia no calculo).
+- GREEN: teste com dois profissionais e desfechos diferentes (faltas,
+  cancelamento, ticket medio) confirma que a formula e aplicada por
+  profissional, isolada do consolidado.
+- `pnpm --dir octaclin-backend typecheck`, `pnpm --dir octaclin-web typecheck`,
+  suite do servico e do dominio financeiro (25/25), `git diff --check` e
+  `pnpm security:secrets`.
+- Playwright: nenhum cenario existente navega ate a aba financeira do cliente
+  (`RecebimentosCliente`, contexto `gestor`) nem afirma o conteudo da tabela
+  "Por profissional" — o unico mock desse endpoint (`console-regression.spec.mjs`)
+  cobre a agenda em contexto `profissional`, onde essa tabela nunca renderiza.
+  O mock foi atualizado para incluir `performance` por consistencia de tipo,
+  mas a cobertura visual dedicada a essa tabela continua pendente.
+
 ## Proximos incrementos candidatos
 
 1. Exportacao auditada dos indicadores, respeitando filtros e autorizacao.
-2. Quebra gerencial por profissional com as mesmas formulas do consolidado.
 
-Esses candidatos ainda nao estao concluidos e devem passar por priorizacao
-antes de ampliar o contrato.
+Esse candidato ainda nao esta concluido e deve passar por priorizacao antes de
+ampliar o contrato.

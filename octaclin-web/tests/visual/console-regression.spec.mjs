@@ -848,7 +848,17 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
           consultas: 2,
           recebidoCentavos: 18000,
           pendenteCentavos: 18000,
-          isentas: 0
+          isentas: 0,
+          performance: {
+            totalConsultas: 4,
+            concluidas: 3,
+            faltas: 1,
+            canceladas: 1,
+            taxaComparecimentoPercentual: 75,
+            taxaFaltaPercentual: 25,
+            taxaCancelamentoPercentual: 25,
+            ticketMedioRecebidoCentavos: 18000
+          }
         }]
       })
     });

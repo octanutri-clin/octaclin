@@ -199,6 +199,7 @@ export interface CriarPacoteSessaoEntrada {
 export interface LinhaRecebimentoProfissionalApi {
   profissionalId?: string;
   profissionalNome: string;
+  performance: IndicadoresPerformanceApi;
   consultas: number;
   recebidoCentavos: number;
   pendenteCentavos: number;

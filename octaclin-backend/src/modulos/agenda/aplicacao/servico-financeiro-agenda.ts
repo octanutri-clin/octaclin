@@ -369,20 +369,23 @@ export class ServicoFinanceiroAgenda {
 
     return [...porProfissional.entries()]
       .map(([profissionalId, linhas]) => {
-        const totais = somarRecebimentos(
-          linhas.map((consulta) => ({
-            status: consulta.status,
-            statusPagamento: consulta.statusPagamento ?? 'pendente',
-            valorCentavos: consulta.valorCentavos ?? 0
-          }))
-        );
+        const linhasFaturamento = linhas.map((consulta) => ({
+          status: consulta.status,
+          statusPagamento: consulta.statusPagamento ?? 'pendente',
+          valorCentavos: consulta.valorCentavos ?? 0
+        }));
+        const totais = somarRecebimentos(linhasFaturamento);
         return {
           profissionalId: profissionalId || undefined,
           profissionalNome: profissionalId ? (nomes.get(profissionalId) ?? 'Profissional') : 'Sem profissional',
           consultas: totais.consultas,
           recebidoCentavos: totais.recebidoCentavos,
           pendenteCentavos: totais.pendenteCentavos,
-          isentas: totais.isentas
+          isentas: totais.isentas,
+          // Mesmas formulas do consolidado (Fase 263): gestor enxerga
+          // comparecimento/falta/cancelamento/ticket medio por profissional,
+          // nao so o dinheiro.
+          performance: calcularIndicadoresPerformance(linhasFaturamento)
         };
       })
       .filter((linha) => linha.consultas > 0)
