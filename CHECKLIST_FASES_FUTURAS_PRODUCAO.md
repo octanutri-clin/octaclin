@@ -2826,6 +2826,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     aberto no candidato exercitado. A fase e o GO permanecem bloqueados pelos
     gates externos ainda nao aceitos: ClamAV/`#234`, juridico,
     dominio/identidade e selecao do piloto.
+  - Incremento 3 concluido tecnicamente em 2026-09-16: readiness, banco,
+    migrations e login publicos foram revalidados; o health detalhado ficou
+    degradado somente pelo antimalware e o monitor `35116115427` reprovou de
+    forma fail-closed/deduplicada na `#234`. O backup diario `35074836592`
+    passou e o restore dedicado mais recente devido (`34747454997`,
+    2026-09-13) tambem. Testes de backup/restore, monitor, producao somente
+    leitura, suporte, lancamento e rollout passaram. Decisao atual: **NO-GO
+    temporario para o piloto**; a fase permanece aberta aguardando ClamAV,
+    juridico, dominio/identidade e selecao do cliente, sem bloquear trabalho de
+    produto independente.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
