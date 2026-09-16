@@ -1,6 +1,6 @@
 # Fase 262 - Aceite de usabilidade e prontidao para piloto
 
-Status: em andamento. Incremento 1 concluido tecnicamente em 2026-09-15.
+Status: em andamento. Incrementos 1 e 2 concluidos tecnicamente em 2026-09-16.
 
 ## Objetivo
 
@@ -51,6 +51,28 @@ preencher `id` e `tenantId` como exige o contrato.
 - GREEN completo: `pnpm --dir octaclin-web test:e2e:criticas` aprovou 12/12.
 - GREEN SuperAdmin: os cenarios LGPD e rollout aprovaram 4/4.
 
+## Incremento 2 - candidato no staging mutavel
+
+O workflow manual `OctaClin staging E2E mutavel` foi repetido no `main` com
+seguranca dinamica explicitamente autorizada, branch Neon descartavel e somente
+dados sinteticos. A primeira execucao do candidato (`35102212700`) passou por
+migrations, role runtime, RLS forcada, isolamento entre dois tenants, jornadas
+mutaveis, probes com orcamento fechado e OWASP ZAP. Ela reprovou corretamente
+no onboarding da Fase 228: convites de staff tentavam redefinir a senha sem os
+aceites obrigatorios de Termos de uso e Politica de privacidade.
+
+O PR `#246` centralizou a ativacao sintetica de primeiro acesso com os dois
+aceites explicitos e adicionou uma regressao ao contrato de staging, sem
+relaxar a validacao da API. Depois do merge `64da9be`, o CI pos-merge
+`35105349112` passou, incluindo o smoke local. A repeticao remota
+`35108404379` aprovou o fluxo completo: migrations, dois tenants/RLS, jornadas
+mutaveis, DAST/fuzz, ZAP, onboarding de proprietario/profissional/paciente,
+publicacao de evidencias sanitizadas e exclusao do branch Neon descartavel.
+
+Nenhum P0/P1 permaneceu aberto no candidato exercitado. Isso conclui o gate de
+staging mutavel da fase, mas nao equivale ao GO do piloto nem prova os gates
+externos descritos abaixo.
+
 ## Estado operacional observado na abertura
 
 - Produção: backend readiness `200`, web login `200`, banco e migrations `ok`.
@@ -65,8 +87,8 @@ preencher `id` e `tenantId` como exige o contrato.
 
 ## Criterios para o proximo incremento
 
-- Executar o workflow mutavel de staging no head do PR, sem credencial ou dado
-  real em log/artefato.
-- Cobrir os quatro papeis no candidato de staging e registrar qualquer P0/P1.
+- Reconciliar observabilidade, backup/restore, suporte e rollback no mesmo
+  candidato aceito.
+- Registrar a decisao humana e as excecoes residuais de cada gate externo.
 - Nao declarar GO enquanto ClamAV, juridico, dominio/identidade e selecao do
   piloto nao tiverem decisao explicita ou excecao residual aceita.
