@@ -822,6 +822,26 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
           taxaCancelamentoPercentual: 25,
           ticketMedioRecebidoCentavos: 18000
         },
+        comparacaoPeriodoAnterior: {
+          inicioEm: '2026-06-01T00:00:00.000Z',
+          fimEm: '2026-06-30T23:59:59.999Z',
+          consultas: 2,
+          recebidoCentavos: 12000,
+          pendenteCentavos: 0,
+          isentas: 0,
+          pacotesRecebidoCentavos: 0,
+          pacotesPendenteCentavos: 0,
+          performance: {
+            totalConsultas: 2,
+            concluidas: 2,
+            faltas: 0,
+            canceladas: 0,
+            taxaComparecimentoPercentual: 60,
+            taxaFaltaPercentual: 40,
+            taxaCancelamentoPercentual: 0,
+            ticketMedioRecebidoCentavos: 12000
+          }
+        },
         porProfissional: [{
           profissionalId: 'profissional-1',
           profissionalNome: 'Dra. Carla',
@@ -2085,8 +2105,10 @@ test.describe('agenda de producao', () => {
     await expect(page.getByRole('heading', { name: 'Meus recebimentos' })).toBeVisible();
     await expect(page.getByText('R$ 180,00').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Meu desempenho no período' })).toBeVisible();
-    await expect(page.getByText('Taxa de comparecimento')).toBeVisible();
-    await expect(page.getByText('75%')).toBeVisible();
+    await expect(page.getByText('Taxa de comparecimento').first()).toBeVisible();
+    await expect(page.getByText('75%', { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Comparação com o período anterior' })).toBeVisible();
+    await expect(page.getByText('+15 p.p.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 

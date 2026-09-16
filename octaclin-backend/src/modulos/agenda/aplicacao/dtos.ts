@@ -345,6 +345,29 @@ export interface LinhaRecebimentoProfissionalDto {
   isentas: number;
 }
 
+export interface IndicadoresPerformanceDto {
+  totalConsultas: number;
+  concluidas: number;
+  faltas: number;
+  canceladas: number;
+  taxaComparecimentoPercentual: number;
+  taxaFaltaPercentual: number;
+  taxaCancelamentoPercentual: number;
+  ticketMedioRecebidoCentavos: number;
+}
+
+export interface ResumoPeriodoAnteriorDto {
+  inicioEm: string;
+  fimEm: string;
+  consultas: number;
+  recebidoCentavos: number;
+  pendenteCentavos: number;
+  isentas: number;
+  pacotesRecebidoCentavos: number;
+  pacotesPendenteCentavos: number;
+  performance: IndicadoresPerformanceDto;
+}
+
 export interface ResumoRecebimentosDto {
   inicioEm: string;
   fimEm: string;
@@ -354,16 +377,8 @@ export interface ResumoRecebimentosDto {
   isentas: number;
   pacotesRecebidoCentavos: number;
   pacotesPendenteCentavos: number;
-  performance: {
-    totalConsultas: number;
-    concluidas: number;
-    faltas: number;
-    canceladas: number;
-    taxaComparecimentoPercentual: number;
-    taxaFaltaPercentual: number;
-    taxaCancelamentoPercentual: number;
-    ticketMedioRecebidoCentavos: number;
-  };
+  performance: IndicadoresPerformanceDto;
+  comparacaoPeriodoAnterior: ResumoPeriodoAnteriorDto;
   porProfissional: LinhaRecebimentoProfissionalDto[];
 }
 

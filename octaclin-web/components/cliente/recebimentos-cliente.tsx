@@ -22,6 +22,27 @@ function formatarPercentual(valor: number) {
   return `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
 }
 
+function formatarDiferencaValor(valorCentavos: number) {
+  if (valorCentavos === 0) return 'Sem variação';
+  return `${valorCentavos > 0 ? '+' : '-'}${formatarValorBRL(Math.abs(valorCentavos))}`;
+}
+
+function formatarDiferencaInteira(valor: number) {
+  if (valor === 0) return 'Sem variação';
+  return `${valor > 0 ? '+' : ''}${valor}`;
+}
+
+function formatarDiferencaPontosPercentuais(valor: number) {
+  if (valor === 0) return 'Sem variação';
+  const absoluto = Math.abs(valor).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+  return `${valor > 0 ? '+' : '-'}${absoluto} p.p.`;
+}
+
+function formatarPeriodo(inicioEm: string, fimEm: string) {
+  const formatar = (valor: string) => new Date(valor).toLocaleDateString('pt-BR');
+  return `${formatar(inicioEm)} a ${formatar(fimEm)}`;
+}
+
 interface ResumoRecebimentosProps {
   contexto?: 'gestor' | 'profissional';
   pacienteId?: string;
@@ -44,7 +65,7 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
       setResumo(
         await obterRecebimentosAgenda({
           inicioEm: new Date(`${de}T00:00:00`).toISOString(),
-          fimEm: new Date(`${ate}T23:59:59`).toISOString(),
+          fimEm: new Date(`${ate}T23:59:59.999`).toISOString(),
           pacienteId
         })
       );
@@ -95,6 +116,40 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
         {
           rotulo: 'Ticket médio recebido',
           valor: formatarValorBRL(resumo.performance.ticketMedioRecebidoCentavos)
+        }
+      ]
+    : [];
+
+  const comparacao = resumo?.comparacaoPeriodoAnterior;
+  const indicadoresComparacao = resumo?.performance && comparacao
+    ? [
+        {
+          rotulo: 'Receita recebida',
+          atual: resumo.recebidoCentavos + resumo.pacotesRecebidoCentavos,
+          anterior: comparacao.recebidoCentavos + comparacao.pacotesRecebidoCentavos,
+          formatar: formatarValorBRL,
+          formatarDiferenca: formatarDiferencaValor
+        },
+        {
+          rotulo: 'Consultas concluídas',
+          atual: resumo.performance.concluidas,
+          anterior: comparacao.performance.concluidas,
+          formatar: String,
+          formatarDiferenca: formatarDiferencaInteira
+        },
+        {
+          rotulo: 'Taxa de comparecimento',
+          atual: resumo.performance.taxaComparecimentoPercentual,
+          anterior: comparacao.performance.taxaComparecimentoPercentual,
+          formatar: formatarPercentual,
+          formatarDiferenca: formatarDiferencaPontosPercentuais
+        },
+        {
+          rotulo: 'Ticket médio recebido',
+          atual: resumo.performance.ticketMedioRecebidoCentavos,
+          anterior: comparacao.performance.ticketMedioRecebidoCentavos,
+          formatar: formatarValorBRL,
+          formatarDiferenca: formatarDiferencaValor
         }
       ]
     : [];
@@ -172,6 +227,34 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
               Comparecimento e falta usam apenas consultas concluídas ou marcadas como falta. A taxa de cancelamento
               usa todas as consultas do período. O ticket médio considera somente consultas pagas e não canceladas.
             </p>
+          </CartaoConteudo>
+        </Cartao>
+      ) : null}
+
+      {comparacao ? (
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo>Comparação com o período anterior</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo className="grid gap-4">
+            <p className="text-xs text-texto-suave">
+              Período anterior: {formatarPeriodo(comparacao.inicioEm, comparacao.fimEm)}. A comparação usa uma janela
+              imediatamente anterior e com a mesma duração da seleção atual.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {indicadoresComparacao.map((indicador) => {
+                const diferenca = indicador.atual - indicador.anterior;
+                return (
+                  <article key={indicador.rotulo} className="rounded-md border border-linha bg-superficie p-3">
+                    <p className="text-xs text-texto-suave">{indicador.rotulo}</p>
+                    <p className="mt-1 text-base font-semibold">{indicador.formatar(indicador.atual)}</p>
+                    <p className="mt-1 text-xs text-texto-suave">
+                      Anterior: {indicador.formatar(indicador.anterior)} · {indicador.formatarDiferenca(diferenca)}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
           </CartaoConteudo>
         </Cartao>
       ) : null}
