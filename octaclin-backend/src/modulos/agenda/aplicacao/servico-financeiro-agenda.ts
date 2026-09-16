@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Between, EntityManager, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { montarCsv } from '../../../infraestrutura/exportacao/csv';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
@@ -19,6 +20,7 @@ import {
   ConsultaAgendaRespostaDto,
   ConsultarRecebimentosDto,
   CriarPacoteSessaoDto,
+  IndicadoresPerformanceDto,
   LinhaRecebimentoProfissionalDto,
   PacoteSessaoRespostaDto,
   RegistrarPagamentoConsultaDto,
@@ -221,6 +223,64 @@ export class ServicoFinanceiroAgenda {
         porProfissional: await this.quebrarPorProfissional(gerenciador, tenantId, consultas)
       };
     });
+  }
+
+  /**
+   * Exportacao auditada do mesmo resumo de `resumoRecebimentos` (Fase 263,
+   * incremento 4): reaproveita o calculo inteiro, incluindo filtro e escopo por
+   * profissional/paciente, e so muda a saida para CSV. O controlador registra o
+   * volume exportado (`contarLinhasCsv`), nunca o conteudo das linhas.
+   */
+  async exportarRecebimentosCsv(
+    tenantId: string,
+    filtro: ConsultarRecebimentosDto,
+    usuario: UsuarioAutenticado
+  ): Promise<string> {
+    const resumo = await this.resumoRecebimentos(tenantId, filtro, usuario);
+
+    const linhaIndicadores = (rotulo: string, dados: {
+      consultas: number;
+      recebidoCentavos: number;
+      pendenteCentavos: number;
+      isentas: number;
+      performance: IndicadoresPerformanceDto;
+    }) => [
+      rotulo,
+      dados.consultas,
+      dados.recebidoCentavos,
+      dados.pendenteCentavos,
+      dados.isentas,
+      dados.performance.totalConsultas,
+      dados.performance.concluidas,
+      dados.performance.faltas,
+      dados.performance.canceladas,
+      dados.performance.taxaComparecimentoPercentual,
+      dados.performance.taxaFaltaPercentual,
+      dados.performance.taxaCancelamentoPercentual,
+      dados.performance.ticketMedioRecebidoCentavos
+    ];
+
+    return montarCsv(
+      [
+        'profissional',
+        'consultas',
+        'recebidoCentavos',
+        'pendenteCentavos',
+        'isentas',
+        'totalConsultasPeriodo',
+        'concluidas',
+        'faltas',
+        'canceladas',
+        'taxaComparecimentoPercentual',
+        'taxaFaltaPercentual',
+        'taxaCancelamentoPercentual',
+        'ticketMedioRecebidoCentavos'
+      ],
+      [
+        ...resumo.porProfissional.map((linha) => linhaIndicadores(linha.profissionalNome, linha)),
+        linhaIndicadores('Consolidado', resumo)
+      ]
+    );
   }
 
   async criarPacote(

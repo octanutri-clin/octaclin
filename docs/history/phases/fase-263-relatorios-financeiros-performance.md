@@ -1,6 +1,6 @@
 # Fase 263 - Relatorios financeiros e de performance por cliente
 
-Status: em andamento. Incrementos 1, 2 e 3 implementados em 2026-09-16.
+Status: em andamento. Incrementos 1, 2, 3 e 4 implementados em 2026-09-16.
 
 ## Objetivo
 
@@ -101,9 +101,55 @@ profissional/paciente reaproveitados sem alteracao.
   O mock foi atualizado para incluir `performance` por consistencia de tipo,
   mas a cobertura visual dedicada a essa tabela continua pendente.
 
+## Incremento 4 - exportacao auditada dos indicadores
+
+Novo endpoint `GET /agenda/financeiro/recebimentos/exportar.csv`, no mesmo
+padrao ja usado por `agenda/consultas/exportar.csv` (Fase 211): mesmos papeis
+e mesma permissao `agenda.financeiro.ler` da rota JSON, `montarCsv`/`campoCsv`
+compartilhados (protegem contra injecao de formula de planilha) e auditoria
+em toda leitura, nao so em escrita.
+
+`exportarRecebimentosCsv` reaproveita `resumoRecebimentos` por inteiro —
+mesmo filtro de periodo, mesmo escopo por profissional/paciente, mesma RLS —
+e so muda a saida para CSV: uma linha por profissional (mesmas colunas da
+tabela "Por profissional" mais os quatro indicadores de performance que a
+tela nao tem espaco para mostrar: concluidas, faltas, canceladas e as tres
+taxas) e uma linha final "Consolidado" com os totais do periodo. Nenhuma
+migration, nenhum novo dado calculado: e a mesma formula do Incremento 1,
+so em outro formato de saida.
+
+A auditoria (`agenda.financeiro.exportar_csv`) segue a mesma regra do resto
+do produto para exportacao: registra o volume exportado
+(`contarLinhasCsv`), nunca o conteudo das linhas — copiar os valores para
+`user_action_logs.metadados` faria a trilha de auditoria conter uma segunda
+copia do proprio dado que ela deveria vigiar.
+
+A tela de recebimentos ganhou um link "Exportar CSV" no cabecalho do card
+principal, ao lado do indicador de carregamento, apontando para o periodo e
+paciente atualmente exibidos (nao para o que esta digitado e ainda nao
+aplicado no formulario).
+
+### Evidencia TDD e validacoes
+
+- GREEN: teste novo do servico compara o CSV inteiro (cabecalho + linha por
+  profissional + linha consolidada) byte a byte contra a mesma fixture do
+  primeiro teste de `resumoRecebimentos`, provando que a exportacao e so uma
+  reprojecao do mesmo calculo.
+- GREEN: teste novo confirma que a exportacao aplica o mesmo escopo de
+  usuario `Professional` que a rota JSON (ignora `profissionalId` pedido e
+  usa o vinculo do usuario).
+- `pnpm --dir octaclin-backend typecheck`, `pnpm --dir octaclin-web typecheck`,
+  suite do servico e do dominio financeiro (18/18 no arquivo do servico),
+  `pnpm audit:redacao-auditoria` (confirma `linhas` classificado como
+  metadado seguro, mesma classificacao da exportacao de agenda existente),
+  `pnpm test:guardas-controladores`, `pnpm test:actions-imutaveis`,
+  `pnpm test:confiabilidade`, `git diff --check` e `pnpm security:secrets`.
+- Playwright: nao adicionado. Nenhum cenario existente navega ate a aba
+  financeira do cliente (mesma lacuna ja registrada no Incremento 3);
+  cobertura visual dedicada a essa tela continua pendente.
+
 ## Proximos incrementos candidatos
 
-1. Exportacao auditada dos indicadores, respeitando filtros e autorizacao.
-
-Esse candidato ainda nao esta concluido e deve passar por priorizacao antes de
-ampliar o contrato.
+Nenhum candidato pendente no momento. Os dois candidatos documentados apos o
+Incremento 2 (exportacao auditada e quebra por profissional) foram entregues
+nos Incrementos 3 e 4.
