@@ -1,11 +1,12 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { BadgeDollarSign, RefreshCcw } from 'lucide-react';
-import { Botao } from '@/components/ui/botao';
+import { BadgeDollarSign, Download, RefreshCcw } from 'lucide-react';
+import { Botao, classesBotao } from '@/components/ui/botao';
 import { Campo, Rotulo } from '@/components/ui/campo';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { BarraCarregamento } from '@/components/ui/feedback';
+import { FaixaAcoes } from '@/components/ui/faixa-acoes';
 import { ResumoRecebimentosApi, formatarValorBRL, obterRecebimentosAgenda } from '@/lib/agenda-api';
 
 /** Primeiro e ultimo dia do mes corrente, em `yyyy-MM-dd` para o campo `date`. */
@@ -87,6 +88,14 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
     void carregar(inicio, fim);
   }
 
+  const urlExportacaoCsv = resumo
+    ? `/api/agenda/financeiro/recebimentos/exportar.csv?${new URLSearchParams({
+        inicioEm: resumo.inicioEm,
+        fimEm: resumo.fimEm,
+        ...(pacienteId ? { pacienteId } : {})
+      })}`
+    : null;
+
   const indicadores = resumo
     ? [
         { rotulo: 'Recebido em consultas', valor: formatarValorBRL(resumo.recebidoCentavos) },
@@ -167,7 +176,23 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
           <CartaoTitulo icone={<BadgeDollarSign className="h-4 w-4" />}>
             {pacienteId ? 'Recebimentos do paciente' : contexto === 'profissional' ? 'Meus recebimentos' : 'Recebimentos'}
           </CartaoTitulo>
-          <BarraCarregamento visivel={carregando} rotulo="Carregando recebimentos" />
+          <FaixaAcoes rotulo="Ações de recebimentos" className="sm:justify-end">
+            <BarraCarregamento visivel={carregando} rotulo="Carregando recebimentos" />
+            <a
+              href={urlExportacaoCsv ?? '#'}
+              aria-disabled={!urlExportacaoCsv}
+              onClick={(evento) => {
+                if (!urlExportacaoCsv) evento.preventDefault();
+              }}
+              className={classesBotao({
+                variante: 'secundario',
+                className: 'aria-disabled:pointer-events-none aria-disabled:opacity-60'
+              })}
+            >
+              <Download size={16} />
+              Exportar CSV
+            </a>
+          </FaixaAcoes>
         </CartaoCabecalho>
         <CartaoConteudo className="grid gap-4">
           <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" onSubmit={aplicar}>

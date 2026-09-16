@@ -353,6 +353,46 @@ describe('ServicoFinanceiroAgenda', () => {
       expect(filtroConsultas().profissionalId).toBe('profissional-7');
     });
 
+    it('exporta CSV com o mesmo consolidado e a mesma quebra por profissional do resumo', async () => {
+      const { servico } = montarServico({
+        consultas: [
+          consulta({ statusPagamento: 'pago', valorCentavos: 18000 }),
+          consulta({ statusPagamento: 'pendente', valorCentavos: 15000 }),
+          consulta({ status: 'cancelada', statusPagamento: 'pendente', valorCentavos: 99900 })
+        ]
+      });
+
+      const csv = await servico.exportarRecebimentosCsv(
+        'tenant-1',
+        { inicioEm: '2026-08-01T00:00:00.000Z', fimEm: '2026-08-31T23:59:59.000Z' },
+        colaborador
+      );
+
+      expect(csv).toBe(
+        'profissional,consultas,recebidoCentavos,pendenteCentavos,isentas,totalConsultasPeriodo,concluidas,faltas,canceladas,taxaComparecimentoPercentual,taxaFaltaPercentual,taxaCancelamentoPercentual,ticketMedioRecebidoCentavos\n' +
+          'Dra. Carla Lima,2,18000,15000,0,3,2,0,1,100,0,33.3,18000\n' +
+          'Consolidado,2,18000,15000,0,3,2,0,1,100,0,33.3,18000\n'
+      );
+    });
+
+    it('exportacao respeita o mesmo escopo do usuario Professional que o resumo', async () => {
+      const { servico, filtroConsultas } = montarServico({
+        profissionalDoUsuario: { id: 'profissional-7', tenantId: 'tenant-1' }
+      });
+
+      await servico.exportarRecebimentosCsv(
+        'tenant-1',
+        {
+          inicioEm: '2026-08-01T00:00:00.000Z',
+          fimEm: '2026-08-31T23:59:59.000Z',
+          profissionalId: 'profissional-outro'
+        },
+        profissionalLogado
+      );
+
+      expect(filtroConsultas().profissionalId).toBe('profissional-7');
+    });
+
     it('deve comparar com uma janela anterior de mesma duracao sem sobrepor os limites', async () => {
       const { servico } = montarServico({
         consultas: [

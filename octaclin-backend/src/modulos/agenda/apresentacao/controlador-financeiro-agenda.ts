@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
+import { contarLinhasCsv } from '../../../infraestrutura/exportacao/csv';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
@@ -59,6 +60,26 @@ export class ControladorFinanceiroAgenda {
       profissionalId: filtro.profissionalId
     });
     return resumo;
+  }
+
+  @Get('financeiro/recebimentos/exportar.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="octaclin-recebimentos.csv"')
+  @Papeis('SuperAdmin', 'Professional', 'Client')
+  @Permissoes('agenda.financeiro.ler')
+  async exportarRecebimentosCsv(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Query() filtro: ConsultarRecebimentosDto
+  ) {
+    const csv = await this.servicoFinanceiro.exportarRecebimentosCsv(usuario.tenantId, filtro, usuario);
+    await this.registrar(usuario, requisicao, 'agenda.financeiro.exportar_csv', 'agenda_financeiro', usuario.tenantId, {
+      inicioEm: filtro.inicioEm,
+      fimEm: filtro.fimEm,
+      profissionalId: filtro.profissionalId,
+      linhas: contarLinhasCsv(csv)
+    });
+    return csv;
   }
 
   @Get('pacotes')

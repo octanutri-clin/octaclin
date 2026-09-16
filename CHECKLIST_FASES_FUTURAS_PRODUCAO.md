@@ -2862,9 +2862,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
     TDD com dois profissionais de desfecho diferente confirma isolamento da
     formula por profissional. Cobertura Playwright dedicada a essa tabela
     continua pendente (nenhum cenario existente navega ate ela).
-  - Proximo incremento candidato: exportacao auditada dos indicadores,
-    respeitando filtros e autorizacao. Detalhes em
-    `docs/history/phases/fase-263-relatorios-financeiros-performance.md`.
+  - Incremento 4 implementado em 2026-09-16: exportacao auditada em
+    `GET /agenda/financeiro/recebimentos/exportar.csv`, mesmo padrao de
+    `agenda/consultas/exportar.csv` (Fase 211) — mesma permissao
+    `agenda.financeiro.ler`, `montarCsv`/`campoCsv` compartilhados (protegem
+    contra injecao de formula) e auditoria de toda leitura, registrando so o
+    volume exportado (`contarLinhasCsv`), nunca o conteudo das linhas.
+    Reaproveita `resumoRecebimentos` por inteiro (mesmo filtro, escopo e
+    RLS); o CSV tem uma linha por profissional com todos os indicadores de
+    performance mais uma linha "Consolidado". Sem migration. Nenhum
+    candidato pendente na fase no momento.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
