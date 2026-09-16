@@ -119,6 +119,18 @@ function tokenDoLink(link, contexto) {
   return token;
 }
 
+async function redefinirPrimeiroAcesso(token, senha) {
+  await api('/auth/redefinir-senha', {
+    method: 'POST',
+    body: JSON.stringify({
+      token,
+      senha,
+      aceiteTermosUso: true,
+      aceitePoliticaPrivacidade: true
+    })
+  });
+}
+
 async function executar() {
   const sufixo = `${Date.now()}-${process.env.GITHUB_RUN_ID ?? 'local'}`;
   const slug = `clinica-e2e-${sufixo}`.toLowerCase();
@@ -151,7 +163,7 @@ async function executar() {
   assert(repeticao?.id === tenant.id && repeticao?.reutilizado === true, 'Provisionamento concorrente duplicou ou mudou tenant.');
 
   const tokenOwnerConvite = tokenDoLink(tenant.convite?.linkPrimeiroAcesso, 'Convite do proprietario');
-  await api('/auth/redefinir-senha', { method: 'POST', body: JSON.stringify({ token: tokenOwnerConvite, senha: senhaOwner }) });
+  await redefinirPrimeiroAcesso(tokenOwnerConvite, senhaOwner);
   const tokenOwner = await login(slug, emailOwner, senhaOwner);
   const contextoOwner = await api('/auth/permissoes', { token: tokenOwner });
   assert(contextoOwner?.papel === 'Client', 'Proprietario nao recebeu papel Client.');
@@ -174,10 +186,7 @@ async function executar() {
     })
   });
   const tokenProfissionalConvite = tokenDoLink(usuarioProfissional.convite?.linkPrimeiroAcesso, 'Convite profissional');
-  await api('/auth/redefinir-senha', {
-    method: 'POST',
-    body: JSON.stringify({ token: tokenProfissionalConvite, senha: senhaProfissional })
-  });
+  await redefinirPrimeiroAcesso(tokenProfissionalConvite, senhaProfissional);
   const tokenProfissional = await login(slug, emailProfissional, senhaProfissional);
   const contextoProfissional = await api('/auth/permissoes', { token: tokenProfissional });
   assert(contextoProfissional?.papel === 'Professional', 'Convite profissional nao aplicou o papel esperado.');
