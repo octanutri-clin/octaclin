@@ -7,6 +7,7 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import {
+  calcularIndicadoresPerformance,
   calcularConsumoPacote,
   entraNoFaturamento,
   pacoteVencido,
@@ -152,6 +153,13 @@ export class ServicoFinanceiroAgenda {
           valorCentavos: consulta.valorCentavos ?? 0
         }))
       );
+      const performance = calcularIndicadoresPerformance(
+        consultas.map((consulta) => ({
+          status: consulta.status,
+          statusPagamento: consulta.statusPagamento ?? 'pendente',
+          valorCentavos: consulta.valorCentavos ?? 0
+        }))
+      );
 
       const pacotes = await gerenciador.getRepository(PacoteSessaoOrm).find({
         where: {
@@ -168,6 +176,7 @@ export class ServicoFinanceiroAgenda {
         inicioEm: inicioEm.toISOString(),
         fimEm: fimEm.toISOString(),
         ...totais,
+        performance,
         pacotesRecebidoCentavos: this.somarPacotes(pacotes, 'pago'),
         pacotesPendenteCentavos: this.somarPacotes(pacotes, 'pendente'),
         porProfissional: await this.quebrarPorProfissional(gerenciador, tenantId, consultas)

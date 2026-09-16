@@ -354,6 +354,16 @@ export interface ResumoRecebimentosDto {
   isentas: number;
   pacotesRecebidoCentavos: number;
   pacotesPendenteCentavos: number;
+  performance: {
+    totalConsultas: number;
+    concluidas: number;
+    faltas: number;
+    canceladas: number;
+    taxaComparecimentoPercentual: number;
+    taxaFaltaPercentual: number;
+    taxaCancelamentoPercentual: number;
+    ticketMedioRecebidoCentavos: number;
+  };
   porProfissional: LinhaRecebimentoProfissionalDto[];
 }
 

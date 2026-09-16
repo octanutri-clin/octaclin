@@ -812,6 +812,16 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
         isentas: 0,
         pacotesRecebidoCentavos: 0,
         pacotesPendenteCentavos: 0,
+        performance: {
+          totalConsultas: 4,
+          concluidas: 3,
+          faltas: 1,
+          canceladas: 1,
+          taxaComparecimentoPercentual: 75,
+          taxaFaltaPercentual: 25,
+          taxaCancelamentoPercentual: 25,
+          ticketMedioRecebidoCentavos: 18000
+        },
         porProfissional: [{
           profissionalId: 'profissional-1',
           profissionalNome: 'Dra. Carla',
@@ -2074,6 +2084,9 @@ test.describe('agenda de producao', () => {
     await expect(detalhes.getByRole('button', { name: 'Remarcar' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Meus recebimentos' })).toBeVisible();
     await expect(page.getByText('R$ 180,00').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Meu desempenho no período' })).toBeVisible();
+    await expect(page.getByText('Taxa de comparecimento')).toBeVisible();
+    await expect(page.getByText('75%')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 

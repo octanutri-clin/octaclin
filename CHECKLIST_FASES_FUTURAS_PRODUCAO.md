@@ -1,6 +1,7 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-16. Fases 256 a 261 concluidas; Fase 262 em andamento.
+Atualizado em 2026-09-16. Fases 256 a 261 concluidas; Fase 262 em andamento;
+Fase 263 em andamento como frente de produto independente.
 O programa de hardening PR 36-56 permanece como trilha separada.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
@@ -2837,6 +2838,19 @@ publicado antes de ampliar a superficie de mudancas visuais.
     juridico, dominio/identidade e selecao do cliente, sem bloquear trabalho de
     produto independente.
 
+- [~] Fase 263 - Relatorios financeiros e de performance por cliente.
+  - Incremento 1 implementado em 2026-09-16 sem migration: o resumo financeiro
+    seguro existente passou a derivar concluidas, faltas, canceladas, taxas de
+    comparecimento/falta/cancelamento e ticket medio recebido em consultas.
+  - O endpoint preserva RLS, permissao `agenda.financeiro.ler` e escopo por
+    profissional/paciente. Pacotes continuam separados e nao contaminam o
+    ticket medio de consultas.
+  - A tela de recebimentos apresenta o novo cartao de desempenho para gestor,
+    profissional e paciente filtrado, com as bases de calculo explicitadas.
+  - Proximos incrementos candidatos: comparacao temporal, exportacao auditada e
+    quebra de performance por profissional. Detalhes em
+    `docs/history/phases/fase-263-relatorios-financeiros-performance.md`.
+
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 
@@ -2851,7 +2865,8 @@ Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
   isso e ruido e nao risco. Ao escolher o provedor: definir o par completo ou
   remover a variavel avulsa, e transformar o check numa sonda real do
   `octaclin-ai-service`, quando meia configuracao volta a ser falha.
-- Relatorios financeiros e de performance por cliente.
+- Relatorios financeiros e de performance por cliente. **Em andamento na Fase
+  263; primeiro incremento implementado.**
 - Marketplace de modelos de questionarios.
 - White-label por clinica.
 - Multi-unidade por tenant.
