@@ -1,5 +1,22 @@
 import { expect, test } from '@playwright/test';
 
+const errosNavegadorPorPagina = new WeakMap();
+
+test.beforeEach(async ({ page }) => {
+  const erros = [];
+  errosNavegadorPorPagina.set(page, erros);
+  page.on('pageerror', (erro) => erros.push(`pageerror: ${erro.message}`));
+  page.on('console', (mensagem) => {
+    if (mensagem.type() === 'error' && !mensagem.text().startsWith('Failed to load resource:')) {
+      erros.push(`console.error: ${mensagem.text()}`);
+    }
+  });
+});
+
+test.afterEach(async ({ page }) => {
+  expect(errosNavegadorPorPagina.get(page) ?? [], 'a jornada nao deve esconder excecoes ou erros do navegador').toEqual([]);
+});
+
 const usuarioProfissional = {
   autenticado: true,
   apiUrl: 'http://localhost:3001',
@@ -152,7 +169,9 @@ async function prepararCliente(page) {
     const convites = conviteCriado
       ? [
           {
+            id: 'convite-usuario-1',
             usuarioId: 'usuario-convidado-1',
+            tenantId: 'tenant-1',
             email: conviteCriado.email,
             role: conviteCriado.role,
             status: 'pendente',
@@ -270,7 +289,7 @@ async function prepararProfissional(page) {
     });
   });
 
-  await page.route('**/api/pacientes**', async (route) => {
+  await page.route((url) => url.pathname === '/api/pacientes', async (route) => {
     if (route.request().method() === 'POST') {
       const payload = await route.request().postDataJSON();
       pacienteCriado = {

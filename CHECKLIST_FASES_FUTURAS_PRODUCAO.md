@@ -1,7 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-13. Fases 256 a 260 concluidas; Fase 261 em andamento
-e Fase 262 pendente.
+Atualizado em 2026-09-15. Fases 256 a 261 concluidas; Fase 262 em andamento.
 O programa de hardening PR 36-56 permanece como trilha separada.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
@@ -2570,7 +2569,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `/operacoes`) ao esgotá-las. Nenhuma migration. Ver
     `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
 
-- [ ] Fase 261 - Regressão de segurança e privacidade do SaaS público. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
+- [x] Fase 261 - Regressão de segurança e privacidade do SaaS público. [ESSENCIAL - BLOQUEADOR PRE-PILOTO]
   - Revalidar autenticação, autorização por papel, RLS forçada, isolamento entre
     tenants, uploads, OAuth, webhooks, rate limit, auditoria e LGPD.
     Incremento 1 entregue em 2026-09-11: scanner antimalware real (ClamAV)
@@ -2784,12 +2783,39 @@ publicado antes de ampliar a superficie de mudancas visuais.
     qualquer coisa em produção — isto não é evitação de escopo, é a mesma
     regra de nunca declarar validação sem evidência obtida no mesmo ciclo.
 
-- [ ] Fase 262 - Aceite de usabilidade e prontidão para piloto. [BLOQUEADOR FINAL]
+  - Rollout reconciliado em 2026-09-15: as migrations `1039` a `1045` foram
+    aplicadas fora de banda em staging e produção com a role proprietária e
+    os dois deploys ficaram `Live`. A verificação pública da mesma rodada
+    confirmou backend `/health/pronto` `200`, web `/login` `200`, banco e
+    migrations `ok` (58 registradas). O health detalhado permanece
+    `degradado` somente em `antimalware`, porque o daemon ClamAV ainda não foi
+    provisionado. A conta Oracle foi limitada a recursos gratuitos e a shape
+    A1 gratuita estava sem capacidade; o item permanece aberto aguardando
+    capacidade gratuita, sem contratação paga.
+  - Inventário GitHub recapturado em 2026-09-15: zero alertas Dependabot, zero
+    Secret Scanning e 217 alertas Code Scanning, todos Trivy de imagens
+    (`3 critical`, `57 high`, `72 medium`, `84 low`, `1 sem severidade`). O
+    backlog continua concentrado nas bases oficiais Python/Node já governadas;
+    não haverá dismiss nem upgrade mutável só para reduzir a contagem. Novos
+    artefatos oficiais ou patches acionam a revisão.
+
+- [~] Fase 262 - Aceite de usabilidade e prontidão para piloto. [BLOQUEADOR FINAL]
   - Executar jornadas reais com dados sintéticos para SuperAdmin, cliente,
     profissional e paciente em navegadores desktop e web móvel suportados.
   - Consolidar defeitos P0/P1, observabilidade, backup/restore, suporte, rollback,
     jurídico e operação. O piloto só recebe GO quando todos os gates bloqueadores
     anteriores estiverem concluídos e as exceções residuais forem aceitas.
+  - Incremento 1 iniciado em 2026-09-15: `pnpm test:fase262` consolida 16
+    cenários Playwright em desktop e web móvel — 12 jornadas críticas de
+    cliente/profissional/paciente e 4 cenários SuperAdmin de LGPD/rollout.
+    As jornadas críticas agora reprovam também por `pageerror` e
+    `console.error`, fechando um falso verde encontrado no primeiro baseline.
+    O mock amplo de pacientes interceptava subrotas, devolvia contrato errado,
+    duplicava itens e gerava uma exceção escondida no prontuário; o mock foi
+    restringido à coleção e o convite sintético passou a respeitar o contrato.
+    Resultado após a correção: 12/12 jornadas críticas e 4/4 cenários
+    SuperAdmin aprovados nos dois viewports. Detalhes em
+    `docs/history/phases/fase-262-aceite-usabilidade-prontidao-piloto.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

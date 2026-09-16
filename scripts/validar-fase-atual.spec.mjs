@@ -32,7 +32,13 @@ const checklist = 'Atualizado em 2026-09-13. Fase 261 em andamento.\n\n- [x] Fas
 test('aceita a ultima fase concluida e a proxima pendente', () => {
   const result = validar(status, checklist);
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stdout, /260 concluida; 261 pendente/);
+  assert.match(result.stdout, /260 concluida; 261 pendente ou em andamento/);
+});
+
+test('aceita a proxima fase marcada como em andamento', () => {
+  const result = validar(status, checklist.replace('- [ ] Fase 261', '- [~] Fase 261'));
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  assert.match(result.stdout, /260 concluida; 261 pendente ou em andamento/);
 });
 
 test('reprova cabecalho historico que nao informa a fase atual', () => {
@@ -41,10 +47,10 @@ test('reprova cabecalho historico que nao informa a fase atual', () => {
   assert.match(result.stderr, /Cabecalho do checklist nao informa a Fase 261/);
 });
 
-test('reprova a proxima fase sem marcador pendente', () => {
-  const result = validar(status, checklist.replace('- [ ] Fase 261', '- [~] Fase 261'));
+test('reprova a proxima fase sem marcador aberto', () => {
+  const result = validar(status, checklist.replace('- [ ] Fase 261', '- [-] Fase 261'));
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /Fase 261 pendente/);
+  assert.match(result.stderr, /Fase 261 pendente ou em andamento/);
 });
 
 test('reprova status sem conclusao da fase anterior', () => {
