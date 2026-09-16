@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 const raiz = resolve(import.meta.dirname, '..');
 const workflow = readFileSync(resolve(raiz, '.github', 'workflows', 'staging-e2e-mutavel.yml'), 'utf8');
 const runner = readFileSync(resolve(raiz, 'octaclin-web', 'scripts', 'e2e-staging-mutavel.mjs'), 'utf8');
+const onboarding = readFileSync(resolve(raiz, 'octaclin-web', 'scripts', 'e2e-fase-228-onboarding.mjs'), 'utf8');
 const fixtureImagem = readFileSync(resolve(raiz, 'octaclin-web', 'public', 'icons', 'octaclin-192.png'));
 const preparador = readFileSync(
   resolve(raiz, 'octaclin-backend', 'src', 'infraestrutura', 'e2e', 'preparar-ambiente-staging-e2e.ts'),
@@ -52,6 +53,14 @@ assert.match(runner, /status: 404/);
 assert.match(runner, /readFile\(new URL\('\.\.\/public\/icons\/octaclin-192\.png', import\.meta\.url\)\)/);
 assert.match(runner, /tiposAceitos: \['image\/png'\]/);
 assert.match(runner, /mimeType: 'image\/png'/);
+assert.match(onboarding, /async function redefinirPrimeiroAcesso\(token, senha\)/);
+assert.match(onboarding, /aceiteTermosUso: true/);
+assert.match(onboarding, /aceitePoliticaPrivacidade: true/);
+assert.equal(
+  onboarding.match(/await redefinirPrimeiroAcesso\(/g)?.length,
+  2,
+  'onboarding deve aplicar o contrato de aceite aos convites do proprietario e do profissional'
+);
 assert.deepEqual(
   fixtureImagem.subarray(0, 8),
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
