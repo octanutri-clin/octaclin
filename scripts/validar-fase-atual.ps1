@@ -11,7 +11,7 @@ $statusContent = Get-Content -LiteralPath $StatusPath -Raw
 $checklistContent = Get-Content -LiteralPath $ChecklistPath -Raw
 $phaseLines = [regex]::Matches(
   $checklistContent,
-  '(?m)^- \[(?<state>x| )\] Fase (?<number>\d+) - '
+  '(?m)^- \[(?<state>x|~| )\] Fase (?<number>\d+) - '
 )
 
 $completedNumbers = @(
@@ -27,16 +27,16 @@ if ($completedNumbers.Count -eq 0) {
 
 $completed = [int](($completedNumbers | Measure-Object -Maximum).Maximum)
 $next = $completed + 1
-$nextPending = @(
+$nextOpen = @(
   foreach ($phaseLine in $phaseLines) {
-    if ($phaseLine.Groups['state'].Value -eq ' ' -and
+    if ($phaseLine.Groups['state'].Value -in @(' ', '~') -and
         [int]$phaseLine.Groups['number'].Value -eq $next) {
       $phaseLine
     }
   }
 )
-if ($nextPending.Count -ne 1) {
-  throw "Checklist deve informar exatamente uma Fase $next pendente apos a Fase $completed concluida."
+if ($nextOpen.Count -ne 1) {
+  throw "Checklist deve informar exatamente uma Fase $next pendente ou em andamento apos a Fase $completed concluida."
 }
 
 $header = [regex]::Match(
@@ -63,4 +63,4 @@ if (-not $nextBlock) {
   throw "Status nao informa a Fase $next atual ou proxima."
 }
 
-Write-Host "Fases canonicas validadas: $completed concluida; $next pendente."
+Write-Host "Fases canonicas validadas: $completed concluida; $next pendente ou em andamento."

@@ -1,12 +1,25 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-13.
+Atualizado em 2026-09-15.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Reconciliacao de 2026-09-15: as migrations pendentes `1039` a `1045` foram
+  aplicadas fora de banda em staging e producao, e os deploys de backend e web
+  ficaram `Live`. Nova verificacao publica confirmou `/health/pronto` `200`,
+  `/login` `200`, banco e migrations `ok`, com 58 migrations registradas. O
+  health detalhado permanece `degradado` somente pelo ClamAV ainda ausente; a
+  infraestrutura gratuita Oracle estava sem capacidade para a shape A1 e
+  nenhum recurso pago foi contratado. A Fase 261 fica tecnicamente entregue e
+  em observacao pelas excecoes declaradas; a Fase 262 foi iniciada com baseline
+  automatizado dos quatro papeis em desktop e web movel. O primeiro incremento
+  transformou erros de navegador em falha de jornada e aprovou 16/16 cenarios
+  apos corrigir um falso verde do mock de pacientes. O GitHub tem zero PRs
+  abertos, zero alertas Dependabot, zero Secret Scanning e 217 alertas Trivy de
+  imagens ainda abertos e governados por revisao de upstream.
 - Incidente operacional em 2026-09-13: a issue GitHub `#234` permanece aberta.
   `GET /health/pronto` do backend de producao respondeu HTTP 503: banco `ok`,
   migrations `falha`. Consulta somente-leitura ao Neon (branch `production`,
@@ -120,13 +133,23 @@ Atualizado em 2026-09-13.
   (Desempenho, resiliencia e diagnostico operacional). Detalhes e
   evidencias completas em
   `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
+- Fase 262 - Aceite de usabilidade e prontidao para piloto, **em andamento
+  desde 2026-09-15**. O Incremento 1 criou o comando `pnpm test:fase262`,
+  consolidando 16 cenarios Playwright para SuperAdmin, cliente, profissional e
+  paciente em desktop e web movel. O baseline fechou um falso verde: jornadas
+  funcionais passavam mesmo com excecao e erros React no navegador, causados
+  por um mock amplo de pacientes. O gate agora reprova `pageerror` e
+  `console.error`; apos restringir o mock ao contrato correto, 16/16 cenarios
+  passaram. Proximo incremento: executar o candidato no staging mutavel com
+  dados sinteticos e consolidar qualquer P0/P1 antes do aceite humano.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
-  identificados no audit da fase) **em andamento; incrementos 1 a 4 integrados**.
+  identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
+  com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
   PR GitHub `#232`, merge `85f5c4a` em `main`, base `1ef9ce7`, 2026-09-11.
   CI verde (20/20 checks) e `mergeable_state: clean` confirmados antes do
-  merge humano. A fase continua aberta: o escopo aprovado no checklist
-  (`CHECKLIST_FASES_FUTURAS_PRODUCAO.md`) e bem mais amplo que este
-  incremento -- revalidacao completa de autenticacao, autorizacao por
+  merge humano. Naquele merge a fase ainda permanecia aberta: o escopo
+  aprovado no checklist (`CHECKLIST_FASES_FUTURAS_PRODUCAO.md`) era bem mais
+  amplo que o primeiro incremento -- revalidacao completa de autenticacao, autorizacao por
   papel, RLS forcada, isolamento entre tenants, OAuth, webhooks, rate
   limit, auditoria e LGPD; SBOM, revisao de workflows, gates de secrets,
   SAST e auditoria de producao; e a execucao real da migration desenhada
